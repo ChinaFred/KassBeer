@@ -6,6 +6,7 @@ les contraintes.
 
 ## Intention
 
+- **Nom** : Kass'Beer.
 - **Problème résolu, pour qui** : Kass'Beer remplace les fiches Excel de brassage amateur
   d'un brasseur et de quelques amis : recette, calculs, déroulé du jour de brassage, suivi
   et coût d'un brassin.
@@ -61,7 +62,9 @@ les contraintes.
   aux comptes invités.
 - **Création des comptes** : sur invitation de l'administrateur ; connexion par compte
   Google, comme Kass'Dalle.
-- **Infrastructure imposée** : aucune. Le brasseur exploite déjà Kass'Dalle sur Firebase
+- **Infrastructure imposée** : aucune. Si Firebase est retenu, un projet Firebase séparé
+  de celui de Kass'Dalle. Dépôt GitHub `ChinaFred/KassBeer`, privé.
+- **Pile connue** : le brasseur exploite déjà Kass'Dalle sur Firebase
   (Auth Google, Firestore, Storage, Hosting, Cloud Functions) et connaît cette pile.
 
 ### Données
@@ -107,13 +110,10 @@ resucrage), dégustations notées, assistant IA.
 
 ## Questions ouvertes
 
-- Formule d'adresse des agents en tête de réponse (Kass'Dalle : « Maître », « Seigneur »,
-  « Kassbi », « Majesté »).
-- Nom affiché : Kass'Beer ou Kass'Bière.
+- Formule d'adresse des agents : non tranchée ; celle du modèle (« Maître », « Seigneur »,
+  « Majesté ») reste en place.
 - Format d'export des recettes : BeerXML, BeerJSON, ou aucun en version 1.
 - Hébergement des données en Europe exigé ou non.
-- Dépôt public ou privé : Kass'Dalle est public parce que ses tickets deviennent des Issues.
-- Projet Firebase : nouveau projet, ou partage avec Kass'Dalle.
 - Formules de calcul à retenir (IBU de Tinseth ou de Rager, couleur de Morey) et leur
   vérification contre les fiches existantes.
 - Si les calculs servent au client (hors ligne) et au serveur (import, IA), ils deviennent
