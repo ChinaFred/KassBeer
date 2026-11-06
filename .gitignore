@@ -1,0 +1,18 @@
+# Artefacts de build et dépendances : jamais versionnés.
+node_modules/
+build/
+dist/
+out/
+__pycache__/
+*.pyc
+.venv/
+coverage/
+
+# Réglages propres au poste.
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Secrets.
+.env
+.env.*
+!.env.example

@@ -1,0 +1,4 @@
+{
+  "_commentaire": "Proposé au démarrage par l'architecte, écrit par la session principale. Chaque règle : un préfixe de chemin (relatif à la racine, vide = partout), des extensions, un dossier « cwd » (relatif à la racine) et une commande. Le hook remplace {file} par le chemin relatif à « cwd », déjà entre guillemets : ne pas ajouter de guillemets autour. Exemples : { \"prefix\": \"app/\", \"extensions\": [\".py\"], \"cwd\": \"\", \"command\": \"black {file}\" } ; { \"prefix\": \"server/src/\", \"extensions\": [\".ts\"], \"cwd\": \"server\", \"command\": \"npx --no-install prettier --write {file}\" }.",
+  "rules": []
+}
