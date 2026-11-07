@@ -24,7 +24,7 @@ affiche dans le journal public des runs. La section « Git » de `CLAUDE.md` et
 Le dépôt GitHub est public depuis le 2026-11-07 (ADR-002), pour obtenir les rulesets sans
 plan payant. Un ruleset protège `main` (PR requise, quatre contrôles, ni force push ni
 suppression) et un autre les tags `v*`. Approbation des workflows de forks, actions
-limitées et épinglées, secret scanning, push protection et alertes Dependabot sont actifs.
+limitées, secret scanning, push protection et alertes Dependabot sont actifs.
 Les noms de personnes sortent des fixtures de `brewing/`, et le cas `mansart` devient
 `ale-blonde-21-04-25` ; ils restent dans l'historique. Les prix d'achat de `cost.json`
 restent publics par décision de l'utilisateur : `CLAUDE.md` l'écrit en exception à la règle
