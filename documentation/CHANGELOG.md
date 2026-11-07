@@ -6,6 +6,16 @@ données, outillage), ou les deux.
 
 ## 2026-11-07
 
+### v0.1.6 — technique
+
+Les actions GitHub passent sous Node 24, que GitHub impose après la fin de Node 20 :
+`checkout` v7.0.1, `setup-node` v7.1.0, `setup-java` v6.1.0, `cache` v6.1.0,
+`upload-artifact` v7.0.2, `download-artifact` v8.0.2, `google-github-actions/auth` v3.0.0.
+Aucune option utilisée par nos workflows ne change. Les quatre alertes Dependabot de
+`rules-tests/` sont tolérées par décision de l'utilisateur : aucune version de
+`firebase-tools` ou de `firebase` ne les corrige encore, et notre usage n'appelle pas le
+code vulnérable. `exigences-techniques.md` documente l'analyse.
+
 ### v0.1.5 — technique
 
 `session-start.sh` avertit au démarrage d'une session quand l'adresse d'auteur du prochain commit (`git var GIT_AUTHOR_IDENT`) n'est
