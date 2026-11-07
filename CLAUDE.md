@@ -76,12 +76,14 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
   quand arriveront l'IA ou le RAPT Pill (ADR à venir).
 - Import des 16 fiches Excel : fichiers JSON préparés par une session Claude Code, relus et
   écrits par l'écran Admin › Import. Aucune IA dans l'application en version 1.
-- Détail et options écartées : `documentation/decisions/ADR-001-pile-technique.md`.
+- Détail et options écartées : `documentation/decisions/ADR-001-pile-technique.md`,
+  `documentation/decisions/ADR-002-depot-public.md`.
 
 Ouvert sur Internet, comptes sur invitation. Données personnelles limitées au nom et à
 l'e-mail (RGPD). Prix d'achat, stock et coût d'un brassin privés à chaque brasseur. Plan
 Blaze, alerte budgétaire à 5 €, dépense visée ≈ 0 € par mois. Projet Firebase distinct de
-Kass'Dalle (identifiant `kassbeer`). Dépôt privé `ChinaFred/KassBeer`, branche principale `main`.
+Kass'Dalle (identifiant `kassbeer`). Dépôt public `ChinaFred/KassBeer` depuis le 2026-11-07 (ADR-002), branche principale `main`
+protégée par un ruleset.
 
 ## Structure
 
@@ -143,7 +145,7 @@ Ces commandes sont **les contrôles du projet**. Les agents les lancent avant ch
 La CI (`.github/workflows/ci.yml`, ajoutée avec le socle) les rejoue sur chaque PR et chaque
 push, et compile l'APK quand `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`
 change. Une session cloud, sans SDK Android, s'appuie sur ce job. Une PR dont la CI n'est
-pas verte ne se fusionne pas. `deploy.yml` déploie Hosting et les règles, et publie l'APK
+pas verte ne se fusionne pas, et le ruleset de `main` l'impose (ADR-002). `deploy.yml` déploie Hosting et les règles, et publie l'APK
 sur App Distribution, après une CI verte sur `main`.
 
 ## Règles de code
@@ -211,7 +213,9 @@ l'équipement. Les ajustements du jour s'écrivent dans le brassin, jamais dans 
 les prix du lecteur. Le coût réel d'un brassin vit sous `users/{uid}/brew_costs/{brewId}`.
 Les profils d'équipement sont lisibles par le groupe. Seule exception : l'export JSON
 d'Admin, qui contient ce que le groupe voit et les seuls prix de l'administrateur (ADR-001,
-arbitrage 13).
+arbitrage 13). Ces règles portent sur les données de l'application dans Firestore. Les prix
+et coûts de test de `brewing/test/fixtures/cost.json`, tirés des fiches de l'administrateur,
+sont publics par sa décision (ADR-002).
 
 **La famille FlutterFire monte ensemble.** Quand `firebase_core` change, monter
 `firebase_auth` et `cloud_firestore` dans la même commande, et nommer dans le
@@ -237,7 +241,7 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 | P2 | Écran du jour de brassage et code qu'il appelle : aucun `runTransaction`, aucune callable ou requête HTTP, aucun `Source.server`, aucun tableau modifié par `arrayUnion` pour une mesure, aucun `Timer` comme source d'une durée, `measured_at` posé par l'appareil | `relecteur-regles` | ADR-001, hors ligne |
 | P3 | Toute formule de brassage hors de `brewing/` est une anomalie ; une formule changée sans cas ajouté à `brewing/test/fixtures/` aussi | `relecteur-regles` | ADR-001, calculs côté client seul |
 | P4 | Chaque changement de `firestore.rules` arrive avec ses tests dans `rules-tests/`, rejoués pour cinq profils : anonyme, connecté non membre, brasseur propriétaire, autre brasseur, admin. Un membre ne peut écrire ni son rôle ni le `owner_uid` d'un autre | `securite` | ADR-001, règles = seul contrôle d'accès |
-| P5 | Aucun prix ni stock ni coût de brassin dans `recipes/`, `brews/`, `equipment/` ; `users/{uid}/**` lisible par son seul propriétaire | `securite` | `projet.md`, données privées |
+| P5 | Aucun prix ni stock ni coût de brassin dans `recipes/`, `brews/`, `equipment/` ; `users/{uid}/**` lisible par son seul propriétaire | `securite` | `projet.md`, données privées ; ADR-002 (exception des fixtures) |
 | P6 | Diff de `app/pubspec.yaml`, `pubspec.lock` ou `android/` : famille FlutterFire montée ensemble, paquets nommés au `CHANGELOG.md`, APK compilé (PC ou job CI vert) | `relecteur-regles` | leçon 4 |
 | P7 | Version changée : le numéro de build après `+` monte d'un | `relecteur-regles` | ADR-001, `versionCode` Android |
 | P8 | Aucun keystore, `key.properties` ou mot de passe de signature dans le diff ; empreintes SHA-1 et SHA-256 de la clé de release enregistrées dans Firebase avant la première livraison | `securite` | ADR-001, connexion Google sur l'APK signé |

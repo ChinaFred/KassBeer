@@ -62,7 +62,7 @@ les contraintes.
   aux comptes invités.
 - **Création des comptes** : sur invitation de l'administrateur ; connexion par compte
   Google, comme Kass'Dalle.
-- **Infrastructure imposée** : aucune. Projet Firebase séparé de celui de Kass'Dalle. Dépôt GitHub `ChinaFred/KassBeer`, privé.
+- **Infrastructure imposée** : aucune. Projet Firebase séparé de celui de Kass'Dalle. Dépôt GitHub `ChinaFred/KassBeer`, public depuis le 2026-11-07 (ADR-002).
 - **Pile connue** : le brasseur exploite déjà Kass'Dalle sur Firebase
   (Auth Google, Firestore, Storage, Hosting, Cloud Functions) et connaît cette pile.
 
@@ -73,7 +73,8 @@ les contraintes.
 - **Réglementation** : RGPD pour les comptes (nom, e-mail).
 - **Données privées à un utilisateur** : le stock d'ingrédients, les prix d'achat et le
   coût réel d'un brassin. Le groupe voit les recettes, les profils d'équipement et les
-  brassins hors coût (mesures et dégustations comprises).
+  brassins hors coût (mesures et dégustations comprises). Exception : les prix et coûts de
+  test de `brewing/test/fixtures/cost.json` sont publics (ADR-002).
 - **Conservation, sauvegarde, export** : conservation sans limite ; sauvegarde gérée de
   Firestore ; export JSON dans Admin (ce que le groupe voit, plus les prix de
   l'administrateur) ; export BeerXML après la v1 (ADR-001).

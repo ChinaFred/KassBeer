@@ -28,8 +28,8 @@
       "fiche_tolerance": 0.07
     },
     {
-      "id": "mansart",
-      "source": "Ale blonde 21-04-25 - Pale ale - Mansart",
+      "id": "ale-blonde-21-04-25",
+      "source": "Ale blonde 21-04-25 - Pale ale",
       "inputs": {
         "original_gravity": 1.049,
         "final_gravity": 1.001
@@ -65,7 +65,7 @@
     },
     {
       "id": "thym",
-      "source": "Bière au thym avec Michael 14-04-23",
+      "source": "Bière au thym 14-04-23",
       "inputs": {
         "original_gravity": 1.052,
         "final_gravity": 1.0
@@ -183,7 +183,7 @@
       "explanation": "Non retrouvé : 1065 → 1001 donne 8,4 % (8,42 par la règle /7,6 de la fiche). Origine du 8,8 inconnue."
     },
     {
-      "source": "7 fiches : Ale blonde 140724 - Pale ale, June bavarian Lager, Ale blonde 21-04-25 - Pale ale - Mansart, Hard lager - deuxième brassin, Bière blonde 11-2-24 - très bonne bière légère estivale, 21-09-25 Twin bottle 4 ; 05-04-6 Clone paix dieu, 20-20-24 Clone paix dieu, Hard bohemian lager",
+      "source": "7 fiches : Ale blonde 140724 - Pale ale, June bavarian Lager, Ale blonde 21-04-25 - Pale ale, Hard lager - deuxième brassin, Bière blonde 11-2-24 - très bonne bière légère estivale, 21-09-25 Twin bottle 4 ; 05-04-6 Clone paix dieu, 20-20-24 Clone paix dieu, Hard bohemian lager",
       "field": "Après f. bouteille",
       "fiche_value": "degré estimé + 0,5 (6,4 ; 7,1 ; 6,8 ; 7,9 ; 5,1 ; 13,13 ; 0,5 sans densité)",
       "explanation": "Hausse forfaitaire de 0,5 % vol. Le paquet calcule la hausse à partir du sucre de resucrage (g/L) et rend null sans cette donnée. Les fiches comptent des « Carbonation Drops » sans leur masse : la hausse ne peut pas être recalculée."

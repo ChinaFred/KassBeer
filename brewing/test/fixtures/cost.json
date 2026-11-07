@@ -318,7 +318,7 @@
     },
     {
       "id": "biere-au-thym-prix-manquant",
-      "source": "Bière au thym avec Michael 14-04-23",
+      "source": "Bière au thym 14-04-23",
       "inputs": {
         "lines": [
           {
@@ -540,7 +540,7 @@
       "explanation": "La fiche divise le coût total par le nombre de bouteilles (50 ; 66), soit 34 cl et 41 cl par bouteille avec 17 L et 27 L. Le paquet calcule une bouteille de 33 cl à partir du coût par litre."
     },
     {
-      "source": "Twin bottle 3 ; 21-09-25 Twin bottle 4 ; Quadruple avec Min et ses potes début août 23",
+      "source": "Twin bottle 3 ; 21-09-25 Twin bottle 4 ; Quadruple début août 23",
       "field": "Nombre de bouteilles / Coût par bouteille",
       "fiche_value": "1 bouteille ; coût par bouteille = coût total (40,84 € ; 1 511,23 € ; 29,77 €)",
       "explanation": "Nombre de bouteilles laissé à 1."
