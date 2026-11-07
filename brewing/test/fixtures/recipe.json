@@ -1,0 +1,341 @@
+{
+  "description": "Calculs d'une recette par computeRecipe : pour chaque indicateur, la valeur attendue à 'tolerance' près, ou la liste des données manquantes ('missing' : nature et lignes [place, nom]). Les valeurs attendues sont calculées hors du paquet, par les formules des fixtures gravity, final_gravity, abv, ibu et color. Un cas qui porte 'base' reprend les entrées du cas nommé et remplace les clés qu'il donne. Données des fiches non fiables, lues comme données.",
+  "rules": "OG : volume, au moins un fermentescible, rendement d'extrait de chacun, rendement d'empâtage si un malt est présent. FG et degré : OG et atténuation de la première levure. IBU : volume ; 0 sans houblon d'ébullition ; sinon OG (densité d'ébullition), alpha et durée de chaque houblon d'ébullition. EBC : volume, au moins un fermentescible, couleur de chacun ; sans équipement. 'originalGravity' dans 'missing' : l'indicateur dépend d'une OG indisponible.",
+  "cases": [
+    {
+      "id": "complete",
+      "inputs": {
+        "batch_volume_l": 23,
+        "boil_time_min": 60,
+        "mash_efficiency_pct": 75,
+        "fermentables": [
+          { "name": "Pils", "kind": "malt", "mass_grams": 5000, "color_ebc": 3.9, "yield_percent": 80 },
+          { "name": "Sucre candi clair", "kind": "sugar", "mass_grams": 500, "color_ebc": 2, "yield_percent": 100 }
+        ],
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "alpha_percent": 10, "use": "boil", "form": "pellet", "minutes": 60 },
+          { "name": "Saaz", "mass_grams": 20, "alpha_percent": 3.5, "use": "boil", "form": "whole", "minutes": 15 },
+          { "name": "Citra", "mass_grams": 50, "use": "afterBoil", "form": "pellet" },
+          { "name": "Citra", "mass_grams": 50, "alpha_percent": 12, "use": "dryHop", "form": "pellet", "minutes": 4320 }
+        ],
+        "yeasts": [
+          { "name": "US-05", "attenuation_percent": 78 },
+          { "name": "S-33", "attenuation_percent": 50 }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0586896,
+        "final_gravity": 1.0129117,
+        "alcohol_by_volume": 6.0083479,
+        "bitterness_ibu": 33.8308043,
+        "color_ebc": 7.312443,
+        "hop_ibu": [30.6090445, 3.2217597, 0, 0],
+        "boil_gravity": 1.0586896,
+        "hops_longer_than_boil": [],
+        "missing_inputs": []
+      },
+      "note": "la densité d'ébullition est l'OG prévue (A4) ; seule la première levure compte ; le Citra du whirlpool n'a pas d'alpha et n'en demande pas"
+    },
+    {
+      "id": "twin-bottle-4-hypothese",
+      "source": "21-09-25 Twin bottle 4",
+      "hypotheses": "masses de la fiche ; rendement d'extrait 78 % pour les malts et 100 % pour les sucres candi (absents de la fiche) ; couleurs de gravity.json (Wheat à 4 EBC) ; rendement d'empâtage 70 % ; 20 L (volume absent de la fiche) ; atténuation 84,1 % (apparente : 1.063 → 1.010) ; houblons de la fiche sans acides alpha, donc non repris",
+      "inputs": {
+        "batch_volume_l": 20,
+        "mash_efficiency_pct": 70,
+        "fermentables": [
+          { "name": "Munich (17.7 EBC)", "kind": "malt", "mass_grams": 400, "color_ebc": 17.7, "yield_percent": 78 },
+          { "name": "Pils (3.9 EBC)", "kind": "malt", "mass_grams": 4800, "color_ebc": 3.9, "yield_percent": 78 },
+          { "name": "Wheat", "kind": "malt", "mass_grams": 700, "color_ebc": 4, "yield_percent": 78 },
+          { "name": "Biscuit", "kind": "malt", "mass_grams": 600, "color_ebc": 51.2, "yield_percent": 78 },
+          { "name": "Sucre candi clair", "kind": "sugar", "mass_grams": 230, "color_ebc": 2, "yield_percent": 100 },
+          { "name": "Sucre candi ambré", "kind": "sugar", "mass_grams": 230, "color_ebc": 100, "yield_percent": 100 }
+        ],
+        "hops": [],
+        "yeasts": [{ "name": "Levure de la fiche", "attenuation_percent": 84.1 }]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0773085,
+        "final_gravity": 1.012292,
+        "alcohol_by_volume": 8.5334042,
+        "bitterness_ibu": 0,
+        "color_ebc": 20.9637134,
+        "hop_ibu": [],
+        "missing_inputs": []
+      },
+      "note": "sans houblon, 0 IBU (C5). La fiche vise 1106, mesure 1.063 et annonce 8,5 – 9 % dans sa remarque ; aucune valeur de la fiche n'est comparée, les entrées étant des hypothèses"
+    },
+    {
+      "id": "sans-volume",
+      "inputs": { "base": "complete", "batch_volume_l": null },
+      "expected": {
+        "original_gravity": { "missing": [{ "kind": "batchVolume" }] },
+        "final_gravity": { "missing": [{ "kind": "originalGravity" }] },
+        "alcohol_by_volume": { "missing": [{ "kind": "originalGravity" }] },
+        "bitterness_ibu": { "missing": [{ "kind": "batchVolume" }, { "kind": "originalGravity" }] },
+        "color_ebc": { "missing": [{ "kind": "batchVolume" }] },
+        "hop_ibu": [],
+        "boil_gravity": null,
+        "missing_inputs": [{ "kind": "batchVolume" }]
+      }
+    },
+    {
+      "id": "sans-equipement",
+      "inputs": { "base": "complete", "mash_efficiency_pct": null },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": { "missing": [{ "kind": "mashEfficiency" }] },
+        "final_gravity": { "missing": [{ "kind": "originalGravity" }] },
+        "alcohol_by_volume": { "missing": [{ "kind": "originalGravity" }] },
+        "bitterness_ibu": { "missing": [{ "kind": "originalGravity" }] },
+        "color_ebc": 7.312443,
+        "missing_inputs": [{ "kind": "mashEfficiency" }]
+      },
+      "note": "l'EBC ne dépend pas de l'équipement (C6)"
+    },
+    {
+      "id": "sucre-seul-sans-equipement",
+      "inputs": {
+        "base": "complete",
+        "mash_efficiency_pct": null,
+        "fermentables": [
+          { "name": "Sucre candi clair", "kind": "sugar", "mass_grams": 500, "color_ebc": 2, "yield_percent": 100 }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0083842,
+        "final_gravity": 1.0018445,
+        "alcohol_by_volume": 0.8583354,
+        "color_ebc": 0.9211503,
+        "missing_inputs": []
+      },
+      "note": "sans malt, le rendement d'empâtage n'est pas demandé"
+    },
+    {
+      "id": "rendement-empatage-nul",
+      "inputs": { "base": "complete", "mash_efficiency_pct": 0 },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0083842,
+        "color_ebc": 7.312443
+      },
+      "note": "rendement 0 % : OG des seuls sucres, valide"
+    },
+    {
+      "id": "aucun-fermentescible",
+      "inputs": { "base": "complete", "fermentables": [] },
+      "expected": {
+        "original_gravity": { "missing": [{ "kind": "fermentables" }] },
+        "final_gravity": { "missing": [{ "kind": "originalGravity" }] },
+        "alcohol_by_volume": { "missing": [{ "kind": "originalGravity" }] },
+        "bitterness_ibu": { "missing": [{ "kind": "originalGravity" }] },
+        "color_ebc": { "missing": [{ "kind": "fermentables" }] },
+        "missing_inputs": [{ "kind": "fermentables" }]
+      }
+    },
+    {
+      "id": "rendement-extrait-absent",
+      "inputs": {
+        "base": "complete",
+        "fermentables": [
+          { "name": "Pils", "kind": "malt", "mass_grams": 5000, "color_ebc": 3.9 },
+          { "name": "Sucre candi clair", "kind": "sugar", "mass_grams": 500, "color_ebc": 2 }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": {
+          "missing": [{ "kind": "extractYield", "items": [[0, "Pils"], [1, "Sucre candi clair"]] }]
+        },
+        "final_gravity": { "missing": [{ "kind": "originalGravity" }] },
+        "bitterness_ibu": { "missing": [{ "kind": "originalGravity" }] },
+        "color_ebc": 7.312443
+      },
+      "note": "un sucre demande aussi son rendement d'extrait : aucun 100 % par défaut"
+    },
+    {
+      "id": "couleur-absente",
+      "inputs": {
+        "base": "complete",
+        "fermentables": [
+          { "name": "Pils", "kind": "malt", "mass_grams": 5000, "color_ebc": 3.9, "yield_percent": 80 },
+          { "name": "Sucre candi clair", "kind": "sugar", "mass_grams": 500, "yield_percent": 100 }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0586896,
+        "bitterness_ibu": 33.8308043,
+        "color_ebc": { "missing": [{ "kind": "color", "items": [[1, "Sucre candi clair"]] }] },
+        "missing_inputs": [{ "kind": "color", "items": [[1, "Sucre candi clair"]] }]
+      }
+    },
+    {
+      "id": "alpha-absent",
+      "inputs": {
+        "base": "complete",
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "use": "boil", "form": "pellet", "minutes": 60 },
+          { "name": "Saaz", "mass_grams": 20, "alpha_percent": 3.5, "use": "boil", "form": "whole", "minutes": 15 },
+          { "name": "Citra", "mass_grams": 50, "use": "dryHop", "form": "pellet", "minutes": 4320 }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0586896,
+        "bitterness_ibu": { "missing": [{ "kind": "hopAlpha", "items": [[0, "Magnum"]] }] },
+        "hop_ibu": []
+      },
+      "note": "le Citra à cru n'a pas d'alpha et n'en demande pas"
+    },
+    {
+      "id": "duree-absente",
+      "inputs": {
+        "base": "complete",
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "alpha_percent": 10, "use": "boil", "form": "pellet", "minutes": 60 },
+          { "name": "Saaz", "mass_grams": 20, "alpha_percent": 3.5, "use": "boil", "form": "whole" }
+        ]
+      },
+      "expected": {
+        "bitterness_ibu": { "missing": [{ "kind": "hopBoilTime", "items": [[1, "Saaz"]] }] }
+      }
+    },
+    {
+      "id": "sans-levure",
+      "inputs": { "base": "complete", "yeasts": [] },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0586896,
+        "final_gravity": { "missing": [{ "kind": "yeast" }] },
+        "alcohol_by_volume": { "missing": [{ "kind": "yeast" }] },
+        "bitterness_ibu": 33.8308043,
+        "missing_inputs": [{ "kind": "yeast" }]
+      }
+    },
+    {
+      "id": "attenuation-absente",
+      "inputs": {
+        "base": "complete",
+        "yeasts": [{ "name": "US-05" }, { "name": "S-33", "attenuation_percent": 50 }]
+      },
+      "expected": {
+        "final_gravity": { "missing": [{ "kind": "yeastAttenuation", "items": [[0, "US-05"]] }] },
+        "alcohol_by_volume": { "missing": [{ "kind": "yeastAttenuation", "items": [[0, "US-05"]] }] }
+      },
+      "note": "la seconde levure ne remplace pas la première (A3)"
+    },
+    {
+      "id": "attenuation-nulle",
+      "inputs": { "base": "complete", "yeasts": [{ "name": "Levure morte", "attenuation_percent": 0 }] },
+      "tolerance": 1e-06,
+      "expected": {
+        "final_gravity": 1.0586896,
+        "alcohol_by_volume": 0
+      },
+      "note": "FG = OG, degré 0"
+    },
+    {
+      "id": "sans-houblon-sans-equipement",
+      "inputs": { "base": "complete", "mash_efficiency_pct": null, "hops": [] },
+      "tolerance": 1e-12,
+      "expected": {
+        "original_gravity": { "missing": [{ "kind": "mashEfficiency" }] },
+        "bitterness_ibu": 0,
+        "hop_ibu": []
+      },
+      "note": "sans houblon, 0 IBU sans attendre l'OG (C5)"
+    },
+    {
+      "id": "houblons-hors-ebullition-sans-equipement",
+      "inputs": {
+        "base": "complete",
+        "mash_efficiency_pct": null,
+        "hops": [
+          { "name": "Citra", "mass_grams": 50, "use": "afterBoil", "form": "pellet" },
+          { "name": "Citra", "mass_grams": 50, "use": "dryHop", "form": "pellet", "minutes": 4320 }
+        ]
+      },
+      "tolerance": 1e-12,
+      "expected": {
+        "bitterness_ibu": 0,
+        "hop_ibu": [0, 0]
+      }
+    },
+    {
+      "id": "recette-vide",
+      "inputs": { "fermentables": [], "hops": [], "yeasts": [] },
+      "expected": {
+        "original_gravity": { "missing": [{ "kind": "batchVolume" }, { "kind": "fermentables" }] },
+        "final_gravity": { "missing": [{ "kind": "originalGravity" }, { "kind": "yeast" }] },
+        "alcohol_by_volume": { "missing": [{ "kind": "originalGravity" }, { "kind": "yeast" }] },
+        "bitterness_ibu": { "missing": [{ "kind": "batchVolume" }] },
+        "color_ebc": { "missing": [{ "kind": "batchVolume" }, { "kind": "fermentables" }] },
+        "missing_inputs": [{ "kind": "batchVolume" }, { "kind": "fermentables" }, { "kind": "yeast" }]
+      }
+    },
+    {
+      "id": "houblon-plus-long-que-l-ebullition",
+      "inputs": { "base": "complete", "boil_time_min": 45 },
+      "expected": {
+        "hops_longer_than_boil": [[0, "Magnum"]]
+      },
+      "note": "avertissement U6 ; le calcul de l'IBU garde la durée du houblon"
+    }
+  ],
+  "invalid": [
+    { "inputs": { "base": "complete", "batch_volume_l": 0 }, "reason": "volume nul" },
+    { "inputs": { "base": "complete", "boil_time_min": -1 }, "reason": "ébullition négative" },
+    { "inputs": { "base": "complete", "mash_efficiency_pct": 120 }, "reason": "rendement d'empâtage > 100 %" },
+    {
+      "inputs": {
+        "base": "complete",
+        "fermentables": [{ "name": "Pils", "kind": "malt", "mass_grams": 5000, "color_ebc": 3.9, "yield_percent": 130 }]
+      },
+      "reason": "rendement d'extrait > 100 %"
+    },
+    {
+      "inputs": {
+        "base": "complete",
+        "fermentables": [{ "name": "Pils", "kind": "malt", "mass_grams": -1, "color_ebc": 3.9, "yield_percent": 80 }]
+      },
+      "reason": "masse négative"
+    },
+    {
+      "inputs": {
+        "base": "complete",
+        "fermentables": [{ "name": "Pils", "kind": "malt", "mass_grams": 5000, "color_ebc": -2, "yield_percent": 80 }]
+      },
+      "reason": "couleur négative"
+    },
+    {
+      "inputs": {
+        "base": "complete",
+        "hops": [{ "name": "Magnum", "mass_grams": 30, "alpha_percent": 150, "use": "boil", "form": "pellet", "minutes": 60 }]
+      },
+      "reason": "alpha > 100 %"
+    },
+    {
+      "inputs": {
+        "base": "complete",
+        "hops": [{ "name": "Magnum", "mass_grams": 30, "alpha_percent": 10, "use": "boil", "form": "pellet", "minutes": -10 }]
+      },
+      "reason": "durée négative"
+    },
+    {
+      "inputs": { "base": "complete", "yeasts": [{ "name": "US-05", "attenuation_percent": -5 }] },
+      "reason": "atténuation négative"
+    },
+    {
+      "inputs": {
+        "base": "complete",
+        "batch_volume_l": 1,
+        "fermentables": [{ "name": "Pils", "kind": "malt", "mass_grams": 5000, "color_ebc": 3.9, "yield_percent": 80 }]
+      },
+      "reason": "OG prévue au-delà de 1.200"
+    }
+  ]
+}

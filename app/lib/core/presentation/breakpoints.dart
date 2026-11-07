@@ -32,3 +32,15 @@ enum WindowSize {
     return WindowSize.expanded;
   }
 }
+
+/// Largeur d'un éditeur plein écran (recette, équipement) : formulaire et, au-delà de
+/// [kExpandedMinWidth], panneau des calculs à droite.
+const double kEditorMaxWidth = 920;
+
+/// Largeur du panneau des calculs à droite de l'éditeur de recette, au-delà de
+/// [kExpandedMinWidth].
+const double kCalculationPanelWidth = 340;
+
+/// Largeur minimale d'une tuile de calcul pour un texte à 100 % ; multipliée par
+/// l'échelle du texte pour que « 1057,9 » ne se coupe pas.
+const double kCalculationTileMinWidth = 120;

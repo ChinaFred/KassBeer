@@ -4,6 +4,28 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-08
+
+### v0.1.7 — fonctionnel
+
+Équipements et recettes arrivent, premier incrément de la version 1 (v0.2 du découpage).
+Chaque brasseur décrit ses équipements et ses recettes, et lit ceux du groupe sans pouvoir
+les modifier. L'éditeur de recette affiche, à chaque saisie, la densité initiale, la densité
+finale, le degré, l'amertume (IBU) et la couleur (EBC). Quand une donnée manque, l'écran dit
+laquelle, sans valeur de remplacement. Une recette se duplique à son nom. La suppression d'un
+équipement annonce les recettes qui l'utilisent. Tout marche hors ligne sur l'APK.
+
+### v0.1.7 — technique
+
+`brewing/` reçoit la densité finale prévue par l'atténuation (fixture tirée de trois fiches),
+la clé d'ingrédient `ingredientKey` et le diagnostic `computeRecipe`. Les valeurs stockées
+passent par `fromStored` ; `extract` et `first_wort` sortent du modèle. `recipes/` et
+`equipment/` reçoivent `owner_name`, libellé d'affichage égal au nom du jeton, borné aussi
+dans les copies des brassins. Les règles refusent tout nombre non fini ou hors de ±1e9, et un
+rendement d'empâtage hors de 0 à 100 %. `app/` dépend de `brewing` ; aucun autre paquet ne change
+dans `pubspec.lock`. Le découpage de la version 1 et ses décisions D1 à D8 entrent dans
+`projet.md`.
+
 ## 2026-11-07
 
 ### v0.1.6 — technique

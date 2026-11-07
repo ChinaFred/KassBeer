@@ -1,0 +1,106 @@
+{
+  "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
+  "formula": "FG = 1 + (OG − 1) × (1 − atténuation / 100)",
+  "hypothesis": "Les fiches ne donnent pas l'atténuation de la levure. Pour les cas tirés des fiches, l'atténuation est l'atténuation apparente des densités mesurées de la fiche, (OG − FG) / (OG − 1), arrondie au dixième de pour cent ; le test vérifie que la FG de la fiche est retrouvée.",
+  "fiche_tolerance_note": "L'arrondi de l'atténuation au dixième écarte la FG d'au plus (OG − 1) × 0,0005, soit 0,0000325 à 1.065. 0,0001 couvre cet arrondi.",
+  "cases": [
+    {
+      "id": "ale-blonde-140724",
+      "source": "Ale blonde 140724 - Pale ale",
+      "hypotheses": "densité mesurée de la chronologie (1.052) et FG 1.023 ; atténuation apparente 55,8 %",
+      "inputs": {
+        "original_gravity": 1.052,
+        "attenuation_percent": 55.8
+      },
+      "expected": 1.022984,
+      "tolerance": 1e-06,
+      "fiche_value": 1.023,
+      "fiche_tolerance": 0.0001
+    },
+    {
+      "id": "twin-bottle-4",
+      "source": "21-09-25 Twin bottle 4",
+      "hypotheses": "densité mesurée 1.063 (la fiche vise 1106) et FG 1.010 ; atténuation apparente 84,1 %",
+      "inputs": {
+        "original_gravity": 1.063,
+        "attenuation_percent": 84.1
+      },
+      "expected": 1.010017,
+      "tolerance": 1e-06,
+      "fiche_value": 1.01,
+      "fiche_tolerance": 0.0001
+    },
+    {
+      "id": "blonde-triple",
+      "source": "Blonde triple décembre 22 - bonne - mousse tient pas",
+      "hypotheses": "densités 1065 et 1001 de la colonne « Densité (1000 +) » ; atténuation apparente 98,5 %",
+      "inputs": {
+        "original_gravity": 1.065,
+        "attenuation_percent": 98.5
+      },
+      "expected": 1.000975,
+      "tolerance": 1e-06,
+      "fiche_value": 1.001,
+      "fiche_tolerance": 0.0001
+    },
+    {
+      "id": "attenuation-nulle",
+      "inputs": {
+        "original_gravity": 1.06,
+        "attenuation_percent": 0
+      },
+      "expected": 1.06,
+      "tolerance": 1e-12,
+      "note": "FG = OG, degré 0"
+    },
+    {
+      "id": "attenuation-totale",
+      "inputs": {
+        "original_gravity": 1.06,
+        "attenuation_percent": 100
+      },
+      "expected": 1.0,
+      "tolerance": 1e-12
+    },
+    {
+      "id": "eau",
+      "inputs": {
+        "original_gravity": 1.0,
+        "attenuation_percent": 78
+      },
+      "expected": 1.0,
+      "tolerance": 1e-12
+    }
+  ],
+  "invalid": [
+    {
+      "inputs": {
+        "original_gravity": 1.06,
+        "attenuation_percent": 120
+      },
+      "reason": "atténuation > 100 %"
+    },
+    {
+      "inputs": {
+        "original_gravity": 1.06,
+        "attenuation_percent": -1
+      },
+      "reason": "atténuation négative"
+    },
+    {
+      "inputs": {
+        "original_gravity": 1.61,
+        "attenuation_percent": 78
+      },
+      "reason": "OG hors intervalle"
+    },
+    {
+      "inputs": {
+        "original_gravity": 0.995,
+        "attenuation_percent": 78
+      },
+      "reason": "OG sous 1.000 : la FG prévue dépasserait l'OG"
+    }
+  ],
+  "divergences": []
+}

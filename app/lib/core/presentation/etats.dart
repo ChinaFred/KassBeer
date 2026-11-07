@@ -92,10 +92,15 @@ class EtatErreur extends StatelessWidget {
     required this.onRetry,
     this.retrying = false,
     this.secondaryAction,
+    this.retryingLabel = 'Vérification en cours',
   });
 
   final String message;
   final VoidCallback onRetry;
+
+  /// Libellé du bouton pendant la nouvelle lecture (« Lecture en cours » pour une
+  /// liste).
+  final String retryingLabel;
 
   /// Une nouvelle lecture est en cours : le bouton attend.
   final bool retrying;
@@ -132,7 +137,7 @@ class EtatErreur extends StatelessWidget {
               FilledButton(
                 onPressed: retrying ? null : onRetry,
                 child: retrying
-                    ? const IndicateurBouton(label: 'Vérification en cours')
+                    ? IndicateurBouton(label: retryingLabel)
                     : const Text('Réessayer'),
               ),
               if (secondaryAction != null) ...[

@@ -9,11 +9,16 @@ import '../../features/auth/presentation/loading_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/not_invited_screen.dart';
 import '../../features/brews/presentation/brews_screen.dart';
-import '../../features/equipment/presentation/equipment_screen.dart';
+import '../../features/equipment/presentation/equipment_detail_screen.dart';
+import '../../features/equipment/presentation/equipment_editor_screen.dart';
+import '../../features/equipment/presentation/equipment_list_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
-import '../../features/recipes/presentation/recipes_screen.dart';
+import '../../features/recipes/presentation/recipe_detail_screen.dart';
+import '../../features/recipes/presentation/recipe_editor_screen.dart';
+import '../../features/recipes/presentation/recipes_list_screen.dart';
 import '../presentation/app_shell.dart';
 import '../presentation/etats.dart';
+import 'page_de_coquille.dart';
 import 'routes.dart';
 
 /// Chemin où envoyer [location] selon [access], ou `null` pour y rester.
@@ -108,28 +113,79 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.accessError,
         builder: (_, _) => const AccessErrorScreen(),
       ),
+      // Éditeurs plein écran, hors de la coquille. Déclarés avant elle : sans quoi
+      // « nouvelle » serait lu comme l'identifiant d'une recette.
+      GoRoute(
+        path: AppRoutes.newRecipe,
+        builder: (_, _) => const RecipeEditorScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.recipes}/:id/modifier',
+        builder: (_, state) =>
+            RecipeEditorScreen(id: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: AppRoutes.newEquipment,
+        builder: (_, _) => const EquipmentEditorScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.equipment}/:id/modifier',
+        builder: (_, state) =>
+            EquipmentEditorScreen(id: state.pathParameters['id']),
+      ),
       ShellRoute(
-        builder: (context, state, child) =>
-            AppShell(location: state.uri.path, child: child),
+        builder: (context, state, child) {
+          final page = state.topRoute;
+          return AppShell(
+            location: state.uri.path,
+            title: page is PageDeCoquille ? page.titre : "Kass'Beer",
+            backTo: page is PageDeCoquille ? page.retour : null,
+            child: child,
+          );
+        },
         routes: [
-          GoRoute(
+          PageDeCoquille(
             path: AppRoutes.recipes,
-            builder: (_, _) => const RecipesScreen(),
+            titre: 'Recettes',
+            builder: (_, _) => const RecipesListScreen(),
+            routes: [
+              PageDeCoquille(
+                path: ':id',
+                titre: 'Recette',
+                retour: AppRoutes.recipes,
+                builder: (_, state) =>
+                    RecipeDetailScreen(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
-          GoRoute(
+          PageDeCoquille(
             path: AppRoutes.brews,
+            titre: 'Brassins',
             builder: (_, _) => const BrewsScreen(),
           ),
-          GoRoute(
+          PageDeCoquille(
             path: AppRoutes.equipment,
-            builder: (_, _) => const EquipmentScreen(),
+            titre: 'Équipements',
+            builder: (_, _) => const EquipmentListScreen(),
+            routes: [
+              PageDeCoquille(
+                path: ':id',
+                titre: 'Équipement',
+                retour: AppRoutes.equipment,
+                builder: (_, state) =>
+                    EquipmentDetailScreen(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
-          GoRoute(
+          PageDeCoquille(
             path: AppRoutes.admin,
+            titre: 'Admin',
             builder: (_, _) => const AdminScreen(),
             routes: [
-              GoRoute(
+              PageDeCoquille(
                 path: 'membres',
+                titre: 'Membres',
+                retour: AppRoutes.admin,
                 builder: (_, _) => const MembersScreen(),
               ),
             ],

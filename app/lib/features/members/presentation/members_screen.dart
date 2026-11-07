@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
+import '../../../core/presentation/etiquette.dart';
+import '../../../core/presentation/feuille_ou_dialogue.dart';
 import '../../../core/providers.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/member.dart';
@@ -26,8 +29,6 @@ class MembersScreen extends ConsumerWidget {
   static String removedMessage(String email) => '$email est retiré.';
   static const emptyMessage =
       'Aucun membre. Appuyez sur Inviter pour ajouter un compte.';
-  static const staleMessage =
-      'Mise à jour de la liste impossible. Elle peut ne plus être à jour.';
   static const selfNote = 'Vous ne pouvez pas vous retirer vous-même';
   static const otherAdminNote =
       'Un administrateur se retire depuis la console Firebase.';
@@ -40,39 +41,12 @@ class MembersScreen extends ConsumerWidget {
     final access = ref.read(accessStateProvider);
     if (access is! AccessGranted) return;
     final existing = {for (final m in members) m.email};
-    final compact = MediaQuery.sizeOf(context).width < kCompactMaxWidth;
     final messenger = ScaffoldMessenger.of(context);
 
-    final request = compact
-        ? await showModalBottomSheet<InviteRequest>(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            showDragHandle: true,
-            builder: (context) => Padding(
-              padding: EdgeInsets.fromLTRB(
-                24,
-                0,
-                24,
-                24 + MediaQuery.viewInsetsOf(context).bottom,
-              ),
-              child: SingleChildScrollView(
-                child: InviteMemberForm(existingEmails: existing),
-              ),
-            ),
-          )
-        : await showDialog<InviteRequest>(
-            context: context,
-            builder: (context) => Dialog(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: kDialogMaxWidth),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: InviteMemberForm(existingEmails: existing),
-                ),
-              ),
-            ),
-          );
+    final request = await showFeuilleOuDialogue<InviteRequest>(
+      context: context,
+      builder: (context) => InviteMemberForm(existingEmails: existing),
+    );
     if (request == null) return;
 
     // L'écriture locale est faite à l'appel : le formulaire est déjà fermé, et la
@@ -163,6 +137,7 @@ class MembersScreen extends ConsumerWidget {
       AsyncError() when members == null => EtatErreur(
         message: loadError,
         retrying: membersAsync.isLoading,
+        retryingLabel: 'Lecture en cours',
         onRetry: () => ref.invalidate(membersListProvider),
       ),
       _ when members == null => const EtatChargement(
@@ -172,7 +147,7 @@ class MembersScreen extends ConsumerWidget {
         padding: EdgeInsets.only(top: 8, bottom: compact ? 96 : 24),
         children: [
           if (membersAsync.hasError)
-            _StaleListNotice(
+            BandeauListePerimee(
               retrying: membersAsync.isLoading,
               onRetry: () => ref.invalidate(membersListProvider),
             ),
@@ -264,10 +239,10 @@ class _MemberRow extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 4,
                   children: [
-                    _Tag(label: _roleLabel),
-                    if (isSelf) const _Tag(label: 'Vous'),
+                    Etiquette(label: _roleLabel),
+                    if (isSelf) const Etiquette(label: 'Vous'),
                     if (member.hasPendingWrites)
-                      const _Tag(label: 'En attente du réseau'),
+                      const Etiquette(label: 'En attente du réseau'),
                   ],
                 ),
                 if (!_removable) ...[
@@ -290,73 +265,6 @@ class _MemberRow extends StatelessWidget {
               icon: const Icon(Icons.person_remove),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// Panne après une première liste lue : la liste reste affichée.
-class _StaleListNotice extends StatelessWidget {
-  const _StaleListNotice({required this.retrying, required this.onRetry});
-
-  final bool retrying;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      liveRegion: true,
-      container: true,
-      child: Material(
-        color: scheme.errorContainer,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-          child: Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            children: [
-              Text(
-                MembersScreen.staleMessage,
-                style: TextStyle(color: scheme.onErrorContainer),
-              ),
-              TextButton(
-                onPressed: retrying ? null : onRetry,
-                child: retrying
-                    ? const IndicateurBouton(label: 'Lecture en cours')
-                    : const Text('Réessayer'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Étiquette non interactive.
-class _Tag extends StatelessWidget {
-  const _Tag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelMedium?.copyWith(color: scheme.onSecondaryContainer),
-        ),
       ),
     );
   }

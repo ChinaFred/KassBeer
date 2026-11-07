@@ -11,6 +11,14 @@ abstract final class AppRoutes {
   static const admin = '/admin';
   static const adminMembers = '/admin/membres';
 
+  static const newRecipe = '/recettes/nouvelle';
+  static String recipe(String id) => '$recipes/$id';
+  static String editRecipe(String id) => '$recipes/$id/modifier';
+
+  static const newEquipment = '/equipements/nouveau';
+  static String equipmentItem(String id) => '$equipment/$id';
+  static String editEquipment(String id) => '$equipment/$id/modifier';
+
   /// Écrans d'accès : un membre qui y arrive repart vers l'accueil.
   static const accessScreens = {loading, login, notInvited, accessError};
 

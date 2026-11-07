@@ -10,6 +10,8 @@ import 'package:kass_beer/features/auth/presentation/not_invited_screen.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
 
+import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
+
 import 'support/fakes.dart';
 
 void main() {
@@ -87,10 +89,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Se connecter avec Google'));
       await tester.pumpAndSettle();
-      expect(
-        find.text('Les recettes arriveront dans une prochaine version.'),
-        findsOneWidget,
-      );
+      expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
     });
   });
 
@@ -163,10 +162,7 @@ void main() {
         app.members.lookup('brasseur@exemple.fr').subscriptions,
         greaterThan(before),
       );
-      expect(
-        find.text('Les recettes arriveront dans une prochaine version.'),
-        findsOneWidget,
-      );
+      expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
     });
 
     testWidgets('membre retiré : bascule à la lecture suivante', (
@@ -176,10 +172,7 @@ void main() {
       await app.pump(tester);
       app.signIn(brewerUser, member: brewerMember);
       await tester.pumpAndSettle();
-      expect(
-        find.text('Les recettes arriveront dans une prochaine version.'),
-        findsOneWidget,
-      );
+      expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
       app.members
           .lookup('brasseur@exemple.fr')
           .add(const MemberLookup(member: null, fromCache: false));
@@ -225,10 +218,7 @@ void main() {
       lookup.add(const MemberLookup(member: brewerMember, fromCache: false));
       await tester.tap(find.text('Réessayer'));
       await tester.pumpAndSettle();
-      expect(
-        find.text('Les recettes arriveront dans une prochaine version.'),
-        findsOneWidget,
-      );
+      expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
     });
 
     testWidgets('session illisible : écran Erreur', (tester) async {
@@ -347,9 +337,6 @@ void main() {
     expect(find.text('Cette page n\'existe pas.'), findsOneWidget);
     await tester.tap(find.text('Revenir à l\'accueil'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Les recettes arriveront dans une prochaine version.'),
-      findsOneWidget,
-    );
+    expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
   });
 }

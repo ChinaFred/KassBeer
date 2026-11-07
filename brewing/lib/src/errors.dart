@@ -51,3 +51,26 @@ void requireRange(String field, num value, num min, num max) {
     );
   }
 }
+
+/// Élément de [values] dont la valeur stockée ([storedValueOf]) vaut [value].
+///
+/// Lève [BrewingInputException] pour le champ [field] si aucun ne correspond ;
+/// son `value` est alors la longueur de [value], jamais le texte stocké.
+T enumFromStored<T>(
+  List<T> values,
+  String Function(T) storedValueOf,
+  String field,
+  String value,
+) {
+  for (final candidate in values) {
+    if (storedValueOf(candidate) == value) return candidate;
+  }
+  // La valeur stockée n'entre pas dans l'erreur : écrite par un autre membre,
+  // elle finirait dans error_reports/. Sa longueur suffit au diagnostic.
+  throw BrewingInputException(
+    field,
+    value.length,
+    'valeur inconnue de ${value.length} caractères, attendu : '
+    '${values.map(storedValueOf).join(', ')}',
+  );
+}

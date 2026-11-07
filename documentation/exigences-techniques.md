@@ -49,11 +49,15 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/providers.dart` | providers des services, fournis par `main.dart` ou par les tests |
 | `lib/core/services/error_report_service.dart` | `ErrorReportService`, `ErrorReportFields` |
 | `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) |
-| `lib/core/presentation/` | `AppShell` (rail défilable), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur`, `IndicateurBouton`), `BandeauHorsLigne`, `LogoKassBeer` |
+| `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour |
+| `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
+| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `lireNombre`, `erreurNombre`), `ChampNombre`, `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, confirmations d'abandon et de suppression), `fiche.dart` (`LigneFiche`, `TitreSection`), `LogoKassBeer` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
-| `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google), état d'accès, écrans Chargement, Connexion, Compte non invité, Erreur |
+| `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
-| `lib/features/admin/`, `recipes/`, `brews/`, `equipment/` | écran Admin ; écrans à venir |
+| `lib/features/equipment/` | `EquipmentRepository` (`equipment/`), `Equipment`, `EquipmentContent`, `EquipmentKind` ; liste, fiche, éditeur |
+| `lib/features/recipes/` | `RecipesRepository` (`recipes/`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document ↔ `brewing/`, tri, duplication ; liste, fiche, éditeur, formulaires des lignes, vue des calculs |
+| `lib/features/admin/`, `brews/` | écran Admin ; Brassins à venir |
 
 **Configuration Firebase.** Aucune valeur dans le code. `firebase_options.dart` lit, par
 `--dart-define-from-file=firebase.env.json` (fichier ignoré par Git ; modèle
@@ -90,12 +94,15 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 
 | Provider | Type | Rôle |
 |---|---|---|
-| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
+| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `recipesRepositoryProvider`, `equipmentRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
 | `sessionUserProvider` | `StreamProvider<SessionUser?>` | `authStateChanges()` |
 | `memberLookupProvider(emailKey)` | `StreamProvider.family<MemberLookup, String>` | `members/{email en minuscules}`, avec les métadonnées |
 | `accessStateProvider` | `Provider<AccessState>` | `AccessLoading`, `AccessSignedOut`, `AccessNotInvited`, `AccessFailed`, `AccessGranted(user, member, offline)` |
 | `accessRefreshingProvider` | `Provider<bool>` | nouvelle lecture en cours (boutons « Réessayer », « Vérifier à nouveau ») |
 | `membersListProvider` | `StreamProvider.autoDispose<List<Member>>` | `members/` entier, admin seul |
+| `grantedAccessProvider` | `Provider<AccessGranted?>` | membre connecté (uid, nom, `offline`), `null` pendant une transition |
+| `recipesListProvider` | `StreamProvider.autoDispose<ListeLue<Recipe>>` | `recipes/` entier, avec `fromCache` |
+| `equipmentListProvider` | `StreamProvider.autoDispose<ListeLue<Equipment>>` | `equipment/` entier, avec `fromCache` |
 | `routerProvider` | `Provider<GoRouter>` | routeur, rafraîchi à chaque changement de `accessStateProvider` |
 
 Aucun de ces providers ne réessaie seul (`retry` rend `null`) : une panne s'affiche, et
@@ -114,6 +121,68 @@ que `hasPendingWrites` est vrai. Un refus du serveur est rapporté par le dépô
 l'écran. L'invitation écrit `email`, `role`, `display_name` (omis s'il est vide),
 `invited_at` = `FieldValue.serverTimestamp()`, `invited_by` = uid de l'admin. Le doublon se
 vérifie sur la liste déjà lue ; les règles refusent de toute façon de récrire un membre.
+
+**Recettes et équipements.** `FirestoreRecipesRepository` et `FirestoreEquipmentRepository`
+écoutent la collection entière avec `includeMetadataChanges: true` et rendent une
+`ListeLue` : chaque document lu, ou illisible, et `fromCache`. Un document illisible
+(champ obligatoire absent, type inattendu, valeur stockée inconnue comme `extract`) est
+rapporté (`recipes.read`, `equipment.read`) et s'affiche « Recette illisible » : aucune
+valeur par défaut ne le complète. Les fiches et les éditeurs cherchent leur document dans
+cette liste : absent d'une lecture du serveur, il « n'existe pas ou a été supprimé » ; absent
+du cache seul, la page attend le serveur en ligne et affiche « indisponible hors ligne » hors
+ligne (`AccessGranted.offline`). Les fiches lisent aussi la liste des équipements (calculs)
+et la fiche d'un équipement celle des recettes (annonce E9).
+
+Écritures, toutes faites dans le cache dès l'appel. Créer, modifier et dupliquer attendent
+d'abord le nom du jeton, 3 s au plus (« Nom de l'auteur ») ; puis l'écran se ferme sans
+attendre le serveur. Supprimer n'attend rien :
+
+| Action | Écriture |
+|---|---|
+| Créer | `doc()` (identifiant créé par l'appareil, connu avant la réponse du serveur), `set` des champs saisis, `owner_uid`, `owner_name` s'il existe, `created_at` et `updated_at` = `serverTimestamp()` |
+| Modifier | `update` des champs saisis, `owner_name` réécrit ou retiré, `updated_at` = `serverTimestamp()` ; ni `owner_uid` ni `created_at` ne sont écrits. Un champ vidé est retiré (`FieldValue.delete()`) |
+| Dupliquer | création d'une copie de `RecipeContent.duplicate()` au nom du lecteur ; la source n'est pas écrite |
+| Supprimer | `delete` ; une recette qui cite un équipement supprimé n'est pas écrite |
+
+`written` (création) ou la Future rendue se termine à la réponse du serveur ; un refus est
+rapporté par le dépôt, puis annoncé par `suivreEcriture` (« L'enregistrement de « {nom} » a
+échoué. »). Aucun écran n'écrit un état propre au lecteur : la recherche et le filtre « Les
+miennes » restent dans l'écran, les calculs se recalculent à chaque affichage.
+
+**Nom de l'auteur.** Avant d'enregistrer, l'écran lit `AuthRepository.currentTokenName()` :
+`(await user.getIdTokenResult()).claims['name']`, la valeur que les règles comparent à
+`owner_name` (`displayName` peut en différer jusqu'au rafraîchissement du jeton). Nom absent
+ou vide, ou plus long que 80 caractères (`kOwnerNameMaxLength`, sans quoi les règles
+refuseraient toute écriture de ce compte) : champ absent à la création, retiré à la
+modification. « Dupliquer » ignore un second appui pendant cette attente. Lecture du jeton
+impossible
+ou plus longue que 3 s (`kTokenNameWait`, jeton expiré hors ligne) : l'erreur est rapportée
+(`auth.token_name`) et l'enregistrement part sans nom au lieu d'attendre le réseau.
+
+**Conversion document ↔ `brewing/`.** Écrite une fois, dans `features/recipes/domain/recipe.dart` :
+`fromFirestore` lit chaque ligne par `FermentableKind`, `HopUse` et `HopForm.fromStored` ;
+`toFirestore` écrit `storedValue` et la clé `ingredientKey` de chaque ingrédient ; `toInput`
+construit le `RecipeInput` de `computeRecipe`. Les masses restent en grammes : la saisie en
+kilogrammes des malts et sucres est multipliée par 1 000 dans le formulaire, la durée à cru en
+jours par 1 440 (`minutesParJour`). Les autres ajouts (`OtherUse`) et la forme de la levure
+(`YeastForm` : `dry`, `liquid`) n'entrent dans aucun calcul et sont lus dans l'application.
+
+**Calculs à l'écran.** `evaluerRecette` appelle `computeRecipe` avec le rendement de
+l'équipement de la recette (`EquipementRecette` : aucun, supprimé, indisponible hors ligne,
+illisible, en lecture, connu). `libelleManque` choisit le libellé de chaque `MissingInput`.
+Une `BrewingInputException` affiche « Calcul impossible : {champ} hors des limites. » ;
+elle est rapportée (`recipes.calculation`, nom du champ seul) une fois par recette et par
+champ et par session (`calculationReportsProvider`), et non à chaque frappe ni à chaque
+lecture. La validation du nom d'un ingrédient (K3) appelle `isValidIngredientName` de
+`brewing/`, la même règle que `ingredientKey` : une faute de saisie n'est ni une exception
+ni un rapport.
+
+**Saisie.** `lireNombre` refuse plus d'un séparateur décimal et toute valeur non finie (plus de
+309 chiffres) ; `erreurNombre` refuse aussi un nombre à partir de 1e9 (`kNombreMaximum`), la
+borne des règles, qui l'excluent. Les éditeurs sont des colonnes défilantes (`SingleChildScrollView`), pas des
+`ListView` : chaque champ reste construit, donc validé, même hors de l'écran.
+`validateGranularly` donne le premier champ en erreur, vers lequel l'éditeur défile ; un nom
+manquant reçoit le focus. `LecteurChamps` refuse de même un nombre stocké non fini.
 
 **Journal d'erreurs.** `ErrorReportService.reportError(feature:, error:, stackTrace:,
 context:)` écrit `error_reports/` sans attendre le serveur, avec les seuls champs des règles
@@ -140,20 +209,30 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/non-invite` | Compte non invité | connecté, sans `members/{email}` |
 | `/erreur-acces` | Erreur d'accès | lecture impossible |
 | `/` | redirige vers `/recettes` | membre |
-| `/recettes`, `/brassins`, `/equipements` | écrans à venir, dans la coquille | membre |
+| `/recettes`, `/recettes/:id` | liste et fiche des recettes, dans la coquille | membre |
+| `/recettes/nouvelle`, `/recettes/:id/modifier` | éditeur de recette, plein écran, hors coquille | membre ; la modification d'une recette d'un autre affiche « Seul l'auteur modifie cette recette. » |
+| `/equipements`, `/equipements/:id` | liste et fiche des équipements, dans la coquille | membre |
+| `/equipements/nouveau`, `/equipements/:id/modifier` | éditeur d'équipement, plein écran, hors coquille | membre ; même règle que les recettes |
+| `/brassins` | écran à venir, dans la coquille | membre |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
 
 `redirectFor(access, uri)` (fonction pure, testée) envoie chaque état sur son écran. Un
 chemin demandé pendant un écran d'accès est gardé dans `?depuis=` et retrouvé une fois le
 membre lu ; seuls les chemins internes (`/…`, pas `//…`) sont suivis, et une page d'Admin ne
-s'ouvre pas pour un brasseur. Un chemin inconnu affiche « Cette page n'existe pas. » et
+s'ouvre pas pour un brasseur. Les éditeurs plein écran sont déclarés avant la coquille :
+`/recettes/nouvelle` n'est pas lu comme l'identifiant d'une recette. Chaque page de la coquille
+est une `PageDeCoquille` (titre, retour). Un chemin inconnu affiche « Cette page n'existe pas. » et
 « Revenir à l'accueil ». Le routeur ne protège aucune donnée : `firestore.rules` le fait.
 
 **Tests.** `app/test/` : écrans et contrôle d'accès avec des doubles des dépôts
 (`test/support/fakes.dart`, sans Firebase), `redirectFor`, `ErrorReportFields`,
-`FirestoreMembersRepository` sur `fake_cloud_firestore`, attente du serveur sous
-`fake_async`, `FirebaseEnv`.
+`FirestoreMembersRepository`, `FirestoreRecipesRepository` et `FirestoreEquipmentRepository`
+sur `fake_cloud_firestore` (création, modification sans toucher `owner_uid` ni `created_at`,
+`owner_name`, duplication, suppression, refus rapporté, document illisible), conversion
+document ↔ `brewing/`, lecture et affichage des nombres, écrans Recettes et Équipements
+(états, lecture seule, « À compléter », éditeur), attente du serveur sous `fake_async`,
+`FirebaseEnv`.
 
 ## Modèle de données
 
@@ -162,7 +241,9 @@ températures en °C (`_c`), densités en SG décimal, couleur en EBC, durées e
 (`_min`), pourcentages de 0 à 100 (`_pct`). Les dates `created_at` et `updated_at` sont
 posées par `serverTimestamp()` ; les règles vérifient qu'elles valent l'heure de la requête.
 
-Les règles refusent tout champ de premier niveau absent des listes ci-dessous. Les éléments
+Les règles refusent tout champ de premier niveau absent des listes ci-dessous. Tout nombre
+de premier niveau est fini et strictement compris entre -1e9 et 1e9 (`optNumber`) ;
+`mash_efficiency_pct` est en plus borné de 0 à 100. Les éléments
 d'une liste (ingrédients, paliers) ne peuvent pas être inspectés par les règles : le dépôt
 de données les écrit à partir des types de `brewing/`, sans prix (P5).
 
@@ -190,24 +271,53 @@ Lisible par tous les membres (partagée au groupe). Aucun prix.
 | Champ | Type |
 |---|---|
 | `owner_uid` | string, obligatoire, uid de l'auteur, immuable |
+| `owner_name` | string, facultatif, 1 à 80 caractères : nom de l'auteur affiché au groupe, égal au nom du jeton de celui qui écrit |
 | `name` | string, obligatoire, 1 à 120 caractères |
 | `style` | string \| null (120) |
 | `notes` | string \| null (10 000) |
 | `batch_volume_l` | number \| null : volume visé en fermenteur |
 | `boil_time_min` | number \| null |
 | `equipment_id` | string \| null : profil d'équipement prévu |
-| `fermentables` | list<map> \| null (50) : `key`, `name`, `kind` (`grain`, `sugar`, `extract`), `weight_g`, `ebc`, `yield_pct` |
-| `hops` | list<map> \| null (50) : `key`, `name`, `weight_g`, `alpha_pct`, `use` (`boil`, `whirlpool`, `dry_hop`, `first_wort`), `time_min`, `form` (`pellet`, `leaf`) |
-| `others` | list<map> \| null (50) : épices et ajouts, `key`, `name`, `weight_g`, `use`, `time_min` |
-| `yeasts` | list<map> \| null (10) : `key`, `name`, `attenuation_pct`, `form` |
+| `fermentables` | list<map> \| null (50) : `key`, `name`, `kind` (`grain`, `sugar`), `weight_g`, `ebc`, `yield_pct` |
+| `hops` | list<map> \| null (50) : `key`, `name`, `weight_g`, `alpha_pct`, `use` (`boil`, `whirlpool`, `dry_hop`), `time_min` (à cru : jours saisis × 1 440), `form` (`pellet`, `leaf`) |
+| `others` | list<map> \| null (50) : épices et ajouts, `key`, `name`, `weight_g`, `use` (`mash`, `boil`, `after_boil`, `fermentation`, `bottling`), `time_min` |
+| `yeasts` | list<map> \| null (10) : `key`, `name`, `attenuation_pct`, `form` (`dry`, `liquid`) ; l'éditeur en écrit une au plus |
 | `mash_steps` | list<map> \| null (20) : `name`, `temp_c`, `duration_min` |
 | `imported_from` | string \| null (200) : nom de la fiche Excel d'origine |
 | `created_at`, `updated_at` | timestamp, obligatoires |
 
-`key` est la clé d'ingrédient (`ingredientKey`) : nature et nom normalisés, en minuscules,
-sans accents, mots reliés par des tirets (`malt-pilsner`, `houblon-saaz`). Elle relie
+`key` est la clé d'ingrédient, calculée par `ingredientKey` de `brewing/` à chaque
+enregistrement et jamais saisie : préfixe de nature (`malt`, `sucre`, `houblon`, `levure`,
+`ajout`) et nom en minuscules, sans accents, chaque suite de caractères hors lettre et chiffre
+remplacée par un tiret, sans tiret en bord, 100 caractères au plus (« Pils » → `malt-pils`,
+« Sucre candi ambré » → `sucre-candi-ambre`). Le préfixe n'est pas répété quand le nom
+commence par lui. Deux lignes de même nom, à la casse près, partagent la clé. Elle relie
 l'ingrédient au prix et au stock du lecteur. Densités, degré, IBU, EBC et coût ne sont pas
 stockés : `brewing/` les calcule à l'affichage.
+
+Les valeurs `extract` (fermentescible) et `first_wort` (houblon) sont retirées du modèle en
+v0.1.7 (arbitrage A5) ; aucune recette n'en contenait. La correspondance avec les enums de
+`brewing/` est écrite une seule fois, dans ces enums : `FermentableKind.fromStored`
+(`grain` → `malt`, `sugar` → `sugar`), `HopUse.fromStored` (`boil` → `boil`, `whirlpool` →
+`afterBoil`, `dry_hop` → `dryHop`), `HopForm.fromStored` (`pellet` → `pellet`, `leaf` →
+`whole`), et `storedValue` en sens inverse. Une valeur inconnue lève `BrewingInputException`,
+dont `value` est la longueur du texte stocké : écrit par un autre membre, ce texte n'entre
+jamais dans `error_reports/`. `OtherUse`, `YeastForm` et `EquipmentKind` de l'application
+suivent la même règle (`DocumentIllisible` sans la valeur).
+Les règles n'inspectent pas les listes : elles acceptent une valeur retirée, que le dépôt de
+données refuse à la lecture par ces fonctions.
+
+`owner_name` est écrit par l'auteur à chaque enregistrement, depuis le nom que porte son
+jeton d'identité (`claims['name']`, voir « Nom de l'auteur ») ; un compte sans nom n'écrit pas
+le champ. Une copie (« Dupliquer ») porte le nom de
+celui qui copie. Les règles refusent une écriture dont `owner_name` diffère du nom du jeton.
+Une modification qui garderait l'ancien nom après un changement de nom Google est donc
+refusée : le dépôt réécrit le nom à chaque modification, ou retire le champ quand le nom est
+vide.
+
+`owner_name` n'est qu'un libellé d'affichage déclaré par l'auteur. Aucun droit, aucun filtre
+(« Les miennes »), aucune suppression, aucun tri (« les miens d'abord ») ne s'appuie dessus :
+tout cela utilise `owner_uid`.
 
 ### `equipment/{equipmentId}`
 
@@ -216,9 +326,10 @@ Lisible par le groupe (ADR-001, arbitrage 5).
 | Champ | Type |
 |---|---|
 | `owner_uid` | string, obligatoire, immuable |
+| `owner_name` | string, facultatif, 1 à 80 caractères : comme dans `recipes/` |
 | `name` | string, obligatoire (120) |
 | `kind` | string, obligatoire : `multi_vessel` (cuves séparées) ou `all_in_one` (Grainfather) |
-| `mash_efficiency_pct` | number \| null : rendement d'empâtage |
+| `mash_efficiency_pct` | number \| null : rendement d'empâtage, de 0 à 100 (règles) |
 | `mash_tun_volume_l`, `kettle_volume_l` | number \| null |
 | `mash_tun_dead_space_l`, `kettle_dead_space_l` | number \| null : pertes de cuve |
 | `boil_off_l_per_h` | number \| null : évaporation |
@@ -239,9 +350,9 @@ Lisible par le groupe, mesures comprises, sans coût. La recette et l'équipemen
 | `name` | string, obligatoire (120) |
 | `status` | string, obligatoire : `planned`, `brewing`, `fermenting`, `conditioning`, `done`, `abandoned` |
 | `planned_for`, `brewed_at` | timestamp \| null |
-| `recipe_snapshot` | map, obligatoire, immuable : copie de la recette, mêmes champs de premier niveau |
-| `equipment_snapshot` | map, obligatoire, immuable : copie de l'équipement, mêmes champs de premier niveau |
-| `adjustments` | map \| null : ajustements du jour, jamais écrits dans la recette. Clés en liste blanche, chacune number \| null : `batch_volume_l`, `mash_water_l`, `sparge_water_l`, `pre_boil_volume_l`, `post_boil_volume_l`, `fermenter_volume_l`, `boil_off_l_per_h`, `mash_temp_c`, `mash_time_min`, `boil_time_min`, `mash_efficiency_pct`. Aucune autre clé, donc aucun prix ni coût (P5) |
+| `recipe_snapshot` | map, obligatoire, immuable : copie de la recette, mêmes champs de premier niveau ; `owner_name`, s'il est présent, est une chaîne de 1 à 80 caractères (celui de l'auteur de la recette, pas forcément celui qui brasse) |
+| `equipment_snapshot` | map, obligatoire, immuable : copie de l'équipement, mêmes champs de premier niveau ; `owner_name` borné comme dans `recipe_snapshot` |
+| `adjustments` | map \| null : ajustements du jour, jamais écrits dans la recette. Clés en liste blanche, chacune number \| null : `batch_volume_l`, `mash_water_l`, `sparge_water_l`, `pre_boil_volume_l`, `post_boil_volume_l`, `fermenter_volume_l`, `boil_off_l_per_h`, `mash_temp_c`, `mash_time_min`, `boil_time_min`, `mash_efficiency_pct`. Chaque valeur est finie et strictement comprise entre -1e9 et 1e9 ; `mash_efficiency_pct` est borné de 0 à 100. Aucune autre clé, donc aucun prix ni coût (P5) |
 | `bottles_count` | number \| null |
 | `notes` | string \| null (10 000) |
 | `imported_from` | string \| null (200) |
@@ -306,7 +417,7 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 | Chemin | Lecture | Création | Modification | Suppression |
 |---|---|---|---|---|
 | `members/{email}` | son propre document (même absent) pour tout compte Google vérifié ; tous pour l'admin | admin | personne | admin, sauf son propre document et celui d'un autre admin (`resource.data.role != 'admin'`) |
-| `recipes/`, `equipment/` | membres | membre, à son `owner_uid` | propriétaire, `owner_uid` et `created_at` inchangés | propriétaire |
+| `recipes/`, `equipment/` | membres | membre, à son `owner_uid` ; `owner_name` absent ou égal au nom du jeton (`request.auth.token.name`, 1 à 80 caractères) | propriétaire, `owner_uid` et `created_at` inchangés, `owner_name` comme à la création | propriétaire |
 | `brews/` | membres | membre, à son `owner_uid` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés | propriétaire |
 | `brews/{id}/events/` | membres | propriétaire du brassin | auteur : `value`, `note`, `measured_at` | auteur |
 | `users/{uid}/**` | propriétaire | propriétaire | propriétaire | propriétaire |
@@ -315,11 +426,24 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 
 L'admin n'a aucun droit d'écriture sur le contenu des autres brasseurs.
 
+**Effacement d'un membre retiré (RGPD).** L'application ne permet ni à l'admin ni au membre
+retiré de modifier ou de supprimer ses contenus. Une demande d'effacement se traite depuis la
+console Firebase ou par l'Admin SDK, avec l'uid du membre : les documents `recipes/` et
+`equipment/` dont `owner_uid` vaut cet uid (suppression, ou retrait de `owner_name`), les
+brassins `brews/` à son `owner_uid` et leurs `events/`, ses données `users/{uid}/`, et, dans les
+brassins des autres membres, les copies `recipe_snapshot` et `equipment_snapshot` qui portent
+son `owner_uid` ou son `owner_name`. Le document `members/{email}` est déjà supprimé par le
+retrait.
+
 Tests : `rules-tests/` (Node 22, `@firebase/rules-unit-testing`, `node --test`), lancés par
 `npm test`, qui démarre l'émulateur Firestore (Java 21) sur le projet `demo-kassbeer`.
 Chaque collection est rejouée pour les cinq profils de P4 (anonyme, connecté non membre,
 brasseur propriétaire, autre brasseur, admin), plus les comptes invités à l'adresse non
 vérifiée ou connectés par mot de passe, et un jeton à l'adresse en majuscules.
+`owner_name.test.mjs` ajoute des jetons au nom absent, vide, de 80 et 81 caractères, et non
+textuel, et borne `owner_name` dans les copies des brassins. `numbers.test.mjs` vérifie que
+les règles refusent Infinity, -Infinity, NaN, ±1e9 et acceptent ±999 999 999, 0 et 1,5, et
+borne `mash_efficiency_pct` de 0 à 100 ; `content.test.mjs` fait de même dans `adjustments`.
 
 ## Calculs de brassage
 
@@ -341,12 +465,15 @@ par `ErrorReportService.reportError` et affiche la panne.
 | SG ↔ points | `sgToPoints`, `pointsToSg` | points = (SG − 1) × 1000 |
 | Notation des fiches | `parseGravity` | « 1057,9 » et « 1090 » ÷ 1000 ; « 1.052 », « 1,07 » lus tels quels |
 | Densité initiale prévue | `predictedOriginalGravity` | 1 + Σ (kg × points/kg/L × r) / V / 1000 ; r = rendement d'empâtage pour un malt, 1 pour un sucre |
+| Densité finale prévue | `predictedFinalGravity` | 1 + (OG − 1) × (1 − atténuation / 100) ; OG de 1.000 à 1.200 |
 | Potentiel d'un malt | `ExtractPotential` | rendement d'extrait % × 385,67 (saccharose, 46,214 ppg), ou points/kg/L |
 | Rendement d'empâtage réel | `measuredMashEfficiency` | (points mesurés × V − points des sucres déjà dans le moût) / points des malts à 100 % |
 | Degré | `alcoholByVolume` | (OG − FG) × 131,25 |
 | Degré après bouteille | `alcoholByVolumeAfterBottling` | degré + g/L × potentiel du sucre / 10⁶ × 131,25 ; `null` sans donnée de resucrage |
 | IBU | `tinsethIbu`, `tinsethIbuForHop` | Tinseth : 1,65 × 0,000125^(Gb − 1) × (1 − e^(−0,04 t)) / 4,15 × alpha (mg/L) ; pellets × 1,1, cônes × 1,0 ; après ébullition et dry hop : 0 |
-| Couleur | `moreyColorEbc` | Morey : MCU = Σ (EBC / 1,97 × lb) / gal ; SRM = 1,4922 × MCU^0,6859 ; EBC = SRM × 1,97 |
+| Couleur | `moreyColorEbc`, `moreyColorEbcOfGrist` | Morey : MCU = Σ (EBC / 1,97 × lb) / gal ; SRM = 1,4922 × MCU^0,6859 ; EBC = SRM × 1,97 ; la seconde ne prend que masses et couleurs |
+| Calculs d'une recette | `computeRecipe` | OG, FG, degré, IBU, EBC, IBU par houblon : voir « Calculs d'une recette » |
+| Clé d'ingrédient | `ingredientKey`, `isValidIngredientName` | préfixe de nature + nom normalisé (voir `recipes/`) ; `BrewingInputException` pour un nom sans lettre ni chiffre, que `isValidIngredientName` détecte sans exception (une seule définition de la règle) |
 | Coût | `computeCost` | Σ quantité × prix ; par litre = total / V ; bouteille de 33 cl = par litre × 0,33 |
 | Planning | `recomputeSchedule` | début d'une étape = fin enregistrée de la précédente, sinon son début + sa durée ; une étape en cours qui dépasse finit à `now` ; une étape à venir ne commence pas avant `now` |
 | Minuteur | `readTimer` | restant = début + durée − `now`, borné à zéro ; dépassement au-delà |
@@ -356,17 +483,50 @@ un coût partiel. Sans sucre de resucrage, le degré après bouteille est absent
 forfaitaire de 0,5 % des fiches Excel n'est pas reprise. Les prix sont passés en argument par
 l'appelant, qui les lit sous `users/{uid}/` ; le paquet n'en contient aucun.
 
+**Calculs d'une recette.** `computeRecipe(recipe:, mashEfficiencyPercent:)` reçoit la recette
+saisie (`RecipeInput` : `FermentableInput`, `HopInput`, `YeastInput`, volume, durée
+d'ébullition), dont les données facultatives peuvent manquer, et le rendement d'empâtage de
+l'équipement, nul s'il est inconnu. Il rend un `RecipeCalculation` : pour chaque indicateur,
+`CalculationComputed(value)` ou `CalculationUnavailable(missing)`. Chaque `MissingInput`
+porte une nature (`MissingInputKind`) et les lignes concernées (`IngredientRef` : place et
+nom). Le paquet ne contient aucun texte affiché : l'écran choisit le libellé de chaque nature.
+
+| Indicateur | Données demandées |
+|---|---|
+| Densité initiale (OG) | volume (`batchVolume`), au moins un fermentescible (`fermentables`), rendement d'extrait de chacun (`extractYield`), rendement d'empâtage si un malt est présent (`mashEfficiency`) |
+| Densité finale (FG) | OG (`originalGravity`), une levure (`yeast`), atténuation de la première (`yeastAttenuation`) |
+| Degré | comme la FG |
+| IBU | volume ; sans houblon d'ébullition, 0 IBU ; sinon OG, acides alpha (`hopAlpha`) et durée (`hopBoilTime`) de chaque houblon d'ébullition |
+| EBC | volume, au moins un fermentescible, couleur de chacun (`color`) ; pas d'équipement |
+
+`originalGravity` signale qu'un indicateur dépend d'une OG indisponible. Règle de l'IBU, qui
+l'emporte sur C8 (« OG en panne ⇒ IBU en panne ») : sans houblon d'ébullition, l'IBU vaut 0 même
+quand l'OG est indisponible ; avec un houblon d'ébullition, l'IBU dépend de l'OG.
+`missingInputs` rassemble les données à compléter, sans doublon et sans cette dépendance.
+`mashEfficiency` ne dit pas pourquoi le rendement manque. L'écran le sait et choisit le
+libellé : aucun équipement choisi, équipement supprimé, indisponible hors ligne, ou rendement
+non renseigné. La densité d'ébullition de l'IBU est l'OG prévue (`boilGravity`).
+`hopBitterness` donne l'IBU de chaque houblon pour « Détail des calculs ».
+`hopsLongerThanBoil` liste les houblons d'ébullition plus longs que l'ébullition de la recette
+(avertissement U6). Une valeur hors limites (volume nul, pourcentage au-delà de 100, OG prévue
+au-delà de 1.200) lève `BrewingInputException`.
+
 **Jour de brassage.** `recomputeSchedule` et `readTimer` sont des fonctions pures qui prennent
 `now` en argument : aucun `Timer` n'est la source d'une durée, et les heures recalculées se
 dérivent à l'affichage sans s'écrire.
 
-**Fixtures.** `brewing/test/fixtures/*.json` (densité, densité initiale et rendement, degré,
-IBU, couleur, coût, planning) portent des cas tirés des 16 fiches Excel : entrées, valeur de
+**Fixtures.** `brewing/test/fixtures/*.json` (densité, densité initiale et rendement, densité
+finale, degré, IBU, couleur, coût, planning, calculs d'une recette) portent des cas tirés des 16 fiches Excel : entrées, valeur de
 la fiche, valeur attendue, tolérance, et hypothèses quand la fiche ne donne pas une entrée.
 Les erreurs connues des fiches (Citra « 22.4 » lu 22 400 g, degré calculé sur la densité
 visée, densités d'en-tête différentes de la chronologie, champs EBC et IBU copiés, coût par
 bouteille divisé par le nombre de bouteilles) sont rangées dans `divergences`, sans être
 corrigées dans les attentes. Une formule changée ajoute d'abord son cas à la fixture.
+`final_gravity.json` prend pour atténuation l'atténuation apparente des densités mesurées de
+trois fiches (Ale blonde 140724 : 55,8 %, Twin bottle 4 : 84,1 %, Blonde triple : 98,5 %) et
+vérifie que leur FG est retrouvée. `recipe.json` compte 18 cas : un seul est tiré d'une fiche
+(`twin-bottle-4-hypothese`), les 17 autres sont synthétiques (données manquantes, cas
+limites). Ses valeurs attendues sont calculées hors du paquet.
 
 ## CI et déploiement
 

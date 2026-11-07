@@ -116,3 +116,9 @@ final accessRefreshingProvider = Provider<bool>((ref) {
   if (key == null || key.isEmpty) return false;
   return ref.watch(memberLookupProvider(key)).isLoading;
 });
+
+/// Membre connecté, ou `null` pendant une transition de l'état d'accès.
+final grantedAccessProvider = Provider<AccessGranted?>((ref) {
+  final access = ref.watch(accessStateProvider);
+  return access is AccessGranted ? access : null;
+});

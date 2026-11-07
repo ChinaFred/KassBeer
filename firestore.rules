@@ -46,8 +46,17 @@ service cloud.firestore {
       return !(k in d) || d[k] == null || (d[k] is string && d[k].size() <= max);
     }
 
+    // Pourcentage de 0 à 100 : un rendement à 150 % rendrait « Calcul impossible »
+    // toutes les recettes qui utilisent l'équipement.
+    function optPercent(d, k) {
+      return !(k in d) || d[k] == null || (d[k] is number && d[k] >= 0 && d[k] <= 100);
+    }
+
+    // Nombre fini et borné : Infinity et NaN rendraient le document illisible par
+    // l'application. Une comparaison avec NaN est fausse, donc NaN est refusé aussi.
     function optNumber(d, k) {
-      return !(k in d) || d[k] == null || d[k] is number;
+      return !(k in d) || d[k] == null
+        || (d[k] is number && d[k] > -1000000000 && d[k] < 1000000000);
     }
 
     function optList(d, k, max) {
@@ -67,6 +76,28 @@ service cloud.firestore {
       return d.owner_uid == request.auth.uid
         && d.created_at == request.time
         && d.updated_at == request.time;
+    }
+
+    // Nom de l'auteur affiché au groupe (recettes, équipements). Facultatif ; présent,
+    // c'est une chaîne de 1 à 80 caractères égale au nom du jeton de celui qui écrit.
+    // Un jeton sans nom n'écrit pas ce champ. Une écriture qui garde un ancien nom,
+    // différent du nom actuel du jeton, est refusée : l'application réécrit le nom à
+    // chaque enregistrement, ou retire le champ.
+    function ownerNameOk(d) {
+      return !('owner_name' in d)
+        || (d.owner_name is string
+            && d.owner_name.size() >= 1
+            && d.owner_name.size() <= 80
+            && 'name' in request.auth.token
+            && d.owner_name == request.auth.token.name);
+    }
+
+    // Nom d'auteur gardé dans la copie figée d'un brassin : celui de l'auteur de la
+    // recette ou de l'équipement, pas forcément celui qui brasse. Seuls le type et la
+    // taille sont contrôlés.
+    function snapshotOwnerNameOk(m) {
+      return !('owner_name' in m)
+        || (m.owner_name is string && m.owner_name.size() >= 1 && m.owner_name.size() <= 80);
     }
 
     // Modification par le propriétaire : il reste propriétaire, la date de
@@ -119,7 +150,7 @@ service cloud.firestore {
     // peuvent pas être inspectés par les règles ; le dépôt de données ne les écrit
     // qu'à partir des types de brewing/, sans prix.
     function recipeFields() {
-      return ['owner_uid', 'name', 'style', 'notes', 'batch_volume_l', 'boil_time_min',
+      return ['owner_uid', 'owner_name', 'name', 'style', 'notes', 'batch_volume_l', 'boil_time_min',
               'equipment_id', 'fermentables', 'hops', 'others', 'yeasts', 'mash_steps',
               'imported_from', 'created_at', 'updated_at'];
     }
@@ -146,9 +177,11 @@ service cloud.firestore {
       allow read: if isMember();
       allow create: if isMember()
         && isRecipeShape(request.resource.data)
+        && ownerNameOk(request.resource.data)
         && createdByMe(request.resource.data);
       allow update: if isMember()
         && isRecipeShape(request.resource.data)
+        && ownerNameOk(request.resource.data)
         && updatedByOwner();
       allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
     }
@@ -156,7 +189,7 @@ service cloud.firestore {
     // ---------------------------------------------------------------- equipment
 
     function equipmentFields() {
-      return ['owner_uid', 'name', 'kind', 'mash_efficiency_pct', 'mash_tun_volume_l',
+      return ['owner_uid', 'owner_name', 'name', 'kind', 'mash_efficiency_pct', 'mash_tun_volume_l',
               'kettle_volume_l', 'mash_tun_dead_space_l', 'kettle_dead_space_l',
               'boil_off_l_per_h', 'trub_loss_l', 'fermenter_loss_l',
               'grain_absorption_l_per_kg', 'notes', 'created_at', 'updated_at'];
@@ -168,7 +201,7 @@ service cloud.firestore {
         && d.owner_uid is string
         && hasName(d, 120)
         && d.kind in ['multi_vessel', 'all_in_one']
-        && optNumber(d, 'mash_efficiency_pct')
+        && optPercent(d, 'mash_efficiency_pct')
         && optNumber(d, 'mash_tun_volume_l')
         && optNumber(d, 'kettle_volume_l')
         && optNumber(d, 'mash_tun_dead_space_l')
@@ -185,9 +218,11 @@ service cloud.firestore {
       allow read: if isMember();
       allow create: if isMember()
         && isEquipmentShape(request.resource.data)
+        && ownerNameOk(request.resource.data)
         && createdByMe(request.resource.data);
       allow update: if isMember()
         && isEquipmentShape(request.resource.data)
+        && ownerNameOk(request.resource.data)
         && updatedByOwner();
       allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
     }
@@ -222,7 +257,7 @@ service cloud.firestore {
         && optNumber(a, 'mash_temp_c')
         && optNumber(a, 'mash_time_min')
         && optNumber(a, 'boil_time_min')
-        && optNumber(a, 'mash_efficiency_pct');
+        && optPercent(a, 'mash_efficiency_pct');
     }
 
     function isBrewShape(d) {
@@ -239,8 +274,10 @@ service cloud.firestore {
         // Copies figées : mêmes champs de premier niveau que la source, donc sans prix.
         && d.recipe_snapshot is map
         && d.recipe_snapshot.keys().hasOnly(recipeFields())
+        && snapshotOwnerNameOk(d.recipe_snapshot)
         && d.equipment_snapshot is map
         && d.equipment_snapshot.keys().hasOnly(equipmentFields())
+        && snapshotOwnerNameOk(d.equipment_snapshot)
         && (!('adjustments' in d) || d.adjustments == null || isAdjustments(d.adjustments))
         && optNumber(d, 'bottles_count')
         && optString(d, 'notes', 10000)
