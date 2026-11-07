@@ -93,7 +93,7 @@ pour les commits à venir.
    vérifiait seule. Ruleset sur `main` : PR requise, 0 approbation, les quatre contrôles de
    `ci.yml` requis, branche à jour avec `main`, ni force push ni suppression. Ruleset sur
    les tags `v*` : ni suppression ni mise à jour. Approbation des workflows pour tout
-   contributeur externe. Actions autorisées limitées et épinglées par SHA. Secret scanning,
+   contributeur externe. Actions autorisées limitées ; nos workflows les épinglent par SHA, sans que GitHub l'exige. Secret scanning,
    push protection, alertes Dependabot, signalement privé de failles, suppression
    automatique des branches fusionnées. Les commits faits sur le poste portent une adresse `noreply`
    (`git config user.email` du dépôt). Les fusions faites sur GitHub prennent l'adresse

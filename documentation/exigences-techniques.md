@@ -503,10 +503,13 @@ diff de `.github/workflows/`.
 
 Autres réglages : approbation des workflows pour tout contributeur externe (Settings ›
 Actions › General) ; actions limitées à celles de GitHub, `subosito/flutter-action` et
-`google-github-actions/auth`, épinglées par SHA ; secret scanning et push protection ;
+`google-github-actions/auth` ; secret scanning et push protection ;
 alertes Dependabot ; signalement privé de failles ; suppression automatique des branches
 fusionnées ; Projects désactivé ; fusion squash et rebase désactivées ; environnement
-`production` sans contournement par les administrateurs.
+`production` sans contournement par les administrateurs. « Require actions to be pinned to a
+full-length commit SHA » reste décoché : `subosito/flutter-action` appelle `actions/cache@v5`
+par son étiquette, et ce réglage refuse aussi les appels internes d'une action. Il a bloqué
+la CI de la PR #4 le 2026-11-07.
 
 ### Workload Identity Federation (Google Cloud)
 
@@ -624,7 +627,7 @@ du client, pas des secrets.
 | GitHub, environnement `production` | règle de branche `main` posée ; les dix variables et les quatre secrets de signature posés |
 | Plan GitHub | Free, dépôt public depuis le 2026-11-07 (ADR-002). Minutes des runners standard gratuites. Le run 42366279942 a lu 9 variables de `production` sur 10, avant la pose des secrets ; le run 42381643401 a lu les 10 variables et les 4 secrets |
 | GitHub, rulesets | `main` : PR requise, 0 approbation, fusion par commit de fusion, quatre contrôles requis, à jour avec `main`, ni force push ni suppression ; tags `v*` : ni suppression ni mise à jour ; aucun contournement |
-| GitHub, sécurité | approbation des workflows pour tout contributeur externe, actions limitées et épinglées par SHA, secret scanning, push protection, alertes Dependabot, signalement privé de failles |
+| GitHub, sécurité | approbation des workflows pour tout contributeur externe, actions limitées, secret scanning, push protection, alertes Dependabot, signalement privé de failles |
 
 Les secrets de signature se posent par les quatre commandes `gh secret set` de
 « Réglages sur GitHub », les deux mots de passe en saisie masquée. Un secret absent fait
