@@ -49,7 +49,14 @@ tags sans abonnement, et rend la CI gratuite.
 Arbitrage de l'utilisateur : les prix et coûts de `brewing/test/fixtures/cost.json` restent
 publics, dans l'arbre et l'historique. Les noms de personnes sortent des fichiers versionnés
 (v0.1.3) ; leur présence dans l'historique est acceptée. Les adresses e-mail sont masquées
-pour les commits à venir.
+pour les commits à venir : « Keep my email addresses private » est coché sur GitHub, et
+`session-start.sh` avertit quand l'adresse d'auteur du prochain commit
+(`git var GIT_AUTHOR_IDENT`) n'est pas une adresse `noreply`.
+
+Licence : aucune, décision de l'utilisateur du 2026-11-07. Le code est lisible sur GitHub et
+reste sous tous droits réservés : aucune réutilisation n'est autorisée au-delà de ce que
+permettent les conditions de GitHub (voir le code et le forker sur la plateforme).
+Une licence s'ajoute par un fichier `LICENSE` et un avenant à cet ADR.
 
 ## Réponses aux questions de l'architecte
 
@@ -96,9 +103,9 @@ pour les commits à venir.
    contributeur externe. Actions autorisées limitées ; nos workflows les épinglent par SHA, sans que GitHub l'exige. Secret scanning,
    push protection, alertes Dependabot, signalement privé de failles, suppression
    automatique des branches fusionnées. Les commits faits sur le poste portent une adresse `noreply`
-   (`git config user.email` du dépôt). Les fusions faites sur GitHub prennent l'adresse
-   principale du compte, tant que « Keep my email addresses private » n'est pas coché dans
-   Settings › Emails : réglage à faire par l'utilisateur. Sauvegarde et mise à jour des utilisateurs inchangées.
+   (`git config user.email` du dépôt). Les fusions faites sur GitHub portent aussi une
+   adresse `noreply` : « Keep my email addresses private » est coché dans Settings › Emails
+   depuis le 2026-11-07. Sauvegarde et mise à jour des utilisateurs inchangées.
 9. **Coût de sortie** : repasser en privé prend un clic. Il retire les rulesets et la
    gratuité des minutes, et ne retire pas les copies faites pendant la période publique.
    Ne jamais recréer le dépôt : son identifiant numérique figure dans la condition Workload
