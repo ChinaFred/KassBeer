@@ -200,6 +200,53 @@ Chaque collection est rejouée pour les cinq profils de P4 (anonyme, connecté n
 brasseur propriétaire, autre brasseur, admin), plus les comptes invités à l'adresse non
 vérifiée ou connectés par mot de passe, et un jeton à l'adresse en majuscules.
 
+## Calculs de brassage
+
+Les calculs vivent dans le paquet Dart pur `brewing/` (ADR-001, CLAUDE.md P3) : aucune
+dépendance Flutter ni Firebase, `test` et `lints` en développement seulement. L'application
+seule l'importe (`package:brewing/brewing.dart`). Aucune formule de brassage n'existe ailleurs.
+
+**Unités.** Masses en grammes, volumes en litres, densités en SG décimal (1.0579), couleur en
+EBC, durées d'ébullition en minutes ; le planning prend des `Duration` et des `DateTime` de
+l'appareil. La conversion vers l'affichage se fait à l'écran.
+
+**Erreurs.** Une entrée invalide (nombre négatif ou non fini, densité hors de 0.980 – 1.200,
+FG > OG, liste vide, fin d'étape sans début) lève `BrewingInputException(field, value, message)`.
+Le paquet ne fait aucun `catch` (`test/no_catch_test.dart` le vérifie) : l'appelant journalise
+par `ErrorReportService.reportError` et affiche la panne.
+
+| Calcul | Fonction | Formule |
+|---|---|---|
+| SG ↔ points | `sgToPoints`, `pointsToSg` | points = (SG − 1) × 1000 |
+| Notation des fiches | `parseGravity` | « 1057,9 » et « 1090 » ÷ 1000 ; « 1.052 », « 1,07 » lus tels quels |
+| Densité initiale prévue | `predictedOriginalGravity` | 1 + Σ (kg × points/kg/L × r) / V / 1000 ; r = rendement d'empâtage pour un malt, 1 pour un sucre |
+| Potentiel d'un malt | `ExtractPotential` | rendement d'extrait % × 385,67 (saccharose, 46,214 ppg), ou points/kg/L |
+| Rendement d'empâtage réel | `measuredMashEfficiency` | (points mesurés × V − points des sucres déjà dans le moût) / points des malts à 100 % |
+| Degré | `alcoholByVolume` | (OG − FG) × 131,25 |
+| Degré après bouteille | `alcoholByVolumeAfterBottling` | degré + g/L × potentiel du sucre / 10⁶ × 131,25 ; `null` sans donnée de resucrage |
+| IBU | `tinsethIbu`, `tinsethIbuForHop` | Tinseth : 1,65 × 0,000125^(Gb − 1) × (1 − e^(−0,04 t)) / 4,15 × alpha (mg/L) ; pellets × 1,1, cônes × 1,0 ; après ébullition et dry hop : 0 |
+| Couleur | `moreyColorEbc` | Morey : MCU = Σ (EBC / 1,97 × lb) / gal ; SRM = 1,4922 × MCU^0,6859 ; EBC = SRM × 1,97 |
+| Coût | `computeCost` | Σ quantité × prix ; par litre = total / V ; bouteille de 33 cl = par litre × 0,33 |
+| Planning | `recomputeSchedule` | début d'une étape = fin enregistrée de la précédente, sinon son début + sa durée ; une étape en cours qui dépasse finit à `now` ; une étape à venir ne commence pas avant `now` |
+| Minuteur | `readTimer` | restant = début + durée − `now`, borné à zéro ; dépassement au-delà |
+
+**Pas de valeur de repli.** Un prix manquant rend `CostUnavailable(linesWithoutPrice)`, jamais
+un coût partiel. Sans sucre de resucrage, le degré après bouteille est absent : la hausse
+forfaitaire de 0,5 % des fiches Excel n'est pas reprise. Les prix sont passés en argument par
+l'appelant, qui les lit sous `users/{uid}/` ; le paquet n'en contient aucun.
+
+**Jour de brassage.** `recomputeSchedule` et `readTimer` sont des fonctions pures qui prennent
+`now` en argument : aucun `Timer` n'est la source d'une durée, et les heures recalculées se
+dérivent à l'affichage sans s'écrire.
+
+**Fixtures.** `brewing/test/fixtures/*.json` (densité, densité initiale et rendement, degré,
+IBU, couleur, coût, planning) portent des cas tirés des 16 fiches Excel : entrées, valeur de
+la fiche, valeur attendue, tolérance, et hypothèses quand la fiche ne donne pas une entrée.
+Les erreurs connues des fiches (Citra « 22.4 » lu 22 400 g, degré calculé sur la densité
+visée, densités d'en-tête différentes de la chronologie, champs EBC et IBU copiés, coût par
+bouteille divisé par le nombre de bouteilles) sont rangées dans `divergences`, sans être
+corrigées dans les attentes. Une formule changée ajoute d'abord son cas à la fixture.
+
 ## Intégrations et services tiers
 
 ## Coûts variables
