@@ -13,6 +13,7 @@ import '../../features/equipment/presentation/equipment_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
 import '../../features/recipes/presentation/recipes_screen.dart';
 import '../presentation/app_shell.dart';
+import '../presentation/etats.dart';
 import 'routes.dart';
 
 /// Chemin où envoyer [location] selon [access], ou `null` pour y rester.
@@ -148,22 +149,13 @@ class _NotFoundScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Cette page n\'existe pas.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => context.go(AppRoutes.home),
-                child: const Text('Revenir à l\'accueil'),
-              ),
-            ],
+      body: SafeArea(
+        child: EtatVide(
+          icon: Icons.search_off,
+          message: 'Cette page n\'existe pas.',
+          action: FilledButton(
+            onPressed: () => context.go(AppRoutes.home),
+            child: const Text('Revenir à l\'accueil'),
           ),
         ),
       ),

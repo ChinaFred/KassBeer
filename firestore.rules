@@ -105,8 +105,11 @@ service cloud.firestore {
 
       allow update: if false;
 
-      // Un admin ne retire pas son propre accès : il resterait sans administrateur.
-      allow delete: if isAdmin() && memberId != emailKey();
+      // Un admin ne retire ni son propre accès (il resterait sans administrateur), ni
+      // celui d'un autre admin : un administrateur se retire depuis la console Firebase.
+      allow delete: if isAdmin()
+        && memberId != emailKey()
+        && resource.data.role != 'admin';
     }
 
     // ---------------------------------------------------------------- recipes

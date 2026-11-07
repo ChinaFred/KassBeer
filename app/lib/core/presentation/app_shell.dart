@@ -94,10 +94,14 @@ class AppShell extends ConsumerWidget {
       ],
     );
 
-    final content = Column(
+    final offline = granted?.offline ?? false;
+
+    /// Bandeau en pleine largeur au-dessus du contenu, centré ou non.
+    Widget withBanner(Widget body) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (granted?.offline ?? false) const BandeauHorsLigne(),
-        Expanded(child: child),
+        if (offline) const BandeauHorsLigne(),
+        Expanded(child: body),
       ],
     );
 
@@ -107,7 +111,7 @@ class AppShell extends ConsumerWidget {
         if (size == WindowSize.compact) {
           return Scaffold(
             appBar: appBar,
-            body: content,
+            body: withBanner(child),
             bottomNavigationBar: NavigationBar(
               selectedIndex: selected,
               onDestinationSelected: goTo,
@@ -129,35 +133,50 @@ class AppShell extends ConsumerWidget {
           body: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              NavigationRail(
-                selectedIndex: selected,
-                onDestinationSelected: goTo,
-                extended: expanded,
-                labelType: expanded
-                    ? NavigationRailLabelType.none
-                    : NavigationRailLabelType.all,
-                destinations: [
-                  for (final d in destinations)
-                    NavigationRailDestination(
-                      icon: Icon(d.icon),
-                      selectedIcon: Icon(d.selectedIcon),
-                      label: Text(d.label),
+              // Défilable : avec un grand texte ou un écran bas, les destinations
+              // dépassent la hauteur disponible.
+              LayoutBuilder(
+                builder: (context, railConstraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: railConstraints.maxHeight,
                     ),
-                ],
+                    child: IntrinsicHeight(
+                      child: NavigationRail(
+                        selectedIndex: selected,
+                        onDestinationSelected: goTo,
+                        extended: expanded,
+                        labelType: expanded
+                            ? NavigationRailLabelType.none
+                            : NavigationRailLabelType.all,
+                        destinations: [
+                          for (final d in destinations)
+                            NavigationRailDestination(
+                              icon: Icon(d.icon),
+                              selectedIcon: Icon(d.selectedIcon),
+                              label: Text(d.label),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
               const VerticalDivider(width: 1),
               Expanded(
-                child: expanded
-                    ? Align(
-                        alignment: Alignment.topCenter,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: kContentMaxWidth,
+                child: withBanner(
+                  expanded
+                      ? Align(
+                          alignment: Alignment.topCenter,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxWidth: kContentMaxWidth,
+                            ),
+                            child: child,
                           ),
-                          child: content,
-                        ),
-                      )
-                    : content,
+                        )
+                      : child,
+                ),
               ),
             ],
           ),
@@ -200,7 +219,7 @@ class _AccountMenu extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 280),
+            constraints: const BoxConstraints(maxWidth: kAccountMenuMaxWidth),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -241,7 +260,11 @@ class _AccountMenu extends ConsumerWidget {
                       feature: 'shell.avatar',
                       error: error,
                       stackTrace: stackTrace,
-                      context: 'photo du compte Google illisible',
+                      // Ni l'URL de la photo (retirée aussi par le service), ni
+                      // l'adresse : le type d'erreur et le code HTTP suffisent.
+                      context: error is NetworkImageLoadException
+                          ? 'photo du compte Google illisible, HTTP ${error.statusCode}'
+                          : 'photo du compte Google illisible',
                     ),
           child: ExcludeSemantics(child: Text(initial)),
         ),

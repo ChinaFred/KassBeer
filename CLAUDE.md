@@ -158,7 +158,10 @@ suffit pas.
   dans `error_reports/` (création par un membre, lecture par l'admin). Hors ligne,
   l'écriture attend le retour du réseau. `FlutterError.onError` et
   `PlatformDispatcher.instance.onError` y sont branchés dans `main.dart`. `debugPrint` seul
-  ne suffit pas. Le paquet `brewing/` ne fait pas de `catch` : il lève, l'appelant journalise.
+  ne suffit pas. Deux exceptions, et deux seulement, où aucun rapport ne peut partir :
+  l'échec de `Firebase.initializeApp` dans `main.dart` (l'écran « Kass'Beer n'a pas pu
+  démarrer » s'affiche) et l'échec d'écriture d'un rapport dans `ErrorReportService`.
+  Ces deux cas écrivent sur la console par `debugPrint`, et rien d'autre ne le peut. Le paquet `brewing/` ne fait pas de `catch` : il lève, l'appelant journalise.
 - TypeScript (Functions, quand elles existeront) : `logError(...)` de
   `functions/src/logging.ts`, écrit sur `firebase-functions/logger`. Pas de client
   `@google-cloud/logging`, qui tire gRPC au démarrage (leçon 5).

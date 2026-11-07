@@ -1,7 +1,7 @@
 // members/{email} : identité des comptes invités (P11).
 
 import { describe, it } from "node:test";
-import { db, memberId, serverTimestamp, uidOf } from "./helpers.mjs";
+import { db, memberId, seed, serverTimestamp, uidOf } from "./helpers.mjs";
 import { expectRule, state, useEnv } from "./setup.mjs";
 
 useEnv();
@@ -195,6 +195,29 @@ describe("members — modification et retrait", () => {
       false,
       db(state.env, "admin")
         .doc(`members/${memberId("admin")}`)
+        .delete(),
+    );
+  });
+
+  it("admin retire le members/ d'un autre admin : refusé (console Firebase)", async () => {
+    await seed(state.env, {
+      "members/second.admin@example.com": {
+        email: "second.admin@example.com",
+        role: "admin",
+        invited_by: uidOf("admin"),
+      },
+    });
+    await expectRule(
+      false,
+      db(state.env, "admin").doc("members/second.admin@example.com").delete(),
+    );
+  });
+
+  it("admin retire un brasseur : autorisé", async () => {
+    await expectRule(
+      true,
+      db(state.env, "admin")
+        .doc(`members/${memberId("otherBrewer")}`)
         .delete(),
     );
   });

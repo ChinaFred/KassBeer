@@ -23,6 +23,14 @@ class MembersScreen extends ConsumerWidget {
       'L\'invitation de $email a échoué.';
   static String removeRejected(String email) =>
       'Le retrait de $email a échoué.';
+  static String removedMessage(String email) => '$email est retiré.';
+  static const emptyMessage =
+      'Aucun membre. Appuyez sur Inviter pour ajouter un compte.';
+  static const staleMessage =
+      'Mise à jour de la liste impossible. Elle peut ne plus être à jour.';
+  static const selfNote = 'Vous ne pouvez pas vous retirer vous-même';
+  static const otherAdminNote =
+      'Un administrateur se retire depuis la console Firebase.';
 
   Future<void> _invite(
     BuildContext context,
@@ -82,7 +90,9 @@ class MembersScreen extends ConsumerWidget {
     );
     unawaited(
       write.catchError((Object _) {
-        // Déjà rapportée par le dépôt de données ; le refus s'affiche.
+        // Déjà rapportée par le dépôt de données ; le refus s'affiche, à la place
+        // du message de succès s'il est encore visible.
+        messenger.hideCurrentSnackBar();
         messenger.showSnackBar(
           SnackBar(content: Text(inviteRejected(request.email))),
         );
@@ -124,10 +134,16 @@ class MembersScreen extends ConsumerWidget {
       },
     );
     if (confirmed != true) return;
+    // Comme l'invitation : la ligne disparaît du cache dès l'appel.
     final write = ref.read(membersRepositoryProvider).remove(member.email);
+    messenger.showSnackBar(
+      SnackBar(content: Text(removedMessage(member.email))),
+    );
     unawaited(
       write.catchError((Object _) {
-        // Déjà rapportée par le dépôt de données ; le refus s'affiche.
+        // Déjà rapportée par le dépôt de données ; le refus s'affiche, à la place
+        // du message de succès s'il est encore visible.
+        messenger.hideCurrentSnackBar();
         messenger.showSnackBar(
           SnackBar(content: Text(removeRejected(member.email))),
         );
@@ -155,6 +171,11 @@ class MembersScreen extends ConsumerWidget {
       _ => ListView(
         padding: EdgeInsets.only(top: 8, bottom: compact ? 96 : 24),
         children: [
+          if (membersAsync.hasError)
+            _StaleListNotice(
+              retrying: membersAsync.isLoading,
+              onRetry: () => ref.invalidate(membersListProvider),
+            ),
           if (!compact)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -168,10 +189,7 @@ class MembersScreen extends ConsumerWidget {
               ),
             ),
           if (members.isEmpty)
-            const EtatVide(
-              icon: Icons.group_outlined,
-              message: 'Aucun membre.',
-            ),
+            const EtatVide(icon: Icons.group_outlined, message: emptyMessage),
           for (final member in members)
             _MemberRow(
               member: member,
@@ -205,6 +223,9 @@ class _MemberRow extends StatelessWidget {
   final Member member;
   final bool isSelf;
   final VoidCallback onRemove;
+
+  /// Les règles refusent de retirer son propre compte et celui d'un autre admin.
+  bool get _removable => !isSelf && !member.isAdmin;
 
   String get _roleLabel => switch (member.role) {
     MemberRole.admin => 'Administrateur',
@@ -249,17 +270,19 @@ class _MemberRow extends StatelessWidget {
                       const _Tag(label: 'En attente du réseau'),
                   ],
                 ),
-                if (isSelf) ...[
+                if (!_removable) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Vous ne pouvez pas vous retirer vous-même',
+                    isSelf
+                        ? MembersScreen.selfNote
+                        : MembersScreen.otherAdminNote,
                     style: muted,
                   ),
                 ],
               ],
             ),
           ),
-          if (!isSelf)
+          if (_removable)
             IconButton(
               tooltip: 'Retirer ${member.email}',
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
@@ -267,6 +290,46 @@ class _MemberRow extends StatelessWidget {
               icon: const Icon(Icons.person_remove),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Panne après une première liste lue : la liste reste affichée.
+class _StaleListNotice extends StatelessWidget {
+  const _StaleListNotice({required this.retrying, required this.onRetry});
+
+  final bool retrying;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Material(
+        color: scheme.errorContainer,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              Text(
+                MembersScreen.staleMessage,
+                style: TextStyle(color: scheme.onErrorContainer),
+              ),
+              TextButton(
+                onPressed: retrying ? null : onRetry,
+                child: retrying
+                    ? const IndicateurBouton(label: 'Lecture en cours')
+                    : const Text('Réessayer'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

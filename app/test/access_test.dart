@@ -306,4 +306,48 @@ void main() {
       );
     });
   });
+
+  testWidgets('vérifier à nouveau, toujours absent : annoncé', (tester) async {
+    final app = TestApp();
+    await app.pump(tester);
+    app.signIn(brewerUser);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Vérifier à nouveau'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ce compte n\'est toujours pas invité.'), findsOneWidget);
+  });
+
+  testWidgets('compte sans adresse : pas de copie, consigne de reconnexion', (
+    tester,
+  ) async {
+    final app = TestApp();
+    await app.pump(tester);
+    app.auth.session.add(const SessionUser(uid: 'sans-adresse', email: null));
+    await tester.pumpAndSettle();
+    expect(find.byType(NotInvitedScreen), findsOneWidget);
+    expect(find.text('Copier l\'adresse'), findsNothing);
+    expect(
+      find.text(
+        'Adresse du compte indisponible. Déconnectez-vous et reconnectez-vous.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Se déconnecter'), findsOneWidget);
+  });
+
+  testWidgets('page introuvable : message et retour à l\'accueil', (tester) async {
+    final app = TestApp();
+    await app.pump(tester);
+    app.signIn(brewerUser, member: brewerMember);
+    await tester.pumpAndSettle();
+    app.container.read(routerProvider).go('/nulle-part');
+    await tester.pumpAndSettle();
+    expect(find.text('Cette page n\'existe pas.'), findsOneWidget);
+    await tester.tap(find.text('Revenir à l\'accueil'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Les recettes arriveront dans une prochaine version.'),
+      findsOneWidget,
+    );
+  });
 }

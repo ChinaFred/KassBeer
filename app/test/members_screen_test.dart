@@ -55,11 +55,22 @@ void main() {
   testWidgets('retrait absent de sa propre ligne', (tester) async {
     await _openMembers(tester);
     expect(find.byTooltip('Retirer admin@exemple.fr'), findsNothing);
-    expect(find.byTooltip('Retirer bob@exemple.fr'), findsOneWidget);
+    expect(find.byTooltip('Retirer bob@exemple.fr'), findsNothing);
     expect(find.byTooltip('Retirer zoe@exemple.fr'), findsOneWidget);
     final size = tester.getSize(find.byTooltip('Retirer zoe@exemple.fr'));
     expect(size.width, greaterThanOrEqualTo(48));
     expect(size.height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('un autre admin : pas de retrait, renvoi à la console', (
+    tester,
+  ) async {
+    await _openMembers(tester);
+    expect(find.byTooltip('Retirer bob@exemple.fr'), findsNothing);
+    expect(
+      find.text('Un administrateur se retire depuis la console Firebase.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('retirer demande confirmation', (tester) async {
@@ -83,6 +94,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Retirer'));
     await tester.pumpAndSettle();
     expect(app.members.removed, ['zoe@exemple.fr']);
+    expect(find.text('zoe@exemple.fr est retiré.'), findsOneWidget);
   });
 
   testWidgets('retrait refusé par le serveur : annoncé', (tester) async {
@@ -93,6 +105,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Retirer'));
     await tester.pumpAndSettle();
     expect(find.text('Le retrait de zoe@exemple.fr a échoué.'), findsOneWidget);
+    expect(find.text('zoe@exemple.fr est retiré.'), findsNothing);
   });
 
   group('invitation', () {
@@ -217,5 +230,43 @@ void main() {
     await tester.tap(find.text('Réessayer'));
     await tester.pumpAndSettle();
     expect(find.text('Vous'), findsOneWidget);
+  });
+
+  testWidgets('panne après une liste lue : la liste reste, la panne s\'affiche', (
+    tester,
+  ) async {
+    final app = await _openMembers(tester);
+    app.members.all.addError(Exception('unavailable'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Mise à jour de la liste impossible. Elle peut ne plus être à jour.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('zoe@exemple.fr'), findsOneWidget);
+  });
+
+  testWidgets('liste vide : invite à ajouter un compte', (tester) async {
+    final app = TestApp();
+    await app.pump(tester);
+    app.signIn(adminUser, member: adminMember);
+    app.members.all.add(const []);
+    await tester.pumpAndSettle();
+    app.container.read(routerProvider).go('/admin/membres');
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Aucun membre. Appuyez sur Inviter pour ajouter un compte.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('formulaire : titre « Rôle » au-dessus du choix', (tester) async {
+    await _openMembers(tester);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    final title = tester.getTopLeft(find.text('Rôle'));
+    final segments = tester.getTopLeft(find.byType(SegmentedButton<MemberRole>));
+    expect(title.dy, lessThan(segments.dy));
   });
 }

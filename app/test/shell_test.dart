@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/presentation/bandeau_hors_ligne.dart';
 
 import 'support/fakes.dart';
 
@@ -112,5 +113,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(app.auth.signOutCalls, 1);
     expect(find.text('Se connecter avec Google'), findsOneWidget);
+  });
+
+  testWidgets('640 × 360, texte × 2 : aucun débordement, rail défilable', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final app = TestApp();
+    await app.pump(tester, width: 640, height: 360);
+    app.signIn(adminUser, member: adminMember, fromCache: true);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.byType(NavigationRail),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('840 px et plus : bandeau hors ligne en pleine largeur', (
+    tester,
+  ) async {
+    final app = TestApp();
+    await app.pump(tester, width: 1400);
+    app.signIn(brewerUser, member: brewerMember, fromCache: true);
+    await tester.pumpAndSettle();
+    final banner = tester.getSize(
+      find.byType(BandeauHorsLigne),
+    );
+    expect(banner.width, greaterThan(840));
   });
 }

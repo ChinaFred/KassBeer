@@ -205,3 +205,9 @@ PR ouverte tourne deux fois par push (`push` et `pull_request`). Toute modificat
 fusion (P10). `securite` vérifie aussi les workflows (P14) : aucun secret lisible sur
 `pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload Identity
 Federation, sans clé JSON de compte de service.
+
+## 8. Exceptions inscrites dans `CLAUDE.md`
+
+- 2026-11-07 : `debugPrint` seul est admis dans deux cas où aucun rapport ne peut partir,
+  l'échec de démarrage de Firebase et l'échec d'écriture d'un rapport d'erreur (relecture
+  du socle, décision de l'utilisateur).

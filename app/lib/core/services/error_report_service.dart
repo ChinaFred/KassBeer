@@ -28,9 +28,7 @@ class ErrorReportFields {
   /// ou l'adresse d'une photo de compte Google.
   static const urlPlaceholder = '<url>';
 
-  static final RegExp _url = RegExp(
-    r'\b[a-zA-Z][a-zA-Z0-9+.-]*://[^\s<>"]+',
-  );
+  static final RegExp _url = RegExp(r'\b[a-zA-Z][a-zA-Z0-9+.-]*://[^\s<>"]+');
 
   static final RegExp _email = RegExp(
     r'[^\s@<>()"]+@[^\s@<>()"]+\.[^\s@<>()"]+',
@@ -179,16 +177,14 @@ class ErrorReportService {
     );
     try {
       unawaited(
-        _firestore
-            .collection('error_reports')
-            .doc()
-            .set(fields.data)
-            .catchError((Object writeError, StackTrace writeStack) {
-              // Écrire dans la collection en panne ne peut pas passer par ce même
-              // service : la console est le dernier recours.
-              _toConsole('écriture du rapport refusée', writeError, writeStack);
-              _toConsole(feature, error, stackTrace);
-            }),
+        _firestore.collection('error_reports').doc().set(fields.data).catchError(
+          (Object writeError, StackTrace writeStack) {
+            // Écrire dans la collection en panne ne peut pas passer par ce même
+            // service : la console est le dernier recours.
+            _toConsole('écriture du rapport refusée', writeError, writeStack);
+            _toConsole(feature, error, stackTrace);
+          },
+        ),
       );
     } catch (writeError, writeStack) {
       _toConsole('écriture du rapport impossible', writeError, writeStack);

@@ -127,6 +127,8 @@ class _InviteMemberFormState extends State<InviteMemberForm> {
           onSubmitted: (_) => _submit(),
         ),
         const SizedBox(height: 8),
+        Text('Rôle', style: theme.textTheme.titleSmall),
+        const SizedBox(height: 8),
         SegmentedButton<MemberRole>(
           segments: const [
             ButtonSegment(value: MemberRole.brewer, label: Text('Brasseur')),
