@@ -142,9 +142,7 @@ void main() {
     await app.pump(tester, width: 1400);
     app.signIn(brewerUser, member: brewerMember, fromCache: true);
     await tester.pumpAndSettle();
-    final banner = tester.getSize(
-      find.byType(BandeauHorsLigne),
-    );
+    final banner = tester.getSize(find.byType(BandeauHorsLigne));
     expect(banner.width, greaterThan(840));
   });
 }

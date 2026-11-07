@@ -335,7 +335,9 @@ void main() {
     expect(find.text('Se déconnecter'), findsOneWidget);
   });
 
-  testWidgets('page introuvable : message et retour à l\'accueil', (tester) async {
+  testWidgets('page introuvable : message et retour à l\'accueil', (
+    tester,
+  ) async {
     final app = TestApp();
     await app.pump(tester);
     app.signIn(brewerUser, member: brewerMember);

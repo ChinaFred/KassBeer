@@ -232,20 +232,21 @@ void main() {
     expect(find.text('Vous'), findsOneWidget);
   });
 
-  testWidgets('panne après une liste lue : la liste reste, la panne s\'affiche', (
-    tester,
-  ) async {
-    final app = await _openMembers(tester);
-    app.members.all.addError(Exception('unavailable'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text(
-        'Mise à jour de la liste impossible. Elle peut ne plus être à jour.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('zoe@exemple.fr'), findsOneWidget);
-  });
+  testWidgets(
+    'panne après une liste lue : la liste reste, la panne s\'affiche',
+    (tester) async {
+      final app = await _openMembers(tester);
+      app.members.all.addError(Exception('unavailable'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Mise à jour de la liste impossible. Elle peut ne plus être à jour.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('zoe@exemple.fr'), findsOneWidget);
+    },
+  );
 
   testWidgets('liste vide : invite à ajouter un compte', (tester) async {
     final app = TestApp();
@@ -266,7 +267,9 @@ void main() {
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
     final title = tester.getTopLeft(find.text('Rôle'));
-    final segments = tester.getTopLeft(find.byType(SegmentedButton<MemberRole>));
+    final segments = tester.getTopLeft(
+      find.byType(SegmentedButton<MemberRole>),
+    );
     expect(title.dy, lessThan(segments.dy));
   });
 }
