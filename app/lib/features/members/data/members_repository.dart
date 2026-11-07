@@ -16,6 +16,14 @@ class MemberLookupUnavailable implements Exception {
   String toString() => 'MemberLookupUnavailable($reason)';
 }
 
+/// Version d'un document `members/{email}` : `data` vaut `null` s'il est absent.
+typedef MemberDocView = ({
+  String id,
+  Map<String, dynamic>? data,
+  bool fromCache,
+  bool hasPendingWrites,
+});
+
 /// Accès à `members/`. Les écrans passent par cette interface ; les tests la
 /// remplacent par un double sans Firebase.
 abstract class MembersRepository {
@@ -67,64 +75,80 @@ class FirestoreMembersRepository implements MembersRepository {
       _firestore.collection('members');
 
   @override
-  Stream<MemberLookup> watchMember(String emailKey) {
+  Stream<MemberLookup> watchMember(String emailKey) => lookupsFrom(
+    _members
+        .doc(emailKey)
+        .snapshots(includeMetadataChanges: true)
+        .map(
+          (snapshot) => (
+            id: snapshot.id,
+            data: snapshot.data(),
+            fromCache: snapshot.metadata.isFromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+          ),
+        ),
+  );
+
+  /// Lectures du membre à partir des versions successives de son document.
+  ///
+  /// Un document absent du cache ne prouve rien : faute de version du serveur dans
+  /// [serverWait], le flux lève [MemberLookupUnavailable]. Pure hors du minuteur,
+  /// testée.
+  Stream<MemberLookup> lookupsFrom(Stream<MemberDocView> docs) {
     late final StreamController<MemberLookup> controller;
-    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? subscription;
+    StreamSubscription<MemberDocView>? subscription;
     Timer? serverTimer;
 
     void failUnavailable() {
       if (controller.isClosed) return;
       const error = MemberLookupUnavailable('aucune réponse du serveur');
+      final stackTrace = StackTrace.current;
       _errors.reportError(
         feature: 'members.watch_member',
         error: error,
-        stackTrace: StackTrace.current,
+        stackTrace: stackTrace,
         context:
             'document absent du cache, serveur muet après ${serverWait.inSeconds} s',
       );
-      controller.addError(error, StackTrace.current);
+      controller.addError(error, stackTrace);
     }
 
     controller = StreamController<MemberLookup>(
       onListen: () {
-        subscription = _members
-            .doc(emailKey)
-            .snapshots(includeMetadataChanges: true)
-            .listen(
-              (snapshot) {
-                final fromCache = snapshot.metadata.isFromCache;
-                if (!snapshot.exists && fromCache) {
-                  // Absent du cache : le serveur seul peut dire « non invité ».
-                  serverTimer ??= Timer(serverWait, failUnavailable);
-                  return;
-                }
-                serverTimer?.cancel();
-                serverTimer = null;
-                final data = snapshot.data();
-                controller.add(
-                  MemberLookup(
-                    member: data == null
-                        ? null
-                        : Member.fromFirestore(
-                            snapshot.id,
-                            data,
-                            hasPendingWrites:
-                                snapshot.metadata.hasPendingWrites,
-                          ),
-                    fromCache: fromCache,
-                  ),
-                );
-              },
-              onError: (Object error, StackTrace stackTrace) {
-                serverTimer?.cancel();
-                _errors.reportError(
-                  feature: 'members.watch_member',
-                  error: error,
-                  stackTrace: stackTrace,
-                );
-                controller.addError(error, stackTrace);
-              },
+        subscription = docs.listen(
+          (doc) {
+            final data = doc.data;
+            if (data == null && doc.fromCache) {
+              // Absent du cache : le serveur seul peut dire « non invité ».
+              serverTimer ??= Timer(serverWait, failUnavailable);
+              return;
+            }
+            serverTimer?.cancel();
+            serverTimer = null;
+            controller.add(
+              MemberLookup(
+                member: data == null
+                    ? null
+                    : Member.fromFirestore(
+                        doc.id,
+                        data,
+                        hasPendingWrites: doc.hasPendingWrites,
+                      ),
+                fromCache: doc.fromCache,
+              ),
             );
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            serverTimer?.cancel();
+            serverTimer = null;
+            _errors.reportError(
+              feature: 'members.watch_member',
+              error: error,
+              stackTrace: stackTrace,
+            );
+            controller.addError(error, stackTrace);
+          },
+        );
       },
       onCancel: () async {
         serverTimer?.cancel();

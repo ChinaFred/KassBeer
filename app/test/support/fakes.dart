@@ -53,7 +53,8 @@ class Replay<T> {
 
 class FakeAuthRepository implements AuthRepository {
   final session = Replay<SessionUser?>();
-  Future<SignInOutcome> Function() onSignIn = () async => SignInOutcome.cancelled;
+  Future<SignInOutcome> Function() onSignIn = () async =>
+      SignInOutcome.cancelled;
   int signInCalls = 0;
   int signOutCalls = 0;
 
@@ -91,7 +92,8 @@ class FakeMembersRepository implements MembersRepository {
   /// Réponse du serveur à une écriture ; jamais terminée par défaut (hors ligne).
   Future<void> Function() serverAnswer = () => Completer<void>().future;
 
-  Replay<MemberLookup> lookup(String email) => lookups.putIfAbsent(email, Replay.new);
+  Replay<MemberLookup> lookup(String email) =>
+      lookups.putIfAbsent(email, Replay.new);
 
   @override
   Stream<MemberLookup> watchMember(String emailKey) => lookup(emailKey).stream;
@@ -142,7 +144,10 @@ const adminUser = SessionUser(
   displayName: 'Alice Admin',
 );
 
-const brewerMember = Member(email: 'brasseur@exemple.fr', role: MemberRole.brewer);
+const brewerMember = Member(
+  email: 'brasseur@exemple.fr',
+  role: MemberRole.brewer,
+);
 const adminMember = Member(
   email: 'admin@exemple.fr',
   role: MemberRole.admin,
@@ -171,19 +176,28 @@ class TestApp {
   late final ProviderContainer container;
 
   /// Monte l'application dans une fenêtre de [width] × [height] pixels logiques.
-  Future<void> pump(WidgetTester tester, {double width = 400, double height = 900}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    double width = 400,
+    double height = 900,
+  }) async {
     tester.view.physicalSize = Size(width, height);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     addTearDown(container.dispose);
     await tester.pumpWidget(
-      UncontrolledProviderScope(container: container, child: const KassBeerApp()),
+      UncontrolledProviderScope(
+        container: container,
+        child: const KassBeerApp(),
+      ),
     );
   }
 
   /// Connecte [user] et répond à la lecture de son document par [member].
   void signIn(SessionUser user, {Member? member, bool fromCache = false}) {
     auth.session.add(user);
-    members.lookup(user.memberKey!).add(MemberLookup(member: member, fromCache: fromCache));
+    members
+        .lookup(user.memberKey!)
+        .add(MemberLookup(member: member, fromCache: fromCache));
   }
 }

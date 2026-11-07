@@ -42,7 +42,9 @@ void main() {
       expect(find.text('Recettes et brassins du groupe'), findsOneWidget);
       expect(find.text('Se connecter avec Google'), findsOneWidget);
       expect(find.text('Accès réservé aux comptes invités.'), findsOneWidget);
-      final button = tester.getSize(find.widgetWithText(FilledButton, 'Se connecter avec Google'));
+      final button = tester.getSize(
+        find.widgetWithText(FilledButton, 'Se connecter avec Google'),
+      );
       expect(button.height, 56);
     });
 
@@ -68,7 +70,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Se connecter avec Google'));
       await tester.pumpAndSettle();
-      expect(find.text('Connexion impossible. Vérifiez le réseau et réessayez.'), findsOneWidget);
+      expect(
+        find.text('Connexion impossible. Vérifiez le réseau et réessayez.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('connexion réussie : membre sur Recettes', (tester) async {
@@ -82,7 +87,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Se connecter avec Google'));
       await tester.pumpAndSettle();
-      expect(find.text('Les recettes arriveront dans une prochaine version.'), findsOneWidget);
+      expect(
+        find.text('Les recettes arriveront dans une prochaine version.'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -95,7 +103,10 @@ void main() {
       expect(find.byType(NotInvitedScreen), findsOneWidget);
       expect(find.text("Ce compte n'a pas accès à Kass'Beer"), findsOneWidget);
       expect(find.text('Vous êtes connecté avec :'), findsOneWidget);
-      expect(find.widgetWithText(SelectableText, 'Brasseur@Exemple.fr'), findsOneWidget);
+      expect(
+        find.widgetWithText(SelectableText, 'Brasseur@Exemple.fr'),
+        findsOneWidget,
+      );
       expect(find.text('Copier l\'adresse'), findsOneWidget);
       expect(find.text('Vérifier à nouveau'), findsOneWidget);
       expect(find.text('Se déconnecter'), findsOneWidget);
@@ -111,14 +122,16 @@ void main() {
 
     testWidgets('copier l\'adresse est annoncé', (tester) async {
       String? copied;
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
-        call,
-      ) async {
-        if (call.method == 'Clipboard.setData') {
-          copied = (call.arguments as Map<Object?, Object?>)['text'] as String?;
-        }
-        return null;
-      });
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied =
+                (call.arguments as Map<Object?, Object?>)['text'] as String?;
+          }
+          return null;
+        },
+      );
       addTearDown(
         () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
           SystemChannels.platform,
@@ -141,24 +154,35 @@ void main() {
       app.signIn(brewerUser);
       await tester.pumpAndSettle();
       final before = app.members.lookup('brasseur@exemple.fr').subscriptions;
-      app.members.lookup('brasseur@exemple.fr').add(
-        const MemberLookup(member: brewerMember, fromCache: false),
-      );
+      app.members
+          .lookup('brasseur@exemple.fr')
+          .add(const MemberLookup(member: brewerMember, fromCache: false));
       await tester.tap(find.text('Vérifier à nouveau'));
       await tester.pumpAndSettle();
-      expect(app.members.lookup('brasseur@exemple.fr').subscriptions, greaterThan(before));
-      expect(find.text('Les recettes arriveront dans une prochaine version.'), findsOneWidget);
+      expect(
+        app.members.lookup('brasseur@exemple.fr').subscriptions,
+        greaterThan(before),
+      );
+      expect(
+        find.text('Les recettes arriveront dans une prochaine version.'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('membre retiré : bascule à la lecture suivante', (tester) async {
+    testWidgets('membre retiré : bascule à la lecture suivante', (
+      tester,
+    ) async {
       final app = TestApp();
       await app.pump(tester);
       app.signIn(brewerUser, member: brewerMember);
       await tester.pumpAndSettle();
-      expect(find.text('Les recettes arriveront dans une prochaine version.'), findsOneWidget);
-      app.members.lookup('brasseur@exemple.fr').add(
-        const MemberLookup(member: null, fromCache: false),
+      expect(
+        find.text('Les recettes arriveront dans une prochaine version.'),
+        findsOneWidget,
       );
+      app.members
+          .lookup('brasseur@exemple.fr')
+          .add(const MemberLookup(member: null, fromCache: false));
       await tester.pumpAndSettle();
       expect(find.byType(NotInvitedScreen), findsOneWidget);
     });
@@ -176,7 +200,9 @@ void main() {
   });
 
   group('panne', () {
-    testWidgets('lecture impossible : écran Erreur, jamais non invité', (tester) async {
+    testWidgets('lecture impossible : écran Erreur, jamais non invité', (
+      tester,
+    ) async {
       final app = TestApp();
       await app.pump(tester);
       app.auth.session.add(brewerUser);
@@ -199,7 +225,10 @@ void main() {
       lookup.add(const MemberLookup(member: brewerMember, fromCache: false));
       await tester.tap(find.text('Réessayer'));
       await tester.pumpAndSettle();
-      expect(find.text('Les recettes arriveront dans une prochaine version.'), findsOneWidget);
+      expect(
+        find.text('Les recettes arriveront dans une prochaine version.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('session illisible : écran Erreur', (tester) async {
@@ -220,9 +249,9 @@ void main() {
       find.text('Hors ligne. Les modifications partiront au retour du réseau.'),
       findsOneWidget,
     );
-    app.members.lookup('brasseur@exemple.fr').add(
-      const MemberLookup(member: brewerMember, fromCache: false),
-    );
+    app.members
+        .lookup('brasseur@exemple.fr')
+        .add(const MemberLookup(member: brewerMember, fromCache: false));
     await tester.pumpAndSettle();
     expect(
       find.text('Hors ligne. Les modifications partiront au retour du réseau.'),
@@ -231,11 +260,22 @@ void main() {
   });
 
   group('redirectFor', () {
-    const granted = AccessGranted(user: brewerUser, member: brewerMember, offline: false);
-    const admin = AccessGranted(user: adminUser, member: adminMember, offline: false);
+    const granted = AccessGranted(
+      user: brewerUser,
+      member: brewerMember,
+      offline: false,
+    );
+    const admin = AccessGranted(
+      user: adminUser,
+      member: adminMember,
+      offline: false,
+    );
 
     test('un chemin demandé pendant le chargement est retrouvé', () {
-      final toLoading = redirectFor(const AccessLoading(), Uri.parse('/brassins'));
+      final toLoading = redirectFor(
+        const AccessLoading(),
+        Uri.parse('/brassins'),
+      );
       expect(toLoading, '/chargement?depuis=%2Fbrassins');
       expect(redirectFor(granted, Uri.parse(toLoading!)), '/brassins');
     });
@@ -243,7 +283,10 @@ void main() {
     test('un brasseur n\'ouvre pas Admin', () {
       expect(redirectFor(granted, Uri.parse('/admin/membres')), '/recettes');
       expect(
-        redirectFor(granted, Uri.parse('/chargement?depuis=%2Fadmin%2Fmembres')),
+        redirectFor(
+          granted,
+          Uri.parse('/chargement?depuis=%2Fadmin%2Fmembres'),
+        ),
         '/recettes',
       );
     });
@@ -253,8 +296,14 @@ void main() {
     });
 
     test('une adresse externe dans depuis est ignorée', () {
-      expect(redirectFor(granted, Uri.parse('/connexion?depuis=https://exemple.fr')), '/recettes');
-      expect(redirectFor(granted, Uri.parse('/connexion?depuis=%2F%2Fexemple.fr')), '/recettes');
+      expect(
+        redirectFor(granted, Uri.parse('/connexion?depuis=https://exemple.fr')),
+        '/recettes',
+      );
+      expect(
+        redirectFor(granted, Uri.parse('/connexion?depuis=%2F%2Fexemple.fr')),
+        '/recettes',
+      );
     });
   });
 }

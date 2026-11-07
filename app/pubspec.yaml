@@ -35,6 +35,8 @@ dev_dependencies:
   # Firestore en mémoire pour les tests des dépôts de données : aucun émulateur, aucun
   # réseau. 4.2.0 suit l'API de cloud_firestore 6.7 et suivantes.
   fake_cloud_firestore: ^4.2.0
+  # Minuteurs simulés : déjà tiré par flutter_test, déclaré parce qu'un test l'importe.
+  fake_async: ^1.3.3
 
 flutter:
   uses-material-design: true

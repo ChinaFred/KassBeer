@@ -4,7 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/fakes.dart';
 
 void main() {
-  Future<TestApp> signedIn(WidgetTester tester, {required double width, bool admin = false}) async {
+  Future<TestApp> signedIn(
+    WidgetTester tester, {
+    required double width,
+    bool admin = false,
+  }) async {
     final app = TestApp();
     await app.pump(tester, width: width);
     if (admin) {
@@ -16,16 +20,25 @@ void main() {
     return app;
   }
 
-  testWidgets('moins de 600 px : barre de navigation en bas, libellés visibles', (tester) async {
-    await signedIn(tester, width: 400);
-    expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.byType(NavigationRail), findsNothing);
-    final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-    expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysShow);
-    for (final label in ['Recettes', 'Brassins', 'Équipements']) {
-      expect(find.descendant(of: find.byType(NavigationBar), matching: find.text(label)), findsOneWidget);
-    }
-  });
+  testWidgets(
+    'moins de 600 px : barre de navigation en bas, libellés visibles',
+    (tester) async {
+      await signedIn(tester, width: 400);
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
+      final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysShow);
+      for (final label in ['Recettes', 'Brassins', 'Équipements']) {
+        expect(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text(label),
+          ),
+          findsOneWidget,
+        );
+      }
+    },
+  );
 
   testWidgets('de 600 à 839 px : rail, libellés visibles', (tester) async {
     await signedIn(tester, width: 700);
@@ -35,14 +48,19 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
   });
 
-  testWidgets('840 px et plus : rail étendu, contenu à 840 px au plus', (tester) async {
+  testWidgets('840 px et plus : rail étendu, contenu à 840 px au plus', (
+    tester,
+  ) async {
     await signedIn(tester, width: 1400);
     final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
     expect(rail.extended, isTrue);
-    final message = find.text('Les recettes arriveront dans une prochaine version.');
-    final box = find.ancestor(of: message, matching: find.byType(ConstrainedBox)).evaluate().map(
-      (e) => (e.widget as ConstrainedBox).constraints.maxWidth,
+    final message = find.text(
+      'Les recettes arriveront dans une prochaine version.',
     );
+    final box = find
+        .ancestor(of: message, matching: find.byType(ConstrainedBox))
+        .evaluate()
+        .map((e) => (e.widget as ConstrainedBox).constraints.maxWidth);
     expect(box, contains(840));
   });
 
@@ -59,7 +77,9 @@ void main() {
     expect(find.text('Inviter et retirer les comptes'), findsOneWidget);
     expect(find.text('Import'), findsOneWidget);
     expect(find.text('Disponible dans une prochaine version'), findsOneWidget);
-    final import = tester.widget<ListTile>(find.widgetWithText(ListTile, 'Import'));
+    final import = tester.widget<ListTile>(
+      find.widgetWithText(ListTile, 'Import'),
+    );
     expect(import.enabled, isFalse);
   });
 
@@ -67,13 +87,21 @@ void main() {
     await signedIn(tester, width: 400);
     await tester.tap(find.text('Brassins'));
     await tester.pumpAndSettle();
-    expect(find.text('Les brassins arriveront dans une prochaine version.'), findsOneWidget);
+    expect(
+      find.text('Les brassins arriveront dans une prochaine version.'),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Équipements'));
     await tester.pumpAndSettle();
-    expect(find.text('Les équipements arriveront dans une prochaine version.'), findsOneWidget);
+    expect(
+      find.text('Les équipements arriveront dans une prochaine version.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('menu du compte : nom, e-mail, version, déconnexion', (tester) async {
+  testWidgets('menu du compte : nom, e-mail, version, déconnexion', (
+    tester,
+  ) async {
     final app = await signedIn(tester, width: 400);
     await tester.tap(find.byTooltip('Mon compte'));
     await tester.pumpAndSettle();
