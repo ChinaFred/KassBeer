@@ -6,6 +6,41 @@ données, outillage), ou les deux.
 
 ## 2026-11-07
 
+### v0.1.1 — fonctionnel
+
+Premier socle utilisable de l'application, sur Android et le web. Connexion par compte
+Google, réservée aux adresses invitées ; un compte non invité voit son adresse pour la
+transmettre ; une panne n'est jamais présentée comme un refus. Accueil avec la navigation
+Recettes, Brassins, Équipements (écrans à venir) et Admin. Admin › Membres invite et retire
+les brasseurs ; un administrateur ne se retire pas lui-même et n'en retire pas un autre (la
+console Firebase le fait). Bandeau hors ligne.
+
+### v0.1.1 — technique
+
+Paquet Dart pur `brewing/` : densités, densité initiale prévue, rendement, degré (avant et
+après resucrage, sans hausse forfaitaire), IBU de Tinseth, EBC de Morey, coût, planning du
+jour de brassage ; 29 tests rejouent des cas tirés des 16 fiches Excel, avec leurs erreurs
+rangées dans `divergences`. `firestore.rules` (membres sur invitation, compte Google
+vérifié, données privées sous `users/`, brassin figé, ajustements en liste blanche, journal
+d'erreurs borné) et 296 tests sur l'émulateur. `firebase.json` : cache et en-têtes de
+sécurité. `ErrorReportService` : rapports dédoublonnés, plafonnés à 20 par minute et 200 par
+session, sans e-mail ni URL. CI GitHub Actions (version, Flutter et `brewing/`, règles,
+compilation Android) et déploiement (Hosting, règles, App Distribution) par Workload
+Identity Federation, inactif tant que le projet Firebase n'est pas configuré. `CLAUDE.md` :
+exception à `debugPrint` quand aucun rapport ne peut partir.
+
+Paquets (nouveaux lockfiles) — `app/pubspec.lock` : firebase_core 4.15.0, firebase_auth
+6.7.0, cloud_firestore 6.8.0, google_sign_in 7.2.0, flutter_riverpod 3.3.1, go_router
+17.2.3, package_info_plus 9.0.1 ; développement : flutter_lints 6.0.0, fake_cloud_firestore
+4.4.0, fake_async 1.3.3 ; plateformes : firebase_core_web 3.12.0,
+firebase_core_platform_interface 8.1.1, firebase_auth_web 6.3.0,
+firebase_auth_platform_interface 9.1.0, cloud_firestore_web 5.7.3,
+cloud_firestore_platform_interface 8.0.7, google_sign_in_android 7.2.18, google_sign_in_web
+1.1.3, google_sign_in_platform_interface 3.1.0. `brewing/pubspec.lock` : lints 6.1.0, test
+1.33.0. `rules-tests/package-lock.json` : firebase-tools 15.35.0,
+@firebase/rules-unit-testing 5.0.2, firebase 12.19.0, prettier 3.9.6. APK : compilé par le
+job « Android — compilation » de la PR (pas de SDK Android en session cloud).
+
 ### v0.1.0 — technique
 
 Démarrage du projet. Pile retenue (ADR-001) : Flutter pour Android et le web, Firebase

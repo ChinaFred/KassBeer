@@ -209,5 +209,5 @@ Federation, sans clé JSON de compte de service.
 ## 8. Exceptions inscrites dans `CLAUDE.md`
 
 - 2026-11-07 : `debugPrint` seul est admis dans deux cas où aucun rapport ne peut partir,
-  l'échec de démarrage de Firebase et l'échec d'écriture d'un rapport d'erreur (relecture
+  l'échec de démarrage de Firebase et un rapport d'erreur impossible à écrire (écriture en échec, aucun compte, compte illisible, plafond atteint) (relecture
   du socle, décision de l'utilisateur).

@@ -160,7 +160,9 @@ suffit pas.
   `PlatformDispatcher.instance.onError` y sont branchés dans `main.dart`. `debugPrint` seul
   ne suffit pas. Deux exceptions, et deux seulement, où aucun rapport ne peut partir :
   l'échec de `Firebase.initializeApp` dans `main.dart` (l'écran « Kass'Beer n'a pas pu
-  démarrer » s'affiche) et l'échec d'écriture d'un rapport dans `ErrorReportService`.
+  démarrer » s'affiche) et un rapport que `ErrorReportService` ne peut pas écrire (écriture
+  en échec, aucun compte connecté, compte illisible, plafond de 20 par minute ou 200 par
+  session atteint).
   Ces deux cas écrivent sur la console par `debugPrint`, et rien d'autre ne le peut. Le paquet `brewing/` ne fait pas de `catch` : il lève, l'appelant journalise.
 - TypeScript (Functions, quand elles existeront) : `logError(...)` de
   `functions/src/logging.ts`, écrit sur `firebase-functions/logger`. Pas de client
