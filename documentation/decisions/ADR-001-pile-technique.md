@@ -1,6 +1,6 @@
 # ADR-001 — Pile technique de la version 1
 
-- **Statut** : proposé
+- **Statut** : accepté le 2026-11-07
 - **Date** : 2026-11-06
 - **Remplace** : —
 
@@ -79,6 +79,27 @@ ADR.
 9. **Coût de sortie** : moyen. Les règles et le modèle de données sont propres à
    Firestore. Le paquet `brewing/` est du Dart pur, indépendant de Firebase. L'export JSON
    complet, puis BeerXML après la v1, rendent les données portables.
+
+## Arbitrages de l'utilisateur (2026-11-07)
+
+L'utilisateur a retenu toutes les recommandations du livrable « Démarrage » :
+
+1. Import des 16 fiches par une session Claude Code, relu et écrit par Admin › Import.
+   Aucune IA dans l'application en v1.
+2. APK distribué par Firebase App Distribution.
+3. Plan Blaze dès la v1, sauvegarde gérée de Firestore, alerte budgétaire à 5 €.
+4. Coût d'un brassin privé à son brasseur (`users/{uid}/brew_costs/`).
+5. Profils d'équipement lisibles par le groupe.
+6. Hors ligne garanti sur l'APK seulement.
+7. JSON d'import versionnés dans `import/fiches/` le temps de l'import, puis retirés.
+8. Flutter 3.44.6, comme Kass'Dalle.
+9. Alarme des minuteurs écran verrouillé après la v1 ; écran maintenu allumé en v1.
+10. Résidence de Firebase Auth en Europe non vérifiée : acceptée.
+11. `docs.rapt.io` à autoriser dans le réseau de la session avant l'ADR du RAPT Pill.
+12. Formule d'adresse : celle du modèle (« Maître », « Seigneur », « Majesté »).
+
+Contrôles P1 à P10 inscrits dans `CLAUDE.md`. Section « Bac à sable » et skill
+`experience-sandbox` retirés.
 
 ## Conséquences
 

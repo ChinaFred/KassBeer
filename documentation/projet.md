@@ -90,10 +90,10 @@ les contraintes.
 ### Coûts et délais
 
 - **Budget mensuel (à l'arrêt / à l'usage)** : du même ordre que Kass'Dalle.
-- **IA ou API facturée, pour quoi** : côté serveur seulement. Version 1 : import des 16
-  fiches (conversion en recettes et brassins structurés). Ensuite : substitution d'un
-  ingrédient manquant, explication d'un écart prévu / mesuré, diagnostic d'un défaut de
-  dégustation.
+- **IA ou API facturée, pour quoi** : aucune dans l'application en version 1 (ADR-001).
+  L'import des 16 fiches est préparé par une session Claude Code et validé dans Admin ›
+  Import. Ensuite, côté serveur seulement : substitution d'un ingrédient manquant,
+  explication d'un écart prévu / mesuré, diagnostic d'un défaut de dégustation.
 - **Échéance de la première version** : le prochain brassin, dans quelques semaines. La
   version 1 peut être réduite pour tenir ce délai.
 
@@ -110,11 +110,7 @@ resucrage), dégustations notées, assistant IA.
 
 ## Questions ouvertes
 
-- Formule d'adresse des agents : non tranchée ; celle du modèle (« Maître », « Seigneur »,
-  « Majesté ») reste en place.
-- Format d'export des recettes : BeerXML, BeerJSON, ou aucun en version 1.
-- Hébergement des données en Europe exigé ou non.
-- Formules de calcul à retenir (IBU de Tinseth ou de Rager, couleur de Morey) et leur
-  vérification contre les fiches existantes.
-- Si les calculs servent au client (hors ligne) et au serveur (import, IA), ils deviennent
-  une logique dupliquée avec fixture partagée, ou restent d'un seul côté.
+Tranchées le 2026-11-07 : voir `decisions/ADR-001-pile-technique.md`, « Arbitrages de
+l'utilisateur ».
+
+- Format du webhook RAPT Pill, à vérifier sur `docs.rapt.io` avant l'ADR dédié.
