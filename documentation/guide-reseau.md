@@ -188,4 +188,6 @@ Kass'Dalle : Version (`node scripts/check-version.mjs`), Flutter et `brewing/`, 
 Firebase App Distribution après une CI verte sur `main`. Le dépôt est privé : le plan
 GitHub Free inclut 2 000 minutes par mois, soit 55 à 80 livraisons. Toute modification de
 `.github/workflows/` ou de `scripts/check-version.mjs` se signale à l'utilisateur avant la
-fusion (P10).
+fusion (P10). `securite` vérifie aussi les workflows (P14) : aucun secret lisible sur
+`pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload Identity
+Federation, sans clé JSON de compte de service.

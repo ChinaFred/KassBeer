@@ -34,3 +34,6 @@ rules-tests/*.log
 *.p12
 *.pem
 *service-account*.json
+
+# JSON d'import des fiches : contiennent des prix (ADR-001, arbitrage 7).
+import/

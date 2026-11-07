@@ -71,14 +71,14 @@ ADR.
    autorisation par les règles Firestore ; en-têtes de sécurité et de cache dans
    `firebase.json`. Les règles sont le seul contrôle d'accès, testées contre l'émulateur.
 8. **Exploitation, sauvegarde, mise à jour** : maintenu par le brasseur avec Claude Code.
-   Sauvegarde quotidienne gérée de Firestore (rétention 7 jours), et export JSON complet
-   depuis Admin. Mise à jour web par Firebase Hosting, avec `index.html` et les fichiers
+   Sauvegarde quotidienne gérée de Firestore (rétention 7 jours), et export JSON depuis
+   Admin (ce que le groupe voit, plus les prix de l'administrateur, arbitrage 13). Mise à jour web par Firebase Hosting, avec `index.html` et les fichiers
    d'amorçage en `no-cache`. APK signé, distribué par Firebase App Distribution, construit
    par GitHub Actions sur un push de la branche principale. La clé de signature vit dans
    les secrets GitHub et dans une copie hors ligne.
 9. **Coût de sortie** : moyen. Les règles et le modèle de données sont propres à
    Firestore. Le paquet `brewing/` est du Dart pur, indépendant de Firebase. L'export JSON
-   complet, puis BeerXML après la v1, rendent les données portables.
+   d'Admin, puis BeerXML après la v1, rendent les données portables.
 
 ## Arbitrages de l'utilisateur (2026-11-07)
 
@@ -91,14 +91,20 @@ L'utilisateur a retenu toutes les recommandations du livrable « Démarrage » :
 4. Coût d'un brassin privé à son brasseur (`users/{uid}/brew_costs/`).
 5. Profils d'équipement lisibles par le groupe.
 6. Hors ligne garanti sur l'APK seulement.
-7. JSON d'import versionnés dans `import/fiches/` le temps de l'import, puis retirés.
+7. JSON d'import non versionnés : `import/` est dans `.gitignore`, et Admin › Import
+   charge le fichier par un sélecteur (révisé le 2026-11-07, après la relecture de
+   `securite` : un fichier retiré reste dans l'historique Git).
 8. Flutter 3.44.6, comme Kass'Dalle.
 9. Alarme des minuteurs écran verrouillé après la v1 ; écran maintenu allumé en v1.
 10. Résidence de Firebase Auth en Europe non vérifiée : acceptée.
 11. `docs.rapt.io` à autoriser dans le réseau de la session avant l'ADR du RAPT Pill.
 12. Formule d'adresse : celle du modèle (« Maître », « Seigneur », « Majesté »).
 
-Contrôles P1 à P10 inscrits dans `CLAUDE.md`. Section « Bac à sable » et skill
+13. Export JSON d'Admin : ce que le groupe voit, plus les seuls prix de l'administrateur.
+    Les prix des autres brasseurs restent privés (P5).
+
+Contrôles P1 à P10 inscrits dans `CLAUDE.md`, puis P11 à P14 proposés par `securite` à la
+relecture (comptes vérifiés et invités, en-têtes web, journal d'erreurs, secrets de la CI). Section « Bac à sable » et skill
 `experience-sandbox` retirés.
 
 ## Conséquences

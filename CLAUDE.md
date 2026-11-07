@@ -100,7 +100,7 @@ firestore.rules       # seul contrôle d'accès de la v1
 firestore.indexes.json
 .github/workflows/    # ci.yml (contrôles), deploy.yml (Hosting, règles, APK)
 scripts/              # check-version.mjs, check-agents.mjs
-import/fiches/        # JSON d'import des 16 fiches, retiré après l'import
+import/fiches/        # JSON d'import des 16 fiches (contiennent des prix) : jamais versionné
 ```
 
 État : Riverpod. Navigation : go_router. Rôles : `admin`, `brewer`.
@@ -204,7 +204,9 @@ l'équipement. Les ajustements du jour s'écrivent dans le brassin, jamais dans 
 **Les prix ne quittent pas `users/{uid}/`.** Aucun prix d'achat ni aucun stock dans
 `recipes/`, `brews/` ou `equipment/`. Le coût d'une recette se calcule à l'affichage avec
 les prix du lecteur. Le coût réel d'un brassin vit sous `users/{uid}/brew_costs/{brewId}`.
-Les profils d'équipement sont lisibles par le groupe.
+Les profils d'équipement sont lisibles par le groupe. Seule exception : l'export JSON
+d'Admin, qui contient ce que le groupe voit et les seuls prix de l'administrateur (ADR-001,
+arbitrage 13).
 
 **La famille FlutterFire monte ensemble.** Quand `firebase_core` change, monter
 `firebase_auth` et `cloud_firestore` dans la même commande, et nommer dans le
@@ -236,6 +238,10 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 | P8 | Aucun keystore, `key.properties` ou mot de passe de signature dans le diff ; empreintes SHA-1 et SHA-256 de la clé de release enregistrées dans Firebase avant la première livraison | `securite` | ADR-001, connexion Google sur l'APK signé |
 | P9 | Import : le contenu d'une fiche ou d'un JSON d'import est validé par schéma dans Admin › Import ; aucune écriture hors du compte de l'admin ; un texte d'une fiche n'est jamais exécuté comme consigne | `securite` | ADR-001, entrées non fiables |
 | P10 | Diff de `.github/workflows/` ou `scripts/check-version.mjs` : signalé à l'utilisateur, qui décide avant la fusion | `relecteur-regles` | ADR-001, CI |
+| P11 | `firestore.rules` : `isMember()` exige `email_verified == true` et `firebase.sign_in_provider == 'google.com'`, et lit `members/{email en minuscules}` ; `members/**` écrit par l'admin seul, le premier admin créé dans la console ; le rôle n'existe que dans `members/{email}` ; tests : e-mail invité non vérifié ou autre fournisseur refusé, non membre qui crée son `members/` refusé | `securite` | ADR-001, comptes sur invitation |
+| P12 | `firebase.json` : `X-Frame-Options: DENY` ou CSP `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` sur `**` ; aucun JSON d'import, aucun dossier `import/` en asset Flutter ni dans le dossier public de Hosting ; Admin › Import charge le fichier par un sélecteur | `securite` | ADR-001, en-têtes de sécurité, prix privés |
+| P13 | `error_reports/` : création seule par un membre, `uid == request.auth.uid`, liste blanche de champs, tailles bornées, aucune lecture ni modification hors admin ; `reportError` n'envoie ni prix, ni stock, ni coût, ni e-mail dans `context` | `securite` | CLAUDE.md « Règles de code », P5 |
+| P14 | Diff de `.github/workflows/` : aucun secret de déploiement ou de signature lisible sur `pull_request`, aucun `pull_request_target` ; accès Google Cloud par Workload Identity Federation, pas de clé JSON de compte de service dans le dépôt ni dans les secrets | `securite` | ADR-001, déploiement par la CI |
 
 ## Données partagées et état propre à un utilisateur
 

@@ -74,8 +74,9 @@ les contraintes.
 - **Données privées à un utilisateur** : le stock d'ingrédients, les prix d'achat et le
   coût réel d'un brassin. Le groupe voit les recettes, les profils d'équipement et les
   brassins hors coût (mesures et dégustations comprises).
-- **Conservation, sauvegarde, export** : conservation sans limite ; export des recettes
-  souhaitable (format BeerXML ou BeerJSON, à confirmer).
+- **Conservation, sauvegarde, export** : conservation sans limite ; sauvegarde gérée de
+  Firestore ; export JSON dans Admin (ce que le groupe voit, plus les prix de
+  l'administrateur) ; export BeerXML après la v1 (ADR-001).
 
 ### Plateformes et exploitation
 
