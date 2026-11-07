@@ -73,7 +73,9 @@ class AppShell extends ConsumerWidget {
     // Le routeur n'affiche la coquille qu'à un membre ; pendant une transition,
     // l'état peut encore être un autre.
     final granted = access is AccessGranted ? access : null;
-    final destinations = shellDestinations(isAdmin: granted?.member.isAdmin ?? false);
+    final destinations = shellDestinations(
+      isAdmin: granted?.member.isAdmin ?? false,
+    );
     final selected = _selectedIndex(destinations);
     final isMembersPage = location.startsWith(AppRoutes.adminMembers);
     final title = isMembersPage ? 'Membres' : destinations[selected].label;
@@ -131,7 +133,9 @@ class AppShell extends ConsumerWidget {
                 selectedIndex: selected,
                 onDestinationSelected: goTo,
                 extended: expanded,
-                labelType: expanded ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+                labelType: expanded
+                    ? NavigationRailLabelType.none
+                    : NavigationRailLabelType.all,
                 destinations: [
                   for (final d in destinations)
                     NavigationRailDestination(
@@ -147,7 +151,9 @@ class AppShell extends ConsumerWidget {
                     ? Align(
                         alignment: Alignment.topCenter,
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+                          constraints: const BoxConstraints(
+                            maxWidth: kContentMaxWidth,
+                          ),
                           child: content,
                         ),
                       )
@@ -162,7 +168,8 @@ class AppShell extends ConsumerWidget {
 
   int _selectedIndex(List<ShellDestination> destinations) {
     for (var i = 0; i < destinations.length; i++) {
-      if (location == destinations[i].path || location.startsWith('${destinations[i].path}/')) {
+      if (location == destinations[i].path ||
+          location.startsWith('${destinations[i].path}/')) {
         return i;
       }
     }
@@ -181,10 +188,11 @@ class _AccountMenu extends ConsumerWidget {
     final theme = Theme.of(context);
     final version = ref.watch(appVersionProvider);
     final name = user.displayName?.trim();
-    final initial = (name != null && name.isNotEmpty ? name : (user.email ?? '?'))
-        .characters
-        .first
-        .toUpperCase();
+    final initial =
+        (name != null && name.isNotEmpty ? name : (user.email ?? '?'))
+            .characters
+            .first
+            .toUpperCase();
     final photo = user.photoUrl;
 
     return MenuAnchor(
@@ -196,8 +204,10 @@ class _AccountMenu extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (name != null && name.isNotEmpty) Text(name, style: theme.textTheme.titleMedium),
-                if (user.email != null) Text(user.email!, style: theme.textTheme.bodyMedium),
+                if (name != null && name.isNotEmpty)
+                  Text(name, style: theme.textTheme.titleMedium),
+                if (user.email != null)
+                  Text(user.email!, style: theme.textTheme.bodyMedium),
                 const SizedBox(height: 8),
                 Text(
                   version == null ? 'Version indisponible' : 'Version $version',
@@ -218,7 +228,8 @@ class _AccountMenu extends ConsumerWidget {
       ],
       builder: (context, controller, _) => IconButton(
         tooltip: 'Mon compte',
-        onPressed: () => controller.isOpen ? controller.close() : controller.open(),
+        onPressed: () =>
+            controller.isOpen ? controller.close() : controller.open(),
         icon: CircleAvatar(
           radius: 16,
           foregroundImage: photo == null ? null : NetworkImage(photo),

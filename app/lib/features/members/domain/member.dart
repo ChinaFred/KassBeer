@@ -51,7 +51,9 @@ class Member {
     return Member(
       email: id,
       role: MemberRole.fromValue(data['role']),
-      displayName: name is String && name.trim().isNotEmpty ? name.trim() : null,
+      displayName: name is String && name.trim().isNotEmpty
+          ? name.trim()
+          : null,
       hasPendingWrites: hasPendingWrites,
     );
   }
@@ -81,7 +83,9 @@ class MemberLookup {
 
   @override
   bool operator ==(Object other) =>
-      other is MemberLookup && other.member == member && other.fromCache == fromCache;
+      other is MemberLookup &&
+      other.member == member &&
+      other.fromCache == fromCache;
 
   @override
   int get hashCode => Object.hash(member, fromCache);
@@ -101,7 +105,8 @@ String normalizeMemberEmail(String input) => input.trim().toLowerCase();
 /// Vrai si [normalized] (déjà passé par [normalizeMemberEmail]) est une adresse que
 /// les règles acceptent comme identifiant de `members/`.
 bool isValidMemberEmail(String normalized) =>
-    normalized.length <= kMemberEmailMaxLength && _emailPattern.hasMatch(normalized);
+    normalized.length <= kMemberEmailMaxLength &&
+    _emailPattern.hasMatch(normalized);
 
 /// Tri de la liste des membres : administrateurs d'abord, puis par e-mail.
 int compareMembers(Member a, Member b) {

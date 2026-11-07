@@ -38,7 +38,11 @@ class FirebaseAuthRepository implements AuthRepository {
   final bool _isWeb;
 
   /// Codes Firebase Auth d'une fenêtre Google fermée par l'utilisateur.
-  static const _cancelCodes = {'popup-closed-by-user', 'cancelled-popup-request', 'web-context-canceled'};
+  static const _cancelCodes = {
+    'popup-closed-by-user',
+    'cancelled-popup-request',
+    'web-context-canceled',
+  };
 
   @override
   Stream<SessionUser?> authStateChanges() => _auth.authStateChanges().map(
@@ -56,7 +60,8 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<SignInOutcome> signInWithGoogle() async {
     try {
       if (_isWeb) {
-        final provider = GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
+        final provider = GoogleAuthProvider()
+          ..setCustomParameters({'prompt': 'select_account'});
         await _auth.signInWithPopup(provider);
         return SignInOutcome.signedIn;
       }
@@ -65,7 +70,9 @@ class FirebaseAuthRepository implements AuthRepository {
       if (idToken == null) {
         throw StateError('Google n\'a pas rendu de jeton d\'identité');
       }
-      await _auth.signInWithCredential(GoogleAuthProvider.credential(idToken: idToken));
+      await _auth.signInWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      );
       return SignInOutcome.signedIn;
     } on FirebaseAuthException catch (error, stackTrace) {
       if (_cancelCodes.contains(error.code)) return SignInOutcome.cancelled;
@@ -75,9 +82,14 @@ class FirebaseAuthRepository implements AuthRepository {
         stackTrace: stackTrace,
         context: 'firebase ${error.code}',
       );
-      throw SignInFailure(network: error.code == 'network-request-failed', cause: error);
+      throw SignInFailure(
+        network: error.code == 'network-request-failed',
+        cause: error,
+      );
     } on GoogleSignInException catch (error, stackTrace) {
-      if (error.code == GoogleSignInExceptionCode.canceled) return SignInOutcome.cancelled;
+      if (error.code == GoogleSignInExceptionCode.canceled) {
+        return SignInOutcome.cancelled;
+      }
       _errors.reportError(
         feature: 'auth.sign_in',
         error: error,
@@ -86,7 +98,11 @@ class FirebaseAuthRepository implements AuthRepository {
       );
       throw SignInFailure(network: false, cause: error);
     } catch (error, stackTrace) {
-      _errors.reportError(feature: 'auth.sign_in', error: error, stackTrace: stackTrace);
+      _errors.reportError(
+        feature: 'auth.sign_in',
+        error: error,
+        stackTrace: stackTrace,
+      );
       throw SignInFailure(network: false, cause: error);
     }
   }

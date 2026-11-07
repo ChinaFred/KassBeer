@@ -51,7 +51,11 @@ class AccessFailed extends AccessState {
 }
 
 class AccessGranted extends AccessState {
-  const AccessGranted({required this.user, required this.member, required this.offline});
+  const AccessGranted({
+    required this.user,
+    required this.member,
+    required this.offline,
+  });
 
   final SessionUser user;
   final Member member;
@@ -81,7 +85,11 @@ final accessStateProvider = Provider<AccessState>((ref) {
         case AsyncData(:final value):
           final member = value.member;
           if (member == null) return AccessNotInvited(user);
-          return AccessGranted(user: user, member: member, offline: value.fromCache);
+          return AccessGranted(
+            user: user,
+            member: member,
+            offline: value.fromCache,
+          );
         default:
           return const AccessLoading();
       }
@@ -95,7 +103,9 @@ void retryAccess(WidgetRef ref) {
   final user = ref.read(sessionUserProvider).value;
   final key = user?.memberKey;
   if (key != null && key.isNotEmpty) ref.invalidate(memberLookupProvider(key));
-  if (ref.read(sessionUserProvider).hasError) ref.invalidate(sessionUserProvider);
+  if (ref.read(sessionUserProvider).hasError) {
+    ref.invalidate(sessionUserProvider);
+  }
 }
 
 /// Vrai pendant une nouvelle lecture de la session ou du membre.

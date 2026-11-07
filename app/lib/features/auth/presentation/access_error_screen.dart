@@ -10,7 +10,8 @@ import 'sign_out.dart';
 class AccessErrorScreen extends ConsumerWidget {
   const AccessErrorScreen({super.key});
 
-  static const message = 'Impossible de vérifier votre accès. Vérifiez le réseau et réessayez.';
+  static const message =
+      'Impossible de vérifier votre accès. Vérifiez le réseau et réessayez.';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -60,9 +60,11 @@ class FirestoreMembersRepository implements MembersRepository {
   final FirebaseFirestore? _injectedFirestore;
   final Duration serverWait;
 
-  FirebaseFirestore get _firestore => _injectedFirestore ?? FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore =>
+      _injectedFirestore ?? FirebaseFirestore.instance;
 
-  CollectionReference<Map<String, dynamic>> get _members => _firestore.collection('members');
+  CollectionReference<Map<String, dynamic>> get _members =>
+      _firestore.collection('members');
 
   @override
   Stream<MemberLookup> watchMember(String emailKey) {
@@ -77,7 +79,8 @@ class FirestoreMembersRepository implements MembersRepository {
         feature: 'members.watch_member',
         error: error,
         stackTrace: StackTrace.current,
-        context: 'document absent du cache, serveur muet après ${serverWait.inSeconds} s',
+        context:
+            'document absent du cache, serveur muet après ${serverWait.inSeconds} s',
       );
       controller.addError(error, StackTrace.current);
     }
@@ -105,7 +108,8 @@ class FirestoreMembersRepository implements MembersRepository {
                         : Member.fromFirestore(
                             snapshot.id,
                             data,
-                            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                            hasPendingWrites:
+                                snapshot.metadata.hasPendingWrites,
                           ),
                     fromCache: fromCache,
                   ),
@@ -137,12 +141,20 @@ class FirestoreMembersRepository implements MembersRepository {
         .map((snapshot) {
           final members = [
             for (final doc in snapshot.docs)
-              Member.fromFirestore(doc.id, doc.data(), hasPendingWrites: doc.metadata.hasPendingWrites),
+              Member.fromFirestore(
+                doc.id,
+                doc.data(),
+                hasPendingWrites: doc.metadata.hasPendingWrites,
+              ),
           ]..sort(compareMembers);
           return members;
         })
         .handleError((Object error, StackTrace stackTrace) {
-          _errors.reportError(feature: 'members.watch_all', error: error, stackTrace: stackTrace);
+          _errors.reportError(
+            feature: 'members.watch_all',
+            error: error,
+            stackTrace: stackTrace,
+          );
           // Relancée : l'écran affiche la panne.
           Error.throwWithStackTrace(error, stackTrace);
         });
@@ -169,13 +181,18 @@ class FirestoreMembersRepository implements MembersRepository {
   }
 
   @override
-  Future<void> remove(String email) => _guard('members.remove', () => _members.doc(email).delete());
+  Future<void> remove(String email) =>
+      _guard('members.remove', () => _members.doc(email).delete());
 
   Future<void> _guard(String feature, Future<void> Function() write) async {
     try {
       await write();
     } catch (error, stackTrace) {
-      _errors.reportError(feature: feature, error: error, stackTrace: stackTrace);
+      _errors.reportError(
+        feature: feature,
+        error: error,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }

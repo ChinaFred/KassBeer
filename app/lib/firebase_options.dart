@@ -68,7 +68,9 @@ class FirebaseEnv {
   FirebaseOptions options({required bool web}) {
     final missing = missingKeys(web: web);
     if (missing.isNotEmpty) {
-      throw StateError('Configuration Firebase incomplète : ${missing.join(', ')}');
+      throw StateError(
+        'Configuration Firebase incomplète : ${missing.join(', ')}',
+      );
     }
     return web
         ? FirebaseOptions(

@@ -8,12 +8,9 @@ import 'sign_out.dart';
 
 /// Compte Google connecté, sans document `members/{email}` sur le serveur.
 class NotInvitedScreen extends ConsumerWidget {
-  const NotInvitedScreen({super.key, required this.email});
+  const NotInvitedScreen({super.key});
 
-  /// Adresse du compte Google, telle que Google la rend.
-  final String email;
-
-  Future<void> _copy(BuildContext context, WidgetRef ref) async {
+  Future<void> _copy(BuildContext context, WidgetRef ref, String email) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await Clipboard.setData(ClipboardData(text: email));
@@ -21,9 +18,15 @@ class NotInvitedScreen extends ConsumerWidget {
     } catch (error, stackTrace) {
       ref
           .read(errorReportServiceProvider)
-          .reportError(feature: 'auth.copy_email', error: error, stackTrace: stackTrace);
+          .reportError(
+            feature: 'auth.copy_email',
+            error: error,
+            stackTrace: stackTrace,
+          );
       messenger.showSnackBar(
-        const SnackBar(content: Text('Copie impossible. Sélectionnez l\'adresse à la main.')),
+        const SnackBar(
+          content: Text('Copie impossible. Sélectionnez l\'adresse à la main.'),
+        ),
       );
     }
   }
@@ -32,6 +35,11 @@ class NotInvitedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final refreshing = ref.watch(accessRefreshingProvider);
+    final access = ref.watch(accessStateProvider);
+    // Adresse du compte Google, telle que Google la rend.
+    final email =
+        (access is AccessNotInvited ? access.user.email : null) ??
+        'Adresse inconnue';
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -51,7 +59,10 @@ class NotInvitedScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text('Vous êtes connecté avec :', textAlign: TextAlign.center),
+                  Text(
+                    'Vous êtes connecté avec :',
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 8),
                   SelectableText(
                     email,
@@ -66,7 +77,7 @@ class NotInvitedScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 32),
                   FilledButton.tonalIcon(
-                    onPressed: () => _copy(context, ref),
+                    onPressed: () => _copy(context, ref, email),
                     icon: const Icon(Icons.copy),
                     label: const Text('Copier l\'adresse'),
                   ),

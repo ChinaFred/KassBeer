@@ -8,7 +8,8 @@ import '../domain/session_user.dart';
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
-  static const networkError = 'Connexion impossible. Vérifiez le réseau et réessayez.';
+  static const networkError =
+      'Connexion impossible. Vérifiez le réseau et réessayez.';
   static const otherError = 'La connexion a échoué. Réessayez.';
 
   @override
@@ -30,7 +31,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authRepositoryProvider).signInWithGoogle();
     } on SignInFailure catch (failure) {
       // Déjà rapportée par le dépôt de données.
-      error = failure.network ? LoginScreen.networkError : LoginScreen.otherError;
+      error = failure.network
+          ? LoginScreen.networkError
+          : LoginScreen.otherError;
     }
     if (!mounted) return;
     setState(() {
@@ -53,7 +56,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ExcludeSemantics(
-                    child: Icon(Icons.sports_bar, size: 72, color: theme.colorScheme.primary),
+                    child: Icon(
+                      Icons.sports_bar,
+                      size: 72,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Semantics(

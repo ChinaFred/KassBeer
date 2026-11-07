@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 class BandeauHorsLigne extends StatelessWidget {
   const BandeauHorsLigne({super.key});
 
-  static const message = 'Hors ligne. Les modifications partiront au retour du réseau.';
+  static const message =
+      'Hors ligne. Les modifications partiront au retour du réseau.';
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +23,10 @@ class BandeauHorsLigne extends StatelessWidget {
               Icon(Icons.cloud_off, color: scheme.onSecondaryContainer),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(message, style: TextStyle(color: scheme.onSecondaryContainer)),
+                child: Text(
+                  message,
+                  style: TextStyle(color: scheme.onSecondaryContainer),
+                ),
               ),
             ],
           ),

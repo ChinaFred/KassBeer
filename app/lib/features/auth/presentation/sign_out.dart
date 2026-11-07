@@ -11,7 +11,11 @@ Future<void> signOutFrom(BuildContext context, WidgetRef ref) async {
   } catch (error, stackTrace) {
     ref
         .read(errorReportServiceProvider)
-        .reportError(feature: 'auth.sign_out', error: error, stackTrace: stackTrace);
+        .reportError(
+          feature: 'auth.sign_out',
+          error: error,
+          stackTrace: stackTrace,
+        );
     messenger?.showSnackBar(
       const SnackBar(content: Text('Déconnexion impossible. Réessayez.')),
     );

@@ -34,7 +34,9 @@ abstract final class AppTheme {
       navigationBarTheme: const NavigationBarThemeData(
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ),
-      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }

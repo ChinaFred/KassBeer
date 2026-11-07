@@ -24,7 +24,9 @@ class ErrorReportFields {
   /// le contenu : c'est ici que l'e-mail est retiré (P13).
   static const emailPlaceholder = '<e-mail>';
 
-  static final RegExp _email = RegExp(r'[^\s@<>()"]+@[^\s@<>()"]+\.[^\s@<>()"]+');
+  static final RegExp _email = RegExp(
+    r'[^\s@<>()"]+@[^\s@<>()"]+\.[^\s@<>()"]+',
+  );
 
   /// Les champs à écrire. `created_at` vaut `FieldValue.serverTimestamp()`.
   final Map<String, Object?> data;
@@ -38,12 +40,18 @@ class ErrorReportFields {
     String? appVersion,
     required String platform,
   }) {
-    final cleanFeature = truncate(feature.trim().isEmpty ? 'inconnu' : feature.trim(), maxFeature);
+    final cleanFeature = truncate(
+      feature.trim().isEmpty ? 'inconnu' : feature.trim(),
+      maxFeature,
+    );
     final stack = stackTrace?.toString();
     return ErrorReportFields._({
       'uid': uid,
       'feature': cleanFeature,
-      'error': truncate(withoutEmails('${error.runtimeType}: $error'), maxError),
+      'error': truncate(
+        withoutEmails('${error.runtimeType}: $error'),
+        maxError,
+      ),
       if (stack != null && stack.isNotEmpty)
         'stack_trace': truncate(withoutEmails(stack), maxStackTrace),
       if (context != null && context.isNotEmpty)
@@ -56,7 +64,8 @@ class ErrorReportFields {
   }
 
   /// [text] sans ses adresses e-mail.
-  static String withoutEmails(String text) => text.replaceAll(_email, emailPlaceholder);
+  static String withoutEmails(String text) =>
+      text.replaceAll(_email, emailPlaceholder);
 
   /// [value] coupé à [max] unités UTF-16, sans couper un caractère en deux, terminé
   /// par « … » quand il a été coupé. Les règles comptent en caractères : une chaîne
@@ -77,9 +86,12 @@ class ErrorReportFields {
 /// Firebase Auth sont résolus à l'usage : le service se construit sans application
 /// Firebase initialisée, donc dans les tests.
 class ErrorReportService {
-  ErrorReportService({FirebaseFirestore? firestore, FirebaseAuth? auth, this.appVersion})
-    : _injectedFirestore = firestore,
-      _injectedAuth = auth;
+  ErrorReportService({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    this.appVersion,
+  }) : _injectedFirestore = firestore,
+       _injectedAuth = auth;
 
   final FirebaseFirestore? _injectedFirestore;
   final FirebaseAuth? _injectedAuth;
@@ -87,7 +99,8 @@ class ErrorReportService {
   /// Version installée, lue au démarrage ; `null` si la lecture a échoué.
   final String? appVersion;
 
-  FirebaseFirestore get _firestore => _injectedFirestore ?? FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore =>
+      _injectedFirestore ?? FirebaseFirestore.instance;
   FirebaseAuth get _auth => _injectedAuth ?? FirebaseAuth.instance;
 
   /// Écrit un rapport dans `error_reports/`, sans attendre le serveur.
@@ -128,16 +141,14 @@ class ErrorReportService {
     );
     try {
       unawaited(
-        _firestore
-            .collection('error_reports')
-            .doc()
-            .set(fields.data)
-            .catchError((Object writeError, StackTrace writeStack) {
-              // Écrire dans la collection en panne ne peut pas passer par ce même
-              // service : la console est le dernier recours.
-              _toConsole('écriture du rapport refusée', writeError, writeStack);
-              _toConsole(feature, error, stackTrace);
-            }),
+        _firestore.collection('error_reports').doc().set(fields.data).catchError(
+          (Object writeError, StackTrace writeStack) {
+            // Écrire dans la collection en panne ne peut pas passer par ce même
+            // service : la console est le dernier recours.
+            _toConsole('écriture du rapport refusée', writeError, writeStack);
+            _toConsole(feature, error, stackTrace);
+          },
+        ),
       );
     } catch (writeError, writeStack) {
       _toConsole('écriture du rapport impossible', writeError, writeStack);
