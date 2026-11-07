@@ -16,3 +16,24 @@ CLAUDE.local.md
 .env
 .env.*
 !.env.example
+
+# Flutter et Dart.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Signature Android : jamais versionnée (CLAUDE.md, P8).
+app/android/key.properties
+*.jks
+*.keystore
+
+# Journaux Firebase et émulateurs.
+firebase-debug*.log
+firestore-debug*.log
+rules-tests/*.log
+*.p12
+*.pem
+*service-account*.json
+
+# JSON d'import des fiches : contiennent des prix (ADR-001, arbitrage 7).
+import/

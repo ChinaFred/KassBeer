@@ -1,16 +1,15 @@
-# CLAUDE.md — <Nom du projet>
+# CLAUDE.md — Kass'Beer
 
 **Source de vérité des instructions IA de ce dépôt.** Il n'en existe pas d'autre copie. Un
 second fichier d'instructions (Copilot, Cursor…) diverge en quelques semaines : ne pas en créer.
 
-Les sections marquées `<!-- architecte -->` sont remplies au démarrage du projet par le skill
-`demarrage-projet` et l'agent `architecte`. Tant qu'elles sont vides, la première demande de
-code se transforme en démarrage (voir « Démarrer le projet »).
+Les sections propres au projet ont été remplies au démarrage (skill `demarrage-projet`,
+agent `architecte`, ADR-001, v0.1.0).
 
 ## Ton
 
 Commencer chaque réponse par « Maître », « Seigneur », « Majesté »… ou une variante créative.
-Répondre en français. <!-- La formule d'adresse se choisit au démarrage (skill demarrage-projet). -->
+Répondre en français.
 
 ### Écrire pour être compris
 
@@ -59,43 +58,111 @@ code pour répondre reste permis.
 
 Un doute sur la nature de la demande se traite comme une question.
 
-## Le projet <!-- architecte -->
+## Le projet
 
-<Intention en trois phrases : pour qui, pour quoi faire, ce qui est hors du périmètre.
-Le détail vit dans `documentation/projet.md`.>
+Kass'Beer remplace les fiches Excel de brassage amateur d'un brasseur et de quelques amis
+(moins de 10 comptes) : recette et calculs, profils d'équipement, déroulé du jour de
+brassage hors ligne, suivi et coût d'un brassin. Vente, brasserie professionnelle, iOS et
+desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 
-<Pile retenue, en une ligne par couche. Le détail et les options écartées vivent dans
-`documentation/decisions/ADR-001-pile-technique.md`.>
+- Interface : Flutter, un seul projet (`app/`) pour Android (APK) et le web.
+- Calculs de brassage : paquet Dart pur `brewing/` (densités, degré, IBU Tinseth, EBC Morey,
+  rendement, coût), lu par l'application seule.
+- Données : Cloud Firestore `(default)` en `europe-west1`, cache hors ligne persistant.
+- Authentification : Firebase Auth, compte Google ; accès réservé aux e-mails listés dans
+  `members/{email}` par l'administrateur.
+- Hébergement : Firebase Hosting (web) ; APK signé distribué par Firebase App Distribution.
+- Serveur : aucun en version 1. Cloud Functions Node 22 / TypeScript en `europe-west1`
+  quand arriveront l'IA ou le RAPT Pill (ADR à venir).
+- Import des 16 fiches Excel : fichiers JSON préparés par une session Claude Code, relus et
+  écrits par l'écran Admin › Import. Aucune IA dans l'application en version 1.
+- Détail et options écartées : `documentation/decisions/ADR-001-pile-technique.md`.
 
-<Contraintes d'exploitation : local, réseau protégé ou ouvert sur Internet ; données
-sensibles ; budget.>
+Ouvert sur Internet, comptes sur invitation. Données personnelles limitées au nom et à
+l'e-mail (RGPD). Prix d'achat, stock et coût d'un brassin privés à chaque brasseur. Plan
+Blaze, alerte budgétaire à 5 €, dépense visée ≈ 0 € par mois. Projet Firebase distinct de
+Kass'Dalle (identifiant à créer). Dépôt privé `ChinaFred/KassBeer`, branche principale `main`.
 
-## Structure <!-- architecte -->
+## Structure
 
 ```
-<arborescence des dossiers principaux, une ligne de commentaire par dossier>
+app/                  # application Flutter (Android, web)
+├── lib/core/         # services transverses : erreurs, router, thème, auth, version
+├── lib/features/     # auth, members, equipment, recipes, brew_day, brews, import, admin
+│                     # chaque feature en couches data/ domain/ presentation/
+├── test/             # tests Flutter
+└── android/          # projet Gradle ; key.properties et *.jks jamais versionnés
+brewing/              # paquet Dart pur : calculs de brassage, sans Flutter ni Firebase
+└── test/fixtures/    # cas tirés des 16 fiches Excel, valeurs attendues et tolérances
+rules-tests/          # tests de firestore.rules contre l'émulateur (Node 22, Java 21)
+firebase.json         # Hosting (en-têtes, cache), Firestore, émulateurs
+firestore.rules       # seul contrôle d'accès de la v1
+firestore.indexes.json
+.github/workflows/    # ci.yml (contrôles), deploy.yml (Hosting, règles, APK)
+scripts/              # check-version.mjs, check-agents.mjs
+import/fiches/        # JSON d'import des 16 fiches (contiennent des prix) : jamais versionné
 ```
 
-## Commandes utiles <!-- architecte -->
+État : Riverpod. Navigation : go_router. Rôles : `admin`, `brewer`.
+
+À la v0.1.0, seuls `app/pubspec.yaml` (il porte la version) et `scripts/` existent. Le
+reste arrive avec le socle de l'application, première livraison après le démarrage.
+
+## Commandes utiles
 
 ```bash
-<installer les dépendances>
-<lancer l'application>
-<analyse statique>
-<formatage — vérification>
-<tests>
-<compilation de chaque cible livrée>
+# Installer
+(cd app && flutter pub get) && (cd brewing && dart pub get) && (cd rules-tests && npm ci)
+
+# Lancer
+(cd app && flutter run -d chrome)
+(cd app && flutter run -d <appareil Android>)
+(cd rules-tests && npx firebase --config ../firebase.json emulators:start --only auth,firestore --project demo-kassbeer)
+
+# Analyse statique
+(cd app && flutter analyze) && (cd brewing && dart analyze --fatal-infos)
+
+# Formatage — vérification
+dart format --output=none --set-exit-if-changed app/lib app/test brewing
+
+# Tests
+(cd brewing && dart test)
+(cd app && flutter test)
+(cd rules-tests && npm test)          # émulateur Firestore, projet demo-kassbeer, Java 21
+
+# Compilation de chaque cible livrée
+(cd app && flutter build web --release)
+(cd app && flutter build apk --release)   # SDK Android : sur le PC, ou job « Android — compilation » de la CI
+
+# Outillage
+node scripts/check-agents.mjs
+git fetch --tags && node scripts/check-version.mjs
 ```
 
-Ces commandes sont **les contrôles du projet**. Il n'y a pas de CI dans ce dépôt : ce sont
-les agents qui les lancent, avant chaque commit (voir « Chaîne de travail »).
+Ces commandes sont **les contrôles du projet**. Les agents les lancent avant chaque commit.
+La CI (`.github/workflows/ci.yml`, ajoutée avec le socle) les rejoue sur chaque PR et chaque
+push, et compile l'APK quand `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`
+change. Une session cloud, sans SDK Android, s'appuie sur ce job. Une PR dont la CI n'est
+pas verte ne se fusionne pas. `deploy.yml` déploie Hosting et les règles, et publie l'APK
+sur App Distribution, après une CI verte sur `main`.
 
 ## Règles de code
 
 **Aucun `catch` silencieux.** C'est la règle la plus stricte du projet. Une erreur attrapée
 est journalisée par le service d'erreurs du projet, y compris une erreur jugée sans gravité,
 avant de rendre un résultat dégradé. Un journal de débogage invisible en production ne
-suffit pas. <!-- architecte : nommer la fonction de journalisation, côté client et serveur. -->
+suffit pas.
+
+- Dart/Flutter : `ErrorReportService.reportError(feature:, error:, stackTrace:, context:)`
+  (`app/lib/core/services/error_report_service.dart`, injecté par constructeur). Il écrit
+  dans `error_reports/` (création par un membre, lecture par l'admin). Hors ligne,
+  l'écriture attend le retour du réseau. `FlutterError.onError` et
+  `PlatformDispatcher.instance.onError` y sont branchés dans `main.dart`. `debugPrint` seul
+  ne suffit pas. Le paquet `brewing/` ne fait pas de `catch` : il lève, l'appelant journalise.
+- TypeScript (Functions, quand elles existeront) : `logError(...)` de
+  `functions/src/logging.ts`, écrit sur `firebase-functions/logger`. Pas de client
+  `@google-cloud/logging`, qui tire gRPC au démarrage (leçon 5).
+- `analysis_options.yaml` active `empty_catches` et `unawaited_futures` en erreur.
 
 **Pas de valeur de repli figée dans le code.** Un prix, un taux de change, un seuil métier
 qui vient d'une donnée ne se remplace pas par une constante quand la donnée manque. Une
@@ -110,20 +177,71 @@ client construit au niveau module se charge au démarrage, comme un import stati
 **Pas de code mort.** Ce qu'un changement rend inutile — fonction, écran, route, constante,
 fichier — sort dans le même changement, avec ses tests et sa documentation.
 
-<!-- architecte : règles propres à la pile (gestion d'état, couches, conventions de nommage). -->
+**Le jour de brassage marche sans réseau — règle absolue.** Sur l'écran du jour de brassage
+et dans ce qu'il appelle : aucune transaction (`runTransaction`), aucune callable ni requête
+HTTP, aucune lecture qui exige le serveur (`Source.server`). Chaque mesure et chaque début
+ou fin d'étape est un document à part (`brews/{id}/events/{eventId}`, identifiant créé par
+le client), jamais un élément ajouté à un tableau. L'heure d'une mesure est l'heure de
+l'appareil (`measured_at`) ; `serverTimestamp()` ne sert qu'à l'audit. Un minuteur se
+recalcule à partir des heures enregistrées : un `Timer` Dart n'en est jamais la source. Les
+heures prévues recalculées après un retard se dérivent à l'affichage et ne s'écrivent pas.
+L'écran garde l'appareil allumé (`wakelock_plus`). Le brassin, sa recette figée et son
+équipement sont lus avant le départ (« Préparer le brassage »). Le cache Firestore est
+réglé sans limite de taille. Le hors ligne est garanti sur l'APK ; sur le web, seul un
+onglet déjà ouvert continue de marcher sans réseau.
 
-## Contrôles propres au projet <!-- architecte -->
+**Les calculs vivent dans `brewing/`, et seulement là.** Aucune formule de brassage dans
+un widget, un repository ou une fonction serveur. Une formule changée ajoute d'abord son cas
+à `brewing/test/fixtures/`. Un calcul de brassage côté serveur est un changement lourd.
+
+**Unités du système international en base.** Masses en grammes, volumes en litres,
+températures en °C, densités en SG décimal (1.0579), couleur en EBC, durées en minutes.
+La conversion vers l'affichage (« 1057,9 ») se fait à l'écran.
+
+**Un brassin fige sa recette.** À sa création, il reçoit une copie de la recette et de
+l'équipement. Les ajustements du jour s'écrivent dans le brassin, jamais dans la recette.
+
+**Les prix ne quittent pas `users/{uid}/`.** Aucun prix d'achat ni aucun stock dans
+`recipes/`, `brews/` ou `equipment/`. Le coût d'une recette se calcule à l'affichage avec
+les prix du lecteur. Le coût réel d'un brassin vit sous `users/{uid}/brew_costs/{brewId}`.
+Les profils d'équipement sont lisibles par le groupe. Seule exception : l'export JSON
+d'Admin, qui contient ce que le groupe voit et les seuls prix de l'administrateur (ADR-001,
+arbitrage 13).
+
+**La famille FlutterFire monte ensemble.** Quand `firebase_core` change, monter
+`firebase_auth` et `cloud_firestore` dans la même commande, et nommer dans le
+`CHANGELOG.md` chaque paquet dont la version change dans `pubspec.lock`.
+
+## Cache web — règle absolue
+
+Dans `firebase.json`, jamais de `**/*.@(js|css|wasm)` en `immutable` ; seul `canvaskit/**`
+peut l'être. `index.html`, `flutter_bootstrap.js`, `flutter.js`, `main.dart.js` et
+`version.json` restent en `no-cache, no-store, must-revalidate` (+ `Pragma: no-cache` et
+`Expires: 0` pour `index.html`). Un cache long sur ces fichiers bloque les navigateurs sur
+une ancienne version (leçon 6).
+
+## Contrôles propres au projet
 
 Les relecteurs appliquent leurs contrôles génériques, **plus** ceux de ce tableau. Chaque
 ligne vient d'une décision d'architecture (ADR) ou d'un incident. L'`architecte` en propose,
 l'utilisateur les valide, la session principale les ajoute ici (skill `evolution-reseau`).
 
-<!-- Exemple de ligne, à ne pas recopier tel quel :
-| P1 | Aucun en-tête de cache long sur les fichiers d'amorçage du web | `relecteur-regles` | ADR-001 |
--->
-
 | N° | Contrôle | Agent | Origine |
 |---|---|---|---|
+| P1 | `firebase.json` : seul `canvaskit/**` en `immutable` ; `index.html`, `flutter_bootstrap.js`, `flutter.js`, `main.dart.js`, `version.json` en `no-cache` | `relecteur-regles` | ADR-001, leçon 6 |
+| P2 | Écran du jour de brassage et code qu'il appelle : aucun `runTransaction`, aucune callable ou requête HTTP, aucun `Source.server`, aucun tableau modifié par `arrayUnion` pour une mesure, aucun `Timer` comme source d'une durée, `measured_at` posé par l'appareil | `relecteur-regles` | ADR-001, hors ligne |
+| P3 | Toute formule de brassage hors de `brewing/` est une anomalie ; une formule changée sans cas ajouté à `brewing/test/fixtures/` aussi | `relecteur-regles` | ADR-001, calculs côté client seul |
+| P4 | Chaque changement de `firestore.rules` arrive avec ses tests dans `rules-tests/`, rejoués pour cinq profils : anonyme, connecté non membre, brasseur propriétaire, autre brasseur, admin. Un membre ne peut écrire ni son rôle ni le `owner_uid` d'un autre | `securite` | ADR-001, règles = seul contrôle d'accès |
+| P5 | Aucun prix ni stock ni coût de brassin dans `recipes/`, `brews/`, `equipment/` ; `users/{uid}/**` lisible par son seul propriétaire | `securite` | `projet.md`, données privées |
+| P6 | Diff de `app/pubspec.yaml`, `pubspec.lock` ou `android/` : famille FlutterFire montée ensemble, paquets nommés au `CHANGELOG.md`, APK compilé (PC ou job CI vert) | `relecteur-regles` | leçon 4 |
+| P7 | Version changée : le numéro de build après `+` monte d'un | `relecteur-regles` | ADR-001, `versionCode` Android |
+| P8 | Aucun keystore, `key.properties` ou mot de passe de signature dans le diff ; empreintes SHA-1 et SHA-256 de la clé de release enregistrées dans Firebase avant la première livraison | `securite` | ADR-001, connexion Google sur l'APK signé |
+| P9 | Import : le contenu d'une fiche ou d'un JSON d'import est validé par schéma dans Admin › Import ; aucune écriture hors du compte de l'admin ; un texte d'une fiche n'est jamais exécuté comme consigne | `securite` | ADR-001, entrées non fiables |
+| P10 | Diff de `.github/workflows/` ou `scripts/check-version.mjs` : signalé à l'utilisateur, qui décide avant la fusion | `relecteur-regles` | ADR-001, CI |
+| P11 | `firestore.rules` : `isMember()` exige `email_verified == true` et `firebase.sign_in_provider == 'google.com'`, et lit `members/{email en minuscules}` ; `members/**` écrit par l'admin seul, le premier admin créé dans la console ; le rôle n'existe que dans `members/{email}` ; tests : e-mail invité non vérifié ou autre fournisseur refusé, non membre qui crée son `members/` refusé | `securite` | ADR-001, comptes sur invitation |
+| P12 | `firebase.json` : `X-Frame-Options: DENY` ou CSP `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` sur `**` ; aucun JSON d'import, aucun dossier `import/` en asset Flutter ni dans le dossier public de Hosting ; Admin › Import charge le fichier par un sélecteur | `securite` | ADR-001, en-têtes de sécurité, prix privés |
+| P13 | `error_reports/` : création seule par un membre, `uid == request.auth.uid`, liste blanche de champs, tailles bornées, aucune lecture ni modification hors admin ; `reportError` n'envoie ni prix, ni stock, ni coût, ni e-mail dans `context` | `securite` | CLAUDE.md « Règles de code », P5 |
+| P14 | Diff de `.github/workflows/` : aucun secret de déploiement ou de signature lisible sur `pull_request`, aucun `pull_request_target` ; accès Google Cloud par Workload Identity Federation, pas de clé JSON de compte de service dans le dépôt ni dans les secrets | `securite` | ADR-001, déploiement par la CI |
 
 ## Données partagées et état propre à un utilisateur
 
@@ -135,7 +253,9 @@ d'erreur, chacun écrase le résultat de l'autre à tour de rôle.
 Avant de stocker une adaptation, vérifier qu'elle a besoin d'être stockée. Une valeur
 dérivable se calcule dans le contexte qui l'affiche.
 
-## Coûts variables (IA, API facturées à l'usage) <!-- architecte : retirer si sans objet -->
+## Coûts variables (IA, API facturées à l'usage)
+
+Version 1 : aucun poste. Le premier poste arrive avec son ADR, son catalogue et son plafond.
 
 - **Une API facturée n'est jamais appelée depuis le client.** Elle passe par le serveur, et
   les clés vivent dans un gestionnaire de secrets.
@@ -155,22 +275,10 @@ deux la lisent, et ne garder en double que le calcul.
 Quand elle existe, elle a une fixture JSON rejouée par les deux suites de tests, et une
 ligne dans ce tableau. Le skill `logique-dupliquee` dit comment.
 
+Les calculs de brassage n'existent qu'en Dart, dans `brewing/` (ADR-001, P3).
+
 | Fixture | Logique | Client | Serveur |
 |---|---|---|---|
-
-## Bac à sable <!-- architecte : retirer si le projet n'en a pas -->
-
-Un dossier d'expériences, réservé à l'administrateur. **Il ne modifie jamais le code de
-l'application** : il peut l'importer et l'appeler ; pour changer un comportement, il copie
-le code et modifie la copie. Rien n'y est enregistré sur les chemins de production. Il ne
-fait partie d'aucune livraison et n'entre pas dans `exigences-fonctionnelles.md` ; seul
-`exigences-techniques.md` le décrit. Un appel à une API facturée depuis le bac à sable porte
-son propre poste de coût, rangé sous le groupe « Bac à sable ». **Une expérience validée ne se
-branche pas : elle se réécrit** dans sa feature, et le bloc expérimental est supprimé.
-
-**Une expérience se choisit portable** : avant la première ligne, dire où tournera le code
-une fois porté, et n'employer que des bibliothèques disponibles là-bas. Skill
-`experience-sandbox`.
 
 ## Une écriture de masse sur les données a un seul écran
 
@@ -178,7 +286,8 @@ Semer un référentiel, reprendre un champ sur tous les documents, rattacher ce 
 orphelin : ces opérations vivent dans **un seul écran d'administration**, avec une barre de
 progression et un compte rendu chiffré (créés, ignorés, en erreur) qui nomme les éléments à
 revoir. Sur le projet qui a servi de base à agent-starter, un bouton de masse posé dans un
-écran métier n'a été trouvé par aucun utilisateur.
+écran métier n'a été trouvé par aucun utilisateur. Dans Kass'Beer, cet écran est
+**Admin › Import** ; l'import des 16 fiches en est la première opération.
 
 ## Documentation à tenir à jour
 
@@ -210,7 +319,6 @@ ne correspond plus au code se corrige ou se supprime.
 
 ## Version
 
-<!-- architecte : fichier qui porte la version (package.json, pyproject.toml, Cargo.toml…). -->
 Un seul fichier porte la version. Chaque commit qui termine la « Chaîne de travail » l'incrémente (dernier chiffre + 1, jusqu'à
 99, puis chiffre du milieu + 1) et ajoute en tête de `documentation/CHANGELOG.md`, sous la date
 du jour (`## AAAA-MM-JJ`), un titre `### vX.Y.Z — fonctionnel` ou `— technique`, dans le même
@@ -222,6 +330,11 @@ une branche, l'intégrer **par une fusion, jamais par un rebase**, puis lancer
 ne dépasse pas celui de la branche principale, si le tag de ce numéro existe déjà, ou si
 `CHANGELOG.md` ne commence pas par l'entrée de ce numéro. Le fichier qui porte la version est
 déclaré dans `.claude/version.json`.
+
+Le fichier qui porte la version est `app/pubspec.yaml` (`version: X.Y.Z+N`). Le numéro de
+build `N` monte d'un à chaque version : Android refuse d'installer un APK dont le
+`versionCode` ne dépasse pas celui de l'APK installé. `check-version.mjs` ignore `+N` ;
+`relecteur-regles` le vérifie (P7).
 
 Chaque version livrée porte un tag annoté `vX.Y.Z`, posé sur la branche principale après la
 fusion (« Chaîne de travail », étape 6). Jamais sur une branche de travail : son numéro peut
@@ -260,7 +373,6 @@ place et ne fait pas la relecture elle-même. `scripts/check-agents.mjs` vérifi
 | `changement-lourd` | une demande entre dans la liste « Changement lourd » ci-dessous |
 | `evolution-reseau` | ajouter, modifier ou retirer un agent, un skill, un hook ou un contrôle |
 | `logique-dupliquee` | changer une logique du tableau « Logique dupliquée » |
-| `experience-sandbox` | ajouter, faire avancer, porter ou retirer une expérience du bac à sable |
 
 Deux hooks, déclarés dans `.claude/settings.json` :
 
@@ -269,13 +381,6 @@ Deux hooks, déclarés dans `.claude/settings.json` :
   session cloud, proposé par l'architecte, écrit par la session principale) ;
 - `format-on-edit.mjs` : après chaque écriture, lance le formateur que
   `.claude/formatters.json` associe au fichier. Un échec ne bloque pas l'édition.
-
-## Démarrer le projet
-
-Tant que la section « Le projet » contient encore ses chevrons, toute demande de code
-commence par le skill `demarrage-projet`. Il recueille l'intention, les utilisateurs et les
-contraintes, puis confie le choix de pile à l'`architecte`. L'utilisateur valide l'ADR et les
-sections de `CLAUDE.md` proposées avant la première ligne de code applicatif.
 
 ## Changement lourd
 

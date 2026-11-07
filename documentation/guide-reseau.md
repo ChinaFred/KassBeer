@@ -4,8 +4,9 @@ Ce document décrit le réseau d'agents livré avec ce dépôt : ce qu'il contie
 démarre, comment il travaille, et comment le faire évoluer. Il se met à jour dans le même
 commit que tout changement de `.claude/`, de `scripts/` ou de `CLAUDE.md`.
 
-Le dépôt ne contient **ni CI, ni déploiement, ni intégration aux Issues GitHub**. Les
-contrôles tournent sur le poste ou dans la session, lancés par les agents.
+La CI et le déploiement arrivent avec le socle de l'application (section 7). Pas
+d'intégration aux Issues GitHub. Jusque-là, les contrôles tournent sur le poste ou dans la
+session, lancés par les agents.
 
 ## 1. Vue d'ensemble
 
@@ -40,9 +41,10 @@ CLAUDE.md                       règles, chaîne de travail, tableaux à remplir
 ├── formatters.json             formateur par type de fichier (rempli au démarrage)
 ├── version.json                fichier qui porte la version (rempli au démarrage)
 ├── agents/                     sept agents
-├── skills/                     cinq skills
+├── skills/                     quatre skills
 └── hooks/
     ├── session-start.sh        vérifie agents et skills, lance setup-projet.sh s'il existe
+    ├── setup-projet.sh         session cloud : installe Flutter 3.44.6 et les dépendances
     └── format-on-edit.mjs      formate le fichier écrit, selon formatters.json
 scripts/
 ├── check-agents.mjs            vérifie les en-têtes YAML et les noms cités dans CLAUDE.md
@@ -72,7 +74,6 @@ documentation/                  modèles de documents, leçons apprises, ce guid
 | `changement-lourd` | avis de l'architecte avant un changement qui engage le projet |
 | `evolution-reseau` | ajouter un contrôle, un agent, un skill ou un hook |
 | `logique-dupliquee` | logique client ↔ serveur avec fixture partagée |
-| `experience-sandbox` | expériences hors livraison, portage, suppression |
 
 ## 3. Démarrer un nouveau projet
 
@@ -177,10 +178,16 @@ git diff HEAD starter/main -- .claude scripts   # voir les écarts, puis reprend
 - **Windows** : les hooks sont en Node ou en bash ; sous Windows, `bash` est celui de Git for
   Windows, pas celui de WSL.
 
-## 7. Ajouter plus tard une CI ou un déploiement
+## 7. CI et déploiement de Kass'Beer
 
-Ce dépôt n'en contient pas, par choix. Le jour où le projet en a besoin, c'est un changement
-lourd : l'`architecte` le propose, et les commandes de « Commandes utiles » deviennent les jobs
-de la CI. Une CI complète comprend en général : vérification du numéro de version,
-compilation de chaque cible, tests des règles d'accès contre un émulateur, déploiement après
-une CI verte.
+ADR-001 retient une CI GitHub Actions, ajoutée avec le socle de l'application. Une session
+cloud n'a pas de SDK Android, et seule la CI compile l'APK. Quatre jobs, repris de
+Kass'Dalle : Version (`node scripts/check-version.mjs`), Flutter et `brewing/`, Règles
+(émulateur), Android (compilation de l'APK quand `app/pubspec.yaml`, `pubspec.lock` ou
+`app/android/` change). `deploy.yml` déploie Hosting et les règles, et publie l'APK sur
+Firebase App Distribution après une CI verte sur `main`. Le dépôt est privé : le plan
+GitHub Free inclut 2 000 minutes par mois, soit 55 à 80 livraisons. Toute modification de
+`.github/workflows/` ou de `scripts/check-version.mjs` se signale à l'utilisateur avant la
+fusion (P10). `securite` vérifie aussi les workflows (P14) : aucun secret lisible sur
+`pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload Identity
+Federation, sans clé JSON de compte de service.

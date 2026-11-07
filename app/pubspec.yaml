@@ -1,0 +1,9 @@
+# Porte la version de Kass'Beer (.claude/version.json). Le reste du projet Flutter
+# (dépendances, lib/, android/, web/) arrive avec le socle de l'application.
+name: kass_beer
+description: "Kass'Beer — recettes et brassins de bière amateur."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.4

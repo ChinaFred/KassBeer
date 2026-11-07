@@ -1,4 +1,4 @@
 {
   "_commentaire": "Rempli au démarrage par la session principale (skill demarrage-projet). « fichier » : chemin, relatif à la racine, du seul fichier qui porte la version (package.json, pubspec.yaml, pyproject.toml…). Vide tant que le projet n'est pas démarré. Lu par scripts/check-version.mjs.",
-  "fichier": ""
+  "fichier": "app/pubspec.yaml"
 }
