@@ -445,7 +445,12 @@ de l'étape, réussite ou échec.
 
 Environnement `production` (Settings › Environments) : branches de déploiement limitées à
 `main` (« Selected branches and tags », règle `main`). Sans relecteur requis : un relecteur
-requis demanderait trois approbations par déploiement (`plan`, `build`, `deploy`).
+requis demanderait trois approbations par déploiement (`plan`, `build`, `deploy`). Sans
+contournement par un administrateur (« Allow administrators to bypass configured protection
+rules » décoché, `can_admins_bypass: false`) : un workflow lancé depuis une autre branche
+que `main` ne lit pas les secrets de signature, même lancé par le propriétaire. Un `PUT` de
+l'environnement par l'API doit contenir `deployment_branch_policy` : sans ce champ, GitHub
+retire la règle de branche.
 
 Variables de l'environnement `production` :
 

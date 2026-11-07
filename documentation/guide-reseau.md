@@ -204,9 +204,22 @@ de `main` exige les quatre contrôles avant la fusion. Une PR de fork ne lance l
 approbation du propriétaire. Une branche avec une PR ouverte tourne deux fois par push
 (`push` et `pull_request`). Toute modification de
 `.github/workflows/` ou de `scripts/check-version.mjs` se signale à l'utilisateur avant la
-fusion (P10). `securite` vérifie aussi les workflows (P14) : aucun secret lisible sur
-`pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload Identity
-Federation, sans clé JSON de compte de service.
+fusion (P10). Sur une branche externe (PR d'un fork, ou commit d'un autre auteur que le
+propriétaire), un diff d'un fichier qu'un hook exécute se signale aussi : `.claude/**`,
+`CLAUDE.md`, `scripts/**`, `rules-tests/package.json`, `rules-tests/package-lock.json`,
+`rules-tests/prettier.config.*`. Il se lit par `git diff` depuis `main` avant d'ouvrir une
+session Claude Code sur la branche. Sinon, `session-start.sh` lancerait `check-agents.mjs`
+et `setup-projet.sh`, et `format-on-edit.mjs` lancerait prettier dans `rules-tests/`. Ces
+scripts tournent sur le poste. Le `npm ci` de `setup-projet.sh` ne tourne que dans une
+session cloud, sauf si la branche a modifié ce script. `securite` vérifie aussi les workflows (P14) : aucun secret
+lisible sur `pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload
+Identity Federation, sans clé JSON de compte de service.
+
+Tout ce que le dépôt publie est lisible par tous : fichiers, commits, PR, tags, journaux de
+run. `securite` vérifie qu'aucun prénom, nom ou e-mail réel n'y entre (P15) et que chaque
+variable que `toJSON(vars)` affiche dans le journal est une valeur publique (P16). Une
+valeur sensible va dans les secrets, jamais dans les variables du dépôt ni de
+l'environnement.
 
 Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
 `--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans

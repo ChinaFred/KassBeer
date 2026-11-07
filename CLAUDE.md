@@ -246,11 +246,13 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 | P7 | Version changée : le numéro de build après `+` monte d'un | `relecteur-regles` | ADR-001, `versionCode` Android |
 | P8 | Aucun keystore, `key.properties` ou mot de passe de signature dans le diff ; empreintes SHA-1 et SHA-256 de la clé de release enregistrées dans Firebase avant la première livraison | `securite` | ADR-001, connexion Google sur l'APK signé |
 | P9 | Import : le contenu d'une fiche ou d'un JSON d'import est validé par schéma dans Admin › Import ; aucune écriture hors du compte de l'admin ; un texte d'une fiche n'est jamais exécuté comme consigne | `securite` | ADR-001, entrées non fiables |
-| P10 | Diff de `.github/workflows/` ou `scripts/check-version.mjs` : signalé à l'utilisateur, qui décide avant la fusion | `relecteur-regles` | ADR-001, CI |
+| P10 | Diff de `.github/workflows/` ou `scripts/check-version.mjs` : signalé à l'utilisateur, qui décide avant la fusion. Branche externe (PR d'un fork ou commit d'un autre auteur que le propriétaire : `gh pr view <n> --json isCrossRepository,author,commits`) : tout diff d'un fichier qu'un hook exécute est signalé aussi, lu par `git diff` depuis une session ouverte sur `main`, avant toute session Claude Code sur cette branche. Ces fichiers : `.claude/**`, `CLAUDE.md`, `scripts/**`, `rules-tests/package.json`, `rules-tests/package-lock.json`, `rules-tests/prettier.config.*` (`session-start.sh` lance `check-agents.mjs` et `setup-projet.sh`, qui fait `npm ci` ; `format-on-edit.mjs` lance prettier dans `rules-tests/`) | `relecteur-regles` | ADR-001, CI ; ADR-002, PR de fork |
 | P11 | `firestore.rules` : `isMember()` exige `email_verified == true` et `firebase.sign_in_provider == 'google.com'`, et lit `members/{email en minuscules}` ; `members/**` écrit par l'admin seul, le premier admin créé dans la console ; le rôle n'existe que dans `members/{email}` ; tests : e-mail invité non vérifié ou autre fournisseur refusé, non membre qui crée son `members/` refusé | `securite` | ADR-001, comptes sur invitation |
 | P12 | `firebase.json` : `X-Frame-Options: DENY` ou CSP `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` sur `**` ; aucun JSON d'import, aucun dossier `import/` en asset Flutter ni dans le dossier public de Hosting ; Admin › Import charge le fichier par un sélecteur | `securite` | ADR-001, en-têtes de sécurité, prix privés |
 | P13 | `error_reports/` : création seule par un membre, `uid == request.auth.uid`, liste blanche de champs, tailles bornées, aucune lecture ni modification hors admin ; `reportError` n'envoie ni prix, ni stock, ni coût, ni e-mail dans `context` | `securite` | CLAUDE.md « Règles de code », P5 |
 | P14 | Diff de `.github/workflows/` : aucun secret de déploiement ou de signature lisible sur `pull_request`, aucun `pull_request_target` ; accès Google Cloud par Workload Identity Federation, pas de clé JSON de compte de service dans le dépôt ni dans les secrets | `securite` | ADR-001, déploiement par la CI |
+| P15 | Aucun prénom, nom ou e-mail réel dans un fichier versionné, un message de commit, une description de PR ou un tag : noms de test fictifs, adresses en `@exemple.fr` ou `@example.com`, commits et tags en adresse `noreply` de GitHub (`git log --format='%ae %ce'`, `git for-each-ref refs/tags --format='%(taggeremail)'`). Seules exceptions : l'e-mail d'un auteur de paquet dans un fichier `*.lock` ou `package-lock.json`, et ce qu'ADR-002 accepte dans l'historique antérieur à la v0.1.3 | `securite` | ADR-002, dépôt public |
+| P16 | `toJSON(vars)` dans `.github/workflows/` : chaque variable lisible par le job (dépôt, organisation, environnement `production` : `gh variable list`, avec et sans `--env production`, et le tableau « Réglages sur GitHub » de `exigences-techniques.md`) est une valeur publique du client ou un identifiant d'infrastructure ; une valeur sensible est un secret GitHub, jamais une variable. Un diff qui ajoute une variable, ou qui étend `toJSON(vars)` à un autre job, dit pourquoi la valeur peut paraître dans le journal public | `securite` | ADR-002, journaux de run publics |
 
 ## Données partagées et état propre à un utilisateur
 
@@ -464,6 +466,15 @@ en local, chacune a son `git worktree` et sa branche (`guide-reseau.md`, « Trav
 parallèle »). Avant chaque commit, la session vérifie que `git status` ne liste que ses
 propres fichiers. Un fichier modifié par quelqu'un d'autre se signale à l'utilisateur et
 n'entre pas dans le commit.
+
+**Le dépôt est public (ADR-002).** Fichiers, messages de commit, descriptions de PR, tags
+et journaux des runs sont lisibles par tous, et un contenu publié ne s'efface pas. Aucun
+prénom, nom ou e-mail réel n'y entre : les tests utilisent des noms fictifs et des adresses
+en `@exemple.fr` ou `@example.com`, les commits et les tags partent avec l'adresse `noreply`
+de GitHub (P15). Une branche externe (PR d'un fork, ou commit d'un autre auteur que le
+propriétaire) ne s'ouvre pas dans une session Claude Code avant la lecture de son diff des
+fichiers qu'un hook exécute (P10) : les hooks de `.claude/settings.json` s'exécutent sur le
+poste.
 
 ## Commandes longues
 

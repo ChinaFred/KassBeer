@@ -6,6 +6,19 @@ données, outillage), ou les deux.
 
 ## 2026-11-07
 
+### v0.1.4 — technique
+
+Trois contrôles proposés par ADR-002 entrent dans `CLAUDE.md`, sur validation de
+l'utilisateur. Sur une branche externe, P10 couvre aussi les fichiers qu'un hook exécute
+(`.claude/**`, `CLAUDE.md`, `scripts/**`, les `package*.json` et la configuration prettier
+de `rules-tests/`), lus avant d'ouvrir une session : les hooks s'exécutent sur le poste. P15
+interdit tout prénom, nom ou e-mail réel dans ce que le dépôt public publie. P16 réserve aux
+valeurs publiques toute variable lisible par le job (dépôt, organisation, environnement
+`production`), car `toJSON(vars)` les
+affiche dans le journal public des runs. La section « Git » de `CLAUDE.md` et
+`guide-reseau.md` décrivent ces règles. `exigences-techniques.md` note que l'environnement
+`production` n'autorise pas le contournement par un administrateur.
+
 ### v0.1.3 — technique
 
 Le dépôt GitHub est public depuis le 2026-11-07 (ADR-002), pour obtenir les rulesets sans
