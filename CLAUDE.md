@@ -389,7 +389,9 @@ Deux hooks, déclarés dans `.claude/settings.json` :
 
 - `session-start.sh` : vérifie les agents et skills (`check-agents.mjs --warn`), puis lance
   `.claude/hooks/setup-projet.sh` s'il existe (installation de la chaîne d'outils dans une
-  session cloud, proposé par l'architecte, écrit par la session principale) ;
+  session cloud, proposé par l'architecte, écrit par la session principale), et avertit
+  quand l'adresse d'auteur du prochain commit (`git var GIT_AUTHOR_IDENT`) n'est pas une
+  adresse `noreply` de GitHub (ADR-002) ;
 - `format-on-edit.mjs` : après chaque écriture, lance le formateur que
   `.claude/formatters.json` associe au fichier. Un échec ne bloque pas l'édition.
 

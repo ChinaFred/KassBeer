@@ -43,7 +43,8 @@ CLAUDE.md                       règles, chaîne de travail, tableaux à remplir
 ├── agents/                     sept agents
 ├── skills/                     quatre skills
 └── hooks/
-    ├── session-start.sh        vérifie agents et skills, lance setup-projet.sh s'il existe
+    ├── session-start.sh        vérifie agents et skills, lance setup-projet.sh s'il existe,
+    │                           avertit si l'adresse git n'est pas noreply (ADR-002)
     ├── setup-projet.sh         session cloud : installe Flutter 3.44.6 et les dépendances
     └── format-on-edit.mjs      formate le fichier écrit, selon formatters.json
 scripts/

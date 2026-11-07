@@ -6,6 +6,14 @@ données, outillage), ou les deux.
 
 ## 2026-11-07
 
+### v0.1.5 — technique
+
+`session-start.sh` avertit au démarrage d'une session quand l'adresse d'auteur du prochain commit (`git var GIT_AUTHOR_IDENT`) n'est
+pas une adresse `noreply` de GitHub : le dépôt est public, et l'adresse d'un commit poussé
+ne s'efface plus (proposition de l'architecte, validée par l'utilisateur). ADR-002 consigne deux
+décisions de l'utilisateur : l'e-mail est masqué sur GitHub, et le code n'a pas de licence
+(tous droits réservés).
+
 ### v0.1.4 — technique
 
 Trois contrôles proposés par ADR-002 entrent dans `CLAUDE.md`, sur validation de
