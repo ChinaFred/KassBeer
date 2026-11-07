@@ -1,0 +1,238 @@
+{
+  "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
+  "formula": "Tinseth : IBU = 1,65 × 0,000125^(Gb − 1) × (1 − e^(−0,04 t)) / 4,15 × forme × alpha × masse (mg/L). Pellets : × 1,1 ; cônes : × 1,0 ; après ébullition et dry hop : 0.",
+  "utilization": [
+    {
+      "boil_minutes": 60,
+      "boil_gravity": 1.05,
+      "expected": 0.23066408,
+      "tolerance": 1e-08
+    },
+    {
+      "boil_minutes": 0,
+      "boil_gravity": 1.05,
+      "expected": 0.0,
+      "tolerance": 1e-12
+    }
+  ],
+  "cases": [
+    {
+      "id": "pellet-60",
+      "inputs": {
+        "hops": [
+          {
+            "name": "Magnum",
+            "alpha_percent": 10,
+            "mass_grams": 30,
+            "use": "boil",
+            "form": "pellet",
+            "boil_minutes": 60
+          }
+        ],
+        "volume_litres": 20,
+        "boil_gravity": 1.05
+      },
+      "expected": 38.059573,
+      "tolerance": 1e-05
+    },
+    {
+      "id": "cones-60",
+      "inputs": {
+        "hops": [
+          {
+            "name": "Magnum",
+            "alpha_percent": 10,
+            "mass_grams": 30,
+            "use": "boil",
+            "form": "whole",
+            "boil_minutes": 60
+          }
+        ],
+        "volume_litres": 20,
+        "boil_gravity": 1.05
+      },
+      "expected": 34.599612,
+      "tolerance": 1e-05
+    },
+    {
+      "id": "ebullition-0-minute",
+      "inputs": {
+        "hops": [
+          {
+            "name": "Magnum",
+            "alpha_percent": 10,
+            "mass_grams": 30,
+            "use": "boil",
+            "form": "pellet",
+            "boil_minutes": 0
+          }
+        ],
+        "volume_litres": 20,
+        "boil_gravity": 1.05
+      },
+      "expected": 0.0,
+      "tolerance": 1e-05
+    },
+    {
+      "id": "apres-ebullition-et-dry-hop",
+      "inputs": {
+        "hops": [
+          {
+            "name": "Citra",
+            "alpha_percent": 12,
+            "mass_grams": 50,
+            "use": "afterBoil",
+            "form": "pellet",
+            "boil_minutes": 10
+          },
+          {
+            "name": "Citra",
+            "alpha_percent": 12,
+            "mass_grams": 50,
+            "use": "dryHop",
+            "form": "pellet",
+            "boil_minutes": 0
+          }
+        ],
+        "volume_litres": 20,
+        "boil_gravity": 1.05
+      },
+      "expected": 0,
+      "tolerance": 1e-05,
+      "note": "boil_minutes est ignoré hors ébullition"
+    },
+    {
+      "id": "densite-forte-15",
+      "inputs": {
+        "hops": [
+          {
+            "name": "Saaz",
+            "alpha_percent": 5,
+            "mass_grams": 20,
+            "use": "boil",
+            "form": "whole",
+            "boil_minutes": 15
+          }
+        ],
+        "volume_litres": 25,
+        "boil_gravity": 1.08
+      },
+      "expected": 3.496283,
+      "tolerance": 1e-05
+    },
+    {
+      "id": "hard-bohemian-lager-hypothese",
+      "inputs": {
+        "hops": [
+          {
+            "name": "Saaz 2.9%",
+            "alpha_percent": 2.9,
+            "mass_grams": 20,
+            "use": "boil",
+            "form": "pellet",
+            "boil_minutes": 45
+          },
+          {
+            "name": "Colombus 14%",
+            "alpha_percent": 14,
+            "mass_grams": 15,
+            "use": "boil",
+            "form": "pellet",
+            "boil_minutes": 45
+          },
+          {
+            "name": "Cytra Aromatique",
+            "alpha_percent": 12,
+            "mass_grams": 20,
+            "use": "afterBoil",
+            "form": "pellet",
+            "boil_minutes": 0
+          },
+          {
+            "name": "Cytra dryHop",
+            "alpha_percent": 12,
+            "mass_grams": 30,
+            "use": "dryHop",
+            "form": "pellet",
+            "boil_minutes": 0
+          }
+        ],
+        "volume_litres": 20,
+        "boil_gravity": 1.05
+      },
+      "expected": 31.211154,
+      "tolerance": 1e-05,
+      "source": "Hard bohemian lager",
+      "hypotheses": "pellets, 20 L, densité d'ébullition 1.050, ébullition de 45 min (« Ajout de l'amérisant et du sucre 00:45:00 ») ; alpha du Citra (12 %) sans effet hors ébullition",
+      "note": "voir divergences : la fiche espère 41"
+    }
+  ],
+  "invalid": [
+    {
+      "hop": {
+        "name": "X",
+        "alpha_percent": 120,
+        "mass_grams": 10,
+        "use": "boil",
+        "form": "pellet",
+        "boil_minutes": 60
+      },
+      "reason": "alpha > 100 %"
+    },
+    {
+      "hop": {
+        "name": "X",
+        "alpha_percent": 10,
+        "mass_grams": -1,
+        "use": "boil",
+        "form": "pellet",
+        "boil_minutes": 60
+      },
+      "reason": "masse négative"
+    },
+    {
+      "hop": {
+        "name": "X",
+        "alpha_percent": 10,
+        "mass_grams": 10,
+        "use": "boil",
+        "form": "pellet",
+        "boil_minutes": -5
+      },
+      "reason": "durée négative"
+    },
+    {
+      "hop": {
+        "name": "X",
+        "alpha_percent": 10,
+        "mass_grams": 10,
+        "use": "boil",
+        "form": "pellet",
+        "boil_minutes": 60
+      },
+      "volume_litres": 0,
+      "reason": "volume nul"
+    }
+  ],
+  "divergences": [
+    {
+      "source": "Hard bohemian lager ; Hard lager - deuxième brassin",
+      "field": "IBU Espéré",
+      "fiche_value": 41,
+      "computed": 31.211154,
+      "explanation": "Saaz 2,9 % (20 g) et Colombus 14 % (15 g) à 45 min donnent 31,2 IBU par Tinseth avec ces hypothèses ; atteindre 41 demanderait une densité d'ébullition de 1.020, alors que Hard lager vise 1.100 et que Hard bohemian lager n'a pas de densité. Le 41 est identique sur deux fiches aux houblons différents (Citra boil 20 g en plus sur Hard lager) : champ copié probable."
+    },
+    {
+      "source": "toutes les fiches",
+      "field": "IBU Espéré",
+      "fiche_value": "24, 25, 25.9, 36, 41",
+      "explanation": "Seules les deux fiches Hard lager donnent un taux d'acides alpha (Saaz 2,9 %, Colombus 14 %). Les autres IBU espérés ne peuvent pas être recalculés. 24 figure sur Ale blonde 140724, Mansart et les deux Clone paix dieu, aux houblons différents."
+    },
+    {
+      "source": "Ale blonde 140724 - Pale ale",
+      "field": "forme du houblon",
+      "fiche_value": "ATTENTION CONES DE SAAZ et PAS DES PELLETS",
+      "explanation": "La fiche distingue cônes et pellets, d'où HopForm ; l'alpha du Saaz est absent."
+    }
+  ]
+}

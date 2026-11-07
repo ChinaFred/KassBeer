@@ -1,0 +1,13 @@
+# Calculs de brassage de Kass'Beer : Dart pur, sans Flutter ni Firebase (ADR-001).
+# Lu par l'application seule. Aucune formule de brassage n'existe ailleurs (CLAUDE.md, P3).
+name: brewing
+description: "Calculs de brassage de Kass'Beer : densités, degré, IBU, EBC, rendement, coût, planning."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.4
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.29.0

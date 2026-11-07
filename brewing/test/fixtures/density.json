@@ -1,0 +1,158 @@
+{
+  "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
+  "unit": "densité en SG décimal (1.0579) ; points = (SG − 1) × 1000",
+  "sg_to_points": [
+    {
+      "sg": 1.0579,
+      "expected": 57.9
+    },
+    {
+      "sg": 1.0,
+      "expected": 0.0
+    },
+    {
+      "sg": 0.996,
+      "expected": -4.0
+    },
+    {
+      "sg": 1.106,
+      "expected": 106.0
+    }
+  ],
+  "points_to_sg": [
+    {
+      "points": 57.9,
+      "expected": 1.0579
+    },
+    {
+      "points": 65,
+      "expected": 1.065,
+      "source": "Blonde triple décembre 22 - bonne - mousse tient pas",
+      "note": "colonne « Densité (1000 +) »"
+    },
+    {
+      "points": 1,
+      "expected": 1.001,
+      "source": "Blonde triple décembre 22 - bonne - mousse tient pas"
+    },
+    {
+      "points": 0,
+      "expected": 1.0
+    }
+  ],
+  "parse": [
+    {
+      "text": "1057,9",
+      "expected": 1.0579,
+      "source": "June bavarian Lager"
+    },
+    {
+      "text": "1067,5",
+      "expected": 1.0675,
+      "source": "Ale blonde 140724 - Pale ale"
+    },
+    {
+      "text": "1.052",
+      "expected": 1.052,
+      "source": "Ale blonde 140724 - Pale ale"
+    },
+    {
+      "text": "1,07",
+      "expected": 1.07
+    },
+    {
+      "text": "1090",
+      "expected": 1.09,
+      "source": "Twin bottle 3"
+    },
+    {
+      "text": "1,063",
+      "expected": 1.063,
+      "source": "21-09-25 Twin bottle 4"
+    },
+    {
+      "text": "1.092",
+      "expected": 1.092,
+      "source": "05-04-6 Clone paix dieu"
+    },
+    {
+      "text": "1001",
+      "expected": 1.001,
+      "source": "Ale blonde 21-04-25 - Pale ale - Mansart"
+    },
+    {
+      "text": "1000",
+      "expected": 1.0,
+      "source": "Bière au thym avec Michael 14-04-23"
+    },
+    {
+      "text": " 1 054 ",
+      "expected": 1.054
+    },
+    {
+      "text": "0,996",
+      "expected": 0.996
+    }
+  ],
+  "parse_invalid": [
+    {
+      "text": "",
+      "reason": "vide"
+    },
+    {
+      "text": "abc",
+      "reason": "illisible"
+    },
+    {
+      "text": "1.61",
+      "reason": "hors intervalle",
+      "source": "Ale blonde 140724 - Pale ale"
+    },
+    {
+      "text": "65",
+      "reason": "points sans 1000 : lire avec points_to_sg"
+    },
+    {
+      "text": "1057,9,1",
+      "reason": "deux séparateurs"
+    },
+    {
+      "text": "-1.05",
+      "reason": "signe"
+    },
+    {
+      "text": "12,63%",
+      "reason": "pas une densité"
+    },
+    {
+      "text": "1250",
+      "reason": "au-delà de 1.200"
+    }
+  ],
+  "divergences": [
+    {
+      "source": "Ale blonde 140724 - Pale ale",
+      "field": "Densité initiale",
+      "fiche_value": "1067,5 (en-tête) ; 1.052 (chronologie, « Mesure de la densité initiale »)",
+      "explanation": "L'en-tête porte la densité visée, la chronologie la densité mesurée. Le degré de la fiche est calculé sur l'en-tête (voir abv.json)."
+    },
+    {
+      "source": "Ale blonde 140724 - Pale ale",
+      "field": "Densite corrigée",
+      "fiche_value": "1.61",
+      "explanation": "Valeur impossible pour un moût (SG 1.61). Probablement 1061 ou 1.061 mal saisi. parse_gravity la refuse ; elle n'est pas corrigée."
+    },
+    {
+      "source": "June bavarian Lager",
+      "field": "Densité initiale",
+      "fiche_value": "1057,9 (en-tête) ; 1.060 (chronologie)",
+      "explanation": "En-tête et chronologie diffèrent de 2,1 points."
+    },
+    {
+      "source": "21-09-25 Twin bottle 4",
+      "field": "Densité initiale",
+      "fiche_value": "1106 « Je vise 1106 » (en-tête) ; 1,063 (chronologie)",
+      "explanation": "L'en-tête porte la densité visée. La densité mesurée est 1.063."
+    }
+  ]
+}

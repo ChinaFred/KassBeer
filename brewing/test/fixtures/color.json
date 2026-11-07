@@ -1,0 +1,154 @@
+{
+  "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
+  "formula": "Morey : MCU = Σ (EBC / 1,97 × masse en lb) / volume en gal ; SRM = 1,4922 × MCU^0,6859 ; EBC = SRM × 1,97",
+  "cases": [
+    {
+      "id": "pils-seul",
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "points_per_kg_per_litre": 300
+          }
+        ],
+        "volume_litres": 20
+      },
+      "expected": 7.776746,
+      "tolerance": 1e-05
+    },
+    {
+      "id": "aucune-couleur",
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Sucre",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 0,
+            "yield_percent": 100
+          }
+        ],
+        "volume_litres": 20
+      },
+      "expected": 0.0,
+      "tolerance": 1e-12
+    },
+    {
+      "id": "twin-bottle-3",
+      "source": "Twin bottle 3",
+      "hypotheses": "Wheat à 4 EBC (couleur absente de la fiche) ; volume 23 L = eau de brassage (volume obtenu vide)",
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Munich (17.7 EBC)",
+            "kind": "malt",
+            "mass_grams": 540,
+            "color_ebc": 17.7,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Pils (3.9 EBC)",
+            "kind": "malt",
+            "mass_grams": 7420,
+            "color_ebc": 3.9,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Biscuit -Aromatic Malt (51.2 EBC)",
+            "kind": "malt",
+            "mass_grams": 1230,
+            "color_ebc": 51.2,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Wheat",
+            "kind": "malt",
+            "mass_grams": 3300,
+            "color_ebc": 4.0,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Cara 50 EBC",
+            "kind": "malt",
+            "mass_grams": 450,
+            "color_ebc": 50,
+            "points_per_kg_per_litre": 300
+          }
+        ],
+        "volume_litres": 23
+      },
+      "expected": 26.932763,
+      "tolerance": 1e-05,
+      "fiche_value": 27,
+      "fiche_tolerance": 0.5
+    }
+  ],
+  "invalid": [
+    {
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Munich (17.7 EBC)",
+            "kind": "malt",
+            "mass_grams": 540,
+            "color_ebc": 17.7,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Pils (3.9 EBC)",
+            "kind": "malt",
+            "mass_grams": 7420,
+            "color_ebc": 3.9,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Biscuit -Aromatic Malt (51.2 EBC)",
+            "kind": "malt",
+            "mass_grams": 1230,
+            "color_ebc": 51.2,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Wheat",
+            "kind": "malt",
+            "mass_grams": 3300,
+            "color_ebc": 4.0,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Cara 50 EBC",
+            "kind": "malt",
+            "mass_grams": 450,
+            "color_ebc": 50,
+            "points_per_kg_per_litre": 300
+          }
+        ],
+        "volume_litres": 0
+      },
+      "reason": "volume nul"
+    }
+  ],
+  "divergences": [
+    {
+      "source": "Ale blonde 140724 - Pale ale, June bavarian Lager, Ale blonde 21-04-25 - Pale ale - Mansart, Hard lager - deuxième brassin, Hard bohemian lager, 05-04-6 Clone paix dieu, 20-20-24 Clone paix dieu",
+      "field": "EBC Espéré",
+      "fiche_value": 10.6,
+      "explanation": "Même valeur sur sept fiches aux grists différents (Pale Ale 4,62 kg + Wheat 1,7 kg ; Pils 4,7 kg + Biscuit 0,3 kg ; Pils 5,92 kg + Carapils 0,6 kg…) : champ copié. Les couleurs de Pale Ale malt, munich light, Carapils et Biscuit n'y sont pas écrites : pas de recalcul."
+    },
+    {
+      "source": "21-09-25 Twin bottle 4",
+      "field": "EBC Espéré",
+      "fiche_value": 27,
+      "explanation": "Même valeur que Twin bottle 3, avec un grist différent (Pils 4,8 kg, Munich 0,4 kg, Biscuit 0,6 kg, Wheat 0,7 kg, 460 g de candi) et un volume absent : champ copié probable."
+    },
+    {
+      "source": "June bavarian Lager",
+      "field": "EBC Constaté",
+      "fiche_value": 10,
+      "explanation": "Mesure de couleur, non calculable."
+    }
+  ]
+}
