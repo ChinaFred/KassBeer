@@ -392,8 +392,23 @@ le contrôle porte sur ce qui sera fusionné. Une branche avec une PR ouverte to
 par push (`push` et `pull_request`). Les minutes des runners standard sont gratuites sur un
 dépôt public (ADR-002).
 
-Les actions sont épinglées par SHA de commit, version en commentaire, aux mêmes SHA que
-Kass'Dalle.
+Les actions sont épinglées par SHA de commit, version en commentaire. Depuis la v0.1.6,
+toutes tournent sous Node 24 :
+
+| Action | Version |
+|---|---|
+| `actions/checkout` | v7.0.1 |
+| `actions/setup-node` | v7.1.0 |
+| `actions/setup-java` | v6.1.0 |
+| `actions/cache` | v6.1.0 |
+| `actions/upload-artifact` | v7.0.2 |
+| `actions/download-artifact` | v8.0.2 |
+| `google-github-actions/auth` | v3.0.0 |
+| `subosito/flutter-action` | v2.23.0, action composite ; elle appelle `actions/cache@v5` par son étiquette |
+
+`upload-artifact` et `download-artifact` montent ensemble. Les artefacts restent zippés
+(`archive` vaut `true` par défaut) : le web s'extrait dans `app/build/web/` et l'APK dans
+`$RUNNER_TEMP/apk/`.
 
 ### `deploy.yml` — déploiement
 
@@ -661,6 +676,23 @@ Fichiers locaux, jamais versionnés :
 - Le keystore de release et son mot de passe vivent hors du dépôt, sur le poste du
   brasseur, avec une copie hors ligne et le mot de passe dans un gestionnaire de mots de
   passe (ADR-001). Une clé perdue empêche toute mise à jour de l'APK installé.
+
+### Alertes de dépendances tolérées
+
+Quatre alertes Dependabot portent sur `rules-tests/package-lock.json`, en dépendances de
+développement. Aucune ne touche l'application livrée. Décision de l'utilisateur du
+2026-11-07 : les tolérer, et remonter `firebase-tools` ou `firebase` dès qu'une version
+les corrige. Les alertes sont fermées sur GitHub avec le motif « Vulnerable code is not
+actually used ».
+
+| Paquet | Tiré par | Faille | Pourquoi elle ne nous touche pas |
+|---|---|---|---|
+| `@grpc/grpc-js` 1.9.16 (deux alertes) | `@firebase/firestore`, qui fige `~1.9.0`, même dans `firebase` 13.2.0 | `getAuthContext` côté serveur ; messages d'erreur d'un serveur transmis au client | le SDK n'est qu'un client gRPC, vers l'émulateur local |
+| `minimatch` 9.0.9 | `glob` 10, dans `firebase-tools` 15.35.0 | déni de service par un motif glob forgé | les motifs viennent de `firebase.json`, écrit par nous |
+| `uuid` 9.0.1 | `gaxios` 6, dans `firebase-tools` | pas de contrôle de borne quand un tampon est fourni aux versions 3, 5 et 6 | `gaxios` appelle `v4` sans tampon |
+
+Forcer les versions corrigées par des `overrides` npm a été écarté : le déploiement exécute
+`firebase-tools`, et aucun test local ne vérifie une CLI aux dépendances forcées.
 
 ## Intégrations et services tiers
 
