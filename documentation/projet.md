@@ -110,6 +110,38 @@ les contraintes.
 Après la version 1 : RAPT Pill, stock, eau (sels et pH), conditionnement (sucre de
 resucrage), dégustations notées, assistant IA.
 
+### Découpage en incréments
+
+Proposé par `product-owner`, validé par l'utilisateur le 2026-11-07. Un incrément « v0.N »
+est une étape de la planification. Il ne change pas la règle de numérotation du dépôt
+(CLAUDE.md, « Version ») : l'incrément v0.2 est livré sous la version 0.1.7 (D7).
+
+| Incrément | Contenu | Critère de fin |
+|---|---|---|
+| v0.2 | Équipements et recettes, avec les calculs affichés (densités initiale et finale, degré, IBU, EBC) et la liste des données à compléter | la recette du prochain brassin est saisie ; un autre brasseur la lit sans pouvoir la modifier |
+| v0.3 | Brassin (création depuis une recette et un équipement, copie figée), « Préparer le brassage », jour de brassage hors ligne : chronologie (`brew_steps`), minuteurs, heures recalculées, mesures, écran allumé | un brassage à blanc complet sur l'APK en mode avion, application tuée puis relancée, minuteur juste, mesures arrivées au retour du réseau |
+| v0.4 | Après le brassage : fermentation, densité finale et degré mesurés, rendement réel, bouteilles, statut jusqu'à « terminé » | un brassin va de « prévu » à « terminé » sans Excel : seuil du prochain brassin (D1) |
+| v0.5 | Mes prix, coût d'une recette (total et par bouteille), coût réel figé d'un brassin | un prix manquant affiche la panne ; le coût d'une fiche connue est retrouvé |
+| v0.6 | Admin › Import des 16 fiches | 16 fiches créées, 0 en erreur, divergences listées, aucun doublon au second import |
+
+### Décisions du découpage
+
+Validées par l'utilisateur le 2026-11-07, sur recommandation de `product-owner`.
+
+- D1 : le prochain brassin a lieu dans moins de quatre semaines ; la v0.4 est le seuil.
+- D2 : le coût (v0.5) et l'import (v0.6) passent après le prochain brassin.
+- D3 : la chronologie du jour vit dans un champ `brew_steps` de la recette (nom, durée,
+  température), prérempli depuis les paliers et l'ébullition ; il arrive en v0.3, avec ses
+  règles et ses tests.
+- D4 : la densité finale prévue se calcule par l'atténuation de la levure, avec une fixture
+  tirée des fiches (fait en v0.2).
+- D5 : le degré après refermentation en bouteille sort de la v1, avec le conditionnement.
+- D6 : seul le propriétaire d'un brassin écrit ses mesures, comme le disent les règles.
+- D7 : les incréments v0.2 à v0.6 sont des étapes de planification, distinctes des numéros
+  de version du dépôt.
+- D8 : un ré-import identifie une fiche par un identifiant tiré de son nom et ignore ce qui
+  existe déjà.
+
 ## Questions ouvertes
 
 Tranchées le 2026-11-07 : voir `decisions/ADR-001-pile-technique.md`, « Arbitrages de

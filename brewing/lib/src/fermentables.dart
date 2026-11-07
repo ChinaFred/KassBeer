@@ -17,11 +17,23 @@ const double sucrosePointsPerKgPerLitre =
 /// Nature d'un fermentescible : un malt passe par l'empâtage, un sucre non.
 enum FermentableKind {
   /// Malt ou céréale empâtée : son extrait est multiplié par le rendement
-  /// d'empâtage de l'équipement.
-  malt,
+  /// d'empâtage de l'équipement. Valeur stockée : `grain`.
+  malt('grain'),
 
-  /// Sucre (candi, saccharose, dextrose…) : compté à 100 %.
-  sugar,
+  /// Sucre (candi, saccharose, dextrose…) : compté à 100 %. Valeur stockée :
+  /// `sugar`.
+  sugar('sugar');
+
+  const FermentableKind(this.storedValue);
+
+  /// Valeur du champ `fermentables[].kind` d'une recette.
+  final String storedValue;
+
+  /// Nature correspondant à la valeur stockée [value].
+  ///
+  /// Lève [BrewingInputException] sur une valeur inconnue.
+  static FermentableKind fromStored(String value) =>
+      enumFromStored(values, (k) => k.storedValue, 'fermentables.kind', value);
 }
 
 /// Potentiel d'extrait d'un fermentescible, donné de l'une de deux façons.

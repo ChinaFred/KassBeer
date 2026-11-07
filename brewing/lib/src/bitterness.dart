@@ -5,29 +5,53 @@ import 'gravity.dart';
 
 /// Forme du houblon.
 enum HopForm {
-  /// Cônes entiers : utilisation de Tinseth sans correction.
-  whole(1.0),
+  /// Cônes entiers : utilisation de Tinseth sans correction. Valeur stockée :
+  /// `leaf`.
+  whole(1.0, 'leaf'),
 
   /// Pellets : utilisation majorée de 10 %, convention courante (BeerSmith,
-  /// Brewer's Friend) appliquée à la formule de Tinseth.
-  pellet(1.1);
+  /// Brewer's Friend) appliquée à la formule de Tinseth. Valeur stockée :
+  /// `pellet`.
+  pellet(1.1, 'pellet');
 
-  const HopForm(this.utilizationFactor);
+  const HopForm(this.utilizationFactor, this.storedValue);
 
   /// Facteur appliqué à l'utilisation de Tinseth.
   final double utilizationFactor;
+
+  /// Valeur du champ `hops[].form` d'une recette.
+  final String storedValue;
+
+  /// Forme correspondant à la valeur stockée [value].
+  ///
+  /// Lève [BrewingInputException] sur une valeur inconnue.
+  static HopForm fromStored(String value) =>
+      enumFromStored(values, (f) => f.storedValue, 'hops.form', value);
 }
 
 /// Moment d'ajout d'un houblon.
 enum HopUse {
-  /// Pendant l'ébullition, pour [Hop.boilMinutes] minutes.
-  boil,
+  /// Pendant l'ébullition, pour [Hop.boilMinutes] minutes. Valeur stockée :
+  /// `boil`.
+  boil('boil'),
 
-  /// Après l'ébullition (arrêt du feu, whirlpool) : compté 0 IBU.
-  afterBoil,
+  /// Après l'ébullition (arrêt du feu, whirlpool) : compté 0 IBU. Valeur
+  /// stockée : `whirlpool`.
+  afterBoil('whirlpool'),
 
-  /// Houblonnage à cru : compté 0 IBU.
-  dryHop,
+  /// Houblonnage à cru : compté 0 IBU. Valeur stockée : `dry_hop`.
+  dryHop('dry_hop');
+
+  const HopUse(this.storedValue);
+
+  /// Valeur du champ `hops[].use` d'une recette.
+  final String storedValue;
+
+  /// Moment correspondant à la valeur stockée [value].
+  ///
+  /// Lève [BrewingInputException] sur une valeur inconnue.
+  static HopUse fromStored(String value) =>
+      enumFromStored(values, (u) => u.storedValue, 'hops.use', value);
 }
 
 /// Un houblon d'une recette ou d'un brassin.

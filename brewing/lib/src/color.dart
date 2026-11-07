@@ -6,6 +6,9 @@ import 'fermentables.dart';
 /// Facteur EBC / SRM.
 const double ebcPerSrm = 1.97;
 
+/// Masse et couleur d'un grain ou d'un sucre : les seules données de la couleur.
+typedef ColorContribution = ({double massGrams, double colorEbc});
+
 /// Couleur de la bière (EBC) par la formule de Morey.
 ///
 /// MCU = Σ (couleur °L × masse en livres) / volume en gallons, avec
@@ -14,12 +17,29 @@ const double ebcPerSrm = 1.97;
 double moreyColorEbc({
   required List<Fermentable> fermentables,
   required double volumeLitres,
+}) => moreyColorEbcOfGrist(
+  grist: [
+    for (final f in fermentables)
+      (massGrams: f.massGrams, colorEbc: f.colorEbc),
+  ],
+  volumeLitres: volumeLitres,
+);
+
+/// Couleur de Morey (EBC) à partir des seules masses et couleurs.
+///
+/// Même formule que [moreyColorEbc] : la couleur ne dépend pas du potentiel
+/// d'extrait, qui peut manquer quand la couleur est connue.
+double moreyColorEbcOfGrist({
+  required List<ColorContribution> grist,
+  required double volumeLitres,
 }) {
   requirePositive('volumeLitres', volumeLitres);
   var lovibondPounds = 0.0;
-  for (final f in fermentables) {
+  for (final g in grist) {
+    requireNonNegative('massGrams', g.massGrams);
+    requireNonNegative('colorEbc', g.colorEbc);
     lovibondPounds +=
-        f.colorEbc / ebcPerSrm * (f.massGrams / 1000 / kilogramsPerPound);
+        g.colorEbc / ebcPerSrm * (g.massGrams / 1000 / kilogramsPerPound);
   }
   final mcu = lovibondPounds / (volumeLitres / litresPerUsGallon);
   if (mcu == 0) return 0;

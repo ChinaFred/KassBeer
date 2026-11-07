@@ -59,12 +59,24 @@ List<ShellDestination> shellDestinations({required bool isAdmin}) => [
 ];
 
 /// Coquille de l'accueil : barre du haut, navigation adaptée à la largeur, bandeau
-/// hors ligne.
+/// hors ligne. Le titre et le bouton retour viennent de la route (`PageDeCoquille`).
 class AppShell extends ConsumerWidget {
-  const AppShell({super.key, required this.location, required this.child});
+  const AppShell({
+    super.key,
+    required this.location,
+    required this.title,
+    this.backTo,
+    required this.child,
+  });
 
   /// Chemin courant (`GoRouterState.uri.path`).
   final String location;
+
+  /// Titre de la barre du haut.
+  final String title;
+
+  /// Chemin du bouton retour ; `null` pour une destination principale.
+  final String? backTo;
   final Widget child;
 
   @override
@@ -77,16 +89,15 @@ class AppShell extends ConsumerWidget {
       isAdmin: granted?.member.isAdmin ?? false,
     );
     final selected = _selectedIndex(destinations);
-    final isMembersPage = location.startsWith(AppRoutes.adminMembers);
-    final title = isMembersPage ? 'Membres' : destinations[selected].label;
+    final back = backTo;
 
     void goTo(int index) => context.go(destinations[index].path);
 
     final appBar = AppBar(
       title: Text(title),
-      leading: isMembersPage
-          ? BackButton(onPressed: () => context.go(AppRoutes.admin))
-          : null,
+      leading: back == null
+          ? null
+          : BackButton(onPressed: () => context.go(back)),
       automaticallyImplyLeading: false,
       actions: [
         if (granted != null) _AccountMenu(user: granted.user),

@@ -18,7 +18,25 @@ abstract class AuthRepository {
   Future<SignInOutcome> signInWithGoogle();
 
   Future<void> signOut();
+
+  /// Nom du compte tel que le porte le jeton d'identité (`claims['name']`), ou
+  /// `null` s'il est absent, vide ou plus long que [kOwnerNameMaxLength]. C'est la
+  /// valeur que `firestore.rules` compare à `owner_name` (`request.auth.token.name`) ;
+  /// `displayName` peut en différer jusqu'au rafraîchissement du jeton.
+  ///
+  /// Lit le jeton en cache s'il est valide. Hors ligne avec un jeton expiré, la
+  /// lecture échoue ou dépasse [kTokenNameWait] : l'erreur est rapportée et le nom
+  /// rendu `null`. L'enregistrement part alors sans `owner_name` (l'écran affiche
+  /// « Autre brasseur ») au lieu d'attendre le réseau.
+  Future<String?> currentTokenName();
 }
+
+/// Longueur maximale de `owner_name` (`firestore.rules`, 1 à 80 caractères).
+const kOwnerNameMaxLength = 80;
+
+/// Attente maximale de la lecture du jeton avant un enregistrement : au-delà,
+/// l'enregistrement part sans `owner_name` plutôt que de rester bloqué hors ligne.
+const kTokenNameWait = Duration(seconds: 3);
 
 /// [AuthRepository] sur Firebase Auth.
 class FirebaseAuthRepository implements AuthRepository {
@@ -115,6 +133,33 @@ class FirebaseAuthRepository implements AuthRepository {
         stackTrace: stackTrace,
       );
       throw SignInFailure(network: false, cause: error);
+    }
+  }
+
+  @override
+  Future<String?> currentTokenName() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    try {
+      final token = await user.getIdTokenResult().timeout(kTokenNameWait);
+      final name = token.claims?['name'];
+      if (name is! String) return null;
+      // Les règles comparent la valeur exacte du jeton : un nom entouré d'espaces
+      // n'est pas réécrit, il est écrit tel quel ou pas du tout. Au-delà de
+      // kOwnerNameMaxLength caractères, les règles refuseraient toute écriture de
+      // ce compte : le nom n'est pas écrit.
+      if (name.trim().isEmpty || name.runes.length > kOwnerNameMaxLength) {
+        return null;
+      }
+      return name;
+    } catch (error, stackTrace) {
+      _errors.reportError(
+        feature: 'auth.token_name',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'lecture du jeton avant un enregistrement',
+      );
+      return null;
     }
   }
 

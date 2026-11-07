@@ -13,10 +13,12 @@ import "firebase/compat/firestore";
 
 export const PROJECT_ID = "demo-kassbeer";
 
-const google = (email, verified = true) => ({
+/// Jeton d'un compte Google. `name` : nom du compte Google, absent si undefined.
+const google = (email, verified = true, name = undefined) => ({
   email,
   email_verified: verified,
   firebase: { sign_in_provider: "google.com" },
+  ...(name === undefined ? {} : { name }),
 });
 
 /// Comptes de test. `member` : document members/{email} semé avant chaque test
@@ -24,18 +26,26 @@ const google = (email, verified = true) => ({
 export const PERSONAS = {
   // Les cinq profils de P4.
   anonymous: null,
-  nonMember: { uid: "stranger", token: google("stranger@example.com"), member: null },
+  nonMember: {
+    uid: "stranger",
+    token: google("stranger@example.com", true, "Inconnu"),
+    member: null,
+  },
   owner: {
     uid: "brewer-a",
-    token: google("brewer.a@example.com"),
+    token: google("brewer.a@example.com", true, "Brasseur A"),
     member: { role: "brewer" },
   },
   otherBrewer: {
     uid: "brewer-b",
-    token: google("brewer.b@example.com"),
+    token: google("brewer.b@example.com", true, "Brasseur B"),
     member: { role: "brewer" },
   },
-  admin: { uid: "admin", token: google("admin@example.com"), member: { role: "admin" } },
+  admin: {
+    uid: "admin",
+    token: google("admin@example.com", true, "Admin"),
+    member: { role: "admin" },
+  },
   // Cas de P11 : invités, mais connexion non conforme.
   unverified: {
     uid: "unverified",
@@ -57,7 +67,32 @@ export const PERSONAS = {
     token: google("Mixed.Case@Example.COM"),
     member: { role: "brewer" },
   },
+  // owner_name (A1) : jetons au nom absent, vide, trop long, à la limite, non textuel.
+  noName: { uid: "no-name", token: google("no.name@example.com"), member: { role: "brewer" } },
+  emptyName: {
+    uid: "empty-name",
+    token: google("empty.name@example.com", true, ""),
+    member: { role: "brewer" },
+  },
+  longName: {
+    uid: "long-name",
+    token: google("long.name@example.com", true, "L".repeat(81)),
+    member: { role: "brewer" },
+  },
+  maxName: {
+    uid: "max-name",
+    token: google("max.name@example.com", true, "M".repeat(80)),
+    member: { role: "brewer" },
+  },
+  numericName: {
+    uid: "numeric-name",
+    token: google("numeric.name@example.com", true, 42),
+    member: { role: "brewer" },
+  },
 };
+
+/// Nom du jeton d'un persona (owner_name attendu).
+export const nameOf = (name) => PERSONAS[name]?.token.name;
 
 export const FIVE_PROFILES = ["anonymous", "nonMember", "owner", "otherBrewer", "admin"];
 
@@ -85,6 +120,7 @@ export function db(env, name) {
 }
 
 export const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
+export const deleteField = () => firebase.firestore.FieldValue.delete();
 export const Timestamp = firebase.firestore.Timestamp;
 
 /// Écrit des documents en contournant les règles.
@@ -122,8 +158,27 @@ export const recipe = (owner, extra = {}) => ({
   style: "Belgian Blond Ale",
   batch_volume_l: 20,
   boil_time_min: 60,
-  fermentables: [{ key: "malt-pilsner", name: "Pilsner", weight_g: 4500, ebc: 3.5 }],
-  hops: [{ key: "houblon-saaz", name: "Saaz", weight_g: 30, alpha_pct: 3.5, time_min: 60 }],
+  fermentables: [
+    {
+      key: "malt-pilsner",
+      name: "Pilsner",
+      kind: "grain",
+      weight_g: 4500,
+      ebc: 3.5,
+      yield_pct: 80,
+    },
+  ],
+  hops: [
+    {
+      key: "houblon-saaz",
+      name: "Saaz",
+      weight_g: 30,
+      alpha_pct: 3.5,
+      use: "boil",
+      time_min: 60,
+      form: "pellet",
+    },
+  ],
   created_at: CREATED,
   updated_at: CREATED,
   ...extra,

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/bandeau_hors_ligne.dart';
 
+import 'package:kass_beer/features/equipment/presentation/equipment_list_screen.dart';
+import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
+
 import 'support/fakes.dart';
 
 void main() {
@@ -55,9 +58,7 @@ void main() {
     await signedIn(tester, width: 1400);
     final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
     expect(rail.extended, isTrue);
-    final message = find.text(
-      'Les recettes arriveront dans une prochaine version.',
-    );
+    final message = find.text(RecipesListScreen.emptyMessage);
     final box = find
         .ancestor(of: message, matching: find.byType(ConstrainedBox))
         .evaluate()
@@ -94,10 +95,7 @@ void main() {
     );
     await tester.tap(find.text('Équipements'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Les équipements arriveront dans une prochaine version.'),
-      findsOneWidget,
-    );
+    expect(find.text(EquipmentListScreen.emptyMessage), findsOneWidget);
   });
 
   testWidgets('menu du compte : nom, e-mail, version, déconnexion', (

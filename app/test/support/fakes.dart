@@ -4,12 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/app.dart';
+import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
 import 'package:kass_beer/features/auth/domain/session_user.dart';
+import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
+import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
+import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
+import 'package:kass_beer/features/recipes/domain/recipe.dart';
 
 /// Flux qui rejoue sa dernière valeur ou erreur à chaque nouvel abonné.
 class Replay<T> {
@@ -71,6 +76,138 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     signOutCalls++;
     session.add(null);
+  }
+
+  /// Nom porté par le jeton ; `null` pour un compte sans nom.
+  String? tokenName = 'Bruno Brasseur';
+
+  /// Retient la réponse tant qu'elle n'est pas terminée (jeton lent).
+  Completer<void>? tokenGate;
+  int tokenReads = 0;
+
+  @override
+  Future<String?> currentTokenName() async {
+    tokenReads++;
+    await tokenGate?.future;
+    return tokenName;
+  }
+}
+
+/// Écriture reçue par un double de dépôt de données.
+class Write<T> {
+  Write(this.kind, this.id, this.content, this.ownerUid, this.ownerName);
+
+  /// `create`, `update`, `duplicate` ou `delete`.
+  final String kind;
+  final String id;
+  final T? content;
+  final String? ownerUid;
+  final String? ownerName;
+}
+
+class FakeRecipesRepository implements RecipesRepository {
+  final all = Replay<ListeLue<Recipe>>();
+  final writes = <Write<RecipeContent>>[];
+  int _next = 0;
+
+  /// Réponse du serveur à une écriture ; jamais terminée par défaut (hors ligne).
+  Future<void> Function() serverAnswer = () => Completer<void>().future;
+
+  /// Publie [recipes] comme une lecture du serveur (ou du cache).
+  void publish(List<Recipe> recipes, {bool fromCache = false}) => all.add(
+    ListeLue(
+      documents: [for (final r in recipes) DocumentValide(r.id, r)],
+      fromCache: fromCache,
+    ),
+  );
+
+  @override
+  Stream<ListeLue<Recipe>> watchAll() => all.stream;
+
+  @override
+  CreationEnCours create({
+    required RecipeContent content,
+    required String ownerUid,
+    required String? ownerName,
+  }) {
+    final id = 'recette-${++_next}';
+    writes.add(Write('create', id, content, ownerUid, ownerName));
+    return (id: id, written: serverAnswer());
+  }
+
+  @override
+  Future<void> update({
+    required String id,
+    required RecipeContent content,
+    required String? ownerName,
+  }) {
+    writes.add(Write('update', id, content, null, ownerName));
+    return serverAnswer();
+  }
+
+  @override
+  CreationEnCours duplicate({
+    required Recipe source,
+    required String ownerUid,
+    required String? ownerName,
+  }) {
+    final id = 'copie-${++_next}';
+    writes.add(
+      Write('duplicate', id, source.content.duplicate(), ownerUid, ownerName),
+    );
+    return (id: id, written: serverAnswer());
+  }
+
+  @override
+  Future<void> delete(String id) {
+    writes.add(Write('delete', id, null, null, null));
+    return serverAnswer();
+  }
+}
+
+class FakeEquipmentRepository implements EquipmentRepository {
+  final all = Replay<ListeLue<Equipment>>();
+  final writes = <Write<EquipmentContent>>[];
+  int _next = 0;
+
+  /// Réponse du serveur à une écriture ; jamais terminée par défaut (hors ligne).
+  Future<void> Function() serverAnswer = () => Completer<void>().future;
+
+  void publish(List<Equipment> items, {bool fromCache = false}) => all.add(
+    ListeLue(
+      documents: [for (final e in items) DocumentValide(e.id, e)],
+      fromCache: fromCache,
+    ),
+  );
+
+  @override
+  Stream<ListeLue<Equipment>> watchAll() => all.stream;
+
+  @override
+  CreationEnCours create({
+    required EquipmentContent content,
+    required String ownerUid,
+    required String? ownerName,
+  }) {
+    final id = 'equipement-${++_next}';
+    writes.add(Write('create', id, content, ownerUid, ownerName));
+    return (id: id, written: serverAnswer());
+  }
+
+  @override
+  Future<void> update({
+    required String id,
+    required EquipmentContent content,
+    required String? ownerName,
+  }) {
+    writes.add(Write('update', id, content, null, ownerName));
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> delete(String id) {
+    writes.add(Write('delete', id, null, null, null));
+    return serverAnswer();
   }
 }
 
@@ -159,19 +296,28 @@ class TestApp {
   TestApp()
     : auth = FakeAuthRepository(),
       members = FakeMembersRepository(),
+      recipes = FakeRecipesRepository(),
+      equipment = FakeEquipmentRepository(),
       errors = RecordingErrorReportService() {
     container = ProviderContainer(
       overrides: [
         errorReportServiceProvider.overrideWithValue(errors),
         authRepositoryProvider.overrideWithValue(auth),
         membersRepositoryProvider.overrideWithValue(members),
+        recipesRepositoryProvider.overrideWithValue(recipes),
+        equipmentRepositoryProvider.overrideWithValue(equipment),
         appVersionProvider.overrideWithValue('0.1.0'),
       ],
     );
+    // Listes vides lues du serveur : l'accueil (Recettes) s'affiche sans attendre.
+    recipes.publish(const []);
+    equipment.publish(const []);
   }
 
   final FakeAuthRepository auth;
   final FakeMembersRepository members;
+  final FakeRecipesRepository recipes;
+  final FakeEquipmentRepository equipment;
   final RecordingErrorReportService errors;
   late final ProviderContainer container;
 

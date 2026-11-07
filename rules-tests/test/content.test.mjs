@@ -200,6 +200,21 @@ describe("brews — recette figée", () => {
     );
   });
 
+  for (const [value, allowed] of [
+    [150, false],
+    [-1, false],
+    [100, true],
+  ]) {
+    it(`adjustments.mash_efficiency_pct = ${value} : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await expectRule(
+        allowed,
+        db(state.env, "owner")
+          .doc("brews/b-a")
+          .update({ adjustments: { mash_efficiency_pct: value }, updated_at: serverTimestamp() }),
+      );
+    });
+  }
+
   it("coût dans les ajustements (adjustments.cost_eur) : refusé (P5)", async () => {
     await expectRule(
       false,

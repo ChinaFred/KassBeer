@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.6+7
+version: 0.1.7+8
 
 environment:
   sdk: ^3.11.4
@@ -30,6 +30,11 @@ dependencies:
   # Version affichée dans le menu du compte, lue du paquet installé : aucune
   # constante de version dans le code.
   package_info_plus: ^9.0.0
+
+  # Calculs de brassage : paquet Dart pur du dépôt (CLAUDE.md, P3), sans autre
+  # dépendance ; rien n'est chargé au démarrage.
+  brewing:
+    path: ../brewing
 
 dev_dependencies:
   flutter_test:

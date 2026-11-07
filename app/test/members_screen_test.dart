@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
 
+import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
+
 import 'support/fakes.dart';
 
 const _other = Member(email: 'zoe@exemple.fr', role: MemberRole.brewer);
@@ -31,10 +33,7 @@ void main() {
     await tester.pumpAndSettle();
     app.container.read(routerProvider).go('/admin/membres');
     await tester.pumpAndSettle();
-    expect(
-      find.text('Les recettes arriveront dans une prochaine version.'),
-      findsOneWidget,
-    );
+    expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
   });
 
   testWidgets('lignes : nom, e-mail, rôle, « Vous » sur sa ligne', (
