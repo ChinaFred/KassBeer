@@ -35,6 +35,118 @@ Sur `**` (P12) : `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
 `Referrer-Policy: strict-origin-when-cross-origin`. Aucun JSON d'import n'est publié : le
 dossier `import/` n'est ni dans `app/build/web`, ni versionné.
 
+### Application Flutter (`app/`)
+
+Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kass_beer`.
+État par Riverpod, navigation par go_router. Chaque feature suit les couches `data/`
+(dépôts de données), `domain/` (types), `presentation/` (écrans, providers).
+
+| Dossier | Contenu |
+|---|---|
+| `lib/main.dart` | démarrage : configuration, Firebase, cache Firestore, version, journal d'erreurs, `google_sign_in` (Android), `ProviderScope` |
+| `lib/app.dart` | `KassBeerApp` (thème, routeur), `MissingConfigurationApp`, `StartupFailureApp` |
+| `lib/firebase_options.dart` | `FirebaseEnv` : configuration lue par `String.fromEnvironment` |
+| `lib/core/providers.dart` | providers des services, fournis par `main.dart` ou par les tests |
+| `lib/core/services/error_report_service.dart` | `ErrorReportService`, `ErrorReportFields` |
+| `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) |
+| `lib/core/presentation/` | `AppShell`, `breakpoints.dart`, `etats.dart` (`EtatChargement`, `EtatVide`, `EtatErreur`), `BandeauHorsLigne` |
+| `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
+| `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google), état d'accès, écrans Chargement, Connexion, Compte non invité, Erreur |
+| `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
+| `lib/features/admin/`, `recipes/`, `brews/`, `equipment/` | écran Admin ; écrans à venir |
+
+**Configuration Firebase.** Aucune valeur dans le code. `firebase_options.dart` lit, par
+`--dart-define-from-file=firebase.env.json` (fichier ignoré par Git ; modèle
+`app/firebase.env.example.json`) : `FIREBASE_PROJECT_ID`, `FIREBASE_MESSAGING_SENDER_ID`,
+pour le web `FIREBASE_WEB_API_KEY`, `FIREBASE_WEB_APP_ID`, `FIREBASE_AUTH_DOMAIN`, pour
+Android `FIREBASE_ANDROID_API_KEY`, `FIREBASE_ANDROID_APP_ID`, `GOOGLE_SERVER_CLIENT_ID`.
+Le web et Android ont chacun leur clé d'API et leur identifiant d'application dans Firebase.
+`GOOGLE_SERVER_CLIENT_ID` est l'identifiant du client OAuth « Web » du projet :
+`google_sign_in` 7 l'exige sur Android pour rendre un jeton d'identité, faute de
+`google-services.json` (non versionné, non utilisé). Une clé vide pour la plateforme affiche
+« Configuration Firebase absente » et la liste des clés manquantes. Un échec de
+`Firebase.initializeApp` affiche « Kass'Beer n'a pas pu démarrer » ; le message part sur la
+console, faute de Firestore.
+
+**Démarrage.** Dans l'ordre : configuration, `Firebase.initializeApp`, réglage de Firestore
+(`persistenceEnabled: true`, `cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED`), version lue par
+`package_info_plus` (`version.json` sur le web), `ErrorReportService`, branchement de
+`FlutterError.onError` et `PlatformDispatcher.instance.onError`, puis
+`GoogleSignIn.instance.initialize(serverClientId:)` sur Android.
+
+**Connexion.** Web : `signInWithPopup` (`prompt: select_account`). Android :
+`GoogleSignIn.instance.authenticate()`, puis `signInWithCredential` avec le jeton
+d'identité. Fenêtre fermée (`popup-closed-by-user`, `cancelled-popup-request`,
+`web-context-canceled`, `GoogleSignInExceptionCode.canceled`) : aucun message. Tout autre
+échec est rapporté et levé en `SignInFailure` ; `network-request-failed` donne le message
+réseau. La déconnexion ferme aussi la session `google_sign_in` sur Android.
+
+**Signature Android.** `app/android/app/build.gradle.kts` lit `app/android/key.properties`
+(`storeFile`, `storePassword`, `keyAlias`, `keyPassword` ; jamais versionné, P8). Sans ce
+fichier, une compilation de release échoue avec un message ; aucune release n'est signée par
+la clé de débogage. Le manifeste principal déclare `INTERNET`.
+
+#### Providers
+
+| Provider | Type | Rôle |
+|---|---|---|
+| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
+| `sessionUserProvider` | `StreamProvider<SessionUser?>` | `authStateChanges()` |
+| `memberLookupProvider(emailKey)` | `StreamProvider.family<MemberLookup, String>` | `members/{email en minuscules}`, avec les métadonnées |
+| `accessStateProvider` | `Provider<AccessState>` | `AccessLoading`, `AccessSignedOut`, `AccessNotInvited`, `AccessFailed`, `AccessGranted(user, member, offline)` |
+| `accessRefreshingProvider` | `Provider<bool>` | nouvelle lecture en cours (boutons « Réessayer », « Vérifier à nouveau ») |
+| `membersListProvider` | `StreamProvider.autoDispose<List<Member>>` | `members/` entier, admin seul |
+| `routerProvider` | `Provider<GoRouter>` | routeur, rafraîchi à chaque changement de `accessStateProvider` |
+
+Aucun de ces providers ne réessaie seul (`retry` rend `null`) : une panne s'affiche, et
+« Réessayer » invalide le provider.
+
+**Lecture du membre.** `watchMember` écoute `members/{email}` avec
+`includeMetadataChanges: true`. Document présent : membre, `offline` = `isFromCache`.
+Document absent d'une réponse du serveur : non invité. Document absent du cache seul : rien
+n'est émis, et sans réponse du serveur en 10 s (`kMemberServerWait`), le flux lève
+`MemberLookupUnavailable`, rapportée : écran Erreur. Un rôle autre que `admin` ou `brewer`
+se lit `null` et n'ouvre pas Admin.
+
+**Écritures hors ligne.** `invite` et `remove` écrivent dans le cache dès l'appel ;
+l'écran se ferme sans attendre le serveur. La ligne porte « En attente du réseau » tant
+que `hasPendingWrites` est vrai. Un refus du serveur est rapporté par le dépôt et annoncé à
+l'écran. L'invitation écrit `email`, `role`, `display_name` (omis s'il est vide),
+`invited_at` = `FieldValue.serverTimestamp()`, `invited_by` = uid de l'admin. Le doublon se
+vérifie sur la liste déjà lue ; les règles refusent de toute façon de récrire un membre.
+
+**Journal d'erreurs.** `ErrorReportService.reportError(feature:, error:, stackTrace:,
+context:)` écrit `error_reports/` sans attendre le serveur, avec les seuls champs des règles
+(`uid`, `feature`, `error`, `stack_trace`, `context`, `app_version`, `platform`,
+`created_at` = `serverTimestamp()`), coupés à leurs bornes. `context` est une chaîne. Toute
+adresse e-mail est remplacée par `<e-mail>` dans `error`, `stack_trace` et `context`. Sans
+compte connecté, ou si l'écriture est refusée (compte non invité), le rapport part sur la
+console (`debugPrint`), dernier recours documenté.
+
+#### Routes (go_router)
+
+| Chemin | Écran | Accès |
+|---|---|---|
+| `/chargement` | Chargement | état `AccessLoading` |
+| `/connexion` | Connexion | sans session |
+| `/non-invite` | Compte non invité | connecté, sans `members/{email}` |
+| `/erreur-acces` | Erreur d'accès | lecture impossible |
+| `/` | redirige vers `/recettes` | membre |
+| `/recettes`, `/brassins`, `/equipements` | écrans à venir, dans la coquille | membre |
+| `/admin` | Admin | admin |
+| `/admin/membres` | Admin › Membres | admin |
+
+`redirectFor(access, uri)` (fonction pure, testée) envoie chaque état sur son écran. Un
+chemin demandé pendant un écran d'accès est gardé dans `?depuis=` et retrouvé une fois le
+membre lu ; seuls les chemins internes (`/…`, pas `//…`) sont suivis, et une page d'Admin ne
+s'ouvre pas pour un brasseur. Un chemin inconnu affiche « Cette page n'existe pas. » et
+« Revenir à l'accueil ». Le routeur ne protège aucune donnée : `firestore.rules` le fait.
+
+**Tests.** `app/test/` : écrans et contrôle d'accès avec des doubles des dépôts
+(`test/support/fakes.dart`, sans Firebase), `redirectFor`, `ErrorReportFields`,
+`FirestoreMembersRepository` sur `fake_cloud_firestore`, attente du serveur sous
+`fake_async`, `FirebaseEnv`.
+
 ## Modèle de données
 
 Unités du système international : masses en grammes (`_g`), volumes en litres (`_l`),

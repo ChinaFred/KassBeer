@@ -8,7 +8,7 @@ plugins {
 }
 
 // Clé de signature de release : app/android/key.properties, jamais versionné (P8).
-// Champs : storeFile (chemin relatif à app/android/app/), storePassword, keyAlias,
+// Champs : storeFile (chemin absolu, ou relatif à app/android/app/), storePassword, keyAlias,
 // keyPassword. Sur le PC, écrit à la main ; dans la CI, écrit par le job à partir des
 // secrets, ou avec une clé jetable pour la seule compilation.
 val keyPropertiesFile = rootProject.file("key.properties")
