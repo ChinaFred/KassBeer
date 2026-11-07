@@ -181,12 +181,26 @@ git diff HEAD starter/main -- .claude scripts   # voir les écarts, puis reprend
 ## 7. CI et déploiement de Kass'Beer
 
 ADR-001 retient une CI GitHub Actions, ajoutée avec le socle de l'application. Une session
-cloud n'a pas de SDK Android, et seule la CI compile l'APK. Quatre jobs, repris de
-Kass'Dalle : Version (`node scripts/check-version.mjs`), Flutter et `brewing/`, Règles
-(émulateur), Android (compilation de l'APK quand `app/pubspec.yaml`, `pubspec.lock` ou
-`app/android/` change). `deploy.yml` déploie Hosting et les règles, et publie l'APK sur
-Firebase App Distribution après une CI verte sur `main`. Le dépôt est privé : le plan
-GitHub Free inclut 2 000 minutes par mois, soit 55 à 80 livraisons. Toute modification de
+cloud n'a pas de SDK Android, et seule la CI compile l'APK.
+
+`.github/workflows/ci.yml` tourne sur chaque pull request et chaque push de branche. Quatre
+jobs, repris de Kass'Dalle sans les Functions ni le job « déjà testé en PR » : Version et
+outillage (`check-version.mjs`, `check-agents.mjs`, tests de `scripts/`), Flutter et
+`brewing/` (analyse, format, tests, build web), Règles (émulateur Firestore, Java 21),
+Android (compilation de l'APK, clé jetable, quand `app/pubspec.yaml`, `app/pubspec.lock` ou
+`app/android/` change). Aucun secret. Une branche qui n'a pas encore incrémenté sa version
+est rouge au job Version. Une PR dont la CI n'est pas verte ne se fusionne pas.
+
+`.github/workflows/deploy.yml` part après une CI verte sur un push de `main`, ou à la main
+sur `main`. Il déploie Hosting, les règles et les index Firestore, et publie un nouvel APK
+sur Firebase App Distribution (groupe `brasseurs`) quand le numéro de build de
+`app/pubspec.yaml` dépasse celui de la dernière version publiée. Tant que le projet
+Firebase n'est pas configuré dans l'environnement GitHub `production`, il s'arrête en vert
+avec l'annonce « Déploiement non configuré ». Détail des jobs, variables, secrets et
+commandes Google Cloud : `exigences-techniques.md`, « CI et déploiement ».
+
+Le dépôt est privé : le plan GitHub Free inclut 2 000 minutes par mois. Une branche avec une
+PR ouverte tourne deux fois par push (`push` et `pull_request`). Toute modification de
 `.github/workflows/` ou de `scripts/check-version.mjs` se signale à l'utilisateur avant la
 fusion (P10). `securite` vérifie aussi les workflows (P14) : aucun secret lisible sur
 `pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload Identity

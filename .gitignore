@@ -13,6 +13,8 @@ coverage/
 CLAUDE.local.md
 
 # Secrets.
+# Configuration Firebase de l'application, lue par --dart-define-from-file.
+app/firebase.env.json
 .env
 .env.*
 !.env.example

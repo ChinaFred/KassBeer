@@ -247,6 +247,195 @@ visée, densités d'en-tête différentes de la chronologie, champs EBC et IBU c
 bouteille divisé par le nombre de bouteilles) sont rangées dans `divergences`, sans être
 corrigées dans les attentes. Une formule changée ajoute d'abord son cas à la fixture.
 
+## CI et déploiement
+
+Deux workflows GitHub Actions. Toute modification de l'un d'eux, ou de
+`scripts/check-version.mjs`, se signale à l'utilisateur avant la fusion (P10). `securite`
+vérifie P14 sur chaque diff de `.github/workflows/`.
+
+### `ci.yml` — contrôles
+
+Déclencheurs : `pull_request`, `push` sur toutes les branches (pas sur les tags), lancement
+manuel. Un nouveau push annule le run en cours de la même référence. Permission unique :
+`contents: read`. Aucun secret.
+
+| Job | Étapes |
+|---|---|
+| Version et outillage | `git fetch --tags`, puis `node scripts/check-version.mjs` : sur une PR avec `--base origin/<base de la PR>` (HEAD est le commit de fusion préparé par GitHub) ; sur un push de `main` avec `--base <commit d'avant le push>` ; sur un push d'une autre branche, contre `origin/main`. Non lancé sur un lancement manuel. Puis `node scripts/check-agents.mjs` et `node --test scripts/*.test.mjs` |
+| Flutter et brewing | Flutter 3.44.6. Dans `brewing/` : `dart pub get`, `pubspec.lock` à jour, `dart analyze --fatal-infos`, `dart format` vérifié, `dart test`. Dans `app/` : `flutter pub get`, `pubspec.lock` à jour, `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`, `flutter test`, `flutter build web --release` sans configuration Firebase |
+| Règles — émulateur | Node 22, Java 21 (Temurin), `npm ci` et `npm test` dans `rules-tests/` (projet `demo-kassbeer`). Binaires de l'émulateur en cache |
+| Android — compilation | quand le diff touche `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`, et toujours sur un lancement manuel : `flutter build apk --release`, Java 17, signé par une clé jetable générée par `keytool` dans le job. Sinon le job réussit sans compiler |
+
+Une branche de travail qui n'a pas encore incrémenté sa version est rouge au job Version :
+le contrôle porte sur ce qui sera fusionné. Une branche avec une PR ouverte tourne deux fois
+par push (`push` et `pull_request`) ; compter ce double dans les 2 000 minutes mensuelles
+du plan GitHub Free.
+
+Les actions sont épinglées par SHA de commit, version en commentaire, aux mêmes SHA que
+Kass'Dalle.
+
+### `deploy.yml` — déploiement
+
+Déclencheurs : fin du workflow CI (`workflow_run`) en succès, sur un `push` de `main`, dans
+ce dépôt ; lancement manuel, accepté sur `main` seulement. Un déploiement à la fois, jamais
+annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
+
+| Job | Environnement, droits | Ce qu'il fait |
+|---|---|---|
+| `gate` | aucun, `contents: read` | vérifie que le commit est la tête de `main` ; sinon s'arrête en vert |
+| `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et décide s'il faut un nouvel APK |
+| `build` | `production`, `contents: read` | build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
+| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; publie l'APK sur App Distribution |
+
+Le code compilé (dépendances pub, Gradle) tourne dans `build`, qui n'a pas de jeton OIDC.
+Les jobs qui ont un accès à Google Cloud ne compilent rien.
+
+**Configuration absente.** Les variables obligatoires sont `GCP_WORKLOAD_IDENTITY_PROVIDER`,
+`GCP_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID`, `FIREBASE_ANDROID_APP_ID` et chaque clé de
+`app/firebase.env.example.json`. Tant qu'aucune d'elles n'existe dans
+l'environnement `production`, `plan` affiche « Déploiement non configuré » et le workflow
+s'arrête en vert, sans rien déployer. Une configuration incomplète (au moins une variable
+posée, une autre absente) fait échouer `plan` avec la liste des variables manquantes. Un
+secret de signature absent fait échouer `build` avant tout déploiement, quand un APK est à
+construire.
+
+**Nouvel APK.** `plan` compare le numéro de build `N` de `app/pubspec.yaml`
+(`X.Y.Z+N`) au `buildVersion` de la dernière version publiée sur App Distribution (API
+`firebaseappdistribution.googleapis.com/v1/…/releases`). Un APK se construit quand aucune
+version n'est publiée, quand `N` est plus grand, ou quand la dernière version publiée a
+expiré. Une réponse de l'API autre que 200 arrête le déploiement. P7 garantit que `N` monte
+à chaque version.
+
+**Configuration Firebase du client.** `app/firebase.env.example.json` liste les clés que
+l'application lit par `String.fromEnvironment` (`app/lib/firebase_options.dart`). `build`
+écrit dans `$RUNNER_TEMP` un fichier JSON qui contient ces clés, et seulement elles, chacune
+avec la variable GitHub du même nom, puis le passe à `flutter build web` et
+`flutter build apk` par `--dart-define-from-file`. Le fichier est supprimé à la fin du job.
+Ces valeurs sont la configuration publique du client, pas des secrets. Une clé ajoutée à
+`firebase.env.example.json` devient une variable obligatoire de l'environnement
+`production`.
+
+**Clé de signature.** Les quatre secrets ne sont lus que dans `build`. Le keystore est
+décodé dans `$RUNNER_TEMP`, `app/android/key.properties` (`storeFile`, `storePassword`,
+`keyAlias`, `keyPassword`) est écrit dans le runner, puis les deux sont supprimés à la sortie
+de l'étape, réussite ou échec.
+
+### Réglages sur GitHub
+
+Environnement `production` (Settings › Environments) : branches de déploiement limitées à
+`main` (« Selected branches and tags », règle `main`). Sans relecteur requis : un relecteur
+requis demanderait trois approbations par déploiement (`plan`, `build`, `deploy`).
+
+Variables de l'environnement `production` :
+
+| Variable | Obligatoire | Valeur |
+|---|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | oui | `projects/<numéro du projet>/locations/global/workloadIdentityPools/github/providers/kassbeer-deploy` |
+| `GCP_SERVICE_ACCOUNT` | oui | `github-deploy@<identifiant du projet>.iam.gserviceaccount.com` |
+| `FIREBASE_PROJECT_ID` | oui | identifiant du projet Firebase ; sert aussi à `firebase deploy --project` |
+| `FIREBASE_MESSAGING_SENDER_ID` | oui | `messagingSenderId` (numéro du projet) |
+| `FIREBASE_WEB_API_KEY` | oui | `apiKey` de l'application web (console Firebase › Paramètres du projet) |
+| `FIREBASE_WEB_APP_ID` | oui | `appId` de l'application web (`1:<numéro>:web:<hex>`) |
+| `FIREBASE_AUTH_DOMAIN` | oui | `authDomain` de l'application web (`<identifiant>.firebaseapp.com`) |
+| `FIREBASE_ANDROID_API_KEY` | oui | `current_key` de `google-services.json` |
+| `FIREBASE_ANDROID_APP_ID` | oui | `mobilesdk_app_id` de l'application Android (`1:<numéro>:android:<hex>`) ; sert aussi à App Distribution |
+| `GOOGLE_SERVER_CLIENT_ID` | oui | identifiant du client OAuth de type « Web » créé par Firebase Auth (`…apps.googleusercontent.com`), demandé par `google_sign_in` sur Android |
+
+Les huit dernières lignes suivent `app/firebase.env.example.json` à la date de ce document ;
+le fichier fait foi.
+
+Secrets de l'environnement `production` :
+
+| Secret | Contenu |
+|---|---|
+| `KEYSTORE_BASE64` | le fichier `.jks` de release en base64, sur une ligne |
+| `KEYSTORE_PASSWORD` | mot de passe du keystore |
+| `KEY_ALIAS` | alias de la clé |
+| `KEY_PASSWORD` | mot de passe de la clé |
+
+Avec la CLI GitHub, depuis le poste :
+
+```bash
+REPO=ChinaFred/KassBeer
+gh variable set FIREBASE_PROJECT_ID --repo "$REPO" --env production --body "<identifiant>"
+# … une commande par variable du tableau
+keytool -genkeypair -keystore kassbeer-release.jks -alias kassbeer \
+  -keyalg RSA -keysize 2048 -validity 10000          # une fois ; copie hors ligne (ADR-001)
+base64 -w0 kassbeer-release.jks | gh secret set KEYSTORE_BASE64 --repo "$REPO" --env production
+gh secret set KEYSTORE_PASSWORD --repo "$REPO" --env production   # saisie masquée
+gh secret set KEY_ALIAS --repo "$REPO" --env production
+gh secret set KEY_PASSWORD --repo "$REPO" --env production
+keytool -list -v -keystore kassbeer-release.jks -alias kassbeer   # SHA-1 et SHA-256 (P8)
+```
+
+Règle de protection de `main` (Settings › Rules) : exiger les quatre contrôles « Version et
+outillage », « Flutter et brewing — analyse, format, tests, build web », « Règles —
+émulateur » et « Android — compilation ». Le job Android réussit sans compiler quand le diff
+ne touche pas Android : il peut être exigé.
+
+### Workload Identity Federation (Google Cloud)
+
+GitHub échange le jeton OIDC du job contre un accès temporaire au compte de service
+`github-deploy`. Aucune clé JSON n'est créée ni stockée (P14). Commandes à lancer une fois,
+par un compte propriétaire du projet, après la création du projet Firebase :
+
+```bash
+PROJECT_ID=<identifiant du projet Firebase>
+REPO=ChinaFred/KassBeer
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+REPO_ID=$(gh api "repos/$REPO" --jq .id)        # identifiant numérique, stable
+SA="github-deploy@$PROJECT_ID.iam.gserviceaccount.com"
+gcloud config set project "$PROJECT_ID"
+
+gcloud services enable iamcredentials.googleapis.com sts.googleapis.com \
+  firebasehosting.googleapis.com firebaserules.googleapis.com firestore.googleapis.com \
+  firebaseappdistribution.googleapis.com
+
+gcloud iam service-accounts create github-deploy --display-name "Déploiement GitHub"
+for role in roles/firebasehosting.admin roles/firebaserules.admin \
+            roles/datastore.indexAdmin roles/firebaseappdistro.admin \
+            roles/serviceusage.serviceUsageConsumer; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member "serviceAccount:$SA" --role "$role" --condition=None
+done
+
+gcloud iam workload-identity-pools create github --location=global \
+  --display-name "GitHub Actions"
+gcloud iam workload-identity-pools providers create-oidc kassbeer-deploy \
+  --location=global --workload-identity-pool=github \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.ref=assertion.ref,attribute.environment=assertion.environment,attribute.workflow_ref=assertion.workflow_ref" \
+  --attribute-condition="assertion.repository_id=='$REPO_ID' && assertion.ref=='refs/heads/main' && assertion.environment=='production' && assertion.workflow_ref=='$REPO/.github/workflows/deploy.yml@refs/heads/main'"
+
+gcloud iam service-accounts add-iam-policy-binding "$SA" \
+  --role roles/iam.workloadIdentityUser \
+  --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository_id/$REPO_ID"
+
+echo "GCP_WORKLOAD_IDENTITY_PROVIDER=projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/kassbeer-deploy"
+echo "GCP_SERVICE_ACCOUNT=$SA"
+```
+
+La condition du fournisseur n'admet qu'un jeton de ce dépôt (identifiant numérique : un
+dépôt recréé sous le même nom ne passe pas), de `main`, de l'environnement `production`, et
+du fichier `deploy.yml`. Les cinq rôles du compte de service couvrent Hosting, les règles,
+les index et App Distribution ; il ne lit ni n'écrit les données Firestore. Si la CLI
+Firebase refuse un déploiement pour une permission manquante, ajouter le rôle que nomme le
+message d'erreur, pas un rôle large comme `roles/firebase.admin`.
+
+### Firebase App Distribution
+
+À faire une fois dans la console Firebase :
+
+- ajouter l'application Android, avec l'`applicationId` de
+  `app/android/app/build.gradle.kts`, et y enregistrer les empreintes SHA-1 et SHA-256 de
+  la clé de release (P8 : sans elles, la connexion Google échoue sur l'APK signé) ;
+- App Distribution › Testeurs et groupes : créer le groupe d'alias `brasseurs` et y ajouter
+  l'e-mail de chaque brasseur.
+
+Chaque nouvel APK part vers ce groupe, avec en notes de version la version, le commit et
+l'entrée de cette version dans `CHANGELOG.md`. Le testeur reçoit un e-mail, puis installe
+par l'application App Tester ou par le lien.
+
 ## Intégrations et services tiers
 
 ## Coûts variables

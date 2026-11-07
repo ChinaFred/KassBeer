@@ -1,5 +1,5 @@
-# Porte la version de Kass'Beer (.claude/version.json). Le reste du projet Flutter
-# (dépendances, lib/, android/, web/) arrive avec le socle de l'application.
+# Porte la version de Kass'Beer (.claude/version.json). Le numéro de build après « + »
+# monte d'un à chaque version : il devient le versionCode Android (P7).
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
@@ -7,3 +7,34 @@ version: 0.1.0+1
 
 environment:
   sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Versions figées sur celles de Kass'Dalle, qui compilent sous Android. La famille
+  # FlutterFire monte ensemble, dans une seule commande, et chaque paquet changé
+  # dans pubspec.lock est nommé au CHANGELOG.md (CLAUDE.md, « Règles de code », P6).
+  firebase_core: 4.15.0
+  firebase_auth: 6.7.0
+  cloud_firestore: 6.8.0
+  google_sign_in: 7.2.0
+
+  flutter_riverpod: 3.3.1
+  go_router: 17.2.3
+
+  # Version affichée dans le menu du compte, lue du paquet installé : aucune
+  # constante de version dans le code.
+  package_info_plus: ^9.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Firestore en mémoire pour les tests des dépôts de données : aucun émulateur, aucun
+  # réseau. 4.2.0 suit l'API de cloud_firestore 6.7 et suivantes.
+  fake_cloud_firestore: ^4.2.0
+
+flutter:
+  uses-material-design: true
