@@ -4,8 +4,9 @@ Ce document décrit le réseau d'agents livré avec ce dépôt : ce qu'il contie
 démarre, comment il travaille, et comment le faire évoluer. Il se met à jour dans le même
 commit que tout changement de `.claude/`, de `scripts/` ou de `CLAUDE.md`.
 
-Le dépôt ne contient **ni CI, ni déploiement, ni intégration aux Issues GitHub**. Les
-contrôles tournent sur le poste ou dans la session, lancés par les agents.
+La CI et le déploiement arrivent avec le socle de l'application (section 7). Pas
+d'intégration aux Issues GitHub. Jusque-là, les contrôles tournent sur le poste ou dans la
+session, lancés par les agents.
 
 ## 1. Vue d'ensemble
 

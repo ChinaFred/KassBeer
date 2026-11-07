@@ -9,7 +9,13 @@ paquet Dart pur. Comptes sur invitation.
 
 - Intention et contraintes : [`documentation/projet.md`](documentation/projet.md)
 - Pile retenue : [`documentation/decisions/ADR-001-pile-technique.md`](documentation/decisions/ADR-001-pile-technique.md)
-- Règles de travail et commandes : [`CLAUDE.md`](CLAUDE.md)
+- Règles de travail et toutes les commandes : [`CLAUDE.md`](CLAUDE.md), « Commandes utiles »
+
+```bash
+(cd app && flutter pub get)          # installer
+(cd app && flutter run -d chrome)    # lancer
+(cd app && flutter test)             # tester
+```
 - Sommaire de la documentation : [`documentation/README.md`](documentation/README.md)
 
 Ce dépôt est né du modèle `ChinaFred/agent-starter` (réseau d'agents Claude Code).

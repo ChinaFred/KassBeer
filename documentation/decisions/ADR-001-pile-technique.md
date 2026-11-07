@@ -117,7 +117,8 @@ l'IA à venir. Il dépense ≈ 0 € tant que l'usage reste sous les quotas.
 
 Règles et contrôles proposés pour `CLAUDE.md` : hors ligne du jour de brassage, calculs
 dans `brewing/` seulement, prix privés, tests des règles, cache web, compilation de l'APK,
-numéro de build, clé de signature (livrable de l'architecte, contrôles P1 à P8).
+numéro de build, clé de signature, validation du JSON d'import, signalement des
+changements de CI (livrable de l'architecte, contrôles P1 à P10).
 
 ## Sources
 

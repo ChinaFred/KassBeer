@@ -62,8 +62,7 @@ les contraintes.
   aux comptes invités.
 - **Création des comptes** : sur invitation de l'administrateur ; connexion par compte
   Google, comme Kass'Dalle.
-- **Infrastructure imposée** : aucune. Si Firebase est retenu, un projet Firebase séparé
-  de celui de Kass'Dalle. Dépôt GitHub `ChinaFred/KassBeer`, privé.
+- **Infrastructure imposée** : aucune. Projet Firebase séparé de celui de Kass'Dalle. Dépôt GitHub `ChinaFred/KassBeer`, privé.
 - **Pile connue** : le brasseur exploite déjà Kass'Dalle sur Firebase
   (Auth Google, Firestore, Storage, Hosting, Cloud Functions) et connaît cette pile.
 
@@ -72,8 +71,9 @@ les contraintes.
 - **Nature, données sensibles** : recettes, brassins, mesures, dégustations, prix
   d'achat. Données personnelles limitées au nom et à l'e-mail des comptes.
 - **Réglementation** : RGPD pour les comptes (nom, e-mail).
-- **Données privées à un utilisateur** : le stock d'ingrédients et les prix d'achat. Le
-  groupe voit les recettes et les brassins (mesures et dégustations comprises).
+- **Données privées à un utilisateur** : le stock d'ingrédients, les prix d'achat et le
+  coût réel d'un brassin. Le groupe voit les recettes, les profils d'équipement et les
+  brassins hors coût (mesures et dégustations comprises).
 - **Conservation, sauvegarde, export** : conservation sans limite ; export des recettes
   souhaitable (format BeerXML ou BeerJSON, à confirmer).
 
@@ -84,8 +84,8 @@ les contraintes.
   minuteurs, saisie des mesures), synchronisé au retour du réseau.
 - **Maintenance, compétences** : le brasseur, avec des sessions Claude Code ; il connaît
   Flutter, Firebase et TypeScript par Kass'Dalle.
-- **Distribution des mises à jour** : à préciser par l'`architecte` ; Kass'Dalle déploie
-  le web sur Firebase Hosting et publie un APK signé.
+- **Distribution des mises à jour** : web sur Firebase Hosting ; APK signé distribué par
+  Firebase App Distribution (ADR-001).
 
 ### Coûts et délais
 

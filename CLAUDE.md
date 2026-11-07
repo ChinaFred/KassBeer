@@ -100,12 +100,13 @@ firestore.rules       # seul contrôle d'accès de la v1
 firestore.indexes.json
 .github/workflows/    # ci.yml (contrôles), deploy.yml (Hosting, règles, APK)
 scripts/              # check-version.mjs, check-agents.mjs
+import/fiches/        # JSON d'import des 16 fiches, retiré après l'import
 ```
 
 État : Riverpod. Navigation : go_router. Rôles : `admin`, `brewer`.
 
-À la v0.1.0, seul `app/pubspec.yaml` existe (il porte la version). Le reste arrive avec le
-socle de l'application, première livraison après le démarrage.
+À la v0.1.0, seuls `app/pubspec.yaml` (il porte la version) et `scripts/` existent. Le
+reste arrive avec le socle de l'application, première livraison après le démarrage.
 
 ## Commandes utiles
 
@@ -217,17 +218,11 @@ peut l'être. `index.html`, `flutter_bootstrap.js`, `flutter.js`, `main.dart.js`
 `Expires: 0` pour `index.html`). Un cache long sur ces fichiers bloque les navigateurs sur
 une ancienne version (leçon 6).
 
-<!-- architecte : règles propres à la pile (gestion d'état, couches, conventions de nommage). -->
-
 ## Contrôles propres au projet
 
 Les relecteurs appliquent leurs contrôles génériques, **plus** ceux de ce tableau. Chaque
 ligne vient d'une décision d'architecture (ADR) ou d'un incident. L'`architecte` en propose,
 l'utilisateur les valide, la session principale les ajoute ici (skill `evolution-reseau`).
-
-<!-- Exemple de ligne, à ne pas recopier tel quel :
-| P1 | Aucun en-tête de cache long sur les fichiers d'amorçage du web | `relecteur-regles` | ADR-001 |
--->
 
 | N° | Contrôle | Agent | Origine |
 |---|---|---|---|
@@ -285,7 +280,8 @@ Semer un référentiel, reprendre un champ sur tous les documents, rattacher ce 
 orphelin : ces opérations vivent dans **un seul écran d'administration**, avec une barre de
 progression et un compte rendu chiffré (créés, ignorés, en erreur) qui nomme les éléments à
 revoir. Sur le projet qui a servi de base à agent-starter, un bouton de masse posé dans un
-écran métier n'a été trouvé par aucun utilisateur.
+écran métier n'a été trouvé par aucun utilisateur. Dans Kass'Beer, cet écran est
+**Admin › Import** ; l'import des 16 fiches en est la première opération.
 
 ## Documentation à tenir à jour
 
@@ -317,7 +313,6 @@ ne correspond plus au code se corrige ou se supprime.
 
 ## Version
 
-<!-- architecte : fichier qui porte la version (package.json, pyproject.toml, Cargo.toml…). -->
 Un seul fichier porte la version. Chaque commit qui termine la « Chaîne de travail » l'incrémente (dernier chiffre + 1, jusqu'à
 99, puis chiffre du milieu + 1) et ajoute en tête de `documentation/CHANGELOG.md`, sous la date
 du jour (`## AAAA-MM-JJ`), un titre `### vX.Y.Z — fonctionnel` ou `— technique`, dans le même

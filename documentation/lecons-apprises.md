@@ -155,4 +155,4 @@ signale.
 
 ## Ce projet
 
-<Ajouter ici chaque incident qui change une règle, avec la date, la version et la règle.>
+Aucun incident à ce jour.

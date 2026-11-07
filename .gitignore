@@ -31,3 +31,6 @@ app/android/key.properties
 firebase-debug*.log
 firestore-debug*.log
 rules-tests/*.log
+*.p12
+*.pem
+*service-account*.json
