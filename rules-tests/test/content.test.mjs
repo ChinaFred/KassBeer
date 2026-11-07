@@ -188,6 +188,36 @@ describe("brews — recette figée", () => {
     );
   });
 
+  it("ajustement du jour en liste blanche (volume, rendement) : autorisé", async () => {
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("brews/b-a")
+        .update({
+          adjustments: { pre_boil_volume_l: 27.5, mash_efficiency_pct: 71 },
+          updated_at: serverTimestamp(),
+        }),
+    );
+  });
+
+  it("coût dans les ajustements (adjustments.cost_eur) : refusé (P5)", async () => {
+    await expectRule(
+      false,
+      db(state.env, "owner")
+        .doc("brews/b-a")
+        .update({ adjustments: { cost_eur: 12 }, updated_at: serverTimestamp() }),
+    );
+  });
+
+  it("ajustement non numérique : refusé", async () => {
+    await expectRule(
+      false,
+      db(state.env, "owner")
+        .doc("brews/b-a")
+        .update({ adjustments: { boil_time_min: "75" }, updated_at: serverTimestamp() }),
+    );
+  });
+
   it("prix dans la copie de la recette : refusé (P5)", async () => {
     const data = brew(uidOf("owner"));
     data.recipe_snapshot = { ...data.recipe_snapshot, price_eur: 30 };

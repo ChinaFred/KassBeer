@@ -12,14 +12,18 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Versions figées sur celles de Kass'Dalle, qui compilent sous Android. La famille
-  # FlutterFire monte ensemble, dans une seule commande, et chaque paquet changé
-  # dans pubspec.lock est nommé au CHANGELOG.md (CLAUDE.md, « Règles de code », P6).
+  # Figés en version exacte, celle du pubspec.lock de Kass'Dalle (compilé sous
+  # Android) : les quatre paquets à code natif firebase_core, firebase_auth,
+  # cloud_firestore et google_sign_in, plus flutter_riverpod et go_router. Ne sont
+  # pas figés ici : package_info_plus (^9.0.0) et toutes les dépendances indirectes
+  # (google_sign_in_android, *_platform_interface, *_web, riverpod…), que seul
+  # pubspec.lock fixe. La famille FlutterFire monte ensemble, dans une seule
+  # commande, et chaque paquet changé dans pubspec.lock est nommé au CHANGELOG.md
+  # (CLAUDE.md, « Règles de code », P6).
   firebase_core: 4.15.0
   firebase_auth: 6.7.0
   cloud_firestore: 6.8.0
   google_sign_in: 7.2.0
-
   flutter_riverpod: 3.3.1
   go_router: 17.2.3
 

@@ -45,16 +45,27 @@ class FirebaseAuthRepository implements AuthRepository {
   };
 
   @override
-  Stream<SessionUser?> authStateChanges() => _auth.authStateChanges().map(
-    (user) => user == null
-        ? null
-        : SessionUser(
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoUrl: user.photoURL,
-          ),
-  );
+  Stream<SessionUser?> authStateChanges() => _auth
+      .authStateChanges()
+      .map(
+        (user) => user == null
+            ? null
+            : SessionUser(
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoUrl: user.photoURL,
+              ),
+      )
+      .handleError((Object error, StackTrace stackTrace) {
+        _errors.reportError(
+          feature: 'auth.state_changes',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        // Relancée : l'écran Erreur s'affiche.
+        Error.throwWithStackTrace(error, stackTrace);
+      });
 
   @override
   Future<SignInOutcome> signInWithGoogle() async {

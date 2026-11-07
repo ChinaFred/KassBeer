@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 
@@ -99,5 +100,89 @@ void main() {
     expect(cut.endsWith('…'), isTrue);
     final beforeEllipsis = cut.codeUnitAt(cut.length - 2);
     expect(beforeEllipsis >= 0xD800 && beforeEllipsis <= 0xDBFF, isFalse);
+  });
+
+  test('aucune URL dans le rapport (photo Google, jeton)', () {
+    final fields = ErrorReportFields.build(
+      uid: 'uid-1',
+      feature: 'shell.avatar',
+      error: Exception(
+        'HTTP 403 pour https://lh3.googleusercontent.com/a/ACg8oc?sz=96&token=abc',
+      ),
+      stackTrace: StackTrace.fromString(
+        'https://kassbeer.web.app/main.dart.js 1234:56  f',
+      ),
+      context: 'image http://exemple.fr/x.png illisible',
+      platform: 'web',
+    ).data;
+    for (final key in ['error', 'stack_trace', 'context']) {
+      final value = fields[key] as String;
+      expect(value, isNot(contains('://')), reason: key);
+      expect(value, contains(ErrorReportFields.urlPlaceholder), reason: key);
+    }
+    expect(fields['error'] as String, contains('HTTP 403'));
+    expect(fields['stack_trace'] as String, contains('1234:56'));
+  });
+
+  group('plafonds d\'écriture', () {
+    late FakeFirebaseFirestore firestore;
+    late DateTime now;
+    late ErrorReportService service;
+
+    setUp(() {
+      firestore = FakeFirebaseFirestore();
+      now = DateTime(2026, 11, 7, 12);
+      service = ErrorReportService(
+        firestore: firestore,
+        currentUid: () => 'uid-1',
+        clock: () => now,
+      );
+    });
+
+    Future<int> written() async {
+      await Future<void>.delayed(Duration.zero);
+      return (await firestore.collection('error_reports').get()).size;
+    }
+
+    test('500 rapports identiques en 1 s : une écriture', () async {
+      final stack = StackTrace.fromString('#0 main (file:///a.dart:1:1)');
+      for (var i = 0; i < 500; i++) {
+        now = now.add(const Duration(milliseconds: 2));
+        service.reportError(
+          feature: 'boucle',
+          error: StateError('même $i'),
+          stackTrace: stack,
+        );
+      }
+      expect(await written(), 1);
+      expect(service.skippedCount, 499);
+    });
+
+    test('500 rapports distincts en 1 s : au plus 20', () async {
+      for (var i = 0; i < 500; i++) {
+        now = now.add(const Duration(milliseconds: 2));
+        service.reportError(feature: 'distinct.$i', error: StateError('e'));
+      }
+      expect(await written(), ErrorReportService.maxPerMinute);
+    });
+
+    test('au plus 200 par session, même étalés dans le temps', () async {
+      for (var i = 0; i < 500; i++) {
+        now = now.add(const Duration(seconds: 10));
+        service.reportError(feature: 'distinct.$i', error: StateError('e'));
+      }
+      expect(await written(), ErrorReportService.maxPerSession);
+    });
+
+    test('la fenêtre d\'une minute se libère', () async {
+      for (var i = 0; i < 25; i++) {
+        service.reportError(feature: 'a.$i', error: StateError('e'));
+      }
+      now = now.add(const Duration(minutes: 1));
+      for (var i = 0; i < 25; i++) {
+        service.reportError(feature: 'b.$i', error: StateError('e'));
+      }
+      expect(await written(), 40);
+    });
   });
 }

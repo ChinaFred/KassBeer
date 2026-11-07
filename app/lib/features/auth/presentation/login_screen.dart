@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/breakpoints.dart';
+import '../../../core/presentation/etats.dart';
+import '../../../core/presentation/logo_kass_beer.dart';
 import '../../../core/providers.dart';
 import '../domain/session_user.dart';
 
@@ -51,26 +54,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
+              constraints: const BoxConstraints(maxWidth: kFormMaxWidth),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ExcludeSemantics(
-                    child: Icon(
-                      Icons.sports_bar,
-                      size: 72,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      "Kass'Beer",
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineLarge,
-                    ),
-                  ),
+                  const LogoKassBeer(headerSemantics: true),
                   const SizedBox(height: 8),
                   Text(
                     'Recettes et brassins du groupe',
@@ -80,17 +68,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  SizedBox(
-                    height: 56,
+                  ConstrainedBox(
+                    // 56 px au moins ; le bouton grandit avec la taille du texte.
+                    constraints: const BoxConstraints(minHeight: 56),
                     child: FilledButton.icon(
                       onPressed: _busy ? null : _signIn,
-                      icon: _busy
-                          ? const SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.login),
-                      label: const Text('Se connecter avec Google'),
+                      icon: _busy ? null : const Icon(Icons.login),
+                      label: _busy
+                          ? const IndicateurBouton(label: 'Connexion en cours')
+                          : const Text('Se connecter avec Google'),
                     ),
                   ),
                   if (_error != null) ...[

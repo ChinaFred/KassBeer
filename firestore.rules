@@ -197,6 +197,31 @@ service cloud.firestore {
               'notes', 'imported_from', 'created_at', 'updated_at'];
     }
 
+    // Ajustements du jour d'un brassin : nombres seuls, clés en liste blanche, unités du
+    // système international. Aucun prix ni coût (P5) : une clé absente de la liste est
+    // refusée.
+    function adjustmentFields() {
+      return ['batch_volume_l', 'mash_water_l', 'sparge_water_l', 'pre_boil_volume_l',
+              'post_boil_volume_l', 'fermenter_volume_l', 'boil_off_l_per_h', 'mash_temp_c',
+              'mash_time_min', 'boil_time_min', 'mash_efficiency_pct'];
+    }
+
+    function isAdjustments(a) {
+      return a is map
+        && a.keys().hasOnly(adjustmentFields())
+        && optNumber(a, 'batch_volume_l')
+        && optNumber(a, 'mash_water_l')
+        && optNumber(a, 'sparge_water_l')
+        && optNumber(a, 'pre_boil_volume_l')
+        && optNumber(a, 'post_boil_volume_l')
+        && optNumber(a, 'fermenter_volume_l')
+        && optNumber(a, 'boil_off_l_per_h')
+        && optNumber(a, 'mash_temp_c')
+        && optNumber(a, 'mash_time_min')
+        && optNumber(a, 'boil_time_min')
+        && optNumber(a, 'mash_efficiency_pct');
+    }
+
     function isBrewShape(d) {
       return d.keys().hasOnly(brewFields())
         && d.keys().hasAll(['owner_uid', 'name', 'status', 'recipe_snapshot',
@@ -213,7 +238,7 @@ service cloud.firestore {
         && d.recipe_snapshot.keys().hasOnly(recipeFields())
         && d.equipment_snapshot is map
         && d.equipment_snapshot.keys().hasOnly(equipmentFields())
-        && (!('adjustments' in d) || d.adjustments == null || d.adjustments is map)
+        && (!('adjustments' in d) || d.adjustments == null || isAdjustments(d.adjustments))
         && optNumber(d, 'bottles_count')
         && optString(d, 'notes', 10000)
         && optString(d, 'imported_from', 200);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'breakpoints.dart';
+
 /// États partagés des écrans : chargement, vide, erreur.
 
 /// Chargement en cours : indicateur centré, annoncé aux lecteurs d'écran.
@@ -20,18 +22,26 @@ class EtatChargement extends StatelessWidget {
   }
 }
 
-/// Rien à afficher : icône et texte, sans bouton.
+/// Rien à afficher : icône, texte, et au besoin une action.
 class EtatVide extends StatelessWidget {
-  const EtatVide({super.key, required this.icon, required this.message});
+  const EtatVide({
+    super.key,
+    required this.icon,
+    required this.message,
+    this.action,
+  });
 
   final IconData icon;
   final String message;
+
+  /// Bouton facultatif sous le message.
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -43,9 +53,33 @@ class EtatVide extends StatelessWidget {
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge,
             ),
+            if (action != null) ...[const SizedBox(height: 24), action!],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Contenu d'un bouton pendant une action : indicateur et libellé visibles, lus par
+/// les lecteurs d'écran.
+class IndicateurBouton extends StatelessWidget {
+  const IndicateurBouton({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox.square(
+          dimension: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        const SizedBox(width: 12),
+        Flexible(child: Text(label)),
+      ],
     );
   }
 }
@@ -73,10 +107,10 @@ class EtatErreur extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: kFormMaxWidth),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -98,10 +132,7 @@ class EtatErreur extends StatelessWidget {
               FilledButton(
                 onPressed: retrying ? null : onRetry,
                 child: retrying
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const IndicateurBouton(label: 'Vérification en cours')
                     : const Text('Réessayer'),
               ),
               if (secondaryAction != null) ...[
