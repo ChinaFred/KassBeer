@@ -1,0 +1,473 @@
+name: Déploiement
+
+# Déploie le web (Firebase Hosting), les règles et les index Firestore après une
+# CI verte sur un push de main. Publie un nouvel APK sur Firebase App
+# Distribution (groupe « brasseurs ») quand le numéro de build de
+# app/pubspec.yaml dépasse celui de la dernière version publiée.
+#
+# Quatre jobs, pour que le code compilé ne tourne jamais à côté d'un accès à
+# Google Cloud :
+#   gate    le commit est la tête de main ;
+#   plan    configuration présente, faut-il un nouvel APK ? (jeton Google, aucun build) ;
+#   build   web et APK signé (secrets de signature, aucun jeton Google) ;
+#   deploy  Hosting, règles, index, App Distribution (jeton Google, aucun build).
+#
+# Aucun secret lisible sur pull_request (P14) : ce workflow ne se déclenche que
+# sur workflow_run et workflow_dispatch, toujours sur main. Google Cloud par
+# Workload Identity Federation, sans clé JSON. Réglages à créer sur GitHub et
+# Google Cloud : documentation/exigences-techniques.md, « CI et déploiement ».
+#
+# Toute modification de ce fichier se signale à l'utilisateur avant la fusion (P10).
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# Un déploiement à la fois, jamais interrompu en route.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+# Le jeton GitHub ne fait que lire le dépôt. Les jobs plan et deploy demandent en
+# plus id-token: write, pour le jeton OIDC échangé auprès de Google Cloud.
+permissions:
+  contents: read
+
+# Actions épinglées par SHA de commit, version en commentaire (voir ci.yml).
+
+env:
+  FLUTTER_VERSION: '3.44.6' # aligner sur ci.yml
+
+jobs:
+  gate:
+    name: Commit à déployer
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Automatique : CI verte, sur un push (pas une PR), de main, dans ce dépôt.
+    # Manuel : sur main seulement ; le sélecteur de GitHub propose toutes les
+    # branches, et aucune autre n'a de CI validée pour la production.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    outputs:
+      sha: ${{ steps.tip.outputs.sha }}
+    steps:
+      - name: Le commit est la tête de main
+        id: tip
+        # Relancer une ancienne CI verte remettrait en ligne un web et des
+        # règles périmés. Un commit dépassé laisse la place au suivant.
+        env:
+          WANTED: ${{ github.event.workflow_run.head_sha || github.sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tip=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          if [ "$tip" != "$WANTED" ]; then
+            echo "::notice::$WANTED n'est plus la tête de main ($tip) : rien à déployer."
+            exit 0
+          fi
+          echo "sha=$WANTED" >> "$GITHUB_OUTPUT"
+
+  plan:
+    name: Configuration et APK à publier
+    needs: gate
+    if: needs.gate.outputs.sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Variables et secrets vivent dans l'environnement « production », réservé à
+    # main. Google Cloud n'accepte le jeton OIDC que de ce dépôt, sur main, dans
+    # cet environnement, depuis ce fichier.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      ready: ${{ steps.config.outputs.ready }}
+      apk: ${{ steps.apk.outputs.build }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            app/pubspec.yaml
+            app/firebase.env.example.json
+          sparse-checkout-cone-mode: false
+
+      - name: Configuration présente ?
+        id: config
+        # Variables obligatoires : les deux de Google Cloud, plus chaque clé de
+        # app/firebase.env.example.json (la liste des --dart-define que lit
+        # l'application). Tant que le projet Firebase n'existe pas, aucune n'est
+        # posée : le déploiement s'arrête ici, en vert, avec une annonce. Une
+        # configuration incomplète est une erreur.
+        env:
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: |
+          doc="documentation/exigences-techniques.md, « CI et déploiement »"
+          example="app/firebase.env.example.json"
+          if ! keys=$(jq -er 'keys_unsorted[]' "$example"); then
+            echo "::error::$example absent ou illisible : liste des variables Firebase inconnue."
+            exit 1
+          fi
+          required="GCP_WORKLOAD_IDENTITY_PROVIDER GCP_SERVICE_ACCOUNT FIREBASE_PROJECT_ID FIREBASE_ANDROID_APP_ID
+            $keys"
+          missing=""
+          present=0
+          names=$(printf '%s' "$required" | tr -s '[:space:]' '\n' | awk 'NF && !seen[$0]++')
+          for name in $names; do
+            if printf '%s' "$VARS_JSON" | jq -e --arg k "$name" '(.[$k] // "") | strings | length > 0' > /dev/null; then
+              present=$((present + 1))
+            else
+              missing="$missing $name"
+            fi
+          done
+          if [ "$present" -eq 0 ]; then
+            echo "::notice::Déploiement non configuré : aucune variable de l'environnement production. Rien n'est déployé. Voir $doc."
+            {
+              echo "### Rien n'est déployé"
+              echo
+              echo "Aucune variable de configuration dans l'environnement \`production\`. Voir $doc."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Variables absentes de l'environnement production :$missing. Voir $doc."
+            exit 1
+          fi
+          android_app_id=$(printf '%s' "$VARS_JSON" | jq -r '.FIREBASE_ANDROID_APP_ID')
+          if ! printf '%s' "$android_app_id" | grep -qE '^1:[0-9]+:android:[0-9a-f]+$'; then
+            echo "::error::FIREBASE_ANDROID_APP_ID n'a pas la forme 1:<numéro>:android:<hex> (console Firebase › Paramètres du projet)."
+            exit 1
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Version de app/pubspec.yaml
+        id: version
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          raw=$(grep -m1 '^version:' app/pubspec.yaml | sed 's/^version:[[:space:]]*//' | tr -d '\r')
+          if ! printf '%s' "$raw" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$'; then
+            echo "::error::app/pubspec.yaml : version « $raw », attendue X.Y.Z+N."
+            exit 1
+          fi
+          echo "Version : $raw."
+          echo "version=$raw" >> "$GITHUB_OUTPUT"
+
+      - name: Authentification Google Cloud (lecture d'App Distribution)
+        id: auth
+        if: steps.config.outputs.ready == 'true'
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          # Un jeton de cinq minutes, en sortie d'étape seulement : ni fichier
+          # d'identifiants, ni variable d'environnement pour les étapes suivantes.
+          token_format: access_token
+          access_token_lifetime: 300s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Faut-il un nouvel APK ?
+        id: apk
+        # Compare le numéro de build N (app/pubspec.yaml, X.Y.Z+N) au
+        # buildVersion de la dernière version publiée sur App Distribution. P7
+        # garantit que N monte d'un à chaque version. Une version publiée
+        # expirée (150 jours) est republiée. Une réponse illisible arrête le
+        # déploiement : aucune décision par défaut.
+        if: steps.config.outputs.ready == 'true'
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+          APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          number=$(printf '%s' "$APP_ID" | cut -d: -f2)
+          url="https://firebaseappdistribution.googleapis.com/v1/projects/$number/apps/$APP_ID/releases?pageSize=1"
+          response="$RUNNER_TEMP/releases.json"
+          code=$(curl -sS --max-time 60 -o "$response" -w '%{http_code}' \
+            -H "Authorization: Bearer $TOKEN" "$url")
+          if [ "$code" != "200" ]; then
+            echo "::error::API App Distribution : HTTP $code. Vérifier le rôle Firebase App Distribution Admin du compte de service et l'API firebaseappdistribution.googleapis.com."
+            jq -r '.error.message // empty' "$response" 2>/dev/null | sed 's/^/::error::/' || echo "::error::Réponse non JSON."
+            exit 1
+          fi
+          build="${VERSION#*+}"
+          latest=$(jq -r '.releases[0].buildVersion // ""' "$response")
+          expire=$(jq -r '.releases[0].expireTime // ""' "$response")
+          if [ -z "$latest" ]; then
+            echo "Aucune version publiée : construction de v$VERSION."
+            decision=true
+          elif ! printf '%s' "$latest" | grep -qE '^[0-9]+$'; then
+            echo "::error::buildVersion publié illisible : « $latest »."
+            exit 1
+          elif [ "$build" -gt "$latest" ]; then
+            echo "Publié : build $latest. app/pubspec.yaml : v$VERSION. Construction."
+            decision=true
+          elif [ -n "$expire" ] && [ "$(date -u -d "$expire" +%s)" -le "$(date -u +%s)" ]; then
+            echo "Publié : build $latest, expiré le $expire. Nouvelle publication de v$VERSION."
+            decision=true
+          else
+            echo "Publié : build $latest. app/pubspec.yaml : v$VERSION. APK publié conservé."
+            decision=false
+          fi
+          rm -f "$response"
+          echo "build=$decision" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build web et APK
+    needs: [gate, plan]
+    if: needs.plan.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Environnement production pour les variables et les secrets de signature.
+    # Pas de id-token : le build exécute le code des dépendances (pub, Gradle),
+    # qui n'a pas à obtenir de jeton Google.
+    environment: production
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Libérer de la place sur le disque
+        if: needs.plan.outputs.apk == 'true'
+        working-directory: .
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/share/swift \
+            /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/local/julia* \
+            /usr/local/share/powershell /usr/local/share/chromium /opt/microsoft
+          df -h /
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          # Le jeton GitHub ne reste pas dans .git/config, à portée des scripts
+          # de build.
+          persist-credentials: false
+
+      - name: Secrets de signature présents
+        # Avant le build : un secret absent arrête le workflow avant tout
+        # déploiement.
+        if: needs.plan.outputs.apk == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            [ -n "${!name:-}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Secrets absents de l'environnement production :$missing. Impossible de signer l'APK. Voir documentation/exigences-techniques.md, « CI et déploiement »."
+            exit 1
+          fi
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Configuration Firebase (dart-define)
+        # Les clés de firebase.env.example.json, et elles seules, reçoivent la
+        # variable GitHub du même nom, puis passent à --dart-define-from-file.
+        # Ce sont les valeurs publiques de configuration du client web et
+        # Android, pas des secrets. Le job plan a vérifié qu'aucune ne manque.
+        env:
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: |
+          jq --argjson vars "$VARS_JSON" \
+            'with_entries(.value = ($vars[.key] // ""))' firebase.env.example.json \
+            > "$RUNNER_TEMP/firebase-defines.json"
+          echo "Clés transmises : $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/firebase-defines.json")."
+
+      - name: Dépendances
+        run: flutter pub get
+
+      - name: Build web
+        run: flutter build web --release --dart-define-from-file="$RUNNER_TEMP/firebase-defines.json"
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        if: needs.plan.outputs.apk == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build de l'APK signé
+        # La clé de release n'existe que dans ce job (P8) : décodée dans
+        # $RUNNER_TEMP, key.properties écrit dans app/android/, les deux
+        # supprimés à la sortie, réussite ou échec.
+        if: needs.plan.outputs.apk == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          keystore="$RUNNER_TEMP/release-keystore.jks"
+          properties="android/key.properties"
+          trap 'rm -f "$keystore" "$properties"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          {
+            echo "storeFile=$keystore"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > "$properties"
+          flutter build apk --release --dart-define-from-file="$RUNNER_TEMP/firebase-defines.json"
+          apk="build/app/outputs/flutter-apk/app-release.apk"
+          [ -f "$apk" ] || { echo "::error::flutter build apk n'a pas produit $apk."; exit 1; }
+          mkdir -p "$RUNNER_TEMP/apk"
+          cp "$apk" "$RUNNER_TEMP/apk/app-release.apk"
+
+      - name: Supprimer la configuration Firebase du runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-defines.json"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: web
+          path: app/build/web
+          if-no-files-found: error
+          retention-days: 1
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: needs.plan.outputs.apk == 'true'
+        with:
+          name: apk
+          path: ${{ runner.temp }}/apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    name: Hosting, règles, index, App Distribution
+    needs: [gate, plan, build]
+    if: needs.plan.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Le commit est toujours la tête de main
+        # Refait ici : « Re-run failed jobs » ne rejoue pas le job gate.
+        env:
+          WANTED: ${{ needs.gate.outputs.sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tip=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          if [ "$tip" != "$WANTED" ]; then
+            echo "::error::$WANTED n'est plus la tête de main ($tip) : déploiement refusé."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rules-tests/package-lock.json
+
+      - name: CLI Firebase verrouillée
+        # Avant l'authentification : rien de ce qui s'installe ici ne tourne avec
+        # le jeton Google. Version et dépendances verrouillées par
+        # rules-tests/package-lock.json (firebase-tools, la même que les tests
+        # des règles) ; --ignore-scripts n'exécute aucun script d'installation.
+        # Seul « firebase » rejoint le PATH.
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund --prefix rules-tests
+          mkdir -p "$RUNNER_TEMP/firebase-cli"
+          ln -s "$GITHUB_WORKSPACE/rules-tests/node_modules/.bin/firebase" "$RUNNER_TEMP/firebase-cli/firebase"
+          echo "$RUNNER_TEMP/firebase-cli" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/firebase-cli/firebase" --version
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: web
+          path: app/build/web
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: needs.plan.outputs.apk == 'true'
+        with:
+          name: apk
+          path: ${{ runner.temp }}/apk
+
+      - name: Authentification Google Cloud
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        # Workload Identity Federation, aucune clé JSON (P14). Le fichier
+        # d'identifiants créé ici ne contient que la configuration d'échange du
+        # jeton OIDC ; firebase-tools le lit par GOOGLE_APPLICATION_CREDENTIALS.
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Déployer Hosting, règles et index Firestore
+        # Un code 0 ne prouve pas que la CLI a déployé : le succès exige aussi
+        # « Deploy complete » dans sa sortie. Pas de --force : il supprimerait
+        # les index absents de firestore.indexes.json.
+        env:
+          PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          log="$RUNNER_TEMP/firebase-deploy.log"
+          set -o pipefail
+          firebase deploy --only hosting,firestore:rules,firestore:indexes \
+            --project "$PROJECT" --non-interactive 2>&1 | tee "$log"
+          if ! grep -q "Deploy complete" "$log"; then
+            echo "::error::firebase deploy a rendu 0 sans « Deploy complete » : rien ne prouve le déploiement."
+            exit 1
+          fi
+
+      - name: Publier l'APK sur App Distribution
+        if: needs.plan.outputs.apk == 'true'
+        env:
+          APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
+          PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          notes="$RUNNER_TEMP/release-notes.txt"
+          # Entrée de cette version dans le CHANGELOG.md (titres « fonctionnel »
+          # et « technique »), jusqu'au titre d'une autre version ou d'une autre date.
+          {
+            echo "Kass'Beer v$VERSION ($(git rev-parse --short HEAD))"
+            echo
+            awk -v v="### v${VERSION%%+*} " '
+              /^## / && seen { exit }
+              /^### v/ { if (index($0, v) == 1) { seen = 1; print; next } else if (seen) exit }
+              seen' documentation/CHANGELOG.md
+          } > "$notes"
+          firebase appdistribution:distribute "$RUNNER_TEMP/apk/app-release.apk" \
+            --app "$APP_ID" --groups brasseurs --release-notes-file "$notes" \
+            --project "$PROJECT" --non-interactive
+
+      - name: Résumé
+        env:
+          APK: ${{ needs.plan.outputs.apk }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          {
+            echo "### Déployé : v$VERSION ($(git rev-parse --short HEAD))"
+            echo
+            echo "Web (Hosting), règles et index Firestore."
+            if [ "$APK" = true ]; then
+              echo "Nouvel APK publié sur App Distribution, groupe « brasseurs »."
+            else
+              echo "APK inchangé : le numéro de build publié est à jour."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

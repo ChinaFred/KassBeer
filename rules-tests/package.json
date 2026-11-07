@@ -1,0 +1,20 @@
+{
+  "name": "kassbeer-rules-tests",
+  "private": true,
+  "description": "Tests de firestore.rules rejoués contre l'émulateur Firebase (projet demo-kassbeer, sans contact avec la production).",
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "firebase --config ../firebase.json emulators:exec --only firestore --project demo-kassbeer \"node --test --test-concurrency=1 test/*.test.mjs\"",
+    "format": "prettier --write \"test/**/*.mjs\"",
+    "format:check": "prettier --check \"test/**/*.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.35.0",
+    "prettier": "3.9.6"
+  }
+}

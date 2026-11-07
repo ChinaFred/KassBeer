@@ -1,0 +1,198 @@
+{
+  "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
+  "formula": "ABV = (OG − FG) × 131,25 ; après bouteille : ABV + points du resucrage / 1000 × 131,25",
+  "fiche_tolerance_note": "Les fiches arrondissent au dixième et calculent (DI − DF) / 7,6, soit × 131,58 : l'écart à × 131,25 atteint 0,03 % vol à 96 points. 0,07 couvre l'arrondi (0,05) et cet écart.",
+  "cases": [
+    {
+      "id": "ale",
+      "source": "Ale blonde 140724 - Pale ale",
+      "inputs": {
+        "original_gravity": 1.0675,
+        "final_gravity": 1.023
+      },
+      "expected": 5.840625,
+      "tolerance": 1e-06,
+      "fiche_value": 5.9,
+      "fiche_tolerance": 0.07
+    },
+    {
+      "id": "june",
+      "source": "June bavarian Lager",
+      "inputs": {
+        "original_gravity": 1.0579,
+        "final_gravity": 1.008
+      },
+      "expected": 6.549375,
+      "tolerance": 1e-06,
+      "fiche_value": 6.6,
+      "fiche_tolerance": 0.07
+    },
+    {
+      "id": "mansart",
+      "source": "Ale blonde 21-04-25 - Pale ale - Mansart",
+      "inputs": {
+        "original_gravity": 1.049,
+        "final_gravity": 1.001
+      },
+      "expected": 6.3,
+      "tolerance": 1e-06,
+      "fiche_value": 6.3,
+      "fiche_tolerance": 0.07
+    },
+    {
+      "id": "hardlager",
+      "source": "Hard lager - deuxième brassin",
+      "inputs": {
+        "original_gravity": 1.1,
+        "final_gravity": 1.044
+      },
+      "expected": 7.35,
+      "tolerance": 1e-06,
+      "fiche_value": 7.4,
+      "fiche_tolerance": 0.07
+    },
+    {
+      "id": "estivale",
+      "source": "Bière blonde 11-2-24 - très bonne bière légère estivale",
+      "inputs": {
+        "original_gravity": 1.054,
+        "final_gravity": 1.019
+      },
+      "expected": 4.59375,
+      "tolerance": 1e-06,
+      "fiche_value": 4.6,
+      "fiche_tolerance": 0.07
+    },
+    {
+      "id": "thym",
+      "source": "Bière au thym avec Michael 14-04-23",
+      "inputs": {
+        "original_gravity": 1.052,
+        "final_gravity": 1.0
+      },
+      "expected": 6.825,
+      "tolerance": 1e-06,
+      "fiche_value": 6.8,
+      "fiche_tolerance": 0.07
+    },
+    {
+      "id": "tb4",
+      "source": "21-09-25 Twin bottle 4",
+      "inputs": {
+        "original_gravity": 1.106,
+        "final_gravity": 1.01
+      },
+      "expected": 12.6,
+      "tolerance": 1e-06,
+      "fiche_value": 12.63,
+      "fiche_tolerance": 0.07
+    },
+    {
+      "id": "meme-densite",
+      "inputs": {
+        "original_gravity": 1.01,
+        "final_gravity": 1.01
+      },
+      "expected": 0.0,
+      "tolerance": 1e-09
+    }
+  ],
+  "invalid": [
+    {
+      "inputs": {
+        "original_gravity": 1.01,
+        "final_gravity": 1.05
+      },
+      "reason": "FG > OG"
+    },
+    {
+      "inputs": {
+        "original_gravity": 1.61,
+        "final_gravity": 1.01
+      },
+      "reason": "OG hors intervalle"
+    }
+  ],
+  "bottling_cases": [
+    {
+      "id": "resucrage-7g-saccharose",
+      "inputs": {
+        "abv_before": 5.840625,
+        "priming": {
+          "grams_per_litre": 7,
+          "points_per_kg_per_litre": 385.674521
+        }
+      },
+      "expected": 6.194963,
+      "tolerance": 1e-05
+    },
+    {
+      "id": "resucrage-nul",
+      "inputs": {
+        "abv_before": 5.0,
+        "priming": {
+          "grams_per_litre": 0,
+          "points_per_kg_per_litre": 385.674521
+        }
+      },
+      "expected": 5.0,
+      "tolerance": 1e-09
+    },
+    {
+      "id": "sans-donnee-de-resucrage",
+      "inputs": {
+        "abv_before": 5.0,
+        "priming": null
+      },
+      "expected": null,
+      "note": "jamais une hausse forfaitaire"
+    }
+  ],
+  "divergences": [
+    {
+      "source": "Ale blonde 140724 - Pale ale",
+      "field": "Degré estimé",
+      "fiche_value": 5.9,
+      "inputs": {
+        "original_gravity": 1.052,
+        "final_gravity": 1.023
+      },
+      "computed": 3.80625,
+      "explanation": "Degré calculé sur la densité visée de l'en-tête (1067,5). Avec la densité mesurée de la chronologie (1.052), le degré vaut 3,8 % vol."
+    },
+    {
+      "source": "21-09-25 Twin bottle 4",
+      "field": "Degré estimé",
+      "fiche_value": 12.63,
+      "inputs": {
+        "original_gravity": 1.063,
+        "final_gravity": 1.01
+      },
+      "computed": 6.95625,
+      "explanation": "« Je vise 1106 » : degré calculé sur la densité visée. Avec la densité mesurée 1,063, il vaut 7,0 % vol. La remarque de la fiche annonce 8,5 – 9 %."
+    },
+    {
+      "source": "Blonde triple décembre 22 - bonne - mousse tient pas",
+      "field": "Degré estimé",
+      "fiche_value": 8.8,
+      "inputs": {
+        "original_gravity": 1.065,
+        "final_gravity": 1.001
+      },
+      "computed": 8.4,
+      "explanation": "Non retrouvé : 1065 → 1001 donne 8,4 % (8,42 par la règle /7,6 de la fiche). Origine du 8,8 inconnue."
+    },
+    {
+      "source": "7 fiches : Ale blonde 140724 - Pale ale, June bavarian Lager, Ale blonde 21-04-25 - Pale ale - Mansart, Hard lager - deuxième brassin, Bière blonde 11-2-24 - très bonne bière légère estivale, 21-09-25 Twin bottle 4 ; 05-04-6 Clone paix dieu, 20-20-24 Clone paix dieu, Hard bohemian lager",
+      "field": "Après f. bouteille",
+      "fiche_value": "degré estimé + 0,5 (6,4 ; 7,1 ; 6,8 ; 7,9 ; 5,1 ; 13,13 ; 0,5 sans densité)",
+      "explanation": "Hausse forfaitaire de 0,5 % vol. Le paquet calcule la hausse à partir du sucre de resucrage (g/L) et rend null sans cette donnée. Les fiches comptent des « Carbonation Drops » sans leur masse : la hausse ne peut pas être recalculée."
+    },
+    {
+      "source": "05-04-6 Clone paix dieu, 20-20-24 Clone paix dieu, Hard bohemian lager",
+      "field": "Degré estimé",
+      "fiche_value": 0.0,
+      "explanation": "Densités vides : la fiche affiche 0,0 % vol. Le paquet ne calcule rien sans densité (l'appelant affiche la panne)."
+    }
+  ]
+}

@@ -1,0 +1,555 @@
+{
+  "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
+  "rule": "coût = Σ quantité × prix unitaire ; par litre = coût / volume ; bouteille de 33 cl = par litre × 0,33. Un prix manquant rend le coût absent avec la liste des lignes sans prix. Les prix unitaires des cas sont tirés des coûts de ligne de la fiche (coût / quantité), les prix affichés étant arrondis au centime.",
+  "cases": [
+    {
+      "id": "ale-blonde-140724",
+      "source": "Ale blonde 140724 - Pale ale",
+      "inputs": {
+        "lines": [
+          {
+            "name": "Pale Ale malt",
+            "quantity": 4620,
+            "unit_price": 0.00188095
+          },
+          {
+            "name": "WHeat",
+            "quantity": 1700,
+            "unit_price": 0.00198824
+          },
+          {
+            "name": "munich light",
+            "quantity": 90,
+            "unit_price": 0.00166667
+          },
+          {
+            "name": "Pils",
+            "quantity": 290,
+            "unit_price": 0.00213793
+          },
+          {
+            "name": "Cascade",
+            "quantity": 29.5,
+            "unit_price": 0.04508475
+          },
+          {
+            "name": "Saaz",
+            "quantity": 29.5,
+            "unit_price": 0.05898305
+          },
+          {
+            "name": "Cascade (aromatique)",
+            "quantity": 50,
+            "unit_price": 0.045
+          },
+          {
+            "name": "Citra en dry HOP",
+            "quantity": 34.9,
+            "unit_price": 0.07994269
+          },
+          {
+            "name": "Orange peel",
+            "quantity": 50,
+            "unit_price": 0.0326
+          },
+          {
+            "name": "Eau de brassage",
+            "quantity": 24,
+            "unit_price": 0.005
+          },
+          {
+            "name": "Eau de rincage",
+            "quantity": 17.3,
+            "unit_price": 0.00520231
+          },
+          {
+            "name": "Eau de vaisselle",
+            "quantity": 30,
+            "unit_price": 0.005
+          },
+          {
+            "name": "Eau de refroidissement",
+            "quantity": 260,
+            "unit_price": 0.005
+          },
+          {
+            "name": "SafAle BE-256",
+            "quantity": 1,
+            "unit_price": 3.99
+          },
+          {
+            "name": "Electricité",
+            "quantity": 1,
+            "unit_price": 2.0
+          },
+          {
+            "name": "Carbonation Drops",
+            "quantity": 50,
+            "unit_price": 0.0826
+          },
+          {
+            "name": "Capsules",
+            "quantity": 50,
+            "unit_price": 0.0296
+          },
+          {
+            "name": "Vidanges",
+            "quantity": 50,
+            "unit_price": 0.1
+          }
+        ],
+        "volume_litres": 17
+      },
+      "expected": {
+        "total": 40.84,
+        "per_litre": 2.402353,
+        "per_bottle_33cl": 0.792776
+      },
+      "tolerance": 0.0001,
+      "fiche_value": {
+        "total": 40.82
+      },
+      "fiche_tolerance": 0.05,
+      "note": "la somme des lignes affichées (40,84) diffère de 2 centimes du total de la fiche : arrondi des lignes"
+    },
+    {
+      "id": "biere-blonde-estivale",
+      "source": "Bière blonde 11-2-24 - très bonne bière légère estivale",
+      "inputs": {
+        "lines": [
+          {
+            "name": "Pilsner",
+            "quantity": 6540,
+            "unit_price": 0.00214985
+          },
+          {
+            "name": "WHeat",
+            "quantity": 2410,
+            "unit_price": 0.0019917
+          },
+          {
+            "name": "munich light",
+            "quantity": 140,
+            "unit_price": 0.00171429
+          },
+          {
+            "name": "Cara 50 EBC",
+            "quantity": 300,
+            "unit_price": 0.0032
+          },
+          {
+            "name": "Cascade",
+            "quantity": 28.3,
+            "unit_price": 0.04487633
+          },
+          {
+            "name": "Saaz",
+            "quantity": 28.3,
+            "unit_price": 0.0590106
+          },
+          {
+            "name": "Citra en dry HOP",
+            "quantity": 34.9,
+            "unit_price": 0.07994269
+          },
+          {
+            "name": "Orange peel",
+            "quantity": 50,
+            "unit_price": 0.0326
+          },
+          {
+            "name": "Eau de brassage",
+            "quantity": 24,
+            "unit_price": 0.005
+          },
+          {
+            "name": "Eau de rincage",
+            "quantity": 14.61,
+            "unit_price": 0.00479124
+          },
+          {
+            "name": "Eau de vaisselle",
+            "quantity": 30,
+            "unit_price": 0.005
+          },
+          {
+            "name": "Eau de refroidissement",
+            "quantity": 260,
+            "unit_price": 0.005
+          },
+          {
+            "name": "SafAle BE-256",
+            "quantity": 1,
+            "unit_price": 3.99
+          },
+          {
+            "name": "Electricité",
+            "quantity": 1,
+            "unit_price": 2.0
+          },
+          {
+            "name": "Carbonation Drops",
+            "quantity": 66,
+            "unit_price": 0.08257576
+          },
+          {
+            "name": "Capsules",
+            "quantity": 66,
+            "unit_price": 0.02954545
+          },
+          {
+            "name": "Vidanges",
+            "quantity": 66,
+            "unit_price": 0.1
+          }
+        ],
+        "volume_litres": 27
+      },
+      "expected": {
+        "total": 49.05,
+        "per_litre": 1.816667,
+        "per_bottle_33cl": 0.5995
+      },
+      "tolerance": 0.0001,
+      "fiche_value": {
+        "total": 49.04
+      },
+      "fiche_tolerance": 0.05
+    },
+    {
+      "id": "twin-bottle-4-prix-manquant",
+      "source": "21-09-25 Twin bottle 4",
+      "inputs": {
+        "lines": [
+          {
+            "name": "Munich (17.7 EBC)",
+            "quantity": 400,
+            "unit_price": 0.00215
+          },
+          {
+            "name": "Pils (3.9 EBC)",
+            "quantity": 4800,
+            "unit_price": 0.00198958
+          },
+          {
+            "name": "Wheat",
+            "quantity": 700,
+            "unit_price": null
+          },
+          {
+            "name": "Biscuit",
+            "quantity": 600,
+            "unit_price": 0.0032
+          },
+          {
+            "name": "Cascade",
+            "quantity": 15.5,
+            "unit_price": 0.09483871
+          },
+          {
+            "name": "Citra",
+            "quantity": 22.4,
+            "unit_price": 0.0664058
+          },
+          {
+            "name": "Sucre candi clair",
+            "quantity": 230,
+            "unit_price": 0.005
+          },
+          {
+            "name": "Sucre candi ambré",
+            "quantity": 230,
+            "unit_price": 0.005
+          },
+          {
+            "name": "Eau de brassage",
+            "quantity": 15,
+            "unit_price": 0.00533333
+          },
+          {
+            "name": "Eau de rincage",
+            "quantity": 9,
+            "unit_price": 0.00555556
+          },
+          {
+            "name": "Eau de vaisselle",
+            "quantity": 30,
+            "unit_price": 0.005
+          },
+          {
+            "name": "Eau de refroidissement",
+            "quantity": 260,
+            "unit_price": 0.005
+          },
+          {
+            "name": "Mangrove Jack's M31",
+            "quantity": 1,
+            "unit_price": 3.85
+          },
+          {
+            "name": "Electricité",
+            "quantity": 1,
+            "unit_price": 2.0
+          },
+          {
+            "name": "Carbonation Drops",
+            "quantity": 1,
+            "unit_price": 0.08
+          },
+          {
+            "name": "Capsules",
+            "quantity": 1,
+            "unit_price": 0.03
+          },
+          {
+            "name": "Vidanges",
+            "quantity": 1,
+            "unit_price": 0.1
+          }
+        ],
+        "volume_litres": 20
+      },
+      "expected": {
+        "missing": [
+          "Wheat"
+        ]
+      },
+      "note": "Wheat 0,70 kg sans prix ; la fiche le compte à 0 €. Citra lu 22,4 g (voir divergences). Volume 20 L supposé (absent de la fiche) : sans effet sur un coût absent."
+    },
+    {
+      "id": "biere-au-thym-prix-manquant",
+      "source": "Bière au thym avec Michael 14-04-23",
+      "inputs": {
+        "lines": [
+          {
+            "name": "WHeat",
+            "quantity": 2250,
+            "unit_price": 0.00228
+          },
+          {
+            "name": "Pils (3.9 EBC)",
+            "quantity": 5330,
+            "unit_price": 0.00199062
+          },
+          {
+            "name": "Biscuit (45 EBC)",
+            "quantity": 250,
+            "unit_price": null
+          },
+          {
+            "name": "Cascade",
+            "quantity": 42.5,
+            "unit_price": 0.03247059
+          },
+          {
+            "name": "Hallertauer Hersbrucker",
+            "quantity": 42.5,
+            "unit_price": 0.03247059
+          },
+          {
+            "name": "Eau de brassage",
+            "quantity": 25,
+            "unit_price": 0.0052
+          },
+          {
+            "name": "Eau de rincage",
+            "quantity": 9,
+            "unit_price": 0.00555556
+          },
+          {
+            "name": "Eau de vaisselle",
+            "quantity": 30,
+            "unit_price": 0.005
+          },
+          {
+            "name": "eau de vaisselle bouteilles",
+            "quantity": 200,
+            "unit_price": 0.01
+          },
+          {
+            "name": "Belle saison lallemand",
+            "quantity": 1,
+            "unit_price": 3.49
+          },
+          {
+            "name": "Electricité",
+            "quantity": 1,
+            "unit_price": 2.0
+          },
+          {
+            "name": "Carbonation Drops",
+            "quantity": 61,
+            "unit_price": 0.08245902
+          },
+          {
+            "name": "Capsules",
+            "quantity": 61,
+            "unit_price": 0.0295082
+          },
+          {
+            "name": "Vidanges",
+            "quantity": 61,
+            "unit_price": 0.1
+          },
+          {
+            "name": "Eau de refroidissement",
+            "quantity": 260,
+            "unit_price": 0.0
+          }
+        ],
+        "volume_litres": 23
+      },
+      "expected": {
+        "missing": [
+          "Biscuit (45 EBC)"
+        ]
+      },
+      "note": "Biscuit 0,25 kg sans prix, compté 0 € par la fiche (0,00 € sur la ligne). Eau de refroidissement à 0 € (eau de pluie) : un prix nul est un prix connu."
+    },
+    {
+      "id": "june-lager-prix-manquant",
+      "source": "June bavarian Lager",
+      "inputs": {
+        "lines": [
+          {
+            "name": "Pale Ale malt",
+            "quantity": 500,
+            "unit_price": 0.00216
+          },
+          {
+            "name": "WHeat",
+            "quantity": 400,
+            "unit_price": 0.002
+          },
+          {
+            "name": "Biscuit",
+            "quantity": 300,
+            "unit_price": 0.0017
+          },
+          {
+            "name": "Pils",
+            "quantity": 4700,
+            "unit_price": 0.00188085
+          },
+          {
+            "name": "Columbus",
+            "quantity": 20,
+            "unit_price": 0.045
+          },
+          {
+            "name": "HAllertau amérisant",
+            "quantity": 15,
+            "unit_price": 0.05866667
+          },
+          {
+            "name": "Saaz 10'",
+            "quantity": 15,
+            "unit_price": 0.04533333
+          },
+          {
+            "name": "Saaz 5'",
+            "quantity": 5,
+            "unit_price": 0.046
+          },
+          {
+            "name": "Coriandre",
+            "quantity": 3,
+            "unit_price": null
+          },
+          {
+            "name": "HAllertau",
+            "quantity": 15,
+            "unit_price": 0.05866667
+          },
+          {
+            "name": "Citra en dry HOP",
+            "quantity": 20,
+            "unit_price": 0.08
+          }
+        ],
+        "volume_litres": 17
+      },
+      "expected": {
+        "missing": [
+          "Coriandre"
+        ]
+      }
+    },
+    {
+      "id": "liste-vide",
+      "inputs": {
+        "lines": [],
+        "volume_litres": 10
+      },
+      "expected": {
+        "total": 0.0,
+        "per_litre": 0.0,
+        "per_bottle_33cl": 0.0
+      },
+      "tolerance": 1e-12
+    }
+  ],
+  "invalid": [
+    {
+      "inputs": {
+        "lines": [],
+        "volume_litres": 0
+      },
+      "reason": "volume nul"
+    },
+    {
+      "inputs": {
+        "lines": [
+          {
+            "name": "Pils",
+            "quantity": -1,
+            "unit_price": 0.002
+          }
+        ],
+        "volume_litres": 10
+      },
+      "reason": "quantité négative"
+    },
+    {
+      "inputs": {
+        "lines": [
+          {
+            "name": "Pils",
+            "quantity": 1,
+            "unit_price": -0.002
+          }
+        ],
+        "volume_litres": 10
+      },
+      "reason": "prix négatif"
+    }
+  ],
+  "divergences": [
+    {
+      "source": "21-09-25 Twin bottle 4",
+      "field": "Citra",
+      "fiche_value": "22.4 g → 1 487,49 € ; coût total 1 511,23 €",
+      "computed": 1.48749,
+      "explanation": "« 22.4 » est lu 22 400 g par la feuille (point pris pour un séparateur de milliers). À 22,4 g et au même prix au gramme (0,0664 €), la ligne vaut 1,49 €."
+    },
+    {
+      "source": "Ale blonde 140724 - Pale ale ; Bière blonde 11-2-24 - très bonne bière légère estivale",
+      "field": "Coût par bouteille (33 Cl)",
+      "fiche_value": "0,82 € ; 0,74 €",
+      "computed": "0,79 € ; 0,60 €",
+      "explanation": "La fiche divise le coût total par le nombre de bouteilles (50 ; 66), soit 34 cl et 41 cl par bouteille avec 17 L et 27 L. Le paquet calcule une bouteille de 33 cl à partir du coût par litre."
+    },
+    {
+      "source": "Twin bottle 3 ; 21-09-25 Twin bottle 4 ; Quadruple avec Min et ses potes début août 23",
+      "field": "Nombre de bouteilles / Coût par bouteille",
+      "fiche_value": "1 bouteille ; coût par bouteille = coût total (40,84 € ; 1 511,23 € ; 29,77 €)",
+      "explanation": "Nombre de bouteilles laissé à 1."
+    },
+    {
+      "source": "05-04-6 Clone paix dieu ; 20-20-24 Clone paix dieu",
+      "field": "toutes les lignes",
+      "fiche_value": "coût total 43,30 € sur les deux fiches",
+      "explanation": "Fiches identiques ligne à ligne, dates vides : copie d'une même recette."
+    }
+  ]
+}

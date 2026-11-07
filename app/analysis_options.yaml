@@ -1,0 +1,18 @@
+# Analyse statique de l'application. `flutter analyze` est strict dans la CI : un
+# avertissement fait échouer le contrôle.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+  errors:
+    # Aucun catch silencieux (CLAUDE.md, « Règles de code »).
+    empty_catches: error
+    # Une Future oubliée cache son erreur : `unawaited(...)` la rend explicite.
+    unawaited_futures: error
+
+linter:
+  rules:
+    empty_catches: true
+    unawaited_futures: true

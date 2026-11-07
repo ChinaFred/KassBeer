@@ -1,0 +1,19 @@
+/// Chemins de l'application (go_router).
+abstract final class AppRoutes {
+  static const loading = '/chargement';
+  static const login = '/connexion';
+  static const notInvited = '/non-invite';
+  static const accessError = '/erreur-acces';
+
+  static const recipes = '/recettes';
+  static const brews = '/brassins';
+  static const equipment = '/equipements';
+  static const admin = '/admin';
+  static const adminMembers = '/admin/membres';
+
+  /// Écrans d'accès : un membre qui y arrive repart vers l'accueil.
+  static const accessScreens = {loading, login, notInvited, accessError};
+
+  /// Écran d'arrivée d'un membre.
+  static const home = recipes;
+}

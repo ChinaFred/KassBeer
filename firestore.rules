@@ -1,0 +1,341 @@
+rules_version = '2';
+
+// Règles Firestore de Kass'Beer, version 1. Seul contrôle d'accès de l'application
+// (ADR-001) : chaque changement arrive avec ses tests dans rules-tests/ (P4).
+//
+// Modèle décrit dans documentation/exigences-techniques.md, « Modèle de données ».
+// Tout chemin non nommé ici est refusé : Firestore refuse par défaut.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------- Identité
+
+    // Compte Google à l'adresse vérifiée (P11). Un compte e-mail / mot de passe,
+    // ou une adresse non vérifiée, n'ouvre rien, même invité.
+    function isGoogleVerified() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    // Identifiant de members/ du compte connecté : son e-mail en minuscules.
+    function emailKey() {
+      return request.auth.token.email.lower();
+    }
+
+    function memberPath() {
+      return /databases/$(database)/documents/members/$(emailKey());
+    }
+
+    function isMember() {
+      return isGoogleVerified() && exists(memberPath());
+    }
+
+    function isAdmin() {
+      return isMember() && get(memberPath()).data.role == 'admin';
+    }
+
+    function isSelf(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // ---------------------------------------------------------------- Outils
+
+    function optString(d, k, max) {
+      return !(k in d) || d[k] == null || (d[k] is string && d[k].size() <= max);
+    }
+
+    function optNumber(d, k) {
+      return !(k in d) || d[k] == null || d[k] is number;
+    }
+
+    function optList(d, k, max) {
+      return !(k in d) || d[k] == null || (d[k] is list && d[k].size() <= max);
+    }
+
+    function optTimestamp(d, k) {
+      return !(k in d) || d[k] == null || d[k] is timestamp;
+    }
+
+    function hasName(d, max) {
+      return d.name is string && d.name.size() >= 1 && d.name.size() <= max;
+    }
+
+    // Création : propriétaire = auteur, dates posées par serverTimestamp().
+    function createdByMe(d) {
+      return d.owner_uid == request.auth.uid
+        && d.created_at == request.time
+        && d.updated_at == request.time;
+    }
+
+    // Modification par le propriétaire : il reste propriétaire, la date de
+    // création ne bouge pas, updated_at est posée par serverTimestamp().
+    function updatedByOwner() {
+      return resource.data.owner_uid == request.auth.uid
+        && request.resource.data.owner_uid == resource.data.owner_uid
+        && request.resource.data.created_at == resource.data.created_at
+        && request.resource.data.updated_at == request.time;
+    }
+
+    // ---------------------------------------------------------------- members
+
+    // Identifiant : e-mail en minuscules. Écrit par l'admin seul (P11). Le premier
+    // admin se crée dans la console. Pas de modification en v1 : pour changer un
+    // rôle, l'admin retire puis réinvite.
+    match /members/{memberId} {
+      // Un compte Google vérifié lit son propre document, même absent : l'application
+      // distingue « compte non invité » d'une panne. Aucun autre document.
+      allow get: if isGoogleVerified() && memberId == emailKey();
+      allow read: if isAdmin();
+
+      allow create: if isAdmin()
+        && memberId == memberId.lower()
+        && request.resource.data.keys().hasOnly(
+             ['email', 'role', 'display_name', 'invited_at', 'invited_by'])
+        && request.resource.data.keys().hasAll(
+             ['email', 'role', 'invited_at', 'invited_by'])
+        && request.resource.data.email == memberId
+        && memberId.matches('^[^@\\s]+@[^@\\s]+$')
+        && memberId.size() <= 254
+        && request.resource.data.role in ['admin', 'brewer']
+        && optString(request.resource.data, 'display_name', 80)
+        && request.resource.data.invited_at == request.time
+        && request.resource.data.invited_by == request.auth.uid;
+
+      allow update: if false;
+
+      // Un admin ne retire ni son propre accès (il resterait sans administrateur), ni
+      // celui d'un autre admin : un administrateur se retire depuis la console Firebase.
+      allow delete: if isAdmin()
+        && memberId != emailKey()
+        && resource.data.role != 'admin';
+    }
+
+    // ---------------------------------------------------------------- recipes
+
+    // Champs de premier niveau d'une recette. Aucun prix ni stock (P5) : les prix
+    // vivent sous users/{uid}/prices. Les éléments des listes (ingrédients) ne
+    // peuvent pas être inspectés par les règles ; le dépôt de données ne les écrit
+    // qu'à partir des types de brewing/, sans prix.
+    function recipeFields() {
+      return ['owner_uid', 'name', 'style', 'notes', 'batch_volume_l', 'boil_time_min',
+              'equipment_id', 'fermentables', 'hops', 'others', 'yeasts', 'mash_steps',
+              'imported_from', 'created_at', 'updated_at'];
+    }
+
+    function isRecipeShape(d) {
+      return d.keys().hasOnly(recipeFields())
+        && d.keys().hasAll(['owner_uid', 'name', 'created_at', 'updated_at'])
+        && d.owner_uid is string
+        && hasName(d, 120)
+        && optString(d, 'style', 120)
+        && optString(d, 'notes', 10000)
+        && optNumber(d, 'batch_volume_l')
+        && optNumber(d, 'boil_time_min')
+        && optString(d, 'equipment_id', 128)
+        && optList(d, 'fermentables', 50)
+        && optList(d, 'hops', 50)
+        && optList(d, 'others', 50)
+        && optList(d, 'yeasts', 10)
+        && optList(d, 'mash_steps', 20)
+        && optString(d, 'imported_from', 200);
+    }
+
+    match /recipes/{recipeId} {
+      allow read: if isMember();
+      allow create: if isMember()
+        && isRecipeShape(request.resource.data)
+        && createdByMe(request.resource.data);
+      allow update: if isMember()
+        && isRecipeShape(request.resource.data)
+        && updatedByOwner();
+      allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
+    }
+
+    // ---------------------------------------------------------------- equipment
+
+    function equipmentFields() {
+      return ['owner_uid', 'name', 'kind', 'mash_efficiency_pct', 'mash_tun_volume_l',
+              'kettle_volume_l', 'mash_tun_dead_space_l', 'kettle_dead_space_l',
+              'boil_off_l_per_h', 'trub_loss_l', 'fermenter_loss_l',
+              'grain_absorption_l_per_kg', 'notes', 'created_at', 'updated_at'];
+    }
+
+    function isEquipmentShape(d) {
+      return d.keys().hasOnly(equipmentFields())
+        && d.keys().hasAll(['owner_uid', 'name', 'kind', 'created_at', 'updated_at'])
+        && d.owner_uid is string
+        && hasName(d, 120)
+        && d.kind in ['multi_vessel', 'all_in_one']
+        && optNumber(d, 'mash_efficiency_pct')
+        && optNumber(d, 'mash_tun_volume_l')
+        && optNumber(d, 'kettle_volume_l')
+        && optNumber(d, 'mash_tun_dead_space_l')
+        && optNumber(d, 'kettle_dead_space_l')
+        && optNumber(d, 'boil_off_l_per_h')
+        && optNumber(d, 'trub_loss_l')
+        && optNumber(d, 'fermenter_loss_l')
+        && optNumber(d, 'grain_absorption_l_per_kg')
+        && optString(d, 'notes', 10000);
+    }
+
+    // Lisible par le groupe (ADR-001, arbitrage 5).
+    match /equipment/{equipmentId} {
+      allow read: if isMember();
+      allow create: if isMember()
+        && isEquipmentShape(request.resource.data)
+        && createdByMe(request.resource.data);
+      allow update: if isMember()
+        && isEquipmentShape(request.resource.data)
+        && updatedByOwner();
+      allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
+    }
+
+    // ---------------------------------------------------------------- brews
+
+    function brewFields() {
+      return ['owner_uid', 'recipe_id', 'name', 'status', 'planned_for', 'brewed_at',
+              'recipe_snapshot', 'equipment_snapshot', 'adjustments', 'bottles_count',
+              'notes', 'imported_from', 'created_at', 'updated_at'];
+    }
+
+    // Ajustements du jour d'un brassin : nombres seuls, clés en liste blanche, unités du
+    // système international. Aucun prix ni coût (P5) : une clé absente de la liste est
+    // refusée.
+    function adjustmentFields() {
+      return ['batch_volume_l', 'mash_water_l', 'sparge_water_l', 'pre_boil_volume_l',
+              'post_boil_volume_l', 'fermenter_volume_l', 'boil_off_l_per_h', 'mash_temp_c',
+              'mash_time_min', 'boil_time_min', 'mash_efficiency_pct'];
+    }
+
+    function isAdjustments(a) {
+      return a is map
+        && a.keys().hasOnly(adjustmentFields())
+        && optNumber(a, 'batch_volume_l')
+        && optNumber(a, 'mash_water_l')
+        && optNumber(a, 'sparge_water_l')
+        && optNumber(a, 'pre_boil_volume_l')
+        && optNumber(a, 'post_boil_volume_l')
+        && optNumber(a, 'fermenter_volume_l')
+        && optNumber(a, 'boil_off_l_per_h')
+        && optNumber(a, 'mash_temp_c')
+        && optNumber(a, 'mash_time_min')
+        && optNumber(a, 'boil_time_min')
+        && optNumber(a, 'mash_efficiency_pct');
+    }
+
+    function isBrewShape(d) {
+      return d.keys().hasOnly(brewFields())
+        && d.keys().hasAll(['owner_uid', 'name', 'status', 'recipe_snapshot',
+                            'equipment_snapshot', 'created_at', 'updated_at'])
+        && d.owner_uid is string
+        && hasName(d, 120)
+        && d.status in ['planned', 'brewing', 'fermenting', 'conditioning', 'done',
+                        'abandoned']
+        && optString(d, 'recipe_id', 128)
+        && optTimestamp(d, 'planned_for')
+        && optTimestamp(d, 'brewed_at')
+        // Copies figées : mêmes champs de premier niveau que la source, donc sans prix.
+        && d.recipe_snapshot is map
+        && d.recipe_snapshot.keys().hasOnly(recipeFields())
+        && d.equipment_snapshot is map
+        && d.equipment_snapshot.keys().hasOnly(equipmentFields())
+        && (!('adjustments' in d) || d.adjustments == null || isAdjustments(d.adjustments))
+        && optNumber(d, 'bottles_count')
+        && optString(d, 'notes', 10000)
+        && optString(d, 'imported_from', 200);
+    }
+
+    match /brews/{brewId} {
+      allow read: if isMember();
+      allow create: if isMember()
+        && isBrewShape(request.resource.data)
+        && createdByMe(request.resource.data);
+      // Un brassin fige sa recette : la copie de la recette et de l'équipement, et
+      // la recette d'origine, ne changent plus après la création.
+      allow update: if isMember()
+        && isBrewShape(request.resource.data)
+        && updatedByOwner()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['recipe_id', 'recipe_snapshot', 'equipment_snapshot']);
+      allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
+
+      // Mesures et étapes du jour de brassage : un document par événement,
+      // identifiant créé par l'appareil, heure de l'appareil dans measured_at,
+      // created_at = serverTimestamp() pour l'audit. Aucune transaction requise.
+      function eventFields() {
+        return ['owner_uid', 'kind', 'step_key', 'measure_type', 'value', 'note',
+                'measured_at', 'created_at'];
+      }
+
+      function isEventShape(d) {
+        return d.keys().hasOnly(eventFields())
+          && d.keys().hasAll(['owner_uid', 'kind', 'measured_at', 'created_at'])
+          && d.owner_uid is string
+          && d.kind in ['step_started', 'step_ended', 'measurement', 'note']
+          && optString(d, 'step_key', 100)
+          && (!('measure_type' in d) || d.measure_type == null
+              || d.measure_type in ['temperature', 'gravity', 'volume', 'ph'])
+          && optNumber(d, 'value')
+          && optString(d, 'note', 2000)
+          && d.measured_at is timestamp;
+      }
+
+      match /events/{eventId} {
+        allow read: if isMember();
+        allow create: if isMember()
+          && isEventShape(request.resource.data)
+          && request.resource.data.owner_uid == request.auth.uid
+          && request.resource.data.created_at == request.time
+          && get(/databases/$(database)/documents/brews/$(brewId)).data.owner_uid
+               == request.auth.uid;
+        // Correction d'une saisie : valeur, note et heure seulement.
+        allow update: if isMember()
+          && resource.data.owner_uid == request.auth.uid
+          && isEventShape(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['value', 'note', 'measured_at']);
+        // Sans lecture du brassin : un événement reste supprimable par son auteur
+        // si le brassin a déjà été supprimé.
+        allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
+      }
+    }
+
+    // ---------------------------------------------------------------- users
+
+    // Prix d'achat, stock et coût réel d'un brassin : privés à leur propriétaire
+    // (P5). Aucune lecture par l'admin, aucune lecture par le groupe.
+    match /users/{uid}/{document=**} {
+      allow read, write: if isMember() && isSelf(uid);
+    }
+
+    // ---------------------------------------------------------------- error_reports
+
+    // Journal d'erreurs (P13) : création seule par un membre, sous son uid, champs
+    // en liste blanche et bornés. Lecture et suppression par l'admin seul. Le
+    // contexte est une chaîne bornée : ni prix, ni stock, ni coût, ni e-mail.
+    match /error_reports/{reportId} {
+      allow create: if isMember()
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'feature', 'error', 'stack_trace', 'context', 'app_version',
+              'platform', 'created_at'])
+        && request.resource.data.keys().hasAll(
+             ['uid', 'feature', 'error', 'created_at'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.feature is string
+        && request.resource.data.feature.size() >= 1
+        && request.resource.data.feature.size() <= 100
+        && request.resource.data.error is string
+        && request.resource.data.error.size() <= 2000
+        && optString(request.resource.data, 'stack_trace', 8000)
+        && optString(request.resource.data, 'context', 2000)
+        && optString(request.resource.data, 'app_version', 40)
+        && (!('platform' in request.resource.data)
+            || request.resource.data.platform in ['android', 'web'])
+        && request.resource.data.created_at == request.time;
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+  }
+}

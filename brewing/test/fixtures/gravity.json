@@ -1,0 +1,406 @@
+{
+  "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
+  "constants": {
+    "sucrose_points_per_kg_per_litre": 385.674521,
+    "note": "46,214 points par livre et par gallon (Palmer), converti en kg et L"
+  },
+  "original_gravity": [
+    {
+      "id": "synthetique-malt-et-sucre",
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "yield_percent": 80
+          },
+          {
+            "name": "Sucre candi clair",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 2,
+            "yield_percent": 100
+          }
+        ],
+        "mash_efficiency_percent": 75,
+        "volume_litres": 23
+      },
+      "expected": 1.0586896,
+      "tolerance": 1e-06,
+      "note": "le sucre compte à 100 %, le malt à 75 %"
+    },
+    {
+      "id": "synthetique-sans-sucre-100",
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 1000,
+            "color_ebc": 3.9,
+            "points_per_kg_per_litre": 300
+          }
+        ],
+        "mash_efficiency_percent": 100,
+        "volume_litres": 10
+      },
+      "expected": 1.03,
+      "tolerance": 1e-09
+    },
+    {
+      "id": "ale-blonde-hypothese",
+      "source": "Ale blonde 140724 - Pale ale",
+      "hypotheses": "potentiel 300 points/kg/L pour chaque malt (absent des fiches), rendement 75 %, 20 L (volume obtenu pour fermentation)",
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Pale Ale malt",
+            "kind": "malt",
+            "mass_grams": 4620,
+            "color_ebc": 6.5,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "WHeat",
+            "kind": "malt",
+            "mass_grams": 1700,
+            "color_ebc": 4,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "munich light",
+            "kind": "malt",
+            "mass_grams": 90,
+            "color_ebc": 17.7,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 290,
+            "color_ebc": 3.9,
+            "points_per_kg_per_litre": 300
+          }
+        ],
+        "mash_efficiency_percent": 75,
+        "volume_litres": 20
+      },
+      "expected": 1.075375,
+      "tolerance": 1e-06,
+      "fiche_value": 1.0675,
+      "fiche_tolerance": 0.01,
+      "note": "la fiche ne donne ni potentiel ni rendement : seul l'ordre de grandeur est comparé"
+    },
+    {
+      "id": "twin-bottle-4-hypothese",
+      "source": "21-09-25 Twin bottle 4",
+      "hypotheses": "potentiel 300 points/kg/L pour les malts, sucres candi au potentiel du saccharose, rendement 70 %, 20 L (volume absent de la fiche)",
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Munich (17.7 EBC)",
+            "kind": "malt",
+            "mass_grams": 400,
+            "color_ebc": 17.7,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Pils (3.9 EBC)",
+            "kind": "malt",
+            "mass_grams": 4800,
+            "color_ebc": 3.9,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Wheat",
+            "kind": "malt",
+            "mass_grams": 700,
+            "color_ebc": 4,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Biscuit",
+            "kind": "malt",
+            "mass_grams": 600,
+            "color_ebc": 51.2,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Sucre candi clair",
+            "kind": "sugar",
+            "mass_grams": 230,
+            "color_ebc": 2,
+            "yield_percent": 100
+          },
+          {
+            "name": "Sucre candi ambré",
+            "kind": "sugar",
+            "mass_grams": 230,
+            "color_ebc": 100,
+            "yield_percent": 100
+          }
+        ],
+        "mash_efficiency_percent": 70,
+        "volume_litres": 20
+      },
+      "expected": 1.0771205,
+      "tolerance": 1e-06,
+      "note": "la fiche vise 1106 ; la densité mesurée est 1.063 (density.json)"
+    }
+  ],
+  "original_gravity_invalid": [
+    {
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "yield_percent": 80
+          },
+          {
+            "name": "Sucre candi clair",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 2,
+            "yield_percent": 100
+          }
+        ],
+        "mash_efficiency_percent": 75,
+        "volume_litres": 0
+      },
+      "reason": "volume nul"
+    },
+    {
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "yield_percent": 80
+          },
+          {
+            "name": "Sucre candi clair",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 2,
+            "yield_percent": 100
+          }
+        ],
+        "mash_efficiency_percent": 120,
+        "volume_litres": 20
+      },
+      "reason": "rendement > 100 %"
+    },
+    {
+      "inputs": {
+        "fermentables": [],
+        "mash_efficiency_percent": 75,
+        "volume_litres": 20
+      },
+      "reason": "aucun fermentescible"
+    },
+    {
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": -5,
+            "color_ebc": 3.9,
+            "points_per_kg_per_litre": 300
+          }
+        ],
+        "mash_efficiency_percent": 75,
+        "volume_litres": 20
+      },
+      "reason": "masse négative"
+    },
+    {
+      "inputs": {
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "yield_percent": 130
+          }
+        ],
+        "mash_efficiency_percent": 75,
+        "volume_litres": 20
+      },
+      "reason": "rendement d'extrait > 100 %"
+    }
+  ],
+  "mash_efficiency": [
+    {
+      "id": "synthetique-sucres-dans-le-mout",
+      "inputs": {
+        "measured_gravity": 1.06,
+        "measured_volume_litres": 23,
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "yield_percent": 80
+          },
+          {
+            "name": "Sucre candi clair",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 2,
+            "yield_percent": 100
+          }
+        ],
+        "sugars_in_wort": true
+      },
+      "expected": 76.953666,
+      "tolerance": 1e-06
+    },
+    {
+      "id": "synthetique-sucres-absents",
+      "inputs": {
+        "measured_gravity": 1.06,
+        "measured_volume_litres": 23,
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "yield_percent": 80
+          },
+          {
+            "name": "Sucre candi clair",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 2,
+            "yield_percent": 100
+          }
+        ],
+        "sugars_in_wort": false
+      },
+      "expected": 89.453666,
+      "tolerance": 1e-06
+    },
+    {
+      "id": "ale-blonde-mesure",
+      "source": "Ale blonde 140724 - Pale ale",
+      "hypotheses": "potentiel 300 points/kg/L ; densité mesurée 1.052 (chronologie), 20 L",
+      "inputs": {
+        "measured_gravity": 1.052,
+        "measured_volume_litres": 20,
+        "fermentables": [
+          {
+            "name": "Pale Ale malt",
+            "kind": "malt",
+            "mass_grams": 4620,
+            "color_ebc": 6.5,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "WHeat",
+            "kind": "malt",
+            "mass_grams": 1700,
+            "color_ebc": 4,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "munich light",
+            "kind": "malt",
+            "mass_grams": 90,
+            "color_ebc": 17.7,
+            "points_per_kg_per_litre": 300
+          },
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 290,
+            "color_ebc": 3.9,
+            "points_per_kg_per_litre": 300
+          }
+        ],
+        "sugars_in_wort": false
+      },
+      "expected": 51.741294,
+      "tolerance": 1e-06,
+      "note": "la fiche n'écrit aucun rendement"
+    }
+  ],
+  "mash_efficiency_invalid": [
+    {
+      "inputs": {
+        "measured_gravity": 1.06,
+        "measured_volume_litres": 23,
+        "fermentables": [
+          {
+            "name": "Sucre",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 2,
+            "yield_percent": 100
+          }
+        ],
+        "sugars_in_wort": true
+      },
+      "reason": "aucun malt"
+    },
+    {
+      "inputs": {
+        "measured_gravity": 1.005,
+        "measured_volume_litres": 10,
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "yield_percent": 80
+          },
+          {
+            "name": "Sucre candi clair",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 2,
+            "yield_percent": 100
+          }
+        ],
+        "sugars_in_wort": true
+      },
+      "reason": "les sucres expliquent toute la densité"
+    },
+    {
+      "inputs": {
+        "measured_gravity": 1.06,
+        "measured_volume_litres": 0,
+        "fermentables": [
+          {
+            "name": "Pils",
+            "kind": "malt",
+            "mass_grams": 5000,
+            "color_ebc": 3.9,
+            "yield_percent": 80
+          },
+          {
+            "name": "Sucre candi clair",
+            "kind": "sugar",
+            "mass_grams": 500,
+            "color_ebc": 2,
+            "yield_percent": 100
+          }
+        ],
+        "sugars_in_wort": true
+      },
+      "reason": "volume nul"
+    }
+  ],
+  "divergences": []
+}
