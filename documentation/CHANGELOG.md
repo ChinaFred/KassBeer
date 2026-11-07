@@ -6,6 +6,20 @@ données, outillage), ou les deux.
 
 ## 2026-11-07
 
+### v0.1.3 — technique
+
+Le dépôt GitHub est public depuis le 2026-11-07 (ADR-002), pour obtenir les rulesets sans
+plan payant. Un ruleset protège `main` (PR requise, quatre contrôles, ni force push ni
+suppression) et un autre les tags `v*`. Approbation des workflows de forks, actions
+limitées et épinglées, secret scanning, push protection et alertes Dependabot sont actifs.
+Les noms de personnes sortent des fixtures de `brewing/`, et le cas `mansart` devient
+`ale-blonde-21-04-25` ; ils restent dans l'historique. Les prix d'achat de `cost.json`
+restent publics par décision de l'utilisateur : `CLAUDE.md` l'écrit en exception à la règle
+des prix, et P5 cite ADR-002. Les tags
+`v0.1.0` et `v0.1.1`, oubliés, sont posés. `exigences-techniques.md` décrit le premier
+déploiement et le clic « Commencer » d'App Distribution, sans lequel l'API des versions
+répond 404. `.vscode/settings.json` (couleurs de VS Code) est versionné.
+
 ### v0.1.2 — technique
 
 Mise en place de la production et du poste de développement. Projet Firebase `kassbeer`

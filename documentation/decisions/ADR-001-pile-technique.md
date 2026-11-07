@@ -3,6 +3,7 @@
 - **Statut** : accepté le 2026-11-07
 - **Date** : 2026-11-06
 - **Remplace** : —
+- **Modifié par** : ADR-002 (dépôt public, minutes de la CI)
 
 ## Contexte
 
@@ -66,7 +67,8 @@ ADR.
 6. **Ce qui coûte à l'usage, plafond** : aucun poste facturé à l'usage en v1. Firestore et
    Hosting restent sous les quotas gratuits (50 000 lectures et 20 000 écritures par jour).
    Une alerte budgétaire à 5 € est posée sur le compte de facturation. La CI reste sous les
-   2 000 minutes gratuites mensuelles du plan GitHub Free.
+   2 000 minutes gratuites mensuelles du plan GitHub Free (caduc depuis ADR-002 : dépôt
+   public, minutes gratuites).
 7. **Exposition** : ouvert sur Internet. Authentification Google par Firebase Auth ;
    autorisation par les règles Firestore ; en-têtes de sécurité et de cache dans
    `firebase.json`. Les règles sont le seul contrôle d'accès, testées contre l'émulateur.
@@ -138,6 +140,7 @@ Consultées le 2026-11-06.
 - GitHub Actions, plan Free : 2 000 minutes par mois sur dépôt privé ; Linux 2 cœurs à
   0,006 $ la minute au-delà : https://docs.github.com/en/billing/reference/actions-runner-pricing
   (lu sur la copie Enterprise Server 3.17 de la page ; tarif à vérifier sur github.com).
+  Caduc depuis ADR-002 : dépôt public, minutes gratuites.
 - Supabase : pause d'un projet gratuit après une semaine d'inactivité ; Pro à partir de
   25 $ par mois : https://supabase.com/pricing
 - Flutter web : retrait du service worker par défaut annoncé en octobre 2024 :

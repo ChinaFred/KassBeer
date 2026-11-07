@@ -133,7 +133,7 @@
   ],
   "divergences": [
     {
-      "source": "Ale blonde 140724 - Pale ale, June bavarian Lager, Ale blonde 21-04-25 - Pale ale - Mansart, Hard lager - deuxième brassin, Hard bohemian lager, 05-04-6 Clone paix dieu, 20-20-24 Clone paix dieu",
+      "source": "Ale blonde 140724 - Pale ale, June bavarian Lager, Ale blonde 21-04-25 - Pale ale, Hard lager - deuxième brassin, Hard bohemian lager, 05-04-6 Clone paix dieu, 20-20-24 Clone paix dieu",
       "field": "EBC Espéré",
       "fiche_value": 10.6,
       "explanation": "Même valeur sur sept fiches aux grists différents (Pale Ale 4,62 kg + Wheat 1,7 kg ; Pils 4,7 kg + Biscuit 0,3 kg ; Pils 5,92 kg + Carapils 0,6 kg…) : champ copié. Les couleurs de Pale Ale malt, munich light, Carapils et Biscuit n'y sont pas écrites : pas de recalcul."

@@ -389,8 +389,8 @@ manuel. Un nouveau push annule le run en cours de la même référence. Permissi
 
 Une branche de travail qui n'a pas encore incrémenté sa version est rouge au job Version :
 le contrôle porte sur ce qui sera fusionné. Une branche avec une PR ouverte tourne deux fois
-par push (`push` et `pull_request`) ; compter ce double dans les 2 000 minutes mensuelles
-du plan GitHub Free.
+par push (`push` et `pull_request`). Les minutes des runners standard sont gratuites sur un
+dépôt public (ADR-002).
 
 Les actions sont épinglées par SHA de commit, version en commentaire, aux mêmes SHA que
 Kass'Dalle.
@@ -490,17 +490,23 @@ gh secret set KEY_PASSWORD --repo "$REPO" --env production        # saisie masqu
 keytool -list -v -keystore "$KS" -alias kassbeer     # SHA-1 et SHA-256 (P8)
 ```
 
-Règle de protection de `main` (Settings › Rules) : exiger les quatre contrôles « Version et
-outillage », « Flutter et brewing — analyse, format, tests, build web », « Règles —
-émulateur » et « Android — compilation ». Le job Android réussit sans compiler quand le diff
-ne touche pas Android : il peut être exigé.
+Le dépôt est public depuis le 2026-11-07 (ADR-002). Deux rulesets sont posés (Settings ›
+Rules), sans liste de contournement. Sur `main` : PR requise, 0 approbation, fusion par
+commit de fusion seule, branche à jour avec `main`, ni force push ni suppression, et les
+quatre contrôles « Version et outillage », « Flutter et brewing — analyse, format, tests,
+build web », « Règles — émulateur » et « Android — compilation ». Le job Android réussit
+sans compiler quand le diff ne touche pas Android : il peut être exigé. Sur les
+tags `v*` : ni suppression, ni mise à jour, ni force push. Seul le propriétaire a le droit d'écrire sur le
+dépôt. Un `deploy.yml` modifié et fusionné sur `main` obtient l'accès du compte
+`github-deploy`, qui peut publier des règles Firestore : P10 et P14 s'appliquent à chaque
+diff de `.github/workflows/`.
 
-La règle de protection de `main` n'existe pas encore. Sur un dépôt privé du plan GitHub Free, l'API des règles
-et de la protection de branche répond 403 (« Upgrade to GitHub Pro or make this repository
-public »). Tant que le dépôt reste privé en plan Free, rien sur GitHub n'empêche la fusion
-d'une PR dont la CI échoue : la session vérifie la CI avant de fusionner. Seul le
-propriétaire a le droit d'écrire sur le dépôt. Un `deploy.yml` modifié et poussé sur `main`
-obtient l'accès du compte `github-deploy`, qui peut publier des règles Firestore.
+Autres réglages : approbation des workflows pour tout contributeur externe (Settings ›
+Actions › General) ; actions limitées à celles de GitHub, `subosito/flutter-action` et
+`google-github-actions/auth`, épinglées par SHA ; secret scanning et push protection ;
+alertes Dependabot ; signalement privé de failles ; suppression automatique des branches
+fusionnées ; Projects désactivé ; fusion squash et rebase désactivées ; environnement
+`production` sans contournement par les administrateurs.
 
 ### Workload Identity Federation (Google Cloud)
 
@@ -547,8 +553,8 @@ echo "GCP_SERVICE_ACCOUNT=$SA"
 Le pool `github` ne garde qu'un fournisseur : la liaison `workloadIdentityUser` porte sur
 tout le pool, et un second fournisseur à la condition plus large obtiendrait aussi
 `github-deploy`. La condition du fournisseur n'admet qu'un jeton de ce dépôt (identifiant numérique : un
-dépôt recréé sous le même nom ne passe pas), de `main`, de l'environnement `production`, et
-du fichier `deploy.yml`. Les cinq rôles du compte de service couvrent Hosting, les règles,
+dépôt recréé sous le même nom ne passe pas, ADR-002), de `main`, de l'environnement
+`production`, et du fichier `deploy.yml`. Les cinq rôles du compte de service couvrent Hosting, les règles,
 les index et App Distribution ; il ne lit ni n'écrit les données Firestore. Si la CLI
 Firebase refuse un déploiement pour une permission manquante, ajouter le rôle que nomme le
 message d'erreur, pas un rôle large comme `roles/firebase.admin`.
@@ -560,6 +566,9 @@ message d'erreur, pas un rôle large comme `roles/firebase.admin`.
 - ajouter l'application Android, avec l'`applicationId` de
   `app/android/app/build.gradle.kts`, et y enregistrer les empreintes SHA-1 et SHA-256 de
   la clé de release (P8 : sans elles, la connexion Google échoue sur l'APK signé) ;
+- App Distribution : choisir l'application Android en haut de la page et cliquer sur
+  « Commencer ». Sans ce clic, l'API des versions répond 404 (« Requested entity was not
+  found »), même au propriétaire du projet, et le job `plan` de `deploy.yml` échoue ;
 - App Distribution › Testeurs et groupes : créer le groupe d'alias `brasseurs` et y ajouter
   l'e-mail de chaque brasseur.
 
@@ -601,7 +610,8 @@ du client, pas des secrets.
 | Projet Firebase | `kassbeer`, numéro `647125623341`, plan Blaze (compte de facturation « Paiement de Firebase ») |
 | Budget | « Kass'Beer 5 EUR », filtré sur ce projet, alertes à 50 %, 90 % et 100 % |
 | Firestore | `(default)`, `europe-west1`, mode natif, protection contre la suppression ; sauvegarde quotidienne gardée 7 jours |
-| Règles Firestore | aucune version publiée (API `firebaserules` : `releases` et `rulesets` vides) ; sans règles, Firestore refuse tout accès client jusqu'au premier déploiement |
+| Règles Firestore | publiées par `deploy.yml` le 2026-11-07 (run 42381643401) |
+| Premier déploiement | 2026-11-07, run 42381643401 : site web, règles et index, APK 0.1.2+3 sur App Distribution |
 | Application web | `1:647125623341:web:c4c47bf56841e8f2100ea4`, site Hosting `kassbeer` (`https://kassbeer.web.app`) |
 | Application Android | `1:647125623341:android:6b006c09c09d1c04100ea4`, paquet `fr.kassbeer.kass_beer` |
 | Empreintes Android | clé de release : SHA-1 `49:62:50:82:6C:FB:E0:9C:E7:5F:58:E8:EA:37:2B:8C:EC:DB:16:32` et SHA-256 `2E:8A:7C:16:A7:E3:9A:D2:D4:37:93:AE:B0:D8:9E:E8:2C:C0:A2:1A:96:30:84:31:C1:95:DE:AE:B8:58:D1:8B` (P8) ; clé de débogage du poste du brasseur : SHA-1 `A0:36:FC:AF:DA:88:32:44:6E:F8:5F:42:EE:81:E2:49:EB:91:02:59` |
@@ -609,17 +619,17 @@ du client, pas des secrets.
 | Clé d'API web | référents `https://kassbeer.web.app/*`, `https://kassbeer.firebaseapp.com/*`, `http://localhost:*/*` ; API Identity Toolkit, Token Service, Firestore, Firebase Installations |
 | Clé d'API Android | paquet `fr.kassbeer.kass_beer` avec l'une des deux SHA-1 ci-dessus ; mêmes quatre API |
 | Premier admin | `members/{e-mail Google de l'administrateur}`, rôle `admin`, `invited_by` = `console`, créé hors de l'application |
-| App Distribution | groupe `brasseurs`, un testeur (l'admin) |
+| App Distribution | ouvert pour l'application Android ; groupe `brasseurs`, un testeur (l'admin) |
 | Workload Identity Federation | pool `github`, fournisseur `kassbeer-deploy`, compte de service `github-deploy`, cinq rôles |
-| GitHub, environnement `production` | règle de branche `main` posée, effet à constater ; les dix variables du tableau ci-dessus posées |
-| Plan GitHub | Free, dépôt privé. La documentation de GitHub réserve environnements, secrets d'environnement et restriction de branche à Pro, Team ou Enterprise sur un dépôt privé. Le run 42366279942 de `deploy.yml` (2026-11-07) a pourtant lu 9 variables de `production` sur 10, puis a échoué sur la dixième, `GOOGLE_SERVER_CLIENT_ID`, posée ensuite. La lecture des secrets et la restriction à `main` restent à constater au premier run qui les demande |
-| GitHub, secrets de signature | à poser depuis le poste |
-| GitHub, protection de `main` | indisponible en plan Free sur un dépôt privé |
+| GitHub, environnement `production` | règle de branche `main` posée ; les dix variables et les quatre secrets de signature posés |
+| Plan GitHub | Free, dépôt public depuis le 2026-11-07 (ADR-002). Minutes des runners standard gratuites. Le run 42366279942 a lu 9 variables de `production` sur 10, avant la pose des secrets ; le run 42381643401 a lu les 10 variables et les 4 secrets |
+| GitHub, rulesets | `main` : PR requise, 0 approbation, fusion par commit de fusion, quatre contrôles requis, à jour avec `main`, ni force push ni suppression ; tags `v*` : ni suppression ni mise à jour ; aucun contournement |
+| GitHub, sécurité | approbation des workflows pour tout contributeur externe, actions limitées et épinglées par SHA, secret scanning, push protection, alertes Dependabot, signalement privé de failles |
 
 Les secrets de signature se posent par les quatre commandes `gh secret set` de
-« Réglages sur GitHub », les deux mots de passe en saisie masquée. Le keystore est déjà créé : sauter
-`keytool -genkeypair`. Tant que ces quatre secrets manquent, le premier déploiement échoue au job `build`, avant
-toute mise en ligne (« Secrets absents de l'environnement production »).
+« Réglages sur GitHub », les deux mots de passe en saisie masquée. Un secret absent fait
+échouer le job `build`, avant toute mise en ligne (« Secrets absents de l'environnement
+production »).
 
 ### Poste de développement
 

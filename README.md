@@ -7,8 +7,12 @@ jour de brassage hors ligne, suivi des brassins. Elle remplace des fiches Excel.
 Android (APK) et web. Flutter, Firebase (Auth Google, Firestore, Hosting), calculs dans un
 paquet Dart pur. Comptes sur invitation.
 
+Dépôt public. `brewing/test/fixtures/cost.json` contient des prix d'achat réels, publiés par
+décision de l'auteur (ADR-002).
+
 - Intention et contraintes : [`documentation/projet.md`](documentation/projet.md)
 - Pile retenue : [`documentation/decisions/ADR-001-pile-technique.md`](documentation/decisions/ADR-001-pile-technique.md)
+- Dépôt public : [`documentation/decisions/ADR-002-depot-public.md`](documentation/decisions/ADR-002-depot-public.md)
 - Règles de travail et toutes les commandes : [`CLAUDE.md`](CLAUDE.md), « Commandes utiles »
 
 ```bash

@@ -199,8 +199,10 @@ Firebase n'est pas configuré dans l'environnement GitHub `production`, il s'arr
 avec l'annonce « Déploiement non configuré ». Détail des jobs, variables, secrets et
 commandes Google Cloud : `exigences-techniques.md`, « CI et déploiement ».
 
-Le dépôt est privé : le plan GitHub Free inclut 2 000 minutes par mois. Une branche avec une
-PR ouverte tourne deux fois par push (`push` et `pull_request`). Toute modification de
+Le dépôt est public (ADR-002) : les minutes des runners standard sont gratuites. Le ruleset
+de `main` exige les quatre contrôles avant la fusion. Une PR de fork ne lance la CI qu'après
+approbation du propriétaire. Une branche avec une PR ouverte tourne deux fois par push
+(`push` et `pull_request`). Toute modification de
 `.github/workflows/` ou de `scripts/check-version.mjs` se signale à l'utilisateur avant la
 fusion (P10). `securite` vérifie aussi les workflows (P14) : aucun secret lisible sur
 `pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload Identity
