@@ -16,6 +16,10 @@ const _allowed = {
 };
 
 void main() {
+  // Installe la plateforme FieldValue de fake_cloud_firestore avant le premier
+  // FieldValue.serverTimestamp() du fichier.
+  setUpAll(FakeFirebaseFirestore.new);
+
   test(
     'seuls les champs admis par les règles, created_at posé par le serveur',
     () {
@@ -139,9 +143,16 @@ void main() {
       );
     });
 
-    Future<int> written() async {
-      await Future<void>.delayed(Duration.zero);
-      return (await firestore.collection('error_reports').get()).size;
+    /// Documents écrits, une fois les écritures en mémoire terminées : attend au
+    /// plus 2 s que [expected] soit atteint, puis 100 ms de plus pour voir un excès.
+    Future<int> written(int expected) async {
+      Future<int> count() async =>
+          (await firestore.collection('error_reports').get()).size;
+      for (var i = 0; i < 100 && await count() < expected; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      return count();
     }
 
     test('500 rapports identiques en 1 s : une écriture', () async {
@@ -154,7 +165,7 @@ void main() {
           stackTrace: stack,
         );
       }
-      expect(await written(), 1);
+      expect(await written(1), 1);
       expect(service.skippedCount, 499);
     });
 
@@ -163,7 +174,10 @@ void main() {
         now = now.add(const Duration(milliseconds: 2));
         service.reportError(feature: 'distinct.$i', error: StateError('e'));
       }
-      expect(await written(), ErrorReportService.maxPerMinute);
+      expect(
+        await written(ErrorReportService.maxPerMinute),
+        ErrorReportService.maxPerMinute,
+      );
     });
 
     test('au plus 200 par session, même étalés dans le temps', () async {
@@ -171,7 +185,10 @@ void main() {
         now = now.add(const Duration(seconds: 10));
         service.reportError(feature: 'distinct.$i', error: StateError('e'));
       }
-      expect(await written(), ErrorReportService.maxPerSession);
+      expect(
+        await written(ErrorReportService.maxPerSession),
+        ErrorReportService.maxPerSession,
+      );
     });
 
     test('la fenêtre d\'une minute se libère', () async {
@@ -182,7 +199,7 @@ void main() {
       for (var i = 0; i < 25; i++) {
         service.reportError(feature: 'b.$i', error: StateError('e'));
       }
-      expect(await written(), 40);
+      expect(await written(40), 40);
     });
   });
 }

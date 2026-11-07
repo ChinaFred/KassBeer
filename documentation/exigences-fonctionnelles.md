@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; voir son nom, son e-mail et la version dans le menu du compte ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un autre compte. Il ne peut pas se retirer lui-même |
+| `admin` (Administrateur) | tout ce que peut un brasseur ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -34,6 +34,7 @@ moins de 600 px (téléphone), de 600 à 839 px, 840 px et plus.
    - Fenêtre Google fermée : retour à l'écran, sans message.
    - Réseau absent : « Connexion impossible. Vérifiez le réseau et réessayez. »
    - Autre échec : « La connexion a échoué. Réessayez. »
+   - Pendant la connexion, le bouton affiche « Connexion en cours ».
 3. **Contrôle d'accès.** L'adresse du compte, en minuscules, est cherchée dans `members/`.
    - Trouvée : Accueil, section Recettes.
    - Absente du serveur : Compte non invité.
@@ -46,8 +47,13 @@ moins de 600 px (téléphone), de 600 à 839 px, 840 px et plus.
 4. **Compte non invité.** Titre « Ce compte n'a pas accès à Kass'Beer », « Vous êtes
    connecté avec : », l'adresse en gros caractères (sélectionnable), « Transmettez cette
    adresse à l'administrateur. Une fois invité, appuyez sur Vérifier à nouveau. ». Boutons
-   « Copier l'adresse » (annonce « Adresse copiée »), « Vérifier à nouveau »,
-   « Se déconnecter ».
+   « Copier l'adresse » (annonce « Adresse copiée » ; en cas d'échec « Copie impossible.
+   Sélectionnez l'adresse à la main. »), « Vérifier à nouveau » (« Vérification en cours »
+   pendant la lecture, puis « Ce compte n'est toujours pas invité. » si l'adresse reste
+   absente), « Se déconnecter ».
+   - Compte Google sans adresse : ni adresse ni « Copier l'adresse » ; le message
+     « Adresse du compte indisponible. Déconnectez-vous et reconnectez-vous. » et
+     « Se déconnecter ».
 
 Une page du web rechargée revient à la même page une fois l'accès vérifié, sauf une page
 d'Admin pour un brasseur, qui renvoie sur Recettes.
@@ -56,18 +62,23 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue) et « Se déconnecter ».
+pu être lue) et « Se déconnecter ». Une déconnexion qui échoue affiche « Déconnexion
+impossible. Réessayez. ».
 
 Destinations : Recettes, Brassins, Équipements, et Admin pour l'administrateur seul. Sous
 600 px, barre de navigation en bas ; de 600 à 839 px, rail de navigation avec libellés ;
-à partir de 840 px, rail étendu et contenu centré sur 840 px au plus.
+à partir de 840 px, rail étendu et contenu centré sur 840 px au plus. Le rail défile quand
+ses destinations dépassent la hauteur (écran bas, grand texte).
 
 Recettes, Brassins et Équipements ne contiennent encore qu'un message : « Les recettes
 arriveront dans une prochaine version. », et de même pour les brassins et les équipements.
 
 **Hors ligne.** Quand l'appareil n'a plus de réseau, un bandeau « Hors ligne. Les
-modifications partiront au retour du réseau. » s'affiche sous la barre du haut, et il est
-annoncé aux lecteurs d'écran.
+modifications partiront au retour du réseau. » s'affiche sous la barre du haut, en pleine
+largeur, et il est annoncé aux lecteurs d'écran.
+
+**Page introuvable.** Une adresse inconnue affiche « Cette page n'existe pas. » et le bouton
+« Revenir à l'accueil ».
 
 ### Admin
 
@@ -76,23 +87,29 @@ et « Import » (« Disponible dans une prochaine version », inactive).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
-« Brasseur », étiquette « Vous » sur sa propre ligne, et « En attente du réseau » tant
+« Brasseur » (« Rôle inconnu » pour une valeur stockée inattendue), étiquette « Vous » sur sa
+propre ligne, et « En attente du réseau » tant
 qu'une invitation faite hors ligne n'a pas atteint le serveur.
 
 - **Inviter** : bouton flottant « Inviter » sur téléphone, bouton en tête de liste sur
-  grand écran. Le formulaire (feuille du bas sur téléphone, dialogue sinon) demande
-  « Adresse e-mail Google » (mise en minuscules), « Nom (facultatif) » et le rôle
-  (« Brasseur » par défaut, ou « Administrateur »). Sur le web, Entrée valide. Erreurs :
+  grand écran. Le formulaire « Inviter un membre » (feuille du bas sur téléphone, dialogue
+  sinon) demande « Adresse e-mail Google » (mise en minuscules), « Nom (facultatif) » et,
+  sous le titre « Rôle », « Brasseur » (par défaut) ou « Administrateur ». Sur le web, Entrée valide. Erreurs :
   « Adresse e-mail invalide. », « Cette adresse est déjà membre. ». Après « Inviter », le
   formulaire se ferme aussitôt, même hors ligne, et l'écran affiche « {e-mail} est invité.
-  Aucun e-mail n'est envoyé : prévenez-le. ». Si le serveur refuse l'invitation : « L'invitation
-  de {e-mail} a échoué. »
-- **Retirer** : icône « Retirer {e-mail} » sur chaque ligne sauf la sienne, qui porte « Vous
-  ne pouvez pas vous retirer vous-même ». Confirmation « Retirer {e-mail} ? » / « Ce compte
+  Aucun e-mail n'est envoyé : prévenez-le. ». Si le serveur refuse l'invitation, ce message
+  est remplacé par « L'invitation de {e-mail} a échoué. »
+- **Retirer** : icône « Retirer {e-mail} » sur la ligne de chaque brasseur. Sa propre ligne
+  porte « Vous ne pouvez pas vous retirer vous-même », celle d'un autre administrateur « Un
+  administrateur se retire depuis la console Firebase. », sans icône. Confirmation « Retirer {e-mail} ? » / « Ce compte
   n'aura plus accès à Kass'Beer. Ses recettes et brassins restent visibles du groupe. »,
-  boutons « Annuler » et « Retirer ». Si le serveur refuse : « Le retrait de {e-mail} a
-  échoué. »
-- Liste illisible : « Impossible de lire la liste des membres. » et « Réessayer ».
+  boutons « Annuler » et « Retirer ». Après « Retirer », la ligne disparaît et l'écran
+  affiche « {e-mail} est retiré. ». Si le serveur refuse, ce message est remplacé par « Le
+  retrait de {e-mail} a échoué. »
+- Liste vide : « Aucun membre. Appuyez sur Inviter pour ajouter un compte. »
+- Liste illisible : « Impossible de lire la liste des membres. » et « Réessayer ». Une panne
+  après une première lecture garde la liste affichée, avec au-dessus « Mise à jour de la
+  liste impossible. Elle peut ne plus être à jour. » et « Réessayer ».
 
 ### Configuration absente
 

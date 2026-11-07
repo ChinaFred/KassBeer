@@ -49,7 +49,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/providers.dart` | providers des services, fournis par `main.dart` ou par les tests |
 | `lib/core/services/error_report_service.dart` | `ErrorReportService`, `ErrorReportFields` |
 | `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) |
-| `lib/core/presentation/` | `AppShell`, `breakpoints.dart`, `etats.dart` (`EtatChargement`, `EtatVide`, `EtatErreur`), `BandeauHorsLigne` |
+| `lib/core/presentation/` | `AppShell` (rail défilable), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur`, `IndicateurBouton`), `BandeauHorsLigne`, `LogoKassBeer` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google), état d'accès, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
@@ -119,9 +119,17 @@ vérifie sur la liste déjà lue ; les règles refusent de toute façon de récr
 context:)` écrit `error_reports/` sans attendre le serveur, avec les seuls champs des règles
 (`uid`, `feature`, `error`, `stack_trace`, `context`, `app_version`, `platform`,
 `created_at` = `serverTimestamp()`), coupés à leurs bornes. `context` est une chaîne. Toute
-adresse e-mail est remplacée par `<e-mail>` dans `error`, `stack_trace` et `context`. Sans
-compte connecté, ou si l'écriture est refusée (compte non invité), le rapport part sur la
-console (`debugPrint`), dernier recours documenté.
+URL (`schéma://…`) est remplacée par `<url>` et toute adresse e-mail par `<e-mail>` dans
+`error`, `stack_trace` et `context` : l'adresse d'une photo Google ou un jeton ne partent
+pas. L'erreur de l'avatar ne rapporte que son type et le code HTTP.
+
+Écritures bornées par session (une instance du service) : un rapport identique (même
+`feature`, même type d'erreur, même premier cadre de pile) n'est écrit qu'une fois ; au plus
+20 écritures par minute glissante (`maxPerMinute`) et 200 par session (`maxPerSession`). Le
+surplus part sur la console avec le compte des rapports écartés (`skippedCount`).
+
+Sans compte connecté, au-delà des plafonds, ou si l'écriture est refusée (compte non
+invité), le rapport part sur la console (`debugPrint`), dernier recours documenté.
 
 #### Routes (go_router)
 
@@ -171,8 +179,9 @@ admin se crée dans la console Firebase.
 | `invited_at` | timestamp | `serverTimestamp()` |
 | `invited_by` | string | uid de l'admin qui invite |
 
-Aucune modification en v1 : pour changer un rôle, l'admin retire le membre puis le
-réinvite.
+Aucune modification en v1 : pour changer le rôle d'un brasseur, l'admin le retire puis le
+réinvite. Un admin ne retire ni son propre document ni celui d'un autre admin : un
+administrateur se retire depuis la console Firebase.
 
 ### `recipes/{recipeId}`
 
@@ -232,7 +241,7 @@ Lisible par le groupe, mesures comprises, sans coût. La recette et l'équipemen
 | `planned_for`, `brewed_at` | timestamp \| null |
 | `recipe_snapshot` | map, obligatoire, immuable : copie de la recette, mêmes champs de premier niveau |
 | `equipment_snapshot` | map, obligatoire, immuable : copie de l'équipement, mêmes champs de premier niveau |
-| `adjustments` | map \| null : ajustements du jour (volume, durée), jamais écrits dans la recette |
+| `adjustments` | map \| null : ajustements du jour, jamais écrits dans la recette. Clés en liste blanche, chacune number \| null : `batch_volume_l`, `mash_water_l`, `sparge_water_l`, `pre_boil_volume_l`, `post_boil_volume_l`, `fermenter_volume_l`, `boil_off_l_per_h`, `mash_temp_c`, `mash_time_min`, `boil_time_min`, `mash_efficiency_pct`. Aucune autre clé, donc aucun prix ni coût (P5) |
 | `bottles_count` | number \| null |
 | `notes` | string \| null (10 000) |
 | `imported_from` | string \| null (200) |
@@ -296,7 +305,7 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 
 | Chemin | Lecture | Création | Modification | Suppression |
 |---|---|---|---|---|
-| `members/{email}` | son propre document (même absent) pour tout compte Google vérifié ; tous pour l'admin | admin | personne | admin, sauf son propre document |
+| `members/{email}` | son propre document (même absent) pour tout compte Google vérifié ; tous pour l'admin | admin | personne | admin, sauf son propre document et celui d'un autre admin (`resource.data.role != 'admin'`) |
 | `recipes/`, `equipment/` | membres | membre, à son `owner_uid` | propriétaire, `owner_uid` et `created_at` inchangés | propriétaire |
 | `brews/` | membres | membre, à son `owner_uid` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés | propriétaire |
 | `brews/{id}/events/` | membres | propriétaire du brassin | auteur : `value`, `note`, `measured_at` | auteur |
@@ -547,6 +556,26 @@ message d'erreur, pas un rôle large comme `roles/firebase.admin`.
 Chaque nouvel APK part vers ce groupe, avec en notes de version la version, le commit et
 l'entrée de cette version dans `CHANGELOG.md`. Le testeur reçoit un e-mail, puis installe
 par l'application App Tester ou par le lien.
+
+### Firebase Auth et clés d'API
+
+Réglages faits à la main dans les consoles Firebase et Google Cloud, après la création du
+projet. Rien dans le dépôt ne les garde : les vérifier à chaque création de projet.
+
+- **Fournisseurs** (Firebase › Authentication › Sign-in method) : Google seul. Désactiver
+  « Adresse e-mail/Mot de passe » et « Anonyme ». Les règles refusent déjà un autre
+  fournisseur (P11) ; le désactiver empêche aussi la création de comptes inutiles.
+- **Domaines autorisés** (Authentication › Settings) : `<projet>.web.app`,
+  `<projet>.firebaseapp.com` et `localhost` seulement. Retirer tout autre domaine.
+- **Clé d'API web** (Google Cloud › API et services › Identifiants) : restriction
+  « Sites web » aux référents `https://<projet>.web.app/*` et
+  `https://<projet>.firebaseapp.com/*` ; restriction d'API aux API Firebase utilisées
+  (Identity Toolkit, Token Service, Cloud Firestore, Firebase Installations).
+- **Clé d'API Android** : restriction « Applications Android » au paquet
+  `fr.kassbeer.kass_beer` et à l'empreinte SHA-1 de la clé de release (la même que celle
+  enregistrée pour App Distribution, P8).
+- **Client OAuth Web** : son identifiant est `GOOGLE_SERVER_CLIENT_ID` ; ne pas le
+  supprimer, `google_sign_in` en dépend sur Android.
 
 ## Intégrations et services tiers
 
