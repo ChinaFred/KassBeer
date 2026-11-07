@@ -188,7 +188,6 @@ class _AccountMenu extends ConsumerWidget {
     final photo = user.photoUrl;
 
     return MenuAnchor(
-      alignmentOffset: const Offset(-200, 0),
       menuChildren: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
