@@ -206,6 +206,11 @@ fusion (P10). `securite` vérifie aussi les workflows (P14) : aucun secret lisib
 `pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload Identity
 Federation, sans clé JSON de compte de service.
 
+Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
+`--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans
+ce fichier local, jamais versionné. État de la production et outils du poste :
+`exigences-techniques.md`, « État de la production » et « Poste de développement ».
+
 ## 8. Exceptions inscrites dans `CLAUDE.md`
 
 - 2026-11-07 : `debugPrint` seul est admis dans deux cas où aucun rapport ne peut partir :
