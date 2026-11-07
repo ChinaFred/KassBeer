@@ -6,6 +6,24 @@ données, outillage), ou les deux.
 
 ## 2026-11-07
 
+### v0.1.2 — technique
+
+Mise en place de la production et du poste de développement. Projet Firebase `kassbeer`
+créé en plan Blaze, avec un budget de 5 € et ses alertes. Firestore `(default)` en
+`europe-west1`, protégé contre la suppression, sauvegardé chaque jour pendant 7 jours.
+Applications web et Android enregistrées, empreintes de la clé de release déclarées (P8),
+connexion Google seule, clés d'API restreintes au site, au paquet Android et aux API
+Firebase. Workload Identity Federation et environnement GitHub `production` configurés
+pour `deploy.yml` ; les secrets de signature restent à poser depuis le poste. Deux
+exceptions servent au développement : le référent `localhost` sur la clé web et la SHA-1
+de débogage du poste sur la clé Android. La documentation de GitHub réserve les secrets
+d'environnement aux plans payants sur un dépôt privé : leur lecture reste à constater. La
+protection de `main` est indisponible en plan GitHub Free sur un dépôt privé.
+`.firebaserc` pointe sur `kassbeer`. Les commandes de lancement passent
+`--dart-define-from-file=firebase.env.json`, sans quoi l'application affiche
+« Configuration Firebase absente ». `exigences-techniques.md` reçoit l'état de la
+production et le poste de développement.
+
 ### v0.1.1 — fonctionnel
 
 Premier socle utilisable de l'application, sur Android et le web. Connexion par compte

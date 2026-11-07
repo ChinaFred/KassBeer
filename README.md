@@ -13,7 +13,7 @@ paquet Dart pur. Comptes sur invitation.
 
 ```bash
 (cd app && flutter pub get)          # installer
-(cd app && flutter run -d chrome)    # lancer
+(cd app && flutter run -d chrome --dart-define-from-file=firebase.env.json)    # lancer
 (cd app && flutter test)             # tester
 ```
 - Sommaire de la documentation : [`documentation/README.md`](documentation/README.md)

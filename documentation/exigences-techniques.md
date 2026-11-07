@@ -13,7 +13,7 @@ directement, avec le cache hors ligne persistant. Aucun serveur en version 1 (AD
 | `firestore.rules` | règles d'accès, appliquant le modèle ci-dessous |
 | `firestore.indexes.json` | index composites ; vide tant qu'aucune requête n'en demande |
 | `firebase.json` | Firestore, émulateurs (auth 9099, firestore 8080), Hosting |
-| `.firebaserc` | alias `default` : `kassbeer-a-definir`, à remplacer par l'identifiant du projet Firebase quand il sera créé |
+| `.firebaserc` | alias `default` : `kassbeer`, le projet Firebase de production |
 | `rules-tests/` | tests des règles contre l'émulateur, projet `demo-kassbeer` |
 
 ### Hosting
@@ -177,7 +177,7 @@ admin se crée dans la console Firebase.
 | `role` | string | `admin` ou `brewer` |
 | `display_name` | string \| null, facultatif | saisi par l'admin à l'invitation, 80 caractères au plus |
 | `invited_at` | timestamp | `serverTimestamp()` |
-| `invited_by` | string | uid de l'admin qui invite |
+| `invited_by` | string | uid de l'admin qui invite ; `console` pour le premier admin, créé hors de l'application |
 
 Aucune modification en v1 : pour changer le rôle d'un brasseur, l'admin le retire puis le
 réinvite. Un admin ne retire ni son propre document ni celui d'un autre admin : un
@@ -472,7 +472,7 @@ Secrets de l'environnement `production` :
 | `KEYSTORE_BASE64` | le fichier `.jks` de release en base64, sur une ligne |
 | `KEYSTORE_PASSWORD` | mot de passe du keystore |
 | `KEY_ALIAS` | alias de la clé |
-| `KEY_PASSWORD` | mot de passe de la clé |
+| `KEY_PASSWORD` | mot de passe de la clé : le même que `KEYSTORE_PASSWORD` (keystore PKCS12) |
 
 Avec la CLI GitHub, depuis le poste :
 
@@ -480,19 +480,27 @@ Avec la CLI GitHub, depuis le poste :
 REPO=ChinaFred/KassBeer
 gh variable set FIREBASE_PROJECT_ID --repo "$REPO" --env production --body "<identifiant>"
 # … une commande par variable du tableau
-keytool -genkeypair -keystore kassbeer-release.jks -alias kassbeer \
+KS=~/kassbeer_release.jks                            # hors du dépôt
+keytool -genkeypair -keystore "$KS" -storetype PKCS12 -alias kassbeer \
   -keyalg RSA -keysize 2048 -validity 10000          # une fois ; copie hors ligne (ADR-001)
-base64 -w0 kassbeer-release.jks | gh secret set KEYSTORE_BASE64 --repo "$REPO" --env production
+base64 -w0 "$KS" | gh secret set KEYSTORE_BASE64 --repo "$REPO" --env production
 gh secret set KEYSTORE_PASSWORD --repo "$REPO" --env production   # saisie masquée
-gh secret set KEY_ALIAS --repo "$REPO" --env production
-gh secret set KEY_PASSWORD --repo "$REPO" --env production
-keytool -list -v -keystore kassbeer-release.jks -alias kassbeer   # SHA-1 et SHA-256 (P8)
+gh secret set KEY_ALIAS --repo "$REPO" --env production --body kassbeer
+gh secret set KEY_PASSWORD --repo "$REPO" --env production        # saisie masquée, même mot de passe
+keytool -list -v -keystore "$KS" -alias kassbeer     # SHA-1 et SHA-256 (P8)
 ```
 
 Règle de protection de `main` (Settings › Rules) : exiger les quatre contrôles « Version et
 outillage », « Flutter et brewing — analyse, format, tests, build web », « Règles —
 émulateur » et « Android — compilation ». Le job Android réussit sans compiler quand le diff
 ne touche pas Android : il peut être exigé.
+
+La règle de protection de `main` n'existe pas encore. Sur un dépôt privé du plan GitHub Free, l'API des règles
+et de la protection de branche répond 403 (« Upgrade to GitHub Pro or make this repository
+public »). Tant que le dépôt reste privé en plan Free, rien sur GitHub n'empêche la fusion
+d'une PR dont la CI échoue : la session vérifie la CI avant de fusionner. Seul le
+propriétaire a le droit d'écrire sur le dépôt. Un `deploy.yml` modifié et poussé sur `main`
+obtient l'accès du compte `github-deploy`, qui peut publier des règles Firestore.
 
 ### Workload Identity Federation (Google Cloud)
 
@@ -536,7 +544,9 @@ echo "GCP_WORKLOAD_IDENTITY_PROVIDER=projects/$PROJECT_NUMBER/locations/global/w
 echo "GCP_SERVICE_ACCOUNT=$SA"
 ```
 
-La condition du fournisseur n'admet qu'un jeton de ce dépôt (identifiant numérique : un
+Le pool `github` ne garde qu'un fournisseur : la liaison `workloadIdentityUser` porte sur
+tout le pool, et un second fournisseur à la condition plus large obtiendrait aussi
+`github-deploy`. La condition du fournisseur n'admet qu'un jeton de ce dépôt (identifiant numérique : un
 dépôt recréé sous le même nom ne passe pas), de `main`, de l'environnement `production`, et
 du fichier `deploy.yml`. Les cinq rôles du compte de service couvrent Hosting, les règles,
 les index et App Distribution ; il ne lit ni n'écrit les données Firestore. Si la CLI
@@ -545,7 +555,7 @@ message d'erreur, pas un rôle large comme `roles/firebase.admin`.
 
 ### Firebase App Distribution
 
-À faire une fois dans la console Firebase :
+À faire une fois dans la console Firebase (fait le 2026-11-07, voir « État de la production ») :
 
 - ajouter l'application Android, avec l'`applicationId` de
   `app/android/app/build.gradle.kts`, et y enregistrer les empreintes SHA-1 et SHA-256 de
@@ -569,13 +579,70 @@ projet. Rien dans le dépôt ne les garde : les vérifier à chaque création de
   `<projet>.firebaseapp.com` et `localhost` seulement. Retirer tout autre domaine.
 - **Clé d'API web** (Google Cloud › API et services › Identifiants) : restriction
   « Sites web » aux référents `https://<projet>.web.app/*` et
-  `https://<projet>.firebaseapp.com/*` ; restriction d'API aux API Firebase utilisées
+  `https://<projet>.firebaseapp.com/*`, plus `http://localhost:*/*` pour `flutter run -d chrome`
+  sur le poste ; restriction d'API aux API Firebase utilisées
   (Identity Toolkit, Token Service, Cloud Firestore, Firebase Installations).
 - **Clé d'API Android** : restriction « Applications Android » au paquet
   `fr.kassbeer.kass_beer` et à l'empreinte SHA-1 de la clé de release (la même que celle
-  enregistrée pour App Distribution, P8).
+  enregistrée pour App Distribution, P8), plus la SHA-1 de débogage du poste pour
+  `flutter run` sur un téléphone. Cette empreinte s'enregistre aussi sur l'application
+  Android de Firebase. La retirer des deux quand le développement sur téléphone ne s'en
+  sert plus : le keystore de débogage a un mot de passe connu (`android`).
 - **Client OAuth Web** : son identifiant est `GOOGLE_SERVER_CLIENT_ID` ; ne pas le
   supprimer, `google_sign_in` en dépend sur Android.
+
+### État de la production
+
+Réglages en place le 2026-11-07. Les identifiants ci-dessous sont la configuration publique
+du client, pas des secrets.
+
+| Élément | Valeur |
+|---|---|
+| Projet Firebase | `kassbeer`, numéro `647125623341`, plan Blaze (compte de facturation « Paiement de Firebase ») |
+| Budget | « Kass'Beer 5 EUR », filtré sur ce projet, alertes à 50 %, 90 % et 100 % |
+| Firestore | `(default)`, `europe-west1`, mode natif, protection contre la suppression ; sauvegarde quotidienne gardée 7 jours |
+| Règles Firestore | aucune version publiée (API `firebaserules` : `releases` et `rulesets` vides) ; sans règles, Firestore refuse tout accès client jusqu'au premier déploiement |
+| Application web | `1:647125623341:web:c4c47bf56841e8f2100ea4`, site Hosting `kassbeer` (`https://kassbeer.web.app`) |
+| Application Android | `1:647125623341:android:6b006c09c09d1c04100ea4`, paquet `fr.kassbeer.kass_beer` |
+| Empreintes Android | clé de release : SHA-1 `49:62:50:82:6C:FB:E0:9C:E7:5F:58:E8:EA:37:2B:8C:EC:DB:16:32` et SHA-256 `2E:8A:7C:16:A7:E3:9A:D2:D4:37:93:AE:B0:D8:9E:E8:2C:C0:A2:1A:96:30:84:31:C1:95:DE:AE:B8:58:D1:8B` (P8) ; clé de débogage du poste du brasseur : SHA-1 `A0:36:FC:AF:DA:88:32:44:6E:F8:5F:42:EE:81:E2:49:EB:91:02:59` |
+| Firebase Auth | Google seul ; domaines autorisés `localhost`, `kassbeer.firebaseapp.com`, `kassbeer.web.app` |
+| Clé d'API web | référents `https://kassbeer.web.app/*`, `https://kassbeer.firebaseapp.com/*`, `http://localhost:*/*` ; API Identity Toolkit, Token Service, Firestore, Firebase Installations |
+| Clé d'API Android | paquet `fr.kassbeer.kass_beer` avec l'une des deux SHA-1 ci-dessus ; mêmes quatre API |
+| Premier admin | `members/{e-mail Google de l'administrateur}`, rôle `admin`, `invited_by` = `console`, créé hors de l'application |
+| App Distribution | groupe `brasseurs`, un testeur (l'admin) |
+| Workload Identity Federation | pool `github`, fournisseur `kassbeer-deploy`, compte de service `github-deploy`, cinq rôles |
+| GitHub, environnement `production` | règle de branche `main` posée, effet à constater ; les dix variables du tableau ci-dessus posées |
+| Plan GitHub | Free, dépôt privé. La documentation de GitHub réserve environnements, secrets d'environnement et restriction de branche à Pro, Team ou Enterprise sur un dépôt privé. Le run 42366279942 de `deploy.yml` (2026-11-07) a pourtant lu 9 variables de `production` sur 10, puis a échoué sur la dixième, `GOOGLE_SERVER_CLIENT_ID`, posée ensuite. La lecture des secrets et la restriction à `main` restent à constater au premier run qui les demande |
+| GitHub, secrets de signature | à poser depuis le poste |
+| GitHub, protection de `main` | indisponible en plan Free sur un dépôt privé |
+
+Les secrets de signature se posent par les quatre commandes `gh secret set` de
+« Réglages sur GitHub », les deux mots de passe en saisie masquée. Le keystore est déjà créé : sauter
+`keytool -genkeypair`. Tant que ces quatre secrets manquent, le premier déploiement échoue au job `build`, avant
+toute mise en ligne (« Secrets absents de l'environnement production »).
+
+### Poste de développement
+
+| Outil | Version | Rôle |
+|---|---|---|
+| Flutter | 3.44.6 | `app/` et `brewing/` |
+| JDK | Temurin 21, dans `JAVA_HOME` | émulateur Firestore de `rules-tests/` |
+| JDK de Gradle | celui d'Android Studio (JBR 21), réglé par `flutter config --jdk-dir` | `flutter build apk` |
+| SDK Android | plateforme 36, build-tools 36.1.0 | licences à accepter une fois par `flutter doctor --android-licenses` (commande interactive) |
+| Node | 22, comme la CI et `engines` de `rules-tests/` | `rules-tests/`, `scripts/` |
+| CLI Firebase | celle de `rules-tests/node_modules/.bin/` (15.35.0) | émulateur, commandes de projet |
+| `gcloud`, `gh` | connectés au compte du brasseur | réglages Google Cloud et GitHub |
+
+Fichiers locaux, jamais versionnés :
+
+- `app/firebase.env.json` : copie de `app/firebase.env.example.json`, chaque clé avec la
+  variable GitHub du même nom. Sans lui, l'application affiche « Configuration Firebase
+  absente ».
+- `app/android/key.properties` : `storeFile` (chemin absolu du keystore, hors du dépôt),
+  `storePassword`, `keyAlias` (`kassbeer`), `keyPassword`.
+- Le keystore de release et son mot de passe vivent hors du dépôt, sur le poste du
+  brasseur, avec une copie hors ligne et le mot de passe dans un gestionnaire de mots de
+  passe (ADR-001). Une clé perdue empêche toute mise à jour de l'APK installé.
 
 ## Intégrations et services tiers
 

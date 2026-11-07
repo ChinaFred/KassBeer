@@ -81,7 +81,7 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 Ouvert sur Internet, comptes sur invitation. Données personnelles limitées au nom et à
 l'e-mail (RGPD). Prix d'achat, stock et coût d'un brassin privés à chaque brasseur. Plan
 Blaze, alerte budgétaire à 5 €, dépense visée ≈ 0 € par mois. Projet Firebase distinct de
-Kass'Dalle (identifiant à créer). Dépôt privé `ChinaFred/KassBeer`, branche principale `main`.
+Kass'Dalle (identifiant `kassbeer`). Dépôt privé `ChinaFred/KassBeer`, branche principale `main`.
 
 ## Structure
 
@@ -115,8 +115,8 @@ reste arrive avec le socle de l'application, première livraison après le déma
 (cd app && flutter pub get) && (cd brewing && dart pub get) && (cd rules-tests && npm ci)
 
 # Lancer
-(cd app && flutter run -d chrome)
-(cd app && flutter run -d <appareil Android>)
+(cd app && flutter run -d chrome --dart-define-from-file=firebase.env.json)
+(cd app && flutter run -d <appareil Android> --dart-define-from-file=firebase.env.json)
 (cd rules-tests && npx firebase --config ../firebase.json emulators:start --only auth,firestore --project demo-kassbeer)
 
 # Analyse statique
