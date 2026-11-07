@@ -222,7 +222,7 @@ class ErrorReportService {
     debugPrint(
       '[ErrorReportService] $feature : '
       '${ErrorReportFields.sanitize(error.toString())}'
-      '${stackTrace == null ? '' : '\n$stackTrace'}',
+      '${stackTrace == null ? '' : '\n${ErrorReportFields.sanitize(stackTrace.toString())}'}',
     );
   }
 }
