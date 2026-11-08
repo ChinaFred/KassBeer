@@ -155,4 +155,14 @@ signale.
 
 ## Ce projet
 
-Aucun incident à ce jour.
+### 16. Un tag posé avant la fin de la CI a empêché le déploiement
+
+Le 2026-11-08, le tag `v0.1.9` a été poussé quelques secondes après la fusion de la PR. Le job
+« Version et outillage » de la CI de `main` venait de démarrer. Son étape « Tags du dépôt » a
+récupéré le tag, et `check-version.mjs` a refusé le numéro. La CI de `main` a échoué et
+`deploy.yml` n'a rien déployé. Il a fallu lancer le déploiement à la main, et le commit garde
+une CI rouge dans l'historique, car un tag poussé ne se supprime pas.
+
+**Règle** : le tag se pose sur le commit de fusion, après sa CI verte.
+**Question de l'architecte** : ce contrôle de CI lit-il un état que l'étape suivante de la
+livraison modifie ?

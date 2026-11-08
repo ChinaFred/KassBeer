@@ -348,8 +348,9 @@ build `N` monte d'un à chaque version : Android refuse d'installer un APK dont 
 `versionCode` ne dépasse pas celui de l'APK installé. `check-version.mjs` ignore `+N` ;
 `relecteur-regles` le vérifie (P7).
 
-Chaque version livrée porte un tag annoté `vX.Y.Z`, posé sur la branche principale après la
-fusion (« Chaîne de travail », étape 6). Jamais sur une branche de travail : son numéro peut
+Chaque version livrée porte un tag annoté `vX.Y.Z`, posé sur le commit de fusion de la
+branche principale, après sa CI verte s'il existe un dépôt distant (« Chaîne de travail »,
+étape 6). Jamais sur une branche de travail : son numéro peut
 encore changer avant la fusion. Un tag poussé ne se déplace pas et ne se supprime pas.
 
 ## Agents
@@ -440,10 +441,13 @@ aucune.
    commit (voir « Version »).
 5. **Commiter.** Un commit qui résume le travail. S'il existe un dépôt distant, faire
    `git pull --no-rebase` avant de commencer un travail et avant chaque push.
-6. **Étiqueter.** Après la fusion, poser le tag sur le dernier commit de la branche
-   principale, qui contient la fusion. Avec un dépôt distant : `git fetch origin`, puis
-   `git tag -a vX.Y.Z -m "vX.Y.Z" origin/main` et `git push origin vX.Y.Z`. Sans dépôt
-   distant : `git tag -a vX.Y.Z -m "vX.Y.Z" main`. Ces commandes marchent depuis n'importe
+6. **Étiqueter.** Le tag se pose sur le commit de fusion. Avec un dépôt distant, attendre
+   que la CI de ce commit soit verte : un tag posé avant fait échouer `check-version.mjs` sur
+   le push de la fusion, et `deploy.yml` ne déploie pas (leçon 16). Si une fusion suivante
+   annule ce run, attendre la CI verte de cette fusion, puis taguer le même commit de fusion.
+   Commandes : `git fetch origin`, puis `git tag -a vX.Y.Z -m "vX.Y.Z" <commit de fusion>` et
+   `git push origin vX.Y.Z`. Sans dépôt distant, le tag se pose après la fusion :
+   `git tag -a vX.Y.Z -m "vX.Y.Z" main`. Ces commandes marchent depuis n'importe
    quel worktree. Si le push du tag est refusé, le dire à l'utilisateur : il pose le tag
    depuis son poste ou crée une release sur GitHub.
 
