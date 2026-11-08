@@ -170,8 +170,8 @@ void main() {
       await tester.ensureVisible(find.text('Supprimer'));
       await tester.tap(find.text('Supprimer'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Supprimer'));
-      await tester.pumpAndSettle();
+      // Constat 5 : le refus précède la confirmation.
+      expect(find.widgetWithText(FilledButton, 'Supprimer'), findsNothing);
       expect(find.text(BrewDetailScreen.deleteOffline), findsOneWidget);
       expect(app.brews.writes, isEmpty);
     });

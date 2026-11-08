@@ -67,6 +67,28 @@ service cloud.firestore {
       return !(k in d) || d[k] == null || d[k] is timestamp;
     }
 
+    function optBool(d, k) {
+      return !(k in d) || d[k] == null || d[k] is bool;
+    }
+
+    // Nombre de bouteilles : entier de 1 à 9 999, comme le formulaire d'embouteillage.
+    function optBottlesCount(d) {
+      return !('bottles_count' in d) || d.bottles_count == null
+        || (d.bottles_count is int && d.bottles_count >= 1 && d.bottles_count <= 9999);
+    }
+
+    function optPackagedVolume(d) {
+      return !('packaged_volume_l' in d) || d.packaged_volume_l == null
+        || (d.packaged_volume_l is number
+            && d.packaged_volume_l > 0 && d.packaged_volume_l <= 1000);
+    }
+
+    function optPrimingSugar(d) {
+      return !('priming_sugar_g' in d) || d.priming_sugar_g == null
+        || (d.priming_sugar_g is number
+            && d.priming_sugar_g >= 0 && d.priming_sugar_g <= 100000);
+    }
+
     function hasName(d, max) {
       return d.name is string && d.name.size() >= 1 && d.name.size() <= max;
     }
@@ -234,6 +256,8 @@ service cloud.firestore {
     function brewFields() {
       return ['owner_uid', 'owner_name', 'recipe_id', 'name', 'status', 'planned_for', 'brewed_at',
               'recipe_snapshot', 'equipment_snapshot', 'adjustments', 'bottles_count',
+              'bottled_at', 'packaged_volume_l', 'priming_sugar_g', 'priming_sugar_name',
+              'og_event_id', 'fg_event_id', 'fermenter_volume_event_id', 'sugars_in_wort',
               'notes', 'imported_from', 'created_at', 'updated_at'];
     }
 
@@ -282,15 +306,25 @@ service cloud.firestore {
         && d.equipment_snapshot.keys().hasOnly(equipmentFields())
         && snapshotOwnerNameOk(d.equipment_snapshot)
         && (!('adjustments' in d) || d.adjustments == null || isAdjustments(d.adjustments))
-        && optNumber(d, 'bottles_count')
+        && optBottlesCount(d)
+        // Après le brassage : embouteillage et mesures retenues, tous facultatifs.
+        // Aucun prix ni coût (P5) ; aucune valeur calculée n'est stockée.
+        && optTimestamp(d, 'bottled_at')
+        && optPackagedVolume(d)
+        && optPrimingSugar(d)
+        && optString(d, 'priming_sugar_name', 80)
+        && optString(d, 'og_event_id', 128)
+        && optString(d, 'fg_event_id', 128)
+        && optString(d, 'fermenter_volume_event_id', 128)
+        && optBool(d, 'sugars_in_wort')
         && optString(d, 'notes', 10000)
         && optString(d, 'imported_from', 200);
     }
 
     // owner_name : nom du brasseur affiché au groupe, comme dans recipes/ (ownerNameOk).
-    // Le statut passe de planned à brewing puis fermenting par des écritures simples
-    // ou un WriteBatch du propriétaire ; les règles ne contrôlent pas l'ordre des
-    // statuts.
+    // Le statut change par des écritures simples ou un WriteBatch du propriétaire. Les
+    // règles ne contrôlent pas l'ordre des statuts : un retour en arrière et une file
+    // hors ligne doivent passer.
     match /brews/{brewId} {
       allow read: if isMember();
       allow create: if isMember()
@@ -307,12 +341,12 @@ service cloud.firestore {
              .hasAny(['recipe_id', 'recipe_snapshot', 'equipment_snapshot']);
       allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
 
-      // Mesures et étapes du jour de brassage : un document par événement,
-      // identifiant créé par l'appareil, heure de l'appareil dans measured_at,
+      // Mesures et étapes du jour de brassage, relevés de fermentation : un document
+      // par événement, identifiant créé par l'appareil, heure de l'appareil dans measured_at,
       // created_at = serverTimestamp() pour l'audit. Aucune transaction requise.
       function eventFields() {
         return ['owner_uid', 'kind', 'step_key', 'measure_type', 'value', 'note',
-                'measured_at', 'created_at'];
+                'measured_at', 'created_at', 'phase'];
       }
 
       // Forme selon kind. Début, fin ou saut d'étape : step_key obligatoire, sans
@@ -325,7 +359,16 @@ service cloud.firestore {
           && stepKeyOk(d)
           && optString(d, 'note', 2000)
           && d.measured_at is timestamp
+          && phaseOk(d)
           && (isStepEvent(d) || isMeasurement(d) || isNote(d));
+      }
+
+      // Absente ou nulle : jour de brassage. 'fermentation' : relevé après le brassage,
+      // sur une mesure ou une note seulement. Immuable : la règle d'update ne la permet
+      // pas.
+      function phaseOk(d) {
+        return !('phase' in d) || d.phase == null
+          || (d.phase == 'fermentation' && d.kind in ['measurement', 'note']);
       }
 
       // Absente, nulle (mesure ou note sans étape), ou de 1 à 100 caractères.
@@ -344,12 +387,20 @@ service cloud.firestore {
           && hasNoMeasure(d);
       }
 
-      // Une comparaison avec NaN est fausse : NaN est refusé, comme Infinity.
+      // Bornes identiques à celles de la saisie : aucune valeur acceptée à l'écran n'est
+      // refusée au retour du réseau. Une comparaison avec NaN est fausse : NaN est
+      // refusé, comme Infinity.
+      function measureInRange(type, v) {
+        return (type == 'temperature' && v >= 0 && v <= 110)
+          || (type == 'gravity' && v >= 0.98 && v <= 1.2)
+          || (type == 'volume' && v > 0 && v <= 1000)
+          || (type == 'ph' && v >= 0 && v <= 14);
+      }
+
       function isMeasurement(d) {
         return d.kind == 'measurement'
-          && d.get('measure_type', null) in ['temperature', 'gravity', 'volume', 'ph']
           && d.get('value', null) is number
-          && d.value > -1000000000 && d.value < 1000000000;
+          && measureInRange(d.get('measure_type', null), d.value);
       }
 
       function isNote(d) {

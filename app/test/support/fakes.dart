@@ -13,6 +13,7 @@ import 'package:kass_beer/features/brew_day/data/alerte_minuteur.dart';
 import 'package:kass_beer/features/brews/data/brews_repository.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
+import 'package:kass_beer/features/brews/domain/releves.dart';
 import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
@@ -418,6 +419,128 @@ class FakeBrewsRepository implements BrewsRepository {
     required BrewEvent event,
   }) {
     writes.add(BrewWrite('restore_event', brewId, {'id': event.id}));
+    return serverAnswer();
+  }
+
+  @override
+  EcritureReleve addReleve({
+    required String brewId,
+    required String ownerUid,
+    required ReleveSaisi releve,
+  }) {
+    final ids = ['event-${++_next}'];
+    writes.add(
+      BrewWrite('releve', brewId, {
+        'ids': ids,
+        'gravity': releve.gravity,
+        'temperature': releve.temperature,
+        'note': releve.note,
+        'at': releve.measuredAt,
+      }),
+    );
+    return (ids: ids, written: serverAnswer());
+  }
+
+  @override
+  Future<void> correctReleve({
+    required String brewId,
+    required String ownerUid,
+    required Releve avant,
+    required ReleveSaisi releve,
+  }) {
+    writes.add(
+      BrewWrite('correct_releve', brewId, {
+        'before': [for (final e in avant.events) e.id],
+        'gravity': releve.gravity,
+        'temperature': releve.temperature,
+        'note': releve.note,
+        'at': releve.measuredAt,
+      }),
+    );
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> deleteEvents({
+    required String brewId,
+    required List<String> eventIds,
+  }) {
+    writes.add(BrewWrite('delete_events', brewId, {'ids': eventIds}));
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> restoreEvents({
+    required String brewId,
+    required List<BrewEvent> events,
+  }) {
+    writes.add(
+      BrewWrite('restore_events', brewId, {
+        'ids': [for (final e in events) e.id],
+      }),
+    );
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> setStatus({
+    required String brewId,
+    required BrewStatus status,
+    required String? ownerName,
+  }) {
+    writes.add(
+      BrewWrite('status', brewId, {'status': status, 'owner_name': ownerName}),
+    );
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> saveBottling({
+    required String brewId,
+    required String ownerUid,
+    required Embouteillage embouteillage,
+    required BrewStatus? nouveauStatut,
+    double? finalGravity,
+    required String? ownerName,
+  }) {
+    writes.add(
+      BrewWrite('bottling', brewId, {
+        'status': nouveauStatut,
+        'bottled_at': embouteillage.bottledAt,
+        'bottles_count': embouteillage.bottlesCount,
+        'packaged_volume_l': embouteillage.packagedVolumeL,
+        'priming_sugar_g': embouteillage.primingSugarG,
+        'priming_sugar_name': embouteillage.primingSugarName,
+        'final_gravity': finalGravity,
+        'owner_name': ownerName,
+      }),
+    );
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> setMesureRetenue({
+    required String brewId,
+    required MesureRetenueChamp champ,
+    required String? eventId,
+    required String? ownerName,
+  }) {
+    writes.add(
+      BrewWrite('retained', brewId, {
+        'field': champ.storedField,
+        'id': eventId,
+      }),
+    );
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> setSugarsInWort({
+    required String brewId,
+    required bool value,
+    required String? ownerName,
+  }) {
+    writes.add(BrewWrite('sugars', brewId, {'value': value}));
     return serverAnswer();
   }
 

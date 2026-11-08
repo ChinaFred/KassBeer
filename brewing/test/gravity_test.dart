@@ -42,33 +42,43 @@ void main() {
     }
   });
 
+  MashEfficiencyReading readCase(Map<String, Object?> inputs) =>
+      readMashEfficiency(
+        measuredGravity: number(inputs['measured_gravity']),
+        measuredVolumeLitres: number(inputs['measured_volume_litres']),
+        fermentables: fermentables(inputs['fermentables']),
+        sugarsInWort: inputs['sugars_in_wort'] as bool,
+      );
+
   test('rendement d\'empâtage mesuré', () {
     for (final c in objects(fixture['mash_efficiency'])) {
-      final inputs = c['inputs'] as Map<String, Object?>;
-      expectCase(
-        c,
-        measuredMashEfficiency(
-          measuredGravity: number(inputs['measured_gravity']),
-          measuredVolumeLitres: number(inputs['measured_volume_litres']),
-          fermentables: fermentables(inputs['fermentables']),
-          sugarsInWort: inputs['sugars_in_wort'] as bool,
-        ),
-      );
+      final result = readCase(c['inputs'] as Map<String, Object?>);
+      expect(result, isA<MashEfficiencyRead>(), reason: label(c));
+      expectCase(c, (result as MashEfficiencyRead).percent);
     }
   });
 
-  test('rendement d\'empâtage : entrées invalides', () {
+  test('rendement d\'empâtage : sans valeur calculable', () {
     for (final c in objects(fixture['mash_efficiency_invalid'])) {
       final inputs = c['inputs'] as Map<String, Object?>;
-      expectInvalid(
-        () => measuredMashEfficiency(
-          measuredGravity: number(inputs['measured_gravity']),
-          measuredVolumeLitres: number(inputs['measured_volume_litres']),
-          fermentables: fermentables(inputs['fermentables']),
-          sugarsInWort: inputs['sugars_in_wort'] as bool,
-        ),
-        label(c),
-      );
+      switch (c['outcome']) {
+        case 'without_malt':
+          expect(
+            readCase(inputs),
+            isA<MashEfficiencyWithoutMalt>(),
+            reason: label(c),
+          );
+        case 'sugars_explain_gravity':
+          expect(
+            readCase(inputs),
+            isA<MashEfficiencySugarsExplainGravity>(),
+            reason: label(c),
+          );
+        case 'throws':
+          expectInvalid(() => readCase(inputs), label(c));
+        default:
+          fail('${label(c)} : résultat attendu inconnu');
+      }
     }
   });
 
@@ -94,14 +104,12 @@ void main() {
       mashEfficiencyPercent: 68,
       volumeLitres: 19,
     );
-    expect(
-      measuredMashEfficiency(
-        measuredGravity: og,
-        measuredVolumeLitres: 19,
-        fermentables: grist,
-        sugarsInWort: true,
-      ),
-      closeTo(68, 1e-9),
+    final measured = readMashEfficiency(
+      measuredGravity: og,
+      measuredVolumeLitres: 19,
+      fermentables: grist,
+      sugarsInWort: true,
     );
+    expect((measured as MashEfficiencyRead).percent, closeTo(68, 1e-9));
   });
 }

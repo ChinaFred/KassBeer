@@ -107,8 +107,9 @@ les contraintes.
 - Jour de brassage hors ligne : chronologie, minuteurs, saisie des mesures, rendement réel.
 - Import des 16 fiches.
 
-Après la version 1 : RAPT Pill, stock, eau (sels et pH), conditionnement (sucre de
-resucrage), dégustations notées, assistant IA.
+Après la version 1 : RAPT Pill, stock, eau (sels et pH), conditionnement (calcul du sucre de
+resucrage), dégustations notées, assistant IA. La masse et la nature du sucre de resucrage sont
+notées dès la v0.4, sans calcul.
 
 ### Découpage en incréments
 

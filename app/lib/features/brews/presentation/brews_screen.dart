@@ -112,6 +112,9 @@ String ligneDateBrassin(Brew brew, DateTime now) {
         ? 'Date non fixée'
         : 'Prévu le ${formatDate(planned)}';
   }
+  if (brew.status == BrewStatus.conditioning && brew.bottledAt != null) {
+    return 'Embouteillé le ${formatDateCourte(brew.bottledAt!)}';
+  }
   if (brewed == null) return '';
   if (brew.status == BrewStatus.brewing &&
       brewed.year == now.year &&

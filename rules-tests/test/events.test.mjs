@@ -207,7 +207,6 @@ describe("events — forme selon kind", () => {
     ["température", { ...VALID_BY_KIND.measurement, measure_type: "temperature", value: 67.5 }],
     ["volume", { ...VALID_BY_KIND.measurement, measure_type: "volume", value: 23 }],
     ["pH", { ...VALID_BY_KIND.measurement, measure_type: "ph", value: 5.4 }],
-    ["valeur 999 999 999", { ...VALID_BY_KIND.measurement, value: 999999999 }],
     ["step_key de 100 caractères", { ...VALID_BY_KIND.step_started, step_key: "k".repeat(100) }],
   ];
   for (const [label, extra] of ACCEPTED) {
@@ -237,6 +236,7 @@ describe("events — forme selon kind", () => {
     ["mesure en texte", { ...VALID_BY_KIND.measurement, value: "1057,9" }],
     ["mesure Infinity", { ...VALID_BY_KIND.measurement, value: Infinity }],
     ["mesure NaN", { ...VALID_BY_KIND.measurement, value: NaN }],
+    ["mesure 999 999 999", { ...VALID_BY_KIND.measurement, value: 999999999 }],
     ["mesure 1e9", { ...VALID_BY_KIND.measurement, value: 1e9 }],
     ["mesure -1e9", { ...VALID_BY_KIND.measurement, value: -1e9 }],
     ["note sans texte (null)", { ...VALID_BY_KIND.note, note: null }],

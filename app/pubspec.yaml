@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.9+10
+version: 0.1.11+12
 
 environment:
   sdk: ^3.11.4
@@ -47,6 +47,11 @@ dependencies:
   # Bip de fin de minuteur sur le web (Web Audio). Déjà tiré par les paquets
   # firebase_*_web ; déclaré parce que app/lib/ l'importe.
   web: ^1.1.1
+
+  # Courbe du relevé de fermentation (ADR-004). Version exacte : le changelog de la
+  # 1.1.0 annonce une rupture d'API dans une version mineure. Importé par le seul
+  # fichier trace_courbe.dart (P18).
+  fl_chart: 1.3.0
 
 dev_dependencies:
   flutter_test:

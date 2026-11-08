@@ -351,7 +351,8 @@
         ],
         "sugars_in_wort": true
       },
-      "reason": "aucun malt"
+      "reason": "aucun malt",
+      "outcome": "without_malt"
     },
     {
       "inputs": {
@@ -375,7 +376,8 @@
         ],
         "sugars_in_wort": true
       },
-      "reason": "les sucres expliquent toute la densité"
+      "reason": "les sucres expliquent toute la densité",
+      "outcome": "sugars_explain_gravity"
     },
     {
       "inputs": {
@@ -399,7 +401,8 @@
         ],
         "sugars_in_wort": true
       },
-      "reason": "volume nul"
+      "reason": "volume nul",
+      "outcome": "throws"
     }
   ],
   "divergences": []

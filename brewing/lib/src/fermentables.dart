@@ -130,13 +130,39 @@ double predictedOriginalGravity({
   return pointsToSg(points);
 }
 
+/// Rendement d'empâtage lu sur une mesure, sans exception ([readMashEfficiency]).
+sealed class MashEfficiencyReading {
+  const MashEfficiencyReading();
+}
+
+/// Rendement calculé, en %.
+class MashEfficiencyRead extends MashEfficiencyReading {
+  /// Crée la lecture.
+  const MashEfficiencyRead(this.percent);
+
+  /// Rendement d'empâtage en %, sans plafond.
+  final double percent;
+}
+
+/// Aucun malt : le rendement d'empâtage n'est pas défini.
+class MashEfficiencyWithoutMalt extends MashEfficiencyReading {
+  /// Crée la lecture.
+  const MashEfficiencyWithoutMalt();
+}
+
+/// Les sucres expliquent à eux seuls la densité mesurée.
+class MashEfficiencySugarsExplainGravity extends MashEfficiencyReading {
+  /// Crée la lecture.
+  const MashEfficiencySugarsExplainGravity();
+}
+
 /// Rendement d'empâtage réel (%) à partir d'une densité et d'un volume mesurés.
 ///
 /// [sugarsInWort] dit si les sucres de la liste étaient déjà dans le moût au
-/// moment de la mesure : leurs points sont alors retirés avant le calcul. Lève
-/// [BrewingInputException] sans malt, ou si les sucres expliquent à eux seuls
-/// la densité mesurée.
-double measuredMashEfficiency({
+/// moment de la mesure : leurs points sont alors retirés avant le calcul. Ne
+/// lève que sur une densité ou un volume hors limites : l'absence de malt et
+/// des sucres qui expliquent toute la densité sont des résultats.
+MashEfficiencyReading readMashEfficiency({
   required double measuredGravity,
   required double measuredVolumeLitres,
   required List<Fermentable> fermentables,
@@ -154,20 +180,8 @@ double measuredMashEfficiency({
       sugarPointLitres += f.maxPointLitres;
     }
   }
-  if (maltPointLitres <= 0) {
-    throw BrewingInputException(
-      'fermentables',
-      fermentables,
-      'aucun malt : rendement indéfini',
-    );
-  }
+  if (maltPointLitres <= 0) return const MashEfficiencyWithoutMalt();
   final fromMalts = measuredPointLitres - sugarPointLitres;
-  if (fromMalts <= 0) {
-    throw BrewingInputException(
-      'measuredGravity',
-      measuredGravity,
-      'les sucres expliquent à eux seuls la densité mesurée',
-    );
-  }
-  return fromMalts / maltPointLitres * 100;
+  if (fromMalts <= 0) return const MashEfficiencySugarsExplainGravity();
+  return MashEfficiencyRead(fromMalts / maltPointLitres * 100);
 }

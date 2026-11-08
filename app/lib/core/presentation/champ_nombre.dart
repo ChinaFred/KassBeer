@@ -15,7 +15,9 @@ class ChampNombre extends StatelessWidget {
     this.avertissement,
     this.obligatoire = false,
     this.max,
+    this.min = 0,
     this.minExclu = false,
+    this.entier = false,
     this.textInputAction = TextInputAction.next,
     this.onChanged,
     this.onSubmitted,
@@ -36,8 +38,14 @@ class ChampNombre extends StatelessWidget {
   final bool obligatoire;
   final double? max;
 
+  /// Minimum accepté, inclus sauf avec [minExclu].
+  final double min;
+
   /// Zéro refusé (volume strictement positif).
   final bool minExclu;
+
+  /// Nombre entier (nombre de bouteilles) : clavier sans décimale.
+  final bool entier;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
@@ -56,7 +64,9 @@ class ChampNombre extends StatelessWidget {
       focusNode: focusNode,
       autofocus: autofocus,
       style: style,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      keyboardType: entier
+          ? TextInputType.number
+          : const TextInputType.numberWithOptions(decimal: true),
       textInputAction: textInputAction,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
@@ -74,7 +84,9 @@ class ChampNombre extends StatelessWidget {
         text ?? '',
         obligatoire: obligatoire,
         max: max,
+        min: min,
         minExclu: minExclu,
+        entier: entier,
       ),
       onChanged: onChanged,
       onFieldSubmitted: onSubmitted,

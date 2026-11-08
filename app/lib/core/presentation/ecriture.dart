@@ -22,6 +22,38 @@ void suivreEcriture({
   );
 }
 
+/// Texte d'une saisie refusée par le serveur (HS5).
+String messageSaisieRefusee(String libelle) =>
+    'Refusée par le serveur : $libelle. Elle n\'est pas enregistrée.';
+
+/// Annonce une saisie refusée, 10 s, à la place du message en cours.
+void annoncerRefus(ScaffoldMessengerState messenger, String libelle) {
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      duration: const Duration(seconds: 10),
+      content: Text(messageSaisieRefusee(libelle)),
+    ),
+  );
+}
+
+/// Annonce [message] avec « Annuler » pendant 10 s.
+void annoncerAvecAnnulation(
+  ScaffoldMessengerState messenger,
+  String message, {
+  required VoidCallback onAnnuler,
+}) {
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      duration: const Duration(seconds: 10),
+      persist: false,
+      content: Text(message),
+      action: SnackBarAction(label: 'Annuler', onPressed: onAnnuler),
+    ),
+  );
+}
+
 /// « Abandonner les modifications ? » : vrai si l'utilisateur abandonne.
 Future<bool> confirmerAbandon(BuildContext context, String message) async {
   final result = await showDialog<bool>(
@@ -49,6 +81,22 @@ Future<bool> confirmerSuppression(
   BuildContext context, {
   required String titre,
   required List<String> paragraphes,
+}) => confirmerAction(
+  context,
+  titre: titre,
+  paragraphes: paragraphes,
+  libelle: 'Supprimer',
+  destructive: true,
+);
+
+/// Confirmation d'une action : vrai si l'utilisateur confirme ; le bouton porte
+/// [libelle], en couleur d'erreur si [destructive].
+Future<bool> confirmerAction(
+  BuildContext context, {
+  required String titre,
+  required List<String> paragraphes,
+  required String libelle,
+  bool destructive = false,
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -74,12 +122,14 @@ Future<bool> confirmerSuppression(
             child: const Text('Annuler'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: scheme.error,
-              foregroundColor: scheme.onError,
-            ),
+            style: destructive
+                ? FilledButton.styleFrom(
+                    backgroundColor: scheme.error,
+                    foregroundColor: scheme.onError,
+                  )
+                : null,
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Supprimer'),
+            child: Text(libelle),
           ),
         ],
       );

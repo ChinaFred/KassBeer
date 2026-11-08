@@ -65,7 +65,19 @@ ChoixHeure placerHeure({
   return (at: choisi, erreur: null);
 }
 
-/// Sélecteur d'heure sur 24 h, en saisie au clavier ; rend l'instant choisi ou la
+/// Sélecteur d'heure sur 24 h, en saisie au clavier.
+Future<TimeOfDay?> demanderHeure24(BuildContext context, TimeOfDay initiale) =>
+    showTimePicker(
+      context: context,
+      initialTime: initiale,
+      initialEntryMode: TimePickerEntryMode.input,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+
+/// Sélecteur d'heure sur 24 h ; rend l'instant choisi au plus proche de [base] ou la
 /// raison du refus, `null` si l'utilisateur annule.
 Future<ChoixHeure?> demanderHeure(
   BuildContext context, {
@@ -74,15 +86,7 @@ Future<ChoixHeure?> demanderHeure(
   DateTime? apres,
   DateTime? plancher,
 }) async {
-  final picked = await showTimePicker(
-    context: context,
-    initialTime: TimeOfDay.fromDateTime(base),
-    initialEntryMode: TimePickerEntryMode.input,
-    builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-      child: child!,
-    ),
-  );
+  final picked = await demanderHeure24(context, TimeOfDay.fromDateTime(base));
   if (picked == null || !context.mounted) return null;
   return placerHeure(
     base: base,
@@ -268,7 +272,7 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
     final autofocus = _edit == null;
     switch (type) {
       case MeasureType.gravity:
-        return _ChampDensite(
+        return ChampDensite(
           controller: _value,
           onSubmit: _submit,
           focusNode: _valueFocus,
@@ -477,24 +481,38 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
   }
 }
 
-class _ChampDensite extends StatefulWidget {
-  const _ChampDensite({
+/// Champ de saisie d'une densité, avec son aperçu : « = 1057,9 ».
+class ChampDensite extends StatefulWidget {
+  const ChampDensite({
+    super.key,
     required this.controller,
     required this.onSubmit,
     required this.focusNode,
     required this.autofocus,
+    this.label = 'Densité',
+    this.textInputAction = TextInputAction.done,
+    this.obligatoire = true,
+    this.grand = true,
   });
 
   final TextEditingController controller;
   final VoidCallback onSubmit;
   final FocusNode focusNode;
   final bool autofocus;
+  final String label;
+  final TextInputAction textInputAction;
+
+  /// Faux : un champ vide est accepté (densité finale de l'embouteillage).
+  final bool obligatoire;
+
+  /// Chiffres en grand (28 sp), pour une saisie à côté de la cuve.
+  final bool grand;
 
   @override
-  State<_ChampDensite> createState() => _ChampDensiteState();
+  State<ChampDensite> createState() => _ChampDensiteState();
 }
 
-class _ChampDensiteState extends State<_ChampDensite> {
+class _ChampDensiteState extends State<ChampDensite> {
   @override
   Widget build(BuildContext context) {
     final preview = switch (readGravity(widget.controller.text)) {
@@ -506,15 +524,19 @@ class _ChampDensiteState extends State<_ChampDensite> {
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      textInputAction: TextInputAction.done,
+      textInputAction: widget.textInputAction,
       autovalidateMode: AutovalidateMode.onUserInteraction,
-      style: const TextStyle(fontSize: 28),
+      style: widget.grand ? const TextStyle(fontSize: 28) : null,
       decoration: InputDecoration(
-        labelText: 'Densité',
+        labelText: widget.label,
         helperText: preview ?? '1057,9 ou 1.058',
         border: const OutlineInputBorder(),
       ),
-      validator: (text) => erreurDensite(text ?? ''),
+      validator: (text) {
+        final value = text ?? '';
+        if (!widget.obligatoire && value.trim().isEmpty) return null;
+        return erreurDensite(value);
+      },
       onChanged: (_) => setState(() {}),
       onFieldSubmitted: (_) => widget.onSubmit(),
     );

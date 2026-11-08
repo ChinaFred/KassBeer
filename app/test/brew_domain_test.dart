@@ -322,7 +322,7 @@ void main() {
       owner: owner,
     );
 
-    test('en cours, prévus croissants, puis récents', () {
+    test('en cours, en fermentation, prévus croissants, puis terminés', () {
       final list = [
         b('fini', BrewStatus.done, brewedAt: DateTime(2026, 1, 1)),
         b('p2', BrewStatus.planned, plannedFor: DateTime(2026, 12, 1)),
@@ -330,7 +330,7 @@ void main() {
         b('p1', BrewStatus.planned, plannedFor: DateTime(2026, 11, 20)),
         b('recent', BrewStatus.fermenting, brewedAt: DateTime(2026, 11, 1)),
       ]..sort(compareBrews);
-      expect(list.map((e) => e.id), ['c', 'p1', 'p2', 'recent', 'fini']);
+      expect(list.map((e) => e.id), ['c', 'recent', 'p1', 'p2', 'fini']);
     });
 
     test('reprise : un seul brassin en cours de moins de 24 h', () {

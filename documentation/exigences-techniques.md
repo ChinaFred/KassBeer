@@ -51,14 +51,14 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) |
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
-| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `lireNombre`, `erreurNombre`), `ChampNombre`, `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, confirmations d'abandon et de suppression), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` |
+| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, confirmations d'abandon, de suppression et `confirmerAction`), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
 | `lib/features/equipment/` | `EquipmentRepository` (`equipment/`), `Equipment`, `EquipmentContent`, `EquipmentKind` ; liste, fiche, éditeur |
 | `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document ↔ `brewing/`, tri, duplication ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin), formulaires des lignes, vue des calculs |
-| `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType` ; liste, fiche, « Nouveau brassin » |
+| `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType`, `PhaseEvenement` ; `domain/mesures_retenues.dart` (mesures retenues, VR1, VR2, RR2), `domain/releves.dart` (regroupement du relevé) ; liste, fiche, « Nouveau brassin », `presentation/releve_fermentation.dart`, `prevu_et_mesure.dart`, `embouteillage.dart`, `courbe_fermentation.dart`, `trace_courbe.dart` (seul import de `fl_chart`, P18) |
 | `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
 | `lib/features/admin/` | écran Admin |
 
@@ -186,9 +186,10 @@ l'appel ; les `Future` rendues se terminent à la réponse du serveur. Aucune tr
 
 `owner_name` : toute écriture sur `brews/{id}` réécrit le champ avec le nom actuel du jeton
 ou le retire (`FieldValue.delete()`) : `ownerNameOk` s'applique à l'état final et refuserait
-un ancien nom, avec le lot qui porte le premier début d'étape. L'écran de préparation et l'écran
-du jour lisent le nom une fois, à l'ouverture (3 s au plus), et le réutilisent : le statut part
-sans attente réseau.
+un ancien nom, avec le lot qui porte le premier début d'étape. L'écran de préparation, l'écran
+du jour et la fiche du brassin (pour son propriétaire, au premier affichage) lisent le nom une
+fois, à l'ouverture (3 s au plus), et le réutilisent : le statut part sans attente réseau, et
+aucune action ne relit le jeton.
 
 Refus du serveur (HS7) : `creationSuivie` compare avec le document serveur par une lecture
 ordinaire (jamais `Source.server`). Si l'événement n'y est pas, le refus est rapporté
@@ -219,7 +220,8 @@ web, `no_sleep.js` se charge au premier appel : d'où la prise à l'ouverture, a
 du réseau.
 
 **Dépendances.** `wakelock_plus` 1.8.2, `flutter_localizations` (SDK), `web` ^1.1.1 (direct,
-déjà tiré), `package_info_plus` ^10.2.2. `flutter_localizations` tire `intl` 0.20.2.
+déjà tiré), `package_info_plus` ^10.2.2. `flutter_localizations` tire `intl` 0.20.2. `fl_chart`
+1.3.0 (version exacte, ADR-004) dessine la courbe du relevé et n'ajoute aucun paquet transitif.
 
 **Conversion document ↔ `brewing/`.** Écrite une fois, dans `features/recipes/domain/recipe.dart` :
 `fromFirestore` lit chaque ligne par `FermentableKind`, `HopUse` et `HopForm.fromStored` ;
@@ -426,12 +428,22 @@ Lisible par le groupe, mesures comprises, sans coût. La recette et l'équipemen
 | `recipe_snapshot` | map, obligatoire, immuable : copie de la recette, mêmes champs de premier niveau, `brew_steps` compris (60 éléments au plus) ; `owner_name`, s'il est présent, est une chaîne de 1 à 80 caractères (celui de l'auteur de la recette, pas forcément celui qui brasse) |
 | `equipment_snapshot` | map, obligatoire, immuable : copie de l'équipement, mêmes champs de premier niveau ; `owner_name` borné comme dans `recipe_snapshot` |
 | `adjustments` | map \| null : ajustements du jour, jamais écrits dans la recette. Clés en liste blanche, chacune number \| null : `batch_volume_l`, `mash_water_l`, `sparge_water_l`, `pre_boil_volume_l`, `post_boil_volume_l`, `fermenter_volume_l`, `boil_off_l_per_h`, `mash_temp_c`, `mash_time_min`, `boil_time_min`, `mash_efficiency_pct`. Chaque valeur est finie et strictement comprise entre -1e9 et 1e9 ; `mash_efficiency_pct` est borné de 0 à 100. Aucune autre clé, donc aucun prix ni coût (P5) |
-| `bottles_count` | number \| null |
+| `bottles_count` | int \| null : entier de 1 à 9 999 (règles) |
+| `bottled_at` | timestamp \| null : date d'embouteillage choisie, heure de l'appareil. Gardé après un retour en arrière ; la reprise d'un abandon s'en déduit (`statutDeReprise`) |
+| `packaged_volume_l`, `priming_sugar_g` | number \| null : volume conditionné (au-delà de 0 et jusqu'à 1 000 L), masse totale de sucre de resucrage (0 à 100 000 g), sans calcul ; bornes vérifiées par les règles |
+| `priming_sugar_name` | string \| null (80) |
+| `og_event_id`, `fg_event_id`, `fermenter_volume_event_id` | string \| null (128) : événement choisi comme densité initiale, densité finale, volume en fermenteur ; nul (champ retiré) = dernière mesure. Identifiants, jamais de valeur. Faits communs au groupe, écrits par le propriétaire |
+| `sugars_in_wort` | bool \| null : réponse à « Les sucres étaient-ils dans le moût à cette mesure ? » |
 | `notes` | string \| null (10 000) |
 | `imported_from` | string \| null (200) |
 | `created_at`, `updated_at` | timestamp, obligatoires |
 
-Le rendement réel se calcule à l'affichage à partir des événements et de la copie figée.
+Le rendement réel, le degré mesuré et les écarts se calculent à l'affichage à partir des
+événements et de la copie figée, jamais stockés ; aucune migration : un champ absent vaut nul.
+Aucun prix ni coût (P5). `MesuresRetenues` lit les identifiants ci-dessus puis applique la règle
+automatique (dernière densité du jour, dernière densité de fermentation, dernier volume) ;
+hors statut En fermentation, un relevé postérieur au jour de `bottled_at` ne compte pas dans la
+densité finale.
 
 ### `brews/{brewId}/events/{eventId}`
 
@@ -449,17 +461,20 @@ règles au retour du réseau.
 | `note` | string \| null (2 000) |
 | `measured_at` | timestamp, obligatoire : heure de l'appareil |
 | `created_at` | timestamp, obligatoire : `serverTimestamp()`, audit seul |
+| `phase` | string \| null : absent ou nul pour le jour de brassage, `fermentation` pour un relevé ; permis sur `measurement` et `note`, refusé sur un événement d'étape ; immuable |
 
 Forme selon `kind` (règles) :
 
 | `kind` | `step_key` | `measure_type`, `value` | `note` |
 |---|---|---|---|
 | `step_started`, `step_ended`, `step_skipped` | obligatoire, non vide | absents ou nuls | facultative |
-| `measurement` | facultatif : nul pour une mesure sans étape, sinon non vide | type de la liste, valeur numérique finie, strictement entre -1e9 et 1e9 | facultative |
+| `measurement` | facultatif : nul pour une mesure sans étape, sinon non vide | type de la liste, valeur numérique dans les bornes de son type (ci-dessous) | facultative |
 | `note` | facultatif : nul pour une note sans étape, sinon non vide | absents ou nuls | obligatoire, 1 à 2 000 caractères |
 
 Les bornes de saisie (température 0 à 110 °C, densité 0,980 à 1,200, volume au-delà de 0 et
-jusqu'à 1 000 L, pH 0 à 14) sont vérifiées par l'application, pas par les règles.
+jusqu'à 1 000 L, pH 0 à 14) sont vérifiées par l'application et par les règles, à la création et
+à la correction d'un événement. Les deux jeux de bornes sont identiques, bornes comprises : une
+saisie acceptée à l'écran n'est pas refusée au retour du réseau.
 
 Après création, seuls `value`, `note` et `measured_at` se corrigent, et la forme reste
 valide : une mesure ne perd pas sa valeur, un début d'étape n'en reçoit pas. « Ne plus
@@ -472,6 +487,13 @@ règle de création d'un événement lit le brassin par `get()`, qui voit l'éta
 où `owner_uid` est déjà celui du brasseur. La création d'un brassin et d'un de ses événements
 dans un même lot est refusée pour la même raison : le brassin part d'abord, par une écriture
 simple, et la file hors ligne garde l'ordre.
+
+Un relevé est écrit par `addReleve` : un événement par valeur, ou une note seule, dans un
+`WriteBatch` (deux `get()` de règles pour un couple densité et température). La note va sur le
+premier événement. `correctReleve` met à jour, crée ou supprime chaque valeur dans un lot.
+« Embouteiller » écrit les champs, le statut et, si la densité finale est remplie, un relevé à
+`bottled_at` dans le même lot ; ce relevé n'est pas recréé par une modification de
+l'embouteillage. Hors ligne, aucune de ces écritures n'exige le réseau.
 
 ### `users/{uid}/…` — données privées
 
@@ -537,7 +559,11 @@ vérifiée ou connectés par mot de passe, et un jeton à l'adresse en majuscule
 `owner_name.test.mjs` ajoute des jetons au nom absent, vide, de 80 et 81 caractères, et non
 textuel, pour `recipes/`, `equipment/` et `brews/`, et borne `owner_name` dans les copies des
 brassins. `events.test.mjs` rejoue chaque `kind` pour les cinq profils, les formes refusées
-de chacun, et l'événement sous un brassin inexistant. `brew_day.test.mjs` vérifie `brew_steps`
+de chacun, et l'événement sous un brassin inexistant. `after_brew.test.mjs` rejoue pour les cinq
+profils chaque champ d'après brassage, le passage à `abandoned` et aux autres statuts, l'embouteillage
+en un `WriteBatch`, `phase` (valeur inconnue, sur un début d'étape, modification refusées), les
+bornes de l'embouteillage et celles de `value` selon `measure_type`, en création et en correction.
+`brew_day.test.mjs` vérifie `brew_steps`
 (60 étapes acceptées, 61 refusées, dans la recette et dans sa copie), les statuts `brewing` puis
 `fermenting`, le premier début en un `WriteBatch`, et un brassin créé puis son premier événement. `numbers.test.mjs` vérifie que
 les règles refusent Infinity, -Infinity, NaN, ±1e9 et acceptent ±999 999 999, 0 et 1,5, et
@@ -565,7 +591,7 @@ par `ErrorReportService.reportError` et affiche la panne.
 | Densité initiale prévue | `predictedOriginalGravity` | 1 + Σ (kg × points/kg/L × r) / V / 1000 ; r = rendement d'empâtage pour un malt, 1 pour un sucre |
 | Densité finale prévue | `predictedFinalGravity` | 1 + (OG − 1) × (1 − atténuation / 100) ; OG de 1.000 à 1.200 |
 | Potentiel d'un malt | `ExtractPotential` | rendement d'extrait % × 385,67 (saccharose, 46,214 ppg), ou points/kg/L |
-| Rendement d'empâtage réel | `measuredMashEfficiency` | (points mesurés × V − points des sucres déjà dans le moût) / points des malts à 100 % |
+| Rendement d'empâtage réel | `readMashEfficiency` | (points mesurés × V − points des sucres déjà dans le moût) / points des malts à 100 % |
 | Degré | `alcoholByVolume` | (OG − FG) × 131,25 |
 | Degré après bouteille | `alcoholByVolumeAfterBottling` | degré + g/L × potentiel du sucre / 10⁶ × 131,25 ; `null` sans donnée de resucrage |
 | IBU | `tinsethIbu`, `tinsethIbuForHop` | Tinseth : 1,65 × 0,000125^(Gb − 1) × (1 − e^(−0,04 t)) / 4,15 × alpha (mg/L) ; pellets × 1,1, cônes × 1,0 ; après ébullition et dry hop : 0 |
@@ -632,8 +658,18 @@ les enregistrements à `recomputeSchedule`. Une anomalie de la réduction (fin a
 encore pour une clé en double ou des enregistrements non réduits (étape inconnue ou enregistrée
 deux fois). Le constructeur `PlannedStep` lève pour une durée négative.
 
+**Comparaison prévu / mesuré.** `compareBrewWithPlan` (`brew_comparison.dart`) rend pour chaque
+ligne la valeur prévue, le résultat mesuré (`MeasuredComputed`, `MeasuredUnavailable` et la liste
+des `MeasurementGap`, `MeasuredImpossible`) et l'écart. Elle ne lève que sur une valeur enregistrée
+hors limites ; une densité finale supérieure à l'initiale ou des sucres qui expliquent toute la
+densité (`readMashEfficiency`, qui ne lève pas) sont des résultats. `fermentationSeries`
+(`fermentation.dart`) rend les points d'un relevé triés (`dayNumber` = écart en jours calendaires,
+`dayOffset` = ce nombre plus la fraction de la journée locale, un jour de changement d'heure
+comptant pour un jour), lus par la liste et par la courbe.
+
 **Fixtures.** `brewing/test/fixtures/*.json` (densité, densité initiale et rendement, densité
-finale, degré, IBU, couleur, coût, planning, chronologie préremplie, calculs d'une recette) portent des cas tirés des 16 fiches Excel : entrées, valeur de
+finale, degré, IBU, couleur, coût, planning, chronologie préremplie, calculs d'une recette,
+comparaison prévu / mesuré, relevé de fermentation) portent des cas tirés des 16 fiches Excel : entrées, valeur de
 la fiche, valeur attendue, tolérance, et hypothèses quand la fiche ne donne pas une entrée.
 Les erreurs connues des fiches (Citra « 22.4 » lu 22 400 g, degré calculé sur la densité
 visée, densités d'en-tête différentes de la chronologie, champs EBC et IBU copiés, coût par
@@ -652,6 +688,9 @@ blonde, deux appareils hors ligne (`double-debut`), des anomalies, deux débuts 
 minute. `brew_steps.json` compte 8 cas synthétiques de `defaultBrewSteps`, dont l'exemple de
 l'ébullition coupée à un ajout de houblon (« Ébullition » 45 min, « Ajouter Cascade 20 g », « Ébullition » 15 min).
 `density.json` range chaque lecture refusée en `unreadable` ou `out_of_range`.
+`brew_comparison.json` compte un cas par ligne et par donnée manquante, dont l'Ale blonde 140724
+(1.052, 20 L) ; ses rendements attendus sont calculés hors du paquet. `fermentation.json` couvre
+l'ordre, une densité absente, les deux changements d'heure et deux relevés le même jour.
 
 ## CI et déploiement
 

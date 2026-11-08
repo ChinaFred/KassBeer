@@ -65,7 +65,8 @@ Kass'Beer remplace les fiches Excel de brassage amateur d'un brasseur et de quel
 brassage hors ligne, suivi et coût d'un brassin. Vente, brasserie professionnelle, iOS et
 desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 
-- Interface : Flutter, un seul projet (`app/`) pour Android (APK) et le web.
+- Interface : Flutter, un seul projet (`app/`) pour Android (APK) et le web. Courbes :
+  `fl_chart` en version figée, importé par un seul fichier (ADR-004).
 - Calculs de brassage : paquet Dart pur `brewing/` (densités, degré, IBU Tinseth, EBC Morey,
   rendement, coût), lu par l'application seule.
 - Données : Cloud Firestore `(default)` en `europe-west1`, cache hors ligne persistant.
@@ -237,7 +238,7 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 
 | N° | Contrôle | Agent | Origine |
 |---|---|---|---|
-| P1 | `firebase.json` : seul `canvaskit/**` en `immutable` ; `index.html`, `flutter_bootstrap.js`, `flutter.js`, `main.dart.js`, `version.json` en `no-cache` | `relecteur-regles` | ADR-001, leçon 6 |
+| P1 | `firebase.json` : seul `canvaskit/**` en `immutable` ; `index.html`, `flutter_bootstrap.js`, `flutter.js`, `main.dart.js`, `version.json` en `no-cache`. Tout `deferred as` dans `app/lib/` exige une règle `no-cache` pour ses fichiers `.part.js` dans `firebase.json`, et un nouvel ADR | `relecteur-regles` | ADR-001, leçon 6 ; ADR-004 |
 | P2 | Écran du jour de brassage et code qu'il appelle : aucun `runTransaction`, aucune callable ou requête HTTP, aucun `Source.server`, aucun tableau modifié par `arrayUnion` pour une mesure, aucun `Timer` comme source d'une durée, `measured_at` posé par l'appareil ; le son et la vibration de fin de minuteur ne chargent rien par le réseau (son du système ou synthétisé, aucune URL), et le verrou d'écran est pris à l'ouverture de l'écran du jour | `relecteur-regles` | ADR-001, hors ligne ; ADR-003, alerte de minuteur |
 | P3 | Toute formule de brassage hors de `brewing/` est une anomalie ; une formule changée sans cas ajouté à `brewing/test/fixtures/` aussi | `relecteur-regles` | ADR-001, calculs côté client seul |
 | P4 | Chaque changement de `firestore.rules` arrive avec ses tests dans `rules-tests/`, rejoués pour cinq profils : anonyme, connecté non membre, brasseur propriétaire, autre brasseur, admin. Un membre ne peut écrire ni son rôle ni le `owner_uid` d'un autre | `securite` | ADR-001, règles = seul contrôle d'accès |
@@ -254,6 +255,7 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 | P15 | Aucun prénom, nom ou e-mail réel dans un fichier versionné, un message de commit, une description de PR ou un tag : noms de test fictifs, adresses en `@exemple.fr` ou `@example.com`, commits et tags en adresse `noreply` de GitHub (`git log --format='%ae %ce'`, `git for-each-ref refs/tags --format='%(taggeremail)'`). Seules exceptions : l'e-mail d'un auteur de paquet dans un fichier `*.lock` ou `package-lock.json`, et ce qu'ADR-002 accepte dans l'historique antérieur à la v0.1.3 | `securite` | ADR-002, dépôt public |
 | P16 | `toJSON(vars)` dans `.github/workflows/` : chaque variable lisible par le job (dépôt, organisation, environnement `production` : `gh variable list`, avec et sans `--env production`, et le tableau « Réglages sur GitHub » de `exigences-techniques.md`) est une valeur publique du client ou un identifiant d'infrastructure ; une valeur sensible est un secret GitHub, jamais une variable. Un diff qui ajoute une variable, ou qui étend `toJSON(vars)` à un autre job, dit pourquoi la valeur peut paraître dans le journal public | `securite` | ADR-002, journaux de run publics |
 | P17 | Canal de plateforme (`MethodChannel`) : nom du canal et des méthodes identiques dans `app/lib/` et `app/android/`, garde `kIsWeb` avant l'appel, `catch` qui appelle `reportError`, test Dart avec `TestDefaultBinaryMessenger`, APK compilé (PC ou job CI vert) | `relecteur-regles` | ADR-003, alerte de minuteur |
+| P18 | `fl_chart` : `package:fl_chart` importé par le seul fichier `app/lib/features/brews/presentation/trace_courbe.dart`, aucun type du paquet dans une signature publique ; version exacte dans `pubspec.yaml` ; aucune couleur par défaut du paquet (ligne, bordure, grille, info-bulle lues dans `colorScheme`) ; `reservedSize` multiplié par l'échelle du texte ; tracé dans un `ExcludeSemantics` avec un résumé en `Semantics` | `relecteur-regles` | ADR-004 |
 
 ## Données partagées et état propre à un utilisateur
 
