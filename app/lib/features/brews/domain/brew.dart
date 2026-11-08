@@ -9,6 +9,9 @@ import '../../recipes/domain/recipe.dart';
 const kBrewNameMaxLength = 120;
 const kBrewNotesMaxLength = 10000;
 
+/// Longueur maximale de la nature du sucre de resucrage (`firestore.rules`).
+const kPrimingSugarNameMaxLength = 80;
+
 /// Statut d'un brassin (`brews/{id}.status`).
 enum BrewStatus {
   planned('planned', 'Prévu'),
@@ -31,6 +34,18 @@ enum BrewStatus {
   }
 }
 
+/// Mesure retenue d'un brassin : un champ d'identifiant sur `brews/{id}`, nul pour
+/// la dernière mesure. On écrit l'identifiant, jamais la valeur (VR4).
+enum MesureRetenueChamp {
+  densiteInitiale('og_event_id'),
+  densiteFinale('fg_event_id'),
+  volumeFermenteur('fermenter_volume_event_id');
+
+  const MesureRetenueChamp(this.storedField);
+
+  final String storedField;
+}
+
 /// Document `brews/{id}` : un brassin fige sa recette et son équipement à sa
 /// création (CLAUDE.md, « Un brassin fige sa recette »).
 @immutable
@@ -48,6 +63,15 @@ class Brew {
     this.equipmentOwnerUid = '',
     this.plannedFor,
     this.brewedAt,
+    this.bottledAt,
+    this.bottlesCount,
+    this.packagedVolumeL,
+    this.primingSugarG,
+    this.primingSugarName,
+    this.ogEventId,
+    this.fgEventId,
+    this.fermenterVolumeEventId,
+    this.sugarsInWort,
     this.notes,
     this.createdAt,
     this.hasPendingWrites = false,
@@ -79,6 +103,28 @@ class Brew {
 
   /// Heure du premier début d'étape (heure de l'appareil).
   final DateTime? brewedAt;
+
+  /// Date d'embouteillage (date choisie, heure de l'appareil). Gardée après un
+  /// retour en arrière : la reprise d'un abandon se déduit de ce champ (ST5).
+  final DateTime? bottledAt;
+  final int? bottlesCount;
+  final double? packagedVolumeL;
+
+  /// Masse totale de sucre de resucrage, en grammes. Aucun calcul (Q4, D5).
+  final double? primingSugarG;
+  final String? primingSugarName;
+
+  /// Événement choisi comme densité initiale ; nul = dernière mesure.
+  final String? ogEventId;
+
+  /// Événement choisi comme densité finale ; nul = dernière mesure.
+  final String? fgEventId;
+
+  /// Événement choisi comme volume en fermenteur ; nul = dernière mesure.
+  final String? fermenterVolumeEventId;
+
+  /// Vrai si les sucres étaient dans le moût à la mesure ; nul sans réponse (RR3).
+  final bool? sugarsInWort;
   final String? notes;
 
   /// `null` tant qu'une écriture locale attend le serveur.
@@ -111,6 +157,15 @@ class Brew {
           : '',
       plannedFor: read.date('planned_for'),
       brewedAt: read.date('brewed_at'),
+      bottledAt: read.date('bottled_at'),
+      bottlesCount: read.nombreFacultatif('bottles_count')?.toInt(),
+      packagedVolumeL: read.nombreFacultatif('packaged_volume_l'),
+      primingSugarG: read.nombreFacultatif('priming_sugar_g'),
+      primingSugarName: read.texteFacultatif('priming_sugar_name'),
+      ogEventId: read.texteFacultatif('og_event_id'),
+      fgEventId: read.texteFacultatif('fg_event_id'),
+      fermenterVolumeEventId: read.texteFacultatif('fermenter_volume_event_id'),
+      sugarsInWort: read.boolFacultatif('sugars_in_wort'),
       notes: read.texteFacultatif('notes'),
       createdAt: read.date('created_at'),
       hasPendingWrites: hasPendingWrites,
@@ -120,6 +175,11 @@ class Brew {
   /// Copie figée lue comme un équipement, pour les calculs et l'affichage.
   Equipment get equipmentRead =>
       Equipment(id: '', ownerUid: equipmentOwnerUid, content: equipment);
+
+  /// Statut après une reprise : se déduit de [bottledAt] (ST5), aucun champ ne
+  /// garde le statut précédent.
+  BrewStatus get statutDeReprise =>
+      bottledAt != null ? BrewStatus.conditioning : BrewStatus.fermenting;
 }
 
 Map<String, dynamic> _map(Object? value, String field) {
@@ -145,12 +205,14 @@ Map<String, Object?> equipmentSnapshot(Equipment equipment) => {
 
 int _bucket(BrewStatus status) => switch (status) {
   BrewStatus.brewing => 0,
-  BrewStatus.planned => 1,
-  _ => 2,
+  BrewStatus.fermenting || BrewStatus.conditioning => 1,
+  BrewStatus.planned => 2,
+  BrewStatus.done || BrewStatus.abandoned => 3,
 };
 
-/// Tri de la liste : en cours, puis prévus par date croissante, puis les autres
-/// du plus récent au plus ancien.
+/// Tri de la liste (ST10) : en cours, puis en fermentation et en conditionnement, puis
+/// prévus par date croissante, puis terminés et abandonnés ; le reste du plus récent au
+/// plus ancien.
 int compareBrews(Brew a, Brew b) {
   final byBucket = _bucket(a.status).compareTo(_bucket(b.status));
   if (byBucket != 0) return byBucket;

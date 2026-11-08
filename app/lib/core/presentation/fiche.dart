@@ -72,6 +72,58 @@ class TitreSection extends StatelessWidget {
   }
 }
 
+/// Section repliable d'une fiche : titre déclaré comme en-tête, résumé à droite.
+///
+/// [storageKey] (identifiant unique de la section dans la page) garde l'état ouvert
+/// quand un `ListView` détruit le bloc hors de l'écran. [ouvert] : état initial.
+class SectionRepliable extends StatelessWidget {
+  const SectionRepliable({
+    super.key,
+    required this.titre,
+    required this.storageKey,
+    required this.children,
+    this.resume,
+    this.ouvert = false,
+  });
+
+  final String titre;
+  final String storageKey;
+  final String? resume;
+  final bool ouvert;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final r = resume;
+    return ExpansionTile(
+      key: PageStorageKey<String>(storageKey),
+      initiallyExpanded: ouvert,
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 8),
+      expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+      title: Wrap(
+        spacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.end,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(titre, style: theme.textTheme.titleMedium),
+          ),
+          if (r != null)
+            Text(
+              r,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+        ],
+      ),
+      children: children,
+    );
+  }
+}
+
 /// Texte en italique quand une section est vide (« Aucun houblon. »).
 class TexteAbsent extends StatelessWidget {
   const TexteAbsent(this.text, {super.key});

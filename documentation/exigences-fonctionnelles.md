@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes et leurs mesures ; suivre le jour de brassage et modifier ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -304,18 +304,31 @@ brassin garde sa version. Recette sans chronologie : le brassin se crée, sans �
 Messages : « Brassin créé. », « Brassin créé sur l'appareil. Il partira au retour du réseau. »,
 « La création de « {nom} » a échoué. ».
 
-**Liste** (tous les brassins du groupe). En cours d'abord, puis prévus par date croissante, puis
-les autres du plus récent au plus ancien. « Tous » / « Les miens », non enregistré. Chaque ligne :
+**Liste** (tous les brassins du groupe). En cours, puis En fermentation et En conditionnement,
+puis prévus par date croissante, puis Terminés et Abandonnés, chaque groupe du plus récent au plus
+ancien. « Tous » / « Les miens », non enregistré. Chaque ligne :
 nom, « {statut} · {équipement} · {auteur} », date (« Prévu le sam. 15 nov. 2026 », « Commencé
-aujourd'hui à 11:15 », « Brassé le 11 févr. 2024 »), étiquette « En attente du réseau ». Vide :
+aujourd'hui à 11:15 », « Brassé le 11 févr. 2024 », « Embouteillé le 3 déc. 2026 » en
+conditionnement), étiquette « En attente du réseau ». Vide :
 « Aucun brassin. Ouvrez une recette et appuyez sur Nouveau brassin. ». Statuts : Prévu, En
 cours, En fermentation, En conditionnement, Terminé, Abandonné.
 
-**Fiche.** Nom, statut, lien vers la recette, « Brassin de {auteur} » pour un autre membre. Bloc
-Calculs sur la copie figée, Chronologie (heures, état, mesures), sections de la recette figée,
-Général (date prévue, brassé le, équipement). Propriétaire : « Préparer le brassage » (prévu),
-« Reprendre le brassage » (en cours), « Modifier » (nom, date prévue, notes), « Supprimer ». Un
-appui sur une mesure ouvre sa correction. Autre membre : aucun bouton. La recette a changé depuis
+**Fiche.** Nom, ligne de statut (« En fermentation · J+12 », « En conditionnement · Embouteillé
+le 3 déc. 2026 », « Terminé · Embouteillé le 3 déc. 2026 »), lien vers la recette, « Brassin de
+{auteur} » pour un autre membre. Prévu et En cours : bloc Calculs sur la copie figée, Chronologie
+(heures, état, mesures), sections de la recette figée, Général (date prévue, brassé le,
+équipement). Après le brassage, dans l'ordre : en fermentation, Relevé, Prévu et mesuré, Notes ;
+en conditionnement, Prévu et mesuré, Embouteillage, Relevé, Notes ; terminé, Prévu et mesuré,
+Embouteillage, Notes, Relevé ; abandonné, Relevé, Prévu et mesuré, Embouteillage (si `bottled_at`
+existe), Notes. Puis Général, le pli « Chronologie » (fermé), le pli « Recette et calculs prévus »
+(fermé sur téléphone, ouvert à partir de 840 pixels). Un brassin en cours affiche aussi le relevé
+s'il en existe un. Propriétaire : « Préparer le brassage » (prévu), « Reprendre le brassage » (en
+cours), « Marquer comme terminé » (en conditionnement), « Reprendre ce brassin » (abandonné). À
+partir de En cours, le menu ⋮ (« Plus d'actions ») porte « Modifier » (nom, date prévue, notes ;
+quitter avec une modification : « Les modifications de ce brassin ne seront pas enregistrées. »),
+« Revenir à {statut} », « Abandonner ce brassin » et « Supprimer » selon le statut ; un brassin
+prévu garde ses boutons « Modifier » et « Supprimer ». Un appui sur une mesure ouvre sa correction.
+Autre membre : aucun bouton, mêmes chiffres. La recette a changé depuis
 la création : « La recette a changé depuis la création de ce brassin. Il garde la version du
 {date}. » ; pour un brassin prévu sans saisie, « Recréer depuis la recette ».
 « Préparé sur cet appareil » s'affiche quand la préparation a abouti pendant la session ; sans
@@ -323,7 +336,107 @@ cette information, rien ne s'affiche.
 
 **Supprimer** (propriétaire). « Supprimer « {nom} » ? » / « Le brassin, ses étapes et ses mesures
 disparaissent pour tout le groupe. ». Sans saisie : immédiat, même hors ligne. Avec saisies :
-réseau exigé (hors ligne : « Suppression impossible hors ligne : ce brassin a des saisies. »).
+réseau exigé (hors ligne, le message s'affiche avant la confirmation : « Suppression impossible
+hors ligne : ce brassin a des saisies. »).
+
+**Statuts** (propriétaire). « Terminer le brassage » passe En cours à En fermentation. En
+fermentation : « Ajouter un relevé » (FAB sur téléphone, bouton au-delà) et « Embouteiller ». En
+conditionnement : « Marquer comme terminé », sans confirmation (« Brassin terminé. » avec
+« Annuler » 10 s), et « Ajouter un relevé » sous la liste. Terminé : aucune action principale ;
+sans note, le propriétaire lit « Aucune note. Ajoutez votre avis sur cette bière. » et « Modifier
+les notes ». « Abandonner ce brassin » (En cours, En fermentation, En conditionnement) demande
+« Abandonner « {nom} » ? » / « Le brassin reste visible du groupe, avec ses mesures. Vous pourrez
+le reprendre. ». « Reprendre ce brassin » rend En conditionnement si le brassin a été embouteillé,
+sinon En fermentation, sans confirmation. « Revenir à {statut} » demande « Revenir à « {statut} » ? »
+/ « Les mesures et l'embouteillage sont gardés. », avec « L'écran du jour s'ouvrira de nouveau par
+Reprendre le brassage. » vers En cours. Annonces : « Brassin revenu à {statut}. », « Brassin
+abandonné. », « Brassin repris : {statut}. ». Hors ligne : « Statut changé sur l'appareil. Il partira
+au retour du réseau. ». L'ordre des statuts n'est pas contrôlé : un retour en arrière et une file
+hors ligne passent.
+
+### Relevé de fermentation
+
+Section « Relevé de fermentation » de la fiche, visible à partir de En fermentation, et dans tout
+statut si un relevé existe. Relevés du plus récent au plus ancien ; sur téléphone, les 5 plus
+récents puis « Voir les N relevés plus anciens ». Ligne : densité, température, écart au relevé
+de densité précédent (« −3,0 pts »), puis « sam. 15 nov. 18:30 · J+5 », la note, et « En attente
+du réseau ». J+N est l'écart en jours calendaires depuis le brassage. À partir de deux densités,
+une courbe s'affiche au-dessus de la liste (densité en trait plein, température en pointillés,
+légende écrite, info-bulle au toucher) ; sans date de brassage, seule la liste s'affiche. Une valeur
+enregistrée que le calcul refuse affiche « Courbe indisponible : une valeur enregistrée est
+refusée. » et la liste reste lisible.
+
+« Ajouter un relevé » (propriétaire, En fermentation ou En conditionnement) : « Densité »
+(0,980 à 1,200), « Température (°C) » (0 à 110), « Date et heure » (maintenant par défaut,
+« Changer la date »), « Ajouter une note » (2 000 caractères). Densité, température et note sont
+facultatives, sauf les trois vides : « Saisissez une densité, une température ou une note. ». Une
+heure à venir : « L'heure ne peut pas être dans le futur. » ; un jour antérieur au brassage : « Le
+relevé ne peut pas précéder le brassage. ». Après la date d'embouteillage : « Après
+l'embouteillage : ce relevé ne compte pas dans la densité finale. », sans blocage. Quitter avec
+une saisie : « La saisie de ce relevé ne sera pas enregistrée. ».
+
+Un appui sur une ligne (propriétaire) ouvre le formulaire prérempli (« Corriger le relevé ») :
+vider une valeur supprime sa mesure, en ajouter une la crée à la même heure. « Supprimer le relevé »
+propose « Annuler » 10 s, qui rétablit les mêmes saisies. Messages : « Relevé enregistré. »
+(« Annuler » 10 s), « Relevé corrigé. », « Relevé supprimé. », « Relevé supprimé. La densité
+finale revient à la dernière mesure. » si le relevé était retenu ; refus du serveur : « Refusée
+par le serveur : Densité 1020,0 du 15 nov. 18:30. Elle n'est pas enregistrée. ». Un relevé ne
+s'affiche pas dans la Chronologie, et une mesure du jour ne s'affiche pas dans le relevé.
+
+États : « Chargement des relevés », « Impossible de lire les relevés. », « Aucun relevé. Appuyez
+sur Ajouter un relevé. » (propriétaire qui peut en ajouter), « Aucun relevé. », « Relevés
+indisponibles sur cet appareil hors ligne. ».
+
+### Embouteillage
+
+« Embouteiller » (propriétaire, En fermentation) ouvre le formulaire : « Date d'embouteillage »
+(aujourd'hui par défaut, ni future ni antérieure au jour du brassage), « Densité finale
+(facultatif) », « Nombre de bouteilles (facultatif) » (entier de 1 à 9 999), « Volume conditionné
+(L) (facultatif) » (0 exclu à 1 000), « Sucre de resucrage (g) (facultatif) » (0 à 100 000),
+« Nature du sucre (facultatif) » (80 caractères). Densité finale remplie : un relevé de
+fermentation est créé à l'heure d'embouteillage, dans le même envoi que le statut. Seule la date
+est obligatoire : une mise en fût n'a pas de bouteilles. Information : « Le brassin passera En
+conditionnement. », et, si le champ densité finale est vide et qu'aucune densité de fermentation
+n'existe, « Aucune densité mesurée en fermentation : le degré restera indisponible. ».
+Avertissements au-delà de 200 bouteilles, 200 L ou 1 000 g. Sortie avec saisie : « La saisie de
+cet embouteillage ne sera pas enregistrée. ». Annonces : « Embouteillage enregistré. Brassin en
+conditionnement. », « L'enregistrement de « {nom} » a échoué. ». Un retour en arrière garde les
+données, et « Embouteiller » rouvre le formulaire prérempli.
+
+La section « Embouteillage » de la fiche affiche ces cinq lignes (« Non renseigné » si vide).
+« Modifier l'embouteillage » (propriétaire, En conditionnement ou Terminé) rouvre le formulaire
+sans densité finale : elle se corrige dans le relevé. Aucun degré après bouteille ni aucun coût.
+
+### Prévu et mesuré
+
+Le bloc « Prévu et mesuré » compare cinq lignes, Prévu / Mesuré / Écart : Densité initiale, Densité
+finale, Degré, Volume en fermenteur, Rendement. Écart = mesuré moins prévu, en points pour les
+densités et le rendement, en % vol pour le degré, en litres pour le volume, sans couleur. Tout est
+recalculé à l'affichage ; aucune valeur n'est enregistrée, et aucune valeur prévue ne remplace une
+mesure absente (« — » dans sa colonne et dans l'écart).
+
+Densité initiale et volume retenus : la dernière mesure du jour de brassage, ou celle que le
+propriétaire choisit. Densité finale retenue : la dernière densité de fermentation (hors celle
+retenue comme densité initiale) ou celle choisie ; hors statut En fermentation, seuls comptent les
+relevés d'un jour au plus égal à celui de l'embouteillage. Chaque valeur affiche son origine
+(« Refroidissement · 8 nov. 15:20 · Dernière mesure », « Relevé J+12 · 20 nov. 18:30 · Choisie »)
+et « Changer » (propriétaire), qui liste les mesures possibles et, si une mesure est retenue, « Dernière mesure (automatique) ».
+En fermentation sans choix : « Densité finale (dernière mesure) », et le degré suivi de
+« provisoire ». Choisir une mesure écrit l'identifiant, jamais la valeur.
+
+Indisponible, chaque raison nommée : « Aucune densité mesurée le jour du brassage. » (« Saisir la
+densité initiale »), « Aucune densité mesurée en fermentation. », « Dépend de la densité
+initiale. », « Dépend de la densité finale. », « Dépend des deux densités. ». Rendement :
+« Aucune densité initiale mesurée. », « Aucun volume mesuré le jour du brassage. » (« Saisir le
+volume en fermenteur »), « Rendement d'extrait non renseigné : {noms}. », « Indiquez si les sucres
+étaient dans le moût à cette mesure. » ; aucun malt : « Sans malt, le rendement ne s'applique
+pas. ». Si la copie contient un sucre, le propriétaire répond à « Les sucres étaient-ils dans le
+moût à cette mesure ? ». Calcul impossible : « Calcul impossible : la densité finale dépasse la
+densité initiale. Vérifiez les mesures retenues. », « Calcul impossible : les sucres expliquent à
+eux seuls la densité mesurée. ». Rendement au-delà de 100 % : la valeur s'affiche, avec
+« Rendement au-delà de 100 % : vérifiez le volume et la densité. ». Sucres ajoutés après la mesure
+de densité initiale : « Les sucres ajoutés après cette densité initiale ne comptent pas dans ce
+degré. ».
 
 ### Préparer le brassage
 
@@ -400,6 +513,10 @@ recalcule depuis l'heure enregistrée, quel que soit le temps écoulé.
 - Sur le web, seul un onglet déjà ouvert marche sans réseau (« Ne fermez pas cet onglet avant le
   retour du réseau. »).
 - Reporté : le message à la déconnexion avec des saisies en attente (HS8).
+- Sur la fiche d'un brassin déjà ouvert en ligne sur l'appareil, relevés, corrections, suppressions,
+  embouteillage, statuts et mesures retenues s'écrivent aussi sans réseau. Annonce : « … sur
+  l'appareil. Il partira au retour du réseau. ». Une ligne attend avec « En attente du réseau ».
+  Une suppression d'un brassin avec saisies exige toujours le réseau.
 
 ### Calculs affichés
 
@@ -417,6 +534,10 @@ mêmes valeurs.
   l'amertume vaut 0 IBU, même sans densité initiale. Whirlpool et à cru comptent 0 IBU.
 - Couleur (Morey) : volume, et couleur de chaque malt et sucre. Elle ne dépend pas de
   l'équipement.
+
+Le degré, le rendement et les écarts mesurés sur un brassin suivent les mêmes règles : ils se
+recalculent à l'affichage, et leurs messages d'indisponibilité sont décrits dans « Prévu et
+mesuré ».
 
 Un calcul dont une donnée manque affiche « Indisponible » avec une icône (« Dépend de la
 densité initiale. » quand seule celle-ci manque). Aucune valeur par défaut ne remplace une

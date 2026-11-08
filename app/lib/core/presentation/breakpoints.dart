@@ -45,6 +45,14 @@ const double kCalculationPanelWidth = 340;
 /// l'échelle du texte pour que « 1057,9 » ne se coupe pas.
 const double kCalculationTileMinWidth = 120;
 
+/// Largeur minimale d'un champ du relevé (densité, température) pour un texte à 100 %
+/// ; multipliée par l'échelle du texte. Sous cette largeur, ils s'empilent.
+const double kReleveChampMinWidth = 140;
+
+/// Largeur minimale d'une colonne du tableau « Prévu et mesuré », multipliée par
+/// l'échelle du texte. Sous cette largeur, le tableau passe en lignes.
+const double kComparaisonValeurMinWidth = 96;
+
 /// Hauteur sous laquelle l'écran du jour de brassage passe en deux colonnes
 /// (téléphone en paysage).
 const double kCompactMaxHeight = 480;

@@ -1,0 +1,221 @@
+{
+  "description": "Comparaison prévu / mesuré d'un brassin (RR7 à RR9, VR7 à VR12). 'measured' est une valeur, ou {\"unavailable\": [...]}, ou {\"impossible\": ...}. Une valeur prévue absente vaut null : 'difference' est alors null. Écart = mesuré − prévu, en points pour les densités et le rendement, en % vol pour le degré, en litres pour le volume. 'planned' d'un cas : \"complet\" reprend 'planned_complet', null signifie aucune valeur prévue.",
+  "grists": {
+    "ale_blonde_140724": [
+      { "name": "Pale Ale malt", "kind": "malt", "mass_grams": 4620, "points_per_kg_per_litre": 300 },
+      { "name": "WHeat", "kind": "malt", "mass_grams": 1700, "points_per_kg_per_litre": 300 },
+      { "name": "munich light", "kind": "malt", "mass_grams": 90, "points_per_kg_per_litre": 300 },
+      { "name": "Pils", "kind": "malt", "mass_grams": 290, "points_per_kg_per_litre": 300 }
+    ],
+    "malt_sucre": [
+      { "name": "Pils", "kind": "malt", "mass_grams": 5000, "yield_percent": 80 },
+      { "name": "Candi", "kind": "sugar", "mass_grams": 500, "yield_percent": 100 }
+    ],
+    "malt_sans_rendement": [
+      { "name": "Pils", "kind": "malt", "mass_grams": 5000, "yield_percent": null },
+      { "name": "Munich", "kind": "malt", "mass_grams": 500, "yield_percent": 80 }
+    ],
+    "sucre_sans_rendement": [
+      { "name": "Pils", "kind": "malt", "mass_grams": 5000, "yield_percent": 80 },
+      { "name": "Candi", "kind": "sugar", "mass_grams": 500, "yield_percent": null }
+    ],
+    "sans_malt": [
+      { "name": "Candi", "kind": "sugar", "mass_grams": 500, "yield_percent": 100 }
+    ]
+  },
+  "planned_complet": {
+    "original_gravity": 1.0675,
+    "final_gravity": 1.023,
+    "alcohol_by_volume": 5.840625,
+    "fermenter_volume_litres": 20,
+    "mash_efficiency_percent": 72
+  },
+  "cases": [
+    {
+      "id": "ale-blonde-140724",
+      "source": "Ale blonde 140724 - Pale ale : densité mesurée 1.052, 20 L ; 1.012 est une valeur de test",
+      "grist": "ale_blonde_140724",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": null },
+      "expected": {
+        "original_gravity": { "planned": 1.0675, "measured": 1.052, "difference": -15.5 },
+        "final_gravity": { "planned": 1.023, "measured": 1.012, "difference": -11 },
+        "alcohol_by_volume": { "planned": 5.840625, "measured": 5.25, "difference": -0.590625 },
+        "fermenter_volume": { "planned": 20, "measured": 20, "difference": 0 },
+        "mash_efficiency": { "planned": 72, "measured": 51.741294, "difference": -20.258706 }
+      }
+    },
+    {
+      "id": "sans-densite-initiale",
+      "grist": "ale_blonde_140724",
+      "planned": "complet",
+      "measured": { "original_gravity": null, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": null },
+      "expected": {
+        "original_gravity": { "planned": 1.0675, "measured": { "unavailable": ["originalGravity"] }, "difference": null },
+        "final_gravity": { "planned": 1.023, "measured": 1.012, "difference": -11 },
+        "alcohol_by_volume": { "planned": 5.840625, "measured": { "unavailable": ["originalGravity"] }, "difference": null },
+        "fermenter_volume": { "planned": 20, "measured": 20, "difference": 0 },
+        "mash_efficiency": { "planned": 72, "measured": { "unavailable": ["originalGravity"] }, "difference": null }
+      }
+    },
+    {
+      "id": "sans-densite-finale",
+      "grist": "ale_blonde_140724",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": null, "fermenter_volume_litres": 20, "sugars_in_wort": null },
+      "expected": {
+        "original_gravity": { "planned": 1.0675, "measured": 1.052, "difference": -15.5 },
+        "final_gravity": { "planned": 1.023, "measured": { "unavailable": ["finalGravity"] }, "difference": null },
+        "alcohol_by_volume": { "planned": 5.840625, "measured": { "unavailable": ["finalGravity"] }, "difference": null },
+        "fermenter_volume": { "planned": 20, "measured": 20, "difference": 0 },
+        "mash_efficiency": { "planned": 72, "measured": 51.741294, "difference": -20.258706 }
+      }
+    },
+    {
+      "id": "aucune-densite",
+      "grist": "ale_blonde_140724",
+      "planned": "complet",
+      "measured": { "original_gravity": null, "final_gravity": null, "fermenter_volume_litres": null, "sugars_in_wort": null },
+      "expected": {
+        "original_gravity": { "planned": 1.0675, "measured": { "unavailable": ["originalGravity"] }, "difference": null },
+        "final_gravity": { "planned": 1.023, "measured": { "unavailable": ["finalGravity"] }, "difference": null },
+        "alcohol_by_volume": { "planned": 5.840625, "measured": { "unavailable": ["originalGravity", "finalGravity"] }, "difference": null },
+        "fermenter_volume": { "planned": 20, "measured": { "unavailable": ["fermenterVolume"] }, "difference": null },
+        "mash_efficiency": { "planned": 72, "measured": { "unavailable": ["originalGravity", "fermenterVolume"] }, "difference": null }
+      }
+    },
+    {
+      "id": "sans-volume",
+      "grist": "ale_blonde_140724",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": null, "sugars_in_wort": null },
+      "expected": {
+        "original_gravity": { "planned": 1.0675, "measured": 1.052, "difference": -15.5 },
+        "final_gravity": { "planned": 1.023, "measured": 1.012, "difference": -11 },
+        "alcohol_by_volume": { "planned": 5.840625, "measured": 5.25, "difference": -0.590625 },
+        "fermenter_volume": { "planned": 20, "measured": { "unavailable": ["fermenterVolume"] }, "difference": null },
+        "mash_efficiency": { "planned": 72, "measured": { "unavailable": ["fermenterVolume"] }, "difference": null }
+      }
+    },
+    {
+      "id": "rendement-extrait-absent",
+      "grist": "malt_sans_rendement",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": null },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": { "unavailable": ["extractYield"], "items": ["Pils"] }, "difference": null }
+      }
+    },
+    {
+      "id": "sucres-sans-reponse",
+      "grist": "malt_sucre",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": null },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": { "unavailable": ["sugarsInWort"] }, "difference": null }
+      }
+    },
+    {
+      "id": "sucres-dans-le-mout",
+      "grist": "malt_sucre",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": true },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": 54.914357, "difference": -17.085643 }
+      }
+    },
+    {
+      "id": "sucres-hors-du-mout",
+      "grist": "malt_sucre",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": false },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": 67.414357, "difference": -4.585643 }
+      }
+    },
+    {
+      "id": "sucre-hors-du-mout-sans-rendement",
+      "note": "le rendement d'extrait d'un sucre hors du moût n'entre pas dans le calcul",
+      "grist": "sucre_sans_rendement",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": false },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": 67.414357, "difference": -4.585643 }
+      }
+    },
+    {
+      "id": "sucre-dans-le-mout-sans-rendement",
+      "grist": "sucre_sans_rendement",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": true },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": { "unavailable": ["extractYield"], "items": ["Candi"] }, "difference": null }
+      }
+    },
+    {
+      "id": "sans-malt",
+      "grist": "sans_malt",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": true },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": { "unavailable": ["noMalt"] }, "difference": null }
+      }
+    },
+    {
+      "id": "plusieurs-raisons",
+      "grist": "sucre_sans_rendement",
+      "planned": "complet",
+      "measured": { "original_gravity": null, "final_gravity": null, "fermenter_volume_litres": null, "sugars_in_wort": null },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": { "unavailable": ["originalGravity", "fermenterVolume", "extractYield", "sugarsInWort"], "items": ["Candi"] }, "difference": null }
+      }
+    },
+    {
+      "id": "densite-finale-superieure",
+      "grist": "ale_blonde_140724",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.012, "final_gravity": 1.052, "fermenter_volume_litres": 20, "sugars_in_wort": null },
+      "expected": {
+        "final_gravity": { "planned": 1.023, "measured": 1.052, "difference": 29 },
+        "alcohol_by_volume": { "planned": 5.840625, "measured": { "impossible": "finalAboveOriginal" }, "difference": null }
+      }
+    },
+    {
+      "id": "sucres-expliquent-la-densite",
+      "grist": "malt_sucre",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.005, "final_gravity": 1.001, "fermenter_volume_litres": 10, "sugars_in_wort": true },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": { "impossible": "sugarsExplainGravity" }, "difference": null }
+      }
+    },
+    {
+      "id": "rendement-au-dela-de-100",
+      "note": "aucun plafond : la valeur s'affiche, l'écran signale le dépassement",
+      "grist": "malt_sucre",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.09, "final_gravity": 1.012, "fermenter_volume_litres": 25, "sugars_in_wort": false },
+      "expected": {
+        "mash_efficiency": { "planned": 72, "measured": 145.848369, "difference": 73.848369 }
+      }
+    },
+    {
+      "id": "prevu-absent",
+      "grist": "ale_blonde_140724",
+      "planned": null,
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": null },
+      "expected": {
+        "original_gravity": { "planned": null, "measured": 1.052, "difference": null },
+        "final_gravity": { "planned": null, "measured": 1.012, "difference": null },
+        "alcohol_by_volume": { "planned": null, "measured": 5.25, "difference": null },
+        "fermenter_volume": { "planned": null, "measured": 20, "difference": null },
+        "mash_efficiency": { "planned": null, "measured": 51.741294, "difference": null }
+      }
+    }
+  ],
+  "invalid": [
+    { "reason": "densité initiale hors bornes", "measured": { "original_gravity": 1.5, "final_gravity": 1.01, "fermenter_volume_litres": 20, "sugars_in_wort": null } },
+    { "reason": "densité finale hors bornes", "measured": { "original_gravity": 1.05, "final_gravity": 0.5, "fermenter_volume_litres": 20, "sugars_in_wort": null } },
+    { "reason": "volume nul", "measured": { "original_gravity": 1.05, "final_gravity": 1.01, "fermenter_volume_litres": 0, "sugars_in_wort": null } }
+  ]
+}

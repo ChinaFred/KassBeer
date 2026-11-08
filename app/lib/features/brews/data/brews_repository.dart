@@ -10,6 +10,7 @@ import '../../equipment/domain/equipment.dart';
 import '../../recipes/domain/recipe.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import '../domain/releves.dart';
 
 /// Attente maximale d'une réponse du serveur par « Préparer le brassage ».
 const kPrepareWait = Duration(seconds: 15);
@@ -100,6 +101,69 @@ abstract class BrewsRepository {
   /// Réécrit une saisie supprimée, avec son identifiant et son heure (« Annuler »).
   Future<void> restoreEvent({required String brewId, required BrewEvent event});
 
+  /// Écrit un relevé de fermentation : un événement par valeur, ou une note seule,
+  /// dans un `WriteBatch` (FE4, FE5). Rend les identifiants créés par l'appareil.
+  EcritureReleve addReleve({
+    required String brewId,
+    required String ownerUid,
+    required ReleveSaisi releve,
+  });
+
+  /// Corrige [avant] selon [releve] : valeurs, note, heure ; une valeur vidée
+  /// supprime son événement, une valeur ajoutée le crée à la même heure (FE9).
+  Future<void> correctReleve({
+    required String brewId,
+    required String ownerUid,
+    required Releve avant,
+    required ReleveSaisi releve,
+  });
+
+  /// Supprime plusieurs saisies dans un `WriteBatch`.
+  Future<void> deleteEvents({
+    required String brewId,
+    required List<String> eventIds,
+  });
+
+  /// Réécrit plusieurs saisies supprimées, identifiants et heures gardés (FE10).
+  Future<void> restoreEvents({
+    required String brewId,
+    required List<BrewEvent> events,
+  });
+
+  /// Change le statut (ST8) : `status`, `owner_name`, `updated_at`, sans transaction.
+  Future<void> setStatus({
+    required String brewId,
+    required BrewStatus status,
+    required String? ownerName,
+  });
+
+  /// Enregistre l'embouteillage. [nouveauStatut] : `conditioning` à la première
+  /// écriture, nul à la modification. [finalGravity] crée un relevé à `bottled_at`
+  /// dans le même `WriteBatch` (EM1).
+  Future<void> saveBottling({
+    required String brewId,
+    required String ownerUid,
+    required Embouteillage embouteillage,
+    required BrewStatus? nouveauStatut,
+    double? finalGravity,
+    required String? ownerName,
+  });
+
+  /// Désigne la mesure retenue [champ], ou revient à la dernière mesure (`null`).
+  Future<void> setMesureRetenue({
+    required String brewId,
+    required MesureRetenueChamp champ,
+    required String? eventId,
+    required String? ownerName,
+  });
+
+  /// Écrit la réponse à « Les sucres étaient-ils dans le moût ? ».
+  Future<void> setSugarsInWort({
+    required String brewId,
+    required bool value,
+    required String? ownerName,
+  });
+
   /// Supprime un brassin sans saisie : possible hors ligne.
   Future<void> delete(String id);
 
@@ -128,6 +192,43 @@ class BrewEventInput {
   final double? value;
   final String? note;
   final DateTime measuredAt;
+}
+
+/// Identifiants créés par l'appareil pour un relevé, et fin de son écriture.
+typedef EcritureReleve = ({List<String> ids, Future<void> written});
+
+/// Saisie d'un relevé (FE1). Base : SG, °C.
+@immutable
+class ReleveSaisi {
+  const ReleveSaisi({
+    this.gravity,
+    this.temperature,
+    this.note,
+    required this.measuredAt,
+  });
+
+  final double? gravity;
+  final double? temperature;
+  final String? note;
+  final DateTime measuredAt;
+}
+
+/// Données d'embouteillage. Aucun prix ni coût (EM5).
+@immutable
+class Embouteillage {
+  const Embouteillage({
+    required this.bottledAt,
+    this.bottlesCount,
+    this.packagedVolumeL,
+    this.primingSugarG,
+    this.primingSugarName,
+  });
+
+  final DateTime bottledAt;
+  final int? bottlesCount;
+  final double? packagedVolumeL;
+  final double? primingSugarG;
+  final String? primingSugarName;
 }
 
 /// [BrewsRepository] sur Cloud Firestore.
@@ -402,14 +503,21 @@ class FirestoreBrewsRepository implements BrewsRepository {
 
   @override
   Future<void> finish({required String brewId, required String? ownerName}) =>
-      _guard(
-        'brews.finish',
-        () => _brews.doc(brewId).update({
-          'status': BrewStatus.fermenting.storedValue,
-          ...champFacultatif('owner_name', ownerName, creation: false),
-          'updated_at': FieldValue.serverTimestamp(),
-        }),
-      );
+      _writeStatus('brews.finish', brewId, BrewStatus.fermenting, ownerName);
+
+  Future<void> _writeStatus(
+    String feature,
+    String brewId,
+    BrewStatus status,
+    String? ownerName,
+  ) => _guard(
+    feature,
+    () => _brews.doc(brewId).update({
+      'status': status.storedValue,
+      ...champFacultatif('owner_name', ownerName, creation: false),
+      'updated_at': FieldValue.serverTimestamp(),
+    }),
+  );
 
   Map<String, Object?> _stepEvent({
     required String ownerUid,
@@ -520,6 +628,296 @@ class FirestoreBrewsRepository implements BrewsRepository {
     refs: [_events(brewId).doc(event.id)],
     kinds: [event.kind.storedValue],
     write: () => _events(brewId).doc(event.id).set(event.toFirestore()),
+  );
+
+  Map<String, Object?> _releveEvent({
+    required String ownerUid,
+    required BrewEventKind kind,
+    MeasureType? type,
+    double? value,
+    String? note,
+    required DateTime at,
+  }) => BrewEvent(
+    id: '',
+    ownerUid: ownerUid,
+    kind: kind,
+    measureType: type,
+    value: value,
+    note: note,
+    measuredAt: at,
+    phase: PhaseEvenement.fermentation,
+  ).toFirestore();
+
+  String? _texteNote(String? note) {
+    final text = note?.trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
+  @override
+  EcritureReleve addReleve({
+    required String brewId,
+    required String ownerUid,
+    required ReleveSaisi releve,
+  }) {
+    final note = _texteNote(releve.note);
+    final batch = _firestore.batch();
+    final refs = <DocumentReference<Map<String, dynamic>>>[];
+    final kinds = <String>[];
+    void add(Map<String, Object?> event, String kind) {
+      final ref = _events(brewId).doc();
+      batch.set(ref, event);
+      refs.add(ref);
+      kinds.add(kind);
+    }
+
+    if (releve.gravity != null) {
+      add(
+        _releveEvent(
+          ownerUid: ownerUid,
+          kind: BrewEventKind.measurement,
+          type: MeasureType.gravity,
+          value: releve.gravity,
+          note: note,
+          at: releve.measuredAt,
+        ),
+        'measurement:gravity',
+      );
+    }
+    if (releve.temperature != null) {
+      add(
+        _releveEvent(
+          ownerUid: ownerUid,
+          kind: BrewEventKind.measurement,
+          type: MeasureType.temperature,
+          value: releve.temperature,
+          // FE5 : la note va sur le premier événement.
+          note: releve.gravity == null ? note : null,
+          at: releve.measuredAt,
+        ),
+        'measurement:temperature',
+      );
+    }
+    if (refs.isEmpty) {
+      add(
+        _releveEvent(
+          ownerUid: ownerUid,
+          kind: BrewEventKind.note,
+          note: note,
+          at: releve.measuredAt,
+        ),
+        'note',
+      );
+    }
+    return (
+      ids: [for (final ref in refs) ref.id],
+      written: _guardCreation(refs: refs, kinds: kinds, write: batch.commit),
+    );
+  }
+
+  @override
+  Future<void> correctReleve({
+    required String brewId,
+    required String ownerUid,
+    required Releve avant,
+    required ReleveSaisi releve,
+  }) {
+    final note = _texteNote(releve.note);
+    final at = Timestamp.fromDate(releve.measuredAt);
+    final batch = _firestore.batch();
+    final refs = <DocumentReference<Map<String, dynamic>>>[];
+    final kinds = <String>[];
+
+    void slot(
+      BrewEvent? existant,
+      MeasureType type,
+      double? value,
+      String? noteDeSlot,
+    ) {
+      if (existant == null) {
+        if (value == null) return;
+        final ref = _events(brewId).doc();
+        batch.set(
+          ref,
+          _releveEvent(
+            ownerUid: ownerUid,
+            kind: BrewEventKind.measurement,
+            type: type,
+            value: value,
+            note: noteDeSlot,
+            at: releve.measuredAt,
+          ),
+        );
+        refs.add(ref);
+        kinds.add('measurement:${type.storedValue}');
+      } else if (value == null) {
+        batch.delete(_events(brewId).doc(existant.id));
+      } else {
+        batch.update(_events(brewId).doc(existant.id), {
+          'value': value,
+          'note': noteDeSlot,
+          'measured_at': at,
+        });
+      }
+    }
+
+    slot(avant.gravity, MeasureType.gravity, releve.gravity, note);
+    slot(
+      avant.temperature,
+      MeasureType.temperature,
+      releve.temperature,
+      releve.gravity == null ? note : null,
+    );
+
+    final aDesValeurs = releve.gravity != null || releve.temperature != null;
+    final noteEvent = avant.noteEvent;
+    if (noteEvent != null && aDesValeurs) {
+      batch.delete(_events(brewId).doc(noteEvent.id));
+    } else if (noteEvent != null) {
+      batch.update(_events(brewId).doc(noteEvent.id), {
+        'note': note,
+        'measured_at': at,
+      });
+    } else if (!aDesValeurs && note != null) {
+      final ref = _events(brewId).doc();
+      batch.set(
+        ref,
+        _releveEvent(
+          ownerUid: ownerUid,
+          kind: BrewEventKind.note,
+          note: note,
+          at: releve.measuredAt,
+        ),
+      );
+      refs.add(ref);
+      kinds.add('note');
+    }
+    return _guardCreation(refs: refs, kinds: kinds, write: batch.commit);
+  }
+
+  @override
+  Future<void> deleteEvents({
+    required String brewId,
+    required List<String> eventIds,
+  }) => _guard('brews.events_delete', () {
+    final batch = _firestore.batch();
+    for (final id in eventIds) {
+      batch.delete(_events(brewId).doc(id));
+    }
+    return batch.commit();
+  });
+
+  @override
+  Future<void> restoreEvents({
+    required String brewId,
+    required List<BrewEvent> events,
+  }) {
+    final refs = [for (final e in events) _events(brewId).doc(e.id)];
+    return _guardCreation(
+      refs: refs,
+      kinds: [for (final e in events) e.kind.storedValue],
+      write: () {
+        final batch = _firestore.batch();
+        for (final (i, e) in events.indexed) {
+          batch.set(refs[i], e.toFirestore());
+        }
+        return batch.commit();
+      },
+    );
+  }
+
+  @override
+  Future<void> setStatus({
+    required String brewId,
+    required BrewStatus status,
+    required String? ownerName,
+  }) => _writeStatus('brews.status', brewId, status, ownerName);
+
+  @override
+  Future<void> saveBottling({
+    required String brewId,
+    required String ownerUid,
+    required Embouteillage embouteillage,
+    required BrewStatus? nouveauStatut,
+    double? finalGravity,
+    required String? ownerName,
+  }) {
+    final fields = <String, Object?>{
+      'bottled_at': Timestamp.fromDate(embouteillage.bottledAt),
+      ...champFacultatif(
+        'bottles_count',
+        embouteillage.bottlesCount,
+        creation: false,
+      ),
+      ...champFacultatif(
+        'packaged_volume_l',
+        embouteillage.packagedVolumeL,
+        creation: false,
+      ),
+      ...champFacultatif(
+        'priming_sugar_g',
+        embouteillage.primingSugarG,
+        creation: false,
+      ),
+      ...champFacultatif(
+        'priming_sugar_name',
+        embouteillage.primingSugarName,
+        creation: false,
+      ),
+      ...champFacultatif('owner_name', ownerName, creation: false),
+      if (nouveauStatut != null) 'status': nouveauStatut.storedValue,
+      'updated_at': FieldValue.serverTimestamp(),
+    };
+    if (finalGravity == null) {
+      return _guard('brews.bottling', () => _brews.doc(brewId).update(fields));
+    }
+    final batch = _firestore.batch();
+    batch.update(_brews.doc(brewId), fields);
+    final eventRef = _events(brewId).doc();
+    // Le relevé est posé à bottled_at : il reste dans la densité finale (VR2).
+    batch.set(
+      eventRef,
+      _releveEvent(
+        ownerUid: ownerUid,
+        kind: BrewEventKind.measurement,
+        type: MeasureType.gravity,
+        value: finalGravity,
+        at: embouteillage.bottledAt,
+      ),
+    );
+    return _guardCreation(
+      refs: [eventRef],
+      kinds: const ['measurement:gravity'],
+      write: batch.commit,
+    );
+  }
+
+  @override
+  Future<void> setMesureRetenue({
+    required String brewId,
+    required MesureRetenueChamp champ,
+    required String? eventId,
+    required String? ownerName,
+  }) => _guard(
+    'brews.retained_measure',
+    () => _brews.doc(brewId).update({
+      ...champFacultatif(champ.storedField, eventId, creation: false),
+      ...champFacultatif('owner_name', ownerName, creation: false),
+      'updated_at': FieldValue.serverTimestamp(),
+    }),
+  );
+
+  @override
+  Future<void> setSugarsInWort({
+    required String brewId,
+    required bool value,
+    required String? ownerName,
+  }) => _guard(
+    'brews.sugars_in_wort',
+    () => _brews.doc(brewId).update({
+      'sugars_in_wort': value,
+      ...champFacultatif('owner_name', ownerName, creation: false),
+      'updated_at': FieldValue.serverTimestamp(),
+    }),
   );
 
   @override

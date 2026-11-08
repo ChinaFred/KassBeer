@@ -117,8 +117,10 @@ class PlanDuJour {
       now: now,
     );
     final recordByStep = {for (final r in reduction.records) r.stepId: r};
-    final saisies = events.where((e) => e.isMeasureOrNote).toList()
-      ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
+    // Un relevé de fermentation n'est pas une saisie du jour (FE11).
+    final saisies =
+        events.where((e) => e.isMeasureOrNote && !e.isFermentation).toList()
+          ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
     final doublons = <String, List<StepEvent>>{};
     final anomalies = <StepEventIssue>[];
     String? incoherente;

@@ -500,6 +500,11 @@ void main() {
     );
     expect(app.auth.tokenReads, greaterThanOrEqualTo(1));
     final lectures = app.auth.tokenReads;
+    int? lecturesAuFinish;
+    app.brews.serverAnswer = () {
+      lecturesAuFinish = app.auth.tokenReads;
+      return Completer<void>().future;
+    };
     await tester.tap(find.byTooltip('Plus d\'actions'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Terminer le brassage'));
@@ -508,6 +513,9 @@ void main() {
     await tester.pumpAndSettle();
     final write = app.brews.writes.singleWhere((w) => w.kind == 'finish');
     expect(write.detail['owner_name'], 'Bruno Brasseur');
-    expect(app.auth.tokenReads, lectures);
+    // La fiche ouverte après la fin lit le jeton pour ses propres actions (R1) ;
+    // « Terminer » n'en a provoqué aucune lecture avant d'écrire.
+    expect(lecturesAuFinish, lectures);
+    expect(app.auth.tokenReads, lectures + 1);
   });
 }

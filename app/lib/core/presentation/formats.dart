@@ -125,6 +125,52 @@ String formatDate(DateTime date) =>
 String formatDateCourte(DateTime date) =>
     '${date.day} ${_moisCourts[date.month - 1]} ${date.year}';
 
+/// Date et heure sans l'année : « sam. 15 nov. 18:30 ».
+String formatJourHeure(DateTime when) =>
+    '${_joursCourts[when.weekday - 1]} ${formatJourCourtHeure(when)}';
+
+/// Date courte et heure sans l'année : « 15 nov. 18:30 ».
+String formatJourCourtHeure(DateTime when) =>
+    '${when.day} ${_moisCourts[when.month - 1]} ${formatHeure(when)}';
+
+const _joursComplets = [
+  'Lundi',
+  'Mardi',
+  'Mercredi',
+  'Jeudi',
+  'Vendredi',
+  'Samedi',
+  'Dimanche',
+];
+const _moisComplets = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre',
+];
+
+/// Lecture d'une date et d'une heure pour un lecteur d'écran :
+/// « Samedi 15 novembre 18 heures 30 ».
+String jourHeureParle(DateTime when) =>
+    '${_joursComplets[when.weekday - 1]} ${when.day} '
+    '${_moisComplets[when.month - 1]} ${when.hour} heures '
+    '${_deuxChiffres(when.minute)}';
+
+/// Écart signé, sans couleur : « +2,0 pts », « −3,0 pts », « 0,0 pts ».
+String formatEcart(double ecart, {String unite = 'pts'}) {
+  final texte = formatNombre(ecart.abs(), decimales: 1, fixe: true);
+  final signe = texte == '0,0' ? '' : (ecart < 0 ? '−' : '+');
+  return '$signe$texte$nbsp$unite';
+}
+
 /// Nombre d'étapes, accordé : « 1 étape », « 11 étapes ».
 String formatEtapes(int nombre) => '$nombre étape${nombre > 1 ? 's' : ''}';
 
@@ -200,27 +246,35 @@ abstract final class ErreursNombre {
   static const illisible = 'Nombre illisible.';
   static const positif = 'Nombre positif attendu.';
   static const tropGrand = 'Nombre trop grand.';
-  static String entre(double max) => 'Entre 0 et ${formatNombre(max)}.';
+  static const entier = 'Nombre entier attendu.';
+  static String entre(double max, {double min = 0}) =>
+      'Entre ${formatNombre(min)} et ${formatNombre(max)}.';
 }
 
 /// Erreur du texte [texte] d'un champ numérique, ou `null` s'il est accepté.
 ///
-/// Le minimum est 0, inclus, sauf si [minExclu] est vrai (volume strictement
+/// Le minimum est [min], inclus, sauf si [minExclu] est vrai (volume strictement
 /// positif) ; [max] est inclus ; à partir de [kNombreMaximum], le nombre est refusé,
-/// comme dans `firestore.rules` (`optNumber`, borne exclue).
+/// comme dans `firestore.rules` (`optNumber`, borne exclue). [entier] refuse un nombre
+/// décimal.
 String? erreurNombre(
   String texte, {
   bool obligatoire = false,
   double? max,
+  double min = 0,
   bool minExclu = false,
+  bool entier = false,
 }) {
   final lu = lireNombre(texte);
   if (lu.illisible) return ErreursNombre.illisible;
   final value = lu.valeur;
   if (value == null) return obligatoire ? ErreursNombre.obligatoire : null;
-  final tooLow = minExclu ? value <= 0 : value < 0;
+  if (entier && value != value.truncateToDouble()) return ErreursNombre.entier;
+  final tooLow = minExclu ? value <= min : value < min;
   if (tooLow || (max != null && value > max)) {
-    return max == null ? ErreursNombre.positif : ErreursNombre.entre(max);
+    return max == null
+        ? ErreursNombre.positif
+        : ErreursNombre.entre(max, min: min);
   }
   if (value >= kNombreMaximum) return ErreursNombre.tropGrand;
   return null;

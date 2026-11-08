@@ -60,6 +60,14 @@ class LecteurChamps {
     throw DocumentIllisible(_path(key), 'nombre attendu');
   }
 
+  /// Booléen facultatif.
+  bool? boolFacultatif(String key) {
+    final value = data[key];
+    if (value == null) return null;
+    if (value is bool) return value;
+    throw DocumentIllisible(_path(key), 'booléen attendu');
+  }
+
   /// Liste de maps facultative ; absente rend une liste vide.
   List<LecteurChamps> liste(String key) {
     final value = data[key];

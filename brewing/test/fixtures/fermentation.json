@@ -1,0 +1,86 @@
+{
+  "description": "Série d'un relevé de fermentation (FE6 à FE8, ADR-004). Le numéro de jour (J+N) est l'écart en jours calendaires depuis brewed_at. day_offset = J+N + fraction de la journée locale : une journée de changement d'heure compte pour un jour. Les heures s'écrivent sans fuseau : elles sont lues comme des heures locales de l'appareil.",
+  "cases": [
+    {
+      "id": "ordre-par-heure",
+      "brewed_at": "2026-11-08T15:20:00",
+      "readings": [
+        { "measured_at": "2026-11-15T18:30:00", "gravity": 1.02, "temperature": 18.5 },
+        { "measured_at": "2026-11-10T06:00:00", "gravity": 1.04, "temperature": 19 },
+        { "measured_at": "2026-11-12T12:00:00", "gravity": 1.03, "temperature": null }
+      ],
+      "expected": [
+        { "measured_at": "2026-11-10T06:00:00", "day_number": 2, "day_offset": 2.25, "gravity": 1.04, "temperature": 19, "gravity_change_points": null },
+        { "measured_at": "2026-11-12T12:00:00", "day_number": 4, "day_offset": 4.5, "gravity": 1.03, "temperature": null, "gravity_change_points": -10 },
+        { "measured_at": "2026-11-15T18:30:00", "day_number": 7, "day_offset": 7.770833333, "gravity": 1.02, "temperature": 18.5, "gravity_change_points": -10 }
+      ]
+    },
+    {
+      "id": "densite-absente",
+      "note": "un point sans densité reste dans la série et ne coupe pas l'écart à la densité précédente",
+      "brewed_at": "2026-11-08T10:00:00",
+      "readings": [
+        { "measured_at": "2026-11-09T12:00:00", "gravity": 1.05, "temperature": 20 },
+        { "measured_at": "2026-11-10T12:00:00", "gravity": null, "temperature": 19 },
+        { "measured_at": "2026-11-11T12:00:00", "gravity": 1.03, "temperature": 18 }
+      ],
+      "expected": [
+        { "measured_at": "2026-11-09T12:00:00", "day_number": 1, "day_offset": 1.5, "gravity": 1.05, "temperature": 20, "gravity_change_points": null },
+        { "measured_at": "2026-11-10T12:00:00", "day_number": 2, "day_offset": 2.5, "gravity": null, "temperature": 19, "gravity_change_points": null },
+        { "measured_at": "2026-11-11T12:00:00", "day_number": 3, "day_offset": 3.5, "gravity": 1.03, "temperature": 18, "gravity_change_points": -20 }
+      ]
+    },
+    {
+      "id": "changement-d-heure-printemps",
+      "note": "dimanche 29 mars 2026 à 02:00, la France passe à l'heure d'été : 23 h ce jour-là",
+      "brewed_at": "2026-03-28T18:00:00",
+      "readings": [
+        { "measured_at": "2026-03-30T06:00:00", "gravity": 1.05, "temperature": null }
+      ],
+      "expected": [
+        { "measured_at": "2026-03-30T06:00:00", "day_number": 2, "day_offset": 2.25, "gravity": 1.05, "temperature": null, "gravity_change_points": null }
+      ]
+    },
+    {
+      "id": "changement-d-heure-automne",
+      "note": "dimanche 25 octobre 2026 à 03:00, la France repasse à l'heure d'hiver : 25 h ce jour-là",
+      "brewed_at": "2026-10-24T22:00:00",
+      "readings": [
+        { "measured_at": "2026-10-26T00:00:00", "gravity": 1.05, "temperature": null }
+      ],
+      "expected": [
+        { "measured_at": "2026-10-26T00:00:00", "day_number": 2, "day_offset": 2, "gravity": 1.05, "temperature": null, "gravity_change_points": null }
+      ]
+    },
+    {
+      "id": "deux-releves-le-meme-jour",
+      "brewed_at": "2026-11-08T15:20:00",
+      "readings": [
+        { "measured_at": "2026-11-10T18:00:00", "gravity": 1.03, "temperature": 18 },
+        { "measured_at": "2026-11-10T09:00:00", "gravity": 1.033, "temperature": 18.5 }
+      ],
+      "expected": [
+        { "measured_at": "2026-11-10T09:00:00", "day_number": 2, "day_offset": 2.375, "gravity": 1.033, "temperature": 18.5, "gravity_change_points": null },
+        { "measured_at": "2026-11-10T18:00:00", "day_number": 2, "day_offset": 2.75, "gravity": 1.03, "temperature": 18, "gravity_change_points": -3 }
+      ]
+    },
+    {
+      "id": "meme-jour-que-le-brassage",
+      "brewed_at": "2026-11-08T23:30:00",
+      "readings": [
+        { "measured_at": "2026-11-08T23:45:00", "gravity": 1.06, "temperature": null },
+        { "measured_at": "2026-11-09T00:15:00", "gravity": 1.059, "temperature": null }
+      ],
+      "expected": [
+        { "measured_at": "2026-11-08T23:45:00", "day_number": 0, "day_offset": 0.989583333, "gravity": 1.06, "temperature": null, "gravity_change_points": null },
+        { "measured_at": "2026-11-09T00:15:00", "day_number": 1, "day_offset": 1.010416667, "gravity": 1.059, "temperature": null, "gravity_change_points": -1 }
+      ]
+    },
+    {
+      "id": "serie-vide",
+      "brewed_at": "2026-11-08T15:20:00",
+      "readings": [],
+      "expected": []
+    }
+  ]
+}

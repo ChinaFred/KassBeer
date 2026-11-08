@@ -62,6 +62,23 @@ enum MeasureType {
   }
 }
 
+/// Moment d'un événement ; absent en base pour le jour de brassage.
+enum PhaseEvenement {
+  fermentation('fermentation');
+
+  const PhaseEvenement(this.storedValue);
+
+  final String storedValue;
+
+  static PhaseEvenement? fromStored(Object? value) {
+    if (value == null) return null;
+    for (final phase in values) {
+      if (phase.storedValue == value) return phase;
+    }
+    throw const DocumentIllisible('phase', 'phase inconnue');
+  }
+}
+
 /// Valeur d'une mesure à l'écran : « 67,5 °C », « 1057,9 », « 23,0 L », « pH 5,42 ».
 String libelleMesure(MeasureType type, double value) => switch (type) {
   MeasureType.temperature => formatCelsius(value),
@@ -84,6 +101,7 @@ class BrewEvent {
     this.value,
     this.note,
     required this.measuredAt,
+    this.phase,
     this.hasPendingWrites = false,
   });
 
@@ -99,6 +117,9 @@ class BrewEvent {
 
   /// Heure de l'appareil, source de toute durée.
   final DateTime measuredAt;
+
+  /// Relevé de fermentation, ou `null` pour le jour de brassage (FE4).
+  final PhaseEvenement? phase;
 
   /// Écriture locale pas encore reçue par le serveur.
   final bool hasPendingWrites;
@@ -127,6 +148,7 @@ class BrewEvent {
       value: read.nombreFacultatif('value'),
       note: read.texteFacultatif('note'),
       measuredAt: measuredAt,
+      phase: PhaseEvenement.fromStored(data['phase']),
       hasPendingWrites: hasPendingWrites,
     );
   }
@@ -149,9 +171,18 @@ class BrewEvent {
     'value': value,
     if (note != null) 'note': note,
     'measured_at': Timestamp.fromDate(measuredAt),
+    if (phase != null) 'phase': phase!.storedValue,
     'created_at': FieldValue.serverTimestamp(),
   };
 
   bool get isMeasureOrNote =>
       kind == BrewEventKind.measurement || kind == BrewEventKind.note;
+
+  bool get isFermentation => phase == PhaseEvenement.fermentation;
+
+  bool get isGravity =>
+      kind == BrewEventKind.measurement && measureType == MeasureType.gravity;
+
+  bool get isVolume =>
+      kind == BrewEventKind.measurement && measureType == MeasureType.volume;
 }

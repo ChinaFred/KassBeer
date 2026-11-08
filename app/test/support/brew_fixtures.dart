@@ -34,6 +34,12 @@ Brew unBrassin({
   List<BrewStepLine> steps = const [palier, ebullition],
   DateTime? brewedAt,
   DateTime? plannedFor,
+  DateTime? bottledAt,
+  int? bottlesCount,
+  String? ogEventId,
+  String? fgEventId,
+  bool? sugarsInWort,
+  RecipeContent? recipe,
 }) => Brew(
   id: id,
   ownerUid: owner,
@@ -41,10 +47,45 @@ Brew unBrassin({
   name: 'Blonde du jour',
   status: status,
   recipeId: 'r1',
-  recipe: RecipeContent(name: 'Blonde', brewSteps: steps),
+  recipe: recipe ?? RecipeContent(name: 'Blonde', brewSteps: steps),
   equipment: equipementTest,
   plannedFor: plannedFor,
   brewedAt: brewedAt,
+  bottledAt: bottledAt,
+  bottlesCount: bottlesCount,
+  ogEventId: ogEventId,
+  fgEventId: fgEventId,
+  sugarsInWort: sugarsInWort,
+);
+
+/// Relevé de fermentation (phase `fermentation`, sans étape).
+BrewEvent releve(
+  String id,
+  MeasureType type,
+  double value,
+  DateTime at, {
+  String? note,
+  bool pending = false,
+}) => BrewEvent(
+  id: id,
+  ownerUid: 'uid-brasseur',
+  kind: BrewEventKind.measurement,
+  measureType: type,
+  value: value,
+  note: note,
+  measuredAt: at,
+  phase: PhaseEvenement.fermentation,
+  hasPendingWrites: pending,
+);
+
+/// Note de fermentation seule.
+BrewEvent noteDeReleve(String id, String note, DateTime at) => BrewEvent(
+  id: id,
+  ownerUid: 'uid-brasseur',
+  kind: BrewEventKind.note,
+  note: note,
+  measuredAt: at,
+  phase: PhaseEvenement.fermentation,
 );
 
 BrewEvent debut(String id, String stepKey, DateTime at) => BrewEvent(

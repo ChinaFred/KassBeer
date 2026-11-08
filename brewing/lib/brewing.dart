@@ -8,11 +8,13 @@ library;
 
 export 'src/alcohol.dart';
 export 'src/bitterness.dart';
+export 'src/brew_comparison.dart';
 export 'src/brew_steps.dart';
 export 'src/color.dart';
 export 'src/cost.dart';
 export 'src/errors.dart';
 export 'src/fermentables.dart';
+export 'src/fermentation.dart';
 export 'src/gravity.dart';
 export 'src/ingredient_key.dart';
 export 'src/recipe_calculation.dart';

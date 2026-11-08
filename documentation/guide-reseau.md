@@ -230,6 +230,11 @@ d'écran est pris à l'ouverture de l'écran du jour. P17 couvre tout canal de p
 même nom côté Dart et Kotlin, garde web, erreur rapportée, test Dart du canal, APK compilé.
 Un nom de canal mal recopié ne se voit dans aucun test Dart, seulement sur le téléphone.
 
+Depuis l'incrément v0.4 (ADR-004), `relecteur-regles` vérifie P18 : `fl_chart` figé en version
+exacte, importé par un seul fichier, couleurs lues dans le thème, résumé pour les lecteurs
+d'écran. Ce fichier unique permet de retirer le paquet sans toucher au reste. P1 s'étend à
+`deferred as` : un fichier chargé à part exige sa règle `no-cache` et un nouvel ADR.
+
 Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
 `--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans
 ce fichier local, jamais versionné. État de la production et outils du poste :

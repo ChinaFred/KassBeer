@@ -6,6 +6,28 @@ données, outillage), ou les deux.
 
 ## 2026-11-08
 
+### v0.1.11 — fonctionnel
+
+L'après-brassage arrive (incrément v0.4) : un brassin va de « Prévu » à « Terminé » sans Excel.
+La fiche d'un brassin suit la fermentation, l'embouteillage et la fin, avec un retour en arrière
+à chaque statut et l'abandon. Le relevé de fermentation note densité, température, date et note,
+montre l'écart à la mesure précédente et trace une courbe de densité et de température. Le bloc
+« Prévu et mesuré » compare densités, degré, volume et rendement réel. Une donnée absente affiche
+« Indisponible » et sa raison. L'embouteillage note la date, la densité finale, les bouteilles,
+le volume et le sucre, sans calcul de degré après bouteille. Ces saisies marchent sans réseau.
+
+### v0.1.11 — technique
+
+`brewing/` : comparaison prévu / mesuré, rendement réel sans exception (`readMashEfficiency`
+remplace `measuredMashEfficiency`), `FermentationPoint`, avec leurs fixtures. Règles : champs
+d'embouteillage et mesures retenues sur `brews/`, `phase` sur les événements, bornes de chaque
+mesure selon sa nature, identiques à celles des formulaires. ADR-004 : `fl_chart` figé, importé
+par `trace_courbe.dart` seul ; contrôle P18 ajouté, P1 étendu à `deferred as`. La courbe ajoute
+93 582 octets à `main.dart.js`, de 4 242 444 à 4 336 026, corrections de relecture comprises.
+L'APK release, mesuré avant et après toute la v0.4 avec une clé jetable, passe de 61 102 880 à
+62 495 656 octets (+1 392 776), sous le seuil de 2 Mo fixé pour la courbe seule.
+
+Paquets — `app/pubspec.lock` : `fl_chart` 1.3.0 ajouté, aucune autre version ne change.
 ### v0.1.10 — technique
 
 Le tag d'une version se pose après la CI verte sur `main` (`CLAUDE.md`, « Chaîne de travail »,
