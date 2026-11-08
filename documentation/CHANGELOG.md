@@ -6,6 +6,12 @@ données, outillage), ou les deux.
 
 ## 2026-11-08
 
+### v0.1.10 — technique
+
+Le tag d'une version se pose après la CI verte sur `main` (`CLAUDE.md`, « Chaîne de travail »,
+étape 6). Posé avant, il fait échouer `check-version.mjs` sur le push de la fusion, et
+`deploy.yml` ne déploie pas : c'est arrivé à la v0.1.9 (leçon 16).
+
 ### v0.1.9 — fonctionnel
 
 L'application porte son propre logo, le médaillon Kass'Beer, sur Android et sur le web. Sur
