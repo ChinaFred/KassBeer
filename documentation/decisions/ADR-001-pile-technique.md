@@ -3,7 +3,8 @@
 - **Statut** : accepté le 2026-11-07
 - **Date** : 2026-11-06
 - **Remplace** : —
-- **Modifié par** : ADR-002 (dépôt public, minutes de la CI)
+- **Modifié par** : ADR-002 (dépôt public, minutes de la CI) ; ADR-005 (recettes en BeerJSON,
+  référentiels, et export BeerXML avancé avant la v1, malgré les mentions « après la v1 » ci-dessous)
 
 ## Contexte
 

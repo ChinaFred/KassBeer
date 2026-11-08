@@ -77,7 +77,7 @@ les contraintes.
   test de `brewing/test/fixtures/cost.json` sont publics (ADR-002).
 - **Conservation, sauvegarde, export** : conservation sans limite ; sauvegarde gérée de
   Firestore ; export JSON dans Admin (ce que le groupe voit, plus les prix de
-  l'administrateur) ; export BeerXML après la v1 (ADR-001).
+  l'administrateur) ; import et export BeerJSON et BeerXML à venir (ADR-005).
 
 ### Plateformes et exploitation
 
@@ -122,6 +122,7 @@ est une étape de la planification. Il ne change pas la règle de numérotation 
 | v0.2 | Équipements et recettes, avec les calculs affichés (densités initiale et finale, degré, IBU, EBC) et la liste des données à compléter | la recette du prochain brassin est saisie ; un autre brasseur la lit sans pouvoir la modifier |
 | v0.3 | Brassin (création depuis une recette et un équipement, copie figée), « Préparer le brassage », jour de brassage hors ligne : chronologie (`brew_steps`), minuteurs, heures recalculées, mesures, écran allumé | un brassage à blanc complet sur l'APK en mode avion, application tuée puis relancée, minuteur juste, mesures arrivées au retour du réseau |
 | v0.4 | Après le brassage : fermentation, densité finale et degré mesurés, rendement réel, bouteilles, statut jusqu'à « terminé » | un brassin va de « prévu » à « terminé » sans Excel : seuil du prochain brassin (D1) |
+| Socle BeerJSON (ADR-005, ajouté le 2026-11-08) | Recettes en BeerJSON partiel (L1), puis échange BeerJSON et BeerXML, référentiels d'ingrédients, 415 recettes publiques (L2 à L4) | L1 : brassage à blanc réussi sur l'APK en mode avion, recettes et brassins au nouveau format ; L2 à L4 : voir ADR-005 |
 | v0.5 | Mes prix, coût d'une recette (total et par bouteille), coût réel figé d'un brassin | un prix manquant affiche la panne ; le coût d'une fiche connue est retrouvé |
 | v0.6 | Admin › Import des 16 fiches | 16 fiches créées, 0 en erreur, divergences listées, aucun doublon au second import |
 
