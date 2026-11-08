@@ -88,6 +88,71 @@ String formatJours(double minutes) {
   return '$text$nbsp${days < 2 ? 'jour' : 'jours'}';
 }
 
+String _deuxChiffres(int value) => value.toString().padLeft(2, '0');
+
+/// Heure sur 24 h : « 12:42 ».
+String formatHeure(DateTime when) =>
+    '${_deuxChiffres(when.hour)}:${_deuxChiffres(when.minute)}';
+
+/// Durée en heures et minutes : « 45 min », « 5 h 40 ».
+String formatDuree(Duration duree) {
+  final minutes = duree.inMinutes;
+  if (minutes < 60) return '$minutes${nbsp}min';
+  return '${minutes ~/ 60}${nbsp}h$nbsp${_deuxChiffres(minutes % 60)}';
+}
+
+const _joursCourts = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+const _moisCourts = [
+  'janv.',
+  'févr.',
+  'mars',
+  'avr.',
+  'mai',
+  'juin',
+  'juil.',
+  'août',
+  'sept.',
+  'oct.',
+  'nov.',
+  'déc.',
+];
+
+/// Date avec le jour : « sam. 15 nov. 2026 ».
+String formatDate(DateTime date) =>
+    '${_joursCourts[date.weekday - 1]} ${formatDateCourte(date)}';
+
+/// Date sans le jour : « 11 févr. 2024 ».
+String formatDateCourte(DateTime date) =>
+    '${date.day} ${_moisCourts[date.month - 1]} ${date.year}';
+
+/// Nombre d'étapes, accordé : « 1 étape », « 11 étapes ».
+String formatEtapes(int nombre) => '$nombre étape${nombre > 1 ? 's' : ''}';
+
+/// pH : « 5,42 ».
+String formatPh(double ph) => formatNombre(ph, fixe: true);
+
+/// Minuteur : « 32:15 », « 1:05:12 », et « +04:12 » pour un dépassement.
+String formatMinuteur(Duration duree, {bool depassement = false}) {
+  final secondes = duree.inSeconds;
+  final heures = secondes ~/ 3600;
+  final minutes = (secondes % 3600) ~/ 60;
+  final reste = _deuxChiffres(secondes % 60);
+  final text = heures > 0
+      ? '$heures:${_deuxChiffres(minutes)}:$reste'
+      : '${_deuxChiffres(minutes)}:$reste';
+  return depassement ? '+$text' : text;
+}
+
+/// Lecture du minuteur pour un lecteur d'écran : « 32 minutes 15 secondes ».
+String minuteurParle(Duration duree) {
+  final secondes = duree.inSeconds;
+  final minutes = secondes ~/ 60;
+  return [
+    if (minutes > 0) '$minutes minute${minutes > 1 ? 's' : ''}',
+    '${secondes % 60} seconde${secondes % 60 > 1 ? 's' : ''}',
+  ].join(' ');
+}
+
 /// Évaporation : « 3,5 L/h ».
 String formatLitresParHeure(double value) => '${formatNombre(value)}${nbsp}L/h';
 

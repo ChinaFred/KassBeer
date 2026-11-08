@@ -12,6 +12,7 @@ import 'app.dart';
 import 'core/providers.dart';
 import 'core/services/error_report_service.dart';
 import 'features/auth/data/auth_repository.dart';
+import 'features/brews/data/brews_repository.dart';
 import 'features/equipment/data/equipment_repository.dart';
 import 'features/members/data/members_repository.dart';
 import 'features/recipes/data/recipes_repository.dart';
@@ -112,6 +113,9 @@ Future<void> main() async {
         ),
         equipmentRepositoryProvider.overrideWithValue(
           FirestoreEquipmentRepository(errorReportService: errors),
+        ),
+        brewsRepositoryProvider.overrideWithValue(
+          FirestoreBrewsRepository(errorReportService: errors),
         ),
       ],
       child: const KassBeerApp(),

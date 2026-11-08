@@ -1,5 +1,5 @@
-// owner_name de recipes/ et equipment/ (A1) : facultatif ; présent, c'est le nom du
-// jeton de celui qui écrit, de 1 à 80 caractères. Valeurs des listes du modèle (A5).
+// owner_name de recipes/, equipment/ (A1) et brews/ (v0.3) : facultatif ; présent, c'est
+// le nom du jeton de celui qui écrit, de 1 à 80 caractères. Valeurs des listes du modèle (A5).
 
 import { describe, it } from "node:test";
 import {
@@ -41,6 +41,7 @@ const UPDATE_A_WITH_NAME = {
 const COLLECTIONS = {
   recipes: { existing: "r-a", make: recipe },
   equipment: { existing: "e-a", make: equipment },
+  brews: { existing: "b-a", make: brew },
 };
 
 for (const [collection, { existing, make }] of Object.entries(COLLECTIONS)) {

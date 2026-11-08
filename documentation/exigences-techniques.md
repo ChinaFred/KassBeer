@@ -44,20 +44,23 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | Dossier | Contenu |
 |---|---|
 | `lib/main.dart` | démarrage : configuration, Firebase, cache Firestore, version, journal d'erreurs, `google_sign_in` (Android), `ProviderScope` |
-| `lib/app.dart` | `KassBeerApp` (thème, routeur), `MissingConfigurationApp`, `StartupFailureApp` |
+| `lib/app.dart` | `KassBeerApp` (thème, routeur), `MissingConfigurationApp`, `StartupFailureApp` ; les trois portent `locale: fr` et les délégués `Global*` (`flutter_localizations`) |
 | `lib/firebase_options.dart` | `FirebaseEnv` : configuration lue par `String.fromEnvironment` |
 | `lib/core/providers.dart` | providers des services, fournis par `main.dart` ou par les tests |
 | `lib/core/services/error_report_service.dart` | `ErrorReportService`, `ErrorReportFields` |
 | `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) |
-| `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour |
+| `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
-| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `lireNombre`, `erreurNombre`), `ChampNombre`, `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, confirmations d'abandon et de suppression), `fiche.dart` (`LigneFiche`, `TitreSection`), `LogoKassBeer` |
+| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `lireNombre`, `erreurNombre`), `ChampNombre`, `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, confirmations d'abandon et de suppression), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` |
+| `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
 | `lib/features/equipment/` | `EquipmentRepository` (`equipment/`), `Equipment`, `EquipmentContent`, `EquipmentKind` ; liste, fiche, éditeur |
-| `lib/features/recipes/` | `RecipesRepository` (`recipes/`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document ↔ `brewing/`, tri, duplication ; liste, fiche, éditeur, formulaires des lignes, vue des calculs |
-| `lib/features/admin/`, `brews/` | écran Admin ; Brassins à venir |
+| `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document ↔ `brewing/`, tri, duplication ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin), formulaires des lignes, vue des calculs |
+| `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType` ; liste, fiche, « Nouveau brassin » |
+| `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
+| `lib/features/admin/` | écran Admin |
 
 **Configuration Firebase.** Aucune valeur dans le code. `firebase_options.dart` lit, par
 `--dart-define-from-file=firebase.env.json` (fichier ignoré par Git ; modèle
@@ -94,7 +97,7 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 
 | Provider | Type | Rôle |
 |---|---|---|
-| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `recipesRepositoryProvider`, `equipmentRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
+| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `recipesRepositoryProvider`, `equipmentRepositoryProvider`, `brewsRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
 | `sessionUserProvider` | `StreamProvider<SessionUser?>` | `authStateChanges()` |
 | `memberLookupProvider(emailKey)` | `StreamProvider.family<MemberLookup, String>` | `members/{email en minuscules}`, avec les métadonnées |
 | `accessStateProvider` | `Provider<AccessState>` | `AccessLoading`, `AccessSignedOut`, `AccessNotInvited`, `AccessFailed`, `AccessGranted(user, member, offline)` |
@@ -103,6 +106,11 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 | `grantedAccessProvider` | `Provider<AccessGranted?>` | membre connecté (uid, nom, `offline`), `null` pendant une transition |
 | `recipesListProvider` | `StreamProvider.autoDispose<ListeLue<Recipe>>` | `recipes/` entier, avec `fromCache` |
 | `equipmentListProvider` | `StreamProvider.autoDispose<ListeLue<Equipment>>` | `equipment/` entier, avec `fromCache` |
+| `brewsListProvider` | `StreamProvider.autoDispose<ListeLue<Brew>>` | `brews/` entier, avec `fromCache` |
+| `brewEventsProvider(brewId)` | `StreamProvider.autoDispose.family<ListeLue<BrewEvent>, String>` | saisies d'un brassin, `hasPendingWrites` par document |
+| `horlogeProvider` | `Provider<DateTime Function()>` | heure de l'appareil, injectée en test ; source de toute durée du minuteur |
+| `screenWakelockProvider`, `alerteMinuteurProvider` | `Provider` | verrou d'écran, alerte de fin de minuteur |
+| `preparedBrewsProvider`, `planReportsProvider`, `repriseTraiteeProvider` | `Provider` | mémoire de session, jamais écrite : brassins préparés, anomalies déjà rapportées, reprise au lancement traitée |
 | `routerProvider` | `Provider<GoRouter>` | routeur, rafraîchi à chaque changement de `accessStateProvider` |
 
 Aucun de ces providers ne réessaie seul (`retry` rend `null`) : une panne s'affiche, et
@@ -159,6 +167,60 @@ impossible
 ou plus longue que 3 s (`kTokenNameWait`, jeton expiré hors ligne) : l'erreur est rapportée
 (`auth.token_name`) et l'enregistrement part sans nom au lieu d'attendre le réseau.
 
+**Brassins et jour de brassage.** `FirestoreBrewsRepository` écrit dans le cache dès
+l'appel ; les `Future` rendues se terminent à la réponse du serveur. Aucune transaction, aucun
+`Source.server` sur le code de l'écran du jour (P2) ; `Source.server` n'apparaît que dans
+`deleteWithEvents`, appelée depuis la fiche.
+
+| Action | Écriture |
+|---|---|
+| Nouveau brassin | `doc()`, `set` seul (un brassin s'écrit avant tout événement : la règle d'un événement le lit par `get()`), `status: planned`, `recipe_snapshot`, `equipment_snapshot`, `owner_name` s'il existe |
+| Modifier | `update` de `name`, `planned_for`, `notes`, `owner_name`, `updated_at` |
+| Commencer le brassage | `WriteBatch` : `status: brewing`, `brewed_at` (heure de l'appareil), `owner_name`, et le premier `step_started` si la première étape a une durée |
+| Début, fin, saut d'étape | `set` d'un événement (`writeSteps`) ; `WriteBatch` pour « Terminer et commencer » et une étape de 0 min (`step_started` + `step_ended`). « Les sauter et commencer » : chaque `step_skipped` en écriture simple, l'une après l'autre, puis le début : un lot de plus de 20 événements ferait plus de 20 `get()` dans les règles |
+| Terminer le brassage | `update` : `status: fermenting`, `owner_name` |
+| Mesure, note | `set` (`addEvent`), identifiant créé par l'appareil, `measured_at` = heure de l'appareil |
+| Corriger | `update` de `value`, `note`, `measured_at` |
+| Annuler (SnackBar, début, fin, mesure) | `delete` ; « Annuler » réécrit le même identifiant et la même heure (`restoreEvent`) |
+| Supprimer un brassin | sans saisie : `delete`, hors ligne compris ; avec saisies : réseau exigé (`Source.server`), les événements un par un par écritures simples, puis le brassin, sans lot (un lot de plus de 20 `get()` de règles peut être refusé) |
+
+`owner_name` : toute écriture sur `brews/{id}` réécrit le champ avec le nom actuel du jeton
+ou le retire (`FieldValue.delete()`) : `ownerNameOk` s'applique à l'état final et refuserait
+un ancien nom, avec le lot qui porte le premier début d'étape. L'écran de préparation et l'écran
+du jour lisent le nom une fois, à l'ouverture (3 s au plus), et le réutilisent : le statut part
+sans attente réseau.
+
+Refus du serveur (HS7) : `creationSuivie` compare avec le document serveur par une lecture
+ordinaire (jamais `Source.server`). Si l'événement n'y est pas, le refus est rapporté
+(`brews.event_rejected`, nature, type et code, sans valeur), et la `Future` échoue : l'écran
+l'affiche. Si l'événement y est (un accusé perdu fait rejouer un `set`, refusé parce que
+`created_at` change), le refus est journalisé sous `brews.event_replayed` (aucun `catch`
+silencieux) et n'est pas annoncé à l'utilisateur. Limite : un refus reçu après la fermeture
+de l'application n'est pas annoncé.
+
+`recomputeSchedule`, `stepRecordsFromEvents` et `readTimer` donnent toutes les heures
+(`PlanDuJour`) ; une heure prévue n'est jamais écrite. Heure de l'appareil lue par
+`horlogeProvider` ; le `Timer` périodique ne sert qu'à redessiner (P2).
+
+**Alerte de fin de minuteur (ADR-003).** `AlerteMinuteur` : `MethodChannel('fr.kassbeer/alert')`,
+méthodes `beep` et `vibrate`, définies dans `MainActivity.kt` (P17). `beep` joue le son de
+notification du système, canal `USAGE_ALARM` (il sonne en mode silencieux) ; `vibrate` vibre
+environ une seconde (permission `VIBRATE`). Sur le web, garde `kIsWeb` et oscillateur Web Audio
+de 300 ms (`package:web`), `AudioContext` créé sur un appui. Aucun fichier ni URL chargé. Bip et
+vibration échouent séparément : chacun est rapporté une fois par session (`brew_day.alert_beep`,
+`brew_day.alert_vibrate`). L'alerte ne part qu'une fois par
+étape, au passage de la durée, écran ouvert, dans les 5 s suivant la fin (un écran rouvert plus
+tard ne sonne pas).
+
+**Verrou d'écran (`wakelock_plus`).** Pris à l'ouverture de « Préparer le brassage » et de
+l'écran du jour, relâché en quittant, repris au retour d'arrière-plan. Compté par
+`ScreenWakelock` ; un échec est rapporté une fois par session (`brew_day.wakelock`). Sur le
+web, `no_sleep.js` se charge au premier appel : d'où la prise à l'ouverture, avant la coupure
+du réseau.
+
+**Dépendances.** `wakelock_plus` 1.8.2, `flutter_localizations` (SDK), `web` ^1.1.1 (direct,
+déjà tiré), `package_info_plus` ^10.2.2. `flutter_localizations` tire `intl` 0.20.2.
+
 **Conversion document ↔ `brewing/`.** Écrite une fois, dans `features/recipes/domain/recipe.dart` :
 `fromFirestore` lit chaque ligne par `FermentableKind`, `HopUse` et `HopForm.fromStored` ;
 `toFirestore` écrit `storedValue` et la clé `ingredientKey` de chaque ingrédient ; `toInput`
@@ -213,7 +275,10 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/recettes/nouvelle`, `/recettes/:id/modifier` | éditeur de recette, plein écran, hors coquille | membre ; la modification d'une recette d'un autre affiche « Seul l'auteur modifie cette recette. » |
 | `/equipements`, `/equipements/:id` | liste et fiche des équipements, dans la coquille | membre |
 | `/equipements/nouveau`, `/equipements/:id/modifier` | éditeur d'équipement, plein écran, hors coquille | membre ; même règle que les recettes |
-| `/brassins` | écran à venir, dans la coquille | membre |
+| `/brassins`, `/brassins/:id` | liste et fiche des brassins, dans la coquille | membre |
+| `/brassins/:id/preparer` | « Préparer le brassage », dans la coquille, retour vers la fiche | membre ; propriétaire pour commencer |
+| `/brassins/:id/jour` | écran du jour, plein écran, hors coquille | propriétaire ; un autre membre lit « Seul le brasseur de ce brassin suit son brassage. » |
+| `/recettes/:id/chronologie` | éditeur de chronologie, plein écran | auteur ; sinon « Seul l'auteur modifie cette chronologie. » |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
 
@@ -232,7 +297,7 @@ sur `fake_cloud_firestore` (création, modification sans toucher `owner_uid` ni 
 `owner_name`, duplication, suppression, refus rapporté, document illisible), conversion
 document ↔ `brewing/`, lecture et affichage des nombres, écrans Recettes et Équipements
 (états, lecture seule, « À compléter », éditeur), attente du serveur sous `fake_async`,
-`FirebaseEnv`.
+`FirebaseEnv`, `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17).
 
 ## Modèle de données
 
@@ -283,6 +348,7 @@ Lisible par tous les membres (partagée au groupe). Aucun prix.
 | `others` | list<map> \| null (50) : épices et ajouts, `key`, `name`, `weight_g`, `use` (`mash`, `boil`, `after_boil`, `fermentation`, `bottling`), `time_min` |
 | `yeasts` | list<map> \| null (10) : `key`, `name`, `attenuation_pct`, `form` (`dry`, `liquid`) ; l'éditeur en écrit une au plus |
 | `mash_steps` | list<map> \| null (20) : `name`, `temp_c`, `duration_min` |
+| `brew_steps` | list<map> \| null (60) : chronologie du jour de brassage, dans l'ordre. Élément : `key` (20 caractères, `doc().id`, créée à l'ajout, stable au renommage et au déplacement, unique dans la recette), `name` (1 à 120), `duration_min` (0 à 600 ; 0 pour une action sans minuteur), `temp_c` (0 à 100 \| null) |
 | `imported_from` | string \| null (200) : nom de la fiche Excel d'origine |
 | `created_at`, `updated_at` | timestamp, obligatoires |
 
@@ -306,6 +372,12 @@ jamais dans `error_reports/`. `OtherUse`, `YeastForm` et `EquipmentKind` de l'ap
 suivent la même règle (`DocumentIllisible` sans la valeur).
 Les règles n'inspectent pas les listes : elles acceptent une valeur retirée, que le dépôt de
 données refuse à la lecture par ces fonctions.
+
+`brew_steps` : les règles bornent la liste à 60 éléments, sans lire ses éléments. Le dépôt de
+données valide chaque élément (clé présente et unique, nom, durée et température dans leurs
+bornes). `brews/{id}/events/{eventId}.step_key` porte la `key` de l'étape. Le préremplissage
+vient de `defaultBrewSteps` (voir « Calculs de brassage ») ; changer un palier ensuite ne
+change pas la chronologie.
 
 `owner_name` est écrit par l'auteur à chaque enregistrement, depuis le nom que porte son
 jeton d'identité (`claims['name']`, voir « Nom de l'auteur ») ; un compte sans nom n'écrit pas
@@ -346,11 +418,12 @@ Lisible par le groupe, mesures comprises, sans coût. La recette et l'équipemen
 | Champ | Type |
 |---|---|
 | `owner_uid` | string, obligatoire, immuable |
+| `owner_name` | string, facultatif, 1 à 80 caractères : nom du brasseur affiché au groupe, égal au nom du jeton de celui qui écrit (comme dans `recipes/`) |
 | `recipe_id` | string \| null : recette d'origine, immuable |
 | `name` | string, obligatoire (120) |
-| `status` | string, obligatoire : `planned`, `brewing`, `fermenting`, `conditioning`, `done`, `abandoned` |
-| `planned_for`, `brewed_at` | timestamp \| null |
-| `recipe_snapshot` | map, obligatoire, immuable : copie de la recette, mêmes champs de premier niveau ; `owner_name`, s'il est présent, est une chaîne de 1 à 80 caractères (celui de l'auteur de la recette, pas forcément celui qui brasse) |
+| `status` | string, obligatoire : `planned`, `brewing`, `fermenting`, `conditioning`, `done`, `abandoned`. Le jour de brassage passe de `planned` à `brewing` (premier début d'étape) puis à `fermenting` (« Terminer le brassage »), par des écritures simples ou un `WriteBatch`, jamais une transaction ; les règles ne contrôlent pas l'ordre des statuts |
+| `planned_for`, `brewed_at` | timestamp \| null : `brewed_at` = `measured_at` du premier début d'étape. Aucun champ « préparé » ni heure prévue recalculée |
+| `recipe_snapshot` | map, obligatoire, immuable : copie de la recette, mêmes champs de premier niveau, `brew_steps` compris (60 éléments au plus) ; `owner_name`, s'il est présent, est une chaîne de 1 à 80 caractères (celui de l'auteur de la recette, pas forcément celui qui brasse) |
 | `equipment_snapshot` | map, obligatoire, immuable : copie de l'équipement, mêmes champs de premier niveau ; `owner_name` borné comme dans `recipe_snapshot` |
 | `adjustments` | map \| null : ajustements du jour, jamais écrits dans la recette. Clés en liste blanche, chacune number \| null : `batch_volume_l`, `mash_water_l`, `sparge_water_l`, `pre_boil_volume_l`, `post_boil_volume_l`, `fermenter_volume_l`, `boil_off_l_per_h`, `mash_temp_c`, `mash_time_min`, `boil_time_min`, `mash_efficiency_pct`. Chaque valeur est finie et strictement comprise entre -1e9 et 1e9 ; `mash_efficiency_pct` est borné de 0 à 100. Aucune autre clé, donc aucun prix ni coût (P5) |
 | `bottles_count` | number \| null |
@@ -369,15 +442,36 @@ règles au retour du réseau.
 | Champ | Type |
 |---|---|
 | `owner_uid` | string, obligatoire : propriétaire du brassin |
-| `kind` | string, obligatoire : `step_started`, `step_ended`, `measurement`, `note` |
-| `step_key` | string \| null (100) : étape de la chronologie |
+| `kind` | string, obligatoire : `step_started`, `step_ended`, `step_skipped` (étape marquée sautée), `measurement`, `note` |
+| `step_key` | string \| null, 1 à 100 caractères, jamais vide : `key` d'une étape de `brew_steps` ; nul quand la mesure ou la note ne porte sur aucune étape |
 | `measure_type` | string \| null : `temperature` (°C), `gravity` (SG), `volume` (L), `ph` |
 | `value` | number \| null |
 | `note` | string \| null (2 000) |
 | `measured_at` | timestamp, obligatoire : heure de l'appareil |
 | `created_at` | timestamp, obligatoire : `serverTimestamp()`, audit seul |
 
-Après création, seuls `value`, `note` et `measured_at` se corrigent.
+Forme selon `kind` (règles) :
+
+| `kind` | `step_key` | `measure_type`, `value` | `note` |
+|---|---|---|---|
+| `step_started`, `step_ended`, `step_skipped` | obligatoire, non vide | absents ou nuls | facultative |
+| `measurement` | facultatif : nul pour une mesure sans étape, sinon non vide | type de la liste, valeur numérique finie, strictement entre -1e9 et 1e9 | facultative |
+| `note` | facultatif : nul pour une note sans étape, sinon non vide | absents ou nuls | obligatoire, 1 à 2 000 caractères |
+
+Les bornes de saisie (température 0 à 110 °C, densité 0,980 à 1,200, volume au-delà de 0 et
+jusqu'à 1 000 L, pH 0 à 14) sont vérifiées par l'application, pas par les règles.
+
+Après création, seuls `value`, `note` et `measured_at` se corrigent, et la forme reste
+valide : une mesure ne perd pas sa valeur, un début d'étape n'en reçoit pas. « Ne plus
+sauter » supprime l'événement `step_skipped`. Deux appareils hors ligne peuvent écrire deux
+débuts de la même étape : `stepRecordsFromEvents` garde le plus ancien et rend l'autre comme
+« Début en double ».
+
+Le premier début d'étape et le passage à `brewing` partent dans un même `WriteBatch`. La
+règle de création d'un événement lit le brassin par `get()`, qui voit l'état d'avant le lot,
+où `owner_uid` est déjà celui du brasseur. La création d'un brassin et d'un de ses événements
+dans un même lot est refusée pour la même raison : le brassin part d'abord, par une écriture
+simple, et la file hors ligne garde l'ordre.
 
 ### `users/{uid}/…` — données privées
 
@@ -418,8 +512,8 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 |---|---|---|---|---|
 | `members/{email}` | son propre document (même absent) pour tout compte Google vérifié ; tous pour l'admin | admin | personne | admin, sauf son propre document et celui d'un autre admin (`resource.data.role != 'admin'`) |
 | `recipes/`, `equipment/` | membres | membre, à son `owner_uid` ; `owner_name` absent ou égal au nom du jeton (`request.auth.token.name`, 1 à 80 caractères) | propriétaire, `owner_uid` et `created_at` inchangés, `owner_name` comme à la création | propriétaire |
-| `brews/` | membres | membre, à son `owner_uid` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés | propriétaire |
-| `brews/{id}/events/` | membres | propriétaire du brassin | auteur : `value`, `note`, `measured_at` | auteur |
+| `brews/` | membres | membre, à son `owner_uid` ; `owner_name` comme dans `recipes/` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés ; `owner_name` comme à la création | propriétaire |
+| `brews/{id}/events/` | membres | propriétaire du brassin existant, à son `owner_uid`, forme selon `kind` | auteur : `value`, `note`, `measured_at`, forme gardée | auteur |
 | `users/{uid}/**` | propriétaire | propriétaire | propriétaire | propriétaire |
 | `error_reports/` | admin | membre, `uid` = le sien, champs en liste blanche et bornés | personne | admin |
 | tout autre chemin | refusé | refusé | refusé | refusé |
@@ -441,7 +535,11 @@ Chaque collection est rejouée pour les cinq profils de P4 (anonyme, connecté n
 brasseur propriétaire, autre brasseur, admin), plus les comptes invités à l'adresse non
 vérifiée ou connectés par mot de passe, et un jeton à l'adresse en majuscules.
 `owner_name.test.mjs` ajoute des jetons au nom absent, vide, de 80 et 81 caractères, et non
-textuel, et borne `owner_name` dans les copies des brassins. `numbers.test.mjs` vérifie que
+textuel, pour `recipes/`, `equipment/` et `brews/`, et borne `owner_name` dans les copies des
+brassins. `events.test.mjs` rejoue chaque `kind` pour les cinq profils, les formes refusées
+de chacun, et l'événement sous un brassin inexistant. `brew_day.test.mjs` vérifie `brew_steps`
+(60 étapes acceptées, 61 refusées, dans la recette et dans sa copie), les statuts `brewing` puis
+`fermenting`, le premier début en un `WriteBatch`, et un brassin créé puis son premier événement. `numbers.test.mjs` vérifie que
 les règles refusent Infinity, -Infinity, NaN, ±1e9 et acceptent ±999 999 999, 0 et 1,5, et
 borne `mash_efficiency_pct` de 0 à 100 ; `content.test.mjs` fait de même dans `adjustments`.
 
@@ -463,7 +561,7 @@ par `ErrorReportService.reportError` et affiche la panne.
 | Calcul | Fonction | Formule |
 |---|---|---|
 | SG ↔ points | `sgToPoints`, `pointsToSg` | points = (SG − 1) × 1000 |
-| Notation des fiches | `parseGravity` | « 1057,9 » et « 1090 » ÷ 1000 ; « 1.052 », « 1,07 » lus tels quels |
+| Notation des fiches | `parseGravity`, `readGravity` | « 1057,9 » et « 1090 » ÷ 1000 ; « 1.052 », « 1,07 » lus tels quels. `readGravity` ne lève pas : il rend `GravityRead(sg)`, `GravityUnreadable()` ou `GravityOutOfRange(sg)`, pour la saisie (une faute de frappe ne va pas dans `error_reports/`). `parseGravity` lève `BrewingInputException`. Seule définition de la règle : `readGravity` |
 | Densité initiale prévue | `predictedOriginalGravity` | 1 + Σ (kg × points/kg/L × r) / V / 1000 ; r = rendement d'empâtage pour un malt, 1 pour un sucre |
 | Densité finale prévue | `predictedFinalGravity` | 1 + (OG − 1) × (1 − atténuation / 100) ; OG de 1.000 à 1.200 |
 | Potentiel d'un malt | `ExtractPotential` | rendement d'extrait % × 385,67 (saccharose, 46,214 ppg), ou points/kg/L |
@@ -475,7 +573,9 @@ par `ErrorReportService.reportError` et affiche la panne.
 | Calculs d'une recette | `computeRecipe` | OG, FG, degré, IBU, EBC, IBU par houblon : voir « Calculs d'une recette » |
 | Clé d'ingrédient | `ingredientKey`, `isValidIngredientName` | préfixe de nature + nom normalisé (voir `recipes/`) ; `BrewingInputException` pour un nom sans lettre ni chiffre, que `isValidIngredientName` détecte sans exception (une seule définition de la règle) |
 | Coût | `computeCost` | Σ quantité × prix ; par litre = total / V ; bouteille de 33 cl = par litre × 0,33 |
-| Planning | `recomputeSchedule` | début d'une étape = fin enregistrée de la précédente, sinon son début + sa durée ; une étape en cours qui dépasse finit à `now` ; une étape à venir ne commence pas avant `now` |
+| Planning | `recomputeSchedule` | heure attendue d'une étape = fin de l'étape précédente dans l'ordre de la chronologie (fin enregistrée, sinon début réel + durée prévue). En cours (`running`) : l'étape commencée sans fin au début le plus récent ; elle finit au plus tôt à `now`. Une autre étape commencée sans fin est faite (`done`), à début + durée. Sautée (`skipped`, événement `step_skipped`, sans début) et non faite (`notDone`, sans événement alors qu'une étape plus loin a commencé) : durée nulle. À venir (`pending`) : ne commence ni avant `now`, ni avant la fin de l'étape en cours. Un début l'emporte sur un saut |
+| Événements d'étape | `stepRecordsFromEvents` | un `StepRecord` par étape : début le plus ancien (à égalité, le plus petit identifiant), dernière fin à ou après ce début, sauts, et les identifiants d'événement retenus. Sans exception, les autres événements sont rendus en `StepEventIssue` : `duplicateStart`, `duplicateEnd`, `endWithoutStart`, `endBeforeStart`, `unknownStep`, triés par heure puis identifiant. Même résultat sur chaque appareil |
+| Chronologie préremplie | `defaultBrewSteps` | une étape par palier ; puis l'ébullition coupée à chaque ajout de houblon d'ébullition, du plus long au plus court (un houblon de t min s'ajoute après durée d'ébullition − t min) ; puis le whirlpool, coupé de même, sur la plus longue durée de ses houblons ; houblons à cru exclus ; ajout de 0 min. Voir ci-dessous |
 | Minuteur | `readTimer` | restant = début + durée − `now`, borné à zéro ; dépassement au-delà |
 
 **Pas de valeur de repli.** Un prix manquant rend `CostUnavailable(linesWithoutPrice)`, jamais
@@ -511,12 +611,29 @@ non renseigné. La densité d'ébullition de l'IBU est l'OG prévue (`boilGravit
 (avertissement U6). Une valeur hors limites (volume nul, pourcentage au-delà de 100, OG prévue
 au-delà de 1.200) lève `BrewingInputException`.
 
+**Chronologie préremplie.** `defaultBrewSteps(mashSteps:, boilMinutes:, hops:)` reçoit les
+paliers (`MashStepInput` : température et durée facultatives), la durée d'ébullition et les
+houblons (`HopInput`). Il rend des `BrewStepDraft` : nature (`BrewStepKind` : `mashStep`,
+`boil`, `hopAddition`, `whirlpool`), place du palier ou du houblon d'origine
+(`sourceIndex`), durée, température et défaut éventuel (`BrewStepProblem`). Aucune durée
+n'est inventée : un palier sans durée rend une étape sans durée (`durationMinutes` nul), qui porte `missingDuration` ; sans
+durée d'ébullition, aucune étape d'ébullition, et les ajouts se suivent du plus long au plus
+court. Un houblon sans durée est placé en tête de sa section (`missingHopTime`) ; un houblon
+d'ébullition plus long que l'ébullition aussi (`hopLongerThanBoil`). Le paquet ne compose
+aucun libellé ni aucune clé : l'application nomme l'étape (nom du palier, « Ébullition »,
+« Ajouter Cascade 20 g », « Whirlpool ») et lui donne une clé `doc().id` à l'ajout.
+
 **Jour de brassage.** `recomputeSchedule` et `readTimer` sont des fonctions pures qui prennent
 `now` en argument : aucun `Timer` n'est la source d'une durée, et les heures recalculées se
-dérivent à l'affichage sans s'écrire.
+dérivent à l'affichage sans s'écrire. L'application lit les événements `step_*` du brassin
+(`StepEvent`, `StepEventKind.fromStored`), les réduit par `stepRecordsFromEvents`, puis passe
+les enregistrements à `recomputeSchedule`. Une anomalie de la réduction (fin avant le début,
+étape inconnue) est rapportée et affichée ; elle ne lève pas. `recomputeSchedule` lève
+encore pour une clé en double ou des enregistrements non réduits (étape inconnue ou enregistrée
+deux fois). Le constructeur `PlannedStep` lève pour une durée négative.
 
 **Fixtures.** `brewing/test/fixtures/*.json` (densité, densité initiale et rendement, densité
-finale, degré, IBU, couleur, coût, planning, calculs d'une recette) portent des cas tirés des 16 fiches Excel : entrées, valeur de
+finale, degré, IBU, couleur, coût, planning, chronologie préremplie, calculs d'une recette) portent des cas tirés des 16 fiches Excel : entrées, valeur de
 la fiche, valeur attendue, tolérance, et hypothèses quand la fiche ne donne pas une entrée.
 Les erreurs connues des fiches (Citra « 22.4 » lu 22 400 g, degré calculé sur la densité
 visée, densités d'en-tête différentes de la chronologie, champs EBC et IBU copiés, coût par
@@ -527,6 +644,14 @@ trois fiches (Ale blonde 140724 : 55,8 %, Twin bottle 4 : 84,1 %, Blonde triple 
 vérifie que leur FG est retrouvée. `recipe.json` compte 18 cas : un seul est tiré d'une fiche
 (`twin-bottle-4-hypothese`), les 17 autres sont synthétiques (données manquantes, cas
 limites). Ses valeurs attendues sont calculées hors du paquet.
+`planning.json` rejoue la tranche d'empâtage de l'Ale blonde 140724 (colonne « Heure exécution
+prévue » retrouvée), puis des cas synthétiques : retard, fin enregistrée, étape sautée, sautée
+puis commencée, non faite, retour en arrière, reprise le lendemain (dépassement de 14 h 05),
+étapes de 0 min. Sa section `event_cases` réduit des événements : les sept débuts de l'Ale
+blonde, deux appareils hors ligne (`double-debut`), des anomalies, deux débuts à la même
+minute. `brew_steps.json` compte 8 cas synthétiques de `defaultBrewSteps`, dont l'exemple de
+l'ébullition coupée à un ajout de houblon (« Ébullition » 45 min, « Ajouter Cascade 20 g », « Ébullition » 15 min).
+`density.json` range chaque lecture refusée en `unreadable` ou `out_of_range`.
 
 ## CI et déploiement
 

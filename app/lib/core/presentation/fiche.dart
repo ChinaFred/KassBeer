@@ -71,3 +71,56 @@ class TitreSection extends StatelessWidget {
     );
   }
 }
+
+/// Texte en italique quand une section est vide (« Aucun houblon. »).
+class TexteAbsent extends StatelessWidget {
+  const TexteAbsent(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      text,
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontStyle: FontStyle.italic,
+      ),
+    );
+  }
+}
+
+/// Ligne sur deux niveaux, lue d'un bloc par les lecteurs d'écran.
+class LigneDeuxNiveaux extends StatelessWidget {
+  const LigneDeuxNiveaux({
+    super.key,
+    required this.title,
+    required this.details,
+  });
+
+  final String title;
+  final List<String> details;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: theme.textTheme.titleMedium),
+            Text(
+              details.join(' · '),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

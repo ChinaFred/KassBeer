@@ -2,6 +2,8 @@
     <!-- Firebase Auth et Firestore en release : le modèle de Flutter ne déclare INTERNET
          que dans les manifestes debug/ et profile/. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Vibration de l'alerte de fin de minuteur (ADR-003). -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <application
         android:label="Kass’Beer"
         android:name="${applicationName}"

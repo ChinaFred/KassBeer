@@ -1,4 +1,3 @@
-import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,8 +13,10 @@ import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../equipment/presentation/equipment_providers.dart';
+import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
-import 'ingredient_forms.dart';
+import '../../brews/presentation/new_brew_form.dart';
+import 'contenu_recette.dart';
 import 'recipe_calculations_view.dart';
 import 'recipes_providers.dart';
 
@@ -127,6 +128,8 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         final mine = recipe.ownerUid == access?.user.uid;
         void edit() => context.push(AppRoutes.editRecipe(recipe.id));
         return _Fiche(
+          onNewBrew: () => ouvrirNouveauBrassin(context, recipe),
+          onEditSteps: () => context.push(AppRoutes.editBrewSteps(recipe.id)),
           recipe: recipe,
           readerUid: access?.user.uid,
           equipement: equipement,
@@ -149,6 +152,8 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
 
 class _Fiche extends StatelessWidget {
   const _Fiche({
+    required this.onNewBrew,
+    required this.onEditSteps,
     required this.recipe,
     required this.readerUid,
     required this.equipement,
@@ -163,6 +168,8 @@ class _Fiche extends StatelessWidget {
   final String? readerUid;
   final EquipementRecette equipement;
   final CalculsRecette calculs;
+  final VoidCallback onNewBrew;
+  final VoidCallback onEditSteps;
 
   /// `null` pour un autre brasseur (lecture seule).
   final VoidCallback? onEdit;
@@ -212,6 +219,11 @@ class _Fiche extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
+            FilledButton.icon(
+              onPressed: onNewBrew,
+              icon: const Icon(Icons.science_outlined),
+              label: const Text('Nouveau brassin'),
+            ),
             if (edit != null)
               FilledButton.tonalIcon(
                 onPressed: edit,
@@ -257,139 +269,54 @@ class _Fiche extends StatelessWidget {
           value: boil == null ? null : formatMinutes(boil),
         ),
         LigneFiche(label: 'Équipement', value: libelleEquipement(equipement)),
-        TitreSection(
-          'Malts et sucres',
-          trailing: c.fermentables.isEmpty
-              ? null
-              : '${c.fermentables.length} · ${formatKilogrammes(c.fermentables.fold(0.0, (s, f) => s + f.weightG))}',
-        ),
-        if (c.fermentables.isEmpty) _Empty('Aucun malt ni sucre.'),
-        for (final f in c.fermentables)
-          _Ligne(
-            title: f.name,
-            details: [
-              f.kind == FermentableKind.malt ? 'Malt' : 'Sucre',
-              formatKilogrammes(f.weightG),
-              f.ebc == null ? 'couleur non renseignée' : formatEbc(f.ebc!),
-              f.yieldPct == null
-                  ? 'rendement non renseigné'
-                  : 'rendement ${formatPourcent(f.yieldPct!)}',
-            ],
+        ContenuRecette(
+          content: c,
+          hopIbu: hopIbu,
+          chronologie: _Chronologie(
+            content: c,
+            onEdit: edit == null ? null : onEditSteps,
           ),
-        const TitreSection('Houblons'),
-        if (c.hops.isEmpty) _Empty('Aucun houblon.'),
-        for (final (i, h) in c.hops.indexed)
-          _Ligne(
-            title: h.name,
-            details: [
-              switch (h.use) {
-                HopUse.boil =>
-                  h.timeMin == null
-                      ? 'Ébullition'
-                      : 'Ébullition ${formatMinutes(h.timeMin!)}',
-                HopUse.afterBoil =>
-                  h.timeMin == null
-                      ? 'Whirlpool'
-                      : 'Whirlpool ${formatMinutes(h.timeMin!)}',
-                HopUse.dryHop =>
-                  h.timeMin == null
-                      ? 'À cru'
-                      : 'À cru ${formatJours(h.timeMin!)}',
-              },
-              formatGrammes(h.weightG),
-              h.alphaPct == null
-                  ? 'alpha non renseigné'
-                  : '${formatPourcent(h.alphaPct!)} alpha',
-              libelleFormeHoublon(h.form),
-              if (hopIbu[i] != null) formatIbu(hopIbu[i]!),
-            ],
-          ),
-        const TitreSection('Autres ajouts'),
-        if (c.others.isEmpty) _Empty('Aucun ajout.'),
-        for (final o in c.others)
-          _Ligne(
-            title: o.name,
-            details: [
-              formatGrammes(o.weightG),
-              if (o.use != null) o.use!.label,
-              if (o.timeMin != null) formatMinutes(o.timeMin!),
-            ],
-          ),
-        const TitreSection('Levure'),
-        if (c.yeasts.isEmpty) _Empty('Aucune levure.'),
-        for (final y in c.yeasts)
-          _Ligne(
-            title: y.name,
-            details: [
-              y.attenuationPct == null
-                  ? 'atténuation non renseignée'
-                  : 'atténuation ${formatPourcent(y.attenuationPct!)}',
-              if (y.form != null) y.form!.label,
-            ],
-          ),
-        const TitreSection('Paliers d\'empâtage'),
-        if (c.mashSteps.isEmpty) _Empty('Aucun palier.'),
-        for (final s in c.mashSteps)
-          _Ligne(
-            title: s.name,
-            details: [formatCelsius(s.tempC), formatMinutes(s.durationMin)],
-          ),
-        const TitreSection('Notes'),
-        Text(
-          c.notes ?? 'Non renseigné',
-          style: c.notes == null
-              ? muted?.copyWith(fontStyle: FontStyle.italic)
-              : theme.textTheme.bodyLarge,
         ),
       ],
     );
   }
 }
 
-class _Empty extends StatelessWidget {
-  const _Empty(this.text);
+/// Section « Chronologie du jour » de la fiche : lecture, et bouton de l'auteur.
+class _Chronologie extends StatelessWidget {
+  const _Chronologie({required this.content, required this.onEdit});
 
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      text,
-      style: theme.textTheme.bodyMedium?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-        fontStyle: FontStyle.italic,
-      ),
-    );
-  }
-}
-
-/// Ligne sur deux niveaux, lue d'un bloc par les lecteurs d'écran.
-class _Ligne extends StatelessWidget {
-  const _Ligne({required this.title, required this.details});
-
-  final String title;
-  final List<String> details;
+  final RecipeContent content;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return MergeSemantics(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: theme.textTheme.titleMedium),
-            Text(
-              details.join(' · '),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+    final edit = onEdit;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TitreSection(
+          'Chronologie du jour',
+          trailing: content.brewSteps.isEmpty
+              ? null
+              : '${formatEtapes(content.brewSteps.length)} · ${formatDuree(dureeChronologie(content.brewSteps))}',
         ),
-      ),
+        if (content.brewStepsProblem != null)
+          const TexteAbsent('Chronologie illisible')
+        else if (content.brewSteps.isEmpty)
+          const TexteAbsent('Aucune étape.')
+        else
+          ...listeEtapes(content.brewSteps),
+        if (edit != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: OutlinedButton.icon(
+              onPressed: edit,
+              icon: const Icon(Icons.schedule),
+              label: const Text('Modifier la chronologie'),
+            ),
+          ),
+      ],
     );
   }
 }

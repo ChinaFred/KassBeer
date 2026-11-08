@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/presentation/breakpoints.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+
+/// Langue de l'application : sélecteurs de date et d'heure en français, sur 24 h.
+const kLocale = Locale('fr');
+const kLocalizationsDelegates = <LocalizationsDelegate<Object?>>[
+  GlobalMaterialLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+];
 
 /// Application Kass'Beer, une fois Firebase configuré.
 class KassBeerApp extends ConsumerWidget {
@@ -14,6 +23,9 @@ class KassBeerApp extends ConsumerWidget {
     return MaterialApp.router(
       title: "Kass'Beer",
       debugShowCheckedModeBanner: false,
+      locale: kLocale,
+      supportedLocales: const [kLocale],
+      localizationsDelegates: kLocalizationsDelegates,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
@@ -36,6 +48,9 @@ class MissingConfigurationApp extends StatelessWidget {
     return MaterialApp(
       title: "Kass'Beer",
       debugShowCheckedModeBanner: false,
+      locale: kLocale,
+      supportedLocales: const [kLocale],
+      localizationsDelegates: kLocalizationsDelegates,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
@@ -61,6 +76,9 @@ class StartupFailureApp extends StatelessWidget {
     return MaterialApp(
       title: "Kass'Beer",
       debugShowCheckedModeBanner: false,
+      locale: kLocale,
+      supportedLocales: const [kLocale],
+      localizationsDelegates: kLocalizationsDelegates,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,

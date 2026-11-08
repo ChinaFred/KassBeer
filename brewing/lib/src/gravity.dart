@@ -25,25 +25,67 @@ double pointsToSg(double points) {
   return 1 + points / 1000;
 }
 
-/// Lit une densité écrite comme dans les fiches.
+/// Lecture d'une densité saisie, sans exception ([readGravity]).
+sealed class GravityReading {
+  const GravityReading();
+}
+
+/// Densité lue, dans [minGravity]–[maxGravity].
+class GravityRead extends GravityReading {
+  /// Crée la lecture.
+  const GravityRead(this.sg);
+
+  /// Densité en SG décimal.
+  final double sg;
+}
+
+/// Texte illisible : vide, signe, lettres, deux séparateurs décimaux.
+class GravityUnreadable extends GravityReading {
+  /// Crée la lecture.
+  const GravityUnreadable();
+}
+
+/// Nombre lu, densité hors de [minGravity]–[maxGravity].
+class GravityOutOfRange extends GravityReading {
+  /// Crée la lecture.
+  const GravityOutOfRange(this.sg);
+
+  /// Densité lue, en SG décimal (« 1250 » → 1.25, « 65 » → 65).
+  final double sg;
+}
+
+/// Lit une densité écrite comme dans les fiches, sans lever d'exception.
 ///
 /// Formes acceptées : « 1057,9 » ou « 1090 » (densité × 1000), « 1.052 » ou
 /// « 1,07 » (SG décimal). La virgule et le point sont des séparateurs décimaux ;
-/// les espaces sont ignorés. Un texte vide, illisible ou hors de
-/// [minGravity]–[maxGravity] lève [BrewingInputException].
-double parseGravity(String text) {
+/// les espaces sont ignorés. Seule définition de la règle, lue par
+/// [parseGravity]. Sert à la saisie : une faute de frappe
+/// n'est pas une erreur à journaliser.
+GravityReading readGravity(String text) {
   final cleaned = text.replaceAll(RegExp(r'\s'), '').replaceAll(',', '.');
   if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(cleaned)) {
-    throw BrewingInputException('gravity', text, 'densité illisible');
+    return const GravityUnreadable();
   }
   final value = double.parse(cleaned);
   final sg = value >= 900 ? value / 1000 : value;
-  if (sg < minGravity || sg > maxGravity) {
-    throw BrewingInputException(
-      'gravity',
-      text,
-      'densité hors de l\'intervalle $minGravity – $maxGravity',
-    );
-  }
-  return sg;
+  if (sg < minGravity || sg > maxGravity) return GravityOutOfRange(sg);
+  return GravityRead(sg);
 }
+
+/// Lit une densité écrite comme dans les fiches (règle de [readGravity]).
+///
+/// Un texte vide, illisible ou hors de [minGravity]–[maxGravity] lève
+/// [BrewingInputException].
+double parseGravity(String text) => switch (readGravity(text)) {
+  GravityRead(:final sg) => sg,
+  GravityUnreadable() => throw BrewingInputException(
+    'gravity',
+    text,
+    'densité illisible',
+  ),
+  GravityOutOfRange() => throw BrewingInputException(
+    'gravity',
+    text,
+    'densité hors de l\'intervalle $minGravity – $maxGravity',
+  ),
+};

@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.7+8
+version: 0.1.8+9
 
 environment:
   sdk: ^3.11.4
@@ -15,7 +15,7 @@ dependencies:
   # Figés en version exacte, celle du pubspec.lock de Kass'Dalle (compilé sous
   # Android) : les quatre paquets à code natif firebase_core, firebase_auth,
   # cloud_firestore et google_sign_in, plus flutter_riverpod et go_router. Ne sont
-  # pas figés ici : package_info_plus (^9.0.0) et toutes les dépendances indirectes
+  # pas figés ici : package_info_plus (^10.2.2) et toutes les dépendances indirectes
   # (google_sign_in_android, *_platform_interface, *_web, riverpod…), que seul
   # pubspec.lock fixe. La famille FlutterFire monte ensemble, dans une seule
   # commande, et chaque paquet changé dans pubspec.lock est nommé au CHANGELOG.md
@@ -29,12 +29,24 @@ dependencies:
 
   # Version affichée dans le menu du compte, lue du paquet installé : aucune
   # constante de version dans le code.
-  package_info_plus: ^9.0.0
+  package_info_plus: ^10.2.2
 
   # Calculs de brassage : paquet Dart pur du dépôt (CLAUDE.md, P3), sans autre
   # dépendance ; rien n'est chargé au démarrage.
   brewing:
     path: ../brewing
+
+  # Garde l'écran allumé pendant le jour de brassage (ADR-001). Figé en 1.8.2, à
+  # installer avec package_info_plus 10 : les deux paquets partagent win32.
+  wakelock_plus: 1.8.2
+
+  # Sélecteurs de date et d'heure en français, heure sur 24 h (ADR-003).
+  flutter_localizations:
+    sdk: flutter
+
+  # Bip de fin de minuteur sur le web (Web Audio). Déjà tiré par les paquets
+  # firebase_*_web ; déclaré parce que app/lib/ l'importe.
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

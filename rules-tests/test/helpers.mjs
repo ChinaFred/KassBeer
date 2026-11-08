@@ -208,6 +208,15 @@ export const brew = (owner, extra = {}) => ({
   ...extra,
 });
 
+/// Chronologie de [count] étapes (brew_steps), clés de 20 caractères comme doc().id.
+export const brewSteps = (count) =>
+  Array.from({ length: count }, (_, i) => ({
+    key: `etape${String(i).padStart(15, "0")}`,
+    name: `Étape ${i + 1}`,
+    duration_min: 10,
+    temp_c: i % 2 === 0 ? 67 : null,
+  }));
+
 export const event = (owner, extra = {}) => ({
   owner_uid: owner,
   kind: "measurement",

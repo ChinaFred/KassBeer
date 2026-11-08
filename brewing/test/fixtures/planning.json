@@ -1,6 +1,7 @@
 {
   "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
-  "rule": "chaque étape commence à la fin de la précédente : fin enregistrée, sinon début (réel ou recalculé) + durée prévue ; une étape en cours qui dépasse finit au plus tôt à now ; une étape à venir ne commence pas avant now.",
+  "rule": "chaque étape commence à la fin de l'étape comptée précédente dans l'ordre de la chronologie : fin enregistrée, sinon début réel + durée prévue. L'étape en cours est celle dont le début sans fin est le plus récent (à égalité, la plus loin) ; elle finit au plus tôt à now. Une autre étape commencée sans fin est faite, à début + durée. Une étape sautée (step_skipped, sans début) et une étape non faite (sans événement, alors qu'une étape plus loin a commencé) durent zéro et ne décalent pas la suite. Une étape à venir ne commence ni avant now, ni avant la fin de l'étape en cours.",
+  "time_format": "« HH:MM » : heure du jour 'date' ; « AAAA-MM-JJTHH:MM » : autre jour. Les heures attendues suivent la même forme.",
   "schedule_cases": [
     {
       "id": "ale-blonde-empatage",
@@ -248,6 +249,441 @@
           "end": "10:45"
         }
       ]
+    },
+    {
+      "id": "etape-sautee",
+      "note": "b et d marquées sautées (step_skipped) : durée nulle, la suite n'est pas décalée",
+      "date": "2026-11-07",
+      "planned_start": "10:00",
+      "now": "10:30",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 30,
+          "started_at": "10:00",
+          "ended_at": "10:30"
+        },
+        {
+          "id": "b",
+          "duration_minutes": 15,
+          "skipped": true
+        },
+        {
+          "id": "c",
+          "duration_minutes": 10
+        },
+        {
+          "id": "d",
+          "duration_minutes": 20,
+          "skipped": true
+        },
+        {
+          "id": "e",
+          "duration_minutes": 5
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "10:00",
+          "status": "done",
+          "end": "10:30"
+        },
+        {
+          "id": "b",
+          "expected_start": "10:30",
+          "status": "skipped",
+          "start": "10:30",
+          "end": "10:30"
+        },
+        {
+          "id": "c",
+          "expected_start": "10:30",
+          "status": "pending",
+          "end": "10:40"
+        },
+        {
+          "id": "d",
+          "expected_start": "10:40",
+          "status": "skipped",
+          "start": "10:40",
+          "end": "10:40"
+        },
+        {
+          "id": "e",
+          "expected_start": "10:40",
+          "status": "pending",
+          "end": "10:45"
+        }
+      ],
+      "expected_last_end": "10:45"
+    },
+    {
+      "id": "sautee-puis-commencee",
+      "note": "une étape sautée puis commencée (deux appareils) : le début l'emporte sur le saut",
+      "date": "2026-11-07",
+      "planned_start": "10:00",
+      "now": "10:05",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 10,
+          "started_at": "10:00",
+          "skipped": true
+        },
+        {
+          "id": "b",
+          "duration_minutes": 10
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "10:00",
+          "status": "running",
+          "end": "10:10"
+        },
+        {
+          "id": "b",
+          "expected_start": "10:10",
+          "status": "pending",
+          "end": "10:20"
+        }
+      ]
+    },
+    {
+      "id": "sautee-avant-une-etape-commencee",
+      "note": "Parcours « Les sauter et commencer » : a marquée sautée (step_skipped), b, plus loin, commencée. a reste « Sautée » : le saut l'emporte sur « Non faite ».",
+      "date": "2026-11-07",
+      "planned_start": "10:00",
+      "now": "10:10",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 20,
+          "skipped": true
+        },
+        {
+          "id": "b",
+          "duration_minutes": 30,
+          "started_at": "10:05"
+        },
+        {
+          "id": "c",
+          "duration_minutes": 10
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "10:00",
+          "status": "skipped",
+          "start": "10:00",
+          "end": "10:00"
+        },
+        {
+          "id": "b",
+          "expected_start": "10:00",
+          "status": "running",
+          "start": "10:05",
+          "end": "10:35"
+        },
+        {
+          "id": "c",
+          "expected_start": "10:35",
+          "status": "pending",
+          "end": "10:45"
+        }
+      ]
+    },
+    {
+      "id": "etape-non-faite",
+      "note": "b jamais commencée alors que c, plus loin, a commencé : « Non faite », durée nulle, toujours démarrable",
+      "date": "2026-11-07",
+      "planned_start": "10:00",
+      "now": "10:20",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 10,
+          "started_at": "10:00",
+          "ended_at": "10:10"
+        },
+        {
+          "id": "b",
+          "duration_minutes": 20
+        },
+        {
+          "id": "c",
+          "duration_minutes": 15,
+          "started_at": "10:12"
+        },
+        {
+          "id": "d",
+          "duration_minutes": 5
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "10:00",
+          "status": "done",
+          "end": "10:10"
+        },
+        {
+          "id": "b",
+          "expected_start": "10:10",
+          "status": "notDone",
+          "start": "10:10",
+          "end": "10:10"
+        },
+        {
+          "id": "c",
+          "expected_start": "10:10",
+          "status": "running",
+          "end": "10:27"
+        },
+        {
+          "id": "d",
+          "expected_start": "10:27",
+          "status": "pending",
+          "end": "10:32"
+        }
+      ]
+    },
+    {
+      "id": "retour-en-arriere",
+      "note": "Cas synthétique, comme « Rinçage » après « Nettoyage cuve cuisson » dans la fiche Ale blonde 140724 - Pale ale (voir divergences) : c faite de 10:31 à 10:40, puis retour à b, commencée à 10:42. b est en cours (début sans fin le plus récent), pas faite. d attend la fin de b. L'heure attendue de c suit l'ordre de la chronologie : après b.",
+      "date": "2026-11-07",
+      "planned_start": "10:00",
+      "now": "10:50",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 30,
+          "started_at": "10:00",
+          "ended_at": "10:30"
+        },
+        {
+          "id": "b",
+          "duration_minutes": 20,
+          "started_at": "10:42"
+        },
+        {
+          "id": "c",
+          "duration_minutes": 10,
+          "started_at": "10:31",
+          "ended_at": "10:40"
+        },
+        {
+          "id": "d",
+          "duration_minutes": 15
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "10:00",
+          "status": "done",
+          "end": "10:30"
+        },
+        {
+          "id": "b",
+          "expected_start": "10:30",
+          "status": "running",
+          "start": "10:42",
+          "end": "11:02"
+        },
+        {
+          "id": "c",
+          "expected_start": "11:02",
+          "status": "done",
+          "start": "10:31",
+          "end": "10:40"
+        },
+        {
+          "id": "d",
+          "expected_start": "11:02",
+          "status": "pending",
+          "end": "11:17"
+        }
+      ]
+    },
+    {
+      "id": "deux-debuts-sans-fin-a-la-meme-heure",
+      "note": "a et b commencées à la même heure, sans fin : à égalité, l'étape en cours est la plus loin dans la chronologie. a est faite, à début + durée.",
+      "date": "2026-11-07",
+      "planned_start": "10:00",
+      "now": "10:05",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 10,
+          "started_at": "10:00"
+        },
+        {
+          "id": "b",
+          "duration_minutes": 20,
+          "started_at": "10:00"
+        },
+        {
+          "id": "c",
+          "duration_minutes": 5
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "10:00",
+          "status": "done",
+          "end": "10:10"
+        },
+        {
+          "id": "b",
+          "expected_start": "10:10",
+          "status": "running",
+          "start": "10:00",
+          "end": "10:20"
+        },
+        {
+          "id": "c",
+          "expected_start": "10:20",
+          "status": "pending",
+          "end": "10:25"
+        }
+      ]
+    },
+    {
+      "id": "reprise-le-lendemain",
+      "note": "brassage interrompu : b commencée à 16:05 pour 60 min, reprise le lendemain à 07:10 (dépassement 14 h 05). b finit à now, c repart de now.",
+      "date": "2024-03-09",
+      "planned_start": "15:00",
+      "now": "2024-03-10T07:10",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 60,
+          "started_at": "15:00",
+          "ended_at": "16:00"
+        },
+        {
+          "id": "b",
+          "duration_minutes": 60,
+          "started_at": "16:05"
+        },
+        {
+          "id": "c",
+          "duration_minutes": 30
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "15:00",
+          "status": "done",
+          "end": "16:00"
+        },
+        {
+          "id": "b",
+          "expected_start": "16:00",
+          "status": "running",
+          "start": "16:05",
+          "end": "2024-03-10T07:10"
+        },
+        {
+          "id": "c",
+          "expected_start": "2024-03-10T07:10",
+          "status": "pending",
+          "end": "2024-03-10T07:40"
+        }
+      ],
+      "expected_last_end": "2024-03-10T07:40"
+    },
+    {
+      "id": "etape-zero-minute",
+      "note": "a : action de 0 min, « Fait » écrit début et fin au même instant. c : action à venir, ne décale pas d.",
+      "date": "2026-11-07",
+      "planned_start": "10:00",
+      "now": "10:10",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 0,
+          "started_at": "10:00",
+          "ended_at": "10:00"
+        },
+        {
+          "id": "b",
+          "duration_minutes": 45,
+          "started_at": "10:00"
+        },
+        {
+          "id": "c",
+          "duration_minutes": 0
+        },
+        {
+          "id": "d",
+          "duration_minutes": 15
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "10:00",
+          "status": "done",
+          "end": "10:00"
+        },
+        {
+          "id": "b",
+          "expected_start": "10:00",
+          "status": "running",
+          "end": "10:45"
+        },
+        {
+          "id": "c",
+          "expected_start": "10:45",
+          "status": "pending",
+          "end": "10:45"
+        },
+        {
+          "id": "d",
+          "expected_start": "10:45",
+          "status": "pending",
+          "end": "11:00"
+        }
+      ]
+    },
+    {
+      "id": "etape-zero-minute-sans-fin",
+      "note": "action de 0 min commencée sans fin : en cours, son minuteur est déjà fini ; elle finit à now",
+      "date": "2026-11-07",
+      "planned_start": "10:00",
+      "now": "10:05",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 0,
+          "started_at": "10:00"
+        },
+        {
+          "id": "b",
+          "duration_minutes": 10
+        }
+      ],
+      "expected": [
+        {
+          "id": "a",
+          "expected_start": "10:00",
+          "status": "running",
+          "end": "10:05"
+        },
+        {
+          "id": "b",
+          "expected_start": "10:05",
+          "status": "pending",
+          "end": "10:15"
+        }
+      ]
     }
   ],
   "schedule_invalid": [
@@ -295,6 +731,22 @@
           "id": "a",
           "duration_minutes": 5,
           "started_at": null
+        }
+      ]
+    },
+    {
+      "reason": "étape enregistrée deux fois (enregistrements non réduits par stepRecordsFromEvents)",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 5,
+          "skipped": true
+        }
+      ],
+      "records": [
+        {
+          "step_id": "a",
+          "skipped": true
         }
       ]
     }
@@ -361,6 +813,420 @@
         "overrun_seconds": 0,
         "finished": false
       }
+    },
+    {
+      "id": "reprise-le-lendemain",
+      "started_at": "2024-03-09T16:05:00",
+      "duration_minutes": 60,
+      "now": "2024-03-10T07:10:00",
+      "expected": {
+        "elapsed_seconds": 54300,
+        "remaining_seconds": 0,
+        "overrun_seconds": 50700,
+        "finished": true
+      }
+    }
+  ],
+  "event_rule": "Réduction des événements step_started, step_ended, step_skipped en un enregistrement par étape : début le plus ancien (à égalité, le plus petit identifiant), dernière fin à ou après ce début, sauts. Les autres événements sont rendus comme anomalies, sans exception : début en double (duplicateStart), fin en double (duplicateEnd), fin sans début (endWithoutStart), fin avant le début (endBeforeStart), étape inconnue (unknownStep). Anomalies triées par heure puis par identifiant.",
+  "event_cases": [
+    {
+      "id": "ale-blonde-evenements",
+      "source": "Ale blonde 140724 - Pale ale",
+      "note": "Les sept « Fait à » de la tranche, écrits comme événements step_started. La réduction rend les débuts du cas ale-blonde-empatage, puis le planning de ce cas.",
+      "schedule_case": "ale-blonde-empatage",
+      "events": [
+        {
+          "id": "ev-01",
+          "kind": "step_started",
+          "step_key": "mettre-les-malts",
+          "measured_at": "11:19"
+        },
+        {
+          "id": "ev-02",
+          "kind": "step_started",
+          "step_key": "mesure-1",
+          "measured_at": "11:19"
+        },
+        {
+          "id": "ev-03",
+          "kind": "step_started",
+          "step_key": "palier-68-a",
+          "measured_at": "11:28"
+        },
+        {
+          "id": "ev-04",
+          "kind": "step_started",
+          "step_key": "mesure-2",
+          "measured_at": "11:33"
+        },
+        {
+          "id": "ev-05",
+          "kind": "step_started",
+          "step_key": "palier-68-b",
+          "measured_at": "11:45"
+        },
+        {
+          "id": "ev-06",
+          "kind": "step_started",
+          "step_key": "verifier-amidon",
+          "measured_at": "12:25"
+        },
+        {
+          "id": "ev-07",
+          "kind": "step_started",
+          "step_key": "mash-out",
+          "measured_at": "12:32"
+        }
+      ],
+      "expected_records": [
+        {
+          "step_id": "mettre-les-malts",
+          "started_at": "11:19",
+          "start_event_id": "ev-01"
+        },
+        {
+          "step_id": "mesure-1",
+          "started_at": "11:19",
+          "start_event_id": "ev-02"
+        },
+        {
+          "step_id": "palier-68-a",
+          "started_at": "11:28",
+          "start_event_id": "ev-03"
+        },
+        {
+          "step_id": "mesure-2",
+          "started_at": "11:33",
+          "start_event_id": "ev-04"
+        },
+        {
+          "step_id": "palier-68-b",
+          "started_at": "11:45",
+          "start_event_id": "ev-05"
+        },
+        {
+          "step_id": "verifier-amidon",
+          "started_at": "12:25",
+          "start_event_id": "ev-06"
+        },
+        {
+          "step_id": "mash-out",
+          "started_at": "12:32",
+          "start_event_id": "ev-07"
+        }
+      ],
+      "expected_issues": []
+    },
+    {
+      "id": "double-debut",
+      "note": "Deux appareils hors ligne. L'appareil 1 termine a à 10:30 et commence b au même instant ; l'appareil 2, sans le savoir, termine a à 10:32 et commence b. Le début le plus ancien de b compte (10:30), l'autre est un « Début en double » ; la dernière fin de a compte (10:32), l'autre est une fin en double. Aucune exception.",
+      "date": "2026-11-07",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 30
+        },
+        {
+          "id": "b",
+          "duration_minutes": 20
+        },
+        {
+          "id": "c",
+          "duration_minutes": 10
+        }
+      ],
+      "events": [
+        {
+          "id": "ev-a-debut-1",
+          "kind": "step_started",
+          "step_key": "a",
+          "measured_at": "10:00"
+        },
+        {
+          "id": "ev-a-fin-1",
+          "kind": "step_ended",
+          "step_key": "a",
+          "measured_at": "10:30"
+        },
+        {
+          "id": "ev-b-debut-1",
+          "kind": "step_started",
+          "step_key": "b",
+          "measured_at": "10:30"
+        },
+        {
+          "id": "ev-a-fin-2",
+          "kind": "step_ended",
+          "step_key": "a",
+          "measured_at": "10:32"
+        },
+        {
+          "id": "ev-b-debut-2",
+          "kind": "step_started",
+          "step_key": "b",
+          "measured_at": "10:32"
+        }
+      ],
+      "expected_records": [
+        {
+          "step_id": "a",
+          "started_at": "10:00",
+          "ended_at": "10:32",
+          "start_event_id": "ev-a-debut-1",
+          "end_event_id": "ev-a-fin-2"
+        },
+        {
+          "step_id": "b",
+          "started_at": "10:30",
+          "start_event_id": "ev-b-debut-1"
+        }
+      ],
+      "expected_issues": [
+        {
+          "kind": "duplicateEnd",
+          "event_id": "ev-a-fin-1"
+        },
+        {
+          "kind": "duplicateStart",
+          "event_id": "ev-b-debut-2"
+        }
+      ],
+      "schedule": {
+        "planned_start": "10:00",
+        "now": "10:40",
+        "expected": [
+          {
+            "id": "a",
+            "expected_start": "10:00",
+            "status": "done",
+            "end": "10:32"
+          },
+          {
+            "id": "b",
+            "expected_start": "10:32",
+            "status": "running",
+            "start": "10:30",
+            "end": "10:50"
+          },
+          {
+            "id": "c",
+            "expected_start": "10:50",
+            "status": "pending",
+            "end": "11:00"
+          }
+        ]
+      }
+    },
+    {
+      "id": "anomalies",
+      "note": "Fin avant le début, fin sans début, étape inconnue, saut enregistré deux fois : rendus sans exception ; le planning reste calculable.",
+      "date": "2026-11-07",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 10
+        },
+        {
+          "id": "b",
+          "duration_minutes": 10
+        }
+      ],
+      "events": [
+        {
+          "id": "ev-1",
+          "kind": "step_started",
+          "step_key": "a",
+          "measured_at": "10:00"
+        },
+        {
+          "id": "ev-2",
+          "kind": "step_ended",
+          "step_key": "a",
+          "measured_at": "09:55"
+        },
+        {
+          "id": "ev-3",
+          "kind": "step_ended",
+          "step_key": "b",
+          "measured_at": "10:05"
+        },
+        {
+          "id": "ev-4",
+          "kind": "step_started",
+          "step_key": "inconnue",
+          "measured_at": "10:01"
+        },
+        {
+          "id": "ev-6",
+          "kind": "step_skipped",
+          "step_key": "b",
+          "measured_at": "10:07"
+        },
+        {
+          "id": "ev-5",
+          "kind": "step_skipped",
+          "step_key": "b",
+          "measured_at": "10:06"
+        }
+      ],
+      "expected_records": [
+        {
+          "step_id": "a",
+          "started_at": "10:00",
+          "start_event_id": "ev-1"
+        },
+        {
+          "step_id": "b",
+          "skipped": true,
+          "skip_event_ids": [
+            "ev-5",
+            "ev-6"
+          ]
+        }
+      ],
+      "expected_issues": [
+        {
+          "kind": "endBeforeStart",
+          "event_id": "ev-2"
+        },
+        {
+          "kind": "unknownStep",
+          "event_id": "ev-4"
+        },
+        {
+          "kind": "endWithoutStart",
+          "event_id": "ev-3"
+        }
+      ],
+      "schedule": {
+        "planned_start": "10:00",
+        "now": "10:05",
+        "expected": [
+          {
+            "id": "a",
+            "expected_start": "10:00",
+            "status": "running",
+            "end": "10:10"
+          },
+          {
+            "id": "b",
+            "expected_start": "10:10",
+            "status": "skipped",
+            "start": "10:10",
+            "end": "10:10"
+          }
+        ]
+      }
+    },
+    {
+      "id": "debuts-a-la-meme-heure",
+      "note": "Deux débuts de a à la même minute : le plus petit identifiant compte, pour un résultat identique sur chaque appareil.",
+      "date": "2026-11-07",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 10
+        }
+      ],
+      "events": [
+        {
+          "id": "ev-z",
+          "kind": "step_started",
+          "step_key": "a",
+          "measured_at": "10:00"
+        },
+        {
+          "id": "ev-m",
+          "kind": "step_started",
+          "step_key": "a",
+          "measured_at": "10:00"
+        }
+      ],
+      "expected_records": [
+        {
+          "step_id": "a",
+          "started_at": "10:00",
+          "start_event_id": "ev-m"
+        }
+      ],
+      "expected_issues": [
+        {
+          "kind": "duplicateStart",
+          "event_id": "ev-z"
+        }
+      ]
+    },
+    {
+      "id": "fin-a-la-meme-heure-que-le-debut",
+      "note": "Bouton « Fait » d'une étape de 0 min : début et fin au même instant. La fin est retenue, sans anomalie. L'identifiant de la fin se trie avant celui du début.",
+      "date": "2026-11-07",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 0
+        },
+        {
+          "id": "b",
+          "duration_minutes": 10
+        }
+      ],
+      "events": [
+        {
+          "id": "ev-2-debut",
+          "kind": "step_started",
+          "step_key": "a",
+          "measured_at": "10:00"
+        },
+        {
+          "id": "ev-1-fin",
+          "kind": "step_ended",
+          "step_key": "a",
+          "measured_at": "10:00"
+        }
+      ],
+      "expected_records": [
+        {
+          "step_id": "a",
+          "started_at": "10:00",
+          "ended_at": "10:00",
+          "start_event_id": "ev-2-debut",
+          "end_event_id": "ev-1-fin"
+        }
+      ],
+      "expected_issues": [],
+      "schedule": {
+        "planned_start": "10:00",
+        "now": "10:00",
+        "expected": [
+          {
+            "id": "a",
+            "expected_start": "10:00",
+            "status": "done",
+            "end": "10:00"
+          },
+          {
+            "id": "b",
+            "expected_start": "10:00",
+            "status": "pending",
+            "end": "10:10"
+          }
+        ]
+      }
+    }
+  ],
+  "event_invalid": [
+    {
+      "reason": "identifiant d'étape en double dans la chronologie",
+      "steps": [
+        {
+          "id": "a",
+          "duration_minutes": 5
+        },
+        {
+          "id": "a",
+          "duration_minutes": 5
+        }
+      ]
     }
   ],
   "divergences": [

@@ -1,0 +1,158 @@
+{
+  "description": "Chronologie préremplie depuis les paliers, l'ébullition et les houblons (defaultBrewSteps ; voir documentation/projet.md, décision D3). Cas synthétiques. 'expected' : étapes rendues, dans l'ordre. Un champ absent vaut null. Le paquet ne compose aucun libellé : l'application nomme chaque étape d'après 'kind' et 'source_index' (« Ébullition », « Ajouter Cascade 20 g », nom du palier).",
+  "rule": "une étape par palier (température et durée du palier ; durée absente : étape sans durée, problème missingDuration) ; puis l'ébullition, coupée à chaque ajout de houblon d'ébullition, du plus long au plus court (un houblon de t min s'ajoute après boil_minutes − t min d'ébullition) ; puis le whirlpool, coupé de même aux houblons de whirlpool, sur la plus longue de leurs durées. Sans durée d'ébullition, pas d'étape d'ébullition : les ajouts se suivent du plus long au plus court. Un houblon sans durée est placé en tête de sa section (problème missingHopTime) ; un houblon d'ébullition plus long que l'ébullition est placé en tête (problème hopLongerThanBoil). Houblons à cru exclus. Étape d'ajout : 0 min, sans température.",
+  "cases": [
+    {
+      "id": "exemple-d-q4",
+      "note": "Ébullition coupée à un ajout de houblon : « Ébullition » 45 min, « Ajouter Cascade 20 g » 0 min, « Ébullition » 15 min.",
+      "mash_steps": [
+        { "name": "Palier 68 °C", "temp_c": 68, "duration_minutes": 60 },
+        { "name": "Mash out", "temp_c": 78, "duration_minutes": 10 }
+      ],
+      "boil_minutes": 60,
+      "hops": [
+        { "name": "Cascade", "mass_grams": 20, "use": "boil", "minutes": 15 }
+      ],
+      "expected": [
+        { "kind": "mashStep", "source_index": 0, "duration_minutes": 60, "temp_c": 68 },
+        { "kind": "mashStep", "source_index": 1, "duration_minutes": 10, "temp_c": 78 },
+        { "kind": "boil", "duration_minutes": 45 },
+        { "kind": "hopAddition", "source_index": 0, "duration_minutes": 0 },
+        { "kind": "boil", "duration_minutes": 15 }
+      ]
+    },
+    {
+      "id": "houblons-multiples",
+      "note": "Houblon de 60 min en tête (pas d'ébullition de 0 min avant lui), deux houblons de 15 min à la suite, houblon de 0 min après la dernière ébullition, whirlpool sur 20 min coupé à 10 min, houblon à cru exclu.",
+      "mash_steps": [],
+      "boil_minutes": 60,
+      "hops": [
+        { "name": "Cascade", "mass_grams": 20, "use": "boil", "minutes": 15 },
+        { "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": 60 },
+        { "name": "Saaz", "mass_grams": 10, "use": "boil", "minutes": 15 },
+        { "name": "Citra", "mass_grams": 25, "use": "boil", "minutes": 0 },
+        { "name": "Mosaic", "mass_grams": 40, "use": "afterBoil", "minutes": 10 },
+        { "name": "Citra", "mass_grams": 50, "use": "afterBoil", "minutes": 20 },
+        { "name": "Citra", "mass_grams": 100, "use": "dryHop", "minutes": 4320 }
+      ],
+      "expected": [
+        { "kind": "hopAddition", "source_index": 1, "duration_minutes": 0 },
+        { "kind": "boil", "duration_minutes": 45 },
+        { "kind": "hopAddition", "source_index": 0, "duration_minutes": 0 },
+        { "kind": "hopAddition", "source_index": 2, "duration_minutes": 0 },
+        { "kind": "boil", "duration_minutes": 15 },
+        { "kind": "hopAddition", "source_index": 3, "duration_minutes": 0 },
+        { "kind": "hopAddition", "source_index": 5, "duration_minutes": 0 },
+        { "kind": "whirlpool", "duration_minutes": 10 },
+        { "kind": "hopAddition", "source_index": 4, "duration_minutes": 0 },
+        { "kind": "whirlpool", "duration_minutes": 10 }
+      ]
+    },
+    {
+      "id": "ebullition-sans-houblon",
+      "mash_steps": [
+        { "name": "Palier 66 °C", "temp_c": 66, "duration_minutes": 75 }
+      ],
+      "boil_minutes": 90,
+      "hops": [],
+      "expected": [
+        { "kind": "mashStep", "source_index": 0, "duration_minutes": 75, "temp_c": 66 },
+        { "kind": "boil", "duration_minutes": 90 }
+      ]
+    },
+    {
+      "id": "palier-sans-duree",
+      "note": "Palier sans durée : aucune durée inventée, l'étape est signalée.",
+      "mash_steps": [
+        { "name": "Palier 64 °C", "temp_c": 64, "duration_minutes": null },
+        { "name": "Palier sans température", "temp_c": null, "duration_minutes": 15 }
+      ],
+      "boil_minutes": 60,
+      "hops": [],
+      "expected": [
+        { "kind": "mashStep", "source_index": 0, "temp_c": 64, "problem": "missingDuration" },
+        { "kind": "mashStep", "source_index": 1, "duration_minutes": 15 },
+        { "kind": "boil", "duration_minutes": 60 }
+      ]
+    },
+    {
+      "id": "sans-duree-d-ebullition",
+      "note": "Sans durée d'ébullition, pas d'étape « Ébullition » ; les ajouts se suivent du plus long au plus court.",
+      "mash_steps": [
+        { "name": "Palier 68 °C", "temp_c": 68, "duration_minutes": 60 }
+      ],
+      "boil_minutes": null,
+      "hops": [
+        { "name": "Cascade", "mass_grams": 20, "use": "boil", "minutes": 15 },
+        { "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": 60 }
+      ],
+      "expected": [
+        { "kind": "mashStep", "source_index": 0, "duration_minutes": 60, "temp_c": 68 },
+        { "kind": "hopAddition", "source_index": 1, "duration_minutes": 0 },
+        { "kind": "hopAddition", "source_index": 0, "duration_minutes": 0 }
+      ]
+    },
+    {
+      "id": "houblon-plus-long-que-l-ebullition",
+      "note": "Magnum 90 min pour 60 min d'ébullition : placé en tête et signalé (avertissement U6 de la recette).",
+      "mash_steps": [],
+      "boil_minutes": 60,
+      "hops": [
+        { "name": "Cascade", "mass_grams": 20, "use": "boil", "minutes": 60 },
+        { "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": 90 }
+      ],
+      "expected": [
+        { "kind": "hopAddition", "source_index": 1, "duration_minutes": 0, "problem": "hopLongerThanBoil" },
+        { "kind": "hopAddition", "source_index": 0, "duration_minutes": 0 },
+        { "kind": "boil", "duration_minutes": 60 }
+      ]
+    },
+    {
+      "id": "houblon-sans-duree",
+      "note": "Houblons sans durée : en tête de leur section, dans l'ordre de la recette, signalés. Whirlpool sans aucune durée connue : pas d'étape « Whirlpool ».",
+      "mash_steps": [],
+      "boil_minutes": 60,
+      "hops": [
+        { "name": "Cascade", "mass_grams": 20, "use": "boil", "minutes": 10 },
+        { "name": "Saaz", "mass_grams": 15, "use": "boil", "minutes": null },
+        { "name": "Citra", "mass_grams": 50, "use": "afterBoil", "minutes": null },
+        { "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": null }
+      ],
+      "expected": [
+        { "kind": "hopAddition", "source_index": 1, "duration_minutes": 0, "problem": "missingHopTime" },
+        { "kind": "hopAddition", "source_index": 3, "duration_minutes": 0, "problem": "missingHopTime" },
+        { "kind": "boil", "duration_minutes": 50 },
+        { "kind": "hopAddition", "source_index": 0, "duration_minutes": 0 },
+        { "kind": "boil", "duration_minutes": 10 },
+        { "kind": "hopAddition", "source_index": 2, "duration_minutes": 0, "problem": "missingHopTime" }
+      ]
+    },
+    {
+      "id": "recette-vide",
+      "mash_steps": [],
+      "boil_minutes": null,
+      "hops": [],
+      "expected": []
+    }
+  ],
+  "invalid": [
+    {
+      "reason": "palier de durée négative",
+      "mash_steps": [{ "name": "Palier", "temp_c": 68, "duration_minutes": -5 }],
+      "boil_minutes": 60,
+      "hops": []
+    },
+    {
+      "reason": "palier au-delà de 100 °C",
+      "mash_steps": [{ "name": "Palier", "temp_c": 120, "duration_minutes": 10 }],
+      "boil_minutes": 60,
+      "hops": []
+    },
+    {
+      "reason": "durée d'ébullition négative",
+      "mash_steps": [],
+      "boil_minutes": -1,
+      "hops": []
+    }
+  ]
+}

@@ -222,6 +222,12 @@ variable que `toJSON(vars)` affiche dans le journal est une valeur publique (P16
 valeur sensible va dans les secrets, jamais dans les variables du dépôt ni de
 l'environnement.
 
+Depuis l'incrément v0.3 (ADR-003), `relecteur-regles` vérifie deux points de plus. P2 couvre
+l'alerte de fin de minuteur : son et vibration ne chargent rien par le réseau, et le verrou
+d'écran est pris à l'ouverture de l'écran du jour. P17 couvre tout canal de plateforme :
+même nom côté Dart et Kotlin, garde web, erreur rapportée, test Dart du canal, APK compilé.
+Un nom de canal mal recopié ne se voit dans aucun test Dart, seulement sur le téléphone.
+
 Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
 `--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans
 ce fichier local, jamais versionné. État de la production et outils du poste :

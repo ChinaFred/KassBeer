@@ -44,3 +44,14 @@ const double kCalculationPanelWidth = 340;
 /// Largeur minimale d'une tuile de calcul pour un texte à 100 % ; multipliée par
 /// l'échelle du texte pour que « 1057,9 » ne se coupe pas.
 const double kCalculationTileMinWidth = 120;
+
+/// Hauteur sous laquelle l'écran du jour de brassage passe en deux colonnes
+/// (téléphone en paysage).
+const double kCompactMaxHeight = 480;
+
+/// Largeur des boutons et de la chronologie de l'écran du jour.
+const double kBrewDayActionsMaxWidth = 480;
+const double kBrewDayChronologyMaxWidth = 480;
+
+/// Largeur de l'écran du jour, centré au-delà.
+const double kBrewDayMaxWidth = 1200;

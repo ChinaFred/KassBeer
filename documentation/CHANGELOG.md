@@ -6,6 +6,34 @@ données, outillage), ou les deux.
 
 ## 2026-11-08
 
+### v0.1.8 — fonctionnel
+
+Le brassin et le jour de brassage hors ligne arrivent (incrément v0.3). Un brassin se crée
+depuis une recette, avec une copie figée de la recette et de l'équipement. La recette reçoit
+une chronologie, préremplie depuis les paliers et l'ébullition. « Préparer le brassage » charge
+tout sur le téléphone. L'écran du jour affiche l'étape en cours, un minuteur lisible de loin
+et les heures prévues recalculées après un retard. Il permet de sauter une étape, de corriger
+une heure et de saisir températures, densités, volumes et pH. Sans réseau, les saisies restent
+sur le téléphone, même application fermée, et partent au retour du réseau. L'écran reste
+allumé. La fin d'un minuteur déclenche une vibration et un bip, même en mode silencieux.
+
+### v0.1.8 — technique
+
+`brewing/` : `recomputeSchedule` corrigé (retour en arrière, étape sautée, début en double),
+`stepRecordsFromEvents`, `defaultBrewSteps`, `readGravity`. Règles : `brew_steps` (60 au plus),
+`owner_name` des brassins, événement `step_skipped`, forme de chaque événement selon sa nature,
+`step_key` non vide. Alerte de fin de minuteur par un canal Kotlin `fr.kassbeer/alert` et Web
+Audio, sans paquet de son (ADR-003), avec la permission Android `VIBRATE`. Contrôles : P2 étendu,
+P17 (canal de plateforme). `main.dart.js` passe de 3 211 502 à 4 170 391 octets, code de cet
+incrément et `flutter_localizations` compris. La taille de l'APK release n'est pas mesurée sur le
+poste, qui n'a plus la clé de signature : le job CI le compile.
+
+Paquets — `app/pubspec.lock` : `wakelock_plus` 1.8.2, `wakelock_plus_platform_interface` 1.7.0,
+`package_info_plus` 9.0.1 → 10.2.2, `package_info_plus_platform_interface` 3.2.1 → 4.1.0,
+`win32` 5.15.0 → 6.4.0, `flutter_localizations` (SDK), `intl` 0.20.2, `dbus` 0.8.0,
+`ffi_leak_tracker` 0.1.2, `petitparser` 7.0.2, `xml` 7.0.1 ; `web` 1.1.1 devient une dépendance
+directe, sans changer de version.
+
 ### v0.1.7 — fonctionnel
 
 Équipements et recettes arrivent, premier incrément de la version 1 (v0.2 du découpage).

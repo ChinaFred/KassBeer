@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
+import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
 
 /// Accès à `recipes/`. Les écrans passent par cette interface ; les tests la
@@ -38,6 +39,17 @@ abstract class RecipesRepository {
 
   /// Supprime la recette [id].
   Future<void> delete(String id);
+
+  /// Clé d'une étape nouvelle, créée par l'appareil.
+  String newStepKey();
+
+  /// Remplace la chronologie de la recette [id], seul champ écrit avec
+  /// `owner_name` et `updated_at`. Lève [ArgumentError] si elle sort des bornes.
+  Future<void> updateBrewSteps({
+    required String id,
+    required List<BrewStepLine> steps,
+    required String? ownerName,
+  });
 }
 
 /// [RecipesRepository] sur Cloud Firestore.
@@ -85,10 +97,14 @@ class FirestoreRecipesRepository implements RecipesRepository {
     bool hasPendingWrites,
   ) {
     try {
-      return DocumentValide(
+      final recipe = Recipe.fromFirestore(
         id,
-        Recipe.fromFirestore(id, data, hasPendingWrites: hasPendingWrites),
+        data,
+        hasPendingWrites: hasPendingWrites,
       );
+      final problem = recipe.content.brewStepsProblem;
+      if (problem != null) _reportBrewSteps(id, problem);
+      return DocumentValide(id, recipe);
     } on DocumentIllisible catch (error, stackTrace) {
       return _invalid(id, error, stackTrace);
     } on BrewingInputException catch (error, stackTrace) {
@@ -97,6 +113,12 @@ class FirestoreRecipesRepository implements RecipesRepository {
       return _invalid(id, error, stackTrace);
     }
   }
+
+  void _reportBrewSteps(String id, String problem) => _errors.reportError(
+    feature: 'recipes.brew_steps',
+    error: DocumentIllisible('brew_steps', problem),
+    context: 'recipes/$id : chronologie illisible',
+  );
 
   DocumentLu<Recipe> _invalid(String id, Object error, StackTrace stackTrace) {
     _errors.reportError(
@@ -164,6 +186,28 @@ class FirestoreRecipesRepository implements RecipesRepository {
   @override
   Future<void> delete(String id) =>
       _guard('recipes.delete', () => _recipes.doc(id).delete());
+
+  @override
+  String newStepKey() => _recipes.doc().id;
+
+  @override
+  Future<void> updateBrewSteps({
+    required String id,
+    required List<BrewStepLine> steps,
+    required String? ownerName,
+  }) => _guard('recipes.brew_steps_update', () async {
+    final problem = erreurChronologie(steps);
+    if (problem != null) throw ArgumentError(problem);
+    await _recipes.doc(id).update({
+      ...champFacultatif(
+        'brew_steps',
+        steps.isEmpty ? null : [for (final s in steps) s.toFirestore()],
+        creation: false,
+      ),
+      ...champFacultatif('owner_name', ownerName, creation: false),
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  });
 
   /// Lance [write] tout de suite (l'écriture locale est faite avant le retour) ;
   /// une erreur, levée en construisant le document ou rendue par le serveur, est
