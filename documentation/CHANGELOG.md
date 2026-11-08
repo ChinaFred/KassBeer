@@ -6,6 +6,13 @@ données, outillage), ou les deux.
 
 ## 2026-11-08
 
+### v0.1.8 — fonctionnel
+
+L'application porte son propre logo, le médaillon Kass'Beer, sur Android et sur le web. Sur
+Android, l'icône est adaptative : médaillon entier sur fond crème, sans coupe quel que soit
+le masque du lanceur. Les PNG sont tirés de `assets/Kassbeer_transparent.png`, sans nouvelle
+dépendance.
+
 ### v0.1.7 — fonctionnel
 
 Équipements et recettes arrivent, premier incrément de la version 1 (v0.2 du découpage).
