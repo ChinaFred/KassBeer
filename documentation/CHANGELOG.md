@@ -24,6 +24,8 @@ d'embouteillage et mesures retenues sur `brews/`, `phase` sur les événements, 
 mesure selon sa nature, identiques à celles des formulaires. ADR-004 : `fl_chart` figé, importé
 par `trace_courbe.dart` seul ; contrôle P18 ajouté, P1 étendu à `deferred as`. La courbe ajoute
 93 582 octets à `main.dart.js`, de 4 242 444 à 4 336 026, corrections de relecture comprises.
+L'APK release, mesuré avant et après toute la v0.4 avec une clé jetable, passe de 61 102 880 à
+62 495 656 octets (+1 392 776), sous le seuil de 2 Mo fixé pour la courbe seule.
 
 Paquets — `app/pubspec.lock` : `fl_chart` 1.3.0 ajouté, aucune autre version ne change.
 ### v0.1.10 — technique
