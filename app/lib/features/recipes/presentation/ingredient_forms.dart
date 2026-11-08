@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/champ_nombre.dart';
 import '../../../core/presentation/formats.dart';
+import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
 
 /// Formulaires d'une ligne de recette, ouverts en feuille du bas ou en dialogue
@@ -841,6 +842,116 @@ class _FormulairePalierState extends ConsumerState<FormulairePalier>
             label: 'Durée (min)',
             obligatoire: true,
             max: 600,
+            textInputAction: TextInputAction.done,
+            onSubmitted: kIsWeb ? (_) => submit(continuer: false) : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Formulaire d'une étape de la chronologie (CH1). La clé est créée à l'ajout et
+/// reste celle de l'étape à la modification (CH6).
+class FormulaireEtape extends ConsumerStatefulWidget {
+  const FormulaireEtape({
+    super.key,
+    this.initial,
+    required this.remaining,
+    required this.newKey,
+    required this.onSubmit,
+  });
+
+  final BrewStepLine? initial;
+  final int remaining;
+  final String Function() newKey;
+  final ValueChanged<BrewStepLine> onSubmit;
+
+  @override
+  ConsumerState<FormulaireEtape> createState() => _FormulaireEtapeState();
+}
+
+class _FormulaireEtapeState extends ConsumerState<FormulaireEtape>
+    with _FormulaireLigne<FormulaireEtape, BrewStepLine> {
+  final _duration = TextEditingController();
+  final _temp = TextEditingController();
+
+  @override
+  int get remaining => widget.remaining;
+  @override
+  bool get editing => widget.initial != null;
+  @override
+  void submitLine(BrewStepLine line) => widget.onSubmit(line);
+
+  @override
+  void initState() {
+    super.initState();
+    final i = widget.initial;
+    if (i != null) {
+      name.text = i.name;
+      _duration.text = texteSaisi(i.durationMin);
+      _temp.text = texteSaisi(i.tempC);
+    }
+  }
+
+  @override
+  void dispose() {
+    _duration.dispose();
+    _temp.dispose();
+    super.dispose();
+  }
+
+  @override
+  BrewStepLine readLine() => BrewStepLine(
+    key: widget.initial?.key ?? widget.newKey(),
+    name: name.text.trim(),
+    durationMin: lireNombre(_duration.text).valeur!,
+    tempC: lireNombre(_temp.text).valeur,
+  );
+
+  @override
+  void clearFields() {
+    _duration.clear();
+    _temp.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = widget.initial;
+    return Form(
+      key: formKey,
+      child: _Cadre(
+        title: initial == null ? 'Étape' : 'Modifier « ${initial.name} »',
+        editing: editing,
+        canContinue: canContinue,
+        onSubmit: submit,
+        lastAdded: lastAdded,
+        children: [
+          TextFormField(
+            controller: name,
+            focusNode: nameFocus,
+            autofocus: true,
+            maxLength: kBrewStepNameMaxLength,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Nom de l\'étape',
+              border: OutlineInputBorder(),
+            ),
+            validator: (v) =>
+                (v ?? '').trim().isEmpty ? 'Donnez un nom à l\'étape.' : null,
+          ),
+          ChampNombre(
+            controller: _duration,
+            label: 'Durée (min)',
+            aide: '0 pour une action sans minuteur (ajout, mesure).',
+            obligatoire: true,
+            max: kBrewStepMaxMinutes,
+          ),
+          ChampNombre(
+            controller: _temp,
+            label: 'Température visée (°C) (facultatif)',
+            max: kBrewStepMaxTemp,
             textInputAction: TextInputAction.done,
             onSubmitted: kIsWeb ? (_) => submit(continuer: false) : null,
           ),

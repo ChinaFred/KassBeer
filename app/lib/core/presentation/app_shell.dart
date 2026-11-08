@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/domain/session_user.dart';
 import '../../features/auth/presentation/access_providers.dart';
 import '../../features/auth/presentation/sign_out.dart';
+import '../../features/brew_day/presentation/reprise_brassage.dart';
 import '../providers.dart';
 import '../router/routes.dart';
 import 'bandeau_hors_ligne.dart';
@@ -112,7 +113,9 @@ class AppShell extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (offline) const BandeauHorsLigne(),
-        Expanded(child: body),
+        Expanded(
+          child: RepriseBrassage(location: location, child: body),
+        ),
       ],
     );
 

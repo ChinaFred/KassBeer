@@ -8,6 +8,7 @@ library;
 
 export 'src/alcohol.dart';
 export 'src/bitterness.dart';
+export 'src/brew_steps.dart';
 export 'src/color.dart';
 export 'src/cost.dart';
 export 'src/errors.dart';

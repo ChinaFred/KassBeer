@@ -5,6 +5,8 @@ import 'package:kass_beer/core/presentation/bandeau_hors_ligne.dart';
 import 'package:kass_beer/features/equipment/presentation/equipment_list_screen.dart';
 import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
 
+import 'package:kass_beer/features/brews/presentation/brews_screen.dart';
+
 import 'support/fakes.dart';
 
 void main() {
@@ -89,10 +91,7 @@ void main() {
     await signedIn(tester, width: 400);
     await tester.tap(find.text('Brassins'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Les brassins arriveront dans une prochaine version.'),
-      findsOneWidget,
-    );
+    expect(find.text(BrewsScreen.emptyMessage), findsOneWidget);
     await tester.tap(find.text('Équipements'));
     await tester.pumpAndSettle();
     expect(find.text(EquipmentListScreen.emptyMessage), findsOneWidget);

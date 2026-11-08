@@ -9,12 +9,18 @@ import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
 import 'package:kass_beer/features/auth/domain/session_user.dart';
+import 'package:kass_beer/features/brew_day/data/alerte_minuteur.dart';
+import 'package:kass_beer/features/brews/data/brews_repository.dart';
+import 'package:kass_beer/features/brews/domain/brew.dart';
+import 'package:kass_beer/features/brews/domain/brew_event.dart';
 import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
 import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
+import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
+import 'package:kass_beer/core/services/screen_wakelock.dart';
 
 /// Flux qui rejoue sa dernière valeur ou erreur à chaque nouvel abonné.
 class Replay<T> {
@@ -163,6 +169,23 @@ class FakeRecipesRepository implements RecipesRepository {
     writes.add(Write('delete', id, null, null, null));
     return serverAnswer();
   }
+
+  /// Dernière chronologie reçue par [updateBrewSteps].
+  List<BrewStepLine>? savedBrewSteps;
+  int _nextKey = 0;
+
+  @override
+  String newStepKey() => 'cle-${++_nextKey}';
+
+  @override
+  Future<void> updateBrewSteps({
+    required String id,
+    required List<BrewStepLine> steps,
+    required String? ownerName,
+  }) {
+    savedBrewSteps = steps;
+    return serverAnswer();
+  }
 }
 
 class FakeEquipmentRepository implements EquipmentRepository {
@@ -209,6 +232,217 @@ class FakeEquipmentRepository implements EquipmentRepository {
     writes.add(Write('delete', id, null, null, null));
     return serverAnswer();
   }
+}
+
+/// Écriture reçue par [FakeBrewsRepository].
+class BrewWrite {
+  BrewWrite(this.kind, this.brewId, [this.detail = const {}]);
+
+  final String kind;
+  final String brewId;
+  final Map<String, Object?> detail;
+
+  @override
+  String toString() => 'BrewWrite($kind, $brewId, $detail)';
+}
+
+class FakeBrewsRepository implements BrewsRepository {
+  final all = Replay<ListeLue<Brew>>();
+  final _events = <String, Replay<ListeLue<BrewEvent>>>{};
+  final writes = <BrewWrite>[];
+  int _next = 0;
+
+  /// Réponse du serveur à une écriture ; jamais terminée par défaut (hors ligne).
+  Future<void> Function() serverAnswer = () => Completer<void>().future;
+
+  /// Vrai si [attendreServeur] rend une réponse du serveur.
+  bool serverReachable = true;
+  int prepareCalls = 0;
+
+  void publish(List<Brew> brews, {bool fromCache = false}) => all.add(
+    ListeLue(
+      documents: [for (final b in brews) DocumentValide(b.id, b)],
+      fromCache: fromCache,
+    ),
+  );
+
+  Replay<ListeLue<BrewEvent>> eventsOf(String brewId) =>
+      _events.putIfAbsent(brewId, Replay.new);
+
+  void publishEvents(
+    String brewId,
+    List<BrewEvent> events, {
+    bool fromCache = false,
+  }) => eventsOf(brewId).add(
+    ListeLue(
+      documents: [for (final e in events) DocumentValide(e.id, e)],
+      fromCache: fromCache,
+    ),
+  );
+
+  @override
+  Stream<ListeLue<Brew>> watchAll() => all.stream;
+
+  @override
+  Stream<ListeLue<BrewEvent>> watchEvents(String brewId) =>
+      eventsOf(brewId).stream;
+
+  @override
+  Future<bool> attendreServeur(
+    String brewId, {
+    Duration limite = kPrepareWait,
+  }) async {
+    prepareCalls++;
+    return serverReachable;
+  }
+
+  @override
+  CreationEnCours create({
+    required Recipe recipe,
+    required Equipment equipment,
+    required String name,
+    required DateTime? plannedFor,
+    required String ownerUid,
+    required String? ownerName,
+    String? notes,
+  }) {
+    final id = 'brassin-${++_next}';
+    writes.add(
+      BrewWrite('create', id, {
+        'name': name,
+        'recipe_id': recipe.id,
+        'equipment_id': equipment.id,
+        'owner_name': ownerName,
+        'notes': notes,
+      }),
+    );
+    return (id: id, written: serverAnswer());
+  }
+
+  @override
+  Future<void> update({
+    required String id,
+    required String name,
+    required DateTime? plannedFor,
+    required String? notes,
+    required String? ownerName,
+  }) {
+    writes.add(
+      BrewWrite('update', id, {'name': name, 'owner_name': ownerName}),
+    );
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> start({
+    required String brewId,
+    required String ownerUid,
+    required DateTime at,
+    required String? firstStepKey,
+    required String? ownerName,
+  }) {
+    writes.add(
+      BrewWrite('start', brewId, {
+        'at': at,
+        'first': firstStepKey,
+        'owner_name': ownerName,
+      }),
+    );
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> finish({required String brewId, required String? ownerName}) {
+    writes.add(BrewWrite('finish', brewId, {'owner_name': ownerName}));
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> writeSteps({
+    required String brewId,
+    required String ownerUid,
+    required List<StepWrite> writes,
+    required DateTime at,
+  }) {
+    this.writes.add(
+      BrewWrite('steps', brewId, {
+        'writes': [
+          for (final w in writes) '${w.kind.storedValue}:${w.stepKey}',
+        ],
+        'at': at,
+      }),
+    );
+    return serverAnswer();
+  }
+
+  @override
+  CreationEnCours addEvent({
+    required String brewId,
+    required BrewEventInput input,
+  }) {
+    final id = 'event-${++_next}';
+    writes.add(
+      BrewWrite('event', brewId, {
+        'id': id,
+        'kind': input.kind.storedValue,
+        'type': input.measureType?.storedValue,
+        'value': input.value,
+        'step': input.stepKey,
+        'at': input.measuredAt,
+      }),
+    );
+    return (id: id, written: serverAnswer());
+  }
+
+  @override
+  Future<void> correct({
+    required String brewId,
+    required String eventId,
+    required double? value,
+    required String? note,
+    required DateTime measuredAt,
+  }) {
+    writes.add(BrewWrite('correct', brewId, {'id': eventId, 'at': measuredAt}));
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> deleteEvent({required String brewId, required String eventId}) {
+    writes.add(BrewWrite('delete_event', brewId, {'id': eventId}));
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> restoreEvent({
+    required String brewId,
+    required BrewEvent event,
+  }) {
+    writes.add(BrewWrite('restore_event', brewId, {'id': event.id}));
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> delete(String id) {
+    writes.add(BrewWrite('delete', id));
+    return serverAnswer();
+  }
+
+  @override
+  Future<void> deleteWithEvents(String id) {
+    writes.add(BrewWrite('delete_with_events', id));
+    return serverAnswer();
+  }
+}
+
+class FakeAlerte implements AlerteMinuteur {
+  int prepared = 0;
+  int triggered = 0;
+
+  @override
+  void preparer() => prepared++;
+
+  @override
+  Future<void> declencher() async => triggered++;
 }
 
 class Invitation {
@@ -298,7 +532,15 @@ class TestApp {
       members = FakeMembersRepository(),
       recipes = FakeRecipesRepository(),
       equipment = FakeEquipmentRepository(),
+      brews = FakeBrewsRepository(),
+      alerte = FakeAlerte(),
       errors = RecordingErrorReportService() {
+    wakelock = ScreenWakelock(
+      errorReportService: errors,
+      toggle: ({required bool enable}) async {
+        wakelockCalls.add(enable);
+      },
+    );
     container = ProviderContainer(
       overrides: [
         errorReportServiceProvider.overrideWithValue(errors),
@@ -306,19 +548,31 @@ class TestApp {
         membersRepositoryProvider.overrideWithValue(members),
         recipesRepositoryProvider.overrideWithValue(recipes),
         equipmentRepositoryProvider.overrideWithValue(equipment),
+        brewsRepositoryProvider.overrideWithValue(brews),
+        horlogeProvider.overrideWithValue(() => now),
+        alerteMinuteurProvider.overrideWithValue(alerte),
+        screenWakelockProvider.overrideWithValue(wakelock),
         appVersionProvider.overrideWithValue('0.1.0'),
       ],
     );
     // Listes vides lues du serveur : l'accueil (Recettes) s'affiche sans attendre.
     recipes.publish(const []);
     equipment.publish(const []);
+    brews.publish(const []);
   }
 
   final FakeAuthRepository auth;
   final FakeMembersRepository members;
   final FakeRecipesRepository recipes;
   final FakeEquipmentRepository equipment;
+  final FakeBrewsRepository brews;
+  final FakeAlerte alerte;
   final RecordingErrorReportService errors;
+  late final ScreenWakelock wakelock;
+  final wakelockCalls = <bool>[];
+
+  /// Heure de l'appareil, modifiable par les tests.
+  DateTime now = DateTime(2026, 11, 8, 12, 10);
   late final ProviderContainer container;
 
   /// Monte l'application dans une fenêtre de [width] × [height] pixels logiques.

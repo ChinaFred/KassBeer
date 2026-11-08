@@ -19,6 +19,9 @@ class ChampNombre extends StatelessWidget {
     this.textInputAction = TextInputAction.next,
     this.onChanged,
     this.onSubmitted,
+    this.style,
+    this.autofocus = false,
+    this.focusNode,
   });
 
   final TextEditingController controller;
@@ -39,12 +42,20 @@ class ChampNombre extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
+  /// Style du texte saisi ; celui du thème s'il est nul.
+  final TextStyle? style;
+  final bool autofocus;
+  final FocusNode? focusNode;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final warning = avertissement;
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
+      autofocus: autofocus,
+      style: style,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textInputAction: textInputAction,
       autovalidateMode: AutovalidateMode.onUserInteraction,

@@ -1,5 +1,6 @@
 {
   "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
+  "errors": "parse_invalid.error : unreadable (texte qui n'est pas un nombre positif à un séparateur décimal au plus) ou out_of_range (nombre lu, densité hors de 0.980 – 1.200) ; parseGravity lève dans les deux cas, readGravity rend la raison",
   "unit": "densité en SG décimal (1.0579) ; points = (SG − 1) × 1000",
   "sg_to_points": [
     {
@@ -92,41 +93,64 @@
     {
       "text": "0,996",
       "expected": 0.996
+    },
+    {
+      "text": "1200",
+      "expected": 1.2,
+      "note": "borne haute"
+    },
+    {
+      "text": "980",
+      "expected": 0.98,
+      "note": "borne basse"
     }
   ],
   "parse_invalid": [
     {
       "text": "",
-      "reason": "vide"
+      "reason": "vide",
+      "error": "unreadable"
     },
     {
       "text": "abc",
-      "reason": "illisible"
+      "reason": "illisible",
+      "error": "unreadable"
     },
     {
       "text": "1.61",
       "reason": "hors intervalle",
+      "error": "out_of_range",
       "source": "Ale blonde 140724 - Pale ale"
     },
     {
       "text": "65",
-      "reason": "points sans 1000 : lire avec points_to_sg"
+      "reason": "points sans 1000 : lire avec points_to_sg",
+      "error": "out_of_range"
     },
     {
       "text": "1057,9,1",
-      "reason": "deux séparateurs"
+      "reason": "deux séparateurs",
+      "error": "unreadable"
     },
     {
       "text": "-1.05",
-      "reason": "signe"
+      "reason": "signe",
+      "error": "unreadable"
     },
     {
       "text": "12,63%",
-      "reason": "pas une densité"
+      "reason": "pas une densité",
+      "error": "unreadable"
     },
     {
       "text": "1250",
-      "reason": "au-delà de 1.200"
+      "reason": "au-delà de 1.200",
+      "error": "out_of_range"
+    },
+    {
+      "text": "979,9",
+      "reason": "en deçà de 0.980",
+      "error": "out_of_range"
     }
   ],
   "divergences": [

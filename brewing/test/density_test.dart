@@ -37,6 +37,28 @@ void main() {
     }
   });
 
+  test('lecture sans exception : même règle que parseGravity', () {
+    for (final c in objects(fixture['parse'])) {
+      final text = c['text'] as String;
+      final reading = readGravity(text);
+      expect(reading, isA<GravityRead>(), reason: label(c));
+      expect(
+        (reading as GravityRead).sg,
+        closeTo(number(c['expected']), 1e-12),
+        reason: label(c),
+      );
+    }
+    for (final c in objects(fixture['parse_invalid'])) {
+      final text = c['text'] as String;
+      final reading = readGravity(text);
+      expect(reading, switch (c['error']) {
+        'unreadable' => isA<GravityUnreadable>(),
+        'out_of_range' => isA<GravityOutOfRange>(),
+        final other => fail('erreur inconnue dans la fixture : $other'),
+      }, reason: label(c));
+    }
+  });
+
   test('SG hors intervalle refusée', () {
     expectInvalid(() => sgToPoints(1.61), '1.61');
     expectInvalid(() => pointsToSg(500), '500 points');

@@ -37,6 +37,58 @@ abstract final class AppTheme {
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
       ),
+      extensions: const [StylesJourDeBrassage.standard],
     );
   }
+}
+
+/// Tailles de texte de l'écran du jour de brassage, lisible à deux mètres.
+@immutable
+class StylesJourDeBrassage extends ThemeExtension<StylesJourDeBrassage> {
+  const StylesJourDeBrassage({
+    required this.minuteur,
+    required this.minuteurPaysage,
+    required this.minuteurLarge,
+    required this.etape,
+    required this.etapeLarge,
+    required this.ensuite,
+    required this.chronologie,
+  });
+
+  static const standard = StylesJourDeBrassage(
+    minuteur: 88,
+    minuteurPaysage: 72,
+    minuteurLarge: 128,
+    etape: 36,
+    etapeLarge: 45,
+    ensuite: 22,
+    chronologie: 16,
+  );
+
+  static StylesJourDeBrassage of(BuildContext context) =>
+      Theme.of(context).extension<StylesJourDeBrassage>() ?? standard;
+
+  final double minuteur;
+  final double minuteurPaysage;
+  final double minuteurLarge;
+  final double etape;
+  final double etapeLarge;
+  final double ensuite;
+  final double chronologie;
+
+  @override
+  StylesJourDeBrassage copyWith({double? minuteur, double? etape}) =>
+      StylesJourDeBrassage(
+        minuteur: minuteur ?? this.minuteur,
+        minuteurPaysage: minuteurPaysage,
+        minuteurLarge: minuteurLarge,
+        etape: etape ?? this.etape,
+        etapeLarge: etapeLarge,
+        ensuite: ensuite,
+        chronologie: chronologie,
+      );
+
+  @override
+  StylesJourDeBrassage lerp(StylesJourDeBrassage? other, double t) =>
+      t < 0.5 || other == null ? this : other;
 }
