@@ -146,13 +146,13 @@ service cloud.firestore {
     // ---------------------------------------------------------------- recipes
 
     // Champs de premier niveau d'une recette. Aucun prix ni stock (P5) : les prix
-    // vivent sous users/{uid}/prices. Les éléments des listes (ingrédients) ne
-    // peuvent pas être inspectés par les règles ; le dépôt de données ne les écrit
-    // qu'à partir des types de brewing/, sans prix.
+    // vivent sous users/{uid}/prices. Les éléments des listes (ingrédients, paliers,
+    // étapes de la chronologie) ne peuvent pas être inspectés par les règles ; le
+    // dépôt de données ne les écrit qu'à partir des types de brewing/, sans prix.
     function recipeFields() {
       return ['owner_uid', 'owner_name', 'name', 'style', 'notes', 'batch_volume_l', 'boil_time_min',
               'equipment_id', 'fermentables', 'hops', 'others', 'yeasts', 'mash_steps',
-              'imported_from', 'created_at', 'updated_at'];
+              'brew_steps', 'imported_from', 'created_at', 'updated_at'];
     }
 
     function isRecipeShape(d) {
@@ -170,6 +170,8 @@ service cloud.firestore {
         && optList(d, 'others', 50)
         && optList(d, 'yeasts', 10)
         && optList(d, 'mash_steps', 20)
+        // Chronologie du jour : 60 étapes au plus (key, name, duration_min, temp_c).
+        && optList(d, 'brew_steps', 60)
         && optString(d, 'imported_from', 200);
     }
 
@@ -230,7 +232,7 @@ service cloud.firestore {
     // ---------------------------------------------------------------- brews
 
     function brewFields() {
-      return ['owner_uid', 'recipe_id', 'name', 'status', 'planned_for', 'brewed_at',
+      return ['owner_uid', 'owner_name', 'recipe_id', 'name', 'status', 'planned_for', 'brewed_at',
               'recipe_snapshot', 'equipment_snapshot', 'adjustments', 'bottles_count',
               'notes', 'imported_from', 'created_at', 'updated_at'];
     }
@@ -275,6 +277,7 @@ service cloud.firestore {
         && d.recipe_snapshot is map
         && d.recipe_snapshot.keys().hasOnly(recipeFields())
         && snapshotOwnerNameOk(d.recipe_snapshot)
+        && optList(d.recipe_snapshot, 'brew_steps', 60)
         && d.equipment_snapshot is map
         && d.equipment_snapshot.keys().hasOnly(equipmentFields())
         && snapshotOwnerNameOk(d.equipment_snapshot)
@@ -284,15 +287,21 @@ service cloud.firestore {
         && optString(d, 'imported_from', 200);
     }
 
+    // owner_name : nom du brasseur affiché au groupe, comme dans recipes/ (ownerNameOk).
+    // Le statut passe de planned à brewing puis fermenting par des écritures simples
+    // ou un WriteBatch du propriétaire ; les règles ne contrôlent pas l'ordre des
+    // statuts.
     match /brews/{brewId} {
       allow read: if isMember();
       allow create: if isMember()
         && isBrewShape(request.resource.data)
+        && ownerNameOk(request.resource.data)
         && createdByMe(request.resource.data);
       // Un brassin fige sa recette : la copie de la recette et de l'équipement, et
       // la recette d'origine, ne changent plus après la création.
       allow update: if isMember()
         && isBrewShape(request.resource.data)
+        && ownerNameOk(request.resource.data)
         && updatedByOwner()
         && !request.resource.data.diff(resource.data).affectedKeys()
              .hasAny(['recipe_id', 'recipe_snapshot', 'equipment_snapshot']);
@@ -306,17 +315,48 @@ service cloud.firestore {
                 'measured_at', 'created_at'];
       }
 
+      // Forme selon kind. Début, fin ou saut d'étape : step_key obligatoire, sans
+      // mesure. Mesure : type connu et valeur numérique finie et bornée, step_key nul
+      // permis (mesure sans étape). Note : texte de 1 à 2 000 caractères, sans mesure.
       function isEventShape(d) {
         return d.keys().hasOnly(eventFields())
           && d.keys().hasAll(['owner_uid', 'kind', 'measured_at', 'created_at'])
           && d.owner_uid is string
-          && d.kind in ['step_started', 'step_ended', 'measurement', 'note']
-          && optString(d, 'step_key', 100)
-          && (!('measure_type' in d) || d.measure_type == null
-              || d.measure_type in ['temperature', 'gravity', 'volume', 'ph'])
-          && optNumber(d, 'value')
+          && stepKeyOk(d)
           && optString(d, 'note', 2000)
-          && d.measured_at is timestamp;
+          && d.measured_at is timestamp
+          && (isStepEvent(d) || isMeasurement(d) || isNote(d));
+      }
+
+      // Absente, nulle (mesure ou note sans étape), ou de 1 à 100 caractères.
+      function stepKeyOk(d) {
+        return !('step_key' in d) || d.step_key == null
+          || (d.step_key is string && d.step_key.size() >= 1 && d.step_key.size() <= 100);
+      }
+
+      function hasNoMeasure(d) {
+        return d.get('measure_type', null) == null && d.get('value', null) == null;
+      }
+
+      function isStepEvent(d) {
+        return d.kind in ['step_started', 'step_ended', 'step_skipped']
+          && d.get('step_key', null) is string
+          && hasNoMeasure(d);
+      }
+
+      // Une comparaison avec NaN est fausse : NaN est refusé, comme Infinity.
+      function isMeasurement(d) {
+        return d.kind == 'measurement'
+          && d.get('measure_type', null) in ['temperature', 'gravity', 'volume', 'ph']
+          && d.get('value', null) is number
+          && d.value > -1000000000 && d.value < 1000000000;
+      }
+
+      function isNote(d) {
+        return d.kind == 'note'
+          && d.get('note', null) is string
+          && d.note.size() >= 1
+          && hasNoMeasure(d);
       }
 
       match /events/{eventId} {

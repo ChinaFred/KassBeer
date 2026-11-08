@@ -10,8 +10,8 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; voir son nom, son e-mail et la version dans le menu du compte ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes et équipements et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes et leurs mesures ; suivre le jour de brassage et modifier ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -76,8 +76,9 @@ Destinations : Recettes, Brassins, Équipements, et Admin pour l'administrateur 
 à partir de 840 px, rail étendu et contenu centré sur 840 px au plus. Le rail défile quand
 ses destinations dépassent la hauteur (écran bas, grand texte).
 
-Brassins ne contient encore qu'un message : « Les brassins arriveront dans une prochaine
-version. ». Recettes et Équipements sont décrits ci-dessous.
+Recettes, Équipements et Brassins sont décrits ci-dessous. Au lancement, si le compte a un seul
+brassin en cours depuis moins de 24 h, l'écran du jour se rouvre avec le message « Brassage
+repris. Les minuteurs comptent le temps écoulé. ».
 
 Une page de second niveau (fiche d'une recette, d'un équipement, Admin › Membres) porte son
 titre (« Recette », « Équipement », « Membres ») et un bouton retour vers sa liste. Les
@@ -189,8 +190,10 @@ flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà.
 et « Supprimer » pour l'auteur, « Dupliquer » pour tous. Puis le bloc Calculs (voir
 « Calculs affichés »), et les sections Général (volume en fermenteur, durée d'ébullition,
 équipement), Malts et sucres, Houblons (avec l'IBU apporté par chacun), Autres ajouts,
-Levure, Paliers d'empâtage, Notes. Chaque ligne d'ingrédient tient sur deux niveaux : nom,
-puis ses valeurs.
+Levure, Paliers d'empâtage, Chronologie du jour, Notes. Chaque ligne d'ingrédient tient sur
+deux niveaux : nom, puis ses valeurs. « Nouveau brassin » (tous les membres) ouvre le
+formulaire de création. Une chronologie illisible s'affiche « Chronologie illisible », sans
+masquer le reste de la recette, et l'erreur est rapportée.
 
 - Recette absente d'une réponse du serveur : « Cette recette n'existe pas ou a été
   supprimée. » et « Revenir aux recettes ». Absente du cache hors ligne : « Recette
@@ -202,6 +205,21 @@ ne change pas. Possible sur toute recette, y compris celle d'un membre retiré. 
 « Recette dupliquée. » (hors ligne : « Recette dupliquée sur l'appareil. Elle partira au
 retour du réseau. »), puis la fiche de la copie. Pendant la lecture du nom du compte, le
 bouton affiche « Duplication » et ne répond pas : un double appui ne crée qu'une copie.
+
+**Chronologie du jour.** La section montre les étapes et la durée totale. Pour l'auteur,
+« Modifier la chronologie » ouvre l'éditeur plein écran « Chronologie du jour », qui n'écrit que
+la chronologie (« Total : 5 h 40 · 11 étapes »). Sans étape : « Aucune étape. Préremplissez
+depuis les paliers et l'ébullition, ou ajoutez une étape. », boutons « Préremplir depuis la
+recette » et « Ajouter une étape ». Le préremplissage crée une étape par palier, puis
+l'ébullition coupée à chaque ajout de houblon (« Ébullition », « Ajouter Cascade 20 g »,
+0 min), puis le whirlpool. Avec des étapes, « Repartir des paliers et de l'ébullition » demande
+« Remplacer les {n} étapes ? ». Modifier un palier ensuite ne change pas la chronologie. Chaque
+étape : « Nom de l'étape » (120 caractères), « Durée (min) » (0 à 600 ; 0 pour une action sans
+minuteur), « Température visée (°C) (facultatif) » (0 à 100). Menu ⋮ : « Monter », « Descendre »,
+« Dupliquer », « Retirer » (SnackBar « Annuler ») ; poignée pour réordonner. Au plus 60 étapes
+(« 60 étapes au plus. »). La clé d'une étape ne change ni au renommage ni au déplacement ;
+dupliquer une recette garde les clés. L'adresse de l'éditeur pour un autre membre affiche « Seul
+l'auteur modifie cette chronologie. ».
 
 **Supprimer** (auteur). « Supprimer « {nom} » ? » / « La recette disparaît pour tout le
 groupe. », boutons « Annuler » et « Supprimer ». Puis « Recette supprimée. ».
@@ -273,6 +291,115 @@ vide sa durée : des minutes ne deviennent pas des jours. Un nom d'ingrédient s
 houblons et ajouts en grammes (« 22,4 g »), « 20 L », « 67 °C », « 60 min », houblon à cru
 « 3 jours » (« 1,5 jour » au singulier sous 2). Les tuiles des calculs s'élargissent avec la
 taille du texte : à 200 %, elles passent sur une colonne plutôt que de couper « 1057,9 ».
+
+### Brassins
+
+**Nouveau brassin** (fiche d'une recette, tous les membres). « Nom du brassin » (prérempli, 120
+caractères), « Équipement » (les siens puis ceux du groupe avec leur auteur ; présélection :
+celui de la recette, sinon son seul équipement ; obligatoire : « Choisissez un équipement. » ;
+hors ligne sans équipement lu : « Équipement indisponible hors ligne. Reconnectez le téléphone
+pour créer le brassin. »), « Date prévue (facultatif) » (aujourd'hui par défaut, effaçable). Le
+brassin reçoit une copie de la recette et de l'équipement : la recette peut changer ensuite, le
+brassin garde sa version. Recette sans chronologie : le brassin se crée, sans étape à suivre.
+Messages : « Brassin créé. », « Brassin créé sur l'appareil. Il partira au retour du réseau. »,
+« La création de « {nom} » a échoué. ».
+
+**Liste** (tous les brassins du groupe). En cours d'abord, puis prévus par date croissante, puis
+les autres du plus récent au plus ancien. « Tous » / « Les miens », non enregistré. Chaque ligne :
+nom, « {statut} · {équipement} · {auteur} », date (« Prévu le sam. 15 nov. 2026 », « Commencé
+aujourd'hui à 11:15 », « Brassé le 11 févr. 2024 »), étiquette « En attente du réseau ». Vide :
+« Aucun brassin. Ouvrez une recette et appuyez sur Nouveau brassin. ». Statuts : Prévu, En
+cours, En fermentation, En conditionnement, Terminé, Abandonné.
+
+**Fiche.** Nom, statut, lien vers la recette, « Brassin de {auteur} » pour un autre membre. Bloc
+Calculs sur la copie figée, Chronologie (heures, état, mesures), sections de la recette figée,
+Général (date prévue, brassé le, équipement). Propriétaire : « Préparer le brassage » (prévu),
+« Reprendre le brassage » (en cours), « Modifier » (nom, date prévue, notes), « Supprimer ». Un
+appui sur une mesure ouvre sa correction. Autre membre : aucun bouton. La recette a changé depuis
+la création : « La recette a changé depuis la création de ce brassin. Il garde la version du
+{date}. » ; pour un brassin prévu sans saisie, « Recréer depuis la recette ».
+« Préparé sur cet appareil » s'affiche quand la préparation a abouti pendant la session ; sans
+cette information, rien ne s'affiche.
+
+**Supprimer** (propriétaire). « Supprimer « {nom} » ? » / « Le brassin, ses étapes et ses mesures
+disparaissent pour tout le groupe. ». Sans saisie : immédiat, même hors ligne. Avec saisies :
+réseau exigé (hors ligne : « Suppression impossible hors ligne : ce brassin a des saisies. »).
+
+### Préparer le brassage
+
+Écran « Préparer le brassage » (propriétaire d'un brassin prévu ou en cours : un autre membre lit
+« Seul le brasseur de ce brassin suit son brassage. », un brassin fini « Le brassage de ce brassin
+est terminé. », sans bouton pour le relancer). À faire sur le téléphone qui
+servira, avec du réseau, avant de le couper. Il attend une réponse du serveur, 15 s au plus, sans
+rien écrire, et liste : brassin et recette figée, équipement, chronologie (« 11 étapes · 5 h 40 ·
+fin vers 16:05 »), compte, écran gardé allumé, minuteurs (« Aucune alarme ne sonne écran
+verrouillé : gardez l'écran visible. »). Réponse reçue : « Tout est prêt. Vous pouvez couper le
+réseau. ». Sans réponse ni réseau : « Préparation impossible sans réseau. Le brassin est lisible
+sur cet appareil, mais peut ne pas être à jour. ». « Commencer le brassage » passe le brassin « En
+cours » avec l'heure de l'appareil, démarre la première étape si elle a une durée, et ouvre
+l'écran du jour. Sur le web : « Gardez cet onglet ouvert. Une page rechargée sans réseau ne
+s'ouvre plus. ».
+
+### Jour de brassage
+
+Écran plein écran, réservé au propriétaire. L'écran reste allumé tant qu'il est ouvert. La
+barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le minuteur. Quand le brassage
+est affiché, ou pendant la lecture des saisies, le retour Android ramène à la fiche du brassin. Un
+autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
+sa fiche, en lecture seule.
+
+**Panneau.** Étape en cours : numéro, nom, minuteur lisible à deux mètres (« 32:15 », « 1:05:12 »),
+« restantes sur 45 min », température visée et dernière mesure, « Ensuite : {nom} · vers 12:30 »,
+« Fin prévue vers 16:05 · retard 12 min ». Durée dépassée : « +04:12 », fond distinct, « Dépassé de
+4 min · prévu 45 min » (« Dépassé · prévu 45 min » la première minute). Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
+« Prévue vers 12:30 », bouton « Commencer l'étape » (« Fait » pour une étape de 0 min, début et
+fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
+« En fermentation »). Sans chronologie : « Aucune étape. Saisissez vos mesures. ».
+
+**Fin d'un minuteur.** Vibration d'environ une seconde et son de notification, une seule fois
+par étape, écran ouvert seulement : aucune alarme ne sonne écran verrouillé.
+
+**Étapes.** Un appui sur une ligne ouvre : « Commencer cette étape », « Marquer comme sautée » /
+« Ne plus sauter », « Corriger l'heure de début », « Corriger l'heure de fin » (l'heure choisie se place au jour le plus proche de la valeur corrigée, sans jamais être dans le futur : un début à 23:50 corrigé à 00:05 passe au lendemain, une fin notée à 08:00 corrigée à 18:00 revient à la veille ; une heure à venir se place à la veille si la veille reste après le début du brassage, sinon elle est refusée ; « La fin doit suivre le début. »), « Annuler le début » / « Annuler la fin » (SnackBar
+« Annuler » 10 s), « Saisir une mesure pour cette étape ». Une étape jamais commencée s'affiche
+« Non faite » dès qu'une étape plus loin a commencé ; marquée sautée, elle s'affiche « Sautée » ; dans les deux cas, elle reste démarrable.
+Étapes faites : heure réelle de début et de fin. À venir : heure attendue, recalculée à partir
+des heures réelles (un retard décale la suite). Commencer une étape alors qu'une autre tourne
+demande « « {nom} » est en cours. », « Terminer et commencer » ; après des étapes non commencées,
+« Les sauter et commencer ». Un double appui n'écrit qu'un événement. Deux débuts pour une étape
+(deux appareils hors ligne) : le plus ancien compte, l'autre s'affiche « Début en double »,
+supprimable. Fin avant le début : « La chronologie ne peut pas être calculée : l'étape « {nom} »
+finit avant de commencer. Corrigez son heure. ».
+
+**Mesures.** Bouton « Mesure » : étape (ou « Sans étape »), type (Température 0 à 110 °C, Densité,
+Volume au-delà de 0 et jusqu'à 1 000 L, pH 0 à 14, Note), heure (« maintenant » par défaut,
+une heure à venir se place à la veille si la veille reste après le début du brassage, comme 23:55 saisi à 00:05 ; sinon elle est refusée), note facultative. Densité : « 1057,9 » ou « 1.058 » (« Densité illisible.
+Écrivez 1057,9 ou 1.058. », « Densité hors de 980 à 1200. »). Le formulaire ne se ferme pas par un appui hors de la feuille
+ni par un glissement : seuls « Annuler » et l'enregistrement le ferment. « Enregistrer la mesure » ferme la
+feuille ; « Mesure enregistrée. » avec « Annuler » 10 s. Un appui sur une mesure ouvre sa
+correction (valeur, note, heure) et « Supprimer la mesure ». Pour changer de type, supprimer et
+ressaisir. Menu ⋮ : « Ajouter une note », « Voir la recette », « Terminer le brassage ». Terminer :
+« Les étapes non commencées resteront non faites. Vous pourrez encore corriger les mesures. ».
+
+**Reprise.** L'application rouvre l'écran du jour au lancement (voir Accueil). Le minuteur se
+recalcule depuis l'heure enregistrée, quel que soit le temps écoulé.
+
+### Hors ligne du jour de brassage
+
+- L'écran marche sans réseau sur l'APK, une fois « Préparer le brassage » fait. Toutes les étapes
+  et les mesures s'écrivent sur l'appareil sans attente ni erreur.
+- Une pastille dans la barre remplace le bandeau : « Envoyé », « Envoi · 3 », « Hors ligne · 3 »,
+  « 1 refusée ». Son appui ouvre le détail : les saisies en attente, « Gardées sur ce téléphone,
+  même si l'application se ferme. », et les refus. Une saisie refusée pendant que l'écran est ouvert
+  s'affiche « Refusée par le serveur : Densité 1057,9 à 12:10. Elle n'est pas enregistrée. » avec
+  « Saisir à nouveau » ; elle est rapportée.
+- Une saisie déjà enregistrée (accusé perdu et renvoi) n'est jamais annoncée refusée.
+- Limite : un refus du serveur reçu après la fermeture de l'application passe sans message : il
+  n'existe pas de journal local des saisies non confirmées en v0.3.
+- Au retour du réseau, chaque saisie arrive une fois, à l'heure de sa saisie, sans intervention.
+- Sur le web, seul un onglet déjà ouvert marche sans réseau (« Ne fermez pas cet onglet avant le
+  retour du réseau. »).
+- Reporté : le message à la déconnexion avec des saisies en attente (HS8).
 
 ### Calculs affichés
 

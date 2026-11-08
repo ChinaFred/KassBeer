@@ -19,6 +19,12 @@ abstract final class AppRoutes {
   static String equipmentItem(String id) => '$equipment/$id';
   static String editEquipment(String id) => '$equipment/$id/modifier';
 
+  static String editBrewSteps(String id) => '$recipes/$id/chronologie';
+
+  static String brew(String id) => '$brews/$id';
+  static String prepareBrew(String id) => '$brews/$id/preparer';
+  static String brewDay(String id) => '$brews/$id/jour';
+
   /// Écrans d'accès : un membre qui y arrive repart vers l'accueil.
   static const accessScreens = {loading, login, notInvited, accessError};
 

@@ -2,6 +2,7 @@ import 'package:brewing/brewing.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
+import 'chronologie.dart';
 
 /// Conversion entre un document `recipes/{id}` et les types de `brewing/`, écrite
 /// ici seulement. Les valeurs stockées des natures, moments et formes passent par
@@ -291,6 +292,8 @@ class RecipeContent {
     this.others = const [],
     this.yeasts = const [],
     this.mashSteps = const [],
+    this.brewSteps = const [],
+    this.brewStepsProblem,
     this.importedFrom,
   });
 
@@ -310,6 +313,12 @@ class RecipeContent {
   final List<YeastLine> yeasts;
   final List<MashStep> mashSteps;
 
+  /// Chronologie du jour, dans l'ordre.
+  final List<BrewStepLine> brewSteps;
+
+  /// Raison pour laquelle `brew_steps` est illisible, ou `null` (CH8).
+  final String? brewStepsProblem;
+
   /// Fiche Excel d'origine ; vide pour une recette saisie ou dupliquée.
   final String? importedFrom;
 
@@ -317,6 +326,7 @@ class RecipeContent {
   /// (valeur stockée inconnue) sans jamais remplacer une valeur absente.
   factory RecipeContent.fromFirestore(Map<String, dynamic> data) {
     final read = LecteurChamps(data);
+    final chronologie = readBrewSteps(data['brew_steps']);
     return RecipeContent(
       name: read.texte('name'),
       style: read.texteFacultatif('style'),
@@ -337,6 +347,8 @@ class RecipeContent {
       mashSteps: List.unmodifiable(
         read.liste('mash_steps').map(MashStep.fromFirestore),
       ),
+      brewSteps: chronologie.steps,
+      brewStepsProblem: chronologie.problem,
       importedFrom: read.texteFacultatif('imported_from'),
     );
   }
@@ -365,6 +377,10 @@ class RecipeContent {
       ...opt('others', list(others, (o) => o.toFirestore())),
       ...opt('yeasts', list(yeasts, (y) => y.toFirestore())),
       ...opt('mash_steps', list(mashSteps, (m) => m.toFirestore())),
+      // Modifier une recette n'écrit pas la chronologie : l'éditeur de la
+      // chronologie a sa propre écriture, seule à la toucher.
+      if (creation && brewSteps.isNotEmpty)
+        'brew_steps': [for (final b in brewSteps) b.toFirestore()],
       ...opt('imported_from', text(importedFrom)),
     };
   }
@@ -380,7 +396,8 @@ class RecipeContent {
   );
 
   /// Copie pour « Dupliquer » (R7) : « Copie de {nom} » coupé à 120 caractères,
-  /// mêmes ingrédients, paliers et équipement, sans fiche d'origine.
+  /// mêmes ingrédients, paliers, chronologie (mêmes clés) et équipement, sans fiche
+  /// d'origine.
   RecipeContent duplicate() => RecipeContent(
     name: truncateName('Copie de ${name.trim()}', kRecipeNameMaxLength),
     style: style,
@@ -393,6 +410,7 @@ class RecipeContent {
     others: others,
     yeasts: yeasts,
     mashSteps: mashSteps,
+    brewSteps: brewSteps,
   );
 }
 

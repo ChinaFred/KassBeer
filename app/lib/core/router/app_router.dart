@@ -8,11 +8,15 @@ import '../../features/auth/presentation/access_providers.dart';
 import '../../features/auth/presentation/loading_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/not_invited_screen.dart';
+import '../../features/brew_day/presentation/brew_day_screen.dart';
+import '../../features/brew_day/presentation/prepare_brew_screen.dart';
+import '../../features/brews/presentation/brew_detail_screen.dart';
 import '../../features/brews/presentation/brews_screen.dart';
 import '../../features/equipment/presentation/equipment_detail_screen.dart';
 import '../../features/equipment/presentation/equipment_editor_screen.dart';
 import '../../features/equipment/presentation/equipment_list_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
+import '../../features/recipes/presentation/brew_steps_editor_screen.dart';
 import '../../features/recipes/presentation/recipe_detail_screen.dart';
 import '../../features/recipes/presentation/recipe_editor_screen.dart';
 import '../../features/recipes/presentation/recipes_list_screen.dart';
@@ -125,6 +129,19 @@ final routerProvider = Provider<GoRouter>((ref) {
             RecipeEditorScreen(id: state.pathParameters['id']),
       ),
       GoRoute(
+        path: '${AppRoutes.recipes}/:id/chronologie',
+        builder: (_, state) =>
+            BrewStepsEditorScreen(id: state.pathParameters['id']!),
+      ),
+      // Écran du jour : plein écran, hors de la coquille.
+      GoRoute(
+        path: '${AppRoutes.brews}/:id/jour',
+        builder: (_, state) => BrewDayScreen(
+          id: state.pathParameters['id']!,
+          reprise: state.extra == kRepriseBrassage,
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.newEquipment,
         builder: (_, _) => const EquipmentEditorScreen(),
       ),
@@ -139,7 +156,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           return AppShell(
             location: state.uri.path,
             title: page is PageDeCoquille ? page.titre : "Kass'Beer",
-            backTo: page is PageDeCoquille ? page.retour : null,
+            backTo: page is PageDeCoquilleDynamique
+                ? page.retourDepuis(state)
+                : page is PageDeCoquille
+                ? page.retour
+                : null,
             child: child,
           );
         },
@@ -162,6 +183,23 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppRoutes.brews,
             titre: 'Brassins',
             builder: (_, _) => const BrewsScreen(),
+            routes: [
+              PageDeCoquille(
+                path: ':id',
+                titre: 'Brassin',
+                retour: AppRoutes.brews,
+                builder: (_, state) =>
+                    BrewDetailScreen(id: state.pathParameters['id']!),
+              ),
+              PageDeCoquilleDynamique(
+                path: ':id/preparer',
+                titre: 'Préparer le brassage',
+                retourDepuis: (state) =>
+                    AppRoutes.brew(state.pathParameters['id']!),
+                builder: (_, state) =>
+                    PrepareBrewScreen(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
           PageDeCoquille(
             path: AppRoutes.equipment,
