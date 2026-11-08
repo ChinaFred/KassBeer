@@ -92,7 +92,8 @@ documentation/                  modèles de documents, leçons apprises, ce guid
 ## 4. Travailler
 
 Toute demande de code suit la « Chaîne de travail » de `CLAUDE.md` : architecture si besoin,
-cadrage, implémentation, relecture, version, commit, tag après la fusion. Une question reçoit
+cadrage, implémentation, relecture, version, commit, tag après la fusion et sa CI verte.
+Une question reçoit
 une réponse, sans modification de fichier.
 
 ### Travailler en parallèle
@@ -128,8 +129,9 @@ un résultat qui ne compile plus. Avant de fusionner, intégrer la branche princ
 branche : `git pull --no-rebase origin <branche-principale>`, ou `git merge
 <branche-principale>` sans dépôt distant. Relancer ensuite les contrôles de « Commandes
 utiles », `git fetch --tags` et `node scripts/check-version.mjs`, puis fusionner.
-`CLAUDE.md` (« Version ») impose la fusion plutôt que le rebase. Après la fusion, le tag
-`vX.Y.Z` se pose sur la branche principale (« Chaîne de travail », étape 6). Une branche ne
+`CLAUDE.md` (« Version ») impose la fusion plutôt que le rebase. Le tag `vX.Y.Z` se pose
+sur le commit de fusion, après sa CI verte s'il existe un dépôt distant (« Chaîne de
+travail », étape 6). Une branche ne
 reçoit pas de tag : si l'autre session fusionne la première, son numéro change.
 
 `check-version.mjs` lit le fichier déclaré dans `.claude/version.json` dans le dernier commit

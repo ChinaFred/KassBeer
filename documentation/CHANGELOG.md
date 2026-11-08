@@ -26,6 +26,11 @@ par `trace_courbe.dart` seul ; contrôle P18 ajouté, P1 étendu à `deferred as
 93 582 octets à `main.dart.js`, de 4 242 444 à 4 336 026, corrections de relecture comprises.
 
 Paquets — `app/pubspec.lock` : `fl_chart` 1.3.0 ajouté, aucune autre version ne change.
+### v0.1.10 — technique
+
+Le tag d'une version se pose après la CI verte sur `main` (`CLAUDE.md`, « Chaîne de travail »,
+étape 6). Posé avant, il fait échouer `check-version.mjs` sur le push de la fusion, et
+`deploy.yml` ne déploie pas : c'est arrivé à la v0.1.9 (leçon 16).
 
 ### v0.1.9 — fonctionnel
 
