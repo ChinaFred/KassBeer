@@ -3,7 +3,8 @@
 | Fichier | Contenu |
 |---|---|
 | `projet.md` | intention, utilisateurs, contraintes — écrit au démarrage |
-| `decisions/` | décisions d'architecture (ADR), une par fichier, numérotées ; ADR-001 : pile technique ; ADR-002 : dépôt public ; ADR-003 : alerte de fin de minuteur ; ADR-004 : bibliothèque de courbes |
+| `decisions/` | décisions d'architecture (ADR), une par fichier, numérotées ; ADR-001 : pile technique ; ADR-002 : dépôt public ; ADR-003 : alerte de fin de minuteur ; ADR-004 : bibliothèque de courbes ; ADR-005 : recettes en BeerJSON, échange, référentiels et recettes publiques |
+| `DATA_SOURCES.md` | sources de données externes : versions, licences, correspondances |
 | `exigences-fonctionnelles.md` | parcours, modules, rôles, règles d'accès |
 | `exigences-techniques.md` | architecture, modèle de données, règles d'accès, intégrations |
 | `CHANGELOG.md` | ce qui change d'une version à l'autre |

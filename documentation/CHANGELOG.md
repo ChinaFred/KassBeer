@@ -6,6 +6,14 @@ données, outillage), ou les deux.
 
 ## 2026-11-08
 
+### v0.1.12 — technique
+
+Cadrage du socle données, sans code. ADR-005 décide le passage des recettes en BeerJSON partiel
+dans Firestore, l'import et l'export BeerJSON et BeerXML en Dart, sans Cloud Function, cinq
+référentiels d'ingrédients et de styles, et 415 recettes publiques DIY Dog. `DATA_SOURCES.md`
+consigne les versions figées, les licences et la correspondance de chaque source, relevées sur les
+fichiers. Les règles de `CLAUDE.md` et le code changent aux livraisons suivantes.
+
 ### v0.1.11 — fonctionnel
 
 L'après-brassage arrive (incrément v0.4) : un brassin va de « Prévu » à « Terminé » sans Excel.
