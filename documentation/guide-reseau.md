@@ -137,6 +137,11 @@ sur le commit de fusion, après sa CI verte s'il existe un dépôt distant (« C
 travail », étape 6). Une branche ne
 reçoit pas de tag : si l'autre session fusionne la première, son numéro change.
 
+Une entrée `— fonctionnel` du `CHANGELOG.md` est extraite par `scripts/changelog-recent.mjs`
+vers `app/assets/changelog_recent.json`, que l'écran « Nouveautés » affiche. `CLAUDE.md` (« Version ») demande de l'écrire pour le
+brasseur, sans chemin de fichier ni numéro d'incrément ; le détail va dans l'entrée
+`— technique`.
+
 `check-version.mjs` lit le fichier déclaré dans `.claude/version.json` dans le dernier commit
 de la branche (`HEAD`) et sur la branche principale : la plus haute version entre `main` et
 `origin/main`, ou la référence passée par `--base <ref>`. Une modification non commitée n'est

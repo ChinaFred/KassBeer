@@ -28,6 +28,9 @@ ADR-006 accepté : les tickets des membres seront publiés en Issues GitHub par 
 sans point d'accès HTTP (Node 24), en deux lots T1 et T2 après les lots L2 à L4 d'ADR-005. Aucune
 implémentation dans cette version. ADR-001 et la section « Le projet » de `CLAUDE.md` le citent.
 
+`CLAUDE.md` (« Version ») ajoute une règle d'écriture : une entrée « fonctionnel » s'adresse au
+brasseur, sans chemin de fichier ni numéro d'incrément, puisqu'elle s'affiche dans « Nouveautés ».
+
 ## 2026-11-08
 
 ### v0.1.12 — technique

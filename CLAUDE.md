@@ -340,6 +340,12 @@ Un seul fichier porte la version. Chaque commit qui termine la « Chaîne de tra
 du jour (`## AAAA-MM-JJ`), un titre `### vX.Y.Z — fonctionnel` ou `— technique`, dans le même
 commit. L'entrée dit ce qui change et pourquoi, en quelques phrases.
 
+Une entrée `— fonctionnel` s'affiche, en texte simple, dans l'écran « Nouveautés » de
+l'application. Elle s'écrit pour le brasseur : ce qu'il voit ou peut faire de nouveau, sans
+chemin de fichier, nom de fichier, nom de paquet, numéro d'incrément (« v0.4 ») ni numéro de
+lot. Ce détail va dans l'entrée `— technique`. Les entrées antérieures à la v0.1.13 ne se
+réécrivent pas.
+
 Deux sessions qui travaillent en parallèle peuvent choisir le même numéro. Avant de fusionner
 une branche, l'intégrer **par une fusion, jamais par un rebase**, puis lancer
 `git fetch --tags` et `node scripts/check-version.mjs`. Il échoue si le numéro de la branche
