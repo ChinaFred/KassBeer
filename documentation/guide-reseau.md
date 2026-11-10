@@ -264,7 +264,7 @@ limite de Firestore de 1 000 expressions par requête : toute règle ajoutée su
 en BeerJSON partiel ». P19, P20, P22 et les autres évolutions d'ADR-005 arrivent avec L2 à
 L4, quand leur code existe.
 
-Depuis la v0.1.19 (L2b d'ADR-005, ADR-007), `securite` vérifie P28 sur le canal de fichiers
+Depuis la v0.1.20 (L2b d'ADR-005, ADR-007), `securite` vérifie P28 sur le canal de fichiers
 `fr.kassbeer/files` : lecture bornée avant tout chargement, nom de fichier exporté sans remontée
 de chemin, `FileProvider` limité à `cacheDir/exports/`, aucune permission de stockage, aucun
 greffon de fichier sans nouvel ADR. P17 s'étend aux appels qui lisent un fichier ou attendent une

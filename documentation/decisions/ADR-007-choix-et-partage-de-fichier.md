@@ -156,7 +156,7 @@ s'ajoute (évolutions du réseau proposées avec cet ADR).
 
 ## Évolutions du réseau acceptées
 
-Acceptées par l'utilisateur le 2026-11-10, appliquées à `CLAUDE.md` avec L2b (v0.1.19) :
+Acceptées par l'utilisateur le 2026-11-10, appliquées à `CLAUDE.md` avec L2b (v0.1.20) :
 extension de P17 (appel qui lit un fichier ou attend une activité hors du thread principal, code
 de requête unique, second appel refusé), P28 nouveau pour `securite` (texte dans le tableau de
 `CLAUDE.md`), lignes « Le projet » et « Structure ».

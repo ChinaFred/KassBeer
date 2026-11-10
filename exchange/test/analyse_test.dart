@@ -226,7 +226,7 @@ void main() {
     '{"beerjson": {"version": 2.01, "recipes": [{"name": "A", "x": $x}]}}',
   );
 
-  group('revue de sécurité de la v0.1.19 : profondeur', () {
+  group('revue de sécurité de la v0.1.20 : profondeur', () {
     test('1 000 000 de niveaux dans recipes : refusé avant jsonDecode', () {
       final texte =
           '{"beerjson": {"version": 2.01, "recipes": ${niveaux(1000000)}}}';
@@ -274,7 +274,7 @@ void main() {
     );
   });
 
-  group('revue de sécurité de la v0.1.19 : en-tête XML', () {
+  group('revue de sécurité de la v0.1.20 : en-tête XML', () {
     test(
       '4 096 octets de déclarations puis <1 : illisible en moins de 100 ms',
       () {

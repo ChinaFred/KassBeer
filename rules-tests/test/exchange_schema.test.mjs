@@ -1,4 +1,4 @@
-// v0.1.19 — sorties du paquet exchange/ (L2b d'ADR-005, P21), validées par ajv sans
+// v0.1.20 — sorties du paquet exchange/ (L2b d'ADR-005, P21), validées par ajv sans
 // émulateur :
 //   - chaque recette lue des fixtures d'import (exchange/test/fixtures/lecture/*.attendu.json,
 //     vérifiées à l'identique par exchange/test/import_fixtures_test.dart) contre le schéma

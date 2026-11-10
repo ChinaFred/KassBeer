@@ -513,7 +513,7 @@ void main() {
     });
   });
 
-  group('revue de sécurité de la v0.1.19', () {
+  group('revue de sécurité de la v0.1.20', () {
     test('4 : unité inconnue affichée sans contrôle de direction', () {
       final unite = 'bar${String.fromCharCode(0x202E)}rels';
       final refus = _refus(_recette({'batch_size': _m(1, unite)}));

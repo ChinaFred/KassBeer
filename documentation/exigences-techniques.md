@@ -298,7 +298,7 @@ du réseau.
 **Dépendances.** `wakelock_plus` 1.8.2, `flutter_localizations` (SDK), `web` ^1.1.1 (direct,
 déjà tiré), `package_info_plus` ^10.2.2. `flutter_localizations` tire `intl` 0.20.2. `fl_chart`
 1.3.0 (version exacte, ADR-004) dessine la courbe du relevé et n'ajoute aucun paquet transitif.
-`exchange` (chemin `../exchange`, v0.1.19) tire `crypto` 3.0.8, déjà résolu en dépendance
+`exchange` (chemin `../exchange`, v0.1.20) tire `crypto` 3.0.8, déjà résolu en dépendance
 indirecte : `pubspec.lock` ne gagne que l'entrée `exchange`. Côté Android,
 `androidx.core:core:1.17.0` est déclaré pour `FileProvider`, à la version que le graphe des
 greffons résout déjà (`./gradlew :app:dependencies --configuration releaseRuntimeClasspath`) ;
@@ -517,7 +517,7 @@ Enveloppe :
 | `owner_uid` | string, obligatoire, uid de l'auteur, immuable |
 | `owner_name` | string, facultatif, 1 à 80 caractères : nom de l'auteur affiché au groupe, égal au nom du jeton de celui qui écrit |
 | `equipment_id` | string \| null (128) : profil d'équipement prévu |
-| `imported_from` | string \| null (200) : origine d'une recette importée, `{format} · sha256:{64 chiffres hexadécimaux}` (`BeerJSON · sha256:…`, v0.1.19), empreinte du contenu de la recette dans le fichier ; aucun nom de fichier. Recettes › Importer marque « Déjà importée » une recette du fichier dont l'empreinte termine l'`imported_from` d'une recette de l'importateur. L'éditeur la garde ; « Dupliquer » ne la copie pas |
+| `imported_from` | string \| null (200) : origine d'une recette importée, `{format} · sha256:{64 chiffres hexadécimaux}` (`BeerJSON · sha256:…`, v0.1.20), empreinte du contenu de la recette dans le fichier ; aucun nom de fichier. Recettes › Importer marque « Déjà importée » une recette du fichier dont l'empreinte termine l'`imported_from` d'une recette de l'importateur. L'éditeur la garde ; « Dupliquer » ne la copie pas |
 | `brew_steps` | list<map> \| null (60) : chronologie du jour de brassage, dans l'ordre. Élément : `key` (20 caractères, `doc().id`, créée à l'ajout, stable au renommage et au déplacement, unique dans la recette), `name` (1 à 120), `duration_min` (0 à 600, décimale permise ; 0 pour une action sans minuteur), `temp_c` (0 à 100 \| null). Inchangée en v0.1.15 |
 | `recipe` | map, obligatoire : ci-dessous |
 | `created_at`, `updated_at` | timestamp, obligatoires |
@@ -989,7 +989,7 @@ empâtage, notes et auteur coûte le même contrôle que la plus grande permise 
 des listes n'entre pas dans le budget, leurs éléments n'étant pas inspectés. Toute règle
 ajoutée sur `recipe` se mesure contre les 40 expressions restantes à la création d'un brassin.
 
-La v0.1.19 (import et export, L2b) ne change aucune règle : `imported_from` reste une chaîne
+La v0.1.20 (import et export, L2b) ne change aucune règle : `imported_from` reste une chaîne
 de 200 caractères au plus, déjà portée à sa longueur maximale par le test « budget des
 règles ». La marge mesurée en v0.1.17 vaut donc encore.
 
@@ -1217,12 +1217,12 @@ l'ébullition coupée à un ajout de houblon (« Ébullition » 45 min, « Ajout
 (1.052, 20 L) ; ses rendements attendus sont calculés hors du paquet. `fermentation.json` couvre
 l'ordre, une densité absente, les deux changements d'heure et deux relevés le même jour.
 
-`normalizeName` (v0.1.19) rend le nom normalisé d'une clé d'ingrédient sans préfixe, sans
+`normalizeName` (v0.1.20) rend le nom normalisé d'une clé d'ingrédient sans préfixe, sans
 lever : il sert au nom du fichier d'un export. Ce n'est pas une formule de brassage.
 
 ## Échange de recettes (`exchange/`)
 
-Paquet Dart pur (ADR-005, livraison L2b, v0.1.19) : aucune dépendance Flutter ni Firebase ;
+Paquet Dart pur (ADR-005, livraison L2b, v0.1.20) : aucune dépendance Flutter ni Firebase ;
 dépend de `brewing/` et de `crypto` 3.0.8 (empreinte SHA-256) ; aucun paquet `xml` avant la
 lecture du BeerXML (L2c). Aucun `catch` dans `lib/` (`test/no_catch_test.dart`). Il rend un
 résultat et ne lève pas pour une donnée invalide, sauf `FormatException` pour un JSON mal formé
@@ -1245,7 +1245,7 @@ linéaire des octets compte `[` et `{` hors des chaînes : au-delà de `kMaxProf
 décodé (1 000 000 de niveaux testés sur la VM et dans Chrome). Une recette qui dépasse
 `kMaxProfondeur` dans `lireEmpreinte` est illisible, sans lecture.
 
-Plafonds hauts d'une valeur convertie (v0.1.19, valeurs nouvelles : l'éditeur n'en a pas) :
+Plafonds hauts d'une valeur convertie (v0.1.20, valeurs nouvelles : l'éditeur n'en a pas) :
 1 000 kg (`kMaxGrammesParLigne`) et 1 000 L (`kMaxLitresParLigne`) par ligne, 10 000 L de
 volume (`kMaxVolumeBrassin`), 2 000 EBC (`kMaxEbc` ; les malts torréfiés les plus foncés
 approchent 1 500 EBC), 365 jours pour un ajout hors ébullition (`kMaxDuree`). L'ébullition, les
@@ -1564,7 +1564,7 @@ manuel. Un nouveau push annule le run en cours de la même référence. Permissi
 | Job | Étapes |
 |---|---|
 | Version et outillage | `git fetch --tags`, puis `node scripts/check-version.mjs` : sur une PR avec `--base origin/<base de la PR>` (HEAD est le commit de fusion préparé par GitHub) ; sur un push de `main` avec `--base <commit d'avant le push>` ; sur un push d'une autre branche, contre `origin/main`. Non lancé sur un lancement manuel. Puis `node scripts/check-agents.mjs` et `node --test scripts/*.test.mjs` (dont `changelog-recent.test.mjs`) |
-| Flutter et brewing | Flutter 3.44.6. Dans `brewing/`, puis dans `exchange/` (v0.1.19) : `dart pub get`, `pubspec.lock` à jour, `dart analyze --fatal-infos`, `dart format` vérifié, `dart test`. Dans `app/` : `flutter pub get`, `pubspec.lock` à jour, `node scripts/changelog-recent.mjs` (asset des nouveautés régénéré), `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`, `flutter test`, `flutter build web --release` sans configuration Firebase |
+| Flutter et brewing | Flutter 3.44.6. Dans `brewing/`, puis dans `exchange/` (v0.1.20) : `dart pub get`, `pubspec.lock` à jour, `dart analyze --fatal-infos`, `dart format` vérifié, `dart test`. Dans `app/` : `flutter pub get`, `pubspec.lock` à jour, `node scripts/changelog-recent.mjs` (asset des nouveautés régénéré), `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`, `flutter test`, `flutter build web --release` sans configuration Firebase |
 | Règles — émulateur | Node 22, Java 21 (Temurin), `npm ci` et `npm test` dans `rules-tests/` (projet `demo-kassbeer`). Binaires de l'émulateur en cache |
 | Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`) : échec si une fonction a un déclencheur HTTP, callable, bloquant ou de file, ou n'a pas de `maxInstances` (P25) |
 | Android — compilation | quand le diff touche `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`, et toujours sur un lancement manuel : `node scripts/changelog-recent.mjs`, puis `flutter build apk --release`, Java 17, signé par une clé jetable générée par `keytool` dans le job. Sinon le job réussit sans compiler |
@@ -1605,7 +1605,7 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
 | `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (aucun déclencheur HTTP, callable, bloquant ou de file, `maxInstances` partout, compte `tickets-functions`, aucun secret autre que `GITHUB_TICKETS_TOKEN`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
-| `tag` | aucun, `contents: write` | après un `deploy` réussi seulement : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
+| `tag` | aucun, `contents: write` | après un `deploy` réussi seulement (condition `!cancelled() && needs.deploy.result == 'success'`, pour que l'absence de `build-functions` ne l'ignore pas) : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et
 `build-functions`, qui n'ont pas de jeton OIDC. Les jobs qui ont un accès à Google Cloud ne

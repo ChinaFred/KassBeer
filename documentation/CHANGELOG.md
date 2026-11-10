@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
-### v0.1.19 — fonctionnel
+### v0.1.20 — fonctionnel
 
 Recettes › Importer : « Importer », dans la liste des recettes, lit un fichier BeerJSON exporté
 d'un autre logiciel de brassage (500 recettes et 10 Mo au plus) et crée ses recettes à votre
@@ -33,7 +33,7 @@ la feuille le dit et l'envoi peut se refaire. L'export BeerXML
 est visible et bloqué : il demande un style de la liste BJCP, qui arrive dans une prochaine
 version.
 
-### v0.1.19 — technique
+### v0.1.20 — technique
 
 Livraison L2b d'ADR-005, avec le canal de fichiers d'ADR-007.
 
@@ -79,6 +79,14 @@ reste en 3.0.8, dépendance indirecte. Android : `androidx.core:core:1.17.0` dé
 `app/android/app/build.gradle.kts`, version déjà résolue par le graphe des greffons (aucun
 changement de version). CI : le job « Flutter et brewing » contrôle aussi `exchange/`
 (dépendances, `pubspec.lock`, analyse, format, tests).
+
+### v0.1.19 — technique
+
+Le job `tag` de `deploy.yml` était ignoré quand `build-functions` ne tournait pas (cas de tout
+déploiement qui ne touche pas `functions/`) : la condition implicite `success()` de GitHub est
+fausse dès qu'un job en amont est ignoré. Sa condition devient `!cancelled() &&
+needs.deploy.result == 'success'`, comme celle de `deploy`. Les versions 0.1.16 et 0.1.18 n'ont
+pas reçu de tag et le reçoivent à la main.
 
 ### v0.1.18 — technique
 

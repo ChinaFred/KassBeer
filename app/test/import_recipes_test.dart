@@ -460,7 +460,7 @@ void main() {
       );
     });
 
-    group('relectures de la v0.1.19', () {
+    group('relectures de la v0.1.20', () {
       testWidgets('16 : ouverture impossible, un seul bouton « Réessayer »', (
         tester,
       ) async {

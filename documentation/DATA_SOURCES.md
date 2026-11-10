@@ -57,7 +57,7 @@ Un `{value, unit}` d'une unité inconnue est rejeté et compté au rapport.
 
 ## Correspondance BeerJSON (import utilisateur) → modèle
 
-Lecture de `exchange/` (v0.1.19), fichiers BeerJSON 1, 2 et 3 choisis par un membre dans
+Lecture de `exchange/` (v0.1.20), fichiers BeerJSON 1, 2 et 3 choisis par un membre dans
 Recettes › Importer. Le modèle est déjà en BeerJSON : la lecture garde les champs de
 `RecipeType` que l'application stocke et convertit les unités.
 
