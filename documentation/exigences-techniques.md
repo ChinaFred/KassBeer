@@ -1455,7 +1455,7 @@ l'identique (I9, `import_recipes_test.dart`). Les suites sans fichier (`analyse_
 ## Cloud Functions
 
 `functions/` (ADR-006) : Cloud Functions 2e génération, Node 24, TypeScript, région
-`europe-west1` (celle de la base), compte d'exécution `tickets-functions@<projet>`. Aucun
+`europe-west1` (celle de la base), compte d'exécution `tickets-functions@kassbeer.iam.gserviceaccount.com`. Aucun
 `onRequest` ni `onCall` (P25) : les deux fonctions ne s'appellent pas depuis Internet.
 
 | Fonction | Déclencheur | Réglages | Ce qu'elle fait |
@@ -1724,7 +1724,7 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et décide s'il faut un nouvel APK |
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
-| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (aucun déclencheur HTTP, callable, bloquant ou de file, `maxInstances` partout, compte `tickets-functions`, aucun secret autre que `GITHUB_TICKETS_TOKEN`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
+| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (aucun déclencheur HTTP, callable, bloquant ou de file, `maxInstances` partout, compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret), aucun secret autre que `GITHUB_TICKETS_TOKEN`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
 | `tag` | aucun, `contents: write` | après un `deploy` réussi seulement (condition `!cancelled() && needs.deploy.result == 'success'`, pour que l'absence de `build-functions` ne l'ignore pas) : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et

@@ -6,6 +6,14 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.22 — technique
+
+Les Functions déclarent leur compte d'exécution par son adresse complète
+(`tickets-functions@kassbeer.iam.gserviceaccount.com`). Avec la forme courte
+`tickets-functions@`, firebase-tools refusait de donner au compte l'accès au secret
+`GITHUB_TICKETS_TOKEN` (erreur 400), et le premier déploiement des Functions échouait. Le
+contrôle du manifeste dans `deploy.yml` n'accepte plus que l'adresse complète.
+
 ### v0.1.21 — fonctionnel
 
 Recettes › Importer lit aussi les fichiers BeerXML, le format qu'exportent BeerSmith,

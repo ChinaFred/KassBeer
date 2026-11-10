@@ -10,8 +10,15 @@ import { defineSecret } from "firebase-functions/params";
 /** Région de la base Firestore `(default)`. */
 export const REGION = "europe-west1";
 
-/** Compte d'exécution des fonctions, complété par l'identifiant du projet au déploiement. */
-export const RUNTIME_SERVICE_ACCOUNT = "tickets-functions@";
+/** Projet Firebase de Kass'Beer (`.firebaserc`). */
+export const PROJECT_ID = "kassbeer";
+
+/**
+ * Compte d'exécution des fonctions, adresse complète. La forme courte `tickets-functions@`
+ * n'est pas complétée par firebase-tools quand il donne au compte l'accès au secret
+ * (`secrets:setIamPolicy` refusé en 400, déploiement du 2026-11-10).
+ */
+export const RUNTIME_SERVICE_ACCOUNT = `tickets-functions@${PROJECT_ID}.iam.gserviceaccount.com`;
 
 /**
  * Jeton à grain fin du compte propriétaire, limité à `ChinaFred/KassBeer` : Issues en
