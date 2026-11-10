@@ -86,7 +86,8 @@ void main() {
       expect(data['owner_name'], 'Bruno');
       expect(data['recipe_id'], 'r1');
       final snapshot = data['recipe_snapshot'] as Map<String, dynamic>;
-      expect(snapshot['name'], 'Blonde');
+      expect(snapshot['format_version'], 1);
+      expect((snapshot['recipe'] as Map<String, dynamic>)['name'], 'Blonde');
       expect(snapshot['owner_uid'], 'uid-auteur');
       expect((snapshot['brew_steps'] as List<dynamic>).length, 2);
       final equipment = data['equipment_snapshot'] as Map<String, dynamic>;
@@ -363,12 +364,14 @@ void main() {
       'owner_uid': 'u',
       'name': 'Blonde',
       'status': 'brewing',
-      'recipe_snapshot': {
-        'name': 'Blonde',
-        'brew_steps': [
-          {'key': 'k1', 'name': 'Palier', 'duration_min': 45},
-        ],
-      },
+      'recipe_snapshot': recetteMinimale(
+        'Blonde',
+        extra: {
+          'brew_steps': [
+            {'key': 'k1', 'name': 'Palier', 'duration_min': 45},
+          ],
+        },
+      ),
       'equipment_snapshot': {'name': 'Cuve', 'kind': 'multi_vessel'},
       'brewed_at': Timestamp.fromDate(at),
     });
@@ -394,19 +397,23 @@ void main() {
       'updateBrewSteps : n\'écrit que brew_steps, owner_name, updated_at',
       () async {
         final doc = firestore.collection('recipes').doc('r1');
-        await doc.set({
-          'owner_uid': 'u',
-          'name': 'Blonde',
-          'created_at': Timestamp.fromDate(at),
-          'updated_at': Timestamp.fromDate(at),
-        });
+        await doc.set(
+          recetteMinimale(
+            'Blonde',
+            extra: {
+              'owner_uid': 'u',
+              'created_at': Timestamp.fromDate(at),
+              'updated_at': Timestamp.fromDate(at),
+            },
+          ),
+        );
         await recipes.updateBrewSteps(
           id: 'r1',
           steps: const [palier, ebullition],
           ownerName: 'Bruno',
         );
         final data = (await doc.get()).data()!;
-        expect(data['name'], 'Blonde');
+        expect((data['recipe'] as Map<String, dynamic>)['name'], 'Blonde');
         expect(data['owner_name'], 'Bruno');
         expect(
           ((data['brew_steps'] as List<dynamic>).first as Map<String, dynamic>)
@@ -434,14 +441,21 @@ void main() {
     test(
       'chronologie illisible : recette lisible, problème rapporté',
       () async {
-        await firestore.collection('recipes').doc('r1').set({
-          'owner_uid': 'u',
-          'name': 'Blonde',
-          'brew_steps': [
-            {'key': 'k', 'name': 'A', 'duration_min': 1},
-            {'key': 'k', 'name': 'B', 'duration_min': 1},
-          ],
-        });
+        await firestore
+            .collection('recipes')
+            .doc('r1')
+            .set(
+              recetteMinimale(
+                'Blonde',
+                extra: {
+                  'owner_uid': 'u',
+                  'brew_steps': [
+                    {'key': 'k', 'name': 'A', 'duration_min': 1},
+                    {'key': 'k', 'name': 'B', 'duration_min': 1},
+                  ],
+                },
+              ),
+            );
         final list = await recipes.watchAll().first;
         expect(list.valides.single.content.brewStepsProblem, isNotNull);
         expect(errors.reports.single.feature, 'recipes.brew_steps');

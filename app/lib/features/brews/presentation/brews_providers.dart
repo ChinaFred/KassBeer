@@ -30,13 +30,16 @@ final planReportsProvider = Provider<Set<String>>((ref) => <String>{});
 /// Vrai une fois la reprise au lancement traitée (D-Q3) : une seule par session.
 final repriseTraiteeProvider = Provider<List<bool>>((ref) => [false]);
 
-/// Textes des états d'une page de brassin (fiche, préparation, écran du jour).
+/// Textes des états de la fiche d'un brassin. La préparation et l'écran du jour
+/// en reprennent le texte d'un brassin illisible.
 const textesBrassin = TextesDocument(
   chargement: 'Chargement du brassin',
   lectureImpossible: 'Impossible de lire les brassins.',
   absent: 'Ce brassin n\'existe pas ou a été supprimé.',
   horsLigne: 'Brassin indisponible hors ligne.',
   illisible:
-      'Ce brassin est illisible : une valeur enregistrée est inattendue.',
+      'Ce brassin ne peut pas s\'afficher. Il a peut-être été enregistré '
+      'par une version plus récente de Kass\'Beer : mettez l\'application à '
+      'jour. L\'erreur est signalée à l\'administrateur.',
   retour: 'Revenir aux brassins',
 );

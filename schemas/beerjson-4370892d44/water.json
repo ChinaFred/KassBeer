@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/beerjson/beerjson/main/json/water.json",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "WaterBase": {
+      "type": "object",
+      "description": "WaterBase provides unique properties to identify individual records of  brewing water.",
+      "properties": {
+        "name": {
+          "description": "Name of the water profile.",
+          "type": "string"
+        },
+        "producer": {
+          "description": "The utility or source the profile describes.",
+          "type": "string"
+        },
+        "calcium": {
+          "description": "The concentration of calcium (Ca) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "bicarbonate": {
+          "description": "The concentration of bicarbonate (HCO3) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "carbonate": {
+          "description": "The concentration of carbonate (CO3) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "potassium": {
+          "description": "The concentration of potassium (K) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "iron": {
+          "description": "The concentration of iron (Fe) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "nitrate": {
+          "description": "The concentration of nitrate (NO3) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "nitrite": {
+          "description": "The concentration of nitrite (NO2) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "fluoride": {
+          "description": "The concentration of fluoride in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "flouride": {
+          "deprecated": true,
+          "description": "Misspelling of fluoride, kept so existing documents stay valid. Write fluoride instead; readers should accept either and prefer fluoride when both are present.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "sulfate": {
+          "description": "The concentration of sulfate (SO4) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "chloride": {
+          "description": "The concentration of chloride (Cl) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "sodium": {
+          "description": "The concentration of sodium (Na) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        },
+        "magnesium": {
+          "description": "The concentration of magnesium (Mg) in the water.",
+          "$ref": "measureable_units.json#/$defs/ConcentrationType"
+        }
+      },
+      "required": [
+        "name",
+        "calcium",
+        "bicarbonate",
+        "sulfate",
+        "chloride",
+        "sodium",
+        "magnesium"
+      ]
+    },
+    "WaterType": {
+      "type": "object",
+      "description": "WaterType collects the attributes of a brewing water to store as record information",
+      "unevaluatedProperties": false,
+      "allOf": [
+        {
+          "$ref": "#/$defs/WaterBase"
+        },
+        {
+          "properties": {
+            "pH": {
+              "description": "The pH of the water.",
+              "type": "number"
+            },
+            "notes": {
+              "description": "Free text notes about the water profile.",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "WaterAdditionType": {
+      "type": "object",
+      "description": "WaterAdditionType collects the attributes of each water addition for use in a recipe",
+      "allOf": [
+        {
+          "$ref": "#/$defs/WaterBase"
+        },
+        {
+          "properties": {
+            "amount": {
+              "description": "The volume of this water used in the recipe.",
+              "$ref": "measureable_units.json#/$defs/VolumeType"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

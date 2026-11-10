@@ -88,15 +88,22 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
                   ),
           ),
         for (final b in shown) _Row(brew: b, readerUid: readerUid, now: now),
+        // Material propre : au retour d'une fiche, la transition de page pose un
+        // fond coloré au-dessus du Material de la page (assertion de ListTile).
         for (final d in invalid)
-          ListTile(
-            leading: Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.error,
+          Material(
+            type: MaterialType.transparency,
+            child: ListTile(
+              leading: Icon(
+                Icons.error_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: const Text('Brassin illisible'),
+              subtitle: const Text(
+                'Mettez l\'application à jour, ou prévenez l\'administrateur.',
+              ),
+              onTap: () => context.go(AppRoutes.brew(d.id)),
             ),
-            title: const Text('Brassin illisible'),
-            subtitle: const Text('Le document contient une valeur inattendue.'),
-            onTap: () => context.go(AppRoutes.brew(d.id)),
           ),
       ],
     );

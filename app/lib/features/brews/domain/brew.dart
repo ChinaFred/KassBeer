@@ -187,7 +187,11 @@ Map<String, dynamic> _map(Object? value, String field) {
   return Map<String, dynamic>.from(value);
 }
 
-/// Copie figée de [recipe] : mêmes champs de premier niveau que `recipes/`.
+/// Copie figée de [recipe] : même forme que `recipes/`, enveloppe
+/// (`format_version`, propriétaire, équipement, chronologie, `updated_at` de la
+/// recette) et sous-arbre `recipe` en BeerJSON partiel. Elle se relit par
+/// [RecipeContent.fromFirestore] : une version de format inconnue rend le brassin
+/// illisible.
 Map<String, Object?> recipeSnapshot(Recipe recipe) => {
   ...recipe.content.toFirestore(creation: true),
   'owner_uid': recipe.ownerUid,

@@ -43,15 +43,14 @@ const kDoubleAppui = Duration(milliseconds: 800);
 /// (écran rouvert, retour d'arrière-plan) ne sonne pas.
 const kFenetreAlerte = Duration(seconds: 5);
 
-const _textesJour = TextesDocument(
+final _textesJour = TextesDocument(
   chargement: 'Chargement du brassin',
   lectureImpossible: 'Impossible de lire les brassins.',
   absent: 'Ce brassin n\'existe pas ou a été supprimé.',
   horsLigne:
       'Brassin indisponible hors ligne. Préparez le brassage avec du réseau '
       'avant de couper la connexion.',
-  illisible:
-      'Ce brassin est illisible : une valeur enregistrée est inattendue.',
+  illisible: textesBrassin.illisible,
   retour: 'Revenir aux brassins',
 );
 

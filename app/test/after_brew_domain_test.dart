@@ -226,7 +226,7 @@ void main() {
       'owner_uid': 'u',
       'name': 'Blonde',
       'status': 'fermenting',
-      'recipe_snapshot': {'name': 'Blonde'},
+      'recipe_snapshot': recetteMinimale('Blonde'),
       'equipment_snapshot': {'name': 'Cuve', 'kind': 'all_in_one'},
     };
 

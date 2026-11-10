@@ -26,14 +26,18 @@ enum FermentableKind {
 
   const FermentableKind(this.storedValue);
 
-  /// Valeur du champ `fermentables[].kind` d'une recette.
+  /// Valeur du champ `fermentable_additions[].type` d'une recette (BeerJSON).
   final String storedValue;
 
   /// Nature correspondant à la valeur stockée [value].
   ///
   /// Lève [BrewingInputException] sur une valeur inconnue.
-  static FermentableKind fromStored(String value) =>
-      enumFromStored(values, (k) => k.storedValue, 'fermentables.kind', value);
+  static FermentableKind fromStored(String value) => enumFromStored(
+    values,
+    (k) => k.storedValue,
+    'fermentable_additions[].type',
+    value,
+  );
 }
 
 /// Potentiel d'extrait d'un fermentescible, donné de l'une de deux façons.

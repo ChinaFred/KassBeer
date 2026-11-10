@@ -6,6 +6,7 @@ import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
 import 'package:kass_beer/features/brews/domain/releves.dart';
 
+import 'support/brew_fixtures.dart';
 import 'support/fakes.dart';
 
 void main() {
@@ -28,7 +29,7 @@ void main() {
       'owner_uid': owner,
       'name': 'Blonde',
       'status': 'fermenting',
-      'recipe_snapshot': {'name': 'Blonde'},
+      'recipe_snapshot': recetteMinimale('Blonde'),
       'equipment_snapshot': {'name': 'Cuve', 'kind': 'all_in_one'},
     });
   });

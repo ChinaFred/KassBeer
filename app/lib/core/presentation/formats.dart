@@ -77,11 +77,11 @@ String formatCelsius(double celsius) =>
     '${formatNombre(celsius, decimales: 1)}$nbsp°C';
 
 /// Durée : « 60 min ».
-String formatMinutes(double minutes) =>
-    '${formatNombre(minutes, decimales: 1)}${nbsp}min';
+String formatMinutes(num minutes) =>
+    '${formatNombre(minutes.toDouble(), decimales: 1)}${nbsp}min';
 
 /// Durée stockée en minutes, affichée en jours : « 3 jours ».
-String formatJours(double minutes) {
+String formatJours(num minutes) {
   final days = minutes / minutesParJour;
   final text = formatNombre(days, decimales: 1);
   // Singulier sous 2 : « 1,5 jour ».
@@ -207,9 +207,9 @@ String formatLitresParKg(double value) => '${formatNombre(value)}${nbsp}L/kg';
 
 /// Texte d'un nombre dans un champ de saisie : virgule décimale, sans espace ni
 /// unité (« 4,5 »). Vide pour `null`.
-String texteSaisi(double? value, {int decimales = 3}) => value == null
+String texteSaisi(num? value, {int decimales = 3}) => value == null
     ? ''
-    : formatNombre(value, decimales: decimales, grouper: false);
+    : formatNombre(value.toDouble(), decimales: decimales, grouper: false);
 
 /// Lecture d'un nombre saisi : [valeur] nulle pour un champ vide ; [illisible] vrai
 /// quand le texte n'est pas un nombre.

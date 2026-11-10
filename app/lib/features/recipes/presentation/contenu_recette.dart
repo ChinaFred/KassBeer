@@ -3,9 +3,38 @@ import 'package:flutter/material.dart';
 
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
+import '../domain/beerjson.dart';
 import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
 import 'ingredient_forms.dart';
+
+/// Détails d'un autre ajout, dans la fiche et dans l'éditeur : « Correction de
+/// l'eau · 5 g · Empâtage · 60 min ».
+List<String> detailsAjout(OtherLine o) => [
+  if (o.type != null) typesAjout.libelle(o.type!),
+  formatGrammes(o.weightG),
+  if (o.use != null) o.use!.label,
+  if (o.timeMin != null) formatMinutes(o.timeMin!),
+];
+
+/// Détails d'un palier : « Infusion · 65 °C · 60 min ».
+List<String> detailsPalier(MashStep s) => [
+  if (s.type != null) typesPalier.libelle(s.type!),
+  formatCelsius(s.tempC),
+  formatMinutes(s.durationMin),
+];
+
+/// Détails d'une levure : « Haute fermentation (ale) · 11 g · atténuation 75 % ·
+/// Sèche ». [fiche] vrai : l'atténuation absente est nommée.
+List<String> detailsLevure(YeastLine y, {required bool fiche}) => [
+  if (y.type != null) typesLevure.libelle(y.type!),
+  if (y.amountG != null) formatGrammes(y.amountG!),
+  if (y.attenuationPct != null)
+    'atténuation ${formatPourcent(y.attenuationPct!)}'
+  else if (fiche)
+    'atténuation non renseignée',
+  if (y.form != null) formesLevure.libelle(y.form!),
+];
 
 /// Lignes d'une chronologie : nom, durée (ou « Action » à 0 min), température.
 List<Widget> listeEtapes(List<BrewStepLine> steps) => [
@@ -97,33 +126,23 @@ class ContenuRecette extends StatelessWidget {
         const TitreSection('Autres ajouts'),
         if (c.others.isEmpty) const TexteAbsent('Aucun ajout.'),
         for (final o in c.others)
-          LigneDeuxNiveaux(
-            title: o.name,
-            details: [
-              formatGrammes(o.weightG),
-              if (o.use != null) o.use!.label,
-              if (o.timeMin != null) formatMinutes(o.timeMin!),
-            ],
-          ),
+          LigneDeuxNiveaux(title: o.name, details: detailsAjout(o)),
         const TitreSection('Levure'),
         if (c.yeasts.isEmpty) const TexteAbsent('Aucune levure.'),
         for (final y in c.yeasts)
           LigneDeuxNiveaux(
             title: y.name,
-            details: [
-              y.attenuationPct == null
-                  ? 'atténuation non renseignée'
-                  : 'atténuation ${formatPourcent(y.attenuationPct!)}',
-              if (y.form != null) y.form!.label,
-            ],
+            details: detailsLevure(y, fiche: true),
           ),
         const TitreSection('Paliers d\'empâtage'),
+        if (c.grainTempC != null)
+          LigneFiche(
+            label: 'Température du grain',
+            value: formatCelsius(c.grainTempC!),
+          ),
         if (c.mashSteps.isEmpty) const TexteAbsent('Aucun palier.'),
         for (final s in c.mashSteps)
-          LigneDeuxNiveaux(
-            title: s.name,
-            details: [formatCelsius(s.tempC), formatMinutes(s.durationMin)],
-          ),
+          LigneDeuxNiveaux(title: s.name, details: detailsPalier(s)),
         ?chronologie,
         const TitreSection('Notes'),
         Text(

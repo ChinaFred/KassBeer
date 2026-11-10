@@ -70,6 +70,8 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 - Calculs de brassage : paquet Dart pur `brewing/` (densités, degré, IBU Tinseth, EBC Morey,
   rendement, coût), lu par l'application seule.
 - Données : Cloud Firestore `(default)` en `europe-west1`, cache hors ligne persistant.
+  `recipes/` et la copie figée `recipe_snapshot` des brassins sont en BeerJSON partiel, au
+  commit figé `4370892d44` du schéma (ADR-005) ; `equipment/` reste plat.
 - Authentification : Firebase Auth, compte Google ; accès réservé aux e-mails listés dans
   `members/{email}` par l'administrateur.
 - Hébergement : Firebase Hosting (web) ; APK signé distribué par Firebase App Distribution.
@@ -78,7 +80,8 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 - Import des 16 fiches Excel : fichiers JSON préparés par une session Claude Code, relus et
   écrits par l'écran Admin › Import. Aucune IA dans l'application en version 1.
 - Détail et options écartées : `documentation/decisions/ADR-001-pile-technique.md`,
-  `documentation/decisions/ADR-002-depot-public.md`.
+  `documentation/decisions/ADR-002-depot-public.md`,
+  `documentation/decisions/ADR-005-echange-referentiels-recettes-publiques.md`.
 
 Ouvert sur Internet, comptes sur invitation. Données personnelles limitées au nom et à
 l'e-mail (RGPD). Prix d'achat, stock et coût d'un brassin privés à chaque brasseur. Plan
@@ -93,17 +96,23 @@ app/                  # application Flutter (Android, web)
 ├── lib/core/         # services transverses : erreurs, router, thème, auth, version
 ├── lib/features/     # auth, members, equipment, recipes, brew_day, brews, costs, import, admin
 │                     # chaque feature en couches data/ domain/ presentation/
-├── test/             # tests Flutter
+├── test/             # tests Flutter ; fixtures/recipe_documents/ : documents BeerJSON
+│                     # validés contre le schéma partiel par rules-tests (ajv)
 └── android/          # projet Gradle ; key.properties et *.jks jamais versionnés
 brewing/              # paquet Dart pur : calculs de brassage, sans Flutter ni Firebase
 └── test/fixtures/    # cas tirés des 16 fiches Excel, valeurs attendues et tolérances
-rules-tests/          # tests de firestore.rules contre l'émulateur (Node 22, Java 21)
+rules-tests/          # tests de firestore.rules contre l'émulateur (Node 22, Java 21) ;
+                      # validation ajv des documents de recette (schéma officiel et partiel)
+schemas/beerjson-4370892d44/  # schémas BeerJSON au commit figé et leur LICENSE MIT (ADR-005)
+effacement-l1/        # outil local à usage unique : efface recipes/, brews/ et leurs coûts figés au passage
+                      # de L1 (ADR-005) ; sort du dépôt à la livraison suivante
 firebase.json         # Hosting (en-têtes, cache), Firestore, émulateurs
 firestore.rules       # seul contrôle d'accès de la v1
 firestore.indexes.json
 .github/workflows/    # ci.yml (contrôles), deploy.yml (Hosting, règles, APK)
 scripts/              # check-version.mjs, check-agents.mjs
 import/fiches/        # JSON d'import des 16 fiches (contiennent des prix) : jamais versionné
+import/backup/        # copie faite par effacement-l1/ avant l'effacement : jamais versionnée
 ```
 
 État : Riverpod. Navigation : go_router. Rôles : `admin`, `brewer`.
@@ -206,6 +215,15 @@ un widget, un repository ou une fonction serveur. Une formule changée ajoute d'
 températures en °C, densités en SG décimal (1.0579), couleur en EBC, durées en minutes.
 La conversion vers l'affichage (« 1057,9 ») se fait à l'écran.
 
+**Recettes en BeerJSON partiel.** `recipes/{id}.recipe` et `recipe_snapshot.recipe` suivent
+`RecipeType` du schéma figé (ADR-005, `schemas/beerjson-4370892d44/`). Unités canoniques
+seules, en couples `{value, unit}` : `g`, `l`, `C`, `min`, `EBC`, `sg`, `%`. Les unités d'une
+source se convertissent à l'import ; l'écran ne fait que présenter (« 1057,9 », saisie des
+malts en kilogrammes). Un champ obligatoire inconnu reste absent : aucune valeur inventée. La
+liste des absences permises est celle d'ADR-005 ; l'export bloque et liste ce qui manque.
+Durées en minutes entières. `key` n'est pas stockée : `ingredientKey` la dérive. Un champ
+propre à Kass'Beer vit dans l'enveloppe du document, jamais dans `recipe`.
+
 **Un brassin fige sa recette.** À sa création, il reçoit une copie de la recette et de
 l'équipement. Les ajustements du jour s'écrivent dans le brassin, jamais dans la recette.
 
@@ -256,6 +274,7 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 | P16 | `toJSON(vars)` dans `.github/workflows/` : chaque variable lisible par le job (dépôt, organisation, environnement `production` : `gh variable list`, avec et sans `--env production`, et le tableau « Réglages sur GitHub » de `exigences-techniques.md`) est une valeur publique du client ou un identifiant d'infrastructure ; une valeur sensible est un secret GitHub, jamais une variable. Un diff qui ajoute une variable, ou qui étend `toJSON(vars)` à un autre job, dit pourquoi la valeur peut paraître dans le journal public | `securite` | ADR-002, journaux de run publics |
 | P17 | Canal de plateforme (`MethodChannel`) : nom du canal et des méthodes identiques dans `app/lib/` et `app/android/`, garde `kIsWeb` avant l'appel, `catch` qui appelle `reportError`, test Dart avec `TestDefaultBinaryMessenger`, APK compilé (PC ou job CI vert) | `relecteur-regles` | ADR-003, alerte de minuteur |
 | P18 | `fl_chart` : `package:fl_chart` importé par le seul fichier `app/lib/features/brews/presentation/trace_courbe.dart`, aucun type du paquet dans une signature publique ; version exacte dans `pubspec.yaml` ; aucune couleur par défaut du paquet (ligne, bordure, grille, info-bulle lues dans `colorScheme`) ; `reservedSize` multiplié par l'échelle du texte ; tracé dans un `ExcludeSemantics` avec un résumé en `Semantics` | `relecteur-regles` | ADR-004 |
+| P21 | Diff du modèle de recette : `recipe` et `recipe_snapshot` restent BeerJSON partiel, au commit figé `4370892d44` (ADR-005) ; unités canoniques ; champ d'extension dans l'enveloppe, jamais dans `recipe` ; `recipeFields()` et la liste des champs de `recipe` à jour dans `firestore.rules`, avec tests et copie figée ; liste des absences permises inchangée, ou ADR ; schéma partiel validé en CI sur les documents de `app/test/fixtures/recipe_documents/` (et, à partir de L2, schéma officiel sur les sorties de l'export) ; toute règle ajoutée sur `recipes/` ou `brews/` mesurée par le test « budget des règles » (1 000 expressions) | `relecteur-regles` | ADR-005 |
 
 ## Données partagées et état propre à un utilisateur
 
@@ -302,6 +321,14 @@ progression et un compte rendu chiffré (créés, ignorés, en erreur) qui nomme
 revoir. Sur le projet qui a servi de base à agent-starter, un bouton de masse posé dans un
 écran métier n'a été trouvé par aucun utilisateur. Dans Kass'Beer, cet écran est
 **Admin › Import** ; l'import des 16 fiches en est la première opération.
+
+Exception ponctuelle (ADR-005, acceptée le 2026-11-10) : au passage de L1, `effacement-l1/`
+efface depuis le poste tous les documents de `recipes/`, `brews/` et leurs `events/`, et le
+coût figé de chaque brassin effacé (`users/{owner_uid}/brew_costs/{brewId}`, comme CB19) ;
+rien d'autre sous `users/`. Il n'accepte que `kassbeer` ou un projet `demo-*` sur
+l'émulateur, fait d'abord un compte rendu sans écriture, copie `recipes/` et `brews/` dans
+`import/backup/` (jamais les coûts figés, dont il ne lit pas le contenu) et demande une
+confirmation. Il sort du dépôt à la livraison suivante, avec cette exception.
 
 ## Documentation à tenir à jour
 

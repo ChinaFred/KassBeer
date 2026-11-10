@@ -63,6 +63,13 @@ service cloud.firestore {
       return !(k in d) || d[k] == null || (d[k] is list && d[k].size() <= max);
     }
 
+    // Liste de BeerJSON (ingrédients, paliers) : absente, ou liste bornée. null est
+    // refusé : BeerJSON n'a pas de null. Moins coûteux qu'optList, qui compare la
+    // liste à null (budget, voir brews/).
+    function optArray(d, k, max) {
+      return d.get(k, []) is list && d.get(k, []).size() <= max;
+    }
+
     function optTimestamp(d, k) {
       return !(k in d) || d[k] == null || d[k] is timestamp;
     }
@@ -167,34 +174,96 @@ service cloud.firestore {
 
     // ---------------------------------------------------------------- recipes
 
-    // Champs de premier niveau d'une recette. Aucun prix ni stock (P5) : les prix
-    // vivent sous users/{uid}/prices. Les éléments des listes (ingrédients, paliers,
-    // étapes de la chronologie) ne peuvent pas être inspectés par les règles ; le
-    // dépôt de données ne les écrit qu'à partir des types de brewing/, sans prix.
+    // Recette en BeerJSON partiel (ADR-005) : une enveloppe propre à Kass'Beer et le
+    // sous-arbre `recipe`, qui suit RecipeType du schéma BeerJSON au commit figé
+    // 4370892d44. Aucun prix ni stock (P5) : les prix vivent sous users/{uid}/prices.
+    // Les éléments des listes (ingrédients, paliers, étapes de la chronologie) ne
+    // peuvent pas être inspectés par les règles ; le dépôt de données ne les écrit
+    // qu'à partir de ses types, sans prix.
     function recipeFields() {
-      return ['owner_uid', 'owner_name', 'name', 'style', 'notes', 'batch_volume_l', 'boil_time_min',
-              'equipment_id', 'fermentables', 'hops', 'others', 'yeasts', 'mash_steps',
-              'brew_steps', 'imported_from', 'created_at', 'updated_at'];
+      return ['format_version', 'owner_uid', 'owner_name', 'equipment_id', 'imported_from',
+              'brew_steps', 'recipe', 'created_at', 'updated_at'];
     }
 
-    function isRecipeShape(d) {
+    // Couple {value, unit} : absent, ou complet dans l'unité canonique de la grandeur.
+    // Jamais une unité sans valeur. Valeur finie et bornée, comme optNumber : une
+    // comparaison avec un texte est une erreur, et une erreur refuse l'écriture.
+    function optMeasure(m, k, unit) {
+      return !(k in m)
+        || (m[k].keys().hasOnly(['value', 'unit']) && m[k].unit == unit
+            && m[k].value > -1000000000 && m[k].value < 1000000000);
+    }
+
+    // Durée BeerJSON (TimeType) : minutes entières, positives ou nulles.
+    function optMinutes(m, k) {
+      return !(k in m)
+        || (m[k].keys().hasOnly(['value', 'unit']) && m[k].unit == 'min'
+            && m[k].value is int && m[k].value >= 0 && m[k].value < 1000000000);
+    }
+
+    // `RecipeType.type` : toutes les valeurs du schéma figé, comme la lecture de
+    // l'application (typesRecette, beerjson.dart).
+    function recipeTypes() {
+      return ['cider', 'kombucha', 'soda', 'other', 'mead', 'wine', 'extract', 'partial mash',
+              'all grain'];
+    }
+
+    // Sous-arbre `recipe`. Les champs obligatoires de BeerJSON absents permis (type,
+    // batch_size, boil, mash…) sont la liste fermée d'ADR-005. `water_additions` est
+    // refusé : l'eau n'entre pas en version 1. `name` et `ingredients` sont
+    // obligatoires : les lire sans eux est une erreur, et une erreur refuse l'écriture.
+    //
+    // Les maps `style`, `boil`, `mash` et `ingredients` sont fermées : keys() sur une
+    // valeur qui n'est pas une map est une erreur, qui refuse l'écriture (une liste ou
+    // un texte à la place de `boil` est refusé sans test `is map`, qui coûte des
+    // expressions). `type` absent se lit comme une valeur du schéma ; présent, il en est
+    // une. `mash.name` est un libellé que l'application écrit (« Empâtage ») et ne
+    // relit pas : les règles le bornent à 120 caractères. Les éléments des listes ne
+    // sont pas inspectés (risque accepté, exigences-techniques.md, « Règles
+    // d'accès ») : la lecture typée de l'application ignore un champ inconnu.
+    // Budget : voir brews/.
+    function isBeerJsonRecipe(r) {
+      return r.keys().hasOnly(['name', 'type', 'notes', 'style', 'batch_size', 'boil', 'mash',
+                               'ingredients'])
+        && hasName(r, 120)
+        && r.get('type', 'all grain') in recipeTypes()
+        && optString(r, 'notes', 10000)
+        && (!('style' in r) || (r.style.keys().hasOnly(['name']) && hasName(r.style, 120)))
+        && optMeasure(r, 'batch_size', 'l')
+        && (!('boil' in r)
+            || (r.boil.keys().hasOnly(['boil_time']) && optMinutes(r.boil, 'boil_time')))
+        && (!('mash' in r)
+            || (r.mash.keys().hasOnly(['name', 'grain_temperature', 'mash_steps'])
+                && (!('name' in r.mash) || hasName(r.mash, 120))
+                && optMeasure(r.mash, 'grain_temperature', 'C')
+                && optArray(r.mash, 'mash_steps', 20)))
+        && r.ingredients.keys().hasOnly(['fermentable_additions', 'hop_additions',
+                                         'miscellaneous_additions', 'culture_additions'])
+        && optArray(r.ingredients, 'fermentable_additions', 50)
+        && optArray(r.ingredients, 'hop_additions', 50)
+        && optArray(r.ingredients, 'miscellaneous_additions', 50)
+        && optArray(r.ingredients, 'culture_additions', 10);
+    }
+
+    // Enveloppe et recette, communes à recipes/ et à la copie figée d'un brassin.
+    // format_version : 1 seulement ; un ancien document plat n'a ni ce champ ni
+    // `recipe`, et il est refusé. Budget : la création d'un brassin évalue cette
+    // fonction dans isBrewCreateShape, à moins de 1 000 expressions au total (voir brews/).
+    function isRecipeContent(d) {
       return d.keys().hasOnly(recipeFields())
-        && d.keys().hasAll(['owner_uid', 'name', 'created_at', 'updated_at'])
-        && d.owner_uid is string
-        && hasName(d, 120)
-        && optString(d, 'style', 120)
-        && optString(d, 'notes', 10000)
-        && optNumber(d, 'batch_volume_l')
-        && optNumber(d, 'boil_time_min')
+        && d.format_version is int
+        && d.format_version == 1
+        && isBeerJsonRecipe(d.recipe)
         && optString(d, 'equipment_id', 128)
-        && optList(d, 'fermentables', 50)
-        && optList(d, 'hops', 50)
-        && optList(d, 'others', 50)
-        && optList(d, 'yeasts', 10)
-        && optList(d, 'mash_steps', 20)
         // Chronologie du jour : 60 étapes au plus (key, name, duration_min, temp_c).
         && optList(d, 'brew_steps', 60)
         && optString(d, 'imported_from', 200);
+    }
+
+    function isRecipeShape(d) {
+      return isRecipeContent(d)
+        && d.keys().hasAll(['owner_uid', 'created_at', 'updated_at'])
+        && d.owner_uid is string;
     }
 
     match /recipes/{recipeId} {
@@ -286,37 +355,72 @@ service cloud.firestore {
         && optPercent(a, 'mash_efficiency_pct');
     }
 
-    function isBrewShape(d) {
+    // Modification d'un brassin : seuls les champs changés sont contrôlés. Un champ
+    // inchangé l'a été à son écriture (création, ou modification précédente), et la
+    // copie figée ne change plus. Un champ obligatoire retiré (name, status) rend la
+    // lecture en erreur, et une erreur refuse l'écriture ; owner_uid et created_at sont
+    // vérifiés par updatedByOwner. Budget : contrôler tous les champs à chaque
+    // modification dépasse 1 000 expressions sur un brassin rempli après le brassage
+    // avec ses ajustements (mesure de la v0.1.14, voir plus bas).
+    function isBrewUpdate(d) {
+      let changed = d.diff(resource.data).affectedKeys();
       return d.keys().hasOnly(brewFields())
         && d.keys().hasAll(['owner_uid', 'name', 'status', 'recipe_snapshot',
                             'equipment_snapshot', 'created_at', 'updated_at'])
-        && d.owner_uid is string
+        // Un brassin fige sa recette : la copie de la recette et de l'équipement, et
+        // la recette d'origine, ne changent plus après la création.
+        && !changed.hasAny(['recipe_id', 'recipe_snapshot', 'equipment_snapshot'])
+        && (!changed.hasAny(['name']) || hasName(d, 120))
+        && (!changed.hasAny(['status'])
+            || d.status in ['planned', 'brewing', 'fermenting', 'conditioning', 'done',
+                            'abandoned'])
+        && (!changed.hasAny(['planned_for', 'brewed_at'])
+            || (optTimestamp(d, 'planned_for') && optTimestamp(d, 'brewed_at')))
+        && (!changed.hasAny(['adjustments'])
+            || d.get('adjustments', null) == null || isAdjustments(d.adjustments))
+        // Après le brassage : embouteillage et mesures retenues, tous facultatifs.
+        // Aucun prix ni coût (P5) ; aucune valeur calculée n'est stockée.
+        && (!changed.hasAny(['bottles_count', 'bottled_at', 'packaged_volume_l',
+                             'priming_sugar_g', 'priming_sugar_name'])
+            || (optBottlesCount(d)
+                && optTimestamp(d, 'bottled_at')
+                && optPackagedVolume(d)
+                && optPrimingSugar(d)
+                && optString(d, 'priming_sugar_name', 80)))
+        && (!changed.hasAny(['og_event_id', 'fg_event_id', 'fermenter_volume_event_id',
+                             'sugars_in_wort'])
+            || (optString(d, 'og_event_id', 128)
+                && optString(d, 'fg_event_id', 128)
+                && optString(d, 'fermenter_volume_event_id', 128)
+                && optBool(d, 'sugars_in_wort')))
+        && (!changed.hasAny(['notes', 'imported_from'])
+            || (optString(d, 'notes', 10000) && optString(d, 'imported_from', 200)));
+    }
+
+    // Création d'un brassin : les champs que l'application écrit à la création
+    // (BrewsRepository.create), et la copie de la recette contrôlée comme recipes/.
+    // Les dates de brassage, les ajustements et les champs d'après brassage arrivent
+    // par des modifications, contrôlées par isBrewUpdate : les contrôler aussi à la
+    // création, avec isRecipeContent, dépasse le budget de 1 000 expressions. Un champ
+    // obligatoire absent (status, name, copies) rend la lecture en erreur, et une erreur
+    // refuse l'écriture ; owner_uid et les dates sont vérifiés par createdByMe.
+    function brewCreateFields() {
+      return ['owner_uid', 'owner_name', 'recipe_id', 'name', 'status', 'planned_for',
+              'recipe_snapshot', 'equipment_snapshot', 'notes', 'imported_from', 'created_at',
+              'updated_at'];
+    }
+
+    function isBrewCreateShape(d) {
+      return d.keys().hasOnly(brewCreateFields())
         && hasName(d, 120)
         && d.status in ['planned', 'brewing', 'fermenting', 'conditioning', 'done',
                         'abandoned']
         && optString(d, 'recipe_id', 128)
         && optTimestamp(d, 'planned_for')
-        && optTimestamp(d, 'brewed_at')
-        // Copies figées : mêmes champs de premier niveau que la source, donc sans prix.
-        && d.recipe_snapshot is map
-        && d.recipe_snapshot.keys().hasOnly(recipeFields())
-        && snapshotOwnerNameOk(d.recipe_snapshot)
-        && optList(d.recipe_snapshot, 'brew_steps', 60)
-        && d.equipment_snapshot is map
         && d.equipment_snapshot.keys().hasOnly(equipmentFields())
         && snapshotOwnerNameOk(d.equipment_snapshot)
-        && (!('adjustments' in d) || d.adjustments == null || isAdjustments(d.adjustments))
-        && optBottlesCount(d)
-        // Après le brassage : embouteillage et mesures retenues, tous facultatifs.
-        // Aucun prix ni coût (P5) ; aucune valeur calculée n'est stockée.
-        && optTimestamp(d, 'bottled_at')
-        && optPackagedVolume(d)
-        && optPrimingSugar(d)
-        && optString(d, 'priming_sugar_name', 80)
-        && optString(d, 'og_event_id', 128)
-        && optString(d, 'fg_event_id', 128)
-        && optString(d, 'fermenter_volume_event_id', 128)
-        && optBool(d, 'sugars_in_wort')
+        && snapshotOwnerNameOk(d.recipe_snapshot)
+        && isRecipeContent(d.recipe_snapshot)
         && optString(d, 'notes', 10000)
         && optString(d, 'imported_from', 200);
     }
@@ -325,20 +429,35 @@ service cloud.firestore {
     // Le statut change par des écritures simples ou un WriteBatch du propriétaire. Les
     // règles ne contrôlent pas l'ordre des statuts : un retour en arrière et une file
     // hors ligne doivent passer.
+    //
+    // Budget : une requête évalue 1 000 expressions au plus, toutes règles comprises
+    // (mesuré sur l'émulateur : isRecipeContent en coûte environ 500, et contrôler tous
+    // les champs d'un brassin rempli autant). Une erreur n'arrête pas un « && »
+    // (error && false vaut false) : chaque règle commence par un contrôle bon marché
+    // qui vaut faux, sans erreur, quand elle ne s'applique pas (document absent pour la
+    // modification, dates du serveur pour la création). La copie de la recette se vérifie à la création seulement : elle
+    // ne change plus ensuite.
+    //
+    // Mesure de la v0.1.14 (émulateur, recette la plus grande permise, tous les champs
+    // de création remplis) : la création d'un brassin passe avec une marge d'environ
+    // 70 expressions, la création d'une recette avec environ 470. Contrôler en plus les
+    // valeurs de la copie de l'équipement dépasse la limite : seules ses clés sont
+    // contrôlées (risque accepté, exigences-techniques.md, « Règles d'accès »). Sur un
+    // brassin rempli après le brassage avec 11 ajustements, isBrewUpdate laisse plus de
+    // 900 expressions à un changement de statut, environ 470 à l'écriture des
+    // 11 ajustements ; changer tous les groupes d'un coup dépasse la limite, et
+    // l'application ne le fait pas.
     match /brews/{brewId} {
       allow read: if isMember();
       allow create: if isMember()
-        && isBrewShape(request.resource.data)
+        && createdByMe(request.resource.data)
         && ownerNameOk(request.resource.data)
-        && createdByMe(request.resource.data);
-      // Un brassin fige sa recette : la copie de la recette et de l'équipement, et
-      // la recette d'origine, ne changent plus après la création.
-      allow update: if isMember()
-        && isBrewShape(request.resource.data)
-        && ownerNameOk(request.resource.data)
+        && isBrewCreateShape(request.resource.data);
+      allow update: if resource != null
+        && isMember()
         && updatedByOwner()
-        && !request.resource.data.diff(resource.data).affectedKeys()
-             .hasAny(['recipe_id', 'recipe_snapshot', 'equipment_snapshot']);
+        && isBrewUpdate(request.resource.data)
+        && ownerNameOk(request.resource.data);
       allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
 
       // Mesures et étapes du jour de brassage, relevés de fermentation : un document

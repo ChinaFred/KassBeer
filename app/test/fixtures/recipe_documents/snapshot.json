@@ -1,0 +1,257 @@
+{
+  "brew_steps": [
+    {
+      "duration_min": 60.0,
+      "key": "k-palier",
+      "name": "Palier 66",
+      "temp_c": 66.0
+    },
+    {
+      "duration_min": 60.0,
+      "key": "k-ebullition",
+      "name": "Ébullition"
+    }
+  ],
+  "equipment_id": "eq-1",
+  "format_version": 1,
+  "owner_name": "Brasseuse Fictive",
+  "owner_uid": "uid-a",
+  "recipe": {
+    "batch_size": {
+      "unit": "l",
+      "value": 20.0
+    },
+    "boil": {
+      "boil_time": {
+        "unit": "min",
+        "value": 60
+      }
+    },
+    "ingredients": {
+      "culture_additions": [
+        {
+          "amount": {
+            "unit": "g",
+            "value": 11.5
+          },
+          "attenuation": {
+            "unit": "%",
+            "value": 78.0
+          },
+          "form": "dry",
+          "name": "US-05",
+          "type": "ale"
+        }
+      ],
+      "fermentable_additions": [
+        {
+          "amount": {
+            "unit": "g",
+            "value": 4500.0
+          },
+          "color": {
+            "unit": "EBC",
+            "value": 3.5
+          },
+          "name": "Pils",
+          "type": "grain",
+          "yield": {
+            "fine_grind": {
+              "unit": "%",
+              "value": 80.0
+            }
+          }
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 500.0
+          },
+          "name": "Candi",
+          "type": "sugar"
+        }
+      ],
+      "hop_additions": [
+        {
+          "alpha_acid": {
+            "unit": "%",
+            "value": 12.0
+          },
+          "amount": {
+            "unit": "g",
+            "value": 22.4
+          },
+          "form": "pellet",
+          "name": "Magnum",
+          "timing": {
+            "time": {
+              "unit": "min",
+              "value": 60
+            },
+            "use": "add_to_boil"
+          }
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 30.0
+          },
+          "form": "leaf",
+          "name": "Saaz",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 15
+            },
+            "time": {
+              "unit": "min",
+              "value": 0
+            },
+            "use": "add_to_boil"
+          }
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 50.0
+          },
+          "form": "pellet",
+          "name": "Citra",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 4320
+            },
+            "use": "add_to_fermentation"
+          }
+        }
+      ],
+      "miscellaneous_additions": [
+        {
+          "amount": {
+            "unit": "g",
+            "value": 5.0
+          },
+          "name": "Gypse",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 60
+            },
+            "use": "add_to_mash"
+          },
+          "type": "water agent"
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 4.0
+          },
+          "name": "Mousse d'Irlande",
+          "timing": {
+            "time": {
+              "unit": "min",
+              "value": 15
+            },
+            "use": "add_to_boil"
+          },
+          "type": "fining"
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 10.0
+          },
+          "name": "Coriandre",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 10
+            },
+            "time": {
+              "unit": "min",
+              "value": 0
+            },
+            "use": "add_to_boil"
+          },
+          "type": "spice"
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 8.0
+          },
+          "name": "Écorce d'orange",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 2880
+            },
+            "use": "add_to_fermentation"
+          },
+          "type": "flavor"
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 20.0
+          },
+          "name": "Copeaux de chêne",
+          "timing": {
+            "use": "add_to_package"
+          },
+          "type": "wood"
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 2.0
+          },
+          "name": "Sel"
+        }
+      ]
+    },
+    "mash": {
+      "grain_temperature": {
+        "unit": "C",
+        "value": 18.0
+      },
+      "mash_steps": [
+        {
+          "name": "Saccharification",
+          "step_temperature": {
+            "unit": "C",
+            "value": 66.0
+          },
+          "step_time": {
+            "unit": "min",
+            "value": 60
+          },
+          "type": "infusion"
+        },
+        {
+          "name": "Mash-out",
+          "step_temperature": {
+            "unit": "C",
+            "value": 78.0
+          },
+          "step_time": {
+            "unit": "min",
+            "value": 10
+          },
+          "type": "temperature"
+        }
+      ],
+      "name": "Empâtage"
+    },
+    "name": "Blonde de Noël",
+    "notes": "Fermentation à 19 °C.",
+    "style": {
+      "name": "Belgian Blond Ale"
+    },
+    "type": "all grain"
+  },
+  "updated_at": {
+    "__timestamp__": "2026-11-02T08:00:00.000Z"
+  }
+}

@@ -169,7 +169,9 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
               color: Theme.of(context).colorScheme.error,
             ),
             title: const Text('Recette illisible'),
-            subtitle: const Text('Le document contient une valeur inattendue.'),
+            subtitle: const Text(
+              'Mettez l\'application à jour, ou prévenez l\'administrateur.',
+            ),
             onTap: () => context.go(AppRoutes.recipe(d.id)),
           ),
       ],

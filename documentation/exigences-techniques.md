@@ -57,7 +57,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
 | `lib/features/equipment/` | `EquipmentRepository` (`equipment/`), `Equipment`, `EquipmentContent`, `EquipmentKind` ; liste, fiche, éditeur |
-| `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document ↔ `brewing/`, tri, duplication ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin), formulaires des lignes, vue des calculs |
+| `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document BeerJSON ↔ `brewing/`, tri, duplication ; `domain/beerjson.dart` : unités canoniques, lecture des couples `{value, unit}`, valeurs énumérées du schéma et leurs libellés (`EnumerationBeerJson`), `verifierVersionFormat` ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin), formulaires des lignes (`ListeBeerJson` : liste déroulante d'une valeur BeerJSON, « Non précisé » en tête), vue des calculs |
 | `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType`, `PhaseEvenement` ; `domain/mesures_retenues.dart` (mesures retenues, VR1, VR2, RR2), `domain/releves.dart` (regroupement du relevé) ; liste, fiche, « Nouveau brassin », `presentation/releve_fermentation.dart`, `prevu_et_mesure.dart`, `embouteillage.dart`, `courbe_fermentation.dart`, `trace_courbe.dart` (seul import de `fl_chart`, P18) |
 | `lib/features/costs/` | `CostsRepository` (`users/{uid}/prices`, `fees`, `brew_costs`, jamais de transaction ni de `Source.server`, `brewCostRef`) ; `domain/price.dart` (`Price`, `purchaseUnitOf`, `isUnusualPrice`), `domain/fee.dart` (`Fee`), `domain/brew_cost.dart` (`BrewCost`, `BrewCostLine`, `FreezeKind`) ; `domain/cost_evaluation.dart` : clés dérivées des lignes de `RecipeContent` (`ingredientsDeRecette`), raisons d'un coût indisponible (`RaisonCout`), `evaluerCoutRecette`, `evaluerEstimationBrassin`, `evaluerFigeage`, déclencheur du figeage (`doitFigerAuPremierEmbouteillage`), boutons proposés (`figerLeCoutPropose`, `recalculerPropose`), écart avec l'embouteillage (`ecartsDepuisFigeage`) ; `data/figeage_embouteillage.dart` (`enregistrerEmbouteillage` : embouteillage puis coût, sans attente) ; `presentation/costs_providers.dart` (`pricesProvider`, `feesProvider`, `brewCostProvider`, `costReportsProvider`) ; `presentation/prices_screen.dart` (« Mes prix », route `/prix`), `price_form.dart` (`ouvrirFormulairePrix` : nouveau, manquant, modification ; « Reprendre un de mes prix »), `fee_form.dart`, `bloc_cout.dart` (`BlocCoutRecette`, lignes des raisons et du détail), `bloc_cout_brassin.dart` (`BlocCoutBrassin` : estimation, « Figer le coût », coût figé, écart, « Recalculer avec mes prix actuels »), `formats_cout.dart` (euros, kilogrammes et euros par kilogramme à l'affichage ; aucun calcul de coût) |
 | `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
@@ -237,13 +237,17 @@ du réseau.
 déjà tiré), `package_info_plus` ^10.2.2. `flutter_localizations` tire `intl` 0.20.2. `fl_chart`
 1.3.0 (version exacte, ADR-004) dessine la courbe du relevé et n'ajoute aucun paquet transitif.
 
-**Conversion document ↔ `brewing/`.** Écrite une fois, dans `features/recipes/domain/recipe.dart` :
-`fromFirestore` lit chaque ligne par `FermentableKind`, `HopUse` et `HopForm.fromStored` ;
-`toFirestore` écrit `storedValue` et la clé `ingredientKey` de chaque ingrédient ; `toInput`
+**Conversion document ↔ `brewing/`.** Écrite une fois, dans `features/recipes/domain/recipe.dart`,
+avec les unités et les valeurs énumérées de BeerJSON dans `beerjson.dart` (v0.1.14) :
+`fromFirestore` vérifie `format_version`, lit l'enveloppe, puis le sous-arbre `recipe` ; la
+nature d'un malt et la forme d'un houblon passent par `FermentableKind` et `HopForm.fromStored`,
+le moment d'un houblon ou d'un ajout se lit dans `timing` ; `toFirestore` écrit l'enveloppe et
+`recipe` d'un bloc, sans clé d'ingrédient (`ingredientKey` vérifie seulement le nom) ; `toInput`
 construit le `RecipeInput` de `computeRecipe`. Les masses restent en grammes : la saisie en
-kilogrammes des malts et sucres est multipliée par 1 000 dans le formulaire, la durée à cru en
-jours par 1 440 (`minutesParJour`). Les autres ajouts (`OtherUse`) et la forme de la levure
-(`YeastForm` : `dry`, `liquid`) n'entrent dans aucun calcul et sont lus dans l'application.
+kilogrammes des malts et sucres est multipliée par 1 000 dans le formulaire ; la durée à cru en
+jours par 1 440 (`minutesParJour`), arrondie à la minute. Les autres ajouts (`OtherUse`), le
+type de recette, de levure, d'ajout et de palier, la forme et la quantité de la levure et la
+température du grain n'entrent dans aucun calcul.
 
 **Calculs à l'écran.** `evaluerRecette` appelle `computeRecipe` avec le rendement de
 l'équipement de la recette (`EquipementRecette` : aucun, supprimé, indisponible hors ligne,
@@ -327,7 +331,10 @@ Les règles refusent tout champ de premier niveau absent des listes ci-dessous. 
 de premier niveau est fini et strictement compris entre -1e9 et 1e9 (`optNumber`) ;
 `mash_efficiency_pct` est en plus borné de 0 à 100. Les éléments
 d'une liste (ingrédients, paliers) ne peuvent pas être inspectés par les règles : le dépôt
-de données les écrit à partir des types de `brewing/`, sans prix (P5).
+de données les écrit à partir de ses types, sans prix (P5).
+
+Les recettes et leurs copies figées font exception à ces noms de champs : elles suivent
+BeerJSON (ADR-005), en couples `{value, unit}` d'une seule unité par grandeur.
 
 ### `members/{email}`
 
@@ -348,49 +355,98 @@ administrateur se retire depuis la console Firebase.
 
 ### `recipes/{recipeId}`
 
-Lisible par tous les membres (partagée au groupe). Aucun prix.
+Lisible par tous les membres (partagée au groupe). Aucun prix. Depuis la v0.1.14, une
+enveloppe propre à Kass'Beer et un sous-arbre `recipe` en BeerJSON partiel (ADR-005) : la
+structure et les noms de `RecipeType` du schéma BeerJSON au commit figé `4370892d44`, copié
+avec sa licence (MIT) dans `schemas/beerjson-4370892d44/`.
+
+Enveloppe :
 
 | Champ | Type |
 |---|---|
+| `format_version` | int, obligatoire : `1`. Toute autre valeur, ou son absence, rend le document illisible |
 | `owner_uid` | string, obligatoire, uid de l'auteur, immuable |
 | `owner_name` | string, facultatif, 1 à 80 caractères : nom de l'auteur affiché au groupe, égal au nom du jeton de celui qui écrit |
-| `name` | string, obligatoire, 1 à 120 caractères |
-| `style` | string \| null (120) |
-| `notes` | string \| null (10 000) |
-| `batch_volume_l` | number \| null : volume visé en fermenteur |
-| `boil_time_min` | number \| null |
-| `equipment_id` | string \| null : profil d'équipement prévu |
-| `fermentables` | list<map> \| null (50) : `key`, `name`, `kind` (`grain`, `sugar`), `weight_g`, `ebc`, `yield_pct` |
-| `hops` | list<map> \| null (50) : `key`, `name`, `weight_g`, `alpha_pct`, `use` (`boil`, `whirlpool`, `dry_hop`), `time_min` (à cru : jours saisis × 1 440), `form` (`pellet`, `leaf`) |
-| `others` | list<map> \| null (50) : épices et ajouts, `key`, `name`, `weight_g`, `use` (`mash`, `boil`, `after_boil`, `fermentation`, `bottling`), `time_min` |
-| `yeasts` | list<map> \| null (10) : `key`, `name`, `attenuation_pct`, `form` (`dry`, `liquid`) ; l'éditeur en écrit une au plus |
-| `mash_steps` | list<map> \| null (20) : `name`, `temp_c`, `duration_min` |
-| `brew_steps` | list<map> \| null (60) : chronologie du jour de brassage, dans l'ordre. Élément : `key` (20 caractères, `doc().id`, créée à l'ajout, stable au renommage et au déplacement, unique dans la recette), `name` (1 à 120), `duration_min` (0 à 600 ; 0 pour une action sans minuteur), `temp_c` (0 à 100 \| null) |
+| `equipment_id` | string \| null (128) : profil d'équipement prévu |
 | `imported_from` | string \| null (200) : nom de la fiche Excel d'origine |
+| `brew_steps` | list<map> \| null (60) : chronologie du jour de brassage, dans l'ordre. Élément : `key` (20 caractères, `doc().id`, créée à l'ajout, stable au renommage et au déplacement, unique dans la recette), `name` (1 à 120), `duration_min` (0 à 600, décimale permise ; 0 pour une action sans minuteur), `temp_c` (0 à 100 \| null). Inchangée en v0.1.14 |
+| `recipe` | map, obligatoire : ci-dessous |
 | `created_at`, `updated_at` | timestamp, obligatoires |
 
-`key` est la clé d'ingrédient, calculée par `ingredientKey` de `brewing/` à chaque
-enregistrement et jamais saisie : préfixe de nature (`malt`, `sucre`, `houblon`, `levure`,
-`ajout`) et nom en minuscules, sans accents, chaque suite de caractères hors lettre et chiffre
-remplacée par un tiret, sans tiret en bord, 100 caractères au plus (« Pils » → `malt-pils`,
-« Sucre candi ambré » → `sucre-candi-ambre`). Le préfixe n'est pas répété quand le nom
-commence par lui. Deux lignes de même nom, à la casse près, partagent la clé. Elle relie
-l'ingrédient au prix et au stock du lecteur ; le calcul du coût ne lit pas ce champ stocké, il
-dérive la clé du nom et de la nature de chaque ligne à la lecture (`ingredientsDeRecette`,
-LI1 de la v0.5). Densités, degré, IBU, EBC et coût ne sont pas
-stockés : `brewing/` les calcule à l'affichage.
+`recipe` (BeerJSON, champs présents dans l'application) :
 
-Les valeurs `extract` (fermentescible) et `first_wort` (houblon) sont retirées du modèle en
-v0.1.7 (arbitrage A5) ; aucune recette n'en contenait. La correspondance avec les enums de
-`brewing/` est écrite une seule fois, dans ces enums : `FermentableKind.fromStored`
-(`grain` → `malt`, `sugar` → `sugar`), `HopUse.fromStored` (`boil` → `boil`, `whirlpool` →
-`afterBoil`, `dry_hop` → `dryHop`), `HopForm.fromStored` (`pellet` → `pellet`, `leaf` →
-`whole`), et `storedValue` en sens inverse. Une valeur inconnue lève `BrewingInputException`,
-dont `value` est la longueur du texte stocké : écrit par un autre membre, ce texte n'entre
-jamais dans `error_reports/`. `OtherUse`, `YeastForm` et `EquipmentKind` de l'application
-suivent la même règle (`DocumentIllisible` sans la valeur).
-Les règles n'inspectent pas les listes : elles acceptent une valeur retirée, que le dépôt de
-données refuse à la lecture par ces fonctions.
+| Champ | Type |
+|---|---|
+| `name` | string, obligatoire, 1 à 120 caractères |
+| `type` | string, facultatif : `all grain`, `partial mash`, `extract` à la saisie ; toute valeur de `RecipeType.type` du schéma à la lecture |
+| `style` | map, facultative : `name` (1 à 120) |
+| `notes` | string, facultatif (10 000) |
+| `batch_size` | `{value, "l"}`, facultatif : volume visé en fermenteur |
+| `boil` | map, facultative : `boil_time` `{value entier, "min"}` |
+| `mash` | map, facultative : `name` (« Empâtage », un libellé), `grain_temperature` `{value, "C"}` facultatif, `mash_steps` (20) absente sans palier, jamais une liste vide. Palier : `name`, `type` facultatif (`MashStepType.type`), `step_temperature` `{value, "C"}`, `step_time` `{value entier, "min"}` |
+| `ingredients` | map, obligatoire, avec les quatre listes, même vides. `water_additions` refusé |
+| `ingredients.fermentable_additions` | list (50) : `name`, `type` (`grain`, `sugar`), `amount` `{value, "g"}`, `color` `{value, "EBC"}` facultatif, `yield.fine_grind` `{value, "%"}` facultatif |
+| `ingredients.hop_additions` | list (50) : `name`, `form` (`pellet`, `leaf`), `alpha_acid` `{value, "%"}` facultatif, `amount` `{value, "g"}`, `timing` (ci-dessous) |
+| `ingredients.miscellaneous_additions` | list (50) : `name`, `type` facultatif (`MiscellaneousBase.type`), `amount` `{value, "g"}`, `timing` facultatif |
+| `ingredients.culture_additions` | list (10) : `name`, `type` et `form` facultatifs (`CultureBase`), `attenuation` `{value, "%"}` facultatif, `amount` `{value, "g"}` facultatif. L'éditeur en écrit une au plus |
+
+Un couple `{value, unit}` est absent ou complet, jamais une unité seule, jamais 0 à la
+place d'un vide. Une seule unité par grandeur : `g`, `l`, `C`, `min`, `EBC`, `%`. Les durées
+en minutes sont des entiers Firestore (`int` en Dart) : une durée décimale rend le document
+illisible.
+
+Moments (`timing`, BeerJSON au commit figé : `time` porte les minutes d'ébullition,
+`duration` le temps d'infusion d'un ajout en fin d'ébullition) :
+
+| Saisie | Écrit | Relu |
+|---|---|---|
+| Houblon, ébullition t min | `use: add_to_boil`, `time` t | Ébullition t |
+| Houblon, whirlpool d min | `add_to_boil`, `time` 0, `duration` d | Whirlpool d |
+| Houblon, à cru j jours | `add_to_fermentation`, `duration` = j × 1 440 arrondi à la minute | À cru |
+| Ajout, Empâtage, Fermentation, Embouteillage | `add_to_mash`, `add_to_fermentation`, `add_to_package`, durée dans `duration` | idem |
+| Ajout, Ébullition t | `add_to_boil`, `time` t | Ébullition t |
+| Ajout, Après ébullition d | `add_to_boil`, `time` 0, `duration` d | Après ébullition d |
+| Ajout, Après ébullition sans durée | `add_to_boil`, `time` 0 | Ébullition 0 min |
+| Ajout sans utilisation | `timing` absent | sans utilisation |
+
+Un houblon `add_to_mash` ou `add_to_package`, un `add_to_boil` à `time` non nul avec
+`duration`, ou un `time` hors ébullition rendent le document illisible : `brewing/` n'a pas
+d'équivalent, ou la valeur serait perdue au prochain enregistrement. Un whirlpool sans durée
+et une durée d'ajout sans utilisation ne s'écrivent pas (`ArgumentError`, l'éditeur les refuse).
+
+Lecture (`recipe.dart`, `beerjson.dart`, `LecteurChamps`) : une valeur énumérée hors du schéma
+(type de recette, de levure, d'ajout, de palier, forme de levure) ou une unité hors liste lève
+`DocumentIllisible`, dont la raison donne la longueur du texte stocké, jamais le texte. Une
+valeur du schéma absente des listes de l'éditeur (`cider`, `slant`…) est lue, affichée telle
+quelle et réécrite à l'identique. La nature d'un malt et la forme d'un houblon passent par
+`FermentableKind.fromStored` (`grain`, `sugar`) et `HopForm.fromStored` (`pellet` → `pellet`,
+`leaf` → `whole`) de `brewing/` ; une autre valeur (`extract`, `plug`…) lève
+`BrewingInputException`, dont `value` est la longueur du texte. Le moment d'un houblon se lit
+dans l'application : `HopUse` n'a plus de valeur stockée.
+
+La clé d'ingrédient n'est plus stockée : `ingredientKey` de `brewing/` la dérive du nom et de
+la nature (préfixe `malt`, `sucre`, `houblon`, `levure`, `ajout`, puis nom en minuscules, sans
+accents, chaque suite de caractères hors lettre et chiffre remplacée par un tiret, 100
+caractères au plus ; « Pils » → `malt-pils`). Deux lignes de même nom, à la casse près,
+partagent la clé. Elle relie l'ingrédient au prix et au stock du lecteur. Un nom sans lettre
+ni chiffre est refusé à l'enregistrement (`BrewingInputException`). Densités, degré, IBU, EBC
+et coût ne sont pas stockés : `brewing/` les calcule à l'affichage.
+
+`RecipeContent` et ses lignes restent le type de travail de l'application : `toInput` donne à
+`computeRecipe` la même entrée qu'en v0.1.13 (test « même recette en plat et en BeerJSON »).
+Modifier une recette réécrit `recipe` d'un bloc (`update`, le champ est remplacé, sans
+`FieldValue.delete()` à l'intérieur) ; `equipment_id`, `imported_from` et `owner_name` vides
+sont retirés par `FieldValue.delete()`.
+
+Validation : `firestore.rules` contrôle l'enveloppe et le premier niveau de `recipe` (voir
+« Règles d'accès ») ; ajv valide en test (`rules-tests/test/beerjson_schema.test.mjs`) les
+documents écrits par `toFirestore` (`app/test/fixtures/recipe_documents/`, vérifiés à
+l'identique par `recipe_conversion_test.dart`) contre le schéma partiel, dérivé à chaque
+lancement du schéma officiel (`beerjson_partial.mjs`) : champs obligatoires de la liste fermée
+d'ADR-005 retirés, unités réduites aux unités canoniques. ajv ne tourne pas dans l'application.
+
+Les règles n'inspectent pas les éléments des listes : elles acceptent une valeur que le dépôt
+de données refuse à la lecture.
 
 `brew_steps` : les règles bornent la liste à 60 éléments, sans lire ses éléments. Le dépôt de
 données valide chaque élément (clé présente et unique, nom, durée et température dans leurs
@@ -442,7 +498,7 @@ Lisible par le groupe, mesures comprises, sans coût. La recette et l'équipemen
 | `name` | string, obligatoire (120) |
 | `status` | string, obligatoire : `planned`, `brewing`, `fermenting`, `conditioning`, `done`, `abandoned`. Le jour de brassage passe de `planned` à `brewing` (premier début d'étape) puis à `fermenting` (« Terminer le brassage »), par des écritures simples ou un `WriteBatch`, jamais une transaction ; les règles ne contrôlent pas l'ordre des statuts |
 | `planned_for`, `brewed_at` | timestamp \| null : `brewed_at` = `measured_at` du premier début d'étape. Aucun champ « préparé » ni heure prévue recalculée |
-| `recipe_snapshot` | map, obligatoire, immuable : copie de la recette, mêmes champs de premier niveau, `brew_steps` compris (60 éléments au plus) ; `owner_name`, s'il est présent, est une chaîne de 1 à 80 caractères (celui de l'auteur de la recette, pas forcément celui qui brasse) |
+| `recipe_snapshot` | map, obligatoire, immuable : copie de la recette, même forme que `recipes/` (enveloppe, `format_version` 1, `recipe` en BeerJSON partiel, `brew_steps` compris, 60 éléments au plus), plus `updated_at` de la recette au moment de la copie. Mêmes contrôles des règles que `recipes/`, à la création du brassin. `owner_name`, s'il est présent, est une chaîne de 1 à 80 caractères (celui de l'auteur de la recette, pas forcément celui qui brasse). Une version de format inconnue rend le brassin illisible |
 | `equipment_snapshot` | map, obligatoire, immuable : copie de l'équipement, mêmes champs de premier niveau ; `owner_name` borné comme dans `recipe_snapshot` |
 | `adjustments` | map \| null : ajustements du jour, jamais écrits dans la recette. Clés en liste blanche, chacune number \| null : `batch_volume_l`, `mash_water_l`, `sparge_water_l`, `pre_boil_volume_l`, `post_boil_volume_l`, `fermenter_volume_l`, `boil_off_l_per_h`, `mash_temp_c`, `mash_time_min`, `boil_time_min`, `mash_efficiency_pct`. Chaque valeur est finie et strictement comprise entre -1e9 et 1e9 ; `mash_efficiency_pct` est borné de 0 à 100. Aucune autre clé, donc aucun prix ni coût (P5) |
 | `bottles_count` | int \| null : entier de 1 à 9 999 (règles) |
@@ -578,7 +634,7 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 |---|---|---|---|---|
 | `members/{email}` | son propre document (même absent) pour tout compte Google vérifié ; tous pour l'admin | admin | personne | admin, sauf son propre document et celui d'un autre admin (`resource.data.role != 'admin'`) |
 | `recipes/`, `equipment/` | membres | membre, à son `owner_uid` ; `owner_name` absent ou égal au nom du jeton (`request.auth.token.name`, 1 à 80 caractères) | propriétaire, `owner_uid` et `created_at` inchangés, `owner_name` comme à la création | propriétaire |
-| `brews/` | membres | membre, à son `owner_uid` ; `owner_name` comme dans `recipes/` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés ; `owner_name` comme à la création | propriétaire |
+| `brews/` | membres | membre, à son `owner_uid` ; `owner_name` comme dans `recipes/` ; champs de création seuls (`owner_uid`, `owner_name`, `recipe_id`, `name`, `status`, `planned_for`, `notes`, `imported_from`, copies, dates) ; `recipe_snapshot` contrôlé comme `recipes/` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés ; liste blanche des clés ; seuls les champs changés sont contrôlés, par groupe (nom, statut, dates, ajustements, embouteillage, mesures retenues et `sugars_in_wort`, notes et `imported_from`) ; `owner_name` comme à la création | propriétaire |
 | `brews/{id}/events/` | membres | propriétaire du brassin existant, à son `owner_uid`, forme selon `kind` | auteur : `value`, `note`, `measured_at`, forme gardée | auteur |
 | `users/{uid}/**` | propriétaire | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous |
 | `users/{uid}/prices/`, `fees/` | propriétaire | propriétaire, forme et bornes contrôlées | propriétaire, forme et bornes contrôlées | propriétaire |
@@ -597,6 +653,82 @@ premier, et un rejeu après un accusé perdu aussi. L'application relit alors le
 une lecture ordinaire : s'il existe sans écriture en attente, le refus est journalisé
 (`costs.freeze_replayed`) sans être annoncé. Les éléments de `lines` ne sont pas inspectés,
 seul leur nombre est borné.
+
+**Forme d'une recette (v0.1.14).** `recipeFields()` : `format_version`, `owner_uid`,
+`owner_name`, `equipment_id`, `imported_from`, `brew_steps`, `recipe`, `created_at`,
+`updated_at`. `format_version` vaut l'entier 1. `recipe` n'a que `name` (1 à 120), `type`
+(une des neuf valeurs de `RecipeType.type` au commit figé), `notes` (10 000), `style` (la
+seule clé `name`, 1 à 120), `batch_size` (`unit` `l`), `boil` (la seule clé `boil_time`, `unit`
+`min`, valeur entière), `mash` (les seules clés `name`, texte de 1 à 120 caractères,
+`grain_temperature`, `unit` `C`, et `mash_steps`, 20) et `ingredients` (quatre listes bornées à
+50, 50, 50 et 10 ; `water_additions` refusé). `style`, `boil`, `mash` et `ingredients` sont
+des maps fermées : une autre clé, ou une liste ou un texte à leur place, est refusé. Une liste
+de `recipe` (ingrédients, `mash_steps`) est absente ou une liste : `null` est refusé, comme
+dans BeerJSON. Un couple présent est complet, aux seules clés `value` et `unit`, valeur finie
+et bornée. `mash.name` est un libellé que l'application écrit (« Empâtage ») et ne relit pas.
+`recipe_snapshot` passe les mêmes contrôles à la création du brassin, puis ne change plus. Un
+document plat de la v0.1.13 est refusé.
+
+**Risques acceptés.** Les règles ne contrôlent pas les éléments des listes (ingrédients,
+paliers, étapes de la chronologie) : un élément peut porter un champ inconnu, un prix
+compris. Seul son auteur peut l'écrire, dans sa recette ou dans sa copie figée, et le
+document reste borné à 1 Mio par Firestore. La lecture typée de l'application ignore un
+champ inconnu, et la copie figée d'un brassin passe par ces types (`recipeSnapshot`) : un
+champ inconnu d'une recette ne se recopie pas dans un brassin créé par l'application. Les
+valeurs de la copie de l'équipement (`equipment_snapshot`) ne sont pas contrôlées à la
+création d'un brassin, ses clés seules le sont (liste blanche d'`equipment/`) : un contrôle
+de plus dépasse le budget ci-dessous. Une valeur mal typée (`notes` en map, par exemple)
+y rend le brassin illisible (« Brassin illisible ») ; seul le brasseur qui crée le brassin
+peut l'écrire, et l'application écrit cette copie à partir de ses types.
+
+Effet de ces risques, écrit par un client autre que l'application :
+
+- Une copie figée ou un élément de liste mal typé rend le brassin ou la recette illisible
+  chez tous les membres. Aucun ne peut brasser ce brassin ni dupliquer cette recette. Seul
+  l'auteur peut corriger le document ; l'administrateur passe par la console Firebase.
+  Chaque lecteur envoie un rapport par session (`error_reports/`).
+- Les champs d'enveloppe de `recipe_snapshot` (`owner_uid`, `created_at`, `updated_at`) ne
+  sont pas contrôlés en valeur : seule leur clé figure dans la liste blanche.
+- Une valeur bien typée mais hors bornes dans `equipment_snapshot` (rendement à 150 %,
+  volume négatif) passe la lecture : les calculs du brassin sont refusés (« Calcul
+  impossible ») ou faux chez tous les lecteurs.
+- `bottles_count` réécrit de 5 en 5.0 est accepté : Firestore juge les deux valeurs égales,
+  le champ ne figure pas parmi les champs changés (`isBrewUpdate`), et `is int` n'est pas
+  revérifié. Sans effet sur l'application, qui lit `toInt()`.
+
+L'effet reste limité à l'affichage du document concerné : les autres documents, les droits et
+les prix ne changent pas.
+
+**Budget des règles.** Une requête évalue 1 000 expressions au plus. Le contrôle d'une
+recette en coûte environ 500 : la création d'un brassin passe par `isBrewCreateShape`, limité
+aux champs de création. La modification d'un brassin (`isBrewUpdate`) ne contrôle que les
+champs changés, groupe par groupe (`!changed.hasAny([...]) || contrôle`, avec
+`changed = request.resource.data.diff(resource.data).affectedKeys()`) : un champ inchangé a
+été contrôlé à son écriture, et la copie figée ne change plus. Contrôler tous les champs à
+chaque modification dépassait la limite sur un brassin rempli après le brassage avec
+5 ajustements (mesure de `securite`, v0.1.14 et `origin/main` v0.1.13). Une erreur n'arrête pas
+un `&&` : la règle de modification commence par `resource != null`, qui vaut faux à la
+création. Comparer une liste à `null` coûte cher : les listes de `recipe` passent par
+`optArray` (`d.get(k, []) is list`), plus économe qu'`optList`.
+
+Mesure de la v0.1.14 sur l'émulateur : des appels `pad()` (environ 10 expressions chacun) sont
+ajoutés à la règle jusqu'au refus ; 98 tiennent dans une règle `if true`.
+
+| Écriture | Marge |
+|---|---|
+| Création d'une recette, la plus grande permise | environ 470 expressions (47 `pad()`) |
+| Création d'un brassin qui la copie, tous les champs de création, équipement complet | environ 70 (7 `pad()`) |
+| Brassin du 22 novembre rempli (`brewed_at`, notes, embouteillage, 3 mesures retenues, `sugars_in_wort`, équipement complet) avec 11 ajustements : changement de statut | plus de 930 (93 `pad()`, la compilation refuse au-delà) |
+| Même brassin : embouteillage et statut changés ensemble | plus de 930 |
+| Même brassin : nom, date prévue et notes de 10 000 caractères | plus de 930 |
+| Même brassin sans ajustements : écriture des 11 ajustements | environ 470 (47 `pad()`) |
+| Même brassin : tous les groupes changés sauf les ajustements | environ 570 (57 `pad()`) |
+| Même brassin : tous les groupes changés, ajustements compris, par un `set()` | limite dépassée, écriture refusée |
+
+L'application n'écrit jamais tous les groupes d'un coup : sa plus grosse modification est
+l'embouteillage avec le statut. Des tests rejouent la plus grande recette permise, un brassin
+qui la copie avec tous les champs de création, et le brassin du 22 novembre avec
+11 ajustements (`recipe_format.test.mjs`, « budget des règles »).
 
 **Effacement d'un membre retiré (RGPD).** L'application ne permet ni à l'admin ni au membre
 retiré de modifier ou de supprimer ses contenus. Une demande d'effacement se traite depuis la
@@ -631,6 +763,21 @@ propre uid, et refuse champ inconnu, type faux, `unit` hors de `g` et `unit` (do
 différent du chemin, plus de 200 lignes, `freeze_kind: initial` en modification et
 `recalculation` en création ; il vérifie aussi la suppression du brassin et de son coût dans un
 même lot.
+
+`recipe_format.test.mjs` (v0.1.14) rejoue la forme BeerJSON dans `recipes/` et dans la copie
+figée : document plat de la v0.1.13, sans `format_version`, `format_version` 2 ou en texte,
+unité `kg`, `°F` ou heure, unité sans valeur, durée décimale, listes de 51 (11 levures, 21
+paliers), `water_additions`, champ hors liste ; maps fermées, en création et en
+modification : `style.price_eur`, `boil.cost_eur`, `mash.stock_g`, `style` en texte, `boil`
+et `mash` en liste ou en texte, `mash.name` en map ou de 121 caractères, liste nulle ou en
+map, `type` hors schéma (« bière ») ou en map, refusés ; `type` absent ou `cider` accepté ;
+modification de `recipe_snapshot` refusée, `set()` complet d'un brassin existant avec une
+autre copie de la recette ou de l'équipement refusé, avec la même copie accepté ; création de
+recette au format plat refusée pour les cinq profils ; remplacement de `recipe` d'un bloc par
+`update`. `beerjson_schema.test.mjs`, sans émulateur, valide par ajv 8.20.0
+(`ajv/dist/2020`) les trois fixtures de `toFirestore` (recette complète, recette réduite au
+nom, copie figée) contre le schéma partiel, et vérifie que le schéma officiel refuse les deux
+premières.
 
 ## Calculs de brassage
 
@@ -1062,6 +1209,62 @@ Les secrets de signature se posent par les quatre commandes `gh secret set` de
 « Réglages sur GitHub », les deux mots de passe en saisie masquée. Un secret absent fait
 échouer le job `build`, avant toute mise en ligne (« Secrets absents de l'environnement
 production »).
+
+### Passage au modèle BeerJSON (v0.1.14) : commande d'effacement
+
+Outil à usage unique, `effacement-l1/` (Node 22, `firebase-admin` 14.5.0, son propre
+`package.json`), pour le déroulé d'ADR-005 (« Calendrier et passage en production »). Il sort
+du dépôt à la livraison suivante.
+
+| Commande | Effet |
+|---|---|
+| `node effacer.mjs rapport --projet <id>` | compte rendu sans écriture : nombre de recettes ; chaque brassin avec son statut, sa date, son nombre d'événements et son coût figé (`users/{owner_uid}/brew_costs/{id}`) ; nombre de coûts figés ; événements orphelins (brassin absent qui garde des `events/`), nommés ; documents hors modèle (autre sous-collection), nommés |
+| `node effacer.mjs effacer --projet <id> [--sauvegarde <dossier>]` | même compte rendu ; refus si un brassin est en `brewing` (code 2) ou si un document est hors modèle (code 5), avant la copie ; copie JSON de `recipes/` et `brews/` (événements et orphelins compris) dans `import/backup/`, ignoré par Git, sans aucun coût figé ; saisie du nom du projet ; compte rendu refait : refus si un brassin est passé en `brewing` (code 2), si un document ou un coût figé a été ajouté, retiré ou modifié depuis la copie (`updateTime`) ou si les nombres diffèrent (code 5), rien n'étant effacé ; `recursiveDelete` de `recipes/` et `brews/`, puis suppression de chaque coût figé à sa date de modification ; nombres effacés ; chaque coût figé dont la suppression échoue, écrit avec son chemin et le message d'erreur, en code 0 comme en code 4 ; contrôle qu'aucun document ne reste sous `recipes/` et `brews/` ni aucun coût figé effacé, et que `equipment/`, `users/` (hors des coûts figés effacés), `members/` et `error_reports/` ont le même nombre de documents |
+
+Lancer la commande depuis PowerShell ou Windows Terminal : sous Git Bash (mintty),
+`process.stdin.isTTY` peut manquer, et l'outil refuse alors l'effacement en production.
+Recettes, brassins et événements se comptent et se copient par un seul parcours
+(`listDocuments`, sous-collections comprises), qui lit aussi un brassin absent gardant des
+`events/`. Le coût figé d'un brassin est celui de son propriétaire
+(`users/{owner_uid}/brew_costs/{id}`) ; un coût posé sous un autre compte, ou celui d'un
+brassin déjà supprimé, reste en place.
+
+Les coûts figés sont comptés et effacés sans être lus ni copiés, y compris ceux de
+l'administrateur (décision du 2026-11-10) : ils portent les prix de chaque brasseur. L'outil
+les lit sans champ (`getAll` avec un `fieldMask` vide), pour leur existence et leur
+`updateTime`. Le décompte de `users/` se fait de la même façon : aucun prix ne passe par
+l'outil. Un coût figé effacé ne se retrouve que dans la sauvegarde quotidienne de Firestore.
+
+La relecture et `recursiveDelete` sont séparés de quelques secondes. Une écriture faite dans
+cet intervalle est effacée sans figurer dans la copie. D'où l'arrêt de l'usage demandé à
+l'étape 1 du déroulé d'ADR-005, et la sauvegarde quotidienne gardée 7 jours.
+
+Contrôles faits avant toute connexion : `GOOGLE_APPLICATION_CREDENTIALS` posé est refusé
+(identifiants par `gcloud auth application-default login` seulement, aucune clé JSON) ; seuls
+le projet `kassbeer` et un projet `demo-` avec `FIRESTORE_EMULATOR_HOST` sont permis (avec
+l'émulateur, l'outil ne parle qu'à lui ; un projet `demo-` sans émulateur est refusé) ; en
+production, `effacer` exige un terminal (entrée standard redirigée refusée) ; une sauvegarde
+dans le dépôt hors de `import/` est refusée ; un dossier de sauvegarde dans un autre arbre
+Git, autre dépôt ou autre worktree, est refusé même si Git l'y ignore, car une configuration
+Git de l'environnement (fichier d'exclusion global, `GIT_CONFIG_*`) peut faire paraître ignoré
+un dossier suivi ; dans `import/` de ce dépôt, `git check-ignore` doit dire le fichier de la
+copie ignoré. Risque accepté : le chemin est jugé tel qu'il est écrit. Une jonction posée
+à la main dans `import/` vers un dossier suivi, ou l'outil copié dans un autre dépôt qui
+n'ignore pas `import/`, ferait accepter un dossier suivi ; l'outil sert une fois, lancé par
+l'administrateur sur son poste. Un dossier hors de tout arbre Git est accepté, et seulement quand
+`git rev-parse` répond « not a git repository » : toute autre erreur (`safe.directory`, chemin
+trop long pour Git, dossier illisible) est refusée. Git est lancé en messages anglais
+(`LC_ALL=C`) et sans `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_INDEX_FILE`,
+`GIT_CEILING_DIRECTORIES` ni `GIT_DISCOVERY_ACROSS_FILESYSTEM`, qui changeraient le dépôt
+découvert. Les événements comptés sont ceux de chaque
+brassin (`brews/{id}/events`), jamais un `collectionGroup("events")`, qui compterait aussi un
+`events/` sous `users/`. Codes de sortie : 0 fait, 1 usage ou lancement refusé, 2 brassin en
+cours, 3 nom du projet refusé, 4 effacement incomplet ou collection protégée modifiée,
+5 document hors modèle, ou `recipes/`, `brews/` et coûts figés différents de la copie (rien
+n'est effacé). Tests contre l'émulateur seul
+(`effacer.test.mjs`), depuis `rules-tests/` :
+`npx firebase --config ../firebase.json emulators:exec --only firestore --project demo-kassbeer "node --test ../effacement-l1/effacer.test.mjs"`,
+après `(cd effacement-l1 && npm ci)`.
 
 ### Poste de développement
 

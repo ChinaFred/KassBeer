@@ -108,9 +108,12 @@ class _EditeurState extends ConsumerState<_Editeur> {
     final drafts = defaultBrewSteps(
       mashSteps: [
         for (final m in c.mashSteps)
-          MashStepInput(tempC: m.tempC, durationMinutes: m.durationMin),
+          MashStepInput(
+            tempC: m.tempC,
+            durationMinutes: m.durationMin.toDouble(),
+          ),
       ],
-      boilMinutes: c.boilTimeMin,
+      boilMinutes: c.boilTimeMin?.toDouble(),
       hops: [for (final h in c.hops) h.toInput()],
     );
     final repo = ref.read(recipesRepositoryProvider);

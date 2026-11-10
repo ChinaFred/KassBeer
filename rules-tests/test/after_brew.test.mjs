@@ -249,7 +249,11 @@ function briefBrew() {
     owner_uid: uidOf("owner"),
     name: "Blonde",
     status: "planned",
-    recipe_snapshot: { owner_uid: uidOf("owner"), name: "Blonde" },
+    recipe_snapshot: {
+      format_version: 1,
+      owner_uid: uidOf("owner"),
+      recipe: { name: "Blonde", ingredients: {} },
+    },
     equipment_snapshot: { owner_uid: uidOf("owner"), name: "Cuve", kind: "all_in_one" },
     created_at: Timestamp.fromDate(new Date("2026-11-02T08:00:00Z")),
     updated_at: Timestamp.fromDate(new Date("2026-11-02T08:00:00Z")),

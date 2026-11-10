@@ -10,6 +10,10 @@ import 'package:kass_beer/features/recipes/domain/recipe.dart';
 
 import 'support/fakes.dart';
 
+Map<String, dynamic> _ingredients(Map<String, dynamic> data) =>
+    (data['recipe'] as Map<String, dynamic>)['ingredients']
+        as Map<String, dynamic>;
+
 void main() {
   late FakeFirebaseFirestore firestore;
   late RecordingErrorReportService errors;
@@ -179,20 +183,36 @@ void main() {
     Future<Map<String, dynamic>> read(String id) async =>
         (await firestore.collection('recipes').doc(id).get()).data()!;
 
-    test('création : clés d\'ingrédient, owner_uid, dates', () async {
-      final created = repository.create(
-        content: content,
-        ownerUid: 'uid-a',
-        ownerName: 'Alice',
-      );
-      await created.written;
-      final data = await read(created.id);
-      expect(data['owner_uid'], 'uid-a');
-      expect(data['owner_name'], 'Alice');
-      expect((data['fermentables'] as List).single['key'], 'malt-pils');
-      expect(data['created_at'], isA<Timestamp>());
-      expect(data.containsKey('imported_from'), isFalse);
-    });
+    test(
+      'création : enveloppe, recipe en BeerJSON, sans clé stockée',
+      () async {
+        final created = repository.create(
+          content: content,
+          ownerUid: 'uid-a',
+          ownerName: 'Alice',
+        );
+        await created.written;
+        final data = await read(created.id);
+        expect(data['owner_uid'], 'uid-a');
+        expect(data['owner_name'], 'Alice');
+        expect(data.keys.toSet(), {
+          'format_version',
+          'owner_uid',
+          'owner_name',
+          'equipment_id',
+          'recipe',
+          'created_at',
+          'updated_at',
+        });
+        expect(data['format_version'], 1);
+        final fermentable =
+            (_ingredients(data)['fermentable_additions'] as List).single as Map;
+        expect(fermentable.containsKey('key'), isFalse);
+        expect(fermentable['amount'], {'value': 4500.0, 'unit': 'g'});
+        expect(data['created_at'], isA<Timestamp>());
+        expect(data.containsKey('imported_from'), isFalse);
+      },
+    );
 
     test(
       'modification : owner_uid et created_at inchangés, nom réécrit',
@@ -213,9 +233,14 @@ void main() {
         expect(after['owner_uid'], 'uid-a');
         expect(after['created_at'], before['created_at']);
         expect(after['owner_name'], 'Alice Martin');
-        expect(after['style'], 'Blonde');
-        expect(after.containsKey('fermentables'), isFalse);
-        expect(after.containsKey('batch_volume_l'), isFalse);
+        final recipe = after['recipe'] as Map<String, dynamic>;
+        expect(recipe['style'], {'name': 'Blonde'});
+        expect(recipe['name'], 'Blonde 2');
+        // `recipe` est écrite d'un bloc. fake_cloud_firestore fusionne une map
+        // écrite par update, Firestore la remplace : le remplacement est vérifié
+        // contre l'émulateur (rules-tests/test/recipe_format.test.mjs).
+        expect(_ingredients(after)['fermentable_additions'], isEmpty);
+        expect(after.containsKey('equipment_id'), isFalse);
       },
     );
 
@@ -234,13 +259,17 @@ void main() {
       );
       await copy.written;
       final data = await read(copy.id);
-      expect(data['name'], 'Copie de Blonde');
+      expect((data['recipe'] as Map)['name'], 'Copie de Blonde');
       expect(data['owner_uid'], 'uid-b');
       expect(data['owner_name'], 'Bruno');
       expect(data['equipment_id'], 'eq-1');
-      expect((data['fermentables'] as List).single['name'], 'Pils');
+      expect(
+        ((_ingredients(data)['fermentable_additions'] as List).single
+            as Map)['name'],
+        'Pils',
+      );
       final original = await read(created.id);
-      expect(original['name'], 'Blonde');
+      expect((original['recipe'] as Map)['name'], 'Blonde');
       expect(original['owner_uid'], 'uid-a');
     });
 
@@ -293,13 +322,13 @@ void main() {
     );
 
     test(
-      'valeur stockée retirée (extract) : recette illisible, rapportée',
+      'document plat de la v0.1.13 : recette illisible, rapportée',
       () async {
         await firestore.collection('recipes').doc('vieille').set({
           'owner_uid': 'uid-a',
           'name': 'Vieille',
           'fermentables': [
-            {'name': 'Extrait', 'kind': 'extract', 'weight_g': 1000},
+            {'name': 'Pils', 'kind': 'grain', 'weight_g': 1000},
           ],
         });
         final list = await repository.watchAll().first;
@@ -307,7 +336,40 @@ void main() {
           list.chercher('vieille'),
           isA<DocumentIllisibleTrouve<Recipe>>(),
         );
-        expect(errors.reports.single.feature, 'recipes.read');
+        final report = errors.reports.single;
+        expect(report.feature, 'recipes.read');
+        expect(report.error.toString(), contains('format_version'));
+      },
+    );
+
+    test(
+      'valeur que l\'application ne lit pas (extrait sec) : recette illisible, '
+      'rapportée sans la valeur',
+      () async {
+        await firestore.collection('recipes').doc('extrait').set({
+          'format_version': 1,
+          'owner_uid': 'uid-a',
+          'recipe': {
+            'name': 'Extrait',
+            'ingredients': {
+              'fermentable_additions': [
+                {
+                  'name': 'Extrait sec',
+                  'type': 'dry extract',
+                  'amount': {'value': 1000, 'unit': 'g'},
+                },
+              ],
+            },
+          },
+        });
+        final list = await repository.watchAll().first;
+        expect(
+          list.chercher('extrait'),
+          isA<DocumentIllisibleTrouve<Recipe>>(),
+        );
+        final report = errors.reports.single;
+        expect(report.feature, 'recipes.read');
+        expect(report.error.toString(), isNot(contains('dry extract')));
       },
     );
   });

@@ -185,15 +185,36 @@ flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà.
   commencer. » ; recherche sans résultat : « Aucune recette ne correspond à « {texte} ». » et
   « Effacer la recherche ».
 - Lecture impossible et panne après une première lecture : comme les équipements, avec
-  « Impossible de lire les recettes. ». Un document illisible s'affiche « Recette
-  illisible ».
+  « Impossible de lire les recettes. ». Un document illisible s'affiche dans la liste
+  « Recette illisible », avec le sous-titre « Mettez l'application à jour, ou prévenez
+  l'administrateur. » ; sa fiche et son éditeur affichent « Cette recette ne peut pas
+  s'afficher. Elle a peut-être été enregistrée par une version plus récente de Kass'Beer :
+  mettez l'application à jour. L'erreur est signalée à l'administrateur. ». L'erreur est
+  rapportée (`error_reports/`) avec la longueur de la valeur fautive, jamais la valeur.
+  Depuis la v0.1.14 (recettes en BeerJSON, ADR-005), une recette est illisible si sa version
+  de format manque ou est inconnue (document de la v0.1.13 compris), si une unité ou une
+  valeur énumérée sort du modèle, ou si une durée en minutes n'est pas entière. Une copie
+  figée illisible rend le brassin illisible : « Brassin illisible » dans la liste, même
+  sous-titre ; sur sa fiche, sa préparation et l'écran du jour, « Ce brassin ne peut pas
+  s'afficher. Il a peut-être été enregistré par une version plus récente de Kass'Beer :
+  mettez l'application à jour. L'erreur est signalée à l'administrateur. », avec le bouton
+  « Revenir aux brassins », qui ramène à la liste. Relire le brassin rendrait le même
+  document : la préparation garde « Réessayer » pour un brassin absent ou hors ligne
+  seulement. Hors ligne, le rapport part au retour du réseau.
 
 **Fiche.** Nom, style, « Recette de {auteur} » pour un autre brasseur. Boutons « Modifier »
 et « Supprimer » pour l'auteur, « Dupliquer » pour tous. Puis le bloc Calculs (voir
-« Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (volume en fermenteur, durée d'ébullition,
-équipement), Malts et sucres, Houblons (avec l'IBU apporté par chacun), Autres ajouts,
-Levure, Paliers d'empâtage, Chronologie du jour, Notes. Chaque ligne d'ingrédient tient sur
-deux niveaux : nom, puis ses valeurs. « Nouveau brassin » (tous les membres) ouvre le
+« Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (type de recette, « Non renseigné » s'il
+manque ; volume en fermenteur, durée d'ébullition, équipement), Malts et sucres, Houblons
+(avec l'IBU apporté par chacun), Autres ajouts, Levure, Paliers d'empâtage, Chronologie du
+jour, Notes. Chaque ligne d'ingrédient tient sur deux niveaux : nom, puis ses valeurs. Un
+ajout porte son type en tête (« Correction de l'eau · 5 g · Empâtage · 60 min ») ; la levure
+« Haute fermentation (ale) · 11 g · atténuation 75 % · Sèche » ; un palier « Infusion ·
+65 °C · 60 min » (libellé court du type de palier ; le libellé long, « Infusion (eau chaude
+ajoutée) », ne figure que dans le menu de l'éditeur). Quand elle est renseignée, la
+température du grain précède les paliers sur une ligne libellé-valeur, comme les valeurs de
+Général : « Température du grain », « 18 °C ». La copie figée d'un brassin et l'écran du
+jour montrent les mêmes détails. « Nouveau brassin » (tous les membres) ouvre le
 formulaire de création. Une chronologie illisible s'affiche « Chronologie illisible », sans
 masquer le reste de la recette, et l'erreur est rapportée.
 
@@ -230,8 +251,10 @@ groupe. », boutons « Annuler » et « Supprimer ». Puis « Recette supprimée
 ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons (3) »…).
 
 - Général : « Nom » (seul champ obligatoire, 120 caractères ; sinon « Donnez un nom à la
-  recette. », l'écran remonte au champ et y place le curseur), « Style (facultatif) », « Volume en fermenteur
-  (L) » (plus de 0), « Durée d'ébullition (min) » (0 à 600), « Équipement » (« Aucun
+  recette. », l'écran remonte au champ et y place le curseur), « Style (facultatif) »,
+  « Type de recette » (liste déroulante : « Non précisé », Tout grain, Empâtage partiel,
+  Extrait), « Volume en fermenteur (L) » (plus de 0), « Durée d'ébullition (min) » (entier
+  de 0 à 600), « Équipement » (« Aucun
   équipement », les siens, puis ceux du groupe avec leur auteur ; un équipement disparu
   s'affiche « Équipement supprimé »). Une nouvelle recette présélectionne l'équipement du
   brasseur s'il n'en a qu'un. Une recette incomplète s'enregistre.
@@ -245,13 +268,47 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   « Couleur (EBC) » (aide « Sert au calcul de la couleur. »), « Rendement d'extrait (%) »
   (aide « Sert au calcul de la densité initiale. »).
 - Houblon : « Nom », « Quantité (g) », « Acides alpha (%) », « Utilisation » (Ébullition,
-  Whirlpool, À cru), durée (« Durée d'ébullition (min) », obligatoire à l'ébullition ;
-  « Durée (min) » au whirlpool ; « Durée à cru (jours) »), « Forme » (Pellets, Cônes, sans
-  choix par défaut ; sinon « Choisissez une forme. »).
-- Autre ajout : « Nom », « Quantité (g) », « Utilisation » (facultative : Empâtage,
-  Ébullition, Après ébullition, Fermentation, Embouteillage), « Durée (min) ». Aucun calcul.
-- Levure : « Nom », « Atténuation (%) », « Forme » (Sèche, Liquide, facultative).
-- Palier : « Nom », « Température (°C) » (0 à 100), « Durée (min) » (0 à 600).
+  Whirlpool, À cru), durée, « Forme » (Pellets, Cônes, sans choix par défaut ; sinon
+  « Choisissez une forme. »). La durée dépend du moment : « Durée d'ébullition (min) »,
+  obligatoire, entier de 0 à 600 ; « Durée d'infusion (min) » au whirlpool, obligatoire,
+  entier de 1 à 600 (« Champ obligatoire. » si vide ; à 0, « Au moins 1 min. Pour un ajout à
+  l'arrêt du feu, choisissez Ébullition et 0 min. »), avec l'aide « Temps entre l'arrêt du
+  feu et le refroidissement. Pour un ajout à l'arrêt du feu sans infusion, choisissez
+  Ébullition et 0 min. », jamais coupée ; « Durée à cru (jours) », facultative, décimale
+  permise, enregistrée en minutes entières (jours × 1 440, arrondi à la minute). Le
+  formulaire garde une durée par moment : le texte saisi est mémorisé pour chaque moment,
+  revenir à un moment remet son texte, un moment jamais saisi a un champ vide.
+- Autre ajout : « Nom », « Quantité (g) », « Type d'ajout » (liste déroulante : « Non
+  précisé », Correction de l'eau, Clarifiant, Épice, Herbe, Arôme, Bois, Autre),
+  « Utilisation » (facultative : Empâtage, Ébullition, Après ébullition, Fermentation,
+  Embouteillage), « Durée (min) » (entier). Une durée sans utilisation est refusée :
+  « Choisissez une utilisation. » ; ce message s'efface dès qu'une utilisation est choisie
+  ou que la durée est vidée. Un ajout « Après ébullition » sans durée s'enregistre comme un
+  ajout à 0 min d'ébullition et se relit « Ébullition · 0 min » ; tant que la durée est vide,
+  l'aide « Sans durée, l'ajout est enregistré à l'arrêt du feu (Ébullition, 0 min). »
+  s'affiche sous « Durée (min) ». Aucun calcul.
+- Levure : « Nom », « Quantité (g) » (facultative, plus de 0, aide « Le coût compte un
+  sachet par levure, quelle que soit la quantité. » ; la quantité n'entre dans aucun calcul
+  de coût), « Atténuation (%) »,
+  « Type de levure » (liste déroulante : « Non précisé », Haute fermentation (ale), Basse
+  fermentation (lager), Kveik, Brettanomyces, Lactobacilles, Pédiocoques, Culture mixte,
+  Champagne, Vin, Fermentation spontanée, Bactéries malolactiques, Autres bactéries,
+  Autre), « Forme » (Sèche, Liquide, facultative).
+- Paliers d'empâtage : « Température du grain (°C) » en tête de section, facultative,
+  décimale, de -20 à 60 (« Entre -20 et 60. »), aide « Température des malts au moment de
+  l'empâtage, souvent celle de la pièce. » ; elle s'enregistre sans palier. Palier : « Nom »,
+  « Température (°C) » (0 à 100), « Durée (min) » (entier de 0 à 600 ; la touche « Suivant »
+  du clavier passe au type), « Type de palier » (liste déroulante : « Non précisé »,
+  Infusion (eau chaude ajoutée), Chauffe de la cuve d'empâtage, Décoction, Rinçage, Vidange
+  de la cuve d'empâtage, Acidification à l'empâtage, Acidification du moût ; le champ
+  affiche le libellé court, « Infusion »).
+- Listes déroulantes : une entrée tient sur deux lignes à grande taille de texte.
+- Aucune valeur n'est choisie d'avance dans les nouveaux champs. Une valeur absente de ces
+  listes mais connue du modèle (venue d'un futur import) s'affiche sous son libellé français
+  et l'enregistrement la conserve. Types de recette : Cidre, Kombucha, Soda, Hydromel, Vin,
+  Autre ; type de levure : Levure de blanche ; formes de levure : Gélose, Culture, Lie (la
+  forme importée reste visible et choisie dans le formulaire, à côté de Sèche et Liquide).
+  Ces valeurs ne sont pas proposées à la saisie.
 - Un appui sur une ligne ouvre son formulaire. Le menu ⋮ propose « Dupliquer » et
   « Retirer » (sans confirmation ; la SnackBar « « {nom} » retiré. » propose « Annuler »),
   et pour un palier « Monter » et « Descendre ». Les malts et sucres se rangent par masse
@@ -281,11 +338,13 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
 « 22,4 » valent 22,4 ; « 1.500 » kg vaut 1,5 kg. Un nombre qui contient plus d'un séparateur
 (« 1.234,5 ») est refusé, comme un nombre trop long pour être lu (plus de 309 chiffres).
 Messages : « Champ obligatoire. », « Nombre illisible. », « Nombre positif attendu. »,
-« Entre 0 et 100. », « Nombre trop grand. » (à partir de 1 000 000 000, la borne des règles).
+« Entre 0 et 100. », « Nombre trop grand. » (à partir de 1 000 000 000, la borne des règles),
+« Nombre entier attendu. » (toute durée en minutes d'une recette, hors chronologie du jour).
 L'unité figure dans le libellé du champ (« Quantité (kg) »). À l'enregistrement, un champ en
 erreur bloque l'enregistrement même hors de l'écran : l'éditeur défile jusqu'au premier champ
-en erreur ; un nom manquant reçoit le curseur. Passer un houblon à « À cru », ou l'en sortir,
-vide sa durée : des minutes ne deviennent pas des jours. Un nom d'ingrédient sans lettre ni chiffre est refusé :
+en erreur ; un nom manquant reçoit le curseur. Chaque moment d'un houblon garde sa propre
+durée : des minutes d'ébullition ne deviennent ni des minutes d'infusion ni des jours. Une
+aide ou un message d'erreur sous un champ n'est pas coupé. Un nom d'ingrédient sans lettre ni chiffre est refusé :
 « Le nom doit contenir une lettre ou un chiffre. ». Aucun champ de prix ni de stock.
 
 **Affichage.** Virgule décimale, espace insécable avant l'unité : densité « 1057,9 », degré

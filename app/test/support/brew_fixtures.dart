@@ -21,6 +21,17 @@ const ajout = BrewStepLine(
   durationMin: 0,
 );
 
+/// Document `recipes/` ou copie figée au format BeerJSON partiel, réduit au nom ;
+/// [extra] ajoute des champs à l'enveloppe.
+Map<String, dynamic> recetteMinimale(
+  String name, {
+  Map<String, dynamic> extra = const {},
+}) => {
+  'format_version': 1,
+  'recipe': <String, dynamic>{'name': name, 'ingredients': <String, dynamic>{}},
+  ...extra,
+};
+
 const equipementTest = EquipmentContent(
   name: 'Grainfather',
   kind: EquipmentKind.allInOne,
