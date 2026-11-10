@@ -48,6 +48,9 @@ CLAUDE.md                       règles, chaîne de travail, tableaux à remplir
     ├── setup-projet.sh         session cloud : installe Flutter 3.44.6 et les dépendances
     └── format-on-edit.mjs      formate le fichier écrit, selon formatters.json
 scripts/
+├── changelog-recent.mjs        écrit app/assets/changelog_recent.json (écran « Nouveautés »)
+│                               depuis CHANGELOG.md ; relancé par ci.yml et deploy.yml
+├── changelog-recent.test.mjs   node --test scripts/changelog-recent.test.mjs
 ├── check-agents.mjs            vérifie les en-têtes YAML et les noms cités dans CLAUDE.md
 ├── check-agents.test.mjs       node --test scripts/check-agents.test.mjs
 ├── check-version.mjs           avant une fusion : version de la branche > version de main

@@ -89,6 +89,7 @@ jobs:
         run: node scripts/check-agents.mjs
 
       - name: Tests des scripts
+        # Dont scripts/changelog-recent.test.mjs (écran « Nouveautés »).
         run: node --test scripts/*.test.mjs
 
   flutter:
@@ -134,6 +135,11 @@ jobs:
         # même chose.
         working-directory: app
         run: git diff --exit-code pubspec.lock
+
+      - name: app — asset des nouveautés
+        # Régénère app/assets/changelog_recent.json depuis CHANGELOG.md avant les
+        # tests et le build web : la copie versionnée ne sert qu'aux builds locaux.
+        run: node scripts/changelog-recent.mjs
 
       - name: app — analyse statique
         working-directory: app
@@ -265,6 +271,10 @@ jobs:
         if: steps.touched.outputs.build == 'true'
         working-directory: app
         run: flutter pub get
+
+      - name: Asset des nouveautés
+        if: steps.touched.outputs.build == 'true'
+        run: node scripts/changelog-recent.mjs
 
       - name: Compiler l'APK release (clé jetable)
         # La clé de release reste réservée à deploy.yml (P8). Celle-ci est

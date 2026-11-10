@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -210,7 +212,7 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-/// Avatar Google et menu du compte : nom, e-mail, version, déconnexion.
+/// Avatar Google et menu du compte : nom, e-mail, version, Nouveautés, déconnexion.
 class _AccountMenu extends ConsumerWidget {
   const _AccountMenu({required this.user});
 
@@ -251,6 +253,12 @@ class _AccountMenu extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+        const Divider(),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.new_releases_outlined),
+          onPressed: () => unawaited(context.push(AppRoutes.news)),
+          child: const Text('Nouveautés'),
         ),
         const Divider(),
         MenuItemButton(

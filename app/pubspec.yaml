@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.12+13
+version: 0.1.13+14
 
 environment:
   sdk: ^3.11.4
@@ -66,3 +66,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Écran « Nouveautés » : généré par scripts/changelog-recent.mjs depuis
+  # documentation/CHANGELOG.md, régénéré par la CI et deploy.yml avant chaque build.
+  assets:
+    - assets/changelog_recent.json

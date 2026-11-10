@@ -11,6 +11,9 @@ abstract final class AppRoutes {
   static const admin = '/admin';
   static const adminMembers = '/admin/membres';
 
+  /// Écran « Nouveautés », ouvert depuis le menu du compte.
+  static const news = '/nouveautes';
+
   static const newRecipe = '/recettes/nouvelle';
   static String recipe(String id) => '$recipes/$id';
   static String editRecipe(String id) => '$recipes/$id/modifier';

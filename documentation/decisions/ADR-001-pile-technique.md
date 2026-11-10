@@ -4,7 +4,8 @@
 - **Date** : 2026-11-06
 - **Remplace** : —
 - **Modifié par** : ADR-002 (dépôt public, minutes de la CI) ; ADR-005 (recettes en BeerJSON,
-  référentiels, et export BeerXML avancé avant la v1, malgré les mentions « après la v1 » ci-dessous)
+  référentiels, et export BeerXML avancé avant la v1, malgré les mentions « après la v1 » ci-dessous) ; ADR-006 (un serveur
+  Cloud Functions Node 24 avant l'IA et le RAPT Pill, pour les tickets)
 
 ## Contexte
 

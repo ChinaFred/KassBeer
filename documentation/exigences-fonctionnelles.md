@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -68,8 +68,8 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue) et « Se déconnecter ». Une déconnexion qui échoue affiche « Déconnexion
-impossible. Réessayez. ».
+pu être lue), un séparateur, « Nouveautés », un séparateur et « Se déconnecter ». Une
+déconnexion qui échoue affiche « Déconnexion impossible. Réessayez. ».
 
 Destinations : Recettes, Brassins, Équipements, et Admin pour l'administrateur seul. Sous
 600 px, barre de navigation en bas ; de 600 à 839 px, rail de navigation avec libellés ;
@@ -91,6 +91,26 @@ largeur, et il est annoncé aux lecteurs d'écran.
 
 **Page introuvable.** Une adresse inconnue affiche « Cette page n'existe pas. » et le bouton
 « Revenir à l'accueil ».
+
+### Nouveautés
+
+Ouvert depuis le menu du compte, pour tout membre (adresse `/nouveautes`). Plein écran, hors
+de la barre de navigation : titre « Nouveautés » et flèche retour. La flèche revient à l'écran
+d'où le membre est parti ; ouvert par son adresse, elle mène à l'accueil.
+
+- En-tête : « Version installée : X.Y.Z. Seules les versions qui changent ce que vous voyez
+  sont listées. », ou « Version installée indisponible. … » si la version n'a pas pu être lue.
+- Une carte par version, la plus récente en tête : « Version X.Y.Z » (titre lu comme en-tête par les
+  lecteurs d'écran), l'étiquette « Installée » sur la version de l'appareil, la date
+  (« 8 novembre 2026 », « 1er » le premier du mois) et le texte de l'entrée « fonctionnel » du
+  CHANGELOG, en paragraphes sélectionnables. Six versions au plus.
+- Chargement : indicateur « Chargement des nouveautés ».
+- Fichier illisible : « Impossible d'afficher les nouveautés. » et « Réessayer » ; la panne est
+  journalisée.
+- Aucune version : « Aucune nouveauté à afficher. » et « Revenir à
+  l'accueil ».
+- Le texte est livré avec l'application : l'écran marche sans réseau, sans bandeau hors ligne.
+  Colonne de 840 px au plus.
 
 ### Admin
 
