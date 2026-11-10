@@ -1260,7 +1260,9 @@ gcloud config set project "$PROJECT_ID"
 gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com \
   pubsub.googleapis.com storage.googleapis.com secretmanager.googleapis.com \
-  cloudscheduler.googleapis.com
+  cloudscheduler.googleapis.com cloudbilling.googleapis.com firebaseextensions.googleapis.com
+# firebase-tools lit la facturation (cloudbilling) et la liste des extensions avant de déployer
+# des Functions ; github-deploy ne peut pas activer ces API lui-même (relevé au 2e essai).
 # Compute Engine crée le compte compute par défaut, compte de build des Functions et cible
 # des étapes 4, 5 et 7. Sur kassbeer, il n'existait pas avant cette activation.
 gcloud services enable compute.googleapis.com

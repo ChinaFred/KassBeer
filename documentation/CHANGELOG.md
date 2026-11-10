@@ -17,7 +17,8 @@ la chaîne de travail devient une vérification. La documentation du ruleset de 
 désormais cinq contrôles requis, avec « Functions — lint, build, tests ». « Réglages faits une
 fois » ajoute ce que le premier déploiement des Functions a révélé : création du compte compute
 par l'API Compute Engine, `roles/editor` retiré des comptes compute et App Engine, et droit
-d'agir au nom du compte App Engine pour `github-deploy`.
+d'agir au nom du compte App Engine pour `github-deploy`, et activation des API Cloud Billing
+et Firebase Extensions, que firebase-tools lit avant de déployer des Functions.
 
 ### v0.1.17 — fonctionnel
 
