@@ -1,0 +1,43 @@
+{
+  "description": "Volume avant ébullition (BOIL_SIZE d'un export BeerXML, ADR-005, L2c) : le volume en fermenteur, plus ce qui reste dans la cuve d'ébullition (pertes au trub et volume mort), plus l'évaporation pendant l'ébullition. Le retrait du moût au refroidissement n'est pas compté : aucun profil d'équipement ne le porte. Valeurs attendues calculées à la main.",
+  "formula": "V avant ébullition (L) = V fermenteur + pertes au trub + volume mort de la cuve d'ébullition + évaporation (L/h) × durée d'ébullition (min) / 60",
+  "cases": [
+    {
+      "id": "ale-20-l-60-min",
+      "batch_litres": 20,
+      "boil_minutes": 60,
+      "boil_off_litres_per_hour": 3,
+      "trub_loss_litres": 1,
+      "kettle_dead_space_litres": 0.5,
+      "expected": 24.5,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "tout-en-un-23-l-90-min",
+      "batch_litres": 23,
+      "boil_minutes": 90,
+      "boil_off_litres_per_hour": 2.4,
+      "trub_loss_litres": 1.5,
+      "kettle_dead_space_litres": 2,
+      "expected": 30.1,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "sans-perte-ni-ebullition",
+      "batch_litres": 10,
+      "boil_minutes": 0,
+      "boil_off_litres_per_hour": 4,
+      "trub_loss_litres": 0,
+      "kettle_dead_space_litres": 0,
+      "expected": 10,
+      "tolerance": 1e-12
+    }
+  ],
+  "invalid": [
+    { "reason": "volume en fermenteur nul", "batch_litres": 0, "boil_minutes": 60, "boil_off_litres_per_hour": 3, "trub_loss_litres": 1, "kettle_dead_space_litres": 0 },
+    { "reason": "durée d'ébullition négative", "batch_litres": 20, "boil_minutes": -1, "boil_off_litres_per_hour": 3, "trub_loss_litres": 1, "kettle_dead_space_litres": 0 },
+    { "reason": "évaporation négative", "batch_litres": 20, "boil_minutes": 60, "boil_off_litres_per_hour": -3, "trub_loss_litres": 1, "kettle_dead_space_litres": 0 },
+    { "reason": "pertes au trub négatives", "batch_litres": 20, "boil_minutes": 60, "boil_off_litres_per_hour": 3, "trub_loss_litres": -1, "kettle_dead_space_litres": 0 },
+    { "reason": "volume mort non fini", "batch_litres": 20, "boil_minutes": 60, "boil_off_litres_per_hour": 3, "trub_loss_litres": 1, "kettle_dead_space_litres": "Infinity" }
+  ]
+}

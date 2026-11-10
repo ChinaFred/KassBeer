@@ -360,11 +360,11 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
         errors: ref.read(errorReportServiceProvider),
       );
     } on FormatException catch (error, stackTrace) {
-      // JSON mal formé ou UTF-8 invalide.
+      // JSON ou XML mal formé, ou UTF-8 invalide.
       _illisible(
         nom,
-        'format json, taille ${octets.length} octets, code illisible, '
-        'position ${error.offset ?? 'inconnue'}',
+        'format ${formatPresume(octets)}, taille ${octets.length} octets, '
+        'code illisible, position ${error.offset ?? 'inconnue'}',
         stackTrace,
       );
       return;

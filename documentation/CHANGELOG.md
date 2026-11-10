@@ -6,6 +6,67 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.21 — fonctionnel
+
+Recettes › Importer lit aussi les fichiers BeerXML, le format qu'exportent BeerSmith,
+Brewfather, Brewer's Friend et Brewtarget. Le fichier s'importe comme un fichier BeerJSON :
+aperçu sans écriture, recettes déjà importées ou en double décochées, compte rendu. Un fichier
+BeerSmith qui contient des apostrophes ou des accents se lit sans caractère faux. « Détails »
+dit ce qui change à l'import : un houblon « First Wort » compte à l'ébullition pendant toute
+l'ébullition de la recette, un houblon « Aroma » avec une durée compte à l'ébullition pendant
+cette durée (si c'était un whirlpool, choisissez Whirlpool dans la recette), un whirlpool sans
+durée compte à l'arrêt du feu, et le style ne garde que son nom. Le profil d'eau, les étapes de fermentation
+et l'équipement du fichier ne sont pas importés. Une levure liquide mesurée en litres garde sa
+quantité en litres. Un fichier BeerSmith (.bsmx) n'est pas lu : exportez la recette en
+BeerXML depuis BeerSmith. L'export BeerXML reste visible et bloqué : il demande un style de la
+liste BJCP, dont le choix arrive dans une prochaine version.
+
+### v0.1.21 — technique
+
+Livraison L2c d'ADR-005. `CLAUDE.md` (« Le projet », « Structure ») et `guide-reseau.md` disent que
+`exchange/` lit et écrit le BeerXML.
+
+`exchange/` gagne `xml` 7.0.1, version prévue par ADR-005,
+et sa dépendance `petitparser` 7.0.2 : ce sont les deux paquets ajoutés à
+`exchange/pubspec.lock`. `app/pubspec.lock` ne change pas : `xml` 7.0.1 et `petitparser` 7.0.2
+y étaient déjà, tirés par `dbus` ; ils entrent désormais dans `main.dart.js`, qui passe de
+4 668 716 à 4 735 582 octets (+66 866, +1,4 %). APK de release compilé sur le PC.
+
+Lecture du BeerXML 1.0 : encodage déclaré (UTF-8 par défaut ; ISO-8859-1, windows-1252 et
+US-ASCII décodés en windows-1252, comme le standard Encoding du WHATWG ; autre encodage
+refusé), fins de ligne normalisées, analyse à événements sans récursion, 16 niveaux
+d'éléments au plus, aucun `DOCTYPE` ni entité autre que les cinq prédéfinies et les
+références numériques (tests d'une « billion laughs » et d'une entité externe, P9). Revue de
+sécurité : l'analyse ne garde que les éléments que la lecture utilise (`kConteneursBeerXml`),
+300 000 au plus (`kMaxElementsXml` ; 500 recettes de 50 houblons en gardent 203 501) ; un
+fichier BeerJSON de plus de 1 000 000 de valeurs (`kMaxValeursJson`, comptées dans le
+parcours de la profondeur) est refusé avant `jsonDecode` ; une liste n'est convertie que
+jusqu'au plafond + 1, et le refus cite le nombre du fichier ; le texte d'un élément coupé en
+morceaux (commentaires, CDATA) se joint une seule fois, au lieu d'une recopie par morceau ;
+le décodage windows-1252 passe par un `Uint16List`. Chaque
+recette est récrite en BeerJSON puis lue par la lecture du BeerJSON (`lireRecetteConvertie`) :
+mêmes bornes, mêmes unités, même compte rendu, même empreinte (`imported_from` « BeerXML ·
+sha256:… ») et même détection de doublon. Correspondances de `DATA_SOURCES.md` : `First
+Wort`, `Aroma`, `Whirlpool`, `Secondary`, `Adjunct`, `Wheat`, couleur en Lovibond ou SRM et
+`POTENTIAL` convertis par `brewing/`, quantités d'ajout et de levure en litres sauf
+`AMOUNT_IS_WEIGHT`. Nouvelles modifications `FirstWortEnEbullition`, `ArretDuFeuSansDuree`,
+`AromaEnEbullition` et parties non importées `equipement` et `nomEmpatage` ; `RaisonFichier.beerXml` (« sa lecture
+arrive dans une prochaine version ») est retiré, avec son libellé. `formatPresume` donne le
+format présumé dans le rapport d'un fichier illisible.
+
+Écriture du BeerXML (`exporterBeerXml`) : complète et testée, bloquée sans style BJCP
+(`StyleBeerXml`, qui viendra de `beer_styles`) ; l'application ne l'appelle pas encore
+(décision 2). `BOIL_SIZE` vient de `preBoilVolumeLitres`, nouvelle formule de `brewing/`
+(volume en fermenteur, pertes au trub, volume mort de la cuve d'ébullition, évaporation),
+cas ajoutés d'abord à `brewing/test/fixtures/boil_volume.json`. Pertes et manques propres au
+BeerXML ajoutés à `ChampExport` et `PerteExport` (`ValeurEcriteAutrement` porte la liste et
+le champ de la ligne), avec leurs libellés aux mots de l'éditeur. Quatre fixtures
+BeerXML écrites à la main (à la manière de BeerSmith en windows-1252, Brewfather, Brewer's
+Friend, Brewtarget ; noms fictifs) : leurs lectures passent le schéma partiel par ajv, et le
+critère A1 (lecture, export, relecture ; écart entre la source et l'export égal aux pertes du
+compte rendu) est vérifié en test. Textes de l'import et de la liste vide rétablis selon la
+proposition d'écran validée. Aucune règle Firestore ne change.
+
 ### v0.1.20 — fonctionnel
 
 Recettes › Importer : « Importer », dans la liste des recettes, lit un fichier BeerJSON exporté

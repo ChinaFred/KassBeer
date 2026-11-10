@@ -275,6 +275,9 @@ SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « S
 « Commandes utiles », `.claude/formatters.json` (`dart format`) et `setup-projet.sh`
 (`dart pub get`) ; la CI le contrôle dans le job « Flutter et brewing ».
 
+Depuis la v0.1.21 (L2c), « Le projet » et « Structure » disent que `exchange/` lit et écrit aussi le
+BeerXML ; l'export BeerXML reste bloqué dans l'écran jusqu'au référentiel des styles (L3).
+
 Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
 `--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans
 ce fichier local, jamais versionné. État de la production et outils du poste :

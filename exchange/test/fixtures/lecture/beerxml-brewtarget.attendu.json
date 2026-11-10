@@ -1,0 +1,369 @@
+{
+  "format": "BeerXML",
+  "total": 3,
+  "recettes": [
+    {
+      "numero": 1,
+      "nom": "Rousse de décoction",
+      "empreinte": "sha256:c243221544831f302b9830700534e298716d18cc9788dcd6382298e84c0eecb8",
+      "en_double": false,
+      "modifications": [
+        "StyleReduitAuNom(Märzen)",
+        "UnitesConverties(Lovi)",
+        "PartiesNonImportees(coAuteurEtDate, ebullition, rendement, detailsPaliers, detailsIngredients)"
+      ],
+      "document": {
+        "format_version": 1,
+        "recipe": {
+          "name": "Rousse de décoction",
+          "type": "all grain",
+          "author": "Brasseur Fictif",
+          "style": {
+            "name": "Märzen"
+          },
+          "notes": "Décoction simple, <recette> fictive.",
+          "batch_size": {
+            "value": 18.5,
+            "unit": "l"
+          },
+          "boil": {
+            "boil_time": {
+              "value": 90,
+              "unit": "min"
+            }
+          },
+          "mash": {
+            "name": "Empâtage",
+            "grain_temperature": {
+              "value": 15.0,
+              "unit": "C"
+            },
+            "mash_steps": [
+              {
+                "name": "Empâtage à 55",
+                "type": "temperature",
+                "step_temperature": {
+                  "value": 55.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 20,
+                  "unit": "min"
+                }
+              },
+              {
+                "name": "Décoction",
+                "type": "decoction",
+                "step_temperature": {
+                  "value": 66.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 45,
+                  "unit": "min"
+                }
+              }
+            ]
+          },
+          "ingredients": {
+            "fermentable_additions": [
+              {
+                "name": "Munich",
+                "type": "grain",
+                "amount": {
+                  "value": 4000.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 17.73,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 80.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Malt torréfié",
+                "type": "grain",
+                "amount": {
+                  "value": 50.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 886.5,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 65.0,
+                    "unit": "%"
+                  }
+                }
+              }
+            ],
+            "hop_additions": [
+              {
+                "name": "Tettnang",
+                "form": "plug",
+                "alpha_acid": {
+                  "value": 4.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 40.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Hallertau",
+                "form": "leaf",
+                "alpha_acid": {
+                  "value": 4.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 20.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 10,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "miscellaneous_additions": [
+              {
+                "name": "Chlorure de calcium",
+                "type": "water agent",
+                "amount": {
+                  "value": 3.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_mash",
+                  "duration": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "culture_additions": [
+              {
+                "name": "Lager liquide",
+                "type": "lager",
+                "form": "liquid",
+                "attenuation": {
+                  "value": 74.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 0.2,
+                  "unit": "l"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "numero": 2,
+      "nom": "Rousse de décoction",
+      "empreinte": "sha256:c243221544831f302b9830700534e298716d18cc9788dcd6382298e84c0eecb8",
+      "en_double": true,
+      "modifications": [
+        "StyleReduitAuNom(Märzen)",
+        "UnitesConverties(Lovi)",
+        "PartiesNonImportees(coAuteurEtDate, ebullition, rendement, detailsPaliers, detailsIngredients)"
+      ],
+      "document": {
+        "format_version": 1,
+        "recipe": {
+          "name": "Rousse de décoction",
+          "type": "all grain",
+          "author": "Brasseur Fictif",
+          "style": {
+            "name": "Märzen"
+          },
+          "notes": "Décoction simple, <recette> fictive.",
+          "batch_size": {
+            "value": 18.5,
+            "unit": "l"
+          },
+          "boil": {
+            "boil_time": {
+              "value": 90,
+              "unit": "min"
+            }
+          },
+          "mash": {
+            "name": "Empâtage",
+            "grain_temperature": {
+              "value": 15.0,
+              "unit": "C"
+            },
+            "mash_steps": [
+              {
+                "name": "Empâtage à 55",
+                "type": "temperature",
+                "step_temperature": {
+                  "value": 55.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 20,
+                  "unit": "min"
+                }
+              },
+              {
+                "name": "Décoction",
+                "type": "decoction",
+                "step_temperature": {
+                  "value": 66.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 45,
+                  "unit": "min"
+                }
+              }
+            ]
+          },
+          "ingredients": {
+            "fermentable_additions": [
+              {
+                "name": "Munich",
+                "type": "grain",
+                "amount": {
+                  "value": 4000.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 17.73,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 80.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Malt torréfié",
+                "type": "grain",
+                "amount": {
+                  "value": 50.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 886.5,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 65.0,
+                    "unit": "%"
+                  }
+                }
+              }
+            ],
+            "hop_additions": [
+              {
+                "name": "Tettnang",
+                "form": "plug",
+                "alpha_acid": {
+                  "value": 4.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 40.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Hallertau",
+                "form": "leaf",
+                "alpha_acid": {
+                  "value": 4.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 20.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 10,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "miscellaneous_additions": [
+              {
+                "name": "Chlorure de calcium",
+                "type": "water agent",
+                "amount": {
+                  "value": 3.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_mash",
+                  "duration": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "culture_additions": [
+              {
+                "name": "Lager liquide",
+                "type": "lager",
+                "form": "liquid",
+                "attenuation": {
+                  "value": 74.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 0.2,
+                  "unit": "l"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "numero": 3,
+      "nom": null,
+      "empreinte": "sha256:8b64aeac7ee6f4861e0f5d1406d3eb7e5071f76bf074c55583fecd9aea56e9d8",
+      "en_double": false,
+      "refus": "NomAbsent"
+    }
+  ]
+}

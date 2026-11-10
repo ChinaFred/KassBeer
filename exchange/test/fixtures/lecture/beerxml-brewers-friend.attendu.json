@@ -1,0 +1,242 @@
+{
+  "format": "BeerXML",
+  "total": 1,
+  "recettes": [
+    {
+      "numero": 1,
+      "nom": "Pale ale d'essai & agrumes",
+      "empreinte": "sha256:9f8429195e2824123ab60f9e56a7a9edc9e6e81471205611b83b38dae8af32bd",
+      "en_double": false,
+      "modifications": [
+        "StyleReduitAuNom(American Pale Ale)",
+        "FirstWortEnEbullition(Cascade, 60)",
+        "ArretDuFeuSansDuree(Citra, Aroma)",
+        "MomentSimplifie(Gélatine, add_to_fermentation)",
+        "UnitesConverties(SRM, Lovi)",
+        "PartiesNonImportees(ebullition, rendement, valeursAnnoncees, nomEmpatage, detailsPaliers)"
+      ],
+      "document": {
+        "format_version": 1,
+        "recipe": {
+          "name": "Pale ale d'essai & agrumes",
+          "type": "partial mash",
+          "author": "Brasseur d'Exemple",
+          "style": {
+            "name": "American Pale Ale"
+          },
+          "notes": "Houblonnage <agrumes> ; recette fictive.",
+          "batch_size": {
+            "value": 19.0,
+            "unit": "l"
+          },
+          "boil": {
+            "boil_time": {
+              "value": 60,
+              "unit": "min"
+            }
+          },
+          "mash": {
+            "name": "Empâtage",
+            "grain_temperature": {
+              "value": 20.0,
+              "unit": "C"
+            },
+            "mash_steps": [
+              {
+                "name": "Infusion des grains",
+                "type": "infusion",
+                "step_temperature": {
+                  "value": 68.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 30,
+                  "unit": "min"
+                }
+              }
+            ]
+          },
+          "ingredients": {
+            "fermentable_additions": [
+              {
+                "name": "Extrait liquide clair",
+                "type": "extract",
+                "amount": {
+                  "value": 2500.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 7.88,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 78.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Crystal 40",
+                "type": "grain",
+                "amount": {
+                  "value": 340.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 78.8,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 74.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Malt pale",
+                "type": "grain",
+                "amount": {
+                  "value": 1200.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 3.94,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 79.0,
+                    "unit": "%"
+                  }
+                }
+              }
+            ],
+            "hop_additions": [
+              {
+                "name": "Cascade",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 6.8,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 14.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Centennial",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 9.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 21.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 15,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Citra",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 12.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 28.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 0,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "miscellaneous_additions": [
+              {
+                "name": "Mousse irlandaise",
+                "type": "fining",
+                "amount": {
+                  "value": 4.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 15,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Gélatine",
+                "type": "fining",
+                "amount": {
+                  "value": 3.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_fermentation",
+                  "duration": {
+                    "value": 2880,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Sucre de garde",
+                "type": "other",
+                "amount": {
+                  "value": 120.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_package",
+                  "duration": {
+                    "value": 0,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "culture_additions": [
+              {
+                "name": "Levure sèche américaine",
+                "type": "ale",
+                "form": "dry",
+                "attenuation": {
+                  "value": 77.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 11.5,
+                  "unit": "g"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

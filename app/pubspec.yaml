@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.20+21
+version: 0.1.21+22
 
 environment:
   sdk: ^3.11.4
@@ -36,9 +36,10 @@ dependencies:
   brewing:
     path: ../brewing
 
-  # Import et export de recettes BeerJSON : paquet Dart pur du dépôt (ADR-005).
-  # Il ne fait rien avant un import ou un export, et rien ne part sur le réseau.
-  # Il tire crypto (SHA-256 des doublons), déjà résolu ici en dépendance indirecte.
+  # Import et export de recettes BeerJSON et BeerXML : paquet Dart pur du dépôt
+  # (ADR-005). Il ne fait rien avant un import ou un export, et rien ne part sur le
+  # réseau. Il tire crypto (SHA-256 des doublons) et xml 7.0.1 (lecture du BeerXML),
+  # déjà résolus ici en dépendances indirectes.
   exchange:
     path: ../exchange
 

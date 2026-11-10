@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.21",
+      "date": "2026-11-10",
+      "paragraphs": [
+        "Recettes › Importer lit aussi les fichiers BeerXML, le format qu'exportent BeerSmith, Brewfather, Brewer's Friend et Brewtarget. Le fichier s'importe comme un fichier BeerJSON : aperçu sans écriture, recettes déjà importées ou en double décochées, compte rendu. Un fichier BeerSmith qui contient des apostrophes ou des accents se lit sans caractère faux. « Détails » dit ce qui change à l'import : un houblon « First Wort » compte à l'ébullition pendant toute l'ébullition de la recette, un houblon « Aroma » avec une durée compte à l'ébullition pendant cette durée (si c'était un whirlpool, choisissez Whirlpool dans la recette), un whirlpool sans durée compte à l'arrêt du feu, et le style ne garde que son nom. Le profil d'eau, les étapes de fermentation et l'équipement du fichier ne sont pas importés. Une levure liquide mesurée en litres garde sa quantité en litres. Un fichier BeerSmith (.bsmx) n'est pas lu : exportez la recette en BeerXML depuis BeerSmith. L'export BeerXML reste visible et bloqué : il demande un style de la liste BJCP, dont le choix arrive dans une prochaine version."
+      ]
+    },
+    {
       "version": "0.1.20",
       "date": "2026-11-10",
       "paragraphs": [
@@ -37,13 +44,6 @@
       "date": "2026-11-10",
       "paragraphs": [
         "Le menu du compte gagne une entrée « Nouveautés ». Elle ouvre un écran qui présente les dernières versions qui changent ce que vous voyez, la plus récente en tête, avec leur date. La version installée sur l'appareil y porte l'étiquette « Installée ». Le texte se sélectionne pour être copié. L'écran marche sans réseau : les nouveautés sont livrées avec l'application."
-      ]
-    },
-    {
-      "version": "0.1.13",
-      "date": "2026-11-10",
-      "paragraphs": [
-        "Les prix et le coût arrivent (incrément v0.5). Chaque brasseur saisit ses prix d'achat et ses frais (eau, électricité, embouteillage) dans « Mes prix », ouvert depuis le menu du compte. La fiche d'une recette affiche son coût avec les prix du lecteur : total, par litre et bouteille de 33 cl. Un prix manquant n'affiche aucun montant : la liste des manquants permet de saisir chaque prix sans quitter la recette. Sur la fiche d'un brassin, son propriétaire voit l'estimation, puis le coût figé automatiquement au premier embouteillage si tous les prix sont connus, par bouteille réelle. Sinon, « Figer le coût » rattrape le figeage. « Recalculer avec mes prix actuels » remplace un coût figé après confirmation. Les prix et les coûts ne sont visibles que de leur propriétaire."
       ]
     }
   ]

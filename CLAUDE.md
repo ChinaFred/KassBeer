@@ -80,8 +80,9 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
   ajoute les décisions de l'admin). L'IA ou le RAPT Pill viendront avec leur ADR.
 - Import des 16 fiches Excel : fichiers JSON préparés par une session Claude Code, relus et
   écrits par l'écran Admin › Import. Aucune IA dans l'application en version 1.
-- Échange de recettes : paquet Dart pur `exchange/` (import et export BeerJSON, BeerXML en L2c),
-  écrans Recettes › Importer et Exporter (ADR-005).
+- Échange de recettes : paquet Dart pur `exchange/` (import et export BeerJSON et BeerXML ; export
+  BeerXML bloqué dans l'écran jusqu'au référentiel des styles), écrans Recettes › Importer et
+  Exporter (ADR-005).
 - Choix et partage de fichier : canal Kotlin `fr.kassbeer/files` (sélecteur du système, feuille de
   partage, enregistrement, `FileProvider` limité à `cacheDir/exports/`) et `package:web` sur le
   web ; aucun greffon (ADR-007).
@@ -107,8 +108,8 @@ app/                  # application Flutter (Android, web)
 └── android/          # projet Gradle ; key.properties et *.jks jamais versionnés
 brewing/              # paquet Dart pur : calculs de brassage, sans Flutter ni Firebase
 └── test/fixtures/    # cas tirés des 16 fiches Excel, valeurs attendues et tolérances
-exchange/             # paquet Dart pur, dépend de brewing/ : lecture et écriture BeerJSON (puis
-│                     # BeerXML), bornes, compte rendu
+exchange/             # paquet Dart pur, dépend de brewing/ : lecture et écriture BeerJSON et
+│                     # BeerXML, bornes, compte rendu
 └── test/fixtures/    # fichiers de lecture et d'export attendus
 rules-tests/          # tests de firestore.rules contre l'émulateur (Node 22, Java 21) ;
                       # validation ajv des documents de recette (schéma officiel et partiel)

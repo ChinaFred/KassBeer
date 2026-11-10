@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire en tête d'Admin l'état du jeton GitHub et le nombre de tickets bloqués. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -301,8 +301,9 @@ Recettes › Importer : sur téléphone après « Toutes / Les miennes », au-de
 « Nouvelle recette ».
 
 - Liste vide : « Aucune recette. Appuyez sur Nouvelle recette pour commencer, ou importez
-  un fichier BeerJSON. » ; « Les miennes » vide : « Vous n'avez pas encore de recette.
-  Appuyez sur Nouvelle recette pour commencer, ou importez un fichier BeerJSON. » ; les deux
+  un fichier BeerXML ou BeerJSON. » ; « Les miennes » vide : « Vous n'avez pas encore de
+  recette. Appuyez sur Nouvelle recette pour commencer, ou importez un fichier BeerXML ou
+  BeerJSON. » ; les deux
   avec le bouton « Importer des recettes » ; recherche sans résultat : « Aucune recette ne correspond à « {texte} ». » et
   « Effacer la recherche ».
 - Lecture impossible et panne après une première lecture : comme les équipements, avec
@@ -408,21 +409,21 @@ d'état lu par le lecteur d'écran à chaque changement.
 **Importer** (Recettes › Importer, tous les membres). Page pleine hors de la coquille, avec
 la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
 
-1. Avant le choix : « Choisissez un fichier BeerJSON (.json) exporté de votre logiciel de
-   brassage. 500 recettes et 10 Mo au plus. Les prix et le stock du fichier ne sont pas
-   importés. » et « Choisir un fichier », qui ne répond pas tant que le sélecteur est ouvert (Android). Le sélecteur du système s'ouvre sans filtre de
+1. Avant le choix : « Choisissez un fichier BeerXML (.xml) ou BeerJSON (.json) exporté de
+   votre logiciel de brassage. 500 recettes et 10 Mo au plus. Les prix et le stock du fichier
+   ne sont pas importés. » et « Choisir un fichier », qui ne répond pas tant que le sélecteur est ouvert (Android). Le sélecteur du système s'ouvre sans filtre de
    type : le format se lit au contenu, jamais à l'extension. Fermer le sélecteur ramène à
    l'écran sans message. Aucun fichier n'est lu depuis le réseau ni depuis l'application.
 2. « Lecture du fichier » pendant l'analyse, sur l'appareil.
 3. Fichier refusé, avec le bouton plein « Choisir un autre fichier » : « Fichier trop gros : 12,4 Mo.
    Kass'Beer lit les fichiers de 10 Mo au plus. » (refusé avant la lecture) ; « Fichier
-   illisible : « {fichier} » n'est pas un fichier BeerJSON. » (JSON mal formé ou encodage
-   illisible compris) ; « Ce fichier JSON n'est pas au format BeerJSON. Dans votre logiciel,
-   exportez la recette en BeerJSON. » ; « Fichier BeerXML : sa lecture arrive dans une
-   prochaine version. Si votre logiciel le permet, exportez la recette en BeerJSON. » ; « Fichier
-   BeerSmith (.bsmx) non lu. La lecture du BeerXML, que BeerSmith exporte, arrive dans une
-   prochaine version. » ; « Version de BeerJSON non prise en charge ({version}). Kass'Beer lit
-   les versions 1, 2 et 3. » ; « Aucune recette dans « {fichier} ». ». Ouverture impossible :
+   illisible : « {fichier} » n'est ni un fichier BeerXML ni un fichier BeerJSON. » (JSON ou
+   XML mal formé, encodage illisible ou non pris en charge, `DOCTYPE` ou entité XML inconnue
+   compris) ; « Ce fichier JSON n'est pas au format BeerJSON. Dans votre logiciel, exportez la
+   recette en BeerXML ou en BeerJSON. » ; « Fichier BeerSmith (.bsmx) non lu. Dans BeerSmith,
+   exportez la recette en BeerXML. » ; « Version de BeerJSON non prise en charge ({version}). Kass'Beer lit
+   les versions 1, 2 et 3. » ; « Aucune recette dans « {fichier} ». » (aussi pour un
+   fichier BeerXML d'ingrédients, de styles ou d'équipements seuls). Ouverture impossible :
    « Impossible d'ouvrir le fichier. Réessayez ou choisissez un autre fichier. » et un seul
    bouton, « Réessayer ». Une panne inattendue de l'analyse affiche « Fichier illisible » et
    est rapportée (taille et type de l'erreur seulement).
@@ -456,7 +457,13 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
    ligne, de 10 000 L de volume, de 2 000 EBC, de 365 jours hors ébullition), « Durée de
    {nom} arrondie à la minute. », « Moment d'ajout simplifié : {nom}, compté à l'empâtage. »
    (ou à l'ébullition, à cru, au conditionnement), « Caractères de contrôle retirés des
-   textes. », « {n} champs inconnus ignorés. ». Une quantité obligatoire au-delà de ces
+   textes. », « {n} champs inconnus ignorés. ». Propres au BeerXML : « First Wort : {houblon}
+   compté à l'ébullition, {n} min. » (« … compté à l'ébullition, durée à compléter. » sans
+   durée d'ébullition dans le fichier), « Whirlpool sans durée : {houblon} compté à l'arrêt du
+   feu. » (de même « Aroma sans durée : … »), « Aroma : {houblon} compté à l'ébullition,
+   {n} min. Si c'est un whirlpool, choisissez Whirlpool dans la recette. », et « Non
+   importés : … équipement du fichier, nom de l'empâtage ». Une seule tournure : « compté à
+   l'ébullition », « compté à l'arrêt du feu ». Une quantité obligatoire au-delà de ces
    plafonds refuse la recette (« Valeur hors limites : quantité de Pils. »).
 7. Barre fixe « Importer N recettes » ; sans case cochée, « Cochez au moins une recette. »
    au-dessus du bouton inactif ; sans recette importable, « Aucune recette à importer. ».
@@ -477,7 +484,14 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
 
 Une recette importée garde ce que le fichier dit, sans valeur inventée : un champ absent
 reste absent et la recette se complète dans l'éditeur, comme une recette saisie. Les
-textes du fichier s'affichent en texte simple. Le BeerXML n'est pas encore lu.
+textes du fichier s'affichent en texte simple.
+
+Un fichier BeerXML 1.0 se lit en UTF-8, ISO-8859-1 ou windows-1252, selon sa déclaration
+(UTF-8 sans déclaration). Un fichier déclaré ISO-8859-1 qui contient une apostrophe
+typographique (BeerSmith sous Windows) se lit juste. Le style garde son nom seul ; le profil
+d'eau, les étapes de fermentation et l'équipement du fichier ne sont pas importés. Une
+levure `Wheat` reste une levure de blé. Une quantité d'ajout ou de levure en litres reste en
+litres (affichée en mL ou L).
 
 **Chronologie du jour.** La section montre les étapes et la durée totale. Pour l'auteur,
 « Modifier la chronologie » ouvre l'éditeur plein écran « Chronologie du jour », qui n'écrit que

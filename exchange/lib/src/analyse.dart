@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'bornes.dart';
 import 'compte_rendu.dart';
+import 'decodage_xml.dart';
 import 'empreinte.dart';
 import 'lecture_beerjson.dart';
+import 'lecture_beerxml.dart';
 import 'schema.dart';
 
 /// Analyse d'un fichier choisi par l'utilisateur : taille, détection du format
@@ -15,17 +17,60 @@ import 'schema.dart';
 /// recette. Au-delà, le fichier est refusé avant `jsonDecode`.
 const int kMaxProfondeurFichier = kMaxProfondeur + 4;
 
+/// Valeurs d'un fichier JSON comptées avant `jsonDecode` : chaque `{`, `[` et
+/// `,` hors des chaînes, soit le nombre de valeurs à une près par objet ou
+/// liste. Un fichier BeerJSON de 500 recettes de 50 houblons, écrit sans
+/// espace, en compte 354 003 (mesure du 2026-11-10 ; cas lu dans
+/// `analyse_test.dart`) ; un fichier de 10 Mo sans espace ne porte guère plus
+/// de 1 000 000 de valeurs utiles, à 10 octets par valeur. Au-delà, le fichier
+/// est refusé (illisible) sans être décodé.
+const int kMaxValeursJson = 1000000;
+
 /// Analyse [octets], le contenu d'un fichier.
 ///
-/// Un fichier JSON plus profond que [kMaxProfondeurFichier] est refusé
-/// (illisible) avant son décodage. Lève [FormatException] pour un JSON mal
-/// formé ou un UTF-8 invalide : l'appelant la rapporte et affiche « Fichier
-/// illisible ». Toute autre donnée invalide rend un [FichierRefuse] ou une
-/// [RecetteRefusee].
+/// Un fichier JSON plus profond que [kMaxProfondeurFichier] ou de plus de
+/// [kMaxValeursJson] valeurs, ou XML plus profond que [kMaxProfondeurXml] ou
+/// de plus de [kMaxElementsXml] éléments gardés, est refusé (illisible). Lève
+/// [FormatException] pour un JSON ou un XML mal formé, ou un UTF-8 invalide :
+/// l'appelant la rapporte et affiche « Fichier illisible ». Toute autre donnée
+/// invalide rend un [FichierRefuse] ou une [RecetteRefusee].
 AnalyseFichier analyserFichier(List<int> octets) {
   if (octets.length > kMaxOctetsParFichier) {
     return FichierRefuse(RaisonFichier.tropGros, taille: octets.length);
   }
+  final debut = _debut(octets);
+  if (debut >= octets.length) {
+    return const FichierRefuse(RaisonFichier.illisible);
+  }
+  final premier = octets[debut];
+  if (premier == 0x3C) return _xml(octets, debut);
+  if (premier != 0x7B && premier != 0x5B) {
+    return const FichierRefuse(RaisonFichier.illisible);
+  }
+  final (:profondeur, :valeurs) = _structureJson(octets, debut);
+  if (profondeur > kMaxProfondeurFichier || valeurs > kMaxValeursJson) {
+    return const FichierRefuse(RaisonFichier.illisible);
+  }
+  // JSON : UTF-8 seul (RFC 8259). Un octet invalide lève FormatException.
+  final texte = const Utf8Decoder().convert(octets, debut);
+  return _beerJson(jsonDecode(texte));
+}
+
+/// Format présumé de [octets] d'après leur premier caractère, pour le
+/// contexte d'un rapport d'erreur : `xml`, `json` ou `inconnu`. Rien du
+/// contenu n'est rendu.
+String formatPresume(List<int> octets) {
+  final debut = _debut(octets);
+  if (debut >= octets.length) return 'inconnu';
+  return switch (octets[debut]) {
+    0x3C => 'xml',
+    0x7B || 0x5B => 'json',
+    _ => 'inconnu',
+  };
+}
+
+/// Position du premier octet après un BOM UTF-8 et des blancs.
+int _debut(List<int> octets) {
   var debut = 0;
   if (octets.length >= 3 &&
       octets[0] == 0xEF &&
@@ -36,31 +81,19 @@ AnalyseFichier analyserFichier(List<int> octets) {
   while (debut < octets.length && _blanc(octets[debut])) {
     debut++;
   }
-  if (debut >= octets.length) {
-    return const FichierRefuse(RaisonFichier.illisible);
-  }
-  final premier = octets[debut];
-  if (premier == 0x3C) return _xml(octets, debut);
-  if (premier != 0x7B && premier != 0x5B) {
-    return const FichierRefuse(RaisonFichier.illisible);
-  }
-  if (_profondeurJson(octets, debut) > kMaxProfondeurFichier) {
-    return const FichierRefuse(RaisonFichier.illisible);
-  }
-  // JSON : UTF-8 seul (RFC 8259). Un octet invalide lève FormatException.
-  final texte = const Utf8Decoder().convert(octets, debut);
-  return _beerJson(jsonDecode(texte));
+  return debut;
 }
 
 bool _blanc(int octet) =>
     octet == 0x20 || octet == 0x09 || octet == 0x0A || octet == 0x0D;
 
-/// Profondeur d'imbrication de `[` et `{` hors des chaînes, en un seul
-/// parcours des octets. Un JSON mal formé donne une valeur quelconque :
-/// `jsonDecode` le refuse ensuite.
-int _profondeurJson(List<int> octets, int debut) {
+/// Profondeur d'imbrication de `[` et `{` hors des chaînes, et nombre de
+/// `{`, `[` et `,` hors des chaînes, en un seul parcours des octets. Un JSON
+/// mal formé donne des valeurs quelconques : `jsonDecode` le refuse ensuite.
+({int profondeur, int valeurs}) _structureJson(List<int> octets, int debut) {
   var profondeur = 0;
   var max = 0;
+  var valeurs = 0;
   var dansChaine = false;
   for (var i = debut; i < octets.length; i++) {
     final o = octets[i];
@@ -73,17 +106,41 @@ int _profondeurJson(List<int> octets, int debut) {
     } else if (o == 0x22) {
       dansChaine = true;
     } else if (o == 0x5B || o == 0x7B) {
+      valeurs++;
       profondeur++;
       if (profondeur > max) max = profondeur;
     } else if (o == 0x5D || o == 0x7D) {
       profondeur--;
+    } else if (o == 0x2C) {
+      valeurs++;
     }
   }
-  return max;
+  return (profondeur: max, valeurs: valeurs);
 }
 
+/// Racines d'un fichier BeerXML sans recette : bibliothèques d'ingrédients,
+/// de styles, d'équipements ou d'empâtages.
+const Set<String> _racinesSansRecette = {
+  'HOPS',
+  'FERMENTABLES',
+  'YEASTS',
+  'MISCS',
+  'WATERS',
+  'STYLES',
+  'EQUIPMENTS',
+  'MASHS',
+  'HOP',
+  'FERMENTABLE',
+  'YEAST',
+  'MISC',
+  'WATER',
+  'STYLE',
+  'EQUIPMENT',
+  'MASH',
+};
+
 /// Fichier qui commence par `<` : BeerSmith ou BeerXML, reconnus sur leur
-/// premier élément. Seul le début est décodé, en ISO-8859-1 : les noms
+/// premier élément. Le début est d'abord lu en ISO-8859-1 : les noms
 /// d'éléments sont en ASCII, quel que soit l'encodage déclaré.
 AnalyseFichier _xml(List<int> octets, int debut) {
   final fin = octets.length < debut + 4096 ? octets.length : debut + 4096;
@@ -94,12 +151,73 @@ AnalyseFichier _xml(List<int> octets, int debut) {
       tete.contains('<Selections ')) {
     return const FichierRefuse(RaisonFichier.bsmx);
   }
-  final nom = _premierElement(tete);
-  if (nom == 'RECIPES' || nom == 'RECIPE') {
-    return const FichierRefuse(RaisonFichier.beerXml);
+  final nom = _premierElement(tete)?.toUpperCase();
+  if (_racinesSansRecette.contains(nom)) {
+    return const FichierRefuse(RaisonFichier.aucuneRecette);
   }
-  return const FichierRefuse(RaisonFichier.illisible);
+  if (nom != 'RECIPES' && nom != 'RECIPE') {
+    return const FichierRefuse(RaisonFichier.illisible);
+  }
+  final texte = decoderXml(octets, debut);
+  if (texte == null) return const FichierRefuse(RaisonFichier.illisible);
+  final lu = lireXml(
+    texte,
+    maxRecettes: kMaxRecettesParFichier,
+    conteneurs: kConteneursBeerXml,
+    ignore: ignoreBeerXml,
+  );
+  final XmlArbre arbre;
+  switch (lu) {
+    case XmlRefuse():
+      return const FichierRefuse(RaisonFichier.illisible);
+    case XmlArbre():
+      arbre = lu;
+  }
+  final racine = arbre.racine;
+  final List<ElementXml> recettes;
+  final int total;
+  if (racine.nom == 'RECIPE') {
+    recettes = [racine];
+    total = 1;
+  } else {
+    recettes = [
+      for (final e in racine.enfants)
+        if (e.nom == 'RECIPE') e,
+    ];
+    total = arbre.recettes;
+  }
+  if (recettes.isEmpty) return const FichierRefuse(RaisonFichier.aucuneRecette);
+  final lues = <RecetteDuFichier>[];
+  final vues = <String>{};
+  for (final (i, recette) in recettes.indexed) {
+    final empreinte = lireEmpreinte(_canonique(recette)).empreinte;
+    lues.add(
+      RecetteDuFichier(
+        numero: i + 1,
+        nom: nomAfficheXml(recette),
+        empreinte: empreinte,
+        resultat: lireRecetteBeerXml(recette),
+        enDouble: !vues.add(empreinte),
+      ),
+    );
+  }
+  return FichierLu(
+    format: FormatFichier.beerXml,
+    recettes: List.unmodifiable(lues),
+    total: total,
+  );
 }
+
+/// Forme canonique d'un élément pour son empreinte : `[nom, texte]` pour une
+/// feuille (texte sans blancs de bord), `[nom, [enfants…]]` sinon. L'ordre des
+/// enfants compte ; l'indentation du fichier, non. Profondeur : deux niveaux
+/// par élément, et [kMaxProfondeurXml] borne les éléments sous [kMaxProfondeur].
+List<Object?> _canonique(ElementXml e) => e.enfants.isEmpty
+    ? [e.nom, e.texte.trim()]
+    : [
+        e.nom,
+        [for (final enfant in e.enfants) _canonique(enfant)],
+      ];
 
 /// Nom du premier élément de [tete], après les déclarations `<?…?>`, les
 /// commentaires `<!--…-->` et un `<!DOCTYPE …>` ; `null` s'il n'y en a pas.

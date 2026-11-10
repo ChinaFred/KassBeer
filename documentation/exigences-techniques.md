@@ -17,7 +17,7 @@ Issues (voir « Cloud Functions »).
 | `firebase.json` | Firestore, Functions (`functions/`, Node 24), émulateurs (auth 9099, firestore 8080), Hosting |
 | `functions/` | Cloud Functions des tickets, TypeScript (ADR-006) |
 | `brewing/` | calculs de brassage, Dart pur (voir « Calculs de brassage ») |
-| `exchange/` | import et export de recettes BeerJSON, Dart pur, dépend de `brewing/` (ADR-005, voir « Échange de recettes ») |
+| `exchange/` | import et export de recettes BeerJSON et BeerXML, Dart pur, dépend de `brewing/` et de `xml` (ADR-005, voir « Échange de recettes ») |
 | `.firebaserc` | alias `default` : `kassbeer`, le projet Firebase de production |
 | `rules-tests/` | tests des règles contre l'émulateur, projet `demo-kassbeer` |
 
@@ -1149,9 +1149,15 @@ au-delà de 1.200) lève `BrewingInputException`. Aucune formule ne change en v0
 Morey et la densité initiale sont inchangés ; les cas ajoutés à `brewing/test/fixtures/`
 (`recipe.json`, `ibu.json`, `brew_comparison.json`, `cost.json`, `conversions.json`) fixent
 les nouvelles règles de lecture. `compareBrewWithPlan` rend l'écart `fermentableKind` pour un
-fermentescible sans nature. Aucun calcul de rendement de brassage ni de volume avant ébullition
-n'existe : l'export de L2b écrit le rendement d'empâtage de l'équipement (ADR-005, amendements
-de L2), et `BOIL_SIZE` (BeerXML) attend L2c.
+fermentescible sans nature. Aucun calcul de rendement de brassage n'existe : les exports
+écrivent le rendement d'empâtage de l'équipement (ADR-005, amendements de L2).
+
+**Volume avant ébullition** (v0.1.21, `boil_volume.dart`). `preBoilVolumeLitres` donne le
+`BOIL_SIZE` d'un export BeerXML : volume en fermenteur + pertes au trub + volume mort de la
+cuve d'ébullition + évaporation (L/h) × durée d'ébullition / 60. Le retrait du moût au
+refroidissement n'est pas compté : aucun profil d'équipement ne le porte. Aucune valeur par
+défaut : l'export est bloqué si l'une manque. Volume en fermenteur nul, autre valeur
+négative ou non finie : `BrewingInputException`. Cas dans `boil_volume.json`.
 
 **Chronologie préremplie.** `defaultBrewSteps(mashSteps:, boilMinutes:, hops:)` reçoit les
 paliers (`MashStepInput` : température et durée facultatives), la durée d'ébullition et les
@@ -1222,12 +1228,14 @@ lever : il sert au nom du fichier d'un export. Ce n'est pas une formule de brass
 
 ## Échange de recettes (`exchange/`)
 
-Paquet Dart pur (ADR-005, livraison L2b, v0.1.20) : aucune dépendance Flutter ni Firebase ;
-dépend de `brewing/` et de `crypto` 3.0.8 (empreinte SHA-256) ; aucun paquet `xml` avant la
-lecture du BeerXML (L2c). Aucun `catch` dans `lib/` (`test/no_catch_test.dart`). Il rend un
-résultat et ne lève pas pour une donnée invalide, sauf `FormatException` pour un JSON mal formé
-ou un UTF-8 invalide, que l'application rapporte (`exchange.read`, `context` : format, taille,
-position ; ni nom ni contenu du fichier, l'exception elle-même n'est pas transmise, son texte
+Paquet Dart pur (ADR-005, livraisons L2b, v0.1.20, et L2c, v0.1.21) : aucune dépendance
+Flutter ni Firebase ; dépend de `brewing/`, de `crypto` 3.0.8 (empreinte SHA-256) et de `xml`
+7.0.1 (analyseur à événements, lecture du BeerXML ; tire `petitparser` 7.0.2). Aucun `catch`
+dans `lib/` (`test/no_catch_test.dart`). Il rend un résultat et ne lève pas pour une donnée
+invalide, sauf `FormatException` pour un JSON ou un XML mal formé ou un UTF-8 invalide
+(`XmlParserException` et `XmlTagException` du paquet `xml` en sont), que l'application
+rapporte (`exchange.read`, `context` : format présumé `formatPresume` — `xml`, `json` ou
+`inconnu` —, taille, position ; ni nom ni contenu du fichier, l'exception elle-même n'est pas transmise, son texte
 citant le fichier) avant d'afficher « Fichier illisible ». Toute autre panne de l'analyse est
 attrapée aussi (`exchange.read`, `context` : taille et type de l'erreur) et affiche
 « Fichier illisible ». L'analyse passe par `analyseurFichierProvider` (`recipes_providers.dart`),
@@ -1243,7 +1251,35 @@ style et nom d'une ligne coupés à 120 caractères, notes à 10 000, la coupe l
 linéaire des octets compte `[` et `{` hors des chaînes : au-delà de `kMaxProfondeurFichier`
 (32 + 4 : racine, `beerjson`, `recipes`, recette), le fichier est refusé (illisible) sans être
 décodé (1 000 000 de niveaux testés sur la VM et dans Chrome). Une recette qui dépasse
-`kMaxProfondeur` dans `lireEmpreinte` est illisible, sans lecture.
+`kMaxProfondeur` dans `lireEmpreinte` est illisible, sans lecture. Le même parcours compte
+les valeurs (chaque `{`, `[` et `,` hors des chaînes) : au-delà de `kMaxValeursJson`
+(1 000 000), le fichier est refusé avant `jsonDecode` (10 Mo de `{}` testés). 500 recettes
+de 50 houblons écrites sans espace en comptent 354 003 (mesure du 2026-11-10).
+
+Un fichier XML de plus de `kMaxProfondeurXml` (16) niveaux d'éléments est refusé pendant
+l'analyse, qui se fait sans récursion. `lireXml` ne garde que ce que la lecture utilise : sous
+`RECIPES`, les 500 premiers `RECIPE` seuls (les suivants sont comptés, un autre enfant n'est
+pas gardé) ; ailleurs, les enfants des éléments de `kConteneursBeerXml` (`RECIPE`, `STYLE`,
+listes, lignes, `MASH`, `MASH_STEPS`, `MASH_STEP`), sauf `VERSION`, `INVENTORY`, `DISPLAY_*`
+et `DISP_*`. Les enfants d'un autre élément (`WATERS`, `EQUIPMENT`, élément inconnu) ne sont
+pas gardés : il garde son texte et note qu'il a des enfants, ce qui suffit à le lister. Au-delà
+de `kMaxElementsXml` (300 000) éléments gardés, le fichier est refusé (illisible) et l'analyse
+s'arrête (10 Mo de `<X/>` dans une recette testés). 500 recettes de 50 houblons, champs
+d'affichage compris, en gardent 203 501 (mesure du 2026-11-10). Une liste n'est convertie
+que jusqu'au plafond + 1 ligne ; le refus cite le nombre du fichier (« Plus de 50 houblons
+(200000). »). Les entités sont vérifiées aussi dans un texte qui n'est pas gardé. Le texte
+d'un élément coupé en morceaux (commentaires, sections CDATA) se joint une seule fois, à sa
+première lecture : 1 300 000 commentaires dans des notes se lisent en moins de 5 s (test).
+Le décodage windows-1252 passe par un tampon de 16 bits par caractère (`Uint16List`). Un fichier
+BeerXML de 10 Mo (2 178 recettes) s'analyse en 343 ms sur la VM (mesure du 2026-11-10, hors
+test).
+
+**Risques acceptés (`exchange/`).** Une balise ouverte et non fermée (`<A b="1" c="2" …`)
+suivie de millions de pseudo-attributs est analysée par le paquet `xml` jusqu'à l'erreur, qui
+lève `FormatException` : l'analyseur garde ces attributs en mémoire avant de lire la fin de la
+balise. `exchange/` ne peut pas l'interrompre (aucun rappel par attribut). Le coût est borné
+par les 10 Mo du fichier, refusé avant toute lecture au-delà : 10 Mo de pseudo-attributs
+lèvent `FormatException` en 342 ms sur la VM (mesure du 2026-11-10, hors test).
 
 Plafonds hauts d'une valeur convertie (v0.1.20, valeurs nouvelles : l'éditeur n'en a pas) :
 1 000 kg (`kMaxGrammesParLigne`) et 1 000 L (`kMaxLitresParLigne`) par ligne, 10 000 L de
@@ -1262,8 +1298,54 @@ caractères au plus après nettoyage ; jamais une liste ou un objet convertis en
 4 096 premiers octets lus en ISO-8859-1 ; `<F_R_`, `<_PERMID_>` ou `<Selections` : BeerSmith
 (`bsmx`) ; premier élément `RECIPES` ou `RECIPE` après les déclarations `<?…?>`, les
 commentaires et un `DOCTYPE`, trouvé par un parcours linéaire (`indexOf`, aucune expression
-régulière à retour arrière : 4 096 octets de `<?a?>` se lisent en moins de 100 ms) :
-`beerXml`, non lu en L2b ; sinon `illisible`. Aucune recette (`recipes` absent ou vide) : `aucuneRecette`.
+régulière à retour arrière : 4 096 octets de `<?a?>` se lisent en moins de 100 ms) : BeerXML,
+lu (ci-dessous) ; premier élément d'une bibliothèque BeerXML (`HOPS`, `FERMENTABLES`,
+`YEASTS`, `MISCS`, `WATERS`, `STYLES`, `EQUIPMENTS`, `MASHS` ou leur élément seul) :
+`aucuneRecette` ; sinon `illisible`. Aucune recette (`recipes` absent ou vide, `RECIPES` sans
+`RECIPE`) : `aucuneRecette`.
+
+**BeerXML : décodage et analyse (`decodage_xml.dart`, P9).** Encodage lu dans la déclaration
+`<?xml … encoding="…"?>` (1 024 premiers octets) : sans déclaration ou `UTF-8`, UTF-8 strict
+(un octet invalide lève `FormatException`, sans repli) ; `ISO-8859-1`, `windows-1252` et
+`US-ASCII` (et leurs alias) décodés en windows-1252, comme le fait le standard Encoding du
+WHATWG pour ces noms : un fichier BeerSmith qui annonce ISO-8859-1 et contient une
+apostrophe typographique (0x92) se lit juste, et les cinq octets sans caractère gardent leur
+valeur, retirée ensuite comme contrôle C1 ; tout autre encodage déclaré (UTF-16, ISO-8859-15…)
+ou une déclaration illisible : `illisible`. Fins de ligne normalisées (XML 1.0, § 2.11).
+Analyse par `parseEvents` du paquet `xml` (`validateNesting`, `validateDocument`), sans
+décodage d'entité par le paquet (`XmlNullEntityMapping`) : `exchange/` décode les cinq entités
+prédéfinies et les références numériques des caractères permis par XML 1.0. Tout `DOCTYPE`,
+toute autre entité (`&xxe;`, `&nbsp;`), un `&` seul ou une référence interdite (`&#0;`)
+refusent le fichier (`illisible`) : aucune entité interne ni externe n'est étendue (tests :
+« billion laughs » refusée en moins de 100 ms, entité externe `SYSTEM`). Noms d'éléments lus
+en majuscules.
+
+**BeerXML : lecture d'une recette (`lireRecetteBeerXml`).** La recette est d'abord récrite en
+BeerJSON (`lecture_beerxml.dart`), puis lue par la lecture du BeerJSON
+(`lireRecetteConvertie`) : bornes, unités, nettoyage et compte rendu sont les mêmes. BeerXML
+est métrique : kilogrammes → grammes (arrondis au microgramme), litres, °C, minutes ; couleur
+d'un fermentescible en Lovibond (en SRM pour un extrait liquide, `TYPE` `Extract`), convertie
+par `brewing/` ; `YIELD`, sinon `POTENTIAL` (densité) converti par `brewing/`. Valeurs
+énumérées lues sans casse. Correspondances (`DATA_SOURCES.md`) : `Adjunct` → `grain` ;
+`First Wort` → `add_to_boil` à la durée de `BOIL_TIME`, listé (`FirstWortEnEbullition`) ;
+`Aroma` avec une durée → ébullition de cette durée, listé (`AromaEnEbullition`), à 0 minute →
+arrêt du feu ; `Aroma` sans `TIME` et `Whirlpool` sans durée → `add_to_boil` à 0 minute sans
+`duration`, listé (`ArretDuFeuSansDuree`) ; `Whirlpool` avec durée → 0 minute et `duration` ;
+`Dry Hop` → `add_to_fermentation`, `Mash` → `add_to_mash`, avec `duration` ; `Secondary`
+(houblon ou ajout) → `add_to_fermentation`, listé ; ajout `Primary`, `Bottling` →
+`add_to_fermentation`, `add_to_package`. `AMOUNT` d'un ajout et d'une levure en litres, en
+kilogrammes si `AMOUNT_IS_WEIGHT` vaut `TRUE` (décision 6) ; une autre valeur que `TRUE` ou
+`FALSE` refuse la recette. Le style garde son nom seul. Non importés et listés : `EQUIPMENT`
+(`PartieNonImportee.equipement`), `WATERS`, `EFFICIENCY`, `BOIL_SIZE`, valeurs annoncées,
+fermentation, conditionnement, dégustation, `ASST_BREWER` et `DATE`, nom de l'empâtage s'il
+n'est pas `Empâtage` (`PartieNonImportee.nomEmpatage`), détails des paliers
+(`INFUSE_AMOUNT`, rampes…) et des ingrédients.
+`VERSION`, `INVENTORY`, `DISPLAY_*` et `DISP_*` ne sont pas lus ; tout autre élément est compté
+(`ChampsInconnus`). Un élément vide n'est pas listé. Empreinte : `lireEmpreinte` sur la forme
+canonique de l'élément `RECIPE` gardé (`[nom, texte]` d'une feuille, `[nom, [enfants]]`
+sinon) : l'ordre des enfants compte, l'indentation, les fins de ligne, les champs d'affichage
+et le contenu des parties non importées (eau, équipement) non. `imported_from` :
+« BeerXML · sha256:… ».
 
 **Lecture d'une recette (`lireRecetteBeerJson`).** Champ par champ, vers le sous-arbre
 `recipe` dans la forme qu'écrit `RecipeContent.toFirestore` (I9), unités canoniques :
@@ -1320,17 +1402,55 @@ d'un palier, le rendement d'extrait ou la couleur d'un malt, les acides alpha d'
 le type, la forme ou la quantité d'une levure, le type d'un ajout :
 `ManqueDeCalcul` (un `MissingInput` de `brewing/`, libellé par `libelleManque`) ou
 `ManqueDeFormat`. `ExportPret.auteur` donne l'auteur écrit. `nomFichierExport` : `normalizeName` coupé à 100 caractères, `recette`
-sinon. L'export BeerXML est bloqué dans l'application jusqu'à `beer_styles` (L3).
+sinon.
+
+**Export BeerXML (`exporterBeerXml`, v0.1.21).** BeerXML 1.0 en UTF-8 déclaré, indenté de
+deux espaces, identique d'un export à l'autre (nombres par `toStringAsFixed`, zéros finaux
+retirés). L'application garde l'export BeerXML visible et bloqué tant que `beer_styles` manque
+(ADR-005, décision 2) : elle n'appelle pas cette fonction. Elle reçoit la recette stockée, le
+nom du propriétaire (comme le BeerJSON), le rendement d'empâtage, l'évaporation, les pertes
+au trub et le volume mort de l'équipement, un `StyleBeerXml` (style BJCP complet, venu du
+référentiel) et le calcul de `computeRecipe`. Bloqué, en plus des manques du BeerJSON, sans
+style (`ChampExport.style`), sans durée d'ébullition, sans évaporation, pertes au trub ou
+volume mort (`BOIL_SIZE` = `preBoilVolumeLitres` de `brewing/`), pour un type de recette hors
+`All Grain`, `Partial Mash`, `Extract`, un ajout sans moment, un houblon ou un ajout sans
+durée (`USE` et `TIME` sont obligatoires) et un houblon mesuré en volume. Écrit :
+`EFFICIENCY` (rendement d'empâtage), `STYLE` complet (couleurs en SRM par `brewing/`), masses
+en kilogrammes, couleur en Lovibond (SRM pour un extrait liquide) par `brewing/`, `WATERS`
+vide, valeurs calculées dans les champs d'affichage `EST_OG`, `EST_FG`, `EST_COLOR`, `IBU`
+(`IBU_METHOD` `Tinseth`), `EST_ABV`. Pertes listées : valeur écrite autrement
+(`ValeurEcriteAutrement`, avec la liste et le champ de la ligne, libellée avec les mots de
+l'éditeur : « Cascade : le moment Whirlpool est écrit Aroma en BeerXML. » ; whirlpool écrit `Aroma` avec sa durée, miel, fruit et jus écrits
+`Sugar`, `other` écrit `Adjunct`, forme poudre ou extrait écrite `Pellet`, levure hors des
+cinq types écrite `Ale`, `dregs` écrit `Culture`, palier hors des trois types écrit
+`Temperature`, `wood` écrit `Other`, houblon au conditionnement écrit `Dry Hop`), volume d'eau
+d'un palier d'infusion (`INFUSE_AMOUNT`, que Kass'Beer ne stocke pas), jour d'ajout à cru,
+durée après l'arrêt du feu d'un ajout, empâtage absent (`MASH` omis, comme en BeerJSON),
+chronologie. Les textes sont échappés ; les caractères interdits par XML 1.0 sont retirés.
 
 **Validation.** Fixtures écrites à la main, noms fictifs : `exchange/test/fixtures/lecture/`
 (fichier et lecture attendue `*.attendu.json` ; pas `import/`, que `.gitignore` réserve aux
 fichiers d'import qui portent des prix) et `export/` (fichiers attendus, dont une recette à
-l'extrait sans `mash` ni `boil`), vérifiées à
+l'extrait sans `mash` ni `boil`, et les exports BeerXML `*.xml`), vérifiées à
 l'identique par les tests du paquet (`MAJ_FIXTURES=1 dart test` les récrit, à relire avant le
 commit). `rules-tests/test/exchange_schema.test.mjs` valide chaque recette lue contre le schéma
 partiel et chaque fichier exporté contre le schéma officiel au commit figé (`beer.json`, ajv
 `dist/2020`). Le test de l'aller-retour (A2) réimporte l'export et retrouve la recette, auteur
 ajouté, style retiré. `schema_test.dart` compare les valeurs énumérées du paquet au schéma.
+
+Quatre fixtures BeerXML écrites à la main, à la manière de BeerSmith (déclarée ISO-8859-1,
+octets windows-1252, champs `DISPLAY_*`), Brewfather, Brewer's Friend (BOM, sans déclaration)
+et Brewtarget (recette en double, recette sans nom), noms fictifs ; aucun fichier tiré de
+Brewtarget, de DIY Dog ni de `diydog-beerxml` (ADR-005). Critère A1
+(`export_beerxml_test.dart`) : lecture, export BeerXML avec le style du fichier (comme le
+donnera `beer_styles`), relecture ; la recette relue est égale à la recette lue (0,01 g,
+0,1 EBC, durées exactes), et l'écart entre le fichier source et l'export, rangé par
+catégorie, est la liste des pertes du compte rendu de l'import (le style, repris du
+référentiel, et les équivalences sans perte, `Adjunct` = `Grain` et `Aroma` 0 min = `Boil`
+0 min, mis à part). L'application relit chaque recette BeerXML lue et la récrit à
+l'identique (I9, `import_recipes_test.dart`). Les suites sans fichier (`analyse_test`,
+`lecture_test`, `lecture_beerxml_test`) tournent aussi dans Chrome (`dart test -p chrome`) ;
+`test/support/decrire.dart` n'importe pas `dart:io`.
 
 ## Cloud Functions
 

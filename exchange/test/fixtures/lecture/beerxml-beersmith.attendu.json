@@ -1,0 +1,238 @@
+{
+  "format": "BeerXML",
+  "total": 1,
+  "recettes": [
+    {
+      "numero": 1,
+      "nom": "Ambrée d’automne",
+      "empreinte": "sha256:922a891d156ce0cdbdbdff0595039e3ea3e28b8f09805cac459afc3baebfb44c",
+      "en_double": false,
+      "modifications": [
+        "StyleReduitAuNom(Irish Red Ale)",
+        "AromaEnEbullition(Fuggle, 20)",
+        "DureeArrondie(duree, East Kent Golding)",
+        "UnitesConverties(Lovi)",
+        "PartiesNonImportees(ebullition, rendement, eau, equipement, degustation, valeursAnnoncees, fermentation, coAuteurEtDate, conditionnement, detailsPaliers, nomEmpatage, detailsIngredients)"
+      ],
+      "document": {
+        "format_version": 1,
+        "recipe": {
+          "name": "Ambrée d’automne",
+          "type": "all grain",
+          "author": "Brasseur Fictif",
+          "style": {
+            "name": "Irish Red Ale"
+          },
+          "notes": "Recette d’essai écrite à la main.\nDeuxième ligne des notes.",
+          "batch_size": {
+            "value": 20.8197649,
+            "unit": "l"
+          },
+          "boil": {
+            "boil_time": {
+              "value": 60,
+              "unit": "min"
+            }
+          },
+          "mash": {
+            "name": "Empâtage",
+            "grain_temperature": {
+              "value": 22.2222222,
+              "unit": "C"
+            },
+            "mash_steps": [
+              {
+                "name": "Saccharification",
+                "type": "infusion",
+                "step_temperature": {
+                  "value": 66.6666667,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 60,
+                  "unit": "min"
+                }
+              },
+              {
+                "name": "Mash out",
+                "type": "temperature",
+                "step_temperature": {
+                  "value": 75.5555556,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            ]
+          },
+          "ingredients": {
+            "fermentable_additions": [
+              {
+                "name": "Malt pale ale",
+                "type": "grain",
+                "amount": {
+                  "value": 4535.9237,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 6.895,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 80.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Caramel 60",
+                "type": "grain",
+                "amount": {
+                  "value": 453.5924,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 118.2,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 74.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Sucre candi brun",
+                "type": "sugar",
+                "amount": {
+                  "value": 226.7962,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 147.75,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 78.3,
+                    "unit": "%"
+                  }
+                }
+              }
+            ],
+            "hop_additions": [
+              {
+                "name": "Northern Brewer",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 8.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 28.3495,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Fuggle",
+                "form": "leaf",
+                "alpha_acid": {
+                  "value": 4.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 14.1748,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 20,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "East Kent Golding",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 5.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 28.3495,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_fermentation",
+                  "duration": {
+                    "value": 4321,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "miscellaneous_additions": [
+              {
+                "name": "Mousse d’Irlande",
+                "type": "fining",
+                "amount": {
+                  "value": 5.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 10,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Acide lactique",
+                "type": "water agent",
+                "amount": {
+                  "value": 0.005,
+                  "unit": "l"
+                },
+                "timing": {
+                  "use": "add_to_mash",
+                  "duration": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "culture_additions": [
+              {
+                "name": "Levure anglaise liquide",
+                "type": "ale",
+                "form": "liquid",
+                "attenuation": {
+                  "value": 73.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 0.125,
+                  "unit": "l"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

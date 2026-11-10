@@ -21,10 +21,10 @@ class RecipesListScreen extends ConsumerStatefulWidget {
   static const loadError = 'Impossible de lire les recettes.';
   static const emptyMessage =
       'Aucune recette. Appuyez sur Nouvelle recette pour commencer, ou '
-      'importez un fichier BeerJSON.';
+      'importez un fichier BeerXML ou BeerJSON.';
   static const mineEmptyMessage =
       'Vous n\'avez pas encore de recette. Appuyez sur Nouvelle recette pour '
-      'commencer, ou importez un fichier BeerJSON.';
+      'commencer, ou importez un fichier BeerXML ou BeerJSON.';
   static String noMatch(String text) =>
       'Aucune recette ne correspond à « $text ».';
 
