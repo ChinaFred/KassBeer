@@ -33,21 +33,28 @@ class IngredientCout {
   /// Nom de la première ligne de cette clé.
   final String name;
 
-  /// Grammes, ou sachets pour une levure ; lignes de même clé additionnées.
+  /// Grammes, sachets pour une levure, ou litres pour une ligne mesurée en
+  /// volume ; lignes de même clé additionnées.
   final double quantity;
   final CostUnit unit;
 }
 
 /// Ingrédients de [content] dans l'ordre de la fiche : malts et sucres, houblons,
-/// ajouts, levures (une ligne de levure vaut un sachet, H1). Une ligne sans
-/// lettre ni chiffre n'a pas de clé : elle est écartée et [sansNom] est vrai
-/// (LI10).
+/// ajouts, levures (une ligne de levure vaut un sachet, H1, quelle que soit sa
+/// quantité). Un houblon ou un ajout mesuré en volume compte en litres
+/// ([CostUnit.litre]) et se chiffre avec un prix au litre. Une ligne sans lettre ni chiffre n'a pas de clé : elle est
+/// écartée et [sansNom] est vrai (LI10).
 ({List<IngredientCout> ingredients, bool sansNom}) ingredientsDeRecette(
   RecipeContent content,
 ) {
   final ingredients = <IngredientCout>[];
   var sansNom = false;
-  void add(IngredientNature nature, String name, double quantity) {
+  void add(
+    IngredientNature nature,
+    String name,
+    double quantity, {
+    bool litres = false,
+  }) {
     if (!isValidIngredientName(name)) {
       sansNom = true;
       return;
@@ -58,19 +65,29 @@ class IngredientCout {
         nature: nature,
         name: name.trim(),
         quantity: quantity,
-        unit: purchaseUnitOf(nature),
+        unit: litres ? CostUnit.litre : purchaseUnitOf(nature),
       ),
     );
   }
 
   for (final f in content.fermentables) {
-    add(IngredientNature.ofFermentable(f.kind), f.name, f.weightG);
+    add(f.nature, f.name, f.weightG);
   }
   for (final h in content.hops) {
-    add(IngredientNature.hop, h.name, h.weightG);
+    add(
+      IngredientNature.hop,
+      h.name,
+      h.amount.valeur,
+      litres: h.amount.enLitres,
+    );
   }
   for (final o in content.others) {
-    add(IngredientNature.addition, o.name, o.weightG);
+    add(
+      IngredientNature.addition,
+      o.name,
+      o.amount.valeur,
+      litres: o.amount.enLitres,
+    );
   }
   for (final y in content.yeasts) {
     add(IngredientNature.yeast, y.name, yeastSachetsPerLine);
@@ -100,10 +117,22 @@ class PrixManquant extends RaisonPrix {
 }
 
 /// Prix dont l'unité ne convient pas à la ligne (LI8) : « Corriger le prix ».
+/// Une ligne en volume face à un prix au gramme, ou l'inverse, en est une :
+/// aucune densité n'est supposée.
 class PrixUniteIncompatible extends RaisonPrix {
   const PrixUniteIncompatible(super.ingredient, this.price);
 
   final Price price;
+}
+
+/// Deux lignes de même nom, l'une en grammes et l'autre en volume : leurs
+/// quantités ne s'additionnent pas, et aucun prix ne les chiffre ensemble.
+/// Donnée attendue : aucun rapport.
+class QuantitesDeDeuxUnites extends RaisonCout {
+  const QuantitesDeDeuxUnites(this.name);
+
+  /// Nom de la première ligne de cette clé.
+  final String name;
 }
 
 /// Document de prix illisible, déjà rapporté (LI9) : « Corriger le prix ».
@@ -258,9 +287,30 @@ EvaluationCout _evaluer({
   try {
     final raisons = <RaisonCout>[];
     final natures = {for (final i in ingredients) i.key: i.nature};
+    // Une clé en grammes et en litres à la fois : groupCostItems (brewing/) ne
+    // l'additionne pas. Elle sort du regroupement avec sa raison.
+    final units = <String, Set<CostUnit>>{};
+    for (final i in ingredients) {
+      (units[i.key] ??= {}).add(i.unit);
+    }
+    final mixed = {
+      for (final MapEntry(:key, :value) in units.entries)
+        if (value.length > 1) key,
+    };
+    for (final key in mixed) {
+      raisons.add(
+        QuantitesDeDeuxUnites(ingredients.firstWhere((i) => i.key == key).name),
+      );
+    }
     final grouped = groupCostItems([
       for (final i in ingredients)
-        CostItem(key: i.key, name: i.name, quantity: i.quantity, unit: i.unit),
+        if (!mixed.contains(i.key))
+          CostItem(
+            key: i.key,
+            name: i.name,
+            quantity: i.quantity,
+            unit: i.unit,
+          ),
     ]);
     final unitPrices = <String, double>{};
     var horsLigne = prices == null || fees == null;

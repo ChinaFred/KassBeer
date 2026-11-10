@@ -132,6 +132,8 @@ void main() {
       IngredientNature.ofFermentable(FermentableKind.sugar),
       IngredientNature.sugar,
     );
+    // Nature à préciser (type BeerJSON other) : clé de sucre.
+    expect(IngredientNature.ofFermentable(null), IngredientNature.sugar);
   });
 
   test('isValidIngredientName : même règle que ingredientKey (K3)', () {

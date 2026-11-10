@@ -65,6 +65,7 @@ class BrewCostLine {
 
 CostUnit _unit(Object? value, String field) {
   for (final unit in CostUnit.values) {
+    // `l` depuis la v0.1.17 : ligne mesurée en volume, chiffrée au prix au litre.
     if (unit.storedValue == value) return unit;
   }
   throw DocumentIllisible(field, 'unité inconnue');

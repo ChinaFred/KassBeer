@@ -75,34 +75,79 @@ String masseParlee(double grams) => grams >= _grammesParKg
 /// Quantité d'un ingrédient ou d'un achat dans [unit] : « 5 kg », « 1 sachet ».
 String formatQuantite(double quantity, CostUnit unit) => switch (unit) {
   CostUnit.unit => formatSachets(quantity),
+  CostUnit.litre => formatVolumeLigne(quantity),
   _ => formatMasse(quantity),
 };
 
 /// [formatQuantite] pour un lecteur d'écran.
 String quantiteParlee(double quantity, CostUnit unit) => switch (unit) {
   CostUnit.unit => formatSachets(quantity),
+  CostUnit.litre => volumeParle(quantity),
   _ => masseParlee(quantity),
 };
+
+/// Volume lu par un lecteur d'écran, au singulier sous 2 : « 1 millilitre »,
+/// « 5 millilitres », « 1 litre », « 1,5 litre », « 2 litres ».
+String volumeParle(double litres) {
+  final (valeur, unite) = litres < 1
+      ? (litres * 1000, 'millilitre')
+      : (litres, 'litre');
+  final texte = formatNombre(valeur, decimales: litres < 1 ? 1 : 2);
+  return '$texte $unite${valeur < 2 ? '' : 's'}';
+}
+
+/// Achat lu par un lecteur d'écran : « 47,50 € les 25 kilogrammes »,
+/// « 6,50 € les 100 millilitres », « 3,99 € le sachet ».
+String achatParle(Price price) {
+  final texte = formatAchat(price);
+  final montant = formatEurosSaisis(price.priceEur);
+  if (!texte.startsWith('$montant les ')) return texte;
+  return '$montant les ${quantiteParlee(price.quantity, price.unit)}';
+}
+
+/// Prix unitaire lu par un lecteur d'écran : « 1,90 € le kilogramme »,
+/// « 65,00 € le litre », « 0,80 € le sachet ».
+String prixUnitaireParle(Price price) {
+  final texte = formatPrixUnitaire(price);
+  final valeur = texte.substring(0, texte.indexOf('€') + 1);
+  return '$valeur ${switch (price.unit) {
+    CostUnit.unit => 'le sachet',
+    CostUnit.litre => 'le litre',
+    _ => 'le kilogramme',
+  }}';
+}
 
 /// Prix unitaire de [price] : « 1,90 €/kg », « 0,80 €/sachet » (PR7).
 String formatPrixUnitaire(Price price) =>
     formatPrixUnitaireDe(price.unitPriceEur, price.unit);
 
-/// Prix unitaire [eurParUnite] (euros par gramme ou par sachet) affiché par
-/// kilogramme ou par sachet.
+/// Prix unitaire [eurParUnite] (euros par gramme, par sachet ou par litre)
+/// affiché par kilogramme, par sachet ou par litre.
 String formatPrixUnitaireDe(double eurParUnite, CostUnit unit) =>
-    unit == CostUnit.unit
-    ? '${formatNombre(eurParUnite, decimales: 2, fixe: true)}$nbsp€/sachet'
-    : '${formatNombre(eurParUnite * _grammesParKg, decimales: 2, fixe: true)}'
-          '$nbsp€/kg';
+    switch (unit) {
+      CostUnit.unit =>
+        '${formatNombre(eurParUnite, decimales: 2, fixe: true)}$nbsp€/sachet',
+      CostUnit.litre =>
+        '${formatNombre(eurParUnite, decimales: 2, fixe: true)}$nbsp€/L',
+      _ =>
+        '${formatNombre(eurParUnite * _grammesParKg, decimales: 2, fixe: true)}'
+            '$nbsp€/kg',
+    };
 
 /// Achat : « 47,50 € les 25 kg », « 3,99 € le sachet ».
 String formatAchat(Price price) {
   final quantity = price.quantity;
   final unit = price.unit;
-  final un = unit == CostUnit.unit ? quantity == 1 : quantity == _grammesParKg;
+  final un = switch (unit) {
+    CostUnit.unit || CostUnit.litre => quantity == 1,
+    _ => quantity == _grammesParKg,
+  };
   final quantite = un
-      ? (unit == CostUnit.unit ? 'le sachet' : 'le kg')
+      ? switch (unit) {
+          CostUnit.unit => 'le sachet',
+          CostUnit.litre => 'le litre',
+          _ => 'le kg',
+        }
       : 'les ${formatQuantite(quantity, unit)}';
   return '${formatEurosSaisis(price.priceEur)} $quantite';
 }

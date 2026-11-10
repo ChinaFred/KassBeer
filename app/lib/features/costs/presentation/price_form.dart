@@ -8,6 +8,7 @@ import '../../../core/presentation/champ_nombre.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/feuille_ou_dialogue.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/segments.dart';
 import '../../../core/providers.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../recipes/domain/recipe.dart' show truncateName;
@@ -31,6 +32,19 @@ abstract final class TextesPrix {
       'L\'unité enregistrée ne correspond pas : saisissez la quantité en '
       '$unite.';
   static const abandon = 'Le prix saisi ne sera pas enregistré.';
+
+  /// La saisie remplace un prix d'une autre unité (gramme ↔ litre).
+  static const remplaceAuGramme =
+      'Ce prix remplacera votre prix au gramme, utilisé par les lignes pesées.';
+  static const remplaceAuLitre =
+      'Ce prix remplacera votre prix au litre, utilisé par les lignes en '
+      'volume.';
+
+  /// Unité choisie qui ne comptera pas la ligne d'où le prix s'ouvre.
+  static const ligneEnVolume =
+      'Cette ligne est en volume : un prix au gramme ne la comptera pas.';
+  static const lignePesee =
+      'Cette ligne est pesée : un prix au litre ne la comptera pas.';
   static const reprendre = 'Reprendre un de mes prix';
   static String reprendreTitre(IngredientNature nature) =>
       'Reprendre un prix de ${libelleNatureMinuscule(nature)}';
@@ -42,6 +56,38 @@ abstract final class TextesPrix {
   static String supprime(String name) => 'Prix de « $name » supprimé.';
   static String suppressionRefusee(String name) =>
       'La suppression du prix de « $name » a échoué.';
+}
+
+/// Unité de saisie de la quantité achetée : kilogrammes ou grammes (stockés en
+/// grammes), litres ou millilitres (stockés en litres, houblon et ajout,
+/// v0.1.17), sachets (levure).
+enum UniteAchat {
+  kg('kg', 'kilogrammes', CostUnit.gram, 1000),
+  g('g', 'grammes', CostUnit.gram, 1),
+  l('L', 'litres', CostUnit.litre, 1),
+  ml('ml', 'millilitres', CostUnit.litre, 0.001),
+  sachets('sachets', 'sachets', CostUnit.unit, 1);
+
+  const UniteAchat(this.label, this.parle, this.unit, this.facteur);
+
+  /// Libellé court du segment et du champ.
+  final String label;
+
+  /// Libellé lu par un lecteur d'écran.
+  final String parle;
+
+  /// Unité stockée.
+  final CostUnit unit;
+
+  /// Quantité stockée pour une unité saisie.
+  final double facteur;
+
+  /// Unités de saisie de [nature] : celles de ses unités d'achat
+  /// ([purchaseUnitsOf]).
+  static List<UniteAchat> de(IngredientNature nature) => [
+    for (final u in UniteAchat.values)
+      if (purchaseUnitsOf(nature).contains(u.unit)) u,
+  ];
 }
 
 /// Façon d'ouvrir le formulaire de prix.
@@ -62,7 +108,9 @@ enum ModePrix {
 ///
 /// [initial] : prix à modifier ; nul pour un nouveau prix, ou pour un prix
 /// illisible à corriger (champs vides). [nature] et [name] : ingrédient fixé
-/// (manquant, modification). Rend vrai si un prix a été enregistré.
+/// (manquant, modification). [uniteLigne] : unité de la ligne de recette à
+/// chiffrer (« Saisir le prix », « Corriger le prix ») ; une ligne en litres
+/// ouvre la saisie en litres. Rend vrai si un prix a été enregistré.
 Future<bool> ouvrirFormulairePrix(
   BuildContext context, {
   required String uid,
@@ -71,6 +119,7 @@ Future<bool> ouvrirFormulairePrix(
   Price? initial,
   IngredientNature? nature,
   String? name,
+  CostUnit? uniteLigne,
 }) async {
   final saved = await showFeuilleOuDialogue<bool>(
     context: context,
@@ -82,6 +131,7 @@ Future<bool> ouvrirFormulairePrix(
       initial: initial,
       nature: nature ?? initial?.nature,
       name: name ?? initial?.name,
+      uniteLigne: uniteLigne,
     ),
   );
   return saved ?? false;
@@ -97,6 +147,7 @@ class FormulairePrix extends ConsumerStatefulWidget {
     this.initial,
     this.nature,
     this.name,
+    this.uniteLigne,
   });
 
   final String uid;
@@ -105,6 +156,9 @@ class FormulairePrix extends ConsumerStatefulWidget {
   final Price? initial;
   final IngredientNature? nature;
   final String? name;
+
+  /// Unité de la ligne de recette à chiffrer, ou `null`.
+  final CostUnit? uniteLigne;
 
   @override
   ConsumerState<FormulairePrix> createState() => _FormulairePrixState();
@@ -117,14 +171,13 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
   late final TextEditingController _quantity;
   IngredientNature? _nature;
 
-  /// Quantité saisie en kilogrammes (sinon en grammes) ; sans objet pour une
-  /// levure.
-  late bool _kg;
+  /// Unité de saisie de la quantité, parmi [UniteAchat.de] de la nature.
+  late UniteAchat _saisie;
   String? _natureError;
   bool _modifie = false;
 
-  /// Prix lu dans une unité qui ne convient pas à sa nature (LI8) : la quantité
-  /// est à saisir de nouveau.
+  /// Prix lu dans une unité qui ne convient pas à sa nature ou à la ligne à
+  /// chiffrer (LI8) : la quantité est à saisir de nouveau.
   bool _uniteIncompatible = false;
 
   bool get _fixe => widget.mode != ModePrix.nouveau;
@@ -136,17 +189,20 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
     _name = TextEditingController(text: widget.name ?? '');
     _price = TextEditingController();
     _quantity = TextEditingController();
-    _kg = _kgParDefaut(_nature);
+    _saisie = _uniteParDefaut(_nature, widget.uniteLigne);
     final initial = widget.initial;
     final nature = _nature;
     if (initial != null) {
       _price.text = texteSaisi(initial.priceEur, decimales: 4);
       // Unité incompatible (LI8) : la quantité achetée ne se relit pas dans
-      // l'unité attendue, elle est à saisir de nouveau.
+      // l'unité attendue, elle est à saisir de nouveau, dans l'unité de la ligne.
+      final ligne = widget.uniteLigne;
       _uniteIncompatible =
-          nature != null && initial.unit != purchaseUnitOf(nature);
+          nature != null &&
+          (!purchaseUnitsOf(nature).contains(initial.unit) ||
+              (ligne != null && ligne != initial.unit));
       if (nature != null && !_uniteIncompatible) {
-        _remplirQuantite(initial.quantity);
+        _remplirQuantite(initial.quantity, initial.unit);
       }
     }
     for (final c in [_name, _price, _quantity]) {
@@ -156,18 +212,30 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
 
   void _changement() => setState(() => _modifie = true);
 
-  static bool _kgParDefaut(IngredientNature? nature) => switch (nature) {
-    IngredientNature.hop || IngredientNature.addition => false,
-    _ => true,
+  /// Unité de saisie à l'ouverture : celle de la ligne à chiffrer (litres pour
+  /// une ligne en volume), sinon grammes pour un houblon ou un ajout,
+  /// kilogrammes pour un malt ou un sucre, sachets pour une levure.
+  static UniteAchat _uniteParDefaut(
+    IngredientNature? nature,
+    CostUnit? ligne,
+  ) => switch (nature) {
+    IngredientNature.yeast => UniteAchat.sachets,
+    IngredientNature.hop || IngredientNature.addition =>
+      ligne == CostUnit.litre ? UniteAchat.l : UniteAchat.g,
+    _ => UniteAchat.kg,
   };
 
-  void _remplirQuantite(double grams) {
-    if (_nature == IngredientNature.yeast) {
-      _quantity.text = texteSaisi(grams, decimales: 0);
-      return;
-    }
-    _kg = grams >= 1000;
-    _quantity.text = texteSaisi(_kg ? grams / 1000 : grams);
+  /// Remplit la quantité de [quantity] stockée en [unit], dans l'unité de
+  /// saisie la plus lisible : kilogrammes dès 1 000 g, millilitres sous 1 L.
+  void _remplirQuantite(double quantity, CostUnit unit) {
+    _saisie = switch (unit) {
+      CostUnit.unit => UniteAchat.sachets,
+      CostUnit.litre => quantity >= 1 ? UniteAchat.l : UniteAchat.ml,
+      _ => quantity >= 1000 ? UniteAchat.kg : UniteAchat.g,
+    };
+    // Arrondi au millième : 0,1 L ÷ 0,001 ne donne pas toujours 100.
+    final saisi = (quantity / _saisie.facteur * 1000).round() / 1000;
+    _quantity.text = texteSaisi(saisi, decimales: _levure ? 0 : 3);
   }
 
   @override
@@ -180,14 +248,14 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
 
   bool get _levure => _nature == IngredientNature.yeast;
 
-  /// Quantité saisie convertie dans l'unité stockée (grammes ou sachets), ou
-  /// `null` si elle est illisible ou hors bornes.
+  /// Quantité saisie convertie dans l'unité stockée (grammes, sachets ou
+  /// litres), ou `null` si elle est illisible ou hors bornes.
   double? get _quantiteStockee {
     final text = _quantity.text;
     if (_erreurQuantite(text) != null) return null;
     final value = lireNombre(text).valeur;
     if (value == null) return null;
-    return _levure || !_kg ? value : value * 1000;
+    return value * _saisie.facteur;
   }
 
   double? get _prixSaisi {
@@ -206,9 +274,11 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
     max: _maxQuantite,
   );
 
-  /// Borne de la quantité saisie : 1e9 grammes ou sachets, soit 1e6 kg.
-  double get _maxQuantite =>
-      _levure || !_kg ? kPurchaseQuantityMax : kPurchaseQuantityMax / 1000;
+  /// Borne de la quantité saisie : 1e9 grammes, sachets ou litres stockés, soit
+  /// 1e6 kg ; 1e9 ml, borne de la saisie des nombres.
+  double get _maxQuantite => _saisie.facteur > 1
+      ? kPurchaseQuantityMax / _saisie.facteur
+      : kPurchaseQuantityMax;
 
   /// Prix unitaire de la saisie (PR7, `brewing/`), ou `null` si un champ est
   /// illisible.
@@ -217,6 +287,28 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
     final quantity = _quantiteStockee;
     if (price == null || quantity == null || quantity <= 0) return null;
     return unitPrice(priceEur: price, quantity: quantity);
+  }
+
+  /// Avertissements sous l'unité : prix d'une autre unité remplacé, et unité
+  /// qui ne comptera pas la ligne d'où le prix s'ouvre (gramme ↔ litre).
+  List<String> get _avertissementsUnite {
+    final saisie = _saisie.unit;
+    const grammeOuLitre = {CostUnit.gram, CostUnit.litre};
+    if (!grammeOuLitre.contains(saisie)) return const [];
+    final remplace = widget.initial ?? _existant;
+    final ligne = widget.uniteLigne;
+    return [
+      if (remplace != null &&
+          remplace.unit != saisie &&
+          grammeOuLitre.contains(remplace.unit))
+        remplace.unit == CostUnit.gram
+            ? TextesPrix.remplaceAuGramme
+            : TextesPrix.remplaceAuLitre,
+      if (ligne != null && ligne != saisie && grammeOuLitre.contains(ligne))
+        ligne == CostUnit.litre
+            ? TextesPrix.ligneEnVolume
+            : TextesPrix.lignePesee,
+    ];
   }
 
   /// Prix existant pour la clé de la saisie (PR8), hors du prix modifié.
@@ -258,7 +350,7 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
     if (choisi == null || !mounted) return;
     setState(() {
       _price.text = texteSaisi(choisi.priceEur, decimales: 4);
-      _remplirQuantite(choisi.quantity);
+      _remplirQuantite(choisi.quantity, choisi.unit);
       _modifie = true;
     });
   }
@@ -292,7 +384,7 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
       name: name,
       priceEur: price,
       quantity: quantity,
-      unit: purchaseUnitOf(nature),
+      unit: _saisie.unit,
     );
     final offline = ref.read(grantedAccessProvider)?.offline ?? false;
     final messenger = ScaffoldMessenger.of(context);
@@ -348,9 +440,10 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
     final reprenables = widget.mode == ModePrix.nouveau
         ? const <Price>[]
         : _reprenables;
-    final quantiteLabel = _levure
-        ? 'Quantité achetée (sachets)'
-        : 'Quantité achetée (${_kg ? 'kg' : 'g'})';
+    final quantiteLabel = 'Quantité achetée (${_saisie.label})';
+    final unites = nature == null
+        ? const <UniteAchat>[]
+        : UniteAchat.de(nature);
     return PopScope(
       canPop: !_modifie,
       onPopInvokedWithResult: (didPop, _) {
@@ -404,7 +497,7 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
                 ],
                 onChanged: (n) => setState(() {
                   _nature = n;
-                  _kg = _kgParDefaut(n);
+                  _saisie = _uniteParDefaut(n, widget.uniteLigne);
                   _natureError = null;
                   _modifie = true;
                 }),
@@ -446,6 +539,7 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
             ),
             const SizedBox(height: 16),
             ChampNombre(
+              key: ValueKey(_saisie),
               controller: _quantity,
               label: quantiteLabel,
               obligatoire: true,
@@ -453,43 +547,50 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
               entier: _levure,
               max: _maxQuantite,
               aide: _uniteIncompatible && _quantity.text.trim().isEmpty
-                  ? TextesPrix.uniteIncompatible(
-                      _levure ? 'sachets' : (_kg ? 'kg' : 'g'),
-                    )
+                  ? TextesPrix.uniteIncompatible(_saisie.label)
                   : null,
               avertissement:
                   nature != null &&
                       unitaire != null &&
-                      isUnusualPrice(nature, unitaire)
+                      isUnusualPrice(nature, unitaire, unit: _saisie.unit)
                   ? TextesPrix.inhabituel
                   : null,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _save(),
             ),
-            if (!_levure) ...[
+            if (unites.length > 1) ...[
               const SizedBox(height: 8),
               Text('Unité', style: theme.textTheme.labelLarge),
               const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerLeft,
-                child: SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: true, label: Text('kg')),
-                    ButtonSegment(value: false, label: Text('g')),
-                  ],
-                  selected: {_kg},
+                child: BoutonsSegmentes<UniteAchat>(
+                  values: unites,
+                  labelOf: (u) => u.label,
+                  semanticsOf: (u) => u.parle,
+                  selected: {_saisie},
                   onSelectionChanged: (s) => setState(() {
-                    _kg = s.first;
+                    _saisie = s.first;
                     _modifie = true;
                   }),
                 ),
               ),
+              for (final texte in _avertissementsUnite)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    texte,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
             ],
             const SizedBox(height: 16),
             Text(
               unitaire == null || nature == null
                   ? ''
-                  : 'Soit ${formatPrixUnitaireDe(unitaire, purchaseUnitOf(nature))}',
+                  : 'Soit ${formatPrixUnitaireDe(unitaire, _saisie.unit)}',
               style: theme.textTheme.bodyLarge,
             ),
             const SizedBox(height: 16),
@@ -579,6 +680,7 @@ class LignePrix extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final detail = parties([formatAchat(price), formatPrixUnitaire(price)]);
+    final parle = parties([achatParle(price), prixUnitaireParle(price)]).parle;
     final extra = trailing;
     return MergeSemantics(
       child: InkWell(
@@ -593,7 +695,7 @@ class LignePrix extends StatelessWidget {
                 Text(price.name, style: theme.textTheme.titleMedium),
                 Text(
                   detail.texte,
-                  semanticsLabel: detail.parle,
+                  semanticsLabel: parle,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

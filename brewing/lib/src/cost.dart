@@ -20,6 +20,11 @@ enum CostUnit {
   /// Unité : sachet de levure.
   unit('unit'),
 
+  /// Litre : ajout ou houblon mesuré en volume, et son prix au litre
+  /// (décision du 2026-11-10). Une ligne en litres ne se chiffre qu'avec un prix
+  /// au litre ([unitPriceFor]) : aucune densité n'est supposée.
+  litre('l'),
+
   /// Forfait par brassin (frais).
   brew('brew'),
 
@@ -28,11 +33,11 @@ enum CostUnit {
 
   const CostUnit(this.storedValue);
 
-  /// Valeur stockée (`g`, `unit`, `brew`, `bottle`).
+  /// Valeur stockée (`g`, `unit`, `l`, `brew`, `bottle`).
   final String storedValue;
 
-  /// Unités d'un prix d'achat : grammes ou sachets.
-  static const List<CostUnit> purchaseUnits = [gram, unit];
+  /// Unités d'un prix d'achat : grammes, sachets ou litres.
+  static const List<CostUnit> purchaseUnits = [gram, unit, litre];
 
   /// Unité de la valeur stockée [value] ; lève [BrewingInputException] sans le
   /// texte reçu si elle est inconnue.
@@ -65,8 +70,8 @@ enum FeeBasis {
       enumFromStored(values, (b) => b.storedValue, field, value);
 }
 
-/// Prix unitaire d'un achat : [priceEur] payés pour [quantity] grammes ou
-/// sachets. Un prix nul est un prix connu (eau de pluie, ingrédient offert).
+/// Prix unitaire d'un achat : [priceEur] payés pour [quantity] grammes,
+/// sachets ou litres. Un prix nul est un prix connu (eau de pluie, ingrédient offert).
 ///
 /// Lève [BrewingInputException], sans la valeur reçue, pour un prix négatif ou
 /// non fini et pour une quantité nulle, négative ou non finie.
@@ -78,7 +83,7 @@ double unitPrice({required double priceEur, required double quantity}) {
 
 /// Prix unitaire d'un achat en [purchaseUnit] pour une ligne en [lineUnit], ou
 /// `null` si les deux unités diffèrent : un prix au sachet ne chiffre pas des
-/// grammes.
+/// grammes, un prix au gramme ne chiffre pas des litres (et l'inverse).
 ///
 /// Lève [BrewingInputException] comme [unitPrice].
 double? unitPriceFor({

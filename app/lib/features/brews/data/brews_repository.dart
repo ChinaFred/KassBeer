@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:brewing/brewing.dart' show BrewingInputException, StepEventKind;
+import 'package:brewing/brewing.dart' show StepEventKind;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -296,9 +296,9 @@ class FirestoreBrewsRepository implements BrewsRepository {
       }
       return DocumentValide(id, brew);
     } on DocumentIllisible catch (error, stackTrace) {
-      return _invalidBrew(id, error, stackTrace);
-    } on BrewingInputException catch (error, stackTrace) {
-      // Valeur stockée inconnue dans la recette figée.
+      // Valeur stockée inconnue, dans le brassin ou dans sa recette figée :
+      // la lecture de la copie (RecipeContent.fromFirestore) ne lève que
+      // DocumentIllisible depuis la v0.1.17.
       return _invalidBrew(id, error, stackTrace);
     }
   }

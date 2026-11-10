@@ -311,7 +311,13 @@ flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà.
   rapportée (`error_reports/`) avec la longueur de la valeur fautive, jamais la valeur.
   Depuis la v0.1.15 (recettes en BeerJSON, ADR-005), une recette est illisible si sa version
   de format manque ou est inconnue (document de la v0.1.14 compris), si une unité ou une
-  valeur énumérée sort du modèle, ou si une durée en minutes n'est pas entière. Une copie
+  valeur énumérée sort du modèle, ou si une durée en minutes n'est pas entière. Depuis la
+  v0.1.17 (L2a d'ADR-005), les valeurs du schéma que la v0.1.15 refusait se lisent : malt
+  extrait liquide ou sec, miel, fruit, jus et « Autre » ; houblon à l'empâtage ou au
+  conditionnement, jour d'ajout d'un houblon à cru ; formes de houblon cônes pressés,
+  cônes frais, poudre et extrait ; quantité d'un houblon, d'un ajout ou d'une levure en
+  litres. Un APK de la v0.1.16 ou antérieure affiche encore « Recette illisible » sur une recette qui en
+  porte une. Une copie
   figée illisible rend le brassin illisible : « Brassin illisible » dans la liste, même
   sous-titre ; sur sa fiche, sa préparation et l'écran du jour, « Ce brassin ne peut pas
   s'afficher. Il a peut-être été enregistré par une version plus récente de Kass'Beer :
@@ -323,11 +329,17 @@ flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà.
 **Fiche.** Nom, style, « Recette de {auteur} » pour un autre brasseur. Boutons « Modifier »
 et « Supprimer » pour l'auteur, « Dupliquer » pour tous. Puis le bloc Calculs (voir
 « Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (type de recette, « Non renseigné » s'il
-manque ; volume en fermenteur, durée d'ébullition, équipement), Malts et sucres, Houblons
+manque ; « Auteur indiqué par le fichier importé » quand une recette importée le porte ; volume en
+fermenteur, durée d'ébullition, équipement), Malts et sucres, Houblons
 (avec l'IBU apporté par chacun), Autres ajouts, Levure, Paliers d'empâtage, Chronologie du
 jour, Notes. Chaque ligne d'ingrédient tient sur deux niveaux : nom, puis ses valeurs. Un
 ajout porte son type en tête (« Correction de l'eau · 5 g · Empâtage · 60 min ») ; la levure
-« Haute fermentation (ale) · 11 g · atténuation 75 % · Sèche » ; un palier « Infusion ·
+« Haute fermentation (ale) · 11 g · atténuation 75 % · Sèche » ; un malt son type en
+tête (« Malt », « Sucre », ou pour une recette importée « Extrait liquide », « Extrait sec »,
+« Miel », « Fruit », « Jus », « Autre ») ; un houblon « Ébullition 60 min · 30 g · 10 % alpha
+· Pellets · 31 IBU », avec, pour une recette importée, les moments « Empâtage » et
+« Conditionnement », les formes « Cônes pressés », « Cônes frais », « Poudre » et
+« Extrait », et « ajout au jour 2 » après la durée d'un houblon à cru ; un palier « Infusion ·
 65 °C · 60 min » (libellé court du type de palier ; le libellé long, « Infusion (eau chaude
 ajoutée) », ne figure que dans le menu de l'éditeur). Quand elle est renseignée, la
 température du grain précède les paliers sur une ligne libellé-valeur, comme les valeurs de
@@ -341,7 +353,8 @@ masquer le reste de la recette, et l'erreur est rapportée.
   indisponible hors ligne. ».
 
 **Dupliquer.** Crée « Copie de {nom} » (coupé à 120 caractères) au nom de celui qui
-duplique, avec les mêmes ingrédients, paliers et équipement, sans fiche d'origine. La source
+duplique, avec les mêmes ingrédients, paliers et équipement, et l'auteur de la recette
+d'origine s'il y en a un, sans fiche d'origine. La source
 ne change pas. Possible sur toute recette, y compris celle d'un membre retiré. Message
 « Recette dupliquée. » (hors ligne : « Recette dupliquée sur l'appareil. Elle partira au
 retour du réseau. »), puis la fiche de la copie. Pendant la lecture du nom du compte, le
@@ -375,14 +388,21 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   de 0 à 600), « Équipement » (« Aucun
   équipement », les siens, puis ceux du groupe avec leur auteur ; un équipement disparu
   s'affiche « Équipement supprimé »). Une nouvelle recette présélectionne l'équipement du
-  brasseur s'il n'en a qu'un. Une recette incomplète s'enregistre.
+  brasseur s'il n'en a qu'un. Une recette incomplète s'enregistre. Une recette importée
+  qui porte un auteur l'affiche en lecture seule (« Auteur indiqué par le fichier
+  importé ») ;
+  l'éditeur n'a pas de champ pour le saisir et le garde à l'enregistrement.
 - Chaque section a son bouton : « Ajouter un malt ou un sucre », « Ajouter un houblon »,
   « Ajouter un ajout », « Ajouter une levure » (une seule levure), « Ajouter un palier ». Le
   formulaire s'ouvre en feuille du bas sur téléphone, en dialogue au-delà, avec « Annuler »,
   « Ajouter et continuer » (ajoute la ligne, vide le formulaire, remet le curseur sur « Nom »
   et annonce « « {nom} » ajouté. ») et « Ajouter » (« Enregistrer » pour une ligne
   existante).
-- Malt ou sucre : « Nom », « Nature » (Malt, Sucre), « Quantité (kg) » (obligatoire),
+- Malt ou sucre : « Nom », « Nature » (Malt, Sucre ; le type d'une recette importée,
+  Extrait liquide, Extrait sec, Miel, Fruit, Jus ou Autre, reste visible et choisi en
+  troisième segment, et l'enregistrement le garde ; pour « Autre », l'avertissement « Nature
+  à préciser pour le calcul : choisissez Malt ou Sucre. » s'affiche sous le choix, en couleur
+  d'avertissement, sans bloquer l'enregistrement), « Quantité (kg) » (obligatoire),
   « Couleur (EBC) » (aide « Sert au calcul de la couleur. »), « Rendement d'extrait (%) »
   (aide « Sert au calcul de la densité initiale. »).
 - Houblon : « Nom », « Quantité (g) », « Acides alpha (%) », « Utilisation » (Ébullition,
@@ -395,8 +415,22 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   Ébullition et 0 min. », jamais coupée ; « Durée à cru (jours) », facultative, décimale
   permise, enregistrée en minutes entières (jours × 1 440, arrondi à la minute). Le
   formulaire garde une durée par moment : le texte saisi est mémorisé pour chaque moment,
-  revenir à un moment remet son texte, un moment jamais saisi a un champ vide.
-- Autre ajout : « Nom », « Quantité (g) », « Type d'ajout » (liste déroulante : « Non
+  revenir à un moment remet son texte, un moment jamais saisi a un champ vide. Un houblon
+  importé à l'empâtage ou au conditionnement garde son moment, affiché en quatrième segment
+  d'« Utilisation », avec « Durée (min) » facultative et l'aide « Moment conservé du fichier
+  importé ; le calcul de l'amertume ne le prend pas en charge. ». Une forme importée
+  (Cônes pressés, Cônes frais, Poudre, Extrait) reste visible et choisie à côté de Pellets
+  et Cônes. Pour un houblon d'ébullition pesé d'une forme Poudre ou Cônes frais,
+  l'avertissement « Forme non prise en charge par le calcul de l'amertume : choisissez
+  Pellets ou Cônes. » s'affiche sous « Forme » ; pour un extrait pesé, « Forme non prise en
+  charge par le calcul de l'amertume. Pour un extrait, indiquez la quantité en ml. ». Pour la forme Extrait, pour une ligne déjà en
+  volume, et tant que l'unité est ml, « Unité de la quantité » (g, ml) s'affiche avant la
+  quantité ; le champ devient « Quantité (ml) », avec l'aide « Non compté dans l'amertume
+  (mesuré en volume). ». Le jour d'ajout d'un houblon à cru
+  importé est gardé tant que le houblon reste à cru (aide « Jour d'ajout du fichier
+  importé conservé : jour 2. »).
+- Autre ajout : « Nom », « Unité de la quantité » (g, ml ; g par défaut, placée avant la
+  quantité), « Quantité (g) » ou « Quantité (ml) », « Type d'ajout » (liste déroulante : « Non
   précisé », Correction de l'eau, Clarifiant, Épice, Herbe, Arôme, Bois, Autre),
   « Utilisation » (facultative : Empâtage, Ébullition, Après ébullition, Fermentation,
   Embouteillage), « Durée (min) » (entier). Une durée sans utilisation est refusée :
@@ -405,7 +439,8 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   ajout à 0 min d'ébullition et se relit « Ébullition · 0 min » ; tant que la durée est vide,
   l'aide « Sans durée, l'ajout est enregistré à l'arrêt du feu (Ébullition, 0 min). »
   s'affiche sous « Durée (min) ». Aucun calcul.
-- Levure : « Nom », « Quantité (g) » (facultative, plus de 0, aide « Le coût compte un
+- Levure : « Nom », « Unité de la quantité » (g, ml ; g par défaut, avant la quantité),
+  « Quantité (g) » ou « Quantité (ml) » (facultative, plus de 0, aide « Le coût compte un
   sachet par levure, quelle que soit la quantité. » ; la quantité n'entre dans aucun calcul
   de coût), « Atténuation (%) »,
   « Type de levure » (liste déroulante : « Non précisé », Haute fermentation (ale), Basse
@@ -421,6 +456,10 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   de la cuve d'empâtage, Acidification à l'empâtage, Acidification du moût ; le champ
   affiche le libellé court, « Infusion »).
 - Listes déroulantes : une entrée tient sur deux lignes à grande taille de texte.
+- Choix par segments (nature, utilisation, forme, unité) : les segments passent l'un sous
+  l'autre quand leurs libellés ne tiennent pas sur la largeur, à la taille de texte
+  courante (360 dp à 200 %, par exemple). Les segments g et ml se lisent « grammes » et
+  « millilitres ».
 - Aucune valeur n'est choisie d'avance dans les nouveaux champs. Une valeur absente de ces
   listes mais connue du modèle (venue d'un futur import) s'affiche sous son libellé français
   et l'enregistrement la conserve. Types de recette : Cidre, Kombucha, Soda, Hydromel, Vin,
@@ -430,12 +469,17 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
 - Un appui sur une ligne ouvre son formulaire. Le menu ⋮ propose « Dupliquer » et
   « Retirer » (sans confirmation ; la SnackBar « « {nom} » retiré. » propose « Annuler »),
   et pour un palier « Monter » et « Descendre ». Les malts et sucres se rangent par masse
-  décroissante ; les houblons par moment (ébullition de la plus longue à la plus courte,
-  whirlpool, à cru) ; l'ordre est enregistré tel quel.
+  décroissante ; les houblons par moment (empâtage pour une recette importée, ébullition
+  de la plus longue à la plus courte, whirlpool, à cru, conditionnement) ; l'ordre est
+  enregistré tel quel.
+- En-tête de la section Houblons : nombre de lignes et masse des seuls houblons pesés
+  (« 3 · 45 g ») ; avec des houblons en volume, « 3 dont 1 en volume · 25 g », et sans
+  masse si aucun n'est pesé (« 1 en volume »).
 - Plafonds : 50 malts et sucres, 50 houblons, 50 ajouts, 20 paliers. Au plafond, le bouton
   d'ajout est inactif avec « 50 houblons au plus. » (etc.).
 - Avertissements non bloquants : « Quantité inhabituelle : 22 400 g. Vérifiez la saisie. »
-  au-delà de 1 000 g pour un houblon ou un ajout, de 30 kg pour un malt ou un sucre ;
+  au-delà de 1 000 g pour un houblon ou un ajout, de 1 L pour une quantité en volume
+  (houblon, ajout), de 30 kg pour un malt ou un sucre ;
   « Volume inhabituel : 250 L. Vérifiez la saisie. » au-delà de 200 L ; « Plus long que
   l'ébullition de la recette. » pour un houblon d'ébullition plus long que la durée
   d'ébullition.
@@ -467,7 +511,8 @@ aide ou un message d'erreur sous un champ n'est pas coupé. Un nom d'ingrédient
 
 **Affichage.** Virgule décimale, espace insécable avant l'unité : densité « 1057,9 », degré
 « 6,6 % vol », « 32 IBU », « 18 EBC » (entiers), malts et sucres en kilogrammes (« 4,5 kg »),
-houblons et ajouts en grammes (« 22,4 g »), « 20 L », « 67 °C », « 60 min », houblon à cru
+houblons et ajouts en grammes (« 22,4 g »), une quantité en volume en millilitres sous
+1 L (« 5 ml ») et en litres au-delà (« 1,5 L »), « 20 L », « 67 °C », « 60 min », houblon à cru
 « 3 jours » (« 1,5 jour » au singulier sous 2). Les tuiles des calculs s'élargissent avec la
 taille du texte : à 200 %, elles passent sur une colonne plutôt que de couper « 1057,9 ».
 
@@ -620,10 +665,16 @@ Indisponible, chaque raison nommée : « Aucune densité mesurée le jour du bra
 densité initiale »), « Aucune densité mesurée en fermentation. », « Dépend de la densité
 initiale. », « Dépend de la densité finale. », « Dépend des deux densités. ». Rendement :
 « Aucune densité initiale mesurée. », « Aucun volume mesuré le jour du brassage. » (« Saisir le
-volume en fermenteur »), « Rendement d'extrait non renseigné : {noms}. », « Indiquez si les sucres
-étaient dans le moût à cette mesure. » ; aucun malt : « Sans malt, le rendement ne s'applique
-pas. ». Si la copie contient un sucre, le propriétaire répond à « Les sucres étaient-ils dans le
-moût à cette mesure ? ». Calcul impossible : « Calcul impossible : la densité finale dépasse la
+volume en fermenteur »), « Rendement d'extrait non renseigné : {noms}. », « Indiquez si les ingrédients
+ajoutés hors de l'empâtage étaient dans le moût à cette mesure. » (pour un autre membre : « Le
+brasseur n'a pas indiqué si les ingrédients ajoutés hors de l'empâtage étaient dans le moût. »), « Nature inconnue dans la recette du brassin :
+{noms}. Le rendement ne peut pas être calculé. » (malt ou sucre de type « Autre » d'une recette
+importée) ; aucun malt : « Sans malt, le rendement ne s'applique pas. ». Si la copie contient
+autre chose qu'un malt (sucre, extrait, miel, fruit, jus, type « Autre »), le propriétaire
+répond à une question qui nomme ces ingrédients, tels que la recette les écrit : « Les
+ingrédients ajoutés hors de l'empâtage (Candi, Miel) étaient-ils dans le moût à cette
+mesure ? » (« L'ingrédient ajouté hors de l'empâtage (Candi) était-il… » pour un seul ; un
+extrait de malt n'est pas empâté). Calcul impossible : « Calcul impossible : la densité finale dépasse la
 densité initiale. Vérifiez les mesures retenues. », « Calcul impossible : les sucres expliquent à
 eux seuls la densité mesurée. ». Rendement au-delà de 100 % : la valeur s'affiche, avec
 « Rendement au-delà de 100 % : vérifiez le volume et la densité. ». Sucres ajoutés après la mesure
@@ -722,7 +773,11 @@ frais » (« 3 frais »), une ligne par frais triée par nom (« Électricité �
 « Ajouter un frais » ; puis « Ingrédients », un pli par nature non vide (« Malts », « Sucres »,
 « Houblons », « Levures », « Ajouts », résumé « 12 prix »), fermé sur téléphone, ouvert à partir
 de 840 pixels. Ligne : « Pils », puis « 47,50 € les 25 kg · 1,90 €/kg » ; levure : « 3,99 € les
-5 sachets · 0,80 €/sachet ». Quantité en kilogrammes à partir de 1 000 g. Montant saisi affiché
+5 sachets · 0,80 €/sachet » ; prix au litre : « 6,50 € les 100 ml · 65,00 €/L » (« 30,00 € le
+litre » pour 1 L). Le lecteur d'écran lit « 6,50 € les 100 millilitres, 65,00 € le litre »
+(« 1 litre », « 1 millilitre » au singulier, « 1,90 € le kilogramme », « 0,80 € le
+sachet »). Quantité en
+kilogrammes à partir de 1 000 g, en millilitres sous 1 L. Montant saisi affiché
 tel quel jusqu'à 4 décimales, montant calculé au centime. « Ajouter un prix » (bouton flottant
 sur téléphone, bouton sous le titre « Ingrédients » au-delà). Une écriture en attente porte « En attente du réseau ».
 Un appui sur une ligne ouvre sa modification.
@@ -741,14 +796,26 @@ caractère) s'affiche aussi « Prix illisible ».
 **Formulaire de prix.** « Nouveau prix », « Modifier le prix », ou « Prix de « Pils » » depuis
 un manquant. « Nature » (Malt, Sucre, Houblon, Levure, Ajout), « Nom » (120 caractères), « Prix
 payé (€) » (0 à 100 000), « Quantité achetée (kg) » ou « (g) » selon « Unité » (kg par défaut
-pour un malt ou un sucre, g pour un houblon ou un ajout), « Quantité achetée (sachets) » pour une
+pour un malt ou un sucre, g pour un houblon ou un ajout) ; pour un houblon ou un ajout,
+« Unité » propose aussi L et ml (v0.1.17 : prix au litre, enregistré en litres ; lus
+« kilogrammes », « grammes », « litres », « millilitres »), choisis d'avance quand le prix
+s'ouvre depuis une ligne mesurée en volume ; les quatre segments passent l'un sous
+l'autre quand ils ne tiennent pas (360 dp à 150 % et au-delà), comme les choix de
+l'éditeur. Sous l'unité, deux avertissements non bloquants : « Ce prix remplacera votre prix
+au gramme, utilisé par les lignes pesées. » (ou « … votre prix au litre, utilisé par les
+lignes en volume. ») quand la saisie remplace un prix de l'autre unité ; « Cette ligne est en
+volume : un prix au gramme ne la comptera pas. » (ou « Cette ligne est pesée : un prix au
+litre ne la comptera pas. ») quand le prix s'ouvre depuis une ligne d'une autre unité ;
+« Quantité achetée (sachets) » pour une
 levure (nombre entier). Tous sont obligatoires. Le prix 0 est un prix connu. Ligne de résultat :
-« Soit 1,90 €/kg » (« €/sachet » pour une levure). « Prix inhabituel : vérifiez la quantité. »
-au-delà de 50 €/kg pour un malt ou un sucre, 500 €/kg pour un houblon ou un ajout, 50 € le
-sachet, sans blocage. Nom sans lettre ni chiffre : « Le nom doit contenir une lettre ou un
+« Soit 1,90 €/kg » (« €/sachet » pour une levure, « €/L » pour un prix au litre). « Prix
+inhabituel : vérifiez la quantité. » au-delà de 50 €/kg pour un malt ou un sucre, 500 €/kg pour
+un houblon ou un ajout, 50 € le sachet, 1 000 €/L, sans blocage. Nom sans lettre ni chiffre : « Le nom doit contenir une lettre ou un
 chiffre. ». Nom dont le prix existe : « Un prix existe déjà pour « Pils ». Il sera remplacé. ».
 « Corriger le prix » d'une unité incompatible laisse la quantité vide, avec « L'unité
-enregistrée ne correspond pas : saisissez la quantité en kg. » (ou g, ou sachets). Un nom
+enregistrée ne correspond pas : saisissez la quantité en kg. » (ou g, L, ml, ou sachets) ;
+pour une ligne en volume face à un prix au gramme, la saisie s'ouvre en litres (et en grammes
+dans le sens inverse). Un nom
 venu d'une recette est coupé à 120 caractères. En modification, nature et nom sont
 verrouillés : « Le nom suit celui des recettes. Pour le
 changer, supprimez ce prix et ajoutez-en un autre. ». Depuis un manquant, nature et nom sont
@@ -786,8 +853,21 @@ sont regroupées ; une levure compte pour un sachet. Sans frais : « Aucun frais
 électricité, embouteillage). » et « Ajouter mes frais », qui ouvre « Mes prix ».
 
 Manquants : « Coût indisponible : 3 prix manquants. » (annoncé aux lecteurs d'écran), puis une
-ligne par raison : « Pils · 5 kg » et « Saisir le prix » ; « Pils : unité du prix
-incompatible. » ou « Pils : prix illisible. » et « Corriger le prix » ; « Volume en fermenteur
+ligne par raison : « Pils · 5 kg » et « Saisir le prix » ; prix d'une autre unité que la
+ligne : « {ligne} : votre prix est {au sachet, au gramme, au litre}. Saisissez un prix {unité
+de la ligne} pour compter cette ligne. » (« Pils · 5 kg : votre prix est au sachet. Saisissez
+un prix au gramme pour compter cette ligne. », « S-04 · 1 sachet : votre prix est au litre.
+Saisissez un prix au sachet… ») et « Corriger le prix », lu par le lecteur d'écran avec la
+quantité en toutes lettres ; « Pils : prix illisible. » et « Corriger le prix » ; pour un
+houblon ou un ajout mesuré en volume, un prix au litre la chiffre (litres × prix par litre) ;
+sans prix, « Acide lactique · 5 ml » et « Saisir le prix au litre » ; face à un prix au
+gramme, « Acide lactique · 5 ml : votre prix est au gramme. Saisissez un prix au litre pour
+compter cette ligne. » ; une ligne pesée face à un prix au litre, « Acide lactique · 5 g :
+votre prix est au litre. Saisissez un prix au gramme pour compter cette ligne. » (aucune
+densité n'est supposée) ; deux lignes de même nom, l'une en grammes et l'autre en volume : « Cascade :
+quantités en grammes et en volume, qui ne s'additionnent pas. », suivi, pour l'auteur, de
+« Mettez les deux lignes dans la même unité. » et « Compléter la recette », pour un autre
+membre, de « Dupliquez la recette pour la corriger à votre nom. » ; « Volume en fermenteur
 non renseigné. » (et « Compléter la recette » pour l'auteur) ; « Une ligne de cette recette n'a
 pas de nom utilisable. » ; « Un de vos frais est illisible : il ne peut pas être compté. » et
 « Ouvrir Mes prix ». « Saisir le prix » ouvre le formulaire de prix sans quitter la recette, pour
@@ -807,7 +887,12 @@ En conditionnement, Terminé et Abandonné, sans coût figé : « Coût non fig�
 raisons, recalculées à l'affichage (manquants et « Saisir le prix » ; « Nature du sucre de
 resucrage non renseignée. » et « Modifier l'embouteillage » ; « Nombre de bouteilles non
 renseigné : les frais par bouteille ne peuvent pas être comptés. » et « Renseigner les
-bouteilles », ces deux actions en En conditionnement et Terminé ; « Prix indisponibles sur cet
+bouteilles », ces deux actions en En conditionnement et Terminé ; une ligne en volume se
+chiffre et se fige avec un prix au litre, comme une autre ligne ; sans action possible sur
+place, « Ce brassin compte {nom} en volume : saisissez un prix au litre dans Mes prix pour
+figer son coût. » et « Ouvrir Mes prix » ; deux lignes de même nom en grammes et en volume :
+« Ce brassin compte {nom} en grammes et en volume : ces quantités ne s'additionnent pas, son
+coût ne peut pas être figé. » ; « Prix indisponibles sur cet
 appareil hors ligne. » ; « Calcul du coût impossible. »). « Figer le coût » est désactivé tant
 qu'une raison bloque, suivi de « Complétez les éléments ci-dessus pour figer le coût. ». Seul
 le nombre de bouteilles manque avec un frais par bouteille : « Figer sans les frais par
@@ -843,13 +928,21 @@ La fiche et l'éditeur affichent cinq tuiles : « Densité initiale », « Densi
 affichage, avec l'équipement tel qu'il est au moment de l'affichage. Deux brasseurs voient les
 mêmes valeurs.
 
-- Densité initiale : volume en fermenteur, au moins un malt ou sucre, le rendement d'extrait
-  de chacun, et le rendement d'empâtage de l'équipement si la recette contient un malt.
+- Densité initiale : volume en fermenteur, au moins un malt ou sucre, la nature et le
+  rendement d'extrait de chacun, et le rendement d'empâtage de l'équipement si la recette
+  contient un malt. Un extrait liquide ou sec, un miel, un fruit ou un jus compte comme un
+  sucre (100 % de son extrait, sans empâtage) ; « Autre » demande sa nature.
 - Densité finale : densité initiale et atténuation de la levure. Degré : à partir des deux
   densités, avant refermentation en bouteille.
 - Amertume (Tinseth) : volume ; un houblon d'ébullition demande ses acides alpha, sa durée,
   et la densité initiale (densité d'ébullition retenue). Sans houblon d'ébullition,
   l'amertume vaut 0 IBU, même sans densité initiale. Whirlpool et à cru comptent 0 IBU.
+  Un houblon à l'empâtage ou au conditionnement rend l'amertume indisponible ; un houblon
+  d'ébullition en poudre, en extrait ou en cônes frais aussi. Des cônes pressés se
+  calculent comme des cônes. Un houblon mesuré en volume ne compte pas dans l'amertume :
+  il apporte 0 IBU, ne demande rien, et la ligne « Non compté dans l'amertume (mesuré en
+  volume) : {noms}. » s'affiche sous les hypothèses ; sa ligne et « Détail des calculs »
+  portent « non compté dans l'amertume (mesuré en volume) ».
 - Couleur (Morey) : volume, et couleur de chaque malt et sucre. Elle ne dépend pas de
   l'équipement.
 
@@ -868,6 +961,10 @@ donnée absente. La liste « À compléter » nomme chaque donnée manquante :
 - « Rendement d'extrait non renseigné : {noms}. », « Couleur non renseignée : {noms}. »
 - « Acides alpha non renseignés : {noms}. », « Durée non renseignée : {noms}. »
 - « Aucune levure. », « Atténuation non renseignée : {nom}. »
+- « Nature à préciser : {noms}. » (malt ou sucre de type « Autre »), « Moment non pris en
+  charge par le calcul : {noms}. » (houblon à l'empâtage ou au conditionnement), « Forme non
+  prise en charge par le calcul : {noms}. » (houblon d'ébullition en poudre, en extrait ou en
+  cônes frais)
 
 Pour l'auteur, « Compléter la recette » ouvre l'éditeur. Sous les tuiles, une ligne
 d'hypothèses : « Pour 20 L · Grainfather (72 %) · US-05 78 % ». « Détail des calculs »

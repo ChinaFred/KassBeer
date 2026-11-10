@@ -209,7 +209,10 @@ service cloud.firestore {
     }
 
     // Sous-arbre `recipe`. Les champs obligatoires de BeerJSON absents permis (type,
-    // batch_size, boil, mash…) sont la liste fermée d'ADR-005. `water_additions` est
+    // author, batch_size, boil, mash…) sont la liste fermée d'ADR-005. `author`,
+    // conservé d'un import, est un texte de 1 à 120 caractères. `efficiency` est
+    // refusé : le rendement d'un fichier importé n'est pas gardé, l'export l'écrit
+    // depuis l'équipement (ADR-005, amendement de L2). `water_additions` est
     // refusé : l'eau n'entre pas en version 1. `name` et `ingredients` sont
     // obligatoires : les lire sans eux est une erreur, et une erreur refuse l'écriture.
     //
@@ -223,10 +226,12 @@ service cloud.firestore {
     // d'accès ») : la lecture typée de l'application ignore un champ inconnu.
     // Budget : voir brews/.
     function isBeerJsonRecipe(r) {
-      return r.keys().hasOnly(['name', 'type', 'notes', 'style', 'batch_size', 'boil', 'mash',
-                               'ingredients'])
+      return r.keys().hasOnly(['name', 'type', 'author', 'notes', 'style', 'batch_size',
+                               'boil', 'mash', 'ingredients'])
         && hasName(r, 120)
         && r.get('type', 'all grain') in recipeTypes()
+        && (!('author' in r)
+            || (r.author is string && r.author.size() >= 1 && r.author.size() <= 120))
         && optString(r, 'notes', 10000)
         && (!('style' in r) || (r.style.keys().hasOnly(['name']) && hasName(r.style, 120)))
         && optMeasure(r, 'batch_size', 'l')
@@ -447,6 +452,16 @@ service cloud.firestore {
     // 900 expressions à un changement de statut, environ 470 à l'écriture des
     // 11 ajustements ; changer tous les groupes d'un coup dépasse la limite, et
     // l'application ne le fait pas.
+    //
+    // Mesure de la v0.1.17 (même émulateur, pad() = « return true », 98 tiennent dans
+    // une règle « if true » seule, environ 10 expressions chacun), recipe.author de
+    // 120 caractères : création d'un brassin qui copie la plus grande recette 4 pad(),
+    // soit une marge d'environ 40 expressions (8 sans auteur) ; création d'une recette
+    // 64 pad(), modification 61 ; brassin du 22 novembre, statut ou embouteillage,
+    // 93 pad() (limite de compilation). Sous users/ : prix au litre 93 pad(), coût figé
+    // de 200 lignes dont des lignes en litres 94 pad(). recipe.efficiency, même contrôlé
+    // par ses seules clés, faisait refuser la création d'un brassin : il n'est pas
+    // stocké. Toute règle ajoutée sur `recipe` se mesure contre ces 40 expressions.
     match /brews/{brewId} {
       allow read: if isMember();
       allow create: if isMember()
@@ -563,13 +578,16 @@ service cloud.firestore {
     // Prix d'un achat (v0.5). Identifiant : clé d'ingrédient (`ingredientKey`),
     // préfixe de nature puis nom normalisé, 100 caractères au plus. Un prix négatif ou
     // non fini rendrait le calcul du coût impossible ; un prix nul est un prix connu.
+    // Unité : grammes, sachets, ou litres depuis la v0.1.17 (prix au litre d'un ajout
+    // ou d'un houblon mesuré en volume). L'application ne propose les litres qu'au
+    // houblon et à l'ajout ; les règles ne lient pas l'unité au préfixe.
     function isPriceShape(d) {
       return d.keys().hasOnly(['name', 'price_eur', 'quantity', 'unit', 'updated_at'])
         && d.keys().hasAll(['name', 'price_eur', 'quantity', 'unit', 'updated_at'])
         && hasName(d, 120)
         && d.price_eur is number && d.price_eur >= 0 && d.price_eur <= 100000
         && d.quantity is number && d.quantity > 0 && d.quantity <= 1000000000
-        && d.unit in ['g', 'unit']
+        && d.unit in ['g', 'unit', 'l']
         && d.updated_at == request.time;
     }
 
@@ -602,7 +620,8 @@ service cloud.firestore {
 
     // Coût réel figé d'un brassin. Les éléments de `lines` ne peuvent pas être
     // inspectés par les règles : leur nombre est borné, et l'application les écrit à
-    // partir des résultats de brewing/. computed_at est l'heure de l'appareil (le
+    // partir des résultats de brewing/ (unité `g`, `unit`, `l` depuis la v0.1.17,
+    // `brew`, `bottle`). computed_at est l'heure de l'appareil (le
     // geste du brasseur, hors ligne compris) : aucune comparaison à request.time. Les
     // valeurs d'embouteillage gardées pour l'écart (CB15) ont les bornes de brews/.
     function isBrewCostShape(d, brewId) {

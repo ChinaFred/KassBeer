@@ -181,6 +181,11 @@ describe("users/{uid}/prices — forme", () => {
     ["prix nul (prix connu)", price({ price_eur: 0 }), true],
     ["prix de 100 000 €", price({ price_eur: 100000 }), true],
     ["levure au sachet", price({ name: "S-04", quantity: 5, unit: "unit" }), true],
+    [
+      "prix au litre (v0.1.17)",
+      price({ name: "Acide lactique", price_eur: 6.5, quantity: 0.1, unit: "l" }),
+      true,
+    ],
     ["quantité de 1e9", price({ quantity: 1000000000 }), true],
     ["nom de 120 caractères", price({ name: "P".repeat(120) }), true],
     ["champ inconnu", price({ stock: 3 }), false],
@@ -192,7 +197,8 @@ describe("users/{uid}/prices — forme", () => {
     ["quantité nulle", price({ quantity: 0 }), false],
     ["quantité au-delà de 1e9", price({ quantity: 1000000001 }), false],
     ["unité kg", price({ unit: "kg" }), false],
-    ["unité l (retirée)", price({ unit: "l" }), false],
+    ["unité ml", price({ unit: "ml" }), false],
+    ["unité L majuscule", price({ unit: "L" }), false],
     ["unité kwh (retirée)", price({ unit: "kwh" }), false],
     ["nom vide", price({ name: "" }), false],
     ["nom de 121 caractères", price({ name: "P".repeat(121) }), false],
@@ -271,8 +277,36 @@ describe("users/{uid}/fees — forme", () => {
   });
 });
 
+// Prix au litre (v0.1.17) : mêmes droits que tout prix, pour les cinq profils.
+describe("users/{uid}/prices — prix au litre, cinq profils", () => {
+  const litre = () => price({ name: "Acide lactique", price_eur: 6.5, quantity: 0.1, unit: "l" });
+  for (const [name, allowed] of Object.entries(ACCESS)) {
+    it(`${name} crée un prix au litre chez brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await expectRule(
+        allowed,
+        db(state.env, name).doc("users/brewer-a/prices/ajout-acide-lactique").set(litre()),
+      );
+    });
+  }
+});
+
 describe("users/{uid}/brew_costs — figeage et forme", () => {
   const ref = (id) => owner().doc(`users/brewer-a/brew_costs/${id}`);
+
+  it("figeage avec une ligne en litres (v0.1.17) : accepté", async () => {
+    const data = brewCost("b-new");
+    data.lines = [
+      ...data.lines,
+      {
+        key: "ajout-acide-lactique",
+        name: "Acide lactique",
+        quantity: 0.005,
+        unit: "l",
+        cost_eur: 0.3,
+      },
+    ];
+    await expectRule(true, ref("b-new").set(data));
+  });
 
   it("premier figeage (initial) en création : accepté", async () => {
     await expectRule(true, ref("b-new").set(brewCost("b-new")));

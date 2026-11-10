@@ -48,8 +48,42 @@ abstract final class TextesCout {
       ? 'Coût indisponible.'
       : 'Coût indisponible : $prixManquants prix '
             'manquant${prixManquants > 1 ? 's' : ''}.';
-  static String uniteIncompatible(String name) =>
-      '$name : unité du prix incompatible.';
+
+  /// Prix d'une unité qui ne chiffre pas la ligne : « Acide lactique · 5 ml :
+  /// votre prix est au gramme. Saisissez un prix au litre pour compter cette
+  /// ligne. ». L'unité demandée est celle de la ligne ([ligne] : sachet, gramme
+  /// ou litre), jamais supposée.
+  static String prixIncompatible(
+    String ligne, {
+    required CostUnit prix,
+    required CostUnit attendu,
+  }) =>
+      '$ligne : votre prix est ${_au(prix)}. Saisissez un prix ${_au(attendu)} '
+      'pour compter cette ligne.';
+
+  static String _au(CostUnit unit) => switch (unit) {
+    CostUnit.unit => 'au sachet',
+    CostUnit.litre => 'au litre',
+    CostUnit.gram => 'au gramme',
+    CostUnit.brew => 'par brassin',
+    CostUnit.bottle => 'par bouteille',
+  };
+
+  /// Brassin dont une ligne en volume n'a pas de prix utilisable, sans action
+  /// sur place (CB8).
+  static String brassinEnVolume(String name) =>
+      'Ce brassin compte $name en volume : saisissez un prix au litre dans Mes '
+      'prix pour figer son coût.';
+
+  static String deuxUnites(String name) =>
+      '$name : quantités en grammes et en volume, qui ne s\'additionnent pas.';
+  static String deuxUnitesAuteur(String name) =>
+      '${deuxUnites(name)} Mettez les deux lignes dans la même unité.';
+  static String deuxUnitesLecteur(String name) =>
+      '${deuxUnites(name)} Dupliquez la recette pour la corriger à votre nom.';
+  static String deuxUnitesBrassin(String name) =>
+      'Ce brassin compte $name en grammes et en volume : ces quantités ne '
+      's\'additionnent pas, son coût ne peut pas être figé.';
   static String prixIllisible(String name) => '$name : prix illisible.';
 }
 
@@ -84,7 +118,7 @@ LigneDetail _ligne(
 }) {
   final cost = formatEuros(costEur);
   final (String texte, String parle) = switch (unit) {
-    CostUnit.gram || CostUnit.unit => (
+    CostUnit.gram || CostUnit.unit || CostUnit.litre => (
       formatQuantite(quantity, unit),
       quantiteParlee(quantity, unit),
     ),
@@ -242,6 +276,7 @@ class ActionsRaisons {
     this.onCompleterRecette,
     this.onModifierEmbouteillage,
     this.onMesPrix,
+    this.brassin = false,
   });
 
   /// « Saisir le prix » (manquant) ou « Corriger le prix » (incompatible,
@@ -250,6 +285,9 @@ class ActionsRaisons {
   final VoidCallback? onCompleterRecette;
   final VoidCallback? onModifierEmbouteillage;
   final VoidCallback? onMesPrix;
+
+  /// Vrai pour le coût d'un brassin : sa copie figée ne se corrige pas.
+  final bool brassin;
 }
 
 /// Une ligne par raison (LI7 à LI10, CR4 à CR6, CB8), aucune avec un montant.
@@ -258,22 +296,62 @@ List<Widget> lignesRaisons(List<RaisonCout> raisons, ActionsRaisons actions) =>
 
 Widget? _ligneRaison(RaisonCout raison, ActionsRaisons actions) {
   final onPrix = actions.onPrix;
+  String ligne(IngredientCout i) =>
+      parties([i.name, formatQuantite(i.quantity, i.unit)]).texte;
   switch (raison) {
-    case PrixManquant(:final ingredient):
-      final quantite = formatQuantite(ingredient.quantity, ingredient.unit);
+    // Brassin, ligne en volume, aucune action sur place : Mes prix seul.
+    case RaisonPrix(:final ingredient)
+        when actions.brassin &&
+            onPrix == null &&
+            ingredient.unit == CostUnit.litre &&
+            raison is! PrixIllisible:
       return LigneRaison(
-        texte: parties([ingredient.name, quantite]).texte,
+        texte: TextesCout.brassinEnVolume(ingredient.name),
+        action: 'Ouvrir Mes prix',
+        onAction: actions.onMesPrix,
+      );
+    case PrixManquant(:final ingredient):
+      final litres = ingredient.unit == CostUnit.litre;
+      return LigneRaison(
+        texte: ligne(ingredient),
         parle:
             '${ingredient.name}, '
             '${quantiteParlee(ingredient.quantity, ingredient.unit)}, '
             'prix manquant',
-        action: 'Saisir le prix',
-        actionParlee: 'Saisir le prix de ${ingredient.name}',
+        action: litres ? 'Saisir le prix au litre' : 'Saisir le prix',
+        actionParlee: litres
+            ? 'Saisir le prix au litre de ${ingredient.name}'
+            : 'Saisir le prix de ${ingredient.name}',
         onAction: onPrix == null ? null : () => onPrix(raison),
       );
-    case PrixUniteIncompatible(:final ingredient):
+    case QuantitesDeDeuxUnites(:final name):
+      if (actions.brassin) {
+        return LigneRaison(texte: TextesCout.deuxUnitesBrassin(name));
+      }
+      final completer = actions.onCompleterRecette;
+      return completer == null
+          ? LigneRaison(texte: TextesCout.deuxUnitesLecteur(name))
+          : LigneRaison(
+              texte: TextesCout.deuxUnitesAuteur(name),
+              action: 'Compléter la recette',
+              onAction: completer,
+            );
+    case PrixUniteIncompatible(:final ingredient, :final price):
+      final parle = parties([
+        ingredient.name,
+        quantiteParlee(ingredient.quantity, ingredient.unit),
+      ]).parle;
       return LigneRaison(
-        texte: TextesCout.uniteIncompatible(ingredient.name),
+        texte: TextesCout.prixIncompatible(
+          ligne(ingredient),
+          prix: price.unit,
+          attendu: ingredient.unit,
+        ),
+        parle: TextesCout.prixIncompatible(
+          parle,
+          prix: price.unit,
+          attendu: ingredient.unit,
+        ),
         action: 'Corriger le prix',
         actionParlee: 'Corriger le prix de ${ingredient.name}',
         onAction: onPrix == null ? null : () => onPrix(raison),
@@ -326,6 +404,9 @@ bool memeRaison(RaisonCout a, RaisonCout b) {
   if (a.runtimeType != b.runtimeType) return false;
   if (a is RaisonPrix && b is RaisonPrix) {
     return a.ingredient.key == b.ingredient.key;
+  }
+  if (a is QuantitesDeDeuxUnites && b is QuantitesDeDeuxUnites) {
+    return a.name == b.name;
   }
   return true;
 }
@@ -418,6 +499,7 @@ Future<bool> ouvrirPrixDeRaison(
     initial: raison is PrixUniteIncompatible ? raison.price : null,
     nature: ingredient.nature,
     name: ingredient.name,
+    uniteLigne: ingredient.unit,
   );
 }
 

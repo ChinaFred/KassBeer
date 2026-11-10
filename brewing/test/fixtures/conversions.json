@@ -1,0 +1,52 @@
+{
+  "description": "Conversions d'unités de brassage lues dans un fichier importé (ADR-005, L2) : densité en degrés Plato, couleur en Lovibond ou en SRM, rendement d'un fermentescible donné en densité (yield.potential). Valeurs attendues calculées hors du paquet, avec les formules ci-dessous.",
+  "formulas": {
+    "plato_to_sg": "SG = 1 + P / (258,6 − (P / 258,2) × 227,1)",
+    "sg_to_plato": "P = −616,868 + 1111,14 × SG − 630,272 × SG² + 135,997 × SG³ (ASBC). Les deux formules ne sont pas l'inverse exacte l'une de l'autre : 12 °P → SG → 12,002 °P.",
+    "srm_to_ebc": "EBC = SRM × 1,97 ; SRM = EBC / 1,97",
+    "lovibond_to_ebc": "°L lu comme SRM (même convention que la couleur de Morey du paquet, moreyColorEbc) : EBC = °L × 1,97",
+    "potential_to_yield": "rendement (%) = (potentiel − 1) × 1000 / 46,214 × 100 ; 46,214 points par livre et par gallon pour le saccharose pur (Palmer), soit 100 %"
+  },
+  "plato_to_sg": [
+    { "plato": 0, "expected": 1.0, "tolerance": 1e-9 },
+    { "plato": 5, "expected": 1.019669378, "tolerance": 1e-9 },
+    { "plato": 12, "expected": 1.048378242, "tolerance": 1e-9 },
+    { "plato": 20, "expected": 1.082984458, "tolerance": 1e-9 }
+  ],
+  "sg_to_plato": [
+    { "sg": 1.02, "expected": 5.080916, "tolerance": 1e-6 },
+    { "sg": 1.048, "expected": 11.912081, "tolerance": 1e-6 },
+    { "sg": 1.08, "expected": 19.330992, "tolerance": 1e-6 }
+  ],
+  "srm_to_ebc": [
+    { "srm": 2, "expected": 3.94, "tolerance": 1e-9 },
+    { "srm": 500, "expected": 985, "tolerance": 1e-9 }
+  ],
+  "ebc_to_srm": [
+    { "ebc": 3.9, "expected": 1.979695431, "tolerance": 1e-9 },
+    { "ebc": 1000, "expected": 507.614213198, "tolerance": 1e-9 }
+  ],
+  "lovibond_to_ebc": [
+    { "lovibond": 2, "expected": 3.94, "tolerance": 1e-9 },
+    { "lovibond": 3.5, "expected": 6.895, "tolerance": 1e-9 }
+  ],
+  "ebc_to_lovibond": [
+    { "ebc": 3.9, "expected": 1.979695431, "tolerance": 1e-9 }
+  ],
+  "potential_to_yield": [
+    { "potential": 1.037, "expected": 80.062319, "tolerance": 1e-6 },
+    { "potential": 1.034, "expected": 73.570779, "tolerance": 1e-6 },
+    { "potential": 1.046214, "expected": 100, "tolerance": 1e-6 },
+    { "potential": 1.0, "expected": 0, "tolerance": 1e-12 }
+  ],
+  "invalid": [
+    { "conversion": "plato_to_sg", "value": -10, "reason": "densité sous 0,980" },
+    { "conversion": "plato_to_sg", "value": 60, "reason": "densité au-delà de 1,200" },
+    { "conversion": "sg_to_plato", "value": 1.3, "reason": "densité au-delà de 1,200" },
+    { "conversion": "srm_to_ebc", "value": -1, "reason": "couleur négative" },
+    { "conversion": "lovibond_to_ebc", "value": -1, "reason": "couleur négative" },
+    { "conversion": "ebc_to_srm", "value": -1, "reason": "couleur négative" },
+    { "conversion": "potential_to_yield", "value": 1.05, "reason": "au-delà du saccharose pur (108 %)" },
+    { "conversion": "potential_to_yield", "value": 0.99, "reason": "potentiel sous 1,000" }
+  ]
+}

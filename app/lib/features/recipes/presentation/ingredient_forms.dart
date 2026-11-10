@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/champ_nombre.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/segments.dart';
 import '../domain/beerjson.dart';
 import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
@@ -30,20 +31,75 @@ String? erreurNomIngredient(String text) {
 String quantiteInhabituelle(String quantite) =>
     'Quantité inhabituelle : $quantite. Vérifiez la saisie.';
 
-/// Avertissement d'une masse saisie [text] dans [unitGrams] grammes par unité,
-/// au-delà de [thresholdGrams].
-String? _warnMass(
-  String text,
-  double thresholdGrams, {
-  required bool kilograms,
-}) {
+/// Unité de saisie de la quantité d'un ajout, d'un houblon extrait ou d'une
+/// levure (décision du 2026-11-10) : grammes ou millilitres, enregistrés en
+/// grammes ou en litres.
+enum UniteSaisie {
+  grammes('g', 'grammes'),
+  millilitres('ml', 'millilitres');
+
+  const UniteSaisie(this.label, this.parle);
+
+  /// Libellé court du segment et du champ.
+  final String label;
+
+  /// Libellé lu par un lecteur d'écran.
+  final String parle;
+}
+
+/// Mention d'un houblon mesuré en volume, seul terme de la fiche, du calcul et
+/// de l'éditeur ; [kHoublonEnVolumePhrase] en début de phrase.
+const kHoublonEnVolume = 'non compté dans l\'amertume (mesuré en volume)';
+
+/// [kHoublonEnVolume] avec sa majuscule de début de phrase.
+final String kHoublonEnVolumePhrase =
+    kHoublonEnVolume[0].toUpperCase() + kHoublonEnVolume.substring(1);
+
+/// Texte du champ de quantité pour [q], dans son unité de saisie.
+String texteQuantite(Quantite? q) {
+  if (q == null) return '';
+  // Arrondi au millième de millilitre : 0,005 L × 1 000 ne donne pas toujours 5.
+  return texteSaisi(
+    q.enLitres ? (q.valeur * 1000000).round() / 1000 : q.valeur,
+  );
+}
+
+/// Unité de saisie de [q] : millilitres pour un volume.
+UniteSaisie uniteDe(Quantite? q) =>
+    q != null && q.enLitres ? UniteSaisie.millilitres : UniteSaisie.grammes;
+
+/// Quantité lue du texte [text] saisi en [unite], ou `null` s'il est vide.
+Quantite? lireQuantite(String text, UniteSaisie unite) {
   final value = lireNombre(text).valeur;
   if (value == null) return null;
-  final grams = kilograms ? value * 1000 : value;
+  return unite == UniteSaisie.millilitres
+      ? Quantite.litres(value / 1000)
+      : Quantite.grammes(value);
+}
+
+/// Avertissement d'une quantité saisie [text] en [unite] : au-delà de
+/// [thresholdGrams] grammes, ou de [kUnusualLineLitres] litres.
+String? _warnQuantite(String text, UniteSaisie unite, double thresholdGrams) {
+  final q = lireQuantite(text, unite);
+  if (q == null) return null;
+  if (q.enLitres) {
+    return q.valeur > kUnusualLineLitres
+        ? quantiteInhabituelle(formatVolumeLigne(q.valeur))
+        : null;
+  }
+  return q.valeur > thresholdGrams
+      ? quantiteInhabituelle(formatGrammes(q.valeur))
+      : null;
+}
+
+/// Avertissement d'une masse saisie [text] en kilogrammes, au-delà de
+/// [thresholdGrams] grammes.
+String? _warnKilograms(String text, double thresholdGrams) {
+  final value = lireNombre(text).valeur;
+  if (value == null) return null;
+  final grams = value * 1000;
   if (grams <= thresholdGrams) return null;
-  return quantiteInhabituelle(
-    kilograms ? formatKilogrammes(grams) : formatGrammes(grams),
-  );
+  return quantiteInhabituelle(formatKilogrammes(grams));
 }
 
 /// Boutons et cadre communs des formulaires de ligne.
@@ -117,7 +173,10 @@ class _Cadre extends StatelessWidget {
   }
 }
 
-/// Choix obligatoire par boutons segmentés, avec son message d'erreur.
+/// Choix par boutons segmentés, avec son message d'erreur ou son avertissement
+/// (non bloquant, couleur `tertiary`). Les segments passent l'un sous l'autre
+/// quand leurs libellés ne tiennent pas sur la largeur, à l'échelle de texte
+/// courante.
 class _Choix<T> extends StatelessWidget {
   const _Choix({
     required this.label,
@@ -125,47 +184,72 @@ class _Choix<T> extends StatelessWidget {
     required this.labelOf,
     required this.selected,
     required this.onChanged,
+    this.semanticsOf,
     this.error,
+    this.avertissement,
   });
 
   final String label;
   final List<T> values;
   final String Function(T) labelOf;
+
+  /// Libellé lu par un lecteur d'écran, s'il diffère du libellé affiché.
+  final String Function(T)? semanticsOf;
   final T? selected;
   final ValueChanged<T?> onChanged;
   final String? error;
+  final String? avertissement;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final err = error;
+    final warn = avertissement;
+    Widget message(String text, Color color) => Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        text,
+        style: theme.textTheme.bodySmall?.copyWith(color: color),
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
-        SegmentedButton<T>(
+        BoutonsSegmentes<T>(
+          values: values,
+          labelOf: labelOf,
+          semanticsOf: semanticsOf,
           emptySelectionAllowed: true,
-          segments: [
-            for (final v in values)
-              ButtonSegment(value: v, label: Text(labelOf(v))),
-          ],
           selected: {?selected},
           onSelectionChanged: (s) => onChanged(s.isEmpty ? null : s.single),
         ),
         if (err != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              err,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          ),
+          message(err, theme.colorScheme.error)
+        else if (warn != null)
+          message(warn, theme.colorScheme.tertiary),
       ],
     );
   }
+}
+
+/// « Unité de la quantité » : g ou ml, lus « grammes » et « millilitres ».
+class _ChoixUnite extends StatelessWidget {
+  const _ChoixUnite({required this.selected, required this.onChanged});
+
+  final UniteSaisie selected;
+  final ValueChanged<UniteSaisie> onChanged;
+
+  @override
+  Widget build(BuildContext context) => _Choix<UniteSaisie>(
+    label: 'Unité de la quantité',
+    values: UniteSaisie.values,
+    labelOf: (u) => u.label,
+    semanticsOf: (u) => u.parle,
+    selected: selected,
+    onChanged: (u) => onChanged(u ?? selected),
+  );
 }
 
 /// Liste déroulante d'une valeur énumérée de BeerJSON, facultative : « Non
@@ -318,7 +402,20 @@ class _FormulaireFermentescibleState
   final _mass = TextEditingController();
   final _ebc = TextEditingController();
   final _yield = TextEditingController();
-  FermentableKind _kind = FermentableKind.malt;
+
+  /// Valeur de [typesFermentable] : `grain`, `sugar`, ou la valeur importée de
+  /// la ligne modifiée, gardée tant que le brasseur n'en choisit pas une autre.
+  String _type = FermentableKind.malt.storedValue;
+
+  /// Type enregistré hors de Malt et Sucre (extrait, miel, `other`…), montré en
+  /// troisième segment pendant toute la modification ; `null` sinon.
+  String? get _typeImporte {
+    final t = widget.initial?.type;
+    return t == null || typesFermentable.proposees.contains(t) ? null : t;
+  }
+
+  static const natureAPreciser =
+      'Nature à préciser pour le calcul : choisissez Malt ou Sucre.';
 
   @override
   int get remaining => widget.remaining;
@@ -333,7 +430,7 @@ class _FormulaireFermentescibleState
     final i = widget.initial;
     if (i != null) {
       name.text = i.name;
-      _kind = i.kind;
+      _type = i.type;
       _mass.text = texteSaisi(i.weightG / 1000);
       _ebc.text = texteSaisi(i.ebc);
       _yield.text = texteSaisi(i.yieldPct);
@@ -351,7 +448,7 @@ class _FormulaireFermentescibleState
   @override
   FermentableLine readLine() => FermentableLine(
     name: name.text.trim(),
-    kind: _kind,
+    type: _type,
     weightG: lireNombre(_mass.text).valeur! * 1000,
     ebc: lireNombre(_ebc.text).valeur,
     yieldPct: lireNombre(_yield.text).valeur,
@@ -379,26 +476,22 @@ class _FormulaireFermentescibleState
         lastAdded: lastAdded,
         children: [
           nameField(),
-          _Choix<FermentableKind>(
+          _Choix<String>(
             label: 'Nature',
-            values: FermentableKind.values,
-            labelOf: (k) => switch (k) {
-              FermentableKind.malt => 'Malt',
-              FermentableKind.sugar => 'Sucre',
-            },
-            selected: _kind,
-            onChanged: (k) => setState(() => _kind = k ?? _kind),
+            values: [...typesFermentable.proposees, ?_typeImporte],
+            labelOf: typesFermentable.libelle,
+            selected: _type,
+            avertissement: FermentableKind.ofType(_type) == null
+                ? natureAPreciser
+                : null,
+            onChanged: (t) => setState(() => _type = t ?? _type),
           ),
           ChampNombre(
             controller: _mass,
             label: 'Quantité (kg)',
             obligatoire: true,
             minExclu: true,
-            avertissement: _warnMass(
-              _mass.text,
-              kUnusualFermentableGrams,
-              kilograms: true,
-            ),
+            avertissement: _warnKilograms(_mass.text, kUnusualFermentableGrams),
             onChanged: (_) => setState(() {}),
           ),
           ChampNombre(
@@ -447,14 +540,61 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
   final _alpha = TextEditingController();
   final _time = TextEditingController();
   HopUse _use = HopUse.boil;
-  HopForm? _form;
+
+  /// Valeur de [formesHoublon], ou `null` tant qu'aucune n'est choisie.
+  String? _form;
   bool _formError = false;
+  UniteSaisie _unite = UniteSaisie.grammes;
+
+  /// Forme enregistrée hors de Pellets et Cônes (import), montrée en troisième
+  /// segment pendant toute la modification ; `null` sinon.
+  String? get _formeImportee {
+    final f = widget.initial?.form;
+    return f == null || formesHoublon.proposees.contains(f) ? null : f;
+  }
+
+  /// Moment enregistré que l'éditeur ne propose pas (empâtage,
+  /// conditionnement, import), montré pendant toute la modification.
+  HopUse? get _momentImporte {
+    final u = widget.initial?.use;
+    return u == HopUse.mash || u == HopUse.package ? u : null;
+  }
+
+  /// Un extrait se mesure en grammes ou en millilitres ; une ligne déjà en
+  /// volume garde ce choix, et il reste visible tant que l'unité est ml.
+  bool get _uniteAuChoix =>
+      _form == 'extract' ||
+      (widget.initial?.amount.enLitres ?? false) ||
+      _unite == UniteSaisie.millilitres;
+
+  static const formeHorsCalcul =
+      'Forme non prise en charge par le calcul de l\'amertume : choisissez '
+      'Pellets ou Cônes.';
+
+  /// Extrait pesé : la quantité en volume l'écarte du calcul sans changer sa
+  /// forme.
+  static const extraitPese =
+      'Forme non prise en charge par le calcul de l\'amertume. Pour un extrait, '
+      'indiquez la quantité en ml.';
+
+  /// Avertissement sous « Forme » : houblon d'ébullition pesé, d'une forme sans
+  /// facteur d'utilisation (poudre, extrait, cônes frais).
+  String? get _formeAvertissement {
+    final form = _form;
+    if (form == null || _use != HopUse.boil) return null;
+    if (_uniteAuChoix && _unite == UniteSaisie.millilitres) return null;
+    if (HopForm.ofBeerJson(form) != null) return null;
+    return form == 'extract' ? extraitPese : formeHorsCalcul;
+  }
 
   /// Texte saisi dans la durée pour chaque moment : revenir à un moment remet
   /// son texte, un moment jamais saisi a un champ vide.
   final _timeTexts = <HopUse, String>{};
 
   static const formMissing = 'Choisissez une forme.';
+  static const momentHorsCalcul =
+      'Moment conservé du fichier importé ; le calcul de l\'amertume ne le '
+      'prend pas en charge.';
   static const whirlpoolHelp =
       'Temps entre l\'arrêt du feu et le refroidissement. Pour un ajout à '
       'l\'arrêt du feu sans infusion, choisissez Ébullition et 0 min.';
@@ -478,7 +618,8 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
     final i = widget.initial;
     if (i != null) {
       name.text = i.name;
-      _mass.text = texteSaisi(i.weightG);
+      _mass.text = texteQuantite(i.amount);
+      _unite = uniteDe(i.amount);
       _alpha.text = texteSaisi(i.alphaPct);
       _use = i.use;
       _form = i.form;
@@ -514,13 +655,21 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
   @override
   HopLine readLine() {
     final form = _form!;
+    final initial = widget.initial;
     return HopLine(
       name: name.text.trim(),
-      weightG: lireNombre(_mass.text).valeur!,
+      amount: lireQuantite(
+        _mass.text,
+        _uniteAuChoix ? _unite : UniteSaisie.grammes,
+      )!,
       alphaPct: lireNombre(_alpha.text).valeur,
       use: _use,
       form: form,
       timeMin: _minutes,
+      // Jour d'ajout d'un import : gardé tant que le houblon reste à cru.
+      dayMin: _use == HopUse.dryHop && initial?.use == HopUse.dryHop
+          ? initial?.dayMin
+          : null,
     );
   }
 
@@ -532,6 +681,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
     _timeTexts.clear();
     _form = null;
     _formError = false;
+    _unite = UniteSaisie.grammes;
   }
 
   String? get _boilWarning {
@@ -559,22 +709,39 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
         lastAdded: lastAdded,
         children: [
           nameField(),
+          if (_uniteAuChoix)
+            _ChoixUnite(
+              selected: _unite,
+              onChanged: (u) => setState(() => _unite = u),
+            ),
           ChampNombre(
+            key: ValueKey(_uniteAuChoix ? _unite : UniteSaisie.grammes),
             controller: _mass,
-            label: 'Quantité (g)',
+            label:
+                'Quantité (${(_uniteAuChoix ? _unite : UniteSaisie.grammes).label})',
+            aide: _uniteAuChoix && _unite == UniteSaisie.millilitres
+                ? '$kHoublonEnVolumePhrase.'
+                : null,
             obligatoire: true,
             minExclu: true,
-            avertissement: _warnMass(
+            avertissement: _warnQuantite(
               _mass.text,
+              _uniteAuChoix ? _unite : UniteSaisie.grammes,
               kUnusualHopGrams,
-              kilograms: false,
             ),
             onChanged: (_) => setState(() {}),
           ),
           ChampNombre(controller: _alpha, label: 'Acides alpha (%)', max: 100),
           _Choix<HopUse>(
             label: 'Utilisation',
-            values: HopUse.values,
+            values: [
+              HopUse.boil,
+              HopUse.afterBoil,
+              HopUse.dryHop,
+              // Moment importé que l'éditeur ne propose pas : il reste visible
+              // et choisi, l'enregistrement le conserve.
+              ?_momentImporte,
+            ],
             labelOf: libelleUtilisationHoublon,
             selected: _use,
             onChanged: (u) => setState(() {
@@ -596,24 +763,33 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
               HopUse.boil => 'Durée d\'ébullition (min)',
               HopUse.afterBoil => 'Durée d\'infusion (min)',
               HopUse.dryHop => 'Durée à cru (jours)',
+              HopUse.mash || HopUse.package => 'Durée (min)',
             },
-            aide: _use == HopUse.afterBoil ? whirlpoolHelp : null,
-            obligatoire: _use != HopUse.dryHop,
+            aide: switch (_use) {
+              HopUse.afterBoil => whirlpoolHelp,
+              HopUse.dryHop when widget.initial?.dayMin != null =>
+                'Jour d\'ajout du fichier importé conservé : jour '
+                    '${formatNombre(widget.initial!.dayMin! / minutesParJour, decimales: 1)}.',
+              HopUse.mash || HopUse.package => momentHorsCalcul,
+              _ => null,
+            },
+            obligatoire: _use == HopUse.boil || _use == HopUse.afterBoil,
             entier: _use != HopUse.dryHop,
             min: _use == HopUse.afterBoil ? 1 : 0,
-            max: _use == HopUse.dryHop ? null : 600,
+            max: _use == HopUse.boil || _use == HopUse.afterBoil ? 600 : null,
             erreurPropre: _use == HopUse.afterBoil
                 ? (t) => lireNombre(t).valeur == 0 ? whirlpoolZero : null
                 : null,
             avertissement: _boilWarning,
             onChanged: (_) => setState(() {}),
           ),
-          _Choix<HopForm>(
+          _Choix<String>(
             label: 'Forme',
-            values: const [HopForm.pellet, HopForm.whole],
-            labelOf: libelleFormeHoublon,
+            values: [...formesHoublon.proposees, ?_formeImportee],
+            labelOf: formesHoublon.libelle,
             selected: _form,
             error: _formError ? formMissing : null,
+            avertissement: _formeAvertissement,
             onChanged: (f) => setState(() {
               _form = f;
               _formError = false;
@@ -625,17 +801,14 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
   }
 }
 
-/// « Ébullition », « Whirlpool », « À cru ».
+/// « Ébullition », « Whirlpool », « À cru », et, pour un import, « Empâtage » et
+/// « Conditionnement ».
 String libelleUtilisationHoublon(HopUse use) => switch (use) {
+  HopUse.mash => 'Empâtage',
   HopUse.boil => 'Ébullition',
   HopUse.afterBoil => 'Whirlpool',
   HopUse.dryHop => 'À cru',
-};
-
-/// « Pellets », « Cônes ».
-String libelleFormeHoublon(HopForm form) => switch (form) {
-  HopForm.pellet => 'Pellets',
-  HopForm.whole => 'Cônes',
+  HopUse.package => 'Conditionnement',
 };
 
 /// Formulaire d'un autre ajout (I3) : aucun calcul.
@@ -661,6 +834,7 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
   final _time = TextEditingController();
   String? _type;
   OtherUse? _use;
+  UniteSaisie _unite = UniteSaisie.grammes;
 
   /// Champ « Utilisation », revalidé quand la durée change.
   final _useField = GlobalKey<FormFieldState<OtherUse?>>();
@@ -683,7 +857,8 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
     final i = widget.initial;
     if (i != null) {
       name.text = i.name;
-      _mass.text = texteSaisi(i.weightG);
+      _mass.text = texteQuantite(i.amount);
+      _unite = uniteDe(i.amount);
       _time.text = texteSaisi(i.timeMin);
       _type = i.type;
       _use = i.use;
@@ -700,7 +875,7 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
   @override
   OtherLine readLine() => OtherLine(
     name: name.text.trim(),
-    weightG: lireNombre(_mass.text).valeur!,
+    amount: lireQuantite(_mass.text, _unite)!,
     type: _type,
     use: _use,
     timeMin: lireNombre(_time.text).valeur?.round(),
@@ -712,6 +887,7 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
     _time.clear();
     _type = null;
     _use = null;
+    _unite = UniteSaisie.grammes;
   }
 
   @override
@@ -729,15 +905,20 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
         lastAdded: lastAdded,
         children: [
           nameField(),
+          _ChoixUnite(
+            selected: _unite,
+            onChanged: (u) => setState(() => _unite = u),
+          ),
           ChampNombre(
+            key: ValueKey(_unite),
             controller: _mass,
-            label: 'Quantité (g)',
+            label: 'Quantité (${_unite.label})',
             obligatoire: true,
             minExclu: true,
-            avertissement: _warnMass(
+            avertissement: _warnQuantite(
               _mass.text,
+              _unite,
               kUnusualOtherGrams,
-              kilograms: false,
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -806,6 +987,7 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
   final _amount = TextEditingController();
   final _attenuation = TextEditingController();
   String? _type;
+  UniteSaisie _unite = UniteSaisie.grammes;
 
   /// Valeur de `formesLevure` ; une valeur hors des deux segments (import) est
   /// gardée tant que le brasseur n'en choisit pas une autre.
@@ -831,7 +1013,8 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
     final i = widget.initial;
     if (i != null) {
       name.text = i.name;
-      _amount.text = texteSaisi(i.amountG);
+      _amount.text = texteQuantite(i.amount);
+      _unite = uniteDe(i.amount);
       _attenuation.text = texteSaisi(i.attenuationPct);
       _type = i.type;
       _form = i.form;
@@ -851,7 +1034,7 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
     type: _type,
     form: _form,
     attenuationPct: lireNombre(_attenuation.text).valeur,
-    amountG: lireNombre(_amount.text).valeur,
+    amount: lireQuantite(_amount.text, _unite),
   );
 
   @override
@@ -876,9 +1059,14 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
         onSubmit: submit,
         children: [
           nameField(),
+          _ChoixUnite(
+            selected: _unite,
+            onChanged: (u) => setState(() => _unite = u),
+          ),
           ChampNombre(
+            key: ValueKey(_unite),
             controller: _amount,
-            label: 'Quantité (g)',
+            label: 'Quantité (${_unite.label})',
             aide:
                 'Le coût compte un sachet par levure, quelle que soit la '
                 'quantité.',

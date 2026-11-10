@@ -4,9 +4,13 @@ import 'dart:io';
 import 'package:brewing/brewing.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
+import 'package:kass_beer/core/presentation/formats.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/costs/domain/brew_cost.dart';
+import 'package:kass_beer/features/costs/presentation/bloc_cout.dart'
+    show TextesCout;
+import 'package:kass_beer/features/costs/presentation/formats_cout.dart';
 import 'package:kass_beer/features/costs/domain/cost_evaluation.dart';
 import 'package:kass_beer/features/costs/domain/fee.dart';
 import 'package:kass_beer/features/costs/domain/price.dart';
@@ -89,13 +93,13 @@ final pils = prix(IngredientNature.malt, 'Pils', 47.5, 25000);
 final cascade = prix(IngredientNature.hop, 'Cascade', 4.5, 100);
 final s04 = prix(IngredientNature.yeast, 'S-04', 3.99, 1);
 
-const pils5kg = FermentableLine(
-  name: 'Pils',
-  kind: FermentableKind.malt,
-  weightG: 5000,
+const pils5kg = FermentableLine(name: 'Pils', type: 'grain', weightG: 5000);
+HopLine houblon(String name, double grams) => HopLine(
+  name: name,
+  amount: Quantite.grammes(grams),
+  use: HopUse.boil,
+  form: 'pellet',
 );
-HopLine houblon(String name, double grams) =>
-    HopLine(name: name, weightG: grams, use: HopUse.boil, form: HopForm.pellet);
 const s04Line = YeastLine(name: 'S-04');
 
 const recette = RecipeContent(
@@ -262,7 +266,7 @@ void main() {
         name: 'N',
         batchVolumeL: 20,
         fermentables: const [pils5kg],
-        others: const [OtherLine(name: 'Pils', weightG: 10)],
+        others: const [OtherLine(name: 'Pils', amount: Quantite.grammes(10))],
       );
       final cout =
           recetteAvec(content, prices: prixLus([pils]), fees: fraisLus([]))
@@ -307,14 +311,10 @@ void main() {
         fermentables: const [
           FermentableLine(
             name: 'Munich (17.7 EBC)',
-            kind: FermentableKind.malt,
+            type: 'grain',
             weightG: 400,
           ),
-          FermentableLine(
-            name: 'Wheat',
-            kind: FermentableKind.malt,
-            weightG: 700,
-          ),
+          FermentableLine(name: 'Wheat', type: 'grain', weightG: 700),
         ],
         hops: [houblon('Cascade', 15.5)],
       );
@@ -383,11 +383,7 @@ void main() {
         name: 'Négatif',
         batchVolumeL: 20,
         fermentables: [
-          FermentableLine(
-            name: 'Pils',
-            kind: FermentableKind.malt,
-            weightG: -4321,
-          ),
+          FermentableLine(name: 'Pils', type: 'grain', weightG: -4321),
         ],
       );
       for (var i = 0; i < 2; i++) {
@@ -435,6 +431,225 @@ void main() {
       expect(cout.prixManquants, 1);
     });
 
+    test('ligne en volume et prix au litre (décision du 2026-11-10)', () {
+      const lactique = OtherLine(
+        name: 'Acide lactique',
+        amount: Quantite.litres(0.005),
+      );
+      const enVolume = RecipeContent(
+        name: 'Saison',
+        batchVolumeL: 20,
+        fermentables: [pils5kg],
+        others: [lactique],
+        yeasts: [s04Line],
+      );
+      // 6,50 € les 100 ml, soit 65 €/L : 5 ml coûtent 0,325 €.
+      final auLitre = prix(
+        IngredientNature.addition,
+        'Acide lactique',
+        6.5,
+        0.1,
+        unit: CostUnit.litre,
+      );
+      final chiffre =
+          recetteAvec(
+                enVolume,
+                prices: prixLus([pils, s04, auLitre]),
+                fees: fraisLus([]),
+              )
+              as CoutObtenu;
+      final ligne = chiffre.lignes.firstWhere(
+        (l) => l.name == 'Acide lactique',
+      );
+      expect(ligne.unit, CostUnit.litre);
+      expect(ligne.quantity, 0.005);
+      expect(ligne.costEur, closeTo(0.325, 1e-12));
+      expect(chiffre.totalEur, closeTo(9.5 + 0.325 + 3.99, 1e-9));
+
+      // Sans prix : prix manquant ordinaire.
+      final sansPrix =
+          recetteAvec(
+                enVolume,
+                prices: prixLus([pils, s04]),
+                fees: fraisLus([]),
+              )
+              as CoutIndisponible;
+      final manquant = sansPrix.raisons.single as PrixManquant;
+      expect(manquant.ingredient.unit, CostUnit.litre);
+
+      // Prix au gramme face à une ligne en volume, et l'inverse : incompatible,
+      // aucune densité supposée.
+      final auGramme = prix(
+        IngredientNature.addition,
+        'Acide lactique',
+        6,
+        100,
+      );
+      final incompatible =
+          recetteAvec(
+                enVolume,
+                prices: prixLus([pils, s04, auGramme]),
+                fees: fraisLus([]),
+              )
+              as CoutIndisponible;
+      expect(
+        (incompatible.raisons.single as PrixUniteIncompatible).price.unit,
+        CostUnit.gram,
+      );
+      const pese = RecipeContent(
+        name: 'Saison',
+        batchVolumeL: 20,
+        fermentables: [pils5kg],
+        others: [
+          OtherLine(name: 'Acide lactique', amount: Quantite.grammes(5)),
+        ],
+        yeasts: [s04Line],
+      );
+      final inverse =
+          recetteAvec(
+                pese,
+                prices: prixLus([pils, s04, auLitre]),
+                fees: fraisLus([]),
+              )
+              as CoutIndisponible;
+      final raison = inverse.raisons.single as PrixUniteIncompatible;
+      expect(raison.ingredient.unit, CostUnit.gram);
+      expect(raison.price.unit, CostUnit.litre);
+      expect(errors.reports, isEmpty);
+      // Hors ligne, la clé absente du cache reste « indisponible hors ligne ».
+      final horsLigne =
+          recetteAvec(
+                enVolume,
+                prices: prixLus([pils, s04], fromCache: true),
+                fees: fraisLus([]),
+              )
+              as CoutIndisponible;
+      expect(horsLigne.raisons, [isA<PrixIndisponiblesHorsLigne>()]);
+    });
+
+    test('unité incompatible : le texte demande l\'unité de la ligne '
+        '(sachet, litre)', () {
+      // Levure (sachets) face à un prix en litres.
+      final s04Litre = prix(
+        IngredientNature.yeast,
+        'S-04',
+        8,
+        0.1,
+        unit: CostUnit.litre,
+      );
+      final levure =
+          recetteAvec(
+                recette,
+                prices: prixLus([pils, s04Litre]),
+                fees: fraisLus([]),
+              )
+              as CoutIndisponible;
+      final raison = levure.raisons.single as PrixUniteIncompatible;
+      expect(
+        TextesCout.prixIncompatible(
+          'S-04 · 1 sachet',
+          prix: raison.price.unit,
+          attendu: raison.ingredient.unit,
+        ),
+        'S-04 · 1 sachet : votre prix est au litre. Saisissez un prix au '
+        'sachet pour compter cette ligne.',
+      );
+      // Houblon en litres face à un prix au sachet.
+      final extraitAuSachet = prix(
+        IngredientNature.hop,
+        'Extrait',
+        12,
+        1,
+        unit: CostUnit.unit,
+      );
+      final houblon =
+          recetteAvec(
+                const RecipeContent(
+                  name: 'Amère',
+                  batchVolumeL: 20,
+                  fermentables: [pils5kg],
+                  hops: [
+                    HopLine(
+                      name: 'Extrait',
+                      amount: Quantite.litres(0.002),
+                      use: HopUse.boil,
+                      form: 'extract',
+                    ),
+                  ],
+                  yeasts: [s04Line],
+                ),
+                prices: prixLus([pils, s04, extraitAuSachet]),
+                fees: fraisLus([]),
+              )
+              as CoutIndisponible;
+      final raisonHoublon = houblon.raisons.single as PrixUniteIncompatible;
+      expect(
+        TextesCout.prixIncompatible(
+          'Extrait · 2 ml',
+          prix: raisonHoublon.price.unit,
+          attendu: raisonHoublon.ingredient.unit,
+        ),
+        'Extrait · 2 ml : votre prix est au sachet. Saisissez un prix au '
+        'litre pour compter cette ligne.',
+      );
+    });
+
+    test('lecture d\'écran des quantités et des prix au litre', () {
+      expect(volumeParle(0.001), '1 millilitre');
+      expect(volumeParle(0.005), '5 millilitres');
+      expect(volumeParle(1), '1 litre');
+      expect(volumeParle(1.5), '1,5 litre');
+      expect(volumeParle(2), '2 litres');
+      final auLitre = prix(
+        IngredientNature.addition,
+        'Acide lactique',
+        6.5,
+        0.1,
+        unit: CostUnit.litre,
+      );
+      expect(formatAchat(auLitre), '6,50$nbsp€ les 100${nbsp}ml');
+      expect(achatParle(auLitre), '6,50$nbsp€ les 100 millilitres');
+      expect(prixUnitaireParle(auLitre), '65,00$nbsp€ le litre');
+      final unLitre = prix(
+        IngredientNature.addition,
+        'Acide lactique',
+        30,
+        1,
+        unit: CostUnit.litre,
+      );
+      expect(formatAchat(unLitre), '30,00$nbsp€ le litre');
+      expect(achatParle(unLitre), '30,00$nbsp€ le litre');
+      expect(prixUnitaireParle(pils), '1,90$nbsp€ le kilogramme');
+      expect(prixUnitaireParle(s04), '3,99$nbsp€ le sachet');
+    });
+
+    test('même nom en grammes et en volume : raison nommée, aucun rapport', () {
+      final cout =
+          recetteAvec(
+                RecipeContent(
+                  name: 'Saison',
+                  batchVolumeL: 20,
+                  fermentables: const [pils5kg],
+                  hops: [
+                    houblon('Cascade', 20),
+                    const HopLine(
+                      name: 'Cascade',
+                      amount: Quantite.litres(0.002),
+                      use: HopUse.boil,
+                      form: 'extract',
+                    ),
+                  ],
+                  yeasts: const [s04Line],
+                ),
+                prices: prixLus([pils, s04, cascade]),
+                fees: fraisLus([]),
+              )
+              as CoutIndisponible;
+      final raison = cout.raisons.single as QuantitesDeDeuxUnites;
+      expect(raison.name, 'Cascade');
+      expect(errors.reports, isEmpty);
+    });
+
     test('prix illisible (LI9)', () {
       final cout =
           recetteAvec(
@@ -454,11 +669,7 @@ void main() {
                   batchVolumeL: 20,
                   fermentables: [
                     pils5kg,
-                    FermentableLine(
-                      name: '---',
-                      kind: FermentableKind.malt,
-                      weightG: 100,
-                    ),
+                    FermentableLine(name: '---', type: 'grain', weightG: 100),
                   ],
                 ),
                 prices: prixLus([pils]),
@@ -601,11 +812,7 @@ void main() {
       const content = RecipeContent(
         name: 'S',
         fermentables: [
-          FermentableLine(
-            name: 'Saccharose',
-            kind: FermentableKind.sugar,
-            weightG: 200,
-          ),
+          FermentableLine(name: 'Saccharose', type: 'sugar', weightG: 200),
         ],
       );
       final f = figer(
@@ -649,7 +856,7 @@ void main() {
                   fermentables: [
                     FermentableLine(
                       name: 'Pils',
-                      kind: FermentableKind.malt,
+                      type: 'grain',
                       weightG: double.nan,
                     ),
                   ],
@@ -708,6 +915,37 @@ void main() {
         expect(cout.perBottleEur, isNull);
       },
     );
+
+    test('ligne en volume au prix au litre : figée, relue en litres', () {
+      final content = RecipeContent(
+        name: 'Saison',
+        batchVolumeL: 20,
+        fermentables: const [pils5kg],
+        others: const [
+          OtherLine(name: 'Acide lactique', amount: Quantite.litres(0.005)),
+        ],
+        yeasts: const [s04Line],
+      );
+      final lactique = prix(
+        IngredientNature.addition,
+        'Acide lactique',
+        6.5,
+        0.1,
+        unit: CostUnit.litre,
+      );
+      final cout =
+          (figer(content: content, prices: prixLus([pils, s04, lactique]))
+                  as FigeagePossible)
+              .cout;
+      final ligne = cout.lines.firstWhere((l) => l.name == 'Acide lactique');
+      expect((ligne.unit, ligne.quantity), (CostUnit.litre, 0.005));
+      expect(ligne.costEur, closeTo(0.325, 1e-12));
+      final relu = BrewCost.fromFirestore('b1', cout.toFirestore());
+      expect(
+        relu.lines.firstWhere((l) => l.name == 'Acide lactique').unit,
+        CostUnit.litre,
+      );
+    });
 
     test('sans nombre de bouteilles ni frais par bouteille : figé', () {
       expect(
@@ -986,8 +1224,17 @@ void main() {
       }
     });
 
-    test('prix : unités l et kwh illisibles, sans valeur dans l\'erreur', () {
-      for (final unit in ['l', 'kwh', 'kg']) {
+    test('prix : unités kwh et kg illisibles, sans valeur dans l\'erreur ; '
+        'l lisible (v0.1.17)', () {
+      final litre = Price.fromFirestore('ajout-acide-lactique', {
+        'name': 'Acide lactique',
+        'price_eur': 6.5,
+        'quantity': 0.1,
+        'unit': 'l',
+      });
+      expect(litre.unit, CostUnit.litre);
+      expect(litre.unitPriceEur, closeTo(65, 1e-9));
+      for (final unit in ['kwh', 'kg', 'ml']) {
         expect(
           () => Price.fromFirestore('malt-pils', {
             'name': 'Pils',
@@ -999,7 +1246,7 @@ void main() {
             isA<DocumentIllisible>().having(
               (e) => e.toString(),
               'toString',
-              isNot(contains(unit == 'l' ? '= l' : unit)),
+              isNot(contains(unit)),
             ),
           ),
         );
@@ -1052,6 +1299,21 @@ void main() {
     expect(isUnusualPrice(IngredientNature.hop, 0.6), isTrue);
     expect(isUnusualPrice(IngredientNature.yeast, 3.99), isFalse);
     expect(isUnusualPrice(IngredientNature.yeast, 60), isTrue);
+    // Prix au litre (v0.1.17) : seuil de 1 000 €/L.
+    expect(
+      isUnusualPrice(IngredientNature.addition, 65, unit: CostUnit.litre),
+      isFalse,
+    );
+    expect(
+      isUnusualPrice(IngredientNature.hop, 1200, unit: CostUnit.litre),
+      isTrue,
+    );
+    expect(purchaseUnitsOf(IngredientNature.addition), [
+      CostUnit.gram,
+      CostUnit.litre,
+    ]);
+    expect(purchaseUnitsOf(IngredientNature.malt), [CostUnit.gram]);
+    expect(purchaseUnitsOf(IngredientNature.yeast), [CostUnit.unit]);
   });
 
   test('coût des fiches retrouvé par l\'application (FIN2)', () {
@@ -1082,16 +1344,14 @@ void main() {
         switch (nature) {
           case IngredientNature.malt:
             fermentables.add(
-              FermentableLine(
-                name: name,
-                kind: FermentableKind.malt,
-                weightG: quantity,
-              ),
+              FermentableLine(name: name, type: 'grain', weightG: quantity),
             );
           case IngredientNature.hop:
             hops.add(houblon(name, quantity));
           case IngredientNature.addition:
-            others.add(OtherLine(name: name, weightG: quantity));
+            others.add(
+              OtherLine(name: name, amount: Quantite.grammes(quantity)),
+            );
           case IngredientNature.yeast:
             yeasts.add(YeastLine(name: name));
           case IngredientNature.sugar:

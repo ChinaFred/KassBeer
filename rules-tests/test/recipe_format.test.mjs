@@ -1,6 +1,10 @@
 // v0.1.15 — recettes en BeerJSON partiel (ADR-005) : enveloppe, format_version, sous-arbre
 // `recipe`, unités canoniques, plafonds des listes. Mêmes contrôles sur la copie figée
 // d'un brassin, qui reste immuable (P4, cinq profils).
+// v0.1.17 — `recipe.author` (1 à 120 caractères) accepté ; `recipe.efficiency` refusé
+// (option A de L2a : le rendement d'un fichier importé n'est pas gardé). Les unités des
+// `amount` des listes (g ou l) ne sont pas contrôlées ici : les règles n'inspectent pas
+// les éléments des listes (schéma partiel et lecture Dart).
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -131,7 +135,40 @@ const SHAPES = [
     true,
   ],
   ...CLOSED_MAPS,
-  ["champ hors liste dans recipe (efficiency)", (o) => recipe(o, {}, { efficiency: {} }), false],
+  [
+    "champ hors liste dans recipe (efficiency vide)",
+    (o) => recipe(o, {}, { efficiency: {} }),
+    false,
+  ],
+  [
+    "rendement d'un fichier importé (efficiency.brewhouse), non stocké",
+    (o) => recipe(o, {}, { efficiency: { brewhouse: { value: 72, unit: "%" } } }),
+    false,
+  ],
+  ["auteur d'un import", (o) => recipe(o, {}, { author: "Brasseuse Fictive" }), true],
+  ["auteur de 120 caractères", (o) => recipe(o, {}, { author: "a".repeat(120) }), true],
+  ["auteur de 121 caractères", (o) => recipe(o, {}, { author: "a".repeat(121) }), false],
+  ["auteur vide", (o) => recipe(o, {}, { author: "" }), false],
+  ["auteur nul", (o) => recipe(o, {}, { author: null }), false],
+  ["auteur en map", (o) => recipe(o, {}, { author: { name: "Brasseuse Fictive" } }), false],
+  ["auteur en nombre", (o) => recipe(o, {}, { author: 42 }), false],
+  [
+    "quantités en litres dans les listes (ajout, houblon, levure)",
+    (o) =>
+      recipe(
+        o,
+        {},
+        {
+          ingredients: {
+            ...beerRecipe().ingredients,
+            hop_additions: [{ ...hop(0), form: "extract", amount: { value: 0.005, unit: "l" } }],
+            miscellaneous_additions: [{ ...misc(0), amount: { value: 0.005, unit: "l" } }],
+            culture_additions: [{ ...culture(0), amount: { value: 0.1, unit: "l" } }],
+          },
+        },
+      ),
+    true,
+  ],
   ["notes de 10 001 caractères", (o) => recipe(o, {}, { notes: "n".repeat(10001) }), false],
   ["style de 121 caractères", (o) => recipe(o, {}, { style: { name: "s".repeat(121) } }), false],
   [
@@ -253,6 +290,68 @@ describe("recipes — format BeerJSON partiel", () => {
     );
   });
 
+  it("ajouter `recipe.author` à une recette existante : autorisé", async () => {
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("recipes/r-a")
+        .update({ "recipe.author": "Brasseuse Fictive", updated_at: serverTimestamp() }),
+    );
+  });
+
+  for (const [label, value] of [
+    ["121 caractères", "a".repeat(121)],
+    ["map", { name: "Brasseuse Fictive" }],
+    ["null", null],
+    ["vide", ""],
+  ]) {
+    it(`modifier \`recipe.author\` (${label}) : refusé`, async () => {
+      const ref = db(state.env, "owner").doc("recipes/r-a");
+      await expectRule(
+        false,
+        ref.update({ "recipe.author": value, updated_at: serverTimestamp() }),
+      );
+      await expectRule(
+        false,
+        ref.update({
+          recipe: beerRecipe({ author: value }),
+          updated_at: serverTimestamp(),
+        }),
+      );
+    });
+  }
+
+  it("modifier `recipe.author` sur 120 caractères : autorisé", async () => {
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("recipes/r-a")
+        .update({ "recipe.author": "a".repeat(120), updated_at: serverTimestamp() }),
+    );
+  });
+
+  it("modifier `recipe_snapshot.recipe.author` du brassin b-a : refusé", async () => {
+    await expectRule(
+      false,
+      db(state.env, "owner").doc("brews/b-a").update({
+        "recipe_snapshot.recipe.author": "Brasseuse Fictive",
+        updated_at: serverTimestamp(),
+      }),
+    );
+  });
+
+  it("ajouter `recipe.efficiency` à une recette existante : refusé", async () => {
+    await expectRule(
+      false,
+      db(state.env, "owner")
+        .doc("recipes/r-a")
+        .update({
+          "recipe.efficiency": { brewhouse: { value: 72, unit: "%" } },
+          updated_at: serverTimestamp(),
+        }),
+    );
+  });
+
   it("modifier une unité en kg : refusé", async () => {
     await expectRule(
       false,
@@ -282,6 +381,17 @@ describe("brews — copie figée au format BeerJSON partiel", () => {
 // Budget de 1 000 expressions par requête (firestore.rules, brews/) : la recette la plus
 // grande que les règles acceptent passe aussi dans la copie figée d'un brassin qui porte
 // tous les champs permis à la création.
+//
+// Mesure de la v0.1.17 sur l'émulateur (des `pad()` = `return true` ajoutés à la règle
+// jusqu'au refus ; 98 tiennent dans une règle `if true` seule, environ 10 expressions
+// chacun), avec `recipe.author` de 120 caractères : création de la recette 64 `pad()`
+// (69 sans auteur, 71 sur la v0.1.15) ; création du brassin qui la copie 4 `pad()`, soit
+// une marge d'environ 40 expressions (8 sans auteur, 10 sur la v0.1.15) ; brassin du
+// 22 novembre, changement de statut ou embouteillage : 93 `pad()` (limite de compilation) ;
+// modification de la recette 61 `pad()`. Après le prix au litre : création d'un prix
+// au litre 93 `pad()`, coût figé de 200 lignes (lignes en litres comprises) 94 `pad()`.
+// `recipe.efficiency`, même contrôlé par ses seules clés, faisait refuser la création du
+// brassin : il n'est pas stocké.
 describe("recipes et brews — budget des règles", () => {
   const g = (value) => ({ value, unit: "g" });
   const largest = (owner) =>
@@ -294,13 +404,22 @@ describe("recipes et brews — budget des règles", () => {
         brew_steps: brewSteps(60),
       },
       {
+        author: "a".repeat(120),
         notes: "n".repeat(10000),
         style: { name: "s".repeat(120) },
         ingredients: {
           fermentable_additions: n(50, fermentable),
           hop_additions: n(50, hop),
-          miscellaneous_additions: n(50, (i) => ({ ...misc(i), type: "spice" })),
-          culture_additions: n(10, (i) => ({ ...culture(i), type: "ale", amount: g(11) })),
+          miscellaneous_additions: n(50, (i) => ({
+            ...misc(i),
+            type: "spice",
+            amount: { value: 0.005, unit: "l" },
+          })),
+          culture_additions: n(10, (i) => ({
+            ...culture(i),
+            type: "ale",
+            amount: i % 2 === 0 ? g(11) : { value: 0.1, unit: "l" },
+          })),
         },
         mash: {
           name: "Empâtage",
@@ -616,6 +735,40 @@ describe("recipes et brews — cinq profils", () => {
         db(state.env, name)
           .doc("recipes/profil")
           .set(fresh(recipe(ownerFor(name)))),
+      );
+    });
+
+    it(`${name} crée une recette importée avec son auteur : ${member ? "autorisé" : "refusé"}`, async () => {
+      await expectRule(
+        member,
+        db(state.env, name)
+          .doc("recipes/profil-auteur")
+          .set(fresh(recipe(ownerFor(name), {}, { author: "Brasseuse Fictive" }))),
+      );
+    });
+
+    it(`${name} crée un brassin dont la copie porte l'auteur : ${member ? "autorisé" : "refusé"}`, async () => {
+      await expectRule(
+        member,
+        db(state.env, name)
+          .doc("brews/profil-auteur")
+          .set(
+            fresh(
+              brew(ownerFor(name), {
+                recipe_snapshot: recipe("brewer-a", {}, { author: "Brasseuse Fictive" }),
+              }),
+            ),
+          ),
+      );
+    });
+
+    const ownsA = name === "owner";
+    it(`${name} ajoute un auteur à la recette de brewer-a : ${ownsA ? "autorisé" : "refusé"}`, async () => {
+      await expectRule(
+        ownsA,
+        db(state.env, name)
+          .doc("recipes/r-a")
+          .update({ "recipe.author": "Brasseuse Fictive", updated_at: serverTimestamp() }),
       );
     });
 

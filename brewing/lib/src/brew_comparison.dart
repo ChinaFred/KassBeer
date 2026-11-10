@@ -76,6 +76,10 @@ enum MeasurementGapKind {
 
   /// Aucun malt : le rendement d'empâtage ne s'applique pas.
   noMalt,
+
+  /// Nature à préciser d'un fermentescible ([MeasurementGap.items] : les
+  /// lignes) : malt ou sucre décide de ce que retire le calcul.
+  fermentableKind,
 }
 
 /// Une donnée manquante et les lignes qu'elle concerne.
@@ -279,7 +283,16 @@ MeasuredResult _efficiency(
         IngredientRef(i, f.name),
   ];
   final hasSugar = fermentables.any((f) => !isMalt(f));
+  final withoutKind = [
+    for (final (i, f) in fermentables.indexed)
+      if (f.kind == null) IngredientRef(i, f.name),
+  ];
   final gaps = [
+    if (withoutKind.isNotEmpty)
+      MeasurementGap(
+        MeasurementGapKind.fermentableKind,
+        List.unmodifiable(withoutKind),
+      ),
     if (og == null) const MeasurementGap(MeasurementGapKind.originalGravity),
     if (volume == null)
       const MeasurementGap(MeasurementGapKind.fermenterVolume),
@@ -301,7 +314,7 @@ MeasuredResult _efficiency(
         if (isMalt(f) || inWort == true)
           Fermentable(
             name: f.name,
-            kind: f.kind,
+            kind: f.kind!,
             massGrams: f.massGrams,
             // La couleur n'entre pas dans le rendement : une couleur absente ne
             // change pas le résultat.
