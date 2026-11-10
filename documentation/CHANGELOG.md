@@ -6,6 +6,14 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.19 — technique
+
+Le job `tag` de `deploy.yml` était ignoré quand `build-functions` ne tournait pas (cas de tout
+déploiement qui ne touche pas `functions/`) : la condition implicite `success()` de GitHub est
+fausse dès qu'un job en amont est ignoré. Sa condition devient `!cancelled() &&
+needs.deploy.result == 'success'`, comme celle de `deploy`. Les versions 0.1.16 et 0.1.18 n'ont
+pas reçu de tag et le reçoivent à la main.
+
 ### v0.1.18 — technique
 
 `deploy.yml` gagne un job `tag` : après un déploiement réussi, il pose le tag annoté `vX.Y.Z`

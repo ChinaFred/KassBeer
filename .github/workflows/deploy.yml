@@ -663,7 +663,10 @@ jobs:
     # verte de ce commit ; sur un lancement manuel, le script vérifie que la CI
     # `push` du commit est finie et verte, sinon le tag ferait échouer
     # check-version.mjs sur cette CI (leçon 16).
-    if: needs.deploy.result == 'success'
+    # !cancelled() : sans lui, la condition implicite success() est fausse dès qu'un job
+    # en amont est ignoré (build-functions quand functions/ ne change pas), et le tag
+    # n'est jamais posé (run 20, v0.1.18).
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # Seul job qui écrit sur le dépôt : créer le tag par l'API, avec le jeton
