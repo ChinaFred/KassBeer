@@ -164,6 +164,11 @@ String jourHeureParle(DateTime when) =>
     '${_moisComplets[when.month - 1]} ${when.hour} heures '
     '${_deuxChiffres(when.minute)}';
 
+/// Date longue : « 8 novembre 2026 », « 1er novembre 2026 ».
+String formatDateLongue(DateTime when) =>
+    '${when.day == 1 ? '1er' : when.day} ${_moisComplets[when.month - 1]} '
+    '${when.year}';
+
 /// Écart signé, sans couleur : « +2,0 pts », « −3,0 pts », « 0,0 pts ».
 String formatEcart(double ecart, {String unite = 'pts'}) {
   final texte = formatNombre(ecart.abs(), decimales: 1, fixe: true);

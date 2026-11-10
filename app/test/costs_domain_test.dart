@@ -154,7 +154,7 @@ void main() {
   );
 
   group('clé dérivée du nom (LI1)', () {
-    // Document BeerJSON (v0.1.14) : la clé n'est plus stockée ; un champ `key` écrit
+    // Document BeerJSON (v0.1.15) : la clé n'est plus stockée ; un champ `key` écrit
     // par un client direct dans un élément de liste est ignoré par la lecture typée.
     Map<String, Object?> recetteBeerJson(List<Map<String, Object?>> malts) => {
       'format_version': 1,

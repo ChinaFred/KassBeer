@@ -209,7 +209,7 @@ export const recipe = (owner, extra = {}, recipeExtra = {}) => ({
   ...extra,
 });
 
-/// Document recipes/ au format plat de la v0.1.13, refusé depuis la v0.1.14.
+/// Document recipes/ au format plat de la v0.1.14, refusé depuis la v0.1.15.
 export const flatRecipe = (owner) => ({
   owner_uid: owner,
   name: "Blonde de Noël",

@@ -322,7 +322,7 @@ void main() {
     );
 
     test(
-      'document plat de la v0.1.13 : recette illisible, rapportée',
+      'document plat de la v0.1.14 : recette illisible, rapportée',
       () async {
         await firestore.collection('recipes').doc('vieille').set({
           'owner_uid': 'uid-a',

@@ -745,7 +745,7 @@ void main() {
     });
   });
 
-  group('v0.1.14 — champs BeerJSON', () {
+  group('v0.1.15 — champs BeerJSON', () {
     Future<void> openSheet(WidgetTester tester, String button) async {
       await tester.scrollUntilVisible(
         find.text(button),

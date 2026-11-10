@@ -1,4 +1,4 @@
-// v0.1.14 — documents de recettes écrits par toFirestore (app/test/fixtures/recipe_documents,
+// v0.1.15 — documents de recettes écrits par toFirestore (app/test/fixtures/recipe_documents,
 // vérifiés à l'identique par app/test/recipe_conversion_test.dart) validés par ajv contre
 // le schéma BeerJSON partiel (ADR-005). Sans émulateur : ce fichier ne lit que des JSON.
 

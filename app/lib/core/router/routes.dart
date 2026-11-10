@@ -14,6 +14,9 @@ abstract final class AppRoutes {
   /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
   static const prices = '/prix';
 
+  /// Écran « Nouveautés », ouvert depuis le menu du compte.
+  static const news = '/nouveautes';
+
   static const newRecipe = '/recettes/nouvelle';
   static String recipe(String id) => '$recipes/$id';
   static String editRecipe(String id) => '$recipes/$id/modifier';

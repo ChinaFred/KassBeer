@@ -23,6 +23,7 @@ import '../../features/recipes/presentation/recipe_editor_screen.dart';
 import '../../features/recipes/presentation/recipes_list_screen.dart';
 import '../presentation/app_shell.dart';
 import '../presentation/etats.dart';
+import '../presentation/nouveautes_screen.dart';
 import 'page_de_coquille.dart';
 import 'routes.dart';
 
@@ -152,6 +153,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '${AppRoutes.equipment}/:id/modifier',
         builder: (_, state) =>
             EquipmentEditorScreen(id: state.pathParameters['id']),
+      ),
+      // Nouveautés : plein écran, hors de la coquille, ouvert par `push` depuis le
+      // menu du compte.
+      GoRoute(
+        path: AppRoutes.news,
+        builder: (_, _) => const NouveautesScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {

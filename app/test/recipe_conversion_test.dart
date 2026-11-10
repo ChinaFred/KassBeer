@@ -239,7 +239,7 @@ String _json(Object? value) =>
 String _fixture(String name) =>
     File('test/fixtures/recipe_documents/$name.json').readAsStringSync();
 
-/// Entrée de `computeRecipe` construite comme la v0.1.13 la construisait depuis un
+/// Entrée de `computeRecipe` construite comme la v0.1.14 la construisait depuis un
 /// document plat. Sert seulement à vérifier que le passage en BeerJSON ne change
 /// aucun chiffre.
 RecipeInput _inputFromFlat(Map<String, dynamic> doc) {
@@ -428,7 +428,7 @@ void main() {
       illisible(_doc()..['format_version'] = '1', 'format_version');
     });
 
-    test('document plat de la v0.1.13', () {
+    test('document plat de la v0.1.14', () {
       illisible({
         'owner_uid': 'uid-a',
         'name': 'Ancienne',

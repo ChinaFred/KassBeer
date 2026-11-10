@@ -315,7 +315,7 @@ Durées estimées, non mesurées.
 
 L2 à L4 peuvent s'intercaler avec la v0.5 et la v0.6.
 
-**Écart de L1, à reprendre en L2.** La lecture de la v0.1.14 rend illisible un document qui
+**Écart de L1, à reprendre en L2.** La lecture de la v0.1.15 rend illisible un document qui
 porte une valeur que « Valeurs sans équivalent direct » veut garder : malt `extract`, houblon
 `add_to_mash` ou `add_to_package`, `time` sur un ajout à cru, forme de houblon `plug`, `powder`
 ou `extract`. L'éditeur n'en écrit aucune, et aucun document de L1 n'en contient. L2 les lit
@@ -333,8 +333,8 @@ possible, sous le seul compte de son auteur, et la lecture typée l'ignore.
 Cadrage (L0) maintenant. Passage à BeerJSON (L1) juste après la fusion de la v0.4, avant la v0.5
 et la v0.6, si possible avant le prochain brassin, prévu vers le 22 novembre 2026.
 
-Ordre constaté le 2026-11-10 : la v0.5 (prix, frais et coût) a fusionné la première, en v0.1.13.
-L1 l'intègre et devient la v0.1.14. Les coûts figés `users/{uid}/brew_costs/{brewId}` existent
+Ordre constaté le 2026-11-10 : la v0.5 (prix, frais et coût) a fusionné la première, en v0.1.13,
+puis le menu du compte et l'écran « Nouveautés » en v0.1.14. L1 les intègre et devient la v0.1.15. Les coûts figés `users/{uid}/brew_costs/{brewId}` existent
 donc au passage : l'effacement compte et efface le coût figé de chaque brassin effacé, comme la suppression
 d'un brassin dans l'application (CB19), et rien d'autre sous `users/`. Ces coûts portent les prix
 de chaque brasseur : l'outil ne lit pas leur contenu et ne les copie pas, y compris ceux de

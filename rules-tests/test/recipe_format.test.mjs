@@ -1,4 +1,4 @@
-// v0.1.14 — recettes en BeerJSON partiel (ADR-005) : enveloppe, format_version, sous-arbre
+// v0.1.15 — recettes en BeerJSON partiel (ADR-005) : enveloppe, format_version, sous-arbre
 // `recipe`, unités canoniques, plafonds des listes. Mêmes contrôles sur la copie figée
 // d'un brassin, qui reste immuable (P4, cinq profils).
 
@@ -86,7 +86,7 @@ const SHAPES = [
       recipe(o, {}, { mash: { name: "Empâtage", grain_temperature: { value: 18, unit: "C" } } }),
     true,
   ],
-  ["document plat de la v0.1.13", (o) => flatRecipe(o), false],
+  ["document plat de la v0.1.14", (o) => flatRecipe(o), false],
   [
     "sans format_version",
     (o) => {
@@ -368,7 +368,7 @@ describe("recipes et brews — budget des règles", () => {
   // Brassin du 22 novembre rempli normalement après le brassage : date de brassage,
   // notes, embouteillage, trois mesures retenues, sugars_in_wort, équipement complet.
   // Contrôler tous ses champs à chaque modification dépassait 1 000 expressions avec
-  // 5 ajustements (v0.1.14) : la modification ne contrôle que les champs changés.
+  // 5 ajustements (v0.1.15) : la modification ne contrôle que les champs changés.
   const at = (iso) => Timestamp.fromDate(new Date(iso));
   const adjustments11 = {
     batch_volume_l: 20,

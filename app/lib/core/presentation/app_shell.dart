@@ -212,7 +212,8 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-/// Avatar Google et menu du compte : nom, e-mail, version, déconnexion.
+/// Avatar Google et menu du compte : nom, e-mail, version, Mes prix, Nouveautés,
+/// déconnexion.
 class _AccountMenu extends ConsumerWidget {
   const _AccountMenu({required this.user});
 
@@ -260,6 +261,13 @@ class _AccountMenu extends ConsumerWidget {
           onPressed: () => unawaited(context.push(AppRoutes.prices)),
           child: const Text('Mes prix'),
         ),
+        const Divider(),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.new_releases_outlined),
+          onPressed: () => unawaited(context.push(AppRoutes.news)),
+          child: const Text('Nouveautés'),
+        ),
+        const Divider(),
         MenuItemButton(
           leadingIcon: const Icon(Icons.logout),
           onPressed: () => signOutFrom(context, ref),

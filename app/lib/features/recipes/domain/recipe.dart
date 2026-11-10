@@ -98,7 +98,7 @@ double _masse(LecteurChamps read) =>
 
 /// Nom écrit d'un ingrédient. La clé n'est pas stockée, mais elle se dérive du nom
 /// (prix, stock) : un nom sans lettre ni chiffre lève [BrewingInputException]
-/// (`ingredientKey`, K3), comme avant la v0.1.14.
+/// (`ingredientKey`, K3), comme avant la v0.1.15.
 String _nom(IngredientNature nature, String name) {
   ingredientKey(nature, name);
   return name.trim();

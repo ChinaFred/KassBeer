@@ -295,6 +295,12 @@ jobs:
       - name: Dépendances
         run: flutter pub get
 
+      - name: Asset des nouveautés
+        # L'écran « Nouveautés » embarque les six dernières versions « fonctionnel »
+        # du CHANGELOG.md, dans le web comme dans l'APK construit plus bas.
+        working-directory: .
+        run: node scripts/changelog-recent.mjs
+
       - name: Build web
         run: flutter build web --release --dart-define-from-file="$RUNNER_TEMP/firebase-defines.json"
 

@@ -6,32 +6,26 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
-### v0.1.14 — fonctionnel
+### v0.1.15 — fonctionnel
 
-Livraison L1 d'ADR-005 : les recettes passent en BeerJSON partiel dans Firestore. L'éditeur gagne
-le type de recette, la température du grain, le type et la quantité de la levure, le type d'un
-ajout et le type d'un palier, tous facultatifs et sans valeur choisie d'avance. Les durées en
-minutes sont entières. Un whirlpool demande sa durée d'infusion, de 1 à 600 min ; à 0, le message
-renvoie vers « Ébullition et 0 min ». Le formulaire d'un houblon garde une durée par moment :
-revenir à un moment remet son texte. Une durée d'ajout sans utilisation est refusée, et le message
-s'efface dès qu'une utilisation est choisie ou que la durée est vidée ; « Après ébullition » sans
-durée affiche une aide. La fiche, la copie figée d'un brassin et l'écran du jour montrent ces
-champs ; un palier y porte le libellé court de son type (« Infusion »), la température du grain
-une ligne libellé-valeur. Chaque valeur du schéma a un libellé français, même celles que
-l'éditeur ne propose pas (Cidre, Gélose, Levure de blanche…), et une forme de levure importée
-reste visible dans le formulaire. Les menus tiennent sur deux lignes à grande taille de texte, et
-une aide longue n'est plus coupée. Les chiffres calculés ne changent pas. Une recette ou un
-brassin écrit avant la v0.1.14 ne peut pas s'afficher : le message demande de mettre l'application à jour
-et dit que l'erreur est signalée à l'administrateur (hors ligne, le rapport part au retour du
-réseau). La préparation et l'écran du jour d'un brassin illisible affichent le texte de sa fiche
-et son bouton « Revenir aux brassins » ; la préparation garde « Réessayer » pour un brassin
-absent ou hors ligne. Sous « Quantité (g) » d'une levure, l'aide dit « Le coût compte un sachet
-par levure, quelle que soit la quantité. » ; aucun calcul ne change. La commande `effacement-l1/` efface `recipes/`, `brews/` et les coûts figés de
-ces brassins au passage.
+Les recettes changent de format. L'éditeur gagne le type de recette, la température du
+grain, la quantité et le type de la levure, le type d'un ajout et le type d'un palier. Ces
+champs sont facultatifs, sans valeur choisie d'avance. Les durées en minutes sont des nombres
+entiers. Un whirlpool demande sa durée d'infusion, de 1 à 600 min ; pour un ajout à l'arrêt du
+feu, choisissez Ébullition et 0 min. Le formulaire d'un houblon garde une durée par moment :
+revenir à un moment remet ce que vous aviez saisi. Sous la quantité d'une levure, une aide
+rappelle que le coût compte un sachet par levure. La fiche, le brassin et l'écran du jour
+montrent ces nouveaux champs. Les listes tiennent sur deux lignes en grande taille de texte, et
+une aide longue n'est plus coupée. Les chiffres calculés ne changent pas.
 
-### v0.1.14 — technique
+Les recettes et les brassins enregistrés avant cette version sont effacés au passage, avec le
+coût figé de ces brassins. Une recette ou un brassin qui ne peut pas s'afficher le dit, invite à
+mettre l'application à jour et ramène à la liste.
 
-Modèle : enveloppe (`format_version` 1, propriétaire, équipement, chronologie, dates) et
+### v0.1.15 — technique
+
+Livraison L1 d'ADR-005 : les recettes et la copie figée des brassins passent en BeerJSON
+partiel dans Firestore. Modèle : enveloppe (`format_version` 1, propriétaire, équipement, chronologie, dates) et
 sous-arbre `recipe` suivant `RecipeType` du schéma BeerJSON au commit `4370892d44`, en couples
 `{value, unit}` d'une seule unité par grandeur. La clé d'ingrédient n'est plus stockée.
 `recipe_snapshot` prend la même forme. `HopUse.storedValue` et `HopUse.fromStored` sortent de
@@ -80,6 +74,31 @@ développement, version déjà présente par `firebase-tools`, aucune autre vers
 `effacement-l1/package-lock.json`, nouveau : `firebase-admin` 14.5.0 et 171 paquets transitifs,
 dont `@google-cloud/firestore` 9.4.0, pour l'outil local seulement. `app/pubspec.lock` ne change
 pas.
+
+### v0.1.14 — fonctionnel
+
+Le menu du compte gagne une entrée « Nouveautés ». Elle ouvre un écran qui présente les
+dernières versions qui changent ce que vous voyez, la plus récente en tête, avec leur date.
+La version installée sur l'appareil y porte l'étiquette « Installée ». Le texte se
+sélectionne pour être copié. L'écran marche sans réseau : les nouveautés sont livrées avec
+l'application.
+
+### v0.1.14 — technique
+
+`scripts/changelog-recent.mjs` extrait du `CHANGELOG.md` les six dernières versions qui ont une
+entrée « fonctionnel », en texte simple découpé en paragraphes, et écrit
+`app/assets/changelog_recent.json`. La CI et `deploy.yml` régénèrent ce fichier avant chaque build
+web et APK ; la copie versionnée sert aux builds locaux. Le script a son test, rejoué par le job
+« Version et outillage ». L'application valide la forme du fichier et affiche la panne, journalisée,
+s'il est mal formé. Route `/nouveautes` hors de la coquille. Aucune dépendance ajoutée :
+`app/pubspec.lock` ne change pas.
+
+ADR-006 accepté : les tickets des membres seront publiés en Issues GitHub par des Cloud Functions
+sans point d'accès HTTP (Node 24), en deux lots T1 et T2 après les lots L2 à L4 d'ADR-005. Aucune
+implémentation dans cette version. ADR-001 et la section « Le projet » de `CLAUDE.md` le citent.
+
+`CLAUDE.md` (« Version ») ajoute une règle d'écriture : une entrée « fonctionnel » s'adresse au
+brasseur, sans chemin de fichier ni numéro d'incrément, puisqu'elle s'affiche dans « Nouveautés ».
 
 ### v0.1.13 — fonctionnel
 
