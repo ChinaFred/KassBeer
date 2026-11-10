@@ -21,6 +21,7 @@ const Map<String, String> kTicketScreenNames = {
   '/recettes': 'Recettes',
   '/recettes/:id': 'Recette',
   '/recettes/nouvelle': 'Nouvelle recette',
+  '/recettes/importer': 'Importer des recettes',
   '/recettes/:id/modifier': 'Modifier la recette',
   '/recettes/:id/chronologie': 'Chronologie du jour',
   '/brassins': 'Brassins',

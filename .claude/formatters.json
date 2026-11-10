@@ -18,6 +18,14 @@
       "command": "dart format {file}"
     },
     {
+      "prefix": "exchange/",
+      "extensions": [
+        ".dart"
+      ],
+      "cwd": "exchange",
+      "command": "dart format {file}"
+    },
+    {
       "prefix": "rules-tests/",
       "extensions": [
         ".mjs",

@@ -55,6 +55,26 @@ Entrées brutes avant dédoublonnage. Noms uniques après normalisation (casse, 
 
 Un `{value, unit}` d'une unité inconnue est rejeté et compté au rapport.
 
+## Correspondance BeerJSON (import utilisateur) → modèle
+
+Lecture de `exchange/` (v0.1.20), fichiers BeerJSON 1, 2 et 3 choisis par un membre dans
+Recettes › Importer. Le modèle est déjà en BeerJSON : la lecture garde les champs de
+`RecipeType` que l'application stocke et convertit les unités.
+
+| Champ | Valeur source | Résultat |
+|---|---|---|
+| Masse, volume, température, durée | `mg`, `kg`, `lb`, `oz` ; `ml`, mesures américaines et impériales ; `F` ; `sec`, `hr`, `day`, `week` | `g`, `l`, `C`, `min` (minutes arrondies, listé) ; conversion dans `exchange/` |
+| Couleur d'un fermentescible | `Lovi`, `SRM` | `EBC` par `brewing/` |
+| `yield` | `fine_grind` ; sinon `potential` en `sg` ; `coarse_grind` seul | `fine_grind` ; `potentialToYieldPercent` de `brewing/` ; absent, listé |
+| `yield.fine_grind`, `alpha_acid` | 0 | absent, listé |
+| `HopAdditionType.timing`, `use: add_to_boil` | `time` ; sinon `duration` ; `time` 0 avec `duration` | ébullition `time` ; ébullition `duration` (ADR-005) ; après l'arrêt du feu, pour `duration` |
+| `timing` d'un ajout à cru, à l'empâtage, au conditionnement | `time` en plus de `duration` | `duration` seule, simplification listée (le jour d'ajout d'un houblon à cru est gardé) |
+| Quantité d'une levure | `pkg`, `each`, `unit` | absente, listée ; pour un malt, un houblon ou un ajout, recette refusée |
+| `style` | objet complet | nom seul (ADR-005 : la catégorie demande `beer_styles`), listé |
+| `efficiency`, valeurs annoncées, `fermentation`, `water_additions`, `packaging`, `taste` | toute valeur | non importés, listés |
+| `inventory`, prix, champs inconnus | toute valeur | ignorés, comptés (P5) |
+| Valeur convertie au-delà des plafonds | plus de 1 000 kg ou 1 000 L par ligne, 10 000 L de volume, 2 000 EBC, 365 jours hors ébullition, nombre non fini | quantité obligatoire : recette refusée ; valeur facultative : absente, listée |
+
 ## Correspondance BeerXML → BeerJSON
 
 Sert à l'import utilisateur et au fichier 001.

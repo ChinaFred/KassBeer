@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seul dossier exposé par ExportsFileProvider (ADR-007) : le fichier d'un export,
+     effacé au lancement suivant de l'application. -->
+<paths>
+    <cache-path name="exports" path="exports/" />
+</paths>

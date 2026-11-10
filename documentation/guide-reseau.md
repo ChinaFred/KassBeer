@@ -264,6 +264,17 @@ limite de Firestore de 1 000 expressions par requête : toute règle ajoutée su
 en BeerJSON partiel ». P19, P20, P22 et les autres évolutions d'ADR-005 arrivent avec L2 à
 L4, quand leur code existe.
 
+Depuis la v0.1.20 (L2b d'ADR-005, ADR-007), `securite` vérifie P28 sur le canal de fichiers
+`fr.kassbeer/files` : lecture bornée avant tout chargement, nom de fichier exporté sans remontée
+de chemin, `FileProvider` limité à `cacheDir/exports/`, aucune permission de stockage, aucun
+greffon de fichier sans nouvel ADR. P17 s'étend aux appels qui lisent un fichier ou attendent une
+autre activité (hors du thread principal, un seul code de requête, second appel refusé). P9
+devient la règle commune des imports (10 Mo, 500 recettes, décodage, lecture typée, aucun prix lu,
+caractères de contrôle bidirectionnels retirés) et P3 couvre les conversions Plato, Lovibond et
+SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « Structure »,
+« Commandes utiles », `.claude/formatters.json` (`dart format`) et `setup-projet.sh`
+(`dart pub get`) ; la CI le contrôle dans le job « Flutter et brewing ».
+
 Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
 `--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans
 ce fichier local, jamais versionné. État de la production et outils du poste :

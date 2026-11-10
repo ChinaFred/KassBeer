@@ -6,6 +6,80 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.20 — fonctionnel
+
+Recettes › Importer : « Importer », dans la liste des recettes, lit un fichier BeerJSON exporté
+d'un autre logiciel de brassage (500 recettes et 10 Mo au plus) et crée ses recettes à votre
+nom. Avant toute écriture, un aperçu donne pour chaque recette son état : « Prête »,
+« Incomplète », « Déjà importée le … » (même contenu déjà importé par vous, décochée),
+« En double dans le fichier » ou « Refusée », avec la raison. « Détails » liste ce qui reste à
+compléter et ce qui a changé à l'import (unités converties, valeurs écartées, parties non
+importées). Vous choisissez l'équipement des recettes, cochez celles à importer, puis lisez le
+compte rendu : créées, ignorées, en erreur. L'import marche sans réseau : les recettes partent
+au retour du réseau. Les prix et le stock du fichier ne sont jamais importés. Le BeerXML n'est
+pas encore lu : un fichier BeerXML est annoncé comme tel.
+
+« Exporter », sur la fiche de toute recette du groupe, produit un fichier BeerJSON sans aucun
+prix : sur Android, « Enregistrer » ou « Partager le fichier » ; sur le web, « Télécharger ». Le
+fichier porte l'auteur de la recette, le rendement de son équipement et les densités, le
+degré, l'amertume et la couleur calculés. Ce qui manque au format est listé (« Type de recette
+non renseigné. ») ; l'auteur peut compléter la recette, un autre membre la duplique. Une
+recette à l'extrait, sans palier ni température du grain, s'exporte sans empâtage ; une
+recette sans durée d'ébullition, sans ébullition ; la feuille le dit, comme pour le style et la
+chronologie du jour, qui ne sont pas exportés. La recette d'un autre membre qui n'indique pas
+d'auteur ne s'exporte pas à son nom : la feuille propose « Dupliquer », et la copie s'exporte à
+votre nom. Avant l'envoi, la feuille nomme l'auteur écrit dans le fichier. Si l'envoi échoue,
+la feuille le dit et l'envoi peut se refaire. L'export BeerXML
+est visible et bloqué : il demande un style de la liste BJCP, qui arrive dans une prochaine
+version.
+
+### v0.1.20 — technique
+
+Livraison L2b d'ADR-005, avec le canal de fichiers d'ADR-007.
+
+Nouveau paquet Dart pur `exchange/` (dépend de `brewing/` et de `crypto` ^3.0.8) : bornes de
+P9 (10 Mo, 500 recettes, plafonds des listes, textes coupés), détection du format par le
+contenu (BeerJSON 1 à 3, JSON non BeerJSON, BeerXML annoncé, BeerSmith), lecture BeerJSON
+champ par champ vers le modèle partiel (unités converties, Lovibond, SRM et densité
+potentielle par `brewing/`), compte rendu par recette (`Refus`, `Modification`, empreinte
+SHA-256, doublon dans le fichier), export BeerJSON 2.01 (`author`, `efficiency.brewhouse` pris
+au rendement d'empâtage de l'équipement, valeurs de `computeRecipe`, style omis, `mash` et
+`boil` omis et listés quand ils sont vides), liste de ce qui bloque l'export ; `author` pris à
+`owner_name` pour le seul propriétaire. Contrôles de direction U+061C, U+200E, U+200F,
+U+202A à U+202E et U+2066 à U+2069 retirés des textes importés. Après conversion, un nombre
+non fini ou au-delà des plafonds de `bornes.dart` (1 000 kg ou 1 000 L par ligne, 10 000 L de
+volume, 2 000 EBC, 365 jours hors ébullition, valeurs nouvelles) refuse la recette ou est
+écarté ; une recette imbriquée sur plus de 32 niveaux est illisible, et un fichier JSON plus
+profond que 36 niveaux est refusé avant son décodage, par un parcours linéaire des octets.
+L'en-tête d'un fichier XML se lit par `indexOf`, sans expression régulière à retour arrière ;
+une version ou une unité inconnues ne s'affichent que courtes et nettoyées. Fixtures écrites à la
+main ; `rules-tests/test/exchange_schema.test.mjs` valide les recettes lues contre le schéma
+partiel et les fichiers exportés, recette à l'extrait comprise, contre le schéma officiel au
+commit figé. `brewing/` gagne `normalizeName` (nom du fichier exporté) et
+`maxPotentialGravity` (borne de `potentialToYieldPercent`, lue par `exchange/`), sans formule
+nouvelle.
+
+Application : `app/lib/core/fichiers/` (`EchangeFichiers`, canal `fr.kassbeer/files` sur
+Android, `package:web` sur le web) ; `EchangeFichiers.kt` (`pickDocument` borné à
+`maxBytes + 1` octets et contrôlé avant lecture, `shareFile` qui prépare son fichier hors du fil
+principal, `saveDocument`, codes `TOO_LARGE`, `ALREADY_ACTIVE`, `NO_PICKER`, `INVALID_NAME` ;
+choix, enregistrement et partage marqués jusqu'à leur résultat final, un second appel rend
+`ALREADY_ACTIVE`), branché dans `MainActivity.kt` ;
+`ExportsFileProvider` non exporté, limité à `cacheDir/exports/`, vidé à chaque lancement ;
+aucune permission de stockage. Écrans Recettes › Importer (`/recettes/importer`) et feuille
+« Exporter » ; `libelleManqueExport` étend `libelleManque` ; aperçu en `ListView.builder` avec
+statuts mémorisés par équipement (53 ms pour un appui sur une case avec 500 recettes, en
+test) ; statut « Prête » calculé avec le nom du jeton, celui qu'écrit l'import ; panne inattendue
+de l'analyse rapportée sous `exchange.read`. `imported_from` porte
+`BeerJSON · sha256:…` ; `Recipe` lit `created_at`. Aucune règle d'accès ne change : le budget
+des règles est inchangé.
+
+Dépendances. `app/pubspec.lock` : seule l'entrée `exchange` (chemin) s'ajoute ; `crypto`
+reste en 3.0.8, dépendance indirecte. Android : `androidx.core:core:1.17.0` déclaré dans
+`app/android/app/build.gradle.kts`, version déjà résolue par le graphe des greffons (aucun
+changement de version). CI : le job « Flutter et brewing » contrôle aussi `exchange/`
+(dépendances, `pubspec.lock`, analyse, format, tests).
+
 ### v0.1.19 — technique
 
 Le job `tag` de `deploy.yml` était ignoré quand `build-functions` ne tournait pas (cas de tout

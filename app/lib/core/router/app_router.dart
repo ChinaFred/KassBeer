@@ -18,6 +18,7 @@ import '../../features/equipment/presentation/equipment_editor_screen.dart';
 import '../../features/equipment/presentation/equipment_list_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
 import '../../features/recipes/presentation/brew_steps_editor_screen.dart';
+import '../../features/recipes/presentation/import_recipes_screen.dart';
 import '../../features/recipes/presentation/recipe_detail_screen.dart';
 import '../../features/recipes/presentation/recipe_editor_screen.dart';
 import '../../features/recipes/presentation/recipes_list_screen.dart';
@@ -128,6 +129,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.newRecipe,
         builder: (_, _) => const RecipeEditorScreen(),
+      ),
+      // Import de recettes (ADR-005, L2) : avant « :id » pour la même raison.
+      GoRoute(
+        path: AppRoutes.importRecipes,
+        builder: (_, _) => const ImportRecipesScreen(),
       ),
       GoRoute(
         path: '${AppRoutes.recipes}/:id/modifier',

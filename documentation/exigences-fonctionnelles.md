@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire en tête d'Admin l'état du jeton GitHub et le nombre de tickets bloqués. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -296,11 +296,14 @@ recette n'est modifiée.
 puis style · volume · auteur ; étiquette « En attente du réseau ». « Rechercher une
 recette » filtre sur le nom et le style ; « Toutes » / « Les miennes » filtre sur l'auteur.
 La recherche et le filtre ne sont pas enregistrés. Aucun calcul dans la liste. Bouton
-flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà.
+flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà. « Importer » ouvre
+Recettes › Importer : sur téléphone après « Toutes / Les miennes », au-delà à côté de
+« Nouvelle recette ».
 
-- Liste vide : « Aucune recette. Appuyez sur Nouvelle recette pour commencer. » ; « Les
-  miennes » vide : « Vous n'avez pas encore de recette. Appuyez sur Nouvelle recette pour
-  commencer. » ; recherche sans résultat : « Aucune recette ne correspond à « {texte} ». » et
+- Liste vide : « Aucune recette. Appuyez sur Nouvelle recette pour commencer, ou importez
+  un fichier BeerJSON. » ; « Les miennes » vide : « Vous n'avez pas encore de recette.
+  Appuyez sur Nouvelle recette pour commencer, ou importez un fichier BeerJSON. » ; les deux
+  avec le bouton « Importer des recettes » ; recherche sans résultat : « Aucune recette ne correspond à « {texte} ». » et
   « Effacer la recherche ».
 - Lecture impossible et panne après une première lecture : comme les équipements, avec
   « Impossible de lire les recettes. ». Un document illisible s'affiche dans la liste
@@ -326,8 +329,9 @@ flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà.
   document : la préparation garde « Réessayer » pour un brassin absent ou hors ligne
   seulement. Hors ligne, le rapport part au retour du réseau.
 
-**Fiche.** Nom, style, « Recette de {auteur} » pour un autre brasseur. Boutons « Modifier »
-et « Supprimer » pour l'auteur, « Dupliquer » pour tous. Puis le bloc Calculs (voir
+**Fiche.** Nom, style, « Recette de {auteur} » pour un autre brasseur. Boutons, dans
+l'ordre : « Nouveau brassin », « Modifier » (auteur), « Dupliquer », « Exporter »,
+« Supprimer » (auteur). Puis le bloc Calculs (voir
 « Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (type de recette, « Non renseigné » s'il
 manque ; « Auteur indiqué par le fichier importé » quand une recette importée le porte ; volume en
 fermenteur, durée d'ébullition, équipement), Malts et sucres, Houblons
@@ -359,6 +363,121 @@ ne change pas. Possible sur toute recette, y compris celle d'un membre retiré. 
 « Recette dupliquée. » (hors ligne : « Recette dupliquée sur l'appareil. Elle partira au
 retour du réseau. »), puis la fiche de la copie. Pendant la lecture du nom du compte, le
 bouton affiche « Duplication » et ne répond pas : un double appui ne crée qu'une copie.
+
+**Exporter** (tous les membres, toute recette lisible, y compris celle d'un membre retiré).
+Feuille du bas sur téléphone, dialogue au-delà : « Exporter « {nom} » », « Le fichier ne
+contient aucun prix. », choix « BeerJSON » (« Format le plus complet. », par défaut, non
+mémorisé, inactif pendant un envoi) ou « BeerXML » (« Lu par la plupart des logiciels de brassage. »), puis un bloc
+d'état lu par le lecteur d'écran à chaque changement.
+
+- Prêt : « Prêt à exporter. », « Auteur dans le fichier : {nom}. », puis ce que le fichier ne garde pas : « Non exporté : le style
+  « {style} » (BeerJSON demande sa catégorie). », « Non exporté : la chronologie du jour. »,
+  « Non exporté : empâtage (aucun palier). » (recette sans palier ni température du grain,
+  à l'extrait par exemple), « Non exporté : ébullition (durée non renseignée). ». Boutons
+  sur Android : « Annuler », « Enregistrer » (bouton à contour ; sélecteur d'enregistrement
+  du système, puis « Fichier enregistré. »), « Partager le fichier » (seul bouton plein ;
+  feuille de partage du système). Sur le web : « Annuler », « Télécharger », puis
+  « Téléchargement lancé : {fichier}. ». Nom du fichier : nom de la recette sans accents, en
+  minuscules, avec des tirets (`ipa-maison.json`), `recette.json` si le nom n'a ni lettre ni
+  chiffre. Échec : « Le fichier n'a pas pu être créé. » dans le bloc d'état de la feuille,
+  rapporté ; les boutons restent actifs pour réessayer.
+- Le fichier contient la recette, l'auteur, le rendement d'empâtage de l'équipement de la
+  recette comme rendement de brassage, et les densités, le degré, l'amertume et la couleur
+  calculés. L'auteur est celui indiqué par le fichier importé ; sinon, pour le membre qui a
+  créé la recette, son nom. Jamais : prix, stock, coût, e-mail, identifiant du propriétaire
+  ou de l'équipement, nom de l'équipement. Deux exports de la même recette sans changement
+  donnent le même fichier.
+- Recette d'un autre membre sans auteur indiqué par un fichier : bloquée, « Dupliquez la
+  recette pour l'exporter à votre nom. », boutons « Fermer » et « Dupliquer » (la même action
+  que sur la fiche) ; s'il manque d'autres valeurs, leur liste précède le message.
+- Bloqué : « Export impossible : {n} valeurs à compléter. » et la liste, avec les libellés de
+  « À compléter » et ceux-ci : « Type de recette non renseigné. », « Aucun palier
+  d'empâtage : la température du grain demande un palier. », « Température du grain non
+  renseignée. » (paliers saisis), « Type de palier non renseigné : {noms}. », « Type de
+  levure non renseigné : {noms}. », « Forme de levure non renseignée : {noms}. », « Quantité
+  de levure non renseignée : {noms}. », « Type d'ajout non renseigné : {noms}. », « Aucun
+  équipement choisi : le rendement de brassage ne peut pas être calculé. » (hors ligne sans
+  l'équipement en cache : « Équipement indisponible hors ligne. »), et, pour sa propre
+  recette quand le compte n'a pas de nom, « Auteur inconnu : le compte qui a créé la recette
+  n'a pas de nom. ». L'auteur voit « Annuler » et « Compléter la recette », qui ouvre
+  l'éditeur. Un autre membre lit « Seul l'auteur complète cette recette. Dupliquez-la pour
+  la compléter à votre nom. » et « Fermer ».
+- BeerXML : visible et bloqué, « BeerXML demande un style de la liste BJCP. Le choix du style
+  arrive dans une prochaine version. », bouton « Fermer ».
+
+**Importer** (Recettes › Importer, tous les membres). Page pleine hors de la coquille, avec
+la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
+
+1. Avant le choix : « Choisissez un fichier BeerJSON (.json) exporté de votre logiciel de
+   brassage. 500 recettes et 10 Mo au plus. Les prix et le stock du fichier ne sont pas
+   importés. » et « Choisir un fichier », qui ne répond pas tant que le sélecteur est ouvert (Android). Le sélecteur du système s'ouvre sans filtre de
+   type : le format se lit au contenu, jamais à l'extension. Fermer le sélecteur ramène à
+   l'écran sans message. Aucun fichier n'est lu depuis le réseau ni depuis l'application.
+2. « Lecture du fichier » pendant l'analyse, sur l'appareil.
+3. Fichier refusé, avec le bouton plein « Choisir un autre fichier » : « Fichier trop gros : 12,4 Mo.
+   Kass'Beer lit les fichiers de 10 Mo au plus. » (refusé avant la lecture) ; « Fichier
+   illisible : « {fichier} » n'est pas un fichier BeerJSON. » (JSON mal formé ou encodage
+   illisible compris) ; « Ce fichier JSON n'est pas au format BeerJSON. Dans votre logiciel,
+   exportez la recette en BeerJSON. » ; « Fichier BeerXML : sa lecture arrive dans une
+   prochaine version. Si votre logiciel le permet, exportez la recette en BeerJSON. » ; « Fichier
+   BeerSmith (.bsmx) non lu. La lecture du BeerXML, que BeerSmith exporte, arrive dans une
+   prochaine version. » ; « Version de BeerJSON non prise en charge ({version}). Kass'Beer lit
+   les versions 1, 2 et 3. » ; « Aucune recette dans « {fichier} ». ». Ouverture impossible :
+   « Impossible d'ouvrir le fichier. Réessayez ou choisissez un autre fichier. » et un seul
+   bouton, « Réessayer ». Une panne inattendue de l'analyse affiche « Fichier illisible » et
+   est rapportée (taille et type de l'erreur seulement).
+4. Aperçu, sans aucune écriture : au-delà de 500 recettes, « Ce fichier contient plus de 500
+   recettes : seules les 500 premières sont lues. » ; résumé chiffré accordé, sans les
+   compteurs à zéro (« 3 prêtes · 1 incomplète · 2 refusées », « · 1 déjà importée »,
+   « · 1 en double » s'il y en a) ; « Choisir un autre fichier » ; « Les prix et le stock du
+   fichier ne sont pas importés. » ; « Équipement des recettes » (présélectionné si le membre
+   n'a qu'un équipement, sinon « Aucun équipement » ; aide « Vous pourrez le changer dans
+   chaque recette. ») ; un filtre avec le compte de chaque valeur : « Toutes (6) »,
+   « Prêtes (3) », « Incomplètes (1) », « Déjà importées ou en double (0) », « Refusées
+   (2) » ; « Toutes les recettes (N) » (« Toutes les recettes affichées (N) » quand un filtre
+   est actif), qui coche ou décoche les recettes affichées ; « Aucune recette pour ce filtre. » quand un filtre n'en montre aucune ; puis une ligne par recette :
+   case, nom, « style · volume · statut », et « Détails (n) » dépliable (lu « Détails de
+   {nom} (n) ») avec « À compléter » et « Modifié à l'import ». Le statut s'écrit en toutes lettres : « Prête » (rien ne manque
+   au calcul ni à l'export BeerJSON, cochée), « Incomplète » (cochée), « Déjà importée le
+   {date} » (même contenu déjà importé par ce membre, décochée, cochable : une seconde copie),
+   « En double dans le fichier » (décochée), « Refusée : {raison} » (sans case). Un même nom
+   seul ne fait pas un doublon.
+5. Raisons d'un refus : « Nom absent. », « Plus de 50 houblons (63). » (malts, ajouts,
+   « Plus de 10 levures », « Plus de 20 paliers »), « Unité inconnue pour le volume :
+   « barrels ». », « Valeur hors limites : quantité de Pils. », « Valeur illisible : … »,
+   « Valeur absente : forme de Cascade. », « Valeur inconnue pour le type de Pils :
+   « adjunct ». », « Nom d'un malt absent ou sans lettre ni chiffre. », « Recette
+   illisible. ». Aucune liste n'est tronquée.
+6. « Modifié à l'import » : « Style : seul le nom « {style} » est gardé. », « Non importés :
+   profil d'eau, étapes de fermentation, … », « Nom coupé à 120 caractères. », « Notes
+   coupées à 10 000 caractères. », « Unités converties (livres, °F, Lovibond). », « Valeur
+   0 lue comme absente : rendement d'extrait de Pils. », « Non importé : quantité de S-04 en
+   « pkg ». », « Non importé : … , hors limites. » (au-delà de 1 000 kg ou de 1 000 L par
+   ligne, de 10 000 L de volume, de 2 000 EBC, de 365 jours hors ébullition), « Durée de
+   {nom} arrondie à la minute. », « Moment d'ajout simplifié : {nom}, compté à l'empâtage. »
+   (ou à l'ébullition, à cru, au conditionnement), « Caractères de contrôle retirés des
+   textes. », « {n} champs inconnus ignorés. ». Une quantité obligatoire au-delà de ces
+   plafonds refuse la recette (« Valeur hors limites : quantité de Pils. »).
+7. Barre fixe « Importer N recettes » ; sans case cochée, « Cochez au moins une recette. »
+   au-dessus du bouton inactif ; sans recette importable, « Aucune recette à importer. ».
+   Aucun dialogue de plus.
+8. « Import en cours : 4 sur 10 » et une barre de progression ; une écriture par recette,
+   au nom du membre ; le retour est bloqué tant que les écritures ne sont pas faites sur
+   l'appareil.
+9. « Import terminé », « 9 créées · 2 ignorées · 1 en erreur » ; hors ligne, « {n} recettes
+   créées sur l'appareil. Elles partiront au retour du réseau. » ; sections « Créées »
+   (toucher ouvre la fiche par-dessus le compte rendu, qui revient au retour ; « En attente
+   du réseau » jusqu'à la réponse du serveur), « Ignorées » avec leur raison (« Saison —
+   Non cochée », « Porter — Refusée : Nom absent. »), « En erreur » (« L'enregistrement de
+   « {nom} » a échoué. ») ; boutons « Revenir aux recettes » et « Importer un autre
+   fichier ». « Import terminé. » et le bilan sont annoncés une fois au lecteur d'écran, refus reçus pendant l'écriture compris ; un refus reçu
+   pendant la lecture du compte rendu est annoncé. Un refus du serveur arrivé après la
+   sortie de l'écran, ou après « Importer un autre fichier », s'annonce en un seul message :
+   « Import : 2 recettes refusées par le serveur : Saison, Porter. ».
+
+Une recette importée garde ce que le fichier dit, sans valeur inventée : un champ absent
+reste absent et la recette se complète dans l'éditeur, comme une recette saisie. Les
+textes du fichier s'affichent en texte simple. Le BeerXML n'est pas encore lu.
 
 **Chronologie du jour.** La section montre les étapes et la durée totale. Pour l'auteur,
 « Modifier la chronologie » ouvre l'éditeur plein écran « Chronologie du jour », qui n'écrit que
@@ -986,6 +1105,11 @@ affiche « Calcul impossible : {champ} hors des limites. » ; l'erreur est rappo
   indisponible hors ligne », jamais « supprimé ».
 - Sur le web, seul un onglet déjà ouvert continue de marcher sans réseau.
 - Deux appareils qui modifient la même recette : le dernier enregistrement l'emporte.
+- L'import marche sans réseau : les recettes sont créées sur l'appareil, partent au retour
+  du réseau, et un refus du serveur s'annonce dans le compte rendu, ou en un seul message
+  après la sortie de l'écran. « Déjà importée » se lit dans les recettes en cache.
+- L'export marche sans réseau si la recette et son équipement sont dans le cache ; sinon
+  « Équipement indisponible hors ligne. » bloque l'export.
 
 ### Configuration absente
 

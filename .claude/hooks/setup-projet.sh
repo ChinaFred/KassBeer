@@ -26,6 +26,7 @@ flutter config --no-analytics >/dev/null
 
 [ -f "$ROOT/app/pubspec.yaml" ] && (cd "$ROOT/app" && flutter pub get)
 [ -f "$ROOT/brewing/pubspec.yaml" ] && (cd "$ROOT/brewing" && dart pub get)
+[ -f "$ROOT/exchange/pubspec.yaml" ] && (cd "$ROOT/exchange" && dart pub get)
 [ -f "$ROOT/rules-tests/package-lock.json" ] && (cd "$ROOT/rules-tests" && npm ci --no-audit --no-fund)
 [ -f "$ROOT/functions/package-lock.json" ] && (cd "$ROOT/functions" && npm ci --no-audit --no-fund)
 

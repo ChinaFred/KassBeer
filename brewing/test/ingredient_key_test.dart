@@ -151,6 +151,13 @@ void main() {
     }
   });
 
+  test('normalizeName : la clé sans préfixe, vide sans lettre ni chiffre', () {
+    expect(normalizeName('IPA Maison'), 'ipa-maison');
+    expect(normalizeName('Bière d\'Été — n° 2'), 'biere-d-ete-n-2');
+    expect(normalizeName('Malt Pils'), 'malt-pils');
+    expect(normalizeName('%!'), isEmpty);
+  });
+
   test('nature lue sur le préfixe de la clé', () {
     for (final nature in IngredientNature.values) {
       for (final name in ['Pils', 'Malt', 'Sucre', 'Houblon', 'Levure']) {

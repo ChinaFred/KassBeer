@@ -1,10 +1,12 @@
 package fr.kassbeer.kass_beer
 
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -15,8 +17,34 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var ringtone: Ringtone? = null
 
+    // Canal des fichiers (ADR-007), branché avec le moteur.
+    private var fichiers: EchangeFichiers? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Lancement neuf : le fichier exporté au lancement précédent est effacé.
+        if (savedInstanceState == null) fichiers?.viderExports()
+    }
+
+    override fun onDestroy() {
+        fichiers?.fermer()
+        super.onDestroy()
+    }
+
+    // Retour du sélecteur du système (ACTION_OPEN_DOCUMENT, ACTION_CREATE_DOCUMENT) ; les
+    // autres requêtes vont aux greffons, par FlutterActivity.
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (fichiers?.onActivityResult(requestCode, resultCode, data) == true) return
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Canal des fichiers : mêmes noms que app/lib/core/fichiers/echange_fichiers.dart
+        // (P17).
+        fichiers = EchangeFichiers(this).also {
+            it.brancher(flutterEngine.dartExecutor.binaryMessenger)
+        }
         // Canal de l'alerte de fin de minuteur : mêmes noms que
         // app/lib/features/brew_day/data/alerte_minuteur.dart (P17).
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "fr.kassbeer/alert")

@@ -1,0 +1,1559 @@
+{
+  "beerjson": {
+    "version": 2.01,
+    "recipes": [
+      {
+        "name": "IPA de test",
+        "type": "all grain",
+        "author": "Brasseuse Fictive",
+        "created": "2026-10-01",
+        "batch_size": {
+          "value": 5.5,
+          "unit": "gal"
+        },
+        "efficiency": {
+          "brewhouse": {
+            "value": 72,
+            "unit": "%"
+          }
+        },
+        "style": {
+          "name": "American IPA",
+          "category": "IPA",
+          "style_guide": "BJCP 2021",
+          "type": "beer"
+        },
+        "original_gravity": {
+          "value": 1.062,
+          "unit": "sg"
+        },
+        "ibu_estimate": {
+          "method": "Tinseth",
+          "value": {
+            "value": 55,
+            "unit": "IBUs"
+          }
+        },
+        "boil": {
+          "pre_boil_size": {
+            "value": 7,
+            "unit": "gal"
+          },
+          "boil_time": {
+            "value": 1,
+            "unit": "hr"
+          }
+        },
+        "mash": {
+          "name": "Infusion simple",
+          "grain_temperature": {
+            "value": 68,
+            "unit": "F"
+          },
+          "mash_steps": [
+            {
+              "name": "Saccharification",
+              "type": "infusion",
+              "step_temperature": {
+                "value": 152,
+                "unit": "F"
+              },
+              "step_time": {
+                "value": 60,
+                "unit": "min"
+              },
+              "water_grain_ratio": {
+                "value": 1.5,
+                "unit": "qt/lb"
+              }
+            },
+            {
+              "name": "Mash out",
+              "type": "temperature",
+              "step_temperature": {
+                "value": 76,
+                "unit": "C"
+              },
+              "step_time": {
+                "value": 10,
+                "unit": "min"
+              }
+            }
+          ]
+        },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Pale Ale Malt",
+              "type": "grain",
+              "producer": "Malterie Exemple",
+              "yield": {
+                "fine_grind": {
+                  "value": 80,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 3,
+                "unit": "Lovi"
+              },
+              "amount": {
+                "value": 11,
+                "unit": "lb"
+              }
+            },
+            {
+              "name": "Crystal 40",
+              "type": "grain",
+              "yield": {
+                "potential": {
+                  "value": 1.034,
+                  "unit": "sg"
+                }
+              },
+              "color": {
+                "value": 40,
+                "unit": "SRM"
+              },
+              "amount": {
+                "value": 12,
+                "unit": "oz"
+              }
+            },
+            {
+              "name": "Sucre candi",
+              "type": "sugar",
+              "yield": {
+                "fine_grind": {
+                  "value": 100,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 0,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 250,
+                "unit": "g"
+              }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Centennial",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 10,
+                "unit": "%"
+              },
+              "beta_acid": {
+                "value": 4,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 1,
+                "unit": "oz"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 60,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Cascade",
+              "form": "leaf",
+              "alpha_acid": {
+                "value": 5.5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 1,
+                "unit": "oz"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 0,
+                  "unit": "min"
+                },
+                "duration": {
+                  "value": 20,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Citra",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 12,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 2,
+                "unit": "oz"
+              },
+              "timing": {
+                "use": "add_to_fermentation",
+                "time": {
+                  "value": 3,
+                  "unit": "day"
+                },
+                "duration": {
+                  "value": 4,
+                  "unit": "day"
+                }
+              }
+            }
+          ],
+          "miscellaneous_additions": [
+            {
+              "name": "Mousse d'Irlande",
+              "type": "fining",
+              "amount": {
+                "value": 1,
+                "unit": "tsp"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 15,
+                  "unit": "min"
+                }
+              }
+            }
+          ],
+          "culture_additions": [
+            {
+              "name": "Levure américaine",
+              "type": "ale",
+              "form": "dry",
+              "producer": "Levurier Exemple",
+              "attenuation": {
+                "value": 78,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 1,
+                "unit": "pkg"
+              }
+            }
+          ],
+          "water_additions": [
+            {
+              "name": "Eau du robinet",
+              "calcium": {
+                "value": 50,
+                "unit": "ppm"
+              }
+            }
+          ]
+        },
+        "fermentation": {
+          "name": "Ale",
+          "fermentation_steps": []
+        },
+        "notes": "Notes de\u202E test.\nDeuxième ligne."
+      },
+      {
+        "name": "Saison refusée",
+        "type": "all grain",
+        "batch_size": {
+          "value": 20,
+          "unit": "l"
+        },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Pils",
+              "type": "grain",
+              "yield": {
+                "fine_grind": {
+                  "value": 81,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 3.5,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 4.5,
+                "unit": "kg"
+              }
+            }
+          ],
+          "miscellaneous_additions": [
+            {
+              "name": "Pastille clarifiante",
+              "type": "fining",
+              "amount": {
+                "value": 1,
+                "unit": "each"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "IPA de test",
+        "type": "all grain",
+        "author": "Brasseuse Fictive",
+        "created": "2026-10-01",
+        "batch_size": {
+          "value": 5.5,
+          "unit": "gal"
+        },
+        "efficiency": {
+          "brewhouse": {
+            "value": 72,
+            "unit": "%"
+          }
+        },
+        "style": {
+          "name": "American IPA",
+          "category": "IPA",
+          "style_guide": "BJCP 2021",
+          "type": "beer"
+        },
+        "original_gravity": {
+          "value": 1.062,
+          "unit": "sg"
+        },
+        "ibu_estimate": {
+          "method": "Tinseth",
+          "value": {
+            "value": 55,
+            "unit": "IBUs"
+          }
+        },
+        "boil": {
+          "pre_boil_size": {
+            "value": 7,
+            "unit": "gal"
+          },
+          "boil_time": {
+            "value": 1,
+            "unit": "hr"
+          }
+        },
+        "mash": {
+          "name": "Infusion simple",
+          "grain_temperature": {
+            "value": 68,
+            "unit": "F"
+          },
+          "mash_steps": [
+            {
+              "name": "Saccharification",
+              "type": "infusion",
+              "step_temperature": {
+                "value": 152,
+                "unit": "F"
+              },
+              "step_time": {
+                "value": 60,
+                "unit": "min"
+              },
+              "water_grain_ratio": {
+                "value": 1.5,
+                "unit": "qt/lb"
+              }
+            },
+            {
+              "name": "Mash out",
+              "type": "temperature",
+              "step_temperature": {
+                "value": 76,
+                "unit": "C"
+              },
+              "step_time": {
+                "value": 10,
+                "unit": "min"
+              }
+            }
+          ]
+        },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Pale Ale Malt",
+              "type": "grain",
+              "producer": "Malterie Exemple",
+              "yield": {
+                "fine_grind": {
+                  "value": 80,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 3,
+                "unit": "Lovi"
+              },
+              "amount": {
+                "value": 11,
+                "unit": "lb"
+              }
+            },
+            {
+              "name": "Crystal 40",
+              "type": "grain",
+              "yield": {
+                "potential": {
+                  "value": 1.034,
+                  "unit": "sg"
+                }
+              },
+              "color": {
+                "value": 40,
+                "unit": "SRM"
+              },
+              "amount": {
+                "value": 12,
+                "unit": "oz"
+              }
+            },
+            {
+              "name": "Sucre candi",
+              "type": "sugar",
+              "yield": {
+                "fine_grind": {
+                  "value": 100,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 0,
+                "unit": "EBC"
+              },
+              "amount": {
+                "value": 250,
+                "unit": "g"
+              }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Centennial",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 10,
+                "unit": "%"
+              },
+              "beta_acid": {
+                "value": 4,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 1,
+                "unit": "oz"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 60,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Cascade",
+              "form": "leaf",
+              "alpha_acid": {
+                "value": 5.5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 1,
+                "unit": "oz"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 0,
+                  "unit": "min"
+                },
+                "duration": {
+                  "value": 20,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Citra",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 12,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 2,
+                "unit": "oz"
+              },
+              "timing": {
+                "use": "add_to_fermentation",
+                "time": {
+                  "value": 3,
+                  "unit": "day"
+                },
+                "duration": {
+                  "value": 4,
+                  "unit": "day"
+                }
+              }
+            }
+          ],
+          "miscellaneous_additions": [
+            {
+              "name": "Mousse d'Irlande",
+              "type": "fining",
+              "amount": {
+                "value": 1,
+                "unit": "tsp"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 15,
+                  "unit": "min"
+                }
+              }
+            }
+          ],
+          "culture_additions": [
+            {
+              "name": "Levure américaine",
+              "type": "ale",
+              "form": "dry",
+              "producer": "Levurier Exemple",
+              "attenuation": {
+                "value": 78,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 1,
+                "unit": "pkg"
+              }
+            }
+          ],
+          "water_additions": [
+            {
+              "name": "Eau du robinet",
+              "calcium": {
+                "value": 50,
+                "unit": "ppm"
+              }
+            }
+          ]
+        },
+        "fermentation": {
+          "name": "Ale",
+          "fermentation_steps": []
+        },
+        "notes": "Notes de\u202E test.\nDeuxième ligne."
+      },
+      {
+        "type": "extract",
+        "ingredients": {
+          "fermentable_additions": []
+        }
+      },
+      {
+        "name": "Houblonnée",
+        "ingredients": {
+          "fermentable_additions": [],
+          "hop_additions": [
+            {
+              "name": "Houblon 1",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 2",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 3",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 4",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 5",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 6",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 7",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 8",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 9",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 10",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 11",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 12",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 13",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 14",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 15",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 16",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 17",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 18",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 19",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 20",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 21",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 22",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 23",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 24",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 25",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 26",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 27",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 28",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 29",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 30",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 31",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 32",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 33",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 34",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 35",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 36",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 37",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 38",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 39",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 40",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 41",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 42",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 43",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 44",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 45",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 46",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 47",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 48",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 49",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 50",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Houblon 51",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 10,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Quantité négative",
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Pils",
+              "type": "grain",
+              "amount": {
+                "value": -1,
+                "unit": "kg"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

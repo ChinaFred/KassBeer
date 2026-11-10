@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "0.1.20",
+      "date": "2026-11-10",
+      "paragraphs": [
+        "Recettes › Importer : « Importer », dans la liste des recettes, lit un fichier BeerJSON exporté d'un autre logiciel de brassage (500 recettes et 10 Mo au plus) et crée ses recettes à votre nom. Avant toute écriture, un aperçu donne pour chaque recette son état : « Prête », « Incomplète », « Déjà importée le … » (même contenu déjà importé par vous, décochée), « En double dans le fichier » ou « Refusée », avec la raison. « Détails » liste ce qui reste à compléter et ce qui a changé à l'import (unités converties, valeurs écartées, parties non importées). Vous choisissez l'équipement des recettes, cochez celles à importer, puis lisez le compte rendu : créées, ignorées, en erreur. L'import marche sans réseau : les recettes partent au retour du réseau. Les prix et le stock du fichier ne sont jamais importés. Le BeerXML n'est pas encore lu : un fichier BeerXML est annoncé comme tel.",
+        "« Exporter », sur la fiche de toute recette du groupe, produit un fichier BeerJSON sans aucun prix : sur Android, « Enregistrer » ou « Partager le fichier » ; sur le web, « Télécharger ». Le fichier porte l'auteur de la recette, le rendement de son équipement et les densités, le degré, l'amertume et la couleur calculés. Ce qui manque au format est listé (« Type de recette non renseigné. ») ; l'auteur peut compléter la recette, un autre membre la duplique. Une recette à l'extrait, sans palier ni température du grain, s'exporte sans empâtage ; une recette sans durée d'ébullition, sans ébullition ; la feuille le dit, comme pour le style et la chronologie du jour, qui ne sont pas exportés. La recette d'un autre membre qui n'indique pas d'auteur ne s'exporte pas à son nom : la feuille propose « Dupliquer », et la copie s'exporte à votre nom. Avant l'envoi, la feuille nomme l'auteur écrit dans le fichier. Si l'envoi échoue, la feuille le dit et l'envoi peut se refaire. L'export BeerXML est visible et bloqué : il demande un style de la liste BJCP, qui arrive dans une prochaine version."
+      ]
+    },
+    {
       "version": "0.1.17",
       "date": "2026-11-10",
       "paragraphs": [
@@ -36,13 +44,6 @@
       "date": "2026-11-10",
       "paragraphs": [
         "Les prix et le coût arrivent (incrément v0.5). Chaque brasseur saisit ses prix d'achat et ses frais (eau, électricité, embouteillage) dans « Mes prix », ouvert depuis le menu du compte. La fiche d'une recette affiche son coût avec les prix du lecteur : total, par litre et bouteille de 33 cl. Un prix manquant n'affiche aucun montant : la liste des manquants permet de saisir chaque prix sans quitter la recette. Sur la fiche d'un brassin, son propriétaire voit l'estimation, puis le coût figé automatiquement au premier embouteillage si tous les prix sont connus, par bouteille réelle. Sinon, « Figer le coût » rattrape le figeage. « Recalculer avec mes prix actuels » remplace un coût figé après confirmation. Les prix et les coûts ne sont visibles que de leur propriétaire."
-      ]
-    },
-    {
-      "version": "0.1.11",
-      "date": "2026-11-08",
-      "paragraphs": [
-        "L'après-brassage arrive (incrément v0.4) : un brassin va de « Prévu » à « Terminé » sans Excel. La fiche d'un brassin suit la fermentation, l'embouteillage et la fin, avec un retour en arrière à chaque statut et l'abandon. Le relevé de fermentation note densité, température, date et note, montre l'écart à la mesure précédente et trace une courbe de densité et de température. Le bloc « Prévu et mesuré » compare densités, degré, volume et rendement réel. Une donnée absente affiche « Indisponible » et sa raison. L'embouteillage note la date, la densité finale, les bouteilles, le volume et le sucre, sans calcul de degré après bouteille. Ces saisies marchent sans réseau."
       ]
     }
   ]

@@ -1,0 +1,189 @@
+{
+  "beerjson": {
+    "version": 2.01,
+    "recipes": [
+      {
+        "name": "Blonde d'essai",
+        "type": "all grain",
+        "notes": "Recette de test.",
+        "batch_size": {
+          "value": 20.0,
+          "unit": "l"
+        },
+        "boil": {
+          "boil_time": {
+            "value": 60,
+            "unit": "min"
+          }
+        },
+        "mash": {
+          "name": "Empâtage",
+          "grain_temperature": {
+            "value": 18.0,
+            "unit": "C"
+          },
+          "mash_steps": [
+            {
+              "name": "Palier 66",
+              "type": "infusion",
+              "step_temperature": {
+                "value": 66.0,
+                "unit": "C"
+              },
+              "step_time": {
+                "value": 60,
+                "unit": "min"
+              }
+            }
+          ]
+        },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Pils",
+              "type": "grain",
+              "amount": {
+                "value": 4500.0,
+                "unit": "g"
+              },
+              "color": {
+                "value": 3.5,
+                "unit": "EBC"
+              },
+              "yield": {
+                "fine_grind": {
+                  "value": 80.0,
+                  "unit": "%"
+                }
+              }
+            },
+            {
+              "name": "Candi",
+              "type": "sugar",
+              "amount": {
+                "value": 500.0,
+                "unit": "g"
+              },
+              "color": {
+                "value": 0.0,
+                "unit": "EBC"
+              },
+              "yield": {
+                "fine_grind": {
+                  "value": 100.0,
+                  "unit": "%"
+                }
+              }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Magnum",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 12.0,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 22.4,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 60,
+                  "unit": "min"
+                }
+              }
+            },
+            {
+              "name": "Saaz",
+              "form": "leaf",
+              "alpha_acid": {
+                "value": 3.5,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 30.0,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 0,
+                  "unit": "min"
+                },
+                "duration": {
+                  "value": 15,
+                  "unit": "min"
+                }
+              }
+            }
+          ],
+          "miscellaneous_additions": [
+            {
+              "name": "Coriandre",
+              "type": "spice",
+              "amount": {
+                "value": 10.0,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 5,
+                  "unit": "min"
+                }
+              }
+            }
+          ],
+          "culture_additions": [
+            {
+              "name": "US-05",
+              "type": "ale",
+              "form": "dry",
+              "attenuation": {
+                "value": 78.0,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 11.5,
+                "unit": "g"
+              }
+            }
+          ]
+        },
+        "author": "Brasseur Exemple",
+        "efficiency": {
+          "brewhouse": {
+            "value": 72.0,
+            "unit": "%"
+          }
+        },
+        "original_gravity": {
+          "value": 1.0596,
+          "unit": "sg"
+        },
+        "final_gravity": {
+          "value": 1.0131,
+          "unit": "sg"
+        },
+        "alcohol_by_volume": {
+          "value": 6.1,
+          "unit": "%"
+        },
+        "ibu_estimate": {
+          "method": "Tinseth",
+          "value": {
+            "value": 31.3,
+            "unit": "IBUs"
+          }
+        },
+        "color_estimate": {
+          "value": 6.7,
+          "unit": "EBC"
+        }
+      }
+    ]
+  }
+}

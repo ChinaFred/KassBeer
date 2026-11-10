@@ -30,6 +30,18 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Partage du fichier exporté (ADR-007) : cacheDir/exports/ seul, non exporté,
+             lecture temporaire de l'URI partagée. Aucune permission de stockage : le
+             sélecteur du système donne l'accès au seul document choisi. -->
+        <provider
+            android:name=".ExportsFileProvider"
+            android:authorities="${applicationId}.exports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/exports_paths" />
+        </provider>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
