@@ -1,0 +1,15 @@
+{
+  "name": "kassbeer-effacement-l1",
+  "private": true,
+  "description": "Effacement à usage unique de recipes/ et brews/ avant le passage au modèle BeerJSON (ADR-005, L1). Sort du dépôt à la livraison suivante.",
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node --test effacer.test.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "14.5.0"
+  }
+}

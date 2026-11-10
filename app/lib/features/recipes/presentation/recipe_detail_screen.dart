@@ -14,6 +14,7 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../costs/presentation/bloc_cout.dart';
 import '../../equipment/presentation/equipment_providers.dart';
+import '../domain/beerjson.dart';
 import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
 import '../../brews/presentation/new_brew_form.dart';
@@ -28,7 +29,9 @@ const textesRecette = TextesDocument(
   absent: 'Cette recette n\'existe pas ou a été supprimée.',
   horsLigne: 'Recette indisponible hors ligne.',
   illisible:
-      'Cette recette est illisible : une valeur enregistrée est inattendue.',
+      'Cette recette ne peut pas s\'afficher. Elle a peut-être été '
+      'enregistrée par une version plus récente de Kass\'Beer : mettez '
+      'l\'application à jour. L\'erreur est signalée à l\'administrateur.',
   retour: 'Revenir aux recettes',
 );
 
@@ -264,6 +267,10 @@ class _Fiche extends StatelessWidget {
         // (CR7). Le bloc porte son titre.
         BlocCoutRecette(recipe: recipe, onCompleter: edit),
         const TitreSection('Général'),
+        LigneFiche(
+          label: 'Type de recette',
+          value: c.type == null ? null : typesRecette.libelle(c.type!),
+        ),
         LigneFiche(
           label: 'Volume en fermenteur',
           value: volume == null ? null : formatLitres(volume),

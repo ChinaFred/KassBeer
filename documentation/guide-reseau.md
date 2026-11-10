@@ -243,6 +243,15 @@ exacte, importé par un seul fichier, couleurs lues dans le thème, résumé pou
 d'écran. Ce fichier unique permet de retirer le paquet sans toucher au reste. P1 s'étend à
 `deferred as` : un fichier chargé à part exige sa règle `no-cache` et un nouvel ADR.
 
+Depuis la v0.1.15 (ADR-005, livraison L1), `relecteur-regles` vérifie P21 : les recettes et la
+copie figée restent en BeerJSON partiel au commit figé, en unités canoniques, sans champ propre
+à Kass'Beer dans `recipe`. Les fixtures de `app/test/fixtures/recipe_documents/` passent le
+schéma partiel par ajv dans le job « Règles — émulateur ». Le contrôle des règles approche la
+limite de Firestore de 1 000 expressions par requête : toute règle ajoutée sur `recipes/` ou
+`brews/` est mesurée par le test « budget des règles ». `CLAUDE.md` gagne la règle « Recettes
+en BeerJSON partiel ». P19, P20, P22 et les autres évolutions d'ADR-005 arrivent avec L2 à
+L4, quand leur code existe.
+
 Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
 `--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans
 ce fichier local, jamais versionné. État de la production et outils du poste :
@@ -253,4 +262,9 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
 - 2026-11-07 : `debugPrint` seul est admis dans deux cas où aucun rapport ne peut partir :
   l'échec de démarrage de Firebase, et un rapport d'erreur impossible à écrire (écriture en
   échec, aucun compte, compte illisible, plafond atteint). Relecture du socle, décision de
+  l'utilisateur.
+- 2026-11-10 : exception ponctuelle à « Une écriture de masse sur les données a un seul
+  écran ». Au passage de L1, `effacement-l1/` efface depuis le poste `recipes/`, `brews/`,
+  leurs `events/` et les coûts figés de ces brassins, après un compte rendu sans écriture, une copie dans `import/backup/` et une
+  confirmation. L'outil et l'exception sortent à la livraison suivante. ADR-005, décision de
   l'utilisateur.

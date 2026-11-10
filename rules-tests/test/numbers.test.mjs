@@ -1,5 +1,6 @@
-// Nombres de premier niveau (optNumber) : finis et bornés à ±1e9. Infinity et NaN
-// rendraient un document illisible par l'application (revue securite v0.1.7).
+// Nombres de premier niveau (optNumber) et grandeurs BeerJSON de premier niveau
+// (optMeasure) : finis et bornés à ±1e9. Infinity et NaN rendraient un document
+// illisible par l'application (revue securite v0.1.7).
 
 import { describe, it } from "node:test";
 import { db, equipment, fresh, recipe, uidOf } from "./helpers.mjs";
@@ -29,12 +30,12 @@ describe("nombres finis et bornés", () => {
           .set(fresh(equipment(uidOf("owner"), { trub_loss_l: value }))),
       );
     });
-    it(`recipes.batch_volume_l = ${label} : ${allowed ? "accepté" : "refusé"}`, async () => {
+    it(`recipes.recipe.batch_size.value = ${label} : ${allowed ? "accepté" : "refusé"}`, async () => {
       await expectRule(
         allowed,
         db(state.env, "owner")
           .doc(`recipes/nombre-${label}`)
-          .set(fresh(recipe(uidOf("owner"), { batch_volume_l: value }))),
+          .set(fresh(recipe(uidOf("owner"), {}, { batch_size: { value, unit: "l" } }))),
       );
     });
   }

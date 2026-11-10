@@ -154,6 +154,17 @@ void main() {
   );
 
   group('clé dérivée du nom (LI1)', () {
+    // Document BeerJSON (v0.1.15) : la clé n'est plus stockée ; un champ `key` écrit
+    // par un client direct dans un élément de liste est ignoré par la lecture typée.
+    Map<String, Object?> recetteBeerJson(List<Map<String, Object?>> malts) => {
+      'format_version': 1,
+      'recipe': {
+        'name': 'Blonde',
+        'batch_size': {'value': 20, 'unit': 'l'},
+        'ingredients': {'fermentable_additions': malts},
+      },
+    };
+
     test('une ligne construite sans clé a son prix', () {
       final cout =
           recetteAvec(recette, prices: prixLus([pils, s04]), fees: fraisLus([]))
@@ -164,13 +175,15 @@ void main() {
     });
 
     test('une ligne stockée sans champ key a son prix', () {
-      final content = RecipeContent.fromFirestore({
-        'name': 'Blonde',
-        'batch_volume_l': 20,
-        'fermentables': [
-          {'name': 'Pils', 'kind': 'grain', 'weight_g': 5000},
-        ],
-      });
+      final content = RecipeContent.fromFirestore(
+        recetteBeerJson([
+          {
+            'name': 'Pils',
+            'type': 'grain',
+            'amount': {'value': 5000, 'unit': 'g'},
+          },
+        ]),
+      );
       final cout =
           recetteAvec(content, prices: prixLus([pils]), fees: fraisLus([]))
               as CoutObtenu;
@@ -178,18 +191,16 @@ void main() {
     });
 
     test('une clé stockée différente du nom est ignorée', () {
-      final content = RecipeContent.fromFirestore({
-        'name': 'Blonde',
-        'batch_volume_l': 20,
-        'fermentables': [
+      final content = RecipeContent.fromFirestore(
+        recetteBeerJson([
           {
             'key': 'malt-autre-chose',
             'name': 'Pils',
-            'kind': 'grain',
-            'weight_g': 5000,
+            'type': 'grain',
+            'amount': {'value': 5000, 'unit': 'g'},
           },
-        ],
-      });
+        ]),
+      );
       expect(
         recetteAvec(content, prices: prixLus([pils]), fees: fraisLus([])),
         isA<CoutObtenu>(),

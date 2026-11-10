@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/data/lecture_document.dart';
+import 'package:kass_beer/core/presentation/formats.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
@@ -137,6 +139,29 @@ void main() {
   });
 
   group('détail et calculs', () {
+    testWidgets('recette illisible : texte, erreur signalée', (tester) async {
+      await open(
+        tester,
+        '/recettes/r1',
+        before: (app) => app.recipes.all.add(
+          const ListeLue(
+            documents: [
+              DocumentInvalide('r1', DocumentIllisible('format_version', 'x')),
+            ],
+            fromCache: false,
+          ),
+        ),
+      );
+      expect(
+        find.text(
+          'Cette recette ne peut pas s\'afficher. Elle a peut-être été '
+          'enregistrée par une version plus récente de Kass\'Beer : mettez '
+          'l\'application à jour. L\'erreur est signalée à l\'administrateur.',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('calcul indisponible : liste « À compléter » (C7)', (
       tester,
     ) async {
@@ -646,7 +671,8 @@ void main() {
       );
     });
 
-    testWidgets('houblon : passer à « À cru » vide la durée', (tester) async {
+    testWidgets('houblon : chaque moment garde sa durée, un moment jamais '
+        'saisi est vide', (tester) async {
       await open(tester, '/recettes/nouvelle');
       await tester.scrollUntilVisible(
         find.text('Ajouter un houblon'),
@@ -655,17 +681,31 @@ void main() {
       );
       await tester.tap(find.text('Ajouter un houblon'));
       await tester.pumpAndSettle();
+      String textOf(String label) => tester
+          .widget<EditableText>(
+            find.descendant(
+              of: sheetField(label),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .controller
+          .text;
+      Future<void> moment(String label) async {
+        await tester.ensureVisible(inSheet(find.text(label)));
+        await tester.tap(inSheet(find.text(label)));
+        await tester.pumpAndSettle();
+      }
+
       await tester.enterText(sheetField('Durée d\x27ébullition (min)'), '60');
-      await tester.ensureVisible(inSheet(find.text('À cru')));
-      await tester.tap(inSheet(find.text('À cru')));
-      await tester.pumpAndSettle();
-      final field = tester.widget<EditableText>(
-        find.descendant(
-          of: sheetField('Durée à cru (jours)'),
-          matching: find.byType(EditableText),
-        ),
-      );
-      expect(field.controller.text, isEmpty);
+      await moment('À cru');
+      expect(textOf('Durée à cru (jours)'), isEmpty);
+      await tester.enterText(sheetField('Durée à cru (jours)'), '3');
+      await moment('Whirlpool');
+      expect(textOf('Durée d\x27infusion (min)'), isEmpty);
+      await moment('Ébullition');
+      expect(textOf('Durée d\x27ébullition (min)'), '60');
+      await moment('À cru');
+      expect(textOf('Durée à cru (jours)'), '3');
     });
 
     test('calcul refusé : un seul rapport par recette et par champ', () {
@@ -702,6 +742,489 @@ void main() {
         recipeKey: 'r2',
       );
       expect(errors.reports, hasLength(2));
+    });
+  });
+
+  group('v0.1.15 — champs BeerJSON', () {
+    Future<void> openSheet(WidgetTester tester, String button) async {
+      await tester.scrollUntilVisible(
+        find.text(button),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text(button));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+    }
+
+    /// Choisit [value] dans la liste déroulante [label] (dans la feuille si
+    /// [sheet]).
+    Future<void> choose(
+      WidgetTester tester,
+      String label,
+      String value, {
+      bool sheet = false,
+    }) async {
+      final field = find.ancestor(
+        of: find.text(label),
+        matching: find.byType(DropdownButtonFormField<String?>),
+      );
+      final target = sheet ? inSheet(field) : field;
+      await tester.ensureVisible(target.first);
+      await tester.tap(target.first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(value).last);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> nameAndSave(WidgetTester tester, String name) async {
+      await tester.scrollUntilVisible(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        name,
+      );
+      await tester.pump();
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+    }
+
+    String errorOf(WidgetTester tester, Finder field) => tester
+        .widget<InputDecorator>(
+          find.descendant(of: field, matching: find.byType(InputDecorator)),
+        )
+        .decoration
+        .errorText!;
+
+    testWidgets('houblon whirlpool : aide, durée obligatoire de 1 à 600 min, '
+        'durée vide au premier passage', (tester) async {
+      final app = await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un houblon');
+      await tester.enterText(sheetField('Nom'), 'Saaz');
+      await tester.enterText(sheetField('Quantité (g)'), '30');
+      await tester.enterText(sheetField('Durée d\'ébullition (min)'), '60');
+      await tester.ensureVisible(inSheet(find.text('Whirlpool')));
+      await tester.tap(inSheet(find.text('Whirlpool')));
+      await tester.pumpAndSettle();
+      final infusion = sheetField('Durée d\'infusion (min)');
+      expect(
+        tester
+            .widget<EditableText>(
+              find.descendant(
+                of: infusion,
+                matching: find.byType(EditableText),
+              ),
+            )
+            .controller
+            .text,
+        isEmpty,
+      );
+      expect(
+        inSheet(find.textContaining('Temps entre l\'arrêt du feu')),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(inSheet(find.text('Cônes')));
+      await tester.tap(inSheet(find.text('Cônes')));
+      await tester.pump();
+      Future<void> submit() async {
+        final button = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+      }
+
+      await submit();
+      expect(errorOf(tester, infusion), 'Champ obligatoire.');
+      await tester.enterText(infusion, '0');
+      await submit();
+      expect(
+        errorOf(tester, infusion),
+        'Au moins 1 min. Pour un ajout à l\'arrêt du feu, choisissez '
+        'Ébullition et 0 min.',
+      );
+      await tester.enterText(infusion, '601');
+      await submit();
+      expect(errorOf(tester, infusion), 'Entre 1 et 600.');
+      await tester.enterText(infusion, '12,5');
+      await submit();
+      expect(errorOf(tester, infusion), 'Nombre entier attendu.');
+      await tester.enterText(infusion, '15');
+      await submit();
+      expect(find.byType(BottomSheet), findsNothing);
+      await nameAndSave(tester, 'Blonde');
+      final hop = app.recipes.writes.single.content!.hops.single;
+      expect((hop.use, hop.timeMin), (HopUse.afterBoil, 15));
+    });
+
+    testWidgets('houblon à cru : jours décimaux, minutes entières', (
+      tester,
+    ) async {
+      final app = await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un houblon');
+      await tester.enterText(sheetField('Nom'), 'Citra');
+      await tester.enterText(sheetField('Quantité (g)'), '50');
+      await tester.ensureVisible(inSheet(find.text('À cru')));
+      await tester.tap(inSheet(find.text('À cru')));
+      await tester.pumpAndSettle();
+      await tester.enterText(sheetField('Durée à cru (jours)'), '2,7');
+      await tester.ensureVisible(inSheet(find.text('Pellets')));
+      await tester.tap(inSheet(find.text('Pellets')));
+      await tester.pump();
+      final button = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      await nameAndSave(tester, 'Houblonnée');
+      // 2,7 × 1 440 = 3 888 minutes.
+      expect(app.recipes.writes.single.content!.hops.single.timeMin, 3888);
+    });
+
+    testWidgets('ajout : durée sans utilisation refusée ; type en tête des '
+        'détails', (tester) async {
+      final app = await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un ajout');
+      await tester.enterText(sheetField('Nom'), 'Gypse');
+      await tester.enterText(sheetField('Quantité (g)'), '5');
+      await tester.enterText(sheetField('Durée (min)'), '60');
+      final button = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(inSheet(find.text('Choisissez une utilisation.')), findsOneWidget);
+      await choose(
+        tester,
+        'Type d\'ajout',
+        'Correction de l\'eau',
+        sheet: true,
+      );
+      final use = inSheet(
+        find.ancestor(
+          of: find.text('Utilisation'),
+          matching: find.byType(DropdownButtonFormField<OtherUse?>),
+        ),
+      );
+      await tester.ensureVisible(use);
+      await tester.tap(use);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Empâtage').last);
+      await tester.pumpAndSettle();
+      // L'erreur s'efface dès qu'une utilisation est choisie.
+      expect(inSheet(find.text('Choisissez une utilisation.')), findsNothing);
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(
+        find.text(
+          'Correction de l\'eau · ${formatGrammes(5)} · Empâtage · '
+          '${formatMinutes(60)}',
+        ),
+        findsOneWidget,
+      );
+      await nameAndSave(tester, 'Eau corrigée');
+      final other = app.recipes.writes.single.content!.others.single;
+      expect(
+        (other.type, other.use, other.timeMin),
+        ('water agent', OtherUse.mash, 60),
+      );
+    });
+
+    testWidgets('ajout : durée vidée, l\'erreur d\'utilisation s\'efface ; '
+        '« Après ébullition » sans durée, aide', (tester) async {
+      await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un ajout');
+      await tester.enterText(sheetField('Nom'), 'Coriandre');
+      await tester.enterText(sheetField('Quantité (g)'), '10');
+      await tester.enterText(sheetField('Durée (min)'), '5');
+      final button = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(inSheet(find.text('Choisissez une utilisation.')), findsOneWidget);
+      await tester.enterText(sheetField('Durée (min)'), '');
+      await tester.pumpAndSettle();
+      expect(inSheet(find.text('Choisissez une utilisation.')), findsNothing);
+      const help =
+          'Sans durée, l\'ajout est enregistré à l\'arrêt du feu (Ébullition, '
+          '0 min).';
+      expect(inSheet(find.text(help)), findsNothing);
+      final use = inSheet(
+        find.ancestor(
+          of: find.text('Utilisation'),
+          matching: find.byType(DropdownButtonFormField<OtherUse?>),
+        ),
+      );
+      await tester.ensureVisible(use);
+      await tester.tap(use);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Après ébullition').last);
+      await tester.pumpAndSettle();
+      expect(inSheet(find.text(help)), findsOneWidget);
+      await tester.enterText(sheetField('Durée (min)'), '10');
+      await tester.pumpAndSettle();
+      expect(inSheet(find.text(help)), findsNothing);
+    });
+
+    testWidgets('levure : quantité, type et forme', (tester) async {
+      final app = await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter une levure');
+      // Aide seule : le coût compte un sachet par levure, sans calcul sur la masse.
+      expect(
+        inSheet(
+          find.text(
+            'Le coût compte un sachet par levure, quelle que soit la quantité.',
+          ),
+        ),
+        findsOneWidget,
+      );
+      await tester.enterText(sheetField('Nom'), 'US-05');
+      await tester.enterText(sheetField('Quantité (g)'), '11,5');
+      await tester.enterText(sheetField('Atténuation (%)'), '78');
+      await choose(
+        tester,
+        'Type de levure',
+        'Haute fermentation (ale)',
+        sheet: true,
+      );
+      await tester.ensureVisible(inSheet(find.text('Sèche')));
+      await tester.tap(inSheet(find.text('Sèche')));
+      await tester.pump();
+      final button = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Haute fermentation (ale) · ${formatGrammes(11.5)} · atténuation '
+          '${formatPourcent(78)} · Sèche',
+        ),
+        findsOneWidget,
+      );
+      await nameAndSave(tester, 'Ale');
+      final yeast = app.recipes.writes.single.content!.yeasts.single;
+      expect((yeast.type, yeast.form, yeast.amountG), ('ale', 'dry', 11.5));
+    });
+
+    testWidgets('palier : type, durée entière', (tester) async {
+      final app = await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un palier');
+      await tester.enterText(sheetField('Nom'), 'Saccharification');
+      await tester.enterText(sheetField('Température (°C)'), '65');
+      await tester.enterText(sheetField('Durée (min)'), '60,5');
+      await choose(
+        tester,
+        'Type de palier',
+        'Infusion (eau chaude ajoutée)',
+        sheet: true,
+      );
+      // Libellé long dans le menu, court dans le champ.
+      expect(inSheet(find.text('Infusion')), findsOneWidget);
+      final button = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(inSheet(find.text('Nombre entier attendu.')), findsOneWidget);
+      await tester.enterText(sheetField('Durée (min)'), '60');
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Infusion · ${formatCelsius(65)} · ${formatMinutes(60)}'),
+        findsOneWidget,
+      );
+      await nameAndSave(tester, 'Empâtée');
+      final step = app.recipes.writes.single.content!.mashSteps.single;
+      expect((step.type, step.durationMin), ('infusion', 60));
+    });
+
+    testWidgets('général : type de recette, ébullition entière, température '
+        'du grain bornée', (tester) async {
+      final app = await open(tester, '/recettes/nouvelle');
+      await choose(tester, 'Type de recette', 'Tout grain');
+      final boil = find.widgetWithText(
+        TextFormField,
+        'Durée d\'ébullition (min)',
+      );
+      await tester.enterText(boil, '60,5');
+      final grain = find.widgetWithText(
+        TextFormField,
+        'Température du grain (°C)',
+      );
+      await tester.scrollUntilVisible(
+        grain,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(
+        find.text(
+          'Température des malts au moment de l\'empâtage, souvent celle de la '
+          'pièce.',
+        ),
+        findsOneWidget,
+      );
+      await tester.enterText(grain, '70');
+      await tester.pump();
+      await nameAndSave(tester, 'Blonde');
+      expect(app.recipes.writes, isEmpty);
+      await tester.scrollUntilVisible(
+        grain,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(errorOf(tester, grain), 'Entre -20 et 60.');
+      await tester.enterText(grain, '-2,5');
+      await tester.scrollUntilVisible(
+        boil,
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(errorOf(tester, boil), 'Nombre entier attendu.');
+      await tester.enterText(boil, '60');
+      await tester.pump();
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      final content = app.recipes.writes.single.content!;
+      expect(
+        (content.type, content.boilTimeMin, content.grainTempC),
+        ('all grain', 60, -2.5),
+      );
+      expect(content.mashSteps, isEmpty);
+    });
+
+    testWidgets('valeur du schéma hors des listes de l\'éditeur : conservée', (
+      tester,
+    ) async {
+      final app = await open(
+        tester,
+        '/recettes/m/modifier',
+        before: (app) => app.recipes.publish([
+          recipe(
+            'm',
+            const RecipeContent(
+              name: 'Pommé',
+              type: 'cider',
+              yeasts: [YeastLine(name: 'Levure', type: 'wheat', form: 'slant')],
+            ),
+          ),
+        ]),
+      );
+      // Libellés français des valeurs que l'éditeur ne propose pas.
+      expect(find.text('Cidre'), findsOneWidget);
+      expect(find.text('cider'), findsNothing);
+      final yeastLine = find.text('Levure de blanche · Gélose');
+      await tester.scrollUntilVisible(
+        yeastLine,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(yeastLine, findsOneWidget);
+      // La forme importée reste visible et choisie dans le formulaire.
+      await tester.tap(yeastLine);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      final segments = tester.widget<SegmentedButton<String>>(
+        inSheet(find.byType(SegmentedButton<String>)),
+      );
+      expect(segments.selected, {'slant'});
+      expect(inSheet(find.text('Gélose')), findsOneWidget);
+      expect(inSheet(find.text('Levure de blanche')), findsOneWidget);
+      await tester.tap(inSheet(find.text('Annuler')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      final content = app.recipes.writes.single.content!;
+      expect(content.type, 'cider');
+      expect(
+        (content.yeasts.single.type, content.yeasts.single.form),
+        ('wheat', 'slant'),
+      );
+    });
+
+    testWidgets(
+      'fiche : type de recette, ajout, levure, température du grain',
+      (tester) async {
+        final app = await open(tester, '/recettes/r');
+        app.recipes.publish([
+          recipe(
+            'r',
+            const RecipeContent(
+              name: 'Complète',
+              type: 'partial mash',
+              grainTempC: 18,
+              others: [
+                OtherLine(
+                  name: 'Gypse',
+                  weightG: 5,
+                  type: 'water agent',
+                  use: OtherUse.mash,
+                  timeMin: 60,
+                ),
+              ],
+              yeasts: [
+                YeastLine(
+                  name: 'US-05',
+                  type: 'ale',
+                  form: 'dry',
+                  attenuationPct: 75,
+                  amountG: 11,
+                ),
+              ],
+              mashSteps: [
+                MashStep(
+                  name: 'Palier',
+                  tempC: 65,
+                  durationMin: 60,
+                  type: 'infusion',
+                ),
+              ],
+            ),
+          ),
+        ]);
+        await tester.pumpAndSettle();
+        for (final line in [
+          'Empâtage partiel',
+          'Correction de l\'eau · ${formatGrammes(5)} · Empâtage · '
+              '${formatMinutes(60)}',
+          'Haute fermentation (ale) · ${formatGrammes(11)} · atténuation '
+              '${formatPourcent(75)} · Sèche',
+          'Température du grain',
+          formatCelsius(18),
+          'Infusion · ${formatCelsius(65)} · ${formatMinutes(60)}',
+        ]) {
+          await tester.scrollUntilVisible(
+            find.text(line),
+            200,
+            scrollable: find.byType(Scrollable).last,
+          );
+          expect(find.text(line), findsOneWidget, reason: line);
+        }
+      },
+    );
+
+    testWidgets('fiche : type de recette absent, « Non renseigné »', (
+      tester,
+    ) async {
+      final app = await open(tester, '/recettes/s');
+      app.recipes.publish([
+        recipe('s', const RecipeContent(name: 'Sans type')),
+      ]);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Type de recette'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      final typeRow = find.ancestor(
+        of: find.text('Type de recette'),
+        matching: find.byType(Wrap),
+      );
+      expect(
+        find.descendant(of: typeRow, matching: find.text('Non renseigné')),
+        findsOneWidget,
+      );
     });
   });
 }

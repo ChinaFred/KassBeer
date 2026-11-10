@@ -13,6 +13,7 @@ class TextesDocument {
     required this.horsLigne,
     required this.illisible,
     required this.retour,
+    this.retourIllisible,
   });
 
   /// « Chargement de la recette ».
@@ -32,6 +33,10 @@ class TextesDocument {
 
   /// Bouton de retour à la liste.
   final String retour;
+
+  /// Bouton d'un document illisible, quand il diffère de [retour] ; `null` :
+  /// [retour].
+  final String? retourIllisible;
 }
 
 /// Affiche le document [id] de la liste [async], ou l'état qui le remplace :
@@ -51,6 +56,7 @@ class PageDocument<T> extends StatelessWidget {
     required this.onBack,
     required this.builder,
     this.frame,
+    this.onBackIllisible,
   });
 
   final AsyncValue<ListeLue<T>> async;
@@ -64,6 +70,11 @@ class PageDocument<T> extends StatelessWidget {
   /// Cadre des états autres que le document (éditeur plein écran, hors de la
   /// coquille) ; `null` dans la coquille.
   final Widget Function(Widget state)? frame;
+
+  /// Action du bouton d'un document illisible ; `null` : [onBack]. Relire un
+  /// document illisible rend le même document : un écran dont [onBack] relit la
+  /// liste ramène ici ailleurs.
+  final VoidCallback? onBackIllisible;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +99,10 @@ class PageDocument<T> extends StatelessWidget {
         EtatVide(
           icon: Icons.error_outline,
           message: textes.illisible,
-          action: back,
+          action: FilledButton(
+            onPressed: onBackIllisible ?? onBack,
+            child: Text(textes.retourIllisible ?? textes.retour),
+          ),
         ),
       ),
       DocumentAbsent<T>() => framed(

@@ -1,5 +1,5 @@
 // owner_name de recipes/, equipment/ (A1) et brews/ (v0.3) : facultatif ; présent, c'est
-// le nom du jeton de celui qui écrit, de 1 à 80 caractères. Valeurs des listes du modèle (A5).
+// le nom du jeton de celui qui écrit, de 1 à 80 caractères. Valeurs des listes du modèle (BeerJSON).
 
 import { describe, it } from "node:test";
 import {
@@ -137,72 +137,95 @@ for (const [collection, { existing, make }] of Object.entries(COLLECTIONS)) {
   });
 }
 
-describe("recipes — valeurs des listes (A5)", () => {
-  const a5 = {
-    fermentables: [
-      { key: "malt-pils", name: "Pils", kind: "grain", weight_g: 5000, ebc: 3.9, yield_pct: 80 },
-      { key: "sucre-candi", name: "Candi", kind: "sugar", weight_g: 500, ebc: 2, yield_pct: 100 },
-    ],
-    hops: [
+describe("recipes — valeurs des listes (BeerJSON, ADR-005)", () => {
+  const g = (value) => ({ value, unit: "g" });
+  const min = (value) => ({ value, unit: "min" });
+  const ingredients = {
+    fermentable_additions: [
       {
-        key: "houblon-magnum",
+        name: "Pils",
+        type: "grain",
+        amount: g(5000),
+        color: { value: 3.9, unit: "EBC" },
+        yield: { fine_grind: { value: 80, unit: "%" } },
+      },
+      { name: "Candi", type: "sugar", amount: g(500) },
+    ],
+    hop_additions: [
+      {
         name: "Magnum",
-        weight_g: 30,
-        alpha_pct: 10,
-        use: "boil",
-        time_min: 60,
         form: "pellet",
+        alpha_acid: { value: 10, unit: "%" },
+        amount: g(30),
+        timing: { use: "add_to_boil", time: min(60) },
       },
       {
-        key: "houblon-citra",
         name: "Citra",
-        weight_g: 50,
-        use: "whirlpool",
-        time_min: 15,
         form: "leaf",
+        amount: g(50),
+        timing: { use: "add_to_boil", time: min(0), duration: min(15) },
       },
       {
-        key: "houblon-citra",
         name: "Citra",
-        weight_g: 50,
-        use: "dry_hop",
-        time_min: 4320,
         form: "pellet",
+        amount: g(50),
+        timing: { use: "add_to_fermentation", duration: min(4320) },
       },
     ],
-    others: ["mash", "boil", "after_boil", "fermentation", "bottling"].map((use, i) => ({
-      key: `ajout-${i}`,
+    miscellaneous_additions: [
+      ["add_to_mash", { duration: min(5) }],
+      ["add_to_boil", { time: min(5) }],
+      ["add_to_boil", { time: min(0), duration: min(5) }],
+      ["add_to_fermentation", { duration: min(5) }],
+      ["add_to_package", { duration: min(5) }],
+    ].map(([use, times], i) => ({
       name: `Ajout ${i}`,
-      weight_g: 10,
-      use,
-      time_min: 5,
+      type: "spice",
+      amount: g(10),
+      timing: { use, ...times },
     })),
-    yeasts: [{ key: "levure-us-05", name: "US-05", attenuation_pct: 78, form: "dry" }],
+    culture_additions: [
+      {
+        name: "US-05",
+        type: "ale",
+        form: "dry",
+        attenuation: { value: 78, unit: "%" },
+        amount: g(11.5),
+      },
+    ],
   };
 
-  it("recette aux valeurs A5 : autorisé", async () => {
+  it("recette aux moments et valeurs de l'éditeur : autorisé", async () => {
     await expectRule(
       true,
       db(state.env, "owner")
         .doc("recipes/nouveau")
-        .set(fresh(recipe(uidOf("owner"), { ...a5, owner_name: nameOf("owner") }))),
+        .set(fresh(recipe(uidOf("owner"), { owner_name: nameOf("owner") }, { ingredients }))),
     );
   });
 
-  // Les règles n'inspectent pas les éléments des listes : une valeur retirée du
-  // modèle (extract, first_wort) passe les règles. Le dépôt de données et brewing/
-  // (FermentableKind.fromStored, HopUse.fromStored) la refusent.
-  it("valeur retirée du modèle dans une liste : acceptée par les règles", async () => {
+  // Les règles n'inspectent pas les éléments des listes : une valeur que l'application
+  // ne lit pas (extrait, houblon à l'empâtage) passe les règles. Le dépôt de données la
+  // refuse (FermentableKind.fromStored, lecture de `timing`).
+  it("valeur inconnue de l'application dans une liste : acceptée par les règles", async () => {
     await expectRule(
       true,
       db(state.env, "owner")
         .doc("recipes/nouveau")
         .set(
           fresh(
-            recipe(uidOf("owner"), {
-              fermentables: [{ key: "malt-x", name: "X", kind: "extract", weight_g: 1 }],
-              hops: [{ key: "houblon-x", name: "X", weight_g: 1, use: "first_wort" }],
-            }),
+            recipe(
+              uidOf("owner"),
+              {},
+              {
+                ingredients: {
+                  fermentable_additions: [{ name: "X", type: "extract", amount: g(1) }],
+                  hop_additions: [
+                    { name: "X", form: "pellet", amount: g(1), timing: { use: "add_to_mash" } },
+                  ],
+                },
+              },
+            ),
           ),
         ),
     );

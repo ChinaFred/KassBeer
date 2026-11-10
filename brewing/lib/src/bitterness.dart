@@ -19,39 +19,31 @@ enum HopForm {
   /// Facteur appliqué à l'utilisation de Tinseth.
   final double utilizationFactor;
 
-  /// Valeur du champ `hops[].form` d'une recette.
+  /// Valeur du champ `hop_additions[].form` d'une recette (BeerJSON).
   final String storedValue;
 
   /// Forme correspondant à la valeur stockée [value].
   ///
   /// Lève [BrewingInputException] sur une valeur inconnue.
-  static HopForm fromStored(String value) =>
-      enumFromStored(values, (f) => f.storedValue, 'hops.form', value);
+  static HopForm fromStored(String value) => enumFromStored(
+    values,
+    (f) => f.storedValue,
+    'hop_additions[].form',
+    value,
+  );
 }
 
-/// Moment d'ajout d'un houblon.
+/// Moment d'ajout d'un houblon. Sa valeur stockée se lit dans l'application
+/// (`timing` BeerJSON d'une recette, ADR-005).
 enum HopUse {
-  /// Pendant l'ébullition, pour [Hop.boilMinutes] minutes. Valeur stockée :
-  /// `boil`.
-  boil('boil'),
+  /// Pendant l'ébullition, pour [Hop.boilMinutes] minutes.
+  boil,
 
-  /// Après l'ébullition (arrêt du feu, whirlpool) : compté 0 IBU. Valeur
-  /// stockée : `whirlpool`.
-  afterBoil('whirlpool'),
+  /// Après l'ébullition (arrêt du feu, whirlpool) : compté 0 IBU.
+  afterBoil,
 
-  /// Houblonnage à cru : compté 0 IBU. Valeur stockée : `dry_hop`.
-  dryHop('dry_hop');
-
-  const HopUse(this.storedValue);
-
-  /// Valeur du champ `hops[].use` d'une recette.
-  final String storedValue;
-
-  /// Moment correspondant à la valeur stockée [value].
-  ///
-  /// Lève [BrewingInputException] sur une valeur inconnue.
-  static HopUse fromStored(String value) =>
-      enumFromStored(values, (u) => u.storedValue, 'hops.use', value);
+  /// Houblonnage à cru : compté 0 IBU.
+  dryHop,
 }
 
 /// Un houblon d'une recette ou d'un brassin.

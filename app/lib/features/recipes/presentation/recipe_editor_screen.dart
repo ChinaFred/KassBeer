@@ -19,7 +19,9 @@ import '../../../core/data/lecture_document.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_providers.dart';
+import '../domain/beerjson.dart';
 import '../domain/recipe.dart';
+import 'contenu_recette.dart';
 import 'ingredient_forms.dart';
 import 'recipe_calculations_view.dart';
 import 'recipe_detail_screen.dart';
@@ -92,6 +94,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   late final TextEditingController _style;
   late final TextEditingController _volume;
   late final TextEditingController _boil;
+  late final TextEditingController _grainTemp;
   late final TextEditingController _notes;
   // Listes modifiées en place, jamais remplacées : « Annuler » après un retrait
   // réinsère la ligne dans la liste que l'écran affiche.
@@ -100,6 +103,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   late final List<OtherLine> _others;
   late final List<YeastLine> _yeasts;
   late final List<MashStep> _steps;
+  String? _type;
   String? _equipmentId;
   bool _equipmentTouched = false;
   bool _dirty = false;
@@ -116,6 +120,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     _style = TextEditingController(text: c?.style ?? '');
     _volume = TextEditingController(text: texteSaisi(c?.batchVolumeL));
     _boil = TextEditingController(text: texteSaisi(c?.boilTimeMin));
+    _grainTemp = TextEditingController(text: texteSaisi(c?.grainTempC));
     _notes = TextEditingController(text: c?.notes ?? '');
     _fermentables = [...?c?.fermentables];
     _hops = [...?c?.hops];
@@ -123,11 +128,12 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     _yeasts = [...?c?.yeasts];
     _steps = [...?c?.mashSteps];
     _equipmentId = c?.equipmentId;
+    _type = c?.type;
   }
 
   @override
   void dispose() {
-    for (final c in [_name, _style, _volume, _boil, _notes]) {
+    for (final c in [_name, _style, _volume, _boil, _grainTemp, _notes]) {
       c.dispose();
     }
     _nameFocus.dispose();
@@ -149,10 +155,12 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     final initial = widget.initial?.content;
     return RecipeContent(
       name: _name.text.trim(),
+      type: _type,
       style: text(_style),
       notes: text(_notes),
       batchVolumeL: _positive(_volume.text),
       boilTimeMin: _withinBoil(_boil.text),
+      grainTempC: _grainTemperature(_grainTemp.text),
       equipmentId: equipmentId,
       fermentables: List.unmodifiable(_fermentables),
       hops: List.unmodifiable(_hops),
@@ -168,8 +176,19 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       ? lireNombre(text).valeur
       : null;
 
-  double? _withinBoil(String text) =>
-      erreurNombre(text, max: 600) == null ? lireNombre(text).valeur : null;
+  int? _withinBoil(String text) =>
+      erreurNombre(text, max: 600, entier: true) == null
+      ? lireNombre(text).valeur?.round()
+      : null;
+
+  /// Bornes de la température du grain (°C).
+  static const _grainTempMin = -20.0;
+  static const _grainTempMax = 60.0;
+
+  double? _grainTemperature(String text) =>
+      erreurNombre(text, min: _grainTempMin, max: _grainTempMax) == null
+      ? lireNombre(text).valeur
+      : null;
 
   Future<void> _scrollTo(GlobalKey key) => montrerChamp(key.currentContext);
 
@@ -580,6 +599,16 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         onChanged: _changed,
       ),
       const SizedBox(height: 8),
+      ListeBeerJson(
+        label: 'Type de recette',
+        values: typesRecette,
+        selected: _type,
+        onChanged: (t) {
+          _type = t;
+          _changed();
+        },
+      ),
+      const SizedBox(height: 16),
       ChampNombre(
         controller: _volume,
         label: 'Volume en fermenteur (L)',
@@ -594,6 +623,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         controller: _boil,
         label: 'Durée d\'ébullition (min)',
         max: 600,
+        entier: true,
         onChanged: _changed,
       ),
       const SizedBox(height: 16),
@@ -707,11 +737,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       for (final (i, o) in _others.indexed)
         LigneEditeur(
           title: o.name,
-          details: [
-            formatGrammes(o.weightG),
-            if (o.use != null) o.use!.label,
-            if (o.timeMin != null) formatMinutes(o.timeMin!),
-          ],
+          details: detailsAjout(o),
           warning: o.weightG > kUnusualOtherGrams
               ? quantiteInhabituelle(formatGrammes(o.weightG))
               : null,
@@ -732,11 +758,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       else
         LigneEditeur(
           title: _yeasts.first.name,
-          details: [
-            if (_yeasts.first.attenuationPct != null)
-              'atténuation ${formatPourcent(_yeasts.first.attenuationPct!)}',
-            if (_yeasts.first.form != null) _yeasts.first.form!.label,
-          ],
+          details: detailsLevure(_yeasts.first, fiche: false),
           onTap: _openYeast,
           onRemove: () => _remove(_yeasts, 0, _yeasts.first.name),
         ),
@@ -745,10 +767,21 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         'Paliers d\'empâtage',
         trailing: _steps.isEmpty ? null : '${_steps.length}',
       ),
+      ChampNombre(
+        controller: _grainTemp,
+        label: 'Température du grain (°C)',
+        aide:
+            'Température des malts au moment de l\'empâtage, souvent celle '
+            'de la pièce.',
+        min: _grainTempMin,
+        max: _grainTempMax,
+        onChanged: _changed,
+      ),
+      const SizedBox(height: 8),
       for (final (i, s) in _steps.indexed)
         LigneEditeur(
           title: s.name,
-          details: [formatCelsius(s.tempC), formatMinutes(s.durationMin)],
+          details: detailsPalier(s),
           onTap: () => _openStep(i),
           onMoveUp: i == 0 ? null : () => _moveStep(i, -1),
           onMoveDown: i == _steps.length - 1 ? null : () => _moveStep(i, 1),

@@ -18,6 +18,7 @@ class ChampNombre extends StatelessWidget {
     this.min = 0,
     this.minExclu = false,
     this.entier = false,
+    this.erreurPropre,
     this.textInputAction = TextInputAction.next,
     this.onChanged,
     this.onSubmitted,
@@ -46,6 +47,10 @@ class ChampNombre extends StatelessWidget {
 
   /// Nombre entier (nombre de bouteilles) : clavier sans décimale.
   final bool entier;
+
+  /// Erreur propre au champ, vérifiée avant les règles communes ; `null` si le
+  /// texte la passe.
+  final String? Function(String texte)? erreurPropre;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
@@ -64,15 +69,20 @@ class ChampNombre extends StatelessWidget {
       focusNode: focusNode,
       autofocus: autofocus,
       style: style,
-      keyboardType: entier
-          ? TextInputType.number
-          : const TextInputType.numberWithOptions(decimal: true),
+      // Un minimum négatif (température du grain) demande la touche « - ».
+      keyboardType: TextInputType.numberWithOptions(
+        decimal: !entier,
+        signed: min < 0,
+      ),
       textInputAction: textInputAction,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
         helperText: warning ?? aide,
-        helperMaxLines: 3,
+        // Une aide ou une erreur longue (whirlpool) n'est pas coupée, même à
+        // grande taille de texte.
+        helperMaxLines: 8,
+        errorMaxLines: 8,
         helperStyle: warning == null
             ? null
             : theme.textTheme.bodySmall?.copyWith(
@@ -80,14 +90,16 @@ class ChampNombre extends StatelessWidget {
               ),
         border: const OutlineInputBorder(),
       ),
-      validator: (text) => erreurNombre(
-        text ?? '',
-        obligatoire: obligatoire,
-        max: max,
-        min: min,
-        minExclu: minExclu,
-        entier: entier,
-      ),
+      validator: (text) =>
+          erreurPropre?.call(text ?? '') ??
+          erreurNombre(
+            text ?? '',
+            obligatoire: obligatoire,
+            max: max,
+            min: min,
+            minExclu: minExclu,
+            entier: entier,
+          ),
       onChanged: onChanged,
       onFieldSubmitted: onSubmitted,
     );

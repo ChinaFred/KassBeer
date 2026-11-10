@@ -6,6 +6,75 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.15 — fonctionnel
+
+Les recettes changent de format. L'éditeur gagne le type de recette, la température du
+grain, la quantité et le type de la levure, le type d'un ajout et le type d'un palier. Ces
+champs sont facultatifs, sans valeur choisie d'avance. Les durées en minutes sont des nombres
+entiers. Un whirlpool demande sa durée d'infusion, de 1 à 600 min ; pour un ajout à l'arrêt du
+feu, choisissez Ébullition et 0 min. Le formulaire d'un houblon garde une durée par moment :
+revenir à un moment remet ce que vous aviez saisi. Sous la quantité d'une levure, une aide
+rappelle que le coût compte un sachet par levure. La fiche, le brassin et l'écran du jour
+montrent ces nouveaux champs. Les listes tiennent sur deux lignes en grande taille de texte, et
+une aide longue n'est plus coupée. Les chiffres calculés ne changent pas.
+
+Les recettes et les brassins enregistrés avant cette version sont effacés au passage, avec le
+coût figé de ces brassins. Une recette ou un brassin qui ne peut pas s'afficher le dit, invite à
+mettre l'application à jour et ramène à la liste.
+
+### v0.1.15 — technique
+
+Livraison L1 d'ADR-005 : les recettes et la copie figée des brassins passent en BeerJSON
+partiel dans Firestore. Modèle : enveloppe (`format_version` 1, propriétaire, équipement, chronologie, dates) et
+sous-arbre `recipe` suivant `RecipeType` du schéma BeerJSON au commit `4370892d44`, en couples
+`{value, unit}` d'une seule unité par grandeur. La clé d'ingrédient n'est plus stockée.
+`recipe_snapshot` prend la même forme. `HopUse.storedValue` et `HopUse.fromStored` sortent de
+`brewing/`, aucune formule ne change ; les exceptions de `HopForm.fromStored` et
+`FermentableKind.fromStored` nomment les chemins stockés (`hop_additions[].form`,
+`fermentable_additions[].type`). Règles : `recipeFields()` et le sous-arbre `recipe` contrôlés,
+dans la recette et dans sa copie figée ; `style`, `boil`, `mash` et `ingredients` sont des maps
+fermées, `type` est une valeur du schéma, `mash.name` un texte borné, et une liste de `recipe`
+nulle est refusée. Les éléments des listes et les valeurs de la copie de l'équipement restent
+non contrôlés, risques acceptés et écrits dans `exigences-techniques.md`. La création d'un
+brassin n'accepte plus que ses champs de création, et sa modification ne contrôle que les champs
+changés (`isBrewUpdate`, qui remplace `isBrewShape`) : un brassin rempli après le brassage avec
+5 ajustements dépassait 1 000 expressions évaluées à chaque modification, même sur `origin/main`.
+Mesures sur l'émulateur : marge d'environ 70 expressions à la création d'un brassin (plus grande
+recette permise), 470 à celle d'une recette ; sur le brassin du 22 novembre rempli avec
+11 ajustements, plus de 900 au changement de statut ou d'embouteillage, 470 à l'écriture des
+11 ajustements. Une écriture qui change d'un coup tous les groupes de champs, ajustements
+compris, dépasse la limite et est refusée ; l'application n'en fait pas. Les schémas BeerJSON (MIT) sont copiés dans `schemas/`, et ajv valide les documents
+écrits par l'application contre le schéma partiel. `effacement-l1/effacer.mjs` refuse une clé
+JSON, un projet autre que `kassbeer` ou `demo-` avec l'émulateur, une confirmation hors terminal
+en production (à lancer depuis PowerShell ou Windows Terminal), une sauvegarde dans le dépôt
+hors de `import/` (`<dépôt>/..copie` compris) et une sauvegarde dans un autre arbre Git,
+autre dépôt ou worktree, même ignorée par Git ; dans `import/`, le fichier de la copie doit
+être ignoré (`git check-ignore`). Git y est lancé sans `GIT_DIR` ni les variables voisines,
+et seul « not a git repository » vaut « hors de Git ». Il
+efface aussi le coût figé de chaque brassin (`users/{owner_uid}/brew_costs/{id}`), sans le
+copier ni lire son contenu (décision du 2026-11-10) : les coûts figés et le décompte de
+`users/` se lisent sans champ (`fieldMask` vide), et aucun document sous `users/` n'entre
+dans la copie. Il ne touche à rien d'autre sous `users/`. Un coût figé dont la suppression
+échoue est écrit avec son chemin et le message d'erreur, en code 0 comme en code 4. Après la
+confirmation, il refait le compte rendu : un brassin passé en `brewing` sort en code 2, un
+document ou un coût figé ajouté, retiré ou modifié (`updateTime`) en code 5, rien n'étant
+effacé. Un événement
+dont le brassin est absent est compté, nommé, copié et effacé ; un document hors modèle (autre
+sous-collection) fait refuser l'effacement avant la copie. Les risques acceptés des règles
+disent l'effet d'une copie mal typée chez tous les lecteurs, et acceptent `bottles_count`
+réécrit de 5 en 5.0, que l'application lit par `toInt()`. Un test des règles vérifie que le
+propriétaire ne retire pas `recipe_id` d'un brassin. `PageDocument` accepte un bouton propre
+à l'état illisible. La ligne « Brassin illisible » de la liste a son propre `Material` : au
+retour d'une fiche, la transition de page levait une assertion de `ListTile` en mode debug. `CLAUDE.md` gagne la règle « Recettes
+en BeerJSON partiel », le contrôle P21, les nouveaux dossiers de « Structure » et une exception
+ponctuelle à « Une écriture de masse » pour l'effacement ; `guide-reseau.md` les décrit.
+
+Paquets — `rules-tests/package-lock.json` : `ajv` 8.20.0 devient une dépendance directe de
+développement, version déjà présente par `firebase-tools`, aucune autre version ne change.
+`effacement-l1/package-lock.json`, nouveau : `firebase-admin` 14.5.0 et 171 paquets transitifs,
+dont `@google-cloud/firestore` 9.4.0, pour l'outil local seulement. `app/pubspec.lock` ne change
+pas.
+
 ### v0.1.14 — fonctionnel
 
 Le menu du compte gagne une entrée « Nouveautés ». Elle ouvre un écran qui présente les

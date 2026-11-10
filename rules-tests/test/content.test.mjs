@@ -25,13 +25,29 @@ const WRITE_A = {
 
 const ownerFor = (name) => (name === "anonymous" ? "anon" : uidOf(name));
 
+// named : document de [owner] dont le nom vaut [name] (dans `recipe` pour une recette).
 const COLLECTIONS = {
-  recipes: { existing: "r-a", make: recipe, edit: { name: "Blonde révisée" } },
-  equipment: { existing: "e-a", make: equipment, edit: { mash_efficiency_pct: 75 } },
-  brews: { existing: "b-a", make: brew, edit: { status: "brewing" } },
+  recipes: {
+    existing: "r-a",
+    make: recipe,
+    edit: { "recipe.name": "Blonde révisée" },
+    named: (owner, name) => recipe(owner, {}, { name }),
+  },
+  equipment: {
+    existing: "e-a",
+    make: equipment,
+    edit: { mash_efficiency_pct: 75 },
+    named: (owner, name) => equipment(owner, { name }),
+  },
+  brews: {
+    existing: "b-a",
+    make: brew,
+    edit: { status: "brewing" },
+    named: (owner, name) => brew(owner, { name }),
+  },
 };
 
-for (const [collection, { existing, make, edit }] of Object.entries(COLLECTIONS)) {
+for (const [collection, { existing, make, edit, named }] of Object.entries(COLLECTIONS)) {
   describe(`${collection} — cinq profils`, () => {
     for (const [name, allowed] of Object.entries(READ)) {
       it(`${name} lit un document : ${allowed ? "autorisé" : "refusé"}`, async () => {
@@ -123,7 +139,25 @@ for (const [collection, { existing, make, edit }] of Object.entries(COLLECTIONS)
         false,
         db(state.env, "owner")
           .doc(`${collection}/nouveau`)
-          .set(fresh(make(uidOf("owner"), { name: "" }))),
+          .set(fresh(named(uidOf("owner"), ""))),
+      );
+    });
+
+    it("nom de 120 caractères : autorisé", async () => {
+      await expectRule(
+        true,
+        db(state.env, "owner")
+          .doc(`${collection}/nouveau`)
+          .set(fresh(named(uidOf("owner"), "N".repeat(120)))),
+      );
+    });
+
+    it("nom de 121 caractères : refusé", async () => {
+      await expectRule(
+        false,
+        db(state.env, "owner")
+          .doc(`${collection}/nouveau`)
+          .set(fresh(named(uidOf("owner"), "N".repeat(121)))),
       );
     });
   });
@@ -135,7 +169,7 @@ describe("recipes — forme", () => {
       false,
       db(state.env, "owner")
         .doc("recipes/nouveau")
-        .set(fresh(recipe(uidOf("owner"), { batch_volume_l: "20" }))),
+        .set(fresh(recipe(uidOf("owner"), {}, { batch_size: { value: "20", unit: "l" } }))),
     );
   });
 });
@@ -157,7 +191,7 @@ describe("brews — recette figée", () => {
       false,
       db(state.env, "owner")
         .doc("brews/b-a")
-        .update({ "recipe_snapshot.name": "Autre", updated_at: serverTimestamp() }),
+        .update({ "recipe_snapshot.recipe.name": "Autre", updated_at: serverTimestamp() }),
     );
   });
 

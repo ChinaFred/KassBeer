@@ -108,8 +108,8 @@ class FirestoreRecipesRepository implements RecipesRepository {
     } on DocumentIllisible catch (error, stackTrace) {
       return _invalid(id, error, stackTrace);
     } on BrewingInputException catch (error, stackTrace) {
-      // Valeur stockée inconnue (nature, moment ou forme) : FermentableKind,
-      // HopUse et HopForm.fromStored la refusent.
+      // Valeur stockée inconnue (nature d'un malt, forme d'un houblon) :
+      // FermentableKind et HopForm.fromStored la refusent.
       return _invalid(id, error, stackTrace);
     }
   }

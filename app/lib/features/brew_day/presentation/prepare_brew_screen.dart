@@ -19,17 +19,18 @@ import '../../recipes/domain/chronologie.dart';
 import 'brew_day_screen.dart';
 import 'chronologie_jour.dart';
 
-/// Texte de l'état hors ligne de cet écran.
-const textesPreparation = TextesDocument(
+/// Textes des états de cet écran ; un brassin illisible a le texte et le bouton
+/// de sa fiche : le relire rendrait le même document.
+final textesPreparation = TextesDocument(
   chargement: 'Chargement du brassin',
   lectureImpossible: 'Impossible de lire les brassins.',
   absent: 'Ce brassin n\'existe pas ou a été supprimé.',
   horsLigne:
       'Indisponible hors ligne. Reconnectez le téléphone pour charger le '
       'brassin.',
-  illisible:
-      'Ce brassin est illisible : une valeur enregistrée est inattendue.',
+  illisible: textesBrassin.illisible,
   retour: 'Réessayer',
+  retourIllisible: textesBrassin.retour,
 );
 
 /// « Préparer le brassage » : vérifie que le téléphone a ce qu'il faut pour le jour
@@ -49,6 +50,7 @@ class PrepareBrewScreen extends ConsumerWidget {
       textes: textesPreparation,
       onRetry: () => ref.invalidate(brewsListProvider),
       onBack: () => ref.invalidate(brewsListProvider),
+      onBackIllisible: () => context.go(AppRoutes.brews),
       builder: (context, brew) {
         if (brew.ownerUid != access?.user.uid) {
           return _Refus(

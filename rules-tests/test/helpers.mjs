@@ -152,36 +152,74 @@ export function memberDocs() {
 
 export const CREATED = Timestamp.fromDate(new Date("2026-11-02T08:00:00Z"));
 
-export const recipe = (owner, extra = {}) => ({
+/// Sous-arbre `recipe` en BeerJSON partiel (ADR-005) ; [extra] remplace des champs.
+export const beerRecipe = (extra = {}) => ({
+  name: "Blonde de Noël",
+  type: "all grain",
+  style: { name: "Belgian Blond Ale" },
+  batch_size: { value: 20, unit: "l" },
+  boil: { boil_time: { value: 60, unit: "min" } },
+  mash: {
+    name: "Empâtage",
+    grain_temperature: { value: 18, unit: "C" },
+    mash_steps: [
+      {
+        name: "Saccharification",
+        type: "infusion",
+        step_temperature: { value: 66, unit: "C" },
+        step_time: { value: 60, unit: "min" },
+      },
+    ],
+  },
+  ingredients: {
+    fermentable_additions: [
+      {
+        name: "Pilsner",
+        type: "grain",
+        amount: { value: 4500, unit: "g" },
+        color: { value: 3.5, unit: "EBC" },
+        yield: { fine_grind: { value: 80, unit: "%" } },
+      },
+    ],
+    hop_additions: [
+      {
+        name: "Saaz",
+        form: "pellet",
+        alpha_acid: { value: 3.5, unit: "%" },
+        amount: { value: 30, unit: "g" },
+        timing: { use: "add_to_boil", time: { value: 60, unit: "min" } },
+      },
+    ],
+    miscellaneous_additions: [],
+    culture_additions: [
+      { name: "US-05", type: "ale", form: "dry", attenuation: { value: 78, unit: "%" } },
+    ],
+  },
+  ...extra,
+});
+
+/// Document recipes/ : enveloppe Kass'Beer et `recipe`. [extra] remplace des champs
+/// de l'enveloppe, [recipeExtra] des champs de `recipe`.
+export const recipe = (owner, extra = {}, recipeExtra = {}) => ({
+  format_version: 1,
+  owner_uid: owner,
+  recipe: beerRecipe(recipeExtra),
+  created_at: CREATED,
+  updated_at: CREATED,
+  ...extra,
+});
+
+/// Document recipes/ au format plat de la v0.1.14, refusé depuis la v0.1.15.
+export const flatRecipe = (owner) => ({
   owner_uid: owner,
   name: "Blonde de Noël",
   style: "Belgian Blond Ale",
   batch_volume_l: 20,
   boil_time_min: 60,
-  fermentables: [
-    {
-      key: "malt-pilsner",
-      name: "Pilsner",
-      kind: "grain",
-      weight_g: 4500,
-      ebc: 3.5,
-      yield_pct: 80,
-    },
-  ],
-  hops: [
-    {
-      key: "houblon-saaz",
-      name: "Saaz",
-      weight_g: 30,
-      alpha_pct: 3.5,
-      use: "boil",
-      time_min: 60,
-      form: "pellet",
-    },
-  ],
+  fermentables: [{ key: "malt-pilsner", name: "Pilsner", kind: "grain", weight_g: 4500, ebc: 3.5 }],
+  hops: [{ key: "houblon-saaz", name: "Saaz", weight_g: 30, use: "boil", time_min: 60 }],
   created_at: CREATED,
   updated_at: CREATED,
-  ...extra,
 });
 
 export const equipment = (owner, extra = {}) => ({

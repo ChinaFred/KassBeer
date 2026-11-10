@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "0.1.15",
+      "date": "2026-11-10",
+      "paragraphs": [
+        "Les recettes changent de format. L'éditeur gagne le type de recette, la température du grain, la quantité et le type de la levure, le type d'un ajout et le type d'un palier. Ces champs sont facultatifs, sans valeur choisie d'avance. Les durées en minutes sont des nombres entiers. Un whirlpool demande sa durée d'infusion, de 1 à 600 min ; pour un ajout à l'arrêt du feu, choisissez Ébullition et 0 min. Le formulaire d'un houblon garde une durée par moment : revenir à un moment remet ce que vous aviez saisi. Sous la quantité d'une levure, une aide rappelle que le coût compte un sachet par levure. La fiche, le brassin et l'écran du jour montrent ces nouveaux champs. Les listes tiennent sur deux lignes en grande taille de texte, et une aide longue n'est plus coupée. Les chiffres calculés ne changent pas.",
+        "Les recettes et les brassins enregistrés avant cette version sont effacés au passage, avec le coût figé de ces brassins. Une recette ou un brassin qui ne peut pas s'afficher le dit, invite à mettre l'application à jour et ramène à la liste."
+      ]
+    },
+    {
       "version": "0.1.14",
       "date": "2026-11-10",
       "paragraphs": [
@@ -33,13 +41,6 @@
       "date": "2026-11-08",
       "paragraphs": [
         "Le brassin et le jour de brassage hors ligne arrivent (incrément v0.3). Un brassin se crée depuis une recette, avec une copie figée de la recette et de l'équipement. La recette reçoit une chronologie, préremplie depuis les paliers et l'ébullition. « Préparer le brassage » charge tout sur le téléphone. L'écran du jour affiche l'étape en cours, un minuteur lisible de loin et les heures prévues recalculées après un retard. Il permet de sauter une étape, de corriger une heure et de saisir températures, densités, volumes et pH. Sans réseau, les saisies restent sur le téléphone, même application fermée, et partent au retour du réseau. L'écran reste allumé. La fin d'un minuteur déclenche une vibration et un bip, même en mode silencieux."
-      ]
-    },
-    {
-      "version": "0.1.7",
-      "date": "2026-11-08",
-      "paragraphs": [
-        "Équipements et recettes arrivent, premier incrément de la version 1 (v0.2 du découpage). Chaque brasseur décrit ses équipements et ses recettes, et lit ceux du groupe sans pouvoir les modifier. L'éditeur de recette affiche, à chaque saisie, la densité initiale, la densité finale, le degré, l'amertume (IBU) et la couleur (EBC). Quand une donnée manque, l'écran dit laquelle, sans valeur de remplacement. Une recette se duplique à son nom. La suppression d'un équipement annonce les recettes qui l'utilisent. Tout marche hors ligne sur l'APK."
       ]
     }
   ]

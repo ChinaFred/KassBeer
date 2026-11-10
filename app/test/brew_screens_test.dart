@@ -70,6 +70,90 @@ void main() {
     });
   });
 
+  group('brassin illisible', () {
+    // Copie figée illisible : la fiche, la préparation et l'écran du jour ont le même
+    // texte. Le rapport attend le réseau hors ligne : « est signalée ».
+    const texte =
+        'Ce brassin ne peut pas s\'afficher. Il a peut-être été enregistré par '
+        'une version plus récente de Kass\'Beer : mettez l\'application à jour. '
+        'L\'erreur est signalée à l\'administrateur.';
+    for (final path in [
+      '/brassins/b1',
+      '/brassins/b1/preparer',
+      '/brassins/b1/jour',
+    ]) {
+      testWidgets('$path : texte de la fiche, Revenir aux brassins', (
+        tester,
+      ) async {
+        final app = await go(
+          tester,
+          path,
+          before: (app) => app.brews.all.add(
+            const ListeLue(
+              documents: [
+                DocumentInvalide(
+                  'b1',
+                  DocumentIllisible('recipe_snapshot.recipe.name', 'absent'),
+                ),
+              ],
+              fromCache: false,
+            ),
+          ),
+        );
+        expect(find.text(texte), findsOneWidget);
+        expect(textesBrassin.illisible, texte);
+        // Relire le brassin rendrait le même document : aucun « Réessayer ».
+        expect(find.text('Réessayer'), findsNothing);
+        await tester.tap(find.text('Revenir aux brassins'));
+        await tester.pumpAndSettle();
+        expect(
+          app.container
+              .read(routerProvider)
+              .routerDelegate
+              .currentConfiguration
+              .uri
+              .path,
+          '/brassins',
+        );
+      });
+    }
+
+    testWidgets('préparation, brassin absent : Réessayer reste', (
+      tester,
+    ) async {
+      await go(
+        tester,
+        '/brassins/b1/preparer',
+        before: (app) => app.brews.publish(const []),
+      );
+      expect(
+        find.text('Ce brassin n\'existe pas ou a été supprimé.'),
+        findsOneWidget,
+      );
+      expect(find.text('Réessayer'), findsOneWidget);
+      expect(find.text('Revenir aux brassins'), findsNothing);
+    });
+
+    testWidgets('préparation, brassin hors ligne : Réessayer reste', (
+      tester,
+    ) async {
+      await go(
+        tester,
+        '/brassins/b1/preparer',
+        fromCache: true,
+        before: (app) => app.brews.publish(const [], fromCache: true),
+      );
+      expect(
+        find.text(
+          'Indisponible hors ligne. Reconnectez le téléphone pour charger le '
+          'brassin.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Réessayer'), findsOneWidget);
+    });
+  });
+
   group('fiche', () {
     testWidgets('propriétaire d\'un prévu : Préparer, Modifier, Supprimer', (
       tester,

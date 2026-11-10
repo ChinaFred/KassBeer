@@ -276,7 +276,7 @@ void main() {
           'owner_uid': 'u',
           'name': 'B',
           'status': 'autre',
-          'recipe_snapshot': <String, dynamic>{'name': 'R'},
+          'recipe_snapshot': recetteMinimale('R'),
           'equipment_snapshot': <String, dynamic>{
             'name': 'E',
             'kind': 'all_in_one',

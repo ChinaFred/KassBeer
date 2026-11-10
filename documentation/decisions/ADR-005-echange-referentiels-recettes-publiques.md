@@ -165,6 +165,8 @@ liste fermée de champs obligatoires peut manquer. Aucune valeur n'est inventée
 | `mash` (sans palier), `grain_temperature`, type d'un palier | saisie ; `name` est un libellé | bloqué |
 | `yield`, `color`, `alpha_acid` | saisie, ou référentiel résolu à l'import | bloqué |
 | `culture.type`, `culture.form`, `misc.type` | choix dans l'éditeur | bloqué |
+| `culture.amount` | saisie facultative, en grammes (décision du 2026-11-10) | bloqué |
+| `mash.mash_steps` | absent quand aucun palier n'est saisi, jamais une liste vide ; `grain_temperature` s'enregistre seule | bloqué |
 | `style.category`, `style_guide`, `type` | style résolu dans `beer_styles` | BeerJSON : `style` omis ; BeerXML : bloqué |
 
 L'export d'une recette bloquée liste les valeurs à compléter (`MissingInput` et équivalents). Une
@@ -313,14 +315,44 @@ Durées estimées, non mesurées.
 
 L2 à L4 peuvent s'intercaler avec la v0.5 et la v0.6.
 
+**Écart de L1, à reprendre en L2.** La lecture de la v0.1.15 rend illisible un document qui
+porte une valeur que « Valeurs sans équivalent direct » veut garder : malt `extract`, houblon
+`add_to_mash` ou `add_to_package`, `time` sur un ajout à cru, forme de houblon `plug`, `powder`
+ou `extract`. L'éditeur n'en écrit aucune, et aucun document de L1 n'en contient. L2 les lit
+avant d'ouvrir l'import.
+
+**Règles de L1.** Le contrôle d'une recette et celui d'un brassin approchent la limite de
+1 000 expressions par requête. La création d'un brassin a sa propre règle, limitée aux champs
+écrits par l'application, et la modification ne recontrôle pas la copie figée, qui est
+immuable. Un import de brassins déjà brassés (v0.6) créera donc le brassin, puis le modifiera.
+Les éléments des listes ne sont pas contrôlés par les règles : un champ inconnu y reste
+possible, sous le seul compte de son auteur, et la lecture typée l'ignore.
+
 ## Calendrier et passage en production
 
 Cadrage (L0) maintenant. Passage à BeerJSON (L1) juste après la fusion de la v0.4, avant la v0.5
 et la v0.6, si possible avant le prochain brassin, prévu vers le 22 novembre 2026.
 
+Ordre constaté le 2026-11-10 : la v0.5 (prix, frais et coût) a fusionné la première, en v0.1.13,
+puis le menu du compte et l'écran « Nouveautés » en v0.1.14. L1 les intègre et devient la v0.1.15. Les coûts figés `users/{uid}/brew_costs/{brewId}` existent
+donc au passage : l'effacement compte et efface le coût figé de chaque brassin effacé, comme la suppression
+d'un brassin dans l'application (CB19), et rien d'autre sous `users/`. Ces coûts portent les prix
+de chaque brasseur : l'outil ne lit pas leur contenu et ne les copie pas, y compris ceux de
+l'administrateur (décision du 2026-11-10).
+
 **Décision de passage.** Vers le 15 novembre 2026, sept jours avant le brassin, L1 doit être
-prêt : CI verte et brassage à blanc réussi sur l'APK en mode avion. Sinon, le brassin se fait sur
-le modèle plat.
+prêt : CI verte. Sinon, le brassin se fait sur le modèle plat.
+
+**Ordre retenu le 2026-11-10.** Aucun environnement ne permet le brassage à blanc avant la fusion :
+les règles de production refusent le nouveau format, l'application n'a aucun branchement vers
+l'émulateur, et il n'existe pas de second projet Firebase. L'utilisateur a choisi de passer
+d'abord, puis de faire le brassage à blanc en production (étape 7 ci-dessous). En cas d'échec, le
+retour au modèle plat est un `git revert -m 1` du commit de fusion de L1, livré en version
+suivante ; les recettes et brassins créés pendant l'essai sont alors effacés.
+
+**Effacement.** La commande efface tous les documents de `recipes/`, `brews/` et leurs `events/`,
+quel que soit leur format (décision du 2026-11-10). C'est une exception ponctuelle à la règle
+« Une écriture de masse a un seul écran » de `CLAUDE.md`, acceptée par l'utilisateur.
 
 **Effacement sans perte.** Il suppose qu'aucun vrai brassin n'est enregistré. La commande
 d'effacement lance d'abord un compte rendu sans écriture : nombre de recettes, liste des brassins
@@ -332,12 +364,16 @@ Déroulé, tous les cas :
    réseau » et n'utilise plus l'application pendant le passage. Aucun brassin en statut `brewing`.
 2. Lancer le compte rendu. L'utilisateur confirme.
 3. Sauvegarde : la sauvegarde quotidienne (7 jours) existe. Copier en plus `recipes/` et `brews/`
-   en JSON dans `import/backup/`.
+   en JSON dans `import/backup/`, dossier ignoré par Git. Les coûts figés ne sont pas copiés.
 4. Fusionner L1 sur `main`. `deploy.yml` publie le site, les règles et un APK au numéro de build
    supérieur. Une fusion vaut passage : L1 ne fusionne pas avant cette étape.
 5. Dès la fin du déploiement, effacer `recipes/`, `brews/` et leurs `events/` par `recursiveDelete`,
-   après la saisie du nom du projet. `equipment/` et `users/` ne sont pas touchés.
-6. Vérifier : recette créée, brassin créé, aucune entrée nouvelle dans `error_reports/`.
+   puis le coût figé de chaque brassin effacé, après la saisie du nom du projet et une relecture.
+   `equipment/` et le reste de `users/` ne sont pas touchés.
+6. Vérifier : recette créée, brassin créé, aucune entrée nouvelle dans `error_reports/` depuis
+   l'heure de l'effacement.
+7. Brassage à blanc sur l'APK, en mode avion pour l'écran du jour. En cas d'échec : retour au
+   modèle plat, comme décrit plus haut.
 
 La commande d'effacement sort du dépôt à la livraison suivante (« Pas de code mort »).
 

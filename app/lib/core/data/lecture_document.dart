@@ -6,7 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class DocumentIllisible implements Exception {
   const DocumentIllisible(this.field, this.reason);
 
-  /// Champ fautif (`name`, `fermentables[2].weight_g`…).
+  /// Champ fautif (`recipe.name`,
+  /// `recipe.ingredients.fermentable_additions[2].amount`…).
   final String field;
 
   /// Raison, en français.
@@ -23,7 +24,8 @@ class LecteurChamps {
 
   final Map<String, dynamic> data;
 
-  /// Préfixe du nom des champs dans les erreurs (`hops[1].`).
+  /// Préfixe du nom des champs dans les erreurs
+  /// (`recipe.ingredients.hop_additions[1].`).
   final String prefix;
 
   String _path(String key) => '$prefix$key';
@@ -68,6 +70,20 @@ class LecteurChamps {
     throw DocumentIllisible(_path(key), 'booléen attendu');
   }
 
+  /// Map facultative, lue avec le préfixe `key.` ; absente rend `null`. Une map
+  /// imbriquée peut arriver sous le type `Map<Object?, Object?>` : elle est copiée.
+  LecteurChamps? objetFacultatif(String key) {
+    final value = data[key];
+    if (value == null) return null;
+    if (value is! Map) throw DocumentIllisible(_path(key), 'map attendue');
+    return LecteurChamps(Map<String, dynamic>.from(value), '${_path(key)}.');
+  }
+
+  /// Map obligatoire, lue avec le préfixe `key.`.
+  LecteurChamps objet(String key) =>
+      objetFacultatif(key) ??
+      (throw DocumentIllisible(_path(key), 'map obligatoire absente'));
+
   /// Liste de maps facultative ; absente rend une liste vide.
   List<LecteurChamps> liste(String key) {
     final value = data[key];
@@ -75,8 +91,11 @@ class LecteurChamps {
     if (value is! List) throw DocumentIllisible(_path(key), 'liste attendue');
     return [
       for (var i = 0; i < value.length; i++)
-        if (value[i] is Map<String, dynamic>)
-          LecteurChamps(value[i] as Map<String, dynamic>, '${_path(key)}[$i].')
+        if (value[i] is Map)
+          LecteurChamps(
+            Map<String, dynamic>.from(value[i] as Map),
+            '${_path(key)}[$i].',
+          )
         else
           throw DocumentIllisible('${_path(key)}[$i]', 'élément illisible'),
     ];
