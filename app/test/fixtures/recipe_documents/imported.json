@@ -1,0 +1,263 @@
+{
+  "format_version": 1,
+  "recipe": {
+    "author": "Brasseuse Fictive",
+    "batch_size": {
+      "unit": "l",
+      "value": 20.0
+    },
+    "boil": {
+      "boil_time": {
+        "unit": "min",
+        "value": 60
+      }
+    },
+    "ingredients": {
+      "culture_additions": [
+        {
+          "amount": {
+            "unit": "l",
+            "value": 0.1
+          },
+          "attenuation": {
+            "unit": "%",
+            "value": 75.0
+          },
+          "form": "liquid",
+          "name": "Levure de blanche liquide",
+          "type": "wheat"
+        }
+      ],
+      "fermentable_additions": [
+        {
+          "amount": {
+            "unit": "g",
+            "value": 3000.0
+          },
+          "color": {
+            "unit": "EBC",
+            "value": 8.0
+          },
+          "name": "Extrait liquide clair",
+          "type": "extract",
+          "yield": {
+            "fine_grind": {
+              "unit": "%",
+              "value": 78.0
+            }
+          }
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 500.0
+          },
+          "color": {
+            "unit": "EBC",
+            "value": 6.0
+          },
+          "name": "Extrait sec",
+          "type": "dry extract",
+          "yield": {
+            "fine_grind": {
+              "unit": "%",
+              "value": 95.0
+            }
+          }
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 250.0
+          },
+          "color": {
+            "unit": "EBC",
+            "value": 2.0
+          },
+          "name": "Miel de fleurs",
+          "type": "honey",
+          "yield": {
+            "fine_grind": {
+              "unit": "%",
+              "value": 75.0
+            }
+          }
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 1000.0
+          },
+          "name": "Framboises",
+          "type": "fruit"
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 300.0
+          },
+          "name": "Jus de pomme",
+          "type": "juice"
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 200.0
+          },
+          "name": "Sirop maison",
+          "type": "other"
+        }
+      ],
+      "hop_additions": [
+        {
+          "alpha_acid": {
+            "unit": "%",
+            "value": 3.5
+          },
+          "amount": {
+            "unit": "g",
+            "value": 20.0
+          },
+          "form": "leaf",
+          "name": "Saaz",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 60
+            },
+            "use": "add_to_mash"
+          }
+        },
+        {
+          "alpha_acid": {
+            "unit": "%",
+            "value": 4.5
+          },
+          "amount": {
+            "unit": "g",
+            "value": 15.0
+          },
+          "form": "plug",
+          "name": "Fuggles",
+          "timing": {
+            "time": {
+              "unit": "min",
+              "value": 30
+            },
+            "use": "add_to_boil"
+          }
+        },
+        {
+          "alpha_acid": {
+            "unit": "%",
+            "value": 6.0
+          },
+          "amount": {
+            "unit": "g",
+            "value": 10.0
+          },
+          "form": "powder",
+          "name": "Cascade",
+          "timing": {
+            "time": {
+              "unit": "min",
+              "value": 10
+            },
+            "use": "add_to_boil"
+          }
+        },
+        {
+          "alpha_acid": {
+            "unit": "%",
+            "value": 50.0
+          },
+          "amount": {
+            "unit": "l",
+            "value": 0.005
+          },
+          "form": "extract",
+          "name": "Extrait de houblon",
+          "timing": {
+            "time": {
+              "unit": "min",
+              "value": 60
+            },
+            "use": "add_to_boil"
+          }
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 100.0
+          },
+          "form": "leaf (wet)",
+          "name": "Houblon frais",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 20
+            },
+            "time": {
+              "unit": "min",
+              "value": 0
+            },
+            "use": "add_to_boil"
+          }
+        },
+        {
+          "alpha_acid": {
+            "unit": "%",
+            "value": 12.0
+          },
+          "amount": {
+            "unit": "g",
+            "value": 50.0
+          },
+          "form": "pellet",
+          "name": "Citra",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 4320
+            },
+            "time": {
+              "unit": "min",
+              "value": 4320
+            },
+            "use": "add_to_fermentation"
+          }
+        },
+        {
+          "amount": {
+            "unit": "g",
+            "value": 5.0
+          },
+          "form": "pellet",
+          "name": "Mosaic",
+          "timing": {
+            "use": "add_to_package"
+          }
+        }
+      ],
+      "miscellaneous_additions": [
+        {
+          "amount": {
+            "unit": "l",
+            "value": 0.005
+          },
+          "name": "Acide lactique",
+          "timing": {
+            "duration": {
+              "unit": "min",
+              "value": 60
+            },
+            "use": "add_to_mash"
+          },
+          "type": "water agent"
+        }
+      ]
+    },
+    "name": "Import de test",
+    "type": "extract"
+  }
+}

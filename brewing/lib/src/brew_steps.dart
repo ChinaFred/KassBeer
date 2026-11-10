@@ -84,10 +84,11 @@ class BrewStepDraft {
 /// ajout de houblon d'ébullition, du plus long au plus court : un houblon de
 /// t min s'ajoute après [boilMinutes] − t min d'ébullition. Puis le whirlpool,
 /// coupé de même aux houblons de whirlpool, sur la plus longue de leurs durées.
-/// Houblons à cru exclus. Un ajout dure 0 min. Aucune durée n'est inventée :
-/// un palier sans durée rend une étape sans durée, qui porte
-/// [BrewStepProblem.missingDuration] ; sans [boilMinutes], aucune étape
-/// d'ébullition, et les ajouts se suivent du plus long au plus court.
+/// Houblons à cru, à l'empâtage et au conditionnement exclus. Un ajout dure
+/// 0 min. Aucune durée n'est inventée : un palier sans durée rend une étape
+/// sans durée, qui porte [BrewStepProblem.missingDuration] ; sans
+/// [boilMinutes], aucune étape d'ébullition, et les ajouts se suivent du plus
+/// long au plus court.
 ///
 /// Lève [BrewingInputException] si [boilMinutes] est négative ou non finie.
 List<BrewStepDraft> defaultBrewSteps({

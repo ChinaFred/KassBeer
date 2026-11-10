@@ -12,7 +12,10 @@ void main() {
     final points = optionalNumber(m['points_per_kg_per_litre']);
     return FermentableInput(
       name: m['name'] as String,
-      kind: FermentableKind.values.byName(m['kind'] as String),
+      kind: switch (m['kind']) {
+        final String kind => FermentableKind.values.byName(kind),
+        _ => null,
+      },
       massGrams: number(m['mass_grams']),
       yieldPercent: points == null
           ? optionalNumber(m['yield_percent'])

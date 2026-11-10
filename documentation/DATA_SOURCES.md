@@ -50,6 +50,8 @@ Entrées brutes avant dédoublonnage. Noms uniques après normalisation (casse, 
 | Couleur | 005 : 169 en EBC, 82 en `Lovi` ; 001 (BeerXML) : Lovibond, SRM pour un extrait liquide | `EBC` | `brewing/` (P3) |
 | Densité | DIY Dog : `1042` | `sg`, `1.042` | `exchange/` |
 | Rendement | BeerXML `YIELD`, 005 `yield_fine_grind` | `%` | identité |
+| Rendement en densité | BeerJSON `yield.potential` (densité d'une livre dans un gallon) | `%` | `brewing/`, `potentialToYieldPercent` (v0.1.17) |
+| Quantité d'un houblon, d'un ajout, d'une levure | masse ou volume | `g` ou `l`, gardée dans son unité (décision du 2026-11-10) | `exchange/` pour les unités impériales |
 
 Un `{value, unit}` d'une unité inconnue est rejeté et compté au rapport.
 
@@ -68,11 +70,11 @@ Sert à l'import utilisateur et au fichier 001.
 | | `Mash` | `add_to_mash` |
 | | `First Wort` | `add_to_boil` à la durée complète ; perte listée au rapport |
 | | `Whirlpool`, `Secondary` (hors norme, vus dans `diydog-beerxml`) | `add_to_boil` à 0 avec `duration` ; `add_to_fermentation` |
-| `HOP.FORM` | `Pellet`, `Plug`, `Leaf` | `pellet`, `plug`, `leaf` ; pour le calcul, `plug` se lit comme `leaf` |
-| Forme BeerJSON | `powder`, `extract` | conservée ; `brewing/` n'a pas cet équivalent, le calcul de l'IBU affiche « à compléter » |
-| Moment BeerJSON | `add_to_mash`, `add_to_package` | conservé ; `brewing/` n'a pas cet équivalent, le calcul de l'IBU affiche « à compléter » |
+| `HOP.FORM` | `Pellet`, `Plug`, `Leaf` | `pellet`, `plug`, `leaf` ; pour le calcul, `plug` se lit comme `leaf` (`HopForm.ofBeerJson`) |
+| Forme BeerJSON | `powder`, `extract`, `leaf (wet)` | conservée ; sans facteur d'utilisation de Tinseth, l'IBU affiche « Forme non prise en charge par le calcul » pour un houblon d'ébullition. Un extrait mesuré en volume ne compte pas dans l'IBU |
+| Moment BeerJSON | `add_to_mash`, `add_to_package` | conservé (`HopUse.mash`, `HopUse.package`) ; l'IBU affiche « Moment non pris en charge par le calcul » |
 | `YEAST.TYPE` | `Ale`, `Lager`, `Wine`, `Champagne` | `ale`, `lager`, `wine`, `champagne` |
-| | `Wheat` | `ale` ; perte listée au rapport |
+| | `Wheat` | `wheat`, sans perte (décision du 2026-11-10 : la valeur existe dans `culture.json`) |
 | `YEAST.FORM` | `Liquid`, `Dry`, `Slant`, `Culture` | valeur de même nom en minuscules |
 | `MISC.TYPE` | `Spice`, `Herb`, `Flavor`, `Fining`, `Water Agent`, `Other` | valeur de même nom en minuscules |
 | `MISC.USE` | `Boil` ; `Mash` ; `Primary`, `Secondary` ; `Bottling` | `add_to_boil` ; `add_to_mash` ; `add_to_fermentation` ; `add_to_package` |

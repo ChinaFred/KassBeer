@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:brewing/brewing.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/features/recipes/domain/beerjson.dart';
 
@@ -41,6 +42,14 @@ void main() {
       typesPalier,
       schemaEnum('mash_step.json', 'MashStepType', 'type'),
     ),
+    'FermentableBase.type': (
+      typesFermentable,
+      schemaEnum('fermentable.json', 'FermentableBase', 'type'),
+    ),
+    'HopVarietyBase.form': (
+      formesHoublon,
+      schemaEnum('hop.json', 'HopVarietyBase', 'form'),
+    ),
   };
 
   for (final MapEntry(key: name, value: (values, schema)) in cases.entries) {
@@ -69,6 +78,28 @@ void main() {
     );
     expect(typesPalier.libelleMenu('sparge'), 'Rinçage');
   });
+
+  test(
+    'malt et houblon : chaque valeur lue a sa nature ou sa forme de calcul',
+    () {
+      expect(
+        typesFermentable.libelles.keys.toSet(),
+        FermentableKind.ofBeerJsonType.keys.toSet(),
+      );
+      expect(
+        formesHoublon.libelles.keys.toSet(),
+        HopForm.ofBeerJsonForm.keys.toSet(),
+      );
+      expect(typesFermentable.proposees, [
+        FermentableKind.malt.storedValue,
+        FermentableKind.sugar.storedValue,
+      ]);
+      expect(formesHoublon.proposees, [
+        HopForm.pellet.storedValue,
+        HopForm.whole.storedValue,
+      ]);
+    },
+  );
 
   test('levure : libellés des valeurs non proposées', () {
     expect(typesLevure.proposees, isNot(contains('wheat')));

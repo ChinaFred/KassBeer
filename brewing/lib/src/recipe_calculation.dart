@@ -5,11 +5,13 @@ import 'errors.dart';
 import 'fermentables.dart';
 import 'yeast.dart';
 
-/// Un fermentescible tel qu'il est saisi : couleur et rendement d'extrait
-/// peuvent manquer.
+/// Un fermentescible tel qu'il est saisi : nature, couleur et rendement
+/// d'extrait peuvent manquer.
 class FermentableInput {
-  /// Crée la ligne. [massGrams] en grammes, [colorEbc] en EBC,
-  /// [yieldPercent] : rendement d'extrait, de 0 à 100 % du saccharose.
+  /// Crée la ligne. [kind] : nature de calcul, nulle quand elle est à préciser
+  /// (type BeerJSON `other`, [FermentableKind.ofType]). [massGrams] en
+  /// grammes, [colorEbc] en EBC, [yieldPercent] : rendement d'extrait, de 0 à
+  /// 100 % du saccharose.
   FermentableInput({
     required this.name,
     required this.kind,
@@ -27,8 +29,8 @@ class FermentableInput {
   /// Nom affiché.
   final String name;
 
-  /// Malt ou sucre.
-  final FermentableKind kind;
+  /// Malt ou sucre, ou nul si la nature est à préciser.
+  final FermentableKind? kind;
 
   /// Masse en grammes.
   final double massGrams;
@@ -42,8 +44,11 @@ class FermentableInput {
 
 /// Un houblon tel qu'il est saisi : acides alpha et durée peuvent manquer.
 class HopInput {
-  /// Crée la ligne. [massGrams] en grammes, [alphaPercent] de 0 à 100 %,
-  /// [minutes] : durée en minutes (d'ébullition pour [HopUse.boil]).
+  /// Crée la ligne. [massGrams] en grammes, nulle pour un houblon mesuré en
+  /// volume (extrait liquide), qui ne compte pas dans l'IBU. [form] : forme de
+  /// calcul, nulle quand Tinseth n'a pas de facteur pour elle
+  /// ([HopForm.ofBeerJson]). [alphaPercent] de 0 à 100 %, [minutes] : durée en
+  /// minutes (d'ébullition pour [HopUse.boil]).
   HopInput({
     required this.name,
     required this.massGrams,
@@ -52,7 +57,8 @@ class HopInput {
     this.alphaPercent,
     this.minutes,
   }) {
-    requireNonNegative('massGrams', massGrams);
+    final mass = massGrams;
+    if (mass != null) requireNonNegative('massGrams', mass);
     final alpha = alphaPercent;
     if (alpha != null) requireRange('alphaPercent', alpha, 0, 100);
     final duration = minutes;
@@ -62,14 +68,15 @@ class HopInput {
   /// Nom affiché.
   final String name;
 
-  /// Masse en grammes.
-  final double massGrams;
+  /// Masse en grammes, ou nulle pour un houblon mesuré en volume.
+  final double? massGrams;
 
   /// Moment d'ajout.
   final HopUse use;
 
-  /// Cônes ou pellets.
-  final HopForm form;
+  /// Cônes ou pellets, ou nulle pour une forme sans facteur d'utilisation
+  /// (poudre, extrait, cônes frais).
+  final HopForm? form;
 
   /// Acides alpha en %, ou nuls s'ils ne sont pas renseignés.
   final double? alphaPercent;
@@ -176,6 +183,19 @@ enum MissingInputKind {
   /// Durée non renseignée d'un houblon d'ébullition.
   hopBoilTime,
 
+  /// Nature à préciser d'un fermentescible de type BeerJSON `other`
+  /// ([MissingInput.items] : les lignes) : elle décide du rendement
+  /// d'empâtage.
+  fermentableKind,
+
+  /// Houblon à l'empâtage ou au conditionnement ([MissingInput.items] : les
+  /// lignes) : Tinseth ne décrit pas ces moments.
+  hopUse,
+
+  /// Houblon d'ébullition d'une forme sans facteur d'utilisation
+  /// ([MissingInput.items] : les lignes).
+  hopForm,
+
   /// Aucune levure.
   yeast,
 
@@ -250,6 +270,7 @@ class RecipeCalculation {
     required this.colorEbc,
     required this.hopBitterness,
     required this.hopsLongerThanBoil,
+    this.hopsWithoutMass = const [],
   });
 
   /// Densité initiale prévue (SG).
@@ -273,6 +294,10 @@ class RecipeCalculation {
 
   /// Houblons d'ébullition dont la durée dépasse celle de la recette.
   final List<IngredientRef> hopsLongerThanBoil;
+
+  /// Houblons mesurés en volume, sans masse : ils ne comptent pas dans l'IBU
+  /// (0 IBU dans [hopBitterness]), et l'écran les nomme.
+  final List<IngredientRef> hopsWithoutMass;
 
   /// Densité d'ébullition retenue pour l'IBU : la densité initiale prévue,
   /// ou nulle si elle est indisponible.
@@ -310,13 +335,16 @@ class RecipeCalculation {
 /// [mashEfficiencyPercent] : rendement d'empâtage de l'équipement, nul s'il
 /// n'est pas connu. Aucune valeur par défaut ne remplace une donnée absente.
 /// Règles :
-/// - densité initiale : volume, au moins un fermentescible, le rendement
-///   d'extrait de chacun, et le rendement d'empâtage si un malt est présent ;
+/// - densité initiale : volume, au moins un fermentescible, la nature et le
+///   rendement d'extrait de chacun, et le rendement d'empâtage si un malt est
+///   présent ;
 /// - densité finale et degré : densité initiale et atténuation de la première
 ///   levure ;
-/// - IBU : volume ; sans houblon d'ébullition, 0 IBU ; sinon densité initiale
-///   (densité d'ébullition), acides alpha et durée de chaque houblon
-///   d'ébullition ;
+/// - IBU : les houblons mesurés en volume sont exclus (0 IBU, listés dans
+///   [RecipeCalculation.hopsWithoutMass]) ; volume ; aucun houblon à
+///   l'empâtage ni au conditionnement ; sans houblon d'ébullition, 0 IBU ;
+///   sinon densité initiale (densité d'ébullition), forme, acides alpha et
+///   durée de chaque houblon d'ébullition ;
 /// - EBC : volume, au moins un fermentescible et la couleur de chacun ;
 ///   l'équipement n'y entre pas.
 ///
@@ -357,6 +385,7 @@ RecipeCalculation computeRecipe({
     colorEbc: _color(recipe),
     hopBitterness: List.unmodifiable(perHop),
     hopsLongerThanBoil: List.unmodifiable(longer),
+    hopsWithoutMass: _refs(hops, (h) => h.massGrams == null, (h) => h.name),
   );
 }
 
@@ -392,6 +421,7 @@ CalculationResult _originalGravity(RecipeInput recipe, double? efficiency) {
   final volume = recipe.batchVolumeLitres;
   final fermentables = recipe.fermentables;
   final hasMalt = fermentables.any((f) => f.kind == FermentableKind.malt);
+  final withoutKind = _refs(fermentables, (f) => f.kind == null, (f) => f.name);
   final withoutYield = _refs(
     fermentables,
     (f) => f.yieldPercent == null,
@@ -401,6 +431,8 @@ CalculationResult _originalGravity(RecipeInput recipe, double? efficiency) {
     [
       if (volume == null) _missingVolume,
       if (fermentables.isEmpty) _missingFermentables,
+      if (withoutKind.isNotEmpty)
+        MissingInput(MissingInputKind.fermentableKind, withoutKind),
       if (hasMalt && efficiency == null)
         const MissingInput(MissingInputKind.mashEfficiency),
       if (withoutYield.isNotEmpty)
@@ -411,7 +443,7 @@ CalculationResult _originalGravity(RecipeInput recipe, double? efficiency) {
         for (final f in fermentables)
           Fermentable(
             name: f.name,
-            kind: f.kind,
+            kind: f.kind!,
             massGrams: f.massGrams,
             // La couleur n'entre pas dans la densité initiale : une couleur
             // absente ne change pas le résultat.
@@ -453,7 +485,20 @@ CalculationResult _finalGravity(RecipeInput recipe, CalculationResult og) {
 ) {
   final volume = recipe.batchVolumeLitres;
   final hops = recipe.hops;
-  bool isBoil(HopInput h) => h.use == HopUse.boil;
+  // Un houblon mesuré en volume ne compte pas dans l'IBU (décision du
+  // 2026-11-10) : il ne demande ni moment, ni forme, ni alpha, ni durée.
+  bool counted(HopInput h) => h.massGrams != null;
+  bool isBoil(HopInput h) => counted(h) && h.use == HopUse.boil;
+  final unsupportedUse = _refs(
+    hops,
+    (h) => counted(h) && (h.use == HopUse.mash || h.use == HopUse.package),
+    (h) => h.name,
+  );
+  final unsupportedForm = _refs(
+    hops,
+    (h) => isBoil(h) && h.form == null,
+    (h) => h.name,
+  );
   final withoutAlpha = _refs(
     hops,
     (h) => isBoil(h) && h.alphaPercent == null,
@@ -468,6 +513,10 @@ CalculationResult _finalGravity(RecipeInput recipe, CalculationResult og) {
     if (volume == null) _missingVolume,
     if (hops.any(isBoil) && og is CalculationUnavailable)
       _dependsOnOriginalGravity,
+    if (unsupportedUse.isNotEmpty)
+      MissingInput(MissingInputKind.hopUse, unsupportedUse),
+    if (unsupportedForm.isNotEmpty)
+      MissingInput(MissingInputKind.hopForm, unsupportedForm),
     if (withoutAlpha.isNotEmpty)
       MissingInput(MissingInputKind.hopAlpha, withoutAlpha),
     if (withoutTime.isNotEmpty)
@@ -482,14 +531,15 @@ CalculationResult _finalGravity(RecipeInput recipe, CalculationResult og) {
         IngredientRef(i, hops[i].name),
         // Hors ébullition, un houblon apporte 0 IBU (tinsethIbuForHop) : ses
         // acides alpha peuvent manquer, et la densité initiale n'est pas lue.
+        // Un houblon mesuré en volume apporte 0 IBU.
         isBoil(hops[i])
             ? tinsethIbuForHop(
                 hop: Hop(
                   name: hops[i].name,
                   alphaPercent: hops[i].alphaPercent!,
-                  massGrams: hops[i].massGrams,
+                  massGrams: hops[i].massGrams!,
                   use: hops[i].use,
-                  form: hops[i].form,
+                  form: hops[i].form!,
                   boilMinutes: hops[i].minutes!,
                 ),
                 volumeLitres: volume!,

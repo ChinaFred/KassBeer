@@ -173,7 +173,7 @@ void main() {
       fermentables: const [
         FermentableLine(
           name: 'Pils',
-          kind: FermentableKind.malt,
+          type: 'grain',
           weightG: 4500,
           yieldPct: 80,
         ),
@@ -304,9 +304,9 @@ void main() {
             hops: [
               HopLine(
                 name: '---',
-                weightG: 10,
+                amount: Quantite.grammes(10),
                 use: HopUse.boil,
-                form: HopForm.pellet,
+                form: 'pellet',
               ),
             ],
           ),
@@ -342,15 +342,41 @@ void main() {
       },
     );
 
+    test('type de malt hors du schéma : recette illisible, rapportée sans la '
+        'valeur', () async {
+      await firestore.collection('recipes').doc('extrait').set({
+        'format_version': 1,
+        'owner_uid': 'uid-a',
+        'recipe': {
+          'name': 'Extrait',
+          'ingredients': {
+            'fermentable_additions': [
+              {
+                'name': 'Extrait sec',
+                'type': 'malt extract',
+                'amount': {'value': 1000, 'unit': 'g'},
+              },
+            ],
+          },
+        },
+      });
+      final list = await repository.watchAll().first;
+      expect(list.chercher('extrait'), isA<DocumentIllisibleTrouve<Recipe>>());
+      final report = errors.reports.single;
+      expect(report.feature, 'recipes.read');
+      expect(report.error.toString(), isNot(contains('malt extract')));
+    });
+
     test(
-      'valeur que l\'application ne lit pas (extrait sec) : recette illisible, '
-      'rapportée sans la valeur',
+      'valeurs importées lues depuis la v0.1.17 (extrait sec, houblon à '
+      'l\'empâtage, quantité en litres) : recette lisible, aucun rapport',
       () async {
-        await firestore.collection('recipes').doc('extrait').set({
+        await firestore.collection('recipes').doc('import').set({
           'format_version': 1,
           'owner_uid': 'uid-a',
           'recipe': {
-            'name': 'Extrait',
+            'name': 'Import',
+            'author': 'Brasseuse Fictive',
             'ingredients': {
               'fermentable_additions': [
                 {
@@ -359,17 +385,20 @@ void main() {
                   'amount': {'value': 1000, 'unit': 'g'},
                 },
               ],
+              'hop_additions': [
+                {
+                  'name': 'Extrait de houblon',
+                  'form': 'extract',
+                  'amount': {'value': 0.005, 'unit': 'l'},
+                  'timing': {'use': 'add_to_mash'},
+                },
+              ],
             },
           },
         });
         final list = await repository.watchAll().first;
-        expect(
-          list.chercher('extrait'),
-          isA<DocumentIllisibleTrouve<Recipe>>(),
-        );
-        final report = errors.reports.single;
-        expect(report.feature, 'recipes.read');
-        expect(report.error.toString(), isNot(contains('dry extract')));
+        expect(list.chercher('import'), isA<DocumentTrouve<Recipe>>());
+        expect(errors.reports, isEmpty);
       },
     );
   });

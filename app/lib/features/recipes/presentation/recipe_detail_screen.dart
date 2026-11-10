@@ -271,6 +271,13 @@ class _Fiche extends StatelessWidget {
           label: 'Type de recette',
           value: c.type == null ? null : typesRecette.libelle(c.type!),
         ),
+        // Auteur indiqué par le fichier importé (recipe.author) ; absent d'une
+        // recette saisie.
+        if (c.author != null)
+          LigneFiche(
+            label: 'Auteur indiqué par le fichier importé',
+            value: c.author,
+          ),
         LigneFiche(
           label: 'Volume en fermenteur',
           value: volume == null ? null : formatLitres(volume),

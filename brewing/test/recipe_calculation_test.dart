@@ -23,7 +23,9 @@ RecipeInput _recipe(Map<String, Object?> m) => RecipeInput(
       .map(
         (f) => FermentableInput(
           name: f['name'] as String,
-          kind: FermentableKind.values.byName(f['kind'] as String),
+          kind: f.containsKey('type')
+              ? FermentableKind.ofType(f['type'] as String)
+              : FermentableKind.values.byName(f['kind'] as String),
           massGrams: number(f['mass_grams']),
           colorEbc: optionalNumber(f['color_ebc']),
           yieldPercent: optionalNumber(f['yield_percent']),
@@ -34,9 +36,12 @@ RecipeInput _recipe(Map<String, Object?> m) => RecipeInput(
       .map(
         (h) => HopInput(
           name: h['name'] as String,
-          massGrams: number(h['mass_grams']),
+          massGrams: optionalNumber(h['mass_grams']),
           use: HopUse.values.byName(h['use'] as String),
-          form: HopForm.values.byName(h['form'] as String),
+          form: switch (h['form']) {
+            final String form => HopForm.values.byName(form),
+            _ => null,
+          },
           alphaPercent: optionalNumber(h['alpha_percent']),
           minutes: optionalNumber(h['minutes']),
         ),
@@ -147,6 +152,19 @@ void main() {
           result.hopsLongerThanBoil,
           _refs(expected['hops_longer_than_boil']),
           reason: label(c),
+        );
+      }
+      if (expected.containsKey('hops_without_mass')) {
+        expect(
+          result.hopsWithoutMass,
+          _refs(expected['hops_without_mass']),
+          reason: label(c),
+        );
+      } else {
+        expect(
+          result.hopsWithoutMass,
+          isEmpty,
+          reason: '${label(c)} / hops_without_mass',
         );
       }
       if (expected.containsKey('missing_inputs')) {

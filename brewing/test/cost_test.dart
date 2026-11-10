@@ -427,10 +427,15 @@ void main() {
     expect(CostUnit.values.map((u) => u.storedValue), [
       'g',
       'unit',
+      'l',
       'brew',
       'bottle',
     ]);
-    expect(CostUnit.purchaseUnits, [CostUnit.gram, CostUnit.unit]);
+    expect(CostUnit.purchaseUnits, [
+      CostUnit.gram,
+      CostUnit.unit,
+      CostUnit.litre,
+    ]);
     expect(FeeBasis.values.map((b) => b.storedValue), [
       'per_brew',
       'per_bottle',

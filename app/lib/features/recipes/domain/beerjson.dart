@@ -48,6 +48,24 @@ extension LectureBeerJson on LecteurChamps {
   double? mesure(String key, String unit) =>
       _couple(key, unit)?.nombre('value');
 
+  /// Valeur et unité du couple [key] exprimé dans l'une des unités [units]
+  /// (`g` ou `l` pour une quantité), ou `null` s'il est absent. Une autre unité,
+  /// une unité sans valeur ou une valeur non numérique lève [DocumentIllisible].
+  ({double value, String unit})? mesureParmi(String key, Set<String> units) {
+    final couple = objetFacultatif(key);
+    if (couple == null) return null;
+    final stored = couple.data['unit'];
+    if (stored is! String || !units.contains(stored)) {
+      throw DocumentIllisible(
+        '${couple.prefix}unit',
+        stored is String
+            ? 'unité inattendue (${stored.length} caractères)'
+            : 'unité absente',
+      );
+    }
+    return (value: couple.nombre('value'), unit: stored);
+  }
+
   /// Durée [key] en minutes entières, ou `null` si elle est absente. Une valeur
   /// décimale lève [DocumentIllisible] (`TimeType.value` est un entier).
   int? duree(String key) {
@@ -128,6 +146,38 @@ const typesRecette = EnumerationBeerJson(
     'all grain': 'Tout grain',
   },
   proposees: ['all grain', 'partial mash', 'extract'],
+);
+
+/// `FermentableBase.type`. Le calcul lit la nature par
+/// `FermentableKind.ofType` de `brewing/` : extrait, miel, fruit et jus comme un
+/// sucre, `other` à préciser. L'éditeur propose Malt et Sucre.
+const typesFermentable = EnumerationBeerJson(
+  {
+    'grain': 'Malt',
+    'sugar': 'Sucre',
+    'extract': 'Extrait liquide',
+    'dry extract': 'Extrait sec',
+    'honey': 'Miel',
+    'fruit': 'Fruit',
+    'juice': 'Jus',
+    'other': 'Autre',
+  },
+  proposees: ['grain', 'sugar'],
+);
+
+/// `HopVarietyBase.form`. Le calcul lit la forme par `HopForm.ofBeerJson` de
+/// `brewing/` : `plug` comme des cônes ; poudre, extrait et cônes frais sans
+/// facteur d'utilisation. L'éditeur propose Pellets et Cônes.
+const formesHoublon = EnumerationBeerJson(
+  {
+    'pellet': 'Pellets',
+    'leaf': 'Cônes',
+    'plug': 'Cônes pressés',
+    'leaf (wet)': 'Cônes frais',
+    'powder': 'Poudre',
+    'extract': 'Extrait',
+  },
+  proposees: ['pellet', 'leaf'],
 );
 
 /// `CultureBase.type`.

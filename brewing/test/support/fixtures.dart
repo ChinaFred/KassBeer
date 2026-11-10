@@ -62,13 +62,16 @@ Fermentable fermentable(Map<String, Object?> m) {
 List<Fermentable> fermentables(Object? value) =>
     objects(value).map(fermentable).toList();
 
-/// Houblon décrit dans une fixture.
+/// Houblon décrit dans une fixture : `form` (nom de l'enum) ou
+/// `beerjson_form` (valeur BeerJSON lue par [HopForm.ofBeerJson]).
 Hop hop(Map<String, Object?> m) => Hop(
   name: m['name'] as String,
   alphaPercent: number(m['alpha_percent']),
   massGrams: number(m['mass_grams']),
   use: HopUse.values.byName(m['use'] as String),
-  form: HopForm.values.byName(m['form'] as String),
+  form: m.containsKey('beerjson_form')
+      ? HopForm.ofBeerJson(m['beerjson_form'] as String)!
+      : HopForm.values.byName(m['form'] as String),
   boilMinutes: number(m['boil_minutes']),
 );
 

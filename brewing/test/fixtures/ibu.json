@@ -1,6 +1,6 @@
 {
   "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
-  "formula": "Tinseth : IBU = 1,65 × 0,000125^(Gb − 1) × (1 − e^(−0,04 t)) / 4,15 × forme × alpha × masse (mg/L). Pellets : × 1,1 ; cônes : × 1,0 ; après ébullition et dry hop : 0.",
+  "formula": "Tinseth : IBU = 1,65 × 0,000125^(Gb − 1) × (1 − e^(−0,04 t)) / 4,15 × forme × alpha × masse (mg/L). Pellets : × 1,1 ; cônes : × 1,0 ; après ébullition et dry hop : 0. 'beerjson_form' : forme BeerJSON lue par HopForm.ofBeerJson (plug → cônes).",
   "utilization": [
     {
       "boil_minutes": 60,
@@ -53,6 +53,26 @@
       },
       "expected": 34.599612,
       "tolerance": 1e-05
+    },
+    {
+      "id": "plug-60",
+      "inputs": {
+        "hops": [
+          {
+            "name": "Magnum",
+            "alpha_percent": 10,
+            "mass_grams": 30,
+            "use": "boil",
+            "beerjson_form": "plug",
+            "boil_minutes": 60
+          }
+        ],
+        "volume_litres": 20,
+        "boil_gravity": 1.05
+      },
+      "expected": 34.599612,
+      "tolerance": 1e-05,
+      "note": "forme BeerJSON 'plug' (cônes pressés) : calculée comme des cônes (DATA_SOURCES.md), facteur 1,0"
     },
     {
       "id": "ebullition-0-minute",

@@ -11,6 +11,7 @@ export 'src/bitterness.dart';
 export 'src/brew_comparison.dart';
 export 'src/brew_steps.dart';
 export 'src/color.dart';
+export 'src/conversions.dart';
 export 'src/cost.dart';
 export 'src/errors.dart';
 export 'src/fermentables.dart';

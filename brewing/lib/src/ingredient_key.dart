@@ -26,11 +26,13 @@ enum IngredientNature {
   /// Préfixe de la clé (`malt`, `sucre`, `houblon`, `levure`, `ajout`).
   final String prefix;
 
-  /// Nature d'un fermentescible.
-  static IngredientNature ofFermentable(FermentableKind kind) => switch (kind) {
-    FermentableKind.malt => IngredientNature.malt,
-    FermentableKind.sugar => IngredientNature.sugar,
-  };
+  /// Nature de la clé d'un fermentescible : malt pour un malt, sucre pour un
+  /// sucre et pour une nature à préciser (`null`, type BeerJSON `other`). La
+  /// clé ne sert qu'au prix et au stock ; le calcul lit [FermentableKind].
+  static IngredientNature ofFermentable(FermentableKind? kind) =>
+      kind == FermentableKind.malt
+      ? IngredientNature.malt
+      : IngredientNature.sugar;
 }
 
 /// Lettres accentuées en minuscule et leur forme sans accent.

@@ -8,6 +8,7 @@ import '../../../core/presentation/formats.dart';
 import '../../../core/services/error_report_service.dart';
 import '../../equipment/domain/equipment.dart';
 import '../domain/recipe.dart';
+import 'ingredient_forms.dart' show kHoublonEnVolume, kHoublonEnVolumePhrase;
 
 /// Équipement d'une recette tel que l'écran le connaît. Il donne le rendement
 /// d'empâtage du calcul et le libellé de la donnée qui manque : `brewing/` dit
@@ -199,11 +200,19 @@ String libelleManque(
   MissingInputKind.hopAlpha =>
     'Acides alpha non renseignés : ${_names(missing)}.',
   MissingInputKind.hopBoilTime => 'Durée non renseignée : ${_names(missing)}.',
+  MissingInputKind.fermentableKind => 'Nature à préciser : ${_names(missing)}.',
+  MissingInputKind.hopUse =>
+    'Moment non pris en charge par le calcul : ${_names(missing)}.',
+  MissingInputKind.hopForm =>
+    'Forme non prise en charge par le calcul : ${_names(missing)}.',
   MissingInputKind.yeast => 'Aucune levure.',
   MissingInputKind.yeastAttenuation =>
     'Atténuation non renseignée : ${_names(missing)}.',
   MissingInputKind.originalGravity => 'Dépend de la densité initiale.',
 };
+
+/// Mention des houblons mesurés en volume (décision du 2026-11-10).
+String houblonsEnVolume(String noms) => '$kHoublonEnVolumePhrase : $noms.';
 
 /// Un indicateur : libellé, abréviation de la barre, mise en forme.
 typedef _Indicateur = ({
@@ -294,6 +303,7 @@ class BlocCalculs extends StatelessWidget {
     }
     final c = (calculs as CalculsObtenus).calculation;
     final missing = c.missingInputs;
+    final enVolume = {for (final h in c.hopsWithoutMass) h.name}.join(', ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -331,6 +341,15 @@ class BlocCalculs extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
+        if (enVolume.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            houblonsEnVolume(enVolume),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
         if (missing.isNotEmpty) ...[
           const SizedBox(height: 16),
           Semantics(
@@ -490,11 +509,15 @@ class _DetailCalculs extends StatelessWidget {
     if (index >= content.hops.length) return '';
     final hop = content.hops[index];
     final minutes = hop.timeMin;
+    if (hop.amount.enLitres) return ', $kHoublonEnVolume';
     return switch (hop.use) {
       HopUse.boil =>
         minutes == null ? '' : ' (ébullition ${formatMinutes(minutes)})',
       HopUse.afterBoil => ' (whirlpool, hors ébullition)',
       HopUse.dryHop => ' (à cru, hors ébullition)',
+      // L'IBU est indisponible avec ces moments : aucune ligne n'est affichée.
+      HopUse.mash => ' (empâtage)',
+      HopUse.package => ' (conditionnement)',
     };
   }
 }
