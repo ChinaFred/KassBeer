@@ -557,7 +557,7 @@ jobs:
             exit 1
           fi
           if ! jq -e --arg full "tickets-functions@$PROJECT.iam.gserviceaccount.com" \
-               '[.endpoints[] | select(.serviceAccountEmail != "tickets-functions@" and .serviceAccountEmail != $full)] | length == 0' "$manifest" > /dev/null; then
+               '[.endpoints[] | select(.serviceAccountEmail != $full)] | length == 0' "$manifest" > /dev/null; then
             echo "::error::Une fonction ne tourne pas sous le compte tickets-functions."
             exit 1
           fi
