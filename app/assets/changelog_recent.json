@@ -1,0 +1,46 @@
+{
+  "versions": [
+    {
+      "version": "0.1.14",
+      "date": "2026-11-10",
+      "paragraphs": [
+        "Le menu du compte gagne une entrée « Nouveautés ». Elle ouvre un écran qui présente les dernières versions qui changent ce que vous voyez, la plus récente en tête, avec leur date. La version installée sur l'appareil y porte l'étiquette « Installée ». Le texte se sélectionne pour être copié. L'écran marche sans réseau : les nouveautés sont livrées avec l'application."
+      ]
+    },
+    {
+      "version": "0.1.13",
+      "date": "2026-11-10",
+      "paragraphs": [
+        "Les prix et le coût arrivent (incrément v0.5). Chaque brasseur saisit ses prix d'achat et ses frais (eau, électricité, embouteillage) dans « Mes prix », ouvert depuis le menu du compte. La fiche d'une recette affiche son coût avec les prix du lecteur : total, par litre et bouteille de 33 cl. Un prix manquant n'affiche aucun montant : la liste des manquants permet de saisir chaque prix sans quitter la recette. Sur la fiche d'un brassin, son propriétaire voit l'estimation, puis le coût figé automatiquement au premier embouteillage si tous les prix sont connus, par bouteille réelle. Sinon, « Figer le coût » rattrape le figeage. « Recalculer avec mes prix actuels » remplace un coût figé après confirmation. Les prix et les coûts ne sont visibles que de leur propriétaire."
+      ]
+    },
+    {
+      "version": "0.1.11",
+      "date": "2026-11-08",
+      "paragraphs": [
+        "L'après-brassage arrive (incrément v0.4) : un brassin va de « Prévu » à « Terminé » sans Excel. La fiche d'un brassin suit la fermentation, l'embouteillage et la fin, avec un retour en arrière à chaque statut et l'abandon. Le relevé de fermentation note densité, température, date et note, montre l'écart à la mesure précédente et trace une courbe de densité et de température. Le bloc « Prévu et mesuré » compare densités, degré, volume et rendement réel. Une donnée absente affiche « Indisponible » et sa raison. L'embouteillage note la date, la densité finale, les bouteilles, le volume et le sucre, sans calcul de degré après bouteille. Ces saisies marchent sans réseau."
+      ]
+    },
+    {
+      "version": "0.1.9",
+      "date": "2026-11-08",
+      "paragraphs": [
+        "L'application porte son propre logo, le médaillon Kass'Beer, sur Android et sur le web. Sur Android, l'icône est adaptative : médaillon entier sur fond crème, sans coupe quel que soit le masque du lanceur. Les PNG sont tirés de assets/Kassbeer_transparent.png, sans nouvelle dépendance."
+      ]
+    },
+    {
+      "version": "0.1.8",
+      "date": "2026-11-08",
+      "paragraphs": [
+        "Le brassin et le jour de brassage hors ligne arrivent (incrément v0.3). Un brassin se crée depuis une recette, avec une copie figée de la recette et de l'équipement. La recette reçoit une chronologie, préremplie depuis les paliers et l'ébullition. « Préparer le brassage » charge tout sur le téléphone. L'écran du jour affiche l'étape en cours, un minuteur lisible de loin et les heures prévues recalculées après un retard. Il permet de sauter une étape, de corriger une heure et de saisir températures, densités, volumes et pH. Sans réseau, les saisies restent sur le téléphone, même application fermée, et partent au retour du réseau. L'écran reste allumé. La fin d'un minuteur déclenche une vibration et un bip, même en mode silencieux."
+      ]
+    },
+    {
+      "version": "0.1.7",
+      "date": "2026-11-08",
+      "paragraphs": [
+        "Équipements et recettes arrivent, premier incrément de la version 1 (v0.2 du découpage). Chaque brasseur décrit ses équipements et ses recettes, et lit ceux du groupe sans pouvoir les modifier. L'éditeur de recette affiche, à chaque saisie, la densité initiale, la densité finale, le degré, l'amertume (IBU) et la couleur (EBC). Quand une donnée manque, l'écran dit laquelle, sans valeur de remplacement. Une recette se duplique à son nom. La suppression d'un équipement annonce les recettes qui l'utilisent. Tout marche hors ligne sur l'APK."
+      ]
+    }
+  ]
+}

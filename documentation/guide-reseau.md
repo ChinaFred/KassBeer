@@ -48,6 +48,9 @@ CLAUDE.md                       règles, chaîne de travail, tableaux à remplir
     ├── setup-projet.sh         session cloud : installe Flutter 3.44.6 et les dépendances
     └── format-on-edit.mjs      formate le fichier écrit, selon formatters.json
 scripts/
+├── changelog-recent.mjs        écrit app/assets/changelog_recent.json (écran « Nouveautés »)
+│                               depuis CHANGELOG.md ; relancé par ci.yml et deploy.yml
+├── changelog-recent.test.mjs   node --test scripts/changelog-recent.test.mjs
 ├── check-agents.mjs            vérifie les en-têtes YAML et les noms cités dans CLAUDE.md
 ├── check-agents.test.mjs       node --test scripts/check-agents.test.mjs
 ├── check-version.mjs           avant une fusion : version de la branche > version de main
@@ -133,6 +136,11 @@ utiles », `git fetch --tags` et `node scripts/check-version.mjs`, puis fusionne
 sur le commit de fusion, après sa CI verte s'il existe un dépôt distant (« Chaîne de
 travail », étape 6). Une branche ne
 reçoit pas de tag : si l'autre session fusionne la première, son numéro change.
+
+Une entrée `— fonctionnel` du `CHANGELOG.md` est extraite par `scripts/changelog-recent.mjs`
+vers `app/assets/changelog_recent.json`, que l'écran « Nouveautés » affiche. `CLAUDE.md` (« Version ») demande de l'écrire pour le
+brasseur, sans chemin de fichier ni numéro d'incrément ; le détail va dans l'entrée
+`— technique`.
 
 `check-version.mjs` lit le fichier déclaré dans `.claude/version.json` dans le dernier commit
 de la branche (`HEAD`) et sur la branche principale : la plus haute version entre `main` et

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/app.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
+import 'package:kass_beer/core/data/nouveautes.dart';
 import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
@@ -652,7 +653,8 @@ const adminMember = Member(
 
 /// Environnement de test : doubles, conteneur Riverpod, application montée.
 class TestApp {
-  TestApp()
+  /// [appVersion] : version installée lue au démarrage ; `null` si illisible.
+  TestApp({String? appVersion = '0.1.0'})
     : auth = FakeAuthRepository(),
       members = FakeMembersRepository(),
       recipes = FakeRecipesRepository(),
@@ -679,7 +681,8 @@ class TestApp {
         horlogeProvider.overrideWithValue(() => now),
         alerteMinuteurProvider.overrideWithValue(alerte),
         screenWakelockProvider.overrideWithValue(wakelock),
-        appVersionProvider.overrideWithValue('0.1.0'),
+        appVersionProvider.overrideWithValue(appVersion),
+        nouveautesSourceProvider.overrideWithValue(() => nouveautes()),
       ],
     );
     // Listes vides lues du serveur : l'accueil (Recettes) s'affiche sans attendre.
@@ -698,6 +701,9 @@ class TestApp {
   final RecordingErrorReportService errors;
   late final ScreenWakelock wakelock;
   final wakelockCalls = <bool>[];
+
+  /// Contenu de l'asset des nouveautés, modifiable par les tests.
+  Future<String> Function() nouveautes = () async => '{"versions": []}';
 
   /// Heure de l'appareil, modifiable par les tests.
   DateTime now = DateTime(2026, 11, 8, 12, 10);

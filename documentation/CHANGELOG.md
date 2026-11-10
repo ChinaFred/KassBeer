@@ -6,6 +6,31 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.14 — fonctionnel
+
+Le menu du compte gagne une entrée « Nouveautés ». Elle ouvre un écran qui présente les
+dernières versions qui changent ce que vous voyez, la plus récente en tête, avec leur date.
+La version installée sur l'appareil y porte l'étiquette « Installée ». Le texte se
+sélectionne pour être copié. L'écran marche sans réseau : les nouveautés sont livrées avec
+l'application.
+
+### v0.1.14 — technique
+
+`scripts/changelog-recent.mjs` extrait du `CHANGELOG.md` les six dernières versions qui ont une
+entrée « fonctionnel », en texte simple découpé en paragraphes, et écrit
+`app/assets/changelog_recent.json`. La CI et `deploy.yml` régénèrent ce fichier avant chaque build
+web et APK ; la copie versionnée sert aux builds locaux. Le script a son test, rejoué par le job
+« Version et outillage ». L'application valide la forme du fichier et affiche la panne, journalisée,
+s'il est mal formé. Route `/nouveautes` hors de la coquille. Aucune dépendance ajoutée :
+`app/pubspec.lock` ne change pas.
+
+ADR-006 accepté : les tickets des membres seront publiés en Issues GitHub par des Cloud Functions
+sans point d'accès HTTP (Node 24), en deux lots T1 et T2 après les lots L2 à L4 d'ADR-005. Aucune
+implémentation dans cette version. ADR-001 et la section « Le projet » de `CLAUDE.md` le citent.
+
+`CLAUDE.md` (« Version ») ajoute une règle d'écriture : une entrée « fonctionnel » s'adresse au
+brasseur, sans chemin de fichier ni numéro d'incrément, puisqu'elle s'affiche dans « Nouveautés ».
+
 ### v0.1.13 — fonctionnel
 
 Les prix et le coût arrivent (incrément v0.5). Chaque brasseur saisit ses prix d'achat et ses

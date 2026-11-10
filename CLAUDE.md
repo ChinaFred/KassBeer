@@ -73,8 +73,9 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 - Authentification : Firebase Auth, compte Google ; accès réservé aux e-mails listés dans
   `members/{email}` par l'administrateur.
 - Hébergement : Firebase Hosting (web) ; APK signé distribué par Firebase App Distribution.
-- Serveur : aucun en version 1. Cloud Functions Node 22 / TypeScript en `europe-west1`
-  quand arriveront l'IA ou le RAPT Pill (ADR à venir).
+- Serveur : aucun aujourd'hui. Cloud Functions 2e génération, Node 24 / TypeScript, en
+  `europe-west1`, sans point d'accès HTTP, d'abord pour les tickets des membres (ADR-006, lots
+  T1 et T2, après les lots L2 à L4 d'ADR-005), puis pour l'IA ou le RAPT Pill (ADR à venir).
 - Import des 16 fiches Excel : fichiers JSON préparés par une session Claude Code, relus et
   écrits par l'écran Admin › Import. Aucune IA dans l'application en version 1.
 - Détail et options écartées : `documentation/decisions/ADR-001-pile-technique.md`,
@@ -102,7 +103,7 @@ firebase.json         # Hosting (en-têtes, cache), Firestore, émulateurs
 firestore.rules       # seul contrôle d'accès de la v1
 firestore.indexes.json
 .github/workflows/    # ci.yml (contrôles), deploy.yml (Hosting, règles, APK)
-scripts/              # check-version.mjs, check-agents.mjs
+scripts/              # check-version.mjs, check-agents.mjs, changelog-recent.mjs
 import/fiches/        # JSON d'import des 16 fiches (contiennent des prix) : jamais versionné
 ```
 
@@ -134,6 +135,7 @@ dart format --output=none --set-exit-if-changed app/lib app/test brewing
 (cd rules-tests && npm test)          # émulateur Firestore, projet demo-kassbeer, Java 21
 
 # Compilation de chaque cible livrée
+node scripts/changelog-recent.mjs           # asset « Nouveautés », avant un build local
 (cd app && flutter build web --release)
 (cd app && flutter build apk --release)   # SDK Android : sur le PC, ou job « Android — compilation » de la CI
 
@@ -337,6 +339,12 @@ Un seul fichier porte la version. Chaque commit qui termine la « Chaîne de tra
 99, puis chiffre du milieu + 1) et ajoute en tête de `documentation/CHANGELOG.md`, sous la date
 du jour (`## AAAA-MM-JJ`), un titre `### vX.Y.Z — fonctionnel` ou `— technique`, dans le même
 commit. L'entrée dit ce qui change et pourquoi, en quelques phrases.
+
+Une entrée `— fonctionnel` s'affiche, en texte simple, dans l'écran « Nouveautés » de
+l'application. Elle s'écrit pour le brasseur : ce qu'il voit ou peut faire de nouveau, sans
+chemin de fichier, nom de fichier, nom de paquet, numéro d'incrément (« v0.4 ») ni numéro de
+lot. Ce détail va dans l'entrée `— technique`. Les entrées antérieures à la v0.1.14 ne se
+réécrivent pas.
 
 Deux sessions qui travaillent en parallèle peuvent choisir le même numéro. Avant de fusionner
 une branche, l'intégrer **par une fusion, jamais par un rebase**, puis lancer

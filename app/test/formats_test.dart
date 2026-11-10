@@ -63,6 +63,12 @@ void main() {
       expect(formatJours(minutesParJour.toDouble()), '1 jour');
     });
 
+    test('date longue, « 1er » le premier du mois', () {
+      expect(formatDateLongue(DateTime(2026, 11, 8)), '8 novembre 2026');
+      expect(formatDateLongue(DateTime(2026, 2, 1)), '1er février 2026');
+      expect(formatDateLongue(DateTime(2026, 12, 31)), '31 décembre 2026');
+    });
+
     test('texte d\'un champ : virgule, sans espace', () {
       expect(texteSaisi(4.5), '4,5');
       expect(texteSaisi(22400), '22400');
