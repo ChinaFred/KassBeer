@@ -14,7 +14,10 @@ pouvait pas pousser de tag, et le tag manuel venait parfois avant la fin de la C
 Le job a seul `contents: write`, sans secret ni accès à Google Cloud ; un tag existant n'est
 ni recréé ni déplacé ; sur un lancement manuel, il attend la CI verte du commit. L'étape 6 de
 la chaîne de travail devient une vérification. La documentation du ruleset de `main` compte
-désormais cinq contrôles requis, avec « Functions — lint, build, tests ».
+désormais cinq contrôles requis, avec « Functions — lint, build, tests ». « Réglages faits une
+fois » ajoute ce que le premier déploiement des Functions a révélé : création du compte compute
+par l'API Compute Engine, `roles/editor` retiré des comptes compute et App Engine, et droit
+d'agir au nom du compte App Engine pour `github-deploy`.
 
 ### v0.1.16 — fonctionnel
 

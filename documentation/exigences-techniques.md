@@ -1201,6 +1201,9 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com \
   pubsub.googleapis.com storage.googleapis.com secretmanager.googleapis.com \
   cloudscheduler.googleapis.com
+# Compute Engine crée le compte compute par défaut, compte de build des Functions et cible
+# des étapes 4, 5 et 7. Sur kassbeer, il n'existait pas avant cette activation.
+gcloud services enable compute.googleapis.com
 
 # 2. Compte d'exécution des fonctions : lit et écrit Firestore, reçoit les événements
 #    Firestore et l'appel de Cloud Scheduler, lit le secret.
@@ -1247,7 +1250,8 @@ done
 #    poste juste après, ou créer le dépôt avant.
 npx firebase functions:artifacts:setpolicy --location europe-west1 --days 1 --project "$PROJECT_ID"
 
-# 7. Compte compute par défaut (compte de build des Functions) : lister ses rôles.
+# 7. Compte compute par défaut (compte de build des Functions), créé à l'étape 1 avec
+#    roles/editor posé d'office : lister ses rôles.
 gcloud projects get-iam-policy "$PROJECT_ID" --flatten=bindings \
   --filter="bindings.members:serviceAccount:$BUILD_SA" --format='value(bindings.role)'
 #    S'il porte roles/editor (rôle posé d'office sur les anciens projets), le remplacer par
@@ -1258,7 +1262,24 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:$BUILD_SA" --role roles/cloudbuild.builds.builder --condition=None
 gcloud projects remove-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:$BUILD_SA" --role roles/editor   # seulement s'il figure dans la liste
+
+# 8. Compte App Engine par défaut : firebase-tools exige, avant tout déploiement de
+#    Functions, que le compte qui déploie puisse agir en son nom (iam.serviceAccounts.actAs),
+#    même si les fonctions tournent sous tickets-functions. Il porte roles/editor d'office ;
+#    Kass'Beer ne l'utilise pas : retirer ce rôle, puis donner l'actAs à github-deploy.
+APPSPOT_SA="$PROJECT_ID@appspot.gserviceaccount.com"
+gcloud projects get-iam-policy "$PROJECT_ID" --flatten=bindings \
+  --filter="bindings.members:serviceAccount:$APPSPOT_SA" --format='value(bindings.role)'
+gcloud projects remove-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$APPSPOT_SA" --role roles/editor --condition=None   # seulement s'il figure dans la liste
+gcloud iam service-accounts add-iam-policy-binding "$APPSPOT_SA" \
+  --member "serviceAccount:$DEPLOY_SA" --role roles/iam.serviceAccountUser
 ```
+
+État relevé le 2026-11-10 sur `kassbeer` : le compte compute ne porte que
+`cloudbuild.builds.builder`, `eventarc.eventReceiver` et `run.invoker` ; le compte App Engine
+ne porte aucun rôle sur le projet. Le premier déploiement des Functions (run 17) a échoué faute
+de l'actAs de l'étape 8.
 
 `roles/run.admin` sert à `firebase-tools` pour donner au compte d'exécution le droit
 d'appeler le service Cloud Run de la tâche planifiée (`run.services.setIamPolicy`).
@@ -1593,7 +1614,7 @@ du client, pas des secrets.
 | Clé d'API Android | paquet `fr.kassbeer.kass_beer` avec l'une des deux SHA-1 ci-dessus ; mêmes quatre API |
 | Premier admin | `members/{e-mail Google de l'administrateur}`, rôle `admin`, `invited_by` = `console`, créé hors de l'application |
 | App Distribution | ouvert pour l'application Android ; groupe `brasseurs`, un testeur (l'admin) |
-| Workload Identity Federation | pool `github`, fournisseur `kassbeer-deploy`, compte de service `github-deploy`, cinq rôles |
+| Workload Identity Federation | pool `github`, fournisseur `kassbeer-deploy`, compte de service `github-deploy`, rôles listés dans « Réglages faits une fois » (cinq au départ, plus ceux des Functions) |
 | GitHub, environnement `production` | règle de branche `main` posée ; les dix variables et les quatre secrets de signature posés |
 | Plan GitHub | Free, dépôt public depuis le 2026-11-07 (ADR-002). Minutes des runners standard gratuites. Le run 42366279942 a lu 9 variables de `production` sur 10, avant la pose des secrets ; le run 42381643401 a lu les 10 variables et les 4 secrets |
 | GitHub, rulesets | `main` : PR requise, 0 approbation, fusion par commit de fusion, quatre contrôles requis, à jour avec `main`, ni force push ni suppression ; tags `v*` : ni suppression ni mise à jour ; aucun contournement |

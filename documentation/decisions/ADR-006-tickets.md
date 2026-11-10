@@ -310,7 +310,10 @@ Après le cadrage de T1 (`analyste-metier`, `ux-designer`), l'utilisateur a tran
 Relevé à l'implémentation de T1 (déduit du code de firebase-tools 15.35.0, à confirmer au premier
 déploiement) : `github-deploy` reçoit aussi `run.admin` (invocation de la tâche planifiée),
 `cloudscheduler.admin`, `artifactregistry.reader` (lecture de la politique de nettoyage) et
-`secretmanager.viewer` sur le seul secret `GITHUB_TICKETS_TOKEN`. Les Functions tournent sous un
+`secretmanager.viewer` sur le seul secret `GITHUB_TICKETS_TOKEN`, et `iam.serviceAccountUser`
+sur le compte App Engine par défaut, que firebase-tools exige avant tout déploiement de
+Functions (relevé au premier déploiement) ; ce compte et le compte compute perdent
+`roles/editor`. Les Functions tournent sous un
 compte dédié `tickets-functions`. La liste complète vit dans `exigences-techniques.md`,
 « Réglages faits une fois ». `allowed_decisions` et `retry_requested_at` arrivent avec T2.
 
