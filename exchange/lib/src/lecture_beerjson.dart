@@ -16,8 +16,27 @@ import 'unites.dart';
 const kNomEmpatage = 'Empâtage';
 
 /// Lit [brut], une recette d'un fichier BeerJSON.
-ResultatRecette lireRecetteBeerJson(Object? brut) {
-  final lecture = _Lecture();
+ResultatRecette lireRecetteBeerJson(Object? brut) => lireRecetteConvertie(brut);
+
+/// Lit [brut], une recette en BeerJSON tirée d'un autre format (BeerXML), avec
+/// ce que la conversion a déjà relevé : [avant] (modifications propres au
+/// format, placées en tête), [parties] non importées, [inconnus] champs
+/// inconnus, et [nombres] : nombre de lignes du fichier par liste
+/// (`hop_additions`, `mash_steps`…) quand la conversion n'en a gardé que le
+/// plafond + 1. Les bornes, les unités et le nettoyage des textes sont ceux du
+/// BeerJSON : le compte rendu est le même.
+ResultatRecette lireRecetteConvertie(
+  Object? brut, {
+  List<Modification> avant = const [],
+  Set<PartieNonImportee> parties = const {},
+  int inconnus = 0,
+  Map<String, int> nombres = const {},
+}) {
+  final lecture = _Lecture()
+    .._modifs.addAll(avant)
+    .._parties.addAll(parties)
+    .._inconnus = inconnus
+    .._nombres = nombres;
   final recipe = lecture.recette(brut);
   final refus = lecture.refus;
   if (refus != null || recipe == null) {
@@ -49,6 +68,7 @@ class _Lecture {
   final _parties = <PartieNonImportee>{};
   int _inconnus = 0;
   bool _caracteres = false;
+  Map<String, int> _nombres = const {};
 
   bool get _arret => refus != null;
 
@@ -380,10 +400,16 @@ class _Lecture {
     return nom;
   }
 
-  /// Vérifie le plafond d'une liste.
-  bool _plafond(List<Object?> lignes, ListeRecette liste, int maximum) {
+  /// Vérifie le plafond de la liste [cle] ; le nombre cité est celui du
+  /// fichier ([lireRecetteConvertie]), sinon celui de [lignes].
+  bool _plafond(
+    List<Object?> lignes,
+    ListeRecette liste,
+    int maximum,
+    String cle,
+  ) {
     if (lignes.length <= maximum) return true;
-    _refuser(TropDeLignes(liste, lignes.length, maximum));
+    _refuser(TropDeLignes(liste, _nombres[cle] ?? lignes.length, maximum));
     return false;
   }
 
@@ -534,7 +560,9 @@ class _Lecture {
       obligatoire: false,
     );
     final lignes = _liste(m['mash_steps']);
-    if (!_plafond(lignes, ListeRecette.paliers, kMaxPaliers)) return null;
+    if (!_plafond(lignes, ListeRecette.paliers, kMaxPaliers, 'mash_steps')) {
+      return null;
+    }
     final steps = <_Json>[];
     for (final brut in lignes) {
       final step = _palier(brut);
@@ -617,7 +645,7 @@ class _Lecture {
           ('culture_additions', ListeRecette.levures, _levure),
         ]) {
       final lignes = _liste(i[key]);
-      if (!_plafond(lignes, liste, kPlafondsListes[key]!)) return null;
+      if (!_plafond(lignes, liste, kPlafondsListes[key]!, key)) return null;
       final lues = <_Json>[];
       for (final brut in lignes) {
         final ligne = lire(brut);

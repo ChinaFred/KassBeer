@@ -1,10 +1,9 @@
 # Échange de recettes de Kass'Beer : paquet Dart pur, sans Flutter ni Firebase
-# (ADR-005, « Échange et ingestion »). Il décode et lit un fichier BeerJSON, produit
+# (ADR-005, « Échange et ingestion »). Il décode et lit un fichier BeerJSON ou BeerXML, produit
 # le compte rendu d'un import et écrit le fichier d'un export. Les conversions de
 # brassage (Plato, Lovibond, SRM, densité potentielle) restent dans brewing/ (P3).
-# Aucun paquet xml avant la lecture du BeerXML.
 name: exchange
-description: "Échange de recettes de Kass'Beer : lecture et écriture BeerJSON, compte rendu d'import."
+description: "Échange de recettes de Kass'Beer : lecture et écriture BeerJSON et BeerXML, compte rendu d'import."
 publish_to: "none"
 version: 0.1.0
 
@@ -17,6 +16,10 @@ dependencies:
   # Empreinte SHA-256 d'une recette importée (doublons). Paquet de l'équipe Dart,
   # pur Dart, déjà résolu en 3.0.8 dans app/pubspec.lock et brewing/pubspec.lock.
   crypto: ^3.0.8
+  # Lecture du BeerXML, analyseur à événements, sans DTD ni entité externe
+  # (ADR-005, P9). Version exacte prévue par ADR-005, déjà résolue en 7.0.1 dans
+  # app/pubspec.lock (dépendance indirecte de dbus). Tire petitparser.
+  xml: 7.0.1
 
 dev_dependencies:
   lints: ^6.1.0

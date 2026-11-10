@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:brewing/brewing.dart';
 
+import 'compte_rendu.dart' show Champ, ListeRecette;
 import 'schema.dart';
 
 /// Export BeerJSON d'une recette (ADR-005) : le sous-arbre `recipe` stocké,
@@ -55,6 +56,36 @@ enum ChampExport {
 
   /// Type d'un autre ajout.
   typeAjout,
+
+  // Champs demandés par le BeerXML seul (`ecriture_beerxml.dart`).
+
+  /// Style de la liste BJCP : BeerXML demande sa catégorie et ses plages.
+  style,
+
+  /// Durée d'ébullition : `BOIL_TIME`, et le calcul de `BOIL_SIZE`.
+  dureeEbullition,
+
+  /// Évaporation de l'équipement, pour `BOIL_SIZE`.
+  evaporation,
+
+  /// Pertes au trub de l'équipement, pour `BOIL_SIZE`.
+  pertesAuTrub,
+
+  /// Volume mort de la cuve d'ébullition, pour `BOIL_SIZE`.
+  volumeMort,
+
+  /// Type de recette sans équivalent BeerXML (`cider`, `mead`…) ; [noms]
+  /// porte la valeur.
+  typeRecetteBeerXml,
+
+  /// Moment d'un autre ajout : `USE` est obligatoire.
+  momentAjout,
+
+  /// Durée ou heure d'un houblon ou d'un autre ajout : `TIME` est obligatoire.
+  dureeAjout,
+
+  /// Houblon mesuré en volume : BeerXML le mesure en kilogrammes.
+  houblonEnVolume,
 }
 
 /// Donnée qui manque au format seul.
@@ -103,6 +134,65 @@ class EbullitionNonExportee extends PerteExport {
   const EbullitionNonExportee();
 }
 
+// Pertes propres au BeerXML (`ecriture_beerxml.dart`).
+
+/// Valeur écrite autrement : BeerXML n'a pas la valeur de Kass'Beer.
+class ValeurEcriteAutrement extends PerteExport {
+  /// Crée la perte.
+  const ValeurEcriteAutrement(
+    this.ligne,
+    this.liste,
+    this.champ,
+    this.source,
+    this.ecrite,
+  );
+
+  /// Nom de la ligne (ingrédient, palier).
+  final String ligne;
+
+  /// Liste de la ligne.
+  final ListeRecette liste;
+
+  /// Champ écrit autrement : [Champ.type], [Champ.forme] ou [Champ.moment].
+  final Champ champ;
+
+  /// Valeur BeerJSON de la recette (`honey`, `powder`…) ; pour un moment,
+  /// `whirlpool` ou `add_to_package`.
+  final String source;
+
+  /// Valeur BeerXML écrite (`Sugar`, `Aroma`, `Pellet`…).
+  final String ecrite;
+}
+
+/// Volume d'infusion d'un palier d'infusion (`INFUSE_AMOUNT`) : Kass'Beer ne
+/// le stocke pas.
+class VolumeInfusionNonExporte extends PerteExport {
+  /// Crée la perte.
+  const VolumeInfusionNonExporte(this.paliers);
+
+  /// Paliers concernés.
+  final List<String> paliers;
+}
+
+/// Jour d'ajout d'un houblon à cru : BeerXML n'en garde que la durée.
+class JourAjoutNonExporte extends PerteExport {
+  /// Crée la perte.
+  const JourAjoutNonExporte(this.lignes);
+
+  /// Houblons concernés.
+  final List<String> lignes;
+}
+
+/// Durée après l'arrêt du feu d'un autre ajout : BeerXML n'a pas ce moment ;
+/// l'ajout est écrit à l'ébullition, 0 minute.
+class DureeApresArretNonExportee extends PerteExport {
+  /// Crée la perte.
+  const DureeApresArretNonExportee(this.lignes);
+
+  /// Ajouts concernés.
+  final List<String> lignes;
+}
+
 /// Résultat d'un export.
 sealed class ResultatExport {
   const ResultatExport();
@@ -122,8 +212,8 @@ class ExportPret extends ResultatExport {
   /// Crée le résultat.
   const ExportPret(this.contenu, this.pertes, this.auteur);
 
-  /// Contenu du fichier, en JSON indenté : deux exports de la même recette
-  /// donnent le même texte (E7).
+  /// Contenu du fichier, en JSON indenté ou en XML : deux exports de la même
+  /// recette donnent le même texte (E7).
   final String contenu;
 
   /// Informations non exportées.
@@ -299,15 +389,24 @@ double _arrondi(double value, int decimales) {
   return (value * facteur).round() / facteur;
 }
 
-String? _texte(Object? value) =>
+String? _texte(Object? value) => texteExport(value);
+
+/// Texte non blanc, sans blancs de bord, ou `null` (auteur d'un export).
+String? texteExport(Object? value) =>
     value is String && value.trim().isNotEmpty ? value.trim() : null;
 
-Map<String, Object?> _map(Object? value) => value is Map
+Map<String, Object?> _map(Object? value) => mapExport(value);
+
+/// [value] en map à clés textuelles ; vide si ce n'en est pas une.
+Map<String, Object?> mapExport(Object? value) => value is Map
     ? {for (final e in value.entries) '${e.key}': e.value}
     : const {};
 
-List<Map<String, Object?>> _maps(Object? value) =>
-    value is List ? [for (final v in value) _map(v)] : const [];
+List<Map<String, Object?>> _maps(Object? value) => mapsExport(value);
+
+/// [value] en liste de maps ; vide si ce n'en est pas une.
+List<Map<String, Object?>> mapsExport(Object? value) =>
+    value is List ? [for (final v in value) mapExport(v)] : const [];
 
 List<String> _noms(
   List<Map<String, Object?>> lignes,

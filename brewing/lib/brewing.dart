@@ -8,6 +8,7 @@ library;
 
 export 'src/alcohol.dart';
 export 'src/bitterness.dart';
+export 'src/boil_volume.dart';
 export 'src/brew_comparison.dart';
 export 'src/brew_steps.dart';
 export 'src/color.dart';

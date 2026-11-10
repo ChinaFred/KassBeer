@@ -1,0 +1,297 @@
+{
+  "format": "BeerXML",
+  "total": 1,
+  "recettes": [
+    {
+      "numero": 1,
+      "nom": "Saison du verger",
+      "empreinte": "sha256:820c336e50651ab6c5e22bd67d7b8e91d5e6df6d5ac3342d7d7902b46ad67813",
+      "en_double": false,
+      "modifications": [
+        "StyleReduitAuNom(Saison)",
+        "UnitesConverties(Lovi)",
+        "PartiesNonImportees(ebullition, rendement, equipement, fermentation, valeursAnnoncees, detailsPaliers)"
+      ],
+      "document": {
+        "format_version": 1,
+        "recipe": {
+          "name": "Saison du verger",
+          "type": "all grain",
+          "author": "Brasseuse Fictive",
+          "style": {
+            "name": "Saison"
+          },
+          "batch_size": {
+            "value": 21.0,
+            "unit": "l"
+          },
+          "boil": {
+            "boil_time": {
+              "value": 75,
+              "unit": "min"
+            }
+          },
+          "mash": {
+            "name": "Empâtage",
+            "grain_temperature": {
+              "value": 18.0,
+              "unit": "C"
+            },
+            "mash_steps": [
+              {
+                "name": "Protéines",
+                "type": "temperature",
+                "step_temperature": {
+                  "value": 52.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 15,
+                  "unit": "min"
+                }
+              },
+              {
+                "name": "Saccharification",
+                "type": "infusion",
+                "step_temperature": {
+                  "value": 64.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 60,
+                  "unit": "min"
+                }
+              },
+              {
+                "name": "Mash out",
+                "type": "temperature",
+                "step_temperature": {
+                  "value": 76.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            ]
+          },
+          "ingredients": {
+            "fermentable_additions": [
+              {
+                "name": "Pilsner",
+                "type": "grain",
+                "amount": {
+                  "value": 3800.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 3.546,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 81.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Malt de blé",
+                "type": "grain",
+                "amount": {
+                  "value": 800.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 4.3340000000000005,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 83.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Flocons d'avoine",
+                "type": "grain",
+                "amount": {
+                  "value": 400.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 1.97,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 70.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Extrait sec clair",
+                "type": "dry extract",
+                "amount": {
+                  "value": 250.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 7.88,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 95.0,
+                    "unit": "%"
+                  }
+                }
+              }
+            ],
+            "hop_additions": [
+              {
+                "name": "Saaz",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 3.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 15.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_mash",
+                  "duration": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Styrian Golding",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 5.2,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 35.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Saaz",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 3.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 20.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 0,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Strisselspalt",
+                "form": "leaf",
+                "alpha_acid": {
+                  "value": 2.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 30.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_fermentation",
+                  "duration": {
+                    "value": 4320,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "miscellaneous_additions": [
+              {
+                "name": "Coriandre",
+                "type": "spice",
+                "amount": {
+                  "value": 8.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 5,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Zeste d'orange",
+                "type": "flavor",
+                "amount": {
+                  "value": 15.0,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_fermentation",
+                  "duration": {
+                    "value": 7200,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "culture_additions": [
+              {
+                "name": "Saison sèche",
+                "type": "ale",
+                "form": "dry",
+                "attenuation": {
+                  "value": 88.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 11.0,
+                  "unit": "g"
+                }
+              },
+              {
+                "name": "Levure de blé",
+                "type": "wheat",
+                "form": "liquid",
+                "attenuation": {
+                  "value": 75.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 0.1,
+                  "unit": "l"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

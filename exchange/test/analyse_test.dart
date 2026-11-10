@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:exchange/exchange.dart';
 import 'package:test/test.dart';
 
-import 'support/description.dart';
+import 'support/decrire.dart';
 
 List<int> _json(Object? value) => utf8.encode(jsonEncode(value));
 
@@ -27,6 +27,54 @@ RaisonFichier? _refus(List<int> octets) => switch (analyserFichier(octets)) {
 };
 
 void main() {
+  group('revue de sécurité de la v0.1.21 : nombre de valeurs JSON', () {
+    test('10 Mo de {} dans une recette : refusé avant jsonDecode', () {
+      const debut =
+          '{"beerjson": {"version": 2.01, "recipes": [{"name": "A", "x": [';
+      const fin = '{}]}]}}';
+      final n = (kMaxOctetsParFichier - debut.length - fin.length) ~/ 3;
+      final octets = utf8.encode('$debut${'{},' * n}$fin');
+      expect(octets.length, lessThanOrEqualTo(kMaxOctetsParFichier));
+      expect(_refus(octets), RaisonFichier.illisible);
+    });
+
+    test('500 recettes de 50 houblons, sans espace : lues', () {
+      final hop = {
+        'name': 'Cascade',
+        'form': 'pellet',
+        'alpha_acid': {'value': 7, 'unit': '%'},
+        'amount': {'value': 20, 'unit': 'g'},
+        'timing': {
+          'use': 'add_to_boil',
+          'time': {'value': 60, 'unit': 'min'},
+        },
+      };
+      final recette = {
+        'name': 'R',
+        'type': 'all grain',
+        'batch_size': {'value': 20, 'unit': 'l'},
+        'ingredients': {'hop_additions': List.filled(50, hop)},
+      };
+      final octets = _json(_fichier(List.filled(500, recette)));
+      expect(octets.length, lessThan(kMaxOctetsParFichier));
+      final lu = analyserFichier(octets) as FichierLu;
+      expect(lu.recettes, hasLength(500));
+      expect(lu.recettes.first.resultat, isA<RecetteLue>());
+    });
+
+    test('virgules et accolades dans une chaîne : non comptées', () {
+      final texte = '"${'{},' * (kMaxValeursJson ~/ 3 + 1)}"';
+      final lu =
+          analyserFichier(
+                utf8.encode(
+                  '{"beerjson": {"version": 2.01, "recipes": [{"name": $texte}]}}',
+                ),
+              )
+              as FichierLu;
+      expect(lu.recettes, hasLength(1));
+    });
+  });
+
   group('taille', () {
     test('plus de 10 Mo : refusé avant toute lecture, taille rendue', () {
       final octets = List<int>.filled(kMaxOctetsParFichier + 1, 0x20);
@@ -81,14 +129,13 @@ void main() {
       'BeerXML reconnu sur son premier élément, déclaration et commentaire compris',
       () {
         for (final xml in [
-          '<?xml version="1.0" encoding="ISO-8859-1"?>\n<!-- x -->\n<RECIPES><RECIPE>',
+          '<?xml version="1.0" encoding="ISO-8859-1"?>\n<!-- x -->\n'
+              '<RECIPES><RECIPE><NAME>A</NAME></RECIPE></RECIPES>',
           '<RECIPE><NAME>A</NAME></RECIPE>',
         ]) {
-          expect(
-            _refus(latin1.encode(xml)),
-            RaisonFichier.beerXml,
-            reason: xml,
-          );
+          final lu = analyserFichier(latin1.encode(xml)) as FichierLu;
+          expect(lu.format, FormatFichier.beerXml, reason: xml);
+          expect(lu.recettes.single.nom, 'A', reason: xml);
         }
       },
     );
@@ -299,14 +346,15 @@ void main() {
       );
     });
 
-    test('RECIPES reconnu après un en-tête et un commentaire', () {
+    test('RECIPES après un en-tête, un commentaire et un DOCTYPE : refusé', () {
       expect(
         _refus(
           utf8.encode(
-            '<?xml version="1.0"?>\n<!-- exporté -->\n<!DOCTYPE x>\n<RECIPES>',
+            '<?xml version="1.0"?>\n<!-- exporté -->\n<!DOCTYPE x>\n'
+            '<RECIPES><RECIPE><NAME>A</NAME></RECIPE></RECIPES>',
           ),
         ),
-        RaisonFichier.beerXml,
+        RaisonFichier.illisible,
       );
     });
   });

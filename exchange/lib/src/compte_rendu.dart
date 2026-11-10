@@ -7,7 +7,10 @@ library;
 /// Format d'un fichier reconnu.
 enum FormatFichier {
   /// BeerJSON, versions 1, 2 et 3.
-  beerJson('BeerJSON');
+  beerJson('BeerJSON'),
+
+  /// BeerXML 1.0.
+  beerXml('BeerXML');
 
   const FormatFichier(this.nom);
 
@@ -238,6 +241,14 @@ enum PartieNonImportee {
 
   /// Co-auteur et date de création.
   coAuteurEtDate,
+
+  /// Équipement décrit dans le fichier (`EQUIPMENT` d'un BeerXML) :
+  /// `equipment/` reste plat (ADR-005).
+  equipement,
+
+  /// Nom de l'empâtage d'un BeerXML : remplacé par « Empâtage »
+  /// (`kNomEmpatage`).
+  nomEmpatage,
 }
 
 /// Raison d'une valeur facultative écartée : le champ reste absent.
@@ -341,6 +352,48 @@ class MomentSimplifie extends Modification {
   final String? usage;
 }
 
+/// Houblon `First Wort` d'un BeerXML : compté à l'ébullition, pendant toute la
+/// durée d'ébullition de la recette (ADR-005). BeerJSON n'a pas ce moment.
+class FirstWortEnEbullition extends Modification {
+  /// Crée la modification.
+  const FirstWortEnEbullition(this.ligne, this.minutes);
+
+  /// Nom du houblon.
+  final String ligne;
+
+  /// Durée d'ébullition retenue, ou `null` si la recette n'en donne pas : la
+  /// durée du houblon reste à compléter.
+  final int? minutes;
+}
+
+/// Houblon `Whirlpool` ou `Aroma` d'un BeerXML sans durée : compté à l'arrêt
+/// du feu (`add_to_boil` à 0 minute, sans `duration` ; ADR-005, amendements
+/// de L2).
+class ArretDuFeuSansDuree extends Modification {
+  /// Crée la modification.
+  const ArretDuFeuSansDuree(this.ligne, this.usage);
+
+  /// Nom du houblon.
+  final String ligne;
+
+  /// Moment d'ajout du fichier : `Whirlpool` ou `Aroma`.
+  final String usage;
+}
+
+/// Houblon `Aroma` d'un BeerXML avec une durée : compté à l'ébullition pendant
+/// cette durée, comme le dit la norme. Un logiciel peut y avoir écrit une
+/// durée de whirlpool : la ligne le signale.
+class AromaEnEbullition extends Modification {
+  /// Crée la modification.
+  const AromaEnEbullition(this.ligne, this.minutes);
+
+  /// Nom du houblon.
+  final String ligne;
+
+  /// Durée lue, arrondie à la minute.
+  final int minutes;
+}
+
 /// Caractères de contrôle retirés des textes (direction du texte, sauts de
 /// ligne dans un nom).
 class CaracteresRetires extends Modification {
@@ -421,15 +474,12 @@ enum RaisonFichier {
   /// Plus d'octets que la borne.
   tropGros,
 
-  /// Ni BeerJSON, ni BeerXML, ni BeerSmith ; JSON mal formé ou encodage
-  /// illisible.
+  /// Ni BeerJSON, ni BeerXML, ni BeerSmith ; JSON ou XML mal formé, encodage
+  /// illisible ou non pris en charge, `DOCTYPE` ou entité XML inconnue.
   illisible,
 
   /// JSON qui n'est pas du BeerJSON.
   jsonNonBeerJson,
-
-  /// BeerXML reconnu, pas encore lu.
-  beerXml,
 
   /// Fichier BeerSmith (`.bsmx`).
   bsmx,

@@ -77,33 +77,69 @@ Recettes › Importer. Le modèle est déjà en BeerJSON : la lecture garde les 
 
 ## Correspondance BeerXML → BeerJSON
 
-Sert à l'import utilisateur et au fichier 001.
+Sert à l'import utilisateur (lecture de `exchange/`, v0.1.21) et au fichier 001. BeerXML 1.0
+est métrique : kilogrammes (convertis en grammes), litres, °C, minutes. Les valeurs
+énumérées se lisent sans casse. Encodages : UTF-8 (par défaut), ISO-8859-1, windows-1252 et
+US-ASCII déclarés, ces trois derniers décodés en windows-1252 (standard du WHATWG) ; autre
+encodage, `DOCTYPE` ou entité autre que les cinq prédéfinies et les références numériques :
+fichier refusé (P9). Une perte « listée » est une ligne de « Modifié à l'import ».
 
 | Champ | Valeur source | Résultat |
 |---|---|---|
 | `FERMENTABLE.TYPE` | `Grain`, `Adjunct` | `grain` |
 | | `Sugar` | `sugar` |
 | | `Extract`, `Dry Extract` | `extract`, `dry extract` |
+| `FERMENTABLE.COLOR` | Lovibond ; SRM pour un `Extract` (extrait liquide) | `EBC` par `brewing/` |
+| `FERMENTABLE.YIELD` | % ; absent avec `POTENTIAL` (densité, annexe de la norme) | `yield.fine_grind` ; `potentialToYieldPercent` de `brewing/` |
 | `HOP.USE` | `Boil` | `add_to_boil`, `time` = `TIME` |
-| | `Aroma` | `add_to_boil`, `time` = `TIME` ; `TIME` absent ou 0 : fin d'ébullition |
+| | `Aroma` avec `TIME` positif | `add_to_boil`, `time` = `TIME` ; listé (« Si c'est un whirlpool, choisissez Whirlpool dans la recette. ») |
+| | `Aroma` à 0 minute | `add_to_boil` à 0, sans `duration` (arrêt du feu), sans perte |
+| | `Aroma` sans `TIME` | `add_to_boil` à 0, sans `duration` ; listé |
 | | `Dry Hop` | `add_to_fermentation`, `duration` = `TIME` |
-| | `Mash` | `add_to_mash` |
-| | `First Wort` | `add_to_boil` à la durée complète ; perte listée au rapport |
-| | `Whirlpool`, `Secondary` (hors norme, vus dans `diydog-beerxml`) | `add_to_boil` à 0 avec `duration` ; `add_to_fermentation` |
+| | `Mash` | `add_to_mash`, `duration` = `TIME` |
+| | `First Wort` | `add_to_boil` à la durée de `BOIL_TIME` (sans `BOIL_TIME`, durée absente) ; listé |
+| | `Whirlpool` (hors norme, vu dans `diydog-beerxml`) | avec `TIME` : `add_to_boil` à 0, `duration` = `TIME` ; sans `TIME` ou à 0 : `add_to_boil` à 0 sans `duration` (arrêt du feu), listé (ADR-005, amendements de L2 ; `source_hop_timing` en L3) |
+| | `Secondary` (hors norme) | `add_to_fermentation`, `duration` = `TIME` ; listé (moment simplifié) |
+| `HOP.FORM` absent | — | recette refusée : la forme est obligatoire dans l'application |
 | `HOP.FORM` | `Pellet`, `Plug`, `Leaf` | `pellet`, `plug`, `leaf` ; pour le calcul, `plug` se lit comme `leaf` (`HopForm.ofBeerJson`) |
 | Forme BeerJSON | `powder`, `extract`, `leaf (wet)` | conservée ; sans facteur d'utilisation de Tinseth, l'IBU affiche « Forme non prise en charge par le calcul » pour un houblon d'ébullition. Un extrait mesuré en volume ne compte pas dans l'IBU |
 | Moment BeerJSON | `add_to_mash`, `add_to_package` | conservé (`HopUse.mash`, `HopUse.package`) ; l'IBU affiche « Moment non pris en charge par le calcul » |
 | `YEAST.TYPE` | `Ale`, `Lager`, `Wine`, `Champagne` | `ale`, `lager`, `wine`, `champagne` |
 | | `Wheat` | `wheat`, sans perte (décision du 2026-11-10 : la valeur existe dans `culture.json`) |
 | `YEAST.FORM` | `Liquid`, `Dry`, `Slant`, `Culture` | valeur de même nom en minuscules |
+| `YEAST.AMOUNT`, `MISC.AMOUNT` | litres ; kilogrammes si `AMOUNT_IS_WEIGHT` vaut `TRUE` | `l` (décision 6) ; `g` ; autre valeur que `TRUE` ou `FALSE` : recette refusée |
 | `MISC.TYPE` | `Spice`, `Herb`, `Flavor`, `Fining`, `Water Agent`, `Other` | valeur de même nom en minuscules |
-| `MISC.USE` | `Boil` ; `Mash` ; `Primary`, `Secondary` ; `Bottling` | `add_to_boil` ; `add_to_mash` ; `add_to_fermentation` ; `add_to_package` |
+| `MISC.USE` | `Boil` ; `Mash` ; `Primary` ; `Secondary` ; `Bottling` | `add_to_boil` (`time`) ; `add_to_mash` ; `add_to_fermentation` ; `add_to_fermentation`, listé ; `add_to_package` (`duration` hors ébullition) |
 | `MASH_STEP.TYPE` | `Infusion`, `Temperature`, `Decoction` | valeur de même nom en minuscules |
+| `MASH.NAME` | autre que « Empâtage » | remplacé par « Empâtage » ; listé (nom de l'empâtage) |
+| `INFUSE_AMOUNT`, rampes, `DECOCTION_AMT`, `TUN_*`, `PH`… | toute valeur | non importés ; listés (détails des paliers) |
 | `RECIPE.TYPE` | `All Grain`, `Partial Mash`, `Extract` | `all grain`, `partial mash`, `extract` |
-| `INVENTORY`, prix, champs inconnus | toute valeur | ignorés (P5) |
+| `STYLE` | élément complet | nom seul ; listé |
+| `EQUIPMENT`, `WATERS`, `EFFICIENCY`, `BOIL_SIZE`, `OG`, `FG`, `EST_*`, `IBU`, `ABV`, fermentation, carbonatation, dégustation, `ASST_BREWER`, `DATE` | élément renseigné | non importés ; listés (un élément vide ne l'est pas) |
+| `VERSION`, `DISPLAY_*`, `DISP_*`, `INVENTORY` | toute valeur | jamais lus, non comptés |
+| Prix, champs inconnus | toute valeur | ignorés, comptés (P5) |
 
-Export BeerXML : 3 étapes de fermentation au plus, troncature avec avertissement. `add_to_mash` et
-`add_to_fermentation` retrouvent `Mash` et `Dry Hop`. Une perte d'information est listée.
+Export BeerXML (`exchange/`, v0.1.21 ; bloqué dans l'application jusqu'au référentiel des
+styles, L3) :
+
+| Valeur Kass'Beer | BeerXML écrit |
+|---|---|
+| `add_to_boil`, `time` | `Boil`, `TIME` = `time` |
+| `add_to_boil` à 0 avec `duration` (whirlpool) | `Aroma`, `TIME` = `duration` ; perte listée |
+| `add_to_fermentation` ; `add_to_mash` ; `add_to_package` (houblon) | `Dry Hop` ; `Mash` ; `Dry Hop` (perte listée), `TIME` = `duration` ; jour d'ajout à cru perdu, listé |
+| Ajout `add_to_fermentation` ; `add_to_package` | `Primary` ; `Bottling` |
+| Malt `honey`, `fruit`, `juice` ; `other` | `Sugar` ; `Adjunct` ; perte listée |
+| Forme `leaf (wet)` ; `powder`, `extract` | `Leaf` ; `Pellet` ; perte listée |
+| Levure hors `ale`, `lager`, `wheat`, `wine`, `champagne` ; forme `dregs` | `Ale` ; `Culture` ; perte listée |
+| Palier hors `infusion`, `temperature`, `decoction` | `Temperature` ; perte listée |
+| Couleur EBC | Lovibond (SRM pour `extract`) par `brewing/` |
+| Masse en grammes ; volume en litres | kilogrammes, `AMOUNT_IS_WEIGHT` `TRUE` ; litres, `FALSE` |
+| Palier d'infusion | sans `INFUSE_AMOUNT`, que Kass'Beer ne stocke pas ; perte listée |
+| — | `BOIL_SIZE` : `preBoilVolumeLitres` de `brewing/` ; `EFFICIENCY` : rendement d'empâtage de l'équipement |
+
+Une recette sans moment ou sans durée d'ajout, avec un houblon en volume ou d'un type hors
+`All Grain`, `Partial Mash`, `Extract` ne s'exporte pas en BeerXML : l'export liste ce qui
+manque. Aucune étape de fermentation n'est écrite : Kass'Beer n'en stocke pas.
 
 ## Correspondance DotBeer (fichier 005) → référentiels
 

@@ -62,6 +62,10 @@ void main() {
       for (final chemin in [
         'lecture/brewtarget-201.json',
         'lecture/v1-metrique.json',
+        'lecture/beerxml-beersmith.xml',
+        'lecture/beerxml-brewfather.xml',
+        'lecture/beerxml-brewers-friend.xml',
+        'lecture/beerxml-brewtarget.xml',
       ]) {
         final fichier = lu(chemin);
         final recettes = preparerImport(
@@ -78,7 +82,10 @@ void main() {
             jsonDecode(jsonEncode(source.recipe)),
             reason: '$chemin, recette ${i + 1}',
           );
-          expect(ecrit['imported_from'], startsWith('BeerJSON · sha256:'));
+          expect(
+            ecrit['imported_from'],
+            startsWith('${fichier.format.nom} · sha256:'),
+          );
         }
       }
     });
@@ -124,6 +131,63 @@ void main() {
     );
   });
 
+  test('libellés de l\'export BeerXML (préparés) : mots de l\'éditeur', () {
+    expect(
+      libellePerte(
+        const ValeurEcriteAutrement(
+          'Cascade',
+          ListeRecette.houblons,
+          Champ.moment,
+          'add_to_package',
+          'Dry Hop',
+        ),
+      ),
+      'Cascade : le moment Conditionnement est écrit Dry Hop en BeerXML.',
+    );
+    expect(
+      libellePerte(
+        const ValeurEcriteAutrement(
+          'Saaz',
+          ListeRecette.houblons,
+          Champ.moment,
+          'whirlpool',
+          'Aroma',
+        ),
+      ),
+      'Saaz : le moment Whirlpool est écrit Aroma en BeerXML.',
+    );
+    expect(
+      libellePerte(
+        const ValeurEcriteAutrement(
+          'Citra',
+          ListeRecette.houblons,
+          Champ.forme,
+          'powder',
+          'Pellet',
+        ),
+      ),
+      'Citra : la forme Poudre est écrite Pellet en BeerXML.',
+    );
+    expect(
+      libellePerte(
+        const ValeurEcriteAutrement(
+          'Miel',
+          ListeRecette.malts,
+          Champ.type,
+          'honey',
+          'Sugar',
+        ),
+      ),
+      'Miel : le type Miel est écrit Sugar en BeerXML.',
+    );
+    expect(
+      libelleModification(
+        const PartiesNonImportees({PartieNonImportee.nomEmpatage}),
+      ),
+      'Non importés : nom de l\'empâtage.',
+    );
+  });
+
   group('Recettes › Importer', () {
     testWidgets(
       'I1 : « Importer » dans la liste ouvre l\'écran, rien n\'est lu avant le choix',
@@ -137,6 +201,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text(TextesImport.titre), findsOneWidget);
         expect(find.text(TextesImport.aide), findsOneWidget);
+        expect(
+          TextesImport.aide,
+          startsWith(
+            'Choisissez un fichier BeerXML (.xml) ou BeerJSON (.json)',
+          ),
+        );
         expect(app.fichiers.choixDemandes, 0);
       },
     );
@@ -194,6 +264,147 @@ void main() {
       expect(report.feature, 'exchange.read');
       expect('${report.error} ${report.context}', isNot(contains('secrete')));
       expect('${report.error} ${report.context}', isNot(contains('Privée')));
+    });
+
+    testWidgets('XML mal formé : illisible, rapporté sans nom ni contenu', (
+      tester,
+    ) async {
+      final app = await open(tester);
+      await choisir(
+        tester,
+        app,
+        FichierChoisi(
+          'recette-secrete.xml',
+          Uint8List.fromList(
+            utf8.encode('<RECIPES><RECIPE><NAME>Privée</NAME></RECIPES>'),
+          ),
+        ),
+      );
+      expect(
+        find.text(fichierIllisible('recette-secrete.xml')),
+        findsOneWidget,
+      );
+      expect(
+        fichierIllisible('recette-secrete.xml'),
+        'Fichier illisible : « recette-secrete.xml » n\'est ni un fichier '
+        'BeerXML ni un fichier BeerJSON.',
+      );
+      final report = app.errors.reports.single;
+      expect(report.feature, 'exchange.read');
+      expect(report.context, startsWith('format xml, '));
+      expect('${report.error} ${report.context}', isNot(contains('secrete')));
+      expect('${report.error} ${report.context}', isNot(contains('Privée')));
+    });
+
+    testWidgets('DOCTYPE (entités) : illisible, aucun rapport', (tester) async {
+      final app = await open(tester);
+      await choisir(
+        tester,
+        app,
+        FichierChoisi(
+          'bombe.xml',
+          Uint8List.fromList(
+            utf8.encode(
+              '<!DOCTYPE RECIPES [<!ENTITY a "aaaa">]>'
+              '<RECIPES><RECIPE><NAME>&a;</NAME></RECIPE></RECIPES>',
+            ),
+          ),
+        ),
+      );
+      expect(find.text(fichierIllisible('bombe.xml')), findsOneWidget);
+      expect(app.errors.reports, isEmpty);
+    });
+
+    testWidgets(
+      'BeerXML (BeerSmith, windows-1252) : aperçu et modifié à l\'import',
+      (tester) async {
+        final app = await open(tester);
+        await choisir(
+          tester,
+          app,
+          FichierChoisi(
+            'automne.xml',
+            fixture('lecture/beerxml-beersmith.xml'),
+          ),
+        );
+        expect(find.textContaining('Ambrée d’automne'), findsWidgets);
+        await tester.tap(find.textContaining('Détails (').first);
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Style : seul le nom « Irish Red Ale » est gardé.'),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            'Aroma : Fuggle compté à l\'ébullition, 20\u00A0min. Si c\'est un '
+            'whirlpool, choisissez Whirlpool dans la recette.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Unités converties (Lovibond).'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'profil d\'eau, équipement du fichier, notes de dégustation',
+          ),
+          findsOneWidget,
+        );
+        expect(app.errors.reports, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'BeerXML : First Wort et whirlpool listés ; import BeerXML · sha256',
+      (tester) async {
+        final app = await open(
+          tester,
+          before: (app) => app.equipment.publish([grainfather]),
+        );
+        await choisir(
+          tester,
+          app,
+          FichierChoisi(
+            'pale.xml',
+            fixture('lecture/beerxml-brewers-friend.xml'),
+          ),
+        );
+        await tester.tap(find.textContaining('Détails (').first);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            'First Wort : Cascade compté à l\'ébullition, 60\u00A0min.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Aroma sans durée : Citra compté à l\'arrêt du feu.'),
+          findsOneWidget,
+        );
+        await tester.tap(find.text(TextesImport.importer(1)));
+        await tester.pumpAndSettle();
+        final write = app.recipes.writes.single;
+        expect(write.content!.importedFrom, startsWith('BeerXML · sha256:'));
+        expect(write.content!.author, 'Brasseur d\'Exemple');
+        expect(write.content!.name, 'Pale ale d\'essai & agrumes');
+      },
+    );
+
+    testWidgets('BeerSmith (.bsmx) : message rétabli', (tester) async {
+      final app = await open(tester);
+      await choisir(
+        tester,
+        app,
+        FichierChoisi(
+          'a.bsmx',
+          Uint8List.fromList(utf8.encode('<Recipe><_PERMID_>1</_PERMID_>')),
+        ),
+      );
+      expect(
+        find.text(
+          'Fichier BeerSmith (.bsmx) non lu. Dans BeerSmith, exportez la '
+          'recette en BeerXML.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('JSON qui n\'est pas du BeerJSON : message, aucun rapport', (

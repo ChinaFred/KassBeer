@@ -1,16 +1,16 @@
 import 'package:exchange/exchange.dart';
 
 import '../../../core/presentation/formats.dart';
+import '../domain/beerjson.dart';
 
 /// Libellés de Recettes › Importer et de l'export d'une recette. Un nom tiré
 /// d'un fichier (recette, ingrédient, unité) s'affiche en texte simple (P9).
-/// Le BeerXML n'est pas encore lu : les textes ne citent que le BeerJSON.
 abstract final class TextesImport {
   static const titre = 'Importer des recettes';
   static const aide =
-      'Choisissez un fichier BeerJSON (.json) exporté de votre logiciel de '
-      'brassage. 500 recettes et 10 Mo au plus. Les prix et le stock du '
-      'fichier ne sont pas importés.';
+      'Choisissez un fichier BeerXML (.xml) ou BeerJSON (.json) exporté de '
+      'votre logiciel de brassage. 500 recettes et 10 Mo au plus. Les prix et '
+      'le stock du fichier ne sont pas importés.';
   static const choisir = 'Choisir un fichier';
   static const choisirAutre = 'Choisir un autre fichier';
   static const lecture = 'Lecture du fichier';
@@ -87,23 +87,21 @@ String libelleFichierRefuse(
 ) => switch (refus.raison) {
   RaisonFichier.tropGros => _tropGros(refus.taille),
   RaisonFichier.illisible =>
-    'Fichier illisible : « $nomFichier » n\'est pas un fichier BeerJSON.',
+    'Fichier illisible : « $nomFichier » n\'est ni un fichier BeerXML ni un '
+        'fichier BeerJSON.',
   RaisonFichier.jsonNonBeerJson =>
     'Ce fichier JSON n\'est pas au format BeerJSON. Dans votre logiciel, '
-        'exportez la recette en BeerJSON.',
-  RaisonFichier.beerXml =>
-    'Fichier BeerXML : sa lecture arrive dans une prochaine version. Si '
-        'votre logiciel le permet, exportez la recette en BeerJSON.',
+        'exportez la recette en BeerXML ou en BeerJSON.',
   RaisonFichier.bsmx =>
-    'Fichier BeerSmith (.bsmx) non lu. La lecture du BeerXML, que '
-        'BeerSmith exporte, arrive dans une prochaine version.',
+    'Fichier BeerSmith (.bsmx) non lu. Dans BeerSmith, exportez la recette '
+        'en BeerXML.',
   RaisonFichier.versionInconnue =>
     'Version de BeerJSON non prise en charge (${refus.version ?? 'absente'}). '
         'Kass\'Beer lit les versions 1, 2 et 3.',
   RaisonFichier.aucuneRecette => 'Aucune recette dans « $nomFichier ».',
 };
 
-/// Message d'un fichier illisible (JSON mal formé, encodage invalide).
+/// Message d'un fichier illisible (JSON ou XML mal formé, encodage invalide).
 String fichierIllisible(String nomFichier) => libelleFichierRefuse(
   const FichierRefuse(RaisonFichier.illisible),
   nomFichier,
@@ -197,6 +195,8 @@ String _partie(PartieNonImportee partie) => switch (partie) {
   PartieNonImportee.detailsIngredients =>
     'détails des ingrédients (producteur, origine…)',
   PartieNonImportee.coAuteurEtDate => 'co-auteur et date de création',
+  PartieNonImportee.equipement => 'équipement du fichier',
+  PartieNonImportee.nomEmpatage => 'nom de l\'empâtage',
 };
 
 String _unite(String unite) => switch (unite) {
@@ -279,6 +279,15 @@ String libelleModification(Modification m) => switch (m) {
         : 'Durée de ${grandeur.ligne} arrondie à la minute.',
   MomentSimplifie(:final ligne, :final usage) =>
     'Moment d\'ajout simplifié : $ligne, ${_moment(usage)}.',
+  FirstWortEnEbullition(:final ligne, :final minutes) =>
+    minutes == null
+        ? 'First Wort : $ligne compté à l\'ébullition, durée à compléter.'
+        : 'First Wort : $ligne compté à l\'ébullition, $minutes${nbsp}min.',
+  ArretDuFeuSansDuree(:final ligne, :final usage) =>
+    '$usage sans durée : $ligne compté à l\'arrêt du feu.',
+  AromaEnEbullition(:final ligne, :final minutes) =>
+    'Aroma : $ligne compté à l\'ébullition, $minutes${nbsp}min. Si c\'est un '
+        'whirlpool, choisissez Whirlpool dans la recette.',
   CaracteresRetires() => 'Caractères de contrôle retirés des textes.',
   ChampsInconnus(:final nombre) =>
     nombre == 1
@@ -316,6 +325,30 @@ abstract final class TextesExport {
   static const enregistre = 'Fichier enregistré.';
 }
 
+/// « le moment Conditionnement », « la forme Poudre », « le type Miel » : la valeur
+/// de la recette avec les mots de l'éditeur.
+String _valeurEditeur(ListeRecette liste, Champ champ, String source) {
+  final EnumerationBeerJson? valeurs = switch ((liste, champ)) {
+    (ListeRecette.malts, _) => typesFermentable,
+    (ListeRecette.houblons, Champ.forme) => formesHoublon,
+    (ListeRecette.levures, Champ.forme) => formesLevure,
+    (ListeRecette.levures, _) => typesLevure,
+    (ListeRecette.ajouts, _) => typesAjout,
+    (ListeRecette.paliers, _) => typesPalier,
+    _ => null,
+  };
+  final valeur = switch (source) {
+    'whirlpool' => 'Whirlpool',
+    'add_to_package' => 'Conditionnement',
+    _ => valeurs?.libelle(source) ?? source,
+  };
+  return switch (champ) {
+    Champ.moment => 'le moment $valeur',
+    Champ.forme => 'la forme $valeur',
+    _ => 'le type $valeur',
+  };
+}
+
 /// Information non exportée.
 String libellePerte(PerteExport perte) => switch (perte) {
   StyleNonExporte(:final nom) =>
@@ -323,4 +356,21 @@ String libellePerte(PerteExport perte) => switch (perte) {
   ChronologieNonExportee() => 'Non exporté : la chronologie du jour.',
   EmpatageNonExporte() => 'Non exporté : empâtage (aucun palier).',
   EbullitionNonExportee() => 'Non exporté : ébullition (durée non renseignée).',
+  // Pertes du BeerXML : l'export BeerXML reste bloqué tant que le choix du
+  // style n'existe pas (ADR-005, décision 2) ; ces libellés le suivront.
+  ValeurEcriteAutrement(
+    :final ligne,
+    :final liste,
+    :final champ,
+    :final source,
+    :final ecrite,
+  ) =>
+    '$ligne : ${_valeurEditeur(liste, champ, source)} '
+        'est ${champ == Champ.forme ? 'écrite' : 'écrit'} $ecrite en BeerXML.',
+  VolumeInfusionNonExporte(:final paliers) =>
+    'Non exporté : volume d\'eau des paliers (${paliers.join(', ')}).',
+  JourAjoutNonExporte(:final lignes) =>
+    'Non exporté : jour d\'ajout à cru (${lignes.join(', ')}).',
+  DureeApresArretNonExportee(:final lignes) =>
+    'Non exporté : durée après l\'arrêt du feu (${lignes.join(', ')}).',
 };

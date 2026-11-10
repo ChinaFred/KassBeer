@@ -243,6 +243,25 @@ String libelleManqueExport(ManqueExport manque, EquipementRecette equipement) =>
           'Quantité de levure non renseignée : ${noms.join(', ')}.',
         ChampExport.typeAjout =>
           'Type d\'ajout non renseigné : ${noms.join(', ')}.',
+        // Champs du BeerXML seul : l'export BeerXML reste bloqué tant que le
+        // choix du style n'existe pas (ADR-005, décision 2).
+        ChampExport.style => 'Style de la liste BJCP non choisi.',
+        ChampExport.dureeEbullition => 'Durée d\'ébullition non renseignée.',
+        ChampExport.evaporation =>
+          'Évaporation de l\'équipement non renseignée.',
+        ChampExport.pertesAuTrub =>
+          'Pertes au trub de l\'équipement non renseignées.',
+        ChampExport.volumeMort =>
+          'Volume mort de la cuve d\'ébullition non renseigné.',
+        ChampExport.typeRecetteBeerXml =>
+          'Type de recette sans équivalent BeerXML : ${noms.join(', ')}.',
+        ChampExport.momentAjout =>
+          'Moment d\'ajout non renseigné : ${noms.join(', ')}.',
+        ChampExport.dureeAjout =>
+          'Durée d\'ajout non renseignée : ${noms.join(', ')}.',
+        ChampExport.houblonEnVolume =>
+          'BeerXML ne connaît pas les houblons mesurés en volume : '
+              '${noms.join(', ')}.',
       },
     };
 
