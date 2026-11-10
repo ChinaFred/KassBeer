@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -253,6 +255,11 @@ class _AccountMenu extends ConsumerWidget {
           ),
         ),
         const Divider(),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.sell_outlined),
+          onPressed: () => unawaited(context.push(AppRoutes.prices)),
+          child: const Text('Mes prix'),
+        ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.logout),
           onPressed: () => signOutFrom(context, ref),

@@ -91,7 +91,7 @@ protégée par un ruleset.
 ```
 app/                  # application Flutter (Android, web)
 ├── lib/core/         # services transverses : erreurs, router, thème, auth, version
-├── lib/features/     # auth, members, equipment, recipes, brew_day, brews, import, admin
+├── lib/features/     # auth, members, equipment, recipes, brew_day, brews, costs, import, admin
 │                     # chaque feature en couches data/ domain/ presentation/
 ├── test/             # tests Flutter
 └── android/          # projet Gradle ; key.properties et *.jks jamais versionnés

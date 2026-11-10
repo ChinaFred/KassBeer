@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/brew_day/data/alerte_minuteur.dart';
 import '../features/brews/data/brews_repository.dart';
+import '../features/costs/data/costs_repository.dart';
 import '../features/equipment/data/equipment_repository.dart';
 import '../features/members/data/members_repository.dart';
 import '../features/recipes/data/recipes_repository.dart';
@@ -34,6 +35,11 @@ final equipmentRepositoryProvider = Provider<EquipmentRepository>(
 
 final brewsRepositoryProvider = Provider<BrewsRepository>(
   (ref) => throw UnimplementedError('brewsRepositoryProvider non fourni'),
+);
+
+/// Prix, frais et coûts figés du compte connecté (`users/{uid}/`).
+final costsRepositoryProvider = Provider<CostsRepository>(
+  (ref) => throw UnimplementedError('costsRepositoryProvider non fourni'),
 );
 
 /// Heure de l'appareil. Injectée pour les tests : un minuteur se recalcule à

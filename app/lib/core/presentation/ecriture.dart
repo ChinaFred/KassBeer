@@ -42,6 +42,20 @@ void annoncerAvecAnnulation(
   ScaffoldMessengerState messenger,
   String message, {
   required VoidCallback onAnnuler,
+}) => annoncerAvecAction(
+  messenger,
+  message,
+  action: 'Annuler',
+  onAction: onAnnuler,
+);
+
+/// Annonce [message] pendant 10 s, à la place du message en cours, avec le
+/// bouton [action] s'il est donné (« Voir le coût »).
+void annoncerAvecAction(
+  ScaffoldMessengerState messenger,
+  String message, {
+  String? action,
+  VoidCallback? onAction,
 }) {
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
@@ -49,7 +63,9 @@ void annoncerAvecAnnulation(
       duration: const Duration(seconds: 10),
       persist: false,
       content: Text(message),
-      action: SnackBarAction(label: 'Annuler', onPressed: onAnnuler),
+      action: action == null || onAction == null
+          ? null
+          : SnackBarAction(label: action, onPressed: onAction),
     ),
   );
 }
@@ -98,42 +114,89 @@ Future<bool> confirmerAction(
   required String libelle,
   bool destructive = false,
 }) async {
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (context) {
-      final scheme = Theme.of(context).colorScheme;
-      return AlertDialog(
-        title: Text(titre),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final (i, p) in paragraphes.indexed) ...[
-                if (i > 0) const SizedBox(height: 12),
-                Text(p),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            style: destructive
-                ? FilledButton.styleFrom(
-                    backgroundColor: scheme.error,
-                    foregroundColor: scheme.onError,
-                  )
-                : null,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(libelle),
-          ),
-        ],
-      );
-    },
+  final result = await _dialogueDeConfirmation(
+    context,
+    titre: titre,
+    paragraphes: paragraphes,
+    libelle: libelle,
+    destructive: destructive,
   );
-  return result ?? false;
+  return result == ChoixConfirmation.confirmer;
 }
+
+/// Réponse à [confirmerActionOuAlternative].
+enum ChoixConfirmation { annuler, alternative, confirmer }
+
+/// Confirmation à trois boutons : « Annuler », [alternative] (une autre action,
+/// par exemple « Renseigner les bouteilles ») et [libelle]. Sans [alternative],
+/// deux boutons comme [confirmerAction]. Fermer le dialogue rend
+/// [ChoixConfirmation.annuler]. Les boutons passent les uns sous les autres
+/// quand la largeur manque (texte à 200 %).
+Future<ChoixConfirmation> confirmerActionOuAlternative(
+  BuildContext context, {
+  required String titre,
+  required List<String> paragraphes,
+  required String libelle,
+  String? alternative,
+}) async =>
+    await _dialogueDeConfirmation(
+      context,
+      titre: titre,
+      paragraphes: paragraphes,
+      libelle: libelle,
+      alternative: alternative,
+    ) ??
+    ChoixConfirmation.annuler;
+
+Future<ChoixConfirmation?> _dialogueDeConfirmation(
+  BuildContext context, {
+  required String titre,
+  required List<String> paragraphes,
+  required String libelle,
+  String? alternative,
+  bool destructive = false,
+}) => showDialog<ChoixConfirmation>(
+  context: context,
+  builder: (context) {
+    final scheme = Theme.of(context).colorScheme;
+    final navigator = Navigator.of(context);
+    return AlertDialog(
+      title: Text(titre),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (i, p) in paragraphes.indexed) ...[
+              if (i > 0) const SizedBox(height: 12),
+              Text(p),
+            ],
+          ],
+        ),
+      ),
+      // Les actions d'un AlertDialog sont dans une OverflowBar : elles
+      // s'empilent quand elles ne tiennent pas sur une ligne.
+      actions: [
+        TextButton(
+          onPressed: () => navigator.pop(ChoixConfirmation.annuler),
+          child: const Text('Annuler'),
+        ),
+        if (alternative != null)
+          TextButton(
+            onPressed: () => navigator.pop(ChoixConfirmation.alternative),
+            child: Text(alternative),
+          ),
+        FilledButton(
+          style: destructive
+              ? FilledButton.styleFrom(
+                  backgroundColor: scheme.error,
+                  foregroundColor: scheme.onError,
+                )
+              : null,
+          onPressed: () => navigator.pop(ChoixConfirmation.confirmer),
+          child: Text(libelle),
+        ),
+      ],
+    );
+  },
+);

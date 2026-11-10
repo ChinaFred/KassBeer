@@ -51,7 +51,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) |
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
-| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, confirmations d'abandon, de suppression et `confirmerAction`), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` |
+| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
@@ -59,6 +59,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/features/equipment/` | `EquipmentRepository` (`equipment/`), `Equipment`, `EquipmentContent`, `EquipmentKind` ; liste, fiche, éditeur |
 | `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document ↔ `brewing/`, tri, duplication ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin), formulaires des lignes, vue des calculs |
 | `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType`, `PhaseEvenement` ; `domain/mesures_retenues.dart` (mesures retenues, VR1, VR2, RR2), `domain/releves.dart` (regroupement du relevé) ; liste, fiche, « Nouveau brassin », `presentation/releve_fermentation.dart`, `prevu_et_mesure.dart`, `embouteillage.dart`, `courbe_fermentation.dart`, `trace_courbe.dart` (seul import de `fl_chart`, P18) |
+| `lib/features/costs/` | `CostsRepository` (`users/{uid}/prices`, `fees`, `brew_costs`, jamais de transaction ni de `Source.server`, `brewCostRef`) ; `domain/price.dart` (`Price`, `purchaseUnitOf`, `isUnusualPrice`), `domain/fee.dart` (`Fee`), `domain/brew_cost.dart` (`BrewCost`, `BrewCostLine`, `FreezeKind`) ; `domain/cost_evaluation.dart` : clés dérivées des lignes de `RecipeContent` (`ingredientsDeRecette`), raisons d'un coût indisponible (`RaisonCout`), `evaluerCoutRecette`, `evaluerEstimationBrassin`, `evaluerFigeage`, déclencheur du figeage (`doitFigerAuPremierEmbouteillage`), boutons proposés (`figerLeCoutPropose`, `recalculerPropose`), écart avec l'embouteillage (`ecartsDepuisFigeage`) ; `data/figeage_embouteillage.dart` (`enregistrerEmbouteillage` : embouteillage puis coût, sans attente) ; `presentation/costs_providers.dart` (`pricesProvider`, `feesProvider`, `brewCostProvider`, `costReportsProvider`) ; `presentation/prices_screen.dart` (« Mes prix », route `/prix`), `price_form.dart` (`ouvrirFormulairePrix` : nouveau, manquant, modification ; « Reprendre un de mes prix »), `fee_form.dart`, `bloc_cout.dart` (`BlocCoutRecette`, lignes des raisons et du détail), `bloc_cout_brassin.dart` (`BlocCoutBrassin` : estimation, « Figer le coût », coût figé, écart, « Recalculer avec mes prix actuels »), `formats_cout.dart` (euros, kilogrammes et euros par kilogramme à l'affichage ; aucun calcul de coût) |
 | `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
 | `lib/features/admin/` | écran Admin |
 
@@ -88,6 +89,16 @@ d'identité. Fenêtre fermée (`popup-closed-by-user`, `cancelled-popup-request`
 échec est rapporté et levé en `SignInFailure` ; `network-request-failed` donne le message
 réseau. La déconnexion ferme aussi la session `google_sign_in` sur Android.
 
+**Déconnexion et cache.** La déconnexion ne vide pas le cache Firestore persistant. Les
+documents lus restent dans le stockage du navigateur (IndexedDB) ou de l'appareil, prix,
+frais et coûts figés compris : une personne qui ouvre ensuite la même session du navigateur
+ou le même téléphone peut les lire avec les outils de développement, sans passer par les
+règles. Un `clearPersistence()` à la déconnexion effacerait aussi les écritures encore en
+attente, dont les mesures et les étapes du jour de brassage saisies hors ligne : elles
+seraient perdues sans message. Le code de déconnexion n'appelle donc pas
+`clearPersistence()`. Un appareil partagé se protège par sa propre session (profil du
+navigateur, compte du téléphone).
+
 **Signature Android.** `app/android/app/build.gradle.kts` lit `app/android/key.properties`
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword` ; jamais versionné, P8). Sans ce
 fichier, une compilation de release échoue avec un message ; aucune release n'est signée par
@@ -97,7 +108,7 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 
 | Provider | Type | Rôle |
 |---|---|---|
-| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `recipesRepositoryProvider`, `equipmentRepositoryProvider`, `brewsRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
+| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `recipesRepositoryProvider`, `equipmentRepositoryProvider`, `brewsRepositoryProvider`, `costsRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
 | `sessionUserProvider` | `StreamProvider<SessionUser?>` | `authStateChanges()` |
 | `memberLookupProvider(emailKey)` | `StreamProvider.family<MemberLookup, String>` | `members/{email en minuscules}`, avec les métadonnées |
 | `accessStateProvider` | `Provider<AccessState>` | `AccessLoading`, `AccessSignedOut`, `AccessNotInvited`, `AccessFailed`, `AccessGranted(user, member, offline)` |
@@ -108,6 +119,9 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 | `equipmentListProvider` | `StreamProvider.autoDispose<ListeLue<Equipment>>` | `equipment/` entier, avec `fromCache` |
 | `brewsListProvider` | `StreamProvider.autoDispose<ListeLue<Brew>>` | `brews/` entier, avec `fromCache` |
 | `brewEventsProvider(brewId)` | `StreamProvider.autoDispose.family<ListeLue<BrewEvent>, String>` | saisies d'un brassin, `hasPendingWrites` par document |
+| `pricesProvider(uid)`, `feesProvider(uid)` | `StreamProvider.autoDispose.family<ListeLue<…>, String>` | prix et frais du compte connecté, lus par « Mes prix », la fiche d'une recette et celle de ses brassins ; jamais ceux d'un autre |
+| `brewCostProvider((uid:, brewId:))` | `StreamProvider.autoDispose.family<RechercheDocument<BrewCost>, …>` | coût figé d'un brassin, lu par la fiche pour son propriétaire seul |
+| `costReportsProvider` | `Provider<Set<String>>` | mémoire de session : calculs de coût refusés déjà rapportés |
 | `horlogeProvider` | `Provider<DateTime Function()>` | heure de l'appareil, injectée en test ; source de toute durée du minuteur |
 | `screenWakelockProvider`, `alerteMinuteurProvider` | `Provider` | verrou d'écran, alerte de fin de minuteur |
 | `preparedBrewsProvider`, `planReportsProvider`, `repriseTraiteeProvider` | `Provider` | mémoire de session, jamais écrite : brassins préparés, anomalies déjà rapportées, reprise au lancement traitée |
@@ -281,6 +295,7 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/brassins/:id/preparer` | « Préparer le brassage », dans la coquille, retour vers la fiche | membre ; propriétaire pour commencer |
 | `/brassins/:id/jour` | écran du jour, plein écran, hors coquille | propriétaire ; un autre membre lit « Seul le brasseur de ce brassin suit son brassage. » |
 | `/recettes/:id/chronologie` | éditeur de chronologie, plein écran | auteur ; sinon « Seul l'auteur modifie cette chronologie. » |
+| `/prix` | « Mes prix », page pleine avec retour, hors coquille, ouverte par `push` depuis le menu du compte | membre ; ses seuls prix et frais |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
 
@@ -299,7 +314,7 @@ sur `fake_cloud_firestore` (création, modification sans toucher `owner_uid` ni 
 `owner_name`, duplication, suppression, refus rapporté, document illisible), conversion
 document ↔ `brewing/`, lecture et affichage des nombres, écrans Recettes et Équipements
 (états, lecture seule, « À compléter », éditeur), attente du serveur sous `fake_async`,
-`FirebaseEnv`, `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17).
+`FirebaseEnv`, `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17), domaine des coûts (`costs_domain_test.dart` : clés dérivées sans champ `key`, raisons de CB8, déclencheur du figeage, écarts), `FirestoreCostsRepository` sur `fake_cloud_firestore` (`costs_repository_test.dart` : écriture et suppression des prix et des frais, document illisible rapporté sans valeur, refus d'un premier figeage annoncé seulement si le coût n'est pas sur le serveur et rejeu journalisé `costs.freeze_replayed` (HL5), suppression du brassin et de son coût dans un même lot par `delete` et `deleteWithEvents` (CB19), `enregistrerEmbouteillage` : coût écrit après l'embouteillage sans attente, aucun coût pour une modification, un embouteillage déjà daté ou un coût déjà lu, embouteillage envoyé même quand le calcul échoue ou que les prix manquent, refus du coût seul et de l'embouteillage seul (CB7)), écrans des coûts (`costs_screens_test.dart` : « Mes prix », bloc de la recette, bloc du brassin absent pour un autre membre et pour l'admin, aucun montant avec un prix manquant ni dans une annonce, coût figé inchangé quand un prix change, figeage au premier embouteillage seulement, dialogues à trois boutons de « Figer » et de « Recalculer », nom importé coupé à 120 caractères, texte à 200 %, contraste, cibles tactiles et en-tête des manquants annoncé).
 
 ## Modèle de données
 
@@ -360,7 +375,9 @@ enregistrement et jamais saisie : préfixe de nature (`malt`, `sucre`, `houblon`
 remplacée par un tiret, sans tiret en bord, 100 caractères au plus (« Pils » → `malt-pils`,
 « Sucre candi ambré » → `sucre-candi-ambre`). Le préfixe n'est pas répété quand le nom
 commence par lui. Deux lignes de même nom, à la casse près, partagent la clé. Elle relie
-l'ingrédient au prix et au stock du lecteur. Densités, degré, IBU, EBC et coût ne sont pas
+l'ingrédient au prix et au stock du lecteur ; le calcul du coût ne lit pas ce champ stocké, il
+dérive la clé du nom et de la nature de chaque ligne à la lecture (`ingredientsDeRecette`,
+LI1 de la v0.5). Densités, degré, IBU, EBC et coût ne sont pas
 stockés : `brewing/` les calcule à l'affichage.
 
 Les valeurs `extract` (fermentescible) et `first_wort` (houblon) sont retirées du modèle en
@@ -495,19 +512,46 @@ premier événement. `correctReleve` met à jour, crée ou supprime chaque valeu
 `bottled_at` dans le même lot ; ce relevé n'est pas recréé par une modification de
 l'embouteillage. Hors ligne, aucune de ces écritures n'exige le réseau.
 
+Au premier enregistrement de l'embouteillage (`modification` faux, `bottled_at` nul avant
+l'écriture, aucun coût figé déjà lu), `enregistrerEmbouteillage` fige aussi le coût réel :
+le calcul se fait d'abord, sans lever (`evaluerFigeage`), puis `saveBottling` part, inchangé,
+puis le `set` de `users/{uid}/brew_costs/{brewId}`, sans attente entre les deux. Le coût ne
+part pas dans le lot de l'embouteillage : un refus sur `brew_costs` annulerait le statut,
+l'embouteillage et le relevé de densité finale. La file de Firestore garde l'ordre des deux
+écritures, hors ligne compris. Un refus du coût seul laisse l'embouteillage enregistré
+(`costs.freeze_rejected`) ; un refus de l'embouteillage seul laisse le coût figé, et le bloc
+Coût affiche l'écart. Un prix manquant ou une autre raison de ne pas figer n'empêche jamais
+l'embouteillage : le coût reste « non figé » et se rattrape par « Figer le coût ».
+
+La fiche du brassin lit `pricesProvider`, `feesProvider` et `brewCostProvider` pour son
+propriétaire seul, et les garde ouverts même quand le bloc Coût est hors de l'écran : à l'envoi
+du formulaire, elle capture ces valeurs avant d'attendre le nom du jeton, sans autre lecture.
+Des prix ou des frais pas encore lus comptent comme indisponibles : le coût ne se fige pas.
+« Voir le coût » fait défiler la fiche jusqu'au bloc, construit à la demande par la liste.
+
 ### `users/{uid}/…` — données privées
 
 Lisibles et modifiables par leur seul propriétaire, membre. L'admin ne les lit pas (P5).
-Les règles ne contrôlent pas la forme de ces documents.
+Les règles contrôlent la forme de `prices`, `fees` et `brew_costs` ; `stock` n'a pas encore de
+contrôle de forme. Unités du système international : masses en grammes, montants en euros.
 
 | Chemin | Champs |
 |---|---|
-| `users/{uid}/prices/{ingredientKey}` | `name` string, `price_eur` number (prix d'un achat), `quantity` number, `unit` string (`g`, `l`, `unit`, `kwh`), `updated_at` timestamp |
+| `users/{uid}/prices/{ingredientKey}` | `name` string (1 à 120), `price_eur` number (prix payé, 0 à 100 000), `quantity` number (quantité achetée, au-delà de 0 et jusqu'à 1e9), `unit` string (`g`, ou `unit` pour un sachet de levure), `updated_at` timestamp (`serverTimestamp()`). Identifiant : clé d'ingrédient, 100 caractères au plus, préfixe `malt`, `sucre`, `houblon`, `levure` ou `ajout`, forme `^(malt|sucre|houblon|levure|ajout)(-[a-z0-9]+)*$` ; un identifiant hors de cette forme est lu comme illisible (`DocumentIllisible('id', 'clé hors format')`), rapporté sans l'identifiant, qui dérive du nom, puis se supprime après confirmation. Un kilogramme saisi est converti en grammes à l'écran |
+| `users/{uid}/fees/{feeId}` | `name` string (1 à 60), `amount_eur` number (0 à 10 000), `basis` string (`per_brew`, `per_bottle`), `updated_at` timestamp (`serverTimestamp()`). Identifiant créé par l'appareil ; 20 frais au plus, limite du formulaire |
 | `users/{uid}/stock/{ingredientKey}` | `name` string, `quantity` number, `unit` string, `updated_at` timestamp (après la v1) |
-| `users/{uid}/brew_costs/{brewId}` | `brew_id` string, `total_eur` number, `lines` list<map> (`key`, `name`, `quantity`, `unit`, `cost_eur`), `computed_at` timestamp |
+| `users/{uid}/brew_costs/{brewId}` | `brew_id` string (égal à l'identifiant), `total_eur` number (somme exacte des lignes, positive ou nulle), `lines` list<map> (200 au plus : `key` clé d'ingrédient ou `frais-{feeId}`, `name`, `quantity`, `unit` parmi `g`, `unit`, `brew`, `bottle`, `cost_eur`), `computed_at` timestamp (heure de l'appareil au figeage), `freeze_kind` string (`initial`, `recalculation`), et, facultatifs, les valeurs d'embouteillage utilisées : `bottles_count` (entier de 1 à 9 999), `packaged_volume_l` (au-delà de 0 et jusqu'à 1 000), `priming_sugar_g` (0 à 100 000), `priming_sugar_name` (80) |
 
-Le coût réel d'un brassin est stocké parce qu'il reprend les prix du jour de l'achat ; le
-coût d'une recette se recalcule à l'affichage avec les prix du lecteur.
+Le coût réel d'un brassin est stocké parce qu'il reprend les prix du jour du figeage ; le
+coût d'une recette et l'estimation d'un brassin non figé se recalculent à l'affichage avec
+les prix et les frais du lecteur, et rien n'est écrit. Un coût figé n'est jamais remplacé en
+silence : modifier l'embouteillage ne réécrit pas `brew_costs`, le bloc compare les valeurs
+d'embouteillage gardées à celles du brassin (`ecartsDepuisFigeage`), et seul « Recalculer
+avec mes prix actuels » remplace le document entier (`freeze_kind: recalculation`). Supprimer
+un brassin supprime `users/{uid}/brew_costs/{brewId}` dans le même `WriteBatch` que
+`brews/{brewId}`, par `delete` comme par `deleteWithEvents`. Les prix et les frais sont lus
+avec le cache hors ligne ; une clé absente d'une liste lue du cache rend « Prix indisponibles
+sur cet appareil hors ligne », jamais « prix manquant », et rien ne se fige.
 
 ### `error_reports/{reportId}`
 
@@ -536,11 +580,23 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 | `recipes/`, `equipment/` | membres | membre, à son `owner_uid` ; `owner_name` absent ou égal au nom du jeton (`request.auth.token.name`, 1 à 80 caractères) | propriétaire, `owner_uid` et `created_at` inchangés, `owner_name` comme à la création | propriétaire |
 | `brews/` | membres | membre, à son `owner_uid` ; `owner_name` comme dans `recipes/` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés ; `owner_name` comme à la création | propriétaire |
 | `brews/{id}/events/` | membres | propriétaire du brassin existant, à son `owner_uid`, forme selon `kind` | auteur : `value`, `note`, `measured_at`, forme gardée | auteur |
-| `users/{uid}/**` | propriétaire | propriétaire | propriétaire | propriétaire |
+| `users/{uid}/**` | propriétaire | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous |
+| `users/{uid}/prices/`, `fees/` | propriétaire | propriétaire, forme et bornes contrôlées | propriétaire, forme et bornes contrôlées | propriétaire |
+| `users/{uid}/brew_costs/` | propriétaire | propriétaire, forme contrôlée, `freeze_kind == 'initial'` | propriétaire, forme contrôlée, `freeze_kind == 'recalculation'` | propriétaire |
+| `users/{uid}/stock/` | propriétaire | propriétaire | propriétaire | propriétaire |
 | `error_reports/` | admin | membre, `uid` = le sien, champs en liste blanche et bornés | personne | admin |
 | tout autre chemin | refusé | refusé | refusé | refusé |
 
 L'admin n'a aucun droit d'écriture sur le contenu des autres brasseurs.
+
+Le joker `users/{uid}/{document=**}` n'accorde que la lecture : les règles s'additionnent, et
+une écriture permise par le joker rendrait sans effet les contrôles de forme. Sur
+`brew_costs`, la création n'accepte que `freeze_kind: initial` et la modification que
+`recalculation` : un second appareil qui fige le même brassin est refusé sans écraser le
+premier, et un rejeu après un accusé perdu aussi. L'application relit alors le document par
+une lecture ordinaire : s'il existe sans écriture en attente, le refus est journalisé
+(`costs.freeze_replayed`) sans être annoncé. Les éléments de `lines` ne sont pas inspectés,
+seul leur nombre est borné.
 
 **Effacement d'un membre retiré (RGPD).** L'application ne permet ni à l'admin ni au membre
 retiré de modifier ou de supprimer ses contenus. Une demande d'effacement se traite depuis la
@@ -568,6 +624,13 @@ bornes de l'embouteillage et celles de `value` selon `measure_type`, en créatio
 `fermenting`, le premier début en un `WriteBatch`, et un brassin créé puis son premier événement. `numbers.test.mjs` vérifie que
 les règles refusent Infinity, -Infinity, NaN, ±1e9 et acceptent ±999 999 999, 0 et 1,5, et
 borne `mash_efficiency_pct` de 0 à 100 ; `content.test.mjs` fait de même dans `adjustments`.
+`users.test.mjs` rejoue `prices`, `fees`, `stock` et `brew_costs` pour les cinq profils
+(lecture, liste, écriture d'un document valide, suppression), les écritures de chacun sous son
+propre uid, et refuse champ inconnu, type faux, `unit` hors de `g` et `unit` (dont `l`, `kwh`,
+`kg`), montant négatif ou hors bornes, identifiant de prix hors du format de clé, `brew_id`
+différent du chemin, plus de 200 lignes, `freeze_kind: initial` en modification et
+`recalculation` en création ; il vérifie aussi la suppression du brassin et de son coût dans un
+même lot.
 
 ## Calculs de brassage
 
@@ -582,7 +645,11 @@ l'appareil. La conversion vers l'affichage se fait à l'écran.
 **Erreurs.** Une entrée invalide (nombre négatif ou non fini, densité hors de 0.980 – 1.200,
 FG > OG, liste vide, fin d'étape sans début) lève `BrewingInputException(field, value, message)`.
 Le paquet ne fait aucun `catch` (`test/no_catch_test.dart` le vérifie) : l'appelant journalise
-par `ErrorReportService.reportError` et affiche la panne.
+par `ErrorReportService.reportError` et affiche la panne. Les erreurs du coût (`cost.dart`) ne
+portent jamais la valeur reçue (`requirePositiveHidden`, `requireNonNegativeHidden`,
+`value` nul) : un prix, un montant ou une quantité saisis par le brasseur n'entrent pas dans
+`error_reports/`, que l'admin lit (P13). L'application remplace en plus toute erreur d'un
+calcul de coût par `CalculCoutRefuse`, qui ne porte que le type de l'erreur d'origine.
 
 | Calcul | Fonction | Formule |
 |---|---|---|
@@ -598,14 +665,24 @@ par `ErrorReportService.reportError` et affiche la panne.
 | Couleur | `moreyColorEbc`, `moreyColorEbcOfGrist` | Morey : MCU = Σ (EBC / 1,97 × lb) / gal ; SRM = 1,4922 × MCU^0,6859 ; EBC = SRM × 1,97 ; la seconde ne prend que masses et couleurs |
 | Calculs d'une recette | `computeRecipe` | OG, FG, degré, IBU, EBC, IBU par houblon : voir « Calculs d'une recette » |
 | Clé d'ingrédient | `ingredientKey`, `isValidIngredientName` | préfixe de nature + nom normalisé (voir `recipes/`) ; `BrewingInputException` pour un nom sans lettre ni chiffre, que `isValidIngredientName` détecte sans exception (une seule définition de la règle) |
-| Coût | `computeCost` | Σ quantité × prix ; par litre = total / V ; bouteille de 33 cl = par litre × 0,33 |
+| Coût | `computeCost` | Σ quantité × prix, coût de chaque ligne (`lineCosts`) ; par litre = total / V ; bouteille de 33 cl = par litre × 0,33 ; sans volume, total seul. Un prix manquant rend `CostUnavailable` |
+| Prix unitaire d'un achat | `unitPrice`, `unitPriceFor` | prix payé / quantité achetée (47,50 € pour 25 000 g = 0,0019 €/g) ; prix nul permis, quantité nulle refusée ; `unitPriceFor` rend `null` quand l'unité de l'achat (`g`, `unit`) n'est pas celle de la ligne |
+| Regroupement | `groupCostItems` | lignes de même clé additionnées, nom et place de la première (Cascade 20 g + 30 g = 50 g) |
+| Frais | `feeQuantity`, `bottles33clIn` | 1 par brassin ; par bouteille, nombre de bouteilles du brassin, ou volume / 0,33 sans arrondi pour une recette |
+| Levure | `yeastSachetsPerLine` | une ligne de levure vaut un sachet (hypothèse H1) |
+| Coût par bouteille réelle, par litre | `costPerBottle`, `costPerLitre` | total / bouteilles (40,84 / 50 = 0,8168) ; total / volume conditionné |
 | Planning | `recomputeSchedule` | heure attendue d'une étape = fin de l'étape précédente dans l'ordre de la chronologie (fin enregistrée, sinon début réel + durée prévue). En cours (`running`) : l'étape commencée sans fin au début le plus récent ; elle finit au plus tôt à `now`. Une autre étape commencée sans fin est faite (`done`), à début + durée. Sautée (`skipped`, événement `step_skipped`, sans début) et non faite (`notDone`, sans événement alors qu'une étape plus loin a commencé) : durée nulle. À venir (`pending`) : ne commence ni avant `now`, ni avant la fin de l'étape en cours. Un début l'emporte sur un saut |
 | Événements d'étape | `stepRecordsFromEvents` | un `StepRecord` par étape : début le plus ancien (à égalité, le plus petit identifiant), dernière fin à ou après ce début, sauts, et les identifiants d'événement retenus. Sans exception, les autres événements sont rendus en `StepEventIssue` : `duplicateStart`, `duplicateEnd`, `endWithoutStart`, `endBeforeStart`, `unknownStep`, triés par heure puis identifiant. Même résultat sur chaque appareil |
 | Chronologie préremplie | `defaultBrewSteps` | une étape par palier ; puis l'ébullition coupée à chaque ajout de houblon d'ébullition, du plus long au plus court (un houblon de t min s'ajoute après durée d'ébullition − t min) ; puis le whirlpool, coupé de même, sur la plus longue durée de ses houblons ; houblons à cru exclus ; ajout de 0 min. Voir ci-dessous |
 | Minuteur | `readTimer` | restant = début + durée − `now`, borné à zéro ; dépassement au-delà |
 
 **Pas de valeur de repli.** Un prix manquant rend `CostUnavailable(linesWithoutPrice)`, jamais
-un coût partiel. Sans sucre de resucrage, le degré après bouteille est absent : la hausse
+un coût partiel. Dans l'application, `evaluerCoutRecette`, `evaluerEstimationBrassin` et
+`evaluerFigeage` rendent soit un montant, soit la liste des raisons (`RaisonCout`) : prix
+manquant, unité incompatible, prix illisible, ligne sans nom utilisable, volume non
+renseigné, aucun ingrédient, calcul impossible, prix indisponibles hors ligne, frais
+illisible, sucre de resucrage sans nature, nombre de bouteilles absent avec un frais par
+bouteille. Aucun frais saisi n'est pas une raison : le montant s'affiche avec sa mention. Sans sucre de resucrage, le degré après bouteille est absent : la hausse
 forfaitaire de 0,5 % des fiches Excel n'est pas reprise. Les prix sont passés en argument par
 l'appelant, qui les lit sous `users/{uid}/` ; le paquet n'en contient aucun.
 
@@ -675,6 +752,14 @@ Les erreurs connues des fiches (Citra « 22.4 » lu 22 400 g, degré calculé su
 visée, densités d'en-tête différentes de la chronologie, champs EBC et IBU copiés, coût par
 bouteille divisé par le nombre de bouteilles) sont rangées dans `divergences`, sans être
 corrigées dans les attentes. Une formule changée ajoute d'abord son cas à la fixture.
+`cost.json` porte aussi les prix unitaires (`unit_prices`, dont l'unité incompatible), le
+regroupement par clé (`grouping`), la quantité des frais (`fee_quantities`), le coût par
+bouteille réelle (`per_bottle`) et par litre (`per_litre`), et le critère de fin de la v0.5
+(`brew_cases`) : Ale blonde 140724 (eau 1,66 € et électricité 2,00 € par brassin, 0,2122 €
+par bouteille, 50 bouteilles) rend 40,84 € à 0,0001 € près, 40,82 € de la fiche à 0,05 € près,
+et 0,8168 € la bouteille (0,82 € sur la fiche) ; Bière blonde 11-2-24 rend 49,05 €, 49,04 € et
+0,7432 € (0,74 €). La même recette comptée sur 20 L rend 43,09 €. Le test
+`app/test/costs_domain_test.dart` retrouve ces deux coûts par le calcul de l'application.
 `final_gravity.json` prend pour atténuation l'atténuation apparente des densités mesurées de
 trois fiches (Ale blonde 140724 : 55,8 %, Twin bottle 4 : 84,1 %, Blonde triple : 98,5 %) et
 vérifie que leur FG est retrouvée. `recipe.json` compte 18 cas : un seul est tiré d'une fiche
