@@ -516,6 +516,32 @@
         "per_bottle_33cl": 0.0
       },
       "tolerance": 1e-12
+    },
+    {
+      "id": "acide-lactique-au-litre",
+      "inputs": {
+        "lines": [
+          {
+            "name": "Pils",
+            "quantity": 5000,
+            "unit_price": 0.0019
+          },
+          {
+            "name": "Acide lactique",
+            "quantity": 0.005,
+            "unit_price": 65
+          }
+        ],
+        "volume_litres": 20
+      },
+      "expected": {
+        "total": 9.825,
+        "per_litre": 0.49125,
+        "per_bottle_33cl": 0.1621125,
+        "line_costs": [9.5, 0.325]
+      },
+      "tolerance": 1e-9,
+      "note": "décision du 2026-11-10 : une ligne en volume (5 ml, quantité en litres) et un prix au litre (6,50 € les 100 ml, 65 €/L) ; coût = litres × prix par litre, même formule qu'en grammes"
     }
   ],
   "invalid": [
@@ -626,6 +652,34 @@
         "purchase_unit": "g",
         "line_unit": "unit",
         "incompatible": true
+      },
+      {
+        "id": "litres-pour-des-litres",
+        "price_eur": 6.5,
+        "quantity": 0.1,
+        "purchase_unit": "l",
+        "line_unit": "l",
+        "expected": 65,
+        "tolerance": 1e-9,
+        "note": "prix au litre (décision du 2026-11-10) : 6,50 € les 100 ml, soit 65 €/L"
+      },
+      {
+        "id": "grammes-pour-des-litres",
+        "price_eur": 6.5,
+        "quantity": 100,
+        "purchase_unit": "g",
+        "line_unit": "l",
+        "incompatible": true,
+        "note": "ligne en volume, prix au gramme : aucune densité n'est supposée"
+      },
+      {
+        "id": "litres-pour-des-grammes",
+        "price_eur": 6.5,
+        "quantity": 0.1,
+        "purchase_unit": "l",
+        "line_unit": "g",
+        "incompatible": true,
+        "note": "ligne pesée, prix au litre : aucune densité n'est supposée"
       }
     ],
     "invalid": [

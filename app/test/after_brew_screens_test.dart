@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:brewing/brewing.dart' show FermentableKind, alcoholByVolume;
+import 'package:brewing/brewing.dart' show alcoholByVolume;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
@@ -20,7 +20,7 @@ const blonde = RecipeContent(
   fermentables: [
     FermentableLine(
       name: 'Pils',
-      kind: FermentableKind.malt,
+      type: 'grain',
       weightG: 5000,
       ebc: 3.9,
       yieldPct: 80,
@@ -36,14 +36,14 @@ const blondeSucree = RecipeContent(
   fermentables: [
     FermentableLine(
       name: 'Pils',
-      kind: FermentableKind.malt,
+      type: 'grain',
       weightG: 5000,
       ebc: 3.9,
       yieldPct: 80,
     ),
     FermentableLine(
       name: 'Candi',
-      kind: FermentableKind.sugar,
+      type: 'sugar',
       weightG: 500,
       ebc: 2,
       yieldPct: 100,
@@ -525,13 +525,18 @@ void main() {
         brew: fermentation(recipe: blondeSucree),
         events: [og(), volume()],
       );
+      // La question nomme les ingrédients ajoutés hors de l'empâtage.
       await voir(
         tester,
-        find.text('Les sucres étaient-ils dans le moût à cette mesure ?'),
+        find.text(
+          'L\'ingrédient ajouté hors de l\'empâtage (Candi) était-il dans le '
+          'moût à cette mesure ?',
+        ),
       );
       expect(
         find.text(
-          'Indiquez si les sucres étaient dans le moût à cette mesure.',
+          "Indiquez si les ingrédients ajoutés hors de l'empâtage étaient dans le "
+          'moût à cette mesure.',
         ),
         findsOneWidget,
       );
@@ -541,11 +546,62 @@ void main() {
       expect(app.brews.writes.single.detail['value'], isTrue);
     });
 
+    testWidgets('v0.1.17 : nature inconnue, question qui nomme les '
+        'ingrédients ajoutés hors de l\'empâtage', (tester) async {
+      const importee = RecipeContent(
+        name: 'Importée',
+        batchVolumeL: 20,
+        fermentables: [
+          FermentableLine(
+            name: 'Pils',
+            type: 'grain',
+            weightG: 5000,
+            ebc: 3.9,
+            yieldPct: 80,
+          ),
+          FermentableLine(
+            name: 'Miel',
+            type: 'honey',
+            weightG: 300,
+            ebc: 2,
+            yieldPct: 75,
+          ),
+          FermentableLine(
+            name: 'Sirop maison',
+            type: 'other',
+            weightG: 200,
+            ebc: 2,
+            yieldPct: 80,
+          ),
+        ],
+        yeasts: [YeastLine(name: 'US-05', attenuationPct: 78)],
+        brewSteps: [palier, ebullition],
+      );
+      await fiche(
+        tester,
+        brew: fermentation(recipe: importee, sugars: true),
+        events: [og(), volume()],
+      );
+      final nature = find.text(
+        'Nature inconnue dans la recette du brassin : Sirop maison. Le '
+        'rendement ne peut pas être calculé.',
+      );
+      await voir(tester, nature);
+      expect(nature, findsOneWidget);
+      expect(
+        find.text(
+          'Les ingrédients ajoutés hors de l\'empâtage (Miel, Sirop maison) '
+          'étaient-ils dans le moût à cette mesure ?',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('RR3 : recette sans sucre, question absente', (tester) async {
       await fiche(tester, brew: fermentation(), events: [og(), volume()]);
       await voir(tester, find.text('Prévu et mesuré'));
       expect(
-        find.text('Les sucres étaient-ils dans le moût à cette mesure ?'),
+        find.textContaining('dans le moût à cette mesure ?'),
         findsNothing,
       );
     });
@@ -1008,7 +1064,9 @@ void main() {
       await voir(tester, find.text('Oui'));
       expect(
         find.bySemanticsLabel(
-          RegExp('Les sucres étaient-ils dans le moût à cette mesure ?'),
+          RegExp(
+            r"ingrédient ajouté hors de l.empâtage \(Candi\) était-il dans le moût",
+          ),
         ),
         findsWidgets,
       );

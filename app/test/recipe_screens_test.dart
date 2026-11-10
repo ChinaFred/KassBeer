@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
+import 'package:kass_beer/core/presentation/segments.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
+import 'package:kass_beer/features/recipes/presentation/contenu_recette.dart';
+import 'package:kass_beer/features/recipes/presentation/ingredient_forms.dart';
 import 'package:kass_beer/features/recipes/presentation/recipe_calculations_view.dart';
 import 'package:kass_beer/features/recipes/presentation/recipe_detail_screen.dart';
 import 'package:kass_beer/features/recipes/presentation/recipe_editor_screen.dart';
@@ -22,17 +25,13 @@ Recipe recipe(
   String? ownerName = 'Bruno Brasseur',
 }) => Recipe(id: id, ownerUid: owner, ownerName: ownerName, content: content);
 
-const pils = FermentableLine(
-  name: 'Pils',
-  kind: FermentableKind.malt,
-  weightG: 4500,
-);
+const pils = FermentableLine(name: 'Pils', type: 'grain', weightG: 4500);
 
 const citra = HopLine(
   name: 'Citra',
-  weightG: 20,
+  amount: Quantite.grammes(20),
   use: HopUse.boil,
-  form: HopForm.pellet,
+  form: 'pellet',
   timeMin: 60,
 );
 
@@ -59,6 +58,53 @@ Finder sheetField(String label) =>
     inSheet(find.widgetWithText(TextFormField, label));
 
 void main() {
+  group('outils de la v0.1.17', () {
+    test(
+      'segmentsTiennent : largeur du plus large libellé, échelle comprise',
+      () {
+        // Police de test : chaque caractère a la largeur de la taille du texte.
+        bool tient(List<String> labels, double maxWidth, double scale) =>
+            segmentsTiennent(
+              labels: labels,
+              style: const TextStyle(fontSize: 14),
+              scaler: TextScaler.linear(scale),
+              textDirection: TextDirection.ltr,
+              maxWidth: maxWidth,
+            );
+        // 2 × (2 × 14 + 55) = 166.
+        expect(tient(const ['g', 'ml'], 166, 1), isTrue);
+        expect(tient(const ['g', 'ml'], 165, 1), isFalse);
+        // À 200 % : 2 × (2 × 28 + 55) = 222.
+        expect(tient(const ['g', 'ml'], 200, 2), isFalse);
+        expect(
+          tient(const ['Ébullition', 'Whirlpool', 'À cru'], 360, 2),
+          isFalse,
+        );
+      },
+    );
+
+    test('en-tête des houblons : masse des houblons pesés seuls', () {
+      HopLine h(Quantite q) =>
+          HopLine(name: 'H', amount: q, use: HopUse.boil, form: 'pellet');
+      expect(enteteHoublons(const []), isNull);
+      expect(
+        enteteHoublons([
+          h(const Quantite.grammes(20)),
+          h(const Quantite.grammes(5)),
+        ]),
+        '2 · ${formatGrammes(25)}',
+      );
+      expect(
+        enteteHoublons([
+          h(const Quantite.grammes(20)),
+          h(const Quantite.litres(0.005)),
+        ]),
+        '2 dont 1 en volume · ${formatGrammes(20)}',
+      );
+      expect(enteteHoublons([h(const Quantite.litres(0.005))]), '1 en volume');
+    });
+  });
+
   group('liste', () {
     testWidgets('vide : message ; Nouvelle recette', (tester) async {
       await open(tester, '/recettes');
@@ -176,9 +222,9 @@ void main() {
             hops: [
               HopLine(
                 name: 'Citra',
-                weightG: 20,
+                amount: Quantite.grammes(20),
                 use: HopUse.boil,
-                form: HopForm.pellet,
+                form: 'pellet',
                 timeMin: 60,
               ),
             ],
@@ -217,7 +263,7 @@ void main() {
               fermentables: [
                 FermentableLine(
                   name: 'Pils',
-                  kind: FermentableKind.malt,
+                  type: 'grain',
                   weightG: 4500,
                   ebc: 3.5,
                   yieldPct: 80,
@@ -280,7 +326,7 @@ void main() {
             fermentables: [
               FermentableLine(
                 name: 'Pils',
-                kind: FermentableKind.malt,
+                type: 'grain',
                 weightG: 4500,
                 ebc: 3.5,
                 yieldPct: 80,
@@ -289,10 +335,10 @@ void main() {
             hops: [
               HopLine(
                 name: 'Citra',
-                weightG: 20,
+                amount: Quantite.grammes(20),
                 alphaPct: 12,
                 use: HopUse.boil,
-                form: HopForm.pellet,
+                form: 'pellet',
                 timeMin: 60,
               ),
             ],
@@ -492,9 +538,9 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Enregistrer'));
       await tester.pumpAndSettle();
-      expect(app.recipes.writes.single.content!.hops.map((h) => h.weightG), [
-        22.4,
-        22.4,
+      expect(app.recipes.writes.single.content!.hops.map((h) => h.amount), [
+        const Quantite.grammes(22.4),
+        const Quantite.grammes(22.4),
       ]);
     });
 
@@ -717,7 +763,7 @@ void main() {
         fermentables: [
           FermentableLine(
             name: 'Sucre',
-            kind: FermentableKind.sugar,
+            type: 'sugar',
             weightG: 20000,
             yieldPct: 100,
           ),
@@ -1005,7 +1051,10 @@ void main() {
       );
       await nameAndSave(tester, 'Ale');
       final yeast = app.recipes.writes.single.content!.yeasts.single;
-      expect((yeast.type, yeast.form, yeast.amountG), ('ale', 'dry', 11.5));
+      expect(
+        (yeast.type, yeast.form, yeast.amount),
+        ('ale', 'dry', const Quantite.grammes(11.5)),
+      );
     });
 
     testWidgets('palier : type, durée entière', (tester) async {
@@ -1157,7 +1206,7 @@ void main() {
               others: [
                 OtherLine(
                   name: 'Gypse',
-                  weightG: 5,
+                  amount: Quantite.grammes(5),
                   type: 'water agent',
                   use: OtherUse.mash,
                   timeMin: 60,
@@ -1169,7 +1218,7 @@ void main() {
                   type: 'ale',
                   form: 'dry',
                   attenuationPct: 75,
-                  amountG: 11,
+                  amount: Quantite.grammes(11),
                 ),
               ],
               mashSteps: [
@@ -1225,6 +1274,344 @@ void main() {
         find.descendant(of: typeRow, matching: find.text('Non renseigné')),
         findsOneWidget,
       );
+    });
+
+    // v0.1.17 — valeurs importées (L2a d'ADR-005).
+    const importee = RecipeContent(
+      name: 'Importée',
+      author: 'Brasseuse Fictive',
+      batchVolumeL: 20,
+      boilTimeMin: 60,
+      fermentables: [
+        FermentableLine(
+          name: 'Extrait sec',
+          type: 'dry extract',
+          weightG: 3000,
+          ebc: 6,
+          yieldPct: 95,
+        ),
+        FermentableLine(
+          name: 'Sirop maison',
+          type: 'other',
+          weightG: 200,
+          ebc: 2,
+          yieldPct: 80,
+        ),
+      ],
+      hops: [
+        HopLine(
+          name: 'Saaz',
+          amount: Quantite.grammes(20),
+          use: HopUse.mash,
+          form: 'plug',
+          alphaPct: 3.5,
+          timeMin: 60,
+        ),
+        HopLine(
+          name: 'Cascade',
+          amount: Quantite.grammes(10),
+          use: HopUse.boil,
+          form: 'powder',
+          alphaPct: 6,
+          timeMin: 10,
+        ),
+        HopLine(
+          name: 'Extrait de houblon',
+          amount: Quantite.litres(0.005),
+          use: HopUse.boil,
+          form: 'extract',
+          alphaPct: 50,
+          timeMin: 60,
+        ),
+        HopLine(
+          name: 'Citra',
+          amount: Quantite.grammes(50),
+          use: HopUse.dryHop,
+          form: 'pellet',
+          timeMin: 4320,
+          dayMin: 2880,
+        ),
+      ],
+      others: [
+        OtherLine(
+          name: 'Acide lactique',
+          amount: Quantite.litres(0.005),
+          type: 'water agent',
+          use: OtherUse.mash,
+          timeMin: 60,
+        ),
+      ],
+      yeasts: [
+        YeastLine(
+          name: 'Levure liquide',
+          type: 'wheat',
+          attenuationPct: 75,
+          amount: Quantite.litres(0.1),
+        ),
+      ],
+    );
+
+    Future<void> voir(WidgetTester tester, Finder finder) async {
+      await tester.scrollUntilVisible(
+        finder,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(finder, findsOneWidget);
+    }
+
+    testWidgets('fiche : libellés, quantités en volume, À compléter, auteur', (
+      tester,
+    ) async {
+      final app = await open(tester, '/recettes/i');
+      app.recipes.publish([recipe('i', importee)]);
+      await tester.pumpAndSettle();
+      for (final text in [
+        'Nature à préciser : Sirop maison.',
+        'Moment non pris en charge par le calcul : Saaz.',
+        'Forme non prise en charge par le calcul : Cascade.',
+        houblonsEnVolume('Extrait de houblon'),
+        'Auteur indiqué par le fichier importé',
+        'Brasseuse Fictive',
+        'Extrait sec · ${formatKilogrammes(3000)} · ${formatEbc(6)} · '
+            'rendement ${formatPourcent(95)}',
+        'Empâtage ${formatMinutes(60)} · ${formatGrammes(20)} · '
+            '${formatPourcent(3.5)} alpha · Cônes pressés',
+        'Ébullition ${formatMinutes(60)} · 5${nbsp}ml · '
+            '${formatPourcent(50)} alpha · Extrait · '
+            'non compté dans l\'amertume (mesuré en volume)',
+        'À cru ${formatJours(4320)} · ajout au jour 2 · ${formatGrammes(50)} · '
+            'alpha non renseigné · Pellets',
+        'Correction de l\'eau · 5${nbsp}ml · Empâtage · ${formatMinutes(60)}',
+        'Levure de blanche · 100${nbsp}ml · atténuation ${formatPourcent(75)}',
+      ]) {
+        await voir(tester, find.text(text));
+      }
+    });
+
+    testWidgets(
+      'éditeur : enregistrée sans changement, recipe identique (I9)',
+      (tester) async {
+        final app = await open(
+          tester,
+          '/recettes/i/modifier',
+          before: (app) => app.recipes.publish([recipe('i', importee)]),
+        );
+        await tester.tap(find.text('Enregistrer'));
+        await tester.pumpAndSettle();
+        final written = app.recipes.writes.single.content!;
+        expect(
+          written.toFirestore(creation: false)['recipe'],
+          importee.toFirestore(creation: false)['recipe'],
+        );
+        expect(written.author, 'Brasseuse Fictive');
+      },
+    );
+
+    testWidgets('éditeur : houblon à l\'empâtage et extrait en ml gardés à '
+        'l\'enregistrement du formulaire', (tester) async {
+      final app = await open(
+        tester,
+        '/recettes/i/modifier',
+        before: (app) => app.recipes.publish([recipe('i', importee)]),
+      );
+      for (final name in ['Saaz', 'Extrait de houblon', 'Citra']) {
+        final line = find.text(name);
+        await tester.scrollUntilVisible(
+          line,
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.tap(line);
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet), findsOneWidget);
+        if (name == 'Saaz') {
+          expect(inSheet(find.text('Empâtage')), findsOneWidget);
+          expect(inSheet(find.text('Cônes pressés')), findsOneWidget);
+        }
+        if (name == 'Extrait de houblon') {
+          expect(sheetField('Quantité (ml)'), findsOneWidget);
+        }
+        final save = inSheet(find.widgetWithText(FilledButton, 'Enregistrer'));
+        await tester.ensureVisible(save);
+        await tester.tap(save);
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('Enregistrer').first);
+      await tester.pumpAndSettle();
+      // Tri de l'éditeur après chaque formulaire : empâtage, ébullition de la
+      // plus longue à la plus courte, à cru.
+      final hops = app.recipes.writes.single.content!.hops;
+      expect(hops.map((h) => (h.name, h.use, h.form, h.amount, h.dayMin)), [
+        ('Saaz', HopUse.mash, 'plug', const Quantite.grammes(20), null),
+        (
+          'Extrait de houblon',
+          HopUse.boil,
+          'extract',
+          const Quantite.litres(0.005),
+          null,
+        ),
+        ('Cascade', HopUse.boil, 'powder', const Quantite.grammes(10), null),
+        ('Citra', HopUse.dryHop, 'pellet', const Quantite.grammes(50), 2880),
+      ]);
+    });
+
+    testWidgets('segments en colonne quand ils ne tiennent pas : 360 dp à '
+        '200 %', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await open(tester, '/recettes/nouvelle', width: 360);
+      await openSheet(tester, 'Ajouter un houblon');
+      final usage = tester.widget<SegmentedButton<HopUse>>(
+        inSheet(find.byType(SegmentedButton<HopUse>)),
+      );
+      expect(usage.direction, Axis.vertical);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('segments côte à côte quand ils tiennent : g et ml à 400 dp', (
+      tester,
+    ) async {
+      await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un ajout');
+      final unite = tester.widget<SegmentedButton<UniteSaisie>>(
+        inSheet(find.byType(SegmentedButton<UniteSaisie>)),
+      );
+      expect(unite.direction, Axis.horizontal);
+    });
+
+    testWidgets('unité g ou ml lue « grammes », « millilitres », avant la '
+        'quantité', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un ajout');
+      expect(inSheet(find.bySemanticsLabel('grammes')), findsOneWidget);
+      expect(inSheet(find.bySemanticsLabel('millilitres')), findsOneWidget);
+      final unite = tester.getTopLeft(
+        inSheet(find.text('Unité de la quantité')),
+      );
+      final quantite = tester.getTopLeft(sheetField('Quantité (g)'));
+      expect(unite.dy, lessThan(quantite.dy));
+      semantics.dispose();
+    });
+
+    testWidgets('houblon d\'ébullition en poudre : avertissement sous la forme', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        '/recettes/p/modifier',
+        before: (app) => app.recipes.publish([
+          recipe(
+            'p',
+            const RecipeContent(
+              name: 'Poudre',
+              hops: [
+                HopLine(
+                  name: 'Cascade',
+                  amount: Quantite.grammes(10),
+                  use: HopUse.boil,
+                  form: 'powder',
+                  alphaPct: 6,
+                  timeMin: 10,
+                ),
+              ],
+            ),
+          ),
+        ]),
+      );
+      final line = find.text('Cascade');
+      await tester.scrollUntilVisible(
+        line,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(line);
+      await tester.pumpAndSettle();
+      final message = inSheet(
+        find.text(
+          'Forme non prise en charge par le calcul de l\'amertume : choisissez '
+          'Pellets ou Cônes.',
+        ),
+      );
+      await tester.ensureVisible(message);
+      expect(message, findsOneWidget);
+      await tester.tap(inSheet(find.text('Pellets')));
+      await tester.pumpAndSettle();
+      expect(message, findsNothing);
+    });
+
+    testWidgets('extrait pesé : avertissement qui propose les ml, pas une '
+        'autre forme', (tester) async {
+      await open(
+        tester,
+        '/recettes/e/modifier',
+        before: (app) => app.recipes.publish([
+          recipe(
+            'e',
+            const RecipeContent(
+              name: 'Extrait',
+              hops: [
+                HopLine(
+                  name: 'Extrait CO2',
+                  amount: Quantite.grammes(2),
+                  use: HopUse.boil,
+                  form: 'extract',
+                  alphaPct: 50,
+                  timeMin: 60,
+                ),
+              ],
+            ),
+          ),
+        ]),
+      );
+      final line = find.text('Extrait CO2');
+      await tester.scrollUntilVisible(
+        line,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(line);
+      await tester.pumpAndSettle();
+      final message = inSheet(
+        find.text(
+          'Forme non prise en charge par le calcul de l\'amertume. Pour un '
+          'extrait, indiquez la quantité en ml.',
+        ),
+      );
+      await tester.ensureVisible(message);
+      expect(message, findsOneWidget);
+      await tester.tap(inSheet(find.text('ml')));
+      await tester.pumpAndSettle();
+      expect(message, findsNothing);
+    });
+
+    testWidgets('ajout et levure saisis en ml : enregistrés en litres', (
+      tester,
+    ) async {
+      final app = await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un ajout');
+      await tester.enterText(sheetField('Nom'), 'Acide lactique');
+      await tester.tap(inSheet(find.text('ml')));
+      await tester.pumpAndSettle();
+      await tester.enterText(sheetField('Quantité (ml)'), '5');
+      final add = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+      await tester.ensureVisible(add);
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      await openSheet(tester, 'Ajouter une levure');
+      await tester.enterText(sheetField('Nom'), 'WLP400');
+      await tester.tap(inSheet(find.text('ml')));
+      await tester.pumpAndSettle();
+      await tester.enterText(sheetField('Quantité (ml)'), '125');
+      final addYeast = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+      await tester.ensureVisible(addYeast);
+      await tester.tap(addYeast);
+      await tester.pumpAndSettle();
+      await nameAndSave(tester, 'Blanche');
+      final content = app.recipes.writes.single.content!;
+      expect(content.others.single.amount, const Quantite.litres(0.005));
+      expect(content.yeasts.single.amount, const Quantite.litres(0.125));
     });
   });
 }

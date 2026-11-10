@@ -8,13 +8,18 @@ import 'chronologie.dart';
 /// Conversion entre un document `recipes/{id}` et les types de `brewing/`, écrite
 /// ici seulement. Le document est une enveloppe Kass'Beer (`format_version`,
 /// propriétaire, équipement, chronologie, dates) et un sous-arbre `recipe` en
-/// BeerJSON partiel (ADR-005, `beerjson.dart`). La nature d'un malt et la forme d'un
-/// houblon passent par `fromStored` / `storedValue` de `brewing/`. La clé d'un
-/// ingrédient n'est pas stockée : `ingredientKey` la dérive du nom et de la nature.
-/// Masses en grammes, durées en minutes entières.
+/// BeerJSON partiel (ADR-005, `beerjson.dart`). Le type d'un malt et la forme
+/// d'un houblon gardent leur valeur BeerJSON ; leur nature et leur forme de
+/// calcul viennent de `brewing/` (`FermentableKind.ofType`, `HopForm.ofBeerJson`).
+/// La clé d'un ingrédient n'est pas stockée : `ingredientKey` la dérive du nom et
+/// de la nature. Masses en grammes, volumes en litres, durées en minutes
+/// entières.
 
 /// Longueur maximale du nom et du style (`firestore.rules`).
 const kRecipeNameMaxLength = 120;
+
+/// Longueur maximale de l'auteur (`recipe.author`, `firestore.rules`).
+const kRecipeAuthorMaxLength = 120;
 
 /// Longueur maximale des notes (`firestore.rules`).
 const kRecipeNotesMaxLength = 10000;
@@ -35,6 +40,10 @@ const kUnusualOtherGrams = 1000.0;
 const kUnusualFermentableGrams = 30000.0;
 const kUnusualVolumeLitres = 200.0;
 
+/// Seuil de l'avertissement « Quantité inhabituelle » d'une ligne mesurée en
+/// volume (houblon, ajout) : 1 L.
+const kUnusualLineLitres = 1.0;
+
 /// Moment d'un autre ajout, écrit dans `timing` (voir [OtherLine]).
 enum OtherUse {
   mash('Empâtage'),
@@ -47,6 +56,53 @@ enum OtherUse {
 
   final String label;
 }
+
+/// Quantité d'un houblon, d'un ajout ou d'une levure : masse en grammes, ou
+/// volume en litres (décision du 2026-11-10 : acide lactique, extrait de
+/// houblon, levure liquide). Enregistrée telle quelle, dans son unité.
+@immutable
+class Quantite {
+  const Quantite.grammes(this.valeur) : enLitres = false;
+  const Quantite.litres(this.valeur) : enLitres = true;
+
+  final double valeur;
+
+  /// Vrai pour un volume en litres, faux pour une masse en grammes.
+  final bool enLitres;
+
+  /// Masse en grammes, ou `null` pour un volume.
+  double? get grammes => enLitres ? null : valeur;
+
+  Map<String, Object> toFirestore() => mesureBeerJson(
+    valeur,
+    enLitres ? UniteBeerJson.litre : UniteBeerJson.gramme,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is Quantite && other.valeur == valeur && other.enLitres == enLitres;
+
+  @override
+  int get hashCode => Object.hash(valeur, enLitres);
+}
+
+/// Quantité [key] en grammes ou en litres, ou `null` si elle est absente. Une
+/// autre unité lève [DocumentIllisible].
+Quantite? _quantiteFacultative(LecteurChamps read, String key) {
+  final value = read.mesureParmi(key, const {
+    UniteBeerJson.gramme,
+    UniteBeerJson.litre,
+  });
+  if (value == null) return null;
+  return value.unit == UniteBeerJson.litre
+      ? Quantite.litres(value.value)
+      : Quantite.grammes(value.value);
+}
+
+/// Quantité obligatoire `amount`, en grammes ou en litres.
+Quantite _quantite(LecteurChamps read) =>
+    _quantiteFacultative(read, 'amount') ??
+    (throw DocumentIllisible('${read.prefix}amount', 'quantité absente'));
 
 /// `timing` d'un ajout : `use`, et `time` ou `duration` en minutes.
 Map<String, Object> _timing(String use, {int? time, int? duration}) => {
@@ -112,23 +168,36 @@ Map<String, Object>? _pourcent(double? value) =>
 class FermentableLine {
   const FermentableLine({
     required this.name,
-    required this.kind,
+    required this.type,
     required this.weightG,
     this.ebc,
     this.yieldPct,
   });
 
   final String name;
-  final FermentableKind kind;
+
+  /// Valeur de [typesFermentable], gardée telle quelle : `grain`, `sugar`, ou
+  /// une valeur importée (`extract`, `honey`, `other`…).
+  final String type;
 
   /// Masse en grammes ; saisie et affichée en kilogrammes (A9).
   final double weightG;
   final double? ebc;
   final double? yieldPct;
 
+  /// Nature de calcul (`brewing/`) : un extrait, un miel, un fruit ou un jus se
+  /// calcule comme un sucre ; `null` pour `other` (nature à préciser).
+  FermentableKind? get kind => FermentableKind.ofType(type);
+
+  /// Nature de la clé d'ingrédient (prix, stock) : malt pour un malt, sucre pour
+  /// tout le reste, `other` compris. Le calcul de brassage ne la lit pas.
+  IngredientNature get nature => IngredientNature.ofFermentable(kind);
+
   factory FermentableLine.fromFirestore(LecteurChamps read) => FermentableLine(
     name: read.texte('name'),
-    kind: FermentableKind.fromStored(read.texte('type')),
+    type:
+        read.valeurDe('type', typesFermentable) ??
+        (throw DocumentIllisible('${read.prefix}type', 'type absent')),
     weightG: _masse(read),
     ebc: read.mesure('color', UniteBeerJson.ebc),
     yieldPct: read
@@ -137,8 +206,8 @@ class FermentableLine {
   );
 
   Map<String, Object?> toFirestore() => {
-    'name': _nom(IngredientNature.ofFermentable(kind), name),
-    'type': kind.storedValue,
+    'name': _nom(nature, name),
+    'type': type,
     'amount': mesureBeerJson(weightG, UniteBeerJson.gramme),
     if (ebc != null) 'color': mesureBeerJson(ebc!, UniteBeerJson.ebc),
     if (yieldPct != null) 'yield': {'fine_grind': _pourcent(yieldPct)},
@@ -158,48 +227,69 @@ class FermentableLine {
 class HopLine {
   const HopLine({
     required this.name,
-    required this.weightG,
+    required this.amount,
     required this.use,
     required this.form,
     this.alphaPct,
     this.timeMin,
+    this.dayMin,
   });
 
   final String name;
 
-  /// Masse en grammes.
-  final double weightG;
+  /// Masse en grammes, ou volume en litres pour un extrait liquide : il ne
+  /// compte pas dans l'IBU.
+  final Quantite amount;
   final HopUse use;
-  final HopForm form;
+
+  /// Valeur de [formesHoublon], gardée telle quelle (`pellet`, `leaf`, ou une
+  /// valeur importée : `plug`, `powder`, `extract`, `leaf (wet)`).
+  final String form;
   final double? alphaPct;
 
-  /// Durée en minutes entières : ébullition, infusion d'un whirlpool, ou jours à
-  /// cru × 1 440 arrondis à la minute.
+  /// Durée en minutes entières : ébullition, infusion d'un whirlpool, jours à
+  /// cru × 1 440 arrondis à la minute, ou durée à l'empâtage ou au
+  /// conditionnement.
   final int? timeMin;
 
+  /// Jour d'ajout d'un houblon à cru, en minutes depuis le début de la
+  /// fermentation (`timing.time`), conservé d'un import ; `brewing/` ne le lit
+  /// pas. Toujours `null` hors de [HopUse.dryHop].
+  final int? dayMin;
+
+  /// Forme de calcul (`brewing/`) : `plug` se calcule comme des cônes ; `null`
+  /// pour une forme sans facteur d'utilisation.
+  HopForm? get calcForm => HopForm.ofBeerJson(form);
+
   /// Moments lus : `add_to_boil` (ébullition, ou whirlpool à `time` 0 avec
-  /// `duration`) et `add_to_fermentation` (à cru, `duration`). `add_to_mash` et
-  /// `add_to_package` n'ont pas d'équivalent dans `brewing/` : le document est
-  /// illisible.
+  /// `duration`), `add_to_fermentation` (à cru, `duration`, et `time` : jour
+  /// d'ajout), `add_to_mash` et `add_to_package` (`duration`). L'empâtage et le
+  /// conditionnement se lisent et s'affichent ; le calcul de l'IBU ne les prend
+  /// pas en charge.
   factory HopLine.fromFirestore(LecteurChamps read) {
     final m =
         _lireMoment(read) ??
         (throw DocumentIllisible('${read.prefix}timing', 'moment absent'));
-    final (HopUse use, int? minutes) = switch (m.use) {
+    final (HopUse use, int? minutes, int? day) = switch (m.use) {
       UsageBeerJson.boil => switch (_lireEbullition(m)) {
-        (afterBoil: true, :final minutes) => (HopUse.afterBoil, minutes),
-        (afterBoil: false, :final minutes) => (HopUse.boil, minutes),
+        (afterBoil: true, :final minutes) => (HopUse.afterBoil, minutes, null),
+        (afterBoil: false, :final minutes) => (HopUse.boil, minutes, null),
       },
-      UsageBeerJson.fermentation => (HopUse.dryHop, _lireDuree(m)),
+      UsageBeerJson.fermentation => (HopUse.dryHop, m.duration, m.time),
+      UsageBeerJson.mash => (HopUse.mash, _lireDuree(m), null),
+      UsageBeerJson.package => (HopUse.package, _lireDuree(m), null),
       _ => throw _usageInconnu(m),
     };
     return HopLine(
       name: read.texte('name'),
-      weightG: _masse(read),
+      amount: _quantite(read),
       use: use,
-      form: HopForm.fromStored(read.texte('form')),
+      form:
+          read.valeurDe('form', formesHoublon) ??
+          (throw DocumentIllisible('${read.prefix}form', 'forme absente')),
       alphaPct: read.mesure('alpha_acid', UniteBeerJson.pourcent),
       timeMin: minutes,
+      dayMin: day,
     );
   }
 
@@ -208,25 +298,31 @@ class HopLine {
   /// [BrewingInputException] pour un nom sans lettre ni chiffre.
   Map<String, Object?> toFirestore() => {
     'name': _nom(IngredientNature.hop, name),
-    'form': form.storedValue,
+    'form': form,
     if (alphaPct != null) 'alpha_acid': _pourcent(alphaPct),
-    'amount': mesureBeerJson(weightG, UniteBeerJson.gramme),
+    'amount': amount.toFirestore(),
     'timing': switch (use) {
+      HopUse.mash => _timing(UsageBeerJson.mash, duration: timeMin),
       HopUse.boil => _timing(UsageBeerJson.boil, time: timeMin),
       HopUse.afterBoil => _timing(
         UsageBeerJson.boil,
         time: 0,
         duration: timeMin ?? (throw ArgumentError('whirlpool sans durée')),
       ),
-      HopUse.dryHop => _timing(UsageBeerJson.fermentation, duration: timeMin),
+      HopUse.dryHop => _timing(
+        UsageBeerJson.fermentation,
+        time: dayMin,
+        duration: timeMin,
+      ),
+      HopUse.package => _timing(UsageBeerJson.package, duration: timeMin),
     },
   };
 
   HopInput toInput() => HopInput(
     name: name,
-    massGrams: weightG,
+    massGrams: amount.grammes,
     use: use,
-    form: form,
+    form: calcForm,
     alphaPercent: alphaPct,
     minutes: timeMin?.toDouble(),
   );
@@ -237,14 +333,16 @@ class HopLine {
 class OtherLine {
   const OtherLine({
     required this.name,
-    required this.weightG,
+    required this.amount,
     this.type,
     this.use,
     this.timeMin,
   });
 
   final String name;
-  final double weightG;
+
+  /// Masse en grammes, ou volume en litres (acide lactique).
+  final Quantite amount;
 
   /// Valeur de [typesAjout], ou `null`.
   final String? type;
@@ -273,7 +371,7 @@ class OtherLine {
     return OtherLine(
       name: read.texte('name'),
       type: read.valeurDe('type', typesAjout),
-      weightG: _masse(read),
+      amount: _quantite(read),
       use: use,
       timeMin: minutes,
     );
@@ -289,7 +387,7 @@ class OtherLine {
     return {
       'name': _nom(IngredientNature.addition, name),
       if (type != null) 'type': type,
-      'amount': mesureBeerJson(weightG, UniteBeerJson.gramme),
+      'amount': amount.toFirestore(),
       if (use != null)
         'timing': switch (use!) {
           OtherUse.mash => _timing(UsageBeerJson.mash, duration: minutes),
@@ -320,7 +418,7 @@ class YeastLine {
     this.type,
     this.form,
     this.attenuationPct,
-    this.amountG,
+    this.amount,
   });
 
   final String name;
@@ -332,15 +430,16 @@ class YeastLine {
   final String? form;
   final double? attenuationPct;
 
-  /// Masse ensemencée en grammes, facultative.
-  final double? amountG;
+  /// Quantité ensemencée, facultative : grammes, ou litres pour une levure
+  /// liquide.
+  final Quantite? amount;
 
   factory YeastLine.fromFirestore(LecteurChamps read) => YeastLine(
     name: read.texte('name'),
     type: read.valeurDe('type', typesLevure),
     form: read.valeurDe('form', formesLevure),
     attenuationPct: read.mesure('attenuation', UniteBeerJson.pourcent),
-    amountG: read.mesure('amount', UniteBeerJson.gramme),
+    amount: _quantiteFacultative(read, 'amount'),
   );
 
   Map<String, Object?> toFirestore() => {
@@ -348,8 +447,7 @@ class YeastLine {
     if (type != null) 'type': type,
     if (form != null) 'form': form,
     if (attenuationPct != null) 'attenuation': _pourcent(attenuationPct),
-    if (amountG != null)
-      'amount': mesureBeerJson(amountG!, UniteBeerJson.gramme),
+    if (amount != null) 'amount': amount!.toFirestore(),
   };
 
   YeastInput toInput() =>
@@ -404,6 +502,7 @@ class RecipeContent {
   const RecipeContent({
     required this.name,
     this.type,
+    this.author,
     this.style,
     this.notes,
     this.batchVolumeL,
@@ -424,6 +523,11 @@ class RecipeContent {
 
   /// Valeur de [typesRecette], ou `null`.
   final String? type;
+
+  /// Auteur de la recette (`recipe.author`), conservé d'un import ; 120
+  /// caractères au plus. L'éditeur ne le saisit pas et le garde à
+  /// l'enregistrement. Distinct de `owner_name`, nom du membre qui l'a créée.
+  final String? author;
   final String? style;
   final String? notes;
 
@@ -454,8 +558,8 @@ class RecipeContent {
   final String? importedFrom;
 
   /// Lit l'enveloppe et le sous-arbre `recipe` ; lève [DocumentIllisible] (version
-  /// de format, unité ou valeur inattendue) ou [BrewingInputException] (nature ou
-  /// forme inconnue) sans jamais remplacer une valeur absente.
+  /// de format, unité ou valeur hors du schéma, type de malt et forme de houblon
+  /// compris) sans jamais remplacer une valeur absente.
   factory RecipeContent.fromFirestore(Map<String, dynamic> data) {
     verifierVersionFormat(data);
     final envelope = LecteurChamps(data);
@@ -466,6 +570,7 @@ class RecipeContent {
     return RecipeContent(
       name: read.texte('name'),
       type: read.valeurDe('type', typesRecette),
+      author: read.texteFacultatif('author'),
       style: read.objetFacultatif('style')?.texte('name'),
       notes: read.texteFacultatif('notes'),
       batchVolumeL: read.mesure('batch_size', UniteBeerJson.litre),
@@ -511,6 +616,7 @@ class RecipeContent {
     String? text(String? value) =>
         value == null || value.trim().isEmpty ? null : value.trim();
     final styleName = text(style);
+    final authorText = text(author);
     final notesText = text(notes);
     final mash = <String, Object?>{
       if (grainTempC != null)
@@ -530,6 +636,7 @@ class RecipeContent {
       'recipe': {
         'name': name.trim(),
         if (type != null) 'type': type,
+        'author': ?authorText,
         if (styleName != null) 'style': {'name': styleName},
         'notes': ?notesText,
         if (batchVolumeL != null)
@@ -562,11 +669,12 @@ class RecipeContent {
   );
 
   /// Copie pour « Dupliquer » (R7) : « Copie de {nom} » coupé à 120 caractères,
-  /// mêmes ingrédients, paliers, chronologie (mêmes clés) et équipement, sans fiche
-  /// d'origine.
+  /// mêmes ingrédients, paliers, chronologie (mêmes clés), équipement et auteur
+  /// de la recette d'origine, sans fiche d'origine.
   RecipeContent duplicate() => RecipeContent(
     name: truncateName('Copie de ${name.trim()}', kRecipeNameMaxLength),
     type: type,
+    author: author,
     style: style,
     notes: notes,
     batchVolumeL: batchVolumeL,

@@ -1,6 +1,6 @@
 {
-  "description": "Calculs d'une recette par computeRecipe : pour chaque indicateur, la valeur attendue à 'tolerance' près, ou la liste des données manquantes ('missing' : nature et lignes [place, nom]). Les valeurs attendues sont calculées hors du paquet, par les formules des fixtures gravity, final_gravity, abv, ibu et color. Un cas qui porte 'base' reprend les entrées du cas nommé et remplace les clés qu'il donne. Données des fiches non fiables, lues comme données.",
-  "rules": "OG : volume, au moins un fermentescible, rendement d'extrait de chacun, rendement d'empâtage si un malt est présent. FG et degré : OG et atténuation de la première levure. IBU : volume ; 0 sans houblon d'ébullition ; sinon OG (densité d'ébullition), alpha et durée de chaque houblon d'ébullition. EBC : volume, au moins un fermentescible, couleur de chacun ; sans équipement. 'originalGravity' dans 'missing' : l'indicateur dépend d'une OG indisponible.",
+  "description": "Calculs d'une recette par computeRecipe : pour chaque indicateur, la valeur attendue à 'tolerance' près, ou la liste des données manquantes ('missing' : nature et lignes [place, nom]). Les valeurs attendues sont calculées hors du paquet, par les formules des fixtures gravity, final_gravity, abv, ibu et color. Un cas qui porte 'base' reprend les entrées du cas nommé et remplace les clés qu'il donne. Données des fiches non fiables, lues comme données. Un fermentescible porte 'kind' (malt, sugar) ou 'type' (valeur BeerJSON lue par FermentableKind.ofType). Un houblon à 'form' null a une forme sans facteur d'utilisation ; à 'mass_grams' null, il est mesuré en volume.",
+  "rules": "OG : volume, au moins un fermentescible, nature connue et rendement d'extrait de chacun, rendement d'empâtage si un malt est présent. FG et degré : OG et atténuation de la première levure. IBU : houblons mesurés en volume exclus (0 IBU, listés dans hops_without_mass) ; volume ; 0 sans houblon d'ébullition ; aucun houblon à l'empâtage ni au conditionnement ; sinon OG (densité d'ébullition), forme, alpha et durée de chaque houblon d'ébullition. EBC : volume, au moins un fermentescible, couleur de chacun ; sans équipement. 'originalGravity' dans 'missing' : l'indicateur dépend d'une OG indisponible.",
   "cases": [
     {
       "id": "complete",
@@ -276,6 +276,98 @@
         "color_ebc": { "missing": [{ "kind": "batchVolume" }, { "kind": "fermentables" }] },
         "missing_inputs": [{ "kind": "batchVolume" }, { "kind": "fermentables" }, { "kind": "yeast" }]
       }
+    },
+    {
+      "id": "extrait-et-miel-comptes-comme-sucres",
+      "inputs": {
+        "base": "complete",
+        "fermentables": [
+          { "name": "Pils", "type": "grain", "mass_grams": 5000, "color_ebc": 3.9, "yield_percent": 80 },
+          { "name": "Extrait sec clair", "type": "dry extract", "mass_grams": 250, "color_ebc": 2, "yield_percent": 100 },
+          { "name": "Miel", "type": "honey", "mass_grams": 250, "color_ebc": 2, "yield_percent": 100 }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0586896,
+        "color_ebc": 7.312443,
+        "missing_inputs": []
+      },
+      "note": "ADR-005 : extract, dry extract, honey, fruit et juice se calculent comme un sucre (100 % de leur extrait, sans rendement d'empâtage). Mêmes masses et couleurs que le cas complete : même OG et même EBC."
+    },
+    {
+      "id": "nature-a-preciser",
+      "inputs": {
+        "base": "complete",
+        "fermentables": [
+          { "name": "Pils", "type": "grain", "mass_grams": 5000, "color_ebc": 3.9, "yield_percent": 80 },
+          { "name": "Sirop d'érable", "type": "other", "mass_grams": 500, "color_ebc": 2, "yield_percent": 100 }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": { "missing": [{ "kind": "fermentableKind", "items": [[1, "Sirop d'érable"]] }] },
+        "final_gravity": { "missing": [{ "kind": "originalGravity" }] },
+        "bitterness_ibu": { "missing": [{ "kind": "originalGravity" }] },
+        "color_ebc": 7.312443,
+        "missing_inputs": [{ "kind": "fermentableKind", "items": [[1, "Sirop d'érable"]] }]
+      },
+      "note": "type 'other' : la nature (empâtée ou non) décide du rendement d'empâtage ; aucune n'est supposée. La couleur n'en dépend pas."
+    },
+    {
+      "id": "houblons-empatage-et-conditionnement",
+      "inputs": {
+        "base": "complete",
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "alpha_percent": 10, "use": "boil", "form": "pellet", "minutes": 60 },
+          { "name": "Saaz", "mass_grams": 20, "alpha_percent": 3.5, "use": "mash", "form": "whole" },
+          { "name": "Citra", "mass_grams": 10, "use": "package", "form": "pellet" }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "original_gravity": 1.0586896,
+        "bitterness_ibu": { "missing": [{ "kind": "hopUse", "items": [[1, "Saaz"], [2, "Citra"]] }] },
+        "hop_ibu": [],
+        "missing_inputs": [{ "kind": "hopUse", "items": [[1, "Saaz"], [2, "Citra"]] }]
+      },
+      "note": "Tinseth ne décrit ni l'empâtage ni le conditionnement : l'IBU est indisponible, aucune utilisation n'est supposée"
+    },
+    {
+      "id": "houblon-forme-non-prise-en-charge",
+      "inputs": {
+        "base": "complete",
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "alpha_percent": 10, "use": "boil", "form": "pellet", "minutes": 60 },
+          { "name": "Saaz", "mass_grams": 20, "alpha_percent": 3.5, "use": "boil", "form": null, "minutes": 15 },
+          { "name": "Citra", "mass_grams": 50, "use": "dryHop", "form": null, "minutes": 4320 }
+        ]
+      },
+      "expected": {
+        "bitterness_ibu": { "missing": [{ "kind": "hopForm", "items": [[1, "Saaz"]] }] },
+        "hop_ibu": []
+      },
+      "note": "form null : poudre, extrait ou cônes frais, sans facteur d'utilisation. Seul un houblon d'ébullition le demande : le Citra à cru apporte 0 IBU quelle que soit sa forme"
+    },
+    {
+      "id": "houblons-mesures-en-volume",
+      "inputs": {
+        "base": "complete",
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "alpha_percent": 10, "use": "boil", "form": "pellet", "minutes": 60 },
+          { "name": "Saaz", "mass_grams": 20, "alpha_percent": 3.5, "use": "boil", "form": "whole", "minutes": 15 },
+          { "name": "Extrait de houblon", "mass_grams": null, "alpha_percent": 50, "use": "boil", "form": null, "minutes": 60 },
+          { "name": "Extrait d'empâtage", "mass_grams": null, "use": "mash", "form": null }
+        ]
+      },
+      "tolerance": 1e-06,
+      "expected": {
+        "bitterness_ibu": 33.8308043,
+        "hop_ibu": [30.6090445, 3.2217597, 0, 0],
+        "hops_without_mass": [[2, "Extrait de houblon"], [3, "Extrait d'empâtage"]],
+        "missing_inputs": []
+      },
+      "note": "décision du 2026-11-10 : un houblon mesuré en volume (extrait liquide) ne compte pas dans l'IBU ; il ne demande ni forme, ni moment, ni alpha, et la fiche le nomme"
     },
     {
       "id": "houblon-plus-long-que-l-ebullition",

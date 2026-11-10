@@ -48,9 +48,7 @@ const _capsules = Fee(
 const _recette = RecipeContent(
   name: 'Blonde',
   batchVolumeL: 20,
-  fermentables: [
-    FermentableLine(name: 'Pils', kind: FermentableKind.malt, weightG: 5000),
-  ],
+  fermentables: [FermentableLine(name: 'Pils', type: 'grain', weightG: 5000)],
   yeasts: [YeastLine(name: 'S-04')],
 );
 
@@ -433,11 +431,7 @@ void main() {
           recipe: const RecipeContent(
             name: 'X',
             fermentables: [
-              FermentableLine(
-                name: 'Pils',
-                kind: FermentableKind.malt,
-                weightG: -1,
-              ),
+              FermentableLine(name: 'Pils', type: 'grain', weightG: -1),
             ],
           ),
         ),

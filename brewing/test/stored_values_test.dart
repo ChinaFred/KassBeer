@@ -1,61 +1,59 @@
 import 'package:brewing/brewing.dart';
 import 'package:test/test.dart';
 
-import 'support/fixtures.dart';
-
-/// Correspondance des valeurs stockées des recettes (exigences-techniques.md)
-/// et des enums du paquet : écrite une fois, dans les enums. Le moment d'un
-/// houblon (`timing` BeerJSON) se lit dans l'application.
+/// Correspondance des valeurs BeerJSON des recettes (exigences-techniques.md)
+/// et des natures et formes de calcul du paquet : écrite une fois, dans les
+/// enums. Le moment d'un houblon (`timing` BeerJSON) se lit dans l'application.
 void main() {
-  test('fermentable_additions[].type', () {
-    expect(FermentableKind.fromStored('grain'), FermentableKind.malt);
-    expect(FermentableKind.fromStored('sugar'), FermentableKind.sugar);
-    expect(FermentableKind.malt.storedValue, 'grain');
+  test('fermentable_additions[].type : nature de calcul', () {
+    expect(FermentableKind.ofType('grain'), FermentableKind.malt);
+    for (final type in ['sugar', 'extract', 'dry extract', 'honey']) {
+      expect(FermentableKind.ofType(type), FermentableKind.sugar, reason: type);
+    }
+    expect(FermentableKind.ofType('fruit'), FermentableKind.sugar);
+    expect(FermentableKind.ofType('juice'), FermentableKind.sugar);
+    expect(FermentableKind.ofType('other'), isNull);
+    expect(FermentableKind.ofBeerJsonType.keys, hasLength(8));
   });
 
-  test('hop_additions[].form', () {
-    expect(HopForm.fromStored('pellet'), HopForm.pellet);
-    expect(HopForm.fromStored('leaf'), HopForm.whole);
+  test('hop_additions[].form : forme de calcul', () {
+    expect(HopForm.ofBeerJson('pellet'), HopForm.pellet);
+    expect(HopForm.ofBeerJson('leaf'), HopForm.whole);
+    expect(HopForm.ofBeerJson('plug'), HopForm.whole);
+    for (final form in ['powder', 'extract', 'leaf (wet)']) {
+      expect(HopForm.ofBeerJson(form), isNull, reason: form);
+    }
+    expect(HopForm.ofBeerJsonForm.keys, hasLength(6));
   });
 
-  test('aller-retour de chaque valeur', () {
+  test('valeur écrite de chaque nature et forme : relue à l\'identique', () {
     for (final k in FermentableKind.values) {
-      expect(FermentableKind.fromStored(k.storedValue), k);
+      expect(FermentableKind.ofType(k.storedValue), k);
     }
     for (final f in HopForm.values) {
-      expect(HopForm.fromStored(f.storedValue), f);
+      expect(HopForm.ofBeerJson(f.storedValue), f);
     }
+    expect(FermentableKind.malt.storedValue, 'grain');
+    expect(HopForm.whole.storedValue, 'leaf');
   });
 
-  test('valeur inconnue ou retirée du modèle refusée', () {
-    expectInvalid(() => FermentableKind.fromStored('extract'), 'extract');
-    expectInvalid(() => FermentableKind.fromStored('malt'), 'nom de l\'enum');
-    expectInvalid(() => HopForm.fromStored('whole'), 'nom de l\'enum');
-    expectInvalid(() => HopForm.fromStored(''), 'vide');
-  });
-
-  test(
-    'le champ fautif est nommé, la valeur stockée ne figure pas dans l\x27erreur',
-    () {
+  test('valeur hors du schéma refusée, sans le texte dans l\'erreur', () {
+    final calls = <(Object? Function(), String)>[
+      (() => FermentableKind.ofType('malt'), 'fermentable_additions[].type'),
+      (() => FermentableKind.ofType(''), 'fermentable_additions[].type'),
+      (() => HopForm.ofBeerJson('whole'), 'hop_additions[].form'),
+      (() => HopForm.ofBeerJson('cônes'), 'hop_additions[].form'),
+    ];
+    for (final (call, field) in calls) {
       expect(
-        () => HopForm.fromStored('plug'),
+        call,
         throwsA(
           isA<BrewingInputException>()
-              .having((e) => e.field, 'field', 'hop_additions[].form')
-              .having((e) => e.value, 'value', 'plug'.length)
-              .having((e) => e.toString(), 'toString', isNot(contains('plug'))),
+              .having((e) => e.field, 'field', field)
+              .having((e) => e.toString(), 'texte', isNot(contains('cônes')))
+              .having((e) => e.toString(), 'texte', isNot(contains('whole'))),
         ),
       );
-      expect(
-        () => FermentableKind.fromStored('extract'),
-        throwsA(
-          isA<BrewingInputException>().having(
-            (e) => e.field,
-            'field',
-            'fermentable_additions[].type',
-          ),
-        ),
-      );
-    },
-  );
+    }
+  });
 }

@@ -63,6 +63,12 @@ String formatLitres(double litres) => '${formatNombre(litres)}${nbsp}L';
 String formatGrammes(double grams) =>
     '${formatNombre(grams, decimales: 1)}${nbsp}g';
 
+/// Volume d'un ajout, d'un houblon ou d'une levure, stocké en litres : en
+/// millilitres sous 1 L (« 5 ml »), en litres au-delà (« 1,5 L »).
+String formatVolumeLigne(double litres) => litres < 1
+    ? '${formatNombre(litres * 1000, decimales: 1)}${nbsp}ml'
+    : formatLitres(litres);
+
 /// Masse d'un fermentescible, stockée en grammes, affichée en kilogrammes :
 /// « 4,5 kg » (arbitrage A9).
 String formatKilogrammes(double grams) =>

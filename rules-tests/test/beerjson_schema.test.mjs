@@ -1,6 +1,11 @@
 // v0.1.15 — documents de recettes écrits par toFirestore (app/test/fixtures/recipe_documents,
 // vérifiés à l'identique par app/test/recipe_conversion_test.dart) validés par ajv contre
 // le schéma BeerJSON partiel (ADR-005). Sans émulateur : ce fichier ne lit que des JSON.
+// v0.1.17 — fixture « imported » : valeurs lues depuis L2a (auteur, extrait, miel, fruit,
+// jus, other, houblon à l'empâtage et au conditionnement, formes plug, powder, extract et
+// leaf (wet), jour d'ajout à cru, quantités en litres, levure wheat). Les unités des
+// `amount` des listes (g ou l) sont contrôlées ici et par la lecture Dart, pas par les
+// règles.
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -23,7 +28,7 @@ function expectInvalid(validate, recipe) {
 }
 
 describe("fixtures de toFirestore : schéma partiel", () => {
-  for (const name of ["complete", "minimal", "snapshot"]) {
+  for (const name of ["complete", "minimal", "snapshot", "imported"]) {
     it(`${name} : format_version 1, recipe valide`, () => {
       const doc = fixture(name);
       assert.equal(doc.format_version, 1);
@@ -34,6 +39,42 @@ describe("fixtures de toFirestore : schéma partiel", () => {
   it("la copie figée porte la même recette que la recette complète", () => {
     assert.deepEqual(fixture("snapshot").recipe, fixture("complete").recipe);
   });
+
+  it("recette importée : quantités en litres, auteur, valeurs du schéma non proposées", () => {
+    const r = fixture("imported").recipe;
+    const units = (list) => r.ingredients[list].map((x) => x.amount.unit);
+    assert.ok(units("hop_additions").includes("l"));
+    assert.deepEqual(units("miscellaneous_additions"), ["l"]);
+    assert.deepEqual(units("culture_additions"), ["l"]);
+    assert.equal(r.author, "Brasseuse Fictive");
+    assert.equal("efficiency" in r, false);
+  });
+});
+
+describe("schéma partiel : unités des quantités des listes", () => {
+  const imported = () => fixture("imported").recipe;
+  const withAmount = (list, amount) => {
+    const r = imported();
+    r.ingredients[list][0].amount = amount;
+    return r;
+  };
+  for (const [list, amount, ok] of [
+    ["hop_additions", { value: 5, unit: "g" }, true],
+    ["hop_additions", { value: 0.005, unit: "l" }, true],
+    ["hop_additions", { value: 5, unit: "ml" }, false],
+    ["hop_additions", { value: 1, unit: "oz" }, false],
+    ["miscellaneous_additions", { value: 5, unit: "g" }, true],
+    ["miscellaneous_additions", { value: 1, unit: "each" }, false],
+    ["miscellaneous_additions", { value: 5, unit: "ml" }, false],
+    ["culture_additions", { value: 11, unit: "g" }, true],
+    ["culture_additions", { value: 1, unit: "pkg" }, false],
+    ["culture_additions", { value: 1, unit: "each" }, false],
+    ["fermentable_additions", { value: 1, unit: "kg" }, false],
+  ]) {
+    it(`${list} en ${amount.unit} : ${ok ? "accepté" : "refusé"}`, () => {
+      (ok ? expectValid : expectInvalid)(partial, withAmount(list, amount));
+    });
+  }
 });
 
 describe("schéma partiel : seules différences avec le schéma officiel", () => {

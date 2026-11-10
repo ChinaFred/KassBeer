@@ -171,6 +171,7 @@ class _BlocCoutBrassinState extends ConsumerState<BlocCoutBrassin> {
           ),
     onModifierEmbouteillage: widget.onModifierEmbouteillage,
     onMesPrix: () => unawaited(context.push(AppRoutes.prices)),
+    brassin: true,
   );
 
   bool get _offline => ref.read(grantedAccessProvider)?.offline ?? false;

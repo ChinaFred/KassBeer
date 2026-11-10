@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
-### v0.1.17 — technique
+### v0.1.18 — technique
 
 `deploy.yml` gagne un job `tag` : après un déploiement réussi, il pose le tag annoté `vX.Y.Z`
 sur le commit déployé, par l'API GitHub, au nom de `github-actions[bot]`. Une session cloud ne
@@ -18,6 +18,88 @@ désormais cinq contrôles requis, avec « Functions — lint, build, tests ». 
 fois » ajoute ce que le premier déploiement des Functions a révélé : création du compte compute
 par l'API Compute Engine, `roles/editor` retiré des comptes compute et App Engine, et droit
 d'agir au nom du compte App Engine pour `github-deploy`.
+
+### v0.1.17 — fonctionnel
+
+La quantité d'un ajout et celle d'une levure se saisissent en grammes ou en millilitres : le
+choix de l'unité se trouve avant la quantité. Une quantité en volume s'affiche en millilitres
+sous 1 L, en litres au-delà.
+
+Dans Mes prix, un houblon ou un ajout peut avoir un prix au litre, saisi en litres ou en
+millilitres (« 6,50 € les 100 ml · 65,00 €/L »). Une ligne en millilitres se chiffre alors
+avec ce prix, dans le coût d'une recette comme dans le coût figé d'un brassin. Sans prix,
+« Saisir le prix au litre » l'ouvre directement en litres. Une ligne en millilitres face à un
+prix au gramme, ou l'inverse, le dit (« votre prix est au gramme ») : aucune densité n'est
+supposée ; le message dit toujours quelle unité de prix la ligne attend (au gramme, au
+litre ou au sachet). En remplaçant un prix au gramme par un prix au litre, ou l'inverse, le
+formulaire prévient que les lignes de l'autre unité ne seront plus comptées. Deux lignes de
+même nom, l'une en grammes et l'autre en volume, sont signalées : l'auteur les remet dans la
+même unité, un autre membre duplique la recette.
+
+Kass'Beer lit et garde maintenant les valeurs des recettes venues d'autres logiciels de
+brassage, avant l'arrivée de l'import : extrait liquide ou sec, miel, fruit et jus, comptés
+comme des sucres dans la densité initiale ; houblon à l'empâtage ou au conditionnement ; cônes
+pressés, comptés comme des cônes ; houblon en poudre, en extrait ou en cônes frais ; jour
+d'ajout d'un houblon à cru ; auteur indiqué par le fichier importé, affiché sur la fiche.
+L'éditeur garde ces valeurs à l'enregistrement. Quand le calcul ne sait pas les traiter,
+« À compléter » le dit : « Nature à préciser », « Moment non pris en charge par le calcul »,
+« Forme non prise en charge par le calcul » ; l'éditeur avertit aussi sous la nature et sous
+la forme. Un houblon mesuré en volume n'est pas compté dans l'amertume, et la fiche le nomme ;
+l'en-tête des houblons ne compte que les houblons pesés dans sa masse. Dans Prévu et mesuré,
+la question sur les sucres nomme les ingrédients ajoutés hors de l'empâtage. Les choix par
+boutons passent l'un sous l'autre quand le texte est grand. Les chiffres des recettes
+existantes ne changent pas.
+
+### v0.1.17 — technique
+
+Livraison L2a d'ADR-005. ADR-007 est accepté (choix et partage d'un fichier par un canal Kotlin et
+`package:web`, sans greffon) ; son code, P28, l'extension de P17 et les lignes de `CLAUDE.md`
+arrivent avec L2b. ADR-005 reçoit les amendements de L2 : trois PR, rendement exporté pris à
+l'équipement (décision 8 remplacée), 500 recettes et 10 Mo par fichier (décision 11 modifiée),
+export BeerXML bloqué jusqu'à L3, quantités en litres, `recipe.efficiency` jamais stocké, prix au
+litre.
+
+Livraison L2a d'ADR-005 (lecture et calculs), option A retenue : `recipe.author` est stocké
+(1 à 120 caractères), `recipe.efficiency` ne l'est pas. `brewing/` : `MissingInputKind` gagne
+`fermentableKind`, `hopUse` et `hopForm` ; `FermentableInput.kind`, `HopInput.form` et
+`HopInput.massGrams` deviennent nullables (nature `other`, forme sans facteur de Tinseth,
+houblon en volume exclu de l'IBU et listé dans `RecipeCalculation.hopsWithoutMass`) ;
+`HopUse.mash` et `HopUse.package` s'ajoutent ; `FermentableKind.ofType` et
+`HopForm.ofBeerJson` remplacent les deux `fromStored` (extrait, miel, fruit, jus → sucre ;
+`plug` → cônes ; `other`, `powder`, `extract`, `leaf (wet)` → sans valeur de calcul) ;
+`CostUnit.litre` ; `MeasurementGapKind.fermentableKind` dans `compareBrewWithPlan` ;
+conversions Plato ↔ SG, SRM et Lovibond ↔ EBC, `yield.potential` → % (`conversions.dart`).
+Aucune formule ne change ; cas ajoutés d'abord à `recipe.json`, `ibu.json`,
+`brew_comparison.json`, `cost.json` et `conversions.json`. Pas de rendement de brassage ni de
+volume avant ébullition (décision 3, `BOIL_SIZE` en L2c). Application : `Quantite` (g ou l)
+pour houblons, ajouts et levures ; type de malt et forme de houblon gardés en valeur BeerJSON
+(`typesFermentable`, `formesHoublon`) ; jour d'ajout à cru (`HopLine.dayMin`) ; éditeur avec
+unité g ou ml ; deux lignes de même clé en g et en l écartées de `groupCostItems` avec la
+raison `QuantitesDeDeuxUnites`. Règles : `author` ajouté à `isBeerJsonRecipe`, `efficiency`
+refusé ; les unités des `amount` des listes restent contrôlées par le schéma partiel et la
+lecture Dart. Budget mesuré sur l'émulateur avec `author` : création d'une recette 64 `pad()`,
+création d'un brassin qui la copie 4 `pad()` (environ 40 expressions), brassin du 22 novembre
+93 `pad()` ; `efficiency` faisait dépasser la limite à la création d'un brassin. Fixture ajv
+`imported.json`. Aucun fichier de l'écran du jour ne change ; il lit les nouvelles valeurs par
+`RecipeContent.fromFirestore` et `ContenuRecette`. Aucune dépendance ne change.
+
+Prix au litre (décision du 2026-11-10) : `CostUnit.purchaseUnits` gagne `litre` (cas
+`acide-lactique-au-litre`, `litres-pour-des-litres` et `litres-pour-des-grammes` ajoutés à
+`cost.json` d'abord ; la formule du coût ne change pas) ; `users/{uid}/prices.unit` accepte
+`l` dans les règles (tests des cinq profils dans `users.test.mjs`, `ml`, `L`, `kg` et `kwh`
+refusés) ; `brew_costs.lines` porte `l` et se relit ; `purchaseUnitsOf` (litres pour houblon
+et ajout), seuil de prix inhabituel de 1 000 €/L, formulaire de prix en kg, g, L ou ml.
+Relectures : `_Choix` passe en colonne quand les libellés mesurés par `TextPainter` ne
+tiennent pas ; avertissements en `tertiary` ; `IngredientNature.ofFermentable` accepte une
+nature nulle et sert `FermentableLine.nature` ; les branches `on BrewingInputException`
+inatteignables de `recipes_repository.dart` et `brews_repository.dart` sont retirées ; tests
+de modification de `recipe.author` et de `recipe_snapshot.recipe.author`. Budget remesuré :
+modification d'une recette 61 `pad()`, prix au litre 93, coût figé de 200 lignes 94 ; création
+d'un brassin inchangée (4). `segmentsTiennent` et `BoutonsSegmentes` passent dans
+`core/presentation/segments.dart`, partagés par les choix de l'éditeur et l'unité d'un prix ;
+`TextesCout.prixIncompatible` nomme l'unité attendue de la ligne et remplace
+`TextesCout.uniteIncompatible` ; `volumeParle`, `achatParle` et `prixUnitaireParle` donnent
+la lecture d'écran des quantités et des prix.
 
 ### v0.1.16 — fonctionnel
 

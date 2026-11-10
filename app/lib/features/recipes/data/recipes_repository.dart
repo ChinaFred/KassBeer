@@ -1,4 +1,3 @@
-import 'package:brewing/brewing.dart' show BrewingInputException;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/data/lecture_document.dart';
@@ -106,10 +105,8 @@ class FirestoreRecipesRepository implements RecipesRepository {
       if (problem != null) _reportBrewSteps(id, problem);
       return DocumentValide(id, recipe);
     } on DocumentIllisible catch (error, stackTrace) {
-      return _invalid(id, error, stackTrace);
-    } on BrewingInputException catch (error, stackTrace) {
-      // Valeur stockée inconnue (nature d'un malt, forme d'un houblon) :
-      // FermentableKind et HopForm.fromStored la refusent.
+      // Depuis la v0.1.17, aucune lecture ne passe par brewing/ : un type de malt
+      // ou une forme de houblon hors du schéma lève DocumentIllisible.
       return _invalid(id, error, stackTrace);
     }
   }

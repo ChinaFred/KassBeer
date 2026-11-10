@@ -204,9 +204,10 @@ describe("recipes — valeurs des listes (BeerJSON, ADR-005)", () => {
     );
   });
 
-  // Les règles n'inspectent pas les éléments des listes : une valeur que l'application
-  // ne lit pas (extrait, houblon à l'empâtage) passe les règles. Le dépôt de données la
-  // refuse (FermentableKind.fromStored, lecture de `timing`).
+  // Les règles n'inspectent pas les éléments des listes : une valeur hors du schéma
+  // BeerJSON (type de malt « malt extract », moment « add_to_water ») passe les règles.
+  // La lecture typée de l'application la refuse (typesFermentable, lecture de
+  // `timing`) : la recette s'affiche « Recette illisible ».
   it("valeur inconnue de l'application dans une liste : acceptée par les règles", async () => {
     await expectRule(
       true,
@@ -219,9 +220,9 @@ describe("recipes — valeurs des listes (BeerJSON, ADR-005)", () => {
               {},
               {
                 ingredients: {
-                  fermentable_additions: [{ name: "X", type: "extract", amount: g(1) }],
+                  fermentable_additions: [{ name: "X", type: "malt extract", amount: g(1) }],
                   hop_additions: [
-                    { name: "X", form: "pellet", amount: g(1), timing: { use: "add_to_mash" } },
+                    { name: "X", form: "pellet", amount: g(1), timing: { use: "add_to_water" } },
                   ],
                 },
               },

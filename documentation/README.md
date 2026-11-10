@@ -3,7 +3,7 @@
 | Fichier | Contenu |
 |---|---|
 | `projet.md` | intention, utilisateurs, contraintes — écrit au démarrage |
-| `decisions/` | décisions d'architecture (ADR), une par fichier, numérotées ; ADR-001 : pile technique ; ADR-002 : dépôt public ; ADR-003 : alerte de fin de minuteur ; ADR-004 : bibliothèque de courbes ; ADR-005 : recettes en BeerJSON, échange, référentiels et recettes publiques ; ADR-006 : tickets publiés en Issues GitHub par des Cloud Functions |
+| `decisions/` | décisions d'architecture (ADR), une par fichier, numérotées ; ADR-001 : pile technique ; ADR-002 : dépôt public ; ADR-003 : alerte de fin de minuteur ; ADR-004 : bibliothèque de courbes ; ADR-005 : recettes en BeerJSON, échange, référentiels et recettes publiques ; ADR-006 : tickets publiés en Issues GitHub par des Cloud Functions ; ADR-007 : choix et partage d'un fichier (canal Kotlin, `package:web`) |
 | `DATA_SOURCES.md` | sources de données externes : versions, licences, correspondances |
 | `exigences-fonctionnelles.md` | parcours, modules, rôles, règles d'accès |
 | `exigences-techniques.md` | architecture, modèle de données, règles d'accès, intégrations |

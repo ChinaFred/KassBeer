@@ -1,4 +1,3 @@
-import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -168,6 +167,8 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       yeasts: List.unmodifiable(_yeasts),
       mashSteps: List.unmodifiable(_steps),
       importedFrom: initial?.importedFrom,
+      // Conservé d'un import, sans champ de saisie (I9).
+      author: initial?.author,
     );
   }
 
@@ -540,7 +541,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         for (final h in calculs.calculation.hopsLongerThanBoil) h.index,
     };
     final fermentableTotal = _fermentables.fold(0.0, (s, f) => s + f.weightG);
-    final hopTotal = _hops.fold(0.0, (s, h) => s + h.weightG);
+    final author = widget.initial?.content.author;
     final ids = {for (final e in equipment) e.id};
     Widget section(_Section s, String title, {String? trailing}) =>
         KeyedSubtree(
@@ -588,6 +589,11 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           }),
         ),
       ),
+      if (author != null)
+        LigneFiche(
+          label: 'Auteur indiqué par le fichier importé',
+          value: author,
+        ),
       const SizedBox(height: 8),
       TextFormField(
         controller: _style,
@@ -669,12 +675,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       for (final (i, f) in _fermentables.indexed)
         LigneEditeur(
           title: f.name,
-          details: [
-            f.kind == FermentableKind.malt ? 'Malt' : 'Sucre',
-            formatKilogrammes(f.weightG),
-            if (f.ebc != null) formatEbc(f.ebc!),
-            if (f.yieldPct != null) 'rendement ${formatPourcent(f.yieldPct!)}',
-          ],
+          details: detailsFermentescible(f, fiche: false),
           warning: f.weightG > kUnusualFermentableGrams
               ? quantiteInhabituelle(formatKilogrammes(f.weightG))
               : null,
@@ -695,26 +696,14 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
             ? '$kMaxFermentables malts et sucres au plus.'
             : null,
       ),
-      section(
-        _Section.hops,
-        'Houblons',
-        trailing: _hops.isEmpty
-            ? null
-            : '${_hops.length} · ${formatGrammes(hopTotal)}',
-      ),
+      section(_Section.hops, 'Houblons', trailing: enteteHoublons(_hops)),
       for (final (i, h) in _hops.indexed)
         LigneEditeur(
           title: h.name,
-          details: [
-            _hopMoment(h),
-            formatGrammes(h.weightG),
-            if (h.alphaPct != null) '${formatPourcent(h.alphaPct!)} alpha',
-            libelleFormeHoublon(h.form),
-            if (hopIbu[i] != null) formatIbu(hopIbu[i]!),
-          ],
+          details: detailsHoublon(h, fiche: false, ibu: hopIbu[i]),
           warning: [
-            if (h.weightG > kUnusualHopGrams)
-              quantiteInhabituelle(formatGrammes(h.weightG)),
+            if (_inhabituelle(h.amount, kUnusualHopGrams))
+              quantiteInhabituelle(formatQuantiteRecette(h.amount)),
             if (longer.contains(i))
               'Plus long que l\'ébullition de la recette.',
           ].join(' ').nullIfEmpty,
@@ -738,8 +727,8 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         LigneEditeur(
           title: o.name,
           details: detailsAjout(o),
-          warning: o.weightG > kUnusualOtherGrams
-              ? quantiteInhabituelle(formatGrammes(o.weightG))
+          warning: _inhabituelle(o.amount, kUnusualOtherGrams)
+              ? quantiteInhabituelle(formatQuantiteRecette(o.amount))
               : null,
           onTap: () => _openOther(i),
           onDuplicate: () => _duplicateLine(_others, i, kMaxOthers),
@@ -810,16 +799,10 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ];
   }
 
-  String _hopMoment(HopLine h) {
-    final t = h.timeMin;
-    return switch (h.use) {
-      HopUse.boil =>
-        t == null ? 'Ébullition' : 'Ébullition ${formatMinutes(t)}',
-      HopUse.afterBoil =>
-        t == null ? 'Whirlpool' : 'Whirlpool ${formatMinutes(t)}',
-      HopUse.dryHop => t == null ? 'À cru' : 'À cru ${formatJours(t)}',
-    };
-  }
+  /// Quantité au-delà de [thresholdGrams] grammes, ou de [kUnusualLineLitres]
+  /// litres (U6).
+  static bool _inhabituelle(Quantite q, double thresholdGrams) =>
+      q.valeur > (q.enLitres ? kUnusualLineLitres : thresholdGrams);
 }
 
 extension on String {

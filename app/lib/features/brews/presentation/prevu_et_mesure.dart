@@ -379,13 +379,17 @@ class _Tableau extends ConsumerWidget {
     final provisoire =
         brew.status == BrewStatus.fermenting && brew.fgEventId == null;
     final finaleAuto = provisoire;
-    final hasSugar = brew.recipe.fermentables.any(
-      (f) => f.kind == FermentableKind.sugar,
-    );
-    final ligneSucres = !hasSugar
+    // Tout ce qui n'est pas un malt, nature à préciser comprise, comme
+    // compareBrewWithPlan (brewing/).
+    final nonMaltes = {
+      for (final f in brew.recipe.fermentables)
+        if (f.kind != FermentableKind.malt) f.name.trim(),
+    }.toList();
+    final ligneSucres = nonMaltes.isEmpty
         ? null
         : mine
         ? _QuestionSucres(
+            question: questionSucres(nonMaltes),
             valeur: brew.sugarsInWort,
             onChanged: (v) =>
                 unawaited(uneAction(() => _sucres(context, ref, v))),
@@ -455,7 +459,7 @@ class _Tableau extends ConsumerWidget {
         ecart: (v) => formatEcart(v, unite: '%${nbsp}vol'),
         suffixeValeur: provisoire ? 'provisoire' : null,
         avertissements: [
-          if (hasSugar && brew.sugarsInWort == false)
+          if (nonMaltes.isNotEmpty && brew.sugarsInWort == false)
             'Les sucres ajoutés après cette densité initiale ne comptent pas '
                 'dans ce degré.',
         ],
@@ -695,11 +699,18 @@ _Raisons _raisonsRendement(
         }
       case MeasurementGapKind.extractYield:
         lignes.add('Rendement d\'extrait non renseigné : ${_noms(gap)}.');
+      case MeasurementGapKind.fermentableKind:
+        lignes.add(
+          'Nature inconnue dans la recette du brassin : ${_noms(gap)}. Le '
+          'rendement ne peut pas être calculé.',
+        );
       case MeasurementGapKind.sugarsInWort:
         lignes.add(
           mine
-              ? 'Indiquez si les sucres étaient dans le moût à cette mesure.'
-              : 'Le brasseur n\'a pas indiqué si les sucres étaient dans le moût.',
+              ? "Indiquez si les ingrédients ajoutés hors de l'empâtage étaient dans le "
+                    'moût à cette mesure.'
+              : "Le brasseur n'a pas indiqué si les ingrédients ajoutés hors de "
+                    "l'empâtage étaient dans le moût.",
         );
       case MeasurementGapKind.finalGravity:
         break;
@@ -713,8 +724,17 @@ String _noms(MeasurementGap gap) =>
 
 const _tabulaire = [FontFeature.tabularFigures()];
 
-/// Question posée quand la copie figée contient un sucre (RR3).
-const _kQuestionSucres = 'Les sucres étaient-ils dans le moût à cette mesure ?';
+/// Question posée quand la copie figée contient autre chose qu'un malt (RR3) :
+/// sucre, miel, fruit, jus, extrait de malt, nature à préciser. Elle nomme ces
+/// ingrédients, tels que la recette les écrit (« Les ingrédients ajoutés hors
+/// de l'empâtage (Candi, Miel) étaient-ils dans le moût à cette mesure ? ») ;
+/// « hors de l'empâtage » reste juste pour un extrait de malt, qui n'est pas
+/// empâté. Les noms n'ont pas d'article : la phrase ne dépend pas de leur genre.
+String questionSucres(List<String> noms) => noms.length == 1
+    ? 'L\'ingrédient ajouté hors de l\'empâtage (${noms.single}) était-il '
+          'dans le moût à cette mesure ?'
+    : 'Les ingrédients ajoutés hors de l\'empâtage (${noms.join(', ')}) '
+          'étaient-ils dans le moût à cette mesure ?';
 
 class _EnTeteTableau extends StatelessWidget {
   const _EnTeteTableau();
@@ -989,8 +1009,13 @@ class _LigneComparaison extends StatelessWidget {
 }
 
 class _QuestionSucres extends StatelessWidget {
-  const _QuestionSucres({required this.valeur, required this.onChanged});
+  const _QuestionSucres({
+    required this.question,
+    required this.valeur,
+    required this.onChanged,
+  });
 
+  final String question;
   final bool? valeur;
   final ValueChanged<bool> onChanged;
 
@@ -1001,11 +1026,11 @@ class _QuestionSucres extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const ExcludeSemantics(child: Text(_kQuestionSucres)),
+          ExcludeSemantics(child: Text(question)),
           const SizedBox(height: 4),
           Semantics(
             container: true,
-            label: _kQuestionSucres,
+            label: question,
             child: SegmentedButton<bool>(
               segments: const [
                 ButtonSegment(value: true, label: Text('Oui')),

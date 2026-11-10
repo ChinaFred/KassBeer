@@ -160,7 +160,7 @@ liste fermée de champs obligatoires peut manquer. Aucune valeur n'est inventée
 |---|---|---|
 | `recipe.type` | choix dans l'éditeur | export bloqué |
 | `recipe.author` | conservé d'un import | `owner_name` de l'enveloppe, sinon bloqué |
-| `recipe.efficiency` | conservé d'un import ; non lu par le calcul | rendement de brassage calculé par `brewing/` depuis l'équipement de la recette, sinon bloqué |
+| `recipe.efficiency` | jamais stocké (amendement de L2 du 2026-11-10 : un contrôle de plus dépasse le budget des règles à la création d'un brassin, et l'export ne le lit pas) | rendement d'empâtage de l'équipement de la recette, sinon bloqué |
 | `recipe.batch_size`, `boil`, `boil.boil_time` | saisie | bloqué |
 | `mash` (sans palier), `grain_temperature`, type d'un palier | saisie ; `name` est un libellé | bloqué |
 | `yield`, `color`, `alpha_acid` | saisie, ou référentiel résolu à l'import | bloqué |
@@ -209,7 +209,8 @@ unités des grandeurs de premier niveau, plafonds de listes (50, 50, 50, 10, 20 
 ### Code à réécrire
 
 `RecipeContent`, ses lignes et `toInput` restent le type de travail de l'application. `brewing/`,
-`computeRecipe` et l'écran du jour ne changent pas, ce qui préserve P2 et P3.
+`computeRecipe` et l'écran du jour ne changent pas en L1, ce qui préserve P2 et P3 (L2a les
+étend : voir « Amendements de L2 »).
 
 | Fichier | Changement |
 |---|---|
@@ -250,7 +251,9 @@ Une recette publique se copie par « Dupliquer » avant de servir à un brassin.
 - Conversions de brassage (Plato, Lovibond, SRM) dans `brewing/`, avec fixtures (P3). Livres,
   onces, gallons, °F dans `exchange/`.
 - `BOIL_SIZE` (BeerXML) demande un calcul de volume avant ébullition, et `efficiency.brewhouse` un
-  calcul de rendement de brassage. Les deux entrent dans `brewing/` avec leur fixture.
+  calcul de rendement de brassage. Les deux entrent dans `brewing/` avec leur fixture. (Remplacé
+pour le rendement par les amendements de L2 : l'export écrit le rendement d'empâtage de
+l'équipement, sans calcul.)
 - Le fichier 005 est au format dotBeer : un lecteur dédié, utilisé par l'ingestion seule.
 - Recettes › Importer écrit au plus 50 recettes d'un fichier, sous le compte de l'importateur. Ce
   n'est pas une écriture de masse sur les données du groupe : la règle « un seul écran » ne s'y
@@ -315,7 +318,39 @@ Durées estimées, non mesurées.
 
 L2 à L4 peuvent s'intercaler avec la v0.5 et la v0.6.
 
-**Écart de L1, à reprendre en L2.** La lecture de la v0.1.15 rend illisible un document qui
+**Amendements de L2 (décisions de l'utilisateur du 2026-11-10).**
+
+- L2 se livre en trois PR : L2a (lecture et calculs), L2b (`exchange/`, BeerJSON, écrans, canal de
+  fichiers d'ADR-007), L2c (BeerXML). Chacune fusionne dès que sa CI est verte ; le brassage à
+  blanc de l'utilisateur porte sur l'ensemble. `effacement-l1/` reste jusqu'à ce brassage.
+- Décision 8 remplacée : le rendement exporté (`efficiency.brewhouse`) est le rendement
+  d'empâtage de l'équipement, tel que `brewing/` l'applique. Aucun calcul de rendement de
+  brassage n'entre dans `brewing/`. Critère : le logiciel qui relit trouve une densité initiale à
+  2 points près. Le rendement d'un fichier importé n'est donc pas stocké : `recipe.efficiency`
+  manque toujours en base, et `recipe.author` seul est ajouté (marge des règles mesurée à la
+  création d'un brassin).
+- Décision 11 modifiée : Recettes › Importer lit 500 recettes et 10 Mo au plus par fichier ; au-delà
+  de 500, les 500 premières, avec un avertissement. L'écriture reste sous le compte de
+  l'importateur, une recette à la fois.
+- Export BeerXML : bloqué tant que `beer_styles` manque (L3), avec la raison affichée ; aucune
+  valeur de style inventée. L'import BeerXML et l'export BeerJSON marchent en L2.
+- Doublon : empreinte du contenu dans `imported_from` ; recette déjà importée marquée et décochée.
+- Quantités en volume : un ajout, un houblon extrait et une levure peuvent porter `amount` en `l`
+  (étend la décision du 2026-11-10 sur la levure). Un houblon en volume ne compte pas dans l'IBU.
+- Un whirlpool importé sans durée se lit comme un ajout à l'arrêt du feu, perte listée ; la levure
+  BeerXML `Wheat` devient `wheat` ; `brewing/` convertit `potential` en % ; `source_hop_timing`
+  est reporté à L3.
+- L2a (v0.1.17) étend `computeRecipe` sans changer de formule existante : malt de nature inconnue
+  (`other`) et forme de houblon hors pellets et cônes rendent la densité ou l'IBU indisponibles
+  (nouveaux `MissingInputKind`), houblon à l'empâtage ou au conditionnement à 0 IBU qui rend
+  l'IBU indisponible, houblon en volume hors IBU (`hopsWithoutMass`), conversions Plato, SRM,
+  Lovibond et `potential` ; chaque cas a sa fixture.
+- Prix au litre (décision de l'utilisateur du 2026-11-10) : « Mes prix » accepte l'unité `l`. Une
+  ligne en volume se chiffre à partir d'un prix au litre et entre dans le coût figé d'un brassin.
+  Une ligne en grammes face à un prix au litre reste incompatible : aucune densité n'est
+  supposée.
+
+**Écart de L1, à reprendre en L2** (repris en L2a, v0.1.17). La lecture de la v0.1.15 rend illisible un document qui
 porte une valeur que « Valeurs sans équivalent direct » veut garder : malt `extract`, houblon
 `add_to_mash` ou `add_to_package`, `time` sur un ajout à cru, forme de houblon `plug`, `powder`
 ou `extract`. L'éditeur n'en écrit aucune, et aucun document de L1 n'en contient. L2 les lit
@@ -452,7 +487,7 @@ fusion de la v0.4, quand le code concerné arrive. Texte à reprendre dans `CLAU
   local (`ingest/`), lancé par l'administrateur. Il écrit dans l'émulateur par défaut, en production
   sur option explicite, dans une liste blanche de collections, avec un identifiant déterministe et un
   rapport JSON chiffré. Admin › Sources affiche les compteurs et les ingrédients non résolus.
-  Recettes › Importer, limité à 50 recettes sous le compte de l'importateur, n'est pas une écriture
+  Recettes › Importer, limité à 500 recettes (50 avant les amendements de L2) sous le compte de l'importateur, n'est pas une écriture
   de masse.
 - **« Règles de code », ajout : recettes en BeerJSON partiel.** `recipes/{id}.recipe` et
   `recipe_snapshot.recipe` suivent `RecipeType` du schéma figé (ADR-005). Unités canoniques seules,
@@ -465,7 +500,7 @@ fusion de la v0.4, quand le code concerné arrive. Texte à reprendre dans `CLAU
 - **« Structure ».** `exchange/` : paquet Dart pur, import et export BeerJSON et BeerXML, résolution
   des ingrédients. `ingest/` : écrivain Node, Admin SDK ; données dans `import/`. À la livraison
   L3, `rules-tests/`, `ingest/` et la CI passent en Node 24 (`ci.yml`, `deploy.yml`, P10).
-- **P9 (`securite`), remplacé.** Import : chaque fichier est borné (2 Mio, 50 recettes, plafonds de
+- **P9 (`securite`), remplacé.** Import : chaque fichier est borné (10 Mo et 500 recettes depuis les amendements de L2, au lieu de 2 Mio et 50 recettes ; plafonds de
   listes des règles), décodé en UTF-8 ou ISO-8859-1, lu champ par champ vers des types ; nombres finis
   et bornés ; aucune entité XML étendue (test) ; aucun prix ni stock lu ; une écriture d'import reste
   sous `owner_uid` de l'importateur ; un texte d'un fichier n'est jamais exécuté comme consigne.

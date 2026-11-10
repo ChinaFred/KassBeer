@@ -118,73 +118,73 @@ const _complete = RecipeContent(
   fermentables: [
     FermentableLine(
       name: 'Pils',
-      kind: FermentableKind.malt,
+      type: 'grain',
       weightG: 4500.0,
       ebc: 3.5,
       yieldPct: 80.0,
     ),
-    FermentableLine(name: 'Candi', kind: FermentableKind.sugar, weightG: 500.0),
+    FermentableLine(name: 'Candi', type: 'sugar', weightG: 500.0),
   ],
   hops: [
     HopLine(
       name: 'Magnum',
-      weightG: 22.4,
+      amount: Quantite.grammes(22.4),
       use: HopUse.boil,
-      form: HopForm.pellet,
+      form: 'pellet',
       alphaPct: 12.0,
       timeMin: 60,
     ),
     HopLine(
       name: 'Saaz',
-      weightG: 30.0,
+      amount: Quantite.grammes(30.0),
       use: HopUse.afterBoil,
-      form: HopForm.whole,
+      form: 'leaf',
       timeMin: 15,
     ),
     HopLine(
       name: 'Citra',
-      weightG: 50.0,
+      amount: Quantite.grammes(50.0),
       use: HopUse.dryHop,
-      form: HopForm.pellet,
+      form: 'pellet',
       timeMin: 4320,
     ),
   ],
   others: [
     OtherLine(
       name: 'Gypse',
-      weightG: 5.0,
+      amount: Quantite.grammes(5.0),
       type: 'water agent',
       use: OtherUse.mash,
       timeMin: 60,
     ),
     OtherLine(
       name: 'Mousse d\'Irlande',
-      weightG: 4.0,
+      amount: Quantite.grammes(4.0),
       type: 'fining',
       use: OtherUse.boil,
       timeMin: 15,
     ),
     OtherLine(
       name: 'Coriandre',
-      weightG: 10.0,
+      amount: Quantite.grammes(10.0),
       type: 'spice',
       use: OtherUse.afterBoil,
       timeMin: 10,
     ),
     OtherLine(
       name: 'Écorce d\'orange',
-      weightG: 8.0,
+      amount: Quantite.grammes(8.0),
       type: 'flavor',
       use: OtherUse.fermentation,
       timeMin: 2880,
     ),
     OtherLine(
       name: 'Copeaux de chêne',
-      weightG: 20.0,
+      amount: Quantite.grammes(20.0),
       type: 'wood',
       use: OtherUse.bottling,
     ),
-    OtherLine(name: 'Sel', weightG: 2.0),
+    OtherLine(name: 'Sel', amount: Quantite.grammes(2.0)),
   ],
   yeasts: [
     YeastLine(
@@ -192,7 +192,7 @@ const _complete = RecipeContent(
       type: 'ale',
       form: 'dry',
       attenuationPct: 78.0,
-      amountG: 11.5,
+      amount: Quantite.grammes(11.5),
     ),
   ],
   mashSteps: [
@@ -217,6 +217,118 @@ const _complete = RecipeContent(
       tempC: 66,
     ),
     BrewStepLine(key: 'k-ebullition', name: 'Ébullition', durationMin: 60),
+  ],
+);
+
+/// Recette importée qui porte les valeurs lues depuis la v0.1.17 (L2a
+/// d'ADR-005) : auteur, malts extrait, miel, fruit, jus et `other`, houblons à
+/// l'empâtage et au conditionnement, formes `plug`, `powder`, `extract` et
+/// `leaf (wet)`, jour d'ajout à cru, quantités en litres, levure `wheat`.
+const _imported = RecipeContent(
+  name: 'Import de test',
+  type: 'extract',
+  author: 'Brasseuse Fictive',
+  batchVolumeL: 20.0,
+  boilTimeMin: 60,
+  fermentables: [
+    FermentableLine(
+      name: 'Extrait liquide clair',
+      type: 'extract',
+      weightG: 3000.0,
+      ebc: 8.0,
+      yieldPct: 78.0,
+    ),
+    FermentableLine(
+      name: 'Extrait sec',
+      type: 'dry extract',
+      weightG: 500.0,
+      ebc: 6.0,
+      yieldPct: 95.0,
+    ),
+    FermentableLine(
+      name: 'Miel de fleurs',
+      type: 'honey',
+      weightG: 250.0,
+      ebc: 2.0,
+      yieldPct: 75.0,
+    ),
+    FermentableLine(name: 'Framboises', type: 'fruit', weightG: 1000.0),
+    FermentableLine(name: 'Jus de pomme', type: 'juice', weightG: 300.0),
+    FermentableLine(name: 'Sirop maison', type: 'other', weightG: 200.0),
+  ],
+  hops: [
+    HopLine(
+      name: 'Saaz',
+      amount: Quantite.grammes(20.0),
+      use: HopUse.mash,
+      form: 'leaf',
+      alphaPct: 3.5,
+      timeMin: 60,
+    ),
+    HopLine(
+      name: 'Fuggles',
+      amount: Quantite.grammes(15.0),
+      use: HopUse.boil,
+      form: 'plug',
+      alphaPct: 4.5,
+      timeMin: 30,
+    ),
+    HopLine(
+      name: 'Cascade',
+      amount: Quantite.grammes(10.0),
+      use: HopUse.boil,
+      form: 'powder',
+      alphaPct: 6.0,
+      timeMin: 10,
+    ),
+    HopLine(
+      name: 'Extrait de houblon',
+      amount: Quantite.litres(0.005),
+      use: HopUse.boil,
+      form: 'extract',
+      alphaPct: 50.0,
+      timeMin: 60,
+    ),
+    HopLine(
+      name: 'Houblon frais',
+      amount: Quantite.grammes(100.0),
+      use: HopUse.afterBoil,
+      form: 'leaf (wet)',
+      timeMin: 20,
+    ),
+    HopLine(
+      name: 'Citra',
+      amount: Quantite.grammes(50.0),
+      use: HopUse.dryHop,
+      form: 'pellet',
+      alphaPct: 12.0,
+      timeMin: 4320,
+      dayMin: 4320,
+    ),
+    HopLine(
+      name: 'Mosaic',
+      amount: Quantite.grammes(5.0),
+      use: HopUse.package,
+      form: 'pellet',
+    ),
+  ],
+  others: [
+    OtherLine(
+      name: 'Acide lactique',
+      amount: Quantite.litres(0.005),
+      type: 'water agent',
+      use: OtherUse.mash,
+      timeMin: 60,
+    ),
+  ],
+  yeasts: [
+    YeastLine(
+      name: 'Levure de blanche liquide',
+      type: 'wheat',
+      form: 'liquid',
+      attenuationPct: 75.0,
+      amount: Quantite.litres(0.1),
+    ),
   ],
 );
 
@@ -257,7 +369,7 @@ RecipeInput _inputFromFlat(Map<String, dynamic> doc) {
       for (final f in rows('fermentables'))
         FermentableInput(
           name: f['name'] as String,
-          kind: FermentableKind.fromStored(f['kind'] as String),
+          kind: FermentableKind.ofType(f['kind'] as String),
           massGrams: n(f, 'weight_g')!,
           colorEbc: n(f, 'ebc'),
           yieldPercent: n(f, 'yield_pct'),
@@ -269,7 +381,7 @@ RecipeInput _inputFromFlat(Map<String, dynamic> doc) {
           name: h['name'] as String,
           massGrams: n(h, 'weight_g')!,
           use: uses[h['use']]!,
-          form: HopForm.fromStored(h['form'] as String),
+          form: HopForm.ofBeerJson(h['form'] as String),
           alphaPercent: n(h, 'alpha_pct'),
           minutes: n(h, 'time_min'),
         ),
@@ -328,12 +440,13 @@ void main() {
         (HopUse.afterBoil, 15),
         (HopUse.dryHop, 4320),
       ]);
-      expect(c.hops.map((h) => h.form), [
+      expect(c.hops.map((h) => h.form), ['pellet', 'leaf', 'pellet']);
+      expect(c.hops.map((h) => h.calcForm), [
         HopForm.pellet,
         HopForm.whole,
         HopForm.pellet,
       ]);
-      expect(c.hops.first.weightG, 22.4);
+      expect(c.hops.first.amount, const Quantite.grammes(22.4));
       final gypse = c.others.single;
       expect(
         (gypse.type, gypse.use, gypse.timeMin),
@@ -341,8 +454,8 @@ void main() {
       );
       final yeast = c.yeasts.single;
       expect(
-        (yeast.type, yeast.form, yeast.attenuationPct, yeast.amountG),
-        ('ale', 'dry', 78, 11.5),
+        (yeast.type, yeast.form, yeast.attenuationPct, yeast.amount),
+        ('ale', 'dry', 78, const Quantite.grammes(11.5)),
       );
       final step = c.mashSteps.single;
       expect((step.type, step.tempC, step.durationMin), ('infusion', 67, 60));
@@ -498,12 +611,19 @@ void main() {
       illisible(step, 'recipe.mash.mash_steps[0].type');
     });
 
-    test('moment d\x27un houblon sans équivalent dans brewing/', () {
-      final mash = _doc();
-      (_list(mash, 'hop_additions').first as Map)['timing'] = {
-        'use': 'add_to_mash',
+    test('moment d\x27un houblon hors du schéma, absent, ou durée perdue', () {
+      final water = _doc();
+      (_list(water, 'hop_additions').first as Map)['timing'] = {
+        'use': 'add_to_water',
       };
-      illisible(mash, 'recipe.ingredients.hop_additions[0].timing.use');
+      illisible(water, 'recipe.ingredients.hop_additions[0].timing.use');
+      // L'empâtage et le conditionnement n'écrivent que `duration`.
+      final mashTime = _doc();
+      (_list(mashTime, 'hop_additions').first as Map)['timing'] = {
+        'use': 'add_to_mash',
+        'time': _min(10),
+      };
+      illisible(mashTime, 'recipe.ingredients.hop_additions[0].timing.time');
       final absent = _doc();
       (_list(absent, 'hop_additions').first as Map).remove('timing');
       illisible(absent, 'recipe.ingredients.hop_additions[0].timing');
@@ -520,22 +640,50 @@ void main() {
       );
     });
 
-    test('nature d\x27un malt ou forme d\x27un houblon inconnue : '
-        'BrewingInputException', () {
-      final extract = _doc();
-      (_list(extract, 'fermentable_additions').first as Map)['type'] =
-          'extract';
-      expect(
-        () => RecipeContent.fromFirestore(extract),
-        throwsA(isA<BrewingInputException>()),
-      );
-      final plug = _doc();
-      (_list(plug, 'hop_additions').first as Map)['form'] = 'plug';
-      expect(
-        () => RecipeContent.fromFirestore(plug),
-        throwsA(isA<BrewingInputException>()),
-      );
-    });
+    test(
+      'type d\x27un malt ou forme d\x27un houblon hors du schéma, ou absent',
+      () {
+        final malt = _doc();
+        (_list(malt, 'fermentable_additions').first as Map)['type'] = 'malt';
+        illisible(malt, 'recipe.ingredients.fermentable_additions[0].type');
+        final noType = _doc();
+        (_list(noType, 'fermentable_additions').first as Map).remove('type');
+        illisible(noType, 'recipe.ingredients.fermentable_additions[0].type');
+        final whole = _doc();
+        (_list(whole, 'hop_additions').first as Map)['form'] = 'whole';
+        illisible(whole, 'recipe.ingredients.hop_additions[0].form');
+      },
+    );
+
+    test(
+      'quantité d\x27un houblon, d\x27un ajout ou d\x27une levure : g ou l',
+      () {
+        for (final (list, unit) in [
+          ('hop_additions', 'ml'),
+          ('hop_additions', 'kg'),
+          ('miscellaneous_additions', 'ml'),
+          ('miscellaneous_additions', 'each'),
+          ('culture_additions', 'pkg'),
+        ]) {
+          final doc = _doc();
+          (_list(doc, list).first as Map)['amount'] = {
+            'value': 5,
+            'unit': unit,
+          };
+          illisible(doc, 'recipe.ingredients.$list[0].amount.unit');
+        }
+        // Un malt reste en grammes (décision du 2026-11-10).
+        final malt = _doc();
+        (_list(malt, 'fermentable_additions').first as Map)['amount'] = {
+          'value': 1,
+          'unit': 'l',
+        };
+        illisible(
+          malt,
+          'recipe.ingredients.fermentable_additions[0].amount.unit',
+        );
+      },
+    );
 
     test('champ obligatoire absent : aucune valeur par défaut', () {
       final doc = _doc();
@@ -625,7 +773,11 @@ void main() {
         const content = RecipeContent(
           name: 'R',
           others: [
-            OtherLine(name: 'Coriandre', weightG: 10, use: OtherUse.afterBoil),
+            OtherLine(
+              name: 'Coriandre',
+              amount: Quantite.grammes(10),
+              use: OtherUse.afterBoil,
+            ),
           ],
         );
         final written = content.toFirestore(creation: true);
@@ -648,15 +800,18 @@ void main() {
       expect(
         () => const HopLine(
           name: 'Saaz',
-          weightG: 10,
+          amount: Quantite.grammes(10),
           use: HopUse.afterBoil,
-          form: HopForm.pellet,
+          form: 'pellet',
         ).toFirestore(),
         throwsArgumentError,
       );
       expect(
-        () =>
-            const OtherLine(name: 'Sel', weightG: 1, timeMin: 5).toFirestore(),
+        () => const OtherLine(
+          name: 'Sel',
+          amount: Quantite.grammes(1),
+          timeMin: 5,
+        ).toFirestore(),
         throwsArgumentError,
       );
     });
@@ -712,6 +867,13 @@ void main() {
       expect(
         _json(_complete.toFirestore(creation: true)),
         _json(jsonDecode(_fixture('complete'))),
+      );
+    });
+
+    test('recette importée : valeurs lues depuis la v0.1.17', () {
+      expect(
+        _json(_imported.toFirestore(creation: true)),
+        _json(jsonDecode(_fixture('imported'))),
       );
     });
 
@@ -844,22 +1006,14 @@ void main() {
     });
 
     test('malts par masse décroissante, houblons par moment', () {
-      const a = FermentableLine(
-        name: 'A',
-        kind: FermentableKind.malt,
-        weightG: 500,
-      );
-      const b = FermentableLine(
-        name: 'B',
-        kind: FermentableKind.malt,
-        weightG: 4500,
-      );
+      const a = FermentableLine(name: 'A', type: 'grain', weightG: 500);
+      const b = FermentableLine(name: 'B', type: 'grain', weightG: 4500);
       expect(sortFermentables([a, b]).map((f) => f.name), ['B', 'A']);
       HopLine hop(String name, HopUse use, [int? t]) => HopLine(
         name: name,
-        weightG: 10,
+        amount: Quantite.grammes(10),
         use: use,
-        form: HopForm.pellet,
+        form: 'pellet',
         timeMin: t,
       );
       final sorted = sortHops([
@@ -869,6 +1023,112 @@ void main() {
         hop('60', HopUse.boil, 60),
       ]);
       expect(sorted.map((h) => h.name), ['60', '10', 'wp', 'cru']);
+      // Ordre du brassage : empâtage d'abord, conditionnement en dernier.
+      expect(
+        sortHops([
+          hop('cond', HopUse.package),
+          hop('60', HopUse.boil, 60),
+          hop('emp', HopUse.mash, 60),
+        ]).map((h) => h.name),
+        ['emp', '60', 'cond'],
+      );
+    });
+  });
+
+  group('v0.1.17 — valeurs importées lues (L2a d\x27ADR-005)', () {
+    Map<String, dynamic> imported() =>
+        jsonDecode(_fixture('imported')) as Map<String, dynamic>;
+
+    test('fixture lue vers les types de travail', () {
+      final c = RecipeContent.fromFirestore(imported());
+      expect(c.author, 'Brasseuse Fictive');
+      expect(c.fermentables.map((f) => (f.type, f.kind)), [
+        ('extract', FermentableKind.sugar),
+        ('dry extract', FermentableKind.sugar),
+        ('honey', FermentableKind.sugar),
+        ('fruit', FermentableKind.sugar),
+        ('juice', FermentableKind.sugar),
+        ('other', null),
+      ]);
+      expect(c.hops.map((h) => (h.use, h.form, h.calcForm)), [
+        (HopUse.mash, 'leaf', HopForm.whole),
+        (HopUse.boil, 'plug', HopForm.whole),
+        (HopUse.boil, 'powder', null),
+        (HopUse.boil, 'extract', null),
+        (HopUse.afterBoil, 'leaf (wet)', null),
+        (HopUse.dryHop, 'pellet', HopForm.pellet),
+        (HopUse.package, 'pellet', HopForm.pellet),
+      ]);
+      expect(c.hops[3].amount, const Quantite.litres(0.005));
+      expect(c.hops[5].dayMin, 4320);
+      expect(c.others.single.amount, const Quantite.litres(0.005));
+      expect(c.yeasts.single.amount, const Quantite.litres(0.1));
+      expect(c.yeasts.single.type, 'wheat');
+    });
+
+    test('I9 : relue puis enregistrée sans changement, recipe identique', () {
+      final doc = imported();
+      final read = RecipeContent.fromFirestore(doc);
+      final written = read.toFirestore(creation: false);
+      expect(_json(written['recipe']), _json(doc['recipe']));
+      // L'auteur et la quantité en litres passent aussi par la copie figée.
+      final snapshot = recipeSnapshot(
+        Recipe(id: 'r-i', ownerUid: 'uid-a', content: read),
+      );
+      expect(_json(snapshot['recipe']), _json(doc['recipe']));
+      expect(
+        _json(
+          RecipeContent.fromFirestore(
+            snapshot,
+          ).toFirestore(creation: true)['recipe'],
+        ),
+        _json(doc['recipe']),
+      );
+    });
+
+    test('Dupliquer garde l\x27auteur de la recette d\x27origine', () {
+      expect(_imported.duplicate().author, 'Brasseuse Fictive');
+    });
+
+    test('auteur vide ou blanc : absent', () {
+      const blank = RecipeContent(name: 'Sans auteur', author: '  ');
+      final recipe =
+          blank.toFirestore(creation: true)['recipe'] as Map<String, Object?>;
+      expect(recipe.containsKey('author'), isFalse);
+    });
+
+    test('toInput : nature, forme, masse de chaque ligne', () {
+      final input = _imported.toInput();
+      expect(input.fermentables.map((f) => f.kind), [
+        FermentableKind.sugar,
+        FermentableKind.sugar,
+        FermentableKind.sugar,
+        FermentableKind.sugar,
+        FermentableKind.sugar,
+        null,
+      ]);
+      expect(input.hops.map((h) => (h.use, h.form, h.massGrams)), [
+        (HopUse.mash, HopForm.whole, 20.0),
+        (HopUse.boil, HopForm.whole, 15.0),
+        (HopUse.boil, null, 10.0),
+        (HopUse.boil, null, null),
+        (HopUse.afterBoil, null, 100.0),
+        (HopUse.dryHop, HopForm.pellet, 50.0),
+        (HopUse.package, HopForm.pellet, 5.0),
+      ]);
+    });
+
+    test('calculs : nature à préciser, moment et forme non pris en charge, '
+        'houblon en volume', () {
+      final c = computeRecipe(recipe: _imported.toInput());
+      final kinds = {
+        for (final m in c.missingInputs)
+          m.kind: [for (final i in m.items) i.name],
+      };
+      expect(kinds[MissingInputKind.fermentableKind], ['Sirop maison']);
+      expect(kinds[MissingInputKind.hopUse], ['Saaz', 'Mosaic']);
+      expect(kinds[MissingInputKind.hopForm], ['Cascade']);
+      expect(c.hopsWithoutMass.map((h) => h.name), ['Extrait de houblon']);
     });
   });
 }

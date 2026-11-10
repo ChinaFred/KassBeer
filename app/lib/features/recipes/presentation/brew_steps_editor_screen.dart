@@ -17,6 +17,7 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
+import 'contenu_recette.dart';
 import 'ingredient_forms.dart';
 import 'recipe_detail_screen.dart';
 import 'recipes_providers.dart';
@@ -77,7 +78,7 @@ String nomEtapePreremplie(BrewStepDraft draft, RecipeContent content) {
     BrewStepKind.whirlpool => 'Whirlpool',
     BrewStepKind.hopAddition => truncateName(
       'Ajouter ${content.hops[index!].name} '
-      '${formatGrammes(content.hops[index].weightG)}',
+      '${formatQuantiteRecette(content.hops[index].amount)}',
       kBrewStepNameMaxLength,
     ),
   };

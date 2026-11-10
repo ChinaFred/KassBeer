@@ -19,23 +19,45 @@ enum HopForm {
   /// Facteur appliqué à l'utilisation de Tinseth.
   final double utilizationFactor;
 
-  /// Valeur du champ `hop_additions[].form` d'une recette (BeerJSON).
+  /// Valeur du champ `hop_additions[].form` (BeerJSON) écrite quand le
+  /// brasseur choisit cette forme.
   final String storedValue;
 
-  /// Forme correspondant à la valeur stockée [value].
+  /// Valeurs de `hop_additions[].form` du schéma BeerJSON figé (ADR-005), et
+  /// la forme de calcul de chacune. `plug` (cônes pressés) se calcule comme des
+  /// cônes (`documentation/DATA_SOURCES.md`). `powder`, `extract` et
+  /// `leaf (wet)` n'ont pas de facteur d'utilisation : `null`.
+  static const Map<String, HopForm?> ofBeerJsonForm = {
+    'leaf': whole,
+    'plug': whole,
+    'pellet': pellet,
+    'leaf (wet)': null,
+    'powder': null,
+    'extract': null,
+  };
+
+  /// Forme de calcul de la forme BeerJSON [form], ou `null` si Tinseth n'a pas
+  /// de facteur pour elle (forme non prise en charge par le calcul).
   ///
-  /// Lève [BrewingInputException] sur une valeur inconnue.
-  static HopForm fromStored(String value) => enumFromStored(
-    values,
-    (f) => f.storedValue,
-    'hop_additions[].form',
-    value,
-  );
+  /// Lève [BrewingInputException] sur une valeur hors du schéma ; la valeur
+  /// n'entre pas dans l'erreur, seule sa longueur.
+  static HopForm? ofBeerJson(String form) {
+    if (ofBeerJsonForm.containsKey(form)) return ofBeerJsonForm[form];
+    throw BrewingInputException(
+      'hop_additions[].form',
+      form.length,
+      'valeur inconnue de ${form.length} caractères',
+    );
+  }
 }
 
-/// Moment d'ajout d'un houblon. Sa valeur stockée se lit dans l'application
-/// (`timing` BeerJSON d'une recette, ADR-005).
+/// Moment d'ajout d'un houblon, dans l'ordre du brassage. Sa valeur stockée se
+/// lit dans l'application (`timing` BeerJSON d'une recette, ADR-005).
 enum HopUse {
+  /// À l'empâtage : Tinseth ne le décrit pas, l'IBU de la recette est
+  /// indisponible (`MissingInputKind.hopUse`).
+  mash,
+
   /// Pendant l'ébullition, pour [Hop.boilMinutes] minutes.
   boil,
 
@@ -44,6 +66,10 @@ enum HopUse {
 
   /// Houblonnage à cru : compté 0 IBU.
   dryHop,
+
+  /// Au conditionnement : Tinseth ne le décrit pas, l'IBU de la recette est
+  /// indisponible (`MissingInputKind.hopUse`).
+  package,
 }
 
 /// Un houblon d'une recette ou d'un brassin.

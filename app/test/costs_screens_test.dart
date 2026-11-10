@@ -9,6 +9,7 @@ import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/costs/domain/brew_cost.dart';
 import 'package:kass_beer/features/costs/domain/fee.dart';
 import 'package:kass_beer/features/costs/domain/price.dart';
+import 'package:kass_beer/features/costs/presentation/price_form.dart';
 import 'package:kass_beer/features/costs/presentation/prices_screen.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
@@ -57,15 +58,13 @@ const capsules = Fee(
 const blonde = RecipeContent(
   name: 'Blonde',
   batchVolumeL: 20,
-  fermentables: [
-    FermentableLine(name: 'Pils', kind: FermentableKind.malt, weightG: 5000),
-  ],
+  fermentables: [FermentableLine(name: 'Pils', type: 'grain', weightG: 5000)],
   hops: [
     HopLine(
       name: 'Cascade',
-      weightG: 50,
+      amount: Quantite.grammes(50),
       use: HopUse.boil,
-      form: HopForm.pellet,
+      form: 'pellet',
       timeMin: 60,
     ),
   ],
@@ -303,6 +302,83 @@ void main() {
       expect(saved.quantity, 25000);
       expect(saved.unit, CostUnit.gram);
       expect(find.text('Prix enregistré.'), findsOneWidget);
+    });
+
+    testWidgets('unités kg, g, L, ml en colonne à 360 dp et 200 % ; prix au '
+        'gramme remplacé par un prix au litre', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final lactique = prix(
+        IngredientNature.addition,
+        'Acide lactique',
+        6,
+        100,
+      );
+      await ouvrir(
+        tester,
+        '/prix',
+        width: 360,
+        before: (app) => publierPrix(app, prices: [lactique]),
+      );
+      // Nouveau prix du même ingrédient : il remplacera le prix au gramme.
+      await tester.tap(find.text('Ajouter un prix'));
+      await tester.pumpAndSettle();
+      await tester.tap(dansFeuille(find.text('Nature')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ajout').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(champ('Nom'), 'Acide lactique');
+      await tester.pumpAndSettle();
+      final unites = tester.widget<SegmentedButton<UniteAchat>>(
+        dansFeuille(find.byType(SegmentedButton<UniteAchat>)),
+      );
+      expect(unites.direction, Axis.vertical);
+      expect(unites.segments, hasLength(4));
+      expect(tester.takeException(), isNull);
+      expect(dansFeuille(find.text(TextesPrix.remplaceAuGramme)), findsNothing);
+      final litres = dansFeuille(find.text('L'));
+      await tester.ensureVisible(litres);
+      await tester.tap(litres);
+      await tester.pumpAndSettle();
+      expect(
+        dansFeuille(find.text(TextesPrix.remplaceAuGramme)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('ligne en volume, unité choisie en grammes : avertissement', (
+      tester,
+    ) async {
+      await ouvrir(
+        tester,
+        '/recettes/r1',
+        before: (app) {
+          app.recipes.publish([
+            Recipe(
+              id: 'r1',
+              ownerUid: uid,
+              content: const RecipeContent(
+                name: 'Saison',
+                batchVolumeL: 20,
+                others: [
+                  OtherLine(
+                    name: 'Acide lactique',
+                    amount: Quantite.litres(0.005),
+                  ),
+                ],
+              ),
+            ),
+          ]);
+          publierPrix(app, prices: const [], fees: const []);
+        },
+      );
+      await voir(tester, find.text('Saisir le prix au litre'));
+      await tester.tap(find.text('Saisir le prix au litre'));
+      await tester.pumpAndSettle();
+      expect(dansFeuille(find.text(TextesPrix.ligneEnVolume)), findsNothing);
+      await tester.tap(dansFeuille(find.text('g')));
+      await tester.pumpAndSettle();
+      expect(dansFeuille(find.text(TextesPrix.ligneEnVolume)), findsOneWidget);
     });
 
     testWidgets('PR6, PR8 : prix inhabituel, prix existant remplacé', (
@@ -711,9 +787,9 @@ void main() {
                 hops: [
                   HopLine(
                     name: long,
-                    weightG: 50,
+                    amount: Quantite.grammes(50),
                     use: HopUse.boil,
-                    form: HopForm.pellet,
+                    form: 'pellet',
                     timeMin: 60,
                   ),
                 ],
@@ -754,7 +830,14 @@ void main() {
           );
         },
       );
-      await voir(tester, find.text('Pils : unité du prix incompatible.'));
+      // L'unité demandée est celle de la ligne : des grammes.
+      await voir(
+        tester,
+        find.text(
+          'Pils · 5${nbsp}kg : votre prix est au sachet. Saisissez un prix au '
+          'gramme pour compter cette ligne.',
+        ),
+      );
       await tester.tap(find.text('Corriger le prix'));
       await tester.pumpAndSettle();
       expect(
@@ -770,6 +853,142 @@ void main() {
       final saved = app.costs.writes.single.value! as Price;
       expect(saved.unit, CostUnit.gram);
       expect(saved.quantity, 25000);
+    });
+
+    // v0.1.17 — prix au litre (décision du 2026-11-10).
+    Recipe saison(List<OtherLine> others, {String owner = uid}) => Recipe(
+      id: 'r1',
+      ownerUid: owner,
+      ownerName: 'Bruno Brasseur',
+      content: RecipeContent(
+        name: 'Saison',
+        batchVolumeL: 20,
+        fermentables: const [
+          FermentableLine(name: 'Pils', type: 'grain', weightG: 5000),
+        ],
+        others: others,
+        yeasts: const [YeastLine(name: 'S-04')],
+      ),
+    );
+    const lactique5ml = OtherLine(
+      name: 'Acide lactique',
+      amount: Quantite.litres(0.005),
+    );
+
+    testWidgets('ligne en ml sans prix : Saisir le prix au litre, enregistré '
+        'en litres, ligne chiffrée', (tester) async {
+      final app = await ouvrir(
+        tester,
+        '/recettes/r1',
+        before: (app) {
+          app.recipes.publish([
+            saison(const [lactique5ml]),
+          ]);
+          publierPrix(app, prices: [pils, s04], fees: const []);
+        },
+      );
+      await voir(tester, find.text('Acide lactique · 5${nbsp}ml'));
+      await tester.tap(find.text('Saisir le prix au litre'));
+      await tester.pumpAndSettle();
+      // La ligne est en volume : la saisie s'ouvre en litres.
+      expect(champ('Quantité achetée (L)'), findsOneWidget);
+      await tester.tap(dansFeuille(find.text('ml')));
+      await tester.pumpAndSettle();
+      await tester.enterText(champ('Prix payé (€)'), '6');
+      await tester.enterText(champ('Quantité achetée (ml)'), '100');
+      await tester.pumpAndSettle();
+      expect(find.text('Soit 60,00$nbsp€/L'), findsOneWidget);
+      await tester.tap(dansFeuille(find.text('Enregistrer')));
+      await tester.pumpAndSettle();
+      final saved = app.costs.writes.single.value! as Price;
+      expect(saved.key, 'ajout-acide-lactique');
+      expect(saved.unit, CostUnit.litre);
+      expect(saved.quantity, closeTo(0.1, 1e-12));
+      app.costs.publishPrices(uid, [pils, s04, saved]);
+      await tester.pumpAndSettle();
+      // 9,50 + 0,30 (5 ml à 60 €/L) + 3,99.
+      expect(find.text(eur('13,79')), findsOneWidget);
+    });
+
+    testWidgets('ligne en ml, prix au gramme ; ligne en g, prix au litre : '
+        'texte de chaque sens', (tester) async {
+      final auGramme = prix(
+        IngredientNature.addition,
+        'Acide lactique',
+        6,
+        100,
+      );
+      final app = await ouvrir(
+        tester,
+        '/recettes/r1',
+        before: (app) {
+          app.recipes.publish([
+            saison(const [lactique5ml]),
+          ]);
+          publierPrix(app, prices: [pils, s04, auGramme], fees: const []);
+        },
+      );
+      final texte = find.text(
+        'Acide lactique · 5${nbsp}ml : votre prix est au gramme. Saisissez un '
+        'prix au litre pour compter cette ligne.',
+      );
+      await voir(tester, texte);
+      expect(texte, findsOneWidget);
+      app.recipes.publish([
+        saison(const [
+          OtherLine(name: 'Acide lactique', amount: Quantite.grammes(5)),
+        ]),
+      ]);
+      app.costs.publishPrices(uid, [
+        pils,
+        s04,
+        prix(
+          IngredientNature.addition,
+          'Acide lactique',
+          6.5,
+          0.1,
+          unit: CostUnit.litre,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      final inverse = find.text(
+        'Acide lactique · 5${nbsp}g : votre prix est au litre. Saisissez un '
+        'prix au gramme pour compter cette ligne.',
+      );
+      await voir(tester, inverse);
+      expect(inverse, findsOneWidget);
+    });
+
+    testWidgets('même nom en g et en ml : auteur, autre membre', (
+      tester,
+    ) async {
+      const deux = [
+        lactique5ml,
+        OtherLine(name: 'Acide lactique', amount: Quantite.grammes(2)),
+      ];
+      const commun =
+          'Acide lactique : quantités en grammes et en volume, qui ne '
+          's\'additionnent pas.';
+      final app = await ouvrir(
+        tester,
+        '/recettes/r1',
+        before: (app) {
+          app.recipes.publish([saison(deux)]);
+          publierPrix(app, prices: [pils, s04], fees: const []);
+        },
+      );
+      final auteur = find.text(
+        '$commun Mettez les deux lignes dans la même unité.',
+      );
+      await voir(tester, auteur);
+      expect(auteur, findsOneWidget);
+      app.recipes.publish([saison(deux, owner: 'uid-autre')]);
+      await tester.pumpAndSettle();
+      final lecteur = find.text(
+        '$commun Dupliquez la recette pour la corriger à votre nom.',
+      );
+      await voir(tester, lecteur);
+      expect(lecteur, findsOneWidget);
     });
 
     testWidgets('LI6 : Reprendre un de mes prix copie sans lier', (

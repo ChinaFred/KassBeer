@@ -7,37 +7,61 @@ const double litresPerUsGallon = 3.785411784;
 /// Kilogrammes dans une livre.
 const double kilogramsPerPound = 0.45359237;
 
+/// Points apportés par le saccharose pur, par livre et par gallon américain
+/// (Palmer, *How to Brew*).
+const double sucrosePointsPerPoundPerGallon = 46.214;
+
 /// Points apportés par le saccharose pur : 46,214 points par livre et par gallon
 /// (Palmer, *How to Brew*), soit ≈ 385,7 points par kilogramme et par litre.
 ///
 /// C'est la référence d'un rendement d'extrait de 100 %.
 const double sucrosePointsPerKgPerLitre =
-    46.214 * litresPerUsGallon / kilogramsPerPound;
+    sucrosePointsPerPoundPerGallon * litresPerUsGallon / kilogramsPerPound;
 
 /// Nature d'un fermentescible : un malt passe par l'empâtage, un sucre non.
 enum FermentableKind {
   /// Malt ou céréale empâtée : son extrait est multiplié par le rendement
-  /// d'empâtage de l'équipement. Valeur stockée : `grain`.
+  /// d'empâtage de l'équipement. Valeur écrite : `grain`.
   malt('grain'),
 
-  /// Sucre (candi, saccharose, dextrose…) : compté à 100 %. Valeur stockée :
+  /// Sucre (candi, saccharose, dextrose…) : compté à 100 %. Valeur écrite :
   /// `sugar`.
   sugar('sugar');
 
   const FermentableKind(this.storedValue);
 
-  /// Valeur du champ `fermentable_additions[].type` d'une recette (BeerJSON).
+  /// Valeur du champ `fermentable_additions[].type` (BeerJSON) écrite quand le
+  /// brasseur choisit cette nature.
   final String storedValue;
 
-  /// Nature correspondant à la valeur stockée [value].
+  /// Valeurs de `fermentable_additions[].type` du schéma BeerJSON figé
+  /// (ADR-005), et la nature de calcul de chacune. `extract`, `dry extract`,
+  /// `honey`, `fruit` et `juice` se calculent comme un sucre : 100 % de leur
+  /// extrait, sans empâtage. `other` n'a pas de nature : `null`.
+  static const Map<String, FermentableKind?> ofBeerJsonType = {
+    'grain': malt,
+    'sugar': sugar,
+    'extract': sugar,
+    'dry extract': sugar,
+    'honey': sugar,
+    'fruit': sugar,
+    'juice': sugar,
+    'other': null,
+  };
+
+  /// Nature de calcul du type BeerJSON [type], ou `null` pour `other` (nature à
+  /// préciser).
   ///
-  /// Lève [BrewingInputException] sur une valeur inconnue.
-  static FermentableKind fromStored(String value) => enumFromStored(
-    values,
-    (k) => k.storedValue,
-    'fermentable_additions[].type',
-    value,
-  );
+  /// Lève [BrewingInputException] sur une valeur hors du schéma ; la valeur
+  /// n'entre pas dans l'erreur, seule sa longueur.
+  static FermentableKind? ofType(String type) {
+    if (ofBeerJsonType.containsKey(type)) return ofBeerJsonType[type];
+    throw BrewingInputException(
+      'fermentable_additions[].type',
+      type.length,
+      'valeur inconnue de ${type.length} caractères',
+    );
+  }
 }
 
 /// Potentiel d'extrait d'un fermentescible, donné de l'une de deux façons.

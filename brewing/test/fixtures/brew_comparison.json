@@ -21,6 +21,10 @@
     ],
     "sans_malt": [
       { "name": "Candi", "kind": "sugar", "mass_grams": 500, "yield_percent": 100 }
+    ],
+    "nature_a_preciser": [
+      { "name": "Pils", "kind": "malt", "mass_grams": 5000, "yield_percent": 80 },
+      { "name": "Sirop d'érable", "kind": null, "mass_grams": 500, "yield_percent": 100 }
     ]
   },
   "planned_complet": {
@@ -31,6 +35,21 @@
     "mash_efficiency_percent": 72
   },
   "cases": [
+    {
+      "id": "nature-a-preciser",
+      "note": "fermentescible de type BeerJSON 'other' : sans nature, il n'est ni retiré ni compté comme sucre ; le rendement mesuré est indisponible",
+      "grist": "nature_a_preciser",
+      "planned": "complet",
+      "measured": { "original_gravity": 1.052, "final_gravity": 1.012, "fermenter_volume_litres": 20, "sugars_in_wort": true },
+      "expected": {
+        "original_gravity": { "planned": 1.0675, "measured": 1.052, "difference": -15.5 },
+        "mash_efficiency": {
+          "planned": 72,
+          "measured": { "unavailable": ["fermentableKind"], "items": ["Sirop d'érable"] },
+          "difference": null
+        }
+      }
+    },
     {
       "id": "ale-blonde-140724",
       "source": "Ale blonde 140724 - Pale ale : densité mesurée 1.052, 20 L ; 1.012 est une valeur de test",

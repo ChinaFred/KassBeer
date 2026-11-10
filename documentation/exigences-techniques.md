@@ -55,7 +55,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
 | `lib/core/data/nouveautes.dart` | `Nouveaute`, `lireNouveautes` (valide la forme de `assets/changelog_recent.json`, lève une `FormatException` sinon), `NouveautesRepository` (lecture de l'asset, panne journalisée sous `nouveautes` puis relancée) |
-| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` |
+| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
@@ -258,9 +258,12 @@ déjà tiré), `package_info_plus` ^10.2.2. `flutter_localizations` tire `intl` 
 
 **Conversion document ↔ `brewing/`.** Écrite une fois, dans `features/recipes/domain/recipe.dart`,
 avec les unités et les valeurs énumérées de BeerJSON dans `beerjson.dart` (v0.1.15) :
-`fromFirestore` vérifie `format_version`, lit l'enveloppe, puis le sous-arbre `recipe` ; la
-nature d'un malt et la forme d'un houblon passent par `FermentableKind` et `HopForm.fromStored`,
-le moment d'un houblon ou d'un ajout se lit dans `timing` ; `toFirestore` écrit l'enveloppe et
+`fromFirestore` vérifie `format_version`, lit l'enveloppe, puis le sous-arbre `recipe` ; le
+type d'un malt et la forme d'un houblon gardent leur valeur BeerJSON (`typesFermentable`,
+`formesHoublon`), et leur nature et forme de calcul viennent de `FermentableKind.ofType` et
+`HopForm.ofBeerJson` de `brewing/` (v0.1.17) ; le moment d'un houblon ou d'un ajout se lit dans
+`timing` ; la quantité d'un houblon, d'un ajout ou d'une levure est une `Quantite`, en grammes
+ou en litres ; `toFirestore` écrit l'enveloppe et
 `recipe` d'un bloc, sans clé d'ingrédient (`ingredientKey` vérifie seulement le nom) ; `toInput`
 construit le `RecipeInput` de `computeRecipe`. Les masses restent en grammes : la saisie en
 kilogrammes des malts et sucres est multipliée par 1 000 dans le formulaire ; la durée à cru en
@@ -476,19 +479,25 @@ Enveloppe :
 |---|---|
 | `name` | string, obligatoire, 1 à 120 caractères |
 | `type` | string, facultatif : `all grain`, `partial mash`, `extract` à la saisie ; toute valeur de `RecipeType.type` du schéma à la lecture |
+| `author` | string, facultatif, 1 à 120 caractères (v0.1.17) : auteur de la recette d'origine, conservé d'un import. L'éditeur l'affiche en lecture seule et le réécrit tel quel ; « Dupliquer » le copie ; la copie figée le porte. Distinct de `owner_name` |
+| `efficiency` | refusé (v0.1.17, option A de L2a) : le rendement d'un fichier importé n'est pas stocké. L'export de L2b écrit `efficiency.brewhouse` depuis le rendement d'empâtage de l'équipement. Le contrôler, même par ses seules clés, faisait refuser la création d'un brassin (budget, voir « Règles d'accès ») |
 | `style` | map, facultative : `name` (1 à 120) |
 | `notes` | string, facultatif (10 000) |
 | `batch_size` | `{value, "l"}`, facultatif : volume visé en fermenteur |
 | `boil` | map, facultative : `boil_time` `{value entier, "min"}` |
 | `mash` | map, facultative : `name` (« Empâtage », un libellé), `grain_temperature` `{value, "C"}` facultatif, `mash_steps` (20) absente sans palier, jamais une liste vide. Palier : `name`, `type` facultatif (`MashStepType.type`), `step_temperature` `{value, "C"}`, `step_time` `{value entier, "min"}` |
 | `ingredients` | map, obligatoire, avec les quatre listes, même vides. `water_additions` refusé |
-| `ingredients.fermentable_additions` | list (50) : `name`, `type` (`grain`, `sugar`), `amount` `{value, "g"}`, `color` `{value, "EBC"}` facultatif, `yield.fine_grind` `{value, "%"}` facultatif |
-| `ingredients.hop_additions` | list (50) : `name`, `form` (`pellet`, `leaf`), `alpha_acid` `{value, "%"}` facultatif, `amount` `{value, "g"}`, `timing` (ci-dessous) |
-| `ingredients.miscellaneous_additions` | list (50) : `name`, `type` facultatif (`MiscellaneousBase.type`), `amount` `{value, "g"}`, `timing` facultatif |
-| `ingredients.culture_additions` | list (10) : `name`, `type` et `form` facultatifs (`CultureBase`), `attenuation` `{value, "%"}` facultatif, `amount` `{value, "g"}` facultatif. L'éditeur en écrit une au plus |
+| `ingredients.fermentable_additions` | list (50) : `name`, `type` obligatoire (`grain`, `sugar` à la saisie ; toute valeur de `FermentableBase.type` à la lecture : `extract`, `dry extract`, `honey`, `fruit`, `juice`, `other`), `amount` `{value, "g"}`, `color` `{value, "EBC"}` facultatif, `yield.fine_grind` `{value, "%"}` facultatif |
+| `ingredients.hop_additions` | list (50) : `name`, `form` obligatoire (`pellet`, `leaf` à la saisie ; toute valeur de `HopVarietyBase.form` à la lecture : `plug`, `leaf (wet)`, `powder`, `extract`), `alpha_acid` `{value, "%"}` facultatif, `amount` `{value, "g"}` ou `{value, "l"}` (v0.1.17), `timing` (ci-dessous) |
+| `ingredients.miscellaneous_additions` | list (50) : `name`, `type` facultatif (`MiscellaneousBase.type`), `amount` `{value, "g"}` ou `{value, "l"}` (v0.1.17), `timing` facultatif |
+| `ingredients.culture_additions` | list (10) : `name`, `type` et `form` facultatifs (`CultureBase`), `attenuation` `{value, "%"}` facultatif, `amount` `{value, "g"}` ou `{value, "l"}` (v0.1.17) facultatif. L'éditeur en écrit une au plus |
 
 Un couple `{value, unit}` est absent ou complet, jamais une unité seule, jamais 0 à la
-place d'un vide. Une seule unité par grandeur : `g`, `l`, `C`, `min`, `EBC`, `%`. Les durées
+place d'un vide. Une seule unité par grandeur : `g`, `l`, `C`, `min`, `EBC`, `%`. La
+quantité (`amount`) d'un houblon, d'un ajout ou d'une levure est une masse en `g` ou un volume
+en `l` (décision du 2026-11-10), enregistrée dans son unité ; celle d'un malt reste en `g`.
+L'éditeur saisit ces volumes en millilitres et les écrit en litres ; l'écran les affiche en
+millilitres sous 1 L. Les durées
 en minutes sont des entiers Firestore (`int` en Dart) : une durée décimale rend le document
 illisible.
 
@@ -499,27 +508,34 @@ Moments (`timing`, BeerJSON au commit figé : `time` porte les minutes d'ébulli
 |---|---|---|
 | Houblon, ébullition t min | `use: add_to_boil`, `time` t | Ébullition t |
 | Houblon, whirlpool d min | `add_to_boil`, `time` 0, `duration` d | Whirlpool d |
-| Houblon, à cru j jours | `add_to_fermentation`, `duration` = j × 1 440 arrondi à la minute | À cru |
+| Houblon, à cru j jours | `add_to_fermentation`, `duration` = j × 1 440 arrondi à la minute ; `time`, jour d'ajout en minutes depuis le début de la fermentation, conservé d'un import (`HopLine.dayMin`, non lu par `brewing/`) | À cru |
+| Houblon importé, empâtage ou conditionnement | `add_to_mash`, `add_to_package`, durée dans `duration` | Empâtage, Conditionnement (`HopUse.mash`, `HopUse.package`) |
 | Ajout, Empâtage, Fermentation, Embouteillage | `add_to_mash`, `add_to_fermentation`, `add_to_package`, durée dans `duration` | idem |
 | Ajout, Ébullition t | `add_to_boil`, `time` t | Ébullition t |
 | Ajout, Après ébullition d | `add_to_boil`, `time` 0, `duration` d | Après ébullition d |
 | Ajout, Après ébullition sans durée | `add_to_boil`, `time` 0 | Ébullition 0 min |
 | Ajout sans utilisation | `timing` absent | sans utilisation |
 
-Un houblon `add_to_mash` ou `add_to_package`, un `add_to_boil` à `time` non nul avec
-`duration`, ou un `time` hors ébullition rendent le document illisible : `brewing/` n'a pas
-d'équivalent, ou la valeur serait perdue au prochain enregistrement. Un whirlpool sans durée
+Un `add_to_boil` à `time` non nul avec `duration`, ou un `time` à l'empâtage, au
+conditionnement ou sur un autre ajout à la fermentation rendent le document illisible : la
+valeur serait perdue au prochain enregistrement. Depuis la v0.1.17, un houblon `add_to_mash`
+ou `add_to_package` et le `time` d'un houblon à cru se lisent. Un whirlpool sans durée
 et une durée d'ajout sans utilisation ne s'écrivent pas (`ArgumentError`, l'éditeur les refuse).
 
 Lecture (`recipe.dart`, `beerjson.dart`, `LecteurChamps`) : une valeur énumérée hors du schéma
 (type de recette, de levure, d'ajout, de palier, forme de levure) ou une unité hors liste lève
 `DocumentIllisible`, dont la raison donne la longueur du texte stocké, jamais le texte. Une
 valeur du schéma absente des listes de l'éditeur (`cider`, `slant`…) est lue, affichée telle
-quelle et réécrite à l'identique. La nature d'un malt et la forme d'un houblon passent par
-`FermentableKind.fromStored` (`grain`, `sugar`) et `HopForm.fromStored` (`pellet` → `pellet`,
-`leaf` → `whole`) de `brewing/` ; une autre valeur (`extract`, `plug`…) lève
-`BrewingInputException`, dont `value` est la longueur du texte. Le moment d'un houblon se lit
-dans l'application : `HopUse` n'a plus de valeur stockée.
+quelle et réécrite à l'identique. Depuis la v0.1.17, le type d'un malt (`typesFermentable`)
+et la forme d'un houblon (`formesHoublon`) suivent la même règle : toute valeur du schéma est
+lue et gardée, une autre lève `DocumentIllisible`. Leur valeur de calcul vient de `brewing/` :
+`FermentableKind.ofType` (`grain` → malt ; `sugar`, `extract`, `dry extract`, `honey`,
+`fruit`, `juice` → sucre ; `other` → `null`, nature à préciser) et `HopForm.ofBeerJson`
+(`leaf` et `plug` → cônes, `pellet` → pellets ; `leaf (wet)`, `powder`, `extract` → `null`,
+forme sans facteur d'utilisation). La clé de prix d'un fermentescible qui n'est pas un malt
+(`other` compris) a le préfixe `sucre` (`FermentableLine.nature`). Une quantité dans une autre
+unité que `g` ou `l` (`ml`, `kg`, `each`…) lève `DocumentIllisible`. Le moment d'un houblon se
+lit dans l'application : `HopUse` n'a pas de valeur stockée.
 
 La clé d'ingrédient n'est plus stockée : `ingredientKey` de `brewing/` la dérive du nom et de
 la nature (préfixe `malt`, `sucre`, `houblon`, `levure`, `ajout`, puis nom en minuscules, sans
@@ -543,7 +559,11 @@ lancement du schéma officiel (`beerjson_partial.mjs`) : champs obligatoires de 
 d'ADR-005 retirés, unités réduites aux unités canoniques. ajv ne tourne pas dans l'application.
 
 Les règles n'inspectent pas les éléments des listes : elles acceptent une valeur que le dépôt
-de données refuse à la lecture.
+de données refuse à la lecture. L'unité d'une quantité (`g` ou `l`) est donc contrôlée par le
+schéma partiel en test et par la lecture Dart, pas par les règles (voir « Risques acceptés »).
+La fixture `imported.json` (v0.1.17) porte les valeurs lues depuis L2a : auteur, malts extrait,
+miel, fruit, jus et `other`, houblons à l'empâtage et au conditionnement, formes `plug`,
+`powder`, `extract` et `leaf (wet)`, jour d'ajout à cru, quantités en litres, levure `wheat`.
 
 `brew_steps` : les règles bornent la liste à 60 éléments, sans lire ses éléments. Le dépôt de
 données valide chaque élément (clé présente et unique, nom, durée et température dans leurs
@@ -690,10 +710,10 @@ contrôle de forme. Unités du système international : masses en grammes, monta
 
 | Chemin | Champs |
 |---|---|
-| `users/{uid}/prices/{ingredientKey}` | `name` string (1 à 120), `price_eur` number (prix payé, 0 à 100 000), `quantity` number (quantité achetée, au-delà de 0 et jusqu'à 1e9), `unit` string (`g`, ou `unit` pour un sachet de levure), `updated_at` timestamp (`serverTimestamp()`). Identifiant : clé d'ingrédient, 100 caractères au plus, préfixe `malt`, `sucre`, `houblon`, `levure` ou `ajout`, forme `^(malt|sucre|houblon|levure|ajout)(-[a-z0-9]+)*$` ; un identifiant hors de cette forme est lu comme illisible (`DocumentIllisible('id', 'clé hors format')`), rapporté sans l'identifiant, qui dérive du nom, puis se supprime après confirmation. Un kilogramme saisi est converti en grammes à l'écran |
+| `users/{uid}/prices/{ingredientKey}` | `name` string (1 à 120), `price_eur` number (prix payé, 0 à 100 000), `quantity` number (quantité achetée, au-delà de 0 et jusqu'à 1e9), `unit` string (`g`, `unit` pour un sachet de levure, ou `l` depuis la v0.1.17 : prix au litre d'un houblon ou d'un ajout ; `purchaseUnitsOf` limite les litres à ces deux natures dans le formulaire, les règles ne lient pas l'unité au préfixe), `updated_at` timestamp (`serverTimestamp()`). Identifiant : clé d'ingrédient, 100 caractères au plus, préfixe `malt`, `sucre`, `houblon`, `levure` ou `ajout`, forme `^(malt|sucre|houblon|levure|ajout)(-[a-z0-9]+)*$` ; un identifiant hors de cette forme est lu comme illisible (`DocumentIllisible('id', 'clé hors format')`), rapporté sans l'identifiant, qui dérive du nom, puis se supprime après confirmation. Un kilogramme saisi est converti en grammes à l'écran, un millilitre en litres |
 | `users/{uid}/fees/{feeId}` | `name` string (1 à 60), `amount_eur` number (0 à 10 000), `basis` string (`per_brew`, `per_bottle`), `updated_at` timestamp (`serverTimestamp()`). Identifiant créé par l'appareil ; 20 frais au plus, limite du formulaire |
 | `users/{uid}/stock/{ingredientKey}` | `name` string, `quantity` number, `unit` string, `updated_at` timestamp (après la v1) |
-| `users/{uid}/brew_costs/{brewId}` | `brew_id` string (égal à l'identifiant), `total_eur` number (somme exacte des lignes, positive ou nulle), `lines` list<map> (200 au plus : `key` clé d'ingrédient ou `frais-{feeId}`, `name`, `quantity`, `unit` parmi `g`, `unit`, `brew`, `bottle`, `cost_eur`), `computed_at` timestamp (heure de l'appareil au figeage), `freeze_kind` string (`initial`, `recalculation`), et, facultatifs, les valeurs d'embouteillage utilisées : `bottles_count` (entier de 1 à 9 999), `packaged_volume_l` (au-delà de 0 et jusqu'à 1 000), `priming_sugar_g` (0 à 100 000), `priming_sugar_name` (80) |
+| `users/{uid}/brew_costs/{brewId}` | `brew_id` string (égal à l'identifiant), `total_eur` number (somme exacte des lignes, positive ou nulle), `lines` list<map> (200 au plus : `key` clé d'ingrédient ou `frais-{feeId}`, `name`, `quantity`, `unit` parmi `g`, `unit`, `l` (v0.1.17, ligne en volume au prix au litre), `brew`, `bottle`, `cost_eur`), `computed_at` timestamp (heure de l'appareil au figeage), `freeze_kind` string (`initial`, `recalculation`), et, facultatifs, les valeurs d'embouteillage utilisées : `bottles_count` (entier de 1 à 9 999), `packaged_volume_l` (au-delà de 0 et jusqu'à 1 000), `priming_sugar_g` (0 à 100 000), `priming_sugar_name` (80) |
 
 Le coût réel d'un brassin est stocké parce qu'il reprend les prix du jour du figeage ; le
 coût d'une recette et l'estimation d'un brassin non figé se recalculent à l'affichage avec
@@ -827,7 +847,8 @@ seul leur nombre est borné.
 **Forme d'une recette (v0.1.15).** `recipeFields()` : `format_version`, `owner_uid`,
 `owner_name`, `equipment_id`, `imported_from`, `brew_steps`, `recipe`, `created_at`,
 `updated_at`. `format_version` vaut l'entier 1. `recipe` n'a que `name` (1 à 120), `type`
-(une des neuf valeurs de `RecipeType.type` au commit figé), `notes` (10 000), `style` (la
+(une des neuf valeurs de `RecipeType.type` au commit figé), `author` (v0.1.17 : texte de 1 à
+120 caractères ; `efficiency` reste refusé), `notes` (10 000), `style` (la
 seule clé `name`, 1 à 120), `batch_size` (`unit` `l`), `boil` (la seule clé `boil_time`, `unit`
 `min`, valeur entière), `mash` (les seules clés `name`, texte de 1 à 120 caractères,
 `grain_temperature`, `unit` `C`, et `mash_steps`, 20) et `ingredients` (quatre listes bornées à
@@ -841,7 +862,11 @@ document plat de la v0.1.14 est refusé.
 
 **Risques acceptés.** Les règles ne contrôlent pas les éléments des listes (ingrédients,
 paliers, étapes de la chronologie) : un élément peut porter un champ inconnu, un prix
-compris. Seul son auteur peut l'écrire, dans sa recette ou dans sa copie figée, et le
+compris. Les unités des quantités des listes (`amount` en `g` ou en `l` pour un houblon, un
+ajout ou une levure, en `g` pour un malt) ne sont pas contrôlées par les règles non plus :
+le schéma partiel les vérifie en test (`beerjson_schema.test.mjs`) et la lecture Dart rend
+illisible une autre unité. Une recette écrite par un autre client avec `ml` ou `kg` est
+acceptée par les règles et s'affiche « Recette illisible ». Seul son auteur peut l'écrire, dans sa recette ou dans sa copie figée, et le
 document reste borné à 1 Mio par Firestore. La lecture typée de l'application ignore un
 champ inconnu, et la copie figée d'un brassin passe par ces types (`recipeSnapshot`) : un
 champ inconnu d'une recette ne se recopie pas dans un brassin créé par l'application. Les
@@ -895,6 +920,26 @@ ajoutés à la règle jusqu'au refus ; 98 tiennent dans une règle `if true`.
 | Même brassin : tous les groupes changés sauf les ajustements | environ 570 (57 `pad()`) |
 | Même brassin : tous les groupes changés, ajustements compris, par un `set()` | limite dépassée, écriture refusée |
 
+Mesure de la v0.1.17, même méthode (`pad()` = `return true`, 98 tiennent dans une règle
+`if true` seule), avec `recipe.author` contrôlé :
+
+| Écriture | v0.1.15 | v0.1.17, sans `author` | v0.1.17, `author` de 120 caractères |
+|---|---|---|---|
+| Création d'une recette, la plus grande permise | 71 `pad()` | 69 | 64 (environ 640 expressions) |
+| Création d'un brassin qui la copie, tous les champs de création, équipement complet | 10 `pad()` | 8 | 4 (environ 40 expressions) |
+| Brassin du 22 novembre rempli, changement de statut ; embouteillage et statut | 93 `pad()` (limite de compilation) | 93 | 93 |
+| Modification de la plus grande recette | non mesuré | non mesuré | 61 |
+| Création d'un prix au litre (`users/{uid}/prices`, `unit` `l`) | non mesuré | non mesuré | 93 (limite de compilation) |
+| Coût figé de 200 lignes, dont des lignes en `l` (`users/{uid}/brew_costs`) | 94 `pad()` | — | 94 |
+
+Sur ce jeu, la v0.1.15 donne 71 et 10 `pad()` là où le tableau précédent note 47 et 7 ; les
+comparaisons de la v0.1.17 sont faites sur le même jeu. `recipe.efficiency`, contrôlé par
+quatre `optMeasure` ou par ses seules clés, faisait refuser la création de ce brassin (limite
+dépassée sans aucun `pad()`) : il n'est pas stocké. Une recette qui porte style, ébullition,
+empâtage, notes et auteur coûte le même contrôle que la plus grande permise : la longueur
+des listes n'entre pas dans le budget, leurs éléments n'étant pas inspectés. Toute règle
+ajoutée sur `recipe` se mesure contre les 40 expressions restantes à la création d'un brassin.
+
 L'application n'écrit jamais tous les groupes d'un coup : sa plus grosse modification est
 l'embouteillage avec le statut. Des tests rejouent la plus grande recette permise, un brassin
 qui la copie avec tous les champs de création, et le brassin du 22 novembre avec
@@ -928,8 +973,9 @@ les règles refusent Infinity, -Infinity, NaN, ±1e9 et acceptent ±999 999 999,
 borne `mash_efficiency_pct` de 0 à 100 ; `content.test.mjs` fait de même dans `adjustments`.
 `users.test.mjs` rejoue `prices`, `fees`, `stock` et `brew_costs` pour les cinq profils
 (lecture, liste, écriture d'un document valide, suppression), les écritures de chacun sous son
-propre uid, et refuse champ inconnu, type faux, `unit` hors de `g` et `unit` (dont `l`, `kwh`,
-`kg`), montant négatif ou hors bornes, identifiant de prix hors du format de clé, `brew_id`
+propre uid, et refuse champ inconnu, type faux, `unit` hors de `g`, `unit` et `l` (dont `ml`,
+`L`, `kwh`, `kg`) ; il accepte un prix au litre pour les cinq profils (v0.1.17) et un coût figé
+dont une ligne est en `l` ; montant négatif ou hors bornes, identifiant de prix hors du format de clé, `brew_id`
 différent du chemin, plus de 200 lignes, `freeze_kind: initial` en modification et
 `recalculation` en création ; il vérifie aussi la suppression du brassin et de son coût dans un
 même lot.
@@ -990,23 +1036,30 @@ calcul de coût par `CalculCoutRefuse`, qui ne porte que le type de l'erreur d'o
 | Degré après bouteille | `alcoholByVolumeAfterBottling` | degré + g/L × potentiel du sucre / 10⁶ × 131,25 ; `null` sans donnée de resucrage |
 | IBU | `tinsethIbu`, `tinsethIbuForHop` | Tinseth : 1,65 × 0,000125^(Gb − 1) × (1 − e^(−0,04 t)) / 4,15 × alpha (mg/L) ; pellets × 1,1, cônes × 1,0 ; après ébullition et dry hop : 0 |
 | Couleur | `moreyColorEbc`, `moreyColorEbcOfGrist` | Morey : MCU = Σ (EBC / 1,97 × lb) / gal ; SRM = 1,4922 × MCU^0,6859 ; EBC = SRM × 1,97 ; la seconde ne prend que masses et couleurs |
+| Plato ↔ SG (v0.1.17) | `platoToSg`, `sgToPlato` | SG = 1 + P / (258,6 − (P / 258,2) × 227,1) ; P = −616,868 + 1111,14 × SG − 630,272 × SG² + 135,997 × SG³ (ASBC). Pas l'inverse exact l'une de l'autre : 12 °P → 12,002 °P. Densité hors de 0,980 – 1,200 refusée |
+| SRM, Lovibond ↔ EBC (v0.1.17) | `srmToEbc`, `ebcToSrm`, `lovibondToEbc`, `ebcToLovibond` | EBC = SRM × 1,97 ; le degré Lovibond d'un grain est lu comme un SRM, comme dans Morey ci-dessus (une couleur importée donne la même couleur de bière que dans le logiciel d'origine) |
+| Rendement donné en densité (v0.1.17) | `potentialToYieldPercent` | % = (potentiel − 1) × 1000 / 46,214 × 100 (`yield.potential` de BeerJSON, densité d'une livre dans un gallon) ; potentiel de 1,000 à 1,046214 |
+| Nature et forme d'une valeur BeerJSON (v0.1.17) | `FermentableKind.ofType`, `HopForm.ofBeerJson` | voir `recipes/` : extrait, miel, fruit, jus comptés comme un sucre ; `plug` comme des cônes ; `other`, `powder`, `extract`, `leaf (wet)` sans valeur de calcul |
 | Calculs d'une recette | `computeRecipe` | OG, FG, degré, IBU, EBC, IBU par houblon : voir « Calculs d'une recette » |
 | Clé d'ingrédient | `ingredientKey`, `isValidIngredientName` | préfixe de nature + nom normalisé (voir `recipes/`) ; `BrewingInputException` pour un nom sans lettre ni chiffre, que `isValidIngredientName` détecte sans exception (une seule définition de la règle) |
 | Coût | `computeCost` | Σ quantité × prix, coût de chaque ligne (`lineCosts`) ; par litre = total / V ; bouteille de 33 cl = par litre × 0,33 ; sans volume, total seul. Un prix manquant rend `CostUnavailable` |
-| Prix unitaire d'un achat | `unitPrice`, `unitPriceFor` | prix payé / quantité achetée (47,50 € pour 25 000 g = 0,0019 €/g) ; prix nul permis, quantité nulle refusée ; `unitPriceFor` rend `null` quand l'unité de l'achat (`g`, `unit`) n'est pas celle de la ligne |
+| Prix unitaire d'un achat | `unitPrice`, `unitPriceFor` | prix payé / quantité achetée (47,50 € pour 25 000 g = 0,0019 €/g) ; prix nul permis, quantité nulle refusée ; `unitPriceFor` rend `null` quand l'unité de l'achat (`g`, `unit`, `l`) n'est pas celle de la ligne, un prix au gramme ne chiffre pas une ligne en litres, ni l'inverse (`CostUnit.litre`, v0.1.17 : prix au litre, aucune densité supposée) |
 | Regroupement | `groupCostItems` | lignes de même clé additionnées, nom et place de la première (Cascade 20 g + 30 g = 50 g) |
 | Frais | `feeQuantity`, `bottles33clIn` | 1 par brassin ; par bouteille, nombre de bouteilles du brassin, ou volume / 0,33 sans arrondi pour une recette |
 | Levure | `yeastSachetsPerLine` | une ligne de levure vaut un sachet (hypothèse H1) |
 | Coût par bouteille réelle, par litre | `costPerBottle`, `costPerLitre` | total / bouteilles (40,84 / 50 = 0,8168) ; total / volume conditionné |
 | Planning | `recomputeSchedule` | heure attendue d'une étape = fin de l'étape précédente dans l'ordre de la chronologie (fin enregistrée, sinon début réel + durée prévue). En cours (`running`) : l'étape commencée sans fin au début le plus récent ; elle finit au plus tôt à `now`. Une autre étape commencée sans fin est faite (`done`), à début + durée. Sautée (`skipped`, événement `step_skipped`, sans début) et non faite (`notDone`, sans événement alors qu'une étape plus loin a commencé) : durée nulle. À venir (`pending`) : ne commence ni avant `now`, ni avant la fin de l'étape en cours. Un début l'emporte sur un saut |
 | Événements d'étape | `stepRecordsFromEvents` | un `StepRecord` par étape : début le plus ancien (à égalité, le plus petit identifiant), dernière fin à ou après ce début, sauts, et les identifiants d'événement retenus. Sans exception, les autres événements sont rendus en `StepEventIssue` : `duplicateStart`, `duplicateEnd`, `endWithoutStart`, `endBeforeStart`, `unknownStep`, triés par heure puis identifiant. Même résultat sur chaque appareil |
-| Chronologie préremplie | `defaultBrewSteps` | une étape par palier ; puis l'ébullition coupée à chaque ajout de houblon d'ébullition, du plus long au plus court (un houblon de t min s'ajoute après durée d'ébullition − t min) ; puis le whirlpool, coupé de même, sur la plus longue durée de ses houblons ; houblons à cru exclus ; ajout de 0 min. Voir ci-dessous |
+| Chronologie préremplie | `defaultBrewSteps` | une étape par palier ; puis l'ébullition coupée à chaque ajout de houblon d'ébullition, du plus long au plus court (un houblon de t min s'ajoute après durée d'ébullition − t min) ; puis le whirlpool, coupé de même, sur la plus longue durée de ses houblons ; houblons à cru, à l'empâtage et au conditionnement exclus ; ajout de 0 min. Voir ci-dessous |
 | Minuteur | `readTimer` | restant = début + durée − `now`, borné à zéro ; dépassement au-delà |
 
 **Pas de valeur de repli.** Un prix manquant rend `CostUnavailable(linesWithoutPrice)`, jamais
 un coût partiel. Dans l'application, `evaluerCoutRecette`, `evaluerEstimationBrassin` et
 `evaluerFigeage` rendent soit un montant, soit la liste des raisons (`RaisonCout`) : prix
-manquant, unité incompatible, prix illisible, ligne sans nom utilisable, volume non
+manquant (une ligne en volume sans prix comprise), unité incompatible (ligne en volume face à
+un prix au gramme, ou l'inverse), quantités de deux unités sous un même nom (`QuantitesDeDeuxUnites` :
+l'application les écarte avant `groupCostItems`, qui lèverait), prix illisible, ligne sans nom
+utilisable, volume non
 renseigné, aucun ingrédient, calcul impossible, prix indisponibles hors ligne, frais
 illisible, sucre de resucrage sans nature, nombre de bouteilles absent avec un frais par
 bouteille. Aucun frais saisi n'est pas une raison : le montant s'affiche avec sa mention. Sans sucre de resucrage, le degré après bouteille est absent : la hausse
@@ -1023,10 +1076,10 @@ nom). Le paquet ne contient aucun texte affiché : l'écran choisit le libellé 
 
 | Indicateur | Données demandées |
 |---|---|
-| Densité initiale (OG) | volume (`batchVolume`), au moins un fermentescible (`fermentables`), rendement d'extrait de chacun (`extractYield`), rendement d'empâtage si un malt est présent (`mashEfficiency`) |
+| Densité initiale (OG) | volume (`batchVolume`), au moins un fermentescible (`fermentables`), nature de chacun (`fermentableKind`, v0.1.17 : `FermentableInput.kind` nul pour `other`), rendement d'extrait de chacun (`extractYield`), rendement d'empâtage si un malt est présent (`mashEfficiency`) |
 | Densité finale (FG) | OG (`originalGravity`), une levure (`yeast`), atténuation de la première (`yeastAttenuation`) |
 | Degré | comme la FG |
-| IBU | volume ; sans houblon d'ébullition, 0 IBU ; sinon OG, acides alpha (`hopAlpha`) et durée (`hopBoilTime`) de chaque houblon d'ébullition |
+| IBU | houblons mesurés en volume exclus (`HopInput.massGrams` nul : 0 IBU, listés dans `hopsWithoutMass`, v0.1.17) ; volume ; aucun houblon à l'empâtage ni au conditionnement (`hopUse`) ; sans houblon d'ébullition, 0 IBU ; sinon OG, forme de calcul (`hopForm` : `HopInput.form` nul), acides alpha (`hopAlpha`) et durée (`hopBoilTime`) de chaque houblon d'ébullition |
 | EBC | volume, au moins un fermentescible, couleur de chacun (`color`) ; pas d'équipement |
 
 `originalGravity` signale qu'un indicateur dépend d'une OG indisponible. Règle de l'IBU, qui
@@ -1039,7 +1092,13 @@ non renseigné. La densité d'ébullition de l'IBU est l'OG prévue (`boilGravit
 `hopBitterness` donne l'IBU de chaque houblon pour « Détail des calculs ».
 `hopsLongerThanBoil` liste les houblons d'ébullition plus longs que l'ébullition de la recette
 (avertissement U6). Une valeur hors limites (volume nul, pourcentage au-delà de 100, OG prévue
-au-delà de 1.200) lève `BrewingInputException`.
+au-delà de 1.200) lève `BrewingInputException`. Aucune formule ne change en v0.1.17 : Tinseth,
+Morey et la densité initiale sont inchangés ; les cas ajoutés à `brewing/test/fixtures/`
+(`recipe.json`, `ibu.json`, `brew_comparison.json`, `cost.json`, `conversions.json`) fixent
+les nouvelles règles de lecture. `compareBrewWithPlan` rend l'écart `fermentableKind` pour un
+fermentescible sans nature. Aucun calcul de rendement de brassage ni de volume avant ébullition
+n'existe : l'export de L2b écrit le rendement d'empâtage de l'équipement (ADR-005, amendements
+de L2), et `BOIL_SIZE` (BeerXML) attend L2c.
 
 **Chronologie préremplie.** `defaultBrewSteps(mashSteps:, boilMinutes:, hops:)` reçoit les
 paliers (`MashStepInput` : température et durée facultatives), la durée d'ébullition et les
@@ -1048,7 +1107,8 @@ houblons (`HopInput`). Il rend des `BrewStepDraft` : nature (`BrewStepKind` : `m
 (`sourceIndex`), durée, température et défaut éventuel (`BrewStepProblem`). Aucune durée
 n'est inventée : un palier sans durée rend une étape sans durée (`durationMinutes` nul), qui porte `missingDuration` ; sans
 durée d'ébullition, aucune étape d'ébullition, et les ajouts se suivent du plus long au plus
-court. Un houblon sans durée est placé en tête de sa section (`missingHopTime`) ; un houblon
+court. Les houblons à l'empâtage et au conditionnement n'ont pas d'étape. Un houblon sans
+durée est placé en tête de sa section (`missingHopTime`) ; un houblon
 d'ébullition plus long que l'ébullition aussi (`hopLongerThanBoil`). Le paquet ne compose
 aucun libellé ni aucune clé : l'application nomme l'étape (nom du palier, « Ébullition »,
 « Ajouter Cascade 20 g », « Whirlpool ») et lui donne une clé `doc().id` à l'ajout.
