@@ -20,6 +20,9 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../brew_day/presentation/chronologie_jour.dart';
 import '../../brew_day/presentation/mesure_form.dart';
+import '../../costs/data/figeage_embouteillage.dart';
+import '../../costs/presentation/bloc_cout_brassin.dart';
+import '../../costs/presentation/costs_providers.dart';
 import '../../recipes/domain/recipe.dart';
 import '../../recipes/presentation/contenu_recette.dart';
 import '../../recipes/presentation/recipe_calculations_view.dart';
@@ -56,6 +59,13 @@ class BrewDetailScreen extends ConsumerStatefulWidget {
   static const revenirMessage = 'Les mesures et l\'embouteillage sont gardés.';
   static const revenirEnCours =
       'L\'écran du jour s\'ouvrira de nouveau par Reprendre le brassage.';
+  static const voirLeCout = 'Voir le coût';
+  static const coutFige = 'Coût figé.';
+  static const coutNonFige = 'Coût non figé.';
+  static const embouteillageEnregistre =
+      'Embouteillage enregistré. Brassin en conditionnement.';
+  static const embouteillageHorsLigne =
+      'Embouteillage enregistré sur l\'appareil. Il partira au retour du réseau.';
   static String recipeChanged(DateTime date) =>
       'La recette a changé depuis la création de ce brassin. Il garde la '
       'version du ${formatDateCourte(date)}.';
@@ -72,6 +82,45 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
 
   /// Vrai pendant une action : un second appui est ignoré.
   bool _actionEnCours = false;
+
+  /// Défilement de la fiche, titre et focus du bloc Coût : « Voir le coût ».
+  final _scroll = ScrollController();
+  final _coutKey = GlobalKey();
+  // Cible de « Voir le coût » seulement : hors du parcours de tabulation.
+  final _coutFocus = FocusNode(skipTraversal: true);
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _coutFocus.dispose();
+    super.dispose();
+  }
+
+  /// Fait défiler la fiche jusqu'au bloc Coût et y place le focus. La liste ne
+  /// construit que ce qui est près de l'écran : elle avance d'un écran à la fois
+  /// jusqu'à ce que le bloc existe.
+  Future<void> _voirLeCout() async {
+    for (var i = 0; i < 50 && _coutKey.currentContext == null; i++) {
+      if (!mounted || !_scroll.hasClients) return;
+      final position = _scroll.position;
+      if (position.pixels >= position.maxScrollExtent) break;
+      _scroll.jumpTo(
+        (position.pixels + position.viewportDimension).clamp(
+          0,
+          position.maxScrollExtent,
+        ),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    final target = _coutKey.currentContext;
+    if (target == null || !target.mounted) return;
+    await Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 250),
+      alignment: 0.1,
+    );
+    if (mounted) _coutFocus.requestFocus();
+  }
 
   Future<void> _uneAction(Future<void> Function() action) async {
     if (_actionEnCours) return;
@@ -109,8 +158,8 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     final repo = ref.read(brewsRepositoryProvider);
     // BR7 : sans saisie, immédiat, même hors ligne ; avec saisies, réseau exigé.
     final written = hasEvents
-        ? repo.deleteWithEvents(brew.id)
-        : repo.delete(brew.id);
+        ? repo.deleteWithEvents(brew.id, ownerUid: brew.ownerUid)
+        : repo.delete(brew.id, ownerUid: brew.ownerUid);
     suivreEcriture(
       messenger: messenger,
       written: written,
@@ -158,7 +207,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       ownerName: ownerName,
       notes: brew.notes,
     );
-    final removal = repo.delete(brew.id);
+    final removal = repo.delete(brew.id, ownerUid: brew.ownerUid);
     suivreEcriture(
       messenger: messenger,
       written: Future.wait([created.written, removal]),
@@ -268,7 +317,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
   }
 
   void _embouteiller(Brew brew, {required bool modification}) {
-    final repo = ref.read(brewsRepositoryProvider);
     final messenger = ScaffoldMessenger.of(context);
     final events = ref.read(brewEventsProvider(brew.id)).value;
     unawaited(
@@ -285,7 +333,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           onSubmit: (embouteillage, finalGravity) {
             unawaited(
               _enregistrerEmbouteillage(
-                repo: repo,
                 messenger: messenger,
                 brew: brew,
                 embouteillage: embouteillage,
@@ -299,33 +346,90 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     );
   }
 
+  /// Enregistre l'embouteillage et, au premier, fige le coût (CB3 à CB9). Prix,
+  /// frais et coût lu sont ceux déjà chargés par la fiche, capturés avant
+  /// l'attente du nom du jeton (CB5) : aucune lecture, aucune attente de plus.
   Future<void> _enregistrerEmbouteillage({
-    required BrewsRepository repo,
     required ScaffoldMessengerState messenger,
     required Brew brew,
     required Embouteillage embouteillage,
     required double? finalGravity,
     required bool modification,
   }) async {
+    final brews = ref.read(brewsRepositoryProvider);
+    final costs = ref.read(costsRepositoryProvider);
+    final errors = ref.read(errorReportServiceProvider);
+    final reported = ref.read(costReportsProvider);
+    final horloge = ref.read(horlogeProvider);
+    final uid = brew.ownerUid;
+    final prices = ref.read(pricesProvider(uid)).value;
+    final fees = ref.read(feesProvider(uid)).value;
+    final coutLu = ref
+        .read(brewCostProvider((uid: uid, brewId: brew.id)))
+        .value;
     final offline = _offline;
     final ownerName = await _tokenName!;
-    final written = repo.saveBottling(
-      brewId: brew.id,
-      ownerUid: brew.ownerUid,
+    final envoi = enregistrerEmbouteillage(
+      brews: brews,
+      costs: costs,
+      errors: errors,
+      reported: reported,
+      brew: brew,
       embouteillage: embouteillage,
-      nouveauStatut: modification ? null : BrewStatus.conditioning,
       finalGravity: finalGravity,
+      modification: modification,
       ownerName: ownerName,
+      prices: prices,
+      fees: fees,
+      coutLu: coutLu,
+      now: horloge(),
     );
-    suivreEcriture(
-      messenger: messenger,
-      written: written,
-      succes: offline
-          ? 'Embouteillage enregistré sur l\'appareil. Il partira au retour du réseau.'
-          : modification
-          ? 'Embouteillage modifié.'
-          : 'Embouteillage enregistré. Brassin en conditionnement.',
-      refus: 'L\'enregistrement de « ${brew.name} » a échoué.',
+    final refus = 'L\'enregistrement de « ${brew.name} » a échoué.';
+    final cout = envoi.cout;
+    if (cout is FigeageNonDemande) {
+      suivreEcriture(
+        messenger: messenger,
+        written: envoi.embouteillage,
+        succes: offline
+            ? BrewDetailScreen.embouteillageHorsLigne
+            : modification
+            ? 'Embouteillage modifié.'
+            : BrewDetailScreen.embouteillageEnregistre,
+        refus: refus,
+      );
+      return;
+    }
+    // Aucun montant dans ces annonces (SE7).
+    final debut = offline
+        ? BrewDetailScreen.embouteillageHorsLigne
+        : BrewDetailScreen.embouteillageEnregistre;
+    final fige = cout is CoutFigeEnvoye;
+    void voir() => unawaited(_voirLeCout());
+    unawaited(
+      envoi.embouteillage.catchError((Object _) {
+        // Déjà rapportée par le dépôt de données.
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(SnackBar(content: Text(refus)));
+      }),
+    );
+    if (cout is CoutFigeEnvoye) {
+      unawaited(
+        cout.written.catchError((Object _) {
+          // Refus du seul coût (CB7), déjà rapporté `costs.freeze_rejected`.
+          annoncerAvecAction(
+            messenger,
+            TextesCoutBrassin.figeRefuse,
+            action: BrewDetailScreen.voirLeCout,
+            onAction: voir,
+          );
+        }),
+      );
+    }
+    annoncerAvecAction(
+      messenger,
+      '$debut ${fige ? BrewDetailScreen.coutFige : BrewDetailScreen.coutNonFige}',
+      action: fige ? null : BrewDetailScreen.voirLeCout,
+      onAction: fige ? null : voir,
     );
   }
 
@@ -390,6 +494,27 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
         brew.recipeUpdatedAt != null &&
         source.updatedAt != brew.recipeUpdatedAt;
     final noEvents = events != null && events.documents.isEmpty;
+
+    // Prix, frais et coût figé du propriétaire, lus par la fiche : le bloc Coût
+    // les affiche, l'embouteillage les capture (CB5). Rien pour un autre membre
+    // (CB1).
+    final Widget? cout = !mine
+        ? null
+        : BlocCoutBrassin(
+            brew: brew,
+            prices: ref.watch(pricesProvider(brew.ownerUid)),
+            fees: ref.watch(feesProvider(brew.ownerUid)),
+            cout: ref.watch(
+              brewCostProvider((uid: brew.ownerUid, brewId: brew.id)),
+            ),
+            titreKey: _coutKey,
+            titreFocus: _coutFocus,
+            onModifierEmbouteillage:
+                brew.status == BrewStatus.conditioning ||
+                    brew.status == BrewStatus.done
+                ? () => _embouteiller(brew, modification: true)
+                : null,
+          );
 
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < kCompactMaxWidth;
@@ -483,6 +608,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     };
 
     final body = ListView(
+      controller: _scroll,
       padding: EdgeInsets.fromLTRB(16, 16, 16, fab == null ? 32 : 96),
       children: [
         Row(
@@ -578,6 +704,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           apresBrassage: apresBrassage,
           eventsAsync: eventsAsync,
           calculs: calculs,
+          cout: cout,
           chronologie: _chronologie(
             brew: brew,
             eventsAsync: eventsAsync,
@@ -670,6 +797,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required bool apresBrassage,
     required AsyncValue<ListeLue<BrewEvent>> eventsAsync,
     required CalculsRecette calculs,
+    required Widget? cout,
     required Widget chronologie,
     required List<Widget> recette,
     required List<Widget> general,
@@ -721,20 +849,25 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
         const TitreSection('Recette'),
         ...recette.skip(2),
         ...general,
+        ?cout,
         ...notesTitre,
       ];
     }
+    // Bloc Coût (propriétaire seul) : après l'embouteillage quand il existe,
+    // sinon après la comparaison.
     final List<Widget> blocs = switch (brew.status) {
-      BrewStatus.fermenting => [section, comparaison, ...notesTitre],
+      BrewStatus.fermenting => [section, comparaison, ?cout, ...notesTitre],
       BrewStatus.conditioning => [
         comparaison,
         embouteillage,
+        ?cout,
         section,
         ...notesTitre,
       ],
       BrewStatus.done => [
         comparaison,
         embouteillage,
+        ?cout,
         ..._notesTermine(brew, mine),
         section,
       ],
@@ -742,6 +875,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
         section,
         comparaison,
         if (brew.bottledAt != null) embouteillage,
+        ?cout,
         ...notesTitre,
       ],
     };

@@ -1,6 +1,6 @@
 {
   "description": "Cas tirés des fiches Excel (données non fiables, lues comme données). 'expected' : valeur que la formule du paquet doit rendre, à 'tolerance' près. 'fiche_value' : valeur écrite dans la fiche ; quand elle est présente, le test vérifie aussi qu'elle est retrouvée à 'fiche_tolerance' près. Les écarts connus des fiches vivent dans 'divergences' et ne sont pas corrigés dans les attentes.",
-  "rule": "coût = Σ quantité × prix unitaire ; par litre = coût / volume ; bouteille de 33 cl = par litre × 0,33. Un prix manquant rend le coût absent avec la liste des lignes sans prix. Les prix unitaires des cas sont tirés des coûts de ligne de la fiche (coût / quantité), les prix affichés étant arrondis au centime.",
+  "rule": "coût = Σ quantité × prix unitaire ; par litre = coût / volume ; bouteille de 33 cl = par litre × 0,33 ; sans volume, total seul. Un prix manquant rend le coût absent avec la liste des lignes sans prix. Les prix unitaires des cas sont tirés des coûts de ligne de la fiche (coût / quantité), les prix affichés étant arrondis au centime.",
   "cases": [
     {
       "id": "ale-blonde-140724",
@@ -476,6 +476,35 @@
       }
     },
     {
+      "id": "volume-absent",
+      "inputs": {
+        "lines": [
+          {
+            "name": "Pils",
+            "quantity": 5000,
+            "unit_price": 0.0019
+          },
+          {
+            "name": "Electricité",
+            "quantity": 1,
+            "unit_price": 2.0
+          }
+        ],
+        "volume_litres": null
+      },
+      "expected": {
+        "total": 11.5,
+        "line_costs": [
+          9.5,
+          2.0
+        ],
+        "per_litre": null,
+        "per_bottle_33cl": null
+      },
+      "tolerance": 1e-9,
+      "note": "brassin sans volume conditionné (CB14) : total calculé, ni par litre ni par bouteille de 33 cl"
+    },
+    {
       "id": "liste-vide",
       "inputs": {
         "lines": [],
@@ -551,5 +580,627 @@
       "fiche_value": "coût total 43,30 € sur les deux fiches",
       "explanation": "Fiches identiques ligne à ligne, dates vides : copie d'une même recette."
     }
-  ]
+  ],
+  "unit_prices": {
+    "description": "Prix unitaire d'un achat (PR7) : prix payé / quantité achetée. 'incompatible' : unité de l'achat différente de celle de la ligne (LI8), prix unitaire nul.",
+    "cases": [
+      {
+        "id": "pils-25-kg",
+        "price_eur": 47.5,
+        "quantity": 25000,
+        "purchase_unit": "g",
+        "line_unit": "g",
+        "expected": 0.0019,
+        "tolerance": 1e-12
+      },
+      {
+        "id": "prix-nul",
+        "price_eur": 0,
+        "quantity": 1000,
+        "purchase_unit": "g",
+        "line_unit": "g",
+        "expected": 0,
+        "tolerance": 1e-12
+      },
+      {
+        "id": "levure-lot-de-5",
+        "price_eur": 19.95,
+        "quantity": 5,
+        "purchase_unit": "unit",
+        "line_unit": "unit",
+        "expected": 3.99,
+        "tolerance": 1e-12
+      },
+      {
+        "id": "sachet-pour-des-grammes",
+        "price_eur": 3.99,
+        "quantity": 1,
+        "purchase_unit": "unit",
+        "line_unit": "g",
+        "incompatible": true
+      },
+      {
+        "id": "grammes-pour-un-sachet",
+        "price_eur": 47.5,
+        "quantity": 25000,
+        "purchase_unit": "g",
+        "line_unit": "unit",
+        "incompatible": true
+      }
+    ],
+    "invalid": [
+      {
+        "price_eur": 47.5,
+        "quantity": 0,
+        "reason": "quantité nulle"
+      },
+      {
+        "price_eur": 47.5,
+        "quantity": -25000,
+        "reason": "quantité négative"
+      },
+      {
+        "price_eur": -47.5,
+        "quantity": 25000,
+        "reason": "prix négatif"
+      }
+    ]
+  },
+  "grouping": {
+    "description": "Lignes de même clé regroupées (LI2) : quantités additionnées, nom et place de la première.",
+    "cases": [
+      {
+        "id": "cascade-deux-fois",
+        "items": [
+          {
+            "key": "houblon-cascade",
+            "name": "Cascade",
+            "quantity": 20,
+            "unit": "g"
+          },
+          {
+            "key": "malt-pils",
+            "name": "Pils",
+            "quantity": 5000,
+            "unit": "g"
+          },
+          {
+            "key": "houblon-cascade",
+            "name": "cascade",
+            "quantity": 30,
+            "unit": "g"
+          }
+        ],
+        "expected": [
+          {
+            "key": "houblon-cascade",
+            "name": "Cascade",
+            "quantity": 50
+          },
+          {
+            "key": "malt-pils",
+            "name": "Pils",
+            "quantity": 5000
+          }
+        ],
+        "unit_price": {
+          "houblon-cascade": 0.045,
+          "malt-pils": 0.0019
+        },
+        "expected_cost": {
+          "total": 11.75,
+          "line_costs": [
+            2.25,
+            9.5
+          ]
+        },
+        "tolerance": 1e-9
+      },
+      {
+        "id": "cascade-deux-fois-sans-prix",
+        "items": [
+          {
+            "key": "houblon-cascade",
+            "name": "Cascade",
+            "quantity": 20,
+            "unit": "g"
+          },
+          {
+            "key": "houblon-cascade",
+            "name": "Cascade",
+            "quantity": 30,
+            "unit": "g"
+          }
+        ],
+        "expected": [
+          {
+            "key": "houblon-cascade",
+            "name": "Cascade",
+            "quantity": 50
+          }
+        ],
+        "unit_price": {},
+        "expected_missing": [
+          "Cascade"
+        ]
+      }
+    ],
+    "invalid": [
+      {
+        "items": [
+          {
+            "key": "levure-s-04",
+            "name": "S-04",
+            "quantity": 1,
+            "unit": "unit"
+          },
+          {
+            "key": "levure-s-04",
+            "name": "S-04",
+            "quantity": 11.5,
+            "unit": "g"
+          }
+        ],
+        "reason": "même clé, unités différentes"
+      }
+    ]
+  },
+  "fee_quantities": {
+    "description": "Quantité d'un frais (FR4) : 1 par brassin, nombre de bouteilles par bouteille. Sur une recette, bouteilles de 33 cl = volume / 0,33, sans arrondi (CR3).",
+    "cases": [
+      {
+        "id": "par-brassin",
+        "basis": "per_brew",
+        "bottles": 50,
+        "expected": 1,
+        "tolerance": 1e-12
+      },
+      {
+        "id": "par-brassin-sans-bouteilles",
+        "basis": "per_brew",
+        "bottles": null,
+        "expected": 1,
+        "tolerance": 1e-12
+      },
+      {
+        "id": "par-bouteille-reelle",
+        "basis": "per_bottle",
+        "bottles": 50,
+        "expected": 50,
+        "tolerance": 1e-12
+      },
+      {
+        "id": "par-bouteille-recette-20-l",
+        "basis": "per_bottle",
+        "volume_litres": 20,
+        "expected": 60.606061,
+        "tolerance": 0.000001
+      }
+    ],
+    "invalid": [
+      {
+        "basis": "per_bottle",
+        "bottles": null,
+        "reason": "frais par bouteille sans nombre de bouteilles"
+      },
+      {
+        "basis": "per_bottle",
+        "bottles": 0,
+        "reason": "zéro bouteille"
+      },
+      {
+        "basis": "per_bottle",
+        "volume_litres": 0,
+        "reason": "volume nul"
+      }
+    ]
+  },
+  "per_bottle": {
+    "description": "Coût d'une bouteille réelle (CB13) : total / nombre de bouteilles. La fiche affiche la valeur arrondie au centime.",
+    "cases": [
+      {
+        "id": "ale-blonde-140724",
+        "total": 40.84,
+        "bottles": 50,
+        "expected": 0.8168,
+        "tolerance": 0.0001,
+        "fiche_value": 0.82,
+        "fiche_tolerance": 0.005
+      },
+      {
+        "id": "biere-blonde-estivale",
+        "total": 49.05,
+        "bottles": 66,
+        "expected": 0.7432,
+        "tolerance": 0.0001,
+        "fiche_value": 0.74,
+        "fiche_tolerance": 0.005
+      }
+    ],
+    "invalid": [
+      {
+        "total": 40.84,
+        "bottles": 0,
+        "reason": "zéro bouteille"
+      },
+      {
+        "total": -1,
+        "bottles": 50,
+        "reason": "total négatif"
+      }
+    ]
+  },
+  "per_litre": {
+    "description": "Coût par litre d'un coût figé (CB12, CB14) : total / volume conditionné.",
+    "cases": [
+      {
+        "id": "ale-blonde-140724",
+        "total": 40.84,
+        "volume_litres": 17,
+        "expected": 2.402353,
+        "tolerance": 0.000001
+      },
+      {
+        "id": "biere-blonde-estivale",
+        "total": 49.05,
+        "volume_litres": 27,
+        "expected": 1.816667,
+        "tolerance": 0.000001
+      }
+    ],
+    "invalid": [
+      {
+        "total": 40.84,
+        "volume_litres": 0,
+        "reason": "volume nul"
+      },
+      {
+        "total": -1,
+        "volume_litres": 17,
+        "reason": "total négatif"
+      }
+    ]
+  },
+  "brew_cases": {
+    "description": "Critère de fin de la v0.5 (FIN2, FIN3) : ingrédients regroupés par clé, une levure pour un sachet, frais par brassin et par bouteille. Les ingrédients et les prix unitaires sont ceux des cas de même nom ; l'eau (somme des quatre lignes d'eau de la fiche) et l'électricité deviennent des frais par brassin, Carbonation Drops, Capsules et Vidanges des frais par bouteille. 'bottles' nul : recette, bouteilles de 33 cl estimées sur 'volume_litres'. Valeurs attendues calculées hors du paquet.",
+    "cases": [
+      {
+        "id": "ale-blonde-140724-brassin",
+        "source": "Ale blonde 140724 - Pale ale",
+        "ingredients": [
+          {
+            "nature": "malt",
+            "name": "Pale Ale malt",
+            "quantity": 4620,
+            "unit": "g",
+            "unit_price": 0.00188095
+          },
+          {
+            "nature": "malt",
+            "name": "WHeat",
+            "quantity": 1700,
+            "unit": "g",
+            "unit_price": 0.00198824
+          },
+          {
+            "nature": "malt",
+            "name": "munich light",
+            "quantity": 90,
+            "unit": "g",
+            "unit_price": 0.00166667
+          },
+          {
+            "nature": "malt",
+            "name": "Pils",
+            "quantity": 290,
+            "unit": "g",
+            "unit_price": 0.00213793
+          },
+          {
+            "nature": "houblon",
+            "name": "Cascade",
+            "quantity": 29.5,
+            "unit": "g",
+            "unit_price": 0.04508475
+          },
+          {
+            "nature": "houblon",
+            "name": "Saaz",
+            "quantity": 29.5,
+            "unit": "g",
+            "unit_price": 0.05898305
+          },
+          {
+            "nature": "houblon",
+            "name": "Cascade (aromatique)",
+            "quantity": 50,
+            "unit": "g",
+            "unit_price": 0.045
+          },
+          {
+            "nature": "houblon",
+            "name": "Citra en dry HOP",
+            "quantity": 34.9,
+            "unit": "g",
+            "unit_price": 0.07994269
+          },
+          {
+            "nature": "ajout",
+            "name": "Orange peel",
+            "quantity": 50,
+            "unit": "g",
+            "unit_price": 0.0326
+          },
+          {
+            "nature": "levure",
+            "name": "SafAle BE-256",
+            "quantity": 1,
+            "unit": "unit",
+            "unit_price": 3.99
+          }
+        ],
+        "fees": [
+          {
+            "name": "Eau",
+            "amount_eur": 1.66,
+            "basis": "per_brew"
+          },
+          {
+            "name": "Electricité",
+            "amount_eur": 2,
+            "basis": "per_brew"
+          },
+          {
+            "name": "Carbonation Drops",
+            "amount_eur": 0.0826,
+            "basis": "per_bottle"
+          },
+          {
+            "name": "Capsules",
+            "amount_eur": 0.0296,
+            "basis": "per_bottle"
+          },
+          {
+            "name": "Vidanges",
+            "amount_eur": 0.1,
+            "basis": "per_bottle"
+          }
+        ],
+        "bottles": 50,
+        "volume_litres": 17,
+        "expected": {
+          "total": 40.84,
+          "per_bottle": 0.8168,
+          "per_litre": 2.402353
+        },
+        "tolerance": 0.0001,
+        "fiche_value": {
+          "total": 40.82,
+          "per_bottle": 0.82
+        },
+        "fiche_tolerance": 0.05
+      },
+      {
+        "id": "biere-blonde-estivale-brassin",
+        "source": "Bière blonde 11-2-24 - très bonne bière légère estivale",
+        "ingredients": [
+          {
+            "nature": "malt",
+            "name": "Pilsner",
+            "quantity": 6540,
+            "unit": "g",
+            "unit_price": 0.00214985
+          },
+          {
+            "nature": "malt",
+            "name": "WHeat",
+            "quantity": 2410,
+            "unit": "g",
+            "unit_price": 0.0019917
+          },
+          {
+            "nature": "malt",
+            "name": "munich light",
+            "quantity": 140,
+            "unit": "g",
+            "unit_price": 0.00171429
+          },
+          {
+            "nature": "malt",
+            "name": "Cara 50 EBC",
+            "quantity": 300,
+            "unit": "g",
+            "unit_price": 0.0032
+          },
+          {
+            "nature": "houblon",
+            "name": "Cascade",
+            "quantity": 28.3,
+            "unit": "g",
+            "unit_price": 0.04487633
+          },
+          {
+            "nature": "houblon",
+            "name": "Saaz",
+            "quantity": 28.3,
+            "unit": "g",
+            "unit_price": 0.0590106
+          },
+          {
+            "nature": "houblon",
+            "name": "Citra en dry HOP",
+            "quantity": 34.9,
+            "unit": "g",
+            "unit_price": 0.07994269
+          },
+          {
+            "nature": "ajout",
+            "name": "Orange peel",
+            "quantity": 50,
+            "unit": "g",
+            "unit_price": 0.0326
+          },
+          {
+            "nature": "levure",
+            "name": "SafAle BE-256",
+            "quantity": 1,
+            "unit": "unit",
+            "unit_price": 3.99
+          }
+        ],
+        "fees": [
+          {
+            "name": "Eau",
+            "amount_eur": 1.64,
+            "basis": "per_brew"
+          },
+          {
+            "name": "Electricité",
+            "amount_eur": 2,
+            "basis": "per_brew"
+          },
+          {
+            "name": "Carbonation Drops",
+            "amount_eur": 0.08257576,
+            "basis": "per_bottle"
+          },
+          {
+            "name": "Capsules",
+            "amount_eur": 0.02954545,
+            "basis": "per_bottle"
+          },
+          {
+            "name": "Vidanges",
+            "amount_eur": 0.1,
+            "basis": "per_bottle"
+          }
+        ],
+        "bottles": 66,
+        "volume_litres": 27,
+        "expected": {
+          "total": 49.05,
+          "per_bottle": 0.7432,
+          "per_litre": 1.816667
+        },
+        "tolerance": 0.0001,
+        "fiche_value": {
+          "total": 49.04,
+          "per_bottle": 0.74
+        },
+        "fiche_tolerance": 0.05
+      },
+      {
+        "id": "ale-blonde-140724-recette-20-l",
+        "source": "Ale blonde 140724 - Pale ale",
+        "ingredients": [
+          {
+            "nature": "malt",
+            "name": "Pale Ale malt",
+            "quantity": 4620,
+            "unit": "g",
+            "unit_price": 0.00188095
+          },
+          {
+            "nature": "malt",
+            "name": "WHeat",
+            "quantity": 1700,
+            "unit": "g",
+            "unit_price": 0.00198824
+          },
+          {
+            "nature": "malt",
+            "name": "munich light",
+            "quantity": 90,
+            "unit": "g",
+            "unit_price": 0.00166667
+          },
+          {
+            "nature": "malt",
+            "name": "Pils",
+            "quantity": 290,
+            "unit": "g",
+            "unit_price": 0.00213793
+          },
+          {
+            "nature": "houblon",
+            "name": "Cascade",
+            "quantity": 29.5,
+            "unit": "g",
+            "unit_price": 0.04508475
+          },
+          {
+            "nature": "houblon",
+            "name": "Saaz",
+            "quantity": 29.5,
+            "unit": "g",
+            "unit_price": 0.05898305
+          },
+          {
+            "nature": "houblon",
+            "name": "Cascade (aromatique)",
+            "quantity": 50,
+            "unit": "g",
+            "unit_price": 0.045
+          },
+          {
+            "nature": "houblon",
+            "name": "Citra en dry HOP",
+            "quantity": 34.9,
+            "unit": "g",
+            "unit_price": 0.07994269
+          },
+          {
+            "nature": "ajout",
+            "name": "Orange peel",
+            "quantity": 50,
+            "unit": "g",
+            "unit_price": 0.0326
+          },
+          {
+            "nature": "levure",
+            "name": "SafAle BE-256",
+            "quantity": 1,
+            "unit": "unit",
+            "unit_price": 3.99
+          }
+        ],
+        "fees": [
+          {
+            "name": "Eau",
+            "amount_eur": 1.66,
+            "basis": "per_brew"
+          },
+          {
+            "name": "Electricité",
+            "amount_eur": 2,
+            "basis": "per_brew"
+          },
+          {
+            "name": "Carbonation Drops",
+            "amount_eur": 0.0826,
+            "basis": "per_bottle"
+          },
+          {
+            "name": "Capsules",
+            "amount_eur": 0.0296,
+            "basis": "per_bottle"
+          },
+          {
+            "name": "Vidanges",
+            "amount_eur": 0.1,
+            "basis": "per_bottle"
+          }
+        ],
+        "bottles": null,
+        "volume_litres": 20,
+        "expected": {
+          "total": 43.090603,
+          "per_litre": 2.15453,
+          "per_bottle_33cl": 0.710995
+        },
+        "tolerance": 0.0001,
+        "note": "FIN3 : une recette de 20 L compte 60,6 bouteilles de 33 cl estimées pour 50 réelles, soit 43,09 € au lieu de 40,84 €."
+      }
+    ]
+  }
 }

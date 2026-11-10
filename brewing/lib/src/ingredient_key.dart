@@ -187,3 +187,15 @@ String ingredientKey(IngredientNature nature, String name) {
       .substring(0, maxIngredientKeyLength)
       .replaceAll(RegExp(r'-+$'), '');
 }
+
+/// Nature d'une clé d'ingrédient, lue sur son préfixe, ou `null` si la clé n'en
+/// porte aucun. Chaque clé commence par le préfixe de sa nature, et aucun
+/// préfixe n'en prolonge un autre : `malt-pils` est un malt, `sucre-malt` un
+/// sucre.
+IngredientNature? natureOfKey(String key) {
+  for (final nature in IngredientNature.values) {
+    final prefix = nature.prefix;
+    if (key == prefix || key.startsWith('$prefix-')) return nature;
+  }
+  return null;
+}

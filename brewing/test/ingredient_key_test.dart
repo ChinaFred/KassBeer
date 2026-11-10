@@ -148,4 +148,20 @@ void main() {
       );
     }
   });
+
+  test('nature lue sur le préfixe de la clé', () {
+    for (final nature in IngredientNature.values) {
+      for (final name in ['Pils', 'Malt', 'Sucre', 'Houblon', 'Levure']) {
+        expect(
+          natureOfKey(ingredientKey(nature, name)),
+          nature,
+          reason: '${nature.prefix} / $name',
+        );
+      }
+    }
+    expect(natureOfKey('sucre-malt'), IngredientNature.sugar);
+    expect(natureOfKey('maltose'), isNull);
+    expect(natureOfKey('autre-chose'), isNull);
+    expect(natureOfKey(''), isNull);
+  });
 }

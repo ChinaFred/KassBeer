@@ -558,7 +558,7 @@ void main() {
       expect(find.text('Calcul impossible'), findsOneWidget);
     });
 
-    testWidgets('EM5 : aucun degré après bouteille ni coût', (tester) async {
+    testWidgets('EM5 : aucun degré après bouteille', (tester) async {
       await fiche(
         tester,
         brew: unBrassin(
@@ -571,7 +571,6 @@ void main() {
       );
       await voir(tester, find.text('Embouteillage'));
       expect(find.textContaining('après bouteille'), findsNothing);
-      expect(find.textContaining('€'), findsNothing);
     });
 
     testWidgets('contraste du texte, thème clair et sombre', (tester) async {
@@ -641,10 +640,15 @@ void main() {
       expect(write.detail['status'], BrewStatus.conditioning);
       expect(write.detail['final_gravity'], 1.012);
       expect(write.detail['bottles_count'], 60);
+      // Prix non lus : le coût ne se fige pas (CB8), l'annonce le dit (CB9).
       expect(
-        find.text('Embouteillage enregistré. Brassin en conditionnement.'),
+        find.text(
+          'Embouteillage enregistré. Brassin en conditionnement. '
+          'Coût non figé.',
+        ),
         findsOneWidget,
       );
+      expect(app.costs.writes, isEmpty);
     });
 
     testWidgets('modification : pas de densité finale, statut inchangé', (

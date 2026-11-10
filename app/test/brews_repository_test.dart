@@ -332,7 +332,7 @@ void main() {
       for (final id in ['e1', 'e2', 'e3']) {
         await brew.collection('events').doc(id).set({'kind': 'note'});
       }
-      await repository.deleteWithEvents('b1');
+      await repository.deleteWithEvents('b1', ownerUid: 'u');
       expect((await brew.get()).exists, isFalse);
       expect((await brew.collection('events').get()).docs, isEmpty);
     });
@@ -340,7 +340,7 @@ void main() {
     test('sans saisie : brassin supprimé', () async {
       final brew = firestore.collection('brews').doc('b1');
       await brew.set({'owner_uid': 'u'});
-      await repository.delete('b1');
+      await repository.delete('b1', ownerUid: 'u');
       expect((await brew.get()).exists, isFalse);
     });
   });
