@@ -8,6 +8,8 @@ import '../../features/auth/domain/session_user.dart';
 import '../../features/auth/presentation/access_providers.dart';
 import '../../features/auth/presentation/sign_out.dart';
 import '../../features/brew_day/presentation/reprise_brassage.dart';
+import '../../features/tickets/presentation/ticket_form_screen.dart';
+import '../../features/tickets/presentation/tickets_providers.dart';
 import '../providers.dart';
 import '../router/routes.dart';
 import 'bandeau_hors_ligne.dart';
@@ -212,8 +214,12 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-/// Avatar Google et menu du compte : nom, e-mail, version, Mes prix, Nouveautés,
-/// déconnexion.
+/// Texte d'une pastille : « 99+ » au-delà de 99.
+String textePastille(int count) => count > 99 ? '99+' : '$count';
+
+/// Avatar Google et menu du compte : nom, e-mail, version, Mes prix, Signaler ou
+/// proposer, Mes tickets, Nouveautés, déconnexion. La pastille compte les
+/// suivis de ticket à lire.
 class _AccountMenu extends ConsumerWidget {
   const _AccountMenu({required this.user});
 
@@ -230,6 +236,10 @@ class _AccountMenu extends ConsumerWidget {
             .first
             .toUpperCase();
     final photo = user.photoUrl;
+    final unread = ref.watch(unreadTicketsCountProvider);
+    final unreadSuffix = unread == 1
+        ? '1 suivi de ticket à lire'
+        : '$unread suivis de ticket à lire';
 
     return MenuAnchor(
       menuChildren: [
@@ -263,6 +273,26 @@ class _AccountMenu extends ConsumerWidget {
         ),
         const Divider(),
         MenuItemButton(
+          leadingIcon: const Icon(Icons.feedback_outlined),
+          // Le modèle de la route courante (`/recettes/:id`), jamais son
+          // adresse : l'écran part sur une Issue publique.
+          onPressed: () => unawaited(
+            context.push(
+              ticketFormLocation(GoRouter.of(context).state.fullPath),
+            ),
+          ),
+          child: const Text('Signaler ou proposer'),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.confirmation_number_outlined),
+          trailingIcon: unread == 0
+              ? null
+              : Badge(label: Text(textePastille(unread))),
+          semanticsLabel: unread == 0 ? null : 'Mes tickets, $unread à lire',
+          onPressed: () => unawaited(context.push(AppRoutes.tickets)),
+          child: const Text('Mes tickets'),
+        ),
+        MenuItemButton(
           leadingIcon: const Icon(Icons.new_releases_outlined),
           onPressed: () => unawaited(context.push(AppRoutes.news)),
           child: const Text('Nouveautés'),
@@ -275,27 +305,31 @@ class _AccountMenu extends ConsumerWidget {
         ),
       ],
       builder: (context, controller, _) => IconButton(
-        tooltip: 'Mon compte',
+        tooltip: unread == 0 ? 'Mon compte' : 'Mon compte, $unreadSuffix',
         onPressed: () =>
             controller.isOpen ? controller.close() : controller.open(),
-        icon: CircleAvatar(
-          radius: 16,
-          foregroundImage: photo == null ? null : NetworkImage(photo),
-          onForegroundImageError: photo == null
-              ? null
-              : (error, stackTrace) => ref
-                    .read(errorReportServiceProvider)
-                    .reportError(
-                      feature: 'shell.avatar',
-                      error: error,
-                      stackTrace: stackTrace,
-                      // Ni l'URL de la photo (retirée aussi par le service), ni
-                      // l'adresse : le type d'erreur et le code HTTP suffisent.
-                      context: error is NetworkImageLoadException
-                          ? 'photo du compte Google illisible, HTTP ${error.statusCode}'
-                          : 'photo du compte Google illisible',
-                    ),
-          child: ExcludeSemantics(child: Text(initial)),
+        icon: Badge(
+          isLabelVisible: unread > 0,
+          label: Text(textePastille(unread)),
+          child: CircleAvatar(
+            radius: 16,
+            foregroundImage: photo == null ? null : NetworkImage(photo),
+            onForegroundImageError: photo == null
+                ? null
+                : (error, stackTrace) => ref
+                      .read(errorReportServiceProvider)
+                      .reportError(
+                        feature: 'shell.avatar',
+                        error: error,
+                        stackTrace: stackTrace,
+                        // Ni l'URL de la photo (retirée aussi par le service), ni
+                        // l'adresse : le type d'erreur et le code HTTP suffisent.
+                        context: error is NetworkImageLoadException
+                            ? 'photo du compte Google illisible, HTTP ${error.statusCode}'
+                            : 'photo du compte Google illisible',
+                      ),
+            child: ExcludeSemantics(child: Text(initial)),
+          ),
         ),
       ),
     );

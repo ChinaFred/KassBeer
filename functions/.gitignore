@@ -1,0 +1,4 @@
+# Sorties de tsc et manifeste de découverte, produits par la CI ou sur le poste.
+lib/
+build-test/
+functions.yaml

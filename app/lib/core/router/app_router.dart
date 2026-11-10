@@ -21,6 +21,10 @@ import '../../features/recipes/presentation/brew_steps_editor_screen.dart';
 import '../../features/recipes/presentation/recipe_detail_screen.dart';
 import '../../features/recipes/presentation/recipe_editor_screen.dart';
 import '../../features/recipes/presentation/recipes_list_screen.dart';
+import '../../features/tickets/domain/ticket.dart';
+import '../../features/tickets/presentation/my_tickets_screen.dart';
+import '../../features/tickets/presentation/ticket_detail_screen.dart';
+import '../../features/tickets/presentation/ticket_form_screen.dart';
 import '../presentation/app_shell.dart';
 import '../presentation/etats.dart';
 import '../presentation/nouveautes_screen.dart';
@@ -159,6 +163,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.news,
         builder: (_, _) => const NouveautesScreen(),
+      ),
+      // Tickets (ADR-006) : pleines pages hors de la coquille, ouvertes par
+      // `push`. « nouveau » avant « :id », sans quoi il serait lu comme un
+      // identifiant.
+      GoRoute(
+        path: AppRoutes.newTicket,
+        builder: (_, state) => TicketFormScreen(
+          ecranOrigine: state.uri.queryParameters[kTicketScreenQueryParam],
+          reprise: switch (state.extra) {
+            final TicketBrouillon brouillon => brouillon,
+            _ => null,
+          },
+        ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.tickets}/:id',
+        builder: (_, state) =>
+            TicketDetailScreen(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.tickets,
+        builder: (_, _) => const MyTicketsScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {

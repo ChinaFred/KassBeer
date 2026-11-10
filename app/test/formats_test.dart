@@ -69,6 +69,11 @@ void main() {
       expect(formatDateLongue(DateTime(2026, 12, 31)), '31 décembre 2026');
     });
 
+    test('date en chiffres « jj/mm/aa »', () {
+      expect(formatDateChiffres(DateTime(2026, 11, 8)), '08/11/26');
+      expect(formatDateChiffres(DateTime(2030, 1, 31)), '31/01/30');
+    });
+
     test('texte d\'un champ : virgule, sans espace', () {
       expect(texteSaisi(4.5), '4,5');
       expect(texteSaisi(22400), '22400');

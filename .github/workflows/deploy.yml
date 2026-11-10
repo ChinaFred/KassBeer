@@ -3,14 +3,20 @@ name: Déploiement
 # Déploie le web (Firebase Hosting), les règles et les index Firestore après une
 # CI verte sur un push de main. Publie un nouvel APK sur Firebase App
 # Distribution (groupe « brasseurs ») quand le numéro de build de
-# app/pubspec.yaml dépasse celui de la dernière version publiée.
+# app/pubspec.yaml dépasse celui de la dernière version publiée. Déploie les
+# Cloud Functions (ADR-006) quand le commit change functions/, et à chaque
+# lancement manuel.
 #
-# Quatre jobs, pour que le code compilé ne tourne jamais à côté d'un accès à
+# Cinq jobs, pour que le code compilé ne tourne jamais à côté d'un accès à
 # Google Cloud :
-#   gate    le commit est la tête de main ;
-#   plan    configuration présente, faut-il un nouvel APK ? (jeton Google, aucun build) ;
-#   build   web et APK signé (secrets de signature, aucun jeton Google) ;
-#   deploy  Hosting, règles, index, App Distribution (jeton Google, aucun build).
+#   gate             le commit est la tête de main ; change-t-il functions/ ? ;
+#   plan             configuration présente, faut-il un nouvel APK ? (jeton Google, aucun build) ;
+#   build            web et APK signé (secrets de signature, aucun jeton Google) ;
+#   build-functions  npm ci, build et manifeste des fonctions (ni secret, ni jeton Google) ;
+#   deploy           Hosting, règles, index, Functions, App Distribution (jeton Google,
+#                    aucun build, aucun npm ci de functions/ ni code des fonctions exécuté :
+#                    firebase-tools lit le manifeste functions.yaml au lieu de charger
+#                    le code, P14).
 #
 # Aucun secret lisible sur pull_request (P14) : ce workflow ne se déclenche que
 # sur workflow_run et workflow_dispatch, toujours sur main. Google Cloud par
@@ -58,6 +64,7 @@ jobs:
        github.event.workflow_run.head_repository.full_name == github.repository)
     outputs:
       sha: ${{ steps.tip.outputs.sha }}
+      functions: ${{ steps.functions.outputs.deploy }}
     steps:
       - name: Le commit est la tête de main
         id: tip
@@ -74,6 +81,39 @@ jobs:
             exit 0
           fi
           echo "sha=$WANTED" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.tip.outputs.sha != ''
+        with:
+          ref: ${{ steps.tip.outputs.sha }}
+          # Le commit et son premier parent : le diff de la fusion sur main.
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Le commit change-t-il functions/ ?
+        id: functions
+        # Functions déployées seulement quand functions/** change (P14), ou sur un
+        # lancement manuel : après un déploiement des Functions en échec, relancer
+        # ce workflow à la main les redéploie. Un diff illisible déploie par prudence.
+        if: steps.tip.outputs.sha != ''
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            deploy=true
+          elif ! git cat-file -e HEAD^1 2>/dev/null; then
+            echo "::warning::Premier parent du commit illisible : les Functions sont déployées."
+            deploy=true
+          elif ! files=$(git diff --name-only HEAD^1 HEAD -- functions/); then
+            echo "::warning::Diff illisible : les Functions sont déployées."
+            deploy=true
+          elif [ -n "$files" ]; then
+            deploy=true
+          else
+            deploy=false
+          fi
+          echo "Déploiement des Functions : $deploy."
+          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
 
   plan:
     name: Configuration et APK à publier
@@ -356,10 +396,80 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  build-functions:
+    name: Build des Functions et manifeste
+    needs: [gate, plan]
+    if: needs.plan.outputs.ready == 'true' && needs.gate.outputs.functions == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Ni environnement, ni secret, ni id-token : npm ci, tsc et la découverte des
+    # fonctions exécutent le code des dépendances, qui n'a pas à obtenir de jeton
+    # Google (P14).
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Manifeste des fonctions
+        # firebase-functions écrit la liste des fonctions et de leurs réglages dans
+        # functions.yaml. Le job deploy le lit au lieu de charger le code avec le
+        # jeton Google (conditions relevées par ADR-005 dans firebase-tools 15.35.0).
+        env:
+          FUNCTIONS_CONTROL_API: 'true'
+        run: |
+          manifest="$PWD/functions.yaml"
+          FUNCTIONS_MANIFEST_OUTPUT_PATH="$manifest" npx --no-install firebase-functions .
+          if ! jq -e '[.endpoints[] | select(has("httpsTrigger") or has("callableTrigger") or has("blockingTrigger") or has("taskQueueTrigger"))] | length == 0' "$manifest" > /dev/null; then
+            echo "::error::Une fonction expose un point d'accès HTTP ou une callable : interdit sans ADR (P25)."
+            exit 1
+          fi
+          if ! jq -e '[.endpoints[] | select((.maxInstances // 0) < 1)] | length == 0' "$manifest" > /dev/null; then
+            echo "::error::maxInstances manque sur une fonction (P25)."
+            exit 1
+          fi
+          echo "Fonctions : $(jq -r '.endpoints | keys | join(", ")' "$manifest")."
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: functions
+          # Le code compilé et le manifeste ; package.json et package-lock.json
+          # viennent du checkout du job deploy. Cloud Build installe les dépendances
+          # de production depuis package-lock.json, côté Google.
+          path: |
+            functions/lib
+            functions/functions.yaml
+          if-no-files-found: error
+          retention-days: 1
+
   deploy:
-    name: Hosting, règles, index, App Distribution
-    needs: [gate, plan, build]
-    if: needs.plan.outputs.ready == 'true'
+    name: Hosting, règles, index, Functions, App Distribution
+    needs: [gate, plan, build, build-functions]
+    # build-functions est ignoré quand functions/ ne change pas : le déploiement part
+    # quand même, sans les Functions.
+    if: >-
+      !cancelled() &&
+      needs.plan.outputs.ready == 'true' &&
+      needs.build.result == 'success' &&
+      (needs.build-functions.result == 'success' ||
+       (needs.build-functions.result == 'skipped' && needs.gate.outputs.functions != 'true'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
@@ -415,6 +525,46 @@ jobs:
           name: apk
           path: ${{ runner.temp }}/apk
 
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.gate.outputs.functions == 'true'
+        with:
+          name: functions
+          path: functions
+
+      - name: Manifeste des Functions contrôlé (P25)
+        # Avant l'authentification : le manifeste vient d'un job qui exécute le code des
+        # dépendances. Il est relu ici, par jq seul : aucun déclencheur HTTP, callable,
+        # bloquant ou de file ; maxInstances sur chaque fonction ; compte d'exécution
+        # tickets-functions ; aucun secret autre que GITHUB_TICKETS_TOKEN.
+        if: needs.gate.outputs.functions == 'true'
+        env:
+          PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          manifest="functions/functions.yaml"
+          if ! jq -e '.endpoints | type == "object" and length > 0' "$manifest" > /dev/null; then
+            echo "::error::$manifest absent, illisible ou sans fonction."
+            exit 1
+          fi
+          if ! jq -e '[.endpoints[] | select(has("httpsTrigger") or has("callableTrigger") or has("blockingTrigger") or has("taskQueueTrigger"))] | length == 0' "$manifest" > /dev/null; then
+            echo "::error::Une fonction expose un point d'accès HTTP ou une callable : interdit sans ADR (P25)."
+            exit 1
+          fi
+          if ! jq -e '[.endpoints[] | select((.maxInstances // 0) < 1)] | length == 0' "$manifest" > /dev/null; then
+            echo "::error::maxInstances manque sur une fonction (P25)."
+            exit 1
+          fi
+          if ! jq -e --arg full "tickets-functions@$PROJECT.iam.gserviceaccount.com" \
+               '[.endpoints[] | select(.serviceAccountEmail != "tickets-functions@" and .serviceAccountEmail != $full)] | length == 0' "$manifest" > /dev/null; then
+            echo "::error::Une fonction ne tourne pas sous le compte tickets-functions."
+            exit 1
+          fi
+          if ! jq -e '[.endpoints[] | (.secretEnvironmentVariables // [])[] | .key | select(. != "GITHUB_TICKETS_TOKEN")] | length == 0' "$manifest" > /dev/null \
+             || ! jq -e '[(.params // [])[] | select(.type == "secret" and .name != "GITHUB_TICKETS_TOKEN")] | length == 0' "$manifest" > /dev/null; then
+            echo "::error::Une fonction lit un secret autre que GITHUB_TICKETS_TOKEN."
+            exit 1
+          fi
+          echo "Manifeste conforme : $(jq -r '.endpoints | keys | join(", ")' "$manifest")."
+
       - name: Authentification Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         # Workload Identity Federation, aucune clé JSON (P14). Le fichier
@@ -437,6 +587,24 @@ jobs:
             --project "$PROJECT" --non-interactive 2>&1 | tee "$log"
           if ! grep -q "Deploy complete" "$log"; then
             echo "::error::firebase deploy a rendu 0 sans « Deploy complete » : rien ne prouve le déploiement."
+            exit 1
+          fi
+
+      - name: Déployer les Functions
+        # Sans npm ci ni build ici (P14) : functions/lib et functions/functions.yaml
+        # viennent du job build-functions. Le predeploy de firebase.json vérifie leur
+        # présence. firebase-tools lit functions.yaml et ne charge pas le code. Pas de
+        # --force : une fonction retirée du code n'est pas supprimée sans geste exprès.
+        if: needs.gate.outputs.functions == 'true'
+        env:
+          PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          log="$RUNNER_TEMP/firebase-deploy-functions.log"
+          set -o pipefail
+          firebase deploy --only functions \
+            --project "$PROJECT" --non-interactive 2>&1 | tee "$log"
+          if ! grep -q "Deploy complete" "$log"; then
+            echo "::error::firebase deploy --only functions a rendu 0 sans « Deploy complete » : rien ne prouve le déploiement."
             exit 1
           fi
 
@@ -465,12 +633,18 @@ jobs:
       - name: Résumé
         env:
           APK: ${{ needs.plan.outputs.apk }}
+          FUNCTIONS: ${{ needs.gate.outputs.functions }}
           VERSION: ${{ needs.plan.outputs.version }}
         run: |
           {
             echo "### Déployé : v$VERSION ($(git rev-parse --short HEAD))"
             echo
             echo "Web (Hosting), règles et index Firestore."
+            if [ "$FUNCTIONS" = true ]; then
+              echo "Cloud Functions des tickets."
+            else
+              echo "Functions inchangées : functions/ n'a pas changé."
+            fi
             if [ "$APK" = true ]; then
               echo "Nouvel APK publié sur App Distribution, groupe « brasseurs »."
             else

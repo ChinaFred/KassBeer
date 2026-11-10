@@ -17,6 +17,7 @@ import 'features/costs/data/costs_repository.dart';
 import 'features/equipment/data/equipment_repository.dart';
 import 'features/members/data/members_repository.dart';
 import 'features/recipes/data/recipes_repository.dart';
+import 'features/tickets/data/tickets_repository.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -120,6 +121,9 @@ Future<void> main() async {
         ),
         costsRepositoryProvider.overrideWithValue(
           FirestoreCostsRepository(errorReportService: errors),
+        ),
+        ticketsRepositoryProvider.overrideWithValue(
+          FirestoreTicketsRepository(errorReportService: errors),
         ),
       ],
       child: const KassBeerApp(),

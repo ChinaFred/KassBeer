@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.16",
+      "date": "2026-11-10",
+      "paragraphs": [
+        "Le menu du compte gagne « Signaler ou proposer » et « Mes tickets ». Un membre signale un bug, propose une évolution ou une nouvelle fonctionnalité depuis l'écran où il se trouve, même sans réseau : le ticket part au retour de la connexion. Le titre et la description sont publiés sur un site public, sans le nom ni l'adresse de l'auteur. « Mes tickets » montre où en est chaque demande : reçue, validée, en cours, livrée, refusée ou close, avec la réponse de l'administrateur. Une pastille sur l'avatar signale un changement à lire. Une demande livrée dit dans quelle version, et si une mise à jour de l'application est nécessaire. Cinq tickets par membre et par jour, vingt pour le groupe. L'administrateur voit sur la page Admin si l'envoi des tickets est bloqué."
+      ]
+    },
+    {
       "version": "0.1.15",
       "date": "2026-11-10",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-08",
       "paragraphs": [
         "L'application porte son propre logo, le médaillon Kass'Beer, sur Android et sur le web. Sur Android, l'icône est adaptative : médaillon entier sur fond crème, sans coupe quel que soit le masque du lanceur. Les PNG sont tirés de assets/Kassbeer_transparent.png, sans nouvelle dépendance."
-      ]
-    },
-    {
-      "version": "0.1.8",
-      "date": "2026-11-08",
-      "paragraphs": [
-        "Le brassin et le jour de brassage hors ligne arrivent (incrément v0.3). Un brassin se crée depuis une recette, avec une copie figée de la recette et de l'équipement. La recette reçoit une chronologie, préremplie depuis les paliers et l'ébullition. « Préparer le brassage » charge tout sur le téléphone. L'écran du jour affiche l'étape en cours, un minuteur lisible de loin et les heures prévues recalculées après un retard. Il permet de sauter une étape, de corriger une heure et de saisir températures, densités, volumes et pH. Sans réseau, les saisies restent sur le téléphone, même application fermée, et partent au retour du réseau. L'écran reste allumé. La fin d'un minuteur déclenche une vibration et un bip, même en mode silencieux."
       ]
     }
   ]

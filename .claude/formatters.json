@@ -26,6 +26,14 @@
       ],
       "cwd": "rules-tests",
       "command": "npx --no-install prettier --write {file}"
+    },
+    {
+      "prefix": "functions/",
+      "extensions": [
+        ".ts"
+      ],
+      "cwd": "functions",
+      "command": "npx --no-install prettier --write {file}"
     }
   ]
 }

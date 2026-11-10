@@ -84,7 +84,9 @@ seules décider de qui peut écrire.
    déclencheur, sans callable.
 5. Sessions Claude Code lancées depuis l'application : plus tard, par une décision à part, hors
    de cet ADR.
-6. Priorité : ces lots commencent après la livraison des lots L2 à L4 d'ADR-005.
+6. Priorité : ces lots commencent après la livraison des lots L2 à L4 d'ADR-005. Révisée le
+   2026-11-10 : T1 démarre après la livraison de L1 (v0.1.15), en parallèle de L2 à L4 ; la
+   branche intègre `main` à chaque livraison d'ADR-005.
 7. Plafonds : 5 tickets par membre et 20 pour le groupe par jour, l'administrateur exempté.
 8. Node 24 pour `functions/`.
 9. Jeton à grain fin du compte propriétaire, dans Secret Manager, renouvelé à son expiration ;
@@ -92,7 +94,8 @@ seules décider de qui peut écrire.
 
 ### Lots
 
-Ils commencent après la livraison des lots L2 à L4 d'ADR-005 (décision 6). Les noms T1 et T2
+Ils commencent après la livraison du lot L1 d'ADR-005, en parallèle de L2 à L4 (décision 6,
+révisée le 2026-11-10). Les noms T1 et T2
 évitent la confusion avec ces lots.
 
 | Lot | Contenu | Livré seul ? |
@@ -241,10 +244,13 @@ et les décisions repartent quand le jeton est remplacé. Le premier appel réus
    statut et `allowed_decisions` sont dérivés par le serveur seul et lus tels quels. Le
    tableau « Logique dupliquée » reste vide.
 3. **Ce qui pèse au démarrage** : côté serveur, aucun SDK lourd ; client GitHub par `fetch`,
-   `firebase-admin` et `firebase-functions` seuls (leçon 5). Côté client, aucun paquet ajouté :
-   pas de `cloud_functions`, les écritures passent par `cloud_firestore`.
+   `firebase-admin` et `firebase-functions` seuls (leçon 5). Côté client, pas de
+   `cloud_functions` : les écritures passent par `cloud_firestore`. Seul `url_launcher` s'ajoute
+   (avenant du 2026-11-10), pour ouvrir la PR livrée ; il est léger et n'entre pas au démarrage.
 4. **Compilation de chaque cible** : `(cd functions && npm ci && npm run build && npm test)`
-   s'ajoute à « Commandes utiles » et à `ci.yml`. APK et web inchangés en dépendances.
+   s'ajoute à « Commandes utiles » et à `ci.yml`. Côté client, `url_launcher` 6.3.3
+   s'ajoute (avenant du 2026-11-10) : l'APK se compile par le job « Android — compilation »
+   de la CI (P6), le web par `flutter build web`.
 5. **Qui voit quoi** : un membre lit ses tickets et la réponse qui lui est faite,
    l'administrateur tous les tickets et toutes les décisions. L'Issue publique contient le
    titre, la description nettoyée, le type, le modèle de route, la version, la plateforme et
@@ -275,6 +281,38 @@ et les décisions repartent quand le jeton est remplacé. Le premier appel réus
 9. **Coût de sortie** : faible. Les tickets sont des Issues GitHub ordinaires. Retirer
    `functions/` laisse les Issues et la collection `tickets/` lisibles. Le dépôt ne se
    recrée jamais (ADR-002, condition Workload Identity Federation).
+
+## Avenant du 2026-11-10 — cadrage de T1
+
+Après le cadrage de T1 (`analyste-metier`, `ux-designer`), l'utilisateur a tranché :
+
+1. **Réponse dès T1.** La tâche horaire relève le dernier commentaire « Réponse : » du compte
+   16348852 et l'écrit dans `reply_text` ; « Mes tickets » l'affiche sous « Réponse de
+   l'administrateur ». Ce relevé passe de T2 à T1.
+2. **Bandeau Admin en T1.** La page Admin lit `ticket_status/github` et compte les tickets
+   bloqués : jeton refusé ou expiré, expiration à 14 jours ou moins, tickets `send_failed` ou
+   `pending` depuis plus d'une heure, tickets dont l'Issue a disparu. En T2, il passe dans
+   Admin › Tickets.
+3. **Écran d'origine modifiable.** Liste préremplie par le modèle de route de l'écran d'origine,
+   avec « Autre écran » et « Je ne sais pas » ; une table fermée donne le nom de chaque route, et
+   un test vérifie que chaque route y figure.
+4. **Lien vers la PR livrée** par `url_launcher`, ouvert seulement en `https` sur `github.com`.
+   P6 s'applique.
+5. **« Reprendre ce ticket »** sur un ticket `over_quota` : formulaire prérempli, nouveau
+   ticket.
+6. **Pastille** : elle ne s'allume pas au passage `pending` → `received`.
+7. **Issue disparue** (404 ou 410 sur l'Issue, dépôt joignable) : le ticket garde son statut,
+   l'erreur est journalisée et le bandeau Admin la compte.
+8. **Description** : 10 à 2 000 caractères, contrôlés par le formulaire et par les règles.
+9. **Plafond** : les tickets de l'administrateur ne sont jamais refusés et ne comptent pas dans
+   les 20 du groupe.
+
+Relevé à l'implémentation de T1 (déduit du code de firebase-tools 15.35.0, à confirmer au premier
+déploiement) : `github-deploy` reçoit aussi `run.admin` (invocation de la tâche planifiée),
+`cloudscheduler.admin`, `artifactregistry.reader` (lecture de la politique de nettoyage) et
+`secretmanager.viewer` sur le seul secret `GITHUB_TICKETS_TOKEN`. Les Functions tournent sous un
+compte dédié `tickets-functions`. La liste complète vit dans `exigences-techniques.md`,
+« Réglages faits une fois ». `allowed_decisions` et `retry_requested_at` arrivent avec T2.
 
 ## Conséquences
 

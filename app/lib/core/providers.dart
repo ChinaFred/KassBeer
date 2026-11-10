@@ -7,6 +7,7 @@ import '../features/costs/data/costs_repository.dart';
 import '../features/equipment/data/equipment_repository.dart';
 import '../features/members/data/members_repository.dart';
 import '../features/recipes/data/recipes_repository.dart';
+import '../features/tickets/data/tickets_repository.dart';
 import 'services/error_report_service.dart';
 import 'services/screen_wakelock.dart';
 
@@ -40,6 +41,11 @@ final brewsRepositoryProvider = Provider<BrewsRepository>(
 /// Prix, frais et coûts figés du compte connecté (`users/{uid}/`).
 final costsRepositoryProvider = Provider<CostsRepository>(
   (ref) => throw UnimplementedError('costsRepositoryProvider non fourni'),
+);
+
+/// Tickets des membres (`tickets/`, `ticket_status/github`, ADR-006).
+final ticketsRepositoryProvider = Provider<TicketsRepository>(
+  (ref) => throw UnimplementedError('ticketsRepositoryProvider non fourni'),
 );
 
 /// Heure de l'appareil. Injectée pour les tests : un minuteur se recalcule à

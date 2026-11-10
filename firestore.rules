@@ -665,5 +665,69 @@ service cloud.firestore {
       allow read, delete: if isAdmin();
       allow update: if false;
     }
+
+    // ---------------------------------------------------------------- tickets
+
+    // Tickets des membres (ADR-006, P23). Le membre crée son ticket hors ligne compris ;
+    // un déclencheur le publie en Issue sur le dépôt public et seul le serveur (SDK
+    // Admin, hors règles) écrit ensuite le statut et les champs GitHub. Le client n'écrit
+    // que les champs de la création, puis `seen_by_author_at`.
+    //
+    // `screen` : modèle de route go_router (segments littéraux en minuscules et
+    // paramètres `:id`), `autre` ou `inconnu`. Un identifiant réel de document ne passe
+    // pas : l'écran part sur le dépôt public.
+    function isTicketCreation(d) {
+      return d.keys().hasOnly(['type', 'title', 'description', 'screen', 'app_version',
+                               'platform', 'author_uid', 'author_email', 'created_at',
+                               'status'])
+        && d.keys().hasAll(['type', 'title', 'description', 'screen', 'platform',
+                            'author_uid', 'author_email', 'created_at', 'status'])
+        && d.type in ['bug', 'evolution', 'feature']
+        && d.title is string && d.title.size() >= 5 && d.title.size() <= 100
+        && d.title.matches('[^\\r\\n]*')
+        && d.description is string
+        && d.description.size() >= 10 && d.description.size() <= 2000
+        && d.screen is string && d.screen.size() <= 100
+        && (d.screen in ['autre', 'inconnu', '/']
+            || d.screen.matches('(/([a-z][a-z-]{0,39}|:[A-Za-z][A-Za-z0-9]{0,39}))+'))
+        && (!('app_version' in d)
+            || (d.app_version is string && d.app_version.size() >= 1
+                && d.app_version.size() <= 40))
+        && d.platform in ['android', 'web']
+        && d.author_uid == request.auth.uid
+        && d.author_email == emailKey()
+        && d.created_at == request.time
+        && d.status == 'pending';
+    }
+
+    match /tickets/{ticketId} {
+      allow create: if isMember()
+        && ticketId.matches('[A-Za-z0-9_-]{1,128}')
+        && isTicketCreation(request.resource.data);
+
+      // Lecture par l'auteur (requête « Mes tickets » filtrée sur author_uid) et l'admin.
+      allow read: if isMember()
+        && (resource.data.author_uid == request.auth.uid || isAdmin());
+
+      // Seule mise à jour client : l'auteur marque le suivi lu, à l'heure du serveur.
+      allow update: if isMember()
+        && resource.data.author_uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['seen_by_author_at'])
+        && request.resource.data.seen_by_author_at == request.time;
+
+      allow delete: if false;
+    }
+
+    // Compteurs du plafond du jour : serveur seul (SDK Admin).
+    match /ticket_quotas/{document=**} {
+      allow read, write: if false;
+    }
+
+    // État du jeton GitHub : écrit par le serveur, lu par l'admin (bandeau de la page Admin).
+    match /ticket_status/{document=**} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
   }
 }

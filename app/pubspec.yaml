@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.15+16
+version: 0.1.16+17
 
 environment:
   sdk: ^3.11.4
@@ -52,6 +52,11 @@ dependencies:
   # 1.1.0 annonce une rupture d'API dans une version mineure. Importé par le seul
   # fichier trace_courbe.dart (P18).
   fl_chart: 1.3.0
+
+  # Ouvre la modification livrée d'un ticket sur GitHub (ADR-006, avenant du
+  # 2026-11-10). Version exacte : seule une adresse https sur github.com est
+  # ouverte (ticket_lien_github.dart).
+  url_launcher: 6.3.3
 
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,15 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs24",
+      "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log", "test", "build-test"],
+      "predeploy": ["test -f \"$RESOURCE_DIR/lib/index.js\" && test -f \"$RESOURCE_DIR/functions.yaml\""]
+    }
+  ],
   "emulators": {
     "auth": { "port": 9099 },
     "firestore": { "port": 8080 },
