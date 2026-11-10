@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:exchange/exchange.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/app.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/data/nouveautes.dart';
+import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
 import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
@@ -22,6 +25,7 @@ import 'package:kass_beer/features/members/domain/member.dart';
 import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
+import 'package:kass_beer/features/recipes/presentation/recipes_providers.dart';
 import 'package:kass_beer/core/services/screen_wakelock.dart';
 import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
@@ -575,6 +579,55 @@ class FakeAlerte implements AlerteMinuteur {
   Future<void> declencher() async => triggered++;
 }
 
+/// Fichier envoyé par le double de [EchangeFichiers].
+class FichierEnvoye {
+  FichierEnvoye(this.mode, this.nom, this.typeMime, this.octets);
+
+  final ModeEnvoi mode;
+  final String nom;
+  final String typeMime;
+  final Uint8List octets;
+}
+
+class FakeEchangeFichiers implements EchangeFichiers {
+  /// Réponse au prochain choix ; annulé par défaut.
+  ResultatChoix choix = const ChoixAnnule();
+  int choixDemandes = 0;
+  int? maxOctetsDemande;
+
+  @override
+  List<ModeEnvoi> modes = const [ModeEnvoi.enregistrer, ModeEnvoi.partager];
+
+  /// Réponse aux envois ; fait par défaut.
+  ResultatEnvoi envoi = const EnvoiFait();
+  final envoyes = <FichierEnvoye>[];
+
+  /// Choix en attente, terminé par le test (sélecteur ouvert) ; `null` : réponse
+  /// immédiate par [choix].
+  Completer<ResultatChoix>? attente;
+
+  @override
+  Future<ResultatChoix> choisir({required int maxOctets}) async {
+    choixDemandes++;
+    maxOctetsDemande = maxOctets;
+    return attente?.future ?? choix;
+  }
+
+  @override
+  Future<ResultatEnvoi> envoyer(
+    ModeEnvoi mode, {
+    required String nom,
+    required String typeMime,
+    required Uint8List octets,
+  }) async {
+    envoyes.add(FichierEnvoye(mode, nom, typeMime, octets));
+    return attenteEnvoi?.future ?? envoi;
+  }
+
+  /// Envoi en attente, terminé par le test ; `null` : réponse immédiate.
+  Completer<ResultatEnvoi>? attenteEnvoi;
+}
+
 class Invitation {
   Invitation(this.email, this.role, this.displayName, this.invitedBy);
 
@@ -752,6 +805,7 @@ class TestApp {
       costs = FakeCostsRepository(),
       alerte = FakeAlerte(),
       tickets = FakeTicketsRepository(),
+      fichiers = FakeEchangeFichiers(),
       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
@@ -775,6 +829,8 @@ class TestApp {
         }),
         horlogeProvider.overrideWithValue(() => now),
         alerteMinuteurProvider.overrideWithValue(alerte),
+        echangeFichiersProvider.overrideWithValue(fichiers),
+        analyseurFichierProvider.overrideWithValue((o) => analyseur(o)),
         screenWakelockProvider.overrideWithValue(wakelock),
         appVersionProvider.overrideWithValue(appVersion),
         nouveautesSourceProvider.overrideWithValue(() => nouveautes()),
@@ -794,6 +850,10 @@ class TestApp {
   final FakeCostsRepository costs;
   final FakeAlerte alerte;
   final FakeTicketsRepository tickets;
+  final FakeEchangeFichiers fichiers;
+
+  /// Analyse d'un fichier importé, remplaçable par les tests.
+  AnalyseFichier Function(List<int>) analyseur = analyserFichier;
   final RecordingErrorReportService errors;
 
   /// Adresses ouvertes hors de l'application, et réponse du système.

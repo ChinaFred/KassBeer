@@ -68,18 +68,18 @@ double ebcToLovibond(double ebc) {
   return ebc / ebcPerSrm;
 }
 
+/// Densité potentielle la plus haute : celle du saccharose pur,
+/// 1 + [sucrosePointsPerPoundPerGallon] / 1000. Un lecteur de fichier la lit
+/// pour écarter une valeur avant [potentialToYieldPercent], sans exception.
+const double maxPotentialGravity = 1 + sucrosePointsPerPoundPerGallon / 1000;
+
 /// Rendement d'extrait (% du saccharose) d'un fermentescible dont le
 /// rendement est donné en densité (BeerJSON `yield.potential`, densité d'une
 /// livre dans un gallon) : (potentiel − 1) × 1000 / 46,214 × 100.
 ///
-/// Lève [BrewingInputException] sous 1,000 ou au-delà du saccharose pur
-/// (1 + [sucrosePointsPerPoundPerGallon] / 1000).
+/// Lève [BrewingInputException] sous 1,000 ou au-delà de
+/// [maxPotentialGravity].
 double potentialToYieldPercent(double potential) {
-  requireRange(
-    'potential',
-    potential,
-    1,
-    1 + sucrosePointsPerPoundPerGallon / 1000,
-  );
+  requireRange('potential', potential, 1, maxPotentialGravity);
   return (potential - 1) * 1000 / sucrosePointsPerPoundPerGallon * 100;
 }

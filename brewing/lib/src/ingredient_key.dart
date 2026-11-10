@@ -160,6 +160,12 @@ String _normalizedName(String name) {
 /// ou un chiffre (K3). Sert à la saisie, sans lever d'exception.
 bool isValidIngredientName(String name) => _normalizedName(name).isNotEmpty;
 
+/// [name] normalisé comme dans une clé d'ingrédient, sans préfixe : minuscules,
+/// sans accents, un tiret entre deux suites de lettres et de chiffres. Vide si
+/// le nom n'a ni lettre ni chiffre. Sert au nom du fichier d'un export
+/// (`exchange/`), sans lever d'exception.
+String normalizeName(String name) => _normalizedName(name);
+
 /// Clé d'un ingrédient : préfixe de sa nature et nom normalisé.
 ///
 /// Le nom passe en minuscules, perd ses accents ; tout caractère autre qu'une

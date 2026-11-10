@@ -20,10 +20,11 @@ class RecipesListScreen extends ConsumerStatefulWidget {
 
   static const loadError = 'Impossible de lire les recettes.';
   static const emptyMessage =
-      'Aucune recette. Appuyez sur Nouvelle recette pour commencer.';
+      'Aucune recette. Appuyez sur Nouvelle recette pour commencer, ou '
+      'importez un fichier BeerJSON.';
   static const mineEmptyMessage =
       'Vous n\'avez pas encore de recette. Appuyez sur Nouvelle recette pour '
-      'commencer.';
+      'commencer, ou importez un fichier BeerJSON.';
   static String noMatch(String text) =>
       'Aucune recette ne correspond à « $text ».';
 
@@ -42,6 +43,8 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
   }
 
   void _create() => context.push(AppRoutes.newRecipe);
+
+  void _import() => context.push(AppRoutes.importRecipes);
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +115,11 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
           message: _mineOnly
               ? RecipesListScreen.mineEmptyMessage
               : RecipesListScreen.emptyMessage,
+          action: OutlinedButton.icon(
+            onPressed: _import,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Importer des recettes'),
+          ),
         );
       }
     }
@@ -131,12 +139,14 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
             runSpacing: 12,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (!compact)
+              if (!compact) ...[
                 FilledButton.icon(
                   onPressed: _create,
                   icon: const Icon(Icons.add),
                   label: const Text('Nouvelle recette'),
                 ),
+                _BoutonImporter(onPressed: _import),
+              ],
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: kFormMaxWidth),
                 child: TextField(
@@ -157,6 +167,9 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
                 selected: {_mineOnly},
                 onSelectionChanged: (s) => setState(() => _mineOnly = s.single),
               ),
+              // Téléphone : après « Toutes / Les miennes » ; le bouton flottant
+              // reste « Nouvelle recette ».
+              if (compact) _BoutonImporter(onPressed: _import),
             ],
           ),
         ),
@@ -177,6 +190,20 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
       ],
     );
   }
+}
+
+/// « Importer » : ouvre Recettes › Importer.
+class _BoutonImporter extends StatelessWidget {
+  const _BoutonImporter({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    onPressed: onPressed,
+    icon: const Icon(Icons.upload_file),
+    label: const Text('Importer'),
+  );
 }
 
 class _Row extends StatelessWidget {

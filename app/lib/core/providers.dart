@@ -8,6 +8,7 @@ import '../features/equipment/data/equipment_repository.dart';
 import '../features/members/data/members_repository.dart';
 import '../features/recipes/data/recipes_repository.dart';
 import '../features/tickets/data/tickets_repository.dart';
+import 'fichiers/echange_fichiers.dart';
 import 'services/error_report_service.dart';
 import 'services/screen_wakelock.dart';
 
@@ -61,6 +62,13 @@ final screenWakelockProvider = Provider<ScreenWakelock>(
 /// Alerte de fin de minuteur (son et vibration).
 final alerteMinuteurProvider = Provider<AlerteMinuteur>(
   (ref) => AlerteMinuteurPlateforme(
+    errorReportService: ref.watch(errorReportServiceProvider),
+  ),
+);
+
+/// Choix d'un fichier et envoi d'un fichier exporté (ADR-007).
+final echangeFichiersProvider = Provider<EchangeFichiers>(
+  (ref) => EchangeFichiersPlateforme(
     errorReportService: ref.watch(errorReportServiceProvider),
   ),
 );

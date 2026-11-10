@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.18+19
+version: 0.1.19+20
 
 environment:
   sdk: ^3.11.4
@@ -35,6 +35,12 @@ dependencies:
   # dépendance ; rien n'est chargé au démarrage.
   brewing:
     path: ../brewing
+
+  # Import et export de recettes BeerJSON : paquet Dart pur du dépôt (ADR-005).
+  # Il ne fait rien avant un import ou un export, et rien ne part sur le réseau.
+  # Il tire crypto (SHA-256 des doublons), déjà résolu ici en dépendance indirecte.
+  exchange:
+    path: ../exchange
 
   # Garde l'écran allumé pendant le jour de brassage (ADR-001). Figé en 1.8.2, à
   # installer avec package_info_plus 10 : les deux paquets partagent win32.

@@ -1,4 +1,6 @@
 import 'package:brewing/brewing.dart';
+import 'package:exchange/exchange.dart'
+    show ChampExport, ManqueDeCalcul, ManqueDeFormat, ManqueExport;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -210,6 +212,39 @@ String libelleManque(
     'Atténuation non renseignée : ${_names(missing)}.',
   MissingInputKind.originalGravity => 'Dépend de la densité initiale.',
 };
+
+/// Libellé d'une valeur qui bloque l'export, ou qui rend une recette importée
+/// « Incomplète » (L2 d'ADR-005). Une donnée qui manque aussi au calcul a le
+/// libellé de [libelleManque] ; le rendement de brassage sans équipement a le
+/// sien.
+String libelleManqueExport(ManqueExport manque, EquipementRecette equipement) =>
+    switch (manque) {
+      ManqueDeCalcul(:final manque)
+          when manque.kind == MissingInputKind.mashEfficiency &&
+              equipement is SansEquipement =>
+        'Aucun équipement choisi : le rendement de brassage ne peut pas être '
+            'calculé.',
+      ManqueDeCalcul(:final manque) => libelleManque(manque, equipement),
+      ManqueDeFormat(:final champ, :final noms) => switch (champ) {
+        ChampExport.typeRecette => 'Type de recette non renseigné.',
+        ChampExport.auteur =>
+          'Auteur inconnu : le compte qui a créé la recette n\'a pas de nom.',
+        ChampExport.paliers =>
+          'Aucun palier d\'empâtage : la température du grain demande un '
+              'palier.',
+        ChampExport.temperatureGrain => 'Température du grain non renseignée.',
+        ChampExport.typePalier =>
+          'Type de palier non renseigné : ${noms.join(', ')}.',
+        ChampExport.typeLevure =>
+          'Type de levure non renseigné : ${noms.join(', ')}.',
+        ChampExport.formeLevure =>
+          'Forme de levure non renseignée : ${noms.join(', ')}.',
+        ChampExport.quantiteLevure =>
+          'Quantité de levure non renseignée : ${noms.join(', ')}.',
+        ChampExport.typeAjout =>
+          'Type d\'ajout non renseigné : ${noms.join(', ')}.',
+      },
+    };
 
 /// Mention des houblons mesurés en volume (décision du 2026-11-10).
 String houblonsEnVolume(String noms) => '$kHoublonEnVolumePhrase : $noms.';

@@ -19,6 +19,7 @@ import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
 import '../../brews/presentation/new_brew_form.dart';
 import 'contenu_recette.dart';
+import 'export_recipe_sheet.dart';
 import 'recipe_calculations_view.dart';
 import 'recipes_providers.dart';
 
@@ -131,22 +132,33 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         );
         final mine = recipe.ownerUid == access?.user.uid;
         void edit() => context.push(AppRoutes.editRecipe(recipe.id));
+        final calculs = evaluerRecette(
+          recipe.content,
+          equipement,
+          errors: ref.read(errorReportServiceProvider),
+          reported: ref.read(calculationReportsProvider),
+          recipeKey: recipe.id,
+        );
         return _Fiche(
           onNewBrew: () => ouvrirNouveauBrassin(context, recipe),
           onEditSteps: () => context.push(AppRoutes.editBrewSteps(recipe.id)),
           recipe: recipe,
           readerUid: access?.user.uid,
           equipement: equipement,
-          calculs: evaluerRecette(
-            recipe.content,
-            equipement,
-            errors: ref.read(errorReportServiceProvider),
-            reported: ref.read(calculationReportsProvider),
-            recipeKey: recipe.id,
-          ),
+          calculs: calculs,
           onEdit: mine ? edit : null,
           onDelete: mine ? () => _delete(recipe) : null,
           onDuplicate: () => _duplicate(recipe),
+          // Tout membre exporte toute recette lisible ; l'auteur seul complète.
+          onExport: () => ouvrirExport(
+            context,
+            recipe: recipe,
+            proprietaire: mine,
+            equipement: equipement,
+            calculs: calculs,
+            onCompleter: mine ? edit : null,
+            onDupliquer: () => _duplicate(recipe),
+          ),
           duplicating: _duplicating,
         );
       },
@@ -165,6 +177,7 @@ class _Fiche extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onDuplicate,
+    required this.onExport,
     required this.duplicating,
   });
 
@@ -179,6 +192,9 @@ class _Fiche extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback onDuplicate;
+
+  /// « Exporter », pour tout membre.
+  final VoidCallback onExport;
 
   /// Duplication en cours : le bouton attend.
   final bool duplicating;
@@ -245,6 +261,11 @@ class _Fiche extends StatelessWidget {
                 icon: const Icon(Icons.copy_outlined),
                 label: const Text('Dupliquer'),
               ),
+            OutlinedButton.icon(
+              onPressed: onExport,
+              icon: const Icon(Icons.ios_share),
+              label: const Text('Exporter'),
+            ),
             if (delete != null)
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(

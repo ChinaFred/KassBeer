@@ -26,6 +26,18 @@ void main() {
     });
   }
 
+  test(
+    'maxPotentialGravity : saccharose pur, borne de potentialToYieldPercent',
+    () {
+      expect(maxPotentialGravity, closeTo(1.046214, 1e-12));
+      expect(potentialToYieldPercent(maxPotentialGravity), closeTo(100, 1e-9));
+      expect(
+        () => potentialToYieldPercent(maxPotentialGravity + 1e-6),
+        throwsA(isA<BrewingInputException>()),
+      );
+    },
+  );
+
   test('Lovibond : aller-retour exact', () {
     for (final ebc in <double>[0, 3.9, 25, 1300]) {
       expect(lovibondToEbc(ebcToLovibond(ebc)), closeTo(ebc, 1e-9));

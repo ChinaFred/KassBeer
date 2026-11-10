@@ -4,7 +4,7 @@ name: CI
 # request et chaque push de branche. Une PR dont la CI n'est pas verte ne se
 # fusionne pas, et deploy.yml ne part qu'après une CI verte sur un push de main.
 #
-# Cinq jobs : Version, Flutter et brewing/, Règles (émulateur), Functions (lint,
+# Cinq jobs : Version, « Flutter et brewing » (app, brewing/ et exchange/), Règles (émulateur), Functions (lint,
 # build, tests, manifeste des fonctions), Android (compilation de l'APK quand le diff
 # touche app/pubspec.yaml, app/pubspec.lock ou app/android/). Pas de job « déjà testé
 # en PR » : le push de fusion rejoue tout.
@@ -125,6 +125,27 @@ jobs:
 
       - name: brewing — tests (fixtures des 16 fiches)
         working-directory: brewing
+        run: dart test
+
+      # exchange/ : import et export BeerJSON (ADR-005, L2). Mêmes contrôles que brewing/.
+      - name: exchange — dépendances
+        working-directory: exchange
+        run: dart pub get
+
+      - name: exchange — pubspec.lock à jour
+        working-directory: exchange
+        run: git diff --exit-code pubspec.lock
+
+      - name: exchange — analyse statique
+        working-directory: exchange
+        run: dart analyze --fatal-infos
+
+      - name: exchange — format
+        working-directory: exchange
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: exchange — tests (fixtures BeerJSON)
+        working-directory: exchange
         run: dart test
 
       - name: app — dépendances

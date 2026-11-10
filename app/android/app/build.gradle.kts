@@ -65,6 +65,13 @@ kotlin {
     }
 }
 
+// FileProvider du partage d'un export (ADR-007). Version déjà résolue par le graphe des
+// greffons Firebase (./gradlew :app:dependencies --configuration releaseRuntimeClasspath,
+// relevé du 2026-11-10) : la déclarer n'ajoute aucun code à l'APK. À remonter avec eux.
+dependencies {
+    implementation("androidx.core:core:1.17.0")
+}
+
 flutter {
     source = "../.."
 }

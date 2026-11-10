@@ -1,0 +1,476 @@
+{
+  "format": "BeerJSON",
+  "total": 6,
+  "recettes": [
+    {
+      "numero": 1,
+      "nom": "IPA de test",
+      "empreinte": "sha256:844b400a4c1046a5e9911515ba0fd38b83bfecb727a63279188c4e75a5d4a3e7",
+      "en_double": false,
+      "modifications": [
+        "CaracteresRetires",
+        "StyleReduitAuNom(American IPA)",
+        "ValeurRejetee(quantite, Levure américaine, uniteNonPriseEnCharge, pkg)",
+        "UnitesConverties(gal, hr, F, lb, Lovi, oz, SRM, potential, day, tsp)",
+        "PartiesNonImportees(coAuteurEtDate, rendement, valeursAnnoncees, fermentation, ebullition, detailsPaliers, eau, detailsIngredients)"
+      ],
+      "document": {
+        "format_version": 1,
+        "recipe": {
+          "name": "IPA de test",
+          "type": "all grain",
+          "author": "Brasseuse Fictive",
+          "style": {
+            "name": "American IPA"
+          },
+          "notes": "Notes de test.\nDeuxième ligne.",
+          "batch_size": {
+            "value": 20.819764812,
+            "unit": "l"
+          },
+          "boil": {
+            "boil_time": {
+              "value": 60,
+              "unit": "min"
+            }
+          },
+          "mash": {
+            "name": "Empâtage",
+            "grain_temperature": {
+              "value": 20.0,
+              "unit": "C"
+            },
+            "mash_steps": [
+              {
+                "name": "Saccharification",
+                "type": "infusion",
+                "step_temperature": {
+                  "value": 66.66666666666667,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 60,
+                  "unit": "min"
+                }
+              },
+              {
+                "name": "Mash out",
+                "type": "temperature",
+                "step_temperature": {
+                  "value": 76.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            ]
+          },
+          "ingredients": {
+            "fermentable_additions": [
+              {
+                "name": "Pale Ale Malt",
+                "type": "grain",
+                "amount": {
+                  "value": 4989.516070000001,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 5.91,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 80.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Crystal 40",
+                "type": "grain",
+                "amount": {
+                  "value": 340.1942775,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 78.8,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 73.57077941749259,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Sucre candi",
+                "type": "sugar",
+                "amount": {
+                  "value": 250.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 0.0,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 100.0,
+                    "unit": "%"
+                  }
+                }
+              }
+            ],
+            "hop_additions": [
+              {
+                "name": "Centennial",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 10.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 28.349523125,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Cascade",
+                "form": "leaf",
+                "alpha_acid": {
+                  "value": 5.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 28.349523125,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 0,
+                    "unit": "min"
+                  },
+                  "duration": {
+                    "value": 20,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Citra",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 12.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 56.69904625,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_fermentation",
+                  "time": {
+                    "value": 4320,
+                    "unit": "min"
+                  },
+                  "duration": {
+                    "value": 5760,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "miscellaneous_additions": [
+              {
+                "name": "Mousse d'Irlande",
+                "type": "fining",
+                "amount": {
+                  "value": 0.00492892159375,
+                  "unit": "l"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 15,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "culture_additions": [
+              {
+                "name": "Levure américaine",
+                "type": "ale",
+                "form": "dry",
+                "attenuation": {
+                  "value": 78.0,
+                  "unit": "%"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "numero": 2,
+      "nom": "Saison refusée",
+      "empreinte": "sha256:bea230d26a20e9818585d1acc6881980bc7982699918aa41811a8b2ed0391d96",
+      "en_double": false,
+      "refus": "UniteInconnue(quantite, Pastille clarifiante, each)"
+    },
+    {
+      "numero": 3,
+      "nom": "IPA de test",
+      "empreinte": "sha256:844b400a4c1046a5e9911515ba0fd38b83bfecb727a63279188c4e75a5d4a3e7",
+      "en_double": true,
+      "modifications": [
+        "CaracteresRetires",
+        "StyleReduitAuNom(American IPA)",
+        "ValeurRejetee(quantite, Levure américaine, uniteNonPriseEnCharge, pkg)",
+        "UnitesConverties(gal, hr, F, lb, Lovi, oz, SRM, potential, day, tsp)",
+        "PartiesNonImportees(coAuteurEtDate, rendement, valeursAnnoncees, fermentation, ebullition, detailsPaliers, eau, detailsIngredients)"
+      ],
+      "document": {
+        "format_version": 1,
+        "recipe": {
+          "name": "IPA de test",
+          "type": "all grain",
+          "author": "Brasseuse Fictive",
+          "style": {
+            "name": "American IPA"
+          },
+          "notes": "Notes de test.\nDeuxième ligne.",
+          "batch_size": {
+            "value": 20.819764812,
+            "unit": "l"
+          },
+          "boil": {
+            "boil_time": {
+              "value": 60,
+              "unit": "min"
+            }
+          },
+          "mash": {
+            "name": "Empâtage",
+            "grain_temperature": {
+              "value": 20.0,
+              "unit": "C"
+            },
+            "mash_steps": [
+              {
+                "name": "Saccharification",
+                "type": "infusion",
+                "step_temperature": {
+                  "value": 66.66666666666667,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 60,
+                  "unit": "min"
+                }
+              },
+              {
+                "name": "Mash out",
+                "type": "temperature",
+                "step_temperature": {
+                  "value": 76.0,
+                  "unit": "C"
+                },
+                "step_time": {
+                  "value": 10,
+                  "unit": "min"
+                }
+              }
+            ]
+          },
+          "ingredients": {
+            "fermentable_additions": [
+              {
+                "name": "Pale Ale Malt",
+                "type": "grain",
+                "amount": {
+                  "value": 4989.516070000001,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 5.91,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 80.0,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Crystal 40",
+                "type": "grain",
+                "amount": {
+                  "value": 340.1942775,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 78.8,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 73.57077941749259,
+                    "unit": "%"
+                  }
+                }
+              },
+              {
+                "name": "Sucre candi",
+                "type": "sugar",
+                "amount": {
+                  "value": 250.0,
+                  "unit": "g"
+                },
+                "color": {
+                  "value": 0.0,
+                  "unit": "EBC"
+                },
+                "yield": {
+                  "fine_grind": {
+                    "value": 100.0,
+                    "unit": "%"
+                  }
+                }
+              }
+            ],
+            "hop_additions": [
+              {
+                "name": "Centennial",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 10.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 28.349523125,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 60,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Cascade",
+                "form": "leaf",
+                "alpha_acid": {
+                  "value": 5.5,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 28.349523125,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 0,
+                    "unit": "min"
+                  },
+                  "duration": {
+                    "value": 20,
+                    "unit": "min"
+                  }
+                }
+              },
+              {
+                "name": "Citra",
+                "form": "pellet",
+                "alpha_acid": {
+                  "value": 12.0,
+                  "unit": "%"
+                },
+                "amount": {
+                  "value": 56.69904625,
+                  "unit": "g"
+                },
+                "timing": {
+                  "use": "add_to_fermentation",
+                  "time": {
+                    "value": 4320,
+                    "unit": "min"
+                  },
+                  "duration": {
+                    "value": 5760,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "miscellaneous_additions": [
+              {
+                "name": "Mousse d'Irlande",
+                "type": "fining",
+                "amount": {
+                  "value": 0.00492892159375,
+                  "unit": "l"
+                },
+                "timing": {
+                  "use": "add_to_boil",
+                  "time": {
+                    "value": 15,
+                    "unit": "min"
+                  }
+                }
+              }
+            ],
+            "culture_additions": [
+              {
+                "name": "Levure américaine",
+                "type": "ale",
+                "form": "dry",
+                "attenuation": {
+                  "value": 78.0,
+                  "unit": "%"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "numero": 4,
+      "nom": null,
+      "empreinte": "sha256:40fa4bedc6d8b6371366252b4f58dc5188ed408591fe9d7ded0ddc26fbc1fc45",
+      "en_double": false,
+      "refus": "NomAbsent"
+    },
+    {
+      "numero": 5,
+      "nom": "Houblonnée",
+      "empreinte": "sha256:3236fab20840e36406c72433fc9578c7773959b07e109a8ae4f2819786ab290b",
+      "en_double": false,
+      "refus": "TropDeLignes(houblons, 51, 50)"
+    },
+    {
+      "numero": 6,
+      "nom": "Quantité négative",
+      "empreinte": "sha256:19ce95263c5a092c3d20dc54ab90e215138e577edad7dbabf5e414350be5bdd4",
+      "en_double": false,
+      "refus": "ValeurHorsLimites(quantite, Pils)"
+    }
+  ]
+}

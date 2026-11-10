@@ -1,0 +1,77 @@
+{
+  "beerjson": {
+    "version": 2.01,
+    "recipes": [
+      {
+        "name": "Blonde à l'extrait",
+        "type": "extract",
+        "batch_size": {
+          "value": 20.0,
+          "unit": "l"
+        },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Extrait sec clair",
+              "type": "dry extract",
+              "amount": {
+                "value": 3000.0,
+                "unit": "g"
+              },
+              "color": {
+                "value": 8.0,
+                "unit": "EBC"
+              },
+              "yield": {
+                "fine_grind": {
+                  "value": 95.0,
+                  "unit": "%"
+                }
+              }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Cascade",
+              "form": "pellet",
+              "alpha_acid": {
+                "value": 6.0,
+                "unit": "%"
+              },
+              "amount": {
+                "value": 30.0,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil",
+                "time": {
+                  "value": 30,
+                  "unit": "min"
+                }
+              }
+            }
+          ],
+          "miscellaneous_additions": [],
+          "culture_additions": [
+            {
+              "name": "US-05",
+              "type": "ale",
+              "form": "dry",
+              "amount": {
+                "value": 11.5,
+                "unit": "g"
+              }
+            }
+          ]
+        },
+        "author": "Brasseur Exemple",
+        "efficiency": {
+          "brewhouse": {
+            "value": 72.0,
+            "unit": "%"
+          }
+        }
+      }
+    ]
+  }
+}

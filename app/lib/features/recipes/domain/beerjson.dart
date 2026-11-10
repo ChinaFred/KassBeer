@@ -2,6 +2,10 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
 
+// Nom écrit dans `recipe.mash.name`, obligatoire dans le schéma : un libellé, le
+// même à la saisie et à l'import (`exchange/`).
+export 'package:exchange/exchange.dart' show kNomEmpatage;
+
 /// BeerJSON partiel (ADR-005) : le sous-arbre `recipe` d'un document `recipes/{id}`
 /// et d'une copie figée suit `RecipeType` du schéma BeerJSON au commit figé
 /// `4370892d44` (`schemas/beerjson-4370892d44/`). Ce fichier porte les unités, les
@@ -279,6 +283,3 @@ abstract final class UsageBeerJson {
   static const fermentation = 'add_to_fermentation';
   static const package = 'add_to_package';
 }
-
-/// Nom écrit dans `recipe.mash.name`, obligatoire dans le schéma : un libellé.
-const kNomEmpatage = 'Empâtage';

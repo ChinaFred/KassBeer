@@ -340,6 +340,9 @@ L2 à L4 peuvent s'intercaler avec la v0.5 et la v0.6.
 - Un whirlpool importé sans durée se lit comme un ajout à l'arrêt du feu, perte listée ; la levure
   BeerXML `Wheat` devient `wheat` ; `brewing/` convertit `potential` en % ; `source_hop_timing`
   est reporté à L3.
+- P9 gagne une clause (accord de l'utilisateur du 2026-11-10) : les caractères de contrôle
+  bidirectionnels (U+061C, U+200E, U+200F, U+202A à U+202E, U+2066 à U+2069) sont retirés des
+  textes d'un fichier importé.
 - L2a (v0.1.17) étend `computeRecipe` sans changer de formule existante : malt de nature inconnue
   (`other`) et forme de houblon hors pellets et cônes rendent la densité ou l'IBU indisponibles
   (nouveaux `MissingInputKind`), houblon à l'empâtage ou au conditionnement à 0 IBU qui rend

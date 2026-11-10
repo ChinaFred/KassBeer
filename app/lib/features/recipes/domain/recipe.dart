@@ -554,7 +554,10 @@ class RecipeContent {
   /// Raison pour laquelle `brew_steps` est illisible, ou `null` (CH8).
   final String? brewStepsProblem;
 
-  /// Fiche Excel d'origine ; vide pour une recette saisie ou dupliquée.
+  /// Origine d'une recette importée (200 caractères au plus) : format et
+  /// empreinte du contenu du fichier (`BeerJSON · sha256:…`, `exchange/`),
+  /// qui repère un second import du même contenu. Vide pour une recette saisie
+  /// ou dupliquée.
   final String? importedFrom;
 
   /// Lit l'enveloppe et le sous-arbre `recipe` ; lève [DocumentIllisible] (version
@@ -711,6 +714,7 @@ class Recipe {
     required this.ownerUid,
     this.ownerName,
     required this.content,
+    this.createdAt,
     this.updatedAt,
     this.hasPendingWrites = false,
   });
@@ -723,6 +727,10 @@ class Recipe {
   /// Nom déclaré par l'auteur, pour l'affichage seul.
   final String? ownerName;
   final RecipeContent content;
+
+  /// Date de création ; `null` tant que la création attend le serveur. Sert à
+  /// « Déjà importée le … » de l'import.
+  final DateTime? createdAt;
 
   /// `null` tant qu'une écriture locale attend le serveur.
   final DateTime? updatedAt;
@@ -741,6 +749,7 @@ class Recipe {
       ownerUid: read.texte('owner_uid'),
       ownerName: read.texteFacultatif('owner_name'),
       content: RecipeContent.fromFirestore(data),
+      createdAt: read.date('created_at'),
       updatedAt: read.date('updated_at'),
       hasPendingWrites: hasPendingWrites,
     );

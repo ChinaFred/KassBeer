@@ -1,3 +1,4 @@
+import 'package:exchange/exchange.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/data/lecture_document.dart';
@@ -14,3 +15,9 @@ final recipesListProvider = StreamProvider.autoDispose<ListeLue<Recipe>>(
 /// Calculs refusés par `brewing/` déjà rapportés, par recette et par champ
 /// (`evaluerRecette`) : un rapport par session, pas un par frappe ni par lecture.
 final calculationReportsProvider = Provider<Set<String>>((ref) => <String>{});
+
+/// Analyse d'un fichier choisi dans Recettes › Importer (`exchange/`). Les tests
+/// la remplacent pour simuler une panne inattendue.
+final analyseurFichierProvider = Provider<AnalyseFichier Function(List<int>)>(
+  (ref) => analyserFichier,
+);

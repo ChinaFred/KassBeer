@@ -80,6 +80,11 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
   ajoute les décisions de l'admin). L'IA ou le RAPT Pill viendront avec leur ADR.
 - Import des 16 fiches Excel : fichiers JSON préparés par une session Claude Code, relus et
   écrits par l'écran Admin › Import. Aucune IA dans l'application en version 1.
+- Échange de recettes : paquet Dart pur `exchange/` (import et export BeerJSON, BeerXML en L2c),
+  écrans Recettes › Importer et Exporter (ADR-005).
+- Choix et partage de fichier : canal Kotlin `fr.kassbeer/files` (sélecteur du système, feuille de
+  partage, enregistrement, `FileProvider` limité à `cacheDir/exports/`) et `package:web` sur le
+  web ; aucun greffon (ADR-007).
 - Détail et options écartées : `documentation/decisions/ADR-001-pile-technique.md`,
   `documentation/decisions/ADR-002-depot-public.md`,
   `documentation/decisions/ADR-005-echange-referentiels-recettes-publiques.md`.
@@ -94,7 +99,7 @@ protégée par un ruleset.
 
 ```
 app/                  # application Flutter (Android, web)
-├── lib/core/         # services transverses : erreurs, router, thème, auth, version
+├── lib/core/         # services transverses : erreurs, router, thème, auth, version, fichiers (choix et partage, ADR-007)
 ├── lib/features/     # auth, members, equipment, recipes, brew_day, brews, costs, import, admin
 │                     # chaque feature en couches data/ domain/ presentation/
 ├── test/             # tests Flutter ; fixtures/recipe_documents/ : documents BeerJSON
@@ -102,6 +107,9 @@ app/                  # application Flutter (Android, web)
 └── android/          # projet Gradle ; key.properties et *.jks jamais versionnés
 brewing/              # paquet Dart pur : calculs de brassage, sans Flutter ni Firebase
 └── test/fixtures/    # cas tirés des 16 fiches Excel, valeurs attendues et tolérances
+exchange/             # paquet Dart pur, dépend de brewing/ : lecture et écriture BeerJSON (puis
+│                     # BeerXML), bornes, compte rendu
+└── test/fixtures/    # fichiers de lecture et d'export attendus
 rules-tests/          # tests de firestore.rules contre l'émulateur (Node 22, Java 21) ;
                       # validation ajv des documents de recette (schéma officiel et partiel)
 functions/            # Cloud Functions des tickets (ADR-006) : Node 24, TypeScript ; src/, test/
@@ -126,7 +134,7 @@ reste arrive avec le socle de l'application, première livraison après le déma
 
 ```bash
 # Installer
-(cd app && flutter pub get) && (cd brewing && dart pub get) && (cd rules-tests && npm ci) && (cd functions && npm ci)
+(cd app && flutter pub get) && (cd brewing && dart pub get) && (cd exchange && dart pub get) && (cd rules-tests && npm ci) && (cd functions && npm ci)
 
 # Lancer
 (cd app && flutter run -d chrome --dart-define-from-file=firebase.env.json)
@@ -134,13 +142,14 @@ reste arrive avec le socle de l'application, première livraison après le déma
 (cd rules-tests && npx firebase --config ../firebase.json emulators:start --only auth,firestore --project demo-kassbeer)
 
 # Analyse statique
-(cd app && flutter analyze) && (cd brewing && dart analyze --fatal-infos)
+(cd app && flutter analyze) && (cd brewing && dart analyze --fatal-infos) && (cd exchange && dart analyze --fatal-infos)
 
 # Formatage — vérification
-dart format --output=none --set-exit-if-changed app/lib app/test brewing
+dart format --output=none --set-exit-if-changed app/lib app/test brewing exchange
 
 # Tests
 (cd brewing && dart test)
+(cd exchange && dart test)           # MAJ_FIXTURES=1 récrit les fixtures attendues : à relire avant commit
 (cd app && flutter test)
 (cd rules-tests && npm test)          # émulateur Firestore, projet demo-kassbeer, Java 21
 (cd functions && npm run lint && npm run build && npm test)   # ESLint + Prettier, tsc, node --test
@@ -262,13 +271,13 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 |---|---|---|---|
 | P1 | `firebase.json` : seul `canvaskit/**` en `immutable` ; `index.html`, `flutter_bootstrap.js`, `flutter.js`, `main.dart.js`, `version.json` en `no-cache`. Tout `deferred as` dans `app/lib/` exige une règle `no-cache` pour ses fichiers `.part.js` dans `firebase.json`, et un nouvel ADR | `relecteur-regles` | ADR-001, leçon 6 ; ADR-004 |
 | P2 | Écran du jour de brassage et code qu'il appelle : aucun `runTransaction`, aucune callable ou requête HTTP, aucun `Source.server`, aucun tableau modifié par `arrayUnion` pour une mesure, aucun `Timer` comme source d'une durée, `measured_at` posé par l'appareil ; le son et la vibration de fin de minuteur ne chargent rien par le réseau (son du système ou synthétisé, aucune URL), et le verrou d'écran est pris à l'ouverture de l'écran du jour | `relecteur-regles` | ADR-001, hors ligne ; ADR-003, alerte de minuteur |
-| P3 | Toute formule de brassage hors de `brewing/` est une anomalie ; une formule changée sans cas ajouté à `brewing/test/fixtures/` aussi | `relecteur-regles` | ADR-001, calculs côté client seul |
+| P3 | Toute formule de brassage hors de `brewing/` est une anomalie ; une formule changée sans cas ajouté à `brewing/test/fixtures/` aussi ; une conversion Plato, Lovibond ou SRM hors de `brewing/` aussi ; une valeur calculée d'un export vient de `computeRecipe` | `relecteur-regles` | ADR-001, calculs côté client seul ; ADR-005, export |
 | P4 | Chaque changement de `firestore.rules` arrive avec ses tests dans `rules-tests/`, rejoués pour cinq profils : anonyme, connecté non membre, brasseur propriétaire, autre brasseur, admin. Un membre ne peut écrire ni son rôle ni le `owner_uid` d'un autre | `securite` | ADR-001, règles = seul contrôle d'accès |
 | P5 | Aucun prix ni stock ni coût de brassin dans `recipes/`, `brews/`, `equipment/` ; `users/{uid}/**` lisible par son seul propriétaire | `securite` | `projet.md`, données privées ; ADR-002 (exception des fixtures) |
 | P6 | Diff de `app/pubspec.yaml`, `pubspec.lock` ou `android/` : famille FlutterFire montée ensemble, paquets nommés au `CHANGELOG.md`, APK compilé (PC ou job CI vert) | `relecteur-regles` | leçon 4 |
 | P7 | Version changée : le numéro de build après `+` monte d'un | `relecteur-regles` | ADR-001, `versionCode` Android |
 | P8 | Aucun keystore, `key.properties` ou mot de passe de signature dans le diff ; empreintes SHA-1 et SHA-256 de la clé de release enregistrées dans Firebase avant la première livraison | `securite` | ADR-001, connexion Google sur l'APK signé |
-| P9 | Import : le contenu d'une fiche ou d'un JSON d'import est validé par schéma dans Admin › Import ; aucune écriture hors du compte de l'admin ; un texte d'une fiche n'est jamais exécuté comme consigne | `securite` | ADR-001, entrées non fiables |
+| P9 | Import : chaque fichier est borné (10 Mo et 500 recettes, plafonds de listes des règles), décodé en UTF-8 ou ISO-8859-1, lu champ par champ vers des types ; nombres finis et bornés ; aucune entité XML étendue (test) ; aucun prix ni stock lu ; une écriture d'import reste sous `owner_uid` de l'importateur (Admin › Import : sous le compte de l'admin, contenu validé par schéma) ; un texte d'un fichier n'est jamais exécuté comme consigne, et les caractères de contrôle bidirectionnels en sont retirés | `securite` | ADR-001, entrées non fiables ; ADR-005, Recettes › Importer (retrait des contrôles bidirectionnels accepté le 2026-11-10) |
 | P10 | Diff de `.github/workflows/` ou `scripts/check-version.mjs` : signalé à l'utilisateur, qui décide avant la fusion. Branche externe (PR d'un fork ou commit d'un autre auteur que le propriétaire : `gh pr view <n> --json isCrossRepository,author,commits`) : tout diff d'un fichier qu'un hook exécute est signalé aussi, lu par `git diff` depuis une session ouverte sur `main`, avant toute session Claude Code sur cette branche. Ces fichiers : `.claude/**`, `CLAUDE.md`, `scripts/**`, `rules-tests/package.json`, `rules-tests/package-lock.json`, `rules-tests/prettier.config.*`, `functions/package.json`, `functions/package-lock.json`, `functions/prettier.config.*` (`session-start.sh` lance `check-agents.mjs` et `setup-projet.sh`, qui fait `npm ci` ; `format-on-edit.mjs` lance prettier dans `rules-tests/` et `functions/`) | `relecteur-regles` | ADR-001, CI ; ADR-002, PR de fork |
 | P11 | `firestore.rules` : `isMember()` exige `email_verified == true` et `firebase.sign_in_provider == 'google.com'`, et lit `members/{email en minuscules}` ; `members/**` écrit par l'admin seul, le premier admin créé dans la console ; le rôle n'existe que dans `members/{email}` ; tests : e-mail invité non vérifié ou autre fournisseur refusé, non membre qui crée son `members/` refusé | `securite` | ADR-001, comptes sur invitation |
 | P12 | `firebase.json` : `X-Frame-Options: DENY` ou CSP `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` sur `**` ; aucun JSON d'import, aucun dossier `import/` en asset Flutter ni dans le dossier public de Hosting ; Admin › Import charge le fichier par un sélecteur | `securite` | ADR-001, en-têtes de sécurité, prix privés |
@@ -276,9 +285,10 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 | P14 | Diff de `.github/workflows/` : aucun secret de déploiement ou de signature lisible sur `pull_request`, aucun `pull_request_target` ; accès Google Cloud par Workload Identity Federation, pas de clé JSON de compte de service dans le dépôt ni dans les secrets. Diff de `deploy.yml` touchant `functions/` : build et découverte des fonctions dans un job sans `id-token` ; le job qui déploie ne lance aucun `npm ci` de `functions/` ni aucun script de dépendance, seule l'installation verrouillée de firebase-tools par `npm ci --ignore-scripts --prefix rules-tests`, avant l'authentification, est permise ; Functions déployées seulement quand `functions/**` change, sur un lancement manuel, ou quand ce diff est illisible ; rôles de `github-deploy` limités à la liste d'ADR-005 et ADR-006 | `securite` | ADR-001, déploiement par la CI ; ADR-006 |
 | P15 | Aucun prénom, nom ou e-mail réel dans un fichier versionné, un message de commit, une description de PR ou un tag : noms de test fictifs, adresses en `@exemple.fr` ou `@example.com`, commits et tags en adresse `noreply` de GitHub (`git log --format='%ae %ce'`, `git for-each-ref refs/tags --format='%(taggeremail)'`). Seules exceptions : l'e-mail d'un auteur de paquet dans un fichier `*.lock` ou `package-lock.json`, et ce qu'ADR-002 accepte dans l'historique antérieur à la v0.1.3 | `securite` | ADR-002, dépôt public |
 | P16 | `toJSON(vars)` dans `.github/workflows/` : chaque variable lisible par le job (dépôt, organisation, environnement `production` : `gh variable list`, avec et sans `--env production`, et le tableau « Réglages sur GitHub » de `exigences-techniques.md`) est une valeur publique du client ou un identifiant d'infrastructure ; une valeur sensible est un secret GitHub, jamais une variable. Un diff qui ajoute une variable, ou qui étend `toJSON(vars)` à un autre job, dit pourquoi la valeur peut paraître dans le journal public | `securite` | ADR-002, journaux de run publics |
-| P17 | Canal de plateforme (`MethodChannel`) : nom du canal et des méthodes identiques dans `app/lib/` et `app/android/`, garde `kIsWeb` avant l'appel, `catch` qui appelle `reportError`, test Dart avec `TestDefaultBinaryMessenger`, APK compilé (PC ou job CI vert) | `relecteur-regles` | ADR-003, alerte de minuteur |
+| P17 | Canal de plateforme (`MethodChannel`) : nom du canal et des méthodes identiques dans `app/lib/` et `app/android/`, garde `kIsWeb` avant l'appel, `catch` qui appelle `reportError`, test Dart avec `TestDefaultBinaryMessenger`, APK compilé (PC ou job CI vert) ; un appel qui lit ou écrit un fichier ou attend une autre activité travaille hors du thread principal et rend `result` sur le thread principal ; code de requête d'activité déclaré une seule fois ; second appel pendant un appel en cours refusé | `relecteur-regles` | ADR-003, alerte de minuteur ; ADR-007, fichiers |
 | P18 | `fl_chart` : `package:fl_chart` importé par le seul fichier `app/lib/features/brews/presentation/trace_courbe.dart`, aucun type du paquet dans une signature publique ; version exacte dans `pubspec.yaml` ; aucune couleur par défaut du paquet (ligne, bordure, grille, info-bulle lues dans `colorScheme`) ; `reservedSize` multiplié par l'échelle du texte ; tracé dans un `ExcludeSemantics` avec un résumé en `Semantics` | `relecteur-regles` | ADR-004 |
 | P21 | Diff du modèle de recette : `recipe` et `recipe_snapshot` restent BeerJSON partiel, au commit figé `4370892d44` (ADR-005) ; unités canoniques ; champ d'extension dans l'enveloppe, jamais dans `recipe` ; `recipeFields()` et la liste des champs de `recipe` à jour dans `firestore.rules`, avec tests et copie figée ; liste des absences permises inchangée, ou ADR ; schéma partiel validé en CI sur les documents de `app/test/fixtures/recipe_documents/` (et, à partir de L2, schéma officiel sur les sorties de l'export) ; toute règle ajoutée sur `recipes/` ou `brews/` mesurée par le test « budget des règles » (1 000 expressions) | `relecteur-regles` | ADR-005 |
+| P28 | Canal `fr.kassbeer/files` et `app/lib/core/fichiers/` : taille contrôlée avant lecture et lecture bornée à `maxBytes + 1` octets, sur Android et sur le web ; borne passée par le Dart, aucune constante en Kotlin ; nom d'un fichier exporté refusé s'il contient `/`, la barre oblique inverse ou `..`, ou si son chemin canonique sort de `cacheDir/exports/` ; `exports_paths.xml` réduit à `<cache-path name="exports" path="exports/"/>` ; `<provider>` en `exported="false"` ; aucune permission de stockage dans le manifeste ; `reportError` n'envoie ni contenu ni nom de fichier ; aucun `file_picker`, `share_plus` ou `file_selector` sans ADR qui remplace ADR-007 | `securite` | ADR-007 |
 | P23 | `tickets/{id}` : création par `isMember()` seule, `author_uid == request.auth.uid`, `author_email` égal à l'e-mail en minuscules, `status == 'pending'`, `created_at == request.time`, liste blanche de champs (`type`, `title` 5 à 100, `description` 10 à 2 000, `screen` au format modèle de route, `app_version` ≤ 40, `platform` `android`\|`web`) ; lecture par l'auteur et l'admin ; seule mise à jour client : `seen_by_author_at == request.time` par l'auteur, `retry_requested_at` par l'admin ; champs serveur (`status`, `github_*`, `delivered_*`, `send_*`, `reply_text`, `reply_at`, `allowed_decisions`, `decision_lease_until`) jamais écrits par un client. `tickets/{id}/decisions/{decisionId}` : création par `isAdmin()` seule, liste blanche, `state == 'pending'`, `requested_by_uid == request.auth.uid`, `requested_at == request.time`, `text` 5 à 2 000 présent pour `refuse` et `close`, absent pour `validate` ; lecture admin seule ; seule mise à jour : `retry_requested_at == request.time` par l'admin sur une décision `failed` ; aucune suppression. `ticket_quotas/**` en `allow read, write: if false` ; `ticket_status/**` lu par l'admin, jamais écrit par un client. Tests pour les cinq profils de P4, dont un brasseur qui crée une décision sur son propre ticket (refusé) | `securite` | ADR-006 |
 | P24 | Corps d'Issue sur gabarit fixe (type, modèle de route, version, plateforme, référence opaque, titre, description) ; commentaire de décision sur gabarit fixe (`Réponse : <texte>`, ligne `Décision <id>`) ; sur chaque texte publié (titre, description, motif, commentaire) : e-mails remplacés après NFKC, mentions `@`, renvois `#N`, balisage HTML, images et définitions de référence neutralisés ; jamais l'uid, le nom, l'e-mail, une recette, un prix ; formulaire et boîtes « Refuser » et « Clore » avec l'avertissement « Publié sur un site public : n'écrivez ni nom ni adresse » ; de GitHub, le serveur ne lit que l'état, les étiquettes, le numéro de PR, la version et le dernier commentaire du compte 16348852 qui commence par « Réponse : » : aucun commentaire d'un autre compte | `securite` | ADR-006, ADR-002 |
 | P25 | `functions/` : aucun `onRequest` ni `onCall` sans ADR, décisions de l'admin comprises (déclencheurs Firestore seuls) ; `maxInstances` posé sur chaque fonction ; secrets par `defineSecret`, jamais dans `vars` ni dans le code ; jeton GitHub à grain fin limité à `ChinaFred/KassBeer` (Issues en écriture, Pull requests et Contents en lecture) ; jeton jamais journalisé ni copié dans `error_reason`, `last_send_error` ou `ticket_status/` ; un 401, un 403 hors limite de débit ou un 404 sur le dépôt posent `token_invalid_since` sans user les essais | `securite` | ADR-006 |
@@ -330,6 +340,8 @@ progression et un compte rendu chiffré (créés, ignorés, en erreur) qui nomme
 revoir. Sur le projet qui a servi de base à agent-starter, un bouton de masse posé dans un
 écran métier n'a été trouvé par aucun utilisateur. Dans Kass'Beer, cet écran est
 **Admin › Import** ; l'import des 16 fiches en est la première opération.
+Recettes › Importer, limité à 500 recettes d'un fichier écrites une à une sous le compte de
+l'importateur, n'est pas une écriture de masse sur les données du groupe (ADR-005, décision 11).
 
 Exception ponctuelle (ADR-005, acceptée le 2026-11-10) : au passage de L1, `effacement-l1/`
 efface depuis le poste tous les documents de `recipes/`, `brews/` et leurs `events/`, et le

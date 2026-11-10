@@ -21,6 +21,10 @@ abstract final class AppRoutes {
   static String recipe(String id) => '$recipes/$id';
   static String editRecipe(String id) => '$recipes/$id/modifier';
 
+  /// « Importer des recettes » : page pleine hors de la coquille, ouverte par
+  /// `push` depuis la liste des recettes.
+  static const importRecipes = '/recettes/importer';
+
   static const newEquipment = '/equipements/nouveau';
   static String equipmentItem(String id) => '$equipment/$id';
   static String editEquipment(String id) => '$equipment/$id/modifier';
