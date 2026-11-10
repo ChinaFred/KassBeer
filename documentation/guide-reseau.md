@@ -46,6 +46,7 @@ CLAUDE.md                       règles, chaîne de travail, tableaux à remplir
     ├── session-start.sh        vérifie agents et skills, lance setup-projet.sh s'il existe,
     │                           avertit si l'adresse git n'est pas noreply (ADR-002)
     ├── setup-projet.sh         session cloud : installe Flutter 3.44.6 et les dépendances
+    │                           (app, brewing, rules-tests, functions)
     └── format-on-edit.mjs      formate le fichier écrit, selon formatters.json
 scripts/
 ├── changelog-recent.mjs        écrit app/assets/changelog_recent.json (écran « Nouveautés »)
@@ -163,6 +164,14 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
+Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
+publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
+P10 (fichiers de `functions/` exécutés par un hook) et P14 (déploiement des Functions sans
+exécuter les dépendances de `functions/` dans le job qui détient le jeton Google ; seule
+l'installation verrouillée de firebase-tools, sans script, y est permise), et ajouté la section
+« Tickets » de `CLAUDE.md`. `formatters.json` formate le TypeScript de `functions/` par
+prettier, et `setup-projet.sh` y lance `npm ci`.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 
@@ -218,9 +227,10 @@ approbation du propriétaire. Une branche avec une PR ouverte tourne deux fois p
 fusion (P10). Sur une branche externe (PR d'un fork, ou commit d'un autre auteur que le
 propriétaire), un diff d'un fichier qu'un hook exécute se signale aussi : `.claude/**`,
 `CLAUDE.md`, `scripts/**`, `rules-tests/package.json`, `rules-tests/package-lock.json`,
-`rules-tests/prettier.config.*`. Il se lit par `git diff` depuis `main` avant d'ouvrir une
+`rules-tests/prettier.config.*`, `functions/package.json`, `functions/package-lock.json`,
+`functions/prettier.config.*`. Il se lit par `git diff` depuis `main` avant d'ouvrir une
 session Claude Code sur la branche. Sinon, `session-start.sh` lancerait `check-agents.mjs`
-et `setup-projet.sh`, et `format-on-edit.mjs` lancerait prettier dans `rules-tests/`. Ces
+et `setup-projet.sh`, et `format-on-edit.mjs` lancerait prettier dans `rules-tests/` ou `functions/`. Ces
 scripts tournent sur le poste. Le `npm ci` de `setup-projet.sh` ne tourne que dans une
 session cloud, sauf si la branche a modifié ce script. `securite` vérifie aussi les workflows (P14) : aucun secret
 lisible sur `pull_request`, aucun `pull_request_target`, accès Google Cloud par Workload

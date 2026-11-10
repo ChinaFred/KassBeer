@@ -5,14 +5,17 @@
 ## Architecture
 
 Application Flutter (`app/`, Android et web) qui lit et écrit Cloud Firestore `(default)`
-directement, avec le cache hors ligne persistant. Aucun serveur en version 1 (ADR-001) :
-`firestore.rules` est le seul contrôle d'accès.
+directement, avec le cache hors ligne persistant. `firestore.rules` est le seul contrôle
+d'accès des clients. Le seul serveur est `functions/` (ADR-006) : deux Cloud Functions sans
+point d'accès HTTP qui publient les tickets des membres en Issues GitHub et relisent ces
+Issues (voir « Cloud Functions »).
 
 | Fichier | Rôle |
 |---|---|
 | `firestore.rules` | règles d'accès, appliquant le modèle ci-dessous |
-| `firestore.indexes.json` | index composites ; vide tant qu'aucune requête n'en demande |
-| `firebase.json` | Firestore, émulateurs (auth 9099, firestore 8080), Hosting |
+| `firestore.indexes.json` | index composites des requêtes de `tickets/`, TTL de `ticket_quotas/` |
+| `firebase.json` | Firestore, Functions (`functions/`, Node 24), émulateurs (auth 9099, firestore 8080), Hosting |
+| `functions/` | Cloud Functions des tickets, TypeScript (ADR-006) |
 | `.firebaserc` | alias `default` : `kassbeer`, le projet Firebase de production |
 | `rules-tests/` | tests des règles contre l'émulateur, projet `demo-kassbeer` |
 
@@ -336,6 +339,84 @@ document ↔ `brewing/`, lecture et affichage des nombres, écrans Recettes et �
 (états, lecture seule, « À compléter », éditeur), attente du serveur sous `fake_async`,
 `FirebaseEnv`, `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17), domaine des coûts (`costs_domain_test.dart` : clés dérivées sans champ `key`, raisons de CB8, déclencheur du figeage, écarts), `FirestoreCostsRepository` sur `fake_cloud_firestore` (`costs_repository_test.dart` : écriture et suppression des prix et des frais, document illisible rapporté sans valeur, refus d'un premier figeage annoncé seulement si le coût n'est pas sur le serveur et rejeu journalisé `costs.freeze_replayed` (HL5), suppression du brassin et de son coût dans un même lot par `delete` et `deleteWithEvents` (CB19), `enregistrerEmbouteillage` : coût écrit après l'embouteillage sans attente, aucun coût pour une modification, un embouteillage déjà daté ou un coût déjà lu, embouteillage envoyé même quand le calcul échoue ou que les prix manquent, refus du coût seul et de l'embouteillage seul (CB7)), écrans des coûts (`costs_screens_test.dart` : « Mes prix », bloc de la recette, bloc du brassin absent pour un autre membre et pour l'admin, aucun montant avec un prix manquant ni dans une annonce, coût figé inchangé quand un prix change, figeage au premier embouteillage seulement, dialogues à trois boutons de « Figer » et de « Recalculer », nom importé coupé à 120 caractères, texte à 200 %, contraste, cibles tactiles et en-tête des manquants annoncé).
 
+#### Tickets — client
+
+Feature `lib/features/tickets/` (ADR-006, lot T1). Aucun code de ticket dans l'écran du jour
+de brassage ni dans ce qu'il appelle (P2) ; aucun prix, stock ni coût (P5).
+
+| Fichier | Contenu |
+|---|---|
+| `domain/ticket.dart` | `Ticket` (lecture tolérante : statut inconnu lu `TicketStatus.unknown`, type inconnu, champ obligatoire absent ou mal typé : `DocumentIllisible`), `TicketType`, `TicketStatus`, `TicketBrouillon`, bornes des règles (titre 5 à 100, description 10 à 2 000), `unread`, `compareTicketsRecentFirst`, `compareVersions` |
+| `domain/ticket_screens.dart` | table fermée `kTicketScreenNames` (modèle de route → nom), `autre`, `inconnu` ; `ticketScreenValue` ne rend qu'une valeur de cet ensemble |
+| `domain/etat_jeton_github.dart` | `EtatJetonGithub` (`token_invalid_since`, `token_expires_at`) |
+| `data/tickets_repository.dart` | `TicketsRepository`, `FirestoreTicketsRepository` |
+| `presentation/` | `TicketFormScreen`, `MyTicketsScreen`, `TicketDetailScreen`, `BandeauTicketsAdmin`, `ticket_statut.dart` (étiquette, icône et phrase de chaque statut), `ticket_lien_github.dart`, `tickets_providers.dart` |
+
+**Routes.** Hors de la coquille, ouvertes par `push`, retour par `pop` sinon `/tickets` ou
+l'accueil : `/tickets/nouveau` (déclarée avant `/tickets/:id`), `/tickets/:id`, `/tickets`.
+`routes.dart` : `tickets`, `newTicket`, `ticket(id)`. Le menu du compte lit
+`GoRouter.of(context).state.fullPath` (modèle `/recettes/:id`, jamais l'adresse) et le passe
+dans `?ecran=` ; le formulaire le réduit par `ticketScreenValue`. « Reprendre ce ticket »
+passe un `TicketBrouillon` par `extra`. `test/ticket_screens_test.dart` parcourt
+`router.configuration.routes` et échoue si une route manque à la table.
+
+**Écritures.** `create` écrit `tickets/{id}` avec l'identifiant créé par l'appareil à
+l'ouverture du formulaire (`newTicketId`) et les seuls champs du contrat : `type`, `title`,
+`description` (retirés de leurs espaces), `screen`, `app_version` (absent si illisible,
+sans `+build`), `platform` (`android` ou `web`), `author_uid`, `author_email` (minuscules),
+`created_at` = `serverTimestamp()`, `status` = `pending`. Un double appui est arrêté par une
+garde synchrone du formulaire : un second `set` serait une mise à jour, refusée par les
+règles. `markSeen` écrit `seen_by_author_at` = `serverTimestamp()` à l'ouverture d'un suivi à
+lire. Ni callable, ni transaction, ni `Source.server` : tout marche hors ligne.
+
+**Lectures.** `watchMine(uid)` : `where author_uid == uid`, tri à l'affichage, aucun index
+composite. Pour l'admin : `watchNotSent` (`status in [pending, send_failed]`),
+`watchIssueMissing` (`issue_missing_since != null`), `watchGithubStatus`
+(`ticket_status/github`). Toutes avec `includeMetadataChanges` et le cache. Un
+`serverTimestamp()` en attente se lit `null` : la date d'envoi affichée est alors l'heure de
+l'appareil gardée par le dépôt pour un ticket créé dans la session, sinon aucune date. Un
+ticket qui a une écriture en attente et n'est plus `pending` n'est pas compté à lire : cette
+écriture ne peut être que `seen_by_author_at`.
+
+**Pastille.** `Ticket.unread` : statut différent de `pending`, aucune écriture en attente,
+`status_changed_at` présent et postérieur à `seen_by_author_at` (ou celui-ci absent).
+Le passage `pending` → `received` n'écrit pas `status_changed_at` : il n'allume rien.
+`unreadTicketsCountProvider` compte ces tickets ; « 99+ » au-delà de 99.
+
+**Providers.** `ticketsRepositoryProvider` (`core/providers.dart`, fourni par `main.dart`),
+`myTicketsProvider(uid)`, `unreadTicketsCountProvider`, `githubStatusProvider`,
+`notSentTicketsProvider`, `issueMissingTicketsProvider`, `ouvrirLienProvider`
+(`launchUrl(mode: externalApplication)`, remplacé dans les tests). Aucune nouvelle tentative
+automatique : une panne s'affiche, « Réessayer » relance.
+
+**`url_launcher` 6.3.3** (version exacte). `lienGithub` n'accepte qu'une adresse `https` sur
+l'hôte `github.com`, sans identifiants ni port ; sinon le bouton « Voir la modification sur
+GitHub » n'apparaît pas. Un refus du système ou une erreur est rapporté
+(`tickets.open_github`, sans l'adresse) et annoncé. `AndroidManifest.xml` déclare dans
+`<queries>` l'intent `VIEW` sur `https` (visibilité des paquets, Android 11+).
+
+**Journal.** Rapports `tickets.create`, `tickets.read`, `tickets.mark_seen`,
+`tickets.watch_*`, `tickets.read_github_status`, `tickets.open_github` : `context` ne porte
+que `tickets/{id}` et le code d'erreur, jamais le titre, la description ni l'e-mail (P13).
+
+**Bandeau Admin.** `messagesBandeauTickets` (fonction pure, testée) : jeton refusé
+(`token_invalid_since`), échéance à 14 jours ou moins (`kTokenExpiryWarning`) ou inconnue,
+tickets `send_failed` ou `pending` depuis plus d'une heure (`kTicketSendDelay`, heure de
+`horlogeProvider`), Issues disparues. Liste vide quand tout va bien.
+
+**Composants partagés.** `Etiquette` reçoit `icon` (exclue de la sémantique) et
+`ton` (`TonEtiquette.erreur` : `errorContainer` / `onErrorContainer`). `EditeurPleinEcran`
+reçoit `libelleAction` et `libelleEnCours` (« Enregistrer » et « Enregistrement » par défaut)
+et `fermerParRetour` (faux par défaut : `go(closePath)` comme avant ; vrai : `pop` s'il y a un
+écran précédent). `formats.dart` : `formatDateChiffres` (« 08/11/26 »). `AdminScreen` affiche
+`BandeauTicketsAdmin` en tête.
+
+**Tests.** `tickets_domain_test.dart` (lecture, statuts, suivi à lire, versions, lien,
+bandeau), `ticket_screens_test.dart` (table et routes), `tickets_repository_test.dart`
+(`fake_cloud_firestore` : champs écrits, illisible rapporté sans texte, `markSeen`, requêtes
+admin, état du jeton), `tickets_screens_test.dart` (menu et pastille, formulaire, liste,
+détail, bandeau Admin).
+
 ## Modèle de données
 
 Unités du système international : masses en grammes (`_g`), volumes en litres (`_l`),
@@ -640,6 +721,76 @@ sur cet appareil hors ligne », jamais « prix manquant », et rien ne se fige.
 | `platform` | string \| null : `android` ou `web` |
 | `created_at` | timestamp, obligatoire : `serverTimestamp()` |
 
+### `tickets/{ticketId}`
+
+Ticket d'un membre (ADR-006). Identifiant créé par l'appareil à l'ouverture du formulaire
+(`[A-Za-z0-9_-]`, 128 caractères au plus) : un double appui n'écrit qu'un ticket. Le membre le
+crée hors ligne compris ; le déclencheur `publishTicket` le publie en Issue sur le dépôt
+public `ChinaFred/KassBeer`. Aucun prix, stock ni coût (P5). `author_email` n'est jamais
+publié.
+
+Écrits par le client, à la création seule :
+
+| Champ | Type |
+|---|---|
+| `type` | string, obligatoire : `bug`, `evolution` ou `feature` |
+| `title` | string, obligatoire, 5 à 100 caractères, une ligne |
+| `description` | string, obligatoire, 10 à 2 000 caractères |
+| `screen` | string, obligatoire, 100 caractères au plus : modèle de route go_router (`/recettes/:id`), `autre` ou `inconnu` ; jamais un identifiant réel |
+| `app_version` | string facultatif, 1 à 40 caractères |
+| `platform` | string, obligatoire : `android` ou `web` |
+| `author_uid` | string, obligatoire : `request.auth.uid` |
+| `author_email` | string, obligatoire : e-mail du jeton en minuscules |
+| `created_at` | timestamp, obligatoire : `serverTimestamp()` |
+| `status` | string, obligatoire : `pending` à la création |
+
+Écrit par l'auteur ensuite : `seen_by_author_at` (timestamp, `serverTimestamp()`), à
+l'ouverture du suivi.
+
+Écrits par le serveur seul (SDK Admin) :
+
+| Champ | Contenu |
+|---|---|
+| `status` | `pending`, `received`, `validated`, `in_progress`, `delivered`, `refused`, `closed`, `send_failed`, `over_quota` |
+| `status_changed_at` | timestamp : chaque changement de statut, sauf `pending` → `received`, et chaque nouvelle réponse |
+| `github_issue_number`, `github_url` | numéro de l'Issue ; adresse construite depuis le numéro (`https://github.com/ChinaFred/KassBeer/issues/N`) |
+| `github_checked_at` | timestamp de la dernière relecture de l'Issue (tri de la passe horaire) |
+| `github_updated_at` | `updated_at` de l'Issue à la dernière relecture : les commentaires ne sont relus que s'il change |
+| `send_attempts` | entier : essais d'envoi en échec ; au dixième, `send_failed` |
+| `last_send_error` | string, 300 caractères au plus : code HTTP et message de GitHub, jamais le jeton |
+| `send_lease_until` | timestamp : bail de deux minutes d'un envoi en cours |
+| `send_quota_day` | `AAAAMMJJ`, jour de Paris où le plafond a été décidé ; le ticket n'est plus compté ensuite |
+| `over_quota_reason` | `member` ou `group` |
+| `reply_text`, `reply_at` | dernière réponse « Réponse : » du compte 16348852, préfixe et ligne « Décision … » retirés, adresses remplacées, 2 000 caractères au plus ; date du commentaire |
+| `delivered_pr_number`, `delivered_pr_url`, `delivered_version` | PR fusionnée qui a fermé l'Issue, adresse `https://github.com/ChinaFred/KassBeer/pull/N`, version `X.Y.Z` de `app/pubspec.yaml` à son commit de fusion ; `null` sans PR (fermeture à la main) ou sans version lisible |
+| `delivered_checked_at` | timestamp de la recherche de la PR de livraison |
+| `issue_missing_since` | timestamp : Issue en 404 ou 410, dépôt joignable ; le statut ne change pas |
+| `updated_at` | timestamp de la dernière écriture du serveur |
+
+Un statut ne recule pas, sauf à la réouverture de l'Issue, qui reprend le statut de ses
+étiquettes. Quitter `delivered` efface les quatre champs `delivered_*`. `allowed_decisions`,
+`decision_lease_until` et la sous-collection `decisions/` arrivent avec le lot T2.
+
+### `ticket_quotas/{id}`
+
+Compteurs du plafond du jour de Paris, lus et écrits par le déclencheur seul :
+`member_{uid}_{AAAAMMJJ}` (5 par membre) et `group_{AAAAMMJJ}` (20 pour le groupe). Champs
+`count`, `day`, `expires_at` (date d'écriture + 7 jours, champ TTL de
+`firestore.indexes.json`). Les tickets de l'administrateur ne sont ni refusés ni comptés.
+
+### `ticket_status/github`
+
+État du jeton GitHub, écrit par le serveur seul, lu par l'administrateur (bandeau de la page
+Admin) :
+
+| Champ | Contenu |
+|---|---|
+| `token_invalid_since` | timestamp du premier refus (401, 403 hors limite de débit, 404 sur le dépôt, secret vide), `null` après le premier appel réussi |
+| `token_invalid_reason` | `secret_vide`, `jeton_refuse` ou `http_<code>` ; jamais le jeton |
+| `token_expires_at` | date de l'en-tête `github-authentication-token-expiration` ; `null` quand la dernière réponse réussie ne le portait pas (« Date d'expiration du jeton GitHub inconnue. ») |
+| `token_checked_at` | timestamp de la dernière réponse réussie qui a écrit ce document |
+| `issues_cursor` | date ISO : curseur de la liste des Issues modifiées, propre à la passe horaire |
+
 ## Règles d'accès
 
 Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'google.com'`),
@@ -657,6 +808,9 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 | `users/{uid}/brew_costs/` | propriétaire | propriétaire, forme contrôlée, `freeze_kind == 'initial'` | propriétaire, forme contrôlée, `freeze_kind == 'recalculation'` | propriétaire |
 | `users/{uid}/stock/` | propriétaire | propriétaire | propriétaire | propriétaire |
 | `error_reports/` | admin | membre, `uid` = le sien, champs en liste blanche et bornés | personne | admin |
+| `tickets/` | auteur (`author_uid` = le sien, requête « Mes tickets » comprise) ; tous pour l'admin | membre, champs de création seuls (voir `tickets/`), `status == 'pending'`, `created_at == request.time`, `author_email` = e-mail du jeton en minuscules | auteur : `seen_by_author_at == request.time` seul | personne |
+| `ticket_quotas/**` | personne | personne | personne | personne |
+| `ticket_status/**` | admin | personne | personne | personne |
 | tout autre chemin | refusé | refusé | refusé | refusé |
 
 L'admin n'a aucun droit d'écriture sur le contenu des autres brasseurs.
@@ -779,6 +933,16 @@ propre uid, et refuse champ inconnu, type faux, `unit` hors de `g` et `unit` (do
 différent du chemin, plus de 200 lignes, `freeze_kind: initial` en modification et
 `recalculation` en création ; il vérifie aussi la suppression du brassin et de son coût dans un
 même lot.
+
+`tickets.test.mjs` rejoue `tickets/` pour les cinq profils (création à son nom, lecture du
+ticket d'un autre, liste filtrée sur `author_uid` et triée sur `created_at`, liste sans
+filtre, marque de lecture, suppression), P11 (adresse non vérifiée, mot de passe, adresse en
+majuscules, membre retiré), chaque borne de la création (titre de 4, 5, 100, 101 caractères
+et sur deux lignes, description de 9, 10, 2 000, 2 001, écran avec identifiant réel,
+version de 41 caractères, plateforme `ios`), chaque champ serveur refusé à la création et en
+modification, `seen_by_author_at` à l'heure de l'appareil, une décision créée par le
+brasseur ou l'admin (refusée en T1), et `ticket_quotas/`, `ticket_status/` pour les cinq
+profils.
 
 `recipe_format.test.mjs` (v0.1.15) rejoue la forme BeerJSON dans `recipes/` et dans la copie
 figée : document plat de la v0.1.14, sans `format_version`, `format_version` 2 ou en texte,
@@ -940,6 +1104,200 @@ l'ébullition coupée à un ajout de houblon (« Ébullition » 45 min, « Ajout
 (1.052, 20 L) ; ses rendements attendus sont calculés hors du paquet. `fermentation.json` couvre
 l'ordre, une densité absente, les deux changements d'heure et deux relevés le même jour.
 
+## Cloud Functions
+
+`functions/` (ADR-006) : Cloud Functions 2e génération, Node 24, TypeScript, région
+`europe-west1` (celle de la base), compte d'exécution `tickets-functions@<projet>`. Aucun
+`onRequest` ni `onCall` (P25) : les deux fonctions ne s'appellent pas depuis Internet.
+
+| Fonction | Déclencheur | Réglages | Ce qu'elle fait |
+|---|---|---|---|
+| `publishTicket` | `onDocumentCreated('tickets/{ticketId}')` | `maxInstances` 2, 256 Mio, 60 s, sans rejeu (la passe horaire renvoie) | publie le ticket `pending` |
+| `syncTickets` | `onSchedule('every 60 minutes')`, heure de Paris | `maxInstances` 1, 256 Mio, 300 s, sans rejeu | renvoie les `pending`, relit les Issues |
+
+Les deux lisent le secret `GITHUB_TICKETS_TOKEN` (`defineSecret`). `src/firestore.ts` charge le
+SDK Admin au premier appel ; le client GitHub (`src/tickets/github.ts`, `fetch`, aucun SDK)
+se construit à l'appel avec le jeton (P26). `src/logging.ts` journalise par
+`firebase-functions/logger` (`logError` dans chaque `catch`) et retire tout ce qui a la forme
+d'un jeton GitHub. Les règles pures (`src/tickets/model.ts`, `src/tickets/text.ts`) sont
+testées par `node --test` (`functions/test/`).
+
+**Publication** (`src/tickets/publish.ts`). Transaction : le ticket doit être `pending`, sans
+numéro d'Issue ni bail actif. Au premier essai, le rôle de l'auteur est lu dans
+`members/{author_email}` ; hors administrateur, les compteurs du jour de Paris sont lus et
+incrémentés dans la même transaction, ou le ticket passe `over_quota`. Bail de deux minutes.
+Si un essai précédent a commencé, l'Issue est d'abord cherchée dans la liste des Issues
+`source:app` modifiées depuis `created_at` du ticket moins dix minutes (500 au plus) : seule
+compte une Issue du compte 16348852 dont une ligne du corps est la ligne « Référence » du
+ticket. La liste ne dépend pas de l'index de recherche de GitHub, en retard de quelques
+minutes. Sinon elle est créée, avec
+les étiquettes `source:app` et `type:<type>`. Succès : `received`, sans
+`status_changed_at`. Échec réseau ou 5xx : un essai compté, `pending` gardé, `send_failed` au
+dixième. Limite de débit : non comptée. Jeton refusé ou secret vide : non compté,
+`token_invalid_since` posé.
+
+**Gabarit de l'Issue** (P24). Titre : celui du ticket, nettoyé, sur une ligne. Corps : type,
+écran (modèle de route, « Autre écran » ou « Non précisé »), version (« Version inconnue »
+si absente), plateforme, référence opaque, puis la description nettoyée. Jamais le nom,
+l'e-mail ni l'uid. Nettoyage de tout texte publié (`publicText`) : commentaires HTML retirés,
+caractères invisibles retirés, forme NFKC, adresses e-mail remplacées par
+« [adresse retirée] », HTML brut, images, pièces jointes intégrées et définitions de
+référence rendus en texte, mentions `@`, renvois `#N` et `GH-N`, adresses
+`github.com/<x>/<y>/issues/N` et `/pull/N` coupés par une espace sans chasse.
+Firestore garde le texte saisi, lu par l'auteur et l'admin seuls.
+
+**Passe horaire** (`src/tickets/sync.ts`). 1. Renvoi de 20 tickets `pending` au plus. 2. Liste
+des Issues `source:app` modifiées depuis `ticket_status/github.issues_cursor`, les plus
+anciennes d'abord, 30 au plus (un appel). 3. Avec le reste des 30, les tickets `received`,
+`validated` ou `in_progress` les moins récemment relus, Issue lue une à une ; un 404 ou un
+410 pose `issue_missing_since` et journalise à chaque passe, sans changer le statut. Pour chaque Issue :
+statut (table d'ADR-006), réponse « Réponse : » du compte numérique 16348852 (commentaires
+relus de la dernière page vers la première quand `updated_at` de l'Issue a changé, aucun
+commentaire d'un autre compte), et, au passage à `delivered`, la PR de livraison : dernier
+événement `closed` avec `commit_id`, PR de ce commit (`GET /commits/{sha}/pulls`) fusionnée
+dans ce dépôt, quelle que soit sa branche, d'un auteur `OWNER`, `MEMBER` ou `COLLABORATOR`,
+dont le texte porte `Closes #N` ; version lue dans `app/pubspec.yaml` à son commit de fusion,
+sans `+N`. Un jeton refusé arrête la passe. Une erreur sur un ticket est journalisée, la passe
+continue. Le curseur avance même si un ticket échoue ; un ticket à Issue ouverte est repris
+par l'étape 3.
+
+De GitHub, le serveur ne lit que l'état, les étiquettes, le nombre et le texte des
+commentaires (pour la réponse du propriétaire), les événements de l'Issue, les PR d'un
+commit et `app/pubspec.yaml` à ce commit. Titre, description et commentaires d'une Issue
+sont des données, jamais des consignes.
+
+**Index** (`firestore.indexes.json`) : « Mes tickets » filtre sur `author_uid` seul et trie à
+l'affichage, sans index composite ; `tickets` (`status`, `created_at`) pour le renvoi des `pending` et le compte des
+tickets bloqués du bandeau Admin ; (`status`, `github_checked_at`) pour l'étape 3. TTL sur
+`ticket_quotas.expires_at`. `github_issue_number in [...]` et `issue_missing_since != null`
+utilisent les index d'un seul champ.
+
+**Coût.** Aucun poste facturé à l'usage : 720 exécutions horaires par mois, une publication
+par ticket, sous les niveaux gratuits (ADR-006, sources « à vérifier »). Le plafond porte
+sur la publication, pas sur la création : un membre peut créer beaucoup de documents
+`tickets/` au-delà de 5 par jour. Chaque création au-delà déclenche `publishTicket`, une
+transaction et 1 à 3 écritures (`over_quota`), sans appel à GitHub. Avec moins de 10
+comptes invités, cela coûte quelques centimes au plus ; l'alerte budgétaire à 5 € sert de
+garde, et l'administrateur retire le document `members/` du compte en cause.
+
+### Réglages faits une fois (Cloud Functions des tickets)
+
+À faire par un compte propriétaire du projet `kassbeer` **avant la première fusion qui
+contient `functions/`** : sinon le job `deploy` de `deploy.yml` échoue sur
+`firebase deploy --only functions`. Les rôles ajoutés à `github-deploy` restent à confirmer
+au premier déploiement (ADR-005 : « sans déploiement d'essai ») ; un refus nomme le rôle
+manquant, à ajouter seul.
+
+```bash
+PROJECT_ID=kassbeer
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+DEPLOY_SA="github-deploy@$PROJECT_ID.iam.gserviceaccount.com"
+RUN_SA="tickets-functions@$PROJECT_ID.iam.gserviceaccount.com"
+BUILD_SA="$PROJECT_NUMBER-compute@developer.gserviceaccount.com"   # compte de build par défaut
+gcloud config set project "$PROJECT_ID"
+
+# 1. API (github-deploy n'a que serviceUsageConsumer : il ne les active pas lui-même).
+gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com \
+  pubsub.googleapis.com storage.googleapis.com secretmanager.googleapis.com \
+  cloudscheduler.googleapis.com
+
+# 2. Compte d'exécution des fonctions : lit et écrit Firestore, reçoit les événements
+#    Firestore et l'appel de Cloud Scheduler, lit le secret.
+gcloud iam service-accounts create tickets-functions --display-name "Functions des tickets"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$RUN_SA" --role roles/datastore.user --condition=None
+for role in roles/eventarc.eventReceiver roles/run.invoker; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member "serviceAccount:$RUN_SA" --role "$role" --condition=None
+done
+
+# 3. Secret GITHUB_TICKETS_TOKEN (saisie masquée, sans retour à la ligne final).
+gcloud secrets create GITHUB_TICKETS_TOKEN --replication-policy=automatic
+read -rs TOKEN && printf '%s' "$TOKEN" | gcloud secrets versions add GITHUB_TICKETS_TOKEN --data-file=- && unset TOKEN
+gcloud secrets add-iam-policy-binding GITHUB_TICKETS_TOKEN \
+  --member "serviceAccount:$RUN_SA" --role roles/secretmanager.secretAccessor
+
+# 4. Rôles de github-deploy pour les Functions.
+for role in roles/cloudfunctions.admin roles/cloudscheduler.admin roles/run.admin \
+            roles/artifactregistry.reader; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member "serviceAccount:$DEPLOY_SA" --role "$role" --condition=None
+done
+for sa in "$RUN_SA" "$BUILD_SA"; do
+  gcloud iam service-accounts add-iam-policy-binding "$sa" \
+    --member "serviceAccount:$DEPLOY_SA" --role roles/iam.serviceAccountUser
+done
+gcloud secrets add-iam-policy-binding GITHUB_TICKETS_TOKEN \
+  --member "serviceAccount:$DEPLOY_SA" --role roles/secretmanager.viewer
+
+# 5. Liaisons des agents de service que firebase-tools pose au premier déploiement d'un
+#    déclencheur Firestore et d'une tâche planifiée ; github-deploy ne modifie pas la
+#    stratégie IAM du projet, elles se posent ici.
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:service-$PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com" \
+  --role roles/iam.serviceAccountTokenCreator --condition=None
+for role in roles/run.invoker roles/eventarc.eventReceiver; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member "serviceAccount:$BUILD_SA" --role "$role" --condition=None
+done
+
+# 6. Artifact Registry : images des fonctions gardées un jour (ADR-006, 0,5 Go gratuits).
+#    Le dépôt gcf-artifacts se crée au premier déploiement : lancer cette commande depuis le
+#    poste juste après, ou créer le dépôt avant.
+npx firebase functions:artifacts:setpolicy --location europe-west1 --days 1 --project "$PROJECT_ID"
+
+# 7. Compte compute par défaut (compte de build des Functions) : lister ses rôles.
+gcloud projects get-iam-policy "$PROJECT_ID" --flatten=bindings \
+  --filter="bindings.members:serviceAccount:$BUILD_SA" --format='value(bindings.role)'
+#    S'il porte roles/editor (rôle posé d'office sur les anciens projets), le remplacer par
+#    roles/cloudbuild.builds.builder, ou passer à un compte de build dédié. github-deploy
+#    agit en son nom (serviceAccountUser) : roles/editor lui donnerait la main sur tout le
+#    projet.
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$BUILD_SA" --role roles/cloudbuild.builds.builder --condition=None
+gcloud projects remove-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$BUILD_SA" --role roles/editor   # seulement s'il figure dans la liste
+```
+
+`roles/run.admin` sert à `firebase-tools` pour donner au compte d'exécution le droit
+d'appeler le service Cloud Run de la tâche planifiée (`run.services.setIamPolicy`).
+`secretmanager.viewer` lit les métadonnées du secret, pas sa valeur. `github-deploy` obtient
+pourtant un accès indirect aux données : par `serviceAccountUser` sur `tickets-functions`, il
+déploie du code qui tourne avec `datastore.user` et lit le secret. Cet accès est inhérent au
+déploiement des Functions ; `firebaserules.admin` l'ouvrait déjà, puisque des règles publiées
+décident de qui lit quoi. Le garde-fou est le même : `deploy.yml` ne part que de `main`, après
+une PR et une CI verte, et chaque diff de `.github/workflows/` ou de `functions/` passe en
+relecture (P10, P14, P25).
+
+**Jeton à grain fin** (GitHub › Settings › Developer settings › Fine-grained tokens), compte
+propriétaire : dépôt `ChinaFred/KassBeer` seul ; permissions « Issues : Read and write »,
+« Pull requests : Read-only », « Contents : Read-only », « Metadata : Read-only » (posée
+d'office) ; rien d'autre. Durée : la plus longue que permet GitHub ; noter ici la date
+d'expiration à chaque renouvellement. Renouveler : `gcloud secrets versions add
+GITHUB_TICKETS_TOKEN --data-file=-`, puis relancer `deploy.yml` à la main (les fonctions
+lisent la version épinglée au déploiement).
+
+| Élément | Valeur |
+|---|---|
+| Expiration du jeton `GITHUB_TICKETS_TOKEN` | à noter à la création |
+
+**Étiquettes GitHub** à créer une fois sur `ChinaFred/KassBeer` :
+
+```bash
+REPO=ChinaFred/KassBeer
+gh label create "source:app" --repo "$REPO" --color 0E8A16 --description "Ticket envoyé depuis l'application"
+gh label create "type:bug" --repo "$REPO" --color D73A4A --description "Ticket : bug"
+gh label create "type:evolution" --repo "$REPO" --color A2EEEF --description "Ticket : évolution"
+gh label create "type:feature" --repo "$REPO" --color 7057FF --description "Ticket : nouvelle fonctionnalité"
+gh label create "validé" --repo "$REPO" --color 0075CA --description "Ticket validé par l'administrateur"
+gh label create "statut:en-cours" --repo "$REPO" --color FBCA04 --description "Une session travaille sur ce ticket"
+gh label create "statut:clos" --repo "$REPO" --color 6A737D --description "Ticket clos par l'administrateur"
+```
+
+**Ruleset de `main`** : ajouter le contrôle « Functions — lint, build, tests » aux contrôles
+requis.
+
 ## CI et déploiement
 
 Deux workflows GitHub Actions. Toute modification de l'un d'eux, ou de
@@ -957,6 +1315,7 @@ manuel. Un nouveau push annule le run en cours de la même référence. Permissi
 | Version et outillage | `git fetch --tags`, puis `node scripts/check-version.mjs` : sur une PR avec `--base origin/<base de la PR>` (HEAD est le commit de fusion préparé par GitHub) ; sur un push de `main` avec `--base <commit d'avant le push>` ; sur un push d'une autre branche, contre `origin/main`. Non lancé sur un lancement manuel. Puis `node scripts/check-agents.mjs` et `node --test scripts/*.test.mjs` (dont `changelog-recent.test.mjs`) |
 | Flutter et brewing | Flutter 3.44.6. Dans `brewing/` : `dart pub get`, `pubspec.lock` à jour, `dart analyze --fatal-infos`, `dart format` vérifié, `dart test`. Dans `app/` : `flutter pub get`, `pubspec.lock` à jour, `node scripts/changelog-recent.mjs` (asset des nouveautés régénéré), `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`, `flutter test`, `flutter build web --release` sans configuration Firebase |
 | Règles — émulateur | Node 22, Java 21 (Temurin), `npm ci` et `npm test` dans `rules-tests/` (projet `demo-kassbeer`). Binaires de l'émulateur en cache |
+| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`) : échec si une fonction a un déclencheur HTTP, callable, bloquant ou de file, ou n'a pas de `maxInstances` (P25) |
 | Android — compilation | quand le diff touche `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`, et toujours sur un lancement manuel : `node scripts/changelog-recent.mjs`, puis `flutter build apk --release`, Java 17, signé par une clé jetable générée par `keytool` dans le job. Sinon le job réussit sans compiler |
 
 Une branche de travail qui n'a pas encore incrémenté sa version est rouge au job Version :
@@ -990,13 +1349,20 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 
 | Job | Environnement, droits | Ce qu'il fait |
 |---|---|---|
-| `gate` | aucun, `contents: read` | vérifie que le commit est la tête de `main` ; sinon s'arrête en vert |
+| `gate` | aucun, `contents: read` | vérifie que le commit est la tête de `main` ; sinon s'arrête en vert. Décide du déploiement des Functions : `git diff HEAD^1 HEAD -- functions/` non vide, ou lancement manuel |
 | `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et décide s'il faut un nouvel APK |
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
-| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; publie l'APK sur App Distribution |
+| `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
+| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (aucun déclencheur HTTP, callable, bloquant ou de file, `maxInstances` partout, compte `tickets-functions`, aucun secret autre que `GITHUB_TICKETS_TOKEN`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
 
-Le code compilé (dépendances pub, Gradle) tourne dans `build`, qui n'a pas de jeton OIDC.
-Les jobs qui ont un accès à Google Cloud ne compilent rien.
+Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et
+`build-functions`, qui n'ont pas de jeton OIDC. Les jobs qui ont un accès à Google Cloud ne
+compilent rien. Pour les Functions, `deploy` ne lance ni `npm ci` ni `tsc` dans `functions/` :
+le predeploy de `firebase.json` vérifie seulement que `lib/index.js` et `functions.yaml` sont
+là, et `firebase-tools` lit `functions.yaml` au lieu de charger le code (P14). Cloud Build
+installe les dépendances de production depuis `functions/package-lock.json`, côté Google ;
+`gcp-build` vide empêche qu'il recompile. Un déploiement des Functions en échec se rejoue par
+un lancement manuel de `deploy.yml`, qui les redéploie toujours.
 
 **Configuration absente.** Les variables obligatoires sont `GCP_WORKLOAD_IDENTITY_PROVIDER`,
 `GCP_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID`, `FIREBASE_ANDROID_APP_ID` et chaque clé de
@@ -1150,7 +1516,8 @@ tout le pool, et un second fournisseur à la condition plus large obtiendrait au
 `github-deploy`. La condition du fournisseur n'admet qu'un jeton de ce dépôt (identifiant numérique : un
 dépôt recréé sous le même nom ne passe pas, ADR-002), de `main`, de l'environnement
 `production`, et du fichier `deploy.yml`. Les cinq rôles du compte de service couvrent Hosting, les règles,
-les index et App Distribution ; il ne lit ni n'écrit les données Firestore. Si la CLI
+les index et App Distribution ; il ne lit ni n'écrit les données Firestore. Les Functions
+ajoutent les rôles de « Réglages faits une fois (Cloud Functions des tickets) ». Si la CLI
 Firebase refuse un déploiement pour une permission manquante, ajouter le rôle que nomme le
 message d'erreur, pas un rôle large comme `roles/firebase.admin`.
 
@@ -1323,5 +1690,9 @@ Forcer les versions corrigées par des `overrides` npm a été écarté : le dé
 `firebase-tools`, et aucun test local ne vérifie une CLI aux dépendances forcées.
 
 ## Intégrations et services tiers
+
+| Service | Appelé par | Usage | Accès |
+|---|---|---|---|
+| API REST GitHub (`api.github.com`) | `functions/` seul | créer une Issue, chercher une Issue par référence, lire Issues, commentaires, événements, PR d'un commit, `app/pubspec.yaml` à un commit | jeton à grain fin `GITHUB_TICKETS_TOKEN` (Secret Manager), en-tête `x-github-api-version: 2022-11-28` |
 
 ## Coûts variables

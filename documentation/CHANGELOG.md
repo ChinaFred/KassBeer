@@ -6,6 +6,36 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.16 — fonctionnel
+
+Le menu du compte gagne « Signaler ou proposer » et « Mes tickets ». Un membre signale un bug,
+propose une évolution ou une nouvelle fonctionnalité depuis l'écran où il se trouve, même sans
+réseau : le ticket part au retour de la connexion. Le titre et la description sont publiés sur
+un site public, sans le nom ni l'adresse de l'auteur. « Mes tickets » montre où en est chaque
+demande : reçue, validée, en cours, livrée, refusée ou close, avec la réponse de
+l'administrateur. Une pastille sur l'avatar signale un changement à lire. Une demande livrée dit
+dans quelle version, et si une mise à jour de l'application est nécessaire. Cinq tickets par
+membre et par jour, vingt pour le groupe. L'administrateur voit sur la page Admin si l'envoi des
+tickets est bloqué.
+
+### v0.1.16 — technique
+
+Lot T1 d'ADR-006 et son avenant. Premières Cloud Functions (`functions/`, Node 24, TypeScript,
+`europe-west1`, sans point d'accès HTTP) : `publishTicket` (déclencheur Firestore : plafonds,
+bail en transaction, Issue publiée avec `source:app` et `type:*`, texte nettoyé) et
+`syncTickets` (tâche horaire : renvoi, statuts lus sur GitHub, « Réponse : » du mainteneur, PR
+fusionnée et version livrée, Issue disparue, état du jeton dans `ticket_status/github`).
+Règles et tests de `tickets/`, `ticket_quotas/` et `ticket_status/`. Job CI « Functions » ;
+`deploy.yml` construit les Functions dans un job sans `id-token` et contrôle le manifeste avant
+de les déployer. Paquets ajoutés à l'application : `url_launcher` 6.3.3, `url_launcher_android`
+6.3.33, `url_launcher_ios` 6.4.2, `url_launcher_linux` 3.2.3, `url_launcher_macos` 3.2.6,
+`url_launcher_platform_interface` 2.3.2, `url_launcher_web` 2.4.3, `url_launcher_windows` 3.1.6 ;
+aucun paquet existant ne change. `functions/` : `firebase-admin` 14.5.0, `firebase-functions`
+7.4.0, et pour les outils `typescript` 6.0.3, `eslint` 10.14.0, `@eslint/js` 10.0.1,
+`typescript-eslint` 8.72.2, `@types/node` 24.19.2, `prettier` 3.9.6. `main.dart.js` passe de
+4 501 692 à environ 4 547 389 octets. Réseau d'agents : contrôles P23 à P27, P10 et P14 étendus,
+section « Tickets » de `CLAUDE.md`, formateur et `npm ci` de `functions/`.
+
 ### v0.1.15 — fonctionnel
 
 Les recettes changent de format. L'éditeur gagne le type de recette, la température du

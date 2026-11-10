@@ -4,9 +4,10 @@ name: CI
 # request et chaque push de branche. Une PR dont la CI n'est pas verte ne se
 # fusionne pas, et deploy.yml ne part qu'après une CI verte sur un push de main.
 #
-# Quatre jobs : Version, Flutter et brewing/, Règles (émulateur), Android
-# (compilation de l'APK quand le diff touche app/pubspec.yaml, app/pubspec.lock ou
-# app/android/). Pas de job « déjà testé en PR » : le push de fusion rejoue tout.
+# Cinq jobs : Version, Flutter et brewing/, Règles (émulateur), Functions (lint,
+# build, tests, manifeste des fonctions), Android (compilation de l'APK quand le diff
+# touche app/pubspec.yaml, app/pubspec.lock ou app/android/). Pas de job « déjà testé
+# en PR » : le push de fusion rejoue tout.
 #
 # Aucun secret ici (P14) : la CI lit le dépôt, compile et teste. L'APK du job
 # Android est signé par une clé jetable générée dans le job.
@@ -194,6 +195,55 @@ jobs:
       - name: Tests de firestore.rules
         # Projet fictif demo-kassbeer : aucun contact avec la production (P4).
         run: npm test
+
+  functions:
+    name: Functions — lint, build, tests
+    # Cloud Functions des tickets (ADR-006). Aucun secret, aucun accès à Google Cloud :
+    # le job installe, analyse, compile, teste, puis produit le manifeste des fonctions
+    # comme le fera deploy.yml, et vérifie P25 sur ce manifeste.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint et format (ESLint, Prettier)
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Tests
+        run: npm test
+
+      - name: Manifeste des fonctions (P25)
+        # Même découverte que deploy.yml. Aucun point d'accès HTTP ni callable, et
+        # maxInstances posé sur chaque fonction.
+        env:
+          FUNCTIONS_CONTROL_API: 'true'
+        run: |
+          manifest="$RUNNER_TEMP/functions.yaml"
+          FUNCTIONS_MANIFEST_OUTPUT_PATH="$manifest" npx --no-install firebase-functions .
+          jq -r '.endpoints | keys[]' "$manifest"
+          if ! jq -e '[.endpoints[] | select(has("httpsTrigger") or has("callableTrigger") or has("blockingTrigger") or has("taskQueueTrigger"))] | length == 0' "$manifest" > /dev/null; then
+            echo "::error::Une fonction expose un point d'accès HTTP ou une callable : interdit sans ADR (P25)."
+            exit 1
+          fi
+          if ! jq -e '[.endpoints[] | select((.maxInstances // 0) < 1)] | length == 0' "$manifest" > /dev/null; then
+            echo "::error::maxInstances manque sur une fonction (P25)."
+            exit 1
+          fi
 
   android:
     name: Android — compilation

@@ -164,6 +164,11 @@ String jourHeureParle(DateTime when) =>
     '${_moisComplets[when.month - 1]} ${when.hour} heures '
     '${_deuxChiffres(when.minute)}';
 
+/// Date en chiffres : « 08/11/26 ».
+String formatDateChiffres(DateTime date) =>
+    '${_deuxChiffres(date.day)}/${_deuxChiffres(date.month)}/'
+    '${_deuxChiffres(date.year % 100)}';
+
 /// Date longue : « 8 novembre 2026 », « 1er novembre 2026 ».
 String formatDateLongue(DateTime when) =>
     '${when.day == 1 ? '1er' : when.day} ${_moisComplets[when.month - 1]} '

@@ -23,6 +23,10 @@ import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
 import 'package:kass_beer/core/services/screen_wakelock.dart';
+import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
+import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
+import 'package:kass_beer/features/tickets/domain/ticket.dart';
+import 'package:kass_beer/features/tickets/presentation/tickets_providers.dart';
 
 import 'cost_fakes.dart';
 
@@ -616,6 +620,91 @@ class FakeMembersRepository implements MembersRepository {
   }
 }
 
+/// Ticket reçu par [FakeTicketsRepository.create].
+typedef TicketCree = ({
+  String id,
+  TicketBrouillon brouillon,
+  String authorUid,
+  String authorEmail,
+  String? appVersion,
+  String platform,
+});
+
+class FakeTicketsRepository implements TicketsRepository {
+  final mine = Replay<ListeLue<Ticket>>();
+  final githubStatus = Replay<RechercheDocument<EtatJetonGithub>>();
+  final notSent = Replay<ListeLue<Ticket>>();
+  final issueMissing = Replay<ListeLue<Ticket>>();
+  final created = <TicketCree>[];
+  final seen = <String>[];
+  final watchedUids = <String>[];
+  int idsGiven = 0;
+
+  /// Réponse du serveur à une écriture ; jamais terminée par défaut (hors ligne).
+  Future<void> Function() serverAnswer = () => Completer<void>().future;
+
+  /// Publie [tickets] et, illisibles, les identifiants [invalid].
+  void publish(
+    List<Ticket> tickets, {
+    bool fromCache = false,
+    List<String> invalid = const [],
+  }) => mine.add(
+    ListeLue(
+      documents: [
+        for (final t in tickets) DocumentValide(t.id, t),
+        for (final id in invalid)
+          DocumentInvalide<Ticket>(
+            id,
+            const DocumentIllisible('type', 'type inconnu'),
+          ),
+      ],
+      fromCache: fromCache,
+    ),
+  );
+
+  @override
+  String newTicketId() => 'ticket-${++idsGiven}';
+
+  @override
+  Future<void> create({
+    required String id,
+    required TicketBrouillon brouillon,
+    required String authorUid,
+    required String authorEmail,
+    required String? appVersion,
+    required String platform,
+  }) {
+    created.add((
+      id: id,
+      brouillon: brouillon,
+      authorUid: authorUid,
+      authorEmail: authorEmail,
+      appVersion: appVersion,
+      platform: platform,
+    ));
+    return serverAnswer();
+  }
+
+  @override
+  Stream<ListeLue<Ticket>> watchMine(String uid) {
+    watchedUids.add(uid);
+    return mine.stream;
+  }
+
+  @override
+  Future<void> markSeen(String id) async => seen.add(id);
+
+  @override
+  Stream<RechercheDocument<EtatJetonGithub>> watchGithubStatus() =>
+      githubStatus.stream;
+
+  @override
+  Stream<ListeLue<Ticket>> watchNotSent() => notSent.stream;
+
+  @override
+  Stream<ListeLue<Ticket>> watchIssueMissing() => issueMissing.stream;
+}
+
 class RecordingErrorReportService extends ErrorReportService {
   final reports = <({String feature, Object error, String? context})>[];
 
@@ -662,6 +751,7 @@ class TestApp {
       brews = FakeBrewsRepository(),
       costs = FakeCostsRepository(),
       alerte = FakeAlerte(),
+      tickets = FakeTicketsRepository(),
       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
@@ -678,6 +768,11 @@ class TestApp {
         equipmentRepositoryProvider.overrideWithValue(equipment),
         brewsRepositoryProvider.overrideWithValue(brews),
         costsRepositoryProvider.overrideWithValue(costs),
+        ticketsRepositoryProvider.overrideWithValue(tickets),
+        ouvrirLienProvider.overrideWithValue((uri) async {
+          openedLinks.add(uri);
+          return openLinkResult;
+        }),
         horlogeProvider.overrideWithValue(() => now),
         alerteMinuteurProvider.overrideWithValue(alerte),
         screenWakelockProvider.overrideWithValue(wakelock),
@@ -698,7 +793,12 @@ class TestApp {
   final FakeBrewsRepository brews;
   final FakeCostsRepository costs;
   final FakeAlerte alerte;
+  final FakeTicketsRepository tickets;
   final RecordingErrorReportService errors;
+
+  /// Adresses ouvertes hors de l'application, et réponse du système.
+  final openedLinks = <Uri>[];
+  bool openLinkResult = true;
   late final ScreenWakelock wakelock;
   final wakelockCalls = <bool>[];
 

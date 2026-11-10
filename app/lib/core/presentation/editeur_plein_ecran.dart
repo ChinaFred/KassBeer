@@ -10,8 +10,8 @@ import 'ecriture.dart';
 import 'etats.dart';
 
 /// Cadre d'un éditeur plein écran, hors de la coquille : ✕ « Fermer », titre,
-/// « Enregistrer », bandeau hors ligne. Quitter avec des changements (✕, retour
-/// Android) demande « Abandonner les modifications ? ».
+/// « Enregistrer » (ou [libelleAction]), bandeau hors ligne. Quitter avec des
+/// changements (✕, retour Android) demande « Abandonner les modifications ? ».
 class EditeurPleinEcran extends ConsumerWidget {
   const EditeurPleinEcran({
     super.key,
@@ -23,6 +23,9 @@ class EditeurPleinEcran extends ConsumerWidget {
     this.onSave,
     this.abandonMessage = '',
     this.bottomBar,
+    this.libelleAction = 'Enregistrer',
+    this.libelleEnCours = 'Enregistrement',
+    this.fermerParRetour = false,
   });
 
   final String titre;
@@ -46,9 +49,23 @@ class EditeurPleinEcran extends ConsumerWidget {
   /// Barre fixée en bas (calculs de la recette).
   final Widget? bottomBar;
 
+  /// Libellé du bouton d'action (« Envoyer ») et pendant l'action (« Envoi »).
+  final String libelleAction;
+  final String libelleEnCours;
+
+  /// Vrai pour un écran ouvert par `push` : quitter revient à l'écran
+  /// précédent, et à [closePath] seulement s'il n'y en a pas (adresse ouverte
+  /// directement).
+  final bool fermerParRetour;
+
   Future<void> _leave(BuildContext context) async {
     if (dirty && !await confirmerAbandon(context, abandonMessage)) return;
-    if (context.mounted) context.go(closePath);
+    if (!context.mounted) return;
+    if (fermerParRetour && context.canPop()) {
+      context.pop();
+    } else {
+      context.go(closePath);
+    }
   }
 
   @override
@@ -77,8 +94,8 @@ class EditeurPleinEcran extends ConsumerWidget {
                 child: FilledButton(
                   onPressed: saving ? null : save,
                   child: saving
-                      ? const IndicateurBouton(label: 'Enregistrement')
-                      : const Text('Enregistrer'),
+                      ? IndicateurBouton(label: libelleEnCours)
+                      : Text(libelleAction),
                 ),
               ),
           ],

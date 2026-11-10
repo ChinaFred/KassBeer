@@ -31,6 +31,12 @@ abstract final class AppRoutes {
   static String prepareBrew(String id) => '$brews/$id/preparer';
   static String brewDay(String id) => '$brews/$id/jour';
 
+  /// Tickets du membre (ADR-006) : pages pleines hors de la coquille, ouvertes
+  /// par `push` depuis le menu du compte.
+  static const tickets = '/tickets';
+  static const newTicket = '/tickets/nouveau';
+  static String ticket(String id) => '$tickets/$id';
+
   /// Écrans d'accès : un membre qui y arrive repart vers l'accueil.
   static const accessScreens = {loading, login, notInvited, accessError};
 

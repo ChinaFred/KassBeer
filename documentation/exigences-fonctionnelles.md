@@ -10,8 +10,8 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire en tête d'Admin l'état du jeton GitHub et le nombre de tickets bloqués. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -70,8 +70,13 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue), un séparateur, « Mes prix », un séparateur, « Nouveautés », un séparateur et
-« Se déconnecter ». Une déconnexion qui échoue affiche « Déconnexion impossible. Réessayez. ».
+pu être lue), un séparateur, « Mes prix », un séparateur, « Signaler ou proposer », « Mes
+tickets », « Nouveautés », un séparateur et « Se déconnecter ». Une déconnexion qui échoue
+affiche « Déconnexion impossible. Réessayez. ».
+
+Une pastille chiffrée sur l'avatar et sur « Mes tickets » compte les tickets dont le suivi est
+à lire (« 99+ » au-delà de 99) ; elle est lue « Mon compte, 2 suivis de ticket à lire » et
+« Mes tickets, 2 à lire ». Sans suivi à lire, rien ne change. Voir « Tickets ».
 
 Destinations : Recettes, Brassins, Équipements, et Admin pour l'administrateur seul. Sous
 600 px, barre de navigation en bas ; de 600 à 839 px, rail de navigation avec libellés ;
@@ -114,10 +119,103 @@ d'où le membre est parti ; ouvert par son adresse, elle mène à l'accueil.
 - Le texte est livré avec l'application : l'écran marche sans réseau, sans bandeau hors ligne.
   Colonne de 840 px au plus.
 
+### Tickets
+
+Un membre signale un bug ou propose une évolution depuis l'application, sans compte GitHub
+(ADR-006). Le ticket devient une Issue publique du dépôt ; l'administrateur la traite, et le
+membre suit son statut dans « Mes tickets ». Aucun accès depuis l'écran du jour de brassage.
+Trois pages pleines, hors de la barre de navigation, ouvertes depuis le menu du compte. Leur
+flèche retour revient à l'écran précédent ; ouvertes par leur adresse, elle mène à « Mes
+tickets » ou à l'accueil.
+
+**Signaler ou proposer** (`/tickets/nouveau`). Cadre d'éditeur plein écran : « Fermer » (✕),
+titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au plus.
+
+- Encadré toujours visible : « Publié sur un site public : n'écrivez ni nom ni adresse. » /
+  « Le titre et la description seront lisibles par tous sur GitHub. Votre nom et votre adresse
+  e-mail ne sont jamais publiés. »
+- « Type » : « Bug » (« Quelque chose ne marche pas »), « Évolution » (« Améliorer ce qui
+  existe »), « Nouvelle fonctionnalité » (« Pouvoir faire quelque chose de nouveau »). Aucun
+  type présélectionné.
+- « Titre », une ligne, 5 à 100 caractères, avec compteur.
+- Plan de description propre au type, en texte fixe au-dessus de la description (bug : « Ce
+  que vous faisiez : … / Ce qui s'est passé : … / Ce que vous attendiez : … »).
+- « Description », 10 à 2 000 caractères, avec compteur.
+- « Écran concerné » : liste préremplie par l'écran d'où le membre a ouvert le menu (« Recette »,
+  « Équipements »…), modifiable, terminée par « Autre écran » et « Je ne sais pas ». Ouvert
+  depuis « Mes tickets » ou par son adresse : « Je ne sais pas ». Les écrans d'Admin n'y
+  figurent que pour l'administrateur. Seul le nom de l'écran part, jamais l'identifiant de la
+  recette ou du brassin.
+- Ligne grise : « Envoyé avec : version 0.2.0, Android » (ou « web », « version
+  indisponible »).
+- Erreurs à l'appui sur « Envoyer », le premier champ en erreur reçoit le focus : « Choisissez
+  le type de ticket. », « Le titre doit faire au moins 5 caractères. », « Décrivez le bug ou
+  l'idée en 10 caractères au moins. ».
+- Envoi : le ticket s'écrit sur l'appareil, le formulaire se ferme sans attendre le serveur,
+  et l'écran d'origine affiche « Ticket enregistré. Suivez-le dans Mes tickets. » (hors ligne :
+  « Ticket enregistré. Il partira au retour du réseau. ») avec « Voir ». Un double appui
+  n'écrit qu'un ticket. Un refus du serveur affiche « Votre ticket a été refusé. Il n'est pas
+  enregistré. » avec « Reprendre », qui rouvre le formulaire avec le texte envoyé.
+- Quitter avec une saisie demande « Abandonner les modifications ? » / « Le texte saisi sera
+  perdu. ». Un ticket envoyé ne se modifie ni ne s'annule.
+
+**Mes tickets** (`/tickets`). Tickets du membre, le plus récent en tête (un ticket encore sur
+l'appareil d'abord). Chaque ligne : icône du type, titre, date « jj/mm/aa », étiquette du
+statut (icône et texte), et à droite un point lu « Nouveau suivi à lire » quand le statut ou la
+réponse a changé depuis la dernière ouverture du ticket. Bouton flottant « Signaler ou
+proposer », absent de l'état vide, qui porte déjà ce bouton. Chargement « Chargement de vos tickets » ; aucun ticket : « Aucun ticket pour
+l'instant. Un bug, une idée ? Envoyez-les à l'administrateur. » et « Signaler ou proposer » ;
+panne : « Impossible de lire vos tickets. » et « Réessayer » ; panne après une première
+lecture : la liste reste, sous « Mise à jour de la liste impossible. Elle peut ne plus être à
+jour. ». Hors ligne : bandeau hors ligne et liste du cache. Un ticket illisible s'affiche
+« Ticket illisible » / « Mettez l'application à jour, ou prévenez l'administrateur. ».
+
+**Suivi d'un ticket** (`/tickets/:id`). Type, titre, étiquette du statut, « Envoyé le jj/mm/aa à
+hh:mm », phrase du statut, encadré « Réponse de l'administrateur » quand il a répondu,
+description, « Écran : Recette », « Envoyé avec : … ». Le texte est sélectionnable. Ouvrir un
+ticket dont le suivi est à lire éteint la pastille, hors ligne compris. États : « Chargement du
+ticket », « Impossible de lire vos tickets. », « Ce ticket n'existe plus. », « Ce ticket n'est
+pas disponible hors ligne. », « Ce ticket est illisible. », avec « Retour à mes tickets ».
+
+| Statut | Étiquette | Phrase |
+|---|---|---|
+| sur l'appareil seul | En attente du réseau | « Votre ticket est enregistré sur cet appareil. Il partira au retour du réseau. » |
+| en attente de transmission | Envoi en cours | « Votre ticket est enregistré. Il sera transmis à l'administrateur dans quelques minutes. », puis au-delà d'une heure « La transmission prend du retard. » |
+| reçu | Reçu | « L'administrateur a reçu votre ticket. » |
+| validé | Validé | « Votre demande sera traitée. » |
+| en cours | En cours | « Le travail a commencé. » |
+| livré | Livré | « C'est fait. Livré dans la version X.Y.Z. » (sans version : « C'est fait. ») ; étiquette « Disponible après mise à jour » si la version installée est plus ancienne, sinon « Disponible dans votre version » ; bouton « Voir la modification sur GitHub » quand la modification est connue |
+| refusé | Refusé | « Cette demande ne sera pas traitée. » |
+| clos | Clos | « Ce ticket est clos. » |
+| envoi impossible | Envoi impossible (ton d'erreur) | « Votre ticket n'a pas pu être transmis. Il reste enregistré dans l'application. L'administrateur est prévenu. » |
+| limite du jour | Limite du jour atteinte (ton d'erreur) | « Ce ticket n'a pas été transmis : la limite de tickets du jour était atteinte. Reprenez-le demain avec le bouton ci-dessous. » et bouton « Reprendre ce ticket », qui ouvre le formulaire prérempli pour un nouveau ticket |
+| inconnu de cette version | Statut inconnu | « Mettez l'application à jour pour lire ce statut. » |
+
+« Voir la modification sur GitHub » n'ouvre qu'une adresse `https` sur `github.com`, hors de
+l'application. Un échec affiche « Impossible d'ouvrir GitHub. ».
+
+La pastille ne s'allume pas quand le ticket passe de « Envoi en cours » à « Reçu ». Elle
+s'allume pour tout autre changement de statut et pour une nouvelle réponse.
+
 ### Admin
 
 Réservé à l'administrateur. Deux entrées : « Membres » (« Inviter et retirer les comptes »)
 et « Import » (« Disponible dans une prochaine version », inactive).
+
+**Bandeau des tickets.** En tête de la page, lu par l'administrateur seul, texte
+sélectionnable et annoncé. Rien quand tout va bien. Une ligne par alerte :
+
+- « Jeton GitHub refusé ou expiré depuis le jj/mm/aa : remplacez GITHUB_TICKETS_TOKEN dans
+  Secret Manager. » (ton d'erreur) ;
+- « Le jeton GitHub expire le jj/mm/aa. » à 14 jours ou moins de l'échéance, « Le jeton
+  GitHub a expiré le jj/mm/aa. » (ton d'erreur) une fois l'échéance passée, ou « Date
+  d'expiration du jeton GitHub inconnue. » quand GitHub ne l'a pas donnée ;
+- « N tickets ne sont pas arrivés sur GitHub. » : envoi impossible, ou en attente de
+  transmission depuis plus d'une heure ;
+- « N tickets dont l'Issue a disparu. » ;
+- « État du jeton GitHub illisible. » pour un document illisible, journalisé ; « Impossible de
+  lire l'état du jeton GitHub. » ou « Impossible de compter les tickets … » quand la lecture
+  échoue.
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
