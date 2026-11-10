@@ -6,6 +6,20 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.18 — technique
+
+`deploy.yml` gagne un job `tag` : après un déploiement réussi, il pose le tag annoté `vX.Y.Z`
+sur le commit déployé, par l'API GitHub, au nom de `github-actions[bot]`. Une session cloud ne
+pouvait pas pousser de tag, et le tag manuel venait parfois avant la fin de la CI (leçon 16).
+Le job a seul `contents: write`, sans secret ni accès à Google Cloud ; un tag existant n'est
+ni recréé ni déplacé ; sur un lancement manuel, il attend la CI verte du commit. L'étape 6 de
+la chaîne de travail devient une vérification. La documentation du ruleset de `main` compte
+désormais cinq contrôles requis, avec « Functions — lint, build, tests ». « Réglages faits une
+fois » ajoute ce que le premier déploiement des Functions a révélé : création du compte compute
+par l'API Compute Engine, `roles/editor` retiré des comptes compute et App Engine, et droit
+d'agir au nom du compte App Engine pour `github-deploy`, et activation des API Cloud Billing
+et Firebase Extensions, que firebase-tools lit avant de déployer des Functions.
+
 ### v0.1.17 — fonctionnel
 
 La quantité d'un ajout et celle d'une levure se saisissent en grammes ou en millilitres : le

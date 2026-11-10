@@ -1260,7 +1260,12 @@ gcloud config set project "$PROJECT_ID"
 gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com \
   pubsub.googleapis.com storage.googleapis.com secretmanager.googleapis.com \
-  cloudscheduler.googleapis.com
+  cloudscheduler.googleapis.com cloudbilling.googleapis.com firebaseextensions.googleapis.com
+# firebase-tools lit la facturation (cloudbilling) et la liste des extensions avant de déployer
+# des Functions ; github-deploy ne peut pas activer ces API lui-même (relevé au 2e essai).
+# Compute Engine crée le compte compute par défaut, compte de build des Functions et cible
+# des étapes 4, 5 et 7. Sur kassbeer, il n'existait pas avant cette activation.
+gcloud services enable compute.googleapis.com
 
 # 2. Compte d'exécution des fonctions : lit et écrit Firestore, reçoit les événements
 #    Firestore et l'appel de Cloud Scheduler, lit le secret.
@@ -1307,7 +1312,8 @@ done
 #    poste juste après, ou créer le dépôt avant.
 npx firebase functions:artifacts:setpolicy --location europe-west1 --days 1 --project "$PROJECT_ID"
 
-# 7. Compte compute par défaut (compte de build des Functions) : lister ses rôles.
+# 7. Compte compute par défaut (compte de build des Functions), créé à l'étape 1 avec
+#    roles/editor posé d'office : lister ses rôles.
 gcloud projects get-iam-policy "$PROJECT_ID" --flatten=bindings \
   --filter="bindings.members:serviceAccount:$BUILD_SA" --format='value(bindings.role)'
 #    S'il porte roles/editor (rôle posé d'office sur les anciens projets), le remplacer par
@@ -1318,7 +1324,24 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:$BUILD_SA" --role roles/cloudbuild.builds.builder --condition=None
 gcloud projects remove-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:$BUILD_SA" --role roles/editor   # seulement s'il figure dans la liste
+
+# 8. Compte App Engine par défaut : firebase-tools exige, avant tout déploiement de
+#    Functions, que le compte qui déploie puisse agir en son nom (iam.serviceAccounts.actAs),
+#    même si les fonctions tournent sous tickets-functions. Il porte roles/editor d'office ;
+#    Kass'Beer ne l'utilise pas : retirer ce rôle, puis donner l'actAs à github-deploy.
+APPSPOT_SA="$PROJECT_ID@appspot.gserviceaccount.com"
+gcloud projects get-iam-policy "$PROJECT_ID" --flatten=bindings \
+  --filter="bindings.members:serviceAccount:$APPSPOT_SA" --format='value(bindings.role)'
+gcloud projects remove-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$APPSPOT_SA" --role roles/editor --condition=None   # seulement s'il figure dans la liste
+gcloud iam service-accounts add-iam-policy-binding "$APPSPOT_SA" \
+  --member "serviceAccount:$DEPLOY_SA" --role roles/iam.serviceAccountUser
 ```
+
+État relevé le 2026-11-10 sur `kassbeer` : le compte compute ne porte que
+`cloudbuild.builds.builder`, `eventarc.eventReceiver` et `run.invoker` ; le compte App Engine
+ne porte aucun rôle sur le projet. Le premier déploiement des Functions (run 17) a échoué faute
+de l'actAs de l'étape 8.
 
 `roles/run.admin` sert à `firebase-tools` pour donner au compte d'exécution le droit
 d'appeler le service Cloud Run de la tâche planifiée (`run.services.setIamPolicy`).
@@ -1414,6 +1437,7 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
 | `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (aucun déclencheur HTTP, callable, bloquant ou de file, `maxInstances` partout, compte `tickets-functions`, aucun secret autre que `GITHUB_TICKETS_TOKEN`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
+| `tag` | aucun, `contents: write` | après un `deploy` réussi seulement : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et
 `build-functions`, qui n'ont pas de jeton OIDC. Les jobs qui ont un accès à Google Cloud ne
@@ -1423,6 +1447,13 @@ là, et `firebase-tools` lit `functions.yaml` au lieu de charger le code (P14). 
 installe les dépendances de production depuis `functions/package-lock.json`, côté Google ;
 `gcp-build` vide empêche qu'il recompile. Un déploiement des Functions en échec se rejoue par
 un lancement manuel de `deploy.yml`, qui les redéploie toujours.
+
+Le tag arrive après la CI verte du commit, ce qui évite l'échec de `check-version.mjs` décrit
+par la leçon 16 : sur `workflow_run`, le workflow démarre à la fin de cette CI ; sur un
+lancement manuel, `tag` lit le run CI `push` du commit et ne pose rien tant qu'il n'est pas
+`completed` et `success`. Seule une réponse 404 compte comme « tag absent » ; toute autre
+erreur de l'API fait échouer le job sans rien créer. Une version dont le déploiement échoue
+ne reçoit pas de tag : relancer `deploy.yml` à la main après la correction le pose.
 
 **Configuration absente.** Les variables obligatoires sont `GCP_WORKLOAD_IDENTITY_PROVIDER`,
 `GCP_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID`, `FIREBASE_ANDROID_APP_ID` et chaque clé de
@@ -1511,11 +1542,14 @@ keytool -list -v -keystore "$KS" -alias kassbeer     # SHA-1 et SHA-256 (P8)
 Le dépôt est public depuis le 2026-11-07 (ADR-002). Deux rulesets sont posés (Settings ›
 Rules), sans liste de contournement. Sur `main` : PR requise, 0 approbation, fusion par
 commit de fusion seule, branche à jour avec `main`, ni force push ni suppression, et les
-quatre contrôles « Version et outillage », « Flutter et brewing — analyse, format, tests,
-build web », « Règles — émulateur » et « Android — compilation ». Le job Android réussit
+cinq contrôles « Version et outillage », « Flutter et brewing — analyse, format, tests,
+build web », « Règles — émulateur », « Functions — lint, build, tests » et « Android —
+compilation ». Le job Android réussit
 sans compiler quand le diff ne touche pas Android : il peut être exigé. Sur les
 tags `v*` : ni suppression, ni mise à jour, ni force push. Seul le propriétaire a le droit d'écrire sur le
-dépôt. Un `deploy.yml` modifié et fusionné sur `main` obtient l'accès du compte
+dépôt, à une exception : le job `tag` de `deploy.yml` crée les références `refs/tags/v*` au
+nom de `github-actions[bot]`, ce que le ruleset des tags permet (il n'interdit que la
+suppression, la mise à jour et le force push). Un `deploy.yml` modifié et fusionné sur `main` obtient l'accès du compte
 `github-deploy`, qui peut publier des règles Firestore : P10 et P14 s'appliquent à chaque
 diff de `.github/workflows/`.
 
@@ -1642,7 +1676,7 @@ du client, pas des secrets.
 | Clé d'API Android | paquet `fr.kassbeer.kass_beer` avec l'une des deux SHA-1 ci-dessus ; mêmes quatre API |
 | Premier admin | `members/{e-mail Google de l'administrateur}`, rôle `admin`, `invited_by` = `console`, créé hors de l'application |
 | App Distribution | ouvert pour l'application Android ; groupe `brasseurs`, un testeur (l'admin) |
-| Workload Identity Federation | pool `github`, fournisseur `kassbeer-deploy`, compte de service `github-deploy`, cinq rôles |
+| Workload Identity Federation | pool `github`, fournisseur `kassbeer-deploy`, compte de service `github-deploy`, rôles listés dans « Réglages faits une fois » (cinq au départ, plus ceux des Functions) |
 | GitHub, environnement `production` | règle de branche `main` posée ; les dix variables et les quatre secrets de signature posés |
 | Plan GitHub | Free, dépôt public depuis le 2026-11-07 (ADR-002). Minutes des runners standard gratuites. Le run 42366279942 a lu 9 variables de `production` sur 10, avant la pose des secrets ; le run 42381643401 a lu les 10 variables et les 4 secrets |
 | GitHub, rulesets | `main` : PR requise, 0 approbation, fusion par commit de fusion, quatre contrôles requis, à jour avec `main`, ni force push ni suppression ; tags `v*` : ni suppression ni mise à jour ; aucun contournement |

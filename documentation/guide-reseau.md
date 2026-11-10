@@ -135,7 +135,9 @@ branche : `git pull --no-rebase origin <branche-principale>`, ou `git merge
 utiles », `git fetch --tags` et `node scripts/check-version.mjs`, puis fusionner.
 `CLAUDE.md` (« Version ») impose la fusion plutôt que le rebase. Le tag `vX.Y.Z` se pose
 sur le commit de fusion, après sa CI verte s'il existe un dépôt distant (« Chaîne de
-travail », étape 6). Une branche ne
+travail », étape 6). Le job `tag` de `deploy.yml` le pose après un déploiement réussi, au
+nom de `github-actions[bot]` ; une session cloud ne peut pas pousser de tag (son proxy Git
+n'autorise que sa branche). Une branche ne
 reçoit pas de tag : si l'autre session fusionne la première, son numéro change.
 
 Une entrée `— fonctionnel` du `CHANGELOG.md` est extraite par `scripts/changelog-recent.mjs`
