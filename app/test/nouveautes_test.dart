@@ -129,21 +129,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-    'menu du compte : Nouveautés entre la version et la déconnexion',
-    (tester) async {
-      await signedIn(tester);
-      await tester.tap(find.byTooltip('Mon compte'));
-      await tester.pumpAndSettle();
-      final items = tester
-          .widgetList<MenuItemButton>(find.byType(MenuItemButton))
-          .map((b) => (b.child! as Text).data)
-          .toList();
-      expect(items, ['Nouveautés', 'Se déconnecter']);
-      expect(find.byIcon(Icons.new_releases_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.logout), findsOneWidget);
-    },
-  );
+  testWidgets('menu du compte : Nouveautés entre Mes prix et la déconnexion', (
+    tester,
+  ) async {
+    await signedIn(tester);
+    await tester.tap(find.byTooltip('Mon compte'));
+    await tester.pumpAndSettle();
+    final items = tester
+        .widgetList<MenuItemButton>(find.byType(MenuItemButton))
+        .map((b) => (b.child! as Text).data)
+        .toList();
+    expect(items, ['Mes prix', 'Nouveautés', 'Se déconnecter']);
+    expect(find.byIcon(Icons.new_releases_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.logout), findsOneWidget);
+  });
 
   testWidgets('ouvert depuis le menu : liste, pastille, retour par pop', (
     tester,

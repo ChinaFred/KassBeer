@@ -1,10 +1,17 @@
 {
   "versions": [
     {
-      "version": "0.1.13",
+      "version": "0.1.14",
       "date": "2026-11-10",
       "paragraphs": [
         "Le menu du compte gagne une entrée « Nouveautés ». Elle ouvre un écran qui présente les dernières versions qui changent ce que vous voyez, la plus récente en tête, avec leur date. La version installée sur l'appareil y porte l'étiquette « Installée ». Le texte se sélectionne pour être copié. L'écran marche sans réseau : les nouveautés sont livrées avec l'application."
+      ]
+    },
+    {
+      "version": "0.1.13",
+      "date": "2026-11-10",
+      "paragraphs": [
+        "Les prix et le coût arrivent (incrément v0.5). Chaque brasseur saisit ses prix d'achat et ses frais (eau, électricité, embouteillage) dans « Mes prix », ouvert depuis le menu du compte. La fiche d'une recette affiche son coût avec les prix du lecteur : total, par litre et bouteille de 33 cl. Un prix manquant n'affiche aucun montant : la liste des manquants permet de saisir chaque prix sans quitter la recette. Sur la fiche d'un brassin, son propriétaire voit l'estimation, puis le coût figé automatiquement au premier embouteillage si tous les prix sont connus, par bouteille réelle. Sinon, « Figer le coût » rattrape le figeage. « Recalculer avec mes prix actuels » remplace un coût figé après confirmation. Les prix et les coûts ne sont visibles que de leur propriétaire."
       ]
     },
     {
@@ -33,13 +40,6 @@
       "date": "2026-11-08",
       "paragraphs": [
         "Équipements et recettes arrivent, premier incrément de la version 1 (v0.2 du découpage). Chaque brasseur décrit ses équipements et ses recettes, et lit ceux du groupe sans pouvoir les modifier. L'éditeur de recette affiche, à chaque saisie, la densité initiale, la densité finale, le degré, l'amertume (IBU) et la couleur (EBC). Quand une donnée manque, l'écran dit laquelle, sans valeur de remplacement. Une recette se duplique à son nom. La suppression d'un équipement annonce les recettes qui l'utilisent. Tout marche hors ligne sur l'APK."
-      ]
-    },
-    {
-      "version": "0.1.1",
-      "date": "2026-11-07",
-      "paragraphs": [
-        "Premier socle utilisable de l'application, sur Android et le web. Connexion par compte Google, réservée aux adresses invitées ; un compte non invité voit son adresse pour la transmettre ; une panne n'est jamais présentée comme un refus. Accueil avec la navigation Recettes, Brassins, Équipements (écrans à venir) et Admin. Admin › Membres invite et retire les brasseurs ; un administrateur ne se retire pas lui-même et n'en retire pas un autre (la console Firebase le fait). Bandeau hors ligne."
       ]
     }
   ]

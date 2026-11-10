@@ -92,7 +92,7 @@ protégée par un ruleset.
 ```
 app/                  # application Flutter (Android, web)
 ├── lib/core/         # services transverses : erreurs, router, thème, auth, version
-├── lib/features/     # auth, members, equipment, recipes, brew_day, brews, import, admin
+├── lib/features/     # auth, members, equipment, recipes, brew_day, brews, costs, import, admin
 │                     # chaque feature en couches data/ domain/ presentation/
 ├── test/             # tests Flutter
 └── android/          # projet Gradle ; key.properties et *.jks jamais versionnés
@@ -343,7 +343,7 @@ commit. L'entrée dit ce qui change et pourquoi, en quelques phrases.
 Une entrée `— fonctionnel` s'affiche, en texte simple, dans l'écran « Nouveautés » de
 l'application. Elle s'écrit pour le brasseur : ce qu'il voit ou peut faire de nouveau, sans
 chemin de fichier, nom de fichier, nom de paquet, numéro d'incrément (« v0.4 ») ni numéro de
-lot. Ce détail va dans l'entrée `— technique`. Les entrées antérieures à la v0.1.13 ne se
+lot. Ce détail va dans l'entrée `— technique`. Les entrées antérieures à la v0.1.14 ne se
 réécrivent pas.
 
 Deux sessions qui travaillent en parallèle peuvent choisir le même numéro. Avant de fusionner

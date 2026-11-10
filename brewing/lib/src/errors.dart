@@ -16,7 +16,9 @@ class BrewingInputException implements Exception {
   final String message;
 
   @override
-  String toString() => 'BrewingInputException($field = $value) : $message';
+  String toString() => value == null
+      ? 'BrewingInputException($field) : $message'
+      : 'BrewingInputException($field = $value) : $message';
 }
 
 /// Vérifie qu'un nombre est fini et strictement positif.
@@ -36,6 +38,31 @@ void requireNonNegative(String field, num value) {
     throw BrewingInputException(
       field,
       value,
+      'doit être un nombre positif ou nul',
+    );
+  }
+}
+
+/// Comme [requirePositive], sans la valeur reçue dans l'erreur : un prix, un
+/// montant ou une quantité saisis par le brasseur n'entrent pas dans
+/// `error_reports/`, que l'admin lit (P13).
+void requirePositiveHidden(String field, num value) {
+  if (!value.isFinite || value <= 0) {
+    throw BrewingInputException(
+      field,
+      null,
+      'doit être un nombre strictement positif',
+    );
+  }
+}
+
+/// Comme [requireNonNegative], sans la valeur reçue dans l'erreur (voir
+/// [requirePositiveHidden]).
+void requireNonNegativeHidden(String field, num value) {
+  if (!value.isFinite || value < 0) {
+    throw BrewingInputException(
+      field,
+      null,
       'doit être un nombre positif ou nul',
     );
   }

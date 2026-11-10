@@ -12,6 +12,7 @@ import '../../features/brew_day/presentation/brew_day_screen.dart';
 import '../../features/brew_day/presentation/prepare_brew_screen.dart';
 import '../../features/brews/presentation/brew_detail_screen.dart';
 import '../../features/brews/presentation/brews_screen.dart';
+import '../../features/costs/presentation/prices_screen.dart';
 import '../../features/equipment/presentation/equipment_detail_screen.dart';
 import '../../features/equipment/presentation/equipment_editor_screen.dart';
 import '../../features/equipment/presentation/equipment_list_screen.dart';
@@ -142,6 +143,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           reprise: state.extra == kRepriseBrassage,
         ),
       ),
+      // « Mes prix » : page pleine avec retour, hors de la coquille.
+      GoRoute(path: AppRoutes.prices, builder: (_, _) => const PricesScreen()),
       GoRoute(
         path: AppRoutes.newEquipment,
         builder: (_, _) => const EquipmentEditorScreen(),

@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
-### v0.1.13 — fonctionnel
+### v0.1.14 — fonctionnel
 
 Le menu du compte gagne une entrée « Nouveautés ». Elle ouvre un écran qui présente les
 dernières versions qui changent ce que vous voyez, la plus récente en tête, avec leur date.
@@ -14,7 +14,7 @@ La version installée sur l'appareil y porte l'étiquette « Installée ». Le t
 sélectionne pour être copié. L'écran marche sans réseau : les nouveautés sont livrées avec
 l'application.
 
-### v0.1.13 — technique
+### v0.1.14 — technique
 
 `scripts/changelog-recent.mjs` extrait du `CHANGELOG.md` les six dernières versions qui ont une
 entrée « fonctionnel », en texte simple découpé en paragraphes, et écrit
@@ -30,6 +30,31 @@ implémentation dans cette version. ADR-001 et la section « Le projet » de `CL
 
 `CLAUDE.md` (« Version ») ajoute une règle d'écriture : une entrée « fonctionnel » s'adresse au
 brasseur, sans chemin de fichier ni numéro d'incrément, puisqu'elle s'affiche dans « Nouveautés ».
+
+### v0.1.13 — fonctionnel
+
+Les prix et le coût arrivent (incrément v0.5). Chaque brasseur saisit ses prix d'achat et ses
+frais (eau, électricité, embouteillage) dans « Mes prix », ouvert depuis le menu du compte. La
+fiche d'une recette affiche son coût avec les prix du lecteur : total, par litre et bouteille de
+33 cl. Un prix manquant n'affiche aucun montant : la liste des manquants permet de saisir chaque
+prix sans quitter la recette. Sur la fiche d'un brassin, son propriétaire voit l'estimation,
+puis le coût figé automatiquement au premier embouteillage si tous les prix sont connus, par
+bouteille réelle. Sinon, « Figer le coût » rattrape le figeage. « Recalculer avec mes prix
+actuels » remplace un coût figé après confirmation. Les prix et les coûts ne sont visibles que
+de leur propriétaire.
+
+### v0.1.13 — technique
+
+`brewing/` : prix unitaire d'un achat, regroupement des lignes de même clé, levure en sachets,
+frais par brassin et par bouteille, coût par bouteille réelle et par litre, `natureOfKey`, avec
+leurs cas dans `cost.json` ; les coûts des fiches Ale blonde 140724 et Bière blonde 11-2-24 sont
+retrouvés. Aucune erreur de `cost.dart` ne porte plus de valeur, et l'application remplace une
+erreur de calcul de coût par `CalculCoutRefuse` (P13). Règles : `users/{uid}/prices`, `fees` et
+`brew_costs` contrôlés en forme et en bornes, `freeze_kind` (`initial` en création seule,
+`recalculation` en mise à jour seule), plus d'écriture libre sous `users/{uid}/`, hors
+`stock/`. Nouvelle feature `costs` ; le coût figé part dans une écriture séparée de
+l'embouteillage, sans transaction ; la suppression d'un brassin efface son coût figé dans le
+même lot. Aucun paquet ne change. `main.dart.js` passe de 4 336 026 à 4 439 270 octets.
 
 ## 2026-11-08
 

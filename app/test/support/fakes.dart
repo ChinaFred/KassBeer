@@ -24,6 +24,8 @@ import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
 import 'package:kass_beer/core/services/screen_wakelock.dart';
 
+import 'cost_fakes.dart';
+
 /// Flux qui rejoue sa dernière valeur ou erreur à chaque nouvel abonné.
 class Replay<T> {
   final _listeners = <MultiStreamController<T>>[];
@@ -546,14 +548,14 @@ class FakeBrewsRepository implements BrewsRepository {
   }
 
   @override
-  Future<void> delete(String id) {
-    writes.add(BrewWrite('delete', id));
+  Future<void> delete(String id, {required String ownerUid}) {
+    writes.add(BrewWrite('delete', id, {'owner_uid': ownerUid}));
     return serverAnswer();
   }
 
   @override
-  Future<void> deleteWithEvents(String id) {
-    writes.add(BrewWrite('delete_with_events', id));
+  Future<void> deleteWithEvents(String id, {required String ownerUid}) {
+    writes.add(BrewWrite('delete_with_events', id, {'owner_uid': ownerUid}));
     return serverAnswer();
   }
 }
@@ -615,7 +617,7 @@ class FakeMembersRepository implements MembersRepository {
 }
 
 class RecordingErrorReportService extends ErrorReportService {
-  final reports = <({String feature, Object error})>[];
+  final reports = <({String feature, Object error, String? context})>[];
 
   @override
   void reportError({
@@ -624,7 +626,7 @@ class RecordingErrorReportService extends ErrorReportService {
     StackTrace? stackTrace,
     String? context,
   }) {
-    reports.add((feature: feature, error: error));
+    reports.add((feature: feature, error: error, context: context));
   }
 }
 
@@ -658,6 +660,7 @@ class TestApp {
       recipes = FakeRecipesRepository(),
       equipment = FakeEquipmentRepository(),
       brews = FakeBrewsRepository(),
+      costs = FakeCostsRepository(),
       alerte = FakeAlerte(),
       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
@@ -674,6 +677,7 @@ class TestApp {
         recipesRepositoryProvider.overrideWithValue(recipes),
         equipmentRepositoryProvider.overrideWithValue(equipment),
         brewsRepositoryProvider.overrideWithValue(brews),
+        costsRepositoryProvider.overrideWithValue(costs),
         horlogeProvider.overrideWithValue(() => now),
         alerteMinuteurProvider.overrideWithValue(alerte),
         screenWakelockProvider.overrideWithValue(wakelock),
@@ -692,6 +696,7 @@ class TestApp {
   final FakeRecipesRepository recipes;
   final FakeEquipmentRepository equipment;
   final FakeBrewsRepository brews;
+  final FakeCostsRepository costs;
   final FakeAlerte alerte;
   final RecordingErrorReportService errors;
   late final ScreenWakelock wakelock;

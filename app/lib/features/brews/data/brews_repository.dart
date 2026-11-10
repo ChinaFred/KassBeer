@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
+import '../../costs/data/costs_repository.dart' show brewCostRef;
 import '../../equipment/domain/equipment.dart';
 import '../../recipes/domain/recipe.dart';
 import '../domain/brew.dart';
@@ -164,12 +165,14 @@ abstract class BrewsRepository {
     required String? ownerName,
   });
 
-  /// Supprime un brassin sans saisie : possible hors ligne.
-  Future<void> delete(String id);
+  /// Supprime un brassin sans saisie : possible hors ligne. Son coût figé
+  /// `users/{ownerUid}/brew_costs/{id}` part dans le même lot (CB19).
+  Future<void> delete(String id, {required String ownerUid});
 
   /// Supprime un brassin et ses saisies : réseau exigé. Par écritures simples,
   /// saisies d'abord : un lot de plus de 20 `get()` de règles peut être refusé.
-  Future<void> deleteWithEvents(String id);
+  /// Le brassin et son coût figé partent ensuite dans un même lot (CB19).
+  Future<void> deleteWithEvents(String id, {required String ownerUid});
 }
 
 /// Mesure ou note à écrire.
@@ -921,11 +924,11 @@ class FirestoreBrewsRepository implements BrewsRepository {
   );
 
   @override
-  Future<void> delete(String id) =>
-      _guard('brews.delete', () => _brews.doc(id).delete());
+  Future<void> delete(String id, {required String ownerUid}) =>
+      _guard('brews.delete', () => _deleteBrewAndCost(id, ownerUid));
 
   @override
-  Future<void> deleteWithEvents(String id) =>
+  Future<void> deleteWithEvents(String id, {required String ownerUid}) =>
       _guard('brews.delete_with_events', () async {
         // Réponse du serveur exigée : hors ligne, cette lecture échoue et rien
         // n'est supprimé. Cette suppression n'est pas sur l'écran du jour (P2).
@@ -935,8 +938,18 @@ class FirestoreBrewsRepository implements BrewsRepository {
         for (final doc in events.docs) {
           await doc.reference.delete();
         }
-        await _brews.doc(id).delete();
+        await _deleteBrewAndCost(id, ownerUid);
       });
+
+  /// Le brassin et son coût figé dans un lot : un refus sur le brassin ne retire
+  /// pas son coût, et aucun coût ne reste sans brassin (CB19). Supprimer un coût
+  /// absent passe les règles.
+  Future<void> _deleteBrewAndCost(String id, String ownerUid) {
+    final batch = _firestore.batch();
+    batch.delete(_brews.doc(id));
+    batch.delete(brewCostRef(_firestore, uid: ownerUid, brewId: id));
+    return batch.commit();
+  }
 
   /// Lance [write] : l'écriture locale est faite avant le retour ; une erreur est
   /// rapportée puis relancée pour l'écran.

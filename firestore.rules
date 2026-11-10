@@ -432,10 +432,91 @@ service cloud.firestore {
 
     // ---------------------------------------------------------------- users
 
-    // Prix d'achat, stock et coût réel d'un brassin : privés à leur propriétaire
-    // (P5). Aucune lecture par l'admin, aucune lecture par le groupe.
+    // Prix d'achat, frais, stock et coût réel d'un brassin : privés à leur
+    // propriétaire (P5). Aucune lecture par l'admin, aucune lecture par le groupe.
+    // Le joker n'accorde que la lecture : les règles s'additionnent, et une écriture
+    // permise ici rendrait sans effet les contrôles de forme ci-dessous. Chaque
+    // collection écrite a sa propre match ; tout autre chemin reste en lecture seule.
     match /users/{uid}/{document=**} {
-      allow read, write: if isMember() && isSelf(uid);
+      allow read: if isMember() && isSelf(uid);
+    }
+
+    // Prix d'un achat (v0.5). Identifiant : clé d'ingrédient (`ingredientKey`),
+    // préfixe de nature puis nom normalisé, 100 caractères au plus. Un prix négatif ou
+    // non fini rendrait le calcul du coût impossible ; un prix nul est un prix connu.
+    function isPriceShape(d) {
+      return d.keys().hasOnly(['name', 'price_eur', 'quantity', 'unit', 'updated_at'])
+        && d.keys().hasAll(['name', 'price_eur', 'quantity', 'unit', 'updated_at'])
+        && hasName(d, 120)
+        && d.price_eur is number && d.price_eur >= 0 && d.price_eur <= 100000
+        && d.quantity is number && d.quantity > 0 && d.quantity <= 1000000000
+        && d.unit in ['g', 'unit']
+        && d.updated_at == request.time;
+    }
+
+    match /users/{uid}/prices/{priceId} {
+      allow create, update: if isMember() && isSelf(uid)
+        && priceId.size() <= 100
+        && priceId.matches('^(malt|sucre|houblon|levure|ajout)(-[a-z0-9]+)*$')
+        && isPriceShape(request.resource.data);
+      allow delete: if isMember() && isSelf(uid);
+    }
+
+    // Frais hors ingrédients (eau, électricité, embouteillage), par brassin ou par
+    // bouteille. Identifiant créé par l'appareil. Les 20 postes au plus sont une
+    // limite du formulaire : les règles ne comptent pas les documents.
+    function isFeeShape(d) {
+      return d.keys().hasOnly(['name', 'amount_eur', 'basis', 'updated_at'])
+        && d.keys().hasAll(['name', 'amount_eur', 'basis', 'updated_at'])
+        && hasName(d, 60)
+        && d.amount_eur is number && d.amount_eur >= 0 && d.amount_eur <= 10000
+        && d.basis in ['per_brew', 'per_bottle']
+        && d.updated_at == request.time;
+    }
+
+    match /users/{uid}/fees/{feeId} {
+      allow create, update: if isMember() && isSelf(uid)
+        && feeId.size() <= 128
+        && isFeeShape(request.resource.data);
+      allow delete: if isMember() && isSelf(uid);
+    }
+
+    // Coût réel figé d'un brassin. Les éléments de `lines` ne peuvent pas être
+    // inspectés par les règles : leur nombre est borné, et l'application les écrit à
+    // partir des résultats de brewing/. computed_at est l'heure de l'appareil (le
+    // geste du brasseur, hors ligne compris) : aucune comparaison à request.time. Les
+    // valeurs d'embouteillage gardées pour l'écart (CB15) ont les bornes de brews/.
+    function isBrewCostShape(d, brewId) {
+      return d.keys().hasOnly(['brew_id', 'total_eur', 'lines', 'computed_at',
+                               'freeze_kind', 'bottles_count', 'packaged_volume_l',
+                               'priming_sugar_g', 'priming_sugar_name'])
+        && d.keys().hasAll(['brew_id', 'total_eur', 'lines', 'computed_at', 'freeze_kind'])
+        && d.brew_id == brewId
+        && d.total_eur is number && d.total_eur >= 0 && d.total_eur < 1000000000
+        && d.lines is list && d.lines.size() <= 200
+        && d.computed_at is timestamp
+        && optBottlesCount(d)
+        && optPackagedVolume(d)
+        && optPrimingSugar(d)
+        && optString(d, 'priming_sugar_name', 80);
+    }
+
+    // Premier figeage en création seule, « Recalculer » en modification seule : un
+    // second appareil qui fige le même brassin est refusé sans écraser le premier
+    // (HL5), et aucun coût figé n'est remplacé sans le geste « Recalculer » (CB16).
+    match /users/{uid}/brew_costs/{brewId} {
+      allow create: if isMember() && isSelf(uid)
+        && isBrewCostShape(request.resource.data, brewId)
+        && request.resource.data.freeze_kind == 'initial';
+      allow update: if isMember() && isSelf(uid)
+        && isBrewCostShape(request.resource.data, brewId)
+        && request.resource.data.freeze_kind == 'recalculation';
+      allow delete: if isMember() && isSelf(uid);
+    }
+
+    // Stock : arrive après la v1, sans contrôle de forme jusque-là.
+    match /users/{uid}/stock/{stockId} {
+      allow write: if isMember() && isSelf(uid);
     }
 
     // ---------------------------------------------------------------- error_reports

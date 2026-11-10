@@ -11,6 +11,9 @@ abstract final class AppRoutes {
   static const admin = '/admin';
   static const adminMembers = '/admin/membres';
 
+  /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
+  static const prices = '/prix';
+
   /// Écran « Nouveautés », ouvert depuis le menu du compte.
   static const news = '/nouveautes';
 

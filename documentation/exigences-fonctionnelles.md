@@ -10,12 +10,14 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
-l'administrateur saisit le nom d'un membre. Retirer un compte ne supprime ni ses recettes ni
+l'administrateur saisit le nom d'un membre. Les prix, les frais et les coûts figés d'un
+membre ne sont lus que par lui, administrateur compris ; ceux d'un membre retiré restent en
+base et plus personne ne les lit. Retirer un compte ne supprime ni ses recettes ni
 ses brassins, qui restent visibles du groupe. Les recettes et équipements d'un membre retiré
 restent lisibles, ne sont plus modifiables par personne dans l'application, et peuvent être
 dupliqués.
@@ -68,8 +70,8 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue), un séparateur, « Nouveautés », un séparateur et « Se déconnecter ». Une
-déconnexion qui échoue affiche « Déconnexion impossible. Réessayez. ».
+pu être lue), un séparateur, « Mes prix », un séparateur, « Nouveautés », un séparateur et
+« Se déconnecter ». Une déconnexion qui échoue affiche « Déconnexion impossible. Réessayez. ».
 
 Destinations : Recettes, Brassins, Équipements, et Admin pour l'administrateur seul. Sous
 600 px, barre de navigation en bas ; de 600 à 839 px, rail de navigation avec libellés ;
@@ -208,7 +210,7 @@ flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà.
 
 **Fiche.** Nom, style, « Recette de {auteur} » pour un autre brasseur. Boutons « Modifier »
 et « Supprimer » pour l'auteur, « Dupliquer » pour tous. Puis le bloc Calculs (voir
-« Calculs affichés »), et les sections Général (volume en fermenteur, durée d'ébullition,
+« Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (volume en fermenteur, durée d'ébullition,
 équipement), Malts et sucres, Houblons (avec l'IBU apporté par chacun), Autres ajouts,
 Levure, Paliers d'empâtage, Chronologie du jour, Notes. Chaque ligne d'ingrédient tient sur
 deux niveaux : nom, puis ses valeurs. « Nouveau brassin » (tous les membres) ouvre le
@@ -342,7 +344,9 @@ en conditionnement, Prévu et mesuré, Embouteillage, Relevé, Notes ; terminé,
 Embouteillage, Notes, Relevé ; abandonné, Relevé, Prévu et mesuré, Embouteillage (si `bottled_at`
 existe), Notes. Puis Général, le pli « Chronologie » (fermé), le pli « Recette et calculs prévus »
 (fermé sur téléphone, ouvert à partir de 840 pixels). Un brassin en cours affiche aussi le relevé
-s'il en existe un. Propriétaire : « Préparer le brassage » (prévu), « Reprendre le brassage » (en
+s'il en existe un. Pour le propriétaire seul, le bloc « Coût » (voir « Coût ») suit
+l'Embouteillage quand il existe (Terminé : avant les Notes), sinon Prévu et mesuré ; prévu et en
+cours, il suit Général. Un autre membre, administrateur compris, ne voit ni ce bloc ni son titre. Propriétaire : « Préparer le brassage » (prévu), « Reprendre le brassage » (en
 cours), « Marquer comme terminé » (en conditionnement), « Reprendre ce brassin » (abandonné). À
 partir de En cours, le menu ⋮ (« Plus d'actions ») porte « Modifier » (nom, date prévue, notes ;
 quitter avec une modification : « Les modifications de ce brassin ne seront pas enregistrées. »),
@@ -355,7 +359,7 @@ la création : « La recette a changé depuis la création de ce brassin. Il gar
 cette information, rien ne s'affiche.
 
 **Supprimer** (propriétaire). « Supprimer « {nom} » ? » / « Le brassin, ses étapes et ses mesures
-disparaissent pour tout le groupe. ». Sans saisie : immédiat, même hors ligne. Avec saisies :
+disparaissent pour tout le groupe. ». Le coût figé du brassin est supprimé avec lui. Sans saisie : immédiat, même hors ligne. Avec saisies :
 réseau exigé (hors ligne, le message s'affiche avant la confirmation : « Suppression impossible
 hors ligne : ce brassin a des saisies. »).
 
@@ -419,13 +423,24 @@ est obligatoire : une mise en fût n'a pas de bouteilles. Information : « Le br
 conditionnement. », et, si le champ densité finale est vide et qu'aucune densité de fermentation
 n'existe, « Aucune densité mesurée en fermentation : le degré restera indisponible. ».
 Avertissements au-delà de 200 bouteilles, 200 L ou 1 000 g. Sortie avec saisie : « La saisie de
-cet embouteillage ne sera pas enregistrée. ». Annonces : « Embouteillage enregistré. Brassin en
-conditionnement. », « L'enregistrement de « {nom} » a échoué. ». Un retour en arrière garde les
+cet embouteillage ne sera pas enregistrée. ». Un retour en arrière garde les
 données, et « Embouteiller » rouvre le formulaire prérempli.
+
+Au premier embouteillage (aucune date d'embouteillage avant, aucun coût figé lu), le coût réel
+se fige avec les prix et les frais déjà lus par la fiche, si tout est connu (voir « Coût »).
+L'embouteillage part toujours, même quand le coût ne se fige pas ; le formulaire ne change pas.
+Annonces, 10 s, sans aucun montant : « Embouteillage enregistré. Brassin en conditionnement.
+Coût figé. », ou « … Coût non figé. » avec « Voir le coût », qui fait défiler la fiche jusqu'au
+bloc Coût et y place le focus ; hors ligne, « Embouteillage enregistré sur l'appareil. Il partira
+au retour du réseau. Coût figé. » ou « … Coût non figé. » ; refus du seul coût : « Coût non
+figé : l'enregistrement a été refusé. » avec « Voir le coût » ; refus de l'embouteillage :
+« L'enregistrement de « {nom} » a échoué. ». Une modification de l'embouteillage, ou un nouvel
+embouteillage après un retour en arrière, ne fige rien : « Embouteillage modifié. », « Embouteillage
+enregistré. Brassin en conditionnement. ».
 
 La section « Embouteillage » de la fiche affiche ces cinq lignes (« Non renseigné » si vide).
 « Modifier l'embouteillage » (propriétaire, En conditionnement ou Terminé) rouvre le formulaire
-sans densité finale : elle se corrige dans le relevé. Aucun degré après bouteille ni aucun coût.
+sans densité finale : elle se corrige dans le relevé. Aucun degré après bouteille.
 
 ### Prévu et mesuré
 
@@ -537,6 +552,132 @@ recalcule depuis l'heure enregistrée, quel que soit le temps écoulé.
   embouteillage, statuts et mesures retenues s'écrivent aussi sans réseau. Annonce : « … sur
   l'appareil. Il partira au retour du réseau. ». Une ligne attend avec « En attente du réseau ».
   Une suppression d'un brassin avec saisies exige toujours le réseau.
+- Prix, frais, figeage au premier embouteillage, « Figer le coût » et « Recalculer » s'écrivent
+  aussi sans réseau, dans le cache de l'appareil. Des prix ou des frais absents du cache
+  affichent « Prix indisponibles sur cet appareil hors ligne. » et ne figent rien. Deux
+  appareils qui figent le même brassin : le premier coût arrivé reste.
+
+### Mes prix
+
+« Mes prix » s'ouvre depuis le menu du compte (tout membre) : page pleine, hors de la barre de
+navigation, avec retour. Chacun n'y voit que ses frais et ses prix. De haut en bas : « Mes
+frais » (« 3 frais »), une ligne par frais triée par nom (« Électricité · 2,00 € par brassin »),
+« Ajouter un frais » ; puis « Ingrédients », un pli par nature non vide (« Malts », « Sucres »,
+« Houblons », « Levures », « Ajouts », résumé « 12 prix »), fermé sur téléphone, ouvert à partir
+de 840 pixels. Ligne : « Pils », puis « 47,50 € les 25 kg · 1,90 €/kg » ; levure : « 3,99 € les
+5 sachets · 0,80 €/sachet ». Quantité en kilogrammes à partir de 1 000 g. Montant saisi affiché
+tel quel jusqu'à 4 décimales, montant calculé au centime. « Ajouter un prix » (bouton flottant
+sur téléphone, bouton sous le titre « Ingrédients » au-delà). Une écriture en attente porte « En attente du réseau ».
+Un appui sur une ligne ouvre sa modification.
+
+États : « Chargement de vos prix » ; « Impossible de lire vos prix. » et « Réessayer » ; « Aucun
+prix enregistré. Ajoutez-en un, ou complétez-les depuis une recette. » ; « Aucun frais. Ajoutez
+l'eau, l'électricité, les capsules… pour qu'ils comptent dans le coût. » ; hors ligne sans
+cache, « Prix indisponibles sur cet appareil hors ligne. », sans « Réessayer » ni bouton d'ajout.
+Un prix ou un frais illisible s'affiche « Prix illisible » (« Ce prix ne peut pas être lu.
+Supprimez-le, puis saisissez-le de nouveau. ») ou « Frais illisible » (même phrase pour un
+frais), avec « Supprimer », qui demande « Supprimer le prix illisible ? » / « Il ne peut pas être
+relu : la suppression ne pourra pas être annulée. ». Un prix dont l'identifiant sort du
+format des règles (plus de 100 caractères, préfixe de nature absent, majuscule ou autre
+caractère) s'affiche aussi « Prix illisible ».
+
+**Formulaire de prix.** « Nouveau prix », « Modifier le prix », ou « Prix de « Pils » » depuis
+un manquant. « Nature » (Malt, Sucre, Houblon, Levure, Ajout), « Nom » (120 caractères), « Prix
+payé (€) » (0 à 100 000), « Quantité achetée (kg) » ou « (g) » selon « Unité » (kg par défaut
+pour un malt ou un sucre, g pour un houblon ou un ajout), « Quantité achetée (sachets) » pour une
+levure (nombre entier). Tous sont obligatoires. Le prix 0 est un prix connu. Ligne de résultat :
+« Soit 1,90 €/kg » (« €/sachet » pour une levure). « Prix inhabituel : vérifiez la quantité. »
+au-delà de 50 €/kg pour un malt ou un sucre, 500 €/kg pour un houblon ou un ajout, 50 € le
+sachet, sans blocage. Nom sans lettre ni chiffre : « Le nom doit contenir une lettre ou un
+chiffre. ». Nom dont le prix existe : « Un prix existe déjà pour « Pils ». Il sera remplacé. ».
+« Corriger le prix » d'une unité incompatible laisse la quantité vide, avec « L'unité
+enregistrée ne correspond pas : saisissez la quantité en kg. » (ou g, ou sachets). Un nom
+venu d'une recette est coupé à 120 caractères. En modification, nature et nom sont
+verrouillés : « Le nom suit celui des recettes. Pour le
+changer, supprimez ce prix et ajoutez-en un autre. ». Depuis un manquant, nature et nom sont
+fixés (« Malt · Pils ») ; « Reprendre un de mes prix » (s'il existe un prix de la même nature)
+ouvre « Reprendre un prix de malt », dont un appui copie prix, quantité et unité dans le
+formulaire, sans lien avec l'original. « Supprimer » (modification) retire le prix sans
+confirmation : « Prix de « Pils » supprimé. » avec « Annuler » 10 s, qui le réécrit. Les coûts
+figés ne changent pas. Quitter avec une saisie : « Le prix saisi ne sera pas enregistré. ».
+Annonces : « Prix enregistré. », « Prix enregistré sur l'appareil. Il partira au retour du
+réseau. », « L'enregistrement du prix de « Pils » a échoué. ».
+
+### Mes frais
+
+Un frais (eau, électricité, embouteillage) compte dans chaque coût : « Nom » (60 caractères),
+« Montant (€) » (0 à 10 000), « Base » (« Par brassin », « Par bouteille », sans choix par
+défaut : « Choisissez une base. »). Aucun frais ni montant n'est préinstallé. 20 frais au plus :
+au-delà, « Ajouter un frais » laisse la place à « 20 frais au plus. Supprimez-en un pour en
+ajouter un autre. ». « Nouveau frais », « Modifier le frais », mêmes boutons et même protection
+que le formulaire de prix. Annonces : « Frais enregistré. », « Frais enregistré sur l'appareil.
+Il partira au retour du réseau. », « Frais « Capsules » supprimé. » avec « Annuler » 10 s.
+
+### Coût
+
+Prix et frais sont ceux du lecteur. Un seul prix manquant affiche la liste des manquants et
+aucun montant : ni total, ni par bouteille, ni sous-total. Montants au centime (« 40,84 € ») ;
+le total arrondit la somme exacte et peut différer d'un centime de la somme des lignes.
+
+**Recette** (bloc « Coût avec vos prix », entre Calculs et Général, tout lecteur). Recalculé à
+chaque affichage, jamais enregistré, avec les prix de celui qui lit, auteur ou non. « Total »,
+« Par litre », « Bouteille de 33 cl », puis l'hypothèse « Pour 20 L · environ 61 bouteilles de
+33 cl » (volume en fermenteur ; une recette n'a pas de nombre de bouteilles). « Détail du coût »
+(replié, « 14 lignes ») : « Pils · 5 kg · 9,50 € », « S-04 · 1 sachet · 3,99 € », « Électricité
+· par brassin · 2,00 € », « Capsules · par bouteille · 3,03 € ». Deux lignes du même ingrédient
+sont regroupées ; une levure compte pour un sachet. Sans frais : « Aucun frais compté (eau,
+électricité, embouteillage). » et « Ajouter mes frais », qui ouvre « Mes prix ».
+
+Manquants : « Coût indisponible : 3 prix manquants. » (annoncé aux lecteurs d'écran), puis une
+ligne par raison : « Pils · 5 kg » et « Saisir le prix » ; « Pils : unité du prix
+incompatible. » ou « Pils : prix illisible. » et « Corriger le prix » ; « Volume en fermenteur
+non renseigné. » (et « Compléter la recette » pour l'auteur) ; « Une ligne de cette recette n'a
+pas de nom utilisable. » ; « Un de vos frais est illisible : il ne peut pas être compté. » et
+« Ouvrir Mes prix ». « Saisir le prix » ouvre le formulaire de prix sans quitter la recette, pour
+tout lecteur ; à l'enregistrement, la ligne sort de la liste et le focus revient sur l'en-tête ;
+au dernier prix, le montant apparaît. Autres états : « Chargement de vos prix », « Impossible de
+lire vos prix. » et « Réessayer », « Prix indisponibles sur cet appareil hors ligne. » (jamais
+« manquant »), « Aucun ingrédient. » (jamais « 0,00 € »), « Calcul du coût impossible. » dans un
+cadre d'erreur.
+
+**Brassin** (bloc « Coût », propriétaire seul). Tant que rien n'est figé : « Coût estimé avec
+vos prix actuels », calculé sur la copie figée de la recette et le sucre de resucrage, « Total »,
+« Par bouteille (50 bouteilles) » ou « Bouteille de 33 cl », « Par litre », l'hypothèse « Pour
+20 L · 50 bouteilles » ou « Pour 20 L · environ 61 bouteilles de 33 cl, nombre de bouteilles non
+renseigné », le détail. Ouvrir la fiche n'écrit rien.
+
+En conditionnement, Terminé et Abandonné, sans coût figé : « Coût non figé », l'estimation ou ses
+raisons, recalculées à l'affichage (manquants et « Saisir le prix » ; « Nature du sucre de
+resucrage non renseignée. » et « Modifier l'embouteillage » ; « Nombre de bouteilles non
+renseigné : les frais par bouteille ne peuvent pas être comptés. » et « Renseigner les
+bouteilles », ces deux actions en En conditionnement et Terminé ; « Prix indisponibles sur cet
+appareil hors ligne. » ; « Calcul du coût impossible. »). « Figer le coût » est désactivé tant
+qu'une raison bloque, suivi de « Complétez les éléments ci-dessus pour figer le coût. ». Seul
+le nombre de bouteilles manque avec un frais par bouteille : « Figer sans les frais par
+bouteille ? » / « Aucun nombre de bouteilles n'est renseigné : les frais par bouteille ne
+seront pas comptés. », boutons « Annuler », « Renseigner les bouteilles » (En conditionnement ou
+Terminé) et « Figer ». Annonces : « Coût figé. », « Coût figé sur l'appareil. Il partira au
+retour du réseau. », « Coût non figé : l'enregistrement a été refusé. ». Rien ne se fige à
+l'ouverture d'une fiche ni à la saisie d'un prix.
+
+Coût figé : « Coût figé le 12 nov. 2026 » (« En attente du réseau » tant qu'il attend), « Total »,
+« Par bouteille (50 bouteilles) », « Par litre (17 L) » (volume conditionné seul), le détail
+figé (« Capsules · 50 bouteilles · 2,50 € »). Sans nombre de bouteilles : « Aucun frais par
+bouteille compté. ». Le montant ne change plus quand un prix change ou disparaît. Un
+embouteillage modifié depuis le figeage (bouteilles, volume, sucre de resucrage ou sa nature ;
+la date seule ne compte pas) affiche, sous le montant, « L'embouteillage a changé depuis le
+figeage : Bouteilles 50 → 52. ». « Recalculer avec mes prix actuels » (bouton encadré dans cet
+avertissement, bouton texte sinon ; désactivé et suivi des raisons quand une raison l'empêche)
+demande « Remplacer le coût figé ? » / « 40,84 € du 12 nov. 2026 deviendra 42,10 €. Les prix
+actuels remplacent ceux du figeage. », bouton « Remplacer ». Quand seul le nombre de bouteilles
+manque avec un frais par bouteille, le recalcul se fait sans ces frais : le dialogue ajoute
+« Aucun nombre de bouteilles n'est renseigné : les frais par bouteille ne seront pas
+comptés. » et le bouton « Renseigner les bouteilles » (En conditionnement ou Terminé). Le coût est remplacé en entier,
+sans historique. Annonces : « Coût recalculé. », « Coût recalculé sur l'appareil. Il partira au
+retour du réseau. », « Coût non recalculé : l'enregistrement a été refusé. ». Un coût figé
+illisible affiche « Coût figé illisible. » et « Recalculer avec mes prix actuels ». États :
+« Chargement du coût », « Impossible de lire le coût. » et « Réessayer ». Aucune annonce ne
+contient de montant.
 
 ### Calculs affichés
 

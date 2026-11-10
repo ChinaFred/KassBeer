@@ -12,6 +12,7 @@ import '../../../core/presentation/page_document.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
+import '../../costs/presentation/bloc_cout.dart';
 import '../../equipment/presentation/equipment_providers.dart';
 import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
@@ -259,6 +260,9 @@ class _Fiche extends StatelessWidget {
           equipement: equipement,
           onComplete: edit,
         ),
+        // « Coût avec vos prix » : avec les prix du lecteur, auteur ou non
+        // (CR7). Le bloc porte son titre.
+        BlocCoutRecette(recipe: recipe, onCompleter: edit),
         const TitreSection('Général'),
         LigneFiche(
           label: 'Volume en fermenteur',
