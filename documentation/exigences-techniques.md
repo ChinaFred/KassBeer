@@ -1354,6 +1354,7 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
 | `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (aucun déclencheur HTTP, callable, bloquant ou de file, `maxInstances` partout, compte `tickets-functions`, aucun secret autre que `GITHUB_TICKETS_TOKEN`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
+| `tag` | aucun, `contents: write` | après un `deploy` réussi seulement : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et
 `build-functions`, qui n'ont pas de jeton OIDC. Les jobs qui ont un accès à Google Cloud ne
@@ -1363,6 +1364,13 @@ là, et `firebase-tools` lit `functions.yaml` au lieu de charger le code (P14). 
 installe les dépendances de production depuis `functions/package-lock.json`, côté Google ;
 `gcp-build` vide empêche qu'il recompile. Un déploiement des Functions en échec se rejoue par
 un lancement manuel de `deploy.yml`, qui les redéploie toujours.
+
+Le tag arrive après la CI verte du commit, ce qui évite l'échec de `check-version.mjs` décrit
+par la leçon 16 : sur `workflow_run`, le workflow démarre à la fin de cette CI ; sur un
+lancement manuel, `tag` lit le run CI `push` du commit et ne pose rien tant qu'il n'est pas
+`completed` et `success`. Seule une réponse 404 compte comme « tag absent » ; toute autre
+erreur de l'API fait échouer le job sans rien créer. Une version dont le déploiement échoue
+ne reçoit pas de tag : relancer `deploy.yml` à la main après la correction le pose.
 
 **Configuration absente.** Les variables obligatoires sont `GCP_WORKLOAD_IDENTITY_PROVIDER`,
 `GCP_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID`, `FIREBASE_ANDROID_APP_ID` et chaque clé de
@@ -1451,11 +1459,14 @@ keytool -list -v -keystore "$KS" -alias kassbeer     # SHA-1 et SHA-256 (P8)
 Le dépôt est public depuis le 2026-11-07 (ADR-002). Deux rulesets sont posés (Settings ›
 Rules), sans liste de contournement. Sur `main` : PR requise, 0 approbation, fusion par
 commit de fusion seule, branche à jour avec `main`, ni force push ni suppression, et les
-quatre contrôles « Version et outillage », « Flutter et brewing — analyse, format, tests,
-build web », « Règles — émulateur » et « Android — compilation ». Le job Android réussit
+cinq contrôles « Version et outillage », « Flutter et brewing — analyse, format, tests,
+build web », « Règles — émulateur », « Functions — lint, build, tests » et « Android —
+compilation ». Le job Android réussit
 sans compiler quand le diff ne touche pas Android : il peut être exigé. Sur les
 tags `v*` : ni suppression, ni mise à jour, ni force push. Seul le propriétaire a le droit d'écrire sur le
-dépôt. Un `deploy.yml` modifié et fusionné sur `main` obtient l'accès du compte
+dépôt, à une exception : le job `tag` de `deploy.yml` crée les références `refs/tags/v*` au
+nom de `github-actions[bot]`, ce que le ruleset des tags permet (il n'interdit que la
+suppression, la mise à jour et le force push). Un `deploy.yml` modifié et fusionné sur `main` obtient l'accès du compte
 `github-deploy`, qui peut publier des règles Firestore : P10 et P14 s'appliquent à chaque
 diff de `.github/workflows/`.
 

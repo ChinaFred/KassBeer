@@ -408,7 +408,7 @@ build `N` monte d'un à chaque version : Android refuse d'installer un APK dont 
 
 Chaque version livrée porte un tag annoté `vX.Y.Z`, posé sur le commit de fusion de la
 branche principale, après sa CI verte s'il existe un dépôt distant (« Chaîne de travail »,
-étape 6). Jamais sur une branche de travail : son numéro peut
+étape 6). Le job `tag` de `deploy.yml` le pose après un déploiement réussi. Jamais sur une branche de travail : son numéro peut
 encore changer avant la fusion. Un tag poussé ne se déplace pas et ne se supprime pas.
 
 ## Agents
@@ -499,7 +499,9 @@ aucune.
    commit (voir « Version »).
 5. **Commiter.** Un commit qui résume le travail. S'il existe un dépôt distant, faire
    `git pull --no-rebase` avant de commencer un travail et avant chaque push.
-6. **Étiqueter.** Le tag se pose sur le commit de fusion. Avec un dépôt distant, attendre
+6. **Étiqueter.** Le tag se pose sur le commit de fusion. Avec le dépôt distant, le job `tag`
+   de `deploy.yml` le pose après la CI verte et un déploiement réussi : vérifier qu'il existe
+   (`git fetch --tags`). À la main seulement s'il manque. Dans ce cas, attendre
    que la CI de ce commit soit verte : un tag posé avant fait échouer `check-version.mjs` sur
    le push de la fusion, et `deploy.yml` ne déploie pas (leçon 16). Si une fusion suivante
    annule ce run, attendre la CI verte de cette fusion, puis taguer le même commit de fusion.

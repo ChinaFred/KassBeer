@@ -6,6 +6,16 @@ données, outillage), ou les deux.
 
 ## 2026-11-10
 
+### v0.1.17 — technique
+
+`deploy.yml` gagne un job `tag` : après un déploiement réussi, il pose le tag annoté `vX.Y.Z`
+sur le commit déployé, par l'API GitHub, au nom de `github-actions[bot]`. Une session cloud ne
+pouvait pas pousser de tag, et le tag manuel venait parfois avant la fin de la CI (leçon 16).
+Le job a seul `contents: write`, sans secret ni accès à Google Cloud ; un tag existant n'est
+ni recréé ni déplacé ; sur un lancement manuel, il attend la CI verte du commit. L'étape 6 de
+la chaîne de travail devient une vérification. La documentation du ruleset de `main` compte
+désormais cinq contrôles requis, avec « Functions — lint, build, tests ».
+
 ### v0.1.16 — fonctionnel
 
 Le menu du compte gagne « Signaler ou proposer » et « Mes tickets ». Un membre signale un bug,

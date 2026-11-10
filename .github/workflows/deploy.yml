@@ -7,7 +7,7 @@ name: Déploiement
 # Cloud Functions (ADR-006) quand le commit change functions/, et à chaque
 # lancement manuel.
 #
-# Cinq jobs, pour que le code compilé ne tourne jamais à côté d'un accès à
+# Six jobs, pour que le code compilé ne tourne jamais à côté d'un accès à
 # Google Cloud :
 #   gate             le commit est la tête de main ; change-t-il functions/ ? ;
 #   plan             configuration présente, faut-il un nouvel APK ? (jeton Google, aucun build) ;
@@ -16,7 +16,9 @@ name: Déploiement
 #   deploy           Hosting, règles, index, Functions, App Distribution (jeton Google,
 #                    aucun build, aucun npm ci de functions/ ni code des fonctions exécuté :
 #                    firebase-tools lit le manifeste functions.yaml au lieu de charger
-#                    le code, P14).
+#                    le code, P14) ;
+#   tag              tag annoté vX.Y.Z sur le commit, après un déploiement réussi
+#                    (jeton GitHub en contents: write, aucun accès à Google Cloud).
 #
 # Aucun secret lisible sur pull_request (P14) : ce workflow ne se déclenche que
 # sur workflow_run et workflow_dispatch, toujours sur main. Google Cloud par
@@ -38,7 +40,8 @@ concurrency:
   cancel-in-progress: false
 
 # Le jeton GitHub ne fait que lire le dépôt. Les jobs plan et deploy demandent en
-# plus id-token: write, pour le jeton OIDC échangé auprès de Google Cloud.
+# plus id-token: write, pour le jeton OIDC échangé auprès de Google Cloud. Le job
+# tag seul reçoit contents: write, pour créer le tag.
 permissions:
   contents: read
 
@@ -651,3 +654,76 @@ jobs:
               echo "APK inchangé : le numéro de build publié est à jour."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  tag:
+    name: Tag de la version déployée
+    needs: [gate, plan, deploy]
+    # Seulement après un déploiement réussi : une version qui n'est pas en ligne
+    # ne reçoit pas de tag. Sur workflow_run, le workflow démarre à la fin d'une CI
+    # verte de ce commit ; sur un lancement manuel, le script vérifie que la CI
+    # `push` du commit est finie et verte, sinon le tag ferait échouer
+    # check-version.mjs sur cette CI (leçon 16).
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Seul job qui écrit sur le dépôt : créer le tag par l'API, avec le jeton
+    # GitHub du run. Ni id-token, ni environnement, ni secret, ni extraction du
+    # code, ni dépendance (P14).
+    permissions:
+      contents: write
+    steps:
+      - name: Poser le tag annoté vX.Y.Z sur le commit déployé
+        env:
+          SHA: ${{ needs.gate.outputs.sha }}
+          RAW: ${{ needs.plan.outputs.version }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${RAW%%+*}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version « $RAW » illisible : aucun tag posé."
+            exit 1
+          fi
+          tag="v$version"
+
+          # Lancement manuel : le tag n'est posé qu'après la CI verte du commit.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            ci=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&event=push&per_page=1" \
+              --jq '.workflow_runs[0] | "\(.status) \(.conclusion)"')
+            if [ "$ci" != "completed success" ]; then
+              echo "::warning::CI de $SHA pas encore verte (« $ci ») : aucun tag posé. Relancer ce workflow après la CI verte."
+              exit 0
+            fi
+          fi
+
+          # Tag déjà présent (déploiement relancé, ou tag posé depuis un poste) :
+          # rien à faire. Un tag poussé ne se déplace pas (CLAUDE.md). Seul un 404
+          # veut dire « absent » ; toute autre erreur de l'API fait échouer le job.
+          err="$RUNNER_TEMP/tag-ref.err"
+          if ref=$(gh api "repos/$REPO/git/ref/tags/$tag" 2>"$err"); then
+            type=$(jq -r .object.type <<<"$ref")
+            target=$(jq -r .object.sha <<<"$ref")
+            if [ "$type" = "tag" ]; then
+              target=$(gh api "repos/$REPO/git/tags/$target" --jq .object.sha)
+            fi
+            if [ "$target" = "$SHA" ]; then
+              echo "Le tag $tag existe déjà sur $SHA."
+            else
+              echo "::warning::Le tag $tag existe déjà sur $target, pas sur $SHA : il n'est pas déplacé."
+            fi
+            exit 0
+          elif ! grep -q 'HTTP 404' "$err"; then
+            cat "$err" >&2
+            echo "::error::Lecture du tag $tag impossible : aucun tag posé."
+            exit 1
+          fi
+
+          object=$(gh api "repos/$REPO/git/tags" \
+            -f tag="$tag" -f message="$tag" -f object="$SHA" -f type=commit \
+            -f 'tagger[name]=github-actions[bot]' \
+            -f 'tagger[email]=41898282+github-actions[bot]@users.noreply.github.com' \
+            --jq .sha)
+          gh api "repos/$REPO/git/refs" -f ref="refs/tags/$tag" -f sha="$object" --silent
+          echo "Tag $tag posé sur $SHA."
+          echo "### Tag $tag posé sur \`${SHA:0:7}\`" >> "$GITHUB_STEP_SUMMARY"
