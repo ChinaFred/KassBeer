@@ -149,6 +149,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       );
       return;
     }
+    // ticket: aucun (confirmation)
     final confirmed = await confirmerSuppression(
       context,
       titre: BrewDetailScreen.deleteTitle(brew.name),
@@ -171,6 +172,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
 
   void _edit(Brew brew) {
     unawaited(
+      // ticket: /brassins/:id/fenetre/modifier
       showFeuilleOuDialogue<void>(
         context: context,
         fermetureProtegee: true,
@@ -184,6 +186,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     if (access == null) return;
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
+    // ticket: aucun (confirmation)
     final confirmed = await confirmerAction(
       context,
       titre: 'Recréer depuis la recette ?',
@@ -283,6 +286,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
   }
 
   Future<void> _revenir(Brew brew, BrewStatus statut) async {
+    // ticket: aucun (confirmation)
     final confirmed = await confirmerAction(
       context,
       titre: BrewDetailScreen.revenirTitre(statut),
@@ -301,6 +305,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
   }
 
   Future<void> _abandonner(Brew brew) async {
+    // ticket: aucun (confirmation)
     final confirmed = await confirmerAction(
       context,
       titre: BrewDetailScreen.abandonTitre(brew.name),
@@ -320,6 +325,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final events = ref.read(brewEventsProvider(brew.id)).value;
     unawaited(
+      // ticket: /brassins/:id/fenetre/embouteillage
       showFeuilleOuDialogue<void>(
         context: context,
         fermetureProtegee: true,
@@ -947,6 +953,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       BrewStatus.conditioning => true,
       _ => false,
     };
+    // ticket: /brassins/:id/menu/actions
     return PopupMenuButton<VoidCallback>(
       icon: const Icon(Icons.more_vert),
       tooltip: 'Plus d\'actions',
@@ -1024,6 +1031,7 @@ class _FormulaireBrassinState extends ConsumerState<_FormulaireBrassin> {
       navigator.pop();
       return;
     }
+    // ticket: aucun (confirmation)
     final abandon = await confirmerAbandon(
       context,
       'Les modifications de ce brassin ne seront pas enregistrées.',
@@ -1041,6 +1049,7 @@ class _FormulaireBrassinState extends ConsumerState<_FormulaireBrassin> {
 
   Future<void> _pickDate() async {
     final now = ref.read(horlogeProvider)();
+    // ticket: aucun (sélecteur du système)
     final picked = await showDatePicker(
       context: context,
       initialDate: _plannedFor ?? now,

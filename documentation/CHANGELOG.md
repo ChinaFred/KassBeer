@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
-### v0.1.28 — fonctionnel
+### v0.1.29 — fonctionnel
 
 Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées
 d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune
@@ -20,7 +20,7 @@ compte 5 journées au plus et 60 étapes par journée ; les journées se rangent
 par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création
 d'un brassin arrive avec une prochaine version.
 
-### v0.1.28 — technique
+### v0.1.29 — technique
 
 Lot D2 d'ADR-009. Dépôts `ProcessesRepository` (`process_templates/` : document illisible
 isolé et rapporté, `erreurModele` vérifié avant chaque écriture, copie et duplication à clés
@@ -32,7 +32,7 @@ de recette ne change pas. L'éditeur de processus défile en un seul `CustomScro
 cru, embouteillage », dans l'application et dans `brewing/test/fixtures/process.json`. Aucune
 dépendance ne change.
 
-### v0.1.27 — technique
+### v0.1.28 — technique
 
 Premier lot (D1) d'ADR-009 : un brassin pourra suivre de 1 à 5 journées (brassage,
 houblonnage à cru, embouteillage) tirées d'un modèle de processus partagé. Rien ne change
@@ -52,6 +52,24 @@ d'environ 16 expressions, l'écriture du plus grand déroulé laisse environ 590
 et un lot de 60 étapes sautées passe. `CLAUDE.md` étend la règle hors ligne à chaque journée
 et « Un brassin fige sa recette » au déroulé, complète P2, P3 et P5, et ajoute les contrôles
 P37 (lecture du déroulé, découpage par journée) et P38 (règles des modèles et du déroulé).
+
+### v0.1.27 — fonctionnel
+
+« Signaler ou proposer » a un nouveau champ, « Élément précis », sous « Écran concerné ». Il
+permet de désigner un menu ou une fenêtre de l'écran : « Embouteillage » ou « Plus d'actions »
+sur un brassin, « Houblon » dans l'éditeur de recette, « Menu du compte »… Par défaut, le ticket
+porte sur l'écran entier. Le suivi affiche l'écran et l'élément, par exemple « Brassin ›
+Embouteillage ». Les listes passent sur deux lignes quand le texte est agrandi. Demandé par le
+ticket #26.
+
+### v0.1.27 — technique
+
+Table fermée `kTicketElements` dans `ticket_screens.dart` : la valeur `screen` devient
+`<modèle de route>/menu/<clé>` ou `<modèle de route>/fenetre/<clé>`, acceptée sans changement
+par `firestore.rules` et `routeTemplateOrNull` (cas ajoutés dans `rules-tests/` et
+`functions/test/`). Chaque appel qui ouvre un menu ou une fenêtre dans `app/lib` porte un
+commentaire `// ticket: <clé>` ou `// ticket: aucun (<raison>)`, vérifié par
+`ticket_screens_test.dart`. Demandé par le ticket #26.
 
 ### v0.1.26 — fonctionnel
 

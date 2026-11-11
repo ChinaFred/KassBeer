@@ -191,6 +191,7 @@ class _BlocCoutBrassinState extends ConsumerState<BlocCoutBrassin> {
     var figeage = _figeage(FreezeKind.initial);
     if (figeage is FigeageImpossible && figeage.seulementBouteilles) {
       final modifier = widget.onModifierEmbouteillage;
+      // ticket: /brassins/:id/fenetre/cout
       final choix = await confirmerActionOuAlternative(
         context,
         titre: TextesCoutBrassin.sansBouteillesTitre,
@@ -236,6 +237,7 @@ class _BlocCoutBrassinState extends ConsumerState<BlocCoutBrassin> {
     if (avant is! FigeagePossible) return;
     final messenger = ScaffoldMessenger.of(context);
     final modifier = widget.onModifierEmbouteillage;
+    // ticket: /brassins/:id/fenetre/cout
     final choix = await confirmerActionOuAlternative(
       context,
       titre: TextesCoutBrassin.remplacerTitre,

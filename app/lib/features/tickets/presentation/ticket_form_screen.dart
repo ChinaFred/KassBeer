@@ -56,6 +56,7 @@ class TicketFormScreen extends ConsumerStatefulWidget {
   static const sentOnline = 'Ticket enregistré. Suivez-le dans Mes tickets.';
   static const sentOffline =
       'Ticket enregistré. Il partira au retour du réseau.';
+  static const elementHelp = 'Menu ou fenêtre concerné.';
   static const abandonMessage = 'Le texte saisi sera perdu.';
   static const refused = 'Votre ticket a été refusé. Il n\'est pas enregistré.';
 
@@ -77,7 +78,13 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
   /// Créé à l'ouverture : un double appui sur « Envoyer » vise le même document.
   late final String _id;
   TicketType? _type;
+
+  /// Écran choisi : clé de `kTicketScreenNames`, « autre » ou « inconnu ».
   late String _screen;
+
+  /// Valeur stockée : [_screen] pour « L'écran entier », sinon un élément de
+  /// `kTicketElements` de cet écran.
+  late String _element;
   bool _typeError = false;
   bool _dirty = false;
   bool _sending = false;
@@ -90,12 +97,16 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
     _title = TextEditingController(text: reprise?.title ?? '');
     _description = TextEditingController(text: reprise?.description ?? '');
     _type = reprise?.type;
-    final screen = ticketScreenValue(reprise?.screen ?? widget.ecranOrigine);
+    final value = ticketScreenValue(reprise?.screen ?? widget.ecranOrigine);
+    final screen = ticketElementScreen(value) ?? value;
     final isAdmin = ref.read(grantedAccessProvider)?.member.isAdmin ?? false;
     // Un brasseur n'a pas les écrans d'Admin dans la liste.
     _screen = !isAdmin && isAdminTicketScreen(screen)
         ? kTicketScreenUnknown
         : screen;
+    // L'élément n'est jamais prérempli depuis l'écran d'origine ; « Reprendre »
+    // rend celui du ticket refusé.
+    _element = reprise != null && _screen == screen ? value : _screen;
   }
 
   @override
@@ -168,7 +179,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
       type: type,
       title: _title.text.trim(),
       description: _description.text.trim(),
-      screen: _screen,
+      screen: _element,
     );
     final written = ref
         .read(ticketsRepositoryProvider)
@@ -219,6 +230,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
     final version = ref.watch(appVersionProvider)?.split('+').first;
     final type = _type;
     final isAdmin = ref.watch(grantedAccessProvider)?.member.isAdmin ?? false;
+    final elements = ticketElementOptions(_screen, isAdmin: isAdmin);
     const gap = SizedBox(height: 16);
     return EditeurPleinEcran(
       titre: TicketFormScreen.titre,
@@ -334,6 +346,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _screen,
                     isExpanded: true,
+                    itemHeight: null,
                     decoration: const InputDecoration(
                       labelText: 'Écran concerné',
                       border: OutlineInputBorder(),
@@ -342,17 +355,49 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                       for (final o in ticketScreenOptions(isAdmin: isAdmin))
                         DropdownMenuItem(
                           value: o.value,
-                          child: Text(o.label, overflow: TextOverflow.ellipsis),
+                          child: _LibelleChoix(o.label),
                         ),
                     ],
                     onChanged: (value) {
                       if (value == null) return;
                       setState(() {
                         _screen = value;
+                        _element = value;
                         _dirty = true;
                       });
                     },
                   ),
+                  if (elements.isNotEmpty) ...[
+                    gap,
+                    DropdownButtonFormField<String>(
+                      // Une clé par écran : changer d'écran recrée le champ sur
+                      // « L'écran entier ».
+                      key: ValueKey('element-$_screen'),
+                      initialValue: _element,
+                      isExpanded: true,
+                      itemHeight: null,
+                      decoration: const InputDecoration(
+                        labelText: 'Élément précis',
+                        helperText: TicketFormScreen.elementHelp,
+                        helperMaxLines: 3,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        for (final o in elements)
+                          DropdownMenuItem(
+                            value: o.value,
+                            child: _LibelleChoix(o.label),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _element = value;
+                          _dirty = true;
+                        });
+                      },
+                    ),
+                  ],
                   gap,
                   Text(
                     envoyeAvec(
@@ -371,6 +416,17 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
       ),
     );
   }
+}
+
+/// Libellé d'un choix de liste : deux lignes au plus, pour un grand texte.
+class _LibelleChoix extends StatelessWidget {
+  const _LibelleChoix(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(label, maxLines: 2, overflow: TextOverflow.ellipsis);
 }
 
 /// Encadré toujours visible : le texte part sur un site public.

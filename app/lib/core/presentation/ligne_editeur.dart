@@ -124,6 +124,7 @@ class LigneEditeur extends StatelessWidget {
                 ),
         ),
         if (actions.isNotEmpty)
+          // ticket: /recettes/nouvelle/menu/ligne, /recettes/:id/modifier/menu/ligne, /recettes/:id/chronologie/menu/ligne
           PopupMenuButton<VoidCallback>(
             tooltip: 'Actions sur « $title »',
             constraints: const BoxConstraints(minWidth: 160),

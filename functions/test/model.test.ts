@@ -94,7 +94,16 @@ describe("corps et titre de l'Issue (P24)", () => {
 });
 
 describe("routeTemplateOrNull", () => {
-  const ok = ["/", "/recettes", "/recettes/:id", "/recettes/:id/modifier", "autre", "inconnu"];
+  const ok = [
+    "/",
+    "/recettes",
+    "/recettes/:id",
+    "/recettes/:id/modifier",
+    "/brassins/:id/fenetre/embouteillage",
+    "/recettes/menu/compte",
+    "autre",
+    "inconnu",
+  ];
   for (const value of ok)
     it(`${value} : accepté`, () => assert.equal(routeTemplateOrNull(value), value));
   const ko = ["/recettes/aB3xYz9", "/recettes/123", "recettes", "/recettes?x=1", "/a#b", "", 3];

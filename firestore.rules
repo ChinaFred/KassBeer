@@ -523,9 +523,9 @@ service cloud.firestore {
     // 93 pad() (limite de compilation). Sous users/ : prix au litre 93 pad(), coût figé
     // de 200 lignes dont des lignes en litres 94 pad(). recipe.efficiency, même contrôlé
     // par ses seules clés, faisait refuser la création d'un brassin : il n'est pas
-    // stocké. Marge corrigée en v0.1.27 ci-dessous : environ 16 expressions.
+    // stocké. Marge corrigée en v0.1.28 ci-dessous : environ 16 expressions.
     //
-    // Mesure de la v0.1.27 (ADR-009, même émulateur). Étalonnage : 98 pad() isolés
+    // Mesure de la v0.1.28 (ADR-009, même émulateur). Étalonnage : 98 pad() isolés
     // atteignent la limite de compilation avant le budget ; regroupés par dix
     // (pad10() = dix pad()), 243 tiennent dans une règle « if true » seule. Un pad()
     // vaut donc environ 4 expressions, pas 10 : la marge de la création d'un brassin

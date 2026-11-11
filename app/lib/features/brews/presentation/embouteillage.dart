@@ -154,6 +154,7 @@ class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
     final debut = brewed == null
         ? DateTime(aujourdhui.year - 5)
         : DateTime(brewed.year, brewed.month, brewed.day);
+    // ticket: aucun (sélecteur du système)
     final picked = await showDatePicker(
       context: context,
       initialDate: _date.isBefore(debut) ? debut : _date,
@@ -240,6 +241,7 @@ class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
       navigator.pop();
       return;
     }
+    // ticket: aucun (confirmation)
     final abandon = await confirmerAbandon(
       context,
       'La saisie de cet embouteillage ne sera pas enregistrée.',

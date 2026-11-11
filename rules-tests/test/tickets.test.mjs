@@ -191,6 +191,9 @@ describe("tickets — forme à la création (P23)", () => {
     "écran racine": { screen: "/" },
     "écran /recettes/:id/modifier": { screen: "/recettes/:id/modifier" },
     "écran /admin/membres": { screen: "/admin/membres" },
+    "écran avec fenêtre /brassins/:id/fenetre/embouteillage": {
+      screen: "/brassins/:id/fenetre/embouteillage",
+    },
     "version absente": { app_version: undefined },
     "version de 40 caractères": { app_version: "v".repeat(40) },
   };

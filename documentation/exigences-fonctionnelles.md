@@ -156,6 +156,20 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
   depuis « Mes tickets » ou par son adresse : « Je ne sais pas ». Les écrans d'Admin n'y
   figurent que pour l'administrateur. Seul le nom de l'écran part, jamais l'identifiant de la
   recette ou du brassin.
+- « Élément précis », sous « Écran concerné », quand l'écran choisi a des menus ou des
+  fenêtres : « L'écran entier » par défaut, puis ses éléments (« Menu du compte », « Barre de
+  navigation » sur les écrans à barre de navigation, listes et fiches de la Bibliothèque
+  comprises ; « Embouteillage », « Relevé de
+  fermentation », « Coût du brassin »… sur la fiche d'un brassin ; « Malt ou sucre »,
+  « Houblon »… dans l'éditeur de recette). Le formulaire de prix porte le même nom, « Prix d'un
+  ingrédient », sur « Mes prix », la fiche d'une recette et celle d'un brassin, et sa liste
+  « Reprendre un prix » aussi ; « Coût du brassin » désigne les deux confirmations « Figer le
+  coût » et « Recalculer avec mes prix actuels ». Aide : « Menu ou fenêtre concerné. »
+Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent pour
+  « Autre écran » et « Je ne sais pas ». Les éléments d'Admin ne figurent que pour
+  l'administrateur. Le suivi affiche « Brassin › Embouteillage ». Les confirmations (« Supprimer
+  ? », « Abandonner les modifications ? ») et les sélecteurs de date et d'heure n'y figurent pas.
+  « Sources des données », sans menu ni fenêtre, n'a pas de champ « Élément précis ».
 - Ligne grise : « Envoyé avec : version 0.2.0, Android » (ou « web », « version
   indisponible »).
 - Erreurs à l'appui sur « Envoyer », le premier champ en erreur reçoit le focus : « Choisissez

@@ -498,7 +498,7 @@ de brassage ni dans ce qu'il appelle (P2) ; aucun prix, stock ni coût (P5).
 | Fichier | Contenu |
 |---|---|
 | `domain/ticket.dart` | `Ticket` (lecture tolérante : statut inconnu lu `TicketStatus.unknown`, type inconnu, champ obligatoire absent ou mal typé : `DocumentIllisible`), `TicketType`, `TicketStatus`, `TicketBrouillon`, bornes des règles (titre 5 à 100, description 10 à 2 000), `unread`, `compareTicketsRecentFirst`, `compareVersions` |
-| `domain/ticket_screens.dart` | table fermée `kTicketScreenNames` (modèle de route → nom), `autre`, `inconnu` ; `ticketScreenValue` ne rend qu'une valeur de cet ensemble |
+| `domain/ticket_screens.dart` | tables fermées `kTicketScreenNames` (modèle de route → nom) et `kTicketElements` (élément d'un écran → nom : `<modèle de route>/menu/<clé>` ou `<modèle de route>/fenetre/<clé>`, minuscules et tirets ; éléments propres à un écran, plus « Menu du compte » et « Barre de navigation » sur chaque écran de `kTicketShellScreens`), `autre`, `inconnu` ; `ticketScreenValue` ne rend qu'une valeur de cet ensemble ; `ticketElementOptions` (« L'écran entier » puis les éléments, vide pour un écran d'Admin vu par un brasseur) ; `ticketScreenLabel` rend « Brassin › Embouteillage » |
 | `domain/etat_jeton_github.dart` | `EtatJetonGithub` (`token_invalid_since`, `token_expires_at`) |
 | `data/tickets_repository.dart` | `TicketsRepository`, `FirestoreTicketsRepository` |
 | `presentation/` | `TicketFormScreen`, `MyTicketsScreen`, `TicketDetailScreen`, `BandeauTicketsAdmin`, `ticket_statut.dart` (étiquette, icône et phrase de chaque statut), `ticket_lien_github.dart`, `tickets_providers.dart` |
@@ -509,7 +509,33 @@ l'accueil : `/tickets/nouveau` (déclarée avant `/tickets/:id`), `/tickets/:id`
 `GoRouter.of(context).state.fullPath` (modèle `/recettes/:id`, jamais l'adresse) et le passe
 dans `?ecran=` ; le formulaire le réduit par `ticketScreenValue`. « Reprendre ce ticket »
 passe un `TicketBrouillon` par `extra`. `test/ticket_screens_test.dart` parcourt
-`router.configuration.routes` et échoue si une route manque à la table.
+`router.configuration.routes` et échoue si une route manque à la table, ou si
+`kTicketShellScreens` n'est pas la liste des routes de la `ShellRoute`. Cette liste compte
+23 routes, dont les 12 de la Bibliothèque (`/bibliotheque/<segment>` et
+`/bibliotheque/<segment>/:id` pour `styles`, `malts`, `houblons`, `levures`, `divers` et
+`recettes`) ; ces 12 écrans n'ont que les deux éléments de la coquille.
+`/sources-des-donnees`, hors de la coquille, n'a aucun élément. L'élément précis
+s'écrit dans le même champ `screen` (aucun champ ajouté, règles et `routeTemplateOrNull`
+inchangés : la forme passe déjà leur contrôle). Il n'est jamais lu de `?ecran=` :
+`initState` ne garde que l'écran ; seul « Reprendre » rend l'élément du ticket refusé.
+
+**Commentaire `// ticket:`.** Chaque appel de `showFeuilleOuDialogue`, `showDialog`,
+`showModalBottomSheet`, `showGeneralDialog`, `showMenu`, `PopupMenuButton`, `MenuAnchor`,
+`SearchAnchor`, `confirmerAction`, `confirmerActionOuAlternative`, `confirmerAbandon`,
+`confirmerSuppression`, `showDatePicker`, `showDateRangePicker` ou `showTimePicker` dans
+`app/lib/` (hors définitions de `feuille_ou_dialogue.dart` et `ecriture.dart`) porte, sur la
+ligne précédente, `// ticket: <clé>[, <clé>…]` (clés de `kTicketElements`) ou
+`// ticket: aucun (<raison>)` (confirmation générique, sélecteur du système). Un appel partagé
+par plusieurs écrans cite une clé par écran, séparées par des virgules : le formulaire de prix
+de `price_form.dart`, ouvert depuis `/prix`, `/recettes/:id` et `/brassins/:id`, cite
+`/prix/fenetre/prix, /recettes/:id/fenetre/prix, /brassins/:id/fenetre/prix`, et sa liste
+« Reprendre un prix » les trois clés `…/fenetre/reprendre`. Les commentaires
+`<coquille>/menu/compte` et `<coquille>/menu/navigation` citent la clé de chaque écran de la
+coquille ; ces commentaires sont dans `app_shell.dart`. `ticket_screens_test.dart` échoue sur un appel sans
+commentaire, une clé citée absente de la table, une clé de la table citée nulle part, une clé
+qui ne commence pas par un modèle de `kTicketScreenNames` suivi de `/menu/` ou `/fenetre/`,
+une route qui contient un segment `menu` ou `fenetre`, une valeur qui ne passe pas la regex
+des règles ou dépasse 100 caractères.
 
 **Écritures.** `create` écrit `tickets/{id}` avec l'identifiant créé par l'appareil à
 l'ouverture du formulaire (`newTicketId`) et les seuls champs du contrat : `type`, `title`,
@@ -562,7 +588,7 @@ et `fermerParRetour` (faux par défaut : `go(closePath)` comme avant ; vrai : `p
 écran précédent). `formats.dart` : `formatDateChiffres` (« 08/11/26 »).
 
 **Tests.** `tickets_domain_test.dart` (lecture, statuts, suivi à lire, versions, lien,
-bandeau), `ticket_screens_test.dart` (table et routes), `tickets_repository_test.dart`
+bandeau), `ticket_screens_test.dart` (tables, routes, éléments, commentaires `// ticket:`, remise à « L'écran entier »), `tickets_repository_test.dart`
 (`fake_cloud_firestore` : champs écrits, illisible rapporté sans texte, `markSeen`, requêtes
 admin, état du jeton), `tickets_screens_test.dart` (menu et pastille, formulaire, liste,
 détail, bandeau Admin).
@@ -874,7 +900,7 @@ Lisible par le groupe, mesures comprises, sans coût. La recette et l'équipemen
 | `process` | map \| null (ADR-009) : déroulé figé, voir ci-dessous. Absent de la création ; écrit, réécrit en entier ou retiré par une modification, seulement si `brewed_at` est nul avant et après l'écriture |
 | `created_at`, `updated_at` | timestamp, obligatoires |
 
-**Déroulé figé `process` (ADR-009, v0.1.27).** Résolution d'un modèle de processus avec la
+**Déroulé figé `process` (ADR-009, v0.1.28).** Résolution d'un modèle de processus avec la
 recette figée, écrite juste après la création du brassin (lot D3) : contrôler `process` à la
 création ferait dépasser le budget de `isBrewCreateShape`.
 
@@ -904,7 +930,7 @@ déroulé, {raison}. », le dépôt le rapporte (`brews.process`), sans repli su
 de la recette. Un champ inconnu est ignoré. Les six lecteurs des étapes d'un brassin
 (`plan_du_jour.dart`, `brew_day_screen.dart`, `prepare_brew_screen.dart`,
 `prevu_et_mesure.dart`, `brew_detail_screen.dart`, `brews_repository.dart`) passent par
-`Brew.deroule` depuis la v0.1.27 ; tant qu'aucun brassin n'a de `process` (lot D3),
+`Brew.deroule` depuis la v0.1.28 ; tant qu'aucun brassin n'a de `process` (lot D3),
 l'affichage ne change pas.
 
 Le rendement réel, le degré mesuré et les écarts se calculent à l'affichage à partir des
@@ -916,8 +942,8 @@ densité finale.
 
 ### `process_templates/{templateId}`
 
-Modèle de processus (ADR-009, v0.1.27). Lisible par le groupe, écrit par son auteur depuis
-« Mes processus » (v0.1.28, lot D2).
+Modèle de processus (ADR-009, v0.1.28). Lisible par le groupe, écrit par son auteur depuis
+« Mes processus » (v0.1.29, lot D2).
 
 | Champ | Type |
 |---|---|
@@ -1024,7 +1050,7 @@ contrôle de forme. Unités du système international : masses en grammes, monta
 | `users/{uid}/prices/{ingredientKey}` | `name` string (1 à 120), `price_eur` number (prix payé, 0 à 100 000), `quantity` number (quantité achetée, au-delà de 0 et jusqu'à 1e9), `unit` string (`g`, `unit` pour un sachet de levure, ou `l` depuis la v0.1.17 : prix au litre d'un houblon ou d'un ajout ; `purchaseUnitsOf` limite les litres à ces deux natures dans le formulaire, les règles ne lient pas l'unité au préfixe), `updated_at` timestamp (`serverTimestamp()`). Identifiant : clé d'ingrédient, 100 caractères au plus, préfixe `malt`, `sucre`, `houblon`, `levure` ou `ajout`, forme `^(malt|sucre|houblon|levure|ajout)(-[a-z0-9]+)*$` ; un identifiant hors de cette forme est lu comme illisible (`DocumentIllisible('id', 'clé hors format')`), rapporté sans l'identifiant, qui dérive du nom, puis se supprime après confirmation. Un kilogramme saisi est converti en grammes à l'écran, un millilitre en litres |
 | `users/{uid}/fees/{feeId}` | `name` string (1 à 60), `amount_eur` number (0 à 10 000), `basis` string (`per_brew`, `per_bottle`), `updated_at` timestamp (`serverTimestamp()`). Identifiant créé par l'appareil ; 20 frais au plus, limite du formulaire |
 | `users/{uid}/stock/{ingredientKey}` | `name` string, `quantity` number, `unit` string, `updated_at` timestamp (après la v1) |
-| `users/{uid}/preferences/processes` | `default_template_id` string \| null (128) : modèle présélectionné dans « Nouveau brassin » ; `updated_at` timestamp (`serverTimestamp()`). Document unique, état propre au lecteur, jamais écrit sur le modèle lu par le groupe (ADR-009, v0.1.27 ; lu et écrit par « Mes processus » depuis la v0.1.28. Supprimer le processus par défaut remet `default_template_id` à nul) |
+| `users/{uid}/preferences/processes` | `default_template_id` string \| null (128) : modèle présélectionné dans « Nouveau brassin » ; `updated_at` timestamp (`serverTimestamp()`). Document unique, état propre au lecteur, jamais écrit sur le modèle lu par le groupe (ADR-009, v0.1.28 ; lu et écrit par « Mes processus » depuis la v0.1.29. Supprimer le processus par défaut remet `default_template_id` à nul) |
 | `users/{uid}/brew_costs/{brewId}` | `brew_id` string (égal à l'identifiant), `total_eur` number (somme exacte des lignes, positive ou nulle), `lines` list<map> (200 au plus : `key` clé d'ingrédient ou `frais-{feeId}`, `name`, `quantity`, `unit` parmi `g`, `unit`, `l` (v0.1.17, ligne en volume au prix au litre), `brew`, `bottle`, `cost_eur`), `computed_at` timestamp (heure de l'appareil au figeage), `freeze_kind` string (`initial`, `recalculation`), et, facultatifs, les valeurs d'embouteillage utilisées : `bottles_count` (entier de 1 à 9 999), `packaged_volume_l` (au-delà de 0 et jusqu'à 1 000), `priming_sugar_g` (0 à 100 000), `priming_sugar_name` (80) |
 
 Le coût réel d'un brassin est stocké parce qu'il reprend les prix du jour du figeage ; le
@@ -1068,7 +1094,7 @@ publié.
 | `type` | string, obligatoire : `bug`, `evolution` ou `feature` |
 | `title` | string, obligatoire, 5 à 100 caractères, une ligne |
 | `description` | string, obligatoire, 10 à 2 000 caractères |
-| `screen` | string, obligatoire, 100 caractères au plus : modèle de route go_router (`/recettes/:id`), `autre` ou `inconnu` ; jamais un identifiant réel |
+| `screen` | string, obligatoire, 100 caractères au plus : modèle de route go_router (`/recettes/:id`), élément de cet écran (`/brassins/:id/fenetre/embouteillage`, `/recettes/menu/compte`), `autre` ou `inconnu` ; jamais un identifiant réel |
 | `app_version` | string facultatif, 1 à 40 caractères |
 | `platform` | string, obligatoire : `android` ou `web` |
 | `author_uid` | string, obligatoire : `request.auth.uid` |
@@ -1353,10 +1379,10 @@ quatre `optMeasure` ou par ses seules clés, faisait refuser la création de ce 
 dépassée sans aucun `pad()`) : il n'est pas stocké. Une recette qui porte style, ébullition,
 empâtage, notes et auteur coûte le même contrôle que la plus grande permise : la longueur
 des listes n'entre pas dans le budget, leurs éléments n'étant pas inspectés. Toute règle
-ajoutée sur `recipe` se mesure contre la marge de la création d'un brassin, corrigée en v0.1.27
+ajoutée sur `recipe` se mesure contre la marge de la création d'un brassin, corrigée en v0.1.28
 ci-dessous (environ 16 expressions).
 
-Mesure de la v0.1.27 (ADR-009, déroulé en journées), même émulateur. Étalonnage : 98 `pad()`
+Mesure de la v0.1.28 (ADR-009, déroulé en journées), même émulateur. Étalonnage : 98 `pad()`
 isolés atteignent la limite de compilation avant le budget ; regroupés par dix
 (`pad10()` = dix `pad()`), 243 tiennent dans une règle `if true` seule, et 69 `pad()` isolés
 coûtent autant que 6 `pad10()` et 8 ou 9 `pad()`. Un `pad()` vaut donc environ
@@ -1366,7 +1392,7 @@ règle ajoutée sur `recipe` se mesure contre ces 16 expressions. Marges mesuré
 `pad10()`, plus grande recette copiée et plus grand déroulé (5 journées de 120 étapes, noms
 de 120 caractères, `template_id` de 128 caractères) :
 
-| Écriture | Avant le contrôle de `process` | v0.1.27 |
+| Écriture | Avant le contrôle de `process` | v0.1.28 |
 |---|---|---|
 | Écriture de `process` sur un brassin prévu qui copie la plus grande recette, notes et `imported_from` à leur longueur maximale, équipement complet | — | 145 `pad()` (environ 590 expressions) |
 | Brassin du 22 novembre (plus grande recette, plus grand déroulé, 11 ajustements) : changement de statut | 177 `pad()` (sans `process`) | 174 |
@@ -1414,7 +1440,7 @@ bornes de l'embouteillage et celles de `value` selon `measure_type`, en créatio
 `brew_day.test.mjs` vérifie `brew_steps`
 (60 étapes acceptées, 61 refusées, dans la recette et dans sa copie), les statuts `brewing` puis
 `fermenting`, le premier début en un `WriteBatch`, et un brassin créé puis son premier événement.
-`processes.test.mjs` (v0.1.27, ADR-009, P38) rejoue pour les cinq profils la lecture, la
+`processes.test.mjs` (v0.1.28, ADR-009, P38) rejoue pour les cinq profils la lecture, la
 création, la modification et la suppression de `process_templates/`, l'écriture de `process`
 sur un brassin prévu, sa lecture, `process` à la création (refusé) et sur un brassin commencé
 (refusé), et `users/{uid}/preferences/processes` ; il vérifie les formes refusées (6 journées,
@@ -1591,7 +1617,7 @@ les enregistrements à `recomputeSchedule`. Une anomalie de la réduction (fin a
 encore pour une clé en double ou des enregistrements non réduits (étape inconnue ou enregistrée
 deux fois). Le constructeur `PlannedStep` lève pour une durée négative.
 
-**Déroulé en journées (ADR-009, v0.1.27).** `resolveProcess(template:, recipe:)` reçoit les
+**Déroulé en journées (ADR-009, v0.1.28).** `resolveProcess(template:, recipe:)` reçoit les
 journées du modèle (`ProcessTemplateSession` : écart, `requiresRecipeBlock`, nature de chaque
 élément) et la recette figée (`ProcessRecipe` : nombre d'étapes de `brew_steps`, paliers,
 ébullition et houblons pour le préremplissage, jour d'ajout à cru de chaque houblon, ajouts au

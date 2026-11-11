@@ -395,7 +395,7 @@ describe("brews — copie figée au format BeerJSON partiel", () => {
 // `recipe.efficiency`, même contrôlé par ses seules clés, faisait refuser la création du
 // brassin : il n'est pas stocké.
 //
-// Mesure de la v0.1.27 (ADR-009). Étalonnage : 98 `pad()` isolés atteignent la limite de
+// Mesure de la v0.1.28 (ADR-009). Étalonnage : 98 `pad()` isolés atteignent la limite de
 // compilation avant le budget ; regroupés par dix (`pad10()`), 243 tiennent dans une règle
 // `if true` seule : un `pad()` vaut environ 4 expressions, et la marge de la création du
 // brassin (4 `pad()`, inchangée) environ 16. Avec `pad10()`, plus grande recette copiée et

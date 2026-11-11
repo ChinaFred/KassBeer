@@ -323,6 +323,7 @@ class _FicheState extends ConsumerState<_Fiche> {
   Future<void> _valider() async {
     final avant = _avantBoite();
     if (avant == null) return;
+    // ticket: aucun (confirmation)
     final ok = await confirmerAction(
       context,
       titre: 'Valider ce ticket ?',
@@ -356,6 +357,7 @@ class _FicheState extends ConsumerState<_Fiche> {
         ref.read(decisionsFicheProvider(_ticket.id)).brouillons[action] ??
         previous ??
         '';
+    // ticket: /admin/tickets/:id/fenetre/decision
     final text = await showFeuilleOuDialogue<String>(
       context: context,
       fermetureProtegee: true,
