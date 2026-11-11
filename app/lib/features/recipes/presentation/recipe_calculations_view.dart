@@ -9,6 +9,7 @@ import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/services/error_report_service.dart';
 import '../../equipment/domain/equipment.dart';
+import '../domain/beerjson.dart';
 import '../domain/recipe.dart';
 import 'ingredient_forms.dart' show kHoublonEnVolume, kHoublonEnVolumePhrase;
 
@@ -237,6 +238,23 @@ String libelleManque(
   MissingInputKind.originalGravity => 'Dépend de la densité initiale.',
 };
 
+/// Fin du message d'un style sans plages : rien à compléter dans la recette.
+const kAutreStyleOuBeerJson =
+    'Choisissez un autre style, ou exportez en BeerJSON.';
+
+/// Types de levure que BeerXML sait classer, avec les libellés de la liste
+/// « Type de levure » de l'éditeur (valeurs proposées seulement).
+final String _typesLevureBeerXml =
+    '${typesLevure.libelle('ale')}, ${typesLevure.libelle('lager')}, '
+    '${typesLevure.libelle('kveik')} ou '
+    '${typesLevure.libelle('mixed-culture')}';
+
+/// « de l'équipement « Grainfather » », ou « de l'équipement » s'il n'est pas lu.
+String _deLEquipement(EquipementRecette equipement) =>
+    equipement is EquipementConnu
+    ? 'de l\'équipement « ${equipement.equipment.content.name} »'
+    : 'de l\'équipement';
+
 /// Libellé d'une valeur qui bloque l'export, ou qui rend une recette importée
 /// « Incomplète » (L2 d'ADR-005). Une donnée qui manque aussi au calcul a le
 /// libellé de [libelleManque] ; le rendement de brassage sans équipement a le
@@ -274,15 +292,34 @@ String libelleManqueExport(
       'Quantité de levure non renseignée : ${noms.join(', ')}.',
     ChampExport.typeAjout =>
       'Type d\'ajout non renseigné : ${noms.join(', ')}.',
-    // Champs du BeerXML seul : l'export BeerXML reste bloqué tant que le
-    // choix du style n'existe pas (ADR-005, décision 2).
-    ChampExport.style => 'Style de la liste BJCP non choisi.',
+    // Champs du BeerXML seul.
+    ChampExport.style => switch (content?.style) {
+      null =>
+        'Style non renseigné : choisissez-le dans les suggestions du champ '
+            'Style.',
+      final saisi =>
+        'Style « $saisi » absent de la Bibliothèque : choisissez-le dans les '
+            'suggestions du champ Style.',
+    },
+    ChampExport.ficheStyle =>
+      'Fiche du style « ${noms.join(', ')} » incomplète dans la '
+          'Bibliothèque : BeerXML demande sa catégorie et ses plages de '
+          'densité, d\'amertume et de couleur. $kAutreStyleOuBeerJson',
+    ChampExport.typeStyle =>
+      noms.isEmpty
+          ? 'Aucune levure : BeerXML classe le style selon la levure. '
+                'Ajoutez une levure de type $_typesLevureBeerXml.'
+          : 'Type de levure à préciser pour BeerXML : ${noms.join(', ')}. '
+                'Choisissez $_typesLevureBeerXml.',
     ChampExport.dureeEbullition => 'Durée d\'ébullition non renseignée.',
-    ChampExport.evaporation => 'Évaporation de l\'équipement non renseignée.',
+    ChampExport.evaporation =>
+      'Évaporation ${_deLEquipement(equipement)} '
+          'non renseignée.',
     ChampExport.pertesAuTrub =>
-      'Pertes au trub de l\'équipement non renseignées.',
+      'Pertes au trub ${_deLEquipement(equipement)} non renseignées.',
     ChampExport.volumeMort =>
-      'Volume mort de la cuve d\'ébullition non renseigné.',
+      'Volume mort de la cuve d\'ébullition '
+          '${_deLEquipement(equipement)} non renseigné.',
     ChampExport.typeRecetteBeerXml =>
       'Type de recette sans équivalent BeerXML : ${noms.join(', ')}.',
     ChampExport.momentAjout =>

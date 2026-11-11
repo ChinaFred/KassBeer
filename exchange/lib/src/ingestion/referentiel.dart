@@ -1,4 +1,3 @@
-import 'alias.dart';
 import 'cles.dart';
 import 'lecture_sources.dart';
 
@@ -6,28 +5,8 @@ import 'lecture_sources.dart';
 /// d'un nom (spécification de L3 : « Identifiants » ; `DATA_SOURCES.md`,
 /// décision 4). Deux entrées de même clé fusionnent : la plus prioritaire
 /// donne les valeurs, chaque entrée ajoute sa ligne de `provenance[]` et son
-/// nom aux `aliases`.
-
-/// Clé d'un producteur de levure, après [kProducteursEquivalents].
-String cleProducteur(String producteur) {
-  final cle = cleNormalisee(producteur);
-  return kProducteursEquivalents[cle] ?? cle;
-}
-
-/// Clé d'une référence de levure chez son producteur : normalisée, sans
-/// tiret (`W-34/70` et `W34/70` donnent `w3470`). Wyeast écrit `WY1056` ou
-/// `1056` : le `wy` est retiré. White Labs écrit `WLP001` ou `001` : le `wlp`
-/// est ajouté.
-String cleProduit(String cleDuProducteur, String produit) {
-  final cle = cleNormalisee(produit).replaceAll('-', '');
-  if (cleDuProducteur == 'wyeast' && RegExp(r'^wy\d+$').hasMatch(cle)) {
-    return cle.substring(2);
-  }
-  if (cleDuProducteur == 'white-labs' && RegExp(r'^\d+$').hasMatch(cle)) {
-    return 'wlp$cle';
-  }
-  return cle;
-}
+/// nom aux `aliases`. `cleProducteur` et `cleProduit` vivent dans
+/// `noms.dart`, partagés avec la résolution d'un import.
 
 /// Clé d'une culture : producteur, référence et nom, quand ils existent
 /// (`wyeast-1056-american-ale`). Le producteur et la référence répétés en tête

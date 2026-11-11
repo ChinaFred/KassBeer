@@ -4,9 +4,11 @@ import 'dart:convert';
 import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
+import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
 import 'package:kass_beer/features/recipes/presentation/export_recipe_sheet.dart';
 import 'package:kass_beer/features/recipes/presentation/libelles_echange.dart';
@@ -14,6 +16,7 @@ import 'package:kass_beer/features/recipes/presentation/recipe_editor_screen.dar
 
 import 'support/brew_fixtures.dart';
 import 'support/fakes.dart';
+import 'support/library_fixtures.dart';
 
 const grainfather = Equipment(
   id: 'e1',
@@ -282,12 +285,255 @@ void main() {
     }
   });
 
-  testWidgets('BeerXML : visible et bloqué avec sa raison', (tester) async {
-    await ouvrir(tester, complete(), owner: mien);
-    await tester.tap(find.text(TextesExport.beerXml));
-    await tester.pumpAndSettle();
-    expect(find.text(TextesExport.beerXmlBloque), findsOneWidget);
-    expect(dansFeuille(find.text('Enregistrer')), findsNothing);
+  group('BeerXML (ADR-005, E4)', () {
+    void bibliotheque(TestApp app) {
+      app.library.index[NatureReferentiel.styles] = DocumentTrouve(
+        IndexReferentiel.fromFirestore(NatureReferentiel.styles, stylesIndex),
+      );
+      app.library.fiches['bjcp2021-21a'] = DocumentTrouve(
+        FicheReferentiel.fromFirestore(
+          NatureReferentiel.styles,
+          'bjcp2021-21a',
+          styleDoc(),
+        ),
+      );
+    }
+
+    RecipeContent ipa() {
+      final c = complete();
+      return RecipeContent(
+        name: c.name,
+        type: c.type,
+        style: 'American IPA',
+        batchVolumeL: c.batchVolumeL,
+        boilTimeMin: c.boilTimeMin,
+        grainTempC: c.grainTempC,
+        equipmentId: c.equipmentId,
+        mashSteps: c.mashSteps,
+        fermentables: c.fermentables,
+        hops: c.hops,
+        yeasts: c.yeasts,
+      );
+    }
+
+    /// Ouvre « Exporter » sur [content] avec [equipement], [avant] préparant
+    /// la Bibliothèque, puis choisit BeerXML.
+    Future<TestApp> ouvrirXml(
+      WidgetTester tester,
+      RecipeContent content, {
+      EquipmentContent equipement = equipementTest,
+      void Function(TestApp app)? avant,
+    }) async {
+      final app = TestApp();
+      avant?.call(app);
+      await app.pump(tester, height: 2000);
+      app.signIn(brewerUser, member: brewerMember);
+      app.recipes.publish([
+        Recipe(
+          id: 'r1',
+          ownerUid: mien,
+          ownerName: 'Bruno Brasseur',
+          content: content,
+        ),
+      ]);
+      app.equipment.publish([
+        Equipment(
+          id: 'e1',
+          ownerUid: mien,
+          ownerName: 'Bruno Brasseur',
+          content: equipement,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      app.container.read(routerProvider).go('/recettes/r1');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Exporter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(TextesExport.beerXml));
+      await tester.pumpAndSettle();
+      return app;
+    }
+
+    testWidgets('style absent de la Bibliothèque : bloqué avec sa raison', (
+      tester,
+    ) async {
+      final app = await ouvrirXml(tester, complete());
+      expect(app.library.indexReads, [NatureReferentiel.styles]);
+      expect(
+        find.text(
+          'Style « Blonde » absent de la Bibliothèque : choisissez-le dans les suggestions du champ Style.',
+        ),
+        findsOneWidget,
+      );
+      expect(dansFeuille(find.text('Enregistrer')), findsNothing);
+    });
+
+    testWidgets('style retrouvé par son nom, fiche lue : fichier .xml', (
+      tester,
+    ) async {
+      final app = await ouvrirXml(
+        tester,
+        ipa(),
+        equipement: const EquipmentContent(
+          name: 'Grainfather',
+          kind: EquipmentKind.allInOne,
+          mashEfficiencyPct: 72,
+          boilOffLPerH: 3,
+          trubLossL: 1,
+          kettleDeadSpaceL: 0.5,
+        ),
+        avant: bibliotheque,
+      );
+      expect(app.library.ficheReads, ['bjcp2021-21a']);
+      expect(find.text(TextesExport.pret), findsOneWidget);
+      await tester.tap(dansFeuille(find.text('Enregistrer')));
+      await tester.pumpAndSettle();
+      final envoye = app.fichiers.envoyes.single;
+      expect(envoye.nom, 'blonde-d-ete.xml');
+      expect(envoye.typeMime, 'application/xml');
+      final texte = utf8.decode(envoye.octets);
+      expect(texte, contains('<NAME>American IPA</NAME>'));
+      expect(texte, contains('<CATEGORY_NUMBER>21</CATEGORY_NUMBER>'));
+      expect(texte, contains('<STYLE_LETTER>A</STYLE_LETTER>'));
+      expect(texte, contains('<STYLE_GUIDE>BJCP2021</STYLE_GUIDE>'));
+      expect(texte, contains('<TYPE>Ale</TYPE>'));
+      expect(texte, isNot(contains('Grainfather')));
+    });
+
+    testWidgets('index illisible : la panne, puis « Réessayer »', (
+      tester,
+    ) async {
+      final app = await ouvrirXml(
+        tester,
+        ipa(),
+        avant: (app) => app.library.indexErrors[NatureReferentiel.styles] =
+            Exception('réseau'),
+      );
+      expect(find.text(TextesExport.styleIllisible), findsOneWidget);
+      app.library.indexErrors.clear();
+      bibliotheque(app);
+      await tester.tap(dansFeuille(find.text(TextesExport.reessayer)));
+      await tester.pumpAndSettle();
+      expect(find.text(TextesExport.styleIllisible), findsNothing);
+      // Équipement sans évaporation : bloqué, sans la raison du style.
+      expect(find.textContaining('absent de la Bibliothèque'), findsNothing);
+      expect(
+        find.text(
+          'Évaporation de l\'équipement « Grainfather » non renseignée.',
+        ),
+        findsOneWidget,
+      );
+      // Équipement du lecteur, seul en cause : « Compléter l'équipement » est
+      // le bouton plein, sans « Compléter la recette ».
+      expect(
+        dansFeuille(
+          find.widgetWithText(FilledButton, TextesExport.completerEquipement),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(TextesExport.completer), findsNothing);
+      await tester.tap(
+        dansFeuille(find.text(TextesExport.completerEquipement)),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        app.container.read(routerProvider).state.uri.path,
+        '/equipements/e1/modifier',
+      );
+    });
+
+    testWidgets('équipement d\'un autre membre : pas de bouton vers lui', (
+      tester,
+    ) async {
+      final app = TestApp();
+      bibliotheque(app);
+      await app.pump(tester, height: 2000);
+      app.signIn(brewerUser, member: brewerMember);
+      app.recipes.publish([
+        Recipe(id: 'r1', ownerUid: mien, ownerName: 'Bruno', content: ipa()),
+      ]);
+      app.equipment.publish([
+        const Equipment(
+          id: 'e1',
+          ownerUid: 'uid-autre',
+          ownerName: 'Ophélie Autre',
+          content: equipementTest,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      app.container.read(routerProvider).go('/recettes/r1');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Exporter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(TextesExport.beerXml));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Évaporation de l\'équipement « Grainfather » non renseignée.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(TextesExport.completerEquipement), findsNothing);
+      // Seul l'équipement est en cause : ni « Compléter la recette », ni texte
+      // pour dupliquer.
+      expect(find.text(TextesExport.completer), findsNothing);
+      expect(find.text(TextesExport.autreMembre), findsNothing);
+    });
+
+    testWidgets('style sans plages, seul manque : autre style ou BeerJSON', (
+      tester,
+    ) async {
+      final c = ipa();
+      await ouvrirXml(
+        tester,
+        RecipeContent(
+          name: c.name,
+          type: c.type,
+          style: 'American Light Lager',
+          batchVolumeL: c.batchVolumeL,
+          boilTimeMin: c.boilTimeMin,
+          grainTempC: c.grainTempC,
+          equipmentId: c.equipmentId,
+          mashSteps: c.mashSteps,
+          fermentables: c.fermentables,
+          hops: c.hops,
+          yeasts: c.yeasts,
+        ),
+        equipement: const EquipmentContent(
+          name: 'Grainfather',
+          kind: EquipmentKind.allInOne,
+          mashEfficiencyPct: 72,
+          boilOffLPerH: 3,
+          trubLossL: 1,
+          kettleDeadSpaceL: 0.5,
+        ),
+        avant: (app) {
+          bibliotheque(app);
+          app.library.fiches['bjcp2021-1a'] = DocumentTrouve(
+            FicheReferentiel.fromFirestore(
+              NatureReferentiel.styles,
+              'bjcp2021-1a',
+              {
+                ...styleDoc(),
+                'name': 'American Light Lager',
+                'style_id': '1A',
+                'category_id': '1',
+              }..remove('original_gravity'),
+            ),
+          );
+        },
+      );
+      expect(
+        find.textContaining(
+          'Choisissez un autre style, ou exportez en BeerJSON.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(TextesExport.styleImpossible), findsOneWidget);
+      expect(find.text(TextesExport.completer), findsNothing);
+      expect(find.text(TextesExport.autreMembre), findsNothing);
+      expect(dansFeuille(find.text(TextesExport.fermer)), findsOneWidget);
+    });
   });
 
   testWidgets(
