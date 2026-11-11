@@ -6,14 +6,15 @@
  * Issues `source:app` du compte propriétaire (pour y reconnaître la ligne « Référence »,
  * sans rien en garder), leurs commentaires (pour la seule réponse du compte
  * propriétaire), les événements de fermeture, les PR d'un commit et `app/pubspec.yaml` à
- * ce commit (P24).
+ * ce commit (P24). Il écrit l'Issue, les commentaires des décisions (T2), leurs étiquettes
+ * et leur fermeture.
  *
  * Chaque échec lève une `GithubError` classée. Le message ne contient jamais le jeton
  * (P25) : il reprend le code HTTP et le message de GitHub.
  */
 
 import { GITHUB_MAINTAINER_ID, GITHUB_REPO_FULL_NAME } from "../config";
-import { redactSecrets } from "../logging";
+import { logError, redactSecrets } from "../logging";
 import {
   LABEL_SOURCE_APP,
   referenceLine,
@@ -169,6 +170,10 @@ export interface GithubClient {
   listIssueEvents(issueNumber: number): Promise<unknown[]>;
   pullsForCommit(sha: string): Promise<MergedPrCandidate[]>;
   fileAtCommit(path: string, sha: string): Promise<string | null>;
+  getComment(commentId: number): Promise<CommentView | null>;
+  createComment(issueNumber: number, body: string): Promise<{ id: number | null }>;
+  addLabels(issueNumber: number, labels: string[]): Promise<void>;
+  closeIssue(issueNumber: number, stateReason: "completed" | "not_planned"): Promise<void>;
 }
 
 /** Construit le client pour un jeton. `fetchImpl` est remplacé par les tests. */
@@ -176,7 +181,7 @@ export function githubClient(token: string, fetchImpl: FetchLike = fetch): Githu
   let tokenExpirationHeader: string | null | undefined = undefined;
 
   async function request<T>(
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "PATCH",
     path: string,
     opts: { body?: unknown; repoLevel?: boolean } = {},
   ): Promise<T> {
@@ -349,6 +354,51 @@ export function githubClient(token: string, fetchImpl: FetchLike = fetch): Githu
       );
       if (typeof file.content !== "string" || file.encoding !== "base64") return null;
       return Buffer.from(file.content, "base64").toString("utf8");
+    },
+
+    /**
+     * Un commentaire par son identifiant, ou `null` s'il n'existe plus (404 ou 410). Sert
+     * à reconnaître le commentaire d'une décision reprise sans relire toutes les pages.
+     */
+    async getComment(commentId) {
+      try {
+        const raw = await request<Record<string, unknown>>(
+          "GET",
+          `${REPO_PATH}/issues/comments/${commentId}`,
+        );
+        return readComment(raw);
+      } catch (err) {
+        if (!(err instanceof GithubError) || err.kind !== "not_found") throw err;
+        logError({
+          message: `Tickets : commentaire ${commentId} introuvable sur GitHub (HTTP ${err.status})`,
+          feature: "tickets",
+          error: err,
+        });
+        return null;
+      }
+    },
+
+    /** Commentaire d'une décision (T2). Rend son identifiant, gardé sur la décision. */
+    async createComment(issueNumber, body) {
+      const created = await request<{ id?: unknown }>(
+        "POST",
+        `${REPO_PATH}/issues/${issueNumber}/comments`,
+        { body: { body } },
+      );
+      return { id: typeof created.id === "number" ? created.id : null };
+    },
+
+    /** Ajoute des étiquettes ; celles déjà posées restent (l'API ne les duplique pas). */
+    async addLabels(issueNumber, labels) {
+      await request<unknown>("POST", `${REPO_PATH}/issues/${issueNumber}/labels`, {
+        body: { labels },
+      });
+    },
+
+    async closeIssue(issueNumber, stateReason) {
+      await request<unknown>("PATCH", `${REPO_PATH}/issues/${issueNumber}`, {
+        body: { state: "closed", state_reason: stateReason },
+      });
     },
   };
 }

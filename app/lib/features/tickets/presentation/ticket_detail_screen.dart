@@ -8,6 +8,7 @@ import '../../../core/presentation/bandeau_hors_ligne.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
+import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/page_document.dart';
 import '../../../core/providers.dart';
@@ -15,6 +16,8 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_screens.dart';
+import 'encadre_reponse.dart';
+import 'frise_ticket.dart';
 import 'my_tickets_screen.dart';
 import 'ticket_lien_github.dart';
 import 'ticket_statut.dart';
@@ -30,8 +33,9 @@ const textesTicket = TextesDocument(
   retour: 'Retour à mes tickets',
 );
 
-/// « Suivi d'un ticket » : statut, réponse, contenu envoyé. L'ouverture d'un
-/// suivi à lire écrit `seen_by_author_at`, hors ligne compris.
+/// « Suivi d'un ticket » au téléphone : statut, réponse, frise, contenu
+/// envoyé. L'ouverture d'un suivi à lire écrit `seen_by_author_at`, hors ligne
+/// compris. En large, [TicketDetailPane] s'affiche à droite de la liste.
 class TicketDetailScreen extends ConsumerWidget {
   const TicketDetailScreen({super.key, required this.id});
 
@@ -39,27 +43,12 @@ class TicketDetailScreen extends ConsumerWidget {
 
   static const titre = 'Suivi d\'un ticket';
   static const resume = 'Reprendre ce ticket';
-  static const replyTitle = 'Réponse de l\'administrateur';
   static const updateNeeded = 'Disponible après mise à jour';
   static const upToDate = 'Disponible dans votre version';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final access = ref.watch(grantedAccessProvider);
-    final uid = access?.user.uid;
-    final offline = access?.offline ?? false;
-    final Widget body = uid == null
-        ? const EtatChargement(label: 'Chargement du ticket')
-        : PageDocument<Ticket>(
-            async: ref.watch(myTicketsProvider(uid)),
-            id: id,
-            offline: offline,
-            textes: textesTicket,
-            onRetry: () => ref.invalidate(myTicketsProvider(uid)),
-            onBack: () => context.go(AppRoutes.tickets),
-            builder: (context, ticket) =>
-                _Detail(key: ValueKey(ticket.id), ticket: ticket),
-          );
+    final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
     return Scaffold(
       appBar: AppBar(
         title: const Text(titre),
@@ -73,10 +62,35 @@ class TicketDetailScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (offline) const BandeauHorsLigne(),
-            Expanded(child: body),
+            Expanded(child: TicketDetailPane(id: id)),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Contenu du suivi de [id], seul au téléphone ou à droite de la liste de
+/// « Mes tickets » en large.
+class TicketDetailPane extends ConsumerWidget {
+  const TicketDetailPane({super.key, required this.id});
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final access = ref.watch(grantedAccessProvider);
+    final uid = access?.user.uid;
+    if (uid == null) return const EtatChargement(label: 'Chargement du ticket');
+    return PageDocument<Ticket>(
+      async: ref.watch(myTicketsProvider(uid)),
+      id: id,
+      offline: access?.offline ?? false,
+      textes: textesTicket,
+      onRetry: () => ref.invalidate(myTicketsProvider(uid)),
+      onBack: () => context.go(AppRoutes.tickets),
+      builder: (context, ticket) =>
+          _Detail(key: ValueKey(ticket.id), ticket: ticket),
     );
   }
 }
@@ -137,7 +151,9 @@ class _DetailState extends ConsumerState<_Detail> {
 
     return SelectionArea(
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        // Marge basse de 96 : à côté de la liste, le bouton flottant
+        // « Signaler ou proposer » ne cache pas les dernières lignes.
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
           Center(
             child: ConstrainedBox(
@@ -210,16 +226,16 @@ class _DetailState extends ConsumerState<_Detail> {
                       label: const Text(TicketDetailScreen.resume),
                     ),
                   ],
-                  if (reply != null) ...[gap, _Reponse(text: reply)],
-                  gap,
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      'Description',
-                      style: theme.textTheme.titleMedium,
+                  if (reply != null) ...[
+                    gap,
+                    EncadreReponse(
+                      titre: titreReponse(ticket.status),
+                      texte: reply,
                     ),
-                  ),
-                  const SizedBox(height: 4),
+                  ],
+                  gap,
+                  FriseTicket(ticket: ticket),
+                  const TitreSection('Description'),
                   Text(ticket.description, style: theme.textTheme.bodyLarge),
                   gap,
                   Text(
@@ -239,53 +255,6 @@ class _DetailState extends ConsumerState<_Detail> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Encadré « Réponse de l'administrateur ».
-class _Reponse extends StatelessWidget {
-  const _Reponse({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Semantics(
-      container: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          border: Border.all(color: scheme.outlineVariant),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  TicketDetailScreen.replyTitle,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                text,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: scheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

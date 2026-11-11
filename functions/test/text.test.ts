@@ -109,3 +109,15 @@ describe("storedReplyText", () => {
     assert.ok(out.endsWith("…"));
   });
 });
+
+describe("publicText — contrôles bidirectionnels (P24)", () => {
+  it("U+202E retiré : « a\u202Eb » rend « ab »", () => assert.equal(publicText("a\u202Eb"), "ab"));
+  it("U+200E, U+200F, U+202A à U+202E, U+2066 à U+2069 retirés", () => {
+    const bidi = [
+      0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
+    ];
+    for (const code of bidi) {
+      assert.equal(publicText(`a${String.fromCharCode(code)}b`), "ab", code.toString(16));
+    }
+  });
+});

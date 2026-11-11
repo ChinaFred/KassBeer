@@ -21,13 +21,25 @@ Uri? lienGithub(String? url) {
   return uri;
 }
 
-/// « Voir la modification sur GitHub » : ouvre [uri] hors de l'application.
+/// Bouton qui ouvre [uri] (adresse GitHub vérifiée par [lienGithub]) hors de
+/// l'application ; « Voir la modification sur GitHub » par défaut.
 class BoutonVoirSurGithub extends ConsumerWidget {
-  const BoutonVoirSurGithub({super.key, required this.uri});
+  const BoutonVoirSurGithub({
+    super.key,
+    required this.uri,
+    this.label = defaultLabel,
+    this.contexte = 'lien de la modification livrée',
+  });
 
   final Uri uri;
 
-  static const label = 'Voir la modification sur GitHub';
+  /// Libellé du bouton (« Ouvrir l'Issue #12 » dans Admin › Tickets).
+  final String label;
+
+  /// Contexte du rapport d'un échec : jamais l'adresse.
+  final String contexte;
+
+  static const defaultLabel = 'Voir la modification sur GitHub';
   static const failure = 'Impossible d\'ouvrir GitHub.';
 
   Future<void> _open(BuildContext context, WidgetRef ref) async {
@@ -47,7 +59,7 @@ class BoutonVoirSurGithub extends ConsumerWidget {
       feature: 'tickets.open_github',
       error: error ?? StateError('ouverture refusée par le système'),
       stackTrace: stackTrace ?? StackTrace.current,
-      context: 'lien de la modification livrée',
+      context: contexte,
     );
     messenger.showSnackBar(const SnackBar(content: Text(failure)));
   }
@@ -56,6 +68,6 @@ class BoutonVoirSurGithub extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => OutlinedButton.icon(
     onPressed: () => _open(context, ref),
     icon: const Icon(Icons.open_in_new),
-    label: const Text(label),
+    label: Text(label),
   );
 }

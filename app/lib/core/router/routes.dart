@@ -11,6 +11,10 @@ abstract final class AppRoutes {
   static const admin = '/admin';
   static const adminMembers = '/admin/membres';
 
+  /// Admin › Tickets des membres (ADR-006, T2), dans la coquille.
+  static const adminTickets = '/admin/tickets';
+  static String adminTicket(String id) => '$adminTickets/$id';
+
   /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
   static const prices = '/prix';
 

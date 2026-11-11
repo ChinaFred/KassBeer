@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/bandeau_liste_perimee.dart';
+import 'package:kass_beer/core/presentation/etiquette.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
@@ -489,13 +490,13 @@ void main() {
       await openDetail(tester, unTicket(replyText: 'Merci, c\'est noté.'));
       expect(find.text('Bug'), findsOneWidget);
       expect(find.text('Densité fausse'), findsOneWidget);
-      expect(find.text('Reçu'), findsOneWidget);
+      expect(find.widgetWithText(Etiquette, 'Reçu'), findsOneWidget);
       expect(find.text('Envoyé le 08/11/26 à 09:30'), findsOneWidget);
       expect(
         find.text('L\'administrateur a reçu votre ticket.'),
         findsOneWidget,
       );
-      expect(find.text(TicketDetailScreen.replyTitle), findsOneWidget);
+      expect(find.text('Réponse de l\'administrateur'), findsOneWidget);
       expect(find.text('Merci, c\'est noté.'), findsOneWidget);
       expect(find.text('La densité affichée est fausse.'), findsOneWidget);
       expect(find.text('Écran : Recette'), findsOneWidget);
@@ -541,7 +542,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(TicketDetailScreen.updateNeeded), findsOneWidget);
-      await tester.tap(find.text(BoutonVoirSurGithub.label));
+      await tester.tap(find.text(BoutonVoirSurGithub.defaultLabel));
       await tester.pumpAndSettle();
       expect(app.openedLinks, [
         Uri.parse('https://github.com/ChinaFred/KassBeer/pull/12'),
@@ -554,7 +555,7 @@ void main() {
         unTicket(status: TicketStatus.delivered, deliveredVersion: '0.1.0'),
       );
       expect(find.text(TicketDetailScreen.upToDate), findsOneWidget);
-      expect(find.text(BoutonVoirSurGithub.label), findsNothing);
+      expect(find.text(BoutonVoirSurGithub.defaultLabel), findsNothing);
     });
 
     testWidgets('livré sans version : « C\'est fait. », aucune comparaison', (
@@ -576,7 +577,7 @@ void main() {
           deliveredPrUrl: 'http://github.com/ChinaFred/KassBeer/pull/12',
         ),
       );
-      expect(find.text(BoutonVoirSurGithub.label), findsNothing);
+      expect(find.text(BoutonVoirSurGithub.defaultLabel), findsNothing);
     });
 
     testWidgets('ouverture refusée par le système : rapportée et annoncée', (
@@ -591,7 +592,7 @@ void main() {
         ),
       ]);
       await push(tester, app, AppRoutes.ticket('t1'));
-      await tester.tap(find.text(BoutonVoirSurGithub.label));
+      await tester.tap(find.text(BoutonVoirSurGithub.defaultLabel));
       await tester.pumpAndSettle();
       expect(find.text(BoutonVoirSurGithub.failure), findsOneWidget);
       expect(
@@ -611,7 +612,10 @@ void main() {
           screen: '/brassins',
         ),
       );
-      expect(find.text('Limite du jour atteinte'), findsOneWidget);
+      expect(
+        find.widgetWithText(Etiquette, 'Limite du jour atteinte'),
+        findsOneWidget,
+      );
       await tester.tap(find.text(TicketDetailScreen.resume));
       await tester.pumpAndSettle();
       expect(find.text(TicketFormScreen.warningTitle), findsOneWidget);
@@ -667,28 +671,30 @@ void main() {
   });
 
   group('bandeau Admin', () {
-    testWidgets('jeton refusé et tickets bloqués, admin seul', (tester) async {
+    testWidgets('jeton refusé et tickets bloqués : dans Admin › Tickets', (
+      tester,
+    ) async {
       final app = await signedIn(tester, admin: true);
       app.tickets.githubStatus.add(
         DocumentTrouve(
           EtatJetonGithub(tokenInvalidSince: DateTime(2026, 11, 7)),
         ),
       );
-      app.tickets.notSent.add(
-        ListeLue(
-          documents: [
-            DocumentValide(
-              'f',
-              unTicket(id: 'f', status: TicketStatus.sendFailed),
-            ),
-          ],
-          fromCache: false,
-        ),
-      );
-      app.tickets.issueMissing.add(
-        const ListeLue(documents: [], fromCache: false),
-      );
+      app.tickets.publishAll([
+        unTicket(id: 'f', status: TicketStatus.sendFailed),
+      ]);
       await tester.tap(find.text('Admin'));
+      await tester.pumpAndSettle();
+      // Accueil d'Admin : la tuile porte le nombre d'alertes, sans bandeau.
+      expect(find.textContaining('Secret Manager'), findsNothing);
+      expect(
+        find.bySemanticsLabel(
+          'Tickets des membres, 2 alertes, Bugs et idées des membres, et leur '
+          'suivi sur GitHub',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Tickets des membres'));
       await tester.pumpAndSettle();
       expect(
         find.text(
@@ -701,17 +707,18 @@ void main() {
         find.text('1 ticket n\'est pas arrivé sur GitHub.'),
         findsOneWidget,
       );
-      expect(find.text('Membres'), findsOneWidget);
     });
 
-    testWidgets('tout va bien : aucun bandeau', (tester) async {
+    testWidgets('tout va bien : aucun bandeau, aucune pastille', (
+      tester,
+    ) async {
       final app = await signedIn(tester, admin: true);
       app.tickets.githubStatus.add(const DocumentAbsent());
-      app.tickets.notSent.add(const ListeLue(documents: [], fromCache: false));
-      app.tickets.issueMissing.add(
-        const ListeLue(documents: [], fromCache: false),
-      );
+      app.tickets.publishAll(const []);
       await tester.tap(find.text('Admin'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel(RegExp('alerte')), findsNothing);
+      await tester.tap(find.text('Tickets des membres'));
       await tester.pumpAndSettle();
       expect(find.textContaining('GitHub'), findsNothing);
     });

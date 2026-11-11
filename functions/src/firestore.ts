@@ -10,6 +10,7 @@ export interface FirestoreKit {
   db: AdminFirestore.Firestore;
   FieldValue: typeof AdminFirestore.FieldValue;
   Timestamp: typeof AdminFirestore.Timestamp;
+  FieldPath: typeof AdminFirestore.FieldPath;
 }
 
 let kit: FirestoreKit | null = null;
@@ -24,6 +25,11 @@ export async function firestore(): Promise<FirestoreKit> {
   const app = await import("firebase-admin/app");
   const fs = await import("firebase-admin/firestore");
   if (app.getApps().length === 0) app.initializeApp();
-  kit = { db: fs.getFirestore(), FieldValue: fs.FieldValue, Timestamp: fs.Timestamp };
+  kit = {
+    db: fs.getFirestore(),
+    FieldValue: fs.FieldValue,
+    Timestamp: fs.Timestamp,
+    FieldPath: fs.FieldPath,
+  };
   return kit;
 }

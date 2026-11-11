@@ -5,7 +5,8 @@
 - **Remplace** : —
 - **Modifié par** : ADR-002 (dépôt public, minutes de la CI) ; ADR-005 (recettes en BeerJSON,
   référentiels, et export BeerXML avancé avant la v1, malgré les mentions « après la v1 » ci-dessous) ; ADR-006 (un serveur
-  Cloud Functions Node 24 avant l'IA et le RAPT Pill, pour les tickets)
+  Cloud Functions Node 24 avant l'IA et le RAPT Pill, pour les tickets) ; ADR-008 (points d'accès
+  publics des tickets, Cloud Storage, premier poste de coût variable)
 
 ## Contexte
 

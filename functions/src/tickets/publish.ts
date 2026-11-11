@@ -12,6 +12,8 @@
  *    pastille ne s'allume pas à ce passage).
  * 4. Échec : `last_send_error`, `send_attempts` + 1, au dixième `send_failed`. Un jeton
  *    refusé ou une limite de débit n'usent pas les essais.
+ *
+ * Chaque changement de statut écrit aussi `allowed_decisions` (T2).
  */
 
 import {
@@ -27,6 +29,7 @@ import {
 } from "../config";
 import { firestore } from "../firestore";
 import { describeError, logError, logInfo, logWarn } from "../logging";
+import { allowedDecisions } from "./decisionModel";
 import { GithubError, githubClient, type FetchLike } from "./github";
 import {
   buildIssueBody,
@@ -115,6 +118,7 @@ async function claim(ticketId: string, now: Date): Promise<Claim> {
         if (refusal !== null) {
           tx.update(ref, {
             status: "over_quota",
+            allowed_decisions: allowedDecisions("over_quota"),
             over_quota_reason: refusal,
             send_quota_day: day,
             status_changed_at: nowTs,
@@ -131,7 +135,10 @@ async function claim(ticketId: string, now: Date): Promise<Claim> {
 
     tx.update(ref, update);
     const attempts = typeof data.send_attempts === "number" ? data.send_attempts : 0;
-    return { kind: "claimed", data, lookupFirst: attempts > 0 || lease != null };
+    // Après une relance demandée par l'admin, `send_attempts` repart de 0 : `send_retried_at`
+    // dit qu'un essai a déjà eu lieu, et l'Issue est d'abord cherchée.
+    const retried = data.send_retried_at != null;
+    return { kind: "claimed", data, lookupFirst: attempts > 0 || lease != null || retried };
   });
 }
 
@@ -143,6 +150,7 @@ async function recordPublished(ticketId: string, issueNumber: number): Promise<v
     .doc(ticketId)
     .update({
       status: "received",
+      allowed_decisions: allowedDecisions("received"),
       github_issue_number: issueNumber,
       github_url: issueUrl(issueNumber),
       github_checked_at: now,
@@ -172,7 +180,13 @@ async function recordFailure(
       last_send_error: message.slice(0, 300),
       send_lease_until: FieldValue.delete(),
       updated_at: now,
-      ...(exhausted ? { status: "send_failed", status_changed_at: now } : {}),
+      ...(exhausted
+        ? {
+            status: "send_failed",
+            allowed_decisions: allowedDecisions("send_failed"),
+            status_changed_at: now,
+          }
+        : {}),
     });
   return exhausted ? "send_failed" : "failed";
 }

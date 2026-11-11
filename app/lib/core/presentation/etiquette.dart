@@ -5,6 +5,15 @@ enum TonEtiquette {
   /// `secondaryContainer` : information.
   normal,
 
+  /// `surfaceContainerHighest` : attente, refus, valeur inconnue.
+  neutre,
+
+  /// `primaryContainer` : étape franchie (ticket reçu, validé, livré).
+  primaire,
+
+  /// `tertiaryContainer` : travail en cours.
+  tertiaire,
+
   /// `errorContainer` : envoi impossible, limite atteinte.
   erreur,
 }
@@ -32,6 +41,15 @@ class Etiquette extends StatelessWidget {
       TonEtiquette.normal => (
         scheme.secondaryContainer,
         scheme.onSecondaryContainer,
+      ),
+      TonEtiquette.neutre => (scheme.surfaceContainerHighest, scheme.onSurface),
+      TonEtiquette.primaire => (
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
+      ),
+      TonEtiquette.tertiaire => (
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
       ),
       TonEtiquette.erreur => (scheme.errorContainer, scheme.onErrorContainer),
     };
