@@ -9,6 +9,7 @@ import 'package:kass_beer/app.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/data/nouveautes.dart';
 import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
+import 'package:kass_beer/core/preferences/preferences_appareil.dart';
 import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
@@ -574,6 +575,40 @@ class FakeBrewsRepository implements BrewsRepository {
   }
 }
 
+/// Double de [PreferencesAppareil] : valeur gardée en mémoire, échecs au choix.
+class FakePreferencesAppareil implements PreferencesAppareil {
+  String? valeur;
+  Object? erreurLecture;
+  Object? erreurEcriture;
+
+  /// Erreurs des écritures suivantes, une par écriture (`null` : réussite),
+  /// lues avant [erreurEcriture].
+  final erreursEcritures = <Object?>[];
+  Future<void>? attenteEcriture;
+  final ecritures = <ThemeMode>[];
+
+  @override
+  Future<String?> lireValeurTheme() async {
+    final erreur = erreurLecture;
+    if (erreur != null) throw erreur;
+    return valeur;
+  }
+
+  @override
+  Future<void> ecrireTheme(ThemeMode mode) async {
+    ecritures.add(mode);
+    final erreurPrevue = erreursEcritures.isNotEmpty
+        ? erreursEcritures.removeAt(0)
+        : erreurEcriture;
+    final attente = attenteEcriture;
+    attenteEcriture = null;
+    if (attente != null) await attente;
+    final erreur = erreurPrevue;
+    if (erreur != null) throw erreur;
+    valeur = kValeursTheme[mode];
+  }
+}
+
 class FakeAlerte implements AlerteMinuteur {
   int prepared = 0;
   int triggered = 0;
@@ -1066,18 +1101,22 @@ const adminMember = Member(
 /// Environnement de test : doubles, conteneur Riverpod, application montée.
 class TestApp {
   /// [appVersion] : version installée lue au démarrage ; `null` si illisible.
-  TestApp({String? appVersion = '0.1.0'})
-    : auth = FakeAuthRepository(),
-      members = FakeMembersRepository(),
-      recipes = FakeRecipesRepository(),
-      equipment = FakeEquipmentRepository(),
-      brews = FakeBrewsRepository(),
-      costs = FakeCostsRepository(),
-      alerte = FakeAlerte(),
-      tickets = FakeTicketsRepository(),
-      fichiers = FakeEchangeFichiers(),
-      library = FakeLibraryRepository(),
-      errors = RecordingErrorReportService() {
+  /// [themeMode] : thème lu sur l'appareil avant `runApp`.
+  TestApp({
+    String? appVersion = '0.1.0',
+    ThemeMode themeMode = ThemeMode.system,
+  }) : auth = FakeAuthRepository(),
+       members = FakeMembersRepository(),
+       recipes = FakeRecipesRepository(),
+       equipment = FakeEquipmentRepository(),
+       brews = FakeBrewsRepository(),
+       costs = FakeCostsRepository(),
+       alerte = FakeAlerte(),
+       tickets = FakeTicketsRepository(),
+       fichiers = FakeEchangeFichiers(),
+       library = FakeLibraryRepository(),
+       preferences = FakePreferencesAppareil(),
+       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
       toggle: ({required bool enable}) async {
@@ -1105,6 +1144,8 @@ class TestApp {
         analyseurFichierProvider.overrideWithValue((o) => analyseur(o)),
         screenWakelockProvider.overrideWithValue(wakelock),
         appVersionProvider.overrideWithValue(appVersion),
+        preferencesAppareilProvider.overrideWithValue(preferences),
+        themeModeInitialProvider.overrideWithValue(themeMode),
         nouveautesSourceProvider.overrideWithValue(() => nouveautes()),
       ],
     );
@@ -1124,6 +1165,7 @@ class TestApp {
   final FakeTicketsRepository tickets;
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
+  final FakePreferencesAppareil preferences;
 
   /// Analyse d'un fichier importé, remplaçable par les tests.
   AnalyseFichier Function(List<int>) analyseur = analyserFichier;

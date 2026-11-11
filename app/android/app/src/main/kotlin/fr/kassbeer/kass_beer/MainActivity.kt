@@ -20,6 +20,9 @@ class MainActivity : FlutterActivity() {
     // Canal des fichiers (ADR-007), branché avec le moteur.
     private var fichiers: EchangeFichiers? = null
 
+    // Canal de la préférence de thème (ADR-009), branché avec le moteur.
+    private var preferences: PreferencesAppareil? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Lancement neuf : le fichier exporté au lancement précédent est effacé.
@@ -28,6 +31,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         fichiers?.fermer()
+        preferences?.fermer()
         super.onDestroy()
     }
 
@@ -43,6 +47,11 @@ class MainActivity : FlutterActivity() {
         // Canal des fichiers : mêmes noms que app/lib/core/fichiers/echange_fichiers.dart
         // (P17).
         fichiers = EchangeFichiers(this).also {
+            it.brancher(flutterEngine.dartExecutor.binaryMessenger)
+        }
+        // Canal de la préférence de thème : mêmes noms que
+        // app/lib/core/preferences/preferences_appareil.dart (P17).
+        preferences = PreferencesAppareil(this).also {
             it.brancher(flutterEngine.dartExecutor.binaryMessenger)
         }
         // Canal de l'alerte de fin de minuteur : mêmes noms que

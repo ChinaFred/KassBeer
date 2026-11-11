@@ -29,6 +29,10 @@ abstract final class AppRoutes {
   /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
   static const prices = '/prix';
 
+  /// « Préférences » (thème de l'appareil, ADR-009) : page pleine hors de la
+  /// coquille, ouverte par `push` depuis le menu du compte.
+  static const preferences = '/preferences';
+
   /// Écran « Nouveautés », ouvert depuis le menu du compte.
   static const news = '/nouveautes';
 

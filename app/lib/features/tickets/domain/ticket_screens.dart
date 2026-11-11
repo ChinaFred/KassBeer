@@ -52,6 +52,7 @@ const Map<String, String> kTicketScreenNames = {
   '/equipements/nouveau': 'Nouvel équipement',
   '/equipements/:id/modifier': 'Modifier l\'équipement',
   '/prix': 'Mes prix',
+  '/preferences': 'Préférences',
   '/nouveautes': 'Nouveautés',
   '/tickets': 'Mes tickets',
   '/tickets/nouveau': 'Signaler ou proposer',

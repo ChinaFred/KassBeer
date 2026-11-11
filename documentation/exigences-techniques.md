@@ -48,16 +48,17 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 
 | Dossier | Contenu |
 |---|---|
-| `lib/main.dart` | démarrage : configuration, Firebase, cache Firestore, version, journal d'erreurs, `google_sign_in` (Android), `ProviderScope` |
-| `lib/app.dart` | `KassBeerApp` (thème, routeur), `MissingConfigurationApp`, `StartupFailureApp` ; les trois portent `locale: fr` et les délégués `Global*` (`flutter_localizations`) |
+| `lib/main.dart` | démarrage : configuration, thème de l'appareil (lu en parallèle de Firebase), Firebase, cache Firestore, version, journal d'erreurs, `google_sign_in` (Android), `ProviderScope` |
+| `lib/app.dart` | `KassBeerApp` (thème clair et sombre, `themeMode` lu dans `themeModeProvider`, routeur), `MissingConfigurationApp` et `StartupFailureApp` en `ThemeMode.system` ; les trois portent `locale: fr` et les délégués `Global*` (`flutter_localizations`) |
 | `lib/firebase_options.dart` | `FirebaseEnv` : configuration lue par `String.fromEnvironment` |
 | `lib/core/providers.dart` | providers des services, fournis par `main.dart` ou par les tests |
 | `lib/core/services/error_report_service.dart` | `ErrorReportService`, `ErrorReportFields` |
-| `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) ; `/nouveautes` est déclaré hors de la coquille, ouvert par `context.push` depuis le menu du compte |
+| `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) ; `/nouveautes` et `/preferences` sont déclarés hors de la coquille, ouverts par `context.push` depuis le menu du compte |
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
 | `lib/core/data/nouveautes.dart` | `Nouveaute`, `lireNouveautes` (valide la forme de `assets/changelog_recent.json`, lève une `FormatException` sinon), `NouveautesRepository` (lecture de l'asset, panne journalisée sous `nouveautes` puis relancée) |
-| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/preferences/` | préférence de thème gardée sur l'appareil (ADR-009) : `PreferencesAppareil` (`lireValeurTheme`, `ecrireTheme`), `PreferencesAppareilPlateforme` (canal `fr.kassbeer/prefs` sur Android, `preferences_web.dart` par `package:web` sur le web, `preferences_web_stub.dart` hors du web, import conditionnel), `lireTheme` (rend `LectureTheme`, ne lève pas), `themeModeProvider` (`ThemeModeNotifier.choisir`) ; fournis par `preferencesAppareilProvider` et `themeModeInitialProvider` |
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets)` rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
@@ -84,11 +85,52 @@ Le web et Android ont chacun leur clé d'API et leur identifiant d'application d
 `Firebase.initializeApp` affiche « Kass'Beer n'a pas pu démarrer » ; le message part sur la
 console, faute de Firestore.
 
-**Démarrage.** Dans l'ordre : configuration, `Firebase.initializeApp`, réglage de Firestore
+**Démarrage.** Dans l'ordre : configuration, lecture du thème de l'appareil lancée sans
+l'attendre (`lireTheme`), `Firebase.initializeApp`, réglage de Firestore
 (`persistenceEnabled: true`, `cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED`), version lue par
 `package_info_plus` (`version.json` sur le web), `ErrorReportService`, branchement de
 `FlutterError.onError` et `PlatformDispatcher.instance.onError`, puis
-`GoogleSignIn.instance.initialize(serverClientId:)` sur Android.
+`GoogleSignIn.instance.initialize(serverClientId:)` sur Android. Le thème lu est attendu avant
+le branchement des erreurs ; une erreur de lecture, gardée jusque-là, est remise à
+`ErrorReportService` (`theme_mode.load`), comme celle de la version. Le thème lu passe à
+`ProviderScope` par `themeModeInitialProvider` : le premier écran s'affiche dans le thème
+choisi.
+
+**Préférence de thème (ADR-009).** Gardée sur l'appareil seul, hors Firestore : aucune règle,
+aucune donnée personnelle. Trois valeurs, `light`, `dark` et `system`, et rien d'autre. Sur
+Android, `MethodChannel('fr.kassbeer/prefs')`, méthodes `getTheme` (rend la valeur ou `null`)
+et `setTheme` (argument `value`), définies dans `PreferencesAppareil.kt` et branchées par
+`MainActivity.configureFlutterEngine` (P17) : fichier
+`getSharedPreferences("kassbeer_prefs", MODE_PRIVATE)`, clé `theme_mode`, écriture par
+`apply()`. Lecture et écriture sur un seul fil à part, résultat rendu sur le fil principal. Un
+seul appel à la fois (P17) : un appel reçu pendant un autre rend `BUSY` (drapeau posé et levé
+sur le fil principal). Côté Dart, `PreferencesAppareilPlateforme.ecrireTheme` n'envoie pas de
+second appel avant la réponse du premier : les choix arrivés entre-temps se réduisent au
+dernier, envoyé à cette réponse, succès ou échec. Le dernier choix est donc le dernier écrit ;
+un `BUSY` reçu quand même est rapporté comme les autres erreurs. La lecture au démarrage reste
+un seul appel. Une valeur hors des trois rend `INVALID_THEME`, un échec `PREFS_FAILED`. Sur le web, garde `kIsWeb` et `window.localStorage`,
+clé `kassbeer.theme` ; un navigateur qui refuse le stockage lève, l'erreur est rapportée.
+
+- Valeur absente : `system`, sans rapport. Valeur inconnue (le stockage du navigateur est
+  modifiable, entrée non fiable) : `system` et rapport `theme_mode.load`, `context`
+  « valeur inconnue (longueur N) » : la valeur elle-même n'est jamais recopiée. Lecture en échec : `system` et rapport
+  `theme_mode.load`, `context` limité au code d'erreur du canal (P13). Aucun message à
+  l'écran.
+- Un choix dans « Préférences » change le thème aussitôt (`ThemeModeNotifier.choisir`), puis
+  s'enregistre. Écriture en échec : thème gardé pour la session, rapport `theme_mode.save`
+  (code d'erreur seul), message « Thème non enregistré : l'ancien thème reviendra au prochain démarrage. » (un seul
+  message à la fois : le précédent est retiré). `choisir` rend `false` seulement si l'appel en
+  échec est le dernier appel de `choisir` (numéro de choix `_dernierChoix`) : l'échec d'un choix
+  suivi d'un autre appel est rapporté sans message, même si ce dernier remet le même thème.
+- Limite : l'écran de lancement Android (`values-night/`) et le fond de `web/index.html`
+  suivent le thème du système jusqu'à la première image Flutter.
+- Tests : `preferences_test.dart` (`TestDefaultBinaryMessenger` : noms du canal, des méthodes
+  et des valeurs, lecture et écriture, échec du canal ; valeur absente, connue, inconnue,
+  stockage refusé ; `themeModeProvider` ; page « Préférences » : choix, enregistrement, échec ;
+  valeur inconnue en forme d'adresse e-mail absente du rapport ; trois échecs de suite, un seul
+  message ; Recettes, fiche d'une recette et jour de brassage montés en thème sombre sans
+  exception).
+  Le Kotlin et le web se vérifient par la compilation et un essai à la main.
 
 **Connexion.** Web : `signInWithPopup` (`prompt: select_account`). Android :
 `GoogleSignIn.instance.authenticate()`, puis `signInWithCredential` avec le jeton
@@ -562,7 +604,7 @@ passe un `TicketBrouillon` par `extra`. `test/ticket_screens_test.dart` parcourt
 23 routes, dont les 12 de la Bibliothèque (`/bibliotheque/<segment>` et
 `/bibliotheque/<segment>/:id` pour `styles`, `malts`, `houblons`, `levures`, `divers` et
 `recettes`) ; ces 12 écrans n'ont que les deux éléments de la coquille.
-`/sources-des-donnees`, hors de la coquille, n'a aucun élément. L'élément précis
+`/sources-des-donnees` et `/preferences`, hors de la coquille, n'ont aucun élément. L'élément précis
 s'écrit dans le même champ `screen` (aucun champ ajouté, règles et `routeTemplateOrNull`
 inchangés : la forme passe déjà leur contrôle). Il n'est jamais lu de `?ecran=` :
 `initState` ne garde que l'écran ; seul « Reprendre » rend l'élément du ticket refusé.
@@ -1296,16 +1338,17 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 
 | Dossier | Contenu |
 |---|---|
-| `lib/main.dart` | démarrage : configuration, Firebase, cache Firestore, version, journal d'erreurs, `google_sign_in` (Android), `ProviderScope` |
-| `lib/app.dart` | `KassBeerApp` (thème, routeur), `MissingConfigurationApp`, `StartupFailureApp` ; les trois portent `locale: fr` et les délégués `Global*` (`flutter_localizations`) |
+| `lib/main.dart` | démarrage : configuration, thème de l'appareil (lu en parallèle de Firebase), Firebase, cache Firestore, version, journal d'erreurs, `google_sign_in` (Android), `ProviderScope` |
+| `lib/app.dart` | `KassBeerApp` (thème clair et sombre, `themeMode` lu dans `themeModeProvider`, routeur), `MissingConfigurationApp` et `StartupFailureApp` en `ThemeMode.system` ; les trois portent `locale: fr` et les délégués `Global*` (`flutter_localizations`) |
 | `lib/firebase_options.dart` | `FirebaseEnv` : configuration lue par `String.fromEnvironment` |
 | `lib/core/providers.dart` | providers des services, fournis par `main.dart` ou par les tests |
 | `lib/core/services/error_report_service.dart` | `ErrorReportService`, `ErrorReportFields` |
-| `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) ; `/nouveautes` est déclaré hors de la coquille, ouvert par `context.push` depuis le menu du compte |
+| `lib/core/router/` | `routes.dart` (chemins), `app_router.dart` (routeur, `redirectFor`) ; `/nouveautes` et `/preferences` sont déclarés hors de la coquille, ouverts par `context.push` depuis le menu du compte |
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
 | `lib/core/data/nouveautes.dart` | `Nouveaute`, `lireNouveautes` (valide la forme de `assets/changelog_recent.json`, lève une `FormatException` sinon), `NouveautesRepository` (lecture de l'asset, panne journalisée sous `nouveautes` puis relancée) |
-| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/preferences/` | préférence de thème gardée sur l'appareil (ADR-009) : `PreferencesAppareil` (`lireValeurTheme`, `ecrireTheme`), `PreferencesAppareilPlateforme` (canal `fr.kassbeer/prefs` sur Android, `preferences_web.dart` par `package:web` sur le web, `preferences_web_stub.dart` hors du web, import conditionnel), `lireTheme` (rend `LectureTheme`, ne lève pas), `themeModeProvider` (`ThemeModeNotifier.choisir`) ; fournis par `preferencesAppareilProvider` et `themeModeInitialProvider` |
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets)` rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
@@ -1332,11 +1375,52 @@ Le web et Android ont chacun leur clé d'API et leur identifiant d'application d
 `Firebase.initializeApp` affiche « Kass'Beer n'a pas pu démarrer » ; le message part sur la
 console, faute de Firestore.
 
-**Démarrage.** Dans l'ordre : configuration, `Firebase.initializeApp`, réglage de Firestore
+**Démarrage.** Dans l'ordre : configuration, lecture du thème de l'appareil lancée sans
+l'attendre (`lireTheme`), `Firebase.initializeApp`, réglage de Firestore
 (`persistenceEnabled: true`, `cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED`), version lue par
 `package_info_plus` (`version.json` sur le web), `ErrorReportService`, branchement de
 `FlutterError.onError` et `PlatformDispatcher.instance.onError`, puis
-`GoogleSignIn.instance.initialize(serverClientId:)` sur Android.
+`GoogleSignIn.instance.initialize(serverClientId:)` sur Android. Le thème lu est attendu avant
+le branchement des erreurs ; une erreur de lecture, gardée jusque-là, est remise à
+`ErrorReportService` (`theme_mode.load`), comme celle de la version. Le thème lu passe à
+`ProviderScope` par `themeModeInitialProvider` : le premier écran s'affiche dans le thème
+choisi.
+
+**Préférence de thème (ADR-009).** Gardée sur l'appareil seul, hors Firestore : aucune règle,
+aucune donnée personnelle. Trois valeurs, `light`, `dark` et `system`, et rien d'autre. Sur
+Android, `MethodChannel('fr.kassbeer/prefs')`, méthodes `getTheme` (rend la valeur ou `null`)
+et `setTheme` (argument `value`), définies dans `PreferencesAppareil.kt` et branchées par
+`MainActivity.configureFlutterEngine` (P17) : fichier
+`getSharedPreferences("kassbeer_prefs", MODE_PRIVATE)`, clé `theme_mode`, écriture par
+`apply()`. Lecture et écriture sur un seul fil à part, résultat rendu sur le fil principal. Un
+seul appel à la fois (P17) : un appel reçu pendant un autre rend `BUSY` (drapeau posé et levé
+sur le fil principal). Côté Dart, `PreferencesAppareilPlateforme.ecrireTheme` n'envoie pas de
+second appel avant la réponse du premier : les choix arrivés entre-temps se réduisent au
+dernier, envoyé à cette réponse, succès ou échec. Le dernier choix est donc le dernier écrit ;
+un `BUSY` reçu quand même est rapporté comme les autres erreurs. La lecture au démarrage reste
+un seul appel. Une valeur hors des trois rend `INVALID_THEME`, un échec `PREFS_FAILED`. Sur le web, garde `kIsWeb` et `window.localStorage`,
+clé `kassbeer.theme` ; un navigateur qui refuse le stockage lève, l'erreur est rapportée.
+
+- Valeur absente : `system`, sans rapport. Valeur inconnue (le stockage du navigateur est
+  modifiable, entrée non fiable) : `system` et rapport `theme_mode.load`, `context`
+  « valeur inconnue (longueur N) » : la valeur elle-même n'est jamais recopiée. Lecture en échec : `system` et rapport
+  `theme_mode.load`, `context` limité au code d'erreur du canal (P13). Aucun message à
+  l'écran.
+- Un choix dans « Préférences » change le thème aussitôt (`ThemeModeNotifier.choisir`), puis
+  s'enregistre. Écriture en échec : thème gardé pour la session, rapport `theme_mode.save`
+  (code d'erreur seul), message « Thème non enregistré : l'ancien thème reviendra au prochain démarrage. » (un seul
+  message à la fois : le précédent est retiré). `choisir` rend `false` seulement si l'appel en
+  échec est le dernier appel de `choisir` (numéro de choix `_dernierChoix`) : l'échec d'un choix
+  suivi d'un autre appel est rapporté sans message, même si ce dernier remet le même thème.
+- Limite : l'écran de lancement Android (`values-night/`) et le fond de `web/index.html`
+  suivent le thème du système jusqu'à la première image Flutter.
+- Tests : `preferences_test.dart` (`TestDefaultBinaryMessenger` : noms du canal, des méthodes
+  et des valeurs, lecture et écriture, échec du canal ; valeur absente, connue, inconnue,
+  stockage refusé ; `themeModeProvider` ; page « Préférences » : choix, enregistrement, échec ;
+  valeur inconnue en forme d'adresse e-mail absente du rapport ; trois échecs de suite, un seul
+  message ; Recettes, fiche d'une recette et jour de brassage montés en thème sombre sans
+  exception).
+  Le Kotlin et le web se vérifient par la compilation et un essai à la main.
 
 **Connexion.** Web : `signInWithPopup` (`prompt: select_account`). Android :
 `GoogleSignIn.instance.authenticate()`, puis `signInWithCredential` avec le jeton

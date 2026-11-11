@@ -35,6 +35,7 @@ import '../../features/tickets/presentation/ticket_form_screen.dart';
 import '../presentation/app_shell.dart';
 import '../presentation/etats.dart';
 import '../presentation/nouveautes_screen.dart';
+import '../presentation/preferences_screen.dart';
 import 'page_de_coquille.dart';
 import 'routes.dart';
 
@@ -169,6 +170,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // « Mes prix » : page pleine avec retour, hors de la coquille.
       GoRoute(path: AppRoutes.prices, builder: (_, _) => const PricesScreen()),
+      // « Préférences » : page pleine avec retour, hors de la coquille.
+      GoRoute(
+        path: AppRoutes.preferences,
+        builder: (_, _) => const PreferencesScreen(),
+      ),
       GoRoute(
         path: AppRoutes.newEquipment,
         builder: (_, _) => const EquipmentEditorScreen(),
