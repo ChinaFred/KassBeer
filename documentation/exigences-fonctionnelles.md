@@ -161,7 +161,9 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
   navigation » sur les écrans à barre de navigation, listes et fiches de la Bibliothèque
   comprises ; « Embouteillage », « Relevé de
   fermentation », « Coût du brassin »… sur la fiche d'un brassin ; « Malt ou sucre »,
-  « Houblon »… dans l'éditeur de recette). Le formulaire de prix porte le même nom, « Prix d'un
+  « Houblon »… dans l'éditeur de recette ; « Journée », « Étape », « Actions d'une journée »,
+  « Insérer un bloc de la recette » dans l'éditeur de processus ; « Plus d'actions » sur la
+  fiche d'un processus). Le formulaire de prix porte le même nom, « Prix d'un
   ingrédient », sur « Mes prix », la fiche d'une recette et celle d'un brassin, et sa liste
   « Reprendre un prix » aussi ; « Coût du brassin » désigne les deux confirmations « Figer le
   coût » et « Recalculer avec mes prix actuels ». Aide : « Menu ou fenêtre concerné. »

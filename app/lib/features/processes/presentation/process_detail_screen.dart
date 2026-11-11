@@ -102,6 +102,7 @@ class _ProcessDetailScreenState extends ConsumerState<ProcessDetailScreen> {
                       child: IndicateurBouton(label: 'Duplication'),
                     ),
                   )
+                // ticket: /processus/:id/menu/actions
                 : PopupMenuButton<void>(
                     tooltip: 'Plus d\'actions',
                     itemBuilder: (_) => [
@@ -204,6 +205,7 @@ class _FicheState extends ConsumerState<_Fiche> {
     final access = ref.read(grantedAccessProvider);
     if (access == null) return;
     final name = _modele.content.name;
+    // ticket: aucun (confirmation)
     final confirmed = await confirmerSuppression(
       context,
       titre: ProcessDetailScreen.deleteTitle(name),

@@ -243,6 +243,7 @@ class _EditeurState extends ConsumerState<_Editeur> {
 
   Future<void> _ouvrirJournee([int? index]) {
     final journee = index == null ? null : _journees[index];
+    // ticket: /processus/nouveau/fenetre/journee, /processus/:id/modifier/fenetre/journee
     return showFeuilleOuDialogue<void>(
       context: context,
       builder: (_) => FormulaireJournee(
@@ -299,6 +300,7 @@ class _EditeurState extends ConsumerState<_Editeur> {
   }
 
   Future<void> _ouvrirEtape(_Journee journee, [int? index]) =>
+      // ticket: /processus/nouveau/fenetre/etape, /processus/:id/modifier/fenetre/etape
       showFeuilleOuDialogue<void>(
         context: context,
         builder: (_) => FormulaireEtape(
@@ -794,6 +796,7 @@ class _BlocJournee extends StatelessWidget {
               ),
             ),
           ),
+          // ticket: /processus/nouveau/menu/journee, /processus/:id/modifier/menu/journee
           PopupMenuButton<VoidCallback>(
             tooltip: 'Actions sur la journée « ${journee.name} »',
             onSelected: (action) => action(),
@@ -962,6 +965,7 @@ class _MenuBloc extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final autre = journee.bloc;
+    // ticket: /processus/nouveau/menu/bloc, /processus/:id/modifier/menu/bloc
     return MenuAnchor(
       menuChildren: [
         for (final nature in const [
