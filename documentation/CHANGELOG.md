@@ -6,6 +6,47 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
+### v0.1.32 — fonctionnel
+
+Les journées après le brassage se suivent comme le brassage. Sur la fiche d'un brassin en
+fermentation, « Préparer la journée « Houblonnage à cru » » s'affiche sous sa date prévue.
+Préparez la journée sur le téléphone qui servira, avec du réseau : ensuite, étapes, minuteurs,
+mesures et notes marchent sans réseau. « Commencer la journée » démarre la première étape ;
+une journée commencée se reprend depuis la fiche.
+
+Une densité ou une température saisie pendant une journée compte dans le relevé de
+fermentation et dans la densité finale, jamais dans la densité initiale. Elle s'affiche sous
+son étape, et le relevé nomme sa journée et son étape. « Terminer la journée » termine l'étape
+en cours et marque sautées celles qui restent ; une journée dont toutes les étapes sont faites
+se termine seule. Une journée que vous ne ferez pas se passe depuis la fiche : le menu de la
+journée porte « Passer la journée », qui marque ses étapes sautées. Dans le déroulé de la
+fiche, une journée terminée résume ce qui a été fait (« Terminée · 3 faites, 1 sautée »).
+
+La journée d'embouteillage finit par « Embouteiller » : le formulaire habituel, puis le retour
+sur la fiche. L'étape en cours se termine à l'envoi. Les prix et les frais lus à la préparation servent à figer le coût, même sans
+réseau. Un brassin qui a une journée d'embouteillage garde « Embouteiller sans suivre la
+journée » dans le menu ⋮ de sa fiche. La liste des brassins annonce toujours la prochaine
+journée d'après sa date : une journée faite en avance reste annoncée jusqu'à cette date.
+
+### v0.1.32 — technique
+
+Lot D4 d'ADR-009. `PlanDuJour.calculer` prend la journée suivie : événements réduits sur toutes
+les journées, horaire recalculé sur la seule journée, départ au premier début de la journée,
+sinon à l'heure de l'appareil ; `journeeTerminee` et `PlanDuJour.commencee` en dérivent l'état.
+Routes `/brassins/:id/jour/:journee/preparer` (dans la coquille) et `/brassins/:id/jour/:journee`
+(plein écran) ; `PrepareBrewScreen` et `BrewDayScreen` sont paramétrés par la clé de la
+journée, `journeeASuivre` nomme les refus. « Commencer la journée » écrit le seul début de la
+première étape, « Terminer la journée » un `WriteBatch` de `step_ended` et de `step_skipped`,
+sans statut. Les mesures et notes d'une journée 2 ou suivante portent `phase: 'fermentation'`
+(`BrewEventInput.phase`). `capturerEmbouteillage` regroupe les lectures capturées à l'envoi de
+l'embouteillage pour la fiche et pour la journée, qui le confie à la fiche pour ses annonces
+(`embouteillagesAAnnoncerProvider`, vidée après l'affichage, refus déjà rapportés écoutés dès
+la mise en mémoire) ; l'étape en cours reçoit son `step_ended` à l'envoi. « Passer la journée »
+écrit les `step_skipped` des étapes non commencées en un lot. Sept éléments de ticket et deux
+noms d'écran ajoutés. `exigences-techniques.md` porte les changements des lots D1 à D4 dans ses
+deux copies des sections Architecture, Modèle de données et Règles d'accès. Les règles
+d'accès, `brewing/` et les dépendances ne changent pas.
+
 ### v0.1.31 — fonctionnel
 
 « Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la

@@ -623,10 +623,16 @@ void main() {
       await tester.pumpAndSettle();
       await voir(tester, find.text(TextesDeroule.fige));
       expect(find.text(TextesDeroule.changerProcessus), findsNothing);
-      expect(
-        find.byTooltip('Actions de la journée Houblonnage à cru'),
-        findsNothing,
-      );
+      // Le menu d'une journée ne garde que « Passer la journée » (lot D4) : plus
+      // aucun changement de date.
+      final menu = find.byTooltip('Actions de la journée Houblonnage à cru');
+      await Scrollable.ensureVisible(tester.element(menu), alignment: 0.5);
+      await tester.pumpAndSettle();
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+      expect(find.text(TextesDeroule.passer), findsOneWidget);
+      expect(find.text(TextesDeroule.changerDate), findsNothing);
+      expect(find.text(TextesDeroule.retablirDate), findsNothing);
     });
 
     testWidgets('brassin sans process : chronologie de la recette seule', (

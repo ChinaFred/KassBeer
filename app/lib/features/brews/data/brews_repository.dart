@@ -211,6 +211,7 @@ class BrewEventInput {
     this.value,
     this.note,
     required this.measuredAt,
+    this.phase,
   });
 
   final String ownerUid;
@@ -220,6 +221,10 @@ class BrewEventInput {
   final double? value;
   final String? note;
   final DateTime measuredAt;
+
+  /// `fermentation` pour une saisie d'une journée 2 ou suivante (ADR-009),
+  /// `null` pour le jour de brassage.
+  final PhaseEvenement? phase;
 }
 
 /// Identifiants créés par l'appareil pour un relevé, et fin de son écriture.
@@ -641,6 +646,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
       value: input.value,
       note: input.note,
       measuredAt: input.measuredAt,
+      phase: input.phase,
     );
     final written = _guardCreation(
       refs: [ref],

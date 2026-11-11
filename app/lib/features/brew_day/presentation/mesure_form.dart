@@ -13,6 +13,8 @@ import '../../../core/providers.dart';
 import '../../brews/data/brews_repository.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/presentation/releve_fermentation.dart'
+    show jourAvant, kReleveApresEmbouteillage;
 import '../../recipes/domain/chronologie.dart';
 
 /// Heure future refusée (JB7).
@@ -20,6 +22,10 @@ const kHeureFutureRefusee = 'L\'heure ne peut pas être dans le futur.';
 
 /// Fin placée avant le début de l'étape.
 const kFinAvantDebut = 'La fin doit suivre le début.';
+
+/// Aide d'une densité ou d'une température saisie pendant une journée 2 ou
+/// suivante (ADR-009).
+const kMesureComptee = 'Comptée dans le relevé de fermentation.';
 
 /// Instant choisi, ou raison du refus.
 typedef ChoixHeure = ({DateTime? at, String? erreur});
@@ -149,6 +155,8 @@ class FormulaireMesure extends StatefulWidget {
     this.initialAt,
     this.initialNote,
     this.plancher,
+    this.releve = false,
+    this.bottledAt,
   });
 
   final List<BrewStepLine> steps;
@@ -171,6 +179,12 @@ class FormulaireMesure extends StatefulWidget {
 
   /// Début du brassin : une heure saisie peut reculer d'un jour jusque-là.
   final DateTime? plancher;
+
+  /// Saisie d'une journée 2 ou suivante : comptée dans le relevé de
+  /// fermentation (ADR-009). Affiche l'aide sous le type, et l'avertissement
+  /// d'un relevé postérieur à [bottledAt].
+  final bool releve;
+  final DateTime? bottledAt;
 
   @override
   State<FormulaireMesure> createState() => _FormulaireMesureState();
@@ -399,6 +413,21 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
                 'à nouveau.',
               ),
             ),
+          if (widget.releve &&
+              !correcting &&
+              !_isNote &&
+              (_type == MeasureType.gravity ||
+                  _type == MeasureType.temperature)) ...[
+            Text(kMesureComptee, style: theme.textTheme.bodyMedium),
+            if (_type == MeasureType.gravity &&
+                widget.bottledAt != null &&
+                jourAvant(widget.bottledAt!, at ?? widget.now()))
+              Text(
+                kReleveApresEmbouteillage,
+                style: theme.textTheme.bodyMedium,
+              ),
+            const SizedBox(height: 12),
+          ],
           if (!_isNote && _type != null) _champValeur(),
           if (!_isNote && _type != null) const SizedBox(height: 16),
           TextFormField(
@@ -556,7 +585,7 @@ void ouvrirCorrection({
   final repo = ref.read(brewsRepositoryProvider);
   final messenger = ScaffoldMessenger.of(context);
   unawaited(
-    // ticket: /brassins/:id/fenetre/correction, /brassins/:id/jour/fenetre/correction
+    // ticket: /brassins/:id/fenetre/correction, /brassins/:id/jour/fenetre/correction, /brassins/:id/jour/:journee/fenetre/correction
     showFeuilleOuDialogue<void>(
       context: context,
       fermetureProtegee: true,
@@ -604,12 +633,14 @@ void ouvrirCorrection({
 }
 
 /// Ajoute une mesure, feuille fermée aussitôt, avec « Annuler » pendant 10 s.
+/// [phase] : `fermentation` pour une journée 2 ou suivante (ADR-009).
 void enregistrerSaisie({
   required WidgetRef ref,
   required ScaffoldMessengerState messenger,
   required Brew brew,
   required SaisieMesure saisie,
   required void Function(Future<void> written, String libelle) suivre,
+  PhaseEvenement? phase,
 }) {
   final repo = ref.read(brewsRepositoryProvider);
   final created = repo.addEvent(
@@ -622,6 +653,7 @@ void enregistrerSaisie({
       value: saisie.value,
       note: saisie.note,
       measuredAt: saisie.at,
+      phase: phase,
     ),
   );
   final type = saisie.type;

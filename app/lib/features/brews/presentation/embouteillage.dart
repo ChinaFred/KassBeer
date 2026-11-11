@@ -2,13 +2,17 @@ import 'dart:async';
 
 import 'package:brewing/brewing.dart' show GravityRead, readGravity;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/champ_nombre.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/editeur_plein_ecran.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/providers.dart';
 import '../../brew_day/presentation/mesure_form.dart';
+import '../../costs/data/figeage_embouteillage.dart';
+import '../../costs/presentation/costs_providers.dart';
 import '../data/brews_repository.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
@@ -392,3 +396,49 @@ class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
 /// Vrai si une densité de fermentation existe parmi [events].
 bool densiteDeFermentationMesuree(List<BrewEvent> events) =>
     events.any((e) => e.isGravity && e.isFermentation);
+
+/// Envoi d'un embouteillage préparé par [capturerEmbouteillage].
+typedef EnvoiEmbouteillage =
+    EmbouteillageEnvoye Function({
+      required Embouteillage embouteillage,
+      required double? finalGravity,
+      required bool modification,
+      required String? ownerName,
+    });
+
+/// Capture les dépôts et les lectures ouvertes du propriétaire de [brew] (prix,
+/// frais, coût figé) à l'envoi du formulaire, avant l'attente du nom du jeton
+/// (CB5). L'envoi rendu n'utilise plus `ref` : il ne lit rien et n'attend rien,
+/// hors ligne compris (P2). La fiche lit ces valeurs pour son bloc Coût ; la
+/// journée d'embouteillage (ADR-009) les a ouvertes à « Préparer la journée ».
+EnvoiEmbouteillage capturerEmbouteillage(WidgetRef ref, Brew brew) {
+  final brews = ref.read(brewsRepositoryProvider);
+  final costs = ref.read(costsRepositoryProvider);
+  final errors = ref.read(errorReportServiceProvider);
+  final reported = ref.read(costReportsProvider);
+  final horloge = ref.read(horlogeProvider);
+  final uid = brew.ownerUid;
+  final prices = ref.read(pricesProvider(uid)).value;
+  final fees = ref.read(feesProvider(uid)).value;
+  final coutLu = ref.read(brewCostProvider((uid: uid, brewId: brew.id))).value;
+  return ({
+    required Embouteillage embouteillage,
+    required double? finalGravity,
+    required bool modification,
+    required String? ownerName,
+  }) => enregistrerEmbouteillage(
+    brews: brews,
+    costs: costs,
+    errors: errors,
+    reported: reported,
+    brew: brew,
+    embouteillage: embouteillage,
+    finalGravity: finalGravity,
+    modification: modification,
+    ownerName: ownerName,
+    prices: prices,
+    fees: fees,
+    coutLu: coutLu,
+    now: horloge(),
+  );
+}

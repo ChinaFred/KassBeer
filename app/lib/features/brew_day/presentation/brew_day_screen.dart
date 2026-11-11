@@ -22,7 +22,12 @@ import '../../auth/presentation/access_providers.dart';
 import '../../brews/data/brews_repository.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/domain/deroule.dart';
 import '../../brews/presentation/brews_providers.dart';
+import '../../brews/presentation/embouteillage.dart';
+import '../../costs/data/figeage_embouteillage.dart';
+import '../../costs/presentation/costs_providers.dart';
+import '../../recipes/domain/chronologie.dart';
 import '../../recipes/presentation/contenu_recette.dart';
 import '../domain/plan_du_jour.dart';
 import 'chronologie_jour.dart';
@@ -54,15 +59,135 @@ final _textesJour = TextesDocument(
   retour: 'Revenir aux brassins',
 );
 
-/// Écran du jour de brassage (`/brassins/:id/jour`), réservé au propriétaire.
+final _textesJournee = TextesDocument(
+  chargement: 'Chargement du brassin',
+  lectureImpossible: 'Impossible de lire les brassins.',
+  absent: 'Ce brassin n\'existe pas ou a été supprimé.',
+  horsLigne:
+      'Brassin indisponible hors ligne. Préparez la journée avec du réseau '
+      'avant de couper la connexion.',
+  illisible: textesBrassin.illisible,
+  retour: 'Revenir aux brassins',
+);
+
+/// Textes de « Préparer la journée » et de l'écran d'une journée 2 ou suivante
+/// (ADR-009).
+abstract final class TextesJournee {
+  static const titre = 'Journée';
+  static const notOwner = 'Seul le brasseur de ce brassin suit cette journée.';
+  static const apresBrassage =
+      'Cette journée s\'ouvre après la fin du brassage.';
+  static const terminee = 'Cette journée est terminée.';
+  static const brassinTermine = 'Ce brassin est terminé.';
+  static const brassinAbandonne =
+      'Ce brassin est abandonné. Reprenez-le pour suivre cette journée.';
+  static const inconnue =
+      'Cette journée n\'existe pas dans le déroulé de ce brassin.';
+  static const preparerSurTelephone =
+      'Préparez la journée sur le téléphone qui servira.';
+  static const prixLus =
+      'Lus sur l\'appareil : le coût se figera à l\'embouteillage.';
+  static const prixIndisponibles =
+      'Prix indisponibles sur cet appareil hors ligne. Le coût ne se figera '
+      'pas.';
+  static const saisiesIllisibles = 'Impossible de lire les saisies.';
+  static const commencer = 'Commencer la journée';
+  static const reprendre = 'Reprendre la journée';
+  static const terminer = 'Terminer la journée';
+  static const continuer = 'Continuer la journée';
+  static const embouteiller = 'Embouteiller';
+  static const revenir = 'Revenir au brassin';
+  static const toutFait = 'Toutes les étapes sont faites. Journée terminée.';
+  static const terminerMessage =
+      'Les étapes non commencées seront marquées sautées. Vous pourrez encore '
+      'corriger les mesures.';
+  static const embouteillerTitre = 'Embouteiller maintenant ?';
+  static const embouteillerMessage =
+      'Les étapes non commencées resteront non faites.';
+  static const embouteillerEnCoursMessage =
+      'L\'étape en cours se termine. Les étapes non commencées resteront non '
+      'faites.';
+  static String prevueLe(DateTime date) =>
+      'Prévue le ${formatJourMois(date)}. Vous pouvez la commencer '
+      'aujourd\'hui.';
+  static String nonTerminee(String nom) =>
+      'La journée « $nom » n\'est pas terminée. Ses étapes resteront non '
+      'faites.';
+  static String terminerTitre(String nom) => 'Terminer la journée « $nom » ?';
+  static String journeeTerminee(String nom) => 'Journée « $nom » terminée.';
+  static String preparer(String nom) => 'Préparer la journée « $nom »';
+  static String reprendreNom(String nom) => 'Reprendre la journée « $nom »';
+}
+
+/// Raison d'une journée qui ne se suit pas, avec son icône.
+typedef RefusJournee = ({IconData icon, String message});
+
+/// Journée [key] de [brew] à suivre (ADR-009), ou la raison du refus : déroulé
+/// illisible, clé inconnue, brassage pas fini, brassin terminé ou abandonné,
+/// embouteillage fait. Ni journée ni refus : [key] est la journée de brassage,
+/// qui se suit par « Préparer le brassage ». Le propriétaire se vérifie avant.
+({JourneeDeroulee? journee, RefusJournee? refus}) journeeASuivre(
+  Brew brew,
+  String key,
+) {
+  final deroule = brew.deroule;
+  final illisible = messageDerouleIllisible(deroule);
+  if (illisible != null) {
+    return (
+      journee: null,
+      refus: (icon: Icons.error_outline, message: illisible),
+    );
+  }
+  final journee = deroule.journee(key);
+  if (journee == null) {
+    return (
+      journee: null,
+      refus: (icon: Icons.search_off, message: TextesJournee.inconnue),
+    );
+  }
+  if (journee.role == RoleJournee.brassage) return (journee: null, refus: null);
+  final RefusJournee? refus = switch (brew.status) {
+    BrewStatus.planned || BrewStatus.brewing => (
+      icon: Icons.schedule,
+      message: TextesJournee.apresBrassage,
+    ),
+    BrewStatus.done => (
+      icon: Icons.check_circle_outline,
+      message: TextesJournee.brassinTermine,
+    ),
+    BrewStatus.abandoned => (
+      icon: Icons.block,
+      message: TextesJournee.brassinAbandonne,
+    ),
+    _
+        when journee.role == RoleJournee.embouteillage &&
+            brew.bottledAt != null =>
+      (icon: Icons.check_circle_outline, message: TextesJournee.terminee),
+    _ => null,
+  };
+  return (journee: refus == null ? journee : null, refus: refus);
+}
+
+/// Écran du jour de brassage (`/brassins/:id/jour`), réservé au propriétaire,
+/// ou d'une journée 2 ou suivante du déroulé (`/brassins/:id/jour/:journee`,
+/// ADR-009).
 ///
 /// Marche sans réseau (CLAUDE.md, P2) : aucune transaction, aucune requête ;
 /// chaque début, fin et mesure est un événement. Le minuteur se recalcule depuis
 /// l'heure enregistrée : le `Timer` ne fait que redessiner.
 class BrewDayScreen extends ConsumerWidget {
-  const BrewDayScreen({super.key, required this.id, this.reprise = false});
+  const BrewDayScreen({
+    super.key,
+    required this.id,
+    this.reprise = false,
+    this.journee,
+  });
 
   final String id;
+
+  /// Clé de la journée suivie ; `null` (ou la clé de la journée de brassage)
+  /// pour le brassage.
+  final String? journee;
 
   /// Écran rouvert au lancement : annonce unique.
   final bool reprise;
@@ -78,14 +203,50 @@ class BrewDayScreen extends ConsumerWidget {
       async: ref.watch(brewsListProvider),
       id: id,
       offline: access?.offline ?? false,
-      textes: _textesJour,
+      textes: journee == null ? _textesJour : _textesJournee,
       onRetry: () => ref.invalidate(brewsListProvider),
       onBack: () => context.go(AppRoutes.brews),
       frame: (state) => Scaffold(
-        appBar: AppBar(title: const Text('Jour de brassage')),
+        appBar: AppBar(
+          title: Text(
+            journee == null ? 'Jour de brassage' : TextesJournee.titre,
+          ),
+        ),
         body: SafeArea(child: state),
       ),
       builder: (context, brew) {
+        final cle = journee;
+        if (cle != null) {
+          if (brew.ownerUid != access?.user.uid) {
+            return _Message(
+              icon: Icons.lock_outline,
+              message: TextesJournee.notOwner,
+              action: 'Voir le brassin',
+              path: AppRoutes.brew(id),
+              titre: TextesJournee.titre,
+            );
+          }
+          final suivie = journeeASuivre(brew, cle);
+          final refus = suivie.refus;
+          if (refus != null) {
+            return _Message(
+              icon: refus.icon,
+              message: refus.message,
+              action: 'Voir le brassin',
+              path: AppRoutes.brew(id),
+              titre: TextesJournee.titre,
+            );
+          }
+          final j = suivie.journee;
+          if (j != null) {
+            return _EcranJour(
+              key: ValueKey('$id/${j.key}'),
+              brew: brew,
+              reprise: false,
+              journee: j,
+            );
+          }
+        }
         if (brew.ownerUid != access?.user.uid) {
           return _Message(
             icon: Icons.lock_outline,
@@ -122,17 +283,19 @@ class _Message extends StatelessWidget {
     required this.message,
     required this.action,
     required this.path,
+    this.titre = 'Jour de brassage',
   });
 
   final IconData icon;
   final String message;
   final String action;
   final String path;
+  final String titre;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Jour de brassage')),
+      appBar: AppBar(title: Text(titre)),
       body: SafeArea(
         child: EtatVide(
           icon: icon,
@@ -148,10 +311,18 @@ class _Message extends StatelessWidget {
 }
 
 class _EcranJour extends ConsumerStatefulWidget {
-  const _EcranJour({super.key, required this.brew, required this.reprise});
+  const _EcranJour({
+    super.key,
+    required this.brew,
+    required this.reprise,
+    this.journee,
+  });
 
   final Brew brew;
   final bool reprise;
+
+  /// Journée 2 ou suivante suivie ; `null` pour le brassage.
+  final JourneeDeroulee? journee;
 
   @override
   ConsumerState<_EcranJour> createState() => _EcranJourState();
@@ -168,8 +339,20 @@ class _EcranJourState extends ConsumerState<_EcranJour>
   String? _etapeAnnoncee;
   bool _etapeConnue = false;
 
+  /// Journée « autre » vue terminée au dernier calcul ; `null` avant le premier.
+  bool? _termineeVue;
+
   Brew get _brew => widget.brew;
+  JourneeDeroulee? get _journee => widget.journee;
   DateTime _now() => ref.read(horlogeProvider)();
+
+  /// Étapes de la journée suivie.
+  List<BrewStepLine> get _lignes =>
+      (_journee ?? _brew.deroule.brassage)?.lignes ?? const [];
+
+  /// Saisies d'une journée 2 ou suivante : relevé de fermentation (ADR-009).
+  PhaseEvenement? get _phase =>
+      _journee == null ? null : PhaseEvenement.fermentation;
 
   @override
   void initState() {
@@ -203,6 +386,20 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     if (evalue is PlanObtenu) {
       _annoncerEtape(evalue.plan);
       _verifierAlerte(evalue.plan);
+      _annoncerFinJournee(evalue.plan);
+    }
+  }
+
+  /// « Journée « {nom} » terminée. » quand la dernière étape d'une journée
+  /// « autre » se termine pendant que l'écran est ouvert ; rien à l'ouverture.
+  void _annoncerFinJournee(PlanDuJour plan) {
+    final journee = _journee;
+    if (journee == null || journee.role != RoleJournee.autre) return;
+    final terminee = plan.termine;
+    final avant = _termineeVue;
+    _termineeVue = terminee;
+    if (avant == false && terminee) {
+      _annoncer(TextesJournee.journeeTerminee(journee.name.trim()));
     }
   }
 
@@ -253,6 +450,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     now: _now(),
     errors: ref.read(errorReportServiceProvider),
     reported: ref.read(planReportsProvider),
+    journee: _journee,
   );
 
   bool _premierAppui() {
@@ -394,6 +592,123 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     router.go(AppRoutes.brew(_brew.id));
   }
 
+  /// « Terminer la journée » (ADR-009) : `step_ended` pour l'étape en cours et
+  /// `step_skipped` pour chaque étape à venir, dans un `WriteBatch`, sans
+  /// changement de statut. Confirmation s'il reste des étapes à venir.
+  Future<void> _terminerJournee(PlanDuJour? plan) async {
+    final journee = _journee;
+    if (journee == null || plan == null) return;
+    final nom = journee.name.trim();
+    final avenir = [
+      for (final l in plan.lignes)
+        if (l.status == StepStatus.pending) l,
+    ];
+    if (avenir.isNotEmpty) {
+      final ok = await _confirmer(
+        TextesJournee.terminerTitre(nom),
+        TextesJournee.terminerMessage,
+        TextesJournee.terminer,
+        non: TextesJournee.continuer,
+      );
+      if (!ok || !mounted) return;
+    } else if (!_premierAppui()) {
+      return;
+    }
+    final running = plan.enCours;
+    final writes = <StepWrite>[
+      if (running != null)
+        (kind: StepEventKind.ended, stepKey: running.step.key),
+      for (final l in avenir)
+        (kind: StepEventKind.skipped, stepKey: l.step.key),
+    ];
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    if (writes.isNotEmpty) {
+      await _ecrire(writes, 'Fin de la journée « $nom »');
+    }
+    router.go(AppRoutes.brew(_brew.id));
+    messenger.showSnackBar(
+      SnackBar(content: Text(TextesJournee.journeeTerminee(nom))),
+    );
+  }
+
+  /// « Embouteiller » depuis la journée d'embouteillage (ADR-009) : confirmation
+  /// s'il reste des étapes, puis le formulaire d'embouteillage de la fiche. À
+  /// l'envoi, l'étape en cours se termine ([_envoyerEmbouteillage]).
+  Future<void> _embouteiller(PlanDuJour? plan) async {
+    final reste =
+        plan != null && (plan.enCours != null || plan.prochaine != null);
+    if (reste) {
+      final ok = await _confirmer(
+        TextesJournee.embouteillerTitre,
+        plan.enCours != null
+            ? TextesJournee.embouteillerEnCoursMessage
+            : TextesJournee.embouteillerMessage,
+        TextesJournee.embouteiller,
+        non: TextesJournee.continuer,
+      );
+      if (!ok || !mounted) return;
+    }
+    final events = _lire(ref.read(brewEventsProvider(_brew.id)).value);
+    unawaited(
+      // ticket: /brassins/:id/jour/:journee/fenetre/embouteillage
+      showFeuilleOuDialogue<void>(
+        context: context,
+        fermetureProtegee: true,
+        builder: (_) => FormulaireEmbouteillage(
+          brew: _brew,
+          modification: false,
+          fermentationMesuree: densiteDeFermentationMesuree(events),
+          now: _now,
+          onSubmit: (embouteillage, finalGravity) =>
+              unawaited(_envoyerEmbouteillage(embouteillage, finalGravity)),
+        ),
+      ),
+    );
+  }
+
+  /// Envoie l'embouteillage avec les prix, les frais et le coût figé ouverts à
+  /// « Préparer la journée » (P2, CB5), puis rend la main à la fiche, qui
+  /// annonce le résultat comme pour un embouteillage fait depuis elle. L'étape
+  /// en cours reçoit son `step_ended` à l'heure de l'envoi, sans attendre le
+  /// serveur : `enregistrerEmbouteillage` n'écrit aucune étape.
+  Future<void> _envoyerEmbouteillage(
+    Embouteillage embouteillage,
+    double? finalGravity,
+  ) async {
+    final envoyer = capturerEmbouteillage(ref, _brew);
+    final offline = ref.read(grantedAccessProvider)?.offline ?? false;
+    final annonces = ref.read(embouteillagesAAnnoncerProvider);
+    final router = GoRouter.of(context);
+    final brewId = _brew.id;
+    final enCours = switch (_evaluer()) {
+      PlanObtenu(:final plan) => plan.enCours,
+      PlanImpossible() => null,
+    };
+    if (enCours != null) {
+      await _ecrire([
+        (kind: StepEventKind.ended, stepKey: enCours.step.key),
+      ], 'Fin de « ${enCours.step.name} »');
+    }
+    final ownerName = await _tokenName;
+    final envoi = envoyer(
+      embouteillage: embouteillage,
+      finalGravity: finalGravity,
+      modification: false,
+      ownerName: ownerName,
+    );
+    // La fiche annonce le résultat à son retour. Si elle ne s'affiche pas, aucun
+    // refus ne reste sans écouteur : il est déjà rapporté par le dépôt de
+    // données (`brews.*`, `costs.freeze_rejected`), rien n'est rapporté de plus.
+    unawaited(envoi.embouteillage.catchError((Object _) {}));
+    final cout = envoi.cout;
+    if (cout is CoutFigeEnvoye) {
+      unawaited(cout.written.catchError((Object _) {}));
+    }
+    annonces[brewId] = (envoi: envoi, offline: offline);
+    router.go(AppRoutes.brew(brewId));
+  }
+
   void _ouvrirMesure({
     String? stepKey,
     MeasureType? type,
@@ -404,12 +719,14 @@ class _EcranJourState extends ConsumerState<_EcranJour>
   }) {
     final messenger = ScaffoldMessenger.of(context);
     unawaited(
-      // ticket: /brassins/:id/jour/fenetre/mesure
+      // ticket: /brassins/:id/jour/fenetre/mesure, /brassins/:id/jour/:journee/fenetre/mesure
       showFeuilleOuDialogue<void>(
         context: context,
         fermetureProtegee: true,
         builder: (_) => FormulaireMesure(
-          steps: _brew.deroule.brassage?.lignes ?? const [],
+          steps: _lignes,
+          releve: _journee != null,
+          bottledAt: _brew.bottledAt,
           initialStepKey: stepKey,
           initialType: type ?? _lastType ?? MeasureType.temperature,
           note: note,
@@ -425,6 +742,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
               messenger: messenger,
               brew: _brew,
               saisie: saisie,
+              phase: _phase,
               suivre: (written, libelle) => _suivre(
                 written,
                 libelle,
@@ -536,7 +854,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
       () => _ouvrirMesure(stepKey: ligne.step.key, type: _typeParDefaut(ligne)),
     );
     unawaited(
-      // ticket: /brassins/:id/jour/fenetre/etape
+      // ticket: /brassins/:id/jour/fenetre/etape, /brassins/:id/jour/:journee/fenetre/etape
       showModalBottomSheet<void>(
         context: context,
         useSafeArea: true,
@@ -671,7 +989,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
 
   void _voirRecette() {
     unawaited(
-      // ticket: /brassins/:id/jour/fenetre/recette
+      // ticket: /brassins/:id/jour/fenetre/recette, /brassins/:id/jour/:journee/fenetre/recette
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -700,6 +1018,15 @@ class _EcranJourState extends ConsumerState<_EcranJour>
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(brewEventsProvider(_brew.id));
     final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
+    final journee = _journee;
+    if (journee?.role == RoleJournee.embouteillage) {
+      // Lectures ouvertes à « Préparer la journée », gardées pour
+      // l'embouteillage (P2) : aucune lecture ne part à l'envoi.
+      final uid = _brew.ownerUid;
+      ref.watch(pricesProvider(uid));
+      ref.watch(feesProvider(uid));
+      ref.watch(brewCostProvider((uid: uid, brewId: _brew.id)));
+    }
     final list = eventsAsync.value;
     void retour() => context.go(AppRoutes.brew(_brew.id));
     if (list == null) {
@@ -730,6 +1057,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     };
     return _Jour(
       brew: _brew,
+      journee: journee,
       plan: plan,
       verrouRefuse: wakelock.failed,
       now: now,
@@ -751,6 +1079,8 @@ class _EcranJourState extends ConsumerState<_EcranJour>
       ),
       onSupprimerDoublon: _supprimerDoublon,
       onTerminerBrassage: () => unawaited(_terminerBrassage()),
+      onTerminerJournee: () => unawaited(_terminerJournee(plan)),
+      onEmbouteiller: () => unawaited(_embouteiller(plan)),
       onVoirRecette: _voirRecette,
       onRetour: retour,
     );
@@ -761,6 +1091,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
 class _Jour extends StatelessWidget {
   const _Jour({
     required this.brew,
+    required this.journee,
     required this.plan,
     required this.verrouRefuse,
     required this.now,
@@ -775,11 +1106,16 @@ class _Jour extends StatelessWidget {
     required this.onTapSaisie,
     required this.onSupprimerDoublon,
     required this.onTerminerBrassage,
+    required this.onTerminerJournee,
+    required this.onEmbouteiller,
     required this.onVoirRecette,
     required this.onRetour,
   });
 
   final Brew brew;
+
+  /// Journée 2 ou suivante ; `null` pour le brassage.
+  final JourneeDeroulee? journee;
   final PlanDuJour? plan;
   final ValueListenable<bool> verrouRefuse;
   final DateTime now;
@@ -794,6 +1130,8 @@ class _Jour extends StatelessWidget {
   final void Function(BrewEvent) onTapSaisie;
   final void Function(StepEvent) onSupprimerDoublon;
   final VoidCallback onTerminerBrassage;
+  final VoidCallback onTerminerJournee;
+  final VoidCallback onEmbouteiller;
   final VoidCallback onVoirRecette;
   final VoidCallback onRetour;
 
@@ -810,9 +1148,15 @@ class _Jour extends StatelessWidget {
 
     // Avec un processus, la barre nomme la journée (ADR-009) ; sans processus,
     // elle garde l'heure seule.
-    final journee = brew.process == null
+    final suivie = this.journee;
+    final journee = suivie != null
+        ? suivie.name.trim()
+        : brew.process == null
         ? null
         : brew.deroule.brassage?.name.trim();
+    final role = suivie?.role;
+    final reste =
+        plan != null && (plan!.enCours != null || plan!.prochaine != null);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -826,6 +1170,9 @@ class _Jour extends StatelessWidget {
         final etapeSize = !low && wide ? styles.etapeLarge : styles.etape;
         final panneau = _Panneau(
           plan: plan,
+          toutFait: role == RoleJournee.autre
+              ? TextesJournee.toutFait
+              : 'Toutes les étapes sont faites.',
           illisible: messageDerouleIllisible(brew.deroule),
           now: now,
           timerSize: timerSize,
@@ -845,10 +1192,14 @@ class _Jour extends StatelessWidget {
               );
         final barre = _BarreActions(
           plan: plan,
+          role: role,
           onMesure: onMesure,
           onTerminerEtape: onTerminerEtape,
           onCommencer: onCommencer,
           onTerminerBrassage: onTerminerBrassage,
+          onTerminerJournee: onTerminerJournee,
+          onEmbouteiller: onEmbouteiller,
+          onRetour: onRetour,
           height: low ? 64 : 72,
         );
         final Widget body;
@@ -937,7 +1288,7 @@ class _Jour extends StatelessWidget {
                   detailAttente: detail,
                   web: kIsWeb,
                 ),
-                // ticket: /brassins/:id/jour/menu/actions
+                // ticket: /brassins/:id/jour/menu/actions, /brassins/:id/jour/:journee/menu/actions
                 PopupMenuButton<VoidCallback>(
                   tooltip: 'Plus d\'actions',
                   onSelected: (action) => action(),
@@ -950,10 +1301,21 @@ class _Jour extends StatelessWidget {
                       value: onVoirRecette,
                       child: const Text('Voir la recette'),
                     ),
-                    PopupMenuItem(
-                      value: onTerminerBrassage,
-                      child: const Text('Terminer le brassage'),
-                    ),
+                    if (role == null)
+                      PopupMenuItem(
+                        value: onTerminerBrassage,
+                        child: const Text('Terminer le brassage'),
+                      )
+                    else if (role == RoleJournee.embouteillage)
+                      PopupMenuItem(
+                        value: onEmbouteiller,
+                        child: const Text(TextesJournee.embouteiller),
+                      )
+                    else if (reste)
+                      PopupMenuItem(
+                        value: onTerminerJournee,
+                        child: const Text(TextesJournee.terminer),
+                      ),
                   ],
                 ),
               ],
@@ -1027,6 +1389,7 @@ class _Jour extends StatelessWidget {
 class _Panneau extends StatelessWidget {
   const _Panneau({
     required this.plan,
+    required this.toutFait,
     required this.illisible,
     required this.now,
     required this.timerSize,
@@ -1035,6 +1398,9 @@ class _Panneau extends StatelessWidget {
   });
 
   final PlanDuJour? plan;
+
+  /// Texte affiché quand toutes les étapes sont faites.
+  final String toutFait;
 
   /// Texte d'un déroulé illisible ([messageDerouleIllisible]), ou `null`.
   final String? illisible;
@@ -1084,9 +1450,7 @@ class _Panneau extends StatelessWidget {
         ensuiteSize,
       );
     }
-    if (p.termine) {
-      return _texte(context, 'Toutes les étapes sont faites.', ensuiteSize);
-    }
+    if (p.termine) return _texte(context, toutFait, ensuiteSize);
     final finPrevue = p.finPrevue;
     final ligneFin = finPrevue == null
         ? null
@@ -1214,18 +1578,28 @@ class _Panneau extends StatelessWidget {
 class _BarreActions extends StatelessWidget {
   const _BarreActions({
     required this.plan,
+    required this.role,
     required this.onMesure,
     required this.onTerminerEtape,
     required this.onCommencer,
     required this.onTerminerBrassage,
+    required this.onTerminerJournee,
+    required this.onEmbouteiller,
+    required this.onRetour,
     required this.height,
   });
 
   final PlanDuJour? plan;
+
+  /// Rôle de la journée 2 ou suivante ; `null` pour le brassage.
+  final RoleJournee? role;
   final void Function(LigneJour?) onMesure;
   final void Function(LigneJour) onTerminerEtape;
   final void Function(LigneJour, PlanDuJour) onCommencer;
   final VoidCallback onTerminerBrassage;
+  final VoidCallback onTerminerJournee;
+  final VoidCallback onEmbouteiller;
+  final VoidCallback onRetour;
   final double height;
 
   @override
@@ -1236,15 +1610,26 @@ class _BarreActions extends StatelessWidget {
     final next = p?.prochaine;
     final String? principal;
     final VoidCallback? action;
-    if (running != null) {
+    if (running != null && role == RoleJournee.autre && next == null) {
+      // Dernière étape commencée d'une journée « autre » : la terminer termine
+      // la journée (ADR-009).
+      principal = TextesJournee.terminer;
+      action = onTerminerJournee;
+    } else if (running != null) {
       principal = 'Terminer l\'étape';
       action = () => onTerminerEtape(running);
     } else if (next != null) {
       principal = next.step.durationMin == 0 ? 'Fait' : 'Commencer l\'étape';
       action = () => onCommencer(next, p!);
-    } else if (p != null && p.termine) {
-      principal = 'Terminer le brassage';
-      action = onTerminerBrassage;
+    } else if (p != null && (p.termine || role == RoleJournee.embouteillage)) {
+      (principal, action) = switch (role) {
+        null => ('Terminer le brassage', onTerminerBrassage),
+        RoleJournee.embouteillage => (
+          TextesJournee.embouteiller,
+          onEmbouteiller,
+        ),
+        _ => (TextesJournee.revenir, onRetour),
+      };
     } else {
       principal = null;
       action = null;

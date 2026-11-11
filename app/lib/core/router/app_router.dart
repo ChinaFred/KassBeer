@@ -162,12 +162,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             BrewStepsEditorScreen(id: state.pathParameters['id']!),
       ),
-      // Écran du jour : plein écran, hors de la coquille.
+      // Écran du jour : plein écran, hors de la coquille. Journée de brassage,
+      // puis journées suivantes du déroulé (ADR-009).
       GoRoute(
         path: '${AppRoutes.brews}/:id/jour',
         builder: (_, state) => BrewDayScreen(
           id: state.pathParameters['id']!,
           reprise: state.extra == kRepriseBrassage,
+        ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.brews}/:id/jour/:journee',
+        builder: (_, state) => BrewDayScreen(
+          id: state.pathParameters['id']!,
+          journee: state.pathParameters['journee'],
         ),
       ),
       // « Mes prix » : page pleine avec retour, hors de la coquille.
@@ -316,6 +324,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                     AppRoutes.brew(state.pathParameters['id']!),
                 builder: (_, state) =>
                     PrepareBrewScreen(id: state.pathParameters['id']!),
+              ),
+              PageDeCoquilleDynamique(
+                path: ':id/jour/:journee/preparer',
+                titre: 'Préparer la journée',
+                retourDepuis: (state) =>
+                    AppRoutes.brew(state.pathParameters['id']!),
+                builder: (_, state) => PrepareBrewScreen(
+                  id: state.pathParameters['id']!,
+                  journee: state.pathParameters['journee'],
+                ),
               ),
             ],
           ),

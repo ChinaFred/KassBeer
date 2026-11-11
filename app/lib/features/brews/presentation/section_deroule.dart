@@ -1,9 +1,10 @@
-import 'package:brewing/brewing.dart' show maxProcessOffsetDays;
+import 'package:brewing/brewing.dart' show StepStatus, maxProcessOffsetDays;
 import 'package:flutter/material.dart';
 
 import '../../../core/presentation/champ_nombre.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
+import '../../brew_day/domain/plan_du_jour.dart';
 import '../../processes/presentation/libelles_processus.dart';
 import '../domain/brew.dart';
 import '../domain/deroule.dart';
@@ -32,6 +33,43 @@ abstract final class TextesDeroule {
       'réseau.';
   static String prevuA(String journee, int ecart) =>
       '« $journee » prévu à J+$ecart.';
+  static const passer = 'Passer la journée';
+  static const garder = 'Garder la journée';
+  static String passerTitre(String journee) =>
+      'Passer la journée « $journee » ?';
+  static const passerMessage =
+      'Ses étapes non commencées seront marquées sautées.';
+  static String passee(String journee) => 'Journée « $journee » passée.';
+  static String passeeHorsLigne(String journee) =>
+      'Journée « $journee » passée sur l\'appareil. Elle partira au retour du '
+      'réseau.';
+}
+
+/// Résumé d'une journée terminée : « Terminée · 3 faites, 1 sautée », ou
+/// « Terminée » seul quand [plan] manque ou que la journée n'a pas d'étape. Une
+/// étape ni faite ni sautée (embouteillage fait avant elle) compte « non
+/// faite ».
+String resumeJourneeTerminee(PlanDuJour? plan) {
+  var faites = 0;
+  var sautees = 0;
+  var autres = 0;
+  for (final l in plan?.lignes ?? const <LigneJour>[]) {
+    switch (l.status) {
+      case StepStatus.done:
+        faites++;
+      case StepStatus.skipped:
+        sautees++;
+      case StepStatus.running || StepStatus.pending || StepStatus.notDone:
+        autres++;
+    }
+  }
+  String compte(int n, String mot) => '$n $mot${n > 1 ? 's' : ''}';
+  final parts = [
+    if (faites > 0) compte(faites, 'faite'),
+    if (sautees > 0) compte(sautees, 'sautée'),
+    if (autres > 0) compte(autres, 'non faite'),
+  ];
+  return parts.isEmpty ? 'Terminée' : 'Terminée · ${parts.join(', ')}';
 }
 
 /// Résumé du pli « Déroulé » après le brassage : « 3 journées », ou le nombre
@@ -46,8 +84,9 @@ String? resumeDeroule(Deroule deroule) {
 
 /// Contenu de la section : en-tête du processus, puis chaque journée. La
 /// journée de brassage montre [chronologieBrassage] (heures, états, mesures) ;
-/// les suivantes, leurs étapes repliées. Un déroulé illisible ne montre que
-/// [chronologieBrassage], qui affiche la panne.
+/// les suivantes, repliées, leur chronologie une fois commencées
+/// ([chronologieJournee], lot D4), sinon leurs étapes. Un déroulé illisible ne
+/// montre que [chronologieBrassage], qui affiche la panne.
 class SectionDeroule extends StatelessWidget {
   const SectionDeroule({
     super.key,
@@ -59,11 +98,27 @@ class SectionDeroule extends StatelessWidget {
     this.onChangerDate,
     this.onRetablirDate,
     this.retablissables = const {},
+    this.chronologieJournee,
+    this.resumeJournee,
+    this.onPasser,
+    this.passables = const {},
   });
 
   final Brew brew;
   final bool mine;
   final Widget chronologieBrassage;
+
+  /// Chronologie d'une journée après le brassage déjà commencée, ou `null` pour
+  /// lister ses étapes.
+  final Widget? Function(JourneeDeroulee journee)? chronologieJournee;
+
+  /// Résumé d'une journée après le brassage, ou `null` pour son résumé prévu
+  /// (« 4 étapes · 25 min ») : une journée terminée (« Terminée · … »).
+  final String? Function(JourneeDeroulee journee)? resumeJournee;
+
+  /// « Passer la journée » ; offert pour les clés de [passables] seulement.
+  final ValueChanged<JourneeDeroulee>? onPasser;
+  final Set<String> passables;
 
   /// Le modèle d'origine n'existe plus sur le serveur.
   final bool modeleSupprime;
@@ -134,6 +189,9 @@ class SectionDeroule extends StatelessWidget {
                 brewId: brew.id,
                 journee: j,
                 depart: depart,
+                chronologie: chronologieJournee?.call(j),
+                resume: resumeJournee?.call(j),
+                onPasser: passables.contains(j.key) ? onPasser : null,
                 onChangerDate: onChangerDate,
                 onRetablirDate: retablissables.contains(j.key)
                     ? onRetablirDate
@@ -150,6 +208,9 @@ class _Journee extends StatelessWidget {
     required this.brewId,
     required this.journee,
     required this.depart,
+    required this.chronologie,
+    required this.resume,
+    required this.onPasser,
     required this.onChangerDate,
     required this.onRetablirDate,
   });
@@ -157,6 +218,13 @@ class _Journee extends StatelessWidget {
   final String brewId;
   final JourneeDeroulee journee;
   final DateTime? depart;
+
+  /// Chronologie de la journée commencée ; `null` : ses étapes « nom · durée ».
+  final Widget? chronologie;
+
+  /// Résumé de la journée terminée ; `null` : son résumé prévu.
+  final String? resume;
+  final ValueChanged<JourneeDeroulee>? onPasser;
   final ValueChanged<JourneeDeroulee>? onChangerDate;
   final ValueChanged<JourneeDeroulee>? onRetablirDate;
 
@@ -164,6 +232,7 @@ class _Journee extends StatelessWidget {
   Widget build(BuildContext context) {
     final changer = onChangerDate;
     final retablir = onRetablirDate;
+    final passer = onPasser;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -171,9 +240,11 @@ class _Journee extends StatelessWidget {
           child: SectionRepliable(
             titre: titreJournee(journee, depart),
             storageKey: 'journee-$brewId-${journee.key}',
-            resume: resumeJourneeDeroulee(journee),
+            resume: resume ?? resumeJourneeDeroulee(journee),
             children: [
-              if (journee.etapes.isEmpty)
+              if (chronologie != null)
+                chronologie!
+              else if (journee.etapes.isEmpty)
                 const TexteAbsent('Aucune étape.')
               else
                 for (final l in journee.lignes)
@@ -184,18 +255,24 @@ class _Journee extends StatelessWidget {
             ],
           ),
         ),
-        if (changer != null)
+        if (changer != null || passer != null)
           // ticket: /brassins/:id/menu/journee
           PopupMenuButton<VoidCallback>(
             icon: const Icon(Icons.more_vert),
             tooltip: 'Actions de la journée ${journee.name.trim()}',
             onSelected: (action) => action(),
             itemBuilder: (_) => [
-              PopupMenuItem(
-                value: () => changer(journee),
-                child: const Text(TextesDeroule.changerDate),
-              ),
-              if (retablir != null)
+              if (changer != null)
+                PopupMenuItem(
+                  value: () => changer(journee),
+                  child: const Text(TextesDeroule.changerDate),
+                ),
+              if (passer != null)
+                PopupMenuItem(
+                  value: () => passer(journee),
+                  child: const Text(TextesDeroule.passer),
+                ),
+              if (changer != null && retablir != null)
                 PopupMenuItem(
                   value: () => retablir(journee),
                   child: const Text(TextesDeroule.retablirDate),

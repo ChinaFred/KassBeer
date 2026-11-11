@@ -1,7 +1,12 @@
 import 'dart:async';
 
 import 'package:brewing/brewing.dart'
-    show fermentationDayNumber, maxProcessOffsetDays, processSessionDate;
+    show
+        StepEventKind,
+        StepStatus,
+        fermentationDayNumber,
+        maxProcessOffsetDays,
+        processSessionDate;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +24,9 @@ import '../../../core/presentation/page_document.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
+import '../../brew_day/domain/plan_du_jour.dart';
+import '../../brew_day/presentation/brew_day_screen.dart'
+    show TextesJournee, journeeASuivre;
 import '../../brew_day/presentation/chronologie_jour.dart';
 import '../../brew_day/presentation/mesure_form.dart';
 import '../../costs/data/figeage_embouteillage.dart';
@@ -87,6 +95,9 @@ class BrewDetailScreen extends ConsumerStatefulWidget {
       'Son processus n\'a pas pu être lu sur cet appareil : le nouveau brassin '
       'n\'aura que la chronologie de la recette. Pour le garder, annulez et '
       'réessayez avec le réseau.';
+  static const embouteillerSansJournee = 'Embouteiller sans suivre la journée';
+  static const prevueAujourdhui = 'Prévue aujourd\'hui';
+  static String prevueLe(DateTime date) => 'Prévue le ${formatJourMois(date)}';
   static const recreatedWithoutProcess =
       'Brassin recréé depuis la recette, sans son processus. Choisissez de '
       'nouveau le processus sur la fiche.';
@@ -106,6 +117,10 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
 
   /// Vrai pendant une action : un second appui est ignoré.
   bool _actionEnCours = false;
+
+  /// Vrai entre la programmation et l'affichage de l'annonce d'un embouteillage
+  /// fait depuis la journée : un `build` de plus n'en programme pas une seconde.
+  bool _annonceProgrammee = false;
 
   /// Défilement de la fiche, titre et focus du bloc Coût : « Voir le coût ».
   final _scroll = ScrollController();
@@ -539,34 +554,32 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required double? finalGravity,
     required bool modification,
   }) async {
-    final brews = ref.read(brewsRepositoryProvider);
-    final costs = ref.read(costsRepositoryProvider);
-    final errors = ref.read(errorReportServiceProvider);
-    final reported = ref.read(costReportsProvider);
-    final horloge = ref.read(horlogeProvider);
-    final uid = brew.ownerUid;
-    final prices = ref.read(pricesProvider(uid)).value;
-    final fees = ref.read(feesProvider(uid)).value;
-    final coutLu = ref
-        .read(brewCostProvider((uid: uid, brewId: brew.id)))
-        .value;
+    final envoyer = capturerEmbouteillage(ref, brew);
     final offline = _offline;
     final ownerName = await _tokenName!;
-    final envoi = enregistrerEmbouteillage(
-      brews: brews,
-      costs: costs,
-      errors: errors,
-      reported: reported,
+    _annoncerEmbouteillage(
+      messenger: messenger,
       brew: brew,
-      embouteillage: embouteillage,
-      finalGravity: finalGravity,
+      envoi: envoyer(
+        embouteillage: embouteillage,
+        finalGravity: finalGravity,
+        modification: modification,
+        ownerName: ownerName,
+      ),
+      offline: offline,
       modification: modification,
-      ownerName: ownerName,
-      prices: prices,
-      fees: fees,
-      coutLu: coutLu,
-      now: horloge(),
     );
+  }
+
+  /// Annonces d'un embouteillage envoyé depuis la fiche, ou depuis la journée
+  /// d'embouteillage à son retour sur la fiche (ADR-009). Aucun montant (SE7).
+  void _annoncerEmbouteillage({
+    required ScaffoldMessengerState messenger,
+    required Brew brew,
+    required EmbouteillageEnvoye envoi,
+    required bool offline,
+    required bool modification,
+  }) {
     final refus = 'L\'enregistrement de « ${brew.name} » a échoué.';
     final cout = envoi.cout;
     if (cout is FigeageNonDemande) {
@@ -638,6 +651,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     final mine = brew.ownerUid == readerUid;
     if (mine) {
       _tokenName ??= ref.read(authRepositoryProvider).currentTokenName();
+      _annoncerEmbouteillageDeLaJournee(brew);
     }
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
@@ -655,13 +669,31 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       if (calculs case CalculsObtenus(:final calculation))
         for (final h in calculation.hopBitterness) h.hop.index: h.ibu,
     };
+    final now = ref.read(horlogeProvider)();
     final plan = evaluerPlan(
       brew: brew,
       events: [...?events?.valides],
-      now: ref.read(horlogeProvider)(),
+      now: now,
       errors: ref.read(errorReportServiceProvider),
       reported: ref.read(planReportsProvider),
     );
+    // Journées après le brassage, chacune avec son plan (ADR-009, P37).
+    final plansJournees = <String, PlanEvalue>{
+      if (events != null)
+        for (final j in brew.deroule.journees.skip(1))
+          j.key: evaluerPlan(
+            brew: brew,
+            events: [...events.valides],
+            now: now,
+            errors: ref.read(errorReportServiceProvider),
+            reported: ref.read(planReportsProvider),
+            journee: j,
+          ),
+    };
+    final prochaine = mine && events != null
+        ? _prochaineJournee(brew, plansJournees)
+        : null;
+    final avecEmbouteillage = brew.deroule.embouteillage != null;
 
     final recipesList = ref.watch(recipesListProvider).value;
     final source = brew.recipeId == null
@@ -720,6 +752,18 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               onPressed: () => context.go(AppRoutes.brewDay(brew.id)),
               child: const Text('Reprendre le brassage'),
             ),
+            BrewStatus.conditioning when prochaine != null => OutlinedButton(
+              style: outlinedStyle,
+              onPressed: () => unawaited(
+                _changerStatut(
+                  brew: brew,
+                  statut: BrewStatus.done,
+                  annonce: 'Brassin terminé.',
+                  annulation: BrewStatus.conditioning,
+                ),
+              ),
+              child: const Text('Marquer comme terminé'),
+            ),
             BrewStatus.conditioning => FilledButton(
               style: primaryStyle,
               onPressed: () => unawaited(
@@ -748,23 +792,36 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     final fermentationMine = mine && brew.status == BrewStatus.fermenting;
     void ajouterReleve() => ouvrirAjoutReleve(context, ref, brew);
     void embouteiller() => _embouteiller(brew, modification: false);
+    // Avec une journée d'embouteillage, « Embouteiller » passe dans le menu ⋮
+    // (« Embouteiller sans suivre la journée ») ; avec une journée à suivre,
+    // son bouton est l'action principale (ADR-009).
+    final releveSecondaire = prochaine != null;
+    final Widget boutonReleve = releveSecondaire
+        ? OutlinedButton(
+            style: outlinedStyle,
+            onPressed: ajouterReleve,
+            child: const Text('Ajouter un relevé'),
+          )
+        : FilledButton(
+            style: primaryStyle,
+            onPressed: ajouterReleve,
+            child: const Text('Ajouter un relevé'),
+          );
     final Widget? actionsFermentation = !fermentationMine
         ? null
         : compact
-        ? OutlinedButton(
-            style: outlinedStyle,
-            onPressed: embouteiller,
-            child: const Text('Embouteiller'),
-          )
+        ? (avecEmbouteillage
+              ? null
+              : OutlinedButton(
+                  style: outlinedStyle,
+                  onPressed: embouteiller,
+                  child: const Text('Embouteiller'),
+                ))
+        : avecEmbouteillage
+        ? boutonReleve
         : Row(
             children: [
-              Expanded(
-                child: FilledButton(
-                  style: primaryStyle,
-                  onPressed: ajouterReleve,
-                  child: const Text('Ajouter un relevé'),
-                ),
-              ),
+              Expanded(child: boutonReleve),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
@@ -845,6 +902,10 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             ),
         ],
         const SizedBox(height: 16),
+        if (prochaine != null) ...[
+          _boutonJournee(brew, prochaine, plansJournees[prochaine.key], now),
+          const SizedBox(height: 8),
+        ],
         ?principal,
         if (actionsFermentation != null) ...[
           const SizedBox(height: 8),
@@ -891,6 +952,26 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           deroule: _deroule(
             brew: brew,
             mine: mine,
+            plans: plansJournees,
+            chronologieJournee: (j) => switch (plansJournees[j.key]) {
+              PlanObtenu(:final plan) when plan.commencee => ChronologieJour(
+                plan: plan,
+                sansEtape: false,
+                onTapSaisie: mine
+                    ? (e) => ouvrirCorrection(
+                        context: context,
+                        ref: ref,
+                        brew: brew,
+                        event: e,
+                        suivre: _suivre,
+                      )
+                    : null,
+              ),
+              PlanImpossible() => const TexteAbsent(
+                kCalculChronologieImpossible,
+              ),
+              _ => null,
+            },
             chronologie: _chronologie(
               brew: brew,
               eventsAsync: eventsAsync,
@@ -936,8 +1017,32 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
   Widget _deroule({
     required Brew brew,
     required bool mine,
+    required Map<String, PlanEvalue> plans,
     required Widget chronologie,
+    required Widget? Function(JourneeDeroulee) chronologieJournee,
   }) {
+    PlanDuJour? planDe(JourneeDeroulee j) => switch (plans[j.key]) {
+      PlanObtenu(:final plan) => plan,
+      _ => null,
+    };
+    bool terminee(JourneeDeroulee j) =>
+        journeeTerminee(brew: brew, journee: j, plan: planDe(j));
+    final suivi =
+        mine &&
+        (brew.status == BrewStatus.fermenting ||
+            brew.status == BrewStatus.conditioning);
+    // « Passer la journée » : journée « autre » non terminée, sans étape en
+    // cours (elle se termine alors par l'écran de la journée). L'embouteillage
+    // a « Embouteiller sans suivre la journée » (ADR-009).
+    final passables = <String>{
+      if (suivi)
+        for (final j in brew.deroule.journees.skip(1))
+          if (j.role == RoleJournee.autre &&
+              planDe(j) != null &&
+              planDe(j)!.enCours == null &&
+              !terminee(j))
+            j.key,
+    };
     final templateId = brew.process?.templateId;
     final modeles = templateId == null
         ? null
@@ -951,6 +1056,12 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       brew: brew,
       mine: mine,
       chronologieBrassage: chronologie,
+      chronologieJournee: chronologieJournee,
+      resumeJournee: (j) => plans.containsKey(j.key) && terminee(j)
+          ? resumeJourneeTerminee(planDe(j))
+          : null,
+      passables: passables,
+      onPasser: (j) => unawaited(_passerJournee(brew, j, planDe(j))),
       modeleSupprime:
           templateId != null &&
           modeles?.chercher(templateId) is DocumentAbsent<ModeleProcessus>,
@@ -967,6 +1078,149 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             }
           : null,
     );
+  }
+
+  /// « Passer la journée » (ADR-009) : `step_skipped` pour chaque étape non
+  /// commencée, dans un `WriteBatch` (`writeSteps`), sans statut ni attente du
+  /// serveur.
+  Future<void> _passerJournee(
+    Brew brew,
+    JourneeDeroulee journee,
+    PlanDuJour? plan,
+  ) async {
+    if (plan == null) return;
+    final nom = journee.name.trim();
+    // ticket: aucun (confirmation)
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(TextesDeroule.passerTitre(nom)),
+        content: const Text(TextesDeroule.passerMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(TextesDeroule.garder),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(TextesDeroule.passer),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final writes = <StepWrite>[
+      for (final l in plan.lignes)
+        if (l.record?.startedAt == null && l.status != StepStatus.skipped)
+          (kind: StepEventKind.skipped, stepKey: l.step.key),
+    ];
+    if (writes.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final offline = _offline;
+    suivreEcriture(
+      messenger: messenger,
+      written: ref
+          .read(brewsRepositoryProvider)
+          .writeSteps(
+            brewId: brew.id,
+            ownerUid: brew.ownerUid,
+            writes: writes,
+            at: ref.read(horlogeProvider)(),
+          ),
+      succes: offline
+          ? TextesDeroule.passeeHorsLigne(nom)
+          : TextesDeroule.passee(nom),
+      refus: 'L\'enregistrement de « ${brew.name} » a échoué.',
+    );
+  }
+
+  /// Première journée après le brassage pas encore terminée, à suivre par le
+  /// propriétaire d'un brassin en fermentation ou en conditionnement
+  /// (ADR-009) ; `null` sinon.
+  JourneeDeroulee? _prochaineJournee(Brew brew, Map<String, PlanEvalue> plans) {
+    if (brew.status != BrewStatus.fermenting &&
+        brew.status != BrewStatus.conditioning) {
+      return null;
+    }
+    for (final j in brew.deroule.journees.skip(1)) {
+      final plan = switch (plans[j.key]) {
+        PlanObtenu(:final plan) => plan,
+        _ => null,
+      };
+      if (journeeTerminee(brew: brew, journee: j, plan: plan)) continue;
+      return journeeASuivre(brew, j.key).journee;
+    }
+    return null;
+  }
+
+  /// « Préparer la journée « {nom} » », ou « Reprendre la journée « {nom} » »
+  /// une fois commencée, sous « Prévue le … » ou « Prévue aujourd'hui ».
+  Widget _boutonJournee(
+    Brew brew,
+    JourneeDeroulee journee,
+    PlanEvalue? evalue,
+    DateTime now,
+  ) {
+    final theme = Theme.of(context);
+    final nom = journee.name.trim();
+    final date = journee.date(brew.departDeroule);
+    final commencee = switch (evalue) {
+      PlanObtenu(:final plan) => plan.commencee,
+      _ => false,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (date != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              memeJour(date, now)
+                  ? BrewDetailScreen.prevueAujourdhui
+                  : BrewDetailScreen.prevueLe(date),
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+        FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+          onPressed: () => context.go(
+            commencee
+                ? AppRoutes.journee(brew.id, journee.key)
+                : AppRoutes.prepareJournee(brew.id, journee.key),
+          ),
+          child: Text(
+            commencee
+                ? TextesJournee.reprendreNom(nom)
+                : TextesJournee.preparer(nom),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Annonce, au retour sur la fiche, un embouteillage envoyé depuis la journée
+  /// d'embouteillage (ADR-009) : mêmes annonces et même « Voir le coût » que
+  /// depuis la fiche. Une seule fois : la mémoire se vide après l'affichage,
+  /// jamais pendant le `build`.
+  void _annoncerEmbouteillageDeLaJournee(Brew brew) {
+    final annonces = ref.read(embouteillagesAAnnoncerProvider);
+    if (_annonceProgrammee || !annonces.containsKey(brew.id)) return;
+    _annonceProgrammee = true;
+    final messenger = ScaffoldMessenger.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _annonceProgrammee = false;
+      if (!mounted) return;
+      final annonce = annonces.remove(brew.id);
+      if (annonce == null) return;
+      _annoncerEmbouteillage(
+        messenger: messenger,
+        brew: brew,
+        envoi: annonce.envoi,
+        offline: annonce.offline,
+        modification: false,
+      );
+    });
   }
 
   /// Chronologie de la journée de brassage, lecture ou panne des saisies.
@@ -1186,6 +1440,12 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           PopupMenuItem(
             value: () => unawaited(_revenir(brew, retour)),
             child: Text('Revenir à ${retour.label}'),
+          ),
+        if (brew.status == BrewStatus.fermenting &&
+            brew.deroule.embouteillage != null)
+          PopupMenuItem(
+            value: () => _embouteiller(brew, modification: false),
+            child: const Text(BrewDetailScreen.embouteillerSansJournee),
           ),
         if (peutAbandonner)
           PopupMenuItem(

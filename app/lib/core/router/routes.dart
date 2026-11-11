@@ -60,6 +60,14 @@ abstract final class AppRoutes {
   static String prepareBrew(String id) => '$brews/$id/preparer';
   static String brewDay(String id) => '$brews/$id/jour';
 
+  /// Journée 2 et suivantes d'un déroulé (ADR-009) : préparation dans la
+  /// coquille, écran de la journée plein écran. `/brassins/:id/jour` reste la
+  /// journée de brassage.
+  static String prepareJournee(String id, String journee) =>
+      '${brewDay(id)}/${Uri.encodeComponent(journee)}/preparer';
+  static String journee(String id, String journee) =>
+      '${brewDay(id)}/${Uri.encodeComponent(journee)}';
+
   /// Tickets du membre (ADR-006) : pages pleines hors de la coquille, ouvertes
   /// par `push` depuis le menu du compte.
   static const tickets = '/tickets';

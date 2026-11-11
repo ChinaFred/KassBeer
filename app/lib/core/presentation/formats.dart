@@ -96,6 +96,10 @@ String formatJours(num minutes) {
 
 String _deuxChiffres(int value) => value.toString().padLeft(2, '0');
 
+/// Vrai si [a] et [b] tombent le même jour calendaire local.
+bool memeJour(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
 /// Heure sur 24 h : « 12:42 ».
 String formatHeure(DateTime when) =>
     '${_deuxChiffres(when.hour)}:${_deuxChiffres(when.minute)}';

@@ -427,6 +427,7 @@ class FakeBrewsRepository implements BrewsRepository {
         'value': input.value,
         'step': input.stepKey,
         'at': input.measuredAt,
+        'phase': input.phase?.storedValue,
       }),
     );
     return (id: id, written: serverAnswer());

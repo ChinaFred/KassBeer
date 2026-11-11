@@ -1103,7 +1103,15 @@ d'étapes d'un déroulé d'une seule journée), le pli « Recette et calculs pr�
 s'il en existe un. Pour le propriétaire seul, le bloc « Coût » (voir « Coût ») suit
 l'Embouteillage quand il existe (Terminé : avant les Notes), sinon Prévu et mesuré ; prévu et en
 cours, il suit Général. Un autre membre, administrateur compris, ne voit ni ce bloc ni son titre. Propriétaire : « Préparer le brassage » (prévu), « Reprendre le brassage » (en
-cours), « Marquer comme terminé » (en conditionnement), « Reprendre ce brassin » (abandonné). À
+cours), « Marquer comme terminé » (en conditionnement), « Reprendre ce brassin » (abandonné).
+En fermentation et en conditionnement, un brassin dont une journée après le brassage n'est pas
+terminée affiche au-dessus « Prévue le mer. 25 nov. » ou « Prévue aujourd'hui », puis le bouton
+« Préparer la journée « Houblonnage à cru » » (« Reprendre la journée « Houblonnage à cru » »
+une fois commencée, qui ouvre l'écran de la journée) : la première journée non terminée, dans
+l'ordre du déroulé, l'embouteillage d'un brassin embouteillé compris comme terminé. « Marquer
+comme terminé » et « Ajouter un relevé » passent alors en bouton secondaire. Avec une journée
+d'embouteillage, « Embouteiller » quitte la fiche et passe dans le menu ⋮ : « Embouteiller sans
+suivre la journée » (en fermentation), qui ouvre le même formulaire. À
 partir de En cours, le menu ⋮ (« Plus d'actions ») porte « Modifier » (nom, date prévue, notes ;
 quitter avec une modification : « Les modifications de ce brassin ne seront pas enregistrées. »),
 « Revenir à {statut} », « Abandonner ce brassin » et « Supprimer » selon le statut ; un brassin
@@ -1150,9 +1158,19 @@ lit encore ; annonce « « Houblonnage à cru » prévu le ven. 27 nov. », hors
 du brassin déplace toutes les journées. Après le départ : aucun bouton, « Le déroulé est figé
 depuis le début du brassage. ». Autre membre : lecture seule. Déroulé illisible : « Déroulé
 illisible. Mettez l'application à jour, ou prévenez l'administrateur. », rapporté, sans repli
-sur la chronologie de la recette. Reporté à la livraison suivante : « Préparer la journée » et
-le suivi des journées après le brassage ; d'ici là, « Embouteiller » et « Ajouter un relevé »
-restent sur la fiche.
+sur la chronologie de la recette. Une journée après le brassage commencée (une étape commencée
+ou sautée, ou une mesure saisie sur l'une de ses étapes) montre dans son pli sa chronologie :
+heures, états et mesures sous leur étape, comme la journée de brassage ; un appui sur une mesure
+ouvre sa correction (propriétaire). Les relevés « Sans étape » restent dans le relevé de
+fermentation. Une journée terminée a pour résumé « Terminée · 3 faites, 1 sautée » (comptes
+réels : faites, sautées, non faites), ou « Terminée » seul sans étape à compter. Pour le
+propriétaire d'un brassin En fermentation ou En conditionnement, le menu ⋮ d'une journée après
+le brassage non terminée, sans étape en cours, porte « Passer la journée » : « Passer la journée
+« Houblonnage à cru » ? » / « Ses étapes non commencées seront marquées sautées. », « Garder la journée » /
+« Passer la journée ». Chaque étape non commencée est marquée sautée, sans changement de statut ;
+annonce « Journée « Houblonnage à cru » passée. », hors ligne « Journée « Houblonnage à cru »
+passée sur l'appareil. Elle partira au retour du réseau. ». La journée d'embouteillage ne le
+propose pas : « Embouteiller sans suivre la journée » en tient lieu.
 
 **Supprimer** (propriétaire). « Supprimer « {nom} » ? » / « Le brassin, ses étapes et ses mesures
 disparaissent pour tout le groupe. ». Le coût figé du brassin est supprimé avec lui. Sans saisie : immédiat, même hors ligne. Avec saisies :
@@ -1172,7 +1190,8 @@ sinon En fermentation, sans confirmation. « Revenir à {statut} » demande « R
 Reprendre le brassage. » vers En cours. Annonces : « Brassin revenu à {statut}. », « Brassin
 abandonné. », « Brassin repris : {statut}. ». Hors ligne : « Statut changé sur l'appareil. Il partira
 au retour du réseau. ». L'ordre des statuts n'est pas contrôlé : un retour en arrière et une file
-hors ligne passent.
+hors ligne passent. « Terminer la journée » ne change aucun statut ; « Embouteiller » depuis la
+journée d'embouteillage passe le brassin En conditionnement, comme depuis la fiche.
 
 ### Relevé de fermentation
 
@@ -1180,7 +1199,9 @@ Section « Relevé de fermentation » de la fiche, visible à partir de En ferme
 statut si un relevé existe. Relevés du plus récent au plus ancien ; sur téléphone, les 5 plus
 récents puis « Voir les N relevés plus anciens ». Ligne : densité, température, écart au relevé
 de densité précédent (« −3,0 pts »), puis « sam. 15 nov. 18:30 · J+5 », la note, et « En attente
-du réseau ». J+N est l'écart en jours calendaires depuis le brassage. À partir de deux densités,
+du réseau ». Une densité ou une température saisie sur une étape d'une journée après le brassage
+porte aussi sa journée et son étape : « mer. 25 nov. 09:20 · J+4 · Houblonnage à cru : Mesure
+de densité ». J+N est l'écart en jours calendaires depuis le brassage. À partir de deux densités,
 une courbe s'affiche au-dessus de la liste (densité en trait plein, température en pointillés,
 légende écrite, info-bulle au toucher) ; sans date de brassage, seule la liste s'affiche. Une valeur
 enregistrée que le calcul refuse affiche « Courbe indisponible : une valeur enregistrée est
@@ -1200,8 +1221,12 @@ vider une valeur supprime sa mesure, en ajouter une la crée à la même heure. 
 propose « Annuler » 10 s, qui rétablit les mêmes saisies. Messages : « Relevé enregistré. »
 (« Annuler » 10 s), « Relevé corrigé. », « Relevé supprimé. », « Relevé supprimé. La densité
 finale revient à la dernière mesure. » si le relevé était retenu ; refus du serveur : « Refusée
-par le serveur : Densité 1020,0 du 15 nov. 18:30. Elle n'est pas enregistrée. ». Un relevé ne
-s'affiche pas dans le Déroulé, et une mesure du jour ne s'affiche pas dans le relevé.
+par le serveur : Densité 1020,0 du 15 nov. 18:30. Elle n'est pas enregistrée. ». Un relevé sans
+étape ne s'affiche pas dans le Déroulé, et une mesure du jour de brassage ne s'affiche pas dans
+le relevé. Une mesure d'une journée après le brassage compte dans le relevé, la courbe et la
+densité finale, jamais comme densité initiale automatique, et s'affiche aussi sous son étape ;
+elle se corrige depuis la fiche (« Corriger le relevé ») ou depuis l'écran de la journée, sur le
+même enregistrement.
 
 États : « Chargement des relevés », « Impossible de lire les relevés. », « Aucun relevé. Appuyez
 sur Ajouter un relevé. » (propriétaire qui peut en ajouter), « Aucun relevé. », « Relevés
@@ -1209,7 +1234,9 @@ indisponibles sur cet appareil hors ligne. ».
 
 ### Embouteillage
 
-« Embouteiller » (propriétaire, En fermentation) ouvre le formulaire : « Date d'embouteillage »
+« Embouteiller » (propriétaire, En fermentation ; « Embouteiller sans suivre la journée » dans
+le menu ⋮ quand le déroulé a une journée d'embouteillage ; ou « Embouteiller » en fin de journée
+d'embouteillage, voir « Journée après le brassage ») ouvre le formulaire : « Date d'embouteillage »
 (aujourd'hui par défaut, ni future ni antérieure au jour du brassage), « Densité finale
 (facultatif) », « Nombre de bouteilles (facultatif) » (entier de 1 à 9 999), « Volume conditionné
 (L) (facultatif) » (0 exclu à 1 000), « Sucre de resucrage (g) (facultatif) » (0 à 100 000),
@@ -1223,7 +1250,9 @@ cet embouteillage ne sera pas enregistrée. ». Un retour en arrière garde les
 données, et « Embouteiller » rouvre le formulaire prérempli.
 
 Au premier embouteillage (aucune date d'embouteillage avant, aucun coût figé lu), le coût réel
-se fige avec les prix et les frais déjà lus par la fiche, si tout est connu (voir « Coût »).
+se fige avec les prix et les frais déjà lus par la fiche, ou par « Préparer la journée » pour la
+journée d'embouteillage, si tout est connu (voir « Coût »). Depuis la journée, l'application
+revient sur la fiche, qui affiche les mêmes annonces.
 L'embouteillage part toujours, même quand le coût ne se fige pas ; le formulaire ne change pas.
 Annonces, 10 s, sans aucun montant : « Embouteillage enregistré. Brassin en conditionnement.
 Coût figé. », ou « … Coût non figé. » avec « Voir le coût », qui fait défiler la fiche jusqu'au
@@ -1250,7 +1279,9 @@ Densité initiale et volume retenus : la dernière mesure du jour de brassage, o
 propriétaire choisit. Densité finale retenue : la dernière densité de fermentation (hors celle
 retenue comme densité initiale) ou celle choisie ; hors statut En fermentation, seuls comptent les
 relevés d'un jour au plus égal à celui de l'embouteillage. Chaque valeur affiche son origine
-(« Refroidissement · 8 nov. 15:20 · Dernière mesure », « Relevé J+12 · 20 nov. 18:30 · Choisie »)
+(« Refroidissement · 8 nov. 15:20 · Dernière mesure », « Relevé J+12 · 20 nov. 18:30 · Choisie »,
+« Houblonnage à cru · Mesure de densité · 26 nov. 09:20 · Dernière mesure » pour une mesure prise
+sur une étape d'une journée après le brassage)
 et « Changer » (propriétaire), qui liste les mesures possibles et, si une mesure est retenue, « Dernière mesure (automatique) ».
 En fermentation sans choix : « Densité finale (dernière mesure) », et le degré suivi de
 « provisoire ». Choisir une mesure écrit l'identifiant, jamais la valeur.
@@ -1365,6 +1396,84 @@ recalcule depuis l'heure enregistrée, quel que soit le temps écoulé.
   aussi sans réseau, dans le cache de l'appareil. Des prix ou des frais absents du cache
   affichent « Prix indisponibles sur cet appareil hors ligne. » et ne figent rien. Deux
   appareils qui figent le même brassin : le premier coût arrivé reste.
+
+### Préparer la journée
+
+Écran « Préparer la journée » d'une journée après le brassage (houblonnage à cru, embouteillage,
+toute journée 2 ou suivante du déroulé), ouvert depuis la fiche, dans la barre de navigation,
+retour vers la fiche. Titre : « Blonde · Houblonnage à cru · prévue le mer. 25 nov. » (« prévue
+aujourd'hui »). « Préparez la journée sur le téléphone qui servira. ». Comme « Préparer le
+brassage », il attend une réponse du serveur 15 s au plus, sans rien écrire, et liste :
+« Brassin et déroulé figé », « Étapes » (« 4 étapes · 25 min · fin vers 10:40 »), compte, écran
+gardé allumé, minuteurs, navigateur (web). Journée d'embouteillage : « Prix et frais », « Lus sur
+l'appareil : le coût se figera à l'embouteillage. » ou « Prix indisponibles sur cet appareil hors
+ligne. Le coût ne se figera pas. ». Informations : « Prévue le mer. 25 nov. Vous pouvez la
+commencer aujourd'hui. » un autre jour que la date prévue ; « La journée « Houblonnage à cru »
+n'est pas terminée. Ses étapes resteront non faites. » pour chaque journée précédente non
+terminée. Réponse reçue : « Tout est prêt. Vous pouvez couper le réseau. » ; sinon
+« Préparation impossible sans réseau. Le brassin est lisible sur cet appareil, mais peut ne pas
+être à jour. ».
+
+Bouton 72 px « Commencer la journée » : démarre la première étape si elle a une durée, sans
+changer le statut du brassin, et ouvre l'écran de la journée ; « Reprendre la journée » une fois
+commencée, sans rien écrire. Le bouton attend la lecture des saisies.
+
+Refus, chacun avec « Voir le brassin » : autre membre « Seul le brasseur de ce brassin suit cette
+journée. » ; brassin prévu ou en cours « Cette journée s'ouvre après la fin du brassage. » ;
+embouteillage déjà fait « Cette journée est terminée. » ; brassin terminé « Ce brassin est
+terminé. » ; abandonné « Ce brassin est abandonné. Reprenez-le pour suivre cette journée. » ;
+journée absente du déroulé « Cette journée n'existe pas dans le déroulé de ce brassin. » ;
+déroulé illisible « Déroulé illisible. Mettez l'application à jour, ou prévenez
+l'administrateur. ».
+
+### Journée après le brassage
+
+Écran plein écran d'une journée 2 ou suivante, réservé au propriétaire (mêmes refus que
+« Préparer la journée »), ouvert au statut En fermentation ou En conditionnement (En fermentation
+seulement pour l'embouteillage). Il reprend l'écran du jour de brassage : barre « Blonde » puis
+« Houblonnage à cru · 10:42 » (lu « Journée Houblonnage à cru, heure actuelle 10:42 »), panneau,
+minuteurs, alerte de fin, étapes, corrections, « Fin prévue » de la journée, écran allumé. Départ
+prévu de la journée : son premier début, sinon l'heure de l'appareil. Les étapes du brassage et
+des autres journées n'y figurent pas et ne changent pas d'état.
+
+Menu ⋮ : « Ajouter une note », « Voir la recette », puis « Terminer la journée » tant qu'il reste
+une étape en cours ou à venir, ou « Embouteiller » pour la journée d'embouteillage. « Terminer la
+journée » demande, s'il reste des étapes à venir, « Terminer la journée « Houblonnage à cru » ? »
+/ « Les étapes non commencées seront marquées sautées. Vous pourrez encore corriger les
+mesures. », « Continuer la journée » / « Terminer la journée » ; il termine l'étape en cours,
+marque sautées les étapes à venir, et revient sur la fiche avec « Journée « Houblonnage à cru »
+terminée. ». Quand la dernière étape est en cours, le bouton du bas devient « Terminer la
+journée », sans confirmation. Toutes les étapes faites ou sautées : « Toutes les étapes sont
+faites. Journée terminée. », bouton « Revenir au brassin », annonce « Journée « Houblonnage à cru »
+terminée. » au lecteur d'écran.
+
+**Journée d'embouteillage.** Le bouton du bas « Embouteiller » remplace « Terminer le brassage »
+une fois toutes les étapes faites ; ⋮ « Embouteiller » reste possible à tout moment. S'il reste
+des étapes : « Embouteiller maintenant ? » / « Les étapes non commencées resteront non faites. »
+(« L'étape en cours se termine. Les étapes non commencées resteront non faites. » quand une
+étape est en cours), « Continuer la journée » / « Embouteiller ». Puis le formulaire
+d'embouteillage (voir « Embouteillage »), qui ne se ferme pas par un appui hors de la feuille ; à
+l'envoi, l'étape en cours se termine à l'heure de l'envoi, les étapes non commencées restent
+non faites, et l'application revient sur la fiche avec les annonces de l'embouteillage.
+
+**Mesures.** Bouton « Mesure » : liste « Étape » limitée aux étapes de la journée, plus « Sans
+étape » ; sous le type Densité ou Température, « Comptée dans le relevé de fermentation. », et,
+après la date d'embouteillage, « Après l'embouteillage : ce relevé ne compte pas dans la densité
+finale. ». « Mesure enregistrée. » avec « Annuler » 10 s. Une mesure s'affiche sous son étape ; une
+mesure « Sans étape » du jour s'affiche sous « Sans étape » et compte comme un relevé de
+fermentation ordinaire. Les notes de la journée sont aussi des notes du relevé.
+
+### Hors ligne des journées
+
+Les règles du « Hors ligne du jour de brassage » valent pour chaque journée après le brassage,
+une fois « Préparer la journée » fait sur l'APK : étapes, mesures, notes, « Terminer la journée »
+et l'embouteillage s'écrivent sur l'appareil sans attente ni erreur, pastille d'envoi comprise.
+« Passer la journée » s'écrit aussi sans réseau. Prix, frais et coût figé lus à « Préparer la
+journée » restent ouverts jusqu'à l'embouteillage ;
+lus hors ligne sans cache, le coût ne se fige pas et l'embouteillage part quand même. La reprise
+au lancement ne rouvre que le jour de brassage ; une journée se rouvre par la fiche. La liste des
+brassins annonce la prochaine journée d'après les dates seules : une journée faite avant sa date
+reste annoncée jusqu'à cette date.
 
 ### Mes prix
 

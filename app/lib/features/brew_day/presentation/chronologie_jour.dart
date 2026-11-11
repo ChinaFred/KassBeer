@@ -46,18 +46,25 @@ String? messageDerouleIllisible(Deroule deroule) {
 const kVerrouRefuse =
     'Écran : l\'appareil refuse de le garder allumé. Réglez la mise en veille.';
 
-/// Calcule la vue de [brew] à [now]. Une anomalie (fin avant le début, étape
-/// inconnue) est rapportée une fois ([reported]). Une erreur de `brewing/` rend
-/// [PlanImpossible] et est rapportée : l'écran affiche la panne.
+/// Calcule la vue de la journée [journee] de [brew] à [now] (nulle : la journée
+/// de brassage). Une anomalie (fin avant le début, étape inconnue) est rapportée
+/// une fois ([reported]). Une erreur de `brewing/` rend [PlanImpossible] et est
+/// rapportée : l'écran affiche la panne.
 PlanEvalue evaluerPlan({
   required Brew brew,
   required List<BrewEvent> events,
   required DateTime now,
   required ErrorReportService errors,
   required Set<String> reported,
+  JourneeDeroulee? journee,
 }) {
   try {
-    final plan = PlanDuJour.calculer(brew: brew, events: events, now: now);
+    final plan = PlanDuJour.calculer(
+      brew: brew,
+      events: events,
+      now: now,
+      journee: journee,
+    );
     for (final anomaly in plan.anomalies) {
       if (!reported.add('${brew.id}|${anomaly.event.id}')) continue;
       errors.reportError(
@@ -131,9 +138,15 @@ class ChronologieJour extends StatelessWidget {
     this.onTapLigne,
     this.onTapSaisie,
     this.onSupprimerDoublon,
+    this.sansEtape = true,
   });
 
   final PlanDuJour plan;
+
+  /// Affiche les mesures « Sans étape ». Faux sur la fiche pour une journée 2 ou
+  /// suivante : ces mesures sont des relevés, déjà dans le relevé de
+  /// fermentation (ADR-009).
+  final bool sansEtape;
 
   /// `null` en lecture seule.
   final void Function(LigneJour ligne)? onTapLigne;
@@ -179,16 +192,17 @@ class ChronologieJour extends StatelessWidget {
               onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
             ),
         ],
-        if (plan.mesuresSansEtape.isNotEmpty)
+        if (sansEtape && plan.mesuresSansEtape.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 12, bottom: 4),
             child: Text('Sans étape', style: theme.textTheme.titleSmall),
           ),
-        for (final s in plan.mesuresSansEtape)
-          _Saisie(
-            event: s,
-            onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
-          ),
+        if (sansEtape)
+          for (final s in plan.mesuresSansEtape)
+            _Saisie(
+              event: s,
+              onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
+            ),
       ],
     );
   }

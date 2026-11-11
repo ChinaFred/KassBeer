@@ -200,6 +200,32 @@ class Deroule {
   /// Lignes de toutes les journées, dans l'ordre.
   List<BrewStepLine> get lignes => [for (final j in journees) ...j.lignes];
 
+  /// Journée de clé [key], ou `null` si le déroulé n'en a pas.
+  JourneeDeroulee? journee(String key) {
+    for (final j in journees) {
+      if (j.key == key) return j;
+    }
+    return null;
+  }
+
+  /// Étape de clé [key] et sa journée, ou `null` pour une clé inconnue.
+  ({JourneeDeroulee journee, BrewStepLine ligne})? etape(String key) {
+    for (final j in journees) {
+      for (final l in j.lignes) {
+        if (l.key == key) return (journee: j, ligne: l);
+      }
+    }
+    return null;
+  }
+
+  /// Journée d'embouteillage, ou `null` si le déroulé n'en a pas.
+  JourneeDeroulee? get embouteillage {
+    for (final j in journees) {
+      if (j.role == RoleJournee.embouteillage) return j;
+    }
+    return null;
+  }
+
   /// Même déroulé, la journée [key] à l'écart [offset] de source [source].
   /// Les journées se rangent de nouveau par `processSessionOrder` de `brewing/` :
   /// la journée de brassage en tête, les suivantes par écart, à égalité dans

@@ -41,6 +41,7 @@ import '../../recipes/presentation/recipes_providers.dart';
 import '../data/brews_repository.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import '../domain/deroule.dart';
 import '../domain/mesures_retenues.dart';
 import 'brews_providers.dart';
 import 'releve_fermentation.dart';
@@ -203,18 +204,20 @@ class _Tableau extends ConsumerWidget {
   final Future<void> Function(Future<void> Function() action) uneAction;
 
   String _etape(BrewEvent e) {
+    // Mesure d'une étape d'une journée 2 ou suivante (ADR-009) : « Houblonnage
+    // à cru · Mesure de densité ».
+    final key = e.stepKey;
+    final trouvee = key == null ? null : brew.deroule.etape(key);
+    if (trouvee != null && trouvee.journee.role != RoleJournee.brassage) {
+      return '${trouvee.journee.name.trim()} · ${trouvee.ligne.name}';
+    }
     if (e.isFermentation) {
       final brewed = brew.brewedAt;
       return brewed == null
           ? 'Relevé'
           : 'Relevé J+${fermentationDayNumber(brewedAt: brewed, at: e.measuredAt)}';
     }
-    final key = e.stepKey;
-    if (key != null) {
-      for (final s in brew.deroule.lignes) {
-        if (s.key == key) return s.name;
-      }
-    }
+    if (trouvee != null) return trouvee.ligne.name;
     return 'Sans étape';
   }
 
