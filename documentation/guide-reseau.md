@@ -318,5 +318,5 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   L'ingestion d'une source externe (référentiels, recettes publiques) passe par un script local
   lancé par l'administrateur (`ingest/`) : émulateur par défaut, production sur option
   explicite et confirmation, liste blanche de collections, identifiants déterministes, rapport
-  JSON chiffré. Admin › Sources affichera les compteurs et les non résolus (L4). ADR-005,
+  JSON chiffré. Admin › Sources affiche les compteurs et les noms non reconnus (L4). ADR-005,
   évolution acceptée le 2026-11-08.

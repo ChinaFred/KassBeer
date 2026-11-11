@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/admin/data/sources_repository.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/brew_day/data/alerte_minuteur.dart';
 import '../features/brews/data/brews_repository.dart';
@@ -49,6 +50,12 @@ final costsRepositoryProvider = Provider<CostsRepository>(
 /// seul (ADR-005, P22).
 final libraryRepositoryProvider = Provider<LibraryRepository>(
   (ref) => throw UnimplementedError('libraryRepositoryProvider non fourni'),
+);
+
+/// Admin › Sources : `ingest_runs/` et `import_unresolved/`, lus par `get()`
+/// seul (ADR-005, L4).
+final sourcesRepositoryProvider = Provider<SourcesRepository>(
+  (ref) => throw UnimplementedError('sourcesRepositoryProvider non fourni'),
 );
 
 /// Tickets des membres (`tickets/`, `ticket_status/github`, ADR-006).

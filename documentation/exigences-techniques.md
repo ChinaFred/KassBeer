@@ -69,7 +69,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/features/costs/` | `CostsRepository` (`users/{uid}/prices`, `fees`, `brew_costs`, jamais de transaction ni de `Source.server`, `brewCostRef`) ; `domain/price.dart` (`Price`, `purchaseUnitOf`, `isUnusualPrice`), `domain/fee.dart` (`Fee`), `domain/brew_cost.dart` (`BrewCost`, `BrewCostLine`, `FreezeKind`) ; `domain/cost_evaluation.dart` : clés dérivées des lignes de `RecipeContent` (`ingredientsDeRecette`), raisons d'un coût indisponible (`RaisonCout`), `evaluerCoutRecette`, `evaluerEstimationBrassin`, `evaluerFigeage`, déclencheur du figeage (`doitFigerAuPremierEmbouteillage`), boutons proposés (`figerLeCoutPropose`, `recalculerPropose`), écart avec l'embouteillage (`ecartsDepuisFigeage`) ; `data/figeage_embouteillage.dart` (`enregistrerEmbouteillage` : embouteillage puis coût, sans attente) ; `presentation/costs_providers.dart` (`pricesProvider`, `feesProvider`, `brewCostProvider`, `costReportsProvider`) ; `presentation/prices_screen.dart` (« Mes prix », route `/prix`), `price_form.dart` (`ouvrirFormulairePrix` : nouveau, manquant, modification ; « Reprendre un de mes prix »), `fee_form.dart`, `bloc_cout.dart` (`BlocCoutRecette`, lignes des raisons et du détail), `bloc_cout_brassin.dart` (`BlocCoutBrassin` : estimation, « Figer le coût », coût figé, écart, « Recalculer avec mes prix actuels »), `formats_cout.dart` (euros, kilogrammes et euros par kilogramme à l'affichage ; aucun calcul de coût) |
 | `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
 | `lib/features/library/` | Bibliothèque (ADR-005, L4) : `LibraryRepository` (`beer_index/`, `beer_*/`, `public_recipes/`, `get()` seul) ; `domain/referentiel.dart` : `NatureReferentiel` (document d'index et collection), `IndexReferentiel` et ses entrées (`EntreeStyle`, `EntreeFermentable`, `EntreeHoublon`, `EntreeLevure`, `EntreeDivers`), `FicheReferentiel` et ses fiches, `Plage`, `Provenance`, `normaliserRecherche` ; `domain/recette_publique.dart` : `RecettePublique` (`recipe` lu par `RecipeContent.fromFirestore`, `announced` en `ValeursAnnoncees`, `source_hop_timing` en `momentsOrigine`, `provenance`, `style_id`), `copie` pour « Dupliquer » ; `presentation/` : `LibraryScreen` (segments, recherche, listes), `ReferenceEntryScreen`, `PublicRecipeScreen`, `DataSourcesScreen`, `library_providers.dart` (`SegmentBibliotheque`), `libelles_bibliotheque.dart` (plages, sources, provenance ; affichage seul) |
-| `lib/features/admin/` | écran Admin |
+| `lib/features/admin/` | écran Admin ; Admin › Sources (ADR-005, L4) : `data/sources_repository.dart` (`SourcesRepository`, `ingest_runs/` et `import_unresolved/` par `get()`), `domain/ingestion.dart` (`ExecutionIngestion`, `IngredientNonResolu`), `presentation/admin_sources_screen.dart`, `presentation/libelles_sources.dart` |
 
 **Configuration Firebase.** Aucune valeur dans le code. `firebase_options.dart` lit, par
 `--dart-define-from-file=firebase.env.json` (fichier ignoré par Git ; modèle
@@ -142,6 +142,8 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 | `indexReferentielProvider(nature)` | `FutureProvider.autoDispose.family` | `beer_index/{nature}` par `lireIndex` ; une panne s'affiche, « Réessayer » invalide |
 | `ficheReferentielProvider((nature:, id:))` | `FutureProvider.autoDispose.family` | `beer_*/{id}` par `lireFiche` |
 | `recettePubliqueProvider(id)` | `FutureProvider.autoDispose.family` | `public_recipes/{id}` par `lireRecettePublique` |
+| `sourcesRepositoryProvider` | `Provider<SourcesRepository>` | Admin › Sources ; fourni par `main.dart` ou par les tests ; sans valeur par défaut |
+| `derniereExecutionProvider` | `FutureProvider.autoDispose<LectureExecution>` | dernière exécution de `ingest_runs/` par `derniereExecution` |
 | `nouveautesSourceProvider` | `Provider<Future<String> Function()>` | lecture de `assets/changelog_recent.json` par `rootBundle` ; remplacée par les tests |
 | `nouveautesRepositoryProvider` | `Provider<NouveautesRepository>` | lecture journalisée des nouveautés |
 | `nouveautesProvider` | `FutureProvider.autoDispose<List<Nouveaute>>` | versions de l'écran « Nouveautés », sans nouvel essai automatique |
@@ -382,6 +384,7 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/prix` | « Mes prix », page pleine avec retour, hors coquille, ouverte par `push` depuis le menu du compte | membre ; ses seuls prix et frais |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
+| `/admin/sources` | Admin › Sources, dans la coquille, retour vers `/admin` | admin |
 
 `redirectFor(access, uri)` (fonction pure, testée) envoie chaque état sur son écran. Un
 chemin demandé pendant un écran d'accès est gardé dans `?depuis=` et retrouvé une fois le
@@ -482,6 +485,58 @@ par-dessus dans la coquille.
 **Hors ligne.** Aucun code de la Bibliothèque dans l'écran du jour ni dans ce qu'il appelle
 (P2). Sans réseau, ce qui est en cache se lit ; un document absent du cache est rendu
 `DocumentAbsentDuCache` et affiché « indisponible hors ligne », jamais « absent ».
+
+#### Admin › Sources — client
+
+Feature `lib/features/admin/` (ADR-005, L4). Lecture seule de `ingest_runs/` et
+`import_unresolved/`, que `firestore.rules` réserve à l'admin et qu'aucun client n'écrit.
+
+| Fichier | Contenu |
+|---|---|
+| `domain/ingestion.dart` | `ExecutionIngestion` (`finished_at`, `target`, `counts`, `sources`, `unresolved`), `ComptesCollection`, `SourceExecution`, `NonResolusNature`, `IngredientNonResolu` (`nature`, `name`, `source`, `count`, `updated_at`?), `entier` |
+| `data/sources_repository.dart` | `SourcesRepository`, `FirestoreSourcesRepository`, `LectureExecution`, `PageNonResolus`, `kTaillePageNonResolus` (50) |
+| `presentation/admin_sources_screen.dart` | `AdminSourcesScreen`, `derniereExecutionProvider` ; lignes de la liste en `LigneDeuxNiveaux`, compte rendu borné à `kDialogMaxWidth` |
+| `presentation/libelles_sources.dart` | noms lisibles des collections, natures, cibles, origines et sources ; ordre des comptes. Natures et collections des référentiels lues dans `SegmentBibliotheque` (`label`, `titreFiche`) |
+
+**Lectures.** Deux requêtes `get()` ordinaires (cache puis serveur), aucun `snapshots()` :
+`ingest_runs` par `orderBy('finished_at', descending: true).limit(1)`, lue à l'ouverture ;
+`import_unresolved` par `orderBy('count', descending: true).limit(50)`, page suivante par
+`startAfterDocument`. « Relire » invalide `derniereExecutionProvider` et relit la première
+page. Chaque requête trie sur un seul champ : aucun index composite.
+`CurseurPage` est celui de la Bibliothèque. Une panne est rapportée (`admin.sources_run`,
+`admin.sources_unresolved`) puis relancée pour l'écran.
+
+**Lecture tolérante.** Un champ inconnu est ignoré (`started_at` et `report_sha256` ne sont pas
+lus). Un champ lu absent ou mal typé lève `DocumentIllisible` : `finished_at` (date), `target`
+(texte), `counts` (map de `{written, unchanged, refused}`), `sources` (liste de `{source,
+version}`), `unresolved` (map nature → nombre), et pour un non-résolu `nature`, `name`,
+`source` (textes) et `count`. Un nombre est un entier positif ou nul ; un `double` entier est
+accepté. Une exécution illisible est rapportée (`admin.sources_run_read`, contexte
+`ingest_runs/{id} illisible`). Les non-résolus illisibles d'une page font un seul rapport
+(`admin.sources_unresolved_read`, nombre et identifiant du premier) : 50 documents ne
+dépassent pas le plafond du service d'erreurs. Aucun nom d'ingrédient dans le contexte d'un
+rapport (P13).
+
+**Libellés.** Une collection, une nature, une cible, une origine ou une source inconnue de
+l'application s'affiche sous sa valeur stockée. Les comptes suivent l'ordre des segments de la
+Bibliothèque, puis `beer_index`, `import_unresolved`, puis les inconnues par ordre
+alphabétique.
+
+**Hors ligne.** Une lecture du cache porte « Hors ligne : lu sur l'appareil. Ce compte rendu
+(ou cette liste) peut ne plus être à jour. ». Une panne hors ligne, ou une liste vide lue du
+cache, s'affiche « Dernière mise à jour indisponible hors ligne. » ou « Liste indisponible hors
+ligne. », jamais « Aucune mise à jour enregistrée ». Aucun code de cet écran dans l'écran du jour
+(P2).
+
+**Tests.** `admin_sources_test.dart` : domaine (champs lus, champ inconnu ignoré, onze champs
+mal typés ou absents, entier en `double`, non-résolu sans date), libellés et ordre, dépôt sur
+`fake_cloud_firestore` (aucune exécution, la plus récente par `finished_at`, exécution
+illisible rapportée, pages de 50 par `count` décroissant, un seul rapport pour les
+non-résolus illisibles d'une page), écran (entrée entre Tickets et Import, accès refusé à un
+brasseur sans lecture, compte rendu, lien « Sources des données », « Relire », compte rendu
+borné sur grand écran, pannes et « Réessayer », compte rendu illisible, hors ligne par bloc,
+lignes, origines, page suivante, panne de la page suivante). `ticket_screens_test.dart` vérifie que `/admin/sources` a son nom d'écran
+(« Admin › Sources »).
 
 #### Tickets — client
 
@@ -1126,8 +1181,8 @@ et compté.
 | `beer_styles/bjcp2021-{code}` | `name`, `category`, `category_id`, `style_id`, `type`, `style_guide`, `original_gravity`, `final_gravity` (plages `sg`), `international_bitterness_units` (plage `IBUs`), `color` (plage EBC, SRM converti par `brewing/`), `alcohol_by_volume` (plage `%`) ; 17 des 110 styles n'ont aucune plage |
 | `beer_index/{nature}` | 5 documents : `fermentables`, `hops`, `cultures`, `miscs`, `styles`. `{count, entries, content_sha256, updated_at}`, entrées triées par nom (sans casse), nombres nus : fermentable `{id, name, aliases?, label_fr?, type?, yield?, color?}` ; houblon `{id, name, aliases?, form?, alpha?}` ; culture `{id, name, aliases?, producer?, product_id?, type?, form?, attenuation?}` (milieu de la plage) ; ajout `{id, name, aliases?, label_fr?, type?}` ; style `{id, name, code, category, og?, fg?, ibu?, ebc?, abv?}` (plages en `[min, max]`). Taille contrôlée par l'écrivain, moins de 900 Ko (calcul de la documentation Firestore) |
 | `public_recipes/diydog-{id}` | enveloppe de `recipes/` : `format_version: 1`, `owner_uid: 'system'`, `owner_name: 'DIY Dog'`, `imported_from: 'DIY Dog · diydog-{id}'`, `search_name` (`recipe.name` normalisé comme une clé d'ingrédient, des espaces à la place des tirets : « Punk IPA 2007 - 2010 » donne « punk ipa 2007 2010 » ; l'application trie et cherche par préfixe sur ce champ, la saisie normalisée de la même façon ; compris dans `content_sha256`), `recipe` (BeerJSON partiel, clés de `isBeerJsonRecipe` seules : copiable tel quel vers `recipes/`) ; propres aux recettes publiques : `style_id`? (absent : DIY Dog ne nomme pas de style), `ingredient_refs` (`{clé ingredientKey de brewing/ : id}` des lignes résolues), `source_hop_timing` (`{hop_index, label}` des houblons dont le libellé d'origine ne dit pas la durée : `start`, `middle`, `Whirlpool`, `WHP`, `FWH`, `HD1`, `FV`…), `announced` (`original_gravity`, `final_gravity` en `sg`, `alcohol_by_volume` en `%`, `ibu_estimate` en `IBUs`, `color_estimate` en EBC ; valeurs de la source, jamais un résultat de calcul) |
-| `ingest_runs/{AAAAMMJJTHHMMSSZ}` | `started_at`, `finished_at`, `target` (`emulator` ou `production`), `counts` (`{collection: {written, unchanged, refused}}`), `sources` (`{source, version}`), `unresolved` (noms non résolus par nature), `report_sha256` (SHA-256 du rapport JSON local) |
-| `import_unresolved/{empreinte}` | empreinte : SHA-256 de `nature|nom normalisé`, 64 chiffres hexadécimaux ; `nature`, `name` (nom tel que DIY Dog l'écrit), `source: 'diydog'`, `count` (lignes de recettes), `updated_at` ; aucun `content_sha256` : l'écrivain compare les quatre champs |
+| `ingest_runs/{AAAAMMJJTHHMMSSZ}` | `started_at`, `finished_at`, `target` (`emulator` ou `production`), `counts` (`{collection: {written, unchanged, refused}}`), `sources` (`{source, version}`), `unresolved` (noms non résolus par nature), `report_sha256` (SHA-256 du rapport JSON local) ; Admin › Sources lit le plus récent par `finished_at` |
+| `import_unresolved/{empreinte}` | empreinte : SHA-256 de `nature|nom normalisé`, 64 chiffres hexadécimaux ; `nature`, `name` (nom tel que DIY Dog l'écrit), `source: 'diydog'`, `count` (lignes de recettes), `updated_at` ; aucun `content_sha256` : l'écrivain compare les quatre champs ; Admin › Sources les lit par `count` décroissant, par pages de 50 |
 
 Dans `recipe` d'une recette publique : `author` vaut `BrewDog` ; `notes` porte `method.twist`
 seul ; `boil` est absent (DIY Dog ne donne pas la durée d'ébullition, `DATA_SOURCES.md`,

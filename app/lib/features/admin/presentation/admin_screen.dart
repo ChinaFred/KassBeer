@@ -6,6 +6,7 @@ import '../../../core/presentation/app_shell.dart';
 import '../../../core/router/routes.dart';
 import '../../tickets/presentation/admin_tickets_screen.dart';
 import '../../tickets/presentation/bandeau_tickets_admin.dart';
+import 'admin_sources_screen.dart';
 
 /// Accueil de l'administration : réservé au rôle `admin` (le routeur le vérifie).
 class AdminScreen extends ConsumerWidget {
@@ -13,6 +14,8 @@ class AdminScreen extends ConsumerWidget {
 
   static const ticketsSubtitle =
       'Bugs et idées des membres, et leur suivi sur GitHub';
+  static const sourcesSubtitle =
+      'Dernière mise à jour de la Bibliothèque et noms non reconnus';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,6 +69,13 @@ class AdminScreen extends ConsumerWidget {
               ),
               onTap: () => context.go(AppRoutes.adminTickets),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.source_outlined),
+            title: const Text(AdminSourcesScreen.titre),
+            subtitle: const Text(sourcesSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go(AppRoutes.adminSources),
           ),
           const ListTile(
             enabled: false,

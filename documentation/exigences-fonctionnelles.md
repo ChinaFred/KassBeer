@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -236,11 +236,13 @@ s'allume pour tout autre changement de statut et pour une nouvelle réponse.
 
 ### Admin
 
-Réservé à l'administrateur. Trois entrées : « Membres » (« Inviter et retirer les comptes »),
+Réservé à l'administrateur. Quatre entrées : « Membres » (« Inviter et retirer les comptes »),
 « Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
-et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas) et « Import » (« Disponible dans une prochaine version », inactive).
+et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas), « Sources »
+(« Dernière mise à jour de la Bibliothèque et noms non reconnus ») et « Import » (« Disponible dans une
+prochaine version », inactive).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
@@ -382,6 +384,62 @@ l'appareil. Un texte non envoyé reste dans la fiche et revient à la réouvertu
 décision écartée ou en échec, la boîte reprend le texte envoyé. Une écriture refusée par le
 serveur affiche « Décision non enregistrée. Réessayez. » et rend boutons et texte. Pas de
 message de succès après une décision appliquée.
+### Admin › Sources
+
+Réservé à l'administrateur (ADR-005, L4). Adresse `/admin/sources`, titre « Sources », retour
+vers Admin. Lecture seule : l'écran n'écrit rien. La mise à jour (ingestion) se lance depuis le
+poste de l'administrateur (`exchange/bin/preparer_referentiels.dart`, puis `ingest/ecrire.mjs`).
+
+En tête : « Mise à jour de la Bibliothèque depuis les sources externes (Brewtarget, BJCP, DIY
+Dog). » et le bouton « Relire », qui relit la dernière mise à jour et la première page des noms
+non reconnus.
+
+Deux blocs, dont le titre est d'un cran au-dessus de celui de leurs sous-sections.
+
+**Dernière mise à jour.** L'exécution la plus récente de l'écrivain, lue à l'ouverture. Sur
+grand écran, le bloc est borné à 480 px.
+
+- « Terminée le » : « 11 novembre 2026 à 13:49 » ; « Cible » : « Production » ou
+  « Émulateur » ; « Rapport local » : `import/ingest/rapports/20261111T124912Z.json`.
+- « Documents » : une ligne par collection, dans l'ordre des segments de la Bibliothèque
+  (« Styles », « Malts et sucres », « Houblons », « Levures », « Divers », « Recettes
+  publiques »), puis « Index de la bibliothèque » et « Noms non reconnus », avec « 412 écrits
+  · 3 inchangés · 0 refusé ». Une collection inconnue de l'application suit, sous son nom
+  technique. Si des documents sont refusés : « 2 documents refusés. Le détail est dans le
+  rapport local. », en ton d'erreur.
+- « Sources lues » : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 » et « DIY
+  Dog », chacun avec sa version (`v5.2.3 ea10908`, `e6c12ab`).
+- « Noms non reconnus (cette exécution) » : le nombre par nature (« Malts et sucres »,
+  « Houblons », « Levures », « Divers »), écrit « 12 noms ».
+
+Sous ce bloc, le lien « Sources des données » ouvre l'écran du même nom.
+
+**Tous les noms non reconnus.** Aide : « Noms qu'aucune source n'a rattachés à un ingrédient de
+la Bibliothèque, du plus fréquent au moins fréquent. ». Pages de 50, « Afficher les noms
+suivants » pour la suite. Chaque ligne : le nom, puis « Houblon · recettes DIY Dog · 12 fois · le
+11 nov. 2026 ». Nature : « Malt ou sucre », « Houblon », « Levure », « Ajout divers », comme
+les fiches de la Bibliothèque. Origine : « recettes DIY Dog », ou « import d'un membre ». Un
+document illisible s'affiche « Nom illisible » / « Mettez l'application à jour. ». Cette liste
+montre à l'administrateur les noms à ajouter à la table d'alias de l'ingestion : un nom
+rattaché donne ses valeurs à la ligne de recette, qui peut alors se calculer.
+
+**États**, pour chaque bloc :
+
+- chargement : indicateur « Chargement de la dernière mise à jour » ou « Chargement des noms
+  non reconnus » ;
+- vide : « Aucune mise à jour enregistrée. Elle se lance depuis votre poste, puis s'affiche
+  ici. » ; « Aucun nom non reconnu. » ;
+- panne : « Impossible de lire la dernière mise à jour. » ou « Impossible de lire les noms non
+  reconnus. », et « Réessayer » ; l'erreur est journalisée. Une panne de la page suivante garde
+  les lignes lues, avec « Impossible de lire la page suivante. » et « Réessayer » ;
+- compte rendu illisible : « Le compte rendu de la dernière mise à jour est illisible. Mettez
+  l'application à jour. » ;
+- hors ligne, sans rien dans le cache : « Dernière mise à jour indisponible hors ligne. » ou
+  « Liste indisponible hors ligne. », et « Réessayer » ; lu depuis le cache : « Hors ligne : lu
+  sur l'appareil. Ce compte rendu peut ne plus être à jour. » au-dessus du compte rendu, et
+  « Hors ligne : lu sur l'appareil. Cette liste peut ne plus être à jour. » au-dessus de la
+  liste.
+
 ### Équipements
 
 **Liste.** Tous les équipements du groupe, les siens d'abord, puis par nom. Chaque ligne :

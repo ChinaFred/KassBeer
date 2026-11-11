@@ -6,6 +6,21 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
+### v0.1.28 — fonctionnel
+
+Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière
+mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de
+documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur
+version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données »,
+et « Relire » relit l'écran.
+
+En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un
+ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50. Chaque
+ligne donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de
+fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un
+nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne
+fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur.
+
 ### v0.1.26 — fonctionnel
 
 Une nouvelle entrée « Bibliothèque », à côté de Recettes, montre les styles de bière, les malts

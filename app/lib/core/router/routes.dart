@@ -26,6 +26,10 @@ abstract final class AppRoutes {
   static const adminTickets = '/admin/tickets';
   static String adminTicket(String id) => '$adminTickets/$id';
 
+  /// Admin › Sources (ADR-005, L4) : dernière ingestion et ingrédients non
+  /// résolus.
+  static const adminSources = '/admin/sources';
+
   /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
   static const prices = '/prix';
 
