@@ -311,6 +311,15 @@ const _imported = RecipeContent(
       use: HopUse.package,
       form: 'pellet',
     ),
+    // Forme facultative (ADR-005, D8) : recette publique DIY Dog et sa copie.
+    HopLine(
+      name: 'Houblon sans forme',
+      amount: Quantite.grammes(20.0),
+      use: HopUse.boil,
+      form: null,
+      alphaPct: 7.0,
+      timeMin: 45,
+    ),
   ],
   others: [
     OtherLine(
@@ -641,7 +650,8 @@ void main() {
     });
 
     test(
-      'type d\x27un malt ou forme d\x27un houblon hors du schéma, ou absent',
+      'type d\x27un malt hors du schéma ou absent, forme d\x27un houblon hors '
+      'du schéma',
       () {
         final malt = _doc();
         (_list(malt, 'fermentable_additions').first as Map)['type'] = 'malt';
@@ -1058,6 +1068,7 @@ void main() {
         (HopUse.afterBoil, 'leaf (wet)', null),
         (HopUse.dryHop, 'pellet', HopForm.pellet),
         (HopUse.package, 'pellet', HopForm.pellet),
+        (HopUse.boil, null, null),
       ]);
       expect(c.hops[3].amount, const Quantite.litres(0.005));
       expect(c.hops[5].dayMin, 4320);
@@ -1115,6 +1126,7 @@ void main() {
         (HopUse.afterBoil, null, 100.0),
         (HopUse.dryHop, HopForm.pellet, 50.0),
         (HopUse.package, HopForm.pellet, 5.0),
+        (HopUse.boil, null, 20.0),
       ]);
     });
 
@@ -1127,7 +1139,12 @@ void main() {
       };
       expect(kinds[MissingInputKind.fermentableKind], ['Sirop maison']);
       expect(kinds[MissingInputKind.hopUse], ['Saaz', 'Mosaic']);
-      expect(kinds[MissingInputKind.hopForm], ['Cascade']);
+      // Forme non prise en charge (poudre) et forme absente : même donnée
+      // manquante pour brewing/, distinguées à l'écran par `libelleManque`.
+      expect(kinds[MissingInputKind.hopForm], [
+        'Cascade',
+        'Houblon sans forme',
+      ]);
       expect(c.hopsWithoutMass.map((h) => h.name), ['Extrait de houblon']);
     });
   });

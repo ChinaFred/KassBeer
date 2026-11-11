@@ -43,8 +43,8 @@ String? enteteHoublons(List<HopLine> hops) {
 }
 
 /// Détails d'un houblon, dans la fiche et dans l'éditeur : « Ébullition 60 min ·
-/// 30 g · 10 % alpha · Pellets · 31 IBU ». [fiche] vrai : l'alpha absent est
-/// nommé. [ibu] : IBU apporté par ce houblon, s'il est calculé.
+/// 30 g · 10 % alpha · Pellets · 31 IBU ». [fiche] vrai : l'alpha et la forme
+/// absents sont nommés. [ibu] : IBU apporté par ce houblon, s'il est calculé.
 List<String> detailsHoublon(HopLine h, {required bool fiche, double? ibu}) => [
   libelleMomentHoublon(h),
   if (h.dayMin != null)
@@ -54,7 +54,10 @@ List<String> detailsHoublon(HopLine h, {required bool fiche, double? ibu}) => [
     '${formatPourcent(h.alphaPct!)} alpha'
   else if (fiche)
     'alpha non renseigné',
-  formesHoublon.libelle(h.form),
+  if (h.form != null)
+    formesHoublon.libelle(h.form!)
+  else if (fiche)
+    'forme non renseignée',
   if (h.amount.enLitres) kHoublonEnVolume else if (ibu != null) formatIbu(ibu),
 ];
 
@@ -120,6 +123,7 @@ class ContenuRecette extends StatelessWidget {
     super.key,
     required this.content,
     this.hopIbu = const {},
+    this.momentsOrigine = const {},
     this.chronologie,
   });
 
@@ -127,6 +131,10 @@ class ContenuRecette extends StatelessWidget {
 
   /// IBU apporté par chaque houblon, par rang.
   final Map<int, double> hopIbu;
+
+  /// Libellé d'origine du moment d'un houblon, par rang (`source_hop_timing`
+  /// d'une recette publique) : « moment d'origine : start ».
+  final Map<int, String> momentsOrigine;
 
   /// Section de chronologie, après les paliers ; nulle pour ne pas l'afficher.
   final Widget? chronologie;
@@ -158,7 +166,11 @@ class ContenuRecette extends StatelessWidget {
         for (final (i, h) in c.hops.indexed)
           LigneDeuxNiveaux(
             title: h.name,
-            details: detailsHoublon(h, fiche: true, ibu: hopIbu[i]),
+            details: [
+              ...detailsHoublon(h, fiche: true, ibu: hopIbu[i]),
+              if (momentsOrigine[i] case final moment?)
+                "moment d'origine : $moment",
+            ],
           ),
         const TitreSection('Autres ajouts'),
         if (c.others.isEmpty) const TexteAbsent('Aucun ajout.'),

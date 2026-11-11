@@ -16,6 +16,11 @@ import '../../features/costs/presentation/prices_screen.dart';
 import '../../features/equipment/presentation/equipment_detail_screen.dart';
 import '../../features/equipment/presentation/equipment_editor_screen.dart';
 import '../../features/equipment/presentation/equipment_list_screen.dart';
+import '../../features/library/presentation/data_sources_screen.dart';
+import '../../features/library/presentation/library_providers.dart';
+import '../../features/library/presentation/library_screen.dart';
+import '../../features/library/presentation/public_recipe_screen.dart';
+import '../../features/library/presentation/reference_entry_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
 import '../../features/recipes/presentation/brew_steps_editor_screen.dart';
 import '../../features/recipes/presentation/import_recipes_screen.dart';
@@ -111,6 +116,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         redirectFor(ref.read(accessStateProvider), state.uri),
     routes: [
       GoRoute(path: '/', redirect: (_, _) => AppRoutes.home),
+      // `/bibliotheque` mène aux styles : une seule page par segment, que le
+      // retour d'une fiche retrouve avec sa recherche.
+      GoRoute(
+        path: AppRoutes.library,
+        redirect: (_, state) => state.uri.path == AppRoutes.library
+            ? AppRoutes.librarySegment(SegmentBibliotheque.styles.slug)
+            : null,
+      ),
       GoRoute(
         path: AppRoutes.loading,
         builder: (_, _) => const LoadingScreen(),
@@ -170,6 +183,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.news,
         builder: (_, _) => const NouveautesScreen(),
       ),
+      // Sources des données (ADR-005) : plein écran, hors de la coquille, ouvert
+      // par `push` depuis la Bibliothèque et le menu du compte.
+      GoRoute(
+        path: AppRoutes.dataSources,
+        builder: (_, _) => const DataSourcesScreen(),
+      ),
       // Tickets (ADR-006) : pleines pages hors de la coquille, ouvertes par
       // `push`. « nouveau » avant « :id », sans quoi il serait lu comme un
       // identifiant.
@@ -221,6 +240,27 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          // Bibliothèque (ADR-005, L4) : un chemin par segment, la fiche sous
+          // son segment, qui garde la liste lue et la recherche au retour.
+          for (final segment in SegmentBibliotheque.values)
+            PageDeCoquille(
+              path: AppRoutes.librarySegment(segment.slug),
+              titre: 'Bibliothèque',
+              builder: (_, _) => LibraryScreen(segment: segment),
+              routes: [
+                PageDeCoquille(
+                  path: ':id',
+                  titre: segment.titreFiche,
+                  retour: AppRoutes.librarySegment(segment.slug),
+                  builder: (_, state) {
+                    final id = state.pathParameters['id']!;
+                    return segment.nature == null
+                        ? PublicRecipeScreen(id: id)
+                        : ReferenceEntryScreen(segment: segment, id: id);
+                  },
+                ),
+              ],
+            ),
           PageDeCoquille(
             path: AppRoutes.brews,
             titre: 'Brassins',

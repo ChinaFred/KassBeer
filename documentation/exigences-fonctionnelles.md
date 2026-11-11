@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Brassins et Équipements ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire en tête d'Admin l'état du jeton GitHub et le nombre de tickets bloqués. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -71,24 +71,26 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
 pu être lue), un séparateur, « Mes prix », un séparateur, « Signaler ou proposer », « Mes
-tickets », « Nouveautés », un séparateur et « Se déconnecter ». Une déconnexion qui échoue
+tickets », « Nouveautés », « Sources des données », un séparateur et « Se déconnecter ». Une déconnexion qui échoue
 affiche « Déconnexion impossible. Réessayez. ».
 
 Une pastille chiffrée sur l'avatar et sur « Mes tickets » compte les tickets dont le suivi est
 à lire (« 99+ » au-delà de 99) ; elle est lue « Mon compte, 2 suivis de ticket à lire » et
 « Mes tickets, 2 à lire ». Sans suivi à lire, rien ne change. Voir « Tickets ».
 
-Destinations : Recettes, Brassins, Équipements, et Admin pour l'administrateur seul. Sous
+Destinations : Recettes, Bibliothèque, Brassins, Équipements, et Admin pour l'administrateur seul. Sous
 600 px, barre de navigation en bas ; de 600 à 839 px, rail de navigation avec libellés ;
 à partir de 840 px, rail étendu et contenu centré sur 840 px au plus. Le rail défile quand
-ses destinations dépassent la hauteur (écran bas, grand texte).
+ses destinations dépassent la hauteur (écran bas, grand texte). Dans le rail avec libellés, un
+libellé plus large que 160 px est réduit pour tenir sur une ligne.
 
 Recettes, Équipements et Brassins sont décrits ci-dessous. Au lancement, si le compte a un seul
 brassin en cours depuis moins de 24 h, l'écran du jour se rouvre avec le message « Brassage
 repris. Les minuteurs comptent le temps écoulé. ».
 
-Une page de second niveau (fiche d'une recette, d'un équipement, Admin › Membres) porte son
-titre (« Recette », « Équipement », « Membres ») et un bouton retour vers sa liste. Les
+Une page de second niveau (fiche d'une recette, d'un équipement, d'une entrée de la
+Bibliothèque, Admin › Membres) porte son titre (« Recette », « Équipement », « Houblon »,
+« Recette publique », « Membres ») et un bouton retour vers sa liste. Les
 éditeurs s'ouvrent en plein écran, hors de la barre de navigation, avec « Fermer » (✕), leur
 titre, « Enregistrer », et le bandeau hors ligne quand l'appareil n'a pas de réseau.
 
@@ -446,7 +448,7 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
 5. Raisons d'un refus : « Nom absent. », « Plus de 50 houblons (63). » (malts, ajouts,
    « Plus de 10 levures », « Plus de 20 paliers »), « Unité inconnue pour le volume :
    « barrels ». », « Valeur hors limites : quantité de Pils. », « Valeur illisible : … »,
-   « Valeur absente : forme de Cascade. », « Valeur inconnue pour le type de Pils :
+   « Valeur absente : quantité de Cascade. », « Valeur inconnue pour le type de Pils :
    « adjunct ». », « Nom d'un malt absent ou sans lettre ni chiffre. », « Recette
    illisible. ». Aucune liste n'est tronquée.
 6. « Modifié à l'import » : « Style : seul le nom « {style} » est gardé. », « Non importés :
@@ -540,7 +542,8 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   (aide « Sert au calcul de la densité initiale. »).
 - Houblon : « Nom », « Quantité (g) », « Acides alpha (%) », « Utilisation » (Ébullition,
   Whirlpool, À cru), durée, « Forme » (Pellets, Cônes, sans choix par défaut ; sinon
-  « Choisissez une forme. »). La durée dépend du moment : « Durée d'ébullition (min) »,
+  « Choisissez une forme. », y compris pour un houblon sans forme d'une recette publique
+  dupliquée, quand sa ligne est modifiée). La durée dépend du moment : « Durée d'ébullition (min) »,
   obligatoire, entier de 0 à 600 ; « Durée d'infusion (min) » au whirlpool, obligatoire,
   entier de 1 à 600 (« Champ obligatoire. » si vide ; à 0, « Au moins 1 min. Pour un ajout à
   l'arrêt du feu, choisissez Ébullition et 0 min. »), avec l'aide « Temps entre l'arrêt du
@@ -648,6 +651,149 @@ houblons et ajouts en grammes (« 22,4 g »), une quantité en volume en millili
 1 L (« 5 ml ») et en litres au-delà (« 1,5 L »), « 20 L », « 67 °C », « 60 min », houblon à cru
 « 3 jours » (« 1,5 jour » au singulier sous 2). Les tuiles des calculs s'élargissent avec la
 taille du texte : à 200 %, elles passent sur une colonne plutôt que de couper « 1057,9 ».
+
+### Bibliothèque
+
+Consultation en lecture seule des styles, des ingrédients et des recettes publiques
+(ADR-005, L4), ouverte à tout membre. Les données sont écrites par le script d'ingestion de
+l'administrateur ; personne ne les modifie dans l'application.
+
+**Accès.** Destination « Bibliothèque » de la navigation, après Recettes. L'adresse
+`/bibliotheque` mène aux styles (`/bibliotheque/styles`). Six segments en puces :
+« Styles », « Malts et sucres », « Houblons », « Levures », « Divers », « Recettes
+publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). Sous 600 px, les puces
+tiennent sur une ligne qui défile à l'horizontale, et une icône d'information à leur droite
+(infobulle « Sources des données ») ouvre « Sources des données ». À partir de 600 px, les
+puces passent à la ligne et le lien « Sources des données » est écrit sous elles.
+
+**Styles et ingrédients.** La liste du segment est lue à la première ouverture, puis gardée
+pour la session. Ordre alphabétique, avec le nombre d'entrées (« 812 entrées », « 3 sur
+812 » pendant une recherche, annoncé aux lecteurs d'écran). Chaque ligne :
+
+- style : « 21A · American IPA », puis catégorie · degré · amertume (« IPA · 5,5 % vol à
+  7,5 % vol · 40 IBU à 70 IBU ») ;
+- malt ou sucre : nom, puis nom français · type · couleur · rendement ;
+- houblon : nom, puis forme · « 6,5 % alpha » ;
+- levure : nom, puis producteur et référence (« Wyeast 1056 ») · type · forme ·
+  atténuation ;
+- divers : nom, puis nom français · type.
+
+« Rechercher par nom » (« Rechercher par nom ou code » pour les styles) filtre à la frappe,
+sans lecture en base, sur le nom, les autres noms, le nom français, le code d'un style, le
+producteur et la référence d'une levure ; majuscules et accents ne comptent pas. Sans
+résultat : « Aucun résultat pour « {texte} ». » et « Effacer la recherche ». La recherche
+n'est pas enregistrée ; elle reste en place au retour d'une fiche. Une entrée illisible est
+écartée : « 1 entrée illisible n'est pas affichée. L'erreur est signalée à
+l'administrateur. »
+
+**Fiche d'une entrée** (`/bibliotheque/{segment}/{id}`, titre « Style », « Malt ou
+sucre », « Houblon », « Levure » ou « Ajout divers », retour vers le segment). Nom, « Autres
+noms : … », puis :
+
+- style : « Classement » (code, catégorie « 21 · IPA », type traduit : « Bière », « Cidre »,
+  « Hydromel »…, guide), « Plages » (densité initiale « 1056,0 à 1070,0 », densité finale,
+  degré, amertume, couleur en EBC) ;
+- malt ou sucre : nom français, type, couleur, rendement d'extrait, producteur, origine ;
+- houblon : nom français, forme, acides alpha, acides bêta, usage (« Aromatique »,
+  « Amérisant », « Aromatique et amérisant », « Double usage »), origine ;
+- levure : producteur, type, forme, atténuation et température de fermentation en plages,
+  floculation ;
+- divers : nom français, type.
+
+La ligne « Nom français » est masquée quand la valeur est absente. Une autre valeur absente
+s'affiche « Non renseigné ». Une valeur que l'application ne sait pas traduire s'affiche
+telle quelle. Section « Provenance » : une ligne courte par source, sans doublon,
+« Brewtarget 5.2.3 · licence GPL-3.0 · relevé le 8 novembre 2026 » ou « DIY Dog · licence DIY
+Dog (usage privé) · relevé le 8 novembre 2026 », et le lien « Sources des données », qui
+donne le fichier et le commit. Le texte de la fiche est sélectionnable.
+
+**Recettes publiques.** Les recettes DIY Dog, par pages de 50 dans l'ordre alphabétique.
+Chaque ligne : nom, puis style · volume · « 4,5 % vol annoncés ». « Afficher les recettes
+suivantes » lit la page suivante. « Rechercher par début de nom » (aide : « Le début du nom.
+Validez pour chercher. ») cherche les noms qui commencent par le texte, sans tenir compte des
+majuscules, des accents ni de la ponctuation, quand le membre valide (Entrée ou flèche
+« Rechercher »), jamais à la frappe. Sans résultat : « Aucune recette ne commence par
+« {texte} ». » et « Effacer la recherche ». Une recette illisible s'affiche « Recette
+illisible · L'erreur est signalée à l'administrateur. ». Si la page suivante ne peut pas être
+lue, la liste reste et le bandeau « Impossible de lire la page suivante. » propose
+« Réessayer ».
+
+**Fiche d'une recette publique** (`/bibliotheque/recettes/{id}`, titre « Recette
+publique »). Nom, style, « Recette publique · DIY Dog », « Voir le style » quand le style est
+reconnu dans la liste BJCP (ouvre sa fiche par-dessus ; les recettes DIY Dog n'en ont pas),
+bouton « Dupliquer » et « Dupliquer copie la recette dans vos recettes, pour la modifier et la
+brasser. ». Puis :
+
+- « Annoncé par la source » : « Valeurs données par la recette d'origine. Kass'Beer ne les a
+  pas calculées. », puis densité initiale, densité finale, degré, amertume et couleur
+  annoncés (« Aucune valeur annoncée. » sans valeur) ;
+- « Calculs » : les cinq tuiles de la fiche d'une recette, calculées sans équipement. Quand
+  des valeurs manquent, un seul message remplace la liste « À compléter » : « Ces valeurs
+  manquent à la recette d'origine (équipement, durées, forme des houblons) : dupliquez-la pour
+  les compléter. » ;
+- « Général » : type de recette, auteur (« BrewDog »), volume, durée d'ébullition ;
+- malts et sucres, houblons, autres ajouts, levure, paliers et notes, comme la fiche d'une
+  recette. Un houblon sans forme porte « forme non renseignée ». Un houblon dont la source ne
+  donne pas la durée porte « moment d'origine : … », traduit avec la valeur de la source entre
+  parenthèses : « début d'ébullition (start) », « milieu d'ébullition (middle) », « fin
+  d'ébullition (end) », « houblonnage à cru (dry hop) », « whirlpool (Whirlpool) » ; une
+  autre valeur s'affiche telle quelle (« FWH ») ;
+- « Provenance », comme la fiche d'une entrée.
+
+Aucun coût : une recette publique n'a pas de prix.
+
+**Dupliquer** (tout membre). Le bouton affiche « Duplication » pendant la lecture du nom du
+compte (3 s au plus). La recette est créée au nom du lecteur, avec le même nom, les mêmes
+ingrédients, paliers et notes, l'auteur « BrewDog » et l'origine « DIY Dog · diydog-{id} ».
+Elle n'a ni équipement ni chronologie. Un houblon sans forme reste sans forme : l'éditeur la
+demande (« Choisissez une forme. ») quand la ligne est modifiée, et le calcul affiche « Forme
+du houblon à compléter : {noms}. » tant qu'elle manque. Le message « Recette dupliquée dans
+vos recettes. » (« Recette dupliquée sur l'appareil. Elle partira au retour du réseau. » hors
+ligne) s'affiche, puis l'éditeur de la nouvelle recette s'ouvre par-dessus la fiche ;
+« Fermer » revient à la fiche, « Enregistrer » ouvre la recette. Un refus du serveur affiche
+« La duplication de « {nom} » a échoué. ». La recette publique ne change pas.
+
+**États.** Chargement : indicateur « Chargement de la bibliothèque » (« Chargement des
+recettes publiques », « Chargement de la fiche »). Segment vide : « Aucun houblon dans la
+bibliothèque pour l'instant. L'administrateur la remplit. » (de même : « Aucun style… »,
+« Aucun malt ni sucre… », « Aucune levure… », « Aucun ajout divers… ») et « Aucune recette
+publique pour l'instant. ». Lecture impossible : « Impossible de lire la bibliothèque.
+L'erreur est signalée à l'administrateur. » et « Réessayer ». Liste illisible : « Cette liste
+ne peut pas s'afficher. L'erreur est signalée à l'administrateur. ». Fiche : « Cette fiche
+n'existe pas ou a été retirée. », « Cette fiche ne peut pas s'afficher. … », « Impossible de
+lire cette fiche. … », avec « Revenir à la bibliothèque » (« Revenir aux recettes
+publiques »). Chaque panne et chaque document illisible est journalisé.
+
+**Hors ligne.** La Bibliothèque est une consultation en ligne. Ce qui a déjà été lu reste
+lisible depuis le cache. Sinon : « Bibliothèque indisponible hors ligne. Elle s'ouvre au
+retour du réseau. » et « Réessayer » (« Fiche indisponible hors ligne. Elle s'ouvre au retour
+du réseau. » pour une fiche), jamais un segment vide. Une liste de recettes lue du cache
+porte « Hors ligne : liste lue sur l'appareil. Elle peut être incomplète. ». « Dupliquer »
+marche hors ligne, comme la création d'une recette. Le jour de brassage ne lit rien de la
+Bibliothèque.
+
+### Sources des données
+
+Ouvert depuis la Bibliothèque, depuis la section « Provenance » d'une fiche et depuis le menu
+du compte, pour tout membre (adresse `/sources-des-donnees`). Plein écran, hors de la barre de
+navigation, titre « Sources des données » et flèche retour (vers l'écran d'origine ; ouvert
+par son adresse, vers la Bibliothèque). Texte sélectionnable, livré avec l'application : il
+s'affiche sans réseau.
+
+- « La Bibliothèque reprend des données publiées par d'autres. Voici leurs auteurs, leurs
+  licences et ce que Kass'Beer en a changé. Chaque fiche indique sa source et sa licence. »
+- Brewtarget : malts, sucres, houblons, levures et ajouts divers, noms et valeurs techniques
+  des fichiers 001 à 005 de Brewtarget v5.2.3 (commit ea10908), licence GPL-3.0, sans notes
+  ni descriptions.
+- BJCP 2021 : noms, codes, catégories et plages chiffrées des styles, lus dans le fichier 002
+  de Brewtarget, sans descriptions.
+- beer-analytics.com : une partie des ingrédients du fichier 005 de Brewtarget, sous licence
+  CC BY-SA 4.0, « Modifications : unités normalisées, doublons fusionnés. », l'adresse
+  `https://creativecommons.org/licenses/by-sa/4.0/` en texte et le bouton « Lire la licence
+  CC BY-SA 4.0 », qui l'ouvre hors de l'application. Si le système refuse : « Impossible
+  d'ouvrir le lien. Il reste sélectionnable sur cette page. », et l'échec est journalisé.
+- DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
+  e6c12ab de leur transcription).
 
 ### Brassins
 
@@ -1097,7 +1243,8 @@ donnée absente. La liste « À compléter » nomme chaque donnée manquante :
 - « Nature à préciser : {noms}. » (malt ou sucre de type « Autre »), « Moment non pris en
   charge par le calcul : {noms}. » (houblon à l'empâtage ou au conditionnement), « Forme non
   prise en charge par le calcul : {noms}. » (houblon d'ébullition en poudre, en extrait ou en
-  cônes frais)
+  cônes frais), « Forme du houblon à compléter : {noms}. » (houblon d'ébullition sans forme,
+  copié d'une recette publique)
 
 Pour l'auteur, « Compléter la recette » ouvre l'éditeur. Sous les tuiles, une ligne
 d'hypothèses : « Pour 20 L · Grainfather (72 %) · US-05 78 % ». « Détail des calculs »

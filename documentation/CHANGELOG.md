@@ -6,6 +6,28 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
+### v0.1.25 — fonctionnel
+
+Une nouvelle entrée « Bibliothèque », à côté de Recettes, montre les styles de bière, les malts
+et sucres, les houblons, les levures, les ajouts divers et les recettes publiques DIY Dog. Une
+recherche filtre chaque liste par nom, autre nom ou code de style. La fiche d'un style donne ses
+plages de densité, de degré, d'amertume et de couleur. La fiche d'un ingrédient donne ses valeurs,
+sa source et sa licence.
+
+La fiche d'une recette publique montre ses ingrédients, ses paliers, les valeurs que Kass'Beer
+peut calculer et, à part, les valeurs annoncées par la recette d'origine. Un houblon dont la
+recette d'origine ne donne pas la durée garde le moment indiqué par la source, traduit.
+« Dupliquer » copie la recette dans vos recettes et ouvre l'éditeur : choisissez votre
+équipement, et la forme des houblons, que la recette d'origine ne donne pas, pour obtenir
+densités, degré et amertume. Une recette dont un houblon n'a pas de forme dit « Forme du
+houblon à compléter ». Recettes › Importer accepte aussi un houblon sans forme, sans rien
+perdre : la forme reste à compléter dans la recette, et l'export BeerXML attend qu'elle le
+soit.
+
+« Sources des données », ouvert depuis la Bibliothèque ou le menu du compte, nomme chaque source,
+sa licence et ce que Kass'Beer en a changé. La Bibliothèque demande le réseau, sauf pour ce qui a
+déjà été lu. Elle reste vide tant que l'administrateur n'a pas chargé les données.
+
 ### v0.1.23 — technique
 
 « Réglages faits une fois » ajoute les derniers réglages relevés au déploiement des

@@ -413,7 +413,8 @@ class _Conversion {
     final nom = _texte(h, 'NAME');
     return {
       'name': nom,
-      'form': _enumere(_texte(h, 'FORM'), kFormesHoublon),
+      // `FORM` absent : ligne sans forme (ADR-005, D8).
+      'form': ?_enumere(_texte(h, 'FORM'), kFormesHoublon),
       'alpha_acid': _couple(_nombre(_texte(h, 'ALPHA')), '%'),
       'amount': _kilogrammes(_texte(h, 'AMOUNT')),
       'timing': _momentHoublon(

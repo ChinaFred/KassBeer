@@ -610,22 +610,22 @@ void main() {
       );
     });
 
-    test('moment inconnu, forme ou moment absents : refusée', () {
+    test('moment inconnu : refusée ; forme absente : ligne gardée sans forme, '
+        'sans perte', () {
       expect(
         _refusRecette(
           _fichier('<NAME>R</NAME><HOPS>${_houblon('Bouillon')}</HOPS>'),
         ),
         'ValeurInconnue(moment, Saaz, Bouillon)',
       );
-      expect(
-        _refusRecette(
-          _fichier(
-            '<NAME>R</NAME><HOPS><HOP><NAME>Saaz</NAME><AMOUNT>0.01</AMOUNT>'
-            '<USE>Boil</USE><TIME>5</TIME></HOP></HOPS>',
-          ),
-        ),
-        'ValeurAbsente(forme, Saaz)',
+      final sansForme = _fichier(
+        '<NAME>R</NAME><HOPS><HOP><NAME>Saaz</NAME><AMOUNT>0.01</AMOUNT>'
+        '<USE>Boil</USE><TIME>5</TIME></HOP></HOPS>',
       );
+      final hop = _ligne(sansForme, 'hop_additions');
+      expect(hop.containsKey('form'), isFalse);
+      expect(hop['amount'], {'value': 10, 'unit': 'g'});
+      expect(_modifs(sansForme), isEmpty);
     });
 
     test('ALPHA 0 : lu comme absent et listé ; AMOUNT en kg → g', () {

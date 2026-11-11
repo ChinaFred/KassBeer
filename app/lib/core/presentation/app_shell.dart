@@ -36,6 +36,12 @@ const _recipes = ShellDestination(
   icon: Icons.menu_book_outlined,
   selectedIcon: Icons.menu_book,
 );
+const _library = ShellDestination(
+  path: AppRoutes.library,
+  label: 'Bibliothèque',
+  icon: Icons.local_library_outlined,
+  selectedIcon: Icons.local_library,
+);
 const _brews = ShellDestination(
   path: AppRoutes.brews,
   label: 'Brassins',
@@ -58,6 +64,7 @@ const _admin = ShellDestination(
 /// Destinations visibles : Admin pour l'administrateur seul.
 List<ShellDestination> shellDestinations({required bool isAdmin}) => [
   _recipes,
+  _library,
   _brews,
   _equipment,
   if (isAdmin) _admin,
@@ -172,7 +179,20 @@ class AppShell extends ConsumerWidget {
                             NavigationRailDestination(
                               icon: Icon(d.icon),
                               selectedIcon: Icon(d.selectedIcon),
-                              label: Text(d.label),
+                              label: expanded
+                                  ? Text(d.label)
+                                  : ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: kRailLabelMaxWidth,
+                                      ),
+                                      // Réduit plutôt que coupé : le rail
+                                      // garde la hauteur que donne
+                                      // IntrinsicHeight, sur une ligne.
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(d.label),
+                                      ),
+                                    ),
                             ),
                         ],
                       ),
@@ -218,7 +238,7 @@ class AppShell extends ConsumerWidget {
 String textePastille(int count) => count > 99 ? '99+' : '$count';
 
 /// Avatar Google et menu du compte : nom, e-mail, version, Mes prix, Signaler ou
-/// proposer, Mes tickets, Nouveautés, déconnexion. La pastille compte les
+/// proposer, Mes tickets, Nouveautés, Sources des données, déconnexion. La pastille compte les
 /// suivis de ticket à lire.
 class _AccountMenu extends ConsumerWidget {
   const _AccountMenu({required this.user});
@@ -296,6 +316,11 @@ class _AccountMenu extends ConsumerWidget {
           leadingIcon: const Icon(Icons.new_releases_outlined),
           onPressed: () => unawaited(context.push(AppRoutes.news)),
           child: const Text('Nouveautés'),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.info_outline),
+          onPressed: () => unawaited(context.push(AppRoutes.dataSources)),
+          child: const Text('Sources des données'),
         ),
         const Divider(),
         MenuItemButton(

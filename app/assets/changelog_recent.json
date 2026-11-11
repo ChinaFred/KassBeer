@@ -1,6 +1,15 @@
 {
   "versions": [
     {
+      "version": "0.1.25",
+      "date": "2026-11-11",
+      "paragraphs": [
+        "Une nouvelle entrée « Bibliothèque », à côté de Recettes, montre les styles de bière, les malts et sucres, les houblons, les levures, les ajouts divers et les recettes publiques DIY Dog. Une recherche filtre chaque liste par nom, autre nom ou code de style. La fiche d'un style donne ses plages de densité, de degré, d'amertume et de couleur. La fiche d'un ingrédient donne ses valeurs, sa source et sa licence.",
+        "La fiche d'une recette publique montre ses ingrédients, ses paliers, les valeurs que Kass'Beer peut calculer et, à part, les valeurs annoncées par la recette d'origine. Un houblon dont la recette d'origine ne donne pas la durée garde le moment indiqué par la source, traduit. « Dupliquer » copie la recette dans vos recettes et ouvre l'éditeur : choisissez votre équipement, et la forme des houblons, que la recette d'origine ne donne pas, pour obtenir densités, degré et amertume. Une recette dont un houblon n'a pas de forme dit « Forme du houblon à compléter ». Recettes › Importer accepte aussi un houblon sans forme, sans rien perdre : la forme reste à compléter dans la recette, et l'export BeerXML attend qu'elle le soit.",
+        "« Sources des données », ouvert depuis la Bibliothèque ou le menu du compte, nomme chaque source, sa licence et ce que Kass'Beer en a changé. La Bibliothèque demande le réseau, sauf pour ce qui a déjà été lu. Elle reste vide tant que l'administrateur n'a pas chargé les données."
+      ]
+    },
+    {
       "version": "0.1.21",
       "date": "2026-11-10",
       "paragraphs": [
@@ -37,13 +46,6 @@
       "paragraphs": [
         "Les recettes changent de format. L'éditeur gagne le type de recette, la température du grain, la quantité et le type de la levure, le type d'un ajout et le type d'un palier. Ces champs sont facultatifs, sans valeur choisie d'avance. Les durées en minutes sont des nombres entiers. Un whirlpool demande sa durée d'infusion, de 1 à 600 min ; pour un ajout à l'arrêt du feu, choisissez Ébullition et 0 min. Le formulaire d'un houblon garde une durée par moment : revenir à un moment remet ce que vous aviez saisi. Sous la quantité d'une levure, une aide rappelle que le coût compte un sachet par levure. La fiche, le brassin et l'écran du jour montrent ces nouveaux champs. Les listes tiennent sur deux lignes en grande taille de texte, et une aide longue n'est plus coupée. Les chiffres calculés ne changent pas.",
         "Les recettes et les brassins enregistrés avant cette version sont effacés au passage, avec le coût figé de ces brassins. Une recette ou un brassin qui ne peut pas s'afficher le dit, invite à mettre l'application à jour et ramène à la liste."
-      ]
-    },
-    {
-      "version": "0.1.14",
-      "date": "2026-11-10",
-      "paragraphs": [
-        "Le menu du compte gagne une entrée « Nouveautés ». Elle ouvre un écran qui présente les dernières versions qui changent ce que vous voyez, la plus récente en tête, avec leur date. La version installée sur l'appareil y porte l'étiquette « Installée ». Le texte se sélectionne pour être copié. L'écran marche sans réseau : les nouveautés sont livrées avec l'application."
       ]
     }
   ]

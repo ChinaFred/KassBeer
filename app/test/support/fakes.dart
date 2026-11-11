@@ -20,6 +20,9 @@ import 'package:kass_beer/features/brews/domain/brew_event.dart';
 import 'package:kass_beer/features/brews/domain/releves.dart';
 import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
+import 'package:kass_beer/features/library/data/library_repository.dart';
+import 'package:kass_beer/features/library/domain/recette_publique.dart';
+import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
 import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
@@ -758,6 +761,88 @@ class FakeTicketsRepository implements TicketsRepository {
   Stream<ListeLue<Ticket>> watchIssueMissing() => issueMissing.stream;
 }
 
+/// Demande de page reçue par [FakeLibraryRepository].
+typedef DemandePage = ({String prefixe, CurseurPage? apres});
+
+class FakeLibraryRepository implements LibraryRepository {
+  /// Réponse à `lireIndex`, par nature ; absente : `DocumentAbsent`.
+  final index = <NatureReferentiel, RechercheDocument<IndexReferentiel>>{};
+
+  /// Panne de `lireIndex`, par nature.
+  final indexErrors = <NatureReferentiel, Object>{};
+  final indexReads = <NatureReferentiel>[];
+
+  /// Réponse à `lireFiche`, par identifiant ; absente : `DocumentAbsent`.
+  final fiches = <String, RechercheDocument<FicheReferentiel>>{};
+  final ficheReads = <String>[];
+
+  /// Recettes publiques, dans l'ordre de `recipe.name`.
+  final recettes = <RecettePublique>[];
+
+  /// Panne de la prochaine page demandée.
+  Object? pageError;
+  bool pagesFromCache = false;
+  final pages = <DemandePage>[];
+
+  @override
+  Future<RechercheDocument<IndexReferentiel>> lireIndex(
+    NatureReferentiel nature,
+  ) async {
+    indexReads.add(nature);
+    final error = indexErrors[nature];
+    if (error != null) throw error;
+    return index[nature] ?? DocumentAbsent<IndexReferentiel>();
+  }
+
+  @override
+  Future<RechercheDocument<FicheReferentiel>> lireFiche(
+    NatureReferentiel nature,
+    String id,
+  ) async {
+    ficheReads.add(id);
+    return fiches[id] ?? DocumentAbsent<FicheReferentiel>();
+  }
+
+  @override
+  Future<PageRecettesPubliques> pageRecettesPubliques({
+    String prefixe = '',
+    CurseurPage? apres,
+  }) async {
+    pages.add((prefixe: prefixe, apres: apres));
+    final error = pageError;
+    if (error != null) {
+      pageError = null;
+      throw error;
+    }
+    final matching = [
+      for (final r in recettes)
+        if (normaliserNomRecherche(
+          r.name,
+        ).startsWith(normaliserNomRecherche(prefixe)))
+          r,
+    ];
+    final start = apres == null ? 0 : apres.valeur as int;
+    final end = (start + kTaillePageRecettes).clamp(0, matching.length);
+    return PageRecettesPubliques(
+      documents: [
+        for (final r in matching.sublist(start, end)) DocumentValide(r.id, r),
+      ],
+      suite: end - start < kTaillePageRecettes ? null : CurseurPage(end),
+      fromCache: pagesFromCache,
+    );
+  }
+
+  @override
+  Future<RechercheDocument<RecettePublique>> lireRecettePublique(
+    String id,
+  ) async {
+    for (final r in recettes) {
+      if (r.id == id) return DocumentTrouve(r);
+    }
+    return DocumentAbsent<RecettePublique>();
+  }
+}
+
 class RecordingErrorReportService extends ErrorReportService {
   final reports = <({String feature, Object error, String? context})>[];
 
@@ -806,6 +891,7 @@ class TestApp {
       alerte = FakeAlerte(),
       tickets = FakeTicketsRepository(),
       fichiers = FakeEchangeFichiers(),
+      library = FakeLibraryRepository(),
       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
@@ -823,6 +909,7 @@ class TestApp {
         brewsRepositoryProvider.overrideWithValue(brews),
         costsRepositoryProvider.overrideWithValue(costs),
         ticketsRepositoryProvider.overrideWithValue(tickets),
+        libraryRepositoryProvider.overrideWithValue(library),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
           return openLinkResult;
@@ -851,6 +938,7 @@ class TestApp {
   final FakeAlerte alerte;
   final FakeTicketsRepository tickets;
   final FakeEchangeFichiers fichiers;
+  final FakeLibraryRepository library;
 
   /// Analyse d'un fichier importé, remplaçable par les tests.
   AnalyseFichier Function(List<int>) analyseur = analyserFichier;
