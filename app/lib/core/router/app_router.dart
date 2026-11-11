@@ -23,8 +23,9 @@ import '../../features/recipes/presentation/recipe_detail_screen.dart';
 import '../../features/recipes/presentation/recipe_editor_screen.dart';
 import '../../features/recipes/presentation/recipes_list_screen.dart';
 import '../../features/tickets/domain/ticket.dart';
+import '../../features/tickets/presentation/admin_ticket_screen.dart';
+import '../../features/tickets/presentation/admin_tickets_screen.dart';
 import '../../features/tickets/presentation/my_tickets_screen.dart';
-import '../../features/tickets/presentation/ticket_detail_screen.dart';
 import '../../features/tickets/presentation/ticket_form_screen.dart';
 import '../presentation/app_shell.dart';
 import '../presentation/etats.dart';
@@ -185,8 +186,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.tickets}/:id',
+        // Au téléphone, le suivi seul ; en large, la liste à gauche et le
+        // suivi à droite.
         builder: (_, state) =>
-            TicketDetailScreen(id: state.pathParameters['id']!),
+            MyTicketsScreen(selectedId: state.pathParameters['id']),
       ),
       GoRoute(
         path: AppRoutes.tickets,
@@ -197,12 +200,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           final page = state.topRoute;
           return AppShell(
             location: state.uri.path,
-            title: page is PageDeCoquille ? page.titre : "Kass'Beer",
+            title: page is PageDeCoquille
+                ? page.titreSelon?.call(context, state) ?? page.titre
+                : "Kass'Beer",
             backTo: page is PageDeCoquilleDynamique
                 ? page.retourDepuis(state)
                 : page is PageDeCoquille
-                ? page.retour
+                ? switch (page.retourSelon) {
+                    final selon? => selon(context, state),
+                    null => page.retour,
+                  }
                 : null,
+            fullWidth: page is PageDeCoquille && page.pleineLargeur,
             child: child,
           );
         },
@@ -267,6 +276,39 @@ final routerProvider = Provider<GoRouter>((ref) {
                 titre: 'Membres',
                 retour: AppRoutes.admin,
                 builder: (_, _) => const MembersScreen(),
+              ),
+              // Liste et fiche sont deux routes sœurs : en large, elles
+              // partagent la même page (cleDePageTicketsAdmin), et seul le
+              // panneau de droite change au choix d'un ticket.
+              PageDeCoquille(
+                path: 'tickets',
+                titre: AdminTicketsScreen.titre,
+                retour: AppRoutes.admin,
+                pleineLargeur: true,
+                pageBuilder: (context, state) => MaterialPage<void>(
+                  key: cleDePageTicketsAdmin(context, state),
+                  child: const AdminTicketsScreen(),
+                ),
+              ),
+              // Au téléphone, la fiche seule, ouverte par push ; en large, la
+              // liste à gauche et la fiche à droite.
+              PageDeCoquille(
+                path: 'tickets/:id',
+                titre: AdminTicketScreen.titre,
+                retour: AppRoutes.adminTickets,
+                pleineLargeur: true,
+                titreSelon: (context, _) => adminTicketsCoteACote(context)
+                    ? AdminTicketsScreen.titre
+                    : AdminTicketScreen.titre,
+                retourSelon: (context, _) => adminTicketsCoteACote(context)
+                    ? AppRoutes.admin
+                    : AppRoutes.adminTickets,
+                pageBuilder: (context, state) => MaterialPage<void>(
+                  key: cleDePageTicketsAdmin(context, state),
+                  child: AdminTicketsScreen(
+                    selectedId: state.pathParameters['id'],
+                  ),
+                ),
               ),
             ],
           ),

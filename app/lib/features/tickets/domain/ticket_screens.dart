@@ -39,6 +39,8 @@ const Map<String, String> kTicketScreenNames = {
   '/tickets/:id': 'Suivi d\'un ticket',
   '/admin': 'Admin',
   '/admin/membres': 'Admin › Membres',
+  '/admin/tickets': 'Admin › Tickets des membres',
+  '/admin/tickets/:id': 'Admin › Ticket d\'un membre',
 };
 
 /// Valeur stockée pour le modèle de route [routePattern] : toujours une clé de

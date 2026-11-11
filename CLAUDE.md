@@ -75,9 +75,11 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 - Authentification : Firebase Auth, compte Google ; accès réservé aux e-mails listés dans
   `members/{email}` par l'administrateur.
 - Hébergement : Firebase Hosting (web) ; APK signé distribué par Firebase App Distribution.
-- Serveur : Cloud Functions 2e génération, Node 24 / TypeScript, en `europe-west1`, sans point
-  d'accès HTTP (`functions/`) : publication et suivi des tickets des membres (ADR-006, T1 ; T2
-  ajoute les décisions de l'admin). L'IA ou le RAPT Pill viendront avec leur ADR.
+- Serveur : Cloud Functions 2e génération, Node 24 / TypeScript, en `europe-west1`
+  (`functions/`) : publication, suivi et décisions des tickets des membres (ADR-006, T1 et T2).
+  ADR-008 (accepté) ajoute, lot par lot (T3 à T7), la parité avec Kass'Dalle : webhook GitHub,
+  callables de l'admin, lancement de sessions Claude Code, livraison, captures dans Cloud
+  Storage. Le RAPT Pill viendra avec son ADR.
 - Import des 16 fiches Excel : fichiers JSON préparés par une session Claude Code, relus et
   écrits par l'écran Admin › Import. Aucune IA dans l'application en version 1.
 - Échange de recettes : paquet Dart pur `exchange/` (import et export BeerJSON et BeerXML ; export

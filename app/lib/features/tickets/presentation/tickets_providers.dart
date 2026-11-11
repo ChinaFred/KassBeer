@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/data/lecture_document.dart';
 import '../../../core/providers.dart';
 import '../../auth/presentation/access_providers.dart';
+import '../../members/presentation/members_providers.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
 
@@ -32,18 +33,39 @@ final githubStatusProvider =
       retry: (retryCount, error) => null,
     );
 
-/// Tickets `pending` ou `send_failed`, lus par l'administrateur seul.
-final notSentTicketsProvider = StreamProvider.autoDispose<ListeLue<Ticket>>(
-  (ref) => ref.watch(ticketsRepositoryProvider).watchNotSent(),
+/// Tous les tickets, lus par l'administrateur seul (Admin › Tickets, compteur
+/// du menu, bandeau).
+final adminTicketsProvider = StreamProvider.autoDispose<ListeLue<Ticket>>(
+  (ref) => ref.watch(ticketsRepositoryProvider).watchAll(),
   retry: (retryCount, error) => null,
 );
 
-/// Tickets dont l'Issue a disparu, lus par l'administrateur seul.
-final issueMissingTicketsProvider =
-    StreamProvider.autoDispose<ListeLue<Ticket>>(
-      (ref) => ref.watch(ticketsRepositoryProvider).watchIssueMissing(),
+/// Nombre de tickets « À traiter » ([Ticket.toProcess]) pour l'administrateur ;
+/// 0 pour un brasseur ou tant que la liste n'est pas lue.
+final ticketsToProcessCountProvider = Provider.autoDispose<int>((ref) {
+  final isAdmin = ref.watch(grantedAccessProvider)?.member.isAdmin ?? false;
+  if (!isAdmin) return 0;
+  final list = ref.watch(adminTicketsProvider).value;
+  if (list == null) return 0;
+  return list.valides.where((t) => t.toProcess).length;
+});
+
+/// Décisions d'un ticket, lues par l'administrateur seul.
+final ticketDecisionsProvider = StreamProvider.autoDispose
+    .family<ListeLue<TicketDecision>, String>(
+      (ref, ticketId) =>
+          ref.watch(ticketsRepositoryProvider).watchDecisions(ticketId),
       retry: (retryCount, error) => null,
     );
+
+/// Nom déclaré de chaque membre (`members/{email}.display_name`), par e-mail,
+/// pour l'auteur d'un ticket. Vide tant que la liste n'est pas lue ou si elle
+/// ne peut pas l'être : l'écran montre alors l'adresse.
+final memberNamesProvider = Provider.autoDispose<Map<String, String>>((ref) {
+  final members = ref.watch(membersListProvider).value;
+  if (members == null) return const {};
+  return {for (final m in members) m.email: ?m.displayName};
+});
 
 /// Ouvre une adresse dans le navigateur ou l'application GitHub ; rend faux si
 /// le système refuse. Remplacée dans les tests.

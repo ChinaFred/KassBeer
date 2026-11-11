@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
-### v0.1.24 — technique
+### v0.1.25 — technique
 
 Les styles BJCP 2021, les malts et sucres, les houblons, les levures et les ajouts de
 Brewtarget, et les 415 recettes publiques de DIY Dog sont en base depuis le 11 novembre. Ils ne
@@ -26,6 +26,29 @@ référentiels et les recettes publiques sont lisibles par tout membre et ne s'�
 cet outil ; relancé sur les mêmes données, il ne réécrit aucun référentiel ni aucune recette,
 et n'ajoute que le compte rendu de l'exécution. Paquets du nouveau lockfile de l'écrivain :
 firebase-admin 14.5.0, ajv 8.20.0, firebase-tools 15.35.0, prettier 3.9.6.
+
+### v0.1.24 — fonctionnel
+
+L'administrateur traite les tickets depuis l'application. Le menu du compte gagne « Tickets à
+traiter », avec le nombre de tickets qui attendent une décision, et la page Admin la tuile
+« Tickets des membres ». La liste se filtre (à traiter, tous, bloqués) et montre l'auteur de
+chaque ticket. La fiche d'un ticket permet de le valider, de le refuser avec un motif ou de le
+clore avec un commentaire, de relancer un envoi en échec et d'ouvrir l'Issue sur GitHub ; elle
+suit l'avancement de la décision. Une frise montre les étapes du ticket, ici comme dans Mes
+tickets, et les statuts prennent de nouvelles couleurs. Sur grand écran, la liste et la fiche
+s'affichent côte à côte.
+
+### v0.1.24 — technique
+
+Lot T2 d'ADR-006. Décisions de l'admin par documents `tickets/{id}/decisions/{decisionId}`,
+appliquées sur l'Issue par les déclencheurs `onDecisionCreated` et `onDecisionUpdated` (bail en
+transaction, reconnaissance de la ligne `Décision <id>`, commentaire « Réponse : » nettoyé,
+étiquette, fermeture) ; `allowed_decisions` calculé par le serveur ; relance des envois par
+`retry_requested_at` à la passe horaire ; règles et tests des décisions pour les cinq profils ;
+trois index. Côté client : Admin › Tickets des membres, frise `FriseTicket`, tons `neutre`,
+`primaire` et `tertiaire` d'`Etiquette`, liste et détail côte à côte. ADR-008 accepté : parité
+avec Kass'Dalle (option B : webhook, callables, Cloud Storage, sessions Claude Code), lots T3 à
+T7 ; ADR-001 et ADR-006 le citent. Aucun paquet ajouté.
 
 ### v0.1.23 — technique
 

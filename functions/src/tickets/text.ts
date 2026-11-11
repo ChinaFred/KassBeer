@@ -21,8 +21,12 @@ const ZWSP = String.fromCharCode(0x200b);
 
 export const EMAIL_REPLACEMENT = "[adresse retirée]";
 
-/** Espaces sans chasse, joints, marque d'ordre des octets, trait d'union conditionnel. */
-const INVISIBLE_CHARS = /[\u00AD\u200B-\u200D\u2060\uFEFF]/g;
+/**
+ * Espaces sans chasse, joints, marque d'ordre des octets, trait d'union conditionnel, et
+ * contrôles bidirectionnels (U+200E, U+200F, U+202A à U+202E, U+2066 à U+2069) : un texte
+ * publié ne s'affiche pas dans un autre ordre que celui où il est lu.
+ */
+const INVISIBLE_CHARS = /[\u00AD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g;
 
 const EMAIL_PATTERN =
   /[A-Za-z0-9._%+-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}/g;

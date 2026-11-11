@@ -368,7 +368,7 @@ possible, sous le seul compte de son auteur, et la lecture typée l'ignore.
 
 **Amendements de L3 et L4 (décisions de la session principale du 2026-11-11, accord de
 l'utilisateur de décider jusqu'à la fin de L4).** L3 et L4 avancent par étapes : les données en
-base (v0.1.24), puis la consultation dans l'application, puis le reste de L4.
+base (v0.1.25), puis la consultation dans l'application, puis le reste de L4.
 
 - D1. Kaggle (`style_stats/`) est reporté. La page déclare « CC0: Public Domain » (relevé du
   2026-11-11, API Kaggle), mais le téléchargement demande un compte Kaggle absent du poste.
@@ -405,7 +405,7 @@ base (v0.1.24), puis la consultation dans l'application, puis le reste de L4.
   L'IBU d'un houblon d'ébullition sans forme est « à compléter », et l'éditeur demande la
   forme. Ce code est livré par la branche des écrans.
 
-Constats de la livraison de l'étape 1 (v0.1.24) :
+Constats de la livraison de l'étape 1 (v0.1.25) :
 
 - Une même souche de levure chez un même producteur (`SafAle S-04` et `SafAle English Ale`,
   référence `S-04`) ne fait qu'un document : sans ce regroupement, 902 documents au lieu de 845.

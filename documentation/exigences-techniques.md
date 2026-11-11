@@ -422,9 +422,8 @@ règles. `markSeen` écrit `seen_by_author_at` = `serverTimestamp()` à l'ouvert
 lire. Ni callable, ni transaction, ni `Source.server` : tout marche hors ligne.
 
 **Lectures.** `watchMine(uid)` : `where author_uid == uid`, tri à l'affichage, aucun index
-composite. Pour l'admin : `watchNotSent` (`status in [pending, send_failed]`),
-`watchIssueMissing` (`issue_missing_since != null`), `watchGithubStatus`
-(`ticket_status/github`). Toutes avec `includeMetadataChanges` et le cache. Un
+composite. Pour l'admin : `watchAll` et `watchGithubStatus` (`ticket_status/github`), voir
+« Tickets — client (T2) ». Toutes avec `includeMetadataChanges` et le cache. Un
 `serverTimestamp()` en attente se lit `null` : la date d'envoi affichée est alors l'heure de
 l'appareil gardée par le dépôt pour un ticket créé dans la session, sinon aucune date. Un
 ticket qui a une écriture en attente et n'est plus `pending` n'est pas compté à lire : cette
@@ -437,7 +436,7 @@ Le passage `pending` → `received` n'écrit pas `status_changed_at` : il n'allu
 
 **Providers.** `ticketsRepositoryProvider` (`core/providers.dart`, fourni par `main.dart`),
 `myTicketsProvider(uid)`, `unreadTicketsCountProvider`, `githubStatusProvider`,
-`notSentTicketsProvider`, `issueMissingTicketsProvider`, `ouvrirLienProvider`
+`ouvrirLienProvider`
 (`launchUrl(mode: externalApplication)`, remplacé dans les tests). Aucune nouvelle tentative
 automatique : une panne s'affiche, « Réessayer » relance.
 
@@ -452,22 +451,109 @@ GitHub » n'apparaît pas. Un refus du système ou une erreur est rapporté
 que `tickets/{id}` et le code d'erreur, jamais le titre, la description ni l'e-mail (P13).
 
 **Bandeau Admin.** `messagesBandeauTickets` (fonction pure, testée) : jeton refusé
-(`token_invalid_since`), échéance à 14 jours ou moins (`kTokenExpiryWarning`) ou inconnue,
+(`token_invalid_since`), échéance à 14 jours ou moins (`kTokenExpiryWarning`) ; sans échéance connue, rien,
 tickets `send_failed` ou `pending` depuis plus d'une heure (`kTicketSendDelay`, heure de
-`horlogeProvider`), Issues disparues. Liste vide quand tout va bien.
+`horlogeProvider`), Issues disparues, comptés sur la liste de `watchAll`. Liste vide quand tout
+va bien. Affiché dans Admin › Tickets depuis T2.
 
 **Composants partagés.** `Etiquette` reçoit `icon` (exclue de la sémantique) et
 `ton` (`TonEtiquette.erreur` : `errorContainer` / `onErrorContainer`). `EditeurPleinEcran`
 reçoit `libelleAction` et `libelleEnCours` (« Enregistrer » et « Enregistrement » par défaut)
 et `fermerParRetour` (faux par défaut : `go(closePath)` comme avant ; vrai : `pop` s'il y a un
-écran précédent). `formats.dart` : `formatDateChiffres` (« 08/11/26 »). `AdminScreen` affiche
-`BandeauTicketsAdmin` en tête.
+écran précédent). `formats.dart` : `formatDateChiffres` (« 08/11/26 »).
 
 **Tests.** `tickets_domain_test.dart` (lecture, statuts, suivi à lire, versions, lien,
 bandeau), `ticket_screens_test.dart` (table et routes), `tickets_repository_test.dart`
 (`fake_cloud_firestore` : champs écrits, illisible rapporté sans texte, `markSeen`, requêtes
 admin, état du jeton), `tickets_screens_test.dart` (menu et pastille, formulaire, liste,
 détail, bandeau Admin).
+
+#### Tickets — client (T2)
+
+Admin › Tickets des membres et décisions de l'administrateur (ADR-006, lot T2). Le client
+n'appelle aucune callable : il écrit des documents que les déclencheurs appliquent.
+
+| Fichier | Contenu |
+|---|---|
+| `domain/ticket.dart` | champs serveur lus en plus : `author_email`, `github_issue_number`, `github_url`, `delivered_pr_number`, `send_attempts`, `last_send_error`, `issue_missing_since`, `allowed_decisions` (`null` si absent ; valeur inconnue ignorée), `decision_lease_until`, `retry_requested_at` ; `toProcess` (`received` ou `send_failed`), `isLate`, `isBlocked`, `decisionInProgress` ; `TicketDecisionAction`, `TicketDecisionState`, `TicketDecision` (lecture tolérante : action inconnue lue `null`, état inconnu `unknown` ; seul un champ mal typé rend la décision illisible), `compareDecisionsRecentFirst`, `kDecisionTextMinLength` / `kDecisionTextMaxLength` (5 et 2 000), `kDecisionPendingDelay` (2 min) |
+| `presentation/admin_tickets_screen.dart` | `AdminTicketsScreen` (liste, filtres, disposition côte à côte), `filtreTicketsProvider`, `auteurTicket`, `pastillesAdmin` |
+| `presentation/admin_ticket_screen.dart` | `AdminTicketScreen` (fiche), `ligneDecision`, `ligneHistorique`, `FormulaireDecision` |
+| `presentation/frise_ticket.dart` | `etapesFrise` (étapes et étape actuelle par statut), `FriseTicket` |
+| `presentation/encadre_reponse.dart` | `EncadreReponse(titre:, texte:)`, partagé avec le suivi du membre ; `titreReponse` dans `ticket_statut.dart` |
+| `presentation/ticket_statut.dart` | `statutAfficheDe` (ton et icône de chaque statut), `EtiquetteStatut(clignoteAuChangement:)` |
+
+**Routes.** Dans la coquille, sous `/admin` : `/admin/tickets` (« Tickets des membres »,
+retour `/admin`) et `/admin/tickets/:id` (« Ticket d'un membre », retour `/admin/tickets`), toutes
+deux `AdminTicketsScreen(selectedId:)` et `PageDeCoquille(pleineLargeur: true)` : `AppShell`
+ne borne pas ces pages à `kContentMaxWidth`. `routes.dart` : `adminTickets`,
+`adminTicket(id)`. `kTicketScreenNames` reçoit « Admin › Tickets des membres » et « Admin ›
+Ticket d'un membre », cachés aux brasseurs par `isAdminTicketScreen`. `/tickets/:id` construit
+`MyTicketsScreen(selectedId:)`.
+
+**Disposition côte à côte.** Admin › Tickets : fenêtre d'au moins
+`kTicketsAdminCoteACoteMinWidth` (840 + 256 px du rail étendu, soit 1 096 px ; le routeur choisit
+la clé de page avant la mise en page) → liste de `kListeTicketsAdminWidth` (360) à gauche, fiche à
+droite, bandeau au-dessus des deux. `/admin/tickets` et `/admin/tickets/:id` sont deux routes
+sœurs qui partagent la clé de page `cleDePageTicketsAdmin` : choisir une ligne par `go` ne change
+que le panneau de droite, sans transition, et la liste garde son défilement. En dessous : liste
+seule, fiche seule ouverte par `push`. Mes tickets : même seuil de largeur, liste de
+`kListeMesTicketsWidth` (380), `TicketDetailPane` à droite ; une ligne choisie passe par
+`context.replace`, qui garde la clé de page et la pile ouverte par `push`. Le filtre vit dans `filtreTicketsProvider` (`Notifier` en `autoDispose`, jamais
+stocké) : il reste le même entre la liste et une fiche.
+Les brouillons des boîtes « Refuser » et « Clore » et la décision écrite vivent dans
+`decisionsFicheProvider` (`Notifier` en `autoDispose`, indexé par l'identifiant du ticket) : un
+changement de disposition pendant qu'une boîte est ouverte ne perd ni le texte ni l'écriture.
+
+**Lectures.** `watchAll()` : toute la collection `tickets/`, sans filtre, pour l'admin (les
+règles autorisent la lecture de tout ticket à `isAdmin()`). Elle sert à la liste, au compteur
+« Tickets à traiter » du menu (`ticketsToProcessCountProvider`, 0 pour un brasseur, qui ne
+s'abonne pas), au bandeau et à la pastille de la tuile d'Admin
+(`messagesBandeauTicketsProvider`). `watchDecisions(ticketId)` : `tickets/{id}/decisions/`, tri à l'affichage. Le
+nom de l'auteur vient de `members/{author_email}.display_name` par `membersListProvider`
+(lecture admin de `members/`, déjà faite par Admin › Membres) ; sans nom, l'adresse. Ce nom
+ne quitte pas l'écran de l'admin.
+
+**Écritures.** `createDecision` : `tickets/{id}/decisions/{decisionId}` avec l'identifiant de
+l'appareil (`newDecisionId`), `action`, `text` (retiré de ses espaces, absent pour `validate`),
+`state: pending`, `requested_by_uid`, `requested_at` = `serverTimestamp()`. `retrySend` :
+`retry_requested_at` = `serverTimestamp()` sur un ticket `send_failed`. `retryDecision` : même
+champ sur une décision `failed`. Chaque écriture se fait dans le cache dès l'appel ; la
+`Future` se termine à l'accord du serveur. Les trois écritures rendent `Future<bool>`. Un refus est
+rapporté par le dépôt (`tickets.create_decision`, `tickets.retry_send`, `tickets.retry_decision`)
+avec le chemin, l'action et le code d'erreur, jamais le texte (P13), qui rend `false` ; l'écran
+n'attrape rien et annonce « Décision non enregistrée. Réessayez. »
+ou « Relance non enregistrée. Réessayez. ».
+
+**Barre de décision.** Les boutons viennent de `allowed_decisions` seul (P26) : le client
+n'en dérive aucun du statut. Aucun bouton pendant une décision `pending` ou `applying`, ou
+tant que `decision_lease_until` est dans le futur, ou tant que les décisions ne sont pas lues.
+La décision écrite par l'écran s'affiche en attendant que la lecture la rende. Ligne d'état de
+la dernière décision (`ligneDecision`, fonction pure) : écriture en attente hors ligne
+(création, ou reprise d'une décision `failed` restée `failed` dans le cache avec
+`hasPendingWrites`), en cours, en attente depuis plus de `kDecisionPendingDelay`, bail expiré (`lease_until` de la
+décision, sinon `decision_lease_until` du ticket), écartée, en échec. Hauteur d'au moins
+`kBarreDecisionFixeMinHeight` (480) : barre fixée en bas ; en dessous, en fin de fiche. Les phrases hors ligne se
+dérivent du cache (`hasPendingWrites` de la décision ou du ticket et `offline`), jamais d'un
+état du widget : elles restent après un changement de disposition.
+
+**Étiquettes.** `TonEtiquette` reçoit `neutre` (`surfaceContainerHighest` / `onSurface`),
+`primaire` (`primaryContainer`) et `tertiaire` (`tertiaryContainer`). `EtiquetteStatut` avec
+`clignoteAuChangement` (fiche d'Admin seule) : trois pulsations d'opacité en 1 200 ms par un
+`AnimationController` créé pour cette seule étiquette, rien si
+`MediaQuery.disableAnimationsOf`, annonce `SemanticsService.sendAnnouncement` dans tous les cas.
+
+**Journal.** Rapports ajoutés : `tickets.watch_all`, `tickets.watch_decisions`,
+`tickets.read_decision`, `tickets.create_decision`, `tickets.retry_send`,
+`tickets.retry_decision`, `tickets.open_github` (contexte « Issue d'un ticket » ou « PR d'un
+ticket livré », sans l'adresse).
+
+**Tests.** `tickets_admin_test.dart` : domaine (À traiter, bloqué, frise par statut, tons,
+titres de l'encadré, infobulle, ligne d'état pour chaque état, historique), menu et compteur,
+tuile d'Admin, liste (filtres, états, auteur, pastilles, téléphone et large), fiche (boutons
+selon `allowed_decisions`, boîtes et validations, écriture refusée, hors ligne, rejet, échec et
+« Réessayer », relance d'envoi, Issue disparue, barre fixe ou en fin de fiche, clignotement et
+animations réduites, texte à 200 %), Mes tickets (frise et sémantique, téléphone et large).
+`tickets_repository_test.dart` : `watchAll`, champs des décisions, lecture tolérante, relances.
 
 ## Modèle de données
 
@@ -816,6 +902,10 @@ publié.
 Écrit par l'auteur ensuite : `seen_by_author_at` (timestamp, `serverTimestamp()`), à
 l'ouverture du suivi.
 
+Écrit par l'admin ensuite (T2) : `retry_requested_at` (timestamp, `serverTimestamp()`), seul
+champ modifié, sur un ticket `send_failed` seulement (« Relancer l'envoi »). La passe horaire
+le retire quand elle reprend le ticket.
+
 Écrits par le serveur seul (SDK Admin) :
 
 | Champ | Contenu |
@@ -834,11 +924,46 @@ l'ouverture du suivi.
 | `delivered_pr_number`, `delivered_pr_url`, `delivered_version` | PR fusionnée qui a fermé l'Issue, adresse `https://github.com/ChinaFred/KassBeer/pull/N`, version `X.Y.Z` de `app/pubspec.yaml` à son commit de fusion ; `null` sans PR (fermeture à la main) ou sans version lisible |
 | `delivered_checked_at` | timestamp de la recherche de la PR de livraison |
 | `issue_missing_since` | timestamp : Issue en 404 ou 410, dépôt joignable ; le statut ne change pas |
+| `allowed_decisions` | liste parmi `validate`, `refuse`, `close` : `received` → les trois ; `validated` et `in_progress` → `refuse`, `close` ; autres statuts → liste vide. Réécrite à chaque changement de statut (publication, passe horaire, décision) ; posée une fois par la passe horaire sur les tickets écrits avant T2. Absente sur un ticket `pending` jamais publié. Le client affiche les boutons de cette liste et ne la calcule pas (P26) |
+| `decision_lease_until` | timestamp : bail de deux minutes d'une décision en cours, posé en transaction, retiré à la fin |
+| `send_retried_at` | timestamp de la dernière relance demandée par l'admin : avec `send_attempts` remis à 0, il fait chercher l'Issue par sa référence avant un nouvel envoi |
 | `updated_at` | timestamp de la dernière écriture du serveur |
 
 Un statut ne recule pas, sauf à la réouverture de l'Issue, qui reprend le statut de ses
-étiquettes. Quitter `delivered` efface les quatre champs `delivered_*`. `allowed_decisions`,
-`decision_lease_until` et la sous-collection `decisions/` arrivent avec le lot T2.
+étiquettes. Quitter `delivered` efface les quatre champs `delivered_*`.
+
+### `tickets/{ticketId}/decisions/{decisionId}`
+
+Décision de l'admin sur un ticket (ADR-006, T2). Identifiant créé par l'appareil
+(`[A-Za-z0-9_-]`, 128 caractères au plus) ; il part sur le dépôt public dans la ligne
+`Décision <id>` du commentaire. Un document par décision garde l'historique. Les
+déclencheurs `onDecisionCreated` et `onDecisionUpdated` l'appliquent sur l'Issue.
+
+Écrits par l'admin, à la création seule :
+
+| Champ | Type |
+|---|---|
+| `action` | string, obligatoire : `validate`, `refuse` ou `close` |
+| `text` | string, 5 à 2 000 caractères : motif (`refuse`) ou commentaire (`close`), obligatoire pour ces deux actions, absent pour `validate` |
+| `state` | string, obligatoire : `pending` à la création |
+| `requested_by_uid` | string, obligatoire : `request.auth.uid` |
+| `requested_at` | timestamp, obligatoire : `serverTimestamp()` |
+
+Écrit par l'admin ensuite : `retry_requested_at` (timestamp, `serverTimestamp()`), seul
+champ modifié, sur une décision `failed` seulement (« Réessayer »). Le serveur le retire
+quand il reprend la décision.
+
+Écrits par le serveur seul (SDK Admin) :
+
+| Champ | Contenu |
+|---|---|
+| `state` | `pending` → `applying` → `applied` ; ou `rejected` (rien publié par cet essai), `failed` (échec en cours de route) |
+| `error_reason` | texte court en français, montré à l'admin, jamais le jeton ni le message brut de GitHub : « Cette décision n'est plus possible pour ce statut. », « Une décision est déjà en cours sur ce ticket. », « Ce ticket a déjà été clos sur GitHub. », « Ce ticket n'existe plus. », « Ce ticket n'a pas encore d'Issue GitHub. », « Décision illisible. », « Jeton GitHub refusé ou expiré. », « Motif publié, mais l'Issue n'a pas été fermée. Réessayez. », « Commentaire publié, mais l'Issue n'a pas été close. Réessayez. », « GitHub limite les appels pour l'instant. Réessayez plus tard. », « L'Issue de ce ticket est introuvable sur GitHub. », « GitHub n'a pas répondu, rien n'a été publié. Réessayez. », « Décision faite sur GitHub, mais le ticket n'a pas été mis à jour. Réessayez. » ; retiré quand la décision est reprise ou appliquée |
+| `steps_done` | liste parmi `comment`, `label`, `close` : étapes faites sur GitHub |
+| `comment_id` | identifiant du commentaire publié (`refuse`, `close`) ; relu en premier à la reprise |
+| `lease_until` | timestamp : bail de deux minutes, le même que `decision_lease_until` du ticket |
+| `applied_at` | timestamp de l'application |
+| `updated_at` | timestamp de la dernière écriture du serveur |
 
 ### `ticket_quotas/{id}`
 
@@ -856,9 +981,10 @@ Admin) :
 |---|---|
 | `token_invalid_since` | timestamp du premier refus (401, 403 hors limite de débit, 404 sur le dépôt, secret vide), `null` après le premier appel réussi |
 | `token_invalid_reason` | `secret_vide`, `jeton_refuse` ou `http_<code>` ; jamais le jeton |
-| `token_expires_at` | date de l'en-tête `github-authentication-token-expiration` ; `null` quand la dernière réponse réussie ne le portait pas (« Date d'expiration du jeton GitHub inconnue. ») |
+| `token_expires_at` | date de l'en-tête `github-authentication-token-expiration` ; `null` quand la dernière réponse réussie ne le portait pas (le bandeau ne dit alors rien de l'expiration) |
 | `token_checked_at` | timestamp de la dernière réponse réussie qui a écrit ce document |
 | `issues_cursor` | date ISO : curseur de la liste des Issues modifiées, propre à la passe horaire |
+| `allowed_decisions_backfilled_at` | timestamp : `allowed_decisions` posé sur les tickets écrits avant T2, propre à la passe horaire |
 
 ### Référentiels et recettes publiques (ADR-005, L3)
 
@@ -929,7 +1055,8 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 | `users/{uid}/brew_costs/` | propriétaire | propriétaire, forme contrôlée, `freeze_kind == 'initial'` | propriétaire, forme contrôlée, `freeze_kind == 'recalculation'` | propriétaire |
 | `users/{uid}/stock/` | propriétaire | propriétaire | propriétaire | propriétaire |
 | `error_reports/` | admin | membre, `uid` = le sien, champs en liste blanche et bornés | personne | admin |
-| `tickets/` | auteur (`author_uid` = le sien, requête « Mes tickets » comprise) ; tous pour l'admin | membre, champs de création seuls (voir `tickets/`), `status == 'pending'`, `created_at == request.time`, `author_email` = e-mail du jeton en minuscules | auteur : `seen_by_author_at == request.time` seul | personne |
+| `tickets/` | auteur (`author_uid` = le sien, requête « Mes tickets » comprise) ; tous pour l'admin | membre, champs de création seuls (voir `tickets/`), `status == 'pending'`, `created_at == request.time`, `author_email` = e-mail du jeton en minuscules | auteur : `seen_by_author_at == request.time` seul ; admin : `retry_requested_at == request.time` seul, ticket `send_failed` | personne |
+| `tickets/{id}/decisions/` | admin | admin, ticket existant, champs de création seuls (voir `decisions/`), `state == 'pending'`, `requested_by_uid == request.auth.uid`, `requested_at == request.time`, `text` 5 à 2 000 pour `refuse` et `close`, absent pour `validate` | admin : `retry_requested_at == request.time` seul, décision `failed` | personne |
 | `ticket_quotas/**` | personne | personne | personne | personne |
 | `ticket_status/**` | admin | personne | personne | personne |
 | `beer_fermentables/`, `beer_hops/`, `beer_cultures/`, `beer_miscs/`, `beer_styles/`, `beer_index/` | membres, `get` seul (aucune requête) | personne | personne | personne |
@@ -1099,9 +1226,16 @@ filtre, marque de lecture, suppression), P11 (adresse non vérifiée, mot de pas
 majuscules, membre retiré), chaque borne de la création (titre de 4, 5, 100, 101 caractères
 et sur deux lignes, description de 9, 10, 2 000, 2 001, écran avec identifiant réel,
 version de 41 caractères, plateforme `ios`), chaque champ serveur refusé à la création et en
-modification, `seen_by_author_at` à l'heure de l'appareil, une décision créée par le
-brasseur ou l'admin (refusée en T1), et `ticket_quotas/`, `ticket_status/` pour les cinq
-profils.
+modification, `seen_by_author_at` à l'heure de l'appareil, et `ticket_quotas/`, `ticket_status/` pour les
+cinq profils. Pour T2, il rejoue `decisions/` pour les cinq profils (création, lecture, liste
+triée sur `requested_at`, reprise d'une décision `failed`, suppression), le brasseur qui crée
+une décision sur son propre ticket (refusé pour les trois actions), chaque borne de la
+création (texte de 4, 5, 2 000, 2 001 caractères, texte pour `validate`, texte absent pour
+`refuse` et `close`, état autre que `pending`, `requested_by_uid` d'un autre compte,
+`requested_at` de l'appareil, chaque champ serveur), un ticket absent, une reprise sur une
+décision `applied` ou avec un autre champ ; et la relance d'un ticket `send_failed` pour les
+cinq profils, refusée sur un ticket `received`, à l'heure de l'appareil ou avec un autre
+champ, ainsi que `allowed_decisions` et `decision_lease_until` écrits par l'admin.
 
 `recipe_format.test.mjs` (v0.1.15) rejoue la forme BeerJSON dans `recipes/` et dans la copie
 figée : document plat de la v0.1.14, sans `format_version`, `format_version` 2 ou en texte,
@@ -1596,19 +1730,23 @@ aucune recette réécrit, seul son document `ingest_runs` créé) ;
 
 `functions/` (ADR-006) : Cloud Functions 2e génération, Node 24, TypeScript, région
 `europe-west1` (celle de la base), compte d'exécution `tickets-functions@kassbeer.iam.gserviceaccount.com`. Aucun
-`onRequest` ni `onCall` (P25) : les deux fonctions ne s'appellent pas depuis Internet.
+`onRequest` ni `onCall` (P25) : aucune des quatre fonctions ne s'appelle depuis Internet.
 
 | Fonction | Déclencheur | Réglages | Ce qu'elle fait |
 |---|---|---|---|
 | `publishTicket` | `onDocumentCreated('tickets/{ticketId}')` | `maxInstances` 2, 256 Mio, 60 s, sans rejeu (la passe horaire renvoie) | publie le ticket `pending` |
-| `syncTickets` | `onSchedule('every 60 minutes')`, heure de Paris | `maxInstances` 1, 256 Mio, 300 s, sans rejeu | renvoie les `pending`, relit les Issues |
+| `onDecisionCreated` | `onDocumentCreated('tickets/{ticketId}/decisions/{decisionId}')` | `maxInstances` 2, 256 Mio, 60 s, sans rejeu | applique la décision de l'admin (T2) |
+| `onDecisionUpdated` | `onDocumentUpdated('tickets/{ticketId}/decisions/{decisionId}')` | idem | reprend une décision `failed` quand `retry_requested_at` est posé ou change ; ne fait rien sur les écritures du serveur |
+| `syncTickets` | `onSchedule('every 60 minutes')`, heure de Paris | `maxInstances` 1, 256 Mio, 300 s, sans rejeu | relance les envois demandés, renvoie les `pending`, reprend les décisions au bail expiré, relit les Issues |
 
-Les deux lisent le secret `GITHUB_TICKETS_TOKEN` (`defineSecret`). `src/firestore.ts` charge le
+Les quatre lisent le secret `GITHUB_TICKETS_TOKEN` (`defineSecret`). `src/firestore.ts` charge le
 SDK Admin au premier appel ; le client GitHub (`src/tickets/github.ts`, `fetch`, aucun SDK)
 se construit à l'appel avec le jeton (P26). `src/logging.ts` journalise par
 `firebase-functions/logger` (`logError` dans chaque `catch`) et retire tout ce qui a la forme
-d'un jeton GitHub. Les règles pures (`src/tickets/model.ts`, `src/tickets/text.ts`) sont
-testées par `node --test` (`functions/test/`).
+d'un jeton GitHub. Les règles pures (`src/tickets/model.ts`, `src/tickets/text.ts`,
+`src/tickets/decisionModel.ts`) sont testées par `node --test` (`functions/test/`).
+`src/tickets/issueState.ts` applique l'état d'une Issue à son ticket, pour la passe horaire et
+pour une décision qui trouve son Issue déjà fermée.
 
 **Publication** (`src/tickets/publish.ts`). Transaction : le ticket doit être `pending`, sans
 numéro d'Issue ni bail actif. Au premier essai, le rôle de l'auteur est lu dans
@@ -1621,25 +1759,72 @@ ticket. La liste ne dépend pas de l'index de recherche de GitHub, en retard de 
 minutes. Sinon elle est créée, avec
 les étiquettes `source:app` et `type:<type>`. Succès : `received`, sans
 `status_changed_at`. Échec réseau ou 5xx : un essai compté, `pending` gardé, `send_failed` au
-dixième. Limite de débit : non comptée. Jeton refusé ou secret vide : non compté,
+dixième. Chaque changement de statut (`received`, `send_failed`, `over_quota`) écrit aussi
+`allowed_decisions`. Après une relance de l'admin, `send_retried_at` fait chercher l'Issue
+avant un nouvel envoi, comme un essai précédent. Limite de débit : non comptée. Jeton refusé ou secret vide : non compté,
 `token_invalid_since` posé.
 
 **Gabarit de l'Issue** (P24). Titre : celui du ticket, nettoyé, sur une ligne. Corps : type,
 écran (modèle de route, « Autre écran » ou « Non précisé »), version (« Version inconnue »
 si absente), plateforme, référence opaque, puis la description nettoyée. Jamais le nom,
 l'e-mail ni l'uid. Nettoyage de tout texte publié (`publicText`) : commentaires HTML retirés,
-caractères invisibles retirés, forme NFKC, adresses e-mail remplacées par
+caractères invisibles et contrôles bidirectionnels (U+200E, U+200F, U+202A à U+202E,
+U+2066 à U+2069) retirés, forme NFKC, adresses e-mail remplacées par
 « [adresse retirée] », HTML brut, images, pièces jointes intégrées et définitions de
 référence rendus en texte, mentions `@`, renvois `#N` et `GH-N`, adresses
 `github.com/<x>/<y>/issues/N` et `/pull/N` coupés par une espace sans chasse.
 Firestore garde le texte saisi, lu par l'auteur et l'admin seuls.
 
-**Passe horaire** (`src/tickets/sync.ts`). 1. Renvoi de 20 tickets `pending` au plus. 2. Liste
-des Issues `source:app` modifiées depuis `ticket_status/github.issues_cursor`, les plus
-anciennes d'abord, 30 au plus (un appel). 3. Avec le reste des 30, les tickets `received`,
+**Décisions de l'admin** (`src/tickets/decisions.ts`, T2). Ordre suivi par
+`onDecisionCreated`, `onDecisionUpdated` et la passe horaire :
+
+1. Transaction sur la décision et son ticket. La décision doit être `pending`, `failed` avec
+   `retry_requested_at`, ou `applying` au bail expiré ; sinon rien (rejeu : une décision
+   `applied` ou `rejected` ne fait rien). Elle passe `rejected` si le ticket n'existe plus,
+   n'a pas d'Issue, porte un `decision_lease_until` actif, ou si `action` n'est pas dans
+   `allowed_decisions` (une reprise sur un ticket déjà au statut visé passe : la passe
+   horaire a pu appliquer ce qu'un essai précédent a fait). Sinon bail de deux minutes sur
+   le ticket (`decision_lease_until`) et sur la décision (`lease_until`), état `applying`,
+   `retry_requested_at` retiré.
+2. Relecture de l'Issue. Pour `refuse` et `close`, recherche d'un commentaire du compte
+   16348852 qui porte la ligne `Décision <id>`. Si la décision porte déjà `comment_id`, ce
+   seul commentaire est relu (`GET /issues/comments/{id}`) : présent avec la ligne, il compte
+   comme publié ; supprimé (404 ou 410), il est republié sans relire les pages. Sinon, ou
+   s'il a perdu sa ligne, les pages sont relues (cinq de 100 au plus). Une Issue fermée
+   par un autre geste : l'état lu est appliqué au ticket (`issueState.ts`), la décision passe
+   `rejected` (« Ce ticket a déjà été clos sur GitHub. »). Une Issue fermée par un essai
+   précédent de cette décision (`not_planned` avec le commentaire, ou `statut:clos` avec le
+   commentaire) compte comme faite.
+3. `refuse` et `close` : commentaire `Réponse : <texte nettoyé par publicText>`, une ligne
+   vide, puis `Décision <id>`, sauf s'il est déjà publié.
+4. Étiquette `validé` (`validate`) ou `statut:clos` (`close`), sauf si elle est posée.
+5. Fermeture `not_planned` (`refuse`) ou `completed` (`close`).
+6. Transaction, si le bail est encore celui de cet essai : ticket au statut visé
+   (`validated`, `refused`, `closed`), `allowed_decisions`, `reply_text` et `reply_at`
+   (texte que la passe horaire relira dans le commentaire, préfixe et ligne `Décision`
+   retirés), `status_changed_at` quand le statut ou la réponse change, bail retiré ;
+   décision `applied`, `applied_at`, `steps_done`, `comment_id`.
+
+Un échec laisse la décision `failed` avec `steps_done` et `error_reason`, et retire les deux
+baux. Un jeton refusé ou un secret vide pose `token_invalid_since`. Le délai d'exécution
+(60 s) est plus court que le bail (2 min) : un bail expiré veut dire une fonction arrêtée.
+
+**Passe horaire** (`src/tickets/sync.ts`). 1. Une fois, `allowed_decisions` posé sur chaque
+ticket qui ne l'a pas ou dont la liste ne suit pas le statut (marque
+`allowed_decisions_backfilled_at` dans `ticket_status/github`). 2. Tickets `send_failed` avec
+`retry_requested_at` (20 au plus) : en transaction, `pending`, `send_attempts` à 0,
+`send_retried_at` posé, `retry_requested_at` retiré, `status_changed_at` inchangé ; puis
+nouvel essai de publication dans la même passe. 3. Renvoi de 20 tickets `pending` au plus.
+4. Décisions `applying` au bail expiré, et décisions encore `pending` cinq minutes après
+`requested_at` (déclencheur arrêté avant la prise, sans rejeu) : 20 de chaque au plus,
+requêtes de groupe sur `decisions`, reprises comme ci-dessus ; la transaction de prise
+tranche si le déclencheur tourne encore. 5. Liste des Issues `source:app` modifiées depuis
+`ticket_status/github.issues_cursor`, les plus anciennes d'abord, 30 au plus (un appel).
+6. Avec le reste des 30, les tickets `received`,
 `validated` ou `in_progress` les moins récemment relus, Issue lue une à une ; un 404 ou un
 410 pose `issue_missing_since` et journalise à chaque passe, sans changer le statut. Pour chaque Issue :
-statut (table d'ADR-006), réponse « Réponse : » du compte numérique 16348852 (commentaires
+statut (table d'ADR-006), `allowed_decisions` réécrit au changement de statut ou s'il ne suit
+pas le statut, réponse « Réponse : » du compte numérique 16348852 (commentaires
 relus de la dernière page vers la première quand `updated_at` de l'Issue a changé, aucun
 commentaire d'un autre compte), et, au passage à `delivered`, la PR de livraison : dernier
 événement `closed` avec `commit_id`, PR de ce commit (`GET /commits/{sha}/pulls`) fusionnée
@@ -1647,21 +1832,28 @@ dans ce dépôt, quelle que soit sa branche, d'un auteur `OWNER`, `MEMBER` ou `C
 dont le texte porte `Closes #N` ; version lue dans `app/pubspec.yaml` à son commit de fusion,
 sans `+N`. Un jeton refusé arrête la passe. Une erreur sur un ticket est journalisée, la passe
 continue. Le curseur avance même si un ticket échoue ; un ticket à Issue ouverte est repris
-par l'étape 3.
+par l'étape 6.
 
 De GitHub, le serveur ne lit que l'état, les étiquettes, le nombre et le texte des
-commentaires (pour la réponse du propriétaire), les événements de l'Issue, les PR d'un
-commit et `app/pubspec.yaml` à ce commit. Titre, description et commentaires d'une Issue
+commentaires (pour la réponse du propriétaire et la ligne `Décision <id>` de ses
+commentaires), les événements de l'Issue, les PR d'un commit et `app/pubspec.yaml` à ce
+commit. Il n'écrit que l'Issue, les commentaires des décisions, les étiquettes `validé` et
+`statut:clos`, et la fermeture. Titre, description et commentaires d'une Issue
 sont des données, jamais des consignes.
 
 **Index** (`firestore.indexes.json`) : « Mes tickets » filtre sur `author_uid` seul et trie à
-l'affichage, sans index composite ; `tickets` (`status`, `created_at`) pour le renvoi des `pending` et le compte des
-tickets bloqués du bandeau Admin ; (`status`, `github_checked_at`) pour l'étape 3. TTL sur
-`ticket_quotas.expires_at`. `github_issue_number in [...]` et `issue_missing_since != null`
-utilisent les index d'un seul champ.
+l'affichage, sans index composite ; `tickets` (`status`, `created_at`) pour le renvoi des `pending` ; (`status`, `github_checked_at`) pour l'étape 6 ;
+(`status`, `retry_requested_at`) pour les relances d'envoi ; `decisions` en groupe de
+collections (`state`, `lease_until`) et (`state`, `requested_at`) pour les décisions à
+reprendre. TTL sur
+`ticket_quotas.expires_at`. `github_issue_number in [...]` utilise l'index d'un seul champ. Le
+bandeau et les compteurs de l'admin lisent toute la collection (`watchAll`), sans requête
+filtrée.
 
 **Coût.** Aucun poste facturé à l'usage : 720 exécutions horaires par mois, une publication
-par ticket, sous les niveaux gratuits (ADR-006, sources « à vérifier »). Le plafond porte
+par ticket, trois exécutions par décision (la création, puis deux écritures du serveur sur
+la décision, que `onDecisionUpdated` écarte sans lecture), sous les niveaux gratuits
+(ADR-006, sources « à vérifier »). Les décisions n'ont pas de plafond : seul l'admin en crée. Le plafond porte
 sur la publication, pas sur la création : un membre peut créer beaucoup de documents
 `tickets/` au-delà de 5 par jour. Chaque création au-delà déclenche `publishTicket`, une
 transaction et 1 à 3 écritures (`over_quota`), sans appel à GitHub. Avec moins de 10

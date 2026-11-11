@@ -166,6 +166,10 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
+Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
+tickets avec Kass'Dalle, lots T3 à T7. Ses contrôles (P25 modifié, P29 à P36) entreront dans
+`CLAUDE.md` avec le lot T3, après l'accord de l'utilisateur.
+
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
 P10 (fichiers de `functions/` exécutés par un hook) et P14 (déploiement des Functions sans
@@ -278,7 +282,7 @@ SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « S
 Depuis la v0.1.21 (L2c), « Le projet » et « Structure » disent que `exchange/` lit et écrit aussi le
 BeerXML ; l'export BeerXML reste bloqué dans l'écran jusqu'au référentiel des styles (L3).
 
-Depuis la v0.1.24 (L3 d'ADR-005, étape 1), l'ingestion des référentiels et des recettes
+Depuis la v0.1.25 (L3 d'ADR-005, étape 1), l'ingestion des référentiels et des recettes
 publiques passe par deux outils du poste : la préparation en Dart
 (`exchange/bin/preparer_referentiels.dart`) et l'écrivain Node 24 `ingest/` (Admin SDK).
 `CLAUDE.md` reçoit les évolutions d'ADR-005 qui portent sur ce code : l'exception à « Une
