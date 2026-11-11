@@ -59,6 +59,7 @@ class EditeurPleinEcran extends ConsumerWidget {
   final bool fermerParRetour;
 
   Future<void> _leave(BuildContext context) async {
+    // ticket: aucun (confirmation)
     if (dirty && !await confirmerAbandon(context, abandonMessage)) return;
     if (!context.mounted) return;
     if (fermerParRetour && context.canPop()) {

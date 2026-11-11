@@ -121,6 +121,7 @@ Future<bool> ouvrirFormulairePrix(
   String? name,
   CostUnit? uniteLigne,
 }) async {
+  // ticket: /prix/fenetre/prix, /recettes/:id/fenetre/prix, /brassins/:id/fenetre/prix
   final saved = await showFeuilleOuDialogue<bool>(
     context: context,
     fermetureProtegee: true,
@@ -340,6 +341,7 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
   Future<void> _reprendre() async {
     final nature = _nature;
     if (nature == null) return;
+    // ticket: /prix/fenetre/reprendre, /recettes/:id/fenetre/reprendre, /brassins/:id/fenetre/reprendre
     final choisi = await showFeuilleOuDialogue<Price>(
       context: context,
       builder: (context) => _ListeReprise(
@@ -361,6 +363,7 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
       navigator.pop(false);
       return;
     }
+    // ticket: aucun (confirmation)
     final abandon = await confirmerAbandon(context, TextesPrix.abandon);
     if (abandon && mounted) navigator.pop(false);
   }
