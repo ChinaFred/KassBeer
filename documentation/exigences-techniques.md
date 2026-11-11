@@ -380,7 +380,7 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/bibliotheque` | redirige vers `/bibliotheque/styles` (route sans écran, hors de la coquille) : une seule page par segment, que le retour d'une fiche retrouve avec sa recherche | membre |
 | `/bibliotheque/{segment}` | Bibliothèque, dans la coquille ; segments `styles`, `malts`, `houblons`, `levures`, `divers`, `recettes` ; chaque segment est une route de premier niveau de la coquille | membre |
 | `/bibliotheque/{segment}/:id` | fiche d'un style, d'un ingrédient ou d'une recette publique, dans la coquille, retour vers le segment ; route fille du segment, qui garde la liste et ses pages lues au retour | membre |
-| `/sources-des-donnees` | « Sources des données », page pleine avec retour, hors coquille, ouverte par `push` depuis la Bibliothèque, une fiche ou le menu du compte | membre |
+| `/sources-des-donnees` | « Sources des données », page pleine avec retour, hors coquille, ouverte par `push` depuis la Bibliothèque, une fiche, Admin › Sources ou le menu du compte | membre |
 | `/prix` | « Mes prix », page pleine avec retour, hors coquille, ouverte par `push` depuis le menu du compte | membre ; ses seuls prix et frais |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |

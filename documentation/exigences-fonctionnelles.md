@@ -969,7 +969,7 @@ Bibliothèque.
 
 ### Sources des données
 
-Ouvert depuis la Bibliothèque, depuis la section « Provenance » d'une fiche et depuis le menu
+Ouvert depuis la Bibliothèque, depuis la section « Provenance » d'une fiche, depuis Admin › Sources et depuis le menu
 du compte, pour tout membre (adresse `/sources-des-donnees`). Plein écran, hors de la barre de
 navigation, titre « Sources des données » et flèche retour (vers l'écran d'origine ; ouvert
 par son adresse, vers la Bibliothèque). Texte sélectionnable, livré avec l'application : il
