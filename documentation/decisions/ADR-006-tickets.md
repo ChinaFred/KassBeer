@@ -4,6 +4,8 @@
 - **Date** : 2026-11-10
 - **Remplace** : — (modifie ADR-001 sur un point : un serveur arrive avant l'IA et le RAPT Pill ;
   applique la clause « Quand revenir sur cette décision » d'ADR-005)
+- **Modifié par** : ADR-008 (parité Kass'Dalle : option C, décisions 1 et 5 et P25 remplacés
+  sur la liste fermée de points d'accès d'ADR-008 ; T2 livré tel quel, repris en T7)
 
 ## Contexte
 

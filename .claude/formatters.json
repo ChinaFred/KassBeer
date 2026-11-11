@@ -42,6 +42,15 @@
       ],
       "cwd": "functions",
       "command": "npx --no-install prettier --write {file}"
+    },
+    {
+      "prefix": "ingest/",
+      "extensions": [
+        ".mjs",
+        ".js"
+      ],
+      "cwd": "ingest",
+      "command": "npx --no-install prettier --write {file}"
     }
   ]
 }

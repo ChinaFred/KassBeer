@@ -1,0 +1,44 @@
+[
+  {
+    "id": "culture-labo-fictif-lf1-levure-fictive",
+    "data": {
+      "name": "Levure Fictive",
+      "aliases": [],
+      "type": "ale",
+      "form": "dry",
+      "producer": "Labo Fictif",
+      "product_id": "LF1",
+      "attenuation": {
+        "minimum": {
+          "value": 70,
+          "unit": "%"
+        },
+        "maximum": {
+          "value": 80,
+          "unit": "%"
+        }
+      },
+      "temperature_range": {
+        "minimum": {
+          "value": 15,
+          "unit": "C"
+        },
+        "maximum": {
+          "value": 22,
+          "unit": "C"
+        }
+      },
+      "flocculation": "medium",
+      "provenance": [
+        {
+          "source": "brewtarget-004",
+          "source_id": "Nom Fictif",
+          "version": "v5.2.3 ea10908",
+          "licence": "GPL-3.0",
+          "retrieved": "2026-11-08"
+        }
+      ],
+      "content_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  }
+]

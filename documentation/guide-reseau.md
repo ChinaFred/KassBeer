@@ -166,6 +166,10 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
+Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
+tickets avec Kass'Dalle, lots T3 à T7. Ses contrôles (P25 modifié, P29 à P36) entreront dans
+`CLAUDE.md` avec le lot T3, après l'accord de l'utilisateur.
+
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
 P10 (fichiers de `functions/` exécutés par un hook) et P14 (déploiement des Functions sans
@@ -278,6 +282,22 @@ SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « S
 Depuis la v0.1.21 (L2c), « Le projet » et « Structure » disent que `exchange/` lit et écrit aussi le
 BeerXML ; l'export BeerXML reste bloqué dans l'écran jusqu'au référentiel des styles (L3).
 
+Depuis la v0.1.25 (L3 d'ADR-005, étape 1), l'ingestion des référentiels et des recettes
+publiques passe par deux outils du poste : la préparation en Dart
+(`exchange/bin/preparer_referentiels.dart`) et l'écrivain Node 24 `ingest/` (Admin SDK).
+`CLAUDE.md` reçoit les évolutions d'ADR-005 qui portent sur ce code : l'exception à « Une
+écriture de masse sur les données a un seul écran » pour l'ingestion d'une source externe,
+`ingest/` dans « Structure », des lignes de « Commandes utiles » pour la préparation et
+l'écriture, P10 étendu à `ingest/package.json`, `ingest/package-lock.json` et
+`ingest/prettier.config.*`, et trois contrôles : P19 (`securite` : référentiels, recettes
+publiques, `ingest_runs` et `import_unresolved` jamais écrits par un client, tests des cinq
+profils), P20 (`relecteur-regles` : aucun fichier ni texte libre d'une source dans le dépôt ou
+en base, licence CC BY-SA 4.0 portée dans `provenance[]`) et P22 (`relecteur-regles` : aucun
+écouteur ni lecture entière sur `beer_*` ou `public_recipes`). `.claude/formatters.json` lance
+prettier sur `ingest/`. `setup-projet.sh` et la CI ne lancent pas encore `ingest/` (ADR-005,
+D2) : ses tests tournent en local. P19 ne couvre pas encore `style_stats` (reporté, D1) ni la
+création d'un non résolu par un membre (D6).
+
 Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
 `--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans
 ce fichier local, jamais versionné. État de la production et outils du poste :
@@ -294,3 +314,9 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   leurs `events/` et les coûts figés de ces brassins, après un compte rendu sans écriture, une copie dans `import/backup/` et une
   confirmation. L'outil et l'exception sortent à la livraison suivante. ADR-005, décision de
   l'utilisateur.
+- 2026-11-11 : exception durable à « Une écriture de masse sur les données a un seul écran ».
+  L'ingestion d'une source externe (référentiels, recettes publiques) passe par un script local
+  lancé par l'administrateur (`ingest/`) : émulateur par défaut, production sur option
+  explicite et confirmation, liste blanche de collections, identifiants déterministes, rapport
+  JSON chiffré. Admin › Sources affichera les compteurs et les non résolus (L4). ADR-005,
+  évolution acceptée le 2026-11-08.

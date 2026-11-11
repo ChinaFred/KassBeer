@@ -69,3 +69,22 @@ const double kBrewDayChronologyMaxWidth = 480;
 
 /// Largeur de l'écran du jour, centré au-delà.
 const double kBrewDayMaxWidth = 1200;
+
+/// Hauteur à partir de laquelle la barre de décision d'un ticket (Admin ›
+/// Tickets) reste fixée en bas de l'écran ; en dessous, elle passe en fin de
+/// fiche.
+const double kBarreDecisionFixeMinHeight = 480;
+
+/// Largeur de la liste de « Mes tickets » (fenêtre d'au moins
+/// [kExpandedMinWidth]) et d'Admin › Tickets (fenêtre d'au moins
+/// [kTicketsAdminCoteACoteMinWidth]) quand la fiche s'affiche à côté.
+const double kListeMesTicketsWidth = 380;
+const double kListeTicketsAdminWidth = 360;
+
+/// Largeur du rail de navigation étendu (`NavigationRail.minExtendedWidth`).
+const double kRailEtenduWidth = 256;
+
+/// Largeur de fenêtre à partir de laquelle Admin › Tickets montre la liste et
+/// la fiche côte à côte : [kExpandedMinWidth] de contenu à côté du rail étendu.
+const double kTicketsAdminCoteACoteMinWidth =
+    kExpandedMinWidth + kRailEtenduWidth;

@@ -136,7 +136,7 @@ void main() {
     expect(errors.reports.single.feature, 'tickets.mark_seen');
   });
 
-  test('admin : tickets non transmis et Issues disparues', () async {
+  test('admin : tous les tickets, champs serveur lus', () async {
     final tickets = firestore.collection('tickets');
     Map<String, Object?> t(
       String status, [
@@ -155,10 +155,131 @@ void main() {
     await tickets
         .doc('m')
         .set(t('validated', {'issue_missing_since': Timestamp.now()}));
-    final notSent = await repository.watchNotSent().first;
-    expect(notSent.documents.map((d) => d.id).toSet(), {'p', 'f'});
-    final missing = await repository.watchIssueMissing().first;
-    expect(missing.documents.map((d) => d.id).toSet(), {'m'});
+    await tickets
+        .doc('x')
+        .set(
+          t('received', {
+            'github_issue_number': 12,
+            'github_url': 'https://github.com/ChinaFred/KassBeer/issues/12',
+            'author_email': 'brasseur@exemple.fr',
+            'allowed_decisions': ['validate', 'refuse', 'close', 'futur'],
+            'decision_lease_until': Timestamp.fromDate(
+              DateTime(2026, 11, 8, 10),
+            ),
+            'send_attempts': 3,
+            'last_send_error': 'GitHub indisponible',
+          }),
+        );
+    final all = await repository.watchAll().first;
+    expect(all.documents.map((d) => d.id).toSet(), {'p', 'f', 'r', 'm', 'x'});
+    final x = all.valides.singleWhere((t) => t.id == 'x');
+    expect(x.issueNumber, 12);
+    expect(x.authorEmail, 'brasseur@exemple.fr');
+    // Une décision inconnue de cette version est ignorée.
+    expect(x.allowedDecisions, TicketDecisionAction.values);
+    expect(x.decisionLeaseUntil, DateTime(2026, 11, 8, 10));
+    expect(x.sendAttempts, 3);
+    expect(x.lastSendError, 'GitHub indisponible');
+    final m = all.valides.singleWhere((t) => t.id == 'm');
+    expect(m.issueMissingSince, isNotNull);
+    expect(m.allowedDecisions, isNull);
+  });
+
+  test(
+    'décision : champs du contrat seuls, sans le texte au rapport',
+    () async {
+      await firestore.collection('tickets').doc('a').set({
+        'status': 'received',
+      });
+      await repository.createDecision(
+        ticketId: 'a',
+        id: 'd1',
+        action: TicketDecisionAction.refuse,
+        text: 'Hors du périmètre.',
+        requestedByUid: 'uid-admin',
+      );
+      await repository.createDecision(
+        ticketId: 'a',
+        id: 'd2',
+        action: TicketDecisionAction.validate,
+        text: null,
+        requestedByUid: 'uid-admin',
+      );
+      final decisions = firestore.collection('tickets/a/decisions');
+      final d1 = (await decisions.doc('d1').get()).data()!;
+      expect(d1.keys.toSet(), {
+        'action',
+        'text',
+        'state',
+        'requested_by_uid',
+        'requested_at',
+      });
+      expect(d1['action'], 'refuse');
+      expect(d1['state'], 'pending');
+      expect(d1['requested_at'], isA<Timestamp>());
+      final d2 = (await decisions.doc('d2').get()).data()!;
+      expect(d2.containsKey('text'), isFalse);
+      expect(repository.newDecisionId('a'), isNotEmpty);
+    },
+  );
+
+  test('décisions lues : tolérance aux valeurs inconnues', () async {
+    final decisions = firestore.collection('tickets/a/decisions');
+    await decisions.doc('d1').set({
+      'action': 'escalate',
+      'state': 'archived',
+      'requested_at': Timestamp.fromDate(DateTime(2026, 11, 8)),
+    });
+    await decisions.doc('d2').set({
+      'action': 'close',
+      'state': 'failed',
+      'text': 'Fait.',
+      'error_reason': 'Issue non fermée.',
+    });
+    await decisions.doc('d3').set({
+      'action': 'refuse',
+      'state': 'pending',
+      'text': 12,
+    });
+    final list = await repository.watchDecisions('a').first;
+    final d1 = list.valides.singleWhere((d) => d.id == 'd1');
+    expect(d1.action, isNull);
+    expect(d1.state, TicketDecisionState.unknown);
+    final d2 = list.valides.singleWhere((d) => d.id == 'd2');
+    expect(d2.state, TicketDecisionState.failed);
+    expect(d2.errorReason, 'Issue non fermée.');
+    expect(
+      list.documents.whereType<DocumentInvalide<TicketDecision>>().single.id,
+      'd3',
+    );
+    expect(errors.reports.single.feature, 'tickets.read_decision');
+    expect(errors.reports.single.context, isNot(contains('12')));
+  });
+
+  test('relances : retry_requested_at seul', () async {
+    final ticket = firestore.collection('tickets').doc('a');
+    await ticket.set({'status': 'send_failed'});
+    await ticket.collection('decisions').doc('d1').set({'state': 'failed'});
+    expect(await repository.retrySend('a'), isTrue);
+    expect(
+      await repository.retryDecision(ticketId: 'a', decisionId: 'd1'),
+      isTrue,
+    );
+    expect(
+      (await ticket.get()).data()!['retry_requested_at'],
+      isA<Timestamp>(),
+    );
+    expect(
+      (await ticket.collection('decisions').doc('d1').get())
+          .data()!['retry_requested_at'],
+      isA<Timestamp>(),
+    );
+  });
+
+  test('relance refusée : rapportée sans texte, rend faux', () async {
+    expect(await repository.retrySend('absent'), isFalse);
+    expect(errors.reports.single.feature, 'tickets.retry_send');
+    expect(errors.reports.single.context, startsWith('tickets/absent '));
   });
 
   test('état du jeton : absent, lu, illisible', () async {

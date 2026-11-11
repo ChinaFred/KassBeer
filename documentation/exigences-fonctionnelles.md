@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire en tête d'Admin l'état du jeton GitHub et le nombre de tickets bloqués. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -71,16 +71,24 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
 pu être lue), un séparateur, « Mes prix », un séparateur, « Signaler ou proposer », « Mes
-tickets », « Nouveautés », « Sources des données », un séparateur et « Se déconnecter ». Une déconnexion qui échoue
+tickets », « Tickets à traiter » (administrateur seul), « Nouveautés », « Sources des données », un séparateur et « Se
+déconnecter ». Une déconnexion qui échoue
 affiche « Déconnexion impossible. Réessayez. ».
 
 Une pastille chiffrée sur l'avatar et sur « Mes tickets » compte les tickets dont le suivi est
 à lire (« 99+ » au-delà de 99) ; elle est lue « Mon compte, 2 suivis de ticket à lire » et
 « Mes tickets, 2 à lire ». Sans suivi à lire, rien ne change. Voir « Tickets ».
 
+Pour l'administrateur, « Tickets à traiter » ouvre Admin › Tickets des membres. Sa pastille
+compte les tickets reçus sans décision et ceux dont l'envoi est impossible, rien à 0 ; elle est
+lue « Tickets à traiter, 3 ». La pastille de l'avatar additionne les suivis à lire et les
+tickets à traiter, et l'avatar est lu « Mon compte, 1 suivi de ticket à lire, 3 tickets à
+traiter ».
+
 Destinations : Recettes, Bibliothèque, Brassins, Équipements, et Admin pour l'administrateur seul. Sous
 600 px, barre de navigation en bas ; de 600 à 839 px, rail de navigation avec libellés ;
-à partir de 840 px, rail étendu et contenu centré sur 840 px au plus. Le rail défile quand
+à partir de 840 px, rail étendu et contenu centré sur 840 px au plus (sauf Admin › Tickets des
+membres, en liste et fiche côte à côte). Le rail défile quand
 ses destinations dépassent la hauteur (écran bas, grand texte). Dans le rail avec libellés, un
 libellé plus large que 160 px est réduit pour tenir sur une ligne.
 
@@ -162,7 +170,12 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
   perdu. ». Un ticket envoyé ne se modifie ni ne s'annule.
 
 **Mes tickets** (`/tickets`). Tickets du membre, le plus récent en tête (un ticket encore sur
-l'appareil d'abord). Chaque ligne : icône du type, titre, date « jj/mm/aa », étiquette du
+l'appareil d'abord). Dans une fenêtre de 840 px ou plus, la liste fait 380 px à gauche et le
+suivi du ticket choisi s'affiche à droite (adresse `/tickets/:id`) ; sans choix : « Choisissez
+un ticket pour voir son suivi. ». Choisir un ticket ne fait ni transition ni retour en haut de la
+liste, et la flèche retour ramène toujours à l'écran d'où « Mes tickets » a été ouvert. La ligne
+choisie prend le fond secondaire du thème. Le suivi garde une marge basse pour le bouton
+flottant. En dessous de 840 px, le suivi s'ouvre seul par-dessus la liste. Chaque ligne : icône du type, titre, date « jj/mm/aa », étiquette du
 statut (icône et texte), et à droite un point lu « Nouveau suivi à lire » quand le statut ou la
 réponse a changé depuis la dernière ouverture du ticket. Bouton flottant « Signaler ou
 proposer », absent de l'état vide, qui porte déjà ce bouton. Chargement « Chargement de vos tickets » ; aucun ticket : « Aucun ticket pour
@@ -173,8 +186,9 @@ jour. ». Hors ligne : bandeau hors ligne et liste du cache. Un ticket illisible
 « Ticket illisible » / « Mettez l'application à jour, ou prévenez l'administrateur. ».
 
 **Suivi d'un ticket** (`/tickets/:id`). Type, titre, étiquette du statut, « Envoyé le jj/mm/aa à
-hh:mm », phrase du statut, encadré « Réponse de l'administrateur » quand il a répondu,
-description, « Écran : Recette », « Envoyé avec : … ». Le texte est sélectionnable. Ouvrir un
+hh:mm », phrase du statut, encadré du texte de l'administrateur quand il a répondu (titré
+« Motif du refus » pour un ticket refusé, « Commentaire de clôture » pour un ticket clos,
+« Réponse de l'administrateur » sinon), frise des étapes (voir ci-dessous), description, « Écran : Recette », « Envoyé avec : … ». Le texte est sélectionnable. Ouvrir un
 ticket dont le suivi est à lire éteint la pastille, hors ligne compris. États : « Chargement du
 ticket », « Impossible de lire vos tickets. », « Ce ticket n'existe plus. », « Ce ticket n'est
 pas disponible hors ligne. », « Ce ticket est illisible. », avec « Retour à mes tickets ».
@@ -193,6 +207,27 @@ pas disponible hors ligne. », « Ce ticket est illisible. », avec « Retour à
 | limite du jour | Limite du jour atteinte (ton d'erreur) | « Ce ticket n'a pas été transmis : la limite de tickets du jour était atteinte. Reprenez-le demain avec le bouton ci-dessous. » et bouton « Reprendre ce ticket », qui ouvre le formulaire prérempli pour un nouveau ticket |
 | inconnu de cette version | Statut inconnu | « Mettez l'application à jour pour lire ce statut. » |
 
+Étiquettes : icône et texte, sur un fond du thème. Gris neutre pour « Envoi en cours », « En
+attente du réseau », « Refusé », « Statut inconnu » ; couleur primaire pour « Reçu », « Validé »,
+« Livré » ; tertiaire pour « En cours » ; secondaire pour « Clos » ; ton d'erreur pour « Envoi
+impossible » et « Limite du jour atteinte ». Elles ne clignotent pas côté membre.
+
+**Frise.** Sous la phrase du statut, les boutons et l'encadré, avant « Description », une frise
+verticale montre les étapes du ticket : coche pour une étape passée, icône du statut en gras
+pour l'étape actuelle, cercle vide pour une étape à venir. Chaque étape est lue d'un bloc
+(« Reçu : étape passée », « Validé : étape actuelle », « Livré : à venir ») ; le texte passe à
+la ligne à 200 %.
+
+| Statut | Étapes |
+|---|---|
+| en attente, reçu, validé, en cours, livré | Envoi en cours → Reçu → Validé → En cours → Livré |
+| sur l'appareil seul | En attente du réseau → Reçu → Validé → En cours → Livré |
+| refusé | Envoi en cours → Reçu → Refusé |
+| clos | Envoi en cours → Reçu → Clos |
+| envoi impossible | Envoi en cours → Envoi impossible (icône en ton d'erreur) |
+| limite du jour | Envoi en cours → Limite du jour atteinte (icône en ton d'erreur) |
+| inconnu de cette version | pas de frise |
+
 « Voir la modification sur GitHub » n'ouvre qu'une adresse `https` sur `github.com`, hors de
 l'application. Un échec affiche « Impossible d'ouvrir GitHub. ».
 
@@ -201,23 +236,11 @@ s'allume pour tout autre changement de statut et pour une nouvelle réponse.
 
 ### Admin
 
-Réservé à l'administrateur. Deux entrées : « Membres » (« Inviter et retirer les comptes »)
-et « Import » (« Disponible dans une prochaine version », inactive).
-
-**Bandeau des tickets.** En tête de la page, lu par l'administrateur seul, texte
-sélectionnable et annoncé. Rien quand tout va bien. Une ligne par alerte :
-
-- « Jeton GitHub refusé ou expiré depuis le jj/mm/aa : remplacez GITHUB_TICKETS_TOKEN dans
-  Secret Manager. » (ton d'erreur) ;
-- « Le jeton GitHub expire le jj/mm/aa. » à 14 jours ou moins de l'échéance, « Le jeton
-  GitHub a expiré le jj/mm/aa. » (ton d'erreur) une fois l'échéance passée, ou « Date
-  d'expiration du jeton GitHub inconnue. » quand GitHub ne l'a pas donnée ;
-- « N tickets ne sont pas arrivés sur GitHub. » : envoi impossible, ou en attente de
-  transmission depuis plus d'une heure ;
-- « N tickets dont l'Issue a disparu. » ;
-- « État du jeton GitHub illisible. » pour un document illisible, journalisé ; « Impossible de
-  lire l'état du jeton GitHub. » ou « Impossible de compter les tickets … » quand la lecture
-  échoue.
+Réservé à l'administrateur. Trois entrées : « Membres » (« Inviter et retirer les comptes »),
+« Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
+pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
+panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
+et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas) et « Import » (« Disponible dans une prochaine version », inactive).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
@@ -245,6 +268,120 @@ qu'une invitation faite hors ligne n'a pas atteint le serveur.
   après une première lecture garde la liste affichée, avec au-dessus « Mise à jour de la
   liste impossible. Elle peut ne plus être à jour. » et « Réessayer ».
 
+
+### Admin › Tickets des membres
+
+Réservé à l'administrateur (ADR-006, T2). Adresse `/admin/tickets`, titre « Tickets des
+membres », retour vers Admin ; ouverte par la tuile d'Admin ou par « Tickets à traiter » du
+menu du compte.
+
+**Bandeau des tickets.** En tête de la liste et de la fiche, lu par l'administrateur seul,
+texte sélectionnable et annoncé, borné au tiers de la hauteur et défilant au-delà. Rien quand
+tout va bien. Une ligne par alerte :
+
+- « Jeton GitHub refusé ou expiré depuis le jj/mm/aa : remplacez GITHUB_TICKETS_TOKEN dans
+  Secret Manager. » (ton d'erreur) ;
+- « Le jeton GitHub expire le jj/mm/aa. » à 14 jours ou moins de l'échéance, « Le jeton
+  GitHub a expiré le jj/mm/aa. » (ton d'erreur) une fois l'échéance passée ; sans échéance
+  (jeton sans expiration), rien sur l'expiration ;
+- « N tickets ne sont pas arrivés sur GitHub. » : envoi impossible, ou en attente de
+  transmission depuis plus d'une heure ;
+- « N tickets dont l'Issue a disparu. » ;
+- « État du jeton GitHub illisible. » pour un document illisible, journalisé ; « Impossible de
+  lire l'état du jeton GitHub. » quand la lecture échoue. Une panne de lecture des tickets
+  n'y est pas répétée : la liste ou la fiche affiche déjà « Impossible de lire les tickets. ».
+
+**Disposition.** Dans une fenêtre de 1 096 px ou plus (840 px de contenu à côté du rail
+étendu), la liste fait 360 px à gauche et la fiche du ticket choisi s'affiche à droite, sous un bandeau
+commun ; sans choix : « Choisissez un ticket pour voir son suivi. ». Appuyer sur un ticket
+change l'adresse (`/admin/tickets/:id`) sans transition : seule la fiche change, la liste garde
+son défilement, la barre du haut garde « Tickets des membres » et son retour mène à Admin.
+La ligne choisie prend le fond secondaire du thème, texte et icône accordés, comme dans Mes
+tickets. En dessous, la liste occupe l'écran et la fiche s'ouvre seule par-dessus (titre
+« Ticket d'un membre », retour vers la liste).
+
+**Liste.** Filtres « À traiter (N) » (tickets reçus sans décision et envois impossibles),
+« Tous » et « Bloqués (N) » (envoi impossible, en attente depuis plus d'une heure, Issue
+disparue) ; sans nombre tant que la liste n'est pas lue. Le choix n'est pas enregistré :
+l'écran s'ouvre sur « À traiter », et passe une fois sur « Tous » s'il n'y a rien à traiter ;
+il reste le même entre la liste et une fiche. Au téléphone, les filtres défilent à
+l'horizontale. Liste du plus récent au plus ancien ; chaque ligne : icône du type (lue),
+titre sur deux lignes au plus, « #12 · Nom · jj/mm/aa » (sans Issue, pas de numéro ; le nom
+déclaré dans Admin › Membres, sinon l'adresse, jamais publié sur l'Issue), étiquette du statut
+et, selon le cas, « Décision en cours », « Issue disparue », « En retard ». Pas de point de
+non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
+l'application à jour. ».
+
+États : « Chargement des tickets » ; « Impossible de lire les tickets. » et « Réessayer » ;
+panne après une lecture : bandeau « Mise à jour de la liste impossible. » au-dessus de la liste ;
+aucun ticket : « Aucun ticket pour l'instant. Les membres n'ont encore rien signalé. » ;
+« À traiter » vide : « Rien à traiter. Tous les tickets ont reçu une décision. » ; « Bloqués »
+vide : « Aucun ticket bloqué. » ; ces deux derniers avec « Afficher tous les tickets ».
+
+**Fiche « Ticket d'un membre ».** Texte sélectionnable, dans cet ordre : icône et type ; titre ;
+étiquette du statut (elle clignote trois fois quand le statut change, jamais au premier
+affichage ni avec les animations réduites, et « Statut : Refusé » est annoncé) et « Issue #12 » ;
+« Ouvrir l'Issue #12 », et pour un ticket livré « Ouvrir la PR #34 » (adresse `https` de
+`github.com` seule, échec « Impossible d'ouvrir GitHub. ») ; pour un envoi impossible,
+« Essais d'envoi : 10 », « Dernière erreur : … » et « Relancer l'envoi », puis « Nouvel essai
+demandé le jj/mm/aa à hh:mm. Il partira dans l'heure. » jusqu'au changement de statut (hors
+ligne : « Nouvel essai enregistré sur cet appareil. Il partira au retour du réseau. », tant
+que la relance attend le réseau, même après un changement de disposition ; échec :
+« Relance non enregistrée. Réessayez. ») ; pour une Issue disparue, « Issue introuvable sur GitHub
+depuis le jj/mm/aa. Vérifiez qu'elle n'a pas été supprimée. », précédé d'une icône de lien
+coupé en ton d'erreur ; l'encadré du texte de
+l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
+« Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
+« Décisions (N) », section repliée, la
+plus récente en haut (« Refus demandé le jj/mm/aa à hh:mm · Appliqué », « Clôture demandée le …
+· Échec : … », « Validation demandée le … · Refusée par le serveur : … »). États : « Chargement
+du ticket », « Impossible de lire les tickets. », « Ce ticket n'existe plus. », « Ce ticket n'est
+pas disponible hors ligne. », « Ticket illisible. Mettez l'application à jour. », avec « Retour
+aux tickets ».
+
+**Barre de décision.** Fixée en bas de la fiche (moitié de la hauteur au plus, défilante) ; sous
+480 px de hauteur, elle passe en fin de fiche. Les boutons sont ceux que le serveur permet pour
+ce ticket (`allowed_decisions`), jamais déduits du statut par l'application : « Refuser » et
+« Clore » à gauche, « Valider » à droite ; ils passent les uns sous les autres quand la largeur
+manque. Liste vide : pas de barre. Liste pas encore écrite par le serveur : « Le serveur n'a pas
+encore calculé les décisions possibles pour ce ticket. ». Pendant une décision en attente ou en
+cours, pas de boutons. Pendant la lecture des décisions, une barre de progression (« Lecture des
+décisions ») remplace la barre. Décisions illisibles : « Impossible de lire les décisions. » et
+« Réessayer » dans la fiche, et aucun bouton de décision. Au-dessus des boutons, une ligne
+d'état de la dernière décision, annoncée :
+
+| État | Ligne |
+|---|---|
+| écrite sur l'appareil hors ligne | « Refus enregistré sur cet appareil. Il partira au retour du réseau. » |
+| en attente ou en cours | barre de progression, « Refus en cours sur GitHub. » |
+| en attente depuis plus de 2 min | barre de progression, « Le serveur n'a pas encore pris ce refus en compte. » |
+| en cours, bail du serveur expiré | « Refus interrompu. Le serveur le reprendra dans l'heure. » |
+| appliquée | pas de ligne ; l'étiquette du statut clignote |
+| écartée par le serveur | sa raison (« Cette décision n'est plus possible pour ce statut. »…) ; les boutons reviennent |
+| en échec | « Le refus n'a pas abouti : <raison> », puis « Réessayez, ou prenez une autre décision. », « Réessayer » (reprise de la même décision) et les boutons de décision ; une reprise demandée hors ligne remplace la ligne par « Nouvel essai enregistré sur cet appareil. Il partira au retour du réseau. », sans boutons, jusqu'au retour du réseau |
+
+Les phrases s'accordent : « Validation enregistrée… Elle partira », « Clôture interrompue ».
+
+**Boîtes.** « Valider » demande « Valider ce ticket ? » / « L'étiquette « validé » sera posée
+sur l'Issue. Le membre verra « Validé ». », avec « Annuler » et « Valider ». « Refuser » et
+« Clore » ouvrent une feuille du bas au téléphone, un dialogue sinon, que ni un appui à côté ni
+un glissement ne ferment. Les deux portent l'encadré « Publié sur un site public : n'écrivez ni
+nom ni adresse. Le membre lira aussi ce texte. », et pour un ticket en cours « Une pull request
+est peut-être ouverte. Elle ne sera pas fermée. ».
+
+- « Refuser ce ticket » : champ « Motif du refus », 3 à 8 lignes, compteur de 2 000, aide
+  « L'Issue sera fermée comme non prévue. », erreur « Le motif doit faire au moins 5
+  caractères. », boutons « Annuler » et « Refuser ».
+- « Clore ce ticket » : « Le ticket passera à « Clos » et l'Issue sera fermée. », champ
+  « Commentaire de clôture », aide « Le membre lira ce texte : réponse, ou raison de la
+  clôture. », erreur « Le commentaire doit faire au moins 5 caractères. », boutons « Annuler »
+  et « Clore ».
+
+Le champ reçoit le focus, et le reprend après une erreur. La boîte se ferme dès l'écriture sur
+l'appareil. Un texte non envoyé reste dans la fiche et revient à la réouverture ; après une
+décision écartée ou en échec, la boîte reprend le texte envoyé. Une écriture refusée par le
+serveur affiche « Décision non enregistrée. Réessayez. » et rend boutons et texte. Pas de
+message de succès après une décision appliquée.
 ### Équipements
 
 **Liste.** Tous les équipements du groupe, les siens d'abord, puis par nom. Chaque ligne :

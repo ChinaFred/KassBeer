@@ -1,0 +1,24 @@
+[
+  {
+    "id": "hop-houblon-fictif",
+    "data": {
+      "name": "Houblon Fictif",
+      "aliases": [],
+      "alpha_acid": {
+        "value": 7,
+        "unit": "%"
+      },
+      "purpose": "aroma",
+      "provenance": [
+        {
+          "source": "brewtarget-003",
+          "source_id": "Nom Fictif",
+          "version": "v5.2.3 ea10908",
+          "licence": "GPL-3.0",
+          "retrieved": "2026-11-08"
+        }
+      ],
+      "content_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  }
+]

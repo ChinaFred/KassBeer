@@ -1,0 +1,48 @@
+{
+  "id": 1,
+  "name": "Bière Inventée",
+  "tagline": "TEXTE LIBRE DIYDOG A NE PAS COPIER",
+  "first_brewed": "01/2000",
+  "description": "TEXTE LIBRE DIYDOG A NE PAS COPIER",
+  "image": "001.png",
+  "abv": 5.2,
+  "ibu": 35,
+  "target_fg": 1010,
+  "target_og": 1050,
+  "ebc": 20,
+  "srm": 10,
+  "ph": 4.4,
+  "attenuation_level": 80,
+  "volume": { "value": 20, "unit": "litres" },
+  "boil_volume": { "value": 25, "unit": "litres" },
+  "method": {
+    "mash_temp": [
+      { "temp": { "value": 65, "unit": "celsius" }, "duration": 60 },
+      { "temp": { "value": 72, "unit": "celsius" }, "duration": null }
+    ],
+    "fermentation": { "temp": { "value": 19, "unit": "celsius" } },
+    "twist": "Ajout inventé pour le test"
+  },
+  "ingredients": {
+    "malt": [
+      { "name": "Malt Imaginaire", "amount": { "value": 4.5, "unit": "kilograms" } },
+      { "name": "Pale Fictif", "amount": { "value": 500, "unit": "grams" } },
+      { "name": "Nom Inconnu", "amount": { "value": 0.25, "unit": "kilograms" } }
+    ],
+    "hops": [
+      { "name": "Houblon Test", "amount": { "value": 20, "unit": "grams" }, "add": "start", "attribute": "bitter" },
+      { "name": "Houblon Test", "amount": { "value": 10, "unit": "grams" }, "add": "60", "attribute": "10% Alpha" },
+      { "name": "H. Test", "amount": { "value": 15, "unit": "grams" }, "add": "end", "attribute": "flavour" },
+      { "name": "Houblon Inconnu", "amount": { "value": 0.05, "unit": "kilogram" }, "add": "Whirlpool", "attribute": "aroma" },
+      { "name": "Houblon Test", "amount": { "value": 30, "unit": "grams" }, "add": "Dry Hop, at Day 3", "attribute": "aroma" },
+      { "name": "Houblon Test", "amount": { "value": 5, "unit": "grams" }, "add": "Kettle", "attribute": "aroma" },
+      { "name": "Poudre Test", "amount": { "value": 8, "unit": "grams" }, "add": "middle", "attribute": "flavour" },
+      { "name": "Fruit Inconnu", "amount": { "value": 100, "unit": "grams" }, "add": "dry hop", "attribute": "flavour" },
+      { "name": "Jus Fictif", "amount": { "value": 1, "unit": "total" }, "add": "end", "attribute": "flavour" }
+    ],
+    "yeast": "Wyeast 9999 - Souche Fictive™ & Levure Inconnue"
+  },
+  "food_pairing": ["TEXTE LIBRE DIYDOG A NE PAS COPIER"],
+  "brewers_tips": "TEXTE LIBRE DIYDOG A NE PAS COPIER",
+  "contributed_by": "TEXTE LIBRE DIYDOG A NE PAS COPIER"
+}

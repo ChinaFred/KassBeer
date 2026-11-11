@@ -78,6 +78,7 @@ class AppShell extends ConsumerWidget {
     required this.location,
     required this.title,
     this.backTo,
+    this.fullWidth = false,
     required this.child,
   });
 
@@ -89,6 +90,10 @@ class AppShell extends ConsumerWidget {
 
   /// Chemin du bouton retour ; `null` pour une destination principale.
   final String? backTo;
+
+  /// Contenu sur toute la largeur, sans la borne de [kContentMaxWidth] (liste et
+  /// fiche côte à côte).
+  final bool fullWidth;
   final Widget child;
 
   @override
@@ -112,7 +117,8 @@ class AppShell extends ConsumerWidget {
           : BackButton(onPressed: () => context.go(back)),
       automaticallyImplyLeading: false,
       actions: [
-        if (granted != null) _AccountMenu(user: granted.user),
+        if (granted != null)
+          _AccountMenu(user: granted.user, isAdmin: granted.member.isAdmin),
         const SizedBox(width: 8),
       ],
     );
@@ -171,6 +177,9 @@ class AppShell extends ConsumerWidget {
                         selectedIndex: selected,
                         onDestinationSelected: goTo,
                         extended: expanded,
+                        // Largeur fixée ici : le seuil côte à côte d'Admin ›
+                        // Tickets la retranche de la fenêtre.
+                        minExtendedWidth: kRailEtenduWidth,
                         labelType: expanded
                             ? NavigationRailLabelType.none
                             : NavigationRailLabelType.all,
@@ -203,7 +212,7 @@ class AppShell extends ConsumerWidget {
               const VerticalDivider(width: 1),
               Expanded(
                 child: withBanner(
-                  expanded
+                  expanded && !fullWidth
                       ? Align(
                           alignment: Alignment.topCenter,
                           child: ConstrainedBox(
@@ -237,13 +246,25 @@ class AppShell extends ConsumerWidget {
 /// Texte d'une pastille : « 99+ » au-delà de 99.
 String textePastille(int count) => count > 99 ? '99+' : '$count';
 
+/// Infobulle de l'avatar : « Mon compte », suivie des suivis à lire et, pour
+/// l'administrateur, des tickets à traiter.
+String infobulleCompte({required int unread, required int toProcess}) => [
+  'Mon compte',
+  if (unread == 1) '1 suivi de ticket à lire',
+  if (unread > 1) '$unread suivis de ticket à lire',
+  if (toProcess == 1) '1 ticket à traiter',
+  if (toProcess > 1) '$toProcess tickets à traiter',
+].join(', ');
+
 /// Avatar Google et menu du compte : nom, e-mail, version, Mes prix, Signaler ou
-/// proposer, Mes tickets, Nouveautés, Sources des données, déconnexion. La pastille compte les
-/// suivis de ticket à lire.
+/// proposer, Mes tickets, Tickets à traiter (admin), Nouveautés, Sources des données,
+/// déconnexion. La pastille compte les suivis de ticket à lire et, pour
+/// l'administrateur, les tickets à traiter.
 class _AccountMenu extends ConsumerWidget {
-  const _AccountMenu({required this.user});
+  const _AccountMenu({required this.user, required this.isAdmin});
 
   final SessionUser user;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -257,9 +278,8 @@ class _AccountMenu extends ConsumerWidget {
             .toUpperCase();
     final photo = user.photoUrl;
     final unread = ref.watch(unreadTicketsCountProvider);
-    final unreadSuffix = unread == 1
-        ? '1 suivi de ticket à lire'
-        : '$unread suivis de ticket à lire';
+    final toProcess = ref.watch(ticketsToProcessCountProvider);
+    final total = unread + toProcess;
 
     return MenuAnchor(
       menuChildren: [
@@ -312,6 +332,18 @@ class _AccountMenu extends ConsumerWidget {
           onPressed: () => unawaited(context.push(AppRoutes.tickets)),
           child: const Text('Mes tickets'),
         ),
+        if (isAdmin)
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.inbox_outlined),
+            trailingIcon: toProcess == 0
+                ? null
+                : Badge(label: Text(textePastille(toProcess))),
+            semanticsLabel: toProcess == 0
+                ? null
+                : 'Tickets à traiter, $toProcess',
+            onPressed: () => context.go(AppRoutes.adminTickets),
+            child: const Text('Tickets à traiter'),
+          ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.new_releases_outlined),
           onPressed: () => unawaited(context.push(AppRoutes.news)),
@@ -330,12 +362,12 @@ class _AccountMenu extends ConsumerWidget {
         ),
       ],
       builder: (context, controller, _) => IconButton(
-        tooltip: unread == 0 ? 'Mon compte' : 'Mon compte, $unreadSuffix',
+        tooltip: infobulleCompte(unread: unread, toProcess: toProcess),
         onPressed: () =>
             controller.isOpen ? controller.close() : controller.open(),
         icon: Badge(
-          isLabelVisible: unread > 0,
-          label: Text(textePastille(unread)),
+          isLabelVisible: total > 0,
+          label: Text(textePastille(total)),
           child: CircleAvatar(
             radius: 16,
             foregroundImage: photo == null ? null : NetworkImage(photo),

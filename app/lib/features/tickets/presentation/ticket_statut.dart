@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../../../core/presentation/etiquette.dart';
 import '../domain/ticket.dart';
@@ -20,64 +23,155 @@ StatutAffiche statutAffiche(Ticket ticket) {
     return (
       label: 'En attente du réseau',
       icon: Icons.cloud_off,
-      ton: TonEtiquette.normal,
+      ton: TonEtiquette.neutre,
     );
   }
-  const normal = TonEtiquette.normal;
-  return switch (ticket.status) {
-    TicketStatus.pending => (
-      label: 'Envoi en cours',
-      icon: Icons.schedule_send,
-      ton: normal,
-    ),
-    TicketStatus.received => (label: 'Reçu', icon: Icons.inbox, ton: normal),
-    TicketStatus.validated => (
-      label: 'Validé',
-      icon: Icons.thumb_up_outlined,
-      ton: normal,
-    ),
-    TicketStatus.inProgress => (
-      label: 'En cours',
-      icon: Icons.build_outlined,
-      ton: normal,
-    ),
-    TicketStatus.delivered => (
-      label: 'Livré',
-      icon: Icons.check_circle_outline,
-      ton: normal,
-    ),
-    TicketStatus.refused => (label: 'Refusé', icon: Icons.block, ton: normal),
-    TicketStatus.closed => (label: 'Clos', icon: Icons.task_alt, ton: normal),
-    TicketStatus.sendFailed => (
-      label: 'Envoi impossible',
-      icon: Icons.error_outline,
-      ton: TonEtiquette.erreur,
-    ),
-    TicketStatus.overQuota => (
-      label: 'Limite du jour atteinte',
-      icon: Icons.event_busy,
-      ton: TonEtiquette.erreur,
-    ),
-    TicketStatus.unknown => (
-      label: 'Statut inconnu',
-      icon: Icons.help_outline,
-      ton: normal,
-    ),
-  };
+  return statutAfficheDe(ticket.status);
 }
 
+/// Étiquette d'un statut stocké (frise, liste d'Admin).
+StatutAffiche statutAfficheDe(TicketStatus status) => switch (status) {
+  TicketStatus.pending => (
+    label: 'Envoi en cours',
+    icon: Icons.schedule_send_outlined,
+    ton: TonEtiquette.neutre,
+  ),
+  TicketStatus.received => (
+    label: 'Reçu',
+    icon: Icons.mark_email_read_outlined,
+    ton: TonEtiquette.primaire,
+  ),
+  TicketStatus.validated => (
+    label: 'Validé',
+    icon: Icons.thumb_up_alt_outlined,
+    ton: TonEtiquette.primaire,
+  ),
+  TicketStatus.inProgress => (
+    label: 'En cours',
+    icon: Icons.construction_outlined,
+    ton: TonEtiquette.tertiaire,
+  ),
+  TicketStatus.delivered => (
+    label: 'Livré',
+    icon: Icons.check_circle_outline,
+    ton: TonEtiquette.primaire,
+  ),
+  TicketStatus.refused => (
+    label: 'Refusé',
+    icon: Icons.block,
+    ton: TonEtiquette.neutre,
+  ),
+  TicketStatus.closed => (
+    label: 'Clos',
+    icon: Icons.archive_outlined,
+    ton: TonEtiquette.normal,
+  ),
+  TicketStatus.sendFailed => (
+    label: 'Envoi impossible',
+    icon: Icons.error_outline,
+    ton: TonEtiquette.erreur,
+  ),
+  TicketStatus.overQuota => (
+    label: 'Limite du jour atteinte',
+    icon: Icons.event_busy,
+    ton: TonEtiquette.erreur,
+  ),
+  TicketStatus.unknown => (
+    label: 'Statut inconnu',
+    icon: Icons.help_outline,
+    ton: TonEtiquette.neutre,
+  ),
+};
+
 /// Étiquette du statut de [ticket].
-class EtiquetteStatut extends StatelessWidget {
-  const EtiquetteStatut({super.key, required this.ticket});
+///
+/// [clignoteAuChangement] (fiche d'Admin seule) : quand le statut change, la
+/// pastille fait trois pulsations d'opacité en 1 200 ms, jamais au premier
+/// affichage ni avec les animations réduites, et « Statut : … » est annoncé
+/// aux lecteurs d'écran dans tous les cas.
+class EtiquetteStatut extends StatefulWidget {
+  const EtiquetteStatut({
+    super.key,
+    required this.ticket,
+    this.clignoteAuChangement = false,
+  });
 
   final Ticket ticket;
+  final bool clignoteAuChangement;
+
+  /// Durée des trois pulsations.
+  static const dureeClignotement = Duration(milliseconds: 1200);
+
+  @override
+  State<EtiquetteStatut> createState() => _EtiquetteStatutState();
+}
+
+class _EtiquetteStatutState extends State<EtiquetteStatut>
+    with SingleTickerProviderStateMixin {
+  /// Créé seulement pour une étiquette qui clignote.
+  AnimationController? _controller;
+
+  AnimationController _controleur() => _controller ??= AnimationController(
+    vsync: this,
+    duration: EtiquetteStatut.dureeClignotement,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.clignoteAuChangement) _controleur();
+  }
+
+  @override
+  void didUpdateWidget(covariant EtiquetteStatut oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.clignoteAuChangement) return;
+    final before = statutAffiche(oldWidget.ticket).label;
+    final now = statutAffiche(widget.ticket).label;
+    if (before == now) return;
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Statut : $now',
+        Directionality.of(context),
+      ),
+    );
+    if (MediaQuery.disableAnimationsOf(context)) return;
+    unawaited(_controleur().forward(from: 0));
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final s = statutAffiche(ticket);
-    return Etiquette(label: s.label, icon: s.icon, ton: s.ton);
+    final s = statutAffiche(widget.ticket);
+    final pill = Etiquette(label: s.label, icon: s.icon, ton: s.ton);
+    if (!widget.clignoteAuChangement) return pill;
+    return FadeTransition(
+      opacity: _controleur().drive(_pulsations),
+      child: pill,
+    );
   }
 }
+
+/// Trois pulsations d'opacité (1 → 0,35 → 1), puis fixe.
+final Animatable<double> _pulsations = TweenSequence<double>([
+  for (var i = 0; i < 3; i++) ...[
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.35), weight: 1),
+    TweenSequenceItem(tween: Tween(begin: 0.35, end: 1.0), weight: 1),
+  ],
+]);
+
+/// Titre de l'encadré du texte de l'administrateur, selon le statut.
+String titreReponse(TicketStatus status) => switch (status) {
+  TicketStatus.refused => 'Motif du refus',
+  TicketStatus.closed => 'Commentaire de clôture',
+  _ => 'Réponse de l\'administrateur',
+};
 
 /// Phrase du statut de [ticket], affichée dans le détail. [now] : heure de
 /// l'appareil, pour dire qu'une transmission prend du retard.

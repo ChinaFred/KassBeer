@@ -1,0 +1,20 @@
+{
+  "sources": [
+    {
+      "source": "brewtarget-001",
+      "version": "v5.2.3 ea10908"
+    },
+    {
+      "source": "diydog",
+      "version": "e6c12ab"
+    }
+  ],
+  "non_resolus": {
+    "fermentable": [
+      {
+        "name": "Malt Inconnu",
+        "lignes": 3
+      }
+    ]
+  }
+}

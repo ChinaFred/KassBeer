@@ -685,6 +685,62 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // ---------------------------------------------------------------- référentiels
+
+    // Référentiels et recettes publiques (ADR-005, P19) : écrits par l'ingestion seule
+    // (ingest/, Admin SDK, hors règles), jamais par un client ; lus par tout membre. Une
+    // entrée et beer_index/{nature} se lisent par get seul : aucune requête sur ces
+    // collections. public_recipes se lit par pages de 50 au plus (P22) : une requête
+    // sans limite, ou de plus de 50, est refusée.
+    match /beer_fermentables/{entryId} {
+      allow get: if isMember();
+      allow write: if false;
+    }
+
+    match /beer_hops/{entryId} {
+      allow get: if isMember();
+      allow write: if false;
+    }
+
+    match /beer_cultures/{entryId} {
+      allow get: if isMember();
+      allow write: if false;
+    }
+
+    match /beer_miscs/{entryId} {
+      allow get: if isMember();
+      allow write: if false;
+    }
+
+    match /beer_styles/{styleId} {
+      allow get: if isMember();
+      allow write: if false;
+    }
+
+    match /beer_index/{nature} {
+      allow get: if isMember();
+      allow write: if false;
+    }
+
+    match /public_recipes/{recipeId} {
+      allow get: if isMember();
+      allow list: if isMember() && request.query.limit <= 50;
+      allow write: if false;
+    }
+
+    // Comptes rendus de l'ingestion et noms DIY Dog non résolus : écrits par le script
+    // seul, lus par l'admin (Admin › Sources, L4). La création d'un non résolu par un
+    // membre arrivera avec la résolution à l'import (ADR-005, D6).
+    match /ingest_runs/{runId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /import_unresolved/{unresolvedId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // ---------------------------------------------------------------- tickets
 
     // Tickets des membres (ADR-006, P23). Le membre crée son ticket hors ligne compris ;
@@ -728,14 +784,60 @@ service cloud.firestore {
       allow read: if isMember()
         && (resource.data.author_uid == request.auth.uid || isAdmin());
 
-      // Seule mise à jour client : l'auteur marque le suivi lu, à l'heure du serveur.
-      allow update: if isMember()
-        && resource.data.author_uid == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['seen_by_author_at'])
-        && request.resource.data.seen_by_author_at == request.time;
+      // Deux mises à jour client, à l'heure du serveur : l'auteur marque le suivi lu ;
+      // l'admin demande un nouvel envoi d'un ticket `send_failed` (T2), que la tâche
+      // horaire reprend.
+      allow update: if (isMember()
+          && resource.data.author_uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['seen_by_author_at'])
+          && request.resource.data.seen_by_author_at == request.time)
+        || (isAdmin()
+          && resource.data.status == 'send_failed'
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['retry_requested_at'])
+          && request.resource.data.retry_requested_at == request.time);
 
       allow delete: if false;
+
+      // Décisions de l'admin (ADR-006, T2, P23) : un document par décision, appliqué sur
+      // l'Issue par un déclencheur. Le serveur (SDK Admin, hors règles) écrit ensuite
+      // `state`, `error_reason`, `steps_done`, `applied_at`, `comment_id`, `lease_until`,
+      // `updated_at`. Le membre ne lit pas les décisions : il lit `reply_text` et le
+      // statut sur son ticket.
+      match /decisions/{decisionId} {
+        allow create: if isAdmin()
+          && decisionId.matches('[A-Za-z0-9_-]{1,128}')
+          && exists(/databases/$(database)/documents/tickets/$(ticketId))
+          && isDecisionCreation(request.resource.data);
+
+        allow read: if isAdmin();
+
+        // Seule mise à jour client : « Réessayer » sur une décision en échec.
+        allow update: if isAdmin()
+          && resource.data.state == 'failed'
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['retry_requested_at'])
+          && request.resource.data.retry_requested_at == request.time;
+
+        allow delete: if false;
+      }
+    }
+
+    // Décision telle que l'admin la crée : `text` (motif ou commentaire, 5 à 2 000
+    // caractères) présent pour `refuse` et `close`, absent pour `validate`.
+    function isDecisionCreation(d) {
+      return d.keys().hasOnly(['action', 'text', 'state', 'requested_by_uid',
+                               'requested_at'])
+        && d.keys().hasAll(['action', 'state', 'requested_by_uid', 'requested_at'])
+        && d.action in ['validate', 'refuse', 'close']
+        && d.state == 'pending'
+        && d.requested_by_uid == request.auth.uid
+        && d.requested_at == request.time
+        && (d.action == 'validate'
+          ? !('text' in d)
+          : ('text' in d && d.text is string
+             && d.text.size() >= 5 && d.text.size() <= 2000));
     }
 
     // Compteurs du plafond du jour : serveur seul (SDK Admin).

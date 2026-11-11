@@ -1,0 +1,91 @@
+[
+  {
+    "id": "cultures",
+    "data": {
+      "count": 1,
+      "entries": [
+        {
+          "id": "culture-labo-fictif-lf1-levure-fictive",
+          "name": "Levure Fictive",
+          "producer": "Labo Fictif",
+          "product_id": "LF1",
+          "type": "ale",
+          "form": "dry",
+          "attenuation": 75
+        }
+      ],
+      "content_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  },
+  {
+    "id": "fermentables",
+    "data": {
+      "count": 1,
+      "entries": [
+        {
+          "id": "fermentable-malt-fictif",
+          "name": "Malt Fictif",
+          "aliases": [
+            "Malt Fictif Bis"
+          ],
+          "label_fr": "Malt fictif",
+          "type": "grain",
+          "yield": 80,
+          "color": 4
+        }
+      ],
+      "content_sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  },
+  {
+    "id": "hops",
+    "data": {
+      "count": 1,
+      "entries": [
+        {
+          "id": "hop-houblon-fictif",
+          "name": "Houblon Fictif",
+          "alpha": 7
+        }
+      ],
+      "content_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  },
+  {
+    "id": "miscs",
+    "data": {
+      "count": 1,
+      "entries": [
+        {
+          "id": "misc-epice-fictive",
+          "name": "Épice Fictive",
+          "type": "spice"
+        }
+      ],
+      "content_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+    }
+  },
+  {
+    "id": "styles",
+    "data": {
+      "count": 1,
+      "entries": [
+        {
+          "id": "bjcp2021-99a",
+          "name": "Style Fictif",
+          "code": "99A",
+          "category": "Catégorie Fictive",
+          "og": [
+            1.04,
+            1.05
+          ],
+          "ebc": [
+            7.9,
+            11.8
+          ]
+        }
+      ],
+      "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+    }
+  }
+]

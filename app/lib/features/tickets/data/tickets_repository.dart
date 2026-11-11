@@ -39,12 +39,39 @@ abstract class TicketsRepository {
   /// `ticket_status/github`, pour l'administrateur.
   Stream<RechercheDocument<EtatJetonGithub>> watchGithubStatus();
 
-  /// Tickets `pending` ou `send_failed`, pour l'administrateur.
-  Stream<ListeLue<Ticket>> watchNotSent();
+  /// Tous les tickets, pour l'administrateur (Admin › Tickets, compteur du
+  /// menu, bandeau).
+  Stream<ListeLue<Ticket>> watchAll();
 
-  /// Tickets dont l'Issue a disparu (`issue_missing_since`), pour
-  /// l'administrateur.
-  Stream<ListeLue<Ticket>> watchIssueMissing();
+  /// Décisions du ticket [ticketId], pour l'administrateur.
+  Stream<ListeLue<TicketDecision>> watchDecisions(String ticketId);
+
+  /// Identifiant d'une décision, créé par l'appareil.
+  String newDecisionId(String ticketId);
+
+  /// Crée `tickets/{ticketId}/decisions/{id}` (`state: pending`,
+  /// `requested_at` à l'heure du serveur). Écrit dans le cache dès l'appel ;
+  /// la `Future` rend vrai quand le serveur l'a acceptée, faux s'il l'a
+  /// refusée. Un refus est rapporté ici, sans le texte (P13) : l'écran
+  /// n'attrape rien, il annonce le refus.
+  Future<bool> createDecision({
+    required String ticketId,
+    required String id,
+    required TicketDecisionAction action,
+    required String? text,
+    required String requestedByUid,
+  });
+
+  /// Demande un nouvel essai de publication d'un ticket `send_failed`
+  /// (`retry_requested_at`). Même déroulé que [createDecision].
+  Future<bool> retrySend(String ticketId);
+
+  /// Demande la reprise d'une décision `failed` (`retry_requested_at`). Même
+  /// déroulé que [createDecision].
+  Future<bool> retryDecision({
+    required String ticketId,
+    required String decisionId,
+  });
 }
 
 /// [TicketsRepository] sur Cloud Firestore.
@@ -118,22 +145,123 @@ class FirestoreTicketsRepository implements TicketsRepository {
   );
 
   @override
-  Stream<ListeLue<Ticket>> watchNotSent() => _watch(
-    _tickets.where(
-      'status',
-      whereIn: [
-        TicketStatus.pending.storedValue,
-        TicketStatus.sendFailed.storedValue,
-      ],
-    ),
-    'tickets.watch_not_sent',
+  Stream<ListeLue<Ticket>> watchAll() => _watch(_tickets, 'tickets.watch_all');
+
+  CollectionReference<Map<String, dynamic>> _decisions(String ticketId) =>
+      _tickets.doc(ticketId).collection('decisions');
+
+  @override
+  Stream<ListeLue<TicketDecision>> watchDecisions(String ticketId) =>
+      _decisions(ticketId)
+          .snapshots(includeMetadataChanges: true)
+          .map(
+            (snapshot) => ListeLue<TicketDecision>(
+              documents: [
+                for (final doc in snapshot.docs) _readDecision(ticketId, doc),
+              ],
+              fromCache: snapshot.metadata.isFromCache,
+            ),
+          )
+          .handleError((Object error, StackTrace stackTrace) {
+            _errors.reportError(
+              feature: 'tickets.watch_decisions',
+              error: error,
+              stackTrace: stackTrace,
+              context: 'tickets/$ticketId/decisions',
+            );
+            Error.throwWithStackTrace(error, stackTrace);
+          });
+
+  DocumentLu<TicketDecision> _readDecision(
+    String ticketId,
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    try {
+      return DocumentValide(
+        doc.id,
+        TicketDecision.fromFirestore(
+          doc.id,
+          doc.data(),
+          hasPendingWrites: doc.metadata.hasPendingWrites,
+        ),
+      );
+    } on DocumentIllisible catch (error, stackTrace) {
+      _errors.reportError(
+        feature: 'tickets.read_decision',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'tickets/$ticketId/decisions/${doc.id} illisible',
+      );
+      return DocumentInvalide(doc.id, error);
+    }
+  }
+
+  @override
+  String newDecisionId(String ticketId) => _decisions(ticketId).doc().id;
+
+  @override
+  Future<bool> createDecision({
+    required String ticketId,
+    required String id,
+    required TicketDecisionAction action,
+    required String? text,
+    required String requestedByUid,
+  }) => _write(
+    'tickets.create_decision',
+    'tickets/$ticketId/decisions/$id action=${action.storedValue}',
+    () => _decisions(ticketId).doc(id).set({
+      'action': action.storedValue,
+      'text': ?text,
+      'state': TicketDecisionState.pending.storedValue,
+      'requested_by_uid': requestedByUid,
+      'requested_at': FieldValue.serverTimestamp(),
+    }),
   );
 
   @override
-  Stream<ListeLue<Ticket>> watchIssueMissing() => _watch(
-    _tickets.where('issue_missing_since', isNull: false),
-    'tickets.watch_issue_missing',
+  Future<bool> retrySend(String ticketId) => _write(
+    'tickets.retry_send',
+    'tickets/$ticketId',
+    () => _tickets.doc(ticketId).update({
+      'retry_requested_at': FieldValue.serverTimestamp(),
+    }),
   );
+
+  @override
+  Future<bool> retryDecision({
+    required String ticketId,
+    required String decisionId,
+  }) => _write(
+    'tickets.retry_decision',
+    'tickets/$ticketId/decisions/$decisionId',
+    () => _decisions(ticketId).doc(decisionId).update({
+      'retry_requested_at': FieldValue.serverTimestamp(),
+    }),
+  );
+
+  /// Écriture d'administration : vrai si le serveur l'accepte. Un refus est
+  /// rapporté avec [where] (chemin et action, jamais le texte : P13) et rend
+  /// faux.
+  Future<bool> _write(
+    String feature,
+    String where,
+    Future<void> Function() write,
+  ) async {
+    try {
+      await write();
+      return true;
+    } catch (error, stackTrace) {
+      _errors.reportError(
+        feature: feature,
+        error: error,
+        stackTrace: stackTrace,
+        context:
+            '$where '
+            'code=${error is FirebaseException ? error.code : error.runtimeType}',
+      );
+      return false;
+    }
+  }
 
   Stream<ListeLue<Ticket>> _watch(
     Query<Map<String, dynamic>> query,

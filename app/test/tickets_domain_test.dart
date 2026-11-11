@@ -261,15 +261,11 @@ void main() {
       List<Ticket> missing = const [],
     }) => messagesBandeauTickets(
       status: status == null ? const AsyncLoading() : AsyncData(status),
-      notSent: AsyncData(
+      tickets: AsyncData(
         ListeLue(
-          documents: [for (final t in notSent) DocumentValide(t.id, t)],
-          fromCache: false,
-        ),
-      ),
-      issueMissing: AsyncData(
-        ListeLue(
-          documents: [for (final t in missing) DocumentValide(t.id, t)],
+          documents: [
+            for (final t in [...notSent, ...missing]) DocumentValide(t.id, t),
+          ],
           fromCache: false,
         ),
       ),
@@ -302,7 +298,7 @@ void main() {
       expect(m.single.error, isTrue);
     });
 
-    test('échéance à 14 jours ou moins, ou inconnue', () {
+    test('échéance à 14 jours ou moins ; sans échéance, rien', () {
       final soon = messages(
         status: DocumentTrouve(
           EtatJetonGithub(tokenExpiresAt: now.add(const Duration(days: 14))),
@@ -310,9 +306,10 @@ void main() {
       );
       expect(soon.single.text, 'Le jeton GitHub expire le 04/12/26.');
       expect(soon.single.error, isFalse);
+      // Jeton sans expiration : rien sur l'échéance.
       expect(
-        messages(status: const DocumentTrouve(EtatJetonGithub())).single.text,
-        'Date d\'expiration du jeton GitHub inconnue.',
+        messages(status: const DocumentTrouve(EtatJetonGithub())),
+        isEmpty,
       );
     });
 
@@ -367,7 +364,10 @@ void main() {
               createdAt: now.subtract(const Duration(minutes: 10)),
             ),
           ],
-          missing: [unTicket(id: 'd')],
+          missing: [
+            unTicket(id: 'd', issueMissingSince: DateTime(2026, 11, 19)),
+            unTicket(id: 'e'),
+          ],
         );
         expect(m.map((e) => e.text), [
           '2 tickets ne sont pas arrivés sur GitHub.',
@@ -375,5 +375,14 @@ void main() {
         ]);
       },
     );
+
+    test('liste illisible : panne annoncée', () {
+      final m = messagesBandeauTickets(
+        status: const AsyncData(DocumentAbsent()),
+        tickets: AsyncError(StateError('refusé'), StackTrace.empty),
+        now: now,
+      );
+      expect(m.single.text, 'Impossible de compter les tickets bloqués.');
+    });
   });
 }
