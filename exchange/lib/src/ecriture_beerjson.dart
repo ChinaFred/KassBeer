@@ -86,6 +86,11 @@ enum ChampExport {
 
   /// Houblon mesuré en volume : BeerXML le mesure en kilogrammes.
   houblonEnVolume,
+
+  /// Houblon sans forme (recette publique et sa copie, ADR-005, D8) : `FORM`
+  /// est attendu par les logiciels qui relisent le BeerXML, et aucune forme
+  /// n'est inventée. [noms] : les houblons. Le BeerJSON l'exporte sans forme.
+  formeHoublon,
 }
 
 /// Donnée qui manque au format seul.

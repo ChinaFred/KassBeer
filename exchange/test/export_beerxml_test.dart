@@ -694,6 +694,21 @@ void main() {
       },
     );
 
+    test('houblon sans forme (recette publique, D8) : bloqué, sans erreur', () {
+      final recipe = _complete();
+      final ingredients = recipe['ingredients']! as Map<String, Object?>;
+      final hops = ingredients['hop_additions']! as List<Object?>;
+      for (final h in hops) {
+        (h! as Map).remove('form');
+      }
+      final noms = [for (final h in hops) '${(h! as Map)['name']}'];
+      final r = _exporter(recipe, style: _style) as ExportBloque;
+      expect(
+        [for (final m in r.manques) _manque(m)],
+        ['formeHoublon(${noms.join(', ')})'],
+      );
+    });
+
     test('ce qui manque au BeerJSON manque aussi au BeerXML', () {
       final recipe = _complete()..remove('type');
       final ingredients = recipe['ingredients']! as Map<String, Object?>;

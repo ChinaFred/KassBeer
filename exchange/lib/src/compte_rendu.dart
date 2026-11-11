@@ -173,7 +173,7 @@ class ValeurIllisible extends Refus {
   final Grandeur grandeur;
 }
 
-/// Valeur obligatoire absente (quantité, forme d'un houblon, moment d'ajout).
+/// Valeur obligatoire absente (quantité, moment d'ajout).
 class ValeurAbsente extends Refus {
   /// Crée la raison.
   const ValeurAbsente(this.grandeur);

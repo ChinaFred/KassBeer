@@ -106,7 +106,7 @@ protégée par un ruleset.
 ```
 app/                  # application Flutter (Android, web)
 ├── lib/core/         # services transverses : erreurs, router, thème, auth, version, fichiers (choix et partage, ADR-007)
-├── lib/features/     # auth, members, equipment, recipes, processes, brew_day, brews, costs, import, admin
+├── lib/features/     # auth, members, equipment, recipes, library, processes, brew_day, brews, costs, import, admin
 │                     # chaque feature en couches data/ domain/ presentation/
 ├── test/             # tests Flutter ; fixtures/recipe_documents/ : documents BeerJSON
 │                     # validés contre le schéma partiel par rules-tests (ajv)

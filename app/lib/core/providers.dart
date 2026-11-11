@@ -5,6 +5,7 @@ import '../features/brew_day/data/alerte_minuteur.dart';
 import '../features/brews/data/brews_repository.dart';
 import '../features/costs/data/costs_repository.dart';
 import '../features/equipment/data/equipment_repository.dart';
+import '../features/library/data/library_repository.dart';
 import '../features/members/data/members_repository.dart';
 import '../features/recipes/data/recipes_repository.dart';
 import '../features/tickets/data/tickets_repository.dart';
@@ -42,6 +43,12 @@ final brewsRepositoryProvider = Provider<BrewsRepository>(
 /// Prix, frais et coûts figés du compte connecté (`users/{uid}/`).
 final costsRepositoryProvider = Provider<CostsRepository>(
   (ref) => throw UnimplementedError('costsRepositoryProvider non fourni'),
+);
+
+/// Bibliothèque : `beer_index/`, `beer_*/`, `public_recipes/`, lus par `get()`
+/// seul (ADR-005, P22).
+final libraryRepositoryProvider = Provider<LibraryRepository>(
+  (ref) => throw UnimplementedError('libraryRepositoryProvider non fourni'),
 );
 
 /// Tickets des membres (`tickets/`, `ticket_status/github`, ADR-006).

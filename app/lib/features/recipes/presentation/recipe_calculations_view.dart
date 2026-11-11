@@ -179,11 +179,36 @@ String messageCalculImpossible(String field) =>
 
 String _names(MissingInput m) => {for (final i in m.items) i.name}.join(', ');
 
-/// Libellé « À compléter » d'une donnée manquante.
+/// Houblons d'ébullition sans forme de calcul : forme absente (à compléter) ou
+/// forme sans facteur d'utilisation. `brewing/` ne les distingue pas ; la ligne
+/// de [content] le dit. Sans [content], toutes sont « non prises en charge ».
+String _libelleForme(MissingInput missing, RecipeContent? content) {
+  bool absente(IngredientRef r) =>
+      content != null &&
+      r.index < content.hops.length &&
+      content.hops[r.index].form == null;
+  final sans = {
+    for (final i in missing.items)
+      if (absente(i)) i.name,
+  }.join(', ');
+  final hors = {
+    for (final i in missing.items)
+      if (!absente(i)) i.name,
+  }.join(', ');
+  return [
+    if (sans.isNotEmpty) 'Forme du houblon à compléter : $sans.',
+    if (hors.isNotEmpty) 'Forme non prise en charge par le calcul : $hors.',
+  ].join(' ');
+}
+
+/// Libellé « À compléter » d'une donnée manquante. [content] : recette
+/// calculée, qui distingue une forme de houblon absente d'une forme non prise
+/// en charge.
 String libelleManque(
   MissingInput missing,
-  EquipementRecette equipement,
-) => switch (missing.kind) {
+  EquipementRecette equipement, {
+  RecipeContent? content,
+}) => switch (missing.kind) {
   MissingInputKind.batchVolume => 'Volume en fermenteur non renseigné.',
   MissingInputKind.fermentables => 'Aucun malt ni sucre.',
   MissingInputKind.mashEfficiency => switch (equipement) {
@@ -205,8 +230,7 @@ String libelleManque(
   MissingInputKind.fermentableKind => 'Nature à préciser : ${_names(missing)}.',
   MissingInputKind.hopUse =>
     'Moment non pris en charge par le calcul : ${_names(missing)}.',
-  MissingInputKind.hopForm =>
-    'Forme non prise en charge par le calcul : ${_names(missing)}.',
+  MissingInputKind.hopForm => _libelleForme(missing, content),
   MissingInputKind.yeast => 'Aucune levure.',
   MissingInputKind.yeastAttenuation =>
     'Atténuation non renseignée : ${_names(missing)}.',
@@ -217,53 +241,61 @@ String libelleManque(
 /// « Incomplète » (L2 d'ADR-005). Une donnée qui manque aussi au calcul a le
 /// libellé de [libelleManque] ; le rendement de brassage sans équipement a le
 /// sien.
-String libelleManqueExport(ManqueExport manque, EquipementRecette equipement) =>
-    switch (manque) {
-      ManqueDeCalcul(:final manque)
-          when manque.kind == MissingInputKind.mashEfficiency &&
-              equipement is SansEquipement =>
-        'Aucun équipement choisi : le rendement de brassage ne peut pas être '
-            'calculé.',
-      ManqueDeCalcul(:final manque) => libelleManque(manque, equipement),
-      ManqueDeFormat(:final champ, :final noms) => switch (champ) {
-        ChampExport.typeRecette => 'Type de recette non renseigné.',
-        ChampExport.auteur =>
-          'Auteur inconnu : le compte qui a créé la recette n\'a pas de nom.',
-        ChampExport.paliers =>
-          'Aucun palier d\'empâtage : la température du grain demande un '
-              'palier.',
-        ChampExport.temperatureGrain => 'Température du grain non renseignée.',
-        ChampExport.typePalier =>
-          'Type de palier non renseigné : ${noms.join(', ')}.',
-        ChampExport.typeLevure =>
-          'Type de levure non renseigné : ${noms.join(', ')}.',
-        ChampExport.formeLevure =>
-          'Forme de levure non renseignée : ${noms.join(', ')}.',
-        ChampExport.quantiteLevure =>
-          'Quantité de levure non renseignée : ${noms.join(', ')}.',
-        ChampExport.typeAjout =>
-          'Type d\'ajout non renseigné : ${noms.join(', ')}.',
-        // Champs du BeerXML seul : l'export BeerXML reste bloqué tant que le
-        // choix du style n'existe pas (ADR-005, décision 2).
-        ChampExport.style => 'Style de la liste BJCP non choisi.',
-        ChampExport.dureeEbullition => 'Durée d\'ébullition non renseignée.',
-        ChampExport.evaporation =>
-          'Évaporation de l\'équipement non renseignée.',
-        ChampExport.pertesAuTrub =>
-          'Pertes au trub de l\'équipement non renseignées.',
-        ChampExport.volumeMort =>
-          'Volume mort de la cuve d\'ébullition non renseigné.',
-        ChampExport.typeRecetteBeerXml =>
-          'Type de recette sans équivalent BeerXML : ${noms.join(', ')}.',
-        ChampExport.momentAjout =>
-          'Moment d\'ajout non renseigné : ${noms.join(', ')}.',
-        ChampExport.dureeAjout =>
-          'Durée d\'ajout non renseignée : ${noms.join(', ')}.',
-        ChampExport.houblonEnVolume =>
-          'BeerXML ne connaît pas les houblons mesurés en volume : '
-              '${noms.join(', ')}.',
-      },
-    };
+String libelleManqueExport(
+  ManqueExport manque,
+  EquipementRecette equipement, {
+  RecipeContent? content,
+}) => switch (manque) {
+  ManqueDeCalcul(:final manque)
+      when manque.kind == MissingInputKind.mashEfficiency &&
+          equipement is SansEquipement =>
+    'Aucun équipement choisi : le rendement de brassage ne peut pas être '
+        'calculé.',
+  ManqueDeCalcul(:final manque) => libelleManque(
+    manque,
+    equipement,
+    content: content,
+  ),
+  ManqueDeFormat(:final champ, :final noms) => switch (champ) {
+    ChampExport.typeRecette => 'Type de recette non renseigné.',
+    ChampExport.auteur =>
+      'Auteur inconnu : le compte qui a créé la recette n\'a pas de nom.',
+    ChampExport.paliers =>
+      'Aucun palier d\'empâtage : la température du grain demande un '
+          'palier.',
+    ChampExport.temperatureGrain => 'Température du grain non renseignée.',
+    ChampExport.typePalier =>
+      'Type de palier non renseigné : ${noms.join(', ')}.',
+    ChampExport.typeLevure =>
+      'Type de levure non renseigné : ${noms.join(', ')}.',
+    ChampExport.formeLevure =>
+      'Forme de levure non renseignée : ${noms.join(', ')}.',
+    ChampExport.quantiteLevure =>
+      'Quantité de levure non renseignée : ${noms.join(', ')}.',
+    ChampExport.typeAjout =>
+      'Type d\'ajout non renseigné : ${noms.join(', ')}.',
+    // Champs du BeerXML seul : l'export BeerXML reste bloqué tant que le
+    // choix du style n'existe pas (ADR-005, décision 2).
+    ChampExport.style => 'Style de la liste BJCP non choisi.',
+    ChampExport.dureeEbullition => 'Durée d\'ébullition non renseignée.',
+    ChampExport.evaporation => 'Évaporation de l\'équipement non renseignée.',
+    ChampExport.pertesAuTrub =>
+      'Pertes au trub de l\'équipement non renseignées.',
+    ChampExport.volumeMort =>
+      'Volume mort de la cuve d\'ébullition non renseigné.',
+    ChampExport.typeRecetteBeerXml =>
+      'Type de recette sans équivalent BeerXML : ${noms.join(', ')}.',
+    ChampExport.momentAjout =>
+      'Moment d\'ajout non renseigné : ${noms.join(', ')}.',
+    ChampExport.dureeAjout =>
+      'Durée d\'ajout non renseignée : ${noms.join(', ')}.',
+    ChampExport.formeHoublon =>
+      'Forme du houblon à compléter : ${noms.join(', ')}.',
+    ChampExport.houblonEnVolume =>
+      'BeerXML ne connaît pas les houblons mesurés en volume : '
+          '${noms.join(', ')}.',
+  },
+};
 
 /// Mention des houblons mesurés en volume (décision du 2026-11-10).
 String houblonsEnVolume(String noms) => '$kHoublonEnVolumePhrase : $noms.';
@@ -318,6 +350,7 @@ class BlocCalculs extends StatelessWidget {
     required this.content,
     required this.equipement,
     this.onComplete,
+    this.messageManques,
   });
 
   final CalculsRecette calculs;
@@ -326,6 +359,10 @@ class BlocCalculs extends StatelessWidget {
 
   /// « Compléter la recette », pour l'auteur seul.
   final VoidCallback? onComplete;
+
+  /// Lecture seule (recette publique) : ce message remplace la liste
+  /// « À compléter » quand des données manquent ; `null` : la liste.
+  final String? messageManques;
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +441,10 @@ class BlocCalculs extends StatelessWidget {
             ),
           ),
         ],
-        if (missing.isNotEmpty) ...[
+        if (missing.isNotEmpty && messageManques != null) ...[
+          const SizedBox(height: 16),
+          Text(messageManques!),
+        ] else if (missing.isNotEmpty) ...[
           const SizedBox(height: 16),
           Semantics(
             header: true,
@@ -418,7 +458,9 @@ class BlocCalculs extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const ExcludeSemantics(child: Text('•  ')),
-                  Expanded(child: Text(libelleManque(m, equipement))),
+                  Expanded(
+                    child: Text(libelleManque(m, equipement, content: content)),
+                  ),
                 ],
               ),
             ),

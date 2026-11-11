@@ -144,6 +144,7 @@ void main() {
         'Signaler ou proposer',
         'Mes tickets',
         'Nouveautés',
+        'Sources des données',
         'Se déconnecter',
       ]);
       expect(find.byIcon(Icons.new_releases_outlined), findsOneWidget);

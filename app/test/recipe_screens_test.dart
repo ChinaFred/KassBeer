@@ -1614,4 +1614,98 @@ void main() {
       expect(content.yeasts.single.amount, const Quantite.litres(0.125));
     });
   });
+
+  group('houblon sans forme (recette publique dupliquée)', () {
+    const sansForme = RecipeContent(
+      name: 'Blonde du Verger',
+      batchVolumeL: 23,
+      fermentables: [pils],
+      hops: [
+        HopLine(
+          name: 'Houblon Alpha',
+          amount: Quantite.grammes(30),
+          use: HopUse.boil,
+          form: null,
+          alphaPct: 8.2,
+          timeMin: 60,
+        ),
+      ],
+    );
+
+    testWidgets('fiche : « Forme du houblon à compléter », IBU indisponible', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        '/recettes/v',
+        before: (app) => app.recipes.publish([recipe('v', sansForme)]),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Forme du houblon à compléter : Houblon Alpha.'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        find.text('Forme non prise en charge par le calcul : Houblon Alpha.'),
+        findsNothing,
+      );
+      await tester.scrollUntilVisible(
+        find.textContaining('forme non renseignée'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+    });
+
+    testWidgets('éditeur : la copie s\'ouvre, la forme se complète', (
+      tester,
+    ) async {
+      final app = await open(
+        tester,
+        '/recettes/v/modifier',
+        before: (app) => app.recipes.publish([recipe('v', sansForme)]),
+      );
+      final line = find.text('Houblon Alpha');
+      await tester.scrollUntilVisible(
+        line,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(line);
+      await tester.pumpAndSettle();
+      final save = inSheet(find.widgetWithText(FilledButton, 'Enregistrer'));
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      // Aucune forme inventée : la ligne modifiée en demande une.
+      expect(inSheet(find.text('Choisissez une forme.')), findsOneWidget);
+      await tester.ensureVisible(inSheet(find.text('Pellets')));
+      await tester.tap(inSheet(find.text('Pellets')));
+      await tester.pump();
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      await tester.tap(find.text('Enregistrer').first);
+      await tester.pumpAndSettle();
+      final hops = app.recipes.writes.single.content!.hops;
+      expect(hops.single.form, 'pellet');
+      expect(hops.single.toFirestore()['form'], 'pellet');
+    });
+
+    test('lecture et écriture sans forme : aucune clé `form` inventée', () {
+      final data = sansForme.toFirestore(creation: true);
+      final hop =
+          (((data['recipe']! as Map)['ingredients'] as Map)['hop_additions']
+                      as List)
+                  .single
+              as Map;
+      expect(hop.containsKey('form'), isFalse);
+      final relue = RecipeContent.fromFirestore({
+        ...data,
+        'owner_uid': 'uid-brasseur',
+      });
+      expect(relue.hops.single.form, isNull);
+      expect(relue.hops.single.calcForm, isNull);
+    });
+  });
 }

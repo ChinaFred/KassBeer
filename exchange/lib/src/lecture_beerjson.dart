@@ -730,11 +730,16 @@ class _Lecture {
       nature: IngredientNature.hop,
     );
     if (name == null) return null;
-    final form = _valeurObligatoire(
-      h['form'],
-      Grandeur(Champ.forme, name),
-      kFormesHoublon,
-    );
+    // Forme facultative (ADR-005, D8) : une ligne sans forme est gardée sans
+    // `form`, sans perte ; aucune forme n'est inventée. Une forme hors du
+    // schéma reste refusée.
+    final form = h['form'] == null
+        ? null
+        : _valeurObligatoire(
+            h['form'],
+            Grandeur(Champ.forme, name),
+            kFormesHoublon,
+          );
     final alpha = _pourcent(
       h['alpha_acid'],
       Grandeur(Champ.acidesAlpha, name),
@@ -747,12 +752,10 @@ class _Lecture {
       volume: true,
     );
     final timing = _moment(h['timing'], name, houblon: true);
-    if (_arret || form == null || amount == null || timing == null) {
-      return null;
-    }
+    if (_arret || amount == null || timing == null) return null;
     return {
       'name': name,
-      'form': form,
+      'form': ?form,
       if (alpha != null) 'alpha_acid': {'value': alpha, 'unit': '%'},
       'amount': amount,
       'timing': timing,
