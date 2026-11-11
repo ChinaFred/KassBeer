@@ -1586,7 +1586,9 @@ gcloud secrets add-iam-policy-binding GITHUB_TICKETS_TOKEN \
 
 # 5. Liaisons des agents de service que firebase-tools pose au premier déploiement d'un
 #    déclencheur Firestore et d'une tâche planifiée ; github-deploy ne modifie pas la
-#    stratégie IAM du projet, elles se posent ici.
+#    stratégie IAM du projet, elles se posent ici. L'agent de service Pub/Sub peut manquer
+#    sur un projet neuf : le créer d'abord.
+gcloud beta services identity create --service=pubsub.googleapis.com
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member "serviceAccount:service-$PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com" \
   --role roles/iam.serviceAccountTokenCreator --condition=None
@@ -1594,11 +1596,19 @@ for role in roles/run.invoker roles/eventarc.eventReceiver; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member "serviceAccount:$BUILD_SA" --role "$role" --condition=None
 done
+#    Agent Eventarc : sans ce rôle, le déclencheur Firestore de publishTicket est refusé
+#    (« Permission denied while using the Eventarc Service Agent », run 25).
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:service-$PROJECT_NUMBER@gcp-sa-eventarc.iam.gserviceaccount.com" \
+  --role roles/eventarc.serviceAgent --condition=None
 
 # 6. Artifact Registry : images des fonctions gardées un jour (ADR-006, 0,5 Go gratuits).
-#    Le dépôt gcf-artifacts se crée au premier déploiement : lancer cette commande depuis le
-#    poste juste après, ou créer le dépôt avant.
-npx firebase functions:artifacts:setpolicy --location europe-west1 --days 1 --project "$PROJECT_ID"
+#    Le dépôt gcf-artifacts se crée au premier déploiement, qui échoue ensuite tant que la
+#    règle manque (« could not set up cleanup policy ») : la poser juste après, puis relancer
+#    deploy.yml à la main. Nom de règle repris de firebase-tools, qui la reconnaît.
+echo '[{"name":"firebase-functions-cleanup","action":{"type":"Delete"},"condition":{"tagState":"any","olderThan":"86400s"}}]' > policy.json
+gcloud artifacts repositories set-cleanup-policies gcf-artifacts --location=europe-west1 \
+  --policy=policy.json --no-dry-run && rm policy.json
 
 # 7. Compte compute par défaut (compte de build des Functions), créé à l'étape 1 avec
 #    roles/editor posé d'office : lister ses rôles.
@@ -1629,7 +1639,10 @@ gcloud iam service-accounts add-iam-policy-binding "$APPSPOT_SA" \
 État relevé le 2026-11-10 sur `kassbeer` : le compte compute ne porte que
 `cloudbuild.builds.builder`, `eventarc.eventReceiver` et `run.invoker` ; le compte App Engine
 ne porte aucun rôle sur le projet. Le premier déploiement des Functions (run 17) a échoué faute
-de l'actAs de l'étape 8.
+de l'actAs de l'étape 8. Les essais suivants ont relevé, dans l'ordre : les API Cloud Billing et
+Firebase Extensions (étape 1), l'adresse complète du compte d'exécution (v0.1.22), le rôle de
+l'agent Eventarc (étape 5) et la règle de nettoyage (étape 6). Les Functions sont en ligne
+depuis le run 26 (2026-11-11, v0.1.22).
 
 `roles/run.admin` sert à `firebase-tools` pour donner au compte d'exécution le droit
 d'appeler le service Cloud Run de la tâche planifiée (`run.services.setIamPolicy`).

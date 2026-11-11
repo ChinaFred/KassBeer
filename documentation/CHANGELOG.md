@@ -4,6 +4,17 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-11
+
+### v0.1.23 — technique
+
+« Réglages faits une fois » ajoute les derniers réglages relevés au déploiement des
+Functions : la création de l'agent de service Pub/Sub, qui peut manquer sur un projet neuf, le
+rôle `eventarc.serviceAgent` de l'agent Eventarc, sans lequel le déclencheur
+Firestore de `publishTicket` est refusé, et la règle de nettoyage du dépôt `gcf-artifacts`
+posée par `gcloud`, sans laquelle firebase-tools termine en erreur. Les Functions des tickets
+sont en ligne depuis la v0.1.22.
+
 ## 2026-11-10
 
 ### v0.1.22 — technique
