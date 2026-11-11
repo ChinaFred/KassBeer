@@ -6,6 +6,24 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
+### v0.1.29 — fonctionnel
+
+Le menu du compte propose « Préférences ». On y choisit le thème de l'application : clair,
+sombre, ou comme l'appareil. Le changement est immédiat et reste enregistré sur l'appareil
+utilisé ; chaque téléphone ou navigateur garde son propre choix. Par défaut, l'application suit
+le réglage de l'appareil, comme avant. Demandé par le ticket #25.
+
+### v0.1.29 — technique
+
+ADR-009 accepté : préférence de thème gardée sur l'appareil, sans paquet ajouté. Canal Kotlin
+`fr.kassbeer/prefs` (`SharedPreferences` `kassbeer_prefs`, clé `theme_mode`, valeurs `light`,
+`dark`, `system`) et `window.localStorage` sur le web. La valeur est lue avant `runApp`, en
+parallèle de `Firebase.initializeApp`, pour que le premier écran s'affiche dans le bon thème.
+Le canal refuse un second appel pendant un appel en cours (P17) ; côté Dart, seul le dernier
+choix part une fois le précédent écrit. Page `/preferences`, entrée du menu du compte. Une valeur
+inconnue ne laisse que sa longueur dans le rapport d'erreur (P13). Aucune donnée Firestore,
+aucune règle changée. Demandé par le ticket #25.
+
 ### v0.1.28 — fonctionnel
 
 L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon,

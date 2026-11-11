@@ -279,6 +279,11 @@ SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « S
 « Commandes utiles », `.claude/formatters.json` (`dart format`) et `setup-projet.sh`
 (`dart pub get`) ; la CI le contrôle dans le job « Flutter et brewing ».
 
+Depuis la v0.1.29 (ADR-009), `relecteur-regles` applique aussi P17 au canal `fr.kassbeer/prefs`
+de la préférence de thème : noms identiques en Dart et en Kotlin, garde `kIsWeb`, travail hors du
+thread principal, second appel refusé (`BUSY`) ; le Dart n'envoie qu'un appel à la fois et ne
+garde que le dernier choix. Aucun contrôle n'est ajouté.
+
 Depuis la v0.1.21 (L2c), « Le projet » et « Structure » disent que `exchange/` lit et écrit aussi le
 BeerXML. Depuis la v0.1.28 (ADR-005, E4), l'export BeerXML de l'écran retrouve son style dans la
 Bibliothèque, et P19 couvre la création d'un `import_unresolved` par un membre (E6).

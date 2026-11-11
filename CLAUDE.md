@@ -88,6 +88,8 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 - Choix et partage de fichier : canal Kotlin `fr.kassbeer/files` (sélecteur du système, feuille de
   partage, enregistrement, `FileProvider` limité à `cacheDir/exports/`) et `package:web` sur le
   web ; aucun greffon (ADR-007).
+- Préférence de thème (clair, sombre, comme l'appareil) : gardée sur l'appareil, canal Kotlin
+  `fr.kassbeer/prefs` et `localStorage` sur le web, lue avant `runApp` ; aucun greffon (ADR-009).
 - Détail et options écartées : `documentation/decisions/ADR-001-pile-technique.md`,
   `documentation/decisions/ADR-002-depot-public.md`,
   `documentation/decisions/ADR-005-echange-referentiels-recettes-publiques.md`.

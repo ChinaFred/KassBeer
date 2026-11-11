@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -70,7 +70,7 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue), un séparateur, « Mes prix », un séparateur, « Signaler ou proposer », « Mes
+pu être lue), un séparateur, « Mes prix », « Préférences », un séparateur, « Signaler ou proposer », « Mes
 tickets », « Tickets à traiter » (administrateur seul), « Nouveautés », « Sources des données », un séparateur et « Se
 déconnecter ». Une déconnexion qui échoue
 affiche « Déconnexion impossible. Réessayez. ».
@@ -108,6 +108,34 @@ largeur, et il est annoncé aux lecteurs d'écran.
 
 **Page introuvable.** Une adresse inconnue affiche « Cette page n'existe pas. » et le bouton
 « Revenir à l'accueil ».
+
+### Préférences
+
+Ouverte depuis le menu du compte, pour tout membre (adresse `/preferences`). Page pleine, hors
+de la barre de navigation : titre « Préférences » et flèche retour. La flèche revient à l'écran
+d'où le membre est parti ; ouverte par son adresse, elle mène à l'accueil. Colonne de 840 px au
+plus.
+
+- Section « Apparence » (lue comme en-tête), une carte de trois choix :
+  - « Comme l'appareil », « Suit le mode clair ou sombre du téléphone ou du navigateur. » ;
+  - « Clair » ;
+  - « Sombre ».
+- Sous la carte : « Ce choix vaut pour cet appareil seulement. ».
+- Par défaut, et quand rien n'a été enregistré : « Comme l'appareil ».
+- Un choix change le thème de toute l'application aussitôt et s'enregistre sur l'appareil,
+  sans bouton. Il vaut pour tous les comptes de cet appareil ou de ce navigateur, et se perd à
+  la désinstallation ou au nettoyage du navigateur. Rien n'est écrit dans Firestore.
+- Enregistrement en échec : le thème choisi reste jusqu'à la fermeture de l'application, et
+  le message « Thème non enregistré : l'ancien thème reviendra au prochain démarrage. » s'affiche ; la panne
+  est journalisée. Si un autre choix a suivi entre-temps, seul l'échec de ce dernier choix
+  s'annonce ; l'échec du précédent est seulement journalisé.
+- Au démarrage, le thème enregistré s'applique dès le premier écran, écran de connexion
+  compris. Lecture impossible ou valeur inconnue : « Comme l'appareil », sans message ; la
+  panne est journalisée.
+- L'écran de lancement d'Android et le fond de la page web avant le chargement suivent le
+  thème du téléphone ou du navigateur. « Configuration Firebase absente » et « Kass'Beer n'a
+  pas pu démarrer » aussi.
+- Marche sans réseau.
 
 ### Nouveautés
 
