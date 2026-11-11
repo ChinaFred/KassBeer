@@ -21,6 +21,7 @@ import '../domain/brew.dart';
 
 /// Ouvre le formulaire « Nouveau brassin » pour [recipe].
 Future<void> ouvrirNouveauBrassin(BuildContext context, Recipe recipe) =>
+    // ticket: /recettes/:id/fenetre/nouveau-brassin
     showFeuilleOuDialogue<void>(
       context: context,
       builder: (_) => FormulaireNouveauBrassin(recipe: recipe),
@@ -91,6 +92,7 @@ class _FormulaireNouveauBrassinState
 
   Future<void> _pickDate() async {
     final now = ref.read(horlogeProvider)();
+    // ticket: aucun (sélecteur du système)
     final picked = await showDatePicker(
       context: context,
       initialDate: _plannedFor ?? now,

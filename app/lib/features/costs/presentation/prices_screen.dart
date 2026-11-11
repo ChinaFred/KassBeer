@@ -176,6 +176,7 @@ class _Contenu extends ConsumerWidget {
   }) async {
     final repo = ref.read(costsRepositoryProvider);
     final messenger = ScaffoldMessenger.of(context);
+    // ticket: aucun (confirmation)
     final confirme = await confirmerAction(
       context,
       titre: frais
