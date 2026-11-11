@@ -56,6 +56,9 @@ class Replay<T> {
     controller.onCancel = () => _listeners.remove(controller);
   });
 
+  /// Dernière valeur publiée ; `null` sans valeur ou après une erreur.
+  T? get value => _hasEvent && _error == null ? _value : null;
+
   void add(T value) {
     _hasEvent = true;
     _value = value;
@@ -686,8 +689,12 @@ typedef TicketCree = ({
 class FakeTicketsRepository implements TicketsRepository {
   final mine = Replay<ListeLue<Ticket>>();
   final githubStatus = Replay<RechercheDocument<EtatJetonGithub>>();
-  final notSent = Replay<ListeLue<Ticket>>();
-  final issueMissing = Replay<ListeLue<Ticket>>();
+  final all = Replay<ListeLue<Ticket>>();
+  final decisions = <String, Replay<ListeLue<TicketDecision>>>{};
+  final decisionsCreated = <DecisionCreee>[];
+  final sendRetries = <String>[];
+  final decisionRetries = <String>[];
+  int decisionIdsGiven = 0;
   final created = <TicketCree>[];
   final seen = <String>[];
   final watchedUids = <String>[];
@@ -751,12 +758,172 @@ class FakeTicketsRepository implements TicketsRepository {
   Stream<RechercheDocument<EtatJetonGithub>> watchGithubStatus() =>
       githubStatus.stream;
 
-  @override
-  Stream<ListeLue<Ticket>> watchNotSent() => notSent.stream;
+  /// Publie [tickets] pour l'administrateur et, illisibles, les identifiants
+  /// [invalid].
+  void publishAll(
+    List<Ticket> tickets, {
+    bool fromCache = false,
+    List<String> invalid = const [],
+  }) => all.add(
+    ListeLue(
+      documents: [
+        for (final t in tickets) DocumentValide(t.id, t),
+        for (final id in invalid)
+          DocumentInvalide<Ticket>(
+            id,
+            const DocumentIllisible('type', 'type inconnu'),
+          ),
+      ],
+      fromCache: fromCache,
+    ),
+  );
+
+  Replay<ListeLue<TicketDecision>> decisionsOf(String ticketId) =>
+      decisions.putIfAbsent(ticketId, Replay.new);
+
+  /// Publie les décisions du ticket [ticketId].
+  void publishDecisions(String ticketId, List<TicketDecision> list) =>
+      decisionsOf(ticketId).add(
+        ListeLue(
+          documents: [for (final d in list) DocumentValide(d.id, d)],
+          fromCache: false,
+        ),
+      );
 
   @override
-  Stream<ListeLue<Ticket>> watchIssueMissing() => issueMissing.stream;
+  Stream<ListeLue<Ticket>> watchAll() => all.stream;
+
+  @override
+  Stream<ListeLue<TicketDecision>> watchDecisions(String ticketId) =>
+      decisionsOf(ticketId).stream;
+
+  @override
+  String newDecisionId(String ticketId) => 'decision-${++decisionIdsGiven}';
+
+  /// Réponse du serveur à une écriture d'administration (décision, relance) :
+  /// vrai s'il l'accepte ; jamais terminée par défaut (hors ligne).
+  Future<bool> Function() adminAnswer = () => Completer<bool>().future;
+
+  @override
+  Future<bool> createDecision({
+    required String ticketId,
+    required String id,
+    required TicketDecisionAction action,
+    required String? text,
+    required String requestedByUid,
+  }) {
+    decisionsCreated.add((
+      ticketId: ticketId,
+      id: id,
+      action: action,
+      text: text,
+      requestedByUid: requestedByUid,
+    ));
+    return adminAnswer();
+  }
+
+  /// Comme Firestore : l'écriture locale republie le ticket avec une écriture
+  /// en attente ; `retry_requested_at` (heure du serveur) reste inchangé.
+  @override
+  Future<bool> retrySend(String ticketId) {
+    sendRetries.add(ticketId);
+    final list = all.value;
+    if (list != null) {
+      all.add(
+        ListeLue(
+          documents: [
+            for (final d in list.documents)
+              if (d case DocumentValide<Ticket>(
+                :final value,
+              ) when value.id == ticketId)
+                DocumentValide(d.id, _enAttente(value))
+              else
+                d,
+          ],
+          fromCache: list.fromCache,
+        ),
+      );
+    }
+    return adminAnswer();
+  }
+
+  /// Comme Firestore : la décision reste `failed` dans le cache, avec une
+  /// écriture en attente.
+  @override
+  Future<bool> retryDecision({
+    required String ticketId,
+    required String decisionId,
+  }) {
+    decisionRetries.add('$ticketId/$decisionId');
+    final list = decisions[ticketId]?.value;
+    if (list != null) {
+      decisionsOf(ticketId).add(
+        ListeLue(
+          documents: [
+            for (final d in list.documents)
+              if (d case DocumentValide<TicketDecision>(
+                :final value,
+              ) when value.id == decisionId)
+                DocumentValide(
+                  d.id,
+                  TicketDecision(
+                    id: value.id,
+                    action: value.action,
+                    state: value.state,
+                    text: value.text,
+                    requestedAt: value.requestedAt,
+                    errorReason: value.errorReason,
+                    leaseUntil: value.leaseUntil,
+                    hasPendingWrites: true,
+                  ),
+                )
+              else
+                d,
+          ],
+          fromCache: list.fromCache,
+        ),
+      );
+    }
+    return adminAnswer();
+  }
+
+  static Ticket _enAttente(Ticket t) => Ticket(
+    id: t.id,
+    type: t.type,
+    title: t.title,
+    description: t.description,
+    screen: t.screen,
+    status: t.status,
+    appVersion: t.appVersion,
+    platform: t.platform,
+    createdAt: t.createdAt,
+    statusChangedAt: t.statusChangedAt,
+    seenByAuthorAt: t.seenByAuthorAt,
+    replyText: t.replyText,
+    deliveredPrUrl: t.deliveredPrUrl,
+    deliveredVersion: t.deliveredVersion,
+    authorEmail: t.authorEmail,
+    issueNumber: t.issueNumber,
+    issueUrl: t.issueUrl,
+    deliveredPrNumber: t.deliveredPrNumber,
+    sendAttempts: t.sendAttempts,
+    lastSendError: t.lastSendError,
+    issueMissingSince: t.issueMissingSince,
+    allowedDecisions: t.allowedDecisions,
+    decisionLeaseUntil: t.decisionLeaseUntil,
+    retryRequestedAt: t.retryRequestedAt,
+    hasPendingWrites: true,
+  );
 }
+
+/// Décision reçue par [FakeTicketsRepository.createDecision].
+typedef DecisionCreee = ({
+  String ticketId,
+  String id,
+  TicketDecisionAction action,
+  String? text,
+  String requestedByUid,
+});
 
 class RecordingErrorReportService extends ErrorReportService {
   final reports = <({String feature, Object error, String? context})>[];

@@ -12,6 +12,15 @@ const kTicketDescriptionMaxLength = 2000;
 /// aurait dû le transmettre.
 const kTicketSendDelay = Duration(hours: 1);
 
+/// Bornes du texte d'un refus ou d'une clôture, les mêmes que `firestore.rules`
+/// (P23).
+const kDecisionTextMinLength = 5;
+const kDecisionTextMaxLength = 2000;
+
+/// Au-delà de ce délai, une décision `pending` n'a pas été prise en compte par
+/// le serveur : l'écran le dit.
+const kDecisionPendingDelay = Duration(minutes: 2);
+
 /// Type d'un ticket (`tickets/{id}.type`).
 enum TicketType {
   bug('bug', 'Bug', 'Quelque chose ne marche pas'),
@@ -120,6 +129,16 @@ class Ticket {
     this.replyText,
     this.deliveredPrUrl,
     this.deliveredVersion,
+    this.authorEmail,
+    this.issueNumber,
+    this.issueUrl,
+    this.deliveredPrNumber,
+    this.sendAttempts,
+    this.lastSendError,
+    this.issueMissingSince,
+    this.allowedDecisions,
+    this.decisionLeaseUntil,
+    this.retryRequestedAt,
     this.hasPendingWrites = false,
   });
 
@@ -149,21 +168,81 @@ class Ticket {
   /// Version lue au commit de fusion, sans `+build`.
   final String? deliveredVersion;
 
-  /// Une écriture locale attend le serveur : la création, ou la date de
-  /// lecture (`seen_by_author_at`), seules écritures permises au membre.
+  /// E-mail de l'auteur, en minuscules ; montré à l'administrateur seul.
+  final String? authorEmail;
+
+  /// Numéro et adresse de l'Issue, écrits par le serveur à la publication.
+  final int? issueNumber;
+  final String? issueUrl;
+
+  /// Numéro de la modification fusionnée.
+  final int? deliveredPrNumber;
+
+  /// Essais de publication en échec, et message du dernier (serveur).
+  final int? sendAttempts;
+  final String? lastSendError;
+
+  /// L'Issue est introuvable sur GitHub depuis cette date (serveur).
+  final DateTime? issueMissingSince;
+
+  /// Décisions que le statut permet, calculées par le serveur seul (P26).
+  /// `null` : le serveur ne les a pas encore écrites. Une valeur que cette
+  /// version ne connaît pas est ignorée.
+  final List<TicketDecisionAction>? allowedDecisions;
+
+  /// Une décision s'applique sur GitHub jusqu'à cette heure (bail du serveur).
+  final DateTime? decisionLeaseUntil;
+
+  /// Nouvel essai de publication demandé par l'administrateur (heure du
+  /// serveur ; `null` tant que l'écriture l'attend).
+  final DateTime? retryRequestedAt;
+
+  /// Une écriture locale attend le serveur : la création ou la date de
+  /// lecture (`seen_by_author_at`) du membre, ou la relance
+  /// (`retry_requested_at`) de l'admin.
   final bool hasPendingWrites;
 
   /// Création encore sur l'appareil seul : « En attente du réseau ».
   bool get waitingForNetwork =>
       status == TicketStatus.pending && hasPendingWrites;
 
+  /// « À traiter » pour l'administrateur : reçu sans décision (`received`),
+  /// ou envoi impossible (`send_failed`). Un ticket `validated` a déjà sa
+  /// décision. Même définition pour le compteur du menu, le filtre et la
+  /// pastille de l'avatar.
+  bool get toProcess =>
+      status == TicketStatus.received || status == TicketStatus.sendFailed;
+
+  /// Création transmise par l'appareil, mais toujours pas publiée après
+  /// [kTicketSendDelay].
+  bool isLate(DateTime now) {
+    final created = createdAt;
+    return status == TicketStatus.pending &&
+        !hasPendingWrites &&
+        created != null &&
+        now.difference(created) > kTicketSendDelay;
+  }
+
+  /// « Bloqué » : envoi impossible, en retard, ou Issue disparue.
+  bool isBlocked(DateTime now) =>
+      status == TicketStatus.sendFailed ||
+      isLate(now) ||
+      issueMissingSince != null;
+
+  /// Une décision s'applique sur GitHub (bail du serveur encore valable).
+  bool decisionInProgress(DateTime now) {
+    final lease = decisionLeaseUntil;
+    return lease != null && lease.isAfter(now);
+  }
+
   /// Un suivi est à lire : le statut ou la réponse a changé depuis la dernière
   /// ouverture du détail.
   ///
   /// Le passage `pending` → `received` n'écrit pas `status_changed_at` : il ne
-  /// compte pas. Une écriture en attente sur un ticket déjà publié ne peut être
-  /// que `seen_by_author_at`, nulle dans le cache tant que le serveur n'a pas
-  /// répondu : le suivi est alors lu.
+  /// compte pas. Sur l'appareil de l'auteur, une écriture en attente sur un ticket
+  /// déjà publié est `seen_by_author_at` (la relance `retry_requested_at` de
+  /// l'admin ne vise qu'un ticket `send_failed`), nulle dans le cache tant que
+  /// le serveur n'a pas répondu : le suivi est alors lu.
   bool get unread {
     if (status == TicketStatus.pending || hasPendingWrites) return false;
     final changed = statusChangedAt;
@@ -188,10 +267,16 @@ class Ticket {
     final read = LecteurChamps(data);
     final type = TicketType.fromStored(data['type']);
     if (type == null) throw const DocumentIllisible('type', 'type inconnu');
-    final number = read.nombreFacultatif('delivered_pr_number');
-    if (number != null && number != number.truncateToDouble()) {
-      throw const DocumentIllisible('delivered_pr_number', 'entier attendu');
+    int? entier(String key) {
+      final number = read.nombreFacultatif(key);
+      if (number == null) return null;
+      if (number != number.truncateToDouble()) {
+        throw DocumentIllisible(key, 'entier attendu');
+      }
+      return number.toInt();
     }
+
+    final deliveredPrNumber = entier('delivered_pr_number');
     return Ticket(
       id: id,
       type: type,
@@ -207,8 +292,26 @@ class Ticket {
       replyText: read.texteFacultatif('reply_text'),
       deliveredPrUrl: read.texteFacultatif('delivered_pr_url'),
       deliveredVersion: read.texteFacultatif('delivered_version'),
+      authorEmail: read.texteFacultatif('author_email'),
+      issueNumber: entier('github_issue_number'),
+      issueUrl: read.texteFacultatif('github_url'),
+      deliveredPrNumber: deliveredPrNumber,
+      sendAttempts: entier('send_attempts'),
+      lastSendError: read.texteFacultatif('last_send_error'),
+      issueMissingSince: read.date('issue_missing_since'),
+      allowedDecisions: _allowedDecisions(data['allowed_decisions']),
+      decisionLeaseUntil: read.date('decision_lease_until'),
+      retryRequestedAt: read.date('retry_requested_at'),
       hasPendingWrites: hasPendingWrites,
     );
+  }
+
+  static List<TicketDecisionAction>? _allowedDecisions(Object? value) {
+    if (value == null) return null;
+    if (value is! List) {
+      throw const DocumentIllisible('allowed_decisions', 'liste attendue');
+    }
+    return [for (final v in value) ?TicketDecisionAction.fromStored(v)];
   }
 
   /// Contenu à reprendre dans un nouveau ticket (« Reprendre ce ticket »).
@@ -250,4 +353,129 @@ int? compareVersions(String a, String b) {
     if (c != 0) return c;
   }
   return 0;
+}
+
+/// Décision de l'administrateur sur un ticket (ADR-006).
+///
+/// [nom] : « Validation », « Refus », « Clôture ». [feminin] accorde les
+/// phrases de l'écran (« Refus interrompu », « Clôture interrompue »).
+enum TicketDecisionAction {
+  validate('validate', 'Validation', feminin: true),
+  refuse('refuse', 'Refus', feminin: false),
+  close('close', 'Clôture', feminin: true);
+
+  const TicketDecisionAction(
+    this.storedValue,
+    this.nom, {
+    required this.feminin,
+  });
+
+  final String storedValue;
+  final String nom;
+  final bool feminin;
+
+  static TicketDecisionAction? fromStored(Object? value) {
+    for (final a in values) {
+      if (a.storedValue == value) return a;
+    }
+    return null;
+  }
+}
+
+/// État d'une décision : `pending` à la création, puis écrit par le serveur.
+enum TicketDecisionState {
+  pending('pending'),
+  applying('applying'),
+  applied('applied'),
+  rejected('rejected'),
+  failed('failed'),
+  unknown(null);
+
+  const TicketDecisionState(this.storedValue);
+
+  final String? storedValue;
+
+  static TicketDecisionState fromStored(Object? value) {
+    for (final s in values) {
+      if (s.storedValue != null && s.storedValue == value) return s;
+    }
+    return unknown;
+  }
+}
+
+/// Document `tickets/{id}/decisions/{decisionId}`, lu par l'administrateur
+/// seul.
+///
+/// Lecture tolérante : une action ou un état que cette version ne connaît pas
+/// se lit `null` ou [TicketDecisionState.unknown], et la décision reste
+/// affichée. Seul un champ mal typé la rend illisible.
+@immutable
+class TicketDecision {
+  const TicketDecision({
+    required this.id,
+    required this.action,
+    required this.state,
+    this.text,
+    this.requestedAt,
+    this.errorReason,
+    this.leaseUntil,
+    this.hasPendingWrites = false,
+  });
+
+  final String id;
+
+  /// `null` : action inconnue de cette version.
+  final TicketDecisionAction? action;
+  final TicketDecisionState state;
+
+  /// Motif ou commentaire saisi ; absent pour une validation.
+  final String? text;
+
+  /// Heure du serveur ; `null` tant que la création l'attend.
+  final DateTime? requestedAt;
+
+  /// Raison d'un rejet ou d'un échec, en français, écrite par le serveur.
+  final String? errorReason;
+
+  /// Bail du serveur pendant l'application, s'il l'écrit.
+  final DateTime? leaseUntil;
+
+  /// La création, ou la reprise (`retry_requested_at`), attend encore le
+  /// serveur.
+  final bool hasPendingWrites;
+
+  /// La décision attend ou s'applique : aucune autre ne part.
+  bool get inProgress =>
+      hasPendingWrites ||
+      state == TicketDecisionState.pending ||
+      state == TicketDecisionState.applying;
+
+  factory TicketDecision.fromFirestore(
+    String id,
+    Map<String, dynamic> data, {
+    bool hasPendingWrites = false,
+  }) {
+    final read = LecteurChamps(data);
+    return TicketDecision(
+      id: id,
+      action: TicketDecisionAction.fromStored(data['action']),
+      state: TicketDecisionState.fromStored(data['state']),
+      text: read.texteFacultatif('text'),
+      requestedAt: read.date('requested_at'),
+      errorReason: read.texteFacultatif('error_reason'),
+      leaseUntil: read.date('lease_until'),
+      hasPendingWrites: hasPendingWrites,
+    );
+  }
+}
+
+/// Décisions de la plus récente à la plus ancienne ; une création qui attend
+/// le serveur passe en tête.
+int compareDecisionsRecentFirst(TicketDecision a, TicketDecision b) {
+  final da = a.requestedAt;
+  final db = b.requestedAt;
+  if (da == null && db == null) return a.id.compareTo(b.id);
+  if (da == null) return -1;
+  if (db == null) return 1;
+  return db.compareTo(da);
 }
