@@ -1,0 +1,123 @@
+[
+  {
+    "id": "diydog-1",
+    "data": {
+      "format_version": 1,
+      "owner_uid": "system",
+      "owner_name": "DIY Dog",
+      "imported_from": "DIY Dog · diydog-1",
+      "search_name": "biere fictive",
+      "recipe": {
+        "name": "Bière Fictive",
+        "author": "BrewDog",
+        "notes": "Ajout fictif",
+        "batch_size": {
+          "value": 20,
+          "unit": "l"
+        },
+        "mash": {
+          "name": "Empâtage",
+          "mash_steps": [
+            {
+              "name": "Palier 1",
+              "type": "infusion",
+              "step_temperature": {
+                "value": 65,
+                "unit": "C"
+              },
+              "step_time": {
+                "value": 60,
+                "unit": "min"
+              }
+            }
+          ]
+        },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Malt Fictif",
+              "type": "grain",
+              "amount": {
+                "value": 4500,
+                "unit": "g"
+              },
+              "yield": {
+                "fine_grind": {
+                  "value": 80,
+                  "unit": "%"
+                }
+              },
+              "color": {
+                "value": 4,
+                "unit": "EBC"
+              }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Houblon Fictif",
+              "amount": {
+                "value": 20,
+                "unit": "g"
+              },
+              "timing": {
+                "use": "add_to_boil"
+              },
+              "alpha_acid": {
+                "value": 7,
+                "unit": "%"
+              }
+            }
+          ],
+          "miscellaneous_additions": [],
+          "culture_additions": [
+            {
+              "name": "Levure Fictive",
+              "type": "ale",
+              "form": "dry",
+              "attenuation": {
+                "value": 75,
+                "unit": "%"
+              }
+            }
+          ]
+        }
+      },
+      "ingredient_refs": {
+        "malt-fictif": "fermentable-malt-fictif",
+        "houblon-fictif": "hop-houblon-fictif",
+        "levure-fictive": "culture-labo-fictif-lf1-levure-fictive"
+      },
+      "source_hop_timing": [
+        {
+          "hop_index": 0,
+          "label": "start"
+        }
+      ],
+      "announced": {
+        "original_gravity": {
+          "value": 1.05,
+          "unit": "sg"
+        },
+        "alcohol_by_volume": {
+          "value": 5.2,
+          "unit": "%"
+        },
+        "ibu_estimate": {
+          "value": 35,
+          "unit": "IBUs"
+        }
+      },
+      "provenance": [
+        {
+          "source": "diydog",
+          "source_id": "Nom Fictif",
+          "version": "e6c12ab",
+          "licence": "DIY Dog (usage privé)",
+          "retrieved": "2026-11-08"
+        }
+      ],
+      "content_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    }
+  }
+]

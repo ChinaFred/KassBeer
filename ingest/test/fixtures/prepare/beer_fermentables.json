@@ -1,0 +1,34 @@
+[
+  {
+    "id": "fermentable-malt-fictif",
+    "data": {
+      "name": "Malt Fictif",
+      "aliases": [
+        "Malt Fictif Bis"
+      ],
+      "label_fr": "Malt fictif",
+      "type": "grain",
+      "yield": {
+        "fine_grind": {
+          "value": 80,
+          "unit": "%"
+        }
+      },
+      "color": {
+        "value": 4,
+        "unit": "EBC"
+      },
+      "origin": "Pays fictif",
+      "provenance": [
+        {
+          "source": "brewtarget-005",
+          "source_id": "Nom Fictif",
+          "version": "v5.2.3 ea10908",
+          "licence": "CC BY-SA 4.0",
+          "retrieved": "2026-11-08"
+        }
+      ],
+      "content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  }
+]

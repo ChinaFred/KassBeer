@@ -1,0 +1,35 @@
+//======================================================================
+// Fixture écrite à la main : styles inventés, dans la forme du fichier 002.
+//======================================================================
+{
+  "beerjson": {
+    "version": 2.01,
+    "styles": [
+      {
+        "name": "Style Fictif",
+        "category": "Catégorie Fictive",
+        "category_id": "99",
+        "style_id": "99A",
+        "overall_impression": "TEXTE LIBRE 002 A NE PAS COPIER",
+        "tags": "TEXTE LIBRE 002 A NE PAS COPIER",
+        "original_gravity": { "minimum": { "unit": "sg", "value": 1.04 }, "maximum": { "unit": "sg", "value": 1.05 } },
+        "final_gravity": { "minimum": { "unit": "sg", "value": 1.008 }, "maximum": { "unit": "sg", "value": 1.012 } },
+        "international_bitterness_units": { "minimum": { "unit": "IBUs", "value": 20 }, "maximum": { "unit": "IBUs", "value": 30 } },
+        "color": { "minimum": { "unit": "SRM", "value": 4 }, "maximum": { "unit": "SRM", "value": 6 } },
+        "alcohol_by_volume": { "minimum": { "unit": "%", "value": 4.2 }, "maximum": { "unit": "%", "value": 5.1 } },
+        "examples": "TEXTE LIBRE 002 A NE PAS COPIER",
+        "style_guide": "BJCP2021",
+        "type": "beer"
+      },
+      {
+        "name": "Style Sans Plage",
+        "category": "Catégorie Fictive",
+        "category_id": "99",
+        "style_id": "99B",
+        "entry_instructions": "TEXTE LIBRE 002 A NE PAS COPIER",
+        "style_guide": "BJCP2021",
+        "type": "beer"
+      }
+    ]
+  }
+}

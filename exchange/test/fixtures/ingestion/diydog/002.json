@@ -1,0 +1,29 @@
+{
+  "id": 2,
+  "name": "Seconde Inventée",
+  "tagline": "TEXTE LIBRE DIYDOG A NE PAS COPIER",
+  "description": "TEXTE LIBRE DIYDOG A NE PAS COPIER",
+  "abv": 7,
+  "ibu": null,
+  "target_fg": null,
+  "target_og": 1065,
+  "ebc": null,
+  "volume": { "value": 20, "unit": "litres" },
+  "boil_volume": { "value": 25, "unit": "litres" },
+  "method": {
+    "mash_temp": [{ "temp": { "value": null, "unit": "celsius" }, "duration": 60 }],
+    "fermentation": { "temp": { "value": null, "unit": "celsius" } },
+    "twist": null
+  },
+  "ingredients": {
+    "malt": [
+      { "name": "Malt Imaginaire", "amount": { "value": 5, "unit": "kilograms" } },
+      { "name": "Sucre Nul", "amount": { "value": 0.3, "unit": "kilograms" } }
+    ],
+    "hops": [
+      { "name": "Houblon Second", "amount": { "value": 25, "unit": "grams" }, "add": "FWH", "attribute": "bitter" }
+    ],
+    "yeast": null
+  },
+  "contributed_by": "TEXTE LIBRE DIYDOG A NE PAS COPIER"
+}

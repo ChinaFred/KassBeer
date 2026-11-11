@@ -4,8 +4,9 @@ Sources externes du socle données (ADR-005) : version figée, licence, ce qui e
 correspondance de chaque source vers le modèle de Kass'Beer.
 
 Relevé du 2026-11-08, sur les fichiers eux-mêmes. Les licences sont des constats, pas un avis
-juridique. **Statut : validé par l'utilisateur le 2026-11-08.** Reste à vérifier avant L3 : la
-licence de la page Kaggle et ses colonnes.
+juridique. **Statut : validé par l'utilisateur le 2026-11-08.** Kaggle : la page déclare « CC0:
+Public Domain » (relevé du 2026-11-11), mais le téléchargement demande un compte absent du
+poste ; l'ingestion de `style_stats` est reportée (ADR-005, amendements de L3, D1).
 
 Aucun fichier de ces sources n'entre dans le dépôt public, un asset ou l'APK. Les données vivent
 dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
@@ -21,7 +22,7 @@ dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 | Brewtarget 005, DotBeer 1.0.0 | idem | en partie CC BY-SA 4.0 (beer-analytics.com), reste sous GPL-3 générale | noms et valeurs, licence par entrée selon `folder_path` | `notes`, URL, 9 recettes, 9 styles, équipements, eaux |
 | `alxiw/punkapi` | `e6c12ab` | MIT sur le code ; aucune licence écrite pour les recettes BrewDog | 415 recettes, usage privé, avec `method.twist` dans `notes` (seul texte libre gardé) | 327 images, `description`, `tagline`, `food_pairing`, `brewers_tips`, `contributed_by` |
 | dépôt GitHub `diydog-beerxml` | `d469275` | aucune | tests locaux, hors CI | Firestore, dépôt |
-| Kaggle « Brewer's Friend Beer Recipes » | à télécharger | non confirmée, à vérifier avant L3 | statistiques par style | lignes brutes, CSV |
+| Kaggle « Brewer's Friend Beer Recipes » | non téléchargé | « CC0: Public Domain » déclarée sur la page (relevé du 2026-11-11) ; ingestion reportée (ADR-005, D1) | statistiques par style | lignes brutes, CSV |
 | BeerJSON | `4370892d44` | MIT | schémas pour ajv en CI et à l'ingestion | — |
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
@@ -39,6 +40,12 @@ Entrées brutes avant dédoublonnage. Noms uniques après normalisation (casse, 
 | Levures | 37 | 296 | 275 | 703 | 1 311 | 791 |
 | Divers | 84 | — | — | 43 | 127 | 122 |
 | Styles | 127 | — | — | 9 | 136, plus 110 dans 002 | non mesuré |
+
+Ces volumes du fichier 001 comptent aussi les ingrédients de ses 29 recettes. L'ingestion (L3)
+ne lit que les listes du premier niveau du 001 : 248 malts et sucres, 62 houblons, 84 ajouts,
+8 levures. Après fusion (relevé du 2026-11-11) : 462 malts et sucres, 466 houblons, 845
+levures (une même souche chez un même producteur ne fait qu'un document, voir
+`exigences-techniques.md`, « Référentiels et recettes publiques »), 122 ajouts, 110 styles.
 
 ## Unités
 
@@ -159,15 +166,16 @@ Enveloppe : `owner_uid: system`, identifiant `diydog-{id}`.
 | Champ source | Présence sur 415 | Résultat |
 |---|---|---|
 | `name` | 415 | `recipe.name` |
-| `volume`, `boil_volume` | 415, litres | `batch_size` ; `boil.pre_boil_size` |
+| `volume` | 415, litres | `batch_size` |
+| `boil_volume` | 415, litres | écarté : `recipe.boil` n'a pas de clé pour lui (`firestore.rules`) |
 | `target_og`, `target_fg` | 414 | `original_gravity`, `final_gravity`, valeurs annoncées, divisées par 1000 |
 | `abv`, `ibu`, `ebc` | 415, 410, 409 | `alcohol_by_volume`, `ibu_estimate`, `color_estimate`, valeurs annoncées ; absentes si nulles |
 | `srm`, `ph`, `attenuation_level` | 399, 403, 404 | écartés ; aucune conversion SRM vers EBC |
-| `method.mash_temp[]` | 391 à 1 palier, 23 à 4, 1 à 3 | `mash.mash_steps[]`, type `infusion` |
-| `method.fermentation.temp` | 415 | `fermentation.fermentation_steps[0]` |
+| `method.mash_temp[]` | 391 à 1 palier, 23 à 4, 1 à 3 | `mash.mash_steps[]`, type `infusion`, nommés « Palier 1 », « Palier 2 »… ; un palier sans durée (57) ou sans température (1, `089.json`) est écarté et listé : `step_time` est obligatoire dans le schéma partiel ; 58 recettes restent sans empâtage |
+| `method.fermentation.temp` | 403 valeurs | écartée, comptée au rapport : `recipe` n'a pas de clé `fermentation` (`firestore.rules`) |
 | `method.twist` | 178 | `recipe.notes`, texte d'origine |
-| `ingredients.malt[]` | 1 627 lignes | `fermentable_additions[]`, type `grain` |
-| `ingredients.yeast` | 414 ; `null` sur `089.json` | `culture_additions[]` ; absent pour `089.json` |
+| `ingredients.malt[]` | 1 627 lignes | `fermentable_additions[]` ; `type` de l'entrée résolue (11 lignes de miel, de dextrose, de sucre ou de lactose ne sont pas du grain) ; `grain` pour une ligne non résolue, que la source range dans `malt` sans autre précision |
+| `ingredients.yeast` | 414 ; `null` sur `089.json` | `culture_additions[]` ; deux souches jointes par « & » (3 recettes) donnent deux lignes ; absent pour `089.json` |
 | `ingredients.hops[]` | 2 255 lignes | `hop_additions[]`, ou `miscellaneous_additions[]` pour un ajout qui n'est pas un houblon |
 
 Valeurs annoncées : gardées pour l'affichage d'une recette publique, jamais utilisées comme
@@ -183,10 +191,10 @@ résultat d'un calcul.
 | `end`, `End` | 488 | `add_to_boil`, `time` = 0 |
 | `Flame Out`, `Flame out` | 57 | `add_to_boil`, `time` = 0 |
 | `Whirlpool`, `whirlpool`, `WHP` | 19 | `add_to_boil`, `time` = 0, `duration` absente, libellé dans `source_hop_timing` |
-| `Dry Hop`, `dry hop`, `Dry hop`, `Dry Hop, at Day N`, `HD1`, `HD2`, `FV`, `fv`, `FV Addition`, `secondary`, `maturation` | 566 | `add_to_fermentation` ; `Dry Hop, at Day N` : `time` = N × 1 440 minutes ; autres libellés sans jour : `time` absent |
-| `Wood Ageing` | 5 | `add_to_fermentation` |
+| `Dry Hop`, `dry hop`, `Dry hop`, `Dry Hop, at Day N`, `HD1`, `HD2`, `FV`, `fv`, `FV Addition`, `secondary`, `maturation` | 566 | `add_to_fermentation` ; `Dry Hop, at Day N` : `time` = N × 1 440 minutes ; autres libellés sans jour : `time` absent ; `HD1`, `HD2`, `FV`, `FV Addition`, `secondary`, `maturation` : libellé dans `source_hop_timing` |
+| `Wood Ageing` | 5 | `add_to_fermentation`, libellé dans `source_hop_timing` |
 | `Mash` | 3 | `add_to_mash` |
-| `FWH`, `First Wort Hops` | 4 | `add_to_boil` à la durée complète ; perte listée |
+| `FWH`, `First Wort Hops` | 4 | `add_to_boil`, `time` absent (la durée d'ébullition manque), libellé dans `source_hop_timing` |
 | `Kettle`, `Additions` | 6 | rejetés et listés au rapport |
 
 Unités rares : `kilogram` (2), `grams` sur un malt (4) convertis ; `total` (1) et `ml` (1) rejetés et
@@ -204,7 +212,8 @@ d'export. Le dépôt sert seulement à tester l'import BeerXML.
 
 ## Résolution des noms DIY Dog contre les référentiels
 
-Correspondance exacte après normalisation, sans alias, sur les noms des fichiers 001 à 005.
+Mesure initiale (L0) : correspondance exacte après normalisation, sans alias, sur les noms des
+fichiers 001 à 005.
 
 | Nature | Lignes | Résolues | Taux | Noms distincts non résolus |
 |---|---|---|---|---|
@@ -212,18 +221,61 @@ Correspondance exacte après normalisation, sans alias, sur les noms des fichier
 | Malts | 1 627 | 295 | 18 % | 107 |
 | Levures | 414 | 6 | 1 % | 27 |
 
-Les houblons n'ont aucun acide alpha dans la source, sauf 28 lignes. Les malts n'ont ni EBC ni
-rendement. Le calcul d'une recette DIY Dog dépend donc de la résolution.
+Mesure de la préparation (L3, relevé du 2026-11-11, `rapport.json`). Les 2 255 lignes de la liste
+`hops` se répartissent en 2 116 houblons, 131 ajouts (épices, fruits, copeaux, sucres : nom
+listé dans la table, ou nom qui ne se résout pas en houblon et se résout en ajout) et 8 lignes
+rejetées. Les 414 levures donnent 417 lignes. « Avant alias » : correspondance exacte, et pour
+une levure le producteur et la référence lus dans le nom (`Wyeast 1056`, `WLP099`), 81 lignes.
 
-Les écarts viennent de la forme des noms : `Extra Pale`, `Pale Ale`, `Caramalt` pour les malts,
-`Wyeast 1056 American Ale` pour les levures. La recherche se fera sur le producteur et `product_id`
-pour les levures, et sur une table d'alias écrite à la main pour environ 245 noms. Cette table porte
-aussi `label_fr`, le libellé français facultatif d'un nom générique ; les noms de variétés restent
-tels quels.
+| Nature | Lignes | Avant alias | Après alias | Noms distincts non résolus | Lignes non résolues |
+|---|---|---|---|---|---|
+| Malts | 1 627 | 295 (18,1 %) | 1 391 (85,5 %) | 47 | 236 |
+| Houblons | 2 116 | 2 025 (95,7 %) | 2 082 (98,4 %) | 8 | 34 |
+| Levures | 417 | 386 (92,6 %) | 400 (95,9 %) | 3 | 17 |
+| Ajouts | 131 | 43 (32,8 %) | 80 (61,1 %) | 42 | 51 |
 
-Une correspondance floue ne remplace jamais une valeur de la source. Elle est marquée dans le
-rapport. Un nom non résolu reste dans la recette, sans valeur technique, et apparaît dans
-`import_unresolved/`.
+Valeurs recopiées de l'entrée résolue dans les lignes des recettes (ADR-005, D4) : type, rendement et
+couleur de 1 391 malts, acide alpha de 2 054 houblons (les 28 lignes `10% Alpha` gardent la
+valeur de la source), type et forme de 400 levures, atténuation de 389. Lignes rejetées : 6
+moments `Kettle` ou `Additions`, 2 quantités en `total` ou `ml`, 58 paliers. Libellés
+d'origine perdus sur un ajout placé hors de `hop_additions` : 20.
+
+**Table d'alias** (`exchange/lib/src/ingestion/alias.dart`, écrite à la main le 2026-11-11) :
+102 alias (60 malts et sucres, 14 houblons, 23 ajouts, 5 levures par producteur et référence),
+31 `label_fr`, et 65 noms de la liste `hops` qui ne sont pas des houblons. Une entrée n'est
+écrite que si la correspondance est sûre :
+
+- nom court d'un malt générique : `Extra Pale` → Extra Pale Ale Malt, `Pale Ale` → Pale Ale
+  Malt, `Munich`, `Wheat` (malt de blé pâle), `Chocolate`, `Brown`, `Amber`, `Rye`,
+  `Pilsner`, `Vienna`, `Black Malt`, `Dextrose`, `Lactose` ;
+- produit nommé autrement : `Caramalt` et ses variantes → Simpsons Caramalt, `Dark Crystal`,
+  `Medium Crystal`, `Extra Dark Crystal` → Simpsons, `Carafa Special Malt Type 1/2/3` →
+  Carafa Special (Carafa sans enveloppe de Weyermann), `Munich Type 1/2` → Munich I/II ;
+- faute de frappe ou abréviation : `Weyernmann Pils`, `H. Mittelfruh`, `Saphire`, `Mt.Hood`,
+  `Hercules` ;
+- ancien nom ou code : `Pacific Hallertau` → Pacifica, `HBC 366` → Ekuanot, `HBC 369` →
+  Mosaic, `HBC 438` → Sabro ;
+- levure par sa référence : `W34/70`, `Saflager S189`, `Be-134`, `WB-06` chez Fermentis,
+  `WLP4000 - Vermont Ale` chez The Yeast Bay ;
+- ajout : copeaux de chêne, café, coriandre, cannelle, gingembre, vanille, poivre, cacao,
+  genièvre, anis étoilé, sel, habanero.
+
+`label_fr` est posé sur l'entrée désignée par un nom générique (« Malt de Munich », « Copeaux
+de chêne ») ; les noms de variétés restent tels quels. Le nom de DIY Dog s'ajoute aux
+`aliases` de l'entrée.
+
+Non écrits, faute de correspondance sûre : niveaux de crystal sans unité (`Crystal 150`,
+`Crystal 120`, `Dark Crystal 350`, `Light Crystal`, `Pale Crystal`, `Crystal`), malts absents des
+sources (`Simpsons T50`, `Double Roasted Crystal`, `Special W`, `Propino`, `Tipple`,
+`Spring Blend`, `Smoked Warminster`), `Maris Otter Extra Pale` (plus clair que Maris Otter),
+`Flaked Oat Malt`, `Dry Malt Extract`, `Lager Malt`, `White Wheat`, extraits de houblon,
+`Bramling Cross/ First Gold`, `German Comet`, `EXP 366`, `Wyeast 2126` (la souche Bohemian
+Lager est la 2124), `Peppercorns` et `Cardamon` (couleur non dite), levures de maison et
+ingrédients absents des référentiels (fruits, jus, miels). Ils restent dans la recette, sans
+valeur technique, et partent dans `import_unresolved/` (100 noms).
+
+Une correspondance floue ne remplace jamais une valeur de la source. Un nom non résolu reste
+dans la recette, sans valeur technique, et apparaît dans `import_unresolved/`.
 
 ## Correspondance BJCP (fichier 002) → `beer_styles`
 
@@ -234,6 +286,9 @@ rapport. Un nom non résolu reste dans la recette, sans valeur technique, et app
 | `category_description`, `overall_impression`, `aroma`, `appearance`, `flavor`, `mouthfeel`, `comments`, `history`, `style_comparison`, `tags`, `ingredients`, `examples` | écartés |
 
 ## Correspondance Kaggle → `style_stats/`
+
+Reportée (ADR-005, amendements de L3, D1) : aucun code ni aucune règle pour `style_stats` tant
+que le fichier n'est pas téléchargé. Prévu :
 
 Colonnes à confirmer sur le fichier, qui n'est pas encore téléchargé : `Style`, `StyleID`, `OG`, `FG`,
 `ABV`, `IBU`, `Color`, et l'échelle de densité. Chaque style reçoit un effectif, un minimum, des

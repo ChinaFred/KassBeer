@@ -1,0 +1,24 @@
+{
+  "name": "kassbeer-ingest",
+  "private": true,
+  "description": "Écrivain de l'ingestion (ADR-005, D5) : lit import/ingest/prepare/ et écrit les référentiels et les recettes publiques dans Firestore par l'Admin SDK. Émulateur par défaut, production sur option explicite et confirmation.",
+  "type": "module",
+  "engines": {
+    "node": "24"
+  },
+  "scripts": {
+    "ecrire": "node ecrire.mjs",
+    "test": "firebase --config ../firebase.json emulators:exec --only firestore --project demo-kassbeer \"node --test --test-concurrency=1 test/*.test.mjs\"",
+    "test:unitaires": "node --test --test-concurrency=1 test/*.test.mjs",
+    "format": "prettier --write \"*.mjs\" \"lib/**/*.mjs\" \"test/**/*.mjs\"",
+    "format:check": "prettier --check \"*.mjs\" \"lib/**/*.mjs\" \"test/**/*.mjs\""
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "firebase-admin": "14.5.0"
+  },
+  "devDependencies": {
+    "firebase-tools": "15.35.0",
+    "prettier": "3.9.6"
+  }
+}

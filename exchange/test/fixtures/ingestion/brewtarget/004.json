@@ -1,0 +1,26 @@
+// Fixture écrite à la main : entrées inventées, dans la forme du fichier 004.
+{
+  "beerjson": {
+    "version": 2.01,
+    "cultures": [
+      {
+        "name": "Souche Fictive",
+        "type": "ale",
+        "form": "liquid",
+        "producer": "Wyeast Labs",
+        "product_id": "WY9999",
+        "temperature_range": { "minimum": { "unit": "F", "value": 60 }, "maximum": { "unit": "F", "value": 70 } },
+        "attenuation_range": { "minimum": { "unit": "%", "value": 70 }, "maximum": { "unit": "%", "value": 74 } },
+        "best_for": "TEXTE LIBRE 004 A NE PAS COPIER",
+        "notes": "TEXTE LIBRE 004 A NE PAS COPIER"
+      },
+      {
+        "name": "Levure Sans Unite",
+        "type": "lager",
+        "form": "dry",
+        "producer": "Autre Labo Fictif",
+        "temperature_range": { "minimum": { "unit": "K", "value": 280 }, "maximum": { "unit": "K", "value": 290 } }
+      }
+    ]
+  }
+}
