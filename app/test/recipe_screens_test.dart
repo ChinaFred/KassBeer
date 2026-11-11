@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
 import 'package:kass_beer/core/presentation/segments.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
+import 'package:kass_beer/features/library/domain/referentiel.dart';
+import 'package:kass_beer/features/library/presentation/champ_bibliotheque.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
 import 'package:kass_beer/features/recipes/presentation/contenu_recette.dart';
 import 'package:kass_beer/features/recipes/presentation/ingredient_forms.dart';
@@ -17,6 +20,7 @@ import 'package:kass_beer/features/recipes/presentation/recipe_editor_screen.dar
 import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
 
 import 'support/fakes.dart';
+import 'support/library_fixtures.dart';
 
 Recipe recipe(
   String id,
@@ -1180,6 +1184,8 @@ void main() {
       expect(segments.selected, {'slant'});
       expect(inSheet(find.text('Gélose')), findsOneWidget);
       expect(inSheet(find.text('Levure de blanche')), findsOneWidget);
+      await tester.ensureVisible(inSheet(find.text('Annuler')));
+      await tester.pumpAndSettle();
       await tester.tap(inSheet(find.text('Annuler')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Enregistrer'));
@@ -1706,6 +1712,370 @@ void main() {
       });
       expect(relue.hops.single.form, isNull);
       expect(relue.hops.single.calcForm, isNull);
+    });
+  });
+
+  group('Bibliothèque dans l\'éditeur (ADR-005, E2 et E3)', () {
+    void bibliotheque(TestApp app) {
+      void lu(NatureReferentiel nature, List<Object?> entries) =>
+          app.library.index[nature] = DocumentTrouve(
+            IndexReferentiel.fromFirestore(nature, indexDoc(entries)),
+          );
+      lu(NatureReferentiel.fermentables, [
+        {
+          'id': 'fermentable-pilsner-fictif',
+          'name': 'Pilsner Fictif',
+          'aliases': ['Pils Fictif'],
+          'type': 'grain',
+          'yield': 81,
+          'color': 3.9,
+        },
+        {
+          'id': 'fermentable-miel-fictif',
+          'name': 'Miel Fictif',
+          'type': 'honey',
+          'yield': 75,
+        },
+      ]);
+      lu(NatureReferentiel.hops, [
+        {
+          'id': 'hop-cascade',
+          'name': 'Cascade',
+          'form': 'pellet',
+          'alpha': 6.5,
+        },
+      ]);
+      lu(NatureReferentiel.cultures, [
+        {
+          'id': 'culture-fermentis-us05-safale-american',
+          'name': 'Safale American',
+          'producer': 'Fermentis',
+          'product_id': 'US-05',
+          'type': 'ale',
+          'form': 'dry',
+          'attenuation': 81,
+        },
+      ]);
+      lu(NatureReferentiel.miscs, [
+        {
+          'id': 'misc-coriandre-fictive',
+          'name': 'Coriandre Fictive',
+          'type': 'spice',
+        },
+      ]);
+      app.library.index[NatureReferentiel.styles] = DocumentTrouve(
+        IndexReferentiel.fromFirestore(NatureReferentiel.styles, stylesIndex),
+      );
+    }
+
+    Future<void> openSheet(WidgetTester tester, String button) async {
+      await tester.scrollUntilVisible(
+        find.text(button),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text(button));
+      await tester.pumpAndSettle();
+    }
+
+    String texteDe(WidgetTester tester, Finder field) => tester
+        .widget<EditableText>(
+          find.descendant(of: field, matching: find.byType(EditableText)),
+        )
+        .controller
+        .text;
+
+    testWidgets(
+      'malt : suggestion par alias ; valeurs vides remplies ; « Reprendre »',
+      (tester) async {
+        final app = await open(
+          tester,
+          '/recettes/nouvelle',
+          before: bibliotheque,
+        );
+        await openSheet(tester, 'Ajouter un malt ou un sucre');
+        expect(app.library.indexReads, [NatureReferentiel.fermentables]);
+        await tester.enterText(sheetField('Nom'), 'pils fic');
+        await tester.pumpAndSettle();
+        expect(find.text('Pilsner Fictif'), findsOneWidget);
+        await tester.tap(find.text('Pilsner Fictif'));
+        await tester.pumpAndSettle();
+        expect(texteDe(tester, sheetField('Nom')), 'Pilsner Fictif');
+        // Les seules valeurs remplies, sous « Nom ».
+        expect(
+          find.text(
+            'Couleur et rendement d\'extrait repris de la Bibliothèque.',
+          ),
+          findsOneWidget,
+        );
+        expect(texteDe(tester, sheetField('Couleur (EBC)')), '3,9');
+        expect(texteDe(tester, sheetField('Rendement d\'extrait (%)')), '81');
+        expect(find.text(kReprendreBibliotheque), findsNothing);
+        // Valeur saisie : jamais remplacée sans geste.
+        await tester.enterText(sheetField('Couleur (EBC)'), '5');
+        await tester.pumpAndSettle();
+        expect(find.text(kReprendreBibliotheque), findsOneWidget);
+        await tester.tap(find.text(kReprendreBibliotheque));
+        await tester.pumpAndSettle();
+        expect(texteDe(tester, sheetField('Couleur (EBC)')), '3,9');
+        expect(find.text(kReprendreBibliotheque), findsNothing);
+        await tester.enterText(sheetField('Quantité (kg)'), '4');
+        await tester.ensureVisible(
+          inSheet(find.widgetWithText(FilledButton, 'Ajouter')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(inSheet(find.widgetWithText(FilledButton, 'Ajouter')));
+        await tester.pumpAndSettle();
+        expect(find.text('Pilsner Fictif'), findsOneWidget);
+      },
+    );
+
+    testWidgets('malt saisi avant la suggestion : la saisie reste', (
+      tester,
+    ) async {
+      await open(tester, '/recettes/nouvelle', before: bibliotheque);
+      await openSheet(tester, 'Ajouter un malt ou un sucre');
+      await tester.enterText(sheetField('Couleur (EBC)'), '10');
+      await tester.tap(inSheet(find.text('Sucre')));
+      await tester.pumpAndSettle();
+      await tester.enterText(sheetField('Nom'), 'Miel');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Miel Fictif'));
+      await tester.pumpAndSettle();
+      // Couleur et nature déjà choisies : gardées ; rendement vide : rempli.
+      expect(texteDe(tester, sheetField('Couleur (EBC)')), '10');
+      expect(texteDe(tester, sheetField('Rendement d\'extrait (%)')), '75');
+      // Nature Miel hors de Malt et Sucre, Sucre choisi : ni reprise ni
+      // « Reprendre ».
+      expect(inSheet(find.text('Miel')), findsNothing);
+      expect(find.text(kReprendreBibliotheque), findsNothing);
+      expect(
+        find.text('Rendement d\'extrait repris de la Bibliothèque.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('houblon et levure : valeurs de la Bibliothèque', (
+      tester,
+    ) async {
+      final app = await open(
+        tester,
+        '/recettes/nouvelle',
+        before: bibliotheque,
+      );
+      await openSheet(tester, 'Ajouter un houblon');
+      await tester.enterText(sheetField('Nom'), 'casc');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cascade'));
+      await tester.pumpAndSettle();
+      expect(texteDe(tester, sheetField('Acides alpha (%)')), '6,5');
+      await tester.enterText(sheetField('Quantité (g)'), '20');
+      await tester.enterText(sheetField('Durée d\'ébullition (min)'), '60');
+      await tester.ensureVisible(
+        inSheet(find.widgetWithText(FilledButton, 'Ajouter')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(inSheet(find.widgetWithText(FilledButton, 'Ajouter')));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+
+      await openSheet(tester, 'Ajouter une levure');
+      await tester.enterText(sheetField('Nom'), 'US-05');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Safale American'));
+      await tester.pumpAndSettle();
+      expect(texteDe(tester, sheetField('Atténuation (%)')), '81');
+      await tester.ensureVisible(
+        inSheet(find.widgetWithText(FilledButton, 'Ajouter')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(inSheet(find.widgetWithText(FilledButton, 'Ajouter')));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        'Blonde',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      final content = app.recipes.writes.single.content!;
+      expect(content.hops.single.form, 'pellet');
+      expect(content.hops.single.alphaPct, 6.5);
+      expect(content.yeasts.single.name, 'Safale American');
+      expect(content.yeasts.single.type, 'ale');
+      expect(content.yeasts.single.form, 'dry');
+    });
+
+    testWidgets('style : choix par code, nom exact enregistré', (tester) async {
+      final app = await open(
+        tester,
+        '/recettes/nouvelle',
+        before: bibliotheque,
+      );
+      final style = find.widgetWithText(TextFormField, 'Style (facultatif)');
+      await tester.ensureVisible(style);
+      await tester.tap(style);
+      await tester.pumpAndSettle();
+      expect(app.library.indexReads, contains(NatureReferentiel.styles));
+      await tester.enterText(style, '21a');
+      await tester.pumpAndSettle();
+      expect(find.text('21A · IPA'), findsOneWidget);
+      // La liste est nommée et son nombre annoncé.
+      expect(find.text(nombreSuggestions(1)), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('^$kSuggestionsLibelle')),
+        findsOneWidget,
+      );
+      // « Suivant » sans ↑ ni ↓ : le texte tapé reste, la liste se ferme.
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+      expect(find.text('21A · IPA'), findsNothing);
+      expect(tester.widget<TextFormField>(style).controller!.text, '21a');
+      // Après ↓, Entrée choisit la suggestion surlignée.
+      await tester.tap(style);
+      await tester.enterText(style, '21A');
+      await tester.pumpAndSettle();
+      expect(find.text('21A · IPA'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+      expect(find.text('21A · IPA'), findsNothing);
+      expect(
+        tester.widget<TextFormField>(style).controller!.text,
+        'American IPA',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        'Mon IPA',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      expect(app.recipes.writes.single.content!.style, 'American IPA');
+    });
+
+    testWidgets('index lu après la frappe : la suggestion paraît sans touche', (
+      tester,
+    ) async {
+      final attente = Completer<void>();
+      final app = await open(
+        tester,
+        '/recettes/nouvelle',
+        before: (app) {
+          bibliotheque(app);
+          app.library.indexAttente[NatureReferentiel.fermentables] = attente;
+        },
+      );
+      await openSheet(tester, 'Ajouter un malt ou un sucre');
+      await tester.enterText(sheetField('Nom'), 'pils');
+      await tester.pumpAndSettle();
+      expect(find.text('Pilsner Fictif'), findsNothing);
+      attente.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Pilsner Fictif'), findsOneWidget);
+      expect(app.library.indexReads, [NatureReferentiel.fermentables]);
+    });
+
+    testWidgets('index absent du serveur : « Bibliothèque vide »', (
+      tester,
+    ) async {
+      await open(tester, '/recettes/nouvelle');
+      await openSheet(tester, 'Ajouter un malt ou un sucre');
+      expect(find.text(kBibliothequeVide), findsOneWidget);
+      expect(find.text(kSuggestionsIndisponibles), findsNothing);
+    });
+
+    testWidgets('hors ligne : index lu dans le cache, suggestions', (
+      tester,
+    ) async {
+      final app = TestApp();
+      bibliotheque(app);
+      await app.pump(tester, width: 400);
+      app.signIn(brewerUser, member: brewerMember, fromCache: true);
+      await tester.pumpAndSettle();
+      app.container.read(routerProvider).go('/recettes/nouvelle');
+      await tester.pumpAndSettle();
+      await openSheet(tester, 'Ajouter un malt ou un sucre');
+      expect(app.library.indexReads, [NatureReferentiel.fermentables]);
+      // Hors ligne : le cache seul, aucune lecture serveur.
+      expect(app.library.indexCacheReads, [NatureReferentiel.fermentables]);
+      await tester.enterText(sheetField('Nom'), 'Pils Fictif');
+      await tester.pumpAndSettle();
+      expect(find.text('Pilsner Fictif'), findsOneWidget);
+    });
+
+    testWidgets('index injoignable : saisie libre, relu au focus suivant', (
+      tester,
+    ) async {
+      final app = await open(
+        tester,
+        '/recettes/nouvelle',
+        before: (app) {
+          bibliotheque(app);
+          app.library.indexErrors[NatureReferentiel.fermentables] = Exception(
+            'réseau',
+          );
+        },
+      );
+      await openSheet(tester, 'Ajouter un malt ou un sucre');
+      expect(find.text(kSuggestionsIndisponibles), findsOneWidget);
+      app.library.indexErrors.clear();
+      await tester.tap(sheetField('Quantité (kg)'));
+      await tester.pumpAndSettle();
+      await tester.tap(sheetField('Nom'));
+      await tester.pumpAndSettle();
+      expect(app.library.indexReads, [
+        NatureReferentiel.fermentables,
+        NatureReferentiel.fermentables,
+      ]);
+      expect(find.text(kSuggestionsIndisponibles), findsNothing);
+      await tester.enterText(sheetField('Nom'), 'Pils Fictif');
+      await tester.pumpAndSettle();
+      expect(find.text('Pilsner Fictif'), findsOneWidget);
+    });
+
+    testWidgets('ajout : le type vide est repris de la Bibliothèque', (
+      tester,
+    ) async {
+      final app = await open(
+        tester,
+        '/recettes/nouvelle',
+        before: bibliotheque,
+      );
+      await openSheet(tester, 'Ajouter un ajout');
+      await tester.enterText(sheetField('Nom'), 'corian');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Coriandre Fictive'));
+      await tester.pumpAndSettle();
+      await tester.enterText(sheetField('Quantité (g)'), '10');
+      await tester.ensureVisible(
+        inSheet(find.widgetWithText(FilledButton, 'Ajouter')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(inSheet(find.widgetWithText(FilledButton, 'Ajouter')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        'Blonde',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      final ajout = app.recipes.writes.single.content!.others.single;
+      expect(ajout.name, 'Coriandre Fictive');
+      expect(ajout.type, 'spice');
     });
   });
 }

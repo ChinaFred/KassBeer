@@ -287,8 +287,8 @@ class _Conversion {
     };
   }
 
-  /// Style : son nom seul. Le reste (catégorie, plages) demande le
-  /// référentiel des styles (ADR-005).
+  /// Style : son nom seul. L'export BeerXML relit la catégorie et les plages
+  /// dans la Bibliothèque par ce nom (ADR-005, E4).
   _Json _style(ElementXml s) {
     final nom = _texte(s, 'NAME');
     final propre = _propre(nom);

@@ -77,8 +77,8 @@ les contraintes.
   test de `brewing/test/fixtures/cost.json` sont publics (ADR-002).
 - **Conservation, sauvegarde, export** : conservation sans limite ; sauvegarde gérée de
   Firestore ; export JSON dans Admin (ce que le groupe voit, plus les prix de
-  l'administrateur) ; import BeerJSON et BeerXML et export BeerJSON dans Recettes ; export
-  BeerXML à venir avec le référentiel des styles (ADR-005).
+  l'administrateur) ; import et export BeerJSON et BeerXML dans Recettes, l'export BeerXML
+  avec un style de la Bibliothèque (ADR-005).
 
 ### Plateformes et exploitation
 

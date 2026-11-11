@@ -1,4 +1,4 @@
-// v0.1.28 — déroulé en journées (ADR-009, P38) : modèles de processus
+// v0.1.29 — déroulé en journées (ADR-009, P38) : modèles de processus
 // (process_templates/), déroulé figé d'un brassin (brews/{id}.process), choix par
 // défaut (users/{uid}/preferences/processes). Cinq profils (P4), plus : process changé
 // sur un brassin commencé refusé, process à la création refusé, lot de 60 step_skipped.

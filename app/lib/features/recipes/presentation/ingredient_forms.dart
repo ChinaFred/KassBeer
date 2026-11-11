@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/presentation/champ_nombre.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/segments.dart';
+import '../../library/domain/referentiel.dart';
+import '../../library/presentation/champ_bibliotheque.dart';
 import '../domain/beerjson.dart';
 import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
@@ -234,6 +236,133 @@ class _Choix<T> extends StatelessWidget {
   }
 }
 
+/// Valeur d'une ligne remplie par une suggestion de la Bibliothèque.
+enum ValeurRemplie {
+  nature('nature', feminin: true),
+  couleur('couleur', feminin: true),
+  rendement('rendement d\'extrait'),
+  acidesAlpha('acides alpha', pluriel: true),
+  forme('forme', feminin: true),
+  type('type'),
+  attenuation('atténuation', feminin: true);
+
+  const ValeurRemplie(
+    this.libelle, {
+    this.feminin = false,
+    this.pluriel = false,
+  });
+
+  final String libelle;
+  final bool feminin;
+  final bool pluriel;
+}
+
+/// « Couleur et rendement d'extrait repris de la Bibliothèque. », ou `null`
+/// si [valeurs] est vide.
+String? valeursReprises(List<ValeurRemplie> valeurs) {
+  if (valeurs.isEmpty) return null;
+  final noms = [for (final v in valeurs) v.libelle];
+  final liste = noms.length == 1
+      ? noms.single
+      : '${noms.sublist(0, noms.length - 1).join(', ')} et ${noms.last}';
+  final pluriel = valeurs.length > 1 || valeurs.single.pluriel;
+  final feminin = valeurs.every((v) => v.feminin);
+  final accord = feminin ? (pluriel ? 'reprises' : 'reprise') : 'repris';
+  return '${liste[0].toUpperCase()}${liste.substring(1)} $accord de la Bibliothèque.';
+}
+
+/// Bouton qui remplace les valeurs saisies par celles de la Bibliothèque.
+const kReprendreBibliotheque = 'Reprendre les valeurs de la Bibliothèque';
+
+/// [kReprendreBibliotheque] : affiché quand une valeur saisie diffère de
+/// l'entrée de la Bibliothèque choisie. Une valeur saisie n'est jamais
+/// remplacée sans ce geste (ADR-005, E2).
+class _Reprendre extends StatelessWidget {
+  const _Reprendre({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerLeft,
+    child: TextButton.icon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.restore),
+      label: const Text(kReprendreBibliotheque),
+    ),
+  );
+}
+
+/// Seconde ligne d'une suggestion de malt : « Malt · 3,5 EBC · 81 % ».
+String? detailFermentable(EntreeIndex e) {
+  if (e is! EntreeFermentable) return null;
+  final type = _accepte(e.type, typesFermentable);
+  final couleur = e.colorEbc;
+  final rendement = e.yieldPct;
+  final parties = [
+    ?e.labelFr,
+    if (type != null) typesFermentable.libelle(type),
+    if (couleur != null) '${formatNombre(couleur, decimales: 1)}${nbsp}EBC',
+    if (rendement != null) '${formatNombre(rendement, decimales: 1)}$nbsp%',
+  ];
+  return parties.isEmpty ? null : parties.join(' · ');
+}
+
+/// Seconde ligne d'une suggestion de houblon : « Pellets · 6,5 % alpha ».
+String? detailHoublon(EntreeIndex e) {
+  if (e is! EntreeHoublon) return null;
+  final forme = _accepte(e.form, formesHoublon);
+  final alpha = e.alphaPct;
+  final parties = [
+    if (forme != null) formesHoublon.libelle(forme),
+    if (alpha != null) '${formatNombre(alpha, decimales: 1)}$nbsp% alpha',
+  ];
+  return parties.isEmpty ? null : parties.join(' · ');
+}
+
+/// Seconde ligne d'une suggestion de levure : « Fermentis US-05 · Sèche ».
+String? detailLevure(EntreeIndex e) {
+  if (e is! EntreeLevure) return null;
+  final souche = [?e.producer, ?e.productId].join(' ');
+  final forme = _accepte(e.form, formesLevure);
+  final parties = [
+    if (souche.isNotEmpty) souche,
+    if (forme != null) formesLevure.libelle(forme),
+  ];
+  return parties.isEmpty ? null : parties.join(' · ');
+}
+
+/// Seconde ligne d'une suggestion d'ajout : son libellé français ou son type.
+String? detailDivers(EntreeIndex e) {
+  if (e is! EntreeDivers) return null;
+  final type = _accepte(e.type, typesAjout);
+  return e.labelFr ?? (type == null ? null : typesAjout.libelle(type));
+}
+
+/// Vrai si le nombre saisi [texte] existe et diffère de [valeur].
+bool _differe(String texte, double? valeur) {
+  if (valeur == null) return false;
+  final saisi = lireNombre(texte).valeur;
+  return saisi != null && saisi != valeur;
+}
+
+/// [valeur] si elle appartient à [valeurs] du schéma, sinon `null`.
+String? _accepte(String? valeur, EnumerationBeerJson valeurs) =>
+    valeur != null && valeurs.accepte(valeur) ? valeur : null;
+
+/// Valeurs proposées par un choix : [valeurs] de l'éditeur, puis la valeur de
+/// la ligne modifiée et la valeur choisie, si elles sont hors de la liste
+/// (import, Bibliothèque).
+List<String> _avecHorsListe(
+  EnumerationBeerJson valeurs,
+  String? initiale,
+  String? choisie,
+) => [
+  ...valeurs.proposees,
+  for (final v in {?initiale, ?choisie})
+    if (!valeurs.proposees.contains(v)) v,
+];
+
 /// « Unité de la quantité » : g ou ml, lus « grammes » et « millilitres ».
 class _ChoixUnite extends StatelessWidget {
   const _ChoixUnite({required this.selected, required this.onChanged});
@@ -353,22 +482,93 @@ mixin _FormulaireLigne<W extends ConsumerStatefulWidget, T>
     nameFocus.requestFocus();
   }
 
+  /// Reconstruit le formulaire après une saisie : le bouton « Reprendre les
+  /// valeurs de la Bibliothèque » suit les valeurs saisies.
+  void _suiviSuggestion(String _) => setState(() {});
+
   /// Champ « Nom » ; [ingredient] faux pour un palier (aucune clé d'ingrédient).
-  Widget nameField({bool ingredient = true}) => TextFormField(
-    controller: name,
-    focusNode: nameFocus,
-    autofocus: true,
-    maxLength: kIngredientNameMaxLength,
-    textCapitalization: TextCapitalization.sentences,
-    textInputAction: TextInputAction.next,
-    decoration: const InputDecoration(
-      labelText: 'Nom',
-      border: OutlineInputBorder(),
-    ),
-    validator: (v) => ingredient
-        ? erreurNomIngredient(v ?? '')
-        : ((v ?? '').trim().isEmpty ? ErreursNombre.obligatoire : null),
-  );
+  /// Avec [nature], le champ propose les entrées de la Bibliothèque
+  /// (ADR-005, E2) ; [onSuggestion] reçoit l'entrée choisie, [detail] donne
+  /// la seconde ligne d'une suggestion. La saisie libre reste possible.
+  Widget nameField({
+    bool ingredient = true,
+    NatureReferentiel? nature,
+    List<ValeurRemplie> Function(EntreeIndex)? onSuggestion,
+    String? Function(EntreeIndex)? detail,
+  }) {
+    Widget champ(String? aide, [VoidCallback? onSubmitted]) => TextFormField(
+      controller: name,
+      focusNode: nameFocus,
+      autofocus: true,
+      // Entrée choisit la suggestion surlignée après ↑ ou ↓ (ChampBibliotheque).
+      onFieldSubmitted: onSubmitted == null ? null : (_) => onSubmitted(),
+      maxLength: kIngredientNameMaxLength,
+      textCapitalization: TextCapitalization.sentences,
+      textInputAction: TextInputAction.next,
+      decoration: InputDecoration(
+        labelText: 'Nom',
+        helperText: aide,
+        helperMaxLines: 8,
+        border: const OutlineInputBorder(),
+      ),
+      // Le bouton « Reprendre les valeurs de la Bibliothèque » suit le nom.
+      onChanged: nature == null ? null : (_) => setState(() {}),
+      validator: (v) => ingredient
+          ? erreurNomIngredient(v ?? '')
+          : ((v ?? '').trim().isEmpty ? ErreursNombre.obligatoire : null),
+    );
+    if (nature == null) return champ(null);
+    final repris = _reprisPour == name.text.trim() ? _repris : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ChampBibliotheque(
+          nature: nature,
+          controller: name,
+          focusNode: nameFocus,
+          detail: detail,
+          onSelected: (e) => setState(() {
+            _repris = valeursReprises(onSuggestion?.call(e) ?? const []);
+            _reprisPour = e.name;
+          }),
+          fieldBuilder: (context, aide, onSubmitted) =>
+              champ(aide, onSubmitted),
+        ),
+        // Ce que la suggestion a rempli, annoncé au lecteur d'écran.
+        Semantics(
+          liveRegion: true,
+          child: repris == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    repris,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  /// Valeurs remplies par la dernière suggestion, et le nom choisi : la ligne
+  /// disparaît quand le nom change.
+  String? _repris;
+  String? _reprisPour;
+
+  /// Après « Reprendre les valeurs de la Bibliothèque » : la ligne sous « Nom »
+  /// liste les valeurs reprises, et le focus va au premier champ de saisie
+  /// repris ([focus], dans l'ordre du formulaire ; un choix par segments n'a
+  /// pas de champ de saisie).
+  void montrerReprises(List<ValeurRemplie> valeurs, FocusNode? focus) {
+    _repris = valeursReprises(valeurs);
+    _reprisPour = name.text.trim();
+    if (focus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) focus.requestFocus();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -402,17 +602,20 @@ class _FormulaireFermentescibleState
   final _mass = TextEditingController();
   final _ebc = TextEditingController();
   final _yield = TextEditingController();
+  final _ebcFocus = FocusNode();
+  final _yieldFocus = FocusNode();
 
   /// Valeur de [typesFermentable] : `grain`, `sugar`, ou la valeur importée de
-  /// la ligne modifiée, gardée tant que le brasseur n'en choisit pas une autre.
+  /// la ligne modifiée ou de la Bibliothèque, gardée tant que le brasseur n'en
+  /// choisit pas une autre.
   String _type = FermentableKind.malt.storedValue;
 
-  /// Type enregistré hors de Malt et Sucre (extrait, miel, `other`…), montré en
-  /// troisième segment pendant toute la modification ; `null` sinon.
-  String? get _typeImporte {
-    final t = widget.initial?.type;
-    return t == null || typesFermentable.proposees.contains(t) ? null : t;
-  }
+  /// Vrai quand le type vient du brasseur ou de la ligne modifiée : une
+  /// suggestion ne le remplace pas sans « Reprendre ».
+  late bool _typeChoisi = widget.initial != null;
+
+  /// Entrée de la Bibliothèque choisie pour le nom, ou `null`.
+  EntreeFermentable? _suggestion;
 
   static const natureAPreciser =
       'Nature à préciser pour le calcul : choisissez Malt ou Sucre.';
@@ -442,6 +645,8 @@ class _FormulaireFermentescibleState
     _mass.dispose();
     _ebc.dispose();
     _yield.dispose();
+    _ebcFocus.dispose();
+    _yieldFocus.dispose();
     super.dispose();
   }
 
@@ -459,7 +664,75 @@ class _FormulaireFermentescibleState
     _mass.clear();
     _ebc.clear();
     _yield.clear();
+    _typeChoisi = false;
+    _suggestion = null;
   }
+
+  /// Suggestion choisie : remplit le type, la couleur et le rendement vides.
+  List<ValeurRemplie> _choisir(EntreeIndex e) {
+    if (e is! EntreeFermentable) return const [];
+    _suggestion = e;
+    final remplies = <ValeurRemplie>[];
+    final type = _accepte(e.type, typesFermentable);
+    if (!_typeChoisi && type != null && type != _type) {
+      _type = type;
+      remplies.add(ValeurRemplie.nature);
+    }
+    if (_ebc.text.trim().isEmpty && e.colorEbc != null) {
+      _ebc.text = texteSaisi(e.colorEbc);
+      remplies.add(ValeurRemplie.couleur);
+    }
+    if (_yield.text.trim().isEmpty && e.yieldPct != null) {
+      _yield.text = texteSaisi(e.yieldPct);
+      remplies.add(ValeurRemplie.rendement);
+    }
+    return remplies;
+  }
+
+  /// Nature de la suggestion à comparer et à reprendre : celle de l'index,
+  /// sauf une nature hors de Malt et Sucre (extrait, miel, fruit) quand le
+  /// brasseur a choisi Malt ou Sucre.
+  String? get _typeSuggestion {
+    final type = _accepte(_suggestion?.type, typesFermentable);
+    if (type == null) return null;
+    final proposees = typesFermentable.proposees;
+    if (_typeChoisi && proposees.contains(_type) && !proposees.contains(type)) {
+      return null;
+    }
+    return type;
+  }
+
+  /// Vrai si une valeur saisie diffère de la suggestion, toujours choisie.
+  bool get _valeursDifferentes {
+    final s = _suggestion;
+    if (s == null || name.text.trim() != s.name) return false;
+    final type = _typeSuggestion;
+    return (type != null && type != _type) ||
+        _differe(_ebc.text, s.colorEbc) ||
+        _differe(_yield.text, s.yieldPct);
+  }
+
+  void _reprendre() => setState(() {
+    final s = _suggestion!;
+    final reprises = <ValeurRemplie>[];
+    FocusNode? focus;
+    final type = _typeSuggestion;
+    if (type != null && type != _type) {
+      _type = type;
+      reprises.add(ValeurRemplie.nature);
+    }
+    if (_differe(_ebc.text, s.colorEbc)) {
+      _ebc.text = texteSaisi(s.colorEbc);
+      reprises.add(ValeurRemplie.couleur);
+      focus ??= _ebcFocus;
+    }
+    if (_differe(_yield.text, s.yieldPct)) {
+      _yield.text = texteSaisi(s.yieldPct);
+      reprises.add(ValeurRemplie.rendement);
+      focus ??= _yieldFocus;
+    }
+    montrerReprises(reprises, focus);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -475,16 +748,23 @@ class _FormulaireFermentescibleState
         onSubmit: submit,
         lastAdded: lastAdded,
         children: [
-          nameField(),
+          nameField(
+            nature: NatureReferentiel.fermentables,
+            onSuggestion: _choisir,
+            detail: detailFermentable,
+          ),
           _Choix<String>(
             label: 'Nature',
-            values: [...typesFermentable.proposees, ?_typeImporte],
+            values: _avecHorsListe(typesFermentable, initial?.type, _type),
             labelOf: typesFermentable.libelle,
             selected: _type,
             avertissement: FermentableKind.ofType(_type) == null
                 ? natureAPreciser
                 : null,
-            onChanged: (t) => setState(() => _type = t ?? _type),
+            onChanged: (t) => setState(() {
+              _type = t ?? _type;
+              _typeChoisi = true;
+            }),
           ),
           ChampNombre(
             controller: _mass,
@@ -496,17 +776,24 @@ class _FormulaireFermentescibleState
           ),
           ChampNombre(
             controller: _ebc,
+            focusNode: _ebcFocus,
             label: 'Couleur (EBC)',
             aide: 'Sert au calcul de la couleur.',
+            onChanged: _suiviSuggestion,
           ),
           ChampNombre(
             controller: _yield,
+            focusNode: _yieldFocus,
             label: 'Rendement d\'extrait (%)',
             aide: 'Sert au calcul de la densité initiale.',
             max: 100,
+            onChanged: _suiviSuggestion,
             textInputAction: TextInputAction.done,
             onSubmitted: kIsWeb ? (_) => submit(continuer: false) : null,
           ),
+          // Après le dernier champ concerné : le champ en cours de frappe ne
+          // bouge pas quand le bouton apparaît.
+          if (_valeursDifferentes) _Reprendre(onPressed: _reprendre),
         ],
       ),
     );
@@ -538,6 +825,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
     with _FormulaireLigne<FormulaireHoublon, HopLine> {
   final _mass = TextEditingController();
   final _alpha = TextEditingController();
+  final _alphaFocus = FocusNode();
   final _time = TextEditingController();
   HopUse _use = HopUse.boil;
 
@@ -546,12 +834,53 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
   bool _formError = false;
   UniteSaisie _unite = UniteSaisie.grammes;
 
-  /// Forme enregistrée hors de Pellets et Cônes (import), montrée en troisième
-  /// segment pendant toute la modification ; `null` sinon.
-  String? get _formeImportee {
-    final f = widget.initial?.form;
-    return f == null || formesHoublon.proposees.contains(f) ? null : f;
+  /// Entrée de la Bibliothèque choisie pour le nom, ou `null`.
+  EntreeHoublon? _suggestion;
+
+  /// Suggestion choisie : remplit l'acide alpha et la forme vides.
+  List<ValeurRemplie> _choisir(EntreeIndex e) {
+    if (e is! EntreeHoublon) return const [];
+    _suggestion = e;
+    final remplies = <ValeurRemplie>[];
+    if (_alpha.text.trim().isEmpty && e.alphaPct != null) {
+      _alpha.text = texteSaisi(e.alphaPct);
+      remplies.add(ValeurRemplie.acidesAlpha);
+    }
+    final forme = _accepte(e.form, formesHoublon);
+    if (_form == null && forme != null) {
+      _form = forme;
+      _formError = false;
+      remplies.add(ValeurRemplie.forme);
+    }
+    return remplies;
   }
+
+  /// Vrai si une valeur saisie diffère de la suggestion, toujours choisie.
+  bool get _valeursDifferentes {
+    final s = _suggestion;
+    if (s == null || name.text.trim() != s.name) return false;
+    final forme = _accepte(s.form, formesHoublon);
+    return (forme != null && forme != _form) ||
+        _differe(_alpha.text, s.alphaPct);
+  }
+
+  void _reprendre() => setState(() {
+    final s = _suggestion!;
+    final reprises = <ValeurRemplie>[];
+    FocusNode? focus;
+    if (_differe(_alpha.text, s.alphaPct)) {
+      _alpha.text = texteSaisi(s.alphaPct);
+      reprises.add(ValeurRemplie.acidesAlpha);
+      focus = _alphaFocus;
+    }
+    final forme = _accepte(s.form, formesHoublon);
+    if (forme != null && forme != _form) {
+      _form = forme;
+      _formError = false;
+      reprises.add(ValeurRemplie.forme);
+    }
+    montrerReprises(reprises, focus);
+  });
 
   /// Moment enregistré que l'éditeur ne propose pas (empâtage,
   /// conditionnement, import), montré pendant toute la modification.
@@ -642,6 +971,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
   void dispose() {
     _mass.dispose();
     _alpha.dispose();
+    _alphaFocus.dispose();
     _time.dispose();
     super.dispose();
   }
@@ -682,6 +1012,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
     _form = null;
     _formError = false;
     _unite = UniteSaisie.grammes;
+    _suggestion = null;
   }
 
   String? get _boilWarning {
@@ -708,7 +1039,11 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
         onSubmit: submit,
         lastAdded: lastAdded,
         children: [
-          nameField(),
+          nameField(
+            nature: NatureReferentiel.hops,
+            onSuggestion: _choisir,
+            detail: detailHoublon,
+          ),
           if (_uniteAuChoix)
             _ChoixUnite(
               selected: _unite,
@@ -731,7 +1066,13 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
             ),
             onChanged: (_) => setState(() {}),
           ),
-          ChampNombre(controller: _alpha, label: 'Acides alpha (%)', max: 100),
+          ChampNombre(
+            controller: _alpha,
+            focusNode: _alphaFocus,
+            label: 'Acides alpha (%)',
+            max: 100,
+            onChanged: _suiviSuggestion,
+          ),
           _Choix<HopUse>(
             label: 'Utilisation',
             values: [
@@ -785,7 +1126,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
           ),
           _Choix<String>(
             label: 'Forme',
-            values: [...formesHoublon.proposees, ?_formeImportee],
+            values: _avecHorsListe(formesHoublon, widget.initial?.form, _form),
             labelOf: formesHoublon.libelle,
             selected: _form,
             error: _formError ? formMissing : null,
@@ -795,6 +1136,9 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
               _formError = false;
             }),
           ),
+          // Après le dernier champ concerné : le champ en cours de frappe ne
+          // bouge pas quand le bouton apparaît.
+          if (_valeursDifferentes) _Reprendre(onPressed: _reprendre),
         ],
       ),
     );
@@ -838,6 +1182,15 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
 
   /// Champ « Utilisation », revalidé quand la durée change.
   final _useField = GlobalKey<FormFieldState<OtherUse?>>();
+
+  /// Suggestion choisie : remplit le type vide (ADR-005, E2).
+  List<ValeurRemplie> _choisir(EntreeIndex e) {
+    if (e is! EntreeDivers || _type != null) return const [];
+    final type = _accepte(e.type, typesAjout);
+    if (type == null) return const [];
+    _type = type;
+    return const [ValeurRemplie.type];
+  }
 
   static const useMissing = 'Choisissez une utilisation.';
   static const afterBoilWithoutTime =
@@ -904,7 +1257,12 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
         onSubmit: submit,
         lastAdded: lastAdded,
         children: [
-          nameField(),
+          // La suggestion donne le nom, et le type s'il est vide.
+          nameField(
+            nature: NatureReferentiel.miscs,
+            onSuggestion: _choisir,
+            detail: detailDivers,
+          ),
           _ChoixUnite(
             selected: _unite,
             onChanged: (u) => setState(() => _unite = u),
@@ -986,6 +1344,7 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
     with _FormulaireLigne<FormulaireLevure, YeastLine> {
   final _amount = TextEditingController();
   final _attenuation = TextEditingController();
+  final _attenuationFocus = FocusNode();
   String? _type;
   UniteSaisie _unite = UniteSaisie.grammes;
 
@@ -993,12 +1352,63 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
   /// gardée tant que le brasseur n'en choisit pas une autre.
   String? _form;
 
-  /// Forme enregistrée hors des segments proposés, montrée en troisième
-  /// segment pendant toute la modification ; `null` sinon.
-  String? get _formImportee {
-    final f = widget.initial?.form;
-    return f == null || formesLevure.proposees.contains(f) ? null : f;
+  /// Entrée de la Bibliothèque choisie pour le nom, ou `null`.
+  EntreeLevure? _suggestion;
+
+  /// Suggestion choisie : remplit le type, la forme et l'atténuation vides.
+  List<ValeurRemplie> _choisir(EntreeIndex e) {
+    if (e is! EntreeLevure) return const [];
+    _suggestion = e;
+    final remplies = <ValeurRemplie>[];
+    final type = _accepte(e.type, typesLevure);
+    if (_type == null && type != null) {
+      _type = type;
+      remplies.add(ValeurRemplie.type);
+    }
+    final forme = _accepte(e.form, formesLevure);
+    if (_form == null && forme != null) {
+      _form = forme;
+      remplies.add(ValeurRemplie.forme);
+    }
+    if (_attenuation.text.trim().isEmpty && e.attenuationPct != null) {
+      _attenuation.text = texteSaisi(e.attenuationPct);
+      remplies.add(ValeurRemplie.attenuation);
+    }
+    return remplies;
   }
+
+  /// Vrai si une valeur saisie diffère de la suggestion, toujours choisie.
+  bool get _valeursDifferentes {
+    final s = _suggestion;
+    if (s == null || name.text.trim() != s.name) return false;
+    final type = _accepte(s.type, typesLevure);
+    final forme = _accepte(s.form, formesLevure);
+    return (type != null && type != _type) ||
+        (forme != null && forme != _form) ||
+        _differe(_attenuation.text, s.attenuationPct);
+  }
+
+  void _reprendre() => setState(() {
+    final s = _suggestion!;
+    final reprises = <ValeurRemplie>[];
+    FocusNode? focus;
+    final type = _accepte(s.type, typesLevure);
+    if (type != null && type != _type) {
+      _type = type;
+      reprises.add(ValeurRemplie.type);
+    }
+    final forme = _accepte(s.form, formesLevure);
+    if (forme != null && forme != _form) {
+      _form = forme;
+      reprises.add(ValeurRemplie.forme);
+    }
+    if (_differe(_attenuation.text, s.attenuationPct)) {
+      _attenuation.text = texteSaisi(s.attenuationPct);
+      reprises.add(ValeurRemplie.attenuation);
+      focus = _attenuationFocus;
+    }
+    montrerReprises(reprises, focus);
+  });
 
   @override
   int get remaining => 1;
@@ -1025,6 +1435,7 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
   void dispose() {
     _amount.dispose();
     _attenuation.dispose();
+    _attenuationFocus.dispose();
     super.dispose();
   }
 
@@ -1043,6 +1454,7 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
     _attenuation.clear();
     _type = null;
     _form = null;
+    _suggestion = null;
   }
 
   @override
@@ -1058,7 +1470,11 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
         canContinue: false,
         onSubmit: submit,
         children: [
-          nameField(),
+          nameField(
+            nature: NatureReferentiel.cultures,
+            onSuggestion: _choisir,
+            detail: detailLevure,
+          ),
           _ChoixUnite(
             selected: _unite,
             onChanged: (u) => setState(() => _unite = u),
@@ -1074,9 +1490,11 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
           ),
           ChampNombre(
             controller: _attenuation,
+            focusNode: _attenuationFocus,
             label: 'Atténuation (%)',
             aide: 'Sert au calcul de la densité finale.',
             max: 100,
+            onChanged: _suiviSuggestion,
           ),
           ListeBeerJson(
             label: 'Type de levure',
@@ -1086,16 +1504,17 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
           ),
           _Choix<String>(
             label: 'Forme',
-            values: [
-              ...formesLevure.proposees,
-              // Forme hors des deux segments, venue d'un import : elle reste
-              // visible et choisie, sous son libellé français.
-              ?_formImportee,
-            ],
+            // Forme hors des deux segments, venue d'un import ou de la
+            // Bibliothèque : elle reste visible et choisie, sous son libellé
+            // français.
+            values: _avecHorsListe(formesLevure, initial?.form, _form),
             labelOf: formesLevure.libelle,
             selected: _form,
             onChanged: (f) => setState(() => _form = f),
           ),
+          // Après le dernier champ concerné : le champ en cours de frappe ne
+          // bouge pas quand le bouton apparaît.
+          if (_valeursDifferentes) _Reprendre(onPressed: _reprendre),
         ],
       ),
     );

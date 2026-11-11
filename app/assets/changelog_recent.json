@@ -1,7 +1,7 @@
 {
   "versions": [
     {
-      "version": "0.1.30",
+      "version": "0.1.31",
       "date": "2026-11-11",
       "paragraphs": [
         "« Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la recette seule » comme avant. Votre processus par défaut est déjà choisi. En dessous, « Déroulé prévu » montre chaque journée avec sa date et son nombre d'étapes, et prévient quand la recette n'a pas de houblon à cru pour la journée de houblonnage, ou quand des houblons à cru n'ont pas de journée. Hors ligne, si vos processus n'ont jamais été lus sur ce téléphone, le brassin se crée avec la chronologie de la recette seule ; vous choisirez son processus plus tard.",
@@ -10,10 +10,19 @@
       ]
     },
     {
-      "version": "0.1.29",
+      "version": "0.1.30",
       "date": "2026-11-11",
       "paragraphs": [
         "Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune à quelques jours du brassage, avec ses étapes de préparation et de nettoyage autour de celles de la recette. La liste montre vos processus, puis ceux des autres brasseurs. Pour commencer, « Partir du modèle d'exemple » ouvre un processus de trois journées aux durées typiques, à ajuster à votre matériel avant de l'enregistrer. Vous modifiez, dupliquez et supprimez les vôtres, et vous choisissez celui que « Nouveau brassin » vous proposera : ce choix ne concerne que vous. Le processus d'un autre brasseur se copie dans les vôtres. Un processus compte 5 journées au plus et 60 étapes par journée ; les journées se rangent d'elles-mêmes par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création d'un brassin arrive avec une prochaine version."
+      ]
+    },
+    {
+      "version": "0.1.28",
+      "date": "2026-11-11",
+      "paragraphs": [
+        "L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon, d'un ajout ou d'une levure, vous voyez les ingrédients qui correspondent, par nom ou autre nom. Choisir l'un d'eux remplit les valeurs encore vides : couleur et rendement d'un malt, acides alpha et forme d'un houblon, type, forme et atténuation d'une levure, type d'un ajout. Une valeur déjà saisie ne change pas ; si elle diffère, « Reprendre les valeurs de la Bibliothèque » la remplace. Le champ « Style » propose les styles BJCP par code ou par nom. Hors ligne, les suggestions viennent de ce qui a déjà été lu ; sinon, la saisie reste libre.",
+        "L'export BeerXML est ouvert. Il retrouve le style de la recette dans la Bibliothèque, avec sa catégorie et ses plages. Une recette sans style de la Bibliothèque demande de le choisir dans les suggestions du champ Style. Le type du style BeerXML suit la levure de la recette : précisez-la si l'export le demande. Un style sans plage chiffrée dans le guide BJCP ne s'exporte pas en BeerXML : choisissez un autre style, ou exportez en BeerJSON. Quand votre équipement n'a pas l'évaporation, les pertes ou le volume mort, « Compléter l'équipement » ouvre sa fiche.",
+        "Recettes › Importer complète les valeurs absentes du fichier quand le nom d'un ingrédient est celui d'une entrée de la Bibliothèque, ou l'un de ses autres noms. Une valeur du fichier n'est jamais remplacée. Les détails de chaque recette listent les valeurs reprises, par exemple « Couleur de Pils reprise de la Bibliothèque. ». Hors ligne, l'import marche comme avant et le dit. Les noms qu'aucune entrée ne reconnaît sont signalés à l'administrateur, sans votre nom ni celui du fichier, pour qu'il complète la Bibliothèque."
       ]
     },
     {
@@ -37,13 +46,6 @@
       "date": "2026-11-11",
       "paragraphs": [
         "L'administrateur traite les tickets depuis l'application. Le menu du compte gagne « Tickets à traiter », avec le nombre de tickets qui attendent une décision, et la page Admin la tuile « Tickets des membres ». La liste se filtre (à traiter, tous, bloqués) et montre l'auteur de chaque ticket. La fiche d'un ticket permet de le valider, de le refuser avec un motif ou de le clore avec un commentaire, de relancer un envoi en échec et d'ouvrir l'Issue sur GitHub ; elle suit l'avancement de la décision. Une frise montre les étapes du ticket, ici comme dans Mes tickets, et les statuts prennent de nouvelles couleurs. Sur grand écran, la liste et la fiche s'affichent côte à côte."
-      ]
-    },
-    {
-      "version": "0.1.21",
-      "date": "2026-11-10",
-      "paragraphs": [
-        "Recettes › Importer lit aussi les fichiers BeerXML, le format qu'exportent BeerSmith, Brewfather, Brewer's Friend et Brewtarget. Le fichier s'importe comme un fichier BeerJSON : aperçu sans écriture, recettes déjà importées ou en double décochées, compte rendu. Un fichier BeerSmith qui contient des apostrophes ou des accents se lit sans caractère faux. « Détails » dit ce qui change à l'import : un houblon « First Wort » compte à l'ébullition pendant toute l'ébullition de la recette, un houblon « Aroma » avec une durée compte à l'ébullition pendant cette durée (si c'était un whirlpool, choisissez Whirlpool dans la recette), un whirlpool sans durée compte à l'arrêt du feu, et le style ne garde que son nom. Le profil d'eau, les étapes de fermentation et l'équipement du fichier ne sont pas importés. Une levure liquide mesurée en litres garde sa quantité en litres. Un fichier BeerSmith (.bsmx) n'est pas lu : exportez la recette en BeerXML depuis BeerSmith. L'export BeerXML reste visible et bloqué : il demande un style de la liste BJCP, dont le choix arrive dans une prochaine version."
       ]
     }
   ]

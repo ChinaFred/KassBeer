@@ -23,18 +23,6 @@ enum EtapeResolution {
 /// Nom résolu : identifiant de l'entrée et étape.
 typedef Resolution = ({String id, EtapeResolution etape});
 
-/// Producteur et référence d'une levure lus dans un nom de DIY Dog, ou
-/// `null` : `Wyeast 1056 - American Ale™` donne Wyeast et `1056`,
-/// `WLP099 - Super High Gravity Ale` donne White Labs et `WLP099`.
-({String producteur, String produit})? soucheDuNom(String nom) {
-  final cle = cleNormalisee(nom);
-  final wyeast = RegExp(r'^wyeast-(\d{4})(-|$)').firstMatch(cle);
-  if (wyeast != null) return (producteur: 'Wyeast', produit: wyeast[1]!);
-  final wlp = RegExp(r'^wlp(\d{3,4})(-|$)').firstMatch(cle);
-  if (wlp != null) return (producteur: 'White Labs', produit: 'WLP${wlp[1]}');
-  return null;
-}
-
 /// Résolveur : référentiels et table d'alias.
 class Resolveur {
   /// Crée le résolveur. Chaque alias doit désigner une entrée existante, et

@@ -88,3 +88,7 @@ const double kRailEtenduWidth = 256;
 /// la fiche côte à côte : [kExpandedMinWidth] de contenu à côté du rail étendu.
 const double kTicketsAdminCoteACoteMinWidth =
     kExpandedMinWidth + kRailEtenduWidth;
+
+/// Hauteur maximale d'une liste de suggestions sous un champ de saisie : six
+/// lignes à deux lignes de texte, sans cacher tout le formulaire au téléphone.
+const double kSuggestionsMaxHeight = 280;

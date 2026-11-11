@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
-### v0.1.30 — fonctionnel
+### v0.1.31 — fonctionnel
 
 « Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la
 recette seule » comme avant. Votre processus par défaut est déjà choisi. En dessous, « Déroulé
@@ -28,7 +28,7 @@ l'écran du jour nomme la journée. Le suivi des journées après le brassage ar
 prochaine version : d'ici là, la mesure de densité se saisit par « Ajouter un relevé » et
 l'embouteillage par « Embouteiller ».
 
-### v0.1.30 — technique
+### v0.1.31 — technique
 
 Lot D3 d'ADR-009. `assemblerDeroule` crée les clés et les libellés du déroulé depuis les
 brouillons de `resolveProcess` (clés de la recette gardées, `erreurDeroule` avant l'écriture) ;
@@ -45,7 +45,7 @@ autre lecture de ses étapes passe par `Brew.deroule`. Trois éléments de ticke
 processus », « Actions d'une journée », « Écart d'une journée ». Les règles d'accès et les
 dépendances ne changent pas.
 
-### v0.1.29 — fonctionnel
+### v0.1.30 — fonctionnel
 
 Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées
 d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune
@@ -59,7 +59,7 @@ compte 5 journées au plus et 60 étapes par journée ; les journées se rangent
 par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création
 d'un brassin arrive avec une prochaine version.
 
-### v0.1.29 — technique
+### v0.1.30 — technique
 
 Lot D2 d'ADR-009. Dépôts `ProcessesRepository` (`process_templates/` : document illisible
 isolé et rapporté, `erreurModele` vérifié avant chaque écriture, copie et duplication à clés
@@ -71,7 +71,7 @@ de recette ne change pas. L'éditeur de processus défile en un seul `CustomScro
 cru, embouteillage », dans l'application et dans `brewing/test/fixtures/process.json`. Aucune
 dépendance ne change.
 
-### v0.1.28 — technique
+### v0.1.29 — technique
 
 Premier lot (D1) d'ADR-009 : un brassin pourra suivre de 1 à 5 journées (brassage,
 houblonnage à cru, embouteillage) tirées d'un modèle de processus partagé. Rien ne change
@@ -91,6 +91,46 @@ d'environ 16 expressions, l'écriture du plus grand déroulé laisse environ 590
 et un lot de 60 étapes sautées passe. `CLAUDE.md` étend la règle hors ligne à chaque journée
 et « Un brassin fige sa recette » au déroulé, complète P2, P3 et P5, et ajoute les contrôles
 P37 (lecture du déroulé, découpage par journée) et P38 (règles des modèles et du déroulé).
+
+### v0.1.28 — fonctionnel
+
+L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon,
+d'un ajout ou d'une levure, vous voyez les ingrédients qui correspondent, par nom ou autre nom.
+Choisir l'un d'eux remplit les valeurs encore vides : couleur et rendement d'un malt, acides
+alpha et forme d'un houblon, type, forme et atténuation d'une levure, type d'un ajout. Une
+valeur déjà saisie ne change pas ; si elle diffère, « Reprendre les valeurs de la Bibliothèque »
+la remplace. Le champ « Style » propose les styles BJCP par code ou par nom. Hors ligne, les suggestions viennent
+de ce qui a déjà été lu ; sinon, la saisie reste libre.
+
+L'export BeerXML est ouvert. Il retrouve le style de la recette dans la Bibliothèque, avec sa
+catégorie et ses plages. Une recette sans style de la Bibliothèque demande de le choisir dans
+les suggestions du champ Style. Le type du style BeerXML suit la levure de la recette : précisez-la si
+l'export le demande. Un style sans plage chiffrée dans le guide BJCP ne s'exporte pas en
+BeerXML : choisissez un autre style, ou exportez en BeerJSON. Quand votre équipement n'a pas
+l'évaporation, les pertes ou le volume mort, « Compléter l'équipement » ouvre sa fiche.
+
+Recettes › Importer complète les valeurs absentes du fichier quand le nom d'un ingrédient est
+celui d'une entrée de la Bibliothèque, ou l'un de ses autres noms. Une valeur du fichier n'est
+jamais remplacée. Les détails de chaque recette listent les valeurs reprises, par exemple
+« Couleur de Pils reprise de la Bibliothèque. ». Hors ligne, l'import marche comme avant et le
+dit. Les noms qu'aucune entrée ne reconnaît sont signalés à l'administrateur, sans votre nom ni
+celui du fichier, pour qu'il complète la Bibliothèque.
+
+### v0.1.28 — technique
+
+`firestore.rules` ouvre `import_unresolved/` à l'écriture d'un membre (ADR-005, E6). Un membre
+crée un nom non résolu à `count` 1, avec `source: import` et le nom normalisé dans `key`. Les
+règles recalculent l'identifiant (SHA-256 de `import|nature|key`) et refusent tout autre
+identifiant. Ensuite, seuls `name`, `count` (+ 1) et `updated_at` changent. Un document de
+l'ingestion, d'un autre identifiant, ne se met jamais à jour par un membre. L'application en
+signale 200 au plus par import, par lots de 10. Le contrôle P19 et la puce « Échange » de
+`CLAUDE.md` le disent ; les règles de `recipes/` et `brews/` ne changent pas.
+
+Dans `exchange/`, `noms.dart` regroupe la normalisation des noms partagée par l'ingestion et
+l'application, et les deux empreintes de `import_unresolved/`. `resolution_import.dart`
+résout les noms d'une recette importée contre les index de la Bibliothèque reçus en paramètre,
+et reprend les valeurs absentes. L'export BeerXML tire son style d'une fiche de la Bibliothèque
+(`styleBeerXmlDe`).
 
 ### v0.1.27 — fonctionnel
 

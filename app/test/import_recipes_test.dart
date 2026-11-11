@@ -6,9 +6,11 @@ import 'dart:typed_data';
 import 'package:exchange/exchange.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
+import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/recipes/domain/import_recettes.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
 import 'package:kass_beer/features/recipes/presentation/libelles_echange.dart';
@@ -16,6 +18,7 @@ import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart
 
 import 'support/brew_fixtures.dart';
 import 'support/fakes.dart';
+import 'support/library_fixtures.dart';
 
 Uint8List fixture(String chemin) =>
     File('../exchange/test/fixtures/$chemin').readAsBytesSync();
@@ -128,6 +131,24 @@ void main() {
           isFalse,
         );
       },
+    );
+  });
+
+  test('valeur reprise : la nature d\'un malt, le type d\'une levure', () {
+    expect(
+      libelleModification(
+        const ValeurReprise(Grandeur(Champ.type, 'Pils'), ListeRecette.malts),
+      ),
+      'Nature de Pils reprise de la Bibliothèque.',
+    );
+    expect(
+      libelleModification(
+        const ValeurReprise(
+          Grandeur(Champ.type, 'US-05'),
+          ListeRecette.levures,
+        ),
+      ),
+      'Type de US-05 repris de la Bibliothèque.',
     );
   });
 
@@ -541,6 +562,226 @@ void main() {
         FichierChoisi('blonde.json', fixture('export/blonde-essai.json')),
       );
       expect(find.textContaining('· Incomplète'), findsOneWidget);
+    });
+
+    group('Bibliothèque (ADR-005, E5 et E6)', () {
+      /// `blonde-essai.json` sans la couleur ni le rendement du Pils.
+      Uint8List sansCouleur() {
+        final document =
+            jsonDecode(utf8.decode(fixture('export/blonde-essai.json')))
+                as Map<String, Object?>;
+        final recette =
+            ((document['beerjson'] as Map)['recipes'] as List).single as Map;
+        final pils =
+            ((recette['ingredients'] as Map)['fermentable_additions'] as List)
+                    .first
+                as Map;
+        pils
+          ..remove('color')
+          ..remove('yield');
+        return Uint8List.fromList(utf8.encode(jsonEncode(document)));
+      }
+
+      void index(TestApp app) {
+        void lu(NatureReferentiel nature, List<Object?> entries) =>
+            app.library.index[nature] = DocumentTrouve(
+              IndexReferentiel.fromFirestore(nature, indexDoc(entries)),
+            );
+        lu(NatureReferentiel.fermentables, [
+          {
+            'id': 'fermentable-pilsner-fictif',
+            'name': 'Pilsner Fictif',
+            'aliases': ['Pils'],
+            'type': 'grain',
+            'yield': 81,
+            'color': 3.9,
+          },
+        ]);
+        lu(NatureReferentiel.hops, [
+          {'id': 'hop-magnum', 'name': 'Magnum', 'alpha': 14},
+          {'id': 'hop-saaz', 'name': 'Saaz', 'alpha': 3},
+        ]);
+        lu(NatureReferentiel.miscs, [
+          {'id': 'misc-coriandre', 'name': 'Coriandre', 'type': 'spice'},
+        ]);
+        lu(NatureReferentiel.cultures, [
+          {
+            'id': 'culture-fermentis-us05-safale-american',
+            'name': 'Safale American',
+            'producer': 'Fermentis',
+            'product_id': 'US-05',
+            'type': 'ale',
+            'attenuation': 81,
+          },
+        ]);
+      }
+
+      testWidgets(
+        'valeurs absentes reprises, valeurs du fichier gardées, noms signalés',
+        (tester) async {
+          final app = await open(
+            tester,
+            before: (app) {
+              index(app);
+              app.equipment.publish([grainfather]);
+            },
+          );
+          expect(app.library.indexReads.toSet(), {
+            NatureReferentiel.fermentables,
+            NatureReferentiel.hops,
+            NatureReferentiel.miscs,
+            NatureReferentiel.cultures,
+          });
+          await choisir(
+            tester,
+            app,
+            FichierChoisi('blonde.json', sansCouleur()),
+          );
+          expect(find.textContaining('Bibliothèque non lue'), findsNothing);
+          await tester.tap(find.textContaining('Détails'));
+          await tester.pumpAndSettle();
+          expect(find.text(TextesImport.reprisBibliotheque), findsOneWidget);
+          expect(
+            find.text('Couleur de Pils reprise de la Bibliothèque.'),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              'Rendement d\'extrait de Pils repris de la Bibliothèque.',
+            ),
+            findsOneWidget,
+          );
+          await tester.tap(find.text(TextesImport.importer(1)));
+          await tester.pumpAndSettle();
+          final content = app.recipes.writes.single.content!;
+          expect(content.fermentables.first.ebc, 3.9);
+          expect(content.fermentables.first.yieldPct, 81);
+          // Valeurs du fichier : l'acide alpha et l'atténuation ne changent pas.
+          expect(content.hops.first.alphaPct, 12);
+          expect(content.yeasts.single.attenuationPct, 78);
+          final signales = app.library.signales.single;
+          expect(
+            [for (final n in signales) '${n.nature}|${n.nom}'],
+            ['fermentable|Candi'],
+          );
+          expect(
+            signales.single.empreinte,
+            empreinteNonResoluImport('fermentable', 'Candi'),
+          );
+        },
+      );
+
+      testWidgets('Bibliothèque vide : import comme avant, une ligne le dit', (
+        tester,
+      ) async {
+        final app = await open(
+          tester,
+          before: (app) => app.equipment.publish([grainfather]),
+        );
+        await choisir(tester, app, FichierChoisi('blonde.json', sansCouleur()));
+        expect(find.text(TextesImport.bibliothequeVide), findsOneWidget);
+        expect(find.textContaining('Bibliothèque non lue'), findsNothing);
+        await tester.tap(find.text(TextesImport.importer(1)));
+        await tester.pumpAndSettle();
+        expect(
+          app.recipes.writes.single.content!.fermentables.first.ebc,
+          isNull,
+        );
+        expect(find.text(TextesImport.bibliothequeVide), findsOneWidget);
+        expect(app.library.signales, isEmpty);
+      });
+
+      testWidgets(
+        'Bibliothèque non lue : ligne dédiée, relue au fichier suivant',
+        (tester) async {
+          final app = await open(
+            tester,
+            before: (app) {
+              index(app);
+              app.library.indexErrors[NatureReferentiel.hops] = Exception(
+                'réseau',
+              );
+            },
+          );
+          await choisir(
+            tester,
+            app,
+            FichierChoisi('blonde.json', sansCouleur()),
+          );
+          expect(
+            find.text(
+              TextesImport.bibliothequeNonLue(const [
+                NatureReferentiel.hops,
+              ], horsLigne: false),
+            ),
+            findsOneWidget,
+          );
+          final lectures = app.library.indexReads.length;
+          expect(lectures, 8);
+          app.library.indexErrors.clear();
+          app.fichiers.choix = FichierChoisi('blonde.json', sansCouleur());
+          await tester.tap(find.text(TextesImport.choisirAutre));
+          await tester.pumpAndSettle();
+          // Lecture d'avant incomplète : les quatre index sont relus.
+          expect(app.library.indexReads.length, lectures + 4);
+          expect(find.textContaining('Bibliothèque non lue'), findsNothing);
+          await tester.tap(find.textContaining('Détails'));
+          await tester.pumpAndSettle();
+          expect(
+            find.text('Couleur de Pils reprise de la Bibliothèque.'),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets('200 noms signalés au plus, les autres comptés', (
+        tester,
+      ) async {
+        final app = await open(
+          tester,
+          before: (app) {
+            index(app);
+            app.equipment.publish([grainfather]);
+          },
+        );
+        // Cinq recettes de 50 ajouts aux noms distincts : 250 noms inconnus,
+        // plus Candi.
+        final document =
+            jsonDecode(utf8.decode(fixture('export/blonde-essai.json')))
+                as Map<String, Object?>;
+        final modele =
+            ((document['beerjson'] as Map)['recipes'] as List).single as Map;
+        final ajout =
+            ((modele['ingredients'] as Map)['miscellaneous_additions'] as List)
+                    .single
+                as Map;
+        (document['beerjson'] as Map)['recipes'] = [
+          for (var r = 0; r < 5; r++)
+            {
+              ...modele,
+              'name': 'Recette $r',
+              'ingredients': {
+                ...(modele['ingredients'] as Map),
+                'miscellaneous_additions': [
+                  for (var i = 0; i < 50; i++)
+                    {...ajout, 'name': 'Ajout inconnu $r-$i'},
+                ],
+              },
+            },
+        ];
+        await choisir(
+          tester,
+          app,
+          FichierChoisi(
+            'cinq.json',
+            Uint8List.fromList(utf8.encode(jsonEncode(document))),
+          ),
+        );
+        await tester.tap(find.text(TextesImport.importer(5)));
+        await tester.pumpAndSettle();
+        expect(app.library.signales.single, hasLength(kMaxSignalements));
+        expect(find.text(TextesImport.nonSignales(51)), findsOneWidget);
+      });
     });
 
     testWidgets(
