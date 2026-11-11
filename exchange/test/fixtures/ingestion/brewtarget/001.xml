@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Fixture ecrite a la main : entrees inventees, dans la forme du fichier 001. -->
+<EQUIPMENTS>
+  <EQUIPMENT>
+    <NAME>Cuve inventee</NAME>
+    <BATCH_SIZE>20</BATCH_SIZE>
+  </EQUIPMENT>
+</EQUIPMENTS>
+<FERMENTABLES>
+  <FERMENTABLE>
+    <NAME>Malt Imaginaire</NAME>
+    <VERSION>1</VERSION>
+    <TYPE>Grain</TYPE>
+    <YIELD>78</YIELD>
+    <COLOR>2</COLOR>
+    <ORIGIN>Pays fictif</ORIGIN>
+    <NOTES>TEXTE LIBRE 001 A NE PAS COPIER</NOTES>
+  </FERMENTABLE>
+  <FERMENTABLE>
+    <NAME>Extrait Fictif</NAME>
+    <TYPE>Extract</TYPE>
+    <YIELD>75</YIELD>
+    <COLOR>3</COLOR>
+  </FERMENTABLE>
+  <FERMENTABLE>
+    <NAME>Sucre Nul</NAME>
+    <TYPE>Sugar</TYPE>
+    <YIELD>0</YIELD>
+    <COLOR>0</COLOR>
+  </FERMENTABLE>
+  <FERMENTABLE>
+    <NAME>Adjuvant Fictif</NAME>
+    <TYPE>Adjunct</TYPE>
+    <COLOR>1</COLOR>
+  </FERMENTABLE>
+</FERMENTABLES>
+<HOPS>
+  <HOP>
+    <NAME>Houblon Test</NAME>
+    <ALPHA>5</ALPHA>
+    <BETA>4</BETA>
+    <FORM>Pellet</FORM>
+    <TYPE>Both</TYPE>
+    <ORIGIN>Pays fictif</ORIGIN>
+    <SUBSTITUTES>TEXTE LIBRE 001 A NE PAS COPIER</SUBSTITUTES>
+  </HOP>
+</HOPS>
+<MISCS>
+  <MISC>
+    <NAME>&#201;pice Test</NAME>
+    <TYPE>Spice</TYPE>
+    <USE_FOR>TEXTE LIBRE 001 A NE PAS COPIER</USE_FOR>
+  </MISC>
+</MISCS>
+<STYLES>
+  <STYLE>
+    <NAME>Style Ancien Fictif</NAME>
+  </STYLE>
+</STYLES>
+<YEASTS>
+  <YEAST>
+    <NAME>Levure Test Ale</NAME>
+    <TYPE>Ale</TYPE>
+    <FORM>Dry</FORM>
+    <LABORATORY>Labo Fictif</LABORATORY>
+    <PRODUCT_ID>LF-1</PRODUCT_ID>
+    <MIN_TEMPERATURE>15</MIN_TEMPERATURE>
+    <MAX_TEMPERATURE>22</MAX_TEMPERATURE>
+    <FLOCCULATION>Medium</FLOCCULATION>
+    <ATTENUATION>75</ATTENUATION>
+    <BEST_FOR>TEXTE LIBRE 001 A NE PAS COPIER</BEST_FOR>
+  </YEAST>
+</YEASTS>
+<RECIPES>
+  <RECIPE>
+    <NAME>Recette Ecartee</NAME>
+    <FERMENTABLES>
+      <FERMENTABLE>
+        <NAME>Malt De Recette</NAME>
+        <TYPE>Grain</TYPE>
+      </FERMENTABLE>
+    </FERMENTABLES>
+  </RECIPE>
+</RECIPES>

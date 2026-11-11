@@ -1,0 +1,37 @@
+// Fixture écrite à la main : entrées inventées, dans la forme du fichier 003.
+{
+  "beerjson": {
+    "version": 2.01,
+    "hop_varieties": [
+      {
+        "name": "Houblon Test",
+        "origin": "Pays fictif",
+        "alpha_acid": { "unit": "%", "value": 6 },
+        "beta_acid": { "unit": "%", "value": 3 },
+        "type": "aroma/bittering",
+        "substitutes": "TEXTE LIBRE 003 A NE PAS COPIER",
+        "oil_content": { "total_oil_ml_per_100g": 1, "notes": "TEXTE LIBRE 003 A NE PAS COPIER" }
+      },
+      {
+        "name": "Houblon Second",
+        "origin": "Pays fictif",
+        "alpha_acid": { "unit": "%", "value": 0 },
+        "type": "aroma"
+      }
+    ],
+    "cultures": [
+      {
+        "id": "7",
+        "producer": "Labo Fictif",
+        "product_id": "LF1",
+        "name": "Levure Test Ale",
+        "type": "ale",
+        "notes": "TEXTE LIBRE 003 A NE PAS COPIER",
+        "attenuation_range": { "minimum": { "unit": "%", "value": 70 }, "maximum": { "unit": "%", "value": 80 } },
+        "flocculation": "medium",
+        "temperature_range": { "minimum": { "unit": "F", "value": 59 }, "maximum": { "unit": "F", "value": 72 } },
+        "form": "dry"
+      }
+    ]
+  }
+}

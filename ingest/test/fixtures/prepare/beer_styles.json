@@ -1,0 +1,43 @@
+[
+  {
+    "id": "bjcp2021-99a",
+    "data": {
+      "name": "Style Fictif",
+      "category": "Catégorie Fictive",
+      "category_id": "99",
+      "style_id": "99A",
+      "type": "beer",
+      "style_guide": "BJCP2021",
+      "original_gravity": {
+        "minimum": {
+          "value": 1.04,
+          "unit": "sg"
+        },
+        "maximum": {
+          "value": 1.05,
+          "unit": "sg"
+        }
+      },
+      "color": {
+        "minimum": {
+          "value": 7.9,
+          "unit": "EBC"
+        },
+        "maximum": {
+          "value": 11.8,
+          "unit": "EBC"
+        }
+      },
+      "provenance": [
+        {
+          "source": "brewtarget-002",
+          "source_id": "Nom Fictif",
+          "version": "v5.2.3 ea10908",
+          "licence": "BJCP (noms et plages)",
+          "retrieved": "2026-11-08"
+        }
+      ],
+      "content_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  }
+]

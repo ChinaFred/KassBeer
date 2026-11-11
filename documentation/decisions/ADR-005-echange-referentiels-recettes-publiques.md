@@ -366,6 +366,58 @@ immuable. Un import de brassins déjà brassés (v0.6) créera donc le brassin, 
 Les éléments des listes ne sont pas contrôlés par les règles : un champ inconnu y reste
 possible, sous le seul compte de son auteur, et la lecture typée l'ignore.
 
+**Amendements de L3 et L4 (décisions de la session principale du 2026-11-11, accord de
+l'utilisateur de décider jusqu'à la fin de L4).** L3 et L4 avancent par étapes : les données en
+base (v0.1.24), puis la consultation dans l'application, puis le reste de L4.
+
+- D1. Kaggle (`style_stats/`) est reporté. La page déclare « CC0: Public Domain » (relevé du
+  2026-11-11, API Kaggle), mais le téléchargement demande un compte Kaggle absent du poste.
+  Aucune règle ni aucun code pour `style_stats` tant qu'il n'y a pas de donnée (« Pas de code
+  mort »).
+- D2. La CI ne change pas dans ces étapes. Node 24 et une étape `ingest/` dans `ci.yml`
+  viendront plus tard : la décision 10 est maintenue, sa livraison décalée. Les tests
+  d'`ingest/` tournent en local.
+- D3. Les champs d'enveloppe `style_id`, `ingredient_refs` et `source_hop_timing` n'entrent pas
+  dans `recipes/` à ces étapes : il reste environ 40 expressions de marge à la création d'un
+  brassin. Ils existent dans `public_recipes/`, écrit par le script seul.
+- D4. L'ingestion recopie dans chaque ligne d'une recette publique les valeurs techniques de
+  l'entrée résolue quand la source n'en donne pas : malt `type`, `yield` et `color`, houblon
+  `alpha_acid`, levure `type`, `form` et `attenuation`. Le rapport compte ces valeurs. Une
+  valeur de la source n'est jamais remplacée. Un nom non résolu reste sans valeur ; une ligne
+  de malt non résolue garde le type `grain`, car DIY Dog la range dans `malt` sans autre
+  précision (11 lignes résolues sont du miel, du dextrose, du sucre ou du lactose).
+- D5. La préparation est en Dart, dans `exchange/` : bibliothèque séparée
+  `package:exchange/ingestion.dart`, jamais importée par l'application, et
+  `exchange/bin/preparer_referentiels.dart`. Elle lit `import/sources/` et écrit
+  `import/ingest/prepare/<collection>.json`. L'écriture est en Node 24, paquet `ingest/`
+  (Admin SDK), qui lit ces fichiers.
+- D6. `import_unresolved/` est écrit par le script seul (nom de DIY Dog non résolu) et lu par
+  l'admin. La création par un membre arrivera avec la résolution à l'import (étape 3).
+- D7. Première écriture en production le 2026-11-11 (12:49Z), par l'administrateur, avec ses
+  ADC de compte utilisateur (`authorized_user`) : 2 525 documents écrits, 0 refusé. Le compte
+  `kassbeer-ingest` est reporté. L'écrivain refuse une clé de compte de service :
+  `GOOGLE_APPLICATION_CREDENTIALS` et `CLOUDSDK_CONFIG` sont refusés, et le fichier ADC doit
+  être de type `authorized_user`, ou `impersonated_service_account` dont la source est
+  `authorized_user`. Cette écriture a précédé la correction du type des malts (D4) : 11 lignes
+  de recettes portent encore `grain` en production. La prochaine exécution, prévue après la
+  fusion, réécrira ces seules recettes.
+- D8. La forme d'un houblon est facultative à la lecture, parce que DIY Dog ne la donne pas.
+  L'IBU d'un houblon d'ébullition sans forme est « à compléter », et l'éditeur demande la
+  forme. Ce code est livré par la branche des écrans.
+
+Constats de la livraison de l'étape 1 (v0.1.24) :
+
+- Une même souche de levure chez un même producteur (`SafAle S-04` et `SafAle English Ale`,
+  référence `S-04`) ne fait qu'un document : sans ce regroupement, 902 documents au lieu de 845.
+- `recipe.boil` est absent des recettes publiques, et la température de fermentation de DIY
+  Dog n'est pas reprise : `isBeerJsonRecipe` n'a de clé ni pour le volume avant ébullition ni
+  pour `fermentation`. Un palier sans durée est écarté (57 paliers, 58 recettes sans empâtage) :
+  `step_time` est obligatoire dans le schéma partiel et dans la lecture de l'application.
+- Aucun houblon d'une recette publique ne porte `form` : DIY Dog ne la donne pas. La lecture
+  de la v0.1.23 (`HopLine.fromFirestore`) exige `form` : D8 la rend facultative.
+- Les règles n'ouvrent que `get` sur les référentiels et `beer_index`, et sur `public_recipes`
+  une requête de 50 documents au plus (`request.query.limit <= 50`, P22).
+
 ## Calendrier et passage en production
 
 Cadrage (L0) maintenant. Passage à BeerJSON (L1) juste après la fusion de la v0.4, avant la v0.5

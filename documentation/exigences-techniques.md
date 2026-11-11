@@ -860,6 +860,58 @@ Admin) :
 | `token_checked_at` | timestamp de la dernière réponse réussie qui a écrit ce document |
 | `issues_cursor` | date ISO : curseur de la liste des Issues modifiées, propre à la passe horaire |
 
+### Référentiels et recettes publiques (ADR-005, L3)
+
+Écrits par l'ingestion seule (`exchange/bin/preparer_referentiels.dart`, puis
+`ingest/ecrire.mjs`, Admin SDK), jamais par un client. Noms et valeurs techniques seuls :
+aucun `notes`, description, URL ni texte libre d'une source (P20), sauf `method.twist` de DIY
+Dog dans `recipe.notes`. Unités canoniques en couples `{value, unit}` (`g`, `l`, `C`, `min`,
+`EBC`, `sg`, `%`, `IBUs` pour l'amertume d'un style ou annoncée) ; plages en
+`{minimum: {value, unit}, maximum: {value, unit}}` comme BeerJSON. Chaque document porte :
+
+| Champ | Contenu |
+|---|---|
+| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908` ou `e6c12ab` ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)` ; `retrieved` : `2026-11-08` |
+| `content_sha256` | SHA-256 du JSON canonique du document (clés triées, entier sans décimale), hors `content_sha256` et `updated_at`, calculé par la préparation ; l'écrivain ne réécrit pas un document de même empreinte |
+| `updated_at` | `serverTimestamp()`, posé par l'écrivain |
+
+Identifiant d'une entrée : `<nature>-<clé>`, nature `fermentable`, `hop`, `culture` ou `misc` ;
+clé = nom normalisé comme une clé d'ingrédient de `brewing/` (`normalizeName` : minuscules,
+accents retirés, tout caractère hors a-z et 0-9 en tiret, tirets réduits), 100 caractères au
+plus. Deux entrées de même clé fusionnent : la source prioritaire (005, puis 003 et 004, puis
+001) donne toutes les valeurs, chaque entrée ajoute sa ligne de `provenance` et son nom aux
+`aliases`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
+de même producteur et de même référence (`Wyeast Labs` = `Wyeast`, `Omega Yeast Labs` =
+`Omega Yeast` ; `WY1056` = `1056` chez Wyeast, `001` = `WLP001` chez White Labs ; tirets
+ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
+ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`). Un
+rendement, un acide alpha ou une atténuation à 0 dans une source est lu comme inconnu : écarté
+et compté.
+
+| Collection | Champs |
+|---|---|
+| `beer_fermentables/{id}` | `name`, `aliases` (liste, peut être vide), `label_fr`?, `type` (`grain`, `sugar`, `extract`, `dry extract`, `honey`, `fruit`, `juice`, `other` ; `Adjunct` du 001 donne `grain`), `yield`? (`{fine_grind: {value, unit: '%'}}`), `color`? (EBC ; Lovibond et SRM convertis par `brewing/`), `producer`?, `origin`? |
+| `beer_hops/{id}` | `name`, `aliases`, `label_fr`?, `form`?, `alpha_acid`? (`%`), `beta_acid`? (`%`), `origin`?, `purpose`? (`type` BeerJSON du houblon : `aroma`, `bittering`, `aroma/bittering`… ; `Both` du 001 donne `aroma/bittering`) |
+| `beer_cultures/{id}` | `name`, `aliases`, `type`?, `form`?, `producer`?, `product_id`?, `attenuation`? (plage `%` ; une valeur du 001 donne une plage d'une valeur), `temperature_range`? (plage `C`, °F convertis), `flocculation`? (`very low` à `very high`) |
+| `beer_miscs/{id}` | `name`, `aliases`, `label_fr`?, `type`? (`spice`, `herb`, `flavor`, `fining`, `water agent`, `wood`, `other`) |
+| `beer_styles/bjcp2021-{code}` | `name`, `category`, `category_id`, `style_id`, `type`, `style_guide`, `original_gravity`, `final_gravity` (plages `sg`), `international_bitterness_units` (plage `IBUs`), `color` (plage EBC, SRM converti par `brewing/`), `alcohol_by_volume` (plage `%`) ; 17 des 110 styles n'ont aucune plage |
+| `beer_index/{nature}` | 5 documents : `fermentables`, `hops`, `cultures`, `miscs`, `styles`. `{count, entries, content_sha256, updated_at}`, entrées triées par nom (sans casse), nombres nus : fermentable `{id, name, aliases?, label_fr?, type?, yield?, color?}` ; houblon `{id, name, aliases?, form?, alpha?}` ; culture `{id, name, aliases?, producer?, product_id?, type?, form?, attenuation?}` (milieu de la plage) ; ajout `{id, name, aliases?, label_fr?, type?}` ; style `{id, name, code, category, og?, fg?, ibu?, ebc?, abv?}` (plages en `[min, max]`). Taille contrôlée par l'écrivain, moins de 900 Ko (calcul de la documentation Firestore) |
+| `public_recipes/diydog-{id}` | enveloppe de `recipes/` : `format_version: 1`, `owner_uid: 'system'`, `owner_name: 'DIY Dog'`, `imported_from: 'DIY Dog · diydog-{id}'`, `search_name` (`recipe.name` normalisé comme une clé d'ingrédient, des espaces à la place des tirets : « Punk IPA 2007 - 2010 » donne « punk ipa 2007 2010 » ; l'application trie et cherche par préfixe sur ce champ, la saisie normalisée de la même façon ; compris dans `content_sha256`), `recipe` (BeerJSON partiel, clés de `isBeerJsonRecipe` seules : copiable tel quel vers `recipes/`) ; propres aux recettes publiques : `style_id`? (absent : DIY Dog ne nomme pas de style), `ingredient_refs` (`{clé ingredientKey de brewing/ : id}` des lignes résolues), `source_hop_timing` (`{hop_index, label}` des houblons dont le libellé d'origine ne dit pas la durée : `start`, `middle`, `Whirlpool`, `WHP`, `FWH`, `HD1`, `FV`…), `announced` (`original_gravity`, `final_gravity` en `sg`, `alcohol_by_volume` en `%`, `ibu_estimate` en `IBUs`, `color_estimate` en EBC ; valeurs de la source, jamais un résultat de calcul) |
+| `ingest_runs/{AAAAMMJJTHHMMSSZ}` | `started_at`, `finished_at`, `target` (`emulator` ou `production`), `counts` (`{collection: {written, unchanged, refused}}`), `sources` (`{source, version}`), `unresolved` (noms non résolus par nature), `report_sha256` (SHA-256 du rapport JSON local) |
+| `import_unresolved/{empreinte}` | empreinte : SHA-256 de `nature|nom normalisé`, 64 chiffres hexadécimaux ; `nature`, `name` (nom tel que DIY Dog l'écrit), `source: 'diydog'`, `count` (lignes de recettes), `updated_at` ; aucun `content_sha256` : l'écrivain compare les quatre champs |
+
+Dans `recipe` d'une recette publique : `author` vaut `BrewDog` ; `notes` porte `method.twist`
+seul ; `boil` est absent (DIY Dog ne donne pas la durée d'ébullition, `DATA_SOURCES.md`,
+décision 1) ; le volume avant ébullition et la température de fermentation sont écartés
+(`recipe` n'a pas de clé pour eux) ; chaque palier est une infusion nommée « Palier N », et un
+palier sans durée est écarté (`step_time` obligatoire dans le schéma partiel et dans la
+lecture de l'application). Une ligne garde le nom de la source. Une valeur technique manquante
+est recopiée de l'entrée résolue (ADR-005, D4 : malt `type`, `yield` et `color`, houblon
+`alpha_acid`, levure `type`, `form`, `attenuation` au milieu de la plage) ; une valeur de la
+source (l'acide alpha de `10% Alpha`) n'est jamais remplacée. Une ligne de malt non résolue
+garde le type `grain` : la source la range dans `malt` sans autre précision. Aucun houblon ne porte de
+`form` : la source ne la donne pas, et aucune valeur n'est inventée.
+
 ## Règles d'accès
 
 Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'google.com'`),
@@ -880,9 +932,17 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 | `tickets/` | auteur (`author_uid` = le sien, requête « Mes tickets » comprise) ; tous pour l'admin | membre, champs de création seuls (voir `tickets/`), `status == 'pending'`, `created_at == request.time`, `author_email` = e-mail du jeton en minuscules | auteur : `seen_by_author_at == request.time` seul | personne |
 | `ticket_quotas/**` | personne | personne | personne | personne |
 | `ticket_status/**` | admin | personne | personne | personne |
+| `beer_fermentables/`, `beer_hops/`, `beer_cultures/`, `beer_miscs/`, `beer_styles/`, `beer_index/` | membres, `get` seul (aucune requête) | personne | personne | personne |
+| `public_recipes/` | membres : `get`, et requête de 50 documents au plus (`request.query.limit <= 50`) ; sans limite ou au-delà, refusée | personne | personne | personne |
+| `ingest_runs/`, `import_unresolved/` | admin | personne | personne | personne |
 | tout autre chemin | refusé | refusé | refusé | refusé |
 
 L'admin n'a aucun droit d'écriture sur le contenu des autres brasseurs.
+
+`public_recipes/` : la règle borne chaque requête à 50 documents, pas leur nombre total. Un
+membre peut donc lire les 415 recettes par des requêtes à `offset` (ou `startAfter`). Le coût
+reste borné par la taille de la collection, et le groupe compte moins de 10 comptes. Ce risque
+est accepté (revue de sécurité de L3, 2026-11-11).
 
 Le joker `users/{uid}/{document=**}` n'accorde que la lecture : les règles s'additionnent, et
 une écriture permise par le joker rendrait sans effet les contrôles de forme. Sur
@@ -1451,6 +1511,86 @@ référentiel, et les équivalences sans perte, `Adjunct` = `Grain` et `Aroma` 0
 l'identique (I9, `import_recipes_test.dart`). Les suites sans fichier (`analyse_test`,
 `lecture_test`, `lecture_beerxml_test`) tournent aussi dans Chrome (`dart test -p chrome`) ;
 `test/support/decrire.dart` n'importe pas `dart:io`.
+
+## Ingestion des référentiels et des recettes publiques (ADR-005, L3)
+
+Deux étapes, lancées à la main par l'administrateur sur son poste (ADR-005, D5). Les sources
+vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/`), la préparation
+dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapports/` :
+`import/` est ignoré par Git (P20).
+
+```bash
+# 1. Préparation, sans réseau : lit import/sources/, écrit import/ingest/prepare/
+(cd exchange && dart run bin/preparer_referentiels.dart)
+# 2. Écriture dans l'émulateur (par défaut), deux fois de suite : la seconde ne réécrit aucun
+#    référentiel ni aucune recette ; seul son document ingest_runs est créé
+(cd ingest && npx firebase --config ../firebase.json emulators:exec --only firestore --project demo-kassbeer "node ecrire.mjs && node ecrire.mjs")
+# 3. Écriture en production : identifiants ADC, saisie du nom du projet au terminal
+gcloud auth application-default login   # compte de l'admin ; kassbeer-ingest reporté (ADR-005, D7)
+(cd ingest && node ecrire.mjs --production --projet kassbeer --simulation)   # compte sans écrire
+(cd ingest && node ecrire.mjs --production --projet kassbeer)
+```
+
+**Préparation** (`package:exchange/ingestion.dart`, bibliothèque distincte de
+`exchange.dart`, jamais importée par l'application ; `bin/preparer_referentiels.dart`). Aucun
+`catch`, aucun réseau. Bornes : chaque fichier source fait 10 Mo au plus
+(`kMaxOctetsParFichier`, contrôlé avant la lecture), 1 000 fichiers DIY Dog au plus
+(`kMaxFichiersDiyDog`), JSON de 32 niveaux au plus (`kMaxProfondeur`, `lireJsonBorne`) ; au-delà,
+la préparation s'arrête sans rien écrire. Aucune empreinte des sources n'est vérifiée. Lecteurs : 001 en BeerXML (`decoderXml` et `lireXml` de
+`decodage_xml.dart`, sous une racine ajoutée car le fichier en a plusieurs ; listes
+`FERMENTABLES`, `HOPS`, `MISCS`, `YEASTS` du premier niveau seules, ni recettes, ni
+équipements, ni styles d'anciennes éditions) ; 002 à 004 en BeerJSON 2.01 et 005 en DotBeer,
+JSON dont les lignes commençant par `//` sont retirées (`lireJsonCommente`) ; DIY Dog. Les
+couleurs passent par `versEbc` (Lovibond et SRM de `brewing/`, P3), les °F par `versCelsius`.
+Une valeur d'unité inconnue, illisible, hors bornes ou nulle (rendement, alpha, atténuation)
+est écartée et comptée. Résolution d'un nom de DIY Dog : clé normalisée égale à celle d'un nom
+du référentiel, puis pour une levure le producteur et la référence lus dans le nom (`Wyeast
+1056`, `WLP099`), puis la table d'alias écrite à la main (`lib/src/ingestion/alias.dart`). Un
+alias vers une entrée absente arrête la préparation (`StateError`). La table liste aussi les
+noms de la liste `hops` qui ne sont pas des houblons (épices, fruits, copeaux) : leur ligne va
+dans `miscellaneous_additions`. Sortie : `<collection>.json` (listes `{id, data}`, triées par
+identifiant, `content_sha256` calculé) et `rapport.json` : entrées par source, entrées
+rejetées, listes ignorées, valeurs écartées, fusions, documents par collection, recettes lues
+et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non résolus
+avec leur nombre de lignes, lignes rejetées, libellés perdus, températures de fermentation non
+reprises, taille JSON des index.
+
+**Écriture** (`ingest/`, Node 24, ESM ; `firebase-admin` 14.5.0, comme `functions/` ; `ajv`
+8.20.0 et `prettier` 3.9.6, comme `rules-tests/` ; `firebase-tools` 15.35.0 pour les tests).
+`ecrire.mjs` refuse `GOOGLE_APPLICATION_CREDENTIALS` et `CLOUDSDK_CONFIG`, quelle que soit
+la casse de la variable (aucune clé JSON de compte de service, aucun autre dossier gcloud) ;
+en production, il lit le type du fichier ADC de gcloud (`%APPDATA%\gcloud` sous Windows,
+`~/.config/gcloud` ailleurs) et n'accepte que `authorized_user`, ou
+`impersonated_service_account` dont `source_credentials.type` vaut `authorized_user` :
+`service_account`, à la racine ou en source d'un emprunt, est refusé, avant la confirmation ;
+sans `--production`, il exige `FIRESTORE_EMULATOR_HOST` et un projet `demo-*` (sans
+l'émulateur, l'Admin SDK viserait la production) ; avec `--production`, il exige
+`--projet kassbeer`, l'absence de `FIRESTORE_EMULATOR_HOST`, un terminal et la saisie du nom
+du projet. Il lit les huit fichiers de la liste blanche (`beer_fermentables`, `beer_hops`,
+`beer_cultures`, `beer_miscs`, `beer_styles`, `beer_index`, `public_recipes`,
+`import_unresolved`) et contrôle chaque document : identifiant de sa collection, clés
+permises, unités canoniques, plages, provenance (sources et licences connues), empreinte, pas
+de `updated_at` préparé ; `recipe` d'une recette publique limité aux clés de
+`isBeerJsonRecipe` et aux plafonds de listes, puis validé par ajv contre le schéma partiel
+que dérive `rules-tests/test/beerjson_partial.mjs` (`rules-tests/` installé d'abord, aucune
+seconde dérivation) ; valeurs de `ingredient_refs` de la forme d'un identifiant de
+référentiel, 200 caractères au plus ; chaque entrée de `beer_index` limitée aux clés de sa
+nature, valeurs typées et nombres finis ; `beer_index` sous 900 Ko. Un document refusé n'est pas écrit, les
+autres le sont (code de sortie 3). Il compare chaque document à la base par `getAll` (300 par
+appel) : même `content_sha256`, ou mêmes champs pour `import_unresolved`, donc inchangé et non
+réécrit. Les autres s'écrivent en entier (`set` sans fusion, `updated_at` du serveur), par
+lots de 400. `--simulation` lit et compte sans écrire. En fin d'exécution : rapport JSON
+`import/ingest/rapports/<id>.json` (comptes, documents refusés et leurs erreurs, sources, non
+résolus), puis `ingest_runs/<id>` par `create`, hors simulation. L'Admin SDK se charge au
+premier usage, après les contrôles. Aucun document absent de la préparation n'est supprimé.
+
+Tests : `(cd exchange && dart test)` (`test/ingestion_test.dart`, fixtures écrites à la main
+dans `test/fixtures/ingestion/`, entrées inventées dans la forme des sources) ;
+`(cd ingest && npm test)` (`node --test` sous `firebase emulators:exec`, projet
+`demo-kassbeer` : options, contrôle, lots sur une base simulée, et deux écritures de la
+fixture `test/fixtures/prepare/` contre l'émulateur, la seconde sans aucun référentiel ni
+aucune recette réécrit, seul son document `ingest_runs` créé) ;
+`npm run test:unitaires` sans émulateur. La CI ne lance pas encore `ingest/` (ADR-005, D2).
 
 ## Cloud Functions
 
@@ -2052,7 +2192,7 @@ après `(cd effacement-l1 && npm ci)`.
 | JDK | Temurin 21, dans `JAVA_HOME` | émulateur Firestore de `rules-tests/` |
 | JDK de Gradle | celui d'Android Studio (JBR 21), réglé par `flutter config --jdk-dir` | `flutter build apk` |
 | SDK Android | plateforme 36, build-tools 36.1.0 | licences à accepter une fois par `flutter doctor --android-licenses` (commande interactive) |
-| Node | 22, comme la CI et `engines` de `rules-tests/` | `rules-tests/`, `scripts/` |
+| Node | 22, comme la CI et `engines` de `rules-tests/` ; 24 pour `ingest/` et `functions/` (le poste a 24.15.0, qui fait tourner `rules-tests/` aussi) | `rules-tests/`, `scripts/`, `ingest/` |
 | CLI Firebase | celle de `rules-tests/node_modules/.bin/` (15.35.0) | émulateur, commandes de projet |
 | `gcloud`, `gh` | connectés au compte du brasseur | réglages Google Cloud et GitHub |
 

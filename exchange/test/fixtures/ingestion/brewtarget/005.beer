@@ -1,0 +1,68 @@
+//======================================================================
+// Fixture écrite à la main : entrées inventées, dans la forme du fichier 005.
+//======================================================================
+{
+  "DotBeer": {
+    "version": "1.0.0",
+    "fermentables": [
+      {
+        "name": "Malt Imaginaire",
+        "folder_path": "Grain",
+        "fermentable_type": "grain",
+        "yield_fine_grind": { "unit": "%", "value": 81 },
+//        "color": {
+//          "unit": "EBC",
+//          "value": 99.0
+//        },
+        "color": { "unit": "EBC", "value": 4 },
+        "notes": "TEXTE LIBRE 005 A NE PAS COPIER"
+      },
+      {
+        "name": "Malt Moulin Fictif",
+        "folder_path": "The Swaen",
+        "fermentable_type": "grain",
+        "producer": "Moulin Fictif",
+        "yield_fine_grind": { "unit": "%", "value": 80 },
+        "color": { "unit": "Lovi", "value": 2 },
+        "notes": "TEXTE LIBRE 005 A NE PAS COPIER, avec un lien http://exemple.fr dans la chaîne"
+      }
+    ],
+    "hops": [
+      {
+        "name": "Houblon Test",
+        "folder_path": "Pays fictif",
+        "origin": "Pays fictif",
+        "alpha_acid": { "unit": "%", "value": 7 },
+        "hop_type": "aroma",
+        "notes": "TEXTE LIBRE 005 A NE PAS COPIER"
+      }
+    ],
+    "miscs": [
+      {
+        "name": "Poudre Fictive",
+        "folder_path": "Spice",
+        "misc_type": "spice"
+      },
+      {
+        "name": "Sel Fictif",
+        "folder_path": "Water Agents/Salts",
+        "misc_type": "water agent",
+        "water_agent_type": "inconnu"
+      }
+    ],
+    "cultures": [
+      {
+        "name": "Souche Fictive",
+        "folder_path": "Wyeast",
+        "culture_type": "ale",
+        "form": "liquid",
+        "producer": "Wyeast",
+        "product_id": "9999",
+        "temperature_range": { "minimum": { "unit": "C", "value": 16 }, "maximum": { "unit": "C", "value": 21 } },
+        "attenuation_range": { "minimum": { "unit": "%", "value": 72 }, "maximum": { "unit": "%", "value": 76 } },
+        "notes": "TEXTE LIBRE 005 A NE PAS COPIER"
+      }
+    ],
+    "recipes": [{ "name": "Recette Ecartee 005" }]
+  }
+}

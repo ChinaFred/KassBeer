@@ -1,0 +1,20 @@
+[
+  {
+    "id": "misc-epice-fictive",
+    "data": {
+      "name": "Épice Fictive",
+      "aliases": [],
+      "type": "spice",
+      "provenance": [
+        {
+          "source": "brewtarget-001",
+          "source_id": "Nom Fictif",
+          "version": "v5.2.3 ea10908",
+          "licence": "GPL-3.0",
+          "retrieved": "2026-11-08"
+        }
+      ],
+      "content_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  }
+]
