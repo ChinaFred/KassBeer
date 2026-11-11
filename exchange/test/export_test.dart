@@ -177,6 +177,26 @@ void main() {
     },
   );
 
+  test('houblon sans forme (D8) : export BeerJSON permis, sans `form`', () {
+    final recipe = _complete();
+    final hops =
+        (recipe['ingredients']! as Map<String, Object?>)['hop_additions']!
+            as List<Object?>;
+    for (final h in hops) {
+      (h! as Map).remove('form');
+    }
+    final r = _exporter(recipe, calcul: _calcul()) as ExportPret;
+    final ecrits =
+        ((((jsonDecode(r.contenu) as Map)['beerjson'] as Map)['recipes']
+                        as List)
+                    .single
+                as Map)['ingredients']
+            as Map;
+    for (final h in ecrits['hop_additions'] as List) {
+      expect((h as Map).containsKey('form'), isFalse);
+    }
+  });
+
   test(
     'E3 : ni prix, ni stock, ni propriétaire, ni équipement dans le fichier',
     () {

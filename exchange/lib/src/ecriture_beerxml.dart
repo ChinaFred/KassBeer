@@ -149,8 +149,8 @@ ResultatExport exporterBeerXml({
 /// Ce qui manque à [recipe] pour un export BeerXML : ce qui manque au
 /// BeerJSON, puis le style, la durée d'ébullition et les volumes de
 /// l'équipement (`BOIL_SIZE`), le moment et la durée des ajouts (`USE` et
-/// `TIME` sont obligatoires), un houblon mesuré en volume et un type de
-/// recette sans équivalent. Vide si l'export est possible.
+/// `TIME` sont obligatoires), un houblon mesuré en volume, un houblon sans
+/// forme et un type de recette sans équivalent. Vide si l'export est possible.
 List<ManqueExport> manquesExportBeerXml({
   required Map<String, Object?> recipe,
   required String? auteur,
@@ -187,6 +187,12 @@ List<ManqueExport> manquesExportBeerXml({
       if (mapExport(h['amount'])['unit'] == 'l') '${h['name']}',
   ];
   if (enVolume.isNotEmpty) format(ChampExport.houblonEnVolume, enVolume);
+  // Forme absente, ou hors de la table : la ligne ne peut pas s'écrire.
+  final sansForme = [
+    for (final h in hops)
+      if (!_formesHoublon.containsKey(h['form'])) '${h['name']}',
+  ];
+  if (sansForme.isNotEmpty) format(ChampExport.formeHoublon, sansForme);
   final sansMoment = [
     for (final o in miscs)
       if (mapExport(o['timing'])['use'] == null) '${o['name']}',
@@ -297,8 +303,11 @@ void _houblons(_Xml x, List<Map<String, Object?>> hops, List<PerteExport> p) {
           ),
         );
     }
-    final form = '${h['form']}';
-    final forme = _formesHoublon[form]!;
+    final form = h['form'];
+    final forme = _formesHoublon[form];
+    // Inatteignable : `manquesExportBeerXml` bloque l'export d'un houblon sans
+    // forme ou d'une forme hors de la table (ChampExport.formeHoublon).
+    if (form is! String || forme == null) continue;
     if (forme.toLowerCase() != form) {
       p.add(
         ValeurEcriteAutrement(

@@ -74,6 +74,7 @@ Recettes › Importer. Le modèle est déjà en BeerJSON : la lecture garde les 
 | Couleur d'un fermentescible | `Lovi`, `SRM` | `EBC` par `brewing/` |
 | `yield` | `fine_grind` ; sinon `potential` en `sg` ; `coarse_grind` seul | `fine_grind` ; `potentialToYieldPercent` de `brewing/` ; absent, listé |
 | `yield.fine_grind`, `alpha_acid` | 0 | absent, listé |
+| `HopVarietyBase.form` | absente | ligne sans forme (ADR-005, D8), sans perte listée ; l'IBU d'ébullition est « à compléter » et l'export BeerXML est bloqué. Une forme hors du schéma : recette refusée |
 | `HopAdditionType.timing`, `use: add_to_boil` | `time` ; sinon `duration` ; `time` 0 avec `duration` | ébullition `time` ; ébullition `duration` (ADR-005) ; après l'arrêt du feu, pour `duration` |
 | `timing` d'un ajout à cru, à l'empâtage, au conditionnement | `time` en plus de `duration` | `duration` seule, simplification listée (le jour d'ajout d'un houblon à cru est gardé) |
 | Quantité d'une levure | `pkg`, `each`, `unit` | absente, listée ; pour un malt, un houblon ou un ajout, recette refusée |
@@ -107,7 +108,7 @@ fichier refusé (P9). Une perte « listée » est une ligne de « Modifié à l'
 | | `First Wort` | `add_to_boil` à la durée de `BOIL_TIME` (sans `BOIL_TIME`, durée absente) ; listé |
 | | `Whirlpool` (hors norme, vu dans `diydog-beerxml`) | avec `TIME` : `add_to_boil` à 0, `duration` = `TIME` ; sans `TIME` ou à 0 : `add_to_boil` à 0 sans `duration` (arrêt du feu), listé (ADR-005, amendements de L2 ; `source_hop_timing` en L3) |
 | | `Secondary` (hors norme) | `add_to_fermentation`, `duration` = `TIME` ; listé (moment simplifié) |
-| `HOP.FORM` absent | — | recette refusée : la forme est obligatoire dans l'application |
+| `HOP.FORM` absent | — | ligne sans forme (ADR-005, D8), sans perte listée ; l'IBU d'ébullition est « à compléter » (« Forme du houblon à compléter ») et l'export BeerXML est bloqué |
 | `HOP.FORM` | `Pellet`, `Plug`, `Leaf` | `pellet`, `plug`, `leaf` ; pour le calcul, `plug` se lit comme `leaf` (`HopForm.ofBeerJson`) |
 | Forme BeerJSON | `powder`, `extract`, `leaf (wet)` | conservée ; sans facteur d'utilisation de Tinseth, l'IBU affiche « Forme non prise en charge par le calcul » pour un houblon d'ébullition. Un extrait mesuré en volume ne compte pas dans l'IBU |
 | Moment BeerJSON | `add_to_mash`, `add_to_package` | conservé (`HopUse.mash`, `HopUse.package`) ; l'IBU affiche « Moment non pris en charge par le calcul » |

@@ -57,17 +57,18 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
 | `lib/core/data/nouveautes.dart` | `Nouveaute`, `lireNouveautes` (valide la forme de `assets/changelog_recent.json`, lève une `FormatException` sinon), `NouveautesRepository` (lecture de l'asset, panne journalisée sous `nouveautes` puis relancée) |
-| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets)` rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
 | `lib/features/equipment/` | `EquipmentRepository` (`equipment/`), `Equipment`, `EquipmentContent`, `EquipmentKind` ; liste, fiche, éditeur |
-| `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document BeerJSON ↔ `brewing/`, tri, duplication ; `domain/beerjson.dart` : unités canoniques, lecture des couples `{value, unit}`, valeurs énumérées du schéma et leurs libellés (`EnumerationBeerJson`), `verifierVersionFormat` ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin), formulaires des lignes (`ListeBeerJson` : liste déroulante d'une valeur BeerJSON, « Non précisé » en tête), vue des calculs (`libelleManque`, et `libelleManqueExport` pour l'export et l'aperçu de l'import) ; `domain/import_recettes.dart` : `preparerImport` (recette lue par `exchange/`, relue par `RecipeContent.fromFirestore`, « Déjà importée » par l'empreinte), `avecEquipement` ; `presentation/import_recipes_screen.dart` (Recettes › Importer, `statutImport` : l'auteur retenu est le nom du jeton (`currentTokenName`, lu une fois avant le premier aperçu), celui qu'écrit l'import ; statuts mémorisés par équipement et lignes construites à l'écran par `ListView.builder` : un appui sur une case avec 500 recettes prend 53 ms en test), `export_recipe_sheet.dart` (feuille « Exporter » : « Auteur dans le fichier : {nom}. » lu dans `ExportPret.auteur`, boutons radio inactifs pendant un envoi), `libelles_echange.dart` (refus, modifications, fichiers refusés, pertes) |
+| `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document BeerJSON ↔ `brewing/`, tri, duplication ; `domain/beerjson.dart` : unités canoniques, lecture des couples `{value, unit}`, valeurs énumérées du schéma et leurs libellés (`EnumerationBeerJson`), `verifierVersionFormat` ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin et la recette publique ; `momentsOrigine` ajoute « moment d'origine : … » à un houblon), formulaires des lignes (`ListeBeerJson` : liste déroulante d'une valeur BeerJSON, « Non précisé » en tête), vue des calculs (`libelleManque`, et `libelleManqueExport` pour l'export et l'aperçu de l'import) ; `domain/import_recettes.dart` : `preparerImport` (recette lue par `exchange/`, relue par `RecipeContent.fromFirestore`, « Déjà importée » par l'empreinte), `avecEquipement` ; `presentation/import_recipes_screen.dart` (Recettes › Importer, `statutImport` : l'auteur retenu est le nom du jeton (`currentTokenName`, lu une fois avant le premier aperçu), celui qu'écrit l'import ; statuts mémorisés par équipement et lignes construites à l'écran par `ListView.builder` : un appui sur une case avec 500 recettes prend 53 ms en test), `export_recipe_sheet.dart` (feuille « Exporter » : « Auteur dans le fichier : {nom}. » lu dans `ExportPret.auteur`, boutons radio inactifs pendant un envoi), `libelles_echange.dart` (refus, modifications, fichiers refusés, pertes) |
 | `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType`, `PhaseEvenement` ; `domain/mesures_retenues.dart` (mesures retenues, VR1, VR2, RR2), `domain/releves.dart` (regroupement du relevé) ; liste, fiche, « Nouveau brassin », `presentation/releve_fermentation.dart`, `prevu_et_mesure.dart`, `embouteillage.dart`, `courbe_fermentation.dart`, `trace_courbe.dart` (seul import de `fl_chart`, P18) |
 | `lib/features/costs/` | `CostsRepository` (`users/{uid}/prices`, `fees`, `brew_costs`, jamais de transaction ni de `Source.server`, `brewCostRef`) ; `domain/price.dart` (`Price`, `purchaseUnitOf`, `isUnusualPrice`), `domain/fee.dart` (`Fee`), `domain/brew_cost.dart` (`BrewCost`, `BrewCostLine`, `FreezeKind`) ; `domain/cost_evaluation.dart` : clés dérivées des lignes de `RecipeContent` (`ingredientsDeRecette`), raisons d'un coût indisponible (`RaisonCout`), `evaluerCoutRecette`, `evaluerEstimationBrassin`, `evaluerFigeage`, déclencheur du figeage (`doitFigerAuPremierEmbouteillage`), boutons proposés (`figerLeCoutPropose`, `recalculerPropose`), écart avec l'embouteillage (`ecartsDepuisFigeage`) ; `data/figeage_embouteillage.dart` (`enregistrerEmbouteillage` : embouteillage puis coût, sans attente) ; `presentation/costs_providers.dart` (`pricesProvider`, `feesProvider`, `brewCostProvider`, `costReportsProvider`) ; `presentation/prices_screen.dart` (« Mes prix », route `/prix`), `price_form.dart` (`ouvrirFormulairePrix` : nouveau, manquant, modification ; « Reprendre un de mes prix »), `fee_form.dart`, `bloc_cout.dart` (`BlocCoutRecette`, lignes des raisons et du détail), `bloc_cout_brassin.dart` (`BlocCoutBrassin` : estimation, « Figer le coût », coût figé, écart, « Recalculer avec mes prix actuels »), `formats_cout.dart` (euros, kilogrammes et euros par kilogramme à l'affichage ; aucun calcul de coût) |
 | `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
+| `lib/features/library/` | Bibliothèque (ADR-005, L4) : `LibraryRepository` (`beer_index/`, `beer_*/`, `public_recipes/`, `get()` seul) ; `domain/referentiel.dart` : `NatureReferentiel` (document d'index et collection), `IndexReferentiel` et ses entrées (`EntreeStyle`, `EntreeFermentable`, `EntreeHoublon`, `EntreeLevure`, `EntreeDivers`), `FicheReferentiel` et ses fiches, `Plage`, `Provenance`, `normaliserRecherche` ; `domain/recette_publique.dart` : `RecettePublique` (`recipe` lu par `RecipeContent.fromFirestore`, `announced` en `ValeursAnnoncees`, `source_hop_timing` en `momentsOrigine`, `provenance`, `style_id`), `copie` pour « Dupliquer » ; `presentation/` : `LibraryScreen` (segments, recherche, listes), `ReferenceEntryScreen`, `PublicRecipeScreen`, `DataSourcesScreen`, `library_providers.dart` (`SegmentBibliotheque`), `libelles_bibliotheque.dart` (plages, sources, provenance ; affichage seul) |
 | `lib/features/admin/` | écran Admin |
 
 **Configuration Firebase.** Aucune valeur dans le code. `firebase_options.dart` lit, par
@@ -137,6 +138,10 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 | `recipesListProvider` | `StreamProvider.autoDispose<ListeLue<Recipe>>` | `recipes/` entier, avec `fromCache` |
 | `equipmentListProvider` | `StreamProvider.autoDispose<ListeLue<Equipment>>` | `equipment/` entier, avec `fromCache` |
 | `brewsListProvider` | `StreamProvider.autoDispose<ListeLue<Brew>>` | `brews/` entier, avec `fromCache` |
+| `libraryRepositoryProvider` | `Provider<LibraryRepository>` | fourni par `main.dart` ou par les tests ; sans valeur par défaut |
+| `indexReferentielProvider(nature)` | `FutureProvider.autoDispose.family` | `beer_index/{nature}` par `lireIndex` ; une panne s'affiche, « Réessayer » invalide |
+| `ficheReferentielProvider((nature:, id:))` | `FutureProvider.autoDispose.family` | `beer_*/{id}` par `lireFiche` |
+| `recettePubliqueProvider(id)` | `FutureProvider.autoDispose.family` | `public_recipes/{id}` par `lireRecettePublique` |
 | `nouveautesSourceProvider` | `Provider<Future<String> Function()>` | lecture de `assets/changelog_recent.json` par `rootBundle` ; remplacée par les tests |
 | `nouveautesRepositoryProvider` | `Provider<NouveautesRepository>` | lecture journalisée des nouveautés |
 | `nouveautesProvider` | `FutureProvider.autoDispose<List<Nouveaute>>` | versions de l'écran « Nouveautés », sans nouvel essai automatique |
@@ -370,6 +375,10 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/brassins/:id/preparer` | « Préparer le brassage », dans la coquille, retour vers la fiche | membre ; propriétaire pour commencer |
 | `/brassins/:id/jour` | écran du jour, plein écran, hors coquille | propriétaire ; un autre membre lit « Seul le brasseur de ce brassin suit son brassage. » |
 | `/recettes/:id/chronologie` | éditeur de chronologie, plein écran | auteur ; sinon « Seul l'auteur modifie cette chronologie. » |
+| `/bibliotheque` | redirige vers `/bibliotheque/styles` (route sans écran, hors de la coquille) : une seule page par segment, que le retour d'une fiche retrouve avec sa recherche | membre |
+| `/bibliotheque/{segment}` | Bibliothèque, dans la coquille ; segments `styles`, `malts`, `houblons`, `levures`, `divers`, `recettes` ; chaque segment est une route de premier niveau de la coquille | membre |
+| `/bibliotheque/{segment}/:id` | fiche d'un style, d'un ingrédient ou d'une recette publique, dans la coquille, retour vers le segment ; route fille du segment, qui garde la liste et ses pages lues au retour | membre |
+| `/sources-des-donnees` | « Sources des données », page pleine avec retour, hors coquille, ouverte par `push` depuis la Bibliothèque, une fiche ou le menu du compte | membre |
 | `/prix` | « Mes prix », page pleine avec retour, hors coquille, ouverte par `push` depuis le menu du compte | membre ; ses seuls prix et frais |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
@@ -389,7 +398,90 @@ sur `fake_cloud_firestore` (création, modification sans toucher `owner_uid` ni 
 `owner_name`, duplication, suppression, refus rapporté, document illisible), conversion
 document ↔ `brewing/`, lecture et affichage des nombres, écrans Recettes et Équipements
 (états, lecture seule, « À compléter », éditeur), attente du serveur sous `fake_async`,
-`FirebaseEnv`, `EchangeFichiersPlateforme` (`echange_fichiers_test.dart`, `TestDefaultBinaryMessenger`, P17 : annulation, fichier rendu, `TOO_LARGE` avec et sans taille, `ALREADY_ACTIVE` au choix et au partage, `NO_PICKER`, `READ_FAILED`, `INVALID_NAME`, `WRITE_FAILED`, aucun nom de fichier rapporté), Recettes › Importer (`import_recipes_test.dart` : relecture identique des recettes lues par `exchange/` (I9), « Déjà importée » par l'empreinte et jamais par le nom seul, fichier trop gros, illisible, non BeerJSON, statuts, détails, « Tout cocher », filtre, écriture sous le compte de l'importateur avec l'équipement présélectionné, hors ligne, refus du serveur, message groupé après la sortie et après « Importer un autre fichier », panne inattendue de l'analyse, boutons de l'accueil, filtres comptés, raisons des ignorées, fiche ouverte par-dessus le compte rendu, annonces, mesure de l'appui sur une case avec 500 recettes), feuille « Exporter » (`export_recipe_test.dart` : pertes, nom du fichier, auteur, rendement de l'équipement, aucun identifiant ni nom d'équipement, web, échec affiché dans la feuille avec réessai, un seul bouton plein, BeerXML bloqué, recette à l'extrait exportée sans `mash` ni `boil`, recette d'un autre membre sans auteur bloquée avec « Dupliquer », export bloqué pour l'auteur et pour un autre membre), `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17), domaine des coûts (`costs_domain_test.dart` : clés dérivées sans champ `key`, raisons de CB8, déclencheur du figeage, écarts), `FirestoreCostsRepository` sur `fake_cloud_firestore` (`costs_repository_test.dart` : écriture et suppression des prix et des frais, document illisible rapporté sans valeur, refus d'un premier figeage annoncé seulement si le coût n'est pas sur le serveur et rejeu journalisé `costs.freeze_replayed` (HL5), suppression du brassin et de son coût dans un même lot par `delete` et `deleteWithEvents` (CB19), `enregistrerEmbouteillage` : coût écrit après l'embouteillage sans attente, aucun coût pour une modification, un embouteillage déjà daté ou un coût déjà lu, embouteillage envoyé même quand le calcul échoue ou que les prix manquent, refus du coût seul et de l'embouteillage seul (CB7)), écrans des coûts (`costs_screens_test.dart` : « Mes prix », bloc de la recette, bloc du brassin absent pour un autre membre et pour l'admin, aucun montant avec un prix manquant ni dans une annonce, coût figé inchangé quand un prix change, figeage au premier embouteillage seulement, dialogues à trois boutons de « Figer » et de « Recalculer », nom importé coupé à 120 caractères, texte à 200 %, contraste, cibles tactiles et en-tête des manquants annoncé).
+`FirebaseEnv`, `EchangeFichiersPlateforme` (`echange_fichiers_test.dart`, `TestDefaultBinaryMessenger`, P17 : annulation, fichier rendu, `TOO_LARGE` avec et sans taille, `ALREADY_ACTIVE` au choix et au partage, `NO_PICKER`, `READ_FAILED`, `INVALID_NAME`, `WRITE_FAILED`, aucun nom de fichier rapporté), Recettes › Importer (`import_recipes_test.dart` : relecture identique des recettes lues par `exchange/` (I9), « Déjà importée » par l'empreinte et jamais par le nom seul, fichier trop gros, illisible, non BeerJSON, statuts, détails, « Tout cocher », filtre, écriture sous le compte de l'importateur avec l'équipement présélectionné, hors ligne, refus du serveur, message groupé après la sortie et après « Importer un autre fichier », panne inattendue de l'analyse, boutons de l'accueil, filtres comptés, raisons des ignorées, fiche ouverte par-dessus le compte rendu, annonces, mesure de l'appui sur une case avec 500 recettes), feuille « Exporter » (`export_recipe_test.dart` : pertes, nom du fichier, auteur, rendement de l'équipement, aucun identifiant ni nom d'équipement, web, échec affiché dans la feuille avec réessai, un seul bouton plein, BeerXML bloqué, recette à l'extrait exportée sans `mash` ni `boil`, recette d'un autre membre sans auteur bloquée avec « Dupliquer », export bloqué pour l'auteur et pour un autre membre), `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17), domaine des coûts (`costs_domain_test.dart` : clés dérivées sans champ `key`, raisons de CB8, déclencheur du figeage, écarts), `FirestoreCostsRepository` sur `fake_cloud_firestore` (`costs_repository_test.dart` : écriture et suppression des prix et des frais, document illisible rapporté sans valeur, refus d'un premier figeage annoncé seulement si le coût n'est pas sur le serveur et rejeu journalisé `costs.freeze_replayed` (HL5), suppression du brassin et de son coût dans un même lot par `delete` et `deleteWithEvents` (CB19), `enregistrerEmbouteillage` : coût écrit après l'embouteillage sans attente, aucun coût pour une modification, un embouteillage déjà daté ou un coût déjà lu, embouteillage envoyé même quand le calcul échoue ou que les prix manquent, refus du coût seul et de l'embouteillage seul (CB7)), Bibliothèque (`library_domain_test.dart` : index, entrée mal typée écartée et comptée, champ inconnu ignoré, plages, unités canoniques seules, provenance, recette publique, rang de houblon hors de la liste, `copie` sans les champs propres aux recettes publiques ni `equipment_id` ni `brew_steps`, houblons sans forme, `normaliserNomRecherche`, libellés traduits, provenance courte ; `library_repository_test.dart` sur `fake_cloud_firestore` : index gardé pour la session, absent non gardé, un seul rapport pour les entrées illisibles, fiches, pages de 50 par `startAfterDocument`, préfixe, recette illisible rapportée, clés écrites par « Dupliquer » comparées à une liste recopiée de `recipeFields()` et des clés de `isBeerJsonRecipe` (à tenir à jour avec `firestore.rules`), `search_name` et les champs propres aux recettes publiques absents, recherche sur `search_name` avec saisie normalisée ; `library_screens_test.dart` : navigation, segments, recherche locale, fiches, états, hors ligne, pages suivantes, recherche à la validation, « Dupliquer » puis éditeur, houblons sans forme, « Voir le style » par `push`, recherche gardée au retour d'une fiche, compte annoncé, puces sur une ligne au téléphone, barre du bas à 360 px en texte × 2, « Sources des données » et son lien ; `recipe_screens_test.dart` : houblon sans forme, « Forme du houblon à compléter », forme demandée puis enregistrée dans l'éditeur), écrans des coûts (`costs_screens_test.dart` : « Mes prix », bloc de la recette, bloc du brassin absent pour un autre membre et pour l'admin, aucun montant avec un prix manquant ni dans une annonce, coût figé inchangé quand un prix change, figeage au premier embouteillage seulement, dialogues à trois boutons de « Figer » et de « Recalculer », nom importé coupé à 120 caractères, texte à 200 %, contraste, cibles tactiles et en-tête des manquants annoncé).
+
+#### Bibliothèque — client
+
+Feature `lib/features/library/` (ADR-005, L4, étape 2). Lecture seule de `beer_index/`,
+`beer_fermentables/`, `beer_hops/`, `beer_cultures/`, `beer_miscs/`, `beer_styles/` et
+`public_recipes/`, que le script d'ingestion écrit. Aucune écriture dans ces collections ;
+la seule écriture de la feature est « Dupliquer », qui passe par `RecipesRepository.create`.
+
+**Lectures (P22).** `FirestoreLibraryRepository` ne fait que des `get()` ordinaires (cache
+puis serveur), jamais de `snapshots()` ni de `Source.server` sur ces collections.
+
+| Lecture | Requête | Mémoire |
+|---|---|---|
+| `lireIndex(nature)` | `get()` de `beer_index/{nature}` (`fermentables`, `hops`, `cultures`, `miscs`, `styles`) | gardé pour la session (instance du dépôt), une entrée par nature, si la lecture vient du serveur et que le document existe ; une lecture du cache, un document absent ou illisible, une panne ne sont pas gardés |
+| `lireFiche(nature, id)` | `get()` de `beer_*/{id}` | aucune |
+| `pageRecettesPubliques(prefixe:, apres:)` | `public_recipes`, `orderBy('search_name')`, `limit(50)` (`kTaillePageRecettes`), `startAfterDocument` pour la page suivante ; préfixe normalisé par `normaliserNomRecherche` (`normalizeName` de `brewing/`, tirets remplacés par des espaces, 100 caractères au plus, comme `nomDeRecherche` de l'ingestion), s'il reste non vide : `where('search_name', >= préfixe)` et `< préfixe + U+F8FF` (`kFinDePrefixe`) ; même champ que le tri, index d'un seul champ | l'écran garde les pages lues tant qu'il est ouvert |
+| `lireRecettePublique(id)` | `get()` de `public_recipes/{id}` | aucune |
+
+Coût par session, au plus : 5 lectures d'index, une page de 50 par ouverture du segment des
+recettes publiques et par recherche validée, une lecture par fiche ouverte. La recherche des
+référentiels filtre l'index en mémoire ; celle des recettes publiques part à la validation,
+jamais à la frappe.
+
+**Lecture typée.** `LecteurChamps` et `LectureBeerJson` : un champ inconnu est ignoré, un
+champ attendu mal typé ou dans une autre unité que l'unité canonique (`%`, `EBC`, `C`, `sg`,
+`IBUs`) rend l'entrée illisible. Index : `entries` absent ou qui n'est pas une liste rend le
+document illisible ; une entrée mal typée est écartée et comptée, et le dépôt de données
+journalise une seule fois pour l'index (`library.index_entries`, première erreur, compte dans
+`context`). Une plage d'index est une paire de nombres finis `[min, max]` ; une plage de fiche
+`{minimum, maximum}` a au moins une borne. `category_id`, `style_id` et `product_id` se lisent
+en texte ou en entier. `provenance[]` exige `source`, `version`, `licence` et `retrieved`
+(texte) ; `source_id` n'est pas lu. Une recette publique se lit par
+`RecipeContent.fromFirestore` (même lecture que `recipes/`), puis `announced` (couples en `sg`,
+`%`, `IBUs`, `EBC`), `source_hop_timing` (`hop_index` entier dans la liste des houblons, sinon
+illisible), `provenance`, `search_name` et `style_id` (lien « Voir le style », ouvert par
+`push` vers `/bibliotheque/styles/{style_id}` ; absent des recettes DIY Dog).
+`ingredient_refs` n'est pas lu à cette étape. Index des styles : `og`, `fg` et `ebc` ne sont
+pas lus (la liste ne les affiche pas ; la fiche lit ses plages dans `beer_styles`).
+
+Écarts relevés sur les fichiers préparés par l'ingestion (`import/ingest/prepare/`, 2026-11-11,
+lus par un test local supprimé ensuite) : aucun houblon des 415 recettes ne porte `form`
+(2 116 lignes), d'où la lecture facultative de `form` (voir `recipes/`) ; `recipe.type` et
+`boil` sont absents ; 58 recettes n'ont pas de `mash` ; `style_id` est absent ; libellés de
+`source_hop_timing` relevés : `start`, `middle` (toutes casses), `Whirlpool`, `WHP`, `FV`,
+`HD1`, `HD2`, `FWH`, `First Wort Hops` ; `purpose` d'un houblon `aroma/bittering`. Les
+5 index (2 005 entrées), 2 005 fiches et 415 recettes passent la lecture sans erreur, et chaque
+`search_name` est égal à `normaliserNomRecherche(recipe.name)`.
+
+**Journal.** `library.index`, `library.entry`, `library.public_recipe` (panne d'un `get()`, ou
+document illisible, `context` : chemin), `library.public_recipes` (panne d'une page),
+`library.public_recipe_read` (recette illisible dans une page), `library.index_entries`,
+`library.open_licence` (lien de la licence refusé par le système). Aucun prix, aucun e-mail.
+
+**Dupliquer.** `RecettePublique.copie` est le `RecipeContent` lu, sans `equipment_id` ni
+`brew_steps` ; `RecipesRepository.create` l'écrit sous l'uid du lecteur avec `owner_name` du
+jeton. `RecipeContent.toFirestore` n'écrit que `format_version`, `imported_from` (`DIY Dog ·
+diydog-{id}`) et `recipe`, aux clés de `isBeerJsonRecipe` : ni `style_id`, ni
+`ingredient_refs`, ni `source_hop_timing`, ni `announced`, ni `provenance`, ni `search_name`
+(règles actuelles de `recipes/`, ADR-005, décision D3 de L3). Un houblon sans forme est écrit
+sans `form`. Le nom n'est pas préfixé de « Copie de ». L'écran ouvre ensuite l'éditeur par
+`push`.
+
+**Calculs.** La fiche d'une recette publique appelle `evaluerRecette` sans équipement
+(`SansEquipement`) : aucune formule hors de `brewing/` (P3). `BlocCalculs(messageManques:)`
+remplace la liste « À compléter » par un seul message (lecture seule). Les valeurs annoncées
+s'affichent avant les calculs et ne leur sont jamais passées. Le moment d'origine d'un houblon
+est traduit à l'affichage (`libelleMomentOrigine`), avec la valeur de la source entre
+parenthèses. La provenance d'une fiche est une ligne courte sans doublon
+(`lignesProvenance` : source, numéro de version, licence, date du relevé).
+
+**Téléphone.** Sous 600 px (`WindowSize.compact`), les puces des segments sont dans un
+`SingleChildScrollView` horizontal, et « Sources des données » est une `IconButton` avec
+infobulle à leur droite ; au-delà, `Wrap` et `TextButton`. La fiche d'une recette publique est
+dans un `Material` transparent : son `ExpansionTile` garde son encre quand une fiche s'ouvre
+par-dessus dans la coquille.
+
+**Lien externe.** « Sources des données » n'ouvre qu'une adresse, la constante
+`kLicenceCcBySa` (`https://creativecommons.org/licenses/by-sa/4.0/`), par
+`ouvrirLienProvider` (`url_launcher`, déjà en dépendance).
+
+**Hors ligne.** Aucun code de la Bibliothèque dans l'écran du jour ni dans ce qu'il appelle
+(P2). Sans réseau, ce qui est en cache se lit ; un document absent du cache est rendu
+`DocumentAbsentDuCache` et affiché « indisponible hors ligne », jamais « absent ».
 
 #### Tickets — client
 
@@ -623,7 +715,7 @@ Enveloppe :
 | `mash` | map, facultative : `name` (« Empâtage », un libellé), `grain_temperature` `{value, "C"}` facultatif, `mash_steps` (20) absente sans palier, jamais une liste vide. Palier : `name`, `type` facultatif (`MashStepType.type`), `step_temperature` `{value, "C"}`, `step_time` `{value entier, "min"}` |
 | `ingredients` | map, obligatoire, avec les quatre listes, même vides. `water_additions` refusé |
 | `ingredients.fermentable_additions` | list (50) : `name`, `type` obligatoire (`grain`, `sugar` à la saisie ; toute valeur de `FermentableBase.type` à la lecture : `extract`, `dry extract`, `honey`, `fruit`, `juice`, `other`), `amount` `{value, "g"}`, `color` `{value, "EBC"}` facultatif, `yield.fine_grind` `{value, "%"}` facultatif |
-| `ingredients.hop_additions` | list (50) : `name`, `form` obligatoire (`pellet`, `leaf` à la saisie ; toute valeur de `HopVarietyBase.form` à la lecture : `plug`, `leaf (wet)`, `powder`, `extract`), `alpha_acid` `{value, "%"}` facultatif, `amount` `{value, "g"}` ou `{value, "l"}` (v0.1.17), `timing` (ci-dessous) |
+| `ingredients.hop_additions` | list (50) : `name`, `form` facultatif (absent pour une recette publique et sa copie, ADR-005 D8 ; `pellet`, `leaf` à la saisie ; toute valeur de `HopVarietyBase.form` à la lecture : `plug`, `leaf (wet)`, `powder`, `extract`), `alpha_acid` `{value, "%"}` facultatif, `amount` `{value, "g"}` ou `{value, "l"}` (v0.1.17), `timing` (ci-dessous) |
 | `ingredients.miscellaneous_additions` | list (50) : `name`, `type` facultatif (`MiscellaneousBase.type`), `amount` `{value, "g"}` ou `{value, "l"}` (v0.1.17), `timing` facultatif |
 | `ingredients.culture_additions` | list (10) : `name`, `type` et `form` facultatifs (`CultureBase`), `attenuation` `{value, "%"}` facultatif, `amount` `{value, "g"}` ou `{value, "l"}` (v0.1.17) facultatif. L'éditeur en écrit une au plus |
 
@@ -667,7 +759,18 @@ lue et gardée, une autre lève `DocumentIllisible`. Leur valeur de calcul vient
 `FermentableKind.ofType` (`grain` → malt ; `sugar`, `extract`, `dry extract`, `honey`,
 `fruit`, `juice` → sucre ; `other` → `null`, nature à préciser) et `HopForm.ofBeerJson`
 (`leaf` et `plug` → cônes, `pellet` → pellets ; `leaf (wet)`, `powder`, `extract` → `null`,
-forme sans facteur d'utilisation). La clé de prix d'un fermentescible qui n'est pas un malt
+forme sans facteur d'utilisation). Depuis la v0.1.26, la forme d'un houblon peut manquer
+(`HopLine.form` nul, aucune clé `form` écrite) : les recettes DIY Dog ne la donnent pas, et
+aucune forme n'est inventée. `calcForm` rend alors `null`, comme pour une forme sans facteur :
+un houblon d'ébullition rend l'IBU indisponible (`MissingInputKind.hopForm`, `brewing/`
+inchangé). `libelleManque(..., content:)` lit la ligne et affiche « Forme du houblon à
+compléter : {noms}. » pour une forme absente, « Forme non prise en charge par le calcul :
+{noms}. » pour une forme sans facteur ; la fiche, l'éditeur et la feuille « Exporter » passent
+`content`. L'éditeur demande une forme quand la ligne est modifiée (« Choisissez une forme. »).
+L'import BeerJSON et BeerXML garde une ligne sans forme, sans `form` et sans perte listée ;
+une forme hors du schéma reste refusée. L'export BeerJSON l'écrit sans `form` (le schéma ne
+l'exige pas) ; l'export BeerXML est bloqué (`ChampExport.formeHoublon`, « Forme du houblon à
+compléter : {noms}. »). La clé de prix d'un fermentescible qui n'est pas un malt
 (`other` compris) a le préfixe `sucre` (`FermentableLine.nature`). Une quantité dans une autre
 unité que `g` ou `l` (`ml`, `kg`, `each`…) lève `DocumentIllisible`. Le moment d'un houblon se
 lit dans l'application : `HopUse` n'a pas de valeur stockée.
@@ -1551,9 +1654,10 @@ et le contenu des parties non importées (eau, équipement) non. `imported_from`
   constante `maxPotentialGravity` (saccharose pur), lue par `exchange/`. Chaque unité
   convertie est listée (`UnitesConverties`). Plato et brix d'un potentiel : écartés.
 - Valeur obligatoire pour l'application (nom de la recette, nom, type et quantité d'un malt,
-  nom, forme, quantité et moment d'un houblon, nom et quantité d'un ajout, nom, température
+  nom, quantité et moment d'un houblon, nom et quantité d'un ajout, nom, température
   et durée d'un palier) absente, illisible, hors bornes ou d'unité inconnue : recette refusée
-  (`Refus`). Valeur facultative hors bornes, hors du schéma ou d'unité sans dimension
+  (`Refus`). La forme d'un houblon est facultative (ADR-005, D8) : absente, la ligne est
+  gardée sans `form` et sans perte ; hors du schéma ou illisible, la recette est refusée. Valeur facultative hors bornes, hors du schéma ou d'unité sans dimension
   (`each`, `pkg`) : écartée, le champ reste absent, listée (`ValeurRejetee`). Une unité hors
   du schéma refuse toujours la recette ; le compte rendu la cite nettoyée (contrôles de
   direction retirés) et coupée à 120 caractères. Rendement et acides alpha à 0 : lus comme absents,

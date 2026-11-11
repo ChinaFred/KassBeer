@@ -186,7 +186,11 @@ class _ExportRecipeSheetState extends ConsumerState<ExportRecipeSheet> {
       final manques = [
         for (final m in resultat.manques)
           if (!(sansAuteur && estAuteur(m)))
-            libelleManqueExport(m, widget.equipement),
+            libelleManqueExport(
+              m,
+              widget.equipement,
+              content: widget.recipe.content,
+            ),
       ];
       final completer = widget.onCompleter;
       etat = [

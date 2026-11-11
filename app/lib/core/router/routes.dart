@@ -9,6 +9,17 @@ abstract final class AppRoutes {
   static const brews = '/brassins';
   static const equipment = '/equipements';
   static const admin = '/admin';
+
+  /// Bibliothèque (ADR-005, L4) : un segment par référentiel et les recettes
+  /// publiques ; `/bibliotheque` redirige vers les styles.
+  static const library = '/bibliotheque';
+  static String librarySegment(String slug) => '$library/$slug';
+  static String libraryEntry(String slug, String id) =>
+      '$library/$slug/${Uri.encodeComponent(id)}';
+
+  /// « Sources des données » : page pleine hors de la coquille, ouverte par
+  /// `push` depuis la Bibliothèque et depuis le menu du compte.
+  static const dataSources = '/sources-des-donnees';
   static const adminMembers = '/admin/membres';
 
   /// Admin › Tickets des membres (ADR-006, T2), dans la coquille.

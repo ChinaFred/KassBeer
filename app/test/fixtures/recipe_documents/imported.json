@@ -237,6 +237,24 @@
           "timing": {
             "use": "add_to_package"
           }
+        },
+        {
+          "alpha_acid": {
+            "unit": "%",
+            "value": 7.0
+          },
+          "amount": {
+            "unit": "g",
+            "value": 20.0
+          },
+          "name": "Houblon sans forme",
+          "timing": {
+            "time": {
+              "unit": "min",
+              "value": 45
+            },
+            "use": "add_to_boil"
+          }
         }
       ],
       "miscellaneous_additions": [

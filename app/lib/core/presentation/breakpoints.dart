@@ -20,6 +20,12 @@ const double kMessageMaxWidth = 480;
 /// Largeur du bloc nom, e-mail et version du menu du compte.
 const double kAccountMenuMaxWidth = 280;
 
+/// Largeur maximale du libellé d'une destination du rail (600 à 839 px) : un
+/// libellé plus large est réduit au lieu d'élargir le rail. Sans elle,
+/// « Bibliothèque » en texte × 2 élargit le rail et le bandeau hors ligne
+/// déborde du contenu.
+const double kRailLabelMaxWidth = 160;
+
 /// Taille d'écran déduite de la largeur disponible.
 enum WindowSize {
   compact,

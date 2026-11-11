@@ -243,8 +243,11 @@ class HopLine {
   final HopUse use;
 
   /// Valeur de [formesHoublon], gardée telle quelle (`pellet`, `leaf`, ou une
-  /// valeur importée : `plug`, `powder`, `extract`, `leaf (wet)`).
-  final String form;
+  /// valeur importée : `plug`, `powder`, `extract`, `leaf (wet)`), ou `null`
+  /// quand la source ne la donne pas (recette publique DIY Dog et sa copie).
+  /// Aucune forme n'est inventée : l'éditeur la demande à la modification de
+  /// la ligne.
+  final String? form;
   final double? alphaPct;
 
   /// Durée en minutes entières : ébullition, infusion d'un whirlpool, jours à
@@ -258,8 +261,13 @@ class HopLine {
   final int? dayMin;
 
   /// Forme de calcul (`brewing/`) : `plug` se calcule comme des cônes ; `null`
-  /// pour une forme sans facteur d'utilisation.
-  HopForm? get calcForm => HopForm.ofBeerJson(form);
+  /// pour une forme sans facteur d'utilisation, ou pour une forme absente. Dans
+  /// les deux cas, un houblon d'ébullition rend l'IBU indisponible
+  /// (`MissingInputKind.hopForm`) ; l'écran les distingue par [form].
+  HopForm? get calcForm {
+    final f = form;
+    return f == null ? null : HopForm.ofBeerJson(f);
+  }
 
   /// Moments lus : `add_to_boil` (ébullition, ou whirlpool à `time` 0 avec
   /// `duration`), `add_to_fermentation` (à cru, `duration`, et `time` : jour
@@ -284,9 +292,7 @@ class HopLine {
       name: read.texte('name'),
       amount: _quantite(read),
       use: use,
-      form:
-          read.valeurDe('form', formesHoublon) ??
-          (throw DocumentIllisible('${read.prefix}form', 'forme absente')),
+      form: read.valeurDe('form', formesHoublon),
       alphaPct: read.mesure('alpha_acid', UniteBeerJson.pourcent),
       timeMin: minutes,
       dayMin: day,
@@ -298,7 +304,7 @@ class HopLine {
   /// [BrewingInputException] pour un nom sans lettre ni chiffre.
   Map<String, Object?> toFirestore() => {
     'name': _nom(IngredientNature.hop, name),
-    'form': form,
+    'form': ?form,
     if (alphaPct != null) 'alpha_acid': _pourcent(alphaPct),
     'amount': amount.toFirestore(),
     'timing': switch (use) {

@@ -271,7 +271,8 @@ void main() {
       );
     });
 
-    test('valeur obligatoire inconnue : type de malt, forme de houblon', () {
+    test('valeur obligatoire inconnue : type de malt, forme de houblon ; '
+        'forme absente gardée absente', () {
       expect(
         _refus(
           _recette({}, {
@@ -288,12 +289,34 @@ void main() {
             'hop_additions': [
               {
                 ..._houblon({'use': 'add_to_boil'}),
-                'form': null,
+                'form': 'fresh',
               },
             ],
           }),
         ),
-        'ValeurAbsente(forme, Cascade)',
+        'ValeurInconnue(forme, Cascade, fresh)',
+      );
+      final sansForme = _recette({}, {
+        'hop_additions': [
+          {
+            ..._houblon({'use': 'add_to_boil'}),
+          }..remove('form'),
+        ],
+      });
+      expect(
+        _ing(_lue(sansForme), 'hop_additions').containsKey('form'),
+        isFalse,
+      );
+      // Même compte rendu qu'avec la forme : rien n'est perdu.
+      expect(
+        _modifs(sansForme),
+        _modifs(
+          _recette({}, {
+            'hop_additions': [
+              _houblon({'use': 'add_to_boil'}),
+            ],
+          }),
+        ),
       );
     });
 
