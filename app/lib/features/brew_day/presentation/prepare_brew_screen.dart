@@ -144,7 +144,7 @@ class _PreparationState extends ConsumerState<_Preparation>
     ref.read(alerteMinuteurProvider).preparer();
     final repo = ref.read(brewsRepositoryProvider);
     final at = ref.read(horlogeProvider)();
-    final first = _brew.recipe.brewSteps.firstOrNull;
+    final first = _brew.deroule.brassage?.lignes.firstOrNull;
     final written = repo.start(
       brewId: _brew.id,
       ownerUid: _brew.ownerUid,
@@ -170,7 +170,8 @@ class _PreparationState extends ConsumerState<_Preparation>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brew = _brew;
-    final steps = brew.recipe.brewSteps;
+    final deroule = brew.deroule;
+    final steps = deroule.brassage?.lignes ?? const <BrewStepLine>[];
     final now = ref.read(horlogeProvider)();
     final evalue = evaluerPlan(
       brew: brew,
@@ -180,7 +181,7 @@ class _PreparationState extends ConsumerState<_Preparation>
       reported: ref.read(planReportsProvider),
     );
     final planned = brew.plannedFor;
-    final illisible = brew.recipe.brewStepsProblem;
+    final illisible = deroule.probleme;
     final chrono = switch (evalue) {
       _ when illisible != null => (
         icon: Icons.error_outline,

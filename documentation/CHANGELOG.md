@@ -6,6 +6,27 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
+### v0.1.27 — technique
+
+Premier lot (D1) d'ADR-009 : un brassin pourra suivre de 1 à 5 journées (brassage,
+houblonnage à cru, embouteillage) tirées d'un modèle de processus partagé. Rien ne change
+encore à l'écran. Le paquet `brewing/` résout un modèle avec la recette figée d'un brassin :
+il garde ou retire chaque journée, place chaque houblon à cru au jour donné par la recette,
+une journée par jour distinct, regroupe au-delà de 5 journées, trie par écart et calcule la
+date de chaque journée. Ses 10 cas de résolution, dont le modèle d'exemple, et ses dates
+autour des changements d'heure du 25 octobre 2026 et du 28 mars 2027 sont dans
+`process.json`. Les règles acceptent les modèles (`process_templates/`, lus par le groupe,
+écrits par leur auteur), le déroulé figé d'un brassin (`process`, absent de la création,
+modifiable seulement avant le départ) et le choix par défaut privé de chaque brasseur.
+L'application lit les étapes d'un brassin par son déroulé : un brassin sans déroulé garde sa
+chronologie de recette, un déroulé illisible s'affiche en panne et se rapporte, sans repli.
+Le calcul du jour se fait journée par journée. Le budget des règles a été mesuré : un
+`pad()` vaut environ 4 expressions et non 10, la marge de la création d'un brassin est
+d'environ 16 expressions, l'écriture du plus grand déroulé laisse environ 590 expressions,
+et un lot de 60 étapes sautées passe. `CLAUDE.md` étend la règle hors ligne à chaque journée
+et « Un brassin fige sa recette » au déroulé, complète P2, P3 et P5, et ajoute les contrôles
+P37 (lecture du déroulé, découpage par journée) et P38 (règles des modèles et du déroulé).
+
 ### v0.1.25 — technique
 
 Les styles BJCP 2021, les malts et sucres, les houblons, les levures et les ajouts de

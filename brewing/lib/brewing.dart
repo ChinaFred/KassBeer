@@ -19,6 +19,7 @@ export 'src/fermentables.dart';
 export 'src/fermentation.dart';
 export 'src/gravity.dart';
 export 'src/ingredient_key.dart';
+export 'src/process.dart';
 export 'src/recipe_calculation.dart';
 export 'src/schedule.dart';
 export 'src/yeast.dart';

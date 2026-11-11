@@ -84,7 +84,8 @@ les contraintes.
 
 - **Cibles** : Android et web.
 - **Hors connexion** : obligatoire pour l'écran du jour de brassage (chronologie,
-  minuteurs, saisie des mesures), synchronisé au retour du réseau.
+  minuteurs, saisie des mesures), synchronisé au retour du réseau. Depuis ADR-009, aussi
+  pour chaque journée du déroulé d'un brassin (houblonnage à cru, embouteillage).
 - **Maintenance, compétences** : le brasseur, avec des sessions Claude Code ; il connaît
   Flutter, Firebase et TypeScript par Kass'Dalle.
 - **Distribution des mises à jour** : web sur Firebase Hosting ; APK signé distribué par
@@ -124,6 +125,7 @@ est une étape de la planification. Il ne change pas la règle de numérotation 
 | v0.3 | Brassin (création depuis une recette et un équipement, copie figée), « Préparer le brassage », jour de brassage hors ligne : chronologie (`brew_steps`), minuteurs, heures recalculées, mesures, écran allumé | un brassage à blanc complet sur l'APK en mode avion, application tuée puis relancée, minuteur juste, mesures arrivées au retour du réseau |
 | v0.4 | Après le brassage : fermentation, densité finale et degré mesurés, rendement réel, bouteilles, statut jusqu'à « terminé » | un brassin va de « prévu » à « terminé » sans Excel : seuil du prochain brassin (D1) |
 | Socle BeerJSON (ADR-005, ajouté le 2026-11-08) | Recettes en BeerJSON partiel (L1), puis échange BeerJSON et BeerXML, référentiels d'ingrédients, 415 recettes publiques (L2 à L4) | L1 : brassage à blanc réussi sur l'APK en mode avion, recettes et brassins au nouveau format ; L2 à L4 : voir ADR-005 |
+| Déroulé en journées (ADR-009, ajouté le 2026-11-11) | Modèles de processus partagés (1 à 5 journées, étapes de préparation et de nettoyage, blocs tirés de la recette), déroulé résolu et figé dans le brassin avant son départ, journées suivies hors ligne. Lots D1 (technique : calculs, règles, lecture du déroulé) à D4 | journée de brassage du 22 novembre 2026 tirée du déroulé (D3) ; houblonnage à cru et embouteillage suivis par l'écran de la journée (D4) |
 | v0.5 | Mes prix, coût d'une recette (total et par bouteille), coût réel figé d'un brassin | un prix manquant affiche la panne ; le coût d'une fiche connue est retrouvé |
 | v0.6 | Admin › Import des 16 fiches | 16 fiches créées, 0 en erreur, divergences listées, aucun doublon au second import |
 

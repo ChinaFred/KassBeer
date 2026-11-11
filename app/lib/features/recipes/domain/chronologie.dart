@@ -109,8 +109,12 @@ ChronologieLue readBrewSteps(Object? raw) {
 
 /// Première erreur d'une chronologie à enregistrer, ou `null` : le dépôt ne
 /// l'écrit qu'à cette condition (les règles ne lisent pas les éléments).
-String? erreurChronologie(List<BrewStepLine> steps) {
-  if (steps.length > kMaxBrewSteps) return '$kMaxBrewSteps étapes au plus.';
+/// [maxSteps] : 60 pour `brew_steps`, 120 pour une journée d'un déroulé.
+String? erreurChronologie(
+  List<BrewStepLine> steps, {
+  int maxSteps = kMaxBrewSteps,
+}) {
+  if (steps.length > maxSteps) return '$maxSteps étapes au plus.';
   final seen = <String>{};
   for (final (i, s) in steps.indexed) {
     final rank = i + 1;

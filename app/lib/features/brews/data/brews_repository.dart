@@ -286,12 +286,20 @@ class FirestoreBrewsRepository implements BrewsRepository {
         data,
         hasPendingWrites: hasPendingWrites,
       );
-      final problem = brew.recipe.brewStepsProblem;
+      // Déroulé illisible (process, ou chronologie de la recette figée) : le
+      // brassin reste lisible, l'écran affiche la panne (ADR-009).
+      final deroule = brew.deroule;
+      final problem = deroule.probleme;
       if (problem != null) {
         _errors.reportError(
-          feature: 'brews.brew_steps',
-          error: DocumentIllisible('brew_steps', problem),
-          context: 'brews/$id : chronologie illisible',
+          feature: deroule.resolu ? 'brews.process' : 'brews.brew_steps',
+          error: DocumentIllisible(
+            deroule.resolu ? 'process' : 'brew_steps',
+            problem,
+          ),
+          context:
+              'brews/$id : ${deroule.resolu ? 'déroulé' : 'chronologie'} '
+              'illisible',
         );
       }
       return DocumentValide(id, brew);

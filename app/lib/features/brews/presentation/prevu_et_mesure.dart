@@ -211,7 +211,7 @@ class _Tableau extends ConsumerWidget {
     }
     final key = e.stepKey;
     if (key != null) {
-      for (final s in brew.recipe.brewSteps) {
+      for (final s in brew.deroule.lignes) {
         if (s.key == key) return s.name;
       }
     }

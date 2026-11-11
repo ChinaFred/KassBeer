@@ -93,7 +93,14 @@ class PlanDuJour {
       if (l.index < ligne.index && l.status == StepStatus.pending) l,
   ];
 
-  /// Calcule la vue de [brew] à [now] à partir de [events].
+  /// Calcule la vue de la journée de brassage de [brew] à [now] à partir de
+  /// [events].
+  ///
+  /// Le calcul se fait journée par journée (ADR-009, P37) : les événements se
+  /// réduisent sur les étapes de toutes les journées du déroulé, puis l'horaire se
+  /// recalcule sur les seules étapes de la journée et leurs enregistrements. Un
+  /// événement d'une autre journée n'est ni une anomalie ni un début qui rend
+  /// « Non faites » les étapes de celle-ci.
   ///
   /// Lève [BrewingInputException] si la chronologie ou les événements sont refusés
   /// par `brewing/` : l'appelant le rapporte et affiche la panne.
@@ -102,21 +109,31 @@ class PlanDuJour {
     required List<BrewEvent> events,
     required DateTime now,
   }) {
-    final steps = brew.recipe.brewSteps;
+    final deroule = brew.deroule;
+    final steps = deroule.brassage?.lignes ?? const <BrewStepLine>[];
+    final keys = {for (final s in steps) s.key};
+    final toutes = {for (final s in deroule.lignes) s.key};
     final planned = [for (final s in steps) s.toPlanned()];
     final stepEvents = [
       for (final e in events)
         if (e.toStepEvent() != null) e.toStepEvent()!,
     ];
-    final reduction = stepRecordsFromEvents(steps: planned, events: stepEvents);
+    final reduction = stepRecordsFromEvents(
+      steps: [for (final s in deroule.lignes) s.toPlanned()],
+      events: stepEvents,
+    );
     final plannedStart = brew.brewedAt ?? brew.plannedFor ?? now;
+    final records = [
+      for (final r in reduction.records)
+        if (keys.contains(r.stepId)) r,
+    ];
     final schedule = recomputeSchedule(
       steps: planned,
       plannedStart: plannedStart,
-      records: reduction.records,
+      records: records,
       now: now,
     );
-    final recordByStep = {for (final r in reduction.records) r.stepId: r};
+    final recordByStep = {for (final r in records) r.stepId: r};
     // Un relevé de fermentation n'est pas une saisie du jour (FE11).
     final saisies =
         events.where((e) => e.isMeasureOrNote && !e.isFermentation).toList()
@@ -125,6 +142,9 @@ class PlanDuJour {
     final anomalies = <StepEventIssue>[];
     String? incoherente;
     for (final issue in reduction.issues) {
+      // Doublon ou fin incohérente d'une autre journée : relevé par sa journée.
+      final stepKey = issue.event.stepKey;
+      if (toutes.contains(stepKey) && !keys.contains(stepKey)) continue;
       switch (issue.kind) {
         case StepEventIssueKind.duplicateStart:
           (doublons[issue.event.stepKey] ??= []).add(issue.event);
@@ -153,7 +173,6 @@ class PlanDuJour {
           doublons: List.unmodifiable(doublons[s.key] ?? const <StepEvent>[]),
         ),
     ];
-    final keys = {for (final s in steps) s.key};
     DateTime? finPrevue;
     var retard = Duration.zero;
     if (schedule.isNotEmpty && incoherente == null) {
@@ -172,7 +191,7 @@ class PlanDuJour {
       lignes: List.unmodifiable(lignes),
       mesuresSansEtape: List.unmodifiable([
         for (final e in saisies)
-          if (e.stepKey == null || !keys.contains(e.stepKey)) e,
+          if (e.stepKey == null || !toutes.contains(e.stepKey)) e,
       ]),
       anomalies: List.unmodifiable(anomalies),
       etapeIncoherente: incoherente,

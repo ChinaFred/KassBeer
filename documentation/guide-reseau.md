@@ -166,6 +166,12 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
+Le 2026-11-11, ADR-009 (déroulé en journées) a étendu la règle absolue du hors ligne à chaque
+journée du déroulé et la règle « Un brassin fige sa recette » à son déroulé, ajouté le lieu des
+modèles (`process_templates/`) aux règles des prix, complété P2, P3 et P5, et ajouté P37 (lecture
+du déroulé et découpage par journée, `relecteur-regles`) et P38 (règles des modèles et du champ
+`process`, `securite`). P29 à P36 restent réservés à ADR-008.
+
 Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
 tickets avec Kass'Dalle, lots T3 à T7. Ses contrôles (P25 modifié, P29 à P36) entreront dans
 `CLAUDE.md` avec le lot T3, après l'accord de l'utilisateur.

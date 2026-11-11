@@ -384,6 +384,33 @@ void main() {
     expect(errors.reports.single.feature, 'brews.read');
   });
 
+  test(
+    'lecture : déroulé illisible rapporté, brassin lisible, sans repli',
+    () async {
+      await firestore.collection('brews').doc('b1').set({
+        'owner_uid': 'u',
+        'name': 'Blonde',
+        'status': 'planned',
+        'recipe_snapshot': recetteMinimale(
+          'Blonde',
+          extra: {
+            'brew_steps': [
+              {'key': 'k1', 'name': 'Palier', 'duration_min': 45},
+            ],
+          },
+        ),
+        'equipment_snapshot': {'name': 'Cuve', 'kind': 'multi_vessel'},
+        'process': {'format_version': 2, 'sessions': <Object?>[]},
+      });
+      final list = await repository.watchAll().first;
+      final brew = list.valides.single;
+      expect(brew.deroule.probleme, 'déroulé, format inconnu');
+      expect(brew.deroule.lignes, isEmpty);
+      expect(errors.reports.single.feature, 'brews.process');
+      expect(errors.reports.single.context, 'brews/b1 : déroulé illisible');
+    },
+  );
+
   group('recettes : chronologie', () {
     late FirestoreRecipesRepository recipes;
     setUp(

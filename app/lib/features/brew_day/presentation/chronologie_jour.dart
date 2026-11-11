@@ -29,7 +29,7 @@ class PlanImpossible extends PlanEvalue {
 const kCalculChronologieImpossible =
     'Une heure ou une durée enregistrée est invalide.';
 
-/// Texte d'une chronologie figée illisible (`brewStepsProblem`).
+/// Texte d'un déroulé illisible (`Brew.deroule`, `probleme`).
 String messageChronologieIllisible(String raison) =>
     'Chronologie de ce brassin illisible : $raison.';
 

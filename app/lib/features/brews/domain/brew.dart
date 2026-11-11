@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/data/lecture_document.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../recipes/domain/recipe.dart';
+import 'deroule.dart';
 
 /// Longueur maximale du nom et des notes d'un brassin (`firestore.rules`).
 const kBrewNameMaxLength = 120;
@@ -73,6 +74,7 @@ class Brew {
     this.fermenterVolumeEventId,
     this.sugarsInWort,
     this.notes,
+    this.process,
     this.createdAt,
     this.hasPendingWrites = false,
   });
@@ -127,6 +129,10 @@ class Brew {
   final bool? sugarsInWort;
   final String? notes;
 
+  /// Déroulé figé lu de `process`, ou `null` sans ce champ. Les étapes d'un
+  /// brassin se lisent par [deroule], jamais par `recipe.brewSteps` (P37).
+  final Deroule? process;
+
   /// `null` tant qu'une écriture locale attend le serveur.
   final DateTime? createdAt;
   final bool hasPendingWrites;
@@ -167,10 +173,16 @@ class Brew {
       fermenterVolumeEventId: read.texteFacultatif('fermenter_volume_event_id'),
       sugarsInWort: read.boolFacultatif('sugars_in_wort'),
       notes: read.texteFacultatif('notes'),
+      process: data['process'] == null ? null : lireDeroule(data['process']),
       createdAt: read.date('created_at'),
       hasPendingWrites: hasPendingWrites,
     );
   }
+
+  /// Déroulé du brassin, seul accès à ses étapes (ADR-009, P37) : `process` s'il
+  /// existe, sinon une journée de brassage tirée de `recipe_snapshot.brew_steps`.
+  /// Un `process` illisible rend un déroulé illisible, sans repli sur la recette.
+  Deroule get deroule => process ?? Deroule.depuisRecette(recipe);
 
   /// Copie figée lue comme un équipement, pour les calculs et l'affichage.
   Equipment get equipmentRead =>

@@ -325,6 +325,45 @@ service cloud.firestore {
       allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
     }
 
+    // ---------------------------------------------------------------- process_templates
+
+    // Modèle de processus (ADR-009, P38) : de 1 à 5 journées nommées, chacune avec son
+    // écart en jours et ses étapes. Lisible par le groupe, comme une recette ; écrit
+    // par son auteur. Les journées et leurs étapes ne sont pas inspectées : l'application
+    // vérifie leurs contraintes avant d'écrire, et les écrit à partir de ses types, sans
+    // prix, stock ni coût (P5).
+    function processTemplateFields() {
+      return ['format_version', 'owner_uid', 'owner_name', 'name', 'notes', 'sessions',
+              'created_at', 'updated_at'];
+    }
+
+    function isProcessTemplateShape(d) {
+      return d.keys().hasOnly(processTemplateFields())
+        && d.keys().hasAll(['format_version', 'owner_uid', 'name', 'sessions', 'created_at',
+                            'updated_at'])
+        && d.format_version is int
+        && d.format_version == 1
+        && d.owner_uid is string
+        && hasName(d, 120)
+        && optString(d, 'notes', 10000)
+        && d.sessions is list
+        && d.sessions.size() >= 1
+        && d.sessions.size() <= 5;
+    }
+
+    match /process_templates/{templateId} {
+      allow read: if isMember();
+      allow create: if isMember()
+        && isProcessTemplateShape(request.resource.data)
+        && ownerNameOk(request.resource.data)
+        && createdByMe(request.resource.data);
+      allow update: if isMember()
+        && isProcessTemplateShape(request.resource.data)
+        && ownerNameOk(request.resource.data)
+        && updatedByOwner();
+      allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
+    }
+
     // ---------------------------------------------------------------- brews
 
     function brewFields() {
@@ -332,7 +371,24 @@ service cloud.firestore {
               'recipe_snapshot', 'equipment_snapshot', 'adjustments', 'bottles_count',
               'bottled_at', 'packaged_volume_l', 'priming_sugar_g', 'priming_sugar_name',
               'og_event_id', 'fg_event_id', 'fermenter_volume_event_id', 'sugars_in_wort',
-              'notes', 'imported_from', 'created_at', 'updated_at'];
+              'notes', 'imported_from', 'process', 'created_at', 'updated_at'];
+    }
+
+    // Déroulé figé d'un brassin (ADR-009) : modèle résolu avec la recette figée, écrit
+    // par une modification juste après la création, jamais à la création (budget de
+    // isBrewCreateShape). Nul, ou map aux clés en liste blanche. Les journées ne sont
+    // pas inspectées : l'application les écrit à partir de ses types, clés d'étapes
+    // uniques, sans prix ni coût (P5, P37).
+    function isProcess(p) {
+      return p == null
+        || (p.keys().hasOnly(['format_version', 'template_id', 'template_name', 'sessions'])
+            && p.format_version is int
+            && p.format_version == 1
+            && optString(p, 'template_id', 128)
+            && optString(p, 'template_name', 120)
+            && p.sessions is list
+            && p.sessions.size() >= 1
+            && p.sessions.size() <= 5);
     }
 
     // Ajustements du jour d'un brassin : nombres seuls, clés en liste blanche, unités du
@@ -399,7 +455,13 @@ service cloud.firestore {
                 && optString(d, 'fermenter_volume_event_id', 128)
                 && optBool(d, 'sugars_in_wort')))
         && (!changed.hasAny(['notes', 'imported_from'])
-            || (optString(d, 'notes', 10000) && optString(d, 'imported_from', 200)));
+            || (optString(d, 'notes', 10000) && optString(d, 'imported_from', 200)))
+        // Un brassin fige son déroulé à son départ : process ne change que tant que
+        // brewed_at est nul, avant et après l'écriture (ADR-009, P38).
+        && (!changed.hasAny(['process'])
+            || (resource.data.get('brewed_at', null) == null
+                && d.get('brewed_at', null) == null
+                && isProcess(d.get('process', null))));
     }
 
     // Création d'un brassin : les champs que l'application écrit à la création
@@ -461,7 +523,21 @@ service cloud.firestore {
     // 93 pad() (limite de compilation). Sous users/ : prix au litre 93 pad(), coût figé
     // de 200 lignes dont des lignes en litres 94 pad(). recipe.efficiency, même contrôlé
     // par ses seules clés, faisait refuser la création d'un brassin : il n'est pas
-    // stocké. Toute règle ajoutée sur `recipe` se mesure contre ces 40 expressions.
+    // stocké. Marge corrigée en v0.1.27 ci-dessous : environ 16 expressions.
+    //
+    // Mesure de la v0.1.27 (ADR-009, même émulateur). Étalonnage : 98 pad() isolés
+    // atteignent la limite de compilation avant le budget ; regroupés par dix
+    // (pad10() = dix pad()), 243 tiennent dans une règle « if true » seule. Un pad()
+    // vaut donc environ 4 expressions, pas 10 : la marge de la création d'un brassin
+    // (4 pad(), inchangée) est d'environ 16 expressions. Marges mesurées avec pad10(),
+    // plus grande recette copiée, plus grand déroulé (5 journées de 120 étapes,
+    // noms de 120 caractères) : écriture de `process` sur un brassin prévu 145 pad()
+    // (environ 590 expressions) ; brassin du 22 novembre avec 11 ajustements,
+    // changement de statut 174 pad() (177 avant le contrôle de `process`),
+    // embouteillage 138 pad() ; écriture des 11 ajustements 68 pad() (70 avant).
+    // Création du plus grand modèle de processus (5 journées de 60 éléments) :
+    // 185 pad(). Un lot de 60 step_skipped, plus le début d'étape suivant, passe
+    // (rules-tests/test/processes.test.mjs).
     match /brews/{brewId} {
       allow read: if isMember();
       allow create: if isMember()
@@ -649,6 +725,16 @@ service cloud.firestore {
       allow update: if isMember() && isSelf(uid)
         && isBrewCostShape(request.resource.data, brewId)
         && request.resource.data.freeze_kind == 'recalculation';
+      allow delete: if isMember() && isSelf(uid);
+    }
+
+    // Choix par défaut du formulaire « Nouveau brassin » (ADR-009) : état propre au
+    // lecteur, jamais écrit sur le modèle lu par le groupe. Un seul document.
+    match /users/{uid}/preferences/processes {
+      allow create, update: if isMember() && isSelf(uid)
+        && request.resource.data.keys().hasOnly(['default_template_id', 'updated_at'])
+        && optString(request.resource.data, 'default_template_id', 128)
+        && request.resource.data.updated_at == request.time;
       allow delete: if isMember() && isSelf(uid);
     }
 

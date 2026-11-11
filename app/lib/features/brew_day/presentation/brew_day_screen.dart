@@ -407,7 +407,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
         context: context,
         fermetureProtegee: true,
         builder: (_) => FormulaireMesure(
-          steps: _brew.recipe.brewSteps,
+          steps: _brew.deroule.brassage?.lignes ?? const [],
           initialStepKey: stepKey,
           initialType: type ?? _lastType ?? MeasureType.temperature,
           note: note,
@@ -816,7 +816,7 @@ class _Jour extends StatelessWidget {
         final etapeSize = !low && wide ? styles.etapeLarge : styles.etape;
         final panneau = _Panneau(
           plan: plan,
-          illisible: brew.recipe.brewStepsProblem,
+          illisible: brew.deroule.probleme,
           now: now,
           timerSize: timerSize,
           etapeSize: etapeSize,

@@ -750,7 +750,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required PlanEvalue plan,
     required bool mine,
   }) {
-    final content = brew.recipe;
+    final probleme = brew.deroule.probleme;
     if (eventsAsync.value == null && eventsAsync.hasError) {
       return Row(
         children: [
@@ -768,10 +768,8 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     return switch (plan) {
       PlanImpossible() => const TexteAbsent(kCalculChronologieImpossible),
       PlanObtenu(:final plan) =>
-        content.brewStepsProblem != null
-            ? TexteAbsent(
-                messageChronologieIllisible(content.brewStepsProblem!),
-              )
+        probleme != null
+            ? TexteAbsent(messageChronologieIllisible(probleme))
             : plan.lignes.isEmpty && plan.mesuresSansEtape.isEmpty
             ? const TexteAbsent('Aucune étape.')
             : ChronologieJour(
@@ -804,7 +802,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required double width,
   }) {
     final offline = _offline;
-    final content = brew.recipe;
     final notes = brew.notes;
     final section = SectionReleve(
       brew: brew,
@@ -885,7 +882,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       SectionRepliable(
         titre: 'Chronologie',
         storageKey: 'chronologie-${brew.id}',
-        resume: formatEtapes(content.brewSteps.length),
+        resume: formatEtapes(brew.deroule.lignes.length),
         children: [chronologie],
       ),
       SectionRepliable(
