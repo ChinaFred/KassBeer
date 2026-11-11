@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:brewing/brewing.dart' show fermentationDayNumber;
+import 'package:brewing/brewing.dart'
+    show fermentationDayNumber, maxProcessOffsetDays, processSessionDate;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,20 +24,28 @@ import '../../brew_day/presentation/mesure_form.dart';
 import '../../costs/data/figeage_embouteillage.dart';
 import '../../costs/presentation/bloc_cout_brassin.dart';
 import '../../costs/presentation/costs_providers.dart';
+import '../../processes/domain/modele_processus.dart';
+import '../../processes/presentation/processes_providers.dart';
 import '../../recipes/domain/recipe.dart';
 import '../../recipes/presentation/contenu_recette.dart';
 import '../../recipes/presentation/recipe_calculations_view.dart';
 import '../../recipes/presentation/recipes_providers.dart';
 import '../data/brews_repository.dart';
+import '../domain/assemblage_deroule.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import '../domain/deroule.dart';
 import '../domain/releves.dart';
 import 'brews_providers.dart';
+import 'changer_processus.dart';
+import 'choix_processus.dart';
 import 'embouteillage.dart';
+import 'new_brew_form.dart' show FormulaireNouveauBrassin;
 import 'prevu_et_mesure.dart';
 import 'releve_fermentation.dart';
+import 'section_deroule.dart';
 
-/// Fiche d'un brassin : copie figée, calculs, chronologie et saisies.
+/// Fiche d'un brassin : copie figée, calculs, déroulé et saisies.
 class BrewDetailScreen extends ConsumerStatefulWidget {
   const BrewDetailScreen({super.key, required this.id});
 
@@ -66,6 +75,21 @@ class BrewDetailScreen extends ConsumerStatefulWidget {
       'Embouteillage enregistré. Brassin en conditionnement.';
   static const embouteillageHorsLigne =
       'Embouteillage enregistré sur l\'appareil. Il partira au retour du réseau.';
+  static const recreateProcessKept =
+      'Son processus est appliqué de nouveau à la recette actuelle.';
+  static const recreateProcessDeleted =
+      'Son processus a été supprimé : le nouveau brassin n\'aura que la '
+      'chronologie de la recette.';
+  static const recreateProcessRefused =
+      'Son processus ne s\'applique pas à la recette actuelle : le nouveau '
+      'brassin n\'aura que la chronologie de la recette.';
+  static const recreateProcessUnread =
+      'Son processus n\'a pas pu être lu sur cet appareil : le nouveau brassin '
+      'n\'aura que la chronologie de la recette. Pour le garder, annulez et '
+      'réessayez avec le réseau.';
+  static const recreatedWithoutProcess =
+      'Brassin recréé depuis la recette, sans son processus. Choisissez de '
+      'nouveau le processus sur la fiche.';
   static String recipeChanged(DateTime date) =>
       'La recette a changé depuis la création de ce brassin. Il garde la '
       'version du ${formatDateCourte(date)}.';
@@ -186,14 +210,46 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     if (access == null) return;
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
+    // Le processus du brassin se résout de nouveau avec la nouvelle copie de la
+    // recette (ADR-009), avant la confirmation : elle dit ce qu'il deviendra. Un
+    // modèle absent ou inapplicable ne s'invente pas.
+    final avecProcessus = brew.process != null;
+    final templateId = brew.process?.templateId;
+    final recherche = templateId == null
+        ? null
+        : ref.read(processTemplatesProvider).value?.chercher(templateId);
+    final evalue = switch (recherche) {
+      DocumentTrouve<ModeleProcessus>(:final value) => evaluerAssemblage(
+        modele: value,
+        recipe: recipe.content,
+        nouvelleCle: ref.read(processesRepositoryProvider).newKey,
+        errors: ref.read(errorReportServiceProvider),
+        reported: ref.read(derouleReportsProvider),
+      ),
+      _ => null,
+    };
+    final deroule = switch (evalue) {
+      AssemblageObtenu(:final assemble) => assemble.deroule,
+      _ => null,
+    };
+    final issue = !avecProcessus
+        ? null
+        : switch ((recherche, evalue)) {
+            (_, AssemblageObtenu()) => BrewDetailScreen.recreateProcessKept,
+            (_, AssemblageRefuse()) => BrewDetailScreen.recreateProcessRefused,
+            (DocumentAbsent<ModeleProcessus>(), _) =>
+              BrewDetailScreen.recreateProcessDeleted,
+            _ => BrewDetailScreen.recreateProcessUnread,
+          };
     // ticket: aucun (confirmation)
     final confirmed = await confirmerAction(
       context,
       titre: 'Recréer depuis la recette ?',
-      paragraphes: const [
+      paragraphes: [
         'Ce brassin est remplacé par un nouveau, à partir de la recette '
             'actuelle. Sa version figée de la recette est perdue ; ses notes sont '
             'recopiées.',
+        ?issue,
       ],
       libelle: 'Recréer',
     );
@@ -214,9 +270,23 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     suivreEcriture(
       messenger: messenger,
       written: Future.wait([created.written, removal]),
-      succes: 'Brassin recréé depuis la recette.',
+      succes: avecProcessus && deroule == null
+          ? BrewDetailScreen.recreatedWithoutProcess
+          : 'Brassin recréé depuis la recette.',
       refus: 'La recréation de « ${brew.name} » a échoué.',
     );
+    if (deroule != null) {
+      suivreDeroule(
+        messenger: messenger,
+        creation: created.written,
+        written: repo.setProcess(
+          brewId: created.id,
+          deroule: deroule,
+          ownerName: ownerName,
+        ),
+        refus: FormulaireNouveauBrassin.processRejected(brew.name),
+      );
+    }
     router.go(AppRoutes.brew(created.id));
   }
 
@@ -319,6 +389,113 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       statut: BrewStatus.abandoned,
       annonce: 'Brassin abandonné.',
     );
+  }
+
+  void _changerProcessus(Brew brew) {
+    unawaited(
+      // ticket: /brassins/:id/fenetre/processus
+      showFeuilleOuDialogue<void>(
+        context: context,
+        builder: (_) =>
+            FeuilleChangerProcessus(brew: brew, tokenName: _tokenName!),
+      ),
+    );
+  }
+
+  /// « Changer la date » d'une journée après le brassage : sélecteur du jour de
+  /// départ à J+365, ou écart en jours sans date de départ. Réécrit `process` en
+  /// entier (ADR-009).
+  Future<void> _changerDate(Brew brew, JourneeDeroulee journee) async {
+    final process = brew.process;
+    if (process == null) return;
+    final depart = brew.departDeroule;
+    final int? ecart;
+    if (depart != null) {
+      // ticket: aucun (sélecteur du système)
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: journee.date(depart),
+        firstDate: processSessionDate(start: depart, offsetDays: 0),
+        lastDate: processSessionDate(
+          start: depart,
+          offsetDays: maxProcessOffsetDays,
+        ),
+        helpText: TextesDeroule.changerDate,
+      );
+      ecart = picked == null
+          ? null
+          : fermentationDayNumber(brewedAt: depart, at: picked);
+    } else {
+      // ticket: /brassins/:id/fenetre/ecart
+      ecart = await showFeuilleOuDialogue<int>(
+        context: context,
+        builder: (_) => FormulaireEcartJournee(journee: journee),
+      );
+    }
+    if (ecart == null || ecart == journee.offsetDays || !mounted) return;
+    await _ecrireEcart(brew, process, journee, ecart, SourceEcart.brasseur);
+  }
+
+  Future<void> _ecrireEcart(
+    Brew brew,
+    Deroule process,
+    JourneeDeroulee journee,
+    int ecart,
+    SourceEcart source,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final offline = _offline;
+    final ownerName = await _tokenName!;
+    if (!mounted) return;
+    final deroule = process.avecEcart(journee.key, ecart, source);
+    final date = journee.avecEcart(ecart, source).date(brew.departDeroule);
+    final name = journee.name.trim();
+    suivreEcriture(
+      messenger: messenger,
+      written: ref
+          .read(brewsRepositoryProvider)
+          .setProcess(brewId: brew.id, deroule: deroule, ownerName: ownerName),
+      succes: offline
+          ? TextesDeroule.ecartHorsLigne(name)
+          : date == null
+          ? TextesDeroule.prevuA(name, ecart)
+          : TextesDeroule.prevuLe(name, date),
+      refus: 'L\'enregistrement de « ${brew.name} » a échoué.',
+    );
+  }
+
+  /// Écarts que le processus d'origine donne aux journées dont le brasseur a
+  /// changé la date : le modèle, s'il existe encore, est assemblé de nouveau
+  /// avec la recette figée. Vide sans modèle lu.
+  Map<String, ({int offset, SourceEcart source})> _ecartsDuProcessus(
+    Brew brew,
+    ListeLue<ModeleProcessus>? modeles,
+  ) {
+    final process = brew.process;
+    final templateId = process?.templateId;
+    if (process == null ||
+        templateId == null ||
+        !process.journees.any((j) => j.sourceEcart == SourceEcart.brasseur)) {
+      return const {};
+    }
+    final modele = switch (modeles?.chercher(templateId)) {
+      DocumentTrouve<ModeleProcessus>(:final value) => value,
+      _ => null,
+    };
+    if (modele == null) return const {};
+    final evalue = evaluerAssemblage(
+      modele: modele,
+      recipe: brew.recipe,
+      nouvelleCle: clesApercu(),
+      errors: ref.read(errorReportServiceProvider),
+      reported: ref.read(derouleReportsProvider),
+    );
+    if (evalue is! AssemblageObtenu) return const {};
+    return {
+      for (final j in process.journees)
+        if (j.sourceEcart == SourceEcart.brasseur)
+          j.key: ?ecartDuProcessus(j, evalue.assemble.deroule),
+    };
   }
 
   void _embouteiller(Brew brew, {required bool modification}) {
@@ -711,11 +888,15 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           eventsAsync: eventsAsync,
           calculs: calculs,
           cout: cout,
-          chronologie: _chronologie(
+          deroule: _deroule(
             brew: brew,
-            eventsAsync: eventsAsync,
-            plan: plan,
             mine: mine,
+            chronologie: _chronologie(
+              brew: brew,
+              eventsAsync: eventsAsync,
+              plan: plan,
+              mine: mine,
+            ),
           ),
           recette: [
             BlocCalculs(
@@ -749,14 +930,53 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     return Scaffold(body: body, floatingActionButton: fab);
   }
 
-  /// Bloc « Chronologie », lecture ou panne des saisies.
+  /// Section « Déroulé » (ADR-009). Les modèles ne se lisent que pour un brassin
+  /// qui en a un : « Modèle supprimé depuis » et « Rétablir la date du
+  /// processus ».
+  Widget _deroule({
+    required Brew brew,
+    required bool mine,
+    required Widget chronologie,
+  }) {
+    final templateId = brew.process?.templateId;
+    final modeles = templateId == null
+        ? null
+        : ref.watch(processTemplatesProvider).value;
+    final modifiable = mine && brew.derouleModifiable;
+    final enCours = brew.process != null && modifiable;
+    final ecarts = enCours
+        ? _ecartsDuProcessus(brew, modeles)
+        : const <String, ({int offset, SourceEcart source})>{};
+    return SectionDeroule(
+      brew: brew,
+      mine: mine,
+      chronologieBrassage: chronologie,
+      modeleSupprime:
+          templateId != null &&
+          modeles?.chercher(templateId) is DocumentAbsent<ModeleProcessus>,
+      onChangerProcessus: modifiable ? () => _changerProcessus(brew) : null,
+      onChangerDate: enCours ? (j) => unawaited(_changerDate(brew, j)) : null,
+      retablissables: ecarts.keys.toSet(),
+      onRetablirDate: enCours
+          ? (j) {
+              final e = ecarts[j.key];
+              if (e == null) return;
+              unawaited(
+                _ecrireEcart(brew, brew.process!, j, e.offset, e.source),
+              );
+            }
+          : null,
+    );
+  }
+
+  /// Chronologie de la journée de brassage, lecture ou panne des saisies.
   Widget _chronologie({
     required Brew brew,
     required AsyncValue<ListeLue<BrewEvent>> eventsAsync,
     required PlanEvalue plan,
     required bool mine,
   }) {
-    final probleme = brew.deroule.probleme;
+    final probleme = messageDerouleIllisible(brew.deroule);
     if (eventsAsync.value == null && eventsAsync.hasError) {
       return Row(
         children: [
@@ -775,7 +995,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       PlanImpossible() => const TexteAbsent(kCalculChronologieImpossible),
       PlanObtenu(:final plan) =>
         probleme != null
-            ? TexteAbsent(messageChronologieIllisible(probleme))
+            ? TexteAbsent(probleme)
             : plan.lignes.isEmpty && plan.mesuresSansEtape.isEmpty
             ? const TexteAbsent('Aucune étape.')
             : ChronologieJour(
@@ -802,7 +1022,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required AsyncValue<ListeLue<BrewEvent>> eventsAsync,
     required CalculsRecette calculs,
     required Widget? cout,
-    required Widget chronologie,
+    required Widget deroule,
     required List<Widget> recette,
     required List<Widget> general,
     required double width,
@@ -846,8 +1066,8 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       return [
         const TitreSection('Calculs'),
         ...recette.take(1),
-        const TitreSection('Chronologie'),
-        chronologie,
+        const TitreSection(TextesDeroule.titre),
+        deroule,
         if (relevesExistent) section,
         const TitreSection('Recette'),
         ...recette.skip(2),
@@ -886,10 +1106,10 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       ...blocs,
       ...general,
       SectionRepliable(
-        titre: 'Chronologie',
-        storageKey: 'chronologie-${brew.id}',
-        resume: formatEtapes(brew.deroule.lignes.length),
-        children: [chronologie],
+        titre: TextesDeroule.titre,
+        storageKey: 'deroule-${brew.id}',
+        resume: resumeDeroule(brew.deroule),
+        children: [deroule],
       ),
       SectionRepliable(
         titre: 'Recette et calculs prévus',

@@ -1,5 +1,9 @@
 import 'package:brewing/brewing.dart'
-    show maxProcessOffsetDays, maxProcessSessions;
+    show
+        maxProcessOffsetDays,
+        maxProcessSessions,
+        processSessionDate,
+        processSessionOrder;
 import 'package:flutter/foundation.dart';
 
 import '../../recipes/domain/chronologie.dart';
@@ -111,6 +115,23 @@ class JourneeDeroulee {
   /// Lignes de chronologie de la journée, dans l'ordre.
   List<BrewStepLine> get lignes => [for (final e in etapes) e.ligne];
 
+  /// Date de la journée depuis le départ [depart] (`brewed_at`, sinon
+  /// `planned_for`), calculée par `brewing/` ; `null` sans départ.
+  DateTime? date(DateTime? depart) => depart == null
+      ? null
+      : processSessionDate(start: depart, offsetDays: offsetDays);
+
+  /// Même journée à l'écart [offset], de source [source].
+  JourneeDeroulee avecEcart(int offset, SourceEcart source) => JourneeDeroulee(
+    key: key,
+    name: name,
+    offsetDays: offset,
+    sourceEcart: source,
+    role: role,
+    etapes: etapes,
+    cleJourneeModele: cleJourneeModele,
+  );
+
   Map<String, Object?> toFirestore() => {
     'key': key,
     'name': name.trim(),
@@ -178,6 +199,27 @@ class Deroule {
 
   /// Lignes de toutes les journées, dans l'ordre.
   List<BrewStepLine> get lignes => [for (final j in journees) ...j.lignes];
+
+  /// Même déroulé, la journée [key] à l'écart [offset] de source [source].
+  /// Les journées se rangent de nouveau par `processSessionOrder` de `brewing/` :
+  /// la journée de brassage en tête, les suivantes par écart, à égalité dans
+  /// leur ordre précédent. Lève [StateError] pour un déroulé illisible, ou pour
+  /// la journée de brassage, toujours à J+0 ; `BrewingInputException` pour un
+  /// écart hors de 0 à 365 jours.
+  Deroule avecEcart(String key, int offset, SourceEcart source) {
+    if (probleme != null) throw StateError('déroulé illisible');
+    if (brassage?.key == key) throw StateError('journée de brassage à J+0');
+    final changees = [
+      for (final j in journees) j.key == key ? j.avecEcart(offset, source) : j,
+    ];
+    // Ordre de `brewing/`, celui de la résolution (P3).
+    final ordre = processSessionOrder([for (final j in changees) j.offsetDays]);
+    return Deroule(
+      journees: List.unmodifiable([for (final i in ordre) changees[i]]),
+      templateId: templateId,
+      templateName: templateName,
+    );
+  }
 
   /// Valeur de `process`. Lève [StateError] pour un déroulé illisible.
   Map<String, Object?> toFirestore() {

@@ -17,6 +17,7 @@ import 'package:kass_beer/features/brew_day/data/alerte_minuteur.dart';
 import 'package:kass_beer/features/brews/data/brews_repository.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
+import 'package:kass_beer/features/brews/domain/deroule.dart';
 import 'package:kass_beer/features/brews/domain/releves.dart';
 import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
@@ -274,6 +275,9 @@ class FakeBrewsRepository implements BrewsRepository {
   /// Réponse du serveur à une écriture ; jamais terminée par défaut (hors ligne).
   Future<void> Function() serverAnswer = () => Completer<void>().future;
 
+  /// Réponse du serveur à l'écriture du déroulé ; [serverAnswer] si nulle.
+  Future<void> Function()? processAnswer;
+
   /// Vrai si [attendreServeur] rend une réponse du serveur.
   bool serverReachable = true;
   int prepareCalls = 0;
@@ -350,6 +354,21 @@ class FakeBrewsRepository implements BrewsRepository {
       BrewWrite('update', id, {'name': name, 'owner_name': ownerName}),
     );
     return serverAnswer();
+  }
+
+  @override
+  Future<void> setProcess({
+    required String brewId,
+    required Deroule? deroule,
+    required String? ownerName,
+  }) {
+    writes.add(
+      BrewWrite('process', brewId, {
+        'deroule': deroule,
+        'owner_name': ownerName,
+      }),
+    );
+    return (processAnswer ?? serverAnswer)();
   }
 
   @override

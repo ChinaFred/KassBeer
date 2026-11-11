@@ -177,6 +177,19 @@ void main() {
     );
   });
 
+  test('ordre des journées : brassage en tête, puis par écart', () {
+    for (final c in objects(fixture['session_orders'])) {
+      final offsets = [for (final o in c['offset_days']! as List) o as int];
+      expect(processSessionOrder(offsets), c['expected'], reason: label(c));
+    }
+    for (final offsets in fixture['invalid_session_orders'] as List<Object?>) {
+      expectInvalid(
+        () => processSessionOrder([for (final o in offsets! as List) o as int]),
+        '$offsets',
+      );
+    }
+  });
+
   test('jour d\'un houblon à cru', () {
     for (final c in objects(fixture['dry_hop_days'])) {
       expect(dryHopDay(c['day_minutes'] as int), c['day'], reason: '$c');

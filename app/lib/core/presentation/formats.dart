@@ -127,6 +127,10 @@ const _moisCourts = [
 String formatDate(DateTime date) =>
     '${_joursCourts[date.weekday - 1]} ${formatDateCourte(date)}';
 
+/// Date avec le jour, sans l'année : « sam. 22 nov. ».
+String formatJourMois(DateTime date) =>
+    '${_joursCourts[date.weekday - 1]} ${date.day} ${_moisCourts[date.month - 1]}';
+
 /// Date sans le jour : « 11 févr. 2024 ».
 String formatDateCourte(DateTime date) =>
     '${date.day} ${_moisCourts[date.month - 1]} ${date.year}';

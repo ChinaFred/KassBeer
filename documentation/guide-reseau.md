@@ -170,7 +170,10 @@ Le 2026-11-11, ADR-009 (déroulé en journées) a étendu la règle absolue du h
 journée du déroulé et la règle « Un brassin fige sa recette » à son déroulé, ajouté le lieu des
 modèles (`process_templates/`) aux règles des prix, complété P2, P3 et P5, et ajouté P37 (lecture
 du déroulé et découpage par journée, `relecteur-regles`) et P38 (règles des modèles et du champ
-`process`, `securite`). P29 à P36 restent réservés à ADR-008.
+`process`, `securite`). P29 à P36 restent réservés à ADR-008. Avec la v0.1.30, P37 permet de
+lire la recette figée d'un brassin (`recipe.brewSteps`, `recipe.brewStepsProblem`) comme entrée
+d'une nouvelle résolution avant le départ : `assemblerDeroule` et l'aperçu « Chronologie de la
+recette seule » par `Deroule.depuisRecette`. Toute autre lecture passe par `Brew.deroule`.
 
 Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
 tickets avec Kass'Dalle, lots T3 à T7. Ses contrôles (P25 modifié, P29 à P36) entreront dans

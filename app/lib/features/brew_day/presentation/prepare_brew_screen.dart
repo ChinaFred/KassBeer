@@ -133,8 +133,15 @@ class _PreparationState extends ConsumerState<_Preparation>
     });
   }
 
+  /// Un déroulé résolu illisible ne se suit pas (ADR-009) : aucun repli sur la
+  /// chronologie de la recette.
+  bool get _derouleIllisible =>
+      _brew.deroule.resolu && _brew.deroule.probleme != null;
+
   Future<void> _start() async {
-    if (_starting || _brew.status != BrewStatus.planned) return;
+    if (_starting || _brew.status != BrewStatus.planned || _derouleIllisible) {
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     setState(() => _starting = true);
@@ -171,7 +178,8 @@ class _PreparationState extends ConsumerState<_Preparation>
     final theme = Theme.of(context);
     final brew = _brew;
     final deroule = brew.deroule;
-    final steps = deroule.brassage?.lignes ?? const <BrewStepLine>[];
+    final brassage = deroule.brassage;
+    final steps = brassage?.lignes ?? const <BrewStepLine>[];
     final now = ref.read(horlogeProvider)();
     final evalue = evaluerPlan(
       brew: brew,
@@ -181,12 +189,24 @@ class _PreparationState extends ConsumerState<_Preparation>
       reported: ref.read(planReportsProvider),
     );
     final planned = brew.plannedFor;
-    final illisible = deroule.probleme;
+    final illisible = messageDerouleIllisible(deroule);
+    // Avec un processus : « Brassage : 18 étapes · … », puis les journées
+    // suivantes et leurs dates (ADR-009).
+    final journee = brew.process == null || brassage == null
+        ? ''
+        : '${brassage.name.trim()} : ';
+    final ensuite = [
+      for (final j in deroule.journees.skip(1))
+        switch (j.date(brew.departDeroule)) {
+          final DateTime date => '${j.name.trim()} le ${formatJourMois(date)}',
+          null => '${j.name.trim()} à J+${j.offsetDays}',
+        },
+    ];
     final chrono = switch (evalue) {
       _ when illisible != null => (
         icon: Icons.error_outline,
         titre: 'Chronologie',
-        detail: messageChronologieIllisible(illisible),
+        detail: illisible,
       ),
       PlanImpossible() => (
         icon: Icons.error_outline,
@@ -202,12 +222,13 @@ class _PreparationState extends ConsumerState<_Preparation>
         icon: Icons.check_circle_outline,
         titre: 'Chronologie',
         detail:
-            '${formatEtapes(steps.length)} · ${formatDuree(dureeChronologie(steps))}'
+            '$journee${formatEtapes(steps.length)} · '
+            '${formatDuree(dureeChronologie(steps))}'
             '${plan.finPrevue == null ? '' : ' · fin vers ${formatHeure(plan.finPrevue!)}'}',
       ),
     };
     final brewing = brew.status == BrewStatus.brewing;
-    final peutCommencer = !_verifying && !_starting;
+    final peutCommencer = !_verifying && !_starting && !_derouleIllisible;
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
@@ -256,7 +277,11 @@ class _PreparationState extends ConsumerState<_Preparation>
                 _LigneVerif(
                   icon: chrono.icon,
                   titre: chrono.titre,
-                  detail: chrono.detail,
+                  detail: [
+                    chrono.detail,
+                    if (illisible == null && ensuite.isNotEmpty)
+                      'Ensuite : ${ensuite.join(', ')}',
+                  ].join('\n'),
                 ),
                 const _LigneVerif(
                   icon: Icons.check_circle_outline,

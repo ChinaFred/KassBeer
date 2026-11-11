@@ -239,6 +239,37 @@ DateTime processSessionDate({
       : DateTime(start.year, start.month, start.day + offsetDays);
 }
 
+/// Ordre des journées d'un déroulé, à partir de l'écart de chaque journée dans
+/// l'ordre courant [offsetDays] : la première, la journée de brassage, reste en
+/// tête ; les suivantes se rangent par écart croissant, à égalité dans l'ordre
+/// courant. Rend les indices de [offsetDays] dans le nouvel ordre. Sert à
+/// [resolveProcess] et au changement de date d'une journée avant le départ.
+///
+/// Lève [BrewingInputException] si [offsetDays] est vide, si la première
+/// journée n'est pas à 0 jour, ou si un écart sort de 0 à
+/// [maxProcessOffsetDays].
+List<int> processSessionOrder(List<int> offsetDays) {
+  if (offsetDays.isEmpty) {
+    throw BrewingInputException('offsetDays', 0, 'au moins une journée');
+  }
+  for (final offset in offsetDays) {
+    requireRange('offsetDays', offset, 0, maxProcessOffsetDays);
+  }
+  if (offsetDays.first != 0) {
+    throw BrewingInputException(
+      'offsetDays',
+      offsetDays.first,
+      'la journée de brassage est à J+0',
+    );
+  }
+  final suite = [for (var i = 1; i < offsetDays.length; i++) i]
+    ..sort((a, b) {
+      final byOffset = offsetDays[a].compareTo(offsetDays[b]);
+      return byOffset != 0 ? byOffset : a.compareTo(b);
+    });
+  return List.unmodifiable([0, ...suite]);
+}
+
 /// Origine d'une étape résolue.
 enum ProcessStepSource {
   /// Étape fixe du modèle : [ProcessStepDraft.index] est sa place dans
@@ -558,16 +589,17 @@ ProcessResolution resolveProcess({
     }
   }
 
-  final ordered = [...sessions.indexed]
-    ..sort((a, b) {
-      final byOffset = a.$2.offsetDays.compareTo(b.$2.offsetDays);
-      if (byOffset != 0) return byOffset;
-      final byTemplate = a.$2.templateIndex.compareTo(b.$2.templateIndex);
-      return byTemplate != 0 ? byTemplate : a.$1.compareTo(b.$1);
-    });
+  // Les journées sont dans l'ordre du modèle : à égalité d'écart, cet ordre
+  // reste. La journée de brassage, à J+0, est la première.
+  final ordered = [
+    for (final i in processSessionOrder([
+      for (final s in sessions) s.offsetDays,
+    ]))
+      sessions[i],
+  ];
   return ProcessResolution(
     sessions: List.unmodifiable([
-      for (final (_, s) in ordered)
+      for (final s in ordered)
         ProcessSessionDraft(
           templateSessionIndex: s.templateIndex,
           offsetDays: s.offsetDays,

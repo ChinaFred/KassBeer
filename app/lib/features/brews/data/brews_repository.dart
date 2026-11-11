@@ -11,10 +11,23 @@ import '../../equipment/domain/equipment.dart';
 import '../../recipes/domain/recipe.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import '../domain/deroule.dart';
 import '../domain/releves.dart';
 
 /// Attente maximale d'une réponse du serveur par « Préparer le brassage ».
 const kPrepareWait = Duration(seconds: 15);
+
+/// Déroulé refusé par [erreurDeroule] avant l'écriture : les règles ne lisent
+/// pas les journées (ADR-009, P37), l'application ne les écrit qu'à cette
+/// condition.
+class DerouleInvalide implements Exception {
+  const DerouleInvalide(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'DerouleInvalide : $message';
+}
 
 /// Écriture d'étape : début, fin ou saut d'une étape.
 typedef StepWrite = ({StepEventKind kind, String stepKey});
@@ -56,6 +69,18 @@ abstract class BrewsRepository {
     required String name,
     required DateTime? plannedFor,
     required String? notes,
+    required String? ownerName,
+  });
+
+  /// Écrit le déroulé figé `process` d'un brassin prévu, en entier (ADR-009,
+  /// option B') : juste après [create], puis à chaque changement de processus ou
+  /// de date avant le départ. [deroule] nul retire le champ : « Chronologie de la
+  /// recette seule ». Les règles refusent l'écriture une fois `brewed_at` posé.
+  /// Échoue par [DerouleInvalide] si [erreurDeroule] refuse le déroulé : rien
+  /// n'est écrit.
+  Future<void> setProcess({
+    required String brewId,
+    required Deroule? deroule,
     required String? ownerName,
   });
 
@@ -477,6 +502,23 @@ class FirestoreBrewsRepository implements BrewsRepository {
       'updated_at': FieldValue.serverTimestamp(),
     }),
   );
+
+  @override
+  Future<void> setProcess({
+    required String brewId,
+    required Deroule? deroule,
+    required String? ownerName,
+  }) => _guard('brews.process_write', () {
+    if (deroule != null) {
+      final erreur = erreurDeroule(deroule);
+      if (erreur != null) throw DerouleInvalide(erreur);
+    }
+    return _brews.doc(brewId).update({
+      ...champFacultatif('process', deroule?.toFirestore(), creation: false),
+      ...champFacultatif('owner_name', ownerName, creation: false),
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  });
 
   @override
   Future<void> start({

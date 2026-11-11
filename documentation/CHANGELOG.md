@@ -6,6 +6,45 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
+### v0.1.30 — fonctionnel
+
+« Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la
+recette seule » comme avant. Votre processus par défaut est déjà choisi. En dessous, « Déroulé
+prévu » montre chaque journée avec sa date et son nombre d'étapes, et prévient quand la recette
+n'a pas de houblon à cru pour la journée de houblonnage, ou quand des houblons à cru n'ont pas
+de journée. Hors ligne, si vos processus n'ont jamais été lus sur ce téléphone, le brassin se
+crée avec la chronologie de la recette seule ; vous choisirez son processus plus tard.
+
+La fiche d'un brassin a une section « Déroulé » à la place de « Chronologie » : le processus
+choisi, la journée de brassage avec ses heures et ses mesures, puis les journées suivantes avec
+leur date et leurs étapes. Tant que le brassage n'a pas commencé, « Changer de processus » en
+choisit un autre, et le menu d'une journée change sa date ou rétablit celle du processus.
+Ensuite, le déroulé ne change plus. « Recréer depuis la recette » garde le processus du brassin.
+
+La liste des brassins annonce la prochaine journée d'un brassin en fermentation (« Prochaine
+journée : Houblonnage à cru, mer. 25 nov. »). « Préparer le brassage » et l'écran du jour
+suivent la journée de brassage du processus, préparation et nettoyage compris, et la barre de
+l'écran du jour nomme la journée. Le suivi des journées après le brassage arrive avec la
+prochaine version : d'ici là, la mesure de densité se saisit par « Ajouter un relevé » et
+l'embouteillage par « Embouteiller ».
+
+### v0.1.30 — technique
+
+Lot D3 d'ADR-009. `assemblerDeroule` crée les clés et les libellés du déroulé depuis les
+brouillons de `resolveProcess` (clés de la recette gardées, `erreurDeroule` avant l'écriture) ;
+`nomEtapePreremplie`, ses avertissements et `formatQuantiteRecette` passent dans
+`recipes/domain/libelles_etapes.dart`, sans changement de l'éditeur « Chronologie du jour ».
+`BrewsRepository.setProcess` écrit `process` en entier après la création (option B'), au
+changement de processus ou de date, et à la recréation ; nul retire le champ. Un `process`
+illisible bloque « Commencer le brassage ». `brewing/` expose `processSessionOrder` (journée
+de brassage en tête, puis par écart, à égalité dans l'ordre courant), utilisé par
+`resolveProcess` et par le changement de date d'une journée ; cas `session_orders` ajoutés à
+`process.json`. P37 permet de lire la recette figée d'un brassin comme entrée d'une nouvelle
+résolution avant le départ (`assemblerDeroule`, aperçu par `Deroule.depuisRecette`) ; toute
+autre lecture de ses étapes passe par `Brew.deroule`. Trois éléments de ticket : « Changer de
+processus », « Actions d'une journée », « Écart d'une journée ». Les règles d'accès et les
+dépendances ne changent pas.
+
 ### v0.1.29 — fonctionnel
 
 Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées

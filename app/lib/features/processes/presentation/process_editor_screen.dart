@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:brewing/brewing.dart' show maxProcessSessions;
+import 'package:brewing/brewing.dart'
+    show maxProcessSessions, processSessionOrder;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -222,15 +223,15 @@ class _EditeurState extends ConsumerState<_Editeur> {
   /// sauf [nouvelle].
   void _trier({String? nouvelle}) {
     final avant = [for (final j in _journees) j.key];
-    final suite = _journees.sublist(1);
-    final indexed = [for (final (i, j) in suite.indexed) (i, j)]
-      ..sort((a, b) {
-        final c = a.$2.offsetDays.compareTo(b.$2.offsetDays);
-        return c != 0 ? c : a.$1.compareTo(b.$1);
-      });
+    // Ordre de `brewing/`, le même que la résolution (P3) : journée de brassage
+    // en tête, puis par écart, à égalité dans l'ordre courant.
+    final ordre = processSessionOrder([
+      for (final j in _journees) j.offsetDays,
+    ]);
+    final ranges = [for (final i in ordre) _journees[i]];
     _journees
-      ..removeRange(1, _journees.length)
-      ..addAll([for (final (_, j) in indexed) j]);
+      ..clear()
+      ..addAll(ranges);
     final messages = [
       for (final (i, j) in _journees.indexed)
         if (j.key != nouvelle &&

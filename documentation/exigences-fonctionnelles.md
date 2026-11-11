@@ -954,29 +954,68 @@ s'affiche sans réseau.
 caractères), « Équipement » (les siens puis ceux du groupe avec leur auteur ; présélection :
 celui de la recette, sinon son seul équipement ; obligatoire : « Choisissez un équipement. » ;
 hors ligne sans équipement lu : « Équipement indisponible hors ligne. Reconnectez le téléphone
-pour créer le brassin. »), « Date prévue (facultatif) » (aujourd'hui par défaut, effaçable). Le
-brassin reçoit une copie de la recette et de l'équipement : la recette peut changer ensuite, le
-brassin garde sa version. Recette sans chronologie : le brassin se crée, sans étape à suivre.
+pour créer le brassin. »), « Processus », « Date prévue (facultatif) » (aujourd'hui par défaut,
+effaçable), « Déroulé prévu ». Le brassin reçoit une copie de la recette et de l'équipement : la
+recette peut changer ensuite, le brassin garde sa version.
+
+« Processus » propose « Chronologie de la recette seule » puis les seuls processus du lecteur,
+par nom ; aucun processus d'un autre membre n'est proposé. Présélection : le processus par
+défaut du lecteur (« Mes processus »), sinon « Chronologie de la recette seule ». Aide :
+« Ajoute les étapes de préparation et les journées après le brassage. ». Lien « Gérer mes
+processus » (ferme le formulaire, ouvre « Mes processus »). États : « Lecture des processus »
+(la création reste possible avec la chronologie seule) ; « Impossible de lire les processus. »
+avec « Réessayer » ; « Aucun processus. » avec « Créer un processus » ; « Votre processus par
+défaut a été supprimé. » ; hors ligne sans processus lu : « Processus indisponibles hors ligne.
+Créez le brassin avec la chronologie de la recette seule, puis choisissez son processus sur sa
+fiche au retour du réseau. » (texte d'information, pas d'erreur). Un processus qui ne
+s'applique pas à la recette affiche sa cause et ne crée rien ; l'erreur est rapportée :
+« La chronologie de cette recette est illisible. », « Ce processus donne plus de 120 étapes dans
+la journée « {nom} ». Retirez des étapes du processus. », « Ce processus est invalide : corrigez-le dans Mes processus. », « Un
+houblon à cru de cette recette a un jour d'ajout hors de 0 à 365 jours. ».
+
+« Déroulé prévu » se recalcule à chaque changement de processus ou de date. Une ligne par
+journée : « Brassage · sam. 21 nov. · 14 étapes · 6 h 10 », « Houblonnage à cru · mer. 25 nov.
+(J+4) · 4 étapes », « Embouteillage · sam. 5 déc. (J+14) · 7 étapes » ; sans date prévue,
+« Houblonnage à cru · J+4 · 4 étapes » ; jour d'ajout donné par la recette : « (J+3, jour fixé
+par la recette) ». Les lignes se lisent telles quelles au lecteur d'écran ; « Déroulé prévu :
+{processus}, 3 journées. » et les annonces sont relues à chaque changement (région live). Annonces :
+« Houblons à cru du J+8 regroupés au J+6 : 5 journées au plus. », « La recette a 2 houblons à
+cru. Ce processus n'a pas de journée pour eux. », « Recette sans houblon à cru : pas de journée
+« Houblonnage à cru ». » (de même « Recette sans ajout à l'embouteillage : pas de journée
+« {nom} ». » pour une journée d'embouteillage conditionnée à ses ajouts), « Chronologie de la
+recette vide : paliers et ébullition préremplis. » suivie des avertissements du préremplissage
+(« « Empâtage » : durée non renseignée, étape non ajoutée. »). Avec « Chronologie de la recette
+seule », le texte de la chronologie reste celui d'avant : recette sans chronologie, le brassin
+se crée sans étape à suivre.
+
+Création : le brassin s'écrit, puis son déroulé, sans attendre le serveur, hors ligne compris.
 Messages : « Brassin créé. », « Brassin créé sur l'appareil. Il partira au retour du réseau. »,
-« La création de « {nom} » a échoué. ».
+« La création de « {nom} » a échoué. ». Déroulé seul refusé : « Le déroulé de « {nom} » a été
+refusé. Choisissez de nouveau le processus sur la fiche. ».
 
 **Liste** (tous les brassins du groupe). En cours, puis En fermentation et En conditionnement,
 puis prévus par date croissante, puis Terminés et Abandonnés, chaque groupe du plus récent au plus
 ancien. « Tous » / « Les miens », non enregistré. Chaque ligne :
 nom, « {statut} · {équipement} · {auteur} », date (« Prévu le sam. 15 nov. 2026 », « Commencé
 aujourd'hui à 11:15 », « Brassé le 11 févr. 2024 », « Embouteillé le 3 déc. 2026 » en
-conditionnement), étiquette « En attente du réseau ». Vide :
+conditionnement), étiquette « En attente du réseau ». En fermentation et en conditionnement, un
+brassin qui a une journée à venir après le brassage affiche « Prochaine journée : Houblonnage à
+cru, mer. 25 nov. » ou « Prochaine journée : Houblonnage à cru, aujourd'hui » à la place de sa
+date : la première journée dont la date n'est pas passée, sauf l'embouteillage d'un brassin
+embouteillé. La liste lit les dates seules : une journée faite avant sa date reste annoncée
+jusqu'à cette date. Vide :
 « Aucun brassin. Ouvrez une recette et appuyez sur Nouveau brassin. ». Statuts : Prévu, En
 cours, En fermentation, En conditionnement, Terminé, Abandonné.
 
 **Fiche.** Nom, ligne de statut (« En fermentation · J+12 », « En conditionnement · Embouteillé
 le 3 déc. 2026 », « Terminé · Embouteillé le 3 déc. 2026 »), lien vers la recette, « Brassin de
-{auteur} » pour un autre membre. Prévu et En cours : bloc Calculs sur la copie figée, Chronologie
-(heures, état, mesures), sections de la recette figée, Général (date prévue, brassé le,
+{auteur} » pour un autre membre. Prévu et En cours : bloc Calculs sur la copie figée, Déroulé
+(voir ci-dessous), sections de la recette figée, Général (date prévue, brassé le,
 équipement). Après le brassage, dans l'ordre : en fermentation, Relevé, Prévu et mesuré, Notes ;
 en conditionnement, Prévu et mesuré, Embouteillage, Relevé, Notes ; terminé, Prévu et mesuré,
 Embouteillage, Notes, Relevé ; abandonné, Relevé, Prévu et mesuré, Embouteillage (si `bottled_at`
-existe), Notes. Puis Général, le pli « Chronologie » (fermé), le pli « Recette et calculs prévus »
+existe), Notes. Puis Général, le pli « Déroulé » (fermé, résumé « 3 journées », ou le nombre
+d'étapes d'un déroulé d'une seule journée), le pli « Recette et calculs prévus »
 (fermé sur téléphone, ouvert à partir de 840 pixels). Un brassin en cours affiche aussi le relevé
 s'il en existe un. Pour le propriétaire seul, le bloc « Coût » (voir « Coût ») suit
 l'Embouteillage quand il existe (Terminé : avant les Notes), sinon Prévu et mesuré ; prévu et en
@@ -990,7 +1029,47 @@ Autre membre : aucun bouton, mêmes chiffres. La recette a changé depuis
 la création : « La recette a changé depuis la création de ce brassin. Il garde la version du
 {date}. » ; pour un brassin prévu sans saisie, « Recréer depuis la recette ».
 « Préparé sur cet appareil » s'affiche quand la préparation a abouti pendant la session ; sans
-cette information, rien ne s'affiche.
+cette information, rien ne s'affiche. « Recréer depuis la recette » applique de nouveau le
+processus du brassin à la recette actuelle (« Son processus est appliqué de nouveau à la recette
+actuelle. »). La confirmation dit d'avance quand ce n'est pas possible : « Son processus a été
+supprimé : le nouveau brassin n'aura que la chronologie de la recette. », « Son processus ne
+s'applique pas à la recette actuelle : le nouveau brassin n'aura que la chronologie de la
+recette. », ou, sans processus lu sur l'appareil, « Son processus n'a pas pu être lu sur cet
+appareil : le nouveau brassin n'aura que la chronologie de la recette. Pour le garder, annulez
+et réessayez avec le réseau. » ; l'annonce est alors
+« Brassin recréé depuis la recette, sans son processus. Choisissez de nouveau le processus sur
+la fiche. ».
+
+**Déroulé** (section de la fiche). En-tête « Processus : {nom du processus au moment du
+choix} », ou « Chronologie de la recette seule » pour un brassin sans processus (brassins
+antérieurs compris) ; « Modèle supprimé depuis ; ce brassin garde son déroulé. » quand le
+processus d'origine n'existe plus. Journée de brassage : titre « Brassage · sam. 21 nov. »,
+puis sa chronologie (heures, état, mesures ; un appui sur une mesure ouvre sa correction).
+Journées suivantes, repliées : « Houblonnage à cru · mer. 25 nov. (J+4) », résumé « 4 étapes ·
+25 min », étapes « nom · durée » ; « (J+3, jour fixé par la recette) », « (J+6, date
+changée) » ; sans date de départ, « Houblonnage à cru · J+4 ». Les dates partent de la date du
+brassage, sinon de la date prévue. Avant le départ, pour le propriétaire : « Changer de
+processus » (feuille : liste des processus du lecteur et déroulé prévu, « Appliquer » ;
+« Déroulé changé. », hors ligne « Déroulé changé sur l'appareil. Il partira au retour du
+réseau. »). La feuille présélectionne le déroulé actuel : son processus, ou « {nom} (actuel) »
+quand il n'est pas dans la liste lue (processus supprimé, liste en lecture, en panne ou hors
+ligne), avec l'aperçu du déroulé actuel, dates changées comprises. Hors ligne sans processus
+lu, la feuille affiche « Processus indisponibles hors ligne. Changez de processus au retour du
+réseau. » ; « Votre processus par défaut a été supprimé. » ne s'affiche que dans « Nouveau
+brassin ». « Appliquer » reste inactif,
+avec « Choisissez un autre processus. », tant que le choix ne diffère pas du déroulé actuel ;
+pendant la lecture, en panne ou hors ligne, seul « Chronologie de la recette seule », choisi par
+le brasseur, s'applique ; le menu ⋮ d'une journée après le brassage porte « Changer la date » (sélecteur du
+jour du brassage à J+365 ; sans date de départ, « Écart (jours après le brassage) ») et
+« Rétablir la date du processus » quand la date a été changée et que le processus d'origine se
+lit encore ; annonce « « Houblonnage à cru » prévu le ven. 27 nov. », hors ligne « Date de
+« Houblonnage à cru » changée sur l'appareil. Elle partira au retour du réseau. ». Changer la date prévue
+du brassin déplace toutes les journées. Après le départ : aucun bouton, « Le déroulé est figé
+depuis le début du brassage. ». Autre membre : lecture seule. Déroulé illisible : « Déroulé
+illisible. Mettez l'application à jour, ou prévenez l'administrateur. », rapporté, sans repli
+sur la chronologie de la recette. Reporté à la livraison suivante : « Préparer la journée » et
+le suivi des journées après le brassage ; d'ici là, « Embouteiller » et « Ajouter un relevé »
+restent sur la fiche.
 
 **Supprimer** (propriétaire). « Supprimer « {nom} » ? » / « Le brassin, ses étapes et ses mesures
 disparaissent pour tout le groupe. ». Le coût figé du brassin est supprimé avec lui. Sans saisie : immédiat, même hors ligne. Avec saisies :
@@ -1039,7 +1118,7 @@ propose « Annuler » 10 s, qui rétablit les mêmes saisies. Messages : « Rele
 (« Annuler » 10 s), « Relevé corrigé. », « Relevé supprimé. », « Relevé supprimé. La densité
 finale revient à la dernière mesure. » si le relevé était retenu ; refus du serveur : « Refusée
 par le serveur : Densité 1020,0 du 15 nov. 18:30. Elle n'est pas enregistrée. ». Un relevé ne
-s'affiche pas dans la Chronologie, et une mesure du jour ne s'affiche pas dans le relevé.
+s'affiche pas dans le Déroulé, et une mesure du jour ne s'affiche pas dans le relevé.
 
 États : « Chargement des relevés », « Impossible de lire les relevés. », « Aucun relevé. Appuyez
 sur Ajouter un relevé. » (propriétaire qui peut en ajouter), « Aucun relevé. », « Relevés
@@ -1120,18 +1199,25 @@ degré. ».
 est terminé. », sans bouton pour le relancer). À faire sur le téléphone qui
 servira, avec du réseau, avant de le couper. Il attend une réponse du serveur, 15 s au plus, sans
 rien écrire, et liste : brassin et recette figée, équipement, chronologie (« 11 étapes · 5 h 40 ·
-fin vers 16:05 »), compte, écran gardé allumé, minuteurs (« Aucune alarme ne sonne écran
+fin vers 16:05 » ; avec un processus, « Brassage : 18 étapes · 6 h 10 · fin vers 16:05 » et
+« Ensuite : Houblonnage à cru le mer. 25 nov., Embouteillage le sam. 5 déc. », ou « à J+4 »
+sans date prévue), compte, écran gardé allumé, minuteurs (« Aucune alarme ne sonne écran
 verrouillé : gardez l'écran visible. »). Réponse reçue : « Tout est prêt. Vous pouvez couper le
 réseau. ». Sans réponse ni réseau : « Préparation impossible sans réseau. Le brassin est lisible
 sur cet appareil, mais peut ne pas être à jour. ». « Commencer le brassage » passe le brassin « En
 cours » avec l'heure de l'appareil, démarre la première étape si elle a une durée, et ouvre
-l'écran du jour. Sur le web : « Gardez cet onglet ouvert. Une page rechargée sans réseau ne
-s'ouvre plus. ».
+l'écran du jour. Avec un processus, les étapes sont celles de la journée de brassage du
+déroulé. Déroulé illisible : « Déroulé illisible. Mettez l'application à jour, ou prévenez
+l'administrateur. » et « Commencer le brassage » bloqué. Sur le web : « Gardez cet onglet
+ouvert. Une page rechargée sans réseau ne s'ouvre plus. ».
 
 ### Jour de brassage
 
 Écran plein écran, réservé au propriétaire. L'écran reste allumé tant qu'il est ouvert. La
-barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le minuteur. Quand le brassage
+barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le minuteur ; avec un
+processus, la seconde ligne nomme la journée (« Brassage · 10:42 », lu « Journée Brassage, heure
+actuelle 10:42 »), et l'écran suit les seules étapes de la journée de brassage du déroulé
+(« Étape 3 sur 18 », « Fin prévue » de la journée). Quand le brassage
 est affiché, ou pendant la lecture des saisies, le retour Android ramène à la fiche du brassin. Un
 autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
 sa fiche, en lecture seule.
@@ -1274,7 +1360,8 @@ Il partira au retour du réseau. », « Frais « Capsules » supprimé. » avec 
 Un processus est un modèle de déroulé : de 1 à 5 journées (le brassage, puis par exemple le
 houblonnage à cru et l'embouteillage), chacune avec son écart en jours depuis le brassage et
 ses étapes de préparation et de nettoyage. Le groupe le lit ; seul son auteur le modifie. Le
-choix du processus d'un brassin arrive avec la livraison suivante (ADR-009, lot D3).
+brasseur le choisit dans « Nouveau brassin » ou sur la fiche d'un brassin prévu (voir
+Brassins).
 
 **Accès.** « Mes processus » s'ouvre depuis le menu du compte, sous « Mes prix » : page
 pleine, hors de la barre de navigation, avec retour. Adresses : `/processus` (liste),

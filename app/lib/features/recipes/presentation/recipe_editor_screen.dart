@@ -19,6 +19,7 @@ import '../../auth/presentation/access_providers.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_providers.dart';
 import '../domain/beerjson.dart';
+import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
 import 'contenu_recette.dart';
 import 'ingredient_forms.dart';

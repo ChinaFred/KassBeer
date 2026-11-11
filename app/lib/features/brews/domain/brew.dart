@@ -184,6 +184,15 @@ class Brew {
   /// Un `process` illisible rend un déroulé illisible, sans repli sur la recette.
   Deroule get deroule => process ?? Deroule.depuisRecette(recipe);
 
+  /// Départ des dates du déroulé (ADR-009) : `brewed_at`, sinon `planned_for` ;
+  /// `null` sans l'un ni l'autre (« J+4 » sans date).
+  DateTime? get departDeroule => brewedAt ?? plannedFor;
+
+  /// Le déroulé se change encore : `brewed_at` est nul (règles, P38) et le
+  /// brassin est prévu.
+  bool get derouleModifiable =>
+      brewedAt == null && status == BrewStatus.planned;
+
   /// Copie figée lue comme un équipement, pour les calculs et l'affichage.
   Equipment get equipmentRead =>
       Equipment(id: '', ownerUid: equipmentOwnerUid, content: equipment);
@@ -248,6 +257,31 @@ int compareBrews(Brew a, Brew b) {
     return da == null ? -1 : 1;
   }
   return db.compareTo(da);
+}
+
+/// Prochaine journée après le brassage d'un brassin en fermentation ou en
+/// conditionnement, d'après les dates seules (ADR-009 : la liste ne lit pas les
+/// événements) : la première dont la date n'est pas passée à [now], sauf la
+/// journée d'embouteillage d'un brassin embouteillé. `null` sinon.
+({JourneeDeroulee journee, DateTime date})? prochaineJourneePrevue(
+  Brew brew,
+  DateTime now,
+) {
+  if (brew.status != BrewStatus.fermenting &&
+      brew.status != BrewStatus.conditioning) {
+    return null;
+  }
+  final aujourdhui = DateTime(now.year, now.month, now.day);
+  for (final j in brew.deroule.journees.skip(1)) {
+    if (j.role == RoleJournee.embouteillage && brew.bottledAt != null) {
+      continue;
+    }
+    final date = j.date(brew.departDeroule);
+    if (date == null) return null;
+    final jour = DateTime(date.year, date.month, date.day);
+    if (!jour.isBefore(aujourdhui)) return (journee: j, date: jour);
+  }
+  return null;
 }
 
 /// Durée pendant laquelle un brassin en cours se rouvre au lancement (D-Q3).

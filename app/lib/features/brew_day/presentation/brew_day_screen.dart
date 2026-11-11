@@ -808,6 +808,12 @@ class _Jour extends StatelessWidget {
       if (etapes > 0) '$etapes étape${etapes > 1 ? 's' : ''}',
     ].join(', ');
 
+    // Avec un processus, la barre nomme la journée (ADR-009) ; sans processus,
+    // elle garde l'heure seule.
+    final journee = brew.process == null
+        ? null
+        : brew.deroule.brassage?.name.trim();
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= kCompactMaxWidth;
@@ -820,7 +826,7 @@ class _Jour extends StatelessWidget {
         final etapeSize = !low && wide ? styles.etapeLarge : styles.etape;
         final panneau = _Panneau(
           plan: plan,
-          illisible: brew.deroule.probleme,
+          illisible: messageDerouleIllisible(brew.deroule),
           now: now,
           timerSize: timerSize,
           etapeSize: etapeSize,
@@ -907,10 +913,15 @@ class _Jour extends StatelessWidget {
                 children: [
                   Text(brew.name, overflow: TextOverflow.ellipsis),
                   Semantics(
-                    label: 'Heure actuelle ${formatHeure(now)}',
+                    label: journee == null
+                        ? 'Heure actuelle ${formatHeure(now)}'
+                        : 'Journée $journee, heure actuelle '
+                              '${formatHeure(now)}',
                     excludeSemantics: true,
                     child: Text(
-                      formatHeure(now),
+                      journee == null
+                          ? formatHeure(now)
+                          : '$journee · ${formatHeure(now)}',
                       key: const ValueKey('heure-appareil'),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -1025,7 +1036,7 @@ class _Panneau extends StatelessWidget {
 
   final PlanDuJour? plan;
 
-  /// Raison pour laquelle la chronologie figée est illisible, ou `null`.
+  /// Texte d'un déroulé illisible ([messageDerouleIllisible]), ou `null`.
   final String? illisible;
   final DateTime now;
   final double timerSize;
@@ -1056,7 +1067,7 @@ class _Panneau extends StatelessWidget {
     final raison = illisible;
     if (raison != null) {
       return Text(
-        messageChronologieIllisible(raison),
+        raison,
         style: TextStyle(fontSize: ensuiteSize, color: scheme.error),
       );
     }

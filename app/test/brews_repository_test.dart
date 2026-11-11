@@ -6,6 +6,7 @@ import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/features/brews/data/brews_repository.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
+import 'package:kass_beer/features/brews/domain/deroule.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
@@ -116,6 +117,78 @@ void main() {
         name: 'Sans',
       ).toFirestore(creation: true);
       expect(content.containsKey('brew_steps'), isFalse);
+    });
+  });
+
+  group('déroulé (ADR-009)', () {
+    Deroule deroule() => Deroule(
+      templateId: 'p1',
+      templateName: 'Mon processus',
+      journees: [
+        JourneeDeroulee(
+          key: 'j1',
+          name: 'Brassage',
+          offsetDays: 0,
+          sourceEcart: SourceEcart.modele,
+          role: RoleJournee.brassage,
+          etapes: const [
+            EtapeDeroulee(
+              ligne: palier,
+              origine: OrigineEtape.chronologieRecette,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    test('écrit après la création, relu tel quel ; nul le retire', () async {
+      final created = await creer();
+      await repository.setProcess(
+        brewId: created.id,
+        deroule: deroule(),
+        ownerName: 'Bruno',
+      );
+      final data = await docBrassin(created.id);
+      expect(data['process'], deroule().toFirestore());
+      expect(data['owner_name'], 'Bruno');
+      final brew = Brew.fromFirestore(created.id, data);
+      expect(brew.deroule.resolu, isTrue);
+      expect(brew.deroule.brassage!.lignes.single.key, 'k-palier');
+      await repository.setProcess(
+        brewId: created.id,
+        deroule: null,
+        ownerName: 'Bruno',
+      );
+      expect((await docBrassin(created.id)).containsKey('process'), isFalse);
+    });
+
+    test("déroulé refusé par erreurDeroule : rien n'est écrit", () async {
+      final created = await creer();
+      final doublon = Deroule(
+        journees: [
+          JourneeDeroulee(
+            key: 'j1',
+            name: 'Brassage',
+            offsetDays: 0,
+            sourceEcart: SourceEcart.modele,
+            role: RoleJournee.brassage,
+            etapes: const [
+              EtapeDeroulee(ligne: palier, origine: OrigineEtape.modele),
+              EtapeDeroulee(ligne: palier, origine: OrigineEtape.modele),
+            ],
+          ),
+        ],
+      );
+      await expectLater(
+        repository.setProcess(
+          brewId: created.id,
+          deroule: doublon,
+          ownerName: 'Bruno',
+        ),
+        throwsA(isA<DerouleInvalide>()),
+      );
+      expect((await docBrassin(created.id)).containsKey('process'), isFalse);
+      expect(errors.reports.single.feature, 'brews.process_write');
     });
   });
 

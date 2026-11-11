@@ -1,6 +1,6 @@
 {
   "description": "Résolution d'un modèle de processus avec la recette figée d'un brassin, jour d'un houblon à cru et date d'une journée (ADR-009). Le paquet rend des brouillons sans clé ni libellé : chaque étape est « origine:indice ». template : place de l'élément dans la journée du modèle ; recipe_step : place dans brew_steps (clé gardée) ; prefill : place dans le préremplissage defaultBrewSteps ; dry_hop et packaging_hop : place dans hops ; packaging_other : place dans les ajouts. Noms et durées des étapes du modèle ne servent pas au calcul : ils documentent le cas, et le modèle « exemple » est relu par le test de l'application (modèle d'exemple, constante du domaine processes/).",
-  "rule": "Un bloc recipe_steps reçoit brew_steps, ou à défaut le préremplissage sans les étapes sans durée ; dry_hops reçoit un houblon à cru par étape, dans l'ordre de la recette ; packaging_additions reçoit les houblons au conditionnement puis les ajouts au conditionnement. Un bloc vide disparaît, et sa journée aussi si elle porte requires_recipe_block. Un houblon à cru qui a un jour d'ajout (day_minutes) tombe à J+round(day_minutes / 1440) ; sans jour, à l'écart du modèle. Une journée de houblonnage par jour distinct (rang 1, 2… s'il y en a plusieurs) ; écart de source recipe, sauf si un de ses houblons n'a pas de jour (template). Au-delà de 5 journées, les jours de houblonnage les plus tardifs se regroupent dans le premier jour regroupé. Tri par écart, à égalité dans l'ordre du modèle. Date d'une journée : jour calendaire local du départ plus l'écart, à minuit, inverse de fermentationDayNumber.",
+  "rule": "Un bloc recipe_steps reçoit brew_steps, ou à défaut le préremplissage sans les étapes sans durée ; dry_hops reçoit un houblon à cru par étape, dans l'ordre de la recette ; packaging_additions reçoit les houblons au conditionnement puis les ajouts au conditionnement. Un bloc vide disparaît, et sa journée aussi si elle porte requires_recipe_block. Un houblon à cru qui a un jour d'ajout (day_minutes) tombe à J+round(day_minutes / 1440) ; sans jour, à l'écart du modèle. Une journée de houblonnage par jour distinct (rang 1, 2… s'il y en a plusieurs) ; écart de source recipe, sauf si un de ses houblons n'a pas de jour (template). Au-delà de 5 journées, les jours de houblonnage les plus tardifs se regroupent dans le premier jour regroupé. Tri par écart, à égalité dans l'ordre du modèle, la journée de brassage en tête (processSessionOrder, cas session_orders : il sert aussi au changement de date d'une journée sur le brassin). Date d'une journée : jour calendaire local du départ plus l'écart, à minuit, inverse de fermentationDayNumber.",
   "templates": {
     "exemple": {
       "name": "Brassage, houblonnage à cru, embouteillage",
@@ -653,5 +653,36 @@
       "expected": "2026-11-26T00:00:00Z"
     }
   ],
-  "invalid_offsets": [-1, 366]
+  "invalid_offsets": [-1, 366],
+  "session_orders": [
+    {
+      "id": "deja-trie",
+      "offset_days": [0, 4, 14],
+      "expected": [0, 1, 2]
+    },
+    {
+      "id": "houblonnage-repousse-apres-l-embouteillage",
+      "note": "Date du houblonnage changée sur le brassin : J+20 passe après l'embouteillage à J+14.",
+      "offset_days": [0, 20, 14],
+      "expected": [0, 2, 1]
+    },
+    {
+      "id": "egalite-ordre-garde",
+      "note": "Deux journées à J+6 gardent leur ordre ; J+3 passe devant.",
+      "offset_days": [0, 6, 6, 3],
+      "expected": [0, 3, 1, 2]
+    },
+    {
+      "id": "journee-a-j0-apres-le-brassage",
+      "note": "Une journée à J+0 reste après la journée de brassage.",
+      "offset_days": [0, 0, 4],
+      "expected": [0, 1, 2]
+    },
+    {
+      "id": "une-seule-journee",
+      "offset_days": [0],
+      "expected": [0]
+    }
+  ],
+  "invalid_session_orders": [[], [3, 4], [0, 366], [0, -1]]
 }

@@ -7,6 +7,8 @@ import '../../../core/services/error_report_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/domain/deroule.dart';
+import '../../brews/presentation/libelles_deroule.dart';
 import '../domain/plan_du_jour.dart';
 
 /// Résultat du calcul de la chronologie d'un brassin.
@@ -29,9 +31,16 @@ class PlanImpossible extends PlanEvalue {
 const kCalculChronologieImpossible =
     'Une heure ou une durée enregistrée est invalide.';
 
-/// Texte d'un déroulé illisible (`Brew.deroule`, `probleme`).
-String messageChronologieIllisible(String raison) =>
-    'Chronologie de ce brassin illisible : $raison.';
+/// Texte d'un déroulé illisible (`Brew.deroule`), ou `null` s'il est lisible :
+/// `process` illisible (ADR-009), ou chronologie figée d'un brassin sans
+/// `process` illisible, avec sa raison.
+String? messageDerouleIllisible(Deroule deroule) {
+  final raison = deroule.probleme;
+  if (raison == null) return null;
+  return deroule.resolu
+      ? kDerouleIllisible
+      : 'Chronologie de ce brassin illisible : $raison.';
+}
 
 /// Texte du verrou d'écran refusé.
 const kVerrouRefuse =
