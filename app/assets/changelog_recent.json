@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "0.1.29",
+      "date": "2026-11-11",
+      "paragraphs": [
+        "Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données », et « Relire » relit l'écran.",
+        "En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50. Chaque ligne donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur."
+      ]
+    },
+    {
       "version": "0.1.28",
       "date": "2026-11-11",
       "paragraphs": [
@@ -37,14 +45,6 @@
       "date": "2026-11-10",
       "paragraphs": [
         "Recettes › Importer lit aussi les fichiers BeerXML, le format qu'exportent BeerSmith, Brewfather, Brewer's Friend et Brewtarget. Le fichier s'importe comme un fichier BeerJSON : aperçu sans écriture, recettes déjà importées ou en double décochées, compte rendu. Un fichier BeerSmith qui contient des apostrophes ou des accents se lit sans caractère faux. « Détails » dit ce qui change à l'import : un houblon « First Wort » compte à l'ébullition pendant toute l'ébullition de la recette, un houblon « Aroma » avec une durée compte à l'ébullition pendant cette durée (si c'était un whirlpool, choisissez Whirlpool dans la recette), un whirlpool sans durée compte à l'arrêt du feu, et le style ne garde que son nom. Le profil d'eau, les étapes de fermentation et l'équipement du fichier ne sont pas importés. Une levure liquide mesurée en litres garde sa quantité en litres. Un fichier BeerSmith (.bsmx) n'est pas lu : exportez la recette en BeerXML depuis BeerSmith. L'export BeerXML reste visible et bloqué : il demande un style de la liste BJCP, dont le choix arrive dans une prochaine version."
-      ]
-    },
-    {
-      "version": "0.1.20",
-      "date": "2026-11-10",
-      "paragraphs": [
-        "Recettes › Importer : « Importer », dans la liste des recettes, lit un fichier BeerJSON exporté d'un autre logiciel de brassage (500 recettes et 10 Mo au plus) et crée ses recettes à votre nom. Avant toute écriture, un aperçu donne pour chaque recette son état : « Prête », « Incomplète », « Déjà importée le … » (même contenu déjà importé par vous, décochée), « En double dans le fichier » ou « Refusée », avec la raison. « Détails » liste ce qui reste à compléter et ce qui a changé à l'import (unités converties, valeurs écartées, parties non importées). Vous choisissez l'équipement des recettes, cochez celles à importer, puis lisez le compte rendu : créées, ignorées, en erreur. L'import marche sans réseau : les recettes partent au retour du réseau. Les prix et le stock du fichier ne sont jamais importés. Le BeerXML n'est pas encore lu : un fichier BeerXML est annoncé comme tel.",
-        "« Exporter », sur la fiche de toute recette du groupe, produit un fichier BeerJSON sans aucun prix : sur Android, « Enregistrer » ou « Partager le fichier » ; sur le web, « Télécharger ». Le fichier porte l'auteur de la recette, le rendement de son équipement et les densités, le degré, l'amertume et la couleur calculés. Ce qui manque au format est listé (« Type de recette non renseigné. ») ; l'auteur peut compléter la recette, un autre membre la duplique. Une recette à l'extrait, sans palier ni température du grain, s'exporte sans empâtage ; une recette sans durée d'ébullition, sans ébullition ; la feuille le dit, comme pour le style et la chronologie du jour, qui ne sont pas exportés. La recette d'un autre membre qui n'indique pas d'auteur ne s'exporte pas à son nom : la feuille propose « Dupliquer », et la copie s'exporte à votre nom. Avant l'envoi, la feuille nomme l'auteur écrit dans le fichier. Si l'envoi échoue, la feuille le dit et l'envoi peut se refaire. L'export BeerXML est visible et bloqué : il demande un style de la liste BJCP, qui arrive dans une prochaine version."
       ]
     }
   ]

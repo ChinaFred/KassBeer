@@ -58,6 +58,7 @@ const Map<String, String> kTicketScreenNames = {
   '/tickets/:id': 'Suivi d\'un ticket',
   '/admin': 'Admin',
   '/admin/membres': 'Admin › Membres',
+  '/admin/sources': 'Admin › Sources',
   '/admin/tickets': 'Admin › Tickets des membres',
   '/admin/tickets/:id': 'Admin › Ticket d\'un membre',
 };
@@ -91,6 +92,7 @@ const kTicketShellScreens = [
   '/admin/membres',
   '/admin/tickets',
   '/admin/tickets/:id',
+  '/admin/sources',
 ];
 
 /// Éléments de la coquille, ajoutés à chaque écran de [kTicketShellScreens].

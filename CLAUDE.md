@@ -367,7 +367,7 @@ l'administrateur (`exchange/bin/preparer_referentiels.dart`, puis `ingest/ecrire
 écrit dans l'émulateur par défaut, en production sur option explicite (`--production --projet
 kassbeer`) et après la saisie du nom du projet, dans une liste blanche de collections, avec un
 identifiant déterministe et un rapport JSON chiffré ; un document inchangé n'est pas réécrit.
-Admin › Sources affichera les compteurs et les ingrédients non résolus (L4).
+Admin › Sources affiche les compteurs de la dernière exécution et les noms non reconnus.
 
 Exception ponctuelle (ADR-005, acceptée le 2026-11-10) : au passage de L1, `effacement-l1/`
 efface depuis le poste tous les documents de `recipes/`, `brews/` et leurs `events/`, et le

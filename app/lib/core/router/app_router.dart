@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/admin_screen.dart';
+import '../../features/admin/presentation/admin_sources_screen.dart';
 import '../../features/auth/presentation/access_error_screen.dart';
 import '../../features/auth/presentation/access_providers.dart';
 import '../../features/auth/presentation/loading_screen.dart';
@@ -316,6 +317,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 titre: 'Membres',
                 retour: AppRoutes.admin,
                 builder: (_, _) => const MembersScreen(),
+              ),
+              PageDeCoquille(
+                path: 'sources',
+                titre: AdminSourcesScreen.titre,
+                retour: AppRoutes.admin,
+                builder: (_, _) => const AdminSourcesScreen(),
               ),
               // Liste et fiche sont deux routes sœurs : en large, elles
               // partagent la même page (cleDePageTicketsAdmin), et seul le

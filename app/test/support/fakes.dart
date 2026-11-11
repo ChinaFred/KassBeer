@@ -11,6 +11,8 @@ import 'package:kass_beer/core/data/nouveautes.dart';
 import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
 import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
+import 'package:kass_beer/features/admin/data/sources_repository.dart';
+import 'package:kass_beer/features/admin/domain/ingestion.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
 import 'package:kass_beer/features/auth/domain/session_user.dart';
 import 'package:kass_beer/features/brew_day/data/alerte_minuteur.dart';
@@ -1019,6 +1021,50 @@ class FakeLibraryRepository implements LibraryRepository {
   }
 }
 
+/// Double d'Admin › Sources : réponses fixées par le test.
+class FakeSourcesRepository implements SourcesRepository {
+  /// Réponse à `derniereExecution` ; `null` : aucune exécution sur le serveur.
+  LectureExecution? execution;
+
+  /// Panne de `derniereExecution`.
+  Object? executionError;
+  int executionReads = 0;
+
+  /// Ingrédients non résolus, déjà triés par `count` décroissant.
+  final nonResolus = <DocumentLu<IngredientNonResolu>>[];
+
+  /// Panne de la prochaine page demandée.
+  Object? pageError;
+  bool pagesFromCache = false;
+  final pages = <CurseurPage?>[];
+
+  @override
+  Future<LectureExecution> derniereExecution() async {
+    executionReads++;
+    final error = executionError;
+    if (error != null) throw error;
+    return execution ??
+        const LectureExecution(execution: DocumentAbsent(), fromCache: false);
+  }
+
+  @override
+  Future<PageNonResolus> pageNonResolus({CurseurPage? apres}) async {
+    pages.add(apres);
+    final error = pageError;
+    if (error != null) {
+      pageError = null;
+      throw error;
+    }
+    final start = apres == null ? 0 : apres.valeur as int;
+    final end = (start + kTaillePageNonResolus).clamp(0, nonResolus.length);
+    return PageNonResolus(
+      documents: nonResolus.sublist(start, end),
+      suite: end - start < kTaillePageNonResolus ? null : CurseurPage(end),
+      fromCache: pagesFromCache,
+    );
+  }
+}
+
 /// Décision reçue par [FakeTicketsRepository.createDecision].
 typedef DecisionCreee = ({
   String ticketId,
@@ -1077,6 +1123,7 @@ class TestApp {
       tickets = FakeTicketsRepository(),
       fichiers = FakeEchangeFichiers(),
       library = FakeLibraryRepository(),
+      sources = FakeSourcesRepository(),
       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
@@ -1095,6 +1142,7 @@ class TestApp {
         costsRepositoryProvider.overrideWithValue(costs),
         ticketsRepositoryProvider.overrideWithValue(tickets),
         libraryRepositoryProvider.overrideWithValue(library),
+        sourcesRepositoryProvider.overrideWithValue(sources),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
           return openLinkResult;
@@ -1124,6 +1172,7 @@ class TestApp {
   final FakeTicketsRepository tickets;
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
+  final FakeSourcesRepository sources;
 
   /// Analyse d'un fichier importé, remplaçable par les tests.
   AnalyseFichier Function(List<int>) analyseur = analyserFichier;
