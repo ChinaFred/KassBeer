@@ -46,6 +46,24 @@ résout les noms d'une recette importée contre les index de la Bibliothèque re
 et reprend les valeurs absentes. L'export BeerXML tire son style d'une fiche de la Bibliothèque
 (`styleBeerXmlDe`).
 
+### v0.1.27 — fonctionnel
+
+« Signaler ou proposer » a un nouveau champ, « Élément précis », sous « Écran concerné ». Il
+permet de désigner un menu ou une fenêtre de l'écran : « Embouteillage » ou « Plus d'actions »
+sur un brassin, « Houblon » dans l'éditeur de recette, « Menu du compte »… Par défaut, le ticket
+porte sur l'écran entier. Le suivi affiche l'écran et l'élément, par exemple « Brassin ›
+Embouteillage ». Les listes passent sur deux lignes quand le texte est agrandi. Demandé par le
+ticket #26.
+
+### v0.1.27 — technique
+
+Table fermée `kTicketElements` dans `ticket_screens.dart` : la valeur `screen` devient
+`<modèle de route>/menu/<clé>` ou `<modèle de route>/fenetre/<clé>`, acceptée sans changement
+par `firestore.rules` et `routeTemplateOrNull` (cas ajoutés dans `rules-tests/` et
+`functions/test/`). Chaque appel qui ouvre un menu ou une fenêtre dans `app/lib` porte un
+commentaire `// ticket: <clé>` ou `// ticket: aucun (<raison>)`, vérifié par
+`ticket_screens_test.dart`. Demandé par le ticket #26.
+
 ### v0.1.26 — fonctionnel
 
 Une nouvelle entrée « Bibliothèque », à côté de Recettes, montre les styles de bière, les malts

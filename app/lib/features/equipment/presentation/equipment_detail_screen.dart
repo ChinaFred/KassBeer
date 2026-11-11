@@ -64,6 +64,7 @@ class EquipmentDetailScreen extends ConsumerWidget {
             for (final r in recipes.valides)
               if (r.content.equipmentId == equipment.id) r.name,
           ];
+    // ticket: aucun (confirmation)
     final confirmed = await confirmerSuppression(
       context,
       titre: deleteTitle(equipment.name),

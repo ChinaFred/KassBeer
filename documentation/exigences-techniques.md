@@ -546,7 +546,7 @@ de brassage ni dans ce qu'il appelle (P2) ; aucun prix, stock ni coût (P5).
 | Fichier | Contenu |
 |---|---|
 | `domain/ticket.dart` | `Ticket` (lecture tolérante : statut inconnu lu `TicketStatus.unknown`, type inconnu, champ obligatoire absent ou mal typé : `DocumentIllisible`), `TicketType`, `TicketStatus`, `TicketBrouillon`, bornes des règles (titre 5 à 100, description 10 à 2 000), `unread`, `compareTicketsRecentFirst`, `compareVersions` |
-| `domain/ticket_screens.dart` | table fermée `kTicketScreenNames` (modèle de route → nom), `autre`, `inconnu` ; `ticketScreenValue` ne rend qu'une valeur de cet ensemble |
+| `domain/ticket_screens.dart` | tables fermées `kTicketScreenNames` (modèle de route → nom) et `kTicketElements` (élément d'un écran → nom : `<modèle de route>/menu/<clé>` ou `<modèle de route>/fenetre/<clé>`, minuscules et tirets ; éléments propres à un écran, plus « Menu du compte » et « Barre de navigation » sur chaque écran de `kTicketShellScreens`), `autre`, `inconnu` ; `ticketScreenValue` ne rend qu'une valeur de cet ensemble ; `ticketElementOptions` (« L'écran entier » puis les éléments, vide pour un écran d'Admin vu par un brasseur) ; `ticketScreenLabel` rend « Brassin › Embouteillage » |
 | `domain/etat_jeton_github.dart` | `EtatJetonGithub` (`token_invalid_since`, `token_expires_at`) |
 | `data/tickets_repository.dart` | `TicketsRepository`, `FirestoreTicketsRepository` |
 | `presentation/` | `TicketFormScreen`, `MyTicketsScreen`, `TicketDetailScreen`, `BandeauTicketsAdmin`, `ticket_statut.dart` (étiquette, icône et phrase de chaque statut), `ticket_lien_github.dart`, `tickets_providers.dart` |
@@ -557,7 +557,33 @@ l'accueil : `/tickets/nouveau` (déclarée avant `/tickets/:id`), `/tickets/:id`
 `GoRouter.of(context).state.fullPath` (modèle `/recettes/:id`, jamais l'adresse) et le passe
 dans `?ecran=` ; le formulaire le réduit par `ticketScreenValue`. « Reprendre ce ticket »
 passe un `TicketBrouillon` par `extra`. `test/ticket_screens_test.dart` parcourt
-`router.configuration.routes` et échoue si une route manque à la table.
+`router.configuration.routes` et échoue si une route manque à la table, ou si
+`kTicketShellScreens` n'est pas la liste des routes de la `ShellRoute`. Cette liste compte
+23 routes, dont les 12 de la Bibliothèque (`/bibliotheque/<segment>` et
+`/bibliotheque/<segment>/:id` pour `styles`, `malts`, `houblons`, `levures`, `divers` et
+`recettes`) ; ces 12 écrans n'ont que les deux éléments de la coquille.
+`/sources-des-donnees`, hors de la coquille, n'a aucun élément. L'élément précis
+s'écrit dans le même champ `screen` (aucun champ ajouté, règles et `routeTemplateOrNull`
+inchangés : la forme passe déjà leur contrôle). Il n'est jamais lu de `?ecran=` :
+`initState` ne garde que l'écran ; seul « Reprendre » rend l'élément du ticket refusé.
+
+**Commentaire `// ticket:`.** Chaque appel de `showFeuilleOuDialogue`, `showDialog`,
+`showModalBottomSheet`, `showGeneralDialog`, `showMenu`, `PopupMenuButton`, `MenuAnchor`,
+`SearchAnchor`, `confirmerAction`, `confirmerActionOuAlternative`, `confirmerAbandon`,
+`confirmerSuppression`, `showDatePicker`, `showDateRangePicker` ou `showTimePicker` dans
+`app/lib/` (hors définitions de `feuille_ou_dialogue.dart` et `ecriture.dart`) porte, sur la
+ligne précédente, `// ticket: <clé>[, <clé>…]` (clés de `kTicketElements`) ou
+`// ticket: aucun (<raison>)` (confirmation générique, sélecteur du système). Un appel partagé
+par plusieurs écrans cite une clé par écran, séparées par des virgules : le formulaire de prix
+de `price_form.dart`, ouvert depuis `/prix`, `/recettes/:id` et `/brassins/:id`, cite
+`/prix/fenetre/prix, /recettes/:id/fenetre/prix, /brassins/:id/fenetre/prix`, et sa liste
+« Reprendre un prix » les trois clés `…/fenetre/reprendre`. Les commentaires
+`<coquille>/menu/compte` et `<coquille>/menu/navigation` citent la clé de chaque écran de la
+coquille ; ces commentaires sont dans `app_shell.dart`. `ticket_screens_test.dart` échoue sur un appel sans
+commentaire, une clé citée absente de la table, une clé de la table citée nulle part, une clé
+qui ne commence pas par un modèle de `kTicketScreenNames` suivi de `/menu/` ou `/fenetre/`,
+une route qui contient un segment `menu` ou `fenetre`, une valeur qui ne passe pas la regex
+des règles ou dépasse 100 caractères.
 
 **Écritures.** `create` écrit `tickets/{id}` avec l'identifiant créé par l'appareil à
 l'ouverture du formulaire (`newTicketId`) et les seuls champs du contrat : `type`, `title`,
@@ -610,7 +636,7 @@ et `fermerParRetour` (faux par défaut : `go(closePath)` comme avant ; vrai : `p
 écran précédent). `formats.dart` : `formatDateChiffres` (« 08/11/26 »).
 
 **Tests.** `tickets_domain_test.dart` (lecture, statuts, suivi à lire, versions, lien,
-bandeau), `ticket_screens_test.dart` (table et routes), `tickets_repository_test.dart`
+bandeau), `ticket_screens_test.dart` (tables, routes, éléments, commentaires `// ticket:`, remise à « L'écran entier »), `tickets_repository_test.dart`
 (`fake_cloud_firestore` : champs écrits, illisible rapporté sans texte, `markSeen`, requêtes
 admin, état du jeton), `tickets_screens_test.dart` (menu et pastille, formulaire, liste,
 détail, bandeau Admin).
@@ -1049,7 +1075,7 @@ publié.
 | `type` | string, obligatoire : `bug`, `evolution` ou `feature` |
 | `title` | string, obligatoire, 5 à 100 caractères, une ligne |
 | `description` | string, obligatoire, 10 à 2 000 caractères |
-| `screen` | string, obligatoire, 100 caractères au plus : modèle de route go_router (`/recettes/:id`), `autre` ou `inconnu` ; jamais un identifiant réel |
+| `screen` | string, obligatoire, 100 caractères au plus : modèle de route go_router (`/recettes/:id`), élément de cet écran (`/brassins/:id/fenetre/embouteillage`, `/recettes/menu/compte`), `autre` ou `inconnu` ; jamais un identifiant réel |
 | `app_version` | string facultatif, 1 à 40 caractères |
 | `platform` | string, obligatoire : `android` ou `web` |
 | `author_uid` | string, obligatoire : `request.auth.uid` |

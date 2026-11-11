@@ -354,6 +354,7 @@ void ouvrirAjoutReleve(BuildContext context, WidgetRef ref, Brew brew) {
   final messenger = ScaffoldMessenger.of(context);
   final offline = ref.read(grantedAccessProvider)?.offline ?? false;
   unawaited(
+    // ticket: /brassins/:id/fenetre/releve
     showFeuilleOuDialogue<void>(
       context: context,
       fermetureProtegee: true,
@@ -406,6 +407,7 @@ void ouvrirCorrectionReleve({
   final messenger = ScaffoldMessenger.of(context);
   final offline = ref.read(grantedAccessProvider)?.offline ?? false;
   unawaited(
+    // ticket: /brassins/:id/fenetre/releve
     showFeuilleOuDialogue<void>(
       context: context,
       fermetureProtegee: true,
@@ -535,6 +537,7 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
       navigator.pop();
       return;
     }
+    // ticket: aucun (confirmation)
     final abandon = await confirmerAbandon(
       context,
       'La saisie de ce relevé ne sera pas enregistrée.',
@@ -588,6 +591,7 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
     final debut = premier == null
         ? DateTime(aujourdhui.year - 5)
         : DateTime(premier.year, premier.month, premier.day);
+    // ticket: aucun (sélecteur du système)
     final picked = await showDatePicker(
       context: context,
       initialDate: base.isBefore(debut) ? debut : base,

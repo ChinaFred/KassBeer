@@ -70,6 +70,7 @@ class IndicateurEnvoi extends StatelessWidget {
   void _details(BuildContext context) {
     final detail = detailAttente;
     final etat = _etat();
+    // ticket: /brassins/:id/jour/fenetre/envoi
     showFeuilleOuDialogue<void>(
       context: context,
       builder: (context) => Column(

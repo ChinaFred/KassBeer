@@ -152,6 +152,7 @@ class _EditeurState extends ConsumerState<_Editeur> {
   }
 
   Future<void> _replaceFromRecipe() async {
+    // ticket: aucun (confirmation)
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -181,6 +182,7 @@ class _EditeurState extends ConsumerState<_Editeur> {
 
   bool get _atMax => _steps.length >= kMaxBrewSteps;
 
+  // ticket: /recettes/:id/chronologie/fenetre/etape
   Future<void> _open([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireEtape(
@@ -300,6 +302,7 @@ class _EditeurState extends ConsumerState<_Editeur> {
                 ),
               ),
               if (_steps.isNotEmpty && hasRecipeContent)
+                // ticket: /recettes/:id/chronologie/menu/actions
                 PopupMenuButton<void>(
                   tooltip: 'Plus d\'actions',
                   onSelected: (_) {},

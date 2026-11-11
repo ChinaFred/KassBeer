@@ -67,6 +67,7 @@ ChoixHeure placerHeure({
 
 /// Sélecteur d'heure sur 24 h, en saisie au clavier.
 Future<TimeOfDay?> demanderHeure24(BuildContext context, TimeOfDay initiale) =>
+    // ticket: aucun (sélecteur du système)
     showTimePicker(
       context: context,
       initialTime: initiale,
@@ -555,6 +556,7 @@ void ouvrirCorrection({
   final repo = ref.read(brewsRepositoryProvider);
   final messenger = ScaffoldMessenger.of(context);
   unawaited(
+    // ticket: /brassins/:id/fenetre/correction, /brassins/:id/jour/fenetre/correction
     showFeuilleOuDialogue<void>(
       context: context,
       fermetureProtegee: true,

@@ -33,6 +33,7 @@ Future<void> ouvrirFormulaireFrais(
   BuildContext context, {
   required String uid,
   Fee? initial,
+  // ticket: /prix/fenetre/frais
 }) => showFeuilleOuDialogue<void>(
   context: context,
   fermetureProtegee: true,
@@ -87,6 +88,7 @@ class _FormulaireFraisState extends ConsumerState<FormulaireFrais> {
       navigator.pop();
       return;
     }
+    // ticket: aucun (confirmation)
     final abandon = await confirmerAbandon(context, TextesFrais.abandon);
     if (abandon && mounted) navigator.pop();
   }

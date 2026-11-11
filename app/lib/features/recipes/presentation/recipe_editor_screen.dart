@@ -262,6 +262,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
 
   // ------------------------------------------------------------ lignes
 
+  // ticket: /recettes/nouvelle/fenetre/malt, /recettes/:id/modifier/fenetre/malt
   Future<void> _openFermentable([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireFermentescible(
@@ -276,6 +277,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ),
   );
 
+  // ticket: /recettes/nouvelle/fenetre/houblon, /recettes/:id/modifier/fenetre/houblon
   Future<void> _openHop([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireHoublon(
@@ -291,6 +293,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ),
   );
 
+  // ticket: /recettes/nouvelle/fenetre/ajout, /recettes/:id/modifier/fenetre/ajout
   Future<void> _openOther([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireAjout(
@@ -303,6 +306,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ),
   );
 
+  // ticket: /recettes/nouvelle/fenetre/levure, /recettes/:id/modifier/fenetre/levure
   Future<void> _openYeast() => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireLevure(
@@ -315,6 +319,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ),
   );
 
+  // ticket: /recettes/nouvelle/fenetre/palier, /recettes/:id/modifier/fenetre/palier
   Future<void> _openStep([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulairePalier(
@@ -476,6 +481,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           ? null
           : BarreCalculs(
               calculs: calculs,
+              // ticket: /recettes/nouvelle/fenetre/calculs, /recettes/:id/modifier/fenetre/calculs
               onTap: () => showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,

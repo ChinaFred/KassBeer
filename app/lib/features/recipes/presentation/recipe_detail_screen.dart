@@ -97,6 +97,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
 
   Future<void> _delete(Recipe recipe) async {
     final messenger = ScaffoldMessenger.of(context);
+    // ticket: aucun (confirmation)
     final confirmed = await confirmerSuppression(
       context,
       titre: RecipeDetailScreen.deleteTitle(recipe.name),

@@ -251,6 +251,7 @@ class _Tableau extends ConsumerWidget {
         ? retenue.event.id
         : null;
     final titre = _titreChoix(champ);
+    // ticket: /brassins/:id/fenetre/mesure-retenue
     final choix = await showFeuilleOuDialogue<_Choix>(
       context: context,
       builder: (context) => _FeuilleChoix(
@@ -294,6 +295,7 @@ class _Tableau extends ConsumerWidget {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     final repo = ref.read(brewsRepositoryProvider);
+    // ticket: /brassins/:id/fenetre/densite-volume
     await showFeuilleOuDialogue<void>(
       context: context,
       fermetureProtegee: true,
@@ -1160,6 +1162,7 @@ class _FormulaireMesureSeuleState extends State<_FormulaireMesureSeule> {
     final debut = premier == null
         ? DateTime(aujourdhui.year - 5)
         : DateTime(premier.year, premier.month, premier.day);
+    // ticket: aucun (sélecteur du système)
     final picked = await showDatePicker(
       context: context,
       initialDate: base.isBefore(debut) ? debut : base,
