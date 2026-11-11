@@ -3,7 +3,7 @@
   "rule": "Un bloc recipe_steps reçoit brew_steps, ou à défaut le préremplissage sans les étapes sans durée ; dry_hops reçoit un houblon à cru par étape, dans l'ordre de la recette ; packaging_additions reçoit les houblons au conditionnement puis les ajouts au conditionnement. Un bloc vide disparaît, et sa journée aussi si elle porte requires_recipe_block. Un houblon à cru qui a un jour d'ajout (day_minutes) tombe à J+round(day_minutes / 1440) ; sans jour, à l'écart du modèle. Une journée de houblonnage par jour distinct (rang 1, 2… s'il y en a plusieurs) ; écart de source recipe, sauf si un de ses houblons n'a pas de jour (template). Au-delà de 5 journées, les jours de houblonnage les plus tardifs se regroupent dans le premier jour regroupé. Tri par écart, à égalité dans l'ordre du modèle. Date d'une journée : jour calendaire local du départ plus l'écart, à minuit, inverse de fermentationDayNumber.",
   "templates": {
     "exemple": {
-      "name": "Modèle d'exemple",
+      "name": "Brassage, houblonnage à cru, embouteillage",
       "notes": "Durées typiques, à ajuster à votre matériel.",
       "sessions": [
         {

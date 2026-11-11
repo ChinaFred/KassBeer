@@ -10,19 +10,19 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
 l'administrateur saisit le nom d'un membre. Les prix, les frais et les coûts figés d'un
 membre ne sont lus que par lui, administrateur compris ; ceux d'un membre retiré restent en
 base et plus personne ne les lit. Retirer un compte ne supprime ni ses recettes ni
-ses brassins, qui restent visibles du groupe. Les recettes et équipements d'un membre retiré
-restent lisibles, ne sont plus modifiables par personne dans l'application, et peuvent être
-dupliqués.
+ses brassins, qui restent visibles du groupe. Les recettes, équipements et processus d'un
+membre retiré restent lisibles, ne sont plus modifiables par personne dans l'application, et
+peuvent être dupliqués ou copiés.
 
-L'auteur d'une recette ou d'un équipement s'affiche « Vous » pour soi, sinon par le nom de
+L'auteur d'une recette, d'un équipement ou d'un processus s'affiche « Vous » pour soi, sinon par le nom de
 son compte Google enregistré avec le contenu, sinon « Autre brasseur ». Ce nom ne donne
 aucun droit : seuls les droits du compte auteur comptent.
 
@@ -70,7 +70,7 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue), un séparateur, « Mes prix », un séparateur, « Signaler ou proposer », « Mes
+pu être lue), un séparateur, « Mes prix », « Mes processus », un séparateur, « Signaler ou proposer », « Mes
 tickets », « Tickets à traiter » (administrateur seul), « Nouveautés », « Sources des données », un séparateur et « Se
 déconnecter ». Une déconnexion qui échoue
 affiche « Déconnexion impossible. Réessayez. ».
@@ -1252,6 +1252,132 @@ au-delà, « Ajouter un frais » laisse la place à « 20 frais au plus. Supprim
 ajouter un autre. ». « Nouveau frais », « Modifier le frais », mêmes boutons et même protection
 que le formulaire de prix. Annonces : « Frais enregistré. », « Frais enregistré sur l'appareil.
 Il partira au retour du réseau. », « Frais « Capsules » supprimé. » avec « Annuler » 10 s.
+
+### Mes processus
+
+Un processus est un modèle de déroulé : de 1 à 5 journées (le brassage, puis par exemple le
+houblonnage à cru et l'embouteillage), chacune avec son écart en jours depuis le brassage et
+ses étapes de préparation et de nettoyage. Le groupe le lit ; seul son auteur le modifie. Le
+choix du processus d'un brassin arrive avec la livraison suivante (ADR-009, lot D3).
+
+**Accès.** « Mes processus » s'ouvre depuis le menu du compte, sous « Mes prix » : page
+pleine, hors de la barre de navigation, avec retour. Adresses : `/processus` (liste),
+`/processus/nouveau`, `/processus/{id}` (fiche), `/processus/{id}/modifier`.
+
+**Liste.** Titre « Mes processus ». Section « Mes processus » (les siens, par nom), puis
+« Processus du groupe » (ceux des autres membres, par nom, avec leur auteur), masquée si elle
+est vide. Ligne : nom, puis « 3 journées · J+0, J+4, J+14 ». Étiquette « Par défaut » sur le
+processus choisi par défaut, « En attente du réseau » tant qu'une écriture n'a pas atteint le
+serveur. Le lecteur d'écran lit chaque ligne d'un bloc : « {nom}, 3 journées, de {auteur}, par
+défaut » ; le double appui ouvre la fiche. Bouton flottant « Nouveau processus » sur téléphone, bouton en tête au-delà ; une
+colonne centrée sur 840 pixels.
+
+- Chargement : « Chargement des processus ». Lecture impossible : « Impossible de lire les
+  processus. », « Réessayer » et « Nouveau processus ». Une panne après une première lecture garde la liste, avec
+  le bandeau « Mise à jour de la liste impossible. Elle peut ne plus être à jour. ».
+- Aucun processus à soi : « Aucun processus. Un processus ajoute à vos brassins les étapes de
+  préparation et de nettoyage, et les journées après le brassage. », avec « Partir du modèle
+  d'exemple » et « Nouveau processus ». Le bouton flottant et le bouton en tête ne s'affichent
+  pas en plus. La section du groupe reste dessous.
+- Document illisible : ligne « Processus illisible » / « Le document contient une valeur
+  inattendue. ». L'erreur est rapportée ; les autres processus restent affichés.
+- Hors ligne : la liste vient du cache, les écritures attendent le réseau. Liste jamais lue
+  sur l'appareil : « Processus indisponibles hors ligne. » et « Nouveau processus ».
+
+**Modèle d'exemple.** « Partir du modèle d'exemple » ouvre « Nouveau processus » prérempli :
+nom « Brassage, houblonnage à cru, embouteillage », notes « Durées typiques, à ajuster à votre
+matériel. », trois journées (Brassage J+0 ; Houblonnage à cru J+4, seulement si la recette a
+des houblons à cru ; Embouteillage J+14). Rien n'est écrit avant « Enregistrer » ; quitter
+demande « Abandonner les modifications ? ». Il n'est proposé que si le lecteur n'a aucun
+processus.
+
+**Fiche.** Barre « Processus », retour vers la liste. Nom, « Processus de {auteur} » pour un
+autre membre, notes. Une section par journée : « 1. Brassage · J+0 » ; la mention « Seulement
+si la recette a des houblons à cru » (ou « … des ajouts à l'embouteillage ») si la journée en
+dépend ; le résumé « 9 étapes · 4 h 15 + chronologie de la recette » (étapes du processus et
+leur durée, puis le bloc), ou le bloc seul pour une journée sans étape (« Houblons à cru ») ; puis chaque étape (« Mise en place du matériel · 30 min ·
+67 °C ») et chaque bloc tiré de la recette (« Chronologie de la recette », « Houblons à cru »,
+« Ajouts à l'embouteillage »), sur fond `secondaryContainer`, lu « Bloc de la recette :
+Houblons à cru ».
+
+- L'auteur voit l'interrupteur « Proposer par défaut dans Nouveau brassin » (« Ce choix ne
+  concerne que vous. »), « Modifier », « Supprimer » et, dans ⋮, « Dupliquer ». Pendant la
+  lecture du choix, l'interrupteur est inactif, avec « Lecture du choix par défaut » ; en
+  panne, « Impossible de lire votre choix par défaut. » et « Réessayer ». Annonces :
+  « « {nom} » sera proposé par défaut. » / « Aucun processus proposé par défaut. ». Un seul
+  processus est proposé par défaut ; le choix est privé.
+- Un autre membre voit le seul bouton « Copier dans mes processus » (« Copie » pendant la
+  lecture du nom du compte, 3 s au plus). La copie garde le nom, reçoit de nouvelles clés de
+  journées et d'étapes, s'écrit au nom du lecteur et ouvre sa fiche : « Processus copié dans
+  vos processus. » (hors ligne : « Processus copié sur l'appareil. Il partira au retour du
+  réseau. »).
+- « Dupliquer » crée « {nom} (copie) » et ouvre sa fiche : « Processus dupliqué. ». Pendant la
+  lecture du nom du compte, ⋮ laisse place à « Duplication » : un second appui ne crée pas de
+  seconde copie.
+- Absent du serveur : « Ce processus n'existe pas ou a été supprimé. » et « Revenir à mes
+  processus ». Absent du cache hors ligne : « Processus indisponible hors ligne. ».
+  Illisible : « Processus illisible. Mettez l'application à jour, ou prévenez
+  l'administrateur. », rapporté.
+
+**Supprimer.** « Supprimer « {nom} » ? » / « Le processus disparaît pour tout le groupe. Les
+brassins déjà créés gardent leur déroulé. », plus, si c'est le processus par défaut : « C'est
+votre processus par défaut : Nouveau brassin proposera la chronologie de la recette seule. ».
+Supprimer le processus par défaut remet le choix à « Chronologie de la recette seule », une
+fois la suppression acceptée par le serveur ; refusée, le choix reste.
+Annonce « Processus supprimé. ».
+
+**Éditeur** (« Nouveau processus » / « Modifier le processus », plein écran, une colonne
+centrée sur 920 pixels, « Enregistrer »). « Nom du processus » (obligatoire, 120 caractères ;
+sinon « Donnez un nom au processus. », curseur sur le champ), « Notes (facultatif) »
+(10 000 caractères). À la création seulement : « Proposer par défaut dans Nouveau brassin »,
+coché si le lecteur n'a pas de processus par défaut. Tant que son choix n'est pas lu avec
+certitude (lecture en cours, cache seul, document illisible, panne), l'interrupteur est
+décoché et inactif, avec « Lecture du choix par défaut » ou « Votre choix actuel n'a pas pu
+être lu. » : aucun défaut existant n'est remplacé. Un nouveau processus part de la journée
+« Brassage » et de son bloc « Chronologie de la recette ».
+
+- Journée 1 : fixe (ni retrait ni déplacement), « J+0, jour du brassage », bloc « Chronologie
+  de la recette » d'office, non retirable (« Obligatoire dans la journée de brassage ») ;
+  ⋮ « Renommer la journée » seul.
+- Journées 2 à 5 : en-tête « 2. Houblonnage à cru · J+4 », lu « Journée 2 sur 3, Houblonnage
+  à cru, J+4 » ; ⋮ « Modifier la journée », « Retirer la journée », et « Monter » ou
+  « Descendre » seulement entre deux journées de même écart. Les journées se trient par écart à
+  chaque changement ; un déplacement s'annonce (« « Embouteillage » passe en journée 3. »).
+  Retirer une journée annonce « Journée « {nom} » retirée. » avec « Annuler ».
+- Formulaire de journée (feuille du bas sur téléphone, dialogue au-delà) : « Nom de la
+  journée » (obligatoire, 120 caractères, « Donnez un nom à la journée. »), « Écart (jours
+  après le brassage) » (entier de 0 à 365, sans valeur d'avance : « Champ obligatoire. »,
+  « Nombre entier attendu. », « Entre 0 et 365. »), aide « J+4 : quatre jours après le jour
+  du brassage. Pour les houblons à cru, le jour fixé par la recette passe avant. » ;
+  « Annuler », « Ajouter » ou « Enregistrer ».
+- Étapes : le formulaire d'étape de la chronologie d'une recette (nom de 120 caractères, durée
+  de 0 à 600 min, température de 0 à 100 °C). Ligne « 2. Désinfection du fermenteur » /
+  « +30 min · 20 min · 67 °C ». Après la chronologie de la recette, dont la durée n'est connue
+  qu'au brassin, le décalage se compte depuis elle (« +20 min après la chronologie de la
+  recette »). Poignée de déplacement dans la journée ; l'éditeur défile pendant le
+  glisser ; ⋮ « Monter », « Descendre »,
+  « Dupliquer », « Retirer » (« « {nom} » retiré. » avec « Annuler »). Un déplacement
+  s'annonce au lecteur d'écran (« « {nom} » en position 3. »). Une étape ne change pas de
+  journée.
+- Blocs : « Insérer un bloc de la recette » (journées 2 et suivantes) propose « Houblons à
+  cru » et « Ajouts à l'embouteillage », chacun une fois dans le processus, un seul par
+  journée. Un bloc déjà placé est inactif (« Déjà dans « Houblonnage à cru » ») ; un second
+  bloc dans la même journée aussi (« Une journée porte un seul bloc de la recette. »). La ligne
+  d'un bloc n'a pas de formulaire ; ⋮ « Monter », « Descendre », « Retirer ». Une insertion
+  s'annonce au lecteur d'écran (« Houblons à cru ajouté en position 4. »). Sous la ligne du
+  bloc, qu'il suit quand le bloc se déplace : « Seulement si la recette en a » (« Sans houblon à cru dans la
+  recette, le brassin n'aura pas cette journée. » ou « Sans ajout à l'embouteillage dans la
+  recette, le brassin n'aura pas cette journée. ») ; retirer le bloc éteint l'interrupteur.
+- Bornes : « 60 étapes au plus dans une journée. » (blocs compris, boutons inactifs) ;
+  « 5 journées au plus. » au-dessus du bouton inactif « Ajouter une journée ».
+- Enregistrer : une journée sans étape est refusée (« La journée « {nom} » n'a aucune
+  étape. », l'éditeur défile jusqu'à elle). Annonces « Processus enregistré. », hors ligne
+  « Processus enregistré sur l'appareil. Il partira au retour du réseau. », refus
+  « L'enregistrement de « {nom} » a échoué. ». La fiche s'ouvre. Quitter avec des
+  changements : « Abandonner les modifications ? » / « Les changements de ce processus ne
+  seront pas enregistrés. ».
+- Un autre membre sur l'adresse de modification : « Seul l'auteur modifie ce processus. » et
+  « Voir le processus ».
 
 ### Coût
 

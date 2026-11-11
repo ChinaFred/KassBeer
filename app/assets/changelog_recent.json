@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.28",
+      "date": "2026-11-11",
+      "paragraphs": [
+        "Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune à quelques jours du brassage, avec ses étapes de préparation et de nettoyage autour de celles de la recette. La liste montre vos processus, puis ceux des autres brasseurs. Pour commencer, « Partir du modèle d'exemple » ouvre un processus de trois journées aux durées typiques, à ajuster à votre matériel avant de l'enregistrer. Vous modifiez, dupliquez et supprimez les vôtres, et vous choisissez celui que « Nouveau brassin » vous proposera : ce choix ne concerne que vous. Le processus d'un autre brasseur se copie dans les vôtres. Un processus compte 5 journées au plus et 60 étapes par journée ; les journées se rangent d'elles-mêmes par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création d'un brassin arrive avec une prochaine version."
+      ]
+    },
+    {
       "version": "0.1.26",
       "date": "2026-11-11",
       "paragraphs": [
@@ -38,13 +45,6 @@
         "La quantité d'un ajout et celle d'une levure se saisissent en grammes ou en millilitres : le choix de l'unité se trouve avant la quantité. Une quantité en volume s'affiche en millilitres sous 1 L, en litres au-delà.",
         "Dans Mes prix, un houblon ou un ajout peut avoir un prix au litre, saisi en litres ou en millilitres (« 6,50 € les 100 ml · 65,00 €/L »). Une ligne en millilitres se chiffre alors avec ce prix, dans le coût d'une recette comme dans le coût figé d'un brassin. Sans prix, « Saisir le prix au litre » l'ouvre directement en litres. Une ligne en millilitres face à un prix au gramme, ou l'inverse, le dit (« votre prix est au gramme ») : aucune densité n'est supposée ; le message dit toujours quelle unité de prix la ligne attend (au gramme, au litre ou au sachet). En remplaçant un prix au gramme par un prix au litre, ou l'inverse, le formulaire prévient que les lignes de l'autre unité ne seront plus comptées. Deux lignes de même nom, l'une en grammes et l'autre en volume, sont signalées : l'auteur les remet dans la même unité, un autre membre duplique la recette.",
         "Kass'Beer lit et garde maintenant les valeurs des recettes venues d'autres logiciels de brassage, avant l'arrivée de l'import : extrait liquide ou sec, miel, fruit et jus, comptés comme des sucres dans la densité initiale ; houblon à l'empâtage ou au conditionnement ; cônes pressés, comptés comme des cônes ; houblon en poudre, en extrait ou en cônes frais ; jour d'ajout d'un houblon à cru ; auteur indiqué par le fichier importé, affiché sur la fiche. L'éditeur garde ces valeurs à l'enregistrement. Quand le calcul ne sait pas les traiter, « À compléter » le dit : « Nature à préciser », « Moment non pris en charge par le calcul », « Forme non prise en charge par le calcul » ; l'éditeur avertit aussi sous la nature et sous la forme. Un houblon mesuré en volume n'est pas compté dans l'amertume, et la fiche le nomme ; l'en-tête des houblons ne compte que les houblons pesés dans sa masse. Dans Prévu et mesuré, la question sur les sucres nomme les ingrédients ajoutés hors de l'empâtage. Les choix par boutons passent l'un sous l'autre quand le texte est grand. Les chiffres des recettes existantes ne changent pas."
-      ]
-    },
-    {
-      "version": "0.1.16",
-      "date": "2026-11-10",
-      "paragraphs": [
-        "Le menu du compte gagne « Signaler ou proposer » et « Mes tickets ». Un membre signale un bug, propose une évolution ou une nouvelle fonctionnalité depuis l'écran où il se trouve, même sans réseau : le ticket part au retour de la connexion. Le titre et la description sont publiés sur un site public, sans le nom ni l'adresse de l'auteur. « Mes tickets » montre où en est chaque demande : reçue, validée, en cours, livrée, refusée ou close, avec la réponse de l'administrateur. Une pastille sur l'avatar signale un changement à lire. Une demande livrée dit dans quelle version, et si une mise à jour de l'application est nécessaire. Cinq tickets par membre et par jour, vingt pour le groupe. L'administrateur voit sur la page Admin si l'envoi des tickets est bloqué."
       ]
     }
   ]

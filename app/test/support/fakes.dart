@@ -36,6 +36,7 @@ import 'package:kass_beer/features/tickets/domain/ticket.dart';
 import 'package:kass_beer/features/tickets/presentation/tickets_providers.dart';
 
 import 'cost_fakes.dart';
+import 'process_fakes.dart';
 
 /// Flux qui rejoue sa dernière valeur ou erreur à chaque nouvel abonné.
 class Replay<T> {
@@ -1059,6 +1060,8 @@ class TestApp {
       tickets = FakeTicketsRepository(),
       fichiers = FakeEchangeFichiers(),
       library = FakeLibraryRepository(),
+      processes = FakeProcessesRepository(),
+      preferences = FakePreferencesProcessusRepository(),
       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
@@ -1077,6 +1080,8 @@ class TestApp {
         costsRepositoryProvider.overrideWithValue(costs),
         ticketsRepositoryProvider.overrideWithValue(tickets),
         libraryRepositoryProvider.overrideWithValue(library),
+        processesRepositoryProvider.overrideWithValue(processes),
+        preferencesProcessusRepositoryProvider.overrideWithValue(preferences),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
           return openLinkResult;
@@ -1106,6 +1111,8 @@ class TestApp {
   final FakeTicketsRepository tickets;
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
+  final FakeProcessesRepository processes;
+  final FakePreferencesProcessusRepository preferences;
 
   /// Analyse d'un fichier importé, remplaçable par les tests.
   AnalyseFichier Function(List<int>) analyseur = analyserFichier;

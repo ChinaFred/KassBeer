@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../recipes/domain/chronologie.dart';
+import '../../recipes/domain/recipe.dart' show truncateName;
 
 /// Modèle de processus (`process_templates/{id}`, ADR-009) : de 1 à 5 journées
 /// nommées, chacune avec son écart en jours et ses étapes, dont les blocs tirés de
@@ -211,6 +212,7 @@ class ModeleProcessus {
     this.ownerName,
     this.createdAt,
     this.updatedAt,
+    this.hasPendingWrites = false,
   });
 
   final String id;
@@ -224,9 +226,16 @@ class ModeleProcessus {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Une écriture locale attend le serveur (« En attente du réseau »).
+  final bool hasPendingWrites;
+
   /// Lit `process_templates/{id}` ; lève [DocumentIllisible] comme
   /// [ContenuModele.fromFirestore].
-  factory ModeleProcessus.fromFirestore(String id, Map<String, dynamic> data) {
+  factory ModeleProcessus.fromFirestore(
+    String id,
+    Map<String, dynamic> data, {
+    bool hasPendingWrites = false,
+  }) {
     final read = LecteurChamps(data);
     return ModeleProcessus(
       id: id,
@@ -235,9 +244,42 @@ class ModeleProcessus {
       content: ContenuModele.fromFirestore(data),
       createdAt: read.date('created_at'),
       updatedAt: read.date('updated_at'),
+      hasPendingWrites: hasPendingWrites,
     );
   }
 }
+
+/// Copie de [modele] avec des clés neuves pour chaque journée et chaque élément
+/// ([nouvelleCle] : `doc().id`) : copie d'un modèle du groupe, duplication. Le nom
+/// devient [name] s'il est donné, coupé à [kNomModeleMaxLength] caractères.
+ContenuModele copieModele(
+  ContenuModele modele,
+  String Function() nouvelleCle, {
+  String? name,
+}) => ContenuModele(
+  name: name == null ? modele.name : truncateName(name, kNomModeleMaxLength),
+  notes: modele.notes,
+  journees: [
+    for (final j in modele.journees)
+      JourneeModele(
+        key: nouvelleCle(),
+        name: j.name,
+        offsetDays: j.offsetDays,
+        requiresRecipeBlock: j.requiresRecipeBlock,
+        elements: [
+          for (final e in j.elements)
+            e.estBloc
+                ? ElementModele.bloc(key: nouvelleCle(), nature: e.nature)
+                : ElementModele.etape(
+                    key: nouvelleCle(),
+                    name: e.name!,
+                    durationMin: e.durationMin!,
+                    tempC: e.tempC,
+                  ),
+        ],
+      ),
+  ],
+);
 
 /// Première erreur d'un modèle à enregistrer, ou `null`. Les règles ne lisent
 /// pas les journées : le dépôt n'écrit le modèle qu'à cette condition.

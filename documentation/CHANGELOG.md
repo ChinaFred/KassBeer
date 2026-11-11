@@ -6,6 +6,32 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
+### v0.1.28 — fonctionnel
+
+Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées
+d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune
+à quelques jours du brassage, avec ses étapes de préparation et de nettoyage autour de celles
+de la recette. La liste montre vos processus, puis ceux des autres brasseurs. Pour commencer,
+« Partir du modèle d'exemple » ouvre un processus de trois journées aux durées typiques, à
+ajuster à votre matériel avant de l'enregistrer. Vous modifiez, dupliquez et supprimez les
+vôtres, et vous choisissez celui que « Nouveau brassin » vous proposera : ce choix ne
+concerne que vous. Le processus d'un autre brasseur se copie dans les vôtres. Un processus
+compte 5 journées au plus et 60 étapes par journée ; les journées se rangent d'elles-mêmes
+par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création
+d'un brassin arrive avec une prochaine version.
+
+### v0.1.28 — technique
+
+Lot D2 d'ADR-009. Dépôts `ProcessesRepository` (`process_templates/` : document illisible
+isolé et rapporté, `erreurModele` vérifié avant chaque écriture, copie et duplication à clés
+neuves) et `PreferencesProcessusRepository` (`users/{uid}/preferences/processes`), sans
+transaction. Le défaut n'est remis à nul qu'après l'acceptation de la suppression de son
+processus. `LigneEditeur` accepte une ligne sans formulaire, avec une icône en tête ; l'éditeur
+de recette ne change pas. L'éditeur de processus défile en un seul `CustomScrollView`, une
+`SliverReorderableList` par journée. Le modèle d'exemple s'appelle « Brassage, houblonnage à
+cru, embouteillage », dans l'application et dans `brewing/test/fixtures/process.json`. Aucune
+dépendance ne change.
+
 ### v0.1.27 — technique
 
 Premier lot (D1) d'ADR-009 : un brassin pourra suivre de 1 à 5 journées (brassage,

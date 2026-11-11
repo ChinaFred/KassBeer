@@ -22,6 +22,9 @@ import '../../features/library/presentation/library_screen.dart';
 import '../../features/library/presentation/public_recipe_screen.dart';
 import '../../features/library/presentation/reference_entry_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
+import '../../features/processes/presentation/process_detail_screen.dart';
+import '../../features/processes/presentation/process_editor_screen.dart';
+import '../../features/processes/presentation/process_list_screen.dart';
 import '../../features/recipes/presentation/brew_steps_editor_screen.dart';
 import '../../features/recipes/presentation/import_recipes_screen.dart';
 import '../../features/recipes/presentation/recipe_detail_screen.dart';
@@ -169,6 +172,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // « Mes prix » : page pleine avec retour, hors de la coquille.
       GoRoute(path: AppRoutes.prices, builder: (_, _) => const PricesScreen()),
+      // « Mes processus » (ADR-009) : pages pleines hors de la coquille. Liste
+      // ouverte par `push` depuis le menu du compte ; « nouveau » avant « :id ».
+      GoRoute(
+        path: AppRoutes.processes,
+        builder: (_, _) => const ProcessListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.newProcess,
+        builder: (_, state) => ProcessEditorScreen(
+          exemple:
+              state.uri.queryParameters[AppRoutes.exampleQueryParam] ==
+              'exemple',
+        ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.processes}/:id/modifier',
+        builder: (_, state) =>
+            ProcessEditorScreen(id: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: '${AppRoutes.processes}/:id',
+        builder: (_, state) =>
+            ProcessDetailScreen(id: state.pathParameters['id']!),
+      ),
       GoRoute(
         path: AppRoutes.newEquipment,
         builder: (_, _) => const EquipmentEditorScreen(),

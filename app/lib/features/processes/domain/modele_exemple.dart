@@ -7,7 +7,8 @@ import 'modele_processus.dart';
 /// recette (P37). Ses durées ne sont pas des formules de brassage (P3). Cas
 /// `exemple` de `brewing/test/fixtures/process.json`.
 
-const kNomModeleExemple = 'Modèle d\'exemple';
+/// Nom de la copie, modifiable avant « Enregistrer ».
+const kNomModeleExemple = 'Brassage, houblonnage à cru, embouteillage';
 
 /// Note portée par chaque copie du modèle d'exemple.
 const kNoteModeleExemple = 'Durées typiques, à ajuster à votre matériel.';

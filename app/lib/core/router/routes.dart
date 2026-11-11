@@ -29,6 +29,16 @@ abstract final class AppRoutes {
   /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
   static const prices = '/prix';
 
+  /// « Mes processus » (ADR-009) : pages pleines hors de la coquille, la liste
+  /// ouverte par `push` depuis le menu du compte. `?modele=exemple` ouvre
+  /// « Nouveau processus » prérempli du modèle d'exemple.
+  static const processes = '/processus';
+  static const newProcess = '/processus/nouveau';
+  static const exampleQueryParam = 'modele';
+  static const newProcessFromExample = '$newProcess?$exampleQueryParam=exemple';
+  static String process(String id) => '$processes/$id';
+  static String editProcess(String id) => '$processes/$id/modifier';
+
   /// Écran « Nouveautés », ouvert depuis le menu du compte.
   static const news = '/nouveautes';
 
