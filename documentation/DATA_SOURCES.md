@@ -78,7 +78,7 @@ Recettes › Importer. Le modèle est déjà en BeerJSON : la lecture garde les 
 | `HopAdditionType.timing`, `use: add_to_boil` | `time` ; sinon `duration` ; `time` 0 avec `duration` | ébullition `time` ; ébullition `duration` (ADR-005) ; après l'arrêt du feu, pour `duration` |
 | `timing` d'un ajout à cru, à l'empâtage, au conditionnement | `time` en plus de `duration` | `duration` seule, simplification listée (le jour d'ajout d'un houblon à cru est gardé) |
 | Quantité d'une levure | `pkg`, `each`, `unit` | absente, listée ; pour un malt, un houblon ou un ajout, recette refusée |
-| `style` | objet complet | nom seul (ADR-005 : la catégorie demande `beer_styles`), listé |
+| `style` | objet complet | nom seul, listé ; l'export BeerXML relit la catégorie et les plages dans `beer_styles` par ce nom exact (ADR-005, E4) |
 | `efficiency`, valeurs annoncées, `fermentation`, `water_additions`, `packaging`, `taste` | toute valeur | non importés, listés |
 | `inventory`, prix, champs inconnus | toute valeur | ignorés, comptés (P5) |
 | Valeur convertie au-delà des plafonds | plus de 1 000 kg ou 1 000 L par ligne, 10 000 L de volume, 2 000 EBC, 365 jours hors ébullition, nombre non fini | quantité obligatoire : recette refusée ; valeur facultative : absente, listée |
@@ -127,8 +127,8 @@ fichier refusé (P9). Une perte « listée » est une ligne de « Modifié à l'
 | `VERSION`, `DISPLAY_*`, `DISP_*`, `INVENTORY` | toute valeur | jamais lus, non comptés |
 | Prix, champs inconnus | toute valeur | ignorés, comptés (P5) |
 
-Export BeerXML (`exchange/`, v0.1.21 ; bloqué dans l'application jusqu'au référentiel des
-styles, L3) :
+Export BeerXML (`exchange/`, v0.1.21 ; appelé par la feuille « Exporter » depuis la v0.1.28,
+style lu dans la Bibliothèque, ADR-005, E4) :
 
 | Valeur Kass'Beer | BeerXML écrit |
 |---|---|
@@ -277,6 +277,49 @@ valeur technique, et partent dans `import_unresolved/` (100 noms).
 
 Une correspondance floue ne remplace jamais une valeur de la source. Un nom non résolu reste
 dans la recette, sans valeur technique, et apparaît dans `import_unresolved/`.
+
+## Résolution d'un import contre la Bibliothèque
+
+Recettes › Importer (ADR-005, E5, v0.1.28) résout chaque ligne contre `beer_index/`, lu sur
+l'appareil, par `completerRecette` d'`exchange/`. Même normalisation que l'ingestion
+(`exchange/lib/src/noms.dart`), sans la table d'alias de DIY Dog en dur : ses noms sont déjà
+dans les `aliases` de l'index.
+
+| Étape | Correspondance |
+|---|---|
+| 1 | identifiant `<nature>-<clé du nom>` |
+| 2 | seule entrée dont le nom ou un alias a la clé du nom |
+| 3 (levure) | seule souche lue dans le nom : `Wyeast 1056`, `WLP001` |
+| 4 (levure) | seule entrée de cette référence : `US-05`, `us05` |
+| 5 (levure) | seule entrée de ce producteur et de cette référence : `Fermentis US-05` |
+
+Deux entrées pour une même clé ne résolvent rien. Valeurs reprises, seulement si la ligne n'en a
+pas : malt `type`, `yield.fine_grind`, `color` ; houblon `alpha_acid`, `form` ; levure `type`,
+`form`, `attenuation` (milieu de la plage de la fiche) ; autre ajout `type`. Chaque reprise est
+listée au compte rendu. Les étapes 4 et 5 et la reprise de la forme du houblon et du type d'un
+ajout vont au-delà de l'ingestion (D4) : ce sont des choix de l'étape 3 (ADR-005, E7). Un nom non
+résolu d'un import est signalé dans `import_unresolved/` avec `source: import` et `key` (le nom
+normalisé), sous un identifiant propre à l'import (SHA-256 de `import|nature|key`, vérifié par
+les règles) : il ne touche jamais un document de l'ingestion, et un même nom a une ligne par
+origine. 200 noms au plus par import ; les suivants sont comptés au compte rendu.
+
+## Correspondance `beer_styles` → `STYLE` du BeerXML
+
+Export BeerXML (ADR-005, E4 et E7, v0.1.28). Le type déduit des levures et le blocage d'un
+style sans plages sont des choix de l'étape 3 (E7). Le style est cherché par son nom exact dans
+`beer_index/styles`, puis lu dans `beer_styles/{id}`.
+
+| `STYLE` | Source |
+|---|---|
+| `NAME`, `CATEGORY`, `CATEGORY_NUMBER`, `STYLE_GUIDE` | `name`, `category`, `category_id`, `style_guide` (`BJCP2021`) |
+| `STYLE_LETTER` | `style_id` sans `category_id` : `21A` → `A`, `X1` → `1` |
+| `TYPE` | `mead` → `Mead`, `cider` → `Cider` ; `beer` (les 110 styles) : levures de la recette, `ale` et `kveik` → `Ale`, `lager` → `Lager`, `wheat` → `Wheat`, `brett`, `lacto`, `pedio`, `mixed-culture`, `spontaneous`, `bacteria`, `malolactic` ou deux classes différentes → `Mixed` ; sans levure typée, ou avec une levure `wine`, `champagne` ou `other` : export bloqué |
+| `OG_MIN` à `IBU_MAX` | plages en `sg` et en `IBUs` |
+| `COLOR_MIN`, `COLOR_MAX` | plage en EBC, écrite en SRM par `brewing/` |
+| `ABV_MIN`, `ABV_MAX` | plage en %, facultative |
+
+Un style sans catégorie, code, guide ou une plage de densité, d'amertume ou de couleur bloque
+l'export : 17 styles n'ont aucune plage (28A à 34C), IPA Argenta (X2) n'a pas de densités.
 
 ## Correspondance BJCP (fichier 002) → `beer_styles`
 

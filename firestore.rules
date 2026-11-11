@@ -728,17 +728,60 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Comptes rendus de l'ingestion et noms DIY Dog non résolus : écrits par le script
-    // seul, lus par l'admin (Admin › Sources, L4). La création d'un non résolu par un
-    // membre arrivera avec la résolution à l'import (ADR-005, D6).
+    // Comptes rendus de l'ingestion : écrits par le script seul, lus par l'admin
+    // (Admin › Sources, L4).
     match /ingest_runs/{runId} {
       allow read: if isAdmin();
       allow write: if false;
     }
 
+    // Noms non résolus (ADR-005, D6 et E6) : écrits par le script (source diydog,
+    // identifiant SHA-256 de « nature|nom normalisé », sans key) et, après un import,
+    // par un membre (source import, key = nom normalisé, identifiant SHA-256 de
+    // « import|nature|key », vérifié à la création : les deux origines ne partagent
+    // jamais un document). Un membre crée le document à count 1, puis le compte monte
+    // d'un à chaque import ; name peut changer de graphie, nature, key et source ne
+    // changent pas, et seul un document d'import se met à jour. Ni e-mail, ni uid, ni
+    // nom de fichier. Lu par l'admin seul, jamais supprimé par un client.
+    function isUnresolvedId(id) {
+      return id.matches('^[0-9a-f]{64}$');
+    }
+
+    function unresolvedFields() {
+      return request.resource.data.keys().hasOnly(
+               ['nature', 'key', 'name', 'source', 'count', 'updated_at'])
+        && request.resource.data.keys().hasAll(
+               ['nature', 'key', 'name', 'source', 'count', 'updated_at'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.count is int
+        && request.resource.data.updated_at == request.time;
+    }
+
     match /import_unresolved/{unresolvedId} {
       allow read: if isAdmin();
-      allow write: if false;
+      allow create: if isMember()
+        && isUnresolvedId(unresolvedId)
+        && unresolvedFields()
+        && request.resource.data.nature in ['fermentable', 'hop', 'culture', 'misc']
+        && request.resource.data.key is string
+        && request.resource.data.key.size() >= 1
+        && request.resource.data.key.size() <= 100
+        && request.resource.data.key.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+        && hashing.sha256('import|' + request.resource.data.nature + '|'
+             + request.resource.data.key).toHexString().lower() == unresolvedId
+        && request.resource.data.source == 'import'
+        && request.resource.data.count == 1;
+      allow update: if isMember()
+        && isUnresolvedId(unresolvedId)
+        && resource.data.source == 'import'
+        && unresolvedFields()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name', 'count', 'updated_at'])
+        && resource.data.count is int
+        && request.resource.data.count == resource.data.count + 1;
+      allow delete: if false;
     }
 
     // ---------------------------------------------------------------- tickets

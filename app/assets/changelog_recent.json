@@ -1,6 +1,15 @@
 {
   "versions": [
     {
+      "version": "0.1.28",
+      "date": "2026-11-11",
+      "paragraphs": [
+        "L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon, d'un ajout ou d'une levure, vous voyez les ingrédients qui correspondent, par nom ou autre nom. Choisir l'un d'eux remplit les valeurs encore vides : couleur et rendement d'un malt, acides alpha et forme d'un houblon, type, forme et atténuation d'une levure, type d'un ajout. Une valeur déjà saisie ne change pas ; si elle diffère, « Reprendre les valeurs de la Bibliothèque » la remplace. Le champ « Style » propose les styles BJCP par code ou par nom. Hors ligne, les suggestions viennent de ce qui a déjà été lu ; sinon, la saisie reste libre.",
+        "L'export BeerXML est ouvert. Il retrouve le style de la recette dans la Bibliothèque, avec sa catégorie et ses plages. Une recette sans style de la Bibliothèque demande de le choisir dans les suggestions du champ Style. Le type du style BeerXML suit la levure de la recette : précisez-la si l'export le demande. Un style sans plage chiffrée dans le guide BJCP ne s'exporte pas en BeerXML : choisissez un autre style, ou exportez en BeerJSON. Quand votre équipement n'a pas l'évaporation, les pertes ou le volume mort, « Compléter l'équipement » ouvre sa fiche.",
+        "Recettes › Importer complète les valeurs absentes du fichier quand le nom d'un ingrédient est celui d'une entrée de la Bibliothèque, ou l'un de ses autres noms. Une valeur du fichier n'est jamais remplacée. Les détails de chaque recette listent les valeurs reprises, par exemple « Couleur de Pils reprise de la Bibliothèque. ». Hors ligne, l'import marche comme avant et le dit. Les noms qu'aucune entrée ne reconnaît sont signalés à l'administrateur, sans votre nom ni celui du fichier, pour qu'il complète la Bibliothèque."
+      ]
+    },
+    {
       "version": "0.1.26",
       "date": "2026-11-11",
       "paragraphs": [
@@ -38,13 +47,6 @@
         "La quantité d'un ajout et celle d'une levure se saisissent en grammes ou en millilitres : le choix de l'unité se trouve avant la quantité. Une quantité en volume s'affiche en millilitres sous 1 L, en litres au-delà.",
         "Dans Mes prix, un houblon ou un ajout peut avoir un prix au litre, saisi en litres ou en millilitres (« 6,50 € les 100 ml · 65,00 €/L »). Une ligne en millilitres se chiffre alors avec ce prix, dans le coût d'une recette comme dans le coût figé d'un brassin. Sans prix, « Saisir le prix au litre » l'ouvre directement en litres. Une ligne en millilitres face à un prix au gramme, ou l'inverse, le dit (« votre prix est au gramme ») : aucune densité n'est supposée ; le message dit toujours quelle unité de prix la ligne attend (au gramme, au litre ou au sachet). En remplaçant un prix au gramme par un prix au litre, ou l'inverse, le formulaire prévient que les lignes de l'autre unité ne seront plus comptées. Deux lignes de même nom, l'une en grammes et l'autre en volume, sont signalées : l'auteur les remet dans la même unité, un autre membre duplique la recette.",
         "Kass'Beer lit et garde maintenant les valeurs des recettes venues d'autres logiciels de brassage, avant l'arrivée de l'import : extrait liquide ou sec, miel, fruit et jus, comptés comme des sucres dans la densité initiale ; houblon à l'empâtage ou au conditionnement ; cônes pressés, comptés comme des cônes ; houblon en poudre, en extrait ou en cônes frais ; jour d'ajout d'un houblon à cru ; auteur indiqué par le fichier importé, affiché sur la fiche. L'éditeur garde ces valeurs à l'enregistrement. Quand le calcul ne sait pas les traiter, « À compléter » le dit : « Nature à préciser », « Moment non pris en charge par le calcul », « Forme non prise en charge par le calcul » ; l'éditeur avertit aussi sous la nature et sous la forme. Un houblon mesuré en volume n'est pas compté dans l'amertume, et la fiche le nomme ; l'en-tête des houblons ne compte que les houblons pesés dans sa masse. Dans Prévu et mesuré, la question sur les sucres nomme les ingrédients ajoutés hors de l'empâtage. Les choix par boutons passent l'un sous l'autre quand le texte est grand. Les chiffres des recettes existantes ne changent pas."
-      ]
-    },
-    {
-      "version": "0.1.16",
-      "date": "2026-11-10",
-      "paragraphs": [
-        "Le menu du compte gagne « Signaler ou proposer » et « Mes tickets ». Un membre signale un bug, propose une évolution ou une nouvelle fonctionnalité depuis l'écran où il se trouve, même sans réseau : le ticket part au retour de la connexion. Le titre et la description sont publiés sur un site public, sans le nom ni l'adresse de l'auteur. « Mes tickets » montre où en est chaque demande : reçue, validée, en cours, livrée, refusée ou close, avec la réponse de l'administrateur. Une pastille sur l'avatar signale un changement à lire. Une demande livrée dit dans quelle version, et si une mise à jour de l'application est nécessaire. Cinq tickets par membre et par jour, vingt pour le groupe. L'administrateur voit sur la page Admin si l'envoi des tickets est bloqué."
       ]
     }
   ]

@@ -121,6 +121,7 @@ export function db(env, name) {
 
 export const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
 export const deleteField = () => firebase.firestore.FieldValue.delete();
+export const increment = (n) => firebase.firestore.FieldValue.increment(n);
 export const Timestamp = firebase.firestore.Timestamp;
 
 /// Écrit des documents en contournant les règles.

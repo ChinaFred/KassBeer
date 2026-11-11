@@ -57,7 +57,7 @@ String? _t(ElementXml e, String nom) {
   return t == null || t.isEmpty ? null : t;
 }
 
-/// Style du fichier source, comme le donnera le référentiel des styles (L3).
+/// Style du fichier source, à la place de la fiche de la Bibliothèque.
 StyleBeerXml _styleDe(ElementXml recette) {
   final s = recette.enfant('STYLE')!;
   String t(String n) => _t(s, n)!;
@@ -745,6 +745,147 @@ void main() {
 
     test('nom du fichier : extension xml', () {
       expect(nomFichierExport('IPA maison', 'xml'), 'ipa-maison.xml');
+    });
+  });
+
+  group('style de la Bibliothèque (E4)', () {
+    const fiche = StyleBibliotheque(
+      nom: 'Blonde Ale',
+      categorie: 'Pale American Ale',
+      numeroCategorie: '18',
+      code: '18A',
+      guide: 'BJCP2021',
+      type: 'beer',
+      ogMin: 1.038,
+      ogMax: 1.054,
+      fgMin: 1.008,
+      fgMax: 1.013,
+      ibuMin: 15,
+      ibuMax: 28,
+      ebcMin: 5.91,
+      ebcMax: 11.82,
+      abvMin: 3.8,
+      abvMax: 5.5,
+    );
+
+    Map<String, Object?> avecLevures(List<String?> types) {
+      final recipe = _complete();
+      final ingredients = recipe['ingredients']! as Map<String, Object?>;
+      ingredients['culture_additions'] = [
+        for (final (i, t) in types.indexed)
+          {
+            'name': 'Levure $i',
+            'type': ?t,
+            'form': 'dry',
+            'attenuation': _m(75.0, '%'),
+            'amount': _m(11.5, 'g'),
+          },
+      ];
+      return recipe;
+    }
+
+    test('lettre tirée du code, type Ale lu dans la levure, export prêt', () {
+      final recipe = _complete();
+      final s = styleBeerXmlDe(fiche, recipe);
+      expect(s.manques, isEmpty);
+      final style = s.style!;
+      expect(style.numeroCategorie, '18');
+      expect(style.lettre, 'A');
+      expect(style.type, 'Ale');
+      expect(style.guide, 'BJCP2021');
+      final r = _exporter(recipe, style: style) as ExportPret;
+      expect(r.contenu, contains('<STYLE_LETTER>A</STYLE_LETTER>'));
+      expect(r.contenu, contains('<TYPE>Ale</TYPE>'));
+      expect(r.contenu, contains('<ABV_MAX>5.5</ABV_MAX>'));
+    });
+
+    test('catégorie X : X1 donne la lettre 1', () {
+      const x = StyleBibliotheque(
+        nom: 'Dorada Pampeana',
+        categorie: 'Argentine Styles',
+        numeroCategorie: 'X',
+        code: 'X1',
+        guide: 'BJCP2021',
+        type: 'beer',
+        ogMin: 1.042,
+        ogMax: 1.054,
+        fgMin: 1.009,
+        fgMax: 1.013,
+        ibuMin: 15,
+        ibuMax: 22,
+        ebcMin: 5.9,
+        ebcMax: 9.9,
+      );
+      expect(styleBeerXmlDe(x, _complete()).style!.lettre, '1');
+    });
+
+    test('type selon les levures : Lager, Wheat, Mixed', () {
+      String? type(List<String?> t) =>
+          styleBeerXmlDe(fiche, avecLevures(t)).style?.type;
+      expect(type(['lager']), 'Lager');
+      expect(type(['wheat']), 'Wheat');
+      expect(type(['kveik', 'ale']), 'Ale');
+      expect(type(['ale', 'lager']), 'Mixed');
+      expect(type(['ale', 'brett']), 'Mixed');
+      expect(type(['lacto']), 'Mixed');
+    });
+
+    test('type indéterminé : sans levure typée, levure de vin, autre type', () {
+      List<String> manques(
+        Map<String, Object?> recipe, [
+        StyleBibliotheque? s,
+      ]) => [
+        for (final m in styleBeerXmlDe(s ?? fiche, recipe).manques) _manque(m),
+      ];
+      expect(manques(avecLevures([])), ['typeStyle']);
+      expect(manques(avecLevures([null])), ['typeStyle(Levure 0)']);
+      expect(manques(avecLevures(['ale', 'wine'])), ['typeStyle(Levure 1)']);
+      const kombucha = StyleBibliotheque(
+        nom: 'Kombucha Fictif',
+        type: 'kombucha',
+      );
+      expect(manques(_complete(), kombucha), ['ficheStyle(Kombucha Fictif)']);
+    });
+
+    test('hydromel et cidre : type du style, sans lire la levure', () {
+      const mead = StyleBibliotheque(nom: 'Hydromel Fictif', type: 'mead');
+      const cider = StyleBibliotheque(nom: 'Cidre Fictif', type: 'cider');
+      List<String> manques(StyleBibliotheque s) => [
+        for (final m in styleBeerXmlDe(s, avecLevures([])).manques) _manque(m),
+      ];
+      expect(manques(mead), ['ficheStyle(Hydromel Fictif)']);
+      expect(manques(cider), ['ficheStyle(Cidre Fictif)']);
+    });
+
+    test('style sans plages (28A dans la Bibliothèque) : export bloqué', () {
+      const sansPlages = StyleBibliotheque(
+        nom: 'Brett Beer',
+        categorie: 'American Wild Ale',
+        numeroCategorie: '28',
+        code: '28A',
+        guide: 'BJCP2021',
+        type: 'beer',
+      );
+      final s = styleBeerXmlDe(sansPlages, _complete());
+      expect(s.style, isNull);
+      final r =
+          exporterBeerXml(
+                recipe: _complete(),
+                ownerName: null,
+                rendementEmpatage: _rendement,
+                evaporationLParH: _evaporation,
+                pertesAuTrubL: _trub,
+                volumeMortL: _volumeMort,
+                style: s.style,
+                manquesStyle: s.manques,
+                calcul: null,
+                chronologie: false,
+              )
+              as ExportBloque;
+      expect(
+        [for (final m in r.manques) _manque(m)],
+        ['ficheStyle(Brett Beer)'],
+      );
     });
   });
 

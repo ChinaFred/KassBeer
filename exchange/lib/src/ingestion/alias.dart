@@ -43,13 +43,6 @@ class Alias {
   final String? labelFr;
 }
 
-/// Producteurs de levure écrits de deux façons selon la source : clé
-/// normalisée lue → clé retenue dans l'identifiant.
-const Map<String, String> kProducteursEquivalents = {
-  'wyeast-labs': 'wyeast',
-  'omega-yeast-labs': 'omega-yeast',
-};
-
 /// Noms de la liste `hops` de DIY Dog qui ne sont pas des houblons : la ligne
 /// va dans `miscellaneous_additions[]`, résolue ou non. Un nom de la liste
 /// `hops` qui ne se résout pas en houblon et se résout en ajout y va aussi.

@@ -280,7 +280,8 @@ SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « S
 (`dart pub get`) ; la CI le contrôle dans le job « Flutter et brewing ».
 
 Depuis la v0.1.21 (L2c), « Le projet » et « Structure » disent que `exchange/` lit et écrit aussi le
-BeerXML ; l'export BeerXML reste bloqué dans l'écran jusqu'au référentiel des styles (L3).
+BeerXML. Depuis la v0.1.28 (ADR-005, E4), l'export BeerXML de l'écran retrouve son style dans la
+Bibliothèque, et P19 couvre la création d'un `import_unresolved` par un membre (E6).
 
 Depuis la v0.1.25 (L3 d'ADR-005, étape 1), l'ingestion des référentiels et des recettes
 publiques passe par deux outils du poste : la préparation en Dart
@@ -290,13 +291,13 @@ publiques passe par deux outils du poste : la préparation en Dart
 `ingest/` dans « Structure », des lignes de « Commandes utiles » pour la préparation et
 l'écriture, P10 étendu à `ingest/package.json`, `ingest/package-lock.json` et
 `ingest/prettier.config.*`, et trois contrôles : P19 (`securite` : référentiels, recettes
-publiques, `ingest_runs` et `import_unresolved` jamais écrits par un client, tests des cinq
-profils), P20 (`relecteur-regles` : aucun fichier ni texte libre d'une source dans le dépôt ou
+publiques et `ingest_runs` jamais écrits par un client ; depuis la v0.1.28, `import_unresolved`
+créé et mis à jour par un membre après un import, liste blanche, `key` normalisée dont le
+SHA-256 donne l'identifiant, compte + 1, aucune suppression ; tests des cinq profils), P20 (`relecteur-regles` : aucun fichier ni texte libre d'une source dans le dépôt ou
 en base, licence CC BY-SA 4.0 portée dans `provenance[]`) et P22 (`relecteur-regles` : aucun
 écouteur ni lecture entière sur `beer_*` ou `public_recipes`). `.claude/formatters.json` lance
 prettier sur `ingest/`. `setup-projet.sh` et la CI ne lancent pas encore `ingest/` (ADR-005,
-D2) : ses tests tournent en local. P19 ne couvre pas encore `style_stats` (reporté, D1) ni la
-création d'un non résolu par un membre (D6).
+D2) : ses tests tournent en local. P19 ne couvre pas encore `style_stats` (reporté, D1).
 
 Les commandes de lancement de `CLAUDE.md` (« Commandes utiles ») passent
 `--dart-define-from-file=firebase.env.json` : la configuration Firebase du client vit dans

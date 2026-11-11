@@ -60,7 +60,20 @@ enum ChampExport {
   // Champs demandés par le BeerXML seul (`ecriture_beerxml.dart`).
 
   /// Style de la liste BJCP : BeerXML demande sa catégorie et ses plages.
+  /// Absent de la recette, ou absent de la Bibliothèque sous ce nom exact.
   style,
+
+  /// Fiche du style sans catégorie, code, guide ou plage de densités,
+  /// d'amertume ou de couleur : BeerXML les demande. [ManqueDeFormat.noms] :
+  /// le style.
+  ficheStyle,
+
+  /// Type BeerXML du style indéterminé : un style BJCP de type `beer` se
+  /// classe en Ale, Lager, Wheat ou Mixed selon les levures de la recette ;
+  /// ici, aucune levure typée, ou une levure sans type, de vin, de champagne ou
+  /// `other`. [ManqueDeFormat.noms] : ces levures ; vide s'il n'y a aucune
+  /// levure typée.
+  typeStyle,
 
   /// Durée d'ébullition : `BOIL_TIME`, et le calcul de `BOIL_SIZE`.
   dureeEbullition,

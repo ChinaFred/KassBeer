@@ -3,9 +3,11 @@
 /// Import : [analyserFichier] détecte le format par le contenu, lit chaque
 /// recette BeerJSON ou BeerXML vers le sous-arbre `recipe` en BeerJSON partiel
 /// et rend le compte rendu (recette lue, refusée, modifiée, en double).
+/// [completerRecette] reprend de la Bibliothèque les valeurs absentes d'une
+/// recette lue, à partir des index reçus en paramètre.
 /// Export : [exporterBeerJson] et [exporterBeerXml] écrivent le fichier d'une
-/// recette, ou la liste de ce qui manque. Le paquet ne fait aucun `catch` et
-/// ne lit aucun prix ni stock.
+/// recette, ou la liste de ce qui manque. Le paquet ne fait aucun `catch`, ne
+/// lit aucun prix ni stock et ne lit rien de Firestore.
 library;
 
 export 'src/analyse.dart';
@@ -15,3 +17,5 @@ export 'src/ecriture_beerjson.dart' hide mapExport, mapsExport, texteExport;
 export 'src/ecriture_beerxml.dart';
 export 'src/empreinte.dart';
 export 'src/lecture_beerjson.dart' show kNomEmpatage;
+export 'src/noms.dart' show empreinteNonResoluImport;
+export 'src/resolution_import.dart';

@@ -6,6 +6,46 @@ données, outillage), ou les deux.
 
 ## 2026-11-11
 
+### v0.1.28 — fonctionnel
+
+L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon,
+d'un ajout ou d'une levure, vous voyez les ingrédients qui correspondent, par nom ou autre nom.
+Choisir l'un d'eux remplit les valeurs encore vides : couleur et rendement d'un malt, acides
+alpha et forme d'un houblon, type, forme et atténuation d'une levure, type d'un ajout. Une
+valeur déjà saisie ne change pas ; si elle diffère, « Reprendre les valeurs de la Bibliothèque »
+la remplace. Le champ « Style » propose les styles BJCP par code ou par nom. Hors ligne, les suggestions viennent
+de ce qui a déjà été lu ; sinon, la saisie reste libre.
+
+L'export BeerXML est ouvert. Il retrouve le style de la recette dans la Bibliothèque, avec sa
+catégorie et ses plages. Une recette sans style de la Bibliothèque demande de le choisir dans
+les suggestions du champ Style. Le type du style BeerXML suit la levure de la recette : précisez-la si
+l'export le demande. Un style sans plage chiffrée dans le guide BJCP ne s'exporte pas en
+BeerXML : choisissez un autre style, ou exportez en BeerJSON. Quand votre équipement n'a pas
+l'évaporation, les pertes ou le volume mort, « Compléter l'équipement » ouvre sa fiche.
+
+Recettes › Importer complète les valeurs absentes du fichier quand le nom d'un ingrédient est
+celui d'une entrée de la Bibliothèque, ou l'un de ses autres noms. Une valeur du fichier n'est
+jamais remplacée. Les détails de chaque recette listent les valeurs reprises, par exemple
+« Couleur de Pils reprise de la Bibliothèque. ». Hors ligne, l'import marche comme avant et le
+dit. Les noms qu'aucune entrée ne reconnaît sont signalés à l'administrateur, sans votre nom ni
+celui du fichier, pour qu'il complète la Bibliothèque.
+
+### v0.1.28 — technique
+
+`firestore.rules` ouvre `import_unresolved/` à l'écriture d'un membre (ADR-005, E6). Un membre
+crée un nom non résolu à `count` 1, avec `source: import` et le nom normalisé dans `key`. Les
+règles recalculent l'identifiant (SHA-256 de `import|nature|key`) et refusent tout autre
+identifiant. Ensuite, seuls `name`, `count` (+ 1) et `updated_at` changent. Un document de
+l'ingestion, d'un autre identifiant, ne se met jamais à jour par un membre. L'application en
+signale 200 au plus par import, par lots de 10. Le contrôle P19 et la puce « Échange » de
+`CLAUDE.md` le disent ; les règles de `recipes/` et `brews/` ne changent pas.
+
+Dans `exchange/`, `noms.dart` regroupe la normalisation des noms partagée par l'ingestion et
+l'application, et les deux empreintes de `import_unresolved/`. `resolution_import.dart`
+résout les noms d'une recette importée contre les index de la Bibliothèque reçus en paramètre,
+et reprend les valeurs absentes. L'export BeerXML tire son style d'une fiche de la Bibliothèque
+(`styleBeerXmlDe`).
+
 ### v0.1.26 — fonctionnel
 
 Une nouvelle entrée « Bibliothèque », à côté de Recettes, montre les styles de bière, les malts

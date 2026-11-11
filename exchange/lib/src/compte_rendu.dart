@@ -274,7 +274,8 @@ sealed class Modification {
   const Modification();
 }
 
-/// Le style garde son nom seul : le reste demande le référentiel des styles.
+/// Le style garde son nom seul : l'export BeerXML relit le reste dans la
+/// Bibliothèque par ce nom (ADR-005, E4).
 class StyleReduitAuNom extends Modification {
   /// Crée la modification.
   const StyleReduitAuNom(this.style);
@@ -408,6 +409,19 @@ class ChampsInconnus extends Modification {
 
   /// Nombre de champs.
   final int nombre;
+}
+
+/// Valeur absente du fichier, reprise de la Bibliothèque (`beer_index/`) après
+/// la résolution exacte du nom de la ligne (`resolution_import.dart`).
+class ValeurReprise extends Modification {
+  /// Crée la modification.
+  const ValeurReprise(this.grandeur, this.liste);
+
+  /// Valeur reprise : champ et nom de la ligne.
+  final Grandeur grandeur;
+
+  /// Liste de la ligne : le type d'un malt se dit « nature » à l'écran.
+  final ListeRecette liste;
 }
 
 /// Résultat de la lecture d'une recette.

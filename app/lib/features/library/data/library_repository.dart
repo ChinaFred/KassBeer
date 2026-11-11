@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:exchange/exchange.dart' show NomNonResolu;
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
@@ -8,6 +9,13 @@ import '../domain/referentiel.dart';
 /// Borne haute d'une recherche par préfixe : U+F8FF, dernier point de code de
 /// la zone privée, trié après toute lettre ou chiffre.
 final kFinDePrefixe = String.fromCharCode(0xF8FF);
+
+/// Collection des noms non résolus d'un import ou de l'ingestion.
+const kNonResolus = 'import_unresolved';
+
+/// Noms signalés par lot (`WriteBatch`) : chaque `set` fusionné lit le document
+/// pour les règles, et un lot est limité à 20 lectures en production.
+const kLotSignalements = 10;
 
 /// Taille d'une page de recettes publiques (ADR-005 : pages de 50).
 const kTaillePageRecettes = 50;
@@ -36,16 +44,20 @@ class PageRecettesPubliques {
   final bool fromCache;
 }
 
-/// Lecture de la Bibliothèque : `beer_index/`, `beer_*/`, `public_recipes/`.
-/// Lecture seule, par `get()` : jamais d'écouteur sur ces collections (P22).
-/// Chaque panne est rapportée puis relancée ; chaque document illisible est
-/// rapporté et rendu comme tel.
+/// Lecture de la Bibliothèque : `beer_index/`, `beer_*/`, `public_recipes/`,
+/// par `get()` : jamais d'écouteur sur ces collections (P22). Chaque panne
+/// est rapportée puis relancée ; chaque document illisible est rapporté et rendu
+/// comme tel. Seule écriture : le signalement des noms non résolus d'un import
+/// (`import_unresolved/`, ADR-005, E6).
 abstract class LibraryRepository {
   /// Index compact de [nature]. Lu une fois par session depuis le serveur, puis
-  /// rendu de mémoire.
+  /// rendu de mémoire. [cacheSeul] (hors ligne) : lu dans le cache seul, sans
+  /// attente du réseau ; absent du cache, il rend [DocumentAbsentDuCache] sans
+  /// rapport.
   Future<RechercheDocument<IndexReferentiel>> lireIndex(
-    NatureReferentiel nature,
-  );
+    NatureReferentiel nature, {
+    bool cacheSeul = false,
+  });
 
   /// Fiche [id] de [nature].
   Future<RechercheDocument<FicheReferentiel>> lireFiche(
@@ -64,6 +76,13 @@ abstract class LibraryRepository {
 
   /// Recette publique [id].
   Future<RechercheDocument<RecettePublique>> lireRecettePublique(String id);
+
+  /// Signale [noms], non résolus par un import (200 au plus, plafond tenu par
+  /// l'appelant) : crée ou met à jour `import_unresolved/{empreinte}`
+  /// (`count` + 1), par lots de [kLotSignalements]. Écriture simple, mise en
+  /// attente hors ligne. Ne lève jamais : chaque échec est rapporté, et
+  /// n'empêche ni l'import ni les autres lots.
+  Future<void> signalerNonResolus(List<NomNonResolu> noms);
 }
 
 /// [LibraryRepository] sur Cloud Firestore.
@@ -85,12 +104,30 @@ class FirestoreLibraryRepository implements LibraryRepository {
 
   @override
   Future<RechercheDocument<IndexReferentiel>> lireIndex(
-    NatureReferentiel nature,
-  ) async {
+    NatureReferentiel nature, {
+    bool cacheSeul = false,
+  }) async {
     final memo = _index[nature];
     if (memo != null) return memo;
     final path = 'beer_index/${nature.indexId}';
-    final snapshot = await _get('library.index', path);
+    final DocumentSnapshot<Map<String, dynamic>> snapshot;
+    try {
+      snapshot = await _firestore
+          .doc(path)
+          .get(cacheSeul ? const GetOptions(source: Source.cache) : null);
+    } on FirebaseException catch (error, stackTrace) {
+      // Cache seul : `unavailable` dit que le document n'est pas dans le cache
+      // (aucun réseau n'est demandé). Ce n'est pas une panne : rien n'est
+      // rapporté, l'appelant affiche « indisponible ».
+      if (cacheSeul && error.code == 'unavailable') {
+        return DocumentAbsentDuCache<IndexReferentiel>();
+      }
+      _rapporterIndex(error, stackTrace, path);
+      rethrow;
+    } catch (error, stackTrace) {
+      _rapporterIndex(error, stackTrace, path);
+      rethrow;
+    }
     final data = snapshot.data();
     if (data == null) return _absent(snapshot);
     final IndexReferentiel index;
@@ -115,6 +152,14 @@ class FirestoreLibraryRepository implements LibraryRepository {
     if (!snapshot.metadata.isFromCache) _index[nature] = found;
     return found;
   }
+
+  void _rapporterIndex(Object error, StackTrace stackTrace, String path) =>
+      _errors.reportError(
+        feature: 'library.index',
+        error: error,
+        stackTrace: stackTrace,
+        context: path,
+      );
 
   @override
   Future<RechercheDocument<FicheReferentiel>> lireFiche(
@@ -180,6 +225,60 @@ class FirestoreLibraryRepository implements LibraryRepository {
       DocumentValide(:final value) => DocumentTrouve(value),
       DocumentInvalide(:final error) => DocumentIllisibleTrouve(error),
     };
+  }
+
+  /// Un lot par tranche de [kLotSignalements] noms, chacun envoyé par un
+  /// `WriteBatch` : une seule écriture en file d'attente par lot, hors ligne
+  /// compris. Un lot refusé est rapporté ; les autres partent.
+  @override
+  Future<void> signalerNonResolus(List<NomNonResolu> noms) {
+    final lots = <Future<void>>[];
+    for (var i = 0; i < noms.length; i += kLotSignalements) {
+      final fin = i + kLotSignalements < noms.length
+          ? i + kLotSignalements
+          : noms.length;
+      lots.add(_signalerLot(noms.sublist(i, fin)));
+    }
+    return Future.wait(lots);
+  }
+
+  /// Crée ou met à jour `import_unresolved/{empreinte}` de chaque nom de [lot]
+  /// par un `set` fusionné : `key` (nom normalisé, dont les règles vérifient
+  /// le SHA-256 dans l'identifiant), `count` + 1, `name` à la graphie de ce
+  /// fichier. L'empreinte d'un import ne croise jamais un document de
+  /// l'ingestion (préfixe `import|`). Un échec est rapporté et rien d'autre
+  /// n'est tenté.
+  Future<void> _signalerLot(List<NomNonResolu> lot) async {
+    final batch = _firestore.batch();
+    for (final n in lot) {
+      batch.set(
+        _firestore.collection(kNonResolus).doc(n.empreinte),
+        {
+          'nature': n.nature,
+          'key': n.cle,
+          'name': n.nom,
+          'source': 'import',
+          'count': FieldValue.increment(1),
+          'updated_at': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    }
+    try {
+      await batch.commit();
+    } catch (error, stackTrace) {
+      // Ni les noms ni le fichier dans le rapport : la taille du lot et les
+      // natures.
+      _errors.reportError(
+        feature: 'library.unresolved',
+        error: error,
+        stackTrace: stackTrace,
+        context:
+            '$kNonResolus : lot de ${lot.length} noms '
+            '(${{for (final n in lot) n.nature}.join(', ')}) : signalement '
+            'impossible',
+      );
+    }
   }
 
   DocumentLu<RecettePublique> _recette(String id, Map<String, dynamic> data) {

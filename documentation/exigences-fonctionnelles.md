@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON toute recette lisible (BeerXML visible et bloqué) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -542,8 +542,35 @@ d'état lu par le lecteur d'écran à chaque changement.
   n'a pas de nom. ». L'auteur voit « Annuler » et « Compléter la recette », qui ouvre
   l'éditeur. Un autre membre lit « Seul l'auteur complète cette recette. Dupliquez-la pour
   la compléter à votre nom. » et « Fermer ».
-- BeerXML : visible et bloqué, « BeerXML demande un style de la liste BJCP. Le choix du style
-  arrive dans une prochaine version. », bouton « Fermer ».
+- BeerXML (ADR-005, E4) : au premier choix de BeerXML, « Lecture du style dans la
+  Bibliothèque » et une roue, bouton « Fermer ». Le style de la recette est cherché par son nom
+  exact dans la Bibliothèque, puis sa fiche est lue (catégorie, code, guide, plages). Ce qui
+  a déjà été lu sert hors ligne. Index ou fiche illisibles : « La fiche du style n'a pas pu
+  être lue dans la Bibliothèque. Vérifiez la connexion, puis réessayez. », boutons « Fermer »
+  et « Réessayer ». Les autres états sont ceux du BeerJSON (prêt, bloqué, échec), avec le
+  fichier `ipa-maison.xml`. En plus des valeurs du BeerJSON, BeerXML demande : « Style non
+  renseigné : choisissez-le dans les suggestions du champ Style. » (recette sans style),
+  « Style « {saisi} » absent de la Bibliothèque : choisissez-le dans les suggestions du champ
+  Style. » (style absent de la Bibliothèque sous ce nom exact), « Fiche du style « {style} » incomplète dans la Bibliothèque : BeerXML
+  demande sa catégorie et ses plages de densité, d'amertume et de couleur. Choisissez un autre
+  style, ou exportez en BeerJSON. » (17 styles BJCP sans plage, et IPA Argenta sans densités ;
+  seul manque, le titre devient « Export BeerXML impossible avec ce style. » et la feuille
+  n'offre que « Fermer », sans « Compléter la recette » ; un style d'un autre type que bière,
+  hydromel ou cidre a le même message), « Type de
+  levure à préciser pour BeerXML : {levures}. Choisissez Haute fermentation (ale), Basse
+  fermentation (lager), Kveik ou Culture mixte. » (levure sans type, de vin, de champagne ou
+  « Autre » ; sans aucune levure : « Aucune levure : BeerXML classe le style selon
+  la levure. Ajoutez une levure de type Haute fermentation (ale), Basse fermentation (lager),
+  Kveik ou Culture mixte. »), « Durée d'ébullition non renseignée. », « Évaporation de
+  l'équipement « {équipement} » non renseignée. », « Pertes au trub de l'équipement
+  « {équipement} » non renseignées. », « Volume mort de la cuve d'ébullition de l'équipement
+  « {équipement} » non renseigné. » (« de l'équipement » seul s'il n'est pas lu) ; quand
+  l'équipement est celui du lecteur, le bouton « Compléter l'équipement » ferme la feuille et
+  ouvre son éditeur ; quand seuls ces champs manquent, c'est le bouton plein, sans « Compléter
+  la recette » ni texte pour dupliquer, « Type de recette sans équivalent
+  BeerXML : {type}. », « Moment d'ajout non renseigné : {noms}. », « Durée d'ajout non
+  renseignée : {noms}. », « Forme du houblon à compléter : {noms}. », « BeerXML ne connaît pas
+  les houblons mesurés en volume : {noms}. ».
 
 **Importer** (Recettes › Importer, tous les membres). Page pleine hors de la coquille, avec
 la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
@@ -577,7 +604,7 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
    (2) » ; « Toutes les recettes (N) » (« Toutes les recettes affichées (N) » quand un filtre
    est actif), qui coche ou décoche les recettes affichées ; « Aucune recette pour ce filtre. » quand un filtre n'en montre aucune ; puis une ligne par recette :
    case, nom, « style · volume · statut », et « Détails (n) » dépliable (lu « Détails de
-   {nom} (n) ») avec « À compléter » et « Modifié à l'import ». Le statut s'écrit en toutes lettres : « Prête » (rien ne manque
+   {nom} (n) ») avec « À compléter », « Modifié à l'import » et « Repris de la Bibliothèque ». Le statut s'écrit en toutes lettres : « Prête » (rien ne manque
    au calcul ni à l'export BeerJSON, cochée), « Incomplète » (cochée), « Déjà importée le
    {date} » (même contenu déjà importé par ce membre, décochée, cochable : une seconde copie),
    « En double dans le fichier » (décochée), « Refusée : {raison} » (sans case). Un même nom
@@ -604,6 +631,27 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
    importés : … équipement du fichier, nom de l'empâtage ». Une seule tournure : « compté à
    l'ébullition », « compté à l'arrêt du feu ». Une quantité obligatoire au-delà de ces
    plafonds refuse la recette (« Valeur hors limites : quantité de Pils. »).
+6 bis. « Repris de la Bibliothèque » (ADR-005, E5) : à l'ouverture de l'écran, les index des
+   malts, houblons, levures et ajouts de la Bibliothèque sont lus une fois. Le nom d'une
+   ligne se résout quand il est celui d'une entrée ou l'un de ses autres noms, après
+   normalisation (casse, accents, ponctuation) ; pour une levure, aussi par sa souche
+   (« Wyeast 1056 », « WLP001 »), sa référence (« US-05 ») ou son producteur et sa référence
+   (« Fermentis US-05 »). Aucune correspondance approchée. Une valeur absente du fichier est
+   reprise de l'entrée : couleur, rendement d'extrait et type d'un malt ; acides alpha et
+   forme d'un houblon ; type, forme et atténuation d'une levure ; type d'un ajout. Une valeur
+   du fichier n'est jamais remplacée. Chaque valeur reprise est listée : « Couleur de Pils reprise de la
+   Bibliothèque. », « Rendement d'extrait de Pils repris de la Bibliothèque. », « Acides
+   alpha de Saaz repris de la Bibliothèque. », « Type de Coriandre repris de la
+   Bibliothèque. » (type d'un ajout). Hors ligne, ou si un index n'a pas pu être lu, l'import
+   marche sans reprise, et l'aperçu comme le compte rendu affichent « Bibliothèque non lue
+   ({natures}) : les valeurs absentes du fichier ne sont pas complétées. », avec les natures non
+   lues (malts et sucres, houblons, ajouts, levures), suivi hors ligne de « Réessayez en ligne
+   pour les reprendre. » ; si les index manquent parce que la Bibliothèque n'est pas encore remplie :
+   « Bibliothèque vide : les valeurs absentes du fichier ne sont pas complétées.
+   L'administrateur la remplit. ». Une lecture incomplète est refaite au choix du fichier
+   suivant. Hors ligne, les index se lisent dans le cache seul, et l'aperçu ne les attend pas
+   plus de 3 s après le choix du fichier ; au-delà, il s'ouvre avec « Bibliothèque non lue ». La nature d'un malt reprise s'écrit
+   « Nature de Pils reprise de la Bibliothèque. ».
 7. Barre fixe « Importer N recettes » ; sans case cochée, « Cochez au moins une recette. »
    au-dessus du bouton inactif ; sans recette importable, « Aucune recette à importer. ».
    Aucun dialogue de plus.
@@ -620,9 +668,15 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
    pendant la lecture du compte rendu est annoncé. Un refus du serveur arrivé après la
    sortie de l'écran, ou après « Importer un autre fichier », s'annonce en un seul message :
    « Import : 2 recettes refusées par le serveur : Saison, Porter. ».
+10. Après l'écriture, chaque nom qu'aucune entrée de la Bibliothèque ne résout est signalé
+   une fois à l'administrateur (ADR-005, E6), sans le nom du fichier ni celui du membre,
+   200 noms au plus par import ; au-delà, le compte rendu dit « {n} autres noms non reconnus
+   non signalés. ». Rien d'autre ne s'affiche au membre. Hors ligne, le signalement part au
+   retour du réseau. Un échec est rapporté et n'arrête pas l'import.
 
 Une recette importée garde ce que le fichier dit, sans valeur inventée : un champ absent
-reste absent et la recette se complète dans l'éditeur, comme une recette saisie. Les
+reste absent, sauf une valeur reprise de la Bibliothèque (6 bis), et la recette se complète
+dans l'éditeur, comme une recette saisie. Les
 textes du fichier s'affichent en texte simple.
 
 Un fichier BeerXML 1.0 se lit en UTF-8, ISO-8859-1 ou windows-1252, selon sa déclaration
@@ -654,7 +708,10 @@ groupe. », boutons « Annuler » et « Supprimer ». Puis « Recette supprimée
 ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons (3) »…).
 
 - Général : « Nom » (seul champ obligatoire, 120 caractères ; sinon « Donnez un nom à la
-  recette. », l'écran remonte au champ et y place le curseur), « Style (facultatif) »,
+  recette. », l'écran remonte au champ et y place le curseur), « Style (facultatif) »
+  (aide « Tapez un code (21A) ou un nom, puis choisissez une suggestion. L'export BeerXML
+  demande un style de la Bibliothèque. » ; à la frappe, 8 styles au plus, « American IPA » puis « 21A · IPA », par code
+  ou par nom ; le choix écrit le nom exact du style ; la saisie libre reste possible),
   « Type de recette » (liste déroulante : « Non précisé », Tout grain, Empâtage partiel,
   Extrait), « Volume en fermenteur (L) » (plus de 0), « Durée d'ébullition (min) » (entier
   de 0 à 600), « Équipement » (« Aucun
@@ -670,6 +727,32 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   « Ajouter et continuer » (ajoute la ligne, vide le formulaire, remet le curseur sur « Nom »
   et annonce « « {nom} » ajouté. ») et « Ajouter » (« Enregistrer » pour une ligne
   existante).
+- Nom d'un malt, d'un houblon, d'un ajout ou d'une levure (ADR-005, E2) : à la frappe, 8
+  entrées de la Bibliothèque au plus, par nom ou autre nom (et, pour une levure, producteur
+  et référence), avec une seconde ligne (« Malt · 3,9 EBC · 81 % », « Pellets · 6,5 % alpha »,
+  « Fermentis US-05 · Sèche », « Épice » pour un ajout). L'index est lu à l'ouverture du
+  formulaire, une fois par session. Choisir une entrée écrit son nom et remplit les valeurs
+  vides : nature, couleur et
+  rendement d'extrait d'un malt (une nature hors de Malt et Sucre s'affiche en troisième
+  segment) ; acides alpha et forme d'un houblon ; type, forme et atténuation d'une levure ;
+  type d'un ajout. Une ligne sous « Nom », annoncée au lecteur d'écran, liste les seules
+  valeurs remplies : « Couleur et rendement d'extrait repris de la Bibliothèque. ». Une valeur
+  déjà saisie ou choisie reste : quand elle diffère de l'entrée, « Reprendre les valeurs de la
+  Bibliothèque » la remplace ; le bouton suit le dernier champ concerné (« Rendement
+  d'extrait », « Forme » du houblon, « Forme » de la levure). Une nature hors de Malt et Sucre
+  (extrait, miel, fruit) ne compte pas dans la différence quand le brasseur a choisi Malt ou
+  Sucre. La saisie libre reste possible. La liste fait 280 px au plus, s'ouvre vers le haut
+  quand il y a plus de place au-dessus, est nommée « Suggestions de la Bibliothèque » et
+  annonce leur nombre (« 3 suggestions de la Bibliothèque ») ; l'option surlignée au clavier a
+  le fond de focus et reste visible (en bas de la liste en descendant, en haut en montant).
+  Entrée ou « Suivant » ne choisit l'option surlignée qu'après ↑ ou ↓ ; sinon le nom tapé reste
+  et le focus passe au champ suivant (même règle pour le style). Un index arrivé après la frappe
+  met la liste à jour sans autre touche. Après « Reprendre les valeurs de la Bibliothèque », la
+  ligne sous « Nom » liste les valeurs reprises et le focus va au premier champ de saisie repris.
+  Hors ligne, l'index se lit dans le cache seul. Index absent du serveur : « Bibliothèque vide :
+  suggestions indisponibles. ». Sans index, l'aide
+  du champ dit « Suggestions de la Bibliothèque indisponibles. Vous pouvez saisir le nom. », et
+  la prise du focus suivante relit l'index.
 - Malt ou sucre : « Nom », « Nature » (Malt, Sucre ; le type d'une recette importée,
   Extrait liquide, Extrait sec, Miel, Fruit, Jus ou Autre, reste visible et choisi en
   troisième segment, et l'enregistrement le garde ; pour « Autre », l'avertissement « Nature

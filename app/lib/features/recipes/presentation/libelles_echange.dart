@@ -1,6 +1,7 @@
 import 'package:exchange/exchange.dart';
 
 import '../../../core/presentation/formats.dart';
+import '../../library/domain/referentiel.dart';
 import '../domain/beerjson.dart';
 
 /// Libellés de Recettes › Importer et de l'export d'une recette. Un nom tiré
@@ -75,7 +76,32 @@ abstract final class TextesImport {
   static String detailsDe(String nom, int n) => 'Détails de $nom ($n)';
   static const aCompleter = 'À compléter';
   static const modifie = 'Modifié à l\'import';
+  static const reprisBibliotheque = 'Repris de la Bibliothèque';
+
+  /// « Bibliothèque non lue (houblons) : … » ; [horsLigne] ajoute le conseil
+  /// de réessayer en ligne.
+  static String bibliothequeNonLue(
+    List<NatureReferentiel> natures, {
+    required bool horsLigne,
+  }) =>
+      'Bibliothèque non lue (${natures.map(_natureNonLue).join(', ')}) : les '
+      'valeurs absentes du fichier ne sont pas complétées.'
+      '${horsLigne ? ' Réessayez en ligne pour les reprendre.' : ''}';
+  static const bibliothequeVide =
+      'Bibliothèque vide : les valeurs absentes du fichier ne sont pas '
+      'complétées. L\'administrateur la remplit.';
+  static String nonSignales(int n) => n == 1
+      ? '1 autre nom non reconnu non signalé.'
+      : '$n autres noms non reconnus non signalés.';
 }
+
+String _natureNonLue(NatureReferentiel nature) => switch (nature) {
+  NatureReferentiel.fermentables => 'malts et sucres',
+  NatureReferentiel.hops => 'houblons',
+  NatureReferentiel.cultures => 'levures',
+  NatureReferentiel.miscs => 'ajouts',
+  NatureReferentiel.styles => 'styles',
+};
 
 String _n(int n, String singulier, String pluriel) =>
     '$n ${n > 1 ? pluriel : singulier}';
@@ -239,6 +265,20 @@ String _texteCoupe(Grandeur g, int maximum) {
   };
 }
 
+/// Champs de genre féminin : « Couleur de Pils reprise », « Rendement
+/// d'extrait de Pils repris ».
+const _feminins = {
+  Champ.couleur,
+  Champ.forme,
+  Champ.attenuation,
+  Champ.quantite,
+  Champ.duree,
+  Champ.dureeEbullition,
+  Champ.dureePalier,
+  Champ.temperatureGrain,
+  Champ.temperaturePalier,
+};
+
 String _majuscule(String texte) =>
     texte.isEmpty ? texte : '${texte[0].toUpperCase()}${texte.substring(1)}';
 
@@ -289,6 +329,14 @@ String libelleModification(Modification m) => switch (m) {
     'Aroma : $ligne compté à l\'ébullition, $minutes${nbsp}min. Si c\'est un '
         'whirlpool, choisissez Whirlpool dans la recette.',
   CaracteresRetires() => 'Caractères de contrôle retirés des textes.',
+  // Le type d'un malt s'appelle « Nature » dans l'éditeur.
+  ValeurReprise(:final grandeur, :final liste)
+      when liste == ListeRecette.malts && grandeur.champ == Champ.type =>
+    'Nature de ${grandeur.ligne} reprise de la Bibliothèque.',
+  ValeurReprise(:final grandeur) =>
+    '${_majuscule(_designation(grandeur))} '
+        '${_feminins.contains(grandeur.champ) ? 'reprise' : 'repris'} de la '
+        'Bibliothèque.',
   ChampsInconnus(:final nombre) =>
     nombre == 1
         ? '1 champ inconnu ignoré.'
@@ -305,13 +353,17 @@ abstract final class TextesExport {
   static const beerXmlAide = 'Lu par la plupart des logiciels de brassage.';
   static const pret = 'Prêt à exporter.';
   static String auteur(String nom) => 'Auteur dans le fichier : $nom.';
-  static const beerXmlBloque =
-      'BeerXML demande un style de la liste BJCP. Le choix du style arrive '
-      'dans une prochaine version.';
+  static const styleEnLecture = 'Lecture du style dans la Bibliothèque';
+  static const styleIllisible =
+      'La fiche du style n\'a pas pu être lue dans la Bibliothèque. Vérifiez '
+      'la connexion, puis réessayez.';
+  static const reessayer = 'Réessayer';
   static String bloque(int n) => n == 1
       ? 'Export impossible : 1 valeur à compléter.'
       : 'Export impossible : $n valeurs à compléter.';
+  static const styleImpossible = 'Export BeerXML impossible avec ce style.';
   static const completer = 'Compléter la recette';
+  static const completerEquipement = 'Compléter l\'équipement';
   static const dupliquer = 'Dupliquer';
   static const dupliquerPourExporter =
       'Dupliquez la recette pour l\'exporter à votre nom.';
@@ -356,8 +408,7 @@ String libellePerte(PerteExport perte) => switch (perte) {
   ChronologieNonExportee() => 'Non exporté : la chronologie du jour.',
   EmpatageNonExporte() => 'Non exporté : empâtage (aucun palier).',
   EbullitionNonExportee() => 'Non exporté : ébullition (durée non renseignée).',
-  // Pertes du BeerXML : l'export BeerXML reste bloqué tant que le choix du
-  // style n'existe pas (ADR-005, décision 2) ; ces libellés le suivront.
+  // Pertes du BeerXML.
   ValeurEcriteAutrement(
     :final ligne,
     :final liste,
