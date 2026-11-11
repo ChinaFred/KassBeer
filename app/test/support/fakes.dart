@@ -932,6 +932,12 @@ class FakeLibraryRepository implements LibraryRepository {
   final indexErrors = <NatureReferentiel, Object>{};
   final indexReads = <NatureReferentiel>[];
 
+  /// Lectures d'index faites dans le cache seul (`cacheSeul`).
+  final indexCacheReads = <NatureReferentiel>[];
+
+  /// Réponse retenue jusqu'à ce que le `Completer` de la nature soit complété.
+  final indexAttente = <NatureReferentiel, Completer<void>>{};
+
   /// Réponse à `lireFiche`, par identifiant ; absente : `DocumentAbsent`.
   final fiches = <String, RechercheDocument<FicheReferentiel>>{};
   final ficheReads = <String>[];
@@ -946,9 +952,13 @@ class FakeLibraryRepository implements LibraryRepository {
 
   @override
   Future<RechercheDocument<IndexReferentiel>> lireIndex(
-    NatureReferentiel nature,
-  ) async {
+    NatureReferentiel nature, {
+    bool cacheSeul = false,
+  }) async {
     indexReads.add(nature);
+    if (cacheSeul) indexCacheReads.add(nature);
+    final attente = indexAttente[nature];
+    if (attente != null) await attente.future;
     final error = indexErrors[nature];
     if (error != null) throw error;
     return index[nature] ?? DocumentAbsent<IndexReferentiel>();
@@ -1000,6 +1010,14 @@ class FakeLibraryRepository implements LibraryRepository {
       if (r.id == id) return DocumentTrouve(r);
     }
     return DocumentAbsent<RecettePublique>();
+  }
+
+  /// Noms reçus par `signalerNonResolus`, un appel par liste.
+  final signales = <List<NomNonResolu>>[];
+
+  @override
+  Future<void> signalerNonResolus(List<NomNonResolu> noms) async {
+    signales.add(noms);
   }
 }
 

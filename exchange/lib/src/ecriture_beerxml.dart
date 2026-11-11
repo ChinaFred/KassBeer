@@ -11,12 +11,196 @@ import 'lecture_beerjson.dart' show kNomEmpatage;
 /// en Lovibond ou en SRM par `brewing/` (P3) ; les masses en kilogrammes. Aucun
 /// prix, stock, coût, e-mail, `owner_uid`, `equipment_id` ni nom d'équipement.
 ///
-/// L'application garde l'export BeerXML bloqué tant que le référentiel des
-/// styles (`beer_styles`, L3) manque : sans [StyleBeerXml], l'export est
-/// bloqué (ADR-005, amendements de L2 ; aucune valeur de style inventée).
+/// Le style vient de la Bibliothèque (`beer_styles/{id}`, retrouvé par son nom
+/// exact, ADR-005, E4) : [styleBeerXmlDe] le met en [StyleBeerXml]. Sans
+/// style, l'export est bloqué ; aucune valeur de style n'est inventée.
+
+/// Style de la Bibliothèque (`beer_styles/{id}`), tel que l'export le lit :
+/// densités en SG décimal, amertume en IBU, couleur en EBC, degré en %.
+class StyleBibliotheque {
+  /// Crée le style.
+  const StyleBibliotheque({
+    required this.nom,
+    this.categorie,
+    this.numeroCategorie,
+    this.code,
+    this.guide,
+    this.type,
+    this.ogMin,
+    this.ogMax,
+    this.fgMin,
+    this.fgMax,
+    this.ibuMin,
+    this.ibuMax,
+    this.ebcMin,
+    this.ebcMax,
+    this.abvMin,
+    this.abvMax,
+  });
+
+  /// Nom du style (`American IPA`).
+  final String nom;
+
+  /// Catégorie (`IPA`).
+  final String? categorie;
+
+  /// Numéro de catégorie (`21`, `X`).
+  final String? numeroCategorie;
+
+  /// Code du style (`21A`, `X1`).
+  final String? code;
+
+  /// Guide (`BJCP2021`).
+  final String? guide;
+
+  /// Type BeerJSON du style (`beer`, `cider`, `mead`…).
+  final String? type;
+
+  /// Bornes des plages ; une borne peut manquer.
+  final double? ogMin, ogMax, fgMin, fgMax, ibuMin, ibuMax, ebcMin, ebcMax;
+
+  /// Degré d'alcool, facultatif en BeerXML.
+  final double? abvMin, abvMax;
+}
+
+/// [StyleBeerXml] de [s] pour la recette [recipe], ou ce qui lui manque
+/// ([ChampExport.ficheStyle], [ChampExport.typeStyle]).
+///
+/// La lettre est le code sans le numéro de catégorie (`21A` dans la catégorie
+/// `21` donne `A`, `X1` dans `X` donne `1`). Le type BeerXML : `mead` donne
+/// `Mead`, `cider` donne `Cider` ; `beer` se lit dans les levures de la
+/// recette, `ale` et `kveik` donnant `Ale`, `lager` donnant `Lager`, `wheat`
+/// donnant `Wheat`, une levure de fermentation mixte ou bactérienne, ou deux
+/// classes différentes, donnant `Mixed`. Aucune levure, une levure sans type,
+/// de vin, de champagne ou `other` : type indéterminé. Un style d'un autre
+/// type que beer, mead ou cider : fiche incomplète.
+({StyleBeerXml? style, List<ManqueDeFormat> manques}) styleBeerXmlDe(
+  StyleBibliotheque s,
+  Map<String, Object?> recipe,
+) {
+  final manques = <ManqueDeFormat>[];
+  final numero = s.numeroCategorie;
+  final code = s.code;
+  final lettre = code == null || numero == null
+      ? null
+      : (code.startsWith(numero) ? code.substring(numero.length) : code);
+  final categorie = s.categorie;
+  final guide = s.guide;
+  final (ogMin, ogMax, fgMin, fgMax) = (s.ogMin, s.ogMax, s.fgMin, s.fgMax);
+  final (ibuMin, ibuMax, ebcMin, ebcMax) = (
+    s.ibuMin,
+    s.ibuMax,
+    s.ebcMin,
+    s.ebcMax,
+  );
+  final complet =
+      categorie != null &&
+      numero != null &&
+      lettre != null &&
+      lettre.isNotEmpty &&
+      guide != null &&
+      ogMin != null &&
+      ogMax != null &&
+      fgMin != null &&
+      fgMax != null &&
+      ibuMin != null &&
+      ibuMax != null &&
+      ebcMin != null &&
+      ebcMax != null &&
+      // Type du style hors de beer, mead et cider : la fiche ne dit pas comment
+      // classer le style en BeerXML.
+      const {'beer', 'mead', 'cider'}.contains(s.type);
+  if (!complet) {
+    manques.add(
+      ManqueDeFormat(ChampExport.ficheStyle, List.unmodifiable([s.nom])),
+    );
+  }
+  final (:type, :levures) = _typeStyle(
+    s.type,
+    mapsExport(mapExport(recipe['ingredients'])['culture_additions']),
+  );
+  // Un style d'un autre type est déjà compté comme fiche incomplète.
+  if (type == null && const {'beer', 'mead', 'cider'}.contains(s.type)) {
+    manques.add(ManqueDeFormat(ChampExport.typeStyle, levures));
+  }
+  if (!complet || type == null) {
+    return (style: null, manques: List.unmodifiable(manques));
+  }
+  return (
+    style: StyleBeerXml(
+      nom: s.nom,
+      categorie: categorie,
+      numeroCategorie: numero,
+      lettre: lettre,
+      guide: guide,
+      type: type,
+      ogMin: ogMin,
+      ogMax: ogMax,
+      fgMin: fgMin,
+      fgMax: fgMax,
+      ibuMin: ibuMin,
+      ibuMax: ibuMax,
+      ebcMin: ebcMin,
+      ebcMax: ebcMax,
+      abvMin: s.abvMin,
+      abvMax: s.abvMax,
+    ),
+    manques: const <ManqueDeFormat>[],
+  );
+}
+
+/// Type BeerXML d'un style BJCP de type [type] (voir [styleBeerXmlDe]) ; sans
+/// type, [levures] nomme les levures sans type ou d'un type sans classe
+/// BeerXML (vide : aucune levure typée, ou style d'un autre type).
+({String? type, List<String> levures}) _typeStyle(
+  String? type,
+  List<Map<String, Object?>> cultures,
+) {
+  const aucune = <String>[];
+  switch (type) {
+    case 'mead':
+      return (type: 'Mead', levures: aucune);
+    case 'cider':
+      return (type: 'Cider', levures: aucune);
+    case 'beer':
+      break;
+    default:
+      return (type: null, levures: aucune);
+  }
+  final classes = <String>{};
+  final sansClasse = <String>[];
+  for (final c in cultures) {
+    final t = c['type'];
+    final classe = switch (t) {
+      'ale' || 'kveik' => 'Ale',
+      'lager' => 'Lager',
+      'wheat' => 'Wheat',
+      'brett' ||
+      'lacto' ||
+      'pedio' ||
+      'mixed-culture' ||
+      'spontaneous' ||
+      'bacteria' ||
+      'malolactic' => 'Mixed',
+      _ => null,
+    };
+    if (classe == null) {
+      sansClasse.add('${c['name']}');
+    } else {
+      classes.add(classe);
+    }
+  }
+  if (sansClasse.isNotEmpty || classes.isEmpty) {
+    return (type: null, levures: List.unmodifiable(sansClasse));
+  }
+  return (
+    type: classes.length == 1 ? classes.single : 'Mixed',
+    levures: aucune,
+  );
+}
 
 /// Style de la liste BJCP, champs obligatoires du `STYLE` de BeerXML. Il vient
-/// du référentiel des styles, jamais d'une valeur par défaut.
+/// de la Bibliothèque ([styleBeerXmlDe]), jamais d'une valeur par défaut.
 class StyleBeerXml {
   /// Crée le style.
   const StyleBeerXml({
@@ -79,8 +263,10 @@ class StyleBeerXml {
 /// [preBoilVolumeLitres] de `brewing/`, calculé avec le volume en fermenteur,
 /// la durée d'ébullition et [evaporationLParH], [pertesAuTrubL] et
 /// [volumeMortL] de l'équipement de la recette ; sans l'une de ces valeurs,
-/// l'export est bloqué. [style] : style BJCP résolu, sinon l'export est
-/// bloqué. Lève [BrewingInputException] pour une valeur d'équipement négative.
+/// l'export est bloqué. [style] : style BJCP résolu ; sans lui, l'export est
+/// bloqué par [manquesStyle] ([styleBeerXmlDe]), ou par [ChampExport.style]
+/// s'il est vide. Lève [BrewingInputException] pour une valeur d'équipement
+/// négative.
 ResultatExport exporterBeerXml({
   required Map<String, Object?> recipe,
   required String? ownerName,
@@ -89,6 +275,7 @@ ResultatExport exporterBeerXml({
   required double? pertesAuTrubL,
   required double? volumeMortL,
   required StyleBeerXml? style,
+  List<ManqueDeFormat> manquesStyle = const [],
   required RecipeCalculation? calcul,
   required bool chronologie,
 }) {
@@ -101,6 +288,7 @@ ResultatExport exporterBeerXml({
     pertesAuTrubL: pertesAuTrubL,
     volumeMortL: volumeMortL,
     style: style,
+    manquesStyle: manquesStyle,
   );
   if (manques.isNotEmpty) return ExportBloque(List.unmodifiable(manques));
   // Non nuls : sans eux, l'export est bloqué plus haut.
@@ -150,7 +338,9 @@ ResultatExport exporterBeerXml({
 /// BeerJSON, puis le style, la durée d'ébullition et les volumes de
 /// l'équipement (`BOIL_SIZE`), le moment et la durée des ajouts (`USE` et
 /// `TIME` sont obligatoires), un houblon mesuré en volume, un houblon sans
-/// forme et un type de recette sans équivalent. Vide si l'export est possible.
+/// forme et un type de recette sans équivalent. Sans [style], ce qui manque
+/// au style : [manquesStyle] ([styleBeerXmlDe]), ou [ChampExport.style] s'il
+/// est vide. Vide si l'export est possible.
 List<ManqueExport> manquesExportBeerXml({
   required Map<String, Object?> recipe,
   required String? auteur,
@@ -159,6 +349,7 @@ List<ManqueExport> manquesExportBeerXml({
   required double? pertesAuTrubL,
   required double? volumeMortL,
   required StyleBeerXml? style,
+  List<ManqueDeFormat> manquesStyle = const [],
 }) {
   final manques = manquesExportBeerJson(
     recipe: recipe,
@@ -172,7 +363,13 @@ List<ManqueExport> manquesExportBeerXml({
   if (type != null && !_typesRecette.containsKey(type)) {
     format(ChampExport.typeRecetteBeerXml, ['$type']);
   }
-  if (style == null) format(ChampExport.style);
+  if (style == null) {
+    if (manquesStyle.isEmpty) {
+      format(ChampExport.style);
+    } else {
+      manques.addAll(manquesStyle);
+    }
+  }
   if (mapExport(recipe['boil'])['boil_time'] == null) {
     format(ChampExport.dureeEbullition);
   }

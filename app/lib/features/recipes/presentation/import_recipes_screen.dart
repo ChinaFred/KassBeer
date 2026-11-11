@@ -18,9 +18,11 @@ import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/services/error_report_service.dart';
+import '../../auth/data/auth_repository.dart' show kTokenNameWait;
 import '../../auth/presentation/access_providers.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_providers.dart';
+import '../../library/domain/referentiel.dart';
 import '../domain/import_recettes.dart';
 import '../domain/recipe.dart';
 import 'libelles_echange.dart';
@@ -78,12 +80,12 @@ StatutLu statutImport(
   required Set<String> reported,
 }) {
   final content = r.content;
-  final resultat = r.source.resultat;
-  if (content == null || resultat is! RecetteLue) {
+  final recipe = r.recipe;
+  if (content == null || recipe == null) {
     return (statut: StatutImport.refusee, aCompleter: const []);
   }
   final export = manquesExportBeerJson(
-    recipe: resultat.recipe,
+    recipe: recipe,
     auteur: content.author ?? ownerName,
     rendementEmpatage: equipement.efficiency,
   );
@@ -256,6 +258,104 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
   /// recalcule pas (500 recettes au plus).
   final _statuts = <String, List<StatutLu>>{};
 
+  /// Index de la Bibliothèque, lus à l'ouverture de l'écran (ADR-005, E5),
+  /// relus au choix d'un fichier quand la lecture précédente est incomplète.
+  late Future<IndexLus> _index = _lireIndex();
+
+  /// Index du dernier aperçu.
+  IndexLus? _indexLus;
+
+  /// Noms non résolus de l'import au-delà de [kMaxSignalements], non signalés.
+  int _nonSignales = 0;
+
+  /// Lit les index des malts, houblons, levures et ajouts par `get()`,
+  /// mémorisés par le dépôt de données. Un index absent, illisible ou
+  /// injoignable (hors ligne) laisse sa liste sans complément.
+  Future<IndexLus> _lireIndex() async {
+    final repository = ref.read(libraryRepositoryProvider);
+    // Hors ligne, le cache seul : aucune attente du réseau.
+    final offline = ref.read(grantedAccessProvider)?.offline ?? false;
+    Future<({IndexBibliotheque? index, bool absent})> lire(
+      NatureReferentiel nature,
+    ) async {
+      final RechercheDocument<IndexReferentiel> lu;
+      try {
+        lu = await repository.lireIndex(nature, cacheSeul: offline);
+      } catch (_) {
+        // Déjà rapportée par le dépôt de données : `lireIndex` rapporte chaque
+        // panne avant de la relancer. Le compte rendu dit que la Bibliothèque
+        // n'a pas été lue.
+        return (index: null, absent: false);
+      }
+      return switch (lu) {
+        DocumentTrouve(:final value) => (
+          index: indexBibliotheque(value),
+          absent: false,
+        ),
+        // Absent du serveur : la Bibliothèque n'est pas encore remplie.
+        DocumentAbsent() => (index: null, absent: true),
+        // Absent du cache hors ligne, ou illisible (déjà rapporté).
+        _ => (index: null, absent: false),
+      };
+    }
+
+    const natures = [
+      NatureReferentiel.fermentables,
+      NatureReferentiel.hops,
+      NatureReferentiel.miscs,
+      NatureReferentiel.cultures,
+    ];
+    final lus = await Future.wait([for (final n in natures) lire(n)]);
+    final index = IndexImport(
+      malts: lus[0].index,
+      houblons: lus[1].index,
+      ajouts: lus[2].index,
+      levures: lus[3].index,
+    );
+    final manquants = [
+      for (final l in lus)
+        if (l.index == null) l,
+    ];
+    return (
+      index: index,
+      incomplet: manquants.isNotEmpty,
+      vide: manquants.isNotEmpty && manquants.every((l) => l.absent),
+      nonLues: [
+        for (final (i, l) in lus.indexed)
+          if (l.index == null) natures[i],
+      ],
+    );
+  }
+
+  /// [_index], attendu [kTokenNameWait] au plus hors ligne, comme le nom du
+  /// jeton : au-delà, l'aperçu s'ouvre avec « Bibliothèque non lue ». La
+  /// lecture continue, et le fichier suivant la reprend.
+  Future<IndexLus> _attendreIndex() {
+    final offline = ref.read(grantedAccessProvider)?.offline ?? false;
+    if (!offline) return _index;
+    return _index.timeout(
+      kTokenNameWait,
+      onTimeout: () => (
+        index: const IndexImport(),
+        incomplet: true,
+        vide: false,
+        nonLues: const [
+          NatureReferentiel.fermentables,
+          NatureReferentiel.hops,
+          NatureReferentiel.miscs,
+          NatureReferentiel.cultures,
+        ],
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Lecture lancée à l'ouverture : elle se fait pendant le choix du fichier.
+    unawaited(_index);
+  }
+
   @override
   void dispose() {
     _suivi?.fermer();
@@ -316,7 +416,17 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
           _nomJetonLu = true;
           if (!mounted) return;
         }
-        _analyser(nom, octets);
+        var index = await _attendreIndex();
+        if (!mounted) return;
+        if (index.incomplet) {
+          // Lecture précédente incomplète (hors ligne, panne, Bibliothèque
+          // vide) : relue pour ce fichier ; un index déjà lu vient de la
+          // mémoire du dépôt de données.
+          _index = _lireIndex();
+          index = await _attendreIndex();
+          if (!mounted) return;
+        }
+        _analyser(nom, octets, index);
     }
   }
 
@@ -334,7 +444,7 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
     setState(() => _etape = _Accueil(erreur: fichierIllisible(nom)));
   }
 
-  void _analyser(String nom, List<int> octets) {
+  void _analyser(String nom, List<int> octets, IndexLus index) {
     final FichierLu lu;
     final List<RecetteAImporter> recettes;
     try {
@@ -358,6 +468,7 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
         lu,
         miennes: miennes,
         errors: ref.read(errorReportServiceProvider),
+        index: index.index,
       );
     } on FormatException catch (error, stackTrace) {
       // JSON ou XML mal formé, ou UTF-8 invalide.
@@ -386,6 +497,7 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
         ]);
       _statuts.clear();
       _filtre = _Filtre.toutes;
+      _indexLus = index;
       _etape = _Apercu(lu, recettes);
     });
   }
@@ -436,6 +548,17 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
       // Une écriture par recette ; l'écran affiche la progression entre deux.
       await Future<void>.delayed(Duration.zero);
       if (!mounted) return;
+    }
+    // Noms non résolus des recettes écrites (ADR-005, E6) : écriture simple,
+    // en attente hors ligne ; un échec est rapporté et n'arrête pas l'import.
+    // Au plus kMaxSignalements noms ; les suivants sont comptés au compte rendu.
+    final nonResolus = nonResolusDe([for (final i in choisies) recettes[i]]);
+    final signales = nonResolus.take(kMaxSignalements).toList();
+    _nonSignales = nonResolus.length - signales.length;
+    if (signales.isNotEmpty) {
+      unawaited(
+        ref.read(libraryRepositoryProvider).signalerNonResolus(signales),
+      );
     }
     setState(() => _etape = const _Termine());
     // Une annonce : la fin et le bilan, refus reçus pendant l'écriture compris.
@@ -648,6 +771,22 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
         const SizedBox(height: 8),
       ],
       MergeSemantics(child: Text(resume, style: theme.textTheme.titleMedium)),
+      if (_indexLus case (
+        incomplet: true,
+        :final vide,
+        :final nonLues,
+        index: _,
+      )) ...[
+        const SizedBox(height: 8),
+        Text(
+          vide
+              ? TextesImport.bibliothequeVide
+              : TextesImport.bibliothequeNonLue(
+                  nonLues,
+                  horsLigne: access?.offline ?? false,
+                ),
+        ),
+      ],
       const SizedBox(height: 8),
       Align(
         alignment: Alignment.centerLeft,
@@ -856,6 +995,26 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
         const SizedBox(height: 8),
         Text(TextesImport.horsLigne(acceptees.length)),
       ],
+      if (_nonSignales > 0) ...[
+        const SizedBox(height: 8),
+        Text(TextesImport.nonSignales(_nonSignales)),
+      ],
+      if (_indexLus case (
+        incomplet: true,
+        :final vide,
+        :final nonLues,
+        index: _,
+      )) ...[
+        const SizedBox(height: 8),
+        Text(
+          vide
+              ? TextesImport.bibliothequeVide
+              : TextesImport.bibliothequeNonLue(
+                  nonLues,
+                  horsLigne: ref.read(grantedAccessProvider)?.offline ?? false,
+                ),
+        ),
+      ],
       if (acceptees.isNotEmpty) ...[
         const TitreSection('Créées'),
         for (final c in acceptees)
@@ -945,7 +1104,8 @@ class _LigneApercu extends StatelessWidget {
     final modifications = [
       for (final m in recette.modifications) libelleModification(m),
     ];
-    final n = aCompleter.length + modifications.length;
+    final reprises = [for (final m in recette.reprises) libelleModification(m)];
+    final n = aCompleter.length + modifications.length + reprises.length;
     final titre = Text(recette.nom);
     final sous = Text(
       sousTitre,
@@ -996,6 +1156,10 @@ class _LigneApercu extends StatelessWidget {
                 if (modifications.isNotEmpty) ...[
                   const _Sous(TextesImport.modifie),
                   for (final l in modifications) _Puce(l),
+                ],
+                if (reprises.isNotEmpty) ...[
+                  const _Sous(TextesImport.reprisBibliotheque),
+                  for (final l in reprises) _Puce(l),
                 ],
               ],
             ),

@@ -333,7 +333,7 @@ L2 à L4 peuvent s'intercaler avec la v0.5 et la v0.6.
   de 500, les 500 premières, avec un avertissement. L'écriture reste sous le compte de
   l'importateur, une recette à la fois.
 - Export BeerXML : bloqué tant que `beer_styles` manque (L3), avec la raison affichée ; aucune
-  valeur de style inventée. L'import BeerXML et l'export BeerJSON marchent en L2.
+  valeur de style inventée. (Débloqué par E4, amendements de L3 et L4.) L'import BeerXML et l'export BeerJSON marchent en L2.
 - Doublon : empreinte du contenu dans `imported_from` ; recette déjà importée marquée et décochée.
 - Quantités en volume : un ajout, un houblon extrait et une levure peuvent porter `amount` en `l`
   (étend la décision du 2026-11-10 sur la levure). Un houblon en volume ne compte pas dans l'IBU.
@@ -392,7 +392,8 @@ base (v0.1.25), puis la consultation dans l'application, puis le reste de L4.
   `import/ingest/prepare/<collection>.json`. L'écriture est en Node 24, paquet `ingest/`
   (Admin SDK), qui lit ces fichiers.
 - D6. `import_unresolved/` est écrit par le script seul (nom de DIY Dog non résolu) et lu par
-  l'admin. La création par un membre arrivera avec la résolution à l'import (étape 3).
+  l'admin. La création par un membre arrivera avec la résolution à l'import (étape 3). (Livrée
+  à l'étape 3 : voir E6.)
 - D7. Première écriture en production le 2026-11-11 (12:49Z), par l'administrateur, avec ses
   ADC de compte utilisateur (`authorized_user`) : 2 525 documents écrits, 0 refusé. Le compte
   `kassbeer-ingest` est reporté. L'écrivain refuse une clé de compte de service :
@@ -404,6 +405,64 @@ base (v0.1.25), puis la consultation dans l'application, puis le reste de L4.
 - D8. La forme d'un houblon est facultative à la lecture, parce que DIY Dog ne la donne pas.
   L'IBU d'un houblon d'ébullition sans forme est « à compléter », et l'éditeur demande la
   forme. Ce code est livré par la branche des écrans.
+
+Décisions de l'étape 3, côté recettes (v0.1.28) :
+
+- E1. Aucun champ n'entre dans `recipes/` ni dans `recipe_snapshot` : D3 tient, à cause du
+  budget des règles. Pas de `style_id` ni d'`ingredient_refs` en base. Le style d'une recette
+  reste `recipe.style.name`, et le lien avec le référentiel se retrouve par le nom, au moment
+  voulu. Les règles de `recipes/` et de `brews/` ne changent pas.
+- E2. Dans l'éditeur, le champ « Nom » d'un malt, d'un houblon, d'un ajout ou d'une levure propose
+  les entrées de `beer_index/` de sa nature, par nom et alias, filtrées sur l'appareil. Le choix
+  remplit les valeurs vides : malt `type`, rendement et couleur ; houblon acide alpha et forme ;
+  levure type, forme et atténuation. Une valeur saisie n'est remplacée que par « Reprendre les
+  valeurs de la Bibliothèque ». La saisie libre reste possible. L'index se lit à l'ouverture du
+  champ, par `get` mémorisé ; hors ligne, il se lit dans le cache seul, et sans lui l'éditeur marche
+  sans suggestions et relit à la prise du focus suivante. Un ajout reçoit son type s'il est vide.
+- E3. Le champ « Style » propose les styles de `beer_index/styles`, par code ou nom, et écrit
+  `recipe.style.name` avec le nom exact du style. La saisie libre reste possible.
+- E4. L'export BeerXML est débloqué. Il retrouve le style par son nom exact dans
+  `beer_index/styles`, puis lit `beer_styles/{id}` par `get` (catégorie, code, type, guide,
+  plages). Sans style, ou avec un style introuvable sous ce nom exact, l'export est bloqué et
+  demande de choisir le style dans les suggestions du champ Style. Les autres règles de `manquesExportBeerXml` restent, dont la forme du houblon
+  (D8). Le type et les plages du `STYLE` suivent E7.
+- E5. À l'ouverture de Recettes › Importer, les index des malts, houblons, levures et ajouts
+  se lisent par `get` mémorisé. Une ligne sans valeur technique dont le nom se résout
+  exactement après normalisation (nom ou alias, et pour une levure souche, référence, ou
+  producteur et référence) reçoit la valeur de l'index, comme D4. Une valeur du fichier n'est
+  jamais remplacée. Le compte rendu liste les valeurs reprises. Hors ligne ou index absent,
+  l'import marche comme avant, avec une ligne au compte rendu. Normalisation et résolution sont
+  dans `exchange/` (`noms.dart`, `resolution_import.dart`), en Dart pur, l'index reçu en
+  paramètre ; `noms.dart` est commun à l'ingestion, que l'application n'importe pas.
+- E6. Après un import, l'application crée ou met à jour `import_unresolved/{empreinte}` pour
+  chaque nom non résolu, par un `set` fusionné : `nature`, `key` (nom normalisé, 100 caractères
+  au plus), `name` (120 caractères au plus), `source: import`, `count` (1, puis + 1 par import,
+  `FieldValue.increment(1)`), `updated_at` (`serverTimestamp`) ; aucun e-mail, uid ni nom de
+  fichier. 200 noms au plus par import, envoyés par lots de 10 (`WriteBatch`) ; les suivants
+  sont comptés au compte rendu. Écriture simple, permise hors ligne. L'empreinte d'un import
+  est le SHA-256 de `import|nature|key` : elle ne croise jamais celle du script (`nature|nom
+  normalisé`, sans `key`), et Admin › Sources montre les deux lignes avec leur origine. Les
+  règles admettent la création par un membre (liste blanche, `source == import`, `count == 1`,
+  `hashing.sha256('import|' + nature + '|' + key).toHexString().lower()` égal à l'identifiant,
+  essayé dans l'émulateur) et la mise à jour d'un document d'import, où seuls `name` (texte de 1
+  à 120 caractères, pour une autre casse ou d'autres accents), `count` (+ 1 exactement) et
+  `updated_at` (`request.time`) changent ; `nature`, `key` et `source` restent. Lecture par
+  l'admin seul, aucune suppression. Un échec de signalement est rapporté et n'empêche pas
+  l'import.
+- E7. Choix de l'étape 3 : décision de la session principale, sous l'accord de l'utilisateur du
+  2026-11-11 de décider jusqu'à la fin de L4 ; à relire par l'utilisateur.
+  - le `TYPE` du `STYLE` BeerXML d'un style BJCP de type `beer` se déduit des levures de la
+    recette : `ale` et `kveik` donnent `Ale`, `lager` donne `Lager`, `wheat` donne `Wheat`,
+    une levure de fermentation mixte ou bactérienne, ou deux classes différentes, donnent
+    `Mixed` ; sans levure typée, ou avec une levure de vin, de champagne ou `other`, l'export
+    est bloqué. `mead` et `cider` donnent `Mead` et `Cider` ;
+  - un style sans catégorie, code, guide ou une plage de densité, d'amertume ou de couleur bloque
+    l'export BeerXML : 17 styles BJCP n'ont aucune plage, IPA Argenta n'a pas de densités ;
+    aucune plage n'est inventée ;
+  - une levure importée se résout aussi par sa référence seule (`US-05`) ou par son producteur
+    et sa référence (`Fermentis US-05`), quand une seule entrée correspond ;
+  - la forme d'un houblon et le type d'un autre ajout sont repris à l'import, en plus des
+    valeurs de D4 ; l'éditeur reprend aussi le type vide d'un ajout.
 
 Constats de la livraison de l'étape 1 (v0.1.25) :
 

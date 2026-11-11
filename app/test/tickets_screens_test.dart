@@ -197,6 +197,38 @@ void main() {
       expect(find.text('Grainfather'), findsWidgets);
     });
 
+    testWidgets('élément précis : jamais prérempli, envoyé dans « screen »', (
+      tester,
+    ) async {
+      final app = await signedIn(tester);
+      await tester.tap(find.text('Équipements'));
+      await tester.pumpAndSettle();
+      await openMenu(tester);
+      await tester.tap(find.text('Signaler ou proposer'));
+      await tester.pumpAndSettle();
+      final element = find.widgetWithText(
+        DropdownButtonFormField<String>,
+        'Élément précis',
+      );
+      expect(
+        find.descendant(of: element, matching: find.text("L'écran entier")),
+        findsOneWidget,
+      );
+      await fillValid(tester);
+      await tester.ensureVisible(element);
+      await tester.pumpAndSettle();
+      await tester.tap(element);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Menu du compte').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Envoyer'));
+      await tester.pumpAndSettle();
+      expect(
+        app.tickets.created.single.brouillon.screen,
+        '/equipements/menu/compte',
+      );
+    });
+
     testWidgets('admin, depuis Membres : « Admin › Membres »', (tester) async {
       final app = await signedIn(tester, admin: true);
       app.members.all.add(const [adminMember]);
@@ -205,6 +237,31 @@ void main() {
       await tester.tap(find.text('Signaler ou proposer'));
       await tester.pumpAndSettle();
       expect(dropdownLabel(tester), 'Admin › Membres');
+    });
+
+    testWidgets('admin, depuis Membres : « Inviter un membre » proposé', (
+      tester,
+    ) async {
+      final app = await signedIn(tester, admin: true);
+      app.members.all.add(const [adminMember]);
+      await go(tester, app, AppRoutes.adminMembers);
+      await openMenu(tester);
+      await tester.tap(find.text('Signaler ou proposer'));
+      await tester.pumpAndSettle();
+      final element = find.widgetWithText(
+        DropdownButtonFormField<String>,
+        'Élément précis',
+      );
+      await tester.ensureVisible(element);
+      await tester.pumpAndSettle();
+      await tester.tap(element);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Inviter un membre').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: element, matching: find.text('Inviter un membre')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Mes tickets s\'ouvre par push et revient par pop', (
@@ -627,6 +684,30 @@ void main() {
       expect(created.brouillon.type, TicketType.feature);
       expect(created.brouillon.title, 'Densité fausse');
       expect(created.brouillon.screen, '/brassins');
+    });
+
+    testWidgets('Reprendre rend l\'élément précis du ticket repris', (
+      tester,
+    ) async {
+      const bottling = '/brassins/:id/fenetre/embouteillage';
+      final app = await openDetail(
+        tester,
+        unTicket(status: TicketStatus.overQuota, screen: bottling),
+      );
+      await tester.tap(find.text(TicketDetailScreen.resume));
+      await tester.pumpAndSettle();
+      expect(dropdownLabel(tester), 'Brassin');
+      final element = find.widgetWithText(
+        DropdownButtonFormField<String>,
+        'Élément précis',
+      );
+      expect(
+        find.descendant(of: element, matching: find.text('Embouteillage')),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Envoyer'));
+      await tester.pumpAndSettle();
+      expect(app.tickets.created.single.brouillon.screen, bottling);
     });
 
     testWidgets('suivi à lire : seen_by_author_at écrit une fois', (

@@ -304,6 +304,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     String oui, {
     String non = 'Annuler',
   }) async {
+    // ticket: aucun (confirmation)
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -403,6 +404,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
   }) {
     final messenger = ScaffoldMessenger.of(context);
     unawaited(
+      // ticket: /brassins/:id/jour/fenetre/mesure
       showFeuilleOuDialogue<void>(
         context: context,
         fermetureProtegee: true,
@@ -534,6 +536,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
       () => _ouvrirMesure(stepKey: ligne.step.key, type: _typeParDefaut(ligne)),
     );
     unawaited(
+      // ticket: /brassins/:id/jour/fenetre/etape
       showModalBottomSheet<void>(
         context: context,
         useSafeArea: true,
@@ -668,6 +671,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
 
   void _voirRecette() {
     unawaited(
+      // ticket: /brassins/:id/jour/fenetre/recette
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -922,6 +926,7 @@ class _Jour extends StatelessWidget {
                   detailAttente: detail,
                   web: kIsWeb,
                 ),
+                // ticket: /brassins/:id/jour/menu/actions
                 PopupMenuButton<VoidCallback>(
                   tooltip: 'Plus d\'actions',
                   onSelected: (action) => action(),

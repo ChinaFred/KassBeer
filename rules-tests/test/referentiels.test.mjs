@@ -1,6 +1,7 @@
 // Référentiels, recettes publiques et comptes rendus de l'ingestion (ADR-005, P19) :
 // écrits par aucun client, lus par les membres (ingest_runs et import_unresolved : par
-// l'admin). Cinq profils de P4, plus les connexions non conformes de P11.
+// l'admin). Cinq profils de P4, plus les connexions non conformes de P11. L'écriture
+// d'un import_unresolved par un membre (E6) : import_unresolved.test.mjs.
 
 import { beforeEach, describe, it } from "node:test";
 import { db, FIVE_PROFILES, seed, serverTimestamp } from "./helpers.mjs";
@@ -187,7 +188,7 @@ describe("ingest_runs et import_unresolved : lecture par l'admin seul", () => {
 });
 
 describe("aucune écriture d'un client, admin compris", () => {
-  for (const collection of [...LUS_PAR_LES_MEMBRES, ...LUS_PAR_L_ADMIN]) {
+  for (const collection of [...LUS_PAR_LES_MEMBRES, "ingest_runs"]) {
     for (const profil of FIVE_PROFILES) {
       it(`${collection} : ${profil} ne crée, ne modifie ni ne supprime`, async () => {
         const fs = db(state.env, profil);

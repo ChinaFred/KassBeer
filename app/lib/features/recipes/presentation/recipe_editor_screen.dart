@@ -18,6 +18,8 @@ import '../../../core/data/lecture_document.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_providers.dart';
+import '../../library/domain/referentiel.dart';
+import '../../library/presentation/champ_bibliotheque.dart';
 import '../domain/beerjson.dart';
 import '../domain/recipe.dart';
 import 'contenu_recette.dart';
@@ -89,6 +91,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   final _keys = {for (final s in _Section.values) s: GlobalKey()};
   final _nameKey = GlobalKey();
   final _nameFocus = FocusNode();
+  final _styleFocus = FocusNode();
   late final TextEditingController _name;
   late final TextEditingController _style;
   late final TextEditingController _volume;
@@ -110,6 +113,11 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   String? _nameError;
 
   static const nameMissing = 'Donnez un nom à la recette.';
+
+  /// Aide du champ « Style ».
+  static const styleAide =
+      'Tapez un code (21A) ou un nom, puis choisissez une suggestion. '
+      'L\'export BeerXML demande un style de la Bibliothèque.';
 
   @override
   void initState() {
@@ -136,6 +144,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       c.dispose();
     }
     _nameFocus.dispose();
+    _styleFocus.dispose();
     super.dispose();
   }
 
@@ -253,6 +262,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
 
   // ------------------------------------------------------------ lignes
 
+  // ticket: /recettes/nouvelle/fenetre/malt, /recettes/:id/modifier/fenetre/malt
   Future<void> _openFermentable([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireFermentescible(
@@ -267,6 +277,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ),
   );
 
+  // ticket: /recettes/nouvelle/fenetre/houblon, /recettes/:id/modifier/fenetre/houblon
   Future<void> _openHop([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireHoublon(
@@ -282,6 +293,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ),
   );
 
+  // ticket: /recettes/nouvelle/fenetre/ajout, /recettes/:id/modifier/fenetre/ajout
   Future<void> _openOther([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireAjout(
@@ -294,6 +306,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ),
   );
 
+  // ticket: /recettes/nouvelle/fenetre/levure, /recettes/:id/modifier/fenetre/levure
   Future<void> _openYeast() => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulaireLevure(
@@ -306,6 +319,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     ),
   );
 
+  // ticket: /recettes/nouvelle/fenetre/palier, /recettes/:id/modifier/fenetre/palier
   Future<void> _openStep([int? index]) => showFeuilleOuDialogue<void>(
     context: context,
     builder: (_) => FormulairePalier(
@@ -467,6 +481,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           ? null
           : BarreCalculs(
               calculs: calculs,
+              // ticket: /recettes/nouvelle/fenetre/calculs, /recettes/:id/modifier/fenetre/calculs
               onTap: () => showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
@@ -595,14 +610,31 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           value: author,
         ),
       const SizedBox(height: 8),
-      TextFormField(
+      // Style BJCP choisi dans la Bibliothèque par son code ou son nom
+      // (ADR-005, E3) : son nom exact est écrit, l'export BeerXML le retrouve.
+      // La saisie libre reste possible.
+      ChampBibliotheque(
+        nature: NatureReferentiel.styles,
         controller: _style,
-        maxLength: kRecipeNameMaxLength,
-        decoration: const InputDecoration(
-          labelText: 'Style (facultatif)',
-          border: OutlineInputBorder(),
+        focusNode: _styleFocus,
+        detail: detailStyle,
+        onSelected: _changed,
+        fieldBuilder: (context, aide, onSubmitted) => TextFormField(
+          controller: _style,
+          focusNode: _styleFocus,
+          // Entrée choisit la suggestion surlignée après ↑ ou ↓ ; sinon le style
+          // tapé reste et le focus passe au champ suivant.
+          textInputAction: TextInputAction.next,
+          onFieldSubmitted: (_) => onSubmitted(),
+          maxLength: kRecipeNameMaxLength,
+          decoration: InputDecoration(
+            labelText: 'Style (facultatif)',
+            helperText: aide ?? styleAide,
+            helperMaxLines: 8,
+            border: const OutlineInputBorder(),
+          ),
+          onChanged: _changed,
         ),
-        onChanged: _changed,
       ),
       const SizedBox(height: 8),
       ListeBeerJson(

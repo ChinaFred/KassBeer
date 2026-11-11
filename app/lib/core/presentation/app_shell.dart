@@ -143,6 +143,7 @@ class AppShell extends ConsumerWidget {
           return Scaffold(
             appBar: appBar,
             body: withBanner(child),
+            // ticket: <coquille>/menu/navigation
             bottomNavigationBar: NavigationBar(
               selectedIndex: selected,
               onDestinationSelected: goTo,
@@ -173,6 +174,7 @@ class AppShell extends ConsumerWidget {
                       minHeight: railConstraints.maxHeight,
                     ),
                     child: IntrinsicHeight(
+                      // ticket: <coquille>/menu/navigation
                       child: NavigationRail(
                         selectedIndex: selected,
                         onDestinationSelected: goTo,
@@ -281,6 +283,7 @@ class _AccountMenu extends ConsumerWidget {
     final toProcess = ref.watch(ticketsToProcessCountProvider);
     final total = unread + toProcess;
 
+    // ticket: <coquille>/menu/compte
     return MenuAnchor(
       menuChildren: [
         Padding(

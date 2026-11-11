@@ -43,6 +43,7 @@ class MembersScreen extends ConsumerWidget {
     final existing = {for (final m in members) m.email};
     final messenger = ScaffoldMessenger.of(context);
 
+    // ticket: /admin/membres/fenetre/inviter
     final request = await showFeuilleOuDialogue<InviteRequest>(
       context: context,
       builder: (context) => InviteMemberForm(existingEmails: existing),
@@ -80,6 +81,7 @@ class MembersScreen extends ConsumerWidget {
     Member member,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    // ticket: aucun (confirmation)
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {

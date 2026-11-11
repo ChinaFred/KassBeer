@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:exchange/exchange.dart' show NomNonResolu;
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
@@ -255,4 +256,133 @@ void main() {
       expect(errors.reports, isEmpty);
     });
   });
+
+  group('import_unresolved (ADR-005, E6)', () {
+    const houblon = NomNonResolu('hop', 'Houblon Inconnu');
+    const malt = NomNonResolu('fermentable', 'Malt Inconnu');
+
+    test('création : liste blanche, count 1, sans e-mail ni uid', () async {
+      await repository.signalerNonResolus([houblon, malt]);
+      final doc = await firestore
+          .doc('import_unresolved/${houblon.empreinte}')
+          .get();
+      final data = doc.data()!;
+      expect(data.keys.toSet(), {
+        'nature',
+        'key',
+        'name',
+        'source',
+        'count',
+        'updated_at',
+      });
+      expect(data['nature'], 'hop');
+      expect(data['key'], 'houblon-inconnu');
+      expect(data['name'], 'Houblon Inconnu');
+      expect(data['source'], 'import');
+      expect(data['count'], 1);
+      expect(data['updated_at'], isA<Timestamp>());
+      expect(houblon.empreinte, matches(RegExp(r'^[0-9a-f]{64}$')));
+      final malts = await firestore
+          .doc('import_unresolved/${malt.empreinte}')
+          .get();
+      expect(malts.data()!['nature'], 'fermentable');
+      expect(errors.reports, isEmpty);
+    });
+
+    test('autre graphie du même nom : même document, compte + 1', () async {
+      await repository.signalerNonResolus([houblon]);
+      const autre = NomNonResolu('hop', 'HOUBLON inconnu');
+      expect(autre.empreinte, houblon.empreinte);
+      await repository.signalerNonResolus([autre]);
+      final doc = await firestore
+          .doc('import_unresolved/${houblon.empreinte}')
+          .get();
+      expect(doc.data()!['count'], 2);
+      expect(doc.data()!['source'], 'import');
+      expect(doc.data()!['name'], 'HOUBLON inconnu');
+      expect(errors.reports, isEmpty);
+    });
+
+    test('120 noms : lots de 10, tous écrits', () async {
+      final noms = [
+        for (var i = 0; i < 120; i++) NomNonResolu('misc', 'Ajout Inconnu $i'),
+      ];
+      final lots = _FirestoreLots();
+      final depot = FirestoreLibraryRepository(
+        errorReportService: errors,
+        firestore: lots,
+      );
+      await depot.signalerNonResolus(noms);
+      expect(lots.lots, 12);
+      final docs = await lots.collection(kNonResolus).get();
+      expect(docs.docs, hasLength(120));
+      expect(errors.reports, isEmpty);
+    });
+
+    test(
+      'lot refusé : les autres écrits, un rapport sans nom, rien ne lève',
+      () async {
+        final noms = [
+          for (var i = 0; i < 30; i++)
+            NomNonResolu('hop', 'Houblon Inconnu $i'),
+        ];
+        final lots = _FirestoreLots(enPanne: 2);
+        final depot = FirestoreLibraryRepository(
+          errorReportService: errors,
+          firestore: lots,
+        );
+        await depot.signalerNonResolus(noms);
+        final ids = {
+          for (final d in (await lots.collection(kNonResolus).get()).docs) d.id,
+        };
+        expect(ids, {
+          for (final n in [...noms.sublist(0, 10), ...noms.sublist(20)])
+            n.empreinte,
+        });
+        final rapport = errors.reports.single;
+        expect(rapport.feature, 'library.unresolved');
+        expect(rapport.context, contains('lot de 10 noms (hop)'));
+        expect(rapport.context, isNot(contains('Houblon')));
+      },
+    );
+  });
+}
+
+/// Firestore de test dont le lot n° [enPanne] (à partir de 1) échoue au commit.
+class _FirestoreLots extends FakeFirebaseFirestore {
+  _FirestoreLots({this.enPanne});
+
+  final int? enPanne;
+  int lots = 0;
+
+  @override
+  WriteBatch batch() {
+    lots++;
+    return _Lot(super.batch(), panne: lots == enPanne);
+  }
+}
+
+class _Lot implements WriteBatch {
+  _Lot(this._lot, {required this.panne});
+
+  final WriteBatch _lot;
+  final bool panne;
+
+  @override
+  void set<T>(DocumentReference<T> document, T data, [SetOptions? options]) =>
+      _lot.set(document, data, options);
+
+  @override
+  Future<void> commit() async {
+    if (panne) {
+      throw FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'permission-denied',
+      );
+    }
+    await _lot.commit();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
