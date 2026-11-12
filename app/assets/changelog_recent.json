@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.31",
+      "date": "2026-11-12",
+      "paragraphs": [
+        "Le suivi d'un ticket a une nouvelle étape, « Analysé », entre « Reçu » et « Validé » : votre demande a été lue et étudiée. L'administrateur lit maintenant dans la fiche d'un ticket les analyses publiées sur sa page GitHub, et peut y répondre depuis l'application avec le bouton « Répondre ». Sa réponse ramène le ticket à « Reçu » pour une nouvelle analyse."
+      ]
+    },
+    {
       "version": "0.1.29",
       "date": "2026-11-11",
       "paragraphs": [
@@ -37,13 +44,6 @@
       "date": "2026-11-11",
       "paragraphs": [
         "L'administrateur traite les tickets depuis l'application. Le menu du compte gagne « Tickets à traiter », avec le nombre de tickets qui attendent une décision, et la page Admin la tuile « Tickets des membres ». La liste se filtre (à traiter, tous, bloqués) et montre l'auteur de chaque ticket. La fiche d'un ticket permet de le valider, de le refuser avec un motif ou de le clore avec un commentaire, de relancer un envoi en échec et d'ouvrir l'Issue sur GitHub ; elle suit l'avancement de la décision. Une frise montre les étapes du ticket, ici comme dans Mes tickets, et les statuts prennent de nouvelles couleurs. Sur grand écran, la liste et la fiche s'affichent côte à côte."
-      ]
-    },
-    {
-      "version": "0.1.21",
-      "date": "2026-11-10",
-      "paragraphs": [
-        "Recettes › Importer lit aussi les fichiers BeerXML, le format qu'exportent BeerSmith, Brewfather, Brewer's Friend et Brewtarget. Le fichier s'importe comme un fichier BeerJSON : aperçu sans écriture, recettes déjà importées ou en double décochées, compte rendu. Un fichier BeerSmith qui contient des apostrophes ou des accents se lit sans caractère faux. « Détails » dit ce qui change à l'import : un houblon « First Wort » compte à l'ébullition pendant toute l'ébullition de la recette, un houblon « Aroma » avec une durée compte à l'ébullition pendant cette durée (si c'était un whirlpool, choisissez Whirlpool dans la recette), un whirlpool sans durée compte à l'arrêt du feu, et le style ne garde que son nom. Le profil d'eau, les étapes de fermentation et l'équipement du fichier ne sont pas importés. Une levure liquide mesurée en litres garde sa quantité en litres. Un fichier BeerSmith (.bsmx) n'est pas lu : exportez la recette en BeerXML depuis BeerSmith. L'export BeerXML reste visible et bloqué : il demande un style de la liste BJCP, dont le choix arrive dans une prochaine version."
       ]
     }
   ]

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,11 +17,13 @@ import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/ticket.dart';
+import '../domain/ticket_analysis.dart';
 import '../domain/ticket_screens.dart';
 import 'admin_tickets_screen.dart';
 import 'bandeau_tickets_admin.dart';
 import 'encadre_reponse.dart';
 import 'frise_ticket.dart';
+import 'section_analyses.dart';
 import 'ticket_lien_github.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
@@ -55,14 +58,25 @@ const kRelanceEnvoiHorsLigne =
     'Nouvel essai enregistré sur cet appareil. Il partira au retour du '
     'réseau.';
 
+/// « Répondre » hors ligne : le bouton est inactif, cette phrase dit pourquoi.
+const kRepondreHorsLigne = 'Répondre demande le réseau.';
+
+/// Ligne de la barre pendant la publication d'une réponse, boîte fermée ou
+/// non.
+const kPublicationReponseEnCours =
+    'Publication de la réponse en cours sur GitHub.';
+
 /// Phrase au-dessus de « Réessayer » et des décisions après un échec.
 const kApresEchec = 'Réessayez, ou prenez une autre décision.';
 
 /// Ligne d'état de la dernière décision, au-dessus des boutons.
+///
+/// [progress] : libellé annoncé de la barre de progression ; `null` : pas de
+/// barre.
 typedef LigneDecision = ({
   IconData? icon,
   bool error,
-  bool progress,
+  String? progress,
   String text,
   bool retry,
 });
@@ -88,7 +102,7 @@ LigneDecision? ligneDecision(
     return (
       icon: Icons.cloud_off,
       error: false,
-      progress: false,
+      progress: null,
       text: decision.state == TicketDecisionState.failed
           ? kRelanceEnvoiHorsLigne
           : phraseHorsLigne(decision.action),
@@ -104,7 +118,7 @@ LigneDecision? ligneDecision(
         return (
           icon: Icons.schedule,
           error: false,
-          progress: false,
+          progress: null,
           text:
               '$nom interrompu$e. Le serveur ${feminin ? 'la' : 'le'} '
               'reprendra dans l\'heure.',
@@ -120,7 +134,7 @@ LigneDecision? ligneDecision(
       return (
         icon: null,
         error: false,
-        progress: true,
+        progress: 'Décision en cours',
         text: late
             ? 'Le serveur n\'a pas encore pris $ce $petit en compte.'
             : '$nom en cours sur GitHub.',
@@ -132,7 +146,7 @@ LigneDecision? ligneDecision(
       return (
         icon: Icons.info_outline,
         error: false,
-        progress: false,
+        progress: null,
         text: decision.errorReason ?? 'Le serveur a écarté $ce $petit.',
         retry: false,
       );
@@ -141,7 +155,7 @@ LigneDecision? ligneDecision(
       return (
         icon: Icons.error_outline,
         error: true,
-        progress: false,
+        progress: null,
         text: reason == null
             ? '$le $petit n\'a pas abouti.'
             : '$le $petit n\'a pas abouti : $reason',
@@ -151,7 +165,7 @@ LigneDecision? ligneDecision(
       return (
         icon: Icons.help_outline,
         error: false,
-        progress: false,
+        progress: null,
         text: 'État de la décision inconnu. Mettez l\'application à jour.',
         retry: false,
       );
@@ -228,25 +242,81 @@ class AdminTicketScreen extends ConsumerWidget {
 /// Brouillons et décision écrite d'une fiche, hors de l'état du widget : un
 /// changement de disposition (liste et fiche côte à côte, ou fiche seule)
 /// reconstruit la fiche sans perdre le texte saisi ni la décision en cours.
+///
+/// [brouillonReponse], [reponseEnCours], [echecReponse] : « Répondre »
+/// (ADR-008) ; l'appel continue quand la boîte est fermée.
 typedef EtatDecisionsFiche = ({
   Map<TicketDecisionAction, String> brouillons,
   TicketDecision? ecrite,
+  String? brouillonReponse,
+  bool reponseEnCours,
+  EchecReponse? echecReponse,
 });
 
-/// Brouillons d'un refus ou d'une clôture, et décision écrite par cet appareil
-/// en attendant que la lecture des décisions la rende.
+/// Brouillons d'un refus ou d'une clôture, décision écrite par cet appareil
+/// en attendant que la lecture des décisions la rende, et réponse en cours de
+/// publication.
 class DecisionsFicheNotifier extends Notifier<EtatDecisionsFiche> {
   DecisionsFicheNotifier(this.ticketId);
 
   final String ticketId;
 
   @override
-  EtatDecisionsFiche build() => (brouillons: const {}, ecrite: null);
+  EtatDecisionsFiche build() => (
+    brouillons: const {},
+    ecrite: null,
+    brouillonReponse: null,
+    reponseEnCours: false,
+    echecReponse: null,
+  );
 
   void garderBrouillon(TicketDecisionAction action, String text) => state = (
     brouillons: {...state.brouillons, action: text},
     ecrite: state.ecrite,
+    brouillonReponse: state.brouillonReponse,
+    reponseEnCours: state.reponseEnCours,
+    echecReponse: state.echecReponse,
   );
+
+  /// Garde le texte de « Répondre » à chaque frappe ; un échec affiché
+  /// s'efface, sauf un échec partiel (texte figé).
+  void garderBrouillonReponse(String text) => state = (
+    brouillons: state.brouillons,
+    ecrite: state.ecrite,
+    brouillonReponse: text,
+    reponseEnCours: state.reponseEnCours,
+    echecReponse: (state.echecReponse?.partiel ?? false)
+        ? state.echecReponse
+        : null,
+  );
+
+  /// Publie [text] par `answerTicketAnalysis` ; un seul appel à la fois.
+  /// Rend `null` si le serveur l'a publié (le brouillon s'efface), sinon
+  /// l'échec, déjà rapporté par le dépôt sans le texte (P13), et le texte
+  /// reste en brouillon.
+  Future<EchecReponse?> publierReponse(String text) async {
+    if (state.reponseEnCours) {
+      return const EchecReponse(CauseEchecReponse.autre);
+    }
+    final repository = ref.read(ticketsRepositoryProvider);
+    state = (
+      brouillons: state.brouillons,
+      ecrite: state.ecrite,
+      brouillonReponse: text,
+      reponseEnCours: true,
+      echecReponse: state.echecReponse,
+    );
+    final echec = await repository.answer(ticketId: ticketId, answer: text);
+    if (!ref.mounted) return echec;
+    state = (
+      brouillons: state.brouillons,
+      ecrite: state.ecrite,
+      brouillonReponse: echec == null ? null : text,
+      reponseEnCours: false,
+      echecReponse: echec,
+    );
+    return echec;
+  }
 
   /// Écrit la décision (dans le cache dès l'appel) ; vrai si le serveur
   /// l'accepte. Un refus est rapporté par le dépôt, sans le texte (P13), et
@@ -274,12 +344,18 @@ class DecisionsFicheNotifier extends Notifier<EtatDecisionsFiche> {
         text: text,
         hasPendingWrites: true,
       ),
+      brouillonReponse: state.brouillonReponse,
+      reponseEnCours: state.reponseEnCours,
+      echecReponse: state.echecReponse,
     );
     final accepted = await written;
     if (accepted || !ref.mounted) return accepted;
     state = (
       brouillons: {...state.brouillons, action: ?text},
       ecrite: state.ecrite?.id == id ? null : state.ecrite,
+      brouillonReponse: state.brouillonReponse,
+      reponseEnCours: state.reponseEnCours,
+      echecReponse: state.echecReponse,
     );
     return false;
   }
@@ -370,6 +446,24 @@ class _FicheState extends ConsumerState<_Fiche> {
     );
     if (text == null) return;
     await _ecrire(avant, action, text);
+  }
+
+  /// Ouvre la boîte « Répondre ». La publication part de la boîte et
+  /// continue si elle est fermée : le résultat s'affiche alors dans un
+  /// message de la fiche.
+  Future<void> _repondre(TicketAnalysisDoc? analyses) async {
+    final messenger = ScaffoldMessenger.of(context);
+    // ticket: /admin/tickets/:id/fenetre/reponse
+    await showFeuilleOuDialogue<void>(
+      context: context,
+      fermetureProtegee: true,
+      builder: (context) => FormulaireReponse(
+        ticketId: _ticket.id,
+        status: _ticket.status,
+        derniereAnalyse: analyses?.lastAnalysisAt,
+        messenger: messenger,
+      ),
+    );
   }
 
   /// Ce dont une écriture a besoin, lu avant d'ouvrir une boîte : si la
@@ -568,6 +662,8 @@ class _FicheState extends ConsumerState<_Fiche> {
       Text('Écran : ${ticketScreenLabel(ticket.screen)}', style: muted),
       const TitreSection('Description'),
       Text(ticket.description, style: theme.textTheme.bodyLarge),
+      // Sans Issue, il n'y a rien à analyser.
+      if (ticket.issueNumber != null) SectionAnalyses(ticket: ticket),
       if (decisionsAsync.value == null && decisionsAsync.hasError) ...[
         gap,
         Semantics(
@@ -691,18 +787,46 @@ class _FicheState extends ConsumerState<_Fiche> {
             now: now,
             ticketLease: ticket.decisionLeaseUntil,
           );
-    final busy = (last?.inProgress ?? false) || ticket.decisionInProgress(now);
+    final reponse = ref.watch(decisionsFicheProvider(ticket.id));
+    final busy =
+        (last?.inProgress ?? false) ||
+        ticket.decisionInProgress(now) ||
+        reponse.reponseEnCours;
+    // Pendant une publication, sa ligne passe avant toute ligne sans barre de
+    // progression (échec, rejet, hors ligne…) : l'administrateur voit ce qui
+    // se passe maintenant.
+    if (reponse.reponseEnCours && (ligne == null || ligne.progress == null)) {
+      ligne = (
+        icon: null,
+        error: false,
+        progress: 'Publication en cours',
+        text: kPublicationReponseEnCours,
+        retry: false,
+      );
+    }
     if (ligne == null && ticket.decisionInProgress(now)) {
       ligne = (
         icon: null,
         error: false,
-        progress: true,
+        progress: 'Décision en cours',
         text: 'Décision en cours sur GitHub.',
         retry: false,
       );
     }
 
     final allowed = ticket.allowedDecisions;
+    // Les analyses ne se lisent que pour un ticket publié (section de la
+    // fiche) : la date de la dernière analyse et des précisions en attente.
+    final analyses = ticket.issueNumber == null
+        ? null
+        : switch (ref.watch(ticketAnalysisProvider(ticket.id)).value) {
+            DocumentTrouve(:final value) => value,
+            _ => null,
+          };
+    final enAttente = ticket.status == TicketStatus.received
+        ? analyses?.pendingAnswerAt
+        : null;
+    final repondre = ticket.canAnswer;
     Widget? actions;
     if (!busy && decisionsRead) {
       if (allowed == null) {
@@ -713,8 +837,8 @@ class _FicheState extends ConsumerState<_Fiche> {
             color: scheme.onSurfaceVariant,
           ),
         );
-      } else if (allowed.isNotEmpty) {
-        actions = OverflowBar(
+      } else if (allowed.isNotEmpty || repondre) {
+        final boutons = OverflowBar(
           alignment: MainAxisAlignment.end,
           overflowAlignment: OverflowBarAlignment.end,
           spacing: 8,
@@ -726,6 +850,13 @@ class _FicheState extends ConsumerState<_Fiche> {
                     _demanderTexte(TicketDecisionAction.refuse, decisions),
                 icon: const Icon(Icons.block),
                 label: const Text('Refuser'),
+              ),
+            // « Répondre » appelle le serveur : inactif hors ligne.
+            if (repondre)
+              OutlinedButton.icon(
+                onPressed: offline ? null : () => _repondre(analyses),
+                icon: const Icon(Icons.reply),
+                label: const Text('Répondre'),
               ),
             if (allowed.contains(TicketDecisionAction.close))
               OutlinedButton.icon(
@@ -742,6 +873,39 @@ class _FicheState extends ConsumerState<_Fiche> {
               ),
           ],
         );
+        actions = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (enAttente != null) ...[
+              Text(
+                'Vos précisions du ${formatDateChiffres(enAttente)} à '
+                '${formatHeure(enAttente)} seront lues par la prochaine '
+                'analyse.',
+                style: theme.textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 8),
+            ],
+            boutons,
+            if (repondre && offline) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Icon(Icons.cloud_off, color: scheme.onSurface),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      kRepondreHorsLigne,
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        );
       }
     }
     if (ligne == null && actions == null) return null;
@@ -755,10 +919,8 @@ class _FicheState extends ConsumerState<_Fiche> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (l.progress) ...[
-                  const LinearProgressIndicator(
-                    semanticsLabel: 'Décision en cours',
-                  ),
+                if (l.progress case final label?) ...[
+                  LinearProgressIndicator(semanticsLabel: label),
                   const SizedBox(height: 8),
                 ],
                 Row(
@@ -1034,6 +1196,308 @@ class _FormulaireDecisionState extends State<FormulaireDecision> {
               FilledButton(
                 onPressed: _submit,
                 child: Text(_refus ? 'Refuser' : 'Clore'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Message d'un échec de « Répondre », dans la boîte ou en bas d'écran. Un
+/// échec partiel dit que la réponse est déjà sur GitHub.
+String messageEchecReponse(EchecReponse echec) =>
+    echec.partiel ? FormulaireReponse.dejaPubliee : _messageEchec(echec);
+
+String _messageEchec(EchecReponse echec) => switch (echec.cause) {
+  CauseEchecReponse.reseau =>
+    'Réponse non publiée : pas de réseau. Votre texte est gardé.',
+  CauseEchecReponse.delai =>
+    'Réponse non publiée : le serveur n\'a pas répondu à temps. Vérifiez '
+        'l\'Issue avant de publier à nouveau.',
+  CauseEchecReponse.acces =>
+    'Réponse non publiée : accès administrateur refusé.',
+  CauseEchecReponse.motif =>
+    'Réponse non publiée : ${echec.motif} Votre texte est gardé.',
+  CauseEchecReponse.autre => 'Réponse non publiée. Votre texte est gardé.',
+};
+
+/// Message d'une réponse publiée ; [recu] : le ticket était « Reçu ».
+String messageReponsePubliee({required bool recu}) => recu
+    ? 'Réponse publiée. Elle sera lue par la prochaine analyse.'
+    : 'Réponse publiée. Le ticket repasse à Reçu.';
+
+/// Boîte « Répondre » (ADR-008) : publie les précisions de l'administrateur
+/// par `answerTicketAnalysis`. La boîte peut se fermer pendant l'envoi : le
+/// résultat s'affiche alors par [messenger], celui de la fiche.
+class FormulaireReponse extends ConsumerStatefulWidget {
+  const FormulaireReponse({
+    super.key,
+    required this.ticketId,
+    required this.status,
+    required this.derniereAnalyse,
+    required this.messenger,
+  });
+
+  final String ticketId;
+
+  /// Statut à l'ouverture : il choisit les textes de la boîte.
+  final TicketStatus status;
+
+  /// Date de la dernière analyse, en sous-titre.
+  final DateTime? derniereAnalyse;
+  final ScaffoldMessengerState messenger;
+
+  static const publicWarning =
+      'Publié sur un site public : n\'écrivez ni nom ni adresse. Le membre ne '
+      'lira pas ce texte dans l\'application.';
+  static const tropCourt = 'La réponse doit faire au moins 5 caractères.';
+  static const tropLong = 'La réponse ne doit pas dépasser 4 000 caractères.';
+  static const enCours =
+      'Publication en cours. Vous pouvez fermer : le résultat s\'affichera '
+      'dans un message.';
+  static const dejaPubliee =
+      'Cette réponse est déjà publiée sur GitHub. Publier remet le ticket à '
+      'Reçu.';
+
+  @override
+  ConsumerState<FormulaireReponse> createState() => _FormulaireReponseState();
+}
+
+class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
+  final _formKey = GlobalKey<FormState>();
+  final _focus = FocusNode();
+  late final TextEditingController _text = TextEditingController(
+    text:
+        ref.read(decisionsFicheProvider(widget.ticketId)).brouillonReponse ??
+        '',
+  );
+
+  bool get _recu => widget.status == TicketStatus.received;
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _publier() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      _focus.requestFocus();
+      return;
+    }
+    final messenger = widget.messenger;
+    final recu = _recu;
+    final notifier = ref.read(decisionsFicheProvider(widget.ticketId).notifier);
+    final echec = await notifier.publierReponse(_text.text.trim());
+    if (echec == null) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text(messageReponsePubliee(recu: recu))),
+      );
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+    if (mounted) {
+      // Le motif est affiché dans la boîte ; le champ reprend le focus.
+      _formKey.currentState?.validate();
+      if (echec.surLeChamp) _focus.requestFocus();
+      return;
+    }
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(messageEchecReponse(echec))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final etat = ref.watch(decisionsFicheProvider(widget.ticketId));
+    final enCours = etat.reponseEnCours;
+    final echec = etat.echecReponse;
+    final partiel = echec?.partiel ?? false;
+    final analyse = widget.derniereAnalyse;
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(
+              _recu ? 'Répondre au ticket' : 'Répondre à l\'analyse',
+              style: theme.textTheme.headlineSmall,
+            ),
+          ),
+          if (analyse != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              dateAnalyse('Analyse', analyse),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Icon(Icons.public, color: scheme.onSurface),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      FormulaireReponse.publicWarning,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _recu
+                ? 'Ajoutez une précision avant l\'analyse. Elle sera lue par la '
+                      'session d\'analyse.'
+                : 'Le ticket repassera à « Reçu ». La prochaine analyse lira '
+                      'votre réponse.',
+          ),
+          if (widget.status == TicketStatus.validated) ...[
+            const SizedBox(height: 8),
+            const Text('La validation sera retirée.'),
+          ],
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _text,
+            focusNode: _focus,
+            autofocus: true,
+            enabled: !enCours,
+            readOnly: partiel,
+            minLines: 4,
+            maxLines: 10,
+            maxLength: kTicketAnswerMaxLength,
+            // Le serveur compte en points de code : un émoji compte pour un,
+            // et la saisie n'est pas coupée au-delà (le validateur refuse).
+            maxLengthEnforcement: MaxLengthEnforcement.none,
+            buildCounter:
+                (
+                  context, {
+                  required currentLength,
+                  required isFocused,
+                  required maxLength,
+                }) {
+                  // Même compte que le validateur : texte sans ses espaces
+                  // de bord.
+                  final n = _text.text.trim().runes.length;
+                  final reste = kTicketAnswerMaxLength - n;
+                  return Semantics(
+                    label: reste >= 0
+                        ? (reste > 1
+                              ? '$reste caractères restants'
+                              : '$reste caractère restant')
+                        : (reste < -1
+                              ? '${-reste} caractères en trop'
+                              : '1 caractère en trop'),
+                    liveRegion: isFocused,
+                    child: ExcludeSemantics(
+                      child: Text(
+                        '$n/$kTicketAnswerMaxLength',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: n > kTicketAnswerMaxLength
+                              ? scheme.error
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+            onChanged: (t) => ref
+                .read(decisionsFicheProvider(widget.ticketId).notifier)
+                .garderBrouillonReponse(t),
+            decoration: InputDecoration(
+              labelText: 'Votre réponse',
+              helperText:
+                  '${_recu ? 'Précisez votre demande.' : 'Répondez aux '
+                            'questions de l\'analyse.'} Les adresses e-mail et '
+                  'les mentions seront retirées.',
+              helperMaxLines: 3,
+              errorMaxLines: 3,
+              border: const OutlineInputBorder(),
+            ),
+            validator: (value) {
+              // Points de code, comme le serveur.
+              final n = (value ?? '').trim().runes.length;
+              if (n < kTicketAnswerMinLength) {
+                return FormulaireReponse.tropCourt;
+              }
+              if (n > kTicketAnswerMaxLength) {
+                return FormulaireReponse.tropLong;
+              }
+              final e = ref
+                  .read(decisionsFicheProvider(widget.ticketId))
+                  .echecReponse;
+              return e != null && e.surLeChamp ? e.motif : null;
+            },
+          ),
+          if (enCours) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                FormulaireReponse.enCours,
+                style: theme.textTheme.bodyLarge,
+              ),
+            ),
+          ] else if (partiel) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                FormulaireReponse.dejaPubliee,
+                style: theme.textTheme.bodyLarge,
+              ),
+            ),
+          ] else if (echec != null && !echec.surLeChamp) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                messageEchecReponse(echec),
+                style: theme.textTheme.bodyLarge?.copyWith(color: scheme.error),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          OverflowBar(
+            alignment: MainAxisAlignment.end,
+            overflowAlignment: OverflowBarAlignment.end,
+            spacing: 8,
+            overflowSpacing: 8,
+            children: [
+              // La fermeture ne coupe pas l'appel.
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(enCours ? 'Fermer' : 'Annuler'),
+              ),
+              FilledButton(
+                onPressed: enCours ? null : _publier,
+                child: enCours
+                    ? const IndicateurBouton(label: 'Publication en cours')
+                    : const Text('Publier'),
               ),
             ],
           ),

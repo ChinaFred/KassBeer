@@ -1,0 +1,89 @@
+{
+  "_commentaire": "Appartenance et rôle (P11, P31, ADR-008). Rejouée par rules-tests/test/member_access.test.mjs (firestore.rules : isMember, isAdmin) et par functions/test/auth.test.ts (functions/src/auth.ts : requireMember, requireAdmin). « token » : jeton du compte (null = anonyme) ; « member » : document members/{clé} semé, la clé étant « member_key » (null = aucun document) ; « expect » : accès attendu, none, member ou admin. Adresses fictives en @example.com (P15).",
+  "cases": [
+    {
+      "name": "anonyme",
+      "token": null,
+      "member_key": null,
+      "member": null,
+      "expect": "none"
+    },
+    {
+      "name": "compte Google vérifié, non invité",
+      "token": { "email": "fixture.stranger@example.com", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": null,
+      "member": null,
+      "expect": "none"
+    },
+    {
+      "name": "brasseur invité",
+      "token": { "email": "fixture.brewer@example.com", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.brewer@example.com",
+      "member": { "role": "brewer" },
+      "expect": "member"
+    },
+    {
+      "name": "administrateur invité",
+      "token": { "email": "fixture.admin@example.com", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.admin@example.com",
+      "member": { "role": "admin" },
+      "expect": "admin"
+    },
+    {
+      "name": "invité, e-mail non vérifié",
+      "token": { "email": "fixture.unverified@example.com", "email_verified": false, "sign_in_provider": "google.com" },
+      "member_key": "fixture.unverified@example.com",
+      "member": { "role": "admin" },
+      "expect": "none"
+    },
+    {
+      "name": "invité, email_verified textuel « true »",
+      "token": { "email": "fixture.texttrue@example.com", "email_verified": "true", "sign_in_provider": "google.com" },
+      "member_key": "fixture.texttrue@example.com",
+      "member": { "role": "admin" },
+      "expect": "none"
+    },
+    {
+      "name": "invité, fournisseur e-mail et mot de passe",
+      "token": { "email": "fixture.password@example.com", "email_verified": true, "sign_in_provider": "password" },
+      "member_key": "fixture.password@example.com",
+      "member": { "role": "admin" },
+      "expect": "none"
+    },
+    {
+      "name": "invité, jeton sans e-mail",
+      "token": { "email": null, "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.noemail@example.com",
+      "member": { "role": "admin" },
+      "expect": "none"
+    },
+    {
+      "name": "adresse du jeton en majuscules, members/ en minuscules",
+      "token": { "email": "Fixture.Mixed@Example.COM", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.mixed@example.com",
+      "member": { "role": "admin" },
+      "expect": "admin"
+    },
+    {
+      "name": "document members/ sous l'adresse en majuscules seule",
+      "token": { "email": "Fixture.Upper@Example.COM", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "Fixture.Upper@Example.COM",
+      "member": { "role": "admin" },
+      "expect": "none"
+    },
+    {
+      "name": "rôle « Admin » mal écrit : membre, pas admin",
+      "token": { "email": "fixture.capital@example.com", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.capital@example.com",
+      "member": { "role": "Admin" },
+      "expect": "member"
+    },
+    {
+      "name": "document members/ sans rôle : membre",
+      "token": { "email": "fixture.norole@example.com", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.norole@example.com",
+      "member": { "email": "fixture.norole@example.com" },
+      "expect": "member"
+    }
+  ]
+}

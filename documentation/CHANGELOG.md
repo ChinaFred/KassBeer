@@ -6,6 +6,32 @@ données, outillage), ou les deux.
 
 ## 2026-11-12
 
+### v0.1.31 — fonctionnel
+
+Le suivi d'un ticket a une nouvelle étape, « Analysé », entre « Reçu » et « Validé » : votre
+demande a été lue et étudiée. L'administrateur lit maintenant dans la fiche d'un ticket les
+analyses publiées sur sa page GitHub, et peut y répondre depuis l'application avec le bouton
+« Répondre ». Sa réponse ramène le ticket à « Reçu » pour une nouvelle analyse.
+
+### v0.1.31 — technique
+
+Lot T3 d'ADR-008. Deux points d'accès, seuls de la liste fermée livrés à ce lot :
+`githubTicketWebhook` (HTTP public, signature `X-Hub-Signature-256` vérifiée sur le corps brut,
+événements `ping`, `issues`, `issue_comment`, secret `GITHUB_WEBHOOK_SECRET`, 5 instances, 60 s)
+et la callable `answerTicketAnalysis` (`requireAdmin`, 2 instances, 60 s). `functions/src/auth.ts`
+(`requireAdmin`, `requireMember`, `requireBoundedText`) et `test-fixtures/member_access.json`,
+rejouée par `rules-tests/` et `functions/test/`. Statut `analyzed` (étiquette `statut:analysé`),
+`answer` dans `allowed_decisions` (`validate` reste offert depuis `received` jusqu'à T4),
+relevé des analyses du compte 16348852 dans `tickets/{id}/admin/analysis` (lecture admin seule)
+par le webhook, la tâche horaire et les décisions. `ci.yml` et `deploy.yml` remplacent le refus
+de tout point d'accès HTTP ou callable par la liste fermée d'ADR-008. Contrôles P6, P14, P23 à
+P26 modifiés, P29 à P34 ajoutés.
+
+Paquets ajoutés, version exacte : `cloud_functions` 6.5.0, `flutter_markdown_plus` 1.0.7,
+`markdown` 7.3.1 ; nouveaux dans `pubspec.lock` : `cloud_functions_platform_interface` 6.0.7 et
+`cloud_functions_web` 5.1.13. La famille FlutterFire ne change pas. `main.dart.js` passe de
+4 920 447 à 5 125 522 octets (+ 4,2 %).
+
 ### v0.1.30 — technique
 
 `documentation/exigences-techniques.md` ne contient plus qu'une copie (2 695 lignes au lieu de

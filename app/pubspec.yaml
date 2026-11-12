@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.30+31
+version: 0.1.31+32
 
 environment:
   sdk: ^3.11.4
@@ -66,6 +66,20 @@ dependencies:
   # (ticket_lien_github.dart) et l'adresse constante de la licence
   # (data_sources_screen.dart) sont ouvertes.
   url_launcher: 6.3.3
+
+  # Callable answerTicketAnalysis d'Admin › Tickets (ADR-008, lot T3). Famille
+  # FlutterFire : 6.5.0 est la version que résout firebase_core 4.15.0 (celle du
+  # pubspec.lock de Kass'Dalle) ; elle monte avec firebase_core (P6). L'instance
+  # FirebaseFunctions se construit au premier appel et reste mémorisée par le
+  # dépôt des tickets : rien n'est chargé au démarrage.
+  cloud_functions: 6.5.0
+
+  # Analyses des tickets en Markdown (ADR-008, lot T3, P33). Version exacte : le
+  # rendu ne change qu'avec une montée relue. Importés par le seul fichier
+  # section_analyses.dart : aucune image chargée, liens http et https seuls, aucun
+  # HTML rendu.
+  flutter_markdown_plus: 1.0.7
+  markdown: 7.3.1
 
 dev_dependencies:
   flutter_test:

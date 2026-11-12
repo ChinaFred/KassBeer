@@ -167,8 +167,14 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
 Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
-tickets avec Kass'Dalle, lots T3 à T7. Ses contrôles (P25 modifié, P29 à P36) entreront dans
-`CLAUDE.md` avec le lot T3, après l'accord de l'utilisateur.
+tickets avec Kass'Dalle, lots T3 à T7.
+
+Le 2026-11-12, avec le lot T3 et l'accord de l'utilisateur, P6, P14, P23, P24, P25 et P26 sont
+modifiés et P29 à P34 ajoutés : point d'accès `githubTicketWebhook` signé (P29), garde des
+callables (P30), appartenance et rôle rejoués par `test-fixtures/member_access.json` (P31, ligne
+de « Logique dupliquée »), relevé et affichage des analyses (P32, P33), « Répondre » (P34).
+`ci.yml` et `deploy.yml` remplacent le refus de tout point d'accès HTTP ou callable par la liste
+fermée d'ADR-008 (P10, accord de l'utilisateur). Les lots T4 à T7 ajouteront leurs contrôles.
 
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu

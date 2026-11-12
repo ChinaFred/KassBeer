@@ -89,7 +89,11 @@ describe("corps et titre de l'Issue (P24)", () => {
   });
 
   it("étiquettes de création", () => {
-    assert.deepEqual(creationLabels("evolution"), ["source:app", "type:evolution"]);
+    assert.deepEqual(creationLabels("evolution"), [
+      "source:app",
+      "type:evolution",
+      "statut:à-analyser",
+    ]);
   });
 });
 

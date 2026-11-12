@@ -865,10 +865,20 @@ service cloud.firestore {
 
         allow delete: if false;
       }
+
+      // Documents du serveur lus par l'admin seul (ADR-008, T3, P23, P32) : `analysis`
+      // (analyses et précisions relevées sur l'Issue, `answer_comment_ids`). Écrits par le
+      // serveur (SDK Admin, hors règles), jamais par un client.
+      match /admin/{docId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
     }
 
     // Décision telle que l'admin la crée : `text` (motif ou commentaire, 5 à 2 000
-    // caractères) présent pour `refuse` et `close`, absent pour `validate`.
+    // caractères) présent pour `refuse` et `close`, absent pour `validate`. « Répondre »
+    // (`answer`) passe par la callable `answerTicketAnalysis`, jamais par ce document
+    // (ADR-008) : la liste des actions le refuse.
     function isDecisionCreation(d) {
       return d.keys().hasOnly(['action', 'text', 'state', 'requested_by_uid',
                                'requested_at'])

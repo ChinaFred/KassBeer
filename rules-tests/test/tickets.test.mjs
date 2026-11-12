@@ -1,5 +1,6 @@
-// tickets/, tickets/{id}/decisions/, ticket_quotas/, ticket_status/ : tickets des membres et
-// décisions de l'admin (ADR-006, T1 et T2, P23, P4, P11).
+// tickets/, tickets/{id}/decisions/, tickets/{id}/admin/, ticket_quotas/, ticket_status/ :
+// tickets des membres, décisions et analyses lues par l'admin (ADR-006, T1 et T2 ;
+// ADR-008, T3 ; P23, P4, P11).
 
 import { describe, it } from "node:test";
 import {
@@ -273,6 +274,38 @@ describe("tickets — mise à jour par l'auteur", () => {
     });
   }
 
+  for (const name of ["owner", "admin"]) {
+    it(`${name} passe le ticket au statut analyzed : refusé`, async () => {
+      await seedTickets();
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a").update({ status: "analyzed" }),
+      );
+    });
+  }
+
+  for (const field of ["answer_reset_at", "allowed_decisions"]) {
+    it(`admin écrit ${field} (champ serveur de T3) : refusé`, async () => {
+      await seedTickets();
+      const value = field === "answer_reset_at" ? serverTimestamp() : ["answer"];
+      await expectRule(
+        false,
+        db(state.env, "admin")
+          .doc("tickets/t-a")
+          .update({ [field]: value }),
+      );
+    });
+  }
+
+  it("owner crée un ticket au statut analyzed : refusé", async () => {
+    await expectRule(
+      false,
+      db(state.env, "owner")
+        .doc("tickets/nouveau")
+        .set(ticket("owner", { status: "analyzed" })),
+    );
+  });
+
   it("admin modifie le statut d'un ticket : refusé", async () => {
     await seedTickets();
     await expectRule(
@@ -436,6 +469,8 @@ describe("tickets — forme d'une décision à la création (P23)", () => {
     "texte de 2 001 caractères": { text: "m".repeat(2001) },
     "texte non textuel": { text: 12345 },
     "action inconnue": { action: "delete" },
+    "action answer (callable seule, ADR-008)": { action: "answer" },
+    "action answer avec texte": { action: "answer", text: "Précision de l'administrateur." },
     "action absente": { action: undefined },
     "état applying": { state: "applying" },
     "état applied": { state: "applied" },
@@ -607,6 +642,67 @@ describe("ticket_quotas et ticket_status", () => {
     it(`${name} lit l'état du jeton : ${allowed ? "autorisé" : "refusé"}`, async () => {
       await seedTickets();
       await expectRule(allowed, db(state.env, name).doc("ticket_status/github").get());
+    });
+  }
+});
+
+/// Analyses relevées par le serveur (ADR-008, T3, P32).
+const analysis = {
+  analyses: [
+    {
+      comment_id: 101,
+      kind: "analysis",
+      body: "## Analyse\n\nLe minuteur repart de zéro.",
+      created_at: CREATED,
+      updated_at: CREATED,
+      truncated: false,
+    },
+  ],
+  skipped_count: 0,
+  checked_at: CREATED,
+  answer_comment_ids: [],
+};
+
+describe("tickets/{id}/admin/ — analyses, cinq profils (P4, P23, P32)", () => {
+  const read = {
+    anonymous: false,
+    nonMember: false,
+    owner: false,
+    otherBrewer: false,
+    admin: true,
+  };
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit les analyses du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
+      await expectRule(allowed, db(state.env, name).doc("tickets/t-a/admin/analysis").get());
+    });
+    it(`${name} liste admin/ du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
+      await expectRule(allowed, db(state.env, name).collection("tickets/t-a/admin").get());
+    });
+  }
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} crée les analyses : refusé`, async () => {
+      await seedTickets();
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/analysis").set(analysis));
+    });
+    it(`${name} ajoute un identifiant à answer_comment_ids : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("tickets/t-a/admin/analysis")
+          .update({ answer_comment_ids: [999] }),
+      );
+    });
+    it(`${name} supprime les analyses : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/analysis").delete());
     });
   }
 });

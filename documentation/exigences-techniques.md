@@ -6,16 +6,19 @@
 
 Application Flutter (`app/`, Android et web) qui lit et écrit Cloud Firestore `(default)`
 directement, avec le cache hors ligne persistant. `firestore.rules` est le seul contrôle
-d'accès des clients. Le seul serveur est `functions/` (ADR-006) : deux Cloud Functions sans
-point d'accès HTTP qui publient les tickets des membres en Issues GitHub et relisent ces
-Issues (voir « Cloud Functions »).
+d'accès des clients. Le seul serveur est `functions/` (ADR-006, ADR-008) : six Cloud Functions
+qui publient les tickets des membres en Issues GitHub, appliquent les décisions de l'admin et
+relisent ces Issues. Deux sont des points d'accès de la liste fermée d'ADR-008 : le webhook
+GitHub signé `githubTicketWebhook` et la callable `answerTicketAnalysis` (voir « Cloud
+Functions »).
 
 | Fichier | Rôle |
 |---|---|
 | `firestore.rules` | règles d'accès, appliquant le modèle ci-dessous |
 | `firestore.indexes.json` | index composites des requêtes de `tickets/`, TTL de `ticket_quotas/` |
 | `firebase.json` | Firestore, Functions (`functions/`, Node 24), émulateurs (auth 9099, firestore 8080), Hosting |
-| `functions/` | Cloud Functions des tickets, TypeScript (ADR-006) |
+| `functions/` | Cloud Functions des tickets, TypeScript (ADR-006, ADR-008) |
+| `test-fixtures/` | fixtures rejouées par plusieurs suites : `member_access.json` (appartenance et rôle, P31), lue par `rules-tests/` et `functions/test/` |
 | `brewing/` | calculs de brassage, Dart pur (voir « Calculs de brassage ») |
 | `exchange/` | import et export de recettes BeerJSON et BeerXML, Dart pur, dépend de `brewing/` et de `xml` (ADR-005, voir « Échange de recettes ») |
 | `.firebaserc` | alias `default` : `kassbeer`, le projet Firebase de production |
@@ -685,16 +688,17 @@ détail, bandeau Admin).
 
 #### Tickets — client (T2)
 
-Admin › Tickets des membres et décisions de l'administrateur (ADR-006, lot T2). Le client
-n'appelle aucune callable : il écrit des documents que les déclencheurs appliquent.
+Admin › Tickets des membres et décisions de l'administrateur (ADR-006, lot T2). Pour
+Valider, Refuser et Clore, le client écrit des documents que les déclencheurs appliquent. Seul
+« Répondre » (lot T3, ci-dessous) appelle une callable, `answerTicketAnalysis`.
 
 | Fichier | Contenu |
 |---|---|
-| `domain/ticket.dart` | champs serveur lus en plus : `author_email`, `github_issue_number`, `github_url`, `delivered_pr_number`, `send_attempts`, `last_send_error`, `issue_missing_since`, `allowed_decisions` (`null` si absent ; valeur inconnue ignorée), `decision_lease_until`, `retry_requested_at` ; `toProcess` (`received` ou `send_failed`), `isLate`, `isBlocked`, `decisionInProgress` ; `TicketDecisionAction`, `TicketDecisionState`, `TicketDecision` (lecture tolérante : action inconnue lue `null`, état inconnu `unknown` ; seul un champ mal typé rend la décision illisible), `compareDecisionsRecentFirst`, `kDecisionTextMinLength` / `kDecisionTextMaxLength` (5 et 2 000), `kDecisionPendingDelay` (2 min) |
+| `domain/ticket.dart` | champs serveur lus en plus : `author_email`, `github_issue_number`, `github_url`, `delivered_pr_number`, `send_attempts`, `last_send_error`, `issue_missing_since`, `allowed_decisions` (`null` si absent ; valeur inconnue ignorée), `decision_lease_until`, `retry_requested_at` ; `toProcess` (`received`, `analyzed` depuis T3, ou `send_failed`), `isLate`, `isBlocked`, `decisionInProgress` ; `TicketDecisionAction`, `TicketDecisionState`, `TicketDecision` (lecture tolérante : action inconnue lue `null`, état inconnu `unknown` ; seul un champ mal typé rend la décision illisible), `compareDecisionsRecentFirst`, `kDecisionTextMinLength` / `kDecisionTextMaxLength` (5 et 2 000), `kDecisionPendingDelay` (2 min) |
 | `presentation/admin_tickets_screen.dart` | `AdminTicketsScreen` (liste, filtres, disposition côte à côte), `filtreTicketsProvider`, `auteurTicket`, `pastillesAdmin` |
 | `presentation/admin_ticket_screen.dart` | `AdminTicketScreen` (fiche), `ligneDecision`, `ligneHistorique`, `FormulaireDecision` |
 | `presentation/frise_ticket.dart` | `etapesFrise` (étapes et étape actuelle par statut), `FriseTicket` |
-| `presentation/encadre_reponse.dart` | `EncadreReponse(titre:, texte:)`, partagé avec le suivi du membre ; `titreReponse` dans `ticket_statut.dart` |
+| `presentation/encadre_reponse.dart` | `EncadreReponse(titre:, texte:)`, partagé avec le suivi du membre ; `EncadreReponse.contenu(titre:, icone:, corps:, accentue:, sousTitre:)` pour une carte d'analyse (T3) ; `titreReponse` dans `ticket_statut.dart` |
 | `presentation/ticket_statut.dart` | `statutAfficheDe` (ton et icône de chaque statut), `EtiquetteStatut(clignoteAuChangement:)` |
 
 **Routes.** Dans la coquille, sous `/admin` : `/admin/tickets` (« Tickets des membres »,
@@ -769,6 +773,38 @@ selon `allowed_decisions`, boîtes et validations, écriture refusée, hors lign
 « Réessayer », relance d'envoi, Issue disparue, barre fixe ou en fin de fiche, clignotement et
 animations réduites, texte à 200 %), Mes tickets (frise et sémantique, téléphone et large).
 `tickets_repository_test.dart` : `watchAll`, champs des décisions, lecture tolérante, relances.
+
+#### Tickets — client (T3)
+
+Statut « Analysé », section « Analyses (N) » de la fiche d'Admin et bouton « Répondre »
+(ADR-008, lot T3, P33). Aucun code de ce lot dans l'écran du jour de brassage ni dans ce qu'il
+appelle (P2).
+
+| Fichier | Contenu |
+|---|---|
+| `domain/ticket.dart` | `TicketStatus.analyzed` (`analyzed`) ; `Ticket.canAnswer` : vrai si `allowed_decisions` contient `kAnswerDecision` (`'answer'`), lu à part de `TicketDecisionAction`, qui ne couvre que les documents de `decisions/` ; `toProcess` compte `analyzed` |
+| `domain/ticket_analysis.dart` | `kTicketAnswerMinLength` et `kTicketAnswerMaxLength` (5 et 4 000 points de code, comme le serveur) ; `TicketAnalysisKind` (`analysis`, `reply`, `unverified_reply`, nature inconnue écartée) ; `TicketAnalysis` ; `TicketAnalysisDoc` (`analyses`, `skippedCount`, `analysisCount`, `pendingAnswerAt` ; lecture tolérante, champ mal typé : `DocumentIllisible`) ; `vueAnalysesVide` ; `corpsAffiche` (ligne de titre `## …` retirée) ; `lienAnalyseOuvrable` (`http` et `https` avec hôte, sinon `null`) ; `imageNonAffichee` ; `CauseEchecReponse` et `EchecReponse.depuis(code:, details:)` (lit `details.reason`, `details.field`, `details.code`, `details.partial`) |
+| `data/tickets_repository.dart` | `watchAnalysis(ticketId)` : `tickets/{id}/admin/analysis` avec `includeMetadataChanges`, rendu `DocumentAbsentDuCache` quand le cache n'a rien, `DocumentIllisibleTrouve` rapporté `tickets.read_analysis`, erreur d'écoute rapportée `tickets.watch_analysis` ; `answer(ticketId:, answer:)` : callable `answerTicketAnalysis`, rend `null` ou un `EchecReponse` déjà rapporté (`tickets.answer`, code, `reason_code`, champ et `partial`, jamais le texte ni le motif, P13) ; `kFunctionsRegion` (`europe-west1`) ; `kCallableTimeout` (70 s, au-delà des 60 s du serveur) ; `FirebaseFunctions.instanceFor(region: kFunctionsRegion)` construit au premier appel de `answer` et mémorisé par le dépôt, jamais au niveau module ni dans `main.dart` (P6) ; `AppelCallable` injecté par les tests |
+| `presentation/tickets_providers.dart` | `ticketAnalysisProvider` (`StreamProvider.autoDispose.family`, sans nouvel essai automatique) |
+| `presentation/section_analyses.dart` | `SectionAnalyses` (titre « Analyses (N) », N compte les seules analyses ; états chargement, panne et « Réessayer », vide, hors ligne, illisible ; ligne « Seules les 10 dernières entrées… » suivie de « Ouvrir l'Issue #N » quand `skipped_count` > 0), `_CarteAnalyse` (titre daté, « Non publiée depuis l'application. » pour `unverified_reply`, ligne « … tronquée(s), voir GitHub. » et « Ouvrir l'Issue #N »), `CorpsAnalyse` (`MarkdownBody` en GitHub Flavored Markdown, `selectable: false`, styles du thème seuls, `imageBuilder` qui rend le texte alternatif, `onTapLink` limité à `lienAnalyseOuvrable` par `ouvrirLienProvider`, échec rapporté `tickets.open_analysis_link` sans adresse ni texte ; `tableColumnWidth: IntrinsicColumnWidth()` et `tableScrollbarThumbVisibility: true` : un tableau large défile à l'horizontale, barre de défilement visible), `dateAnalyse`. Seul fichier qui importe `flutter_markdown_plus` et `markdown` |
+| `presentation/admin_ticket_screen.dart` | bouton « Répondre » de la barre si `canAnswer` (inactif hors ligne, phrase `kRepondreHorsLigne`), ligne « Vos précisions du … seront lues par la prochaine analyse. » ; `FormulaireReponse` (boîte `showFeuilleOuDialogue` à fermeture protégée ; compteur et limite en points de code : `buildCounter` sur `text.trim().runes.length`, comme le validateur, lu « N caractères restants » ou « N caractères en trop » (`Semantics`, `liveRegion` quand le champ a le focus), `maxLengthEnforcement: none`, validateur 5 à 4 000 avec le libellé du serveur) ; `DecisionsFicheNotifier.publierReponse` (un appel à la fois, `brouillonReponse`, `reponseEnCours`, `echecReponse` dans `EtatDecisionsFiche` : la boîte peut se fermer pendant l'appel, le résultat arrive en message) ; `LigneDecision.progress` porte le libellé annoncé de la barre de progression (« Décision en cours », « Publication en cours ») ; pendant une publication, sa ligne `kPublicationReponseEnCours` passe avant toute ligne de décision sans barre (`progress == null`) |
+| `presentation/ticket_statut.dart`, `presentation/frise_ticket.dart` | « Analysé » (`Icons.manage_search`, ton primaire), phrase du membre ; frise Envoi en cours → Reçu → Analysé → Validé → En cours → Livré |
+
+**Paquets.** `cloud_functions` 6.5.0 (avec `cloud_functions_platform_interface` 6.0.7 et
+`cloud_functions_web` 5.1.13, résolus par `firebase_core` 4.15.0 ; monte avec la famille
+FlutterFire, P6), `flutter_markdown_plus` 1.0.7 et `markdown` 7.3.1, en version exacte.
+
+**Panne de lecture.** Après une erreur de l'écoute, Riverpod garde la valeur précédente. La
+section garde les cartes d'un document déjà trouvé qui a des entrées ; dans tout autre état
+(rien de lu, absent du cache, absent, illisible, document sans entrée), elle affiche « Impossible de lire les analyses. » et
+« Réessayer », qui invalide `ticketAnalysisProvider`.
+
+**Tests.** `tickets_analyses_test.dart` : domaine (statut, `answer`, lecture du document,
+corps, liens, images, échecs), dépôt (lecture, appel, refus rapporté sans le texte), fiche
+(états de la section dont la panne après « absent du cache », cartes, liens, ordre des
+boutons, hors ligne, boîte, compteur en points de code avec 2 600 émojis et 4 001 caractères,
+ligne de publication avant une décision écartée ou en échec, tableau large qui défile à 360 px et texte
+× 2).
 
 ## Modèle de données
 
@@ -1136,11 +1172,11 @@ le retire quand elle reprend le ticket.
 
 | Champ | Contenu |
 |---|---|
-| `status` | `pending`, `received`, `validated`, `in_progress`, `delivered`, `refused`, `closed`, `send_failed`, `over_quota` |
+| `status` | `pending`, `received`, `analyzed`, `validated`, `in_progress`, `delivered`, `refused`, `closed`, `send_failed`, `over_quota` ; `analyzed` vient de l'étiquette `statut:analysé` (ADR-008, T3) |
 | `status_changed_at` | timestamp : chaque changement de statut, sauf `pending` → `received`, et chaque nouvelle réponse |
 | `github_issue_number`, `github_url` | numéro de l'Issue ; adresse construite depuis le numéro (`https://github.com/ChinaFred/KassBeer/issues/N`) |
 | `github_checked_at` | timestamp de la dernière relecture de l'Issue (tri de la passe horaire) |
-| `github_updated_at` | `updated_at` de l'Issue à la dernière relecture : les commentaires ne sont relus que s'il change |
+| `github_updated_at` | `updated_at` de l'Issue à la dernière relecture : la passe horaire sur les Issues modifiées et le webhook `issues` ne relisent les commentaires que s'il change ; un commentaire du compte 16348852 reçu par le webhook, et la relecture des tickets ouverts de la passe horaire, les relisent toujours |
 | `send_attempts` | entier : essais d'envoi en échec ; au dixième, `send_failed` |
 | `last_send_error` | string, 300 caractères au plus : code HTTP et message de GitHub, jamais le jeton |
 | `send_lease_until` | timestamp : bail de deux minutes d'un envoi en cours |
@@ -1150,13 +1186,35 @@ le retire quand elle reprend le ticket.
 | `delivered_pr_number`, `delivered_pr_url`, `delivered_version` | PR fusionnée qui a fermé l'Issue, adresse `https://github.com/ChinaFred/KassBeer/pull/N`, version `X.Y.Z` de `app/pubspec.yaml` à son commit de fusion ; `null` sans PR (fermeture à la main) ou sans version lisible |
 | `delivered_checked_at` | timestamp de la recherche de la PR de livraison |
 | `issue_missing_since` | timestamp : Issue en 404 ou 410, dépôt joignable ; le statut ne change pas |
-| `allowed_decisions` | liste parmi `validate`, `refuse`, `close` : `received` → les trois ; `validated` et `in_progress` → `refuse`, `close` ; autres statuts → liste vide. Réécrite à chaque changement de statut (publication, passe horaire, décision) ; posée une fois par la passe horaire sur les tickets écrits avant T2. Absente sur un ticket `pending` jamais publié. Le client affiche les boutons de cette liste et ne la calcule pas (P26) |
-| `decision_lease_until` | timestamp : bail de deux minutes d'une décision en cours, posé en transaction, retiré à la fin |
+| `allowed_decisions` | liste parmi `validate`, `refuse`, `close`, `answer` : `received` → `validate`, `refuse`, `close`, `answer` ; `analyzed` → `validate`, `refuse`, `close`, `answer` ; `validated` → `refuse`, `close`, `answer` ; `in_progress` → `refuse`, `close` ; autres statuts → liste vide. `validate` reste offert depuis `received` jusqu'au lot T4, qui le réserve à `analyzed` (ADR-008, « Statuts », décision du 2026-11-12). `answer` est la callable `answerTicketAnalysis`, jamais un document de `decisions/` : le client le lit à part des trois actions des documents. Réécrite à chaque changement de statut (publication, webhook, passe horaire, décision, réponse) ; réécrite une fois sur tous les tickets par la passe horaire à chaque version de la règle (`allowed_decisions_backfill_version`). Absente sur un ticket `pending` jamais publié. Le client affiche les boutons de cette liste et ne la calcule pas (P26) |
+| `decision_lease_until` | timestamp : bail de deux minutes d'une décision ou d'une réponse en cours, posé en transaction, retiré à la fin ; une décision et une réponse ne tournent jamais ensemble sur un ticket |
+| `answer_reset_at` | timestamp : dernier retour à `received` d'un ticket `analyzed` ou `validated` par « Répondre » (ADR-008). Un état d'Issue dont `updated_at` est antérieur ou égal ne change plus le statut : une étiquette livrée en retard ne refait pas avancer le ticket |
 | `send_retried_at` | timestamp de la dernière relance demandée par l'admin : avec `send_attempts` remis à 0, il fait chercher l'Issue par sa référence avant un nouvel envoi |
 | `updated_at` | timestamp de la dernière écriture du serveur |
 
 Un statut ne recule pas, sauf à la réouverture de l'Issue, qui reprend le statut de ses
-étiquettes. Quitter `delivered` efface les quatre champs `delivered_*`.
+étiquettes, et sauf « Répondre », qui ramène `analyzed` ou `validated` à `received`. Rang des
+statuts ouverts : `received` < `analyzed` < `validated` < `in_progress`. Le statut est dérivé
+des seules étiquettes (`statut:analysé`, `validé`, `statut:en-cours`), jamais du texte d'un
+commentaire (P32). Quitter `delivered` efface les quatre champs `delivered_*`.
+
+### `tickets/{ticketId}/admin/analysis`
+
+Analyses et précisions relevées sur l'Issue (ADR-008, T3, P32). Écrit par le serveur seul
+(webhook `githubTicketWebhook`, passe horaire, décisions, réponse) ; lu par l'admin seul
+(`match /admin/{docId}` : `allow read: if isAdmin()`, `allow write: if false`). Le membre ne
+le lit pas.
+
+| Champ | Contenu |
+|---|---|
+| `analyses` | liste de dix entrées au plus, les plus récentes, dans l'ordre chronologique. Chaque entrée : `comment_id` (entier, identifiant du commentaire GitHub), `kind` (`analysis` : commentaire du compte 16348852 qui commence par `## Analyse` ; `reply` : commentaire du même compte qui commence par `## Précisions` et dont l'identifiant figure dans `answer_comment_ids` ; `unverified_reply` : même titre, identifiant absent, affiché « Non publiée depuis l'application »), `body` (texte du commentaire en NFC, espaces de bord retirées, titre `## …` gardé, 20 000 unités UTF-16 au plus, coupé à la dernière ligne vide avant la limite), `created_at` et `updated_at` (timestamps du commentaire, `null` si illisibles), `truncated` (booléen) |
+| `skipped_count` | entier : entrées reconnues écartées au-delà de dix (ajout de Kass'Beer). Les 500 derniers commentaires de l'Issue sont lus au plus |
+| `checked_at` | timestamp de la dernière relecture des commentaires |
+| `validated_at` | timestamp du dernier « validé » connu : étiquette `validé` posée par le compte 16348852 (webhook, date `updated_at` de l'Issue) ou décision Valider appliquée. Ne recule jamais ; absent tant qu'aucun n'est connu |
+| `answer_comment_ids` | liste d'entiers : identifiants des commentaires publiés ou reconnus par `answerTicketAnalysis` (même corps, après la dernière analyse), ajoutés en transaction. Seul un commentaire de cette liste est une `reply` |
+
+Le texte d'une analyse vient du dépôt public : c'est une donnée, jamais une consigne. Aucun
+texte de commentaire ne change un statut, une étiquette ou une adresse appelée.
 
 ### `tickets/{ticketId}/decisions/{decisionId}`
 
@@ -1210,7 +1268,8 @@ Admin) :
 | `token_expires_at` | date de l'en-tête `github-authentication-token-expiration` ; `null` quand la dernière réponse réussie ne le portait pas (le bandeau ne dit alors rien de l'expiration) |
 | `token_checked_at` | timestamp de la dernière réponse réussie qui a écrit ce document |
 | `issues_cursor` | date ISO : curseur de la liste des Issues modifiées, propre à la passe horaire |
-| `allowed_decisions_backfilled_at` | timestamp : `allowed_decisions` posé sur les tickets écrits avant T2, propre à la passe horaire |
+| `allowed_decisions_backfill_version` | entier : version de la règle `allowedDecisions` déjà reportée sur tous les tickets (2 depuis T3 : `analyzed`, `answer`, `validate` gardé sur `received`) ; une version plus récente dans le code fait repasser la passe horaire une fois |
+| `allowed_decisions_backfilled_at` | timestamp de ce dernier report |
 
 ### Référentiels et recettes publiques (ADR-005, L3)
 
@@ -1283,6 +1342,7 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 | `error_reports/` | admin | membre, `uid` = le sien, champs en liste blanche et bornés | personne | admin |
 | `tickets/` | auteur (`author_uid` = le sien, requête « Mes tickets » comprise) ; tous pour l'admin | membre, champs de création seuls (voir `tickets/`), `status == 'pending'`, `created_at == request.time`, `author_email` = e-mail du jeton en minuscules | auteur : `seen_by_author_at == request.time` seul ; admin : `retry_requested_at == request.time` seul, ticket `send_failed` | personne |
 | `tickets/{id}/decisions/` | admin | admin, ticket existant, champs de création seuls (voir `decisions/`), `state == 'pending'`, `requested_by_uid == request.auth.uid`, `requested_at == request.time`, `text` 5 à 2 000 pour `refuse` et `close`, absent pour `validate` | admin : `retry_requested_at == request.time` seul, décision `failed` | personne |
+| `tickets/{id}/admin/**` | admin | personne | personne | personne |
 | `ticket_quotas/**` | personne | personne | personne | personne |
 | `ticket_status/**` | admin | personne | personne | personne |
 | `beer_fermentables/`, `beer_hops/`, `beer_cultures/`, `beer_miscs/`, `beer_styles/`, `beer_index/` | membres, `get` seul (aucune requête) | personne | personne | personne |
@@ -1998,25 +2058,183 @@ aucune recette réécrit, seul son document `ingest_runs` créé) ;
 
 ## Cloud Functions
 
-`functions/` (ADR-006) : Cloud Functions 2e génération, Node 24, TypeScript, région
-`europe-west1` (celle de la base), compte d'exécution `tickets-functions@kassbeer.iam.gserviceaccount.com`. Aucun
-`onRequest` ni `onCall` (P25) : aucune des quatre fonctions ne s'appelle depuis Internet.
+`functions/` (ADR-006, ADR-008) : Cloud Functions 2e génération, Node 24, TypeScript, région
+`europe-west1` (celle de la base), compte d'exécution `tickets-functions@kassbeer.iam.gserviceaccount.com`.
+Deux points d'accès, ceux du lot T3 de la liste fermée d'ADR-008 (P25) : le webhook
+`githubTicketWebhook` et la callable `answerTicketAnalysis`. Les quatre autres fonctions ne
+s'appellent pas depuis Internet.
 
 | Fonction | Déclencheur | Réglages | Ce qu'elle fait |
 |---|---|---|---|
 | `publishTicket` | `onDocumentCreated('tickets/{ticketId}')` | `maxInstances` 2, 256 Mio, 60 s, sans rejeu (la passe horaire renvoie) | publie le ticket `pending` |
 | `onDecisionCreated` | `onDocumentCreated('tickets/{ticketId}/decisions/{decisionId}')` | `maxInstances` 2, 256 Mio, 60 s, sans rejeu | applique la décision de l'admin (T2) |
 | `onDecisionUpdated` | `onDocumentUpdated('tickets/{ticketId}/decisions/{decisionId}')` | idem | reprend une décision `failed` quand `retry_requested_at` est posé ou change ; ne fait rien sur les écritures du serveur |
-| `syncTickets` | `onSchedule('every 60 minutes')`, heure de Paris | `maxInstances` 1, 256 Mio, 300 s, sans rejeu | relance les envois demandés, renvoie les `pending`, reprend les décisions au bail expiré, relit les Issues |
+| `syncTickets` | `onSchedule('every 60 minutes')`, heure de Paris | `maxInstances` 1, 256 Mio, 300 s, sans rejeu | relance les envois demandés, renvoie les `pending`, reprend les décisions au bail expiré, relit les Issues, leurs réponses et leurs analyses |
+| `githubTicketWebhook` | `onRequest`, `invoker: "public"` (ADR-008, T3) | `maxInstances` 5, 256 Mio, 60 s | applique l'état d'une Issue poussé par GitHub, relève les analyses (P29, P32) |
+| `answerTicketAnalysis` | `onCall`, `requireAdmin` (ADR-008, T3) | `maxInstances` 2, 256 Mio, 60 s, `cors` : `https://kassbeer.web.app`, `https://kassbeer.firebaseapp.com` | « Répondre » : publie les précisions de l'admin, ramène le ticket à `received` (P34) |
 
-Les quatre lisent le secret `GITHUB_TICKETS_TOKEN` (`defineSecret`). `src/firestore.ts` charge le
+Les six lisent le secret `GITHUB_TICKETS_TOKEN` (`defineSecret`). `githubTicketWebhook` lit
+aussi `GITHUB_WEBHOOK_SECRET`, et lui seul (P25). App Check n'est pas exigé (ADR-008). `src/firestore.ts` charge le
 SDK Admin au premier appel ; le client GitHub (`src/tickets/github.ts`, `fetch`, aucun SDK)
 se construit à l'appel avec le jeton (P26). `src/logging.ts` journalise par
 `firebase-functions/logger` (`logError` dans chaque `catch`) et retire tout ce qui a la forme
 d'un jeton GitHub. Les règles pures (`src/tickets/model.ts`, `src/tickets/text.ts`,
 `src/tickets/decisionModel.ts`) sont testées par `node --test` (`functions/test/`).
-`src/tickets/issueState.ts` applique l'état d'une Issue à son ticket, pour la passe horaire et
-pour une décision qui trouve son Issue déjà fermée.
+`src/tickets/issueState.ts` applique l'état d'une Issue à son ticket, pour la passe horaire, le
+webhook et une décision qui trouve son Issue déjà fermée : le statut est recalculé sur le
+ticket relu en transaction, et les analyses sont écrites avant le ticket (un échec laisse
+`github_updated_at` inchangé, la passe suivante relit).
+
+**Garde des callables** (`src/auth.ts`, ADR-008, P30, P31). `requireAdmin` et
+`requireMember` sont la première instruction de chaque callable, avant toute lecture de ses
+arguments : `request.auth` présent (sinon `unauthenticated`, « Connexion requise. »),
+`email_verified === true`, `firebase.sign_in_provider === 'google.com'`, document
+`members/{email en minuscules}` relu à chaque appel, sans cache, rôle `admin` pour
+`requireAdmin`. Tout autre refus rend `permission-denied` avec le même message pour un
+non-membre et un brasseur (« Accès réservé à l'administrateur. », « Accès réservé aux
+membres. ») : la réponse ne dit pas si le compte existe. C'est la vérification de
+`isMember()` et `isAdmin()` de `firestore.rules`, recopiée : la fixture
+`test-fixtures/member_access.json` est rejouée par `rules-tests/test/member_access.test.mjs`
+(sondes `beer_index/{nature}` en `get` et `ticket_status/github`) et par
+`functions/test/auth.test.ts`. `requireBoundedText` refuse un argument texte absent, d'un
+autre type ou plus long que sa borne brute, avant toute lecture (`invalid-argument`,
+`details.field`, `details.reason`).
+
+**Webhook** (`src/tickets/webhook.ts`, `src/tickets/webhookModel.ts`, ADR-008, P29). Adresse
+publique ; l'authentification est la signature. Dans l'ordre : méthode autre que `POST` :
+405 ; corps de plus de 25 Mo (`req.rawBody` ou `Content-Length`) : 413 ; `X-GitHub-Event`
+absent : 400 ; `GITHUB_WEBHOOK_SECRET` vide : 503, journalisé une fois par minute et par
+instance au plus ; HMAC SHA-256 du corps brut comparé à `X-Hub-Signature-256` par
+`timingSafeEqual`, longueurs comparées d'abord : signature absente ou fausse en 401,
+`logWarn` une fois par minute et par instance au plus, avec le nombre de refus ; ni
+signature, ni secret, ni corps journalisés. Puis : `ping` : 200 ; autre événement (`pull_request`
+et `workflow_run` arrivent à T5) : 200, ignoré ; corps illisible : 400 (seul le nom de
+l'erreur est journalisé) ; autre dépôt que `ChinaFred/KassBeer`, PR, action inconnue,
+commentaire d'un autre compte que 16348852, Issue sans ticket : 200, ignoré. Le ticket se
+retrouve par `github_issue_number`, écrit par le serveur, jamais par un texte de l'Issue.
+`issues` (`opened`, `edited`, `labeled`, `unlabeled`, `closed`, `reopened`) : état de l'Issue
+lu dans la charge, appliqué par `applyIssue` ; un `labeled validé` dont l'expéditeur est le
+compte 16348852 écrit `validated_at`. `issue_comment` (`created`, `edited`, `deleted`) d'un
+commentaire du compte 16348852 : `applyIssue` avec relecture forcée des commentaires
+(réponse, analyses). Jeton GitHub vide, panne Firestore ou GitHub : 500, journalisé ;
+GitHub affiche la livraison en échec, la passe horaire rattrape. Un jeton refusé pose
+`token_invalid_since`. Une livraison rejouée par GitHub réécrit le même état.
+
+**Analyses** (`src/tickets/analysisModel.ts`, `src/tickets/analyses.ts`, P32). Les 500
+derniers commentaires de l'Issue au plus sont lus en une fois (`recentComments`), pour la
+réponse « Réponse : » et pour les analyses. Seuls comptent les commentaires du compte
+numérique 16348852, texte en NFC, espaces de tête retirées, qui commencent par `## Analyse`
+(`analysis`) ou `## Précisions` (`reply` si l'identifiant est dans `answer_comment_ids`,
+sinon `unverified_reply`). Dix entrées au plus, les plus récentes, 20 000 unités UTF-16
+chacune, coupe à la dernière ligne vide, `truncated` noté, `skipped_count` pour le reste.
+Écriture fusionnée de `tickets/{id}/admin/analysis` en transaction, `answer_comment_ids` lu
+dans la même transaction. Relevé par le webhook, par la passe horaire (`applyIssue`), par
+chaque décision appliquée (étape 7) et par « Répondre ».
+
+**Répondre** (`src/tickets/answer.ts`, `answerTicketAnalysis`, ADR-008, P34). Entrée
+`{ticketId: string, answer: string}`, sortie `{status: string}` (statut du ticket après la
+réponse : `received`, ou le statut relu si un autre geste l'a changé entre-temps).
+
+1. `requireAdmin`, puis `ticketId` (128 caractères bruts au plus, `[A-Za-z0-9_-]`) et
+   `answer` (16 000 unités UTF-16 brutes au plus : 4 000 points de code de deux unités, plus
+   la place de ce que le nettoyage retire ; puis caractères de contrôle retirés, NFC,
+   espaces de bord retirées, 5 à 4 000 caractères comptés en points de code, puis
+   `publicText` : adresses e-mail remplacées, mentions, renvois, balisage neutralisés ; un
+   texte qui ne publie rien de lisible est trop court). Le texte n'est jamais journalisé.
+2. Transaction : ticket existant, statut `received`, `analyzed` ou `validated`, Issue
+   présente, aucun `decision_lease_until` actif ; bail de deux minutes posé, partagé avec
+   les décisions de `decisions/`.
+3. Issue et commentaires relus. Issue fermée : son état est appliqué au ticket, refus. Ticket
+   `analyzed` ou `validated` sans analyse sur l'Issue : refus.
+4. Commentaire `## Précisions de l'administrateur`, une ligne vide, le texte publié (P24),
+   sauf si une précision du compte 16348852 qui suit la dernière analyse (n'importe où sans
+   analyse) porte déjà ce corps, qu'elle soit dans `answer_comment_ids` (`reply`) ou non
+   (`unverified_reply`) : un second appel, un nouvel essai après un délai dépassé, ou un essai
+   après une création dont la réponse s'est perdue, ne publie rien (P26). Une précision
+   reconnue hors de `answer_comment_ids` y est ajoutée. Une création en échec sans statut
+   4xx (coupure, 5xx) relit l'Issue et ses commentaires : si la précision y est, l'appel
+   continue comme après une création réussie ; sinon, ou si la relecture échoue (journalisé),
+   l'appel rend « Rien n'a été publié », et le nouvel essai la reconnaîtra si elle existe.
+   Précision retrouvée : l'erreur de la création, gardée, passe par `logError` (statut et
+   message de GitHub, jamais le jeton ni le texte).
+   Identifiant ajouté à `answer_comment_ids` en transaction ; un échec de cet ajout est
+   journalisé (la précision s'affiche alors « Non publiée depuis l'application »).
+5. Ticket au-delà de `received` : étiquette `statut:à-analyser` posée, puis `statut:analysé`
+   et `validé` retirées (une étiquette déjà absente, 404, est journalisée).
+6. Transaction : ticket `analyzed` ou `validated` → `received`, `answer_reset_at`,
+   `status_changed_at`, `allowed_decisions`, `updated_at` ; bail retiré s'il est encore le
+   sien (sinon il est retiré à la fin, ou expire seul).
+7. Au mieux : relevé des analyses, état du jeton.
+
+Erreurs (`HttpsError`) : `details.reason` porte le motif en français, `details.field` le champ
+en cause pour `invalid-argument`, `details.code` un code stable pour les autres,
+`details.partial: true` quand la précision est déjà publiée sur l'Issue (le texte ne doit plus
+changer). Les erreurs `unavailable` du serveur portent un `details.reason` ; une coupure du
+réseau côté client n'en porte pas.
+
+| Code | `details` | Message |
+|---|---|---|
+| `unauthenticated` | `reason` | « Connexion requise. » |
+| `permission-denied` | `reason` | « Accès réservé à l'administrateur. » |
+| `invalid-argument` | `field: "ticketId"`, `reason` | « Identifiant du ticket : valeur requise. », « … : un texte est attendu. », « … : texte trop long. », « Identifiant de ticket invalide. » |
+| `invalid-argument` | `field: "answer"`, `reason` | « Réponse : valeur requise. », « Réponse : un texte est attendu. », « Réponse : texte trop long. » (plus de 16 000 unités UTF-16 brutes), « La réponse doit faire au moins 5 caractères. », « La réponse ne doit pas dépasser 4 000 caractères. » |
+| `not-found` | `reason`, `code: "ticket_not_found"` | « Ce ticket n'existe plus. » |
+| `failed-precondition` | `reason`, `code: "not_answerable"` | « Ce ticket n'a pas encore d'Issue GitHub. », « Seul un ticket reçu, analysé ou validé peut recevoir une réponse. » |
+| `failed-precondition` | `reason`, `code: "decision_in_progress"` | « Une décision est déjà en cours sur ce ticket. » |
+| `failed-precondition` | `reason`, `code: "issue_closed"` | « Ce ticket a déjà été clos sur GitHub. » |
+| `failed-precondition` | `reason`, `code: "no_analysis"` | « Aucune analyse à laquelle répondre. » |
+| `failed-precondition` | `reason`, `code: "github_token"` | « GitHub refuse le jeton. Rien n'a été publié. » |
+| `not-found` | `reason`, `code: "issue_not_found"` | « L'Issue n'existe plus sur GitHub. » |
+| `unavailable` | `reason`, `code: "github_rate_limit"` | « GitHub limite les appels. Réessayez dans quelques minutes. Rien n'a été publié. » |
+| `unavailable` | `reason`, `code: "github_unavailable"` | « GitHub ne répond pas. Réessayez. Rien n'a été publié. » |
+| `aborted` | `reason`, `code: "answer_published_labels_failed"`, `partial: true` | « Réponse publiée, mais le statut n'a pas changé. Réessayez. » (précision sur l'Issue ; un nouvel essai ne la republie pas) |
+| `internal` | `reason`, `code: "ticket_not_updated"`, `partial: true` | « Réponse publiée sur GitHub, mais le ticket n'a pas été mis à jour. Réessayez. » |
+| `internal` | `reason`, `code: "internal"` | « La réponse n'a pas pu être publiée. Réessayez. » |
+
+Coût d'abus : une callable ouverte à tout compte connecté qui n'est pas admin s'arrête après
+la vérification du jeton par le SDK et une lecture de `members/` ; le webhook refuse une
+requête non signée avant toute lecture de Firestore. `maxInstances` (2 et 5) borne le nombre
+d'instances.
+
+**Plafond théorique du coût d'abus (recalcul demandé par ADR-008, 2026-11-12).** Hypothèses,
+**prix à vérifier** sur la page de tarifs de Cloud Run (les Functions 2e génération sont
+facturées comme Cloud Run) avant de s'y fier :
+
+- réglages du code : 256 Mio, aucun `cpu` posé, donc 1 vCPU par instance (valeur par défaut
+  de `firebase-functions` 7.4.0 jusqu'à 2 Go), concurrence 80, `minInstances` 0 ;
+- facturation à la requête, `europe-west1` en niveau 1 : 0,000024 $ par vCPU-seconde,
+  0,0000025 $ par Gio-seconde, 0,40 $ par million de requêtes ;
+- quota gratuit mensuel du compte de facturation : 180 000 vCPU-secondes, 360 000
+  Gio-secondes, 2 millions de requêtes ;
+- mois de 30 jours (2 592 000 s), instances occupées en continu, sortie réseau négligée (un
+  refus 401 est un corps vide).
+
+| Point d'accès | Instances | vCPU | Mémoire | Total par mois |
+|---|---|---|---|---|
+| une instance saturée | 1 | 62,21 $ | 1,62 $ | 63,83 $ |
+| `githubTicketWebhook` | 5 | 311,04 $ | 8,10 $ | 319,14 $ |
+| `answerTicketAnalysis` | 2 | 124,42 $ | 3,24 $ | 127,66 $ |
+| les deux | 7 | 435,46 $ | 11,34 $ | 446,80 $, soit 441,58 $ après le quota gratuit (≈ 14,9 $ par jour) |
+
+Ce plafond porte sur le temps d'instance seul. Les requêtes ne sont pas bornées par
+`maxInstances` : elles le sont par le débit de l'attaquant. Exemple : 100 requêtes par seconde
+en continu font 259,2 millions de requêtes par mois, soit ≈ 103 $ au-delà du quota gratuit.
+La facturation des requêtes refusées en 429 quand toutes les instances sont occupées est à
+vérifier. L'alerte budgétaire à 5 € (≈ 5,4 $, taux à vérifier) part après environ 9 heures
+d'attaque continue sur les deux points d'accès (≈ 14,9 $ par jour), environ 12 heures sur le
+webhook seul (≈ 10,6 $ par jour) et environ 2,5 jours sur une seule instance (≈ 2,1 $ par
+jour). Ces durées supposent le quota gratuit du mois déjà consommé ; sinon il absorbe d'abord
+≈ 5,2 $ (4,32 $ de vCPU et 0,90 $ de mémoire). L'alerte prévient et ne coupe
+rien : l'administrateur désactive le webhook dans les réglages du dépôt GitHub, ou supprime la
+fonction.
+
+**Risque résiduel du webhook public.** L'adresse du webhook est publique (`invoker:
+"public"`). Un tiers peut l'appeler en boucle sans signature : chaque appel est refusé en 401
+avant toute lecture de Firestore, mais occupe une instance. Tant que les 5 instances sont
+occupées, une livraison légitime de GitHub peut être refusée (429 ou délai) ; GitHub ne la
+renvoie pas d'office. La passe horaire `syncTickets` relit les Issues, leurs étiquettes et
+leurs analyses : le ticket rattrape son état en une heure au plus. Le coût de cette boucle est
+borné par le tableau ci-dessus, et l'alerte à 5 € prévient.
 
 **Publication** (`src/tickets/publish.ts`). Transaction : le ticket doit être `pending`, sans
 numéro d'Issue ni bail actif. Au premier essai, le rôle de l'auteur est lu dans
@@ -2027,7 +2245,7 @@ Si un essai précédent a commencé, l'Issue est d'abord cherchée dans la liste
 compte une Issue du compte 16348852 dont une ligne du corps est la ligne « Référence » du
 ticket. La liste ne dépend pas de l'index de recherche de GitHub, en retard de quelques
 minutes. Sinon elle est créée, avec
-les étiquettes `source:app` et `type:<type>`. Succès : `received`, sans
+les étiquettes `source:app`, `type:<type>` et `statut:à-analyser` (ADR-008). Succès : `received`, sans
 `status_changed_at`. Échec réseau ou 5xx : un essai compté, `pending` gardé, `send_failed` au
 dixième. Chaque changement de statut (`received`, `send_failed`, `over_quota`) écrit aussi
 `allowed_decisions`. Après une relance de l'admin, `send_retried_at` fait chercher l'Issue
@@ -2074,14 +2292,16 @@ Firestore garde le texte saisi, lu par l'auteur et l'admin seuls.
    (texte que la passe horaire relira dans le commentaire, préfixe et ligne `Décision`
    retirés), `status_changed_at` quand le statut ou la réponse change, bail retiré ;
    décision `applied`, `applied_at`, `steps_done`, `comment_id`.
+7. Au mieux (ADR-008) : `validated_at` de `admin/analysis` après Valider, puis relevé des
+   analyses de l'Issue. Un échec est journalisé, la décision reste faite.
 
 Un échec laisse la décision `failed` avec `steps_done` et `error_reason`, et retire les deux
 baux. Un jeton refusé ou un secret vide pose `token_invalid_since`. Le délai d'exécution
 (60 s) est plus court que le bail (2 min) : un bail expiré veut dire une fonction arrêtée.
 
-**Passe horaire** (`src/tickets/sync.ts`). 1. Une fois, `allowed_decisions` posé sur chaque
-ticket qui ne l'a pas ou dont la liste ne suit pas le statut (marque
-`allowed_decisions_backfilled_at` dans `ticket_status/github`). 2. Tickets `send_failed` avec
+**Passe horaire** (`src/tickets/sync.ts`). 1. Une fois par version de la règle,
+`allowed_decisions` posé sur chaque ticket qui ne l'a pas ou dont la liste ne suit pas le
+statut (marque `allowed_decisions_backfill_version` dans `ticket_status/github`, 2 depuis T3). 2. Tickets `send_failed` avec
 `retry_requested_at` (20 au plus) : en transaction, `pending`, `send_attempts` à 0,
 `send_retried_at` posé, `retry_requested_at` retiré, `status_changed_at` inchangé ; puis
 nouvel essai de publication dans la même passe. 3. Renvoi de 20 tickets `pending` au plus.
@@ -2091,12 +2311,14 @@ requêtes de groupe sur `decisions`, reprises comme ci-dessus ; la transaction d
 tranche si le déclencheur tourne encore. 5. Liste des Issues `source:app` modifiées depuis
 `ticket_status/github.issues_cursor`, les plus anciennes d'abord, 30 au plus (un appel).
 6. Avec le reste des 30, les tickets `received`,
-`validated` ou `in_progress` les moins récemment relus, Issue lue une à une ; un 404 ou un
+`analyzed`, `validated` ou `in_progress` les moins récemment relus, Issue et commentaires lus
+un à un (un commentaire modifié ne change pas `updated_at` de l'Issue) ; un 404 ou un
 410 pose `issue_missing_since` et journalise à chaque passe, sans changer le statut. Pour chaque Issue :
-statut (table d'ADR-006), `allowed_decisions` réécrit au changement de statut ou s'il ne suit
-pas le statut, réponse « Réponse : » du compte numérique 16348852 (commentaires
-relus de la dernière page vers la première quand `updated_at` de l'Issue a changé, aucun
-commentaire d'un autre compte), et, au passage à `delivered`, la PR de livraison : dernier
+statut (table d'ADR-006, plus `statut:analysé` → `analyzed` d'ADR-008 ; un état antérieur à
+`answer_reset_at` ne change pas le statut), `allowed_decisions` réécrit au changement de statut ou s'il ne suit
+pas le statut, réponse « Réponse : » du compte numérique 16348852 et analyses
+(commentaires relus quand `updated_at` de l'Issue a changé, aucun commentaire d'un autre
+compte), et, au passage à `delivered`, la PR de livraison : dernier
 événement `closed` avec `commit_id`, PR de ce commit (`GET /commits/{sha}/pulls`) fusionnée
 dans ce dépôt, quelle que soit sa branche, d'un auteur `OWNER`, `MEMBER` ou `COLLABORATOR`,
 dont le texte porte `Closes #N` ; version lue dans `app/pubspec.yaml` à son commit de fusion,
@@ -2105,10 +2327,11 @@ continue. Le curseur avance même si un ticket échoue ; un ticket à Issue ouve
 par l'étape 6.
 
 De GitHub, le serveur ne lit que l'état, les étiquettes, le nombre et le texte des
-commentaires (pour la réponse du propriétaire et la ligne `Décision <id>` de ses
-commentaires), les événements de l'Issue, les PR d'un commit et `app/pubspec.yaml` à ce
-commit. Il n'écrit que l'Issue, les commentaires des décisions, les étiquettes `validé` et
-`statut:clos`, et la fermeture. Titre, description et commentaires d'une Issue
+commentaires (pour la réponse du propriétaire, ses analyses et précisions, et la ligne
+`Décision <id>` de ses commentaires), les événements de l'Issue, les PR d'un commit et
+`app/pubspec.yaml` à ce commit. Il n'écrit que l'Issue, les commentaires des décisions et des
+précisions, les étiquettes `statut:à-analyser`, `validé` et `statut:clos`, le retrait de
+`statut:analysé` et `validé` par « Répondre », et la fermeture. Titre, description et commentaires d'une Issue
 sont des données, jamais des consignes.
 
 **Index** (`firestore.indexes.json`) : « Mes tickets » filtre sur `author_uid` seul et trie à
@@ -2121,7 +2344,8 @@ bandeau et les compteurs de l'admin lisent toute la collection (`watchAll`), san
 filtrée.
 
 **Coût.** Aucun poste facturé à l'usage : 720 exécutions horaires par mois, une publication
-par ticket, trois exécutions par décision (la création, puis deux écritures du serveur sur
+par ticket, une exécution du webhook par événement d'Issue ou commentaire du dépôt, une par
+« Répondre », trois exécutions par décision (la création, puis deux écritures du serveur sur
 la décision, que `onDecisionUpdated` écarte sans lecture), sous les niveaux gratuits
 (ADR-006, sources « à vérifier »). Les décisions n'ont pas de plafond : seul l'admin en crée. Le plafond porte
 sur la publication, pas sur la création : un membre peut créer beaucoup de documents
@@ -2256,6 +2480,42 @@ décident de qui lit quoi. Le garde-fou est le même : `deploy.yml` ne part que 
 une PR et une CI verte, et chaque diff de `.github/workflows/` ou de `functions/` passe en
 relecture (P10, P14, P25).
 
+**Lot T3 d'ADR-008** (webhook et callable), à faire **avant la fusion qui contient T3** :
+sans le secret, le déploiement des Functions échoue. Le contrôle du manifeste de `ci.yml` et
+de `deploy.yml` accepte les deux points d'accès du lot, avec leurs réglages, et refuse tout
+autre déclencheur HTTP ou callable (liste fermée d'ADR-008, P25 ; diff des workflows décidé par
+l'utilisateur, P10).
+
+```bash
+# 9. Secret GITHUB_WEBHOOK_SECRET (32 octets aléatoires), lu par githubTicketWebhook seul.
+gcloud secrets create GITHUB_WEBHOOK_SECRET --replication-policy=automatic
+openssl rand -hex 32 | tr -d '\n' | gcloud secrets versions add GITHUB_WEBHOOK_SECRET --data-file=-
+gcloud secrets add-iam-policy-binding GITHUB_WEBHOOK_SECRET \
+  --member "serviceAccount:$RUN_SA" --role roles/secretmanager.secretAccessor
+gcloud secrets add-iam-policy-binding GITHUB_WEBHOOK_SECRET \
+  --member "serviceAccount:$DEPLOY_SA" --role roles/secretmanager.viewer
+# Valeur à recopier une fois dans le webhook du dépôt (étape 10), sans la garder ailleurs.
+gcloud secrets versions access latest --secret GITHUB_WEBHOOK_SECRET
+```
+
+10. Après le premier déploiement : dépôt `ChinaFred/KassBeer` › Settings › Webhooks › Add
+webhook. Adresse : celle de `githubTicketWebhook` affichée par le déploiement
+(`https://europe-west1-kassbeer.cloudfunctions.net/githubTicketWebhook` ou l'adresse
+Cloud Run indiquée), type `application/json`, secret de l'étape 9, vérification SSL
+activée, événements « Issues » et « Issue comments » seuls (T5 ajoute « Pull requests » et
+« Workflow runs »). GitHub envoie un `ping`, qui doit rendre 200 (« Recent Deliveries »).
+
+11. Invocation publique : `firebase-tools` donne `allUsers` comme invocateur du service
+Cloud Run du webhook (`invoker: "public"`) et de la callable (par défaut), par
+`roles/run.admin` de `github-deploy`. Une règle d'organisation « Domain restricted sharing »
+le refuserait : le projet `kassbeer` n'a pas d'organisation (à vérifier au premier
+déploiement de T3).
+
+Rotation du secret du webhook : nouvelle version (étape 9), même valeur collée dans le
+webhook du dépôt, redéploiement des Functions (`deploy.yml` à la main), puis
+`gcloud secrets versions destroy` de l'ancienne version. Entre la nouvelle version et le
+redéploiement, les livraisons rendent 401 ; la passe horaire rattrape.
+
 **Jeton à grain fin** (GitHub › Settings › Developer settings › Fine-grained tokens), compte
 propriétaire : dépôt `ChinaFred/KassBeer` seul ; permissions « Issues : Read and write »,
 « Pull requests : Read-only », « Contents : Read-only », « Metadata : Read-only » (posée
@@ -2301,7 +2561,7 @@ manuel. Un nouveau push annule le run en cours de la même référence. Permissi
 | Version et outillage | `git fetch --tags`, puis `node scripts/check-version.mjs` : sur une PR avec `--base origin/<base de la PR>` (HEAD est le commit de fusion préparé par GitHub) ; sur un push de `main` avec `--base <commit d'avant le push>` ; sur un push d'une autre branche, contre `origin/main`. Non lancé sur un lancement manuel. Puis `node scripts/check-agents.mjs` et `node --test scripts/*.test.mjs` (dont `changelog-recent.test.mjs`) |
 | Flutter et brewing | Flutter 3.44.6. Dans `brewing/`, puis dans `exchange/` (v0.1.20) : `dart pub get`, `pubspec.lock` à jour, `dart analyze --fatal-infos`, `dart format` vérifié, `dart test`. Dans `app/` : `flutter pub get`, `pubspec.lock` à jour, `node scripts/changelog-recent.mjs` (asset des nouveautés régénéré), `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`, `flutter test`, `flutter build web --release` sans configuration Firebase |
 | Règles — émulateur | Node 22, Java 21 (Temurin), `npm ci` et `npm test` dans `rules-tests/` (projet `demo-kassbeer`). Binaires de l'émulateur en cache |
-| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`) : échec si une fonction a un déclencheur HTTP, callable, bloquant ou de file, ou n'a pas de `maxInstances` (P25) |
+| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`), contrôlé par `jq` : déclencheurs HTTP et callables limités à la liste fermée d'ADR-008 déjà livrée (`githubTicketWebhook`, seul `invoker: "public"`, `maxInstances` 5 et 60 s ; `answerTicketAnalysis`, `maxInstances` 2 et 60 s), aucun déclencheur bloquant ni de file, `maxInstances` sur chaque fonction ; sinon échec « Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25). » |
 | Android — compilation | quand le diff touche `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`, et toujours sur un lancement manuel : `node scripts/changelog-recent.mjs`, puis `flutter build apk --release`, Java 17, signé par une clé jetable générée par `keytool` dans le job. Sinon le job réussit sans compiler |
 
 Une branche de travail qui n'a pas encore incrémenté sa version est rouge au job Version :
@@ -2339,7 +2599,7 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et décide s'il faut un nouvel APK |
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
-| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (aucun déclencheur HTTP, callable, bloquant ou de file, `maxInstances` partout, compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret), aucun secret autre que `GITHUB_TICKETS_TOKEN`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
+| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et `GITHUB_WEBHOOK_SECRET` monté par `githubTicketWebhook` seul) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
 | `tag` | aucun, `contents: write` | après un `deploy` réussi seulement (condition `!cancelled() && needs.deploy.result == 'success'`, pour que l'absence de `build-functions` ne l'ignore pas) : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et

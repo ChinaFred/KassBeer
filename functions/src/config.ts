@@ -26,6 +26,18 @@ export const RUNTIME_SERVICE_ACCOUNT = `tickets-functions@${PROJECT_ID}.iam.gser
  */
 export const GITHUB_TICKETS_TOKEN = defineSecret("GITHUB_TICKETS_TOKEN");
 
+/**
+ * Secret partagé avec le webhook du dépôt (ADR-008, T3) : HMAC SHA-256 du corps de chaque
+ * livraison (`X-Hub-Signature-256`). Monté par `githubTicketWebhook` seul (P25).
+ */
+export const GITHUB_WEBHOOK_SECRET = defineSecret("GITHUB_WEBHOOK_SECRET");
+
+/**
+ * Origines admises par les callables (ADR-008, P25) : l'application web hébergée. Cette
+ * liste limite les navigateurs, pas un script.
+ */
+export const CALLABLE_ORIGINS = ["https://kassbeer.web.app", "https://kassbeer.firebaseapp.com"];
+
 export const GITHUB_OWNER = "ChinaFred";
 export const GITHUB_REPO = "KassBeer";
 export const GITHUB_REPO_FULL_NAME = `${GITHUB_OWNER}/${GITHUB_REPO}`;
@@ -41,6 +53,11 @@ export const COLL_MEMBERS = "members";
 export const COLL_TICKET_QUOTAS = "ticket_quotas";
 export const COLL_TICKET_STATUS = "ticket_status";
 export const TICKET_STATUS_GITHUB_DOC = "github";
+
+/** Sous-collection des documents d'un ticket lus par l'admin seul (ADR-008). */
+export const TICKET_ADMIN_SUBCOLLECTION = "admin";
+/** Analyses relevées sur l'Issue : `tickets/{id}/admin/analysis` (P32). */
+export const TICKET_ANALYSIS_DOC = "analysis";
 
 /** Plafonds du jour de Paris (ADR-006, décision 7) ; l'administrateur n'est pas compté. */
 export const MEMBER_DAILY_LIMIT = 5;
