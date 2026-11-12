@@ -4,6 +4,17 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-12
+
+### v0.1.30 — technique
+
+`documentation/exigences-techniques.md` ne contient plus qu'une copie (2 695 lignes au lieu de
+3 959). Le commit `9e72415` avait remplacé la ligne `import_unresolved/` par un texte contenant
+`` $` `` : dans un `String.replace` JavaScript, cette séquence insère tout ce qui précède le
+passage remplacé, et le début du document s'est trouvé copié au milieu de cette ligne. Chaque
+passage qui différait entre les deux copies garde sa version la plus récente, vérifiée contre le
+code ; la ligne `import_unresolved/` est recousue, avec l'expression de `firestore.rules`.
+
 ## 2026-11-11
 
 ### v0.1.29 — fonctionnel
