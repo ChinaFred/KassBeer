@@ -1,0 +1,200 @@
+// Base Firestore en mémoire pour les tests des lancements (ADR-008, T4). Elle couvre ce que
+// lit et écrit `src/tickets/launch.ts` (et, dans `validatedByApp.test.ts`, les décisions, la
+// réponse, `applyIssue` et le report de `sync.ts`) : documents et sous-collections, `get`, `set` (fusion
+// de premier niveau), `update`, transactions exécutées l'une après l'autre (deux appels
+// simultanés se suivent, comme deux transactions Firestore qui se rejouent), `Timestamp`,
+// `FieldValue.delete()` et `FieldValue.serverTimestamp()` du SDK Admin.
+
+import { FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore";
+
+import type { FirestoreKit } from "../src/firestore";
+
+type Data = Record<string, unknown>;
+
+const DELETE = FieldValue.delete();
+const SERVER_TIME = FieldValue.serverTimestamp();
+
+export class FakeDb {
+  readonly docs = new Map<string, Data>();
+  /** Écritures validées, dans l'ordre (chemin du document). */
+  readonly writes: string[] = [];
+  private queue: Promise<unknown> = Promise.resolve();
+
+  constructor(private readonly now: () => number = Date.now) {}
+
+  collection(name: string): FakeCollection {
+    return new FakeCollection(this, name);
+  }
+
+  read(path: string): Data | undefined {
+    const d = this.docs.get(path);
+    return d === undefined ? undefined : { ...d };
+  }
+
+  seed(path: string, data: Data): void {
+    this.docs.set(path, { ...data });
+  }
+
+  apply(path: string, data: Data, mode: "set" | "merge" | "update"): void {
+    const current = this.docs.get(path);
+    if (mode === "update" && current === undefined) {
+      throw new Error(`NOT_FOUND: ${path}`);
+    }
+    const next: Data = mode === "set" ? {} : { ...(current ?? {}) };
+    for (const [k, v] of Object.entries(data)) {
+      if (v instanceof FieldValue && v.isEqual(DELETE)) delete next[k];
+      else if (v instanceof FieldValue && v.isEqual(SERVER_TIME)) {
+        next[k] = Timestamp.fromMillis(this.now());
+      } else next[k] = v;
+    }
+    this.docs.set(path, next);
+    this.writes.push(path);
+  }
+
+  runTransaction<T>(fn: (tx: FakeTx) => Promise<T>): Promise<T> {
+    const run = this.queue.then(async () => {
+      const tx = new FakeTx(this);
+      const result = await fn(tx);
+      for (const w of tx.pending) this.apply(w.path, w.data, w.mode);
+      return result;
+    });
+    // La file continue après un échec : la transaction suivante part quand même.
+    this.queue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  kit(): FirestoreKit {
+    return {
+      db: this as unknown as FirestoreKit["db"],
+      FieldValue,
+      Timestamp,
+      FieldPath,
+    };
+  }
+}
+
+export class FakeCollection {
+  constructor(
+    private readonly db: FakeDb,
+    readonly path: string,
+  ) {}
+
+  doc(id: string): FakeDocRef {
+    return new FakeDocRef(this.db, `${this.path}/${id}`, id);
+  }
+
+  /** Requête par identifiant de document seule (report de `sync.ts`). */
+  orderBy(field: unknown): FakeQuery {
+    if (!(field instanceof FieldPath) || !field.isEqual(FieldPath.documentId())) {
+      throw new Error("FakeCollection : seul orderBy(FieldPath.documentId()) est permis");
+    }
+    return new FakeQuery(this.db, this, null, null);
+  }
+}
+
+/** `orderBy(documentId)`, `select`, `limit`, `startAfter`, `get` : assez pour un parcours paginé. */
+export class FakeQuery {
+  constructor(
+    private readonly db: FakeDb,
+    private readonly coll: FakeCollection,
+    private readonly max: number | null,
+    private readonly afterId: string | null,
+  ) {}
+
+  select(..._fields: string[]): FakeQuery {
+    return this;
+  }
+
+  limit(n: number): FakeQuery {
+    return new FakeQuery(this.db, this.coll, n, this.afterId);
+  }
+
+  startAfter(snap: FakeSnapshot): FakeQuery {
+    return new FakeQuery(this.db, this.coll, this.max, snap.id);
+  }
+
+  async get(): Promise<{ docs: FakeSnapshot[] }> {
+    const prefix = `${this.coll.path}/`;
+    const ids = [...this.db.docs.keys()]
+      .filter((p) => p.startsWith(prefix) && !p.slice(prefix.length).includes("/"))
+      .map((p) => p.slice(prefix.length))
+      .sort()
+      .filter((id) => this.afterId === null || id > this.afterId);
+    const page = this.max === null ? ids : ids.slice(0, this.max);
+    return {
+      docs: page.map((id) => {
+        const ref = this.coll.doc(id);
+        return new FakeSnapshot(ref, this.db.read(ref.path));
+      }),
+    };
+  }
+}
+
+export class FakeSnapshot {
+  constructor(
+    readonly ref: FakeDocRef,
+    private readonly value: Data | undefined,
+  ) {}
+
+  get id(): string {
+    return this.ref.id;
+  }
+
+  get exists(): boolean {
+    return this.value !== undefined;
+  }
+
+  data(): Data | undefined {
+    return this.value === undefined ? undefined : { ...this.value };
+  }
+
+  get(field: string): unknown {
+    return this.value?.[field];
+  }
+}
+
+export class FakeDocRef {
+  constructor(
+    private readonly db: FakeDb,
+    readonly path: string,
+    readonly id: string,
+  ) {}
+
+  collection(name: string): FakeCollection {
+    return new FakeCollection(this.db, `${this.path}/${name}`);
+  }
+
+  async get(): Promise<FakeSnapshot> {
+    return new FakeSnapshot(this, this.db.read(this.path));
+  }
+
+  async set(data: Data, opts: { merge?: boolean } = {}): Promise<void> {
+    this.db.apply(this.path, data, opts.merge === true ? "merge" : "set");
+  }
+
+  async update(data: Data): Promise<void> {
+    this.db.apply(this.path, data, "update");
+  }
+}
+
+export class FakeTx {
+  readonly pending: { path: string; data: Data; mode: "set" | "merge" | "update" }[] = [];
+
+  constructor(private readonly db: FakeDb) {}
+
+  async get(ref: FakeDocRef): Promise<FakeSnapshot> {
+    return new FakeSnapshot(ref, this.db.read(ref.path));
+  }
+
+  set(ref: FakeDocRef, data: Data, opts: { merge?: boolean } = {}): void {
+    this.pending.push({ path: ref.path, data, mode: opts.merge === true ? "merge" : "set" });
+  }
+
+  update(ref: FakeDocRef, data: Data): void {
+    if (this.db.read(ref.path) === undefined) throw new Error(`NOT_FOUND: ${ref.path}`);
+    this.pending.push({ path: ref.path, data, mode: "update" });
+  }
+}

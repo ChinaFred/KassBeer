@@ -35,23 +35,60 @@ export function isPlausibleDecisionId(value: string): boolean {
  * `allowed_decisions`, que le client lit à part des trois actions des documents.
  */
 export const ANSWER_ACTION = "answer";
-export type AllowedDecision = DecisionAction | typeof ANSWER_ACTION;
+
+/**
+ * « Lancer l'analyse » et « Lancer le développement » (`launchTicketAnalysis`,
+ * `launchTicketDevelopment`, ADR-008, T4) : des callables, jamais des documents de
+ * `decisions/` (les règles les refusent). Le client lit ces entrées à part, comme `answer`.
+ */
+export const LAUNCH_ANALYSIS_ACTION = "launch_analysis";
+export const LAUNCH_DEVELOPMENT_ACTION = "launch_development";
+
+export type AllowedDecision =
+  | DecisionAction
+  | typeof ANSWER_ACTION
+  | typeof LAUNCH_ANALYSIS_ACTION
+  | typeof LAUNCH_DEVELOPMENT_ACTION;
+
+/**
+ * Vrai si `validated_by_app_at` est posé : Valider a été appliqué depuis l'application
+ * (décision `validate` de `decisions/`) depuis le dernier retour du ticket sous `validated`.
+ * Une étiquette `validé` posée sur GitHub ne le pose pas (ADR-008, décision de
+ * l'utilisateur du 2026-11-13). Pure.
+ */
+export function isValidatedByApp(validatedByAppAt: unknown): boolean {
+  return validatedByAppAt !== null && validatedByAppAt !== undefined;
+}
+
+/**
+ * Statuts qui gardent `validated_by_app_at` : `validated` et `in_progress`. Tout autre
+ * statut écrit l'efface, pour qu'un `validé` reposé plus tard sur GitHub ne suffise pas à
+ * lancer le développement. Pure.
+ */
+export function keepsAppValidation(status: unknown): boolean {
+  return status === "validated" || status === "in_progress";
+}
 
 /**
  * Les décisions que permet un statut (ADR-006, « Décisions de l'administrateur » ; ADR-008,
- * « Statuts ») : Valider depuis `received` et `analyzed` ; Répondre depuis `received`,
- * `analyzed` et `validated` (`answerPrecondition` de Kass'Dalle). Écrites par le serveur à
- * chaque changement de statut ; le client ne les calcule pas (P26).
+ * « Statuts », lot T4) : Valider depuis `analyzed`, et depuis `validated` tant que la
+ * validation ne vient pas de l'application (`validatedByApp` faux : étiquette posée sur
+ * GitHub) ; lancer le développement depuis `validated` validé dans l'application seul ; Répondre depuis `received`,
+ * `analyzed` et `validated` (`answerPrecondition` de Kass'Dalle) ; lancer l'analyse depuis
+ * `received`, le développement depuis `validated` (`launchPrecondition` de Kass'Dalle).
+ * Écrites par le serveur à chaque changement de statut ; le client ne les calcule pas
+ * (P26). Le serveur la recalcule à chaque décision et à chaque lancement (P42).
  */
-export function allowedDecisions(status: unknown): AllowedDecision[] {
+export function allowedDecisions(status: unknown, validatedByApp = false): AllowedDecision[] {
   switch (status) {
     case "received":
-      // Valider reste offert depuis Reçu jusqu'à T4 (ADR-008), qui le réserve à `analyzed`.
-      return ["validate", "refuse", "close", ANSWER_ACTION];
+      return ["refuse", "close", ANSWER_ACTION, LAUNCH_ANALYSIS_ACTION];
     case "analyzed":
       return ["validate", "refuse", "close", ANSWER_ACTION];
     case "validated":
-      return ["refuse", "close", ANSWER_ACTION];
+      return validatedByApp
+        ? ["refuse", "close", ANSWER_ACTION, LAUNCH_DEVELOPMENT_ACTION]
+        : ["validate", "refuse", "close", ANSWER_ACTION];
     case "in_progress":
       return ["refuse", "close"];
     default:
@@ -60,8 +97,12 @@ export function allowedDecisions(status: unknown): AllowedDecision[] {
 }
 
 /** Vrai si `stored` est déjà la liste attendue pour `status`, dans le même ordre. */
-export function allowedDecisionsUpToDate(stored: unknown, status: unknown): boolean {
-  const wanted = allowedDecisions(status);
+export function allowedDecisionsUpToDate(
+  stored: unknown,
+  status: unknown,
+  validatedByApp = false,
+): boolean {
+  const wanted = allowedDecisions(status, validatedByApp);
   return (
     Array.isArray(stored) &&
     stored.length === wanted.length &&
@@ -104,6 +145,8 @@ export interface DecisionClaimInput {
   ticket: {
     status: unknown;
     allowedDecisions: unknown;
+    /** `validated_by_app_at` du ticket, tel que lu. */
+    validatedByAppAt?: unknown;
     /** `decision_lease_until` du ticket, en millisecondes, ou `null`. */
     leaseUntilMs: number | null;
     issueNumber: unknown;
@@ -123,7 +166,8 @@ export type DecisionClaimVerdict =
  *   `failed` sans reprise demandée : rien.
  * - `pending`, `failed` avec reprise, `applying` au bail expiré : la décision est prise,
  *   sauf si le ticket n'existe plus, n'a pas d'Issue, porte le bail d'une autre décision,
- *   ou si son statut ne permet plus l'action.
+ *   ou si son statut ne permet plus l'action : absente de `allowed_decisions` stocké, ou de
+ *   `allowedDecisions(status)` recalculé (P42).
  *
  * Une reprise (`failed` ou `applying`) sur un ticket déjà au statut visé passe aussi :
  * la passe horaire a pu appliquer ce qu'un essai précédent a fait sur GitHub, et la
@@ -160,11 +204,23 @@ export function decisionClaimVerdict(input: DecisionClaimInput): DecisionClaimVe
   if (ticket.leaseUntilMs !== null && ticket.leaseUntilMs > nowMs) {
     return { kind: "reject", reason: REJECT_LEASE_TAKEN };
   }
-  const allowed = Array.isArray(ticket.allowedDecisions)
+  const stored = Array.isArray(ticket.allowedDecisions)
     ? (ticket.allowedDecisions as unknown[])
     : [];
-  const alreadyThere = resumed && ticket.status === statusAfterDecision(action);
-  if (!allowed.includes(action) && !alreadyThere) {
+  // P42 : la liste stockée peut dater d'une règle plus ancienne (elle n'est réécrite qu'au
+  // changement de statut ou par la passe horaire) ; la règle du code tranche aussi.
+  const allowed =
+    stored.includes(action) &&
+    (
+      allowedDecisions(ticket.status, isValidatedByApp(ticket.validatedByAppAt)) as string[]
+    ).includes(action);
+  // Une reprise de Valider sur un ticket déjà `validated` passe seulement si la validation
+  // de l'application n'est pas encore écrite (sinon il n'y a rien à refaire).
+  const alreadyThere =
+    resumed &&
+    ticket.status === statusAfterDecision(action) &&
+    !(action === "validate" && isValidatedByApp(ticket.validatedByAppAt));
+  if (!allowed && !alreadyThere) {
     return { kind: "reject", reason: REJECT_NOT_ALLOWED };
   }
   return { kind: "claim", action, issueNumber, resumed };

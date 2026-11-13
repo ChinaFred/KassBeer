@@ -287,7 +287,8 @@ Réservé à l'administrateur. Trois entrées : « Membres » (« Inviter et ret
 « Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
-et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas) et « Import » (« Disponible dans une prochaine version », inactive).
+et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas, un jeton de routine
+refusé l'allume) et « Import » (« Disponible dans une prochaine version », inactive).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
@@ -334,8 +335,13 @@ tout va bien. Une ligne par alerte :
 - « N tickets ne sont pas arrivés sur GitHub. » : envoi impossible, ou en attente de
   transmission depuis plus d'une heure ;
 - « N tickets dont l'Issue a disparu. » ;
+- « Jeton de la routine d'analyse refusé depuis le jj/mm/aa. Remplacez-le dans Secret
+  Manager. » et « Jeton de la routine de développement refusé depuis le jj/mm/aa. Remplacez-le
+  dans Secret Manager. » (ton d'erreur), lus dans l'état des lancements (ADR-008, T4) ;
 - « État du jeton GitHub illisible. » pour un document illisible, journalisé ; « Impossible de
-  lire l'état du jeton GitHub. » quand la lecture échoue. Une panne de lecture des tickets
+  lire l'état du jeton GitHub. » quand la lecture échoue ; de même « État des lancements
+  illisible. » et « Impossible de lire l'état des lancements. ». Le plafond des lancements
+  atteint n'y figure pas : c'est un état normal. Une panne de lecture des tickets
   n'y est pas répétée : la liste ou la fiche affiche déjà « Impossible de lire les tickets. ».
 
 **Disposition.** Dans une fenêtre de 1 096 px ou plus (840 px de contenu à côté du rail
@@ -347,6 +353,14 @@ La ligne choisie prend le fond secondaire du thème, texte et icône accordés, 
 tickets. En dessous, la liste occupe l'écran et la fiche s'ouvre seule par-dessus (titre
 « Ticket d'un membre », retour vers la liste).
 
+**Compteur des lancements.** Au-dessus des filtres, en texte secondaire : « Lancements de
+sessions : 2 sur 10 le 13/11 · 3 en novembre 2026 ». Le jour, le mois et le plafond sont ceux écrits
+par le serveur : l'application ne recalcule pas le jour de Paris et n'a aucun plafond en dur.
+Sans compteur : « Lancements de sessions : aucun compté. » ; lecture : « … : lecture en
+cours. » ; hors ligne, absent du cache : « … : compteur non disponible hors ligne. » ;
+illisible : « … : compteur illisible. » ; panne : « Lancements de sessions : compteur
+indisponible. » en ton d'erreur, avec un bouton icône « Réessayer ».
+
 **Liste.** Filtres « À traiter (N) » (tickets reçus ou analysés sans décision, et envois
 impossibles ; un ticket validé n'y est pas),
 « Tous » et « Bloqués (N) » (envoi impossible, en attente depuis plus d'une heure, Issue
@@ -356,7 +370,10 @@ il reste le même entre la liste et une fiche. Au téléphone, les filtres défi
 l'horizontale. Liste du plus récent au plus ancien ; chaque ligne : icône du type (lue),
 titre sur deux lignes au plus, « #12 · Nom · jj/mm/aa » (sans Issue, pas de numéro ; le nom
 déclaré dans Admin › Membres, sinon l'adresse, jamais publié sur l'Issue), étiquette du statut
-et, selon le cas, « Décision en cours », « Issue disparue », « En retard ». Pas de point de
+et, selon le cas, « Décision en cours », « Issue disparue », « En retard », « Analyse en
+cours » ou « Développement en cours » (sablier, lu « Analyse en cours depuis 14:05 »),
+« Relance possible ». Ces deux dernières pastilles ne lisent l'historique des lancements que
+pour un ticket dont le serveur permet un lancement (reçu ou validé). Pas de point de
 non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
 l'application à jour. ».
 
@@ -381,6 +398,7 @@ coupé en ton d'erreur ; l'encadré du texte de
 l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
 « Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
 « Analyses (N) », pour un ticket qui a une Issue (voir ci-dessous) ;
+« Lancements (N) », section repliée, pour un ticket qui a une Issue (voir ci-dessous) ;
 « Décisions (N) », section repliée, la
 plus récente en haut (« Refus demandé le jj/mm/aa à hh:mm · Appliqué », « Clôture demandée le …
 · Échec : … », « Validation demandée le … · Refusée par le serveur : … »). États : « Chargement
@@ -419,13 +437,76 @@ sans relevé : « Analyse pas encore relevée. » et « Ouvrir l'Issue #12 » ; 
 cache : « Analyses non disponibles hors ligne. » ; document illisible : « Analyses illisibles.
 Mettez l'application à jour. ».
 
+**Lancements (N).** Section repliée, lue par l'administrateur seul (ADR-008, T4) : les sessions
+Claude Code lancées sur ce ticket, la plus récente en haut, vingt au plus. Le titre reste
+« Lancements » sans nombre tant que la section n'est pas lue. Une carte par lancement, dans
+l'encadré du texte de l'administrateur : « Analyse lancée » ou « Développement lancé »
+(« Lancement » pour une action inconnue), « le jj/mm/aa à hh:mm par vous » (« par un autre
+administrateur » sinon), puis le résultat : « Session créée » ; « Échec : <raison> » (« Échec :
+raison inconnue ») en ton d'erreur ; « Résultat inconnu : vérifiez sur claude.ai/code ».
+Session créée avec un lien `https` sur `claude.ai` : « Ouvrir la session » (hors de
+l'application ; échec « Impossible d'ouvrir la session. »), bouton icône « Copier le lien »
+(« Lien copié. »), « Visible seulement depuis le compte Claude de l'administrateur. » et « Pour
+l'arrêter, ouvrez-la sur claude.ai/code. ». Autre lien : « Lien de session invalide. », rien
+ne s'ouvre.
+
+États : barre de progression « Lecture des lancements » ; « Impossible de lire les lancements. »
+et « Réessayer » ; hors ligne, absent du cache : « Lancements non disponibles hors ligne. » ;
+document illisible : « Lancements illisibles. Mettez l'application à jour. » ; aucun :
+« Aucune session lancée pour ce ticket. », suivi, quand le bouton de lancement est affiché et
+actif dans la barre (décisions lues, aucune décision ni réponse en cours, en ligne, plafond non
+atteint, aucun appel en cours), de « Appuyez sur « Lancer l'analyse », en bas de la fiche. »
+(ou « Appuyez sur « Lancer le développement », en bas de la fiche. »).
+
 **Barre de décision.** Fixée en bas de la fiche (moitié de la hauteur au plus, défilante) ; sous
 480 px de hauteur, elle passe en fin de fiche. Les boutons sont ceux que le serveur permet pour
 ce ticket (`allowed_decisions`), jamais déduits du statut par l'application : « Refuser »,
-« Répondre » (valeur `answer`) et « Clore » à gauche, « Valider » à droite ; ils passent les uns
-sous les autres quand la largeur manque. Le serveur offre « Valider » sur un ticket reçu ou
-analysé ; à partir du lot T4 d'ADR-008, sur un ticket analysé seul. « Répondre » appelle le serveur : hors ligne, il est
-inactif, et la ligne « Répondre demande le réseau. » le dit sous les boutons. Pour un ticket
+« Répondre » (valeur `answer`) et « Clore » à gauche ; à droite, une seule action principale :
+
+| Statut | Action principale |
+|---|---|
+| Reçu | « Lancer l'analyse » (valeur `launch_analysis`) ; après l'échéance d'un lancement sans changement de statut, « Relancer l'analyse » (bouton tonal) |
+| Analysé | « Valider » |
+| Validé dans l'application | « Lancer le développement » (valeur `launch_development`), ou « Relancer le développement » |
+| Validé sur GitHub seul | « Valider » |
+| En cours, Livré, Refusé, Clos | aucune |
+
+Les boutons passent les uns sous les autres quand la largeur manque. Le serveur offre
+« Valider » sur un ticket analysé seul (ADR-008, T4) ; pour un ticket reçu, la ligne « Valider
+sera possible une fois le ticket analysé. » suit les boutons. « Lancer le développement »
+n'est offert qu'après un « Valider » fait dans l'application (ADR-008, décision du
+2026-11-13). Une étiquette « validé » posée sur GitHub change le statut affiché en Validé, mais
+le serveur offre alors « Valider » à la place du lancement, et la ligne « Validé sur GitHub :
+validez depuis l'application pour lancer le développement. » suit les boutons. Un retour à
+Reçu ou Analysé, un refus ou une clôture effacent la validation de l'application. « Répondre » et les lancements
+appellent le serveur : hors ligne, ils sont inactifs, et la ligne « Répondre demande le
+réseau. », « Lancer une session demande le réseau. » ou « Répondre et lancer une session
+demandent le réseau. » le dit sous les boutons. Hors ligne, la ligne « Lancer une session
+demande le réseau. » s'affiche dès que le serveur permet un lancement, même quand l'historique
+des lancements, absent du cache, retient le bouton ; aucune barre de progression ne s'affiche
+alors.
+
+Un lancement est « en cours » tant que l'échéance écrite par le serveur n'est pas passée (une
+heure pour une analyse, trois pour un développement) : pas de bouton de lancement, et la barre
+se redessine à l'échéance. Pendant un développement en cours, « Répondre » est masqué. Pendant
+la lecture de l'historique des lancements, en ligne, une barre de progression « Lecture des
+lancements » remplace le bouton de lancement ; historique illisible ou en panne : pas de bouton. Au-dessus
+des boutons, une seule ligne de lancement, dans cet ordre de priorité :
+
+| Cas | Ligne |
+|---|---|
+| appel de la fiche en cours | barre de progression, « Lancement de l'analyse en cours. » ; le bouton est inactif |
+| lancement en cours | « Analyse en cours depuis 14:05 » (autre jour : « … depuis le 12/11/26 à 14:05 ») |
+| plafond atteint, ticket reçu ou validé | « Plafond atteint le 13/11 : 10 lancements sur 10. Le compteur repart à zéro peu après minuit. » ; le bouton est inactif |
+| relance | « Le lancement du jj/mm/aa à hh:mm n'a rien changé au ticket. Vérifiez sur claude.ai/code qu'aucune session ne tourne encore. » |
+| plafond atteint, ticket analysé ou validé sur GitHub seul | « Plafond atteint le 13/11 : 10 lancements sur 10. Vous pouvez valider. Le compteur repart à zéro peu après minuit. » |
+
+La date est celle du compteur écrit par le serveur. Le serveur le remet à zéro à sa passe de
+minuit (heure de Paris) : quelques secondes après minuit, la ligne du plafond disparaît.
+
+La ligne des précisions en attente (ci-dessous) s'affiche aussi sous la ligne du plafond ou de
+la relance. Seul un lancement en cours (appel de la fiche ou échéance non passée) la masque.
+Pour un ticket
 reçu dont la dernière réponse suit la dernière analyse, la ligne « Vos précisions du jj/mm/aa à
 hh:mm seront lues par la prochaine analyse. » précède les boutons. Pendant la publication d'une
 réponse, pas de boutons : barre de progression (« Publication en cours » pour un lecteur
@@ -450,8 +531,34 @@ d'état de la dernière décision, annoncée :
 
 Les phrases s'accordent : « Validation enregistrée… Elle partira », « Clôture interrompue ».
 
+**Boîte de lancement** (ADR-008, P39). « Lancer l'analyse » ou « Lancer le développement »
+ouvre « Lancer l'analyse de ce ticket ? » / « Lancer le développement de ce ticket ? »
+(relance : « Relancer l'analyse de ce ticket ? » / « Relancer le développement de ce
+ticket ? »), qu'un
+appui à côté ne ferme pas ; rien n'est appelé avant « Lancer ». Contenu : « Une session Claude
+Code va lire l'Issue #12 et publier son analyse sur GitHub. » (développement : « … va écrire
+le code de l'Issue #12 et ouvrir une pull request. Elle ne fusionne rien. ») ; la ligne du
+quota, « Lancements restants le 13/11 : 7 sur 10. », « Plafond atteint le 13/11 : … » (« Lancer »
+inactif) ou « Lancements restants : inconnu. » quand l'état des lancements manque ; pour une
+relance, l'avertissement de la relance ; l'encadré « Facturé sur l'abonnement Claude de
+l'administrateur. Ce coût n'apparaît pas dans le suivi des coûts de l'application. ». Boutons
+« Annuler » (focus initial) et « Lancer » (« Relancer » pour une relance).
+
+Pendant l'appel : « Lancer » inactif avec « Lancement en cours », « Annuler » devient « Fermer »,
+ligne annoncée « Lancement en cours. Vous pouvez fermer : le résultat s'affichera dans la
+section Lancements. ». « Fermer », le retour et Échap ferment la boîte sans couper l'appel ;
+un seul appel part à la fois. Un refus du serveur reste dans la boîte, en ton d'erreur, avec
+son motif (plafond, ticket changé sur GitHub, routine non configurée, en pause, jeton refusé,
+limite de l'API…). Message en bas d'écran, boîte ouverte ou fermée : « Session lancée. Le lien
+est dans la section Lancements. » ; « Résultat inconnu, compté dans les lancements du jour.
+Vérifiez sur claude.ai/code avant de relancer. » (ou le message du serveur) ; « Réponse perdue.
+Regardez la section Lancements avant de relancer. » quand la réponse n'arrive pas ; un refus
+arrivé après « Fermer » affiche son motif.
+
 **Boîtes.** « Valider » demande « Valider ce ticket ? » / « L'étiquette « validé » sera posée
-sur l'Issue. Le membre verra « Validé ». », avec « Annuler » et « Valider ». « Refuser » et
+sur l'Issue. Le membre verra « Validé ». », avec « Annuler » et « Valider ». Sur un ticket validé
+sur GitHub seul, le texte devient « La validation sera enregistrée dans l'application.
+« Lancer le développement » sera ensuite proposé. ». « Refuser » et
 « Clore » ouvrent une feuille du bas au téléphone, un dialogue sinon, que ni un appui à côté ni
 un glissement ne ferment. Les deux portent l'encadré « Publié sur un site public : n'écrivez ni
 nom ni adresse. Le membre lira aussi ce texte. », et pour un ticket en cours « Une pull request

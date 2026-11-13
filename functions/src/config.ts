@@ -33,6 +33,17 @@ export const GITHUB_TICKETS_TOKEN = defineSecret("GITHUB_TICKETS_TOKEN");
 export const GITHUB_WEBHOOK_SECRET = defineSecret("GITHUB_WEBHOOK_SECRET");
 
 /**
+ * Routines Claude Code des tickets (ADR-008, T4, P35) : identifiant (`trig_…`) et jeton de
+ * déclenchement de chaque routine, créés sur claude.ai/code. Chaque paire est montée par la
+ * seule callable qui la lit (P25) : l'analyse par `launchTicketAnalysis`, le développement
+ * par `launchTicketDevelopment`. Vides : « Lancement non configuré », rien ne part.
+ */
+export const TICKETS_ROUTINE_ANALYSIS_ID = defineSecret("TICKETS_ROUTINE_ANALYSIS_ID");
+export const TICKETS_ROUTINE_ANALYSIS_TOKEN = defineSecret("TICKETS_ROUTINE_ANALYSIS_TOKEN");
+export const TICKETS_ROUTINE_DEV_ID = defineSecret("TICKETS_ROUTINE_DEV_ID");
+export const TICKETS_ROUTINE_DEV_TOKEN = defineSecret("TICKETS_ROUTINE_DEV_TOKEN");
+
+/**
  * Origines admises par les callables (ADR-008, P25) : l'application web hébergée. Cette
  * liste limite les navigateurs, pas un script.
  */
@@ -58,6 +69,23 @@ export const TICKET_STATUS_GITHUB_DOC = "github";
 export const TICKET_ADMIN_SUBCOLLECTION = "admin";
 /** Analyses relevées sur l'Issue : `tickets/{id}/admin/analysis` (P32). */
 export const TICKET_ANALYSIS_DOC = "analysis";
+/** Historique des lancements de sessions : `tickets/{id}/admin/launches` (P41). */
+export const TICKET_LAUNCHES_DOC = "launches";
+/** Compteurs des lancements affichés à l'admin : `ticket_status/launches` (P36, P41). */
+export const TICKET_STATUS_LAUNCHES_DOC = "launches";
+
+/**
+ * Poste de coût des lancements de routines (CLAUDE.md, « Coûts variables », P36) : inscrit
+ * au catalogue de `exigences-techniques.md`. Seul nom employé pour ce poste.
+ */
+export const LAUNCH_COST_CENTER = "ticket_routine_launch";
+
+/**
+ * Plafond des lancements de routines, analyse et développement confondus, pour le groupe,
+ * par jour de Paris (ADR-008, P36). Seul endroit où il est écrit : le client le lit dans
+ * `ticket_status/launches.per_day`.
+ */
+export const LAUNCHES_PER_DAY = 10;
 
 /** Plafonds du jour de Paris (ADR-006, décision 7) ; l'administrateur n'est pas compté. */
 export const MEMBER_DAILY_LIMIT = 5;

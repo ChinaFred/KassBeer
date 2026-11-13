@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
+import 'ticket_launch.dart';
 
 /// Bornes d'un ticket, les mêmes que `firestore.rules` (P23).
 const kTicketTitleMinLength = 5;
@@ -141,6 +142,8 @@ class Ticket {
     this.issueMissingSince,
     this.allowedDecisions,
     this.canAnswer = false,
+    this.canLaunchAnalysis = false,
+    this.canLaunchDevelopment = false,
     this.decisionLeaseUntil,
     this.retryRequestedAt,
     this.hasPendingWrites = false,
@@ -198,6 +201,19 @@ class Ticket {
   /// (callable `answerTicketAnalysis`, ADR-008). Écrit par le serveur seul
   /// (P26) ; ce n'est pas un document de `decisions/`, d'où un champ à part.
   final bool canAnswer;
+
+  /// `launch_analysis` et `launch_development` figurent dans
+  /// `allowed_decisions` : « Lancer l'analyse » et « Lancer le
+  /// développement » sont permis (ADR-008, T4). Écrits par le serveur seul ;
+  /// l'application ne recopie aucune précondition (P39).
+  final bool canLaunchAnalysis;
+  final bool canLaunchDevelopment;
+
+  /// Lancement que le serveur permet pour [action].
+  bool canLaunch(ActionLancement action) => switch (action) {
+    ActionLancement.analyse => canLaunchAnalysis,
+    ActionLancement.developpement => canLaunchDevelopment,
+  };
 
   /// Une décision s'applique sur GitHub jusqu'à cette heure (bail du serveur).
   final DateTime? decisionLeaseUntil;
@@ -288,6 +304,10 @@ class Ticket {
     }
 
     final deliveredPrNumber = entier('delivered_pr_number');
+    final allowedRaw = switch (data['allowed_decisions']) {
+      final List<Object?> list => list,
+      _ => const <Object?>[],
+    };
     return Ticket(
       id: id,
       type: type,
@@ -311,10 +331,9 @@ class Ticket {
       lastSendError: read.texteFacultatif('last_send_error'),
       issueMissingSince: read.date('issue_missing_since'),
       allowedDecisions: _allowedDecisions(data['allowed_decisions']),
-      canAnswer: switch (data['allowed_decisions']) {
-        final List<Object?> list => list.contains(kAnswerDecision),
-        _ => false,
-      },
+      canAnswer: allowedRaw.contains(kAnswerDecision),
+      canLaunchAnalysis: allowedRaw.contains(kLaunchAnalysisDecision),
+      canLaunchDevelopment: allowedRaw.contains(kLaunchDevelopmentDecision),
       decisionLeaseUntil: read.date('decision_lease_until'),
       retryRequestedAt: read.date('retry_requested_at'),
       hasPendingWrites: hasPendingWrites,

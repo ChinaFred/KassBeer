@@ -1,6 +1,6 @@
 // tickets/, tickets/{id}/decisions/, tickets/{id}/admin/, ticket_quotas/, ticket_status/ :
-// tickets des membres, décisions et analyses lues par l'admin (ADR-006, T1 et T2 ;
-// ADR-008, T3 ; P23, P4, P11).
+// tickets des membres, décisions, analyses et lancements lus par l'admin (ADR-006, T1 et
+// T2 ; ADR-008, T3 et T4 ; P23, P4, P11, P41).
 
 import { describe, it } from "node:test";
 import {
@@ -237,6 +237,7 @@ describe("tickets — forme à la création (P23)", () => {
     "champ serveur reply_text": { reply_text: "Réponse" },
     "champ serveur delivered_version": { delivered_version: "9.9.9" },
     "champ serveur allowed_decisions": { allowed_decisions: ["validate"] },
+    "champ serveur validated_by_app_at": { validated_by_app_at: serverTimestamp() },
     "seen_by_author_at à la création": { seen_by_author_at: serverTimestamp() },
     "champ hors liste (display_name)": { display_name: "Brasseur A" },
     "champ hors liste (price_eur)": { price_eur: 3 },
@@ -471,6 +472,10 @@ describe("tickets — forme d'une décision à la création (P23)", () => {
     "action inconnue": { action: "delete" },
     "action answer (callable seule, ADR-008)": { action: "answer" },
     "action answer avec texte": { action: "answer", text: "Précision de l'administrateur." },
+    "action launch_analysis (callable seule, ADR-008, T4)": { action: "launch_analysis" },
+    "action launch_analysis sans texte": { action: "launch_analysis", text: undefined },
+    "action launch_development (callable seule, ADR-008, T4)": { action: "launch_development" },
+    "action launch_development sans texte": { action: "launch_development", text: undefined },
     "action absente": { action: undefined },
     "état applying": { state: "applying" },
     "état applied": { state: "applied" },
@@ -589,11 +594,36 @@ describe("tickets — relance d'un envoi en échec (T2)", () => {
       retry_requested_at: serverTimestamp(),
       allowed_decisions: ["validate"],
     },
+    "avec validated_by_app_at": {
+      retry_requested_at: serverTimestamp(),
+      validated_by_app_at: serverTimestamp(),
+    },
   };
   for (const [name, change] of Object.entries(refused)) {
     it(`admin relance ${name} : refusé`, async () => {
       await seedDecisions();
       await expectRule(false, db(state.env, "admin").doc("tickets/t-failed").update(change));
+    });
+  }
+
+  // Validation de l'application (ADR-008, 2026-11-13) : écrite par le serveur seul.
+  it("owner écrit seen_by_author_at avec validated_by_app_at : refusé", async () => {
+    await seedDecisions();
+    await expectRule(
+      false,
+      db(state.env, "owner")
+        .doc("tickets/t-a")
+        .update({ seen_by_author_at: serverTimestamp(), validated_by_app_at: serverTimestamp() }),
+    );
+  });
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit validated_by_app_at sur un ticket : refusé`, async () => {
+      await seedDecisions();
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a").update({ validated_by_app_at: serverTimestamp() }),
+      );
     });
   }
 
@@ -703,6 +733,98 @@ describe("tickets/{id}/admin/ — analyses, cinq profils (P4, P23, P32)", () => 
       await seedTickets();
       await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
       await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/analysis").delete());
+    });
+  }
+});
+
+/// Historique des lancements de sessions, écrit par le serveur (ADR-008, T4, P41).
+const launches = {
+  entries: [
+    {
+      id: "0b6f4a52-5d8e-4f43-9a8e-1f0c2a3b4c5d",
+      action: "analyse",
+      state: "launched",
+      at: CREATED,
+      by_uid: "admin",
+      retry_after: CREATED,
+      session_url: "https://claude.ai/code/session_exemple",
+    },
+  ],
+  updated_at: CREATED,
+};
+
+/// Compteurs des lancements, écrits par le serveur (ADR-008, T4, P36, P41).
+const launchStatus = {
+  day: "20261113",
+  count_day: 1,
+  month: "202611",
+  count_month: 4,
+  per_day: 10,
+  analysis_invalid_since: null,
+  development_invalid_since: null,
+};
+
+describe("lancements — admin/launches et ticket_status/launches, cinq profils (P4, P41)", () => {
+  const read = {
+    anonymous: false,
+    nonMember: false,
+    owner: false,
+    otherBrewer: false,
+    admin: true,
+  };
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit l'historique des lancements du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/launches": launches });
+      await expectRule(allowed, db(state.env, name).doc("tickets/t-a/admin/launches").get());
+    });
+    it(`${name} lit les compteurs des lancements : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "ticket_status/launches": launchStatus });
+      await expectRule(allowed, db(state.env, name).doc("ticket_status/launches").get());
+    });
+  }
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} crée l'historique des lancements : refusé`, async () => {
+      await seedTickets();
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/launches").set(launches));
+    });
+    it(`${name} modifie l'historique des lancements : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/launches": launches });
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a/admin/launches").update({ entries: [] }),
+      );
+    });
+    it(`${name} supprime l'historique des lancements : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/launches": launches });
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/launches").delete());
+    });
+    it(`${name} écrit les compteurs des lancements : refusé`, async () => {
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("ticket_status/launches")
+          .set({ ...launchStatus, count_day: 0 }),
+      );
+    });
+    it(`${name} remet à zéro le compteur de lancements du jour : refusé`, async () => {
+      await seed(state.env, {
+        "ticket_quotas/launch_20261113": { day: "20261113", count: 10, expires_at: CREATED },
+      });
+      await expectRule(
+        false,
+        db(state.env, name).doc("ticket_quotas/launch_20261113").update({ count: 0 }),
+      );
+    });
+    it(`${name} lit le compteur de lancements du jour : refusé`, async () => {
+      await seed(state.env, {
+        "ticket_quotas/launch_20261113": { day: "20261113", count: 10, expires_at: CREATED },
+      });
+      await expectRule(false, db(state.env, name).doc("ticket_quotas/launch_20261113").get());
     });
   }
 });

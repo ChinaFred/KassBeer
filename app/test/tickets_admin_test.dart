@@ -550,7 +550,8 @@ void main() {
     testWidgets('lignes : numéro, nom de l\'auteur, date, pastilles', (
       tester,
     ) async {
-      final app = await admin(tester);
+      // Le compteur des lancements occupe une ligne au-dessus des filtres.
+      final app = await admin(tester, height: 1100);
       app.members.all.add(const [
         Member(
           email: 'brasseur@exemple.fr',
@@ -869,6 +870,40 @@ void main() {
       expect(find.text('Refuser'), findsNothing);
       expect(find.text('Validation en cours sur GitHub.'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('Décision en cours')), findsWidgets);
+    });
+
+    testWidgets('Valider un ticket validé sur GitHub seul : texte propre', (
+      tester,
+    ) async {
+      final app = await fiche(
+        tester,
+        unTicket(
+          status: TicketStatus.validated,
+          allowedDecisions: const [
+            TicketDecisionAction.refuse,
+            TicketDecisionAction.close,
+            TicketDecisionAction.validate,
+          ],
+        ),
+      );
+      await tester.tap(find.text('Valider'));
+      await tester.pumpAndSettle();
+      expect(find.text('Valider ce ticket ?'), findsOneWidget);
+      expect(find.text(kValiderConfirmationGithub), findsOneWidget);
+      expect(
+        find.text(
+          'La validation sera enregistrée dans l\'application. « Lancer le '
+          'développement » sera ensuite proposé.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(kValiderConfirmation), findsNothing);
+      await tester.tap(find.widgetWithText(FilledButton, 'Valider').last);
+      await settle(tester);
+      expect(
+        app.tickets.decisionsCreated.single.action,
+        TicketDecisionAction.validate,
+      );
     });
 
     testWidgets('Refuser : avertissement, motif trop court, texte écrit', (
