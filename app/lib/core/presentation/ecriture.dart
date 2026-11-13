@@ -71,20 +71,28 @@ void annoncerAvecAction(
 }
 
 /// « Abandonner les modifications ? » : vrai si l'utilisateur abandonne.
-Future<bool> confirmerAbandon(BuildContext context, String message) async {
+/// [titre], [continuer] et [abandonner] remplacent les libellés par défaut
+/// (« Arrêter l'import ? », Admin › Import).
+Future<bool> confirmerAbandon(
+  BuildContext context,
+  String message, {
+  String titre = 'Abandonner les modifications ?',
+  String continuer = 'Continuer la saisie',
+  String abandonner = 'Abandonner',
+}) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Abandonner les modifications ?'),
+      title: Text(titre),
       content: Text(message),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Continuer la saisie'),
+          child: Text(continuer),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Abandonner'),
+          child: Text(abandonner),
         ),
       ],
     ),

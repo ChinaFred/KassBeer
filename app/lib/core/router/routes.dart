@@ -22,6 +22,10 @@ abstract final class AppRoutes {
   static const dataSources = '/sources-des-donnees';
   static const adminMembers = '/admin/membres';
 
+  /// Admin › Import des fiches Excel (v0.6) : page pleine hors de la
+  /// coquille, réservée à l'admin par le routeur (`/admin/**`).
+  static const adminImport = '/admin/import';
+
   /// Admin › Tickets des membres (ADR-006, T2), dans la coquille.
   static const adminTickets = '/admin/tickets';
   static String adminTicket(String id) => '$adminTickets/$id';

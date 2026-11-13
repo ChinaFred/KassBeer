@@ -11,6 +11,8 @@ import '../../tickets/presentation/bandeau_tickets_admin.dart';
 class AdminScreen extends ConsumerWidget {
   const AdminScreen({super.key});
 
+  static const importSubtitle = 'Fiches Excel préparées en JSON';
+
   static const ticketsSubtitle =
       'Bugs et idées des membres, et leur suivi sur GitHub';
 
@@ -67,11 +69,13 @@ class AdminScreen extends ConsumerWidget {
               onTap: () => context.go(AppRoutes.adminTickets),
             ),
           ),
-          const ListTile(
-            enabled: false,
-            leading: Icon(Icons.upload_file_outlined),
-            title: Text('Import'),
-            subtitle: Text('Disponible dans une prochaine version'),
+          ListTile(
+            leading: const Icon(Icons.upload_file_outlined),
+            title: const Text('Import'),
+            subtitle: const Text(importSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            // `push` : le retour ramène à l'administration.
+            onTap: () => context.push(AppRoutes.adminImport),
           ),
         ],
       ),

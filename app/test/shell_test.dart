@@ -80,11 +80,11 @@ void main() {
     expect(find.text('Membres'), findsOneWidget);
     expect(find.text('Inviter et retirer les comptes'), findsOneWidget);
     expect(find.text('Import'), findsOneWidget);
-    expect(find.text('Disponible dans une prochaine version'), findsOneWidget);
+    expect(find.text('Fiches Excel préparées en JSON'), findsOneWidget);
     final import = tester.widget<ListTile>(
       find.widgetWithText(ListTile, 'Import'),
     );
-    expect(import.enabled, isFalse);
+    expect(import.enabled, isTrue);
   });
 
   testWidgets('navigation entre les sections', (tester) async {

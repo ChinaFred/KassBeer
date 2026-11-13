@@ -25,8 +25,8 @@ les contraintes.
     tient pas, bière qui vieillit mal).
 - **Hors périmètre** : vente ou commerce de bière ; usage par une brasserie
   professionnelle ; iOS et desktop en version 1.
-- **Outil remplacé, données à reprendre** : 16 fiches Excel (exportées en PDF), de
-  décembre 2022 à septembre 2025. Chaque fiche contient un en-tête (densités, degré, EBC et
+- **Outil remplacé, données à reprendre** : 16 fiches Excel (`.xlsx`), d'octobre 2022
+  à septembre 2025. Chaque fiche contient un en-tête (densités, degré, EBC et
   IBU visés, volumes, nombre de bouteilles, coût), une chronologie (heure prévue et réelle,
   température visée et mesurée, action, durée, densité), les matières premières avec leurs
   prix (malts, houblons, épices, sucres, eau, levure, électricité, embouteillage), et pour 3

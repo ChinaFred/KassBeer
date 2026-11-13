@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.32",
+      "date": "2026-11-13",
+      "paragraphs": [
+        "L'administrateur peut importer les 16 fiches Excel de brassage depuis Administration › Import. Il choisit le fichier préparé, relit chaque fiche avec ses points à revoir (divergences, corrections, heures reprises, coût), puis confirme. Chaque fiche devient une recette et un brassin terminé, avec sa chronologie, ses mesures et ses relevés de fermentation. Le coût de chaque brassin est figé avec les prix de sa fiche, visible par l'administrateur seul. Un second import du même fichier n'écrit rien, et un import interrompu reprend où il s'était arrêté."
+      ]
+    },
+    {
       "version": "0.1.31",
       "date": "2026-11-12",
       "paragraphs": [
@@ -37,13 +44,6 @@
         "Une nouvelle entrée « Bibliothèque », à côté de Recettes, montre les styles de bière, les malts et sucres, les houblons, les levures, les ajouts divers et les recettes publiques DIY Dog. Une recherche filtre chaque liste par nom, autre nom ou code de style. La fiche d'un style donne ses plages de densité, de degré, d'amertume et de couleur. La fiche d'un ingrédient donne ses valeurs, sa source et sa licence.",
         "La fiche d'une recette publique montre ses ingrédients, ses paliers, les valeurs que Kass'Beer peut calculer et, à part, les valeurs annoncées par la recette d'origine. Un houblon dont la recette d'origine ne donne pas la durée garde le moment indiqué par la source, traduit. « Dupliquer » copie la recette dans vos recettes et ouvre l'éditeur : choisissez votre équipement, et la forme des houblons, que la recette d'origine ne donne pas, pour obtenir densités, degré et amertume. Une recette dont un houblon n'a pas de forme dit « Forme du houblon à compléter ». Recettes › Importer accepte aussi un houblon sans forme, sans rien perdre : la forme reste à compléter dans la recette, et l'export BeerXML attend qu'elle le soit.",
         "« Sources des données », ouvert depuis la Bibliothèque ou le menu du compte, nomme chaque source, sa licence et ce que Kass'Beer en a changé. La Bibliothèque demande le réseau, sauf pour ce qui a déjà été lu. Elle reste vide tant que l'administrateur n'a pas chargé les données."
-      ]
-    },
-    {
-      "version": "0.1.24",
-      "date": "2026-11-11",
-      "paragraphs": [
-        "L'administrateur traite les tickets depuis l'application. Le menu du compte gagne « Tickets à traiter », avec le nombre de tickets qui attendent une décision, et la page Admin la tuile « Tickets des membres ». La liste se filtre (à traiter, tous, bloqués) et montre l'auteur de chaque ticket. La fiche d'un ticket permet de le valider, de le refuser avec un motif ou de le clore avec un commentaire, de relancer un envoi en échec et d'ouvrir l'Issue sur GitHub ; elle suit l'avancement de la décision. Une frise montre les étapes du ticket, ici comme dans Mes tickets, et les statuts prennent de nouvelles couleurs. Sur grand écran, la liste et la fiche s'affichent côte à côte."
       ]
     }
   ]

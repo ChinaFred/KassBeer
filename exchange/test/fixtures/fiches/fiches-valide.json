@@ -1,0 +1,172 @@
+{
+  "beerjson": {
+    "version": 2.06,
+    "recipes": [
+      {
+        "name": "Blonde d'essai",
+        "type": "all grain",
+        "notes": "Empâtage : demander 64 °C sur la machine.",
+        "batch_size": { "value": 20, "unit": "l" },
+        "boil": { "boil_time": { "value": 60, "unit": "min" } },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Pils",
+              "type": "grain",
+              "yield": { "fine_grind": { "value": 80, "unit": "%" } },
+              "color": { "value": 3.5, "unit": "EBC" },
+              "amount": { "value": 4000, "unit": "g" }
+            }
+          ],
+          "hop_additions": [
+            {
+              "name": "Houblon Alpha",
+              "form": "pellet",
+              "alpha_acid": { "value": 8, "unit": "%" },
+              "amount": { "value": 30, "unit": "g" },
+              "timing": { "use": "add_to_boil", "time": { "value": 60, "unit": "min" } }
+            }
+          ],
+          "culture_additions": [
+            {
+              "name": "Levure Test",
+              "type": "ale",
+              "form": "dry",
+              "attenuation": { "value": 75, "unit": "%" },
+              "amount": { "value": 11, "unit": "g" }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Ambrée d'essai",
+        "type": "all grain",
+        "batch_size": { "value": 18, "unit": "l" },
+        "boil": { "boil_time": { "value": 60, "unit": "min" } },
+        "ingredients": {
+          "fermentable_additions": [
+            {
+              "name": "Malt ambré",
+              "type": "grain",
+              "amount": { "value": 3500, "unit": "g" }
+            },
+            {
+              "name": "Sucre candi",
+              "type": "sugar",
+              "amount": { "value": 300, "unit": "g" }
+            }
+          ],
+          "culture_additions": [
+            { "name": "Levure Test", "type": "ale", "form": "dry", "amount": { "value": 11, "unit": "g" } }
+          ]
+        }
+      }
+    ]
+  },
+  "kassbeer_fiches": {
+    "format_version": 1,
+    "fiches": [
+      {
+        "fiche_id": "2024-07-14-blonde-essai",
+        "recipe_index": 0,
+        "recipe_doc_id": "fiche-blonde-essai",
+        "brew_steps": [
+          { "key": "empatage", "name": "Etablir un palier à 66°C", "duration_min": 60, "temp_c": 66 },
+          { "key": "ebullition", "name": "Ebullition", "duration_min": 60, "temp_c": 100 },
+          { "key": "densite-initiale", "name": "Mesure de la densité initiale", "duration_min": 0 }
+        ],
+        "brew": {
+          "name": "Blonde d'essai",
+          "planned_for": "2024-07-14T00:00:00+02:00",
+          "start_at": "2024-07-14T09:00:00+02:00",
+          "notes": "Notes de la fiche Excel\nDensité initiale espérée : 1052.\nLes relevés sans heure sont datés de 12:00.",
+          "bottles_count": 50,
+          "packaged_volume_l": 17,
+          "priming_sugar_name": "Sucre blanc",
+          "equipment": { "name": "Installation à cuves (fiches Excel)", "kind": "multi_vessel" }
+        },
+        "events": [
+          { "id": "e01", "kind": "step_started", "step_key": "empatage", "measured_at": "2024-07-14T09:15:00+02:00", "time_source": "fiche" },
+          { "id": "e02", "kind": "measurement", "step_key": "empatage", "measure_type": "temperature", "value": 66.5, "measured_at": "2024-07-14T09:15:00+02:00", "time_source": "fiche" },
+          { "id": "e03", "kind": "step_started", "step_key": "ebullition", "measured_at": "2024-07-14T10:40:00+02:00", "time_source": "fiche" },
+          { "id": "e04", "kind": "step_started", "step_key": "densite-initiale", "measured_at": "2024-07-14T12:05:00+02:00", "time_source": "fiche" },
+          { "id": "e05", "kind": "measurement", "step_key": "densite-initiale", "measure_type": "gravity", "value": 1.052, "note": "corrigée à 20 °C", "measured_at": "2024-07-14T12:05:00+02:00", "time_source": "fiche" },
+          { "id": "e06", "kind": "measurement", "step_key": "densite-initiale", "measure_type": "volume", "value": 20, "measured_at": "2024-07-14T12:05:00+02:00", "time_source": "ligne_precedente" },
+          { "id": "e07", "kind": "measurement", "measure_type": "gravity", "value": 1.023, "note": "Date estimée : jour du brassage + 28 jours.", "measured_at": "2024-08-11T12:00:00+02:00", "phase": "fermentation", "time_source": "estimee_j28" }
+        ],
+        "retained": { "og_event_id": "e05", "fermenter_volume_event_id": "e06" },
+        "cost": {
+          "prices": [
+            { "key": "malt-pils", "name": "Pils", "price_eur": 50, "quantity": 25000, "unit": "g" },
+            { "key": "houblon-alpha", "name": "Houblon Alpha", "price_eur": 10, "quantity": 100, "unit": "g" },
+            { "key": "levure-test", "name": "Levure Test", "price_eur": 4, "quantity": 1, "unit": "unit" }
+          ],
+          "fees": [
+            { "name": "Eau", "amount_eur": 1.5, "basis": "per_brew" },
+            { "name": "Capsules", "amount_eur": 0.02, "basis": "per_bottle" }
+          ],
+          "fiche_total_eur": 17.5
+        },
+        "corrections": [
+          {
+            "subject": "Densité finale",
+            "fiche_value": "1023 sans date",
+            "imported_value": "1,023 le 11 août 2024 à 12:00",
+            "reason": "Date estimée : jour du brassage + 28 jours."
+          }
+        ],
+        "deductions": ["Palier d'empâtage : 66 °C pendant 60 min, tiré de la ligne « Etablir un palier à 66°C »."],
+        "divergences": ["Degré annoncé calculé sur la densité visée."],
+        "not_imported": ["Feuille « Courbes de T° » : formules."]
+      },
+      {
+        "fiche_id": "2023-04-02-ambree-essai",
+        "recipe_index": 1,
+        "recipe_doc_id": "fiche-ambree-essai",
+        "brew_steps": [
+          { "key": "empatage", "name": "Empâtage", "duration_min": 60, "temp_c": 67 },
+          { "key": "ebullition", "name": "Ebullition", "duration_min": 60 }
+        ],
+        "brew": {
+          "name": "Ambrée d'essai",
+          "planned_for": "2023-04-02T00:00:00+02:00",
+          "start_at": "2023-04-02T10:00:00+02:00",
+          "equipment": { "name": "Brew in bag (fiches Excel)", "kind": "all_in_one" }
+        },
+        "events": [
+          { "id": "a01", "kind": "step_started", "step_key": "empatage", "measured_at": "2023-04-02T10:10:00+02:00", "time_source": "fiche" },
+          { "id": "a02", "kind": "measurement", "step_key": "empatage", "measure_type": "temperature", "value": 67, "measured_at": "2023-04-02T10:10:00+02:00", "time_source": "debut_brassage" },
+          { "id": "a03", "kind": "measurement", "measure_type": "gravity", "value": 1.058, "measured_at": "2023-04-03T12:00:00+02:00", "phase": "fermentation", "time_source": "midi" },
+          { "id": "a04", "kind": "note", "note": "Fermentation lente.", "measured_at": "2023-04-05T12:00:00+02:00", "phase": "fermentation", "time_source": "midi" }
+        ]
+      },
+      {
+        "fiche_id": "clone-essai-b",
+        "recipe_index": 0,
+        "recipe_doc_id": "fiche-blonde-essai",
+        "brew_steps": [
+          { "key": "empatage", "name": "Etablir un palier à 66°C", "duration_min": 60, "temp_c": 66 },
+          { "key": "ebullition", "name": "Ebullition", "duration_min": 60, "temp_c": 100 },
+          { "key": "densite-initiale", "name": "Mesure de la densité initiale", "duration_min": 0 }
+        ],
+        "brew": {
+          "name": "Blonde d'essai (second brassin)",
+          "planned_for": "2024-09-08T00:00:00+02:00",
+          "start_at": "2024-09-08T09:00:00+02:00",
+          "bottles_count": 48,
+          "equipment": { "name": "Installation à cuves (fiches Excel)", "kind": "multi_vessel" }
+        },
+        "events": [
+          { "id": "c01", "kind": "step_started", "step_key": "empatage", "measured_at": "2024-09-08T09:20:00+02:00", "time_source": "fiche" }
+        ],
+        "cost": {
+          "prices": [
+            { "key": "malt-pils", "name": "Pils", "price_eur": 50, "quantity": 25000, "unit": "g" }
+          ],
+          "fees": [],
+          "fiche_total_eur": 15
+        }
+      }
+    ]
+  }
+}

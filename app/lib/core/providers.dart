@@ -6,6 +6,7 @@ import '../features/brew_day/data/alerte_minuteur.dart';
 import '../features/brews/data/brews_repository.dart';
 import '../features/costs/data/costs_repository.dart';
 import '../features/equipment/data/equipment_repository.dart';
+import '../features/import/data/import_fiches_repository.dart';
 import '../features/library/data/library_repository.dart';
 import '../features/members/data/members_repository.dart';
 import '../features/recipes/data/recipes_repository.dart';
@@ -45,6 +46,13 @@ final brewsRepositoryProvider = Provider<BrewsRepository>(
 /// Prix, frais et coûts figés du compte connecté (`users/{uid}/`).
 final costsRepositoryProvider = Provider<CostsRepository>(
   (ref) => throw UnimplementedError('costsRepositoryProvider non fourni'),
+);
+
+/// Admin › Import des fiches Excel (v0.6) : recettes, brassins et événements
+/// aux identifiants du fichier.
+final importFichesRepositoryProvider = Provider<ImportFichesRepository>(
+  (ref) =>
+      throw UnimplementedError('importFichesRepositoryProvider non fourni'),
 );
 
 /// Bibliothèque : `beer_index/`, `beer_*/`, `public_recipes/`, lus par `get()`

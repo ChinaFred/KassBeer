@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:exchange/exchange.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +22,7 @@ import 'package:kass_beer/features/brews/domain/brew_event.dart';
 import 'package:kass_beer/features/brews/domain/releves.dart';
 import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
+import 'package:kass_beer/features/import/data/import_fiches_repository.dart';
 import 'package:kass_beer/features/library/data/library_repository.dart';
 import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
@@ -1143,6 +1145,7 @@ class TestApp {
        tickets = FakeTicketsRepository(),
        fichiers = FakeEchangeFichiers(),
        library = FakeLibraryRepository(),
+       importFirestore = FakeFirebaseFirestore(),
        preferences = FakePreferencesAppareil(),
        errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
@@ -1162,6 +1165,9 @@ class TestApp {
         costsRepositoryProvider.overrideWithValue(costs),
         ticketsRepositoryProvider.overrideWithValue(tickets),
         libraryRepositoryProvider.overrideWithValue(library),
+        importFichesRepositoryProvider.overrideWithValue(
+          FirestoreImportFichesRepository(firestore: importFirestore),
+        ),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
           return openLinkResult;
@@ -1193,6 +1199,9 @@ class TestApp {
   final FakeTicketsRepository tickets;
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
+
+  /// Firestore en mémoire d'Admin › Import (v0.6).
+  final FakeFirebaseFirestore importFirestore;
   final FakePreferencesAppareil preferences;
 
   /// Analyse d'un fichier importé, remplaçable par les tests.
