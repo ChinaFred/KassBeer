@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/admin_screen.dart';
+import '../../features/import/presentation/import_fiches_screen.dart';
 import '../../features/auth/presentation/access_error_screen.dart';
 import '../../features/auth/presentation/access_providers.dart';
 import '../../features/auth/presentation/loading_screen.dart';
@@ -254,6 +255,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.tickets,
         builder: (_, _) => const MyTicketsScreen(),
+      ),
+      // Admin › Import (v0.6) : page pleine hors de la coquille, pour la barre
+      // d'import et la confirmation de sortie pendant l'écriture. Déclarée
+      // avant la coquille ; `/admin/**` reste refusé à un brasseur.
+      GoRoute(
+        path: AppRoutes.adminImport,
+        builder: (_, _) => const ImportFichesScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {

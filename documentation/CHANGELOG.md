@@ -6,6 +6,29 @@ données, outillage), ou les deux.
 
 ## 2026-11-13
 
+### v0.1.38 — fonctionnel
+
+L'administrateur peut importer les 16 fiches Excel de brassage depuis Administration › Import.
+Il choisit le fichier préparé, relit chaque fiche avec ses points à revoir (divergences,
+corrections, heures reprises, coût), puis confirme. Chaque fiche devient une recette et un
+brassin terminé, avec sa chronologie, ses mesures et ses relevés de fermentation. Le coût de
+chaque brassin est figé avec les prix de sa fiche, visible par l'administrateur seul. Un second
+import du même fichier n'écrit rien, et un import interrompu reprend où il s'était arrêté.
+
+### v0.1.38 — technique
+
+Incrément v0.6. `exchange/` : `package:exchange/fiches.dart` lit le format `kassbeer_fiches` v1
+(document BeerJSON pour les recettes, bornes de FO4), et `bin/verifier_fiches.dart` le rejoue à
+la préparation. Feature `import` : analyse sans écriture, identifiants fixés par le fichier,
+marque de fin `imported_from` et empreinte pour la reprise, écritures par lots dans le budget
+des règles, arrêt sur 30 s sans accusé du serveur. P9 amendé : Admin › Import lit les prix des
+fiches de l'administrateur et ne les écrit que dans `users/{uid}/brew_costs/` ; le lecteur
+refuse un montant dans un texte lu par le groupe (code `montant`) et une fiche dont un document
+ou un événement appartient à un autre compte. Aucune règle
+Firestore ne change ; 25 tests de règles rejouent les écritures d'un import. `.gitignore` limite
+`/import/` à la racine, pour versionner `app/lib/features/import/`. Aucun paquet ne change.
+`main.dart.js` passe de 5 339 305 à 5 409 676 octets (+ 70 371, main mesuré à la v0.1.37).
+
 ### v0.1.37 — fonctionnel
 
 Sur la fiche d'un brassin, le déroulé compare le prévu et le réel. Dès qu'une étape a un début

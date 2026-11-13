@@ -75,6 +75,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`, d'une journée du déroulé, brassage par défaut : événements réduits sur les étapes de toutes les journées, horaire recalculé sur celles de la journée ; `journeeTerminee`, v0.1.35), écran du jour et « Préparer le brassage » paramétrés par la journée (`journeeASuivre`, `TextesJournee`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
 | `lib/features/library/` | Bibliothèque (ADR-005, L4) : `LibraryRepository` (`beer_index/`, `beer_*/`, `public_recipes/`, `get()` seul) ; `domain/referentiel.dart` : `NatureReferentiel` (document d'index et collection), `IndexReferentiel` et ses entrées (`EntreeStyle`, `EntreeFermentable`, `EntreeHoublon`, `EntreeLevure`, `EntreeDivers`), `FicheReferentiel` et ses fiches, `Plage`, `Provenance`, `normaliserRecherche` ; `domain/recette_publique.dart` : `RecettePublique` (`recipe` lu par `RecipeContent.fromFirestore`, `announced` en `ValeursAnnoncees`, `source_hop_timing` en `momentsOrigine`, `provenance`, `style_id`), `copie` pour « Dupliquer » ; `presentation/` : `LibraryScreen` (segments, recherche, listes), `ReferenceEntryScreen`, `PublicRecipeScreen`, `DataSourcesScreen`, `library_providers.dart` (`SegmentBibliotheque`), `libelles_bibliotheque.dart` (plages, sources, provenance ; affichage seul) |
 | `lib/features/admin/` | écran Admin |
+| `lib/features/import/` | Admin › Import (v0.6) : `data/import_fiches_repository.dart` (`ImportFichesRepository` : lecture sur le serveur de l'existant, recette, brassin, groupes de modification et lots d'événements aux identifiants du fichier), `data/execution_import.dart` (`executerImport` : une écriture après l'autre, délai de 30 s, perte de connexion), `domain/fiches_a_importer.dart` (`preparerFiches`, `etatDe`, `planDeFiche`, coût figé par `evaluerFigeage`), `presentation/import_fiches_screen.dart`, `libelles_import_fiches.dart` |
 
 **Configuration Firebase.** Aucune valeur dans le code. `firebase_options.dart` lit, par
 `--dart-define-from-file=firebase.env.json` (fichier ignoré par Git ; modèle
@@ -184,6 +185,7 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 | `recipesListProvider` | `StreamProvider.autoDispose<ListeLue<Recipe>>` | `recipes/` entier, avec `fromCache` |
 | `equipmentListProvider` | `StreamProvider.autoDispose<ListeLue<Equipment>>` | `equipment/` entier, avec `fromCache` |
 | `brewsListProvider` | `StreamProvider.autoDispose<ListeLue<Brew>>` | `brews/` entier, avec `fromCache` |
+| `importFichesRepositoryProvider` | `Provider<ImportFichesRepository>` | Admin › Import ; fourni par `main.dart` ou par les tests, sans valeur par défaut |
 | `libraryRepositoryProvider` | `Provider<LibraryRepository>` | fourni par `main.dart` ou par les tests ; sans valeur par défaut |
 | `indexReferentielProvider(nature)` | `FutureProvider.autoDispose.family` | `beer_index/{nature}` par `lireIndex` ; une panne s'affiche, « Réessayer » invalide |
 | `ficheReferentielProvider((nature:, id:))` | `FutureProvider.autoDispose.family` | `beer_*/{id}` par `lireFiche` |
@@ -436,6 +438,7 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/processus/:id/modifier` | « Modifier le processus », plein écran, hors coquille | auteur ; sinon « Seul l'auteur modifie ce processus. » |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
+| `/admin/import` | Admin › Import, page pleine avec retour, hors coquille, ouverte par `push` depuis Admin, déclarée avant la coquille | admin ; écrit sous son seul `owner_uid` |
 
 `redirectFor(access, uri)` (fonction pure, testée) envoie chaque état sur son écran. Un
 chemin demandé pendant un écran d'accès est gardé dans `?depuis=` et retrouvé une fois le
@@ -2347,6 +2350,119 @@ référentiel, et les équivalences sans perte, `Adjunct` = `Grain` et `Aroma` 0
 l'identique (I9, `import_recipes_test.dart`). Les suites sans fichier (`analyse_test`,
 `lecture_test`, `lecture_beerxml_test`) tournent aussi dans Chrome (`dart test -p chrome`) ;
 `test/support/decrire.dart` n'importe pas `dart:io`.
+
+## Admin › Import des fiches Excel (v0.6)
+
+Une session Claude Code lit les extraits texte des 16 fiches `.xlsx` et écrit un seul fichier,
+`import/fiches/fiches-kassbeer.json` (ignoré par Git, jamais en asset ni dans Hosting, P12).
+Aucun code de préparation n'entre dans le dépôt. La session passe le fichier au vérificateur,
+puis l'administrateur le choisit dans Admin › Import.
+
+### Format `kassbeer_fiches` v1
+
+Fichier JSON en UTF-8, 10 Mo au plus. Racine : `beerjson` et `kassbeer_fiches`, rien d'autre.
+Exemple complet, fictif : `exchange/test/fixtures/fiches/fiches-valide.json`.
+
+- `beerjson` : document BeerJSON 2.06, une recette par recette distincte. Il est lu par
+  `analyserFichier` puis `completerRecette`, comme Recettes › Importer : mêmes bornes, même
+  compte rendu, même reprise de la Bibliothèque. Aucune adresse web dans aucune chaîne de
+  la recette (noms et notes des lignes, auteur, style compris) ; aucun montant dans `name`
+  ni `notes`.
+- `kassbeer_fiches` : `format_version` (1, sinon le fichier est refusé) et `fiches` (50 au plus,
+  `fiche_id` uniques, sinon le fichier est refusé).
+
+Une entrée de `fiches` (tout champ inconnu refuse la fiche) :
+
+| Champ | Type et bornes |
+|---|---|
+| `fiche_id` | `^[a-z0-9-]{1,60}$`, fixé avec l'utilisateur, sans prénom |
+| `recipe_index` | entier, rang dans `beerjson.recipes` |
+| `recipe_doc_id` | `^[a-z0-9-]{1,100}$` ; deux fiches au même identifiant ont le même `recipe_index` et la même chronologie (CR2) |
+| `brew_steps` | 60 au plus : `key` (`^[A-Za-z0-9_-]{1,100}$`, unique), `name` (1 à 120), `duration_min` (0 à 600), `temp_c` (0 à 100, facultatif) |
+| `brew` | `name` (1 à 120), `planned_for`, `start_at` (heure de début du plan), `notes` (10 000, facultatif, lues par le groupe : ni prix ni prénom), `bottles_count` (1 à 9 999), `packaged_volume_l` (0 exclu à 1 000), `priming_sugar_name` (1 à 80), `equipment` : `name` (1 à 120), `kind` (`multi_vessel` ou `all_in_one`) |
+| `events` | 300 au plus, `id` unique (`^[A-Za-z0-9_-]{1,100}$`), `kind` (`step_started`, `measurement`, `note`), `step_key` (clé de `brew_steps`, obligatoire pour `step_started`), `measure_type` et `value` (mesure seule : température 0 à 110, densité 0,980 à 1,200, volume 0 exclu à 1 000, pH 0 à 14), `note` (2 000, obligatoire pour `note`), `measured_at`, `phase` (`fermentation`, mesure ou note seule), `time_source` (`fiche`, `ligne_precedente`, `debut_brassage`, `midi`, `estimee_j28`) |
+| `retained` | facultatif : `og_event_id` (densité), `fg_event_id` (densité de fermentation), `fermenter_volume_event_id` (volume hors fermentation), chacun l'`id` d'un événement de la fiche |
+| `cost` | facultatif : `prices` (`key` au format de `users/{uid}/prices`, unique ; `name` 1 à 120 ; `price_eur` 0 à 100 000 ; `quantity` 0 exclu à 10⁹ ; `unit` `g`, `unit` ou `l`), `fees` (`name` 1 à 60, `amount_eur` 0 à 10 000, `basis` `per_brew` ou `per_bottle`), 200 lignes au plus ensemble ; `fiche_total_eur` (facultatif) |
+| `corrections` | 200 au plus : `subject`, `fiche_value`, `imported_value`, `reason` (textes de 2 000 au plus) |
+| `deductions`, `divergences`, `not_imported` | 200 textes au plus, 2 000 caractères chacun ; lus par l'administrateur seul |
+
+Dates : ISO 8601 avec le décalage d'Europe/Paris du jour (`2024-07-14T11:15:00+02:00`),
+entre le 1er janvier 2015 et l'heure de l'import. La préparation écrit chaque heure, dont la
+date J+28 à 12:00 du relevé de densité finale estimé (Q2) ; l'application n'en calcule aucune.
+Textes : contrôles bidirectionnels et caractères de contrôle retirés (P9) ; une adresse web
+dans un texte écrit en base refuse la fiche (code `adresseWeb`, FO5). Un texte lu par le
+groupe qui contient un montant (`€`, `EUR`, `euro` ou `euros`, sans distinction de casse)
+refuse la fiche avec le code `montant` : `brew.name`, `brew.notes`, `events[].note`,
+`brew_steps[].name`, `brew.priming_sugar_name`, `brew.equipment.name`, `name` et `notes` de
+la recette (chemin `recipe_index`). Les prix ne vont ainsi que dans le coût figé (P5, P9).
+`corrections`, `deductions`, `divergences` et `not_imported`, lus par l'administrateur
+seul, peuvent citer un montant.
+
+### Lecteur et vérificateur
+
+`package:exchange/fiches.dart` (`lireFichierFiches`, `src/fiches/lecture.dart` et
+`modele.dart`) : Dart pur, sans `catch`. Le premier champ refusé est retenu avec son chemin
+(`events[12].measured_at`) et un code ; la fiche est refusée, les autres restent lues. Aucun
+refus ne porte de valeur, donc aucun prix. Un JSON mal formé lève la `FormatException` de
+`jsonDecode` ; l'écran la rapporte avec sa seule position. L'empreinte d'une fiche
+(`lireEmpreinte` de l'entrée et de sa recette) change avec toute valeur de l'une ou l'autre.
+
+`dart run bin/verifier_fiches.dart <fichier>`, depuis `exchange/`, lit le fichier avec ce
+même lecteur et affiche les comptes et les refus, sans prix ; code de sortie 0 si toutes les
+fiches sont lues, 1 sinon.
+
+### Écritures
+
+Sous le compte de l'administrateur, par `ImportFichesRepository` (identifiants du fichier) et
+`CostsRepository.saveBrewCost`. Aucune transaction ; chaque écriture attend l'accusé du
+serveur avant la suivante, 30 s au plus (`kDelaiEcriture`), et la perte de la connexion
+(`grantedAccessProvider.offline`) arrête l'import. Ordre pour une fiche (CR3) :
+
+1. `recipes/{recipe_doc_id}` si elle n'existe pas : `RecipeContent` relu par
+   `RecipeContent.fromFirestore`, `brew_steps` de la fiche, `imported_from`
+   `Fiche Excel · {fiche_id}`, sans `equipment_id` ;
+2. `brews/fiche-{fiche_id}` s'il n'existe pas : statut `done`, `planned_for`, copie figée de
+   la recette, copie d'équipement réduite à `name`, `kind`, `owner_uid`, `owner_name` ;
+3. modifications, une écriture par groupe : `brewed_at` (premier `step_started`, sinon
+   `start_at`) ; `bottles_count`, `packaged_volume_l`, `priming_sugar_name` ; `notes` ;
+4. événements absents, par lots de 10 dans un `WriteBatch` (`created_at` du serveur) ;
+5. `og_event_id`, `fg_event_id`, `fermenter_volume_event_id` ;
+6. `users/{uid}/brew_costs/fiche-{fiche_id}`, `freeze_kind: initial`, s'il n'existe pas et si
+   `evaluerFigeage` le calcule avec les prix et frais de la fiche (Q1), `computed_at` =
+   `brewed_at` ; rien sous `prices` ni `fees` ;
+7. `imported_from` du brassin : `Fiche Excel · {fiche_id} · sha256:{empreinte}`, marque de fin.
+
+Aucun `process` n'est écrit (ADR-010) : `process` n'est pas dans `brewCreateFields`, et un
+brassin importé, daté par `brewed_at`, ne peut plus en recevoir. Il se lit par `Brew.deroule`
+comme une seule journée tirée de `recipe_snapshot.brew_steps` (P37), test dans
+`import_fiches_test.dart`.
+
+Un groupe déjà écrit avec les mêmes valeurs n'est pas réécrit. Analyse : recettes, brassins,
+événements et coûts figés aux identifiants du fichier, lus en `Source.server` avec les index
+de la Bibliothèque. Les événements de `brews/fiche-{id}` sont lus même sans brassin : un
+événement laissé par un autre compte serait sinon pris pour un événement déjà écrit.
+États : brassin absent, « Nouvelle » ; présent sans marque, « À compléter » (reprise de ce
+qui manque) ; marque égale, « Déjà importée » ; autre marque, « Déjà importée, contenu
+différent » ; recette, brassin ou événement d'un autre compte à ces identifiants
+(`DocumentDUnAutreMembre`), « Refusée ». Erreur :
+`reportError(feature: 'import.fiches')`, contexte « fiche n° 3, étape evenements, lot 2, code
+permission-denied », sans valeur ni texte de la fiche (P13). Aucune règle Firestore ne change :
+`rules-tests/test/import_fiches.test.mjs` rejoue ces écritures pour les cinq profils et mesure
+le budget sur le plus grand brassin importé (P21).
+
+**Tests.** `exchange/test/fiches_test.dart` (fichier valide, relevé J+28, empreinte, refus de
+FO4 un par un, champ inconnu, `step_key` inconnue, identifiants en double, version inconnue,
+contrôles bidirectionnels, adresse web dans toute chaîne de la recette, montant dans un texte
+lu par le groupe et permis dans les divergences, aucune valeur dans un refus, vérificateur) ;
+`app/test/import_fiches_test.dart` (plan et ordre, lots de 10, coût figé avec les prix de la
+fiche sans écriture sous `prices` ni `fees`, relevé J+28 retenu comme densité finale d'un
+brassin Terminé, second import sans écriture, contenu différent, reprise sans doublon, erreur
+partielle, connexion perdue, délai, hors ligne, recette, brassin ou événement d'un autre
+compte refusés sans écriture, admin seul, libellé accessible d'une ligne, « Import arrêté »
+après une perte de connexion, aucun montant dans une annonce ni un rapport) ;
+`rules-tests/test/import_fiches.test.mjs` (parcours des cinq profils, brassin et recette
+importés réécrits par un autre membre refusés, rejeux refusés, brassin `done` créé avec
+`brewed_at` refusé par la liste des champs sur une copie minimale, budget).
 
 ## Ingestion des référentiels et des recettes publiques (ADR-005, L3)
 
