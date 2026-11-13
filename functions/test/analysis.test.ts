@@ -82,12 +82,22 @@ describe("statut analyzed et étiquettes (ADR-008, P32)", () => {
 });
 
 describe("décisions permises avec answer (ADR-008)", () => {
-  it("received : valider (jusqu'à T4), refuser, clore, répondre", () =>
-    assert.deepEqual(allowedDecisions("received"), ["validate", "refuse", "close", "answer"]));
+  it("received : répondre, sans valider (T4)", () =>
+    assert.deepEqual(allowedDecisions("received"), [
+      "refuse",
+      "close",
+      "answer",
+      "launch_analysis",
+    ]));
   it("analyzed : valider, refuser, clore, répondre", () =>
     assert.deepEqual(allowedDecisions("analyzed"), ["validate", "refuse", "close", "answer"]));
-  it("validated : refuser, clore, répondre", () =>
-    assert.deepEqual(allowedDecisions("validated"), ["refuse", "close", "answer"]));
+  it("validated dans l'application : refuser, clore, répondre, lancer le développement", () =>
+    assert.deepEqual(allowedDecisions("validated", true), [
+      "refuse",
+      "close",
+      "answer",
+      "launch_development",
+    ]));
   it("in_progress : refuser, clore", () =>
     assert.deepEqual(allowedDecisions("in_progress"), ["refuse", "close"]));
 });

@@ -108,6 +108,7 @@ async function claim(refs: Refs, now: Date): Promise<Claim> {
           : {
               status: t.status,
               allowedDecisions: t.allowed_decisions,
+              validatedByAppAt: t.validated_by_app_at,
               leaseUntilMs: millis(t.decision_lease_until),
               issueNumber: t.github_issue_number,
             },
@@ -482,7 +483,11 @@ export async function applyDecision(
         claimed.leaseUntilMs,
         {
           status,
-          allowed_decisions: allowedDecisions(status),
+          // Valider appliqué depuis l'application : seul chemin qui pose
+          // `validated_by_app_at` et ouvre « Lancer le développement » (ADR-008,
+          // 2026-11-13). Refuser et Clore l'effacent.
+          allowed_decisions: allowedDecisions(status, claimed.action === "validate"),
+          validated_by_app_at: claimed.action === "validate" ? now : null,
           updated_at: now,
           ...(changed ? { status_changed_at: now } : {}),
           ...(reply !== null && changed ? { reply_text: reply, reply_at: now } : {}),

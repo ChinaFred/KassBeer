@@ -1,6 +1,6 @@
 /**
- * Cloud Functions de Kass'Beer (ADR-006, ADR-008). Six fonctions, dont deux points d'accès
- * de la liste fermée d'ADR-008 (P25) :
+ * Cloud Functions de Kass'Beer (ADR-006, ADR-008). Huit fonctions, dont quatre points
+ * d'accès de la liste fermée d'ADR-008 (P25) :
  *
  * - `publishTicket` : déclencheur de création de `tickets/{ticketId}`, publie l'Issue ;
  * - `onDecisionCreated` : déclencheur de création de
@@ -11,7 +11,10 @@
  *   `pending`, reprend les décisions au bail expiré et relit les Issues et leurs analyses ;
  * - `githubTicketWebhook` : `onRequest` public, signé HMAC (P29), état des Issues poussé
  *   par GitHub (T3) ;
- * - `answerTicketAnalysis` : `onCall` de l'admin (`requireAdmin`, P30), « Répondre » (T3).
+ * - `answerTicketAnalysis` : `onCall` de l'admin (`requireAdmin`, P30), « Répondre » (T3) ;
+ * - `launchTicketAnalysis`, `launchTicketDevelopment` : `onCall` de l'admin, lancement d'une
+ *   routine Claude Code d'analyse ou de développement (T4, P35, P36). Une callable par
+ *   routine : chacune ne monte que les secrets de la sienne (P25).
  *
  * Ce module ne construit aucun client (P26) : Firestore et GitHub s'ouvrent à l'appel.
  */
@@ -26,11 +29,16 @@ import {
   GITHUB_WEBHOOK_SECRET,
   REGION,
   RUNTIME_SERVICE_ACCOUNT,
+  TICKETS_ROUTINE_ANALYSIS_ID,
+  TICKETS_ROUTINE_ANALYSIS_TOKEN,
+  TICKETS_ROUTINE_DEV_ID,
+  TICKETS_ROUTINE_DEV_TOKEN,
 } from "./config";
 import { logError } from "./logging";
 import { handleAnswerCall } from "./tickets/answer";
 import { isRetryRequest } from "./tickets/decisionModel";
 import { applyDecision } from "./tickets/decisions";
+import { handleLaunchCall } from "./tickets/launch";
 import { publishTicket as publish } from "./tickets/publish";
 import { runHourlyPass } from "./tickets/sync";
 import { handleGithubWebhook } from "./tickets/webhook";
@@ -120,7 +128,9 @@ export const onDecisionUpdated = onDocumentUpdated(DECISION_TRIGGER, async (even
 
 export const syncTickets = onSchedule(
   {
-    schedule: "every 60 minutes",
+    // À heure fixe (minute 0, heure de Paris) : la passe de minuit remet le compteur des
+    // lancements au nouveau jour (`refreshLaunchStatus`, ADR-008, T4).
+    schedule: "0 * * * *",
     timeZone: "Europe/Paris",
     region: REGION,
     serviceAccount: RUNTIME_SERVICE_ACCOUNT,
@@ -178,4 +188,49 @@ export const answerTicketAnalysis = onCall(
     timeoutSeconds: 60,
   },
   (req) => handleAnswerCall(req, () => GITHUB_TICKETS_TOKEN.value()),
+);
+
+/**
+ * Réglages communs des deux lancements (ADR-008, T4, P25) : délai de 120 s (Issue relue,
+ * 15 s, appel de la routine, 30 s, écritures), une instance chacun.
+ */
+const LAUNCH_CALLABLE = {
+  region: REGION,
+  serviceAccount: RUNTIME_SERVICE_ACCOUNT,
+  cors: CALLABLE_ORIGINS,
+  maxInstances: 1,
+  memory: "256MiB" as const,
+  timeoutSeconds: 120,
+};
+
+/** « Lancer l'analyse » (ADR-008, T4, P35, P36). Seule à monter les secrets d'analyse. */
+export const launchTicketAnalysis = onCall(
+  {
+    ...LAUNCH_CALLABLE,
+    secrets: [GITHUB_TICKETS_TOKEN, TICKETS_ROUTINE_ANALYSIS_ID, TICKETS_ROUTINE_ANALYSIS_TOKEN],
+  },
+  (req) =>
+    handleLaunchCall(req, "analyse", {
+      routine: () => ({
+        id: TICKETS_ROUTINE_ANALYSIS_ID.value(),
+        token: TICKETS_ROUTINE_ANALYSIS_TOKEN.value(),
+      }),
+      githubToken: () => GITHUB_TICKETS_TOKEN.value(),
+    }),
+);
+
+/** « Lancer le développement » (ADR-008, T4, P35, P36). Seule à monter les secrets de développement. */
+export const launchTicketDevelopment = onCall(
+  {
+    ...LAUNCH_CALLABLE,
+    secrets: [GITHUB_TICKETS_TOKEN, TICKETS_ROUTINE_DEV_ID, TICKETS_ROUTINE_DEV_TOKEN],
+  },
+  (req) =>
+    handleLaunchCall(req, "developpement", {
+      routine: () => ({
+        id: TICKETS_ROUTINE_DEV_ID.value(),
+        token: TICKETS_ROUTINE_DEV_TOKEN.value(),
+      }),
+      githubToken: () => GITHUB_TICKETS_TOKEN.value(),
+    }),
 );

@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.36",
+      "date": "2026-11-13",
+      "paragraphs": [
+        "L'administrateur peut lancer depuis la fiche d'un ticket une session Claude Code qui analyse la demande, puis, une fois le ticket validé, une session qui en écrit le code. Chaque lancement passe par une boîte de confirmation qui affiche les lancements restants du jour. La fiche garde l'historique des lancements avec le lien vers chaque session. « Valider » n'est plus proposé qu'une fois le ticket analysé."
+      ]
+    },
+    {
       "version": "0.1.35",
       "date": "2026-11-13",
       "paragraphs": [
@@ -37,15 +44,6 @@
       "date": "2026-11-11",
       "paragraphs": [
         "Le menu du compte propose « Préférences ». On y choisit le thème de l'application : clair, sombre, ou comme l'appareil. Le changement est immédiat et reste enregistré sur l'appareil utilisé ; chaque téléphone ou navigateur garde son propre choix. Par défaut, l'application suit le réglage de l'appareil, comme avant. Demandé par le ticket #25."
-      ]
-    },
-    {
-      "version": "0.1.28",
-      "date": "2026-11-11",
-      "paragraphs": [
-        "L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon, d'un ajout ou d'une levure, vous voyez les ingrédients qui correspondent, par nom ou autre nom. Choisir l'un d'eux remplit les valeurs encore vides : couleur et rendement d'un malt, acides alpha et forme d'un houblon, type, forme et atténuation d'une levure, type d'un ajout. Une valeur déjà saisie ne change pas ; si elle diffère, « Reprendre les valeurs de la Bibliothèque » la remplace. Le champ « Style » propose les styles BJCP par code ou par nom. Hors ligne, les suggestions viennent de ce qui a déjà été lu ; sinon, la saisie reste libre.",
-        "L'export BeerXML est ouvert. Il retrouve le style de la recette dans la Bibliothèque, avec sa catégorie et ses plages. Une recette sans style de la Bibliothèque demande de le choisir dans les suggestions du champ Style. Le type du style BeerXML suit la levure de la recette : précisez-la si l'export le demande. Un style sans plage chiffrée dans le guide BJCP ne s'exporte pas en BeerXML : choisissez un autre style, ou exportez en BeerJSON. Quand votre équipement n'a pas l'évaporation, les pertes ou le volume mort, « Compléter l'équipement » ouvre sa fiche.",
-        "Recettes › Importer complète les valeurs absentes du fichier quand le nom d'un ingrédient est celui d'une entrée de la Bibliothèque, ou l'un de ses autres noms. Une valeur du fichier n'est jamais remplacée. Les détails de chaque recette listent les valeurs reprises, par exemple « Couleur de Pils reprise de la Bibliothèque. ». Hors ligne, l'import marche comme avant et le dit. Les noms qu'aucune entrée ne reconnaît sont signalés à l'administrateur, sans votre nom ni celui du fichier, pour qu'il complète la Bibliothèque."
       ]
     }
   ]

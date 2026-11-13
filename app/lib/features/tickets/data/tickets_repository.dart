@@ -6,16 +6,18 @@ import '../../../core/services/error_report_service.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_analysis.dart';
+import '../domain/ticket_launch.dart';
 
-/// Accès à `tickets/` et `ticket_status/github` (ADR-006, P23), et à la
-/// callable `answerTicketAnalysis` (ADR-008). Les écrans passent par cette
-/// interface ; les tests la remplacent par un double.
+/// Accès à `tickets/`, `ticket_status/github` et `ticket_status/launches`
+/// (ADR-006, P23, P41), et aux callables `answerTicketAnalysis`,
+/// `launchTicketAnalysis` et `launchTicketDevelopment` (ADR-008). Les écrans
+/// passent par cette interface ; les tests la remplacent par un double.
 ///
 /// Lectures ordinaires avec le cache hors ligne ; aucune `runTransaction`,
-/// aucun `Source.server`. Une seule callable, « Répondre », pour
-/// l'administrateur. Aucun rapport d'erreur ne porte le titre, la
-/// description, l'e-mail d'un ticket ni le texte d'une analyse ou d'une
-/// réponse (P13, P33).
+/// aucun `Source.server`. Les callables sont réservées à l'administrateur.
+/// Aucun rapport d'erreur ne porte le titre, la description, l'e-mail d'un
+/// ticket, le texte d'une analyse ou d'une réponse, ni un lien de session
+/// (P13, P33, P41).
 abstract class TicketsRepository {
   /// Identifiant d'un ticket, créé par l'appareil à l'ouverture du formulaire :
   /// un double appui écrit le même document.
@@ -88,6 +90,21 @@ abstract class TicketsRepository {
     required String ticketId,
     required String answer,
   });
+
+  /// `tickets/{ticketId}/admin/launches`, pour l'administrateur seul (P41).
+  Stream<RechercheDocument<TicketLaunchesDoc>> watchLaunches(String ticketId);
+
+  /// `ticket_status/launches` : compteurs, plafond et jetons des routines,
+  /// pour l'administrateur seul (P41).
+  Stream<RechercheDocument<EtatLancements>> watchLaunchStatus();
+
+  /// Lance [action] sur [ticketId] (callable `launchTicketAnalysis` ou
+  /// `launchTicketDevelopment`). Un seul appel, jamais rejoué. Tout échec est
+  /// rapporté ici, puis rendu.
+  Future<ResultatLancement> launch({
+    required String ticketId,
+    required ActionLancement action,
+  });
 }
 
 /// Appel d'une callable : nom, données ; rend `data` de la réponse. Remplacé
@@ -102,6 +119,10 @@ const kFunctionsRegion = 'europe-west1';
 /// Délai d'une callable côté client, au-delà des 60 s du serveur (ADR-008) :
 /// le serveur conclut avant que l'appareil abandonne.
 const kCallableTimeout = Duration(seconds: 70);
+
+/// Délai d'une callable de lancement côté client, au-delà des 120 s du
+/// serveur (ADR-008) : le serveur conclut avant que l'appareil abandonne.
+const kLaunchCallableTimeout = Duration(seconds: 130);
 
 /// [TicketsRepository] sur Cloud Firestore.
 class FirestoreTicketsRepository implements TicketsRepository {
@@ -120,21 +141,22 @@ class FirestoreTicketsRepository implements TicketsRepository {
   final DateTime Function() _clock;
   final AppelCallable? _injectedCallable;
 
-  /// Client des Cloud Functions, construit au premier appel de « Répondre »
+  /// Client des Cloud Functions, construit au premier appel d'une callable
   /// et mémorisé (P6) : rien n'est chargé au démarrage.
   FirebaseFunctions? _functions;
 
-  Future<Object?> _call(String name, Map<String, Object?> data) async {
+  Future<Object?> _call(
+    String name,
+    Map<String, Object?> data, {
+    Duration timeout = kCallableTimeout,
+  }) async {
     final injected = _injectedCallable;
     if (injected != null) return injected(name, data);
     final functions = _functions ??= FirebaseFunctions.instanceFor(
       region: kFunctionsRegion,
     );
     final result = await functions
-        .httpsCallable(
-          name,
-          options: HttpsCallableOptions(timeout: kCallableTimeout),
-        )
+        .httpsCallable(name, options: HttpsCallableOptions(timeout: timeout))
         .call<Object?>(data);
     return result.data;
   }
@@ -481,4 +503,102 @@ class FirestoreTicketsRepository implements TicketsRepository {
         );
         Error.throwWithStackTrace(error, stackTrace);
       });
+
+  @override
+  Stream<RechercheDocument<TicketLaunchesDoc>> watchLaunches(String ticketId) =>
+      _watchDocument(
+        _tickets.doc(ticketId).collection('admin').doc('launches'),
+        TicketLaunchesDoc.fromFirestore,
+        readFeature: 'tickets.read_launches',
+        watchFeature: 'tickets.watch_launches',
+        path: 'tickets/$ticketId/admin/launches',
+      );
+
+  @override
+  Stream<RechercheDocument<EtatLancements>> watchLaunchStatus() =>
+      _watchDocument(
+        _firestore.collection('ticket_status').doc('launches'),
+        EtatLancements.fromFirestore,
+        readFeature: 'tickets.read_launch_status',
+        watchFeature: 'tickets.watch_launch_status',
+        path: 'ticket_status/launches',
+      );
+
+  /// Lecture d'un document écrit par le serveur : absent (du cache ou du
+  /// serveur), trouvé ou illisible. Un document illisible ou une panne est
+  /// rapporté avec [path] seul.
+  Stream<RechercheDocument<T>> _watchDocument<T>(
+    DocumentReference<Map<String, dynamic>> ref,
+    T Function(Map<String, dynamic> data) parse, {
+    required String readFeature,
+    required String watchFeature,
+    required String path,
+  }) => ref
+      .snapshots(includeMetadataChanges: true)
+      .map<RechercheDocument<T>>((snapshot) {
+        final data = snapshot.data();
+        if (!snapshot.exists || data == null) {
+          return snapshot.metadata.isFromCache
+              ? DocumentAbsentDuCache<T>()
+              : DocumentAbsent<T>();
+        }
+        try {
+          return DocumentTrouve(parse(data));
+        } on DocumentIllisible catch (error, stackTrace) {
+          _errors.reportError(
+            feature: readFeature,
+            error: error,
+            stackTrace: stackTrace,
+            context: '$path illisible',
+          );
+          return DocumentIllisibleTrouve<T>(error);
+        }
+      })
+      .handleError((Object error, StackTrace stackTrace) {
+        _errors.reportError(
+          feature: watchFeature,
+          error: error,
+          stackTrace: stackTrace,
+          context: path,
+        );
+        Error.throwWithStackTrace(error, stackTrace);
+      });
+
+  @override
+  Future<ResultatLancement> launch({
+    required String ticketId,
+    required ActionLancement action,
+  }) async {
+    final where = 'tickets/$ticketId action=${action.storedValue}';
+    try {
+      final data = await _call(action.callable, {
+        'ticketId': ticketId,
+      }, timeout: kLaunchCallableTimeout);
+      return ResultatLancement.depuisReponse(data);
+    } on FirebaseFunctionsException catch (error, stackTrace) {
+      final resultat = ResultatLancement.depuisErreur(
+        code: error.code,
+        details: error.details,
+      );
+      _errors.reportError(
+        feature: 'tickets.launch',
+        error: error,
+        stackTrace: stackTrace,
+        // Codes seuls : ni le motif, ni un lien de session (P41).
+        context:
+            '$where code=${error.code}'
+            '${resultat.code == null ? '' : ' reason_code=${resultat.code}'}',
+      );
+      return resultat;
+    } catch (error, stackTrace) {
+      _errors.reportError(
+        feature: 'tickets.launch',
+        error: error,
+        stackTrace: stackTrace,
+        context: '$where code=${error.runtimeType}',
+      );
+      // Sans réponse, la session est peut-être partie.
+      return const ResultatLancement(IssueLancement.perdu);
+    }
+  }
 }

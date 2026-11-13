@@ -185,6 +185,17 @@ de « Logique dupliquée »), relevé et affichage des analyses (P32, P33), « R
 `ci.yml` et `deploy.yml` remplacent le refus de tout point d'accès HTTP ou callable par la liste
 fermée d'ADR-008 (P10, accord de l'utilisateur). Les lots T4 à T7 ajouteront leurs contrôles.
 
+Le 2026-11-13, avec le lot T4 et l'accord de l'utilisateur, P14, P23 (champ serveur
+`validated_by_app_at`) et P25 sont modifiés et P35, P36,
+P39 à P42 ajoutés (P37 et P38 étaient pris par ADR-010) : appel de l'API Routines (P35), plafond du
+poste `ticket_routine_launch` (P36), confirmation d'un lancement (P39), prompts des routines
+signalés avant la fusion, avec l'arrêt sur `GIT_COMMITTER_IDENT`, les fichiers sensibles
+d'`ingest/` et d'Android et la liste fermée des appels de l'analyse (P40), historique des
+lancements (P41), Valider réservé aux tickets analysés et « Lancer le développement » réservé à un
+ticket validé dans l'application (P42). La section « Coûts variables » de
+`CLAUDE.md` décrit ce premier poste. `ci.yml` et `deploy.yml` ajoutent les deux callables de T4 à la
+liste fermée et leurs secrets au contrôle des secrets (P10, accord de l'utilisateur).
+
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
 P10 (fichiers de `functions/` exécutés par un hook) et P14 (déploiement des Functions sans
