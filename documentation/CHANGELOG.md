@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-13
 
-### v0.1.37 — fonctionnel
+### v0.1.38 — fonctionnel
 
 L'administrateur peut importer les 16 fiches Excel de brassage depuis Administration › Import.
 Il choisit le fichier préparé, relit chaque fiche avec ses points à revoir (divergences,
@@ -15,17 +15,49 @@ brassin terminé, avec sa chronologie, ses mesures et ses relevés de fermentati
 chaque brassin est figé avec les prix de sa fiche, visible par l'administrateur seul. Un second
 import du même fichier n'écrit rien, et un import interrompu reprend où il s'était arrêté.
 
-### v0.1.37 — technique
+### v0.1.38 — technique
 
 Incrément v0.6. `exchange/` : `package:exchange/fiches.dart` lit le format `kassbeer_fiches` v1
 (document BeerJSON pour les recettes, bornes de FO4), et `bin/verifier_fiches.dart` le rejoue à
 la préparation. Feature `import` : analyse sans écriture, identifiants fixés par le fichier,
 marque de fin `imported_from` et empreinte pour la reprise, écritures par lots dans le budget
 des règles, arrêt sur 30 s sans accusé du serveur. P9 amendé : Admin › Import lit les prix des
-fiches de l'administrateur et ne les écrit que dans `users/{uid}/brew_costs/`. Aucune règle
+fiches de l'administrateur et ne les écrit que dans `users/{uid}/brew_costs/` ; le lecteur
+refuse un montant dans un texte lu par le groupe (code `montant`) et une fiche dont un document
+ou un événement appartient à un autre compte. Aucune règle
 Firestore ne change ; 25 tests de règles rejouent les écritures d'un import. `.gitignore` limite
 `/import/` à la racine, pour versionner `app/lib/features/import/`. Aucun paquet ne change.
 `main.dart.js` passe de 5 317 706 à 5 388 062 octets (+ 70 356, mesuré sur main à la v0.1.36).
+
+### v0.1.37 — fonctionnel
+
+Sur la fiche d'un brassin, le déroulé compare le prévu et le réel. Dès qu'une étape a un début
+et une fin, sa ligne donne la durée prévue, la durée réelle et l'écart : « prévu 45 min · réel
+57 min · +12 min ». Une étape sautée, en cours ou restée sans heure de fin le dit. Chaque journée
+commencée affiche sa durée totale prévue et réelle, avec le temps passé entre les étapes. L'écran
+du jour ne change pas.
+
+Après le brassage, « Mettre à jour mon processus avec ce brassin » reprend dans votre processus
+les durées réelles que vous cochez. Seules les étapes venues du processus se proposent, quand
+leur durée réelle diffère de celle du processus. Pour un houblonnage à cru fait sur plusieurs
+journées, vous choisissez la durée d'une des journées. Seules ces durées changent, et vos
+brassins gardent leur déroulé. Pendant 10 secondes, « Annuler » rétablit les durées d'avant.
+
+### v0.1.37 — technique
+
+Suite d'ADR-010 : prévu et réel. `brewing/` gagne `actualDurations` (durée réelle d'une étape :
+fin retenue moins début retenu de `StepRecord`, jamais `ScheduledStep.end`, arrondie à la minute
+la plus proche ; journée du premier début à la dernière fin, temps entre les étapes, étapes en
+cours ou sans fin), `durationUpdateIssue` et `roundedStepMinutes`. `fixtures/process.json`
+reçoit d'abord 17 cas de durées (dont minuit, le 2026-10-25 et le 2027-03-28), 12 cas de
+proposition et 4 arrondis ; P3 de `CLAUDE.md` couvre ces durées. Sur la fiche,
+`ChronologieJour` reçoit les durées par un paramètre facultatif que l'écran du jour ne passe
+pas ; textes dans `libelles_deroule.dart`. « Mettre à jour mon processus avec ce brassin » lit
+`template_step_key` et `template_session_key` (`mise_a_jour_processus.dart`,
+`maj_processus.dart`) et réécrit `sessions` par `ProcessesRepository.update` après
+`erreurModele`, sans transaction ; seul `duration_min` des étapes choisies change. Un élément de
+ticket ajouté (`/brassins/:id/fenetre/maj-processus`). Tests : `app/test/prevu_reel_test.dart`.
+Les règles d'accès et les dépendances ne changent pas.
 
 ### v0.1.36 — fonctionnel
 

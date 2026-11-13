@@ -1,4 +1,5 @@
-import 'package:brewing/brewing.dart' show StepStatus, maxProcessOffsetDays;
+import 'package:brewing/brewing.dart'
+    show ActualDayDuration, StepStatus, maxProcessOffsetDays;
 import 'package:flutter/material.dart';
 
 import '../../../core/presentation/champ_nombre.dart';
@@ -102,6 +103,8 @@ class SectionDeroule extends StatelessWidget {
     this.resumeJournee,
     this.onPasser,
     this.passables = const {},
+    this.dureesJournee,
+    this.actionProcessus,
   });
 
   final Brew brew;
@@ -119,6 +122,14 @@ class SectionDeroule extends StatelessWidget {
   /// « Passer la journée » ; offert pour les clés de [passables] seulement.
   final ValueChanged<JourneeDeroulee>? onPasser;
   final Set<String> passables;
+
+  /// Prévu et réel d'une journée commencée (« Durée totale : … »), ou `null`
+  /// tant qu'aucune étape n'a début et fin.
+  final ActualDayDuration? Function(JourneeDeroulee journee)? dureesJournee;
+
+  /// « Mettre à jour mon processus avec ce brassin », ou son état (hors ligne,
+  /// panne) ; `null` sans action. Jamais avec « Changer de processus ».
+  final Widget? actionProcessus;
 
   /// Le modèle d'origine n'existe plus sur le serveur.
   final bool modeleSupprime;
@@ -168,6 +179,11 @@ class SectionDeroule extends StatelessWidget {
             padding: const EdgeInsets.only(top: 4),
             child: Text(TextesDeroule.fige, style: muted),
           ),
+        if (actionProcessus != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: actionProcessus,
+          ),
         if (deroule.probleme != null)
           chronologieBrassage
         else
@@ -183,6 +199,7 @@ class SectionDeroule extends StatelessWidget {
                   ),
                 ),
               ),
+              ?LigneDureeJournee.ou(dureesJournee?.call(j)),
               chronologieBrassage,
             ] else
               _Journee(
@@ -191,6 +208,7 @@ class SectionDeroule extends StatelessWidget {
                 depart: depart,
                 chronologie: chronologieJournee?.call(j),
                 resume: resumeJournee?.call(j),
+                duree: dureesJournee?.call(j),
                 onPasser: passables.contains(j.key) ? onPasser : null,
                 onChangerDate: onChangerDate,
                 onRetablirDate: retablissables.contains(j.key)
@@ -210,6 +228,7 @@ class _Journee extends StatelessWidget {
     required this.depart,
     required this.chronologie,
     required this.resume,
+    required this.duree,
     required this.onPasser,
     required this.onChangerDate,
     required this.onRetablirDate,
@@ -224,6 +243,9 @@ class _Journee extends StatelessWidget {
 
   /// Résumé de la journée terminée ; `null` : son résumé prévu.
   final String? resume;
+
+  /// Prévu et réel de la journée, ou `null`.
+  final ActualDayDuration? duree;
   final ValueChanged<JourneeDeroulee>? onPasser;
   final ValueChanged<JourneeDeroulee>? onChangerDate;
   final ValueChanged<JourneeDeroulee>? onRetablirDate;
@@ -242,6 +264,7 @@ class _Journee extends StatelessWidget {
             storageKey: 'journee-$brewId-${journee.key}',
             resume: resume ?? resumeJourneeDeroulee(journee),
             children: [
+              ?LigneDureeJournee.ou(duree),
               if (chronologie != null)
                 chronologie!
               else if (journee.etapes.isEmpty)
@@ -280,6 +303,39 @@ class _Journee extends StatelessWidget {
             ],
           ),
       ],
+    );
+  }
+}
+
+/// « Durée totale : prévu 6 h 10 · réel 6 h 52, dont 32 min entre les étapes ·
+/// +42 min » d'une journée, sur la fiche. Sans couleur : l'écart se lit au
+/// signe.
+class LigneDureeJournee extends StatelessWidget {
+  const LigneDureeJournee._(this.texte);
+
+  /// La ligne de [durees], ou `null` sans prévu et réel à montrer.
+  static LigneDureeJournee? ou(ActualDayDuration? durees) {
+    final texte = durees == null ? null : dureeJourneeReelle(durees);
+    return texte == null ? null : LigneDureeJournee._(texte);
+  }
+
+  final TexteDuree texte;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Semantics(
+        label: texte.lu,
+        excludeSemantics: true,
+        child: Text(
+          texte.affiche,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
     );
   }
 }

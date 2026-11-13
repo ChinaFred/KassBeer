@@ -1468,6 +1468,70 @@ annonce « Journée « Houblonnage à cru » passée. », hors ligne « Journée
 passée sur l'appareil. Elle partira au retour du réseau. ». La journée d'embouteillage ne le
 propose pas : « Embouteiller sans suivre la journée » en tient lieu.
 
+**Prévu et réel** (Déroulé de la fiche, tous les lecteurs). Dès qu'une étape d'une journée a un
+début et une fin, la journée passe en prévu et réel. La deuxième ligne de chaque étape devient
+« Terminée · prévu 45 min · réel 57 min · +12 min » (écart « −5 min », « 0 min », « +1 h 15 » au-delà
+d'une heure ; lu « 12 minutes de plus », « 5 minutes de moins », « sans écart »). Étape sautée
+ou non faite : « prévu 45 min · réel — » (lu « pas de durée réelle ») ; à venir : « À venir · prévu
+45 min » (lu « prévu 45 min ») ; en cours :
+« réel en cours » ; commencée sans fin, ou restée en cours après la fin de la journée (brassage
+terminé, journée terminée, brassin terminé ou abandonné) : « réel sans heure de fin ». Une
+action de 0 min garde « Action ». La durée réelle d'une étape va de son premier début à sa
+dernière fin retenue, arrondie à la minute la plus proche ; le prévu s'arrondit de même. Une
+ligne « Durée totale : prévu 6 h 10 · réel 6 h 52, dont 32 min entre les étapes · +42 min » se place
+sous le titre de la journée de brassage, et en tête du pli des journées suivantes (le résumé du pli
+ne change pas). Le réel de la journée va du premier début à la dernière fin ; « dont … entre les
+étapes » (écoulé moins la somme des réels des étapes) n'apparaît qu'à partir d'une minute. Étape
+en cours : « réel en cours » ; étape sans fin : « réel inconnu : 1 étape sans heure de fin ». Lu :
+« Durée totale : prévue 6 h 10, réelle 6 h 52 dont 32 minutes entre les étapes, 42 minutes de plus
+que prévu. ». Aucune couleur : l'écart se lit au signe. Seuls le nombre et son unité (« 45 min »,
+« 6 h 10 ») et l'espace avant « : » sont insécables : à 200 % sur un téléphone, la ligne se coupe
+entre les mots, jamais au milieu d'un mot. Une journée jamais commencée garde son
+affichage. Le prévu de la journée compte les étapes sautées. L'écran du jour et l'écran d'une
+journée après le brassage ne changent pas. Un brassin sans processus (ancien, importé) montre
+aussi ses durées quand ses étapes ont des heures.
+
+**Mettre à jour mon processus avec ce brassin** (propriétaire). Bouton dans la section Déroulé,
+sous « Le déroulé est figé depuis le début du brassage. », pour un brassin En fermentation, En
+conditionnement, Terminé ou Abandonné dont le processus d'origine existe encore, appartient au
+lecteur et a au moins une durée à reprendre. Il ne s'affiche jamais avec « Changer de
+processus ». Processus en lecture, supprimé (« Modèle supprimé depuis ; ce brassin garde son
+déroulé. »), d'un autre membre ou rien à proposer : pas de bouton. Hors ligne, processus absent
+du cache : « Processus indisponible hors ligne. Mettez-le à jour au retour du réseau. ». Lecture en
+panne : « Impossible de lire votre processus. » et « Réessayer ». Utilisable plusieurs fois : une
+durée déjà reprise ne se propose plus. Un autre membre ne voit pas le bouton.
+
+La feuille « Mettre à jour mon processus » montre « Processus : {nom} », l'aide « Cochez les durées
+à reprendre. Les brassins existants gardent leur déroulé. », puis un groupe par journée du
+processus, dans son ordre. Une étape du brassin se propose si elle vient d'une étape du processus
+qui existe encore, si sa durée réelle est connue, de 1 à 600 min, et différente de la durée
+actuelle du processus. Ligne : case décochée, nom actuel de l'étape dans le processus, « processus
+30 min → réel 42 min ». Étape répétée sur plusieurs journées (houblonnage à cru 1 et 2) : en-tête
+« Désinfection du matériel · processus 10 min », dans le style du titre d'une case, puis des
+boutons radio « Garder 10 min » (choisi au départ), « réel 12 min · Houblonnage à cru 1 », « réel
+9 min · Houblonnage à cru 2 », lus comme un groupe « Désinfection du matériel, processus
+10 min » ; une journée sans valeur à proposer s'affiche en gris, sans bouton, avec sa raison
+(« Houblonnage à cru 2 : pas de durée réelle », « Houblonnage à cru 1 : réel 10 min, déjà à cette
+durée », « … : réel 0 min, hors de 1 à 600 min ») ; s'il ne reste qu'une valeur, une case avec le
+nom de la journée. Sous la liste : « Non proposées : 2 sans durée réelle, 1 déjà à cette durée,
+1 retirée du processus, 1 hors de 1 à 600 min. Les étapes tirées de la recette ne sont pas
+proposées. » (raisons non nulles seules). Une étape du processus retirée depuis compte une fois,
+même répétée sur plusieurs journées ; une étape sans lien avec le processus n'est pas comptée.
+Si plus rien n'est à proposer pendant que la feuille est ouverte (processus changé ailleurs) :
+« Aucune durée à reprendre. » et « Fermer » ; lecture en panne : « Impossible de lire votre
+processus. », « Réessayer » et « Fermer » ; hors ligne sans cache : le message d'indisponibilité et
+« Fermer ».
+Sans coche : « Cochez au moins une durée. », bouton « Mettre à jour » inactif ; sinon « Mettre à
+jour 1 durée », « Mettre à jour 3 durées ». Seule la durée des étapes choisies change dans le
+processus ; le brassin, sa recette et les autres brassins ne changent pas. Processus invalide :
+« Ce processus est invalide : corrigez-le dans Mes processus. » dans la feuille, rien n'est écrit.
+Annonce « Processus « {nom} » mis à jour : 3 durées. » avec « Annuler » 10 s, qui réécrit les
+durées d'avant (« Processus « {nom} » : 3 durées rétablies. », hors ligne « Processus « {nom} » :
+3 durées rétablies sur l'appareil. Elles partiront au retour du réseau. », au singulier « 1 durée
+rétablie… Elle partira… ») ; hors ligne « Processus « {nom} »
+mis à jour sur l'appareil : 3 durées. Il partira au retour du réseau. » ; refus « L'enregistrement
+de « {nom} » a échoué. ». Le dernier enregistrement l'emporte.
+
 **Supprimer** (propriétaire). « Supprimer « {nom} » ? » / « Le brassin, ses étapes et ses mesures
 disparaissent pour tout le groupe. ». Le coût figé du brassin est supprimé avec lui. Sans saisie : immédiat, même hors ligne. Avec saisies :
 réseau exigé (hors ligne, le message s'affiche avant la confirmation : « Suppression impossible
@@ -1863,7 +1927,8 @@ Un processus est un modèle de déroulé : de 1 à 5 journées (le brassage, pui
 houblonnage à cru et l'embouteillage), chacune avec son écart en jours depuis le brassage et
 ses étapes de préparation et de nettoyage. Le groupe le lit ; seul son auteur le modifie. Le
 brasseur le choisit dans « Nouveau brassin » ou sur la fiche d'un brassin prévu (voir
-Brassins).
+Brassins). Après le brassage, « Mettre à jour mon processus avec ce brassin » reprend dans son
+processus les durées réelles qu'il coche (voir Brassins, Déroulé).
 
 **Accès.** « Mes processus » s'ouvre depuis le menu du compte, sous « Mes prix » : page
 pleine, hors de la barre de navigation, avec retour. Adresses : `/processus` (liste),

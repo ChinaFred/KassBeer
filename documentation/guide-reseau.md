@@ -175,6 +175,12 @@ lire la recette figée d'un brassin (`recipe.brewSteps`, `recipe.brewStepsProble
 d'une nouvelle résolution avant le départ : `assemblerDeroule` et l'aperçu « Chronologie de la
 recette seule » par `Deroule.depuisRecette`. Toute autre lecture passe par `Brew.deroule`.
 
+Le 2026-11-13, avec l'accord de l'utilisateur, P3 est complété : les durées réelles d'étape et
+de journée et leur écart avec le prévu se calculent dans `brewing/` (`actualDurations`,
+`durationUpdateIssue`), et leur changement ajoute d'abord un cas à
+`brewing/test/fixtures/process.json`. La fiche d'un brassin et « Mettre à jour mon processus
+avec ce brassin » (v0.1.37) n'en font que l'affichage.
+
 Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
 tickets avec Kass'Dalle, lots T3 à T7.
 
@@ -305,11 +311,13 @@ SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « S
 « Commandes utiles », `.claude/formatters.json` (`dart format`) et `setup-projet.sh`
 (`dart pub get`) ; la CI le contrôle dans le job « Flutter et brewing ».
 
-Depuis la v0.1.37 (import des 16 fiches, v0.6), P9 admet une exception : Admin › Import lit les
+Depuis la v0.1.38 (import des 16 fiches, v0.6), P9 admet une exception : Admin › Import lit les
 prix et frais des fiches de l'administrateur, par `package:exchange/fiches.dart`, et ne les écrit
 que dans le coût figé de chaque brassin importé (`users/{uid de l'admin}/brew_costs/`). `securite`
-vérifie qu'aucun de ces prix n'entre dans `prices`, `fees`, `recipes/`, `brews/`, une note, un
-rapport d'erreur ou une annonce.
+vérifie qu'aucun de ces prix n'entre dans `prices`, `fees`, `recipes/`, `brews/`, un rapport
+d'erreur ou une annonce. Le lecteur refuse une fiche dont un texte lu par le groupe contient un
+montant (« € », « EUR », « euro »), et une fiche dont un document ou un événement appartient à un
+autre compte. La réserve à l'admin vient du routeur seul.
 
 Depuis la v0.1.29 (ADR-009), `relecteur-regles` applique aussi P17 au canal `fr.kassbeer/prefs`
 de la préférence de thème : noms identiques en Dart et en Kotlin, garde `kIsWeb`, travail hors du
