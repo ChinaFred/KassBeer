@@ -2,9 +2,12 @@ import 'package:brewing/brewing.dart' show HopUse;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
+import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/router/app_router.dart';
+import 'package:kass_beer/features/brew_day/domain/plan_du_jour.dart';
 import 'package:kass_beer/features/brews/domain/assemblage_deroule.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
+import 'package:kass_beer/features/brews/domain/brew_event.dart';
 import 'package:kass_beer/features/brews/domain/deroule.dart';
 import 'package:kass_beer/features/brews/presentation/brew_detail_screen.dart';
 import 'package:kass_beer/features/brews/presentation/brews_screen.dart';
@@ -249,6 +252,80 @@ void main() {
         isNull,
       );
     });
+  });
+
+  test('prochaine journée : seulement après la dernière journée terminée', () {
+    final d = derouleExemple(
+      const RecipeContent(
+        name: 'Blonde',
+        brewSteps: [palier],
+        hops: [
+          HopLine(
+            name: 'Citra',
+            amount: Quantite.grammes(30),
+            use: HopUse.dryHop,
+            form: 'pellet',
+            dayMin: 3 * 1440,
+          ),
+          HopLine(
+            name: 'Mosaic',
+            amount: Quantite.grammes(25),
+            use: HopUse.dryHop,
+            form: 'pellet',
+            dayMin: 6 * 1440,
+          ),
+        ],
+      ),
+    );
+    final brassin = unBrassin(
+      status: BrewStatus.fermenting,
+      brewedAt: DateTime(2026, 11, 1, 9),
+      process: d,
+    );
+    final now = DateTime(2026, 11, 8, 12);
+    PlanDuJour? Function(JourneeDeroulee) plans(List<BrewEvent> events) =>
+        (j) => PlanDuJour.calculer(
+          brew: brassin,
+          events: events,
+          now: now,
+          journee: j,
+        );
+    expect(
+      prochaineJournee(brew: brassin, planDe: plans(const []))?.name,
+      'Houblonnage à cru 1',
+    );
+    // Houblonnage 2 fait, houblonnage 1 jamais : l'embouteillage suit.
+    final deuxieme = d.journees[2];
+    expect(deuxieme.name, 'Houblonnage à cru 2');
+    final events = [
+      for (final (i, l) in deuxieme.lignes.indexed)
+        saut('s$i', l.key, DateTime(2026, 11, 7, 10)),
+    ];
+    expect(
+      prochaineJournee(brew: brassin, planDe: plans(events))?.role,
+      RoleJournee.embouteillage,
+    );
+    // Embouteillé : plus aucune journée, ni par les événements ni par les dates.
+    final embouteille = unBrassin(
+      status: BrewStatus.conditioning,
+      brewedAt: DateTime(2026, 11, 1, 9),
+      bottledAt: DateTime(2026, 11, 7),
+      process: d,
+    );
+    expect(prochaineJournee(brew: embouteille, planDe: (_) => null), isNull);
+    expect(prochaineJourneePrevue(embouteille, now), isNull);
+  });
+
+  test('événements lus : cache sans document = pas encore lus', () {
+    expect(evenementsLus(null), isNull);
+    expect(
+      evenementsLus(const ListeLue<BrewEvent>(documents: [], fromCache: true)),
+      isNull,
+    );
+    expect(
+      evenementsLus(const ListeLue<BrewEvent>(documents: [], fromCache: false)),
+      isEmpty,
+    );
   });
 
   group('Nouveau brassin', () {
@@ -1047,6 +1124,225 @@ void main() {
         ),
         'Brassé le 4 nov. 2026',
       );
+    });
+
+    Future<TestApp> liste(WidgetTester tester, List<Brew> brews) async {
+      final app = TestApp();
+      await app.pump(tester);
+      app.signIn(brewerUser, member: brewerMember);
+      app.brews.publish(brews);
+      await tester.pumpAndSettle();
+      app.container.read(routerProvider).go('/brassins');
+      await tester.pumpAndSettle();
+      return app;
+    }
+
+    testWidgets('journée faite en avance : la suivante est annoncée', (
+      tester,
+    ) async {
+      final d = derouleExemple();
+      final app = await liste(tester, [
+        unBrassin(
+          id: 'a',
+          status: BrewStatus.fermenting,
+          brewedAt: DateTime(2026, 11, 6, 9),
+          recipe: recetteAvecCru,
+          process: d,
+        ),
+      ]);
+      // Houblonnage prévu le 10 nov., fait le 7 : toutes ses étapes passées.
+      app.brews.publishEvents('a', [
+        for (final (i, l) in d.journees[1].lignes.indexed)
+          saut('s$i', l.key, DateTime(2026, 11, 7, 10)),
+      ]);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Prochaine journée : Embouteillage, '
+          '${formatJourMois(DateTime(2026, 11, 20))}',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Houblonnage'), findsNothing);
+    });
+
+    testWidgets('journée en retard : « en retard (prévue le …) »', (
+      tester,
+    ) async {
+      final app = await liste(tester, [
+        unBrassin(
+          id: 'a',
+          status: BrewStatus.fermenting,
+          brewedAt: DateTime(2026, 11, 1, 9),
+          recipe: recetteAvecCru,
+          process: derouleExemple(),
+        ),
+      ]);
+      app.brews.publishEvents('a', const []);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Prochaine journée : Houblonnage à cru, en retard (prévue le '
+          '${formatJourMois(DateTime(2026, 11, 5))})',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('journée commencée, non terminée : « en cours »', (
+      tester,
+    ) async {
+      final d = derouleExemple();
+      final app = await liste(tester, [
+        unBrassin(
+          id: 'a',
+          status: BrewStatus.fermenting,
+          brewedAt: DateTime(2026, 11, 1, 9),
+          recipe: recetteAvecCru,
+          process: d,
+        ),
+      ]);
+      app.brews.publishEvents('a', [
+        debut('e1', d.journees[1].lignes.first.key, DateTime(2026, 11, 8, 9)),
+      ]);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Prochaine journée : Houblonnage à cru, en cours'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets("embouteillé : la journée placée après l'embouteillage", (
+      tester,
+    ) async {
+      final d = derouleExemple();
+      // Houblonnage déplacé à J+20, après l'embouteillage (J+14).
+      final apres = d.avecEcart(d.journees[1].key, 20, SourceEcart.brasseur);
+      expect(apres.journees.last.name, 'Houblonnage à cru');
+      Brew brassin(String id, String owner) => unBrassin(
+        id: id,
+        owner: owner,
+        status: BrewStatus.conditioning,
+        brewedAt: DateTime(2026, 11, 1, 9),
+        bottledAt: DateTime(2026, 11, 7),
+        recipe: recetteAvecCru,
+        process: apres,
+      );
+      final app = await liste(tester, [
+        brassin('a', 'uid-brasseur'),
+        brassin('autre', 'uid-autre'),
+      ]);
+      app.brews.publishEvents('a', const []);
+      await tester.pumpAndSettle();
+      // Par les événements (le mien) et par les dates (celui d'un autre).
+      expect(
+        find.text(
+          'Prochaine journée : Houblonnage à cru, '
+          '${formatJourMois(DateTime(2026, 11, 21))}',
+        ),
+        findsNWidgets(2),
+      );
+    });
+
+    testWidgets('brassin embouteillé : aucune prochaine journée', (
+      tester,
+    ) async {
+      final app = await liste(tester, [
+        unBrassin(
+          id: 'a',
+          status: BrewStatus.conditioning,
+          brewedAt: DateTime(2026, 11, 1, 9),
+          bottledAt: DateTime(2026, 11, 7),
+          recipe: recetteAvecCru,
+          process: derouleExemple(),
+        ),
+      ]);
+      // Houblonnage jamais fait : il n'est plus annoncé après l'embouteillage.
+      app.brews.publishEvents('a', const []);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Prochaine journée'), findsNothing);
+      expect(find.text('Embouteillé le 7 nov. 2026'), findsOneWidget);
+    });
+
+    testWidgets("brassin d'un autre membre : dates seules, aucune lecture", (
+      tester,
+    ) async {
+      final app = await liste(tester, [
+        unBrassin(
+          id: 'autre',
+          owner: 'uid-autre',
+          status: BrewStatus.fermenting,
+          brewedAt: DateTime(2026, 11, 1, 9),
+          recipe: recetteAvecCru,
+          process: derouleExemple(),
+        ),
+      ]);
+      expect(app.brews.eventsOf('autre').subscriptions, 0);
+      expect(
+        find.text('Prochaine journée : Embouteillage, dim. 15 nov.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('événements non lus : règle des dates, liste intacte', (
+      tester,
+    ) async {
+      Brew brassin(String id) => unBrassin(
+        id: id,
+        status: BrewStatus.fermenting,
+        brewedAt: DateTime(2026, 11, 1, 9),
+        recipe: recetteAvecCru,
+        process: derouleExemple(),
+      );
+      final app = await liste(tester, [
+        brassin('chargement'),
+        brassin('panne'),
+        brassin('sans-cache'),
+      ]);
+      app.brews.eventsOf('panne').addError(StateError('lecture refusée'));
+      app.brews.publishEvents('sans-cache', const [], fromCache: true);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Prochaine journée : Embouteillage, dim. 15 nov.'),
+        findsNWidgets(3),
+      );
+      expect(find.textContaining('en retard'), findsNothing);
+    });
+
+    testWidgets('sans processus ou d\'une seule journée : aucune lecture', (
+      tester,
+    ) async {
+      final app = await liste(tester, [
+        unBrassin(
+          id: 'sans-processus',
+          status: BrewStatus.fermenting,
+          brewedAt: DateTime(2026, 11, 1, 9),
+        ),
+        unBrassin(
+          id: 'une-journee',
+          status: BrewStatus.conditioning,
+          brewedAt: DateTime(2026, 11, 1, 9),
+          process: Deroule.depuisRecette(recetteAvecCru),
+        ),
+        unBrassin(
+          id: 'prevu',
+          status: BrewStatus.planned,
+          plannedFor: DateTime(2026, 11, 20),
+          recipe: recetteAvecCru,
+          process: derouleExemple(),
+        ),
+        unBrassin(
+          id: 'suivi',
+          status: BrewStatus.fermenting,
+          brewedAt: DateTime(2026, 11, 1, 9),
+          recipe: recetteAvecCru,
+          process: derouleExemple(),
+        ),
+      ]);
+      expect(app.brews.eventsOf('sans-processus').subscriptions, 0);
+      expect(app.brews.eventsOf('une-journee').subscriptions, 0);
+      expect(app.brews.eventsOf('prevu').subscriptions, 0);
+      expect(app.brews.eventsOf('suivi').subscriptions, greaterThan(0));
     });
   });
 

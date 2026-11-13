@@ -6,6 +6,35 @@ données, outillage), ou les deux.
 
 ## 2026-11-13
 
+### v0.1.39 — fonctionnel
+
+Dans la liste des brassins, « Prochaine journée » annonce pour vos brassins la même journée que
+leur fiche. Une journée faite avant sa date n'est plus annoncée : la suivante prend sa place. Une
+journée commencée et pas terminée affiche « en cours ». Une journée dont la date est passée sans
+qu'elle soit commencée affiche « en retard », suivi de sa date prévue. Une fois le brassin
+embouteillé, seule une journée prévue après l'embouteillage reste annoncée ; sans elle, ou une
+fois toutes les journées faites, la ligne reprend la date du brassin. La fiche ne propose plus une
+journée placée avant une journée déjà faite. Une journée prévue après l'embouteillage reste
+proposée sur la fiche. Les brassins des autres membres, et les vôtres tant que leurs saisies ne sont
+pas lues, suivent les dates prévues, comme avant.
+
+### v0.1.39 — technique
+
+La fiche et la liste des brassins choisissent la prochaine journée par une seule fonction,
+`prochaineJournee` (`brew_day/domain/plan_du_jour.dart`), qui remplace `_prochaineJournee` de la
+fiche : première journée non terminée placée après la dernière journée terminée ; une fois
+`bottled_at` posé, seules les journées placées après la journée d'embouteillage, et `null` sans
+journée d'embouteillage dans le déroulé. Les deux ne l'appliquent qu'avec des événements lus (`evenementsLus` : une
+lecture du cache sans document compte comme non lue). La liste écoute `brews/{id}/events` (cache
+compris, aucune transaction) pour les seuls brassins du lecteur En fermentation ou En
+conditionnement dont le `process` a au moins deux journées (`listeLitEvenements`), à l'affichage
+de leur ligne. Sinon, `prochaineJourneeAnnoncee` garde `prochaineJourneePrevue`, fondée sur les
+dates, qui ne cherche plus, après l'embouteillage, que parmi les journées placées après la
+journée d'embouteillage. ADR-010 précise que sa limite « la liste ne
+lit pas les événements » vaut jusqu'à la v0.1.38. Tests ajoutés dans
+`app/test/deroule_d3_test.dart` et `app/test/deroule_d4_test.dart`. Les règles d'accès et les
+dépendances ne changent pas.
+
 ### v0.1.38 — fonctionnel
 
 L'administrateur peut importer les 16 fiches Excel de brassage depuis Administration › Import.

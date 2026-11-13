@@ -1,6 +1,7 @@
 import 'package:brewing/brewing.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../core/data/lecture_document.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
 import '../../brews/domain/deroule.dart';
@@ -272,6 +273,72 @@ bool journeeTerminee({
 }) {
   if (journee.role == RoleJournee.embouteillage) return brew.bottledAt != null;
   return plan != null && plan.enCours == null && plan.prochaine == null;
+}
+
+/// Événements valides d'un brassin, ou `null` tant qu'ils ne sont pas lus :
+/// aucune lecture encore, lecture en échec, ou lecture du cache sans aucun
+/// document (hors ligne sans copie sur l'appareil). La fiche et la liste des
+/// brassins ne choisissent la prochaine journée qu'avec des événements lus.
+List<BrewEvent>? evenementsLus(ListeLue<BrewEvent>? lus) {
+  if (lus == null || (lus.fromCache && lus.documents.isEmpty)) return null;
+  return lus.valides;
+}
+
+/// Prochaine journée d'un brassin en fermentation ou en conditionnement
+/// (ADR-010) : la première journée non terminée ([journeeTerminee]) placée
+/// après la dernière journée terminée, dans l'ordre du déroulé. Une journée
+/// non terminée placée avant une journée terminée n'est plus proposée. Une
+/// fois `bottled_at` posé, la journée d'embouteillage compte comme terminée :
+/// seules les journées placées après elle restent proposées ; sans journée
+/// d'embouteillage dans le déroulé, plus aucune. `null` sans journée restante.
+/// [planDe] rend le plan calculé d'une journée, `null` si le calcul est refusé.
+/// Seule règle de la fiche et de la liste des brassins.
+JourneeDeroulee? prochaineJournee({
+  required Brew brew,
+  required PlanDuJour? Function(JourneeDeroulee journee) planDe,
+}) {
+  if (brew.status != BrewStatus.fermenting &&
+      brew.status != BrewStatus.conditioning) {
+    return null;
+  }
+  if (brew.bottledAt != null && brew.deroule.embouteillage == null) {
+    return null;
+  }
+  final journees = brew.deroule.journees.skip(1).toList();
+  var suivante = 0;
+  for (final (i, j) in journees.indexed) {
+    if (journeeTerminee(brew: brew, journee: j, plan: planDe(j))) {
+      suivante = i + 1;
+    }
+  }
+  return suivante < journees.length ? journees[suivante] : null;
+}
+
+/// Prochaine journée annoncée par la liste des brassins, avec son jour
+/// calendaire et vrai si elle est commencée ([PlanDuJour.commencee]).
+/// [planDe] connu (événements lus) : [prochaineJournee], même règle que la
+/// fiche, dont la date peut être passée. [planDe] nul (événements pas lus, ou
+/// brassin d'un autre membre) : [prochaineJourneePrevue], d'après les dates
+/// seules, jamais commencée. `null` sans journée ou sans date de départ.
+({JourneeDeroulee journee, DateTime date, bool commencee})?
+prochaineJourneeAnnoncee(
+  Brew brew,
+  DateTime now, {
+  PlanDuJour? Function(JourneeDeroulee journee)? planDe,
+}) {
+  if (planDe == null) {
+    final prevue = prochaineJourneePrevue(brew, now);
+    if (prevue == null) return null;
+    return (journee: prevue.journee, date: prevue.date, commencee: false);
+  }
+  final journee = prochaineJournee(brew: brew, planDe: planDe);
+  final date = journee?.date(brew.departDeroule);
+  if (journee == null || date == null) return null;
+  return (
+    journee: journee,
+    date: DateTime(date.year, date.month, date.day),
+    commencee: planDe(journee)?.commencee ?? false,
+  );
 }
 
 /// Vrai si [journee] de [brew] est close pour le prévu et réel de la fiche :

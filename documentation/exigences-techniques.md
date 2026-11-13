@@ -1159,7 +1159,9 @@ dans le modèle assemblé de nouveau, par `template_session_key`, puis par le no
 houblonnage répété ; sans modèle lu, « Rétablir la date du processus » n'est pas proposé.
 `fermentationDayNumber` donne l'écart d'une date choisie, `JourneeDeroulee.date` (par
 `processSessionDate`) la date d'une journée (P3). `prochaineJourneePrevue` dérive la ligne de
-la liste des dates seules, sans lire les événements.
+la liste des dates seules ; depuis la v0.1.39, elle ne sert que pour les brassins d'un autre
+membre et tant que les événements du brassin ne sont pas lus (voir « Journées 2 et
+suivantes »).
 
 **Journées 2 et suivantes (v0.1.35, lot D4).** `PlanDuJour.calculer(brew:, events:, now:,
 journee:)` calcule une journée du déroulé (nulle : le brassage). `stepRecordsFromEvents` reçoit
@@ -1239,9 +1241,28 @@ conditionnement) écrit `step_skipped` pour chaque étape non commencée par `wr
 `WriteBatch`, sans statut ; confirmation par `showDialog` (`// ticket: aucun (confirmation)`) ;
 aucun élément de ticket nouveau, le menu reste `/brassins/:id/menu/journee`. Une journée
 terminée a pour résumé `resumeJourneeTerminee` (« Terminée · 3 faites, 1 sautée », « Terminée »
-seul sans étape à compter). La liste garde les dates seules
-(`prochaineJourneePrevue`) : lire les événements de chaque brassin pour une ligne de liste
-coûterait une écoute de plus par brassin. La reprise au lancement (`brassinAReprendre`) reste
+seul sans étape à compter). La fiche et la liste choisissent la prochaine journée par la même
+fonction, `prochaineJournee(brew:, planDe:)` de `brew_day/domain/plan_du_jour.dart` (v0.1.39) :
+pour un brassin En fermentation ou En conditionnement, la première journée non terminée
+(`journeeTerminee`) placée après la dernière journée terminée. Une fois `bottled_at` posé, la
+journée d'embouteillage compte comme terminée : seules les journées placées après elle restent ;
+sans journée d'embouteillage dans le déroulé (`Deroule.embouteillage` nul), la fonction rend
+`null`.
+Les deux n'appliquent cette règle qu'avec des événements lus (`evenementsLus`) : une lecture du
+cache sans aucun document compte comme pas encore lue. La liste lit les événements
+(`brewEventsProvider`, écoute de `brews/{id}/events` servie par le cache, aucune transaction ni
+`Source.server`) des seuls brassins de `listeLitEvenements` : brassins du lecteur
+(`owner_uid`), comme la fiche qui ne propose la journée qu'au propriétaire, En fermentation ou En
+conditionnement, avec un `process` d'au moins deux journées. L'écoute part quand la ligne
+s'affiche dans la liste, jamais au lancement, et s'arrête avec elle (`autoDispose`).
+`prochaineJourneeAnnoncee` calcule les plans des journées par `evaluerPlan`, une fois chacun, et
+rend la journée, sa date (`JourneeDeroulee.date`, P3) et `commencee` (`PlanDuJour.commencee`) :
+« en cours » pour une journée commencée, « en retard (prévue le …) » pour une date passée. Sans
+événements lus (chargement, erreur rapportée par le dépôt sous `brews.watch_events`, cache sans
+document) et pour les brassins d'un autre membre, elle rend `prochaineJourneePrevue`, d'après
+les dates seules : une fois `bottled_at` posé, elle ne cherche que parmi les journées placées
+après la journée d'embouteillage, et rend `null` sans journée d'embouteillage. Les règles d'accès ne changent pas :
+`brews/{id}/events` est lisible par `isMember()`. La reprise au lancement (`brassinAReprendre`) reste
 limitée au brassage. Éléments de ticket ajoutés : `/brassins/:id/jour/:journee/menu/actions`,
 `…/fenetre/mesure`, `…/fenetre/correction`, `…/fenetre/etape`, `…/fenetre/recette`,
 `…/fenetre/envoi`, `…/fenetre/embouteillage` ; écrans « Préparer la journée » (dans la coquille)

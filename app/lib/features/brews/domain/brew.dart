@@ -259,10 +259,24 @@ int compareBrews(Brew a, Brew b) {
   return db.compareTo(da);
 }
 
+/// Vrai si la liste des brassins lit les événements de [brew] pour annoncer sa
+/// prochaine journée : brassin de [readerUid], comme la fiche qui ne propose la
+/// journée qu'à son propriétaire, en fermentation ou en conditionnement, avec un
+/// `process` d'au moins deux journées. Les autres gardent la règle des dates.
+bool listeLitEvenements(Brew brew, String? readerUid) =>
+    readerUid != null &&
+    brew.ownerUid == readerUid &&
+    (brew.status == BrewStatus.fermenting ||
+        brew.status == BrewStatus.conditioning) &&
+    (brew.process?.journees.length ?? 0) >= 2;
+
 /// Prochaine journée après le brassage d'un brassin en fermentation ou en
-/// conditionnement, d'après les dates seules (ADR-010 : la liste ne lit pas les
-/// événements) : la première dont la date n'est pas passée à [now], sauf la
-/// journée d'embouteillage d'un brassin embouteillé. `null` sinon.
+/// conditionnement, d'après les dates seules : la première dont la date n'est
+/// pas passée à [now]. Une fois le brassin embouteillé, seules les journées
+/// placées après la journée d'embouteillage comptent ; sans journée
+/// d'embouteillage dans le déroulé, aucune. `null` sinon. Règle de la liste
+/// tant que les événements du brassin ne sont pas lus, et pour les brassins des
+/// autres membres (`prochaineJourneeAnnoncee`).
 ({JourneeDeroulee journee, DateTime date})? prochaineJourneePrevue(
   Brew brew,
   DateTime now,
@@ -271,11 +285,14 @@ int compareBrews(Brew a, Brew b) {
       brew.status != BrewStatus.conditioning) {
     return null;
   }
+  var journees = brew.deroule.journees.skip(1);
+  if (brew.bottledAt != null) {
+    final embouteillage = brew.deroule.embouteillage;
+    if (embouteillage == null) return null;
+    journees = journees.skipWhile((j) => j.key != embouteillage.key).skip(1);
+  }
   final aujourdhui = DateTime(now.year, now.month, now.day);
-  for (final j in brew.deroule.journees.skip(1)) {
-    if (j.role == RoleJournee.embouteillage && brew.bottledAt != null) {
-      continue;
-    }
+  for (final j in journees) {
     final date = j.date(brew.departDeroule);
     if (date == null) return null;
     final jour = DateTime(date.year, date.month, date.day);
