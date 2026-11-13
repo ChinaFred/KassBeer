@@ -251,8 +251,9 @@ jobs:
       - name: Manifeste des fonctions (P25)
         # Même découverte que deploy.yml. Points d'accès HTTP et callables limités à
         # la liste fermée d'ADR-008 déjà livrée (githubTicketWebhook seul public,
-        # answerTicketAnalysis), avec leurs maxInstances et délais ; aucun déclencheur
-        # bloquant ni de file ; maxInstances posé sur chaque fonction.
+        # answerTicketAnalysis, launchTicketAnalysis, launchTicketDevelopment), avec leurs
+        # maxInstances et délais ; aucun déclencheur bloquant ni de file ; maxInstances posé
+        # sur chaque fonction ; chaque secret monté par les seules fonctions de P25.
         env:
           FUNCTIONS_CONTROL_API: 'true'
         run: |
@@ -263,10 +264,12 @@ jobs:
             def keys_with(f): [.endpoints | to_entries[] | select(.value | f) | .key];
             (keys_with(has("blockingTrigger") or has("taskQueueTrigger")) | length == 0)
             and ((keys_with(has("httpsTrigger")) - ["githubTicketWebhook"]) | length == 0)
-            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis"]) | length == 0)
+            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis", "launchTicketAnalysis", "launchTicketDevelopment"]) | length == 0)
             and ((keys_with((.httpsTrigger.invoker // []) | index("public") != null)) - ["githubTicketWebhook"] | length == 0)
             and ((.endpoints.githubTicketWebhook // null) | . == null or (.maxInstances == 5 and .timeoutSeconds == 60))
             and ((.endpoints.answerTicketAnalysis // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 60))
+            and ((.endpoints.launchTicketAnalysis // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 120))
+            and ((.endpoints.launchTicketDevelopment // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 120))
           '
           if ! jq -e "$endpoints_filter" "$manifest" > /dev/null; then
             echo "::error::Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25)."
@@ -274,6 +277,20 @@ jobs:
           fi
           if ! jq -e '[.endpoints[] | select((.maxInstances // 0) < 1)] | length == 0' "$manifest" > /dev/null; then
             echo "::error::maxInstances manque sur une fonction (P25)."
+            exit 1
+          fi
+          secrets_filter='
+            {"GITHUB_WEBHOOK_SECRET": ["githubTicketWebhook"],
+             "TICKETS_ROUTINE_ANALYSIS_ID": ["launchTicketAnalysis"],
+             "TICKETS_ROUTINE_ANALYSIS_TOKEN": ["launchTicketAnalysis"],
+             "TICKETS_ROUTINE_DEV_ID": ["launchTicketDevelopment"],
+             "TICKETS_ROUTINE_DEV_TOKEN": ["launchTicketDevelopment"]} as $only
+            | ([.endpoints | to_entries[] | .key as $f | (.value.secretEnvironmentVariables // [])[] | .key
+                | select(. != "GITHUB_TICKETS_TOKEN" and ((($only[.] // []) | index($f)) == null))] | length == 0)
+              and ([(.params // [])[] | select(.type == "secret" and .name != "GITHUB_TICKETS_TOKEN" and $only[.name] == null)] | length == 0)
+          '
+          if ! jq -e "$secrets_filter" "$manifest" > /dev/null; then
+            echo "::error::Une fonction lit un secret hors de la liste de P25, ou un secret monté par une autre fonction que la sienne."
             exit 1
           fi
 

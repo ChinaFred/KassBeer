@@ -20,6 +20,8 @@ import {
   isPlausibleDecisionId,
   isResumableByPass,
   isRetryRequest,
+  isValidatedByApp,
+  keepsAppValidation,
   PENDING_DECISION_GRACE_MS,
   stalePendingCutoffMs,
   replyTextOfComment,
@@ -36,13 +38,34 @@ const NOW = Date.parse("2026-11-11T10:00:00Z");
 const TOKEN = "github_pat_11AAAAAAAAAAAAAAAAAAAA_secretsecretsecretsecret";
 
 describe("décisions permises par statut (P26)", () => {
-  it("received : valider (jusqu'à T4, ADR-008), refuser, clore, répondre", () =>
-    assert.deepEqual(allowedDecisions("received"), ["validate", "refuse", "close", "answer"]));
+  it("received : refuser, clore, répondre, lancer l'analyse ; pas valider (T4, P42)", () =>
+    assert.deepEqual(allowedDecisions("received"), [
+      "refuse",
+      "close",
+      "answer",
+      "launch_analysis",
+    ]));
   it("analyzed : valider, refuser, clore, répondre", () =>
     assert.deepEqual(allowedDecisions("analyzed"), ["validate", "refuse", "close", "answer"]));
-  it("validated : refuser, clore, répondre ; in_progress : refuser, clore", () => {
-    assert.deepEqual(allowedDecisions("validated"), ["refuse", "close", "answer"]);
+  it("validated dans l'application : refuser, clore, répondre, lancer le développement ; in_progress : refuser, clore", () => {
+    assert.deepEqual(allowedDecisions("validated", true), [
+      "refuse",
+      "close",
+      "answer",
+      "launch_development",
+    ]);
     assert.deepEqual(allowedDecisions("in_progress"), ["refuse", "close"]);
+  });
+  it("validated sur GitHub seul : valider, refuser, clore, répondre ; pas de lancement (2026-11-13)", () =>
+    assert.deepEqual(allowedDecisions("validated"), ["validate", "refuse", "close", "answer"]));
+  it("validation de l'application : posée, gardée en validated et in_progress seuls", () => {
+    assert.equal(isValidatedByApp(null), false);
+    assert.equal(isValidatedByApp(undefined), false);
+    assert.equal(isValidatedByApp({ seconds: 1 }), true);
+    assert.deepEqual(
+      TICKET_STATUSES.filter((s) => keepsAppValidation(s)),
+      ["validated", "in_progress"],
+    );
   });
   it("autres statuts : aucune", () => {
     for (const s of TICKET_STATUSES) {
@@ -55,6 +78,10 @@ describe("décisions permises par statut (P26)", () => {
     assert.equal(allowedDecisionsUpToDate(["refuse", "close"], "in_progress"), true);
     assert.equal(allowedDecisionsUpToDate(["close", "refuse"], "in_progress"), false);
     assert.equal(allowedDecisionsUpToDate(["refuse", "close"], "validated"), false);
+    assert.equal(
+      allowedDecisionsUpToDate(["validate", "refuse", "close", "answer"], "validated", true),
+      false,
+    );
     assert.equal(allowedDecisionsUpToDate(undefined, "refused"), false);
     assert.equal(allowedDecisionsUpToDate([], "refused"), true);
     assert.equal(allowedDecisionsUpToDate(["validate"], "refused"), false);
@@ -84,7 +111,7 @@ function input(
         ? null
         : {
             status: "received",
-            allowedDecisions: ["validate", "refuse", "close", "answer"],
+            allowedDecisions: ["refuse", "close", "answer", "launch_analysis"],
             leaseUntilMs: null,
             issueNumber: 12,
             ...ticket,
@@ -137,6 +164,64 @@ describe("prise d'une décision (transitions)", () => {
         input(
           { action: "validate", text: undefined },
           { status: "validated", allowedDecisions: ["refuse", "close"] },
+        ),
+      ),
+      { kind: "reject", reason: REJECT_NOT_ALLOWED },
+    ));
+
+  it("P42 : received dont la liste stockée (T3) contient validate, Valider rejeté", () =>
+    assert.deepEqual(
+      decisionClaimVerdict(
+        input(
+          { action: "validate", text: undefined },
+          { status: "received", allowedDecisions: ["validate", "refuse", "close", "answer"] },
+        ),
+      ),
+      { kind: "reject", reason: REJECT_NOT_ALLOWED },
+    ));
+
+  it("validated sur GitHub seul : Valider pris ; déjà validé dans l'application : rejeté", () => {
+    assert.deepEqual(
+      decisionClaimVerdict(
+        input(
+          { action: "validate", text: undefined },
+          { status: "validated", allowedDecisions: allowedDecisions("validated") },
+        ),
+      ),
+      { kind: "claim", action: "validate", issueNumber: 12, resumed: false },
+    );
+    assert.deepEqual(
+      decisionClaimVerdict(
+        input(
+          { action: "validate", text: undefined },
+          {
+            status: "validated",
+            allowedDecisions: allowedDecisions("validated"),
+            validatedByAppAt: { seconds: 1 },
+          },
+        ),
+      ),
+      { kind: "reject", reason: REJECT_NOT_ALLOWED },
+    );
+  });
+
+  it("P42 : analyzed, Valider pris", () =>
+    assert.deepEqual(
+      decisionClaimVerdict(
+        input(
+          { action: "validate", text: undefined },
+          { status: "analyzed", allowedDecisions: allowedDecisions("analyzed") },
+        ),
+      ),
+      { kind: "claim", action: "validate", issueNumber: 12, resumed: false },
+    ));
+
+  it("P42 : action absente de la liste stockée mais permise par la règle, rejetée", () =>
+    assert.deepEqual(
+      decisionClaimVerdict(
+        input(
+          { action: "validate", text: undefined },
+          { status: "analyzed", allowedDecisions: ["refuse", "close"] },
         ),
       ),
       { kind: "reject", reason: REJECT_NOT_ALLOWED },

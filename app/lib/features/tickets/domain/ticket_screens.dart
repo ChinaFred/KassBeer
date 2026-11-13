@@ -176,6 +176,7 @@ const _kTicketScreenElements = {
   '/admin/membres/fenetre/inviter': 'Inviter un membre',
   '/admin/tickets/:id/fenetre/decision': 'Refuser ou clore',
   '/admin/tickets/:id/fenetre/reponse': 'Répondre',
+  '/admin/tickets/:id/fenetre/lancement': 'Lancer une session',
 };
 
 /// Élément (menu ou fenêtre) → nom affiché : table fermée.

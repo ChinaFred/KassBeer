@@ -18,12 +18,16 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_analysis.dart';
+import '../domain/ticket_launch.dart';
 import '../domain/ticket_screens.dart';
 import 'admin_tickets_screen.dart';
 import 'bandeau_tickets_admin.dart';
+import 'boite_lancement.dart';
+import 'encadre_avertissement.dart';
 import 'encadre_reponse.dart';
 import 'frise_ticket.dart';
 import 'section_analyses.dart';
+import 'section_lancements.dart';
 import 'ticket_lien_github.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
@@ -60,6 +64,56 @@ const kRelanceEnvoiHorsLigne =
 
 /// « Répondre » hors ligne : le bouton est inactif, cette phrase dit pourquoi.
 const kRepondreHorsLigne = 'Répondre demande le réseau.';
+
+/// Lancement hors ligne : le bouton est inactif, cette phrase dit pourquoi.
+const kLancerHorsLigne = 'Lancer une session demande le réseau.';
+
+/// « Répondre » et un lancement hors ligne : une seule phrase.
+const kRepondreEtLancerHorsLigne =
+    'Répondre et lancer une session demandent le réseau.';
+
+/// Ligne d'un ticket reçu : « Valider » n'est offert que depuis Analysé
+/// (ADR-008, P42).
+const kValiderApresAnalyse =
+    'Valider sera possible une fois le ticket analysé.';
+
+/// Ligne d'un ticket validé par une étiquette posée sur GitHub : le serveur
+/// offre « Valider » à nouveau et réserve « Lancer le développement » à une
+/// validation faite dans l'application (ADR-008, décision du 2026-11-13).
+const kValiderDepuisApplication =
+    'Validé sur GitHub : validez depuis l\'application pour lancer le '
+    'développement.';
+
+/// Boîte « Valider ce ticket ? » d'un ticket à valider.
+const kValiderConfirmation =
+    'L\'étiquette « validé » sera posée sur l\'Issue. Le membre verra '
+    '« Validé ».';
+
+/// Boîte « Valider ce ticket ? » d'un ticket validé sur GitHub seul :
+/// l'étiquette est déjà posée.
+const kValiderConfirmationGithub =
+    'La validation sera enregistrée dans l\'application. « Lancer le '
+    'développement » sera ensuite proposé.';
+
+/// Valider offert par le serveur sur un ticket déjà validé : la validation
+/// vient d'une étiquette posée sur GitHub. Le client lit `allowed_decisions`
+/// et ne recalcule rien.
+bool _valideSurGithub(Ticket ticket) =>
+    ticket.status == TicketStatus.validated &&
+    (ticket.allowedDecisions?.contains(TicketDecisionAction.validate) ?? false);
+
+/// État des lancements d'une fiche, dérivé une fois et lu par la barre et
+/// par la section « Lancements ».
+typedef _EtatLancementsFiche = ({
+  AsyncValue<RechercheDocument<TicketLaunchesDoc>>? lancements,
+  TicketLaunchesDoc? historique,
+  ActionLancement? lancement,
+  EtatLancements? quota,
+  bool appelEnCours,
+  TicketLaunch? enCours,
+  TicketLaunch? aRelancer,
+  ActionLancement? actif,
+});
 
 /// Ligne de la barre pendant la publication d'une réponse, boîte fermée ou
 /// non.
@@ -403,9 +457,10 @@ class _FicheState extends ConsumerState<_Fiche> {
     final ok = await confirmerAction(
       context,
       titre: 'Valider ce ticket ?',
-      paragraphes: const [
-        'L\'étiquette « validé » sera posée sur l\'Issue. Le membre verra '
-            '« Validé ».',
+      paragraphes: [
+        _valideSurGithub(_ticket)
+            ? kValiderConfirmationGithub
+            : kValiderConfirmation,
       ],
       libelle: 'Valider',
     );
@@ -464,6 +519,40 @@ class _FicheState extends ConsumerState<_Fiche> {
         messenger: messenger,
       ),
     );
+  }
+
+  /// Ouvre la boîte de lancement (P39). L'appel part de la boîte et
+  /// continue si elle est fermée : le résultat s'affiche alors dans un
+  /// message de la fiche. Un refus reste affiché dans la boîte.
+  Future<void> _lancer(
+    ActionLancement action, {
+    required DateTime? relanceDe,
+    required EtatLancements? quota,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(lancementFicheProvider(_ticket.id).notifier);
+    Future<ResultatLancement>? enVol;
+    // ticket: /admin/tickets/:id/fenetre/lancement
+    final fin = await showDialog<FinBoiteLancement>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BoiteLancement(
+        action: action,
+        issueNumber: _ticket.issueNumber,
+        quota: quota,
+        relanceDe: relanceDe,
+        envoyer: () => enVol = notifier.lancer(action),
+      ),
+    );
+    var resultat = fin?.resultat;
+    if (fin != null && fin.detache) {
+      final appel = enVol;
+      if (appel == null) return;
+      resultat = await appel;
+    }
+    if (resultat == null) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(resultat.message)));
   }
 
   /// Ce dont une écriture a besoin, lu avant d'ouvrir une boîte : si la
@@ -542,6 +631,12 @@ class _FicheState extends ConsumerState<_Fiche> {
     );
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: scheme.onSurfaceVariant,
+    );
+    final etatLancements = _etatLancements(
+      decisions: decisions,
+      decisionsRead: decisionsAsync.value != null,
+      offline: offline,
+      now: now,
     );
     const gap = SizedBox(height: 16);
     final number = ticket.issueNumber;
@@ -664,6 +759,8 @@ class _FicheState extends ConsumerState<_Fiche> {
       Text(ticket.description, style: theme.textTheme.bodyLarge),
       // Sans Issue, il n'y a rien à analyser.
       if (ticket.issueNumber != null) SectionAnalyses(ticket: ticket),
+      if (ticket.issueNumber != null)
+        SectionLancements(ticket: ticket, lancementActif: etatLancements.actif),
       if (decisionsAsync.value == null && decisionsAsync.hasError) ...[
         gap,
         Semantics(
@@ -713,6 +810,7 @@ class _FicheState extends ConsumerState<_Fiche> {
         decisionsRead: decisionsAsync.value != null,
         offline: offline,
         now: now,
+        etat: etatLancements,
       ),
     };
 
@@ -766,6 +864,90 @@ class _FicheState extends ConsumerState<_Fiche> {
     );
   }
 
+  /// Décision ou réponse en cours : la barre n'affiche aucun bouton.
+  bool _occupe(List<TicketDecision> decisions, DateTime now) {
+    final last = decisions.isEmpty ? null : decisions.first;
+    return (last?.inProgress ?? false) ||
+        _ticket.decisionInProgress(now) ||
+        ref.watch(decisionsFicheProvider(_ticket.id)).reponseEnCours;
+  }
+
+  /// Lancements (ADR-008, T4) : offerts d'après `allowed_decisions` seul
+  /// (P39) ; « en cours » tant que `retry_after` n'est pas passé. `actif` est
+  /// l'action du bouton de lancement de la barre quand il est affiché et
+  /// actif : la section « Lancements » n'invite à appuyer que dans ce cas.
+  _EtatLancementsFiche _etatLancements({
+    required List<TicketDecision> decisions,
+    required bool decisionsRead,
+    required bool offline,
+    required DateTime now,
+  }) {
+    final ticket = _ticket;
+    final lancements = ticket.issueNumber == null
+        ? null
+        : ref.watch(ticketLaunchesProvider(ticket.id));
+    final historique = switch (lancements?.value) {
+      DocumentTrouve(:final value) => value,
+      DocumentAbsent() => const TicketLaunchesDoc(entries: []),
+      _ => null,
+    };
+    ActionLancement? lancement;
+    for (final a in ActionLancement.values) {
+      if (ticket.canLaunch(a) && ticket.issueNumber != null) {
+        lancement = a;
+        break;
+      }
+    }
+    // Le plafond se lit aussi pour un ticket à valider : « Vous pouvez
+    // valider. »
+    final quota =
+        lancement == null &&
+            ticket.status != TicketStatus.analyzed &&
+            !_valideSurGithub(ticket)
+        ? null
+        : switch (ref.watch(launchStatusProvider).value) {
+            DocumentTrouve(:final value) => value,
+            _ => null,
+          };
+    final appelEnCours = ref.watch(lancementFicheProvider(ticket.id));
+    final enCours = lancement == null
+        ? null
+        : historique?.enCours(lancement, now);
+    final aRelancer = lancement == null
+        ? null
+        : historique?.aRelancer(
+            lancement,
+            now,
+            statusChangedAt: ticket.statusChangedAt,
+          );
+    // Le bouton est affiché quand l'historique est lu et rien n'est en cours,
+    // dans une barre qui montre ses boutons (décisions lues, aucune décision
+    // ni réponse en cours, `allowed_decisions` calculé). Il est actif en
+    // ligne, sans appel en cours, plafond du jour non atteint.
+    final actif =
+        lancement != null &&
+            historique != null &&
+            enCours == null &&
+            decisionsRead &&
+            ticket.allowedDecisions != null &&
+            !_occupe(decisions, now) &&
+            !offline &&
+            !appelEnCours &&
+            !(quota?.plafondAtteint ?? false)
+        ? lancement
+        : null;
+    return (
+      lancements: lancements,
+      historique: historique,
+      lancement: lancement,
+      quota: quota,
+      appelEnCours: appelEnCours,
+      enCours: enCours,
+      aRelancer: aRelancer,
+      actif: actif,
+    );
+  }
+
   /// Barre de décision : ligne d'état de la dernière décision, puis les
   /// boutons de `allowed_decisions` (P26). `null` s'il n'y a rien à montrer.
   Widget? _barre(
@@ -774,6 +956,7 @@ class _FicheState extends ConsumerState<_Fiche> {
     required bool decisionsRead,
     required bool offline,
     required DateTime now,
+    required _EtatLancementsFiche etat,
   }) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -788,10 +971,7 @@ class _FicheState extends ConsumerState<_Fiche> {
             ticketLease: ticket.decisionLeaseUntil,
           );
     final reponse = ref.watch(decisionsFicheProvider(ticket.id));
-    final busy =
-        (last?.inProgress ?? false) ||
-        ticket.decisionInProgress(now) ||
-        reponse.reponseEnCours;
+    final busy = _occupe(decisions, now);
     // Pendant une publication, sa ligne passe avant toute ligne sans barre de
     // progression (échec, rejet, hors ligne…) : l'administrateur voit ce qui
     // se passe maintenant.
@@ -826,7 +1006,104 @@ class _FicheState extends ConsumerState<_Fiche> {
     final enAttente = ticket.status == TicketStatus.received
         ? analyses?.pendingAnswerAt
         : null;
-    final repondre = ticket.canAnswer;
+
+    final lancements = etat.lancements;
+    final historique = etat.historique;
+    final lancement = etat.lancement;
+    final valideSurGithub = _valideSurGithub(ticket);
+    final quota = etat.quota;
+    final appelEnCours = etat.appelEnCours;
+    final enCours = etat.enCours;
+    final aRelancer = etat.aRelancer;
+    // Pendant un développement en cours, « Répondre » est masqué (Kass'Dalle).
+    final developpementEnCours =
+        historique?.enCours(ActionLancement.developpement, now) != null;
+    final repondre = ticket.canAnswer && !developpementEnCours;
+
+    // Une seule ligne de lancement, par ordre de priorité. La ligne des
+    // précisions en attente s'affiche en plus, sous elle, sauf pendant un
+    // lancement en cours (`precisionsVisibles`).
+    final enCoursDepuis = enCours?.at;
+    final relanceDe = aRelancer?.at;
+    final ({
+      IconData? icon,
+      String? progress,
+      String text,
+      bool precisionsVisibles,
+    })?
+    ligneLancement = switch (lancement) {
+      null when quota != null && quota.plafondAtteint => (
+        icon: Icons.event_busy,
+        progress: null,
+        text: lignePlafondAnalyse(quota),
+        precisionsVisibles: true,
+      ),
+      null => null,
+      final a when appelEnCours => (
+        icon: null,
+        progress: 'Lancement en cours',
+        text: 'Lancement de ${a.complement} en cours.',
+        precisionsVisibles: false,
+      ),
+      final a when enCours != null => (
+        icon: Icons.hourglass_top,
+        progress: null,
+        text: enCoursDepuis == null
+            ? '${a.nom} en cours.'
+            : ligneEnCours(a, enCoursDepuis, now),
+        precisionsVisibles: false,
+      ),
+      // Plafond avant la relance : il explique le bouton inactif.
+      _ when quota?.plafondAtteint ?? false => (
+        icon: Icons.event_busy,
+        progress: null,
+        text: ligneQuota(quota),
+        precisionsVisibles: true,
+      ),
+      _ when relanceDe != null => (
+        icon: Icons.info_outline,
+        progress: null,
+        text: BoiteLancement.avertissementRelance(relanceDe),
+        precisionsVisibles: true,
+      ),
+      _ => null,
+    };
+
+    // Historique en lecture : une barre de progression à la place du bouton ;
+    // illisible : aucun bouton, la panne est dans la section. Hors ligne, ou
+    // historique absent du cache : pas de barre, la ligne « hors ligne » dit
+    // pourquoi aucun lancement n'est possible.
+    final lectureLancements =
+        lancement != null &&
+        !offline &&
+        historique == null &&
+        !(lancements?.hasError ?? false) &&
+        lancements?.value is! DocumentIllisibleTrouve &&
+        lancements?.value is! DocumentAbsentDuCache;
+    Widget? boutonLancement;
+    if (lancement != null && historique != null && enCours == null) {
+      final action = lancement;
+      // Hors ligne, appel en cours ou plafond atteint le jour écrit par le
+      // serveur : bouton inactif, la ligne de la barre dit pourquoi.
+      final onPressed = etat.actif == null
+          ? null
+          : () => _lancer(action, relanceDe: relanceDe, quota: quota);
+      boutonLancement = relanceDe == null
+          ? FilledButton.icon(
+              onPressed: onPressed,
+              icon: Icon(switch (action) {
+                ActionLancement.analyse => Icons.manage_search,
+                ActionLancement.developpement => Icons.code,
+              }),
+              label: Text('Lancer ${action.complement}'),
+            )
+          : FilledButton.tonalIcon(
+              onPressed: onPressed,
+              icon: const Icon(Icons.refresh),
+              label: Text('Relancer ${action.complement}'),
+            );
+    }
+
     Widget? actions;
     if (!busy && decisionsRead) {
       if (allowed == null) {
@@ -837,7 +1114,7 @@ class _FicheState extends ConsumerState<_Fiche> {
             color: scheme.onSurfaceVariant,
           ),
         );
-      } else if (allowed.isNotEmpty || repondre) {
+      } else if (allowed.isNotEmpty || repondre || lancement != null) {
         final boutons = OverflowBar(
           alignment: MainAxisAlignment.end,
           overflowAlignment: OverflowBarAlignment.end,
@@ -871,12 +1148,57 @@ class _FicheState extends ConsumerState<_Fiche> {
                 icon: const Icon(Icons.thumb_up_alt_outlined),
                 label: const Text('Valider'),
               ),
+            ?boutonLancement,
           ],
         );
+        // Un lancement offert par le serveur, hors ligne : la ligne s'affiche
+        // aussi quand l'historique, absent du cache, retient le bouton.
+        final lancerHorsLigne = offline && lancement != null && enCours == null;
+        // La ligne des précisions reste sous la ligne du plafond ou de la
+        // relance ; seul un lancement en cours la masque.
+        final lignePrecisions =
+            enAttente != null &&
+            (ligneLancement == null || ligneLancement.precisionsVisibles);
+        final horsLigne = switch ((repondre && offline, lancerHorsLigne)) {
+          (true, true) => kRepondreEtLancerHorsLigne,
+          (true, false) => kRepondreHorsLigne,
+          (false, true) => kLancerHorsLigne,
+          (false, false) => null,
+        };
         actions = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (enAttente != null) ...[
+            if (ligneLancement case final l?) ...[
+              Semantics(
+                liveRegion: true,
+                container: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (l.progress case final label?) ...[
+                      LinearProgressIndicator(semanticsLabel: label),
+                      const SizedBox(height: 8),
+                    ],
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (l.icon case final icon?) ...[
+                          ExcludeSemantics(
+                            child: Icon(icon, color: scheme.onSurface),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: Text(l.text, style: theme.textTheme.bodyLarge),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (lignePrecisions) ...[
               Text(
                 'Vos précisions du ${formatDateChiffres(enAttente)} à '
                 '${formatHeure(enAttente)} seront lues par la prochaine '
@@ -885,8 +1207,35 @@ class _FicheState extends ConsumerState<_Fiche> {
               ),
               const SizedBox(height: 8),
             ],
+            if (lectureLancements) ...[
+              const LinearProgressIndicator(
+                semanticsLabel: 'Lecture des lancements',
+              ),
+              const SizedBox(height: 8),
+            ],
             boutons,
-            if (repondre && offline) ...[
+            if (ticket.status == TicketStatus.received &&
+                !allowed.contains(TicketDecisionAction.validate)) ...[
+              const SizedBox(height: 8),
+              Text(
+                kValiderApresAnalyse,
+                textAlign: TextAlign.end,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (valideSurGithub) ...[
+              const SizedBox(height: 8),
+              Text(
+                kValiderDepuisApplication,
+                textAlign: TextAlign.end,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (horsLigne != null) ...[
               const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -896,10 +1245,7 @@ class _FicheState extends ConsumerState<_Fiche> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      kRepondreHorsLigne,
-                      style: theme.textTheme.bodyLarge,
-                    ),
+                    child: Text(horsLigne, style: theme.textTheme.bodyLarge),
                   ),
                 ],
               ),
@@ -909,68 +1255,77 @@ class _FicheState extends ConsumerState<_Fiche> {
       }
     }
     if (ligne == null && actions == null) return null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (ligne case final l?)
-          Semantics(
-            liveRegion: true,
-            container: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (l.progress case final label?) ...[
-                  LinearProgressIndicator(semanticsLabel: label),
-                  const SizedBox(height: 8),
-                ],
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (l.icon case final icon?) ...[
-                      ExcludeSemantics(
-                        child: Icon(
-                          icon,
-                          color: l.error ? scheme.error : scheme.onSurface,
+    // À l'échéance d'un lancement en cours, la barre se redessine et propose
+    // « Relancer » ou rend « Répondre ».
+    final echeances = [
+      ?enCours?.retryAfter,
+      ?historique?.enCours(ActionLancement.developpement, now)?.retryAfter,
+    ]..sort();
+    return ReconstruireA(
+      instant: echeances.isEmpty ? null : echeances.first,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (ligne case final l?)
+            Semantics(
+              liveRegion: true,
+              container: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (l.progress case final label?) ...[
+                    LinearProgressIndicator(semanticsLabel: label),
+                    const SizedBox(height: 8),
+                  ],
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (l.icon case final icon?) ...[
+                        ExcludeSemantics(
+                          child: Icon(
+                            icon,
+                            color: l.error ? scheme.error : scheme.onSurface,
+                          ),
                         ),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(
+                        child: Text(l.text, style: theme.textTheme.bodyLarge),
                       ),
-                      const SizedBox(width: 8),
                     ],
-                    Expanded(
-                      child: Text(l.text, style: theme.textTheme.bodyLarge),
+                  ),
+                  if (l.retry && last != null) ...[
+                    const SizedBox(height: 8),
+                    Text(kApresEchec, style: theme.textTheme.bodyLarge),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: FilledButton.tonalIcon(
+                        onPressed: _relanceDecision
+                            ? null
+                            : () => _relancer(
+                                () => ref
+                                    .read(ticketsRepositoryProvider)
+                                    .retryDecision(
+                                      ticketId: ticket.id,
+                                      decisionId: last.id,
+                                    ),
+                                (v) => _relanceDecision = v,
+                              ),
+                        icon: const Icon(Icons.refresh),
+                        label: _relanceDecision
+                            ? const IndicateurBouton(label: 'Relance en cours')
+                            : const Text('Réessayer'),
+                      ),
                     ),
                   ],
-                ),
-                if (l.retry && last != null) ...[
-                  const SizedBox(height: 8),
-                  Text(kApresEchec, style: theme.textTheme.bodyLarge),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: FilledButton.tonalIcon(
-                      onPressed: _relanceDecision
-                          ? null
-                          : () => _relancer(
-                              () => ref
-                                  .read(ticketsRepositoryProvider)
-                                  .retryDecision(
-                                    ticketId: ticket.id,
-                                    decisionId: last.id,
-                                  ),
-                              (v) => _relanceDecision = v,
-                            ),
-                      icon: const Icon(Icons.refresh),
-                      label: _relanceDecision
-                          ? const IndicateurBouton(label: 'Relance en cours')
-                          : const Text('Réessayer'),
-                    ),
-                  ),
                 ],
-              ],
+              ),
             ),
-          ),
-        if (ligne != null && actions != null) const SizedBox(height: 12),
-        ?actions,
-      ],
+          if (ligne != null && actions != null) const SizedBox(height: 12),
+          ?actions,
+        ],
+      ),
     );
   }
 }
@@ -1107,7 +1462,6 @@ class _FormulaireDecisionState extends State<FormulaireDecision> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     return Form(
       key: _formKey,
       child: Column(
@@ -1122,31 +1476,9 @@ class _FormulaireDecisionState extends State<FormulaireDecision> {
             ),
           ),
           const SizedBox(height: 16),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ExcludeSemantics(
-                    child: Icon(Icons.public, color: scheme.onSurface),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      FormulaireDecision.publicWarning,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          const EncadreAvertissement(
+            icone: Icons.public,
+            texte: FormulaireDecision.publicWarning,
           ),
           if (!_refus) ...[
             const SizedBox(height: 12),
@@ -1342,31 +1674,9 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
             ),
           ],
           const SizedBox(height: 16),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ExcludeSemantics(
-                    child: Icon(Icons.public, color: scheme.onSurface),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      FormulaireReponse.publicWarning,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          const EncadreAvertissement(
+            icone: Icons.public,
+            texte: FormulaireReponse.publicWarning,
           ),
           const SizedBox(height: 12),
           Text(

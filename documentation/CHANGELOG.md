@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-13
 
-### v0.1.36 — fonctionnel
+### v0.1.37 — fonctionnel
 
 Sur la fiche d'un brassin, le déroulé compare le prévu et le réel. Dès qu'une étape a un début
 et une fin, sa ligne donne la durée prévue, la durée réelle et l'écart : « prévu 45 min · réel
@@ -20,7 +20,7 @@ leur durée réelle diffère de celle du processus. Pour un houblonnage à cru f
 journées, vous choisissez la durée d'une des journées. Seules ces durées changent, et vos
 brassins gardent leur déroulé. Pendant 10 secondes, « Annuler » rétablit les durées d'avant.
 
-### v0.1.36 — technique
+### v0.1.37 — technique
 
 Suite d'ADR-010 : prévu et réel. `brewing/` gagne `actualDurations` (durée réelle d'une étape :
 fin retenue moins début retenu de `StepRecord`, jamais `ScheduledStep.end`, arrondie à la minute
@@ -35,6 +35,35 @@ pas ; textes dans `libelles_deroule.dart`. « Mettre à jour mon processus avec 
 `erreurModele`, sans transaction ; seul `duration_min` des étapes choisies change. Un élément de
 ticket ajouté (`/brassins/:id/fenetre/maj-processus`). Tests : `app/test/prevu_reel_test.dart`.
 Les règles d'accès et les dépendances ne changent pas.
+
+### v0.1.36 — fonctionnel
+
+L'administrateur peut lancer depuis la fiche d'un ticket une session Claude Code qui analyse la
+demande, puis, une fois le ticket validé, une session qui en écrit le code. Chaque lancement passe
+par une boîte de confirmation qui affiche les lancements restants du jour. La fiche garde
+l'historique des lancements avec le lien vers chaque session. « Valider » n'est plus proposé
+qu'une fois le ticket analysé. Le développement ne se lance que pour un ticket validé depuis
+l'application : un ticket validé sur GitHub propose de nouveau « Valider ».
+
+### v0.1.36 — technique
+
+Lot T4 d'ADR-008. Callables `launchTicketAnalysis` et `launchTicketDevelopment` (`requireAdmin`,
+1 instance, 120 s) ; `routine.ts` appelle l'API Routines de Claude Code par `fetch` seul, corps
+`analyse #N` ou `developpement #N`, sans redirection, 30 s, jamais rejoué ; secrets
+`TICKETS_ROUTINE_ANALYSIS_ID`/`_TOKEN` et `TICKETS_ROUTINE_DEV_ID`/`_TOKEN`, chacun monté par sa
+seule fonction. Premier poste de coût : `ticket_routine_launch`, plafond `LAUNCHES_PER_DAY` = 10 par
+jour de Paris, compté avant l'appel dans `ticket_quotas/launch_{AAAAMMJJ}`, affiché par
+`ticket_status/launches` ; historique `tickets/{id}/admin/launches`. `allowed_decisions` :
+`launch_analysis` et `launch_development`, `validate` seulement depuis `analyzed`, revérifié au
+serveur (version de report 4) ; `launch_development` exige un « Valider » fait dans l'application
+(`validated_by_app_at`), une étiquette `validé` posée sur GitHub ne suffit pas (décision de
+l'utilisateur du 2026-11-13). `syncTickets` passe de `every 60 minutes` à `0 * * * *` (Europe/Paris)
+pour suivre le jour de Paris du compteur. Prompts des deux routines dans `exigences-techniques.md`,
+à recoller sur claude.ai : arrêt si `GIT_COMMITTER_IDENT` n'est pas `noreply`, fichiers sensibles
+étendus à `ingest/` et aux fichiers de construction Android, liste fermée des appels GitHub de
+l'analyse (décisions de l'utilisateur du 2026-11-13). `ci.yml` et `deploy.yml` : liste fermée étendue aux deux callables, contrôle
+des secrets par fonction ajouté à la CI. Contrôles P14, P23 et P25 modifiés, P35, P36 et P39 à P42 ajoutés. Aucun
+paquet ajouté ; `main.dart.js` passe de 5 125 522 à 5 159 200 octets (+ 0,7 %).
 
 ### v0.1.35 — fonctionnel
 

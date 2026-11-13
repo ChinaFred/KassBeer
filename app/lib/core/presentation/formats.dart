@@ -188,6 +188,10 @@ String formatDateLongue(DateTime when) =>
     '${when.day == 1 ? '1er' : when.day} ${_moisComplets[when.month - 1]} '
     '${when.year}';
 
+/// Mois et année : « novembre 2026 ». [mois] de 1 à 12.
+String formatMoisAnnee(int annee, int mois) =>
+    '${_moisComplets[mois - 1]} $annee';
+
 /// Écart signé, sans couleur : « +2,0 pts », « −3,0 pts », « 0,0 pts ».
 String formatEcart(double ecart, {String unite = 'pts'}) {
   final texte = formatNombre(ecart.abs(), decimales: 1, fixe: true);

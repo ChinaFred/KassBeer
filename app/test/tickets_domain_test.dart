@@ -5,6 +5,7 @@ import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/etiquette.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
 import 'package:kass_beer/features/tickets/presentation/bandeau_tickets_admin.dart';
 import 'package:kass_beer/features/tickets/presentation/ticket_lien_github.dart';
 import 'package:kass_beer/features/tickets/presentation/ticket_statut.dart';
@@ -257,10 +258,13 @@ void main() {
   group('bandeau Admin', () {
     List<MessageBandeau> messages({
       RechercheDocument<EtatJetonGithub>? status,
+      AsyncValue<RechercheDocument<EtatLancements>> launches =
+          const AsyncLoading(),
       List<Ticket> notSent = const [],
       List<Ticket> missing = const [],
     }) => messagesBandeauTickets(
       status: status == null ? const AsyncLoading() : AsyncData(status),
+      launches: launches,
       tickets: AsyncData(
         ListeLue(
           documents: [
@@ -379,10 +383,65 @@ void main() {
     test('liste illisible : panne annoncée', () {
       final m = messagesBandeauTickets(
         status: const AsyncData(DocumentAbsent()),
+        launches: const AsyncData(DocumentAbsent()),
         tickets: AsyncError(StateError('refusé'), StackTrace.empty),
         now: now,
       );
       expect(m.single.text, 'Impossible de compter les tickets bloqués.');
+    });
+
+    test('routines : jetons refusés, en ton d\'erreur', () {
+      final m = messages(
+        status: const DocumentAbsent(),
+        launches: AsyncData(
+          DocumentTrouve(
+            EtatLancements(
+              day: '20261108',
+              countDay: 10,
+              perDay: 10,
+              analysisInvalidSince: DateTime(2026, 11, 7),
+              developmentInvalidSince: DateTime(2026, 11, 6),
+            ),
+          ),
+        ),
+      );
+      expect(m.map((e) => e.text), [
+        'Jeton de la routine d\'analyse refusé depuis le 07/11/26. '
+            'Remplacez-le dans Secret Manager.',
+        'Jeton de la routine de développement refusé depuis le 06/11/26. '
+            'Remplacez-le dans Secret Manager.',
+      ]);
+      expect(m.every((e) => e.error), isTrue);
+    });
+
+    test('routines : plafond atteint sans ligne, pannes annoncées', () {
+      expect(
+        messages(
+          status: const DocumentAbsent(),
+          launches: const AsyncData(
+            DocumentTrouve(
+              EtatLancements(day: '20261108', countDay: 10, perDay: 10),
+            ),
+          ),
+        ),
+        isEmpty,
+      );
+      expect(
+        messages(
+          status: const DocumentAbsent(),
+          launches: AsyncError(StateError('refusé'), StackTrace.empty),
+        ).single,
+        (text: 'Impossible de lire l\'état des lancements.', error: true),
+      );
+      expect(
+        messages(
+          status: const DocumentAbsent(),
+          launches: const AsyncData(
+            DocumentIllisibleTrouve(DocumentIllisible('day', 'mal formé')),
+          ),
+        ).single,
+        (text: 'État des lancements illisible.', error: true),
+      );
     });
   });
 }

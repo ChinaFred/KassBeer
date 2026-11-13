@@ -15,6 +15,7 @@ import '../../../core/router/routes.dart';
 import '../domain/ticket.dart';
 import 'admin_ticket_screen.dart';
 import 'bandeau_tickets_admin.dart';
+import 'section_lancements.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
 
@@ -230,6 +231,7 @@ class _PanneauListe extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const CompteurLancements(),
         _Filtres(
           filtre: filtre,
           toProcess: list == null ? null : toProcess,
@@ -461,6 +463,7 @@ class _Ligne extends StatelessWidget {
             Text(meta),
             EtiquetteStatut(ticket: ticket),
             ...pastillesAdmin(ticket, now),
+            PastilleLancement(ticket: ticket),
           ],
         ),
       ),

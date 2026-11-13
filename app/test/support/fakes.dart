@@ -36,6 +36,7 @@ import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
 import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
 import 'package:kass_beer/features/tickets/presentation/tickets_providers.dart';
 
 import 'cost_fakes.dart';
@@ -971,6 +972,8 @@ class FakeTicketsRepository implements TicketsRepository {
     issueMissingSince: t.issueMissingSince,
     allowedDecisions: t.allowedDecisions,
     canAnswer: t.canAnswer,
+    canLaunchAnalysis: t.canLaunchAnalysis,
+    canLaunchDevelopment: t.canLaunchDevelopment,
     decisionLeaseUntil: t.decisionLeaseUntil,
     retryRequestedAt: t.retryRequestedAt,
     hasPendingWrites: true,
@@ -1000,6 +1003,46 @@ class FakeTicketsRepository implements TicketsRepository {
   }) {
     answers.add((ticketId: ticketId, answer: answer));
     return answerResult();
+  }
+
+  /// Historique des lancements par ticket : absent par défaut (aucun
+  /// lancement). Un test qui veut la lecture en cours place un [Replay] vide
+  /// avant d'ouvrir la fiche.
+  final launchHistories =
+      <String, Replay<RechercheDocument<TicketLaunchesDoc>>>{};
+
+  /// `ticket_status/launches` : absent par défaut.
+  final launchStatus = Replay<RechercheDocument<EtatLancements>>()
+    ..add(const DocumentAbsent());
+
+  Replay<RechercheDocument<TicketLaunchesDoc>> launchesOf(String ticketId) =>
+      launchHistories.putIfAbsent(
+        ticketId,
+        () => Replay()..add(const DocumentAbsent()),
+      );
+
+  @override
+  Stream<RechercheDocument<TicketLaunchesDoc>> watchLaunches(String ticketId) =>
+      launchesOf(ticketId).stream;
+
+  @override
+  Stream<RechercheDocument<EtatLancements>> watchLaunchStatus() =>
+      launchStatus.stream;
+
+  /// Lancements demandés : ticket et action.
+  final launches = <({String ticketId, ActionLancement action})>[];
+
+  /// Réponse du serveur à un lancement ; jamais terminée par défaut.
+  Future<ResultatLancement> Function() launchResult = () =>
+      Completer<ResultatLancement>().future;
+
+  @override
+  Future<ResultatLancement> launch({
+    required String ticketId,
+    required ActionLancement action,
+  }) {
+    launches.add((ticketId: ticketId, action: action));
+    return launchResult();
   }
 }
 

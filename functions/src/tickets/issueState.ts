@@ -16,7 +16,12 @@ import {
 import { firestore } from "../firestore";
 import { logError, logInfo } from "../logging";
 import { writeTicketAnalyses } from "./analyses";
-import { allowedDecisions, allowedDecisionsUpToDate } from "./decisionModel";
+import {
+  allowedDecisions,
+  allowedDecisionsUpToDate,
+  isValidatedByApp,
+  keepsAppValidation,
+} from "./decisionModel";
 import { GithubError, type GithubClient } from "./github";
 import {
   closingCommitFromEvents,
@@ -97,9 +102,17 @@ export async function applyIssue(
     update.status = next;
     update.status_changed_at = now;
   }
+  // Une validation de l'application ne survit pas à un statut hors `validated` et
+  // `in_progress`, ni un champ resté posé sur un ticket qui n'était pas validé : un `validé`
+  // reposé plus tard sur GitHub ne permet pas de lancer.
+  const byApp =
+    keepsAppValidation(current) &&
+    keepsAppValidation(next) &&
+    isValidatedByApp(data.validated_by_app_at);
+  if (!byApp && isValidatedByApp(data.validated_by_app_at)) update.validated_by_app_at = null;
   // Réécrit à chaque changement de statut, et posé sur un ticket qui ne l'a pas (T2).
-  if (next !== current || !allowedDecisionsUpToDate(data.allowed_decisions, next)) {
-    update.allowed_decisions = allowedDecisions(next);
+  if (next !== current || !allowedDecisionsUpToDate(data.allowed_decisions, next, byApp)) {
+    update.allowed_decisions = allowedDecisions(next, byApp);
   }
   if (data.issue_missing_since != null) update.issue_missing_since = FieldValue.delete();
 
@@ -149,6 +162,7 @@ export async function applyIssue(
     const out: Record<string, unknown> = { ...update };
     delete out.status;
     delete out.allowed_decisions;
+    delete out.validated_by_app_at;
     if (freshCurrent !== current || freshNext !== next) {
       for (const k of Object.keys(out)) if (k.startsWith("delivered_")) delete out[k];
       if (out.status_changed_at !== undefined && out.reply_text === undefined) {
@@ -159,8 +173,16 @@ export async function applyIssue(
       out.status = freshNext;
       out.status_changed_at = now;
     }
-    if (freshNext !== freshCurrent || !allowedDecisionsUpToDate(f.allowed_decisions, freshNext)) {
-      out.allowed_decisions = allowedDecisions(freshNext);
+    const freshByApp =
+      keepsAppValidation(freshCurrent) &&
+      keepsAppValidation(freshNext) &&
+      isValidatedByApp(f.validated_by_app_at);
+    if (!freshByApp && isValidatedByApp(f.validated_by_app_at)) out.validated_by_app_at = null;
+    if (
+      freshNext !== freshCurrent ||
+      !allowedDecisionsUpToDate(f.allowed_decisions, freshNext, freshByApp)
+    ) {
+      out.allowed_decisions = allowedDecisions(freshNext, freshByApp);
     }
     tx.update(doc.ref, out);
     return { from: freshCurrent, to: freshNext };
