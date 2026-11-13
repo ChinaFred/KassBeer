@@ -175,6 +175,12 @@ lire la recette figée d'un brassin (`recipe.brewSteps`, `recipe.brewStepsProble
 d'une nouvelle résolution avant le départ : `assemblerDeroule` et l'aperçu « Chronologie de la
 recette seule » par `Deroule.depuisRecette`. Toute autre lecture passe par `Brew.deroule`.
 
+Le 2026-11-13, avec l'accord de l'utilisateur, P3 est complété : les durées réelles d'étape et
+de journée et leur écart avec le prévu se calculent dans `brewing/` (`actualDurations`,
+`durationUpdateIssue`), et leur changement ajoute d'abord un cas à
+`brewing/test/fixtures/process.json`. La fiche d'un brassin et « Mettre à jour mon processus
+avec ce brassin » (v0.1.37) n'en font que l'affichage.
+
 Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
 tickets avec Kass'Dalle, lots T3 à T7.
 

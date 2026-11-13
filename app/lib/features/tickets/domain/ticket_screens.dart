@@ -143,6 +143,7 @@ const _kTicketScreenElements = {
   '/brassins/:id/fenetre/prix': 'Prix d\'un ingrédient',
   '/brassins/:id/fenetre/reprendre': 'Reprendre un prix',
   '/brassins/:id/fenetre/processus': 'Changer de processus',
+  '/brassins/:id/fenetre/maj-processus': 'Mettre à jour mon processus',
   '/brassins/:id/menu/journee': 'Actions d\'une journée',
   '/brassins/:id/fenetre/ecart': 'Écart d\'une journée',
   '/brassins/:id/jour/menu/actions': 'Plus d\'actions',

@@ -199,6 +199,125 @@ void main() {
     }
   });
 
+  group('prévu et réel d\'une journée', () {
+    final durations = fixture['actual_durations'] as Map<String, Object?>;
+    for (final c in objects(durations['cases'])) {
+      test(label(c), () {
+        final steps = [
+          for (final s in objects(c['steps']))
+            PlannedStep(
+              id: s['id'] as String,
+              duration: Duration(
+                seconds: (number(s['planned_minutes']) * 60).round(),
+              ),
+            ),
+        ];
+        final events = [
+          for (final e in objects(c['events']))
+            StepEvent(
+              id: e['id'] as String,
+              kind: StepEventKind.fromStored(e['kind'] as String),
+              stepKey: e['step'] as String,
+              measuredAt: DateTime.parse(e['at'] as String),
+            ),
+        ];
+        final now = DateTime.parse(c['now'] as String);
+        final records = stepRecordsFromEvents(
+          steps: steps,
+          events: events,
+        ).records;
+        DateTime? firstStart;
+        for (final r in records) {
+          final s = r.startedAt;
+          if (s != null && (firstStart == null || s.isBefore(firstStart))) {
+            firstStart = s;
+          }
+        }
+        final schedule = recomputeSchedule(
+          steps: steps,
+          plannedStart: firstStart ?? now,
+          records: records,
+          now: now,
+        );
+        final byId = {for (final r in records) r.stepId: r};
+        final result = actualDurations(
+          steps: [
+            for (final (i, s) in steps.indexed)
+              StepTiming(
+                planned: s.duration,
+                status: schedule[i].status,
+                record: byId[s.id],
+              ),
+          ],
+          dayClosed: c['day_closed'] as bool? ?? false,
+        );
+
+        final expected = c['expected'] as Map<String, Object?>;
+        final expectedSteps = objects(expected['steps']);
+        expect(result.steps.length, expectedSteps.length);
+        for (final (i, e) in expectedSteps.indexed) {
+          final s = result.steps[i];
+          final at = 'étape ${steps[i].id}';
+          expect(s.kind.name, e['kind'], reason: at);
+          expect(s.plannedMinutes, e['planned'], reason: at);
+          expect(s.actualMinutes, e['actual'], reason: at);
+          expect(s.deltaMinutes, e['delta'], reason: at);
+        }
+        final day = expected['day'] as Map<String, Object?>;
+        expect(result.kind.name, day['kind'], reason: 'journée');
+        expect(result.plannedMinutes, day['planned'], reason: 'prévu');
+        expect(result.actualMinutes, day['actual'], reason: 'réel');
+        expect(result.betweenStepsMinutes, day['between'], reason: 'entre');
+        expect(result.deltaMinutes, day['delta'], reason: 'écart');
+        expect(result.stepsWithoutEnd, day['without_end'], reason: 'sans fin');
+      });
+    }
+
+    test('étape faite sans début refusée', () {
+      expectInvalid(
+        () => actualDurations(
+          steps: [
+            StepTiming(
+              planned: const Duration(minutes: 5),
+              status: StepStatus.done,
+            ),
+          ],
+        ),
+        'faite sans début',
+      );
+      expectInvalid(
+        () => StepTiming(
+          planned: const Duration(minutes: -1),
+          status: StepStatus.pending,
+        ),
+        'prévu négatif',
+      );
+    });
+  });
+
+  test('durée réelle proposée pour une étape de modèle', () {
+    final updates = fixture['duration_updates'] as Map<String, Object?>;
+    for (final c in objects(updates['cases'])) {
+      final issue = durationUpdateIssue(
+        actual: ActualStepDuration(
+          kind: ActualStepKind.values.byName(c['kind'] as String),
+          plannedMinutes: 0,
+          actualMinutes: c['actual'] as int?,
+        ),
+        currentMinutes: number(c['current_minutes']),
+      );
+      expect(issue?.name, c['issue'], reason: label(c));
+    }
+    for (final c in objects(updates['rounded_step_minutes'])) {
+      expect(
+        roundedStepMinutes(number(c['minutes'])),
+        c['expected'],
+        reason: '${c['minutes']}',
+      );
+    }
+    expectInvalid(() => roundedStepMinutes(-1), 'durée négative');
+  });
+
   test('date d\'une journée, inverse du numéro de jour', () {
     for (final c in objects(fixture['session_dates'])) {
       final start = DateTime.parse(c['start'] as String);

@@ -1,10 +1,18 @@
 {
   "versions": [
     {
+      "version": "0.1.37",
+      "date": "2026-11-13",
+      "paragraphs": [
+        "Sur la fiche d'un brassin, le déroulé compare le prévu et le réel. Dès qu'une étape a un début et une fin, sa ligne donne la durée prévue, la durée réelle et l'écart : « prévu 45 min · réel 57 min · +12 min ». Une étape sautée, en cours ou restée sans heure de fin le dit. Chaque journée commencée affiche sa durée totale prévue et réelle, avec le temps passé entre les étapes. L'écran du jour ne change pas.",
+        "Après le brassage, « Mettre à jour mon processus avec ce brassin » reprend dans votre processus les durées réelles que vous cochez. Seules les étapes venues du processus se proposent, quand leur durée réelle diffère de celle du processus. Pour un houblonnage à cru fait sur plusieurs journées, vous choisissez la durée d'une des journées. Seules ces durées changent, et vos brassins gardent leur déroulé. Pendant 10 secondes, « Annuler » rétablit les durées d'avant."
+      ]
+    },
+    {
       "version": "0.1.36",
       "date": "2026-11-13",
       "paragraphs": [
-        "L'administrateur peut lancer depuis la fiche d'un ticket une session Claude Code qui analyse la demande, puis, une fois le ticket validé, une session qui en écrit le code. Chaque lancement passe par une boîte de confirmation qui affiche les lancements restants du jour. La fiche garde l'historique des lancements avec le lien vers chaque session. « Valider » n'est plus proposé qu'une fois le ticket analysé."
+        "L'administrateur peut lancer depuis la fiche d'un ticket une session Claude Code qui analyse la demande, puis, une fois le ticket validé, une session qui en écrit le code. Chaque lancement passe par une boîte de confirmation qui affiche les lancements restants du jour. La fiche garde l'historique des lancements avec le lien vers chaque session. « Valider » n'est plus proposé qu'une fois le ticket analysé. Le développement ne se lance que pour un ticket validé depuis l'application : un ticket validé sur GitHub propose de nouveau « Valider »."
       ]
     },
     {
@@ -37,13 +45,6 @@
       "date": "2026-11-12",
       "paragraphs": [
         "Le suivi d'un ticket a une nouvelle étape, « Analysé », entre « Reçu » et « Validé » : votre demande a été lue et étudiée. L'administrateur lit maintenant dans la fiche d'un ticket les analyses publiées sur sa page GitHub, et peut y répondre depuis l'application avec le bouton « Répondre ». Sa réponse ramène le ticket à « Reçu » pour une nouvelle analyse."
-      ]
-    },
-    {
-      "version": "0.1.29",
-      "date": "2026-11-11",
-      "paragraphs": [
-        "Le menu du compte propose « Préférences ». On y choisit le thème de l'application : clair, sombre, ou comme l'appareil. Le changement est immédiat et reste enregistré sur l'appareil utilisé ; chaque téléphone ou navigateur garde son propre choix. Par défaut, l'application suit le réglage de l'appareil, comme avant. Demandé par le ticket #25."
       ]
     }
   ]

@@ -84,6 +84,19 @@ class PlanDuJour {
   bool get commencee =>
       lignes.any((l) => l.record != null || l.mesures.isNotEmpty);
 
+  /// Prévu et réel de la journée et de chaque étape, dans l'ordre de [lignes],
+  /// calculés par `brewing/` (P3) à partir des heures enregistrées. [close] :
+  /// la journée est close (voir [journeeClose]) ; une étape restée en cours y
+  /// est sans heure de fin. Lève `BrewingInputException` pour une étape faite
+  /// sans début.
+  ActualDayDuration durees({required bool close}) => actualDurations(
+    steps: [
+      for (final l in lignes)
+        StepTiming(planned: l.duree, status: l.status, record: l.record),
+    ],
+    dayClosed: close,
+  );
+
   /// Étape à venir après [ligne], ou `null`.
   LigneJour? suivanteDe(LigneJour ligne) {
     for (final l in lignes) {
@@ -259,6 +272,24 @@ bool journeeTerminee({
 }) {
   if (journee.role == RoleJournee.embouteillage) return brew.bottledAt != null;
   return plan != null && plan.enCours == null && plan.prochaine == null;
+}
+
+/// Vrai si [journee] de [brew] est close pour le prévu et réel de la fiche :
+/// la journée de brassage une fois le brassage terminé (statut après « En
+/// cours ») ; une autre journée terminée ([journeeTerminee]), ou un brassin
+/// terminé ou abandonné.
+bool journeeClose({
+  required Brew brew,
+  required JourneeDeroulee journee,
+  required PlanDuJour? plan,
+}) {
+  if (journee.role == RoleJournee.brassage) {
+    return brew.status != BrewStatus.planned &&
+        brew.status != BrewStatus.brewing;
+  }
+  return brew.status == BrewStatus.done ||
+      brew.status == BrewStatus.abandoned ||
+      journeeTerminee(brew: brew, journee: journee, plan: plan);
 }
 
 String _nomEtape(List<BrewStepLine> steps, String key) {

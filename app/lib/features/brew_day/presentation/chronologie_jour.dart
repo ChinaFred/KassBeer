@@ -1,5 +1,11 @@
 import 'package:brewing/brewing.dart'
-    show BrewingInputException, StepEvent, StepStatus;
+    show
+        ActualDayDuration,
+        ActualDayKind,
+        ActualStepDuration,
+        BrewingInputException,
+        StepEvent,
+        StepStatus;
 import 'package:flutter/material.dart';
 
 import '../../../core/presentation/formats.dart';
@@ -87,6 +93,54 @@ PlanEvalue evaluerPlan({
   }
 }
 
+/// Prévu et réel de la journée [journee] de [brew], d'après [plan] (fiche
+/// seule) ; `null` tant qu'aucune étape n'a début et fin. Un refus de
+/// `brewing/` est rapporté une fois ([reported]) et rend `null` : les lignes
+/// gardent leur durée prévue.
+ActualDayDuration? evaluerDurees({
+  required Brew brew,
+  required JourneeDeroulee journee,
+  required PlanDuJour plan,
+  required ErrorReportService errors,
+  required Set<String> reported,
+}) {
+  try {
+    final durees = plan.durees(
+      close: journeeClose(brew: brew, journee: journee, plan: plan),
+    );
+    return durees.kind == ActualDayKind.none ? null : durees;
+  } on BrewingInputException catch (error, stackTrace) {
+    if (reported.add('${brew.id}|durees|${journee.key}|${error.field}')) {
+      errors.reportError(
+        feature: 'brews.actual_durations',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'brews/${brew.id} : durées réelles refusées ${error.field}',
+      );
+    }
+    return null;
+  }
+}
+
+/// Prévu et réel de chaque journée de [brew] dont une étape a début et fin, par
+/// clé de journée, d'après [plans] (plan de chaque journée, même clé).
+Map<String, ActualDayDuration> dureesDesJournees({
+  required Brew brew,
+  required Map<String, PlanEvalue> plans,
+  required ErrorReportService errors,
+  required Set<String> reported,
+}) => {
+  for (final j in brew.deroule.journees)
+    if (plans[j.key] case PlanObtenu(:final plan))
+      j.key: ?evaluerDurees(
+        brew: brew,
+        journee: j,
+        plan: plan,
+        errors: errors,
+        reported: reported,
+      ),
+};
+
 /// Texte de l'état d'une étape, jamais la couleur seule.
 String libelleEtat(StepStatus status) => switch (status) {
   StepStatus.done => 'Terminée',
@@ -139,9 +193,15 @@ class ChronologieJour extends StatelessWidget {
     this.onTapSaisie,
     this.onSupprimerDoublon,
     this.sansEtape = true,
+    this.durees,
   });
 
   final PlanDuJour plan;
+
+  /// Prévu et réel de la journée ([evaluerDurees]), sur la fiche seule ; nul
+  /// sur l'écran du jour et tant qu'aucune étape n'a début et fin : chaque
+  /// ligne garde sa durée prévue.
+  final ActualDayDuration? durees;
 
   /// Affiche les mesures « Sans étape ». Faux sur la fiche pour une journée 2 ou
   /// suivante : ces mesures sont des relevés, déjà dans le relevé de
@@ -159,6 +219,10 @@ class ChronologieJour extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textSize = StylesJourDeBrassage.of(context).chronologie;
+    final etapes = durees?.steps;
+    final reelles = etapes != null && etapes.length == plan.lignes.length
+        ? etapes
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -172,10 +236,11 @@ class ChronologieJour extends StatelessWidget {
               style: TextStyle(color: theme.colorScheme.error),
             ),
           ),
-        for (final l in plan.lignes) ...[
+        for (final (i, l) in plan.lignes.indexed) ...[
           _Ligne(
             ligne: l,
             heure: heureDeLigne(l, plan),
+            reelle: reelles?[i],
             textSize: textSize,
             onTap: onTapLigne == null ? null : () => onTapLigne!(l),
           ),
@@ -212,12 +277,16 @@ class _Ligne extends StatelessWidget {
   const _Ligne({
     required this.ligne,
     required this.heure,
+    required this.reelle,
     required this.textSize,
     required this.onTap,
   });
 
   final LigneJour ligne;
   final String heure;
+
+  /// Prévu et réel de l'étape (fiche), ou nul : durée prévue seule.
+  final ActualStepDuration? reelle;
   final double textSize;
   final VoidCallback? onTap;
 
@@ -226,9 +295,13 @@ class _Ligne extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final running = ligne.status == StepStatus.running;
-    final duration = ligne.step.durationMin == 0
-        ? 'Action'
-        : formatDuree(ligne.duree);
+    final texte = reelle == null
+        ? null
+        : dureeEtapeReelle(reelle!, ligne.status);
+    final duration =
+        texte?.affiche ??
+        (ligne.step.durationMin == 0 ? 'Action' : formatDuree(ligne.duree));
+    final durationLue = texte?.lu ?? duration;
     final content = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 64),
       child: Padding(
@@ -260,7 +333,8 @@ class _Ligne extends StatelessWidget {
     return Semantics(
       button: onTap != null,
       label:
-          '${ligne.step.name}, ${libelleEtat(ligne.status)}, $heure, $duration',
+          '${ligne.step.name}, ${libelleEtat(ligne.status)}, $heure, '
+          '$durationLue',
       onTap: onTap,
       excludeSemantics: true,
       child: Material(

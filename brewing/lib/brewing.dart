@@ -6,6 +6,7 @@
 /// [BrewingInputException] ; le paquet ne fait aucun `catch`.
 library;
 
+export 'src/actual_durations.dart';
 export 'src/alcohol.dart';
 export 'src/bitterness.dart';
 export 'src/boil_volume.dart';
