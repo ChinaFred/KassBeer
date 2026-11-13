@@ -311,6 +311,14 @@ SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « S
 « Commandes utiles », `.claude/formatters.json` (`dart format`) et `setup-projet.sh`
 (`dart pub get`) ; la CI le contrôle dans le job « Flutter et brewing ».
 
+Depuis la v0.1.38 (import des 16 fiches, v0.6), P9 admet une exception : Admin › Import lit les
+prix et frais des fiches de l'administrateur, par `package:exchange/fiches.dart`, et ne les écrit
+que dans le coût figé de chaque brassin importé (`users/{uid de l'admin}/brew_costs/`). `securite`
+vérifie qu'aucun de ces prix n'entre dans `prices`, `fees`, `recipes/`, `brews/`, un rapport
+d'erreur ou une annonce. Le lecteur refuse une fiche dont un texte lu par le groupe contient un
+montant (« € », « EUR », « euro »), et une fiche dont un document ou un événement appartient à un
+autre compte. La réserve à l'admin vient du routeur seul.
+
 Depuis la v0.1.29 (ADR-009), `relecteur-regles` applique aussi P17 au canal `fr.kassbeer/prefs`
 de la préférence de thème : noms identiques en Dart et en Kotlin, garde `kIsWeb`, travail hors du
 thread principal, second appel refusé (`BUSY`) ; le Dart n'envoie qu'un appel à la fois et ne

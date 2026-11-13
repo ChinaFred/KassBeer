@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -288,7 +288,7 @@ Réservé à l'administrateur. Trois entrées : « Membres » (« Inviter et ret
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
 et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas, un jeton de routine
-refusé l'allume) et « Import » (« Disponible dans une prochaine version », inactive).
+refusé l'allume) et « Import » (« Fiches Excel préparées en JSON »).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
@@ -315,6 +315,89 @@ qu'une invitation faite hors ligne n'a pas atteint le serveur.
 - Liste illisible : « Impossible de lire la liste des membres. » et « Réessayer ». Une panne
   après une première lecture garde la liste affichée, avec au-dessus « Mise à jour de la
   liste impossible. Elle peut ne plus être à jour. » et « Réessayer ».
+
+### Admin › Import
+
+Réservé à l'administrateur (v0.6). Adresse `/admin/import`, page pleine hors de la coquille,
+titre « Importer les fiches Excel », flèche de retour, bandeau hors ligne. Un brasseur qui
+ouvre l'adresse est renvoyé à l'accueil. C'est le seul écran d'écriture de masse sur les
+données du groupe.
+
+Le fichier est préparé hors de l'application par une session Claude Code à partir des 16
+fiches `.xlsx`, puis vérifié par `exchange/bin/verifier_fiches.dart` (format dans
+`exigences-techniques.md`, « Admin › Import »). Chaque correction est validée par
+l'utilisateur pendant la préparation ; l'application n'en fait aucune.
+
+1. **Choix.** « Choisissez le fichier JSON préparé à partir des fiches Excel. 10 Mo au plus.
+   Rien n'est écrit avant votre confirmation. » et « Choisir le fichier » (sélecteur
+   d'ADR-007). Hors ligne, « Import impossible hors ligne. Reconnectez-vous pour analyser le
+   fichier. » remplace le bouton. Refus : « Ce fichier dépasse 10 Mo. » ; « Ce fichier n'est
+   pas un fichier de fiches Kass'Beer. Choisissez le fichier JSON préparé. » (JSON mal formé
+   compris) ; « Ce fichier est d'un format que cette version ne lit pas. Faites-le préparer de
+   nouveau. » ; « Ce fichier contient plus de 50 fiches. Faites-le préparer de nouveau. » ;
+   « Deux fiches de ce fichier portent l'identifiant « {id} ». Faites-le préparer de
+   nouveau. ». Fichier sans fiche : « Ce fichier ne contient aucune fiche. ».
+2. **Analyse, sans écriture.** « Lecture du fichier », puis « Comparaison avec les données
+   déjà enregistrées » : index de la Bibliothèque et documents aux identifiants du fichier,
+   lus sur le serveur. Panne : « Impossible de vérifier ce qui est déjà importé. Vérifiez la
+   connexion. » et « Réessayer », sans redemander le fichier.
+3. **Relecture.** « Choisir un autre fichier », puis « 16 fiches · 15 recettes · 16 brassins
+   · 490 heures et mesures · 8 coûts figés » et les comptes par état sans les zéros (« 14
+   nouvelles · 1 à compléter · 1 refusée »). Une ligne par fiche : case, « Ale blonde · 14
+   juil. 2024 », identifiant de la fiche, étiquette d'état, points à revoir (« 3 divergences
+   · 2 heures reprises »), détail dépliable. États : « Nouvelle » et « À compléter » (« Import
+   commencé et non terminé : seul ce qui manque sera écrit. »), cochées ; « Déjà importée » ;
+   « Déjà importée, contenu différent » (« Le fichier a changé depuis l'import. Pour remplacer
+   cette fiche, supprimez son brassin et sa recette, puis importez de nouveau. ») ;
+   « Refusée : {raison} », avec le champ en cause (par exemple « montant dans un texte lu
+   par le groupe (brew.notes). » : un prix ne va que dans le coût figé). Seules les deux
+   premières se cochent. Le lecteur d'écran lit la ligne d'un bloc, explication de l'état
+   comprise : « Ale blonde, 14 juillet 2024, à compléter, 3 points à revoir, Import commencé
+   et non terminé : seul ce qui manque sera écrit. ». Le détail liste, sans rubrique vide :
+   nom en double (« Une de vos recettes s'appelle déjà « Ale blonde ». »), « À compléter dans
+   la recette », « Divergences », « Corrections validées », « Valeurs déduites » (dont unités
+   converties, durées arrondies, moments et style simplifiés, textes coupés à la lecture de la
+   recette), « Reprises de la Bibliothèque », « Heures reprises » (dont « Relevé sans date :
+   daté de 28 jours après le brassage. »), « Non importé » (dont parties de la recette non
+   importées et valeurs rejetées), « Coût » (« Coût figé : 49,04 € », « Coût non figé : prix
+   manquant pour Houblon Saaz. Vous pourrez le figer depuis le brassin. », « Écart avec la
+   fiche : … dans la fiche, … recalculé. »). Hors ligne, « Choisir un autre fichier »
+   disparaît.
+4. **Barre du bas.** « Importer N fiches » ; sans case cochée, « Cochez au moins une
+   fiche. » ; quand rien n'est cochable, « Toutes les fiches de ce fichier sont déjà
+   importées. Rien à écrire. » à la place du bouton ; hors ligne, « Import impossible hors
+   ligne. Reconnectez-vous pour importer les fiches cochées. ». Le second import d'un même
+   fichier n'écrit donc rien.
+5. **Confirmation.** « Importer 16 fiches ? » / « 16 brassins et 15 recettes seront écrits
+   sous votre compte. Ils seront visibles du groupe. Les coûts restent privés. » (une fiche :
+   « 1 brassin sera écrit sous votre compte. Il sera visible du groupe. … »), boutons
+   « Annuler » et « Importer ». Une recette déjà enregistrée n'entre pas dans le compte.
+6. **Écriture.** « Fiche 4 sur 16 · Ale blonde », barre de progression et « 212 écritures sur
+   610 », ce dernier texte absent tant que le total n'est pas connu ; annonce au lecteur
+   d'écran une fois par fiche. Quitter demande « Arrêter l'import ? » / « La fiche en cours
+   sera reprise au prochain import du même fichier. », boutons « Continuer l'import » et
+   « Arrêter ». Une écriture sans accusé du serveur en 30 s, ou la perte de la connexion,
+   arrête l'import.
+7. **Compte rendu.** « Import terminé · 16 créées · 0 ignorées · 0 en erreur », annoncé au
+   lecteur d'écran sans montant ; après une perte de connexion ou un accusé absent, le titre
+   et l'annonce disent « Import arrêté · 4 créées · 11 ignorées · 1 en erreur », suivis de
+   « Connexion perdue. Import arrêté à la fiche 5 sur 16. Reconnectez-vous puis choisissez de
+   nouveau le fichier : les fiches commencées seront reprises. ». Sections « Fiches à revoir » (rubriques du détail),
+   « Ignorées » (« Non cochée », « Déjà importée », « Refusée : … », « Non traitée : import
+   arrêté ») et « En erreur » (« Ale blonde (2024-07-14-ale-blonde) — événements, lot 3 :
+   écriture refusée. Relancez l'import du même fichier pour reprendre. »). Une fiche en
+   erreur est passée, les suivantes continuent. Boutons « Voir les brassins » et « Revenir
+   à l'administration ». Le compte rendu se relit en choisissant de nouveau le fichier.
+
+Ce que l'import crée, sous le compte de l'administrateur : une recette par recette
+distincte du fichier (deux fiches de mêmes matières et même chronologie en partagent une),
+sans équipement ; un brassin « Terminé » par fiche, sans date d'embouteillage, avec ses
+notes de fiche, une copie d'équipement sans valeurs (« Installation à cuves (fiches
+Excel) » ou « Brew in bag (fiches Excel) ») et donc une densité prévue « à compléter » ;
+ses heures réelles (débuts d'étape), mesures, relevés de fermentation, nombre de bouteilles,
+volume conditionné et nature du sucre de resucrage ; le coût figé de la fiche quand tous
+ses prix sont connus (voir « Coût »). Rien n'est écrit dans « Mes prix » ni dans « Mes
+frais ». Une recette ou un brassin déjà présent à l'identifiant prévu n'est pas réécrit.
 
 
 ### Admin › Tickets des membres
@@ -1483,6 +1566,14 @@ au retour du réseau. ». L'ordre des statuts n'est pas contrôlé : un retour e
 hors ligne passent. « Terminer la journée » ne change aucun statut ; « Embouteiller » depuis la
 journée d'embouteillage passe le brassin En conditionnement, comme depuis la fiche.
 
+**Brassin importé d'une fiche Excel** (Admin › Import, v0.6). Il appartient à l'administrateur
+et se lit comme un brassin fini par « Terminer le brassage » : statut Terminé, date de brassage
+à la première heure réelle de la fiche, étapes commencées sans fin, sans date d'embouteillage.
+Ses notes commencent par « Notes de la fiche Excel » (en-tête recopié, remarques, quantités
+réelles notées à côté) et ne portent ni prix ni prénom. Sa copie d'équipement n'a que son nom
+et son type : la densité prévue est « à compléter », la densité mesurée, le degré mesuré et le
+rendement réel restent calculés.
+
 ### Relevé de fermentation
 
 Section « Relevé de fermentation » de la fiche, visible à partir de En fermentation, et dans tout
@@ -1496,6 +1587,12 @@ une courbe s'affiche au-dessus de la liste (densité en trait plein, températur
 légende écrite, info-bulle au toucher) ; sans date de brassage, seule la liste s'affiche. Une valeur
 enregistrée que le calcul refuse affiche « Courbe indisponible : une valeur enregistrée est
 refusée. » et la liste reste lisible.
+
+Brassin importé d'une fiche sans relevé de fermentation : la densité finale de l'en-tête de la
+fiche devient un relevé, daté par la fiche, sinon du jour du brassage + 28 jours à 12:00, avec la
+note « Date estimée : jour du brassage + 28 jours. ». La date est fixée à la préparation du
+fichier ; l'application n'en calcule aucune. Ce relevé compte dans la densité finale retenue.
+Les relevés des fiches, qui n'ont pas d'heure, sont datés de 12:00.
 
 « Ajouter un relevé » (propriétaire, En fermentation ou En conditionnement) : « Densité »
 (0,980 à 1,200), « Température (°C) » (0 à 110), « Date et heure » (maintenant par défaut,
@@ -2005,6 +2102,12 @@ au dernier prix, le montant apparaît. Autres états : « Chargement de vos prix
 lire vos prix. » et « Réessayer », « Prix indisponibles sur cet appareil hors ligne. » (jamais
 « manquant »), « Aucun ingrédient. » (jamais « 0,00 € »), « Calcul du coût impossible. » dans un
 cadre d'erreur.
+
+**Brassin importé d'une fiche Excel** (v0.6). Son coût est figé à l'import avec les prix et
+les frais notés dans la fiche, pas avec « Mes prix » ni « Mes frais », qui ne changent pas ; il
+est daté du jour du brassage et garde le nombre de bouteilles, le volume conditionné et la
+nature du sucre de la fiche. Un prix manquant, ou un frais par bouteille sans nombre de
+bouteilles, laisse le coût non figé : « Figer le coût » reste disponible sur le brassin.
 
 **Brassin** (bloc « Coût », propriétaire seul). Tant que rien n'est figé : « Coût estimé avec
 vos prix actuels », calculé sur la copie figée de la recette et le sucre de resucrage, « Total »,

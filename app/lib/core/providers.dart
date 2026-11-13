@@ -6,6 +6,7 @@ import '../features/brew_day/data/alerte_minuteur.dart';
 import '../features/brews/data/brews_repository.dart';
 import '../features/costs/data/costs_repository.dart';
 import '../features/equipment/data/equipment_repository.dart';
+import '../features/import/data/import_fiches_repository.dart';
 import '../features/library/data/library_repository.dart';
 import '../features/members/data/members_repository.dart';
 import '../features/processes/data/preferences_processus_repository.dart';
@@ -61,6 +62,13 @@ final preferencesProcessusRepositoryProvider =
         'preferencesProcessusRepositoryProvider non fourni',
       ),
     );
+
+/// Admin › Import des fiches Excel (v0.6) : recettes, brassins et événements
+/// aux identifiants du fichier.
+final importFichesRepositoryProvider = Provider<ImportFichesRepository>(
+  (ref) =>
+      throw UnimplementedError('importFichesRepositoryProvider non fourni'),
+);
 
 /// Bibliothèque : `beer_index/`, `beer_*/`, `public_recipes/`, lus par `get()`
 /// seul (ADR-005, P22).
