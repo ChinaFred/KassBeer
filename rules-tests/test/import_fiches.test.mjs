@@ -340,7 +340,19 @@ describe("import des fiches — création du brassin", () => {
   it("recette déjà créée, recréée à la reprise : refusé (la reprise ne la réécrit pas)", async () => {
     const fs = db(state.env, "admin");
     const data = { ...fresh(ficheRecipe("admin")), owner_name: nameOf("admin") };
-    await fs.doc(RECIPE).set(data);
+    // Recette semée avec une date de création passée et fixe : la réécriture pose
+    // un nouveau serverTimestamp(), toujours différent, que updatedByOwner() refuse.
+    // Deux set() successifs pouvaient tomber sur la même request.time.
+    await state.env.withSecurityRulesDisabled((ctx) =>
+      ctx
+        .firestore()
+        .doc(RECIPE)
+        .set({
+          ...data,
+          created_at: at("2024-07-14T07:00:00Z"),
+          updated_at: at("2024-07-14T07:00:00Z"),
+        }),
+    );
     await expectRule(false, fs.doc(RECIPE).set(data));
   });
 });
