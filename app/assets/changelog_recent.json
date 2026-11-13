@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.39",
+      "date": "2026-11-13",
+      "paragraphs": [
+        "Dans la liste des brassins, « Prochaine journée » annonce pour vos brassins la même journée que leur fiche. Une journée faite avant sa date n'est plus annoncée : la suivante prend sa place. Une journée commencée et pas terminée affiche « en cours ». Une journée dont la date est passée sans qu'elle soit commencée affiche « en retard », suivi de sa date prévue. Une fois le brassin embouteillé, seule une journée prévue après l'embouteillage reste annoncée ; sans elle, ou une fois toutes les journées faites, la ligne reprend la date du brassin. La fiche ne propose plus une journée placée avant une journée déjà faite. Une journée prévue après l'embouteillage reste proposée sur la fiche. Les brassins des autres membres, et les vôtres tant que leurs saisies ne sont pas lues, suivent les dates prévues, comme avant."
+      ]
+    },
+    {
       "version": "0.1.37",
       "date": "2026-11-13",
       "paragraphs": [
@@ -38,13 +45,6 @@
       "date": "2026-11-13",
       "paragraphs": [
         "Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune à quelques jours du brassage, avec ses étapes de préparation et de nettoyage autour de celles de la recette. La liste montre vos processus, puis ceux des autres brasseurs. Pour commencer, « Partir du modèle d'exemple » ouvre un processus de trois journées aux durées typiques, à ajuster à votre matériel avant de l'enregistrer. Vous modifiez, dupliquez et supprimez les vôtres, et vous choisissez celui que « Nouveau brassin » vous proposera : ce choix ne concerne que vous. Le processus d'un autre brasseur se copie dans les vôtres. Un processus compte 5 journées au plus et 60 étapes par journée ; les journées se rangent d'elles-mêmes par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création d'un brassin arrive avec une prochaine version."
-      ]
-    },
-    {
-      "version": "0.1.31",
-      "date": "2026-11-12",
-      "paragraphs": [
-        "Le suivi d'un ticket a une nouvelle étape, « Analysé », entre « Reçu » et « Validé » : votre demande a été lue et étudiée. L'administrateur lit maintenant dans la fiche d'un ticket les analyses publiées sur sa page GitHub, et peut y répondre depuis l'application avec le bouton « Répondre ». Sa réponse ramène le ticket à « Reçu » pour une nouvelle analyse."
       ]
     }
   ]

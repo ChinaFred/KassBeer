@@ -26,8 +26,7 @@ import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../brew_day/domain/plan_du_jour.dart';
-import '../../brew_day/presentation/brew_day_screen.dart'
-    show TextesJournee, journeeASuivre;
+import '../../brew_day/presentation/brew_day_screen.dart' show TextesJournee;
 import '../../brew_day/presentation/chronologie_jour.dart';
 import '../../brew_day/presentation/mesure_form.dart';
 import '../../costs/data/figeage_embouteillage.dart';
@@ -712,8 +711,16 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             errors: ref.read(errorReportServiceProvider),
             reported: ref.read(planReportsProvider),
           );
-    final prochaine = mine && events != null
-        ? _prochaineJournee(brew, plansJournees)
+    // Même règle que la liste des brassins (prochaineJournee, ADR-010), avec
+    // les mêmes événements lus (evenementsLus).
+    final prochaine = mine && evenementsLus(events) != null
+        ? prochaineJournee(
+            brew: brew,
+            planDe: (j) => switch (plansJournees[j.key]) {
+              PlanObtenu(:final plan) => plan,
+              _ => null,
+            },
+          )
         : null;
     final avecEmbouteillage = brew.deroule.embouteillage != null;
 
@@ -1178,25 +1185,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           : TextesDeroule.passee(nom),
       refus: 'L\'enregistrement de « ${brew.name} » a échoué.',
     );
-  }
-
-  /// Première journée après le brassage pas encore terminée, à suivre par le
-  /// propriétaire d'un brassin en fermentation ou en conditionnement
-  /// (ADR-010) ; `null` sinon.
-  JourneeDeroulee? _prochaineJournee(Brew brew, Map<String, PlanEvalue> plans) {
-    if (brew.status != BrewStatus.fermenting &&
-        brew.status != BrewStatus.conditioning) {
-      return null;
-    }
-    for (final j in brew.deroule.journees.skip(1)) {
-      final plan = switch (plans[j.key]) {
-        PlanObtenu(:final plan) => plan,
-        _ => null,
-      };
-      if (journeeTerminee(brew: brew, journee: j, plan: plan)) continue;
-      return journeeASuivre(brew, j.key).journee;
-    }
-    return null;
   }
 
   /// « Préparer la journée « {nom} » », ou « Reprendre la journée « {nom} » »

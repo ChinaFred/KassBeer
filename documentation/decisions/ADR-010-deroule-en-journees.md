@@ -258,10 +258,14 @@ journée : son premier début enregistré, sinon `brewed_at` pour le brassage et
 l'appareil pour les autres.
 
 La reprise au lancement (`brassinAReprendre`) reste limitée au brassage : elle lit la liste des
-brassins, sans leurs événements. Les autres journées s'ouvrent depuis la liste et la fiche. La
-liste dérive sa ligne des dates seules (« En fermentation · Houblonnage à cru prévu le 26/11 »).
-Elle ne lit pas les événements : une journée faite avant sa date reste annoncée jusqu'à cette
-date (limite acceptée).
+brassins, sans leurs événements. Les autres journées s'ouvrent depuis la liste et la fiche.
+Jusqu'à la v0.1.38, la liste dérive sa ligne des dates seules (« En fermentation · Houblonnage à
+cru prévu le 26/11 ») et ne lit pas les événements : une journée faite avant sa date reste
+annoncée jusqu'à cette date (limite acceptée). Depuis la v0.1.39, elle lit les événements des
+brassins du lecteur En fermentation ou En conditionnement dont le `process` a au moins deux
+journées, et annonce la même journée que la fiche ; les dates seules restent la règle pour les
+brassins des autres membres et tant que ces événements ne sont pas lus (décision de
+l'utilisateur du 2026-11-13).
 
 ### Mesures des journées 2 et suivantes
 

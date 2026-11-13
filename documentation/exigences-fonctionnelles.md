@@ -1295,11 +1295,20 @@ ancien. « Tous » / « Les miens », non enregistré. Chaque ligne :
 nom, « {statut} · {équipement} · {auteur} », date (« Prévu le sam. 15 nov. 2026 », « Commencé
 aujourd'hui à 11:15 », « Brassé le 11 févr. 2024 », « Embouteillé le 3 déc. 2026 » en
 conditionnement), étiquette « En attente du réseau ». En fermentation et en conditionnement, un
-brassin qui a une journée à venir après le brassage affiche « Prochaine journée : Houblonnage à
+brassin qui a une journée après le brassage à venir affiche « Prochaine journée : Houblonnage à
 cru, mer. 25 nov. » ou « Prochaine journée : Houblonnage à cru, aujourd'hui » à la place de sa
-date : la première journée dont la date n'est pas passée, sauf l'embouteillage d'un brassin
-embouteillé. La liste lit les dates seules : une journée faite avant sa date reste annoncée
-jusqu'à cette date. Vide :
+date. Pour les brassins du lecteur, la journée annoncée est celle que la fiche lui propose : la
+première journée non terminée placée après la dernière journée terminée. Une journée faite avant
+sa date n'est plus annoncée : la suivante l'est. Une journée commencée et pas terminée s'affiche
+« Prochaine journée : Houblonnage à cru, en cours ». Une journée dont la date est passée, pas
+commencée, s'affiche « Prochaine journée : Houblonnage à cru, en retard (prévue le
+mer. 25 nov.) ». Une fois le brassin embouteillé, l'embouteillage compte comme fait : une
+journée placée après lui dans le déroulé (« Dégustation ») reste annoncée ; sans journée
+d'embouteillage dans le déroulé, aucune ne l'est. Aucune journée restante : la ligne reprend la
+date du brassin (« Embouteillé le … »). Pour les brassins des autres membres, et pour les siens
+tant que ses saisies ne sont pas lues (chargement sans copie sur l'appareil, lecture en échec),
+la ligne suit les dates seules : la première journée dont la date n'est pas passée, parmi celles
+placées après l'embouteillage une fois le brassin embouteillé. Vide :
 « Aucun brassin. Ouvrez une recette et appuyez sur Nouveau brassin. ». Statuts : Prévu, En
 cours, En fermentation, En conditionnement, Terminé, Abandonné.
 
@@ -1320,8 +1329,12 @@ cours), « Marquer comme terminé » (en conditionnement), « Reprendre ce brass
 En fermentation et en conditionnement, un brassin dont une journée après le brassage n'est pas
 terminée affiche au-dessus « Prévue le mer. 25 nov. » ou « Prévue aujourd'hui », puis le bouton
 « Préparer la journée « Houblonnage à cru » » (« Reprendre la journée « Houblonnage à cru » »
-une fois commencée, qui ouvre l'écran de la journée) : la première journée non terminée, dans
-l'ordre du déroulé, l'embouteillage d'un brassin embouteillé compris comme terminé. « Marquer
+une fois commencée, qui ouvre l'écran de la journée) : la première journée non terminée placée
+après la dernière journée terminée, dans l'ordre du déroulé. Une journée non terminée placée
+avant une journée terminée n'est plus proposée. Une fois le brassin embouteillé, seule une
+journée placée après la journée d'embouteillage reste proposée (en conditionnement) ; sans
+journée d'embouteillage dans le déroulé, aucune ne l'est. La liste des brassins annonce la même
+journée. « Marquer
 comme terminé » et « Ajouter un relevé » passent alors en bouton secondaire. Avec une journée
 d'embouteillage, « Embouteiller » quitte la fiche et passe dans le menu ⋮ : « Embouteiller sans
 suivre la journée » (en fermentation), qui ouvre le même formulaire. À
@@ -1749,8 +1762,9 @@ et l'embouteillage s'écrivent sur l'appareil sans attente ni erreur, pastille d
 journée » restent ouverts jusqu'à l'embouteillage ;
 lus hors ligne sans cache, le coût ne se fige pas et l'embouteillage part quand même. La reprise
 au lancement ne rouvre que le jour de brassage ; une journée se rouvre par la fiche. La liste des
-brassins annonce la prochaine journée d'après les dates seules : une journée faite avant sa date
-reste annoncée jusqu'à cette date.
+brassins annonce, pour les brassins du lecteur, la journée que propose la fiche, d'après les
+saisies lues sur l'appareil, y compris une journée placée après l'embouteillage ; sans saisies
+lues, et pour les brassins des autres membres, elle suit les dates seules (voir « Liste »).
 
 ### Mes prix
 

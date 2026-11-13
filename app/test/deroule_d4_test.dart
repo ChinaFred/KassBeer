@@ -710,6 +710,63 @@ void main() {
       expect(find.text("Enregistrer l'embouteillage"), findsOneWidget);
     });
 
+    testWidgets('événements du cache sans document : aucune journée proposée', (
+      tester,
+    ) async {
+      final app = await ouvrir(tester, '/brassins/b1');
+      app.brews.publishEvents('b1', const [], fromCache: true);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Préparer la journée'), findsNothing);
+      app.brews.publishEvents('b1', const []);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(TextesJournee.preparer('Houblonnage à cru')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('embouteillé : journée placée après, Marquer secondaire', (
+      tester,
+    ) async {
+      await ouvrir(
+        tester,
+        '/brassins/b1',
+        brew: unBrassin(
+          status: BrewStatus.conditioning,
+          brewedAt: brasse,
+          bottledAt: DateTime(2026, 11, 7),
+          recipe: recetteAvecCru,
+          process: deroule.avecEcart(cru.key, 20, SourceEcart.brasseur),
+        ),
+      );
+      expect(
+        find.text(TextesJournee.preparer('Houblonnage à cru')),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(OutlinedButton, 'Marquer comme terminé'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('embouteillé sans journée après : rien proposé', (
+      tester,
+    ) async {
+      await ouvrir(
+        tester,
+        '/brassins/b1',
+        brew: enFermentation(
+          status: BrewStatus.conditioning,
+          bottledAt: DateTime(2026, 11, 7),
+        ),
+      );
+      expect(find.textContaining('Préparer la journée'), findsNothing);
+      expect(
+        find.widgetWithText(FilledButton, 'Marquer comme terminé'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('Préparer la journée depuis la fiche', (tester) async {
       await ouvrir(tester, '/brassins/b1');
       await tester.tap(find.text(TextesJournee.preparer('Houblonnage à cru')));

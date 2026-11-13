@@ -10,7 +10,10 @@ import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
+import '../../brew_day/domain/plan_du_jour.dart';
+import '../../brew_day/presentation/chronologie_jour.dart';
 import '../domain/brew.dart';
+import '../domain/deroule.dart';
 import 'brews_providers.dart';
 
 /// Brassins du groupe : en cours d'abord, puis prévus, puis les autres ; filtre
@@ -112,17 +115,28 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
 
 /// Date affichée dans la ligne d'un brassin. En fermentation et en
 /// conditionnement, la prochaine journée du déroulé quand elle existe
-/// (« Prochaine journée : Houblonnage à cru, mer. 25 nov. »), d'après les dates
-/// seules (ADR-010).
-String ligneDateBrassin(Brew brew, DateTime now) {
+/// (« Prochaine journée : Houblonnage à cru, mer. 25 nov. »), choisie par
+/// [prochaineJourneeAnnoncee] (ADR-010) : même règle que la fiche quand
+/// [planDe] est connu (événements lus), avec « en cours » pour une journée
+/// commencée et « en retard (prévue le …) » pour une date passée ; d'après les
+/// dates seules sinon.
+String ligneDateBrassin(
+  Brew brew,
+  DateTime now, {
+  PlanDuJour? Function(JourneeDeroulee journee)? planDe,
+}) {
   final brewed = brew.brewedAt;
   final planned = brew.plannedFor;
-  final prochaine = prochaineJourneePrevue(brew, now);
+  final prochaine = prochaineJourneeAnnoncee(brew, now, planDe: planDe);
   if (prochaine != null) {
     final date = prochaine.date;
-    final quand =
-        date.year == now.year && date.month == now.month && date.day == now.day
+    final aujourdhui = DateTime(now.year, now.month, now.day);
+    final quand = prochaine.commencee
+        ? 'en cours'
+        : date == aujourdhui
         ? "aujourd'hui"
+        : date.isBefore(aujourdhui)
+        ? 'en retard (prévue le ${formatJourMois(date)})'
         : formatJourMois(date);
     return 'Prochaine journée : ${prochaine.journee.name.trim()}, $quand';
   }
@@ -144,17 +158,43 @@ String ligneDateBrassin(Brew brew, DateTime now) {
   return 'Brassé le ${formatDateCourte(brewed)}';
 }
 
-class _Row extends StatelessWidget {
+class _Row extends ConsumerWidget {
   const _Row({required this.brew, required this.readerUid, required this.now});
 
   final Brew brew;
   final String? readerUid;
   final DateTime now;
 
+  /// Plan d'une journée d'après les événements du brassin, lus depuis le cache
+  /// comme sur la fiche, chaque plan calculé une fois ; `null` tant qu'ils ne
+  /// sont pas lus ([evenementsLus] : chargement, panne rapportée par le dépôt,
+  /// hors ligne sans cache) : la ligne garde alors la règle des dates. Seuls les
+  /// brassins de [listeLitEvenements] les lisent.
+  PlanDuJour? Function(JourneeDeroulee)? _planDe(WidgetRef ref) {
+    if (!listeLitEvenements(brew, readerUid)) return null;
+    final events = evenementsLus(ref.watch(brewEventsProvider(brew.id)).value);
+    if (events == null) return null;
+    final plans = <String, PlanDuJour?>{};
+    return (j) => plans.putIfAbsent(
+      j.key,
+      () => switch (evaluerPlan(
+        brew: brew,
+        events: events,
+        now: now,
+        errors: ref.read(errorReportServiceProvider),
+        reported: ref.read(planReportsProvider),
+        journee: j,
+      )) {
+        PlanObtenu(:final plan) => plan,
+        PlanImpossible() => null,
+      },
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final date = ligneDateBrassin(brew, now);
+    final date = ligneDateBrassin(brew, now, planDe: _planDe(ref));
     return InkWell(
       onTap: () => context.go(AppRoutes.brew(brew.id)),
       child: ConstrainedBox(
