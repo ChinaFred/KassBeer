@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'app.dart';
+import 'core/preferences/preferences_appareil.dart';
 import 'core/providers.dart';
 import 'core/services/error_report_service.dart';
 import 'features/auth/data/auth_repository.dart';
@@ -32,6 +33,11 @@ Future<void> main() async {
     runApp(MissingConfigurationApp(missingKeys: missing));
     return;
   }
+
+  // Thème lu en parallèle de Firebase : le premier écran s'affiche dans le thème
+  // choisi (ADR-009). `lireTheme` ne lève pas ; son erreur est rapportée plus bas.
+  final preferences = PreferencesAppareilPlateforme();
+  final lectureTheme = lireTheme(preferences);
 
   try {
     await Firebase.initializeApp(options: env.options(web: kIsWeb));
@@ -68,6 +74,9 @@ Future<void> main() async {
       stackTrace: versionStack,
     );
   }
+
+  final theme = await lectureTheme;
+  theme.rapporter(errors);
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
@@ -107,6 +116,8 @@ Future<void> main() async {
       overrides: [
         errorReportServiceProvider.overrideWithValue(errors),
         appVersionProvider.overrideWithValue(version),
+        preferencesAppareilProvider.overrideWithValue(preferences),
+        themeModeInitialProvider.overrideWithValue(theme.mode),
         authRepositoryProvider.overrideWithValue(
           FirebaseAuthRepository(errorReportService: errors),
         ),

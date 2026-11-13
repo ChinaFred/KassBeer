@@ -9,6 +9,7 @@ import 'package:kass_beer/app.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/data/nouveautes.dart';
 import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
+import 'package:kass_beer/core/preferences/preferences_appareil.dart';
 import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
@@ -34,6 +35,7 @@ import 'package:kass_beer/core/services/screen_wakelock.dart';
 import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
 import 'package:kass_beer/features/tickets/presentation/tickets_providers.dart';
 
 import 'cost_fakes.dart';
@@ -595,6 +597,40 @@ class FakeBrewsRepository implements BrewsRepository {
   }
 }
 
+/// Double de [PreferencesAppareil] : valeur gardée en mémoire, échecs au choix.
+class FakePreferencesAppareil implements PreferencesAppareil {
+  String? valeur;
+  Object? erreurLecture;
+  Object? erreurEcriture;
+
+  /// Erreurs des écritures suivantes, une par écriture (`null` : réussite),
+  /// lues avant [erreurEcriture].
+  final erreursEcritures = <Object?>[];
+  Future<void>? attenteEcriture;
+  final ecritures = <ThemeMode>[];
+
+  @override
+  Future<String?> lireValeurTheme() async {
+    final erreur = erreurLecture;
+    if (erreur != null) throw erreur;
+    return valeur;
+  }
+
+  @override
+  Future<void> ecrireTheme(ThemeMode mode) async {
+    ecritures.add(mode);
+    final erreurPrevue = erreursEcritures.isNotEmpty
+        ? erreursEcritures.removeAt(0)
+        : erreurEcriture;
+    final attente = attenteEcriture;
+    attenteEcriture = null;
+    if (attente != null) await attente;
+    final erreur = erreurPrevue;
+    if (erreur != null) throw erreur;
+    valeur = kValeursTheme[mode];
+  }
+}
+
 class FakeAlerte implements AlerteMinuteur {
   int prepared = 0;
   int triggered = 0;
@@ -934,10 +970,37 @@ class FakeTicketsRepository implements TicketsRepository {
     lastSendError: t.lastSendError,
     issueMissingSince: t.issueMissingSince,
     allowedDecisions: t.allowedDecisions,
+    canAnswer: t.canAnswer,
     decisionLeaseUntil: t.decisionLeaseUntil,
     retryRequestedAt: t.retryRequestedAt,
     hasPendingWrites: true,
   );
+
+  final analyses = <String, Replay<RechercheDocument<TicketAnalysisDoc>>>{};
+
+  Replay<RechercheDocument<TicketAnalysisDoc>> analysesOf(String ticketId) =>
+      analyses.putIfAbsent(ticketId, Replay.new);
+
+  @override
+  Stream<RechercheDocument<TicketAnalysisDoc>> watchAnalysis(String ticketId) =>
+      analysesOf(ticketId).stream;
+
+  /// Réponses publiées par « Répondre » : ticket et texte.
+  final answers = <({String ticketId, String answer})>[];
+
+  /// Réponse du serveur à « Répondre » : `null` si publiée ; jamais terminée
+  /// par défaut.
+  Future<EchecReponse?> Function() answerResult = () =>
+      Completer<EchecReponse?>().future;
+
+  @override
+  Future<EchecReponse?> answer({
+    required String ticketId,
+    required String answer,
+  }) {
+    answers.add((ticketId: ticketId, answer: answer));
+    return answerResult();
+  }
 }
 
 /// Demande de page reçue par [FakeLibraryRepository].
@@ -1087,20 +1150,24 @@ const adminMember = Member(
 /// Environnement de test : doubles, conteneur Riverpod, application montée.
 class TestApp {
   /// [appVersion] : version installée lue au démarrage ; `null` si illisible.
-  TestApp({String? appVersion = '0.1.0'})
-    : auth = FakeAuthRepository(),
-      members = FakeMembersRepository(),
-      recipes = FakeRecipesRepository(),
-      equipment = FakeEquipmentRepository(),
-      brews = FakeBrewsRepository(),
-      costs = FakeCostsRepository(),
-      alerte = FakeAlerte(),
-      tickets = FakeTicketsRepository(),
-      fichiers = FakeEchangeFichiers(),
-      library = FakeLibraryRepository(),
-      processes = FakeProcessesRepository(),
-      preferences = FakePreferencesProcessusRepository(),
-      errors = RecordingErrorReportService() {
+  /// [themeMode] : thème lu sur l'appareil avant `runApp`.
+  TestApp({
+    String? appVersion = '0.1.0',
+    ThemeMode themeMode = ThemeMode.system,
+  }) : auth = FakeAuthRepository(),
+       members = FakeMembersRepository(),
+       recipes = FakeRecipesRepository(),
+       equipment = FakeEquipmentRepository(),
+       brews = FakeBrewsRepository(),
+       costs = FakeCostsRepository(),
+       alerte = FakeAlerte(),
+       tickets = FakeTicketsRepository(),
+       fichiers = FakeEchangeFichiers(),
+       library = FakeLibraryRepository(),
+       processes = FakeProcessesRepository(),
+       preferencesProcessus = FakePreferencesProcessusRepository(),
+       preferences = FakePreferencesAppareil(),
+       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
       toggle: ({required bool enable}) async {
@@ -1119,7 +1186,9 @@ class TestApp {
         ticketsRepositoryProvider.overrideWithValue(tickets),
         libraryRepositoryProvider.overrideWithValue(library),
         processesRepositoryProvider.overrideWithValue(processes),
-        preferencesProcessusRepositoryProvider.overrideWithValue(preferences),
+        preferencesProcessusRepositoryProvider.overrideWithValue(
+          preferencesProcessus,
+        ),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
           return openLinkResult;
@@ -1130,6 +1199,8 @@ class TestApp {
         analyseurFichierProvider.overrideWithValue((o) => analyseur(o)),
         screenWakelockProvider.overrideWithValue(wakelock),
         appVersionProvider.overrideWithValue(appVersion),
+        preferencesAppareilProvider.overrideWithValue(preferences),
+        themeModeInitialProvider.overrideWithValue(themeMode),
         nouveautesSourceProvider.overrideWithValue(() => nouveautes()),
       ],
     );
@@ -1150,7 +1221,8 @@ class TestApp {
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
   final FakeProcessesRepository processes;
-  final FakePreferencesProcessusRepository preferences;
+  final FakePreferencesProcessusRepository preferencesProcessus;
+  final FakePreferencesAppareil preferences;
 
   /// Analyse d'un fichier importé, remplaçable par les tests.
   AnalyseFichier Function(List<int>) analyseur = analyserFichier;

@@ -4,9 +4,9 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
-## 2026-11-11
+## 2026-11-13
 
-### v0.1.32 — fonctionnel
+### v0.1.35 — fonctionnel
 
 Les journées après le brassage se suivent comme le brassage. Sur la fiche d'un brassin en
 fermentation, « Préparer la journée « Houblonnage à cru » » s'affiche sous sa date prévue.
@@ -28,9 +28,9 @@ réseau. Un brassin qui a une journée d'embouteillage garde « Embouteiller san
 journée » dans le menu ⋮ de sa fiche. La liste des brassins annonce toujours la prochaine
 journée d'après sa date : une journée faite en avance reste annoncée jusqu'à cette date.
 
-### v0.1.32 — technique
+### v0.1.35 — technique
 
-Lot D4 d'ADR-009. `PlanDuJour.calculer` prend la journée suivie : événements réduits sur toutes
+Lot D4 d'ADR-010. `PlanDuJour.calculer` prend la journée suivie : événements réduits sur toutes
 les journées, horaire recalculé sur la seule journée, départ au premier début de la journée,
 sinon à l'heure de l'appareil ; `journeeTerminee` et `PlanDuJour.commencee` en dérivent l'état.
 Routes `/brassins/:id/jour/:journee/preparer` (dans la coquille) et `/brassins/:id/jour/:journee`
@@ -47,7 +47,7 @@ noms d'écran ajoutés. `exigences-techniques.md` porte les changements des lots
 deux copies des sections Architecture, Modèle de données et Règles d'accès. Les règles
 d'accès, `brewing/` et les dépendances ne changent pas.
 
-### v0.1.31 — fonctionnel
+### v0.1.34 — fonctionnel
 
 « Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la
 recette seule » comme avant. Votre processus par défaut est déjà choisi. En dessous, « Déroulé
@@ -69,9 +69,9 @@ l'écran du jour nomme la journée. Le suivi des journées après le brassage ar
 prochaine version : d'ici là, la mesure de densité se saisit par « Ajouter un relevé » et
 l'embouteillage par « Embouteiller ».
 
-### v0.1.31 — technique
+### v0.1.34 — technique
 
-Lot D3 d'ADR-009. `assemblerDeroule` crée les clés et les libellés du déroulé depuis les
+Lot D3 d'ADR-010. `assemblerDeroule` crée les clés et les libellés du déroulé depuis les
 brouillons de `resolveProcess` (clés de la recette gardées, `erreurDeroule` avant l'écriture) ;
 `nomEtapePreremplie`, ses avertissements et `formatQuantiteRecette` passent dans
 `recipes/domain/libelles_etapes.dart`, sans changement de l'éditeur « Chronologie du jour ».
@@ -86,7 +86,7 @@ autre lecture de ses étapes passe par `Brew.deroule`. Trois éléments de ticke
 processus », « Actions d'une journée », « Écart d'une journée ». Les règles d'accès et les
 dépendances ne changent pas.
 
-### v0.1.30 — fonctionnel
+### v0.1.33 — fonctionnel
 
 Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées
 d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune
@@ -100,9 +100,9 @@ compte 5 journées au plus et 60 étapes par journée ; les journées se rangent
 par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création
 d'un brassin arrive avec une prochaine version.
 
-### v0.1.30 — technique
+### v0.1.33 — technique
 
-Lot D2 d'ADR-009. Dépôts `ProcessesRepository` (`process_templates/` : document illisible
+Lot D2 d'ADR-010. Dépôts `ProcessesRepository` (`process_templates/` : document illisible
 isolé et rapporté, `erreurModele` vérifié avant chaque écriture, copie et duplication à clés
 neuves) et `PreferencesProcessusRepository` (`users/{uid}/preferences/processes`), sans
 transaction. Le défaut n'est remis à nul qu'après l'acceptation de la suppression de son
@@ -112,9 +112,9 @@ de recette ne change pas. L'éditeur de processus défile en un seul `CustomScro
 cru, embouteillage », dans l'application et dans `brewing/test/fixtures/process.json`. Aucune
 dépendance ne change.
 
-### v0.1.29 — technique
+### v0.1.32 — technique
 
-Premier lot (D1) d'ADR-009 : un brassin pourra suivre de 1 à 5 journées (brassage,
+Premier lot (D1) d'ADR-010 : un brassin pourra suivre de 1 à 5 journées (brassage,
 houblonnage à cru, embouteillage) tirées d'un modèle de processus partagé. Rien ne change
 encore à l'écran. Le paquet `brewing/` résout un modèle avec la recette figée d'un brassin :
 il garde ou retire chaque journée, place chaque houblon à cru au jour donné par la recette,
@@ -132,6 +132,63 @@ d'environ 16 expressions, l'écriture du plus grand déroulé laisse environ 590
 et un lot de 60 étapes sautées passe. `CLAUDE.md` étend la règle hors ligne à chaque journée
 et « Un brassin fige sa recette » au déroulé, complète P2, P3 et P5, et ajoute les contrôles
 P37 (lecture du déroulé, découpage par journée) et P38 (règles des modèles et du déroulé).
+
+## 2026-11-12
+
+### v0.1.31 — fonctionnel
+
+Le suivi d'un ticket a une nouvelle étape, « Analysé », entre « Reçu » et « Validé » : votre
+demande a été lue et étudiée. L'administrateur lit maintenant dans la fiche d'un ticket les
+analyses publiées sur sa page GitHub, et peut y répondre depuis l'application avec le bouton
+« Répondre ». Sa réponse ramène le ticket à « Reçu » pour une nouvelle analyse.
+
+### v0.1.31 — technique
+
+Lot T3 d'ADR-008. Deux points d'accès, seuls de la liste fermée livrés à ce lot :
+`githubTicketWebhook` (HTTP public, signature `X-Hub-Signature-256` vérifiée sur le corps brut,
+événements `ping`, `issues`, `issue_comment`, secret `GITHUB_WEBHOOK_SECRET`, 5 instances, 60 s)
+et la callable `answerTicketAnalysis` (`requireAdmin`, 2 instances, 60 s). `functions/src/auth.ts`
+(`requireAdmin`, `requireMember`, `requireBoundedText`) et `test-fixtures/member_access.json`,
+rejouée par `rules-tests/` et `functions/test/`. Statut `analyzed` (étiquette `statut:analysé`),
+`answer` dans `allowed_decisions` (`validate` reste offert depuis `received` jusqu'à T4),
+relevé des analyses du compte 16348852 dans `tickets/{id}/admin/analysis` (lecture admin seule)
+par le webhook, la tâche horaire et les décisions. `ci.yml` et `deploy.yml` remplacent le refus
+de tout point d'accès HTTP ou callable par la liste fermée d'ADR-008. Contrôles P6, P14, P23 à
+P26 modifiés, P29 à P34 ajoutés.
+
+Paquets ajoutés, version exacte : `cloud_functions` 6.5.0, `flutter_markdown_plus` 1.0.7,
+`markdown` 7.3.1 ; nouveaux dans `pubspec.lock` : `cloud_functions_platform_interface` 6.0.7 et
+`cloud_functions_web` 5.1.13. La famille FlutterFire ne change pas. `main.dart.js` passe de
+4 920 447 à 5 125 522 octets (+ 4,2 %).
+
+### v0.1.30 — technique
+
+`documentation/exigences-techniques.md` ne contient plus qu'une copie (2 695 lignes au lieu de
+3 959). Le commit `9e72415` avait remplacé la ligne `import_unresolved/` par un texte contenant
+`` $` `` : dans un `String.replace` JavaScript, cette séquence insère tout ce qui précède le
+passage remplacé, et le début du document s'est trouvé copié au milieu de cette ligne. Chaque
+passage qui différait entre les deux copies garde sa version la plus récente, vérifiée contre le
+code ; la ligne `import_unresolved/` est recousue, avec l'expression de `firestore.rules`.
+
+## 2026-11-11
+
+### v0.1.29 — fonctionnel
+
+Le menu du compte propose « Préférences ». On y choisit le thème de l'application : clair,
+sombre, ou comme l'appareil. Le changement est immédiat et reste enregistré sur l'appareil
+utilisé ; chaque téléphone ou navigateur garde son propre choix. Par défaut, l'application suit
+le réglage de l'appareil, comme avant. Demandé par le ticket #25.
+
+### v0.1.29 — technique
+
+ADR-009 accepté : préférence de thème gardée sur l'appareil, sans paquet ajouté. Canal Kotlin
+`fr.kassbeer/prefs` (`SharedPreferences` `kassbeer_prefs`, clé `theme_mode`, valeurs `light`,
+`dark`, `system`) et `window.localStorage` sur le web. La valeur est lue avant `runApp`, en
+parallèle de `Firebase.initializeApp`, pour que le premier écran s'affiche dans le bon thème.
+Le canal refuse un second appel pendant un appel en cours (P17) ; côté Dart, seul le dernier
+choix part une fois le précédent écrit. Page `/preferences`, entrée du menu du compte. Une valeur
+inconnue ne laisse que sa longueur dans le rapport d'erreur (P13). Aucune donnée Firestore,
+aucune règle changée. Demandé par le ticket #25.
 
 ### v0.1.28 — fonctionnel
 

@@ -21,7 +21,7 @@ import 'package:kass_beer/features/recipes/domain/recipe.dart';
 import 'support/brew_fixtures.dart';
 import 'support/fakes.dart';
 
-/// Lot D3 d'ADR-009 : assemblage du déroulé, « Nouveau brassin », fiche, liste,
+/// Lot D3 d'ADR-010 : assemblage du déroulé, « Nouveau brassin », fiche, liste,
 /// « Préparer le brassage » et écran du jour avec un processus.
 
 String Function() cles(String prefixe) {
@@ -304,7 +304,7 @@ void main() {
             exemple(),
             exemple(id: 'g1', owner: 'uid-zoe'),
           ]);
-          app.preferences.publishDefault('uid-brasseur', 'p1');
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'p1');
         },
       );
       expect(find.text(kNomModeleExemple), findsOneWidget);
@@ -354,7 +354,7 @@ void main() {
         tester,
         before: (app) {
           app.processes.publish([exemple()]);
-          app.preferences.publishDefault('uid-brasseur', 'p1');
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'p1');
         },
       );
       expect(
@@ -395,7 +395,7 @@ void main() {
               ),
             ),
           ]);
-          app.preferences.publishDefault('uid-brasseur', 'p1');
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'p1');
         },
       );
       await tester.tap(find.text(kNomModeleExemple).last);
@@ -414,7 +414,7 @@ void main() {
         tester,
         before: (app) {
           app.processes.publish([exemple(id: 'g1', owner: 'uid-zoe')]);
-          app.preferences.publishDefault('uid-brasseur', 'g1');
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'g1');
         },
       );
       expect(find.text(TextesChoixProcessus.aucun), findsOneWidget);
@@ -457,7 +457,7 @@ void main() {
           app.brews.serverAnswer = () async {};
           app.brews.processAnswer = () async => throw Exception('refus');
           app.processes.publish([exemple()]);
-          app.preferences.publishDefault('uid-brasseur', 'p1');
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'p1');
         },
       );
       await creer(tester);
@@ -476,7 +476,7 @@ void main() {
         before: (app) {
           app.brews.serverAnswer = () async => throw Exception('refus');
           app.processes.publish([exemple()]);
-          app.preferences.publishDefault('uid-brasseur', 'p1');
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'p1');
         },
       );
       await creer(tester);
@@ -859,7 +859,7 @@ void main() {
         unBrassin(status: BrewStatus.planned, recipe: recetteAvecCru),
         modeles: const [],
       );
-      app.preferences.publishDefault('uid-brasseur', 'supprime');
+      app.preferencesProcessus.publishDefault('uid-brasseur', 'supprime');
       await tester.pumpAndSettle();
       await ouvrirFeuille(tester);
       expect(find.text(TextesChoixProcessus.aucun), findsOneWidget);

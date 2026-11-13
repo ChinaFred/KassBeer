@@ -111,8 +111,10 @@ Kass'Dalle.
   `maxInstances` plafonne chaque fonction ; l'alerte à 5 € prévient.
 - **Coût d'abus.** Huit points d'accès publics. ADR-005 estime ≈ 124 $ par mois pour un point
   d'accès saturé en continu. Avec `maxInstances` de 1 à 5, le plafond théorique est
-  proportionnel au nombre d'instances ; il se recalcule au lot T3, et l'alerte à 5 € arrive en
-  moins d'un jour d'attaque continue (à vérifier).
+  proportionnel au nombre d'instances. Recalcul au lot T3 (2026-11-12, `exigences-techniques.md`,
+  tarifs à vérifier) : ≈ 64 $ par mois et par instance saturée, ≈ 442 $ par mois pour les deux
+  points d'accès de T3 (7 instances) après le quota gratuit ; l'alerte à 5 € part en ≈ 9 h
+  d'attaque continue sur les deux, ≈ 12 h sur le webhook seul.
 
 ### Webhook `githubTicketWebhook`
 
@@ -137,7 +139,11 @@ d'un auteur de confiance qui ferme l'Issue (Kass'Dalle). « Répondre » ramène
 (`answer_reset_at`). `validate` n'est possible que depuis `analyzed` (« Valider sera possible une
 fois le ticket analysé. »). `allowed_decisions` reste écrit par le serveur, qui recontrôle chaque
 appel ; le client ne recopie pas les préconditions de Kass'Dalle (fixture
-`ticket_decisions.json` non reprise). Un APK ancien affiche « Statut inconnu de cette version ».
+`ticket_decisions.json` non reprise). Un APK ancien affiche « Statut inconnu » (« Mettez
+l'application à jour pour lire ce statut. »).
+
+2026-11-12 : Jusqu'au lot T4, Valider reste offert depuis Reçu (décision de l'utilisateur) ; T4
+le réserve aux tickets analysés.
 
 ### Analyses et « Répondre »
 
@@ -301,7 +307,7 @@ livraison à la fois.
 `CLAUDE.md` change : « Le projet » (callables, webhook, Storage, routines), « Structure »
 (`storage.rules`, `test-fixtures/`), « Commandes utiles » (émulateur Storage), « Coûts
 variables » (premier poste), « Logique dupliquée » (`member_access.json`), « Tickets », P5
-(exception de la capture), P23 à P27 modifiés, P29 à P36 ajoutés. ADR-006 reçoit « Modifié
+(exception de la capture), P23 à P27 modifiés, P29 à P34 ajoutés au lot T3 (2026-11-12), les suivants par lot. ADR-006 reçoit « Modifié
 par : ADR-008 (option C, décisions 1 et 5, P25) » ; ADR-001 aussi.
 
 ## Sources

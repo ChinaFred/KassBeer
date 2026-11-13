@@ -18,7 +18,7 @@ import '../../recipes/domain/libelles_etapes.dart';
 import '../../recipes/domain/recipe.dart';
 import 'deroule.dart';
 
-/// Assemblage du déroulé d'un brassin (ADR-009, lot D3) : `resolveProcess` de
+/// Assemblage du déroulé d'un brassin (ADR-010, lot D3) : `resolveProcess` de
 /// `brewing/` rend des brouillons sans clé ni libellé (P3) ; ce fichier crée les
 /// clés, les noms et les annonces de l'écran de choix, puis vérifie le déroulé
 /// par [erreurDeroule] (P37).

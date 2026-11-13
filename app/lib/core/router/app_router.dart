@@ -38,6 +38,7 @@ import '../../features/tickets/presentation/ticket_form_screen.dart';
 import '../presentation/app_shell.dart';
 import '../presentation/etats.dart';
 import '../presentation/nouveautes_screen.dart';
+import '../presentation/preferences_screen.dart';
 import 'page_de_coquille.dart';
 import 'routes.dart';
 
@@ -163,7 +164,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             BrewStepsEditorScreen(id: state.pathParameters['id']!),
       ),
       // Écran du jour : plein écran, hors de la coquille. Journée de brassage,
-      // puis journées suivantes du déroulé (ADR-009).
+      // puis journées suivantes du déroulé (ADR-010).
       GoRoute(
         path: '${AppRoutes.brews}/:id/jour',
         builder: (_, state) => BrewDayScreen(
@@ -180,7 +181,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // « Mes prix » : page pleine avec retour, hors de la coquille.
       GoRoute(path: AppRoutes.prices, builder: (_, _) => const PricesScreen()),
-      // « Mes processus » (ADR-009) : pages pleines hors de la coquille. Liste
+      // « Mes processus » (ADR-010) : pages pleines hors de la coquille. Liste
       // ouverte par `push` depuis le menu du compte ; « nouveau » avant « :id ».
       GoRoute(
         path: AppRoutes.processes,
@@ -203,6 +204,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '${AppRoutes.processes}/:id',
         builder: (_, state) =>
             ProcessDetailScreen(id: state.pathParameters['id']!),
+      ),
+      // « Préférences » : page pleine avec retour, hors de la coquille.
+      GoRoute(
+        path: AppRoutes.preferences,
+        builder: (_, _) => const PreferencesScreen(),
       ),
       GoRoute(
         path: AppRoutes.newEquipment,

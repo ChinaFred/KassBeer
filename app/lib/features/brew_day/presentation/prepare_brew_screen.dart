@@ -40,7 +40,7 @@ final textesPreparation = TextesDocument(
 
 /// « Préparer le brassage » : vérifie que le téléphone a ce qu'il faut pour le jour
 /// J, sans rien écrire (PR4), puis commence le brassage. Avec [journee], la clé
-/// d'une journée 2 ou suivante du déroulé : « Préparer la journée » (ADR-009).
+/// d'une journée 2 ou suivante du déroulé : « Préparer la journée » (ADR-010).
 class PrepareBrewScreen extends ConsumerWidget {
   const PrepareBrewScreen({super.key, required this.id, this.journee});
 
@@ -170,13 +170,13 @@ class _PreparationState extends ConsumerState<_Preparation>
     });
   }
 
-  /// Un déroulé résolu illisible ne se suit pas (ADR-009) : aucun repli sur la
+  /// Un déroulé résolu illisible ne se suit pas (ADR-010) : aucun repli sur la
   /// chronologie de la recette.
   bool get _derouleIllisible =>
       _brew.deroule.resolu && _brew.deroule.probleme != null;
 
   /// « Commencer la journée » : démarre la première étape si elle a une durée,
-  /// par une écriture simple, sans changer le statut (ADR-009), puis ouvre
+  /// par une écriture simple, sans changer le statut (ADR-010), puis ouvre
   /// l'écran de la journée.
   void _commencerJournee(JourneeDeroulee journee) {
     if (_starting) return;
@@ -267,7 +267,7 @@ class _PreparationState extends ConsumerState<_Preparation>
     final planned = brew.plannedFor;
     final illisible = messageDerouleIllisible(deroule);
     // Avec un processus : « Brassage : 18 étapes · … », puis les journées
-    // suivantes et leurs dates (ADR-009).
+    // suivantes et leurs dates (ADR-010).
     final journee = brew.process == null || brassage == null
         ? ''
         : '${brassage.name.trim()} : ';
@@ -370,7 +370,7 @@ class _PreparationState extends ConsumerState<_Preparation>
   }
 }
 
-/// Lignes et « Préparer la journée » d'une journée 2 ou suivante (ADR-009).
+/// Lignes et « Préparer la journée » d'une journée 2 ou suivante (ADR-010).
 extension on _PreparationState {
   /// Lignes communes au brassage et aux journées suivantes : compte, écran,
   /// minuteurs, navigateur, et « Tout est prêt » après la réponse du serveur.

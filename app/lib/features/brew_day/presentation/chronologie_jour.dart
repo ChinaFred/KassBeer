@@ -32,7 +32,7 @@ const kCalculChronologieImpossible =
     'Une heure ou une durée enregistrée est invalide.';
 
 /// Texte d'un déroulé illisible (`Brew.deroule`), ou `null` s'il est lisible :
-/// `process` illisible (ADR-009), ou chronologie figée d'un brassin sans
+/// `process` illisible (ADR-010), ou chronologie figée d'un brassin sans
 /// `process` illisible, avec sa raison.
 String? messageDerouleIllisible(Deroule deroule) {
   final raison = deroule.probleme;
@@ -145,7 +145,7 @@ class ChronologieJour extends StatelessWidget {
 
   /// Affiche les mesures « Sans étape ». Faux sur la fiche pour une journée 2 ou
   /// suivante : ces mesures sont des relevés, déjà dans le relevé de
-  /// fermentation (ADR-009).
+  /// fermentation (ADR-010).
   final bool sansEtape;
 
   /// `null` en lecture seule.

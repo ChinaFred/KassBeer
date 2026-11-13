@@ -19,7 +19,7 @@ import 'choix_processus.dart';
 import 'libelles_deroule.dart';
 import 'section_deroule.dart';
 
-/// Feuille « Changer de processus » d'un brassin prévu (ADR-009) : les seuls
+/// Feuille « Changer de processus » d'un brassin prévu (ADR-010) : les seuls
 /// processus du lecteur et le déroulé prévu, puis « Appliquer », qui réécrit
 /// `process` en entier depuis la recette figée du brassin. Réservée au
 /// propriétaire tant que `brewed_at` est nul.

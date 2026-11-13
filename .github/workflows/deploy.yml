@@ -440,8 +440,17 @@ jobs:
         run: |
           manifest="$PWD/functions.yaml"
           FUNCTIONS_MANIFEST_OUTPUT_PATH="$manifest" npx --no-install firebase-functions .
-          if ! jq -e '[.endpoints[] | select(has("httpsTrigger") or has("callableTrigger") or has("blockingTrigger") or has("taskQueueTrigger"))] | length == 0' "$manifest" > /dev/null; then
-            echo "::error::Une fonction expose un point d'accès HTTP ou une callable : interdit sans ADR (P25)."
+          endpoints_filter='
+            def keys_with(f): [.endpoints | to_entries[] | select(.value | f) | .key];
+            (keys_with(has("blockingTrigger") or has("taskQueueTrigger")) | length == 0)
+            and ((keys_with(has("httpsTrigger")) - ["githubTicketWebhook"]) | length == 0)
+            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis"]) | length == 0)
+            and ((keys_with((.httpsTrigger.invoker // []) | index("public") != null)) - ["githubTicketWebhook"] | length == 0)
+            and ((.endpoints.githubTicketWebhook // null) | . == null or (.maxInstances == 5 and .timeoutSeconds == 60))
+            and ((.endpoints.answerTicketAnalysis // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 60))
+          '
+          if ! jq -e "$endpoints_filter" "$manifest" > /dev/null; then
+            echo "::error::Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25)."
             exit 1
           fi
           if ! jq -e '[.endpoints[] | select((.maxInstances // 0) < 1)] | length == 0' "$manifest" > /dev/null; then
@@ -536,9 +545,12 @@ jobs:
 
       - name: Manifeste des Functions contrôlé (P25)
         # Avant l'authentification : le manifeste vient d'un job qui exécute le code des
-        # dépendances. Il est relu ici, par jq seul : aucun déclencheur HTTP, callable,
+        # dépendances. Il est relu ici, par jq seul : points d'accès HTTP et callables
+        # limités à la liste fermée d'ADR-008 (githubTicketWebhook seul public,
+        # answerTicketAnalysis), avec leurs maxInstances et délais ; aucun déclencheur
         # bloquant ou de file ; maxInstances sur chaque fonction ; compte d'exécution
-        # tickets-functions ; aucun secret autre que GITHUB_TICKETS_TOKEN.
+        # tickets-functions ; secrets : GITHUB_TICKETS_TOKEN, et GITHUB_WEBHOOK_SECRET
+        # monté par githubTicketWebhook seul.
         if: needs.gate.outputs.functions == 'true'
         env:
           PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
@@ -548,8 +560,17 @@ jobs:
             echo "::error::$manifest absent, illisible ou sans fonction."
             exit 1
           fi
-          if ! jq -e '[.endpoints[] | select(has("httpsTrigger") or has("callableTrigger") or has("blockingTrigger") or has("taskQueueTrigger"))] | length == 0' "$manifest" > /dev/null; then
-            echo "::error::Une fonction expose un point d'accès HTTP ou une callable : interdit sans ADR (P25)."
+          endpoints_filter='
+            def keys_with(f): [.endpoints | to_entries[] | select(.value | f) | .key];
+            (keys_with(has("blockingTrigger") or has("taskQueueTrigger")) | length == 0)
+            and ((keys_with(has("httpsTrigger")) - ["githubTicketWebhook"]) | length == 0)
+            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis"]) | length == 0)
+            and ((keys_with((.httpsTrigger.invoker // []) | index("public") != null)) - ["githubTicketWebhook"] | length == 0)
+            and ((.endpoints.githubTicketWebhook // null) | . == null or (.maxInstances == 5 and .timeoutSeconds == 60))
+            and ((.endpoints.answerTicketAnalysis // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 60))
+          '
+          if ! jq -e "$endpoints_filter" "$manifest" > /dev/null; then
+            echo "::error::Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25)."
             exit 1
           fi
           if ! jq -e '[.endpoints[] | select((.maxInstances // 0) < 1)] | length == 0' "$manifest" > /dev/null; then
@@ -561,9 +582,13 @@ jobs:
             echo "::error::Une fonction ne tourne pas sous le compte tickets-functions."
             exit 1
           fi
-          if ! jq -e '[.endpoints[] | (.secretEnvironmentVariables // [])[] | .key | select(. != "GITHUB_TICKETS_TOKEN")] | length == 0' "$manifest" > /dev/null \
-             || ! jq -e '[(.params // [])[] | select(.type == "secret" and .name != "GITHUB_TICKETS_TOKEN")] | length == 0' "$manifest" > /dev/null; then
-            echo "::error::Une fonction lit un secret autre que GITHUB_TICKETS_TOKEN."
+          secrets_filter='
+            ([.endpoints | to_entries[] | .key as $f | (.value.secretEnvironmentVariables // [])[] | .key
+              | select(. != "GITHUB_TICKETS_TOKEN" and (. != "GITHUB_WEBHOOK_SECRET" or $f != "githubTicketWebhook"))] | length == 0)
+            and ([(.params // [])[] | select(.type == "secret" and .name != "GITHUB_TICKETS_TOKEN" and .name != "GITHUB_WEBHOOK_SECRET")] | length == 0)
+          '
+          if ! jq -e "$secrets_filter" "$manifest" > /dev/null; then
+            echo "::error::Une fonction lit un secret autre que GITHUB_TICKETS_TOKEN, ou GITHUB_WEBHOOK_SECRET hors de githubTicketWebhook."
             exit 1
           fi
           echo "Manifeste conforme : $(jq -r '.endpoints | keys | join(", ")' "$manifest")."

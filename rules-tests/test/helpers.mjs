@@ -274,7 +274,7 @@ export const fresh = (data) => ({
   updated_at: serverTimestamp(),
 });
 
-/// Journée d'un modèle de processus (ADR-009) : [count] éléments, dont un bloc tiré
+/// Journée d'un modèle de processus (ADR-010) : [count] éléments, dont un bloc tiré
 /// de la recette ([block]) en troisième place s'il est donné.
 const templateSession = (i, count, block, nameSize = 0) => ({
   key: `journee${String(i).padStart(13, "0")}`,
@@ -339,7 +339,7 @@ const resolvedSession = (i, count, nameSize = 0) => ({
   })),
 });
 
-/// Champ `process` d'un brassin (ADR-009) ; [extra] remplace des champs.
+/// Champ `process` d'un brassin (ADR-010) ; [extra] remplace des champs.
 export const brewProcess = (extra = {}) => ({
   format_version: 1,
   template_id: "t-a",

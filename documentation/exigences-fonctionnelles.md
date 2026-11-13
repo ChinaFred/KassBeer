@@ -10,8 +10,8 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -70,7 +70,7 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue), un séparateur, « Mes prix », « Mes processus », un séparateur, « Signaler ou proposer », « Mes
+pu être lue), un séparateur, « Mes prix », « Mes processus », « Préférences », un séparateur, « Signaler ou proposer », « Mes
 tickets », « Tickets à traiter » (administrateur seul), « Nouveautés », « Sources des données », un séparateur et « Se
 déconnecter ». Une déconnexion qui échoue
 affiche « Déconnexion impossible. Réessayez. ».
@@ -80,7 +80,7 @@ Une pastille chiffrée sur l'avatar et sur « Mes tickets » compte les tickets 
 « Mes tickets, 2 à lire ». Sans suivi à lire, rien ne change. Voir « Tickets ».
 
 Pour l'administrateur, « Tickets à traiter » ouvre Admin › Tickets des membres. Sa pastille
-compte les tickets reçus sans décision et ceux dont l'envoi est impossible, rien à 0 ; elle est
+compte les tickets reçus ou analysés sans décision et ceux dont l'envoi est impossible, rien à 0 ; elle est
 lue « Tickets à traiter, 3 ». La pastille de l'avatar additionne les suivis à lire et les
 tickets à traiter, et l'avatar est lu « Mon compte, 1 suivi de ticket à lire, 3 tickets à
 traiter ».
@@ -108,6 +108,34 @@ largeur, et il est annoncé aux lecteurs d'écran.
 
 **Page introuvable.** Une adresse inconnue affiche « Cette page n'existe pas. » et le bouton
 « Revenir à l'accueil ».
+
+### Préférences
+
+Ouverte depuis le menu du compte, pour tout membre (adresse `/preferences`). Page pleine, hors
+de la barre de navigation : titre « Préférences » et flèche retour. La flèche revient à l'écran
+d'où le membre est parti ; ouverte par son adresse, elle mène à l'accueil. Colonne de 840 px au
+plus.
+
+- Section « Apparence » (lue comme en-tête), une carte de trois choix :
+  - « Comme l'appareil », « Suit le mode clair ou sombre du téléphone ou du navigateur. » ;
+  - « Clair » ;
+  - « Sombre ».
+- Sous la carte : « Ce choix vaut pour cet appareil seulement. ».
+- Par défaut, et quand rien n'a été enregistré : « Comme l'appareil ».
+- Un choix change le thème de toute l'application aussitôt et s'enregistre sur l'appareil,
+  sans bouton. Il vaut pour tous les comptes de cet appareil ou de ce navigateur, et se perd à
+  la désinstallation ou au nettoyage du navigateur. Rien n'est écrit dans Firestore.
+- Enregistrement en échec : le thème choisi reste jusqu'à la fermeture de l'application, et
+  le message « Thème non enregistré : l'ancien thème reviendra au prochain démarrage. » s'affiche ; la panne
+  est journalisée. Si un autre choix a suivi entre-temps, seul l'échec de ce dernier choix
+  s'annonce ; l'échec du précédent est seulement journalisé.
+- Au démarrage, le thème enregistré s'applique dès le premier écran, écran de connexion
+  compris. Lecture impossible ou valeur inconnue : « Comme l'appareil », sans message ; la
+  panne est journalisée.
+- L'écran de lancement d'Android et le fond de la page web avant le chargement suivent le
+  thème du téléphone ou du navigateur. « Configuration Firebase absente » et « Kass'Beer n'a
+  pas pu démarrer » aussi.
+- Marche sans réseau.
 
 ### Nouveautés
 
@@ -214,6 +242,7 @@ pas disponible hors ligne. », « Ce ticket est illisible. », avec « Retour à
 | sur l'appareil seul | En attente du réseau | « Votre ticket est enregistré sur cet appareil. Il partira au retour du réseau. » |
 | en attente de transmission | Envoi en cours | « Votre ticket est enregistré. Il sera transmis à l'administrateur dans quelques minutes. », puis au-delà d'une heure « La transmission prend du retard. » |
 | reçu | Reçu | « L'administrateur a reçu votre ticket. » |
+| analysé | Analysé | « Votre ticket a été lu et étudié. » |
 | validé | Validé | « Votre demande sera traitée. » |
 | en cours | En cours | « Le travail a commencé. » |
 | livré | Livré | « C'est fait. Livré dans la version X.Y.Z. » (sans version : « C'est fait. ») ; étiquette « Disponible après mise à jour » si la version installée est plus ancienne, sinon « Disponible dans votre version » ; bouton « Voir la modification sur GitHub » quand la modification est connue |
@@ -224,8 +253,8 @@ pas disponible hors ligne. », « Ce ticket est illisible. », avec « Retour à
 | inconnu de cette version | Statut inconnu | « Mettez l'application à jour pour lire ce statut. » |
 
 Étiquettes : icône et texte, sur un fond du thème. Gris neutre pour « Envoi en cours », « En
-attente du réseau », « Refusé », « Statut inconnu » ; couleur primaire pour « Reçu », « Validé »,
-« Livré » ; tertiaire pour « En cours » ; secondaire pour « Clos » ; ton d'erreur pour « Envoi
+attente du réseau », « Refusé », « Statut inconnu » ; couleur primaire pour « Reçu », « Analysé »,
+« Validé », « Livré » ; tertiaire pour « En cours » ; secondaire pour « Clos » ; ton d'erreur pour « Envoi
 impossible » et « Limite du jour atteinte ». Elles ne clignotent pas côté membre.
 
 **Frise.** Sous la phrase du statut, les boutons et l'encadré, avant « Description », une frise
@@ -236,8 +265,8 @@ la ligne à 200 %.
 
 | Statut | Étapes |
 |---|---|
-| en attente, reçu, validé, en cours, livré | Envoi en cours → Reçu → Validé → En cours → Livré |
-| sur l'appareil seul | En attente du réseau → Reçu → Validé → En cours → Livré |
+| en attente, reçu, analysé, validé, en cours, livré | Envoi en cours → Reçu → Analysé → Validé → En cours → Livré |
+| sur l'appareil seul | En attente du réseau → Reçu → Analysé → Validé → En cours → Livré |
 | refusé | Envoi en cours → Reçu → Refusé |
 | clos | Envoi en cours → Reçu → Clos |
 | envoi impossible | Envoi en cours → Envoi impossible (icône en ton d'erreur) |
@@ -248,7 +277,9 @@ la ligne à 200 %.
 l'application. Un échec affiche « Impossible d'ouvrir GitHub. ».
 
 La pastille ne s'allume pas quand le ticket passe de « Envoi en cours » à « Reçu ». Elle
-s'allume pour tout autre changement de statut et pour une nouvelle réponse.
+s'allume pour tout autre changement de statut et pour une nouvelle réponse, y compris le
+retour d'« Analysé » à « Reçu » après une réponse de l'administrateur (la frise recule alors
+d'une étape).
 
 ### Admin
 
@@ -316,7 +347,8 @@ La ligne choisie prend le fond secondaire du thème, texte et icône accordés, 
 tickets. En dessous, la liste occupe l'écran et la fiche s'ouvre seule par-dessus (titre
 « Ticket d'un membre », retour vers la liste).
 
-**Liste.** Filtres « À traiter (N) » (tickets reçus sans décision et envois impossibles),
+**Liste.** Filtres « À traiter (N) » (tickets reçus ou analysés sans décision, et envois
+impossibles ; un ticket validé n'y est pas),
 « Tous » et « Bloqués (N) » (envoi impossible, en attente depuis plus d'une heure, Issue
 disparue) ; sans nombre tant que la liste n'est pas lue. Le choix n'est pas enregistré :
 l'écran s'ouvre sur « À traiter », et passe une fois sur « Tous » s'il n'y a rien à traiter ;
@@ -348,6 +380,7 @@ depuis le jj/mm/aa. Vérifiez qu'elle n'a pas été supprimée. », précédé d
 coupé en ton d'erreur ; l'encadré du texte de
 l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
 « Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
+« Analyses (N) », pour un ticket qui a une Issue (voir ci-dessous) ;
 « Décisions (N) », section repliée, la
 plus récente en haut (« Refus demandé le jj/mm/aa à hh:mm · Appliqué », « Clôture demandée le …
 · Échec : … », « Validation demandée le … · Refusée par le serveur : … »). États : « Chargement
@@ -355,11 +388,50 @@ du ticket », « Impossible de lire les tickets. », « Ce ticket n'existe plus.
 pas disponible hors ligne. », « Ticket illisible. Mettez l'application à jour. », avec « Retour
 aux tickets ».
 
+**Analyses (N).** Section toujours ouverte, lue par l'administrateur seul (ADR-008). Elle
+montre ce que le compte du mainteneur a publié sur l'Issue : analyses (`## Analyse…`) et
+précisions (`## Précisions…`), la plus ancienne en haut, séparées de 12 px. N compte les seules
+analyses ; le titre reste « Analyses » sans nombre tant que la section n'est pas lue. Une
+carte par entrée, dans l'encadré du texte de l'administrateur, titre en en-tête :
+
+| Entrée | Icône, fond | Titre |
+|---|---|---|
+| analyse | loupe, fond de surface | « Analyse du jj/mm/aa à hh:mm » (sans date : « Analyse ») |
+| réponse publiée par « Répondre » | flèche de réponse, fond secondaire | « Votre réponse du jj/mm/aa à hh:mm » |
+| précisions publiées hors de l'application | bulle, fond de surface | « Précisions du jj/mm/aa à hh:mm », puis « Non publiée depuis l'application. » |
+
+Le corps est rendu en Markdown (style GitHub), aux couleurs du thème, sans sa ligne de titre
+`## …`. Une image n'est jamais chargée : « [Image non affichée : texte alternatif] », ou
+« [Image non affichée] ». Un lien ne s'ouvre, hors de l'application, que s'il est en `http` ou
+`https` avec un hôte ; un autre lien ne fait rien ; un échec affiche « Impossible d'ouvrir le
+lien. ». Aucun HTML n'est rendu : une balise reste du texte. Le lien est lu comme un lien
+activable. Un tableau large défile à l'horizontale. Entrée tronquée : « Analyse tronquée, voir
+GitHub. » (« Réponse tronquée, voir GitHub. » pour une réponse, « Précisions tronquées, voir
+GitHub. » pour des précisions non publiées depuis l'application) et « Ouvrir l'Issue #12 ».
+Plus de dix entrées sur l'Issue : « Seules les 10 dernières entrées sont affichées. Les autres
+sont sur GitHub. », puis « Ouvrir l'Issue #12 ».
+
+États : barre de progression « Lecture des analyses » ; « Impossible de lire les analyses. » et
+« Réessayer » (« Lecture en cours » pendant la relecture), dès que la lecture échoue, sauf si
+des entrées sont déjà affichées : elles restent ; ticket reçu sans analyse : « Pas
+encore analysé. Les analyses publiées sur l'Issue s'afficheront ici. » ; ticket au-delà de Reçu
+sans relevé : « Analyse pas encore relevée. » et « Ouvrir l'Issue #12 » ; hors ligne, absent du
+cache : « Analyses non disponibles hors ligne. » ; document illisible : « Analyses illisibles.
+Mettez l'application à jour. ».
+
 **Barre de décision.** Fixée en bas de la fiche (moitié de la hauteur au plus, défilante) ; sous
 480 px de hauteur, elle passe en fin de fiche. Les boutons sont ceux que le serveur permet pour
-ce ticket (`allowed_decisions`), jamais déduits du statut par l'application : « Refuser » et
-« Clore » à gauche, « Valider » à droite ; ils passent les uns sous les autres quand la largeur
-manque. Liste vide : pas de barre. Liste pas encore écrite par le serveur : « Le serveur n'a pas
+ce ticket (`allowed_decisions`), jamais déduits du statut par l'application : « Refuser »,
+« Répondre » (valeur `answer`) et « Clore » à gauche, « Valider » à droite ; ils passent les uns
+sous les autres quand la largeur manque. Le serveur offre « Valider » sur un ticket reçu ou
+analysé ; à partir du lot T4 d'ADR-008, sur un ticket analysé seul. « Répondre » appelle le serveur : hors ligne, il est
+inactif, et la ligne « Répondre demande le réseau. » le dit sous les boutons. Pour un ticket
+reçu dont la dernière réponse suit la dernière analyse, la ligne « Vos précisions du jj/mm/aa à
+hh:mm seront lues par la prochaine analyse. » précède les boutons. Pendant la publication d'une
+réponse, pas de boutons : barre de progression (« Publication en cours » pour un lecteur
+d'écran) et « Publication de la réponse en cours sur GitHub. ». Pendant la publication, cette
+ligne remplace celle de la dernière décision quand celle-ci n'a pas de barre de progression
+(écartée, en échec, interrompue, écrite hors ligne, état inconnu). Liste vide : pas de barre. Liste pas encore écrite par le serveur : « Le serveur n'a pas
 encore calculé les décisions possibles pour ce ticket. ». Pendant une décision en attente ou en
 cours, pas de boutons. Pendant la lecture des décisions, une barre de progression (« Lecture des
 décisions ») remplace la barre. Décisions illisibles : « Impossible de lire les décisions. » et
@@ -398,6 +470,40 @@ l'appareil. Un texte non envoyé reste dans la fiche et revient à la réouvertu
 décision écartée ou en échec, la boîte reprend le texte envoyé. Une écriture refusée par le
 serveur affiche « Décision non enregistrée. Réessayez. » et rend boutons et texte. Pas de
 message de succès après une décision appliquée.
+
+**Boîte « Répondre ».** Feuille du bas au téléphone, dialogue sinon, que ni un appui à côté ni
+un glissement ne ferment. Titre « Répondre à l'analyse » (ticket reçu : « Répondre au ticket »),
+sous-titre « Analyse du jj/mm/aa à hh:mm » s'il existe une analyse ; encadré « Publié sur un
+site public : n'écrivez ni nom ni adresse. Le membre ne lira pas ce texte dans
+l'application. » ; puis « Le ticket repassera à « Reçu ». La prochaine analyse lira votre
+réponse. » (ticket reçu : « Ajoutez une précision avant l'analyse. Elle sera lue par la session
+d'analyse. »), et pour un ticket validé « La validation sera retirée. ». Champ « Votre
+réponse », 4 à 10 lignes, compteur de 4 000 (texte sans ses espaces de bord, un émoji compte
+pour un caractère, comme au serveur ; la saisie n'est pas coupée au-delà ; lu « 3 994
+caractères restants » ou « 12 caractères en trop » par un lecteur d'écran, annoncé pendant la
+saisie), aide « Répondez aux questions de l'analyse. Les
+adresses e-mail et les mentions seront retirées. » (ticket reçu : « Précisez votre demande. … »),
+focus à l'ouverture ; erreurs « La réponse doit faire au moins 5 caractères. » et « La réponse
+ne doit pas dépasser 4 000 caractères. » (libellé du serveur), et le focus revient au champ. Boutons « Annuler » et « Publier ». Le serveur retire adresses et mentions ;
+l'application ne contrôle que la longueur.
+
+- Pendant l'envoi : « Publier » inactif (« Publication en cours »), champ inactif, « Annuler »
+  devient « Fermer », ligne annoncée « Publication en cours. Vous pouvez fermer : le résultat
+  s'affichera dans un message. ». Fermer la boîte (retour, Échap, « Fermer ») ne coupe pas
+  l'appel. Un seul appel part à la fois.
+- Succès : la boîte se ferme et le message « Réponse publiée. Le ticket repasse à Reçu. »
+  s'affiche (ticket reçu : « Réponse publiée. Elle sera lue par la prochaine analyse. »).
+- Échec : la boîte reste ouverte avec le texte, et une ligne annoncée en ton d'erreur ; boîte
+  fermée, un message en bas d'écran : « Réponse non publiée : <motif du serveur> Votre texte
+  est gardé. » ; « Réponse non publiée : pas de réseau. Votre texte est gardé. » ; « Réponse non
+  publiée : le serveur n'a pas répondu à temps. Vérifiez l'Issue avant de publier à
+  nouveau. » ; « Réponse non publiée : accès administrateur refusé. » ; sinon « Réponse non
+  publiée. Votre texte est gardé. ». Un motif qui porte sur le texte s'affiche sous le champ.
+- Échec partiel (réponse publiée, ticket pas ramené à Reçu) : le texte passe en lecture seule
+  et « Cette réponse est déjà publiée sur GitHub. Publier remet le ticket à Reçu. » s'affiche.
+- Le texte non publié reste dans la fiche, même après un changement de disposition, et revient
+  à la réouverture ; il s'efface après une publication réussie.
+
 ### Équipements
 
 **Liste.** Tous les équipements du groupe, les siens d'abord, puis par nom. Chaque ligne :

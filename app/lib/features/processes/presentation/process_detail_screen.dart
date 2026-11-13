@@ -225,7 +225,7 @@ class _FicheState extends ConsumerState<_Fiche> {
       // suppression acceptée par le serveur : refusée, le défaut reste. Hors
       // ligne, il attend le retour du réseau ; si l'application se ferme
       // avant, le choix désigne un modèle supprimé, lu comme aucun défaut
-      // (ADR-009).
+      // (ADR-010).
       final preferences = ref.read(preferencesProcessusRepositoryProvider);
       final uid = access.user.uid;
       unawaited(

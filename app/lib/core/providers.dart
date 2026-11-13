@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/auth/data/auth_repository.dart';
@@ -12,6 +13,7 @@ import '../features/processes/data/processes_repository.dart';
 import '../features/recipes/data/recipes_repository.dart';
 import '../features/tickets/data/tickets_repository.dart';
 import 'fichiers/echange_fichiers.dart';
+import 'preferences/preferences_appareil.dart';
 import 'services/error_report_service.dart';
 import 'services/screen_wakelock.dart';
 
@@ -47,7 +49,7 @@ final costsRepositoryProvider = Provider<CostsRepository>(
   (ref) => throw UnimplementedError('costsRepositoryProvider non fourni'),
 );
 
-/// Modèles de processus du groupe (`process_templates/`, ADR-009).
+/// Modèles de processus du groupe (`process_templates/`, ADR-010).
 final processesRepositoryProvider = Provider<ProcessesRepository>(
   (ref) => throw UnimplementedError('processesRepositoryProvider non fourni'),
 );
@@ -99,4 +101,17 @@ final echangeFichiersProvider = Provider<EchangeFichiers>(
 /// démarrage) ; `null` si la lecture a échoué. Le menu du compte l'affiche.
 final appVersionProvider = Provider<String?>(
   (ref) => throw UnimplementedError('appVersionProvider non fourni'),
+);
+
+/// Préférences gardées sur l'appareil (ADR-009) : canal `fr.kassbeer/prefs` sur
+/// Android, `localStorage` sur le web. `main.dart` fournit l'instance qui a lu le
+/// thème au démarrage.
+final preferencesAppareilProvider = Provider<PreferencesAppareil>(
+  (ref) => PreferencesAppareilPlateforme(),
+);
+
+/// Thème lu sur l'appareil avant `runApp` (`main.dart`) ; [ThemeMode.system] si
+/// rien n'est enregistré ou si la lecture a échoué.
+final themeModeInitialProvider = Provider<ThemeMode>(
+  (ref) => throw UnimplementedError('themeModeInitialProvider non fourni'),
 );

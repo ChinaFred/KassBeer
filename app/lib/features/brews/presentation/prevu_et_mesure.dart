@@ -204,7 +204,7 @@ class _Tableau extends ConsumerWidget {
   final Future<void> Function(Future<void> Function() action) uneAction;
 
   String _etape(BrewEvent e) {
-    // Mesure d'une étape d'une journée 2 ou suivante (ADR-009) : « Houblonnage
+    // Mesure d'une étape d'une journée 2 ou suivante (ADR-010) : « Houblonnage
     // à cru · Mesure de densité ».
     final key = e.stepKey;
     final trouvee = key == null ? null : brew.deroule.etape(key);

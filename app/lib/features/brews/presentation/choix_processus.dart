@@ -14,7 +14,7 @@ import '../../recipes/domain/recipe.dart';
 import '../domain/assemblage_deroule.dart';
 import 'libelles_deroule.dart';
 
-/// Choix du processus d'un brassin (ADR-009, lot D3) : « Nouveau brassin » et
+/// Choix du processus d'un brassin (ADR-010, lot D3) : « Nouveau brassin » et
 /// « Changer de processus » sur la fiche d'un brassin prévu. Seuls les modèles
 /// du lecteur sont proposés ; aucun modèle d'un autre membre n'est présélectionné.
 

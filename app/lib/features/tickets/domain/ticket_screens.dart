@@ -58,6 +58,7 @@ const Map<String, String> kTicketScreenNames = {
   '/processus/nouveau': 'Nouveau processus',
   '/processus/:id': 'Processus',
   '/processus/:id/modifier': 'Modifier le processus',
+  '/preferences': 'Préférences',
   '/nouveautes': 'Nouveautés',
   '/tickets': 'Mes tickets',
   '/tickets/nouveau': 'Signaler ou proposer',
@@ -173,6 +174,7 @@ const _kTicketScreenElements = {
   '/prix/fenetre/frais': 'Frais',
   '/admin/membres/fenetre/inviter': 'Inviter un membre',
   '/admin/tickets/:id/fenetre/decision': 'Refuser ou clore',
+  '/admin/tickets/:id/fenetre/reponse': 'Répondre',
 };
 
 /// Élément (menu ou fenêtre) → nom affiché : table fermée.

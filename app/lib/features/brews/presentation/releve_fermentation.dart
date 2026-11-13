@@ -98,7 +98,7 @@ String libelleReleve(ReleveSaisi releve) {
 }
 
 /// « Houblonnage à cru : Mesure de densité » pour un relevé saisi sur une étape
-/// d'une journée 2 ou suivante (ADR-009) ; `null` sinon.
+/// d'une journée 2 ou suivante (ADR-010) ; `null` sinon.
 String? etapeDuReleve(Brew brew, Releve releve) {
   final key = releve.events.first.stepKey;
   final trouvee = key == null ? null : brew.deroule.etape(key);

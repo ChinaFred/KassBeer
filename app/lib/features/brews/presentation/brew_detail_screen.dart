@@ -226,7 +226,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     // Le processus du brassin se résout de nouveau avec la nouvelle copie de la
-    // recette (ADR-009), avant la confirmation : elle dit ce qu'il deviendra. Un
+    // recette (ADR-010), avant la confirmation : elle dit ce qu'il deviendra. Un
     // modèle absent ou inapplicable ne s'invente pas.
     final avecProcessus = brew.process != null;
     final templateId = brew.process?.templateId;
@@ -419,7 +419,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
 
   /// « Changer la date » d'une journée après le brassage : sélecteur du jour de
   /// départ à J+365, ou écart en jours sans date de départ. Réécrit `process` en
-  /// entier (ADR-009).
+  /// entier (ADR-010).
   Future<void> _changerDate(Brew brew, JourneeDeroulee journee) async {
     final process = brew.process;
     if (process == null) return;
@@ -572,7 +572,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
   }
 
   /// Annonces d'un embouteillage envoyé depuis la fiche, ou depuis la journée
-  /// d'embouteillage à son retour sur la fiche (ADR-009). Aucun montant (SE7).
+  /// d'embouteillage à son retour sur la fiche (ADR-010). Aucun montant (SE7).
   void _annoncerEmbouteillage({
     required ScaffoldMessengerState messenger,
     required Brew brew,
@@ -677,7 +677,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       errors: ref.read(errorReportServiceProvider),
       reported: ref.read(planReportsProvider),
     );
-    // Journées après le brassage, chacune avec son plan (ADR-009, P37).
+    // Journées après le brassage, chacune avec son plan (ADR-010, P37).
     final plansJournees = <String, PlanEvalue>{
       if (events != null)
         for (final j in brew.deroule.journees.skip(1))
@@ -794,7 +794,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     void embouteiller() => _embouteiller(brew, modification: false);
     // Avec une journée d'embouteillage, « Embouteiller » passe dans le menu ⋮
     // (« Embouteiller sans suivre la journée ») ; avec une journée à suivre,
-    // son bouton est l'action principale (ADR-009).
+    // son bouton est l'action principale (ADR-010).
     final releveSecondaire = prochaine != null;
     final Widget boutonReleve = releveSecondaire
         ? OutlinedButton(
@@ -1011,7 +1011,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     return Scaffold(body: body, floatingActionButton: fab);
   }
 
-  /// Section « Déroulé » (ADR-009). Les modèles ne se lisent que pour un brassin
+  /// Section « Déroulé » (ADR-010). Les modèles ne se lisent que pour un brassin
   /// qui en a un : « Modèle supprimé depuis » et « Rétablir la date du
   /// processus ».
   Widget _deroule({
@@ -1033,7 +1033,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             brew.status == BrewStatus.conditioning);
     // « Passer la journée » : journée « autre » non terminée, sans étape en
     // cours (elle se termine alors par l'écran de la journée). L'embouteillage
-    // a « Embouteiller sans suivre la journée » (ADR-009).
+    // a « Embouteiller sans suivre la journée » (ADR-010).
     final passables = <String>{
       if (suivi)
         for (final j in brew.deroule.journees.skip(1))
@@ -1080,7 +1080,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     );
   }
 
-  /// « Passer la journée » (ADR-009) : `step_skipped` pour chaque étape non
+  /// « Passer la journée » (ADR-010) : `step_skipped` pour chaque étape non
   /// commencée, dans un `WriteBatch` (`writeSteps`), sans statut ni attente du
   /// serveur.
   Future<void> _passerJournee(
@@ -1136,7 +1136,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
 
   /// Première journée après le brassage pas encore terminée, à suivre par le
   /// propriétaire d'un brassin en fermentation ou en conditionnement
-  /// (ADR-009) ; `null` sinon.
+  /// (ADR-010) ; `null` sinon.
   JourneeDeroulee? _prochaineJournee(Brew brew, Map<String, PlanEvalue> plans) {
     if (brew.status != BrewStatus.fermenting &&
         brew.status != BrewStatus.conditioning) {
@@ -1200,7 +1200,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
   }
 
   /// Annonce, au retour sur la fiche, un embouteillage envoyé depuis la journée
-  /// d'embouteillage (ADR-009) : mêmes annonces et même « Voir le coût » que
+  /// d'embouteillage (ADR-010) : mêmes annonces et même « Voir le coût » que
   /// depuis la fiche. Une seule fois : la mémoire se vide après l'affichage,
   /// jamais pendant le `build`.
   void _annoncerEmbouteillageDeLaJournee(Brew brew) {

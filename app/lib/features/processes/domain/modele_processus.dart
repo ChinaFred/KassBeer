@@ -12,7 +12,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../recipes/domain/chronologie.dart';
 import '../../recipes/domain/recipe.dart' show truncateName;
 
-/// Modèle de processus (`process_templates/{id}`, ADR-009) : de 1 à 5 journées
+/// Modèle de processus (`process_templates/{id}`, ADR-010) : de 1 à 5 journées
 /// nommées, chacune avec son écart en jours et ses étapes, dont les blocs tirés de
 /// la recette. Lu par le groupe, écrit par son auteur. La résolution avec une
 /// recette se fait dans `brewing/` (P3).

@@ -101,7 +101,7 @@ class PlanDuJour {
   /// Calcule la vue de la journée [journee] de [brew] à [now] à partir de
   /// [events] ; [journee] nulle désigne la journée de brassage.
   ///
-  /// Le calcul se fait journée par journée (ADR-009, P37) : les événements se
+  /// Le calcul se fait journée par journée (ADR-010, P37) : les événements se
   /// réduisent sur les étapes de toutes les journées du déroulé, puis l'horaire se
   /// recalcule sur les seules étapes de la journée et leurs enregistrements. Un
   /// événement d'une autre journée n'est ni une anomalie ni un début qui rend
@@ -167,7 +167,7 @@ class PlanDuJour {
       plannedStart.day,
     );
     // Brassage : un relevé de fermentation n'est pas une saisie du jour (FE11).
-    // Autre journée : ses mesures portent `phase: 'fermentation'` (ADR-009).
+    // Autre journée : ses mesures portent `phase: 'fermentation'` (ADR-010).
     final saisies =
         events
             .where(
@@ -248,7 +248,7 @@ class PlanDuJour {
   }
 }
 
-/// Vrai si [journee] de [brew] est terminée (ADR-009) : l'embouteillage quand
+/// Vrai si [journee] de [brew] est terminée (ADR-010) : l'embouteillage quand
 /// `bottled_at` est posé ; une autre journée quand aucune de ses étapes n'est en
 /// cours ni à venir dans [plan], son plan calculé. Sans plan (calcul refusé), la
 /// journée n'est pas terminée.

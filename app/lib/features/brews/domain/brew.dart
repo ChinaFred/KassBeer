@@ -179,12 +179,12 @@ class Brew {
     );
   }
 
-  /// Déroulé du brassin, seul accès à ses étapes (ADR-009, P37) : `process` s'il
+  /// Déroulé du brassin, seul accès à ses étapes (ADR-010, P37) : `process` s'il
   /// existe, sinon une journée de brassage tirée de `recipe_snapshot.brew_steps`.
   /// Un `process` illisible rend un déroulé illisible, sans repli sur la recette.
   Deroule get deroule => process ?? Deroule.depuisRecette(recipe);
 
-  /// Départ des dates du déroulé (ADR-009) : `brewed_at`, sinon `planned_for` ;
+  /// Départ des dates du déroulé (ADR-010) : `brewed_at`, sinon `planned_for` ;
   /// `null` sans l'un ni l'autre (« J+4 » sans date).
   DateTime? get departDeroule => brewedAt ?? plannedFor;
 
@@ -260,7 +260,7 @@ int compareBrews(Brew a, Brew b) {
 }
 
 /// Prochaine journée après le brassage d'un brassin en fermentation ou en
-/// conditionnement, d'après les dates seules (ADR-009 : la liste ne lit pas les
+/// conditionnement, d'après les dates seules (ADR-010 : la liste ne lit pas les
 /// événements) : la première dont la date n'est pas passée à [now], sauf la
 /// journée d'embouteillage d'un brassin embouteillé. `null` sinon.
 ({JourneeDeroulee journee, DateTime date})? prochaineJourneePrevue(

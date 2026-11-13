@@ -163,7 +163,7 @@ void main() {
     }
   });
 
-  group('erreurModele : contraintes d\'ADR-009', () {
+  group('erreurModele : contraintes d\'ADR-010', () {
     test('modèle valide', () {
       expect(erreurModele(deuxJournees()), isNull);
     });

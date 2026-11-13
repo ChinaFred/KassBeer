@@ -10,7 +10,7 @@ import '../domain/brew.dart';
 import '../domain/deroule.dart';
 import 'libelles_deroule.dart';
 
-/// Section « Déroulé » de la fiche d'un brassin (ADR-009, lot D3) : processus
+/// Section « Déroulé » de la fiche d'un brassin (ADR-010, lot D3) : processus
 /// d'origine, journées et leurs dates, changements avant le départ.
 
 /// Textes de la section.

@@ -410,7 +410,7 @@ typedef EnvoiEmbouteillage =
 /// frais, coût figé) à l'envoi du formulaire, avant l'attente du nom du jeton
 /// (CB5). L'envoi rendu n'utilise plus `ref` : il ne lit rien et n'attend rien,
 /// hors ligne compris (P2). La fiche lit ces valeurs pour son bloc Coût ; la
-/// journée d'embouteillage (ADR-009) les a ouvertes à « Préparer la journée ».
+/// journée d'embouteillage (ADR-010) les a ouvertes à « Préparer la journée ».
 EnvoiEmbouteillage capturerEmbouteillage(WidgetRef ref, Brew brew) {
   final brews = ref.read(brewsRepositoryProvider);
   final costs = ref.read(costsRepositoryProvider);

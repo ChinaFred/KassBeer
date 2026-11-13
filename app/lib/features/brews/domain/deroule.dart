@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 import '../../recipes/domain/chronologie.dart';
 import '../../recipes/domain/recipe.dart';
 
-/// Déroulé figé d'un brassin (`brews/{id}.process`, ADR-009) : de 1 à 5 journées
+/// Déroulé figé d'un brassin (`brews/{id}.process`, ADR-010) : de 1 à 5 journées
 /// résolues depuis un modèle de processus et la recette figée. Se lit par
 /// `Brew.deroule`, seul accès aux étapes d'un brassin (P37).
 
@@ -161,7 +161,7 @@ class Deroule {
       templateName = null;
 
   /// Journée de brassage unique d'un brassin sans `process`, tirée de
-  /// `recipe_snapshot.brew_steps` (lecture tolérante, ADR-009). Une chronologie
+  /// `recipe_snapshot.brew_steps` (lecture tolérante, ADR-010). Une chronologie
   /// illisible rend le déroulé illisible.
   factory Deroule.depuisRecette(RecipeContent recipe) {
     final problem = recipe.brewStepsProblem;

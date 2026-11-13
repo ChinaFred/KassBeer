@@ -16,7 +16,7 @@ import '../domain/preference_processus.dart';
 import 'libelles_processus.dart';
 import 'processes_providers.dart';
 
-/// « Mes processus » (ADR-009) : les modèles du lecteur, puis ceux du groupe.
+/// « Mes processus » (ADR-010) : les modèles du lecteur, puis ceux du groupe.
 /// Page pleine hors de la coquille, ouverte depuis le menu du compte.
 class ProcessListScreen extends ConsumerWidget {
   const ProcessListScreen({super.key});

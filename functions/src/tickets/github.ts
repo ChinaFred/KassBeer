@@ -5,9 +5,9 @@
  * De GitHub, le serveur ne lit que l'état et les étiquettes des Issues, le corps des
  * Issues `source:app` du compte propriétaire (pour y reconnaître la ligne « Référence »,
  * sans rien en garder), leurs commentaires (pour la seule réponse du compte
- * propriétaire), les événements de fermeture, les PR d'un commit et `app/pubspec.yaml` à
- * ce commit (P24). Il écrit l'Issue, les commentaires des décisions (T2), leurs étiquettes
- * et leur fermeture.
+ * propriétaire, et ses analyses et précisions, P32), les événements de fermeture, les PR
+ * d'un commit et `app/pubspec.yaml` à ce commit (P24). Il écrit l'Issue, les commentaires
+ * des décisions (T2) et des précisions (T3), leurs étiquettes et leur fermeture.
  *
  * Chaque échec lève une `GithubError` classée. Le message ne contient jamais le jeton
  * (P25) : il reprend le code HTTP et le message de GitHub.
@@ -167,12 +167,14 @@ export interface GithubClient {
     perPage: number,
   ): Promise<IssueView[]>;
   lastCommentsFirst(issueNumber: number, commentCount: number): AsyncGenerator<CommentView[]>;
+  recentComments(issueNumber: number, commentCount: number): Promise<CommentView[]>;
   listIssueEvents(issueNumber: number): Promise<unknown[]>;
   pullsForCommit(sha: string): Promise<MergedPrCandidate[]>;
   fileAtCommit(path: string, sha: string): Promise<string | null>;
   getComment(commentId: number): Promise<CommentView | null>;
   createComment(issueNumber: number, body: string): Promise<{ id: number | null }>;
   addLabels(issueNumber: number, labels: string[]): Promise<void>;
+  removeLabel(issueNumber: number, label: string): Promise<"removed" | "absent">;
   closeIssue(issueNumber: number, stateReason: "completed" | "not_planned"): Promise<void>;
 }
 
@@ -181,7 +183,7 @@ export function githubClient(token: string, fetchImpl: FetchLike = fetch): Githu
   let tokenExpirationHeader: string | null | undefined = undefined;
 
   async function request<T>(
-    method: "GET" | "POST" | "PATCH",
+    method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
     opts: { body?: unknown; repoLevel?: boolean } = {},
   ): Promise<T> {
@@ -325,6 +327,19 @@ export function githubClient(token: string, fetchImpl: FetchLike = fetch): Githu
       }
     },
 
+    /**
+     * Les 500 derniers commentaires au plus (`MAX_PAGES` pages de 100, de la dernière à la
+     * première), rendus dans l'ordre chronologique. Sert au relevé des analyses (P32) et
+     * de la réponse « Réponse : » en une seule lecture.
+     */
+    async recentComments(issueNumber, commentCount) {
+      const pages: CommentView[][] = [];
+      for await (const page of this.lastCommentsFirst(issueNumber, commentCount)) {
+        pages.unshift(page);
+      }
+      return pages.flat();
+    },
+
     async listIssueEvents(issueNumber) {
       const events: unknown[] = [];
       for (let page = 1; page <= MAX_PAGES; page++) {
@@ -393,6 +408,28 @@ export function githubClient(token: string, fetchImpl: FetchLike = fetch): Githu
       await request<unknown>("POST", `${REPO_PATH}/issues/${issueNumber}/labels`, {
         body: { labels },
       });
+    },
+
+    /**
+     * Retire une étiquette. Rend `absent` quand GitHub répond 404 (étiquette déjà
+     * retirée) : le résultat voulu est atteint, et l'écart est journalisé.
+     */
+    async removeLabel(issueNumber, label) {
+      try {
+        await request<unknown>(
+          "DELETE",
+          `${REPO_PATH}/issues/${issueNumber}/labels/${encodeURIComponent(label)}`,
+        );
+        return "removed";
+      } catch (err) {
+        if (!(err instanceof GithubError) || err.kind !== "not_found") throw err;
+        logError({
+          message: `Tickets : étiquette ${label} déjà absente de l'Issue #${issueNumber}`,
+          feature: "tickets",
+          error: err,
+        });
+        return "absent";
+      }
     },
 
     async closeIssue(issueNumber, stateReason) {

@@ -3,7 +3,7 @@ import 'brew_steps.dart';
 import 'errors.dart';
 import 'recipe_calculation.dart';
 
-/// Nombre de journées d'un modèle de processus et d'un déroulé (ADR-009).
+/// Nombre de journées d'un modèle de processus et d'un déroulé (ADR-010).
 const maxProcessSessions = 5;
 
 /// Écart maximal d'une journée, en jours depuis le début du brassage.
@@ -104,7 +104,7 @@ class ProcessTemplateIssue {
 
 /// Premier défaut de [sessions] qui empêche la résolution, ou `null`.
 ///
-/// Contraintes d'ADR-009 : de 1 à [maxProcessSessions] journées ; la première
+/// Contraintes d'ADR-010 : de 1 à [maxProcessSessions] journées ; la première
 /// est la journée de brassage (écart 0, seul bloc `recipeSteps` du modèle) ;
 /// un bloc `dryHops` et un bloc `packagingAdditions` au plus, jamais dans la
 /// première journée ni dans la même ; `requiresRecipeBlock` seulement sur une
@@ -426,7 +426,7 @@ class ProcessResolution {
   final List<ProcessWarning> warnings;
 }
 
-/// Résout le modèle [template] avec la recette figée [recipe] (ADR-009).
+/// Résout le modèle [template] avec la recette figée [recipe] (ADR-010).
 ///
 /// Chaque journée garde ses étapes fixes et remplace ses blocs : `recipeSteps`
 /// par la chronologie de la recette, ou à défaut par son préremplissage, sans

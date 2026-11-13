@@ -24,7 +24,7 @@ const kHeureFutureRefusee = 'L\'heure ne peut pas être dans le futur.';
 const kFinAvantDebut = 'La fin doit suivre le début.';
 
 /// Aide d'une densité ou d'une température saisie pendant une journée 2 ou
-/// suivante (ADR-009).
+/// suivante (ADR-010).
 const kMesureComptee = 'Comptée dans le relevé de fermentation.';
 
 /// Instant choisi, ou raison du refus.
@@ -181,7 +181,7 @@ class FormulaireMesure extends StatefulWidget {
   final DateTime? plancher;
 
   /// Saisie d'une journée 2 ou suivante : comptée dans le relevé de
-  /// fermentation (ADR-009). Affiche l'aide sous le type, et l'avertissement
+  /// fermentation (ADR-010). Affiche l'aide sous le type, et l'avertissement
   /// d'un relevé postérieur à [bottledAt].
   final bool releve;
   final DateTime? bottledAt;
@@ -633,7 +633,7 @@ void ouvrirCorrection({
 }
 
 /// Ajoute une mesure, feuille fermée aussitôt, avec « Annuler » pendant 10 s.
-/// [phase] : `fermentation` pour une journée 2 ou suivante (ADR-009).
+/// [phase] : `fermentation` pour une journée 2 ou suivante (ADR-010).
 void enregistrerSaisie({
   required WidgetRef ref,
   required ScaffoldMessengerState messenger,

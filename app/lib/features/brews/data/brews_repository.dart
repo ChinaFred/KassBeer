@@ -18,7 +18,7 @@ import '../domain/releves.dart';
 const kPrepareWait = Duration(seconds: 15);
 
 /// Déroulé refusé par [erreurDeroule] avant l'écriture : les règles ne lisent
-/// pas les journées (ADR-009, P37), l'application ne les écrit qu'à cette
+/// pas les journées (ADR-010, P37), l'application ne les écrit qu'à cette
 /// condition.
 class DerouleInvalide implements Exception {
   const DerouleInvalide(this.message);
@@ -72,7 +72,7 @@ abstract class BrewsRepository {
     required String? ownerName,
   });
 
-  /// Écrit le déroulé figé `process` d'un brassin prévu, en entier (ADR-009,
+  /// Écrit le déroulé figé `process` d'un brassin prévu, en entier (ADR-010,
   /// option B') : juste après [create], puis à chaque changement de processus ou
   /// de date avant le départ. [deroule] nul retire le champ : « Chronologie de la
   /// recette seule ». Les règles refusent l'écriture une fois `brewed_at` posé.
@@ -222,7 +222,7 @@ class BrewEventInput {
   final String? note;
   final DateTime measuredAt;
 
-  /// `fermentation` pour une saisie d'une journée 2 ou suivante (ADR-009),
+  /// `fermentation` pour une saisie d'une journée 2 ou suivante (ADR-010),
   /// `null` pour le jour de brassage.
   final PhaseEvenement? phase;
 }
@@ -317,7 +317,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
         hasPendingWrites: hasPendingWrites,
       );
       // Déroulé illisible (process, ou chronologie de la recette figée) : le
-      // brassin reste lisible, l'écran affiche la panne (ADR-009).
+      // brassin reste lisible, l'écran affiche la panne (ADR-010).
       final deroule = brew.deroule;
       final problem = deroule.probleme;
       if (problem != null) {

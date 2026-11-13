@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/data/lecture_document.dart';
 
 /// Choix par défaut du formulaire « Nouveau brassin »
-/// (`users/{uid}/preferences/processes`, ADR-009) : état propre au lecteur, jamais
+/// (`users/{uid}/preferences/processes`, ADR-010) : état propre au lecteur, jamais
 /// écrit sur le modèle lu par le groupe.
 
 @immutable

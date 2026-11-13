@@ -32,7 +32,7 @@ Future<void> ouvrirNouveauBrassin(BuildContext context, Recipe recipe) =>
 
 /// Crée un brassin depuis une recette, avec une copie de la recette et de
 /// l'équipement choisi (BR1, BR2), puis écrit son déroulé si un processus est
-/// choisi (ADR-009, option B' : deux écritures).
+/// choisi (ADR-010, option B' : deux écritures).
 class FormulaireNouveauBrassin extends ConsumerStatefulWidget {
   const FormulaireNouveauBrassin({super.key, required this.recipe});
 

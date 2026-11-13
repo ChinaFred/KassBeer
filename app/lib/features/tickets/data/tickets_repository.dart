@@ -1,16 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
+import '../domain/ticket_analysis.dart';
 
-/// Accès à `tickets/` et `ticket_status/github` (ADR-006, P23). Les écrans
-/// passent par cette interface ; les tests la remplacent par un double.
+/// Accès à `tickets/` et `ticket_status/github` (ADR-006, P23), et à la
+/// callable `answerTicketAnalysis` (ADR-008). Les écrans passent par cette
+/// interface ; les tests la remplacent par un double.
 ///
-/// Lectures ordinaires avec le cache hors ligne ; aucune callable, aucune
-/// `runTransaction`, aucun `Source.server`. Aucun rapport d'erreur ne porte le
-/// titre, la description ni l'e-mail d'un ticket (P13).
+/// Lectures ordinaires avec le cache hors ligne ; aucune `runTransaction`,
+/// aucun `Source.server`. Une seule callable, « Répondre », pour
+/// l'administrateur. Aucun rapport d'erreur ne porte le titre, la
+/// description, l'e-mail d'un ticket ni le texte d'une analyse ou d'une
+/// réponse (P13, P33).
 abstract class TicketsRepository {
   /// Identifiant d'un ticket, créé par l'appareil à l'ouverture du formulaire :
   /// un double appui écrit le même document.
@@ -72,7 +77,31 @@ abstract class TicketsRepository {
     required String ticketId,
     required String decisionId,
   });
+
+  /// `tickets/{ticketId}/admin/analysis`, pour l'administrateur seul.
+  Stream<RechercheDocument<TicketAnalysisDoc>> watchAnalysis(String ticketId);
+
+  /// Publie [answer] sur l'Issue de [ticketId] (callable
+  /// `answerTicketAnalysis`). Rend `null` si le serveur l'a publiée ; sinon
+  /// l'échec, déjà rapporté sans le texte (P13).
+  Future<EchecReponse?> answer({
+    required String ticketId,
+    required String answer,
+  });
 }
+
+/// Appel d'une callable : nom, données ; rend `data` de la réponse. Remplacé
+/// dans les tests.
+typedef AppelCallable =
+    Future<Object?> Function(String name, Map<String, Object?> data);
+
+/// Région des Cloud Functions (ADR-006) : une callable appelée ailleurs
+/// répond 404.
+const kFunctionsRegion = 'europe-west1';
+
+/// Délai d'une callable côté client, au-delà des 60 s du serveur (ADR-008) :
+/// le serveur conclut avant que l'appareil abandonne.
+const kCallableTimeout = Duration(seconds: 70);
 
 /// [TicketsRepository] sur Cloud Firestore.
 class FirestoreTicketsRepository implements TicketsRepository {
@@ -80,13 +109,35 @@ class FirestoreTicketsRepository implements TicketsRepository {
     required ErrorReportService errorReportService,
     FirebaseFirestore? firestore,
     DateTime Function()? clock,
+    AppelCallable? callable,
   }) : _errors = errorReportService,
        _injectedFirestore = firestore,
-       _clock = clock ?? DateTime.now;
+       _clock = clock ?? DateTime.now,
+       _injectedCallable = callable;
 
   final ErrorReportService _errors;
   final FirebaseFirestore? _injectedFirestore;
   final DateTime Function() _clock;
+  final AppelCallable? _injectedCallable;
+
+  /// Client des Cloud Functions, construit au premier appel de « Répondre »
+  /// et mémorisé (P6) : rien n'est chargé au démarrage.
+  FirebaseFunctions? _functions;
+
+  Future<Object?> _call(String name, Map<String, Object?> data) async {
+    final injected = _injectedCallable;
+    if (injected != null) return injected(name, data);
+    final functions = _functions ??= FirebaseFunctions.instanceFor(
+      region: kFunctionsRegion,
+    );
+    final result = await functions
+        .httpsCallable(
+          name,
+          options: HttpsCallableOptions(timeout: kCallableTimeout),
+        )
+        .call<Object?>(data);
+    return result.data;
+  }
 
   /// Heure de l'appareil des tickets créés dans cette session : affichée tant
   /// que `created_at` attend le serveur.
@@ -319,6 +370,82 @@ class FirestoreTicketsRepository implements TicketsRepository {
         stackTrace: stackTrace,
         context: 'tickets/$id',
       );
+    }
+  }
+
+  @override
+  Stream<RechercheDocument<TicketAnalysisDoc>> watchAnalysis(String ticketId) =>
+      _tickets
+          .doc(ticketId)
+          .collection('admin')
+          .doc('analysis')
+          .snapshots(includeMetadataChanges: true)
+          .map<RechercheDocument<TicketAnalysisDoc>>((snapshot) {
+            final data = snapshot.data();
+            if (!snapshot.exists || data == null) {
+              return snapshot.metadata.isFromCache
+                  ? DocumentAbsentDuCache<TicketAnalysisDoc>()
+                  : DocumentAbsent<TicketAnalysisDoc>();
+            }
+            try {
+              return DocumentTrouve(TicketAnalysisDoc.fromFirestore(data));
+            } on DocumentIllisible catch (error, stackTrace) {
+              _errors.reportError(
+                feature: 'tickets.read_analysis',
+                error: error,
+                stackTrace: stackTrace,
+                context: 'tickets/$ticketId/admin/analysis illisible',
+              );
+              return DocumentIllisibleTrouve<TicketAnalysisDoc>(error);
+            }
+          })
+          .handleError((Object error, StackTrace stackTrace) {
+            _errors.reportError(
+              feature: 'tickets.watch_analysis',
+              error: error,
+              stackTrace: stackTrace,
+              context: 'tickets/$ticketId/admin/analysis',
+            );
+            Error.throwWithStackTrace(error, stackTrace);
+          });
+
+  @override
+  Future<EchecReponse?> answer({
+    required String ticketId,
+    required String answer,
+  }) async {
+    try {
+      await _call('answerTicketAnalysis', {
+        'ticketId': ticketId,
+        'answer': answer,
+      });
+      return null;
+    } on FirebaseFunctionsException catch (error, stackTrace) {
+      final echec = EchecReponse.depuis(
+        code: error.code,
+        details: error.details,
+      );
+      _errors.reportError(
+        feature: 'tickets.answer',
+        // Le message vient du serveur, jamais du texte saisi ; le contexte ne
+        // porte ni la réponse ni le motif (P13).
+        error: error,
+        stackTrace: stackTrace,
+        context:
+            'tickets/$ticketId code=${error.code}'
+            '${echec.codeServeur == null ? '' : ' reason_code=${echec.codeServeur}'}'
+            '${echec.champ == null ? '' : ' field=${echec.champ}'}'
+            '${echec.partiel ? ' partial' : ''}',
+      );
+      return echec;
+    } catch (error, stackTrace) {
+      _errors.reportError(
+        feature: 'tickets.answer',
+        error: error,
+        stackTrace: stackTrace,
+        context: 'tickets/$ticketId code=${error.runtimeType}',
+      );
+      return const EchecReponse(CauseEchecReponse.autre);
     }
   }
 

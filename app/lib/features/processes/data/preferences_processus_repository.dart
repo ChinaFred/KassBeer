@@ -4,7 +4,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
 import '../domain/preference_processus.dart';
 
-/// Accès à `users/{uid}/preferences/processes` (ADR-009), privé à son
+/// Accès à `users/{uid}/preferences/processes` (ADR-010), privé à son
 /// propriétaire. Les écrans passent par cette interface ; les tests la
 /// remplacent par un double sans Firebase. Aucune transaction ; l'écriture est
 /// faite dans le cache dès l'appel.

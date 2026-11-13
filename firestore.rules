@@ -327,7 +327,7 @@ service cloud.firestore {
 
     // ---------------------------------------------------------------- process_templates
 
-    // Modèle de processus (ADR-009, P38) : de 1 à 5 journées nommées, chacune avec son
+    // Modèle de processus (ADR-010, P38) : de 1 à 5 journées nommées, chacune avec son
     // écart en jours et ses étapes. Lisible par le groupe, comme une recette ; écrit
     // par son auteur. Les journées et leurs étapes ne sont pas inspectées : l'application
     // vérifie leurs contraintes avant d'écrire, et les écrit à partir de ses types, sans
@@ -374,7 +374,7 @@ service cloud.firestore {
               'notes', 'imported_from', 'process', 'created_at', 'updated_at'];
     }
 
-    // Déroulé figé d'un brassin (ADR-009) : modèle résolu avec la recette figée, écrit
+    // Déroulé figé d'un brassin (ADR-010) : modèle résolu avec la recette figée, écrit
     // par une modification juste après la création, jamais à la création (budget de
     // isBrewCreateShape). Nul, ou map aux clés en liste blanche. Les journées ne sont
     // pas inspectées : l'application les écrit à partir de ses types, clés d'étapes
@@ -457,7 +457,7 @@ service cloud.firestore {
         && (!changed.hasAny(['notes', 'imported_from'])
             || (optString(d, 'notes', 10000) && optString(d, 'imported_from', 200)))
         // Un brassin fige son déroulé à son départ : process ne change que tant que
-        // brewed_at est nul, avant et après l'écriture (ADR-009, P38).
+        // brewed_at est nul, avant et après l'écriture (ADR-010, P38).
         && (!changed.hasAny(['process'])
             || (resource.data.get('brewed_at', null) == null
                 && d.get('brewed_at', null) == null
@@ -523,9 +523,9 @@ service cloud.firestore {
     // 93 pad() (limite de compilation). Sous users/ : prix au litre 93 pad(), coût figé
     // de 200 lignes dont des lignes en litres 94 pad(). recipe.efficiency, même contrôlé
     // par ses seules clés, faisait refuser la création d'un brassin : il n'est pas
-    // stocké. Marge corrigée en v0.1.29 ci-dessous : environ 16 expressions.
+    // stocké. Marge corrigée en v0.1.32 ci-dessous : environ 16 expressions.
     //
-    // Mesure de la v0.1.29 (ADR-009, même émulateur). Étalonnage : 98 pad() isolés
+    // Mesure de la v0.1.32 (ADR-010, même émulateur). Étalonnage : 98 pad() isolés
     // atteignent la limite de compilation avant le budget ; regroupés par dix
     // (pad10() = dix pad()), 243 tiennent dans une règle « if true » seule. Un pad()
     // vaut donc environ 4 expressions, pas 10 : la marge de la création d'un brassin
@@ -728,7 +728,7 @@ service cloud.firestore {
       allow delete: if isMember() && isSelf(uid);
     }
 
-    // Choix par défaut du formulaire « Nouveau brassin » (ADR-009) : état propre au
+    // Choix par défaut du formulaire « Nouveau brassin » (ADR-010) : état propre au
     // lecteur, jamais écrit sur le modèle lu par le groupe. Un seul document.
     match /users/{uid}/preferences/processes {
       allow create, update: if isMember() && isSelf(uid)
@@ -951,10 +951,20 @@ service cloud.firestore {
 
         allow delete: if false;
       }
+
+      // Documents du serveur lus par l'admin seul (ADR-008, T3, P23, P32) : `analysis`
+      // (analyses et précisions relevées sur l'Issue, `answer_comment_ids`). Écrits par le
+      // serveur (SDK Admin, hors règles), jamais par un client.
+      match /admin/{docId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
     }
 
     // Décision telle que l'admin la crée : `text` (motif ou commentaire, 5 à 2 000
-    // caractères) présent pour `refuse` et `close`, absent pour `validate`.
+    // caractères) présent pour `refuse` et `close`, absent pour `validate`. « Répondre »
+    // (`answer`) passe par la callable `answerTicketAnalysis`, jamais par ce document
+    // (ADR-008) : la liste des actions le refuse.
     function isDecisionCreation(d) {
       return d.keys().hasOnly(['action', 'text', 'state', 'requested_by_uid',
                                'requested_at'])

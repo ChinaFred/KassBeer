@@ -26,7 +26,7 @@ import 'package:kass_beer/features/recipes/domain/recipe.dart';
 import 'support/brew_fixtures.dart';
 import 'support/fakes.dart';
 
-/// Lot D4 d'ADR-009 : journées 2 et suivantes (« Préparer la journée », écran
+/// Lot D4 d'ADR-010 : journées 2 et suivantes (« Préparer la journée », écran
 /// de la journée, « Terminer la journée », embouteillage, mesures en
 /// `phase: 'fermentation'`, fiche).
 

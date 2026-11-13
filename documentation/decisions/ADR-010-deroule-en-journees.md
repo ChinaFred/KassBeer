@@ -1,6 +1,6 @@
-# ADR-009 — Déroulé d'un brassin en journées : modèles de processus partagés, journées suivies hors ligne
+# ADR-010 — Déroulé d'un brassin en journées : modèles de processus partagés, journées suivies hors ligne
 
-- **Statut** : accepté le 2026-11-11 par délégation (l'utilisateur a répondu aux sept questions, puis a demandé de poursuivre seul avec des hypothèses) ; revue commune avant la fusion
+- **Statut** : accepté (réponses de l'utilisateur du 2026-11-11, validation du 2026-11-13)
 - **Date** : 2026-11-11
 - **Remplace** : — . Étend ADR-001 sur deux règles de `CLAUDE.md` : « Le jour de brassage
   marche sans réseau » couvre chaque journée du déroulé, et « Un brassin fige sa recette »

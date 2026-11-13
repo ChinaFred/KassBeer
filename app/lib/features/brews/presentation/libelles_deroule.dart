@@ -2,7 +2,7 @@ import '../../../core/presentation/formats.dart';
 import '../../recipes/domain/chronologie.dart';
 import '../domain/deroule.dart';
 
-/// Libellés du déroulé d'un brassin (ADR-009) : « Nouveau brassin », fiche,
+/// Libellés du déroulé d'un brassin (ADR-010) : « Nouveau brassin », fiche,
 /// liste, « Préparer le brassage ». Dates par `JourneeDeroulee.date`, durées par
 /// `dureeChronologie` : aucun calcul ici (P3).
 

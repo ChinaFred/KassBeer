@@ -12,6 +12,9 @@
  * 3. à 5. Commentaire, étiquette, fermeture, dans cet ordre ; ce qui est fait est sauté.
  * 6. Transaction : statut, `reply_text`, `reply_at`, `allowed_decisions`,
  *    `status_changed_at` du ticket, baux retirés, décision `applied`.
+ * 7. Au mieux (ADR-008, P32) : `validated_at` de `admin/analysis` après Valider, puis
+ *    relevé des analyses et précisions de l'Issue. Un échec est journalisé, la décision
+ *    reste faite.
  *
  * Un échec laisse la décision `failed` avec `steps_done` et `error_reason`, et retire les
  * baux. Un jeton refusé pose `token_invalid_since`. Chaque écriture finale vérifie que le
@@ -40,6 +43,7 @@ import {
   type DecisionStep,
   type FailureKind,
 } from "./decisionModel";
+import { recordValidatedAt, refreshAnalyses } from "./analyses";
 import { GithubError, githubClient, type FetchLike, type GithubClient } from "./github";
 import { applyIssue } from "./issueState";
 import { isPlausibleTicketId } from "./publish";
@@ -268,6 +272,8 @@ export type GithubRun =
       stepsDone: DecisionStep[];
       commentId: number | null;
       commentBody: string | null;
+      /** Nombre de commentaires de l'Issue après la décision, pour le relevé des analyses. */
+      commentCount: number;
     }
   | { kind: "closed_elsewhere"; stepsDone: DecisionStep[] };
 
@@ -328,9 +334,34 @@ export async function runOnGithub(
       await client.closeIssue(issue.number, plan.close);
       stepsDone.push("close");
     }
-    return { kind: "done", stepsDone, commentId, commentBody: body };
+    const commentCount = issue.comments + (plan.comment ? 1 : 0);
+    return { kind: "done", stepsDone, commentId, commentBody: body, commentCount };
   } catch (err) {
     throw new StepFailure(err, stepsDone, commentId);
+  }
+}
+
+/**
+ * Étape 7, au mieux : `validated_at` après Valider, puis relevé des analyses (P32). Ne
+ * lève pas.
+ */
+async function afterDecision(
+  client: GithubClient,
+  ticketId: string,
+  claimed: Extract<Claim, { kind: "claimed" }>,
+  run: Extract<GithubRun, { kind: "done" }>,
+): Promise<void> {
+  try {
+    if (claimed.action === "validate") await recordValidatedAt(ticketId, Date.now());
+    await refreshAnalyses(client, ticketId, claimed.issueNumber, run.commentCount);
+  } catch (err) {
+    logError({
+      message: "Tickets : analyses non relevées après la décision",
+      feature: "tickets",
+      ticketId,
+      error: err,
+      extra: { action: claimed.action },
+    });
   }
 }
 
@@ -476,6 +507,7 @@ export async function applyDecision(
     return "failed";
   }
   await recordTokenAccepted(client);
+  if (run.kind === "done") await afterDecision(client, ticketId, claimed, run);
   if (run.kind === "closed_elsewhere") {
     logInfo({ ...log, message: "Tickets : Issue déjà fermée sur GitHub, décision refusée" });
     return "rejected";

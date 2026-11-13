@@ -71,7 +71,7 @@ final _textesJournee = TextesDocument(
 );
 
 /// Textes de « Préparer la journée » et de l'écran d'une journée 2 ou suivante
-/// (ADR-009).
+/// (ADR-010).
 abstract final class TextesJournee {
   static const titre = 'Journée';
   static const notOwner = 'Seul le brasseur de ce brassin suit cette journée.';
@@ -122,7 +122,7 @@ abstract final class TextesJournee {
 /// Raison d'une journée qui ne se suit pas, avec son icône.
 typedef RefusJournee = ({IconData icon, String message});
 
-/// Journée [key] de [brew] à suivre (ADR-009), ou la raison du refus : déroulé
+/// Journée [key] de [brew] à suivre (ADR-010), ou la raison du refus : déroulé
 /// illisible, clé inconnue, brassage pas fini, brassin terminé ou abandonné,
 /// embouteillage fait. Ni journée ni refus : [key] est la journée de brassage,
 /// qui se suit par « Préparer le brassage ». Le propriétaire se vérifie avant.
@@ -170,7 +170,7 @@ typedef RefusJournee = ({IconData icon, String message});
 
 /// Écran du jour de brassage (`/brassins/:id/jour`), réservé au propriétaire,
 /// ou d'une journée 2 ou suivante du déroulé (`/brassins/:id/jour/:journee`,
-/// ADR-009).
+/// ADR-010).
 ///
 /// Marche sans réseau (CLAUDE.md, P2) : aucune transaction, aucune requête ;
 /// chaque début, fin et mesure est un événement. Le minuteur se recalcule depuis
@@ -350,7 +350,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
   List<BrewStepLine> get _lignes =>
       (_journee ?? _brew.deroule.brassage)?.lignes ?? const [];
 
-  /// Saisies d'une journée 2 ou suivante : relevé de fermentation (ADR-009).
+  /// Saisies d'une journée 2 ou suivante : relevé de fermentation (ADR-010).
   PhaseEvenement? get _phase =>
       _journee == null ? null : PhaseEvenement.fermentation;
 
@@ -592,7 +592,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     router.go(AppRoutes.brew(_brew.id));
   }
 
-  /// « Terminer la journée » (ADR-009) : `step_ended` pour l'étape en cours et
+  /// « Terminer la journée » (ADR-010) : `step_ended` pour l'étape en cours et
   /// `step_skipped` pour chaque étape à venir, dans un `WriteBatch`, sans
   /// changement de statut. Confirmation s'il reste des étapes à venir.
   Future<void> _terminerJournee(PlanDuJour? plan) async {
@@ -632,7 +632,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     );
   }
 
-  /// « Embouteiller » depuis la journée d'embouteillage (ADR-009) : confirmation
+  /// « Embouteiller » depuis la journée d'embouteillage (ADR-010) : confirmation
   /// s'il reste des étapes, puis le formulaire d'embouteillage de la fiche. À
   /// l'envoi, l'étape en cours se termine ([_envoyerEmbouteillage]).
   Future<void> _embouteiller(PlanDuJour? plan) async {
@@ -1146,7 +1146,7 @@ class _Jour extends StatelessWidget {
       if (etapes > 0) '$etapes étape${etapes > 1 ? 's' : ''}',
     ].join(', ');
 
-    // Avec un processus, la barre nomme la journée (ADR-009) ; sans processus,
+    // Avec un processus, la barre nomme la journée (ADR-010) ; sans processus,
     // elle garde l'heure seule.
     final suivie = this.journee;
     final journee = suivie != null
@@ -1612,7 +1612,7 @@ class _BarreActions extends StatelessWidget {
     final VoidCallback? action;
     if (running != null && role == RoleJournee.autre && next == null) {
       // Dernière étape commencée d'une journée « autre » : la terminer termine
-      // la journée (ADR-009).
+      // la journée (ADR-010).
       principal = TextesJournee.terminer;
       action = onTerminerJournee;
     } else if (running != null) {

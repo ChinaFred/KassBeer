@@ -166,18 +166,24 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
-Le 2026-11-11, ADR-009 (déroulé en journées) a étendu la règle absolue du hors ligne à chaque
+Le 2026-11-11, ADR-010 (déroulé en journées) a étendu la règle absolue du hors ligne à chaque
 journée du déroulé et la règle « Un brassin fige sa recette » à son déroulé, ajouté le lieu des
 modèles (`process_templates/`) aux règles des prix, complété P2, P3 et P5, et ajouté P37 (lecture
 du déroulé et découpage par journée, `relecteur-regles`) et P38 (règles des modèles et du champ
-`process`, `securite`). P29 à P36 restent réservés à ADR-008. Avec la v0.1.31, P37 permet de
+`process`, `securite`). P29 à P36 restent réservés à ADR-008. Avec la v0.1.34, P37 permet de
 lire la recette figée d'un brassin (`recipe.brewSteps`, `recipe.brewStepsProblem`) comme entrée
 d'une nouvelle résolution avant le départ : `assemblerDeroule` et l'aperçu « Chronologie de la
 recette seule » par `Deroule.depuisRecette`. Toute autre lecture passe par `Brew.deroule`.
 
 Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
-tickets avec Kass'Dalle, lots T3 à T7. Ses contrôles (P25 modifié, P29 à P36) entreront dans
-`CLAUDE.md` avec le lot T3, après l'accord de l'utilisateur.
+tickets avec Kass'Dalle, lots T3 à T7.
+
+Le 2026-11-12, avec le lot T3 et l'accord de l'utilisateur, P6, P14, P23, P24, P25 et P26 sont
+modifiés et P29 à P34 ajoutés : point d'accès `githubTicketWebhook` signé (P29), garde des
+callables (P30), appartenance et rôle rejoués par `test-fixtures/member_access.json` (P31, ligne
+de « Logique dupliquée »), relevé et affichage des analyses (P32, P33), « Répondre » (P34).
+`ci.yml` et `deploy.yml` remplacent le refus de tout point d'accès HTTP ou callable par la liste
+fermée d'ADR-008 (P10, accord de l'utilisateur). Les lots T4 à T7 ajouteront leurs contrôles.
 
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
@@ -287,6 +293,11 @@ caractères de contrôle bidirectionnels retirés) et P3 couvre les conversions 
 SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « Structure »,
 « Commandes utiles », `.claude/formatters.json` (`dart format`) et `setup-projet.sh`
 (`dart pub get`) ; la CI le contrôle dans le job « Flutter et brewing ».
+
+Depuis la v0.1.29 (ADR-009), `relecteur-regles` applique aussi P17 au canal `fr.kassbeer/prefs`
+de la préférence de thème : noms identiques en Dart et en Kotlin, garde `kIsWeb`, travail hors du
+thread principal, second appel refusé (`BUSY`) ; le Dart n'envoie qu'un appel à la fois et ne
+garde que le dernier choix. Aucun contrôle n'est ajouté.
 
 Depuis la v0.1.21 (L2c), « Le projet » et « Structure » disent que `exchange/` lit et écrit aussi le
 BeerXML. Depuis la v0.1.28 (ADR-005, E4), l'export BeerXML de l'écran retrouve son style dans la

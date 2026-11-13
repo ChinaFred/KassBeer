@@ -17,6 +17,7 @@ export type TicketPlatform = (typeof TICKET_PLATFORMS)[number];
 export const TICKET_STATUSES = [
   "pending",
   "received",
+  "analyzed",
   "validated",
   "in_progress",
   "delivered",
@@ -29,14 +30,24 @@ export type TicketStatus = (typeof TICKET_STATUSES)[number];
 
 /** Statuts d'un ticket publié, que la tâche horaire relit sur GitHub. */
 export type PublishedStatus =
-  "received" | "validated" | "in_progress" | "delivered" | "refused" | "closed";
+  "received" | "analyzed" | "validated" | "in_progress" | "delivered" | "refused" | "closed";
 
 /** Statuts d'une Issue ouverte, relus aussi pour reconnaître une Issue disparue. */
-export const OPEN_STATUSES: readonly PublishedStatus[] = ["received", "validated", "in_progress"];
+export const OPEN_STATUSES: readonly PublishedStatus[] = [
+  "received",
+  "analyzed",
+  "validated",
+  "in_progress",
+];
 
 const FINAL_STATUSES: readonly PublishedStatus[] = ["delivered", "refused", "closed"];
 
-const OPEN_RANK: Record<string, number> = { received: 1, validated: 2, in_progress: 3 };
+const OPEN_RANK: Record<string, number> = {
+  received: 1,
+  analyzed: 2,
+  validated: 3,
+  in_progress: 4,
+};
 
 export function isTicketType(value: unknown): value is TicketType {
   return typeof value === "string" && (TICKET_TYPES as readonly string[]).includes(value);
@@ -55,13 +66,17 @@ export function isPublishedStatus(value: unknown): value is PublishedStatus {
 }
 
 export const LABEL_SOURCE_APP = "source:app";
+/** Posée à la publication, et de nouveau par « Répondre » (ADR-008). */
+export const LABEL_TO_ANALYZE = "statut:à-analyser";
+/** Posée par la session d'analyse : le ticket passe `analyzed` (ADR-008). */
+export const LABEL_ANALYZED = "statut:analysé";
 export const LABEL_VALIDATED = "validé";
 export const LABEL_IN_PROGRESS = "statut:en-cours";
 export const LABEL_CLOSED = "statut:clos";
 
 /** Étiquettes posées à la création de l'Issue. */
 export function creationLabels(type: TicketType): string[] {
-  return [LABEL_SOURCE_APP, `type:${type}`];
+  return [LABEL_SOURCE_APP, `type:${type}`, LABEL_TO_ANALYZE];
 }
 
 // ── Corps de l'Issue (P24) ──────────────────────────────────────────────────
@@ -167,7 +182,9 @@ export interface IssueView {
 /**
  * Le statut que dit l'Issue (ADR-006, « Statuts »). Fermée : `statut:clos` → `closed` ;
  * `not_planned` ou `duplicate` → `refused` ; sinon `delivered`. Ouverte :
- * `statut:en-cours` → `in_progress` ; `validé` → `validated` ; sinon `received`.
+ * `statut:en-cours` → `in_progress` ; `validé` → `validated` ; `statut:analysé` →
+ * `analyzed` (ADR-008) ; sinon `received`. Les étiquettes seules comptent, jamais le
+ * texte d'un commentaire (P32).
  */
 export function statusFromIssue(
   issue: Pick<IssueView, "state" | "stateReason" | "labels">,
@@ -179,7 +196,22 @@ export function statusFromIssue(
   }
   if (issue.labels.includes(LABEL_IN_PROGRESS)) return "in_progress";
   if (issue.labels.includes(LABEL_VALIDATED)) return "validated";
+  if (issue.labels.includes(LABEL_ANALYZED)) return "analyzed";
   return "received";
+}
+
+/**
+ * Vrai si l'état d'Issue lu (`issueUpdatedAt`) est antérieur ou égal au retour à « Reçu »
+ * écrit par « Répondre » (`answer_reset_at`) : un événement d'étiquette livré en retard ne
+ * refait pas avancer le ticket. Sans date de part ou d'autre : `false`. Pure (Kass'Dalle).
+ */
+export function isStaleIssueSnapshot(
+  issueUpdatedAt: string | null | undefined,
+  answerResetAtMs: number | null,
+): boolean {
+  if (answerResetAtMs === null || typeof issueUpdatedAt !== "string") return false;
+  const ms = Date.parse(issueUpdatedAt);
+  return !Number.isNaN(ms) && ms <= answerResetAtMs;
 }
 
 /**

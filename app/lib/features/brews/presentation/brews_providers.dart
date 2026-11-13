@@ -28,7 +28,7 @@ final preparedBrewsProvider = Provider<Set<String>>((ref) => <String>{});
 /// rapport par session, pas un par seconde.
 final planReportsProvider = Provider<Set<String>>((ref) => <String>{});
 
-/// Embouteillage envoyé depuis la journée d'embouteillage (ADR-009), annoncé
+/// Embouteillage envoyé depuis la journée d'embouteillage (ADR-010), annoncé
 /// par la fiche à son retour, par brassin : ses annonces et « Voir le coût »
 /// sont celles d'un embouteillage fait depuis la fiche. Mémoire de session.
 typedef EmbouteillageAAnnoncer = ({EmbouteillageEnvoye envoi, bool offline});

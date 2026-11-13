@@ -221,7 +221,7 @@ void main() {
       expect(write.ownerUid, moi);
       expect(write.ownerName, 'Bruno Brasseur');
       expect(write.content!.journees, hasLength(3));
-      expect(app.preferences.saved.single.templateId, write.id);
+      expect(app.preferencesProcessus.saved.single.templateId, write.id);
       expect(find.text('Processus enregistré.'), findsOneWidget);
       // La fiche du processus enregistré s'ouvre.
       expect(find.text(ProcessDetailScreen.titre), findsOneWidget);
@@ -243,7 +243,7 @@ void main() {
               pending: true,
             ),
           ]);
-          app.preferences.publishDefault(moi, 'b');
+          app.preferencesProcessus.publishDefault(moi, 'b');
         },
       );
       expect(find.text('Processus du groupe'), findsOneWidget);
@@ -418,7 +418,10 @@ void main() {
       );
       await tester.tap(find.text(ProcessDetailScreen.proposerParDefaut));
       await tester.pumpAndSettle();
-      expect(app.preferences.saved.single, (uid: moi, templateId: 'a'));
+      expect(app.preferencesProcessus.saved.single, (
+        uid: moi,
+        templateId: 'a',
+      ));
       expect(
         find.text(ProcessDetailScreen.defaultOn(kNomModeleExemple)),
         findsOneWidget,
@@ -428,7 +431,7 @@ void main() {
           .removeCurrentSnackBar();
       await tester.tap(find.text(ProcessDetailScreen.proposerParDefaut));
       await tester.pumpAndSettle();
-      expect(app.preferences.saved.last, (uid: moi, templateId: null));
+      expect(app.preferencesProcessus.saved.last, (uid: moi, templateId: null));
       expect(find.text(ProcessDetailScreen.defaultOff), findsOneWidget);
       // Le modèle lu par le groupe n'est pas écrit.
       expect(app.processes.writes, isEmpty);
@@ -441,7 +444,7 @@ void main() {
         '/processus/a',
         before: (app) {
           app.processes.publish([modele('a')]);
-          app.preferences.publishDefault(moi, 'a');
+          app.preferencesProcessus.publishDefault(moi, 'a');
           app.processes.serverAnswer = () async {};
         },
       );
@@ -458,7 +461,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(app.processes.writes.single.kind, 'delete');
       expect(app.processes.writes.single.id, 'a');
-      expect(app.preferences.saved.single, (uid: moi, templateId: null));
+      expect(app.preferencesProcessus.saved.single, (
+        uid: moi,
+        templateId: null,
+      ));
       expect(find.text(ProcessDetailScreen.deleted), findsOneWidget);
     });
 
@@ -476,7 +482,7 @@ void main() {
       expect(find.text(ProcessDetailScreen.deleteDefault), findsNothing);
       await tester.tap(find.widgetWithText(FilledButton, 'Supprimer'));
       await tester.pumpAndSettle();
-      expect(app.preferences.saved, isEmpty);
+      expect(app.preferencesProcessus.saved, isEmpty);
     });
 
     testWidgets('dupliquer : « {nom} (copie) »', (tester) async {
@@ -503,7 +509,7 @@ void main() {
         '/processus/a',
         before: (app) {
           app.processes.publish([modele('a')]);
-          app.preferences.enAttente(moi);
+          app.preferencesProcessus.enAttente(moi);
         },
       );
       expect(find.text(ProcessDetailScreen.lectureDefaut), findsOneWidget);
@@ -514,12 +520,12 @@ void main() {
         ),
       );
       expect(interrupteur().onChanged, isNull);
-      app.preferences.of(moi).addError(Exception('unavailable'));
+      app.preferencesProcessus.of(moi).addError(Exception('unavailable'));
       await tester.pumpAndSettle();
       expect(find.text(ProcessDetailScreen.defaultUnreadable), findsOneWidget);
       expect(interrupteur().onChanged, isNull);
       // « Réessayer » relance la lecture.
-      app.preferences.publishDefault(moi, 'a');
+      app.preferencesProcessus.publishDefault(moi, 'a');
       await tester.tap(find.text('Réessayer'));
       await tester.pumpAndSettle();
       expect(find.text(ProcessDetailScreen.choixPersonnel), findsOneWidget);
@@ -534,7 +540,7 @@ void main() {
         '/processus/a',
         before: (app) {
           app.processes.publish([modele('a')]);
-          app.preferences.publishDefault(moi, 'a');
+          app.preferencesProcessus.publishDefault(moi, 'a');
           app.processes.serverAnswer = () async =>
               throw Exception('permission-denied');
         },
@@ -545,7 +551,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Supprimer'));
       await tester.pumpAndSettle();
       expect(app.processes.writes.single.kind, 'delete');
-      expect(app.preferences.saved, isEmpty);
+      expect(app.preferencesProcessus.saved, isEmpty);
       expect(
         find.text('La suppression de « $kNomModeleExemple » a échoué.'),
         findsOneWidget,
@@ -770,7 +776,7 @@ void main() {
       await tester.tap(find.text('Enregistrer'));
       await tester.pumpAndSettle();
       expect(app.processes.writes.single.kind, 'create');
-      expect(app.preferences.saved, isEmpty);
+      expect(app.preferencesProcessus.saved, isEmpty);
     });
 
     testWidgets('défaut existant : décoché ; défaut supprimé : coché', (
@@ -781,7 +787,7 @@ void main() {
         '/processus/nouveau',
         before: (app) {
           app.processes.publish([modele('a')]);
-          app.preferences.publishDefault(moi, 'a');
+          app.preferencesProcessus.publishDefault(moi, 'a');
         },
       );
       SwitchListTile interrupteur() => tester.widget<SwitchListTile>(
@@ -845,7 +851,7 @@ void main() {
         write.content!.journees.map((j) => j.key),
         modele('a').content.journees.map((j) => j.key),
       );
-      expect(app.preferences.saved, isEmpty);
+      expect(app.preferencesProcessus.saved, isEmpty);
     });
   });
 }

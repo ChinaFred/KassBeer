@@ -113,7 +113,7 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
 /// Date affichée dans la ligne d'un brassin. En fermentation et en
 /// conditionnement, la prochaine journée du déroulé quand elle existe
 /// (« Prochaine journée : Houblonnage à cru, mer. 25 nov. »), d'après les dates
-/// seules (ADR-009).
+/// seules (ADR-010).
 String ligneDateBrassin(Brew brew, DateTime now) {
   final brewed = brew.brewedAt;
   final planned = brew.plannedFor;

@@ -1,6 +1,6 @@
 import 'modele_processus.dart';
 
-/// Modèle d'exemple accepté le 2026-11-11 (ADR-009) : trois journées, durées en
+/// Modèle d'exemple accepté le 2026-11-11 (ADR-010) : trois journées, durées en
 /// minutes. Il ne s'applique jamais seul : il ne s'écrit que sur l'action du
 /// brasseur « Partir du modèle d'exemple », et devient alors une donnée du
 /// brasseur, modifiable. Un brassin sans processus garde sa journée tirée de la

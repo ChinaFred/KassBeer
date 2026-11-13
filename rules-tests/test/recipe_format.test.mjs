@@ -395,7 +395,7 @@ describe("brews — copie figée au format BeerJSON partiel", () => {
 // `recipe.efficiency`, même contrôlé par ses seules clés, faisait refuser la création du
 // brassin : il n'est pas stocké.
 //
-// Mesure de la v0.1.29 (ADR-009). Étalonnage : 98 `pad()` isolés atteignent la limite de
+// Mesure de la v0.1.32 (ADR-010). Étalonnage : 98 `pad()` isolés atteignent la limite de
 // compilation avant le budget ; regroupés par dix (`pad10()`), 243 tiennent dans une règle
 // `if true` seule : un `pad()` vaut environ 4 expressions, et la marge de la création du
 // brassin (4 `pad()`, inchangée) environ 16. Avec `pad10()`, plus grande recette copiée et
@@ -656,7 +656,7 @@ describe("recipes et brews — budget des règles", () => {
     });
   }
 
-  // Déroulé en journées (ADR-009) : les trois cas mesurés par la méthode des `pad()`.
+  // Déroulé en journées (ADR-010) : les trois cas mesurés par la méthode des `pad()`.
   it("brassin prévu qui copie la plus grande recette : écriture du plus grand déroulé : autorisé", async () => {
     await seed(state.env, {
       "brews/budget-deroule": brew(uidOf("owner"), {

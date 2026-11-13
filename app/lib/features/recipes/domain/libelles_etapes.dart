@@ -6,7 +6,7 @@ import 'recipe.dart';
 
 /// Libellés des étapes tirées d'une recette : préremplissage de la chronologie
 /// (éditeur « Chronologie du jour ») et blocs du déroulé d'un brassin
-/// (ADR-009). Texte seul : les étapes et leurs durées viennent de `brewing/`
+/// (ADR-010). Texte seul : les étapes et leurs durées viennent de `brewing/`
 /// (P3).
 
 /// Quantité d'une ligne : « 22,4 g », « 5 ml », « 1,5 L ».

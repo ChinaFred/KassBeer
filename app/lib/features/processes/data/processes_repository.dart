@@ -5,7 +5,7 @@ import '../../../core/services/error_report_service.dart';
 import '../domain/modele_processus.dart';
 
 /// Modèle refusé par [erreurModele] avant l'écriture : les règles ne lisent pas
-/// les journées (ADR-009), l'application ne les écrit qu'à cette condition.
+/// les journées (ADR-010), l'application ne les écrit qu'à cette condition.
 class ModeleInvalide implements Exception {
   const ModeleInvalide(this.message);
 
@@ -15,7 +15,7 @@ class ModeleInvalide implements Exception {
   String toString() => 'ModeleInvalide : $message';
 }
 
-/// Accès à `process_templates/` (ADR-009). Les écrans passent par cette
+/// Accès à `process_templates/` (ADR-010). Les écrans passent par cette
 /// interface ; les tests la remplacent par un double sans Firebase.
 ///
 /// Lectures ordinaires avec le cache hors ligne, aucune transaction : chaque
