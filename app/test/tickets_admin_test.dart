@@ -10,11 +10,13 @@ import 'package:kass_beer/features/members/domain/member.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
 import 'package:kass_beer/features/tickets/presentation/admin_ticket_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/admin_tickets_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/bandeau_tickets_admin.dart';
 import 'package:kass_beer/features/tickets/presentation/frise_ticket.dart';
 import 'package:kass_beer/features/tickets/presentation/my_tickets_screen.dart';
+import 'package:kass_beer/features/tickets/presentation/section_analyses.dart';
 import 'package:kass_beer/features/tickets/presentation/ticket_detail_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/ticket_statut.dart';
 
@@ -26,8 +28,9 @@ void main() {
   const all = TicketDecisionAction.values;
 
   group('domaine', () {
-    test('À traiter : reçu ou envoi impossible, jamais validé', () {
+    test('À traiter : reçu, analysé ou envoi impossible, jamais validé', () {
       expect(unTicket(status: TicketStatus.received).toProcess, isTrue);
+      expect(unTicket(status: TicketStatus.analyzed).toProcess, isTrue);
       expect(unTicket(status: TicketStatus.sendFailed).toProcess, isTrue);
       for (final s in [
         TicketStatus.pending,
@@ -89,13 +92,21 @@ void main() {
       List<String> labels(Ticket t) => [
         for (final e in etapesFrise(t)!.etapes) e.label,
       ];
-      const suivi = ['Envoi en cours', 'Reçu', 'Validé', 'En cours', 'Livré'];
+      const suivi = [
+        'Envoi en cours',
+        'Reçu',
+        'Analysé',
+        'Validé',
+        'En cours',
+        'Livré',
+      ];
       for (final (status, actuelle) in [
         (TicketStatus.pending, 0),
         (TicketStatus.received, 1),
-        (TicketStatus.validated, 2),
-        (TicketStatus.inProgress, 3),
-        (TicketStatus.delivered, 4),
+        (TicketStatus.analyzed, 2),
+        (TicketStatus.validated, 3),
+        (TicketStatus.inProgress, 4),
+        (TicketStatus.delivered, 5),
       ]) {
         final t = unTicket(status: status);
         expect(labels(t), suivi, reason: status.name);
@@ -226,7 +237,7 @@ void main() {
         final l = ligne(
           uneDecision(requestedAt: now.subtract(const Duration(seconds: 30))),
         )!;
-        expect(l.progress, isTrue);
+        expect(l.progress, 'Décision en cours');
         expect(l.text, 'Refus en cours sur GitHub.');
         expect(
           ligne(
@@ -257,7 +268,7 @@ void main() {
           uneDecision(state: TicketDecisionState.applying),
           ticketLease: now.subtract(const Duration(minutes: 1)),
         )!;
-        expect(l.progress, isFalse);
+        expect(l.progress, isNull);
         expect(
           l.text,
           'Refus interrompu. Le serveur le reprendra dans l\'heure.',
@@ -717,6 +728,8 @@ void main() {
       WidgetTester tester,
       Ticket ticket, {
       List<TicketDecision>? decisions = const [],
+      RechercheDocument<TicketAnalysisDoc>? analyses =
+          const DocumentAbsent<TicketAnalysisDoc>(),
       double width = 400,
       double height = 900,
       bool offline = false,
@@ -731,6 +744,7 @@ void main() {
       if (decisions != null) {
         app.tickets.publishDecisions(ticket.id, decisions);
       }
+      if (analyses != null) app.tickets.analysesOf(ticket.id).add(analyses);
       app.container.read(routerProvider).go(AppRoutes.adminTicket(ticket.id));
       await settle(tester);
       return app;
@@ -761,9 +775,16 @@ void main() {
       // Ticket refusé : aucune décision possible, aucune barre.
       expect(find.text('Valider'), findsNothing);
       expect(find.text('Refuser'), findsNothing);
-      await tester.tap(find.text('Ouvrir l\'Issue #12'));
+      // Refusé sans document d'analyses : « pas encore relevée », et un
+      // second bouton vers l'Issue.
+      expect(find.text('Analyses'), findsOneWidget);
+      expect(find.text(SectionAnalyses.pasEncoreRelevee), findsOneWidget);
+      expect(find.text('Ouvrir l\'Issue #12'), findsNWidgets(2));
+      await tester.tap(find.text('Ouvrir l\'Issue #12').first);
       await tester.pumpAndSettle();
       expect(app.openedLinks.single.path, '/ChinaFred/KassBeer/issues/12');
+      await tester.ensureVisible(find.text('Décisions (1)'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Décisions (1)'));
       await tester.pumpAndSettle();
       expect(
@@ -1353,6 +1374,9 @@ void main() {
         ),
       ]);
       app.tickets.publishDecisions('t1', const []);
+      app.tickets
+          .analysesOf('t1')
+          .add(const DocumentAbsent<TicketAnalysisDoc>());
       await go(tester, app, AppRoutes.adminTickets);
       expect(tester.takeException(), isNull);
       await go(tester, app, AppRoutes.adminTicket('t1'));

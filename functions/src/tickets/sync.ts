@@ -1,8 +1,9 @@
 /**
  * Passe horaire des tickets (ADR-006, CA26 à CA31, T2) :
  *
- * 1. `allowed_decisions` posé une fois sur les tickets écrits avant T2 (marque
- *    `allowed_decisions_backfilled_at` dans `ticket_status/github`) ;
+ * 1. `allowed_decisions` réécrit une fois par version de la règle (tickets écrits avant
+ *    T2, puis liste de T3 : `analyzed`, `answer`) ; marque
+ *    `allowed_decisions_backfill_version` dans `ticket_status/github` ;
  * 2. relance des tickets `send_failed` dont l'admin a demandé un nouvel essai
  *    (`retry_requested_at`) : `send_attempts` à 0, `pending`, puis nouvel essai ;
  * 3. renvoi des tickets `pending` (20 au plus), par `publishTicket` ;
@@ -10,10 +11,12 @@
  *    décisions encore `pending` cinq minutes après leur création ;
  * 5. Issues `source:app` modifiées depuis le curseur `issues_cursor` de
  *    `ticket_status/github`, les plus anciennes d'abord : statut, décisions permises,
- *    réponse « Réponse : » du compte 16348852, PR de livraison et version ;
+ *    réponse « Réponse : » du compte 16348852, analyses et précisions (P32), PR de
+ *    livraison et version ;
  * 6. avec le reste des 30 Issues de la passe : tickets à Issue ouverte les moins
- *    récemment relus, Issue lue une à une. Une Issue disparue (404 ou 410, dépôt
- *    joignable) laisse le statut et pose `issue_missing_since`.
+ *    récemment relus, Issue et commentaires lus un à un (un commentaire modifié ne
+ *    change pas la date de l'Issue). Une Issue disparue (404 ou 410, dépôt joignable)
+ *    laisse le statut et pose `issue_missing_since`.
  *
  * Un jeton refusé arrête la passe. Chaque ticket est traité seul : une erreur est
  * journalisée et la passe continue.
@@ -48,6 +51,13 @@ const DECISIONS_PER_PASS = 20;
 
 /** Tickets lus par page lors de la pose initiale de `allowed_decisions`. */
 const BACKFILL_PAGE = 200;
+
+/**
+ * Version de la règle `allowedDecisions` : à chaque changement de la règle, la pose
+ * initiale repasse une fois sur tous les tickets. 2 : statut `analyzed` et `answer`
+ * (ADR-008, T3), Valider gardé sur `received` jusqu'à T4.
+ */
+export const ALLOWED_DECISIONS_VERSION = 2;
 
 /** Marge du curseur : une Issue modifiée pendant la passe précédente est relue. */
 const CURSOR_MARGIN_MS = 10 * 60 * 1000;
@@ -110,7 +120,7 @@ async function refreshOne(client: GithubClient, doc: DocumentSnapshot): Promise<
     });
     return;
   }
-  await applyIssue(client, doc, issue);
+  await applyIssue(client, doc, issue, { forceComments: true });
 }
 
 async function guarded(ticketId: string, work: () => Promise<void>): Promise<void> {
@@ -163,15 +173,20 @@ async function syncUpdatedIssues(client: GithubClient, passStart: Date): Promise
 
 /**
  * Étape 1 : `allowed_decisions` posé sur chaque ticket qui ne l'a pas ou dont la liste ne
- * suit pas le statut, une seule fois (tickets écrits avant T2). Ensuite, chaque
- * changement de statut l'écrit. Chaque ticket est corrigé en transaction : un statut
+ * suit pas le statut, une fois par version de la règle (`ALLOWED_DECISIONS_VERSION`).
+ * Ensuite, chaque changement de statut l'écrit. Chaque ticket est corrigé en transaction : un statut
  * changé entre-temps n'est pas écrasé. Ne lève pas.
  */
 async function backfillAllowedDecisions(): Promise<void> {
   try {
     const { db, FieldPath, Timestamp } = await firestore();
     const statusRef = db.collection(COLL_TICKET_STATUS).doc(TICKET_STATUS_GITHUB_DOC);
-    if ((await statusRef.get()).get("allowed_decisions_backfilled_at") != null) return;
+    if (
+      (await statusRef.get()).get("allowed_decisions_backfill_version") ===
+      ALLOWED_DECISIONS_VERSION
+    ) {
+      return;
+    }
     let fixed = 0;
     let last: DocumentSnapshot | null = null;
     for (;;) {
@@ -196,7 +211,13 @@ async function backfillAllowedDecisions(): Promise<void> {
       if (page.docs.length < BACKFILL_PAGE) break;
       last = page.docs[page.docs.length - 1];
     }
-    await statusRef.set({ allowed_decisions_backfilled_at: Timestamp.now() }, { merge: true });
+    await statusRef.set(
+      {
+        allowed_decisions_backfill_version: ALLOWED_DECISIONS_VERSION,
+        allowed_decisions_backfilled_at: Timestamp.now(),
+      },
+      { merge: true },
+    );
     logInfo({
       message: `Tickets : décisions permises posées sur ${fixed} ticket(s)`,
       feature: "tickets",

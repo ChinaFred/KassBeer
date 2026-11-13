@@ -41,6 +41,11 @@ StatutAffiche statutAfficheDe(TicketStatus status) => switch (status) {
     icon: Icons.mark_email_read_outlined,
     ton: TonEtiquette.primaire,
   ),
+  TicketStatus.analyzed => (
+    label: 'Analysé',
+    icon: Icons.manage_search,
+    ton: TonEtiquette.primaire,
+  ),
   TicketStatus.validated => (
     label: 'Validé',
     icon: Icons.thumb_up_alt_outlined,
@@ -191,6 +196,7 @@ List<String> phrasesStatut(Ticket ticket, DateTime now) {
         'La transmission prend du retard.',
     ],
     TicketStatus.received => const ['L\'administrateur a reçu votre ticket.'],
+    TicketStatus.analyzed => const ['Votre ticket a été lu et étudié.'],
     TicketStatus.validated => const ['Votre demande sera traitée.'],
     TicketStatus.inProgress => const ['Le travail a commencé.'],
     TicketStatus.delivered => [

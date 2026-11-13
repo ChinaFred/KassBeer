@@ -68,6 +68,9 @@ enum TicketType {
 enum TicketStatus {
   pending('pending'),
   received('received'),
+
+  /// Analysé : étiquette `statut:analysé` posée sur l'Issue (ADR-008).
+  analyzed('analyzed'),
   validated('validated'),
   inProgress('in_progress'),
   delivered('delivered'),
@@ -137,6 +140,7 @@ class Ticket {
     this.lastSendError,
     this.issueMissingSince,
     this.allowedDecisions,
+    this.canAnswer = false,
     this.decisionLeaseUntil,
     this.retryRequestedAt,
     this.hasPendingWrites = false,
@@ -190,6 +194,11 @@ class Ticket {
   /// version ne connaît pas est ignorée.
   final List<TicketDecisionAction>? allowedDecisions;
 
+  /// `answer` figure dans `allowed_decisions` : « Répondre » est permis
+  /// (callable `answerTicketAnalysis`, ADR-008). Écrit par le serveur seul
+  /// (P26) ; ce n'est pas un document de `decisions/`, d'où un champ à part.
+  final bool canAnswer;
+
   /// Une décision s'applique sur GitHub jusqu'à cette heure (bail du serveur).
   final DateTime? decisionLeaseUntil;
 
@@ -206,12 +215,14 @@ class Ticket {
   bool get waitingForNetwork =>
       status == TicketStatus.pending && hasPendingWrites;
 
-  /// « À traiter » pour l'administrateur : reçu sans décision (`received`),
-  /// ou envoi impossible (`send_failed`). Un ticket `validated` a déjà sa
-  /// décision. Même définition pour le compteur du menu, le filtre et la
-  /// pastille de l'avatar.
+  /// « À traiter » pour l'administrateur : reçu ou analysé sans décision
+  /// (`received`, `analyzed`), ou envoi impossible (`send_failed`). Un ticket
+  /// `validated` a déjà sa décision. Même définition pour le compteur du menu,
+  /// le filtre et la pastille de l'avatar.
   bool get toProcess =>
-      status == TicketStatus.received || status == TicketStatus.sendFailed;
+      status == TicketStatus.received ||
+      status == TicketStatus.analyzed ||
+      status == TicketStatus.sendFailed;
 
   /// Création transmise par l'appareil, mais toujours pas publiée après
   /// [kTicketSendDelay].
@@ -300,6 +311,10 @@ class Ticket {
       lastSendError: read.texteFacultatif('last_send_error'),
       issueMissingSince: read.date('issue_missing_since'),
       allowedDecisions: _allowedDecisions(data['allowed_decisions']),
+      canAnswer: switch (data['allowed_decisions']) {
+        final List<Object?> list => list.contains(kAnswerDecision),
+        _ => false,
+      },
       decisionLeaseUntil: read.date('decision_lease_until'),
       retryRequestedAt: read.date('retry_requested_at'),
       hasPendingWrites: hasPendingWrites,
@@ -354,6 +369,11 @@ int? compareVersions(String a, String b) {
   }
   return 0;
 }
+
+/// Valeur de `allowed_decisions` qui permet « Répondre » (ADR-008). Les
+/// règles de `decisions/` la refusent : elle ne devient jamais une
+/// [TicketDecisionAction].
+const kAnswerDecision = 'answer';
 
 /// Décision de l'administrateur sur un ticket (ADR-006).
 ///

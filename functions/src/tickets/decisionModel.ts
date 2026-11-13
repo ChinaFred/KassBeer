@@ -30,14 +30,28 @@ export function isPlausibleDecisionId(value: string): boolean {
 // ── Décisions permises ──────────────────────────────────────────────────────
 
 /**
- * Les décisions que permet un statut (ADR-006, « Décisions de l'administrateur »).
- * Écrites par le serveur à chaque changement de statut ; le client ne les calcule pas (P26).
+ * « Répondre » (`answerTicketAnalysis`, ADR-008, T3) : une callable, pas un document de
+ * `decisions/` (les règles refusent `answer` dans `decisions/`). Elle figure dans
+ * `allowed_decisions`, que le client lit à part des trois actions des documents.
  */
-export function allowedDecisions(status: unknown): DecisionAction[] {
+export const ANSWER_ACTION = "answer";
+export type AllowedDecision = DecisionAction | typeof ANSWER_ACTION;
+
+/**
+ * Les décisions que permet un statut (ADR-006, « Décisions de l'administrateur » ; ADR-008,
+ * « Statuts ») : Valider depuis `received` et `analyzed` ; Répondre depuis `received`,
+ * `analyzed` et `validated` (`answerPrecondition` de Kass'Dalle). Écrites par le serveur à
+ * chaque changement de statut ; le client ne les calcule pas (P26).
+ */
+export function allowedDecisions(status: unknown): AllowedDecision[] {
   switch (status) {
     case "received":
-      return ["validate", "refuse", "close"];
+      // Valider reste offert depuis Reçu jusqu'à T4 (ADR-008), qui le réserve à `analyzed`.
+      return ["validate", "refuse", "close", ANSWER_ACTION];
+    case "analyzed":
+      return ["validate", "refuse", "close", ANSWER_ACTION];
     case "validated":
+      return ["refuse", "close", ANSWER_ACTION];
     case "in_progress":
       return ["refuse", "close"];
     default:

@@ -7,6 +7,7 @@ import '../../auth/presentation/access_providers.dart';
 import '../../members/presentation/members_providers.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
+import '../domain/ticket_analysis.dart';
 
 /// Tickets du compte [uid], lus avec le cache hors ligne.
 final myTicketsProvider = StreamProvider.autoDispose
@@ -55,6 +56,14 @@ final ticketDecisionsProvider = StreamProvider.autoDispose
     .family<ListeLue<TicketDecision>, String>(
       (ref, ticketId) =>
           ref.watch(ticketsRepositoryProvider).watchDecisions(ticketId),
+      retry: (retryCount, error) => null,
+    );
+
+/// `tickets/{id}/admin/analysis`, lu par l'administrateur seul (ADR-008).
+final ticketAnalysisProvider = StreamProvider.autoDispose
+    .family<RechercheDocument<TicketAnalysisDoc>, String>(
+      (ref, ticketId) =>
+          ref.watch(ticketsRepositoryProvider).watchAnalysis(ticketId),
       retry: (retryCount, error) => null,
     );
 

@@ -36,22 +36,25 @@ const NOW = Date.parse("2026-11-11T10:00:00Z");
 const TOKEN = "github_pat_11AAAAAAAAAAAAAAAAAAAA_secretsecretsecretsecret";
 
 describe("décisions permises par statut (P26)", () => {
-  it("received : valider, refuser, clore", () =>
-    assert.deepEqual(allowedDecisions("received"), ["validate", "refuse", "close"]));
-  it("validated et in_progress : refuser, clore", () => {
-    assert.deepEqual(allowedDecisions("validated"), ["refuse", "close"]);
+  it("received : valider (jusqu'à T4, ADR-008), refuser, clore, répondre", () =>
+    assert.deepEqual(allowedDecisions("received"), ["validate", "refuse", "close", "answer"]));
+  it("analyzed : valider, refuser, clore, répondre", () =>
+    assert.deepEqual(allowedDecisions("analyzed"), ["validate", "refuse", "close", "answer"]));
+  it("validated : refuser, clore, répondre ; in_progress : refuser, clore", () => {
+    assert.deepEqual(allowedDecisions("validated"), ["refuse", "close", "answer"]);
     assert.deepEqual(allowedDecisions("in_progress"), ["refuse", "close"]);
   });
   it("autres statuts : aucune", () => {
     for (const s of TICKET_STATUSES) {
-      if (["received", "validated", "in_progress"].includes(s)) continue;
+      if (["received", "analyzed", "validated", "in_progress"].includes(s)) continue;
       assert.deepEqual(allowedDecisions(s), [], s);
     }
     assert.deepEqual(allowedDecisions(undefined), []);
   });
   it("liste à jour : même contenu, même ordre", () => {
-    assert.equal(allowedDecisionsUpToDate(["refuse", "close"], "validated"), true);
-    assert.equal(allowedDecisionsUpToDate(["close", "refuse"], "validated"), false);
+    assert.equal(allowedDecisionsUpToDate(["refuse", "close"], "in_progress"), true);
+    assert.equal(allowedDecisionsUpToDate(["close", "refuse"], "in_progress"), false);
+    assert.equal(allowedDecisionsUpToDate(["refuse", "close"], "validated"), false);
     assert.equal(allowedDecisionsUpToDate(undefined, "refused"), false);
     assert.equal(allowedDecisionsUpToDate([], "refused"), true);
     assert.equal(allowedDecisionsUpToDate(["validate"], "refused"), false);
@@ -81,7 +84,7 @@ function input(
         ? null
         : {
             status: "received",
-            allowedDecisions: ["validate", "refuse", "close"],
+            allowedDecisions: ["validate", "refuse", "close", "answer"],
             leaseUntilMs: null,
             issueNumber: 12,
             ...ticket,

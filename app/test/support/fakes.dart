@@ -34,6 +34,7 @@ import 'package:kass_beer/core/services/screen_wakelock.dart';
 import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
 import 'package:kass_beer/features/tickets/presentation/tickets_providers.dart';
 
 import 'cost_fakes.dart';
@@ -948,10 +949,37 @@ class FakeTicketsRepository implements TicketsRepository {
     lastSendError: t.lastSendError,
     issueMissingSince: t.issueMissingSince,
     allowedDecisions: t.allowedDecisions,
+    canAnswer: t.canAnswer,
     decisionLeaseUntil: t.decisionLeaseUntil,
     retryRequestedAt: t.retryRequestedAt,
     hasPendingWrites: true,
   );
+
+  final analyses = <String, Replay<RechercheDocument<TicketAnalysisDoc>>>{};
+
+  Replay<RechercheDocument<TicketAnalysisDoc>> analysesOf(String ticketId) =>
+      analyses.putIfAbsent(ticketId, Replay.new);
+
+  @override
+  Stream<RechercheDocument<TicketAnalysisDoc>> watchAnalysis(String ticketId) =>
+      analysesOf(ticketId).stream;
+
+  /// Réponses publiées par « Répondre » : ticket et texte.
+  final answers = <({String ticketId, String answer})>[];
+
+  /// Réponse du serveur à « Répondre » : `null` si publiée ; jamais terminée
+  /// par défaut.
+  Future<EchecReponse?> Function() answerResult = () =>
+      Completer<EchecReponse?>().future;
+
+  @override
+  Future<EchecReponse?> answer({
+    required String ticketId,
+    required String answer,
+  }) {
+    answers.add((ticketId: ticketId, answer: answer));
+    return answerResult();
+  }
 }
 
 /// Demande de page reçue par [FakeLibraryRepository].
