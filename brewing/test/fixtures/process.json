@@ -684,5 +684,390 @@
       "expected": [0]
     }
   ],
-  "invalid_session_orders": [[], [3, 4], [0, 366], [0, -1]]
+  "invalid_session_orders": [[], [3, 4], [0, 366], [0, -1]],
+  "actual_durations": {
+    "rule": "Prévu et réel d'une journée, sur la fiche d'un brassin. Les événements se réduisent par stepRecordsFromEvents (début le plus ancien, dernière fin à ou après ce début ; une fin antérieure est écartée), puis l'horaire par recomputeSchedule (départ : premier début, sinon now). Durée réelle d'une étape : fin retenue moins début retenu (jamais la fin estimée de ScheduledStep.end), arrondie à la minute la plus proche, 30 s vers le haut. Prévu arrondi de même. Écart = réel arrondi moins prévu arrondi. Étape de 0 min prévue : action, ligne inchangée. Sautée, non faite ou à venir : none. Commencée sans fin : running si elle est l'étape en cours et que la journée n'est pas close (day_closed), sinon missingEnd. Journée : prévu = somme des durées prévues, sautées comprises, arrondie ; none tant qu'aucune étape n'a début et fin ; running si une étape est en cours ; missingEnd si une étape a commencé sans fin ; sinon réel = dernière fin moins premier début, arrondi, et between = réel moins la somme des réels arrondis des étapes qui ont début et fin. Heures avec fuseau : l'écart se calcule en temps écoulé, changement d'heure compris.",
+    "cases": [
+      {
+        "id": "journee-avec-attentes",
+        "note": "Cinq étapes faites, des attentes entre elles ; l'ajout de 0 min, fait pendant l'ébullition, reste une action.",
+        "now": "2026-11-21T13:00:00+01:00",
+        "steps": [
+          { "id": "mise", "planned_minutes": 30 },
+          { "id": "palier", "planned_minutes": 60 },
+          { "id": "ebullition", "planned_minutes": 90 },
+          { "id": "ajout", "planned_minutes": 0 },
+          { "id": "nettoyage", "planned_minutes": 60 }
+        ],
+        "events": [
+          { "id": "e01", "kind": "step_started", "step": "mise", "at": "2026-11-21T08:00:00+01:00" },
+          { "id": "e02", "kind": "step_ended", "step": "mise", "at": "2026-11-21T08:35:00+01:00" },
+          { "id": "e03", "kind": "step_started", "step": "palier", "at": "2026-11-21T08:50:00+01:00" },
+          { "id": "e04", "kind": "step_ended", "step": "palier", "at": "2026-11-21T09:48:00+01:00" },
+          { "id": "e05", "kind": "step_started", "step": "ebullition", "at": "2026-11-21T09:50:00+01:00" },
+          { "id": "e06", "kind": "step_started", "step": "ajout", "at": "2026-11-21T10:20:00+01:00" },
+          { "id": "e07", "kind": "step_ended", "step": "ajout", "at": "2026-11-21T10:20:00+01:00" },
+          { "id": "e08", "kind": "step_ended", "step": "ebullition", "at": "2026-11-21T11:32:00+01:00" },
+          { "id": "e09", "kind": "step_started", "step": "nettoyage", "at": "2026-11-21T11:40:00+01:00" },
+          { "id": "e10", "kind": "step_ended", "step": "nettoyage", "at": "2026-11-21T12:40:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 30, "actual": 35, "delta": 5 },
+            { "kind": "measured", "planned": 60, "actual": 58, "delta": -2 },
+            { "kind": "measured", "planned": 90, "actual": 102, "delta": 12 },
+            { "kind": "action", "planned": 0 },
+            { "kind": "measured", "planned": 60, "actual": 60, "delta": 0 }
+          ],
+          "day": { "kind": "measured", "planned": 240, "actual": 280, "between": 25, "delta": 40, "without_end": 0 }
+        }
+      },
+      {
+        "id": "sautee-et-non-faite",
+        "note": "Une étape sautée, une non faite (jamais commencée, une étape plus loin a commencé) : pas de réel. Le prévu de la journée les compte.",
+        "now": "2026-11-21T11:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 20 },
+          { "id": "b", "planned_minutes": 15 },
+          { "id": "c", "planned_minutes": 10 },
+          { "id": "d", "planned_minutes": 30 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:22:00+01:00" },
+          { "id": "e3", "kind": "step_skipped", "step": "b", "at": "2026-11-21T10:22:00+01:00" },
+          { "id": "e4", "kind": "step_started", "step": "d", "at": "2026-11-21T10:25:00+01:00" },
+          { "id": "e5", "kind": "step_ended", "step": "d", "at": "2026-11-21T10:50:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 20, "actual": 22, "delta": 2 },
+            { "kind": "none", "planned": 15 },
+            { "kind": "none", "planned": 10 },
+            { "kind": "measured", "planned": 30, "actual": 25, "delta": -5 }
+          ],
+          "day": { "kind": "measured", "planned": 75, "actual": 50, "between": 3, "delta": -25, "without_end": 0 }
+        }
+      },
+      {
+        "id": "etape-en-cours",
+        "note": "Une étape faite, la suivante en cours : la journée n'a pas encore de réel.",
+        "now": "2026-11-21T11:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 30 },
+          { "id": "b", "planned_minutes": 45 },
+          { "id": "c", "planned_minutes": 10 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:30:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "b", "at": "2026-11-21T10:31:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 30, "actual": 30, "delta": 0 },
+            { "kind": "running", "planned": 45 },
+            { "kind": "none", "planned": 10 }
+          ],
+          "day": { "kind": "running", "planned": 85, "without_end": 0 }
+        }
+      },
+      {
+        "id": "etape-en-cours-journee-close",
+        "note": "Mêmes heures, journée close par « Terminer le brassage » du menu sans fin de l'étape en cours : elle reste sans heure de fin, la journée sans réel.",
+        "now": "2026-11-21T11:00:00+01:00",
+        "day_closed": true,
+        "steps": [
+          { "id": "a", "planned_minutes": 30 },
+          { "id": "b", "planned_minutes": 45 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:30:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "b", "at": "2026-11-21T10:31:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 30, "actual": 30, "delta": 0 },
+            { "kind": "missingEnd", "planned": 45 }
+          ],
+          "day": { "kind": "missingEnd", "planned": 75, "without_end": 1 }
+        }
+      },
+      {
+        "id": "commencee-sans-fin",
+        "note": "Deux étapes commencées sans fin : la plus récente est en cours, l'autre est faite, sans heure de fin. Une étape en cours l'emporte pour la journée.",
+        "now": "2026-11-21T12:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 30 },
+          { "id": "b", "planned_minutes": 20 },
+          { "id": "c", "planned_minutes": 10 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_started", "step": "b", "at": "2026-11-21T10:40:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "c", "at": "2026-11-21T11:00:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "c", "at": "2026-11-21T11:10:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "missingEnd", "planned": 30 },
+            { "kind": "running", "planned": 20 },
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0 }
+          ],
+          "day": { "kind": "running", "planned": 60, "without_end": 1 }
+        }
+      },
+      {
+        "id": "commencee-sans-fin-journee-close",
+        "note": "Mêmes heures, journée close : les deux étapes sont sans heure de fin, la journée sans réel.",
+        "now": "2026-11-21T12:00:00+01:00",
+        "day_closed": true,
+        "steps": [
+          { "id": "a", "planned_minutes": 30 },
+          { "id": "b", "planned_minutes": 20 },
+          { "id": "c", "planned_minutes": 10 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_started", "step": "b", "at": "2026-11-21T10:40:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "c", "at": "2026-11-21T11:00:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "c", "at": "2026-11-21T11:10:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "missingEnd", "planned": 30 },
+            { "kind": "missingEnd", "planned": 20 },
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0 }
+          ],
+          "day": { "kind": "missingEnd", "planned": 60, "without_end": 2 }
+        }
+      },
+      {
+        "id": "fin-ecartee",
+        "note": "Une fin avant le début (horloge d'un autre appareil) est écartée ; la fin suivante est retenue.",
+        "now": "2026-11-21T12:00:00+01:00",
+        "steps": [{ "id": "a", "planned_minutes": 30 }],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T09:58:00+01:00" },
+          { "id": "e3", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:31:00+01:00" }
+        ],
+        "expected": {
+          "steps": [{ "kind": "measured", "planned": 30, "actual": 31, "delta": 1 }],
+          "day": { "kind": "measured", "planned": 30, "actual": 31, "between": 0, "delta": 1, "without_end": 0 }
+        }
+      },
+      {
+        "id": "debut-en-double",
+        "note": "Deux appareils hors ligne commencent la même étape : le début le plus ancien compte.",
+        "now": "2026-11-21T12:00:00+01:00",
+        "steps": [{ "id": "a", "planned_minutes": 30 }],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:05:00+01:00" },
+          { "id": "e2", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e3", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:40:00+01:00" }
+        ],
+        "expected": {
+          "steps": [{ "kind": "measured", "planned": 30, "actual": 40, "delta": 10 }],
+          "day": { "kind": "measured", "planned": 30, "actual": 40, "between": 0, "delta": 10, "without_end": 0 }
+        }
+      },
+      {
+        "id": "action-faite",
+        "note": "Étape de 0 min « Fait » : action, sans réel ni écart, même si sa fin arrive 20 s après son début.",
+        "now": "2026-11-21T12:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 10 },
+          { "id": "ajout", "planned_minutes": 0 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:10:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "ajout", "at": "2026-11-21T10:10:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "ajout", "at": "2026-11-21T10:10:20+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0 },
+            { "kind": "action", "planned": 0 }
+          ],
+          "day": { "kind": "measured", "planned": 10, "actual": 10, "between": 0, "delta": 0, "without_end": 0 }
+        }
+      },
+      {
+        "id": "arrondi-30-secondes",
+        "note": "10 min 30 s : 11 min. 10 min 29 s : 10 min. Prévu de 12,5 min : 13 min.",
+        "now": "2026-11-21T12:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 10 },
+          { "id": "b", "planned_minutes": 10 },
+          { "id": "c", "planned_minutes": 12.5 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:10:30+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "b", "at": "2026-11-21T10:11:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "b", "at": "2026-11-21T10:21:29+01:00" },
+          { "id": "e5", "kind": "step_started", "step": "c", "at": "2026-11-21T10:21:29+01:00" },
+          { "id": "e6", "kind": "step_ended", "step": "c", "at": "2026-11-21T10:33:29+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 10, "actual": 11, "delta": 1 },
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0 },
+            { "kind": "measured", "planned": 13, "actual": 12, "delta": -1 }
+          ],
+          "day": { "kind": "measured", "planned": 33, "actual": 33, "between": 0, "delta": 0, "without_end": 0 }
+        }
+      },
+      {
+        "id": "duree-hors-bornes",
+        "note": "Réel de 605 min et de 0 min : affichés, mais hors de 1 à 600 min pour la mise à jour d'un processus (duration_updates).",
+        "now": "2026-11-21T20:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 600 },
+          { "id": "b", "planned_minutes": 5 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T08:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T18:05:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "b", "at": "2026-11-21T18:05:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "b", "at": "2026-11-21T18:05:20+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 600, "actual": 605, "delta": 5 },
+            { "kind": "measured", "planned": 5, "actual": 0, "delta": -5 }
+          ],
+          "day": { "kind": "measured", "planned": 605, "actual": 605, "between": 0, "delta": 0, "without_end": 0 }
+        }
+      },
+      {
+        "id": "journee-passant-minuit",
+        "now": "2026-11-22T02:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 60 },
+          { "id": "b", "planned_minutes": 30 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T23:30:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-22T00:40:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "b", "at": "2026-11-22T00:45:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "b", "at": "2026-11-22T01:10:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 60, "actual": 70, "delta": 10 },
+            { "kind": "measured", "planned": 30, "actual": 25, "delta": -5 }
+          ],
+          "day": { "kind": "measured", "planned": 90, "actual": 100, "between": 5, "delta": 10, "without_end": 0 }
+        }
+      },
+      {
+        "id": "heure-d-hiver-2026-10-25",
+        "note": "Dimanche 25 octobre 2026, 03:00 en France redevient 02:00. De 01:30 (heure d'été) à 02:45 (heure d'hiver) : 135 min écoulées, pas 75.",
+        "now": "2026-10-25T04:00:00+01:00",
+        "steps": [{ "id": "a", "planned_minutes": 120 }],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-10-25T01:30:00+02:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-10-25T02:45:00+01:00" }
+        ],
+        "expected": {
+          "steps": [{ "kind": "measured", "planned": 120, "actual": 135, "delta": 15 }],
+          "day": { "kind": "measured", "planned": 120, "actual": 135, "between": 0, "delta": 15, "without_end": 0 }
+        }
+      },
+      {
+        "id": "heure-d-ete-2027-03-28",
+        "note": "Dimanche 28 mars 2027, 02:00 en France devient 03:00. De 01:30 (heure d'hiver) à 03:20 (heure d'été) : 50 min écoulées, pas 110.",
+        "now": "2027-03-28T04:00:00+02:00",
+        "steps": [{ "id": "a", "planned_minutes": 60 }],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2027-03-28T01:30:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2027-03-28T03:20:00+02:00" }
+        ],
+        "expected": {
+          "steps": [{ "kind": "measured", "planned": 60, "actual": 50, "delta": -10 }],
+          "day": { "kind": "measured", "planned": 60, "actual": 50, "between": 0, "delta": -10, "without_end": 0 }
+        }
+      },
+      {
+        "id": "jamais-commencee",
+        "now": "2026-11-21T10:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 30 },
+          { "id": "b", "planned_minutes": 20 }
+        ],
+        "events": [],
+        "expected": {
+          "steps": [
+            { "kind": "none", "planned": 30 },
+            { "kind": "none", "planned": 20 }
+          ],
+          "day": { "kind": "none", "planned": 50, "without_end": 0 }
+        }
+      },
+      {
+        "id": "en-cours-sans-etape-finie",
+        "note": "Aucune étape n'a encore début et fin : la journée reste sans prévu/réel (none) ; l'étape en cours est rendue running.",
+        "now": "2026-11-21T10:10:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 30 },
+          { "id": "b", "planned_minutes": 20 }
+        ],
+        "events": [{ "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" }],
+        "expected": {
+          "steps": [
+            { "kind": "running", "planned": 30 },
+            { "kind": "none", "planned": 20 }
+          ],
+          "day": { "kind": "none", "planned": 50, "without_end": 0 }
+        }
+      },
+      {
+        "id": "journee-passee",
+        "note": "Journée passée : toutes ses étapes sautées, aucune durée réelle.",
+        "now": "2026-11-25T10:00:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 10 },
+          { "id": "b", "planned_minutes": 5 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_skipped", "step": "a", "at": "2026-11-25T09:00:00+01:00" },
+          { "id": "e2", "kind": "step_skipped", "step": "b", "at": "2026-11-25T09:00:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "none", "planned": 10 },
+            { "kind": "none", "planned": 5 }
+          ],
+          "day": { "kind": "none", "planned": 15, "without_end": 0 }
+        }
+      }
+    ]
+  },
+  "duration_updates": {
+    "rule": "Une durée réelle d'étape se propose pour une étape de modèle si elle est connue (measured), de 1 à 600 min, et différente de la durée actuelle du modèle arrondie à la minute. Sinon : noActual, outOfBounds, unchanged, dans cet ordre.",
+    "cases": [
+      { "id": "proposee", "kind": "measured", "actual": 42, "current_minutes": 30, "issue": null },
+      { "id": "borne-basse", "kind": "measured", "actual": 1, "current_minutes": 30, "issue": null },
+      { "id": "borne-haute", "kind": "measured", "actual": 600, "current_minutes": 30, "issue": null },
+      { "id": "zero-minute", "kind": "measured", "actual": 0, "current_minutes": 30, "issue": "outOfBounds" },
+      { "id": "au-dela-de-600", "kind": "measured", "actual": 605, "current_minutes": 600, "issue": "outOfBounds" },
+      { "id": "deja-a-cette-duree", "kind": "measured", "actual": 30, "current_minutes": 30, "issue": "unchanged" },
+      { "id": "duree-actuelle-decimale", "note": "30,4 min s'affiche 30 min : un réel de 30 min n'est pas proposé.", "kind": "measured", "actual": 30, "current_minutes": 30.4, "issue": "unchanged" },
+      { "id": "duree-actuelle-decimale-arrondie-au-dessus", "kind": "measured", "actual": 31, "current_minutes": 30.5, "issue": "unchanged" },
+      { "id": "sautee", "kind": "none", "current_minutes": 30, "issue": "noActual" },
+      { "id": "en-cours", "kind": "running", "current_minutes": 30, "issue": "noActual" },
+      { "id": "sans-fin", "kind": "missingEnd", "current_minutes": 30, "issue": "noActual" },
+      { "id": "action", "kind": "action", "current_minutes": 0, "issue": "noActual" }
+    ],
+    "rounded_step_minutes": [
+      { "minutes": 0, "expected": 0 },
+      { "minutes": 12.4, "expected": 12 },
+      { "minutes": 12.5, "expected": 13, "note": "30 s vers le haut" },
+      { "minutes": 600, "expected": 600 }
+    ]
+  }
 }

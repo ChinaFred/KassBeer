@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:brewing/brewing.dart'
     show
+        ActualDayDuration,
         StepEventKind,
         StepStatus,
         fermentationDayNumber,
@@ -48,6 +49,7 @@ import 'brews_providers.dart';
 import 'changer_processus.dart';
 import 'choix_processus.dart';
 import 'embouteillage.dart';
+import 'maj_processus.dart';
 import 'new_brew_form.dart' show FormulaireNouveauBrassin;
 import 'prevu_et_mesure.dart';
 import 'releve_fermentation.dart';
@@ -417,6 +419,16 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     );
   }
 
+  void _majProcessus(Brew brew) {
+    unawaited(
+      // ticket: /brassins/:id/fenetre/maj-processus
+      showFeuilleOuDialogue<void>(
+        context: context,
+        builder: (_) => FeuilleMajProcessus(brew: brew, tokenName: _tokenName!),
+      ),
+    );
+  }
+
   /// « Changer la date » d'une journée après le brassage : sélecteur du jour de
   /// départ à J+365, ou écart en jours sans date de départ. Réécrit `process` en
   /// entier (ADR-010).
@@ -690,6 +702,16 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             journee: j,
           ),
     };
+    // Prévu et réel des journées commencées (fiche seule, ADR-010).
+    final brassage = brew.deroule.brassage;
+    final durees = events == null
+        ? const <String, ActualDayDuration>{}
+        : dureesDesJournees(
+            brew: brew,
+            plans: {if (brassage != null) brassage.key: plan, ...plansJournees},
+            errors: ref.read(errorReportServiceProvider),
+            reported: ref.read(planReportsProvider),
+          );
     final prochaine = mine && events != null
         ? _prochaineJournee(brew, plansJournees)
         : null;
@@ -952,11 +974,14 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           deroule: _deroule(
             brew: brew,
             mine: mine,
+            readerUid: readerUid,
             plans: plansJournees,
+            durees: durees,
             chronologieJournee: (j) => switch (plansJournees[j.key]) {
               PlanObtenu(:final plan) when plan.commencee => ChronologieJour(
                 plan: plan,
                 sansEtape: false,
+                durees: durees[j.key],
                 onTapSaisie: mine
                     ? (e) => ouvrirCorrection(
                         context: context,
@@ -977,6 +1002,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               eventsAsync: eventsAsync,
               plan: plan,
               mine: mine,
+              durees: brassage == null ? null : durees[brassage.key],
             ),
           ),
           recette: [
@@ -1017,7 +1043,9 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
   Widget _deroule({
     required Brew brew,
     required bool mine,
+    required String? readerUid,
     required Map<String, PlanEvalue> plans,
+    required Map<String, ActualDayDuration> durees,
     required Widget chronologie,
     required Widget? Function(JourneeDeroulee) chronologieJournee,
   }) {
@@ -1044,9 +1072,19 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             j.key,
     };
     final templateId = brew.process?.templateId;
-    final modeles = templateId == null
+    final modelesAsync = templateId == null
         ? null
-        : ref.watch(processTemplatesProvider).value;
+        : ref.watch(processTemplatesProvider);
+    final modeles = modelesAsync?.value;
+    final majProcessus = etatMajProcessus(
+      brew: brew,
+      readerUid: readerUid,
+      offline: _offline,
+      modeles: modelesAsync,
+      durees: durees,
+      errors: ref.read(errorReportServiceProvider),
+      reported: ref.read(planReportsProvider),
+    );
     final modifiable = mine && brew.derouleModifiable;
     final enCours = brew.process != null && modifiable;
     final ecarts = enCours
@@ -1061,6 +1099,14 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           ? resumeJourneeTerminee(planDe(j))
           : null,
       passables: passables,
+      dureesJournee: (j) => durees[j.key],
+      actionProcessus: majProcessus == null
+          ? null
+          : ActionMajProcessus(
+              etat: majProcessus,
+              onOuvrir: () => _majProcessus(brew),
+              onReessayer: () => ref.invalidate(processTemplatesProvider),
+            ),
       onPasser: (j) => unawaited(_passerJournee(brew, j, planDe(j))),
       modeleSupprime:
           templateId != null &&
@@ -1229,6 +1275,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required AsyncValue<ListeLue<BrewEvent>> eventsAsync,
     required PlanEvalue plan,
     required bool mine,
+    required ActualDayDuration? durees,
   }) {
     final probleme = messageDerouleIllisible(brew.deroule);
     if (eventsAsync.value == null && eventsAsync.hasError) {
@@ -1254,6 +1301,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             ? const TexteAbsent('Aucune étape.')
             : ChronologieJour(
                 plan: plan,
+                durees: durees,
                 onTapSaisie: mine
                     ? (e) => ouvrirCorrection(
                         context: context,
