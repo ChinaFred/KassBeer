@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-13
 
-### v0.1.32 — fonctionnel
+### v0.1.37 — fonctionnel
 
 L'administrateur peut importer les 16 fiches Excel de brassage depuis Administration › Import.
 Il choisit le fichier préparé, relit chaque fiche avec ses points à revoir (divergences,
@@ -15,7 +15,7 @@ brassin terminé, avec sa chronologie, ses mesures et ses relevés de fermentati
 chaque brassin est figé avec les prix de sa fiche, visible par l'administrateur seul. Un second
 import du même fichier n'écrit rien, et un import interrompu reprend où il s'était arrêté.
 
-### v0.1.32 — technique
+### v0.1.37 — technique
 
 Incrément v0.6. `exchange/` : `package:exchange/fiches.dart` lit le format `kassbeer_fiches` v1
 (document BeerJSON pour les recettes, bornes de FO4), et `bin/verifier_fiches.dart` le rejoue à
@@ -26,6 +26,162 @@ fiches de l'administrateur et ne les écrit que dans `users/{uid}/brew_costs/`. 
 Firestore ne change ; 25 tests de règles rejouent les écritures d'un import. `.gitignore` limite
 `/import/` à la racine, pour versionner `app/lib/features/import/`. Aucun paquet ne change.
 `main.dart.js` passe de 5 125 522 à 5 197 841 octets.
+
+### v0.1.36 — fonctionnel
+
+L'administrateur peut lancer depuis la fiche d'un ticket une session Claude Code qui analyse la
+demande, puis, une fois le ticket validé, une session qui en écrit le code. Chaque lancement passe
+par une boîte de confirmation qui affiche les lancements restants du jour. La fiche garde
+l'historique des lancements avec le lien vers chaque session. « Valider » n'est plus proposé
+qu'une fois le ticket analysé. Le développement ne se lance que pour un ticket validé depuis
+l'application : un ticket validé sur GitHub propose de nouveau « Valider ».
+
+### v0.1.36 — technique
+
+Lot T4 d'ADR-008. Callables `launchTicketAnalysis` et `launchTicketDevelopment` (`requireAdmin`,
+1 instance, 120 s) ; `routine.ts` appelle l'API Routines de Claude Code par `fetch` seul, corps
+`analyse #N` ou `developpement #N`, sans redirection, 30 s, jamais rejoué ; secrets
+`TICKETS_ROUTINE_ANALYSIS_ID`/`_TOKEN` et `TICKETS_ROUTINE_DEV_ID`/`_TOKEN`, chacun monté par sa
+seule fonction. Premier poste de coût : `ticket_routine_launch`, plafond `LAUNCHES_PER_DAY` = 10 par
+jour de Paris, compté avant l'appel dans `ticket_quotas/launch_{AAAAMMJJ}`, affiché par
+`ticket_status/launches` ; historique `tickets/{id}/admin/launches`. `allowed_decisions` :
+`launch_analysis` et `launch_development`, `validate` seulement depuis `analyzed`, revérifié au
+serveur (version de report 4) ; `launch_development` exige un « Valider » fait dans l'application
+(`validated_by_app_at`), une étiquette `validé` posée sur GitHub ne suffit pas (décision de
+l'utilisateur du 2026-11-13). `syncTickets` passe de `every 60 minutes` à `0 * * * *` (Europe/Paris)
+pour suivre le jour de Paris du compteur. Prompts des deux routines dans `exigences-techniques.md`,
+à recoller sur claude.ai : arrêt si `GIT_COMMITTER_IDENT` n'est pas `noreply`, fichiers sensibles
+étendus à `ingest/` et aux fichiers de construction Android, liste fermée des appels GitHub de
+l'analyse (décisions de l'utilisateur du 2026-11-13). `ci.yml` et `deploy.yml` : liste fermée étendue aux deux callables, contrôle
+des secrets par fonction ajouté à la CI. Contrôles P14, P23 et P25 modifiés, P35, P36 et P39 à P42 ajoutés. Aucun
+paquet ajouté ; `main.dart.js` passe de 5 125 522 à 5 159 200 octets (+ 0,7 %).
+
+### v0.1.35 — fonctionnel
+
+Les journées après le brassage se suivent comme le brassage. Sur la fiche d'un brassin en
+fermentation, « Préparer la journée « Houblonnage à cru » » s'affiche sous sa date prévue.
+Préparez la journée sur le téléphone qui servira, avec du réseau : ensuite, étapes, minuteurs,
+mesures et notes marchent sans réseau. « Commencer la journée » démarre la première étape ;
+une journée commencée se reprend depuis la fiche.
+
+Une densité ou une température saisie pendant une journée compte dans le relevé de
+fermentation et dans la densité finale, jamais dans la densité initiale. Elle s'affiche sous
+son étape, et le relevé nomme sa journée et son étape. « Terminer la journée » termine l'étape
+en cours et marque sautées celles qui restent ; une journée dont toutes les étapes sont faites
+se termine seule. Une journée que vous ne ferez pas se passe depuis la fiche : le menu de la
+journée porte « Passer la journée », qui marque ses étapes sautées. Dans le déroulé de la
+fiche, une journée terminée résume ce qui a été fait (« Terminée · 3 faites, 1 sautée »).
+
+La journée d'embouteillage finit par « Embouteiller » : le formulaire habituel, puis le retour
+sur la fiche. L'étape en cours se termine à l'envoi. Les prix et les frais lus à la préparation servent à figer le coût, même sans
+réseau. Un brassin qui a une journée d'embouteillage garde « Embouteiller sans suivre la
+journée » dans le menu ⋮ de sa fiche. La liste des brassins annonce toujours la prochaine
+journée d'après sa date : une journée faite en avance reste annoncée jusqu'à cette date.
+
+### v0.1.35 — technique
+
+Lot D4 d'ADR-010. `PlanDuJour.calculer` prend la journée suivie : événements réduits sur toutes
+les journées, horaire recalculé sur la seule journée, départ au premier début de la journée,
+sinon à l'heure de l'appareil ; `journeeTerminee` et `PlanDuJour.commencee` en dérivent l'état.
+Routes `/brassins/:id/jour/:journee/preparer` (dans la coquille) et `/brassins/:id/jour/:journee`
+(plein écran) ; `PrepareBrewScreen` et `BrewDayScreen` sont paramétrés par la clé de la
+journée, `journeeASuivre` nomme les refus. « Commencer la journée » écrit le seul début de la
+première étape, « Terminer la journée » un `WriteBatch` de `step_ended` et de `step_skipped`,
+sans statut. Les mesures et notes d'une journée 2 ou suivante portent `phase: 'fermentation'`
+(`BrewEventInput.phase`). `capturerEmbouteillage` regroupe les lectures capturées à l'envoi de
+l'embouteillage pour la fiche et pour la journée, qui le confie à la fiche pour ses annonces
+(`embouteillagesAAnnoncerProvider`, vidée après l'affichage, refus déjà rapportés écoutés dès
+la mise en mémoire) ; l'étape en cours reçoit son `step_ended` à l'envoi. « Passer la journée »
+écrit les `step_skipped` des étapes non commencées en un lot. Sept éléments de ticket et deux
+noms d'écran ajoutés. `exigences-techniques.md` porte les changements des lots D1 à D4 dans ses
+deux copies des sections Architecture, Modèle de données et Règles d'accès. Les règles
+d'accès, `brewing/` et les dépendances ne changent pas.
+
+### v0.1.34 — fonctionnel
+
+« Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la
+recette seule » comme avant. Votre processus par défaut est déjà choisi. En dessous, « Déroulé
+prévu » montre chaque journée avec sa date et son nombre d'étapes, et prévient quand la recette
+n'a pas de houblon à cru pour la journée de houblonnage, ou quand des houblons à cru n'ont pas
+de journée. Hors ligne, si vos processus n'ont jamais été lus sur ce téléphone, le brassin se
+crée avec la chronologie de la recette seule ; vous choisirez son processus plus tard.
+
+La fiche d'un brassin a une section « Déroulé » à la place de « Chronologie » : le processus
+choisi, la journée de brassage avec ses heures et ses mesures, puis les journées suivantes avec
+leur date et leurs étapes. Tant que le brassage n'a pas commencé, « Changer de processus » en
+choisit un autre, et le menu d'une journée change sa date ou rétablit celle du processus.
+Ensuite, le déroulé ne change plus. « Recréer depuis la recette » garde le processus du brassin.
+
+La liste des brassins annonce la prochaine journée d'un brassin en fermentation (« Prochaine
+journée : Houblonnage à cru, mer. 25 nov. »). « Préparer le brassage » et l'écran du jour
+suivent la journée de brassage du processus, préparation et nettoyage compris, et la barre de
+l'écran du jour nomme la journée. Le suivi des journées après le brassage arrive avec la
+prochaine version : d'ici là, la mesure de densité se saisit par « Ajouter un relevé » et
+l'embouteillage par « Embouteiller ».
+
+### v0.1.34 — technique
+
+Lot D3 d'ADR-010. `assemblerDeroule` crée les clés et les libellés du déroulé depuis les
+brouillons de `resolveProcess` (clés de la recette gardées, `erreurDeroule` avant l'écriture) ;
+`nomEtapePreremplie`, ses avertissements et `formatQuantiteRecette` passent dans
+`recipes/domain/libelles_etapes.dart`, sans changement de l'éditeur « Chronologie du jour ».
+`BrewsRepository.setProcess` écrit `process` en entier après la création (option B'), au
+changement de processus ou de date, et à la recréation ; nul retire le champ. Un `process`
+illisible bloque « Commencer le brassage ». `brewing/` expose `processSessionOrder` (journée
+de brassage en tête, puis par écart, à égalité dans l'ordre courant), utilisé par
+`resolveProcess` et par le changement de date d'une journée ; cas `session_orders` ajoutés à
+`process.json`. P37 permet de lire la recette figée d'un brassin comme entrée d'une nouvelle
+résolution avant le départ (`assemblerDeroule`, aperçu par `Deroule.depuisRecette`) ; toute
+autre lecture de ses étapes passe par `Brew.deroule`. Trois éléments de ticket : « Changer de
+processus », « Actions d'une journée », « Écart d'une journée ». Les règles d'accès et les
+dépendances ne changent pas.
+
+### v0.1.33 — fonctionnel
+
+Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées
+d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune
+à quelques jours du brassage, avec ses étapes de préparation et de nettoyage autour de celles
+de la recette. La liste montre vos processus, puis ceux des autres brasseurs. Pour commencer,
+« Partir du modèle d'exemple » ouvre un processus de trois journées aux durées typiques, à
+ajuster à votre matériel avant de l'enregistrer. Vous modifiez, dupliquez et supprimez les
+vôtres, et vous choisissez celui que « Nouveau brassin » vous proposera : ce choix ne
+concerne que vous. Le processus d'un autre brasseur se copie dans les vôtres. Un processus
+compte 5 journées au plus et 60 étapes par journée ; les journées se rangent d'elles-mêmes
+par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création
+d'un brassin arrive avec une prochaine version.
+
+### v0.1.33 — technique
+
+Lot D2 d'ADR-010. Dépôts `ProcessesRepository` (`process_templates/` : document illisible
+isolé et rapporté, `erreurModele` vérifié avant chaque écriture, copie et duplication à clés
+neuves) et `PreferencesProcessusRepository` (`users/{uid}/preferences/processes`), sans
+transaction. Le défaut n'est remis à nul qu'après l'acceptation de la suppression de son
+processus. `LigneEditeur` accepte une ligne sans formulaire, avec une icône en tête ; l'éditeur
+de recette ne change pas. L'éditeur de processus défile en un seul `CustomScrollView`, une
+`SliverReorderableList` par journée. Le modèle d'exemple s'appelle « Brassage, houblonnage à
+cru, embouteillage », dans l'application et dans `brewing/test/fixtures/process.json`. Aucune
+dépendance ne change.
+
+### v0.1.32 — technique
+
+Premier lot (D1) d'ADR-010 : un brassin pourra suivre de 1 à 5 journées (brassage,
+houblonnage à cru, embouteillage) tirées d'un modèle de processus partagé. Rien ne change
+encore à l'écran. Le paquet `brewing/` résout un modèle avec la recette figée d'un brassin :
+il garde ou retire chaque journée, place chaque houblon à cru au jour donné par la recette,
+une journée par jour distinct, regroupe au-delà de 5 journées, trie par écart et calcule la
+date de chaque journée. Ses 10 cas de résolution, dont le modèle d'exemple, et ses dates
+autour des changements d'heure du 25 octobre 2026 et du 28 mars 2027 sont dans
+`process.json`. Les règles acceptent les modèles (`process_templates/`, lus par le groupe,
+écrits par leur auteur), le déroulé figé d'un brassin (`process`, absent de la création,
+modifiable seulement avant le départ) et le choix par défaut privé de chaque brasseur.
+L'application lit les étapes d'un brassin par son déroulé : un brassin sans déroulé garde sa
+chronologie de recette, un déroulé illisible s'affiche en panne et se rapporte, sans repli.
+Le calcul du jour se fait journée par journée. Le budget des règles a été mesuré : un
+`pad()` vaut environ 4 expressions et non 10, la marge de la création d'un brassin est
+d'environ 16 expressions, l'écriture du plus grand déroulé laisse environ 590 expressions,
+et un lot de 60 étapes sautées passe. `CLAUDE.md` étend la règle hors ligne à chaque journée
+et « Un brassin fige sa recette » au déroulé, complète P2, P3 et P5, et ajoute les contrôles
+P37 (lecture du déroulé, découpage par journée) et P38 (règles des modèles et du déroulé).
 
 ## 2026-11-12
 

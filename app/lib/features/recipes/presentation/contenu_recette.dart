@@ -5,12 +5,9 @@ import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../domain/beerjson.dart';
 import '../domain/chronologie.dart';
+import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
 import 'ingredient_forms.dart';
-
-/// Quantité d'une ligne : « 22,4 g », « 5 ml », « 1,5 L ».
-String formatQuantiteRecette(Quantite q) =>
-    q.enLitres ? formatVolumeLigne(q.valeur) : formatGrammes(q.valeur);
 
 /// Moment d'un houblon et sa durée : « Ébullition 60 min », « Whirlpool 20 min »,
 /// « À cru 3 jours », « Empâtage 60 min ».

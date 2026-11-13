@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/page_document.dart';
 import '../../../core/providers.dart';
+import '../../costs/data/figeage_embouteillage.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
 
@@ -26,6 +27,15 @@ final preparedBrewsProvider = Provider<Set<String>>((ref) => <String>{});
 /// Anomalies de chronologie déjà rapportées, par brassin et par événement : un
 /// rapport par session, pas un par seconde.
 final planReportsProvider = Provider<Set<String>>((ref) => <String>{});
+
+/// Embouteillage envoyé depuis la journée d'embouteillage (ADR-010), annoncé
+/// par la fiche à son retour, par brassin : ses annonces et « Voir le coût »
+/// sont celles d'un embouteillage fait depuis la fiche. Mémoire de session.
+typedef EmbouteillageAAnnoncer = ({EmbouteillageEnvoye envoi, bool offline});
+final embouteillagesAAnnoncerProvider =
+    Provider<Map<String, EmbouteillageAAnnoncer>>(
+      (ref) => <String, EmbouteillageAAnnoncer>{},
+    );
 
 /// Vrai une fois la reprise au lancement traitée (D-Q3) : une seule par session.
 final repriseTraiteeProvider = Provider<List<bool>>((ref) => [false]);

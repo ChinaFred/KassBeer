@@ -10,19 +10,19 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
 l'administrateur saisit le nom d'un membre. Les prix, les frais et les coûts figés d'un
 membre ne sont lus que par lui, administrateur compris ; ceux d'un membre retiré restent en
 base et plus personne ne les lit. Retirer un compte ne supprime ni ses recettes ni
-ses brassins, qui restent visibles du groupe. Les recettes et équipements d'un membre retiré
-restent lisibles, ne sont plus modifiables par personne dans l'application, et peuvent être
-dupliqués.
+ses brassins, qui restent visibles du groupe. Les recettes, équipements et processus d'un
+membre retiré restent lisibles, ne sont plus modifiables par personne dans l'application, et
+peuvent être dupliqués ou copiés.
 
-L'auteur d'une recette ou d'un équipement s'affiche « Vous » pour soi, sinon par le nom de
+L'auteur d'une recette, d'un équipement ou d'un processus s'affiche « Vous » pour soi, sinon par le nom de
 son compte Google enregistré avec le contenu, sinon « Autre brasseur ». Ce nom ne donne
 aucun droit : seuls les droits du compte auteur comptent.
 
@@ -70,7 +70,7 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue), un séparateur, « Mes prix », « Préférences », un séparateur, « Signaler ou proposer », « Mes
+pu être lue), un séparateur, « Mes prix », « Mes processus », « Préférences », un séparateur, « Signaler ou proposer », « Mes
 tickets », « Tickets à traiter » (administrateur seul), « Nouveautés », « Sources des données », un séparateur et « Se
 déconnecter ». Une déconnexion qui échoue
 affiche « Déconnexion impossible. Réessayez. ».
@@ -189,7 +189,9 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
   navigation » sur les écrans à barre de navigation, listes et fiches de la Bibliothèque
   comprises ; « Embouteillage », « Relevé de
   fermentation », « Coût du brassin »… sur la fiche d'un brassin ; « Malt ou sucre »,
-  « Houblon »… dans l'éditeur de recette). Le formulaire de prix porte le même nom, « Prix d'un
+  « Houblon »… dans l'éditeur de recette ; « Journée », « Étape », « Actions d'une journée »,
+  « Insérer un bloc de la recette » dans l'éditeur de processus ; « Plus d'actions » sur la
+  fiche d'un processus). Le formulaire de prix porte le même nom, « Prix d'un
   ingrédient », sur « Mes prix », la fiche d'une recette et celle d'un brassin, et sa liste
   « Reprendre un prix » aussi ; « Coût du brassin » désigne les deux confirmations « Figer le
   coût » et « Recalculer avec mes prix actuels ». Aide : « Menu ou fenêtre concerné. »
@@ -285,7 +287,8 @@ Réservé à l'administrateur. Trois entrées : « Membres » (« Inviter et ret
 « Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
-et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas) et « Import » (« Fiches Excel préparées en JSON »).
+et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas, un jeton de routine
+refusé l'allume) et « Import » (« Fiches Excel préparées en JSON »).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
@@ -415,8 +418,13 @@ tout va bien. Une ligne par alerte :
 - « N tickets ne sont pas arrivés sur GitHub. » : envoi impossible, ou en attente de
   transmission depuis plus d'une heure ;
 - « N tickets dont l'Issue a disparu. » ;
+- « Jeton de la routine d'analyse refusé depuis le jj/mm/aa. Remplacez-le dans Secret
+  Manager. » et « Jeton de la routine de développement refusé depuis le jj/mm/aa. Remplacez-le
+  dans Secret Manager. » (ton d'erreur), lus dans l'état des lancements (ADR-008, T4) ;
 - « État du jeton GitHub illisible. » pour un document illisible, journalisé ; « Impossible de
-  lire l'état du jeton GitHub. » quand la lecture échoue. Une panne de lecture des tickets
+  lire l'état du jeton GitHub. » quand la lecture échoue ; de même « État des lancements
+  illisible. » et « Impossible de lire l'état des lancements. ». Le plafond des lancements
+  atteint n'y figure pas : c'est un état normal. Une panne de lecture des tickets
   n'y est pas répétée : la liste ou la fiche affiche déjà « Impossible de lire les tickets. ».
 
 **Disposition.** Dans une fenêtre de 1 096 px ou plus (840 px de contenu à côté du rail
@@ -428,6 +436,14 @@ La ligne choisie prend le fond secondaire du thème, texte et icône accordés, 
 tickets. En dessous, la liste occupe l'écran et la fiche s'ouvre seule par-dessus (titre
 « Ticket d'un membre », retour vers la liste).
 
+**Compteur des lancements.** Au-dessus des filtres, en texte secondaire : « Lancements de
+sessions : 2 sur 10 le 13/11 · 3 en novembre 2026 ». Le jour, le mois et le plafond sont ceux écrits
+par le serveur : l'application ne recalcule pas le jour de Paris et n'a aucun plafond en dur.
+Sans compteur : « Lancements de sessions : aucun compté. » ; lecture : « … : lecture en
+cours. » ; hors ligne, absent du cache : « … : compteur non disponible hors ligne. » ;
+illisible : « … : compteur illisible. » ; panne : « Lancements de sessions : compteur
+indisponible. » en ton d'erreur, avec un bouton icône « Réessayer ».
+
 **Liste.** Filtres « À traiter (N) » (tickets reçus ou analysés sans décision, et envois
 impossibles ; un ticket validé n'y est pas),
 « Tous » et « Bloqués (N) » (envoi impossible, en attente depuis plus d'une heure, Issue
@@ -437,7 +453,10 @@ il reste le même entre la liste et une fiche. Au téléphone, les filtres défi
 l'horizontale. Liste du plus récent au plus ancien ; chaque ligne : icône du type (lue),
 titre sur deux lignes au plus, « #12 · Nom · jj/mm/aa » (sans Issue, pas de numéro ; le nom
 déclaré dans Admin › Membres, sinon l'adresse, jamais publié sur l'Issue), étiquette du statut
-et, selon le cas, « Décision en cours », « Issue disparue », « En retard ». Pas de point de
+et, selon le cas, « Décision en cours », « Issue disparue », « En retard », « Analyse en
+cours » ou « Développement en cours » (sablier, lu « Analyse en cours depuis 14:05 »),
+« Relance possible ». Ces deux dernières pastilles ne lisent l'historique des lancements que
+pour un ticket dont le serveur permet un lancement (reçu ou validé). Pas de point de
 non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
 l'application à jour. ».
 
@@ -462,6 +481,7 @@ coupé en ton d'erreur ; l'encadré du texte de
 l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
 « Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
 « Analyses (N) », pour un ticket qui a une Issue (voir ci-dessous) ;
+« Lancements (N) », section repliée, pour un ticket qui a une Issue (voir ci-dessous) ;
 « Décisions (N) », section repliée, la
 plus récente en haut (« Refus demandé le jj/mm/aa à hh:mm · Appliqué », « Clôture demandée le …
 · Échec : … », « Validation demandée le … · Refusée par le serveur : … »). États : « Chargement
@@ -500,13 +520,76 @@ sans relevé : « Analyse pas encore relevée. » et « Ouvrir l'Issue #12 » ; 
 cache : « Analyses non disponibles hors ligne. » ; document illisible : « Analyses illisibles.
 Mettez l'application à jour. ».
 
+**Lancements (N).** Section repliée, lue par l'administrateur seul (ADR-008, T4) : les sessions
+Claude Code lancées sur ce ticket, la plus récente en haut, vingt au plus. Le titre reste
+« Lancements » sans nombre tant que la section n'est pas lue. Une carte par lancement, dans
+l'encadré du texte de l'administrateur : « Analyse lancée » ou « Développement lancé »
+(« Lancement » pour une action inconnue), « le jj/mm/aa à hh:mm par vous » (« par un autre
+administrateur » sinon), puis le résultat : « Session créée » ; « Échec : <raison> » (« Échec :
+raison inconnue ») en ton d'erreur ; « Résultat inconnu : vérifiez sur claude.ai/code ».
+Session créée avec un lien `https` sur `claude.ai` : « Ouvrir la session » (hors de
+l'application ; échec « Impossible d'ouvrir la session. »), bouton icône « Copier le lien »
+(« Lien copié. »), « Visible seulement depuis le compte Claude de l'administrateur. » et « Pour
+l'arrêter, ouvrez-la sur claude.ai/code. ». Autre lien : « Lien de session invalide. », rien
+ne s'ouvre.
+
+États : barre de progression « Lecture des lancements » ; « Impossible de lire les lancements. »
+et « Réessayer » ; hors ligne, absent du cache : « Lancements non disponibles hors ligne. » ;
+document illisible : « Lancements illisibles. Mettez l'application à jour. » ; aucun :
+« Aucune session lancée pour ce ticket. », suivi, quand le bouton de lancement est affiché et
+actif dans la barre (décisions lues, aucune décision ni réponse en cours, en ligne, plafond non
+atteint, aucun appel en cours), de « Appuyez sur « Lancer l'analyse », en bas de la fiche. »
+(ou « Appuyez sur « Lancer le développement », en bas de la fiche. »).
+
 **Barre de décision.** Fixée en bas de la fiche (moitié de la hauteur au plus, défilante) ; sous
 480 px de hauteur, elle passe en fin de fiche. Les boutons sont ceux que le serveur permet pour
 ce ticket (`allowed_decisions`), jamais déduits du statut par l'application : « Refuser »,
-« Répondre » (valeur `answer`) et « Clore » à gauche, « Valider » à droite ; ils passent les uns
-sous les autres quand la largeur manque. Le serveur offre « Valider » sur un ticket reçu ou
-analysé ; à partir du lot T4 d'ADR-008, sur un ticket analysé seul. « Répondre » appelle le serveur : hors ligne, il est
-inactif, et la ligne « Répondre demande le réseau. » le dit sous les boutons. Pour un ticket
+« Répondre » (valeur `answer`) et « Clore » à gauche ; à droite, une seule action principale :
+
+| Statut | Action principale |
+|---|---|
+| Reçu | « Lancer l'analyse » (valeur `launch_analysis`) ; après l'échéance d'un lancement sans changement de statut, « Relancer l'analyse » (bouton tonal) |
+| Analysé | « Valider » |
+| Validé dans l'application | « Lancer le développement » (valeur `launch_development`), ou « Relancer le développement » |
+| Validé sur GitHub seul | « Valider » |
+| En cours, Livré, Refusé, Clos | aucune |
+
+Les boutons passent les uns sous les autres quand la largeur manque. Le serveur offre
+« Valider » sur un ticket analysé seul (ADR-008, T4) ; pour un ticket reçu, la ligne « Valider
+sera possible une fois le ticket analysé. » suit les boutons. « Lancer le développement »
+n'est offert qu'après un « Valider » fait dans l'application (ADR-008, décision du
+2026-11-13). Une étiquette « validé » posée sur GitHub change le statut affiché en Validé, mais
+le serveur offre alors « Valider » à la place du lancement, et la ligne « Validé sur GitHub :
+validez depuis l'application pour lancer le développement. » suit les boutons. Un retour à
+Reçu ou Analysé, un refus ou une clôture effacent la validation de l'application. « Répondre » et les lancements
+appellent le serveur : hors ligne, ils sont inactifs, et la ligne « Répondre demande le
+réseau. », « Lancer une session demande le réseau. » ou « Répondre et lancer une session
+demandent le réseau. » le dit sous les boutons. Hors ligne, la ligne « Lancer une session
+demande le réseau. » s'affiche dès que le serveur permet un lancement, même quand l'historique
+des lancements, absent du cache, retient le bouton ; aucune barre de progression ne s'affiche
+alors.
+
+Un lancement est « en cours » tant que l'échéance écrite par le serveur n'est pas passée (une
+heure pour une analyse, trois pour un développement) : pas de bouton de lancement, et la barre
+se redessine à l'échéance. Pendant un développement en cours, « Répondre » est masqué. Pendant
+la lecture de l'historique des lancements, en ligne, une barre de progression « Lecture des
+lancements » remplace le bouton de lancement ; historique illisible ou en panne : pas de bouton. Au-dessus
+des boutons, une seule ligne de lancement, dans cet ordre de priorité :
+
+| Cas | Ligne |
+|---|---|
+| appel de la fiche en cours | barre de progression, « Lancement de l'analyse en cours. » ; le bouton est inactif |
+| lancement en cours | « Analyse en cours depuis 14:05 » (autre jour : « … depuis le 12/11/26 à 14:05 ») |
+| plafond atteint, ticket reçu ou validé | « Plafond atteint le 13/11 : 10 lancements sur 10. Le compteur repart à zéro peu après minuit. » ; le bouton est inactif |
+| relance | « Le lancement du jj/mm/aa à hh:mm n'a rien changé au ticket. Vérifiez sur claude.ai/code qu'aucune session ne tourne encore. » |
+| plafond atteint, ticket analysé ou validé sur GitHub seul | « Plafond atteint le 13/11 : 10 lancements sur 10. Vous pouvez valider. Le compteur repart à zéro peu après minuit. » |
+
+La date est celle du compteur écrit par le serveur. Le serveur le remet à zéro à sa passe de
+minuit (heure de Paris) : quelques secondes après minuit, la ligne du plafond disparaît.
+
+La ligne des précisions en attente (ci-dessous) s'affiche aussi sous la ligne du plafond ou de
+la relance. Seul un lancement en cours (appel de la fiche ou échéance non passée) la masque.
+Pour un ticket
 reçu dont la dernière réponse suit la dernière analyse, la ligne « Vos précisions du jj/mm/aa à
 hh:mm seront lues par la prochaine analyse. » précède les boutons. Pendant la publication d'une
 réponse, pas de boutons : barre de progression (« Publication en cours » pour un lecteur
@@ -531,8 +614,34 @@ d'état de la dernière décision, annoncée :
 
 Les phrases s'accordent : « Validation enregistrée… Elle partira », « Clôture interrompue ».
 
+**Boîte de lancement** (ADR-008, P39). « Lancer l'analyse » ou « Lancer le développement »
+ouvre « Lancer l'analyse de ce ticket ? » / « Lancer le développement de ce ticket ? »
+(relance : « Relancer l'analyse de ce ticket ? » / « Relancer le développement de ce
+ticket ? »), qu'un
+appui à côté ne ferme pas ; rien n'est appelé avant « Lancer ». Contenu : « Une session Claude
+Code va lire l'Issue #12 et publier son analyse sur GitHub. » (développement : « … va écrire
+le code de l'Issue #12 et ouvrir une pull request. Elle ne fusionne rien. ») ; la ligne du
+quota, « Lancements restants le 13/11 : 7 sur 10. », « Plafond atteint le 13/11 : … » (« Lancer »
+inactif) ou « Lancements restants : inconnu. » quand l'état des lancements manque ; pour une
+relance, l'avertissement de la relance ; l'encadré « Facturé sur l'abonnement Claude de
+l'administrateur. Ce coût n'apparaît pas dans le suivi des coûts de l'application. ». Boutons
+« Annuler » (focus initial) et « Lancer » (« Relancer » pour une relance).
+
+Pendant l'appel : « Lancer » inactif avec « Lancement en cours », « Annuler » devient « Fermer »,
+ligne annoncée « Lancement en cours. Vous pouvez fermer : le résultat s'affichera dans la
+section Lancements. ». « Fermer », le retour et Échap ferment la boîte sans couper l'appel ;
+un seul appel part à la fois. Un refus du serveur reste dans la boîte, en ton d'erreur, avec
+son motif (plafond, ticket changé sur GitHub, routine non configurée, en pause, jeton refusé,
+limite de l'API…). Message en bas d'écran, boîte ouverte ou fermée : « Session lancée. Le lien
+est dans la section Lancements. » ; « Résultat inconnu, compté dans les lancements du jour.
+Vérifiez sur claude.ai/code avant de relancer. » (ou le message du serveur) ; « Réponse perdue.
+Regardez la section Lancements avant de relancer. » quand la réponse n'arrive pas ; un refus
+arrivé après « Fermer » affiche son motif.
+
 **Boîtes.** « Valider » demande « Valider ce ticket ? » / « L'étiquette « validé » sera posée
-sur l'Issue. Le membre verra « Validé ». », avec « Annuler » et « Valider ». « Refuser » et
+sur l'Issue. Le membre verra « Validé ». », avec « Annuler » et « Valider ». Sur un ticket validé
+sur GitHub seul, le texte devient « La validation sera enregistrée dans l'application.
+« Lancer le développement » sera ensuite proposé. ». « Refuser » et
 « Clore » ouvrent une feuille du bas au téléphone, un dialogue sinon, que ni un appui à côté ni
 un glissement ne ferment. Les deux portent l'encadré « Publié sur un site public : n'écrivez ni
 nom ni adresse. Le membre lira aussi ce texte. », et pour un ticket en cours « Une pull request
@@ -1224,34 +1333,81 @@ s'affiche sans réseau.
 caractères), « Équipement » (les siens puis ceux du groupe avec leur auteur ; présélection :
 celui de la recette, sinon son seul équipement ; obligatoire : « Choisissez un équipement. » ;
 hors ligne sans équipement lu : « Équipement indisponible hors ligne. Reconnectez le téléphone
-pour créer le brassin. »), « Date prévue (facultatif) » (aujourd'hui par défaut, effaçable). Le
-brassin reçoit une copie de la recette et de l'équipement : la recette peut changer ensuite, le
-brassin garde sa version. Recette sans chronologie : le brassin se crée, sans étape à suivre.
+pour créer le brassin. »), « Processus », « Date prévue (facultatif) » (aujourd'hui par défaut,
+effaçable), « Déroulé prévu ». Le brassin reçoit une copie de la recette et de l'équipement : la
+recette peut changer ensuite, le brassin garde sa version.
+
+« Processus » propose « Chronologie de la recette seule » puis les seuls processus du lecteur,
+par nom ; aucun processus d'un autre membre n'est proposé. Présélection : le processus par
+défaut du lecteur (« Mes processus »), sinon « Chronologie de la recette seule ». Aide :
+« Ajoute les étapes de préparation et les journées après le brassage. ». Lien « Gérer mes
+processus » (ferme le formulaire, ouvre « Mes processus »). États : « Lecture des processus »
+(la création reste possible avec la chronologie seule) ; « Impossible de lire les processus. »
+avec « Réessayer » ; « Aucun processus. » avec « Créer un processus » ; « Votre processus par
+défaut a été supprimé. » ; hors ligne sans processus lu : « Processus indisponibles hors ligne.
+Créez le brassin avec la chronologie de la recette seule, puis choisissez son processus sur sa
+fiche au retour du réseau. » (texte d'information, pas d'erreur). Un processus qui ne
+s'applique pas à la recette affiche sa cause et ne crée rien ; l'erreur est rapportée :
+« La chronologie de cette recette est illisible. », « Ce processus donne plus de 120 étapes dans
+la journée « {nom} ». Retirez des étapes du processus. », « Ce processus est invalide : corrigez-le dans Mes processus. », « Un
+houblon à cru de cette recette a un jour d'ajout hors de 0 à 365 jours. ».
+
+« Déroulé prévu » se recalcule à chaque changement de processus ou de date. Une ligne par
+journée : « Brassage · sam. 21 nov. · 14 étapes · 6 h 10 », « Houblonnage à cru · mer. 25 nov.
+(J+4) · 4 étapes », « Embouteillage · sam. 5 déc. (J+14) · 7 étapes » ; sans date prévue,
+« Houblonnage à cru · J+4 · 4 étapes » ; jour d'ajout donné par la recette : « (J+3, jour fixé
+par la recette) ». Les lignes se lisent telles quelles au lecteur d'écran ; « Déroulé prévu :
+{processus}, 3 journées. » et les annonces sont relues à chaque changement (région live). Annonces :
+« Houblons à cru du J+8 regroupés au J+6 : 5 journées au plus. », « La recette a 2 houblons à
+cru. Ce processus n'a pas de journée pour eux. », « Recette sans houblon à cru : pas de journée
+« Houblonnage à cru ». » (de même « Recette sans ajout à l'embouteillage : pas de journée
+« {nom} ». » pour une journée d'embouteillage conditionnée à ses ajouts), « Chronologie de la
+recette vide : paliers et ébullition préremplis. » suivie des avertissements du préremplissage
+(« « Empâtage » : durée non renseignée, étape non ajoutée. »). Avec « Chronologie de la recette
+seule », le texte de la chronologie reste celui d'avant : recette sans chronologie, le brassin
+se crée sans étape à suivre.
+
+Création : le brassin s'écrit, puis son déroulé, sans attendre le serveur, hors ligne compris.
 Messages : « Brassin créé. », « Brassin créé sur l'appareil. Il partira au retour du réseau. »,
-« La création de « {nom} » a échoué. ».
+« La création de « {nom} » a échoué. ». Déroulé seul refusé : « Le déroulé de « {nom} » a été
+refusé. Choisissez de nouveau le processus sur la fiche. ».
 
 **Liste** (tous les brassins du groupe). En cours, puis En fermentation et En conditionnement,
 puis prévus par date croissante, puis Terminés et Abandonnés, chaque groupe du plus récent au plus
 ancien. « Tous » / « Les miens », non enregistré. Chaque ligne :
 nom, « {statut} · {équipement} · {auteur} », date (« Prévu le sam. 15 nov. 2026 », « Commencé
 aujourd'hui à 11:15 », « Brassé le 11 févr. 2024 », « Embouteillé le 3 déc. 2026 » en
-conditionnement), étiquette « En attente du réseau ». Vide :
+conditionnement), étiquette « En attente du réseau ». En fermentation et en conditionnement, un
+brassin qui a une journée à venir après le brassage affiche « Prochaine journée : Houblonnage à
+cru, mer. 25 nov. » ou « Prochaine journée : Houblonnage à cru, aujourd'hui » à la place de sa
+date : la première journée dont la date n'est pas passée, sauf l'embouteillage d'un brassin
+embouteillé. La liste lit les dates seules : une journée faite avant sa date reste annoncée
+jusqu'à cette date. Vide :
 « Aucun brassin. Ouvrez une recette et appuyez sur Nouveau brassin. ». Statuts : Prévu, En
 cours, En fermentation, En conditionnement, Terminé, Abandonné.
 
 **Fiche.** Nom, ligne de statut (« En fermentation · J+12 », « En conditionnement · Embouteillé
 le 3 déc. 2026 », « Terminé · Embouteillé le 3 déc. 2026 »), lien vers la recette, « Brassin de
-{auteur} » pour un autre membre. Prévu et En cours : bloc Calculs sur la copie figée, Chronologie
-(heures, état, mesures), sections de la recette figée, Général (date prévue, brassé le,
+{auteur} » pour un autre membre. Prévu et En cours : bloc Calculs sur la copie figée, Déroulé
+(voir ci-dessous), sections de la recette figée, Général (date prévue, brassé le,
 équipement). Après le brassage, dans l'ordre : en fermentation, Relevé, Prévu et mesuré, Notes ;
 en conditionnement, Prévu et mesuré, Embouteillage, Relevé, Notes ; terminé, Prévu et mesuré,
 Embouteillage, Notes, Relevé ; abandonné, Relevé, Prévu et mesuré, Embouteillage (si `bottled_at`
-existe), Notes. Puis Général, le pli « Chronologie » (fermé), le pli « Recette et calculs prévus »
+existe), Notes. Puis Général, le pli « Déroulé » (fermé, résumé « 3 journées », ou le nombre
+d'étapes d'un déroulé d'une seule journée), le pli « Recette et calculs prévus »
 (fermé sur téléphone, ouvert à partir de 840 pixels). Un brassin en cours affiche aussi le relevé
 s'il en existe un. Pour le propriétaire seul, le bloc « Coût » (voir « Coût ») suit
 l'Embouteillage quand il existe (Terminé : avant les Notes), sinon Prévu et mesuré ; prévu et en
 cours, il suit Général. Un autre membre, administrateur compris, ne voit ni ce bloc ni son titre. Propriétaire : « Préparer le brassage » (prévu), « Reprendre le brassage » (en
-cours), « Marquer comme terminé » (en conditionnement), « Reprendre ce brassin » (abandonné). À
+cours), « Marquer comme terminé » (en conditionnement), « Reprendre ce brassin » (abandonné).
+En fermentation et en conditionnement, un brassin dont une journée après le brassage n'est pas
+terminée affiche au-dessus « Prévue le mer. 25 nov. » ou « Prévue aujourd'hui », puis le bouton
+« Préparer la journée « Houblonnage à cru » » (« Reprendre la journée « Houblonnage à cru » »
+une fois commencée, qui ouvre l'écran de la journée) : la première journée non terminée, dans
+l'ordre du déroulé, l'embouteillage d'un brassin embouteillé compris comme terminé. « Marquer
+comme terminé » et « Ajouter un relevé » passent alors en bouton secondaire. Avec une journée
+d'embouteillage, « Embouteiller » quitte la fiche et passe dans le menu ⋮ : « Embouteiller sans
+suivre la journée » (en fermentation), qui ouvre le même formulaire. À
 partir de En cours, le menu ⋮ (« Plus d'actions ») porte « Modifier » (nom, date prévue, notes ;
 quitter avec une modification : « Les modifications de ce brassin ne seront pas enregistrées. »),
 « Revenir à {statut} », « Abandonner ce brassin » et « Supprimer » selon le statut ; un brassin
@@ -1260,7 +1416,57 @@ Autre membre : aucun bouton, mêmes chiffres. La recette a changé depuis
 la création : « La recette a changé depuis la création de ce brassin. Il garde la version du
 {date}. » ; pour un brassin prévu sans saisie, « Recréer depuis la recette ».
 « Préparé sur cet appareil » s'affiche quand la préparation a abouti pendant la session ; sans
-cette information, rien ne s'affiche.
+cette information, rien ne s'affiche. « Recréer depuis la recette » applique de nouveau le
+processus du brassin à la recette actuelle (« Son processus est appliqué de nouveau à la recette
+actuelle. »). La confirmation dit d'avance quand ce n'est pas possible : « Son processus a été
+supprimé : le nouveau brassin n'aura que la chronologie de la recette. », « Son processus ne
+s'applique pas à la recette actuelle : le nouveau brassin n'aura que la chronologie de la
+recette. », ou, sans processus lu sur l'appareil, « Son processus n'a pas pu être lu sur cet
+appareil : le nouveau brassin n'aura que la chronologie de la recette. Pour le garder, annulez
+et réessayez avec le réseau. » ; l'annonce est alors
+« Brassin recréé depuis la recette, sans son processus. Choisissez de nouveau le processus sur
+la fiche. ».
+
+**Déroulé** (section de la fiche). En-tête « Processus : {nom du processus au moment du
+choix} », ou « Chronologie de la recette seule » pour un brassin sans processus (brassins
+antérieurs compris) ; « Modèle supprimé depuis ; ce brassin garde son déroulé. » quand le
+processus d'origine n'existe plus. Journée de brassage : titre « Brassage · sam. 21 nov. »,
+puis sa chronologie (heures, état, mesures ; un appui sur une mesure ouvre sa correction).
+Journées suivantes, repliées : « Houblonnage à cru · mer. 25 nov. (J+4) », résumé « 4 étapes ·
+25 min », étapes « nom · durée » ; « (J+3, jour fixé par la recette) », « (J+6, date
+changée) » ; sans date de départ, « Houblonnage à cru · J+4 ». Les dates partent de la date du
+brassage, sinon de la date prévue. Avant le départ, pour le propriétaire : « Changer de
+processus » (feuille : liste des processus du lecteur et déroulé prévu, « Appliquer » ;
+« Déroulé changé. », hors ligne « Déroulé changé sur l'appareil. Il partira au retour du
+réseau. »). La feuille présélectionne le déroulé actuel : son processus, ou « {nom} (actuel) »
+quand il n'est pas dans la liste lue (processus supprimé, liste en lecture, en panne ou hors
+ligne), avec l'aperçu du déroulé actuel, dates changées comprises. Hors ligne sans processus
+lu, la feuille affiche « Processus indisponibles hors ligne. Changez de processus au retour du
+réseau. » ; « Votre processus par défaut a été supprimé. » ne s'affiche que dans « Nouveau
+brassin ». « Appliquer » reste inactif,
+avec « Choisissez un autre processus. », tant que le choix ne diffère pas du déroulé actuel ;
+pendant la lecture, en panne ou hors ligne, seul « Chronologie de la recette seule », choisi par
+le brasseur, s'applique ; le menu ⋮ d'une journée après le brassage porte « Changer la date » (sélecteur du
+jour du brassage à J+365 ; sans date de départ, « Écart (jours après le brassage) ») et
+« Rétablir la date du processus » quand la date a été changée et que le processus d'origine se
+lit encore ; annonce « « Houblonnage à cru » prévu le ven. 27 nov. », hors ligne « Date de
+« Houblonnage à cru » changée sur l'appareil. Elle partira au retour du réseau. ». Changer la date prévue
+du brassin déplace toutes les journées. Après le départ : aucun bouton, « Le déroulé est figé
+depuis le début du brassage. ». Autre membre : lecture seule. Déroulé illisible : « Déroulé
+illisible. Mettez l'application à jour, ou prévenez l'administrateur. », rapporté, sans repli
+sur la chronologie de la recette. Une journée après le brassage commencée (une étape commencée
+ou sautée, ou une mesure saisie sur l'une de ses étapes) montre dans son pli sa chronologie :
+heures, états et mesures sous leur étape, comme la journée de brassage ; un appui sur une mesure
+ouvre sa correction (propriétaire). Les relevés « Sans étape » restent dans le relevé de
+fermentation. Une journée terminée a pour résumé « Terminée · 3 faites, 1 sautée » (comptes
+réels : faites, sautées, non faites), ou « Terminée » seul sans étape à compter. Pour le
+propriétaire d'un brassin En fermentation ou En conditionnement, le menu ⋮ d'une journée après
+le brassage non terminée, sans étape en cours, porte « Passer la journée » : « Passer la journée
+« Houblonnage à cru » ? » / « Ses étapes non commencées seront marquées sautées. », « Garder la journée » /
+« Passer la journée ». Chaque étape non commencée est marquée sautée, sans changement de statut ;
+annonce « Journée « Houblonnage à cru » passée. », hors ligne « Journée « Houblonnage à cru »
+passée sur l'appareil. Elle partira au retour du réseau. ». La journée d'embouteillage ne le
+propose pas : « Embouteiller sans suivre la journée » en tient lieu.
 
 **Supprimer** (propriétaire). « Supprimer « {nom} » ? » / « Le brassin, ses étapes et ses mesures
 disparaissent pour tout le groupe. ». Le coût figé du brassin est supprimé avec lui. Sans saisie : immédiat, même hors ligne. Avec saisies :
@@ -1280,7 +1486,8 @@ sinon En fermentation, sans confirmation. « Revenir à {statut} » demande « R
 Reprendre le brassage. » vers En cours. Annonces : « Brassin revenu à {statut}. », « Brassin
 abandonné. », « Brassin repris : {statut}. ». Hors ligne : « Statut changé sur l'appareil. Il partira
 au retour du réseau. ». L'ordre des statuts n'est pas contrôlé : un retour en arrière et une file
-hors ligne passent.
+hors ligne passent. « Terminer la journée » ne change aucun statut ; « Embouteiller » depuis la
+journée d'embouteillage passe le brassin En conditionnement, comme depuis la fiche.
 
 **Brassin importé d'une fiche Excel** (Admin › Import, v0.6). Il appartient à l'administrateur
 et se lit comme un brassin fini par « Terminer le brassage » : statut Terminé, date de brassage
@@ -1296,7 +1503,9 @@ Section « Relevé de fermentation » de la fiche, visible à partir de En ferme
 statut si un relevé existe. Relevés du plus récent au plus ancien ; sur téléphone, les 5 plus
 récents puis « Voir les N relevés plus anciens ». Ligne : densité, température, écart au relevé
 de densité précédent (« −3,0 pts »), puis « sam. 15 nov. 18:30 · J+5 », la note, et « En attente
-du réseau ». J+N est l'écart en jours calendaires depuis le brassage. À partir de deux densités,
+du réseau ». Une densité ou une température saisie sur une étape d'une journée après le brassage
+porte aussi sa journée et son étape : « mer. 25 nov. 09:20 · J+4 · Houblonnage à cru : Mesure
+de densité ». J+N est l'écart en jours calendaires depuis le brassage. À partir de deux densités,
 une courbe s'affiche au-dessus de la liste (densité en trait plein, température en pointillés,
 légende écrite, info-bulle au toucher) ; sans date de brassage, seule la liste s'affiche. Une valeur
 enregistrée que le calcul refuse affiche « Courbe indisponible : une valeur enregistrée est
@@ -1322,8 +1531,12 @@ vider une valeur supprime sa mesure, en ajouter une la crée à la même heure. 
 propose « Annuler » 10 s, qui rétablit les mêmes saisies. Messages : « Relevé enregistré. »
 (« Annuler » 10 s), « Relevé corrigé. », « Relevé supprimé. », « Relevé supprimé. La densité
 finale revient à la dernière mesure. » si le relevé était retenu ; refus du serveur : « Refusée
-par le serveur : Densité 1020,0 du 15 nov. 18:30. Elle n'est pas enregistrée. ». Un relevé ne
-s'affiche pas dans la Chronologie, et une mesure du jour ne s'affiche pas dans le relevé.
+par le serveur : Densité 1020,0 du 15 nov. 18:30. Elle n'est pas enregistrée. ». Un relevé sans
+étape ne s'affiche pas dans le Déroulé, et une mesure du jour de brassage ne s'affiche pas dans
+le relevé. Une mesure d'une journée après le brassage compte dans le relevé, la courbe et la
+densité finale, jamais comme densité initiale automatique, et s'affiche aussi sous son étape ;
+elle se corrige depuis la fiche (« Corriger le relevé ») ou depuis l'écran de la journée, sur le
+même enregistrement.
 
 États : « Chargement des relevés », « Impossible de lire les relevés. », « Aucun relevé. Appuyez
 sur Ajouter un relevé. » (propriétaire qui peut en ajouter), « Aucun relevé. », « Relevés
@@ -1331,7 +1544,9 @@ indisponibles sur cet appareil hors ligne. ».
 
 ### Embouteillage
 
-« Embouteiller » (propriétaire, En fermentation) ouvre le formulaire : « Date d'embouteillage »
+« Embouteiller » (propriétaire, En fermentation ; « Embouteiller sans suivre la journée » dans
+le menu ⋮ quand le déroulé a une journée d'embouteillage ; ou « Embouteiller » en fin de journée
+d'embouteillage, voir « Journée après le brassage ») ouvre le formulaire : « Date d'embouteillage »
 (aujourd'hui par défaut, ni future ni antérieure au jour du brassage), « Densité finale
 (facultatif) », « Nombre de bouteilles (facultatif) » (entier de 1 à 9 999), « Volume conditionné
 (L) (facultatif) » (0 exclu à 1 000), « Sucre de resucrage (g) (facultatif) » (0 à 100 000),
@@ -1345,7 +1560,9 @@ cet embouteillage ne sera pas enregistrée. ». Un retour en arrière garde les
 données, et « Embouteiller » rouvre le formulaire prérempli.
 
 Au premier embouteillage (aucune date d'embouteillage avant, aucun coût figé lu), le coût réel
-se fige avec les prix et les frais déjà lus par la fiche, si tout est connu (voir « Coût »).
+se fige avec les prix et les frais déjà lus par la fiche, ou par « Préparer la journée » pour la
+journée d'embouteillage, si tout est connu (voir « Coût »). Depuis la journée, l'application
+revient sur la fiche, qui affiche les mêmes annonces.
 L'embouteillage part toujours, même quand le coût ne se fige pas ; le formulaire ne change pas.
 Annonces, 10 s, sans aucun montant : « Embouteillage enregistré. Brassin en conditionnement.
 Coût figé. », ou « … Coût non figé. » avec « Voir le coût », qui fait défiler la fiche jusqu'au
@@ -1372,7 +1589,9 @@ Densité initiale et volume retenus : la dernière mesure du jour de brassage, o
 propriétaire choisit. Densité finale retenue : la dernière densité de fermentation (hors celle
 retenue comme densité initiale) ou celle choisie ; hors statut En fermentation, seuls comptent les
 relevés d'un jour au plus égal à celui de l'embouteillage. Chaque valeur affiche son origine
-(« Refroidissement · 8 nov. 15:20 · Dernière mesure », « Relevé J+12 · 20 nov. 18:30 · Choisie »)
+(« Refroidissement · 8 nov. 15:20 · Dernière mesure », « Relevé J+12 · 20 nov. 18:30 · Choisie »,
+« Houblonnage à cru · Mesure de densité · 26 nov. 09:20 · Dernière mesure » pour une mesure prise
+sur une étape d'une journée après le brassage)
 et « Changer » (propriétaire), qui liste les mesures possibles et, si une mesure est retenue, « Dernière mesure (automatique) ».
 En fermentation sans choix : « Densité finale (dernière mesure) », et le degré suivi de
 « provisoire ». Choisir une mesure écrit l'identifiant, jamais la valeur.
@@ -1404,18 +1623,25 @@ degré. ».
 est terminé. », sans bouton pour le relancer). À faire sur le téléphone qui
 servira, avec du réseau, avant de le couper. Il attend une réponse du serveur, 15 s au plus, sans
 rien écrire, et liste : brassin et recette figée, équipement, chronologie (« 11 étapes · 5 h 40 ·
-fin vers 16:05 »), compte, écran gardé allumé, minuteurs (« Aucune alarme ne sonne écran
+fin vers 16:05 » ; avec un processus, « Brassage : 18 étapes · 6 h 10 · fin vers 16:05 » et
+« Ensuite : Houblonnage à cru le mer. 25 nov., Embouteillage le sam. 5 déc. », ou « à J+4 »
+sans date prévue), compte, écran gardé allumé, minuteurs (« Aucune alarme ne sonne écran
 verrouillé : gardez l'écran visible. »). Réponse reçue : « Tout est prêt. Vous pouvez couper le
 réseau. ». Sans réponse ni réseau : « Préparation impossible sans réseau. Le brassin est lisible
 sur cet appareil, mais peut ne pas être à jour. ». « Commencer le brassage » passe le brassin « En
 cours » avec l'heure de l'appareil, démarre la première étape si elle a une durée, et ouvre
-l'écran du jour. Sur le web : « Gardez cet onglet ouvert. Une page rechargée sans réseau ne
-s'ouvre plus. ».
+l'écran du jour. Avec un processus, les étapes sont celles de la journée de brassage du
+déroulé. Déroulé illisible : « Déroulé illisible. Mettez l'application à jour, ou prévenez
+l'administrateur. » et « Commencer le brassage » bloqué. Sur le web : « Gardez cet onglet
+ouvert. Une page rechargée sans réseau ne s'ouvre plus. ».
 
 ### Jour de brassage
 
 Écran plein écran, réservé au propriétaire. L'écran reste allumé tant qu'il est ouvert. La
-barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le minuteur. Quand le brassage
+barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le minuteur ; avec un
+processus, la seconde ligne nomme la journée (« Brassage · 10:42 », lu « Journée Brassage, heure
+actuelle 10:42 »), et l'écran suit les seules étapes de la journée de brassage du déroulé
+(« Étape 3 sur 18 », « Fin prévue » de la journée). Quand le brassage
 est affiché, ou pendant la lecture des saisies, le retour Android ramène à la fiche du brassin. Un
 autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
 sa fiche, en lecture seule.
@@ -1480,6 +1706,84 @@ recalcule depuis l'heure enregistrée, quel que soit le temps écoulé.
   aussi sans réseau, dans le cache de l'appareil. Des prix ou des frais absents du cache
   affichent « Prix indisponibles sur cet appareil hors ligne. » et ne figent rien. Deux
   appareils qui figent le même brassin : le premier coût arrivé reste.
+
+### Préparer la journée
+
+Écran « Préparer la journée » d'une journée après le brassage (houblonnage à cru, embouteillage,
+toute journée 2 ou suivante du déroulé), ouvert depuis la fiche, dans la barre de navigation,
+retour vers la fiche. Titre : « Blonde · Houblonnage à cru · prévue le mer. 25 nov. » (« prévue
+aujourd'hui »). « Préparez la journée sur le téléphone qui servira. ». Comme « Préparer le
+brassage », il attend une réponse du serveur 15 s au plus, sans rien écrire, et liste :
+« Brassin et déroulé figé », « Étapes » (« 4 étapes · 25 min · fin vers 10:40 »), compte, écran
+gardé allumé, minuteurs, navigateur (web). Journée d'embouteillage : « Prix et frais », « Lus sur
+l'appareil : le coût se figera à l'embouteillage. » ou « Prix indisponibles sur cet appareil hors
+ligne. Le coût ne se figera pas. ». Informations : « Prévue le mer. 25 nov. Vous pouvez la
+commencer aujourd'hui. » un autre jour que la date prévue ; « La journée « Houblonnage à cru »
+n'est pas terminée. Ses étapes resteront non faites. » pour chaque journée précédente non
+terminée. Réponse reçue : « Tout est prêt. Vous pouvez couper le réseau. » ; sinon
+« Préparation impossible sans réseau. Le brassin est lisible sur cet appareil, mais peut ne pas
+être à jour. ».
+
+Bouton 72 px « Commencer la journée » : démarre la première étape si elle a une durée, sans
+changer le statut du brassin, et ouvre l'écran de la journée ; « Reprendre la journée » une fois
+commencée, sans rien écrire. Le bouton attend la lecture des saisies.
+
+Refus, chacun avec « Voir le brassin » : autre membre « Seul le brasseur de ce brassin suit cette
+journée. » ; brassin prévu ou en cours « Cette journée s'ouvre après la fin du brassage. » ;
+embouteillage déjà fait « Cette journée est terminée. » ; brassin terminé « Ce brassin est
+terminé. » ; abandonné « Ce brassin est abandonné. Reprenez-le pour suivre cette journée. » ;
+journée absente du déroulé « Cette journée n'existe pas dans le déroulé de ce brassin. » ;
+déroulé illisible « Déroulé illisible. Mettez l'application à jour, ou prévenez
+l'administrateur. ».
+
+### Journée après le brassage
+
+Écran plein écran d'une journée 2 ou suivante, réservé au propriétaire (mêmes refus que
+« Préparer la journée »), ouvert au statut En fermentation ou En conditionnement (En fermentation
+seulement pour l'embouteillage). Il reprend l'écran du jour de brassage : barre « Blonde » puis
+« Houblonnage à cru · 10:42 » (lu « Journée Houblonnage à cru, heure actuelle 10:42 »), panneau,
+minuteurs, alerte de fin, étapes, corrections, « Fin prévue » de la journée, écran allumé. Départ
+prévu de la journée : son premier début, sinon l'heure de l'appareil. Les étapes du brassage et
+des autres journées n'y figurent pas et ne changent pas d'état.
+
+Menu ⋮ : « Ajouter une note », « Voir la recette », puis « Terminer la journée » tant qu'il reste
+une étape en cours ou à venir, ou « Embouteiller » pour la journée d'embouteillage. « Terminer la
+journée » demande, s'il reste des étapes à venir, « Terminer la journée « Houblonnage à cru » ? »
+/ « Les étapes non commencées seront marquées sautées. Vous pourrez encore corriger les
+mesures. », « Continuer la journée » / « Terminer la journée » ; il termine l'étape en cours,
+marque sautées les étapes à venir, et revient sur la fiche avec « Journée « Houblonnage à cru »
+terminée. ». Quand la dernière étape est en cours, le bouton du bas devient « Terminer la
+journée », sans confirmation. Toutes les étapes faites ou sautées : « Toutes les étapes sont
+faites. Journée terminée. », bouton « Revenir au brassin », annonce « Journée « Houblonnage à cru »
+terminée. » au lecteur d'écran.
+
+**Journée d'embouteillage.** Le bouton du bas « Embouteiller » remplace « Terminer le brassage »
+une fois toutes les étapes faites ; ⋮ « Embouteiller » reste possible à tout moment. S'il reste
+des étapes : « Embouteiller maintenant ? » / « Les étapes non commencées resteront non faites. »
+(« L'étape en cours se termine. Les étapes non commencées resteront non faites. » quand une
+étape est en cours), « Continuer la journée » / « Embouteiller ». Puis le formulaire
+d'embouteillage (voir « Embouteillage »), qui ne se ferme pas par un appui hors de la feuille ; à
+l'envoi, l'étape en cours se termine à l'heure de l'envoi, les étapes non commencées restent
+non faites, et l'application revient sur la fiche avec les annonces de l'embouteillage.
+
+**Mesures.** Bouton « Mesure » : liste « Étape » limitée aux étapes de la journée, plus « Sans
+étape » ; sous le type Densité ou Température, « Comptée dans le relevé de fermentation. », et,
+après la date d'embouteillage, « Après l'embouteillage : ce relevé ne compte pas dans la densité
+finale. ». « Mesure enregistrée. » avec « Annuler » 10 s. Une mesure s'affiche sous son étape ; une
+mesure « Sans étape » du jour s'affiche sous « Sans étape » et compte comme un relevé de
+fermentation ordinaire. Les notes de la journée sont aussi des notes du relevé.
+
+### Hors ligne des journées
+
+Les règles du « Hors ligne du jour de brassage » valent pour chaque journée après le brassage,
+une fois « Préparer la journée » fait sur l'APK : étapes, mesures, notes, « Terminer la journée »
+et l'embouteillage s'écrivent sur l'appareil sans attente ni erreur, pastille d'envoi comprise.
+« Passer la journée » s'écrit aussi sans réseau. Prix, frais et coût figé lus à « Préparer la
+journée » restent ouverts jusqu'à l'embouteillage ;
+lus hors ligne sans cache, le coût ne se fige pas et l'embouteillage part quand même. La reprise
+au lancement ne rouvre que le jour de brassage ; une journée se rouvre par la fiche. La liste des
+brassins annonce la prochaine journée d'après les dates seules : une journée faite avant sa date
+reste annoncée jusqu'à cette date.
 
 ### Mes prix
 
@@ -1552,6 +1856,133 @@ au-delà, « Ajouter un frais » laisse la place à « 20 frais au plus. Supprim
 ajouter un autre. ». « Nouveau frais », « Modifier le frais », mêmes boutons et même protection
 que le formulaire de prix. Annonces : « Frais enregistré. », « Frais enregistré sur l'appareil.
 Il partira au retour du réseau. », « Frais « Capsules » supprimé. » avec « Annuler » 10 s.
+
+### Mes processus
+
+Un processus est un modèle de déroulé : de 1 à 5 journées (le brassage, puis par exemple le
+houblonnage à cru et l'embouteillage), chacune avec son écart en jours depuis le brassage et
+ses étapes de préparation et de nettoyage. Le groupe le lit ; seul son auteur le modifie. Le
+brasseur le choisit dans « Nouveau brassin » ou sur la fiche d'un brassin prévu (voir
+Brassins).
+
+**Accès.** « Mes processus » s'ouvre depuis le menu du compte, sous « Mes prix » : page
+pleine, hors de la barre de navigation, avec retour. Adresses : `/processus` (liste),
+`/processus/nouveau`, `/processus/{id}` (fiche), `/processus/{id}/modifier`.
+
+**Liste.** Titre « Mes processus ». Section « Mes processus » (les siens, par nom), puis
+« Processus du groupe » (ceux des autres membres, par nom, avec leur auteur), masquée si elle
+est vide. Ligne : nom, puis « 3 journées · J+0, J+4, J+14 ». Étiquette « Par défaut » sur le
+processus choisi par défaut, « En attente du réseau » tant qu'une écriture n'a pas atteint le
+serveur. Le lecteur d'écran lit chaque ligne d'un bloc : « {nom}, 3 journées, de {auteur}, par
+défaut » ; le double appui ouvre la fiche. Bouton flottant « Nouveau processus » sur téléphone, bouton en tête au-delà ; une
+colonne centrée sur 840 pixels.
+
+- Chargement : « Chargement des processus ». Lecture impossible : « Impossible de lire les
+  processus. », « Réessayer » et « Nouveau processus ». Une panne après une première lecture garde la liste, avec
+  le bandeau « Mise à jour de la liste impossible. Elle peut ne plus être à jour. ».
+- Aucun processus à soi : « Aucun processus. Un processus ajoute à vos brassins les étapes de
+  préparation et de nettoyage, et les journées après le brassage. », avec « Partir du modèle
+  d'exemple » et « Nouveau processus ». Le bouton flottant et le bouton en tête ne s'affichent
+  pas en plus. La section du groupe reste dessous.
+- Document illisible : ligne « Processus illisible » / « Le document contient une valeur
+  inattendue. ». L'erreur est rapportée ; les autres processus restent affichés.
+- Hors ligne : la liste vient du cache, les écritures attendent le réseau. Liste jamais lue
+  sur l'appareil : « Processus indisponibles hors ligne. » et « Nouveau processus ».
+
+**Modèle d'exemple.** « Partir du modèle d'exemple » ouvre « Nouveau processus » prérempli :
+nom « Brassage, houblonnage à cru, embouteillage », notes « Durées typiques, à ajuster à votre
+matériel. », trois journées (Brassage J+0 ; Houblonnage à cru J+4, seulement si la recette a
+des houblons à cru ; Embouteillage J+14). Rien n'est écrit avant « Enregistrer » ; quitter
+demande « Abandonner les modifications ? ». Il n'est proposé que si le lecteur n'a aucun
+processus.
+
+**Fiche.** Barre « Processus », retour vers la liste. Nom, « Processus de {auteur} » pour un
+autre membre, notes. Une section par journée : « 1. Brassage · J+0 » ; la mention « Seulement
+si la recette a des houblons à cru » (ou « … des ajouts à l'embouteillage ») si la journée en
+dépend ; le résumé « 9 étapes · 4 h 15 + chronologie de la recette » (étapes du processus et
+leur durée, puis le bloc), ou le bloc seul pour une journée sans étape (« Houblons à cru ») ; puis chaque étape (« Mise en place du matériel · 30 min ·
+67 °C ») et chaque bloc tiré de la recette (« Chronologie de la recette », « Houblons à cru »,
+« Ajouts à l'embouteillage »), sur fond `secondaryContainer`, lu « Bloc de la recette :
+Houblons à cru ».
+
+- L'auteur voit l'interrupteur « Proposer par défaut dans Nouveau brassin » (« Ce choix ne
+  concerne que vous. »), « Modifier », « Supprimer » et, dans ⋮, « Dupliquer ». Pendant la
+  lecture du choix, l'interrupteur est inactif, avec « Lecture du choix par défaut » ; en
+  panne, « Impossible de lire votre choix par défaut. » et « Réessayer ». Annonces :
+  « « {nom} » sera proposé par défaut. » / « Aucun processus proposé par défaut. ». Un seul
+  processus est proposé par défaut ; le choix est privé.
+- Un autre membre voit le seul bouton « Copier dans mes processus » (« Copie » pendant la
+  lecture du nom du compte, 3 s au plus). La copie garde le nom, reçoit de nouvelles clés de
+  journées et d'étapes, s'écrit au nom du lecteur et ouvre sa fiche : « Processus copié dans
+  vos processus. » (hors ligne : « Processus copié sur l'appareil. Il partira au retour du
+  réseau. »).
+- « Dupliquer » crée « {nom} (copie) » et ouvre sa fiche : « Processus dupliqué. ». Pendant la
+  lecture du nom du compte, ⋮ laisse place à « Duplication » : un second appui ne crée pas de
+  seconde copie.
+- Absent du serveur : « Ce processus n'existe pas ou a été supprimé. » et « Revenir à mes
+  processus ». Absent du cache hors ligne : « Processus indisponible hors ligne. ».
+  Illisible : « Processus illisible. Mettez l'application à jour, ou prévenez
+  l'administrateur. », rapporté.
+
+**Supprimer.** « Supprimer « {nom} » ? » / « Le processus disparaît pour tout le groupe. Les
+brassins déjà créés gardent leur déroulé. », plus, si c'est le processus par défaut : « C'est
+votre processus par défaut : Nouveau brassin proposera la chronologie de la recette seule. ».
+Supprimer le processus par défaut remet le choix à « Chronologie de la recette seule », une
+fois la suppression acceptée par le serveur ; refusée, le choix reste.
+Annonce « Processus supprimé. ».
+
+**Éditeur** (« Nouveau processus » / « Modifier le processus », plein écran, une colonne
+centrée sur 920 pixels, « Enregistrer »). « Nom du processus » (obligatoire, 120 caractères ;
+sinon « Donnez un nom au processus. », curseur sur le champ), « Notes (facultatif) »
+(10 000 caractères). À la création seulement : « Proposer par défaut dans Nouveau brassin »,
+coché si le lecteur n'a pas de processus par défaut. Tant que son choix n'est pas lu avec
+certitude (lecture en cours, cache seul, document illisible, panne), l'interrupteur est
+décoché et inactif, avec « Lecture du choix par défaut » ou « Votre choix actuel n'a pas pu
+être lu. » : aucun défaut existant n'est remplacé. Un nouveau processus part de la journée
+« Brassage » et de son bloc « Chronologie de la recette ».
+
+- Journée 1 : fixe (ni retrait ni déplacement), « J+0, jour du brassage », bloc « Chronologie
+  de la recette » d'office, non retirable (« Obligatoire dans la journée de brassage ») ;
+  ⋮ « Renommer la journée » seul.
+- Journées 2 à 5 : en-tête « 2. Houblonnage à cru · J+4 », lu « Journée 2 sur 3, Houblonnage
+  à cru, J+4 » ; ⋮ « Modifier la journée », « Retirer la journée », et « Monter » ou
+  « Descendre » seulement entre deux journées de même écart. Les journées se trient par écart à
+  chaque changement ; un déplacement s'annonce (« « Embouteillage » passe en journée 3. »).
+  Retirer une journée annonce « Journée « {nom} » retirée. » avec « Annuler ».
+- Formulaire de journée (feuille du bas sur téléphone, dialogue au-delà) : « Nom de la
+  journée » (obligatoire, 120 caractères, « Donnez un nom à la journée. »), « Écart (jours
+  après le brassage) » (entier de 0 à 365, sans valeur d'avance : « Champ obligatoire. »,
+  « Nombre entier attendu. », « Entre 0 et 365. »), aide « J+4 : quatre jours après le jour
+  du brassage. Pour les houblons à cru, le jour fixé par la recette passe avant. » ;
+  « Annuler », « Ajouter » ou « Enregistrer ».
+- Étapes : le formulaire d'étape de la chronologie d'une recette (nom de 120 caractères, durée
+  de 0 à 600 min, température de 0 à 100 °C). Ligne « 2. Désinfection du fermenteur » /
+  « +30 min · 20 min · 67 °C ». Après la chronologie de la recette, dont la durée n'est connue
+  qu'au brassin, le décalage se compte depuis elle (« +20 min après la chronologie de la
+  recette »). Poignée de déplacement dans la journée ; l'éditeur défile pendant le
+  glisser ; ⋮ « Monter », « Descendre »,
+  « Dupliquer », « Retirer » (« « {nom} » retiré. » avec « Annuler »). Un déplacement
+  s'annonce au lecteur d'écran (« « {nom} » en position 3. »). Une étape ne change pas de
+  journée.
+- Blocs : « Insérer un bloc de la recette » (journées 2 et suivantes) propose « Houblons à
+  cru » et « Ajouts à l'embouteillage », chacun une fois dans le processus, un seul par
+  journée. Un bloc déjà placé est inactif (« Déjà dans « Houblonnage à cru » ») ; un second
+  bloc dans la même journée aussi (« Une journée porte un seul bloc de la recette. »). La ligne
+  d'un bloc n'a pas de formulaire ; ⋮ « Monter », « Descendre », « Retirer ». Une insertion
+  s'annonce au lecteur d'écran (« Houblons à cru ajouté en position 4. »). Sous la ligne du
+  bloc, qu'il suit quand le bloc se déplace : « Seulement si la recette en a » (« Sans houblon à cru dans la
+  recette, le brassin n'aura pas cette journée. » ou « Sans ajout à l'embouteillage dans la
+  recette, le brassin n'aura pas cette journée. ») ; retirer le bloc éteint l'interrupteur.
+- Bornes : « 60 étapes au plus dans une journée. » (blocs compris, boutons inactifs) ;
+  « 5 journées au plus. » au-dessus du bouton inactif « Ajouter une journée ».
+- Enregistrer : une journée sans étape est refusée (« La journée « {nom} » n'a aucune
+  étape. », l'éditeur défile jusqu'à elle). Annonces « Processus enregistré. », hors ligne
+  « Processus enregistré sur l'appareil. Il partira au retour du réseau. », refus
+  « L'enregistrement de « {nom} » a échoué. ». La fiche s'ouvre. Quitter avec des
+  changements : « Abandonner les modifications ? » / « Les changements de ce processus ne
+  seront pas enregistrés. ».
+- Un autre membre sur l'adresse de modification : « Seul l'auteur modifie ce processus. » et
+  « Voir le processus ».
 
 ### Coût
 

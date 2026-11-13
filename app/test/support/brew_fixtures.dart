@@ -1,5 +1,6 @@
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
+import 'package:kass_beer/features/brews/domain/deroule.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
@@ -54,6 +55,7 @@ Brew unBrassin({
   String? fgEventId,
   bool? sugarsInWort,
   RecipeContent? recipe,
+  Deroule? process,
 }) => Brew(
   id: id,
   ownerUid: owner,
@@ -73,6 +75,7 @@ Brew unBrassin({
   ogEventId: ogEventId,
   fgEventId: fgEventId,
   sugarsInWort: sugarsInWort,
+  process: process,
 );
 
 /// Relevé de fermentation (phase `fermentation`, sans étape).

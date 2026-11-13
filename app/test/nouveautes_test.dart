@@ -141,6 +141,7 @@ void main() {
           .toList();
       expect(items, [
         'Mes prix',
+        'Mes processus',
         'Préférences',
         'Signaler ou proposer',
         'Mes tickets',

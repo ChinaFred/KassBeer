@@ -444,10 +444,12 @@ jobs:
             def keys_with(f): [.endpoints | to_entries[] | select(.value | f) | .key];
             (keys_with(has("blockingTrigger") or has("taskQueueTrigger")) | length == 0)
             and ((keys_with(has("httpsTrigger")) - ["githubTicketWebhook"]) | length == 0)
-            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis"]) | length == 0)
+            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis", "launchTicketAnalysis", "launchTicketDevelopment"]) | length == 0)
             and ((keys_with((.httpsTrigger.invoker // []) | index("public") != null)) - ["githubTicketWebhook"] | length == 0)
             and ((.endpoints.githubTicketWebhook // null) | . == null or (.maxInstances == 5 and .timeoutSeconds == 60))
             and ((.endpoints.answerTicketAnalysis // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 60))
+            and ((.endpoints.launchTicketAnalysis // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 120))
+            and ((.endpoints.launchTicketDevelopment // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 120))
           '
           if ! jq -e "$endpoints_filter" "$manifest" > /dev/null; then
             echo "::error::Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25)."
@@ -547,10 +549,12 @@ jobs:
         # Avant l'authentification : le manifeste vient d'un job qui exécute le code des
         # dépendances. Il est relu ici, par jq seul : points d'accès HTTP et callables
         # limités à la liste fermée d'ADR-008 (githubTicketWebhook seul public,
-        # answerTicketAnalysis), avec leurs maxInstances et délais ; aucun déclencheur
-        # bloquant ou de file ; maxInstances sur chaque fonction ; compte d'exécution
-        # tickets-functions ; secrets : GITHUB_TICKETS_TOKEN, et GITHUB_WEBHOOK_SECRET
-        # monté par githubTicketWebhook seul.
+        # answerTicketAnalysis, launchTicketAnalysis, launchTicketDevelopment), avec leurs
+        # maxInstances et délais ; aucun déclencheur bloquant ou de file ; maxInstances sur
+        # chaque fonction ; compte d'exécution tickets-functions ; secrets :
+        # GITHUB_TICKETS_TOKEN, et chacun des autres monté par les seules fonctions de P25
+        # (GITHUB_WEBHOOK_SECRET : githubTicketWebhook ; TICKETS_ROUTINE_ANALYSIS_* :
+        # launchTicketAnalysis ; TICKETS_ROUTINE_DEV_* : launchTicketDevelopment).
         if: needs.gate.outputs.functions == 'true'
         env:
           PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
@@ -564,10 +568,12 @@ jobs:
             def keys_with(f): [.endpoints | to_entries[] | select(.value | f) | .key];
             (keys_with(has("blockingTrigger") or has("taskQueueTrigger")) | length == 0)
             and ((keys_with(has("httpsTrigger")) - ["githubTicketWebhook"]) | length == 0)
-            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis"]) | length == 0)
+            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis", "launchTicketAnalysis", "launchTicketDevelopment"]) | length == 0)
             and ((keys_with((.httpsTrigger.invoker // []) | index("public") != null)) - ["githubTicketWebhook"] | length == 0)
             and ((.endpoints.githubTicketWebhook // null) | . == null or (.maxInstances == 5 and .timeoutSeconds == 60))
             and ((.endpoints.answerTicketAnalysis // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 60))
+            and ((.endpoints.launchTicketAnalysis // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 120))
+            and ((.endpoints.launchTicketDevelopment // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 120))
           '
           if ! jq -e "$endpoints_filter" "$manifest" > /dev/null; then
             echo "::error::Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25)."
@@ -583,12 +589,17 @@ jobs:
             exit 1
           fi
           secrets_filter='
-            ([.endpoints | to_entries[] | .key as $f | (.value.secretEnvironmentVariables // [])[] | .key
-              | select(. != "GITHUB_TICKETS_TOKEN" and (. != "GITHUB_WEBHOOK_SECRET" or $f != "githubTicketWebhook"))] | length == 0)
-            and ([(.params // [])[] | select(.type == "secret" and .name != "GITHUB_TICKETS_TOKEN" and .name != "GITHUB_WEBHOOK_SECRET")] | length == 0)
+            {"GITHUB_WEBHOOK_SECRET": ["githubTicketWebhook"],
+             "TICKETS_ROUTINE_ANALYSIS_ID": ["launchTicketAnalysis"],
+             "TICKETS_ROUTINE_ANALYSIS_TOKEN": ["launchTicketAnalysis"],
+             "TICKETS_ROUTINE_DEV_ID": ["launchTicketDevelopment"],
+             "TICKETS_ROUTINE_DEV_TOKEN": ["launchTicketDevelopment"]} as $only
+            | ([.endpoints | to_entries[] | .key as $f | (.value.secretEnvironmentVariables // [])[] | .key
+                | select(. != "GITHUB_TICKETS_TOKEN" and ((($only[.] // []) | index($f)) == null))] | length == 0)
+              and ([(.params // [])[] | select(.type == "secret" and .name != "GITHUB_TICKETS_TOKEN" and $only[.name] == null)] | length == 0)
           '
           if ! jq -e "$secrets_filter" "$manifest" > /dev/null; then
-            echo "::error::Une fonction lit un secret autre que GITHUB_TICKETS_TOKEN, ou GITHUB_WEBHOOK_SECRET hors de githubTicketWebhook."
+            echo "::error::Une fonction lit un secret hors de la liste de P25, ou un secret monté par une autre fonction que la sienne."
             exit 1
           fi
           echo "Manifeste conforme : $(jq -r '.endpoints | keys | join(", ")' "$manifest")."

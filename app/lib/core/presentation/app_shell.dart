@@ -258,8 +258,8 @@ String infobulleCompte({required int unread, required int toProcess}) => [
   if (toProcess > 1) '$toProcess tickets à traiter',
 ].join(', ');
 
-/// Avatar Google et menu du compte : nom, e-mail, version, Mes prix, Préférences,
-/// Signaler ou proposer, Mes tickets, Tickets à traiter (admin), Nouveautés,
+/// Avatar Google et menu du compte : nom, e-mail, version, Mes prix, Mes processus,
+/// Préférences, Signaler ou proposer, Mes tickets, Tickets à traiter (admin), Nouveautés,
 /// Sources des données, déconnexion. La pastille compte les suivis de ticket à lire et, pour
 /// l'administrateur, les tickets à traiter.
 class _AccountMenu extends ConsumerWidget {
@@ -313,6 +313,11 @@ class _AccountMenu extends ConsumerWidget {
           leadingIcon: const Icon(Icons.sell_outlined),
           onPressed: () => unawaited(context.push(AppRoutes.prices)),
           child: const Text('Mes prix'),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.checklist_outlined),
+          onPressed: () => unawaited(context.push(AppRoutes.processes)),
+          child: const Text('Mes processus'),
         ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.tune),

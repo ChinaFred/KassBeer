@@ -21,6 +21,7 @@ import '../../equipment/presentation/equipment_providers.dart';
 import '../../library/domain/referentiel.dart';
 import '../../library/presentation/champ_bibliotheque.dart';
 import '../domain/beerjson.dart';
+import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
 import 'contenu_recette.dart';
 import 'ingredient_forms.dart';

@@ -434,11 +434,14 @@ void main() {
           before: (app) {
             app.recipes.publish([recette()]);
             app.equipment.publish([equipment]);
+            app.processes.publish(const []);
           },
         );
         await tester.tap(find.text('Nouveau brassin'));
         await tester.pumpAndSettle();
         expect(find.textContaining('Chronologie : 1 étape ·'), findsOneWidget);
+        await tester.ensureVisible(find.text('Créer le brassin'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Créer le brassin'));
         await tester.pumpAndSettle();
         final write = app.brews.writes.single;
@@ -460,6 +463,7 @@ void main() {
               content: const RecipeContent(name: 'Blonde'),
             ),
           ]);
+          app.processes.publish(const []);
           // Deux équipements à soi : aucune présélection.
           app.equipment.publish([
             equipment,
@@ -475,6 +479,8 @@ void main() {
         },
       );
       await tester.tap(find.text('Nouveau brassin'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Créer le brassin'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Créer le brassin'));
       await tester.pumpAndSettle();

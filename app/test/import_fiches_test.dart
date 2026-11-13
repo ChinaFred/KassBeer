@@ -284,6 +284,17 @@ void main() {
       expect(data['bottles_count'], 50);
       expect(data['og_event_id'], 'e05');
       expect(data.containsKey('bottled_at'), isFalse);
+      // ADR-010 : aucun déroulé écrit ; le brassin se lit comme une journée
+      // tirée de la chronologie de sa copie figée (P37).
+      expect(data.containsKey('process'), isFalse);
+      final lu = Brew.fromFirestore(blonde.id, data);
+      expect(lu.process, isNull);
+      expect(lu.deroule.journees, hasLength(1));
+      expect(lu.deroule.lignes.map((l) => l.key), [
+        'empatage',
+        'ebullition',
+        'densite-initiale',
+      ]);
       expect(data['imported_from'], fiches.first.marque);
       expect(
         (data['equipment_snapshot'] as Map)['name'],

@@ -15,9 +15,12 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_providers.dart';
+import '../../processes/presentation/processes_providers.dart';
 import '../../recipes/domain/chronologie.dart';
 import '../../recipes/domain/recipe.dart';
 import '../domain/brew.dart';
+import '../domain/deroule.dart';
+import 'choix_processus.dart';
 
 /// Ouvre le formulaire « Nouveau brassin » pour [recipe].
 Future<void> ouvrirNouveauBrassin(BuildContext context, Recipe recipe) =>
@@ -28,7 +31,8 @@ Future<void> ouvrirNouveauBrassin(BuildContext context, Recipe recipe) =>
     );
 
 /// Crée un brassin depuis une recette, avec une copie de la recette et de
-/// l'équipement choisi (BR1, BR2).
+/// l'équipement choisi (BR1, BR2), puis écrit son déroulé si un processus est
+/// choisi (ADR-010, option B' : deux écritures).
 class FormulaireNouveauBrassin extends ConsumerStatefulWidget {
   const FormulaireNouveauBrassin({super.key, required this.recipe});
 
@@ -38,6 +42,9 @@ class FormulaireNouveauBrassin extends ConsumerStatefulWidget {
   static const createdOffline =
       'Brassin créé sur l\'appareil. Il partira au retour du réseau.';
   static String rejected(String name) => 'La création de « $name » a échoué.';
+  static String processRejected(String name) =>
+      'Le déroulé de « $name » a été refusé. Choisissez de nouveau le '
+      'processus sur la fiche.';
   static const chooseEquipment = 'Choisissez un équipement.';
   static const equipmentOffline =
       'Équipement indisponible hors ligne. Reconnectez le téléphone pour créer '
@@ -55,11 +62,15 @@ class _FormulaireNouveauBrassinState
   bool _equipmentTouched = false;
   String? _equipmentError;
   DateTime? _plannedFor;
+  String? _processId;
+  bool _processTouched = false;
+  String? _processError;
   bool _creating = false;
   String? _nameError;
   final _nameFocus = FocusNode();
   final _nameKey = GlobalKey();
   final _equipmentKey = GlobalKey();
+  final _processKey = GlobalKey();
 
   @override
   void initState() {
@@ -102,7 +113,12 @@ class _FormulaireNouveauBrassinState
     if (picked != null && mounted) setState(() => _plannedFor = picked);
   }
 
-  Future<void> _create(Equipment? equipment) async {
+  /// Processus choisi : le choix du brasseur s'il désigne encore un de ses
+  /// modèles, sinon la présélection.
+  String? _selection(ChoixProcessus choix) =>
+      _processTouched ? choix.valide(_processId) : choix.defaut;
+
+  Future<void> _create(Equipment? equipment, ChoixProcessus choix) async {
     final name = _name.text.trim();
     setState(() {
       _nameError = name.isEmpty ? 'Donnez un nom au brassin.' : null;
@@ -122,6 +138,25 @@ class _FormulaireNouveauBrassinState
     if (_creating) return;
     final access = ref.read(grantedAccessProvider);
     if (access == null) return;
+    // Déroulé assemblé avant toute écriture, avec ses clés définitives : un
+    // processus refusé ne crée rien.
+    final modele = choix.modele(_selection(choix));
+    Deroule? deroule;
+    if (modele != null) {
+      final evalue = evaluerAssemblage(
+        modele: modele,
+        recipe: widget.recipe.content,
+        nouvelleCle: ref.read(processesRepositoryProvider).newKey,
+        errors: ref.read(errorReportServiceProvider),
+        reported: ref.read(derouleReportsProvider),
+      );
+      if (evalue is AssemblageRefuse) {
+        setState(() => _processError = evalue.cause);
+        await montrerChamp(_processKey.currentContext);
+        return;
+      }
+      deroule = (evalue as AssemblageObtenu).assemble.deroule;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     final navigator = Navigator.of(context);
@@ -147,6 +182,22 @@ class _FormulaireNouveauBrassinState
           : FormulaireNouveauBrassin.created,
       refus: FormulaireNouveauBrassin.rejected(name),
     );
+    if (deroule != null) {
+      // Seconde écriture, juste après la création (règle : `process` absent de
+      // la création). Faite dans le cache dès l'appel, hors ligne compris.
+      suivreDeroule(
+        messenger: messenger,
+        creation: created.written,
+        written: ref
+            .read(brewsRepositoryProvider)
+            .setProcess(
+              brewId: created.id,
+              deroule: deroule,
+              ownerName: ownerName,
+            ),
+        refus: FormulaireNouveauBrassin.processRejected(name),
+      );
+    }
     navigator.pop();
     router.go(AppRoutes.brew(created.id));
   }
@@ -168,6 +219,27 @@ class _FormulaireNouveauBrassinState
     final loadFailed = list == null && equipmentAsync.hasError;
     final steps = recipe.content.brewSteps;
     final planned = _plannedFor;
+    final choix = lireChoixProcessus(
+      ref,
+      readerUid: readerUid,
+      offline: offline,
+    );
+    final selection = _selection(choix);
+    final modele = choix.modele(selection);
+    final apercu = modele == null
+        ? null
+        : evaluerAssemblage(
+            modele: modele,
+            recipe: recipe.content,
+            nouvelleCle: clesApercu(),
+            errors: ref.read(errorReportServiceProvider),
+            reported: ref.read(derouleReportsProvider),
+          );
+    void ouvrir(String path) {
+      final router = GoRouter.of(context);
+      Navigator.of(context).pop();
+      unawaited(router.push(path));
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -274,6 +346,23 @@ class _FormulaireNouveauBrassinState
             ),
           ),
         const SizedBox(height: 16),
+        KeyedSubtree(
+          key: _processKey,
+          child: ChampProcessus(
+            choix: choix,
+            selection: selection,
+            errorText: _processError,
+            onChanged: (id) => setState(() {
+              _processId = id;
+              _processTouched = true;
+              _processError = null;
+            }),
+            onRetry: () => ref.invalidate(processTemplatesProvider),
+            onGerer: () => ouvrir(AppRoutes.processes),
+            onCreer: () => ouvrir(AppRoutes.newProcess),
+          ),
+        ),
+        const SizedBox(height: 8),
         Text('Date prévue (facultatif)', style: theme.textTheme.labelLarge),
         Row(
           children: [
@@ -293,29 +382,34 @@ class _FormulaireNouveauBrassinState
           ],
         ),
         const SizedBox(height: 16),
-        Text(
-          steps.isEmpty
-              ? (mine
-                    ? 'Cette recette n\'a pas de chronologie : le jour du '
-                          'brassage n\'aura aucune étape à suivre.'
-                    : 'Seul l\'auteur écrit la chronologie de cette recette. '
-                          'Dupliquez-la pour écrire la vôtre.')
-              : 'Chronologie : ${formatEtapes(steps.length)} · '
-                    '${formatDuree(dureeChronologie(steps))}',
-          style: theme.textTheme.bodyMedium,
-        ),
-        if (steps.isEmpty && mine)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () {
-                final router = GoRouter.of(context);
-                Navigator.of(context).pop();
-                unawaited(router.push(AppRoutes.editBrewSteps(recipe.id)));
-              },
-              child: const Text('Écrire la chronologie'),
-            ),
+        DerouleProcessusPrevu(
+          evalue: apercu,
+          depart: planned,
+          chronologieSeule: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                steps.isEmpty
+                    ? (mine
+                          ? "Cette recette n'a pas de chronologie : le jour du "
+                                "brassage n'aura aucune étape à suivre."
+                          : "Seul l'auteur écrit la chronologie de cette "
+                                'recette. Dupliquez-la pour écrire la vôtre.')
+                    : 'Chronologie : ${formatEtapes(steps.length)} · '
+                          '${formatDuree(dureeChronologie(steps))}',
+                style: theme.textTheme.bodyMedium,
+              ),
+              if (steps.isEmpty && mine)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => ouvrir(AppRoutes.editBrewSteps(recipe.id)),
+                    child: const Text('Écrire la chronologie'),
+                  ),
+                ),
+            ],
           ),
+        ),
         const SizedBox(height: 24),
         Wrap(
           alignment: WrapAlignment.end,
@@ -328,7 +422,7 @@ class _FormulaireNouveauBrassinState
             FilledButton(
               onPressed: _creating || all.isEmpty
                   ? null
-                  : () => unawaited(_create(selected)),
+                  : () => unawaited(_create(selected, choix)),
               child: _creating
                   ? const IndicateurBouton(label: 'Création')
                   : const Text('Créer le brassin'),

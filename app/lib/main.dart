@@ -19,6 +19,8 @@ import 'features/equipment/data/equipment_repository.dart';
 import 'features/import/data/import_fiches_repository.dart';
 import 'features/library/data/library_repository.dart';
 import 'features/members/data/members_repository.dart';
+import 'features/processes/data/preferences_processus_repository.dart';
+import 'features/processes/data/processes_repository.dart';
 import 'features/recipes/data/recipes_repository.dart';
 import 'features/tickets/data/tickets_repository.dart';
 import 'firebase_options.dart';
@@ -137,6 +139,12 @@ Future<void> main() async {
         ),
         importFichesRepositoryProvider.overrideWithValue(
           FirestoreImportFichesRepository(),
+        ),
+        processesRepositoryProvider.overrideWithValue(
+          FirestoreProcessesRepository(errorReportService: errors),
+        ),
+        preferencesProcessusRepositoryProvider.overrideWithValue(
+          FirestorePreferencesProcessusRepository(errorReportService: errors),
         ),
         libraryRepositoryProvider.overrideWithValue(
           FirestoreLibraryRepository(errorReportService: errors),

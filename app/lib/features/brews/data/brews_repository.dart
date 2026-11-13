@@ -11,10 +11,23 @@ import '../../equipment/domain/equipment.dart';
 import '../../recipes/domain/recipe.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import '../domain/deroule.dart';
 import '../domain/releves.dart';
 
 /// Attente maximale d'une réponse du serveur par « Préparer le brassage ».
 const kPrepareWait = Duration(seconds: 15);
+
+/// Déroulé refusé par [erreurDeroule] avant l'écriture : les règles ne lisent
+/// pas les journées (ADR-010, P37), l'application ne les écrit qu'à cette
+/// condition.
+class DerouleInvalide implements Exception {
+  const DerouleInvalide(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'DerouleInvalide : $message';
+}
 
 /// Écriture d'étape : début, fin ou saut d'une étape.
 typedef StepWrite = ({StepEventKind kind, String stepKey});
@@ -56,6 +69,18 @@ abstract class BrewsRepository {
     required String name,
     required DateTime? plannedFor,
     required String? notes,
+    required String? ownerName,
+  });
+
+  /// Écrit le déroulé figé `process` d'un brassin prévu, en entier (ADR-010,
+  /// option B') : juste après [create], puis à chaque changement de processus ou
+  /// de date avant le départ. [deroule] nul retire le champ : « Chronologie de la
+  /// recette seule ». Les règles refusent l'écriture une fois `brewed_at` posé.
+  /// Échoue par [DerouleInvalide] si [erreurDeroule] refuse le déroulé : rien
+  /// n'est écrit.
+  Future<void> setProcess({
+    required String brewId,
+    required Deroule? deroule,
     required String? ownerName,
   });
 
@@ -186,6 +211,7 @@ class BrewEventInput {
     this.value,
     this.note,
     required this.measuredAt,
+    this.phase,
   });
 
   final String ownerUid;
@@ -195,6 +221,10 @@ class BrewEventInput {
   final double? value;
   final String? note;
   final DateTime measuredAt;
+
+  /// `fermentation` pour une saisie d'une journée 2 ou suivante (ADR-010),
+  /// `null` pour le jour de brassage.
+  final PhaseEvenement? phase;
 }
 
 /// Identifiants créés par l'appareil pour un relevé, et fin de son écriture.
@@ -286,12 +316,20 @@ class FirestoreBrewsRepository implements BrewsRepository {
         data,
         hasPendingWrites: hasPendingWrites,
       );
-      final problem = brew.recipe.brewStepsProblem;
+      // Déroulé illisible (process, ou chronologie de la recette figée) : le
+      // brassin reste lisible, l'écran affiche la panne (ADR-010).
+      final deroule = brew.deroule;
+      final problem = deroule.probleme;
       if (problem != null) {
         _errors.reportError(
-          feature: 'brews.brew_steps',
-          error: DocumentIllisible('brew_steps', problem),
-          context: 'brews/$id : chronologie illisible',
+          feature: deroule.resolu ? 'brews.process' : 'brews.brew_steps',
+          error: DocumentIllisible(
+            deroule.resolu ? 'process' : 'brew_steps',
+            problem,
+          ),
+          context:
+              'brews/$id : ${deroule.resolu ? 'déroulé' : 'chronologie'} '
+              'illisible',
         );
       }
       return DocumentValide(id, brew);
@@ -471,6 +509,23 @@ class FirestoreBrewsRepository implements BrewsRepository {
   );
 
   @override
+  Future<void> setProcess({
+    required String brewId,
+    required Deroule? deroule,
+    required String? ownerName,
+  }) => _guard('brews.process_write', () {
+    if (deroule != null) {
+      final erreur = erreurDeroule(deroule);
+      if (erreur != null) throw DerouleInvalide(erreur);
+    }
+    return _brews.doc(brewId).update({
+      ...champFacultatif('process', deroule?.toFirestore(), creation: false),
+      ...champFacultatif('owner_name', ownerName, creation: false),
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  });
+
+  @override
   Future<void> start({
     required String brewId,
     required String ownerUid,
@@ -591,6 +646,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
       value: input.value,
       note: input.note,
       measuredAt: input.measuredAt,
+      phase: input.phase,
     );
     final written = _guardCreation(
       refs: [ref],

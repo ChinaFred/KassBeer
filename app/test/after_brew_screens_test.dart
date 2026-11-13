@@ -400,8 +400,8 @@ void main() {
           mesure('m1', null, MeasureType.volume, 21, brewedAt),
         ],
       );
-      await voir(tester, find.text('Chronologie'));
-      await tester.tap(find.text('Chronologie'));
+      await voir(tester, find.text('Déroulé'));
+      await tester.tap(find.text('Déroulé'));
       await tester.pumpAndSettle();
       await voir(tester, find.text('Sans étape'));
       expect(find.textContaining(' · 1020,0'), findsNothing);

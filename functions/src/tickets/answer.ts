@@ -19,7 +19,8 @@
  *    `statut:analysé` et `validé` retirées.
  * 6. Transaction : ticket `analyzed` ou `validated` ramené à `received`, `answer_reset_at`
  *    posé, `allowed_decisions` réécrit, bail retiré.
- * 7. Au mieux : relevé des analyses.
+ * 7. Au mieux : lancements en cours du ticket clos (`retry_after` ramené à l'heure de la
+ *    réponse, T4), puis relevé des analyses.
  *
  * Le texte de la réponse n'est jamais journalisé (P34).
  */
@@ -50,6 +51,7 @@ import {
   type GithubErrorKind,
 } from "./github";
 import { applyIssue } from "./issueState";
+import { closeRunningLaunches } from "./launch";
 import {
   LABEL_ANALYZED,
   LABEL_TO_ANALYZE,
@@ -352,6 +354,8 @@ async function resetAndRelease(ticketId: string, leaseUntilMs: number): Promise<
       update.answer_reset_at = now;
       update.status_changed_at = now;
       update.allowed_decisions = allowedDecisions(status);
+      // Retour à `received` : une validation de l'application ne vaut plus.
+      update.validated_by_app_at = null;
       update.updated_at = now;
     }
     if (Object.keys(update).length > 0) tx.update(ref, update);
@@ -472,6 +476,11 @@ export async function answerTicket(
         error: err,
       });
       throw refusal("internal", ANSWER_NOT_WRITTEN, "ticket_not_updated", true);
+    }
+    // Le ticket revient à « Reçu » : les lancements en cours ne bloquent plus une nouvelle
+    // analyse (ADR-008, T4, Kass'Dalle).
+    if (lease.status !== "received" && status === "received") {
+      await closeRunningLaunches(ticketId);
     }
     try {
       await refreshAnalyses(client, ticketId, lease.issueNumber, run.commentCount);

@@ -145,6 +145,21 @@ l'application à jour pour lire ce statut. »).
 2026-11-12 : Jusqu'au lot T4, Valider reste offert depuis Reçu (décision de l'utilisateur) ; T4
 le réserve aux tickets analysés.
 
+2026-11-13, décision de l'utilisateur (lot T4) : « Lancer le développement » n'est possible
+qu'après un « Valider » fait dans l'application. L'application d'une décision `validate` pose
+`validated_by_app_at` sur le ticket (serveur seul) ; Refuser, Clore, « Répondre » et toute
+relecture de l'Issue dont le statut d'avant ou d'après est hors `validated` et `in_progress`
+l'effacent. `launch_development` n'entre dans
+`allowed_decisions` qu'avec ce champ, et `launchTicketDevelopment` le recontrôle (refus
+`not_launchable`). Une étiquette `validé` posée sur GitHub change toujours le statut affiché ;
+le serveur offre alors « Valider » sur ce ticket `validated`, et l'application affiche
+« Validé sur GitHub : validez depuis l'application pour lancer le développement. ». Le retrait
+de `validé` sur une Issue ouverte ne fait pas reculer le statut et n'efface pas la validation de
+l'application ; la session de développement, qui exige l'étiquette `validé`, refuse alors de
+travailler. Version 4
+de la règle (`ALLOWED_DECISIONS_VERSION`) : les tickets déjà validés avant ce changement
+doivent être validés à nouveau dans l'application.
+
 ### Analyses et « Répondre »
 
 Copie de Kass'Dalle. `tickets/{id}/admin/analysis` (dix entrées, 20 000 caractères chacune,
@@ -174,6 +189,11 @@ changer tient en une ligne. L'API limite à 30 appels par heure et par routine e
 pour le compte, partagés avec Kass'Dalle. Les sessions consomment l'abonnement Claude de
 l'administrateur.
 
+2026-11-13 (lot T4) : le motif du corps est réduit à `^(analyse|developpement) #[1-9][0-9]{0,6}$`
+jusqu'à T5, qui y ajoutera `livraison` avec `launchTicketDelivery`. `routine_invalid_since` est
+écrit en deux champs, un par routine : `analysis_invalid_since` et `development_invalid_since`
+de `ticket_status/launches`. `delivery_running` arrive avec T5.
+
 ### Livraison
 
 Copie de `delivery.ts` : état « PR prête » (`tickets/{id}/admin/delivery`), verrou global
@@ -183,8 +203,16 @@ chemin d'un renommage compris) : `.github/**`, `.claude/**`, `scripts/**`, tout 
 `CLAUDE.local.md`, `.mcp.json`, `firebase.json`, `firestore.rules`, `storage.rules`,
 `firestore.indexes.json`, `rules-tests/package.json`, `rules-tests/package-lock.json`,
 `rules-tests/prettier.config.*`, `functions/package.json`, `functions/package-lock.json`,
-`functions/prettier.config.*`. La session ne pose jamais de tag : le job `tag` de `deploy.yml` le
+`functions/prettier.config.*`, `ingest/package.json`, `ingest/package-lock.json`,
+`ingest/prettier.config.*`, `app/android/**/*.gradle`, `app/android/**/*.gradle.kts`,
+`app/android/gradle.properties`, `app/android/settings.gradle*`, `app/android/gradle/**`. La
+session ne pose jamais de tag : le job `tag` de `deploy.yml` le
 fait (leçon 16). Jeton GitHub : Actions en lecture ajouté.
+
+2026-11-13, décision de l'utilisateur (lot T4) : la liste ajoute les fichiers d'`ingest/` que
+le hook `format-on-edit.mjs` et `npm ci` exécutent (P10), et les fichiers de construction
+Android (`*.gradle`, `*.gradle.kts`, `gradle.properties`, `settings.gradle*`, `gradle/**`
+sous `app/android/`), exécutés par la compilation de l'APK.
 
 ### Prompts
 
@@ -193,7 +221,13 @@ substitutions : `ChinaFred/KassBeer`, `main`, `app/pubspec.yaml` (build + 1, P7)
 `git fetch --tags && node scripts/check-version.mjs`, liste des fichiers sensibles ci-dessus,
 contrôles de « Commandes utiles », `statut:en-cours` posée avant le premier commit (`CLAUDE.md`,
 « Tickets »). Ajouts : arrêt avant le premier commit si `git var GIT_AUTHOR_IDENT` n'est pas une
-adresse `noreply` (P15) ; aucun tag. Un test de `functions/test/` vérifie que la liste des
+adresse `noreply` (P15) ; aucun tag.
+
+2026-11-13, décision de l'utilisateur (lot T4) : l'arrêt avant le premier commit vaut aussi
+pour `git var GIT_COMMITTER_IDENT`. Le prompt d'analyse limite les appels GitHub à une liste
+fermée : lire l'Issue et ses commentaires, publier un commentaire « ## Analyse », retirer
+`statut:à-analyser` et poser `statut:analysé`. Tout autre appel est interdit : aucune autre
+étiquette (ni `validé`), aucune fermeture, aucune autre Issue ou pull request, aucune fusion. Un test de `functions/test/` vérifie que la liste des
 fichiers sensibles du prompt égale celle de `delivery.ts`.
 
 ### Capture d'écran

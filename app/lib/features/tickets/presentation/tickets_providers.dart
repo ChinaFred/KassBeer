@@ -8,6 +8,7 @@ import '../../members/presentation/members_providers.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_analysis.dart';
+import '../domain/ticket_launch.dart';
 
 /// Tickets du compte [uid], lus avec le cache hors ligne.
 final myTicketsProvider = StreamProvider.autoDispose
@@ -64,6 +65,23 @@ final ticketAnalysisProvider = StreamProvider.autoDispose
     .family<RechercheDocument<TicketAnalysisDoc>, String>(
       (ref, ticketId) =>
           ref.watch(ticketsRepositoryProvider).watchAnalysis(ticketId),
+      retry: (retryCount, error) => null,
+    );
+
+/// `tickets/{id}/admin/launches`, lu par l'administrateur seul (P41) : fiche,
+/// et pastille de la liste pour un ticket dont un lancement est permis.
+final ticketLaunchesProvider = StreamProvider.autoDispose
+    .family<RechercheDocument<TicketLaunchesDoc>, String>(
+      (ref, ticketId) =>
+          ref.watch(ticketsRepositoryProvider).watchLaunches(ticketId),
+      retry: (retryCount, error) => null,
+    );
+
+/// `ticket_status/launches`, lu par l'administrateur seul (P41) : compteur
+/// de la liste, quota de la boîte, jetons des routines du bandeau.
+final launchStatusProvider =
+    StreamProvider.autoDispose<RechercheDocument<EtatLancements>>(
+      (ref) => ref.watch(ticketsRepositoryProvider).watchLaunchStatus(),
       retry: (retryCount, error) => null,
     );
 

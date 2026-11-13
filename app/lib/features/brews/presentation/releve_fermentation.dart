@@ -28,6 +28,7 @@ import '../../brew_day/presentation/mesure_form.dart';
 import '../data/brews_repository.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import '../domain/deroule.dart';
 import '../domain/releves.dart';
 import 'brews_providers.dart';
 import 'courbe_fermentation.dart';
@@ -96,11 +97,23 @@ String libelleReleve(ReleveSaisi releve) {
   return 'Note $quand';
 }
 
+/// « Houblonnage à cru : Mesure de densité » pour un relevé saisi sur une étape
+/// d'une journée 2 ou suivante (ADR-010) ; `null` sinon.
+String? etapeDuReleve(Brew brew, Releve releve) {
+  final key = releve.events.first.stepKey;
+  final trouvee = key == null ? null : brew.deroule.etape(key);
+  if (trouvee == null || trouvee.journee.role == RoleJournee.brassage) {
+    return null;
+  }
+  return '${trouvee.journee.name.trim()} : ${trouvee.ligne.name}';
+}
+
 /// Texte lu par un lecteur d'écran pour une ligne de relevé.
 String releveParle({
   required Releve releve,
   required int? jour,
   required double? ecart,
+  String? etape,
 }) {
   final gravity = releve.gravityValue;
   final temperature = releve.temperatureValue;
@@ -108,6 +121,7 @@ String releveParle({
   return [
     jourHeureParle(releve.measuredAt),
     if (jour != null) 'jour $jour',
+    ?etape,
     if (gravity != null) 'densité ${formatDensite(gravity)}',
     if (temperature != null)
       '${formatNombre(temperature, decimales: 1)} degrés',
@@ -232,6 +246,7 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
       for (final r in visibles)
         _LigneReleve(
           releve: r,
+          etape: etapeDuReleve(brew, r),
           point: pointDe[r.cle],
           jour: brewedAt == null
               ? null
@@ -262,12 +277,16 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
 class _LigneReleve extends StatelessWidget {
   const _LigneReleve({
     required this.releve,
+    required this.etape,
     required this.point,
     required this.jour,
     required this.onTap,
   });
 
   final Releve releve;
+
+  /// Journée et étape d'un relevé saisi pendant une journée ([etapeDuReleve]).
+  final String? etape;
   final FermentationPoint? point;
   final int? jour;
   final VoidCallback? onTap;
@@ -291,7 +310,12 @@ class _LigneReleve extends StatelessWidget {
     return Semantics(
       container: true,
       button: onTap != null,
-      label: releveParle(releve: releve, jour: jour, ecart: ecart),
+      label: releveParle(
+        releve: releve,
+        jour: jour,
+        ecart: ecart,
+        etape: etape,
+      ),
       onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
@@ -330,6 +354,7 @@ class _LigneReleve extends StatelessWidget {
                   [
                     formatJourHeure(releve.measuredAt),
                     if (jour != null) 'J+$jour',
+                    ?etape,
                   ].join(' · '),
                   style: theme.textTheme.bodyMedium?.copyWith(color: muted),
                 ),
