@@ -273,3 +273,86 @@ export const fresh = (data) => ({
   created_at: serverTimestamp(),
   updated_at: serverTimestamp(),
 });
+
+/// Journée d'un modèle de processus (ADR-010) : [count] éléments, dont un bloc tiré
+/// de la recette ([block]) en troisième place s'il est donné.
+const templateSession = (i, count, block, nameSize = 0) => ({
+  key: `journee${String(i).padStart(13, "0")}`,
+  name: nameSize > 0 ? `J${i}`.padEnd(nameSize, "j") : `Journée ${i + 1}`,
+  offset_days: [0, 4, 7, 14, 28][i],
+  ...(block === "dry_hops" ? { requires_recipe_block: true } : {}),
+  steps: Array.from({ length: count }, (_, k) =>
+    block && k === 2
+      ? { key: `bloc${String(i * 100 + k).padStart(16, "0")}`, kind: block }
+      : {
+          key: `etape${String(i * 100 + k).padStart(15, "0")}`,
+          kind: "step",
+          name: nameSize > 0 ? `E${k}`.padEnd(nameSize, "e") : `Étape ${k + 1}`,
+          duration_min: 10,
+          temp_c: k % 2 === 0 ? 20 : null,
+        },
+  ),
+});
+
+/// Document process_templates/ de [owner] ; [extra] remplace des champs.
+export const processTemplate = (owner, extra = {}) => ({
+  format_version: 1,
+  owner_uid: owner,
+  name: "Brassage et embouteillage",
+  notes: "Durées typiques, à ajuster à votre matériel.",
+  sessions: [templateSession(0, 4, "recipe_steps"), templateSession(1, 4, "packaging_additions")],
+  created_at: CREATED,
+  updated_at: CREATED,
+  ...extra,
+});
+
+/// Plus grand modèle permis : nom de 120 caractères, notes de 10 000, 5 journées de
+/// 60 éléments aux noms de 120 caractères.
+export const largestProcessTemplate = (owner) =>
+  processTemplate(owner, {
+    name: "m".repeat(120),
+    notes: "n".repeat(10000),
+    sessions: [
+      templateSession(0, 60, "recipe_steps", 120),
+      templateSession(1, 60, "dry_hops", 120),
+      templateSession(2, 60, null, 120),
+      templateSession(3, 60, "packaging_additions", 120),
+      templateSession(4, 60, null, 120),
+    ],
+  });
+
+/// Journée résolue d'un brassin (`process.sessions[]`) de [count] étapes.
+const resolvedSession = (i, count, nameSize = 0) => ({
+  key: `journee${String(i).padStart(13, "0")}`,
+  name: nameSize > 0 ? `J${i}`.padEnd(nameSize, "j") : `Journée ${i + 1}`,
+  offset_days: [0, 4, 7, 14, 28][i],
+  offset_source: "template",
+  role: i === 0 ? "brew" : i === 3 ? "packaging" : "other",
+  template_session_key: `journee${String(i).padStart(13, "0")}`,
+  steps: Array.from({ length: count }, (_, k) => ({
+    key: `resolue${String(i * 1000 + k).padStart(13, "0")}`,
+    name: nameSize > 0 ? `E${k}`.padEnd(nameSize, "e") : `Étape ${k + 1}`,
+    duration_min: 10,
+    ...(k % 2 === 0 ? { temp_c: 20 } : {}),
+    origin: "template",
+    template_step_key: `etape${String(i * 100 + k).padStart(15, "0")}`,
+  })),
+});
+
+/// Champ `process` d'un brassin (ADR-010) ; [extra] remplace des champs.
+export const brewProcess = (extra = {}) => ({
+  format_version: 1,
+  template_id: "t-a",
+  template_name: "Brassage et embouteillage",
+  sessions: [resolvedSession(0, 3), resolvedSession(3, 2)],
+  ...extra,
+});
+
+/// Plus grand déroulé permis : identifiant de 128 caractères, nom de 120, 5 journées
+/// de 120 étapes aux noms de 120 caractères.
+export const largestProcess = () =>
+  brewProcess({
+    template_id: "t".repeat(128),
+    template_name: "m".repeat(120),
+    sessions: Array.from({ length: 5 }, (_, i) => resolvedSession(i, 120, 120)),
+  });

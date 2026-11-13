@@ -29,6 +29,16 @@ abstract final class AppRoutes {
   /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
   static const prices = '/prix';
 
+  /// « Mes processus » (ADR-010) : pages pleines hors de la coquille, la liste
+  /// ouverte par `push` depuis le menu du compte. `?modele=exemple` ouvre
+  /// « Nouveau processus » prérempli du modèle d'exemple.
+  static const processes = '/processus';
+  static const newProcess = '/processus/nouveau';
+  static const exampleQueryParam = 'modele';
+  static const newProcessFromExample = '$newProcess?$exampleQueryParam=exemple';
+  static String process(String id) => '$processes/$id';
+  static String editProcess(String id) => '$processes/$id/modifier';
+
   /// « Préférences » (thème de l'appareil, ADR-009) : page pleine hors de la
   /// coquille, ouverte par `push` depuis le menu du compte.
   static const preferences = '/preferences';
@@ -53,6 +63,14 @@ abstract final class AppRoutes {
   static String brew(String id) => '$brews/$id';
   static String prepareBrew(String id) => '$brews/$id/preparer';
   static String brewDay(String id) => '$brews/$id/jour';
+
+  /// Journée 2 et suivantes d'un déroulé (ADR-010) : préparation dans la
+  /// coquille, écran de la journée plein écran. `/brassins/:id/jour` reste la
+  /// journée de brassage.
+  static String prepareJournee(String id, String journee) =>
+      '${brewDay(id)}/${Uri.encodeComponent(journee)}/preparer';
+  static String journee(String id, String journee) =>
+      '${brewDay(id)}/${Uri.encodeComponent(journee)}';
 
   /// Tickets du membre (ADR-006) : pages pleines hors de la coquille, ouvertes
   /// par `push` depuis le menu du compte.

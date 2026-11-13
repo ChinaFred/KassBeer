@@ -1,6 +1,31 @@
 {
   "versions": [
     {
+      "version": "0.1.35",
+      "date": "2026-11-13",
+      "paragraphs": [
+        "Les journées après le brassage se suivent comme le brassage. Sur la fiche d'un brassin en fermentation, « Préparer la journée « Houblonnage à cru » » s'affiche sous sa date prévue. Préparez la journée sur le téléphone qui servira, avec du réseau : ensuite, étapes, minuteurs, mesures et notes marchent sans réseau. « Commencer la journée » démarre la première étape ; une journée commencée se reprend depuis la fiche.",
+        "Une densité ou une température saisie pendant une journée compte dans le relevé de fermentation et dans la densité finale, jamais dans la densité initiale. Elle s'affiche sous son étape, et le relevé nomme sa journée et son étape. « Terminer la journée » termine l'étape en cours et marque sautées celles qui restent ; une journée dont toutes les étapes sont faites se termine seule. Une journée que vous ne ferez pas se passe depuis la fiche : le menu de la journée porte « Passer la journée », qui marque ses étapes sautées. Dans le déroulé de la fiche, une journée terminée résume ce qui a été fait (« Terminée · 3 faites, 1 sautée »).",
+        "La journée d'embouteillage finit par « Embouteiller » : le formulaire habituel, puis le retour sur la fiche. L'étape en cours se termine à l'envoi. Les prix et les frais lus à la préparation servent à figer le coût, même sans réseau. Un brassin qui a une journée d'embouteillage garde « Embouteiller sans suivre la journée » dans le menu ⋮ de sa fiche. La liste des brassins annonce toujours la prochaine journée d'après sa date : une journée faite en avance reste annoncée jusqu'à cette date."
+      ]
+    },
+    {
+      "version": "0.1.34",
+      "date": "2026-11-13",
+      "paragraphs": [
+        "« Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la recette seule » comme avant. Votre processus par défaut est déjà choisi. En dessous, « Déroulé prévu » montre chaque journée avec sa date et son nombre d'étapes, et prévient quand la recette n'a pas de houblon à cru pour la journée de houblonnage, ou quand des houblons à cru n'ont pas de journée. Hors ligne, si vos processus n'ont jamais été lus sur ce téléphone, le brassin se crée avec la chronologie de la recette seule ; vous choisirez son processus plus tard.",
+        "La fiche d'un brassin a une section « Déroulé » à la place de « Chronologie » : le processus choisi, la journée de brassage avec ses heures et ses mesures, puis les journées suivantes avec leur date et leurs étapes. Tant que le brassage n'a pas commencé, « Changer de processus » en choisit un autre, et le menu d'une journée change sa date ou rétablit celle du processus. Ensuite, le déroulé ne change plus. « Recréer depuis la recette » garde le processus du brassin.",
+        "La liste des brassins annonce la prochaine journée d'un brassin en fermentation (« Prochaine journée : Houblonnage à cru, mer. 25 nov. »). « Préparer le brassage » et l'écran du jour suivent la journée de brassage du processus, préparation et nettoyage compris, et la barre de l'écran du jour nomme la journée. Le suivi des journées après le brassage arrive avec la prochaine version : d'ici là, la mesure de densité se saisit par « Ajouter un relevé » et l'embouteillage par « Embouteiller »."
+      ]
+    },
+    {
+      "version": "0.1.33",
+      "date": "2026-11-13",
+      "paragraphs": [
+        "Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune à quelques jours du brassage, avec ses étapes de préparation et de nettoyage autour de celles de la recette. La liste montre vos processus, puis ceux des autres brasseurs. Pour commencer, « Partir du modèle d'exemple » ouvre un processus de trois journées aux durées typiques, à ajuster à votre matériel avant de l'enregistrer. Vous modifiez, dupliquez et supprimez les vôtres, et vous choisissez celui que « Nouveau brassin » vous proposera : ce choix ne concerne que vous. Le processus d'un autre brasseur se copie dans les vôtres. Un processus compte 5 journées au plus et 60 étapes par journée ; les journées se rangent d'elles-mêmes par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création d'un brassin arrive avec une prochaine version."
+      ]
+    },
+    {
       "version": "0.1.31",
       "date": "2026-11-12",
       "paragraphs": [
@@ -21,29 +46,6 @@
         "L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon, d'un ajout ou d'une levure, vous voyez les ingrédients qui correspondent, par nom ou autre nom. Choisir l'un d'eux remplit les valeurs encore vides : couleur et rendement d'un malt, acides alpha et forme d'un houblon, type, forme et atténuation d'une levure, type d'un ajout. Une valeur déjà saisie ne change pas ; si elle diffère, « Reprendre les valeurs de la Bibliothèque » la remplace. Le champ « Style » propose les styles BJCP par code ou par nom. Hors ligne, les suggestions viennent de ce qui a déjà été lu ; sinon, la saisie reste libre.",
         "L'export BeerXML est ouvert. Il retrouve le style de la recette dans la Bibliothèque, avec sa catégorie et ses plages. Une recette sans style de la Bibliothèque demande de le choisir dans les suggestions du champ Style. Le type du style BeerXML suit la levure de la recette : précisez-la si l'export le demande. Un style sans plage chiffrée dans le guide BJCP ne s'exporte pas en BeerXML : choisissez un autre style, ou exportez en BeerJSON. Quand votre équipement n'a pas l'évaporation, les pertes ou le volume mort, « Compléter l'équipement » ouvre sa fiche.",
         "Recettes › Importer complète les valeurs absentes du fichier quand le nom d'un ingrédient est celui d'une entrée de la Bibliothèque, ou l'un de ses autres noms. Une valeur du fichier n'est jamais remplacée. Les détails de chaque recette listent les valeurs reprises, par exemple « Couleur de Pils reprise de la Bibliothèque. ». Hors ligne, l'import marche comme avant et le dit. Les noms qu'aucune entrée ne reconnaît sont signalés à l'administrateur, sans votre nom ni celui du fichier, pour qu'il complète la Bibliothèque."
-      ]
-    },
-    {
-      "version": "0.1.27",
-      "date": "2026-11-11",
-      "paragraphs": [
-        "« Signaler ou proposer » a un nouveau champ, « Élément précis », sous « Écran concerné ». Il permet de désigner un menu ou une fenêtre de l'écran : « Embouteillage » ou « Plus d'actions » sur un brassin, « Houblon » dans l'éditeur de recette, « Menu du compte »… Par défaut, le ticket porte sur l'écran entier. Le suivi affiche l'écran et l'élément, par exemple « Brassin › Embouteillage ». Les listes passent sur deux lignes quand le texte est agrandi. Demandé par le ticket #26."
-      ]
-    },
-    {
-      "version": "0.1.26",
-      "date": "2026-11-11",
-      "paragraphs": [
-        "Une nouvelle entrée « Bibliothèque », à côté de Recettes, montre les styles de bière, les malts et sucres, les houblons, les levures, les ajouts divers et les recettes publiques DIY Dog. Une recherche filtre chaque liste par nom, autre nom ou code de style. La fiche d'un style donne ses plages de densité, de degré, d'amertume et de couleur. La fiche d'un ingrédient donne ses valeurs, sa source et sa licence.",
-        "La fiche d'une recette publique montre ses ingrédients, ses paliers, les valeurs que Kass'Beer peut calculer et, à part, les valeurs annoncées par la recette d'origine. Un houblon dont la recette d'origine ne donne pas la durée garde le moment indiqué par la source, traduit. « Dupliquer » copie la recette dans vos recettes et ouvre l'éditeur : choisissez votre équipement, et la forme des houblons, que la recette d'origine ne donne pas, pour obtenir densités, degré et amertume. Une recette dont un houblon n'a pas de forme dit « Forme du houblon à compléter ». Recettes › Importer accepte aussi un houblon sans forme, sans rien perdre : la forme reste à compléter dans la recette, et l'export BeerXML attend qu'elle le soit.",
-        "« Sources des données », ouvert depuis la Bibliothèque ou le menu du compte, nomme chaque source, sa licence et ce que Kass'Beer en a changé. La Bibliothèque demande le réseau, sauf pour ce qui a déjà été lu. Elle reste vide tant que l'administrateur n'a pas chargé les données."
-      ]
-    },
-    {
-      "version": "0.1.24",
-      "date": "2026-11-11",
-      "paragraphs": [
-        "L'administrateur traite les tickets depuis l'application. Le menu du compte gagne « Tickets à traiter », avec le nombre de tickets qui attendent une décision, et la page Admin la tuile « Tickets des membres ». La liste se filtre (à traiter, tous, bloqués) et montre l'auteur de chaque ticket. La fiche d'un ticket permet de le valider, de le refuser avec un motif ou de le clore avec un commentaire, de relancer un envoi en échec et d'ouvrir l'Issue sur GitHub ; elle suit l'avancement de la décision. Une frise montre les étapes du ticket, ici comme dans Mes tickets, et les statuts prennent de nouvelles couleurs. Sur grand écran, la liste et la fiche s'affichent côte à côte."
       ]
     }
   ]

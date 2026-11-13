@@ -1,0 +1,688 @@
+{
+  "description": "Résolution d'un modèle de processus avec la recette figée d'un brassin, jour d'un houblon à cru et date d'une journée (ADR-010). Le paquet rend des brouillons sans clé ni libellé : chaque étape est « origine:indice ». template : place de l'élément dans la journée du modèle ; recipe_step : place dans brew_steps (clé gardée) ; prefill : place dans le préremplissage defaultBrewSteps ; dry_hop et packaging_hop : place dans hops ; packaging_other : place dans les ajouts. Noms et durées des étapes du modèle ne servent pas au calcul : ils documentent le cas, et le modèle « exemple » est relu par le test de l'application (modèle d'exemple, constante du domaine processes/).",
+  "rule": "Un bloc recipe_steps reçoit brew_steps, ou à défaut le préremplissage sans les étapes sans durée ; dry_hops reçoit un houblon à cru par étape, dans l'ordre de la recette ; packaging_additions reçoit les houblons au conditionnement puis les ajouts au conditionnement. Un bloc vide disparaît, et sa journée aussi si elle porte requires_recipe_block. Un houblon à cru qui a un jour d'ajout (day_minutes) tombe à J+round(day_minutes / 1440) ; sans jour, à l'écart du modèle. Une journée de houblonnage par jour distinct (rang 1, 2… s'il y en a plusieurs) ; écart de source recipe, sauf si un de ses houblons n'a pas de jour (template). Au-delà de 5 journées, les jours de houblonnage les plus tardifs se regroupent dans le premier jour regroupé. Tri par écart, à égalité dans l'ordre du modèle, la journée de brassage en tête (processSessionOrder, cas session_orders : il sert aussi au changement de date d'une journée sur le brassin). Date d'une journée : jour calendaire local du départ plus l'écart, à minuit, inverse de fermentationDayNumber.",
+  "templates": {
+    "exemple": {
+      "name": "Brassage, houblonnage à cru, embouteillage",
+      "notes": "Durées typiques, à ajuster à votre matériel.",
+      "sessions": [
+        {
+          "name": "Brassage",
+          "offset_days": 0,
+          "items": [
+            { "kind": "step", "name": "Mise en place du matériel", "duration_min": 30 },
+            { "kind": "step", "name": "Désinfection du fermenteur", "duration_min": 20 },
+            { "kind": "step", "name": "Chauffe de l'eau d'empâtage", "duration_min": 40 },
+            { "kind": "step", "name": "Mouture du grain", "duration_min": 20 },
+            { "kind": "recipe_steps" },
+            { "kind": "step", "name": "Refroidissement", "duration_min": 30 },
+            { "kind": "step", "name": "Mise en cuve et mesure de densité", "duration_min": 15 },
+            { "kind": "step", "name": "Oxygénation et ensemencement", "duration_min": 10 },
+            { "kind": "step", "name": "Nettoyage du matériel", "duration_min": 60 },
+            { "kind": "step", "name": "Rangement", "duration_min": 30 }
+          ]
+        },
+        {
+          "name": "Houblonnage à cru",
+          "offset_days": 4,
+          "requires_recipe_block": true,
+          "items": [
+            { "kind": "step", "name": "Désinfection du matériel", "duration_min": 10 },
+            { "kind": "step", "name": "Mesure de densité", "duration_min": 5 },
+            { "kind": "dry_hops" },
+            { "kind": "step", "name": "Nettoyage", "duration_min": 10 }
+          ]
+        },
+        {
+          "name": "Embouteillage",
+          "offset_days": 14,
+          "items": [
+            { "kind": "step", "name": "Lavage des bouteilles", "duration_min": 60 },
+            { "kind": "step", "name": "Désinfection des bouteilles et du matériel", "duration_min": 30 },
+            { "kind": "step", "name": "Préparation du sucre de resucrage", "duration_min": 15 },
+            { "kind": "step", "name": "Transfert en cuve d'embouteillage", "duration_min": 15 },
+            { "kind": "packaging_additions" },
+            { "kind": "step", "name": "Mise en bouteilles et capsulage", "duration_min": 60 },
+            { "kind": "step", "name": "Nettoyage et rangement", "duration_min": 30 }
+          ]
+        }
+      ]
+    },
+    "quatre-journees": {
+      "name": "Exemple et contrôle de la gazéification",
+      "sessions": [
+        {
+          "name": "Brassage",
+          "offset_days": 0,
+          "items": [
+            { "kind": "step", "name": "Mise en place", "duration_min": 30 },
+            { "kind": "recipe_steps" },
+            { "kind": "step", "name": "Nettoyage", "duration_min": 60 }
+          ]
+        },
+        {
+          "name": "Houblonnage à cru",
+          "offset_days": 4,
+          "requires_recipe_block": true,
+          "items": [
+            { "kind": "step", "name": "Désinfection", "duration_min": 10 },
+            { "kind": "dry_hops" }
+          ]
+        },
+        {
+          "name": "Embouteillage",
+          "offset_days": 14,
+          "items": [
+            { "kind": "step", "name": "Lavage des bouteilles", "duration_min": 60 },
+            { "kind": "packaging_additions" }
+          ]
+        },
+        {
+          "name": "Contrôle de la gazéification",
+          "offset_days": 28,
+          "items": [{ "kind": "step", "name": "Ouverture d'une bouteille", "duration_min": 10 }]
+        }
+      ]
+    },
+    "brassage-seul": {
+      "name": "Brassage seul",
+      "sessions": [
+        {
+          "name": "Brassage",
+          "offset_days": 0,
+          "items": [
+            { "kind": "step", "name": "Mise en place", "duration_min": 30 },
+            { "kind": "recipe_steps" },
+            { "kind": "step", "name": "Nettoyage", "duration_min": 60 }
+          ]
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "exemple-sans-houblon-a-cru",
+      "note": "Modèle d'exemple, recette sans houblon à cru ni ajout au conditionnement : la journée de houblonnage (requires_recipe_block) est retirée ; l'embouteillage est gardé, son bloc retiré.",
+      "template": "exemple",
+      "recipe": {
+        "brew_step_count": 3,
+        "hops": [{ "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": 60 }]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "recipe_step:0", "recipe_step:1", "recipe_step:2", "template:5", "template:6", "template:7", "template:8", "template:9"]
+          },
+          {
+            "template_session": 2,
+            "offset_days": 14,
+            "offset_source": "template",
+            "role": "packaging",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "template:5", "template:6"]
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "deux-houblons-sans-jour",
+      "note": "Deux houblons à cru sans jour d'ajout : une journée à l'écart du modèle (J+4), houblons dans l'ordre de la recette.",
+      "template": "exemple",
+      "recipe": {
+        "brew_step_count": 2,
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": 60 },
+          { "name": "Citra", "mass_grams": 50, "use": "dryHop", "minutes": 4320 },
+          { "name": "Mosaic", "mass_grams": 50, "use": "dryHop", "minutes": 4320 }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "recipe_step:0", "recipe_step:1", "template:5", "template:6", "template:7", "template:8", "template:9"]
+          },
+          {
+            "template_session": 1,
+            "offset_days": 4,
+            "offset_source": "template",
+            "role": "other",
+            "steps": ["template:0", "template:1", "dry_hop:1", "dry_hop:2", "template:3"]
+          },
+          {
+            "template_session": 2,
+            "offset_days": 14,
+            "offset_source": "template",
+            "role": "packaging",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "template:5", "template:6"]
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "jours-3-et-6",
+      "note": "Houblons à cru aux jours 3 et 6 (4 320 et 8 640 min) : deux journées de houblonnage, rangs 1 et 2, écart tiré de la recette.",
+      "template": "exemple",
+      "recipe": {
+        "brew_step_count": 1,
+        "hops": [
+          { "name": "Citra", "mass_grams": 50, "use": "dryHop", "minutes": 4320, "day_minutes": 8640 },
+          { "name": "Mosaic", "mass_grams": 50, "use": "dryHop", "minutes": 4320, "day_minutes": 4320 }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "recipe_step:0", "template:5", "template:6", "template:7", "template:8", "template:9"]
+          },
+          {
+            "template_session": 1,
+            "offset_days": 3,
+            "offset_source": "recipe",
+            "role": "other",
+            "repeat": 1,
+            "steps": ["template:0", "template:1", "dry_hop:1", "template:3"]
+          },
+          {
+            "template_session": 1,
+            "offset_days": 6,
+            "offset_source": "recipe",
+            "role": "other",
+            "repeat": 2,
+            "steps": ["template:0", "template:1", "dry_hop:0", "template:3"]
+          },
+          {
+            "template_session": 2,
+            "offset_days": 14,
+            "offset_source": "template",
+            "role": "packaging",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "template:5", "template:6"]
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "regroupement-au-dela-de-5",
+      "note": "Quatre jours de houblonnage distincts (2, 3, 5, 8) et trois autres journées : 7 journées. Les trois jours les plus tardifs se regroupent au J+3, le premier jour regroupé ; houblons dans l'ordre des jours.",
+      "template": "quatre-journees",
+      "recipe": {
+        "brew_step_count": 1,
+        "hops": [
+          { "name": "Citra", "mass_grams": 30, "use": "dryHop", "day_minutes": 11520 },
+          { "name": "Mosaic", "mass_grams": 30, "use": "dryHop", "day_minutes": 2880 },
+          { "name": "Galaxy", "mass_grams": 30, "use": "dryHop", "day_minutes": 7200 },
+          { "name": "Simcoe", "mass_grams": 30, "use": "dryHop", "day_minutes": 4320 }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "recipe_step:0", "template:2"]
+          },
+          {
+            "template_session": 1,
+            "offset_days": 2,
+            "offset_source": "recipe",
+            "role": "other",
+            "repeat": 1,
+            "steps": ["template:0", "dry_hop:1"]
+          },
+          {
+            "template_session": 1,
+            "offset_days": 3,
+            "offset_source": "recipe",
+            "role": "other",
+            "repeat": 2,
+            "steps": ["template:0", "dry_hop:3", "dry_hop:2", "dry_hop:0"]
+          },
+          {
+            "template_session": 2,
+            "offset_days": 14,
+            "offset_source": "template",
+            "role": "packaging",
+            "steps": ["template:0"]
+          },
+          {
+            "template_session": 3,
+            "offset_days": 28,
+            "offset_source": "template",
+            "role": "other",
+            "steps": ["template:0"]
+          }
+        ],
+        "warnings": [
+          { "kind": "dryHopDayMerged", "day": 5, "into_day": 3 },
+          { "kind": "dryHopDayMerged", "day": 8, "into_day": 3 }
+        ]
+      }
+    },
+    {
+      "id": "houblons-avec-et-sans-jour",
+      "note": "Un houblon sans jour (J+4 du modèle), un au jour 2, un à 6 460 min (4,49 jours, arrondi au J+4) : deux journées. Celle du J+4 regroupe un houblon sans jour, son écart vient du modèle.",
+      "template": "exemple",
+      "recipe": {
+        "brew_step_count": 1,
+        "hops": [
+          { "name": "Citra", "mass_grams": 40, "use": "dryHop" },
+          { "name": "Mosaic", "mass_grams": 40, "use": "dryHop", "day_minutes": 2880 },
+          { "name": "Galaxy", "mass_grams": 40, "use": "dryHop", "day_minutes": 6460 }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "recipe_step:0", "template:5", "template:6", "template:7", "template:8", "template:9"]
+          },
+          {
+            "template_session": 1,
+            "offset_days": 2,
+            "offset_source": "recipe",
+            "role": "other",
+            "repeat": 1,
+            "steps": ["template:0", "template:1", "dry_hop:1", "template:3"]
+          },
+          {
+            "template_session": 1,
+            "offset_days": 4,
+            "offset_source": "template",
+            "role": "other",
+            "repeat": 2,
+            "steps": ["template:0", "template:1", "dry_hop:0", "dry_hop:2", "template:3"]
+          },
+          {
+            "template_session": 2,
+            "offset_days": 14,
+            "offset_source": "template",
+            "role": "packaging",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "template:5", "template:6"]
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "chronologie-de-recette-vide",
+      "note": "brew_steps vide : préremplissage. Le palier sans durée est retiré et signalé ; le houblon sans durée est placé en tête et signalé.",
+      "template": "exemple",
+      "recipe": {
+        "brew_step_count": 0,
+        "mash_steps": [
+          { "temp_c": 68, "duration_minutes": 60 },
+          { "temp_c": 78, "duration_minutes": null }
+        ],
+        "boil_minutes": 60,
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": 60 },
+          { "name": "Cascade", "mass_grams": 20, "use": "boil" }
+        ]
+      },
+      "expected": {
+        "prefill_count": 5,
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "prefill:0", "prefill:2", "prefill:3", "prefill:4", "template:5", "template:6", "template:7", "template:8", "template:9"]
+          },
+          {
+            "template_session": 2,
+            "offset_days": 14,
+            "offset_source": "template",
+            "role": "packaging",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "template:5", "template:6"]
+          }
+        ],
+        "warnings": [
+          { "kind": "prefillMissingDuration", "prefill_index": 1 },
+          { "kind": "prefillMissingHopTime", "prefill_index": 2 }
+        ]
+      }
+    },
+    {
+      "id": "chronologie-et-preremplissage-vides",
+      "note": "Recette sans chronologie, sans palier, sans ébullition ni houblon : le bloc disparaît, la journée de brassage garde ses étapes du modèle.",
+      "template": "brassage-seul",
+      "recipe": { "brew_step_count": 0 },
+      "expected": {
+        "prefill_count": 0,
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "template:2"]
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "ajouts-a-l-embouteillage",
+      "note": "Houblon au conditionnement puis ajouts au conditionnement, dans l'ordre de la recette ; l'ajout à la fermentation n'entre dans aucun bloc.",
+      "template": "exemple",
+      "recipe": {
+        "brew_step_count": 1,
+        "hops": [
+          { "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": 60 },
+          { "name": "Saaz", "mass_grams": 10, "use": "package" }
+        ],
+        "others_at_packaging": [false, true, false, true]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "recipe_step:0", "template:5", "template:6", "template:7", "template:8", "template:9"]
+          },
+          {
+            "template_session": 2,
+            "offset_days": 14,
+            "offset_source": "template",
+            "role": "packaging",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "packaging_hop:1", "packaging_other:1", "packaging_other:3", "template:5", "template:6"]
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "houblons-a-cru-sans-journee",
+      "note": "La recette a deux houblons à cru et le modèle n'a pas de bloc dry_hops : aucune journée, un avertissement.",
+      "template": "brassage-seul",
+      "recipe": {
+        "brew_step_count": 1,
+        "hops": [
+          { "name": "Citra", "mass_grams": 50, "use": "dryHop", "day_minutes": 4320 },
+          { "name": "Mosaic", "mass_grams": 50, "use": "dryHop" }
+        ]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "recipe_step:0", "template:2"]
+          }
+        ],
+        "warnings": [{ "kind": "dryHopsWithoutSession", "hop_count": 2 }]
+      }
+    },
+    {
+      "id": "houblon-a-cru-au-jour-0",
+      "note": "Un houblon à cru au jour 0 donne une journée au J+0, placée après la journée de brassage (ordre du modèle à égalité).",
+      "template": "exemple",
+      "recipe": {
+        "brew_step_count": 1,
+        "hops": [{ "name": "Citra", "mass_grams": 50, "use": "dryHop", "day_minutes": 300 }]
+      },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0,
+            "offset_days": 0,
+            "offset_source": "template",
+            "role": "brew",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "recipe_step:0", "template:5", "template:6", "template:7", "template:8", "template:9"]
+          },
+          {
+            "template_session": 1,
+            "offset_days": 0,
+            "offset_source": "recipe",
+            "role": "other",
+            "steps": ["template:0", "template:1", "dry_hop:0", "template:3"]
+          },
+          {
+            "template_session": 2,
+            "offset_days": 14,
+            "offset_source": "template",
+            "role": "packaging",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "template:5", "template:6"]
+          }
+        ],
+        "warnings": []
+      }
+    }
+  ],
+  "invalid_templates": [
+    {
+      "id": "aucune-journee",
+      "sessions": [],
+      "issue": "noSession"
+    },
+    {
+      "id": "six-journees",
+      "sessions": [
+        { "offset_days": 0, "items": ["recipe_steps"] },
+        { "offset_days": 1, "items": ["step"] },
+        { "offset_days": 2, "items": ["step"] },
+        { "offset_days": 3, "items": ["step"] },
+        { "offset_days": 4, "items": ["step"] },
+        { "offset_days": 5, "items": ["step"] }
+      ],
+      "issue": "tooManySessions"
+    },
+    {
+      "id": "premiere-journee-a-j-plus-1",
+      "sessions": [{ "offset_days": 1, "items": ["recipe_steps"] }],
+      "issue": "firstOffsetNotZero",
+      "session_index": 0
+    },
+    {
+      "id": "premiere-journee-sans-chronologie",
+      "sessions": [{ "offset_days": 0, "items": ["step"] }],
+      "issue": "recipeStepsMissing",
+      "session_index": 0
+    },
+    {
+      "id": "houblons-a-cru-le-jour-du-brassage",
+      "sessions": [{ "offset_days": 0, "items": ["recipe_steps", "dry_hops"] }],
+      "issue": "blockInFirstSession",
+      "session_index": 0
+    },
+    {
+      "id": "chronologie-dans-la-deuxieme-journee",
+      "sessions": [
+        { "offset_days": 0, "items": ["recipe_steps"] },
+        { "offset_days": 4, "items": ["recipe_steps"] }
+      ],
+      "issue": "recipeStepsTwice",
+      "session_index": 1
+    },
+    {
+      "id": "deux-blocs-de-houblons-a-cru",
+      "sessions": [
+        { "offset_days": 0, "items": ["recipe_steps"] },
+        { "offset_days": 3, "items": ["dry_hops"] },
+        { "offset_days": 6, "items": ["dry_hops"] }
+      ],
+      "issue": "dryHopsTwice",
+      "session_index": 2
+    },
+    {
+      "id": "deux-blocs-d-embouteillage",
+      "sessions": [
+        { "offset_days": 0, "items": ["recipe_steps"] },
+        { "offset_days": 14, "items": ["packaging_additions", "packaging_additions"] }
+      ],
+      "issue": "packagingTwice",
+      "session_index": 1
+    },
+    {
+      "id": "cru-et-embouteillage-le-meme-jour",
+      "sessions": [
+        { "offset_days": 0, "items": ["recipe_steps"] },
+        { "offset_days": 14, "items": ["dry_hops", "packaging_additions"] }
+      ],
+      "issue": "dryHopsWithPackaging",
+      "session_index": 1
+    },
+    {
+      "id": "journee-conditionnelle-sans-bloc",
+      "sessions": [
+        { "offset_days": 0, "items": ["recipe_steps"] },
+        { "offset_days": 4, "requires_recipe_block": true, "items": ["step"] }
+      ],
+      "issue": "requiresRecipeBlockWithoutBlock",
+      "session_index": 1
+    },
+    {
+      "id": "ecart-qui-decroit",
+      "sessions": [
+        { "offset_days": 0, "items": ["recipe_steps"] },
+        { "offset_days": 14, "items": ["packaging_additions"] },
+        { "offset_days": 4, "items": ["dry_hops"] }
+      ],
+      "issue": "offsetDecreasing",
+      "session_index": 2
+    }
+  ],
+  "invalid_sessions": [
+    { "id": "ecart-negatif", "offset_days": -1 },
+    { "id": "ecart-de-366-jours", "offset_days": 366 }
+  ],
+  "invalid_recipes": [
+    {
+      "id": "jour-d-ajout-negatif",
+      "recipe": {
+        "brew_step_count": 1,
+        "hops": [{ "name": "Citra", "mass_grams": 50, "use": "dryHop", "day_minutes": -1 }]
+      }
+    },
+    {
+      "id": "jour-d-ajout-au-dela-de-365",
+      "recipe": {
+        "brew_step_count": 1,
+        "hops": [{ "name": "Citra", "mass_grams": 50, "use": "dryHop", "day_minutes": 526320 }]
+      }
+    }
+  ],
+  "dry_hop_days": [
+    { "day_minutes": 0, "day": 0 },
+    { "day_minutes": 719, "day": 0 },
+    { "day_minutes": 720, "day": 1, "note": "demi-journée : arrondi au jour supérieur" },
+    { "day_minutes": 4320, "day": 3 },
+    { "day_minutes": 6460, "day": 4 },
+    { "day_minutes": 526319, "day": 365 }
+  ],
+  "invalid_dry_hop_days": [-1, 526320],
+  "session_dates": [
+    {
+      "id": "veille-du-passage-a-l-heure-d-hiver",
+      "note": "dimanche 25 octobre 2026 à 03:00, la France repasse à l'heure d'hiver : 25 h ce jour-là. Heures sans fuseau : heures locales de l'appareil.",
+      "start": "2026-10-24T21:00:00",
+      "offset_days": 1,
+      "expected": "2026-10-25T00:00:00"
+    },
+    {
+      "id": "houblonnage-apres-l-heure-d-hiver",
+      "start": "2026-10-24T21:00:00",
+      "offset_days": 4,
+      "expected": "2026-10-28T00:00:00"
+    },
+    {
+      "id": "brassage-le-jour-de-l-heure-d-hiver",
+      "start": "2026-10-25T02:30:00",
+      "offset_days": 14,
+      "expected": "2026-11-08T00:00:00"
+    },
+    {
+      "id": "veille-du-passage-a-l-heure-d-ete",
+      "note": "dimanche 28 mars 2027 à 02:00, la France passe à l'heure d'été : 23 h ce jour-là.",
+      "start": "2027-03-27T22:00:00",
+      "offset_days": 1,
+      "expected": "2027-03-28T00:00:00"
+    },
+    {
+      "id": "embouteillage-apres-l-heure-d-ete",
+      "start": "2027-03-27T22:00:00",
+      "offset_days": 14,
+      "expected": "2027-04-10T00:00:00"
+    },
+    {
+      "id": "brassage-le-jour-de-l-heure-d-ete",
+      "start": "2027-03-28T03:30:00",
+      "offset_days": 4,
+      "expected": "2027-04-01T00:00:00"
+    },
+    {
+      "id": "jour-zero",
+      "start": "2026-11-22T08:30:00",
+      "offset_days": 0,
+      "expected": "2026-11-22T00:00:00"
+    },
+    {
+      "id": "fin-de-mois",
+      "start": "2026-11-22T08:30:00",
+      "offset_days": 14,
+      "expected": "2026-12-06T00:00:00"
+    },
+    {
+      "id": "depart-utc",
+      "note": "Une heure UTC rend une date UTC.",
+      "start": "2026-11-22T23:30:00Z",
+      "offset_days": 4,
+      "expected": "2026-11-26T00:00:00Z"
+    }
+  ],
+  "invalid_offsets": [-1, 366],
+  "session_orders": [
+    {
+      "id": "deja-trie",
+      "offset_days": [0, 4, 14],
+      "expected": [0, 1, 2]
+    },
+    {
+      "id": "houblonnage-repousse-apres-l-embouteillage",
+      "note": "Date du houblonnage changée sur le brassin : J+20 passe après l'embouteillage à J+14.",
+      "offset_days": [0, 20, 14],
+      "expected": [0, 2, 1]
+    },
+    {
+      "id": "egalite-ordre-garde",
+      "note": "Deux journées à J+6 gardent leur ordre ; J+3 passe devant.",
+      "offset_days": [0, 6, 6, 3],
+      "expected": [0, 3, 1, 2]
+    },
+    {
+      "id": "journee-a-j0-apres-le-brassage",
+      "note": "Une journée à J+0 reste après la journée de brassage.",
+      "offset_days": [0, 0, 4],
+      "expected": [0, 1, 2]
+    },
+    {
+      "id": "une-seule-journee",
+      "offset_days": [0],
+      "expected": [0]
+    }
+  ],
+  "invalid_session_orders": [[], [3, 4], [0, 366], [0, -1]]
+}

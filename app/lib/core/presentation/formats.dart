@@ -96,6 +96,10 @@ String formatJours(num minutes) {
 
 String _deuxChiffres(int value) => value.toString().padLeft(2, '0');
 
+/// Vrai si [a] et [b] tombent le même jour calendaire local.
+bool memeJour(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
 /// Heure sur 24 h : « 12:42 ».
 String formatHeure(DateTime when) =>
     '${_deuxChiffres(when.hour)}:${_deuxChiffres(when.minute)}';
@@ -126,6 +130,10 @@ const _moisCourts = [
 /// Date avec le jour : « sam. 15 nov. 2026 ».
 String formatDate(DateTime date) =>
     '${_joursCourts[date.weekday - 1]} ${formatDateCourte(date)}';
+
+/// Date avec le jour, sans l'année : « sam. 22 nov. ».
+String formatJourMois(DateTime date) =>
+    '${_joursCourts[date.weekday - 1]} ${date.day} ${_moisCourts[date.month - 1]}';
 
 /// Date sans le jour : « 11 févr. 2024 ».
 String formatDateCourte(DateTime date) =>

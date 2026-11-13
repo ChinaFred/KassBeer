@@ -1,4 +1,3 @@
-import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,8 +15,8 @@ import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/chronologie.dart';
+import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
-import 'contenu_recette.dart';
 import 'ingredient_forms.dart';
 import 'recipe_detail_screen.dart';
 import 'recipes_providers.dart';
@@ -68,22 +67,6 @@ class BrewStepsEditorScreen extends ConsumerWidget {
   }
 }
 
-/// Nom d'une étape préremplie : nom du palier, « Ébullition », « Whirlpool »,
-/// « Ajouter Cascade 20 g ».
-String nomEtapePreremplie(BrewStepDraft draft, RecipeContent content) {
-  final index = draft.sourceIndex;
-  return switch (draft.kind) {
-    BrewStepKind.mashStep => content.mashSteps[index!].name,
-    BrewStepKind.boil => 'Ébullition',
-    BrewStepKind.whirlpool => 'Whirlpool',
-    BrewStepKind.hopAddition => truncateName(
-      'Ajouter ${content.hops[index!].name} '
-      '${formatQuantiteRecette(content.hops[index].amount)}',
-      kBrewStepNameMaxLength,
-    ),
-  };
-}
-
 class _Editeur extends ConsumerStatefulWidget {
   const _Editeur({super.key, required this.recipe});
 
@@ -106,32 +89,16 @@ class _EditeurState extends ConsumerState<_Editeur> {
 
   void _prefill() {
     final c = widget.recipe.content;
-    final drafts = defaultBrewSteps(
-      mashSteps: [
-        for (final m in c.mashSteps)
-          MashStepInput(
-            tempC: m.tempC,
-            durationMinutes: m.durationMin.toDouble(),
-          ),
-      ],
-      boilMinutes: c.boilTimeMin?.toDouble(),
-      hops: [for (final h in c.hops) h.toInput()],
-    );
+    final drafts = preremplissageChronologie(c);
     final repo = ref.read(recipesRepositoryProvider);
     final warnings = <String>[];
     final steps = <BrewStepLine>[];
     for (final draft in drafts) {
       final name = nomEtapePreremplie(draft, c);
+      final warning = avertissementPreremplissage(draft, name);
+      if (warning != null) warnings.add(warning);
       final minutes = draft.durationMinutes;
-      if (minutes == null) {
-        warnings.add('« $name » : durée non renseignée, étape non ajoutée.');
-        continue;
-      }
-      if (draft.problem == BrewStepProblem.missingHopTime) {
-        warnings.add('« $name » : houblon sans durée, placé en tête.');
-      } else if (draft.problem == BrewStepProblem.hopLongerThanBoil) {
-        warnings.add('« $name » : plus long que l\'ébullition, placé en tête.');
-      }
+      if (minutes == null) continue;
       steps.add(
         BrewStepLine(
           key: repo.newStepKey(),

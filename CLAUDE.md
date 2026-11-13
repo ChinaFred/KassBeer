@@ -85,6 +85,9 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
 - Échange de recettes : paquet Dart pur `exchange/` (import et export BeerJSON et BeerXML ; l'export
   BeerXML lit son style dans la Bibliothèque, l'import reprend de la Bibliothèque les valeurs
   absentes du fichier), écrans Recettes › Importer et Exporter (ADR-005).
+- Déroulé en journées : modèles de processus partagés (`process_templates/`), résolus et copiés
+  dans le brassin (`brews/{id}.process`) avant son départ ; de 1 à 5 journées (brassage,
+  houblonnage à cru, embouteillage…) suivies hors ligne par l'écran du jour (ADR-010).
 - Choix et partage de fichier : canal Kotlin `fr.kassbeer/files` (sélecteur du système, feuille de
   partage, enregistrement, `FileProvider` limité à `cacheDir/exports/`) et `package:web` sur le
   web ; aucun greffon (ADR-007).
@@ -105,7 +108,7 @@ protégée par un ruleset.
 ```
 app/                  # application Flutter (Android, web)
 ├── lib/core/         # services transverses : erreurs, router, thème, auth, version, fichiers (choix et partage, ADR-007)
-├── lib/features/     # auth, members, equipment, recipes, library, brew_day, brews, costs, import, admin
+├── lib/features/     # auth, members, equipment, recipes, library, processes, brew_day, brews, costs, import, admin
 │                     # chaque feature en couches data/ domain/ presentation/
 ├── test/             # tests Flutter ; fixtures/recipe_documents/ : documents BeerJSON
 │                     # validés contre le schéma partiel par rules-tests (ajv)
@@ -225,16 +228,19 @@ client construit au niveau module se charge au démarrage, comme un import stati
 **Pas de code mort.** Ce qu'un changement rend inutile — fonction, écran, route, constante,
 fichier — sort dans le même changement, avec ses tests et sa documentation.
 
-**Le jour de brassage marche sans réseau — règle absolue.** Sur l'écran du jour de brassage
-et dans ce qu'il appelle : aucune transaction (`runTransaction`), aucune callable ni requête
+**Le jour de brassage marche sans réseau — règle absolue.** Sur l'écran du jour de brassage,
+sur chaque journée du déroulé (ADR-010) et dans ce qu'ils appellent : aucune transaction (`runTransaction`), aucune callable ni requête
 HTTP, aucune lecture qui exige le serveur (`Source.server`). Chaque mesure et chaque début
 ou fin d'étape est un document à part (`brews/{id}/events/{eventId}`, identifiant créé par
 le client), jamais un élément ajouté à un tableau. L'heure d'une mesure est l'heure de
 l'appareil (`measured_at`) ; `serverTimestamp()` ne sert qu'à l'audit. Un minuteur se
 recalcule à partir des heures enregistrées : un `Timer` Dart n'en est jamais la source. Les
 heures prévues recalculées après un retard se dérivent à l'affichage et ne s'écrivent pas.
-L'écran garde l'appareil allumé (`wakelock_plus`). Le brassin, sa recette figée et son
-équipement sont lus avant le départ (« Préparer le brassage »). Le cache Firestore est
+L'écran garde l'appareil allumé (`wakelock_plus`). Le brassin, sa recette figée, son
+déroulé et son équipement sont lus avant chaque journée (« Préparer le brassage », « Préparer
+la journée ») ; pour la journée d'embouteillage, les prix, les frais et le coût figé du
+propriétaire aussi. Les mesures et notes d'une journée 2 ou suivante portent
+`phase: 'fermentation'`. Le cache Firestore est
 réglé sans limite de taille. Le hors ligne est garanti sur l'APK ; sur le web, seul un
 onglet déjà ouvert continue de marcher sans réseau.
 
@@ -257,9 +263,13 @@ propre à Kass'Beer vit dans l'enveloppe du document, jamais dans `recipe`.
 
 **Un brassin fige sa recette.** À sa création, il reçoit une copie de la recette et de
 l'équipement. Les ajustements du jour s'écrivent dans le brassin, jamais dans la recette.
+Il fige aussi son déroulé (`process`) à son départ : tant que `brewed_at` est nul, le déroulé
+se change par une réécriture complète ; ensuite les règles le refusent. Un brassin sans
+`process` se lit comme une journée tirée de `recipe_snapshot.brew_steps` ; un `process`
+illisible s'affiche en panne et se rapporte, sans repli sur la chronologie de la recette.
 
 **Les prix ne quittent pas `users/{uid}/`.** Aucun prix d'achat ni aucun stock dans
-`recipes/`, `brews/` ou `equipment/`. Le coût d'une recette se calcule à l'affichage avec
+`recipes/`, `brews/` (champ `process` compris), `equipment/` ou `process_templates/`. Le coût d'une recette se calcule à l'affichage avec
 les prix du lecteur. Le coût réel d'un brassin vit sous `users/{uid}/brew_costs/{brewId}`.
 Les profils d'équipement sont lisibles par le groupe. Seule exception : l'export JSON
 d'Admin, qui contient ce que le groupe voit et les seuls prix de l'administrateur (ADR-001,
@@ -288,10 +298,10 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 | N° | Contrôle | Agent | Origine |
 |---|---|---|---|
 | P1 | `firebase.json` : seul `canvaskit/**` en `immutable` ; `index.html`, `flutter_bootstrap.js`, `flutter.js`, `main.dart.js`, `version.json` en `no-cache`. Tout `deferred as` dans `app/lib/` exige une règle `no-cache` pour ses fichiers `.part.js` dans `firebase.json`, et un nouvel ADR | `relecteur-regles` | ADR-001, leçon 6 ; ADR-004 |
-| P2 | Écran du jour de brassage et code qu'il appelle : aucun `runTransaction`, aucune callable ou requête HTTP, aucun `Source.server`, aucun tableau modifié par `arrayUnion` pour une mesure, aucun `Timer` comme source d'une durée, `measured_at` posé par l'appareil ; le son et la vibration de fin de minuteur ne chargent rien par le réseau (son du système ou synthétisé, aucune URL), et le verrou d'écran est pris à l'ouverture de l'écran du jour | `relecteur-regles` | ADR-001, hors ligne ; ADR-003, alerte de minuteur |
-| P3 | Toute formule de brassage hors de `brewing/` est une anomalie ; une formule changée sans cas ajouté à `brewing/test/fixtures/` aussi ; une conversion Plato, Lovibond ou SRM hors de `brewing/` aussi ; une valeur calculée d'un export vient de `computeRecipe` | `relecteur-regles` | ADR-001, calculs côté client seul ; ADR-005, export |
+| P2 | Écran du jour de brassage, chaque journée du déroulé et code qu'ils appellent : aucun `runTransaction`, aucune callable ou requête HTTP, aucun `Source.server`, aucun tableau modifié par `arrayUnion` pour une mesure, aucun `Timer` comme source d'une durée, `measured_at` posé par l'appareil ; le son et la vibration de fin de minuteur ne chargent rien par le réseau (son du système ou synthétisé, aucune URL), et le verrou d'écran est pris à l'ouverture de l'écran du jour ; mesures et notes d'une journée 2 ou suivante en `phase: 'fermentation'` ; « Terminer la journée » n'écrit que `step_ended` et `step_skipped` ; la journée d'embouteillage lit prix, frais et coût figé depuis les lectures ouvertes à « Préparer la journée » | `relecteur-regles` | ADR-001, hors ligne ; ADR-003, alerte de minuteur ; ADR-010, journées |
+| P3 | Toute formule de brassage hors de `brewing/` est une anomalie ; une formule changée sans cas ajouté à `brewing/test/fixtures/` aussi ; une conversion Plato, Lovibond ou SRM hors de `brewing/` aussi ; une valeur calculée d'un export vient de `computeRecipe` ; la résolution d'un modèle de processus, le jour d'un houblon à cru et la date d'une journée (J+n) hors de `brewing/` aussi, et leur changement sans cas ajouté à `brewing/test/fixtures/process.json` aussi | `relecteur-regles` | ADR-001, calculs côté client seul ; ADR-005, export ; ADR-010, déroulé |
 | P4 | Chaque changement de `firestore.rules` arrive avec ses tests dans `rules-tests/`, rejoués pour cinq profils : anonyme, connecté non membre, brasseur propriétaire, autre brasseur, admin. Un membre ne peut écrire ni son rôle ni le `owner_uid` d'un autre | `securite` | ADR-001, règles = seul contrôle d'accès |
-| P5 | Aucun prix ni stock ni coût de brassin dans `recipes/`, `brews/`, `equipment/` ; `users/{uid}/**` lisible par son seul propriétaire | `securite` | `projet.md`, données privées ; ADR-002 (exception des fixtures) |
+| P5 | Aucun prix ni stock ni coût de brassin dans `recipes/`, `brews/` (champ `process` compris), `equipment/`, `process_templates/` ; `users/{uid}/**` lisible par son seul propriétaire | `securite` | `projet.md`, données privées ; ADR-002 (exception des fixtures) ; ADR-010 |
 | P6 | Diff de `app/pubspec.yaml`, `pubspec.lock` ou `android/` : famille FlutterFire montée ensemble, paquets nommés au `CHANGELOG.md`, APK compilé (PC ou job CI vert) ; `cloud_functions` monté avec la famille FlutterFire dans la même commande ; `flutter_markdown_plus` et `markdown` en version exacte (sans `^`) ; `FirebaseFunctions.instanceFor(region: 'europe-west1')` construit au premier usage et mémorisé, aucune instance au niveau module ni dans `main.dart` ; taille de `main.dart.js` (`flutter build web --release`) avant et après, notée dans l'entrée `— technique` du `CHANGELOG.md` | `relecteur-regles` | leçon 4 ; ADR-008 |
 | P7 | Version changée : le numéro de build après `+` monte d'un | `relecteur-regles` | ADR-001, `versionCode` Android |
 | P8 | Aucun keystore, `key.properties` ou mot de passe de signature dans le diff ; empreintes SHA-1 et SHA-256 de la clé de release enregistrées dans Firebase avant la première livraison | `securite` | ADR-001, connexion Google sur l'APK signé |
@@ -321,6 +331,8 @@ l'utilisateur les valide, la session principale les ajoute ici (skill `evolution
 | P32 | Relevé des analyses (`githubTicketWebhook`, `syncTickets`, décisions) : seuls les commentaires dont `user.id` vaut 16348852 (le nombre, jamais le login), texte en NFC, espaces de tête retirées, qui commence par `## Analyse` (`analysis`) ou `## Précisions` (`reply` si l'identifiant figure dans `answer_comment_ids`, écrit par le serveur seul, sinon `unverified_reply`) ; dix entrées au plus, 20 000 caractères chacune, coupe à une ligne vide, `truncated` noté ; écriture dans `tickets/{id}/admin/analysis` par le serveur seul ; statut dérivé des seules étiquettes (`statut:à-analyser`, `statut:analysé`, `validé`, `statut:en-cours`), jamais du texte d'un commentaire | `securite` | ADR-008, analyses |
 | P33 | Affichage des analyses (`flutter_markdown_plus`) : `imageBuilder` qui rend le texte alternatif, aucune image chargée ; `onTapLink` n'ouvre que `http` et `https` (schéma vérifié après `Uri.tryParse`), dans le navigateur externe, tout autre schéma ignoré ; aucun HTML rendu ; titre `## …` retiré à l'affichage ; `unverified_reply` affiché « Non publiée depuis l'application » ; section lue par l'admin seul ; `reportError` n'envoie aucun texte d'analyse | `securite` | ADR-008, analyses |
 | P34 | `answerTicketAnalysis` : `requireAdmin` (P30) ; `ticketId` borné ; `text` borné en taille brute, puis `cleanMultiline`, de 5 à 4 000 caractères ; préconditions recontrôlées au serveur (`answerPrecondition` de Kass'Dalle : statut permis, hors Question, Issue présente) ; corps publié par `publicText` sur le gabarit de P24 ; identifiant du commentaire ajouté à `answer_comment_ids` en transaction ; statut ramené à `received` avec `answer_reset_at` ; texte jamais journalisé ; tests : texte de 4 et de 4 001 caractères, e-mail, mention, `#N`, HTML, non admin, double appel | `securite` | ADR-008, « Répondre » |
+| P37 | Déroulé d'un brassin : aucune lecture de `recipe.brewSteps` ou `recipe.brewStepsProblem` d'un brassin hors du lecteur du déroulé (`Brew.deroule`), sauf comme entrée d'une nouvelle résolution avant le départ (`assemblerDeroule`, aperçu « Chronologie de la recette seule » par `Deroule.depuisRecette`) ; clés d'étapes uniques sur toutes les journées, vérifiées avant l'écriture de `process` ; `stepRecordsFromEvents` reçoit les étapes de toutes les journées, `recomputeSchedule` celles d'une seule journée et ses seuls enregistrements ; un `process` illisible s'affiche en panne et passe par `reportError`, sans repli sur `recipe_snapshot.brew_steps` ; le modèle d'exemple ne s'écrit que sur une action du brasseur, jamais à la place d'un modèle absent | `relecteur-regles` | ADR-010 |
+| P38 | `process_templates/` : lecture `isMember()`, écriture par l'auteur (`createdByMe`, `updatedByOwner`, `ownerNameOk`), `format_version == 1`, clés en liste blanche, `sessions` de 1 à 5 ; `brews/{id}.process` absent de `brewCreateFields`, modifiable seulement si `brewed_at` est nul avant et après l'écriture ; `users/{uid}/preferences/` écrit par son seul propriétaire. Tests pour les cinq profils (P4), plus : `process` changé sur un brassin commencé refusé, `process` à la création refusé, lot de 60 `step_skipped` accepté. Budget mesuré par la méthode des `pad()` et noté dans `firestore.rules` à chaque règle ajoutée sur `brews/` | `securite` | ADR-010 |
 
 ## Données partagées et état propre à un utilisateur
 

@@ -19,6 +19,8 @@ import {
   FIVE_PROFILES,
   flatRecipe,
   fresh,
+  largestProcess,
+  largestProcessTemplate,
   nameOf,
   recipe,
   seed,
@@ -392,6 +394,15 @@ describe("brews — copie figée au format BeerJSON partiel", () => {
 // au litre 93 `pad()`, coût figé de 200 lignes (lignes en litres comprises) 94 `pad()`.
 // `recipe.efficiency`, même contrôlé par ses seules clés, faisait refuser la création du
 // brassin : il n'est pas stocké.
+//
+// Mesure de la v0.1.32 (ADR-010). Étalonnage : 98 `pad()` isolés atteignent la limite de
+// compilation avant le budget ; regroupés par dix (`pad10()`), 243 tiennent dans une règle
+// `if true` seule : un `pad()` vaut environ 4 expressions, et la marge de la création du
+// brassin (4 `pad()`, inchangée) environ 16. Avec `pad10()`, plus grande recette copiée et
+// plus grand déroulé (5 journées de 120 étapes) : écriture de `process` sur un brassin
+// prévu 145 `pad()` ; brassin du 22 novembre (11 ajustements), statut 174 `pad()` (177
+// avant le contrôle de `process`), embouteillage 138 `pad()`, écriture des 11 ajustements
+// 68 `pad()` (70 avant) ; création du plus grand modèle de processus 185 `pad()`.
 describe("recipes et brews — budget des règles", () => {
   const g = (value) => ({ value, unit: "g" });
   const largest = (owner) =>
@@ -644,6 +655,68 @@ describe("recipes et brews — budget des règles", () => {
       );
     });
   }
+
+  // Déroulé en journées (ADR-010) : les trois cas mesurés par la méthode des `pad()`.
+  it("brassin prévu qui copie la plus grande recette : écriture du plus grand déroulé : autorisé", async () => {
+    await seed(state.env, {
+      "brews/budget-deroule": brew(uidOf("owner"), {
+        owner_name: nameOf("owner"),
+        planned_for: at("2026-11-22T08:00:00Z"),
+        notes: "n".repeat(10000),
+        imported_from: "f".repeat(200),
+        recipe_snapshot: largest("brewer-a"),
+        equipment_snapshot: brew22().equipment_snapshot,
+      }),
+    });
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("brews/budget-deroule")
+        .update({
+          process: largestProcess(),
+          owner_name: nameOf("owner"),
+          updated_at: serverTimestamp(),
+        }),
+    );
+  });
+
+  for (const [label, fields] of [
+    ["statut modifié", { status: "conditioning" }],
+    [
+      "embouteillage modifié",
+      {
+        bottled_at: at("2026-12-07T10:00:00Z"),
+        bottles_count: 50,
+        packaged_volume_l: 18,
+        priming_sugar_g: 110,
+        priming_sugar_name: "Dextrose",
+        status: "conditioning",
+      },
+    ],
+  ]) {
+    it(`brassin du 22 novembre, plus grande recette, plus grand déroulé, 11 ajustements, ${label} : autorisé`, async () => {
+      await seed22({
+        adjustments: adjustments11,
+        recipe_snapshot: largest("brewer-a"),
+        process: largestProcess(),
+      });
+      await expectRule(
+        true,
+        db(state.env, "owner")
+          .doc("brews/b-22")
+          .update({ ...fields, owner_name: nameOf("owner"), updated_at: serverTimestamp() }),
+      );
+    });
+  }
+
+  it("création du plus grand modèle de processus : autorisé", async () => {
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("process_templates/budget")
+        .set(fresh({ ...largestProcessTemplate(uidOf("owner")), owner_name: nameOf("owner") })),
+    );
+  });
 
   for (const name of FIVE_PROFILES) {
     const allowed = name === "owner";

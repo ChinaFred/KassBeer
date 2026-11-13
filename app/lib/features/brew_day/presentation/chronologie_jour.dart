@@ -7,6 +7,8 @@ import '../../../core/services/error_report_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/domain/deroule.dart';
+import '../../brews/presentation/libelles_deroule.dart';
 import '../domain/plan_du_jour.dart';
 
 /// Résultat du calcul de la chronologie d'un brassin.
@@ -29,26 +31,40 @@ class PlanImpossible extends PlanEvalue {
 const kCalculChronologieImpossible =
     'Une heure ou une durée enregistrée est invalide.';
 
-/// Texte d'une chronologie figée illisible (`brewStepsProblem`).
-String messageChronologieIllisible(String raison) =>
-    'Chronologie de ce brassin illisible : $raison.';
+/// Texte d'un déroulé illisible (`Brew.deroule`), ou `null` s'il est lisible :
+/// `process` illisible (ADR-010), ou chronologie figée d'un brassin sans
+/// `process` illisible, avec sa raison.
+String? messageDerouleIllisible(Deroule deroule) {
+  final raison = deroule.probleme;
+  if (raison == null) return null;
+  return deroule.resolu
+      ? kDerouleIllisible
+      : 'Chronologie de ce brassin illisible : $raison.';
+}
 
 /// Texte du verrou d'écran refusé.
 const kVerrouRefuse =
     'Écran : l\'appareil refuse de le garder allumé. Réglez la mise en veille.';
 
-/// Calcule la vue de [brew] à [now]. Une anomalie (fin avant le début, étape
-/// inconnue) est rapportée une fois ([reported]). Une erreur de `brewing/` rend
-/// [PlanImpossible] et est rapportée : l'écran affiche la panne.
+/// Calcule la vue de la journée [journee] de [brew] à [now] (nulle : la journée
+/// de brassage). Une anomalie (fin avant le début, étape inconnue) est rapportée
+/// une fois ([reported]). Une erreur de `brewing/` rend [PlanImpossible] et est
+/// rapportée : l'écran affiche la panne.
 PlanEvalue evaluerPlan({
   required Brew brew,
   required List<BrewEvent> events,
   required DateTime now,
   required ErrorReportService errors,
   required Set<String> reported,
+  JourneeDeroulee? journee,
 }) {
   try {
-    final plan = PlanDuJour.calculer(brew: brew, events: events, now: now);
+    final plan = PlanDuJour.calculer(
+      brew: brew,
+      events: events,
+      now: now,
+      journee: journee,
+    );
     for (final anomaly in plan.anomalies) {
       if (!reported.add('${brew.id}|${anomaly.event.id}')) continue;
       errors.reportError(
@@ -122,9 +138,15 @@ class ChronologieJour extends StatelessWidget {
     this.onTapLigne,
     this.onTapSaisie,
     this.onSupprimerDoublon,
+    this.sansEtape = true,
   });
 
   final PlanDuJour plan;
+
+  /// Affiche les mesures « Sans étape ». Faux sur la fiche pour une journée 2 ou
+  /// suivante : ces mesures sont des relevés, déjà dans le relevé de
+  /// fermentation (ADR-010).
+  final bool sansEtape;
 
   /// `null` en lecture seule.
   final void Function(LigneJour ligne)? onTapLigne;
@@ -170,16 +192,17 @@ class ChronologieJour extends StatelessWidget {
               onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
             ),
         ],
-        if (plan.mesuresSansEtape.isNotEmpty)
+        if (sansEtape && plan.mesuresSansEtape.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 12, bottom: 4),
             child: Text('Sans étape', style: theme.textTheme.titleSmall),
           ),
-        for (final s in plan.mesuresSansEtape)
-          _Saisie(
-            event: s,
-            onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
-          ),
+        if (sansEtape)
+          for (final s in plan.mesuresSansEtape)
+            _Saisie(
+              event: s,
+              onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
+            ),
       ],
     );
   }

@@ -8,6 +8,8 @@ import '../features/costs/data/costs_repository.dart';
 import '../features/equipment/data/equipment_repository.dart';
 import '../features/library/data/library_repository.dart';
 import '../features/members/data/members_repository.dart';
+import '../features/processes/data/preferences_processus_repository.dart';
+import '../features/processes/data/processes_repository.dart';
 import '../features/recipes/data/recipes_repository.dart';
 import '../features/tickets/data/tickets_repository.dart';
 import 'fichiers/echange_fichiers.dart';
@@ -46,6 +48,19 @@ final brewsRepositoryProvider = Provider<BrewsRepository>(
 final costsRepositoryProvider = Provider<CostsRepository>(
   (ref) => throw UnimplementedError('costsRepositoryProvider non fourni'),
 );
+
+/// Modèles de processus du groupe (`process_templates/`, ADR-010).
+final processesRepositoryProvider = Provider<ProcessesRepository>(
+  (ref) => throw UnimplementedError('processesRepositoryProvider non fourni'),
+);
+
+/// Choix par défaut du compte connecté (`users/{uid}/preferences/processes`).
+final preferencesProcessusRepositoryProvider =
+    Provider<PreferencesProcessusRepository>(
+      (ref) => throw UnimplementedError(
+        'preferencesProcessusRepositoryProvider non fourni',
+      ),
+    );
 
 /// Bibliothèque : `beer_index/`, `beer_*/`, `public_recipes/`, lus par `get()`
 /// seul (ADR-005, P22).

@@ -69,9 +69,10 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
 | `lib/features/equipment/` | `EquipmentRepository` (`equipment/`), `Equipment`, `EquipmentContent`, `EquipmentKind` ; liste, fiche, éditeur |
 | `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document BeerJSON ↔ `brewing/`, tri, duplication ; `domain/beerjson.dart` : unités canoniques, lecture des couples `{value, unit}`, valeurs énumérées du schéma et leurs libellés (`EnumerationBeerJson`), `verifierVersionFormat` ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin et la recette publique ; `momentsOrigine` ajoute « moment d'origine : … » à un houblon), formulaires des lignes (`ListeBeerJson` : liste déroulante d'une valeur BeerJSON, « Non précisé » en tête), vue des calculs (`libelleManque`, et `libelleManqueExport` pour l'export et l'aperçu de l'import) ; `domain/import_recettes.dart` : `preparerImport` (recette lue par `exchange/`, relue par `RecipeContent.fromFirestore`, « Déjà importée » par l'empreinte), `avecEquipement` ; `presentation/import_recipes_screen.dart` (Recettes › Importer, `statutImport` : l'auteur retenu est le nom du jeton (`currentTokenName`, lu une fois avant le premier aperçu), celui qu'écrit l'import ; statuts mémorisés par équipement et lignes construites à l'écran par `ListView.builder` : un appui sur une case avec 500 recettes prend 53 ms en test), `export_recipe_sheet.dart` (feuille « Exporter » : « Auteur dans le fichier : {nom}. » lu dans `ExportPret.auteur`, boutons radio inactifs pendant un envoi), `libelles_echange.dart` (refus, modifications, fichiers refusés, pertes) |
-| `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType`, `PhaseEvenement` ; `domain/mesures_retenues.dart` (mesures retenues, VR1, VR2, RR2), `domain/releves.dart` (regroupement du relevé) ; liste, fiche, « Nouveau brassin », `presentation/releve_fermentation.dart`, `prevu_et_mesure.dart`, `embouteillage.dart`, `courbe_fermentation.dart`, `trace_courbe.dart` (seul import de `fl_chart`, P18) |
+| `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction ; un déroulé illisible est rapporté sous `brews.process`, une chronologie figée illisible sous `brews.brew_steps`), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType`, `PhaseEvenement` ; `domain/deroule.dart` (ADR-010) : `Deroule`, `JourneeDeroulee`, `EtapeDeroulee`, `lireDeroule` (lecture de `process`, illisible avec sa raison, sans repli), `erreurDeroule` (contrôle avant écriture, clés d'étapes uniques sur toutes les journées) ; `Brew.deroule`, seul accès aux étapes d'un brassin (P37) : `process` s'il existe, sinon une journée de brassage tirée de `recipe_snapshot.brew_steps` ; `domain/assemblage_deroule.dart` (`assemblerDeroule`, `ecartDuProcessus`, v0.1.34) ; `setProcess` du dépôt ; `presentation/choix_processus.dart` (« Processus » et « Déroulé prévu »), `section_deroule.dart` (section « Déroulé » de la fiche), `changer_processus.dart`, `libelles_deroule.dart` ; `domain/mesures_retenues.dart` (mesures retenues, VR1, VR2, RR2), `domain/releves.dart` (regroupement du relevé) ; liste, fiche, « Nouveau brassin », `presentation/releve_fermentation.dart`, `prevu_et_mesure.dart`, `embouteillage.dart`, `courbe_fermentation.dart`, `trace_courbe.dart` (seul import de `fl_chart`, P18) |
 | `lib/features/costs/` | `CostsRepository` (`users/{uid}/prices`, `fees`, `brew_costs`, jamais de transaction ni de `Source.server`, `brewCostRef`) ; `domain/price.dart` (`Price`, `purchaseUnitOf`, `isUnusualPrice`), `domain/fee.dart` (`Fee`), `domain/brew_cost.dart` (`BrewCost`, `BrewCostLine`, `FreezeKind`) ; `domain/cost_evaluation.dart` : clés dérivées des lignes de `RecipeContent` (`ingredientsDeRecette`), raisons d'un coût indisponible (`RaisonCout`), `evaluerCoutRecette`, `evaluerEstimationBrassin`, `evaluerFigeage`, déclencheur du figeage (`doitFigerAuPremierEmbouteillage`), boutons proposés (`figerLeCoutPropose`, `recalculerPropose`), écart avec l'embouteillage (`ecartsDepuisFigeage`) ; `data/figeage_embouteillage.dart` (`enregistrerEmbouteillage` : embouteillage puis coût, sans attente) ; `presentation/costs_providers.dart` (`pricesProvider`, `feesProvider`, `brewCostProvider`, `costReportsProvider`) ; `presentation/prices_screen.dart` (« Mes prix », route `/prix`), `price_form.dart` (`ouvrirFormulairePrix` : nouveau, manquant, modification ; « Reprendre un de mes prix »), `fee_form.dart`, `bloc_cout.dart` (`BlocCoutRecette`, lignes des raisons et du détail), `bloc_cout_brassin.dart` (`BlocCoutBrassin` : estimation, « Figer le coût », coût figé, écart, « Recalculer avec mes prix actuels »), `formats_cout.dart` (euros, kilogrammes et euros par kilogramme à l'affichage ; aucun calcul de coût) |
-| `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
+| `lib/features/processes/` | modèles de processus (ADR-010, lot D2). `domain/modele_processus.dart` : `ModeleProcessus` (avec `hasPendingWrites`), `ContenuModele`, `JourneeModele`, `ElementModele`, `NatureElement` (lecture de `process_templates/`, champ inconnu ignoré, `DocumentIllisible` sinon ; écriture en liste blanche ; `erreurModele` : bornes, clés uniques, puis contraintes d'ADR-010 par `processTemplateIssue` de `brewing/` ; `copieModele` : clés neuves de journées et d'éléments, nom coupé à 120 caractères) ; `domain/modele_exemple.dart` : `modeleExemple` (trois journées acceptées le 2026-11-11, nom « Brassage, houblonnage à cru, embouteillage », note « Durées typiques, à ajuster à votre matériel. », clés neuves à chaque copie), écrit seulement à « Enregistrer » après « Partir du modèle d'exemple » ; `domain/preference_processus.dart` : `PreferenceProcessus`, `idModeleParDefaut`. `data/processes_repository.dart` : `ProcessesRepository` (`watchAll` avec `includeMetadataChanges`, document illisible isolé en `DocumentInvalide` et rapporté sous `processes.read` ; `create`, `update`, `copy`, `duplicate` (« {nom} (copie) »), `delete`, `newKey` = `doc().id` ; `erreurModele` vérifié avant chaque écriture, refus `ModeleInvalide` rapporté sans rien écrire ; aucune transaction). `data/preferences_processus_repository.dart` : `PreferencesProcessusRepository` (`watch(uid)`, `saveDefault` par `set` de `default_template_id` et `updated_at`). `presentation/` : `processes_providers.dart`, `process_list_screen.dart` (« Mes processus »), `process_detail_screen.dart` (fiche, `textesProcessus` ; le défaut n'est remis à nul qu'après l'acceptation de la suppression de son processus), `process_editor_screen.dart` (éditeur plein écran en un `CustomScrollView`, une `SliverReorderableList` par journée dans un `SliverMainAxisGroup` ; `FormulaireEtape` des recettes, `LigneEditeur` ; « Proposer par défaut » coché seulement quand l'absence de défaut est lue avec certitude), `formulaire_journee.dart`, `libelles_processus.dart` (résumés ; durées par `dureeChronologie` et `decalagesChronologie`, P3) |
+| `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`, d'une journée du déroulé, brassage par défaut : événements réduits sur les étapes de toutes les journées, horaire recalculé sur celles de la journée ; `journeeTerminee`, v0.1.35), écran du jour et « Préparer le brassage » paramétrés par la journée (`journeeASuivre`, `TextesJournee`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
 | `lib/features/library/` | Bibliothèque (ADR-005, L4) : `LibraryRepository` (`beer_index/`, `beer_*/`, `public_recipes/`, `get()` seul) ; `domain/referentiel.dart` : `NatureReferentiel` (document d'index et collection), `IndexReferentiel` et ses entrées (`EntreeStyle`, `EntreeFermentable`, `EntreeHoublon`, `EntreeLevure`, `EntreeDivers`), `FicheReferentiel` et ses fiches, `Plage`, `Provenance`, `normaliserRecherche` ; `domain/recette_publique.dart` : `RecettePublique` (`recipe` lu par `RecipeContent.fromFirestore`, `announced` en `ValeursAnnoncees`, `source_hop_timing` en `momentsOrigine`, `provenance`, `style_id`), `copie` pour « Dupliquer » ; `presentation/` : `LibraryScreen` (segments, recherche, listes), `ReferenceEntryScreen`, `PublicRecipeScreen`, `DataSourcesScreen`, `library_providers.dart` (`SegmentBibliotheque`), `libelles_bibliotheque.dart` (plages, sources, provenance ; affichage seul) |
 | `lib/features/admin/` | écran Admin |
 
@@ -173,7 +174,7 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 
 | Provider | Type | Rôle |
 |---|---|---|
-| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `recipesRepositoryProvider`, `equipmentRepositoryProvider`, `brewsRepositoryProvider`, `costsRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
+| `errorReportServiceProvider`, `authRepositoryProvider`, `membersRepositoryProvider`, `recipesRepositoryProvider`, `equipmentRepositoryProvider`, `brewsRepositoryProvider`, `costsRepositoryProvider`, `processesRepositoryProvider`, `preferencesProcessusRepositoryProvider`, `appVersionProvider` | `Provider` | services fournis par `main.dart` (`overrides`) ou par les tests ; sans valeur par défaut |
 | `sessionUserProvider` | `StreamProvider<SessionUser?>` | `authStateChanges()` |
 | `memberLookupProvider(emailKey)` | `StreamProvider.family<MemberLookup, String>` | `members/{email en minuscules}`, avec les métadonnées |
 | `accessStateProvider` | `Provider<AccessState>` | `AccessLoading`, `AccessSignedOut`, `AccessNotInvited`, `AccessFailed`, `AccessGranted(user, member, offline)` |
@@ -193,6 +194,8 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 | `brewEventsProvider(brewId)` | `StreamProvider.autoDispose.family<ListeLue<BrewEvent>, String>` | saisies d'un brassin, `hasPendingWrites` par document |
 | `pricesProvider(uid)`, `feesProvider(uid)` | `StreamProvider.autoDispose.family<ListeLue<…>, String>` | prix et frais du compte connecté, lus par « Mes prix », la fiche d'une recette et celle de ses brassins ; jamais ceux d'un autre |
 | `brewCostProvider((uid:, brewId:))` | `StreamProvider.autoDispose.family<RechercheDocument<BrewCost>, …>` | coût figé d'un brassin, lu par la fiche pour son propriétaire seul |
+| `processTemplatesProvider` | `StreamProvider.autoDispose<ListeLue<ModeleProcessus>>` | `process_templates/` entier, avec `fromCache` ; lu à l'ouverture de « Mes processus », pas au lancement |
+| `processPreferenceProvider(uid)` | `StreamProvider.autoDispose.family<RechercheDocument<PreferenceProcessus>, String>` | choix par défaut du compte connecté, lu par la liste, la fiche et l'éditeur ; jamais celui d'un autre |
 | `costReportsProvider` | `Provider<Set<String>>` | mémoire de session : calculs de coût refusés déjà rapportés |
 | `horlogeProvider` | `Provider<DateTime Function()>` | heure de l'appareil, injectée en test ; source de toute durée du minuteur |
 | `screenWakelockProvider`, `alerteMinuteurProvider` | `Provider` | verrou d'écran, alerte de fin de minuteur |
@@ -419,12 +422,18 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/brassins`, `/brassins/:id` | liste et fiche des brassins, dans la coquille | membre |
 | `/brassins/:id/preparer` | « Préparer le brassage », dans la coquille, retour vers la fiche | membre ; propriétaire pour commencer |
 | `/brassins/:id/jour` | écran du jour, plein écran, hors coquille | propriétaire ; un autre membre lit « Seul le brasseur de ce brassin suit son brassage. » |
+| `/brassins/:id/jour/:journee/preparer` | « Préparer la journée » d'une journée 2 ou suivante du déroulé (ADR-010, v0.1.35), dans la coquille, retour vers la fiche ; `:journee` est la clé de la journée, celle du brassage mène à « Préparer le brassage » | membre ; propriétaire pour commencer ; refus nommés (`journeeASuivre`) |
+| `/brassins/:id/jour/:journee` | écran d'une journée 2 ou suivante, plein écran, hors coquille, déclaré après `/brassins/:id/jour` | propriétaire ; un autre membre lit « Seul le brasseur de ce brassin suit cette journée. » |
 | `/recettes/:id/chronologie` | éditeur de chronologie, plein écran | auteur ; sinon « Seul l'auteur modifie cette chronologie. » |
 | `/bibliotheque` | redirige vers `/bibliotheque/styles` (route sans écran, hors de la coquille) : une seule page par segment, que le retour d'une fiche retrouve avec sa recherche | membre |
 | `/bibliotheque/{segment}` | Bibliothèque, dans la coquille ; segments `styles`, `malts`, `houblons`, `levures`, `divers`, `recettes` ; chaque segment est une route de premier niveau de la coquille | membre |
 | `/bibliotheque/{segment}/:id` | fiche d'un style, d'un ingrédient ou d'une recette publique, dans la coquille, retour vers le segment ; route fille du segment, qui garde la liste et ses pages lues au retour | membre |
 | `/sources-des-donnees` | « Sources des données », page pleine avec retour, hors coquille, ouverte par `push` depuis la Bibliothèque, une fiche ou le menu du compte | membre |
 | `/prix` | « Mes prix », page pleine avec retour, hors coquille, ouverte par `push` depuis le menu du compte | membre ; ses seuls prix et frais |
+| `/processus` | « Mes processus », page pleine avec retour, hors coquille, ouverte par `push` depuis le menu du compte | membre ; ses processus puis ceux du groupe |
+| `/processus/nouveau` | « Nouveau processus », éditeur plein écran, hors coquille, déclaré avant `/processus/:id` ; `?modele=exemple` le préremplit du modèle d'exemple | membre ; écrit sous son seul `owner_uid` |
+| `/processus/:id` | fiche d'un processus, page pleine, hors coquille, retour vers la liste | membre ; « Copier dans mes processus » pour un autre que l'auteur |
+| `/processus/:id/modifier` | « Modifier le processus », plein écran, hors coquille | auteur ; sinon « Seul l'auteur modifie ce processus. » |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
 
@@ -443,7 +452,7 @@ sur `fake_cloud_firestore` (création, modification sans toucher `owner_uid` ni 
 `owner_name`, duplication, suppression, refus rapporté, document illisible), conversion
 document ↔ `brewing/`, lecture et affichage des nombres, écrans Recettes et Équipements
 (états, lecture seule, « À compléter », éditeur), attente du serveur sous `fake_async`,
-`FirebaseEnv`, `EchangeFichiersPlateforme` (`echange_fichiers_test.dart`, `TestDefaultBinaryMessenger`, P17 : annulation, fichier rendu, `TOO_LARGE` avec et sans taille, `ALREADY_ACTIVE` au choix et au partage, `NO_PICKER`, `READ_FAILED`, `INVALID_NAME`, `WRITE_FAILED`, aucun nom de fichier rapporté), Recettes › Importer (`import_recipes_test.dart` : relecture identique des recettes lues par `exchange/` (I9), « Déjà importée » par l'empreinte et jamais par le nom seul, fichier trop gros, illisible, non BeerJSON, statuts, détails, « Tout cocher », filtre, écriture sous le compte de l'importateur avec l'équipement présélectionné, hors ligne, refus du serveur, message groupé après la sortie et après « Importer un autre fichier », panne inattendue de l'analyse, boutons de l'accueil, filtres comptés, raisons des ignorées, fiche ouverte par-dessus le compte rendu, annonces, mesure de l'appui sur une case avec 500 recettes, valeurs absentes reprises de la Bibliothèque et valeurs du fichier gardées, noms non résolus signalés une fois, Bibliothèque non lue), feuille « Exporter » (`export_recipe_test.dart` : pertes, nom du fichier, auteur, rendement de l'équipement, aucun identifiant ni nom d'équipement, web, échec affiché dans la feuille avec réessai, un seul bouton plein, BeerXML : style absent de la Bibliothèque bloqué, style retrouvé par son nom et fichier `.xml`, index illisible puis « Réessayer », recette à l'extrait exportée sans `mash` ni `boil`, recette d'un autre membre sans auteur bloquée avec « Dupliquer », export bloqué pour l'auteur et pour un autre membre), `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17), domaine des coûts (`costs_domain_test.dart` : clés dérivées sans champ `key`, raisons de CB8, déclencheur du figeage, écarts), `FirestoreCostsRepository` sur `fake_cloud_firestore` (`costs_repository_test.dart` : écriture et suppression des prix et des frais, document illisible rapporté sans valeur, refus d'un premier figeage annoncé seulement si le coût n'est pas sur le serveur et rejeu journalisé `costs.freeze_replayed` (HL5), suppression du brassin et de son coût dans un même lot par `delete` et `deleteWithEvents` (CB19), `enregistrerEmbouteillage` : coût écrit après l'embouteillage sans attente, aucun coût pour une modification, un embouteillage déjà daté ou un coût déjà lu, embouteillage envoyé même quand le calcul échoue ou que les prix manquent, refus du coût seul et de l'embouteillage seul (CB7)), Bibliothèque (`library_domain_test.dart` : index, entrée mal typée écartée et comptée, champ inconnu ignoré, plages, unités canoniques seules, provenance, recette publique, rang de houblon hors de la liste, `copie` sans les champs propres aux recettes publiques ni `equipment_id` ni `brew_steps`, houblons sans forme, `normaliserNomRecherche`, libellés traduits, provenance courte ; `library_repository_test.dart` sur `fake_cloud_firestore` : index gardé pour la session, absent non gardé, un seul rapport pour les entrées illisibles, fiches, pages de 50 par `startAfterDocument`, préfixe, recette illisible rapportée, clés écrites par « Dupliquer » comparées à une liste recopiée de `recipeFields()` et des clés de `isBeerJsonRecipe` (à tenir à jour avec `firestore.rules`), `search_name` et les champs propres aux recettes publiques absents, recherche sur `search_name` avec saisie normalisée ; `library_screens_test.dart` : navigation, segments, recherche locale, fiches, états, hors ligne, pages suivantes, recherche à la validation, « Dupliquer » puis éditeur, houblons sans forme, « Voir le style » par `push`, recherche gardée au retour d'une fiche, compte annoncé, puces sur une ligne au téléphone, barre du bas à 360 px en texte × 2, « Sources des données » et son lien ; `recipe_screens_test.dart` : houblon sans forme, « Forme du houblon à compléter », forme demandée puis enregistrée dans l'éditeur, suggestions de la Bibliothèque pour un malt, un houblon et une levure, valeurs vides remplies, « Reprendre les valeurs de la Bibliothèque », style choisi par son code, hors ligne sans lecture ; `library_repository_test.dart` : `import_unresolved` créé à `count` 1 avec la liste blanche, autre graphie du même nom sur le même document, compte monté d'un, nom repris, 120 noms en lots de 10, lot refusé sans effet sur les autres ni levée, un rapport sans nom), écrans des coûts (`costs_screens_test.dart` : « Mes prix », bloc de la recette, bloc du brassin absent pour un autre membre et pour l'admin, aucun montant avec un prix manquant ni dans une annonce, coût figé inchangé quand un prix change, figeage au premier embouteillage seulement, dialogues à trois boutons de « Figer » et de « Recalculer », nom importé coupé à 120 caractères, texte à 200 %, contraste, cibles tactiles et en-tête des manquants annoncé).
+`FirebaseEnv`, `EchangeFichiersPlateforme` (`echange_fichiers_test.dart`, `TestDefaultBinaryMessenger`, P17 : annulation, fichier rendu, `TOO_LARGE` avec et sans taille, `ALREADY_ACTIVE` au choix et au partage, `NO_PICKER`, `READ_FAILED`, `INVALID_NAME`, `WRITE_FAILED`, aucun nom de fichier rapporté), Recettes › Importer (`import_recipes_test.dart` : relecture identique des recettes lues par `exchange/` (I9), « Déjà importée » par l'empreinte et jamais par le nom seul, fichier trop gros, illisible, non BeerJSON, statuts, détails, « Tout cocher », filtre, écriture sous le compte de l'importateur avec l'équipement présélectionné, hors ligne, refus du serveur, message groupé après la sortie et après « Importer un autre fichier », panne inattendue de l'analyse, boutons de l'accueil, filtres comptés, raisons des ignorées, fiche ouverte par-dessus le compte rendu, annonces, mesure de l'appui sur une case avec 500 recettes, valeurs absentes reprises de la Bibliothèque et valeurs du fichier gardées, noms non résolus signalés une fois, Bibliothèque non lue), feuille « Exporter » (`export_recipe_test.dart` : pertes, nom du fichier, auteur, rendement de l'équipement, aucun identifiant ni nom d'équipement, web, échec affiché dans la feuille avec réessai, un seul bouton plein, BeerXML : style absent de la Bibliothèque bloqué, style retrouvé par son nom et fichier `.xml`, index illisible puis « Réessayer », recette à l'extrait exportée sans `mash` ni `boil`, recette d'un autre membre sans auteur bloquée avec « Dupliquer », export bloqué pour l'auteur et pour un autre membre), `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17), domaine des coûts (`costs_domain_test.dart` : clés dérivées sans champ `key`, raisons de CB8, déclencheur du figeage, écarts), `FirestoreCostsRepository` sur `fake_cloud_firestore` (`costs_repository_test.dart` : écriture et suppression des prix et des frais, document illisible rapporté sans valeur, refus d'un premier figeage annoncé seulement si le coût n'est pas sur le serveur et rejeu journalisé `costs.freeze_replayed` (HL5), suppression du brassin et de son coût dans un même lot par `delete` et `deleteWithEvents` (CB19), `enregistrerEmbouteillage` : coût écrit après l'embouteillage sans attente, aucun coût pour une modification, un embouteillage déjà daté ou un coût déjà lu, embouteillage envoyé même quand le calcul échoue ou que les prix manquent, refus du coût seul et de l'embouteillage seul (CB7)), Bibliothèque (`library_domain_test.dart` : index, entrée mal typée écartée et comptée, champ inconnu ignoré, plages, unités canoniques seules, provenance, recette publique, rang de houblon hors de la liste, `copie` sans les champs propres aux recettes publiques ni `equipment_id` ni `brew_steps`, houblons sans forme, `normaliserNomRecherche`, libellés traduits, provenance courte ; `library_repository_test.dart` sur `fake_cloud_firestore` : index gardé pour la session, absent non gardé, un seul rapport pour les entrées illisibles, fiches, pages de 50 par `startAfterDocument`, préfixe, recette illisible rapportée, clés écrites par « Dupliquer » comparées à une liste recopiée de `recipeFields()` et des clés de `isBeerJsonRecipe` (à tenir à jour avec `firestore.rules`), `search_name` et les champs propres aux recettes publiques absents, recherche sur `search_name` avec saisie normalisée ; `library_screens_test.dart` : navigation, segments, recherche locale, fiches, états, hors ligne, pages suivantes, recherche à la validation, « Dupliquer » puis éditeur, houblons sans forme, « Voir le style » par `push`, recherche gardée au retour d'une fiche, compte annoncé, puces sur une ligne au téléphone, barre du bas à 360 px en texte × 2, « Sources des données » et son lien ; `recipe_screens_test.dart` : houblon sans forme, « Forme du houblon à compléter », forme demandée puis enregistrée dans l'éditeur, suggestions de la Bibliothèque pour un malt, un houblon et une levure, valeurs vides remplies, « Reprendre les valeurs de la Bibliothèque », style choisi par son code, hors ligne sans lecture ; `library_repository_test.dart` : `import_unresolved` créé à `count` 1 avec la liste blanche, autre graphie du même nom sur le même document, compte monté d'un, nom repris, 120 noms en lots de 10, lot refusé sans effet sur les autres ni levée, un rapport sans nom), déroulé d'un brassin (`deroule_d3_test.dart` : clés uniques et clés de la recette gardées, libellés, journée retirée, préremplissage, houblonnage répété, chronologie illisible refusée, date changée et rétablie, prochaine journée, « Nouveau brassin » avec présélection, chronologie seule, modèle d'un autre membre jamais proposé, hors ligne, panne, refus du seul déroulé et de la création, fiche avant et après le départ, « Changer de processus », « Recréer depuis la recette », liste, « Préparer le brassage » et écran du jour avec un processus ; `deroule_d4_test.dart` : `PlanDuJour` par journée (début de la journée 2 sans « Non faites » au brassage, départ prévu au premier début ou à l'heure de l'appareil, mesures sous l'étape de la journée et jamais au brassage, « Sans étape » du jour), `journeeTerminee`, densité d'une journée 2 retenue comme finale et jamais comme initiale, « Préparer la journée » (refus : autre membre, brassage pas fini, embouteillage fait, terminé, abandonné, clé inconnue ; premier début seul, Reprendre sans écriture, sans réseau, prix lus ou indisponibles), écran de la journée (Terminer la journée en un lot, tout fait sans confirmation, dernière étape, mesure en `phase: 'fermentation'` limitée aux étapes de la journée, mesure du brassage sans `phase`, hors ligne, Embouteiller avec confirmation puis retour sur la fiche et mémoire vidée, étape en cours terminée à l'embouteillage, autre membre), fiche (prochaine journée, Embouteiller dans ⋮, Reprendre, relevé avec la journée et l'étape, « Passer la journée » en un lot et absent pour l'embouteillage, résumé « Terminée · … »), `resumeJourneeTerminee`, P2 sur les fichiers appelés par les journées ; `brews_repository_test.dart` : `setProcess` écrit, relu, retiré, refusé par `erreurDeroule`), processus (`processes_repository_test.dart` sur `fake_cloud_firestore` : champs écrits, modèle refusé par `erreurModele` sans écriture, document illisible isolé et rapporté, modification qui garde `owner_uid` et `created_at`, copie au nom du lecteur avec clés neuves, duplication, suppression, choix par défaut absent, écrit, remis à nul et illisible ; `process_screens_test.dart` : menu du compte, chargement et panne, liste vide avec le modèle d'exemple écrit à « Enregistrer » seulement et proposé par défaut, miens puis groupe par nom, « Par défaut », document illisible, hors ligne sans cache, fiche, autre membre en lecture seule avec copie, choix par défaut, suppression du défaut, duplication, journée vide refusée, nom manquant, journée 1 fixe, tri par écart annoncé, 5 journées et 60 étapes au plus, bloc déjà placé, modification, double appui du lecteur d'écran sur une ligne, « Nouveau processus » en panne et hors ligne, choix par défaut en lecture, en panne et non lu, suppression refusée qui garde le défaut, duplication bloquée pendant l'attente, journée retirée, résumés ; `ligne_editeur_test.dart` : ligne avec et sans formulaire, icône en tête, ⋮ masqué sans action), écrans des coûts (`costs_screens_test.dart` : « Mes prix », bloc de la recette, bloc du brassin absent pour un autre membre et pour l'admin, aucun montant avec un prix manquant ni dans une annonce, coût figé inchangé quand un prix change, figeage au premier embouteillage seulement, dialogues à trois boutons de « Figer » et de « Recalculer », nom importé coupé à 120 caractères, texte à 200 %, contraste, cibles tactiles et en-tête des manquants annoncé).
 
 #### Bibliothèque — client
 
@@ -1023,7 +1032,146 @@ Lisible par le groupe, mesures comprises, sans coût. La recette et l'équipemen
 | `sugars_in_wort` | bool \| null : réponse à « Les sucres étaient-ils dans le moût à cette mesure ? » |
 | `notes` | string \| null (10 000) |
 | `imported_from` | string \| null (200) |
+| `process` | map \| null (ADR-010) : déroulé figé, voir ci-dessous. Absent de la création ; écrit, réécrit en entier ou retiré par une modification, seulement si `brewed_at` est nul avant et après l'écriture |
 | `created_at`, `updated_at` | timestamp, obligatoires |
+
+**Déroulé figé `process` (ADR-010, v0.1.32).** Résolution d'un modèle de processus avec la
+recette figée, écrite juste après la création du brassin (v0.1.34) : contrôler `process` à la
+création ferait dépasser le budget de `isBrewCreateShape`.
+
+| Champ | Type |
+|---|---|
+| `format_version` | int, `1` |
+| `template_id` | string \| null (128) : modèle d'origine, peut avoir été supprimé depuis |
+| `template_name` | string \| null (120) : nom du modèle au moment de la résolution |
+| `sessions` | liste de 1 à 5 journées résolues, triées par écart, la journée de brassage en tête |
+
+Journée résolue (non inspectée par les règles, lue par `lireDeroule`) : `key` (1 à 100, unique
+dans le déroulé), `name` (1 à 120), `offset_days` (entier de 0 à 365), `offset_source`
+(`template`, `recipe`, `brewer`), `role` (`brew` pour la première et elle seule, `packaging`
+pour une seule au plus, `other`), `template_session_key` (100) facultatif, `steps` (120 au
+plus). Étape résolue : `key` (1 à 100, unique sur toutes les journées du brassin), `name`
+(1 à 120), `duration_min` (0 à 600), `temp_c` (0 à 100) facultative, `origin` (`template`,
+`recipe_steps`, `dry_hops`, `packaging_additions`), `template_step_key` (100) facultatif. Les
+étapes de la recette gardent leur clé de `recipe_snapshot.brew_steps` ; les autres reçoivent
+une clé neuve (`doc().id`) à chaque résolution. `template_step_key` et `template_session_key`
+servent au prévu/réel d'une livraison suivante. Aucun prix, stock ni coût (P5).
+
+Lecture tolérante : un brassin sans `process` (ou à `process` nul) se lit comme une journée de
+brassage unique tirée de `recipe_snapshot.brew_steps` ; aucune migration. Un `process`
+illisible (format inconnu, clé en double, borne dépassée, rôle mal placé) rend le déroulé
+illisible : la fiche, « Préparer le brassage » et l'écran du jour affichent « Déroulé
+illisible. Mettez l'application à jour, ou prévenez l'administrateur. », « Commencer le
+brassage » est bloqué, le dépôt le rapporte (`brews.process`), sans repli sur la chronologie
+de la recette. Une chronologie figée illisible d'un brassin sans `process` garde son texte
+« Chronologie de ce brassin illisible : {raison}. ». Un champ inconnu est ignoré. Les six
+lecteurs des étapes d'un brassin (`plan_du_jour.dart`, `brew_day_screen.dart`,
+`prepare_brew_screen.dart`, `prevu_et_mesure.dart`, `brew_detail_screen.dart`,
+`brews_repository.dart`) passent par `Brew.deroule` depuis la v0.1.32.
+
+**Écriture de `process` (v0.1.34).** `BrewsRepository.setProcess(brewId:, deroule:,
+ownerName:)` écrit `process` en entier par un `update`, avec `owner_name` et `updated_at` ;
+`deroule` nul retire le champ (« Chronologie de la recette seule »). `erreurDeroule` est
+vérifié avant l'écriture : un refus lève `DerouleInvalide`, rapporté sous
+`brews.process_write`, sans rien écrire. Aucune transaction. Trois appelants, tous avant le
+départ (`Brew.derouleModifiable` : `brewed_at` nul et statut prévu) :
+
+- « Nouveau brassin » : `create` inchangé, puis `setProcess` sur le même identifiant, sans
+  attendre le serveur (option B'). Les deux écritures partent dans le cache, hors ligne
+  compris ; un brassin refusé à la création rend aussi son déroulé refusé, et seul le refus de
+  la création s'annonce (`suivreDeroule`) ;
+- la fiche : « Changer de processus », « Changer la date », « Rétablir la date du processus » ;
+- « Recréer depuis la recette » : le modèle d'origine, s'il est lu, s'assemble de nouveau avec
+  la nouvelle copie de la recette, puis `setProcess` sur le nouveau brassin ; sans modèle lu ou
+  assemblable, le brassin recréé n'a pas de `process` et l'annonce le dit.
+
+**Assemblage (v0.1.34).** `assemblerDeroule(templateId:, modele:, recipe:, nouvelleCle:)`
+(`brews/domain/assemblage_deroule.dart`) appelle `resolveProcess` puis crée les clés et les
+libellés : étape du modèle (nom, durée, température, `template_step_key`), étape de
+`brew_steps` (clé gardée), étape préremplie (`nomEtapePreremplie`, clé neuve), houblon à cru et
+ajout à l'embouteillage (« Ajouter {nom} {quantité} », 0 min, clé neuve), journée (clé neuve,
+`template_session_key`, « {nom} 1 », « {nom} 2 » pour un houblonnage répété). Il lève
+`AssemblageImpossible` pour une chronologie de recette illisible (aucun repli sur le
+préremplissage) ou un déroulé refusé par `erreurDeroule`, et laisse passer
+`BrewingInputException`. L'écran appelle `evaluerAssemblage`, qui rapporte un refus une fois par
+modèle et par raison (`brews.process_assembly`, `derouleReportsProvider`). L'aperçu de « Déroulé
+prévu » s'assemble avec des clés locales (`clesApercu`), l'écriture avec `newKey` du dépôt des
+processus (`doc().id`). À la création, la recette assemblée est `recipe.content`, celle que
+`recipeSnapshot` copie dans le même appel ; sur la fiche, `brew.recipe`, la copie figée.
+Annonces : préremplissage, avertissements de `defaultBrewSteps` (textes de
+`avertissementPreremplissage`, partagés avec l'éditeur « Chronologie du jour »), journée retirée
+faute de houblon à cru ou d'ajout à l'embouteillage, houblons à cru sans journée, jour regroupé.
+`Deroule.avecEcart` change l'écart d'une journée après le brassage (source `brewer`) et range
+les journées par `processSessionOrder` de `brewing/`, le même ordre que `resolveProcess`.
+`AssemblageImpossible` porte sa cause affichée ; `evaluerAssemblage` rend `AssemblageRefuse`
+avec cette cause, ou celle d'une `BrewingInputException` (modèle invalide, jour d'ajout hors
+limites). « Changer de processus » ne remplace jamais le déroulé actuel faute d'avoir lu la
+liste : le déroulé actuel absent de la liste devient l'entrée « {nom} (actuel) », et
+« Appliquer » n'écrit qu'un choix du brasseur différent du déroulé actuel. La confirmation de
+« Recréer depuis la recette » assemble le modèle avant de s'afficher. `ecartDuProcessus` retrouve l'écart d'origine d'une journée
+dans le modèle assemblé de nouveau, par `template_session_key`, puis par le nom pour un
+houblonnage répété ; sans modèle lu, « Rétablir la date du processus » n'est pas proposé.
+`fermentationDayNumber` donne l'écart d'une date choisie, `JourneeDeroulee.date` (par
+`processSessionDate`) la date d'une journée (P3). `prochaineJourneePrevue` dérive la ligne de
+la liste des dates seules, sans lire les événements.
+
+**Journées 2 et suivantes (v0.1.35, lot D4).** `PlanDuJour.calculer(brew:, events:, now:,
+journee:)` calcule une journée du déroulé (nulle : le brassage). `stepRecordsFromEvents` reçoit
+les étapes de toutes les journées, `recomputeSchedule` celles de la journée et ses seuls
+enregistrements (P37). Départ prévu : le premier début enregistré de la journée ; sinon
+`brewed_at` (puis `planned_for`) pour le brassage, l'heure de l'appareil pour les autres.
+Saisies d'une journée 2 ou suivante : les mesures et notes dont l'étape lui appartient, et, sous
+« Sans étape », les relevés de fermentation sans étape connue mesurés depuis le début du jour
+calendaire de son départ ; le brassage garde les saisies sans `phase`. Une étape inconnue n'est
+relevée comme anomalie que par le calcul du brassage. `journeeTerminee` : l'embouteillage quand
+`bottled_at` est posé, une autre journée quand aucune étape n'est en cours ni à venir (calcul
+refusé : non terminée). `PlanDuJour.commencee` : une étape commencée ou sautée, ou une mesure
+rattachée. Aucun calcul d'heure nouveau dans `brewing/` : aucun cas ajouté à `process.json`.
+
+`journeeASuivre(brew, key)` (`brew_day_screen.dart`) rend la journée suivie ou le refus nommé
+(déroulé illisible, clé inconnue, brassin prévu ou en cours, terminé, abandonné, embouteillage
+fait) ; la clé du brassage rend la main au parcours du brassage. `PrepareBrewScreen` et
+`BrewDayScreen` prennent la clé en paramètre (`journee`), sans copie d'écran. « Commencer la
+journée » : `writeSteps` avec le seul début de la première étape si elle a une durée, écriture
+simple, aucun statut. « Terminer la journée » : `writeSteps` de `step_ended` pour l'étape en
+cours et de `step_skipped` pour chaque étape à venir, un `WriteBatch` (le lot de 60
+`step_skipped` passe les règles, `processes.test.mjs`). Mesures et notes : `BrewEventInput.phase`
+à `fermentation`, `step_key` de l'étape ou nul (`enregistrerSaisie(phase:)`) ; aucune règle ne
+change (`phaseOk`). `MesuresRetenues` ne les prend jamais comme densité initiale automatique ;
+elles entrent dans la densité finale, le relevé (`etapeDuReleve` : « Houblonnage à cru : Mesure
+de densité ») et « Prévu et mesuré » (« Houblonnage à cru · Mesure de densité »), par
+`Deroule.etape(key)`.
+
+Embouteillage depuis la journée : `capturerEmbouteillage(ref, brew)`
+(`brews/presentation/embouteillage.dart`) capture les dépôts, les prix, les frais et le coût
+figé lus, avant l'attente du nom du jeton (CB5), et rend l'envoi, qui appelle
+`enregistrerEmbouteillage` sans lecture ni attente. La fiche et l'écran de la journée
+l'utilisent tous deux. « Préparer la journée » d'embouteillage ouvre `pricesProvider`,
+`feesProvider` et `brewCostProvider` du propriétaire ; l'écran de la journée les garde ouverts
+(P2). `enregistrerEmbouteillage` n'écrit aucune étape : à l'envoi, l'écran écrit `step_ended`
+pour l'étape en cours, à l'heure de l'appareil, sans attendre le serveur, puis dépose le résultat
+dans `embouteillagesAAnnoncerProvider` (mémoire de session, par brassin) avec un `catchError` sur
+l'embouteillage et sur le coût figé (refus déjà rapportés par les dépôts, rien de plus), et
+revient sur la fiche. La fiche lit la mémoire pendant le `build`, la vide et annonce après
+l'affichage (`addPostFrameCallback`), une fois, « Voir le coût » compris.
+
+La fiche calcule le plan de chaque journée après le brassage, propose la première non terminée
+(« Préparer la journée « {nom} » », « Reprendre la journée « {nom} » »), montre la chronologie
+d'une journée commencée dans son pli (`SectionDeroule.chronologieJournee`, sans « Sans étape ») et
+déplace « Embouteiller » dans ⋮ (« Embouteiller sans suivre la journée ») quand le déroulé a une
+journée d'embouteillage (`Deroule.embouteillage`). « Passer la journée » (⋮ d'une journée
+« autre » non terminée, sans étape en cours, propriétaire, En fermentation ou En
+conditionnement) écrit `step_skipped` pour chaque étape non commencée par `writeSteps`, un
+`WriteBatch`, sans statut ; confirmation par `showDialog` (`// ticket: aucun (confirmation)`) ;
+aucun élément de ticket nouveau, le menu reste `/brassins/:id/menu/journee`. Une journée
+terminée a pour résumé `resumeJourneeTerminee` (« Terminée · 3 faites, 1 sautée », « Terminée »
+seul sans étape à compter). La liste garde les dates seules
+(`prochaineJourneePrevue`) : lire les événements de chaque brassin pour une ligne de liste
+coûterait une écoute de plus par brassin. La reprise au lancement (`brassinAReprendre`) reste
+limitée au brassage. Éléments de ticket ajoutés : `/brassins/:id/jour/:journee/menu/actions`,
+`…/fenetre/mesure`, `…/fenetre/correction`, `…/fenetre/etape`, `…/fenetre/recette`,
+`…/fenetre/envoi`, `…/fenetre/embouteillage` ; écrans « Préparer la journée » (dans la coquille)
+et « Journée après le brassage ».
 
 Le rendement réel, le degré mesuré et les écarts se calculent à l'affichage à partir des
 événements et de la copie figée, jamais stockés ; aucune migration : un champ absent vaut nul.
@@ -1031,6 +1179,38 @@ Aucun prix ni coût (P5). `MesuresRetenues` lit les identifiants ci-dessus puis 
 automatique (dernière densité du jour, dernière densité de fermentation, dernier volume) ;
 hors statut En fermentation, un relevé postérieur au jour de `bottled_at` ne compte pas dans la
 densité finale.
+
+### `process_templates/{templateId}`
+
+Modèle de processus (ADR-010, v0.1.32). Lisible par le groupe, écrit par son auteur depuis
+« Mes processus » (v0.1.33, lot D2).
+
+| Champ | Type |
+|---|---|
+| `format_version` | int, obligatoire, `1` |
+| `owner_uid` | string, obligatoire, immuable |
+| `owner_name` | string, facultatif, contrôlé comme dans `recipes/` (`ownerNameOk`) |
+| `name` | string, obligatoire, 1 à 120 caractères |
+| `notes` | string \| null (10 000) |
+| `sessions` | liste, obligatoire, de 1 à 5 journées |
+| `created_at`, `updated_at` | timestamp, `serverTimestamp()` |
+
+Journée (non inspectée par les règles) : `key` (1 à 100, unique dans le modèle), `name`
+(1 à 120), `offset_days` (entier de 0 à 365, écart depuis le début du brassage),
+`requires_recipe_block` (bool, facultatif : la journée n'entre dans un brassin que si son bloc
+tiré de la recette n'est pas vide), `steps` (60 au plus). Élément de `steps` : `key` (1 à 100,
+unique dans le modèle), `kind` (`step`, `recipe_steps`, `dry_hops`, `packaging_additions`) ;
+`name` (1 à 120), `duration_min` (0 à 600) et `temp_c` (0 à 100, facultative) pour `step`
+seulement. `erreurModele` vérifie avant l'écriture les contraintes d'ADR-010 : première journée
+à J+0 avec le seul bloc `recipe_steps` du modèle ; un bloc `dry_hops` et un bloc
+`packaging_additions` au plus, jamais le jour du brassage ni dans la même journée ;
+`requires_recipe_block` sur une journée qui porte l'un d'eux ; écarts qui ne décroissent pas.
+Les deux blocs ne vont jamais dans la même journée (ADR-010) : une journée de houblonnage se
+répète une fois par jour d'ajout.
+
+Le modèle d'exemple (`modeleExemple`) est une constante de l'application, jamais écrite sans
+l'action « Partir du modèle d'exemple » puis « Enregistrer » du brasseur ; il est aussi le cas `exemple`
+de `brewing/test/fixtures/process.json`, relu par `app/test/processes_domain_test.dart`.
 
 ### `brews/{brewId}/events/{eventId}`
 
@@ -1048,7 +1228,7 @@ règles au retour du réseau.
 | `note` | string \| null (2 000) |
 | `measured_at` | timestamp, obligatoire : heure de l'appareil |
 | `created_at` | timestamp, obligatoire : `serverTimestamp()`, audit seul |
-| `phase` | string \| null : absent ou nul pour le jour de brassage, `fermentation` pour un relevé ; permis sur `measurement` et `note`, refusé sur un événement d'étape ; immuable |
+| `phase` | string \| null : absent ou nul pour le jour de brassage, `fermentation` pour un relevé et pour une mesure ou une note d'une journée 2 ou suivante (avec son `step_key`, v0.1.35) ; permis sur `measurement` et `note`, refusé sur un événement d'étape ; immuable |
 
 Forme selon `kind` (règles) :
 
@@ -1110,6 +1290,7 @@ contrôle de forme. Unités du système international : masses en grammes, monta
 | `users/{uid}/prices/{ingredientKey}` | `name` string (1 à 120), `price_eur` number (prix payé, 0 à 100 000), `quantity` number (quantité achetée, au-delà de 0 et jusqu'à 1e9), `unit` string (`g`, `unit` pour un sachet de levure, ou `l` depuis la v0.1.17 : prix au litre d'un houblon ou d'un ajout ; `purchaseUnitsOf` limite les litres à ces deux natures dans le formulaire, les règles ne lient pas l'unité au préfixe), `updated_at` timestamp (`serverTimestamp()`). Identifiant : clé d'ingrédient, 100 caractères au plus, préfixe `malt`, `sucre`, `houblon`, `levure` ou `ajout`, forme `^(malt|sucre|houblon|levure|ajout)(-[a-z0-9]+)*$` ; un identifiant hors de cette forme est lu comme illisible (`DocumentIllisible('id', 'clé hors format')`), rapporté sans l'identifiant, qui dérive du nom, puis se supprime après confirmation. Un kilogramme saisi est converti en grammes à l'écran, un millilitre en litres |
 | `users/{uid}/fees/{feeId}` | `name` string (1 à 60), `amount_eur` number (0 à 10 000), `basis` string (`per_brew`, `per_bottle`), `updated_at` timestamp (`serverTimestamp()`). Identifiant créé par l'appareil ; 20 frais au plus, limite du formulaire |
 | `users/{uid}/stock/{ingredientKey}` | `name` string, `quantity` number, `unit` string, `updated_at` timestamp (après la v1) |
+| `users/{uid}/preferences/processes` | `default_template_id` string \| null (128) : modèle présélectionné dans « Nouveau brassin » ; `updated_at` timestamp (`serverTimestamp()`). Document unique, état propre au lecteur, jamais écrit sur le modèle lu par le groupe (ADR-010, v0.1.32 ; lu et écrit par « Mes processus » depuis la v0.1.33. Supprimer le processus par défaut remet `default_template_id` à nul) |
 | `users/{uid}/brew_costs/{brewId}` | `brew_id` string (égal à l'identifiant), `total_eur` number (somme exacte des lignes, positive ou nulle), `lines` list<map> (200 au plus : `key` clé d'ingrédient ou `frais-{feeId}`, `name`, `quantity`, `unit` parmi `g`, `unit`, `l` (v0.1.17, ligne en volume au prix au litre), `brew`, `bottle`, `cost_eur`), `computed_at` timestamp (heure de l'appareil au figeage), `freeze_kind` string (`initial`, `recalculation`), et, facultatifs, les valeurs d'embouteillage utilisées : `bottles_count` (entier de 1 à 9 999), `packaged_volume_l` (au-delà de 0 et jusqu'à 1 000), `priming_sugar_g` (0 à 100 000), `priming_sugar_name` (80) |
 
 Le coût réel d'un brassin est stocké parce qu'il reprend les prix du jour du figeage ; le
@@ -1333,12 +1514,14 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 |---|---|---|---|---|
 | `members/{email}` | son propre document (même absent) pour tout compte Google vérifié ; tous pour l'admin | admin | personne | admin, sauf son propre document et celui d'un autre admin (`resource.data.role != 'admin'`) |
 | `recipes/`, `equipment/` | membres | membre, à son `owner_uid` ; `owner_name` absent ou égal au nom du jeton (`request.auth.token.name`, 1 à 80 caractères) | propriétaire, `owner_uid` et `created_at` inchangés, `owner_name` comme à la création | propriétaire |
-| `brews/` | membres | membre, à son `owner_uid` ; `owner_name` comme dans `recipes/` ; champs de création seuls (`owner_uid`, `owner_name`, `recipe_id`, `name`, `status`, `planned_for`, `notes`, `imported_from`, copies, dates) ; `recipe_snapshot` contrôlé comme `recipes/` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés ; liste blanche des clés ; seuls les champs changés sont contrôlés, par groupe (nom, statut, dates, ajustements, embouteillage, mesures retenues et `sugars_in_wort`, notes et `imported_from`) ; `owner_name` comme à la création | propriétaire |
+| `brews/` | membres | membre, à son `owner_uid` ; `owner_name` comme dans `recipes/` ; champs de création seuls (`owner_uid`, `owner_name`, `recipe_id`, `name`, `status`, `planned_for`, `notes`, `imported_from`, copies, dates) ; `recipe_snapshot` contrôlé comme `recipes/` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés ; liste blanche des clés ; seuls les champs changés sont contrôlés, par groupe (nom, statut, dates, ajustements, embouteillage, mesures retenues et `sugars_in_wort`, notes et `imported_from`, `process`) ; `process` changé seulement si `brewed_at` est nul avant et après l'écriture, nul ou map aux clés `format_version` (== 1), `template_id` (128), `template_name` (120), `sessions` (liste de 1 à 5) ; `owner_name` comme à la création | propriétaire |
+| `process_templates/` | membres | membre, à son `owner_uid` (`createdByMe`), `owner_name` comme dans `recipes/` ; clés en liste blanche, `format_version == 1`, `name` 1 à 120, `notes` 10 000, `sessions` liste de 1 à 5 | propriétaire (`updatedByOwner`), même forme | propriétaire |
 | `brews/{id}/events/` | membres | propriétaire du brassin existant, à son `owner_uid`, forme selon `kind` | auteur : `value`, `note`, `measured_at`, forme gardée | auteur |
 | `users/{uid}/**` | propriétaire | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous |
 | `users/{uid}/prices/`, `fees/` | propriétaire | propriétaire, forme et bornes contrôlées | propriétaire, forme et bornes contrôlées | propriétaire |
 | `users/{uid}/brew_costs/` | propriétaire | propriétaire, forme contrôlée, `freeze_kind == 'initial'` | propriétaire, forme contrôlée, `freeze_kind == 'recalculation'` | propriétaire |
 | `users/{uid}/stock/` | propriétaire | propriétaire | propriétaire | propriétaire |
+| `users/{uid}/preferences/processes` | propriétaire (joker) | propriétaire, clés `default_template_id` (128 ou nul) et `updated_at == request.time` | idem | propriétaire |
 | `error_reports/` | admin | membre, `uid` = le sien, champs en liste blanche et bornés | personne | admin |
 | `tickets/` | auteur (`author_uid` = le sien, requête « Mes tickets » comprise) ; tous pour l'admin | membre, champs de création seuls (voir `tickets/`), `status == 'pending'`, `created_at == request.time`, `author_email` = e-mail du jeton en minuscules | auteur : `seen_by_author_at == request.time` seul ; admin : `retry_requested_at == request.time` seul, ticket `send_failed` | personne |
 | `tickets/{id}/decisions/` | admin | admin, ticket existant, champs de création seuls (voir `decisions/`), `state == 'pending'`, `requested_by_uid == request.auth.uid`, `requested_at == request.time`, `text` 5 à 2 000 pour `refuse` et `close`, absent pour `validate` | admin : `retry_requested_at == request.time` seul, décision `failed` | personne |
@@ -1466,7 +1649,33 @@ quatre `optMeasure` ou par ses seules clés, faisait refuser la création de ce 
 dépassée sans aucun `pad()`) : il n'est pas stocké. Une recette qui porte style, ébullition,
 empâtage, notes et auteur coûte le même contrôle que la plus grande permise : la longueur
 des listes n'entre pas dans le budget, leurs éléments n'étant pas inspectés. Toute règle
-ajoutée sur `recipe` se mesure contre les 40 expressions restantes à la création d'un brassin.
+ajoutée sur `recipe` se mesure contre la marge de la création d'un brassin, corrigée en v0.1.32
+ci-dessous (environ 16 expressions).
+
+Mesure de la v0.1.32 (ADR-010, déroulé en journées), même émulateur. Étalonnage : 98 `pad()`
+isolés atteignent la limite de compilation avant le budget ; regroupés par dix
+(`pad10()` = dix `pad()`), 243 tiennent dans une règle `if true` seule, et 69 `pad()` isolés
+coûtent autant que 6 `pad10()` et 8 ou 9 `pad()`. Un `pad()` vaut donc environ
+4 expressions, et non 10 comme l'écrivaient les mesures de la v0.1.15 et de la v0.1.17 : la
+marge de la création d'un brassin (4 `pad()`, inchangée) est d'environ 16 expressions. Toute
+règle ajoutée sur `recipe` se mesure contre ces 16 expressions. Marges mesurées avec
+`pad10()`, plus grande recette copiée et plus grand déroulé (5 journées de 120 étapes, noms
+de 120 caractères, `template_id` de 128 caractères) :
+
+| Écriture | Avant le contrôle de `process` | v0.1.32 |
+|---|---|---|
+| Écriture de `process` sur un brassin prévu qui copie la plus grande recette, notes et `imported_from` à leur longueur maximale, équipement complet | — | 145 `pad()` (environ 590 expressions) |
+| Brassin du 22 novembre (plus grande recette, plus grand déroulé, 11 ajustements) : changement de statut | 177 `pad()` (sans `process`) | 174 |
+| Même brassin : embouteillage et statut | — | 138 |
+| Brassin du 22 novembre sans ajustements : écriture des 11 ajustements | 70 | 68 |
+| Création d'un brassin qui copie la plus grande recette | 4 | 4 |
+| Création du plus grand modèle de processus (5 journées de 60 éléments, nom de 120, notes de 10 000) | — | 185 |
+
+Le contrôle de `process` coûte environ 3 `pad()` (12 expressions) à chaque modification d'un
+brassin : `brewFields()` s'allonge d'une clé et `changed.hasAny(['process'])` s'évalue. Un
+lot de 60 `step_skipped`, plus le début d'étape suivant, passe sur l'émulateur
+(`processes.test.mjs`) : « Terminer la journée » et « Les sauter et commencer » n'ont pas à
+découper leur lot.
 
 La v0.1.20 (import et export, L2b) ne change aucune règle : `imported_from` reste une chaîne
 de 200 caractères au plus, déjà portée à sa longueur maximale par le test « budget des
@@ -1509,7 +1718,14 @@ caractères, heure posée par le client, identifiant qui n'a pas 64 chiffres hex
 minuscules ; connexions non conformes de P11 refusées.
 `brew_day.test.mjs` vérifie `brew_steps`
 (60 étapes acceptées, 61 refusées, dans la recette et dans sa copie), les statuts `brewing` puis
-`fermenting`, le premier début en un `WriteBatch`, et un brassin créé puis son premier événement. `numbers.test.mjs` vérifie que
+`fermenting`, le premier début en un `WriteBatch`, et un brassin créé puis son premier événement.
+`processes.test.mjs` (v0.1.32, ADR-010, P38) rejoue pour les cinq profils la lecture, la
+création, la modification et la suppression de `process_templates/`, l'écriture de `process`
+sur un brassin prévu, sa lecture, `process` à la création (refusé) et sur un brassin commencé
+(refusé), et `users/{uid}/preferences/processes` ; il vérifie les formes refusées (6 journées,
+aucune, `format_version` 2, clé hors liste, `template_id` de 129 caractères), `process` écrit
+avec `brewed_at` dans la même écriture (refusé), un départ qui ne touche pas `process`
+(accepté), et un lot de 60 `step_skipped` (accepté). `numbers.test.mjs` vérifie que
 les règles refusent Infinity, -Infinity, NaN, ±1e9 et acceptent ±999 999 999, 0 et 1,5, et
 borne `mash_efficiency_pct` de 0 à 100 ; `content.test.mjs` fait de même dans `adjustments`.
 `users.test.mjs` rejoue `prices`, `fees`, `stock` et `brew_costs` pour les cinq profils
@@ -1600,6 +1816,11 @@ calcul de coût par `CalculCoutRefuse`, qui ne porte que le type de l'erreur d'o
 | Événements d'étape | `stepRecordsFromEvents` | un `StepRecord` par étape : début le plus ancien (à égalité, le plus petit identifiant), dernière fin à ou après ce début, sauts, et les identifiants d'événement retenus. Sans exception, les autres événements sont rendus en `StepEventIssue` : `duplicateStart`, `duplicateEnd`, `endWithoutStart`, `endBeforeStart`, `unknownStep`, triés par heure puis identifiant. Même résultat sur chaque appareil |
 | Chronologie préremplie | `defaultBrewSteps` | une étape par palier ; puis l'ébullition coupée à chaque ajout de houblon d'ébullition, du plus long au plus court (un houblon de t min s'ajoute après durée d'ébullition − t min) ; puis le whirlpool, coupé de même, sur la plus longue durée de ses houblons ; houblons à cru, à l'empâtage et au conditionnement exclus ; ajout de 0 min. Voir ci-dessous |
 | Minuteur | `readTimer` | restant = début + durée − `now`, borné à zéro ; dépassement au-delà |
+| Défaut d'un modèle de processus | `processTemplateIssue` | premier défaut parmi les contraintes d'ADR-010 (`ProcessTemplateIssueKind`), et la journée qui le porte ; `null` si le modèle se résout |
+| Résolution d'un modèle de processus | `resolveProcess` | journées gardées ou retirées, blocs remplacés par la recette figée, journées de houblonnage par jour distinct, regroupement au-delà de 5, tri par écart, avertissements. Voir ci-dessous |
+| Jour d'un houblon à cru | `dryHopDay` | `round(dayMin / 1 440)` ; `dayMin` négatif ou jour au-delà de 365 : `BrewingInputException` |
+| Ordre des journées | `processSessionOrder` | journée de brassage en tête, puis par écart croissant, à égalité dans l'ordre courant ; sert à `resolveProcess` et au changement de date d'une journée ; lève pour une liste vide, une première journée hors de J+0 ou un écart hors de 0 à 365 |
+| Date d'une journée | `processSessionDate` | jour calendaire local du départ (`brewed_at`, sinon `planned_for`) plus l'écart, à minuit ; inverse de `fermentationDayNumber`, un changement d'heure ne décale pas la date |
 
 **Pas de valeur de repli.** Un prix manquant rend `CostUnavailable(linesWithoutPrice)`, jamais
 un coût partiel. Dans l'application, `evaluerCoutRecette`, `evaluerEstimationBrassin` et
@@ -1675,6 +1896,28 @@ les enregistrements à `recomputeSchedule`. Une anomalie de la réduction (fin a
 étape inconnue) est rapportée et affichée ; elle ne lève pas. `recomputeSchedule` lève
 encore pour une clé en double ou des enregistrements non réduits (étape inconnue ou enregistrée
 deux fois). Le constructeur `PlannedStep` lève pour une durée négative.
+
+**Déroulé en journées (ADR-010, v0.1.32).** `resolveProcess(template:, recipe:)` reçoit les
+journées du modèle (`ProcessTemplateSession` : écart, `requiresRecipeBlock`, nature de chaque
+élément) et la recette figée (`ProcessRecipe` : nombre d'étapes de `brew_steps`, paliers,
+ébullition et houblons pour le préremplissage, jour d'ajout à cru de chaque houblon, ajouts au
+conditionnement). Il lève si `processTemplateIssue` rend un défaut. Le bloc `recipeSteps`
+reçoit les étapes de `brew_steps`, ou à défaut le préremplissage `defaultBrewSteps` sans ses
+étapes sans durée ; `dryHops` un houblon à cru par étape, dans l'ordre de la recette ;
+`packagingAdditions` les houblons puis les ajouts au conditionnement. Un bloc vide disparaît,
+et sa journée aussi si elle porte `requiresRecipeBlock`. Un houblon à cru qui a un jour
+d'ajout tombe à `dryHopDay(dayMin)`, sinon à l'écart du modèle ; une journée de houblonnage
+par jour distinct (rang 1, 2…), écart de source `recipe` sauf si l'un de ses houblons n'a pas
+de jour. Au-delà de 5 journées, les jours les plus tardifs se regroupent dans le premier jour
+regroupé. Tri par écart, à égalité dans l'ordre du modèle. Le résultat (`ProcessResolution`)
+rend des brouillons sans clé ni libellé (`ProcessSessionDraft`, `ProcessStepDraft` : origine
+et indice dans la liste d'origine), le préremplissage complet et les avertissements
+(`ProcessWarning` : étape préremplie sans durée, houblon sans durée ou plus long que
+l'ébullition, houblons à cru sans journée, jour regroupé). L'application crée les clés et les
+libellés (`assemblerDeroule`, v0.1.34). `fixtures/process.json` compte 10 cas de résolution, dont le modèle
+d'exemple, 11 modèles invalides, 2 recettes invalides, 6 jours d'ajout, 9 dates, dont les
+changements d'heure du 2026-10-25 et du 2027-03-28, et 5 ordres de journées (`session_orders`,
+4 refusés).
 
 **Comparaison prévu / mesuré.** `compareBrewWithPlan` (`brew_comparison.dart`) rend pour chaque
 ligne la valeur prévue, le résultat mesuré (`MeasuredComputed`, `MeasuredUnavailable` et la liste
