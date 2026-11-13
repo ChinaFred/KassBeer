@@ -478,6 +478,28 @@ void main() {
       expect(_lu(g).fiches.first.resultat, isA<FicheAcceptee>());
     });
 
+    test('S6 : montant dans le nom d\'un malt de la recette, refus sans '
+        'valeur', () {
+      final f = _fichier();
+      final recettes =
+          (f['beerjson']! as Map<String, Object?>)['recipes']! as List<Object?>;
+      final ingredients =
+          (recettes.first! as Map<String, Object?>)['ingredients']!
+              as Map<String, Object?>;
+      final malt =
+          (ingredients['fermentable_additions']! as List<Object?>).first!
+              as Map<String, Object?>;
+      malt['name'] = 'Pils 3,50 €';
+      final lu = _lu(f);
+      final r = _refus(lu.fiches.first);
+      expect((r.chemin, r.code), ('recipe_index', CodeRefusFiche.montant));
+      expect('$r', isNot(contains('3,50')));
+      expect('$r', isNot(contains('Pils')));
+      // La troisième fiche partage cette recette : refusée aussi.
+      expect(_refus(lu.fiches[2]).code, CodeRefusFiche.montant);
+      expect(lu.fiches[1].resultat, isA<FicheAcceptee>());
+    });
+
     test('S4 : adresse web dans le nom d\'un houblon de la recette', () {
       final f = _fichier();
       final recettes =

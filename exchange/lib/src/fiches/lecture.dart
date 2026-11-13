@@ -507,27 +507,24 @@ class _Lecteur {
     );
   }
 
-  /// Recette lue par le groupe : aucune adresse web dans aucune de ses chaînes
-  /// (FO5, S4), aucun montant dans son nom ni ses notes (S1).
+  /// Recette lue par le groupe : aucune adresse web (FO5, S4) ni aucun montant
+  /// (S1, S6) dans aucune de ses chaînes, noms et notes des lignes compris.
   void _controlerRecette() {
     final r = recetteBrute;
     if (r is! Map) return;
-    if (_adresseDans(r)) _refuser('recipe_index', CodeRefusFiche.adresseWeb);
-    for (final cle in const ['name', 'notes']) {
-      final t = r[cle];
-      if (t is String && _montant.hasMatch(t)) {
-        _refuser('recipe_index', CodeRefusFiche.montant);
-      }
+    if (_dans(r, _adresseWeb)) {
+      _refuser('recipe_index', CodeRefusFiche.adresseWeb);
     }
+    if (_dans(r, _montant)) _refuser('recipe_index', CodeRefusFiche.montant);
   }
 
-  /// Vrai si une chaîne de [valeur], clés comprises, contient une adresse web.
-  /// La profondeur est bornée par `analyserFichier`.
-  static bool _adresseDans(Object? valeur) => switch (valeur) {
-    final String t => _adresseWeb.hasMatch(t),
-    final List<Object?> l => l.any(_adresseDans),
+  /// Vrai si une chaîne de [valeur], clés comprises, correspond à [motif]. La
+  /// profondeur est bornée par `analyserFichier`.
+  static bool _dans(Object? valeur, RegExp motif) => switch (valeur) {
+    final String t => motif.hasMatch(t),
+    final List<Object?> l => l.any((v) => _dans(v, motif)),
     final Map<Object?, Object?> m => m.entries.any(
-      (e) => _adresseDans(e.key) || _adresseDans(e.value),
+      (e) => _dans(e.key, motif) || _dans(e.value, motif),
     ),
     _ => false,
   };

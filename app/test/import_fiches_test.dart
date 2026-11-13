@@ -739,6 +739,29 @@ void main() {
       },
     );
 
+    testWidgets('U2 : hors ligne pendant la relecture, barre et en-tête', (
+      tester,
+    ) async {
+      final app = await ouvrir(tester);
+      await analyser(tester, app);
+      expect(find.text(TextesImportFiches.choisirAutre), findsOneWidget);
+      expect(find.text('Importer 3 fiches'), findsOneWidget);
+      app.members
+          .lookup(adminUser.memberKey!)
+          .add(const MemberLookup(member: adminMember, fromCache: true));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Import impossible hors ligne. Reconnectez-vous pour importer les '
+          'fiches cochées.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(TextesImportFiches.choisirAutre), findsNothing);
+      expect(find.text(TextesImportFiches.horsLigne), findsNothing);
+      expect(find.text('Importer 3 fiches'), findsNothing);
+    });
+
     testWidgets('fichier qui n\'est pas un fichier de fiches', (tester) async {
       final app = await ouvrir(tester);
       app.fichiers.choix = FichierChoisi(

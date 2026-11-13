@@ -27,7 +27,7 @@ refuse un montant dans un texte lu par le groupe (code `montant`) et une fiche d
 ou un événement appartient à un autre compte. Aucune règle
 Firestore ne change ; 25 tests de règles rejouent les écritures d'un import. `.gitignore` limite
 `/import/` à la racine, pour versionner `app/lib/features/import/`. Aucun paquet ne change.
-`main.dart.js` passe de 5 317 706 à 5 388 062 octets (+ 70 356, mesuré sur main à la v0.1.36).
+`main.dart.js` passe de 5 339 305 à 5 409 676 octets (+ 70 371, main mesuré à la v0.1.37).
 
 ### v0.1.37 — fonctionnel
 

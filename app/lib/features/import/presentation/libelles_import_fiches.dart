@@ -266,7 +266,7 @@ List<Rubrique> rubriquesDe(
       lignes: [
         ...fiche.nonImporte,
         for (final m in f.modifications)
-          if (!_deduite(m)) libelleModification(m),
+          if (!_deduite(m) && m is! ValeurReprise) libelleModification(m),
       ],
     ),
     (titre: 'Coût', lignes: lignesCout(f.cout)),
@@ -280,7 +280,10 @@ List<Rubrique> rubriquesDe(
 /// Vrai pour une modification de lecture qui garde la valeur sous une autre
 /// forme (unité convertie, durée arrondie, moment ou style simplifié, texte
 /// coupé) : « Valeurs déduites ». Parties non importées, valeurs rejetées,
-/// champs inconnus et caractères retirés : « Non importé ».
+/// champs inconnus et caractères retirés : « Non importé ». Une
+/// [ValeurReprise] n'est créée que par `completerRecette`, dans
+/// `FicheAImporter.reprises` (« Reprises de la Bibliothèque ») : la lecture de
+/// la recette n'en met aucune dans `modifications`, et « Non importé » l'écarte.
 bool _deduite(Modification m) => switch (m) {
   UnitesConverties() ||
   DureeArrondie() ||
