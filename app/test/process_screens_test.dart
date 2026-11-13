@@ -752,7 +752,7 @@ void main() {
         '/processus/nouveau',
         before: (app) {
           app.processes.publish(const []);
-          app.preferences
+          app.preferencesProcessus
               .of(moi)
               .add(DocumentAbsentDuCache<PreferenceProcessus>());
         },
