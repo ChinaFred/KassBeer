@@ -698,7 +698,8 @@ void main() {
       expect(
         find.bySemanticsLabel(
           RegExp(
-            r"^Ambrée d'essai, [12] avril 2023, à compléter, .*"
+            // Minuit à Paris tombe la veille en UTC (CI) : « 1er avril ».
+            r"^Ambrée d'essai, (1er|2) avril 2023, à compléter, .*"
             'Import commencé et non terminé : seul ce qui manque sera écrit.',
           ),
         ),
