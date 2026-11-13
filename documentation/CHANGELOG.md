@@ -25,7 +25,7 @@ des règles, arrêt sur 30 s sans accusé du serveur. P9 amendé : Admin › Imp
 fiches de l'administrateur et ne les écrit que dans `users/{uid}/brew_costs/`. Aucune règle
 Firestore ne change ; 25 tests de règles rejouent les écritures d'un import. `.gitignore` limite
 `/import/` à la racine, pour versionner `app/lib/features/import/`. Aucun paquet ne change.
-`main.dart.js` passe de 5 125 522 à 5 197 841 octets.
+`main.dart.js` passe de 5 317 706 à 5 388 062 octets (+ 70 356, mesuré sur main à la v0.1.36).
 
 ### v0.1.36 — fonctionnel
 
