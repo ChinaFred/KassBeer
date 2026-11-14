@@ -874,8 +874,9 @@ service cloud.firestore {
 
     // Tickets des membres (ADR-006, P23). Le membre crée son ticket hors ligne compris ;
     // un déclencheur le publie en Issue sur le dépôt public et seul le serveur (SDK
-    // Admin, hors règles) écrit ensuite le statut et les champs GitHub. Le client n'écrit
-    // que les champs de la création, puis `seen_by_author_at`.
+    // Admin, hors règles) écrit ensuite le statut et les champs GitHub, et
+    // `screenshot_path` (`attachTicketScreenshot`, ADR-008, T6). Le client n'écrit que les
+    // champs de la création, puis `seen_by_author_at` : `hasOnly` refuse tout autre champ.
     //
     // `screen` : modèle de route go_router (segments littéraux en minuscules et
     // paramètres `:id`), `autre` ou `inconnu`. Un identifiant réel de document ne passe

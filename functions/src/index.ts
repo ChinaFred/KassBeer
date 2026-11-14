@@ -17,8 +17,11 @@
  *   accepte `mode: "resume"`, « Relancer le développement » (T5, P47) ;
  * - `launchTicketDelivery` : `onCall` de l'admin, « Livrer » (T5, P43, P44), par la routine
  *   de développement. Chaque callable ne monte que les secrets de sa routine (P25).
+ * - `attachTicketScreenshot` : `onCall` de l'auteur membre (`requireMember`, P30), joint
+ *   la capture déposée dans Cloud Storage à son ticket (T6). Aucun secret.
  *
- * Ce module ne construit aucun client (P26) : Firestore et GitHub s'ouvrent à l'appel.
+ * Ce module ne construit aucun client (P26) : Firestore, Storage et GitHub s'ouvrent à
+ * l'appel.
  */
 
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
@@ -42,6 +45,7 @@ import { isRetryRequest } from "./tickets/decisionModel";
 import { applyDecision } from "./tickets/decisions";
 import { handleDevelopmentCall, handleLaunchCall } from "./tickets/launch";
 import { publishTicket as publish } from "./tickets/publish";
+import { handleScreenshotCall } from "./tickets/screenshot";
 import { runHourlyPass } from "./tickets/sync";
 import { handleGithubWebhook } from "./tickets/webhook";
 
@@ -259,4 +263,20 @@ export const launchTicketDelivery = onCall(
       routine: devRoutine,
       githubToken: () => GITHUB_TICKETS_TOKEN.value(),
     }),
+);
+
+/**
+ * Capture d'écran jointe par l'auteur de son ticket (ADR-008, T6, P30). Aucun secret : la
+ * fonction lit Firestore et le bucket par défaut avec le compte d'exécution.
+ */
+export const attachTicketScreenshot = onCall(
+  {
+    region: REGION,
+    serviceAccount: RUNTIME_SERVICE_ACCOUNT,
+    cors: CALLABLE_ORIGINS,
+    maxInstances: 2,
+    memory: "256MiB",
+    timeoutSeconds: 60,
+  },
+  (req) => handleScreenshotCall(req),
 );

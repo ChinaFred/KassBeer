@@ -16,6 +16,8 @@ import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
+import '../../../core/presentation/menu_compte.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -432,11 +434,10 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
     );
   }
 
-  Future<void> _quitter() async {
-    if (!_ecriture) {
-      _retour();
-      return;
-    }
+  /// Vrai si rien ne s'écrit, ou si l'utilisateur arrête l'import : la fiche
+  /// en cours s'arrête alors.
+  Future<bool> _peutQuitter() async {
+    if (!_ecriture) return true;
     // ticket: aucun (confirmation)
     final arreter = await confirmerAbandon(
       context,
@@ -445,8 +446,12 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
       continuer: TextesImportFiches.continuer,
       abandonner: TextesImportFiches.arreter,
     );
-    if (!arreter || !mounted) return;
-    _arret = true;
+    if (arreter) _arret = true;
+    return arreter;
+  }
+
+  Future<void> _quitter() async {
+    if (!await _peutQuitter() || !mounted) return;
     _retour();
   }
 
@@ -491,14 +496,21 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
         appBar: AppBar(
           title: const Text(TextesImportFiches.titre),
           leading: BackButton(onPressed: () => unawaited(_quitter())),
+          actions: [
+            // Pendant l'écriture : même confirmation que le retour.
+            MenuCompte(avantDeQuitter: _ecriture ? _peutQuitter : null),
+            const SizedBox(width: 8),
+          ],
         ),
-        body: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              if (offline) const BandeauHorsLigne(),
-              Expanded(child: body),
-            ],
+        body: ZoneCapture(
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                if (offline) const BandeauHorsLigne(),
+                Expanded(child: body),
+              ],
+            ),
           ),
         ),
       ),

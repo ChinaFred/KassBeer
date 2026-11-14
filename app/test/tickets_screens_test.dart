@@ -163,7 +163,7 @@ void main() {
       tester,
     ) async {
       final app = await signedIn(tester);
-      await tester.tap(find.text('Équipements'));
+      await tester.tap(find.byTooltip('Équipements'));
       await tester.pumpAndSettle();
       await openMenu(tester);
       await tester.tap(find.text('Signaler ou proposer'));
@@ -201,7 +201,7 @@ void main() {
       tester,
     ) async {
       final app = await signedIn(tester);
-      await tester.tap(find.text('Équipements'));
+      await tester.tap(find.byTooltip('Équipements'));
       await tester.pumpAndSettle();
       await openMenu(tester);
       await tester.tap(find.text('Signaler ou proposer'));
@@ -764,7 +764,7 @@ void main() {
       app.tickets.publishAll([
         unTicket(id: 'f', status: TicketStatus.sendFailed),
       ]);
-      await tester.tap(find.text('Admin'));
+      await tester.tap(find.byTooltip('Admin'));
       await tester.pumpAndSettle();
       // Accueil d'Admin : la tuile porte le nombre d'alertes, sans bandeau.
       expect(find.textContaining('Secret Manager'), findsNothing);
@@ -796,7 +796,7 @@ void main() {
       final app = await signedIn(tester, admin: true);
       app.tickets.githubStatus.add(const DocumentAbsent());
       app.tickets.publishAll(const []);
-      await tester.tap(find.text('Admin'));
+      await tester.tap(find.byTooltip('Admin'));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel(RegExp('alerte')), findsNothing);
       await tester.tap(find.text('Tickets des membres'));

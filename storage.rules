@@ -1,0 +1,79 @@
+rules_version = '2';
+
+// Règles Cloud Storage de Kass'Beer (ADR-008, lot T6). Un seul chemin ouvert : la
+// capture d'écran jointe à un ticket. Tout autre chemin est refusé : Storage refuse
+// par défaut.
+//
+// Chaque changement arrive avec ses tests dans rules-tests/ (P4), rejoués sur
+// l'émulateur Storage pour les cinq profils.
+//
+// L'appartenance se lit dans Firestore par une règle inter-services (`firestore.get`,
+// `firestore.exists`), à l'identique de `isGoogleVerified`, `isMember` et `isAdmin` de
+// firestore.rules. Les deux copies rejouent test-fixtures/member_access.json (P31).
+//
+// Prérequis hors dépôt : l'agent de service de Storage
+// (`service-<numéro>@gcp-sa-firebasestorage.iam.gserviceaccount.com`) porte le rôle
+// `roles/firebaserules.firestoreServiceAgent`. Sans lui, `firestore.get` échoue, une
+// erreur vaut refus, et chaque dépôt et chaque lecture sont refusés.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ---------------------------------------------------------------- Identité
+
+    // Compte Google à l'adresse vérifiée (P11), comme firestore.rules.
+    function isGoogleVerified() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function memberPath() {
+      return /databases/(default)/documents/members/$(request.auth.token.email.lower());
+    }
+
+    function isMember() {
+      return isGoogleVerified() && firestore.exists(memberPath());
+    }
+
+    function isAdmin() {
+      return isMember() && firestore.get(memberPath()).data.role == 'admin';
+    }
+
+    // ---------------------------------------------------------------- Tickets
+
+    // Capture d'écran jointe à un ticket (ADR-008, T6) : privée, jamais publiée sur
+    // GitHub. `tickets/{uid}/{ticketId}/screenshot.png` seul : le client ne produit que
+    // des PNG (note du 2026-11-14).
+    //
+    // Création seule (`resource == null`), par l'auteur membre, quand `tickets/{ticketId}`
+    // existe dans Firestore et porte `author_uid` égal à l'appelant : PNG de 1 octet à
+    // 5 Mo. Une capture déposée ne se remplace pas : celle que le serveur a contrôlée reste
+    // celle que l'administrateur lit. Lecture par l'auteur membre et l'administrateur.
+    // Aucune mise à jour, aucune suppression, aucun listage.
+    // `attachTicketScreenshot` vérifie ensuite l'auteur, la taille et les premiers
+    // octets avant d'écrire `screenshot_path`.
+    match /tickets/{uid}/{ticketId}/{fileName} {
+      // Ticket absent : `get` rend null, la lecture de `.data` lève, et une erreur vaut
+      // refus. Une seule lecture facturée.
+      function ticket() {
+        return firestore.get(/databases/(default)/documents/tickets/$(ticketId));
+      }
+
+      allow get: if isMember()
+        && (request.auth.uid == uid || isAdmin());
+
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && resource == null
+        && fileName == 'screenshot.png'
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType == 'image/png'
+        && isMember()
+        && ticket().data.author_uid == request.auth.uid;
+
+      allow update, list, delete: if false;
+    }
+  }
+}

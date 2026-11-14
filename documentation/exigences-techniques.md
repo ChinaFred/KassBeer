@@ -6,23 +6,27 @@
 
 Application Flutter (`app/`, Android et web) qui lit et écrit Cloud Firestore `(default)`
 directement, avec le cache hors ligne persistant. `firestore.rules` est le seul contrôle
-d'accès des clients. Le seul serveur est `functions/` (ADR-006, ADR-008) : six Cloud Functions
-qui publient les tickets des membres en Issues GitHub, appliquent les décisions de l'admin et
-relisent ces Issues. Deux sont des points d'accès de la liste fermée d'ADR-008 : le webhook
-GitHub signé `githubTicketWebhook` et la callable `answerTicketAnalysis` (voir « Cloud
+d'accès des clients à Firestore ; `storage.rules` celui de Cloud Storage, où vivent les
+seules captures jointes aux tickets (ADR-008, T6). Le seul serveur est `functions/` (ADR-006,
+ADR-008) : neuf Cloud Functions qui publient les tickets des membres en Issues GitHub,
+appliquent les décisions de l'admin, relisent ces Issues, lancent les routines et joignent une
+capture à son ticket. Cinq sont des points d'accès de la liste fermée d'ADR-008 : le webhook
+GitHub signé `githubTicketWebhook` et les callables `answerTicketAnalysis`,
+`launchTicketAnalysis`, `launchTicketDevelopment` et `attachTicketScreenshot` (voir « Cloud
 Functions »).
 
 | Fichier | Rôle |
 |---|---|
 | `firestore.rules` | règles d'accès, appliquant le modèle ci-dessous |
+| `storage.rules` | règles de Cloud Storage : `tickets/{uid}/{ticketId}/screenshot.png` seul, en création seule (ADR-008, T6, voir « Règles d'accès ») |
 | `firestore.indexes.json` | index composites des requêtes de `tickets/`, TTL de `ticket_quotas/` |
-| `firebase.json` | Firestore, Functions (`functions/`, Node 24), émulateurs (auth 9099, firestore 8080), Hosting |
+| `firebase.json` | Firestore, Storage (`storage.rules`), Functions (`functions/`, Node 24), émulateurs (auth 9099, firestore 8080, storage 9199), Hosting |
 | `functions/` | Cloud Functions des tickets, TypeScript (ADR-006, ADR-008) |
-| `test-fixtures/` | fixtures rejouées par plusieurs suites : `member_access.json` (appartenance et rôle, P31), lue par `rules-tests/` et `functions/test/` |
+| `test-fixtures/` | fixtures rejouées par plusieurs suites : `member_access.json` (appartenance et rôle, P31), lue par `rules-tests/` (`firestore.rules` et `storage.rules`) et `functions/test/` |
 | `brewing/` | calculs de brassage, Dart pur (voir « Calculs de brassage ») |
 | `exchange/` | import et export de recettes BeerJSON et BeerXML, Dart pur, dépend de `brewing/` et de `xml` (ADR-005, voir « Échange de recettes ») |
 | `.firebaserc` | alias `default` : `kassbeer`, le projet Firebase de production |
-| `rules-tests/` | tests des règles contre l'émulateur, projet `demo-kassbeer` |
+| `rules-tests/` | tests de `firestore.rules` et `storage.rules` contre les émulateurs Firestore et Storage, projet `demo-kassbeer` |
 
 ### Hosting
 
@@ -60,7 +64,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
 | `lib/core/data/nouveautes.dart` | `Nouveaute`, `lireNouveautes` (valide la forme de `assets/changelog_recent.json`, lève une `FormatException` sinon), `NouveautesRepository` (lecture de l'asset, panne journalisée sous `nouveautes` puis relancée) |
-| `lib/core/presentation/` | `AppShell` (rail défilable ; titre et retour reçus de la route ; menu du compte), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/presentation/` | `AppShell` (barre du bas à icônes seules sous 600 px, `label` en infobulle et pour le lecteur d'écran ; rail défilable ; titre et retour reçus de la route ; menu du compte), `MenuCompte` (`menu_compte.dart` : avatar et menu du compte de la coquille et des pages pleines, rien sans `AccessGranted` ; `photo: false` sur l'écran du jour, initiale seule ; entrée de l'écran courant masquée par `kEntreeDeLEcran`, comparée au `fullPath` ; `avantDeQuitter` appelé avant « Tickets à traiter », « Mes processus » et « Se déconnecter » ; « Tickets à traiter » par `go`, sauf sur `kEcransDuJour` (`/brassins/:id/jour`, `/brassins/:id/jour/:journee`), par `push` pour garder l'écran du jour et son verrou ; `avantDeDeconnecter` avant « Se déconnecter » ; `textePastille`, `infobulleCompte`), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` (menu du compte après l'action, `avantDeQuitter` = confirmation d'abandon si modifié ; bouton d'action borné par la largeur restante, libellé réduit par `FittedBox`) et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
 | `lib/core/preferences/` | préférence de thème gardée sur l'appareil (ADR-009) : `PreferencesAppareil` (`lireValeurTheme`, `ecrireTheme`), `PreferencesAppareilPlateforme` (canal `fr.kassbeer/prefs` sur Android, `preferences_web.dart` par `package:web` sur le web, `preferences_web_stub.dart` hors du web, import conditionnel), `lireTheme` (rend `LectureTheme`, ne lève pas), `themeModeProvider` (`ThemeModeNotifier.choisir`) ; fournis par `preferencesAppareilProvider` et `themeModeInitialProvider` |
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets)` rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
@@ -350,6 +354,15 @@ l'écran du jour, relâché en quittant, repris au retour d'arrière-plan. Compt
 web, `no_sleep.js` se charge au premier appel : d'où la prise à l'ouverture, avant la coupure
 du réseau.
 
+**Menu du compte sur l'écran du jour.** Chaque barre du haut de `brew_day_screen.dart` (cadre de
+`PageDocument`, message, chargement des saisies, écran) porte `MenuCompte(photo: false)` :
+initiale seule, aucune `NetworkImage` (P2). Les entrées s'ouvrent par `push` : l'écran du jour
+reste monté et garde son verrou. Avec des saisies en attente (`hasPendingWrites`),
+`avantDeDeconnecter` ouvre `confirmerDeconnexionSaisies` (`TextesDeconnexion`). Firestore
+range ses écritures en attente par utilisateur : après une déconnexion, elles restent dans le
+cache persistant et ne partent qu'à la reconnexion du même compte sur l'appareil ; un autre
+compte ne les envoie pas.
+
 **Dépendances.** `wakelock_plus` 1.8.2, `flutter_localizations` (SDK), `web` ^1.1.1 (direct,
 déjà tiré), `package_info_plus` ^10.2.2. `flutter_localizations` tire `intl` 0.20.2. `fl_chart`
 1.3.0 (version exacte, ADR-004) dessine la courbe du relevé et n'ajoute aucun paquet transitif.
@@ -597,8 +610,10 @@ par-dessus dans la coquille.
 
 #### Tickets — client
 
-Feature `lib/features/tickets/` (ADR-006, lot T1). Aucun code de ticket dans l'écran du jour
-de brassage ni dans ce qu'il appelle (P2) ; aucun prix, stock ni coût (P5).
+Feature `lib/features/tickets/` (ADR-006, lot T1). Dans l'écran du jour de brassage et ce
+qu'il appelle (P2), le seul code de ticket est celui du menu du compte (`MenuCompte`) : les
+deux compteurs de pastille, écouteurs Firestore servis par le cache, et des pages ouvertes par
+`push` ; aucune transaction, callable ni requête. Aucun prix, stock ni coût (P5).
 
 | Fichier | Contenu |
 |---|---|
@@ -611,7 +626,7 @@ de brassage ni dans ce qu'il appelle (P2) ; aucun prix, stock ni coût (P5).
 **Routes.** Hors de la coquille, ouvertes par `push`, retour par `pop` sinon `/tickets` ou
 l'accueil : `/tickets/nouveau` (déclarée avant `/tickets/:id`), `/tickets/:id`, `/tickets`.
 `routes.dart` : `tickets`, `newTicket`, `ticket(id)`. Le menu du compte lit
-`GoRouter.of(context).state.fullPath` (modèle `/recettes/:id`, jamais l'adresse) et le passe
+`GoRouterState.of(context).fullPath`, l'état de la page qui le porte (modèle `/recettes/:id`, jamais l'adresse) et le passe
 dans `?ecran=` ; le formulaire le réduit par `ticketScreenValue`. « Reprendre ce ticket »
 passe un `TicketBrouillon` par `extra`. `test/ticket_screens_test.dart` parcourt
 `router.configuration.routes` et échoue si une route manque à la table, ou si
@@ -619,7 +634,11 @@ passe un `TicketBrouillon` par `extra`. `test/ticket_screens_test.dart` parcourt
 23 routes, dont les 12 de la Bibliothèque (`/bibliotheque/<segment>` et
 `/bibliotheque/<segment>/:id` pour `styles`, `malts`, `houblons`, `levures`, `divers` et
 `recettes`) ; ces 12 écrans n'ont que les deux éléments de la coquille.
-`/sources-des-donnees` et `/preferences`, hors de la coquille, n'ont aucun élément. L'élément précis
+`kTicketAccountMenuScreens` liste les 20 pages pleines hors de la coquille qui portent le menu
+du compte ; chacune reçoit l'élément `menu/compte` (« Menu du compte »).
+`ticket_screens_test.dart` échoue si cette liste n'est pas celle des routes hors de la
+coquille, écrans d'accès et redirections (`/`, `/bibliotheque`) exclus.
+`/sources-des-donnees`, `/preferences` et `/nouveautes` n'ont que cet élément. L'élément précis
 s'écrit dans le même champ `screen` (aucun champ ajouté, règles et `routeTemplateOrNull`
 inchangés : la forme passe déjà leur contrôle). Il n'est jamais lu de `?ecran=` :
 `initState` ne garde que l'écran ; seul « Reprendre » rend l'élément du ticket refusé.
@@ -636,7 +655,8 @@ de `price_form.dart`, ouvert depuis `/prix`, `/recettes/:id` et `/brassins/:id`,
 `/prix/fenetre/prix, /recettes/:id/fenetre/prix, /brassins/:id/fenetre/prix`, et sa liste
 « Reprendre un prix » les trois clés `…/fenetre/reprendre`. Les commentaires
 `<coquille>/menu/compte` et `<coquille>/menu/navigation` citent la clé de chaque écran de la
-coquille ; ces commentaires sont dans `app_shell.dart`. `ticket_screens_test.dart` échoue sur un appel sans
+coquille, `<hors-coquille>/menu/compte` celle de chaque écran de `kTicketAccountMenuScreens` ;
+`menu/navigation` est dans `app_shell.dart`, `menu/compte` dans `menu_compte.dart`. `ticket_screens_test.dart` échoue sur un appel sans
 commentaire, une clé citée absente de la table, une clé de la table citée nulle part, une clé
 qui ne commence pas par un modèle de `kTicketScreenNames` suivi de `/menu/` ou `/fenetre/`,
 une route qui contient un segment `menu` ou `fenetre`, une valeur qui ne passe pas la regex
@@ -878,6 +898,52 @@ historique absent du cache, lecture, section, invitation de la section vide, lie
 (compteur, panne, pastilles, aucune lecture pour un ticket sans lancement permis). `tickets_domain_test.dart` :
 lignes du bandeau. Les doubles de `test/support/fakes.dart` rendent un historique et un état
 absents par défaut.
+
+#### Tickets — client (T6)
+
+Capture d'écran jointe à un ticket (ADR-008, lot T6 ; note du 2026-11-14). L'écran du jour de
+brassage porte la zone de capture et le menu du compte, comme toute page qui a ce menu : la
+prise d'image est locale (`toImage`), sans réseau ; le dépôt part du formulaire, ouvert
+par-dessus l'écran du jour (P2).
+
+| Fichier | Contenu |
+|---|---|
+| `core/presentation/zone_capture.dart` | `ZoneCapture` (`RepaintBoundary`) : corps du `Scaffold` de la coquille (sans la barre du haut, la barre ou le rail de navigation) et de chaque page pleine qui porte `MenuCompte` ; `zoneCaptureDe(context)` : la première `ZoneCapture` sous le `Scaffold` le plus proche ; `echelleCapture` (échelle `kCaptureMaxScale` 2 au plus, plus grand côté `kCaptureMaxSide` 2 000 px au plus) ; `rendrePng` (PNG, `null` au-delà de `maxBytes`) |
+| `features/tickets/presentation/capture_ticket.dart` | `CaptureEcran` (`png`, `ecran`) ; `CaptureEnAttente` et `captureEnAttenteProvider` : dépôt en mémoire, écrit par le menu, vidé par le formulaire qui le lit une fois (`prendre`), jamais écrit sur l'appareil ; `capturerEcranProvider` et `capturerEcran` (délai `kCaptureTimeout` 5 s ; échec rapporté `tickets.capture`, sans contenu) ; `ticketScreenshotProvider` (`FutureProvider.autoDispose.family` par chemin, sans nouvel essai) |
+| `core/presentation/menu_compte.dart` | « Signaler ou proposer » : capture de la page sous le menu, puis `push` du formulaire avec le modèle de route `GoRouterState.of(context).fullPath` ; le menu ouvert, dans l'`Overlay`, n'est pas dans l'image |
+| `features/tickets/presentation/ticket_form_screen.dart` | section « Capture » si la capture prise correspond à l'écran d'origine et sans « Reprendre » ; avertissement des prix pour `kTicketScreensWithPrices`, avant la case ; case décochée ; envoi : ticket écrit, formulaire fermé, puis, ticket accepté par le serveur en 30 s au plus (`captureWaitTimeout`), `attachScreenshot` ; hors ligne, rien ne part |
+| `features/tickets/presentation/vignette_capture.dart` | `VignetteCapture` (`Semantics` bouton avec `onTap`, « Agrandir la capture » ; `InkWell` posé au-dessus de l'image, effet d'appui et focus visibles ; agrandie dans un `Dialog.fullscreen` avec `InteractiveViewer`) ; image illisible : « Capture indisponible. », rapportée une fois `tickets.capture_display` avec la taille seule ; `CaptureDuTicket` (lecture par `getData` ; en échec « Capture indisponible. », hors ligne « La capture se lit avec le réseau. », et « Réessayer », qui invalide `ticketScreenshotProvider`) ; `TextesCapture` |
+| `features/tickets/domain/ticket.dart` | `Ticket.screenshotPath` (`screenshot_path`) ; `kTicketScreenshotMaxBytes` (5 Mo) ; `kTicketScreenshotPathPattern` (`screenshot.png` seul) ; `ticketScreenshotPath(uid, ticketId)` |
+| `features/tickets/domain/ticket_screens.dart` | `kTicketScreensWithPrices` : Recette, Brassin, jour de brassage, journée suivante, Préparer la journée, Mes prix |
+| `features/tickets/data/tickets_repository.dart` | `attachScreenshot(ticketId:, authorUid:, png:)` : `putData` sous `tickets/{uid}/{ticketId}/screenshot.png` en `image/png` (délai 2 min), puis callable `attachTicketScreenshot` (`{ticketId, path}`) ; échec rapporté `tickets.screenshot` par une erreur neutre (`StateError('storage <code>')`, le message d'une `FirebaseException` de Storage portant le chemin) avec l'identifiant du ticket, l'étape et le code, jamais le chemin ni le contenu (P13) ; après un échec, relit le ticket et rend vrai s'il porte déjà `screenshot_path` (second dépôt refusé par la création seule) ; `loadScreenshot(path)` : chemin vérifié contre le motif, puis `getData(5 Mo)`, jamais d'URL de téléchargement ; échec rapporté `tickets.load_screenshot` par la même erreur neutre, code seul ; `FirebaseStorage.instance` construite au premier dépôt ou à la première lecture et mémorisée par le dépôt (P6) ; `DeposerFichier` et `LireFichier` injectés par les tests |
+| `ticket_detail_screen.dart`, `admin_ticket_screen.dart` | « Capture » après la description, quand `screenshot_path` est posé |
+
+**Point à mesurer sur l'APK.** Le formulaire s'ouvre après le rendu PNG (`toImage`, puis
+`toByteData`), jusqu'à 5 s (`kCaptureTimeout`). Le temps entre l'appui sur « Signaler ou
+proposer » et l'ouverture n'a pas été mesuré sur un téléphone ; s'il se voit, ouvrir le
+formulaire pendant le rendu (la capture arrivant ensuite) est la piste retenue, pas encore
+faite.
+
+**Écran du jour.** `IndicateurEnvoi` passe en pastille compacte sous 400 dp de large
+(`compactMaxWidth`) : icône et nombre seuls, rien pour « Envoyé » ; le lecteur d'écran lit
+toujours le message entier. La ligne de l'heure tient sur une ligne (`maxLines: 1`, points de
+suspension). Sur téléphone, le panneau du haut fait au plus 60 % de l'écran et les trois
+quarts du corps, pour que la chronologie garde sa place sous une barre du bas haute (texte à
+200 %). Test : 360 dp, texte à 200 %, hors ligne, trois saisies en attente, sans débordement.
+
+**Paquets.** `firebase_storage` 13.6.0, en version exacte (avec
+`firebase_storage_platform_interface` 6.0.7 et `firebase_storage_web` 3.11.13, résolus par
+`firebase_core` 4.15.0 ; aucune autre version du `pubspec.lock` ne change ; monte avec la
+famille FlutterFire, P6). `main.dart.js` : 5 417 304 octets avant, 5 510 208 après
+(+ 92 904, `flutter build web --release`, 2026-11-14).
+
+**Tests.** `ticket_capture_test.dart` : écran concerné après un `push` (fiche d'Admin au
+téléphone, recette empilée dans la coquille), capture prise à l'appui, case décochée,
+avertissement des prix, envoi sans capture, dépôt après l'acceptation, échec, délai, refus,
+hors ligne, aucune capture depuis « Mes tickets », l'adresse directe ou « Reprendre », écran du
+jour, vignette du suivi et de la fiche d'Admin, zone sans la barre du haut, zone présente sur
+chaque page qui porte le menu, échelle, dépôt de données. Dans `test/support/fakes.dart`,
+`capturerEcranProvider` rend `kPngDeTest` : `toImage` ne se termine pas sous l'horloge simulée.
 
 ## Modèle de données
 
@@ -1488,6 +1554,7 @@ le retire quand elle reprend le ticket.
 | `decision_lease_until` | timestamp : bail de deux minutes d'une décision ou d'une réponse en cours, de 150 s d'un lancement (T4), de 210 s d'une livraison (T5, plus que les 180 s de `launchTicketDelivery`), posé en transaction, retiré à la fin ; une décision, une réponse et un lancement ne tournent jamais ensemble sur un ticket |
 | `answer_reset_at` | timestamp : dernier retour à `received` d'un ticket `analyzed` ou `validated` par « Répondre » (ADR-008). Un état d'Issue dont `updated_at` est antérieur ou égal ne change plus le statut : une étiquette livrée en retard ne refait pas avancer le ticket |
 | `send_retried_at` | timestamp de la dernière relance demandée par l'admin : avec `send_attempts` remis à 0, il fait chercher l'Issue par sa référence avant un nouvel envoi |
+| `screenshot_path` | string : `tickets/{author_uid}/{ticketId}/screenshot.png`, écrit par `attachTicketScreenshot` après ses contrôles (ADR-008, T6). Absent : aucune capture. Jamais écrit par un client : les règles du ticket (`hasOnly`) le refusent, testé dans `rules-tests/` pour les cinq profils. La capture ne part jamais sur GitHub ; chaque Issue porte « Capture éventuelle disponible dans Admin › Tickets. » |
 | `updated_at` | timestamp de la dernière écriture du serveur |
 
 Un statut ne recule pas, sauf à la réouverture de l'Issue, qui reprend le statut de ses
@@ -1715,6 +1782,26 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 
 L'admin n'a aucun droit d'écriture sur le contenu des autres brasseurs.
 
+**Cloud Storage (`storage.rules`, ADR-008, T6).** Bucket par défaut
+`kassbeer.firebasestorage.app`. `isGoogleVerified`, `isMember` et `isAdmin` y sont recopiés de
+`firestore.rules` et lisent `members/{email en minuscules}` par `firestore.exists` et
+`firestore.get` ; les deux copies rejouent `test-fixtures/member_access.json` (P31).
+
+| Chemin | Lecture (`get`) | Création | Remplacement, liste, suppression |
+|---|---|---|---|
+| `tickets/{uid}/{ticketId}/{fileName}` | membre `uid` (l'auteur) ; admin | membre `uid` seul, fichier absent (`resource == null`), `tickets/{ticketId}` existant dans Firestore avec `author_uid == request.auth.uid` (`firestore.get`), `fileName` égal à `screenshot.png`, type `image/png`, taille de 1 octet à 5 Mo | personne |
+| tout autre chemin | refusé | refusé | refusé |
+
+Chaque dépôt et chaque lecture coûtent une ou deux lectures Firestore facturées (`members/`,
+puis `tickets/`). `attachTicketScreenshot` recontrôle ensuite l'auteur, le type, la taille et
+les premiers octets (PNG `89 50 4E 47 0D 0A 1A 0A`) avant d'écrire `screenshot_path`. Une
+capture déposée ne se remplace pas (décision du 2026-11-14) : l'image que le serveur a
+contrôlée reste celle que l'administrateur lit. Un second dépôt pour le même ticket est
+refusé ; le client relit alors le ticket et ne dit « sans la capture » que si
+`screenshot_path` manque. Une capture déposée sans `screenshot_path` (callable en échec) reste dans le
+bucket, sans purge (décision de l'utilisateur, 2026-11-14) ; elle n'est lue par personne,
+l'application ne lisant que le chemin écrit par le serveur.
+
 `import_unresolved/` : un membre qui appelle Firestore directement, sans l'application, peut
 créer des documents à des noms de son choix, ou faire monter `count` sans plafond. Ce risque est
 accepté (v0.1.28) : moins de 10 comptes invités, lecture réservée à l'admin, alerte budgétaire
@@ -1875,8 +1962,10 @@ son `owner_uid` ou son `owner_name`. Le document `members/{email}` est déjà su
 retrait.
 
 Tests : `rules-tests/` (Node 22, `@firebase/rules-unit-testing`, `node --test`), lancés par
-`npm test`, qui démarre l'émulateur Firestore (Java 21) sur le projet `demo-kassbeer`.
-Chaque collection est rejouée pour les cinq profils de P4 (anonyme, connecté non membre,
+`npm test`, qui démarre les émulateurs Firestore et Storage (Java 21) sur le projet
+`demo-kassbeer`. `storage.test.mjs` rejoue `storage.rules` (dépôt et lecture d'une capture,
+type, taille, nom, ticket absent ou d'un autre auteur, liste et suppression refusées, cas de
+P11 et `member_access.json`) avec son propre environnement Firestore et Storage. Chaque collection est rejouée pour les cinq profils de P4 (anonyme, connecté non membre,
 brasseur propriétaire, autre brasseur, admin), plus les comptes invités à l'adresse non
 vérifiée ou connectés par mot de passe, et un jeton à l'adresse en majuscules.
 `owner_name.test.mjs` ajoute des jetons au nom absent, vide, de 80 et 81 caractères, et non
@@ -2620,9 +2709,10 @@ aucune recette réécrit, seul son document `ingest_runs` créé) ;
 
 `functions/` (ADR-006, ADR-008) : Cloud Functions 2e génération, Node 24, TypeScript, région
 `europe-west1` (celle de la base), compte d'exécution `tickets-functions@kassbeer.iam.gserviceaccount.com`.
-Quatre points d'accès, ceux des lots T3 et T4 de la liste fermée d'ADR-008 (P25) : le webhook
-`githubTicketWebhook` et les callables `answerTicketAnalysis`, `launchTicketAnalysis` et
-`launchTicketDevelopment`. Les quatre autres fonctions ne s'appellent pas depuis Internet.
+Cinq points d'accès, ceux des lots T3, T4 et T6 de la liste fermée d'ADR-008 (P25) : le webhook
+`githubTicketWebhook` et les callables `answerTicketAnalysis`, `launchTicketAnalysis`,
+`launchTicketDevelopment` et `attachTicketScreenshot`. Les quatre autres fonctions ne
+s'appellent pas depuis Internet.
 
 | Fonction | Déclencheur | Réglages | Ce qu'elle fait |
 |---|---|---|---|
@@ -2635,8 +2725,10 @@ Quatre points d'accès, ceux des lots T3 et T4 de la liste fermée d'ADR-008 (P2
 | `launchTicketAnalysis` | `onCall`, `requireAdmin` (ADR-008, T4) | `maxInstances` 1, 256 Mio, 120 s, même `cors` | « Lancer l'analyse » : lance la routine d'analyse sur un ticket `received` (P35, P36) |
 | `launchTicketDevelopment` | `onCall`, `requireAdmin` (ADR-008, T4) | `maxInstances` 1, 256 Mio, 120 s, même `cors` | « Lancer le développement » : lance la routine de développement sur un ticket `validated` (P35, P36) ; avec `mode: "resume"`, « Relancer le développement » sur un ticket `in_progress` à CI rouge (T5, P47) |
 | `launchTicketDelivery` | `onCall`, `requireAdmin` (ADR-008, T5) | `maxInstances` 1, 256 Mio, 180 s, même `cors` | « Livrer » : contrôle la PR, ses fichiers et sa CI, prend le verrou des livraisons, lance la routine de développement avec `livraison #N` sur un ticket `in_progress` (P43, P44) |
+| `attachTicketScreenshot` | `onCall`, `requireMember`, auteur du ticket (ADR-008, T6) | `maxInstances` 2, 256 Mio, 60 s, même `cors`, aucun secret | joint la capture déposée dans Storage à son ticket : écrit `screenshot_path` (voir ci-dessous) |
 
-Les neuf lisent le secret `GITHUB_TICKETS_TOKEN` (`defineSecret`). `githubTicketWebhook` lit
+Les neuf premières lisent le secret `GITHUB_TICKETS_TOKEN` (`defineSecret`) ;
+`attachTicketScreenshot` ne lit aucun secret. `githubTicketWebhook` lit
 aussi `GITHUB_WEBHOOK_SECRET`, et lui seul ; `launchTicketAnalysis` lit aussi
 `TICKETS_ROUTINE_ANALYSIS_ID` et `TICKETS_ROUTINE_ANALYSIS_TOKEN`, et elle seule ;
 `launchTicketDevelopment` et `launchTicketDelivery` lisent aussi `TICKETS_ROUTINE_DEV_ID` et
@@ -2667,6 +2759,27 @@ membres. ») : la réponse ne dit pas si le compte existe. C'est la vérificatio
 `functions/test/auth.test.ts`. `requireBoundedText` refuse un argument texte absent, d'un
 autre type ou plus long que sa borne brute, avant toute lecture (`invalid-argument`,
 `details.field`, `details.reason`).
+
+**Capture** (`attachTicketScreenshot`, `src/tickets/screenshot.ts`, ADR-008, T6). Copie de
+Kass'Dalle. Dans l'ordre : `requireMember` (P30) ; `ticketId` (`requireBoundedText`, 128, puis
+`[A-Za-z0-9_-]`) ; `path` (`requireBoundedText`, 300), égal à
+`tickets/{uid de l'appelant}/{ticketId}/screenshot.png`, sinon `invalid-argument`
+(`details.code = path_invalid`, `details.field = path`) ; ticket absent : `not-found`
+(`ticket_missing`) ; `author_uid` autre que l'appelant : `permission-denied` (`not_author`) ;
+fichier absent : `not-found` (`file_missing`) ; type annoncé autre que `image/png`, taille
+nulle, illisible ou au-delà de 5 Mo, ou premiers octets autres que la signature PNG :
+`invalid-argument` (`file_refused`, « Seules les images PNG de 5 Mo au plus sont
+acceptées. ») ; sinon `screenshot_path` et `updated_at` écrits, `{ok: true}`. Une panne :
+`logError` avec l'identifiant du ticket et `errorCode` (`storageErrorCode` : statut HTTP,
+code court sans `/`, ou nom de la classe), jamais le message ni la pile de l'erreur, qui
+portent le chemin, puis `internal`.
+Un second appel réécrit le même chemin. `src/storage.ts` charge `firebase-admin/storage` au
+premier appel et mémorise le bucket par défaut (P26) ; `@google-cloud/storage` était déjà
+installé par `firebase-admin`, aucun paquet ajouté. Tests : `functions/test/screenshot.test.ts`
+(six profils de P30, bornes, chemins hors motif dont `.jpg`, auteur, fichier, tailles 0, 5 Mo
+et 5 Mo + 1, signatures, panne dont le message porte le chemin : journal capturé sans lui). La phrase « Capture éventuelle disponible dans Admin › Tickets. » termine
+chaque Issue (`ISSUE_SCREENSHOT_NOTE`, `src/tickets/model.ts`), qu'une capture soit jointe ou
+non.
 
 **Webhook** (`src/tickets/webhook.ts`, `src/tickets/webhookModel.ts`, ADR-008, P29). Adresse
 publique ; l'authentification est la signature. Dans l'ordre : méthode autre que `POST` :
@@ -3641,6 +3754,63 @@ R7. Termine par un résumé : la pull request, le commit poussé et l'état de l
     raison de l'arrêt.
 ```
 
+### Captures des tickets — réglages faits une fois (ADR-008, T6)
+
+À faire par un compte propriétaire du projet `kassbeer` **avant la fusion qui contient T6** :
+`deploy.yml` publie `storage.rules` à chaque déploiement (`firebase deploy --only
+…,storage`), et la publication échoue tant que le bucket par défaut n'existe pas. Rien de ce
+qui suit n'a été essayé sur le projet : chaque point « à vérifier » se confirme au premier
+déploiement.
+
+1. **Bucket par défaut.** Console Firebase › Storage › « Commencer », emplacement
+   `europe-west1` (celui de la base ; choix définitif), règles de production (tout refusé :
+   `deploy.yml` publie ensuite `storage.rules`). Nom attendu :
+   `kassbeer.firebasestorage.app` (plan Blaze requis). Hors niveau gratuit en `europe-west1`
+   (à vérifier) : 100 captures de 5 Mo font 0,5 Go.
+2. **Agent de service de Storage et Firestore.** `storage.rules` lit `members/` et
+   `tickets/` par `firestore.get` : l'agent de service de Storage doit porter
+   `roles/firebaserules.firestoreServiceAgent`. La console le propose au premier
+   déploiement de règles croisées ; `deploy.yml` tourne en `--non-interactive` et ne
+   l'accorde pas. Sans ce rôle, chaque dépôt et chaque lecture sont refusés.
+
+```bash
+PROJECT_ID=kassbeer
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+RUN_SA="tickets-functions@$PROJECT_ID.iam.gserviceaccount.com"
+DEPLOY_SA="github-deploy@$PROJECT_ID.iam.gserviceaccount.com"
+BUCKET="gs://$PROJECT_ID.firebasestorage.app"
+
+# 2. Agent de service de Storage : lecture de Firestore par les règles.
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:service-$PROJECT_NUMBER@gcp-sa-firebasestorage.iam.gserviceaccount.com" \
+  --role roles/firebaserules.firestoreServiceAgent --condition=None
+
+# 3. Compte d'exécution des Functions : lecture des captures par attachTicketScreenshot
+#    (existence, métadonnées, 8 premiers octets), sur ce bucket seul.
+gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+  --member "serviceAccount:$RUN_SA" --role roles/storage.objectViewer
+
+# 4. CORS du bucket pour getData() depuis l'application web (à vérifier : sans règle, le
+#    navigateur refuse la lecture des octets). GET seul, deux origines.
+cat > /tmp/cors-kassbeer.json <<'JSON'
+[{"origin": ["https://kassbeer.web.app", "https://kassbeer.firebaseapp.com"],
+  "method": ["GET"], "maxAgeSeconds": 3600}]
+JSON
+gcloud storage buckets update "$BUCKET" --cors-file=/tmp/cors-kassbeer.json
+```
+
+5. **Publication des règles par `github-deploy`.** `roles/firebaserules.admin` publie déjà
+   les règles Firestore ; il couvre les règles Storage. `firebase-tools` lit aussi le bucket
+   par défaut du projet : si la publication est refusée, ajouter le seul rôle que nomme le
+   message (`roles/firebasestorage.viewer`, à vérifier), jamais `roles/storage.admin` ni
+   `roles/firebase.admin`. `github-deploy` ne lit ni n'écrit aucune capture.
+
+Aucun secret. La callable `attachTicketScreenshot` est publique comme les autres callables
+(invocation par `allUsers`, posée par `firebase-tools`) ; `requireMember` est sa garde (P30).
+Sauvegarde : les captures ne sont pas dans l'export de Firestore ; une capture perdue ne casse
+pas le ticket. Sortie : vider puis supprimer le bucket, retirer le bloc `storage` de
+`firebase.json` et `,storage` de `deploy.yml`.
+
 ## CI et déploiement
 
 Deux workflows GitHub Actions. Toute modification de l'un d'eux, ou de
@@ -3657,8 +3827,8 @@ manuel. Un nouveau push annule le run en cours de la même référence. Permissi
 |---|---|
 | Version et outillage | `git fetch --tags`, puis `node scripts/check-version.mjs` : sur une PR avec `--base origin/<base de la PR>` (HEAD est le commit de fusion préparé par GitHub) ; sur un push de `main` avec `--base <commit d'avant le push>` ; sur un push d'une autre branche, contre `origin/main`. Non lancé sur un lancement manuel. Puis `node scripts/check-agents.mjs` et `node --test scripts/*.test.mjs` (dont `changelog-recent.test.mjs`) |
 | Flutter et brewing | Flutter 3.44.6. Dans `brewing/`, puis dans `exchange/` (v0.1.20) : `dart pub get`, `pubspec.lock` à jour, `dart analyze --fatal-infos`, `dart format` vérifié, `dart test`. Dans `app/` : `flutter pub get`, `pubspec.lock` à jour, `node scripts/changelog-recent.mjs` (asset des nouveautés régénéré), `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`, `flutter test`, `flutter build web --release` sans configuration Firebase |
-| Règles — émulateur | Node 22, Java 21 (Temurin), `npm ci` et `npm test` dans `rules-tests/` (projet `demo-kassbeer`). Binaires de l'émulateur en cache |
-| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`), contrôlé par `jq` : déclencheurs HTTP et callables limités à la liste fermée d'ADR-008 déjà livrée (`githubTicketWebhook`, seul `invoker: "public"`, `maxInstances` 5 et 60 s ; `answerTicketAnalysis`, `maxInstances` 2 et 60 s ; `launchTicketAnalysis` et `launchTicketDevelopment`, `maxInstances` 1 et 120 s ; `launchTicketDelivery`, `maxInstances` 1 et 180 s), aucun déclencheur bloquant ni de file, `maxInstances` sur chaque fonction ; sinon échec « Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25). » ; secrets : `GITHUB_TICKETS_TOKEN` partout, chacun des autres monté par les seules fonctions de P25 (table `$only` du filtre : `GITHUB_WEBHOOK_SECRET` → `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_*` → `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_*` → `launchTicketDevelopment` et `launchTicketDelivery`), aucun autre secret déclaré ; sinon échec « Une fonction lit un secret hors de la liste de P25, ou un secret monté par une autre fonction que la sienne. » Même filtre que `deploy.yml` : une PR verte ne se fait pas refuser au déploiement |
+| Règles — émulateur | Node 22, Java 21 (Temurin), `npm ci` et `npm test` dans `rules-tests/` (projet `demo-kassbeer`) : `firestore.rules` et `storage.rules` contre les émulateurs Firestore et Storage. Binaires des émulateurs en cache (clé `firebase-emulators-storage-…`) |
+| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`), contrôlé par `jq` : déclencheurs HTTP et callables limités à la liste fermée d'ADR-008 déjà livrée (`githubTicketWebhook`, seul `invoker: "public"`, `maxInstances` 5 et 60 s ; `answerTicketAnalysis`, `maxInstances` 2 et 60 s ; `launchTicketAnalysis` et `launchTicketDevelopment`, `maxInstances` 1 et 120 s ; `launchTicketDelivery`, `maxInstances` 1 et 180 s ; `attachTicketScreenshot`, `maxInstances` 2 et 60 s), aucun déclencheur bloquant ni de file, `maxInstances` sur chaque fonction ; sinon échec « Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25). » ; secrets : `GITHUB_TICKETS_TOKEN` partout, chacun des autres monté par les seules fonctions de P25 (table `$only` du filtre : `GITHUB_WEBHOOK_SECRET` → `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_*` → `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_*` → `launchTicketDevelopment` et `launchTicketDelivery`), aucun autre secret déclaré ; sinon échec « Une fonction lit un secret hors de la liste de P25, ou un secret monté par une autre fonction que la sienne. » Même filtre que `deploy.yml` : une PR verte ne se fait pas refuser au déploiement |
 | Android — compilation | quand le diff touche `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`, et toujours sur un lancement manuel : `node scripts/changelog-recent.mjs`, puis `flutter build apk --release`, Java 17, signé par une clé jetable générée par `keytool` dans le job. Sinon le job réussit sans compiler |
 
 Une branche de travail qui n'a pas encore incrémenté sa version est rouge au job Version :
@@ -3696,7 +3866,7 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et décide s'il faut un nouvel APK |
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
-| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et chacun des autres monté par les seules fonctions de P25 : `GITHUB_WEBHOOK_SECRET` par `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_ID` et `_TOKEN` par `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_ID` et `_TOKEN` par `launchTicketDevelopment` et `launchTicketDelivery`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes` ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
+| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et chacun des autres monté par les seules fonctions de P25 : `GITHUB_WEBHOOK_SECRET` par `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_ID` et `_TOKEN` par `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_ID` et `_TOKEN` par `launchTicketDevelopment` et `launchTicketDelivery`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage` (`storage` : `storage.rules`, ADR-008, T6) ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
 | `tag` | aucun, `contents: write` | après un `deploy` réussi seulement (condition `!cancelled() && needs.deploy.result == 'success'`, pour que l'absence de `build-functions` ne l'ignore pas) : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et
@@ -4008,7 +4178,7 @@ après `(cd effacement-l1 && npm ci)`.
 | Outil | Version | Rôle |
 |---|---|---|
 | Flutter | 3.44.6 | `app/`, `brewing/` et `exchange/` |
-| JDK | Temurin 21, dans `JAVA_HOME` | émulateur Firestore de `rules-tests/` |
+| JDK | Temurin 21, dans `JAVA_HOME` | émulateurs Firestore et Storage de `rules-tests/` |
 | JDK de Gradle | celui d'Android Studio (JBR 21), réglé par `flutter config --jdk-dir` | `flutter build apk` |
 | SDK Android | plateforme 36, build-tools 36.1.0 | licences à accepter une fois par `flutter doctor --android-licenses` (commande interactive) |
 | Node | 22, comme la CI et `engines` de `rules-tests/` ; 24 pour `ingest/` et `functions/` (le poste a 24.15.0, qui fait tourner `rules-tests/` aussi) | `rules-tests/`, `scripts/`, `ingest/` |
@@ -4048,6 +4218,7 @@ Forcer les versions corrigées par des `overrides` npm a été écarté : le dé
 | Service | Appelé par | Usage | Accès |
 |---|---|---|---|
 | API REST GitHub (`api.github.com`) | `functions/` seul | créer une Issue, chercher une Issue par référence, lire Issues, commentaires, événements, PR d'un commit, `app/pubspec.yaml` à un commit ; depuis T5, lire les PR ouvertes, une PR, ses fichiers, les runs d'un commit (rien n'est écrit pour une livraison) | jeton à grain fin `GITHUB_TICKETS_TOKEN` (Secret Manager), en-tête `x-github-api-version: 2022-11-28` |
+| Cloud Storage for Firebase (bucket par défaut `kassbeer.firebasestorage.app`, `europe-west1`) | l'application (`firebase_storage` : `putData`, `getData`) sous `storage.rules` ; `attachTicketScreenshot` (`firebase-admin/storage`) | captures jointes aux tickets, `tickets/{uid}/{ticketId}/screenshot.png` (ADR-008, T6) ; jamais d'URL de téléchargement | compte Google du membre (règles) ; compte d'exécution `tickets-functions` (`roles/storage.objectViewer` sur le bucket) |
 | API Routines de Claude Code (`api.anthropic.com/v1/claude_code/routines/{id}/fire`) | `launchTicketAnalysis` et `launchTicketDevelopment` seuls (`functions/src/tickets/routine.ts`, `fetch`, sans SDK) | lancer une session d'analyse ou de développement d'un ticket, corps `{"text": "analyse #N"}` ou `{"text": "developpement #N"}` (P35) ; API expérimentale, sans clé d'idempotence : un appel n'est jamais rejoué | identifiant et jeton de chaque routine (`TICKETS_ROUTINE_*`, Secret Manager), en-têtes `authorization: Bearer`, `anthropic-version: 2023-06-01` ; `redirect: "error"`, délai de 30 s |
 
 ## Coûts variables

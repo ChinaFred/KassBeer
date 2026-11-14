@@ -9,6 +9,8 @@ import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
+import '../../../core/presentation/menu_compte.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/modele_processus.dart';
@@ -96,21 +98,24 @@ class ProcessListScreen extends ConsumerWidget {
               context.canPop() ? context.pop() : context.go(AppRoutes.home),
         ),
         title: const Text(titre),
+        actions: const [MenuCompte(), SizedBox(width: 8)],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (offline) const BandeauHorsLigne(),
-          Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-                child: body,
+      body: ZoneCapture(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (offline) const BandeauHorsLigne(),
+            Expanded(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+                  child: body,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: compact && canCreate
           ? FloatingActionButton.extended(

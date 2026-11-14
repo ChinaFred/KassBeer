@@ -6,6 +6,47 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.41 — fonctionnel
+
+Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne
+son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans :
+éditeurs, import, jour de brassage, Mes prix, Mes processus, Préférences, Nouveautés, Mes tickets.
+L'entrée de l'écran où vous êtes n'y figure pas. Quitter un éditeur modifié ou un import en cours
+par ce menu demande d'abord confirmation. Sur l'écran du jour de brassage, l'avatar montre votre
+initiale, et la déconnexion prévient quand des saisies attendent encore le réseau.
+
+« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de
+cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais
+publiée. Sur un écran qui montre vos prix, un avertissement le rappelle, avant la case. Une capture
+jointe ne se remplace plus. Elle apparaît dans le suivi du ticket ; si elle ne se lit pas, un
+bouton « Réessayer » la recharge, et sans réseau un message le dit. Sur l'écran du jour de
+brassage, l'administrateur ouvre « Tickets à traiter » par-dessus l'écran, qui reste allumé ; au
+téléphone, la pastille d'envoi passe en icône et nombre pour laisser la place au nom du brassin.
+
+### v0.1.41 — technique
+
+Demandé par les tickets #37, #38 et #39. #37 : `NavigationBar` en `alwaysHide` sous 600 px,
+`navigationBarTheme` retiré du thème. #39 : `_AccountMenu` devient `MenuCompte`
+(`core/presentation/menu_compte.dart`), posé sur la coquille et les 20 pages pleines, avec
+`photo: false` sur l'écran du jour (aucune `NetworkImage`, P2), `avantDeQuitter` et
+`avantDeDeconnecter`, entrée de l'écran courant masquée d'après `GoRouterState.of(context).fullPath` ;
+`kTicketAccountMenuScreens` donne l'élément `menu/compte` aux pages pleines. #38 : lot T6
+d'ADR-008 (note du 2026-11-14) : `ZoneCapture` (`RepaintBoundary`), image gardée en mémoire,
+dépôt dans Cloud Storage sous `tickets/{uid}/{ticketId}/screenshot.png`, callable
+`attachTicketScreenshot` (`requireMember`, `maxInstances: 2`, `timeoutSeconds: 60`) qui écrit
+`screenshot_path`, lecture par `getData` ; `storage.rules` en création seule (`resource == null`), `screenshot.png`
+en `image/png` seul, ticket existant de l'auteur (`firestore.get`), callable et client alignés sur
+le PNG seul ; rapports d'erreur Storage neutres (`StateError('storage <code>')` côté client,
+`errorCode` seul côté serveur), image illisible rapportée `tickets.capture_display` ;
+phrase fixe « Capture éventuelle disponible dans Admin › Tickets. » sur chaque Issue. La cause du
+`/admin/tickets` signalé n'a pas été reproduite : deux tests de non-régression couvrent une page
+ouverte par `push`. Écran du jour : « Tickets à traiter » en `push` (`kEcransDuJour`), pastille
+d'envoi compacte sous 400 dp, panneau du haut à 75 % du corps au plus (360 dp, texte à 200 %). Paquets ajoutés à `pubspec.lock` : `firebase_storage` 13.6.0,
+`firebase_storage_platform_interface` 6.0.7, `firebase_storage_web` 3.11.13 ; aucune autre version
+ne change. `main.dart.js` : 5 417 304 octets avant (#37 et #39 compris), 5 510 208 après. `ci.yml`
+et `deploy.yml` : callable ajoutée à la liste fermée, émulateur Storage pour `rules-tests/`,
+`storage` au déploiement. `CLAUDE.md` : P5, P6, P14, P23, P24, P25 et P31 modifiés, P48 ajouté.
+
 ### v0.1.40 — fonctionnel
 
 L'administrateur peut livrer un ticket depuis sa fiche. Quand la pull request d'un ticket En cours

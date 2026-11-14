@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/fiche.dart';
+import '../../../core/presentation/menu_compte.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../tickets/presentation/tickets_providers.dart';
@@ -80,36 +82,39 @@ class DataSourcesScreen extends ConsumerWidget {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppRoutes.library),
         ),
+        actions: const [MenuCompte(), SizedBox(width: 8)],
       ),
-      body: SafeArea(
-        top: false,
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-            child: SelectionArea(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                children: [
-                  paragraphe(intro),
-                  const TitreSection('Brewtarget'),
-                  paragraphe(brewtarget),
-                  const TitreSection('BJCP 2021'),
-                  paragraphe(bjcp),
-                  const TitreSection('beer-analytics.com'),
-                  paragraphe(beerAnalytics),
-                  paragraphe('Licence : $kLicenceCcBySa'),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _ouvrirLicence(context, ref),
-                      icon: const Icon(Icons.open_in_new),
-                      label: const Text('Lire la licence CC BY-SA 4.0'),
+      body: ZoneCapture(
+        child: SafeArea(
+          top: false,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+              child: SelectionArea(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                  children: [
+                    paragraphe(intro),
+                    const TitreSection('Brewtarget'),
+                    paragraphe(brewtarget),
+                    const TitreSection('BJCP 2021'),
+                    paragraphe(bjcp),
+                    const TitreSection('beer-analytics.com'),
+                    paragraphe(beerAnalytics),
+                    paragraphe('Licence : $kLicenceCcBySa'),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _ouvrirLicence(context, ref),
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text('Lire la licence CC BY-SA 4.0'),
+                      ),
                     ),
-                  ),
-                  const TitreSection('DIY Dog'),
-                  paragraphe(diyDog),
-                ],
+                    const TitreSection('DIY Dog'),
+                    paragraphe(diyDog),
+                  ],
+                ),
               ),
             ),
           ),
