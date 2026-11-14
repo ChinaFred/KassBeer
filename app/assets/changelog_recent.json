@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.56",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur » la teinte de la bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de 0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle dépend du verre, de la lumière et de l'écran. Au-delà de 79 EBC, la teinte ne fonce plus, et la fiche le dit. « Sources des données » nomme la source des teintes et donne le texte de sa licence. Demandé par le ticket #48."
+      ]
+    },
+    {
       "version": "0.1.53",
       "date": "2026-11-14",
       "paragraphs": [
@@ -36,13 +43,6 @@
       "paragraphs": [
         "L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres restent alignés d'une ligne à l'autre. Le médaillon du logo s'affiche à la connexion, au chargement, sur « Ce compte n'a pas accès » et en tête du menu sur grand écran. Le texte s'affiche dans la même police sur tous les appareils. Sur le web, l'application ne télécharge plus de police au démarrage, et les flèches s'affichent aussi sans réseau.",
         "Les listes de recettes, brassins, équipements, processus, tickets et l'accueil Admin ont la même ligne : une icône à gauche, le nom, les détails, puis les étiquettes. Les prix et les frais suivent la même ligne, sans icône. Le statut d'un brassin s'affiche dans une étiquette colorée. Une liste vide affiche un titre. Les titres de section se distinguent de leur contenu. Les messages d'erreur, d'avertissement et de succès s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le brassage », et chaque vérification prend la couleur de son état."
-      ]
-    },
-    {
-      "version": "0.1.48",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou « Journaux indisponibles pour l'instant »."
       ]
     }
   ]

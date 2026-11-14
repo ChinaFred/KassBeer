@@ -27,10 +27,12 @@ Fixture écrite à la main `brewing/test/fixtures/teinte.json` (14 teintes dont 
 générée ; génération décrite dans `DATA_SOURCES.md`). Application : `couleur_ebc.dart`
 (`BarreCouleurEbc`, `BandeTeintes`, `TextesCouleurEbc.depasseLimite` et `auDela`),
 `couleurs_ebc_screen.dart` (sans état d'erreur : ses entrées sont des constantes valides,
-cases de la grille suivant l'échelle du texte), texte MIT `DataSourcesScreen.licenceMit`, route `/bibliotheque/couleurs` hors de la coquille, lien
-« Échelle des couleurs » dans l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des
-données » et dans `DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
+cases de la grille suivant l'échelle du texte), texte MIT `DataSourcesScreen.licenceMit`,
+route `/bibliotheque/couleurs` hors de la coquille, lien « Échelle des couleurs » dans
+l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des données » et dans
+`DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
 Pastille sur la fiche d'un malt et sur la recette : plus tard. Demandé par le ticket #48.
+
 ### v0.1.53 — fonctionnel
 
 Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous
