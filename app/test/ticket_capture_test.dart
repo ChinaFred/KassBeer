@@ -212,6 +212,7 @@ void main() {
       }
       expect(kTicketScreensWithPrices, {
         '/recettes/:id',
+        '/recettes/importer/:id',
         '/brassins/:id',
         '/brassins/:id/jour',
         '/brassins/:id/jour/:journee',

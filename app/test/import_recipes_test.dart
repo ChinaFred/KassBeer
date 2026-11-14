@@ -13,7 +13,9 @@ import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/recipes/domain/import_recettes.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
+import 'package:kass_beer/features/recipes/presentation/imported_recipe_screen.dart';
 import 'package:kass_beer/features/recipes/presentation/libelles_echange.dart';
+import 'package:kass_beer/features/recipes/presentation/recipe_detail_screen.dart';
 import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
 
 import 'support/brew_fixtures.dart';
@@ -1014,6 +1016,48 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text(TextesImport.termine), findsOneWidget);
       });
+
+      testWidgets(
+        'ticket #60 : depuis la liste, la fiche s\'ouvre par-dessus le compte '
+        'rendu, et le retour y ramène',
+        (tester) async {
+          // Parcours réel : la coquille (liste des recettes) est dans la pile
+          // sous l'import, ouvert par `push`.
+          final app = TestApp();
+          await app.pump(tester, height: 4000);
+          app.signIn(brewerUser, member: brewerMember);
+          app.equipment.publish([grainfather]);
+          await tester.pumpAndSettle();
+          expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
+          await tester.tap(find.widgetWithText(OutlinedButton, 'Importer'));
+          await tester.pumpAndSettle();
+          expect(find.text(TextesImport.titre), findsOneWidget);
+          await choisir(
+            tester,
+            app,
+            FichierChoisi('blonde.json', fixture('export/blonde-essai.json')),
+          );
+          await tester.tap(find.text(TextesImport.importer(1)));
+          await tester.pumpAndSettle();
+          expect(find.text(TextesImport.termine), findsOneWidget);
+
+          await tester.tap(find.text('Blonde d\'essai'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.byType(RecipeDetailScreen), findsOneWidget);
+          expect(
+            find.widgetWithText(AppBar, ImportedRecipeScreen.titre),
+            findsOneWidget,
+          );
+          expect(find.text(TextesImport.termine), findsNothing);
+
+          await tester.tap(find.byType(BackButton));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.byType(RecipeDetailScreen), findsNothing);
+          expect(find.text(TextesImport.termine), findsOneWidget);
+        },
+      );
 
       testWidgets('20 : « Import terminé » annoncé une fois ; refus annoncé', (
         tester,

@@ -64,6 +64,11 @@ abstract final class AppRoutes {
   /// `push` depuis la liste des recettes.
   static const importRecipes = '/recettes/importer';
 
+  /// Fiche d'une recette ouverte depuis le compte rendu de l'import : page
+  /// pleine hors de la coquille, ouverte par `push`, dont le retour ramène au
+  /// compte rendu (ticket #60).
+  static String importedRecipe(String id) => '$importRecipes/$id';
+
   static const newEquipment = '/equipements/nouveau';
   static String equipmentItem(String id) => '$equipment/$id';
   static String editEquipment(String id) => '$equipment/$id/modifier';

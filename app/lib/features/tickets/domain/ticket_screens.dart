@@ -27,6 +27,7 @@ const Map<String, String> kTicketScreenNames = {
   '/recettes/:id': 'Recette',
   '/recettes/nouvelle': 'Nouvelle recette',
   '/recettes/importer': 'Importer des recettes',
+  '/recettes/importer/:id': 'Recette importée',
   '/recettes/:id/modifier': 'Modifier la recette',
   '/recettes/:id/chronologie': 'Chronologie du jour',
   '/bibliotheque': 'Bibliothèque',
@@ -128,6 +129,7 @@ const kTicketAccountMenu = 'Menu du compte';
 const kTicketAccountMenuScreens = [
   '/recettes/nouvelle',
   '/recettes/importer',
+  '/recettes/importer/:id',
   '/recettes/:id/modifier',
   '/recettes/:id/chronologie',
   '/brassins/:id/jour',
@@ -153,6 +155,7 @@ const kTicketAccountMenuScreens = [
 /// prix » (ADR-008, note du 2026-11-14).
 const kTicketScreensWithPrices = {
   '/recettes/:id',
+  '/recettes/importer/:id',
   '/brassins/:id',
   '/brassins/:id/jour',
   '/brassins/:id/jour/:journee',
