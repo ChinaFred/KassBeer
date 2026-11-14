@@ -40,6 +40,10 @@ class DataSourcesScreen extends ConsumerWidget {
   static const diyDog =
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '
       'pour un usage privé (version e6c12ab de leur transcription).';
+  static const srm2hex =
+      'Teintes de la page « Couleurs EBC » et de la barre de couleur d\'un '
+      'style : 400 teintes reprises du paquet npm srm2hex, version 1.0.2. '
+      'Licence MIT. Seule la table des teintes est reprise.';
   static const openFailure =
       'Impossible d\'ouvrir le lien. Il reste sélectionnable sur cette page.';
 
@@ -101,6 +105,8 @@ class DataSourcesScreen extends ConsumerWidget {
               ),
               const TitreSection('DIY Dog'),
               paragraphe(diyDog),
+              const TitreSection('srm2hex'),
+              paragraphe(srm2hex),
             ],
           ),
         ),

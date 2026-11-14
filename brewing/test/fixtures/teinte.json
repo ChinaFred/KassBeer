@@ -1,0 +1,32 @@
+{
+  "description": "Teinte indicative d'une couleur EBC (teinteEbc) et arrêts d'un dégradé de plage (degradeEbc). Valeurs attendues lues à la main dans la table des 400 teintes (brewing/lib/src/teintes_srm.dart, paquet srm2hex 1.0.2, MIT) : table_index = indice lu, teinte en #RRGGBB. Aucune valeur choisie sur une frontière entre deux indices, hormis 0 EBC et la limite.",
+  "regle": "indice = floor(ebcToSrm(ebc) × 10) ; 0 EBC : première teinte ; à partir de la limite haute (78,8 EBC, affichée « 79 EBC et plus ») : dernière teinte.",
+  "limite_ebc": 78.8,
+  "teinte": [
+    { "id": "0 EBC, premier indice", "ebc": 0, "table_index": 0, "expected": "#F8F8E6" },
+    { "id": "1 EBC", "ebc": 1, "table_index": 5, "expected": "#F8F9B2" },
+    { "id": "3,9 EBC, pils", "ebc": 3.9, "table_index": 19, "expected": "#F8F753" },
+    { "id": "8 EBC", "ebc": 8, "table_index": 40, "expected": "#E6E118" },
+    { "id": "12 EBC", "ebc": 12, "table_index": 60, "expected": "#D4B827" },
+    { "id": "16 EBC", "ebc": 16, "table_index": 81, "expected": "#BE933B" },
+    { "id": "30 EBC, ambrée", "ebc": 30, "table_index": 152, "expected": "#A15834" },
+    { "id": "50 EBC, brune", "ebc": 50, "table_index": 253, "expected": "#261716" },
+    { "id": "70 EBC", "ebc": 70, "table_index": 355, "expected": "#070606" },
+    { "id": "78 EBC, sous la limite", "ebc": 78, "table_index": 395, "expected": "#030403" },
+    { "id": "78,8 EBC, limite", "ebc": 78.8, "table_index": 399, "expected": "#030403" },
+    { "id": "79 EBC, au-delà", "ebc": 79, "table_index": 399, "expected": "#030403" },
+    { "id": "200 EBC, stout", "ebc": 200, "table_index": 399, "expected": "#030403" }
+  ],
+  "degrade": [
+    { "id": "8 à 16 EBC, 3 points", "debut": 8, "fin": 16, "points": 3, "expected": ["#E6E118", "#D4B827", "#BE933B"] },
+    { "id": "16 à 8 EBC : ordre croissant", "debut": 16, "fin": 8, "points": 3, "expected": ["#E6E118", "#D4B827", "#BE933B"] },
+    { "id": "100 à 200 EBC : teinte unie au-delà de la limite", "debut": 100, "fin": 200, "points": 3, "expected": ["#030403", "#030403", "#030403"] },
+    { "id": "12 à 12 EBC", "debut": 12, "fin": 12, "points": 2, "expected": ["#D4B827", "#D4B827"] }
+  ],
+  "invalid": [
+    { "id": "teinte négative", "fonction": "teinte", "ebc": -1 },
+    { "id": "dégradé, début négatif", "fonction": "degrade", "debut": -1, "fin": 10, "points": 3 },
+    { "id": "dégradé, fin négative", "fonction": "degrade", "debut": 10, "fin": -0.5, "points": 3 },
+    { "id": "dégradé, un seul point", "fonction": "degrade", "debut": 8, "fin": 16, "points": 1 }
+  ]
+}

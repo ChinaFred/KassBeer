@@ -8,7 +8,8 @@ juridique. **Statut : validé par l'utilisateur le 2026-11-08.** Kaggle : la pag
 Public Domain » (relevé du 2026-11-11), mais le téléchargement demande un compte absent du
 poste ; l'ingestion de `style_stats` est reportée (ADR-005, amendements de L3, D1).
 
-Aucun fichier de ces sources n'entre dans le dépôt public, un asset ou l'APK. Les données vivent
+Aucun fichier de ces sources n'entre dans le dépôt public, un asset ou l'APK, sauf la table des
+teintes de `srm2hex` (MIT), reprise dans `brewing/` avec sa licence. Les données vivent
 dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 
 ## Sources, versions et licences
@@ -24,10 +25,11 @@ dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 | dépôt GitHub `diydog-beerxml` | `d469275` | aucune | tests locaux, hors CI | Firestore, dépôt |
 | Kaggle « Brewer's Friend Beer Recipes » | non téléchargé | « CC0: Public Domain » déclarée sur la page (relevé du 2026-11-11) ; ingestion reportée (ADR-005, D1) | statistiques par style | lignes brutes, CSV |
 | BeerJSON | `4370892d44` | MIT | schémas pour ajv en CI et à l'ingestion | — |
+| paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
 beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, doublons
-fusionnés) et DIY Dog. Chaque entrée porte sa licence dans `provenance[]`.
+fusionnés), DIY Dog et srm2hex (MIT). Chaque entrée porte sa licence dans `provenance[]`.
 
 ## Volumes
 

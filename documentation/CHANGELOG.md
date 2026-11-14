@@ -6,6 +6,27 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.56 — fonctionnel
+
+Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur » la teinte de la
+bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de
+0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et
+depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle
+dépend du verre, de la lumière et de l'écran. Demandé par le ticket #48.
+
+### v0.1.56 — technique
+
+`brewing/` : `teinteEbc` (EBC → `0xRRGGBB`), `degradeEbc` (arrêts d'un dégradé de plage) et
+`teinteEbcLimite` (78,8 EBC), sur la table générée `teintes_srm.dart` : 400 triplets du paquet
+npm srm2hex 1.0.2 (MIT, archive de SHA-1 d84847e600a65eaee38247e2bce6e6d33c214d14), repris par
+script, indexés par floor(`ebcToSrm` × 10). Au-delà de 40 SRM, dernière teinte de la table.
+Fixture écrite à la main `brewing/test/fixtures/teinte.json` (13 teintes, 4 dégradés, 4 cas
+refusés). Application : `couleur_ebc.dart` (`BarreCouleurEbc`, `BandeTeintes`),
+`couleurs_ebc_screen.dart`, route `/bibliotheque/couleurs` hors de la coquille, lien
+« Échelle des couleurs » dans l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des
+données » et dans `DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
+Pastille sur la fiche d'un malt et sur la recette : plus tard. Demandé par le ticket #48.
+
 ### v0.1.51 — fonctionnel
 
 Les fiches d'une recette, d'un brassin, d'un équipement et d'un processus ont un en-tête avec le
