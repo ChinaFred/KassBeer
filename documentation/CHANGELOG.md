@@ -33,6 +33,75 @@ l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des données » et
 `DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
 Pastille sur la fiche d'un malt et sur la recette : plus tard. Demandé par le ticket #48.
 
+### v0.1.55 — fonctionnel
+
+« Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple
+et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un
+nouveau processus prérempli ; rien n'est enregistré avant « Enregistrer ».
+
+Une courbe des températures accompagne le jour de brassage. Elle montre la température visée
+de chaque étape selon le plan de départ et selon les heures réelles, les températures et les
+densités mesurées, et la densité initiale prévue. Sur le téléphone, une bascule « Étapes » |
+« Courbe » l'affiche à la place de la chronologie ; sur grand écran, elle se place sous le
+minuteur. Sur la fiche du brassin, elle paraît en tête de la journée de brassage dès la
+première étape commencée. En paysage, sur un téléphone, la bascule garde le minuteur visible.
+
+La courbe de fermentation commence à la densité initiale du jour de brassage : un seul relevé
+suffit pour la voir. Elle montre aussi les densités initiale et finale prévues, et la plage de
+température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente
+de la Bibliothèque, ou sans plage, une ligne le dit.
+
+### v0.1.55 — technique
+
+`brewing/` : `brewDayTemperatureSeries` (`brew_day_curve.dart`) calcule les températures visées
+du plan de départ et recalculées, le retard et les débuts théoriques à partir de l'horaire de
+`recomputeSchedule` ; cas `brew_day_temperatures` et modèle `fiches` ajoutés d'abord à
+`brewing/test/fixtures/process.json`. Application : `modele_fiches.dart`, `modeles_a_copier.dart`
+(`ModeleACopier`, route `?modele=exemple|fiches`), section « Modèles à copier » de
+`process_list_screen.dart` ; « Partir du modèle d'exemple », `partirExemple` et
+`AppRoutes.newProcessFromExample` retirés (remplacés par `AppRoutes.newProcessFrom`).
+`courbe_brassage.dart` (`CourbeBrassage`, `donneesCourbeBrassage`, `resumeCourbeBrassage`),
+`ZoneChronologieCourbe` dans l'écran du jour (aussi en paysage bas), `TraceCourbeBrassage`,
+`LignePrevue` et `PlageTrace` dans `trace_courbe.dart`, seul import de `fl_chart` (P18) :
+graduations de densité rondes sur la grille, axe de droite sans libellés sous 200 px de tracé,
+info-bulle à distance euclidienne qui réunit les séries touchées. Légende partagée
+`legende_courbe.dart` (trait, disque, losange, aplat). `brewing/` : `gravityGapPoints` (cas
+`gravity_gap` de `gravity.json`) pour l'écart des densités prévues ; l'écart initial se compte
+sur la densité initiale retenue seule. `prevuDe` passe dans `brews/domain/prevu.dart`
+(`CalculsRecette.calculOuNul`), ce qui retire l'import circulaire entre
+`releve_fermentation.dart` et `prevu_et_mesure.dart`. Plage de la levure :
+`plage_levure.dart` (`plageLevureProvider`), résolution par le nom (`IndexBibliotheque.resoudre`)
+dans `beer_index/cultures`, puis `beer_cultures/{id}` par `get()` (P22) ; `lireFiche` reçoit
+`cacheSeul` pour le hors ligne. Lecture faite par la fiche seule ; le test « P2 » de
+`deroule_d4_test.dart` couvre les fichiers de la courbe du jour et refuse qu'ils lisent la
+Bibliothèque. Fiche : la courbe du jour ne paraît qu'après le premier début d'étape. « Mes
+processus » : « Modèles à copier » aussi sous une panne de lecture. Aucune écriture Firestore
+nouvelle, aucune règle changée, aucune dépendance changée.
+
+### v0.1.54 — fonctionnel
+
+Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche.
+Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie »,
+« Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi
+compléter les recettes importées l'une après l'autre. Demandé par le ticket #60.
+
+### v0.1.54 — technique
+
+Recettes › Importer : la fiche d'une recette créée s'ouvre par `push` sur une route hors de la
+coquille, `/recettes/importer/:id` (`AppRoutes.importedRecipe`, `ImportedRecipeScreen` :
+`RecipeDetailScreen` dans une `PageSecondaire` « Recette »). L'import est ouvert par `push`
+depuis la liste des recettes, donc au-dessus de la coquille ; un `push` de `/recettes/:id`
+ajoutait une seconde page de coquille de même clé, le `Navigator` levait l'assertion
+`!keyReservation.contains(key)` et la fiche ne s'affichait pas. Nouvelle route inscrite dans
+`ticket_screens.dart` (nom d'écran, menu du compte, écrans à prix, et les quatre fenêtres de la
+fiche : Exporter, Nouveau brassin, Prix d'un ingrédient, Reprendre un prix). Les sorties de la
+fiche gardent le compte rendu dans la pile : `RecipeDetailScreen(depuisImport: true)` ouvre
+`RecipeEditorScreen` et `BrewStepsEditorScreen` avec `extra: AppRoutes.retourParPop`, qui se
+ferment par `pop` après « Enregistrer » ; Supprimer fait `pop`, Dupliquer ouvre la copie par
+`push` sur `/recettes/importer/:id`, l'état absent affiche « Revenir au compte rendu ». Tests
+ajoutés à `import_recipes_test.dart` sur le parcours réel (liste, import, fiche, retour ;
+Modifier puis Enregistrer ; Supprimer) ; le test 11 est gardé. Demandé par le ticket #60.
+
 ### v0.1.53 — fonctionnel
 
 Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous

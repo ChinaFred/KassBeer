@@ -13,6 +13,7 @@ import '../../../core/presentation/page_secondaire.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/modele_processus.dart';
+import '../domain/modeles_a_copier.dart';
 import '../domain/preference_processus.dart';
 import 'libelles_processus.dart';
 import 'processes_providers.dart';
@@ -29,7 +30,7 @@ class ProcessListScreen extends ConsumerWidget {
   static const aucun =
       'Aucun processus. Un processus ajoute à vos brassins les étapes de '
       'préparation et de nettoyage, et les journées après le brassage.';
-  static const partirExemple = 'Partir du modèle d\'exemple';
+  static const modelesACopier = 'Modèles à copier';
   static const nouveau = 'Nouveau processus';
 
   @override
@@ -63,7 +64,7 @@ class ProcessListScreen extends ConsumerWidget {
               retrying: listAsync.isLoading,
               retryingLabel: 'Lecture en cours',
               onRetry: retry,
-              secondaryAction: _BoutonNouveau(onPressed: create),
+              secondaryAction: _CreationSansListe(onCreate: create),
             )
           : const EtatChargement(label: chargement);
     } else if (sansCache) {
@@ -71,7 +72,7 @@ class ProcessListScreen extends ConsumerWidget {
           ? EtatVide(
               icon: Icons.cloud_off,
               message: horsLigne,
-              action: _BoutonNouveau(onPressed: create),
+              action: _CreationSansListe(onCreate: create),
             )
           : const EtatChargement(label: chargement);
     } else {
@@ -87,7 +88,7 @@ class ProcessListScreen extends ConsumerWidget {
         onCreate: create,
       );
     }
-    // Sans processus à soi, l'état vide porte ses deux boutons de création.
+    // Sans processus à soi, l'état vide porte le bouton de création.
     final canCreate = list != null && !sansCache && mine.isNotEmpty;
 
     return PageSecondaire(
@@ -175,32 +176,21 @@ class _Liste extends StatelessWidget {
               children: [
                 Text(ProcessListScreen.aucun, style: theme.textTheme.bodyLarge),
                 const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                      ),
-                      onPressed: () =>
-                          context.push(AppRoutes.newProcessFromExample),
-                      child: const Text(ProcessListScreen.partirExemple),
-                    ),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                      ),
-                      onPressed: onCreate,
-                      child: const Text(ProcessListScreen.nouveau),
-                    ),
-                  ],
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  onPressed: onCreate,
+                  child: const Text(ProcessListScreen.nouveau),
                 ),
               ],
             ),
           ),
         for (final m in mine)
           _Ligne(modele: m, auteur: null, parDefaut: m.id == defaultId),
+        // Toujours affichée, hors ligne compris : les modèles sont dans
+        // l'application, rien ne s'écrit avant « Enregistrer ».
+        const _ModelesACopier(),
         if (group.isNotEmpty) ...[
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
@@ -268,6 +258,72 @@ class _Ligne extends StatelessWidget {
       onTap: () => context.push(AppRoutes.process(modele.id)),
     );
   }
+}
+
+/// Section « Modèles à copier » : son titre et une ligne par modèle.
+class _ModelesACopier extends StatelessWidget {
+  const _ModelesACopier();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: TitreSection(ProcessListScreen.modelesACopier),
+      ),
+      for (final m in ModeleACopier.values) _LigneModeleACopier(modele: m),
+    ],
+  );
+}
+
+/// Ligne de « Modèles à copier » : l'appui ouvre « Nouveau processus »
+/// prérempli, rien n'est écrit avant « Enregistrer ».
+class _LigneModeleACopier extends StatelessWidget {
+  const _LigneModeleACopier({required this.modele});
+
+  final ModeleACopier modele;
+
+  /// Libellé lu par le lecteur d'écran : « Modèle à copier : {nom}, 3 journées ».
+  static String parle(ModeleACopier modele, ContenuModele contenu) =>
+      'Modèle à copier : ${modele.nom}, '
+      '${formatJournees(contenu.journees.length)}';
+
+  @override
+  Widget build(BuildContext context) {
+    // Clés factices : la copie ne sert qu'au résumé ; l'éditeur crée les siennes.
+    var n = 0;
+    final contenu = modele.copie(() => 'apercu-${n++}');
+    return LigneListe(
+      icone: Icons.content_copy_outlined,
+      titre: modele.nom,
+      details: [Text(resumeModele(contenu)), Text(modele.note)],
+      etiquettes: const [Etiquette(label: 'Modèle')],
+      semanticsLabel: parle(modele, contenu),
+      onTap: () => context.push(AppRoutes.newProcessFrom(modele.parametre)),
+    );
+  }
+}
+
+/// Sous un état qui remplace la liste (panne de lecture, hors ligne sans
+/// copie) : « Nouveau processus » et « Modèles à copier », qui sont dans
+/// l'application et ne dépendent pas de la lecture des processus.
+class _CreationSansListe extends StatelessWidget {
+  const _CreationSansListe({required this.onCreate});
+
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Center(child: _BoutonNouveau(onPressed: onCreate)),
+      const SizedBox(height: 16),
+      const _ModelesACopier(),
+    ],
+  );
 }
 
 /// « Nouveau processus » en contour, sous un état qui remplace la liste : la

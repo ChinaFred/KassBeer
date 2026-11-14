@@ -112,4 +112,26 @@ void main() {
     );
     expect((measured as MashEfficiencyRead).percent, closeTo(68, 1e-9));
   });
+
+  test('écart en points sur une densité prévue', () {
+    final gap = fixture['gravity_gap'] as Map<String, Object?>;
+    for (final c in objects(gap['cases'])) {
+      expectCase(
+        c,
+        gravityGapPoints(
+          measured: number(c['measured']),
+          planned: number(c['planned']),
+        ),
+      );
+    }
+    for (final c in objects(gap['invalid'])) {
+      expectInvalid(
+        () => gravityGapPoints(
+          measured: number(c['measured']),
+          planned: number(c['planned']),
+        ),
+        label(c),
+      );
+    }
+  });
 }

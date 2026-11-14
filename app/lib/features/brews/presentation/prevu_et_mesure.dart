@@ -5,8 +5,6 @@ import 'package:brewing/brewing.dart'
         BrewComparison,
         BrewMeasurements,
         BrewingInputException,
-        CalculationComputed,
-        CalculationResult,
         ComparisonLine,
         FermentableKind,
         GravityRead,
@@ -17,7 +15,6 @@ import 'package:brewing/brewing.dart'
         MeasuredUnavailable,
         MeasurementGap,
         MeasurementGapKind,
-        PlannedBrewValues,
         compareBrewWithPlan,
         fermentationDayNumber,
         readGravity;
@@ -43,6 +40,7 @@ import '../domain/brew.dart';
 import '../domain/brew_event.dart';
 import '../domain/deroule.dart';
 import '../domain/mesures_retenues.dart';
+import '../domain/prevu.dart';
 import 'brews_providers.dart';
 import 'releve_fermentation.dart';
 
@@ -68,21 +66,6 @@ class ComparaisonImpossible extends ComparaisonEvaluee {
   final String field;
 }
 
-double? _valeur(CalculationResult result) =>
-    result is CalculationComputed ? result.value : null;
-
-/// Valeurs prévues du brassin : copie figée, jamais une mesure (RR8).
-PlannedBrewValues prevuDe(Brew brew, CalculsRecette calculs) {
-  final calcul = calculs is CalculsObtenus ? calculs.calculation : null;
-  return PlannedBrewValues(
-    originalGravity: calcul == null ? null : _valeur(calcul.originalGravity),
-    finalGravity: calcul == null ? null : _valeur(calcul.finalGravity),
-    alcoholByVolume: calcul == null ? null : _valeur(calcul.alcoholByVolume),
-    fermenterVolumeLitres: brew.recipe.batchVolumeL,
-    mashEfficiencyPercent: brew.equipment.mashEfficiencyPct,
-  );
-}
-
 /// Calcule la comparaison. Une valeur enregistrée hors limites est rapportée une fois
 /// par brassin et rend [ComparaisonImpossible] : jamais de valeur de repli.
 ComparaisonEvaluee evaluerComparaison({
@@ -95,7 +78,7 @@ ComparaisonEvaluee evaluerComparaison({
   try {
     return ComparaisonObtenue(
       compareBrewWithPlan(
-        planned: prevuDe(brew, calculs),
+        planned: prevuDe(brew, calculs.calculOuNul),
         measured: BrewMeasurements(
           originalGravity: retenues.densiteInitiale?.value,
           finalGravity: retenues.densiteFinale?.value,

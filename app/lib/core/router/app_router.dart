@@ -26,11 +26,13 @@ import '../../features/library/presentation/library_screen.dart';
 import '../../features/library/presentation/public_recipe_screen.dart';
 import '../../features/library/presentation/reference_entry_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
+import '../../features/processes/domain/modeles_a_copier.dart';
 import '../../features/processes/presentation/process_detail_screen.dart';
 import '../../features/processes/presentation/process_editor_screen.dart';
 import '../../features/processes/presentation/process_list_screen.dart';
 import '../../features/recipes/presentation/brew_steps_editor_screen.dart';
 import '../../features/recipes/presentation/import_recipes_screen.dart';
+import '../../features/recipes/presentation/imported_recipe_screen.dart';
 import '../../features/recipes/presentation/recipe_detail_screen.dart';
 import '../../features/recipes/presentation/recipe_editor_screen.dart';
 import '../../features/recipes/presentation/recipes_list_screen.dart';
@@ -157,15 +159,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.importRecipes,
         builder: (_, _) => const ImportRecipesScreen(),
       ),
+      // Fiche ouverte par `push` depuis le compte rendu de l'import (ticket
+      // #60). Hors de la coquille : la coquille est déjà dans la pile sous
+      // l'import, et un `push` de `/recettes/:id` y ajouterait une seconde page
+      // de coquille de même clé.
+      GoRoute(
+        path: '${AppRoutes.importRecipes}/:id',
+        builder: (_, state) =>
+            ImportedRecipeScreen(id: state.pathParameters['id']!),
+      ),
       GoRoute(
         path: '${AppRoutes.recipes}/:id/modifier',
-        builder: (_, state) =>
-            RecipeEditorScreen(id: state.pathParameters['id']),
+        builder: (_, state) => RecipeEditorScreen(
+          id: state.pathParameters['id'],
+          retourParPop: state.extra == AppRoutes.retourParPop,
+        ),
       ),
       GoRoute(
         path: '${AppRoutes.recipes}/:id/chronologie',
-        builder: (_, state) =>
-            BrewStepsEditorScreen(id: state.pathParameters['id']!),
+        builder: (_, state) => BrewStepsEditorScreen(
+          id: state.pathParameters['id']!,
+          retourParPop: state.extra == AppRoutes.retourParPop,
+        ),
       ),
       // Écran du jour : plein écran, hors de la coquille. Journée de brassage,
       // puis journées suivantes du déroulé (ADR-010).
@@ -194,9 +209,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.newProcess,
         builder: (_, state) => ProcessEditorScreen(
-          exemple:
-              state.uri.queryParameters[AppRoutes.exampleQueryParam] ==
-              'exemple',
+          modele: ModeleACopier.deParametre(
+            state.uri.queryParameters[AppRoutes.modelQueryParam],
+          ),
         ),
       ),
       GoRoute(
