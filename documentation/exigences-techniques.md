@@ -793,11 +793,17 @@ par-dessus dans la coquille.
 « Couleur » d'un style (bornes absentes : 0 et `teinteEbcLimite`), `BandeTeintes` (16 px,
 `LinearGradient` des teintes de `degradeEbc`, bordure `outlineVariant`, dans un
 `ExcludeSemantics`, avec un `Semantics` qui lit la plage), `couleurTeinte` (entier
-`0xRRGGBB` → `Color`, sans calcul). Une `BrewingInputException` masque la barre et passe une
-fois par `reportError` (`library.color_gradient`, champ refusé seul). `couleurs_ebc_screen.dart` :
-pas de `kPasEchelleEbc` (4 EBC), valeurs lues par `teinteEbc`, dégradé de 40 points au-delà
-de 600 px, panne rapportée `library.color_scale`. Aucune table ni conversion de couleur dans
-`app/lib/` (P3) ; aucune valeur SRM affichée. Tests : `app/test/couleurs_ebc_test.dart`.
+`0xRRGGBB` → `Color`, sans calcul). `TextesCouleurEbc.depasseLimite` (borne haute au-delà de
+`teinteEbcLimite`, ou plage « à partir de ») affiche `TextesCouleurEbc.auDela()` (« Au-delà de
+79 EBC, la teinte affichée ne fonce plus. ») sous la barre et l'ajoute au libellé du
+`Semantics`. Une `BrewingInputException` masque la barre et passe une fois par `reportError`
+(`library.color_gradient`, champ refusé seul). `couleurs_ebc_screen.dart` : pas de
+`kPasEchelleEbc` (4 EBC), valeurs lues par `teinteEbc` sur des constantes valides (aucun état
+d'erreur : `brewing/` ne les refuse pas), dégradé de 40 points au-delà de 600 px, largeur des
+cases de la grille multipliée par l'échelle du texte. « Sources des données » affiche
+`DataSourcesScreen.licenceMit`, le texte d'autorisation MIT de srm2hex, que la licence exige
+dans toute copie livrée. Aucune table ni conversion de couleur dans `app/lib/` (P3) ; aucune
+valeur SRM affichée. Tests : `app/test/couleurs_ebc_test.dart`.
 
 **Lien externe.** « Sources des données » n'ouvre qu'une adresse, la constante
 `kLicenceCcBySa` (`https://creativecommons.org/licenses/by-sa/4.0/`), par

@@ -1720,9 +1720,8 @@ l'écran. » Puis une valeur tous les 4 EBC, de « 0 EBC » à « 76 EBC », et 
 couleur `outlineVariant` du thème, et son libellé en EBC. Aucune valeur n'est donnée en SRM.
 Sous 600 px, une ligne par valeur. À partir de 600 px, un dégradé continu de 0 à 79 EBC
 au-dessus (lu « Dégradé de 0 à 79 EBC et plus »), puis les valeurs en grille qui passe à la
-ligne ; la largeur d'une case suit l'échelle du texte. Si la teinte ne peut pas se
-calculer : état d'erreur « Cette échelle ne peut pas s'afficher. L'erreur est signalée à
-l'administrateur. », sans bouton « Réessayer » (le calcul ne lit aucune donnée).
+ligne ; la largeur d'une case suit l'échelle du texte. La page n'a ni chargement ni état
+d'erreur : elle ne lit aucune donnée.
 
 ### Sources des données
 

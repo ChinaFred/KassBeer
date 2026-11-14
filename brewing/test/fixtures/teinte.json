@@ -1,5 +1,12 @@
 {
-  "description": "Teinte indicative d'une couleur EBC (teinteEbc) et arrêts d'un dégradé de plage (degradeEbc). Valeurs attendues lues à la main dans la table des 400 teintes (brewing/lib/src/teintes_srm.dart, paquet srm2hex 1.0.2, MIT) : table_index = indice lu, teinte en #RRGGBB. Aucune valeur choisie sur une frontière entre deux indices, hormis 0 EBC et la limite.",
+  "description": "Teinte indicative d'une couleur EBC (teinteEbc) et arrêts d'un dégradé de plage (degradeEbc). Valeurs attendues lues à la main dans la table des 400 teintes (brewing/lib/src/teintes_srm.dart, paquet srm2hex 1.0.2, MIT) : table_index = indice lu, teinte en #RRGGBB. Une seule valeur sur une frontière entre deux indices, hormis 0 EBC et la limite : 11,82 EBC (6 SRM exactement, indice 60).",
+  "source": {
+    "fichier": "package/lookup.js de srm2hex-1.0.2.tgz",
+    "lookup_js_sha256": "d3ed62b9bd34b3e461c0d0c6d80cfc9a4a198a9036c67c80c7b929fe2b094381",
+    "texte": "[[r,g,b],[r,g,b],…] : les 400 triplets dans l'ordre de lookup.js, sans espace",
+    "texte_longueur": 4497,
+    "fnv1a_32": "427e5b13"
+  },
   "regle": "indice = floor(ebcToSrm(ebc) × 10) ; 0 EBC : première teinte ; à partir de la limite haute (78,8 EBC, affichée « 79 EBC et plus ») : dernière teinte.",
   "limite_ebc": 78.8,
   "teinte": [
@@ -7,6 +14,7 @@
     { "id": "1 EBC", "ebc": 1, "table_index": 5, "expected": "#F8F9B2" },
     { "id": "3,9 EBC, pils", "ebc": 3.9, "table_index": 19, "expected": "#F8F753" },
     { "id": "8 EBC", "ebc": 8, "table_index": 40, "expected": "#E6E118" },
+    { "id": "11,82 EBC, frontière : 6 SRM exactement", "ebc": 11.82, "table_index": 60, "expected": "#D4B827" },
     { "id": "12 EBC", "ebc": 12, "table_index": 60, "expected": "#D4B827" },
     { "id": "16 EBC", "ebc": 16, "table_index": 81, "expected": "#BE933B" },
     { "id": "30 EBC, ambrée", "ebc": 30, "table_index": 152, "expected": "#A15834" },

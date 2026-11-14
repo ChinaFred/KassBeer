@@ -1,12 +1,9 @@
 import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/breakpoints.dart';
-import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/page_secondaire.dart';
-import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import 'couleur_ebc.dart';
 
@@ -20,69 +17,32 @@ typedef ValeurEchelle = ({String libelle, int teinte});
 /// table, tous les [kPasEchelleEbc] EBC, puis « 79 EBC et plus ». Ouverte par
 /// `push` depuis la Bibliothèque et la fiche d'un style. Page statique : elle
 /// ne lit rien dans Firestore et s'affiche hors ligne.
-class CouleursEbcScreen extends ConsumerStatefulWidget {
+class CouleursEbcScreen extends StatelessWidget {
   const CouleursEbcScreen({super.key});
 
   static const title = 'Couleurs EBC';
-  static const unreadable =
-      'Cette échelle ne peut pas s\'afficher. L\'erreur est signalée à '
-      'l\'administrateur.';
 
   /// Libellé de la dernière valeur : la limite de la table, arrondie.
   static String libelleLimite() =>
       '${formatNombre(teinteEbcLimite, decimales: 0)}${nbsp}EBC et plus';
 
-  @override
-  ConsumerState<CouleursEbcScreen> createState() => _CouleursEbcScreenState();
-}
-
-class _CouleursEbcScreenState extends ConsumerState<CouleursEbcScreen> {
-  late final ({List<ValeurEchelle> valeurs, List<int> degrade})? _echelle =
-      _lire();
-
-  ({List<ValeurEchelle> valeurs, List<int> degrade})? _lire() {
-    try {
-      return (
-        valeurs: [
-          for (var ebc = 0; ebc < teinteEbcLimite; ebc += kPasEchelleEbc)
-            (libelle: formatEbc(ebc.toDouble()), teinte: teinteEbc(ebc * 1.0)),
-          (
-            libelle: CouleursEbcScreen.libelleLimite(),
-            teinte: teinteEbc(teinteEbcLimite),
-          ),
-        ],
-        degrade: degradeEbc(0, teinteEbcLimite, points: 40),
-      );
-    } on BrewingInputException catch (error, stackTrace) {
-      ref
-          .read(errorReportServiceProvider)
-          .reportError(
-            feature: 'library.color_scale',
-            error: error,
-            stackTrace: stackTrace,
-            context: 'échelle refusée par brewing : ${error.field}',
-          );
-      return null;
-    }
-  }
+  /// Valeurs de l'échelle. Les entrées sont des constantes valides : `brewing/`
+  /// ne les refuse pas, d'où l'absence d'état d'erreur sur cette page.
+  static List<ValeurEchelle> valeurs() => [
+    for (var ebc = 0; ebc < teinteEbcLimite; ebc += kPasEchelleEbc)
+      (libelle: formatEbc(ebc.toDouble()), teinte: teinteEbc(ebc * 1.0)),
+    (libelle: libelleLimite(), teinte: teinteEbc(teinteEbcLimite)),
+  ];
 
   @override
-  Widget build(BuildContext context) {
-    final echelle = _echelle;
-    return PageSecondaire(
-      titre: CouleursEbcScreen.title,
-      repli: AppRoutes.library,
-      body: echelle == null
-          ? const EtatErreur(
-              message: CouleursEbcScreen.unreadable,
-              onRetry: null,
-            )
-          : Builder(
-              builder: (context) =>
-                  _Echelle(valeurs: echelle.valeurs, degrade: echelle.degrade),
-            ),
-    );
-  }
+  Widget build(BuildContext context) => PageSecondaire(
+    titre: title,
+    repli: AppRoutes.library,
+    body: _Echelle(
+      valeurs: valeurs(),
+      degrade: degradeEbc(0, teinteEbcLimite, points: 40),
+    ),
+  );
 }
 
 class _Echelle extends StatelessWidget {

@@ -29,7 +29,17 @@ dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
 beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, doublons
-fusionnés), DIY Dog et srm2hex (MIT). Chaque entrée porte sa licence dans `provenance[]`.
+fusionnés), DIY Dog et srm2hex (MIT, avec le texte de la licence). Chaque entrée de Firestore
+porte sa licence dans `provenance[]` ; la licence de srm2hex est en tête de `teintes_srm.dart`
+et dans l'écran.
+
+Génération de `teintes_srm.dart` : le script, à usage unique, est resté hors du dépôt. Il lit
+`package/lookup.js` de l'archive (SHA-256
+`d3ed62b9bd34b3e461c0d0c6d80cfc9a4a198a9036c67c80c7b929fe2b094381`), en extrait le tableau
+JSON de 400 triplets et les écrit dans le même ordre, un par dixième de SRM, sans autre
+changement. `brewing/test/teinte_test.dart` vérifie la table contre une empreinte de
+`lookup.js` (texte « [[r,g,b],…] » de 4 497 caractères, FNV-1a 32 bits `427e5b13`, notée dans
+`brewing/test/fixtures/teinte.json`), calculée depuis l'archive et non depuis la table.
 
 ## Volumes
 

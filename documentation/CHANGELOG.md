@@ -12,7 +12,9 @@ Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur 
 bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de
 0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et
 depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle
-dépend du verre, de la lumière et de l'écran. Demandé par le ticket #48.
+dépend du verre, de la lumière et de l'écran. Au-delà de 79 EBC, la teinte ne fonce plus, et la
+fiche le dit. « Sources des données » nomme la source des teintes et donne le texte de sa
+licence. Demandé par le ticket #48.
 
 ### v0.1.56 — technique
 
@@ -20,9 +22,12 @@ dépend du verre, de la lumière et de l'écran. Demandé par le ticket #48.
 `teinteEbcLimite` (78,8 EBC), sur la table générée `teintes_srm.dart` : 400 triplets du paquet
 npm srm2hex 1.0.2 (MIT, archive de SHA-1 d84847e600a65eaee38247e2bce6e6d33c214d14), repris par
 script, indexés par floor(`ebcToSrm` × 10). Au-delà de 40 SRM, dernière teinte de la table.
-Fixture écrite à la main `brewing/test/fixtures/teinte.json` (13 teintes, 4 dégradés, 4 cas
-refusés). Application : `couleur_ebc.dart` (`BarreCouleurEbc`, `BandeTeintes`),
-`couleurs_ebc_screen.dart`, route `/bibliotheque/couleurs` hors de la coquille, lien
+Fixture écrite à la main `brewing/test/fixtures/teinte.json` (14 teintes dont une frontière à
+11,82 EBC, 4 dégradés, 4 cas refusés, empreinte FNV-1a de `lookup.js` qui vérifie la table
+générée ; génération décrite dans `DATA_SOURCES.md`). Application : `couleur_ebc.dart`
+(`BarreCouleurEbc`, `BandeTeintes`, `TextesCouleurEbc.depasseLimite` et `auDela`),
+`couleurs_ebc_screen.dart` (sans état d'erreur : ses entrées sont des constantes valides,
+cases de la grille suivant l'échelle du texte), texte MIT `DataSourcesScreen.licenceMit`, route `/bibliotheque/couleurs` hors de la coquille, lien
 « Échelle des couleurs » dans l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des
 données » et dans `DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
 Pastille sur la fiche d'un malt et sur la recette : plus tard. Demandé par le ticket #48.

@@ -23,6 +23,21 @@ void main() {
     }
   });
 
+  test('table : empreinte de lookup.js de srm2hex 1.0.2', () {
+    // Texte canonique « [[r,g,b],[r,g,b],…] » des 400 triplets, haché en
+    // FNV-1a 32 bits. Valeurs calculées une fois depuis `package/lookup.js` de
+    // l'archive (DATA_SOURCES.md), sans passer par cette table.
+    final texte =
+        '[${teintesSrm.map((t) => '[${t.$1},${t.$2},${t.$3}]').join(',')}]';
+    var empreinte = 0x811c9dc5;
+    for (final octet in texte.codeUnits) {
+      empreinte = ((empreinte ^ octet) * 0x01000193) & 0xffffffff;
+    }
+    final source = fixture['source']! as Map<String, Object?>;
+    expect(texte.length, source['texte_longueur']);
+    expect(empreinte, int.parse(source['fnv1a_32']! as String, radix: 16));
+  });
+
   test('limite haute : 78,8 EBC', () {
     expect(teinteEbcLimite, closeTo(number(fixture['limite_ebc']), 1e-9));
   });
