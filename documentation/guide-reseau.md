@@ -220,6 +220,11 @@ caractères ; reprise d'une décision interrompue par l'admin seul. « Le projet
 suivent. `ci.yml` et `deploy.yml` ajoutent les quatre callables et une liste fermée des
 déclencheurs (P10, accord de l'utilisateur).
 
+Le 2026-11-14, à la demande de l'utilisateur : P36 et la section « Coûts variables » de
+`CLAUDE.md` ajoutent le compte fondateur (`members/{email}.founder`, posé dans la console
+Firebase) et son plafond `FOUNDER_LAUNCHES_PER_DAY`, cinq fois celui du groupe, sur un compteur
+à part (v0.1.51).
+
 Le 2026-11-14, complément du lot T6 avec l'accord de l'utilisateur : P23 et P48 modifiés (capture
 envoyée dans l'heure, dimensions contrôlées, image choisie réencodée en PNG, rétention de 180 jours).
 

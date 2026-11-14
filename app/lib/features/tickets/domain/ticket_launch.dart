@@ -247,7 +247,9 @@ class VerrouLivraison {
 
 /// Document `ticket_status/launches`, écrit par le serveur seul et lu par
 /// l'administrateur seul (P41). Le plafond [perDay] vient du serveur
-/// (`LAUNCHES_PER_DAY`) : aucune constante en Dart (P39).
+/// (`LAUNCHES_PER_DAY`) : aucune constante en Dart (P39). Le compte fondateur a
+/// son propre compteur ([founderCountDay], [founderPerDay]) : [vuePour] le
+/// place dans [countDay] et [perDay] pour l'écran.
 @immutable
 class EtatLancements {
   const EtatLancements({
@@ -256,6 +258,8 @@ class EtatLancements {
     this.month,
     this.countMonth,
     this.perDay,
+    this.founderCountDay,
+    this.founderPerDay,
     this.analysisInvalidSince,
     this.developmentInvalidSince,
     this.deliveryRunning,
@@ -271,6 +275,11 @@ class EtatLancements {
   final String? month;
   final int? countMonth;
   final int? perDay;
+
+  /// Compteur et plafond du jour du compte fondateur
+  /// (`FOUNDER_LAUNCHES_PER_DAY` du serveur), à part de ceux du groupe.
+  final int? founderCountDay;
+  final int? founderPerDay;
 
   /// Jeton de la routine refusé depuis cette date.
   final DateTime? analysisInvalidSince;
@@ -314,10 +323,33 @@ class EtatLancements {
       month: periode('month', _mois),
       countMonth: entier('count_month'),
       perDay: entier('per_day'),
+      founderCountDay: entier('founder_count_day'),
+      founderPerDay: entier('founder_per_day'),
       analysisInvalidSince: read.date('analysis_invalid_since'),
       developmentInvalidSince: read.date('development_invalid_since'),
       deliveryRunning: _verrou(read.objetFacultatif('delivery_running')),
       ciReadDeniedSince: read.date('ci_read_denied_since'),
+    );
+  }
+
+  /// L'état vu par le compte connecté : pour le fondateur, [countDay] et
+  /// [perDay] sont ceux de son compteur ; sans eux, inconnus. Les autres
+  /// champs, mois compris (les deux compteurs ensemble), restent ceux du
+  /// document.
+  EtatLancements vuePour({required bool fondateur}) {
+    if (!fondateur) return this;
+    return EtatLancements(
+      day: day,
+      countDay: founderCountDay,
+      month: month,
+      countMonth: countMonth,
+      perDay: founderPerDay,
+      founderCountDay: founderCountDay,
+      founderPerDay: founderPerDay,
+      analysisInvalidSince: analysisInvalidSince,
+      developmentInvalidSince: developmentInvalidSince,
+      deliveryRunning: deliveryRunning,
+      ciReadDeniedSince: ciReadDeniedSince,
     );
   }
 

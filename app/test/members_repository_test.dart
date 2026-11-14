@@ -181,6 +181,30 @@ void main() {
     expect(member.isAdmin, isFalse);
   });
 
+  test('founder : booléen strict, administrateur seul', () {
+    expect(
+      Member.fromFirestore('a@exemple.fr', {
+        'role': 'admin',
+        'founder': true,
+      }).founder,
+      isTrue,
+    );
+    expect(
+      Member.fromFirestore('a@exemple.fr', {
+        'role': 'admin',
+        'founder': 'true',
+      }).founder,
+      isFalse,
+    );
+    expect(
+      Member.fromFirestore('b@exemple.fr', {
+        'role': 'brewer',
+        'founder': true,
+      }).founder,
+      isFalse,
+    );
+  });
+
   test('adresse : minuscules et forme', () {
     expect(normalizeMemberEmail('  Nina@Exemple.FR '), 'nina@exemple.fr');
     expect(isValidMemberEmail('nina@exemple.fr'), isTrue);
