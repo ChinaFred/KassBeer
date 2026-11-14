@@ -148,6 +148,7 @@ describe("members — invitation", () => {
     "invited_by d'un autre compte": [NEW_EMAIL, { invited_by: "brewer-a" }],
     "invited_at posée par le client": [NEW_EMAIL, { invited_at: new Date() }],
     "champ hors liste": [NEW_EMAIL, { uid: "x" }],
+    "champ founder": [NEW_EMAIL, { founder: true }],
     "nom trop long": [NEW_EMAIL, { display_name: "x".repeat(81) }],
     "identifiant sans @": ["nouveau", {}],
   };
@@ -170,6 +171,15 @@ describe("members — modification et retrait", () => {
       );
     });
   }
+
+  it("admin se donne founder : refusé", async () => {
+    await expectRule(
+      false,
+      db(state.env, "admin")
+        .doc(`members/${memberId("admin")}`)
+        .update({ founder: true }),
+    );
+  });
 
   const remove = {
     anonymous: false,

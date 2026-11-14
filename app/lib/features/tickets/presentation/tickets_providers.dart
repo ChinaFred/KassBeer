@@ -137,12 +137,25 @@ final ticketsPrPreteProvider =
     });
 
 /// `ticket_status/launches`, lu par l'administrateur seul (P41) : compteur
-/// de la liste, quota de la boîte, jetons des routines du bandeau.
+/// de la liste, quota de la boîte, jetons des routines du bandeau. Le compte
+/// fondateur y lit son propre compteur ([EtatLancements.vuePour]).
 final launchStatusProvider =
-    StreamProvider.autoDispose<RechercheDocument<EtatLancements>>(
-      (ref) => ref.watch(ticketsRepositoryProvider).watchLaunchStatus(),
-      retry: (retryCount, error) => null,
-    );
+    StreamProvider.autoDispose<RechercheDocument<EtatLancements>>((ref) {
+      final fondateur = ref.watch(
+        grantedAccessProvider.select((a) => a?.member.founder ?? false),
+      );
+      return ref
+          .watch(ticketsRepositoryProvider)
+          .watchLaunchStatus()
+          .map(
+            (lu) => switch (lu) {
+              DocumentTrouve<EtatLancements>(:final value) => DocumentTrouve(
+                value.vuePour(fondateur: fondateur),
+              ),
+              _ => lu,
+            },
+          );
+    }, retry: (retryCount, error) => null);
 
 /// Nom déclaré de chaque membre (`members/{email}.display_name`), par e-mail,
 /// pour l'auteur d'un ticket. Vide tant que la liste n'est pas lue ou si elle

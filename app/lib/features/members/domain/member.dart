@@ -27,6 +27,7 @@ class Member {
     required this.email,
     required this.role,
     this.displayName,
+    this.founder = false,
     this.hasPendingWrites = false,
   });
 
@@ -36,6 +37,12 @@ class Member {
   /// `null` quand la valeur stockée n'est ni `admin` ni `brewer`.
   final MemberRole? role;
   final String? displayName;
+
+  /// Compte fondateur : `founder == true` (booléen strict) sur un administrateur,
+  /// posé dans la console Firebase seule. Il ne change que le compteur des
+  /// lancements de sessions lu dans `ticket_status/launches` ; le serveur en
+  /// décide seul.
+  final bool founder;
 
   /// Écriture locale pas encore reçue par le serveur (« En attente du réseau »).
   final bool hasPendingWrites;
@@ -48,9 +55,11 @@ class Member {
     bool hasPendingWrites = false,
   }) {
     final name = data['display_name'];
+    final role = MemberRole.fromValue(data['role']);
     return Member(
       email: id,
-      role: MemberRole.fromValue(data['role']),
+      role: role,
+      founder: role == MemberRole.admin && data['founder'] == true,
       displayName: name is String && name.trim().isNotEmpty
           ? name.trim()
           : null,
@@ -64,10 +73,12 @@ class Member {
       other.email == email &&
       other.role == role &&
       other.displayName == displayName &&
+      other.founder == founder &&
       other.hasPendingWrites == hasPendingWrites;
 
   @override
-  int get hashCode => Object.hash(email, role, displayName, hasPendingWrites);
+  int get hashCode =>
+      Object.hash(email, role, displayName, founder, hasPendingWrites);
 }
 
 /// Lecture de `members/{email}` du compte connecté.

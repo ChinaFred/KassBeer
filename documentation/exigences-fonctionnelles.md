@@ -145,8 +145,9 @@ au plus). Sous 600 px, les cartes s'étendent de 8 px sur la marge, carte d'acti
 comprise, et leur contenu reste aligné sur l'en-tête.
 
 Recettes, Équipements et Brassins sont décrits ci-dessous. Au lancement, si le compte a un seul
-brassin en cours depuis moins de 24 h, l'écran du jour se rouvre avec le message « Brassage
-repris. Les minuteurs comptent le temps écoulé. ».
+brassin en cours depuis moins de 24 h, l'écran du jour se rouvre avec l'encadré « Brassage
+repris. Les minuteurs comptent le temps écoulé. » sous la carte de l'étape, lu à son apparition, qui
+défile avec le panneau et se ferme par « Fermer ».
 
 Une page de second niveau (fiche d'une recette, d'un équipement, d'une entrée de la
 Bibliothèque, Admin › Membres) porte son titre (« Recette », « Équipement », « Houblon »,
@@ -363,14 +364,16 @@ lecture : la liste reste, sous « Mise à jour de la liste impossible. Elle peut
 jour. ». Hors ligne : bandeau hors ligne et liste du cache. Un ticket illisible s'affiche
 « Ticket illisible » / « Mettez l'application à jour, ou prévenez l'administrateur. ».
 
-**Suivi d'un ticket** (`/tickets/:id`). Type, titre, étiquette du statut, « Envoyé le jj/mm/aa à
-hh:mm », phrase du statut, encadré du texte de l'administrateur quand il a répondu (titré
+**Suivi d'un ticket** (`/tickets/:id`). En-tête de fiche : titre, type en ligne grise,
+étiquette du statut. Puis la phrase du statut, encadré du texte de l'administrateur quand il a répondu (titré
 « Motif du refus » pour un ticket refusé, « Commentaire de clôture » pour un ticket clos,
-« Réponse de l'administrateur » sinon), frise des étapes (voir ci-dessous), description, « Capture » quand une capture est jointe
+« Réponse de l'administrateur » sinon), frise des étapes (voir ci-dessous), lignes « Envoyé le » (jj/mm/aa à hh:mm), « Envoyé avec »
+(version, plateforme) et « Écran » (Recette), comme la fiche de l'administrateur, description,
+« Capture » quand une capture est jointe
 (vignette qui s'agrandit à l'appui ; si elle ne se lit pas, « Capture indisponible. », hors
 ligne « La capture se lit avec le réseau. », et « Réessayer » ; « Capture effacée. » quand ses
-180 jours sont passés ou qu'elle n'est plus dans le stockage, sans « Réessayer »), « Écran :
-Recette », « Envoyé avec : … ». Le texte est sélectionnable. Ouvrir un
+180 jours sont passés ou qu'elle n'est plus dans le stockage, sans « Réessayer »). Le texte est
+sélectionnable. Ouvrir un
 ticket dont le suivi est à lire éteint la pastille, hors ligne compris. États : « Chargement du
 ticket », « Impossible de lire vos tickets. », « Ce ticket n'existe plus. », « Ce ticket n'est
 pas disponible hors ligne. », « Ce ticket est illisible. », avec « Retour à mes tickets ».
@@ -677,6 +680,9 @@ tickets. En dessous, la liste occupe l'écran et la fiche s'ouvre seule par-dess
 **Compteur des lancements.** Au-dessus des filtres, en texte secondaire : « Lancements de
 sessions : 2 sur 10 le 13/11 · 3 en novembre 2026 ». Le jour, le mois et le plafond sont ceux écrits
 par le serveur : l'application ne recalcule pas le jour de Paris et n'a aucun plafond en dur.
+Le compte fondateur (champ `founder` de son document de membre, posé dans la console Firebase)
+a son propre compteur, cinq fois plus haut (« 4 sur 50 le 14/11 ») : ses lancements ne
+consomment pas ceux des autres administrateurs, et inversement. Le mois compte les deux.
 Sans compteur : « Lancements de sessions : aucun compté. » ; lecture : « … : lecture en
 cours. » ; hors ligne, absent du cache : « … : compteur non disponible hors ligne. » ;
 illisible : « … : compteur illisible. » ; panne : « Lancements de sessions : compteur
@@ -1794,7 +1800,8 @@ placées après l'embouteillage une fois le brassin embouteillé. Vide : titre �
 sur Nouveau brassin. ». Statuts : Prévu, En
 cours, En fermentation, En conditionnement, Terminé, Abandonné.
 
-**Fiche.** En-tête : nom, menu ⋮ à sa droite, ligne grise (« J+12 » en fermentation,
+**Fiche.** En-tête : nom, menu ⋮ à sa droite, ligne grise (« Brassé le 8 nov. 2026 (J+12) » en
+fermentation,
 « Embouteillé le 3 déc. 2026 » en conditionnement et terminé, « Brassin de {auteur} » pour un
 autre membre), statut en étiquette, du même ton que dans la liste. Puis le lien vers la
 recette. La prochaine journée, son bouton et l'action principale du statut sont dans une carte
@@ -2140,7 +2147,10 @@ la première minute). La carte garde la même taille et la même marge dans les 
 ne bouge au passage en dépassé. Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
 « Prévue vers 12:30 », bouton « Commencer l'étape » (« Fait » pour une étape de 0 min, début et
 fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
-« En fermentation »). Sans chronologie : « Aucune étape. Saisissez vos mesures. ».
+« En fermentation »). Sans chronologie : « Aucune étape. Saisissez vos mesures. ». Quand le
+panneau ne tient pas dans sa place (60 % de l'écran au plus en portrait), une barre de
+défilement reste visible à sa droite (couleur `onSurfaceVariant`, 6 px, comme les autres
+barres de l'application).
 
 **Fin d'un minuteur.** Vibration d'environ une seconde et son de notification, une seule fois
 par étape, écran ouvert seulement : aucune alarme ne sonne écran verrouillé.
