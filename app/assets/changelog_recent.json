@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.51",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant. « Sources des données » nomme cette nouvelle source."
+      ]
+    },
+    {
       "version": "0.1.50",
       "date": "2026-11-14",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Dans « Rapports d'erreur », une relecture n'affiche plus qu'une seule attente, sur le bouton appuyé. Après une panne, « Réessayer » montre l'attente dans le bandeau, et le bouton « Actualiser » reste en place, désactivé. Tirer la liste vers le bas n'ajoute plus d'indicateur en haut de l'écran."
-      ]
-    },
-    {
-      "version": "0.1.45",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Dans « Signaler ou proposer », un bouton « Choisir une image » permet de joindre une image de l'appareil à la place de la capture de l'écran. Seules les images PNG, JPEG et WebP sont proposées. L'image est réduite à 2 000 pixels de côté au plus et réenregistrée sans ses métadonnées (date, lieu de prise de vue). Une seule image part avec le ticket : choisir une image décoche la capture de l'écran, et l'inverse. Pendant la préparation de l'image, « Envoyer » est grisé. Une capture doit être envoyée dans l'heure qui suit le ticket. Les captures sont effacées au bout de 180 jours ; la fiche du ticket affiche alors « Capture effacée. »."
       ]
     }
   ]
