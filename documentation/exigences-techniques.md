@@ -187,6 +187,7 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 | `brewsListProvider` | `StreamProvider.autoDispose<ListeLue<Brew>>` | `brews/` entier, avec `fromCache` |
 | `importFichesRepositoryProvider` | `Provider<ImportFichesRepository>` | Admin › Import ; fourni par `main.dart` ou par les tests, sans valeur par défaut |
 | `libraryRepositoryProvider` | `Provider<LibraryRepository>` | fourni par `main.dart` ou par les tests ; sans valeur par défaut |
+| `errorReportsRepositoryProvider` | `Provider<ErrorReportsRepository>` | Admin › Rapports d'erreur (ADR-011, J1) ; fourni par `main.dart` ou par les tests, sans valeur par défaut |
 | `indexReferentielProvider(nature)` | `FutureProvider.autoDispose.family` | `beer_index/{nature}` par `lireIndex` ; une panne s'affiche, « Réessayer » invalide |
 | `ficheReferentielProvider((nature:, id:))` | `FutureProvider.autoDispose.family` | `beer_*/{id}` par `lireFiche` |
 | `recettePubliqueProvider(id)` | `FutureProvider.autoDispose.family` | `public_recipes/{id}` par `lireRecettePublique` |
@@ -438,6 +439,7 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/processus/:id/modifier` | « Modifier le processus », plein écran, hors coquille | auteur ; sinon « Seul l'auteur modifie ce processus. » |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
+| `/admin/rapports-erreur` | Admin › Rapports d'erreur (ADR-011, J1), dans la coquille, retour vers Admin | admin ; lecture seule de `error_reports/` |
 | `/admin/import` | Admin › Import, page pleine avec retour, hors coquille, ouverte par `push` depuis Admin, déclarée avant la coquille | admin ; écrit sous son seul `owner_uid` |
 
 `redirectFor(access, uri)` (fonction pure, testée) envoie chaque état sur son écran. Un
@@ -456,6 +458,28 @@ sur `fake_cloud_firestore` (création, modification sans toucher `owner_uid` ni 
 document ↔ `brewing/`, lecture et affichage des nombres, écrans Recettes et Équipements
 (états, lecture seule, « À compléter », éditeur), attente du serveur sous `fake_async`,
 `FirebaseEnv`, `EchangeFichiersPlateforme` (`echange_fichiers_test.dart`, `TestDefaultBinaryMessenger`, P17 : annulation, fichier rendu, `TOO_LARGE` avec et sans taille, `ALREADY_ACTIVE` au choix et au partage, `NO_PICKER`, `READ_FAILED`, `INVALID_NAME`, `WRITE_FAILED`, aucun nom de fichier rapporté), Recettes › Importer (`import_recipes_test.dart` : relecture identique des recettes lues par `exchange/` (I9), « Déjà importée » par l'empreinte et jamais par le nom seul, fichier trop gros, illisible, non BeerJSON, statuts, détails, « Tout cocher », filtre, écriture sous le compte de l'importateur avec l'équipement présélectionné, hors ligne, refus du serveur, message groupé après la sortie et après « Importer un autre fichier », panne inattendue de l'analyse, boutons de l'accueil, filtres comptés, raisons des ignorées, fiche ouverte par-dessus le compte rendu, annonces, mesure de l'appui sur une case avec 500 recettes, valeurs absentes reprises de la Bibliothèque et valeurs du fichier gardées, noms non résolus signalés une fois, Bibliothèque non lue), feuille « Exporter » (`export_recipe_test.dart` : pertes, nom du fichier, auteur, rendement de l'équipement, aucun identifiant ni nom d'équipement, web, échec affiché dans la feuille avec réessai, un seul bouton plein, BeerXML : style absent de la Bibliothèque bloqué, style retrouvé par son nom et fichier `.xml`, index illisible puis « Réessayer », recette à l'extrait exportée sans `mash` ni `boil`, recette d'un autre membre sans auteur bloquée avec « Dupliquer », export bloqué pour l'auteur et pour un autre membre), `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17), domaine des coûts (`costs_domain_test.dart` : clés dérivées sans champ `key`, raisons de CB8, déclencheur du figeage, écarts), `FirestoreCostsRepository` sur `fake_cloud_firestore` (`costs_repository_test.dart` : écriture et suppression des prix et des frais, document illisible rapporté sans valeur, refus d'un premier figeage annoncé seulement si le coût n'est pas sur le serveur et rejeu journalisé `costs.freeze_replayed` (HL5), suppression du brassin et de son coût dans un même lot par `delete` et `deleteWithEvents` (CB19), `enregistrerEmbouteillage` : coût écrit après l'embouteillage sans attente, aucun coût pour une modification, un embouteillage déjà daté ou un coût déjà lu, embouteillage envoyé même quand le calcul échoue ou que les prix manquent, refus du coût seul et de l'embouteillage seul (CB7)), Bibliothèque (`library_domain_test.dart` : index, entrée mal typée écartée et comptée, champ inconnu ignoré, plages, unités canoniques seules, provenance, recette publique, rang de houblon hors de la liste, `copie` sans les champs propres aux recettes publiques ni `equipment_id` ni `brew_steps`, houblons sans forme, `normaliserNomRecherche`, libellés traduits, provenance courte ; `library_repository_test.dart` sur `fake_cloud_firestore` : index gardé pour la session, absent non gardé, un seul rapport pour les entrées illisibles, fiches, pages de 50 par `startAfterDocument`, préfixe, recette illisible rapportée, clés écrites par « Dupliquer » comparées à une liste recopiée de `recipeFields()` et des clés de `isBeerJsonRecipe` (à tenir à jour avec `firestore.rules`), `search_name` et les champs propres aux recettes publiques absents, recherche sur `search_name` avec saisie normalisée ; `library_screens_test.dart` : navigation, segments, recherche locale, fiches, états, hors ligne, pages suivantes, recherche à la validation, « Dupliquer » puis éditeur, houblons sans forme, « Voir le style » par `push`, recherche gardée au retour d'une fiche, compte annoncé, puces sur une ligne au téléphone, barre du bas à 360 px en texte × 2, « Sources des données » et son lien ; `recipe_screens_test.dart` : houblon sans forme, « Forme du houblon à compléter », forme demandée puis enregistrée dans l'éditeur, suggestions de la Bibliothèque pour un malt, un houblon et une levure, valeurs vides remplies, « Reprendre les valeurs de la Bibliothèque », style choisi par son code, hors ligne sans lecture ; `library_repository_test.dart` : `import_unresolved` créé à `count` 1 avec la liste blanche, autre graphie du même nom sur le même document, compte monté d'un, nom repris, 120 noms en lots de 10, lot refusé sans effet sur les autres ni levée, un rapport sans nom), déroulé d'un brassin (`deroule_d3_test.dart` : clés uniques et clés de la recette gardées, libellés, journée retirée, préremplissage, houblonnage répété, chronologie illisible refusée, date changée et rétablie, prochaine journée, « Nouveau brassin » avec présélection, chronologie seule, modèle d'un autre membre jamais proposé, hors ligne, panne, refus du seul déroulé et de la création, fiche avant et après le départ, « Changer de processus », « Recréer depuis la recette », liste, « Préparer le brassage » et écran du jour avec un processus ; `deroule_d4_test.dart` : `PlanDuJour` par journée (début de la journée 2 sans « Non faites » au brassage, départ prévu au premier début ou à l'heure de l'appareil, mesures sous l'étape de la journée et jamais au brassage, « Sans étape » du jour), `journeeTerminee`, densité d'une journée 2 retenue comme finale et jamais comme initiale, « Préparer la journée » (refus : autre membre, brassage pas fini, embouteillage fait, terminé, abandonné, clé inconnue ; premier début seul, Reprendre sans écriture, sans réseau, prix lus ou indisponibles), écran de la journée (Terminer la journée en un lot, tout fait sans confirmation, dernière étape, mesure en `phase: 'fermentation'` limitée aux étapes de la journée, mesure du brassage sans `phase`, hors ligne, Embouteiller avec confirmation puis retour sur la fiche et mémoire vidée, étape en cours terminée à l'embouteillage, autre membre), fiche (prochaine journée, Embouteiller dans ⋮, Reprendre, relevé avec la journée et l'étape, « Passer la journée » en un lot et absent pour l'embouteillage, résumé « Terminée · … »), `resumeJourneeTerminee`, P2 sur les fichiers appelés par les journées ; `brews_repository_test.dart` : `setProcess` écrit, relu, retiré, refusé par `erreurDeroule` ; `prevu_reel_test.dart` : libellés prévu et réel de chaque cas, texte lu, groupes soudés, ligne de journée, fiche (lignes d'étape, étape sans fin après le brassage, journée jamais commencée, brassin sans processus, autre membre sans bouton), écran du jour inchangé, propositions et raisons, étape renommée, journées répétées, `avecDurees`, bouton absent (brassin en cours, processus d'un autre membre, supprimé, rien à proposer, deuxième usage), hors ligne sans cache, panne, feuille (cases décochées, bouton chiffré, écriture de la seule `duration_min`, « Annuler », hors ligne, refus du serveur, modèle invalide refusé dans la feuille, boutons radio et case d'une journée répétée), élément de ticket), processus (`processes_repository_test.dart` sur `fake_cloud_firestore` : champs écrits, modèle refusé par `erreurModele` sans écriture, document illisible isolé et rapporté, modification qui garde `owner_uid` et `created_at`, copie au nom du lecteur avec clés neuves, duplication, suppression, choix par défaut absent, écrit, remis à nul et illisible ; `process_screens_test.dart` : menu du compte, chargement et panne, liste vide avec le modèle d'exemple écrit à « Enregistrer » seulement et proposé par défaut, miens puis groupe par nom, « Par défaut », document illisible, hors ligne sans cache, fiche, autre membre en lecture seule avec copie, choix par défaut, suppression du défaut, duplication, journée vide refusée, nom manquant, journée 1 fixe, tri par écart annoncé, 5 journées et 60 étapes au plus, bloc déjà placé, modification, double appui du lecteur d'écran sur une ligne, « Nouveau processus » en panne et hors ligne, choix par défaut en lecture, en panne et non lu, suppression refusée qui garde le défaut, duplication bloquée pendant l'attente, journée retirée, résumés ; `ligne_editeur_test.dart` : ligne avec et sans formulaire, icône en tête, ⋮ masqué sans action), écrans des coûts (`costs_screens_test.dart` : « Mes prix », bloc de la recette, bloc du brassin absent pour un autre membre et pour l'admin, aucun montant avec un prix manquant ni dans une annonce, coût figé inchangé quand un prix change, figeage au premier embouteillage seulement, dialogues à trois boutons de « Figer » et de « Recalculer », nom importé coupé à 120 caractères, texte à 200 %, contraste, cibles tactiles et en-tête des manquants annoncé).
+
+#### Admin › Rapports d'erreur — client (ADR-011, J1)
+
+`features/admin/` : `domain/error_report.dart` (`ErrorReport.fromFirestore`, `PlateformeRapport`,
+première ligne, résumé, texte copié), `data/error_reports_repository.dart`
+(`ErrorReportsRepository`, `FirestoreErrorReportsRepository`), `presentation/error_reports_screen.dart`.
+
+- Lecture : `error_reports` par `orderBy('created_at', descending: true)`, `limit(50)`
+  (`kTaillePageRapports`), `get()` ; la suite par `startAfterDocument` du dernier document
+  lu. Aucun `snapshots()`, aucune écriture ni suppression (lecture seule, choix du
+  2026-11-14 ; P44). `fromCache` vient de `metadata.isFromCache` : l'écran affiche alors le
+  bandeau « Hors ligne ».
+- Une lecture en échec passe par `reportError` (`admin.error_reports`, contexte « première
+  page » ou « page suivante »), puis l'écran affiche la panne. Une copie en échec rapporte
+  `admin.error_reports.copy`. Aucun texte de rapport ne part dans `context` (P13).
+- `uid` est affiché tel quel ; ni `users/` ni `members/` ne sont lus pour le traduire.
+- Tests : `app/test/error_reports_test.dart` (lecture d'un document, pages de 50 sur
+  `fake_cloud_firestore`, panne rapportée ; écran : tuile, accès refusé au brasseur, liste,
+  plateforme inconnue, aucune suppression, sections et copie, « Charger la suite » et « Fin
+  des rapports. », vide, panne de la première page et de la suite, « Actualiser », hors ligne,
+  texte à 200 %, ligne large) ; `rules-tests/test/error_reports.test.mjs` : page de 50 par
+  `created_at` décroissant et suite par `startAfter`, pour les cinq profils (admin seul).
 
 #### Bibliothèque — client
 
@@ -1401,7 +1425,10 @@ sur cet appareil hors ligne », jamais « prix manquant », et rien ne se fige.
 
 ### `error_reports/{reportId}`
 
-Écrit par `ErrorReportService.reportError` (P13).
+Écrit par `ErrorReportService.reportError` (P13). Lu par l'admin seul dans Admin › Rapports
+d'erreur (ADR-011, J1), par pages de 50 sur `created_at` décroissant ; aucune suppression
+depuis l'application. Aucune rétention : les rapports restent jusqu'à leur suppression dans
+la console Firebase.
 
 | Champ | Type |
 |---|---|
@@ -3753,6 +3780,17 @@ actually used ».
 
 Forcer les versions corrigées par des `overrides` npm a été écarté : le déploiement exécute
 `firebase-tools`, et aucun test local ne vérifie une CLI aux dépendances forcées.
+
+## Journaux
+
+Deux journaux, deux publics (ADR-011) :
+
+| Journal | Écrit par | Contenu | Lu par |
+|---|---|---|---|
+| `error_reports/` (Firestore) | l'application, `ErrorReportService.reportError` | pannes des appareils des membres : erreur, pile, contexte, version, plateforme ; URL et e-mails retirés à l'écriture (P13) | l'admin, Admin › Rapports d'erreur (J1, livré) |
+| sortie des Cloud Functions (Cloud Logging) | `functions/src/logging.ts` (`logError`, `logWarn`) | erreurs et événements du serveur des tickets : `feature`, `ticketId`, description, pile | la console Google Cloud ; Admin › Journaux par la callable `queryLogs` à venir (J2) |
+
+Le texte d'un journal ne se recopie jamais dans une Issue (ADR-002, P24).
 
 ## Intégrations et services tiers
 

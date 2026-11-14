@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.40",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50 à la fois, avec « Charger la suite » pour les précédentes. Chaque ligne donne la date, la partie de l'application concernée, la version et la plateforme (Android ou Web). Une ligne se déplie sur l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application."
+      ]
+    },
+    {
       "version": "0.1.39",
       "date": "2026-11-13",
       "paragraphs": [
@@ -36,15 +43,6 @@
         "Les journées après le brassage se suivent comme le brassage. Sur la fiche d'un brassin en fermentation, « Préparer la journée « Houblonnage à cru » » s'affiche sous sa date prévue. Préparez la journée sur le téléphone qui servira, avec du réseau : ensuite, étapes, minuteurs, mesures et notes marchent sans réseau. « Commencer la journée » démarre la première étape ; une journée commencée se reprend depuis la fiche.",
         "Une densité ou une température saisie pendant une journée compte dans le relevé de fermentation et dans la densité finale, jamais dans la densité initiale. Elle s'affiche sous son étape, et le relevé nomme sa journée et son étape. « Terminer la journée » termine l'étape en cours et marque sautées celles qui restent ; une journée dont toutes les étapes sont faites se termine seule. Une journée que vous ne ferez pas se passe depuis la fiche : le menu de la journée porte « Passer la journée », qui marque ses étapes sautées. Dans le déroulé de la fiche, une journée terminée résume ce qui a été fait (« Terminée · 3 faites, 1 sautée »).",
         "La journée d'embouteillage finit par « Embouteiller » : le formulaire habituel, puis le retour sur la fiche. L'étape en cours se termine à l'envoi. Les prix et les frais lus à la préparation servent à figer le coût, même sans réseau. Un brassin qui a une journée d'embouteillage garde « Embouteiller sans suivre la journée » dans le menu ⋮ de sa fiche. La liste des brassins annonce toujours la prochaine journée d'après sa date : une journée faite en avance reste annoncée jusqu'à cette date."
-      ]
-    },
-    {
-      "version": "0.1.34",
-      "date": "2026-11-13",
-      "paragraphs": [
-        "« Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la recette seule » comme avant. Votre processus par défaut est déjà choisi. En dessous, « Déroulé prévu » montre chaque journée avec sa date et son nombre d'étapes, et prévient quand la recette n'a pas de houblon à cru pour la journée de houblonnage, ou quand des houblons à cru n'ont pas de journée. Hors ligne, si vos processus n'ont jamais été lus sur ce téléphone, le brassin se crée avec la chronologie de la recette seule ; vous choisirez son processus plus tard.",
-        "La fiche d'un brassin a une section « Déroulé » à la place de « Chronologie » : le processus choisi, la journée de brassage avec ses heures et ses mesures, puis les journées suivantes avec leur date et leurs étapes. Tant que le brassage n'a pas commencé, « Changer de processus » en choisit un autre, et le menu d'une journée change sa date ou rétablit celle du processus. Ensuite, le déroulé ne change plus. « Recréer depuis la recette » garde le processus du brassin.",
-        "La liste des brassins annonce la prochaine journée d'un brassin en fermentation (« Prochaine journée : Houblonnage à cru, mer. 25 nov. »). « Préparer le brassage » et l'écran du jour suivent la journée de brassage du processus, préparation et nettoyage compris, et la barre de l'écran du jour nomme la journée. Le suivi des journées après le brassage arrive avec la prochaine version : d'ici là, la mesure de densité se saisit par « Ajouter un relevé » et l'embouteillage par « Embouteiller »."
       ]
     }
   ]

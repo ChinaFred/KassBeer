@@ -4,6 +4,37 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-14
+
+### v0.1.40 — fonctionnel
+
+L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les
+pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50
+à la fois, avec « Charger la suite » pour les précédentes. Chaque ligne donne la date, la partie de
+l'application concernée, la version et la plateforme (Android ou Web). Une ligne se déplie sur
+l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie
+le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application.
+
+### v0.1.40 — technique
+
+ADR-011, lot J1 : Admin › Rapports d'erreur (`/admin/rapports-erreur`, `PageDeCoquille` sous
+`/admin`, réservé à l'admin par le routeur). Fichiers ajoutés dans `app/lib/features/admin/` :
+`domain/error_report.dart`, `data/error_reports_repository.dart` (`ErrorReportsRepository`,
+`FirestoreErrorReportsRepository`, fourni par `errorReportsRepositoryProvider`),
+`presentation/error_reports_screen.dart` ; tuile dans `admin_screen.dart`. Lecture de
+`error_reports` par `orderBy('created_at', descending: true)`, `limit(50)`, `get()` et
+`startAfterDocument`, sans `snapshots()` ni suppression (P44) ; une lecture ou une copie en échec
+passe par `reportError`, sans texte de rapport dans `context` (P13). `firestore.rules` est
+inchangé ; `rules-tests/test/error_reports.test.mjs` ajoute la requête paginée (page de 50 et
+suite) pour les cinq profils de P4. Tests : `app/test/error_reports_test.dart`. Aucune dépendance
+ajoutée ni montée. Évolutions du réseau ajoutées avec ADR-011 : `queryLogs` dans la liste fermée de
+P25, contrôles P43 (`queryLogs`) et P44 (champs de `logging.ts`, Admin › Journaux, Admin › Rapports
+d'erreur), lecture des journaux par l'API REST et `fetch` dans « Règles de code » de `CLAUDE.md`,
+note de renvoi dans ADR-008. Seuil `kGrandTexteMinScale` (1,3) ajouté à
+`core/presentation/breakpoints.dart`. `main.dart.js` (`flutter build web --release`) passe de
+5 411 506 à 5 438 215 octets (+ 26 709). Admin › Journaux et la callable `queryLogs` viendront
+avec le lot J2.
+
 ## 2026-11-13
 
 ### v0.1.39 — fonctionnel

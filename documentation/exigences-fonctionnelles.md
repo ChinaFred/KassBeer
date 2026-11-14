@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -283,12 +283,13 @@ d'une étape).
 
 ### Admin
 
-Réservé à l'administrateur. Trois entrées : « Membres » (« Inviter et retirer les comptes »),
+Réservé à l'administrateur. Quatre entrées : « Membres » (« Inviter et retirer les comptes »),
 « Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
 et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas, un jeton de routine
-refusé l'allume) et « Import » (« Fiches Excel préparées en JSON »).
+refusé l'allume), « Import » (« Fiches Excel préparées en JSON ») et « Rapports d'erreur »
+(« Pannes rencontrées dans l'application par les membres »).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
@@ -399,6 +400,41 @@ volume conditionné et nature du sucre de resucrage ; le coût figé de la fiche
 ses prix sont connus (voir « Coût »). Rien n'est écrit dans « Mes prix » ni dans « Mes
 frais ». Une recette ou un brassin déjà présent à l'identifiant prévu n'est pas réécrit.
 
+
+### Admin › Rapports d'erreur
+
+Réservé à l'administrateur (ADR-011, J1). Adresse `/admin/rapports-erreur`, titre « Rapports
+d'erreur », retour vers Admin. L'écran lit les pannes que l'application a rapportées sur les
+appareils des membres, de la plus récente à la plus ancienne. Lecture seule : aucun rapport
+ne se supprime depuis l'écran.
+
+- **En tête** : « N rapports affichés » (« 1 rapport affiché ») et le bouton « Actualiser »,
+  qui relit la première page. Tirer la liste vers le bas fait la même chose.
+- **Une ligne repliée** : icône de bug en ton d'erreur ; titre = première ligne de l'erreur,
+  deux lignes au plus (« Erreur sans message » si elle est vide) ; résumé « date · fonction ·
+  v{version} », ce qui manque omis ; étiquette « Android » ou « Web », « Plateforme inconnue »
+  en ton neutre si elle manque. L'étiquette est à droite du titre sur une ligne d'au moins
+  600 px, sous le résumé sinon (téléphone, texte agrandi).
+- **Une ligne dépliée** : sections « Erreur », « Contexte », « Pile d'appels » (en chasse
+  fixe) et « Compte » (identifiant du compte, tel quel), chacune absente si elle est vide,
+  texte sélectionnable. « Copier le rapport » copie le résumé, la plateforme et les sections,
+  puis affiche « Rapport copié. » (« Impossible de copier le rapport. » en cas d'échec).
+- **Pages de 50** : « Charger la suite » lit les 50 suivants, « Lecture en cours » pendant la
+  lecture. Pendant « Actualiser », l'icône laisse place à un indicateur annoncé « Lecture en
+  cours », et « Charger la suite » reste désactivé. Une page de moins de 50 affiche « Fin des rapports. ».
+- Chargement : « Chargement des rapports ». Liste vide : « Aucun rapport d'erreur. Une panne
+  rencontrée par un membre apparaîtra ici, avec son contexte. »
+- Première lecture impossible : « Impossible de lire les rapports d'erreur. » et
+  « Réessayer ». Une panne sur la suite ou sur « Actualiser » garde la liste affichée, avec
+  au-dessus « Lecture impossible. Les rapports déjà affichés restent visibles. »
+  et « Réessayer », qui rejoue la lecture en échec. Sans aucun rapport affiché, une panne
+  d'« Actualiser » s'affiche seule : « Impossible de lire les rapports d'erreur. » et
+  « Réessayer ». Pendant une nouvelle lecture, la panne affichée reste, avec « Lecture en
+  cours », jusqu'à la réponse.
+- Hors ligne, avec au moins un rapport lu : la liste lue dans l'appareil s'affiche sous
+  « Hors ligne. Rapports lus sur cet appareil : la liste peut être incomplète. » et
+  « Réessayer ». Sans aucun rapport dans l'appareil, sans ce bandeau : « Aucun rapport lu sur
+  cet appareil. Réessayez avec le réseau. » et « Réessayer ».
 
 ### Admin › Tickets des membres
 

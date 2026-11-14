@@ -202,6 +202,12 @@ ticket validé dans l'application (P42). La section « Coûts variables » de
 `CLAUDE.md` décrit ce premier poste. `ci.yml` et `deploy.yml` ajoutent les deux callables de T4 à la
 liste fermée et leurs secrets au contrôle des secrets (P10, accord de l'utilisateur).
 
+Le 2026-11-14, ADR-011 (journaux) et l'accord de l'utilisateur ajoutent `queryLogs` à P25,
+P43 (filtre et réponse de `queryLogs`, `securite`) et P44 (champs du journal lus par le filtre,
+recherche par un bouton, rapports d'erreur paginés, `relecteur-regles`). « Règles de code »
+précise que la lecture des journaux passe aussi par l'API REST et `fetch`, et « Le projet » cite
+ADR-011.
+
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
 P10 (fichiers de `functions/` exécutés par un hook) et P14 (déploiement des Functions sans

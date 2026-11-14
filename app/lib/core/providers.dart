@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/admin/data/error_reports_repository.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/brew_day/data/alerte_minuteur.dart';
 import '../features/brews/data/brews_repository.dart';
@@ -79,6 +80,13 @@ final libraryRepositoryProvider = Provider<LibraryRepository>(
 /// Tickets des membres (`tickets/`, `ticket_status/github`, ADR-006).
 final ticketsRepositoryProvider = Provider<TicketsRepository>(
   (ref) => throw UnimplementedError('ticketsRepositoryProvider non fourni'),
+);
+
+/// Admin › Rapports d'erreur (ADR-011, J1) : `error_reports/` lu par pages,
+/// `get()` seul.
+final errorReportsRepositoryProvider = Provider<ErrorReportsRepository>(
+  (ref) =>
+      throw UnimplementedError('errorReportsRepositoryProvider non fourni'),
 );
 
 /// Heure de l'appareil. Injectée pour les tests : un minuteur se recalcule à

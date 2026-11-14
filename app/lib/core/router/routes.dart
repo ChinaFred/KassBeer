@@ -26,6 +26,9 @@ abstract final class AppRoutes {
   /// coquille, réservée à l'admin par le routeur (`/admin/**`).
   static const adminImport = '/admin/import';
 
+  /// Admin › Rapports d'erreur (ADR-011, J1), dans la coquille.
+  static const adminErrorReports = '/admin/rapports-erreur';
+
   /// Admin › Tickets des membres (ADR-006, T2), dans la coquille.
   static const adminTickets = '/admin/tickets';
   static String adminTicket(String id) => '$adminTickets/$id';

@@ -65,6 +65,7 @@ const Map<String, String> kTicketScreenNames = {
   '/tickets/:id': 'Suivi d\'un ticket',
   '/admin': 'Admin',
   '/admin/membres': 'Admin › Membres',
+  '/admin/rapports-erreur': 'Admin › Rapports d\'erreur',
   '/admin/import': 'Admin › Import',
   '/admin/tickets': 'Admin › Tickets des membres',
   '/admin/tickets/:id': 'Admin › Ticket d\'un membre',
@@ -98,6 +99,7 @@ const kTicketShellScreens = [
   '/equipements/:id',
   '/admin',
   '/admin/membres',
+  '/admin/rapports-erreur',
   '/admin/tickets',
   '/admin/tickets/:id',
 ];
