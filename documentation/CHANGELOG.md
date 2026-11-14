@@ -8,8 +8,8 @@ données, outillage), ou les deux.
 
 ### v0.1.48 — fonctionnel
 
-« Lancer l'analyse », les autres lancements de session, l'écran Journaux et la vérification
-d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou
+« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran
+Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou
 « Journaux indisponibles pour l'instant ».
 
 ### v0.1.48 — technique
