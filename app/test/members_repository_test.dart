@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_async/fake_async.dart';
@@ -203,6 +205,26 @@ void main() {
       }).founder,
       isFalse,
     );
+  });
+
+  // Fixture partagée avec functions/test/auth.test.ts (isFounder, P31) : le
+  // client ne lit `founder` que pour choisir le compteur affiché.
+  test('member_access.json : founder comme isFounder du serveur', () {
+    final fixture =
+        jsonDecode(
+              File('../test-fixtures/member_access.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final cases = (fixture['cases'] as List).cast<Map<String, dynamic>>();
+    final membres = cases.where((c) => c['expect'] != 'none').toList();
+    expect(membres.where((c) => c['founder'] == true), isNotEmpty);
+    for (final c in membres) {
+      final member = Member.fromFirestore(
+        c['member_key'] as String,
+        c['member'] as Map<String, dynamic>,
+      );
+      expect(member.founder, c['founder'] == true, reason: c['name'] as String);
+    }
   });
 
   test('adresse : minuscules et forme', () {

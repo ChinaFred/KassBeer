@@ -676,6 +676,23 @@ describe("lancement : plafond du jour (P36)", () => {
     assert.equal(h.db.read("ticket_status/launches")?.count_month, 2);
   });
 
+  it("fondateur, deux appels simultanés sur deux tickets : comptés deux fois à part", async () => {
+    const h = harness();
+    seedTicket(h, "t-1");
+    seedTicket(h, "t-2");
+    const outs = await Promise.all([
+      launchTicketSession("t-1", "analyse", "f-uid", h.deps(), "founder"),
+      launchTicketSession("t-2", "analyse", "f-uid", h.deps(), "founder"),
+    ]);
+    assert.deepEqual(
+      outs.map((o) => o.outcome),
+      ["launched", "launched"],
+    );
+    assert.equal(h.db.read(`ticket_quotas/launch_founder_${DAY}`)?.count, 2);
+    assert.equal(quota(h), 0);
+    assert.equal(h.db.read("ticket_status/launches")?.founder_count_day, 2);
+  });
+
   it("deux appels simultanés sur le même ticket : un seul part", async () => {
     const h = harness();
     seedTicket(h, "t-1");
@@ -737,6 +754,18 @@ describe("lancement : échec, résultat inconnu, en cours (P35, P36)", () => {
     assert.equal(out.outcome, "launched");
     assert.equal(h.db.read("ticket_status/launches")?.analysis_invalid_since, null);
     assert.equal(quota(h), 1);
+  });
+
+  it("fondateur, 400 : compteur du fondateur rendu, celui du groupe inchangé", async () => {
+    const h = harness({ routine: async () => new Response("bad text", { status: 400 }) });
+    seedTicket(h, "t-1");
+    h.db.seed(`ticket_quotas/launch_${DAY}`, { count: 3, day: DAY });
+    h.db.seed(`ticket_quotas/launch_founder_${DAY}`, { count: 2, day: DAY });
+    const err = await refusal(launchTicketSession("t-1", "analyse", "f-uid", h.deps(), "founder"));
+    assert.equal(details(err).code, "routine_failed");
+    assert.equal(h.db.read(`ticket_quotas/launch_founder_${DAY}`)?.count, 2);
+    assert.equal(quota(h), 3);
+    assert.equal(history(h)[0].state, "failed");
   });
 
   it("404 : routine_invalid, alerte posée ; 429 : resource-exhausted ; 400 en pause", async () => {

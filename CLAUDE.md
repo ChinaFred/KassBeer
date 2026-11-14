@@ -418,7 +418,7 @@ Les calculs de brassage n'existent qu'en Dart, dans `brewing/` (ADR-001, P3).
 
 | Fixture | Logique | Client | Serveur |
 |---|---|---|---|
-| `test-fixtures/member_access.json` | appartenance et rôle : jeton présent, `email_verified`, fournisseur `google.com`, `members/{email en minuscules}`, rôle `admin` ou `brewer` | `firestore.rules` et `storage.rules` (`isMember`, `isAdmin`), rejouées par `rules-tests/` (`storage.test.mjs` pour `storage.rules`) | `functions/src/auth.ts` (`requireMember`, `requireAdmin`), rejouée par `functions/test/` |
+| `test-fixtures/member_access.json` | appartenance et rôle : jeton présent, `email_verified`, fournisseur `google.com`, `members/{email en minuscules}`, rôle `admin` ou `brewer` ; compte fondateur (admin et `founder === true`) | `firestore.rules` et `storage.rules` (`isMember`, `isAdmin`), rejouées par `rules-tests/` (`storage.test.mjs` pour `storage.rules`) ; `Member.founder` (`app/lib/features/members/domain/member.dart`, choix du compteur affiché), rejoué par `app/test/members_repository_test.dart` | `functions/src/auth.ts` (`requireMember`, `requireAdmin`, `isFounder`), rejouée par `functions/test/` |
 | bloc « L3 » du prompt de développement (`exigences-techniques.md`, « Routines des tickets ») | fichiers sensibles d'une livraison | prompt de la routine (session Claude Code) | `functions/src/tickets/delivery.ts` (`isSensitiveDeliveryPath`), égalité rejouée par `functions/test/prompts.test.ts` |
 
 ## Une écriture de masse sur les données a un seul écran

@@ -23,6 +23,7 @@ interface FixtureCase {
   member_key: string | null;
   member: Record<string, unknown> | null;
   expect: "none" | "member" | "admin";
+  founder?: boolean;
 }
 
 // Compilé dans build-test/test/ : la racine du dépôt est trois dossiers plus haut.
@@ -56,9 +57,13 @@ describe("member_access.json — functions/src/auth.ts (P31)", () => {
       const member = requireMember(req, lookupOf(c));
       const admin = requireAdmin(req, lookupOf(c));
       if (c.expect === "none") await assert.rejects(member, HttpsError);
-      else assert.deepEqual(await member, { uid: "u", founder: false });
-      if (c.expect === "admin") assert.deepEqual(await admin, { uid: "u", founder: false });
-      else await assert.rejects(admin, HttpsError);
+      else assert.deepEqual(await member, { uid: "u", founder: c.founder ?? false });
+      if (c.expect === "admin") {
+        assert.deepEqual(await admin, { uid: "u", founder: c.founder ?? false });
+      } else await assert.rejects(admin, HttpsError);
+    });
+    it(`${c.name} : isFounder ${c.founder ?? false}`, () => {
+      assert.equal(isFounder(tokenOf(c), c.member), c.founder ?? false);
     });
   }
 });
