@@ -233,6 +233,11 @@ void main() {
       );
       expect(reading.overrun.inSeconds, e['overrun_seconds'], reason: label(c));
       expect(reading.isFinished, e['finished'], reason: label(c));
+      expect(
+        reading.elapsedFraction,
+        closeTo((e['elapsed_fraction'] as num).toDouble(), 1e-9),
+        reason: label(c),
+      );
     }
   });
 
