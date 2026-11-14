@@ -35,6 +35,7 @@ class EditeurPleinEcran extends ConsumerWidget {
     this.libelleAction = 'Enregistrer',
     this.libelleEnCours = 'Enregistrement',
     this.fermerParRetour = false,
+    this.actionActive = true,
   });
 
   final String titre;
@@ -66,6 +67,10 @@ class EditeurPleinEcran extends ConsumerWidget {
   /// précédent, et à [closePath] seulement s'il n'y en a pas (adresse ouverte
   /// directement).
   final bool fermerParRetour;
+
+  /// Faux : le bouton d'action reste affiché, grisé, sous son libellé (une
+  /// préparation en cours, comme le décodage d'une image choisie).
+  final bool actionActive;
 
   /// Vrai si rien n'est à perdre, ou si l'utilisateur abandonne.
   Future<bool> _peutQuitter(BuildContext context) async =>
@@ -117,7 +122,7 @@ class EditeurPleinEcran extends ConsumerWidget {
                     ),
                   ),
                   child: FilledButton(
-                    onPressed: saving ? null : save,
+                    onPressed: saving || !actionActive ? null : save,
                     child: saving
                         ? IndicateurBouton(label: libelleEnCours)
                         : FittedBox(

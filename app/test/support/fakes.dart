@@ -666,6 +666,7 @@ class FakeEchangeFichiers implements EchangeFichiers {
   ResultatChoix choix = const ChoixAnnule();
   int choixDemandes = 0;
   int? maxOctetsDemande;
+  List<String>? typesDemandes;
 
   @override
   List<ModeEnvoi> modes = const [ModeEnvoi.enregistrer, ModeEnvoi.partager];
@@ -679,9 +680,13 @@ class FakeEchangeFichiers implements EchangeFichiers {
   Completer<ResultatChoix>? attente;
 
   @override
-  Future<ResultatChoix> choisir({required int maxOctets}) async {
+  Future<ResultatChoix> choisir({
+    required int maxOctets,
+    List<String>? types,
+  }) async {
     choixDemandes++;
     maxOctetsDemande = maxOctets;
+    typesDemandes = types;
     return attente?.future ?? choix;
   }
 
@@ -1093,9 +1098,13 @@ class FakeTicketsRepository implements TicketsRepository {
   final screenshots = <String, Uint8List>{};
   final screenshotReads = <String>[];
 
+  /// Captures effacées du bucket : [CaptureEffacee].
+  final screenshotsErased = <String>{};
+
   @override
   Future<Uint8List> loadScreenshot(String path) async {
     screenshotReads.add(path);
+    if (screenshotsErased.contains(path)) throw const CaptureEffacee();
     final bytes = screenshots[path];
     if (bytes == null) throw StateError('capture absente');
     return bytes;
@@ -1384,6 +1393,8 @@ class TestApp {
           captureCalls++;
           return capture;
         }),
+        // Même raison pour le décodage d'une image choisie : `preparer`.
+        preparerImageProvider.overrideWithValue((octets) => preparer(octets)),
       ],
     );
     // Listes vides lues du serveur : l'accueil (Recettes) s'affiche sans attendre.
@@ -1425,6 +1436,11 @@ class TestApp {
   /// de capture.
   Uint8List? capture = kPngDeTest;
   int captureCalls = 0;
+
+  /// Préparation d'une image choisie (« Choisir une image ») ; rend
+  /// [kPngDeTest] par défaut.
+  Future<Uint8List> Function(Uint8List octets) preparer = (octets) async =>
+      kPngDeTest;
 
   /// Contenu de l'asset des nouveautés, modifiable par les tests.
   Future<String> Function() nouveautes = () async => '{"versions": []}';

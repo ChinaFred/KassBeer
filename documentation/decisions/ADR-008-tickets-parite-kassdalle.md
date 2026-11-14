@@ -334,8 +334,8 @@ aucun `--force`, aucune relance de workflow, arrêt expliqué dans le résumé s
 
 ### Capture d'écran
 
-Remplacé en partie par la note du 2026-11-14 (point 4) : création seule, PNG seul, aucun choix
-d'image pour l'instant.
+Remplacé en partie par la note du 2026-11-14 (point 4) : création seule, PNG seul. Le choix
+d'image, d'abord écarté (point 2), revient par le complément du 2026-11-14 (point D).
 
 Copie de Kass'Dalle. Case « Joindre une capture de l'écran précédent » décochée par défaut,
 capture par un `RepaintBoundary` autour du routeur, ou choix d'une image. PNG ou JPEG, 5 Mo au
@@ -382,22 +382,65 @@ prix. ». Exception à P5 : la capture est un partage choisi par le membre vers 
    termine le corps de toute Issue, qu'une capture soit jointe ou non (gabarit de P24) : la
    phrase ne dit pas qu'un ticket a une capture.
 6. **Pas de purge.** Une capture reste dans le bucket ; une capture déposée sans
-   `screenshot_path` (callable en échec) n'est lue par personne.
+   `screenshot_path` (callable en échec) n'est lue par personne. Remplacé par le point C du
+   complément ci-dessous.
+
+2026-11-14, complément du lot T6 (décisions de l'utilisateur, après la livraison de v0.1.41) :
+
+A. **Délai d'une heure.** `storage.rules` refuse la création si `tickets/{ticketId}.created_at`
+   a plus d'une heure (`created_at > request.time - duration.value(1, 'h')`). La capture part
+   juste après la création du ticket ; aucun dépôt ne vise un ancien ticket. Le statut publié
+   n'est pas contrôlé : la capture est acceptée dès la création (auteur, moins d'une heure,
+   sans capture). Risque accepté par l'utilisateur : un compte volé peut joindre une image à
+   un ticket qu'il vient de créer ; seul l'administrateur la lit.
+B. **Dimensions.** `attachTicketScreenshot` lit les 24 premiers octets du fichier (lecture
+   partielle) : signature PNG, bloc `IHDR`, largeur et hauteur. Un côté au-delà de 2 000 px est
+   refusé (`dimensions_refused`). Le client ne produit pas plus grand (capture et image
+   choisie réduites à 2 000 px).
+C. **Rétention de 180 jours.** Une règle de cycle de vie du bucket efface les objets sous
+   `tickets/` 180 jours après leur création ; la suppression réversible (soft delete) est
+   désactivée. Les deux réglages sont faits par l'administrateur (2026-11-14,
+   `exigences-techniques.md`, « Captures des tickets — réglages faits une fois »). Le serveur
+   écrit `screenshot_expires_at` (rattachement + 180 jours) avec `screenshot_path`, champ
+   serveur (P23). Échéance passée, ou fichier absent (`object-not-found`) : la fiche affiche
+   « Capture effacée », sans lecture ni rapport d'erreur.
+D. **« Choisir une image ».** Dans le formulaire, sous la case : une seule image, exclusive de
+   la capture de l'écran (choisir décoche la case, cocher retire l'image), aperçu, « Retirer
+   l'image ». Le sélecteur passe par le canal d'ADR-007 : `EchangeFichiers.choisir` reçoit
+   un argument facultatif de types (`EXTRA_MIME_TYPES` et type `image/*` sur Android,
+   attribut `accept` sur le web), borne de 5 Mo passée par le Dart (P17, P28) ; aucun
+   `image_picker` ni `file_picker`. Toute image choisie est décodée par `dart:ui` (côté long
+   réduit à 2 000 px), puis réencodée en PNG, ce qui retire les métadonnées EXIF : le serveur
+   et `storage.rules` restent en PNG seul. Textes : « Cette image n'a pas pu être ouverte.
+   Choisissez-en une autre. », « Cette image dépasse 5 Mo. Choisissez une image plus
+   légère. ». L'avertissement des prix reste celui du point 1.
+E. **Bucket en `us-east1`.** L'administrateur a créé `kassbeer.firebasestorage.app` en
+   `us-east1` (vérifié par `gcloud`), et non en `europe-west1` comme prévu ci-dessous : choix
+   de l'utilisateur pour le niveau gratuit de Cloud Storage, réservé à `us-east1`, `us-west1`
+   et `us-central1`. Firestore et les Functions restent en `europe-west1`. Le transfert entre
+   régions est négligeable : une capture de 5 Mo au plus par ticket, 24 octets lus par la
+   callable, une lecture par fiche ouverte.
+   Constat : les captures sont stockées en `us-east1`, hors de l'Union européenne, par choix
+   de l'utilisateur pour le niveau gratuit. Ce transfert est couvert par les clauses
+   contractuelles types de Google (conditions de traitement des données de Google Cloud). Les
+   captures sont effacées après 180 jours (point C). Une capture peut montrer un nom ou un
+   e-mail : c'est pourquoi seuls l'auteur et l'administrateur la lisent (`storage.rules`).
 
 `github-deploy` peut demander, pour publier `storage.rules`, un rôle de lecture du bucket par
 défaut (`roles/firebasestorage.viewer`, à vérifier au premier déploiement) : c'est le seul rôle
 que T6 peut ajouter à la liste de P14. `tickets-functions` reçoit `roles/storage.objectViewer`
 sur le seul bucket par défaut.
 
-**Cloud Storage.** Bucket par défaut `kassbeer.firebasestorage.app`, créé en `europe-west1`
-(région de la base ; choix définitif à la création). Note du 2026-11-14 (v0.1.42) : le bucket
-est en `us-east1`, seule région du niveau gratuit retenue par l'administrateur, et Firebase ne
-le déclare pas comme bucket par défaut ; l'application, les Functions et `deploy.yml` le
-nomment (`exigences-techniques.md`, « Captures des tickets — réglages faits une fois »). `storage.rules` :
-`match /tickets/{uid}/{ticketId}/{fileName}` ; lecture par le membre propriétaire ou
-l'administrateur ; création et mise à jour par le propriétaire membre, `fileName` égal à
-`screenshot.png` ou `screenshot.jpg`, `request.resource.size <= 5 * 1024 * 1024`, type
-`image/png` ou `image/jpeg` ; tout le reste refusé. L'appartenance se lit par
+**Cloud Storage.** Bucket `kassbeer.firebasestorage.app`, prévu en `europe-west1` (région
+de la base), créé en `us-east1` (complément du 2026-11-14, point E). Note du 2026-11-14
+(v0.1.42) : Firebase ne le déclare pas comme bucket par défaut ; l'application, les Functions
+et `deploy.yml` le nomment (`exigences-techniques.md`, « Captures des tickets — réglages faits
+une fois »). `storage.rules` (note du 2026-11-14, point 4, et complément, point A) : `match
+/tickets/{uid}/{ticketId}/{fileName}` ; lecture par le membre propriétaire ou
+l'administrateur ; création seule (`resource == null`) par le propriétaire membre, ticket
+existant dont il est l'auteur, créé il y a une heure au plus, `fileName` égal à
+`screenshot.png`, type `image/png`, de 1 octet à 5 Mo ; mise à jour, liste, suppression et
+tout autre chemin refusés. L'appartenance se lit par
 `firestore.get(members/{email en minuscules})`. L'agent de service de Storage doit pouvoir
 lire Firestore (accordé par la console au premier déploiement de règles croisées, à
 vérifier). Lecture sur le web par `getData()` : une règle CORS du bucket pour
@@ -432,7 +475,7 @@ Ils commencent après la fusion de T2. Estimations non mesurées, tirées des ta
 | T3 | secret `GITHUB_WEBHOOK_SECRET` (`openssl rand -hex 32`) créé avant le déploiement ; webhook du dépôt : adresse de `githubTicketWebhook` affichée par le déploiement, `application/json`, ce secret, SSL vérifié, événements Issues et Issue comments (T5 : Pull requests, Workflow runs), `ping` en 200 ; rôles de `github-deploy` sur ce secret ; invocation publique des callables et du webhook (Cloud Run) |
 | T4 | deux routines sur claude.ai/code, dépôt `ChinaFred/KassBeer` seul, aucun connecteur, déclencheur API, prompts collés ; secrets `TICKETS_ROUTINE_ANALYSIS_ID`, `TICKETS_ROUTINE_ANALYSIS_TOKEN`, `TICKETS_ROUTINE_DEV_ID`, `TICKETS_ROUTINE_DEV_TOKEN`, même vides, avant le déploiement |
 | T5 | avant la fusion : jeton `GITHUB_TICKETS_TOKEN` étendu à Actions en lecture, prompt de la routine de développement recollé sur claude.ai (compatible avec le serveur de T4), événements « Pull requests » et « Workflow runs » cochés sur le webhook du dépôt ; aucun secret nouveau |
-| T6 | bucket par défaut en `europe-west1` (en `us-east1` et nommé dans le code, note du 2026-11-14 ci-dessus) ; accès de l'agent Storage à Firestore ; CORS du bucket si `getData()` l'exige ; rôle de `github-deploy` pour publier les règles Storage (à vérifier) |
+| T6 | bucket en `us-east1`, nommé dans le code (point E du complément du 2026-11-14 et note du 2026-11-14 ci-dessus), cycle de vie de 180 jours sous `tickets/` et suppression réversible désactivée (point C) ; accès de l'agent Storage à Firestore ; CORS du bucket si `getData()` l'exige ; rôle de `github-deploy` pour publier les règles Storage (à vérifier) |
 
 Six secrets en tout : la limite de six versions actives gratuites est atteinte (à vérifier).
 Une rotation détruit la version précédente (`gcloud secrets versions destroy`). Un secret

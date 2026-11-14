@@ -9,9 +9,12 @@ import 'fichiers_web_stub.dart'
 /// canal Kotlin `fr.kassbeer/files` sur Android, `package:web` sur le web. Aucun
 /// greffon, aucune permission de stockage, rien sur le réseau.
 abstract class EchangeFichiers {
-  /// Ouvre le sélecteur du système, sans filtre de type : le format se lit au
-  /// contenu. Un fichier de plus de [maxOctets] est refusé avant sa lecture.
-  Future<ResultatChoix> choisir({required int maxOctets});
+  /// Ouvre le sélecteur du système. Sans [types], aucun filtre : le format se
+  /// lit au contenu. Avec [types] (types MIME de [kMotifTypeMime], par exemple
+  /// [kTypesImages]), le sélecteur ne propose que ces types ; le contenu reste
+  /// contrôlé par l'appelant. Un fichier de plus de [maxOctets] est refusé
+  /// avant sa lecture.
+  Future<ResultatChoix> choisir({required int maxOctets, List<String>? types});
 
   /// Façons d'envoyer un fichier sur cette plateforme, dans l'ordre des boutons.
   List<ModeEnvoi> get modes;
@@ -100,6 +103,15 @@ const kMethodeChoisir = 'pickDocument';
 const kMethodePartager = 'shareFile';
 const kMethodeEnregistrer = 'saveDocument';
 
+/// Types MIME admis par le filtre de [EchangeFichiers.choisir] : le même
+/// motif que `EchangeFichiers.kt`, au plus [kTypesMax] types.
+final kMotifTypeMime = RegExp(r'^[a-z]{1,20}/[a-z0-9.+*-]{1,60}$');
+const kTypesMax = 10;
+
+/// Images qu'un ticket accepte (« Choisir une image », ADR-008, T6) : toutes
+/// sont décodées puis réencodées en PNG avant l'envoi.
+const kTypesImages = ['image/png', 'image/jpeg', 'image/webp'];
+
 /// Code d'erreur de `EchangeFichiers.kt` que le Dart distingue : fichier trop
 /// gros. Les autres codes (`ALREADY_ACTIVE`, `NO_PICKER`, `INVALID_NAME`,
 /// `READ_FAILED`, `WRITE_FAILED`, `SHARE_FAILED`) rendent un échec, rapporté
@@ -124,10 +136,26 @@ class EchangeFichiersPlateforme implements EchangeFichiers {
       : const [ModeEnvoi.enregistrer, ModeEnvoi.partager];
 
   @override
-  Future<ResultatChoix> choisir({required int maxOctets}) async {
+  Future<ResultatChoix> choisir({
+    required int maxOctets,
+    List<String>? types,
+  }) async {
+    if (types != null &&
+        (types.isEmpty ||
+            types.length > kTypesMax ||
+            !types.every(kMotifTypeMime.hasMatch))) {
+      // Erreur de programmation : rapportée, sélecteur non ouvert.
+      _rapporter(
+        'exchange.pick',
+        ArgumentError('types de fichier hors motif'),
+        StackTrace.current,
+        'filtre de types refusé',
+      );
+      return const ChoixImpossible();
+    }
     if (kIsWeb) {
       try {
-        return await _web.choisir(maxOctets);
+        return await _web.choisir(maxOctets, types: types);
       } catch (error, stackTrace) {
         _rapporter('exchange.pick', error, stackTrace, 'lecture web');
         return const ChoixImpossible();
@@ -136,7 +164,7 @@ class EchangeFichiersPlateforme implements EchangeFichiers {
     try {
       final result = await _canal.invokeMapMethod<String, Object?>(
         kMethodeChoisir,
-        {'maxBytes': maxOctets},
+        {'maxBytes': maxOctets, 'mimeTypes': ?types},
       );
       if (result == null) return const ChoixAnnule();
       final nom = result['name'];

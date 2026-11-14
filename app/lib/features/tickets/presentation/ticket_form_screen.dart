@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/fichiers/echange_fichiers.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/editeur_plein_ecran.dart';
@@ -40,7 +41,9 @@ String ticketFormLocation(String? routePattern) {
 /// Ouvert depuis le menu du compte, le formulaire prend une fois la capture de
 /// l'écran quitté ([captureEnAttenteProvider]) et propose de la joindre, case
 /// décochée (ADR-008, T6). Aucune capture depuis « Mes tickets », l'adresse
-/// directe ou « Reprendre ».
+/// directe ou « Reprendre ». « Choisir une image » joint à la place une image
+/// de l'appareil, réduite et réencodée en PNG ; une seule image part, la
+/// capture de l'écran ou l'image choisie (complément du 2026-11-14).
 class TicketFormScreen extends ConsumerStatefulWidget {
   const TicketFormScreen({super.key, this.ecranOrigine, this.reprise});
 
@@ -65,6 +68,8 @@ class TicketFormScreen extends ConsumerStatefulWidget {
       'Ticket enregistré. Il partira au retour du réseau.';
   static const elementHelp = 'Menu ou fenêtre concerné.';
   static const abandonMessage = 'Le texte saisi sera perdu.';
+  static const abandonMessageImage =
+      'Le texte saisi et l\'image seront perdus.';
   static const refused = 'Votre ticket a été refusé. Il n\'est pas enregistré.';
   static const captureAttach = 'Joindre une capture de l\'écran précédent';
   static const captureHelp =
@@ -75,6 +80,14 @@ class TicketFormScreen extends ConsumerStatefulWidget {
   static const sentWithoutCapture = 'Ticket enregistré sans la capture.';
   static const sentOfflineWithoutCapture =
       'Ticket enregistré sans la capture. Il partira au retour du réseau.';
+  static const imagePick = 'Choisir une image';
+  static const imageRemove = 'Retirer l\'image';
+  static const imagePreparing = 'Préparation de l\'image…';
+  static const imageLabel = 'Aperçu de l\'image choisie';
+  static const imageUnreadable =
+      'Cette image n\'a pas pu être ouverte. Choisissez-en une autre.';
+  static const imageTooLarge =
+      'Cette image dépasse 5 Mo. Choisissez une image plus légère.';
 
   /// Délai d'acceptation du ticket par le serveur avant le dépôt de la
   /// capture ; au-delà, le ticket part sans elle.
@@ -92,6 +105,8 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
   final _typeFocus = FocusNode();
   final _titleFocus = FocusNode();
   final _descriptionFocus = FocusNode();
+  final _choisirFocus = FocusNode();
+  final _retirerFocus = FocusNode();
   late final TextEditingController _title;
   late final TextEditingController _description;
 
@@ -115,6 +130,17 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
 
   /// « Joindre une capture de l'écran précédent », décochée à l'ouverture.
   bool _joindre = false;
+
+  /// Image choisie sur l'appareil, réencodée en PNG ; exclusive de [_joindre].
+  /// En mémoire seulement.
+  Uint8List? _image;
+
+  /// Sélecteur ouvert ou image en préparation (hors web : le navigateur ne
+  /// signale pas toujours la fermeture du sélecteur).
+  bool _choixEnCours = false;
+
+  /// Texte d'erreur du dernier choix, ou `null`.
+  String? _erreurImage;
 
   @override
   void initState() {
@@ -153,6 +179,8 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
     _typeFocus.dispose();
     _titleFocus.dispose();
     _descriptionFocus.dispose();
+    _choisirFocus.dispose();
+    _retirerFocus.dispose();
     super.dispose();
   }
 
@@ -182,9 +210,80 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
     return null;
   }
 
+  /// « Choisir une image » : sélecteur filtré sur les images, borne de 5 Mo
+  /// passée au canal (P28), puis décodage et réencodage en PNG. Choisir une
+  /// image décoche la capture de l'écran.
+  Future<void> _choisirImage() async {
+    if (_choixEnCours || _sending) return;
+    if (!kIsWeb) setState(() => _choixEnCours = true);
+    final resultat = await ref
+        .read(echangeFichiersProvider)
+        .choisir(maxOctets: kTicketScreenshotMaxBytes, types: kTypesImages);
+    if (!mounted) return;
+    switch (resultat) {
+      case ChoixAnnule():
+        setState(() => _choixEnCours = false);
+        _focusApresRendu(_choisirFocus);
+      case FichierTropGros():
+        _refuserImage(TicketFormScreen.imageTooLarge);
+      case ChoixImpossible():
+        // Déjà rapporté par EchangeFichiers.
+        _refuserImage(TicketFormScreen.imageUnreadable);
+      case FichierChoisi(:final octets):
+        setState(() => _choixEnCours = true);
+        final Uint8List png;
+        try {
+          png = await ref.read(preparerImageProvider)(octets);
+        } catch (error, stackTrace) {
+          // Ni le nom ni le contenu du fichier (P13, P48) : la taille seule.
+          ref
+              .read(errorReportServiceProvider)
+              .reportError(
+                feature: 'tickets.image',
+                error: StateError('image non décodée'),
+                stackTrace: stackTrace,
+                context:
+                    'décodage impossible, ${octets.length} octets, '
+                    '${error.runtimeType}',
+              );
+          if (mounted) _refuserImage(TicketFormScreen.imageUnreadable);
+          return;
+        }
+        if (!mounted) return;
+        if (png.length > kTicketScreenshotMaxBytes) {
+          _refuserImage(TicketFormScreen.imageTooLarge);
+          return;
+        }
+        setState(() {
+          _choixEnCours = false;
+          _erreurImage = null;
+          _image = png;
+          _joindre = false;
+          _dirty = true;
+        });
+        // Le bouton de retrait remplace « Choisir une image » : il reçoit le
+        // focus une fois construit.
+        _focusApresRendu(_retirerFocus);
+    }
+  }
+
+  void _focusApresRendu(FocusNode node) =>
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && node.context != null) node.requestFocus();
+      });
+
+  void _refuserImage(String texte) {
+    setState(() {
+      _choixEnCours = false;
+      _erreurImage = texte;
+    });
+    _focusApresRendu(_choisirFocus);
+  }
+
   Future<void> _send() async {
     // Garde synchrone : un second appui avant la fermeture n'écrit rien.
-    if (_sending) return;
+    // Une image en préparation n'est pas encore jointe : l'envoi attend.
+    if (_sending || _choixEnCours) return;
     final type = _type;
     final invalid = _formKey.currentState!.validateGranularly();
     setState(() => _typeError = type == null);
@@ -220,7 +319,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
     );
     final repository = ref.read(ticketsRepositoryProvider);
     final errors = ref.read(errorReportServiceProvider);
-    final capture = _joindre ? _capture : null;
+    final capture = _joindre ? _capture?.png : _image;
     final written = repository.create(
       id: id,
       brouillon: brouillon,
@@ -290,7 +389,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
       final jointe = await repository.attachScreenshot(
         ticketId: id,
         authorUid: access.user.uid,
-        png: capture.png,
+        png: capture,
       );
       if (!jointe) {
         annoncerAvecAction(
@@ -321,10 +420,15 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
       fermerParRetour: true,
       dirty: _dirty,
       saving: _sending,
+      // Une image en préparation n'est pas encore jointe : « Envoyer » attend,
+      // grisé, sous son libellé.
+      actionActive: !_choixEnCours,
       onSave: _send,
       libelleAction: 'Envoyer',
       libelleEnCours: 'Envoi',
-      abandonMessage: TicketFormScreen.abandonMessage,
+      abandonMessage: _image != null || (_joindre && _capture != null)
+          ? TicketFormScreen.abandonMessageImage
+          : TicketFormScreen.abandonMessage,
       body: Form(
         key: _formKey,
         child: Align(
@@ -481,15 +585,34 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                       },
                     ),
                   ],
-                  if (_capture case final capture?) ...[
-                    gap,
-                    _SectionCapture(
-                      capture: capture,
-                      joindre: _joindre,
-                      enabled: !_sending,
-                      onChanged: (value) => setState(() => _joindre = value),
-                    ),
-                  ],
+                  gap,
+                  _SectionCapture(
+                    capture: _capture,
+                    joindre: _joindre,
+                    image: _image,
+                    erreurImage: _erreurImage,
+                    enabled: !_sending,
+                    choixEnCours: _choixEnCours,
+                    onChanged: (value) => setState(() {
+                      _joindre = value;
+                      // Une seule image : cocher retire l'image choisie et
+                      // son erreur.
+                      if (value) {
+                        _image = null;
+                        _erreurImage = null;
+                      }
+                    }),
+                    onChoisir: () => unawaited(_choisirImage()),
+                    choisirFocus: _choisirFocus,
+                    retirerFocus: _retirerFocus,
+                    onRetirer: () {
+                      setState(() {
+                        _image = null;
+                        _erreurImage = null;
+                      });
+                      _focusApresRendu(_choisirFocus);
+                    },
+                  ),
                   gap,
                   Text(
                     envoyeAvec(
@@ -512,26 +635,47 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
 
 /// Section « Capture » : avertissement quand l'écran capturé peut montrer des
 /// prix, lu avant la case ; case « Joindre une capture de l'écran
-/// précédent », décochée à l'ouverture ; vignette de l'image.
+/// précédent », décochée à l'ouverture, et vignette de l'image, quand une
+/// capture a été prise ; puis « Choisir une image », ou l'aperçu de l'image
+/// choisie et « Retirer l'image ». Pendant la préparation d'une image,
+/// « Préparation de l'image… » remplace le bouton.
 class _SectionCapture extends StatelessWidget {
   const _SectionCapture({
     required this.capture,
     required this.joindre,
+    required this.image,
+    required this.erreurImage,
     required this.enabled,
+    required this.choixEnCours,
     required this.onChanged,
+    required this.onChoisir,
+    required this.onRetirer,
+    required this.choisirFocus,
+    required this.retirerFocus,
   });
 
-  final CaptureEcran capture;
+  final CaptureEcran? capture;
   final bool joindre;
+  final Uint8List? image;
+  final String? erreurImage;
   final bool enabled;
+  final bool choixEnCours;
   final ValueChanged<bool> onChanged;
+  final VoidCallback onChoisir;
+  final VoidCallback onRetirer;
+  final FocusNode choisirFocus;
+  final FocusNode retirerFocus;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final prix = kTicketScreensWithPrices.contains(
-      ticketElementScreen(capture.ecran) ?? capture.ecran,
-    );
+    final capture = this.capture;
+    final image = this.image;
+    final prix =
+        capture != null &&
+        kTicketScreensWithPrices.contains(
+          ticketElementScreen(capture.ecran) ?? capture.ecran,
+        );
     final aide = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
@@ -562,18 +706,78 @@ class _SectionCapture extends StatelessWidget {
           ),
           const SizedBox(height: 4),
         ],
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-          value: joindre,
-          onChanged: enabled ? (v) => onChanged(v ?? false) : null,
-          title: const Text(TicketFormScreen.captureAttach),
-          subtitle: const Text(TicketFormScreen.captureHelp),
-        ),
-        VignetteCapture(
-          png: capture.png,
-          libelle: TicketFormScreen.captureLabel,
-        ),
+        if (capture != null) ...[
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: joindre,
+            onChanged: enabled && !choixEnCours
+                ? (v) => onChanged(v ?? false)
+                : null,
+            title: const Text(TicketFormScreen.captureAttach),
+            subtitle: const Text(TicketFormScreen.captureHelp),
+          ),
+          VignetteCapture(
+            png: capture.png,
+            libelle: TicketFormScreen.captureLabel,
+          ),
+        ] else ...[
+          const SizedBox(height: 4),
+          Text(TicketFormScreen.captureHelp, style: aide),
+        ],
+        const SizedBox(height: 12),
+        if (choixEnCours)
+          Semantics(
+            liveRegion: true,
+            child: Row(
+              children: [
+                const SizedBox.square(
+                  dimension: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    TicketFormScreen.imagePreparing,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (image == null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              focusNode: choisirFocus,
+              onPressed: enabled ? onChoisir : null,
+              icon: const Icon(Icons.image_outlined),
+              label: const Text(TicketFormScreen.imagePick),
+            ),
+          )
+        else ...[
+          VignetteCapture(png: image, libelle: TicketFormScreen.imageLabel),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              focusNode: retirerFocus,
+              onPressed: enabled ? onRetirer : null,
+              child: const Text(TicketFormScreen.imageRemove),
+            ),
+          ),
+        ],
+        if (erreurImage case final texte?) ...[
+          const SizedBox(height: 4),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              texte,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -245,7 +245,10 @@ class _DetailState extends ConsumerState<_Detail> {
                   Text(ticket.description, style: theme.textTheme.bodyLarge),
                   if (ticket.screenshotPath case final path?) ...[
                     gap,
-                    CaptureDuTicket(path: path),
+                    CaptureDuTicket(
+                      path: path,
+                      expiresAt: ticket.screenshotExpiresAt,
+                    ),
                   ],
                   gap,
                   Text(

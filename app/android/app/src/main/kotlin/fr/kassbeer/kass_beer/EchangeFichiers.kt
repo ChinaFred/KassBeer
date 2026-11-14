@@ -28,9 +28,10 @@ class ExportsFileProvider : FileProvider()
  * Canal fr.kassbeer/files (ADR-007) : mêmes noms de canal, de méthodes et de codes que
  * app/lib/core/fichiers/echange_fichiers.dart (P17).
  *
- * - pickDocument(maxBytes) : ACTION_OPEN_DOCUMENT sans filtre de type ; taille contrôlée
- *   avant l'ouverture du flux, lecture bornée à maxBytes + 1 octets ; rend {name, bytes},
- *   ou null sur une annulation.
+ * - pickDocument(maxBytes, mimeTypes?) : ACTION_OPEN_DOCUMENT, sans filtre de type, ou
+ *   limité à mimeTypes (EXTRA_MIME_TYPES ; type générique des images quand tous en sont) ;
+ *   taille contrôlée avant l'ouverture du flux, lecture bornée à maxBytes + 1 octets ; rend
+ *   {name, bytes}, ou null sur une annulation.
  * - shareFile(name, mimeType, bytes) : écrit le fichier dans cacheDir/exports/, puis
  *   ACTION_SEND par la feuille de partage du système.
  * - saveDocument(name, mimeType, bytes) : ACTION_CREATE_DOCUMENT ; rend true si le fichier
@@ -51,6 +52,10 @@ class EchangeFichiers(private val activity: Activity) : MethodChannel.MethodCall
         private const val DOSSIER_EXPORTS = "exports"
         private const val NOM_MAX = 120
         private const val TAMPON = 64 * 1024
+
+        /** Même motif et même nombre maximal que kMotifTypeMime et kTypesMax du Dart. */
+        private val MOTIF_TYPE_MIME = Regex("^[a-z]{1,20}/[a-z0-9.+*-]{1,60}$")
+        private const val TYPES_MAX = 10
     }
 
     private class Choix(val result: MethodChannel.Result, val maxBytes: Long)
@@ -101,14 +106,29 @@ class EchangeFichiers(private val activity: Activity) : MethodChannel.MethodCall
             result.error("INVALID_ARGUMENT", "borne absente", null)
             return
         }
+        val brut = call.argument<List<Any?>>("mimeTypes")
+        val types = brut?.map { it as? String }
+        if (types != null &&
+            (types.isEmpty() || types.size > TYPES_MAX ||
+                types.any { it == null || !MOTIF_TYPE_MIME.matches(it) })
+        ) {
+            result.error("INVALID_ARGUMENT", "types de fichier refusés", null)
+            return
+        }
         if (occupe()) {
             result.error("ALREADY_ACTIVE", "choix ou enregistrement en cours", null)
             return
         }
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            // Aucun filtre : Drive déclare un .xml en application/octet-stream.
-            type = "*/*"
+            if (types == null) {
+                // Aucun filtre : Drive déclare un .xml en application/octet-stream.
+                type = "*/*"
+            } else {
+                val filtres = types.filterNotNull()
+                type = if (filtres.all { it.startsWith("image/") }) "image/*" else "*/*"
+                putExtra(Intent.EXTRA_MIME_TYPES, filtres.toTypedArray())
+            }
         }
         choixEnCours = Choix(result, maxBytes)
         try {
