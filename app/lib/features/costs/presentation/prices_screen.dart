@@ -3,19 +3,16 @@ import 'dart:async';
 import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/data/lecture_document.dart';
-import '../../../core/presentation/bandeau_hors_ligne.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
-import '../../../core/presentation/menu_compte.dart';
-import '../../../core/presentation/zone_capture.dart';
+import '../../../core/presentation/ligne_liste.dart';
+import '../../../core/presentation/page_secondaire.dart';
 import '../../../core/providers.dart';
-import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/fee.dart';
 import '../domain/price.dart';
@@ -115,32 +112,10 @@ class PricesScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppRoutes.home),
-        ),
-        title: const Text(titre),
-        actions: const [MenuCompte(), SizedBox(width: 8)],
-      ),
-      body: ZoneCapture(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (offline) const BandeauHorsLigne(),
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-                  child: body,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return PageSecondaire(
+      titre: titre,
+      horsLigne: offline,
+      body: body,
       floatingActionButton: compact && pret && !sansCache
           ? FloatingActionButton.extended(
               onPressed: nouveauPrix,
@@ -217,13 +192,14 @@ class _Contenu extends ConsumerWidget {
     final prixIllisibles = prices.documents
         .whereType<DocumentInvalide<Price>>();
 
-    Widget illisible({required bool frais, required String id}) => ListTile(
-      leading: Icon(Icons.error_outline, color: theme.colorScheme.error),
-      title: Text(frais ? 'Frais illisible' : 'Prix illisible'),
-      subtitle: Text(
-        frais ? PricesScreen.fraisIllisible : PricesScreen.prixIllisible,
-      ),
-      trailing: TextButton(
+    Widget illisible({required bool frais, required String id}) => LigneListe(
+      icone: Icons.error_outline,
+      erreur: true,
+      titre: frais ? 'Frais illisible' : 'Prix illisible',
+      details: [
+        Text(frais ? PricesScreen.fraisIllisible : PricesScreen.prixIllisible),
+      ],
+      action: TextButton(
         style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
         onPressed: () =>
             unawaited(_supprimerIllisible(context, ref, frais: frais, id: id)),
@@ -246,6 +222,7 @@ class _Contenu extends ConsumerWidget {
           storageKey: 'prix-${nature.prefix}',
           resume: '${items.length} prix',
           ouvert: ouvert,
+          niveau: NiveauTitre.sousSection,
           children: [
             for (final p in items)
               LignePrix(
@@ -259,9 +236,7 @@ class _Contenu extends ConsumerWidget {
                     initial: p,
                   ),
                 ),
-                trailing: p.hasPendingWrites
-                    ? const Etiquette(label: 'En attente du réseau')
-                    : null,
+                enAttente: p.hasPendingWrites,
               ),
           ],
         ),
@@ -269,7 +244,12 @@ class _Contenu extends ConsumerWidget {
     }
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, compact ? 96 : 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        8,
+        16,
+        compact ? kMargeBoutonFlottant : 24,
+      ),
       children: [
         TitreSection(
           'Mes frais',
@@ -324,7 +304,7 @@ class _Contenu extends ConsumerWidget {
   }
 }
 
-/// Ligne d'un frais : « Électricité · 2,00 € par brassin ».
+/// Ligne d'un frais : « Électricité », « 2,00 € par brassin ».
 class _LigneFrais extends StatelessWidget {
   const _LigneFrais({required this.fee, required this.onTap});
 
@@ -333,35 +313,16 @@ class _LigneFrais extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final texte = parties([
-      fee.name,
-      '${formatEurosSaisis(fee.amountEur)} ${libelleBase(fee.basis)}',
-    ]);
-    return MergeSemantics(
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  texte.texte,
-                  semanticsLabel: texte.parle,
-                  style: theme.textTheme.bodyLarge,
-                ),
-                if (fee.hasPendingWrites) ...[
-                  const SizedBox(height: 8),
-                  const Etiquette(label: 'En attente du réseau'),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    final montant =
+        '${formatEurosSaisis(fee.amountEur)} ${libelleBase(fee.basis)}';
+    return LigneListe(
+      titre: fee.name,
+      details: [Text(montant)],
+      etiquettes: [
+        if (fee.hasPendingWrites)
+          const Etiquette(label: 'En attente du réseau'),
+      ],
+      onTap: onTap,
     );
   }
 }

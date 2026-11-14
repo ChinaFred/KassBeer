@@ -184,7 +184,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Les miennes'));
       await tester.pumpAndSettle();
-      expect(find.text(RecipesListScreen.mineEmptyMessage), findsOneWidget);
+      expect(find.text(RecipesListScreen.mineEmptyTitle), findsOneWidget);
+      expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
     });
   });
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
+import 'package:kass_beer/core/presentation/etiquette.dart';
 import 'package:kass_beer/core/presentation/ligne_editeur.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/brew_day/presentation/brew_day_screen.dart';
@@ -52,9 +53,15 @@ void main() {
           unBrassin(id: 'z', owner: 'uid-zoe', status: BrewStatus.done),
         ]),
       );
-      expect(find.text('Prévu · Grainfather · Vous'), findsOneWidget);
+      expect(find.text('Grainfather · Vous'), findsOneWidget);
       expect(find.text('Prévu le sam. 14 nov. 2026'), findsOneWidget);
-      expect(find.textContaining('Terminé · Grainfather'), findsOneWidget);
+      // Statut en étiquette : neutre avant le brassage, primaire une fois
+      // terminé.
+      TonEtiquette ton(String statut) =>
+          tester.widget<Etiquette>(find.widgetWithText(Etiquette, statut)).ton;
+      expect(ton('Prévu'), TonEtiquette.neutre);
+      expect(ton('Terminé'), TonEtiquette.primaire);
+      expect(find.textContaining('Grainfather · '), findsNWidgets(2));
       await tester.tap(find.text('Les miens'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Terminé'), findsNothing);

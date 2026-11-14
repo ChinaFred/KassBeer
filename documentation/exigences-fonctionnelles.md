@@ -335,9 +335,11 @@ suivi du ticket choisi s'affiche à droite (adresse `/tickets/:id`) ; sans choix
 un ticket pour voir son suivi. ». Choisir un ticket ne fait ni transition ni retour en haut de la
 liste, et la flèche retour ramène toujours à l'écran d'où « Mes tickets » a été ouvert. La ligne
 choisie prend le fond secondaire du thème. Le suivi garde une marge basse pour le bouton
-flottant. En dessous de 840 px, le suivi s'ouvre seul par-dessus la liste. Chaque ligne : icône du type, titre, date « jj/mm/aa », étiquette du
-statut (icône et texte), et à droite un point lu « Nouveau suivi à lire » quand le statut ou la
-réponse a changé depuis la dernière ouverture du ticket. Bouton flottant « Signaler ou
+flottant. En dessous de 840 px, le suivi s'ouvre seul par-dessus la liste. Chaque ligne, comme
+dans Admin › Tickets : icône du type dans un disque (lue), titre sur deux lignes au plus, date
+« jj/mm/aa », étiquette du statut (icône et texte) dessous, et à droite un point « Nouveau suivi
+à lire », lu avec la ligne, quand le statut ou la réponse a changé depuis la dernière ouverture
+du ticket. Bouton flottant « Signaler ou
 proposer », absent de l'état vide, qui porte déjà ce bouton. Chargement « Chargement de vos tickets » ; aucun ticket : « Aucun ticket pour
 l'instant. Un bug, une idée ? Envoyez-les à l'administrateur. » et « Signaler ou proposer » ;
 panne : « Impossible de lire vos tickets. » et « Réessayer » ; panne après une première
@@ -1063,13 +1065,13 @@ l'application ne contrôle que la longueur.
 ### Équipements
 
 **Liste.** Tous les équipements du groupe, les siens d'abord, puis par nom. Chaque ligne :
-nom, puis « Cuves séparées » ou « Tout-en-un » · « Rendement 72 % » (ou « Rendement non
-renseigné ») · auteur. Étiquette « En attente du réseau » tant qu'une écriture n'a pas
-atteint le serveur. Bouton flottant « Nouvel équipement » sur téléphone, bouton en tête de
+icône du type (cuves séparées ou tout-en-un), nom, puis « Cuves séparées » ou « Tout-en-un » ·
+« Rendement 72 % » (ou « Rendement non renseigné ») · auteur. Étiquette « En attente du
+réseau » sous le texte tant qu'une écriture n'a pas atteint le serveur. Bouton flottant « Nouvel équipement » sur téléphone, bouton en tête de
 liste au-delà.
 
-- Liste vide : « Aucun équipement. Appuyez sur Nouvel équipement pour décrire votre
-  installation. »
+- Liste vide : titre « Aucun équipement », puis « Appuyez sur Nouvel équipement pour décrire
+  votre installation. »
 - Lecture impossible : « Impossible de lire les équipements. » et « Réessayer ». Une panne
   après une première lecture garde la liste, avec « Mise à jour de la liste impossible. Elle
   peut ne plus être à jour. » et « Réessayer ».
@@ -1109,18 +1111,17 @@ recette n'est modifiée.
 
 ### Recettes
 
-**Liste.** Toutes les recettes du groupe, la dernière modifiée en tête. Chaque ligne : nom,
-puis style · volume · auteur ; étiquette « En attente du réseau ». « Rechercher une
+**Liste.** Toutes les recettes du groupe, la dernière modifiée en tête. Chaque ligne : icône,
+nom, puis style · volume · auteur ; étiquette « En attente du réseau » dessous. « Rechercher une
 recette » filtre sur le nom et le style ; « Toutes » / « Les miennes » filtre sur l'auteur.
 La recherche et le filtre ne sont pas enregistrés. Aucun calcul dans la liste. Bouton
 flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà. « Importer » ouvre
 Recettes › Importer : sur téléphone après « Toutes / Les miennes », au-delà à côté de
 « Nouvelle recette ».
 
-- Liste vide : « Aucune recette. Appuyez sur Nouvelle recette pour commencer, ou importez
-  un fichier BeerXML ou BeerJSON. » ; « Les miennes » vide : « Vous n'avez pas encore de
-  recette. Appuyez sur Nouvelle recette pour commencer, ou importez un fichier BeerXML ou
-  BeerJSON. » ; les deux
+- Liste vide : titre « Aucune recette » ; « Les miennes » vide : titre « Vous n'avez pas
+  encore de recette » ; puis, pour les deux, « Appuyez sur Nouvelle recette pour commencer, ou
+  importez un fichier BeerXML ou BeerJSON. », les deux
   avec le bouton « Importer des recettes » ; recherche sans résultat : « Aucune recette ne correspond à « {texte} ». » et
   « Effacer la recherche ».
 - Lecture impossible et panne après une première lecture : comme les équipements, avec
@@ -1741,9 +1742,10 @@ refusé. Choisissez de nouveau le processus sur la fiche. ».
 **Liste** (tous les brassins du groupe). En cours, puis En fermentation et En conditionnement,
 puis prévus par date croissante, puis Terminés et Abandonnés, chaque groupe du plus récent au plus
 ancien. « Tous » / « Les miens », non enregistré. Chaque ligne :
-nom, « {statut} · {équipement} · {auteur} », date (« Prévu le sam. 15 nov. 2026 », « Commencé
+icône, nom, « {équipement} · {auteur} », date (« Prévu le sam. 15 nov. 2026 », « Commencé
 aujourd'hui à 11:15 », « Brassé le 11 févr. 2024 », « Embouteillé le 3 déc. 2026 » en
-conditionnement), étiquette « En attente du réseau ». En fermentation et en conditionnement, un
+conditionnement), puis l'étiquette du statut (neutre : Prévu, Abandonné ; ambre : En cours, En
+fermentation, En conditionnement ; brune : Terminé) et l'étiquette « En attente du réseau ». En fermentation et en conditionnement, un
 brassin qui a une journée après le brassage à venir affiche « Prochaine journée : Houblonnage à
 cru, mer. 25 nov. » ou « Prochaine journée : Houblonnage à cru, aujourd'hui » à la place de sa
 date. Pour les brassins du lecteur, la journée annoncée est celle que la fiche lui propose : la
@@ -1757,8 +1759,9 @@ d'embouteillage dans le déroulé, aucune ne l'est. Aucune journée restante : l
 date du brassin (« Embouteillé le … »). Pour les brassins des autres membres, et pour les siens
 tant que ses saisies ne sont pas lues (chargement sans copie sur l'appareil, lecture en échec),
 la ligne suit les dates seules : la première journée dont la date n'est pas passée, parmi celles
-placées après l'embouteillage une fois le brassin embouteillé. Vide :
-« Aucun brassin. Ouvrez une recette et appuyez sur Nouveau brassin. ». Statuts : Prévu, En
+placées après l'embouteillage une fois le brassin embouteillé. Vide : titre « Aucun brassin »
+(« Les miens » : « Vous n'avez pas encore de brassin »), puis « Ouvrez une recette et appuyez
+sur Nouveau brassin. ». Statuts : Prévu, En
 cours, En fermentation, En conditionnement, Terminé, Abandonné.
 
 **Fiche.** Nom, ligne de statut (« En fermentation · J+12 », « En conditionnement · Embouteillé
@@ -2069,7 +2072,7 @@ rien écrire, et liste : brassin et recette figée, équipement, chronologie («
 fin vers 16:05 » ; avec un processus, « Brassage : 18 étapes · 6 h 10 · fin vers 16:05 » et
 « Ensuite : Houblonnage à cru le mer. 25 nov., Embouteillage le sam. 5 déc. », ou « à J+4 »
 sans date prévue), compte, écran gardé allumé, minuteurs (« Aucune alarme ne sonne écran
-verrouillé : gardez l'écran visible. »). Réponse reçue : « Tout est prêt. Vous pouvez couper le
+verrouillé : gardez l'écran visible. »), chaque ligne avec une icône colorée selon son état (vert : fait ; ambre : à surveiller ; rouge : en panne ; gris : information). Réponse reçue, dans un encadré vert : « Tout est prêt. Vous pouvez couper le
 réseau. ». Sans réponse ni réseau : « Préparation impossible sans réseau. Le brassin est lisible
 sur cet appareil, mais peut ne pas être à jour. ». « Commencer le brassage » passe le brassin « En
 cours » avec l'heure de l'appareil, démarre la première étape si elle a une durée, et ouvre
@@ -2164,7 +2167,7 @@ l'appareil : le coût se figera à l'embouteillage. » ou « Prix indisponibles 
 ligne. Le coût ne se figera pas. ». Informations : « Prévue le mer. 25 nov. Vous pouvez la
 commencer aujourd'hui. » un autre jour que la date prévue ; « La journée « Houblonnage à cru »
 n'est pas terminée. Ses étapes resteront non faites. » pour chaque journée précédente non
-terminée. Réponse reçue : « Tout est prêt. Vous pouvez couper le réseau. » ; sinon
+terminée. Réponse reçue, dans un encadré vert : « Tout est prêt. Vous pouvez couper le réseau. » ; sinon
 « Préparation impossible sans réseau. Le brassin est lisible sur cet appareil, mais peut ne pas
 être à jour. ».
 
@@ -2234,7 +2237,7 @@ lues, et pour les brassins des autres membres, elle suit les dates seules (voir 
 
 « Mes prix » s'ouvre depuis le menu du compte (tout membre) : page pleine, hors de la barre de
 navigation, avec retour. Chacun n'y voit que ses frais et ses prix. De haut en bas : « Mes
-frais » (« 3 frais »), une ligne par frais triée par nom (« Électricité · 2,00 € par brassin »),
+frais » (« 3 frais »), une ligne par frais triée par nom (« Électricité », puis « 2,00 € par brassin »),
 « Ajouter un frais » ; puis « Ingrédients », un pli par nature non vide (« Malts », « Sucres »,
 « Houblons », « Levures », « Ajouts », résumé « 12 prix »), fermé sur téléphone, ouvert à partir
 de 840 pixels. Ligne : « Pils », puis « 47,50 € les 25 kg · 1,90 €/kg » ; levure : « 3,99 € les
@@ -2317,7 +2320,7 @@ pleine, hors de la barre de navigation, avec retour. Adresses : `/processus` (li
 
 **Liste.** Titre « Mes processus ». Section « Mes processus » (les siens, par nom), puis
 « Processus du groupe » (ceux des autres membres, par nom, avec leur auteur), masquée si elle
-est vide. Ligne : nom, puis « 3 journées · J+0, J+4, J+14 ». Étiquette « Par défaut » sur le
+est vide. Ligne : icône de liste à cocher dans un disque, nom, puis « 3 journées · J+0, J+4, J+14 ». Étiquette « Par défaut » sur le
 processus choisi par défaut, « En attente du réseau » tant qu'une écriture n'a pas atteint le
 serveur. Le lecteur d'écran lit chaque ligne d'un bloc : « {nom}, 3 journées, de {auteur}, par
 défaut » ; le double appui ouvre la fiche. Bouton flottant « Nouveau processus » sur téléphone, bouton en tête au-delà ; une

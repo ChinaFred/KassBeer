@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/breakpoints.dart';
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/services/error_report_service.dart';
 import '../../equipment/domain/equipment.dart';
@@ -406,27 +407,11 @@ class BlocCalculs extends StatelessWidget {
     final theme = Theme.of(context);
     final calculs = this.calculs;
     if (calculs is CalculsImpossibles) {
-      return Semantics(
+      return Encadre(
+        ton: TonEncadre.erreur,
+        icone: Icons.error_outline,
         liveRegion: true,
-        child: Material(
-          color: theme.colorScheme.errorContainer,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: theme.colorScheme.error),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    messageCalculImpossible(calculs.field),
-                    style: TextStyle(color: theme.colorScheme.onErrorContainer),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        child: Text(messageCalculImpossible(calculs.field)),
       );
     }
     final c = (calculs as CalculsObtenus).calculation;

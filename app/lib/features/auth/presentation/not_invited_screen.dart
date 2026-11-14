@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
+import '../../../core/presentation/logo_kass_beer.dart';
 import '../../../core/providers.dart';
 import 'access_providers.dart';
 import 'sign_out.dart';
@@ -86,6 +87,8 @@ class _NotInvitedScreenState extends ConsumerState<NotInvitedScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Center(child: MedaillonKassBeer(taille: 120)),
+                  const SizedBox(height: 24),
                   Semantics(
                     header: true,
                     child: Text(

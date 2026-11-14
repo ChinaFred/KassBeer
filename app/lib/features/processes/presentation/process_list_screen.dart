@@ -3,14 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/data/lecture_document.dart';
-import '../../../core/presentation/bandeau_hors_ligne.dart';
 import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
-import '../../../core/presentation/menu_compte.dart';
-import '../../../core/presentation/zone_capture.dart';
+import '../../../core/presentation/ligne_liste.dart';
+import '../../../core/presentation/page_secondaire.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/modele_processus.dart';
@@ -91,32 +90,10 @@ class ProcessListScreen extends ConsumerWidget {
     // Sans processus à soi, l'état vide porte ses deux boutons de création.
     final canCreate = list != null && !sansCache && mine.isNotEmpty;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppRoutes.home),
-        ),
-        title: const Text(titre),
-        actions: const [MenuCompte(), SizedBox(width: 8)],
-      ),
-      body: ZoneCapture(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (offline) const BandeauHorsLigne(),
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-                  child: body,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return PageSecondaire(
+      titre: titre,
+      horsLigne: offline,
+      body: body,
       floatingActionButton: compact && canCreate
           ? FloatingActionButton.extended(
               onPressed: create,
@@ -167,7 +144,10 @@ class _Liste extends StatelessWidget {
     final invalid = list.documents
         .whereType<DocumentInvalide<ModeleProcessus>>();
     return ListView(
-      padding: EdgeInsets.only(top: 8, bottom: compact ? 96 : 24),
+      padding: EdgeInsets.only(
+        top: 8,
+        bottom: compact ? kMargeBoutonFlottant : 24,
+      ),
       children: [
         if (stale) BandeauListePerimee(retrying: retrying, onRetry: onRetry),
         if (!compact && mine.isNotEmpty)
@@ -238,10 +218,13 @@ class _Liste extends StatelessWidget {
             ),
         ],
         for (final d in invalid)
-          ListTile(
-            leading: Icon(Icons.error_outline, color: theme.colorScheme.error),
-            title: const Text('Processus illisible'),
-            subtitle: const Text('Le document contient une valeur inattendue.'),
+          LigneListe(
+            icone: Icons.error_outline,
+            erreur: true,
+            titre: 'Processus illisible',
+            details: const [
+              Text('Le document contient une valeur inattendue.'),
+            ],
             onTap: () => context.push(AppRoutes.process(d.id)),
           ),
       ],
@@ -264,64 +247,27 @@ class _Ligne extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final c = modele.content;
     final a = auteur;
-    final label = [
-      c.name,
-      formatJournees(c.journees.length),
-      if (a != null) 'de $a',
-      if (parDefaut) 'par défaut',
-      if (modele.hasPendingWrites) 'en attente du réseau',
-    ].join(', ');
-    void open() => context.push(AppRoutes.process(modele.id));
     // Un seul nœud qui porte l'action : le double appui du lecteur d'écran
     // ouvre la fiche.
-    return Semantics(
-      button: true,
-      label: label,
-      onTap: open,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: open,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(c.name, style: theme.textTheme.titleMedium),
-                Text(
-                  resumeModele(c),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (a != null)
-                  Text(
-                    a,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                if (parDefaut || modele.hasPendingWrites) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      if (parDefaut) const Etiquette(label: 'Par défaut'),
-                      if (modele.hasPendingWrites)
-                        const Etiquette(label: 'En attente du réseau'),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return LigneListe(
+      icone: Icons.checklist_outlined,
+      titre: c.name,
+      details: [Text(resumeModele(c)), if (a != null) Text(a)],
+      etiquettes: [
+        if (parDefaut) const Etiquette(label: 'Par défaut'),
+        if (modele.hasPendingWrites)
+          const Etiquette(label: 'En attente du réseau'),
+      ],
+      semanticsLabel: [
+        c.name,
+        formatJournees(c.journees.length),
+        if (a != null) 'de $a',
+        if (parDefaut) 'par défaut',
+        if (modele.hasPendingWrites) 'en attente du réseau',
+      ].join(', '),
+      onTap: () => context.push(AppRoutes.process(modele.id)),
     );
   }
 }

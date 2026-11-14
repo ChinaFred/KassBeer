@@ -1,7 +1,32 @@
 import 'package:flutter/material.dart';
 
-/// Logo de Kass'Beer : icône et nom. L'icône `sports_bar` tient la place du fichier
-/// du logo, qui n'existe pas encore.
+/// Médaillon du logo (`assets/images/logo_kass_beer.webp`, 384 px), exclu de la
+/// sémantique : le nom de l'application l'accompagne ou le titre de l'écran suffit.
+///
+/// Jamais sous [tailleMin] : en dessous, le gobelin n'est plus lisible.
+class MedaillonKassBeer extends StatelessWidget {
+  const MedaillonKassBeer({super.key, this.taille = 176})
+    : assert(taille >= tailleMin);
+
+  static const double tailleMin = 48;
+
+  final double taille;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Image.asset(
+        'assets/images/logo_kass_beer.webp',
+        width: taille,
+        height: taille,
+        filterQuality: FilterQuality.medium,
+      ),
+    );
+  }
+}
+
+/// Logo de Kass'Beer : médaillon et nom, en tête des écrans de connexion et de
+/// chargement.
 class LogoKassBeer extends StatelessWidget {
   const LogoKassBeer({super.key, this.headerSemantics = false});
 
@@ -15,20 +40,16 @@ class LogoKassBeer extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ExcludeSemantics(
-          child: Icon(
-            Icons.sports_bar,
-            size: 72,
-            color: theme.colorScheme.primary,
-          ),
-        ),
+        const Center(child: MedaillonKassBeer()),
         const SizedBox(height: 16),
         Semantics(
           header: headerSemantics,
           child: Text(
             "Kass'Beer",
             textAlign: TextAlign.center,
-            style: theme.textTheme.headlineLarge,
+            style: theme.textTheme.headlineLarge?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
           ),
         ),
       ],

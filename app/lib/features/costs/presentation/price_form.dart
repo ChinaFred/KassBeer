@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/champ_nombre.dart';
 import '../../../core/presentation/ecriture.dart';
+import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/feuille_ou_dialogue.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/presentation/segments.dart';
 import '../../../core/providers.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -492,7 +494,6 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
                 decoration: InputDecoration(
                   labelText: 'Nature',
                   errorText: _natureError,
-                  border: const OutlineInputBorder(),
                 ),
                 items: [
                   for (final n in IngredientNature.values)
@@ -513,7 +514,6 @@ class _FormulairePrixState extends ConsumerState<FormulairePrix> {
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   labelText: 'Nom',
-                  border: const OutlineInputBorder(),
                   helperText: existant == null
                       ? null
                       : TextesPrix.existeDeja(existant.name),
@@ -672,43 +672,26 @@ class LignePrix extends StatelessWidget {
     super.key,
     required this.price,
     required this.onTap,
-    this.trailing,
+    this.enAttente = false,
   });
 
   final Price price;
   final VoidCallback? onTap;
-  final Widget? trailing;
+
+  /// Vrai : étiquette « En attente du réseau » sous le détail.
+  final bool enAttente;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final detail = parties([formatAchat(price), formatPrixUnitaire(price)]);
     final parle = parties([achatParle(price), prixUnitaireParle(price)]).parle;
-    final extra = trailing;
-    return MergeSemantics(
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(price.name, style: theme.textTheme.titleMedium),
-                Text(
-                  detail.texte,
-                  semanticsLabel: parle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (extra != null) ...[const SizedBox(height: 8), extra],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return LigneListe(
+      titre: price.name,
+      details: [Text(detail.texte, semanticsLabel: parle)],
+      etiquettes: [
+        if (enAttente) const Etiquette(label: 'En attente du réseau'),
+      ],
+      onTap: onTap,
     );
   }
 }

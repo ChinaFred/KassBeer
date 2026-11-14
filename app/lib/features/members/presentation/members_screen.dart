@@ -146,7 +146,10 @@ class MembersScreen extends ConsumerWidget {
         label: 'Chargement des membres',
       ),
       _ => ListView(
-        padding: EdgeInsets.only(top: 8, bottom: compact ? 96 : 24),
+        padding: EdgeInsets.only(
+          top: 8,
+          bottom: compact ? kMargeBoutonFlottant : 24,
+        ),
         children: [
           if (membersAsync.hasError)
             BandeauListePerimee(

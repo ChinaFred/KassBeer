@@ -244,13 +244,18 @@ void main() {
         ),
       );
       expect(find.text('2 frais'), findsOneWidget);
-      final capsulesY = tester
-          .getTopLeft(find.text('Capsules · ${eur('0,05')} par bouteille'))
-          .dy;
-      final electriciteY = tester
-          .getTopLeft(find.text('Électricité · ${eur('2,00')} par brassin'))
-          .dy;
+      // Nom en titre, montant et base dessous.
+      final capsulesY = tester.getTopLeft(find.text('Capsules')).dy;
+      final electriciteY = tester.getTopLeft(find.text('Électricité')).dy;
       expect(capsulesY, lessThan(electriciteY));
+      expect(
+        tester.getTopLeft(find.text('${eur('0,05')} par bouteille')).dy,
+        greaterThan(capsulesY),
+      );
+      expect(
+        tester.getTopLeft(find.text('${eur('2,00')} par brassin')).dy,
+        greaterThan(electriciteY),
+      );
       // Fermées sur téléphone.
       expect(find.text('Pils'), findsNothing);
       expect(find.text('2 prix'), findsOneWidget);

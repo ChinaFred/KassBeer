@@ -22,17 +22,23 @@ class EtatChargement extends StatelessWidget {
   }
 }
 
-/// Rien à afficher : icône, texte, et au besoin une action.
+/// Rien à afficher : icône dans un disque, titre facultatif, texte, et au
+/// besoin une action.
 class EtatVide extends StatelessWidget {
   const EtatVide({
     super.key,
     required this.icon,
     required this.message,
+    this.titre,
     this.action,
   });
 
   final IconData icon;
   final String message;
+
+  /// Titre court au-dessus du message (« Aucune recette »), déclaré comme
+  /// en-tête ; `null` : le message seul.
+  final String? titre;
 
   /// Bouton facultatif sous le message.
   final Widget? action;
@@ -40,14 +46,42 @@ class EtatVide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final t = titre;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: theme.colorScheme.onSurfaceVariant),
+            ExcludeSemantics(
+              child: SizedBox.square(
+                dimension: 80,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.secondaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 40,
+                    color: scheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
+            if (t != null) ...[
+              Semantics(
+                header: true,
+                child: Text(
+                  t,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             Text(
               message,
               textAlign: TextAlign.center,

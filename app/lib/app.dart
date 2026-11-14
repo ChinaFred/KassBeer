@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/preferences/theme_mode_provider.dart';
 import 'core/presentation/breakpoints.dart';
+import 'core/presentation/logo_kass_beer.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -116,6 +117,8 @@ class _StartupMessage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Center(child: MedaillonKassBeer(taille: 120)),
+                  const SizedBox(height: 24),
                   Icon(
                     Icons.error_outline,
                     size: 48,

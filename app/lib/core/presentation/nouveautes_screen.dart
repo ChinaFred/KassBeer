@@ -5,12 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../data/nouveautes.dart';
 import '../providers.dart';
 import '../router/routes.dart';
-import 'breakpoints.dart';
 import 'etats.dart';
 import 'etiquette.dart';
 import 'formats.dart';
-import 'menu_compte.dart';
-import 'zone_capture.dart';
+import 'page_secondaire.dart';
 
 /// Écran « Nouveautés », ouvert depuis le menu du compte : les dernières versions
 /// qui ont une entrée « fonctionnel » au CHANGELOG, livrées avec l'application.
@@ -49,18 +47,7 @@ class NouveautesScreen extends ConsumerWidget {
     } else {
       body = const EtatChargement(label: 'Chargement des nouveautés');
     }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nouveautés'),
-        leading: BackButton(
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppRoutes.home),
-        ),
-        actions: const [MenuCompte(), SizedBox(width: 8)],
-      ),
-      body: ZoneCapture(child: SafeArea(top: false, child: body)),
-    );
+    return PageSecondaire(titre: 'Nouveautés', body: body);
   }
 }
 
@@ -81,29 +68,19 @@ class _ListeNouveautes extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    '$intro Seules les versions qui changent ce que vous voyez '
-                    'sont listées.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  for (final v in versions)
-                    _CarteVersion(
-                      nouveaute: v,
-                      installed: v.version == installedVersion,
-                    ),
-                ],
-              ),
+          Text(
+            '$intro Seules les versions qui changent ce que vous voyez '
+            'sont listées.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          const SizedBox(height: 16),
+          for (final v in versions)
+            _CarteVersion(
+              nouveaute: v,
+              installed: v.version == installedVersion,
+            ),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/bandeau_hors_ligne.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 
 import 'package:kass_beer/features/equipment/presentation/equipment_list_screen.dart';
 import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
@@ -98,10 +99,10 @@ void main() {
     expect(find.text('Inviter et retirer les comptes'), findsOneWidget);
     expect(find.text('Import'), findsOneWidget);
     expect(find.text('Fiches Excel préparées en JSON'), findsOneWidget);
-    final import = tester.widget<ListTile>(
-      find.widgetWithText(ListTile, 'Import'),
+    final import = tester.widget<LigneListe>(
+      find.widgetWithText(LigneListe, 'Import'),
     );
-    expect(import.enabled, isTrue);
+    expect(import.onTap, isNotNull);
   });
 
   testWidgets('navigation entre les sections', (tester) async {

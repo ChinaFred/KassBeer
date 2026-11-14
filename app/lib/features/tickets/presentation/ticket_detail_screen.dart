@@ -157,9 +157,9 @@ class _DetailState extends ConsumerState<_Detail> {
 
     return SelectionArea(
       child: ListView(
-        // Marge basse de 96 : à côté de la liste, le bouton flottant
+        // Marge basse du bouton flottant : à côté de la liste, le bouton
         // « Signaler ou proposer » ne cache pas les dernières lignes.
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, kMargeBoutonFlottant),
         children: [
           Center(
             child: ConstrainedBox(

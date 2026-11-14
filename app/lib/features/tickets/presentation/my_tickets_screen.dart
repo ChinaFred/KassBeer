@@ -5,18 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/data/lecture_document.dart';
-import '../../../core/presentation/bandeau_hors_ligne.dart';
 import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
-import '../../../core/presentation/menu_compte.dart';
-import '../../../core/presentation/zone_capture.dart';
+import '../../../core/presentation/ligne_liste.dart';
+import '../../../core/presentation/page_secondaire.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/ticket.dart';
+import 'ligne_ticket.dart';
 import 'ticket_detail_screen.dart';
-import 'ticket_statut.dart';
 import 'tickets_providers.dart';
 
 /// Retour d'une page de ticket ouverte par `push` : l'écran précédent, sinon
@@ -51,7 +50,7 @@ class MyTicketsScreen extends ConsumerWidget {
   static const emptyMessage =
       'Aucun ticket pour l\'instant. Un bug, une idée ? Envoyez-les à '
       'l\'administrateur.';
-  static const unreadLabel = 'Nouveau suivi à lire';
+  static const unreadLabel = LigneTicket.nonLuLabel;
   static const noSelection = 'Choisissez un ticket pour voir son suivi.';
 
   @override
@@ -105,47 +104,28 @@ class MyTicketsScreen extends ConsumerWidget {
       }
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(titre),
-        leading: BackButton(
-          onPressed: () => quitterPageTicket(context, AppRoutes.home),
-        ),
-        actions: const [MenuCompte(), SizedBox(width: 8)],
-      ),
-      body: ZoneCapture(
-        child: SafeArea(
-          top: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (offline) const BandeauHorsLigne(),
-              Expanded(
-                child: wide
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SizedBox(width: kListeMesTicketsWidth, child: body),
-                          const VerticalDivider(width: 1),
-                          Expanded(
-                            child: selected == null
-                                ? const EtatVide(
-                                    icon: Icons.confirmation_number_outlined,
-                                    message: noSelection,
-                                  )
-                                : TicketDetailPane(
-                                    key: ValueKey(selected),
-                                    id: selected,
-                                  ),
-                          ),
-                        ],
-                      )
-                    : body,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return PageSecondaire(
+      titre: titre,
+      horsLigne: offline,
+      // Grand écran : la liste et le suivi côte à côte, sur toute la largeur.
+      largeurMax: null,
+      body: wide
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(width: kListeMesTicketsWidth, child: body),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: selected == null
+                      ? const EtatVide(
+                          icon: Icons.confirmation_number_outlined,
+                          message: noSelection,
+                        )
+                      : TicketDetailPane(key: ValueKey(selected), id: selected),
+                ),
+              ],
+            )
+          : body,
       floatingActionButton: empty
           ? null
           : FloatingActionButton.extended(
@@ -195,146 +175,34 @@ class _Liste extends StatelessWidget {
       );
     }
     return ListView(
-      padding: const EdgeInsets.only(top: 8, bottom: 96),
+      padding: const EdgeInsets.only(top: 8, bottom: kMargeBoutonFlottant),
       children: [
         if (stale) BandeauListePerimee(retrying: retrying, onRetry: onRetry),
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final t in tickets)
-                  _Ligne(
-                    ticket: t,
-                    selected: t.id == selectedId,
-                    onTap: () => onOpen(t.id),
-                  ),
-                for (final d in invalid)
-                  ListTile(
-                    leading: Icon(
-                      Icons.error_outline,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    title: const Text('Ticket illisible'),
-                    subtitle: const Text(
-                      'Mettez l\'application à jour, ou prévenez '
-                      'l\'administrateur.',
-                    ),
-                    selected: d.id == selectedId,
-                    selectedTileColor: Theme.of(
-                      context,
-                    ).colorScheme.secondaryContainer,
-                    selectedColor: Theme.of(
-                      context,
-                    ).colorScheme.onSecondaryContainer,
-                    onTap: () => onOpen(d.id),
-                  ),
-              ],
-            ),
+        for (final t in tickets)
+          LigneTicket(
+            ticket: t,
+            details: t.createdAt == null
+                ? ''
+                : formatDateChiffres(t.createdAt!),
+            selected: t.id == selectedId,
+            nonLu: t.unread,
+            onTap: () => onOpen(t.id),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Ligne extends StatelessWidget {
-  const _Ligne({
-    required this.ticket,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Ticket ticket;
-
-  /// Ticket affiché à droite de la liste, en large.
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final created = ticket.createdAt;
-    // Ligne choisie : même marquage que la liste d'Admin › Tickets.
-    final muted = selected
-        ? scheme.onSecondaryContainer
-        : scheme.onSurfaceVariant;
-    return Semantics(
-      selected: selected,
-      child: Material(
-        color: selected ? scheme.secondaryContainer : Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Semantics(
-                    label: ticket.type.label,
-                    child: ExcludeSemantics(
-                      child: Icon(ticketTypeIcon(ticket.type), color: muted),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          ticket.title,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: selected
-                                ? scheme.onSecondaryContainer
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (created != null)
-                              Text(
-                                formatDateChiffres(created),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: muted,
-                                ),
-                              ),
-                            EtiquetteStatut(ticket: ticket),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (ticket.unread) ...[
-                    const SizedBox(width: 8),
-                    Semantics(
-                      container: true,
-                      label: MyTicketsScreen.unreadLabel,
-                      child: ExcludeSemantics(
-                        child: SizedBox.square(
-                          dimension: 12,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.error,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+        for (final d in invalid)
+          LigneListe(
+            icone: Icons.error_outline,
+            erreur: true,
+            titre: 'Ticket illisible',
+            details: const [
+              Text(
+                'Mettez l\'application à jour, ou prévenez '
+                'l\'administrateur.',
               ),
-            ),
+            ],
+            selected: d.id == selectedId,
+            onTap: () => onOpen(d.id),
           ),
-        ),
-      ),
+      ],
     );
   }
 }
