@@ -1,7 +1,10 @@
 /**
- * Lancement d'une session Claude Code sur un ticket, par une Routine (ADR-008, T4, P35, P36,
- * P41) : « Lancer l'analyse » (ticket Reçu) et « Lancer le développement » (ticket Validé),
- * appelés par `launchTicketAnalysis` et `launchTicketDevelopment` après `requireAdmin`.
+ * Lancement d'une session Claude Code sur un ticket, par une Routine (ADR-008, T4 et T5, P35,
+ * P36, P41, P43, P44, P47) : « Lancer l'analyse » (ticket Reçu), « Lancer le développement »
+ * (ticket Validé), « Relancer le développement » (`reprise`, ticket En cours à CI rouge) et
+ * « Livrer » (`livraison`, ticket En cours à PR prête), appelés par `launchTicketAnalysis`,
+ * `launchTicketDevelopment` (`mode: "start"` ou `"resume"`) et `launchTicketDelivery` après
+ * `requireAdmin`.
  * Copie de `functions/src/tickets/launch.ts` de Kass'Dalle, adaptée : bail des décisions de
  * Kass'Beer (`decision_lease_until`), plafond `LAUNCHES_PER_DAY` de `config.ts`, pas de
  * compte fondateur, pas de type Question, règle « en cours » réduite à `retry_after`.
@@ -10,8 +13,14 @@
  *  1. secrets de la routine présents et identifiant bien formé, sinon « Lancement non
  *     configuré » : rien compté, rien envoyé ;
  *  2. transaction sur le ticket : existant, `launchPrecondition` (statut, Issue, règle des
- *     décisions permises recalculée), aucun bail actif, aucun lancement du même type en
- *     cours (`runningLaunch`, historique lu dans la transaction) ; bail posé ;
+ *     décisions permises recalculée), aucun bail actif, aucun lancement qui le bloque en
+ *     cours (`runningLaunch`, historique lu dans la transaction) ; reprise : verrou des
+ *     livraisons non tenu par ce ticket, `admin/delivery.relaunch_ready` vrai (P47) ; bail
+ *     posé (210 s pour une livraison, 150 s sinon) ;
+ *  2 bis. livraison seulement, rien compté en cas de refus (P43) : PR ouvertes, fichiers et
+ *     runs de la CI relus sur GitHub (état écrit dans `admin/delivery`), une seule PR
+ *     éligible, aucun fichier sensible, CI verte ; puis verrou global des livraisons
+ *     (`delivery_running`, P44) ;
  *  3. plafond du jour (P36) : transaction sur `ticket_quotas/launch_{AAAAMMJJ}` et
  *     `ticket_status/launches` ; refus au plafond ;
  *  4. Issue relue sur GitHub : fermée, ou étiquettes qui donnent un autre statut → l'état
@@ -34,7 +43,7 @@ import { randomUUID } from "node:crypto";
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { HttpsError, type FunctionsErrorCode } from "firebase-functions/v2/https";
 
-import { requireAdmin, type AuthLike, type MemberLookup } from "../auth";
+import { requireAdmin, requireBoundedText, type AuthLike, type MemberLookup } from "../auth";
 import {
   COLL_TICKET_QUOTAS,
   COLL_TICKET_STATUS,
@@ -49,7 +58,29 @@ import {
 import { firestore, type FirestoreKit } from "../firestore";
 import { logError, logInfo, logWarn, type LogEntry } from "../logging";
 import { readTicketIdArg } from "./answer";
-import { GithubError, githubClient, type FetchLike, type GithubClient } from "./github";
+import {
+  DELIVERY_ACTIONS_FORBIDDEN_MESSAGE,
+  DELIVERY_NO_PR_MESSAGE,
+  claimDeliveryLock,
+  deliveryCiNotGreenMessage,
+  deliveryFilesUnreadableMessage,
+  deliveryLockHeld,
+  deliveryMultiplePrMessage,
+  deliveryRef,
+  deliverySensitiveMessage,
+  readDelivery,
+  readDeliveryLock,
+  releaseDeliveryLock,
+  sensitiveDeliveryPath,
+  writeDeliveryState,
+} from "./delivery";
+import {
+  GithubActionsForbidden,
+  GithubError,
+  githubClient,
+  type FetchLike,
+  type GithubClient,
+} from "./github";
 import { applyIssue } from "./issueState";
 import {
   LAUNCH_FROM_STATUS,
@@ -90,6 +121,14 @@ import { markTokenInvalid, recordTokenAccepted } from "./tokenStatus";
  */
 export const LAUNCH_LEASE_MS = 150 * 1000;
 
+/** Bail d'une livraison : plus long que le délai de `launchTicketDelivery` (180 s, P43). */
+export const DELIVERY_LEASE_MS = 210 * 1000;
+
+/** Le bail posé par un lancement. Pure. */
+export function launchLeaseMs(action: LaunchAction): number {
+  return action === "livraison" ? DELIVERY_LEASE_MS : LAUNCH_LEASE_MS;
+}
+
 // ── Ce que rend la callable ─────────────────────────────────────────────────
 
 /**
@@ -109,6 +148,14 @@ export const LAUNCH_NOT_RECORDED_MESSAGE =
   "Le lancement n'a pas pu être préparé. Rien n'a été lancé.";
 export const LAUNCH_INTERNAL_MESSAGE =
   "Le lancement a échoué. Regardez la section Lancements avant de relancer.";
+/** Reprise refusée : la CI de la PR n'est plus en échec (P47). */
+export const REPRISE_CI_NOT_RED_MESSAGE =
+  "La CI de la pull request n'est pas en échec. Rien n'a été lancé ni décompté.";
+/** Reprise refusée : une livraison de ce ticket est en cours (P47). */
+export const REPRISE_DELIVERY_RUNNING_MESSAGE =
+  "Une livraison est en cours sur ce ticket. Rien n'a été lancé ni décompté.";
+/** `mode` de `launchTicketDevelopment` hors `start` et `resume` (P47). */
+export const LAUNCH_MODE_INVALID = "Mode de lancement : « start » ou « resume » attendu.";
 
 /**
  * Refus rendu au client : `details.reason` (français) et `details.code` (stable), plus les
@@ -259,13 +306,26 @@ export function launchEntryViews(
   }));
 }
 
+/** Code stable d'un refus « en cours » : `reprise_running` quand une reprise bloque. Pure. */
+export function runningRefusalCode(action: LaunchAction, blocking: LaunchAction): string {
+  if (action === "livraison" && blocking === "reprise") return "reprise_running";
+  if (action === "reprise" && blocking === "livraison") return "reprise_blocked_by_delivery";
+  return "running";
+}
+
 /** Étape 2 : précondition, « en cours » et bail, en une transaction. Rend le numéro d'Issue. */
 async function claimLaunch(ctx: Ctx): Promise<{ issueNumber: number; leaseUntilMs: number }> {
   const { db, Timestamp } = ctx.kit;
   const ref = ticketRef(ctx.kit, ctx.ticketId);
   const historyRef = launchesRef(ctx.kit, ctx.ticketId);
+  const resume = ctx.action === "reprise";
   return db.runTransaction(async (tx) => {
-    const [snap, history] = await Promise.all([tx.get(ref), tx.get(historyRef)]);
+    const [snap, history, delivery, status] = await Promise.all([
+      tx.get(ref),
+      tx.get(historyRef),
+      resume ? tx.get(deliveryRef(ctx.kit, ctx.ticketId)) : Promise.resolve(null),
+      resume ? tx.get(statusRef(ctx.kit)) : Promise.resolve(null),
+    ]);
     if (!snap.exists) throw refusal("not-found", LAUNCH_TICKET_MISSING, "ticket_not_found");
     const data = snap.data() ?? {};
     const issueNumber = data.github_issue_number;
@@ -289,11 +349,27 @@ async function claimLaunch(ctx: Ctx): Promise<{ issueNumber: number; leaseUntilM
     if (running !== null) {
       throw refusal(
         "failed-precondition",
-        launchRunningMessage(ctx.action, running.atMs, running.retryAfterMs),
-        "running",
+        launchRunningMessage(running.action, running.atMs, running.retryAfterMs),
+        runningRefusalCode(ctx.action, running.action),
       );
     }
-    const leaseUntilMs = nowMs + LAUNCH_LEASE_MS;
+    if (resume) {
+      // P47 : aucune livraison de ce ticket en cours, CI de la PR en échec (écrit par le
+      // serveur dans `admin/delivery`, P45).
+      const millis = (v: unknown) => (v instanceof Timestamp ? v.toMillis() : null);
+      const lock = readDeliveryLock(status?.get("delivery_running"), millis);
+      if (lock !== null && lock.ticketId === ctx.ticketId && deliveryLockHeld(lock, nowMs)) {
+        throw refusal(
+          "failed-precondition",
+          REPRISE_DELIVERY_RUNNING_MESSAGE,
+          "reprise_blocked_by_delivery",
+        );
+      }
+      if (delivery?.get("relaunch_ready") !== true) {
+        throw refusal("failed-precondition", REPRISE_CI_NOT_RED_MESSAGE, "reprise_ci_not_red");
+      }
+    }
+    const leaseUntilMs = nowMs + launchLeaseMs(ctx.action);
     tx.update(ref, { decision_lease_until: Timestamp.fromMillis(leaseUntilMs) });
     return { issueNumber: issueNumber as number, leaseUntilMs };
   });
@@ -425,6 +501,86 @@ async function setRoutineInvalid(ctx: Ctx, invalid: boolean): Promise<void> {
   }
 }
 
+// ── Livraison (P43) ─────────────────────────────────────────────────────────
+
+/**
+ * Étape 2 bis : contrôles d'une livraison avant tout comptage, relus sur GitHub : une seule
+ * PR éligible, liste de ses fichiers lue en entier, aucun fichier sensible, CI verte.
+ * L'état relu est écrit dans `admin/delivery` (au mieux). Lève un refus
+ * `failed-precondition` avec son code stable ; un échec GitHub suit `launchGithubFailure`.
+ * Rend le numéro de la PR.
+ */
+async function checkDeliveryLaunch(
+  ctx: Ctx,
+  issueNumber: number,
+  deps: LaunchDeps,
+): Promise<number> {
+  const token = deps.githubToken().trim();
+  const markInvalid = deps.markTokenInvalid ?? markTokenInvalid;
+  if (token.length === 0) {
+    await markInvalid(null);
+    const f = launchGithubFailure("token");
+    throw refusal(f.code, f.reason, f.machine);
+  }
+  const client = githubClient(token, deps.fetchGithub);
+  const github = async <T>(what: string, work: () => Promise<T>): Promise<T> => {
+    try {
+      return await work();
+    } catch (err) {
+      const kind = err instanceof GithubError ? err.kind : "other";
+      ctx.log("error", {
+        ...base(ctx, `Tickets : ${what} avant la livraison`, { kind }),
+        error: err,
+      });
+      if (err instanceof GithubActionsForbidden) {
+        // Jeton sans « Actions : lecture » : panne à part, sans `token_invalid_since` (P25).
+        throw refusal(
+          "failed-precondition",
+          DELIVERY_ACTIONS_FORBIDDEN_MESSAGE,
+          "github_actions_forbidden",
+        );
+      }
+      if (kind === "token") await markInvalid(err as GithubError);
+      const f = launchGithubFailure(kind);
+      throw refusal(f.code, f.reason, f.machine);
+    }
+  };
+  const reading = await github("pull requests non relues", () =>
+    readDelivery(ctx.kit, client, issueNumber, LAUNCH_FROM_STATUS.livraison),
+  );
+  try {
+    await writeDeliveryState(ctx.kit, ctx.ticketId, reading.state);
+  } catch (err) {
+    ctx.log("error", {
+      ...base(ctx, "Tickets : état « PR prête » relu à la livraison, non écrit"),
+      error: err,
+    });
+  }
+  const refuse = (message: string, machine: string): never => {
+    ctx.log(
+      "info",
+      base(ctx, `Tickets : livraison refusée (${machine})`, { pr: reading.state.pr_number }),
+    );
+    throw refusal("failed-precondition", message, machine);
+  };
+  const count = reading.state.eligible_pr_count;
+  if (count > 1) refuse(deliveryMultiplePrMessage(count, issueNumber), "delivery_multiple_prs");
+  const pr = reading.pr;
+  if (pr === null) return refuse(DELIVERY_NO_PR_MESSAGE, "delivery_no_pr");
+  const files = await github("fichiers de la pull request non relus", () =>
+    client.listPullRequestFiles(pr.number),
+  );
+  if (!files.complete) {
+    refuse(deliveryFilesUnreadableMessage(pr.number), "delivery_files_unreadable");
+  }
+  const sensitive = sensitiveDeliveryPath(files.files);
+  if (sensitive !== null) {
+    refuse(deliverySensitiveMessage(pr.number, sensitive), "delivery_sensitive_files");
+  }
+  if (!reading.state.ready) refuse(deliveryCiNotGreenMessage(pr.number), "delivery_ci_not_green");
+  return pr.number;
+}
+
 // ── Lancement ───────────────────────────────────────────────────────────────
 
 /** Étape 4 : Issue relue. Lève un refus si le ticket a changé ou si GitHub échoue. */
@@ -504,7 +660,21 @@ export async function launchTicketSession(
 
   let reservedDay: string | null = null;
   let keepCount = false;
+  // Livraison : instant du lancement, fixé à la prise du verrou.
+  let lockedAtMs: number | null = null;
   try {
+    // 2 bis. Livraison : PR, fichiers et CI relus, puis verrou global (P43, P44).
+    if (action === "livraison") {
+      await checkDeliveryLaunch(ctx, issueNumber, deps);
+      const plannedAtMs = ctx.now();
+      await claimDeliveryLock(kit, ticketId, issueNumber, plannedAtMs, (message, other) =>
+        refusal("failed-precondition", message, "delivery_running_elsewhere", {
+          ticketId: other,
+        }),
+      );
+      lockedAtMs = plannedAtMs;
+    }
+
     // 3. Plafond du jour.
     const day = parisDay(new Date(ctx.now()));
     await reserveLaunch(ctx, day);
@@ -515,7 +685,7 @@ export async function launchTicketSession(
 
     // 5. Trace écrite avant l'appel.
     const text = launchCommandText(action, issueNumber);
-    const atMs = ctx.now();
+    const atMs = lockedAtMs ?? ctx.now();
     const id = randomUUID();
     const { Timestamp } = kit;
     try {
@@ -548,6 +718,7 @@ export async function launchTicketSession(
     });
   } finally {
     if (reservedDay !== null && !keepCount) await releaseLaunch(ctx, reservedDay);
+    if (lockedAtMs !== null && !keepCount) await releaseDeliveryLock(kit, ticketId, lockedAtMs);
     await releaseLease(ctx, leaseUntilMs);
   }
 }
@@ -630,16 +801,48 @@ async function settleLaunch(
 // ── Callable ────────────────────────────────────────────────────────────────
 
 /**
- * Corps commun des deux callables : garde (P30), argument `ticketId`, lancement. Les refus
- * attendus (`HttpsError`) passent tels quels ; toute autre panne est journalisée et rendue
- * en `internal` : le client ne sait pas si la session est partie, et le dit.
+ * `mode` de `launchTicketDevelopment` (P47) : `start` (absent : `start`, anciens clients) ou
+ * `resume`, comparés exactement ; jamais déduit du statut. Lève `invalid-argument`. Pure.
+ */
+export function readLaunchMode(data: unknown): "start" | "resume" {
+  const raw = (data as Record<string, unknown> | null | undefined)?.mode;
+  const value = requireBoundedText(raw, { field: "mode", max: 16, label: "Mode de lancement" });
+  if (value === undefined || value === "start") return "start";
+  if (value === "resume") return "resume";
+  throw new HttpsError("invalid-argument", LAUNCH_MODE_INVALID, {
+    field: "mode",
+    reason: LAUNCH_MODE_INVALID,
+  });
+}
+
+/**
+ * `launchTicketDevelopment` : garde (P30), puis `mode` (P47) avant toute autre lecture ;
+ * `resume` lance une reprise (`reprise #N`), sinon un développement (`developpement #N`).
+ */
+export async function handleDevelopmentCall(
+  req: AuthLike & { data?: unknown },
+  deps: LaunchDeps & { lookup?: MemberLookup },
+): Promise<LaunchResult> {
+  return handleLaunchCall(
+    req,
+    (data) => (readLaunchMode(data) === "resume" ? "reprise" : "developpement"),
+    deps,
+  );
+}
+
+/**
+ * Corps commun des callables : garde (P30), action (`mode` lu après la garde pour le
+ * développement), argument `ticketId`, lancement. Les refus attendus (`HttpsError`) passent
+ * tels quels ; toute autre panne est journalisée et rendue en `internal` : le client ne sait
+ * pas si la session est partie, et le dit.
  */
 export async function handleLaunchCall(
   req: AuthLike & { data?: unknown },
-  action: LaunchAction,
+  actionOf: LaunchAction | ((data: unknown) => LaunchAction),
   deps: LaunchDeps & { lookup?: MemberLookup },
 ): Promise<LaunchResult> {
   const { uid } = await requireAdmin(req, deps.lookup);
+  const action = typeof actionOf === "function" ? actionOf(req.data) : actionOf;
   const ticketId = readTicketIdArg(req.data);
   try {
     return await launchTicketSession(ticketId, action, uid, deps);

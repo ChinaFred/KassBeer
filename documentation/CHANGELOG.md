@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.40 — fonctionnel
+### v0.1.41 — fonctionnel
 
 Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne
 son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans :
@@ -20,7 +20,7 @@ cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; 
 publiée. Sur un écran qui montre vos prix, un avertissement le rappelle. La capture apparaît dans
 le suivi du ticket.
 
-### v0.1.40 — technique
+### v0.1.41 — technique
 
 Demandé par les tickets #37, #38 et #39. #37 : `NavigationBar` en `alwaysHide` sous 600 px,
 `navigationBarTheme` retiré du thème. #39 : `_AccountMenu` devient `MenuCompte`
@@ -38,7 +38,36 @@ ouverte par `push`. Paquets ajoutés à `pubspec.lock` : `firebase_storage` 13.6
 `firebase_storage_platform_interface` 6.0.7, `firebase_storage_web` 3.11.13 ; aucune autre version
 ne change. `main.dart.js` : 5 417 304 octets avant (#37 et #39 compris), 5 510 208 après. `ci.yml`
 et `deploy.yml` : callable ajoutée à la liste fermée, émulateur Storage pour `rules-tests/`,
-`storage` au déploiement. `CLAUDE.md` : P5, P6, P23, P24, P25 et P31 modifiés, P43 ajouté.
+`storage` au déploiement. `CLAUDE.md` : P5, P6, P23, P24, P25 et P31 modifiés, P48 ajouté.
+
+### v0.1.40 — fonctionnel
+
+L'administrateur peut livrer un ticket depuis sa fiche. Quand la pull request d'un ticket En cours
+est prête, CI verte, « Livrer » lance une session Claude Code qui la met à jour, la fusionne et
+suit le déploiement. La boîte de confirmation rappelle que la fusion met l'application en ligne
+pour tout le groupe. Une seule livraison tourne à la fois. La section « Livraison » de la fiche
+montre le compte rendu de la session : terminée, ou arrêtée avec la raison. Si la CI d'une pull
+request est en échec, « Relancer le développement » lance une session qui corrige la même
+branche. Dans la liste, des pastilles signalent « PR prête », « CI en cours », « Livraison en
+cours » et « Correction en cours ».
+
+### v0.1.40 — technique
+
+Lot T5 d'ADR-008. Callable `launchTicketDelivery` (`requireAdmin`, 1 instance, 180 s), par la routine
+de développement (secrets `TICKETS_ROUTINE_DEV_*` montés par deux fonctions, aucun secret nouveau) ;
+reprise par `launchTicketDevelopment` avec `mode: "resume"` (action `reprise`). `delivery.ts` : PR
+unique éligible, fichiers sensibles (liste d'ADR-008 plus `pubspec.lock`, `gradlew`, `**/hook/**`,
+`**/.claude/**`, `auth.ts`, `config.ts`, `delivery.ts`, `member_access.json`), CI verte sur `push`
+et `pull_request`, verrou global `ticket_status/launches.delivery_running` (3 h), état
+`tickets/{id}/admin/delivery` (`ready`, `relaunch_ready`, comptes rendus `## Livraison — …`).
+Webhook : `pull_request` et `workflow_run` de `ci.yml`. Refuser et Clore rejetés pendant une
+livraison ; `launch_delivery` et `relaunch_development` seulement pour un ticket validé dans
+l'application (version de report 5). 403 sur `/actions/runs` en panne à part
+(`ci_read_denied_since`), sans `token_invalid_since`. Livraison et reprise comptées au plafond de
+`ticket_routine_launch`. Prompt de développement : parties Livraison (L0 à L11) et Reprise (R1 à
+R7), à recoller sur claude.ai. `ci.yml` et `deploy.yml` : `launchTicketDelivery` dans la liste
+fermée. Contrôles P14, P24, P25, P29, P35, P36, P39 à P42 modifiés, P43 à P47 ajoutés. Aucun
+paquet ajouté.
 
 ## 2026-11-13
 

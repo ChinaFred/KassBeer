@@ -232,12 +232,21 @@ class _CarteAnalyse extends StatelessWidget {
 /// ouverts hors de l'application, aucun HTML rendu (`encodeHtml: false` du
 /// paquet : une balise reste du texte). Styles du thème seuls.
 class CorpsAnalyse extends ConsumerWidget {
-  const CorpsAnalyse({super.key, required this.texte, this.accentue = false});
+  const CorpsAnalyse({
+    super.key,
+    required this.texte,
+    this.accentue = false,
+    this.encre,
+  });
 
   final String texte;
 
   /// Texte sur `secondaryContainer` (réponse de l'administrateur).
   final bool accentue;
+
+  /// Couleur du texte et des liens imposée par le fond de la carte (blocage
+  /// de livraison sur `errorContainer`) ; sinon celle du thème.
+  final Color? encre;
 
   static const lienImpossible = 'Impossible d\'ouvrir le lien.';
 
@@ -269,7 +278,10 @@ class CorpsAnalyse extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final encre = accentue ? scheme.onSecondaryContainer : scheme.onSurface;
+    final forcee = this.encre;
+    final encre =
+        forcee ?? (accentue ? scheme.onSecondaryContainer : scheme.onSurface);
+    final liens = forcee != null || accentue ? encre : scheme.primary;
     final text = theme.textTheme;
     TextStyle? teinte(TextStyle? style) => style?.copyWith(color: encre);
     final code = text.bodyMedium?.copyWith(
@@ -286,9 +298,9 @@ class CorpsAnalyse extends ConsumerWidget {
       styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
         p: teinte(text.bodyLarge),
         a: text.bodyLarge?.copyWith(
-          color: accentue ? encre : scheme.primary,
+          color: liens,
           decoration: TextDecoration.underline,
-          decorationColor: accentue ? encre : scheme.primary,
+          decorationColor: liens,
         ),
         h1: teinte(text.titleLarge),
         h2: teinte(text.titleMedium),
@@ -334,7 +346,7 @@ class CorpsAnalyse extends ConsumerWidget {
         imageNonAffichee(alt),
         style: text.bodyMedium?.copyWith(
           fontStyle: FontStyle.italic,
-          color: accentue ? encre : scheme.onSurfaceVariant,
+          color: forcee != null || accentue ? encre : scheme.onSurfaceVariant,
         ),
       ),
     );

@@ -56,10 +56,23 @@ class BoiteLancement extends StatefulWidget {
     required this.quota,
     required this.relanceDe,
     required this.envoyer,
+    this.prNumber,
+    this.avertissement,
+    this.typeTicket,
   });
 
   final ActionLancement action;
   final int? issueNumber;
+
+  /// PR à livrer ou à corriger (« PR #34 »), lue dans `admin/delivery`.
+  final int? prNumber;
+
+  /// Avertissement d'une relance, à la place de [avertissementRelance]
+  /// (livraison arrêtée ou sans fusion).
+  final String? avertissement;
+
+  /// « Bug », rappelé dans la boîte « Livrer ».
+  final String? typeTicket;
 
   /// `ticket_status/launches` lu, ou `null` : « Lancements restants :
   /// inconnu. ».
@@ -78,9 +91,20 @@ class BoiteLancement extends StatefulWidget {
       'Lancement en cours. Vous pouvez fermer : le résultat s\'affichera dans '
       'la section Lancements.';
 
+  /// Accord de fusion de « Livrer » (P39).
+  static const accordFusion =
+      'La fusion met l\'application en ligne pour tout le groupe, sur le web '
+      'et sur Android, sans autre accord. Appuyer sur « Livrer » vaut accord '
+      'de fusion.';
+
   /// « Une session Claude Code va lire l'Issue #12… » (P39).
-  static String effet(ActionLancement action, int? issueNumber) {
+  static String effet(
+    ActionLancement action,
+    int? issueNumber, {
+    int? prNumber,
+  }) {
     final issue = issueNumber == null ? 'l\'Issue' : 'l\'Issue #$issueNumber';
+    final pr = prNumber == null ? 'la pull request' : 'la PR #$prNumber';
     return switch (action) {
       ActionLancement.analyse =>
         'Une session Claude Code va lire $issue et publier son analyse sur '
@@ -88,8 +112,27 @@ class BoiteLancement extends StatefulWidget {
       ActionLancement.developpement =>
         'Une session Claude Code va écrire le code de $issue et ouvrir une '
             'pull request. Elle ne fusionne rien.',
+      ActionLancement.livraison =>
+        'Une session Claude Code va mettre $pr à jour avec main, la '
+            'fusionner, puis suivre le déploiement.',
+      ActionLancement.reprise =>
+        'Une session Claude Code va reprendre $pr, corriger la CI et '
+            'pousser sur la même branche. Elle ne fusionne pas.',
     };
   }
+
+  /// Titre de la boîte.
+  static String titre(ActionLancement action, {required bool relance}) =>
+      switch (action) {
+        ActionLancement.livraison =>
+          relance
+              ? 'Relancer la livraison de ce ticket ?'
+              : 'Livrer ce ticket ?',
+        ActionLancement.reprise => 'Relancer le développement ?',
+        _ =>
+          '${relance ? 'Relancer' : 'Lancer'} ${action.complement} de ce '
+              'ticket ?',
+      };
 
   /// Avertissement d'une relance.
   static String avertissementRelance(DateTime relanceDe) =>
@@ -105,6 +148,11 @@ class BoiteLancement extends StatefulWidget {
 class _BoiteLancementState extends State<BoiteLancement> {
   bool _envoi = false;
   String? _erreur;
+
+  /// Refus `delivery_sensitive_files` ou `delivery_files_unreadable`
+  /// ([kRefusFusionALaMain]) : « Livrer » reste inactif tant que la boîte est
+  /// ouverte.
+  bool _bloque = false;
 
   /// La fermeture est demandée : un second `pop` fermerait la fiche.
   bool _fermeture = false;
@@ -126,6 +174,7 @@ class _BoiteLancementState extends State<BoiteLancement> {
       setState(() {
         _erreur = resultat.message;
         _envoi = false;
+        _bloque = kRefusFusionALaMain.contains(resultat.code);
       });
       return;
     }
@@ -139,6 +188,19 @@ class _BoiteLancementState extends State<BoiteLancement> {
     final relanceDe = widget.relanceDe;
     final erreur = _erreur;
     final relance = relanceDe != null;
+    final action = widget.action;
+    final livraison = action == ActionLancement.livraison;
+    final avertissement =
+        widget.avertissement ??
+        (relanceDe == null
+            ? null
+            : BoiteLancement.avertissementRelance(relanceDe));
+    final typeTicket = widget.typeTicket;
+    final libelle = switch (action) {
+      ActionLancement.livraison => relance ? 'Relancer' : 'Livrer',
+      ActionLancement.reprise => 'Relancer',
+      _ => relance ? 'Relancer' : 'Lancer',
+    };
 
     return PopScope(
       canPop: !_envoi,
@@ -148,22 +210,33 @@ class _BoiteLancementState extends State<BoiteLancement> {
       },
       child: AlertDialog(
         scrollable: true,
-        title: Text(
-          '${relance ? 'Relancer' : 'Lancer'} ${widget.action.complement} de '
-          'ce ticket ?',
-        ),
+        title: Text(BoiteLancement.titre(action, relance: relance)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(BoiteLancement.effet(widget.action, widget.issueNumber)),
+            Text(
+              BoiteLancement.effet(
+                action,
+                widget.issueNumber,
+                prNumber: widget.prNumber,
+              ),
+            ),
+            if (livraison) ...[
+              const SizedBox(height: 12),
+              const Text(BoiteLancement.accordFusion),
+              if (typeTicket != null) ...[
+                const SizedBox(height: 12),
+                Text('Type du ticket : $typeTicket.'),
+              ],
+            ],
             const SizedBox(height: 12),
             Text(ligneQuota(widget.quota)),
-            if (relance) ...[
+            if (avertissement != null) ...[
               const SizedBox(height: 12),
               EncadreAvertissement(
                 icone: Icons.warning_amber_outlined,
-                texte: BoiteLancement.avertissementRelance(relanceDe),
+                texte: avertissement,
               ),
             ],
             const SizedBox(height: 12),
@@ -208,12 +281,17 @@ class _BoiteLancementState extends State<BoiteLancement> {
           ),
           FilledButton(
             // Plafond atteint : la ligne du quota dit pourquoi.
-            onPressed: _envoi || (widget.quota?.plafondAtteint ?? false)
+            onPressed:
+                _envoi || _bloque || (widget.quota?.plafondAtteint ?? false)
                 ? null
                 : _lancer,
             child: _envoi
-                ? const IndicateurBouton(label: 'Lancement en cours')
-                : Text(relance ? 'Relancer' : 'Lancer'),
+                ? IndicateurBouton(
+                    label: livraison
+                        ? 'Livraison en cours'
+                        : 'Lancement en cours',
+                  )
+                : Text(libelle),
           ),
         ],
       ),

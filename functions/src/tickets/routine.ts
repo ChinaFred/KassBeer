@@ -3,7 +3,8 @@
  * P35). Copie de `functions/src/tickets/routine.ts` de Kass'Dalle.
  *
  * Un seul appel : `POST https://api.anthropic.com/v1/claude_code/routines/{id}/fire`, corps
- * `{"text": "analyse #N"}` ou `{"text": "developpement #N"}` (`livraison` arrive à T5).
+ * `{"text": "<action> #N"}`, `<action>` parmi `analyse`, `developpement`, `livraison` et
+ * `reprise` (les deux dernières partent vers la routine de développement, T5).
  * L'API n'a pas de clé d'idempotence : un appel n'est jamais rejoué, ni ici ni par
  * l'appelant. C'est le seul appel sortant vers `api.anthropic.com` (P35).
  *

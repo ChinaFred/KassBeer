@@ -6,8 +6,12 @@
  * Issues `source:app` du compte propriétaire (pour y reconnaître la ligne « Référence »,
  * sans rien en garder), leurs commentaires (pour la seule réponse du compte
  * propriétaire, et ses analyses et précisions, P32), les événements de fermeture, les PR
- * d'un commit et `app/pubspec.yaml` à ce commit (P24). Il écrit l'Issue, les commentaires
- * des décisions (T2) et des précisions (T3), leurs étiquettes et leur fermeture.
+ * d'un commit et `app/pubspec.yaml` à ce commit (P24). Pour la livraison (T5, P24, P46) :
+ * PR ouvertes (numéro, état, brouillon, auteur, tête, corps lu pour `closingIssueNumbers`
+ * et jamais gardé), chemins des fichiers d'une PR, runs d'un commit (identifiant, nom,
+ * chemin, événement, état, conclusion, dates). Il écrit l'Issue, les commentaires des
+ * décisions (T2) et des précisions (T3), leurs étiquettes et leur fermeture ; rien pour une
+ * livraison.
  *
  * Chaque échec lève une `GithubError` classée. Le message ne contient jamais le jeton
  * (P25) : il reprend le code HTTP et le message de GitHub.
@@ -28,6 +32,8 @@ const REPO_PATH = `/repos/${GITHUB_REPO_FULL_NAME}`;
 const TIMEOUT_MS = 15_000;
 const USER_AGENT = "KassBeer-Tickets";
 const MAX_PAGES = 5;
+/** Pages de 100 fichiers lues au plus pour une PR (P43) : au-delà, la liste est tronquée. */
+export const MAX_FILE_PAGES = 10;
 
 /**
  * - `token` : secret vide, jeton refusé (401), 403 hors limite de débit, 404 sur le dépôt ;
@@ -46,6 +52,22 @@ export class GithubError extends Error {
   ) {
     super(redactSecrets(message).slice(0, 300));
     this.name = "GithubError";
+  }
+}
+
+/**
+ * 403 sur `GET /actions/runs` : la permission « Actions : lecture » manque au jeton, qui sert
+ * par ailleurs. Panne à part (`kind` `other`, jamais `token`) : elle ne pose pas
+ * `token_invalid_since` (décision de l'utilisateur du 2026-11-14, P25).
+ */
+export class GithubActionsForbidden extends GithubError {
+  constructor() {
+    super(
+      "other",
+      403,
+      "GitHub refuse la lecture des runs de la CI : ajoutez « Actions : lecture » au jeton GITHUB_TICKETS_TOKEN.",
+    );
+    this.name = "GithubActionsForbidden";
   }
 }
 
@@ -126,6 +148,80 @@ export function readMergedPrCandidate(raw: Record<string, unknown>): MergedPrCan
   };
 }
 
+/** Une pull request telle que la livraison la lit (liste ou détail, P24). */
+export interface PullRequestView {
+  number: number;
+  /** `open` ou `closed`, `null` si illisible. */
+  state: string | null;
+  draft: boolean;
+  /** Corps, lu pour `closingIssueNumbers` seul : jamais écrit dans Firestore (P24). */
+  body: string | null;
+  authorId: number | null;
+  /** `head.repo.full_name`, `null` pour une copie supprimée. */
+  headRepoFullName: string | null;
+  headRef: string | null;
+  headSha: string | null;
+}
+
+/** Lit une PR rendue par `GET /pulls` ou `GET /pulls/{n}`, ou `null`. Pure. */
+export function readPullRequest(raw: Record<string, unknown>): PullRequestView | null {
+  if (typeof raw.number !== "number" || !Number.isSafeInteger(raw.number)) return null;
+  const user = raw.user as { id?: unknown } | null | undefined;
+  const head = raw.head as
+    { ref?: unknown; sha?: unknown; repo?: { full_name?: unknown } | null } | null | undefined;
+  return {
+    number: raw.number,
+    state: str(raw.state),
+    draft: raw.draft === true,
+    body: str(raw.body),
+    authorId: typeof user?.id === "number" ? user.id : null,
+    headRepoFullName: str(head?.repo?.full_name),
+    headRef: str(head?.ref),
+    headSha: str(head?.sha),
+  };
+}
+
+/** Un fichier d'une PR (`GET /pulls/{n}/files`) : chemin et ancien chemin d'un renommage. */
+export interface PullRequestFileView {
+  filename: string | null;
+  previousFilename: string | null;
+}
+
+/** Un run de GitHub Actions, tel que la livraison le lit (P24). */
+export interface CiRunView {
+  id: number | null;
+  name: string | null;
+  /** Chemin du fichier du workflow (`.github/workflows/ci.yml`). */
+  path: string | null;
+  /** Événement qui l'a lancé (`push`, `pull_request`…). */
+  event: string | null;
+  headSha: string | null;
+  /** Dépôt de la tête (`head_repository.full_name`) : seuls les runs de ce dépôt comptent. */
+  headRepoFullName: string | null;
+  /** `queued`, `in_progress`, `completed`… */
+  status: string | null;
+  /** `success`, `failure`, `cancelled`… ; `null` tant que le run n'est pas fini. */
+  conclusion: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+/** Lit un run rendu par `GET /actions/runs` ou porté par un événement `workflow_run`. Pure. */
+export function readCiRun(raw: Record<string, unknown>): CiRunView {
+  return {
+    id: typeof raw.id === "number" ? raw.id : null,
+    name: str(raw.name),
+    path: str(raw.path),
+    event: str(raw.event),
+    headSha: str(raw.head_sha),
+    headRepoFullName: str((raw.head_repository as { full_name?: unknown } | null)?.full_name),
+    status: str(raw.status),
+    conclusion: str(raw.conclusion),
+    createdAt: str(raw.created_at),
+    updatedAt: str(raw.updated_at),
+  };
+}
+
 /**
  * Vrai si l'Issue rendue par l'API est celle du ticket : Issue (pas une PR), créée par le
  * compte `maintainerId` (le compte du jeton), dont une ligne du corps est exactement la
@@ -176,6 +272,15 @@ export interface GithubClient {
   addLabels(issueNumber: number, labels: string[]): Promise<void>;
   removeLabel(issueNumber: number, label: string): Promise<"removed" | "absent">;
   closeIssue(issueNumber: number, stateReason: "completed" | "not_planned"): Promise<void>;
+  /** PR ouvertes du dépôt, `MAX_PAGES` pages de 100 ; `complete` faux si tronquée (P45). */
+  listOpenPullRequests(): Promise<{ prs: PullRequestView[]; complete: boolean }>;
+  getPullRequest(prNumber: number): Promise<PullRequestView>;
+  /** Fichiers d'une PR, `MAX_FILE_PAGES` pages de 100 ; `complete` faux au-delà (P43). */
+  listPullRequestFiles(
+    prNumber: number,
+  ): Promise<{ files: PullRequestFileView[]; complete: boolean }>;
+  /** Runs de GitHub Actions d'un commit (100 au plus). */
+  listRunsForCommit(headSha: string): Promise<CiRunView[]>;
 }
 
 /** Construit le client pour un jeton. `fetchImpl` est remplacé par les tests. */
@@ -436,6 +541,72 @@ export function githubClient(token: string, fetchImpl: FetchLike = fetch): Githu
       await request<unknown>("PATCH", `${REPO_PATH}/issues/${issueNumber}`, {
         body: { state: "closed", state_reason: stateReason },
       });
+    },
+
+    async listOpenPullRequests() {
+      const prs: PullRequestView[] = [];
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        const batch = await request<Array<Record<string, unknown>>>(
+          "GET",
+          `${REPO_PATH}/pulls?state=open&per_page=100&page=${page}`,
+          { repoLevel: true },
+        );
+        for (const raw of batch) {
+          const pr = readPullRequest(raw);
+          if (pr !== null) prs.push(pr);
+        }
+        if (batch.length < 100) return { prs, complete: true };
+      }
+      return { prs, complete: false };
+    },
+
+    async getPullRequest(prNumber) {
+      const raw = await request<Record<string, unknown>>("GET", `${REPO_PATH}/pulls/${prNumber}`);
+      const pr = readPullRequest(raw);
+      if (pr === null) throw new GithubError("other", null, `PR #${prNumber} illisible`);
+      return pr;
+    },
+
+    async listPullRequestFiles(prNumber) {
+      const files: PullRequestFileView[] = [];
+      for (let page = 1; page <= MAX_FILE_PAGES; page++) {
+        const batch = await request<Array<Record<string, unknown>>>(
+          "GET",
+          `${REPO_PATH}/pulls/${prNumber}/files?per_page=100&page=${page}`,
+        );
+        for (const f of batch) {
+          files.push({ filename: str(f.filename), previousFilename: str(f.previous_filename) });
+        }
+        if (batch.length < 100) return { files, complete: true };
+      }
+      return { files, complete: false };
+    },
+
+    /**
+     * Un 403 hors limite de débit dit ici que la permission « Actions : lecture » manque au
+     * jeton, qui sert par ailleurs : il est rendu en `GithubActionsForbidden`, sans déclarer
+     * tout le jeton refusé (Kass'Dalle, `listRunsForCommit` ; P25).
+     */
+    async listRunsForCommit(headSha) {
+      if (!/^[0-9a-f]{40}$/i.test(headSha)) {
+        throw new GithubError("other", null, `SHA de commit illisible : ${headSha.slice(0, 64)}`);
+      }
+      let raw: { workflow_runs?: unknown };
+      try {
+        raw = await request<{ workflow_runs?: unknown }>(
+          "GET",
+          `${REPO_PATH}/actions/runs?head_sha=${headSha}&per_page=100`,
+        );
+      } catch (err) {
+        if (err instanceof GithubError && err.kind === "token" && err.status === 403) {
+          throw new GithubActionsForbidden();
+        }
+        throw err;
+      }
+      const runs = Array.isArray(raw.workflow_runs) ? raw.workflow_runs : [];
+      return runs
+        .filter((r): r is Record<string, unknown> => r !== null && typeof r === "object")
+        .map(readCiRun);
     },
   };
 }

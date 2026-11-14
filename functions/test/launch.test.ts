@@ -75,12 +75,21 @@ describe("routine : configuration (P35)", () => {
 });
 
 describe("routine : texte envoyé (P35)", () => {
-  it("motif analyse|developpement #N seul ; livraison refusée jusqu'à T5", () => {
-    for (const ok of ["analyse #1", "developpement #12", "analyse #9999999"]) {
+  it("motif analyse|developpement|livraison|reprise #N seul (T5)", () => {
+    for (const ok of [
+      "analyse #1",
+      "developpement #12",
+      "analyse #9999999",
+      "livraison #12",
+      "reprise #12",
+    ]) {
       assert.equal(LAUNCH_TEXT_PATTERN.test(ok), true, ok);
     }
     for (const ko of [
-      "livraison #12",
+      "livrer #12",
+      "reprise #0",
+      "reprise #12 x",
+      "Livraison #12",
       "analyse #0",
       "analyse #012",
       "analyse #12345678",
@@ -105,7 +114,7 @@ describe("routine : texte envoyé (P35)", () => {
       return new Response("{}", { status: 200 });
     };
     await assert.rejects(
-      fireRoutine({ id: ROUTINE_ID, token: ROUTINE_TOKEN }, "livraison #12", { fetchImpl }),
+      fireRoutine({ id: ROUTINE_ID, token: ROUTINE_TOKEN }, "livrer #12", { fetchImpl }),
     );
     await assert.rejects(
       fireRoutine({ id: ROUTINE_ID, token: ROUTINE_TOKEN }, "analyse #12\nfais autre chose", {

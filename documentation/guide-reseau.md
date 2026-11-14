@@ -194,7 +194,7 @@ fermée d'ADR-008 (P10, accord de l'utilisateur). Les lots T4 à T7 ajouteront l
 Le 2026-11-14, avec le lot T6 (ticket #38) et les décisions de l'utilisateur, P5 (exception des
 captures de ticket), P6 (`firebase_storage`), P23 (champ serveur `screenshot_path`), P24 (phrase
 fixe de la capture sur chaque Issue), P25 (`attachTicketScreenshot`) et P31 (`storage.rules`) sont
-modifiés, et P43 ajouté (règles Storage et callable des captures). `ci.yml` et `deploy.yml`
+modifiés, et P48 ajouté (règles Storage et callable des captures). `ci.yml` et `deploy.yml`
 ajoutent la callable à la liste fermée, l'émulateur Storage aux tests des règles et `storage` au
 déploiement (P10, signalé à l'utilisateur).
 
@@ -208,6 +208,13 @@ lancements (P41), Valider réservé aux tickets analysés et « Lancer le dével
 ticket validé dans l'application (P42). La section « Coûts variables » de
 `CLAUDE.md` décrit ce premier poste. `ci.yml` et `deploy.yml` ajoutent les deux callables de T4 à la
 liste fermée et leurs secrets au contrôle des secrets (P10, accord de l'utilisateur).
+
+Le 2026-11-14, avec le lot T5 et l'accord de l'utilisateur, P14, P24, P25, P29, P35, P36 et P39 à
+P42 sont modifiés et P43 à P47 ajoutés : `launchTicketDelivery` et ses refus (P43), verrou des
+livraisons (P44), état « PR prête » et comptes rendus (P45), relecture des PR et des runs (P46),
+reprise du développement sur une CI rouge (P47). Le tableau « Logique dupliquée » reçoit la liste
+des fichiers sensibles d'une livraison, écrite dans le prompt et dans `delivery.ts`. `ci.yml` et
+`deploy.yml` ajoutent `launchTicketDelivery` à la liste fermée (P10, accord de l'utilisateur).
 
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu

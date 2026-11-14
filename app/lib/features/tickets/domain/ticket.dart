@@ -158,6 +158,8 @@ class Ticket {
     this.canAnswer = false,
     this.canLaunchAnalysis = false,
     this.canLaunchDevelopment = false,
+    this.canLaunchDelivery = false,
+    this.canRelaunchDevelopment = false,
     this.decisionLeaseUntil,
     this.retryRequestedAt,
     this.screenshotPath,
@@ -230,10 +232,17 @@ class Ticket {
   final bool canLaunchAnalysis;
   final bool canLaunchDevelopment;
 
+  /// `launch_delivery` et `relaunch_development` (ADR-008, T5) : ticket En
+  /// cours validé dans l'application. Le serveur recontrôle chaque appel.
+  final bool canLaunchDelivery;
+  final bool canRelaunchDevelopment;
+
   /// Lancement que le serveur permet pour [action].
   bool canLaunch(ActionLancement action) => switch (action) {
     ActionLancement.analyse => canLaunchAnalysis,
     ActionLancement.developpement => canLaunchDevelopment,
+    ActionLancement.livraison => canLaunchDelivery,
+    ActionLancement.reprise => canRelaunchDevelopment,
   };
 
   /// Une décision s'applique sur GitHub jusqu'à cette heure (bail du serveur).
@@ -355,6 +364,8 @@ class Ticket {
       canAnswer: allowedRaw.contains(kAnswerDecision),
       canLaunchAnalysis: allowedRaw.contains(kLaunchAnalysisDecision),
       canLaunchDevelopment: allowedRaw.contains(kLaunchDevelopmentDecision),
+      canLaunchDelivery: allowedRaw.contains(kLaunchDeliveryDecision),
+      canRelaunchDevelopment: allowedRaw.contains(kRelaunchDevelopmentDecision),
       decisionLeaseUntil: read.date('decision_lease_until'),
       retryRequestedAt: read.date('retry_requested_at'),
       screenshotPath: read.texteFacultatif('screenshot_path'),
