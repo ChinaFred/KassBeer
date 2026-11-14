@@ -1,14 +1,14 @@
 {
   "versions": [
     {
-      "version": "0.1.43",
+      "version": "0.1.44",
       "date": "2026-11-14",
       "paragraphs": [
         "L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien, 50 à la fois. On choisit la gravité, la période (1 h, 24 h ou 7 jours), une fonction, un ticket ou un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni pendant la frappe. Une entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue."
       ]
     },
     {
-      "version": "0.1.42",
+      "version": "0.1.43",
       "date": "2026-11-14",
       "paragraphs": [
         "L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50 à la fois, avec « Charger la suite » pour les précédentes. Chaque ligne donne la date, la partie de l'application concernée, la version et la plateforme (Android ou Web). Une ligne se déplie sur l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application."

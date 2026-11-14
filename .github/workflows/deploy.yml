@@ -626,13 +626,19 @@ jobs:
         # Un code 0 ne prouve pas que la CLI a déployé : le succès exige aussi
         # « Deploy complete » dans sa sortie. Pas de --force : il supprimerait
         # les index absents de firestore.indexes.json. `storage` : storage.rules
-        # sur le bucket par défaut (ADR-008, T6), qui doit exister avant.
+        # sur le bucket <projet>.firebasestorage.app (ADR-008, T6), nommé dans une
+        # copie de firebase.json : Firebase ne rend pas de bucket par défaut pour
+        # le projet (404 sur defaultBucket, v0.1.41). firebase.json
+        # garde la forme simple, que l'émulateur de rules-tests exige.
         env:
           PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
         run: |
           log="$RUNNER_TEMP/firebase-deploy.log"
           set -o pipefail
-          firebase deploy --only hosting,firestore:rules,firestore:indexes,storage \
+          jq --arg b "$PROJECT.firebasestorage.app" \
+            '.storage = [{bucket: $b, rules: .storage.rules}]' firebase.json > firebase.deploy.json
+          firebase deploy --config firebase.deploy.json \
+            --only hosting,firestore:rules,firestore:indexes,storage \
             --project "$PROJECT" --non-interactive 2>&1 | tee "$log"
           if ! grep -q "Deploy complete" "$log"; then
             echo "::error::firebase deploy a rendu 0 sans « Deploy complete » : rien ne prouve le déploiement."

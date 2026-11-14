@@ -390,7 +390,10 @@ que T6 peut ajouter à la liste de P14. `tickets-functions` reçoit `roles/stora
 sur le seul bucket par défaut.
 
 **Cloud Storage.** Bucket par défaut `kassbeer.firebasestorage.app`, créé en `europe-west1`
-(région de la base ; choix définitif à la création). `storage.rules` :
+(région de la base ; choix définitif à la création). Note du 2026-11-14 (v0.1.42) : le bucket
+est en `us-east1`, seule région du niveau gratuit retenue par l'administrateur, et Firebase ne
+le déclare pas comme bucket par défaut ; l'application, les Functions et `deploy.yml` le
+nomment (`exigences-techniques.md`, « Captures des tickets — réglages faits une fois »). `storage.rules` :
 `match /tickets/{uid}/{ticketId}/{fileName}` ; lecture par le membre propriétaire ou
 l'administrateur ; création et mise à jour par le propriétaire membre, `fileName` égal à
 `screenshot.png` ou `screenshot.jpg`, `request.resource.size <= 5 * 1024 * 1024`, type
@@ -429,7 +432,7 @@ Ils commencent après la fusion de T2. Estimations non mesurées, tirées des ta
 | T3 | secret `GITHUB_WEBHOOK_SECRET` (`openssl rand -hex 32`) créé avant le déploiement ; webhook du dépôt : adresse de `githubTicketWebhook` affichée par le déploiement, `application/json`, ce secret, SSL vérifié, événements Issues et Issue comments (T5 : Pull requests, Workflow runs), `ping` en 200 ; rôles de `github-deploy` sur ce secret ; invocation publique des callables et du webhook (Cloud Run) |
 | T4 | deux routines sur claude.ai/code, dépôt `ChinaFred/KassBeer` seul, aucun connecteur, déclencheur API, prompts collés ; secrets `TICKETS_ROUTINE_ANALYSIS_ID`, `TICKETS_ROUTINE_ANALYSIS_TOKEN`, `TICKETS_ROUTINE_DEV_ID`, `TICKETS_ROUTINE_DEV_TOKEN`, même vides, avant le déploiement |
 | T5 | avant la fusion : jeton `GITHUB_TICKETS_TOKEN` étendu à Actions en lecture, prompt de la routine de développement recollé sur claude.ai (compatible avec le serveur de T4), événements « Pull requests » et « Workflow runs » cochés sur le webhook du dépôt ; aucun secret nouveau |
-| T6 | bucket par défaut en `europe-west1` ; accès de l'agent Storage à Firestore ; CORS du bucket si `getData()` l'exige ; rôle de `github-deploy` pour publier les règles Storage (à vérifier) |
+| T6 | bucket par défaut en `europe-west1` (en `us-east1` et nommé dans le code, note du 2026-11-14 ci-dessus) ; accès de l'agent Storage à Firestore ; CORS du bucket si `getData()` l'exige ; rôle de `github-deploy` pour publier les règles Storage (à vérifier) |
 
 Six secrets en tout : la limite de six versions actives gratuites est atteinte (à vérifier).
 Une rotation détruit la version précédente (`gcloud secrets versions destroy`). Un secret

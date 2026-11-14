@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.43 — fonctionnel
+### v0.1.44 — fonctionnel
 
 L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les
 messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien,
@@ -15,7 +15,7 @@ un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni p
 entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux
 peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue.
 
-### v0.1.43 — technique
+### v0.1.44 — technique
 
 ADR-011, lot J2 : callable `queryLogs` (`functions/src/logs/queryLogs.ts`, exportée par
 `index.ts`) : `onCall`, `requireAdmin` en premier, `maxInstances` 1, `concurrency` 1, 60 s,
@@ -53,7 +53,7 @@ nouvelle recherche replie toutes les entrées (numéro de recherche dans la clé
 fusion de `main` ; mesuré sur `main` à la v0.1.41, avec J1 et J2 : 5 542 375 → 5 600 569 octets
 (+ 58 194).
 
-### v0.1.42 — fonctionnel
+### v0.1.43 — fonctionnel
 
 L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les
 pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50
@@ -62,7 +62,7 @@ l'application concernée, la version et la plateforme (Android ou Web). Une lign
 l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie
 le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application.
 
-### v0.1.42 — technique
+### v0.1.43 — technique
 
 ADR-011, lot J1 : Admin › Rapports d'erreur (`/admin/rapports-erreur`, `PageDeCoquille` sous
 `/admin`, réservé à l'admin par le routeur). Fichiers ajoutés dans `app/lib/features/admin/` :
@@ -81,6 +81,16 @@ note de renvoi dans ADR-008. Seuil `kGrandTexteMinScale` (1,3) ajouté à
 `core/presentation/breakpoints.dart`. `main.dart.js` (`flutter build web --release`) passe de
 5 431 748 (`main` à la v0.1.40) à 5 458 499 octets (+ 26 751). Admin › Journaux et la callable `queryLogs` viendront
 avec le lot J2.
+### v0.1.42 — technique
+
+Le déploiement de la v0.1.41 échouait à la publication de `storage.rules` : Firebase ne rend
+pas de bucket par défaut pour le projet (404 sur `defaultBucket`). Le bucket existe, en
+`us-east1` pour rester dans le niveau gratuit. Il est maintenant nommé partout : `storageBucket` des options Firebase de l'application (sans lui,
+`FirebaseStorage.instance` n'avait aucun bucket et le dépôt d'une capture échouait),
+`STORAGE_BUCKET` de `functions/src/config.ts` pour `attachTicketScreenshot`, et une copie
+`firebase.deploy.json` écrite par `deploy.yml` avec le bucket nommé. `firebase.json` garde la
+forme que l'émulateur des tests de règles exige. Aucun paquet ne change.
+
 ### v0.1.41 — fonctionnel
 
 Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne

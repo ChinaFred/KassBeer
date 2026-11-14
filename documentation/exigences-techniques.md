@@ -2856,7 +2856,7 @@ acceptées. ») ; sinon `screenshot_path` et `updated_at` écrits, `{ok: true}`.
 code court sans `/`, ou nom de la classe), jamais le message ni la pile de l'erreur, qui
 portent le chemin, puis `internal`.
 Un second appel réécrit le même chemin. `src/storage.ts` charge `firebase-admin/storage` au
-premier appel et mémorise le bucket par défaut (P26) ; `@google-cloud/storage` était déjà
+premier appel et mémorise le bucket nommé `STORAGE_BUCKET` (P26) ; `@google-cloud/storage` était déjà
 installé par `firebase-admin`, aucun paquet ajouté. Tests : `functions/test/screenshot.test.ts`
 (six profils de P30, bornes, chemins hors motif dont `.jpg`, auteur, fichier, tailles 0, 5 Mo
 et 5 Mo + 1, signatures, panne dont le message porte le chemin : journal capturé sans lui). La phrase « Capture éventuelle disponible dans Admin › Tickets. » termine
@@ -3857,15 +3857,16 @@ R7. Termine par un résumé : la pull request, le commit poussé et l'état de l
 
 À faire par un compte propriétaire du projet `kassbeer` **avant la fusion qui contient T6** :
 `deploy.yml` publie `storage.rules` à chaque déploiement (`firebase deploy --only
-…,storage`), et la publication échoue tant que le bucket par défaut n'existe pas. Rien de ce
-qui suit n'a été essayé sur le projet : chaque point « à vérifier » se confirme au premier
-déploiement.
+…,storage`) sur le bucket nommé, et la publication échoue tant que ce bucket n'existe pas.
 
-1. **Bucket par défaut.** Console Firebase › Storage › « Commencer », emplacement
-   `europe-west1` (celui de la base ; choix définitif), règles de production (tout refusé :
-   `deploy.yml` publie ensuite `storage.rules`). Nom attendu :
-   `kassbeer.firebasestorage.app` (plan Blaze requis). Hors niveau gratuit en `europe-west1`
-   (à vérifier) : 100 captures de 5 Mo font 0,5 Go.
+1. **Bucket.** `kassbeer.firebasestorage.app`, en `us-east1` : `europe-west1` est hors du
+   niveau gratuit, et l'administrateur ne veut pas de dépense (décision du 2026-11-14). Firebase
+   ne rend pas de bucket par défaut pour le projet (404 sur `defaultBucket` au déploiement de
+   la v0.1.41). Il est donc nommé partout : `storageBucket` des options Firebase
+   (`<projet>.firebasestorage.app`, `firebase_options.dart`), `STORAGE_BUCKET` de
+   `functions/src/config.ts`, et une copie `firebase.deploy.json` de `firebase.json` que
+   `deploy.yml` écrit avec `storage: [{bucket, rules}]`. `firebase.json` garde la forme simple :
+   l'émulateur refuse une liste sans cible.
 2. **Agent de service de Storage et Firestore.** `storage.rules` lit `members/` et
    `tickets/` par `firestore.get` : l'agent de service de Storage doit porter
    `roles/firebaserules.firestoreServiceAgent`. La console le propose au premier
@@ -4401,7 +4402,7 @@ et troncature des entrées ; liste fermée égale aux exports ; champs de `loggi
 | Service | Appelé par | Usage | Accès |
 |---|---|---|---|
 | API REST GitHub (`api.github.com`) | `functions/` seul | créer une Issue, chercher une Issue par référence, lire Issues, commentaires, événements, PR d'un commit, `app/pubspec.yaml` à un commit ; depuis T5, lire les PR ouvertes, une PR, ses fichiers, les runs d'un commit (rien n'est écrit pour une livraison) | jeton à grain fin `GITHUB_TICKETS_TOKEN` (Secret Manager), en-tête `x-github-api-version: 2022-11-28` |
-| Cloud Storage for Firebase (bucket par défaut `kassbeer.firebasestorage.app`, `europe-west1`) | l'application (`firebase_storage` : `putData`, `getData`) sous `storage.rules` ; `attachTicketScreenshot` (`firebase-admin/storage`) | captures jointes aux tickets, `tickets/{uid}/{ticketId}/screenshot.png` (ADR-008, T6) ; jamais d'URL de téléchargement | compte Google du membre (règles) ; compte d'exécution `tickets-functions` (`roles/storage.objectViewer` sur le bucket) |
+| Cloud Storage for Firebase (bucket `kassbeer.firebasestorage.app`, `us-east1`, nommé dans le code) | l'application (`firebase_storage` : `putData`, `getData`) sous `storage.rules` ; `attachTicketScreenshot` (`firebase-admin/storage`) | captures jointes aux tickets, `tickets/{uid}/{ticketId}/screenshot.png` (ADR-008, T6) ; jamais d'URL de téléchargement | compte Google du membre (règles) ; compte d'exécution `tickets-functions` (`roles/storage.objectViewer` sur le bucket) |
 | API Cloud Logging (`logging.googleapis.com/v2/entries:list`) | `queryLogs` seul (`functions/src/logs/queryLogs.ts`, `fetch`, sans SDK) | lire la sortie des fonctions pour Admin › Journaux (ADR-011, J2, P49) | jeton du compte d'exécution lu au serveur de métadonnées, rôle `roles/logging.viewer` ; `redirect: "error"`, délai de 20 s |
 | API Routines de Claude Code (`api.anthropic.com/v1/claude_code/routines/{id}/fire`) | `launchTicketAnalysis` et `launchTicketDevelopment` seuls (`functions/src/tickets/routine.ts`, `fetch`, sans SDK) | lancer une session d'analyse ou de développement d'un ticket, corps `{"text": "analyse #N"}` ou `{"text": "developpement #N"}` (P35) ; API expérimentale, sans clé d'idempotence : un appel n'est jamais rejoué | identifiant et jeton de chaque routine (`TICKETS_ROUTINE_*`, Secret Manager), en-têtes `authorization: Bearer`, `anthropic-version: 2023-06-01` ; `redirect: "error"`, délai de 30 s |
 

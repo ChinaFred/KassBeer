@@ -271,7 +271,7 @@ export const launchTicketDelivery = onCall(
 
 /**
  * Capture d'écran jointe par l'auteur de son ticket (ADR-008, T6, P30). Aucun secret : la
- * fonction lit Firestore et le bucket par défaut avec le compte d'exécution.
+ * fonction lit Firestore et le bucket `STORAGE_BUCKET` avec le compte d'exécution.
  */
 export const attachTicketScreenshot = onCall(
   {
