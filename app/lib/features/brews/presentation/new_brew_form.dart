@@ -24,7 +24,7 @@ import 'choix_processus.dart';
 
 /// Ouvre le formulaire « Nouveau brassin » pour [recipe].
 Future<void> ouvrirNouveauBrassin(BuildContext context, Recipe recipe) =>
-    // ticket: /recettes/:id/fenetre/nouveau-brassin
+    // ticket: /recettes/:id/fenetre/nouveau-brassin, /recettes/importer/:id/fenetre/nouveau-brassin
     showFeuilleOuDialogue<void>(
       context: context,
       builder: (_) => FormulaireNouveauBrassin(recipe: recipe),

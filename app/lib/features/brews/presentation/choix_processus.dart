@@ -487,7 +487,7 @@ Future<String?> choisirProcessus(
   BuildContext context,
   List<ModeleProcessus> miens,
 ) =>
-    // ticket: /recettes/:id/fenetre/choix-processus
+    // ticket: /recettes/:id/fenetre/choix-processus, /recettes/importer/:id/fenetre/choix-processus
     showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(

@@ -29,7 +29,7 @@ la création alors qu'aucun choix n'existe. Le modèle d'exemple n'est jamais ap
 (`ChampProcessus.onCreer` facultatif) ; la feuille de la fiche se titre « Choisir un
 processus » sur un brassin prévu sans processus. `AideChronologieSeule`,
 `BoutonProcessus` et `choisirProcessus` (`choix_processus.dart`) sous « Chronologie de la
-recette seule » ; nouvelle fenêtre `/recettes/:id/fenetre/choix-processus` dans
+recette seule » ; nouvelle fenêtre `/recettes/:id/fenetre/choix-processus` (et `/recettes/importer/:id/…`) dans
 `kTicketElements`. `sansProcessusPrevu` (`section_deroule.dart`) remplace « Changer de
 processus » par « Choisir un processus » sur un brassin prévu sans `process`, et
 `_chronologie` n'y affiche plus « Aucune étape. ». Aucun calcul, aucune règle, aucun modèle de
@@ -37,6 +37,30 @@ données ne change ; l'écran du jour et les journées ne sont pas touchés (P2)
 de la voie « Chronologie de la recette seule » n'est pas fait (point 5 de l'analyse). Tests de
 widgets ajoutés dans `deroule_d3_test.dart` et `process_screens_test.dart`. Demandé par le
 ticket #61.
+
+### v0.1.54 — fonctionnel
+
+Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche.
+Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie »,
+« Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi
+compléter les recettes importées l'une après l'autre. Demandé par le ticket #60.
+
+### v0.1.54 — technique
+
+Recettes › Importer : la fiche d'une recette créée s'ouvre par `push` sur une route hors de la
+coquille, `/recettes/importer/:id` (`AppRoutes.importedRecipe`, `ImportedRecipeScreen` :
+`RecipeDetailScreen` dans une `PageSecondaire` « Recette »). L'import est ouvert par `push`
+depuis la liste des recettes, donc au-dessus de la coquille ; un `push` de `/recettes/:id`
+ajoutait une seconde page de coquille de même clé, le `Navigator` levait l'assertion
+`!keyReservation.contains(key)` et la fiche ne s'affichait pas. Nouvelle route inscrite dans
+`ticket_screens.dart` (nom d'écran, menu du compte, écrans à prix, et les quatre fenêtres de la
+fiche : Exporter, Nouveau brassin, Prix d'un ingrédient, Reprendre un prix). Les sorties de la
+fiche gardent le compte rendu dans la pile : `RecipeDetailScreen(depuisImport: true)` ouvre
+`RecipeEditorScreen` et `BrewStepsEditorScreen` avec `extra: AppRoutes.retourParPop`, qui se
+ferment par `pop` après « Enregistrer » ; Supprimer fait `pop`, Dupliquer ouvre la copie par
+`push` sur `/recettes/importer/:id`, l'état absent affiche « Revenir au compte rendu ». Tests
+ajoutés à `import_recipes_test.dart` sur le parcours réel (liste, import, fiche, retour ;
+Modifier puis Enregistrer ; Supprimer) ; le test 11 est gardé. Demandé par le ticket #60.
 
 ### v0.1.53 — fonctionnel
 

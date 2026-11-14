@@ -1053,8 +1053,9 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
                     child: Etiquette(label: TextesImport.enAttente),
                   ),
             trailing: const Icon(Icons.chevron_right),
-            // `push` : le retour ramène au compte rendu.
-            onTap: () => context.push(AppRoutes.recipe(c.id)),
+            // `push` d'une page hors de la coquille : le retour ramène au
+            // compte rendu (ticket #60).
+            onTap: () => context.push(AppRoutes.importedRecipe(c.id)),
           ),
       ],
       if (_ignorees.isNotEmpty) ...[
