@@ -144,7 +144,7 @@ firestore.rules       # seul contrôle d'accès de la v1
 storage.rules         # règles Cloud Storage : captures des tickets seules (ADR-008, T6)
 firestore.indexes.json
 .github/workflows/    # ci.yml (contrôles), deploy.yml (Hosting, règles, Functions, APK)
-scripts/              # check-version.mjs, check-agents.mjs, changelog-recent.mjs
+scripts/              # check-version.mjs, check-agents.mjs, changelog-recent.mjs, garder-apk-en-ligne.sh (ADR-012)
 import/fiches/        # JSON d'import des 16 fiches (contiennent des prix) : jamais versionné
 import/backup/        # copie faite par effacement-l1/ avant l'effacement : jamais versionnée
 import/sources/       # fichiers de Brewtarget et de DIY Dog (P20) : jamais versionnés
@@ -200,8 +200,8 @@ Ces commandes sont **les contrôles du projet**. Les agents les lancent avant ch
 La CI (`.github/workflows/ci.yml`, ajoutée avec le socle) les rejoue sur chaque PR et chaque
 push, et compile l'APK quand `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`
 change. Une session cloud, sans SDK Android, s'appuie sur ce job. Une PR dont la CI n'est
-pas verte ne se fusionne pas, et le ruleset de `main` l'impose (ADR-002). `deploy.yml` déploie Hosting et les règles, et publie l'APK
-sur App Distribution, après une CI verte sur `main`.
+pas verte ne se fusionne pas, et le ruleset de `main` l'impose (ADR-002). `deploy.yml` déploie Hosting (avec l'APK et `apk_release.json`, ADR-012) et les règles, et
+publie l'APK sur App Distribution, après une CI verte sur `main`.
 
 ## Règles de code
 
