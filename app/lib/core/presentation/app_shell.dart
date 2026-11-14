@@ -9,6 +9,7 @@ import 'bandeau_hors_ligne.dart';
 import 'breakpoints.dart';
 import 'logo_kass_beer.dart';
 import 'menu_compte.dart';
+import 'verification_mise_a_jour.dart';
 import 'zone_capture.dart';
 
 /// Destination de la navigation principale.
@@ -123,7 +124,11 @@ class AppShell extends ConsumerWidget {
       children: [
         if (offline) const BandeauHorsLigne(),
         Expanded(
-          child: RepriseBrassage(location: location, child: body),
+          // Fenêtre « Nouvelle version » de l'APK, une fois par lancement
+          // (ADR-012).
+          child: VerificationMiseAJour(
+            child: RepriseBrassage(location: location, child: body),
+          ),
         ),
       ],
     );

@@ -12,6 +12,9 @@ import 'package:kass_beer/core/data/nouveautes.dart';
 import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
 import 'package:kass_beer/core/preferences/preferences_appareil.dart';
 import 'package:kass_beer/core/providers.dart';
+import 'package:kass_beer/core/services/app_installer.dart';
+import 'package:kass_beer/core/services/app_update_service.dart';
+import 'package:kass_beer/core/services/app_update_transport.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/admin/data/error_reports_repository.dart';
 import 'package:kass_beer/features/admin/domain/error_report.dart';
@@ -1293,6 +1296,103 @@ class RecordingErrorReportService extends ErrorReportService {
   }
 }
 
+/// Réseau et fichier de la mise à jour de l'APK (ADR-012), simulés.
+class FakeTransportMiseAJour implements TransportMiseAJour {
+  /// Réponse au manifeste ; `null` : échec de réseau.
+  ReponseManifeste? manifeste;
+
+  /// Issue du téléchargement ; [progressions] sont annoncées avant.
+  Transfert transfert = const TransfertInterrompu();
+  List<int> progressions = const [];
+
+  /// Appelé à chaque bloc : un test peut y annuler le suivi.
+  void Function()? pendantTransfert;
+
+  /// Attendu après les progressions : la fenêtre reste en téléchargement.
+  Completer<void>? attente;
+
+  /// Erreur levée par [supprimer] ; `null` : effacement réussi.
+  Object? erreurSuppression;
+
+  final lectures = <Uri>[];
+  final telechargements = <({Uri url, String chemin, int max})>[];
+  final suppressions = <String>[];
+
+  @override
+  Future<ReponseManifeste?> lireManifeste(
+    Uri url, {
+    required Duration delai,
+    required int maxOctets,
+  }) async {
+    lectures.add(url);
+    return manifeste;
+  }
+
+  @override
+  Future<Transfert> telecharger(
+    Uri url,
+    String chemin, {
+    required int maxOctets,
+    required bool Function() annule,
+    required void Function(int recus) progression,
+  }) async {
+    telechargements.add((url: url, chemin: chemin, max: maxOctets));
+    for (final recus in progressions) {
+      pendantTransfert?.call();
+      if (annule()) return const TransfertInterrompu();
+      progression(recus);
+    }
+    final enAttente = attente;
+    if (enAttente != null) await enAttente.future;
+    if (annule()) return const TransfertInterrompu();
+    return transfert;
+  }
+
+  @override
+  Future<void> supprimer(String chemin) async {
+    suppressions.add(chemin);
+    final erreur = erreurSuppression;
+    if (erreur != null) throw erreur;
+  }
+}
+
+/// Canal `fr.kassbeer/updates` simulé.
+class FakeInstallateurApk implements InstallateurApk {
+  String? dossier = '/cache/updates';
+  bool permis = true;
+  bool reglagesOuverts = true;
+
+  /// Attendu par [peutInstaller] : la lecture de l'autorisation reste en cours.
+  Completer<void>? attentePermis;
+  int lecturesPermis = 0;
+  Installation installation = Installation.ouverte;
+  final builds = <int>[];
+  int ouverturesReglages = 0;
+
+  @override
+  Future<String?> dossierMisesAJour() async => dossier;
+
+  @override
+  Future<bool> peutInstaller() async {
+    lecturesPermis++;
+    final attente = attentePermis;
+    if (attente != null) await attente.future;
+    return permis;
+  }
+
+  @override
+  Future<bool> ouvrirReglages() async {
+    ouverturesReglages++;
+    return reglagesOuverts;
+  }
+
+  @override
+  Future<Installation> installer(int buildAttendu) async {
+    builds.add(buildAttendu);
+    return installation;
+  }
+}
+
 const brewerUser = SessionUser(
   uid: 'uid-brasseur',
   email: 'Brasseur@Exemple.fr',
@@ -1347,6 +1447,8 @@ class TestApp {
        preferencesProcessus = FakePreferencesProcessusRepository(),
        importFirestore = FakeFirebaseFirestore(),
        preferences = FakePreferencesAppareil(),
+       transportMiseAJour = FakeTransportMiseAJour(),
+       installateur = FakeInstallateurApk(),
        errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
@@ -1387,6 +1489,17 @@ class TestApp {
         preferencesAppareilProvider.overrideWithValue(preferences),
         themeModeInitialProvider.overrideWithValue(themeMode),
         nouveautesSourceProvider.overrideWithValue(() => nouveautes()),
+        // Mise à jour de l'APK : aucun manifeste par défaut (échec de réseau).
+        appUpdateServiceProvider.overrideWith(
+          (ref) => AppUpdateService(
+            errorReportService: errors,
+            installateur: installateur,
+            buildInstalle: buildInstalle,
+            versionInstallee: appVersion,
+            transport: transportMiseAJour,
+            estAndroid: () => estAndroid,
+          ),
+        ),
         // `toImage` ne se termine pas sous l'horloge simulée : la capture
         // rend [capture], et compte les appels.
         capturerEcranProvider.overrideWithValue((context) async {
@@ -1421,6 +1534,12 @@ class TestApp {
   /// Firestore en mémoire d'Admin › Import (v0.6).
   final FakeFirebaseFirestore importFirestore;
   final FakePreferencesAppareil preferences;
+
+  /// Mise à jour de l'APK (ADR-012) : réseau, canal, build installé, plateforme.
+  final FakeTransportMiseAJour transportMiseAJour;
+  final FakeInstallateurApk installateur;
+  int? buildInstalle = 45;
+  bool estAndroid = true;
 
   /// Analyse d'un fichier importé, remplaçable par les tests.
   AnalyseFichier Function(List<int>) analyseur = analyserFichier;

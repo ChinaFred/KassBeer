@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.47 — fonctionnel
+### v0.1.48 — fonctionnel
 
 L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert
 pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres
@@ -21,7 +21,7 @@ section se distinguent de leur contenu. Les messages d'erreur, d'avertissement e
 s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le
 brassage », et chaque vérification prend la couleur de son état.
 
-### v0.1.47 — technique
+### v0.1.48 — technique
 
 Revue visuelle de l'agent `ux-designer`, lots 1 à 3. Lot 1 : `app_theme.dart` construit la
 palette depuis quatre couleurs (couleurs principales en variante `fidelity`, conteneurs en
@@ -37,8 +37,52 @@ et l'en-tête du rail étendu. Lot 3 : composants `LigneListe`, `Encadre`, `Page
 `LigneTicket`, `TitreSection` à deux niveaux, `LigneFiche` en deux colonnes à partir de 600 px,
 `EtatVide` avec titre, constante `kMargeBoutonFlottant` ; `encadre_avertissement.dart` est
 supprimé ; tests dans `app/test/composants_test.dart`. Aucune dépendance changée ;
-`main.dart.js` (`flutter build web --release`) : 5 619 654 octets sur `main` à la v0.1.46,
-5 620 419 après (+ 765) ; `build/web` + 83 Ko (police et médaillon).
+`main.dart.js` (`flutter build web --release`) : 5 633 682 octets sur `main` à la v0.1.47,
+5 634 444 après (+ 762) ; `build/web` + 83 Ko (police et médaillon). APK de release compilé par
+le job « Android — compilation » de la CI (clé de signature absente du poste) ; APK de débogage
+compilé sur le poste. Corrections de la revue : « Tout est prêt » en `titleMedium` et annoncé,
+séparateurs à leur hauteur par défaut, ton neutre d'`Encadre` retiré faute d'usage.
+
+### v0.1.47 — fonctionnel
+
+Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle
+version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui
+de la version installée et la taille du téléchargement. « Plus tard » la ferme jusqu'au
+lancement suivant. « Mettre à jour » télécharge la version dans l'application, contrôle le
+fichier, puis ouvre l'écran d'installation d'Android. La première fois, Android demande
+d'autoriser Kass'Beer à installer des applications : la fenêtre ouvre le bon réglage. Une
+coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre jamais pendant le
+jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change
+sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36.
+
+### v0.1.47 — technique
+
+ADR-012 (option A), ticket #36. Le job `build` de `deploy.yml` copie l'APK signé dans
+`app/build/web/app-release.apk` et écrit `app/build/web/apk_release.json` (`version`,
+`build_number`, `file`, `size_bytes`, `sha256`, `built_at`) ; `plan` lit aussi ce manifeste en
+ligne, sans jeton, et fait construire l'APK s'il est absent, illisible ou en retard sur le build
+de `app/pubspec.yaml`. Sans nouvel APK, `deploy` lance `scripts/garder-apk-en-ligne.sh` avant
+l'authentification : la paire en ligne est recopiée si sa forme, `PK`, sa taille et son SHA-256
+concordent ; un manifeste seul ou une paire incohérente arrête le déploiement. App Distribution
+reste publié depuis le même APK. `firebase.json` : `app-release.apk` (type, téléchargement) et
+`apk_release.json` en `no-cache`, règles de cache existantes inchangées (P1). Client :
+`AppUpdateService` (`app/lib/core/services/app_update_service.dart`), lecture par `HttpClient`
+de `dart:io` derrière un import conditionnel (stub sur le web), délai de 8 s, corps borné à
+4 096 octets, formes contrôlées champ par champ, comparaison du seul `build_number` au build
+installé ; échec réseau sans rapport, réponse 200 illisible en `app_update_check` ; fichier
+faux (taille, SHA-256, paquet ou `versionCode`) effacé et rapporté en `app_update_download`,
+coupure ou annulation sans rapport. Fenêtre `app_update_dialog.dart`, vérification depuis la
+coquille (`verification_mise_a_jour.dart`), jamais sur `/brassins/:id/jour` ni
+`/brassins/:id/jour/:journee`. Canal Kotlin `fr.kassbeer/updates` (`MisesAJour.kt`) :
+`updatesDir`, `canRequestInstall`, `openInstallSettings`, `installApk(expectedBuild)` sans
+chemin reçu du Dart, contrôle du paquet et du `versionCode` par `getPackageArchiveInfo`, second
+`FileProvider` (`MisesAJourFileProvider`, autorité `.updates`, `cacheDir/updates/` seul),
+permission `REQUEST_INSTALL_PACKAGES`, `cacheDir/updates/` vidé à chaque lancement neuf.
+`app/pubspec.yaml` déclare `crypto: 3.0.8` en version exacte ; `pubspec.lock` : seul `crypto`
+passe de `transitive` à `direct main`, aucune version ne change. `main.dart.js` : 5 610 310
+octets avant, 5 612 436 octets après (+ 2 126). Taille de l'APK non mesurée (pas de SDK Android dans
+la session) : à relever dans le résumé du job `build` du premier déploiement. Réglage hors
+dépôt : rétention des versions de Hosting.
 
 ### v0.1.46 — fonctionnel
 
