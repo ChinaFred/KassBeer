@@ -373,18 +373,29 @@ et aucun lien vers l'APK n'est affiché. App Distribution reste publié en paral
   réponse 200 illisible (dont `index.html`, que Hosting sert pour un manifeste absent) :
   rapport `app_update_check`, `context` « raison: <champ> », sans valeur.
 - *Moment* : `VerificationMiseAJour`, monté dans la coquille (`app_shell.dart`) : la coquille
-  n'est affichée qu'à un membre connecté. Une vérification par lancement
-  (`etatMiseAJourProvider`, en mémoire) ; « Plus tard » n'est pas mémorisé. La fenêtre ne
-  s'ouvre pas tant que la route courante (`GoRouter.state`, pages ouvertes par `push` comprises)
-  est `/brassins/:id/jour` ou `/brassins/:id/jour/:journee` (`routeSansMiseAJour`) : elle
-  attend un changement de route. L'écran du jour et les journées n'importent aucun fichier de
-  la mise à jour (P2).
-- *Fenêtre* « Nouvelle version » (`app_update_dialog.dart`) : offre (« Kass'Beer X.Y.Z est
-  disponible (vous avez X.Y.Z). », taille, « Plus tard », « Mettre à jour ») ; autorisation
-  (« Autorisez Kass'Beer à installer des applications », « Ouvrir les réglages », nouvelle
-  lecture de `canRequestInstall` au retour par `AppLifecycleListener`) ; téléchargement
-  (progression, « Annuler ») ; installation ; échec (« Réessayer », « Plus tard »). Retour du
-  système refusé pendant le téléchargement et l'installation. Aucun repli vers le navigateur.
+  n'est affichée qu'à un membre connecté. Une lecture du manifeste par lancement
+  (`etatMiseAJourProvider`, en mémoire) ; « Plus tard » n'est pas mémorisé. La lecture attend
+  que la reprise du brassage ait décidé (`repriseTraiteeProvider`, relu à chaque liste de
+  `brewsListProvider`, écoute fermée dès la lecture partie ; une liste en panne vaut décision),
+  puis une image de plus, le temps que la reprise ouvre l'écran du jour. Ni la lecture ni la
+  fenêtre n'ont lieu tant que la route courante (`GoRouter.state`, pages ouvertes par `push`
+  comprises) est `/brassins/:id/jour` ou `/brassins/:id/jour/:journee` (`routeSansMiseAJour`) :
+  elles attendent le retour sur un autre écran. `proposee` ne passe à vrai qu'à l'ouverture de
+  la fenêtre. La fenêtre rend `true` sur un choix du brasseur (« Plus tard », retour du
+  système, installateur ouvert) ; retirée sans choix (page remplacée sous elle), elle rend
+  `null` et revient au prochain écran permis du même lancement. L'écran du jour et les
+  journées n'importent aucun fichier de la mise à jour (P2, P51).
+- *Fenêtre* « Nouvelle version » (`app_update_dialog.dart`, `AlertDialog(scrollable: true)`) :
+  offre (« Kass'Beer X.Y.Z est disponible (vous avez X.Y.Z). », taille, « Plus tard »,
+  « Mettre à jour ») ; autorisation (« Autorisez Kass'Beer à installer des applications »,
+  « Ouvrir les réglages », nouvelle lecture de `canRequestInstall` au retour par
+  `AppLifecycleListener` ; sans autorisation au retour, « L'autorisation n'est pas encore
+  donnée. ») ; téléchargement (progression nommée « Téléchargement de la nouvelle version »,
+  valeur en pourcentage, « Annuler ») ; installation ; échec (« Réessayer », « Plus tard »).
+  « Mettre à jour », « Réessayer » et « Ouvrir les réglages » sont désactivés pendant leur
+  action (`_enCours`), « Annuler » après un premier appui. Message d'échec, ligne
+  d'installation et ligne d'autorisation en `Semantics(liveRegion: true)`. Retour du système
+  refusé pendant le téléchargement et l'installation. Aucun repli vers le navigateur.
 - *Téléchargement* : `https://kassbeer.web.app/app-release.apk` vers
   `cacheDir/updates/kass-beer-update.apk` (dossier rendu par le canal), SHA-256 calculé au fil
   de l'écriture (`package:crypto`), lecture arrêtée à `size_bytes` + 1 octets, 30 s sans octet

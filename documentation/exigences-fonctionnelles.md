@@ -205,15 +205,22 @@ connecté. Rien sur le web : ni vérification, ni fenêtre, ni lien vers l'APK.
 - Une vérification par lancement, après la connexion, en arrière-plan. Si une version plus
   récente que celle installée est publiée, la fenêtre « Nouvelle version » s'ouvre au-dessus de
   l'écran courant.
-- Sur l'écran du jour de brassage et sur l'écran d'une journée du déroulé, la fenêtre ne
-  s'ouvre pas : elle attend que le brasseur quitte ces écrans.
+- Sur l'écran du jour de brassage et sur l'écran d'une journée du déroulé, ni la vérification
+  ni la fenêtre n'ont lieu : elles attendent que le brasseur quitte ces écrans. Quand
+  l'application rouvre d'elle-même l'écran du jour au lancement, la vérification part au
+  retour.
+- Si la fenêtre disparaît sans choix du brasseur (un autre écran la remplace), elle revient au
+  prochain écran permis, dans le même lancement.
 - Offre : « Kass'Beer X.Y.Z est disponible (vous avez X.Y.Z). », puis « Téléchargement de
   48,2 Mo. ». Boutons « Plus tard » et « Mettre à jour ».
 - « Plus tard » ferme la fenêtre. Rien n'est retenu : elle revient au lancement suivant.
 - « Mettre à jour », sans autorisation d'installer : « Autorisez Kass'Beer à installer des
   applications », « Dans les réglages, activez « Autoriser cette source », puis revenez ici. »,
   boutons « Plus tard » et « Ouvrir les réglages ». Au retour dans l'application avec
-  l'autorisation, le téléchargement part seul.
+  l'autorisation, le téléchargement part seul ; sans elle, la fenêtre ajoute « L'autorisation
+  n'est pas encore donnée. ».
+- Un bouton appuyé reste inactif pendant son action : deux appuis rapides ne lancent qu'un
+  téléchargement. La fenêtre défile quand le texte est agrandi ou l'écran en paysage.
 - Téléchargement : barre de progression, « 12,3 Mo sur 48,2 Mo », bouton « Annuler ». Le
   retour du téléphone ne ferme pas la fenêtre pendant le téléchargement.
 - Fichier reçu et contrôlé : « Ouverture de l'installateur… », puis l'écran d'installation

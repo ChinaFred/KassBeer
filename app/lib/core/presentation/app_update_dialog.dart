@@ -7,14 +7,16 @@ import '../services/app_update_service.dart';
 import 'formats.dart';
 
 /// Ouvre la fenêtre « Nouvelle version » (ADR-012). Elle se ferme par
-/// « Plus tard » ou à l'ouverture de l'installateur du système.
-Future<void> showAppUpdateDialog(
+/// « Plus tard », le retour du système hors téléchargement ou l'ouverture de
+/// l'installateur : elle rend alors `true`. `null` : la fenêtre a disparu sans
+/// choix du brasseur (page remplacée sous elle) et peut revenir.
+Future<bool?> showAppUpdateDialog(
   BuildContext context, {
   required MiseAJourDisponible miseAJour,
   required AppUpdateService service,
 }) =>
     // ticket: aucun (fenêtre de mise à jour de l'APK, ADR-012)
-    showDialog<void>(
+    showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => AppUpdateDialog(miseAJour: miseAJour, service: service),
@@ -58,6 +60,8 @@ class AppUpdateDialog extends StatefulWidget {
   static const echecInstallateur =
       'L\'installateur du système n\'a pas pu s\'ouvrir.';
   static const echecReglages = 'Les réglages n\'ont pas pu s\'ouvrir.';
+  static const pasEncoreAutorise = 'L\'autorisation n\'est pas encore donnée.';
+  static const progression = 'Téléchargement de la nouvelle version';
 
   /// « Kass'Beer X.Y.Z est disponible (vous avez X.Y.Z). »
   static String offre(String nouvelle, String? installee) =>
@@ -88,6 +92,16 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
   String _echec = '';
   AppLifecycleListener? _retour;
 
+  /// Action en cours (lecture de l'autorisation, ouverture des réglages) : les
+  /// boutons qui la lancent sont désactivés, un double appui ne part qu'une fois.
+  bool _enCours = false;
+
+  /// Annulation demandée : « Annuler » est désactivé.
+  bool _annulationDemandee = false;
+
+  /// Retour des réglages sans l'autorisation.
+  bool _pasEncoreAutorise = false;
+
   ManifesteApk get _manifeste => widget.miseAJour.manifeste;
 
   bool get _occupe =>
@@ -103,11 +117,16 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
   @override
   Widget build(BuildContext context) {
     final texte = Theme.of(context).textTheme;
+    final pourcent = (_recus * 100 / _manifeste.tailleOctets).floor();
     return PopScope(
       // Retour du système : refusé pendant le téléchargement et
       // l'installation, « Plus tard » sinon.
-      canPop: !_occupe,
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_occupe) _fermer();
+      },
       child: AlertDialog(
+        scrollable: true,
         icon: const Icon(Icons.system_update_outlined),
         title: const Text(AppUpdateDialog.titre),
         content: Column(
@@ -128,14 +147,23 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
               ),
             ],
             _Etape.autorisation => [
-              const Text(AppUpdateDialog.autorisationTexte),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _pasEncoreAutorise
+                      ? '${AppUpdateDialog.autorisationTexte}. '
+                            '${AppUpdateDialog.pasEncoreAutorise}'
+                      : AppUpdateDialog.autorisationTexte,
+                ),
+              ),
               const SizedBox(height: 8),
               Text(AppUpdateDialog.autorisationAide, style: texte.bodySmall),
             ],
             _Etape.telechargement => [
               LinearProgressIndicator(
                 value: _recus / _manifeste.tailleOctets,
-                semanticsLabel: 'Téléchargement',
+                semanticsLabel: AppUpdateDialog.progression,
+                semanticsValue: '$pourcent %',
               ),
               const SizedBox(height: 12),
               Text(
@@ -144,20 +172,25 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                 style: texte.bodySmall,
               ),
             ],
-            _Etape.installation => const [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(child: Text(AppUpdateDialog.ouvertureInstallateur)),
-                ],
+            _Etape.installation => [
+              Semantics(
+                liveRegion: true,
+                child: const Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(AppUpdateDialog.ouvertureInstallateur),
+                    ),
+                  ],
+                ),
               ),
             ],
-            _Etape.echec => [Text(_echec)],
+            _Etape.echec => [Semantics(liveRegion: true, child: Text(_echec))],
           },
         ),
         actions: switch (_etape) {
@@ -167,7 +200,7 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
               child: const Text(AppUpdateDialog.plusTard),
             ),
             FilledButton(
-              onPressed: _commencer,
+              onPressed: _enCours ? null : _commencer,
               child: const Text(AppUpdateDialog.mettreAJour),
             ),
           ],
@@ -177,13 +210,13 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
               child: const Text(AppUpdateDialog.plusTard),
             ),
             FilledButton(
-              onPressed: _ouvrirReglages,
+              onPressed: _enCours ? null : _ouvrirReglages,
               child: const Text(AppUpdateDialog.ouvrirReglages),
             ),
           ],
           _Etape.telechargement => [
             TextButton(
-              onPressed: () => _suivi?.annuler(),
+              onPressed: _annulationDemandee ? null : _annuler,
               child: const Text(AppUpdateDialog.annuler),
             ),
           ],
@@ -194,7 +227,7 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
               child: const Text(AppUpdateDialog.plusTard),
             ),
             FilledButton(
-              onPressed: _commencer,
+              onPressed: _enCours ? null : _commencer,
               child: const Text(AppUpdateDialog.reessayer),
             ),
           ],
@@ -203,7 +236,13 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
     );
   }
 
-  void _fermer() => Navigator.of(context).pop();
+  /// Choix du brasseur : la fenêtre rend `true`.
+  void _fermer() => Navigator.of(context).pop(true);
+
+  void _annuler() {
+    _suivi?.annuler();
+    setState(() => _annulationDemandee = true);
+  }
 
   void _echouer(String message) {
     if (!mounted) return;
@@ -211,16 +250,22 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
       _etape = _Etape.echec;
       _echec = message;
       _suivi = null;
+      _enCours = false;
     });
   }
 
   /// L'autorisation se lit avant le téléchargement : un APK reçu puis refusé
   /// à l'installation serait transféré pour rien.
   Future<void> _commencer() async {
+    if (_enCours) return;
+    setState(() => _enCours = true);
     final permis = await widget.service.peutInstaller();
     if (!mounted) return;
     if (!permis) {
-      setState(() => _etape = _Etape.autorisation);
+      setState(() {
+        _etape = _Etape.autorisation;
+        _enCours = false;
+      });
       return;
     }
     final suivi = ApkDownload();
@@ -228,6 +273,9 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
       _etape = _Etape.telechargement;
       _suivi = suivi;
       _recus = 0;
+      _annulationDemandee = false;
+      _pasEncoreAutorise = false;
+      _enCours = false;
     });
     final issue = await widget.service.telecharger(
       _manifeste,
@@ -268,9 +316,13 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
 
   /// Ouvre le réglage, puis relit l'autorisation au retour dans Kass'Beer.
   Future<void> _ouvrirReglages() async {
+    if (_enCours) return;
+    setState(() => _enCours = true);
     _retour ??= AppLifecycleListener(onResume: _auRetour);
     final ouvert = await widget.service.ouvrirReglages();
-    if (!ouvert) _echouer(AppUpdateDialog.echecReglages);
+    if (!mounted) return;
+    if (!ouvert) return _echouer(AppUpdateDialog.echecReglages);
+    setState(() => _enCours = false);
   }
 
   void _auRetour() {
@@ -280,7 +332,11 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
 
   Future<void> _relireAutorisation() async {
     final permis = await widget.service.peutInstaller();
-    if (!mounted || !permis || _etape != _Etape.autorisation) return;
+    if (!mounted || _etape != _Etape.autorisation) return;
+    if (!permis) {
+      setState(() => _pasEncoreAutorise = true);
+      return;
+    }
     await _commencer();
   }
 }

@@ -1352,6 +1352,10 @@ class FakeInstallateurApk implements InstallateurApk {
   String? dossier = '/cache/updates';
   bool permis = true;
   bool reglagesOuverts = true;
+
+  /// Attendu par [peutInstaller] : la lecture de l'autorisation reste en cours.
+  Completer<void>? attentePermis;
+  int lecturesPermis = 0;
   Installation installation = Installation.ouverte;
   final builds = <int>[];
   int ouverturesReglages = 0;
@@ -1360,7 +1364,12 @@ class FakeInstallateurApk implements InstallateurApk {
   Future<String?> dossierMisesAJour() async => dossier;
 
   @override
-  Future<bool> peutInstaller() async => permis;
+  Future<bool> peutInstaller() async {
+    lecturesPermis++;
+    final attente = attentePermis;
+    if (attente != null) await attente.future;
+    return permis;
+  }
 
   @override
   Future<bool> ouvrirReglages() async {

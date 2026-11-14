@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/app_update_dialog.dart';
+import 'package:kass_beer/core/router/app_router.dart';
+import 'package:kass_beer/features/brew_day/presentation/brew_day_screen.dart';
 import 'package:kass_beer/core/presentation/verification_mise_a_jour.dart';
 import 'package:kass_beer/core/services/app_installer.dart';
 import 'package:kass_beer/core/services/app_update_service.dart';
 import 'package:kass_beer/core/services/app_update_transport.dart';
 
+import 'support/brew_fixtures.dart';
 import 'support/fakes.dart';
 
 /// Fenêtre « Nouvelle version » (ADR-012), vérification au lancement depuis la
@@ -162,6 +165,130 @@ void main() {
       expect(installateur.builds, isEmpty);
     });
 
+    testWidgets('double appui sur Mettre à jour : un seul téléchargement', (
+      tester,
+    ) async {
+      final attente = Completer<void>();
+      installateur.attentePermis = attente;
+      transport.transfert = TransfertFini(50540134, sha);
+      await ouvrir(tester);
+      await tester.tap(find.text('Mettre à jour'));
+      await tester.pump();
+      await tester.tap(find.text('Mettre à jour'), warnIfMissed: false);
+      await tester.pump();
+      final bouton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Mettre à jour'),
+      );
+      expect(bouton.onPressed, isNull);
+      attente.complete();
+      await tester.pumpAndSettle();
+      expect(installateur.lecturesPermis, 1);
+      expect(transport.telechargements, hasLength(1));
+    });
+
+    testWidgets('Annuler désactivé après un premier appui', (tester) async {
+      final attente = Completer<void>();
+      transport.attente = attente;
+      await ouvrir(tester);
+      await tester.tap(find.text('Mettre à jour'));
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('Annuler'));
+      await tester.pump();
+      final bouton = tester.widget<TextButton>(
+        find.widgetWithText(TextButton, 'Annuler'),
+      );
+      expect(bouton.onPressed, isNull);
+      attente.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(AppUpdateDialog.echecAnnule), findsOneWidget);
+    });
+
+    testWidgets('retour des réglages sans autorisation : message, aucun '
+        'téléchargement', (tester) async {
+      installateur.permis = false;
+      await ouvrir(tester);
+      await tester.tap(find.text('Mettre à jour'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ouvrir les réglages'));
+      await tester.pumpAndSettle();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('L\'autorisation n\'est pas encore donnée.'),
+        findsOneWidget,
+      );
+      expect(transport.telechargements, isEmpty);
+    });
+
+    testWidgets('accessibilité : échec et installation en région vivante, '
+        'progression nommée avec son pourcentage', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final attente = Completer<void>();
+      transport.progressions = [25270067];
+      transport.attente = attente;
+      transport.transfert = const TransfertInterrompu();
+      await ouvrir(tester);
+      await tester.tap(find.text('Mettre à jour'));
+      await tester.pump();
+      await tester.pump();
+      expect(
+        tester.getSemantics(find.byType(LinearProgressIndicator)),
+        matchesSemantics(label: AppUpdateDialog.progression, value: '50 %'),
+      );
+      attente.complete();
+      await tester.pumpAndSettle();
+      final vivant = find.ancestor(
+        of: find.text(AppUpdateDialog.echecReseau),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.liveRegion == true,
+        ),
+      );
+      expect(vivant, findsOneWidget);
+      semantics.dispose();
+    });
+
+    for (final taille in const [Size(360, 640), Size(640, 360)]) {
+      testWidgets('texte à 200 % en ${taille.width.toInt()} × '
+          '${taille.height.toInt()} : aucun débordement', (tester) async {
+        tester.view.physicalSize = taille;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        installateur.permis = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showAppUpdateDialog(
+                  context,
+                  miseAJour: MiseAJourDisponible(
+                    manifeste: manifeste,
+                    versionInstallee: '0.1.45',
+                  ),
+                  service: service,
+                ),
+                child: const Text('ouvrir'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('ouvrir'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.text('Mettre à jour'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text(AppUpdateDialog.ouvrirReglages), findsOneWidget);
+      });
+    }
+
     testWidgets('fichier faux : échec, rapport app_update_download', (
       tester,
     ) async {
@@ -235,6 +362,61 @@ void main() {
       await tester.tap(find.byTooltip('Brassins'));
       await tester.pumpAndSettle();
       expect(find.text('Nouvelle version'), findsNothing);
+      expect(app.transportMiseAJour.lectures, hasLength(1));
+    });
+
+    testWidgets('brassin à reprendre : aucune lecture pendant l\'écran du '
+        'jour, fenêtre au retour', (tester) async {
+      final jour = DateTime(2026, 11, 8);
+      final app = TestApp(appVersion: '0.1.45')
+        ..now = DateTime(jour.year, jour.month, jour.day, 12, 10)
+        ..buildInstalle = 46;
+      app.transportMiseAJour.manifeste = ReponseManifeste(200, manifesteJson);
+      await app.pump(tester);
+      app.signIn(brewerUser, member: brewerMember);
+      app.brews.publish([
+        unBrassin(
+          id: 'b1',
+          brewedAt: DateTime(jour.year, jour.month, jour.day, 11, 45),
+        ),
+      ]);
+      app.brews.publishEvents('b1', [
+        debut(
+          'e1',
+          'k-palier',
+          DateTime(jour.year, jour.month, jour.day, 11, 45),
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.text(BrewDayScreen.reprised), findsOneWidget);
+      expect(app.transportMiseAJour.lectures, isEmpty);
+      expect(find.text('Nouvelle version'), findsNothing);
+      app.container.read(routerProvider).go('/recettes');
+      await tester.pumpAndSettle();
+      expect(app.transportMiseAJour.lectures, hasLength(1));
+      expect(find.text('Nouvelle version'), findsOneWidget);
+    });
+
+    testWidgets('fenêtre retirée sans choix : revient dans le même lancement', (
+      tester,
+    ) async {
+      final app = await connecter(
+        tester,
+        reponse: ReponseManifeste(200, manifesteJson),
+      );
+      expect(find.text('Nouvelle version'), findsOneWidget);
+      // Page remplacée sous la fenêtre : la reprise ou une adresse ouvre
+      // l'écran du jour par `go`.
+      app.brews.publish([
+        unBrassin(id: 'b1', brewedAt: DateTime(2026, 11, 8, 11, 45)),
+      ]);
+      app.brews.publishEvents('b1', const []);
+      app.container.read(routerProvider).go('/brassins/b1/jour');
+      await tester.pumpAndSettle();
+      expect(find.text('Nouvelle version'), findsNothing);
+      app.container.read(routerProvider).go('/recettes');
+      await tester.pumpAndSettle();
+      expect(find.text('Nouvelle version'), findsOneWidget);
       expect(app.transportMiseAJour.lectures, hasLength(1));
     });
 
