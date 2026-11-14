@@ -242,6 +242,12 @@ abstract final class AppTheme {
         backgroundColor: scheme.primaryContainer,
         foregroundColor: scheme.onPrimaryContainer,
       ),
+      // Barre de défilement lisible (`onSurfaceVariant`, au moins 3:1 sur les
+      // surfaces) : le gris par défaut n'atteint pas 2:1 en clair.
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: WidgetStatePropertyAll(scheme.onSurfaceVariant),
+        thickness: const WidgetStatePropertyAll(6),
+      ),
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
       ),
