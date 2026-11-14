@@ -1,18 +1,9 @@
 // tickets/, tickets/{id}/decisions/, tickets/{id}/admin/, ticket_quotas/, ticket_status/ :
-// tickets des membres, décisions, analyses et lancements lus par l'admin (ADR-006, T1 et
-// T2 ; ADR-008, T3 et T4 ; P23, P4, P11, P41).
+// tickets des membres, historique des décisions écrit par le serveur, analyses et lancements
+// lus par l'admin (ADR-006, T1 et T2 ; ADR-008, T3, T4 et T7 ; P23, P4, P11, P41).
 
 import { describe, it } from "node:test";
-import {
-  CREATED,
-  db,
-  deleteField,
-  memberId,
-  seed,
-  serverTimestamp,
-  Timestamp,
-  uidOf,
-} from "./helpers.mjs";
+import { CREATED, db, memberId, seed, serverTimestamp, Timestamp, uidOf } from "./helpers.mjs";
 import { expectRule, state, useEnv } from "./setup.mjs";
 
 useEnv();
@@ -376,7 +367,7 @@ describe("tickets — mise à jour par l'auteur", () => {
   });
 });
 
-/// Décision telle que l'écran Admin › Tickets la crée.
+/// Décision telle que l'écran Admin › Tickets la créait avant T7 : les règles la refusent.
 const decision = (name, extra = {}) => ({
   action: "refuse",
   text: "Hors du périmètre de l'application.",
@@ -421,19 +412,14 @@ async function seedDecisions() {
   });
 }
 
-describe("tickets — décisions, cinq profils (P4, P23)", () => {
-  const create = {
-    anonymous: false,
-    nonMember: false,
-    owner: false,
-    otherBrewer: false,
-    admin: true,
-  };
-  for (const [name, allowed] of Object.entries(create)) {
-    it(`${name} crée une décision sur le ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+describe("tickets — décisions, cinq profils (P4, P23, T7)", () => {
+  // Les décisions sont écrites par les callables seules (ADR-008, T7) : aucune création
+  // client, admin compris.
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} crée une décision sur le ticket de brewer-a : refusé`, async () => {
       await seedDecisions();
       await expectRule(
-        allowed,
+        false,
         db(state.env, name).doc("tickets/t-a/decisions/d-new").set(decision(name)),
       );
     });
@@ -447,6 +433,19 @@ describe("tickets — décisions, cinq profils (P4, P23)", () => {
       if (data.text === undefined) delete data.text;
       await expectRule(false, db(state.env, "owner").doc("tickets/t-a/decisions/d-own").set(data));
     }
+  });
+
+  it("admin crée une décision validate, ou à l'état d'une décision appliquée : refusé", async () => {
+    await seedDecisions();
+    const validate = decision("admin", { action: "validate" });
+    delete validate.text;
+    await expectRule(false, db(state.env, "admin").doc("tickets/t-a/decisions/d-v").set(validate));
+    await expectRule(
+      false,
+      db(state.env, "admin")
+        .doc("tickets/t-a/decisions/d-s")
+        .set(decision("admin", { state: "applied", applied_at: serverTimestamp() })),
+    );
   });
 
   const read = {
@@ -473,26 +472,23 @@ describe("tickets — décisions, cinq profils (P4, P23)", () => {
     });
   }
 
-  const retry = {
-    anonymous: false,
-    nonMember: false,
-    owner: false,
-    otherBrewer: false,
-    admin: true,
-  };
-  for (const [name, allowed] of Object.entries(retry)) {
-    it(`${name} relance une décision failed : ${allowed ? "autorisé" : "refusé"}`, async () => {
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit retry_requested_at sur une décision failed : refusé`, async () => {
       await seedDecisions();
       await expectRule(
-        allowed,
+        false,
         db(state.env, name)
           .doc("tickets/t-a/decisions/d-failed")
           .update({ retry_requested_at: serverTimestamp() }),
       );
     });
-  }
-
-  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} modifie l'état d'une décision : refusé`, async () => {
+      await seedDecisions();
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a/decisions/d-failed").update({ state: "pending" }),
+      );
+    });
     it(`${name} supprime une décision : refusé`, async () => {
       await seedDecisions();
       await expectRule(false, db(state.env, name).doc("tickets/t-a/decisions/d-failed").delete());
@@ -500,137 +496,12 @@ describe("tickets — décisions, cinq profils (P4, P23)", () => {
   }
 });
 
-describe("tickets — forme d'une décision à la création (P23)", () => {
-  const valid = {
-    "refuse avec motif": {},
-    "close avec commentaire": { action: "close", text: "Fait dans la v0.3." },
-    "validate sans texte": { action: "validate", text: undefined },
-    "texte de 5 caractères": { text: "12345" },
-    "texte de 2 000 caractères": { text: "m".repeat(2000) },
-    "décision sur le ticket d'un autre brasseur": { __ticket: "t-b" },
-  };
-  for (const [name, extra] of Object.entries(valid)) {
-    it(`${name} : autorisé`, async () => {
-      await seedDecisions();
-      const { __ticket = "t-a", ...rest } = extra;
-      const data = decision("admin", rest);
-      for (const [k, v] of Object.entries(rest)) if (v === undefined) delete data[k];
-      await expectRule(
-        true,
-        db(state.env, "admin").doc(`tickets/${__ticket}/decisions/d-new`).set(data),
-      );
-    });
-  }
-
-  const invalid = {
-    "validate avec texte": { action: "validate" },
-    "refuse sans motif": { text: undefined },
-    "close sans commentaire": { action: "close", text: undefined },
-    "texte de 4 caractères": { text: "1234" },
-    "texte de 2 001 caractères": { text: "m".repeat(2001) },
-    "texte non textuel": { text: 12345 },
-    "action inconnue": { action: "delete" },
-    "action answer (callable seule, ADR-008)": { action: "answer" },
-    "action answer avec texte": { action: "answer", text: "Précision de l'administrateur." },
-    "action launch_analysis (callable seule, ADR-008, T4)": { action: "launch_analysis" },
-    "action launch_analysis sans texte": { action: "launch_analysis", text: undefined },
-    "action launch_development (callable seule, ADR-008, T4)": { action: "launch_development" },
-    "action launch_development sans texte": { action: "launch_development", text: undefined },
-    "action absente": { action: undefined },
-    "état applying": { state: "applying" },
-    "état applied": { state: "applied" },
-    "état absent": { state: undefined },
-    "requested_by_uid d'un autre compte": { requested_by_uid: "brewer-a" },
-    "requested_by_uid absent": { requested_by_uid: undefined },
-    "requested_at fixé par l'appareil": { requested_at: CREATED },
-    "requested_at absent": { requested_at: undefined },
-    "champ serveur error_reason": { error_reason: "x" },
-    "champ serveur applied_at": { applied_at: serverTimestamp() },
-    "champ serveur steps_done": { steps_done: [] },
-    "champ serveur lease_until": { lease_until: serverTimestamp() },
-    "champ serveur comment_id": { comment_id: 1 },
-    "retry_requested_at à la création": { retry_requested_at: serverTimestamp() },
-    "champ hors liste (author_email)": { author_email: "admin@example.com" },
-  };
-  for (const [name, extra] of Object.entries(invalid)) {
-    it(`${name} : refusé`, async () => {
-      await seedDecisions();
-      const data = decision("admin", extra);
-      for (const [k, v] of Object.entries(extra)) if (v === undefined) delete data[k];
-      await expectRule(false, db(state.env, "admin").doc("tickets/t-a/decisions/d-new").set(data));
-    });
-  }
-
-  it("identifiant de décision hors [A-Za-z0-9_-] : refusé", async () => {
-    await seedDecisions();
-    await expectRule(
-      false,
-      db(state.env, "admin").doc("tickets/t-a/decisions/d.1").set(decision("admin")),
-    );
-  });
-
-  it("décision sur un ticket absent : refusé", async () => {
-    await seedDecisions();
-    await expectRule(
-      false,
-      db(state.env, "admin").doc("tickets/absent/decisions/d-new").set(decision("admin")),
-    );
-  });
-
-  it("décision déjà existante réécrite par set : refusé", async () => {
-    await seedDecisions();
-    await expectRule(
-      false,
-      db(state.env, "admin").doc("tickets/t-a/decisions/d-applied").set(decision("admin")),
-    );
-  });
-});
-
-describe("tickets — reprise d'une décision par l'admin", () => {
-  it("décision applied : refusé", async () => {
-    await seedDecisions();
-    await expectRule(
-      false,
-      db(state.env, "admin")
-        .doc("tickets/t-a/decisions/d-applied")
-        .update({ retry_requested_at: serverTimestamp() }),
-    );
-  });
-
-  const refused = {
-    "retry_requested_at à l'heure de l'appareil": { retry_requested_at: CREATED },
-    "état remis à pending": { state: "pending" },
-    "retry_requested_at et état": { retry_requested_at: serverTimestamp(), state: "pending" },
-    "retry_requested_at et texte": {
-      retry_requested_at: serverTimestamp(),
-      text: "Nouveau motif publié",
-    },
-    "error_reason effacé": { error_reason: deleteField() },
-  };
-  for (const [name, change] of Object.entries(refused)) {
-    it(`admin modifie ${name} sur une décision failed : refusé`, async () => {
+describe("tickets — relance d'un envoi en échec : par la callable seule (T7)", () => {
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit retry_requested_at sur le ticket send_failed de brewer-a : refusé`, async () => {
       await seedDecisions();
       await expectRule(
         false,
-        db(state.env, "admin").doc("tickets/t-a/decisions/d-failed").update(change),
-      );
-    });
-  }
-});
-
-describe("tickets — relance d'un envoi en échec (T2)", () => {
-  const retry = {
-    anonymous: false,
-    nonMember: false,
-    owner: false,
-    otherBrewer: false,
-    admin: true,
-  };
-  for (const [name, allowed] of Object.entries(retry)) {
-    it(`${name} relance l'envoi du ticket send_failed de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
-      await seedDecisions();
-      await expectRule(
-        allowed,
         db(state.env, name)
           .doc("tickets/t-failed")
           .update({ retry_requested_at: serverTimestamp() }),
@@ -638,7 +509,7 @@ describe("tickets — relance d'un envoi en échec (T2)", () => {
     });
   }
 
-  it("admin relance un ticket received : refusé", async () => {
+  it("admin écrit retry_requested_at sur un ticket received : refusé", async () => {
     await seedDecisions();
     await expectRule(
       false,
@@ -646,25 +517,15 @@ describe("tickets — relance d'un envoi en échec (T2)", () => {
     );
   });
 
-  const refused = {
-    "à l'heure de l'appareil": { retry_requested_at: CREATED },
-    "avec le statut": { retry_requested_at: serverTimestamp(), status: "pending" },
-    "avec send_attempts": { retry_requested_at: serverTimestamp(), send_attempts: 0 },
-    "avec allowed_decisions": {
-      retry_requested_at: serverTimestamp(),
-      allowed_decisions: ["validate"],
-    },
-    "avec validated_by_app_at": {
-      retry_requested_at: serverTimestamp(),
-      validated_by_app_at: serverTimestamp(),
-    },
-  };
-  for (const [name, change] of Object.entries(refused)) {
-    it(`admin relance ${name} : refusé`, async () => {
-      await seedDecisions();
-      await expectRule(false, db(state.env, "admin").doc("tickets/t-failed").update(change));
-    });
-  }
+  it("admin remet un ticket send_failed à pending : refusé", async () => {
+    await seedDecisions();
+    await expectRule(
+      false,
+      db(state.env, "admin")
+        .doc("tickets/t-failed")
+        .update({ status: "pending", send_attempts: 0 }),
+    );
+  });
 
   // Validation de l'application (ADR-008, 2026-11-13) : écrite par le serveur seul.
   it("owner écrit seen_by_author_at avec validated_by_app_at : refusé", async () => {

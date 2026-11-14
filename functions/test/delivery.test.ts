@@ -11,12 +11,8 @@ import { HttpsError } from "firebase-functions/v2/https";
 
 import * as firestoreModule from "../src/firestore";
 import type { LogEntry } from "../src/logging";
-import {
-  allowedDecisions,
-  decisionClaimVerdict,
-  REJECT_DELIVERY_RUNNING,
-} from "../src/tickets/decisionModel";
-import { applyDecision } from "../src/tickets/decisions";
+import { allowedDecisions, REJECT_DELIVERY_RUNNING } from "../src/tickets/decisionModel";
+import { decideTicket } from "../src/tickets/decisions";
 import {
   SENSITIVE_DELIVERY_PATTERNS,
   ciSummary,
@@ -948,63 +944,40 @@ describe("livraison : verrou (P44)", () => {
 // ── Refuser et Clore pendant la livraison (P44) ─────────────────────────────
 
 describe("décisions pendant une livraison (P44)", () => {
-  const input = (action: string, deliveryRunning: boolean) => ({
-    decision: {
-      state: "pending",
-      action,
-      text: "Motif assez long",
-      leaseUntilMs: null,
-      retryRequested: false,
-    },
-    ticket: {
-      status: "in_progress",
-      allowedDecisions: allowedDecisions("in_progress", true),
-      validatedByAppAt: BY_APP,
-      leaseUntilMs: null,
-      issueNumber: 12,
-      deliveryRunning,
-    },
-    nowMs: NOW,
-  });
-
-  it("Refuser et Clore rejetés pendant la livraison de ce ticket", () => {
-    for (const action of ["refuse", "close"]) {
-      assert.deepEqual(decisionClaimVerdict(input(action, true)), {
-        kind: "reject",
-        reason: REJECT_DELIVERY_RUNNING,
+  for (const action of ["refuse", "close"] as const) {
+    it(`decideTicket : ${action} refusé sans appel GitHub ni décision écrite tant que le verrou tient`, async () => {
+      const db = new FakeDb();
+      mock.method(firestoreModule, "firestore", async () => db.kit());
+      db.seed("tickets/t-1", {
+        status: "in_progress",
+        github_issue_number: 12,
+        validated_by_app_at: BY_APP,
+        allowed_decisions: allowedDecisions("in_progress", true),
       });
-      assert.equal(decisionClaimVerdict(input(action, false)).kind, "claim");
-    }
-  });
-
-  it("applyDecision : Clore rejeté sans appel GitHub tant que le verrou tient", async () => {
-    const db = new FakeDb();
-    mock.method(firestoreModule, "firestore", async () => db.kit());
-    db.seed("tickets/t-1", {
-      status: "in_progress",
-      github_issue_number: 12,
-      validated_by_app_at: BY_APP,
-      allowed_decisions: allowedDecisions("in_progress", true),
+      db.seed("ticket_status/launches", {
+        delivery_running: {
+          ticket_id: "t-1",
+          issue_number: 12,
+          launched_at: Timestamp.fromMillis(Date.now() - HOUR),
+          retry_after: Timestamp.fromMillis(Date.now() + HOUR),
+        },
+      });
+      const calls: string[] = [];
+      await assert.rejects(
+        decideTicket("t-1", action, "Plus utile.", "admin-uid", GH_TOKEN, githubFetch({}, calls)),
+        (err: HttpsError) =>
+          err.code === "failed-precondition" &&
+          (err.details as { code: string; reason: string }).code === "delivery_running" &&
+          (err.details as { reason: string }).reason === REJECT_DELIVERY_RUNNING,
+      );
+      assert.equal(calls.length, 0);
+      assert.deepEqual(
+        [...db.docs.keys()].filter((k) => k.includes("/decisions/")),
+        [],
+      );
+      assert.equal(db.read("tickets/t-1")?.decision_lease_until, undefined);
     });
-    db.seed("tickets/t-1/decisions/d-1", {
-      state: "pending",
-      action: "close",
-      text: "Plus utile.",
-    });
-    db.seed("ticket_status/launches", {
-      delivery_running: {
-        ticket_id: "t-1",
-        issue_number: 12,
-        launched_at: Timestamp.fromMillis(Date.now() - HOUR),
-        retry_after: Timestamp.fromMillis(Date.now() + HOUR),
-      },
-    });
-    const calls: string[] = [];
-    const out = await applyDecision("t-1", "d-1", GH_TOKEN, githubFetch({}, calls));
-    assert.equal(out, "rejected");
-    assert.equal(calls.length, 0);
-    assert.equal(db.read("tickets/t-1/decisions/d-1")?.error_reason, REJECT_DELIVERY_RUNNING);
-  });
+  }
 });
 
 // ── Décisions permises (P42) ────────────────────────────────────────────────

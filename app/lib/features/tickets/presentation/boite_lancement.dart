@@ -46,7 +46,7 @@ final lancementFicheProvider = NotifierProvider.autoDispose
 typedef FinBoiteLancement = ({ResultatLancement? resultat, bool detache});
 
 /// Boîte de confirmation d'un lancement (P39). Rien n'est appelé avant
-/// « Lancer ». Pendant l'envoi, « Fermer », le retour et Échap la ferment
+/// « Lancer ». Pendant l'envoi, « Fermer » et le retour la ferment
 /// sans couper l'appel. Un refus du serveur reste affiché dans la boîte.
 class BoiteLancement extends StatefulWidget {
   const BoiteLancement({
@@ -204,7 +204,7 @@ class _BoiteLancementState extends State<BoiteLancement> {
 
     return PopScope(
       canPop: !_envoi,
-      // Le retour et Échap pendant l'envoi valent « Fermer ».
+      // Le retour pendant l'envoi vaut « Fermer ».
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && _envoi) _fermer((resultat: null, detache: true));
       },

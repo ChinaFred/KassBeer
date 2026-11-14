@@ -52,28 +52,105 @@ const textesTicketAdmin = TextesDocument(
     ? (nom: 'Décision', feminin: true)
     : (nom: action.nom, feminin: action.feminin);
 
-/// Écriture de [action] faite sur l'appareil hors ligne : « Refus enregistré
-/// sur cet appareil. Il partira au retour du réseau. ».
-String phraseHorsLigne(TicketDecisionAction? action) {
-  final (:nom, :feminin) = nomDecision(action);
-  return '$nom enregistré${feminin ? 'e' : ''} sur cet appareil. '
-      '${feminin ? 'Elle' : 'Il'} partira au retour du réseau.';
+/// Hors ligne, sous les boutons de la barre : décisions, « Répondre » et
+/// lancements appellent le serveur (ADR-008, T7). Les boutons restent visibles
+/// et inactifs.
+const kActionsHorsLigne = 'Ces actions demandent le réseau.';
+
+/// Hors ligne, dans le bloc « Envoi impossible ».
+const kRelancerEnvoiHorsLigne = 'Relancer l\'envoi demande le réseau.';
+
+/// Libellé lu de l'indicateur d'une décision en cours : « Refus en cours ».
+String indicateurDecision(TicketDecisionAction action) =>
+    '${action.nom} en cours';
+
+/// Ligne de la barre pendant l'appel d'une décision, boîte fermée ou non.
+String ligneDecisionEnCours(TicketDecisionAction action) =>
+    '${action.nom} en cours sur GitHub.';
+
+/// Message en bas d'écran après une décision appliquée. [valideSurGithub] :
+/// le ticket était validé par une étiquette posée sur GitHub. [texteGarde] :
+/// le texte publié par un essai précédent est gardé, le texte envoyé n'est
+/// pas publié (P53).
+String messageDecisionAppliquee(
+  TicketDecisionAction action, {
+  required bool valideSurGithub,
+  bool texteGarde = false,
+}) {
+  final base = switch (action) {
+    TicketDecisionAction.validate when valideSurGithub =>
+      'Validation enregistrée. Vous pouvez lancer le développement.',
+    TicketDecisionAction.validate =>
+      'Ticket validé. Le membre voit « Validé ».',
+    TicketDecisionAction.refuse => 'Ticket refusé. L\'Issue est fermée.',
+    TicketDecisionAction.close => 'Ticket clos. L\'Issue est fermée.',
+  };
+  if (!texteGarde || action == TicketDecisionAction.validate) return base;
+  final garde = action == TicketDecisionAction.refuse
+      ? 'Le motif déjà publié est gardé'
+      : 'Le commentaire déjà publié est gardé';
+  return '$base $garde : votre nouveau texte n\'est pas publié.';
 }
 
-/// Relance d'un envoi ou d'une décision faite sur l'appareil hors ligne.
-const kRelanceEnvoiHorsLigne =
-    'Nouvel essai enregistré sur cet appareil. Il partira au retour du '
-    'réseau.';
+/// Durée d'un message d'échec en bas d'écran : le temps de le lire et d'agir.
+const kDureeMessageEchec = Duration(seconds: 10);
 
-/// « Répondre » hors ligne : le bouton est inactif, cette phrase dit pourquoi.
-const kRepondreHorsLigne = 'Répondre demande le réseau.';
+/// Message d'un échec de [action], dans la boîte ou en bas d'écran.
+String messageEchecDecision(TicketDecisionAction action, EchecReponse echec) {
+  final valider = action == TicketDecisionAction.validate;
+  final verbe = switch (action) {
+    TicketDecisionAction.validate => 'valider',
+    TicketDecisionAction.refuse => 'refuser',
+    TicketDecisionAction.close => 'clore',
+  };
+  final echoue = switch (action) {
+    TicketDecisionAction.validate => 'Validation non enregistrée',
+    TicketDecisionAction.refuse => 'Refus non publié',
+    TicketDecisionAction.close => 'Clôture non publiée',
+  };
+  final garde = valider ? '' : ' Votre texte est gardé.';
+  if (echec.partiel) {
+    return action == TicketDecisionAction.refuse
+        ? 'Le motif est publié sur GitHub, mais l\'Issue n\'est pas fermée. '
+              'Refuser à nouveau termine sans republier.'
+        : 'Le commentaire est publié sur GitHub, mais l\'Issue n\'est pas '
+              'fermée. Clore à nouveau termine sans republier.';
+  }
+  return switch (echec.cause) {
+    CauseEchecReponse.motif => '$echoue : ${echec.motif}$garde',
+    CauseEchecReponse.reseau => '$echoue : pas de réseau.$garde',
+    CauseEchecReponse.delai =>
+      'Résultat inconnu : le serveur n\'a pas répondu à temps. Regardez le '
+          'statut du ticket avant de $verbe à nouveau.$garde',
+    CauseEchecReponse.acces => '$echoue : accès administrateur refusé.',
+    CauseEchecReponse.autre => '$echoue.$garde',
+  };
+}
 
-/// Lancement hors ligne : le bouton est inactif, cette phrase dit pourquoi.
-const kLancerHorsLigne = 'Lancer une session demande le réseau.';
-
-/// « Répondre » et un lancement hors ligne : une seule phrase.
-const kRepondreEtLancerHorsLigne =
-    'Répondre et lancer une session demandent le réseau.';
+/// Message après « Relancer l'envoi ».
+String messageRelanceEnvoi(ResultatRelanceEnvoi resultat) {
+  final echec = resultat.echec;
+  if (echec != null) {
+    return switch (echec.cause) {
+      CauseEchecReponse.motif => 'Envoi non relancé : ${echec.motif}',
+      CauseEchecReponse.reseau => 'Envoi non relancé : pas de réseau.',
+      CauseEchecReponse.delai =>
+        'Résultat inconnu : regardez le statut du ticket avant de relancer.',
+      CauseEchecReponse.acces =>
+        'Envoi non relancé : accès administrateur refusé.',
+      CauseEchecReponse.autre => 'Envoi non relancé.',
+    };
+  }
+  final issue = resultat.issueNumber;
+  if (resultat.status == TicketStatus.received && issue != null) {
+    return 'Ticket envoyé sur GitHub : Issue #$issue.';
+  }
+  if (resultat.status == TicketStatus.pending) {
+    return 'Envoi relancé, mais GitHub n\'a pas encore publié l\'Issue. Un '
+        'nouvel essai partira dans l\'heure.';
+  }
+  return 'Envoi relancé.';
+}
 
 /// Ligne d'un ticket reçu : « Valider » n'est offert que depuis Analysé
 /// (ADR-008, P42).
@@ -136,120 +213,14 @@ typedef _LigneLancement = ({
 const kPublicationReponseEnCours =
     'Publication de la réponse en cours sur GitHub.';
 
-/// Phrase au-dessus de « Réessayer » et des décisions après un échec.
-const kApresEchec = 'Réessayez, ou prenez une autre décision.';
-
-/// Ligne d'état de la dernière décision, au-dessus des boutons.
-///
-/// [progress] : libellé annoncé de la barre de progression ; `null` : pas de
-/// barre.
-typedef LigneDecision = ({
-  IconData? icon,
-  bool error,
-  String? progress,
-  String text,
-  bool retry,
-});
-
-/// Ligne d'état de [decision] (la plus récente), ou `null` quand il n'y a rien
-/// à dire (décision appliquée). [offline] : l'appareil est hors ligne ;
-/// [ticketLease] : bail du ticket, à défaut de celui de la décision.
-LigneDecision? ligneDecision(
-  TicketDecision decision, {
-  required bool offline,
-  required DateTime now,
-  required DateTime? ticketLease,
-}) {
-  final (:nom, :feminin) = nomDecision(decision.action);
-  final e = feminin ? 'e' : '';
-  final petit = nom.toLowerCase();
-  final ce = feminin ? 'cette' : 'ce';
-  final le = feminin ? 'La' : 'Le';
-  if (decision.hasPendingWrites && offline) {
-    // Une reprise demandée hors ligne laisse la décision `failed` dans le
-    // cache, avec `retry_requested_at` en attente : c'est un nouvel essai, pas
-    // une création.
-    return (
-      icon: Icons.cloud_off,
-      error: false,
-      progress: null,
-      text: decision.state == TicketDecisionState.failed
-          ? kRelanceEnvoiHorsLigne
-          : phraseHorsLigne(decision.action),
-      retry: false,
-    );
-  }
-  switch (decision.state) {
-    case TicketDecisionState.pending || TicketDecisionState.applying:
-      final lease = decision.leaseUntil ?? ticketLease;
-      if (decision.state == TicketDecisionState.applying &&
-          lease != null &&
-          lease.isBefore(now)) {
-        return (
-          icon: Icons.schedule,
-          error: false,
-          progress: null,
-          text:
-              '$nom interrompu$e. Le serveur ${feminin ? 'la' : 'le'} '
-              'reprendra dans l\'heure.',
-          retry: false,
-        );
-      }
-      final requested = decision.requestedAt;
-      final late =
-          decision.state == TicketDecisionState.pending &&
-          !decision.hasPendingWrites &&
-          requested != null &&
-          now.difference(requested) > kDecisionPendingDelay;
-      return (
-        icon: null,
-        error: false,
-        progress: 'Décision en cours',
-        text: late
-            ? 'Le serveur n\'a pas encore pris $ce $petit en compte.'
-            : '$nom en cours sur GitHub.',
-        retry: false,
-      );
-    case TicketDecisionState.applied:
-      return null;
-    case TicketDecisionState.rejected:
-      return (
-        icon: Icons.info_outline,
-        error: false,
-        progress: null,
-        text: decision.errorReason ?? 'Le serveur a écarté $ce $petit.',
-        retry: false,
-      );
-    case TicketDecisionState.failed:
-      final reason = decision.errorReason;
-      return (
-        icon: Icons.error_outline,
-        error: true,
-        progress: null,
-        text: reason == null
-            ? '$le $petit n\'a pas abouti.'
-            : '$le $petit n\'a pas abouti : $reason',
-        retry: true,
-      );
-    case TicketDecisionState.unknown:
-      return (
-        icon: Icons.help_outline,
-        error: false,
-        progress: null,
-        text: 'État de la décision inconnu. Mettez l\'application à jour.',
-        retry: false,
-      );
-  }
-}
-
 /// Ligne de l'historique : « Refus demandé le 11/11/26 à 10:02 · Appliqué ».
 String ligneHistorique(TicketDecision decision) {
   final (:nom, :feminin) = nomDecision(decision.action);
   final e = feminin ? 'e' : '';
   final requested = decision.requestedAt;
   final quand = requested == null
-      ? 'sur cet appareil'
-      : 'le ${formatDateChiffres(requested)} à ${formatHeure(requested)}';
+      ? ''
+      : ' le ${formatDateChiffres(requested)} à ${formatHeure(requested)}';
   final reason = decision.errorReason;
   final etat = switch (decision.state) {
     TicketDecisionState.pending => 'En attente',
@@ -262,7 +233,7 @@ String ligneHistorique(TicketDecision decision) {
     TicketDecisionState.failed => reason == null ? 'Échec' : 'Échec : $reason',
     TicketDecisionState.unknown => 'État inconnu',
   };
-  return '$nom demandé$e $quand · $etat';
+  return '$nom demandé$e$quand · $etat';
 }
 
 /// Fiche « Ticket d'un membre » d'Admin › Tickets : contenu, frise,
@@ -309,125 +280,178 @@ class AdminTicketScreen extends ConsumerWidget {
   }
 }
 
-/// Brouillons et décision écrite d'une fiche, hors de l'état du widget : un
+/// Brouillons et appels en cours d'une fiche, hors de l'état du widget : un
 /// changement de disposition (liste et fiche côte à côte, ou fiche seule)
-/// reconstruit la fiche sans perdre le texte saisi ni la décision en cours.
+/// reconstruit la fiche sans perdre le texte saisi ni l'appel en cours.
 ///
-/// [brouillonReponse], [reponseEnCours], [echecReponse] : « Répondre »
-/// (ADR-008) ; l'appel continue quand la boîte est fermée.
-typedef EtatDecisionsFiche = ({
-  Map<TicketDecisionAction, String> brouillons,
-  TicketDecision? ecrite,
-  String? brouillonReponse,
-  bool reponseEnCours,
-  EchecReponse? echecReponse,
-});
+/// [decisionEnCours], [echecDecision] : Valider, Refuser, Clore (ADR-008, T7) ;
+/// [relanceEnCours] : « Relancer l'envoi » ; [brouillonReponse],
+/// [reponseEnCours], [echecReponse] : « Répondre ». Chaque appel continue
+/// quand sa boîte est fermée.
+@immutable
+class EtatDecisionsFiche {
+  const EtatDecisionsFiche({
+    this.brouillons = const {},
+    this.decisionEnCours,
+    this.echecDecision,
+    this.relanceEnCours = false,
+    this.brouillonReponse,
+    this.reponseEnCours = false,
+    this.echecReponse,
+  });
 
-/// Brouillons d'un refus ou d'une clôture, décision écrite par cet appareil
-/// en attendant que la lecture des décisions la rende, et réponse en cours de
-/// publication.
+  final Map<TicketDecisionAction, String> brouillons;
+  final TicketDecisionAction? decisionEnCours;
+
+  /// Dernier échec d'une décision, avec son action ; effacé par une frappe
+  /// (sauf un échec partiel : texte figé) ou par un nouvel appel.
+  final ({TicketDecisionAction action, EchecReponse echec})? echecDecision;
+  final bool relanceEnCours;
+  final String? brouillonReponse;
+  final bool reponseEnCours;
+  final EchecReponse? echecReponse;
+
+  /// Un appel au serveur part déjà de cette fiche : aucun autre ne part.
+  bool get appelEnCours =>
+      decisionEnCours != null || reponseEnCours || relanceEnCours;
+
+  /// Échec de [action] à afficher, ou `null`.
+  EchecReponse? echecDe(TicketDecisionAction action) =>
+      echecDecision?.action == action ? echecDecision?.echec : null;
+
+  EtatDecisionsFiche copyWith({
+    Map<TicketDecisionAction, String>? brouillons,
+    ValueGetter<TicketDecisionAction?>? decisionEnCours,
+    ValueGetter<({TicketDecisionAction action, EchecReponse echec})?>?
+    echecDecision,
+    bool? relanceEnCours,
+    ValueGetter<String?>? brouillonReponse,
+    bool? reponseEnCours,
+    ValueGetter<EchecReponse?>? echecReponse,
+  }) => EtatDecisionsFiche(
+    brouillons: brouillons ?? this.brouillons,
+    decisionEnCours: decisionEnCours == null
+        ? this.decisionEnCours
+        : decisionEnCours(),
+    echecDecision: echecDecision == null ? this.echecDecision : echecDecision(),
+    relanceEnCours: relanceEnCours ?? this.relanceEnCours,
+    brouillonReponse: brouillonReponse == null
+        ? this.brouillonReponse
+        : brouillonReponse(),
+    reponseEnCours: reponseEnCours ?? this.reponseEnCours,
+    echecReponse: echecReponse == null ? this.echecReponse : echecReponse(),
+  );
+}
+
+/// Brouillons d'un refus ou d'une clôture, décision, relance et réponse en
+/// cours d'appel.
 class DecisionsFicheNotifier extends Notifier<EtatDecisionsFiche> {
   DecisionsFicheNotifier(this.ticketId);
 
   final String ticketId;
 
   @override
-  EtatDecisionsFiche build() => (
-    brouillons: const {},
-    ecrite: null,
-    brouillonReponse: null,
-    reponseEnCours: false,
-    echecReponse: null,
-  );
+  EtatDecisionsFiche build() => const EtatDecisionsFiche();
 
-  void garderBrouillon(TicketDecisionAction action, String text) => state = (
-    brouillons: {...state.brouillons, action: text},
-    ecrite: state.ecrite,
-    brouillonReponse: state.brouillonReponse,
-    reponseEnCours: state.reponseEnCours,
-    echecReponse: state.echecReponse,
-  );
+  /// Garde le texte de [action] à chaque frappe ; un échec affiché s'efface,
+  /// sauf un échec partiel (texte figé).
+  void garderBrouillon(TicketDecisionAction action, String text) {
+    final echec = state.echecDecision;
+    state = state.copyWith(
+      brouillons: {...state.brouillons, action: text},
+      echecDecision:
+          echec != null && echec.action == action && !echec.echec.partiel
+          ? () => null
+          : null,
+    );
+  }
+
+  /// Le ticket est refusé ou clos : les brouillons de Refuser et Clore sont
+  /// sans objet (résultat d'un appel au résultat inconnu, ou décision prise
+  /// ailleurs).
+  void effacerBrouillons() {
+    if (state.brouillons.isEmpty && state.echecDecision == null) return;
+    state = state.copyWith(brouillons: const {}, echecDecision: () => null);
+  }
 
   /// Garde le texte de « Répondre » à chaque frappe ; un échec affiché
   /// s'efface, sauf un échec partiel (texte figé).
-  void garderBrouillonReponse(String text) => state = (
-    brouillons: state.brouillons,
-    ecrite: state.ecrite,
-    brouillonReponse: text,
-    reponseEnCours: state.reponseEnCours,
-    echecReponse: (state.echecReponse?.partiel ?? false)
-        ? state.echecReponse
-        : null,
+  void garderBrouillonReponse(String text) => state = state.copyWith(
+    brouillonReponse: () => text,
+    echecReponse: (state.echecReponse?.partiel ?? false) ? null : () => null,
   );
+
+  /// Applique [action] par sa callable ; un seul appel à la fois par fiche,
+  /// lancement compris. Rend un échec `null` si le serveur l'a appliquée (le
+  /// brouillon s'efface), sinon l'échec, déjà rapporté par le dépôt sans le
+  /// texte (P13), et le texte reste en brouillon. Aucun envoi automatique au
+  /// retour du réseau.
+  Future<ResultatDecision> decider(
+    TicketDecisionAction action, {
+    String? text,
+  }) async {
+    if (state.appelEnCours || ref.read(lancementFicheProvider(ticketId))) {
+      return (
+        echec: const EchecReponse(CauseEchecReponse.autre),
+        texteGarde: false,
+      );
+    }
+    final repository = ref.read(ticketsRepositoryProvider);
+    state = state.copyWith(
+      brouillons: text == null ? null : {...state.brouillons, action: text},
+      decisionEnCours: () => action,
+      echecDecision: () => null,
+    );
+    final resultat = await repository.decide(
+      ticketId: ticketId,
+      action: action,
+      text: text,
+    );
+    final echec = resultat.echec;
+    if (!ref.mounted) return resultat;
+    state = state.copyWith(
+      brouillons: echec == null
+          ? ({...state.brouillons}..remove(action))
+          : null,
+      decisionEnCours: () => null,
+      echecDecision: () =>
+          echec == null ? null : (action: action, echec: echec),
+    );
+    return resultat;
+  }
+
+  /// Relance l'envoi par `retryTicketSend` ; un seul appel à la fois.
+  Future<ResultatRelanceEnvoi> relancerEnvoi() async {
+    if (state.appelEnCours || ref.read(lancementFicheProvider(ticketId))) {
+      return const ResultatRelanceEnvoi.echec(
+        EchecReponse(CauseEchecReponse.autre),
+      );
+    }
+    final repository = ref.read(ticketsRepositoryProvider);
+    state = state.copyWith(relanceEnCours: true);
+    final resultat = await repository.retrySend(ticketId);
+    if (ref.mounted) state = state.copyWith(relanceEnCours: false);
+    return resultat;
+  }
 
   /// Publie [text] par `answerTicketAnalysis` ; un seul appel à la fois.
   /// Rend `null` si le serveur l'a publié (le brouillon s'efface), sinon
   /// l'échec, déjà rapporté par le dépôt sans le texte (P13), et le texte
   /// reste en brouillon.
   Future<EchecReponse?> publierReponse(String text) async {
-    if (state.reponseEnCours) {
+    if (state.appelEnCours || ref.read(lancementFicheProvider(ticketId))) {
       return const EchecReponse(CauseEchecReponse.autre);
     }
     final repository = ref.read(ticketsRepositoryProvider);
-    state = (
-      brouillons: state.brouillons,
-      ecrite: state.ecrite,
-      brouillonReponse: text,
-      reponseEnCours: true,
-      echecReponse: state.echecReponse,
-    );
+    state = state.copyWith(brouillonReponse: () => text, reponseEnCours: true);
     final echec = await repository.answer(ticketId: ticketId, answer: text);
     if (!ref.mounted) return echec;
-    state = (
-      brouillons: state.brouillons,
-      ecrite: state.ecrite,
-      brouillonReponse: echec == null ? null : text,
+    state = state.copyWith(
+      brouillonReponse: () => echec == null ? null : text,
       reponseEnCours: false,
-      echecReponse: echec,
+      echecReponse: () => echec,
     );
     return echec;
-  }
-
-  /// Écrit la décision (dans le cache dès l'appel) ; vrai si le serveur
-  /// l'accepte. Un refus est rapporté par le dépôt, sans le texte (P13), et
-  /// le brouillon revient.
-  Future<bool> ecrire({
-    required TicketDecisionAction action,
-    required String? text,
-    required String requestedByUid,
-  }) async {
-    final repository = ref.read(ticketsRepositoryProvider);
-    final id = repository.newDecisionId(ticketId);
-    final written = repository.createDecision(
-      ticketId: ticketId,
-      id: id,
-      action: action,
-      text: text,
-      requestedByUid: requestedByUid,
-    );
-    state = (
-      brouillons: {...state.brouillons}..remove(action),
-      ecrite: TicketDecision(
-        id: id,
-        action: action,
-        state: TicketDecisionState.pending,
-        text: text,
-        hasPendingWrites: true,
-      ),
-      brouillonReponse: state.brouillonReponse,
-      reponseEnCours: state.reponseEnCours,
-      echecReponse: state.echecReponse,
-    );
-    final accepted = await written;
-    if (accepted || !ref.mounted) return accepted;
-    state = (
-      brouillons: {...state.brouillons, action: ?text},
-      ecrite: state.ecrite?.id == id ? null : state.ecrite,
-      brouillonReponse: state.brouillonReponse,
-      reponseEnCours: state.reponseEnCours,
-      echecReponse: state.echecReponse,
-    );
-    return false;
   }
 }
 
@@ -446,44 +470,66 @@ class _Fiche extends ConsumerStatefulWidget {
 }
 
 class _FicheState extends ConsumerState<_Fiche> {
-  bool _relanceEnvoi = false;
-  bool _relanceDecision = false;
-
-  static const decisionNotSaved = 'Décision non enregistrée. Réessayez.';
-  static const retryNotSaved = 'Relance non enregistrée. Réessayez.';
   static const decisionsLoadError = 'Impossible de lire les décisions.';
 
   Ticket get _ticket => widget.ticket;
 
-  List<TicketDecision> _decisions(
-    ListeLue<TicketDecision>? list,
-    TicketDecision? ecrite,
-  ) {
-    final decisions = [...?list?.valides];
-    if (ecrite != null && !decisions.any((d) => d.id == ecrite.id)) {
-      decisions.add(ecrite);
+  @override
+  void didUpdateWidget(covariant _Fiche oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final status = widget.ticket.status;
+    // Ticket devenu Refusé ou Clos (décision au résultat inconnu, ou prise
+    // ailleurs) : les brouillons de Refuser et Clore s'effacent. Après le
+    // dessin : un fournisseur ne change pas pendant la construction.
+    if (status != oldWidget.ticket.status &&
+        (status == TicketStatus.refused || status == TicketStatus.closed)) {
+      final fiche = ref.read(decisionsFicheProvider(widget.ticket.id).notifier);
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => fiche.effacerBrouillons(),
+      );
     }
-    return decisions..sort(compareDecisionsRecentFirst);
   }
 
+  /// Confirmation, puis appel de `validateTicket`. Le résultat s'affiche
+  /// dans un message de la fiche, même si la disposition change pendant
+  /// l'appel (le fournisseur reste).
   Future<void> _valider() async {
-    final avant = _avantBoite();
-    if (avant == null) return;
+    final fiche = ref.read(decisionsFicheProvider(_ticket.id).notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    final valideSurGithub = _valideSurGithub(_ticket);
     // ticket: aucun (confirmation)
     final ok = await confirmerAction(
       context,
       titre: 'Valider ce ticket ?',
       paragraphes: [
-        _valideSurGithub(_ticket)
-            ? kValiderConfirmationGithub
-            : kValiderConfirmation,
+        valideSurGithub ? kValiderConfirmationGithub : kValiderConfirmation,
       ],
       libelle: 'Valider',
     );
     if (!ok) return;
-    await _ecrire(avant, TicketDecisionAction.validate, null);
+    const action = TicketDecisionAction.validate;
+    final echec = (await fiche.decider(action)).echec;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      echec == null
+          ? SnackBar(
+              content: Text(
+                messageDecisionAppliquee(
+                  action,
+                  valideSurGithub: valideSurGithub,
+                ),
+              ),
+            )
+          : SnackBar(
+              duration: kDureeMessageEchec,
+              content: Text(messageEchecDecision(action, echec)),
+            ),
+    );
   }
 
+  /// Ouvre la boîte « Refuser ce ticket » ou « Clore ce ticket ». L'appel part
+  /// de la boîte et continue si elle est fermée : le résultat s'affiche alors
+  /// dans un message de la fiche.
   Future<void> _demanderTexte(
     TicketDecisionAction action,
     List<TicketDecision> decisions,
@@ -498,25 +544,41 @@ class _FicheState extends ConsumerState<_Fiche> {
       }
       break;
     }
-    final avant = _avantBoite();
-    if (avant == null) return;
-    final initial =
-        ref.read(decisionsFicheProvider(_ticket.id)).brouillons[action] ??
-        previous ??
-        '';
+    final fiche = ref.read(decisionsFicheProvider(_ticket.id).notifier);
+    final brouillon = ref
+        .read(decisionsFicheProvider(_ticket.id))
+        .brouillons[action];
+    if (brouillon == null && previous != null) {
+      fiche.garderBrouillon(action, previous);
+    }
     // ticket: /admin/tickets/:id/fenetre/decision
-    final text = await showFeuilleOuDialogue<String>(
+    await showFeuilleOuDialogue<void>(
       context: context,
       fermetureProtegee: true,
       builder: (context) => FormulaireDecision(
+        ticketId: _ticket.id,
         action: action,
         enCours: _ticket.status == TicketStatus.inProgress,
-        initial: initial,
-        onChanged: (t) => avant.fiche.garderBrouillon(action, t),
+        messenger: ScaffoldMessenger.of(this.context),
       ),
     );
-    if (text == null) return;
-    await _ecrire(avant, action, text);
+  }
+
+  /// « Relancer l'envoi » : un appel, sans confirmation ; le résultat
+  /// s'affiche dans un message.
+  Future<void> _relancerEnvoi() async {
+    final fiche = ref.read(decisionsFicheProvider(_ticket.id).notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    final resultat = await fiche.relancerEnvoi();
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: resultat.echec == null
+            ? const Duration(milliseconds: 4000)
+            : kDureeMessageEchec,
+        content: Text(messageRelanceEnvoi(resultat)),
+      ),
+    );
   }
 
   /// Ouvre la boîte « Répondre ». La publication part de la boîte et
@@ -575,68 +637,15 @@ class _FicheState extends ConsumerState<_Fiche> {
     }
     if (resultat == null) return;
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(content: Text(resultat.message)));
-  }
-
-  /// Ce dont une écriture a besoin, lu avant d'ouvrir une boîte : si la
-  /// fenêtre change de disposition pendant la saisie, cet état est détruit,
-  /// mais le fournisseur reste (la nouvelle fiche l'écoute) et l'écriture
-  /// part quand même. `null` sans compte connecté.
-  ({
-    DecisionsFicheNotifier fiche,
-    String uid,
-    ScaffoldMessengerState messenger,
-  })?
-  _avantBoite() {
-    final uid = ref.read(grantedAccessProvider)?.user.uid;
-    if (uid == null) return null;
-    return (
-      fiche: ref.read(decisionsFicheProvider(_ticket.id).notifier),
-      uid: uid,
-      messenger: ScaffoldMessenger.of(context),
+    messenger.showSnackBar(
+      SnackBar(
+        // Échec ou résultat inconnu : le temps de le lire et d'agir.
+        duration: resultat.issue == IssueLancement.lance
+            ? const Duration(milliseconds: 4000)
+            : kDureeMessageEchec,
+        content: Text(resultat.message),
+      ),
     );
-  }
-
-  /// L'écriture locale est faite dès l'appel : la boîte est fermée, les
-  /// boutons disparaissent. Un refus est rapporté par le dépôt, sans le texte
-  /// (P13) ; le brouillon revient et l'écran l'annonce.
-  static Future<void> _ecrire(
-    ({
-      DecisionsFicheNotifier fiche,
-      String uid,
-      ScaffoldMessengerState messenger,
-    })
-    avant,
-    TicketDecisionAction action,
-    String? text,
-  ) async {
-    final accepted = await avant.fiche.ecrire(
-      action: action,
-      text: text,
-      requestedByUid: avant.uid,
-    );
-    if (accepted) return;
-    avant.messenger.hideCurrentSnackBar();
-    avant.messenger.showSnackBar(
-      const SnackBar(content: Text(decisionNotSaved)),
-    );
-  }
-
-  /// Relance d'un envoi ou d'une décision. Hors ligne, l'écriture attend le
-  /// réseau : l'écran le dit au lieu de garder « Relance en cours ».
-  Future<void> _relancer(
-    Future<bool> Function() write,
-    void Function(bool) setBusy,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => setBusy(true));
-    // Un refus est rapporté par le dépôt ; l'écran l'annonce.
-    final accepted = await write();
-    if (!mounted) return;
-    setState(() => setBusy(false));
-    if (accepted) return;
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text(retryNotSaved)));
   }
 
   @override
@@ -648,19 +657,12 @@ class _FicheState extends ConsumerState<_Fiche> {
     final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
     final names = ref.watch(memberNamesProvider);
     final decisionsAsync = ref.watch(ticketDecisionsProvider(ticket.id));
-    final decisions = _decisions(
-      decisionsAsync.value,
-      ref.watch(decisionsFicheProvider(ticket.id)).ecrite,
-    );
+    final decisions = [...?decisionsAsync.value?.valides]
+      ..sort(compareDecisionsRecentFirst);
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: scheme.onSurfaceVariant,
     );
-    final etatLancements = _etatLancements(
-      decisions: decisions,
-      decisionsRead: decisionsAsync.value != null,
-      offline: offline,
-      now: now,
-    );
+    final etatLancements = _etatLancements(offline: offline, now: now);
     const gap = SizedBox(height: 16);
     final number = ticket.issueNumber;
     final issueLink = lienGithub(ticket.issueUrl);
@@ -738,12 +740,9 @@ class _FicheState extends ConsumerState<_Fiche> {
         gap,
         _EnvoiImpossible(
           ticket: ticket,
-          busy: _relanceEnvoi,
+          busy: ref.watch(decisionsFicheProvider(ticket.id)).relanceEnCours,
           offline: offline,
-          onRetry: () => _relancer(
-            () => ref.read(ticketsRepositoryProvider).retrySend(ticket.id),
-            (v) => _relanceEnvoi = v,
-          ),
+          onRetry: _relancerEnvoi,
         ),
       ],
       if (missing != null) ...[
@@ -844,21 +843,16 @@ class _FicheState extends ConsumerState<_Fiche> {
       ],
     ];
 
-    // Décisions en lecture : une barre de progression à la place de la barre
-    // de décision ; illisibles : aucun bouton, la panne est dans la fiche.
-    final Widget? barre = switch (decisionsAsync) {
-      AsyncValue(value: null, hasError: false) => const LinearProgressIndicator(
-        semanticsLabel: 'Lecture des décisions',
-      ),
-      _ => _barre(
-        context,
-        decisions: decisions,
-        decisionsRead: decisionsAsync.value != null,
-        offline: offline,
-        now: now,
-        etat: etatLancements,
-      ),
-    };
+    // La barre ne dépend pas de l'historique des décisions : les boutons
+    // viennent de `allowed_decisions`, l'appel en cours du fournisseur de la
+    // fiche et du bail du ticket.
+    final barre = _barre(
+      context,
+      decisions: decisions,
+      offline: offline,
+      now: now,
+      etat: etatLancements,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -931,21 +925,17 @@ class _FicheState extends ConsumerState<_Fiche> {
     }
   }
 
-  /// Décision ou réponse en cours : la barre n'affiche aucun bouton.
-  bool _occupe(List<TicketDecision> decisions, DateTime now) {
-    final last = decisions.isEmpty ? null : decisions.first;
-    return (last?.inProgress ?? false) ||
-        _ticket.decisionInProgress(now) ||
-        ref.watch(decisionsFicheProvider(_ticket.id)).reponseEnCours;
-  }
+  /// Décision, relance ou réponse en cours d'appel, ou bail du serveur posé :
+  /// la barre n'affiche aucun bouton.
+  bool _occupe(DateTime now) =>
+      _ticket.decisionInProgress(now) ||
+      ref.watch(decisionsFicheProvider(_ticket.id)).appelEnCours;
 
   /// Lancements (ADR-008, T4) : offerts d'après `allowed_decisions` seul
   /// (P39) ; « en cours » tant que `retry_after` n'est pas passé. `actif` est
   /// l'action du bouton de lancement de la barre quand il est affiché et
   /// actif : la section « Lancements » n'invite à appuyer que dans ce cas.
   _EtatLancementsFiche _etatLancements({
-    required List<TicketDecision> decisions,
-    required bool decisionsRead,
     required bool offline,
     required DateTime now,
   }) {
@@ -1015,16 +1005,15 @@ class _FicheState extends ConsumerState<_Fiche> {
       ),
     };
     // Le bouton est affiché quand l'historique est lu et rien n'est en cours,
-    // dans une barre qui montre ses boutons (décisions lues, aucune décision
-    // ni réponse en cours, `allowed_decisions` calculé). Il est actif en
-    // ligne, sans appel en cours, plafond du jour non atteint.
+    // dans une barre qui montre ses boutons (aucune décision, relance ni
+    // réponse en cours, `allowed_decisions` calculé). Il est actif en ligne,
+    // sans appel en cours, plafond du jour non atteint.
     final actif =
         lancement != null &&
             historique != null &&
             enCours == null &&
-            decisionsRead &&
             ticket.allowedDecisions != null &&
-            !_occupe(decisions, now) &&
+            !_occupe(now) &&
             !offline &&
             !appelEnCours &&
             !(quota?.plafondAtteint ?? false) &&
@@ -1045,12 +1034,11 @@ class _FicheState extends ConsumerState<_Fiche> {
     );
   }
 
-  /// Barre de décision : ligne d'état de la dernière décision, puis les
-  /// boutons de `allowed_decisions` (P26). `null` s'il n'y a rien à montrer.
+  /// Barre de décision : ligne de l'appel en cours, puis les boutons de
+  /// `allowed_decisions` (P26). `null` s'il n'y a rien à montrer.
   Widget? _barre(
     BuildContext context, {
     required List<TicketDecision> decisions,
-    required bool decisionsRead,
     required bool offline,
     required DateTime now,
     required _EtatLancementsFiche etat,
@@ -1058,38 +1046,26 @@ class _FicheState extends ConsumerState<_Fiche> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final ticket = _ticket;
-    final last = decisions.isEmpty ? null : decisions.first;
-    var ligne = last == null
-        ? null
-        : ligneDecision(
-            last,
-            offline: offline,
-            now: now,
-            ticketLease: ticket.decisionLeaseUntil,
-          );
-    final reponse = ref.watch(decisionsFicheProvider(ticket.id));
-    final busy = _occupe(decisions, now);
-    // Pendant une publication, sa ligne passe avant toute ligne sans barre de
-    // progression (échec, rejet, hors ligne…) : l'administrateur voit ce qui
-    // se passe maintenant.
-    if (reponse.reponseEnCours && (ligne == null || ligne.progress == null)) {
-      ligne = (
-        icon: null,
-        error: false,
+    final fiche = ref.watch(decisionsFicheProvider(ticket.id));
+    final busy = _occupe(now);
+    final enCoursDecision = fiche.decisionEnCours;
+    // Une seule ligne d'appel : la décision de cette fiche, la réponse, puis
+    // le bail du serveur (décision prise depuis un autre appareil).
+    final ({String progress, String text})? ligne = switch (enCoursDecision) {
+      final action? => (
+        progress: indicateurDecision(action),
+        text: ligneDecisionEnCours(action),
+      ),
+      null when fiche.reponseEnCours => (
         progress: 'Publication en cours',
         text: kPublicationReponseEnCours,
-        retry: false,
-      );
-    }
-    if (ligne == null && ticket.decisionInProgress(now)) {
-      ligne = (
-        icon: null,
-        error: false,
+      ),
+      null when ticket.decisionInProgress(now) => (
         progress: 'Décision en cours',
         text: 'Décision en cours sur GitHub.',
-        retry: false,
-      );
-    }
+      ),
+      null => null,
+    };
 
     final allowed = ticket.allowedDecisions;
     // Les analyses ne se lisent que pour un ticket publié (section de la
@@ -1124,6 +1100,16 @@ class _FicheState extends ConsumerState<_Fiche> {
     final relanceDe = aRelancer?.at;
     final _LigneLancement? ligneLancement = switch (lancement) {
       _ when etat.livraison != null => _ligneDeLivraison(etat.livraison!),
+      // Appel d'un lancement sans bouton de lancement affiché (statut changé
+      // entre-temps) : la ligne explique les boutons inactifs.
+      null when appelEnCours => (
+        icon: null,
+        progress: 'Lancement en cours',
+        text: 'Lancement en cours.',
+        precisionsVisibles: false,
+        error: false,
+        ton: null,
+      ),
       null when quota != null && quota.plafondAtteint => (
         icon: Icons.event_busy,
         progress: null,
@@ -1235,8 +1221,10 @@ class _FicheState extends ConsumerState<_Fiche> {
         (livraison?.reessayer ?? false) &&
         ref.watch(ticketDeliveryProvider(ticket.id)).isLoading;
 
+    // Un lancement en cours d'appel : décisions et « Répondre » inactifs.
+    final inactif = offline || appelEnCours;
     Widget? actions;
-    if (!busy && decisionsRead) {
+    if (!busy) {
       if (allowed == null) {
         actions = Text(
           'Le serveur n\'a pas encore calculé les décisions possibles pour ce '
@@ -1252,50 +1240,53 @@ class _FicheState extends ConsumerState<_Fiche> {
           spacing: 8,
           overflowSpacing: 8,
           children: [
+            // Décisions et « Répondre » appellent le serveur : inactifs hors
+            // ligne, la ligne sous les boutons dit pourquoi ; inactifs aussi
+            // pendant l'appel d'un lancement (un seul appel à la fois).
             if (allowed.contains(TicketDecisionAction.refuse) && !masquer)
               OutlinedButton.icon(
-                onPressed: () =>
-                    _demanderTexte(TicketDecisionAction.refuse, decisions),
+                onPressed: inactif
+                    ? null
+                    : () => _demanderTexte(
+                        TicketDecisionAction.refuse,
+                        decisions,
+                      ),
                 icon: const Icon(Icons.block),
                 label: const Text('Refuser'),
               ),
-            // « Répondre » appelle le serveur : inactif hors ligne.
             if (repondre)
               OutlinedButton.icon(
-                onPressed: offline ? null : () => _repondre(analyses),
+                onPressed: inactif ? null : () => _repondre(analyses),
                 icon: const Icon(Icons.reply),
                 label: const Text('Répondre'),
               ),
             if (allowed.contains(TicketDecisionAction.close) && !masquer)
               OutlinedButton.icon(
-                onPressed: () =>
-                    _demanderTexte(TicketDecisionAction.close, decisions),
+                onPressed: inactif
+                    ? null
+                    : () =>
+                          _demanderTexte(TicketDecisionAction.close, decisions),
                 icon: const Icon(Icons.archive_outlined),
                 label: const Text('Clore'),
               ),
             if (allowed.contains(TicketDecisionAction.validate))
               FilledButton.icon(
-                onPressed: _valider,
+                onPressed: inactif ? null : _valider,
                 icon: const Icon(Icons.thumb_up_alt_outlined),
                 label: const Text('Valider'),
               ),
             ?boutonLancement,
           ],
         );
-        // Un lancement offert par le serveur, hors ligne : la ligne s'affiche
-        // aussi quand l'historique, absent du cache, retient le bouton.
-        final lancerHorsLigne = offline && lancement != null && enCours == null;
         // La ligne des précisions reste sous la ligne du plafond ou de la
         // relance ; seul un lancement en cours la masque.
         final lignePrecisions =
             enAttente != null &&
             (ligneLancement == null || ligneLancement.precisionsVisibles);
-        final horsLigne = switch ((repondre && offline, lancerHorsLigne)) {
-          (true, true) => kRepondreEtLancerHorsLigne,
-          (true, false) => kRepondreHorsLigne,
-          (false, true) => kLancerHorsLigne,
-          (false, false) => null,
-        };
+        // Hors ligne, une seule ligne pour tous les boutons offerts : elle
+        // s'affiche aussi quand l'historique des lancements, absent du cache,
+        // retient le bouton de lancement.
+        final horsLigne = offline ? kActionsHorsLigne : null;
         actions = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1416,17 +1407,21 @@ class _FicheState extends ConsumerState<_Fiche> {
             ],
             if (horsLigne != null) ...[
               const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ExcludeSemantics(
-                    child: Icon(Icons.cloud_off, color: scheme.onSurface),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(horsLigne, style: theme.textTheme.bodyLarge),
-                  ),
-                ],
+              Semantics(
+                liveRegion: true,
+                container: true,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ExcludeSemantics(
+                      child: Icon(Icons.cloud_off, color: scheme.onSurface),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(horsLigne, style: theme.textTheme.bodyLarge),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -1456,52 +1451,9 @@ class _FicheState extends ConsumerState<_Fiche> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (l.progress case final label?) ...[
-                    LinearProgressIndicator(semanticsLabel: label),
-                    const SizedBox(height: 8),
-                  ],
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (l.icon case final icon?) ...[
-                        ExcludeSemantics(
-                          child: Icon(
-                            icon,
-                            color: l.error ? scheme.error : scheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: Text(l.text, style: theme.textTheme.bodyLarge),
-                      ),
-                    ],
-                  ),
-                  if (l.retry && last != null) ...[
-                    const SizedBox(height: 8),
-                    Text(kApresEchec, style: theme.textTheme.bodyLarge),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: FilledButton.tonalIcon(
-                        onPressed: _relanceDecision
-                            ? null
-                            : () => _relancer(
-                                () => ref
-                                    .read(ticketsRepositoryProvider)
-                                    .retryDecision(
-                                      ticketId: ticket.id,
-                                      decisionId: last.id,
-                                    ),
-                                (v) => _relanceDecision = v,
-                              ),
-                        icon: const Icon(Icons.refresh),
-                        label: _relanceDecision
-                            ? const IndicateurBouton(label: 'Relance en cours')
-                            : const Text('Réessayer'),
-                      ),
-                    ),
-                  ],
+                  LinearProgressIndicator(semanticsLabel: l.progress),
+                  const SizedBox(height: 8),
+                  Text(l.text, style: theme.textTheme.bodyLarge),
                 ],
               ),
             ),
@@ -1533,7 +1485,7 @@ IconData? iconeLivraison(TonLivraison ton) => switch (ton) {
 };
 
 /// Bloc d'un ticket `send_failed` : essais, dernière erreur, « Relancer
-/// l'envoi » ou la relance déjà demandée.
+/// l'envoi » (`retryTicketSend`, ADR-008, T7).
 class _EnvoiImpossible extends StatelessWidget {
   const _EnvoiImpossible({
     required this.ticket,
@@ -1545,8 +1497,7 @@ class _EnvoiImpossible extends StatelessWidget {
   final Ticket ticket;
   final bool busy;
 
-  /// Hors ligne, une relance en attente le dit au lieu de « Relance en
-  /// cours ».
+  /// Hors ligne, le bouton est inactif et une ligne dit pourquoi.
   final bool offline;
   final VoidCallback onRetry;
 
@@ -1555,8 +1506,6 @@ class _EnvoiImpossible extends StatelessWidget {
     final theme = Theme.of(context);
     final attempts = ticket.sendAttempts;
     final error = ticket.lastSendError;
-    final retry = ticket.retryRequestedAt;
-    final changed = ticket.statusChangedAt;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1565,18 +1514,15 @@ class _EnvoiImpossible extends StatelessWidget {
         if (error != null)
           Text('Dernière erreur : $error', style: theme.textTheme.bodyLarge),
         const SizedBox(height: 8),
-        if (retry != null && (changed == null || retry.isAfter(changed)))
-          Semantics(
-            liveRegion: true,
-            child: Text(
-              'Nouvel essai demandé le ${formatDateChiffres(retry)} à '
-              '${formatHeure(retry)}. Il partira dans l\'heure.',
-              style: theme.textTheme.bodyLarge,
-            ),
-          )
-        // Relance écrite hors ligne : le ticket en cache porte l'écriture en
-        // attente, quelle que soit la disposition de l'écran.
-        else if (ticket.hasPendingWrites && offline)
+        FilledButton.tonalIcon(
+          onPressed: busy || offline ? null : onRetry,
+          icon: const Icon(Icons.refresh),
+          label: busy
+              ? const IndicateurBouton(label: 'Relance en cours')
+              : const Text('Relancer l\'envoi'),
+        ),
+        if (offline) ...[
+          const SizedBox(height: 8),
           Semantics(
             liveRegion: true,
             container: true,
@@ -1587,45 +1533,39 @@ class _EnvoiImpossible extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    kRelanceEnvoiHorsLigne,
+                    kRelancerEnvoiHorsLigne,
                     style: theme.textTheme.bodyLarge,
                   ),
                 ),
               ],
             ),
-          )
-        else
-          FilledButton.tonalIcon(
-            onPressed: busy ? null : onRetry,
-            icon: const Icon(Icons.refresh),
-            label: busy
-                ? const IndicateurBouton(label: 'Relance en cours')
-                : const Text('Relancer l\'envoi'),
           ),
+        ],
       ],
     );
   }
 }
 
-/// Boîte « Refuser ce ticket » ou « Clore ce ticket » : rend le texte saisi,
-/// sans espaces autour, par `Navigator.pop`.
-class FormulaireDecision extends StatefulWidget {
+/// Boîte « Refuser ce ticket » ou « Clore ce ticket » (ADR-008, T7) : publie
+/// le motif ou le commentaire par `refuseTicket` ou `closeTicket`. La boîte
+/// peut se fermer pendant l'appel : le résultat s'affiche alors par
+/// [messenger], celui de la fiche. Le texte saisi reste en brouillon dans la
+/// fiche ; hors ligne, il est gardé et rien ne part.
+class FormulaireDecision extends ConsumerStatefulWidget {
   const FormulaireDecision({
     super.key,
+    required this.ticketId,
     required this.action,
     required this.enCours,
-    required this.initial,
-    required this.onChanged,
+    required this.messenger,
   });
 
+  final String ticketId;
   final TicketDecisionAction action;
 
   /// Le ticket est « En cours » : une pull request est peut-être ouverte.
   final bool enCours;
-  final String initial;
-
-  /// Brouillon gardé par la fiche à chaque frappe.
-  final ValueChanged<String> onChanged;
+  final ScaffoldMessengerState messenger;
 
   static const publicWarning =
       'Publié sur un site public : n\'écrivez ni nom ni adresse. Le membre '
@@ -1634,36 +1574,118 @@ class FormulaireDecision extends StatefulWidget {
       'Une pull request est peut-être ouverte. Elle ne sera pas fermée.';
 
   @override
-  State<FormulaireDecision> createState() => _FormulaireDecisionState();
+  ConsumerState<FormulaireDecision> createState() => _FormulaireDecisionState();
 }
 
-class _FormulaireDecisionState extends State<FormulaireDecision> {
+class _FormulaireDecisionState extends ConsumerState<FormulaireDecision> {
   final _formKey = GlobalKey<FormState>();
   final _focus = FocusNode();
+  final _focusBouton = FocusNode();
   late final TextEditingController _text = TextEditingController(
-    text: widget.initial,
+    text:
+        ref
+            .read(decisionsFicheProvider(widget.ticketId))
+            .brouillons[widget.action] ??
+        '',
   );
 
   bool get _refus => widget.action == TicketDecisionAction.refuse;
 
+  String get _nom => _refus ? 'Le motif' : 'Le commentaire';
+
+  @override
+  void initState() {
+    super.initState();
+    // Réouverture après un motif du serveur sur le texte : l'erreur revient
+    // sous le champ dès le premier dessin.
+    final echec = ref
+        .read(decisionsFicheProvider(widget.ticketId))
+        .echecDe(widget.action);
+    if (echec != null && echec.surLeChamp) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _formKey.currentState?.validate();
+      });
+    }
+  }
+
+  /// Texte figé : focus au bouton d'action après le dessin qui reflète
+  /// l'échec, ou au champ en lecture seule si ce bouton est inactif.
+  void _focusApresRendu() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      (_focusBouton.canRequestFocus ? _focusBouton : _focus).requestFocus();
+    });
+  }
+
   @override
   void dispose() {
     _focus.dispose();
+    _focusBouton.dispose();
     _text.dispose();
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _envoyer() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       _focus.requestFocus();
       return;
     }
-    Navigator.of(context).pop(_text.text.trim());
+    final messenger = widget.messenger;
+    final action = widget.action;
+    final fiche = ref.read(decisionsFicheProvider(widget.ticketId).notifier);
+    // Une boîte fermée pendant l'appel reste montée le temps de son animation
+    // de sortie : seule une route encore active affiche le résultat.
+    final route = ModalRoute.of(context);
+    final resultat = await fiche.decider(action, text: _text.text.trim());
+    final echec = resultat.echec;
+    final ouverte = route?.isActive ?? false;
+    if (echec == null) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            messageDecisionAppliquee(
+              action,
+              valideSurGithub: false,
+              texteGarde: resultat.texteGarde,
+            ),
+          ),
+        ),
+      );
+      if (mounted && ouverte) Navigator.of(context).pop();
+      return;
+    }
+    if (mounted && ouverte) {
+      // L'échec est affiché dans la boîte. Focus au champ ; texte figé (motif
+      // déjà publié) : au bouton d'action, seul geste utile, ou au champ en
+      // lecture seule si ce bouton est inactif (hors ligne, autre appel).
+      _formKey.currentState?.validate();
+      if (echec.partiel) {
+        _focusApresRendu();
+      } else {
+        _focus.requestFocus();
+      }
+      return;
+    }
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: kDureeMessageEchec,
+        content: Text(messageEchecDecision(action, echec)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final etat = ref.watch(decisionsFicheProvider(widget.ticketId));
+    final enCours = etat.decisionEnCours == widget.action;
+    final echec = etat.echecDe(widget.action);
+    final partiel = echec?.partiel ?? false;
+    final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
+    final verbe = _refus ? 'Refuser' : 'Clore';
     return Form(
       key: _formKey,
       child: Column(
@@ -1694,11 +1716,54 @@ class _FormulaireDecisionState extends State<FormulaireDecision> {
           TextFormField(
             controller: _text,
             focusNode: _focus,
-            autofocus: true,
+            // Texte figé (motif déjà publié) : le focus va au bouton d'action,
+            // ou à « Annuler » si ce bouton est inactif.
+            autofocus: !partiel,
+            enabled: !enCours,
+            readOnly: partiel,
+            // Une frappe revalide : le motif du serveur s'efface avec elle.
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             minLines: 3,
             maxLines: 8,
             maxLength: kDecisionTextMaxLength,
-            onChanged: widget.onChanged,
+            // Le serveur compte en points de code : un émoji compte pour un,
+            // et la saisie n'est pas coupée au-delà (le validateur refuse).
+            maxLengthEnforcement: MaxLengthEnforcement.none,
+            buildCounter:
+                (
+                  context, {
+                  required currentLength,
+                  required isFocused,
+                  required maxLength,
+                }) {
+                  // Même compte que le validateur : texte sans ses espaces
+                  // de bord.
+                  final n = _text.text.trim().runes.length;
+                  final reste = kDecisionTextMaxLength - n;
+                  return Semantics(
+                    label: reste >= 0
+                        ? (reste > 1
+                              ? '$reste caractères restants'
+                              : '$reste caractère restant')
+                        : (reste < -1
+                              ? '${-reste} caractères en trop'
+                              : '1 caractère en trop'),
+                    liveRegion: isFocused,
+                    child: ExcludeSemantics(
+                      child: Text(
+                        '$n/$kDecisionTextMaxLength',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: n > kDecisionTextMaxLength
+                              ? scheme.error
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+            onChanged: (t) => ref
+                .read(decisionsFicheProvider(widget.ticketId).notifier)
+                .garderBrouillon(widget.action, t),
             decoration: InputDecoration(
               labelText: _refus ? 'Motif du refus' : 'Commentaire de clôture',
               helperText: _refus
@@ -1709,13 +1774,63 @@ class _FormulaireDecisionState extends State<FormulaireDecision> {
               errorMaxLines: 3,
               border: const OutlineInputBorder(),
             ),
-            validator: (value) =>
-                (value ?? '').trim().length < kDecisionTextMinLength
-                ? (_refus
-                      ? 'Le motif doit faire au moins 5 caractères.'
-                      : 'Le commentaire doit faire au moins 5 caractères.')
-                : null,
+            validator: (value) {
+              // Points de code, comme le serveur.
+              final n = (value ?? '').trim().runes.length;
+              if (n < kDecisionTextMinLength) {
+                return '$_nom doit faire au moins 5 caractères.';
+              }
+              if (n > kDecisionTextMaxLength) {
+                return '$_nom ne doit pas dépasser 4 000 caractères.';
+              }
+              final e = ref
+                  .read(decisionsFicheProvider(widget.ticketId))
+                  .echecDe(widget.action);
+              return e != null && e.surLeChamp ? e.motif : null;
+            },
           ),
+          if (enCours) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                '${widget.action.nom} en cours. Vous pouvez fermer : le '
+                'résultat s\'affichera dans un message.',
+                style: theme.textTheme.bodyLarge,
+              ),
+            ),
+          ] else if (echec != null && !echec.surLeChamp) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                messageEchecDecision(widget.action, echec),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: partiel ? null : scheme.error,
+                ),
+              ),
+            ),
+          ],
+          if (offline && !enCours) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              container: true,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ExcludeSemantics(child: Icon(Icons.cloud_off)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '$verbe demande le réseau. Votre texte est gardé.',
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           OverflowBar(
             alignment: MainAxisAlignment.end,
@@ -1723,13 +1838,24 @@ class _FormulaireDecisionState extends State<FormulaireDecision> {
             spacing: 8,
             overflowSpacing: 8,
             children: [
+              // La fermeture ne coupe pas l'appel.
               TextButton(
+                // Texte figé et action inactive (hors ligne, autre appel) :
+                // le focus va à « Annuler » plutôt que nulle part.
+                autofocus: partiel && (enCours || offline || etat.appelEnCours),
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Annuler'),
+                child: Text(enCours ? 'Fermer' : 'Annuler'),
               ),
               FilledButton(
-                onPressed: _submit,
-                child: Text(_refus ? 'Refuser' : 'Clore'),
+                focusNode: _focusBouton,
+                autofocus:
+                    partiel && !(enCours || offline || etat.appelEnCours),
+                onPressed: enCours || offline || etat.appelEnCours
+                    ? null
+                    : _envoyer,
+                child: enCours
+                    ? IndicateurBouton(label: indicateurDecision(widget.action))
+                    : Text(verbe),
               ),
             ],
           ),
@@ -1791,6 +1917,7 @@ class FormulaireReponse extends ConsumerStatefulWidget {
   static const enCours =
       'Publication en cours. Vous pouvez fermer : le résultat s\'affichera '
       'dans un message.';
+  static const horsLigne = 'Répondre demande le réseau. Votre texte est gardé.';
   static const dejaPubliee =
       'Cette réponse est déjà publiée sur GitHub. Publier remet le ticket à '
       'Reçu.';
@@ -1802,6 +1929,7 @@ class FormulaireReponse extends ConsumerStatefulWidget {
 class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
   final _formKey = GlobalKey<FormState>();
   final _focus = FocusNode();
+  final _focusBouton = FocusNode();
   late final TextEditingController _text = TextEditingController(
     text:
         ref.read(decisionsFicheProvider(widget.ticketId)).brouillonReponse ??
@@ -1811,8 +1939,33 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
   bool get _recu => widget.status == TicketStatus.received;
 
   @override
+  void initState() {
+    super.initState();
+    // Réouverture après un motif du serveur sur le texte : l'erreur revient
+    // sous le champ dès le premier dessin.
+    final echec = ref
+        .read(decisionsFicheProvider(widget.ticketId))
+        .echecReponse;
+    if (echec != null && echec.surLeChamp) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _formKey.currentState?.validate();
+      });
+    }
+  }
+
+  /// Texte figé : focus au bouton d'action après le dessin qui reflète
+  /// l'échec, ou au champ en lecture seule si ce bouton est inactif.
+  void _focusApresRendu() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      (_focusBouton.canRequestFocus ? _focusBouton : _focus).requestFocus();
+    });
+  }
+
+  @override
   void dispose() {
     _focus.dispose();
+    _focusBouton.dispose();
     _text.dispose();
     super.dispose();
   }
@@ -1825,23 +1978,38 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
     final messenger = widget.messenger;
     final recu = _recu;
     final notifier = ref.read(decisionsFicheProvider(widget.ticketId).notifier);
+    // Une boîte fermée pendant l'appel reste montée le temps de son animation
+    // de sortie : seule une route encore active affiche le résultat.
+    final route = ModalRoute.of(context);
     final echec = await notifier.publierReponse(_text.text.trim());
+    final ouverte = route?.isActive ?? false;
     if (echec == null) {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(content: Text(messageReponsePubliee(recu: recu))),
       );
-      if (mounted) Navigator.of(context).pop();
+      if (mounted && ouverte) Navigator.of(context).pop();
       return;
     }
-    if (mounted) {
-      // Le motif est affiché dans la boîte ; le champ reprend le focus.
+    if (mounted && ouverte) {
+      // L'échec est affiché dans la boîte. Focus au champ ; texte figé
+      // (réponse déjà publiée) : au bouton « Publier », ou au champ en
+      // lecture seule si ce bouton est inactif (hors ligne, autre appel).
       _formKey.currentState?.validate();
-      if (echec.surLeChamp) _focus.requestFocus();
+      if (echec.partiel) {
+        _focusApresRendu();
+      } else {
+        _focus.requestFocus();
+      }
       return;
     }
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(content: Text(messageEchecReponse(echec))));
+    messenger.showSnackBar(
+      SnackBar(
+        duration: kDureeMessageEchec,
+        content: Text(messageEchecReponse(echec)),
+      ),
+    );
   }
 
   @override
@@ -1852,6 +2020,7 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
     final enCours = etat.reponseEnCours;
     final echec = etat.echecReponse;
     final partiel = echec?.partiel ?? false;
+    final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
     final analyse = widget.derniereAnalyse;
     return Form(
       key: _formKey,
@@ -1896,9 +2065,13 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
           TextFormField(
             controller: _text,
             focusNode: _focus,
-            autofocus: true,
+            // Texte figé (réponse déjà publiée) : le focus va à « Publier »,
+            // ou à « Annuler » si ce bouton est inactif.
+            autofocus: !partiel,
             enabled: !enCours,
             readOnly: partiel,
+            // Une frappe revalide : le motif du serveur s'efface avec elle.
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             minLines: 4,
             maxLines: 10,
             maxLength: kTicketAnswerMaxLength,
@@ -1993,6 +2166,26 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
               ),
             ),
           ],
+          if (offline && !enCours) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              container: true,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ExcludeSemantics(child: Icon(Icons.cloud_off)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      FormulaireReponse.horsLigne,
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           OverflowBar(
             alignment: MainAxisAlignment.end,
@@ -2002,11 +2195,19 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
             children: [
               // La fermeture ne coupe pas l'appel.
               TextButton(
+                // Texte figé et action inactive (hors ligne, autre appel) :
+                // le focus va à « Annuler » plutôt que nulle part.
+                autofocus: partiel && (enCours || offline || etat.appelEnCours),
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(enCours ? 'Fermer' : 'Annuler'),
               ),
               FilledButton(
-                onPressed: enCours ? null : _publier,
+                focusNode: _focusBouton,
+                autofocus:
+                    partiel && !(enCours || offline || etat.appelEnCours),
+                onPressed: enCours || offline || etat.appelEnCours
+                    ? null
+                    : _publier,
                 child: enCours
                     ? const IndicateurBouton(label: 'Publication en cours')
                     : const Text('Publier'),
