@@ -32,6 +32,7 @@ Ticket unTicket({
   DateTime? decisionLeaseUntil,
   DateTime? retryRequestedAt,
   String? screenshotPath,
+  DateTime? screenshotExpiresAt,
   bool hasPendingWrites = false,
 }) => Ticket(
   id: id,
@@ -66,6 +67,7 @@ Ticket unTicket({
   decisionLeaseUntil: decisionLeaseUntil,
   retryRequestedAt: retryRequestedAt,
   screenshotPath: screenshotPath,
+  screenshotExpiresAt: screenshotExpiresAt,
   hasPendingWrites: hasPendingWrites,
 );
 

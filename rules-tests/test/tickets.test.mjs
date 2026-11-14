@@ -241,6 +241,9 @@ describe("tickets — forme à la création (P23)", () => {
     "champ serveur screenshot_path (T6)": {
       screenshot_path: "tickets/brewer-a/nouveau/screenshot.png",
     },
+    "champ serveur screenshot_expires_at (T6)": {
+      screenshot_expires_at: Timestamp.fromDate(new Date("2027-05-13T09:00:00Z")),
+    },
     "seen_by_author_at à la création": { seen_by_author_at: serverTimestamp() },
     "champ hors liste (display_name)": { display_name: "Brasseur A" },
     "champ hors liste (price_eur)": { price_eur: 3 },
@@ -297,6 +300,26 @@ describe("tickets — mise à jour par l'auteur", () => {
         db(state.env, name)
           .doc("tickets/t-a")
           .update({ screenshot_path: "tickets/brewer-a/t-a/screenshot.png" }),
+      );
+    });
+  }
+
+  // screenshot_expires_at (complément du 2026-11-14) : écrit avec screenshot_path, par le
+  // serveur seul.
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit screenshot_expires_at sur le ticket de brewer-a : refusé`, async () => {
+      await seed(state.env, {
+        "tickets/t-a": {
+          ...published,
+          screenshot_path: "tickets/brewer-a/t-a/screenshot.png",
+          screenshot_expires_at: Timestamp.fromDate(new Date("2027-05-13T09:00:00Z")),
+        },
+      });
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("tickets/t-a")
+          .update({ screenshot_expires_at: Timestamp.fromDate(new Date("2030-01-01T00:00:00Z")) }),
       );
     });
   }

@@ -14,7 +14,7 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import "firebase/compat/storage";
-import { CREATED, PERSONAS, PROJECT_ID, Timestamp, memberDocs, seed, uidOf } from "./helpers.mjs";
+import { PERSONAS, PROJECT_ID, Timestamp, memberDocs, seed, uidOf } from "./helpers.mjs";
 
 const state = { env: null };
 
@@ -56,7 +56,12 @@ async function clearBucket() {
   });
 }
 
-function ticketOf(uid) {
+/// Heure de création d'un ticket, `minutes` avant l'horloge réelle : `request.time` de
+/// l'émulateur suit l'horloge, et storage.rules refuse un dépôt sur un ticket de plus
+/// d'une heure (complément du 2026-11-14).
+const minutesAgo = (minutes) => Timestamp.fromMillis(Date.now() - minutes * 60_000);
+
+function ticketOf(uid, createdAt = minutesAgo(5)) {
   return {
     type: "bug",
     title: "Le minuteur saute",
@@ -65,7 +70,7 @@ function ticketOf(uid) {
     platform: "android",
     author_uid: uid,
     author_email: `${uid}@example.com`,
-    created_at: CREATED,
+    created_at: createdAt,
     status: "received",
   };
 }
@@ -194,6 +199,34 @@ describe("storage.rules — contenu du dépôt", () => {
   it("ticket d'un autre auteur, sous son propre uid : refusé", async () => {
     await expectRule(false, upload("owner", "tickets/brewer-a/t-b/screenshot.png"));
   });
+
+  it("ticket créé il y a 55 minutes : autorisé", async () => {
+    await seed(state.env, { "tickets/t-a": ticketOf("brewer-a", minutesAgo(55)) });
+    await expectRule(true, upload("owner", OWN));
+  });
+
+  it("ticket créé il y a plus d'une heure : refusé", async () => {
+    await seed(state.env, { "tickets/t-a": ticketOf("brewer-a", minutesAgo(61)) });
+    await expectRule(false, upload("owner", OWN));
+  });
+
+  it("ticket sans created_at lisible : refusé", async () => {
+    const { created_at: _omis, ...sansDate } = ticketOf("brewer-a");
+    await seed(state.env, {
+      "tickets/t-a": sansDate,
+      "tickets/t-b": { ...ticketOf("brewer-a"), created_at: "2026-11-14T09:00:00Z" },
+    });
+    await expectRule(false, upload("owner", OWN));
+    await expectRule(false, upload("owner", "tickets/brewer-a/t-b/screenshot.png"));
+  });
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} dépose la capture de son propre ticket de plus d'une heure : refusé`, async () => {
+      const uid = name === "anonymous" ? "anon" : uidOf(name);
+      await seed(state.env, { "tickets/t-old": ticketOf(uid, minutesAgo(90)) });
+      await expectRule(false, upload(name, `tickets/${uid}/t-old/screenshot.png`));
+    });
+  }
 
   it("autre chemin du bucket : refusé", async () => {
     await expectRule(false, upload("owner", "brewer-a/screenshot.png"));

@@ -105,6 +105,42 @@ void main() {
       expect(await fichiers.choisir(maxOctets: 100), isA<FichierTropGros>());
     });
 
+    test('filtre de types : passé au canal avec la borne', () async {
+      repondre((_) async => {'name': 'photo.jpg', 'bytes': octets});
+      final r = await fichiers.choisir(maxOctets: 100, types: kTypesImages);
+      expect(r, isA<FichierChoisi>());
+      expect(calls.single.arguments, {
+        'maxBytes': 100,
+        'mimeTypes': ['image/png', 'image/jpeg', 'image/webp'],
+      });
+    });
+
+    test('filtre de types hors motif : refusé sans appel, rapporté', () async {
+      repondre((_) async => null);
+      for (final types in [
+        <String>[],
+        ['image/png;x=1'],
+        ['IMAGE/PNG'],
+        ['image'],
+        List.filled(kTypesMax + 1, 'image/png'),
+      ]) {
+        expect(
+          await fichiers.choisir(maxOctets: 100, types: types),
+          isA<ChoixImpossible>(),
+          reason: '$types',
+        );
+      }
+      expect(calls, isEmpty);
+      expect(errors.reports, hasLength(5));
+      expect(errors.reports.first.context, 'filtre de types refusé');
+    });
+
+    test('motif des types : celui de EchangeFichiers.kt', () {
+      expect(kMotifTypeMime.pattern, r'^[a-z]{1,20}/[a-z0-9.+*-]{1,60}$');
+      expect(kTypesMax, 10);
+      expect(kTypesImages.every(kMotifTypeMime.hasMatch), isTrue);
+    });
+
     test('réponse inattendue : rapportée, ouverture impossible', () async {
       repondre((_) async => {'name': 3});
       expect(await fichiers.choisir(maxOctets: 100), isA<ChoixImpossible>());
