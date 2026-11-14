@@ -202,6 +202,13 @@ ticket validé dans l'application (P42). La section « Coûts variables » de
 `CLAUDE.md` décrit ce premier poste. `ci.yml` et `deploy.yml` ajoutent les deux callables de T4 à la
 liste fermée et leurs secrets au contrôle des secrets (P10, accord de l'utilisateur).
 
+Le 2026-11-14, avec le lot T5 et l'accord de l'utilisateur, P14, P24, P25, P29, P35, P36 et P39 à
+P42 sont modifiés et P43 à P47 ajoutés : `launchTicketDelivery` et ses refus (P43), verrou des
+livraisons (P44), état « PR prête » et comptes rendus (P45), relecture des PR et des runs (P46),
+reprise du développement sur une CI rouge (P47). Le tableau « Logique dupliquée » reçoit la liste
+des fichiers sensibles d'une livraison, écrite dans le prompt et dans `delivery.ts`. `ci.yml` et
+`deploy.yml` ajoutent `launchTicketDelivery` à la liste fermée (P10, accord de l'utilisateur).
+
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
 P10 (fichiers de `functions/` exécutés par un hook) et P14 (déploiement des Functions sans

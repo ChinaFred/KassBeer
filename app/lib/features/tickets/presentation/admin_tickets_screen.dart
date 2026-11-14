@@ -16,6 +16,7 @@ import '../domain/ticket.dart';
 import 'admin_ticket_screen.dart';
 import 'bandeau_tickets_admin.dart';
 import 'section_lancements.dart';
+import 'section_livraison.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
 
@@ -185,9 +186,18 @@ class _PanneauListe extends ConsumerWidget {
     final filtre = ref.watch(filtreTicketsProvider).filtre;
     final notifier = ref.read(filtreTicketsProvider.notifier);
     final valides = list?.valides ?? const <Ticket>[];
-    final toProcess = valides.where((t) => t.toProcess).length;
+    // « À traiter » de la liste : statut, plus les tickets En cours dont la
+    // PR est prête (décision 7 du 2026-11-14) ; le compteur du menu reste sur
+    // le statut seul.
+    final pretes = ref.watch(ticketsPrPreteProvider);
+    final prPretes = pretes.ids;
+    final toProcess = valides
+        .where((t) => t.toProcess || prPretes.contains(t.id))
+        .length;
     final blocked = valides.where((t) => t.isBlocked(now)).length;
-    if (list != null && !ref.read(filtreTicketsProvider).ajuste) {
+    // Le premier filtre attend l'état des PR des tickets En cours : un ticket
+    // dont la PR est prête est à traiter.
+    if (list != null && pretes.lu && !ref.read(filtreTicketsProvider).ajuste) {
       // Après la construction : un fournisseur ne change pas pendant un
       // build.
       WidgetsBinding.instance.addPostFrameCallback(
@@ -217,6 +227,7 @@ class _PanneauListe extends ConsumerWidget {
     } else {
       body = _Liste(
         list: list,
+        prPretes: prPretes,
         filtre: filtre,
         now: now,
         selectedId: selectedId,
@@ -309,6 +320,7 @@ class _Filtres extends StatelessWidget {
 class _Liste extends ConsumerWidget {
   const _Liste({
     required this.list,
+    required this.prPretes,
     required this.filtre,
     required this.now,
     required this.selectedId,
@@ -320,6 +332,9 @@ class _Liste extends ConsumerWidget {
   });
 
   final ListeLue<Ticket> list;
+
+  /// Tickets En cours dont la PR est prête : sous « À traiter ».
+  final Set<String> prPretes;
   final FiltreTickets filtre;
   final DateTime now;
   final String? selectedId;
@@ -335,7 +350,7 @@ class _Liste extends ConsumerWidget {
     final tickets = [
       for (final t in list.valides)
         if (switch (filtre) {
-          FiltreTickets.aTraiter => t.toProcess,
+          FiltreTickets.aTraiter => t.toProcess || prPretes.contains(t.id),
           FiltreTickets.tous => true,
           FiltreTickets.bloques => t.isBlocked(now),
         })
@@ -464,6 +479,7 @@ class _Ligne extends StatelessWidget {
             EtiquetteStatut(ticket: ticket),
             ...pastillesAdmin(ticket, now),
             PastilleLancement(ticket: ticket),
+            PastilleLivraison(ticket: ticket),
           ],
         ),
       ),

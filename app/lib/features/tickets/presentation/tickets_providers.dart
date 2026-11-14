@@ -8,6 +8,7 @@ import '../../members/presentation/members_providers.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_analysis.dart';
+import '../domain/ticket_delivery.dart';
 import '../domain/ticket_launch.dart';
 
 /// Tickets du compte [uid], lus avec le cache hors ligne.
@@ -76,6 +77,64 @@ final ticketLaunchesProvider = StreamProvider.autoDispose
           ref.watch(ticketsRepositoryProvider).watchLaunches(ticketId),
       retry: (retryCount, error) => null,
     );
+
+/// `tickets/{id}/admin/delivery`, lu par l'administrateur seul (P45) : fiche,
+/// et pastille de la liste pour un ticket En cours seulement.
+final ticketDeliveryProvider = StreamProvider.autoDispose
+    .family<RechercheDocument<TicketDelivery>, String>(
+      (ref, ticketId) =>
+          ref.watch(ticketsRepositoryProvider).watchDelivery(ticketId),
+      retry: (retryCount, error) => null,
+    );
+
+/// Tickets En cours dont la PR est prête (`admin/delivery.ready`, écrit par
+/// le serveur), dont aucune livraison ni correction n'est en cours et sans
+/// `ticket_status/launches.ci_read_denied_since` (même lecture que la
+/// pastille, [pastilleLivraison]) : ils entrent dans le filtre
+/// « À traiter » de la liste seule ; le compteur du menu reste calculé sur le
+/// statut (décision 7 du 2026-11-14). `admin/delivery` n'est lu que pour les
+/// tickets En cours. [lu] : chaque `admin/delivery` de ces tickets a rendu
+/// une lecture (document, absence ou panne) ; la liste attend ce moment pour
+/// choisir son premier filtre.
+final ticketsPrPreteProvider =
+    Provider.autoDispose<({Set<String> ids, bool lu})>((ref) {
+      final list = ref.watch(adminTicketsProvider).value;
+      if (list == null) return (ids: const {}, lu: false);
+      final now = ref.watch(horlogeProvider)();
+      final quota = switch (ref.watch(launchStatusProvider).value) {
+        DocumentTrouve(:final value) => value,
+        _ => null,
+      };
+      final ids = <String>{};
+      var lu = true;
+      for (final t in list.valides) {
+        if (t.status != TicketStatus.inProgress || t.issueNumber == null) {
+          continue;
+        }
+        final async = ref.watch(ticketDeliveryProvider(t.id));
+        if (async.value == null && !async.hasError) lu = false;
+        final livraison = switch (async.value) {
+          DocumentTrouve(:final value) => value,
+          _ => null,
+        };
+        if (livraison == null || !livraison.ready) continue;
+        final historique = switch (ref
+            .watch(ticketLaunchesProvider(t.id))
+            .value) {
+          DocumentTrouve(:final value) => value,
+          _ => null,
+        };
+        final pastille = pastilleLivraison(
+          ticket: t,
+          livraison: livraison,
+          historique: historique,
+          quota: quota,
+          now: now,
+        );
+        if (pastille == PastilleLivraisonType.prPrete) ids.add(t.id);
+      }
+      return (ids: ids, lu: lu);
+    });
 
 /// `ticket_status/launches`, lu par l'administrateur seul (P41) : compteur
 /// de la liste, quota de la boîte, jetons des routines du bandeau.

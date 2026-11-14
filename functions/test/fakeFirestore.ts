@@ -1,6 +1,7 @@
-// Base Firestore en mémoire pour les tests des lancements (ADR-008, T4). Elle couvre ce que
-// lit et écrit `src/tickets/launch.ts` (et, dans `validatedByApp.test.ts`, les décisions, la
-// réponse, `applyIssue` et le report de `sync.ts`) : documents et sous-collections, `get`, `set` (fusion
+// Base Firestore en mémoire pour les tests des lancements (ADR-008, T4 et T5). Elle couvre ce que
+// lit et écrit `src/tickets/launch.ts` et `src/tickets/delivery.ts` (et, dans
+// `validatedByApp.test.ts`, les décisions, la réponse, `applyIssue` et le report de `sync.ts`) :
+// documents et sous-collections, `where(champ, "==", valeur)`, `get`, `set` (fusion
 // de premier niveau), `update`, transactions exécutées l'une après l'autre (deux appels
 // simultanés se suivent, comme deux transactions Firestore qui se rejouent), `Timestamp`,
 // `FieldValue.delete()` et `FieldValue.serverTimestamp()` du SDK Admin.
@@ -93,6 +94,12 @@ export class FakeCollection {
     }
     return new FakeQuery(this.db, this, null, null);
   }
+
+  /** Égalité seule (livraison : tickets d'une Issue, tickets `in_progress`). */
+  where(field: string, op: string, value: unknown): FakeQuery {
+    if (op !== "==") throw new Error(`FakeCollection : opérateur ${op} non pris en charge`);
+    return new FakeQuery(this.db, this, null, null, [{ field, value }]);
+  }
 }
 
 /** `orderBy(documentId)`, `select`, `limit`, `startAfter`, `get` : assez pour un parcours paginé. */
@@ -102,6 +109,7 @@ export class FakeQuery {
     private readonly coll: FakeCollection,
     private readonly max: number | null,
     private readonly afterId: string | null,
+    private readonly filters: readonly { field: string; value: unknown }[] = [],
   ) {}
 
   select(..._fields: string[]): FakeQuery {
@@ -109,11 +117,11 @@ export class FakeQuery {
   }
 
   limit(n: number): FakeQuery {
-    return new FakeQuery(this.db, this.coll, n, this.afterId);
+    return new FakeQuery(this.db, this.coll, n, this.afterId, this.filters);
   }
 
   startAfter(snap: FakeSnapshot): FakeQuery {
-    return new FakeQuery(this.db, this.coll, this.max, snap.id);
+    return new FakeQuery(this.db, this.coll, this.max, snap.id, this.filters);
   }
 
   async get(): Promise<{ docs: FakeSnapshot[] }> {
@@ -122,13 +130,18 @@ export class FakeQuery {
       .filter((p) => p.startsWith(prefix) && !p.slice(prefix.length).includes("/"))
       .map((p) => p.slice(prefix.length))
       .sort()
-      .filter((id) => this.afterId === null || id > this.afterId);
+      .filter((id) => this.afterId === null || id > this.afterId)
+      .filter((id) => {
+        const data = this.db.read(`${this.coll.path}/${id}`) ?? {};
+        return this.filters.every((f) => data[f.field] === f.value);
+      });
     const page = this.max === null ? ids : ids.slice(0, this.max);
-    return {
-      docs: page.map((id) => {
-        const ref = this.coll.doc(id);
-        return new FakeSnapshot(ref, this.db.read(ref.path));
-      }),
+    const docs = page.map((id) => {
+      const ref = this.coll.doc(id);
+      return new FakeSnapshot(ref, this.db.read(ref.path));
+    });
+    return { docs, size: docs.length, empty: docs.length === 0 } as {
+      docs: FakeSnapshot[];
     };
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Cloud Functions de Kass'Beer (ADR-006, ADR-008). Huit fonctions, dont quatre points
+ * Cloud Functions de Kass'Beer (ADR-006, ADR-008). Neuf fonctions, dont cinq points
  * d'accès de la liste fermée d'ADR-008 (P25) :
  *
  * - `publishTicket` : déclencheur de création de `tickets/{ticketId}`, publie l'Issue ;
@@ -13,8 +13,10 @@
  *   par GitHub (T3) ;
  * - `answerTicketAnalysis` : `onCall` de l'admin (`requireAdmin`, P30), « Répondre » (T3) ;
  * - `launchTicketAnalysis`, `launchTicketDevelopment` : `onCall` de l'admin, lancement d'une
- *   routine Claude Code d'analyse ou de développement (T4, P35, P36). Une callable par
- *   routine : chacune ne monte que les secrets de la sienne (P25).
+ *   routine Claude Code d'analyse ou de développement (T4, P35, P36) ; le développement
+ *   accepte `mode: "resume"`, « Relancer le développement » (T5, P47) ;
+ * - `launchTicketDelivery` : `onCall` de l'admin, « Livrer » (T5, P43, P44), par la routine
+ *   de développement. Chaque callable ne monte que les secrets de sa routine (P25).
  *
  * Ce module ne construit aucun client (P26) : Firestore et GitHub s'ouvrent à l'appel.
  */
@@ -38,7 +40,7 @@ import { logError } from "./logging";
 import { handleAnswerCall } from "./tickets/answer";
 import { isRetryRequest } from "./tickets/decisionModel";
 import { applyDecision } from "./tickets/decisions";
-import { handleLaunchCall } from "./tickets/launch";
+import { handleDevelopmentCall, handleLaunchCall } from "./tickets/launch";
 import { publishTicket as publish } from "./tickets/publish";
 import { runHourlyPass } from "./tickets/sync";
 import { handleGithubWebhook } from "./tickets/webhook";
@@ -191,8 +193,8 @@ export const answerTicketAnalysis = onCall(
 );
 
 /**
- * Réglages communs des deux lancements (ADR-008, T4, P25) : délai de 120 s (Issue relue,
- * 15 s, appel de la routine, 30 s, écritures), une instance chacun.
+ * Réglages communs des lancements (ADR-008, T4, P25) : délai de 120 s (Issue relue, 15 s,
+ * appel de la routine, 30 s, écritures), une instance chacun. La livraison porte 180 s.
  */
 const LAUNCH_CALLABLE = {
   region: REGION,
@@ -219,18 +221,42 @@ export const launchTicketAnalysis = onCall(
     }),
 );
 
-/** « Lancer le développement » (ADR-008, T4, P35, P36). Seule à monter les secrets de développement. */
+/** Identifiant et jeton de la routine de développement, lus à l'appel. */
+function devRoutine(): { id: string; token: string } {
+  return { id: TICKETS_ROUTINE_DEV_ID.value(), token: TICKETS_ROUTINE_DEV_TOKEN.value() };
+}
+
+/**
+ * « Lancer le développement » et, avec `mode: "resume"`, « Relancer le développement »
+ * (ADR-008, T4 et T5, P35, P36, P47). Monte les secrets de développement, comme
+ * `launchTicketDelivery` seule.
+ */
 export const launchTicketDevelopment = onCall(
   {
     ...LAUNCH_CALLABLE,
     secrets: [GITHUB_TICKETS_TOKEN, TICKETS_ROUTINE_DEV_ID, TICKETS_ROUTINE_DEV_TOKEN],
   },
   (req) =>
-    handleLaunchCall(req, "developpement", {
-      routine: () => ({
-        id: TICKETS_ROUTINE_DEV_ID.value(),
-        token: TICKETS_ROUTINE_DEV_TOKEN.value(),
-      }),
+    handleDevelopmentCall(req, {
+      routine: devRoutine,
+      githubToken: () => GITHUB_TICKETS_TOKEN.value(),
+    }),
+);
+
+/**
+ * « Livrer » (ADR-008, T5, P43, P44) : par la routine de développement (aucun secret
+ * `TICKETS_ROUTINE_DELIVERY_*`). Délai de 180 s : PR, fichiers et runs relus sur GitHub
+ * avant l'appel ; bail de 210 s (`DELIVERY_LEASE_MS`).
+ */
+export const launchTicketDelivery = onCall(
+  {
+    ...LAUNCH_CALLABLE,
+    timeoutSeconds: 180,
+    secrets: [GITHUB_TICKETS_TOKEN, TICKETS_ROUTINE_DEV_ID, TICKETS_ROUTINE_DEV_TOKEN],
+  },
+  (req) =>
+    handleLaunchCall(req, "livraison", {
+      routine: devRoutine,
       githubToken: () => GITHUB_TICKETS_TOKEN.value(),
     }),
 );

@@ -4,6 +4,37 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-14
+
+### v0.1.40 — fonctionnel
+
+L'administrateur peut livrer un ticket depuis sa fiche. Quand la pull request d'un ticket En cours
+est prête, CI verte, « Livrer » lance une session Claude Code qui la met à jour, la fusionne et
+suit le déploiement. La boîte de confirmation rappelle que la fusion met l'application en ligne
+pour tout le groupe. Une seule livraison tourne à la fois. La section « Livraison » de la fiche
+montre le compte rendu de la session : terminée, ou arrêtée avec la raison. Si la CI d'une pull
+request est en échec, « Relancer le développement » lance une session qui corrige la même
+branche. Dans la liste, des pastilles signalent « PR prête », « CI en cours », « Livraison en
+cours » et « Correction en cours ».
+
+### v0.1.40 — technique
+
+Lot T5 d'ADR-008. Callable `launchTicketDelivery` (`requireAdmin`, 1 instance, 180 s), par la routine
+de développement (secrets `TICKETS_ROUTINE_DEV_*` montés par deux fonctions, aucun secret nouveau) ;
+reprise par `launchTicketDevelopment` avec `mode: "resume"` (action `reprise`). `delivery.ts` : PR
+unique éligible, fichiers sensibles (liste d'ADR-008 plus `pubspec.lock`, `gradlew`, `**/hook/**`,
+`**/.claude/**`, `auth.ts`, `config.ts`, `delivery.ts`, `member_access.json`), CI verte sur `push`
+et `pull_request`, verrou global `ticket_status/launches.delivery_running` (3 h), état
+`tickets/{id}/admin/delivery` (`ready`, `relaunch_ready`, comptes rendus `## Livraison — …`).
+Webhook : `pull_request` et `workflow_run` de `ci.yml`. Refuser et Clore rejetés pendant une
+livraison ; `launch_delivery` et `relaunch_development` seulement pour un ticket validé dans
+l'application (version de report 5). 403 sur `/actions/runs` en panne à part
+(`ci_read_denied_since`), sans `token_invalid_since`. Livraison et reprise comptées au plafond de
+`ticket_routine_launch`. Prompt de développement : parties Livraison (L0 à L11) et Reprise (R1 à
+R7), à recoller sur claude.ai. `ci.yml` et `deploy.yml` : `launchTicketDelivery` dans la liste
+fermée. Contrôles P14, P24, P25, P29, P35, P36, P39 à P42 modifiés, P43 à P47 ajoutés. Aucun
+paquet ajouté.
+
 ## 2026-11-13
 
 ### v0.1.39 — fonctionnel

@@ -3,7 +3,8 @@
  * déclencheurs de `tickets/{ticketId}/decisions/{decisionId}` (création, reprise demandée)
  * et par la passe horaire (décision `applying` au bail expiré). Aucune callable (P25).
  *
- * 1. Transaction : la décision est prise (`decisionClaimVerdict`) ; bail de deux minutes
+ * 1. Transaction : la décision est prise (`decisionClaimVerdict`, verrou des livraisons lu
+ *    pour Refuser et Clore, P44) ; bail de deux minutes
  *    sur le ticket (`decision_lease_until`) et sur la décision (`lease_until`), état
  *    `applying`. Sinon `rejected` avec son motif, ou rien (rejeu).
  * 2. Relecture de l'Issue ; pour `refuse` et `close`, recherche du commentaire qui porte
@@ -44,6 +45,7 @@ import {
   type FailureKind,
 } from "./decisionModel";
 import { recordValidatedAt, refreshAnalyses } from "./analyses";
+import { deliveryRunningFor } from "./delivery";
 import { GithubError, githubClient, type FetchLike, type GithubClient } from "./github";
 import { applyIssue } from "./issueState";
 import { isPlausibleTicketId } from "./publish";
@@ -84,12 +86,15 @@ export type Claim =
     };
 
 async function claim(refs: Refs, now: Date): Promise<Claim> {
-  const { db, FieldValue, Timestamp } = await firestore();
+  const kit = await firestore();
+  const { db, FieldValue, Timestamp } = kit;
   const millis = (v: unknown) => (v instanceof Timestamp ? v.toMillis() : null);
   return db.runTransaction(async (tx): Promise<Claim> => {
-    const [decisionSnap, ticketSnap] = await Promise.all([
+    const [decisionSnap, ticketSnap, deliveryRunning] = await Promise.all([
       tx.get(refs.decision),
       tx.get(refs.ticket),
+      // P44 : Refuser et Clore rejetés pendant une livraison de ce ticket.
+      deliveryRunningFor(tx, kit, refs.ticket.id, now.getTime()),
     ]);
     if (!decisionSnap.exists) return { kind: "skip" };
     const d = decisionSnap.data() ?? {};
@@ -111,6 +116,7 @@ async function claim(refs: Refs, now: Date): Promise<Claim> {
               validatedByAppAt: t.validated_by_app_at,
               leaseUntilMs: millis(t.decision_lease_until),
               issueNumber: t.github_issue_number,
+              deliveryRunning,
             },
       nowMs: now.getTime(),
     });

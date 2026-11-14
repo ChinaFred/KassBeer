@@ -6,11 +6,13 @@ import '../../../core/services/error_report_service.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_analysis.dart';
+import '../domain/ticket_delivery.dart';
 import '../domain/ticket_launch.dart';
 
 /// Accès à `tickets/`, `ticket_status/github` et `ticket_status/launches`
 /// (ADR-006, P23, P41), et aux callables `answerTicketAnalysis`,
-/// `launchTicketAnalysis` et `launchTicketDevelopment` (ADR-008). Les écrans
+/// `launchTicketAnalysis`, `launchTicketDevelopment` et `launchTicketDelivery`
+/// (ADR-008). Les écrans
 /// passent par cette interface ; les tests la remplacent par un double.
 ///
 /// Lectures ordinaires avec le cache hors ligne ; aucune `runTransaction`,
@@ -98,9 +100,13 @@ abstract class TicketsRepository {
   /// pour l'administrateur seul (P41).
   Stream<RechercheDocument<EtatLancements>> watchLaunchStatus();
 
-  /// Lance [action] sur [ticketId] (callable `launchTicketAnalysis` ou
-  /// `launchTicketDevelopment`). Un seul appel, jamais rejoué. Tout échec est
-  /// rapporté ici, puis rendu.
+  /// `tickets/{ticketId}/admin/delivery` : état « PR prête » et comptes
+  /// rendus de livraison, pour l'administrateur seul (P45).
+  Stream<RechercheDocument<TicketDelivery>> watchDelivery(String ticketId);
+
+  /// Lance [action] sur [ticketId] (callable [ActionLancement.callable], avec
+  /// [ActionLancement.arguments]). Un seul appel, jamais rejoué. Tout échec
+  /// est rapporté ici, puis rendu.
   Future<ResultatLancement> launch({
     required String ticketId,
     required ActionLancement action,
@@ -123,6 +129,10 @@ const kCallableTimeout = Duration(seconds: 70);
 /// Délai d'une callable de lancement côté client, au-delà des 120 s du
 /// serveur (ADR-008) : le serveur conclut avant que l'appareil abandonne.
 const kLaunchCallableTimeout = Duration(seconds: 130);
+
+/// Délai de `launchTicketDelivery` côté client, au-delà des 180 s du serveur
+/// (P43).
+const kDeliveryCallableTimeout = Duration(seconds: 190);
 
 /// [TicketsRepository] sur Cloud Firestore.
 class FirestoreTicketsRepository implements TicketsRepository {
@@ -515,6 +525,16 @@ class FirestoreTicketsRepository implements TicketsRepository {
       );
 
   @override
+  Stream<RechercheDocument<TicketDelivery>> watchDelivery(String ticketId) =>
+      _watchDocument(
+        _tickets.doc(ticketId).collection('admin').doc('delivery'),
+        TicketDelivery.fromFirestore,
+        readFeature: 'tickets.read_delivery',
+        watchFeature: 'tickets.watch_delivery',
+        path: 'tickets/$ticketId/admin/delivery',
+      );
+
+  @override
   Stream<RechercheDocument<EtatLancements>> watchLaunchStatus() =>
       _watchDocument(
         _firestore.collection('ticket_status').doc('launches'),
@@ -571,9 +591,13 @@ class FirestoreTicketsRepository implements TicketsRepository {
   }) async {
     final where = 'tickets/$ticketId action=${action.storedValue}';
     try {
-      final data = await _call(action.callable, {
-        'ticketId': ticketId,
-      }, timeout: kLaunchCallableTimeout);
+      final data = await _call(
+        action.callable,
+        {'ticketId': ticketId, ...action.arguments},
+        timeout: action == ActionLancement.livraison
+            ? kDeliveryCallableTimeout
+            : kLaunchCallableTimeout,
+      );
       return ResultatLancement.depuisReponse(data);
     } on FirebaseFunctionsException catch (error, stackTrace) {
       final resultat = ResultatLancement.depuisErreur(

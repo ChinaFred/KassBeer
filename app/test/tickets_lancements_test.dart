@@ -66,11 +66,7 @@ void main() {
             'retry_after': Timestamp.fromDate(t0.add(const Duration(hours: 1))),
             'session_url': 'https://claude.ai/code/session_1',
           },
-          {
-            'action': 'livraison',
-            'state': 'futur',
-            'at': Timestamp.fromDate(t1),
-          },
+          {'action': 'futur', 'state': 'futur', 'at': Timestamp.fromDate(t1)},
           for (var i = 0; i < 25; i++)
             {
               'action': 'developpement',

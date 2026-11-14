@@ -17,7 +17,10 @@
  * 6. avec le reste des 30 Issues de la passe : tickets à Issue ouverte les moins
  *    récemment relus, Issue et commentaires lus un à un (un commentaire modifié ne
  *    change pas la date de l'Issue). Une Issue disparue (404 ou 410, dépôt joignable)
- *    laisse le statut et pose `issue_missing_since`.
+ *    laisse le statut et pose `issue_missing_since` ;
+ * 7. livraison (T5, P46) : verrou des livraisons libéré si son ticket n'est plus
+ *    `in_progress` ; état « PR prête » de chaque ticket `in_progress` (30 au plus), liste
+ *    des PR ouvertes lue une fois et partagée.
  *
  * Avant tout, sans GitHub : `ticket_status/launches` remis au jour de Paris (T4).
  *
@@ -46,6 +49,11 @@ import {
 } from "./decisionModel";
 import { COLL_DECISIONS, applyDecision } from "./decisions";
 import { GithubError, githubClient, type FetchLike, type GithubClient } from "./github";
+import {
+  refreshTicketDelivery,
+  releaseDeliveryLockIfLeft,
+  type OpenPullRequests,
+} from "./delivery";
 import { applyIssue } from "./issueState";
 import { refreshLaunchStatus } from "./launch";
 import { LABEL_SOURCE_APP, OPEN_STATUSES, type IssueView } from "./model";
@@ -64,8 +72,10 @@ const BACKFILL_PAGE = 200;
  * (ADR-008, T3). 3 : Valider depuis `analyzed` seul, `launch_analysis` et
  * `launch_development` (ADR-008, T4). 4 : `launch_development` réservé à un ticket validé
  * dans l'application (`validated_by_app_at`), Valider offert sinon (ADR-008, 2026-11-13).
+ * 5 : `launch_delivery` et `relaunch_development` sur un ticket `in_progress` validé dans
+ * l'application (ADR-008, T5).
  */
-export const ALLOWED_DECISIONS_VERSION = 4;
+export const ALLOWED_DECISIONS_VERSION = 5;
 
 /** Marge du curseur : une Issue modifiée pendant la passe précédente est relue. */
 const CURSOR_MARGIN_MS = 10 * 60 * 1000;
@@ -366,6 +376,30 @@ async function resumeStuckDecisions(token: string, fetchImpl?: FetchLike): Promi
   return "ok";
 }
 
+/**
+ * Étape 7 : verrou des livraisons libéré si son ticket n'est plus `in_progress`, puis état
+ * « PR prête » de chaque ticket `in_progress` (P46). La liste des PR ouvertes est lue une
+ * fois, au premier ticket. Chaque ticket est traité seul ; un jeton refusé arrête la passe.
+ */
+async function refreshDeliveries(client: GithubClient): Promise<void> {
+  const kit = await firestore();
+  await releaseDeliveryLockIfLeft(kit, null, Date.now());
+  const snap = await kit.db
+    .collection(COLL_TICKETS)
+    .where("status", "==", "in_progress")
+    .limit(ISSUES_PER_PASS)
+    .get();
+  let openPrs: OpenPullRequests | null = null;
+  for (const doc of snap.docs) {
+    const issueNumber = doc.get("github_issue_number");
+    if (typeof issueNumber !== "number") continue;
+    await guarded(doc.id, async () => {
+      openPrs ??= await client.listOpenPullRequests();
+      await refreshTicketDelivery(kit, client, doc.id, issueNumber, openPrs);
+    });
+  }
+}
+
 /** Passe complète. Ne lève pas. */
 export async function runHourlyPass(token: string, fetchImpl?: FetchLike): Promise<void> {
   const passStart = new Date();
@@ -409,6 +443,7 @@ export async function runHourlyPass(token: string, fetchImpl?: FetchLike): Promi
         await guarded(doc.id, () => refreshOne(client, doc));
       }
     }
+    await refreshDeliveries(client);
     await recordTokenAccepted(client);
   } catch (err) {
     if (err instanceof TokenRefused) {

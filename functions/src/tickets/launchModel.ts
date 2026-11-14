@@ -1,5 +1,6 @@
 /**
- * Règles pures des lancements de sessions Claude Code (ADR-008, T4, P35, P36, P41), reprises
+ * Règles pures des lancements de sessions Claude Code (ADR-008, T4 et T5, P35, P36, P41, P43,
+ * P47), reprises
  * de `functions/src/tickets/rules.ts` de Kass'Dalle (« Lancements de sessions »). Aucune
  * lecture ni écriture ici : `launch.ts` lit et écrit.
  */
@@ -7,7 +8,9 @@
 import { LAUNCHES_PER_DAY } from "../config";
 import {
   LAUNCH_ANALYSIS_ACTION,
+  LAUNCH_DELIVERY_ACTION,
   LAUNCH_DEVELOPMENT_ACTION,
+  RELAUNCH_DEVELOPMENT_ACTION,
   allowedDecisions,
   isValidatedByApp,
   type AllowedDecision,
@@ -17,17 +20,29 @@ import type { TicketStatus } from "./model";
 // ── Actions et texte envoyé ─────────────────────────────────────────────────
 
 /**
- * Les deux lancements de T4 : `analyse` (ticket Reçu) et `developpement` (ticket Validé).
- * La valeur est aussi le premier mot du texte envoyé à la routine. `livraison` arrive à T5.
+ * Les lancements : `analyse` (ticket Reçu) et `developpement` (ticket Validé), de T4 ;
+ * `livraison` (« Livrer ») et `reprise` (« Relancer le développement »), ticket En cours, de
+ * T5. La valeur est aussi le premier mot du texte envoyé à la routine.
  */
-export const LAUNCH_ACTIONS = ["analyse", "developpement"] as const;
+export const LAUNCH_ACTIONS = ["analyse", "developpement", "livraison", "reprise"] as const;
 export type LaunchAction = (typeof LAUNCH_ACTIONS)[number];
 
-/** Seule forme de texte envoyée à une routine (P35 ; `livraison` ajouté à T5). */
-export const LAUNCH_TEXT_PATTERN = /^(analyse|developpement) #[1-9][0-9]{0,6}$/;
+/** Seule forme de texte envoyée à une routine (P35). */
+export const LAUNCH_TEXT_PATTERN = /^(analyse|developpement|livraison|reprise) #[1-9][0-9]{0,6}$/;
 
 /**
- * Le texte envoyé à la routine : `analyse #N` ou `developpement #N`, `N` tiré de
+ * Routine qui reçoit chaque action : la livraison et la reprise partent par la routine de
+ * développement (ADR-008, « Livraison » ; P25, P35). Aucune routine de livraison à part.
+ */
+export const LAUNCH_ROUTINE: Record<LaunchAction, "analyse" | "developpement"> = {
+  analyse: "analyse",
+  developpement: "developpement",
+  livraison: "developpement",
+  reprise: "developpement",
+};
+
+/**
+ * Le texte envoyé à la routine : `<action> #N`, `N` tiré de
  * `github_issue_number` écrit par le serveur. Lève si le résultat ne suit pas
  * [LAUNCH_TEXT_PATTERN] : rien d'autre ne part. Pure.
  */
@@ -43,21 +58,41 @@ export function launchCommandText(action: LaunchAction, issueNumber: number): st
 export const LAUNCH_FROM_STATUS: Record<LaunchAction, TicketStatus> = {
   analyse: "received",
   developpement: "validated",
+  livraison: "in_progress",
+  reprise: "in_progress",
 };
 
 /** L'entrée de `allowed_decisions` qui offre le lancement au client. */
 export const LAUNCH_DECISION: Record<LaunchAction, AllowedDecision> = {
   analyse: LAUNCH_ANALYSIS_ACTION,
   developpement: LAUNCH_DEVELOPMENT_ACTION,
+  livraison: LAUNCH_DELIVERY_ACTION,
+  reprise: RELAUNCH_DEVELOPMENT_ACTION,
 };
 
 /**
  * Délai après lequel un lancement peut être relancé (`retry_after`) : 1 h pour une analyse,
- * 3 h pour un développement.
+ * 3 h pour un développement, une reprise ou une livraison (P36). C'est aussi l'échéance du
+ * verrou des livraisons (P44).
  */
 export const LAUNCH_RETRY_MS: Record<LaunchAction, number> = {
   analyse: 60 * 60 * 1000,
   developpement: 3 * 60 * 60 * 1000,
+  livraison: 3 * 60 * 60 * 1000,
+  reprise: 3 * 60 * 60 * 1000,
+};
+
+/**
+ * Les entrées en cours qui bloquent chaque lancement du même ticket. Analyse et premier
+ * développement : la même action seule (T4, inchangé). Livraison : une livraison ou une
+ * reprise (`reprise_running`, décision 12 du 2026-11-14). Reprise : un développement, une
+ * reprise ou une livraison (P47, décision 10).
+ */
+export const LAUNCH_BLOCKED_BY: Record<LaunchAction, readonly LaunchAction[]> = {
+  analyse: ["analyse"],
+  developpement: ["developpement"],
+  livraison: ["livraison", "reprise"],
+  reprise: ["developpement", "reprise", "livraison"],
 };
 
 /** Entrées gardées dans `tickets/{id}/admin/launches`, plus récente en tête (P41). */
@@ -77,6 +112,12 @@ export const LAUNCH_NO_ISSUE_MESSAGE = "Ce ticket n'a pas encore d'Issue GitHub.
 export const LAUNCH_NOT_ALLOWED_MESSAGE = "Ce lancement n'est pas possible pour ce statut.";
 export const LAUNCH_NOT_VALIDATED_BY_APP_MESSAGE =
   "Validé sur GitHub : validez depuis l'application pour lancer le développement.";
+/**
+ * Livraison ou reprise d'un ticket En cours que l'application n'a pas validé (décisions 1
+ * et 9 du 2026-11-14) : il ne se valide plus depuis l'application.
+ */
+export const LAUNCH_IN_PROGRESS_NOT_BY_APP_MESSAGE =
+  "Ce ticket a été validé sur GitHub : livrez ou corrigez sa pull request sur GitHub.";
 
 /**
  * Ce que décide un lancement avant tout appel : `null` s'il est permis, sinon le message du
@@ -97,8 +138,11 @@ export function launchPrecondition(
       LAUNCH_DECISION[action],
     )
   ) {
-    return action === "developpement" && args.status === "validated"
-      ? LAUNCH_NOT_VALIDATED_BY_APP_MESSAGE
+    if (action === "developpement" && args.status === "validated") {
+      return LAUNCH_NOT_VALIDATED_BY_APP_MESSAGE;
+    }
+    return args.status === "in_progress"
+      ? LAUNCH_IN_PROGRESS_NOT_BY_APP_MESSAGE
       : LAUNCH_NOT_ALLOWED_MESSAGE;
   }
   return null;
@@ -117,25 +161,33 @@ export interface LaunchEntryView {
   retry_after_ms: number | null;
 }
 
+function isLaunchAction(value: unknown): value is LaunchAction {
+  return typeof value === "string" && (LAUNCH_ACTIONS as readonly string[]).includes(value);
+}
+
 /**
- * Le lancement en cours de ce type, ou `null` : une entrée de la même action, `launched`
- * ou `unknown`, dont `retry_after` est dans le futur. C'est la seule règle, au serveur
- * comme au client : une entrée `failed` porte `retry_after` égal à son heure et ne bloque
- * rien ; « Répondre » ramène `retry_after` à l'heure de la réponse (`closeRunningEntries`).
- * Rend l'entrée la plus récente qui bloque. Pure.
+ * Le lancement en cours qui bloque `action`, ou `null` : une entrée d'une action de
+ * `LAUNCH_BLOCKED_BY[action]`, `launched` ou `unknown`, dont `retry_after` est dans le futur.
+ * C'est la seule règle, au serveur comme au client : une entrée `failed` porte `retry_after`
+ * égal à son heure et ne bloque rien ; « Répondre » et un blocage de livraison relevé
+ * ramènent `retry_after` à l'heure du relevé (`closeRunningEntries`). Rend l'entrée la plus
+ * récente qui bloque, avec son action. Pure.
  */
 export function runningLaunch(
   entries: readonly LaunchEntryView[],
   action: LaunchAction,
   nowMs: number,
-): { atMs: number; retryAfterMs: number } | null {
-  let found: { atMs: number; retryAfterMs: number } | null = null;
+): { action: LaunchAction; atMs: number; retryAfterMs: number } | null {
+  const blockers = LAUNCH_BLOCKED_BY[action];
+  let found: { action: LaunchAction; atMs: number; retryAfterMs: number } | null = null;
   for (const e of entries) {
-    if (e.action !== action) continue;
+    if (!isLaunchAction(e.action) || !blockers.includes(e.action)) continue;
     if (e.state !== "launched" && e.state !== "unknown") continue;
     if (e.retry_after_ms === null || e.retry_after_ms <= nowMs) continue;
-    const atMs = e.at_ms ?? e.retry_after_ms - LAUNCH_RETRY_MS[action];
-    if (found === null || atMs > found.atMs) found = { atMs, retryAfterMs: e.retry_after_ms };
+    const atMs = e.at_ms ?? e.retry_after_ms - LAUNCH_RETRY_MS[e.action];
+    if (found === null || atMs > found.atMs) {
+      found = { action: e.action, atMs, retryAfterMs: e.retry_after_ms };
+    }
   }
   return found;
 }
@@ -143,18 +195,20 @@ export function runningLaunch(
 /**
  * L'historique après « Répondre » : chaque entrée `launched` ou `unknown` encore en cours
  * voit son `retry_after` ramené à `nowMs` (Kass'Dalle : un lancement antérieur au dernier
- * changement de statut ne bloque rien). `null` si rien ne change. Pure.
+ * changement de statut ne bloque rien). `only` restreint aux entrées choisies (livraison :
+ * entrées `livraison` lancées avant un blocage relevé, P45). `null` si rien ne change. Pure.
  */
 export function closeRunningEntries(
   entries: readonly Record<string, unknown>[],
   views: readonly LaunchEntryView[],
   nowMs: number,
   toTimestamp: (ms: number) => unknown,
+  only: (view: LaunchEntryView) => boolean = () => true,
 ): Record<string, unknown>[] | null {
   let changed = false;
   const out = entries.map((entry, i) => {
     const v = views[i];
-    if (v === undefined) return entry;
+    if (v === undefined || !only(v)) return entry;
     if (v.state !== "launched" && v.state !== "unknown") return entry;
     if (v.retry_after_ms === null || v.retry_after_ms <= nowMs) return entry;
     changed = true;
@@ -242,6 +296,8 @@ export function refreshedLaunchStatus(
 export const ROUTINE_INVALID_FIELD: Record<LaunchAction, string> = {
   analyse: "analysis_invalid_since",
   developpement: "development_invalid_since",
+  livraison: "development_invalid_since",
+  reprise: "development_invalid_since",
 };
 
 // ── Messages ────────────────────────────────────────────────────────────────
@@ -274,13 +330,23 @@ export function parisHourMinute(ms: number): string {
   return `${p.hour}:${p.minute}`;
 }
 
-/** Message d'un lancement refusé parce qu'un lancement du même type est en cours. Pure. */
+const RUNNING_WHAT: Record<LaunchAction, string> = {
+  analyse: "Une analyse a été lancée",
+  developpement: "Un développement a été lancé",
+  livraison: "Une livraison a été lancée",
+  reprise: "Une correction de la pull request a été lancée",
+};
+
+/**
+ * Message d'un lancement refusé parce qu'un lancement qui le bloque est en cours ; `action`
+ * est celle de l'entrée en cours. Pure.
+ */
 export function launchRunningMessage(
   action: LaunchAction,
   launchedAtMs: number,
   retryAfterMs: number,
 ): string {
-  const what = action === "analyse" ? "Une analyse a été lancée" : "Un développement a été lancé";
+  const what = RUNNING_WHAT[action];
   return (
     `${what} le ${parisShortDate(launchedAtMs)} à ${parisHourMinute(launchedAtMs)}. ` +
     `Attendez son résultat ou relancez après ${parisHourMinute(retryAfterMs)}.`
