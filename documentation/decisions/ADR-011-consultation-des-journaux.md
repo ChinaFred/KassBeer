@@ -225,8 +225,9 @@ décision :
 ## Conséquences
 
 - La liste fermée d'ADR-008 et P25 gagnent `queryLogs` (`onCall`, `requireAdmin`, J2,
-  `maxInstances` 1, 60 s). Les listes de `ci.yml` (ligne 267) et de `deploy.yml` (lignes 447
-  et 571) changent : diff signalé à l'utilisateur (P10, P14).
+  `maxInstances` 1, 60 s). Les listes de `ci.yml` (job « Manifeste des fonctions (P25) ») et
+  de `deploy.yml` (job de découverte et job `deploy`) changent : diff signalé à l'utilisateur
+  (P10, P14).
 - Le compte `tickets-functions` peut lire les journaux du projet (`roles/logging.viewer`) :
   une faille dans l'une des fonctions lit aussi les journaux de requêtes et d'audit
   d'administration. `queryLogs` n'en rend que la sortie des fonctions.

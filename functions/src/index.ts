@@ -1,5 +1,5 @@
 /**
- * Cloud Functions de Kass'Beer (ADR-006, ADR-008, ADR-011). Dix fonctions, dont six points
+ * Cloud Functions de Kass'Beer (ADR-006, ADR-008, ADR-011). Onze fonctions, dont sept points
  * d'accès de la liste fermée d'ADR-008 et d'ADR-011 (P25) :
  *
  * - `publishTicket` : déclencheur de création de `tickets/{ticketId}`, publie l'Issue ;
