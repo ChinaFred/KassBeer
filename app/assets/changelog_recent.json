@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.52",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois celui des autres administrateurs. Ses lancements ne consomment pas les 10 du groupe, et inversement. Le compteur d'Admin › Tickets et la boîte de lancement affichent le plafond du compte connecté. Le mois compte tous les lancements."
+      ]
+    },
+    {
       "version": "0.1.51",
       "date": "2026-11-14",
       "paragraphs": [
@@ -35,13 +42,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui de la version installée et la taille du téléchargement. « Plus tard » la ferme jusqu'au lancement suivant. « Mettre à jour » télécharge la version dans l'application, contrôle le fichier, puis ouvre l'écran d'installation d'Android. La première fois, Android demande d'autoriser Kass'Beer à installer des applications : la fenêtre ouvre le bon réglage. Une coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre jamais pendant le jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36."
-      ]
-    },
-    {
-      "version": "0.1.46",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Dans « Rapports d'erreur », une relecture n'affiche plus qu'une seule attente, sur le bouton appuyé. Après une panne, « Réessayer » montre l'attente dans le bandeau, et le bouton « Actualiser » reste en place, désactivé. Tirer la liste vers le bas n'ajoute plus d'indicateur en haut de l'écran."
       ]
     }
   ]

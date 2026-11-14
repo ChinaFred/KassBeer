@@ -677,6 +677,9 @@ tickets. En dessous, la liste occupe l'écran et la fiche s'ouvre seule par-dess
 **Compteur des lancements.** Au-dessus des filtres, en texte secondaire : « Lancements de
 sessions : 2 sur 10 le 13/11 · 3 en novembre 2026 ». Le jour, le mois et le plafond sont ceux écrits
 par le serveur : l'application ne recalcule pas le jour de Paris et n'a aucun plafond en dur.
+Le compte fondateur (champ `founder` de son document de membre, posé dans la console Firebase)
+a son propre compteur, cinq fois plus haut (« 4 sur 50 le 14/11 ») : ses lancements ne
+consomment pas ceux des autres administrateurs, et inversement. Le mois compte les deux.
 Sans compteur : « Lancements de sessions : aucun compté. » ; lecture : « … : lecture en
 cours. » ; hors ligne, absent du cache : « … : compteur non disponible hors ligne. » ;
 illisible : « … : compteur illisible. » ; panne : « Lancements de sessions : compteur
