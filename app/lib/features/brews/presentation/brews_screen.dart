@@ -7,6 +7,7 @@ import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -22,11 +23,12 @@ class BrewsScreen extends ConsumerStatefulWidget {
   const BrewsScreen({super.key});
 
   static const loadError = 'Impossible de lire les brassins.';
+  static const emptyTitle = 'Aucun brassin';
+  static const mineEmptyTitle = 'Vous n\'avez pas encore de brassin';
+
+  /// Message des deux états vides, sous [emptyTitle] ou [mineEmptyTitle].
   static const emptyMessage =
-      'Aucun brassin. Ouvrez une recette et appuyez sur Nouveau brassin.';
-  static const mineEmptyMessage =
-      'Vous n\'avez pas encore de brassin. Ouvrez une recette et appuyez sur '
-      'Nouveau brassin.';
+      'Ouvrez une recette et appuyez sur Nouveau brassin.';
 
   @override
   ConsumerState<BrewsScreen> createState() => _BrewsScreenState();
@@ -80,9 +82,10 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
         if (shown.isEmpty && invalid.isEmpty)
           EtatVide(
             icon: Icons.science_outlined,
-            message: _mineOnly
-                ? BrewsScreen.mineEmptyMessage
-                : BrewsScreen.emptyMessage,
+            titre: _mineOnly
+                ? BrewsScreen.mineEmptyTitle
+                : BrewsScreen.emptyTitle,
+            message: BrewsScreen.emptyMessage,
             action: _mineOnly
                 ? null
                 : TextButton(
@@ -91,22 +94,17 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
                   ),
           ),
         for (final b in shown) _Row(brew: b, readerUid: readerUid, now: now),
-        // Material propre : au retour d'une fiche, la transition de page pose un
-        // fond coloré au-dessus du Material de la page (assertion de ListTile).
         for (final d in invalid)
-          Material(
-            type: MaterialType.transparency,
-            child: ListTile(
-              leading: Icon(
-                Icons.error_outline,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              title: const Text('Brassin illisible'),
-              subtitle: const Text(
+          LigneListe(
+            icone: Icons.error_outline,
+            erreur: true,
+            titre: 'Brassin illisible',
+            details: const [
+              Text(
                 'Mettez l\'application à jour, ou prévenez l\'administrateur.',
               ),
-              onTap: () => context.go(AppRoutes.brew(d.id)),
-            ),
+            ],
+            onTap: () => context.go(AppRoutes.brew(d.id)),
           ),
       ],
     );
@@ -193,46 +191,39 @@ class _Row extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final date = ligneDateBrassin(brew, now, planDe: _planDe(ref));
-    return InkWell(
-      onTap: () => context.go(AppRoutes.brew(brew.id)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 64),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(brew.name, style: theme.textTheme.titleMedium),
-                    Text(
-                      [
-                        brew.status.label,
-                        brew.equipment.name,
-                        libelleAuteur(
-                          ownerUid: brew.ownerUid,
-                          ownerName: brew.ownerName,
-                          readerUid: readerUid,
-                        ),
-                      ].join(' · '),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    if (date.isNotEmpty)
-                      Text(date, style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              if (brew.hasPendingWrites)
-                const Etiquette(label: 'En attente du réseau'),
-            ],
-          ),
+    return LigneListe(
+      icone: Icons.science_outlined,
+      titre: brew.name,
+      details: [
+        Text(
+          [
+            brew.equipment.name,
+            libelleAuteur(
+              ownerUid: brew.ownerUid,
+              ownerName: brew.ownerName,
+              readerUid: readerUid,
+            ),
+          ].join(' · '),
         ),
-      ),
+        if (date.isNotEmpty) Text(date),
+      ],
+      etiquettes: [
+        Etiquette(label: brew.status.label, ton: _tonStatut(brew.status)),
+        if (brew.hasPendingWrites)
+          const Etiquette(label: 'En attente du réseau'),
+      ],
+      onTap: () => context.go(AppRoutes.brew(brew.id)),
     );
   }
 }
+
+/// Ton de l'étiquette du statut d'un brassin dans la liste : neutre avant et
+/// hors du travail, tertiaire pendant, primaire une fois terminé.
+TonEtiquette _tonStatut(BrewStatus status) => switch (status) {
+  BrewStatus.planned || BrewStatus.abandoned => TonEtiquette.neutre,
+  BrewStatus.brewing ||
+  BrewStatus.fermenting ||
+  BrewStatus.conditioning => TonEtiquette.tertiaire,
+  BrewStatus.done => TonEtiquette.primaire,
+};

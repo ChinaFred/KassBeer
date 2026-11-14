@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/ecriture.dart';
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/feuille_ou_dialogue.dart';
 import '../../../core/presentation/fiche.dart';
@@ -24,7 +25,6 @@ import '../domain/ticket_screens.dart';
 import 'admin_tickets_screen.dart';
 import 'bandeau_tickets_admin.dart';
 import 'boite_lancement.dart';
-import 'encadre_avertissement.dart';
 import 'encadre_reponse.dart';
 import 'frise_ticket.dart';
 import 'section_analyses.dart';
@@ -1678,9 +1678,10 @@ class _FormulaireDecisionState extends State<FormulaireDecision> {
             ),
           ),
           const SizedBox(height: 16),
-          const EncadreAvertissement(
+          const Encadre(
+            ton: TonEncadre.avertissement,
             icone: Icons.public,
-            texte: FormulaireDecision.publicWarning,
+            child: Text(FormulaireDecision.publicWarning),
           ),
           if (!_refus) ...[
             const SizedBox(height: 12),
@@ -1707,7 +1708,6 @@ class _FormulaireDecisionState extends State<FormulaireDecision> {
                         'clôture.',
               helperMaxLines: 3,
               errorMaxLines: 3,
-              border: const OutlineInputBorder(),
             ),
             validator: (value) =>
                 (value ?? '').trim().length < kDecisionTextMinLength
@@ -1876,9 +1876,10 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
             ),
           ],
           const SizedBox(height: 16),
-          const EncadreAvertissement(
+          const Encadre(
+            ton: TonEncadre.avertissement,
             icone: Icons.public,
-            texte: FormulaireReponse.publicWarning,
+            child: Text(FormulaireReponse.publicWarning),
           ),
           const SizedBox(height: 12),
           Text(
@@ -1948,7 +1949,6 @@ class _FormulaireReponseState extends ConsumerState<FormulaireReponse> {
                   'les mentions seront retirées.',
               helperMaxLines: 3,
               errorMaxLines: 3,
-              border: const OutlineInputBorder(),
             ),
             validator: (value) {
               // Points de code, comme le serveur.

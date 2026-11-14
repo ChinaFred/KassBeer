@@ -122,9 +122,14 @@ class ContenuRecette extends StatelessWidget {
     this.hopIbu = const {},
     this.momentsOrigine = const {},
     this.chronologie,
+    this.niveauTitres = NiveauTitre.section,
   });
 
   final RecipeContent content;
+
+  /// [NiveauTitre.sousSection] sous un titre « Recette » (fiche d'un brassin,
+  /// recette ouverte depuis l'écran du jour).
+  final NiveauTitre niveauTitres;
 
   /// IBU apporté par chaque houblon, par rang.
   final Map<int, double> hopIbu;
@@ -151,6 +156,7 @@ class ContenuRecette extends StatelessWidget {
           trailing: c.fermentables.isEmpty
               ? null
               : '${c.fermentables.length} · ${formatKilogrammes(c.fermentables.fold(0.0, (s, f) => s + f.weightG))}',
+          niveau: niveauTitres,
         ),
         if (c.fermentables.isEmpty) const TexteAbsent('Aucun malt ni sucre.'),
         for (final f in c.fermentables)
@@ -158,7 +164,7 @@ class ContenuRecette extends StatelessWidget {
             title: f.name,
             details: detailsFermentescible(f, fiche: true),
           ),
-        const TitreSection('Houblons'),
+        TitreSection('Houblons', niveau: niveauTitres),
         if (c.hops.isEmpty) const TexteAbsent('Aucun houblon.'),
         for (final (i, h) in c.hops.indexed)
           LigneDeuxNiveaux(
@@ -169,18 +175,18 @@ class ContenuRecette extends StatelessWidget {
                 "moment d'origine : $moment",
             ],
           ),
-        const TitreSection('Autres ajouts'),
+        TitreSection('Autres ajouts', niveau: niveauTitres),
         if (c.others.isEmpty) const TexteAbsent('Aucun ajout.'),
         for (final o in c.others)
           LigneDeuxNiveaux(title: o.name, details: detailsAjout(o)),
-        const TitreSection('Levure'),
+        TitreSection('Levure', niveau: niveauTitres),
         if (c.yeasts.isEmpty) const TexteAbsent('Aucune levure.'),
         for (final y in c.yeasts)
           LigneDeuxNiveaux(
             title: y.name,
             details: detailsLevure(y, fiche: true),
           ),
-        const TitreSection('Paliers d\'empâtage'),
+        TitreSection('Paliers d\'empâtage', niveau: niveauTitres),
         if (c.grainTempC != null)
           LigneFiche(
             label: 'Température du grain',
@@ -190,7 +196,7 @@ class ContenuRecette extends StatelessWidget {
         for (final s in c.mashSteps)
           LigneDeuxNiveaux(title: s.name, details: detailsPalier(s)),
         ?chronologie,
-        const TitreSection('Notes'),
+        TitreSection('Notes', niveau: niveauTitres),
         Text(
           c.notes ?? 'Non renseigné',
           style: c.notes == null

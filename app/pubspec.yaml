@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.46+47
+version: 0.1.47+48
 
 environment:
   sdk: ^3.11.4
@@ -108,3 +108,15 @@ flutter:
   # documentation/CHANGELOG.md, régénéré par la CI et deploy.yml avant chaque build.
   assets:
     - assets/changelog_recent.json
+    # Médaillon du logo, 384 px, tiré de assets/Kassbeer_transparent.png du dépôt.
+    - assets/images/logo_kass_beer.webp
+    # Licence de la police Bitter (SIL Open Font License 1.1), livrée avec elle.
+    - assets/fonts/OFL.txt
+
+  # Police des titres : Bitter demi-grasse (600), réduite au jeu latin et aux
+  # accents (38 Ko). Embarquée : aucun téléchargement au démarrage.
+  fonts:
+    - family: Bitter
+      fonts:
+        - asset: assets/fonts/Bitter-SemiBold.ttf
+          weight: 600

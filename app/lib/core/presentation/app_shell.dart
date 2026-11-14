@@ -7,6 +7,7 @@ import '../../features/brew_day/presentation/reprise_brassage.dart';
 import '../router/routes.dart';
 import 'bandeau_hors_ligne.dart';
 import 'breakpoints.dart';
+import 'logo_kass_beer.dart';
 import 'menu_compte.dart';
 import 'zone_capture.dart';
 
@@ -177,6 +178,9 @@ class AppShell extends ConsumerWidget {
                         // Largeur fixée ici : le seuil côte à côte d'Admin ›
                         // Tickets la retranche de la fenêtre.
                         minExtendedWidth: kRailEtenduWidth,
+                        // Rail étendu : médaillon et nom en tête. Le rail
+                        // réduit (600 à 839 px) n'a pas la place.
+                        leading: expanded ? const _EnteteRail() : null,
                         labelType: expanded
                             ? NavigationRailLabelType.none
                             : NavigationRailLabelType.all,
@@ -241,5 +245,39 @@ class AppShell extends ConsumerWidget {
       }
     }
     return 0;
+  }
+}
+
+/// En-tête du rail étendu : médaillon de 48 px et nom de l'application. Exclu
+/// de la sémantique : la barre du haut porte déjà le titre de l'écran.
+class _EnteteRail extends StatelessWidget {
+  const _EnteteRail();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ExcludeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: SizedBox(
+          width: kRailEtenduWidth - 32,
+          child: Row(
+            children: [
+              const MedaillonKassBeer(taille: MedaillonKassBeer.tailleMin),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  "Kass'Beer",
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

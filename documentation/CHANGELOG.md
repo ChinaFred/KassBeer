@@ -6,6 +6,40 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.47 — fonctionnel
+
+L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert
+pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres
+restent alignés d'une ligne à l'autre. Le médaillon du logo s'affiche à la connexion, au
+chargement, sur « Ce compte n'a pas accès » et en tête du menu sur grand écran.
+
+Les listes de recettes, brassins, équipements, processus, tickets et l'accueil Admin ont la même
+ligne : une icône à gauche, le nom, les détails, puis les étiquettes. Les prix et les frais
+suivent la même ligne, sans icône. Le statut d'un
+brassin s'affiche dans une étiquette colorée. Une liste vide affiche un titre. Les titres de
+section se distinguent de leur contenu. Les messages d'erreur, d'avertissement et de succès
+s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le
+brassage », et chaque vérification prend la couleur de son état.
+
+### v0.1.47 — technique
+
+Revue visuelle de l'agent `ux-designer`, lots 1 à 3. Lot 1 : `app_theme.dart` construit la
+palette depuis quatre couleurs (couleurs principales en variante `fidelity`, conteneurs en
+variante `tonalSpot` pour qu'un bouton posé dessus garde son contraste), surfaces tirées du
+laiton, `ThemeExtension` `CouleursEtat` (succès), thèmes de barre, navigation, rail, cartes,
+champs, listes, puces, segments, séparateurs, `ExpansionTile` et bouton flottant ;
+`app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 sur 23 couples en clair et
+en sombre. Lot 2 : police Bitter demi-grasse (SIL OFL 1.1, `OFL.txt` livré en asset), figée à
+la graisse 600 et réduite au jeu latin par fonttools (38 736 octets) ; médaillon de 384 px en
+WebP (38 564 octets) tiré de `assets/Kassbeer_transparent.png` ; `MedaillonKassBeer` (48 px
+au moins) dans `logo_kass_beer.dart`, l'écran de panne au démarrage, `not_invited_screen.dart`
+et l'en-tête du rail étendu. Lot 3 : composants `LigneListe`, `Encadre`, `PageSecondaire` et
+`LigneTicket`, `TitreSection` à deux niveaux, `LigneFiche` en deux colonnes à partir de 600 px,
+`EtatVide` avec titre, constante `kMargeBoutonFlottant` ; `encadre_avertissement.dart` est
+supprimé ; tests dans `app/test/composants_test.dart`. Aucune dépendance changée ;
+`main.dart.js` (`flutter build web --release`) : 5 619 654 octets sur `main` à la v0.1.46,
+5 620 419 après (+ 765) ; `build/web` + 83 Ko (police et médaillon).
+
 ### v0.1.46 — fonctionnel
 
 Dans « Rapports d'erreur », une relecture n'affiche plus qu'une seule attente, sur le bouton

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../domain/ticket_launch.dart';
-import 'encadre_avertissement.dart';
 
 /// Appel de lancement en cours sur une fiche, hors de l'état du widget : un
 /// changement de disposition garde le bouton inactif, et un seul appel part
@@ -234,15 +234,16 @@ class _BoiteLancementState extends State<BoiteLancement> {
             Text(ligneQuota(widget.quota)),
             if (avertissement != null) ...[
               const SizedBox(height: 12),
-              EncadreAvertissement(
+              Encadre(
+                ton: TonEncadre.avertissement,
                 icone: Icons.warning_amber_outlined,
-                texte: avertissement,
+                child: Text(avertissement),
               ),
             ],
             const SizedBox(height: 12),
-            const EncadreAvertissement(
+            const Encadre(
               icone: Icons.payments_outlined,
-              texte: BoiteLancement.cout,
+              child: Text(BoiteLancement.cout),
             ),
             if (_envoi) ...[
               const SizedBox(height: 12),

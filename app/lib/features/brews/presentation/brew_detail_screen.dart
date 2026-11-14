@@ -878,7 +878,12 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
 
     final body = ListView(
       controller: _scroll,
-      padding: EdgeInsets.fromLTRB(16, 16, 16, fab == null ? 32 : 96),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        fab == null ? 32 : kMargeBoutonFlottant,
+      ),
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1019,7 +1024,11 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               equipement: equipement,
             ),
             const SizedBox(height: 8),
-            ContenuRecette(content: content, hopIbu: hopIbu),
+            ContenuRecette(
+              content: content,
+              hopIbu: hopIbu,
+              niveauTitres: NiveauTitre.sousSection,
+            ),
           ],
           general: [
             const TitreSection('Général'),
@@ -1632,7 +1641,6 @@ class _FormulaireBrassinState extends ConsumerState<_FormulaireBrassin> {
             decoration: InputDecoration(
               labelText: 'Nom du brassin',
               errorText: _nameError,
-              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 8),
@@ -1659,10 +1667,7 @@ class _FormulaireBrassinState extends ConsumerState<_FormulaireBrassin> {
             maxLength: kBrewNotesMaxLength,
             maxLines: 3,
             minLines: 1,
-            decoration: const InputDecoration(
-              labelText: 'Notes (facultatif)',
-              border: OutlineInputBorder(),
-            ),
+            decoration: const InputDecoration(labelText: 'Notes (facultatif)'),
           ),
           const SizedBox(height: 16),
           Wrap(
