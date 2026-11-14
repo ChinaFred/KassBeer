@@ -6,6 +6,33 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.55 — fonctionnel
+
+« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et qu'aucun n'est
+proposé par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage)
+autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie
+de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un
+processus », ou « Créer un processus » si vous n'en avez aucun. Une recette sans chronologie
+affiche « sans processus, le brassin n'aura aucune étape ».
+
+Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus
+choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son
+propriétaire. Demandé par le ticket #61.
+
+### v0.1.55 — technique
+
+`lireChoixProcessus` présélectionne le seul processus valide du lecteur quand aucun défaut
+valide n'existe ; le modèle d'exemple n'est jamais appliqué seul (P37). `AideChronologieSeule`,
+`BoutonProcessus` et `choisirProcessus` (`choix_processus.dart`) sous « Chronologie de la
+recette seule » ; nouvelle fenêtre `/recettes/:id/fenetre/choix-processus` dans
+`kTicketElements`. `sansProcessusPrevu` (`section_deroule.dart`) remplace « Changer de
+processus » par « Choisir un processus » sur un brassin prévu sans `process`, et
+`_chronologie` n'y affiche plus « Aucune étape. ». Aucun calcul, aucune règle, aucun modèle de
+données ne change ; l'écran du jour et les journées ne sont pas touchés (P2). Le préremplissage
+de la voie « Chronologie de la recette seule » n'est pas fait (point 5 de l'analyse). Tests de
+widgets ajoutés dans `deroule_d3_test.dart` et `process_screens_test.dart`. Demandé par le
+ticket #61.
+
 ### v0.1.51 — fonctionnel
 
 Les fiches d'une recette, d'un brassin, d'un équipement et d'un processus ont un en-tête avec le

@@ -118,6 +118,18 @@ class _FormulaireNouveauBrassinState
   String? _selection(ChoixProcessus choix) =>
       _processTouched ? choix.valide(_processId) : choix.defaut;
 
+  /// « Choisir un processus » sous « Chronologie de la recette seule » : la
+  /// liste des modèles du lecteur ; le modèle choisi remplace la sélection.
+  Future<void> _choisir(ChoixProcessus choix) async {
+    final id = await choisirProcessus(context, choix.miens);
+    if (id == null || !mounted) return;
+    setState(() {
+      _processId = id;
+      _processTouched = true;
+      _processError = null;
+    });
+  }
+
   Future<void> _create(Equipment? equipment, ChoixProcessus choix) async {
     final name = _name.text.trim();
     setState(() {
@@ -386,17 +398,27 @@ class _FormulaireNouveauBrassinState
           chronologieSeule: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                steps.isEmpty
-                    ? (mine
-                          ? "Cette recette n'a pas de chronologie : le jour du "
-                                "brassage n'aura aucune étape à suivre."
-                          : "Seul l'auteur écrit la chronologie de cette "
-                                'recette. Dupliquez-la pour écrire la vôtre.')
-                    : 'Chronologie : ${formatEtapes(steps.length)} · '
-                          '${formatDuree(dureeChronologie(steps))}',
-                style: theme.textTheme.bodyMedium,
+              if (steps.isNotEmpty)
+                Text(
+                  'Chronologie : ${formatEtapes(steps.length)} · '
+                  '${formatDuree(dureeChronologie(steps))}',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              AideChronologieSeule(
+                choix: choix,
+                recetteSansEtape: steps.isEmpty,
+                onChoisir: () => unawaited(_choisir(choix)),
+                onCreer: () => ouvrir(AppRoutes.newProcess),
               ),
+              if (steps.isEmpty && !mine)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    "Seul l'auteur écrit la chronologie de cette recette. "
+                    'Dupliquez-la pour écrire la vôtre.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
               if (steps.isEmpty && mine)
                 Align(
                   alignment: Alignment.centerLeft,
