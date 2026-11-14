@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.48 — fonctionnel
+### v0.1.49 — fonctionnel
 
 L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert
 pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres
@@ -22,7 +22,7 @@ section se distinguent de leur contenu. Les messages d'erreur, d'avertissement e
 s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le
 brassage », et chaque vérification prend la couleur de son état.
 
-### v0.1.48 — technique
+### v0.1.49 — technique
 
 Revue visuelle de l'agent `ux-designer`, lots 1 à 3. Lot 1 : `app_theme.dart` construit la
 palette depuis quatre couleurs (couleurs principales en variante `fidelity`, conteneurs en
@@ -45,12 +45,29 @@ et l'en-tête du rail étendu. Lot 3 : composants `LigneListe`, `Encadre`, `Page
 `LigneTicket`, `TitreSection` à deux niveaux, `LigneFiche` en deux colonnes à partir de 600 px,
 `EtatVide` avec titre, constante `kMargeBoutonFlottant` ; `encadre_avertissement.dart` est
 supprimé ; tests dans `app/test/composants_test.dart`. Aucune dépendance changée ;
-`main.dart.js` (`flutter build web --release`) : 5 633 682 octets sur `main` à la v0.1.47,
+`main.dart.js` (`flutter build web --release`) : 5 633 682 octets sur `main` à la v0.1.47 (code de
+`app/` inchangé à la v0.1.48),
 5 649 424 après (+ 15 742, dont 14 980 pour la déclaration des polices du texte et de secours) ;
 assets ajoutés : 325 546 octets (polices, licences et médaillon). APK de release compilé par
 le job « Android — compilation » de la CI (clé de signature absente du poste) ; APK de débogage
 compilé sur le poste. Corrections de la revue : « Tout est prêt » en `titleMedium` et annoncé,
 séparateurs à leur hauteur par défaut, ton neutre d'`Encadre` retiré faute d'usage.
+
+### v0.1.48 — fonctionnel
+
+« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran
+Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou
+« Journaux indisponibles pour l'instant ».
+
+### v0.1.48 — technique
+
+Chaque callable échouait en 500 sans détail (`app/no-app`, journaux du 2026-11-14) :
+`firebase-functions` crée son application nommée `__FIREBASE_FUNCTIONS_SDK__` pour vérifier
+le jeton avant le code de la fonction, et `firestore.ts` comme `storage.ts` ne créaient
+l'application par défaut que si `getApps()` était vide. `src/adminApp.ts`
+(`ensureDefaultApp`) la crée si aucune application `[DEFAULT]` n'existe ; test
+`functions/test/adminApp.test.ts`. Les déclencheurs n'étaient pas touchés. Aucun paquet ne
+change.
 
 ### v0.1.47 — fonctionnel
 

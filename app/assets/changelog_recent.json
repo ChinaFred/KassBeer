@@ -1,11 +1,18 @@
 {
   "versions": [
     {
-      "version": "0.1.48",
+      "version": "0.1.49",
       "date": "2026-11-14",
       "paragraphs": [
         "L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres restent alignés d'une ligne à l'autre. Le médaillon du logo s'affiche à la connexion, au chargement, sur « Ce compte n'a pas accès » et en tête du menu sur grand écran. Le texte s'affiche dans la même police sur tous les appareils. Sur le web, l'application ne télécharge plus de police au démarrage, et les flèches s'affichent aussi sans réseau.",
         "Les listes de recettes, brassins, équipements, processus, tickets et l'accueil Admin ont la même ligne : une icône à gauche, le nom, les détails, puis les étiquettes. Les prix et les frais suivent la même ligne, sans icône. Le statut d'un brassin s'affiche dans une étiquette colorée. Une liste vide affiche un titre. Les titres de section se distinguent de leur contenu. Les messages d'erreur, d'avertissement et de succès s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le brassage », et chaque vérification prend la couleur de son état."
+      ]
+    },
+    {
+      "version": "0.1.48",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou « Journaux indisponibles pour l'instant »."
       ]
     },
     {
@@ -34,13 +41,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien, 50 à la fois. On choisit la gravité, la période (1 h, 24 h ou 7 jours), une fonction, un ticket ou un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni pendant la frappe. Une entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue."
-      ]
-    },
-    {
-      "version": "0.1.43",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50 à la fois, avec « Charger la suite » pour les précédentes. Chaque ligne donne la date, la partie de l'application concernée, la version et la plateforme (Android ou Web). Une ligne se déplie sur l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application."
       ]
     }
   ]
