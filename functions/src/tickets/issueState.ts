@@ -1,7 +1,8 @@
 /**
  * État d'une Issue appliqué à son ticket : statut, décisions permises, réponse
- * « Réponse : » du compte 16348852, analyses et précisions (`admin/analysis`, P32), PR de
- * livraison et version. Appelé par la passe horaire (`sync.ts`), par le webhook
+ * « Réponse : » du compte 16348852, analyses et précisions (`admin/analysis`, P32), comptes
+ * rendus de livraison (`admin/delivery`, P45), verrou des livraisons libéré quand le ticket
+ * quitte « En cours » (P44), PR de livraison et version. Appelé par la passe horaire (`sync.ts`), par le webhook
  * (`webhook.ts`) et par une décision qui trouve son Issue déjà fermée (`decisions.ts`).
  */
 
@@ -16,6 +17,7 @@ import {
 import { firestore } from "../firestore";
 import { logError, logInfo } from "../logging";
 import { writeTicketAnalyses } from "./analyses";
+import { releaseDeliveryLockIfLeft, writeDeliveryReports } from "./delivery";
 import {
   allowedDecisions,
   allowedDecisionsUpToDate,
@@ -120,6 +122,7 @@ export async function applyIssue(
     const comments =
       issue.comments > 0 ? await client.recentComments(issue.number, issue.comments) : [];
     await writeTicketAnalyses(doc.id, comments);
+    await writeDeliveryReports(await firestore(), doc.id, comments, Date.now());
     const reply = lastReply(comments, GITHUB_MAINTAINER_ID, REPLY_MAX_CHARS);
     if (reply !== null && reply.text !== data.reply_text) {
       const atMs = reply.at === null ? Number.NaN : Date.parse(reply.at);
@@ -193,5 +196,8 @@ export async function applyIssue(
       feature: "tickets",
       ticketId: doc.id,
     });
+    if (written.from === "in_progress") {
+      await releaseDeliveryLockIfLeft(await firestore(), doc.id, Date.now());
+    }
   }
 }

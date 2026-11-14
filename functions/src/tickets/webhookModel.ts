@@ -5,14 +5,40 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import { readIssue } from "./github";
-import { LABEL_VALIDATED, type IssueView } from "./model";
+import {
+  CI_WORKFLOW_NAME,
+  CI_WORKFLOW_PATH,
+  DELIVERY_EVENT_MAX,
+  isDeliveryCandidatePr,
+} from "./delivery";
+import { readIssue, readPullRequest } from "./github";
+import { LABEL_VALIDATED, closingIssueNumbers, type IssueView } from "./model";
 
 /** Plafond d'une livraison GitHub : au-delà, le corps est refusé avant le HMAC. */
 export const WEBHOOK_MAX_BODY_BYTES = 25 * 1024 * 1024;
 
-/** Événements traités à T3 ; `pull_request` et `workflow_run` arrivent à T5. */
-export const WEBHOOK_EVENTS = new Set(["ping", "issues", "issue_comment"]);
+/** Événements traités : ceux de T3, et `pull_request` et `workflow_run` depuis T5 (P29). */
+export const WEBHOOK_EVENTS = new Set([
+  "ping",
+  "issues",
+  "issue_comment",
+  "pull_request",
+  "workflow_run",
+]);
+
+/** Actions d'une PR qui changent son état « PR prête » (corps, brouillon, tête, fermeture). */
+const DELIVERY_PR_ACTIONS = new Set([
+  "opened",
+  "reopened",
+  "edited",
+  "ready_for_review",
+  "converted_to_draft",
+  "synchronize",
+  "closed",
+]);
+
+/** Actions d'un `workflow_run` qui relisent la livraison : départ, exécution, fin. */
+const DELIVERY_RUN_ACTIONS = new Set(["requested", "in_progress", "completed"]);
 
 const ISSUE_ACTIONS = new Set(["opened", "edited", "labeled", "unlabeled", "closed", "reopened"]);
 const COMMENT_ACTIONS = new Set(["created", "edited", "deleted"]);
@@ -81,6 +107,89 @@ export function webhookAction(
     const user = comment?.user as { id?: unknown } | null | undefined;
     if (user?.id !== maintainerId) return null;
     return { issue, forceComments: true, validatedLabel: false };
+  }
+  return null;
+}
+
+/**
+ * Vrai si un côté (`base` ou `head`) d'une PR portée par `workflow_run.pull_requests` est dans
+ * ce dépôt. GitHub y donne `repo` sous la forme `{ id, url, name }` : l'adresse d'API
+ * `https://api.github.com/repos/<dépôt>` est comparée, casse ignorée ; `full_name`, s'il est
+ * présent, aussi. Pure.
+ */
+export function isOwnRunPrSide(side: unknown, repoFullName: string): boolean {
+  if (side === null || typeof side !== "object") return false;
+  const repo = (side as { repo?: unknown }).repo as
+    { url?: unknown; full_name?: unknown } | null | undefined;
+  if (repo === null || typeof repo !== "object") return false;
+  const want = repoFullName.toLowerCase();
+  if (typeof repo.full_name === "string") return repo.full_name.toLowerCase() === want;
+  return (
+    typeof repo.url === "string" &&
+    repo.url.toLowerCase() === `https://api.github.com/repos/${want}`
+  );
+}
+
+/**
+ * Ce qu'un événement demande de relire pour « Livrer » (P29, P46), ou `null` :
+ *
+ * - `pull_request` d'une PR candidate (`isDeliveryCandidatePr` : tête dans ce dépôt, auteur
+ *   `maintainerId`) : les Issues citées par un mot-clé de fermeture dans le corps, et dans
+ *   l'ancien corps d'un `edited` (un renvoi retiré rend la PR inéligible pour cette Issue),
+ *   `DELIVERY_EVENT_MAX` au plus. Le corps n'est lu que pour ces numéros ;
+ * - `workflow_run` du seul workflow `.github/workflows/ci.yml` (chemin et nom) : les PR de ce
+ *   dépôt qu'il porte (`pull_requests` dont base et tête sont dans ce dépôt,
+ *   `isOwnRunPrSide`), `DELIVERY_EVENT_MAX` au plus ; l'appelant relit chaque PR et ses runs, jamais la liste des PR ouvertes.
+ *
+ * Un autre dépôt, un autre workflow (« Déploiement ») ou une autre action : `null`, sans
+ * appel à GitHub. Pure.
+ */
+export function deliveryRefreshFromEvent(
+  event: string,
+  payload: Payload,
+  repoFullName: string,
+): { issueNumbers: number[]; prNumbers: number[] } | null {
+  if (!isOwnRepository(payload, repoFullName)) return null;
+  const action = typeof payload.action === "string" ? payload.action : "";
+  if (event === "pull_request" && DELIVERY_PR_ACTIONS.has(action)) {
+    const raw = payload.pull_request as Payload | null | undefined;
+    if (raw === null || typeof raw !== "object") return null;
+    const pr = readPullRequest(raw);
+    if (!isDeliveryCandidatePr(pr)) return null;
+    const changes = payload.changes as { body?: { from?: unknown } } | null | undefined;
+    const bodies = [raw.body, changes?.body?.from].filter(
+      (b): b is string => typeof b === "string",
+    );
+    const issues = new Set<number>();
+    for (const body of bodies) {
+      for (const n of closingIssueNumbers(body, repoFullName)) issues.add(n);
+    }
+    if (issues.size === 0) return null;
+    return {
+      issueNumbers: [...issues].sort((a, b) => a - b).slice(0, DELIVERY_EVENT_MAX),
+      prNumbers: [],
+    };
+  }
+  if (event === "workflow_run" && DELIVERY_RUN_ACTIONS.has(action)) {
+    const run = payload.workflow_run as Payload | null | undefined;
+    if (run === null || typeof run !== "object") return null;
+    if (run.path !== CI_WORKFLOW_PATH || run.name !== CI_WORKFLOW_NAME) return null;
+    if (!Array.isArray(run.pull_requests)) return null;
+    const prs = new Set<number>();
+    for (const item of run.pull_requests) {
+      const pr = item as { number?: unknown; base?: unknown; head?: unknown } | null;
+      // Base et tête dans ce dépôt, sinon ignorée sans appel à GitHub (P29).
+      if (!isOwnRunPrSide(pr?.base, repoFullName) || !isOwnRunPrSide(pr?.head, repoFullName)) {
+        continue;
+      }
+      const n = pr?.number;
+      if (typeof n === "number" && Number.isSafeInteger(n) && n > 0) prs.add(n);
+    }
+    if (prs.size === 0) return null;
+    return {
+      issueNumbers: [],
+      prNumbers: [...prs].sort((a, b) => a - b).slice(0, DELIVERY_EVENT_MAX),
+    };
   }
   return null;
 }

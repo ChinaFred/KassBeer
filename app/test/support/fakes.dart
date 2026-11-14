@@ -40,6 +40,7 @@ import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
 import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_delivery.dart';
 import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
 import 'package:kass_beer/features/tickets/presentation/tickets_providers.dart';
 
@@ -978,6 +979,8 @@ class FakeTicketsRepository implements TicketsRepository {
     canAnswer: t.canAnswer,
     canLaunchAnalysis: t.canLaunchAnalysis,
     canLaunchDevelopment: t.canLaunchDevelopment,
+    canLaunchDelivery: t.canLaunchDelivery,
+    canRelaunchDevelopment: t.canRelaunchDevelopment,
     decisionLeaseUntil: t.decisionLeaseUntil,
     retryRequestedAt: t.retryRequestedAt,
     hasPendingWrites: true,
@@ -1032,6 +1035,19 @@ class FakeTicketsRepository implements TicketsRepository {
   @override
   Stream<RechercheDocument<EtatLancements>> watchLaunchStatus() =>
       launchStatus.stream;
+
+  /// `admin/delivery` par ticket : absent par défaut.
+  final deliveries = <String, Replay<RechercheDocument<TicketDelivery>>>{};
+
+  Replay<RechercheDocument<TicketDelivery>> deliveryOf(String ticketId) =>
+      deliveries.putIfAbsent(
+        ticketId,
+        () => Replay()..add(const DocumentAbsent()),
+      );
+
+  @override
+  Stream<RechercheDocument<TicketDelivery>> watchDelivery(String ticketId) =>
+      deliveryOf(ticketId).stream;
 
   /// Lancements demandés : ticket et action.
   final launches = <({String ticketId, ActionLancement action})>[];

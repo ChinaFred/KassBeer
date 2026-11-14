@@ -22,7 +22,8 @@ export const RUNTIME_SERVICE_ACCOUNT = `tickets-functions@${PROJECT_ID}.iam.gser
 
 /**
  * Jeton à grain fin du compte propriétaire, limité à `ChinaFred/KassBeer` : Issues en
- * lecture et écriture, Pull requests et Contents en lecture (P25). Déclaré ici, lu à l'appel.
+ * lecture et écriture ; Pull requests, Contents et Actions en lecture (P25 ; Actions depuis
+ * T5, pour les runs de la CI d'une PR). Déclaré ici, lu à l'appel.
  */
 export const GITHUB_TICKETS_TOKEN = defineSecret("GITHUB_TICKETS_TOKEN");
 
@@ -34,9 +35,11 @@ export const GITHUB_WEBHOOK_SECRET = defineSecret("GITHUB_WEBHOOK_SECRET");
 
 /**
  * Routines Claude Code des tickets (ADR-008, T4, P35) : identifiant (`trig_…`) et jeton de
- * déclenchement de chaque routine, créés sur claude.ai/code. Chaque paire est montée par la
- * seule callable qui la lit (P25) : l'analyse par `launchTicketAnalysis`, le développement
- * par `launchTicketDevelopment`. Vides : « Lancement non configuré », rien ne part.
+ * déclenchement de chaque routine, créés sur claude.ai/code. Chaque paire est montée par les
+ * seules callables qui la lisent (P25) : l'analyse par `launchTicketAnalysis` ; le
+ * développement par `launchTicketDevelopment` (développement et reprise) et
+ * `launchTicketDelivery`, la livraison partant par la routine de développement (T5). Vides :
+ * « Lancement non configuré », rien ne part.
  */
 export const TICKETS_ROUTINE_ANALYSIS_ID = defineSecret("TICKETS_ROUTINE_ANALYSIS_ID");
 export const TICKETS_ROUTINE_ANALYSIS_TOKEN = defineSecret("TICKETS_ROUTINE_ANALYSIS_TOKEN");
@@ -73,6 +76,8 @@ export const TICKET_ANALYSIS_DOC = "analysis";
 export const TICKET_LAUNCHES_DOC = "launches";
 /** Compteurs des lancements affichés à l'admin : `ticket_status/launches` (P36, P41). */
 export const TICKET_STATUS_LAUNCHES_DOC = "launches";
+/** État « PR prête » et comptes rendus de livraison : `tickets/{id}/admin/delivery` (P45). */
+export const TICKET_DELIVERY_DOC = "delivery";
 
 /**
  * Poste de coût des lancements de routines (CLAUDE.md, « Coûts variables », P36) : inscrit
@@ -81,9 +86,9 @@ export const TICKET_STATUS_LAUNCHES_DOC = "launches";
 export const LAUNCH_COST_CENTER = "ticket_routine_launch";
 
 /**
- * Plafond des lancements de routines, analyse et développement confondus, pour le groupe,
- * par jour de Paris (ADR-008, P36). Seul endroit où il est écrit : le client le lit dans
- * `ticket_status/launches.per_day`.
+ * Plafond des lancements de routines, analyse, développement, reprise et livraison confondus,
+ * pour le groupe, par jour de Paris (ADR-008, P36). Seul endroit où il est écrit : le client
+ * le lit dans `ticket_status/launches.per_day`.
  */
 export const LAUNCHES_PER_DAY = 10;
 

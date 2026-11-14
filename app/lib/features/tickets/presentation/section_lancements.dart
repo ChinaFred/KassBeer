@@ -65,7 +65,8 @@ class _ReconstruireAState extends ConsumerState<ReconstruireA> {
 
 /// Pastille de la liste d'Admin › Tickets : lancement en cours ou relance
 /// possible. Lit `admin/launches` pour les seuls tickets dont un lancement
-/// est permis par le serveur (tickets reçus ou validés).
+/// est permis par le serveur (tickets reçus ou validés). Un ticket En cours
+/// porte `PastilleLivraison` à la place (`section_livraison.dart`).
 class PastilleLancement extends ConsumerWidget {
   const PastilleLancement({super.key, required this.ticket});
 
@@ -73,6 +74,9 @@ class PastilleLancement extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ticket.status == TicketStatus.inProgress) {
+      return const SizedBox.shrink();
+    }
     final actions = [
       for (final a in ActionLancement.values)
         if (ticket.canLaunch(a)) a,
@@ -410,6 +414,8 @@ class CarteLancement extends ConsumerWidget {
       icone: switch (l.action) {
         ActionLancement.analyse => Icons.manage_search,
         ActionLancement.developpement => Icons.code,
+        ActionLancement.livraison => Icons.local_shipping_outlined,
+        ActionLancement.reprise => Icons.build_outlined,
         null => Icons.rocket_launch_outlined,
       },
       sousTitre: sousTitre.isEmpty ? null : sousTitre,

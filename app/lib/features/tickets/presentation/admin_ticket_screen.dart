@@ -18,6 +18,7 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_analysis.dart';
+import '../domain/ticket_delivery.dart';
 import '../domain/ticket_launch.dart';
 import '../domain/ticket_screens.dart';
 import 'admin_tickets_screen.dart';
@@ -28,6 +29,7 @@ import 'encadre_reponse.dart';
 import 'frise_ticket.dart';
 import 'section_analyses.dart';
 import 'section_lancements.dart';
+import 'section_livraison.dart';
 import 'ticket_lien_github.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
@@ -113,6 +115,19 @@ typedef _EtatLancementsFiche = ({
   TicketLaunch? enCours,
   TicketLaunch? aRelancer,
   ActionLancement? actif,
+  LigneLivraison? livraison,
+  TicketDelivery? etatPr,
+});
+
+/// Ligne de lancement de la barre, au-dessus des boutons.
+typedef _LigneLancement = ({
+  IconData? icon,
+  String? progress,
+  String text,
+  bool precisionsVisibles,
+  bool error,
+  // Ton d'une ligne de livraison : couleur de son icône ; `null` ailleurs.
+  TonLivraison? ton,
 });
 
 /// Ligne de la barre pendant la publication d'une réponse, boîte fermée ou
@@ -528,6 +543,8 @@ class _FicheState extends ConsumerState<_Fiche> {
     ActionLancement action, {
     required DateTime? relanceDe,
     required EtatLancements? quota,
+    int? prNumber,
+    String? avertissement,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(lancementFicheProvider(_ticket.id).notifier);
@@ -541,6 +558,11 @@ class _FicheState extends ConsumerState<_Fiche> {
         issueNumber: _ticket.issueNumber,
         quota: quota,
         relanceDe: relanceDe,
+        prNumber: prNumber,
+        avertissement: avertissement,
+        typeTicket: action == ActionLancement.livraison
+            ? _ticket.type.label
+            : null,
         envoyer: () => enVol = notifier.lancer(action),
       ),
     );
@@ -641,10 +663,18 @@ class _FicheState extends ConsumerState<_Fiche> {
     const gap = SizedBox(height: 16);
     final number = ticket.issueNumber;
     final issueLink = lienGithub(ticket.issueUrl);
-    final prLink = ticket.status == TicketStatus.delivered
-        ? lienGithub(ticket.deliveredPrUrl)
-        : null;
-    final prNumber = ticket.deliveredPrNumber;
+    // Ticket En cours : la PR éligible lue dans `admin/delivery`, adresse de
+    // ce dépôt seule (P39) ; ticket Livré : la PR qui l'a fermé.
+    final etatPr = etatLancements.etatPr;
+    final prLink = switch (ticket.status) {
+      TicketStatus.delivered => lienGithub(ticket.deliveredPrUrl),
+      TicketStatus.inProgress when etatPr?.eligiblePrCount == 1 =>
+        lienPullRequestOuvrable(etatPr?.prUrl),
+      _ => null,
+    };
+    final prNumber = ticket.status == TicketStatus.delivered
+        ? ticket.deliveredPrNumber
+        : etatPr?.prNumber;
     final created = ticket.createdAt;
     final reply = ticket.replyText;
     final missing = ticket.issueMissingSince;
@@ -698,7 +728,7 @@ class _FicheState extends ConsumerState<_Fiche> {
                 label: prNumber == null
                     ? 'Ouvrir la PR'
                     : 'Ouvrir la PR #$prNumber',
-                contexte: 'PR d\'un ticket livré',
+                contexte: 'PR d\'un ticket',
               ),
           ],
         ),
@@ -757,6 +787,17 @@ class _FicheState extends ConsumerState<_Fiche> {
       Text('Écran : ${ticketScreenLabel(ticket.screen)}', style: muted),
       const TitreSection('Description'),
       Text(ticket.description, style: theme.textTheme.bodyLarge),
+      // Livraison avant Analyses : pour un ticket En cours, le blocage est le
+      // texte à lire maintenant (UX T5, point 4).
+      if (ticket.issueNumber != null)
+        SectionLivraison(
+          ticket: ticket,
+          // Invitation seulement quand le bouton s'appelle « Livrer », pas
+          // « Relancer la livraison ».
+          livrerActif:
+              etatLancements.actif == ActionLancement.livraison &&
+              etatLancements.aRelancer == null,
+        ),
       // Sans Issue, il n'y a rien à analyser.
       if (ticket.issueNumber != null) SectionAnalyses(ticket: ticket),
       if (ticket.issueNumber != null)
@@ -864,6 +905,27 @@ class _FicheState extends ConsumerState<_Fiche> {
     );
   }
 
+  /// Ligne de livraison d'un ticket En cours, dans la forme de la barre.
+  _LigneLancement _ligneDeLivraison(LigneLivraison l) => (
+    icon: iconeLivraison(l.ton),
+    progress: l.progression,
+    text: l.texte,
+    precisionsVisibles: true,
+    error: l.ton == TonLivraison.erreur,
+    ton: l.ton,
+  );
+
+  /// « Ouvrir le ticket #9 » : la fiche du ticket qui tient le verrou ; à côté
+  /// de la liste, elle remplace celle-ci (`go`), sinon elle s'empile (`push`).
+  void _ouvrirTicket(BuildContext context, String id) {
+    final location = AppRoutes.adminTicket(id);
+    if (adminTicketsCoteACote(context)) {
+      context.go(location);
+    } else {
+      unawaited(context.push(location));
+    }
+  }
+
   /// Décision ou réponse en cours : la barre n'affiche aucun bouton.
   bool _occupe(List<TicketDecision> decisions, DateTime now) {
     final last = decisions.isEmpty ? null : decisions.first;
@@ -892,34 +954,61 @@ class _FicheState extends ConsumerState<_Fiche> {
       _ => null,
     };
     ActionLancement? lancement;
-    for (final a in ActionLancement.values) {
+    for (final a in [ActionLancement.analyse, ActionLancement.developpement]) {
       if (ticket.canLaunch(a) && ticket.issueNumber != null) {
         lancement = a;
         break;
       }
     }
-    // Le plafond se lit aussi pour un ticket à valider : « Vous pouvez
-    // valider. »
+    final enCoursDeLivraison =
+        ticket.status == TicketStatus.inProgress && ticket.issueNumber != null;
+    // Le plafond se lit aussi pour un ticket à valider (« Vous pouvez
+    // valider. ») et pour un ticket En cours (verrou des livraisons).
     final quota =
         lancement == null &&
             ticket.status != TicketStatus.analyzed &&
-            !_valideSurGithub(ticket)
+            !_valideSurGithub(ticket) &&
+            !enCoursDeLivraison
         ? null
         : switch (ref.watch(launchStatusProvider).value) {
             DocumentTrouve(:final value) => value,
             _ => null,
           };
     final appelEnCours = ref.watch(lancementFicheProvider(ticket.id));
+    // Ticket En cours (T5) : ligne et bouton lus dans `admin/delivery`,
+    // `admin/launches` et `ticket_status/launches`, sans règle recopiée.
+    LigneLivraison? livraison;
+    TicketDelivery? etatPr;
+    if (enCoursDeLivraison) {
+      final async = ref.watch(ticketDeliveryProvider(ticket.id));
+      etatPr = switch (async.value) {
+        DocumentTrouve(:final value) => value,
+        _ => null,
+      };
+      livraison = ligneLivraison(
+        ticket: ticket,
+        livraison: async.value,
+        livraisonEnPanne:
+            async.hasError && async.value is! DocumentTrouve<TicketDelivery>,
+        historique: historique,
+        quota: quota,
+        now: now,
+        offline: offline,
+        appelEnCours: appelEnCours,
+      );
+      lancement = livraison?.action;
+    }
     final enCours = lancement == null
         ? null
         : historique?.enCours(lancement, now);
-    final aRelancer = lancement == null
-        ? null
-        : historique?.aRelancer(
-            lancement,
-            now,
-            statusChangedAt: ticket.statusChangedAt,
-          );
+    final aRelancer = switch (lancement) {
+      null || ActionLancement.reprise => null,
+      final a => historique?.aRelancer(
+        a,
+        now,
+        statusChangedAt: ticket.statusChangedAt,
+      ),
+    };
     // Le bouton est affiché quand l'historique est lu et rien n'est en cours,
     // dans une barre qui montre ses boutons (décisions lues, aucune décision
     // ni réponse en cours, `allowed_decisions` calculé). Il est actif en
@@ -933,7 +1022,8 @@ class _FicheState extends ConsumerState<_Fiche> {
             !_occupe(decisions, now) &&
             !offline &&
             !appelEnCours &&
-            !(quota?.plafondAtteint ?? false)
+            !(quota?.plafondAtteint ?? false) &&
+            (livraison == null || livraison.actif)
         ? lancement
         : null;
     return (
@@ -945,6 +1035,8 @@ class _FicheState extends ConsumerState<_Fiche> {
       enCours: enCours,
       aRelancer: aRelancer,
       actif: actif,
+      livraison: livraison,
+      etatPr: etatPr,
     );
   }
 
@@ -1025,18 +1117,15 @@ class _FicheState extends ConsumerState<_Fiche> {
     // lancement en cours (`precisionsVisibles`).
     final enCoursDepuis = enCours?.at;
     final relanceDe = aRelancer?.at;
-    final ({
-      IconData? icon,
-      String? progress,
-      String text,
-      bool precisionsVisibles,
-    })?
-    ligneLancement = switch (lancement) {
+    final _LigneLancement? ligneLancement = switch (lancement) {
+      _ when etat.livraison != null => _ligneDeLivraison(etat.livraison!),
       null when quota != null && quota.plafondAtteint => (
         icon: Icons.event_busy,
         progress: null,
         text: lignePlafondAnalyse(quota),
         precisionsVisibles: true,
+        error: false,
+        ton: null,
       ),
       null => null,
       final a when appelEnCours => (
@@ -1044,6 +1133,8 @@ class _FicheState extends ConsumerState<_Fiche> {
         progress: 'Lancement en cours',
         text: 'Lancement de ${a.complement} en cours.',
         precisionsVisibles: false,
+        error: false,
+        ton: null,
       ),
       final a when enCours != null => (
         icon: Icons.hourglass_top,
@@ -1052,6 +1143,8 @@ class _FicheState extends ConsumerState<_Fiche> {
             ? '${a.nom} en cours.'
             : ligneEnCours(a, enCoursDepuis, now),
         precisionsVisibles: false,
+        error: false,
+        ton: null,
       ),
       // Plafond avant la relance : il explique le bouton inactif.
       _ when quota?.plafondAtteint ?? false => (
@@ -1059,12 +1152,16 @@ class _FicheState extends ConsumerState<_Fiche> {
         progress: null,
         text: ligneQuota(quota),
         precisionsVisibles: true,
+        error: false,
+        ton: null,
       ),
       _ when relanceDe != null => (
         icon: Icons.info_outline,
         progress: null,
         text: BoiteLancement.avertissementRelance(relanceDe),
         precisionsVisibles: true,
+        error: false,
+        ton: null,
       ),
       _ => null,
     };
@@ -1081,28 +1178,57 @@ class _FicheState extends ConsumerState<_Fiche> {
         lancements?.value is! DocumentIllisibleTrouve &&
         lancements?.value is! DocumentAbsentDuCache;
     Widget? boutonLancement;
+    final livraison = etat.livraison;
     if (lancement != null && historique != null && enCours == null) {
       final action = lancement;
+      final avertissement =
+          action == ActionLancement.livraison && relanceDe != null
+          ? livraison?.texte
+          : null;
       // Hors ligne, appel en cours ou plafond atteint le jour écrit par le
       // serveur : bouton inactif, la ligne de la barre dit pourquoi.
       final onPressed = etat.actif == null
           ? null
-          : () => _lancer(action, relanceDe: relanceDe, quota: quota);
-      boutonLancement = relanceDe == null
-          ? FilledButton.icon(
-              onPressed: onPressed,
-              icon: Icon(switch (action) {
-                ActionLancement.analyse => Icons.manage_search,
-                ActionLancement.developpement => Icons.code,
-              }),
-              label: Text('Lancer ${action.complement}'),
-            )
-          : FilledButton.tonalIcon(
-              onPressed: onPressed,
-              icon: const Icon(Icons.refresh),
-              label: Text('Relancer ${action.complement}'),
+          : () => _lancer(
+              action,
+              relanceDe: relanceDe,
+              quota: quota,
+              prNumber: etat.etatPr?.prNumber,
+              avertissement: avertissement,
             );
+      boutonLancement = switch (action) {
+        ActionLancement.livraison when relanceDe == null => FilledButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.local_shipping_outlined),
+          label: const Text('Livrer'),
+        ),
+        ActionLancement.reprise => FilledButton.tonalIcon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.refresh),
+          label: const Text('Relancer le développement'),
+        ),
+        _ when relanceDe == null => FilledButton.icon(
+          onPressed: onPressed,
+          icon: Icon(switch (action) {
+            ActionLancement.analyse => Icons.manage_search,
+            _ => Icons.code,
+          }),
+          label: Text('Lancer ${action.complement}'),
+        ),
+        _ => FilledButton.tonalIcon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.refresh),
+          label: Text('Relancer ${action.complement}'),
+        ),
+      };
     }
+    // Livraison de ce ticket en cours : Refuser et Clore masqués (P39, P44).
+    final masquer = livraison?.masquerRefuserClore ?? false;
+    // Relecture de `admin/delivery` après « Réessayer » : bouton inactif,
+    // avec un indicateur, jusqu'à la fin de la lecture.
+    final relectureLivraison =
+        (livraison?.reessayer ?? false) &&
+        ref.watch(ticketDeliveryProvider(ticket.id)).isLoading;
 
     Widget? actions;
     if (!busy && decisionsRead) {
@@ -1121,7 +1247,7 @@ class _FicheState extends ConsumerState<_Fiche> {
           spacing: 8,
           overflowSpacing: 8,
           children: [
-            if (allowed.contains(TicketDecisionAction.refuse))
+            if (allowed.contains(TicketDecisionAction.refuse) && !masquer)
               OutlinedButton.icon(
                 onPressed: () =>
                     _demanderTexte(TicketDecisionAction.refuse, decisions),
@@ -1135,7 +1261,7 @@ class _FicheState extends ConsumerState<_Fiche> {
                 icon: const Icon(Icons.reply),
                 label: const Text('Répondre'),
               ),
-            if (allowed.contains(TicketDecisionAction.close))
+            if (allowed.contains(TicketDecisionAction.close) && !masquer)
               OutlinedButton.icon(
                 onPressed: () =>
                     _demanderTexte(TicketDecisionAction.close, decisions),
@@ -1184,15 +1310,63 @@ class _FicheState extends ConsumerState<_Fiche> {
                       children: [
                         if (l.icon case final icon?) ...[
                           ExcludeSemantics(
-                            child: Icon(icon, color: scheme.onSurface),
+                            child: Icon(
+                              icon,
+                              color: switch (l.ton) {
+                                final ton? => couleurIconeLivraison(
+                                  ton,
+                                  scheme,
+                                ),
+                                null => scheme.onSurface,
+                              },
+                            ),
                           ),
                           const SizedBox(width: 8),
                         ],
                         Expanded(
-                          child: Text(l.text, style: theme.textTheme.bodyLarge),
+                          child: Text(
+                            l.text,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: l.error ? scheme.error : null,
+                            ),
+                          ),
                         ),
+                        if (livraison != null && livraison.reessayer)
+                          IconButton(
+                            tooltip: relectureLivraison
+                                ? 'Lecture en cours'
+                                : 'Réessayer',
+                            onPressed: relectureLivraison
+                                ? null
+                                : () => ref.invalidate(
+                                    ticketDeliveryProvider(ticket.id),
+                                  ),
+                            icon: relectureLivraison
+                                ? const SizedBox.square(
+                                    dimension: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      semanticsLabel: 'Lecture en cours',
+                                    ),
+                                  )
+                                : const Icon(Icons.refresh),
+                          ),
                       ],
                     ),
+                    if (livraison?.verrouTicketId case final autre?) ...[
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton(
+                          onPressed: () => _ouvrirTicket(context, autre),
+                          child: Text(
+                            livraison?.verrouIssue == null
+                                ? 'Ouvrir le ticket'
+                                : 'Ouvrir le ticket #${livraison?.verrouIssue}',
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1257,9 +1431,13 @@ class _FicheState extends ConsumerState<_Fiche> {
     if (ligne == null && actions == null) return null;
     // À l'échéance d'un lancement en cours, la barre se redessine et propose
     // « Relancer » ou rend « Répondre ».
+    final verrou = quota?.deliveryRunning;
     final echeances = [
       ?enCours?.retryAfter,
       ?historique?.enCours(ActionLancement.developpement, now)?.retryAfter,
+      ?historique?.enCours(ActionLancement.livraison, now)?.retryAfter,
+      ?historique?.enCours(ActionLancement.reprise, now)?.retryAfter,
+      if (verrou != null && verrou.tient(now)) ?verrou.retryAfter,
     ]..sort();
     return ReconstruireA(
       instant: echeances.isEmpty ? null : echeances.first,
@@ -1329,6 +1507,25 @@ class _FicheState extends ConsumerState<_Fiche> {
     );
   }
 }
+
+/// Couleur de l'icône d'une ligne de livraison : `primary` pour une PR
+/// prête, `error` pour un échec, sinon la couleur du texte.
+Color couleurIconeLivraison(TonLivraison ton, ColorScheme scheme) =>
+    switch (ton) {
+      TonLivraison.prete => scheme.primary,
+      TonLivraison.erreur => scheme.error,
+      _ => scheme.onSurface,
+    };
+
+/// Icône d'une ligne de livraison ; `null` pour une barre de progression.
+IconData? iconeLivraison(TonLivraison ton) => switch (ton) {
+  TonLivraison.progression => null,
+  TonLivraison.enCours => Icons.hourglass_top,
+  TonLivraison.info => Icons.info_outline,
+  TonLivraison.prete => Icons.check_circle_outline,
+  TonLivraison.erreur => Icons.error_outline,
+  TonLivraison.plafond => Icons.event_busy,
+};
 
 /// Bloc d'un ticket `send_failed` : essais, dernière erreur, « Relancer
 /// l'envoi » ou la relance déjà demandée.

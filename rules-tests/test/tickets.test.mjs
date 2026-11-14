@@ -828,3 +828,97 @@ describe("lancements — admin/launches et ticket_status/launches, cinq profils 
     });
   }
 });
+
+/// État « PR prête » et comptes rendus de livraison, écrits par le serveur (ADR-008, T5, P45).
+const delivery = {
+  eligible_pr_count: 1,
+  pr_number: 34,
+  pr_url: "https://github.com/ChinaFred/KassBeer/pull/34",
+  head_sha: "a".repeat(40),
+  ci_status: "completed",
+  ci_conclusion: "success",
+  ci_completed_at: CREATED,
+  ready: true,
+  relaunch_ready: false,
+  reports: [
+    {
+      comment_id: 77,
+      kind: "blocked",
+      body: "## Livraison — blocage\n\nL7 : CI rouge.",
+      created_at: CREATED,
+      updated_at: CREATED,
+      truncated: false,
+    },
+  ],
+  reports_checked_at: CREATED,
+  updated_at: CREATED,
+};
+
+/// Verrou des livraisons, écrit par le serveur (ADR-008, T5, P44).
+const deliveryRunning = {
+  ticket_id: "t-a",
+  issue_number: 12,
+  launched_at: CREATED,
+  retry_after: CREATED,
+};
+
+describe("livraison — admin/delivery et ticket_status/launches.delivery_running, cinq profils (P4, P41, P44, P45)", () => {
+  const read = {
+    anonymous: false,
+    nonMember: false,
+    owner: false,
+    otherBrewer: false,
+    admin: true,
+  };
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit l'état de livraison du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/delivery": delivery });
+      await expectRule(allowed, db(state.env, name).doc("tickets/t-a/admin/delivery").get());
+    });
+    it(`${name} lit le verrou des livraisons : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seed(state.env, {
+        "ticket_status/launches": { ...launchStatus, delivery_running: deliveryRunning },
+      });
+      await expectRule(allowed, db(state.env, name).doc("ticket_status/launches").get());
+    });
+  }
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} crée l'état de livraison : refusé`, async () => {
+      await seedTickets();
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/delivery").set(delivery));
+    });
+    it(`${name} modifie l'état de livraison (ready, comptes rendus) : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/delivery": delivery });
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a/admin/delivery").update({ ready: false, reports: [] }),
+      );
+    });
+    it(`${name} supprime l'état de livraison : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/delivery": delivery });
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/delivery").delete());
+    });
+    it(`${name} libère le verrou des livraisons : refusé`, async () => {
+      await seed(state.env, {
+        "ticket_status/launches": { ...launchStatus, delivery_running: deliveryRunning },
+      });
+      await expectRule(
+        false,
+        db(state.env, name).doc("ticket_status/launches").update({ delivery_running: null }),
+      );
+    });
+    it(`${name} prend le verrou des livraisons : refusé`, async () => {
+      await seed(state.env, { "ticket_status/launches": launchStatus });
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("ticket_status/launches")
+          .update({ delivery_running: { ...deliveryRunning, ticket_id: "t-b" } }),
+      );
+    });
+  }
+});

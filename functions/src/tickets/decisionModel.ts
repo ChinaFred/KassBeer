@@ -44,11 +44,22 @@ export const ANSWER_ACTION = "answer";
 export const LAUNCH_ANALYSIS_ACTION = "launch_analysis";
 export const LAUNCH_DEVELOPMENT_ACTION = "launch_development";
 
+/**
+ * « Livrer » (`launchTicketDelivery`) et « Relancer le développement »
+ * (`launchTicketDevelopment`, `mode: "resume"`), ADR-008, T5 : des callables, comme les
+ * lancements de T4. Offerts sur un ticket `in_progress` validé dans l'application seul
+ * (décisions de l'utilisateur du 2026-11-14) ; le serveur recontrôle chaque appel (P43, P47).
+ */
+export const LAUNCH_DELIVERY_ACTION = "launch_delivery";
+export const RELAUNCH_DEVELOPMENT_ACTION = "relaunch_development";
+
 export type AllowedDecision =
   | DecisionAction
   | typeof ANSWER_ACTION
   | typeof LAUNCH_ANALYSIS_ACTION
-  | typeof LAUNCH_DEVELOPMENT_ACTION;
+  | typeof LAUNCH_DEVELOPMENT_ACTION
+  | typeof LAUNCH_DELIVERY_ACTION
+  | typeof RELAUNCH_DEVELOPMENT_ACTION;
 
 /**
  * Vrai si `validated_by_app_at` est posé : Valider a été appliqué depuis l'application
@@ -75,8 +86,9 @@ export function keepsAppValidation(status: unknown): boolean {
  * validation ne vient pas de l'application (`validatedByApp` faux : étiquette posée sur
  * GitHub) ; lancer le développement depuis `validated` validé dans l'application seul ; Répondre depuis `received`,
  * `analyzed` et `validated` (`answerPrecondition` de Kass'Dalle) ; lancer l'analyse depuis
- * `received`, le développement depuis `validated` (`launchPrecondition` de Kass'Dalle).
- * Écrites par le serveur à chaque changement de statut ; le client ne les calcule pas
+ * `received`, le développement depuis `validated` (`launchPrecondition` de Kass'Dalle) ;
+ * livrer et relancer le développement depuis `in_progress` validé dans l'application seul
+ * (T5). Écrites par le serveur à chaque changement de statut ; le client ne les calcule pas
  * (P26). Le serveur la recalcule à chaque décision et à chaque lancement (P42).
  */
 export function allowedDecisions(status: unknown, validatedByApp = false): AllowedDecision[] {
@@ -90,7 +102,9 @@ export function allowedDecisions(status: unknown, validatedByApp = false): Allow
         ? ["refuse", "close", ANSWER_ACTION, LAUNCH_DEVELOPMENT_ACTION]
         : ["validate", "refuse", "close", ANSWER_ACTION];
     case "in_progress":
-      return ["refuse", "close"];
+      return validatedByApp
+        ? ["refuse", "close", LAUNCH_DELIVERY_ACTION, RELAUNCH_DEVELOPMENT_ACTION]
+        : ["refuse", "close"];
     default:
       return [];
   }
@@ -130,6 +144,8 @@ export const REJECT_TICKET_MISSING = "Ce ticket n'existe plus.";
 export const REJECT_NO_ISSUE = "Ce ticket n'a pas encore d'Issue GitHub.";
 export const REJECT_INVALID = "Décision illisible.";
 export const REJECT_ISSUE_CLOSED = "Ce ticket a déjà été clos sur GitHub.";
+/** Refuser ou Clore pendant la livraison de ce ticket (P44, décision du 2026-11-14). */
+export const REJECT_DELIVERY_RUNNING = "Une livraison est en cours sur ce ticket. Attendez sa fin.";
 
 export interface DecisionClaimInput {
   decision: {
@@ -150,6 +166,11 @@ export interface DecisionClaimInput {
     /** `decision_lease_until` du ticket, en millisecondes, ou `null`. */
     leaseUntilMs: number | null;
     issueNumber: unknown;
+    /**
+     * Vrai si `ticket_status/launches.delivery_running` porte ce ticket et que son échéance
+     * est future : Refuser et Clore sont rejetés (P44). Absent : faux.
+     */
+    deliveryRunning?: boolean;
   } | null;
   nowMs: number;
 }
@@ -167,7 +188,8 @@ export type DecisionClaimVerdict =
  * - `pending`, `failed` avec reprise, `applying` au bail expiré : la décision est prise,
  *   sauf si le ticket n'existe plus, n'a pas d'Issue, porte le bail d'une autre décision,
  *   ou si son statut ne permet plus l'action : absente de `allowed_decisions` stocké, ou de
- *   `allowedDecisions(status)` recalculé (P42).
+ *   `allowedDecisions(status)` recalculé (P42), ou si une livraison de ce ticket est en
+ *   cours et l'action est Refuser ou Clore (P44).
  *
  * Une reprise (`failed` ou `applying`) sur un ticket déjà au statut visé passe aussi :
  * la passe horaire a pu appliquer ce qu'un essai précédent a fait sur GitHub, et la
@@ -222,6 +244,11 @@ export function decisionClaimVerdict(input: DecisionClaimInput): DecisionClaimVe
     !(action === "validate" && isValidatedByApp(ticket.validatedByAppAt));
   if (!allowed && !alreadyThere) {
     return { kind: "reject", reason: REJECT_NOT_ALLOWED };
+  }
+  // Une Issue fermée ou refusée pendant que la session fusionne la PR qui la ferme laisserait
+  // un ticket clos avec une PR livrée (P44).
+  if (ticket.deliveryRunning === true && action !== "validate" && !alreadyThere) {
+    return { kind: "reject", reason: REJECT_DELIVERY_RUNNING };
   }
   return { kind: "claim", action, issueNumber, resumed };
 }

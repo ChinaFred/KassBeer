@@ -1,6 +1,6 @@
 /**
- * `githubTicketWebhook` (ADR-008, T3, P29) : état des Issues poussé par GitHub. Copie de
- * Kass'Dalle (`functions/src/tickets/webhook.ts`), limitée aux événements de T3.
+ * `githubTicketWebhook` (ADR-008, T3 et T5, P29) : état des Issues, des PR et de la CI
+ * poussé par GitHub. Copie de Kass'Dalle (`functions/src/tickets/webhook.ts`).
  *
  * Fonction HTTPS publique (`invoker: "public"`) : GitHub ne présente pas de jeton Google.
  * L'authentification est la signature `X-Hub-Signature-256`, HMAC SHA-256 du corps brut
@@ -14,9 +14,13 @@
  * Les refus de signature et de secret sont journalisés une fois par minute et par instance
  * au plus, avec leur nombre. Ni la signature, ni le secret, ni le corps ne sont journalisés.
  *
- * Effet : statut du ticket dérivé des étiquettes seules, réponse « Réponse : », analyses et
- * précisions relues (`applyIssue`), `validated_at` quand le compte propriétaire pose
- * `validé`. Relire les commentaires demande le jeton `GITHUB_TICKETS_TOKEN`, monté aussi.
+ * Effet : statut du ticket dérivé des étiquettes seules, réponse « Réponse : », analyses,
+ * précisions et comptes rendus de livraison relus (`applyIssue`), `validated_at` quand le
+ * compte propriétaire pose `validé`. T5 (P29, P46) : `pull_request` d'une PR du compte
+ * 16348852 dans ce dépôt et `workflow_run` de `ci.yml` relisent l'état « PR prête » des
+ * tickets `in_progress` dont l'Issue est fermée par la PR (`admin/delivery`), cinq au plus ;
+ * une PR ouverte ne change pas le statut (décision de l'utilisateur du 2026-11-14). Relire
+ * GitHub demande le jeton `GITHUB_TICKETS_TOKEN`, monté aussi.
  */
 
 import { GITHUB_MAINTAINER_ID, GITHUB_REPO_FULL_NAME, COLL_TICKETS } from "../config";
@@ -24,11 +28,18 @@ import { firestore } from "../firestore";
 import { LogSampler } from "../logSampler";
 import { logError, logInfo, logWarn } from "../logging";
 import { recordValidatedAt } from "./analyses";
+import {
+  DELIVERY_EVENT_MAX,
+  refreshDeliveryFromRun,
+  refreshTicketDelivery,
+  type OpenPullRequests,
+} from "./delivery";
 import { GithubError, githubClient, type FetchLike } from "./github";
 import { applyIssue } from "./issueState";
 import {
   WEBHOOK_EVENTS,
   WEBHOOK_MAX_BODY_BYTES,
+  deliveryRefreshFromEvent,
   verifyGithubSignature,
   webhookAction,
 } from "./webhookModel";
@@ -47,6 +58,7 @@ export interface WebhookResponse {
 }
 
 export type WebhookAction = NonNullable<ReturnType<typeof webhookAction>>;
+export type DeliveryRefresh = NonNullable<ReturnType<typeof deliveryRefreshFromEvent>>;
 
 export interface WebhookDeps {
   secret: () => string;
@@ -54,6 +66,12 @@ export interface WebhookDeps {
   fetchImpl?: FetchLike;
   /** Application d'un événement retenu ; remplacée par les tests. Rend les tickets touchés. */
   apply?: (action: WebhookAction, token: string, fetchImpl?: FetchLike) => Promise<number>;
+  /** Relecture de livraison d'un événement retenu ; remplacée par les tests. */
+  applyDelivery?: (
+    refresh: DeliveryRefresh,
+    token: string,
+    fetchImpl?: FetchLike,
+  ) => Promise<number>;
 }
 
 /** Refus de signature, échantillonnés : un relevé par minute et par instance au plus. */
@@ -95,6 +113,43 @@ export async function applyWebhookAction(
   }
   await recordTokenAccepted(client);
   return snap.size;
+}
+
+/**
+ * Relit l'état « PR prête » (P46) : `pull_request`, tickets `in_progress` des Issues citées,
+ * liste des PR ouvertes lue une fois pour l'événement ; `workflow_run`, chaque PR et les runs
+ * de sa tête, sans la liste. Rend le nombre de tickets réécrits. Lève en cas d'échec.
+ */
+export async function applyDeliveryRefresh(
+  refresh: DeliveryRefresh,
+  token: string,
+  fetchImpl?: FetchLike,
+): Promise<number> {
+  const kit = await firestore();
+  const trimmed = token.trim();
+  if (trimmed.length === 0) throw new MissingToken();
+  const client = githubClient(trimmed, fetchImpl);
+  let count = 0;
+  for (const prNumber of refresh.prNumbers.slice(0, DELIVERY_EVENT_MAX)) {
+    count += await refreshDeliveryFromRun(kit, client, prNumber);
+  }
+  let openPrs: OpenPullRequests | null = null;
+  for (const issueNumber of refresh.issueNumbers.slice(0, DELIVERY_EVENT_MAX)) {
+    const snap = await kit.db
+      .collection(COLL_TICKETS)
+      .where("github_issue_number", "==", issueNumber)
+      .limit(2)
+      .get();
+    for (const doc of snap.docs) {
+      if (doc.get("status") !== "in_progress") continue;
+      openPrs ??= await client.listOpenPullRequests();
+      if ((await refreshTicketDelivery(kit, client, doc.id, issueNumber, openPrs)) !== null) {
+        count++;
+      }
+    }
+  }
+  await recordTokenAccepted(client);
+  return count;
 }
 
 /** Gestionnaire du webhook. Ne lève pas : chaque issue est une réponse HTTP. */
@@ -179,7 +234,12 @@ export async function handleGithubWebhook(
 
   const action = webhookAction(event, payload, GITHUB_REPO_FULL_NAME, GITHUB_MAINTAINER_ID);
   if (action === null) {
-    res.status(200).send("ignoré");
+    const refresh = deliveryRefreshFromEvent(event, payload, GITHUB_REPO_FULL_NAME);
+    if (refresh === null) {
+      res.status(200).send("ignoré");
+      return;
+    }
+    await handleDeliveryRefresh(refresh, event, delivery, res, deps);
     return;
   }
 
@@ -199,6 +259,43 @@ export async function handleGithubWebhook(
       err instanceof MissingToken ? "token" : err instanceof GithubError ? err.kind : "other";
     logError({
       message: `githubTicketWebhook : événement ${event} non appliqué (Issue #${action.issue.number})`,
+      feature: "tickets",
+      error: err,
+      extra: { delivery, kind },
+    });
+    if (err instanceof MissingToken) await markTokenInvalid(null);
+    else if (err instanceof GithubError && err.kind === "token") await markTokenInvalid(err);
+    res.status(500).send("Erreur interne.");
+  }
+}
+
+/** `pull_request` ou `workflow_run` retenu : relecture de livraison. Ne lève pas. */
+async function handleDeliveryRefresh(
+  refresh: DeliveryRefresh,
+  event: string,
+  delivery: string,
+  res: WebhookResponse,
+  deps: WebhookDeps,
+): Promise<void> {
+  try {
+    const count = await (deps.applyDelivery ?? applyDeliveryRefresh)(
+      refresh,
+      deps.token(),
+      deps.fetchImpl,
+    );
+    if (count > 0) {
+      logInfo({
+        message: `githubTicketWebhook : état « PR prête » relu (${event})`,
+        feature: "tickets",
+        extra: { delivery, tickets: count },
+      });
+    }
+    res.status(200).send(count > 0 ? `ok (${count})` : "ignoré");
+  } catch (err) {
+    const kind =
+      err instanceof MissingToken ? "token" : err instanceof GithubError ? err.kind : "other";
+    logError({
+      message: `githubTicketWebhook : état « PR prête » non relu (${event})`,
       feature: "tickets",
       error: err,
       extra: { delivery, kind },

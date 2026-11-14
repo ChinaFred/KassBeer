@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
 
-import { handleGithubWebhook, type WebhookAction, type WebhookDeps } from "../src/tickets/webhook";
+import {
+  handleGithubWebhook,
+  type DeliveryRefresh,
+  type WebhookAction,
+  type WebhookDeps,
+} from "../src/tickets/webhook";
 import {
   WEBHOOK_MAX_BODY_BYTES,
   verifyGithubSignature,
@@ -36,6 +41,7 @@ interface Call {
   status: number;
   body: string;
   applied: WebhookAction[];
+  deliveries: DeliveryRefresh[];
 }
 
 async function call(
@@ -47,6 +53,7 @@ async function call(
     contentLength?: string;
     secret?: string;
     apply?: WebhookDeps["apply"];
+    applyDelivery?: WebhookDeps["applyDelivery"];
   } = {},
 ): Promise<Call> {
   const body = opts.body ?? Buffer.from(JSON.stringify(issuePayload()));
@@ -56,7 +63,8 @@ async function call(
     "content-length": opts.contentLength,
   };
   const applied: WebhookAction[] = [];
-  const out: Call = { status: 0, body: "", applied };
+  const deliveries: DeliveryRefresh[] = [];
+  const out: Call = { status: 0, body: "", applied, deliveries };
   await handleGithubWebhook(
     {
       method: opts.method ?? "POST",
@@ -78,6 +86,12 @@ async function call(
         opts.apply ??
         (async (action) => {
           applied.push(action);
+          return 1;
+        }),
+      applyDelivery:
+        opts.applyDelivery ??
+        (async (refresh) => {
+          deliveries.push(refresh);
           return 1;
         }),
     },
@@ -126,9 +140,78 @@ describe("githubTicketWebhook — événements (P29, P32)", () => {
     const r = await call({ event: "ping", body });
     assert.deepEqual([r.status, r.body], [200, "pong"]);
   });
-  it("autre événement (pull_request avant T5) : 200, ignoré", async () => {
+  it("pull_request sans PR lisible, autre événement : 200, ignoré", async () => {
     const r = await call({ event: "pull_request" });
-    assert.deepEqual([r.status, r.applied.length], [200, 0]);
+    assert.deepEqual([r.status, r.applied.length, r.deliveries.length], [200, 0, 0]);
+    const other = await call({ event: "push" });
+    assert.deepEqual([other.status, other.body], [200, "ignoré"]);
+  });
+  it("pull_request du compte 16348852 : relecture de livraison (T5)", async () => {
+    const body = Buffer.from(
+      JSON.stringify({
+        action: "synchronize",
+        repository: { full_name: REPO },
+        pull_request: {
+          number: 34,
+          state: "open",
+          draft: false,
+          body: "Closes #12",
+          user: { id: OWNER },
+          head: { ref: "claude/x", sha: "a".repeat(40), repo: { full_name: REPO } },
+        },
+      }),
+    );
+    const r = await call({ event: "pull_request", body });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.deliveries, [{ issueNumbers: [12], prNumbers: [] }]);
+  });
+  it("workflow_run de « Déploiement » : 200, ignoré sans appel (T5)", async () => {
+    const body = Buffer.from(
+      JSON.stringify({
+        action: "completed",
+        repository: { full_name: REPO },
+        workflow_run: {
+          name: "Déploiement",
+          path: ".github/workflows/deploy.yml",
+          pull_requests: [
+            {
+              number: 34,
+              base: { repo: { url: `https://api.github.com/repos/${REPO}` } },
+              head: { repo: { url: `https://api.github.com/repos/${REPO}` } },
+            },
+          ],
+        },
+      }),
+    );
+    const r = await call({ event: "workflow_run", body });
+    assert.deepEqual([r.status, r.body, r.deliveries.length], [200, "ignoré", 0]);
+  });
+  it("relecture de livraison en panne : 500", async () => {
+    const body = Buffer.from(
+      JSON.stringify({
+        action: "completed",
+        repository: { full_name: REPO },
+        workflow_run: {
+          name: "CI",
+          path: ".github/workflows/ci.yml",
+          pull_requests: [
+            {
+              number: 34,
+              base: { repo: { url: `https://api.github.com/repos/${REPO}` } },
+              head: { repo: { url: `https://api.github.com/repos/${REPO}` } },
+            },
+          ],
+        },
+      }),
+    );
+    const r = await call({
+      event: "workflow_run",
+      body,
+      applyDelivery: async () => {
+        throw new Error("panne");
+      },
+    });
+    assert.equal(r.status, 500);
   });
   it("corps illisible signé : 400", async () => {
     const body = Buffer.from("{pas du json");

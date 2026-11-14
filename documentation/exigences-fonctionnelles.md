@@ -480,11 +480,13 @@ cours. » ; hors ligne, absent du cache : « … : compteur non disponible hors 
 illisible : « … : compteur illisible. » ; panne : « Lancements de sessions : compteur
 indisponible. » en ton d'erreur, avec un bouton icône « Réessayer ».
 
-**Liste.** Filtres « À traiter (N) » (tickets reçus ou analysés sans décision, et envois
-impossibles ; un ticket validé n'y est pas),
+**Liste.** Filtres « À traiter (N) » (tickets reçus ou analysés sans décision, envois
+impossibles, et tickets En cours dont la pull request est prête à livrer, sauf pendant une
+livraison ou une correction de ce ticket et tant que GitHub refuse au jeton la lecture de la CI ; un ticket validé n'y est pas ; le compteur « Tickets à traiter » du menu ne compte que les statuts),
 « Tous » et « Bloqués (N) » (envoi impossible, en attente depuis plus d'une heure, Issue
 disparue) ; sans nombre tant que la liste n'est pas lue. Le choix n'est pas enregistré :
-l'écran s'ouvre sur « À traiter », et passe une fois sur « Tous » s'il n'y a rien à traiter ;
+l'écran s'ouvre sur « À traiter », et passe une fois sur « Tous » s'il n'y a rien à traiter,
+une fois lu l'état de la pull request de chaque ticket En cours ;
 il reste le même entre la liste et une fiche. Au téléphone, les filtres défilent à
 l'horizontale. Liste du plus récent au plus ancien ; chaque ligne : icône du type (lue),
 titre sur deux lignes au plus, « #12 · Nom · jj/mm/aa » (sans Issue, pas de numéro ; le nom
@@ -492,8 +494,14 @@ déclaré dans Admin › Membres, sinon l'adresse, jamais publié sur l'Issue), 
 et, selon le cas, « Décision en cours », « Issue disparue », « En retard », « Analyse en
 cours » ou « Développement en cours » (sablier, lu « Analyse en cours depuis 14:05 »),
 « Relance possible ». Ces deux dernières pastilles ne lisent l'historique des lancements que
-pour un ticket dont le serveur permet un lancement (reçu ou validé). Pas de point de
-non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
+pour un ticket dont le serveur permet un lancement (reçu ou validé). Un ticket En cours porte
+au plus une pastille de livraison, dans cet ordre : « Livraison en cours » (sablier, lu
+« Livraison en cours depuis 14:05 »), « Correction en cours » (sablier, lu « Correction de la
+pull request en cours », pendant une relance du développement), « CI en cours » (horloge, lu
+« CI de la pull request en cours »), « PR prête » (icône de livraison, ton tertiaire, lu
+« Pull request prête à livrer ») ; l'état de la pull request n'est lu que pour les tickets En cours, et sans lui
+aucune pastille ne s'affiche. Tant que GitHub refuse au jeton la lecture de la CI, ni « CI en
+cours » ni « PR prête » ne s'affiche. Pas de point de non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
 l'application à jour. ».
 
 États : « Chargement des tickets » ; « Impossible de lire les tickets. » et « Réessayer » ;
@@ -506,7 +514,9 @@ vide : « Aucun ticket bloqué. » ; ces deux derniers avec « Afficher tous les
 étiquette du statut (elle clignote trois fois quand le statut change, jamais au premier
 affichage ni avec les animations réduites, et « Statut : Refusé » est annoncé) et « Issue #12 » ;
 « Ouvrir l'Issue #12 », et pour un ticket livré « Ouvrir la PR #34 » (adresse `https` de
-`github.com` seule, échec « Impossible d'ouvrir GitHub. ») ; pour un envoi impossible,
+`github.com` seule, échec « Impossible d'ouvrir GitHub. ») ; pour un ticket En cours, « Ouvrir
+la PR #34 » quand le serveur retient une seule pull request éligible (adresse
+`https://github.com/ChinaFred/KassBeer/pull/<n>` seule) ; pour un envoi impossible,
 « Essais d'envoi : 10 », « Dernière erreur : … » et « Relancer l'envoi », puis « Nouvel essai
 demandé le jj/mm/aa à hh:mm. Il partira dans l'heure. » jusqu'au changement de statut (hors
 ligne : « Nouvel essai enregistré sur cet appareil. Il partira au retour du réseau. », tant
@@ -516,6 +526,8 @@ depuis le jj/mm/aa. Vérifiez qu'elle n'a pas été supprimée. », précédé d
 coupé en ton d'erreur ; l'encadré du texte de
 l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
 « Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
+« Livraison (N) », section ouverte, pour un ticket En cours ou Livré, ou qui a déjà un compte
+rendu de livraison (voir ci-dessous) ;
 « Analyses (N) », pour un ticket qui a une Issue (voir ci-dessous) ;
 « Lancements (N) », section repliée, pour un ticket qui a une Issue (voir ci-dessous) ;
 « Décisions (N) », section repliée, la
@@ -556,11 +568,35 @@ sans relevé : « Analyse pas encore relevée. » et « Ouvrir l'Issue #12 » ; 
 cache : « Analyses non disponibles hors ligne. » ; document illisible : « Analyses illisibles.
 Mettez l'application à jour. ».
 
+**Livraison (N).** Section ouverte, juste après « Description », lue par l'administrateur seul
+(ADR-008, T5) : les comptes rendus de la session de livraison relevés sur l'Issue
+(`## Livraison — blocage`, `## Livraison — terminée`, publiés par le compte du mainteneur
+seul), du plus ancien au plus récent, dix au plus. N compte les comptes rendus ; le titre
+reste « Livraison » sans nombre tant que la section n'est pas lue. Une carte par compte rendu :
+
+| Compte rendu | Icône, fond | Titre |
+|---|---|---|
+| blocage | erreur, fond d'erreur du thème et texte accordé | « Blocage du jj/mm/aa à hh:mm » (sans date : « Blocage ») |
+| terminée | validation en couleur primaire, fond de surface | « Livraison terminée le jj/mm/aa à hh:mm » (sans date : « Livraison terminée ») |
+
+Le titre de la carte est un titre de section pour le lecteur d'écran. Le corps est rendu en
+Markdown sans sa ligne de titre, avec les mêmes garde-fous que les Analyses (aucune image
+chargée, liens `http` et `https` seuls, aucun HTML rendu). Compte rendu tronqué : « Compte
+rendu tronqué, voir GitHub. » et « Ouvrir l'Issue #12 ».
+
+États : barre de progression « Lecture de la livraison » ; « Impossible de lire la
+livraison. » et « Réessayer » (« Lecture en cours » pendant la relecture), sous les comptes
+rendus déjà affichés s'il y en a ; hors ligne, absent du cache : « Livraison non disponible
+hors ligne. » ; document illisible : « Livraison illisible. Mettez l'application à jour. » ;
+aucun : « Aucun compte rendu de livraison. », suivi de « Appuyez sur « Livrer », en bas de la
+fiche. » quand le bouton « Livrer » est affiché et actif (pas pour « Relancer la
+livraison »).
+
 **Lancements (N).** Section repliée, lue par l'administrateur seul (ADR-008, T4) : les sessions
 Claude Code lancées sur ce ticket, la plus récente en haut, vingt au plus. Le titre reste
 « Lancements » sans nombre tant que la section n'est pas lue. Une carte par lancement, dans
-l'encadré du texte de l'administrateur : « Analyse lancée » ou « Développement lancé »
-(« Lancement » pour une action inconnue), « le jj/mm/aa à hh:mm par vous » (« par un autre
+l'encadré du texte de l'administrateur : « Analyse lancée », « Développement lancé »,
+« Livraison lancée » ou « Correction lancée » (« Lancement » pour une action inconnue), « le jj/mm/aa à hh:mm par vous » (« par un autre
 administrateur » sinon), puis le résultat : « Session créée » ; « Échec : <raison> » (« Échec :
 raison inconnue ») en ton d'erreur ; « Résultat inconnu : vérifiez sur claude.ai/code ».
 Session créée avec un lien `https` sur `claude.ai` : « Ouvrir la session » (hors de
@@ -588,7 +624,8 @@ ce ticket (`allowed_decisions`), jamais déduits du statut par l'application : �
 | Analysé | « Valider » |
 | Validé dans l'application | « Lancer le développement » (valeur `launch_development`), ou « Relancer le développement » |
 | Validé sur GitHub seul | « Valider » |
-| En cours, Livré, Refusé, Clos | aucune |
+| En cours, validé dans l'application | selon la pull request (ci-dessous) : « Livrer » (valeur `launch_delivery`), « Relancer la livraison » (bouton tonal) ou « Relancer le développement » (valeur `relaunch_development`, bouton tonal) |
+| En cours, validé sur GitHub seul, Livré, Refusé, Clos | aucune |
 
 Les boutons passent les uns sous les autres quand la largeur manque. Le serveur offre
 « Valider » sur un ticket analysé seul (ADR-008, T4) ; pour un ticket reçu, la ligne « Valider
@@ -622,6 +659,44 @@ des boutons, une seule ligne de lancement, dans cet ordre de priorité :
 
 La date est celle du compteur écrit par le serveur. Le serveur le remet à zéro à sa passe de
 minuit (heure de Paris) : quelques secondes après minuit, la ligne du plafond disparaît.
+
+**Ticket En cours** (ADR-008, T5). « Livrer » et « Relancer le développement » ne sont offerts
+que pour un ticket validé dans l'application (décisions du 2026-11-14). La ligne au-dessus des
+boutons se lit dans l'état de la pull request écrit par le serveur, l'historique des lancements
+et le verrou des livraisons ; l'application ne recalcule rien. Une seule ligne, annoncée, dans
+cet ordre de priorité :
+
+| Cas | Ligne | Bouton principal |
+|---|---|---|
+| livraison de ce ticket en cours | « Livraison en cours depuis 14:05. » (autre jour : « … depuis le 12/11/26 à 14:05. ») | aucun ; « Refuser » et « Clore » masqués |
+| correction de la PR en cours | « Correction de la PR #34 en cours depuis 14:05. » | aucun |
+| lecture de la CI refusée au jeton GitHub (403), avec une seule pull request éligible | « Le jeton GitHub ne peut pas lire la CI : sur GitHub, donnez-lui le droit « Actions : lecture ». » en ton d'erreur | aucun |
+| état de la pull request en lecture | barre de progression, « Lecture de la pull request » | aucun |
+| état illisible (version plus récente) | « État de la pull request illisible. Mettez l'application à jour. » en ton d'erreur | aucun |
+| état en panne de lecture | « État de la pull request illisible. » en ton d'erreur, bouton icône « Réessayer », inactif avec un indicateur pendant la relecture | aucun |
+| hors ligne, état absent du cache | « État de la pull request non disponible hors ligne. » | aucun |
+| plusieurs PR | « 3 pull requests ferment l'Issue #12 : fermez sur GitHub celles à abandonner. » | aucun |
+| CI rouge, validé sur GitHub seul | « CI de la PR #34 en échec. Ouvrez la PR pour voir l'erreur. » | aucun |
+| CI rouge pendant le développement | « CI de la PR #34 en échec. Développement lancé le 13/11/26 à 14:05 : relance possible après 17:05. » (échéance un autre jour : « … après le 14/11/26 à 02:05. ») | aucun |
+| CI rouge | « CI de la PR #34 en échec. Une session peut la corriger sur la même branche. » (plafond atteint : ligne du plafond) | « Relancer le développement » |
+| aucune PR, développement en cours | « Développement en cours depuis 14:05. La pull request n'est pas encore prête. » | aucun |
+| aucune PR | « Aucune pull request prête pour l'Issue #12. » | aucun |
+| CI en cours | « CI de la PR #34 en cours. « Livrer » sera proposé quand elle sera verte. » | aucun |
+| CI annulée | « CI de la PR #34 terminée sans succès. Ouvrez la PR pour la suivre sur GitHub. » | aucun |
+| CI absente (aucun run) | « CI de la PR #34 pas encore lancée. Ouvrez la PR pour la suivre sur GitHub. » | aucun |
+| livraison d'un autre ticket en cours | « Livraison du ticket #9 en cours depuis 14:05. Une seule livraison à la fois. », puis « Ouvrir le ticket #9 » (à côté de la liste, la fiche est remplacée ; au téléphone, elle s'empile) | aucun |
+| PR prête, validé sur GitHub seul | « PR #34 prête. Ce ticket a été validé sur GitHub : fusionnez la PR sur GitHub. » ; si le serveur offre « Valider » : « … fusionnez la PR sur GitHub, ou validez-le depuis l'application pour la livrer d'ici. » | aucun |
+| appel de la fiche en cours | barre de progression, « Lancement de la livraison en cours. » (« … de la correction … ») | inactif |
+| plafond atteint | ligne du plafond | « Livrer » inactif |
+| dernière livraison close par un blocage (marquée par le serveur) | « La livraison du 13/11/26 à 14:05 s'est arrêtée. Lisez le blocage dans la section Livraison. » (ton d'erreur) | « Relancer la livraison » |
+| échéance passée sans fusion ni blocage | « La livraison du 13/11/26 à 14:05 n'a rien fusionné en trois heures. Vérifiez sur claude.ai/code qu'aucune session ne tourne encore. » | « Relancer la livraison » |
+| PR prête | « PR #34 prête : CI verte le 13/11/26 à 14:05. » (sans date : « PR #34 prête : CI verte. »), icône de validation en couleur primaire | « Livrer » |
+
+Hors ligne, « Livrer » et « Relancer le développement » sont inactifs et « Lancer une session
+demande le réseau. » s'affiche sous les boutons. La barre se redessine aux échéances du verrou,
+de la livraison, de la correction et du développement. Refuser et Clore pendant la livraison
+de ce ticket sont aussi refusés par le serveur (« Une livraison est en cours sur ce ticket.
+Attendez sa fin. »).
 
 La ligne des précisions en attente (ci-dessous) s'affiche aussi sous la ligne du plafond ou de
 la relance. Seul un lancement en cours (appel de la fiche ou échéance non passée) la masque.
@@ -673,6 +748,30 @@ est dans la section Lancements. » ; « Résultat inconnu, compté dans les lanc
 Vérifiez sur claude.ai/code avant de relancer. » (ou le message du serveur) ; « Réponse perdue.
 Regardez la section Lancements avant de relancer. » quand la réponse n'arrive pas ; un refus
 arrivé après « Fermer » affiche son motif.
+
+**Boîte « Livrer »** (ADR-008, P39). Même boîte que les lancements. Titre « Livrer ce
+ticket ? » (relance : « Relancer la livraison de ce ticket ? ») ; « Une session Claude Code va
+mettre la PR #34 à jour avec main, la fusionner, puis suivre le déploiement. » ; « La fusion
+met l'application en ligne pour tout le groupe, sur le web et sur Android, sans autre accord.
+Appuyer sur « Livrer » vaut accord de fusion. » ; « Type du ticket : Bug. » ; ligne du quota
+(une livraison compte dans les 10 lancements du jour) ; pour une relance, l'avertissement de
+la ligne (blocage ou échéance passée) ; encadré du coût. Boutons « Annuler » (focus initial) et
+« Livrer » (« Relancer »), « Livraison en cours » pendant l'appel. Refus propres à la
+livraison, dans la boîte : fichier protégé (« La PR #34 modifie un fichier protégé (…).
+Fusionnez-la vous-même après relecture. Rien n'a été lancé ni décompté. ») et liste de
+fichiers trop longue (« … trop longue pour être vérifiée. Fusionnez-la vous-même après
+relecture. … ») : « Livrer » reste alors inactif tant que la boîte est ouverte ; pull request
+plus prête, CI pas verte, lecture de la CI refusée au jeton (« Le jeton GitHub ne peut pas
+lire la CI : sur GitHub, donnez-lui le droit « Actions : lecture ». Rien n'a été lancé ni décompté. »), plusieurs pull
+requests, livraison d'un autre ticket en cours, correction en cours. Aucun de ces refus ne compte un lancement.
+
+**Boîte « Relancer le développement ? »** « Une session Claude Code va reprendre la PR #34,
+corriger la CI et pousser sur la même branche. Elle ne fusionne pas. » ; ligne du quota ;
+encadré du coût ; « Annuler » (focus initial) et « Relancer ». Refus : « La CI de la pull
+request n'est pas en échec. Rien n'a été lancé ni décompté. », « Une livraison est en cours
+sur ce ticket. Rien n'a été lancé ni décompté. », ou le message « en cours ». Une correction
+qui s'arrête ne publie rien sur l'Issue : sa raison est dans le résumé de la session, ouvert
+depuis la carte « Correction lancée ».
 
 **Boîtes.** « Valider » demande « Valider ce ticket ? » / « L'étiquette « validé » sera posée
 sur l'Issue. Le membre verra « Validé ». », avec « Annuler » et « Valider ». Sur un ticket validé
