@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/menu_compte.dart';
 import '../../../core/router/routes.dart';
+import 'error_reports_screen.dart';
+import 'logs_screen.dart';
 import '../../tickets/presentation/admin_tickets_screen.dart';
 import '../../tickets/presentation/bandeau_tickets_admin.dart';
 
@@ -76,6 +78,20 @@ class AdminScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             // `push` : le retour ramène à l'administration.
             onTap: () => context.push(AppRoutes.adminImport),
+          ),
+          ListTile(
+            leading: const Icon(Icons.bug_report_outlined),
+            title: const Text(ErrorReportsScreen.titre),
+            subtitle: const Text(ErrorReportsScreen.sousTitre),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go(AppRoutes.adminErrorReports),
+          ),
+          ListTile(
+            leading: const Icon(Icons.receipt_long_outlined),
+            title: const Text(LogsScreen.titre),
+            subtitle: const Text(LogsScreen.sousTitre),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go(AppRoutes.adminLogs),
           ),
         ],
       ),

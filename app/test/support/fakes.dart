@@ -13,6 +13,10 @@ import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
 import 'package:kass_beer/core/preferences/preferences_appareil.dart';
 import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
+import 'package:kass_beer/features/admin/data/error_reports_repository.dart';
+import 'package:kass_beer/features/admin/domain/error_report.dart';
+import 'package:kass_beer/features/admin/data/logs_repository.dart';
+import 'package:kass_beer/features/admin/domain/log_entry.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
 import 'package:kass_beer/features/auth/domain/session_user.dart';
 import 'package:kass_beer/features/brew_day/data/alerte_minuteur.dart';
@@ -1198,6 +1202,65 @@ class FakeLibraryRepository implements LibraryRepository {
   }
 }
 
+/// Admin › Rapports d'erreur : [rapports] du plus récent au plus ancien,
+/// servis par pages de [kTaillePageRapports] ; le curseur est l'indice suivant.
+class FakeErrorReportsRepository implements ErrorReportsRepository {
+  final rapports = <ErrorReport>[];
+
+  /// Panne de la prochaine page demandée.
+  Object? pageError;
+  bool fromCache = false;
+
+  /// Curseur de chaque page demandée (`null` : première page).
+  final demandes = <CurseurRapports?>[];
+
+  /// Réponse retenue jusqu'à ce que ce `Completer` soit complété.
+  Completer<void>? attente;
+
+  @override
+  Future<PageRapports> page({CurseurRapports? apres}) async {
+    demandes.add(apres);
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
+    final error = pageError;
+    if (error != null) {
+      pageError = null;
+      throw error;
+    }
+    final start = apres == null ? 0 : apres.valeur as int;
+    final end = (start + kTaillePageRapports).clamp(0, rapports.length);
+    return PageRapports(
+      rapports: rapports.sublist(start, end),
+      suite: end - start < kTaillePageRapports ? null : CurseurRapports(end),
+      fromCache: fromCache,
+    );
+  }
+}
+
+/// Admin › Journaux : chaque recherche est notée ; [reponses] sert les pages
+/// dans l'ordre, une [EchecJournaux] ou autre erreur est levée.
+class FakeLogsRepository implements LogsRepository {
+  final reponses = <Object>[];
+  final demandes = <({FiltresJournaux filtres, String? suite})>[];
+
+  /// Réponse retenue jusqu'à ce que ce `Completer` soit complété.
+  Completer<void>? attente;
+
+  @override
+  Future<PageJournaux> rechercher(
+    FiltresJournaux filtres, {
+    String? suite,
+  }) async {
+    demandes.add((filtres: filtres, suite: suite));
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
+    if (reponses.isEmpty) throw StateError('aucune réponse prévue');
+    final r = reponses.removeAt(0);
+    if (r is PageJournaux) return r;
+    throw r;
+  }
+}
+
 /// Décision reçue par [FakeTicketsRepository.createDecision].
 typedef DecisionCreee = ({
   String ticketId,
@@ -1269,6 +1332,8 @@ class TestApp {
        tickets = FakeTicketsRepository(),
        fichiers = FakeEchangeFichiers(),
        library = FakeLibraryRepository(),
+       errorReports = FakeErrorReportsRepository(),
+       logs = FakeLogsRepository(),
        processes = FakeProcessesRepository(),
        preferencesProcessus = FakePreferencesProcessusRepository(),
        importFirestore = FakeFirebaseFirestore(),
@@ -1291,6 +1356,8 @@ class TestApp {
         costsRepositoryProvider.overrideWithValue(costs),
         ticketsRepositoryProvider.overrideWithValue(tickets),
         libraryRepositoryProvider.overrideWithValue(library),
+        errorReportsRepositoryProvider.overrideWithValue(errorReports),
+        logsRepositoryProvider.overrideWithValue(logs),
         importFichesRepositoryProvider.overrideWithValue(
           FirestoreImportFichesRepository(firestore: importFirestore),
         ),
@@ -1335,6 +1402,8 @@ class TestApp {
   final FakeTicketsRepository tickets;
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
+  final FakeErrorReportsRepository errorReports;
+  final FakeLogsRepository logs;
   final FakeProcessesRepository processes;
   final FakePreferencesProcessusRepository preferencesProcessus;
 

@@ -7,6 +7,11 @@ const double kCompactMaxWidth = 600;
 const double kExpandedMinWidth = 840;
 const double kContentMaxWidth = 840;
 
+/// Échelle du texte au-delà de laquelle une ligne de liste range ses étiquettes
+/// sous le titre au lieu de les mettre à droite (Admin › Rapports d'erreur) :
+/// au-delà de 130 %, le titre garderait trop peu de largeur.
+const double kGrandTexteMinScale = 1.3;
+
 /// Largeur d'un dialogue de formulaire sur grand écran.
 const double kDialogMaxWidth = 480;
 

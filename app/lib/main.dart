@@ -12,6 +12,8 @@ import 'app.dart';
 import 'core/preferences/preferences_appareil.dart';
 import 'core/providers.dart';
 import 'core/services/error_report_service.dart';
+import 'features/admin/data/error_reports_repository.dart';
+import 'features/admin/data/logs_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/brews/data/brews_repository.dart';
 import 'features/costs/data/costs_repository.dart';
@@ -151,6 +153,12 @@ Future<void> main() async {
         ),
         ticketsRepositoryProvider.overrideWithValue(
           FirestoreTicketsRepository(errorReportService: errors),
+        ),
+        errorReportsRepositoryProvider.overrideWithValue(
+          FirestoreErrorReportsRepository(errorReportService: errors),
+        ),
+        logsRepositoryProvider.overrideWithValue(
+          FunctionsLogsRepository(errorReportService: errors),
         ),
       ],
       child: const KassBeerApp(),

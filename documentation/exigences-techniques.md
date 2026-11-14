@@ -191,6 +191,8 @@ la clé de débogage. Le manifeste principal déclare `INTERNET`.
 | `brewsListProvider` | `StreamProvider.autoDispose<ListeLue<Brew>>` | `brews/` entier, avec `fromCache` |
 | `importFichesRepositoryProvider` | `Provider<ImportFichesRepository>` | Admin › Import ; fourni par `main.dart` ou par les tests, sans valeur par défaut |
 | `libraryRepositoryProvider` | `Provider<LibraryRepository>` | fourni par `main.dart` ou par les tests ; sans valeur par défaut |
+| `errorReportsRepositoryProvider` | `Provider<ErrorReportsRepository>` | Admin › Rapports d'erreur (ADR-011, J1) ; fourni par `main.dart` ou par les tests, sans valeur par défaut |
+| `logsRepositoryProvider` | `Provider<LogsRepository>` | Admin › Journaux (ADR-011, J2), callable `queryLogs` ; fourni par `main.dart` ou par les tests, sans valeur par défaut |
 | `indexReferentielProvider(nature)` | `FutureProvider.autoDispose.family` | `beer_index/{nature}` par `lireIndex` ; une panne s'affiche, « Réessayer » invalide |
 | `ficheReferentielProvider((nature:, id:))` | `FutureProvider.autoDispose.family` | `beer_*/{id}` par `lireFiche` |
 | `recettePubliqueProvider(id)` | `FutureProvider.autoDispose.family` | `public_recipes/{id}` par `lireRecettePublique` |
@@ -451,6 +453,8 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/processus/:id/modifier` | « Modifier le processus », plein écran, hors coquille | auteur ; sinon « Seul l'auteur modifie ce processus. » |
 | `/admin` | Admin | admin |
 | `/admin/membres` | Admin › Membres | admin |
+| `/admin/rapports-erreur` | Admin › Rapports d'erreur (ADR-011, J1), dans la coquille, retour vers Admin | admin ; lecture seule de `error_reports/` |
+| `/admin/journaux` | Admin › Journaux (ADR-011, J2), dans la coquille, retour vers Admin | admin ; callable `queryLogs` (`requireAdmin`) |
 | `/admin/import` | Admin › Import, page pleine avec retour, hors coquille, ouverte par `push` depuis Admin, déclarée avant la coquille | admin ; écrit sous son seul `owner_uid` |
 
 `redirectFor(access, uri)` (fonction pure, testée) envoie chaque état sur son écran. Un
@@ -469,6 +473,79 @@ sur `fake_cloud_firestore` (création, modification sans toucher `owner_uid` ni 
 document ↔ `brewing/`, lecture et affichage des nombres, écrans Recettes et Équipements
 (états, lecture seule, « À compléter », éditeur), attente du serveur sous `fake_async`,
 `FirebaseEnv`, `EchangeFichiersPlateforme` (`echange_fichiers_test.dart`, `TestDefaultBinaryMessenger`, P17 : annulation, fichier rendu, `TOO_LARGE` avec et sans taille, `ALREADY_ACTIVE` au choix et au partage, `NO_PICKER`, `READ_FAILED`, `INVALID_NAME`, `WRITE_FAILED`, aucun nom de fichier rapporté), Recettes › Importer (`import_recipes_test.dart` : relecture identique des recettes lues par `exchange/` (I9), « Déjà importée » par l'empreinte et jamais par le nom seul, fichier trop gros, illisible, non BeerJSON, statuts, détails, « Tout cocher », filtre, écriture sous le compte de l'importateur avec l'équipement présélectionné, hors ligne, refus du serveur, message groupé après la sortie et après « Importer un autre fichier », panne inattendue de l'analyse, boutons de l'accueil, filtres comptés, raisons des ignorées, fiche ouverte par-dessus le compte rendu, annonces, mesure de l'appui sur une case avec 500 recettes, valeurs absentes reprises de la Bibliothèque et valeurs du fichier gardées, noms non résolus signalés une fois, Bibliothèque non lue), feuille « Exporter » (`export_recipe_test.dart` : pertes, nom du fichier, auteur, rendement de l'équipement, aucun identifiant ni nom d'équipement, web, échec affiché dans la feuille avec réessai, un seul bouton plein, BeerXML : style absent de la Bibliothèque bloqué, style retrouvé par son nom et fichier `.xml`, index illisible puis « Réessayer », recette à l'extrait exportée sans `mash` ni `boil`, recette d'un autre membre sans auteur bloquée avec « Dupliquer », export bloqué pour l'auteur et pour un autre membre), `FirestoreBrewsRepository` sur `fake_cloud_firestore` (copie figée, `owner_name` à chaque écriture, identifiant de l'appareil, HS7), écrans Brassins et écran du jour (minuteur recalculé avec une horloge injectée, double appui, étape sautée, début en double, densité, alerte, verrou, reprise, pastille d'envoi), `AlerteMinuteurPlateforme` (`TestDefaultBinaryMessenger`, P17), domaine des coûts (`costs_domain_test.dart` : clés dérivées sans champ `key`, raisons de CB8, déclencheur du figeage, écarts), `FirestoreCostsRepository` sur `fake_cloud_firestore` (`costs_repository_test.dart` : écriture et suppression des prix et des frais, document illisible rapporté sans valeur, refus d'un premier figeage annoncé seulement si le coût n'est pas sur le serveur et rejeu journalisé `costs.freeze_replayed` (HL5), suppression du brassin et de son coût dans un même lot par `delete` et `deleteWithEvents` (CB19), `enregistrerEmbouteillage` : coût écrit après l'embouteillage sans attente, aucun coût pour une modification, un embouteillage déjà daté ou un coût déjà lu, embouteillage envoyé même quand le calcul échoue ou que les prix manquent, refus du coût seul et de l'embouteillage seul (CB7)), Bibliothèque (`library_domain_test.dart` : index, entrée mal typée écartée et comptée, champ inconnu ignoré, plages, unités canoniques seules, provenance, recette publique, rang de houblon hors de la liste, `copie` sans les champs propres aux recettes publiques ni `equipment_id` ni `brew_steps`, houblons sans forme, `normaliserNomRecherche`, libellés traduits, provenance courte ; `library_repository_test.dart` sur `fake_cloud_firestore` : index gardé pour la session, absent non gardé, un seul rapport pour les entrées illisibles, fiches, pages de 50 par `startAfterDocument`, préfixe, recette illisible rapportée, clés écrites par « Dupliquer » comparées à une liste recopiée de `recipeFields()` et des clés de `isBeerJsonRecipe` (à tenir à jour avec `firestore.rules`), `search_name` et les champs propres aux recettes publiques absents, recherche sur `search_name` avec saisie normalisée ; `library_screens_test.dart` : navigation, segments, recherche locale, fiches, états, hors ligne, pages suivantes, recherche à la validation, « Dupliquer » puis éditeur, houblons sans forme, « Voir le style » par `push`, recherche gardée au retour d'une fiche, compte annoncé, puces sur une ligne au téléphone, barre du bas à 360 px en texte × 2, « Sources des données » et son lien ; `recipe_screens_test.dart` : houblon sans forme, « Forme du houblon à compléter », forme demandée puis enregistrée dans l'éditeur, suggestions de la Bibliothèque pour un malt, un houblon et une levure, valeurs vides remplies, « Reprendre les valeurs de la Bibliothèque », style choisi par son code, hors ligne sans lecture ; `library_repository_test.dart` : `import_unresolved` créé à `count` 1 avec la liste blanche, autre graphie du même nom sur le même document, compte monté d'un, nom repris, 120 noms en lots de 10, lot refusé sans effet sur les autres ni levée, un rapport sans nom), déroulé d'un brassin (`deroule_d3_test.dart` : clés uniques et clés de la recette gardées, libellés, journée retirée, préremplissage, houblonnage répété, chronologie illisible refusée, date changée et rétablie, prochaine journée, « Nouveau brassin » avec présélection, chronologie seule, modèle d'un autre membre jamais proposé, hors ligne, panne, refus du seul déroulé et de la création, fiche avant et après le départ, « Changer de processus », « Recréer depuis la recette », liste, « Préparer le brassage » et écran du jour avec un processus ; `deroule_d4_test.dart` : `PlanDuJour` par journée (début de la journée 2 sans « Non faites » au brassage, départ prévu au premier début ou à l'heure de l'appareil, mesures sous l'étape de la journée et jamais au brassage, « Sans étape » du jour), `journeeTerminee`, densité d'une journée 2 retenue comme finale et jamais comme initiale, « Préparer la journée » (refus : autre membre, brassage pas fini, embouteillage fait, terminé, abandonné, clé inconnue ; premier début seul, Reprendre sans écriture, sans réseau, prix lus ou indisponibles), écran de la journée (Terminer la journée en un lot, tout fait sans confirmation, dernière étape, mesure en `phase: 'fermentation'` limitée aux étapes de la journée, mesure du brassage sans `phase`, hors ligne, Embouteiller avec confirmation puis retour sur la fiche et mémoire vidée, étape en cours terminée à l'embouteillage, autre membre), fiche (prochaine journée, Embouteiller dans ⋮, Reprendre, relevé avec la journée et l'étape, « Passer la journée » en un lot et absent pour l'embouteillage, résumé « Terminée · … »), `resumeJourneeTerminee`, P2 sur les fichiers appelés par les journées ; `brews_repository_test.dart` : `setProcess` écrit, relu, retiré, refusé par `erreurDeroule` ; `prevu_reel_test.dart` : libellés prévu et réel de chaque cas, texte lu, groupes soudés, ligne de journée, fiche (lignes d'étape, étape sans fin après le brassage, journée jamais commencée, brassin sans processus, autre membre sans bouton), écran du jour inchangé, propositions et raisons, étape renommée, journées répétées, `avecDurees`, bouton absent (brassin en cours, processus d'un autre membre, supprimé, rien à proposer, deuxième usage), hors ligne sans cache, panne, feuille (cases décochées, bouton chiffré, écriture de la seule `duration_min`, « Annuler », hors ligne, refus du serveur, modèle invalide refusé dans la feuille, boutons radio et case d'une journée répétée), élément de ticket), processus (`processes_repository_test.dart` sur `fake_cloud_firestore` : champs écrits, modèle refusé par `erreurModele` sans écriture, document illisible isolé et rapporté, modification qui garde `owner_uid` et `created_at`, copie au nom du lecteur avec clés neuves, duplication, suppression, choix par défaut absent, écrit, remis à nul et illisible ; `process_screens_test.dart` : menu du compte, chargement et panne, liste vide avec le modèle d'exemple écrit à « Enregistrer » seulement et proposé par défaut, miens puis groupe par nom, « Par défaut », document illisible, hors ligne sans cache, fiche, autre membre en lecture seule avec copie, choix par défaut, suppression du défaut, duplication, journée vide refusée, nom manquant, journée 1 fixe, tri par écart annoncé, 5 journées et 60 étapes au plus, bloc déjà placé, modification, double appui du lecteur d'écran sur une ligne, « Nouveau processus » en panne et hors ligne, choix par défaut en lecture, en panne et non lu, suppression refusée qui garde le défaut, duplication bloquée pendant l'attente, journée retirée, résumés ; `ligne_editeur_test.dart` : ligne avec et sans formulaire, icône en tête, ⋮ masqué sans action), écrans des coûts (`costs_screens_test.dart` : « Mes prix », bloc de la recette, bloc du brassin absent pour un autre membre et pour l'admin, aucun montant avec un prix manquant ni dans une annonce, coût figé inchangé quand un prix change, figeage au premier embouteillage seulement, dialogues à trois boutons de « Figer » et de « Recalculer », nom importé coupé à 120 caractères, texte à 200 %, contraste, cibles tactiles et en-tête des manquants annoncé).
+
+#### Admin › Rapports d'erreur — client (ADR-011, J1)
+
+`features/admin/` : `domain/error_report.dart` (`ErrorReport.fromFirestore`, `PlateformeRapport`,
+première ligne, résumé, texte copié), `data/error_reports_repository.dart`
+(`ErrorReportsRepository`, `FirestoreErrorReportsRepository`), `presentation/error_reports_screen.dart`.
+
+- Lecture : `error_reports` par `orderBy('created_at', descending: true)`, `limit(50)`
+  (`kTaillePageRapports`), `get()` ; la suite par `startAfterDocument` du dernier document
+  lu. Aucun `snapshots()`, aucune écriture ni suppression (lecture seule, choix du
+  2026-11-14 ; P50). `fromCache` vient de `metadata.isFromCache` : l'écran affiche alors le
+  bandeau « Hors ligne ».
+- Une lecture en échec passe par `reportError` (`admin.error_reports`, contexte « première
+  page » ou « page suivante »), puis l'écran affiche la panne. Une copie en échec rapporte
+  `admin.error_reports.copy`. Aucun texte de rapport ne part dans `context` (P13).
+- `uid` est affiché tel quel ; ni `users/` ni `members/` ne sont lus pour le traduire.
+- Tests : `app/test/error_reports_test.dart` (lecture d'un document, pages de 50 sur
+  `fake_cloud_firestore`, panne rapportée ; écran : tuile, accès refusé au brasseur, liste,
+  plateforme inconnue, aucune suppression, sections et copie, « Charger la suite » et « Fin
+  des rapports. », vide, panne de la première page et de la suite, « Actualiser », hors ligne,
+  texte à 200 %, ligne large) ; `rules-tests/test/error_reports.test.mjs` : page de 50 par
+  `created_at` décroissant et suite par `startAfter`, pour les cinq profils (admin seul).
+
+#### Admin › Journaux — client (ADR-011, J2)
+
+`features/admin/` : `domain/log_entry.dart` (`FiltresJournaux`, `FiltreGravite`,
+`FiltrePeriode`, `EntreeJournal`, `GraviteJournal`, `PageJournaux`, `EchecJournaux`),
+`data/logs_repository.dart` (`LogsRepository`, `FunctionsLogsRepository`),
+`presentation/logs_screen.dart`.
+
+- Appel : `queryLogs` par `FirebaseFunctions.instanceFor(region: 'europe-west1')`, construit
+  au premier appel et mémorisé dans le dépôt (P6), délai client `kCallableTimeout` (70 s).
+  Arguments : `severity`, `periodMinutes`, `functionName`, `ticketId`, `freeText` (absents
+  quand le champ est vide), `pageToken` pour la suite. La recherche part du seul bouton
+  « Rechercher » (P50).
+- Le menu « Fonction » est construit depuis `functions` de la réponse ; aucune liste de
+  fonctions en Dart. Aucune borne du serveur n'est recopiée : ni la forme d'un identifiant de
+  ticket, ni la longueur du texte, ni la longueur gardée des données. Un refus
+  `invalid-argument` sur `ticketId` ou `freeText` pose sous le champ le `message` de la
+  `HttpsError` (`EchecJournaux.motif`), et efface la panne affichée. « Texte coupé à N
+  caractères. » s'affiche sous « Message » d'après `messageTruncated` et sous « Données »
+  d'après `payloadTruncated`, N lu dans `maxChars` de la réponse.
+- Erreurs : `EchecJournaux.depuis(code, details, message)` — `resource-exhausted` (quota),
+  `failed-precondition` avec `reason` `iam` ou `emulator`, `permission-denied` et
+  `unauthenticated`, `invalid-argument` sur `ticketId` ou `freeText` (sous le champ), sur
+  `pageToken` (`refuse` : « Réessayer » relit la première page avec les filtres de la liste) ou
+  sans l'un de ces trois champs (`rejete` : « Recherche refusée par le serveur. », sans
+  « Réessayer »), `unavailable` sans `reason` (hors ligne), tout autre code (indisponible).
+  Les libellés des pannes (quota, IAM, émulateur, indisponible, accès, hors ligne, page
+  refusée, recherche refusée) sont des libellés d'écran gardés côté client, choisis par code et `reason` : la
+  panne « hors ligne » n'a pas de réponse du serveur à afficher, et les autres suivent la même
+  règle. Seul le refus d'un champ affiche le texte du serveur. Chaque échec passe par `reportError`
+  (`admin.logs`, contexte : page, code, cause, champ), sans filtre, sans texte cherché ni texte
+  de journal (P13). Une réponse illisible est rapportée et affichée comme indisponible. Une
+  copie en échec rapporte `admin.logs.copy`.
+- `formatJourCourtHeureSecondes` (`core/presentation/formats.dart`) écrit l'heure d'une entrée.
+  `EtatErreur` et `BandeauListePerimee` acceptent `onRetry: null` (panne sans « Réessayer ») et
+  `retryEnabled: false` (bouton désactivé sans indicateur) ; `BandeauListePerimee` prend un
+  `retryingLabel` (« Lecture en cours » par défaut, « Recherche en cours » pour les journaux).
+- L'écran retient l'origine de l'appel en cours (`rechercher`, `reessayer`, `suite`) : seul le
+  bouton appuyé affiche l'indicateur. Le titre d'une entrée est la première ligne du message ;
+  « Message » passe en chasse fixe sur plusieurs lignes. Les rangs des entrées dépliées sont
+  gardés par l'écran (`initiallyExpanded`) ; une nouvelle recherche les vide et monte un numéro de
+  recherche porté par la clé de chaque entrée, ce qui replie aussi une entrée revenue au même
+  rang.
+- Tests : `app/test/logs_test.dart` (filtres, page, gravités, échecs ; dépôt : arguments,
+  refus rapporté sans le texte, réponse illisible ; écran : tuile, ouverture sans appel,
+  brasseur refusé, frappe sans appel, liste et résumé replié, menu des fonctions du serveur,
+  filtres modifiés, suite et fin, vide, IAM et émulateur sans « Réessayer », quota rejoué avec
+  la panne gardée et un seul indicateur, bandeau sur une liste, page suivante refusée relue
+  depuis la première page, champ refusé avec le message du serveur, focus et panne effacée,
+  Rechercher avec une liste (un seul indicateur), entrée dépliée, titre d'une ligne, message en
+  chasse fixe et copie, entrée gardée dépliée au défilement, disposition large, texte à 200 %) ; `app/test/formats_test.dart`.
 
 #### Bibliothèque — client
 
@@ -1488,7 +1565,10 @@ sur cet appareil hors ligne », jamais « prix manquant », et rien ne se fige.
 
 ### `error_reports/{reportId}`
 
-Écrit par `ErrorReportService.reportError` (P13).
+Écrit par `ErrorReportService.reportError` (P13). Lu par l'admin seul dans Admin › Rapports
+d'erreur (ADR-011, J1), par pages de 50 sur `created_at` décroissant ; aucune suppression
+depuis l'application. Aucune rétention : les rapports restent jusqu'à leur suppression dans
+la console Firebase.
 
 | Champ | Type |
 |---|---|
@@ -2709,10 +2789,11 @@ aucune recette réécrit, seul son document `ingest_runs` créé) ;
 
 `functions/` (ADR-006, ADR-008) : Cloud Functions 2e génération, Node 24, TypeScript, région
 `europe-west1` (celle de la base), compte d'exécution `tickets-functions@kassbeer.iam.gserviceaccount.com`.
-Cinq points d'accès, ceux des lots T3, T4 et T6 de la liste fermée d'ADR-008 (P25) : le webhook
-`githubTicketWebhook` et les callables `answerTicketAnalysis`, `launchTicketAnalysis`,
-`launchTicketDevelopment` et `attachTicketScreenshot`. Les quatre autres fonctions ne
-s'appellent pas depuis Internet.
+Sept points d'accès, ceux des lots T3 à T6 de la liste fermée d'ADR-008 et du lot J2 d'ADR-011
+(P25) : le webhook `githubTicketWebhook` et les callables `answerTicketAnalysis`,
+`launchTicketAnalysis`, `launchTicketDevelopment`, `launchTicketDelivery`,
+`attachTicketScreenshot` et `queryLogs`. Les quatre autres fonctions ne s'appellent pas depuis
+Internet.
 
 | Fonction | Déclencheur | Réglages | Ce qu'elle fait |
 |---|---|---|---|
@@ -2726,9 +2807,10 @@ s'appellent pas depuis Internet.
 | `launchTicketDevelopment` | `onCall`, `requireAdmin` (ADR-008, T4) | `maxInstances` 1, 256 Mio, 120 s, même `cors` | « Lancer le développement » : lance la routine de développement sur un ticket `validated` (P35, P36) ; avec `mode: "resume"`, « Relancer le développement » sur un ticket `in_progress` à CI rouge (T5, P47) |
 | `launchTicketDelivery` | `onCall`, `requireAdmin` (ADR-008, T5) | `maxInstances` 1, 256 Mio, 180 s, même `cors` | « Livrer » : contrôle la PR, ses fichiers et sa CI, prend le verrou des livraisons, lance la routine de développement avec `livraison #N` sur un ticket `in_progress` (P43, P44) |
 | `attachTicketScreenshot` | `onCall`, `requireMember`, auteur du ticket (ADR-008, T6) | `maxInstances` 2, 256 Mio, 60 s, même `cors`, aucun secret | joint la capture déposée dans Storage à son ticket : écrit `screenshot_path` (voir ci-dessous) |
+| `queryLogs` | `onCall`, `requireAdmin` (ADR-011, J2) | `maxInstances` 1, `concurrency` 1, 256 Mio, 60 s, même `cors`, aucun secret | Admin › Journaux : lit la sortie des fonctions dans Cloud Logging (`entries:list`), filtre construit par le serveur (P49) ; voir « Journaux » |
 
 Les neuf premières lisent le secret `GITHUB_TICKETS_TOKEN` (`defineSecret`) ;
-`attachTicketScreenshot` ne lit aucun secret. `githubTicketWebhook` lit
+`attachTicketScreenshot` et `queryLogs` n'en lisent aucun. `githubTicketWebhook` lit
 aussi `GITHUB_WEBHOOK_SECRET`, et lui seul ; `launchTicketAnalysis` lit aussi
 `TICKETS_ROUTINE_ANALYSIS_ID` et `TICKETS_ROUTINE_ANALYSIS_TOKEN`, et elle seule ;
 `launchTicketDevelopment` et `launchTicketDelivery` lisent aussi `TICKETS_ROUTINE_DEV_ID` et
@@ -3385,6 +3467,23 @@ gh label create "statut:clos" --repo "$REPO" --color 6A737D --description "Ticke
 **Ruleset de `main`** : ajouter le contrôle « Functions — lint, build, tests » aux contrôles
 requis.
 
+**Lot J2 d'ADR-011** (`queryLogs`), à faire **avant la fusion qui contient J2** : sans ce
+rôle, Admin › Journaux affiche « Lecture des journaux non autorisée : rôle IAM manquant. ».
+Le contrôle du manifeste de `ci.yml` et de `deploy.yml` accepte `queryLogs` dans la liste des
+callables, vérifie `maxInstances` 1, `timeoutSeconds` 60 et `concurrency` 1, et refuse tout
+secret monté par elle (P25 ; diff des workflows décidé par l'utilisateur, P10, P14). `github-deploy` ne
+reçoit rien : la callable ne monte aucun secret et tourne sous `tickets-functions`, sur
+lequel il a déjà `serviceAccountUser`.
+
+```bash
+# 12. Lecture des journaux du projet par le compte d'exécution (choix du 2026-11-14 :
+#     rôle sur le projet, aucune vue de journaux). Ce rôle ouvre aussi les journaux de
+#     requêtes et d'audit d'administration ; queryLogs n'en rend que la sortie des fonctions.
+gcloud projects add-iam-policy-binding kassbeer \
+  --member=serviceAccount:tickets-functions@kassbeer.iam.gserviceaccount.com \
+  --role=roles/logging.viewer
+```
+
 ### Routines des tickets (ADR-008, T4 et T5)
 
 **Réglages faits une fois**, par un compte propriétaire du projet `kassbeer`, **avant la
@@ -3829,7 +3928,7 @@ manuel. Un nouveau push annule le run en cours de la même référence. Permissi
 | Version et outillage | `git fetch --tags`, puis `node scripts/check-version.mjs` : sur une PR avec `--base origin/<base de la PR>` (HEAD est le commit de fusion préparé par GitHub) ; sur un push de `main` avec `--base <commit d'avant le push>` ; sur un push d'une autre branche, contre `origin/main`. Non lancé sur un lancement manuel. Puis `node scripts/check-agents.mjs` et `node --test scripts/*.test.mjs` (dont `changelog-recent.test.mjs`) |
 | Flutter et brewing | Flutter 3.44.6. Dans `brewing/`, puis dans `exchange/` (v0.1.20) : `dart pub get`, `pubspec.lock` à jour, `dart analyze --fatal-infos`, `dart format` vérifié, `dart test`. Dans `app/` : `flutter pub get`, `pubspec.lock` à jour, `node scripts/changelog-recent.mjs` (asset des nouveautés régénéré), `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`, `flutter test`, `flutter build web --release` sans configuration Firebase |
 | Règles — émulateur | Node 22, Java 21 (Temurin), `npm ci` et `npm test` dans `rules-tests/` (projet `demo-kassbeer`) : `firestore.rules` et `storage.rules` contre les émulateurs Firestore et Storage. Binaires des émulateurs en cache (clé `firebase-emulators-storage-…`) |
-| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`), contrôlé par `jq` : déclencheurs HTTP et callables limités à la liste fermée d'ADR-008 déjà livrée (`githubTicketWebhook`, seul `invoker: "public"`, `maxInstances` 5 et 60 s ; `answerTicketAnalysis`, `maxInstances` 2 et 60 s ; `launchTicketAnalysis` et `launchTicketDevelopment`, `maxInstances` 1 et 120 s ; `launchTicketDelivery`, `maxInstances` 1 et 180 s ; `attachTicketScreenshot`, `maxInstances` 2 et 60 s), aucun déclencheur bloquant ni de file, `maxInstances` sur chaque fonction ; sinon échec « Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25). » ; secrets : `GITHUB_TICKETS_TOKEN` partout, chacun des autres monté par les seules fonctions de P25 (table `$only` du filtre : `GITHUB_WEBHOOK_SECRET` → `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_*` → `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_*` → `launchTicketDevelopment` et `launchTicketDelivery`), aucun autre secret déclaré ; sinon échec « Une fonction lit un secret hors de la liste de P25, ou un secret monté par une autre fonction que la sienne. » Même filtre que `deploy.yml` : une PR verte ne se fait pas refuser au déploiement |
+| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`), contrôlé par `jq` : déclencheurs HTTP et callables limités à la liste fermée d'ADR-008 et d'ADR-011 déjà livrée (`githubTicketWebhook`, seul `invoker: "public"`, `maxInstances` 5 et 60 s ; `answerTicketAnalysis`, `maxInstances` 2 et 60 s ; `launchTicketAnalysis` et `launchTicketDevelopment`, `maxInstances` 1 et 120 s ; `launchTicketDelivery`, `maxInstances` 1 et 180 s ; `attachTicketScreenshot`, `maxInstances` 2 et 60 s ; `queryLogs`, `maxInstances` 1, 60 s et `concurrency` 1), aucun déclencheur bloquant ni de file, `maxInstances` sur chaque fonction ; sinon échec « Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25). » ; secrets : `GITHUB_TICKETS_TOKEN` partout, chacun des autres monté par les seules fonctions de P25 (table `$only` du filtre : `GITHUB_WEBHOOK_SECRET` → `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_*` → `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_*` → `launchTicketDevelopment` et `launchTicketDelivery`), aucun secret monté par `queryLogs`, aucun autre secret déclaré ; sinon échec « Une fonction lit un secret hors de la liste de P25, ou un secret monté par une autre fonction que la sienne. » Même filtre que `deploy.yml` : une PR verte ne se fait pas refuser au déploiement |
 | Android — compilation | quand le diff touche `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`, et toujours sur un lancement manuel : `node scripts/changelog-recent.mjs`, puis `flutter build apk --release`, Java 17, signé par une clé jetable générée par `keytool` dans le job. Sinon le job réussit sans compiler |
 
 Une branche de travail qui n'a pas encore incrémenté sa version est rouge au job Version :
@@ -3867,7 +3966,7 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et décide s'il faut un nouvel APK |
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
-| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et chacun des autres monté par les seules fonctions de P25 : `GITHUB_WEBHOOK_SECRET` par `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_ID` et `_TOKEN` par `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_ID` et `_TOKEN` par `launchTicketDevelopment` et `launchTicketDelivery`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage` (`storage` : `storage.rules`, ADR-008, T6) ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
+| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008 et d'ADR-011, `queryLogs` en `maxInstances` 1, 60 s et `concurrency` 1, sans secret, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et chacun des autres monté par les seules fonctions de P25 : `GITHUB_WEBHOOK_SECRET` par `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_ID` et `_TOKEN` par `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_ID` et `_TOKEN` par `launchTicketDevelopment` et `launchTicketDelivery`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage` (`storage` : `storage.rules`, ADR-008, T6) ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
 | `tag` | aucun, `contents: write` | après un `deploy` réussi seulement (condition `!cancelled() && needs.deploy.result == 'success'`, pour que l'absence de `build-functions` ne l'ignore pas) : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et
@@ -4214,12 +4313,97 @@ actually used ».
 Forcer les versions corrigées par des `overrides` npm a été écarté : le déploiement exécute
 `firebase-tools`, et aucun test local ne vérifie une CLI aux dépendances forcées.
 
+## Journaux
+
+Deux journaux, deux publics (ADR-011) :
+
+| Journal | Écrit par | Contenu | Lu par |
+|---|---|---|---|
+| `error_reports/` (Firestore) | l'application, `ErrorReportService.reportError` | pannes des appareils des membres : erreur, pile, contexte, version, plateforme ; URL et e-mails retirés à l'écriture (P13) | l'admin, Admin › Rapports d'erreur (J1, livré) |
+| sortie des Cloud Functions (Cloud Logging) | `functions/src/logging.ts` (`logError`, `logWarn`, `logInfo`) | erreurs et événements du serveur des tickets : `message`, `feature`, `ticketId`, description, pile | la console Google Cloud ; l'admin, Admin › Journaux par la callable `queryLogs` (J2, livré) |
+
+Le texte d'un journal ne se recopie jamais dans une Issue (ADR-002, P24).
+
+**Format écrit par `logging.ts`.** `firebase-functions/logger` écrit une ligne JSON sur la
+sortie standard (`stdout` pour `DEBUG` à `WARNING`, `stderr` pour `ERROR`) ; Cloud Run la lit
+comme `jsonPayload`, `severity` devient la gravité de l'entrée. Le texte va dans
+`jsonPayload.message` ; pour `ERROR`, le logger y écrit la pile de l'appel
+(`Error: <message>\n    at …`). `ticketId` et les champs de `extra` sont au premier niveau de
+`jsonPayload`. `queryLogs` filtre sur `jsonPayload.ticketId` et `jsonPayload.message`
+(`FILTERED_FIELDS`) : `functions/test/logs.test.ts` capture une ligne écrite par `logError` et
+vérifie ces deux champs (P50).
+
+**`queryLogs`** (`functions/src/logs/queryLogs.ts`, ADR-011, J2, P49).
+
+1. `requireAdmin` (P30), avant toute lecture des arguments.
+2. Arguments, refus en `invalid-argument` avec `details.field` et `details.reason` :
+
+| Argument | Lecture | Clause |
+|---|---|---|
+| `severity` | `DEBUG`, `INFO`, `WARNING`, `ERROR` (`QUERYABLE_SEVERITIES`) ou absent | `severity>=X` ; `severity=DEBUG` pour `DEBUG` |
+| `functionName` | liste fermée `QUERYABLE_FUNCTIONS` de `config.ts`, égale aux exports de `index.ts` (test) | `resource.labels.service_name="<nom en minuscules>"` |
+| `ticketId` | `requireBoundedText` (128), puis `^[A-Za-z0-9_-]{1,128}$` | `jsonPayload.ticketId="…"` |
+| `freeText` | `requireBoundedText` (100), 1 à 100 caractères, aucun caractère de contrôle C0 ou C1 ni séparateur U+2028, U+2029 | `jsonPayload.message:"…"`, `"` et `\` échappés |
+| `periodMinutes` | `60`, `1440` ou `10080` (`QUERYABLE_PERIODS_MINUTES`) ; défaut `60` | `timestamp>="<ISO>"` |
+| `pageToken` | `requireBoundedText` (2 000), forme `<période>\|<ISO>\|<jeton de l'API>` rendue par `queryLogs` (`readPageToken`) : période relue dans `QUERYABLE_PERIODS_MINUTES`, début ni futur ni antérieur à maintenant − période − 5 min (`PAGE_TOKEN_MARGIN_MS`), jeton de l'API non vide ; un `periodMinutes` contraire à la période du jeton est refusé | jeton passé à l'API ; la période et le début du jeton remplacent « maintenant − période » |
+
+3. Filtre : `resource.type="cloud_run_revision" AND (LOG_ID("run.googleapis.com/stdout") OR
+   LOG_ID("run.googleapis.com/stderr"))` (`BASE_CLAUSE`) toujours en tête, puis les clauses,
+   jointes par `AND`. Chaque valeur du client est entre guillemets ; un ` OR ` du texte reste
+   dans la chaîne. Ni les journaux de requêtes (`run.googleapis.com/requests`, adresse IP de
+   l'appelant) ni les journaux d'audit ne sont lus. Le filtre n'est ni rendu ni journalisé.
+4. Sous l'émulateur (`FUNCTIONS_EMULATOR === "true"`) : `failed-precondition`, `reason`
+   `emulator`, « Journaux non disponibles dans l'émulateur. », aucun appel.
+5. Projet : `GCLOUD_PROJECT` (ou `GOOGLE_CLOUD_PROJECT`) de l'environnement d'exécution, jamais
+   un argument ; illisible : `unavailable`, journalisé.
+6. Jeton : `GET http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token`
+   (`Metadata-Flavor: Google`, `redirect: "error"`, 5 s), mémorisé dans une variable du module,
+   vide au démarrage, jusqu'à son échéance moins 60 s ; vidé sur un 401. Jamais journalisé ni
+   rendu.
+7. Appel unique : `POST https://logging.googleapis.com/v2/entries:list`, corps
+   `resourceNames: ["projects/<projet>"]`, `filter`, `orderBy: "timestamp desc"`,
+   `pageSize: 50`, `pageToken` ; `redirect: "error"`, `AbortSignal.timeout(20_000)`. Le
+   `nextPageToken` rendu porte la période et son début (`<période>|<ISO>|<jeton>`) : la page
+   suivante envoie le même filtre, que l'API exige identique. Une page demandée plus de cinq
+   minutes après la fin de sa période est refusée (`invalid-argument`, `field` `pageToken`) ;
+   le client relit alors la première page. Un jeton composé de plus de 2 000
+   caractères rend `unavailable`, journalisé, au lieu d'une fausse fin.
+8. Réponse : `entries` (par entrée : `timestamp` RFC 3339 rendu par l'API, `severity`,
+   `functionName` lu de `resource.labels.service_name`, `message` = `jsonPayload.message` ou
+   `textPayload`, `messageTruncated`, `insertId`, `payload` = `jsonPayload` sans `message`, en
+   JSON indenté, `payloadTruncated`), `nextPageToken` (ou `null`), `functions`
+   (`QUERYABLE_FUNCTIONS`), `maxChars` (`TEXT_MAX_CHARS`, 8 000, longueur gardée, affichée par
+   le client). `message` et `payload` passent par `redactSecrets` **avant** la coupe à
+   `maxChars` caractères : un jeton à cheval sur la coupe est retiré entier ; les indicateurs
+   `messageTruncated` et `payloadTruncated` se calculent sur le texte nettoyé. Les adresses
+   e-mail restent visibles (choix du 2026-11-14).
+9. Erreurs : 429 → `resource-exhausted` (`reason` `quota`), « Quota de lecture des journaux
+   atteint, réessayez dans une minute. » ; 401 ou 403 → `failed-precondition` (`reason`
+   `iam`), « Lecture des journaux non autorisée : rôle IAM manquant. » ; autre statut,
+   délai, réseau, jeton non obtenu, corps illisible → `unavailable` (`reason`
+   `logging_unavailable`), « Journaux indisponibles pour l'instant. ». `logError` (feature
+   `logs`) dans chaque `catch` et sur chaque refus de l'API, avec le statut seul : ni jeton, ni
+   filtre, ni `freeText`, ni corps de la réponse (qui peut citer le filtre).
+
+Plafond : `maxInstances` 1 et `concurrency` 1, 50 entrées par page, une requête par appui sur
+un bouton ; quota de l'API : 60 lectures par minute et par projet, partagé avec l'Explorateur
+de journaux de la console. Lecture non facturée : aucun poste au catalogue des coûts variables.
+Tests : `functions/test/logs.test.ts` (six profils de P30 refusés avant la lecture des
+arguments et sans appel ; chaque valeur hors liste ; texte avec `"`, `\`, ` OR ` et saut de
+ligne ; clause imposée en tête ; un seul appel à `entries:list` et jeton mémorisé ; page
+suivante au même filtre ; jeton de page sans période, à période hors liste, futur, plus ancien
+que la période et sa marge, contraire à `periodMinutes`, sans jeton de l'API ; période relue
+dans le jeton ; 429, 401, 403, 500, délai, réseau, corps illisible ; jeton, filtre
+et texte absents des journaux capturés ; émulateur et projet inconnu sans appel ; réduction
+et troncature des entrées ; liste fermée égale aux exports ; champs de `logging.ts`).
+
 ## Intégrations et services tiers
 
 | Service | Appelé par | Usage | Accès |
 |---|---|---|---|
 | API REST GitHub (`api.github.com`) | `functions/` seul | créer une Issue, chercher une Issue par référence, lire Issues, commentaires, événements, PR d'un commit, `app/pubspec.yaml` à un commit ; depuis T5, lire les PR ouvertes, une PR, ses fichiers, les runs d'un commit (rien n'est écrit pour une livraison) | jeton à grain fin `GITHUB_TICKETS_TOKEN` (Secret Manager), en-tête `x-github-api-version: 2022-11-28` |
 | Cloud Storage for Firebase (bucket `kassbeer.firebasestorage.app`, `us-east1`, nommé dans le code) | l'application (`firebase_storage` : `putData`, `getData`) sous `storage.rules` ; `attachTicketScreenshot` (`firebase-admin/storage`) | captures jointes aux tickets, `tickets/{uid}/{ticketId}/screenshot.png` (ADR-008, T6) ; jamais d'URL de téléchargement | compte Google du membre (règles) ; compte d'exécution `tickets-functions` (`roles/storage.objectViewer` sur le bucket) |
+| API Cloud Logging (`logging.googleapis.com/v2/entries:list`) | `queryLogs` seul (`functions/src/logs/queryLogs.ts`, `fetch`, sans SDK) | lire la sortie des fonctions pour Admin › Journaux (ADR-011, J2, P49) | jeton du compte d'exécution lu au serveur de métadonnées, rôle `roles/logging.viewer` ; `redirect: "error"`, délai de 20 s |
 | API Routines de Claude Code (`api.anthropic.com/v1/claude_code/routines/{id}/fire`) | `launchTicketAnalysis` et `launchTicketDevelopment` seuls (`functions/src/tickets/routine.ts`, `fetch`, sans SDK) | lancer une session d'analyse ou de développement d'un ticket, corps `{"text": "analyse #N"}` ou `{"text": "developpement #N"}` (P35) ; API expérimentale, sans clé d'idempotence : un appel n'est jamais rejoué | identifiant et jeton de chaque routine (`TICKETS_ROUTINE_*`, Secret Manager), en-têtes `authorization: Bearer`, `anthropic-version: 2023-06-01` ; `redirect: "error"`, délai de 30 s |
 
 ## Coûts variables

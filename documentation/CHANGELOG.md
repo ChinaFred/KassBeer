@@ -6,6 +6,81 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.44 — fonctionnel
+
+L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les
+messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien,
+50 à la fois. On choisit la gravité, la période (1 h, 24 h ou 7 jours), une fonction, un ticket ou
+un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni pendant la frappe. Une
+entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux
+peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue.
+
+### v0.1.44 — technique
+
+ADR-011, lot J2 : callable `queryLogs` (`functions/src/logs/queryLogs.ts`, exportée par
+`index.ts`) : `onCall`, `requireAdmin` en premier, `maxInstances` 1, `concurrency` 1, 60 s,
+256 Mio, `cors` de `CALLABLE_ORIGINS`, compte `tickets-functions`, aucun secret (P25). Elle lit
+`entries:list` de Cloud Logging par `fetch` (`redirect: "error"`, 20 s, un appel), avec le jeton
+du serveur de métadonnées mémorisé jusqu'à son échéance moins 60 s ; aucune dépendance ajoutée.
+Filtre construit par le serveur, clause `cloud_run_revision` et `LOG_ID` `stdout` ou `stderr`
+toujours en tête ; `severity`, `functionName` (liste fermée `QUERYABLE_FUNCTIONS` de `config.ts`,
+égale aux exports de `index.ts` par test), `ticketId`, `freeText` (guillemets et barres obliques
+inverses échappés), `periodMinutes` et `pageToken` contrôlés ; 50 entrées par page. Le jeton de
+page vaut `<période>|<début ISO>|<jeton de l'API>` : la page suivante rejoue le même filtre, la
+période est relue dans la liste fermée, et un début antérieur à maintenant − période − 5 min est
+refusé. `payload` et `message` passent par `redactSecrets` avant d'être coupés à 8 000 caractères,
+avec `payloadTruncated` et `messageTruncated` calculés sur le texte nettoyé, et la longueur
+rendue au client (`maxChars`) ; e-mails visibles (P49). Tests : `functions/test/logs.test.ts`, dont les champs
+`ticketId` et `message` écrits par `logging.ts` (P50). Diffs des workflows (P10, P14) :
+dans `.github/workflows/ci.yml` et deux fois dans `.github/workflows/deploy.yml`, `queryLogs`
+ajouté à la liste des callables du contrôle du manifeste, avec une ligne `jq` qui exige
+`maxInstances` 1, `timeoutSeconds` 60 et `concurrency` 1 ; dans les deux `secrets_filter`, une
+ligne `jq` refuse tout secret monté par `queryLogs` ; commentaires des contrôles mis à jour
+(ADR-011). Réglage à faire avant la fusion : `roles/logging.viewer` sur le projet pour
+`tickets-functions` (« Réglages faits une fois », étape 12). Client : Admin › Journaux
+(`/admin/journaux`, tuile après « Rapports d'erreur »), `app/lib/features/admin/`
+`domain/log_entry.dart`, `data/logs_repository.dart` (`FunctionsLogsRepository`, client des
+Functions construit au premier appel, P6), `presentation/logs_screen.dart` ;
+`formatJourCourtHeureSecondes` dans `core/presentation/formats.dart` ; `EtatErreur` et
+`BandeauListePerimee` acceptent une panne sans « Réessayer » et un bouton désactivé sans
+indicateur. L'écran ne recopie aucune borne du serveur : message d'un champ refusé lu dans la
+`HttpsError`, longueur coupée lue dans `maxChars` et affichée sous « Message » et sous
+« Données ». Un `invalid-argument` sans champ connu s'affiche « Recherche refusée par le
+serveur. », sans « Réessayer » ; seul un refus de `pageToken` relit la première page. Une
+nouvelle recherche replie toutes les entrées (numéro de recherche dans la clé). Tests : `app/test/logs_test.dart`,
+`app/test/formats_test.dart`. Aucun paquet Dart ni npm ajouté ou monté. `main.dart.js`
+(`flutter build web --release`) passe de 5 458 499 à 5 499 631 octets (+ 41 132) avant la
+fusion de `main` ; mesuré sur `main` à la v0.1.41, avec J1 et J2 : 5 542 375 → 5 600 569 octets
+(+ 58 194).
+
+### v0.1.43 — fonctionnel
+
+L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les
+pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50
+à la fois, avec « Charger la suite » pour les précédentes. Chaque ligne donne la date, la partie de
+l'application concernée, la version et la plateforme (Android ou Web). Une ligne se déplie sur
+l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie
+le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application.
+
+### v0.1.43 — technique
+
+ADR-011, lot J1 : Admin › Rapports d'erreur (`/admin/rapports-erreur`, `PageDeCoquille` sous
+`/admin`, réservé à l'admin par le routeur). Fichiers ajoutés dans `app/lib/features/admin/` :
+`domain/error_report.dart`, `data/error_reports_repository.dart` (`ErrorReportsRepository`,
+`FirestoreErrorReportsRepository`, fourni par `errorReportsRepositoryProvider`),
+`presentation/error_reports_screen.dart` ; tuile dans `admin_screen.dart`. Lecture de
+`error_reports` par `orderBy('created_at', descending: true)`, `limit(50)`, `get()` et
+`startAfterDocument`, sans `snapshots()` ni suppression (P50) ; une lecture ou une copie en échec
+passe par `reportError`, sans texte de rapport dans `context` (P13). `firestore.rules` est
+inchangé ; `rules-tests/test/error_reports.test.mjs` ajoute la requête paginée (page de 50 et
+suite) pour les cinq profils de P4. Tests : `app/test/error_reports_test.dart`. Aucune dépendance
+ajoutée ni montée. Évolutions du réseau ajoutées avec ADR-011 : `queryLogs` dans la liste fermée de
+P25, contrôles P49 (`queryLogs`) et P50 (champs de `logging.ts`, Admin › Journaux, Admin › Rapports
+d'erreur), lecture des journaux par l'API REST et `fetch` dans « Règles de code » de `CLAUDE.md`,
+note de renvoi dans ADR-008. Seuil `kGrandTexteMinScale` (1,3) ajouté à
+`core/presentation/breakpoints.dart`. `main.dart.js` (`flutter build web --release`) passe de
+5 431 748 (`main` à la v0.1.40) à 5 458 499 octets (+ 26 751). Admin › Journaux et la callable `queryLogs` viendront
+avec le lot J2.
 ### v0.1.42 — technique
 
 Le déploiement de la v0.1.41 échouait à la publication de `storage.rules` : Firebase ne rend

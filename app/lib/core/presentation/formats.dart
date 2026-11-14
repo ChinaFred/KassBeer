@@ -147,6 +147,11 @@ String formatJourHeure(DateTime when) =>
 String formatJourCourtHeure(DateTime when) =>
     '${when.day} ${_moisCourts[when.month - 1]} ${formatHeure(when)}';
 
+/// Date courte et heure avec les secondes, sans l'année : « 15 nov. 18:30:42 »
+/// (Admin › Journaux).
+String formatJourCourtHeureSecondes(DateTime when) =>
+    '${formatJourCourtHeure(when)}:${_deuxChiffres(when.second)}';
+
 const _joursComplets = [
   'Lundi',
   'Mardi',
