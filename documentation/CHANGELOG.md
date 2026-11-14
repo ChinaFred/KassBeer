@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.48 — fonctionnel
+### v0.1.49 — fonctionnel
 
 Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur
 GitHub, au lieu de partir plus tard. Pendant l'action, la fiche affiche « … en cours sur
@@ -16,7 +16,7 @@ accepte maintenant 4 000 caractères. Ces actions demandent le réseau : hors li
 restent visibles mais inactifs, avec « Ces actions demandent le réseau. ». L'historique des
 décisions d'un ticket reste affiché.
 
-### v0.1.48 — technique
+### v0.1.49 — technique
 
 ADR-008, lot T7 (décisions de l'utilisateur du 2026-11-14 ; P23, P25, P26, P42, P44 modifiés,
 P53 ajouté) : callables `validateTicket`, `refuseTicket`, `closeTicket` et `retryTicketSend`
@@ -37,6 +37,22 @@ fois dans `deploy.yml`, les quatre callables ajoutées à la liste fermée avec 
 `syncTickets` seul en tâche planifiée). Réglages avant la fusion : aucune décision `pending` ou
 `applying` en base, puis suppression manuelle des deux déclencheurs
 (`firebase functions:delete`), sans quoi le déploiement des Functions échoue.
+
+### v0.1.48 — fonctionnel
+
+« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran
+Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou
+« Journaux indisponibles pour l'instant ».
+
+### v0.1.48 — technique
+
+Chaque callable échouait en 500 sans détail (`app/no-app`, journaux du 2026-11-14) :
+`firebase-functions` crée son application nommée `__FIREBASE_FUNCTIONS_SDK__` pour vérifier
+le jeton avant le code de la fonction, et `firestore.ts` comme `storage.ts` ne créaient
+l'application par défaut que si `getApps()` était vide. `src/adminApp.ts`
+(`ensureDefaultApp`) la crée si aucune application `[DEFAULT]` n'existe ; test
+`functions/test/adminApp.test.ts`. Les déclencheurs n'étaient pas touchés. Aucun paquet ne
+change.
 
 ### v0.1.47 — fonctionnel
 
