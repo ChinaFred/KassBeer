@@ -31,9 +31,16 @@ const SOURCES = [
   "brewtarget-003",
   "brewtarget-004",
   "brewtarget-005",
+  "fabricants",
   "diydog",
 ];
-const LICENCES = ["GPL-3.0", "CC BY-SA 4.0", "BJCP (noms et plages)", "DIY Dog (usage privé)"];
+const LICENCES = [
+  "GPL-3.0",
+  "CC BY-SA 4.0",
+  "BJCP (noms et plages)",
+  "DIY Dog (usage privé)",
+  "Données publiées par le fabricant",
+];
 const NATURES = ["fermentable", "hop", "culture", "misc"];
 const INDEX = ["fermentables", "hops", "cultures", "miscs", "styles"];
 

@@ -63,7 +63,7 @@ class Provenance {
     required this.retrieved,
   });
 
-  /// `brewtarget-001` à `brewtarget-005`, `diydog`.
+  /// `brewtarget-001` à `brewtarget-005`, `fabricants`, `diydog`.
   final String source;
 
   /// `v5.2.3 ea10908`, `e6c12ab`.

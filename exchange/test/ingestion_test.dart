@@ -39,6 +39,7 @@ SourcesBrutes _sources() {
     texte003: texte('003.json'),
     texte004: texte('004.json'),
     texte005: texte('005.beer'),
+    texteFabricants: File('$_dossier/fabricants/vide.json').readAsStringSync(),
     diyDog: [
       for (final f in ['001.json', '002.json'])
         (fichier: f, texte: File('$_dossier/diydog/$f').readAsStringSync()),
@@ -660,6 +661,85 @@ void main() {
     });
   });
 
+  group('fiches des fabricants', () {
+    late Preparation p;
+    setUpAll(() {
+      final s = _sources();
+      p = preparer(
+        SourcesBrutes(
+          octets001: s.octets001,
+          texte002: s.texte002,
+          texte003: s.texte003,
+          texte004: s.texte004,
+          texte005: s.texte005,
+          texteFabricants: File(
+            '$_dossier/fabricants/cultures.json',
+          ).readAsStringSync(),
+          diyDog: s.diyDog,
+        ),
+        alias: _alias,
+        ajoutsDansHoublons: _ajouts,
+      );
+    });
+
+    test('la fiche donne les valeurs, l\'identifiant ne change pas', () {
+      final l = _doc(
+        p,
+        'beer_cultures',
+        'culture-labo-fictif-lf1-levure-test-ale',
+      );
+      expect(l['name'], 'Fictiale LF1');
+      expect(l['aliases'], ['Levure Test Ale']);
+      expect(l['attenuation'], plage(76, 80, '%'));
+      expect(l['temperature_range'], plage(18, 26, 'C'));
+      // La fiche ne donne pas la floculation : elle n'est pas reprise du 003.
+      expect(l.containsKey('flocculation'), isFalse);
+      expect(l.containsKey('notes'), isFalse);
+      final provenance = l['provenance']! as List;
+      expect(provenance.first, {
+        'source': 'fabricants',
+        'source_id': 'labo-fictif-lf1',
+        'version': kDateReleveFabricants,
+        'licence': Licence.fabricant,
+        'retrieved': kDateReleveFabricants,
+      });
+      expect(provenance, hasLength(3));
+    });
+
+    test('souche connue de la seule fiche ; atténuation hors bornes', () {
+      final fiche = p.collections['beer_cultures']!.singleWhere(
+        (e) => (e['data']! as Map)['name'] == 'Fictibrew LF2',
+      );
+      expect(fiche['id'], 'culture-labo-fictif-lf2-fictibrew-lf2');
+      final n = fiche['data']! as Map;
+      expect(n['temperature_range'], plage(20, 32, 'C'));
+      expect(n.containsKey('attenuation'), isFalse);
+      expect(p.collections['beer_cultures'], hasLength(4));
+      final ecartees = (p.rapport['valeurs_ecartees']! as Map)['lignes']!;
+      expect(
+        (ecartees as List).where(
+          (e) =>
+              (e as Map)['source'] == 'fabricants' &&
+              '${e['champ']}'.startsWith('attenuation_range'),
+        ),
+        isNotEmpty,
+      );
+    });
+
+    test('liste autre que cultures ignorée et comptée', () {
+      expect(
+        (p.rapport['listes_ignorees']! as Map)['fabricants:hop_varieties'],
+        1,
+      );
+      expect(
+        p.collections['beer_hops']!.where(
+          (e) => (e['data']! as Map)['name'] == 'Houblon De Fiche',
+        ),
+        isEmpty,
+      );
+    });
+  });
+
   group('rapport', () {
     late Preparation p;
     setUpAll(() => p = _preparer());
@@ -793,6 +873,7 @@ void main() {
       texte003: s.texte003,
       texte004: s.texte004,
       texte005: s.texte005,
+      texteFabricants: s.texteFabricants,
       diyDog: List.filled(kMaxFichiersDiyDog + 1, s.diyDog.first),
     );
     expect(() => preparer(trop), throwsStateError);

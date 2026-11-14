@@ -21,12 +21,13 @@ Map<String, Object> provenance({
   String source = 'brewtarget-003',
   String licence = 'GPL-3.0',
   String version = 'v5.2.3 ea10908',
+  String retrieved = '2026-11-08',
 }) => {
   'source': source,
   'source_id': 'élément 12',
   'version': version,
   'licence': licence,
-  'retrieved': '2026-11-08',
+  'retrieved': retrieved,
 };
 
 /// `beer_index/{nature}`.

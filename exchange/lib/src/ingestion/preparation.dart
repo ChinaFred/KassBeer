@@ -27,6 +27,7 @@ class SourcesBrutes {
     required this.texte003,
     required this.texte004,
     required this.texte005,
+    required this.texteFabricants,
     required this.diyDog,
   });
 
@@ -44,6 +45,9 @@ class SourcesBrutes {
 
   /// Fichier 005.
   final String texte005;
+
+  /// Fiches techniques des fabricants (`fabricants/cultures.json`).
+  final String texteFabricants;
 
   /// Recettes DIY Dog : nom du fichier et contenu, dans l'ordre des fichiers.
   final List<({String fichier, String texte})> diyDog;
@@ -90,7 +94,8 @@ Preparation preparer(
     ..lire002(sources.texte002)
     ..lire003ou004(sources.texte003, Source.brewtarget003)
     ..lire003ou004(sources.texte004, Source.brewtarget004)
-    ..lire005(sources.texte005);
+    ..lire005(sources.texte005)
+    ..lireFabricants(sources.texteFabricants);
   final referentiel = Referentiel.fusionner(lecture.entrees);
   final resolveur = Resolveur(
     referentiel,
