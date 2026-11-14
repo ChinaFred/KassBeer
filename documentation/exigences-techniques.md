@@ -711,6 +711,20 @@ options (le texte change d'un caractère puis revient, curseur compris), sauf si
 encore celui de l'ouverture du champ. Les formulaires de ligne affichent sous « Nom », en
 `liveRegion`, les valeurs remplies (`ValeurRemplie`, `valeursReprises`).
 
+Champ « Style » (`ChampBibliotheque(choixDesStyles: true)`, réservé à
+`NatureReferentiel.styles`, ticket #49) : sur un champ vide, `suggestionsPour(stylesSiVide:
+true)` rend les 8 premiers styles dans l'ordre des codes BJCP (`stylesParCode`,
+`comparerCodesStyle` de `referentiel.dart` : nombre de tête, puis reste du code), et l'index
+arrivé au focus ouvre la liste. L'icône de fin de champ (`Icons.list`, info-bulle « Choisir un
+style dans la Bibliothèque ») ouvre `choisirStyle` (`choix_style.dart`) : feuille du bas sous
+`kCompactMaxWidth`, boîte de dialogue de 560 px au plus au-delà ; elle attend la lecture en cours
+ou reprend l'index déjà lu, sans seconde lecture. Recherche en mémoire (`stylesGroupes` : code,
+nom, autre nom, catégorie), styles groupés par catégorie. Le focus quitte le champ avant
+l'ouverture. L'icône est désactivée quand la dernière lecture n'a pas rendu d'index ; elle reste
+active avant la première lecture, qu'elle lance. L'aide du champ (`aideStyleSaisi`) compare le
+texte, espaces de bord retirées, au `name` exact d'un style, comme l'export BeerXML. Aucun
+`snapshots()` ni lecture de `beer_styles/` (P22) ; `recipe.style.name` inchangé.
+
 **Signalement des noms non résolus (`signalerNonResolus`, E6).** Après l'écriture des recettes
 d'un import, un appel pour les noms non résolus de ces recettes, une fois chacun
 (`nonResolusDe`), 200 au plus (`kMaxSignalements`) ; les suivants sont comptés au compte rendu

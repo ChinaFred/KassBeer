@@ -12,6 +12,7 @@ import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/library/presentation/champ_bibliotheque.dart';
+import 'package:kass_beer/features/library/presentation/choix_style.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
 import 'package:kass_beer/features/recipes/presentation/contenu_recette.dart';
 import 'package:kass_beer/features/recipes/presentation/ingredient_forms.dart';
@@ -2008,6 +2009,231 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Pilsner Fictif'), findsOneWidget);
       expect(app.library.indexReads, [NatureReferentiel.fermentables]);
+    });
+
+    group('style : liste et feuille « Choisir un style » (ticket #49)', () {
+      void styles(TestApp app) =>
+          app.library.index[NatureReferentiel.styles] = DocumentTrouve(
+            IndexReferentiel.fromFirestore(
+              NatureReferentiel.styles,
+              indexDoc([
+                {
+                  'id': 'bjcp2021-21a',
+                  'name': 'American IPA',
+                  'code': '21A',
+                  'category': 'IPA',
+                },
+                {
+                  'id': 'bjcp2021-10a',
+                  'name': 'Weissbier',
+                  'code': '10A',
+                  'category': 'German Wheat Beer',
+                },
+                {
+                  'id': 'bjcp2021-2a',
+                  'name': 'International Pale Lager',
+                  'code': '2A',
+                  'category': 'International Lager',
+                },
+              ]),
+            ),
+          );
+
+      Finder champStyle() =>
+          find.widgetWithText(TextFormField, 'Style (facultatif)');
+
+      Future<void> focusStyle(WidgetTester tester) async {
+        await tester.ensureVisible(champStyle());
+        await tester.tap(champStyle());
+        await tester.pumpAndSettle();
+      }
+
+      Finder bouton() => find.widgetWithIcon(IconButton, Icons.list);
+
+      testWidgets('champ vide : la liste s\'ouvre dans l\'ordre des codes', (
+        tester,
+      ) async {
+        final app = await open(tester, '/recettes/nouvelle', before: styles);
+        await focusStyle(tester);
+        expect(find.text(nombreSuggestions(3)), findsOneWidget);
+        final y = [
+          'International Pale Lager',
+          'Weissbier',
+          'American IPA',
+        ].map((n) => tester.getTopLeft(find.text(n)).dy).toList();
+        expect(y[0] < y[1] && y[1] < y[2], isTrue);
+        await tester.tap(find.text('Weissbier'));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<TextFormField>(champStyle()).controller!.text,
+          'Weissbier',
+        );
+        expect(
+          find.text('Style de la Bibliothèque : 10A · German Wheat Beer'),
+          findsOneWidget,
+        );
+        expect(app.library.indexReads, [NatureReferentiel.styles]);
+      });
+
+      testWidgets('feuille : recherche par code, choix, index lu une fois', (
+        tester,
+      ) async {
+        final app = await open(tester, '/recettes/nouvelle', before: styles);
+        await tester.ensureVisible(champStyle());
+        expect(find.byTooltip(kListeStylesLibelle), findsOneWidget);
+        await tester.tap(bouton());
+        await tester.pumpAndSettle();
+        expect(find.text(kChoisirStyle), findsOneWidget);
+        // Groupes par catégorie, lignes « code · nom ».
+        expect(find.text('2A · International Pale Lager'), findsOneWidget);
+        expect(find.text('German Wheat Beer'), findsNWidgets(2));
+        await tester.enterText(
+          find.widgetWithText(TextField, kRechercherStyle),
+          '21a',
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('2A · International Pale Lager'), findsNothing);
+        expect(find.text('21A · American IPA'), findsOneWidget);
+        await tester.tap(find.text('21A · American IPA'));
+        await tester.pumpAndSettle();
+        expect(find.text(kChoisirStyle), findsNothing);
+        expect(
+          tester.widget<TextFormField>(champStyle()).controller!.text,
+          'American IPA',
+        );
+        expect(
+          find.text('Style de la Bibliothèque : 21A · IPA'),
+          findsOneWidget,
+        );
+        // Seconde ouverture : l'index n'est pas relu.
+        await tester.tap(bouton());
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.widgetWithText(TextField, kRechercherStyle),
+          'zzz',
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(aucunStyle('zzz')), findsOneWidget);
+        await tester.tap(find.text('Fermer'));
+        await tester.pumpAndSettle();
+        expect(app.library.indexReads, [NatureReferentiel.styles]);
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Nom').first,
+          'Mon IPA',
+        );
+        await tester.pump();
+        await tester.tap(find.text('Enregistrer'));
+        await tester.pumpAndSettle();
+        expect(app.recipes.writes.single.content!.style, 'American IPA');
+      });
+
+      testWidgets('saisie libre gardée, aide « hors Bibliothèque »', (
+        tester,
+      ) async {
+        final app = await open(tester, '/recettes/nouvelle', before: styles);
+        await focusStyle(tester);
+        await tester.enterText(champStyle(), 'IPA américaine');
+        await tester.pumpAndSettle();
+        expect(find.text(kStyleHorsBibliotheque), findsOneWidget);
+        // Nom exact à la casse près : l'export BeerXML le refuserait.
+        await tester.enterText(champStyle(), 'american ipa');
+        await tester.pumpAndSettle();
+        expect(find.text(kStyleHorsBibliotheque), findsOneWidget);
+        await tester.enterText(champStyle(), 'IPA américaine');
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Nom').first,
+          'Mon IPA',
+        );
+        await tester.pump();
+        await tester.tap(find.text('Enregistrer'));
+        await tester.pumpAndSettle();
+        expect(app.recipes.writes.single.content!.style, 'IPA américaine');
+      });
+
+      testWidgets('sans index : icône désactivée, aide de la panne', (
+        tester,
+      ) async {
+        await open(tester, '/recettes/nouvelle');
+        await focusStyle(tester);
+        expect(find.text(kBibliothequeVide), findsOneWidget);
+        expect(tester.widget<IconButton>(bouton()).onPressed, isNull);
+        expect(find.text(kChoisirStyle), findsNothing);
+      });
+
+      testWidgets('feuille ouverte avant la lecture : chargement puis liste', (
+        tester,
+      ) async {
+        final attente = Completer<void>();
+        final app = await open(
+          tester,
+          '/recettes/nouvelle',
+          before: (app) {
+            styles(app);
+            app.library.indexAttente[NatureReferentiel.styles] = attente;
+          },
+        );
+        await tester.ensureVisible(champStyle());
+        await tester.tap(bouton());
+        await tester.pump();
+        await tester.pump();
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        attente.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('10A · Weissbier'), findsOneWidget);
+        expect(app.library.indexReads, [NatureReferentiel.styles]);
+      });
+
+      testWidgets('grand écran : boîte de dialogue de 560 px au plus', (
+        tester,
+      ) async {
+        await open(tester, '/recettes/nouvelle', width: 1200, before: styles);
+        await tester.ensureVisible(champStyle());
+        await tester.tap(bouton());
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet), findsNothing);
+        final boite = find.ancestor(
+          of: find.text(kChoisirStyle),
+          matching: find.byType(Dialog),
+        );
+        expect(boite, findsOneWidget);
+        final fond = find
+            .descendant(of: boite, matching: find.byType(Material))
+            .first;
+        expect(tester.getSize(fond).width, lessThanOrEqualTo(560));
+        await tester.tap(find.text('10A · Weissbier'));
+        await tester.pumpAndSettle();
+        expect(find.byType(Dialog), findsNothing);
+      });
+
+      testWidgets('malt : champ vide, aucune liste ouverte', (tester) async {
+        await open(tester, '/recettes/nouvelle', before: bibliotheque);
+        await openSheet(tester, 'Ajouter un malt ou un sucre');
+        expect(
+          find.textContaining(RegExp(r'^\d+ suggestions? de la Biblioth')),
+          findsNothing,
+        );
+        expect(inSheet(find.byIcon(Icons.list)), findsNothing);
+      });
+    });
+
+    test('ordre des codes de style et aide du style saisi', () {
+      final codes = ['21A', 'X1', '10A', '2B', '2A']..sort(comparerCodesStyle);
+      expect(codes, ['2A', '2B', '10A', '21A', 'X1']);
+      const ipa = EntreeStyle(
+        id: 'bjcp2021-21a',
+        name: 'American IPA',
+        code: '21A',
+        category: 'IPA',
+      );
+      expect(aideStyleSaisi(const [ipa], ''), isNull);
+      expect(
+        aideStyleSaisi(const [ipa], ' American IPA '),
+        'Style de la Bibliothèque : 21A · IPA',
+      );
+      expect(aideStyleSaisi(const [ipa], 'American'), kStyleHorsBibliotheque);
+      expect(stylesGroupes(const [ipa], 'ip').single.categorie, 'IPA');
+      expect(stylesGroupes(const [ipa], 'zzz'), isEmpty);
     });
 
     testWidgets('index absent du serveur : « Bibliothèque vide »', (

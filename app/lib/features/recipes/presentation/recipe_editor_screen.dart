@@ -117,8 +117,9 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
 
   /// Aide du champ « Style ».
   static const styleAide =
-      'Tapez un code (21A) ou un nom, puis choisissez une suggestion. '
-      'L\'export BeerXML demande un style de la Bibliothèque.';
+      'Tapez un code (21A) ou un nom, puis choisissez une suggestion, ou '
+      'ouvrez la liste des styles. L\'export BeerXML demande un style de la '
+      'Bibliothèque.';
 
   @override
   void initState() {
@@ -604,14 +605,16 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       const SizedBox(height: 8),
       // Style BJCP choisi dans la Bibliothèque par son code ou son nom
       // (ADR-005, E3) : son nom exact est écrit, l'export BeerXML le retrouve.
-      // La saisie libre reste possible.
+      // La saisie libre reste possible. La liste s'ouvre sur un champ vide, et
+      // l'icône de fin de champ ouvre « Choisir un style » (ticket #49).
       ChampBibliotheque(
         nature: NatureReferentiel.styles,
+        choixDesStyles: true,
         controller: _style,
         focusNode: _styleFocus,
         detail: detailStyle,
         onSelected: _changed,
-        fieldBuilder: (context, aide, onSubmitted) => TextFormField(
+        fieldBuilder: (context, aide, onSubmitted, boutonListe) => TextFormField(
           controller: _style,
           focusNode: _styleFocus,
           // Entrée choisit la suggestion surlignée après ↑ ou ↓ ; sinon le style
@@ -622,6 +625,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           decoration: InputDecoration(
             labelText: 'Style (facultatif)',
             helperText: aide ?? styleAide,
+            suffixIcon: boutonListe,
             helperMaxLines: 8,
           ),
           onChanged: _changed,

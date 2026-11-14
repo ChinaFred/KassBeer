@@ -1409,9 +1409,19 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
 
 - Général : « Nom » (seul champ obligatoire, 120 caractères ; sinon « Donnez un nom à la
   recette. », l'écran remonte au champ et y place le curseur), « Style (facultatif) »
-  (aide « Tapez un code (21A) ou un nom, puis choisissez une suggestion. L'export BeerXML
-  demande un style de la Bibliothèque. » ; à la frappe, 8 styles au plus, « American IPA » puis « 21A · IPA », par code
-  ou par nom ; le choix écrit le nom exact du style ; la saisie libre reste possible),
+  (aide « Tapez un code (21A) ou un nom, puis choisissez une suggestion, ou ouvrez la liste
+  des styles. L'export BeerXML demande un style de la Bibliothèque. » ; au focus d'un champ
+  vide, les 8 premiers styles par ordre de code BJCP ; à la frappe, 8 styles au plus,
+  « American IPA » puis « 21A · IPA », par code ou par nom ; une icône de liste en fin de champ
+  (« Choisir un style dans la Bibliothèque ») ouvre « Choisir un style » : feuille du bas presque
+  plein écran au téléphone, boîte de 560 px au plus sur grand écran, champ « Rechercher un code
+  ou un nom » (code, nom, autre nom, catégorie), styles groupés par catégorie, lignes « 21A ·
+  American IPA » avec la catégorie en seconde ligne, indicateur pendant la lecture, « Aucun
+  style ne correspond à « {texte} ». Vous pouvez garder votre saisie. », bouton « Fermer » ;
+  l'icône est désactivée quand la Bibliothèque est vide ou illisible ; le choix écrit le nom
+  exact du style ; la saisie libre reste possible ; une fois la Bibliothèque lue, l'aide
+  devient « Style de la Bibliothèque : 21A · IPA » pour un nom exact, ou « Style hors
+  Bibliothèque : l'export BeerXML le refusera. », casse et accents compris),
   « Type de recette » (liste déroulante : « Non précisé », Tout grain, Empâtage partiel,
   Extrait), « Volume en fermenteur (L) » (plus de 0), « Durée d'ébullition (min) » (entier
   de 0 à 600), « Équipement » (« Aucun
