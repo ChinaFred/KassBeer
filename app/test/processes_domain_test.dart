@@ -7,6 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/features/processes/domain/modele_exemple.dart';
+import 'package:kass_beer/features/processes/domain/modele_fiches.dart';
+import 'package:kass_beer/features/processes/domain/modeles_a_copier.dart';
 import 'package:kass_beer/features/processes/domain/modele_processus.dart';
 
 /// Clés successives, comme `doc().id`.
@@ -301,6 +303,77 @@ void main() {
     ]) {
       test(label, () => expect(erreurModele(modele), message));
     }
+  });
+
+  group('plan de brassage des fiches', () {
+    final fixture =
+        jsonDecode(
+              File('../brewing/test/fixtures/process.json').readAsStringSync(),
+            )
+            as Map<String, Object?>;
+    final attendu =
+        (fixture['templates']! as Map<String, Object?>)['fiches']!
+            as Map<String, Object?>;
+
+    test('identique au cas « fiches » de la fixture de brewing/', () {
+      final modele = modeleFiches(compteur());
+      expect(modele.name, attendu['name']);
+      expect(modele.notes, attendu['notes']);
+      final sessions = attendu['sessions']! as List<Object?>;
+      expect(modele.journees, hasLength(sessions.length));
+      for (final (i, raw) in sessions.indexed) {
+        final s = raw! as Map<String, Object?>;
+        final j = modele.journees[i];
+        expect(j.name, s['name']);
+        expect(j.offsetDays, s['offset_days']);
+        expect(j.requiresRecipeBlock, s['requires_recipe_block'] ?? false);
+        final items = s['items']! as List<Object?>;
+        expect(j.elements, hasLength(items.length), reason: j.name);
+        for (final (k, rawItem) in items.indexed) {
+          final item = rawItem! as Map<String, Object?>;
+          final e = j.elements[k];
+          expect(e.nature.storedValue, item['kind'], reason: '${j.name} $k');
+          expect(e.name, item['name'], reason: '${j.name} $k');
+          expect(e.durationMin, (item['duration_min'] as num?)?.toDouble());
+          expect(e.tempC, (item['temp_c'] as num?)?.toDouble());
+        }
+      }
+    });
+
+    test('journées J+4 et J+14 identiques au modèle d\'exemple', () {
+      final fiches = modeleFiches(compteur());
+      final exemple = modeleExemple(compteur());
+      for (var i = 1; i < 3; i++) {
+        expect(
+          [
+            for (final e in fiches.journees[i].elements)
+              (e.nature, e.name, e.durationMin, e.tempC),
+          ],
+          [
+            for (final e in exemple.journees[i].elements)
+              (e.nature, e.name, e.durationMin, e.tempC),
+          ],
+        );
+      }
+    });
+
+    test('valide, « Fin du refroidissement » de 0 min acceptée', () {
+      final modele = modeleFiches(compteur());
+      expect(erreurModele(modele), isNull);
+      final fin = modele.journees.first.elements.firstWhere(
+        (e) => e.name == 'Fin du refroidissement',
+      );
+      expect(fin.durationMin, 0);
+      expect(fin.tempC, 25);
+    });
+
+    test('modèles à copier : paramètre de la route', () {
+      expect(ModeleACopier.deParametre('exemple'), ModeleACopier.exemple);
+      expect(ModeleACopier.deParametre('fiches'), ModeleACopier.fiches);
+      expect(ModeleACopier.deParametre('autre'), isNull);
+      expect(ModeleACopier.deParametre(null), isNull);
+      expect(ModeleACopier.fiches.copie(compteur()).name, kNomModeleFiches);
+    });
   });
 
   group('modèle d\'exemple', () {
