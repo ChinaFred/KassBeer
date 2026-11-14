@@ -385,6 +385,74 @@ void main() {
       expect(find.text(ErrorReportsScreen.erreurListe), findsNothing);
     });
 
+    testWidgets(
+      '« Réessayer » du bandeau : un seul indicateur, dans le bandeau',
+      (tester) async {
+        final app = await _ouvrir(tester, rapports: [_rapport(1)]);
+        app.errorReports.pageError = StateError('panne');
+        await tester.tap(find.byTooltip('Actualiser'));
+        await tester.pumpAndSettle();
+        final attente = Completer<void>();
+        app.errorReports.attente = attente;
+        await tester.tap(
+          find.descendant(
+            of: find.byType(BandeauListePerimee),
+            matching: find.text('Réessayer'),
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.descendant(
+            of: find.byType(BandeauListePerimee),
+            matching: find.byType(IndicateurBouton),
+          ),
+          findsOneWidget,
+        );
+        // L'en-tête garde son bouton, désactivé, sans indicateur.
+        final actualiser = tester.widget<IconButton>(
+          find.ancestor(
+            of: find.byTooltip('Actualiser'),
+            matching: find.byType(IconButton),
+          ),
+        );
+        expect(actualiser.onPressed, isNull);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        app.errorReports.attente = null;
+        attente.complete();
+        await tester.pumpAndSettle();
+        expect(find.text(ErrorReportsScreen.erreurListe), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '« Actualiser » sous un bandeau de panne : indicateur en tête seul',
+      (tester) async {
+        final app = await _ouvrir(tester, rapports: [_rapport(1)]);
+        app.errorReports.pageError = StateError('panne');
+        await tester.tap(find.byTooltip('Actualiser'));
+        await tester.pumpAndSettle();
+        final attente = Completer<void>();
+        app.errorReports.attente = attente;
+        await tester.tap(find.byTooltip('Actualiser'));
+        await tester.pump();
+        expect(
+          find.bySemanticsLabel(ErrorReportsScreen.lectureEnCours),
+          findsOneWidget,
+        );
+        expect(find.byType(IndicateurBouton), findsNothing);
+        final reessayer = tester.widget<TextButton>(
+          find.descendant(
+            of: find.byType(BandeauListePerimee),
+            matching: find.byType(TextButton),
+          ),
+        );
+        expect(reessayer.onPressed, isNull);
+        app.errorReports.attente = null;
+        attente.complete();
+        await tester.pumpAndSettle();
+      },
+    );
+
     testWidgets('liste vide, « Actualiser » en échec : panne seule', (
       tester,
     ) async {
@@ -428,6 +496,52 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Réessayer'));
       await tester.pumpAndSettle();
       expect(app.errorReports.demandes, [null, null]);
+    });
+
+    testWidgets('hors ligne sans rapport : attente dans « Réessayer » seul', (
+      tester,
+    ) async {
+      final app = await _ouvrir(
+        tester,
+        avant: (app) => app.errorReports.fromCache = true,
+      );
+      final attente = Completer<void>();
+      app.errorReports.attente = attente;
+      await tester.tap(find.widgetWithText(TextButton, 'Réessayer'));
+      await tester.pump();
+      expect(
+        find.descendant(
+          of: find.byType(EtatVide),
+          matching: find.byType(IndicateurBouton),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byTooltip('Actualiser'), findsOneWidget);
+      app.errorReports.attente = null;
+      attente.complete();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('tirer pour actualiser : seul l\'indicateur du geste', (
+      tester,
+    ) async {
+      final app = await _ouvrir(tester, rapports: [_rapport(1)]);
+      final attente = Completer<void>();
+      app.errorReports.attente = attente;
+      await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(app.errorReports.demandes, [null, null]);
+      expect(find.byTooltip('Actualiser'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(ErrorReportsScreen.lectureEnCours),
+        findsNothing,
+      );
+      expect(find.byType(IndicateurBouton), findsNothing);
+      app.errorReports.attente = null;
+      attente.complete();
+      await tester.pumpAndSettle();
     });
 
     testWidgets('hors ligne : bandeau au-dessus de la liste', (tester) async {
