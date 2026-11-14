@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.45",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Dans « Rapports d'erreur », une relecture n'affiche plus qu'une seule attente, sur le bouton appuyé. Après une panne, « Réessayer » montre l'attente dans le bandeau, et le bouton « Actualiser » reste en place, désactivé. Tirer la liste vers le bas n'ajoute plus d'indicateur en haut de l'écran."
+      ]
+    },
+    {
       "version": "0.1.44",
       "date": "2026-11-14",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-13",
       "paragraphs": [
         "Dans la liste des brassins, « Prochaine journée » annonce pour vos brassins la même journée que leur fiche. Une journée faite avant sa date n'est plus annoncée : la suivante prend sa place. Une journée commencée et pas terminée affiche « en cours ». Une journée dont la date est passée sans qu'elle soit commencée affiche « en retard », suivi de sa date prévue. Une fois le brassin embouteillé, seule une journée prévue après l'embouteillage reste annoncée ; sans elle, ou une fois toutes les journées faites, la ligne reprend la date du brassin. La fiche ne propose plus une journée placée avant une journée déjà faite. Une journée prévue après l'embouteillage reste proposée sur la fiche. Les brassins des autres membres, et les vôtres tant que leurs saisies ne sont pas lues, suivent les dates prévues, comme avant."
-      ]
-    },
-    {
-      "version": "0.1.38",
-      "date": "2026-11-13",
-      "paragraphs": [
-        "L'administrateur peut importer les 16 fiches Excel de brassage depuis Administration › Import. Il choisit le fichier préparé, relit chaque fiche avec ses points à revoir (divergences, corrections, heures reprises, coût), puis confirme. Chaque fiche devient une recette et un brassin terminé, avec sa chronologie, ses mesures et ses relevés de fermentation. Le coût de chaque brassin est figé avec les prix de sa fiche, visible par l'administrateur seul. Un second import du même fichier n'écrit rien, et un import interrompu reprend où il s'était arrêté."
       ]
     }
   ]

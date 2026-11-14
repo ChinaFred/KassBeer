@@ -484,8 +484,10 @@ ne se supprime depuis l'écran.
   texte sélectionnable. « Copier le rapport » copie le résumé, la plateforme et les sections,
   puis affiche « Rapport copié. » (« Impossible de copier le rapport. » en cas d'échec).
 - **Pages de 50** : « Charger la suite » lit les 50 suivants, « Lecture en cours » pendant la
-  lecture. Pendant « Actualiser », l'icône laisse place à un indicateur annoncé « Lecture en
-  cours », et « Charger la suite » reste désactivé. Une page de moins de 50 affiche « Fin des rapports. ».
+  lecture. Seul le bouton appuyé montre l'attente, les autres sont désactivés : pendant
+  « Actualiser », l'icône laisse place à un indicateur annoncé « Lecture en cours » ; pendant
+  « Réessayer » d'un bandeau ou de l'état vide hors ligne, l'indicateur est dans ce bouton et
+  l'icône reste, désactivée ; « tirer pour actualiser » n'affiche que l'indicateur du geste. Une page de moins de 50 affiche « Fin des rapports. ».
 - Chargement : « Chargement des rapports ». Liste vide : « Aucun rapport d'erreur. Une panne
   rencontrée par un membre apparaîtra ici, avec son contexte. »
 - Première lecture impossible : « Impossible de lire les rapports d'erreur. » et
