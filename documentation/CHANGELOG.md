@@ -17,8 +17,11 @@ initiale, et la déconnexion prévient quand des saisies attendent encore le ré
 
 « Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de
 cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais
-publiée. Sur un écran qui montre vos prix, un avertissement le rappelle. La capture apparaît dans
-le suivi du ticket.
+publiée. Sur un écran qui montre vos prix, un avertissement le rappelle, avant la case. Une capture
+jointe ne se remplace plus. Elle apparaît dans le suivi du ticket ; si elle ne se lit pas, un
+bouton « Réessayer » la recharge, et sans réseau un message le dit. Sur l'écran du jour de
+brassage, l'administrateur ouvre « Tickets à traiter » par-dessus l'écran, qui reste allumé ; au
+téléphone, la pastille d'envoi passe en icône et nombre pour laisser la place au nom du brassin.
 
 ### v0.1.41 — technique
 
@@ -31,10 +34,14 @@ Demandé par les tickets #37, #38 et #39. #37 : `NavigationBar` en `alwaysHide` 
 d'ADR-008 (note du 2026-11-14) : `ZoneCapture` (`RepaintBoundary`), image gardée en mémoire,
 dépôt dans Cloud Storage sous `tickets/{uid}/{ticketId}/screenshot.png`, callable
 `attachTicketScreenshot` (`requireMember`, `maxInstances: 2`, `timeoutSeconds: 60`) qui écrit
-`screenshot_path`, lecture par `getData` ; `storage.rules` exige un ticket existant de l'auteur ;
+`screenshot_path`, lecture par `getData` ; `storage.rules` en création seule (`resource == null`), `screenshot.png`
+en `image/png` seul, ticket existant de l'auteur (`firestore.get`), callable et client alignés sur
+le PNG seul ; rapports d'erreur Storage neutres (`StateError('storage <code>')` côté client,
+`errorCode` seul côté serveur), image illisible rapportée `tickets.capture_display` ;
 phrase fixe « Capture éventuelle disponible dans Admin › Tickets. » sur chaque Issue. La cause du
 `/admin/tickets` signalé n'a pas été reproduite : deux tests de non-régression couvrent une page
-ouverte par `push`. Paquets ajoutés à `pubspec.lock` : `firebase_storage` 13.6.0,
+ouverte par `push`. Écran du jour : « Tickets à traiter » en `push` (`kEcransDuJour`), pastille
+d'envoi compacte sous 400 dp, panneau du haut à 75 % du corps au plus (360 dp, texte à 200 %). Paquets ajoutés à `pubspec.lock` : `firebase_storage` 13.6.0,
 `firebase_storage_platform_interface` 6.0.7, `firebase_storage_web` 3.11.13 ; aucune autre version
 ne change. `main.dart.js` : 5 417 304 octets avant (#37 et #39 compris), 5 510 208 après. `ci.yml`
 et `deploy.yml` : callable ajoutée à la liste fermée, émulateur Storage pour `rules-tests/`,

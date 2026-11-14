@@ -5,7 +5,7 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans : éditeurs, import, jour de brassage, Mes prix, Mes processus, Préférences, Nouveautés, Mes tickets. L'entrée de l'écran où vous êtes n'y figure pas. Quitter un éditeur modifié ou un import en cours par ce menu demande d'abord confirmation. Sur l'écran du jour de brassage, l'avatar montre votre initiale, et la déconnexion prévient quand des saisies attendent encore le réseau.",
-        "« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais publiée. Sur un écran qui montre vos prix, un avertissement le rappelle. La capture apparaît dans le suivi du ticket."
+        "« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais publiée. Sur un écran qui montre vos prix, un avertissement le rappelle, avant la case. Une capture jointe ne se remplace plus. Elle apparaît dans le suivi du ticket ; si elle ne se lit pas, un bouton « Réessayer » la recharge, et sans réseau un message le dit. Sur l'écran du jour de brassage, l'administrateur ouvre « Tickets à traiter » par-dessus l'écran, qui reste allumé ; au téléphone, la pastille d'envoi passe en icône et nombre pour laisser la place au nom du brassin."
       ]
     },
     {

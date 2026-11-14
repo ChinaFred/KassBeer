@@ -330,6 +330,9 @@ aucun `--force`, aucune relance de workflow, arrêt expliqué dans le résumé s
 
 ### Capture d'écran
 
+Remplacé en partie par la note du 2026-11-14 (point 4) : création seule, PNG seul, aucun choix
+d'image pour l'instant.
+
 Copie de Kass'Dalle. Case « Joindre une capture de l'écran précédent » décochée par défaut,
 capture par un `RepaintBoundary` autour du routeur, ou choix d'une image. PNG ou JPEG, 5 Mo au
 plus, textes de Kass'Dalle. Envoi : le ticket se crée dans Firestore (T1), puis l'image monte
