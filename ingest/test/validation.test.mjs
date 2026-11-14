@@ -109,6 +109,20 @@ describe("controlerDocument", () => {
     refuse("beer_miscs", c);
   });
 
+  it("provenance d'une fiche de fabricant : acceptée", () => {
+    const c = doc("beer_cultures");
+    c.data.provenance = [
+      {
+        source: "fabricants",
+        source_id: "fermentis-safale-us-05",
+        version: "2026-11-14",
+        licence: "Données publiées par le fabricant",
+        retrieved: "2026-11-14",
+      },
+    ];
+    assert.deepEqual(controlerDocument("beer_cultures", c), []);
+  });
+
   it("updated_at préparé : refusé, l'écrivain le pose", () => {
     const d = doc("beer_hops");
     d.data.updated_at = "2026-11-11";

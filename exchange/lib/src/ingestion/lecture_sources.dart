@@ -5,7 +5,8 @@ import 'json_commentaires.dart';
 import 'sources.dart';
 import 'valeurs.dart';
 
-/// Lecture des fichiers DefaultContent 001 à 005 de Brewtarget (v5.2.3) vers
+/// Lecture des fichiers DefaultContent 001 à 005 de Brewtarget (v5.2.3) et
+/// du fichier des fiches techniques des fabricants vers
 /// des entrées de référentiel en unités canoniques. Seuls les noms et les
 /// valeurs techniques sont lus (P20) : aucun `notes`, description, URL,
 /// substitut, `best_for`, recette, équipement ni eau.
@@ -125,7 +126,8 @@ class StyleLu {
 
 /// Ce que la lecture des sources de Brewtarget a produit.
 class LectureReferentiels {
-  /// Entrées lues, dans l'ordre : 001, 002, 003, 004, 005.
+  /// Entrées lues, dans l'ordre : 001, 002, 003, 004, 005, fiches des
+  /// fabricants.
   final List<EntreeBrute> entrees = [];
 
   /// Styles du fichier 002.
@@ -425,22 +427,43 @@ class LectureReferentiels {
             );
           }
         case 'cultures':
-          for (final brut in value) {
-            final c = brut is Map ? brut : const <String, Object?>{};
-            final nom = nomPropre(c['name']);
-            final v = LecteurValeurs(journal, source.id, nom ?? '');
-            _ajouter(
-              NatureReferentiel.culture,
-              nom,
-              _culture(v, c, c['type']),
-              source,
-              _texteId(c['id']),
-              Licence.gpl3,
-            );
-          }
+          _lireCultures(value, source, Licence.gpl3);
         default:
           listesIgnorees['${source.id}:$key'] = value.length;
       }
+    }
+  }
+
+  /// Lit le fichier des fiches techniques des fabricants (BeerJSON 2.01,
+  /// `fabricants/cultures.json`, écrit à la main) : `cultures` seules, avec
+  /// les mêmes champs que 003 et 004. Toute autre liste est ignorée et
+  /// comptée.
+  void lireFabricants(String texte) {
+    const source = Source.fabricants;
+    final racine = _racine(texte, 'beerjson', source);
+    for (final MapEntry(:key, :value) in racine.entries) {
+      if (value is! List) continue;
+      if (key == 'cultures') {
+        _lireCultures(value, source, Licence.fabricant);
+      } else {
+        listesIgnorees['${source.id}:$key'] = value.length;
+      }
+    }
+  }
+
+  void _lireCultures(List<Object?> liste, Source source, String licence) {
+    for (final brut in liste) {
+      final c = brut is Map ? brut : const <String, Object?>{};
+      final nom = nomPropre(c['name']);
+      final v = LecteurValeurs(journal, source.id, nom ?? '');
+      _ajouter(
+        NatureReferentiel.culture,
+        nom,
+        _culture(v, c, c['type']),
+        source,
+        _texteId(c['id']),
+        licence,
+      );
     }
   }
 

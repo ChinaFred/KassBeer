@@ -24,6 +24,7 @@ dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 | dépôt GitHub `diydog-beerxml` | `d469275` | aucune | tests locaux, hors CI | Firestore, dépôt |
 | Kaggle « Brewer's Friend Beer Recipes » | non téléchargé | « CC0: Public Domain » déclarée sur la page (relevé du 2026-11-11) ; ingestion reportée (ADR-005, D1) | statistiques par style | lignes brutes, CSV |
 | BeerJSON | `4370892d44` | MIT | schémas pour ajv en CI et à l'ingestion | — |
+| Fiches techniques Fermentis (`fermentis.com/en/product/…`), recopiées à la main dans `import/sources/fabricants/cultures.json` (BeerJSON 2.01) | relevé du 2026-11-14 | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-14 | 25 cultures (23 levures, 2 bactéries) : nom, type, forme, producteur, référence, atténuation apparente, plage de température | floculation (la fiche donne un temps de sédimentation), tolérance à l'alcool, dosage, descriptions |
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
 beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, doublons
@@ -148,6 +149,26 @@ style lu dans la Bibliothèque, ADR-005, E4) :
 Une recette sans moment ou sans durée d'ajout, avec un houblon en volume ou d'un type hors
 `All Grain`, `Partial Mash`, `Extract` ne s'exporte pas en BeerXML : l'export liste ce qui
 manque. Aucune étape de fermentation n'est écrite : Kass'Beer n'en stocke pas.
+
+## Fiches des fabricants → `beer_cultures`
+
+Fichier écrit à la main, `import/sources/fabricants/cultures.json`, au format BeerJSON 2.01
+(liste `cultures`, mêmes champs que 003 et 004) ; en-tête en `//` avec l'adresse des fiches.
+Lu par `lireFabricants` d'`exchange/` ; toute autre liste est ignorée et comptée. Fermentis
+seul au relevé du 2026-11-14.
+
+| Valeur de la fiche | Champ |
+|---|---|
+| nom commercial sans ™ (`SafAle US-05`), référence (`US-05`), Fermentis | `name`, `product_id`, `producer` |
+| espèce et usage : *S. cerevisiae* → `ale`, et `wheat` pour une levure de bière de blé (WB-06, W-68, BW-20) ; *S. pastorianus* → `lager` ; *Brettanomyces* → `brett` ; *Lactiplantibacillus*, *Levilactobacillus* → `lacto` ; *Torulaspora* → `other` | `type` |
+| levure sèche | `form` : `dry` |
+| « Apparent attenuation » ; LA-01 : 15 % (valeur unique, plage de 15 à 15) | `attenuation` |
+| plage « ideally » de « Dosage / Temperature » ; BR-8 et F-2 : plage optimale ou d'usage ; LP 652 : 37 °C ± 3 ; LB 1 : 32 °C ± 5 | `temperature_range` |
+
+HA-18, DA-16, DW-17 et LD-20 (levure et enzyme) annoncent 98 à 102 % : la borne des pourcentages
+(100) écarte la plage, comptée au rapport, et l'atténuation reste absente. F-2, BR-8 et les deux
+bactéries n'ont pas d'atténuation sur leur fiche. La fiche, prioritaire, donne toutes les
+valeurs : la floculation d'une levure déjà connue de Brewtarget n'est plus reprise.
 
 ## Correspondance DotBeer (fichier 005) → référentiels
 
@@ -348,5 +369,6 @@ quartiles, une médiane et un maximum. Si une colonne est en Plato ou en SRM, la
 2. **Styles.** `beer_styles` ne prend que les 110 styles BJCP 2021 du fichier 002.
 3. **`twist` de DIY Dog** (178 recettes). Le texte d'origine va dans `recipe.notes`. C'est la seule
    exception à l'écart des textes libres de DIY Dog.
-4. **Priorité entre sources** pour un même ingrédient : 005, puis 003 et 004, puis 001. Les autres
+4. **Priorité entre sources** pour un même ingrédient : fiches des fabricants (depuis le
+   2026-11-14), puis 005, puis 003 et 004, puis 001. Les autres
    fichiers fournissent les alias et une ligne de `provenance[]`.

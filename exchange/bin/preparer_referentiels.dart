@@ -10,7 +10,8 @@ import 'package:exchange/ingestion.dart';
 /// dart run bin/preparer_referentiels.dart [--sources ../import/sources] [--sortie ../import/ingest/prepare]
 /// ```
 ///
-/// Lit `brewtarget-v5.2.3/` et `punkapi-e6c12ab/data/` sous `--sources`, écrit
+/// Lit `brewtarget-v5.2.3/`, `fabricants/cultures.json` et
+/// `punkapi-e6c12ab/data/` sous `--sources`, écrit
 /// `<collection>.json` (listes `{id, data}`) et `rapport.json` sous `--sortie`.
 /// Aucun réseau. Une source absente ou illisible arrête la préparation avec
 /// son erreur : rien n'est écrit.
@@ -45,6 +46,9 @@ Future<void> main(List<String> arguments) async {
       texte003: texte(Source.brewtarget003),
       texte004: texte(Source.brewtarget004),
       texte005: texte(Source.brewtarget005),
+      texteFabricants: _borne(
+        File('$racine/fabricants/${Source.fabricants.fichier}'),
+      ).readAsStringSync(),
       diyDog: [
         for (final f in fichiers)
           (

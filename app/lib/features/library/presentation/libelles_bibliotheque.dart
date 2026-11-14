@@ -15,12 +15,14 @@ String? formatPlage(Plage? plage, String Function(double) format) {
   return 'jusqu\'à ${format(max!)}';
 }
 
-/// Nom court d'une source de `provenance[]` : « Brewtarget », « DIY Dog ».
+/// Nom court d'une source de `provenance[]` : « Brewtarget », « DIY Dog »,
+/// « Fiches des fabricants ».
 /// Le fichier et le commit restent dans « Sources des données ». Une source
 /// inconnue s'affiche telle quelle.
 String libelleSource(String source) {
   if (RegExp(r'^brewtarget-\d{3}$').hasMatch(source)) return 'Brewtarget';
   if (source == 'diydog') return 'DIY Dog';
+  if (source == 'fabricants') return 'Fiches des fabricants';
   return source;
 }
 

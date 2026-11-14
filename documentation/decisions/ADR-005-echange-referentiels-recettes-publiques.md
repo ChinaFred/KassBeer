@@ -277,6 +277,7 @@ dans `import/`, ignoré par Git. Les fixtures sont écrites à la main.
 | DIY Dog (`alxiw/punkapi`, `e6c12ab`) | recettes, usage privé, `method.twist` dans `notes` (seul texte libre gardé) | images, textes libres (`description`, `tagline`, `food_pairing`, `brewers_tips`), `contributed_by` |
 | `diydog-beerxml` (`d469275`) | tests locaux, hors CI | Firestore, dépôt |
 | Kaggle | agrégats `style_stats/`, si la licence de la page le permet | lignes brutes |
+| Fiches techniques des fabricants (Fermentis, relevé du 2026-11-14) | noms et valeurs techniques recopiés à la main, prioritaires sur Brewtarget (amendement du 2026-11-14) | descriptions, dosage, sédimentation |
 
 Le fichier 005 est un mélange, d'après son en-tête : malts de The Swaen, éléments de la Canadian
 Homebrewers Association, exemples dotBeer, et « le reste » depuis beer-analytics.com sous
@@ -591,6 +592,18 @@ la demande sont les seuls garde-fous.
 
 Le tableau « Logique dupliquée » reste vide. La règle « Une écriture de masse » reçoit une exception.
 P3, P9, P10 changent, P19 à P22 s'ajoutent.
+
+## Amendement du 2026-11-14 : fiches des fabricants
+
+Décision de l'utilisateur. Les sources de Brewtarget s'arrêtent à 2023 : SafLager E-30 et SH-45,
+SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et LA-02, SafSour LB 1 manquaient. Une source
+de plus, `fabricants`, lit un fichier BeerJSON 2.01 écrit à la main depuis les fiches publiées
+par le fabricant (`import/sources/fabricants/cultures.json`, hors dépôt comme les autres
+sources). Elle passe avant 005 : la fiche est plus récente. Une souche déjà connue garde
+l'identifiant de son document. Le fabricant publie ces données en accès libre : l'utilisateur
+en accepte la reprise (licence notée « Données publiées par le fabricant »). Seuls les noms et
+les valeurs techniques entrent dans le référentiel (P20). Détail :
+`documentation/DATA_SOURCES.md`, « Fiches des fabricants ».
 
 ## Évolutions du réseau acceptées
 

@@ -37,6 +37,11 @@ class DataSourcesScreen extends ConsumerWidget {
       'Une partie des ingrédients du fichier 005 de Brewtarget vient de '
       'beer-analytics.com, sous licence CC BY-SA 4.0. Modifications : unités '
       'normalisées, doublons fusionnés.';
+  static const fabricants =
+      'Levures de Fermentis : noms, type, forme, atténuation et températures '
+      'recopiés des fiches techniques publiées par le fabricant, relevées le '
+      '14 novembre 2026. Ces valeurs remplacent celles de Brewtarget pour les '
+      'mêmes levures. Les textes des fiches ne sont pas repris.';
   static const diyDog =
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '
       'pour un usage privé (version e6c12ab de leur transcription).';
@@ -95,6 +100,8 @@ class DataSourcesScreen extends ConsumerWidget {
                 label: const Text('Lire la licence CC BY-SA 4.0'),
               ),
             ),
+            const TitreSection('Fiches des fabricants'),
+            paragraphe(fabricants),
             const TitreSection('DIY Dog'),
             paragraphe(diyDog),
           ],

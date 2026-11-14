@@ -1559,7 +1559,8 @@ La ligne « Nom français » est masquée quand la valeur est absente. Une autre
 s'affiche « Non renseigné ». Une valeur que l'application ne sait pas traduire s'affiche
 telle quelle. Section « Provenance » : une ligne courte par source, sans doublon,
 « Brewtarget 5.2.3 · licence GPL-3.0 · relevé le 8 novembre 2026 » ou « DIY Dog · licence DIY
-Dog (usage privé) · relevé le 8 novembre 2026 », et le lien « Sources des données », qui
+Dog (usage privé) · relevé le 8 novembre 2026 » ou « Fiches des fabricants · licence Données
+publiées par le fabricant · relevé le 14 novembre 2026 », et le lien « Sources des données », qui
 donne le fichier et le commit. Le texte de la fiche est sélectionnable.
 
 **Recettes publiques.** Les recettes DIY Dog, par pages de 50 dans l'ordre alphabétique.
@@ -1647,6 +1648,9 @@ s'affiche sans réseau.
   `https://creativecommons.org/licenses/by-sa/4.0/` en texte et le bouton « Lire la licence
   CC BY-SA 4.0 », qui l'ouvre hors de l'application. Si le système refuse : « Impossible
   d'ouvrir le lien. Il reste sélectionnable sur cette page. », et l'échec est journalisé.
+- Fiches des fabricants : levures de Fermentis, noms, type, forme, atténuation et températures
+  recopiés des fiches techniques publiées par le fabricant, relevées le 14 novembre 2026 ; ces
+  valeurs remplacent celles de Brewtarget pour les mêmes levures ; textes des fiches non repris.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
 

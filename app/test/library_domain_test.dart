@@ -325,6 +325,7 @@ void main() {
       expect(formatPlage(null, f), isNull);
       expect(libelleSource('brewtarget-005'), 'Brewtarget');
       expect(libelleSource('diydog'), 'DIY Dog');
+      expect(libelleSource('fabricants'), 'Fiches des fabricants');
       expect(libelleSource('autre'), 'autre');
       expect(libelleReleve('2026-11-08'), '8 novembre 2026');
       expect(libelleReleve('inconnue'), 'inconnue');

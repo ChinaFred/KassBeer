@@ -593,6 +593,11 @@ void main() {
         scrollable: _liste,
       );
       await tester.scrollUntilVisible(
+        find.text(DataSourcesScreen.fabricants),
+        200,
+        scrollable: _liste,
+      );
+      await tester.scrollUntilVisible(
         find.text(DataSourcesScreen.diyDog),
         200,
         scrollable: _liste,
