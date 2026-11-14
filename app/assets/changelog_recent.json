@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "0.1.52",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique que le panneau de l'étape continue plus bas.",
+        "La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation (« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes."
+      ]
+    },
+    {
       "version": "0.1.51",
       "date": "2026-11-14",
       "paragraphs": [
@@ -35,13 +43,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui de la version installée et la taille du téléchargement. « Plus tard » la ferme jusqu'au lancement suivant. « Mettre à jour » télécharge la version dans l'application, contrôle le fichier, puis ouvre l'écran d'installation d'Android. La première fois, Android demande d'autoriser Kass'Beer à installer des applications : la fenêtre ouvre le bon réglage. Une coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre jamais pendant le jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36."
-      ]
-    },
-    {
-      "version": "0.1.46",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Dans « Rapports d'erreur », une relecture n'affiche plus qu'une seule attente, sur le bouton appuyé. Après une panne, « Réessayer » montre l'attente dans le bandeau, et le bouton « Actualiser » reste en place, désactivé. Tirer la liste vers le bas n'ajoute plus d'indicateur en haut de l'écran."
       ]
     }
   ]
