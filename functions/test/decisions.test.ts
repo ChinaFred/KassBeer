@@ -5,7 +5,7 @@ import {
   FAILURE_ISSUE_MISSING,
   FAILURE_RATE_LIMIT,
   FAILURE_TOKEN,
-  REJECT_INVALID,
+  REJECT_DELIVERY_RUNNING,
   REJECT_LEASE_TAKEN,
   REJECT_NO_ISSUE,
   REJECT_NOT_ALLOWED,
@@ -13,19 +13,20 @@ import {
   allowedDecisions,
   allowedDecisionsUpToDate,
   commentCarriesDecision,
-  decisionClaimVerdict,
   decisionCommentBody,
+  decisionFailure,
   decisionPlan,
+  decisionStart,
+  decisionTextOfComment,
   failureReason,
-  isPlausibleDecisionId,
-  isResumableByPass,
-  isRetryRequest,
-  PENDING_DECISION_GRACE_MS,
-  stalePendingCutoffMs,
+  isValidatedByApp,
+  keepsAppValidation,
+  readDecisionText,
   replyTextOfComment,
   statusAfterDecision,
-  textFitsAction,
-  type DecisionClaimInput,
+  type DecisionAction,
+  type DecisionStartInput,
+  type LatestDecision,
 } from "../src/tickets/decisionModel";
 import { runOnGithub, type Claim, type Refs } from "../src/tickets/decisions";
 import { githubClient, type FetchLike } from "../src/tickets/github";
@@ -36,22 +37,50 @@ const NOW = Date.parse("2026-11-11T10:00:00Z");
 const TOKEN = "github_pat_11AAAAAAAAAAAAAAAAAAAA_secretsecretsecretsecret";
 
 describe("décisions permises par statut (P26)", () => {
-  it("received : valider, refuser, clore", () =>
-    assert.deepEqual(allowedDecisions("received"), ["validate", "refuse", "close"]));
-  it("validated et in_progress : refuser, clore", () => {
-    assert.deepEqual(allowedDecisions("validated"), ["refuse", "close"]);
+  it("received : refuser, clore, répondre, lancer l'analyse ; pas valider (T4, P42)", () =>
+    assert.deepEqual(allowedDecisions("received"), [
+      "refuse",
+      "close",
+      "answer",
+      "launch_analysis",
+    ]));
+  it("analyzed : valider, refuser, clore, répondre", () =>
+    assert.deepEqual(allowedDecisions("analyzed"), ["validate", "refuse", "close", "answer"]));
+  it("validated dans l'application : refuser, clore, répondre, lancer le développement ; in_progress : refuser, clore", () => {
+    assert.deepEqual(allowedDecisions("validated", true), [
+      "refuse",
+      "close",
+      "answer",
+      "launch_development",
+    ]);
     assert.deepEqual(allowedDecisions("in_progress"), ["refuse", "close"]);
+  });
+  it("validated sur GitHub seul : valider, refuser, clore, répondre ; pas de lancement (2026-11-13)", () =>
+    assert.deepEqual(allowedDecisions("validated"), ["validate", "refuse", "close", "answer"]));
+  it("validation de l'application : posée, gardée en validated et in_progress seuls", () => {
+    assert.equal(isValidatedByApp(null), false);
+    assert.equal(isValidatedByApp(undefined), false);
+    assert.equal(isValidatedByApp({ seconds: 1 }), true);
+    assert.deepEqual(
+      TICKET_STATUSES.filter((s) => keepsAppValidation(s)),
+      ["validated", "in_progress"],
+    );
   });
   it("autres statuts : aucune", () => {
     for (const s of TICKET_STATUSES) {
-      if (["received", "validated", "in_progress"].includes(s)) continue;
+      if (["received", "analyzed", "validated", "in_progress"].includes(s)) continue;
       assert.deepEqual(allowedDecisions(s), [], s);
     }
     assert.deepEqual(allowedDecisions(undefined), []);
   });
   it("liste à jour : même contenu, même ordre", () => {
-    assert.equal(allowedDecisionsUpToDate(["refuse", "close"], "validated"), true);
-    assert.equal(allowedDecisionsUpToDate(["close", "refuse"], "validated"), false);
+    assert.equal(allowedDecisionsUpToDate(["refuse", "close"], "in_progress"), true);
+    assert.equal(allowedDecisionsUpToDate(["close", "refuse"], "in_progress"), false);
+    assert.equal(allowedDecisionsUpToDate(["refuse", "close"], "validated"), false);
+    assert.equal(
+      allowedDecisionsUpToDate(["validate", "refuse", "close", "answer"], "validated", true),
+      false,
+    );
     assert.equal(allowedDecisionsUpToDate(undefined, "refused"), false);
     assert.equal(allowedDecisionsUpToDate([], "refused"), true);
     assert.equal(allowedDecisionsUpToDate(["validate"], "refused"), false);
@@ -64,152 +93,224 @@ describe("décisions permises par statut (P26)", () => {
 });
 
 function input(
-  decision: Partial<DecisionClaimInput["decision"]> = {},
-  ticket: Partial<NonNullable<DecisionClaimInput["ticket"]>> | null = {},
-): DecisionClaimInput {
+  action: DecisionAction,
+  ticket: Partial<NonNullable<DecisionStartInput["ticket"]>> | null = {},
+  latest: Partial<LatestDecision> | null = null,
+): DecisionStartInput {
   return {
-    decision: {
-      state: "pending",
-      action: "refuse",
-      text: "Hors du périmètre de l'application.",
-      leaseUntilMs: null,
-      retryRequested: false,
-      ...decision,
-    },
+    action,
     ticket:
       ticket === null
         ? null
         : {
             status: "received",
-            allowedDecisions: ["validate", "refuse", "close"],
+            validatedByAppAt: null,
             leaseUntilMs: null,
             issueNumber: 12,
+            deliveryRunning: false,
             ...ticket,
+          },
+    latest:
+      latest === null
+        ? null
+        : {
+            id: "dec_1",
+            action,
+            state: "failed",
+            leaseUntilMs: null,
+            stepsDone: [],
+            text: "Hors du périmètre de l'application.",
+            commentId: null,
+            ...latest,
           },
     nowMs: NOW,
   };
 }
 
-describe("prise d'une décision (transitions)", () => {
-  it("pending, action permise : prise", () =>
-    assert.deepEqual(decisionClaimVerdict(input()), {
-      kind: "claim",
-      action: "refuse",
+const refused = (code: string, machine: string, reason: string) => ({
+  kind: "refuse",
+  code,
+  machine,
+  reason,
+});
+
+describe("précondition des callables de décision (P42, P44, P53)", () => {
+  it("refuse sur un ticket reçu, sans décision : nouvelle décision", () =>
+    assert.deepEqual(decisionStart(input("refuse")), {
+      kind: "start",
       issueNumber: 12,
-      resumed: false,
+      resume: null,
     }));
 
-  it("applied et rejected : rejeu sans effet", () => {
-    assert.equal(decisionClaimVerdict(input({ state: "applied" })).kind, "skip");
-    assert.equal(decisionClaimVerdict(input({ state: "rejected" })).kind, "skip");
-  });
-
-  it("applying au bail actif : rien ; au bail expiré : reprise", () => {
-    assert.deepEqual(decisionClaimVerdict(input({ state: "applying", leaseUntilMs: NOW + 1 })), {
-      kind: "skip",
-      why: "in_progress",
-    });
-    const resumed = decisionClaimVerdict(input({ state: "applying", leaseUntilMs: NOW - 1 }));
-    assert.equal(resumed.kind, "claim");
-    assert.equal(resumed.kind === "claim" && resumed.resumed, true);
-  });
-
-  it("failed : rien sans reprise demandée, reprise avec", () => {
-    assert.deepEqual(decisionClaimVerdict(input({ state: "failed" })), {
-      kind: "skip",
-      why: "failed_without_retry",
-    });
-    assert.equal(
-      decisionClaimVerdict(input({ state: "failed", retryRequested: true })).kind,
-      "claim",
+  it("ticket absent : not-found ; sans Issue : no_issue", () => {
+    assert.deepEqual(
+      decisionStart(input("refuse", null)),
+      refused("not-found", "ticket_missing", REJECT_TICKET_MISSING),
+    );
+    assert.deepEqual(
+      decisionStart(input("refuse", { issueNumber: null })),
+      refused("failed-precondition", "no_issue", REJECT_NO_ISSUE),
     );
   });
 
-  it("état inconnu : rien", () =>
-    assert.equal(decisionClaimVerdict(input({ state: "done" })).kind, "skip"));
-
-  it("action hors liste du statut : rejected", () =>
+  it("bail actif : decision_in_progress ; bail expiré : prise", () => {
     assert.deepEqual(
-      decisionClaimVerdict(
-        input(
-          { action: "validate", text: undefined },
-          { status: "validated", allowedDecisions: ["refuse", "close"] },
-        ),
-      ),
-      { kind: "reject", reason: REJECT_NOT_ALLOWED },
+      decisionStart(input("refuse", { leaseUntilMs: NOW + 1000 })),
+      refused("failed-precondition", "decision_in_progress", REJECT_LEASE_TAKEN),
+    );
+    assert.equal(decisionStart(input("refuse", { leaseUntilMs: NOW - 1000 })).kind, "start");
+  });
+
+  it("P42 : Valider sur un ticket reçu refusé, la liste stockée n'est pas lue", () =>
+    assert.deepEqual(
+      decisionStart(input("validate", { status: "received" })),
+      refused("failed-precondition", "not_allowed", REJECT_NOT_ALLOWED),
     ));
 
-  it("allowed_decisions absent : rejected", () =>
-    assert.deepEqual(decisionClaimVerdict(input({}, { allowedDecisions: undefined })), {
-      kind: "reject",
-      reason: REJECT_NOT_ALLOWED,
-    }));
-
-  it("bail d'une autre décision actif : rejected ; bail expiré : prise", () => {
-    assert.deepEqual(decisionClaimVerdict(input({}, { leaseUntilMs: NOW + 1000 })), {
-      kind: "reject",
-      reason: REJECT_LEASE_TAKEN,
-    });
-    assert.equal(decisionClaimVerdict(input({}, { leaseUntilMs: NOW - 1000 })).kind, "claim");
+  it("P42 : Valider sur un ticket analysé, ou validé sur GitHub seul : prise", () => {
+    assert.equal(decisionStart(input("validate", { status: "analyzed" })).kind, "start");
+    assert.equal(decisionStart(input("validate", { status: "validated" })).kind, "start");
   });
 
-  it("ticket absent ou sans Issue : rejected", () => {
-    assert.deepEqual(decisionClaimVerdict(input({}, null)), {
-      kind: "reject",
-      reason: REJECT_TICKET_MISSING,
+  it("déjà fait : Valider sur un ticket validé dans l'application, sans rien publier", () =>
+    assert.deepEqual(
+      decisionStart(input("validate", { status: "validated", validatedByAppAt: { seconds: 1 } })),
+      { kind: "done", status: "validated" },
+    ));
+
+  it("déjà fait : Refuser sur un ticket refusé dont la dernière décision Refuser est appliquée", () => {
+    assert.deepEqual(decisionStart(input("refuse", { status: "refused" }, { state: "applied" })), {
+      kind: "done",
+      status: "refused",
     });
-    assert.deepEqual(decisionClaimVerdict(input({}, { issueNumber: null })), {
-      kind: "reject",
-      reason: REJECT_NO_ISSUE,
-    });
+    // Refusé sur GitHub, sans décision de l'application : refus.
+    assert.deepEqual(
+      decisionStart(input("refuse", { status: "refused" })),
+      refused("failed-precondition", "not_allowed", REJECT_NOT_ALLOWED),
+    );
   });
 
-  it("action ou texte illisible : rejected", () => {
-    for (const d of [
-      { action: "delete" },
-      { action: "validate", text: "un motif" },
-      { action: "refuse", text: undefined },
-      { action: "close", text: "     " },
-      { action: "close", text: "x".repeat(2001) },
-    ]) {
-      assert.deepEqual(decisionClaimVerdict(input(d)), { kind: "reject", reason: REJECT_INVALID });
+  it("P44 : Refuser et Clore refusés pendant une livraison de ce ticket", () => {
+    for (const action of ["refuse", "close"] as const) {
+      const ticket = { status: "in_progress", validatedByAppAt: { seconds: 1 } };
+      assert.deepEqual(
+        decisionStart(input(action, { ...ticket, deliveryRunning: true })),
+        refused("failed-precondition", "delivery_running", REJECT_DELIVERY_RUNNING),
+      );
+      assert.equal(
+        decisionStart(input(action, { ...ticket, deliveryRunning: false })).kind,
+        "start",
+      );
     }
   });
 
-  it("reprise sur un ticket déjà au statut visé : prise (passe horaire passée avant)", () => {
-    const retried = input(
-      { state: "failed", retryRequested: true },
-      { status: "refused", allowedDecisions: [] },
+  it("reprise : dernière décision de même action failed, même identifiant", () =>
+    assert.deepEqual(decisionStart(input("refuse", {}, { commentId: 991 })), {
+      kind: "start",
+      issueNumber: 12,
+      resume: { id: "dec_1", keepText: false, knownCommentId: 991 },
+    }));
+
+  it("reprise : commentaire publié, texte stocké gardé", () => {
+    const start = decisionStart(input("close", {}, { stepsDone: ["comment"] }));
+    assert.equal(start.kind === "start" && start.resume?.keepText, true);
+  });
+
+  it("reprise : applying au bail expiré repris ; au bail actif, ticket au bail actif refusé", () => {
+    const expired = decisionStart(
+      input("refuse", {}, { state: "applying", leaseUntilMs: NOW - 1 }),
     );
-    assert.equal(decisionClaimVerdict(retried).kind, "claim");
-    // Une première prise sur un ticket déjà refusé est rejetée.
+    assert.equal(expired.kind === "start" && expired.resume?.id, "dec_1");
+    assert.deepEqual(
+      decisionStart(
+        input("refuse", { leaseUntilMs: NOW + 1 }, { state: "applying", leaseUntilMs: NOW + 1 }),
+      ),
+      refused("failed-precondition", "decision_in_progress", REJECT_LEASE_TAKEN),
+    );
+  });
+
+  it("reprise : pending écrite avant T7, reprise ; autre action ou décision appliquée : nouvelle", () => {
+    const pending = decisionStart(input("refuse", {}, { state: "pending" }));
+    assert.equal(pending.kind === "start" && pending.resume?.id, "dec_1");
+    const other = decisionStart(input("refuse", {}, { action: "close" }));
+    assert.equal(other.kind === "start" && other.resume, null);
+    const applied = decisionStart(input("refuse", {}, { state: "applied" }));
+    assert.equal(applied.kind === "start" && applied.resume, null);
+  });
+
+  it("reprise sur un ticket déjà au statut visé (passe horaire passée) : prise", () => {
+    const retried = decisionStart(input("refuse", { status: "refused" }, { state: "failed" }));
+    assert.equal(retried.kind, "start");
+  });
+});
+
+describe("texte de Refuser et de Clore (P53)", () => {
+  it("5 à 4 000 caractères comptés en points de code", () => {
+    assert.equal(readDecisionText("refuse", "12345").ok, true);
+    assert.equal(readDecisionText("refuse", "m".repeat(4000)).ok, true);
+    assert.equal(readDecisionText("close", "\u{1F37A}".repeat(4000)).ok, true);
+    assert.deepEqual(readDecisionText("refuse", "1234"), {
+      ok: false,
+      reason: "Le motif doit faire au moins 5 caractères.",
+    });
+    assert.deepEqual(readDecisionText("close", "m".repeat(4001)), {
+      ok: false,
+      reason: "Le commentaire ne doit pas dépasser 4 000 caractères.",
+    });
+  });
+
+  it("espaces seuls ou caractères de contrôle seuls : trop court", () => {
+    assert.equal(readDecisionText("refuse", "      ").ok, false);
+    assert.equal(readDecisionText("refuse", "\u0000\u0001\u0002\u0003\u0004\u0005").ok, false);
+  });
+
+  it("texte nettoyé : bords retirés, NFC, retours à la ligne gardés", () =>
+    assert.deepEqual(
+      readDecisionText("refuse", "  Hors pe\u0301rime\u0300tre.\nVoir plus tard.  "),
+      {
+        ok: true,
+        text: "Hors périmètre.\nVoir plus tard.",
+      },
+    ));
+});
+
+describe("texte d'un commentaire de décision retrouvé (P53)", () => {
+  it("préfixe et ligne Décision retirés", () =>
     assert.equal(
-      decisionClaimVerdict(input({}, { status: "refused", allowedDecisions: [] })).kind,
-      "reject",
+      decisionTextOfComment("Réponse : Hors périmètre.\n\nDécision dec_1", OWNER),
+      "Hors périmètre.",
+    ));
+  it("borné à 4 000 points de code, même pour un commentaire allongé sur GitHub", () => {
+    const text = decisionTextOfComment(`Réponse : ${"m".repeat(10_000)}\n\nDécision d`, OWNER);
+    assert.equal(Array.from(text ?? "").length, 4000);
+    assert.ok(text?.endsWith("…"));
+  });
+  it("coupe sans séparer une paire de substitution", () => {
+    const text = decisionTextOfComment(
+      `Réponse : ${"\u{1F37A}".repeat(5000)}\n\nDécision d`,
+      OWNER,
     );
+    assert.equal(Array.from(text ?? "").length, 4000);
+    assert.ok(text?.endsWith("\u{1F37A}…"));
   });
+  it("commentaire sans forme de réponse : null", () =>
+    assert.equal(decisionTextOfComment("Je regarde.", OWNER), null));
+});
 
-  it("texte : présent pour refuse et close, absent pour validate", () => {
-    assert.equal(textFitsAction("validate", undefined), true);
-    assert.equal(textFitsAction("validate", "texte"), false);
-    assert.equal(textFitsAction("refuse", "Motif valable"), true);
-    assert.equal(textFitsAction("close", "x".repeat(2000)), true);
-    assert.equal(textFitsAction("close", "🍺".repeat(2000)), true);
-  });
-
-  it("reprise demandée : retry_requested_at posé après et changé", () => {
-    assert.equal(isRetryRequest(null, NOW), true);
-    assert.equal(isRetryRequest(NOW - 5, NOW), true);
-    assert.equal(isRetryRequest(NOW, NOW), false);
-    assert.equal(isRetryRequest(NOW, null), false);
-    assert.equal(isRetryRequest(null, null), false);
-  });
-
-  it("identifiant de décision : [A-Za-z0-9_-]{1,128}", () => {
-    assert.equal(isPlausibleDecisionId("aB3_x-9"), true);
-    assert.equal(isPlausibleDecisionId("a/b"), false);
-    assert.equal(isPlausibleDecisionId(""), false);
-    assert.equal(isPlausibleDecisionId("a".repeat(129)), false);
+describe("échec sur GitHub rendu au client (P53)", () => {
+  it("commentaire publié : aborted, partiel", () =>
+    assert.deepEqual(decisionFailure("refuse", ["comment"], "network"), {
+      code: "aborted",
+      machine: "refuse_partial",
+      reason: "Motif publié, mais l'Issue n'a pas été fermée. Réessayez.",
+      partial: true,
+    }));
+  it("rien publié : jeton, Issue absente, limite, GitHub muet", () => {
+    assert.equal(decisionFailure("validate", [], "token").machine, "github_token");
+    assert.equal(decisionFailure("validate", [], "not_found").code, "not-found");
+    assert.equal(decisionFailure("close", [], "rate_limit").machine, "github_rate_limit");
+    assert.equal(decisionFailure("close", [], "other").code, "unavailable");
+    assert.equal(decisionFailure("close", [], "other").partial, false);
   });
 });
 
@@ -432,51 +533,20 @@ describe("client GitHub : écritures des décisions", () => {
   });
 });
 
-describe("reprise par la passe horaire", () => {
-  it("pending créée depuis plus de cinq minutes : reprise", () => {
-    assert.equal(PENDING_DECISION_GRACE_MS, 5 * 60 * 1000);
-    assert.equal(stalePendingCutoffMs(NOW), NOW - 300_000);
-    const at = (requestedAtMs: number | null) =>
-      isResumableByPass({ state: "pending", leaseUntilMs: null, requestedAtMs, nowMs: NOW });
-    assert.equal(at(NOW - 300_001), true);
-    assert.equal(at(NOW - 300_000), false);
-    assert.equal(at(NOW - 60_000), false);
-    assert.equal(at(null), false);
-  });
-  it("applying au bail expiré : reprise ; au bail actif : non", () => {
-    const lease = (leaseUntilMs: number | null) =>
-      isResumableByPass({ state: "applying", leaseUntilMs, requestedAtMs: null, nowMs: NOW });
-    assert.equal(lease(NOW - 1), true);
-    assert.equal(lease(NOW + 1), false);
-  });
-  it("applied, rejected, failed : non", () => {
-    for (const state of ["applied", "rejected", "failed"]) {
-      assert.equal(
-        isResumableByPass({
-          state,
-          leaseUntilMs: null,
-          requestedAtMs: NOW - 3_600_000,
-          nowMs: NOW,
-        }),
-        false,
-      );
-    }
-  });
-  it("une décision pending reprise est prise comme à sa création", () =>
-    assert.equal(decisionClaimVerdict(input({ state: "pending" })).kind, "claim"));
-});
-
 describe("reprise d'une décision avec comment_id (P26)", () => {
+  // L'Issue ouverte ne relit pas le ticket (seule une Issue fermée le relit).
+  const refs = { decision: { id: "dec_1" } } as unknown as Refs;
   const claimed = (knownCommentId: number | null): Extract<Claim, { kind: "claimed" }> => ({
     kind: "claimed",
+    refs,
     action: "refuse",
     text: "Hors du périmètre de l'application.",
+    receivedText: "Hors du périmètre de l'application.",
     issueNumber: 12,
     leaseUntilMs: NOW + 120_000,
     knownCommentId,
+    storedTextKept: false,
   });
-  // L'Issue ouverte n'utilise pas `refs` (seule une Issue fermée relit le ticket).
-  const refs = {} as Refs;
 
   function fakeGithub(knownComment: { status: number; body: unknown }) {
     const calls: Array<{ method: string; path: string }> = [];
@@ -532,7 +602,7 @@ describe("reprise d'une décision avec comment_id (P26)", () => {
         body: "Réponse : Hors du périmètre de l'application.\n\nDécision dec_1",
       },
     });
-    const run = await runOnGithub(client, refs, "dec_1", claimed(991));
+    const run = await runOnGithub(client, claimed(991));
     assert.equal(count(calls, "GET", "/issues/comments/991"), 1);
     assert.equal(count(calls, "GET", "/issues/12/comments"), 0);
     assert.equal(count(calls, "POST", "/issues/12/comments"), 0);
@@ -544,7 +614,7 @@ describe("reprise d'une décision avec comment_id (P26)", () => {
 
   it("commentaire connu supprimé (404) : republié, sans relire les pages", async () => {
     const { calls, client } = fakeGithub({ status: 404, body: { message: "Not Found" } });
-    const run = await runOnGithub(client, refs, "dec_1", claimed(991));
+    const run = await runOnGithub(client, claimed(991));
     assert.equal(count(calls, "GET", "/issues/12/comments"), 0);
     assert.equal(count(calls, "POST", "/issues/12/comments"), 1);
     assert.equal(run.kind === "done" && run.commentId, 992);
@@ -555,14 +625,14 @@ describe("reprise d'une décision avec comment_id (P26)", () => {
       status: 200,
       body: { id: 991, user: { id: 4242 }, body: "Réponse : x\n\nDécision dec_1" },
     });
-    await runOnGithub(client, refs, "dec_1", claimed(991));
+    await runOnGithub(client, claimed(991));
     assert.ok(count(calls, "GET", "/issues/12/comments") >= 1);
     assert.equal(count(calls, "POST", "/issues/12/comments"), 1);
   });
 
   it("sans comment_id : pages relues avant de publier", async () => {
     const { calls, client } = fakeGithub({ status: 500, body: {} });
-    await runOnGithub(client, refs, "dec_1", claimed(null));
+    await runOnGithub(client, claimed(null));
     assert.equal(count(calls, "GET", "/issues/comments/991"), 0);
     assert.equal(count(calls, "GET", "/issues/12/comments"), 5);
     assert.equal(count(calls, "POST", "/issues/12/comments"), 1);

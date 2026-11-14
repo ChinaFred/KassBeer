@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/admin/presentation/admin_sources_screen.dart';
+import '../../features/admin/presentation/error_reports_screen.dart';
+import '../../features/admin/presentation/logs_screen.dart';
+import '../../features/import/presentation/import_fiches_screen.dart';
 import '../../features/auth/presentation/access_error_screen.dart';
 import '../../features/auth/presentation/access_providers.dart';
 import '../../features/auth/presentation/loading_screen.dart';
@@ -23,8 +26,12 @@ import '../../features/library/presentation/library_screen.dart';
 import '../../features/library/presentation/public_recipe_screen.dart';
 import '../../features/library/presentation/reference_entry_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
+import '../../features/processes/presentation/process_detail_screen.dart';
+import '../../features/processes/presentation/process_editor_screen.dart';
+import '../../features/processes/presentation/process_list_screen.dart';
 import '../../features/recipes/presentation/brew_steps_editor_screen.dart';
 import '../../features/recipes/presentation/import_recipes_screen.dart';
+import '../../features/recipes/presentation/imported_recipe_screen.dart';
 import '../../features/recipes/presentation/recipe_detail_screen.dart';
 import '../../features/recipes/presentation/recipe_editor_screen.dart';
 import '../../features/recipes/presentation/recipes_list_screen.dart';
@@ -36,6 +43,7 @@ import '../../features/tickets/presentation/ticket_form_screen.dart';
 import '../presentation/app_shell.dart';
 import '../presentation/etats.dart';
 import '../presentation/nouveautes_screen.dart';
+import '../presentation/preferences_screen.dart';
 import 'page_de_coquille.dart';
 import 'routes.dart';
 
@@ -150,17 +158,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.importRecipes,
         builder: (_, _) => const ImportRecipesScreen(),
       ),
+      // Fiche ouverte par `push` depuis le compte rendu de l'import (ticket
+      // #60). Hors de la coquille : la coquille est déjà dans la pile sous
+      // l'import, et un `push` de `/recettes/:id` y ajouterait une seconde page
+      // de coquille de même clé.
+      GoRoute(
+        path: '${AppRoutes.importRecipes}/:id',
+        builder: (_, state) =>
+            ImportedRecipeScreen(id: state.pathParameters['id']!),
+      ),
       GoRoute(
         path: '${AppRoutes.recipes}/:id/modifier',
-        builder: (_, state) =>
-            RecipeEditorScreen(id: state.pathParameters['id']),
+        builder: (_, state) => RecipeEditorScreen(
+          id: state.pathParameters['id'],
+          retourParPop: state.extra == AppRoutes.retourParPop,
+        ),
       ),
       GoRoute(
         path: '${AppRoutes.recipes}/:id/chronologie',
-        builder: (_, state) =>
-            BrewStepsEditorScreen(id: state.pathParameters['id']!),
+        builder: (_, state) => BrewStepsEditorScreen(
+          id: state.pathParameters['id']!,
+          retourParPop: state.extra == AppRoutes.retourParPop,
+        ),
       ),
-      // Écran du jour : plein écran, hors de la coquille.
+      // Écran du jour : plein écran, hors de la coquille. Journée de brassage,
+      // puis journées suivantes du déroulé (ADR-010).
       GoRoute(
         path: '${AppRoutes.brews}/:id/jour',
         builder: (_, state) => BrewDayScreen(
@@ -168,8 +190,44 @@ final routerProvider = Provider<GoRouter>((ref) {
           reprise: state.extra == kRepriseBrassage,
         ),
       ),
+      GoRoute(
+        path: '${AppRoutes.brews}/:id/jour/:journee',
+        builder: (_, state) => BrewDayScreen(
+          id: state.pathParameters['id']!,
+          journee: state.pathParameters['journee'],
+        ),
+      ),
       // « Mes prix » : page pleine avec retour, hors de la coquille.
       GoRoute(path: AppRoutes.prices, builder: (_, _) => const PricesScreen()),
+      // « Mes processus » (ADR-010) : pages pleines hors de la coquille. Liste
+      // ouverte par `push` depuis le menu du compte ; « nouveau » avant « :id ».
+      GoRoute(
+        path: AppRoutes.processes,
+        builder: (_, _) => const ProcessListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.newProcess,
+        builder: (_, state) => ProcessEditorScreen(
+          exemple:
+              state.uri.queryParameters[AppRoutes.exampleQueryParam] ==
+              'exemple',
+        ),
+      ),
+      GoRoute(
+        path: '${AppRoutes.processes}/:id/modifier',
+        builder: (_, state) =>
+            ProcessEditorScreen(id: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: '${AppRoutes.processes}/:id',
+        builder: (_, state) =>
+            ProcessDetailScreen(id: state.pathParameters['id']!),
+      ),
+      // « Préférences » : page pleine avec retour, hors de la coquille.
+      GoRoute(
+        path: AppRoutes.preferences,
+        builder: (_, _) => const PreferencesScreen(),
+      ),
       GoRoute(
         path: AppRoutes.newEquipment,
         builder: (_, _) => const EquipmentEditorScreen(),
@@ -214,6 +272,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.tickets,
         builder: (_, _) => const MyTicketsScreen(),
+      ),
+      // Admin › Import (v0.6) : page pleine hors de la coquille, pour la barre
+      // d'import et la confirmation de sortie pendant l'écriture. Déclarée
+      // avant la coquille ; `/admin/**` reste refusé à un brasseur.
+      GoRoute(
+        path: AppRoutes.adminImport,
+        builder: (_, _) => const ImportFichesScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {
@@ -291,6 +356,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (_, state) =>
                     PrepareBrewScreen(id: state.pathParameters['id']!),
               ),
+              PageDeCoquilleDynamique(
+                path: ':id/jour/:journee/preparer',
+                titre: 'Préparer la journée',
+                retourDepuis: (state) =>
+                    AppRoutes.brew(state.pathParameters['id']!),
+                builder: (_, state) => PrepareBrewScreen(
+                  id: state.pathParameters['id']!,
+                  journee: state.pathParameters['journee'],
+                ),
+              ),
             ],
           ),
           PageDeCoquille(
@@ -317,6 +392,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                 titre: 'Membres',
                 retour: AppRoutes.admin,
                 builder: (_, _) => const MembersScreen(),
+              ),
+              PageDeCoquille(
+                path: 'rapports-erreur',
+                titre: ErrorReportsScreen.titre,
+                retour: AppRoutes.admin,
+                builder: (_, _) => const ErrorReportsScreen(),
+              ),
+              PageDeCoquille(
+                path: 'journaux',
+                titre: LogsScreen.titre,
+                retour: AppRoutes.admin,
+                builder: (_, _) => const LogsScreen(),
               ),
               PageDeCoquille(
                 path: 'sources',

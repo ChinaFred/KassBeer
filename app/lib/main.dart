@@ -9,15 +9,23 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'app.dart';
+import 'core/preferences/preferences_appareil.dart';
 import 'core/providers.dart';
+import 'core/services/app_installer.dart';
+import 'core/services/app_update_service.dart';
 import 'core/services/error_report_service.dart';
+import 'features/admin/data/error_reports_repository.dart';
+import 'features/admin/data/logs_repository.dart';
 import 'features/admin/data/sources_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/brews/data/brews_repository.dart';
 import 'features/costs/data/costs_repository.dart';
 import 'features/equipment/data/equipment_repository.dart';
+import 'features/import/data/import_fiches_repository.dart';
 import 'features/library/data/library_repository.dart';
 import 'features/members/data/members_repository.dart';
+import 'features/processes/data/preferences_processus_repository.dart';
+import 'features/processes/data/processes_repository.dart';
 import 'features/recipes/data/recipes_repository.dart';
 import 'features/tickets/data/tickets_repository.dart';
 import 'firebase_options.dart';
@@ -31,6 +39,11 @@ Future<void> main() async {
     runApp(MissingConfigurationApp(missingKeys: missing));
     return;
   }
+
+  // Thème lu en parallèle de Firebase : le premier écran s'affiche dans le thème
+  // choisi (ADR-009). `lireTheme` ne lève pas ; son erreur est rapportée plus bas.
+  final preferences = PreferencesAppareilPlateforme();
+  final lectureTheme = lireTheme(preferences);
 
   try {
     await Firebase.initializeApp(options: env.options(web: kIsWeb));
@@ -49,11 +62,16 @@ Future<void> main() async {
   }
 
   String? version;
+  int? build;
   Object? versionError;
   StackTrace? versionStack;
   try {
-    version = (await PackageInfo.fromPlatform()).version;
+    final info = await PackageInfo.fromPlatform();
+    version = info.version;
     if (version.isEmpty) version = null;
+    // Numéro après « + » : versionCode de l'APK, comparé au manifeste publié
+    // (ADR-012). Illisible : aucune mise à jour n'est proposée.
+    build = int.tryParse(info.buildNumber);
   } catch (error, stackTrace) {
     versionError = error;
     versionStack = stackTrace;
@@ -67,6 +85,9 @@ Future<void> main() async {
       stackTrace: versionStack,
     );
   }
+
+  final theme = await lectureTheme;
+  theme.rapporter(errors);
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
@@ -106,6 +127,8 @@ Future<void> main() async {
       overrides: [
         errorReportServiceProvider.overrideWithValue(errors),
         appVersionProvider.overrideWithValue(version),
+        preferencesAppareilProvider.overrideWithValue(preferences),
+        themeModeInitialProvider.overrideWithValue(theme.mode),
         authRepositoryProvider.overrideWithValue(
           FirebaseAuthRepository(errorReportService: errors),
         ),
@@ -124,6 +147,15 @@ Future<void> main() async {
         costsRepositoryProvider.overrideWithValue(
           FirestoreCostsRepository(errorReportService: errors),
         ),
+        importFichesRepositoryProvider.overrideWithValue(
+          FirestoreImportFichesRepository(),
+        ),
+        processesRepositoryProvider.overrideWithValue(
+          FirestoreProcessesRepository(errorReportService: errors),
+        ),
+        preferencesProcessusRepositoryProvider.overrideWithValue(
+          FirestorePreferencesProcessusRepository(errorReportService: errors),
+        ),
         libraryRepositoryProvider.overrideWithValue(
           FirestoreLibraryRepository(errorReportService: errors),
         ),
@@ -132,6 +164,20 @@ Future<void> main() async {
         ),
         ticketsRepositoryProvider.overrideWithValue(
           FirestoreTicketsRepository(errorReportService: errors),
+        ),
+        errorReportsRepositoryProvider.overrideWithValue(
+          FirestoreErrorReportsRepository(errorReportService: errors),
+        ),
+        logsRepositoryProvider.overrideWithValue(
+          FunctionsLogsRepository(errorReportService: errors),
+        ),
+        appUpdateServiceProvider.overrideWithValue(
+          AppUpdateService(
+            errorReportService: errors,
+            installateur: InstallateurApkPlateforme(errorReportService: errors),
+            buildInstalle: build,
+            versionInstallee: version,
+          ),
         ),
       ],
       child: const KassBeerApp(),

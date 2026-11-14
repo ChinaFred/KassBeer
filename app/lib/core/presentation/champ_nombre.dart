@@ -88,7 +88,6 @@ class ChampNombre extends StatelessWidget {
             : theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.tertiary,
               ),
-        border: const OutlineInputBorder(),
       ),
       validator: (text) =>
           erreurPropre?.call(text ?? '') ??

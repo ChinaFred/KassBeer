@@ -6,24 +6,34 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
+import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
+import '../../brew_day/domain/plan_du_jour.dart';
+import '../../brew_day/presentation/chronologie_jour.dart';
 import '../domain/brew.dart';
+import '../domain/deroule.dart';
 import 'brews_providers.dart';
 
-/// Brassins du groupe : en cours d'abord, puis prévus, puis les autres ; filtre
-/// « Tous » / « Les miens », état de l'écran, jamais écrit en base.
+/// Brassins du groupe : en cours d'abord, puis prévus, puis les autres, chaque
+/// groupe non vide sous son en-tête ([GroupeBrassins]) ; filtre « Tous » /
+/// « Les miens », état de l'écran, jamais écrit en base.
 class BrewsScreen extends ConsumerStatefulWidget {
   const BrewsScreen({super.key});
 
   static const loadError = 'Impossible de lire les brassins.';
+  static const emptyTitle = 'Aucun brassin';
+  static const mineEmptyTitle = 'Vous n\'avez pas encore de brassin';
+
+  /// Message des deux états vides, sous [emptyTitle] ou [mineEmptyTitle].
   static const emptyMessage =
-      'Aucun brassin. Ouvrez une recette et appuyez sur Nouveau brassin.';
-  static const mineEmptyMessage =
-      'Vous n\'avez pas encore de brassin. Ouvrez une recette et appuyez sur '
-      'Nouveau brassin.';
+      'Ouvrez une recette et appuyez sur Nouveau brassin.';
+
+  /// En-tête des brassins illisibles, après les groupes.
+  static const illisibles = 'Illisibles';
 
   @override
   ConsumerState<BrewsScreen> createState() => _BrewsScreenState();
@@ -77,9 +87,10 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
         if (shown.isEmpty && invalid.isEmpty)
           EtatVide(
             icon: Icons.science_outlined,
-            message: _mineOnly
-                ? BrewsScreen.mineEmptyMessage
-                : BrewsScreen.emptyMessage,
+            titre: _mineOnly
+                ? BrewsScreen.mineEmptyTitle
+                : BrewsScreen.emptyTitle,
+            message: BrewsScreen.emptyMessage,
             action: _mineOnly
                 ? null
                 : TextButton(
@@ -87,33 +98,69 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
                     child: const Text('Voir les recettes'),
                   ),
           ),
-        for (final b in shown) _Row(brew: b, readerUid: readerUid, now: now),
-        // Material propre : au retour d'une fiche, la transition de page pose un
-        // fond coloré au-dessus du Material de la page (assertion de ListTile).
+        // `shown` suit l'ordre des groupes (compareBrews) : un en-tête avant
+        // le premier brassin de chaque groupe.
+        for (final (i, b) in shown.indexed) ...[
+          if (i == 0 ||
+              groupeBrassin(shown[i - 1].status) != groupeBrassin(b.status))
+            _EnTeteGroupe(groupeBrassin(b.status).libelle),
+          _Row(brew: b, readerUid: readerUid, now: now),
+        ],
+        if (invalid.isNotEmpty && shown.isNotEmpty)
+          const _EnTeteGroupe(BrewsScreen.illisibles),
         for (final d in invalid)
-          Material(
-            type: MaterialType.transparency,
-            child: ListTile(
-              leading: Icon(
-                Icons.error_outline,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              title: const Text('Brassin illisible'),
-              subtitle: const Text(
-                'Mettez l\'application à jour, ou prévenez l\'administrateur.',
-              ),
-              onTap: () => context.go(AppRoutes.brew(d.id)),
-            ),
+          LigneListe(
+            icone: Icons.error_outline,
+            erreur: true,
+            titre: 'Brassin illisible',
+            details: const [Text(kDetailLigneIllisible)],
+            onTap: () => context.go(AppRoutes.brew(d.id)),
           ),
       ],
     );
   }
 }
 
-/// Date affichée dans la ligne d'un brassin.
-String ligneDateBrassin(Brew brew, DateTime now) {
+/// En-tête d'un groupe de la liste, déclaré comme en-tête.
+class _EnTeteGroupe extends StatelessWidget {
+  const _EnTeteGroupe(this.libelle);
+
+  final String libelle;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: TitreSection(libelle, niveau: NiveauTitre.sousSection),
+  );
+}
+
+/// Date affichée dans la ligne d'un brassin. En fermentation et en
+/// conditionnement, la prochaine journée du déroulé quand elle existe
+/// (« Prochaine journée : Houblonnage à cru, mer. 25 nov. »), choisie par
+/// [prochaineJourneeAnnoncee] (ADR-010) : même règle que la fiche quand
+/// [planDe] est connu (événements lus), avec « en cours » pour une journée
+/// commencée et « en retard (prévue le …) » pour une date passée ; d'après les
+/// dates seules sinon.
+String ligneDateBrassin(
+  Brew brew,
+  DateTime now, {
+  PlanDuJour? Function(JourneeDeroulee journee)? planDe,
+}) {
   final brewed = brew.brewedAt;
   final planned = brew.plannedFor;
+  final prochaine = prochaineJourneeAnnoncee(brew, now, planDe: planDe);
+  if (prochaine != null) {
+    final date = prochaine.date;
+    final aujourdhui = DateTime(now.year, now.month, now.day);
+    final quand = prochaine.commencee
+        ? 'en cours'
+        : date == aujourdhui
+        ? "aujourd'hui"
+        : date.isBefore(aujourdhui)
+        ? 'en retard (prévue le ${formatJourMois(date)})'
+        : formatJourMois(date);
+    return 'Prochaine journée : ${prochaine.journee.name.trim()}, $quand';
+  }
   if (brew.status == BrewStatus.planned) {
     return planned == null
         ? 'Date non fixée'
@@ -132,55 +179,75 @@ String ligneDateBrassin(Brew brew, DateTime now) {
   return 'Brassé le ${formatDateCourte(brewed)}';
 }
 
-class _Row extends StatelessWidget {
+class _Row extends ConsumerWidget {
   const _Row({required this.brew, required this.readerUid, required this.now});
 
   final Brew brew;
   final String? readerUid;
   final DateTime now;
 
+  /// Plan d'une journée d'après les événements du brassin, lus depuis le cache
+  /// comme sur la fiche, chaque plan calculé une fois ; `null` tant qu'ils ne
+  /// sont pas lus ([evenementsLus] : chargement, panne rapportée par le dépôt,
+  /// hors ligne sans cache) : la ligne garde alors la règle des dates. Seuls les
+  /// brassins de [listeLitEvenements] les lisent.
+  PlanDuJour? Function(JourneeDeroulee)? _planDe(WidgetRef ref) {
+    if (!listeLitEvenements(brew, readerUid)) return null;
+    final events = evenementsLus(ref.watch(brewEventsProvider(brew.id)).value);
+    if (events == null) return null;
+    final plans = <String, PlanDuJour?>{};
+    return (j) => plans.putIfAbsent(
+      j.key,
+      () => switch (evaluerPlan(
+        brew: brew,
+        events: events,
+        now: now,
+        errors: ref.read(errorReportServiceProvider),
+        reported: ref.read(planReportsProvider),
+        journee: j,
+      )) {
+        PlanObtenu(:final plan) => plan,
+        PlanImpossible() => null,
+      },
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final date = ligneDateBrassin(brew, now);
-    return InkWell(
-      onTap: () => context.go(AppRoutes.brew(brew.id)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 64),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(brew.name, style: theme.textTheme.titleMedium),
-                    Text(
-                      [
-                        brew.status.label,
-                        brew.equipment.name,
-                        libelleAuteur(
-                          ownerUid: brew.ownerUid,
-                          ownerName: brew.ownerName,
-                          readerUid: readerUid,
-                        ),
-                      ].join(' · '),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    if (date.isNotEmpty)
-                      Text(date, style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              if (brew.hasPendingWrites)
-                const Etiquette(label: 'En attente du réseau'),
-            ],
-          ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final date = ligneDateBrassin(brew, now, planDe: _planDe(ref));
+    return LigneListe(
+      icone: Icons.science_outlined,
+      titre: brew.name,
+      details: [
+        Text(
+          [
+            brew.equipment.name,
+            libelleAuteur(
+              ownerUid: brew.ownerUid,
+              ownerName: brew.ownerName,
+              readerUid: readerUid,
+            ),
+          ].join(' · '),
         ),
-      ),
+        if (date.isNotEmpty) Text(date),
+      ],
+      etiquettes: [
+        Etiquette(label: brew.status.label, ton: tonStatutBrassin(brew.status)),
+        if (brew.hasPendingWrites)
+          const Etiquette(label: 'En attente du réseau'),
+      ],
+      onTap: () => context.go(AppRoutes.brew(brew.id)),
     );
   }
 }
+
+/// Ton de l'étiquette du statut d'un brassin, dans la liste et sur la fiche :
+/// neutre avant et hors du travail, tertiaire pendant, primaire une fois
+/// terminé.
+TonEtiquette tonStatutBrassin(BrewStatus status) => switch (status) {
+  BrewStatus.planned || BrewStatus.abandoned => TonEtiquette.neutre,
+  BrewStatus.brewing ||
+  BrewStatus.fermenting ||
+  BrewStatus.conditioning => TonEtiquette.tertiaire,
+  BrewStatus.done => TonEtiquette.primaire,
+};

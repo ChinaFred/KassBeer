@@ -1,19 +1,27 @@
 /**
  * Passe horaire des tickets (ADR-006, CA26 à CA31, T2) :
  *
- * 1. `allowed_decisions` posé une fois sur les tickets écrits avant T2 (marque
- *    `allowed_decisions_backfilled_at` dans `ticket_status/github`) ;
- * 2. relance des tickets `send_failed` dont l'admin a demandé un nouvel essai
- *    (`retry_requested_at`) : `send_attempts` à 0, `pending`, puis nouvel essai ;
- * 3. renvoi des tickets `pending` (20 au plus), par `publishTicket` ;
- * 4. reprise des décisions restées `applying` après l'expiration de leur bail, et des
- *    décisions encore `pending` cinq minutes après leur création ;
- * 5. Issues `source:app` modifiées depuis le curseur `issues_cursor` de
+ * 1. `allowed_decisions` réécrit une fois par version de la règle (tickets écrits avant
+ *    T2, liste de T3 : `analyzed`, `answer`, puis liste de T4 : Valider depuis `analyzed`
+ *    seul, lancements) ; marque
+ *    `allowed_decisions_backfill_version` dans `ticket_status/github` ;
+ * 2. renvoi des tickets `pending` (20 au plus), par `publishTicket` ;
+ * 3. Issues `source:app` modifiées depuis le curseur `issues_cursor` de
  *    `ticket_status/github`, les plus anciennes d'abord : statut, décisions permises,
- *    réponse « Réponse : » du compte 16348852, PR de livraison et version ;
- * 6. avec le reste des 30 Issues de la passe : tickets à Issue ouverte les moins
- *    récemment relus, Issue lue une à une. Une Issue disparue (404 ou 410, dépôt
- *    joignable) laisse le statut et pose `issue_missing_since`.
+ *    réponse « Réponse : » du compte 16348852, analyses et précisions (P32), PR de
+ *    livraison et version ;
+ * 4. avec le reste des 30 Issues de la passe : tickets à Issue ouverte les moins
+ *    récemment relus, Issue et commentaires lus un à un (un commentaire modifié ne
+ *    change pas la date de l'Issue). Une Issue disparue (404 ou 410, dépôt joignable)
+ *    laisse le statut et pose `issue_missing_since` ;
+ * 5. livraison (T5, P46) : verrou des livraisons libéré si son ticket n'est plus
+ *    `in_progress` ; état « PR prête » de chaque ticket `in_progress` (30 au plus), liste
+ *    des PR ouvertes lue une fois et partagée.
+ *
+ * Avant tout, sans GitHub : `ticket_status/launches` remis au jour de Paris (T4).
+ *
+ * Depuis T7 (ADR-008), la passe ne relance aucun envoi et ne reprend aucune décision :
+ * l'admin le fait par `retryTicketSend` et par un nouvel appel de la décision.
  *
  * Un jeton refusé arrête la passe. Chaque ticket est traité seul : une erreur est
  * journalisée et la passe continue.
@@ -33,21 +41,34 @@ import { logError, logInfo } from "../logging";
 import {
   allowedDecisions,
   allowedDecisionsUpToDate,
-  isResumableByPass,
-  stalePendingCutoffMs,
+  isValidatedByApp,
+  keepsAppValidation,
 } from "./decisionModel";
-import { COLL_DECISIONS, applyDecision } from "./decisions";
 import { GithubError, githubClient, type FetchLike, type GithubClient } from "./github";
+import {
+  refreshTicketDelivery,
+  releaseDeliveryLockIfLeft,
+  type OpenPullRequests,
+} from "./delivery";
 import { applyIssue } from "./issueState";
+import { refreshLaunchStatus } from "./launch";
 import { LABEL_SOURCE_APP, OPEN_STATUSES, type IssueView } from "./model";
 import { publishTicket } from "./publish";
 import { markTokenInvalid, recordTokenAccepted } from "./tokenStatus";
 
-/** Décisions `applying` reprises au plus par passe. */
-const DECISIONS_PER_PASS = 20;
-
 /** Tickets lus par page lors de la pose initiale de `allowed_decisions`. */
 const BACKFILL_PAGE = 200;
+
+/**
+ * Version de la règle `allowedDecisions` : à chaque changement de la règle, la pose
+ * initiale repasse une fois sur tous les tickets. 2 : statut `analyzed` et `answer`
+ * (ADR-008, T3). 3 : Valider depuis `analyzed` seul, `launch_analysis` et
+ * `launch_development` (ADR-008, T4). 4 : `launch_development` réservé à un ticket validé
+ * dans l'application (`validated_by_app_at`), Valider offert sinon (ADR-008, 2026-11-13).
+ * 5 : `launch_delivery` et `relaunch_development` sur un ticket `in_progress` validé dans
+ * l'application (ADR-008, T5).
+ */
+export const ALLOWED_DECISIONS_VERSION = 5;
 
 /** Marge du curseur : une Issue modifiée pendant la passe précédente est relue. */
 const CURSOR_MARGIN_MS = 10 * 60 * 1000;
@@ -110,7 +131,7 @@ async function refreshOne(client: GithubClient, doc: DocumentSnapshot): Promise<
     });
     return;
   }
-  await applyIssue(client, doc, issue);
+  await applyIssue(client, doc, issue, { forceComments: true });
 }
 
 async function guarded(ticketId: string, work: () => Promise<void>): Promise<void> {
@@ -127,7 +148,7 @@ async function guarded(ticketId: string, work: () => Promise<void>): Promise<voi
   }
 }
 
-/** Étape 2 : Issues modifiées depuis le curseur. Rend les numéros traités. */
+/** Étape 3 : Issues modifiées depuis le curseur. Rend les numéros traités. */
 async function syncUpdatedIssues(client: GithubClient, passStart: Date): Promise<Set<number>> {
   const { db } = await firestore();
   const statusRef = db.collection(COLL_TICKET_STATUS).doc(TICKET_STATUS_GITHUB_DOC);
@@ -163,40 +184,56 @@ async function syncUpdatedIssues(client: GithubClient, passStart: Date): Promise
 
 /**
  * Étape 1 : `allowed_decisions` posé sur chaque ticket qui ne l'a pas ou dont la liste ne
- * suit pas le statut, une seule fois (tickets écrits avant T2). Ensuite, chaque
- * changement de statut l'écrit. Chaque ticket est corrigé en transaction : un statut
- * changé entre-temps n'est pas écrasé. Ne lève pas.
+ * suit pas le statut, une fois par version de la règle (`ALLOWED_DECISIONS_VERSION`).
+ * Ensuite, chaque changement de statut l'écrit. Chaque ticket est corrigé en transaction : un statut
+ * changé entre-temps n'est pas écrasé. Ne lève pas. Exportée pour les tests.
  */
-async function backfillAllowedDecisions(): Promise<void> {
+export async function backfillAllowedDecisions(): Promise<void> {
   try {
     const { db, FieldPath, Timestamp } = await firestore();
     const statusRef = db.collection(COLL_TICKET_STATUS).doc(TICKET_STATUS_GITHUB_DOC);
-    if ((await statusRef.get()).get("allowed_decisions_backfilled_at") != null) return;
+    if (
+      (await statusRef.get()).get("allowed_decisions_backfill_version") ===
+      ALLOWED_DECISIONS_VERSION
+    ) {
+      return;
+    }
     let fixed = 0;
     let last: DocumentSnapshot | null = null;
     for (;;) {
       let query = db
         .collection(COLL_TICKETS)
         .orderBy(FieldPath.documentId())
-        .select("status", "allowed_decisions")
+        .select("status", "allowed_decisions", "validated_by_app_at")
         .limit(BACKFILL_PAGE);
       if (last !== null) query = query.startAfter(last);
       const page = await query.get();
       for (const doc of page.docs) {
-        if (allowedDecisionsUpToDate(doc.get("allowed_decisions"), doc.get("status"))) continue;
+        const byAppOf = (snap: DocumentSnapshot) =>
+          keepsAppValidation(snap.get("status")) &&
+          isValidatedByApp(snap.get("validated_by_app_at"));
+        if (allowedDecisionsUpToDate(doc.get("allowed_decisions"), doc.get("status"), byAppOf(doc)))
+          continue;
         await db.runTransaction(async (tx) => {
           const fresh = await tx.get(doc.ref);
           if (!fresh.exists) return;
           const status = fresh.get("status");
-          if (allowedDecisionsUpToDate(fresh.get("allowed_decisions"), status)) return;
-          tx.update(doc.ref, { allowed_decisions: allowedDecisions(status) });
+          const byApp = byAppOf(fresh);
+          if (allowedDecisionsUpToDate(fresh.get("allowed_decisions"), status, byApp)) return;
+          tx.update(doc.ref, { allowed_decisions: allowedDecisions(status, byApp) });
         });
         fixed++;
       }
       if (page.docs.length < BACKFILL_PAGE) break;
       last = page.docs[page.docs.length - 1];
     }
-    await statusRef.set({ allowed_decisions_backfilled_at: Timestamp.now() }, { merge: true });
+    await statusRef.set(
+      {
+        allowed_decisions_backfill_version: ALLOWED_DECISIONS_VERSION,
+        allowed_decisions_backfilled_at: Timestamp.now(),
+      },
+      { merge: true },
+    );
     logInfo({
       message: `Tickets : décisions permises posées sur ${fixed} ticket(s)`,
       feature: "tickets",
@@ -212,129 +249,34 @@ async function backfillAllowedDecisions(): Promise<void> {
 }
 
 /**
- * Étape 2 : tickets `send_failed` avec `retry_requested_at` (relance demandée par
- * l'admin). En transaction : `pending`, `send_attempts` à 0, `send_retried_at` posé (la
- * publication cherche d'abord une Issue déjà créée), `retry_requested_at` retiré. Puis
- * nouvel essai dans la même passe. `status_changed_at` ne change pas : la pastille du
- * membre ne s'allume pas pour une relance. Rend `token` si le jeton est refusé.
+ * Étape 5 : verrou des livraisons libéré si son ticket n'est plus `in_progress`, puis état
+ * « PR prête » de chaque ticket `in_progress` (P46). La liste des PR ouvertes est lue une
+ * fois, au premier ticket. Chaque ticket est traité seul ; un jeton refusé arrête la passe.
  */
-async function retryFailedSends(token: string, fetchImpl?: FetchLike): Promise<"ok" | "token"> {
-  let docs: DocumentSnapshot[];
-  try {
-    const { db } = await firestore();
-    const snap = await db
-      .collection(COLL_TICKETS)
-      .where("status", "==", "send_failed")
-      .orderBy("retry_requested_at")
-      .limit(PENDING_PER_PASS)
-      .get();
-    docs = snap.docs;
-  } catch (err) {
-    logError({ message: "Tickets : relances d'envoi illisibles", feature: "tickets", error: err });
-    return "ok";
-  }
-  for (const doc of docs) {
-    let reset: boolean;
-    try {
-      const { db, FieldValue, Timestamp } = await firestore();
-      reset = await db.runTransaction(async (tx) => {
-        const fresh = await tx.get(doc.ref);
-        if (fresh.get("status") !== "send_failed") return false;
-        if (!(fresh.get("retry_requested_at") instanceof Timestamp)) return false;
-        const now = Timestamp.now();
-        tx.update(doc.ref, {
-          status: "pending",
-          allowed_decisions: allowedDecisions("pending"),
-          send_attempts: 0,
-          send_retried_at: now,
-          retry_requested_at: FieldValue.delete(),
-          send_lease_until: FieldValue.delete(),
-          updated_at: now,
-        });
-        return true;
-      });
-    } catch (err) {
-      logError({
-        message: "Tickets : relance d'envoi non enregistrée",
-        feature: "tickets",
-        ticketId: doc.id,
-        error: err,
-      });
-      continue;
-    }
-    if (!reset) continue;
-    logInfo({
-      message: "Tickets : relance d'envoi demandée par l'admin",
-      feature: "tickets",
-      ticketId: doc.id,
+async function refreshDeliveries(client: GithubClient): Promise<void> {
+  const kit = await firestore();
+  await releaseDeliveryLockIfLeft(kit, null, Date.now());
+  const snap = await kit.db
+    .collection(COLL_TICKETS)
+    .where("status", "==", "in_progress")
+    .limit(ISSUES_PER_PASS)
+    .get();
+  let openPrs: OpenPullRequests | null = null;
+  for (const doc of snap.docs) {
+    const issueNumber = doc.get("github_issue_number");
+    if (typeof issueNumber !== "number") continue;
+    await guarded(doc.id, async () => {
+      openPrs ??= await client.listOpenPullRequests();
+      await refreshTicketDelivery(kit, client, doc.id, issueNumber, openPrs);
     });
-    if ((await publishTicket(doc.id, token, fetchImpl)) === "token") return "token";
   }
-  return "ok";
-}
-
-/**
- * Étape 4 : décisions restées `applying` après l'expiration de leur bail (fonction
- * arrêtée en cours de route), et décisions encore `pending` cinq minutes après leur
- * création (déclencheur arrêté avant la prise, sans rejeu). Chacune est reprise par
- * `applyDecision`, dont la transaction de prise tranche. Rend `token` si le jeton est
- * refusé.
- */
-async function resumeStuckDecisions(token: string, fetchImpl?: FetchLike): Promise<"ok" | "token"> {
-  let docs: DocumentSnapshot[];
-  try {
-    const { db, Timestamp } = await firestore();
-    const now = Date.now();
-    const [applying, pending] = await Promise.all([
-      db
-        .collectionGroup(COLL_DECISIONS)
-        .where("state", "==", "applying")
-        .where("lease_until", "<", Timestamp.fromMillis(now))
-        .orderBy("lease_until")
-        .limit(DECISIONS_PER_PASS)
-        .get(),
-      db
-        .collectionGroup(COLL_DECISIONS)
-        .where("state", "==", "pending")
-        .where("requested_at", "<", Timestamp.fromMillis(stalePendingCutoffMs(now)))
-        .orderBy("requested_at")
-        .limit(DECISIONS_PER_PASS)
-        .get(),
-    ]);
-    const millis = (v: unknown) => (v instanceof Timestamp ? v.toMillis() : null);
-    docs = [...applying.docs, ...pending.docs].filter((doc) =>
-      isResumableByPass({
-        state: doc.get("state"),
-        leaseUntilMs: millis(doc.get("lease_until")),
-        requestedAtMs: millis(doc.get("requested_at")),
-        nowMs: now,
-      }),
-    );
-  } catch (err) {
-    logError({
-      message: "Tickets : décisions à reprendre illisibles",
-      feature: "tickets",
-      error: err,
-    });
-    return "ok";
-  }
-  for (const doc of docs) {
-    const ticket = doc.ref.parent.parent;
-    if (ticket === null || ticket.parent.id !== COLL_TICKETS) continue;
-    logInfo({
-      message: `Tickets : décision ${doc.get("state")} reprise par la passe horaire`,
-      feature: "tickets",
-      ticketId: ticket.id,
-      extra: { decisionId: doc.id },
-    });
-    if ((await applyDecision(ticket.id, doc.id, token, fetchImpl)) === "token") return "token";
-  }
-  return "ok";
 }
 
 /** Passe complète. Ne lève pas. */
 export async function runHourlyPass(token: string, fetchImpl?: FetchLike): Promise<void> {
   const passStart = new Date();
+  // Sans GitHub : compteurs des lancements remis au jour de Paris (ADR-008, T4).
+  await refreshLaunchStatus();
   try {
     const trimmed = token.trim();
     if (trimmed.length === 0) {
@@ -344,7 +286,6 @@ export async function runHourlyPass(token: string, fetchImpl?: FetchLike): Promi
     const { db } = await firestore();
 
     await backfillAllowedDecisions();
-    if ((await retryFailedSends(trimmed, fetchImpl)) === "token") return;
 
     const pending = await db
       .collection(COLL_TICKETS)
@@ -355,8 +296,6 @@ export async function runHourlyPass(token: string, fetchImpl?: FetchLike): Promi
     for (const doc of pending.docs) {
       if ((await publishTicket(doc.id, trimmed, fetchImpl)) === "token") return;
     }
-
-    if ((await resumeStuckDecisions(trimmed, fetchImpl)) === "token") return;
 
     const client = githubClient(trimmed, fetchImpl);
     const handled = await syncUpdatedIssues(client, passStart);
@@ -373,6 +312,7 @@ export async function runHourlyPass(token: string, fetchImpl?: FetchLike): Promi
         await guarded(doc.id, () => refreshOne(client, doc));
       }
     }
+    await refreshDeliveries(client);
     await recordTokenAccepted(client);
   } catch (err) {
     if (err instanceof TokenRefused) {

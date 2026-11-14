@@ -1,7 +1,7 @@
 // error_reports/ : journal d'erreurs (P13).
 
 import { describe, it } from "node:test";
-import { db, serverTimestamp, uidOf } from "./helpers.mjs";
+import { CREATED, db, serverTimestamp, uidOf } from "./helpers.mjs";
 import { expectRule, state, useEnv } from "./setup.mjs";
 
 useEnv();
@@ -56,6 +56,19 @@ describe("error_reports — cinq profils", () => {
     });
     it(`${name} supprime un rapport : ${verdict}`, async () => {
       await expectRule(allowed, db(state.env, name).doc("error_reports/er-1").delete());
+    });
+  }
+
+  // Admin › Rapports d'erreur (ADR-011, J1) : pages de 50 par created_at
+  // décroissant, la suite par startAfter.
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit une page de rapports, puis la suite : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      const page = db(state.env, name)
+        .collection("error_reports")
+        .orderBy("created_at", "desc")
+        .limit(50);
+      await expectRule(allowed, page.get());
+      await expectRule(allowed, page.startAfter(CREATED).get());
     });
   }
 

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/breakpoints.dart';
 import 'package:kass_beer/core/presentation/fiche.dart';
@@ -377,15 +378,27 @@ void main() {
       app.container.read(routerProvider).go(AppRoutes.admin);
       await tester.pumpAndSettle();
       final titres = tester
-          .widgetList<ListTile>(find.byType(ListTile))
-          .map((t) => (t.title! as Text).data)
+          .widgetList<LigneListe>(find.byType(LigneListe))
+          .map((l) => l.titre)
           .toList();
-      expect(titres, ['Membres', 'Tickets des membres', 'Sources', 'Import']);
+      expect(titres.take(4), [
+        'Membres',
+        'Tickets des membres',
+        'Sources',
+        'Import',
+      ]);
       expect(find.text(AdminScreen.sourcesSubtitle), findsOneWidget);
       await tester.tap(find.text('Sources'));
       await tester.pumpAndSettle();
       expect(location(app), AppRoutes.adminSources);
       expect(find.text(AdminSourcesScreen.emptyRun), findsOneWidget);
+      // Second bloc sous le premier : la liste ne le construit qu'à l'approche.
+      await tester.scrollUntilVisible(
+        find.text(AdminSourcesScreen.emptyUnresolved),
+        200,
+        // La liste de la page, pas le défilement propre d'un état vide.
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text(AdminSourcesScreen.emptyUnresolved), findsOneWidget);
     });
 

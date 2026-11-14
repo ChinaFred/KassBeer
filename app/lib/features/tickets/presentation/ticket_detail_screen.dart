@@ -10,7 +10,9 @@ import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/menu_compte.dart';
 import '../../../core/presentation/page_document.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -22,6 +24,7 @@ import 'my_tickets_screen.dart';
 import 'ticket_lien_github.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
+import 'vignette_capture.dart';
 
 /// Textes des états du suivi d'un ticket.
 const textesTicket = TextesDocument(
@@ -55,15 +58,18 @@ class TicketDetailScreen extends ConsumerWidget {
         leading: BackButton(
           onPressed: () => quitterPageTicket(context, AppRoutes.tickets),
         ),
+        actions: const [MenuCompte(), SizedBox(width: 8)],
       ),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (offline) const BandeauHorsLigne(),
-            Expanded(child: TicketDetailPane(id: id)),
-          ],
+      body: ZoneCapture(
+        child: SafeArea(
+          top: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (offline) const BandeauHorsLigne(),
+              Expanded(child: TicketDetailPane(id: id)),
+            ],
+          ),
         ),
       ),
     );
@@ -144,16 +150,13 @@ class _DetailState extends ConsumerState<_Detail> {
         : null;
     final link = delivered ? lienGithub(ticket.deliveredPrUrl) : null;
     final reply = ticket.replyText;
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
     const gap = SizedBox(height: 16);
 
     return SelectionArea(
       child: ListView(
-        // Marge basse de 96 : à côté de la liste, le bouton flottant
+        // Marge basse du bouton flottant : à côté de la liste, le bouton
         // « Signaler ou proposer » ne cache pas les dernières lignes.
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, kMargeBoutonFlottant),
         children: [
           Center(
             child: ConstrainedBox(
@@ -161,31 +164,10 @@ class _DetailState extends ConsumerState<_Detail> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      ExcludeSemantics(
-                        child: Icon(
-                          ticketTypeIcon(ticket.type),
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(child: Text(ticket.type.label, style: muted)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      ticket.title,
-                      style: theme.textTheme.headlineSmall,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
+                  EnTeteFiche(
+                    titre: ticket.title,
+                    sousTitre: ticket.type.label,
+                    etiquettes: [
                       EtiquetteStatut(ticket: ticket),
                       if (comparison != null)
                         Etiquette(
@@ -195,14 +177,6 @@ class _DetailState extends ConsumerState<_Detail> {
                         ),
                     ],
                   ),
-                  if (created != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Envoyé le ${formatDateChiffres(created)} à '
-                      '${formatHeure(created)}',
-                      style: muted,
-                    ),
-                  ],
                   gap,
                   for (final p in phrasesStatut(ticket, now))
                     Padding(
@@ -235,21 +209,34 @@ class _DetailState extends ConsumerState<_Detail> {
                   ],
                   gap,
                   FriseTicket(ticket: ticket),
-                  const TitreSection('Description'),
-                  Text(ticket.description, style: theme.textTheme.bodyLarge),
-                  gap,
-                  Text(
-                    'Écran : ${ticketScreenLabel(ticket.screen)}',
-                    style: muted,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    envoyeAvec(
+                  const SizedBox(height: 8),
+                  if (created != null)
+                    LigneFiche(
+                      label: 'Envoyé le',
+                      value:
+                          '${formatDateChiffres(created)} à '
+                          '${formatHeure(created)}',
+                    ),
+                  LigneFiche(
+                    label: 'Envoyé avec',
+                    value: versionEtPlateforme(
                       version: ticket.appVersion,
                       platform: ticket.platform,
                     ),
-                    style: muted,
                   ),
+                  LigneFiche(
+                    label: 'Écran',
+                    value: ticketScreenLabel(ticket.screen),
+                  ),
+                  const TitreSection('Description'),
+                  Text(ticket.description, style: theme.textTheme.bodyLarge),
+                  if (ticket.screenshotPath case final path?) ...[
+                    gap,
+                    CaptureDuTicket(
+                      path: path,
+                      expiresAt: ticket.screenshotExpiresAt,
+                    ),
+                  ],
                 ],
               ),
             ),

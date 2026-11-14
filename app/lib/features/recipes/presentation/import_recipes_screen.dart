@@ -11,10 +11,14 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/fichiers/echange_fichiers.dart';
 import '../../../core/presentation/bandeau_hors_ligne.dart';
 import '../../../core/presentation/breakpoints.dart';
+import '../../../core/presentation/encadre.dart';
+import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/menu_compte.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/services/error_report_service.dart';
@@ -254,6 +258,10 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
   var _ignorees = <({String nom, String raison})>[];
   bool _horsLigneALaFin = false;
 
+  /// Import arrêté depuis le menu du compte : les recettes suivantes ne
+  /// s'écrivent pas.
+  bool _arret = false;
+
   /// Statuts de l'aperçu par équipement : un appui sur une case ne les
   /// recalcule pas (500 recettes au plus).
   final _statuts = <String, List<StatutLu>>{};
@@ -364,6 +372,22 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
 
   void _retour() =>
       context.canPop() ? context.pop() : context.go(AppRoutes.recipes);
+
+  /// Vrai si rien ne s'écrit, ou si l'utilisateur arrête l'import (menu du
+  /// compte ; le retour est désactivé pendant l'écriture).
+  Future<bool> _peutQuitter() async {
+    if (_etape is! _Ecriture) return true;
+    // ticket: aucun (confirmation)
+    final arreter = await confirmerAbandon(
+      context,
+      TextesImport.arreterTexte,
+      titre: TextesImport.arreterTitre,
+      continuer: TextesImport.continuer,
+      abandonner: TextesImport.arreter,
+    );
+    if (arreter) _arret = true;
+    return arreter;
+  }
 
   /// Choix en cours sur Android : les boutons de choix ne répondent pas, le
   /// canal refuserait un second appel (`ALREADY_ACTIVE`). Sur le web, un
@@ -530,6 +554,7 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
         }
       };
     _suivi = suivi;
+    _arret = false;
     _horsLigneALaFin = access.offline;
     setState(() => _etape = _Ecriture(0, total));
     _annoncer(TextesImport.enCours(0, total));
@@ -538,6 +563,10 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
     final repository = ref.read(recipesRepositoryProvider);
     for (final (n, i) in choisies.indexed) {
       final r = recettes[i];
+      if (_arret) {
+        _ignorees.add((nom: r.nom, raison: TextesImport.arretee));
+        continue;
+      }
       final created = repository.create(
         content: avecEquipement(r.content!, equipmentId),
         ownerUid: access.user.uid,
@@ -622,14 +651,20 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
         appBar: AppBar(
           title: const Text(TextesImport.titre),
           leading: BackButton(onPressed: ecriture ? null : _retour),
+          actions: [
+            MenuCompte(avantDeQuitter: ecriture ? _peutQuitter : null),
+            const SizedBox(width: 8),
+          ],
         ),
-        body: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              if (access?.offline ?? false) const BandeauHorsLigne(),
-              Expanded(child: body),
-            ],
+        body: ZoneCapture(
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                if (access?.offline ?? false) const BandeauHorsLigne(),
+                Expanded(child: body),
+              ],
+            ),
           ),
         ),
       ),
@@ -649,7 +684,6 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
       _centre(ListView(padding: const EdgeInsets.all(16), children: children));
 
   Widget _accueil(_Accueil etape) {
-    final theme = Theme.of(context);
     final erreur = etape.erreur;
     final Widget bouton;
     if (etape.reessayer) {
@@ -668,19 +702,11 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
     }
     return _colonne([
       if (erreur != null)
-        Semantics(
+        Encadre(
+          ton: TonEncadre.erreur,
+          icone: Icons.error_outline,
           liveRegion: true,
-          child: Material(
-            color: theme.colorScheme.errorContainer,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                erreur,
-                style: TextStyle(color: theme.colorScheme.onErrorContainer),
-              ),
-            ),
-          ),
+          child: Text(erreur),
         )
       else
         const Text(TextesImport.aide),
@@ -816,7 +842,6 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
           decoration: const InputDecoration(
             labelText: TextesImport.equipement,
             helperText: TextesImport.equipementAide,
-            border: OutlineInputBorder(),
           ),
           items: [
             const DropdownMenuItem(
@@ -1028,8 +1053,9 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
                     child: Etiquette(label: TextesImport.enAttente),
                   ),
             trailing: const Icon(Icons.chevron_right),
-            // `push` : le retour ramène au compte rendu.
-            onTap: () => context.push(AppRoutes.recipe(c.id)),
+            // `push` d'une page hors de la coquille : le retour ramène au
+            // compte rendu (ticket #60).
+            onTap: () => context.push(AppRoutes.importedRecipe(c.id)),
           ),
       ],
       if (_ignorees.isNotEmpty) ...[

@@ -6,6 +6,8 @@
 
 import type * as AdminFirestore from "firebase-admin/firestore";
 
+import { ensureDefaultApp } from "./adminApp";
+
 export interface FirestoreKit {
   db: AdminFirestore.Firestore;
   FieldValue: typeof AdminFirestore.FieldValue;
@@ -17,14 +19,14 @@ let kit: FirestoreKit | null = null;
 
 /**
  * Le client Firestore. Un chargement en échec lève et n'est pas mémorisé : l'appelant
- * journalise, l'appel suivant réessaie. Entre le test de `getApps()` et `initializeApp()`
- * il n'y a aucun `await` : deux appels simultanés n'initialisent qu'une application.
+ * journalise, l'appel suivant réessaie. `ensureDefaultApp` est synchrone : deux appels
+ * simultanés n'initialisent qu'une application par défaut.
  */
 export async function firestore(): Promise<FirestoreKit> {
   if (kit !== null) return kit;
   const app = await import("firebase-admin/app");
   const fs = await import("firebase-admin/firestore");
-  if (app.getApps().length === 0) app.initializeApp();
+  ensureDefaultApp(app);
   kit = {
     db: fs.getFirestore(),
     FieldValue: fs.FieldValue,

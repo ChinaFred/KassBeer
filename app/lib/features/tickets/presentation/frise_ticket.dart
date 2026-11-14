@@ -22,6 +22,7 @@ typedef EtapeFrise = ({String label, IconData icon, bool erreur});
   final suivi = [
     envoi,
     recu,
+    etape(TicketStatus.analyzed),
     etape(TicketStatus.validated),
     etape(TicketStatus.inProgress),
     etape(TicketStatus.delivered),
@@ -29,9 +30,10 @@ typedef EtapeFrise = ({String label, IconData icon, bool erreur});
   return switch (ticket.status) {
     TicketStatus.pending => (etapes: suivi, actuelle: 0),
     TicketStatus.received => (etapes: suivi, actuelle: 1),
-    TicketStatus.validated => (etapes: suivi, actuelle: 2),
-    TicketStatus.inProgress => (etapes: suivi, actuelle: 3),
-    TicketStatus.delivered => (etapes: suivi, actuelle: 4),
+    TicketStatus.analyzed => (etapes: suivi, actuelle: 2),
+    TicketStatus.validated => (etapes: suivi, actuelle: 3),
+    TicketStatus.inProgress => (etapes: suivi, actuelle: 4),
+    TicketStatus.delivered => (etapes: suivi, actuelle: 5),
     TicketStatus.refused => (
       etapes: [envoi, recu, etape(TicketStatus.refused)],
       actuelle: 2,

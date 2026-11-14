@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seul dossier exposé par MisesAJourFileProvider (ADR-012) : l'APK téléchargé et
+     contrôlé, effacé au lancement suivant de l'application. -->
+<paths>
+    <cache-path name="updates" path="updates/" />
+</paths>

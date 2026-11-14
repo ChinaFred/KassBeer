@@ -2,19 +2,25 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kass_beer/core/presentation/app_shell.dart';
+import 'package:kass_beer/core/presentation/menu_compte.dart';
 import 'package:kass_beer/core/presentation/etiquette.dart';
+import 'package:kass_beer/core/presentation/fiche.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
 import 'package:kass_beer/features/tickets/presentation/admin_ticket_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/admin_tickets_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/bandeau_tickets_admin.dart';
+import 'package:kass_beer/features/tickets/presentation/boite_lancement.dart';
 import 'package:kass_beer/features/tickets/presentation/frise_ticket.dart';
 import 'package:kass_beer/features/tickets/presentation/my_tickets_screen.dart';
+import 'package:kass_beer/features/tickets/presentation/section_analyses.dart';
 import 'package:kass_beer/features/tickets/presentation/ticket_detail_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/ticket_statut.dart';
 
@@ -26,8 +32,9 @@ void main() {
   const all = TicketDecisionAction.values;
 
   group('domaine', () {
-    test('À traiter : reçu ou envoi impossible, jamais validé', () {
+    test('À traiter : reçu, analysé ou envoi impossible, jamais validé', () {
       expect(unTicket(status: TicketStatus.received).toProcess, isTrue);
+      expect(unTicket(status: TicketStatus.analyzed).toProcess, isTrue);
       expect(unTicket(status: TicketStatus.sendFailed).toProcess, isTrue);
       for (final s in [
         TicketStatus.pending,
@@ -89,13 +96,21 @@ void main() {
       List<String> labels(Ticket t) => [
         for (final e in etapesFrise(t)!.etapes) e.label,
       ];
-      const suivi = ['Envoi en cours', 'Reçu', 'Validé', 'En cours', 'Livré'];
+      const suivi = [
+        'Envoi en cours',
+        'Reçu',
+        'Analysé',
+        'Validé',
+        'En cours',
+        'Livré',
+      ];
       for (final (status, actuelle) in [
         (TicketStatus.pending, 0),
         (TicketStatus.received, 1),
-        (TicketStatus.validated, 2),
-        (TicketStatus.inProgress, 3),
-        (TicketStatus.delivered, 4),
+        (TicketStatus.analyzed, 2),
+        (TicketStatus.validated, 3),
+        (TicketStatus.inProgress, 4),
+        (TicketStatus.delivered, 5),
       ]) {
         final t = unTicket(status: status);
         expect(labels(t), suivi, reason: status.name);
@@ -187,129 +202,122 @@ void main() {
       );
     });
 
-    group('ligne d\'état d\'une décision', () {
-      LigneDecision? ligne(
-        TicketDecision d, {
-        bool offline = false,
-        DateTime? ticketLease,
-      }) => ligneDecision(
-        d,
-        offline: offline,
-        now: now,
-        ticketLease: ticketLease,
-      );
-
-      test('écriture locale hors ligne', () {
-        final l = ligne(
-          uneDecision(hasPendingWrites: true, requestedAt: null),
-          offline: true,
-        )!;
-        expect(l.icon, Icons.cloud_off);
+    group('messages des décisions (T7)', () {
+      test('décision appliquée', () {
         expect(
-          l.text,
-          'Refus enregistré sur cet appareil. Il partira au retour du réseau.',
-        );
-        expect(
-          ligne(
-            uneDecision(
-              action: TicketDecisionAction.close,
-              hasPendingWrites: true,
-            ),
-            offline: true,
-          )!.text,
-          'Clôture enregistrée sur cet appareil. Elle partira au retour du '
-          'réseau.',
-        );
-      });
-
-      test('en attente ou en cours : barre de progression', () {
-        final l = ligne(
-          uneDecision(requestedAt: now.subtract(const Duration(seconds: 30))),
-        )!;
-        expect(l.progress, isTrue);
-        expect(l.text, 'Refus en cours sur GitHub.');
-        expect(
-          ligne(
-            uneDecision(
-              action: TicketDecisionAction.validate,
-              state: TicketDecisionState.applying,
-              leaseUntil: now.add(const Duration(minutes: 1)),
-            ),
-          )!.text,
-          'Validation en cours sur GitHub.',
-        );
-      });
-
-      test('en attente depuis plus de 2 min', () {
-        expect(
-          ligne(
-            uneDecision(
-              action: TicketDecisionAction.close,
-              requestedAt: now.subtract(const Duration(minutes: 3)),
-            ),
-          )!.text,
-          'Le serveur n\'a pas encore pris cette clôture en compte.',
-        );
-      });
-
-      test('bail expiré pendant l\'application : interrompue', () {
-        final l = ligne(
-          uneDecision(state: TicketDecisionState.applying),
-          ticketLease: now.subtract(const Duration(minutes: 1)),
-        )!;
-        expect(l.progress, isFalse);
-        expect(
-          l.text,
-          'Refus interrompu. Le serveur le reprendra dans l\'heure.',
-        );
-        expect(
-          ligne(
-            uneDecision(
-              action: TicketDecisionAction.validate,
-              state: TicketDecisionState.applying,
-              leaseUntil: now.subtract(const Duration(minutes: 1)),
-            ),
-          )!.text,
-          'Validation interrompue. Le serveur la reprendra dans l\'heure.',
-        );
-      });
-
-      test('appliquée : aucune ligne', () {
-        expect(ligne(uneDecision(state: TicketDecisionState.applied)), isNull);
-      });
-
-      test('rejetée : raison du serveur', () {
-        final l = ligne(
-          uneDecision(
-            state: TicketDecisionState.rejected,
-            errorReason: 'Cette décision n\'est plus possible pour ce statut.',
+          messageDecisionAppliquee(
+            TicketDecisionAction.validate,
+            valideSurGithub: false,
           ),
-        )!;
-        expect(l.icon, Icons.info_outline);
-        expect(l.text, 'Cette décision n\'est plus possible pour ce statut.');
-        expect(l.retry, isFalse);
-      });
-
-      test('en échec : raison, Réessayer', () {
-        final l = ligne(
-          uneDecision(
-            action: TicketDecisionAction.close,
-            state: TicketDecisionState.failed,
-            errorReason: 'Jeton GitHub refusé ou expiré.',
-          ),
-        )!;
-        expect(l.error, isTrue);
-        expect(l.retry, isTrue);
+          'Ticket validé. Le membre voit « Validé ».',
+        );
         expect(
-          l.text,
-          'La clôture n\'a pas abouti : Jeton GitHub refusé ou expiré.',
+          messageDecisionAppliquee(
+            TicketDecisionAction.validate,
+            valideSurGithub: true,
+          ),
+          'Validation enregistrée. Vous pouvez lancer le développement.',
+        );
+        expect(
+          messageDecisionAppliquee(
+            TicketDecisionAction.refuse,
+            valideSurGithub: false,
+          ),
+          'Ticket refusé. L\'Issue est fermée.',
+        );
+        expect(
+          messageDecisionAppliquee(
+            TicketDecisionAction.close,
+            valideSurGithub: false,
+          ),
+          'Ticket clos. L\'Issue est fermée.',
         );
       });
 
-      test('état inconnu', () {
+      test('échec : motif, réseau, résultat inconnu, accès, partiel', () {
+        const refus = TicketDecisionAction.refuse;
         expect(
-          ligne(uneDecision(state: TicketDecisionState.unknown))!.text,
-          'État de la décision inconnu. Mettez l\'application à jour.',
+          messageEchecDecision(
+            refus,
+            const EchecReponse(
+              CauseEchecReponse.motif,
+              motif: 'Une décision est déjà en cours sur ce ticket.',
+            ),
+          ),
+          'Refus non publié : Une décision est déjà en cours sur ce ticket. '
+          'Votre texte est gardé.',
+        );
+        expect(
+          messageEchecDecision(
+            refus,
+            const EchecReponse(CauseEchecReponse.reseau),
+          ),
+          'Refus non publié : pas de réseau. Votre texte est gardé.',
+        );
+        expect(
+          messageEchecDecision(
+            TicketDecisionAction.close,
+            const EchecReponse(CauseEchecReponse.delai),
+          ),
+          'Résultat inconnu : le serveur n\'a pas répondu à temps. Regardez '
+          'le statut du ticket avant de clore à nouveau. Votre texte est '
+          'gardé.',
+        );
+        expect(
+          messageEchecDecision(
+            TicketDecisionAction.validate,
+            const EchecReponse(CauseEchecReponse.acces),
+          ),
+          'Validation non enregistrée : accès administrateur refusé.',
+        );
+        expect(
+          messageEchecDecision(
+            TicketDecisionAction.validate,
+            const EchecReponse(CauseEchecReponse.reseau),
+          ),
+          'Validation non enregistrée : pas de réseau.',
+        );
+        expect(
+          messageEchecDecision(
+            refus,
+            const EchecReponse(CauseEchecReponse.motif, partiel: true),
+          ),
+          'Le motif est publié sur GitHub, mais l\'Issue n\'est pas fermée. '
+          'Refuser à nouveau termine sans republier.',
+        );
+      });
+
+      test('relance d\'envoi', () {
+        expect(
+          messageRelanceEnvoi(
+            const ResultatRelanceEnvoi.envoi(
+              status: TicketStatus.received,
+              issueNumber: 12,
+            ),
+          ),
+          'Ticket envoyé sur GitHub : Issue #12.',
+        );
+        expect(
+          messageRelanceEnvoi(
+            const ResultatRelanceEnvoi.envoi(status: TicketStatus.pending),
+          ),
+          startsWith('Envoi relancé, mais GitHub'),
+        );
+        expect(
+          messageRelanceEnvoi(
+            const ResultatRelanceEnvoi.echec(
+              EchecReponse(CauseEchecReponse.reseau),
+            ),
+          ),
+          'Envoi non relancé : pas de réseau.',
+        );
+        expect(
+          messageRelanceEnvoi(
+            const ResultatRelanceEnvoi.echec(
+              EchecReponse(CauseEchecReponse.delai),
+            ),
+          ),
+          'Résultat inconnu : regardez le statut du ticket avant de relancer.',
         );
       });
     });
@@ -533,13 +541,15 @@ void main() {
       final app = await admin(tester);
       app.tickets.publishAll(const []);
       await go(tester, app, AppRoutes.adminTickets);
+      expect(find.text(AdminTicketsScreen.emptyTitle), findsOneWidget);
       expect(find.text(AdminTicketsScreen.emptyMessage), findsOneWidget);
     });
 
     testWidgets('lignes : numéro, nom de l\'auteur, date, pastilles', (
       tester,
     ) async {
-      final app = await admin(tester);
+      // Le compteur des lancements occupe une ligne au-dessus des filtres.
+      final app = await admin(tester, height: 1100);
       app.members.all.add(const [
         Member(
           email: 'brasseur@exemple.fr',
@@ -602,8 +612,13 @@ void main() {
       expect(tous.selected, isTrue);
       expect(find.text('Densité fausse'), findsOneWidget);
       await tapChip(tester, 'À traiter (0)');
+      expect(
+        find.text(AdminTicketsScreen.nothingToProcessTitle),
+        findsOneWidget,
+      );
       expect(find.text(AdminTicketsScreen.nothingToProcess), findsOneWidget);
       await tapChip(tester, 'Bloqués (0)');
+      expect(find.text(AdminTicketsScreen.nothingBlockedTitle), findsOneWidget);
       expect(find.text(AdminTicketsScreen.nothingBlocked), findsOneWidget);
       await tester.tap(find.text(AdminTicketsScreen.showAll));
       await tester.pumpAndSettle();
@@ -686,15 +701,23 @@ void main() {
       final chip = tester.getRect(find.text('À traiter (2)'));
       final valider = tester.getRect(find.text('Valider'));
       expect(valider.left, greaterThan(chip.right));
-      final tile = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, 'Densité fausse'),
-      );
-      expect(tile.selected, isTrue);
+      final ligne = find.widgetWithText(LigneListe, 'Densité fausse');
+      expect(tester.widget<LigneListe>(ligne).selected, isTrue);
       expect(
-        tile.selectedTileColor,
+        tester
+            .widget<Material>(
+              find.descendant(of: ligne, matching: find.byType(Material)).first,
+            )
+            .color,
         Theme.of(
           tester.element(find.text('Valider')),
         ).colorScheme.secondaryContainer,
+      );
+      expect(
+        tester.getSemantics(
+          find.descendant(of: ligne, matching: find.text('Densité fausse')),
+        ),
+        isSemantics(isSelected: true, isButton: true, hasTapAction: true),
       );
       await tester.tap(find.text('Autre idée'));
       await tester.pumpAndSettle();
@@ -717,6 +740,8 @@ void main() {
       WidgetTester tester,
       Ticket ticket, {
       List<TicketDecision>? decisions = const [],
+      RechercheDocument<TicketAnalysisDoc>? analyses =
+          const DocumentAbsent<TicketAnalysisDoc>(),
       double width = 400,
       double height = 900,
       bool offline = false,
@@ -731,6 +756,7 @@ void main() {
       if (decisions != null) {
         app.tickets.publishDecisions(ticket.id, decisions);
       }
+      if (analyses != null) app.tickets.analysesOf(ticket.id).add(analyses);
       app.container.read(routerProvider).go(AppRoutes.adminTicket(ticket.id));
       await settle(tester);
       return app;
@@ -751,8 +777,20 @@ void main() {
         decisions: [uneDecision(state: TicketDecisionState.applied)],
       );
       expect(find.text('Issue #12'), findsOneWidget);
-      expect(find.text('Auteur : brasseur@exemple.fr'), findsOneWidget);
-      expect(find.text('Envoyé le 08/11/26 à 09:30'), findsOneWidget);
+      // Métadonnées en lignes « libellé : valeur ».
+      Finder ligne(String libelle, String valeur) => find.ancestor(
+        of: find.text(valeur),
+        matching: find.widgetWithText(LigneFiche, libelle),
+      );
+      expect(ligne('Auteur', 'brasseur@exemple.fr'), findsOneWidget);
+      expect(ligne('Envoyé le', '08/11/26 à 09:30'), findsOneWidget);
+      expect(ligne('Envoyé avec', 'version 0.1.0, Android'), findsOneWidget);
+      expect(ligne('Écran', 'Recette'), findsOneWidget);
+      // En-tête de fiche : titre déclaré en-tête, type en sous-titre.
+      expect(
+        find.ancestor(of: find.text('Bug'), matching: find.byType(EnTeteFiche)),
+        findsOneWidget,
+      );
       expect(find.text('Motif du refus'), findsOneWidget);
       expect(find.text('Hors du périmètre.'), findsOneWidget);
       expect(find.text('La densité affichée est fausse.'), findsOneWidget);
@@ -761,9 +799,16 @@ void main() {
       // Ticket refusé : aucune décision possible, aucune barre.
       expect(find.text('Valider'), findsNothing);
       expect(find.text('Refuser'), findsNothing);
-      await tester.tap(find.text('Ouvrir l\'Issue #12'));
+      // Refusé sans document d'analyses : « pas encore relevée », et un
+      // second bouton vers l'Issue.
+      expect(find.text('Analyses'), findsOneWidget);
+      expect(find.text(SectionAnalyses.pasEncoreRelevee), findsOneWidget);
+      expect(find.text('Ouvrir l\'Issue #12'), findsNWidgets(2));
+      await tester.tap(find.text('Ouvrir l\'Issue #12').first);
       await tester.pumpAndSettle();
       expect(app.openedLinks.single.path, '/ChinaFred/KassBeer/issues/12');
+      await tester.ensureVisible(find.text('Décisions (1)'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Décisions (1)'));
       await tester.pumpAndSettle();
       expect(
@@ -825,10 +870,12 @@ void main() {
       expect(find.text('Refuser'), findsOneWidget);
     });
 
-    testWidgets('Valider : confirmation, décision écrite, boutons retirés', (
+    testWidgets('Valider : confirmation, appel, ligne en cours, message', (
       tester,
     ) async {
       final app = await fiche(tester, unTicket(allowedDecisions: all));
+      final server = Completer<EchecReponse?>();
+      app.tickets.decideResult = () => server.future;
       await tester.tap(find.text('Valider'));
       await tester.pumpAndSettle();
       expect(find.text('Valider ce ticket ?'), findsOneWidget);
@@ -841,22 +888,93 @@ void main() {
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Valider').last);
       await settle(tester);
-      final d = app.tickets.decisionsCreated.single;
+      final d = app.tickets.decisionsAppelees.single;
       expect(d.action, TicketDecisionAction.validate);
       expect(d.text, isNull);
-      expect(d.requestedByUid, adminUser.uid);
       expect(find.text('Refuser'), findsNothing);
       expect(find.text('Validation en cours sur GitHub.'), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('Décision en cours')), findsWidgets);
+      expect(
+        find.bySemanticsLabel(RegExp('Validation en cours')),
+        findsWidgets,
+      );
+      server.complete(null);
+      await settle(tester);
+      expect(
+        find.text('Ticket validé. Le membre voit « Validé ».'),
+        findsOneWidget,
+      );
+      expect(find.text('Validation en cours sur GitHub.'), findsNothing);
     });
 
-    testWidgets('Refuser : avertissement, motif trop court, texte écrit', (
+    testWidgets('Valider un ticket validé sur GitHub seul : texte propre', (
       tester,
     ) async {
       final app = await fiche(
         tester,
+        unTicket(
+          status: TicketStatus.validated,
+          allowedDecisions: const [
+            TicketDecisionAction.refuse,
+            TicketDecisionAction.close,
+            TicketDecisionAction.validate,
+          ],
+        ),
+      );
+      app.tickets.decideResult = () async => null;
+      await tester.tap(find.text('Valider'));
+      await tester.pumpAndSettle();
+      expect(find.text('Valider ce ticket ?'), findsOneWidget);
+      expect(find.text(kValiderConfirmationGithub), findsOneWidget);
+      expect(
+        find.text(
+          'La validation sera enregistrée dans l\'application. « Lancer le '
+          'développement » sera ensuite proposé.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(kValiderConfirmation), findsNothing);
+      await tester.tap(find.widgetWithText(FilledButton, 'Valider').last);
+      await settle(tester);
+      expect(
+        app.tickets.decisionsAppelees.single.action,
+        TicketDecisionAction.validate,
+      );
+      expect(
+        find.text(
+          'Validation enregistrée. Vous pouvez lancer le développement.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Valider en échec : boutons revenus, message', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      app.tickets.decideResult = () async => const EchecReponse(
+        CauseEchecReponse.motif,
+        motif: 'Cette décision n\'est plus possible pour ce statut.',
+      );
+      await tester.tap(find.text('Valider'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Valider').last);
+      await settle(tester);
+      expect(
+        find.text(
+          'Validation non enregistrée : Cette décision n\'est plus possible '
+          'pour ce statut.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Valider'), findsOneWidget);
+    });
+
+    testWidgets('Refuser : avertissement, motif trop court, appel, boîte '
+        'ouverte pendant l\'appel', (tester) async {
+      final app = await fiche(
+        tester,
         unTicket(status: TicketStatus.inProgress, allowedDecisions: all),
       );
+      final server = Completer<EchecReponse?>();
+      app.tickets.decideResult = () => server.future;
       await tester.tap(find.text('Refuser'));
       await tester.pumpAndSettle();
       expect(find.text('Refuser ce ticket'), findsOneWidget);
@@ -866,6 +984,7 @@ void main() {
         find.text('L\'Issue sera fermée comme non prévue.'),
         findsOneWidget,
       );
+      expect(find.text('0/4000'), findsOneWidget);
       await tester.enterText(find.byType(TextFormField), 'Non');
       await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
       await tester.pumpAndSettle();
@@ -873,17 +992,38 @@ void main() {
         find.text('Le motif doit faire au moins 5 caractères.'),
         findsOneWidget,
       );
-      expect(app.tickets.decisionsCreated, isEmpty);
+      expect(app.tickets.decisionsAppelees, isEmpty);
+      await tester.enterText(find.byType(TextFormField), 'm' * 4001);
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Le motif ne doit pas dépasser 4 000 caractères.'),
+        findsOneWidget,
+      );
+      expect(app.tickets.decisionsAppelees, isEmpty);
       await tester.enterText(
         find.byType(TextFormField),
         '  Hors du périmètre.  ',
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
       await settle(tester);
-      final d = app.tickets.decisionsCreated.single;
+      final d = app.tickets.decisionsAppelees.single;
       expect(d.action, TicketDecisionAction.refuse);
       expect(d.text, 'Hors du périmètre.');
+      // La boîte reste ouverte : champ inactif, « Fermer », phrase annoncée.
+      expect(find.text('Refuser ce ticket'), findsOneWidget);
+      expect(
+        find.text(
+          'Refus en cours. Vous pouvez fermer : le résultat s\'affichera dans '
+          'un message.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Fermer'), findsOneWidget);
+      server.complete(null);
+      await settle(tester);
       expect(find.text('Refuser ce ticket'), findsNothing);
+      expect(find.text('Ticket refusé. L\'Issue est fermée.'), findsOneWidget);
     });
 
     testWidgets('Clore : annuler garde le brouillon', (tester) async {
@@ -911,45 +1051,290 @@ void main() {
       expect(find.text('Déjà fait.'), findsOneWidget);
     });
 
-    testWidgets('écriture refusée : annoncée, boutons et brouillon rendus', (
+    testWidgets('échec, boîte ouverte : message dans la boîte, texte gardé', (
       tester,
     ) async {
       final app = await fiche(tester, unTicket(allowedDecisions: all));
-      final answer = Completer<bool>();
-      app.tickets.adminAnswer = () => answer.future;
+      app.tickets.decideResult = () async =>
+          const EchecReponse(CauseEchecReponse.reseau);
       await tester.tap(find.text('Refuser'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField), 'Hors du périmètre.');
       await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
       await settle(tester);
-      expect(find.text('Refuser'), findsNothing);
-      answer.complete(false);
-      await tester.pumpAndSettle();
-      expect(find.text('Décision non enregistrée. Réessayez.'), findsOneWidget);
-      expect(find.text('Refuser'), findsOneWidget);
-      await tester.tap(find.text('Refuser'));
-      await tester.pumpAndSettle();
-      expect(find.text('Hors du périmètre.'), findsOneWidget);
-    });
-
-    testWidgets('hors ligne : décision enregistrée sur l\'appareil', (
-      tester,
-    ) async {
-      await fiche(tester, unTicket(allowedDecisions: all), offline: true);
-      await tester.tap(find.text('Valider'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Valider').last);
-      await tester.pump();
+      expect(find.text('Refuser ce ticket'), findsOneWidget);
       expect(
-        find.text(
-          'Validation enregistrée sur cet appareil. Elle partira au retour du '
-          'réseau.',
+        find.text('Refus non publié : pas de réseau. Votre texte est gardé.'),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(TextFormField),
+          matching: find.text('Hors du périmètre.'),
         ),
         findsOneWidget,
       );
     });
 
-    testWidgets('rejetée : raison, boutons revenus, texte repris', (
+    testWidgets('motif refusé par le serveur : sous le champ', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      app.tickets.decideResult = () async => const EchecReponse(
+        CauseEchecReponse.motif,
+        champ: 'text',
+        motif: 'Le motif doit faire au moins 5 caractères.',
+      );
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '@@@@@@');
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await settle(tester);
+      expect(
+        find.text('Le motif doit faire au moins 5 caractères.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('échec, boîte fermée : message, brouillon rendu à la '
+        'réouverture', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      final server = Completer<EchecReponse?>();
+      app.tickets.decideResult = () => server.future;
+      await tester.tap(find.text('Clore'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Déjà fait.');
+      await tester.tap(find.widgetWithText(FilledButton, 'Clore'));
+      await settle(tester);
+      await tester.tap(find.text('Fermer'));
+      // Barre de progression indéfinie : pas de pumpAndSettle pendant l'appel.
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Clôture en cours sur GitHub.'), findsOneWidget);
+      expect(find.text('Clore'), findsNothing);
+      server.complete(const EchecReponse(CauseEchecReponse.delai));
+      await settle(tester);
+      expect(
+        find.text(
+          'Résultat inconnu : le serveur n\'a pas répondu à temps. Regardez le '
+          'statut du ticket avant de clore à nouveau. Votre texte est gardé.',
+        ),
+        findsWidgets,
+      );
+      // Le message d'échec (10 s) couvre la barre : il se retire avant la
+      // réouverture.
+      await tester.pump(const Duration(seconds: 11));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Clore'));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(TextFormField),
+          matching: find.text('Déjà fait.'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('texte gardé par le serveur : message dédié', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      app.tickets.decideResult = () async => null;
+      app.tickets.texteGarde = true;
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Nouveau motif.');
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await settle(tester);
+      expect(
+        find.text(
+          'Ticket refusé. L\'Issue est fermée. Le motif déjà publié est '
+          'gardé : votre nouveau texte n\'est pas publié.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('boîte fermée pendant son animation : échec en message de '
+        '10 s', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      final server = Completer<EchecReponse?>();
+      app.tickets.decideResult = () => server.future;
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Hors du périmètre.');
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await tester.pump();
+      await tester.tap(find.text('Fermer'));
+      // La boîte est encore montée : son animation de sortie n'est pas finie.
+      await tester.pump(const Duration(milliseconds: 50));
+      server.complete(const EchecReponse(CauseEchecReponse.reseau));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      const message =
+          'Refus non publié : pas de réseau. Votre texte est gardé.';
+      expect(find.text(message), findsOneWidget);
+      final snack = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snack.duration, kDureeMessageEchec);
+    });
+
+    testWidgets('motif sur le texte : réaffiché à la réouverture, effacé à la '
+        'frappe', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      const motif = 'Le motif doit faire au moins 5 caractères.';
+      app.tickets.decideResult = () async => const EchecReponse(
+        CauseEchecReponse.motif,
+        champ: 'text',
+        motif: motif,
+      );
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '@@@@@@');
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await settle(tester);
+      expect(find.text(motif), findsOneWidget);
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      expect(find.text(motif), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField), 'Hors du périmètre.');
+      await tester.pumpAndSettle();
+      expect(find.text(motif), findsNothing);
+    });
+
+    testWidgets('focus après un échec : champ, puis bouton si le texte est '
+        'figé', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      app.tickets.decideResult = () async =>
+          const EchecReponse(CauseEchecReponse.reseau);
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Hors du périmètre.');
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await settle(tester);
+      expect(
+        tester
+            .widget<EditableText>(find.byType(EditableText))
+            .focusNode
+            .hasFocus,
+        isTrue,
+      );
+      app.tickets.decideResult = () async => const EchecReponse(
+        CauseEchecReponse.motif,
+        motif: 'Motif publié, mais l\'Issue n\'a pas été fermée. Réessayez.',
+        partiel: true,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await settle(tester);
+      final bouton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Refuser'),
+      );
+      expect(bouton.focusNode?.hasFocus, isTrue);
+    });
+
+    testWidgets('réouverture après un échec partiel : focus au bouton', (
+      tester,
+    ) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      app.tickets.decideResult = () async => const EchecReponse(
+        CauseEchecReponse.motif,
+        motif: 'Motif publié, mais l\'Issue n\'a pas été fermée. Réessayez.',
+        partiel: true,
+      );
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Hors du périmètre.');
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await settle(tester);
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      final bouton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Refuser'),
+      );
+      expect(bouton.focusNode?.hasFocus, isTrue);
+      expect(
+        tester
+            .widget<EditableText>(find.byType(EditableText))
+            .focusNode
+            .hasFocus,
+        isFalse,
+      );
+    });
+
+    testWidgets('lancement en cours d\'appel : décisions inactives, aucune '
+        'décision ne part', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      final lancement = app.container.read(
+        lancementFicheProvider('t1').notifier,
+      );
+      unawaited(lancement.lancer(ActionLancement.analyse));
+      await tester.pump();
+      // Aucun bouton de lancement sur ce ticket : la ligne dit pourquoi les
+      // décisions sont inactives.
+      expect(find.text('Lancement en cours.'), findsOneWidget);
+      for (final label in ['Valider', 'Refuser', 'Clore']) {
+        final button = tester.widget<ButtonStyleButton>(
+          find.ancestor(
+            of: find.text(label),
+            matching: find.bySubtype<ButtonStyleButton>(),
+          ),
+        );
+        expect(button.onPressed, isNull, reason: label);
+      }
+      final resultat = await app.container
+          .read(decisionsFicheProvider('t1').notifier)
+          .decider(TicketDecisionAction.validate);
+      expect(resultat.echec?.cause, CauseEchecReponse.autre);
+      expect(app.tickets.decisionsAppelees, isEmpty);
+    });
+
+    testWidgets('échec partiel : texte figé, message dédié', (tester) async {
+      final app = await fiche(tester, unTicket(allowedDecisions: all));
+      app.tickets.decideResult = () async => const EchecReponse(
+        CauseEchecReponse.motif,
+        motif: 'Motif publié, mais l\'Issue n\'a pas été fermée. Réessayez.',
+        partiel: true,
+      );
+      await tester.tap(find.text('Refuser'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Hors du périmètre.');
+      await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
+      await settle(tester);
+      expect(
+        find.text(
+          'Le motif est publié sur GitHub, mais l\'Issue n\'est pas fermée. '
+          'Refuser à nouveau termine sans republier.',
+        ),
+        findsOneWidget,
+      );
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.readOnly, isTrue);
+    });
+
+    testWidgets('hors ligne : boutons inactifs, une seule ligne, aucun appel', (
+      tester,
+    ) async {
+      final app = await fiche(
+        tester,
+        unTicket(allowedDecisions: all, canAnswer: true),
+        offline: true,
+      );
+      for (final label in ['Valider', 'Refuser', 'Clore', 'Répondre']) {
+        final button = tester.widget<ButtonStyleButton>(
+          find.ancestor(
+            of: find.text(label),
+            matching: find.bySubtype<ButtonStyleButton>(),
+          ),
+        );
+        expect(button.onPressed, isNull, reason: label);
+      }
+      expect(find.text(kActionsHorsLigne), findsOneWidget);
+      await tester.tap(find.text('Valider'));
+      await tester.pumpAndSettle();
+      expect(find.text('Valider ce ticket ?'), findsNothing);
+      expect(app.tickets.decisionsAppelees, isEmpty);
+    });
+
+    testWidgets('rejetée : boutons présents, texte repris dans la boîte', (
       tester,
     ) async {
       await fiche(
@@ -962,10 +1347,6 @@ void main() {
           ),
         ],
       );
-      expect(
-        find.text('Une décision est déjà en cours sur ce ticket.'),
-        findsOneWidget,
-      );
       await tester.tap(find.text('Refuser'));
       await tester.pumpAndSettle();
       expect(
@@ -977,66 +1358,7 @@ void main() {
       );
     });
 
-    testWidgets('en échec : Réessayer écrit la reprise', (tester) async {
-      final app = await fiche(
-        tester,
-        unTicket(allowedDecisions: all),
-        decisions: [
-          uneDecision(
-            id: 'd9',
-            state: TicketDecisionState.failed,
-            errorReason: 'Motif publié, mais l\'Issue n\'a pas été fermée.',
-          ),
-        ],
-      );
-      expect(
-        find.text(
-          'Le refus n\'a pas abouti : Motif publié, mais l\'Issue n\'a pas '
-          'été fermée.',
-        ),
-        findsOneWidget,
-      );
-      // « Réessayer » et les décisions restent, sous la consigne.
-      expect(find.text(kApresEchec), findsOneWidget);
-      expect(find.text('Valider'), findsOneWidget);
-      expect(
-        tester.getTopLeft(find.text(kApresEchec)).dy,
-        lessThan(tester.getTopLeft(find.text('Réessayer')).dy),
-      );
-      await tester.tap(find.text('Réessayer'));
-      await tester.pump();
-      expect(app.tickets.decisionRetries, ['t1/d9']);
-      expect(find.text('Relance en cours'), findsOneWidget);
-    });
-
-    testWidgets('hors ligne : Réessayer dit que la reprise attend le réseau', (
-      tester,
-    ) async {
-      final app = await fiche(
-        tester,
-        unTicket(allowedDecisions: all),
-        offline: true,
-        decisions: [uneDecision(id: 'd9', state: TicketDecisionState.failed)],
-      );
-      await tester.tap(find.text('Réessayer'));
-      await settle(tester);
-      expect(app.tickets.decisionRetries, ['t1/d9']);
-      // Comme Firestore : la décision reste `failed` en cache, avec une
-      // écriture en attente.
-      final cached = app.tickets.decisionsOf('t1').value!.valides.single;
-      expect(cached.state, TicketDecisionState.failed);
-      expect(cached.hasPendingWrites, isTrue);
-      expect(find.text('Relance en cours'), findsNothing);
-      expect(find.text(kRelanceEnvoiHorsLigne), findsOneWidget);
-      expect(
-        find.text(
-          'Refus enregistré sur cet appareil. Il partira au retour du réseau.',
-        ),
-        findsNothing,
-      );
-    });
-
-    testWidgets('hors ligne : Relancer l\'envoi attend le réseau', (
+    testWidgets('hors ligne : Relancer l\'envoi inactif, phrase', (
       tester,
     ) async {
       final app = await fiche(
@@ -1046,45 +1368,16 @@ void main() {
       );
       await tester.tap(find.text('Relancer l\'envoi'));
       await settle(tester);
-      expect(app.tickets.sendRetries, ['t1']);
-      expect(app.tickets.all.value!.valides.single.hasPendingWrites, isTrue);
-      expect(find.text('Relance en cours'), findsNothing);
-      expect(find.text(kRelanceEnvoiHorsLigne), findsOneWidget);
+      expect(app.tickets.sendRetries, isEmpty);
+      expect(find.text(kRelancerEnvoiHorsLigne), findsOneWidget);
     });
 
-    testWidgets('hors ligne : relances gardées au changement de disposition', (
-      tester,
-    ) async {
-      await fiche(
-        tester,
-        unTicket(status: TicketStatus.sendFailed, allowedDecisions: all),
-        offline: true,
-        width: 1000,
-        decisions: [uneDecision(id: 'd9', state: TicketDecisionState.failed)],
-      );
-      await tester.tap(find.text('Relancer l\'envoi'));
-      await settle(tester);
-      await tester.tap(find.text('Réessayer'));
-      await settle(tester);
-      expect(find.text(kRelanceEnvoiHorsLigne), findsNWidgets(2));
-      // La fiche est reconstruite à droite de la liste : les deux lignes
-      // viennent du cache, pas de l'état de l'ancienne fiche.
-      tester.view.physicalSize = const Size(1200, 900);
-      await settle(tester);
-      expect(find.byType(ChoiceChip), findsNWidgets(3));
-      expect(find.text(kRelanceEnvoiHorsLigne), findsNWidgets(2));
-      expect(find.text('Relancer l\'envoi'), findsNothing);
-    });
-
-    testWidgets('décisions en lecture : barre de progression, aucun bouton', (
-      tester,
-    ) async {
+    testWidgets('historique en lecture : boutons affichés', (tester) async {
       await fiche(tester, unTicket(allowedDecisions: all), decisions: null);
-      expect(find.bySemanticsLabel('Lecture des décisions'), findsOneWidget);
-      expect(find.text('Valider'), findsNothing);
+      expect(find.text('Valider'), findsOneWidget);
     });
 
-    testWidgets('décisions illisibles : panne, Réessayer, aucun bouton', (
+    testWidgets('historique illisible : panne, Réessayer, boutons gardés', (
       tester,
     ) async {
       final app = await fiche(
@@ -1095,8 +1388,7 @@ void main() {
       app.tickets.decisionsOf('t1').addError(StateError('panne'));
       await settle(tester);
       expect(find.text('Impossible de lire les décisions.'), findsOneWidget);
-      expect(find.text('Valider'), findsNothing);
-      expect(find.bySemanticsLabel('Lecture des décisions'), findsNothing);
+      expect(find.text('Valider'), findsOneWidget);
       app.tickets.publishDecisions('t1', const []);
       await tester.tap(find.text('Réessayer'));
       await settle(tester);
@@ -1104,7 +1396,7 @@ void main() {
       expect(find.text('Valider'), findsOneWidget);
     });
 
-    testWidgets('boîte ouverte pendant un passage en large : texte écrit', (
+    testWidgets('boîte ouverte pendant un passage en large : appel parti', (
       tester,
     ) async {
       final app = await fiche(
@@ -1123,10 +1415,10 @@ void main() {
       expect(find.text('Refuser ce ticket'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Refuser'));
       await settle(tester);
-      final d = app.tickets.decisionsCreated.single;
+      final d = app.tickets.decisionsAppelees.single;
       expect(d.action, TicketDecisionAction.refuse);
       expect(d.text, 'Hors du périmètre.');
-      // La nouvelle fiche montre la décision en cours.
+      // La nouvelle fiche montre l'appel en cours.
       expect(find.text('Refus en cours sur GitHub.'), findsOneWidget);
     });
 
@@ -1161,18 +1453,12 @@ void main() {
           allowedDecisions: all,
           decisionLeaseUntil: now.add(const Duration(minutes: 1)),
         ),
-        decisions: [
-          uneDecision(
-            state: TicketDecisionState.applying,
-            requestedAt: now.subtract(const Duration(seconds: 20)),
-          ),
-        ],
       );
-      expect(find.text('Refus en cours sur GitHub.'), findsOneWidget);
+      expect(find.text('Décision en cours sur GitHub.'), findsOneWidget);
       expect(find.text('Valider'), findsNothing);
     });
 
-    testWidgets('Relancer l\'envoi : relance écrite, puis heure affichée', (
+    testWidgets('Relancer l\'envoi : appel, indicateur, message', (
       tester,
     ) async {
       final app = await fiche(
@@ -1190,40 +1476,48 @@ void main() {
         find.text('Dernière erreur : GitHub indisponible'),
         findsOneWidget,
       );
-      final answer = Completer<bool>();
-      app.tickets.adminAnswer = () => answer.future;
+      final server = Completer<ResultatRelanceEnvoi>();
+      app.tickets.retrySendResult = () => server.future;
       await tester.tap(find.text('Relancer l\'envoi'));
       await tester.pump();
       expect(app.tickets.sendRetries, ['t1']);
       expect(find.text('Relance en cours'), findsOneWidget);
-      answer.complete(true);
-      app.tickets.publishAll([
-        unTicket(
-          status: TicketStatus.sendFailed,
-          statusChangedAt: DateTime(2026, 11, 8, 10),
-          retryRequestedAt: DateTime(2026, 11, 8, 12, 5),
-          allowedDecisions: const [],
+      server.complete(
+        const ResultatRelanceEnvoi.envoi(
+          status: TicketStatus.received,
+          issueNumber: 12,
         ),
-      ]);
+      );
       await tester.pumpAndSettle();
       expect(
-        find.text(
-          'Nouvel essai demandé le 08/11/26 à 12:05. Il partira dans l\'heure.',
-        ),
+        find.text('Ticket envoyé sur GitHub : Issue #12.'),
         findsOneWidget,
       );
-      expect(find.text('Relancer l\'envoi'), findsNothing);
     });
 
-    testWidgets('relance refusée : annoncée', (tester) async {
+    testWidgets('relance en échec : annoncée, bouton revenu', (tester) async {
       final app = await fiche(
         tester,
         unTicket(status: TicketStatus.sendFailed, allowedDecisions: const []),
       );
-      app.tickets.adminAnswer = () async => false;
+      app.tickets.retrySendResult = () async =>
+          const ResultatRelanceEnvoi.echec(
+            EchecReponse(
+              CauseEchecReponse.motif,
+              motif:
+                  'GitHub refuse le jeton. L\'envoi reprendra quand le jeton '
+                  'sera remplacé.',
+            ),
+          );
       await tester.tap(find.text('Relancer l\'envoi'));
       await tester.pumpAndSettle();
-      expect(find.text('Relance non enregistrée. Réessayez.'), findsOneWidget);
+      expect(
+        find.text(
+          'Envoi non relancé : GitHub refuse le jeton. L\'envoi reprendra '
+          'quand le jeton sera remplacé.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Relancer l\'envoi'), findsOneWidget);
     });
 
@@ -1292,7 +1586,16 @@ void main() {
       app.tickets.publishAll([
         unTicket(status: TicketStatus.validated, allowedDecisions: const []),
       ]);
-      await tester.pump();
+      // Le nouveau statut arrive en une ou deux trames selon l'ordre des
+      // abonnements ; le clignotement se mesure 100 ms après son affichage.
+      final valide = find.descendant(
+        of: find.byType(EtiquetteStatut),
+        matching: find.text('Validé'),
+      );
+      for (var i = 0; i < 3 && valide.evaluate().isEmpty; i++) {
+        await tester.pump();
+      }
+      expect(valide, findsOneWidget);
       await tester.pump(const Duration(milliseconds: 100));
       final fading = tester
           .widget<FadeTransition>(
@@ -1353,6 +1656,9 @@ void main() {
         ),
       ]);
       app.tickets.publishDecisions('t1', const []);
+      app.tickets
+          .analysesOf('t1')
+          .add(const DocumentAbsent<TicketAnalysisDoc>());
       await go(tester, app, AppRoutes.adminTickets);
       expect(tester.takeException(), isNull);
       await go(tester, app, AppRoutes.adminTicket('t1'));

@@ -96,6 +96,10 @@ String formatJours(num minutes) {
 
 String _deuxChiffres(int value) => value.toString().padLeft(2, '0');
 
+/// Vrai si [a] et [b] tombent le même jour calendaire local.
+bool memeJour(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
 /// Heure sur 24 h : « 12:42 ».
 String formatHeure(DateTime when) =>
     '${_deuxChiffres(when.hour)}:${_deuxChiffres(when.minute)}';
@@ -127,6 +131,10 @@ const _moisCourts = [
 String formatDate(DateTime date) =>
     '${_joursCourts[date.weekday - 1]} ${formatDateCourte(date)}';
 
+/// Date avec le jour, sans l'année : « sam. 22 nov. ».
+String formatJourMois(DateTime date) =>
+    '${_joursCourts[date.weekday - 1]} ${date.day} ${_moisCourts[date.month - 1]}';
+
 /// Date sans le jour : « 11 févr. 2024 ».
 String formatDateCourte(DateTime date) =>
     '${date.day} ${_moisCourts[date.month - 1]} ${date.year}';
@@ -138,6 +146,11 @@ String formatJourHeure(DateTime when) =>
 /// Date courte et heure sans l'année : « 15 nov. 18:30 ».
 String formatJourCourtHeure(DateTime when) =>
     '${when.day} ${_moisCourts[when.month - 1]} ${formatHeure(when)}';
+
+/// Date courte et heure avec les secondes, sans l'année : « 15 nov. 18:30:42 »
+/// (Admin › Journaux).
+String formatJourCourtHeureSecondes(DateTime when) =>
+    '${formatJourCourtHeure(when)}:${_deuxChiffres(when.second)}';
 
 const _joursComplets = [
   'Lundi',
@@ -179,6 +192,10 @@ String formatDateChiffres(DateTime date) =>
 String formatDateLongue(DateTime when) =>
     '${when.day == 1 ? '1er' : when.day} ${_moisComplets[when.month - 1]} '
     '${when.year}';
+
+/// Mois et année : « novembre 2026 ». [mois] de 1 à 12.
+String formatMoisAnnee(int annee, int mois) =>
+    '${_moisComplets[mois - 1]} $annee';
 
 /// Écart signé, sans couleur : « +2,0 pts », « −3,0 pts », « 0,0 pts ».
 String formatEcart(double ecart, {String unite = 'pts'}) {

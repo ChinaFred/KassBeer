@@ -69,6 +69,11 @@ void main() {
       expect(formatDateLongue(DateTime(2026, 12, 31)), '31 décembre 2026');
     });
 
+    test("date avec le jour, sans l'année", () {
+      expect(formatJourMois(DateTime(2026, 11, 21)), 'sam. 21 nov.');
+      expect(formatJourMois(DateTime(2026, 12, 6)), 'dim. 6 déc.');
+    });
+
     test('date en chiffres « jj/mm/aa »', () {
       expect(formatDateChiffres(DateTime(2026, 11, 8)), '08/11/26');
       expect(formatDateChiffres(DateTime(2030, 1, 31)), '31/01/30');
@@ -99,4 +104,18 @@ void main() {
       expect(formatJours(2.0 * minutesParJour), '2 jours');
     });
   });
+
+  test(
+    'formatJourCourtHeureSecondes : jour, mois court, heure et secondes',
+    () {
+      expect(
+        formatJourCourtHeureSecondes(DateTime(2026, 11, 15, 18, 30, 42)),
+        '15 nov. 18:30:42',
+      );
+      expect(
+        formatJourCourtHeureSecondes(DateTime(2026, 2, 1, 7, 5, 3)),
+        '1 févr. 07:05:03',
+      );
+    },
+  );
 }

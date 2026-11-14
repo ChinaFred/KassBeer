@@ -12,9 +12,10 @@ class FichiersWeb {
   Completer<ResultatChoix>? _enCours;
 
   /// Crée et clique un `<input type="file">` : l'appel part du geste de
-  /// l'utilisateur, que le navigateur exige. Un nouveau choix clôt le
-  /// précédent comme annulé (navigateur sans événement `cancel`).
-  Future<ResultatChoix> choisir(int maxOctets) {
+  /// l'utilisateur, que le navigateur exige. [types] devient l'attribut
+  /// `accept`. Un nouveau choix clôt le précédent comme annulé (navigateur
+  /// sans événement `cancel`).
+  Future<ResultatChoix> choisir(int maxOctets, {List<String>? types}) {
     final precedent = _enCours;
     if (precedent != null && !precedent.isCompleted) {
       precedent.complete(const ChoixAnnule());
@@ -22,6 +23,7 @@ class FichiersWeb {
     final completer = Completer<ResultatChoix>();
     _enCours = completer;
     final input = web.HTMLInputElement()..type = 'file';
+    if (types != null) input.accept = types.join(',');
     input.addEventListener(
       'change',
       ((web.Event _) => _lire(input, maxOctets, completer)).toJS,

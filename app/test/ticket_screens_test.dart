@@ -164,7 +164,12 @@ void main() {
         'Recettes › Menu du compte',
       );
       expect(ticketScreenValue('/brassins/:id/fenetre/inconnue'), 'inconnu');
-      expect(ticketScreenValue('/prix/menu/compte'), 'inconnu');
+      expect(ticketScreenValue('/prix/menu/compte'), '/prix/menu/compte');
+      expect(
+        ticketScreenLabel('/brassins/:id/jour/menu/compte'),
+        'Jour de brassage › Menu du compte',
+      );
+      expect(ticketScreenValue('/prix/menu/navigation'), 'inconnu');
       expect(ticketElementScreen('/brassins/:id'), isNull);
     });
 
@@ -196,7 +201,10 @@ void main() {
           ticketElementOptions(kTicketScreenUnknown, isAdmin: true),
           isEmpty,
         );
-        expect(ticketElementOptions('/nouveautes', isAdmin: true), isEmpty);
+        expect(ticketElementOptions('/nouveautes', isAdmin: true), [
+          (value: '/nouveautes', label: kTicketWholeScreen),
+          (value: '/nouveautes/menu/compte', label: 'Menu du compte'),
+        ]);
       },
     );
 
@@ -239,6 +247,37 @@ void main() {
       expect(inShell.toSet(), kTicketShellScreens.toSet());
     });
 
+    test('kTicketAccountMenuScreens : les pages pleines hors coquille', () {
+      final app = TestApp();
+      addTearDown(app.container.dispose);
+      final router = app.container.read(routerProvider);
+      final outside = <String>[];
+      void walk(List<RouteBase> routes, String parent) {
+        for (final route in routes) {
+          if (route is GoRoute) {
+            final full = route.path.startsWith('/')
+                ? route.path
+                : '$parent/${route.path}';
+            // Redirections (`/`, `/bibliotheque`) : aucune page.
+            if (route.builder != null || route.pageBuilder != null) {
+              outside.add(full);
+            }
+            walk(route.routes, full);
+          }
+        }
+      }
+
+      walk(router.configuration.routes, '');
+      outside.removeWhere(AppRoutes.accessScreens.contains);
+      expect(outside.toSet(), kTicketAccountMenuScreens.toSet());
+      expect(
+        kTicketAccountMenuScreens.toSet().intersection(
+          kTicketShellScreens.toSet(),
+        ),
+        isEmpty,
+      );
+    });
+
     test('chaque menu ou fenêtre de lib/ porte son commentaire « ticket »', () {
       // Appels qui ouvrent un menu ou une fenêtre. Les définitions de
       // feuille_ou_dialogue.dart et ecriture.dart ne sont pas des appels.
@@ -271,6 +310,11 @@ void main() {
                   ? [
                       for (final s in kTicketShellScreens)
                         '$s${key.substring('<coquille>'.length)}',
+                    ]
+                  : key.startsWith('<hors-coquille>/')
+                  ? [
+                      for (final s in kTicketAccountMenuScreens)
+                        '$s${key.substring('<hors-coquille>'.length)}',
                     ]
                   : [key];
               for (final k in expanded) {

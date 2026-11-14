@@ -1,17 +1,9 @@
-// tickets/, tickets/{id}/decisions/, ticket_quotas/, ticket_status/ : tickets des membres et
-// décisions de l'admin (ADR-006, T1 et T2, P23, P4, P11).
+// tickets/, tickets/{id}/decisions/, tickets/{id}/admin/, ticket_quotas/, ticket_status/ :
+// tickets des membres, historique des décisions écrit par le serveur, analyses et lancements
+// lus par l'admin (ADR-006, T1 et T2 ; ADR-008, T3, T4 et T7 ; P23, P4, P11, P41).
 
 import { describe, it } from "node:test";
-import {
-  CREATED,
-  db,
-  deleteField,
-  memberId,
-  seed,
-  serverTimestamp,
-  Timestamp,
-  uidOf,
-} from "./helpers.mjs";
+import { CREATED, db, memberId, seed, serverTimestamp, Timestamp, uidOf } from "./helpers.mjs";
 import { expectRule, state, useEnv } from "./setup.mjs";
 
 useEnv();
@@ -236,6 +228,13 @@ describe("tickets — forme à la création (P23)", () => {
     "champ serveur reply_text": { reply_text: "Réponse" },
     "champ serveur delivered_version": { delivered_version: "9.9.9" },
     "champ serveur allowed_decisions": { allowed_decisions: ["validate"] },
+    "champ serveur validated_by_app_at": { validated_by_app_at: serverTimestamp() },
+    "champ serveur screenshot_path (T6)": {
+      screenshot_path: "tickets/brewer-a/nouveau/screenshot.png",
+    },
+    "champ serveur screenshot_expires_at (T6)": {
+      screenshot_expires_at: Timestamp.fromDate(new Date("2027-05-13T09:00:00Z")),
+    },
     "seen_by_author_at à la création": { seen_by_author_at: serverTimestamp() },
     "champ hors liste (display_name)": { display_name: "Brasseur A" },
     "champ hors liste (price_eur)": { price_eur: 3 },
@@ -273,6 +272,92 @@ describe("tickets — mise à jour par l'auteur", () => {
     });
   }
 
+  for (const name of ["owner", "admin"]) {
+    it(`${name} passe le ticket au statut analyzed : refusé`, async () => {
+      await seedTickets();
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a").update({ status: "analyzed" }),
+      );
+    });
+  }
+
+  // screenshot_path (ADR-008, T6) : écrit par attachTicketScreenshot seul (SDK Admin).
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit screenshot_path sur le ticket de brewer-a : refusé`, async () => {
+      await seedTickets();
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("tickets/t-a")
+          .update({ screenshot_path: "tickets/brewer-a/t-a/screenshot.png" }),
+      );
+    });
+  }
+
+  // screenshot_expires_at (complément du 2026-11-14) : écrit avec screenshot_path, par le
+  // serveur seul.
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit screenshot_expires_at sur le ticket de brewer-a : refusé`, async () => {
+      await seed(state.env, {
+        "tickets/t-a": {
+          ...published,
+          screenshot_path: "tickets/brewer-a/t-a/screenshot.png",
+          screenshot_expires_at: Timestamp.fromDate(new Date("2027-05-13T09:00:00Z")),
+        },
+      });
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("tickets/t-a")
+          .update({ screenshot_expires_at: Timestamp.fromDate(new Date("2030-01-01T00:00:00Z")) }),
+      );
+    });
+  }
+
+  it("owner marque le suivi lu et pose screenshot_path : refusé", async () => {
+    await seedTickets();
+    await expectRule(
+      false,
+      db(state.env, "owner").doc("tickets/t-a").update({
+        seen_by_author_at: serverTimestamp(),
+        screenshot_path: "tickets/brewer-a/t-a/screenshot.png",
+      }),
+    );
+  });
+
+  it("owner marque lu un ticket qui porte déjà screenshot_path : autorisé", async () => {
+    await seed(state.env, {
+      "tickets/t-a": { ...published, screenshot_path: "tickets/brewer-a/t-a/screenshot.png" },
+    });
+    await expectRule(
+      true,
+      db(state.env, "owner").doc("tickets/t-a").update({ seen_by_author_at: serverTimestamp() }),
+    );
+  });
+
+  for (const field of ["answer_reset_at", "allowed_decisions"]) {
+    it(`admin écrit ${field} (champ serveur de T3) : refusé`, async () => {
+      await seedTickets();
+      const value = field === "answer_reset_at" ? serverTimestamp() : ["answer"];
+      await expectRule(
+        false,
+        db(state.env, "admin")
+          .doc("tickets/t-a")
+          .update({ [field]: value }),
+      );
+    });
+  }
+
+  it("owner crée un ticket au statut analyzed : refusé", async () => {
+    await expectRule(
+      false,
+      db(state.env, "owner")
+        .doc("tickets/nouveau")
+        .set(ticket("owner", { status: "analyzed" })),
+    );
+  });
+
   it("admin modifie le statut d'un ticket : refusé", async () => {
     await seedTickets();
     await expectRule(
@@ -282,7 +367,7 @@ describe("tickets — mise à jour par l'auteur", () => {
   });
 });
 
-/// Décision telle que l'écran Admin › Tickets la crée.
+/// Décision telle que l'écran Admin › Tickets la créait avant T7 : les règles la refusent.
 const decision = (name, extra = {}) => ({
   action: "refuse",
   text: "Hors du périmètre de l'application.",
@@ -327,19 +412,14 @@ async function seedDecisions() {
   });
 }
 
-describe("tickets — décisions, cinq profils (P4, P23)", () => {
-  const create = {
-    anonymous: false,
-    nonMember: false,
-    owner: false,
-    otherBrewer: false,
-    admin: true,
-  };
-  for (const [name, allowed] of Object.entries(create)) {
-    it(`${name} crée une décision sur le ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+describe("tickets — décisions, cinq profils (P4, P23, T7)", () => {
+  // Les décisions sont écrites par les callables seules (ADR-008, T7) : aucune création
+  // client, admin compris.
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} crée une décision sur le ticket de brewer-a : refusé`, async () => {
       await seedDecisions();
       await expectRule(
-        allowed,
+        false,
         db(state.env, name).doc("tickets/t-a/decisions/d-new").set(decision(name)),
       );
     });
@@ -353,6 +433,19 @@ describe("tickets — décisions, cinq profils (P4, P23)", () => {
       if (data.text === undefined) delete data.text;
       await expectRule(false, db(state.env, "owner").doc("tickets/t-a/decisions/d-own").set(data));
     }
+  });
+
+  it("admin crée une décision validate, ou à l'état d'une décision appliquée : refusé", async () => {
+    await seedDecisions();
+    const validate = decision("admin", { action: "validate" });
+    delete validate.text;
+    await expectRule(false, db(state.env, "admin").doc("tickets/t-a/decisions/d-v").set(validate));
+    await expectRule(
+      false,
+      db(state.env, "admin")
+        .doc("tickets/t-a/decisions/d-s")
+        .set(decision("admin", { state: "applied", applied_at: serverTimestamp() })),
+    );
   });
 
   const read = {
@@ -379,26 +472,23 @@ describe("tickets — décisions, cinq profils (P4, P23)", () => {
     });
   }
 
-  const retry = {
-    anonymous: false,
-    nonMember: false,
-    owner: false,
-    otherBrewer: false,
-    admin: true,
-  };
-  for (const [name, allowed] of Object.entries(retry)) {
-    it(`${name} relance une décision failed : ${allowed ? "autorisé" : "refusé"}`, async () => {
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit retry_requested_at sur une décision failed : refusé`, async () => {
       await seedDecisions();
       await expectRule(
-        allowed,
+        false,
         db(state.env, name)
           .doc("tickets/t-a/decisions/d-failed")
           .update({ retry_requested_at: serverTimestamp() }),
       );
     });
-  }
-
-  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} modifie l'état d'une décision : refusé`, async () => {
+      await seedDecisions();
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a/decisions/d-failed").update({ state: "pending" }),
+      );
+    });
     it(`${name} supprime une décision : refusé`, async () => {
       await seedDecisions();
       await expectRule(false, db(state.env, name).doc("tickets/t-a/decisions/d-failed").delete());
@@ -406,131 +496,12 @@ describe("tickets — décisions, cinq profils (P4, P23)", () => {
   }
 });
 
-describe("tickets — forme d'une décision à la création (P23)", () => {
-  const valid = {
-    "refuse avec motif": {},
-    "close avec commentaire": { action: "close", text: "Fait dans la v0.3." },
-    "validate sans texte": { action: "validate", text: undefined },
-    "texte de 5 caractères": { text: "12345" },
-    "texte de 2 000 caractères": { text: "m".repeat(2000) },
-    "décision sur le ticket d'un autre brasseur": { __ticket: "t-b" },
-  };
-  for (const [name, extra] of Object.entries(valid)) {
-    it(`${name} : autorisé`, async () => {
-      await seedDecisions();
-      const { __ticket = "t-a", ...rest } = extra;
-      const data = decision("admin", rest);
-      for (const [k, v] of Object.entries(rest)) if (v === undefined) delete data[k];
-      await expectRule(
-        true,
-        db(state.env, "admin").doc(`tickets/${__ticket}/decisions/d-new`).set(data),
-      );
-    });
-  }
-
-  const invalid = {
-    "validate avec texte": { action: "validate" },
-    "refuse sans motif": { text: undefined },
-    "close sans commentaire": { action: "close", text: undefined },
-    "texte de 4 caractères": { text: "1234" },
-    "texte de 2 001 caractères": { text: "m".repeat(2001) },
-    "texte non textuel": { text: 12345 },
-    "action inconnue": { action: "delete" },
-    "action absente": { action: undefined },
-    "état applying": { state: "applying" },
-    "état applied": { state: "applied" },
-    "état absent": { state: undefined },
-    "requested_by_uid d'un autre compte": { requested_by_uid: "brewer-a" },
-    "requested_by_uid absent": { requested_by_uid: undefined },
-    "requested_at fixé par l'appareil": { requested_at: CREATED },
-    "requested_at absent": { requested_at: undefined },
-    "champ serveur error_reason": { error_reason: "x" },
-    "champ serveur applied_at": { applied_at: serverTimestamp() },
-    "champ serveur steps_done": { steps_done: [] },
-    "champ serveur lease_until": { lease_until: serverTimestamp() },
-    "champ serveur comment_id": { comment_id: 1 },
-    "retry_requested_at à la création": { retry_requested_at: serverTimestamp() },
-    "champ hors liste (author_email)": { author_email: "admin@example.com" },
-  };
-  for (const [name, extra] of Object.entries(invalid)) {
-    it(`${name} : refusé`, async () => {
-      await seedDecisions();
-      const data = decision("admin", extra);
-      for (const [k, v] of Object.entries(extra)) if (v === undefined) delete data[k];
-      await expectRule(false, db(state.env, "admin").doc("tickets/t-a/decisions/d-new").set(data));
-    });
-  }
-
-  it("identifiant de décision hors [A-Za-z0-9_-] : refusé", async () => {
-    await seedDecisions();
-    await expectRule(
-      false,
-      db(state.env, "admin").doc("tickets/t-a/decisions/d.1").set(decision("admin")),
-    );
-  });
-
-  it("décision sur un ticket absent : refusé", async () => {
-    await seedDecisions();
-    await expectRule(
-      false,
-      db(state.env, "admin").doc("tickets/absent/decisions/d-new").set(decision("admin")),
-    );
-  });
-
-  it("décision déjà existante réécrite par set : refusé", async () => {
-    await seedDecisions();
-    await expectRule(
-      false,
-      db(state.env, "admin").doc("tickets/t-a/decisions/d-applied").set(decision("admin")),
-    );
-  });
-});
-
-describe("tickets — reprise d'une décision par l'admin", () => {
-  it("décision applied : refusé", async () => {
-    await seedDecisions();
-    await expectRule(
-      false,
-      db(state.env, "admin")
-        .doc("tickets/t-a/decisions/d-applied")
-        .update({ retry_requested_at: serverTimestamp() }),
-    );
-  });
-
-  const refused = {
-    "retry_requested_at à l'heure de l'appareil": { retry_requested_at: CREATED },
-    "état remis à pending": { state: "pending" },
-    "retry_requested_at et état": { retry_requested_at: serverTimestamp(), state: "pending" },
-    "retry_requested_at et texte": {
-      retry_requested_at: serverTimestamp(),
-      text: "Nouveau motif publié",
-    },
-    "error_reason effacé": { error_reason: deleteField() },
-  };
-  for (const [name, change] of Object.entries(refused)) {
-    it(`admin modifie ${name} sur une décision failed : refusé`, async () => {
+describe("tickets — relance d'un envoi en échec : par la callable seule (T7)", () => {
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit retry_requested_at sur le ticket send_failed de brewer-a : refusé`, async () => {
       await seedDecisions();
       await expectRule(
         false,
-        db(state.env, "admin").doc("tickets/t-a/decisions/d-failed").update(change),
-      );
-    });
-  }
-});
-
-describe("tickets — relance d'un envoi en échec (T2)", () => {
-  const retry = {
-    anonymous: false,
-    nonMember: false,
-    owner: false,
-    otherBrewer: false,
-    admin: true,
-  };
-  for (const [name, allowed] of Object.entries(retry)) {
-    it(`${name} relance l'envoi du ticket send_failed de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
-      await seedDecisions();
-      await expectRule(
-        allowed,
         db(state.env, name)
           .doc("tickets/t-failed")
           .update({ retry_requested_at: serverTimestamp() }),
@@ -538,7 +509,7 @@ describe("tickets — relance d'un envoi en échec (T2)", () => {
     });
   }
 
-  it("admin relance un ticket received : refusé", async () => {
+  it("admin écrit retry_requested_at sur un ticket received : refusé", async () => {
     await seedDecisions();
     await expectRule(
       false,
@@ -546,19 +517,34 @@ describe("tickets — relance d'un envoi en échec (T2)", () => {
     );
   });
 
-  const refused = {
-    "à l'heure de l'appareil": { retry_requested_at: CREATED },
-    "avec le statut": { retry_requested_at: serverTimestamp(), status: "pending" },
-    "avec send_attempts": { retry_requested_at: serverTimestamp(), send_attempts: 0 },
-    "avec allowed_decisions": {
-      retry_requested_at: serverTimestamp(),
-      allowed_decisions: ["validate"],
-    },
-  };
-  for (const [name, change] of Object.entries(refused)) {
-    it(`admin relance ${name} : refusé`, async () => {
+  it("admin remet un ticket send_failed à pending : refusé", async () => {
+    await seedDecisions();
+    await expectRule(
+      false,
+      db(state.env, "admin")
+        .doc("tickets/t-failed")
+        .update({ status: "pending", send_attempts: 0 }),
+    );
+  });
+
+  // Validation de l'application (ADR-008, 2026-11-13) : écrite par le serveur seul.
+  it("owner écrit seen_by_author_at avec validated_by_app_at : refusé", async () => {
+    await seedDecisions();
+    await expectRule(
+      false,
+      db(state.env, "owner")
+        .doc("tickets/t-a")
+        .update({ seen_by_author_at: serverTimestamp(), validated_by_app_at: serverTimestamp() }),
+    );
+  });
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit validated_by_app_at sur un ticket : refusé`, async () => {
       await seedDecisions();
-      await expectRule(false, db(state.env, "admin").doc("tickets/t-failed").update(change));
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a").update({ validated_by_app_at: serverTimestamp() }),
+      );
     });
   }
 
@@ -607,6 +593,253 @@ describe("ticket_quotas et ticket_status", () => {
     it(`${name} lit l'état du jeton : ${allowed ? "autorisé" : "refusé"}`, async () => {
       await seedTickets();
       await expectRule(allowed, db(state.env, name).doc("ticket_status/github").get());
+    });
+  }
+});
+
+/// Analyses relevées par le serveur (ADR-008, T3, P32).
+const analysis = {
+  analyses: [
+    {
+      comment_id: 101,
+      kind: "analysis",
+      body: "## Analyse\n\nLe minuteur repart de zéro.",
+      created_at: CREATED,
+      updated_at: CREATED,
+      truncated: false,
+    },
+  ],
+  skipped_count: 0,
+  checked_at: CREATED,
+  answer_comment_ids: [],
+};
+
+describe("tickets/{id}/admin/ — analyses, cinq profils (P4, P23, P32)", () => {
+  const read = {
+    anonymous: false,
+    nonMember: false,
+    owner: false,
+    otherBrewer: false,
+    admin: true,
+  };
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit les analyses du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
+      await expectRule(allowed, db(state.env, name).doc("tickets/t-a/admin/analysis").get());
+    });
+    it(`${name} liste admin/ du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
+      await expectRule(allowed, db(state.env, name).collection("tickets/t-a/admin").get());
+    });
+  }
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} crée les analyses : refusé`, async () => {
+      await seedTickets();
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/analysis").set(analysis));
+    });
+    it(`${name} ajoute un identifiant à answer_comment_ids : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("tickets/t-a/admin/analysis")
+          .update({ answer_comment_ids: [999] }),
+      );
+    });
+    it(`${name} supprime les analyses : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/analysis": analysis });
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/analysis").delete());
+    });
+  }
+});
+
+/// Historique des lancements de sessions, écrit par le serveur (ADR-008, T4, P41).
+const launches = {
+  entries: [
+    {
+      id: "0b6f4a52-5d8e-4f43-9a8e-1f0c2a3b4c5d",
+      action: "analyse",
+      state: "launched",
+      at: CREATED,
+      by_uid: "admin",
+      retry_after: CREATED,
+      session_url: "https://claude.ai/code/session_exemple",
+    },
+  ],
+  updated_at: CREATED,
+};
+
+/// Compteurs des lancements, écrits par le serveur (ADR-008, T4, P36, P41).
+const launchStatus = {
+  day: "20261113",
+  count_day: 1,
+  month: "202611",
+  count_month: 4,
+  per_day: 10,
+  analysis_invalid_since: null,
+  development_invalid_since: null,
+};
+
+describe("lancements — admin/launches et ticket_status/launches, cinq profils (P4, P41)", () => {
+  const read = {
+    anonymous: false,
+    nonMember: false,
+    owner: false,
+    otherBrewer: false,
+    admin: true,
+  };
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit l'historique des lancements du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/launches": launches });
+      await expectRule(allowed, db(state.env, name).doc("tickets/t-a/admin/launches").get());
+    });
+    it(`${name} lit les compteurs des lancements : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "ticket_status/launches": launchStatus });
+      await expectRule(allowed, db(state.env, name).doc("ticket_status/launches").get());
+    });
+  }
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} crée l'historique des lancements : refusé`, async () => {
+      await seedTickets();
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/launches").set(launches));
+    });
+    it(`${name} modifie l'historique des lancements : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/launches": launches });
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a/admin/launches").update({ entries: [] }),
+      );
+    });
+    it(`${name} supprime l'historique des lancements : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/launches": launches });
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/launches").delete());
+    });
+    it(`${name} écrit les compteurs des lancements : refusé`, async () => {
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("ticket_status/launches")
+          .set({ ...launchStatus, count_day: 0 }),
+      );
+    });
+    it(`${name} remet à zéro le compteur de lancements du jour : refusé`, async () => {
+      await seed(state.env, {
+        "ticket_quotas/launch_20261113": { day: "20261113", count: 10, expires_at: CREATED },
+      });
+      await expectRule(
+        false,
+        db(state.env, name).doc("ticket_quotas/launch_20261113").update({ count: 0 }),
+      );
+    });
+    it(`${name} lit le compteur de lancements du jour : refusé`, async () => {
+      await seed(state.env, {
+        "ticket_quotas/launch_20261113": { day: "20261113", count: 10, expires_at: CREATED },
+      });
+      await expectRule(false, db(state.env, name).doc("ticket_quotas/launch_20261113").get());
+    });
+  }
+});
+
+/// État « PR prête » et comptes rendus de livraison, écrits par le serveur (ADR-008, T5, P45).
+const delivery = {
+  eligible_pr_count: 1,
+  pr_number: 34,
+  pr_url: "https://github.com/ChinaFred/KassBeer/pull/34",
+  head_sha: "a".repeat(40),
+  ci_status: "completed",
+  ci_conclusion: "success",
+  ci_completed_at: CREATED,
+  ready: true,
+  relaunch_ready: false,
+  reports: [
+    {
+      comment_id: 77,
+      kind: "blocked",
+      body: "## Livraison — blocage\n\nL7 : CI rouge.",
+      created_at: CREATED,
+      updated_at: CREATED,
+      truncated: false,
+    },
+  ],
+  reports_checked_at: CREATED,
+  updated_at: CREATED,
+};
+
+/// Verrou des livraisons, écrit par le serveur (ADR-008, T5, P44).
+const deliveryRunning = {
+  ticket_id: "t-a",
+  issue_number: 12,
+  launched_at: CREATED,
+  retry_after: CREATED,
+};
+
+describe("livraison — admin/delivery et ticket_status/launches.delivery_running, cinq profils (P4, P41, P44, P45)", () => {
+  const read = {
+    anonymous: false,
+    nonMember: false,
+    owner: false,
+    otherBrewer: false,
+    admin: true,
+  };
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit l'état de livraison du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/delivery": delivery });
+      await expectRule(allowed, db(state.env, name).doc("tickets/t-a/admin/delivery").get());
+    });
+    it(`${name} lit le verrou des livraisons : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seed(state.env, {
+        "ticket_status/launches": { ...launchStatus, delivery_running: deliveryRunning },
+      });
+      await expectRule(allowed, db(state.env, name).doc("ticket_status/launches").get());
+    });
+  }
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} crée l'état de livraison : refusé`, async () => {
+      await seedTickets();
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/delivery").set(delivery));
+    });
+    it(`${name} modifie l'état de livraison (ready, comptes rendus) : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/delivery": delivery });
+      await expectRule(
+        false,
+        db(state.env, name).doc("tickets/t-a/admin/delivery").update({ ready: false, reports: [] }),
+      );
+    });
+    it(`${name} supprime l'état de livraison : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/delivery": delivery });
+      await expectRule(false, db(state.env, name).doc("tickets/t-a/admin/delivery").delete());
+    });
+    it(`${name} libère le verrou des livraisons : refusé`, async () => {
+      await seed(state.env, {
+        "ticket_status/launches": { ...launchStatus, delivery_running: deliveryRunning },
+      });
+      await expectRule(
+        false,
+        db(state.env, name).doc("ticket_status/launches").update({ delivery_running: null }),
+      );
+    });
+    it(`${name} prend le verrou des livraisons : refusé`, async () => {
+      await seed(state.env, { "ticket_status/launches": launchStatus });
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("ticket_status/launches")
+          .update({ delivery_running: { ...deliveryRunning, ticket_id: "t-b" } }),
+      );
     });
   }
 });

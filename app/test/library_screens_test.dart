@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/library/presentation/data_sources_screen.dart';
@@ -66,7 +67,7 @@ void main() {
           .map((d) => d.label)
           .toList();
       expect(labels, ['Recettes', 'Bibliothèque', 'Brassins', 'Équipements']);
-      await tester.tap(find.text('Bibliothèque'));
+      await tester.tap(find.byTooltip('Bibliothèque'));
       await tester.pumpAndSettle();
       // `/bibliotheque` redirige vers les styles.
       expect(location(app), '/bibliotheque/styles');
@@ -113,6 +114,14 @@ void main() {
       expect(find.text('Cascade'), findsOneWidget);
       expect(find.text('Houblon doré'), findsOneWidget);
       expect(find.text('2 entrées'), findsOneWidget);
+      // Ingrédients sans repère, à la différence des recettes publiques.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(LigneListe, 'Cascade'),
+          matching: find.byType(RepereDisque),
+        ),
+        findsNothing,
+      );
       expect(find.text(LibraryScreen.unreadableEntries(1)), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'DORE');
       await tester.pumpAndSettle();
@@ -325,22 +334,43 @@ void main() {
         tester.getTopLeft(find.widgetWithText(ChoiceChip, 'Divers')).dy,
       );
       expect(find.byTooltip(LibraryScreen.sourcesLabel), findsOneWidget);
+      // Fondu au bord droit : une puce coupée annonce la suite. Opacité seule
+      // (dstIn) : la couleur du dégradé ne se voit pas.
+      final fondu = tester.widget<ShaderMask>(
+        find.ancestor(
+          of: find.widgetWithText(ChoiceChip, 'Styles'),
+          matching: find.byType(ShaderMask),
+        ),
+      );
+      expect(fondu.blendMode, BlendMode.dstIn);
     });
 
-    testWidgets('au-delà de 600 px : puces à la ligne, lien en texte', (
-      tester,
-    ) async {
+    testWidgets('au-delà de 600 px : puces à la ligne, icône des sources à '
+        'droite', (tester) async {
       final app = TestApp();
       await app.pump(tester, width: 900);
       app.signIn(brewerUser, member: brewerMember);
       await tester.pumpAndSettle();
       app.container.read(routerProvider).go('/bibliotheque/styles');
       await tester.pumpAndSettle();
+      final puce = find.widgetWithText(ChoiceChip, 'Styles');
       expect(
-        find.widgetWithText(TextButton, LibraryScreen.sourcesLabel),
+        find.ancestor(of: puce, matching: find.byType(Wrap)),
         findsOneWidget,
       );
-      expect(find.byType(Wrap), findsWidgets);
+      // Même place qu'au téléphone : une icône à droite des puces, sans fondu.
+      final sources = find.byTooltip(LibraryScreen.sourcesLabel);
+      expect(sources, findsOneWidget);
+      expect(
+        tester.getCenter(sources).dx,
+        greaterThan(
+          tester.getTopRight(find.widgetWithText(ChoiceChip, 'Divers')).dx,
+        ),
+      );
+      expect(
+        find.ancestor(of: puce, matching: find.byType(ShaderMask)),
+        findsNothing,
+      );
     });
 
     testWidgets('barre du bas à 360 px, admin, texte × 2 : aucun débordement', (
@@ -359,7 +389,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(NavigationBar),
-          matching: find.text('Bibliothèque'),
+          matching: find.byTooltip('Bibliothèque'),
         ),
         findsOneWidget,
       );
@@ -385,6 +415,14 @@ void main() {
         before: (app) => seed(app, 60),
       );
       expect(find.text('Recette 001'), findsOneWidget);
+      // Même repère que la liste des recettes.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(LigneListe, 'Recette 001'),
+          matching: find.byIcon(Icons.menu_book_outlined),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.text(
           'Blonde fruitée · ${formatLitres(23)} · ${formatDegre(5.6)} annoncés',
@@ -465,7 +503,11 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Recette publique · DIY Dog'), findsOneWidget);
+      // Style et source sur la ligne du sous-titre.
+      expect(
+        find.text('Blonde fruitée · Recette publique · DIY Dog'),
+        findsOneWidget,
+      );
       expect(find.text('Dupliquer'), findsOneWidget);
       expect(find.text('Calculs'), findsOneWidget);
       // Fenêtre haute : toute la fiche est construite.

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/app_shell.dart';
+import '../../../core/presentation/ligne_liste.dart';
+import '../../../core/presentation/menu_compte.dart';
 import '../../../core/router/routes.dart';
+import 'error_reports_screen.dart';
+import 'logs_screen.dart';
 import '../../tickets/presentation/admin_tickets_screen.dart';
 import '../../tickets/presentation/bandeau_tickets_admin.dart';
 import 'admin_sources_screen.dart';
@@ -11,6 +14,8 @@ import 'admin_sources_screen.dart';
 /// Accueil de l'administration : réservé au rôle `admin` (le routeur le vérifie).
 class AdminScreen extends ConsumerWidget {
   const AdminScreen({super.key});
+
+  static const importSubtitle = 'Fiches Excel préparées en JSON';
 
   static const ticketsSubtitle =
       'Bugs et idées des membres, et leur suivi sur GitHub';
@@ -26,65 +31,65 @@ class AdminScreen extends ConsumerWidget {
         .watch(messagesBandeauTicketsProvider)
         .where((m) => m.error)
         .length;
-    // Material propre : l'encre des tuiles se peint sur lui, pas sous le fond
-    // de la transition de page.
-    return Material(
-      type: MaterialType.transparency,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          ListTile(
-            leading: const Icon(Icons.group_outlined),
-            title: const Text('Membres'),
-            subtitle: const Text('Inviter et retirer les comptes'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.go(AppRoutes.adminMembers),
-          ),
-          Semantics(
-            label: alerts == 0
-                ? null
-                : '${AdminTicketsScreen.titre}, '
-                      '${alerts == 1 ? '1 alerte' : '$alerts alertes'}, '
-                      '$ticketsSubtitle',
-            excludeSemantics: alerts > 0,
-            button: alerts > 0,
-            onTap: alerts > 0 ? () => context.go(AppRoutes.adminTickets) : null,
-            child: ListTile(
-              leading: const Icon(Icons.confirmation_number_outlined),
-              title: const Text(AdminTicketsScreen.titre),
-              subtitle: const Text(ticketsSubtitle),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (alerts > 0) ...[
-                    Badge(
-                      label: Text(textePastille(alerts)),
-                      backgroundColor: scheme.error,
-                      textColor: scheme.onError,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
-              onTap: () => context.go(AppRoutes.adminTickets),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.source_outlined),
-            title: const Text(AdminSourcesScreen.titre),
-            subtitle: const Text(sourcesSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.go(AppRoutes.adminSources),
-          ),
-          const ListTile(
-            enabled: false,
-            leading: Icon(Icons.upload_file_outlined),
-            title: Text('Import'),
-            subtitle: Text('Disponible dans une prochaine version'),
-          ),
-        ],
-      ),
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: [
+        LigneListe(
+          icone: Icons.group_outlined,
+          titre: 'Membres',
+          details: const [Text('Inviter et retirer les comptes')],
+          chevron: true,
+          onTap: () => context.go(AppRoutes.adminMembers),
+        ),
+        LigneListe(
+          icone: Icons.confirmation_number_outlined,
+          titre: AdminTicketsScreen.titre,
+          details: const [Text(ticketsSubtitle)],
+          trailing: alerts > 0
+              ? Badge(
+                  label: Text(textePastille(alerts)),
+                  backgroundColor: scheme.error,
+                  textColor: scheme.onError,
+                )
+              : null,
+          chevron: true,
+          semanticsLabel: alerts == 0
+              ? null
+              : '${AdminTicketsScreen.titre}, '
+                    '${alerts == 1 ? '1 alerte' : '$alerts alertes'}, '
+                    '$ticketsSubtitle',
+          onTap: () => context.go(AppRoutes.adminTickets),
+        ),
+        LigneListe(
+          icone: Icons.source_outlined,
+          titre: AdminSourcesScreen.titre,
+          details: const [Text(sourcesSubtitle)],
+          chevron: true,
+          onTap: () => context.go(AppRoutes.adminSources),
+        ),
+        LigneListe(
+          icone: Icons.upload_file_outlined,
+          titre: 'Import',
+          details: const [Text(importSubtitle)],
+          chevron: true,
+          // `push` : le retour ramène à l'administration.
+          onTap: () => context.push(AppRoutes.adminImport),
+        ),
+        LigneListe(
+          icone: Icons.bug_report_outlined,
+          titre: ErrorReportsScreen.titre,
+          details: const [Text(ErrorReportsScreen.sousTitre)],
+          chevron: true,
+          onTap: () => context.go(AppRoutes.adminErrorReports),
+        ),
+        LigneListe(
+          icone: Icons.receipt_long_outlined,
+          titre: LogsScreen.titre,
+          details: const [Text(LogsScreen.sousTitre)],
+          chevron: true,
+          onTap: () => context.go(AppRoutes.adminLogs),
+        ),
+      ],
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/data/lecture_document.dart';
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
@@ -148,6 +149,7 @@ class DetailCout extends StatelessWidget {
       titre: TextesCout.detail,
       storageKey: storageKey,
       resume: '$n ligne${n > 1 ? 's' : ''}',
+      niveau: NiveauTitre.sousSection,
       children: [
         for (final l in lignes)
           Padding(
@@ -187,31 +189,12 @@ class CadreCalculImpossible extends StatelessWidget {
   const CadreCalculImpossible({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      liveRegion: true,
-      child: Material(
-        color: scheme.errorContainer,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.error_outline, color: scheme.error),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  TextesCout.calculImpossible,
-                  style: TextStyle(color: scheme.onErrorContainer),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const Encadre(
+    ton: TonEncadre.erreur,
+    icone: Icons.error_outline,
+    liveRegion: true,
+    child: Text(TextesCout.calculImpossible),
+  );
 }
 
 /// Une raison et son action, sur deux niveaux si la largeur manque. La ligne

@@ -1,8 +1,10 @@
 import 'package:brewing/brewing.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../core/data/lecture_document.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/domain/deroule.dart';
 import '../../recipes/domain/chronologie.dart';
 
 /// Une étape de la chronologie d'un brassin, à l'instant du calcul.
@@ -79,6 +81,23 @@ class PlanDuJour {
   /// La chronologie existe, et rien n'est en cours ni à venir.
   bool get termine => lignes.isNotEmpty && enCours == null && prochaine == null;
 
+  /// Une étape a commencé ou a été sautée, ou une mesure y est rattachée.
+  bool get commencee =>
+      lignes.any((l) => l.record != null || l.mesures.isNotEmpty);
+
+  /// Prévu et réel de la journée et de chaque étape, dans l'ordre de [lignes],
+  /// calculés par `brewing/` (P3) à partir des heures enregistrées. [close] :
+  /// la journée est close (voir [journeeClose]) ; une étape restée en cours y
+  /// est sans heure de fin. Lève `BrewingInputException` pour une étape faite
+  /// sans début.
+  ActualDayDuration durees({required bool close}) => actualDurations(
+    steps: [
+      for (final l in lignes)
+        StepTiming(planned: l.duree, status: l.status, record: l.record),
+    ],
+    dayClosed: close,
+  );
+
   /// Étape à venir après [ligne], ou `null`.
   LigneJour? suivanteDe(LigneJour ligne) {
     for (final l in lignes) {
@@ -93,7 +112,23 @@ class PlanDuJour {
       if (l.index < ligne.index && l.status == StepStatus.pending) l,
   ];
 
-  /// Calcule la vue de [brew] à [now] à partir de [events].
+  /// Calcule la vue de la journée [journee] de [brew] à [now] à partir de
+  /// [events] ; [journee] nulle désigne la journée de brassage.
+  ///
+  /// Le calcul se fait journée par journée (ADR-010, P37) : les événements se
+  /// réduisent sur les étapes de toutes les journées du déroulé, puis l'horaire se
+  /// recalcule sur les seules étapes de la journée et leurs enregistrements. Un
+  /// événement d'une autre journée n'est ni une anomalie ni un début qui rend
+  /// « Non faites » les étapes de celle-ci.
+  ///
+  /// Départ prévu : le premier début enregistré de la journée ; sinon, pour le
+  /// brassage, `brewed_at` (puis `planned_for`), et pour une autre journée
+  /// l'heure de l'appareil [now].
+  ///
+  /// Mesures et notes : celles du jour de brassage (sans `phase`) pour le
+  /// brassage ; pour une autre journée, celles dont l'étape lui appartient, et
+  /// « Sans étape » les relevés de fermentation sans étape connue mesurés depuis
+  /// le début du jour calendaire de son départ.
   ///
   /// Lève [BrewingInputException] si la chronologie ou les événements sont refusés
   /// par `brewing/` : l'appelant le rapporte et affiche la panne.
@@ -101,30 +136,76 @@ class PlanDuJour {
     required Brew brew,
     required List<BrewEvent> events,
     required DateTime now,
+    JourneeDeroulee? journee,
   }) {
-    final steps = brew.recipe.brewSteps;
+    final deroule = brew.deroule;
+    final cible = journee ?? deroule.brassage;
+    final brassage = cible == null || cible.role == RoleJournee.brassage;
+    final steps = cible?.lignes ?? const <BrewStepLine>[];
+    final keys = {for (final s in steps) s.key};
+    final toutes = {for (final s in deroule.lignes) s.key};
     final planned = [for (final s in steps) s.toPlanned()];
     final stepEvents = [
       for (final e in events)
         if (e.toStepEvent() != null) e.toStepEvent()!,
     ];
-    final reduction = stepRecordsFromEvents(steps: planned, events: stepEvents);
-    final plannedStart = brew.brewedAt ?? brew.plannedFor ?? now;
+    final reduction = stepRecordsFromEvents(
+      steps: [for (final s in deroule.lignes) s.toPlanned()],
+      events: stepEvents,
+    );
+    final records = [
+      for (final r in reduction.records)
+        if (keys.contains(r.stepId)) r,
+    ];
+    DateTime? premierDebut;
+    for (final r in records) {
+      final started = r.startedAt;
+      if (started != null &&
+          (premierDebut == null || started.isBefore(premierDebut))) {
+        premierDebut = started;
+      }
+    }
+    final plannedStart = brassage
+        ? brew.brewedAt ?? brew.plannedFor ?? now
+        : premierDebut ?? now;
     final schedule = recomputeSchedule(
       steps: planned,
       plannedStart: plannedStart,
-      records: reduction.records,
+      records: records,
       now: now,
     );
-    final recordByStep = {for (final r in reduction.records) r.stepId: r};
-    // Un relevé de fermentation n'est pas une saisie du jour (FE11).
+    final recordByStep = {for (final r in records) r.stepId: r};
+    final depuis = DateTime(
+      plannedStart.year,
+      plannedStart.month,
+      plannedStart.day,
+    );
+    // Brassage : un relevé de fermentation n'est pas une saisie du jour (FE11).
+    // Autre journée : ses mesures portent `phase: 'fermentation'` (ADR-010).
     final saisies =
-        events.where((e) => e.isMeasureOrNote && !e.isFermentation).toList()
+        events
+            .where(
+              (e) =>
+                  e.isMeasureOrNote &&
+                  (brassage
+                      ? !e.isFermentation
+                      : keys.contains(e.stepKey) ||
+                            (e.isFermentation &&
+                                !toutes.contains(e.stepKey) &&
+                                !e.measuredAt.isBefore(depuis))),
+            )
+            .toList()
           ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
     final doublons = <String, List<StepEvent>>{};
     final anomalies = <StepEventIssue>[];
     String? incoherente;
     for (final issue in reduction.issues) {
+      final stepKey = issue.event.stepKey;
+      if (!keys.contains(stepKey)) {
+        // Doublon ou fin incohérente d'une autre journée : relevé par sa
+        // journée. Une étape inconnue n'est relevée qu'une fois, par le brassage.
+        if (toutes.contains(stepKey) || !brassage) continue;
+      }
       switch (issue.kind) {
         case StepEventIssueKind.duplicateStart:
           (doublons[issue.event.stepKey] ??= []).add(issue.event);
@@ -153,7 +234,6 @@ class PlanDuJour {
           doublons: List.unmodifiable(doublons[s.key] ?? const <StepEvent>[]),
         ),
     ];
-    final keys = {for (final s in steps) s.key};
     DateTime? finPrevue;
     var retard = Duration.zero;
     if (schedule.isNotEmpty && incoherente == null) {
@@ -172,7 +252,7 @@ class PlanDuJour {
       lignes: List.unmodifiable(lignes),
       mesuresSansEtape: List.unmodifiable([
         for (final e in saisies)
-          if (e.stepKey == null || !keys.contains(e.stepKey)) e,
+          if (e.stepKey == null || !toutes.contains(e.stepKey)) e,
       ]),
       anomalies: List.unmodifiable(anomalies),
       etapeIncoherente: incoherente,
@@ -180,6 +260,103 @@ class PlanDuJour {
       retard: retard,
     );
   }
+}
+
+/// Vrai si [journee] de [brew] est terminée (ADR-010) : l'embouteillage quand
+/// `bottled_at` est posé ; une autre journée quand aucune de ses étapes n'est en
+/// cours ni à venir dans [plan], son plan calculé. Sans plan (calcul refusé), la
+/// journée n'est pas terminée.
+bool journeeTerminee({
+  required Brew brew,
+  required JourneeDeroulee journee,
+  required PlanDuJour? plan,
+}) {
+  if (journee.role == RoleJournee.embouteillage) return brew.bottledAt != null;
+  return plan != null && plan.enCours == null && plan.prochaine == null;
+}
+
+/// Événements valides d'un brassin, ou `null` tant qu'ils ne sont pas lus :
+/// aucune lecture encore, lecture en échec, ou lecture du cache sans aucun
+/// document (hors ligne sans copie sur l'appareil). La fiche et la liste des
+/// brassins ne choisissent la prochaine journée qu'avec des événements lus.
+List<BrewEvent>? evenementsLus(ListeLue<BrewEvent>? lus) {
+  if (lus == null || (lus.fromCache && lus.documents.isEmpty)) return null;
+  return lus.valides;
+}
+
+/// Prochaine journée d'un brassin en fermentation ou en conditionnement
+/// (ADR-010) : la première journée non terminée ([journeeTerminee]) placée
+/// après la dernière journée terminée, dans l'ordre du déroulé. Une journée
+/// non terminée placée avant une journée terminée n'est plus proposée. Une
+/// fois `bottled_at` posé, la journée d'embouteillage compte comme terminée :
+/// seules les journées placées après elle restent proposées ; sans journée
+/// d'embouteillage dans le déroulé, plus aucune. `null` sans journée restante.
+/// [planDe] rend le plan calculé d'une journée, `null` si le calcul est refusé.
+/// Seule règle de la fiche et de la liste des brassins.
+JourneeDeroulee? prochaineJournee({
+  required Brew brew,
+  required PlanDuJour? Function(JourneeDeroulee journee) planDe,
+}) {
+  if (brew.status != BrewStatus.fermenting &&
+      brew.status != BrewStatus.conditioning) {
+    return null;
+  }
+  if (brew.bottledAt != null && brew.deroule.embouteillage == null) {
+    return null;
+  }
+  final journees = brew.deroule.journees.skip(1).toList();
+  var suivante = 0;
+  for (final (i, j) in journees.indexed) {
+    if (journeeTerminee(brew: brew, journee: j, plan: planDe(j))) {
+      suivante = i + 1;
+    }
+  }
+  return suivante < journees.length ? journees[suivante] : null;
+}
+
+/// Prochaine journée annoncée par la liste des brassins, avec son jour
+/// calendaire et vrai si elle est commencée ([PlanDuJour.commencee]).
+/// [planDe] connu (événements lus) : [prochaineJournee], même règle que la
+/// fiche, dont la date peut être passée. [planDe] nul (événements pas lus, ou
+/// brassin d'un autre membre) : [prochaineJourneePrevue], d'après les dates
+/// seules, jamais commencée. `null` sans journée ou sans date de départ.
+({JourneeDeroulee journee, DateTime date, bool commencee})?
+prochaineJourneeAnnoncee(
+  Brew brew,
+  DateTime now, {
+  PlanDuJour? Function(JourneeDeroulee journee)? planDe,
+}) {
+  if (planDe == null) {
+    final prevue = prochaineJourneePrevue(brew, now);
+    if (prevue == null) return null;
+    return (journee: prevue.journee, date: prevue.date, commencee: false);
+  }
+  final journee = prochaineJournee(brew: brew, planDe: planDe);
+  final date = journee?.date(brew.departDeroule);
+  if (journee == null || date == null) return null;
+  return (
+    journee: journee,
+    date: DateTime(date.year, date.month, date.day),
+    commencee: planDe(journee)?.commencee ?? false,
+  );
+}
+
+/// Vrai si [journee] de [brew] est close pour le prévu et réel de la fiche :
+/// la journée de brassage une fois le brassage terminé (statut après « En
+/// cours ») ; une autre journée terminée ([journeeTerminee]), ou un brassin
+/// terminé ou abandonné.
+bool journeeClose({
+  required Brew brew,
+  required JourneeDeroulee journee,
+  required PlanDuJour? plan,
+}) {
+  if (journee.role == RoleJournee.brassage) {
+    return brew.status != BrewStatus.planned &&
+        brew.status != BrewStatus.brewing;
+  }
+  return brew.status == BrewStatus.done ||
+      brew.status == BrewStatus.abandoned ||
+      journeeTerminee(brew: brew, journee: journee, plan: plan);
 }
 
 String _nomEtape(List<BrewStepLine> steps, String key) {

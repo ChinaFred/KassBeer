@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etiquette.dart';
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
@@ -515,36 +516,18 @@ class _BlocCoutBrassinState extends ConsumerState<BlocCoutBrassin> {
       if (ecarts.isNotEmpty)
         Padding(
           padding: const EdgeInsets.only(top: 8),
-          child: Material(
-            color: theme.colorScheme.tertiaryContainer,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.warning_amber,
-                        color: theme.colorScheme.onTertiaryContainer,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          texteEcarts(ecarts).texte,
-                          semanticsLabel: texteEcarts(ecarts).parle,
-                          style: TextStyle(
-                            color: theme.colorScheme.onTertiaryContainer,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  ..._recalcul(cout, readerUid, coutLu, encadre: true),
-                ],
-              ),
+          child: Encadre(
+            ton: TonEncadre.avertissement,
+            icone: Icons.warning_amber,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  texteEcarts(ecarts).texte,
+                  semanticsLabel: texteEcarts(ecarts).parle,
+                ),
+                ..._recalcul(cout, readerUid, coutLu, encadre: true),
+              ],
             ),
           ),
         )

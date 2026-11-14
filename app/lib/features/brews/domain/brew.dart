@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/data/lecture_document.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../recipes/domain/recipe.dart';
+import 'deroule.dart';
 
 /// Longueur maximale du nom et des notes d'un brassin (`firestore.rules`).
 const kBrewNameMaxLength = 120;
@@ -73,6 +74,7 @@ class Brew {
     this.fermenterVolumeEventId,
     this.sugarsInWort,
     this.notes,
+    this.process,
     this.createdAt,
     this.hasPendingWrites = false,
   });
@@ -127,6 +129,10 @@ class Brew {
   final bool? sugarsInWort;
   final String? notes;
 
+  /// Déroulé figé lu de `process`, ou `null` sans ce champ. Les étapes d'un
+  /// brassin se lisent par [deroule], jamais par `recipe.brewSteps` (P37).
+  final Deroule? process;
+
   /// `null` tant qu'une écriture locale attend le serveur.
   final DateTime? createdAt;
   final bool hasPendingWrites;
@@ -167,10 +173,25 @@ class Brew {
       fermenterVolumeEventId: read.texteFacultatif('fermenter_volume_event_id'),
       sugarsInWort: read.boolFacultatif('sugars_in_wort'),
       notes: read.texteFacultatif('notes'),
+      process: data['process'] == null ? null : lireDeroule(data['process']),
       createdAt: read.date('created_at'),
       hasPendingWrites: hasPendingWrites,
     );
   }
+
+  /// Déroulé du brassin, seul accès à ses étapes (ADR-010, P37) : `process` s'il
+  /// existe, sinon une journée de brassage tirée de `recipe_snapshot.brew_steps`.
+  /// Un `process` illisible rend un déroulé illisible, sans repli sur la recette.
+  Deroule get deroule => process ?? Deroule.depuisRecette(recipe);
+
+  /// Départ des dates du déroulé (ADR-010) : `brewed_at`, sinon `planned_for` ;
+  /// `null` sans l'un ni l'autre (« J+4 » sans date).
+  DateTime? get departDeroule => brewedAt ?? plannedFor;
+
+  /// Le déroulé se change encore : `brewed_at` est nul (règles, P38) et le
+  /// brassin est prévu.
+  bool get derouleModifiable =>
+      brewedAt == null && status == BrewStatus.planned;
 
   /// Copie figée lue comme un équipement, pour les calculs et l'affichage.
   Equipment get equipmentRead =>
@@ -207,19 +228,37 @@ Map<String, Object?> equipmentSnapshot(Equipment equipment) => {
   'owner_name': ?equipment.ownerName,
 };
 
-int _bucket(BrewStatus status) => switch (status) {
-  BrewStatus.brewing => 0,
-  BrewStatus.fermenting || BrewStatus.conditioning => 1,
-  BrewStatus.planned => 2,
-  BrewStatus.done || BrewStatus.abandoned => 3,
+/// Groupe d'un brassin dans la liste, dans l'ordre de [compareBrews] : en
+/// cours (brassage, fermentation, conditionnement), prévus, puis terminés et
+/// abandonnés.
+enum GroupeBrassins {
+  enCours('En cours'),
+  prevus('Prévus'),
+  termines('Terminés et abandonnés');
+
+  const GroupeBrassins(this.libelle);
+
+  final String libelle;
+}
+
+GroupeBrassins groupeBrassin(BrewStatus status) => switch (status) {
+  BrewStatus.brewing ||
+  BrewStatus.fermenting ||
+  BrewStatus.conditioning => GroupeBrassins.enCours,
+  BrewStatus.planned => GroupeBrassins.prevus,
+  BrewStatus.done || BrewStatus.abandoned => GroupeBrassins.termines,
 };
 
-/// Tri de la liste (ST10) : en cours, puis en fermentation et en conditionnement, puis
-/// prévus par date croissante, puis terminés et abandonnés ; le reste du plus récent au
-/// plus ancien.
+/// Tri de la liste (ST10) : par [GroupeBrassins], le brassage du jour avant la
+/// fermentation et le conditionnement ; prévus par date croissante ; le reste
+/// du plus récent au plus ancien.
 int compareBrews(Brew a, Brew b) {
-  final byBucket = _bucket(a.status).compareTo(_bucket(b.status));
-  if (byBucket != 0) return byBucket;
+  final parGroupe = groupeBrassin(
+    a.status,
+  ).index.compareTo(groupeBrassin(b.status).index);
+  if (parGroupe != 0) return parGroupe;
+  final aBrasse = a.status == BrewStatus.brewing;
+  if (aBrasse != (b.status == BrewStatus.brewing)) return aBrasse ? -1 : 1;
   if (a.status == BrewStatus.planned) {
     final pa = a.plannedFor;
     final pb = b.plannedFor;
@@ -236,6 +275,48 @@ int compareBrews(Brew a, Brew b) {
     return da == null ? -1 : 1;
   }
   return db.compareTo(da);
+}
+
+/// Vrai si la liste des brassins lit les événements de [brew] pour annoncer sa
+/// prochaine journée : brassin de [readerUid], comme la fiche qui ne propose la
+/// journée qu'à son propriétaire, en fermentation ou en conditionnement, avec un
+/// `process` d'au moins deux journées. Les autres gardent la règle des dates.
+bool listeLitEvenements(Brew brew, String? readerUid) =>
+    readerUid != null &&
+    brew.ownerUid == readerUid &&
+    (brew.status == BrewStatus.fermenting ||
+        brew.status == BrewStatus.conditioning) &&
+    (brew.process?.journees.length ?? 0) >= 2;
+
+/// Prochaine journée après le brassage d'un brassin en fermentation ou en
+/// conditionnement, d'après les dates seules : la première dont la date n'est
+/// pas passée à [now]. Une fois le brassin embouteillé, seules les journées
+/// placées après la journée d'embouteillage comptent ; sans journée
+/// d'embouteillage dans le déroulé, aucune. `null` sinon. Règle de la liste
+/// tant que les événements du brassin ne sont pas lus, et pour les brassins des
+/// autres membres (`prochaineJourneeAnnoncee`).
+({JourneeDeroulee journee, DateTime date})? prochaineJourneePrevue(
+  Brew brew,
+  DateTime now,
+) {
+  if (brew.status != BrewStatus.fermenting &&
+      brew.status != BrewStatus.conditioning) {
+    return null;
+  }
+  var journees = brew.deroule.journees.skip(1);
+  if (brew.bottledAt != null) {
+    final embouteillage = brew.deroule.embouteillage;
+    if (embouteillage == null) return null;
+    journees = journees.skipWhile((j) => j.key != embouteillage.key).skip(1);
+  }
+  final aujourdhui = DateTime(now.year, now.month, now.day);
+  for (final j in journees) {
+    final date = j.date(brew.departDeroule);
+    if (date == null) return null;
+    final jour = DateTime(date.year, date.month, date.day);
+    if (!jour.isBefore(aujourdhui)) return (journee: j, date: jour);
+  }
+  return null;
 }
 
 /// Durée pendant laquelle un brassin en cours se rouvre au lancement (D-Q3).

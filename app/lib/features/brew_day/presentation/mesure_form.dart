@@ -10,9 +10,12 @@ import '../../../core/presentation/editeur_plein_ecran.dart';
 import '../../../core/presentation/feuille_ou_dialogue.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../brews/data/brews_repository.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/presentation/releve_fermentation.dart'
+    show jourAvant, kReleveApresEmbouteillage;
 import '../../recipes/domain/chronologie.dart';
 
 /// Heure future refusée (JB7).
@@ -20,6 +23,10 @@ const kHeureFutureRefusee = 'L\'heure ne peut pas être dans le futur.';
 
 /// Fin placée avant le début de l'étape.
 const kFinAvantDebut = 'La fin doit suivre le début.';
+
+/// Aide d'une densité ou d'une température saisie pendant une journée 2 ou
+/// suivante (ADR-010).
+const kMesureComptee = 'Comptée dans le relevé de fermentation.';
 
 /// Instant choisi, ou raison du refus.
 typedef ChoixHeure = ({DateTime? at, String? erreur});
@@ -149,6 +156,8 @@ class FormulaireMesure extends StatefulWidget {
     this.initialAt,
     this.initialNote,
     this.plancher,
+    this.releve = false,
+    this.bottledAt,
   });
 
   final List<BrewStepLine> steps;
@@ -171,6 +180,12 @@ class FormulaireMesure extends StatefulWidget {
 
   /// Début du brassin : une heure saisie peut reculer d'un jour jusque-là.
   final DateTime? plancher;
+
+  /// Saisie d'une journée 2 ou suivante : comptée dans le relevé de
+  /// fermentation (ADR-010). Affiche l'aide sous le type, et l'avertissement
+  /// d'un relevé postérieur à [bottledAt].
+  final bool releve;
+  final DateTime? bottledAt;
 
   @override
   State<FormulaireMesure> createState() => _FormulaireMesureState();
@@ -269,7 +284,7 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
 
   Widget _champValeur() {
     final type = _type!;
-    const grand = TextStyle(fontSize: 28);
+    final grand = TextStyle(fontSize: StylesJourDeBrassage.of(context).saisie);
     final autofocus = _edit == null;
     switch (type) {
       case MeasureType.gravity:
@@ -350,10 +365,7 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
             DropdownButtonFormField<String?>(
               initialValue: _stepKey,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Étape',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Étape'),
               items: [
                 const DropdownMenuItem(value: null, child: Text('Sans étape')),
                 for (final s in widget.steps)
@@ -399,6 +411,21 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
                 'à nouveau.',
               ),
             ),
+          if (widget.releve &&
+              !correcting &&
+              !_isNote &&
+              (_type == MeasureType.gravity ||
+                  _type == MeasureType.temperature)) ...[
+            Text(kMesureComptee, style: theme.textTheme.bodyMedium),
+            if (_type == MeasureType.gravity &&
+                widget.bottledAt != null &&
+                jourAvant(widget.bottledAt!, at ?? widget.now()))
+              Text(
+                kReleveApresEmbouteillage,
+                style: theme.textTheme.bodyMedium,
+              ),
+            const SizedBox(height: 12),
+          ],
           if (!_isNote && _type != null) _champValeur(),
           if (!_isNote && _type != null) const SizedBox(height: 16),
           TextFormField(
@@ -411,7 +438,6 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
               labelText: _isNote ? 'Note' : 'Note (facultatif)',
-              border: const OutlineInputBorder(),
             ),
             validator: (v) => _isNote && (v ?? '').trim().isEmpty
                 ? 'Écrivez une note.'
@@ -506,7 +532,8 @@ class ChampDensite extends StatefulWidget {
   /// Faux : un champ vide est accepté (densité finale de l'embouteillage).
   final bool obligatoire;
 
-  /// Chiffres en grand (28 sp), pour une saisie à côté de la cuve.
+  /// Chiffres en grand ([StylesJourDeBrassage.saisie]), pour une saisie à
+  /// côté de la cuve.
   final bool grand;
 
   @override
@@ -527,11 +554,12 @@ class _ChampDensiteState extends State<ChampDensite> {
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textInputAction: widget.textInputAction,
       autovalidateMode: AutovalidateMode.onUserInteraction,
-      style: widget.grand ? const TextStyle(fontSize: 28) : null,
+      style: widget.grand
+          ? TextStyle(fontSize: StylesJourDeBrassage.of(context).saisie)
+          : null,
       decoration: InputDecoration(
         labelText: widget.label,
         helperText: preview ?? '1057,9 ou 1.058',
-        border: const OutlineInputBorder(),
       ),
       validator: (text) {
         final value = text ?? '';
@@ -556,7 +584,7 @@ void ouvrirCorrection({
   final repo = ref.read(brewsRepositoryProvider);
   final messenger = ScaffoldMessenger.of(context);
   unawaited(
-    // ticket: /brassins/:id/fenetre/correction, /brassins/:id/jour/fenetre/correction
+    // ticket: /brassins/:id/fenetre/correction, /brassins/:id/jour/fenetre/correction, /brassins/:id/jour/:journee/fenetre/correction
     showFeuilleOuDialogue<void>(
       context: context,
       fermetureProtegee: true,
@@ -604,12 +632,14 @@ void ouvrirCorrection({
 }
 
 /// Ajoute une mesure, feuille fermée aussitôt, avec « Annuler » pendant 10 s.
+/// [phase] : `fermentation` pour une journée 2 ou suivante (ADR-010).
 void enregistrerSaisie({
   required WidgetRef ref,
   required ScaffoldMessengerState messenger,
   required Brew brew,
   required SaisieMesure saisie,
   required void Function(Future<void> written, String libelle) suivre,
+  PhaseEvenement? phase,
 }) {
   final repo = ref.read(brewsRepositoryProvider);
   final created = repo.addEvent(
@@ -622,6 +652,7 @@ void enregistrerSaisie({
       value: saisie.value,
       note: saisie.note,
       measuredAt: saisie.at,
+      phase: phase,
     ),
   );
   final type = saisie.type;

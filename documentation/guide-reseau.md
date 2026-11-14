@@ -55,7 +55,9 @@ scripts/
 ├── check-agents.mjs            vérifie les en-têtes YAML et les noms cités dans CLAUDE.md
 ├── check-agents.test.mjs       node --test scripts/check-agents.test.mjs
 ├── check-version.mjs           avant une fusion : version de la branche > version de main
-└── check-version.test.mjs      node --test scripts/check-version.test.mjs
+├── check-version.test.mjs      node --test scripts/check-version.test.mjs
+└── garder-apk-en-ligne.sh      deploy.yml sans nouvel APK : recopie l'APK et apk_release.json
+                                en ligne dans app/build/web, refuse une paire incohérente (ADR-012)
 documentation/                  modèles de documents, leçons apprises, ce guide
 ```
 
@@ -166,9 +168,90 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
+Le 2026-11-11, ADR-010 (déroulé en journées) a étendu la règle absolue du hors ligne à chaque
+journée du déroulé et la règle « Un brassin fige sa recette » à son déroulé, ajouté le lieu des
+modèles (`process_templates/`) aux règles des prix, complété P2, P3 et P5, et ajouté P37 (lecture
+du déroulé et découpage par journée, `relecteur-regles`) et P38 (règles des modèles et du champ
+`process`, `securite`). P29 à P36 restent réservés à ADR-008. Avec la v0.1.34, P37 permet de
+lire la recette figée d'un brassin (`recipe.brewSteps`, `recipe.brewStepsProblem`) comme entrée
+d'une nouvelle résolution avant le départ : `assemblerDeroule` et l'aperçu « Chronologie de la
+recette seule » par `Deroule.depuisRecette`. Toute autre lecture passe par `Brew.deroule`.
+
+Le 2026-11-13, avec l'accord de l'utilisateur, P3 est complété : les durées réelles d'étape et
+de journée et leur écart avec le prévu se calculent dans `brewing/` (`actualDurations`,
+`durationUpdateIssue`), et leur changement ajoute d'abord un cas à
+`brewing/test/fixtures/process.json`. La fiche d'un brassin et « Mettre à jour mon processus
+avec ce brassin » (v0.1.37) n'en font que l'affichage.
+
 Le 2026-11-11, la ligne « Serveur » de `CLAUDE.md` (« Le projet ») cite ADR-008 : parité des
-tickets avec Kass'Dalle, lots T3 à T7. Ses contrôles (P25 modifié, P29 à P36) entreront dans
-`CLAUDE.md` avec le lot T3, après l'accord de l'utilisateur.
+tickets avec Kass'Dalle, lots T3 à T7.
+
+Le 2026-11-12, avec le lot T3 et l'accord de l'utilisateur, P6, P14, P23, P24, P25 et P26 sont
+modifiés et P29 à P34 ajoutés : point d'accès `githubTicketWebhook` signé (P29), garde des
+callables (P30), appartenance et rôle rejoués par `test-fixtures/member_access.json` (P31, ligne
+de « Logique dupliquée »), relevé et affichage des analyses (P32, P33), « Répondre » (P34).
+`ci.yml` et `deploy.yml` remplacent le refus de tout point d'accès HTTP ou callable par la liste
+fermée d'ADR-008 (P10, accord de l'utilisateur). Les lots T4 à T7 ajouteront leurs contrôles.
+
+Le 2026-11-14, avec le lot T6 (ticket #38) et les décisions de l'utilisateur, P5 (exception des
+captures de ticket), P6 (`firebase_storage`), P23 (champ serveur `screenshot_path`), P24 (phrase
+fixe de la capture sur chaque Issue), P25 (`attachTicketScreenshot`) et P31 (`storage.rules`) sont
+modifiés, et P48 ajouté (règles Storage et callable des captures). P14 admet, pour T6, le seul rôle
+`roles/firebasestorage.viewer` de `github-deploy`, si la publication de `storage.rules` l'exige. `ci.yml` et `deploy.yml`
+ajoutent la callable à la liste fermée, l'émulateur Storage aux tests des règles et `storage` au
+déploiement (P10, signalé à l'utilisateur).
+
+Le 2026-11-13, avec le lot T4 et l'accord de l'utilisateur, P14, P23 (champ serveur
+`validated_by_app_at`) et P25 sont modifiés et P35, P36,
+P39 à P42 ajoutés (P37 et P38 étaient pris par ADR-010) : appel de l'API Routines (P35), plafond du
+poste `ticket_routine_launch` (P36), confirmation d'un lancement (P39), prompts des routines
+signalés avant la fusion, avec l'arrêt sur `GIT_COMMITTER_IDENT`, les fichiers sensibles
+d'`ingest/` et d'Android et la liste fermée des appels de l'analyse (P40), historique des
+lancements (P41), Valider réservé aux tickets analysés et « Lancer le développement » réservé à un
+ticket validé dans l'application (P42). La section « Coûts variables » de
+`CLAUDE.md` décrit ce premier poste. `ci.yml` et `deploy.yml` ajoutent les deux callables de T4 à la
+liste fermée et leurs secrets au contrôle des secrets (P10, accord de l'utilisateur).
+
+Le 2026-11-14, lot T7 avec l'accord de l'utilisateur : P23, P25, P26, P42 et P44 modifiés, P53
+ajouté (`securite`) : Valider, Refuser, Clore et « Relancer l'envoi » deviennent les callables
+`validateTicket`, `refuseTicket`, `closeTicket` et `retryTicketSend` (une instance chacune) ;
+`tickets/{id}/decisions/` reste l'historique, écrit par le serveur seul ; motif de 5 à 4 000
+caractères ; reprise d'une décision interrompue par l'admin seul. « Le projet » et « Tickets »
+suivent. `ci.yml` et `deploy.yml` ajoutent les quatre callables et une liste fermée des
+déclencheurs (P10, accord de l'utilisateur).
+
+Le 2026-11-14, à la demande de l'utilisateur : P36 et la section « Coûts variables » de
+`CLAUDE.md` ajoutent le compte fondateur (`members/{email}.founder`, posé dans la console
+Firebase) et son plafond `FOUNDER_LAUNCHES_PER_DAY`, cinq fois celui du groupe, sur un compteur
+à part (v0.1.52). La ligne `member_access.json` du tableau « Logique dupliquée » ajoute le compte
+fondateur : `Member.founder` côté client, `isFounder` côté serveur, cas rejoués par la fixture.
+P31 compte cinq fichiers au lieu de quatre : `app/lib/features/members/domain/member.dart`
+y entre, et un diff de `Member.founder` sans cas ajouté à `member_access.json` est une anomalie
+(accord de l'utilisateur du 2026-11-14).
+
+Le 2026-11-14, complément du lot T6 avec l'accord de l'utilisateur : P23 et P48 modifiés (capture
+envoyée dans l'heure, dimensions contrôlées, image choisie réencodée en PNG, rétention de 180 jours).
+
+Le 2026-11-14, avec le lot T5 et l'accord de l'utilisateur, P14, P24, P25, P29, P35, P36 et P39 à
+P42 sont modifiés et P43 à P47 ajoutés : `launchTicketDelivery` et ses refus (P43), verrou des
+livraisons (P44), état « PR prête » et comptes rendus (P45), relecture des PR et des runs (P46),
+reprise du développement sur une CI rouge (P47). Le tableau « Logique dupliquée » reçoit la liste
+des fichiers sensibles d'une livraison, écrite dans le prompt et dans `delivery.ts`. `ci.yml` et
+`deploy.yml` ajoutent `launchTicketDelivery` à la liste fermée (P10, accord de l'utilisateur).
+
+Le 2026-11-14, ADR-011 (journaux) et l'accord de l'utilisateur ajoutent `queryLogs` à P25,
+P49 (filtre et réponse de `queryLogs`, `securite`) et P50 (champs du journal lus par le filtre,
+recherche par un bouton, rapports d'erreur paginés, `relecteur-regles`). « Règles de code »
+précise que la lecture des journaux passe aussi par l'API REST et `fetch`, et « Le projet » cite
+ADR-011.
+
+Le 2026-11-14, ADR-012 (mise à jour de l'APK, ticket #36) et les décisions de l'utilisateur
+étendent P1 (paire APK et manifeste en `no-cache`), P17 (canal `fr.kassbeer/updates`) et P28
+(second `FileProvider`, `REQUEST_INSTALL_PACKAGES`), et ajoutent P51 (client et canal de la
+mise à jour, `securite`) et P52 (paire écrite par `build`, restaurée par
+`garder-apk-en-ligne.sh`, `relecteur-regles`). « Règles de code » reçoit une exception à
+« Aucun `catch` silencieux » pour les échecs réseau de la mise à jour, et « Le projet » cite
+ADR-012.
 
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
@@ -278,6 +361,19 @@ caractères de contrôle bidirectionnels retirés) et P3 couvre les conversions 
 SRM et les valeurs calculées d'un export. Le paquet `exchange/` entre dans « Structure »,
 « Commandes utiles », `.claude/formatters.json` (`dart format`) et `setup-projet.sh`
 (`dart pub get`) ; la CI le contrôle dans le job « Flutter et brewing ».
+
+Depuis la v0.1.38 (import des 16 fiches, v0.6), P9 admet une exception : Admin › Import lit les
+prix et frais des fiches de l'administrateur, par `package:exchange/fiches.dart`, et ne les écrit
+que dans le coût figé de chaque brassin importé (`users/{uid de l'admin}/brew_costs/`). `securite`
+vérifie qu'aucun de ces prix n'entre dans `prices`, `fees`, `recipes/`, `brews/`, un rapport
+d'erreur ou une annonce. Le lecteur refuse une fiche dont un texte lu par le groupe contient un
+montant (« € », « EUR », « euro »), et une fiche dont un document ou un événement appartient à un
+autre compte. La réserve à l'admin vient du routeur seul.
+
+Depuis la v0.1.29 (ADR-009), `relecteur-regles` applique aussi P17 au canal `fr.kassbeer/prefs`
+de la préférence de thème : noms identiques en Dart et en Kotlin, garde `kIsWeb`, travail hors du
+thread principal, second appel refusé (`BUSY`) ; le Dart n'envoie qu'un appel à la fois et ne
+garde que le dernier choix. Aucun contrôle n'est ajouté.
 
 Depuis la v0.1.21 (L2c), « Le projet » et « Structure » disent que `exchange/` lit et écrit aussi le
 BeerXML. Depuis la v0.1.28 (ADR-005, E4), l'export BeerXML de l'écran retrouve son style dans la

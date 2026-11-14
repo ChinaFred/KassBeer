@@ -63,6 +63,13 @@ class FirebaseEnv {
     ];
   }
 
+  /// Bucket Cloud Storage des captures de tickets (ADR-008, T6) : le bucket par défaut
+  /// d'un projet créé depuis 2024 porte le nom `<projet>.firebasestorage.app`. Il est
+  /// nommé ici parce que Firebase ne le déclare pas comme bucket par défaut du projet
+  /// `kassbeer` (déploiement de la v0.1.41) : sans `storageBucket`, `FirebaseStorage`
+  /// n'a aucun bucket.
+  String get storageBucket => '$projectId.firebasestorage.app';
+
   /// Options de la plateforme [web] (web) ou Android. À n'appeler que si
   /// [missingKeys] est vide.
   FirebaseOptions options({required bool web}) {
@@ -79,12 +86,14 @@ class FirebaseEnv {
             messagingSenderId: messagingSenderId,
             projectId: projectId,
             authDomain: authDomain,
+            storageBucket: storageBucket,
           )
         : FirebaseOptions(
             apiKey: androidApiKey,
             appId: androidAppId,
             messagingSenderId: messagingSenderId,
             projectId: projectId,
+            storageBucket: storageBucket,
           );
   }
 }

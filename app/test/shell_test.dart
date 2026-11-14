@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/bandeau_hors_ligne.dart';
+import 'package:kass_beer/core/presentation/logo_kass_beer.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 
 import 'package:kass_beer/features/equipment/presentation/equipment_list_screen.dart';
 import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
@@ -27,22 +30,31 @@ void main() {
   }
 
   testWidgets(
-    'moins de 600 px : barre de navigation en bas, libellés visibles',
+    'moins de 600 px : barre de navigation en bas, icônes seules, nom en '
+    'infobulle et pour le lecteur d\'écran',
     (tester) async {
+      final semantics = tester.ensureSemantics();
       await signedIn(tester, width: 400);
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(find.byType(NavigationRail), findsNothing);
       final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysShow);
-      for (final label in ['Recettes', 'Brassins', 'Équipements']) {
+      expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysHide);
+      for (final label in ['Recettes', 'Bibliothèque', 'Brassins']) {
+        final destination = find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byTooltip(label),
+        );
+        expect(destination, findsOneWidget, reason: label);
         expect(
           find.descendant(
             of: find.byType(NavigationBar),
-            matching: find.text(label),
+            matching: find.bySemanticsLabel(RegExp('^$label')),
           ),
           findsOneWidget,
+          reason: label,
         );
       }
+      semantics.dispose();
     },
   );
 
@@ -52,6 +64,13 @@ void main() {
     expect(rail.extended, isFalse);
     expect(rail.labelType, NavigationRailLabelType.all);
     expect(find.byType(NavigationBar), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(NavigationRail),
+        matching: find.text('Brassins'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('840 px et plus : rail étendu, contenu à 840 px au plus', (
@@ -70,29 +89,30 @@ void main() {
 
   testWidgets('un brasseur ne voit pas Admin', (tester) async {
     await signedIn(tester, width: 400);
+    expect(find.byTooltip('Admin'), findsNothing);
     expect(find.text('Admin'), findsNothing);
   });
 
   testWidgets('un admin voit Admin et ouvre Membres', (tester) async {
     await signedIn(tester, width: 400, admin: true);
-    await tester.tap(find.text('Admin'));
+    await tester.tap(find.byTooltip('Admin'));
     await tester.pumpAndSettle();
     expect(find.text('Membres'), findsOneWidget);
     expect(find.text('Inviter et retirer les comptes'), findsOneWidget);
     expect(find.text('Import'), findsOneWidget);
-    expect(find.text('Disponible dans une prochaine version'), findsOneWidget);
-    final import = tester.widget<ListTile>(
-      find.widgetWithText(ListTile, 'Import'),
+    expect(find.text('Fiches Excel préparées en JSON'), findsOneWidget);
+    final import = tester.widget<LigneListe>(
+      find.widgetWithText(LigneListe, 'Import'),
     );
-    expect(import.enabled, isFalse);
+    expect(import.onTap, isNotNull);
   });
 
   testWidgets('navigation entre les sections', (tester) async {
     await signedIn(tester, width: 400);
-    await tester.tap(find.text('Brassins'));
+    await tester.tap(find.byTooltip('Brassins'));
     await tester.pumpAndSettle();
     expect(find.text(BrewsScreen.emptyMessage), findsOneWidget);
-    await tester.tap(find.text('Équipements'));
+    await tester.tap(find.byTooltip('Équipements'));
     await tester.pumpAndSettle();
     expect(find.text(EquipmentListScreen.emptyMessage), findsOneWidget);
   });
@@ -129,6 +149,46 @@ void main() {
         matching: find.byType(SingleChildScrollView),
       ),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('rail étendu, texte × 2 : nom sous le médaillon, entier', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await signedIn(tester, width: 1400);
+    expect(tester.takeException(), isNull);
+    final nom = find.descendant(
+      of: find.byType(NavigationRail),
+      matching: find.text("Kass'Beer"),
+    );
+    final medaillon = find.descendant(
+      of: find.byType(NavigationRail),
+      matching: find.byType(MedaillonKassBeer),
+    );
+    expect(
+      tester.getTopLeft(nom).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(medaillon).dy),
+    );
+    // Une seule ligne, sans points de suspension, dans la largeur du rail.
+    final paragraphe = tester.renderObject<RenderParagraph>(
+      find.descendant(of: nom, matching: find.byType(RichText)),
+    );
+    expect(paragraphe.didExceedMaxLines, isFalse);
+    expect(paragraphe.overflow, isNot(TextOverflow.ellipsis));
+    expect(
+      paragraphe
+          .getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 9),
+          )
+          .map((b) => b.top)
+          .toSet(),
+      hasLength(1),
+    );
+    expect(
+      tester.getRect(nom).right,
+      lessThanOrEqualTo(tester.getRect(find.byType(NavigationRail)).right),
     );
   });
 

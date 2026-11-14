@@ -9,6 +9,7 @@ import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -57,14 +58,18 @@ class LibraryScreen extends StatelessWidget {
   }
 }
 
-/// Segments et accès à « Sources des données ». Sur téléphone, les puces
-/// tiennent sur une ligne qui défile à l'horizontale, et « Sources des
-/// données » est une icône à sa droite ; au-delà, les puces passent à la ligne
-/// et le lien est écrit en toutes lettres.
+/// Segments et accès à « Sources des données », une icône à droite des puces à
+/// toutes les largeurs. Sur téléphone, les puces tiennent sur une ligne qui
+/// défile à l'horizontale, en fondu au bord droit ; au-delà, elles passent à
+/// la ligne.
 class _EnTete extends StatelessWidget {
   const _EnTete({required this.segment});
 
   final SegmentBibliotheque segment;
+
+  /// Largeur du fondu au bord droit de la ligne des puces (téléphone) : une
+  /// puce coupée par le bord s'y efface et annonce la suite.
+  static const _fondu = 32.0;
 
   @override
   Widget build(BuildContext context) {
@@ -80,45 +85,48 @@ class _EnTete extends StatelessWidget {
           },
         ),
     ];
-    void sources() => unawaited(context.push(AppRoutes.dataSources));
+    final Widget segments;
     if (compact) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(left: 16),
-                child: Row(
-                  children: [
-                    for (final p in puces) ...[p, const SizedBox(width: 8)],
-                  ],
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: LibraryScreen.sourcesLabel,
-              onPressed: sources,
-              icon: const Icon(Icons.info_outline),
-            ),
-            const SizedBox(width: 4),
-          ],
+      // Fondu par l'opacité seule (BlendMode.dstIn) : la couleur du dégradé
+      // ne compte pas, son alpha va de 1 à 0. La marge droite égale au fondu
+      // laisse la dernière puce nette en fin de défilement.
+      final opaque = Theme.of(context).colorScheme.onSurface;
+      segments = ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (bounds) => LinearGradient(
+          colors: [opaque, opaque.withValues(alpha: 0)],
+          stops: [bounds.width <= _fondu ? 0 : 1 - _fondu / bounds.width, 1],
+        ).createShader(bounds),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.only(left: 16, right: _fondu),
+          child: Row(
+            children: [
+              for (final (i, p) in puces.indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                p,
+              ],
+            ],
+          ),
         ),
+      );
+    } else {
+      segments = Padding(
+        padding: const EdgeInsets.only(left: 16),
+        child: Wrap(spacing: 8, runSpacing: 8, children: puces),
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
         children: [
-          Wrap(spacing: 8, runSpacing: 8, children: puces),
-          const SizedBox(height: 4),
-          TextButton.icon(
-            onPressed: sources,
+          Expanded(child: segments),
+          IconButton(
+            tooltip: LibraryScreen.sourcesLabel,
+            onPressed: () => unawaited(context.push(AppRoutes.dataSources)),
             icon: const Icon(Icons.info_outline),
-            label: const Text(LibraryScreen.sourcesLabel),
           ),
+          const SizedBox(width: 4),
         ],
       ),
     );
@@ -159,7 +167,6 @@ class _ChampRecherche extends StatelessWidget {
               labelText: label,
               helperText: helper,
               prefixIcon: const Icon(Icons.search),
-              border: const OutlineInputBorder(),
               suffixIcon: submit == null
                   ? null
                   : IconButton(
@@ -564,6 +571,7 @@ class _LigneRecette extends StatelessWidget {
       if (abv != null) '${formatDegre(abv)} annoncés',
     ];
     return _Ligne(
+      icone: Icons.menu_book_outlined,
       titre: c.name,
       details: details,
       onTap: () => context.go(
@@ -573,56 +581,30 @@ class _LigneRecette extends StatelessWidget {
   }
 }
 
-/// Ligne d'une liste : titre et détails, comme la liste des recettes.
-/// [erreur] : document illisible, sans action.
+/// Ligne d'une liste : titre et détails sur une ligne. [icone] : repère d'une
+/// recette publique, le même que la liste des recettes ; les ingrédients et les
+/// styles n'en ont pas. [erreur] : document illisible, sans action.
 class _Ligne extends StatelessWidget {
   const _Ligne({
     required this.titre,
     required this.details,
+    this.icone,
     this.onTap,
     this.erreur = false,
   });
 
   final String titre;
   final List<String> details;
+  final IconData? icone;
   final VoidCallback? onTap;
   final bool erreur;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final content = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 56),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            if (erreur) ...[
-              Icon(Icons.error_outline, color: theme.colorScheme.error),
-              const SizedBox(width: 16),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(titre, style: theme.textTheme.titleMedium),
-                  if (details.isNotEmpty)
-                    Text(
-                      details.join(' · '),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    final tap = onTap;
-    return MergeSemantics(
-      child: tap == null ? content : InkWell(onTap: tap, child: content),
-    );
-  }
+  Widget build(BuildContext context) => LigneListe(
+    icone: erreur ? Icons.error_outline : icone,
+    erreur: erreur,
+    titre: titre,
+    details: [if (details.isNotEmpty) Text(details.join(' · '))],
+    onTap: onTap,
+  );
 }

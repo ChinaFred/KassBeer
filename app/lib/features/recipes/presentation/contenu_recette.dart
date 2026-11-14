@@ -5,12 +5,9 @@ import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../domain/beerjson.dart';
 import '../domain/chronologie.dart';
+import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
 import 'ingredient_forms.dart';
-
-/// Quantité d'une ligne : « 22,4 g », « 5 ml », « 1,5 L ».
-String formatQuantiteRecette(Quantite q) =>
-    q.enLitres ? formatVolumeLigne(q.valeur) : formatGrammes(q.valeur);
 
 /// Moment d'un houblon et sa durée : « Ébullition 60 min », « Whirlpool 20 min »,
 /// « À cru 3 jours », « Empâtage 60 min ».
@@ -125,9 +122,23 @@ class ContenuRecette extends StatelessWidget {
     this.hopIbu = const {},
     this.momentsOrigine = const {},
     this.chronologie,
-  });
+    this.niveauTitres = NiveauTitre.section,
+    this.enCartes = false,
+  }) : assert(
+         !enCartes || niveauTitres == NiveauTitre.section,
+         'Une section en carte a un titre de section.',
+       );
 
   final RecipeContent content;
+
+  /// [NiveauTitre.sousSection] sous un titre « Recette » (fiche d'un brassin,
+  /// recette ouverte depuis l'écran du jour).
+  final NiveauTitre niveauTitres;
+
+  /// Vrai : chaque section dans une [CarteSection] (fiche d'une recette,
+  /// recette publique). Faux : les sections se suivent, sous un titre
+  /// « Recette » qui les range (fiche d'un brassin, écran du jour).
+  final bool enCartes;
 
   /// IBU apporté par chaque houblon, par rang.
   final Map<int, double> hopIbu;
@@ -146,60 +157,83 @@ class ContenuRecette extends StatelessWidget {
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
+    // Une section : son titre et ses lignes, dans une carte ou à la suite.
+    List<Widget> section(
+      String titre,
+      List<Widget> lignes, {
+      String? trailing,
+    }) => enCartes
+        ? [CarteSection(titre: titre, trailing: trailing, children: lignes)]
+        : [
+            TitreSection(titre, trailing: trailing, niveau: niveauTitres),
+            ...lignes,
+          ];
+    final chronologie = this.chronologie;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TitreSection(
+        ...section(
           'Malts et sucres',
           trailing: c.fermentables.isEmpty
               ? null
               : '${c.fermentables.length} · ${formatKilogrammes(c.fermentables.fold(0.0, (s, f) => s + f.weightG))}',
+          [
+            if (c.fermentables.isEmpty)
+              const TexteAbsent('Aucun malt ni sucre.'),
+            for (final f in c.fermentables)
+              LigneDeuxNiveaux(
+                title: f.name,
+                details: detailsFermentescible(f, fiche: true),
+              ),
+          ],
         ),
-        if (c.fermentables.isEmpty) const TexteAbsent('Aucun malt ni sucre.'),
-        for (final f in c.fermentables)
-          LigneDeuxNiveaux(
-            title: f.name,
-            details: detailsFermentescible(f, fiche: true),
+        ...section('Houblons', [
+          if (c.hops.isEmpty) const TexteAbsent('Aucun houblon.'),
+          for (final (i, h) in c.hops.indexed)
+            LigneDeuxNiveaux(
+              title: h.name,
+              details: [
+                ...detailsHoublon(h, fiche: true, ibu: hopIbu[i]),
+                if (momentsOrigine[i] case final moment?)
+                  "moment d'origine : $moment",
+              ],
+            ),
+        ]),
+        ...section('Autres ajouts', [
+          if (c.others.isEmpty) const TexteAbsent('Aucun ajout.'),
+          for (final o in c.others)
+            LigneDeuxNiveaux(title: o.name, details: detailsAjout(o)),
+        ]),
+        ...section('Levure', [
+          if (c.yeasts.isEmpty) const TexteAbsent('Aucune levure.'),
+          for (final y in c.yeasts)
+            LigneDeuxNiveaux(
+              title: y.name,
+              details: detailsLevure(y, fiche: true),
+            ),
+        ]),
+        ...section('Paliers d\'empâtage', [
+          if (c.grainTempC != null)
+            LigneFiche(
+              label: 'Température du grain',
+              value: formatCelsius(c.grainTempC!),
+            ),
+          if (c.mashSteps.isEmpty) const TexteAbsent('Aucun palier.'),
+          for (final s in c.mashSteps)
+            LigneDeuxNiveaux(title: s.name, details: detailsPalier(s)),
+        ]),
+        // La chronologie porte son titre : en carte, elle en est le premier
+        // enfant.
+        if (chronologie != null)
+          enCartes ? CarteSection(children: [chronologie]) : chronologie,
+        ...section('Notes', [
+          Text(
+            c.notes ?? 'Non renseigné',
+            style: c.notes == null
+                ? muted?.copyWith(fontStyle: FontStyle.italic)
+                : theme.textTheme.bodyLarge,
           ),
-        const TitreSection('Houblons'),
-        if (c.hops.isEmpty) const TexteAbsent('Aucun houblon.'),
-        for (final (i, h) in c.hops.indexed)
-          LigneDeuxNiveaux(
-            title: h.name,
-            details: [
-              ...detailsHoublon(h, fiche: true, ibu: hopIbu[i]),
-              if (momentsOrigine[i] case final moment?)
-                "moment d'origine : $moment",
-            ],
-          ),
-        const TitreSection('Autres ajouts'),
-        if (c.others.isEmpty) const TexteAbsent('Aucun ajout.'),
-        for (final o in c.others)
-          LigneDeuxNiveaux(title: o.name, details: detailsAjout(o)),
-        const TitreSection('Levure'),
-        if (c.yeasts.isEmpty) const TexteAbsent('Aucune levure.'),
-        for (final y in c.yeasts)
-          LigneDeuxNiveaux(
-            title: y.name,
-            details: detailsLevure(y, fiche: true),
-          ),
-        const TitreSection('Paliers d\'empâtage'),
-        if (c.grainTempC != null)
-          LigneFiche(
-            label: 'Température du grain',
-            value: formatCelsius(c.grainTempC!),
-          ),
-        if (c.mashSteps.isEmpty) const TexteAbsent('Aucun palier.'),
-        for (final s in c.mashSteps)
-          LigneDeuxNiveaux(title: s.name, details: detailsPalier(s)),
-        ?chronologie,
-        const TitreSection('Notes'),
-        Text(
-          c.notes ?? 'Non renseigné',
-          style: c.notes == null
-              ? muted?.copyWith(fontStyle: FontStyle.italic)
-              : theme.textTheme.bodyLarge,
-        ),
+        ]),
       ],
     );
   }

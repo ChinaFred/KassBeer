@@ -1,50 +1,48 @@
 {
   "versions": [
     {
-      "version": "0.1.29",
-      "date": "2026-11-11",
+      "version": "0.1.55",
+      "date": "2026-11-15",
       "paragraphs": [
         "Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données », et « Relire » relit l'écran.",
         "En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50. Chaque ligne donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur."
       ]
     },
     {
-      "version": "0.1.28",
-      "date": "2026-11-11",
+      "version": "0.1.54",
+      "date": "2026-11-14",
       "paragraphs": [
-        "L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon, d'un ajout ou d'une levure, vous voyez les ingrédients qui correspondent, par nom ou autre nom. Choisir l'un d'eux remplit les valeurs encore vides : couleur et rendement d'un malt, acides alpha et forme d'un houblon, type, forme et atténuation d'une levure, type d'un ajout. Une valeur déjà saisie ne change pas ; si elle diffère, « Reprendre les valeurs de la Bibliothèque » la remplace. Le champ « Style » propose les styles BJCP par code ou par nom. Hors ligne, les suggestions viennent de ce qui a déjà été lu ; sinon, la saisie reste libre.",
-        "L'export BeerXML est ouvert. Il retrouve le style de la recette dans la Bibliothèque, avec sa catégorie et ses plages. Une recette sans style de la Bibliothèque demande de le choisir dans les suggestions du champ Style. Le type du style BeerXML suit la levure de la recette : précisez-la si l'export le demande. Un style sans plage chiffrée dans le guide BJCP ne s'exporte pas en BeerXML : choisissez un autre style, ou exportez en BeerJSON. Quand votre équipement n'a pas l'évaporation, les pertes ou le volume mort, « Compléter l'équipement » ouvre sa fiche.",
-        "Recettes › Importer complète les valeurs absentes du fichier quand le nom d'un ingrédient est celui d'une entrée de la Bibliothèque, ou l'un de ses autres noms. Une valeur du fichier n'est jamais remplacée. Les détails de chaque recette listent les valeurs reprises, par exemple « Couleur de Pils reprise de la Bibliothèque. ». Hors ligne, l'import marche comme avant et le dit. Les noms qu'aucune entrée ne reconnaît sont signalés à l'administrateur, sans votre nom ni celui du fichier, pour qu'il complète la Bibliothèque."
+        "Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche. Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie », « Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi compléter les recettes importées l'une après l'autre. Demandé par le ticket #60."
       ]
     },
     {
-      "version": "0.1.27",
-      "date": "2026-11-11",
+      "version": "0.1.53",
+      "date": "2026-11-14",
       "paragraphs": [
-        "« Signaler ou proposer » a un nouveau champ, « Élément précis », sous « Écran concerné ». Il permet de désigner un menu ou une fenêtre de l'écran : « Embouteillage » ou « Plus d'actions » sur un brassin, « Houblon » dans l'éditeur de recette, « Menu du compte »… Par défaut, le ticket porte sur l'écran entier. Le suivi affiche l'écran et l'élément, par exemple « Brassin › Embouteillage ». Les listes passent sur deux lignes quand le texte est agrandi. Demandé par le ticket #26."
+        "Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique que le panneau de l'étape continue plus bas.",
+        "La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation (« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes."
       ]
     },
     {
-      "version": "0.1.26",
-      "date": "2026-11-11",
+      "version": "0.1.52",
+      "date": "2026-11-14",
       "paragraphs": [
-        "Une nouvelle entrée « Bibliothèque », à côté de Recettes, montre les styles de bière, les malts et sucres, les houblons, les levures, les ajouts divers et les recettes publiques DIY Dog. Une recherche filtre chaque liste par nom, autre nom ou code de style. La fiche d'un style donne ses plages de densité, de degré, d'amertume et de couleur. La fiche d'un ingrédient donne ses valeurs, sa source et sa licence.",
-        "La fiche d'une recette publique montre ses ingrédients, ses paliers, les valeurs que Kass'Beer peut calculer et, à part, les valeurs annoncées par la recette d'origine. Un houblon dont la recette d'origine ne donne pas la durée garde le moment indiqué par la source, traduit. « Dupliquer » copie la recette dans vos recettes et ouvre l'éditeur : choisissez votre équipement, et la forme des houblons, que la recette d'origine ne donne pas, pour obtenir densités, degré et amertume. Une recette dont un houblon n'a pas de forme dit « Forme du houblon à compléter ». Recettes › Importer accepte aussi un houblon sans forme, sans rien perdre : la forme reste à compléter dans la recette, et l'export BeerXML attend qu'elle le soit.",
-        "« Sources des données », ouvert depuis la Bibliothèque ou le menu du compte, nomme chaque source, sa licence et ce que Kass'Beer en a changé. La Bibliothèque demande le réseau, sauf pour ce qui a déjà été lu. Elle reste vide tant que l'administrateur n'a pas chargé les données."
+        "Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois celui des autres administrateurs. Ses lancements ne consomment pas les 10 du groupe, et inversement. Le compteur d'Admin › Tickets et la boîte de lancement affichent le plafond du compte connecté. Le mois compte tous les lancements."
       ]
     },
     {
-      "version": "0.1.24",
-      "date": "2026-11-11",
+      "version": "0.1.51",
+      "date": "2026-11-14",
       "paragraphs": [
-        "L'administrateur traite les tickets depuis l'application. Le menu du compte gagne « Tickets à traiter », avec le nombre de tickets qui attendent une décision, et la page Admin la tuile « Tickets des membres ». La liste se filtre (à traiter, tous, bloqués) et montre l'auteur de chaque ticket. La fiche d'un ticket permet de le valider, de le refuser avec un motif ou de le clore avec un commentaire, de relancer un envoi en échec et d'ouvrir l'Issue sur GitHub ; elle suit l'avancement de la décision. Une frise montre les étapes du ticket, ici comme dans Mes tickets, et les statuts prennent de nouvelles couleurs. Sur grand écran, la liste et la fiche s'affichent côte à côte."
+        "Les fiches d'une recette, d'un brassin, d'un équipement et d'un processus ont un en-tête avec le nom et ses étiquettes, puis des sections dans des cartes. Sur la fiche d'un brassin, la prochaine journée et son bouton sont en tête, dans une carte colorée. Les boutons suivent le même ordre partout : l'action principale en plein, « Modifier » en teinte, « Supprimer » en rouge. La liste des brassins est groupée : en cours, prévus, terminés et abandonnés. La recherche des recettes prend toute la largeur. Les listes vides de tickets, de prix et de membres ont un titre.",
+        "Sur l'écran du jour, l'étape en cours est dans une carte, avec une barre qui montre le temps écoulé. Quand le temps est dépassé, la carte passe à l'ambre, avec un bord et une alarme. L'étape et l'heure de fin s'écrivent plus grand, pour se lire à deux mètres. Dans la chronologie, une étape faite est en vert et l'étape en cours en brun. Dans « Préparer le brassage », chaque vérification a l'icône et la couleur de son état, et le nom du brassin et sa date sont sur deux lignes."
       ]
     },
     {
-      "version": "0.1.21",
-      "date": "2026-11-10",
+      "version": "0.1.50",
+      "date": "2026-11-14",
       "paragraphs": [
-        "Recettes › Importer lit aussi les fichiers BeerXML, le format qu'exportent BeerSmith, Brewfather, Brewer's Friend et Brewtarget. Le fichier s'importe comme un fichier BeerJSON : aperçu sans écriture, recettes déjà importées ou en double décochées, compte rendu. Un fichier BeerSmith qui contient des apostrophes ou des accents se lit sans caractère faux. « Détails » dit ce qui change à l'import : un houblon « First Wort » compte à l'ébullition pendant toute l'ébullition de la recette, un houblon « Aroma » avec une durée compte à l'ébullition pendant cette durée (si c'était un whirlpool, choisissez Whirlpool dans la recette), un whirlpool sans durée compte à l'arrêt du feu, et le style ne garde que son nom. Le profil d'eau, les étapes de fermentation et l'équipement du fichier ne sont pas importés. Une levure liquide mesurée en litres garde sa quantité en litres. Un fichier BeerSmith (.bsmx) n'est pas lu : exportez la recette en BeerXML depuis BeerSmith. L'export BeerXML reste visible et bloqué : il demande un style de la liste BJCP, dont le choix arrive dans une prochaine version."
+        "Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur GitHub, au lieu de partir plus tard. Pendant l'action, la fiche affiche « … en cours sur GitHub. », puis un message court dit si c'est fait. En cas d'échec, le message dit pourquoi et le texte saisi est gardé. La boîte de Refuser et de Clore peut se fermer pendant l'envoi, et accepte maintenant 4 000 caractères. Ces actions demandent le réseau : hors ligne, les boutons restent visibles mais inactifs, avec « Ces actions demandent le réseau. ». L'historique des décisions d'un ticket reste affiché."
       ]
     }
   ]

@@ -14,6 +14,13 @@ export const REGION = "europe-west1";
 export const PROJECT_ID = "kassbeer";
 
 /**
+ * Bucket Cloud Storage des captures de tickets (ADR-008, T6), nommé : Firebase ne le
+ * déclare pas comme bucket par défaut du projet (déploiement de la v0.1.41), et
+ * `getStorage().bucket()` sans nom n'en trouverait aucun.
+ */
+export const STORAGE_BUCKET = `${PROJECT_ID}.firebasestorage.app`;
+
+/**
  * Compte d'exécution des fonctions, adresse complète. La forme courte `tickets-functions@`
  * n'est pas complétée par firebase-tools quand il donne au compte l'accès au secret
  * (`secrets:setIamPolicy` refusé en 400, déploiement du 2026-11-10).
@@ -22,9 +29,35 @@ export const RUNTIME_SERVICE_ACCOUNT = `tickets-functions@${PROJECT_ID}.iam.gser
 
 /**
  * Jeton à grain fin du compte propriétaire, limité à `ChinaFred/KassBeer` : Issues en
- * lecture et écriture, Pull requests et Contents en lecture (P25). Déclaré ici, lu à l'appel.
+ * lecture et écriture ; Pull requests, Contents et Actions en lecture (P25 ; Actions depuis
+ * T5, pour les runs de la CI d'une PR). Déclaré ici, lu à l'appel.
  */
 export const GITHUB_TICKETS_TOKEN = defineSecret("GITHUB_TICKETS_TOKEN");
+
+/**
+ * Secret partagé avec le webhook du dépôt (ADR-008, T3) : HMAC SHA-256 du corps de chaque
+ * livraison (`X-Hub-Signature-256`). Monté par `githubTicketWebhook` seul (P25).
+ */
+export const GITHUB_WEBHOOK_SECRET = defineSecret("GITHUB_WEBHOOK_SECRET");
+
+/**
+ * Routines Claude Code des tickets (ADR-008, T4, P35) : identifiant (`trig_…`) et jeton de
+ * déclenchement de chaque routine, créés sur claude.ai/code. Chaque paire est montée par les
+ * seules callables qui la lisent (P25) : l'analyse par `launchTicketAnalysis` ; le
+ * développement par `launchTicketDevelopment` (développement et reprise) et
+ * `launchTicketDelivery`, la livraison partant par la routine de développement (T5). Vides :
+ * « Lancement non configuré », rien ne part.
+ */
+export const TICKETS_ROUTINE_ANALYSIS_ID = defineSecret("TICKETS_ROUTINE_ANALYSIS_ID");
+export const TICKETS_ROUTINE_ANALYSIS_TOKEN = defineSecret("TICKETS_ROUTINE_ANALYSIS_TOKEN");
+export const TICKETS_ROUTINE_DEV_ID = defineSecret("TICKETS_ROUTINE_DEV_ID");
+export const TICKETS_ROUTINE_DEV_TOKEN = defineSecret("TICKETS_ROUTINE_DEV_TOKEN");
+
+/**
+ * Origines admises par les callables (ADR-008, P25) : l'application web hébergée. Cette
+ * liste limite les navigateurs, pas un script.
+ */
+export const CALLABLE_ORIGINS = ["https://kassbeer.web.app", "https://kassbeer.firebaseapp.com"];
 
 export const GITHUB_OWNER = "ChinaFred";
 export const GITHUB_REPO = "KassBeer";
@@ -41,6 +74,38 @@ export const COLL_MEMBERS = "members";
 export const COLL_TICKET_QUOTAS = "ticket_quotas";
 export const COLL_TICKET_STATUS = "ticket_status";
 export const TICKET_STATUS_GITHUB_DOC = "github";
+
+/** Sous-collection des documents d'un ticket lus par l'admin seul (ADR-008). */
+export const TICKET_ADMIN_SUBCOLLECTION = "admin";
+/** Analyses relevées sur l'Issue : `tickets/{id}/admin/analysis` (P32). */
+export const TICKET_ANALYSIS_DOC = "analysis";
+/** Historique des lancements de sessions : `tickets/{id}/admin/launches` (P41). */
+export const TICKET_LAUNCHES_DOC = "launches";
+/** Compteurs des lancements affichés à l'admin : `ticket_status/launches` (P36, P41). */
+export const TICKET_STATUS_LAUNCHES_DOC = "launches";
+/** État « PR prête » et comptes rendus de livraison : `tickets/{id}/admin/delivery` (P45). */
+export const TICKET_DELIVERY_DOC = "delivery";
+
+/**
+ * Poste de coût des lancements de routines (CLAUDE.md, « Coûts variables », P36) : inscrit
+ * au catalogue de `exigences-techniques.md`. Seul nom employé pour ce poste.
+ */
+export const LAUNCH_COST_CENTER = "ticket_routine_launch";
+
+/**
+ * Plafond des lancements de routines, analyse, développement, reprise et livraison confondus,
+ * pour le groupe, par jour de Paris (ADR-008, P36). Seul endroit où il est écrit : le client
+ * le lit dans `ticket_status/launches.per_day`.
+ */
+export const LAUNCHES_PER_DAY = 10;
+
+/**
+ * Plafond des lancements du compte fondateur (`members/{email}.founder === true`, posé dans
+ * la console Firebase, jamais par un client), par jour de Paris : cinq fois celui du groupe,
+ * sur un compteur à part (`ticket_quotas/launch_founder_{AAAAMMJJ}`). Décision de
+ * l'utilisateur du 2026-11-14. Le client le lit dans `ticket_status/launches.founder_per_day`.
+ */
+export const FOUNDER_LAUNCHES_PER_DAY = 5 * LAUNCHES_PER_DAY;
 
 /** Plafonds du jour de Paris (ADR-006, décision 7) ; l'administrateur n'est pas compté. */
 export const MEMBER_DAILY_LIMIT = 5;
@@ -61,5 +126,36 @@ export const ISSUES_PER_PASS = 30;
 /** Tickets `pending` renvoyés au plus par passe. */
 export const PENDING_PER_PASS = 20;
 
-/** Longueur gardée d'une réponse relevée sur GitHub. */
-export const REPLY_MAX_CHARS = 2000;
+/**
+ * Longueur gardée d'une réponse relevée sur GitHub (`reply_text`), en points de code : celle
+ * du motif de Refuser et du commentaire de Clore (4 000 depuis T7, P53).
+ */
+export const REPLY_MAX_CHARS = 4000;
+
+/**
+ * Fonctions dont Admin › Journaux filtre la sortie (`queryLogs`, ADR-011, J2, P49) : les
+ * noms exportés par `index.ts`, dans son ordre. Le client construit son menu depuis la
+ * liste rendue par `queryLogs`, jamais d'une copie. `logs.test.ts` vérifie l'égalité avec
+ * les exports.
+ */
+export const QUERYABLE_FUNCTIONS = [
+  "publishTicket",
+  "syncTickets",
+  "githubTicketWebhook",
+  "answerTicketAnalysis",
+  "validateTicket",
+  "refuseTicket",
+  "closeTicket",
+  "retryTicketSend",
+  "launchTicketAnalysis",
+  "launchTicketDevelopment",
+  "launchTicketDelivery",
+  "attachTicketScreenshot",
+  "queryLogs",
+] as const;
+
+/** Gravités filtrables par `queryLogs` (vocabulaire de Cloud Logging, P49). */
+export const QUERYABLE_SEVERITIES = ["DEBUG", "INFO", "WARNING", "ERROR"] as const;
+
+/** Périodes de `queryLogs`, en minutes : 1 h, 24 h, 7 jours (P49). */
+export const QUERYABLE_PERIODS_MINUTES = [60, 1440, 10080] as const;

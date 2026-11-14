@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:exchange/exchange.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,19 +10,29 @@ import 'package:kass_beer/app.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/data/nouveautes.dart';
 import 'package:kass_beer/core/fichiers/echange_fichiers.dart';
+import 'package:kass_beer/core/preferences/preferences_appareil.dart';
 import 'package:kass_beer/core/providers.dart';
+import 'package:kass_beer/core/services/app_installer.dart';
+import 'package:kass_beer/core/services/app_update_service.dart';
+import 'package:kass_beer/core/services/app_update_transport.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
+import 'package:kass_beer/features/admin/data/error_reports_repository.dart';
 import 'package:kass_beer/features/admin/data/sources_repository.dart';
 import 'package:kass_beer/features/admin/domain/ingestion.dart';
+import 'package:kass_beer/features/admin/domain/error_report.dart';
+import 'package:kass_beer/features/admin/data/logs_repository.dart';
+import 'package:kass_beer/features/admin/domain/log_entry.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
 import 'package:kass_beer/features/auth/domain/session_user.dart';
 import 'package:kass_beer/features/brew_day/data/alerte_minuteur.dart';
 import 'package:kass_beer/features/brews/data/brews_repository.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
+import 'package:kass_beer/features/brews/domain/deroule.dart';
 import 'package:kass_beer/features/brews/domain/releves.dart';
 import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
+import 'package:kass_beer/features/import/data/import_fiches_repository.dart';
 import 'package:kass_beer/features/library/data/library_repository.dart';
 import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
@@ -35,9 +46,14 @@ import 'package:kass_beer/core/services/screen_wakelock.dart';
 import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_delivery.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
+import 'package:kass_beer/features/tickets/presentation/capture_ticket.dart';
 import 'package:kass_beer/features/tickets/presentation/tickets_providers.dart';
 
 import 'cost_fakes.dart';
+import 'process_fakes.dart';
 
 /// Flux qui rejoue sa dernière valeur ou erreur à chaque nouvel abonné.
 class Replay<T> {
@@ -275,6 +291,9 @@ class FakeBrewsRepository implements BrewsRepository {
   /// Réponse du serveur à une écriture ; jamais terminée par défaut (hors ligne).
   Future<void> Function() serverAnswer = () => Completer<void>().future;
 
+  /// Réponse du serveur à l'écriture du déroulé ; [serverAnswer] si nulle.
+  Future<void> Function()? processAnswer;
+
   /// Vrai si [attendreServeur] rend une réponse du serveur.
   bool serverReachable = true;
   int prepareCalls = 0;
@@ -354,6 +373,21 @@ class FakeBrewsRepository implements BrewsRepository {
   }
 
   @override
+  Future<void> setProcess({
+    required String brewId,
+    required Deroule? deroule,
+    required String? ownerName,
+  }) {
+    writes.add(
+      BrewWrite('process', brewId, {
+        'deroule': deroule,
+        'owner_name': ownerName,
+      }),
+    );
+    return (processAnswer ?? serverAnswer)();
+  }
+
+  @override
   Future<void> start({
     required String brewId,
     required String ownerUid,
@@ -409,6 +443,7 @@ class FakeBrewsRepository implements BrewsRepository {
         'value': input.value,
         'step': input.stepKey,
         'at': input.measuredAt,
+        'phase': input.phase?.storedValue,
       }),
     );
     return (id: id, written: serverAnswer());
@@ -576,6 +611,40 @@ class FakeBrewsRepository implements BrewsRepository {
   }
 }
 
+/// Double de [PreferencesAppareil] : valeur gardée en mémoire, échecs au choix.
+class FakePreferencesAppareil implements PreferencesAppareil {
+  String? valeur;
+  Object? erreurLecture;
+  Object? erreurEcriture;
+
+  /// Erreurs des écritures suivantes, une par écriture (`null` : réussite),
+  /// lues avant [erreurEcriture].
+  final erreursEcritures = <Object?>[];
+  Future<void>? attenteEcriture;
+  final ecritures = <ThemeMode>[];
+
+  @override
+  Future<String?> lireValeurTheme() async {
+    final erreur = erreurLecture;
+    if (erreur != null) throw erreur;
+    return valeur;
+  }
+
+  @override
+  Future<void> ecrireTheme(ThemeMode mode) async {
+    ecritures.add(mode);
+    final erreurPrevue = erreursEcritures.isNotEmpty
+        ? erreursEcritures.removeAt(0)
+        : erreurEcriture;
+    final attente = attenteEcriture;
+    attenteEcriture = null;
+    if (attente != null) await attente;
+    final erreur = erreurPrevue;
+    if (erreur != null) throw erreur;
+    valeur = kValeursTheme[mode];
+  }
+}
+
 class FakeAlerte implements AlerteMinuteur {
   int prepared = 0;
   int triggered = 0;
@@ -602,6 +671,7 @@ class FakeEchangeFichiers implements EchangeFichiers {
   ResultatChoix choix = const ChoixAnnule();
   int choixDemandes = 0;
   int? maxOctetsDemande;
+  List<String>? typesDemandes;
 
   @override
   List<ModeEnvoi> modes = const [ModeEnvoi.enregistrer, ModeEnvoi.partager];
@@ -615,9 +685,13 @@ class FakeEchangeFichiers implements EchangeFichiers {
   Completer<ResultatChoix>? attente;
 
   @override
-  Future<ResultatChoix> choisir({required int maxOctets}) async {
+  Future<ResultatChoix> choisir({
+    required int maxOctets,
+    List<String>? types,
+  }) async {
     choixDemandes++;
     maxOctetsDemande = maxOctets;
+    typesDemandes = types;
     return attente?.future ?? choix;
   }
 
@@ -696,10 +770,8 @@ class FakeTicketsRepository implements TicketsRepository {
   final githubStatus = Replay<RechercheDocument<EtatJetonGithub>>();
   final all = Replay<ListeLue<Ticket>>();
   final decisions = <String, Replay<ListeLue<TicketDecision>>>{};
-  final decisionsCreated = <DecisionCreee>[];
+  final decisionsAppelees = <DecisionAppelee>[];
   final sendRetries = <String>[];
-  final decisionRetries = <String>[];
-  int decisionIdsGiven = 0;
   final created = <TicketCree>[];
   final seen = <String>[];
   final watchedUids = <String>[];
@@ -802,123 +874,150 @@ class FakeTicketsRepository implements TicketsRepository {
   Stream<ListeLue<TicketDecision>> watchDecisions(String ticketId) =>
       decisionsOf(ticketId).stream;
 
-  @override
-  String newDecisionId(String ticketId) => 'decision-${++decisionIdsGiven}';
+  /// Réponse du serveur à une décision : `null` si appliquée ; jamais terminée
+  /// par défaut.
+  Future<EchecReponse?> Function() decideResult = () =>
+      Completer<EchecReponse?>().future;
 
-  /// Réponse du serveur à une écriture d'administration (décision, relance) :
-  /// vrai s'il l'accepte ; jamais terminée par défaut (hors ligne).
-  Future<bool> Function() adminAnswer = () => Completer<bool>().future;
+  /// `textKept` rendu par le serveur avec une décision appliquée.
+  bool texteGarde = false;
 
   @override
-  Future<bool> createDecision({
+  Future<ResultatDecision> decide({
     required String ticketId,
-    required String id,
     required TicketDecisionAction action,
-    required String? text,
-    required String requestedByUid,
-  }) {
-    decisionsCreated.add((
-      ticketId: ticketId,
-      id: id,
-      action: action,
-      text: text,
-      requestedByUid: requestedByUid,
-    ));
-    return adminAnswer();
+    String? text,
+  }) async {
+    decisionsAppelees.add((ticketId: ticketId, action: action, text: text));
+    final echec = await decideResult();
+    return (echec: echec, texteGarde: echec == null && texteGarde);
   }
 
-  /// Comme Firestore : l'écriture locale republie le ticket avec une écriture
-  /// en attente ; `retry_requested_at` (heure du serveur) reste inchangé.
+  /// Réponse du serveur à « Relancer l'envoi » ; jamais terminée par défaut.
+  Future<ResultatRelanceEnvoi> Function() retrySendResult = () =>
+      Completer<ResultatRelanceEnvoi>().future;
+
   @override
-  Future<bool> retrySend(String ticketId) {
+  Future<ResultatRelanceEnvoi> retrySend(String ticketId) {
     sendRetries.add(ticketId);
-    final list = all.value;
-    if (list != null) {
-      all.add(
-        ListeLue(
-          documents: [
-            for (final d in list.documents)
-              if (d case DocumentValide<Ticket>(
-                :final value,
-              ) when value.id == ticketId)
-                DocumentValide(d.id, _enAttente(value))
-              else
-                d,
-          ],
-          fromCache: list.fromCache,
-        ),
-      );
-    }
-    return adminAnswer();
+    return retrySendResult();
   }
 
-  /// Comme Firestore : la décision reste `failed` dans le cache, avec une
-  /// écriture en attente.
+  final analyses = <String, Replay<RechercheDocument<TicketAnalysisDoc>>>{};
+
+  Replay<RechercheDocument<TicketAnalysisDoc>> analysesOf(String ticketId) =>
+      analyses.putIfAbsent(ticketId, Replay.new);
+
   @override
-  Future<bool> retryDecision({
+  Stream<RechercheDocument<TicketAnalysisDoc>> watchAnalysis(String ticketId) =>
+      analysesOf(ticketId).stream;
+
+  /// Réponses publiées par « Répondre » : ticket et texte.
+  final answers = <({String ticketId, String answer})>[];
+
+  /// Réponse du serveur à « Répondre » : `null` si publiée ; jamais terminée
+  /// par défaut.
+  Future<EchecReponse?> Function() answerResult = () =>
+      Completer<EchecReponse?>().future;
+
+  @override
+  Future<EchecReponse?> answer({
     required String ticketId,
-    required String decisionId,
+    required String answer,
   }) {
-    decisionRetries.add('$ticketId/$decisionId');
-    final list = decisions[ticketId]?.value;
-    if (list != null) {
-      decisionsOf(ticketId).add(
-        ListeLue(
-          documents: [
-            for (final d in list.documents)
-              if (d case DocumentValide<TicketDecision>(
-                :final value,
-              ) when value.id == decisionId)
-                DocumentValide(
-                  d.id,
-                  TicketDecision(
-                    id: value.id,
-                    action: value.action,
-                    state: value.state,
-                    text: value.text,
-                    requestedAt: value.requestedAt,
-                    errorReason: value.errorReason,
-                    leaseUntil: value.leaseUntil,
-                    hasPendingWrites: true,
-                  ),
-                )
-              else
-                d,
-          ],
-          fromCache: list.fromCache,
-        ),
-      );
-    }
-    return adminAnswer();
+    answers.add((ticketId: ticketId, answer: answer));
+    return answerResult();
   }
 
-  static Ticket _enAttente(Ticket t) => Ticket(
-    id: t.id,
-    type: t.type,
-    title: t.title,
-    description: t.description,
-    screen: t.screen,
-    status: t.status,
-    appVersion: t.appVersion,
-    platform: t.platform,
-    createdAt: t.createdAt,
-    statusChangedAt: t.statusChangedAt,
-    seenByAuthorAt: t.seenByAuthorAt,
-    replyText: t.replyText,
-    deliveredPrUrl: t.deliveredPrUrl,
-    deliveredVersion: t.deliveredVersion,
-    authorEmail: t.authorEmail,
-    issueNumber: t.issueNumber,
-    issueUrl: t.issueUrl,
-    deliveredPrNumber: t.deliveredPrNumber,
-    sendAttempts: t.sendAttempts,
-    lastSendError: t.lastSendError,
-    issueMissingSince: t.issueMissingSince,
-    allowedDecisions: t.allowedDecisions,
-    decisionLeaseUntil: t.decisionLeaseUntil,
-    retryRequestedAt: t.retryRequestedAt,
-    hasPendingWrites: true,
-  );
+  /// Historique des lancements par ticket : absent par défaut (aucun
+  /// lancement). Un test qui veut la lecture en cours place un [Replay] vide
+  /// avant d'ouvrir la fiche.
+  final launchHistories =
+      <String, Replay<RechercheDocument<TicketLaunchesDoc>>>{};
+
+  /// `ticket_status/launches` : absent par défaut.
+  final launchStatus = Replay<RechercheDocument<EtatLancements>>()
+    ..add(const DocumentAbsent());
+
+  Replay<RechercheDocument<TicketLaunchesDoc>> launchesOf(String ticketId) =>
+      launchHistories.putIfAbsent(
+        ticketId,
+        () => Replay()..add(const DocumentAbsent()),
+      );
+
+  @override
+  Stream<RechercheDocument<TicketLaunchesDoc>> watchLaunches(String ticketId) =>
+      launchesOf(ticketId).stream;
+
+  @override
+  Stream<RechercheDocument<EtatLancements>> watchLaunchStatus() =>
+      launchStatus.stream;
+
+  /// `admin/delivery` par ticket : absent par défaut.
+  final deliveries = <String, Replay<RechercheDocument<TicketDelivery>>>{};
+
+  Replay<RechercheDocument<TicketDelivery>> deliveryOf(String ticketId) =>
+      deliveries.putIfAbsent(
+        ticketId,
+        () => Replay()..add(const DocumentAbsent()),
+      );
+
+  @override
+  Stream<RechercheDocument<TicketDelivery>> watchDelivery(String ticketId) =>
+      deliveryOf(ticketId).stream;
+
+  /// Lancements demandés : ticket et action.
+  final launches = <({String ticketId, ActionLancement action})>[];
+
+  /// Réponse du serveur à un lancement ; jamais terminée par défaut.
+  Future<ResultatLancement> Function() launchResult = () =>
+      Completer<ResultatLancement>().future;
+
+  @override
+  Future<ResultatLancement> launch({
+    required String ticketId,
+    required ActionLancement action,
+  }) {
+    launches.add((ticketId: ticketId, action: action));
+    return launchResult();
+  }
+
+  /// Captures jointes : ticket, auteur, octets.
+  final screenshotsAttached =
+      <({String ticketId, String authorUid, Uint8List png})>[];
+
+  /// Réponse à [attachScreenshot] : vrai si la capture est jointe.
+  Future<bool> Function() attachResult = () async => true;
+
+  @override
+  Future<bool> attachScreenshot({
+    required String ticketId,
+    required String authorUid,
+    required Uint8List png,
+  }) {
+    screenshotsAttached.add((
+      ticketId: ticketId,
+      authorUid: authorUid,
+      png: png,
+    ));
+    return attachResult();
+  }
+
+  /// Captures lues, par chemin ; absente : lecture en échec.
+  final screenshots = <String, Uint8List>{};
+  final screenshotReads = <String>[];
+
+  /// Captures effacées du bucket : [CaptureEffacee].
+  final screenshotsErased = <String>{};
+
+  @override
+  Future<Uint8List> loadScreenshot(String path) async {
+    screenshotReads.add(path);
+    if (screenshotsErased.contains(path)) throw const CaptureEffacee();
+    final bytes = screenshots[path];
+    if (bytes == null) throw StateError('capture absente');
+    return bytes;
+  }
 }
 
 /// Demande de page reçue par [FakeLibraryRepository].
@@ -1065,13 +1164,70 @@ class FakeSourcesRepository implements SourcesRepository {
   }
 }
 
-/// Décision reçue par [FakeTicketsRepository.createDecision].
-typedef DecisionCreee = ({
+/// Admin › Rapports d'erreur : [rapports] du plus récent au plus ancien,
+/// servis par pages de [kTaillePageRapports] ; le curseur est l'indice suivant.
+class FakeErrorReportsRepository implements ErrorReportsRepository {
+  final rapports = <ErrorReport>[];
+
+  /// Panne de la prochaine page demandée.
+  Object? pageError;
+  bool fromCache = false;
+
+  /// Curseur de chaque page demandée (`null` : première page).
+  final demandes = <CurseurRapports?>[];
+
+  /// Réponse retenue jusqu'à ce que ce `Completer` soit complété.
+  Completer<void>? attente;
+
+  @override
+  Future<PageRapports> page({CurseurRapports? apres}) async {
+    demandes.add(apres);
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
+    final error = pageError;
+    if (error != null) {
+      pageError = null;
+      throw error;
+    }
+    final start = apres == null ? 0 : apres.valeur as int;
+    final end = (start + kTaillePageRapports).clamp(0, rapports.length);
+    return PageRapports(
+      rapports: rapports.sublist(start, end),
+      suite: end - start < kTaillePageRapports ? null : CurseurRapports(end),
+      fromCache: fromCache,
+    );
+  }
+}
+
+/// Admin › Journaux : chaque recherche est notée ; [reponses] sert les pages
+/// dans l'ordre, une [EchecJournaux] ou autre erreur est levée.
+class FakeLogsRepository implements LogsRepository {
+  final reponses = <Object>[];
+  final demandes = <({FiltresJournaux filtres, String? suite})>[];
+
+  /// Réponse retenue jusqu'à ce que ce `Completer` soit complété.
+  Completer<void>? attente;
+
+  @override
+  Future<PageJournaux> rechercher(
+    FiltresJournaux filtres, {
+    String? suite,
+  }) async {
+    demandes.add((filtres: filtres, suite: suite));
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
+    if (reponses.isEmpty) throw StateError('aucune réponse prévue');
+    final r = reponses.removeAt(0);
+    if (r is PageJournaux) return r;
+    throw r;
+  }
+}
+
+/// Décision reçue par [FakeTicketsRepository.decide].
+typedef DecisionAppelee = ({
   String ticketId,
-  String id,
   TicketDecisionAction action,
   String? text,
-  String requestedByUid,
 });
 
 class RecordingErrorReportService extends ErrorReportService {
@@ -1085,6 +1241,103 @@ class RecordingErrorReportService extends ErrorReportService {
     String? context,
   }) {
     reports.add((feature: feature, error: error, context: context));
+  }
+}
+
+/// Réseau et fichier de la mise à jour de l'APK (ADR-012), simulés.
+class FakeTransportMiseAJour implements TransportMiseAJour {
+  /// Réponse au manifeste ; `null` : échec de réseau.
+  ReponseManifeste? manifeste;
+
+  /// Issue du téléchargement ; [progressions] sont annoncées avant.
+  Transfert transfert = const TransfertInterrompu();
+  List<int> progressions = const [];
+
+  /// Appelé à chaque bloc : un test peut y annuler le suivi.
+  void Function()? pendantTransfert;
+
+  /// Attendu après les progressions : la fenêtre reste en téléchargement.
+  Completer<void>? attente;
+
+  /// Erreur levée par [supprimer] ; `null` : effacement réussi.
+  Object? erreurSuppression;
+
+  final lectures = <Uri>[];
+  final telechargements = <({Uri url, String chemin, int max})>[];
+  final suppressions = <String>[];
+
+  @override
+  Future<ReponseManifeste?> lireManifeste(
+    Uri url, {
+    required Duration delai,
+    required int maxOctets,
+  }) async {
+    lectures.add(url);
+    return manifeste;
+  }
+
+  @override
+  Future<Transfert> telecharger(
+    Uri url,
+    String chemin, {
+    required int maxOctets,
+    required bool Function() annule,
+    required void Function(int recus) progression,
+  }) async {
+    telechargements.add((url: url, chemin: chemin, max: maxOctets));
+    for (final recus in progressions) {
+      pendantTransfert?.call();
+      if (annule()) return const TransfertInterrompu();
+      progression(recus);
+    }
+    final enAttente = attente;
+    if (enAttente != null) await enAttente.future;
+    if (annule()) return const TransfertInterrompu();
+    return transfert;
+  }
+
+  @override
+  Future<void> supprimer(String chemin) async {
+    suppressions.add(chemin);
+    final erreur = erreurSuppression;
+    if (erreur != null) throw erreur;
+  }
+}
+
+/// Canal `fr.kassbeer/updates` simulé.
+class FakeInstallateurApk implements InstallateurApk {
+  String? dossier = '/cache/updates';
+  bool permis = true;
+  bool reglagesOuverts = true;
+
+  /// Attendu par [peutInstaller] : la lecture de l'autorisation reste en cours.
+  Completer<void>? attentePermis;
+  int lecturesPermis = 0;
+  Installation installation = Installation.ouverte;
+  final builds = <int>[];
+  int ouverturesReglages = 0;
+
+  @override
+  Future<String?> dossierMisesAJour() async => dossier;
+
+  @override
+  Future<bool> peutInstaller() async {
+    lecturesPermis++;
+    final attente = attentePermis;
+    if (attente != null) await attente.future;
+    return permis;
+  }
+
+  @override
+  Future<bool> ouvrirReglages() async {
+    ouverturesReglages++;
+    return reglagesOuverts;
+  }
+
+  @override
+  Future<Installation> installer(int buildAttendu) async {
+    builds.add(buildAttendu);
+    return installation;
   }
 }
 
@@ -1110,21 +1363,42 @@ const adminMember = Member(
 );
 
 /// Environnement de test : doubles, conteneur Riverpod, application montée.
+/// Image PNG d'un pixel, valide pour `Image.memory`.
+final kPngDeTest = Uint8List.fromList(const [
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, //
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+  0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0xf8, 0xcf, 0xc0, 0xf0,
+  0x1f, 0x00, 0x05, 0x00, 0x01, 0xff, 0x89, 0x99, 0x3d, 0x1d, 0x00, 0x00,
+  0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+]);
+
 class TestApp {
   /// [appVersion] : version installée lue au démarrage ; `null` si illisible.
-  TestApp({String? appVersion = '0.1.0'})
-    : auth = FakeAuthRepository(),
-      members = FakeMembersRepository(),
-      recipes = FakeRecipesRepository(),
-      equipment = FakeEquipmentRepository(),
-      brews = FakeBrewsRepository(),
-      costs = FakeCostsRepository(),
-      alerte = FakeAlerte(),
-      tickets = FakeTicketsRepository(),
-      fichiers = FakeEchangeFichiers(),
-      library = FakeLibraryRepository(),
-      sources = FakeSourcesRepository(),
-      errors = RecordingErrorReportService() {
+  /// [themeMode] : thème lu sur l'appareil avant `runApp`.
+  TestApp({
+    String? appVersion = '0.1.0',
+    ThemeMode themeMode = ThemeMode.system,
+  }) : auth = FakeAuthRepository(),
+       members = FakeMembersRepository(),
+       recipes = FakeRecipesRepository(),
+       equipment = FakeEquipmentRepository(),
+       brews = FakeBrewsRepository(),
+       costs = FakeCostsRepository(),
+       alerte = FakeAlerte(),
+       tickets = FakeTicketsRepository(),
+       fichiers = FakeEchangeFichiers(),
+       library = FakeLibraryRepository(),
+       sources = FakeSourcesRepository(),
+       errorReports = FakeErrorReportsRepository(),
+       logs = FakeLogsRepository(),
+       processes = FakeProcessesRepository(),
+       preferencesProcessus = FakePreferencesProcessusRepository(),
+       importFirestore = FakeFirebaseFirestore(),
+       preferences = FakePreferencesAppareil(),
+       transportMiseAJour = FakeTransportMiseAJour(),
+       installateur = FakeInstallateurApk(),
+       errors = RecordingErrorReportService() {
     wakelock = ScreenWakelock(
       errorReportService: errors,
       toggle: ({required bool enable}) async {
@@ -1143,6 +1417,15 @@ class TestApp {
         ticketsRepositoryProvider.overrideWithValue(tickets),
         libraryRepositoryProvider.overrideWithValue(library),
         sourcesRepositoryProvider.overrideWithValue(sources),
+        errorReportsRepositoryProvider.overrideWithValue(errorReports),
+        logsRepositoryProvider.overrideWithValue(logs),
+        importFichesRepositoryProvider.overrideWithValue(
+          FirestoreImportFichesRepository(firestore: importFirestore),
+        ),
+        processesRepositoryProvider.overrideWithValue(processes),
+        preferencesProcessusRepositoryProvider.overrideWithValue(
+          preferencesProcessus,
+        ),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
           return openLinkResult;
@@ -1153,7 +1436,28 @@ class TestApp {
         analyseurFichierProvider.overrideWithValue((o) => analyseur(o)),
         screenWakelockProvider.overrideWithValue(wakelock),
         appVersionProvider.overrideWithValue(appVersion),
+        preferencesAppareilProvider.overrideWithValue(preferences),
+        themeModeInitialProvider.overrideWithValue(themeMode),
         nouveautesSourceProvider.overrideWithValue(() => nouveautes()),
+        // Mise à jour de l'APK : aucun manifeste par défaut (échec de réseau).
+        appUpdateServiceProvider.overrideWith(
+          (ref) => AppUpdateService(
+            errorReportService: errors,
+            installateur: installateur,
+            buildInstalle: buildInstalle,
+            versionInstallee: appVersion,
+            transport: transportMiseAJour,
+            estAndroid: () => estAndroid,
+          ),
+        ),
+        // `toImage` ne se termine pas sous l'horloge simulée : la capture
+        // rend [capture], et compte les appels.
+        capturerEcranProvider.overrideWithValue((context) async {
+          captureCalls++;
+          return capture;
+        }),
+        // Même raison pour le décodage d'une image choisie : `preparer`.
+        preparerImageProvider.overrideWithValue((octets) => preparer(octets)),
       ],
     );
     // Listes vides lues du serveur : l'accueil (Recettes) s'affiche sans attendre.
@@ -1173,6 +1477,20 @@ class TestApp {
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
   final FakeSourcesRepository sources;
+  final FakeErrorReportsRepository errorReports;
+  final FakeLogsRepository logs;
+  final FakeProcessesRepository processes;
+  final FakePreferencesProcessusRepository preferencesProcessus;
+
+  /// Firestore en mémoire d'Admin › Import (v0.6).
+  final FakeFirebaseFirestore importFirestore;
+  final FakePreferencesAppareil preferences;
+
+  /// Mise à jour de l'APK (ADR-012) : réseau, canal, build installé, plateforme.
+  final FakeTransportMiseAJour transportMiseAJour;
+  final FakeInstallateurApk installateur;
+  int? buildInstalle = 45;
+  bool estAndroid = true;
 
   /// Analyse d'un fichier importé, remplaçable par les tests.
   AnalyseFichier Function(List<int>) analyseur = analyserFichier;
@@ -1183,6 +1501,16 @@ class TestApp {
   bool openLinkResult = true;
   late final ScreenWakelock wakelock;
   final wakelockCalls = <bool>[];
+
+  /// Image rendue par la capture de « Signaler ou proposer » ; `null` : pas
+  /// de capture.
+  Uint8List? capture = kPngDeTest;
+  int captureCalls = 0;
+
+  /// Préparation d'une image choisie (« Choisir une image ») ; rend
+  /// [kPngDeTest] par défaut.
+  Future<Uint8List> Function(Uint8List octets) preparer = (octets) async =>
+      kPngDeTest;
 
   /// Contenu de l'asset des nouveautés, modifiable par les tests.
   Future<String> Function() nouveautes = () async => '{"versions": []}';

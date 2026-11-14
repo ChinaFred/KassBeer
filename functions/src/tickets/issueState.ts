@@ -1,8 +1,9 @@
 /**
  * État d'une Issue appliqué à son ticket : statut, décisions permises, réponse
- * « Réponse : » du compte 16348852, PR de livraison et version. Appelé par la passe
- * horaire (`sync.ts`) et par une décision qui trouve son Issue déjà fermée
- * (`decisions.ts`).
+ * « Réponse : » du compte 16348852, analyses et précisions (`admin/analysis`, P32), comptes
+ * rendus de livraison (`admin/delivery`, P45), verrou des livraisons libéré quand le ticket
+ * quitte « En cours » (P44), PR de livraison et version. Appelé par la passe horaire (`sync.ts`), par le webhook
+ * (`webhook.ts`) et par une décision qui trouve son Issue déjà fermée (`decisions.ts`).
  */
 
 import type { DocumentSnapshot } from "firebase-admin/firestore";
@@ -15,11 +16,19 @@ import {
 } from "../config";
 import { firestore } from "../firestore";
 import { logError, logInfo } from "../logging";
-import { allowedDecisions, allowedDecisionsUpToDate } from "./decisionModel";
+import { writeTicketAnalyses } from "./analyses";
+import { releaseDeliveryLockIfLeft, writeDeliveryReports } from "./delivery";
+import {
+  allowedDecisions,
+  allowedDecisionsUpToDate,
+  isValidatedByApp,
+  keepsAppValidation,
+} from "./decisionModel";
 import { GithubError, type GithubClient } from "./github";
 import {
   closingCommitFromEvents,
   isPublishedStatus,
+  isStaleIssueSnapshot,
   lastReply,
   nextStatus,
   pickDeliveredPr,
@@ -60,26 +69,31 @@ async function findDelivery(client: GithubClient, issueNumber: number): Promise<
   return { prNumber: pr.number, prUrl: pr.url, version };
 }
 
-/** Dernière réponse du compte propriétaire, lue de la dernière page vers la première. */
-async function findReply(client: GithubClient, issue: IssueView) {
-  for await (const page of client.lastCommentsFirst(issue.number, issue.comments)) {
-    const reply = lastReply(page, GITHUB_MAINTAINER_ID, REPLY_MAX_CHARS);
-    if (reply !== null) return reply;
-  }
-  return null;
-}
-
-/** Applique l'état d'une Issue à son ticket. Lève en cas d'échec : rien n'est écrit. */
+/**
+ * Applique l'état d'une Issue à son ticket. Les commentaires sont relus quand l'Issue a
+ * changé depuis la dernière lecture, ou toujours avec `forceComments` (commentaire modifié
+ * ou supprimé, qui ne change pas `updated_at` de l'Issue) : réponse « Réponse : » et
+ * analyses en une lecture. Un état antérieur au dernier retour à « Reçu » d'une réponse de
+ * l'admin (`answer_reset_at`) ne change pas le statut. Lève en cas d'échec : les analyses
+ * sont écrites avant le ticket, et un échec laisse `github_updated_at` inchangé pour que la
+ * passe suivante relise.
+ */
 export async function applyIssue(
   client: GithubClient,
   doc: DocumentSnapshot,
   issue: IssueView,
+  opts: { forceComments?: boolean } = {},
 ): Promise<void> {
   const { FieldValue, Timestamp } = await firestore();
   const data = doc.data() ?? {};
   const current = data.status;
   if (!isPublishedStatus(current)) return;
-  const next = nextStatus(current, statusFromIssue(issue));
+  const resetAt = data.answer_reset_at;
+  const stale = isStaleIssueSnapshot(
+    issue.updatedAt,
+    resetAt instanceof Timestamp ? resetAt.toMillis() : null,
+  );
+  const next = stale ? current : nextStatus(current, statusFromIssue(issue));
   const now = Timestamp.now();
   const update: Record<string, unknown> = {
     github_checked_at: now,
@@ -90,14 +104,26 @@ export async function applyIssue(
     update.status = next;
     update.status_changed_at = now;
   }
+  // Une validation de l'application ne survit pas à un statut hors `validated` et
+  // `in_progress`, ni un champ resté posé sur un ticket qui n'était pas validé : un `validé`
+  // reposé plus tard sur GitHub ne permet pas de lancer.
+  const byApp =
+    keepsAppValidation(current) &&
+    keepsAppValidation(next) &&
+    isValidatedByApp(data.validated_by_app_at);
+  if (!byApp && isValidatedByApp(data.validated_by_app_at)) update.validated_by_app_at = null;
   // Réécrit à chaque changement de statut, et posé sur un ticket qui ne l'a pas (T2).
-  if (next !== current || !allowedDecisionsUpToDate(data.allowed_decisions, next)) {
-    update.allowed_decisions = allowedDecisions(next);
+  if (next !== current || !allowedDecisionsUpToDate(data.allowed_decisions, next, byApp)) {
+    update.allowed_decisions = allowedDecisions(next, byApp);
   }
   if (data.issue_missing_since != null) update.issue_missing_since = FieldValue.delete();
 
-  if (issue.comments > 0 && issue.updatedAt !== data.github_updated_at) {
-    const reply = await findReply(client, issue);
+  if (opts.forceComments === true || issue.updatedAt !== data.github_updated_at) {
+    const comments =
+      issue.comments > 0 ? await client.recentComments(issue.number, issue.comments) : [];
+    await writeTicketAnalyses(doc.id, comments);
+    await writeDeliveryReports(await firestore(), doc.id, comments, Date.now());
+    const reply = lastReply(comments, GITHUB_MAINTAINER_ID, REPLY_MAX_CHARS);
     if (reply !== null && reply.text !== data.reply_text) {
       const atMs = reply.at === null ? Number.NaN : Date.parse(reply.at);
       update.reply_text = reply.text;
@@ -119,12 +145,59 @@ export async function applyIssue(
     update.delivered_checked_at = FieldValue.delete();
   }
 
-  await doc.ref.update(update);
-  if (next !== current) {
+  // Le statut est recalculé sur le ticket relu en transaction : une réponse de l'admin
+  // (`answer_reset_at`) ou une décision écrite pendant la lecture de GitHub n'est pas
+  // écrasée. Si le statut relu diffère de celui de la lecture, les champs de livraison
+  // attendent la passe suivante.
+  const { db } = await firestore();
+  const written = await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(doc.ref);
+    if (!fresh.exists) return null;
+    const f = fresh.data() ?? {};
+    const freshCurrent = f.status;
+    if (!isPublishedStatus(freshCurrent)) return null;
+    const freshReset = f.answer_reset_at;
+    const freshStale = isStaleIssueSnapshot(
+      issue.updatedAt,
+      freshReset instanceof Timestamp ? freshReset.toMillis() : null,
+    );
+    const freshNext = freshStale ? freshCurrent : nextStatus(freshCurrent, statusFromIssue(issue));
+    const out: Record<string, unknown> = { ...update };
+    delete out.status;
+    delete out.allowed_decisions;
+    delete out.validated_by_app_at;
+    if (freshCurrent !== current || freshNext !== next) {
+      for (const k of Object.keys(out)) if (k.startsWith("delivered_")) delete out[k];
+      if (out.status_changed_at !== undefined && out.reply_text === undefined) {
+        delete out.status_changed_at;
+      }
+    }
+    if (freshNext !== freshCurrent) {
+      out.status = freshNext;
+      out.status_changed_at = now;
+    }
+    const freshByApp =
+      keepsAppValidation(freshCurrent) &&
+      keepsAppValidation(freshNext) &&
+      isValidatedByApp(f.validated_by_app_at);
+    if (!freshByApp && isValidatedByApp(f.validated_by_app_at)) out.validated_by_app_at = null;
+    if (
+      freshNext !== freshCurrent ||
+      !allowedDecisionsUpToDate(f.allowed_decisions, freshNext, freshByApp)
+    ) {
+      out.allowed_decisions = allowedDecisions(freshNext, freshByApp);
+    }
+    tx.update(doc.ref, out);
+    return { from: freshCurrent, to: freshNext };
+  });
+  if (written !== null && written.to !== written.from) {
     logInfo({
-      message: `Tickets : Issue #${issue.number}, ${current} → ${next}`,
+      message: `Tickets : Issue #${issue.number}, ${written.from} → ${written.to}`,
       feature: "tickets",
       ticketId: doc.id,
     });
+    if (written.from === "in_progress") {
+      await releaseDeliveryLockIfLeft(await firestore(), doc.id, Date.now());
+    }
   }
 }

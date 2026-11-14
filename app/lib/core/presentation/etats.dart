@@ -22,17 +22,23 @@ class EtatChargement extends StatelessWidget {
   }
 }
 
-/// Rien à afficher : icône, texte, et au besoin une action.
+/// Rien à afficher : icône dans un disque, titre facultatif, texte, et au
+/// besoin une action.
 class EtatVide extends StatelessWidget {
   const EtatVide({
     super.key,
     required this.icon,
     required this.message,
+    this.titre,
     this.action,
   });
 
   final IconData icon;
   final String message;
+
+  /// Titre court au-dessus du message (« Aucune recette »), déclaré comme
+  /// en-tête ; `null` : le message seul.
+  final String? titre;
 
   /// Bouton facultatif sous le message.
   final Widget? action;
@@ -40,21 +46,54 @@ class EtatVide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final t = titre;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge,
-            ),
-            if (action != null) ...[const SizedBox(height: 24), action!],
-          ],
+        // Borné ici : dans une page sans borne (PageSecondaire), le message ne
+        // s'étale pas sur toute la largeur de la fenêtre.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: SizedBox.square(
+                  dimension: 80,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: scheme.secondaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 40,
+                      color: scheme.onSecondaryContainer,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (t != null) ...[
+                Semantics(
+                  header: true,
+                  child: Text(
+                    t,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge,
+              ),
+              if (action != null) ...[const SizedBox(height: 24), action!],
+            ],
+          ),
         ),
       ),
     );
@@ -84,19 +123,21 @@ class IndicateurBouton extends StatelessWidget {
   }
 }
 
-/// Panne : message et bouton « Réessayer ».
+/// Panne : message et bouton « Réessayer », absent si [onRetry] est `null`
+/// (panne qu'une nouvelle tentative ne corrige pas).
 class EtatErreur extends StatelessWidget {
   const EtatErreur({
     super.key,
     required this.message,
     required this.onRetry,
     this.retrying = false,
+    this.retryEnabled = true,
     this.secondaryAction,
     this.retryingLabel = 'Vérification en cours',
   });
 
   final String message;
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
 
   /// Libellé du bouton pendant la nouvelle lecture (« Lecture en cours » pour une
   /// liste).
@@ -104,6 +145,10 @@ class EtatErreur extends StatelessWidget {
 
   /// Une nouvelle lecture est en cours : le bouton attend.
   final bool retrying;
+
+  /// Faux : le bouton est désactivé sans indicateur (un autre appel est en
+  /// cours).
+  final bool retryEnabled;
 
   /// Action de repli sous le bouton, par exemple « Se déconnecter ».
   final Widget? secondaryAction;
@@ -133,13 +178,15 @@ class EtatErreur extends StatelessWidget {
                   style: theme.textTheme.bodyLarge,
                 ),
               ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: retrying ? null : onRetry,
-                child: retrying
-                    ? IndicateurBouton(label: retryingLabel)
-                    : const Text('Réessayer'),
-              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: retrying || !retryEnabled ? null : onRetry,
+                  child: retrying
+                      ? IndicateurBouton(label: retryingLabel)
+                      : const Text('Réessayer'),
+                ),
+              ],
               if (secondaryAction != null) ...[
                 const SizedBox(height: 8),
                 secondaryAction!,

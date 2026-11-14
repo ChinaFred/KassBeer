@@ -4,9 +4,9 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
-## 2026-11-11
+## 2026-11-15
 
-### v0.1.29 — fonctionnel
+### v0.1.55 — fonctionnel
 
 Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière
 mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de
@@ -21,7 +21,769 @@ fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la ta
 nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne
 fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur.
 
+### v0.1.55 — technique
+
+Dernière partie de L4 d'ADR-005, préparée en v0.1.29 (PR #33) et reprise sur la branche
+principale par une fusion. `features/admin/` : `SourcesRepository` (`ingest_runs/` par
+`limit(1)`, `import_unresolved/` par pages de 50, `get()` seul), `domain/ingestion.dart`,
+`admin_sources_screen.dart`, `libelles_sources.dart` ; route `/admin/sources`. L'entrée d'Admin
+passe sur `LigneListe`, comme les autres. `firestore.rules` inchangé : les deux collections sont
+déjà lues par l'admin seul (P19).
+
+## 2026-11-14
+
+### v0.1.54 — fonctionnel
+
+Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche.
+Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie »,
+« Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi
+compléter les recettes importées l'une après l'autre. Demandé par le ticket #60.
+
+### v0.1.54 — technique
+
+Recettes › Importer : la fiche d'une recette créée s'ouvre par `push` sur une route hors de la
+coquille, `/recettes/importer/:id` (`AppRoutes.importedRecipe`, `ImportedRecipeScreen` :
+`RecipeDetailScreen` dans une `PageSecondaire` « Recette »). L'import est ouvert par `push`
+depuis la liste des recettes, donc au-dessus de la coquille ; un `push` de `/recettes/:id`
+ajoutait une seconde page de coquille de même clé, le `Navigator` levait l'assertion
+`!keyReservation.contains(key)` et la fiche ne s'affichait pas. Nouvelle route inscrite dans
+`ticket_screens.dart` (nom d'écran, menu du compte, écrans à prix, et les quatre fenêtres de la
+fiche : Exporter, Nouveau brassin, Prix d'un ingrédient, Reprendre un prix). Les sorties de la
+fiche gardent le compte rendu dans la pile : `RecipeDetailScreen(depuisImport: true)` ouvre
+`RecipeEditorScreen` et `BrewStepsEditorScreen` avec `extra: AppRoutes.retourParPop`, qui se
+ferment par `pop` après « Enregistrer » ; Supprimer fait `pop`, Dupliquer ouvre la copie par
+`push` sur `/recettes/importer/:id`, l'état absent affiche « Revenir au compte rendu ». Tests
+ajoutés à `import_recipes_test.dart` sur le parcours réel (liste, import, fiche, retour ;
+Modifier puis Enregistrer ; Supprimer) ; le test 11 est gardé. Demandé par le ticket #60.
+
+### v0.1.53 — fonctionnel
+
+Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous
+l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste
+lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique
+que le panneau de l'étape continue plus bas.
+
+La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation
+(« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres
+fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes.
+
+### v0.1.53 — technique
+
+Suite du lot 4 de la revue visuelle (remarques « plus tard » de la revue UX). `GroupeBrassins` et
+`groupeBrassin` passent de `brews_screen.dart` à `domain/brew.dart` ; `compareBrews` trie
+d'après ce groupe, et `_bucket`, qui le recopiait, sort. L'annonce de reprise devient un
+`Encadre` du panneau (`liveRegion`), placé dans `_DefilementPanneau` (`Scrollbar` toujours
+visible, dessinée seulement si le contenu dépasse, sans la seconde barre du web de bureau),
+sous la carte de l'étape ; `scrollbarTheme` du thème en `onSurfaceVariant`, 6 px ; le test à 200 % n'écarte plus l'erreur
+« Floating SnackBar presented off screen », et `masquerAnnonce` sort des tests. Le test du thème
+contrôle le texte coloré sur `surfaceContainerLow` (fond des cartes), en clair et en sombre.
+Mise à jour de l'APK : le fichier téléchargé s'ouvre par `File.open(mode: FileMode.write)` à la
+place d'`openWrite`, qui sous Windows ne rendait jamais l'erreur d'un dossier absent ;
+`app_update_transport_test` « dossier absent » passe sur le poste. Une erreur inattendue du
+téléchargement (corps illisible, rappel qui lève) referme aussi le fichier avant de remonter,
+avec son test (relecture `securite`). Bornes de taille et SHA-256 inchangés (P51).
+
+### v0.1.52 — fonctionnel
+
+Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois
+celui des autres administrateurs. Ses lancements ne consomment pas les 10 du groupe, et
+inversement. Le compteur d'Admin › Tickets et la boîte de lancement affichent le plafond du
+compte connecté. Le mois compte tous les lancements.
+
+### v0.1.52 — technique
+
+Compte fondateur reconnu par le champ `founder: true` de `members/{email}`, posé dans la
+console Firebase (les règles refusent ce champ à tout client : liste blanche de `create`,
+`update` fermé ; aucun e-mail dans le code, P15). `requireAdmin` rend `founder` sans lecture de
+plus (`isFounder`, `functions/src/auth.ts`). `FOUNDER_LAUNCHES_PER_DAY` = 5 ×
+`LAUNCHES_PER_DAY` (`config.ts`), compteur `ticket_quotas/launch_founder_{AAAAMMJJ}`,
+`ticket_status/launches` gagne `founder_count_day` et `founder_per_day` (`launchModel.ts` :
+`LaunchPool`, `launchLimitOf`). Client : `Member.founder`, `EtatLancements.vuePour`, appliqué
+par `launchStatusProvider`. P36 et « Coûts variables » de `CLAUDE.md` modifiés (décision de
+l'utilisateur du 2026-11-14). Réglage après le déploiement : ajouter `founder` (booléen,
+`true`) au document `members/` du fondateur dans la console Firebase.
+
+La relecture ajoute des tests : compteur du fondateur rendu sur un échec, deux lancements
+simultanés du fondateur, champ `founder` refusé par les règles à l'admin ; cas fondateur ajoutés à
+`test-fixtures/member_access.json`, rejoués par `functions/test/auth.test.ts` et
+`app/test/members_repository_test.dart` (P31, ligne de « Logique dupliquée » mise à jour). P31
+nomme aussi `app/lib/features/members/domain/member.dart` (cinq fichiers au lieu de quatre, accord
+de l'utilisateur du 2026-11-14).
+
+### v0.1.51 — fonctionnel
+
+Les fiches d'une recette, d'un brassin, d'un équipement et d'un processus ont un en-tête avec le
+nom et ses étiquettes, puis des sections dans des cartes. Sur la fiche d'un brassin, la prochaine
+journée et son bouton sont en tête, dans une carte colorée. Les boutons suivent le même ordre
+partout : l'action principale en plein, « Modifier » en teinte, « Supprimer » en rouge. La liste
+des brassins est groupée : en cours, prévus, terminés et abandonnés. La recherche des recettes
+prend toute la largeur. Les listes vides de tickets, de prix et de membres ont un titre.
+
+Sur l'écran du jour, l'étape en cours est dans une carte, avec une barre qui montre le temps
+écoulé. Quand le temps est dépassé, la carte passe à l'ambre, avec un bord et une alarme.
+L'étape et l'heure de fin s'écrivent plus grand, pour se lire à deux mètres. Dans la
+chronologie, une étape faite est en vert et l'étape en cours en brun. Dans « Préparer le
+brassage », chaque vérification a l'icône et la couleur de son état, et le nom du brassin et sa
+date sont sur deux lignes.
+
+### v0.1.51 — technique
+
+Lot 4 de la revue visuelle, en deux branches réunies (4a fiches et listes, 4b écran du jour).
+Composants `EnTeteFiche`, `CarteSection` (débord de `kDebordCarteCompact` sous 600 px),
+`RepereDisque`, `SurLigneChoisie` (contour de l'`Etiquette` sur une ligne choisie),
+`PageSecondaire.marges` (borne dans la liste, défilement à la molette au-dessus des marges),
+`ContenuRecette.enCartes`, `GroupeBrassins`, `kDetailLigneIllisible` ; fiche équipement à 840 px ;
+27 `OutlineInputBorder()` explicites retirés (le thème les fournit). Écran du jour : `_CarteEtape`
+(`primaryContainer`, puis `tertiaryContainer` et bord `tertiary` en dépassé, même marge),
+`TimerReading.elapsedFraction` dans `brewing/` avec ses cas dans `planning.json` (P3),
+`StylesJourDeBrassage` gagne `etiquette`, `information`, `bouton` et `saisie` (plus aucune taille en
+dur dans `brew_day/`), colonne d'heure de la chronologie `kChronologieHeureWidth` multipliée par
+l'échelle du texte et bornée à `kChronologieHeureMaxFraction`, état explicite des vérifications de
+« Préparer ». Aucune lecture ni écriture de l'écran du jour changée (P2). Aucune dépendance
+changée.
+
+### v0.1.50 — fonctionnel
+
+Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur
+GitHub, au lieu de partir plus tard. Pendant l'action, la fiche affiche « … en cours sur
+GitHub. », puis un message court dit si c'est fait. En cas d'échec, le message dit pourquoi et
+le texte saisi est gardé. La boîte de Refuser et de Clore peut se fermer pendant l'envoi, et
+accepte maintenant 4 000 caractères. Ces actions demandent le réseau : hors ligne, les boutons
+restent visibles mais inactifs, avec « Ces actions demandent le réseau. ». L'historique des
+décisions d'un ticket reste affiché.
+
+### v0.1.50 — technique
+
+ADR-008, lot T7 (décisions de l'utilisateur du 2026-11-14 ; P23, P25, P26, P42, P44 modifiés,
+P53 ajouté) : callables `validateTicket`, `refuseTicket`, `closeTicket` et `retryTicketSend`
+(`functions/src/tickets/decisionCalls.ts`, `requireAdmin`, `maxInstances` 1, 60 s, secret
+`GITHUB_TICKETS_TOKEN` seul). La décision se prend dans la transaction du bail
+`decision_lease_until` (`decisionStart`) : `allowedDecisions` recalculé, verrou des
+livraisons, reprise par l'admin de la décision la plus récente de même action (`failed`,
+`applying` au bail expiré, ou `pending` d'avant T7) avec le même identifiant, commentaire déjà
+publié reconnu sans republication (`textKept` dans la réponse), échec partiel en `aborted`.
+Retirés : `onDecisionCreated`, `onDecisionUpdated`, `resumeStuckDecisions`,
+`retryFailedSends`, la relance par `retry_requested_at`, trois index. `tickets/{id}/decisions/`
+reste l'historique, en `allow read: if isAdmin(); allow write: if false`. `REPLY_MAX_CHARS` et
+le motif passent à 4 000. Client : appels directs avec état « en cours » et « dernier échec »
+dans `decisionsFicheProvider`, messages d'échec de 10 s, un seul appel à la fois par fiche,
+boîte « Répondre » corrigée (`route.isActive`). Diffs des workflows (P10) : dans `ci.yml` et deux
+fois dans `deploy.yml`, les quatre callables ajoutées à la liste fermée avec `maxInstances` 1 et
+60 s, et une liste fermée des déclencheurs (`publishTicket` seul en déclencheur Firestore,
+`syncTickets` seul en tâche planifiée). Réglages avant la fusion : aucune décision `pending` ou
+`applying` en base, puis suppression manuelle des deux déclencheurs
+(`firebase functions:delete`), sans quoi le déploiement des Functions échoue.
+
+### v0.1.49 — fonctionnel
+
+L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert
+pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres
+restent alignés d'une ligne à l'autre. Le médaillon du logo s'affiche à la connexion, au
+chargement, sur « Ce compte n'a pas accès » et en tête du menu sur grand écran. Le texte
+s'affiche dans la même police sur tous les appareils. Sur le web, l'application ne télécharge
+plus de police au démarrage, et les flèches s'affichent aussi sans réseau.
+
+Les listes de recettes, brassins, équipements, processus, tickets et l'accueil Admin ont la même
+ligne : une icône à gauche, le nom, les détails, puis les étiquettes. Les prix et les frais
+suivent la même ligne, sans icône. Le statut d'un brassin s'affiche dans une étiquette colorée. Une liste vide affiche un titre. Les titres de
+section se distinguent de leur contenu. Les messages d'erreur, d'avertissement et de succès
+s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le
+brassage », et chaque vérification prend la couleur de son état.
+
+### v0.1.49 — technique
+
+Revue visuelle de l'agent `ux-designer`, lots 1 à 3. Lot 1 : `app_theme.dart` construit la
+palette depuis quatre couleurs (couleurs principales en variante `fidelity`, conteneurs en
+variante `tonalSpot` pour qu'un bouton posé dessus garde son contraste), surfaces tirées du
+laiton, `ThemeExtension` `CouleursEtat` (succès), thèmes de barre, navigation, rail, cartes,
+champs, listes, puces, segments, séparateurs, `ExpansionTile` et bouton flottant ;
+`app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 sur 23 couples en clair et
+en sombre. Lot 2 : polices embarquées, sous SIL OFL 1.1, réduites par fonttools, chacune avec
+sa licence en asset (`OFL-Bitter.txt`, `OFL-Roboto.txt`, `OFL-NotoSansMath.txt`) : Bitter
+demi-grasse pour les titres, figée à la graisse 600 (38 736 octets) ; Roboto 400, 500, 700 et
+italique 400 pour le texte (56 Ko chacune, latin, latin étendu A, ponctuation, symboles), posée
+en `fontFamily` du thème : la famille « Roboto » du manifeste empêche le moteur web de la
+télécharger depuis `fonts.gstatic.com` au démarrage, et Windows ou macOS ne prennent plus Segoe UI
+ou SF ; `Symboles` (8 Ko, flèches et ⋮ tirés de Noto Sans Math) en `fontFamilyFallback` avec
+Roboto, pour les flèches de la chronologie du jour, du coût figé et de l'import, absentes de
+Roboto et de Bitter, que le web allait chercher dans une police Noto en ligne ; médaillon de 384 px en
+WebP (38 564 octets) tiré de `assets/Kassbeer_transparent.png` ; `MedaillonKassBeer` (48 px
+au moins) dans `logo_kass_beer.dart`, l'écran de panne au démarrage, `not_invited_screen.dart`
+et l'en-tête du rail étendu. Lot 3 : composants `LigneListe`, `Encadre`, `PageSecondaire` et
+`LigneTicket`, `TitreSection` à deux niveaux, `LigneFiche` en deux colonnes à partir de 600 px,
+`EtatVide` avec titre, constante `kMargeBoutonFlottant` ; `encadre_avertissement.dart` est
+supprimé ; tests dans `app/test/composants_test.dart`. Aucune dépendance changée ;
+`main.dart.js` (`flutter build web --release`) : 5 633 682 octets sur `main` à la v0.1.47 (code de
+`app/` inchangé à la v0.1.48),
+5 649 424 après (+ 15 742, dont 14 980 pour la déclaration des polices du texte et de secours) ;
+assets ajoutés : 325 546 octets (polices, licences et médaillon). APK de release compilé par
+le job « Android — compilation » de la CI (clé de signature absente du poste) ; APK de débogage
+compilé sur le poste. Corrections de la revue : « Tout est prêt » en `titleMedium` et annoncé,
+séparateurs à leur hauteur par défaut, ton neutre d'`Encadre` retiré faute d'usage.
+
+### v0.1.48 — fonctionnel
+
+« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran
+Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou
+« Journaux indisponibles pour l'instant ».
+
+### v0.1.48 — technique
+
+Chaque callable échouait en 500 sans détail (`app/no-app`, journaux du 2026-11-14) :
+`firebase-functions` crée son application nommée `__FIREBASE_FUNCTIONS_SDK__` pour vérifier
+le jeton avant le code de la fonction, et `firestore.ts` comme `storage.ts` ne créaient
+l'application par défaut que si `getApps()` était vide. `src/adminApp.ts`
+(`ensureDefaultApp`) la crée si aucune application `[DEFAULT]` n'existe ; test
+`functions/test/adminApp.test.ts`. Les déclencheurs n'étaient pas touchés. Aucun paquet ne
+change.
+
+### v0.1.47 — fonctionnel
+
+Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle
+version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui
+de la version installée et la taille du téléchargement. « Plus tard » la ferme jusqu'au
+lancement suivant. « Mettre à jour » télécharge la version dans l'application, contrôle le
+fichier, puis ouvre l'écran d'installation d'Android. La première fois, Android demande
+d'autoriser Kass'Beer à installer des applications : la fenêtre ouvre le bon réglage. Une
+coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre jamais pendant le
+jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change
+sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36.
+
+### v0.1.47 — technique
+
+ADR-012 (option A), ticket #36. Le job `build` de `deploy.yml` copie l'APK signé dans
+`app/build/web/app-release.apk` et écrit `app/build/web/apk_release.json` (`version`,
+`build_number`, `file`, `size_bytes`, `sha256`, `built_at`) ; `plan` lit aussi ce manifeste en
+ligne, sans jeton, et fait construire l'APK s'il est absent, illisible ou en retard sur le build
+de `app/pubspec.yaml`. Sans nouvel APK, `deploy` lance `scripts/garder-apk-en-ligne.sh` avant
+l'authentification : la paire en ligne est recopiée si sa forme, `PK`, sa taille et son SHA-256
+concordent ; un manifeste seul ou une paire incohérente arrête le déploiement. App Distribution
+reste publié depuis le même APK. `firebase.json` : `app-release.apk` (type, téléchargement) et
+`apk_release.json` en `no-cache`, règles de cache existantes inchangées (P1). Client :
+`AppUpdateService` (`app/lib/core/services/app_update_service.dart`), lecture par `HttpClient`
+de `dart:io` derrière un import conditionnel (stub sur le web), délai de 8 s, corps borné à
+4 096 octets, formes contrôlées champ par champ, comparaison du seul `build_number` au build
+installé ; échec réseau sans rapport, réponse 200 illisible en `app_update_check` ; fichier
+faux (taille, SHA-256, paquet ou `versionCode`) effacé et rapporté en `app_update_download`,
+coupure ou annulation sans rapport. Fenêtre `app_update_dialog.dart`, vérification depuis la
+coquille (`verification_mise_a_jour.dart`), jamais sur `/brassins/:id/jour` ni
+`/brassins/:id/jour/:journee`. Canal Kotlin `fr.kassbeer/updates` (`MisesAJour.kt`) :
+`updatesDir`, `canRequestInstall`, `openInstallSettings`, `installApk(expectedBuild)` sans
+chemin reçu du Dart, contrôle du paquet et du `versionCode` par `getPackageArchiveInfo`, second
+`FileProvider` (`MisesAJourFileProvider`, autorité `.updates`, `cacheDir/updates/` seul),
+permission `REQUEST_INSTALL_PACKAGES`, `cacheDir/updates/` vidé à chaque lancement neuf.
+`app/pubspec.yaml` déclare `crypto: 3.0.8` en version exacte ; `pubspec.lock` : seul `crypto`
+passe de `transitive` à `direct main`, aucune version ne change. `main.dart.js` : 5 610 310
+octets avant, 5 612 436 octets après (+ 2 126). Taille de l'APK non mesurée (pas de SDK Android dans
+la session) : à relever dans le résumé du job `build` du premier déploiement. Réglage hors
+dépôt : rétention des versions de Hosting.
+
+### v0.1.46 — fonctionnel
+
+Dans « Rapports d'erreur », une relecture n'affiche plus qu'une seule attente, sur le bouton
+appuyé. Après une panne, « Réessayer » montre l'attente dans le bandeau, et le bouton
+« Actualiser » reste en place, désactivé. Tirer la liste vers le bas n'ajoute plus d'indicateur
+en haut de l'écran.
+
+### v0.1.46 — technique
+
+`error_reports_screen.dart` remplace le drapeau `_actualisation` par l'origine de la lecture
+(`_Origine` : en-tête, bandeau, état vide hors ligne, suite, geste), comme `logs_screen.dart` : l'indicateur de
+l'en-tête ne s'affiche que pour « Actualiser », celui du bandeau que pour son « Réessayer »
+(`retryEnabled: false` sinon), celui de « Charger la suite » que pour la suite, et
+« tirer pour actualiser » garde le seul indicateur du `RefreshIndicator`. Quatre tests ajoutés à
+`app/test/error_reports_test.dart`. Point relevé à la livraison d'ADR-011 :
+deux indicateurs « Lecture en cours » pendant un « Réessayer » sous une liste. Aucune dépendance changée ;
+`main.dart.js` (`flutter build web --release`) : 5 619 084 octets sur `main` à la v0.1.45,
+5 609 932 après (− 9 152).
+
+### v0.1.45 — fonctionnel
+
+Dans « Signaler ou proposer », un bouton « Choisir une image » permet de joindre une image de
+l'appareil à la place de la capture de l'écran. Seules les images PNG, JPEG et WebP sont
+proposées. L'image est réduite à 2 000 pixels de côté au plus et réenregistrée sans ses
+métadonnées (date, lieu de prise de vue). Une seule image part avec le ticket : choisir une image
+décoche la capture de l'écran, et l'inverse. Pendant la préparation de l'image, « Envoyer » est
+grisé. Une capture doit être envoyée dans l'heure qui suit le ticket. Les captures sont effacées
+au bout de 180 jours ; la fiche du ticket affiche alors « Capture effacée. ».
+
+### v0.1.45 — technique
+
+ADR-008, complément du lot T6 (décisions de l'utilisateur du 2026-11-14, note datée de l'ADR,
+points A à E ; P23 et P48 modifiés). `storage.rules` : `create` refusé si
+`tickets/{ticketId}.created_at` n'est pas une date de moins d'une heure (`ticketOpenToCapture`),
+tests de `rules-tests/` (55 et 61 min, champ absent ou texte, cinq profils sur un ticket de
+90 min). `attachTicketScreenshot` lit 24 octets : signature, IHDR de 13 octets, largeur et
+hauteur de 1 à 2 000 px (`dimensions_refused` sinon) ; écrit `screenshot_expires_at` (+ 180
+jours) avec `screenshot_path`, champ serveur refusé au client (tests des cinq profils). Client :
+« Capture effacée. » sans lecture ni rapport quand l'échéance est passée ou que Storage rend
+`object-not-found` (`CaptureEffacee`). Canal `fr.kassbeer/files` (P17, P28) : `pickDocument`
+reçoit `mimeTypes` en option (1 à 10 types, même motif vérifié en Dart et en Kotlin, test
+d'égalité), envoyés par `EXTRA_MIME_TYPES` ; attribut `accept` sur le web ; sans filtre, appel
+inchangé. Formulaire : `kTypesImages` (PNG, JPEG, WebP), lecture bornée à 5 Mo par le Dart,
+`dimensionsImage` lit la taille dans l'en-tête (PNG IHDR, JPEG SOFn, WebP VP8, VP8L, VP8X) sans
+décoder, refus au-delà de 50 millions de pixels par `depasseMaxPixels` (comparaison sans
+produit), recontrôle du descripteur hors web, décodage `dart:ui` (côté long à 2 000 px) et
+réencodage PNG ; `EditeurPleinEcran.actionActive` grise « Envoyer » pendant la préparation.
+Réglages faits le 2026-11-14 : bucket en `us-east1` (documentation corrigée, constat du
+stockage hors UE dans ADR-008), cycle de vie de 180 jours sous `tickets/`, suppression réversible
+désactivée. Taille de `main.dart.js` (`flutter build web --release`) : 5 610 310 octets avant (v0.1.44),
+5 619 084 après (+ 8 774). Kotlin modifié : APK compilé par le job CI « Android — compilation ».
+
+### v0.1.44 — fonctionnel
+
+L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les
+messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien,
+50 à la fois. On choisit la gravité, la période (1 h, 24 h ou 7 jours), une fonction, un ticket ou
+un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni pendant la frappe. Une
+entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux
+peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue.
+
+### v0.1.44 — technique
+
+ADR-011, lot J2 : callable `queryLogs` (`functions/src/logs/queryLogs.ts`, exportée par
+`index.ts`) : `onCall`, `requireAdmin` en premier, `maxInstances` 1, `concurrency` 1, 60 s,
+256 Mio, `cors` de `CALLABLE_ORIGINS`, compte `tickets-functions`, aucun secret (P25). Elle lit
+`entries:list` de Cloud Logging par `fetch` (`redirect: "error"`, 20 s, un appel), avec le jeton
+du serveur de métadonnées mémorisé jusqu'à son échéance moins 60 s ; aucune dépendance ajoutée.
+Filtre construit par le serveur, clause `cloud_run_revision` et `LOG_ID` `stdout` ou `stderr`
+toujours en tête ; `severity`, `functionName` (liste fermée `QUERYABLE_FUNCTIONS` de `config.ts`,
+égale aux exports de `index.ts` par test), `ticketId`, `freeText` (guillemets et barres obliques
+inverses échappés), `periodMinutes` et `pageToken` contrôlés ; 50 entrées par page. Le jeton de
+page vaut `<période>|<début ISO>|<jeton de l'API>` : la page suivante rejoue le même filtre, la
+période est relue dans la liste fermée, et un début antérieur à maintenant − période − 5 min est
+refusé. `payload` et `message` passent par `redactSecrets` avant d'être coupés à 8 000 caractères,
+avec `payloadTruncated` et `messageTruncated` calculés sur le texte nettoyé, et la longueur
+rendue au client (`maxChars`) ; e-mails visibles (P49). Tests : `functions/test/logs.test.ts`, dont les champs
+`ticketId` et `message` écrits par `logging.ts` (P50). Diffs des workflows (P10, P14) :
+dans `.github/workflows/ci.yml` et deux fois dans `.github/workflows/deploy.yml`, `queryLogs`
+ajouté à la liste des callables du contrôle du manifeste, avec une ligne `jq` qui exige
+`maxInstances` 1, `timeoutSeconds` 60 et `concurrency` 1 ; dans les deux `secrets_filter`, une
+ligne `jq` refuse tout secret monté par `queryLogs` ; commentaires des contrôles mis à jour
+(ADR-011). Réglage à faire avant la fusion : `roles/logging.viewer` sur le projet pour
+`tickets-functions` (« Réglages faits une fois », étape 12). Client : Admin › Journaux
+(`/admin/journaux`, tuile après « Rapports d'erreur »), `app/lib/features/admin/`
+`domain/log_entry.dart`, `data/logs_repository.dart` (`FunctionsLogsRepository`, client des
+Functions construit au premier appel, P6), `presentation/logs_screen.dart` ;
+`formatJourCourtHeureSecondes` dans `core/presentation/formats.dart` ; `EtatErreur` et
+`BandeauListePerimee` acceptent une panne sans « Réessayer » et un bouton désactivé sans
+indicateur. L'écran ne recopie aucune borne du serveur : message d'un champ refusé lu dans la
+`HttpsError`, longueur coupée lue dans `maxChars` et affichée sous « Message » et sous
+« Données ». Un `invalid-argument` sans champ connu s'affiche « Recherche refusée par le
+serveur. », sans « Réessayer » ; seul un refus de `pageToken` relit la première page. Une
+nouvelle recherche replie toutes les entrées (numéro de recherche dans la clé). Tests : `app/test/logs_test.dart`,
+`app/test/formats_test.dart`. Aucun paquet Dart ni npm ajouté ou monté. `main.dart.js`
+(`flutter build web --release`) passe de 5 458 499 à 5 499 631 octets (+ 41 132) avant la
+fusion de `main` ; mesuré sur `main` à la v0.1.41, avec J1 et J2 : 5 542 375 → 5 600 569 octets
+(+ 58 194).
+
+### v0.1.43 — fonctionnel
+
+L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les
+pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50
+à la fois, avec « Charger la suite » pour les précédentes. Chaque ligne donne la date, la partie de
+l'application concernée, la version et la plateforme (Android ou Web). Une ligne se déplie sur
+l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie
+le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application.
+
+### v0.1.43 — technique
+
+ADR-011, lot J1 : Admin › Rapports d'erreur (`/admin/rapports-erreur`, `PageDeCoquille` sous
+`/admin`, réservé à l'admin par le routeur). Fichiers ajoutés dans `app/lib/features/admin/` :
+`domain/error_report.dart`, `data/error_reports_repository.dart` (`ErrorReportsRepository`,
+`FirestoreErrorReportsRepository`, fourni par `errorReportsRepositoryProvider`),
+`presentation/error_reports_screen.dart` ; tuile dans `admin_screen.dart`. Lecture de
+`error_reports` par `orderBy('created_at', descending: true)`, `limit(50)`, `get()` et
+`startAfterDocument`, sans `snapshots()` ni suppression (P50) ; une lecture ou une copie en échec
+passe par `reportError`, sans texte de rapport dans `context` (P13). `firestore.rules` est
+inchangé ; `rules-tests/test/error_reports.test.mjs` ajoute la requête paginée (page de 50 et
+suite) pour les cinq profils de P4. Tests : `app/test/error_reports_test.dart`. Aucune dépendance
+ajoutée ni montée. Évolutions du réseau ajoutées avec ADR-011 : `queryLogs` dans la liste fermée de
+P25, contrôles P49 (`queryLogs`) et P50 (champs de `logging.ts`, Admin › Journaux, Admin › Rapports
+d'erreur), lecture des journaux par l'API REST et `fetch` dans « Règles de code » de `CLAUDE.md`,
+note de renvoi dans ADR-008. Seuil `kGrandTexteMinScale` (1,3) ajouté à
+`core/presentation/breakpoints.dart`. `main.dart.js` (`flutter build web --release`) passe de
+5 431 748 (`main` à la v0.1.40) à 5 458 499 octets (+ 26 751). Admin › Journaux et la callable `queryLogs` viendront
+avec le lot J2.
+### v0.1.42 — technique
+
+Le déploiement de la v0.1.41 échouait à la publication de `storage.rules` : Firebase ne rend
+pas de bucket par défaut pour le projet (404 sur `defaultBucket`). Le bucket existe, en
+`us-east1` pour rester dans le niveau gratuit. Il est maintenant nommé partout : `storageBucket` des options Firebase de l'application (sans lui,
+`FirebaseStorage.instance` n'avait aucun bucket et le dépôt d'une capture échouait),
+`STORAGE_BUCKET` de `functions/src/config.ts` pour `attachTicketScreenshot`, et une copie
+`firebase.deploy.json` écrite par `deploy.yml` avec le bucket nommé. `firebase.json` garde la
+forme que l'émulateur des tests de règles exige. Aucun paquet ne change.
+
+### v0.1.41 — fonctionnel
+
+Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne
+son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans :
+éditeurs, import, jour de brassage, Mes prix, Mes processus, Préférences, Nouveautés, Mes tickets.
+L'entrée de l'écran où vous êtes n'y figure pas. Quitter un éditeur modifié ou un import en cours
+par ce menu demande d'abord confirmation. Sur l'écran du jour de brassage, l'avatar montre votre
+initiale, et la déconnexion prévient quand des saisies attendent encore le réseau.
+
+« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de
+cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais
+publiée. Sur un écran qui montre vos prix, un avertissement le rappelle, avant la case. Une capture
+jointe ne se remplace plus. Elle apparaît dans le suivi du ticket ; si elle ne se lit pas, un
+bouton « Réessayer » la recharge, et sans réseau un message le dit. Sur l'écran du jour de
+brassage, l'administrateur ouvre « Tickets à traiter » par-dessus l'écran, qui reste allumé ; au
+téléphone, la pastille d'envoi passe en icône et nombre pour laisser la place au nom du brassin.
+
+### v0.1.41 — technique
+
+Demandé par les tickets #37, #38 et #39. #37 : `NavigationBar` en `alwaysHide` sous 600 px,
+`navigationBarTheme` retiré du thème. #39 : `_AccountMenu` devient `MenuCompte`
+(`core/presentation/menu_compte.dart`), posé sur la coquille et les 20 pages pleines, avec
+`photo: false` sur l'écran du jour (aucune `NetworkImage`, P2), `avantDeQuitter` et
+`avantDeDeconnecter`, entrée de l'écran courant masquée d'après `GoRouterState.of(context).fullPath` ;
+`kTicketAccountMenuScreens` donne l'élément `menu/compte` aux pages pleines. #38 : lot T6
+d'ADR-008 (note du 2026-11-14) : `ZoneCapture` (`RepaintBoundary`), image gardée en mémoire,
+dépôt dans Cloud Storage sous `tickets/{uid}/{ticketId}/screenshot.png`, callable
+`attachTicketScreenshot` (`requireMember`, `maxInstances: 2`, `timeoutSeconds: 60`) qui écrit
+`screenshot_path`, lecture par `getData` ; `storage.rules` en création seule (`resource == null`), `screenshot.png`
+en `image/png` seul, ticket existant de l'auteur (`firestore.get`), callable et client alignés sur
+le PNG seul ; rapports d'erreur Storage neutres (`StateError('storage <code>')` côté client,
+`errorCode` seul côté serveur), image illisible rapportée `tickets.capture_display` ;
+phrase fixe « Capture éventuelle disponible dans Admin › Tickets. » sur chaque Issue. La cause du
+`/admin/tickets` signalé n'a pas été reproduite : deux tests de non-régression couvrent une page
+ouverte par `push`. Écran du jour : « Tickets à traiter » en `push` (`kEcransDuJour`), pastille
+d'envoi compacte sous 400 dp, panneau du haut à 75 % du corps au plus (360 dp, texte à 200 %). Paquets ajoutés à `pubspec.lock` : `firebase_storage` 13.6.0,
+`firebase_storage_platform_interface` 6.0.7, `firebase_storage_web` 3.11.13 ; aucune autre version
+ne change. `main.dart.js` : 5 417 304 octets avant (#37 et #39 compris), 5 510 208 après. `ci.yml`
+et `deploy.yml` : callable ajoutée à la liste fermée, émulateur Storage pour `rules-tests/`,
+`storage` au déploiement. `CLAUDE.md` : P5, P6, P14, P23, P24, P25 et P31 modifiés, P48 ajouté.
+
+### v0.1.40 — fonctionnel
+
+L'administrateur peut livrer un ticket depuis sa fiche. Quand la pull request d'un ticket En cours
+est prête, CI verte, « Livrer » lance une session Claude Code qui la met à jour, la fusionne et
+suit le déploiement. La boîte de confirmation rappelle que la fusion met l'application en ligne
+pour tout le groupe. Une seule livraison tourne à la fois. La section « Livraison » de la fiche
+montre le compte rendu de la session : terminée, ou arrêtée avec la raison. Si la CI d'une pull
+request est en échec, « Relancer le développement » lance une session qui corrige la même
+branche. Dans la liste, des pastilles signalent « PR prête », « CI en cours », « Livraison en
+cours » et « Correction en cours ».
+
+### v0.1.40 — technique
+
+Lot T5 d'ADR-008. Callable `launchTicketDelivery` (`requireAdmin`, 1 instance, 180 s), par la routine
+de développement (secrets `TICKETS_ROUTINE_DEV_*` montés par deux fonctions, aucun secret nouveau) ;
+reprise par `launchTicketDevelopment` avec `mode: "resume"` (action `reprise`). `delivery.ts` : PR
+unique éligible, fichiers sensibles (liste d'ADR-008 plus `pubspec.lock`, `gradlew`, `**/hook/**`,
+`**/.claude/**`, `auth.ts`, `config.ts`, `delivery.ts`, `member_access.json`), CI verte sur `push`
+et `pull_request`, verrou global `ticket_status/launches.delivery_running` (3 h), état
+`tickets/{id}/admin/delivery` (`ready`, `relaunch_ready`, comptes rendus `## Livraison — …`).
+Webhook : `pull_request` et `workflow_run` de `ci.yml`. Refuser et Clore rejetés pendant une
+livraison ; `launch_delivery` et `relaunch_development` seulement pour un ticket validé dans
+l'application (version de report 5). 403 sur `/actions/runs` en panne à part
+(`ci_read_denied_since`), sans `token_invalid_since`. Livraison et reprise comptées au plafond de
+`ticket_routine_launch`. Prompt de développement : parties Livraison (L0 à L11) et Reprise (R1 à
+R7), à recoller sur claude.ai. `ci.yml` et `deploy.yml` : `launchTicketDelivery` dans la liste
+fermée. Contrôles P14, P24, P25, P29, P35, P36, P39 à P42 modifiés, P43 à P47 ajoutés. Aucun
+paquet ajouté.
+
+## 2026-11-13
+
+### v0.1.39 — fonctionnel
+
+Dans la liste des brassins, « Prochaine journée » annonce pour vos brassins la même journée que
+leur fiche. Une journée faite avant sa date n'est plus annoncée : la suivante prend sa place. Une
+journée commencée et pas terminée affiche « en cours ». Une journée dont la date est passée sans
+qu'elle soit commencée affiche « en retard », suivi de sa date prévue. Une fois le brassin
+embouteillé, seule une journée prévue après l'embouteillage reste annoncée ; sans elle, ou une
+fois toutes les journées faites, la ligne reprend la date du brassin. La fiche ne propose plus une
+journée placée avant une journée déjà faite. Une journée prévue après l'embouteillage reste
+proposée sur la fiche. Les brassins des autres membres, et les vôtres tant que leurs saisies ne sont
+pas lues, suivent les dates prévues, comme avant.
+
+### v0.1.39 — technique
+
+La fiche et la liste des brassins choisissent la prochaine journée par une seule fonction,
+`prochaineJournee` (`brew_day/domain/plan_du_jour.dart`), qui remplace `_prochaineJournee` de la
+fiche : première journée non terminée placée après la dernière journée terminée ; une fois
+`bottled_at` posé, seules les journées placées après la journée d'embouteillage, et `null` sans
+journée d'embouteillage dans le déroulé. Les deux ne l'appliquent qu'avec des événements lus (`evenementsLus` : une
+lecture du cache sans document compte comme non lue). La liste écoute `brews/{id}/events` (cache
+compris, aucune transaction) pour les seuls brassins du lecteur En fermentation ou En
+conditionnement dont le `process` a au moins deux journées (`listeLitEvenements`), à l'affichage
+de leur ligne. Sinon, `prochaineJourneeAnnoncee` garde `prochaineJourneePrevue`, fondée sur les
+dates, qui ne cherche plus, après l'embouteillage, que parmi les journées placées après la
+journée d'embouteillage. ADR-010 précise que sa limite « la liste ne
+lit pas les événements » vaut jusqu'à la v0.1.38. Tests ajoutés dans
+`app/test/deroule_d3_test.dart` et `app/test/deroule_d4_test.dart`. Les règles d'accès et les
+dépendances ne changent pas.
+
+### v0.1.38 — fonctionnel
+
+L'administrateur peut importer les 16 fiches Excel de brassage depuis Administration › Import.
+Il choisit le fichier préparé, relit chaque fiche avec ses points à revoir (divergences,
+corrections, heures reprises, coût), puis confirme. Chaque fiche devient une recette et un
+brassin terminé, avec sa chronologie, ses mesures et ses relevés de fermentation. Le coût de
+chaque brassin est figé avec les prix de sa fiche, visible par l'administrateur seul. Un second
+import du même fichier n'écrit rien, et un import interrompu reprend où il s'était arrêté.
+
+### v0.1.38 — technique
+
+Incrément v0.6. `exchange/` : `package:exchange/fiches.dart` lit le format `kassbeer_fiches` v1
+(document BeerJSON pour les recettes, bornes de FO4), et `bin/verifier_fiches.dart` le rejoue à
+la préparation. Feature `import` : analyse sans écriture, identifiants fixés par le fichier,
+marque de fin `imported_from` et empreinte pour la reprise, écritures par lots dans le budget
+des règles, arrêt sur 30 s sans accusé du serveur. P9 amendé : Admin › Import lit les prix des
+fiches de l'administrateur et ne les écrit que dans `users/{uid}/brew_costs/` ; le lecteur
+refuse un montant dans un texte lu par le groupe (code `montant`) et une fiche dont un document
+ou un événement appartient à un autre compte. Aucune règle
+Firestore ne change ; 25 tests de règles rejouent les écritures d'un import. `.gitignore` limite
+`/import/` à la racine, pour versionner `app/lib/features/import/`. Aucun paquet ne change.
+`main.dart.js` passe de 5 339 305 à 5 409 676 octets (+ 70 371, main mesuré à la v0.1.37).
+
+### v0.1.37 — fonctionnel
+
+Sur la fiche d'un brassin, le déroulé compare le prévu et le réel. Dès qu'une étape a un début
+et une fin, sa ligne donne la durée prévue, la durée réelle et l'écart : « prévu 45 min · réel
+57 min · +12 min ». Une étape sautée, en cours ou restée sans heure de fin le dit. Chaque journée
+commencée affiche sa durée totale prévue et réelle, avec le temps passé entre les étapes. L'écran
+du jour ne change pas.
+
+Après le brassage, « Mettre à jour mon processus avec ce brassin » reprend dans votre processus
+les durées réelles que vous cochez. Seules les étapes venues du processus se proposent, quand
+leur durée réelle diffère de celle du processus. Pour un houblonnage à cru fait sur plusieurs
+journées, vous choisissez la durée d'une des journées. Seules ces durées changent, et vos
+brassins gardent leur déroulé. Pendant 10 secondes, « Annuler » rétablit les durées d'avant.
+
+### v0.1.37 — technique
+
+Suite d'ADR-010 : prévu et réel. `brewing/` gagne `actualDurations` (durée réelle d'une étape :
+fin retenue moins début retenu de `StepRecord`, jamais `ScheduledStep.end`, arrondie à la minute
+la plus proche ; journée du premier début à la dernière fin, temps entre les étapes, étapes en
+cours ou sans fin), `durationUpdateIssue` et `roundedStepMinutes`. `fixtures/process.json`
+reçoit d'abord 17 cas de durées (dont minuit, le 2026-10-25 et le 2027-03-28), 12 cas de
+proposition et 4 arrondis ; P3 de `CLAUDE.md` couvre ces durées. Sur la fiche,
+`ChronologieJour` reçoit les durées par un paramètre facultatif que l'écran du jour ne passe
+pas ; textes dans `libelles_deroule.dart`. « Mettre à jour mon processus avec ce brassin » lit
+`template_step_key` et `template_session_key` (`mise_a_jour_processus.dart`,
+`maj_processus.dart`) et réécrit `sessions` par `ProcessesRepository.update` après
+`erreurModele`, sans transaction ; seul `duration_min` des étapes choisies change. Un élément de
+ticket ajouté (`/brassins/:id/fenetre/maj-processus`). Tests : `app/test/prevu_reel_test.dart`.
+Les règles d'accès et les dépendances ne changent pas.
+
+### v0.1.36 — fonctionnel
+
+L'administrateur peut lancer depuis la fiche d'un ticket une session Claude Code qui analyse la
+demande, puis, une fois le ticket validé, une session qui en écrit le code. Chaque lancement passe
+par une boîte de confirmation qui affiche les lancements restants du jour. La fiche garde
+l'historique des lancements avec le lien vers chaque session. « Valider » n'est plus proposé
+qu'une fois le ticket analysé. Le développement ne se lance que pour un ticket validé depuis
+l'application : un ticket validé sur GitHub propose de nouveau « Valider ».
+
+### v0.1.36 — technique
+
+Lot T4 d'ADR-008. Callables `launchTicketAnalysis` et `launchTicketDevelopment` (`requireAdmin`,
+1 instance, 120 s) ; `routine.ts` appelle l'API Routines de Claude Code par `fetch` seul, corps
+`analyse #N` ou `developpement #N`, sans redirection, 30 s, jamais rejoué ; secrets
+`TICKETS_ROUTINE_ANALYSIS_ID`/`_TOKEN` et `TICKETS_ROUTINE_DEV_ID`/`_TOKEN`, chacun monté par sa
+seule fonction. Premier poste de coût : `ticket_routine_launch`, plafond `LAUNCHES_PER_DAY` = 10 par
+jour de Paris, compté avant l'appel dans `ticket_quotas/launch_{AAAAMMJJ}`, affiché par
+`ticket_status/launches` ; historique `tickets/{id}/admin/launches`. `allowed_decisions` :
+`launch_analysis` et `launch_development`, `validate` seulement depuis `analyzed`, revérifié au
+serveur (version de report 4) ; `launch_development` exige un « Valider » fait dans l'application
+(`validated_by_app_at`), une étiquette `validé` posée sur GitHub ne suffit pas (décision de
+l'utilisateur du 2026-11-13). `syncTickets` passe de `every 60 minutes` à `0 * * * *` (Europe/Paris)
+pour suivre le jour de Paris du compteur. Prompts des deux routines dans `exigences-techniques.md`,
+à recoller sur claude.ai : arrêt si `GIT_COMMITTER_IDENT` n'est pas `noreply`, fichiers sensibles
+étendus à `ingest/` et aux fichiers de construction Android, liste fermée des appels GitHub de
+l'analyse (décisions de l'utilisateur du 2026-11-13). `ci.yml` et `deploy.yml` : liste fermée étendue aux deux callables, contrôle
+des secrets par fonction ajouté à la CI. Contrôles P14, P23 et P25 modifiés, P35, P36 et P39 à P42 ajoutés. Aucun
+paquet ajouté ; `main.dart.js` passe de 5 125 522 à 5 159 200 octets (+ 0,7 %).
+
+### v0.1.35 — fonctionnel
+
+Les journées après le brassage se suivent comme le brassage. Sur la fiche d'un brassin en
+fermentation, « Préparer la journée « Houblonnage à cru » » s'affiche sous sa date prévue.
+Préparez la journée sur le téléphone qui servira, avec du réseau : ensuite, étapes, minuteurs,
+mesures et notes marchent sans réseau. « Commencer la journée » démarre la première étape ;
+une journée commencée se reprend depuis la fiche.
+
+Une densité ou une température saisie pendant une journée compte dans le relevé de
+fermentation et dans la densité finale, jamais dans la densité initiale. Elle s'affiche sous
+son étape, et le relevé nomme sa journée et son étape. « Terminer la journée » termine l'étape
+en cours et marque sautées celles qui restent ; une journée dont toutes les étapes sont faites
+se termine seule. Une journée que vous ne ferez pas se passe depuis la fiche : le menu de la
+journée porte « Passer la journée », qui marque ses étapes sautées. Dans le déroulé de la
+fiche, une journée terminée résume ce qui a été fait (« Terminée · 3 faites, 1 sautée »).
+
+La journée d'embouteillage finit par « Embouteiller » : le formulaire habituel, puis le retour
+sur la fiche. L'étape en cours se termine à l'envoi. Les prix et les frais lus à la préparation servent à figer le coût, même sans
+réseau. Un brassin qui a une journée d'embouteillage garde « Embouteiller sans suivre la
+journée » dans le menu ⋮ de sa fiche. La liste des brassins annonce toujours la prochaine
+journée d'après sa date : une journée faite en avance reste annoncée jusqu'à cette date.
+
+### v0.1.35 — technique
+
+Lot D4 d'ADR-010. `PlanDuJour.calculer` prend la journée suivie : événements réduits sur toutes
+les journées, horaire recalculé sur la seule journée, départ au premier début de la journée,
+sinon à l'heure de l'appareil ; `journeeTerminee` et `PlanDuJour.commencee` en dérivent l'état.
+Routes `/brassins/:id/jour/:journee/preparer` (dans la coquille) et `/brassins/:id/jour/:journee`
+(plein écran) ; `PrepareBrewScreen` et `BrewDayScreen` sont paramétrés par la clé de la
+journée, `journeeASuivre` nomme les refus. « Commencer la journée » écrit le seul début de la
+première étape, « Terminer la journée » un `WriteBatch` de `step_ended` et de `step_skipped`,
+sans statut. Les mesures et notes d'une journée 2 ou suivante portent `phase: 'fermentation'`
+(`BrewEventInput.phase`). `capturerEmbouteillage` regroupe les lectures capturées à l'envoi de
+l'embouteillage pour la fiche et pour la journée, qui le confie à la fiche pour ses annonces
+(`embouteillagesAAnnoncerProvider`, vidée après l'affichage, refus déjà rapportés écoutés dès
+la mise en mémoire) ; l'étape en cours reçoit son `step_ended` à l'envoi. « Passer la journée »
+écrit les `step_skipped` des étapes non commencées en un lot. Sept éléments de ticket et deux
+noms d'écran ajoutés. `exigences-techniques.md` porte les changements des lots D1 à D4 dans ses
+deux copies des sections Architecture, Modèle de données et Règles d'accès. Les règles
+d'accès, `brewing/` et les dépendances ne changent pas.
+
+### v0.1.34 — fonctionnel
+
+« Nouveau brassin » demande le processus du brassin : vos processus, ou « Chronologie de la
+recette seule » comme avant. Votre processus par défaut est déjà choisi. En dessous, « Déroulé
+prévu » montre chaque journée avec sa date et son nombre d'étapes, et prévient quand la recette
+n'a pas de houblon à cru pour la journée de houblonnage, ou quand des houblons à cru n'ont pas
+de journée. Hors ligne, si vos processus n'ont jamais été lus sur ce téléphone, le brassin se
+crée avec la chronologie de la recette seule ; vous choisirez son processus plus tard.
+
+La fiche d'un brassin a une section « Déroulé » à la place de « Chronologie » : le processus
+choisi, la journée de brassage avec ses heures et ses mesures, puis les journées suivantes avec
+leur date et leurs étapes. Tant que le brassage n'a pas commencé, « Changer de processus » en
+choisit un autre, et le menu d'une journée change sa date ou rétablit celle du processus.
+Ensuite, le déroulé ne change plus. « Recréer depuis la recette » garde le processus du brassin.
+
+La liste des brassins annonce la prochaine journée d'un brassin en fermentation (« Prochaine
+journée : Houblonnage à cru, mer. 25 nov. »). « Préparer le brassage » et l'écran du jour
+suivent la journée de brassage du processus, préparation et nettoyage compris, et la barre de
+l'écran du jour nomme la journée. Le suivi des journées après le brassage arrive avec la
+prochaine version : d'ici là, la mesure de densité se saisit par « Ajouter un relevé » et
+l'embouteillage par « Embouteiller ».
+
+### v0.1.34 — technique
+
+Lot D3 d'ADR-010. `assemblerDeroule` crée les clés et les libellés du déroulé depuis les
+brouillons de `resolveProcess` (clés de la recette gardées, `erreurDeroule` avant l'écriture) ;
+`nomEtapePreremplie`, ses avertissements et `formatQuantiteRecette` passent dans
+`recipes/domain/libelles_etapes.dart`, sans changement de l'éditeur « Chronologie du jour ».
+`BrewsRepository.setProcess` écrit `process` en entier après la création (option B'), au
+changement de processus ou de date, et à la recréation ; nul retire le champ. Un `process`
+illisible bloque « Commencer le brassage ». `brewing/` expose `processSessionOrder` (journée
+de brassage en tête, puis par écart, à égalité dans l'ordre courant), utilisé par
+`resolveProcess` et par le changement de date d'une journée ; cas `session_orders` ajoutés à
+`process.json`. P37 permet de lire la recette figée d'un brassin comme entrée d'une nouvelle
+résolution avant le départ (`assemblerDeroule`, aperçu par `Deroule.depuisRecette`) ; toute
+autre lecture de ses étapes passe par `Brew.deroule`. Trois éléments de ticket : « Changer de
+processus », « Actions d'une journée », « Écart d'une journée ». Les règles d'accès et les
+dépendances ne changent pas.
+
+### v0.1.33 — fonctionnel
+
+Le menu du compte ouvre « Mes processus », sous « Mes prix ». Un processus décrit les journées
+d'un brassin : le brassage, puis par exemple le houblonnage à cru et l'embouteillage, chacune
+à quelques jours du brassage, avec ses étapes de préparation et de nettoyage autour de celles
+de la recette. La liste montre vos processus, puis ceux des autres brasseurs. Pour commencer,
+« Partir du modèle d'exemple » ouvre un processus de trois journées aux durées typiques, à
+ajuster à votre matériel avant de l'enregistrer. Vous modifiez, dupliquez et supprimez les
+vôtres, et vous choisissez celui que « Nouveau brassin » vous proposera : ce choix ne
+concerne que vous. Le processus d'un autre brasseur se copie dans les vôtres. Un processus
+compte 5 journées au plus et 60 étapes par journée ; les journées se rangent d'elles-mêmes
+par date, et une journée sans étape n'est pas acceptée. Le choix du processus à la création
+d'un brassin arrive avec une prochaine version.
+
+### v0.1.33 — technique
+
+Lot D2 d'ADR-010. Dépôts `ProcessesRepository` (`process_templates/` : document illisible
+isolé et rapporté, `erreurModele` vérifié avant chaque écriture, copie et duplication à clés
+neuves) et `PreferencesProcessusRepository` (`users/{uid}/preferences/processes`), sans
+transaction. Le défaut n'est remis à nul qu'après l'acceptation de la suppression de son
+processus. `LigneEditeur` accepte une ligne sans formulaire, avec une icône en tête ; l'éditeur
+de recette ne change pas. L'éditeur de processus défile en un seul `CustomScrollView`, une
+`SliverReorderableList` par journée. Le modèle d'exemple s'appelle « Brassage, houblonnage à
+cru, embouteillage », dans l'application et dans `brewing/test/fixtures/process.json`. Aucune
+dépendance ne change.
+
+### v0.1.32 — technique
+
+Premier lot (D1) d'ADR-010 : un brassin pourra suivre de 1 à 5 journées (brassage,
+houblonnage à cru, embouteillage) tirées d'un modèle de processus partagé. Rien ne change
+encore à l'écran. Le paquet `brewing/` résout un modèle avec la recette figée d'un brassin :
+il garde ou retire chaque journée, place chaque houblon à cru au jour donné par la recette,
+une journée par jour distinct, regroupe au-delà de 5 journées, trie par écart et calcule la
+date de chaque journée. Ses 10 cas de résolution, dont le modèle d'exemple, et ses dates
+autour des changements d'heure du 25 octobre 2026 et du 28 mars 2027 sont dans
+`process.json`. Les règles acceptent les modèles (`process_templates/`, lus par le groupe,
+écrits par leur auteur), le déroulé figé d'un brassin (`process`, absent de la création,
+modifiable seulement avant le départ) et le choix par défaut privé de chaque brasseur.
+L'application lit les étapes d'un brassin par son déroulé : un brassin sans déroulé garde sa
+chronologie de recette, un déroulé illisible s'affiche en panne et se rapporte, sans repli.
+Le calcul du jour se fait journée par journée. Le budget des règles a été mesuré : un
+`pad()` vaut environ 4 expressions et non 10, la marge de la création d'un brassin est
+d'environ 16 expressions, l'écriture du plus grand déroulé laisse environ 590 expressions,
+et un lot de 60 étapes sautées passe. `CLAUDE.md` étend la règle hors ligne à chaque journée
+et « Un brassin fige sa recette » au déroulé, complète P2, P3 et P5, et ajoute les contrôles
+P37 (lecture du déroulé, découpage par journée) et P38 (règles des modèles et du déroulé).
+
+## 2026-11-12
+
+### v0.1.31 — fonctionnel
+
+Le suivi d'un ticket a une nouvelle étape, « Analysé », entre « Reçu » et « Validé » : votre
+demande a été lue et étudiée. L'administrateur lit maintenant dans la fiche d'un ticket les
+analyses publiées sur sa page GitHub, et peut y répondre depuis l'application avec le bouton
+« Répondre ». Sa réponse ramène le ticket à « Reçu » pour une nouvelle analyse.
+
+### v0.1.31 — technique
+
+Lot T3 d'ADR-008. Deux points d'accès, seuls de la liste fermée livrés à ce lot :
+`githubTicketWebhook` (HTTP public, signature `X-Hub-Signature-256` vérifiée sur le corps brut,
+événements `ping`, `issues`, `issue_comment`, secret `GITHUB_WEBHOOK_SECRET`, 5 instances, 60 s)
+et la callable `answerTicketAnalysis` (`requireAdmin`, 2 instances, 60 s). `functions/src/auth.ts`
+(`requireAdmin`, `requireMember`, `requireBoundedText`) et `test-fixtures/member_access.json`,
+rejouée par `rules-tests/` et `functions/test/`. Statut `analyzed` (étiquette `statut:analysé`),
+`answer` dans `allowed_decisions` (`validate` reste offert depuis `received` jusqu'à T4),
+relevé des analyses du compte 16348852 dans `tickets/{id}/admin/analysis` (lecture admin seule)
+par le webhook, la tâche horaire et les décisions. `ci.yml` et `deploy.yml` remplacent le refus
+de tout point d'accès HTTP ou callable par la liste fermée d'ADR-008. Contrôles P6, P14, P23 à
+P26 modifiés, P29 à P34 ajoutés.
+
+Paquets ajoutés, version exacte : `cloud_functions` 6.5.0, `flutter_markdown_plus` 1.0.7,
+`markdown` 7.3.1 ; nouveaux dans `pubspec.lock` : `cloud_functions_platform_interface` 6.0.7 et
+`cloud_functions_web` 5.1.13. La famille FlutterFire ne change pas. `main.dart.js` passe de
+4 920 447 à 5 125 522 octets (+ 4,2 %).
+
+### v0.1.30 — technique
+
+`documentation/exigences-techniques.md` ne contient plus qu'une copie (2 695 lignes au lieu de
+3 959). Le commit `9e72415` avait remplacé la ligne `import_unresolved/` par un texte contenant
+`` $` `` : dans un `String.replace` JavaScript, cette séquence insère tout ce qui précède le
+passage remplacé, et le début du document s'est trouvé copié au milieu de cette ligne. Chaque
+passage qui différait entre les deux copies garde sa version la plus récente, vérifiée contre le
+code ; la ligne `import_unresolved/` est recousue, avec l'expression de `firestore.rules`.
+
+## 2026-11-11
+
+### v0.1.29 — fonctionnel
+
+Le menu du compte propose « Préférences ». On y choisit le thème de l'application : clair,
+sombre, ou comme l'appareil. Le changement est immédiat et reste enregistré sur l'appareil
+utilisé ; chaque téléphone ou navigateur garde son propre choix. Par défaut, l'application suit
+le réglage de l'appareil, comme avant. Demandé par le ticket #25.
+
+### v0.1.29 — technique
+
+ADR-009 accepté : préférence de thème gardée sur l'appareil, sans paquet ajouté. Canal Kotlin
+`fr.kassbeer/prefs` (`SharedPreferences` `kassbeer_prefs`, clé `theme_mode`, valeurs `light`,
+`dark`, `system`) et `window.localStorage` sur le web. La valeur est lue avant `runApp`, en
+parallèle de `Firebase.initializeApp`, pour que le premier écran s'affiche dans le bon thème.
+Le canal refuse un second appel pendant un appel en cours (P17) ; côté Dart, seul le dernier
+choix part une fois le précédent écrit. Page `/preferences`, entrée du menu du compte. Une valeur
+inconnue ne laisse que sa longueur dans le rapport d'erreur (P13). Aucune donnée Firestore,
+aucune règle changée. Demandé par le ticket #25.
+
 ### v0.1.28 — fonctionnel
+
 L'éditeur de recette s'appuie sur la Bibliothèque. En tapant le nom d'un malt, d'un houblon,
 d'un ajout ou d'une levure, vous voyez les ingrédients qui correspondent, par nom ou autre nom.
 Choisir l'un d'eux remplit les valeurs encore vides : couleur et rendement d'un malt, acides

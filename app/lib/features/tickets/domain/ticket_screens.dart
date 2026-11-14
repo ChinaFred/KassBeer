@@ -27,6 +27,7 @@ const Map<String, String> kTicketScreenNames = {
   '/recettes/:id': 'Recette',
   '/recettes/nouvelle': 'Nouvelle recette',
   '/recettes/importer': 'Importer des recettes',
+  '/recettes/importer/:id': 'Recette importée',
   '/recettes/:id/modifier': 'Modifier la recette',
   '/recettes/:id/chronologie': 'Chronologie du jour',
   '/bibliotheque': 'Bibliothèque',
@@ -47,17 +48,27 @@ const Map<String, String> kTicketScreenNames = {
   '/brassins/:id': 'Brassin',
   '/brassins/:id/preparer': 'Préparer le brassage',
   '/brassins/:id/jour': 'Jour de brassage',
+  '/brassins/:id/jour/:journee/preparer': 'Préparer la journée',
+  '/brassins/:id/jour/:journee': 'Journée après le brassage',
   '/equipements': 'Équipements',
   '/equipements/:id': 'Équipement',
   '/equipements/nouveau': 'Nouvel équipement',
   '/equipements/:id/modifier': 'Modifier l\'équipement',
   '/prix': 'Mes prix',
+  '/processus': 'Mes processus',
+  '/processus/nouveau': 'Nouveau processus',
+  '/processus/:id': 'Processus',
+  '/processus/:id/modifier': 'Modifier le processus',
+  '/preferences': 'Préférences',
   '/nouveautes': 'Nouveautés',
   '/tickets': 'Mes tickets',
   '/tickets/nouveau': 'Signaler ou proposer',
   '/tickets/:id': 'Suivi d\'un ticket',
   '/admin': 'Admin',
   '/admin/membres': 'Admin › Membres',
+  '/admin/rapports-erreur': 'Admin › Rapports d\'erreur',
+  '/admin/journaux': 'Admin › Journaux',
+  '/admin/import': 'Admin › Import',
   '/admin/sources': 'Admin › Sources',
   '/admin/tickets': 'Admin › Tickets des membres',
   '/admin/tickets/:id': 'Admin › Ticket d\'un membre',
@@ -86,21 +97,72 @@ const kTicketShellScreens = [
   '/brassins',
   '/brassins/:id',
   '/brassins/:id/preparer',
+  '/brassins/:id/jour/:journee/preparer',
   '/equipements',
   '/equipements/:id',
   '/admin',
   '/admin/membres',
+  '/admin/rapports-erreur',
+  '/admin/journaux',
   '/admin/tickets',
   '/admin/tickets/:id',
   '/admin/sources',
 ];
 
 /// Éléments de la coquille, ajoutés à chaque écran de [kTicketShellScreens].
-/// Les commentaires `// ticket:` de `app_shell.dart` citent, pour chaque écran
-/// de la coquille, sa clé `menu/compte` ou `menu/navigation`.
+/// Les commentaires `// ticket:` de `app_shell.dart` et de `menu_compte.dart`
+/// citent, pour chaque écran de la coquille, sa clé `menu/compte` ou
+/// `menu/navigation` (`<coquille>/…`).
 const kTicketShellElements = {
-  'menu/compte': 'Menu du compte',
+  'menu/compte': kTicketAccountMenu,
   'menu/navigation': 'Barre de navigation',
+};
+
+/// Nom de l'élément `menu/compte`.
+const kTicketAccountMenu = 'Menu du compte';
+
+/// Pages pleines, hors de la coquille, dont la barre du haut porte le menu du
+/// compte (`MenuCompte`) : elles reçoivent l'élément `menu/compte`. Le
+/// commentaire `// ticket:` de `menu_compte.dart` les cite par
+/// `<hors-coquille>/menu/compte`.
+///
+/// `test/ticket_screens_test.dart` vérifie que cette liste est celle des routes
+/// hors de la coquille, écrans d'accès et redirections exclus.
+const kTicketAccountMenuScreens = [
+  '/recettes/nouvelle',
+  '/recettes/importer',
+  '/recettes/importer/:id',
+  '/recettes/:id/modifier',
+  '/recettes/:id/chronologie',
+  '/brassins/:id/jour',
+  '/brassins/:id/jour/:journee',
+  '/prix',
+  '/processus',
+  '/processus/nouveau',
+  '/processus/:id/modifier',
+  '/processus/:id',
+  '/preferences',
+  '/equipements/nouveau',
+  '/equipements/:id/modifier',
+  '/nouveautes',
+  '/sources-des-donnees',
+  '/tickets/nouveau',
+  '/tickets/:id',
+  '/tickets',
+  '/admin/import',
+];
+
+/// Écrans qui peuvent montrer les prix, les frais ou le coût du lecteur : la
+/// capture de l'un d'eux porte l'avertissement « La capture peut montrer vos
+/// prix » (ADR-008, note du 2026-11-14).
+const kTicketScreensWithPrices = {
+  '/recettes/:id',
+  '/recettes/importer/:id',
+  '/brassins/:id',
+  '/brassins/:id/jour',
+  '/brassins/:id/jour/:journee',
+  '/brassins/:id/jour/:journee/preparer',
+  '/prix',
 };
 
 /// Éléments propres à un écran, dans l'ordre de la liste « Élément précis ».
@@ -109,6 +171,10 @@ const _kTicketScreenElements = {
   '/recettes/:id/fenetre/nouveau-brassin': 'Nouveau brassin',
   '/recettes/:id/fenetre/prix': 'Prix d\'un ingrédient',
   '/recettes/:id/fenetre/reprendre': 'Reprendre un prix',
+  '/recettes/importer/:id/fenetre/exporter': 'Exporter la recette',
+  '/recettes/importer/:id/fenetre/nouveau-brassin': 'Nouveau brassin',
+  '/recettes/importer/:id/fenetre/prix': 'Prix d\'un ingrédient',
+  '/recettes/importer/:id/fenetre/reprendre': 'Reprendre un prix',
   '/recettes/nouvelle/fenetre/malt': 'Malt ou sucre',
   '/recettes/nouvelle/fenetre/houblon': 'Houblon',
   '/recettes/nouvelle/fenetre/ajout': 'Autre ajout',
@@ -136,17 +202,41 @@ const _kTicketScreenElements = {
   '/brassins/:id/fenetre/cout': 'Coût du brassin',
   '/brassins/:id/fenetre/prix': 'Prix d\'un ingrédient',
   '/brassins/:id/fenetre/reprendre': 'Reprendre un prix',
+  '/brassins/:id/fenetre/processus': 'Changer de processus',
+  '/brassins/:id/fenetre/maj-processus': 'Mettre à jour mon processus',
+  '/brassins/:id/menu/journee': 'Actions d\'une journée',
+  '/brassins/:id/fenetre/ecart': 'Écart d\'une journée',
   '/brassins/:id/jour/menu/actions': 'Plus d\'actions',
   '/brassins/:id/jour/fenetre/mesure': 'Mesure ou note',
   '/brassins/:id/jour/fenetre/correction': 'Correction d\'une saisie',
   '/brassins/:id/jour/fenetre/etape': 'Actions d\'une étape',
   '/brassins/:id/jour/fenetre/recette': 'Voir la recette',
   '/brassins/:id/jour/fenetre/envoi': 'Envoi des saisies',
+  '/brassins/:id/jour/:journee/menu/actions': 'Plus d\'actions',
+  '/brassins/:id/jour/:journee/fenetre/mesure': 'Mesure ou note',
+  '/brassins/:id/jour/:journee/fenetre/correction': 'Correction d\'une saisie',
+  '/brassins/:id/jour/:journee/fenetre/etape': 'Actions d\'une étape',
+  '/brassins/:id/jour/:journee/fenetre/recette': 'Voir la recette',
+  '/brassins/:id/jour/:journee/fenetre/envoi': 'Envoi des saisies',
+  '/brassins/:id/jour/:journee/fenetre/embouteillage': 'Embouteillage',
+  '/processus/:id/menu/actions': 'Plus d\'actions',
+  '/processus/nouveau/fenetre/journee': 'Journée',
+  '/processus/nouveau/fenetre/etape': 'Étape',
+  '/processus/nouveau/menu/journee': 'Actions d\'une journée',
+  '/processus/nouveau/menu/ligne': 'Actions d\'une ligne',
+  '/processus/nouveau/menu/bloc': 'Insérer un bloc de la recette',
+  '/processus/:id/modifier/fenetre/journee': 'Journée',
+  '/processus/:id/modifier/fenetre/etape': 'Étape',
+  '/processus/:id/modifier/menu/journee': 'Actions d\'une journée',
+  '/processus/:id/modifier/menu/ligne': 'Actions d\'une ligne',
+  '/processus/:id/modifier/menu/bloc': 'Insérer un bloc de la recette',
   '/prix/fenetre/prix': 'Prix d\'un ingrédient',
   '/prix/fenetre/reprendre': 'Reprendre un prix',
   '/prix/fenetre/frais': 'Frais',
   '/admin/membres/fenetre/inviter': 'Inviter un membre',
   '/admin/tickets/:id/fenetre/decision': 'Refuser ou clore',
+  '/admin/tickets/:id/fenetre/reponse': 'Répondre',
+  '/admin/tickets/:id/fenetre/lancement': 'Lancer une session',
 };
 
 /// Élément (menu ou fenêtre) → nom affiché : table fermée.
@@ -159,6 +249,8 @@ final Map<String, String> kTicketElements = Map.unmodifiable({
   ..._kTicketScreenElements,
   for (final screen in kTicketShellScreens)
     for (final e in kTicketShellElements.entries) '$screen/${e.key}': e.value,
+  for (final screen in kTicketAccountMenuScreens)
+    '$screen/menu/compte': kTicketAccountMenu,
 });
 
 /// Libellé de « L'écran entier », valeur par défaut de « Élément précis ».

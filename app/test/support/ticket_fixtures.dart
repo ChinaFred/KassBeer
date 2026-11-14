@@ -24,8 +24,14 @@ Ticket unTicket({
   String? lastSendError,
   DateTime? issueMissingSince,
   List<TicketDecisionAction>? allowedDecisions,
+  bool canAnswer = false,
+  bool canLaunchAnalysis = false,
+  bool canLaunchDevelopment = false,
+  bool canLaunchDelivery = false,
+  bool canRelaunchDevelopment = false,
   DateTime? decisionLeaseUntil,
-  DateTime? retryRequestedAt,
+  String? screenshotPath,
+  DateTime? screenshotExpiresAt,
   bool hasPendingWrites = false,
 }) => Ticket(
   id: id,
@@ -52,8 +58,14 @@ Ticket unTicket({
   lastSendError: lastSendError,
   issueMissingSince: issueMissingSince,
   allowedDecisions: allowedDecisions,
+  canAnswer: canAnswer,
+  canLaunchAnalysis: canLaunchAnalysis,
+  canLaunchDevelopment: canLaunchDevelopment,
+  canLaunchDelivery: canLaunchDelivery,
+  canRelaunchDevelopment: canRelaunchDevelopment,
   decisionLeaseUntil: decisionLeaseUntil,
-  retryRequestedAt: retryRequestedAt,
+  screenshotPath: screenshotPath,
+  screenshotExpiresAt: screenshotExpiresAt,
   hasPendingWrites: hasPendingWrites,
 );
 
@@ -65,8 +77,6 @@ TicketDecision uneDecision({
   String? text = 'Hors du périmètre.',
   DateTime? requestedAt,
   String? errorReason,
-  DateTime? leaseUntil,
-  bool hasPendingWrites = false,
 }) => TicketDecision(
   id: id,
   action: action,
@@ -74,8 +84,6 @@ TicketDecision uneDecision({
   text: text,
   requestedAt: requestedAt ?? DateTime(2026, 11, 8, 11),
   errorReason: errorReason,
-  leaseUntil: leaseUntil,
-  hasPendingWrites: hasPendingWrites,
 );
 
 const Object _defaultDate = Object();

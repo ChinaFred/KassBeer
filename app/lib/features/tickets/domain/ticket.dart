@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
+import 'ticket_launch.dart';
 
 /// Bornes d'un ticket, les mêmes que `firestore.rules` (P23).
 const kTicketTitleMinLength = 5;
@@ -8,18 +9,37 @@ const kTicketTitleMaxLength = 100;
 const kTicketDescriptionMinLength = 10;
 const kTicketDescriptionMaxLength = 2000;
 
+/// Capture d'écran jointe à un ticket (ADR-008, T6) : 5 Mo au plus, comme
+/// `storage.rules` et `attachTicketScreenshot`.
+const kTicketScreenshotMaxBytes = 5 * 1024 * 1024;
+
+/// Capture absente du bucket : effacée par la règle de cycle de vie (180
+/// jours). Affichée « Capture effacée », jamais rapportée.
+class CaptureEffacee implements Exception {
+  const CaptureEffacee();
+
+  @override
+  String toString() => 'CaptureEffacee';
+}
+
+/// Chemin Storage d'une capture : `tickets/{uid}/{ticketId}/screenshot.png`,
+/// seul nom que `storage.rules` accepte.
+final kTicketScreenshotPathPattern = RegExp(
+  r'^tickets/[A-Za-z0-9_-]{1,128}/[A-Za-z0-9_-]{1,128}/screenshot\.png$',
+);
+
+/// Chemin Storage de la capture PNG du ticket [ticketId] de [uid].
+String ticketScreenshotPath(String uid, String ticketId) =>
+    'tickets/$uid/$ticketId/screenshot.png';
+
 /// Au-delà de ce délai, un ticket `pending` est en retard : la tâche horaire
 /// aurait dû le transmettre.
 const kTicketSendDelay = Duration(hours: 1);
 
-/// Bornes du texte d'un refus ou d'une clôture, les mêmes que `firestore.rules`
-/// (P23).
+/// Bornes du texte d'un refus ou d'une clôture, les mêmes que `refuseTicket`
+/// et `closeTicket` (P53), comptées en points de code.
 const kDecisionTextMinLength = 5;
-const kDecisionTextMaxLength = 2000;
-
-/// Au-delà de ce délai, une décision `pending` n'a pas été prise en compte par
-/// le serveur : l'écran le dit.
-const kDecisionPendingDelay = Duration(minutes: 2);
+const kDecisionTextMaxLength = 4000;
 
 /// Type d'un ticket (`tickets/{id}.type`).
 enum TicketType {
@@ -68,6 +88,9 @@ enum TicketType {
 enum TicketStatus {
   pending('pending'),
   received('received'),
+
+  /// Analysé : étiquette `statut:analysé` posée sur l'Issue (ADR-008).
+  analyzed('analyzed'),
   validated('validated'),
   inProgress('in_progress'),
   delivered('delivered'),
@@ -137,8 +160,14 @@ class Ticket {
     this.lastSendError,
     this.issueMissingSince,
     this.allowedDecisions,
+    this.canAnswer = false,
+    this.canLaunchAnalysis = false,
+    this.canLaunchDevelopment = false,
+    this.canLaunchDelivery = false,
+    this.canRelaunchDevelopment = false,
     this.decisionLeaseUntil,
-    this.retryRequestedAt,
+    this.screenshotPath,
+    this.screenshotExpiresAt,
     this.hasPendingWrites = false,
   });
 
@@ -185,33 +214,66 @@ class Ticket {
   /// L'Issue est introuvable sur GitHub depuis cette date (serveur).
   final DateTime? issueMissingSince;
 
+  /// Chemin Cloud Storage de la capture jointe, écrit par
+  /// `attachTicketScreenshot` seul (ADR-008, T6) ; `null` sans capture. Un
+  /// chemin hors de [kTicketScreenshotPathPattern] n'est jamais lu dans
+  /// Storage : « Capture indisponible. ».
+  final String? screenshotPath;
+
+  /// Date d'effacement de la capture par la règle de cycle de vie du bucket
+  /// (rattachement + 180 jours), écrite par `attachTicketScreenshot` seul avec
+  /// [screenshotPath]. Passée : « Capture effacée », sans lecture.
+  final DateTime? screenshotExpiresAt;
+
   /// Décisions que le statut permet, calculées par le serveur seul (P26).
   /// `null` : le serveur ne les a pas encore écrites. Une valeur que cette
   /// version ne connaît pas est ignorée.
   final List<TicketDecisionAction>? allowedDecisions;
 
+  /// `answer` figure dans `allowed_decisions` : « Répondre » est permis
+  /// (callable `answerTicketAnalysis`, ADR-008). Écrit par le serveur seul
+  /// (P26) ; ce n'est pas un document de `decisions/`, d'où un champ à part.
+  final bool canAnswer;
+
+  /// `launch_analysis` et `launch_development` figurent dans
+  /// `allowed_decisions` : « Lancer l'analyse » et « Lancer le
+  /// développement » sont permis (ADR-008, T4). Écrits par le serveur seul ;
+  /// l'application ne recopie aucune précondition (P39).
+  final bool canLaunchAnalysis;
+  final bool canLaunchDevelopment;
+
+  /// `launch_delivery` et `relaunch_development` (ADR-008, T5) : ticket En
+  /// cours validé dans l'application. Le serveur recontrôle chaque appel.
+  final bool canLaunchDelivery;
+  final bool canRelaunchDevelopment;
+
+  /// Lancement que le serveur permet pour [action].
+  bool canLaunch(ActionLancement action) => switch (action) {
+    ActionLancement.analyse => canLaunchAnalysis,
+    ActionLancement.developpement => canLaunchDevelopment,
+    ActionLancement.livraison => canLaunchDelivery,
+    ActionLancement.reprise => canRelaunchDevelopment,
+  };
+
   /// Une décision s'applique sur GitHub jusqu'à cette heure (bail du serveur).
   final DateTime? decisionLeaseUntil;
 
-  /// Nouvel essai de publication demandé par l'administrateur (heure du
-  /// serveur ; `null` tant que l'écriture l'attend).
-  final DateTime? retryRequestedAt;
-
   /// Une écriture locale attend le serveur : la création ou la date de
-  /// lecture (`seen_by_author_at`) du membre, ou la relance
-  /// (`retry_requested_at`) de l'admin.
+  /// lecture (`seen_by_author_at`) du membre.
   final bool hasPendingWrites;
 
   /// Création encore sur l'appareil seul : « En attente du réseau ».
   bool get waitingForNetwork =>
       status == TicketStatus.pending && hasPendingWrites;
 
-  /// « À traiter » pour l'administrateur : reçu sans décision (`received`),
-  /// ou envoi impossible (`send_failed`). Un ticket `validated` a déjà sa
-  /// décision. Même définition pour le compteur du menu, le filtre et la
-  /// pastille de l'avatar.
+  /// « À traiter » pour l'administrateur : reçu ou analysé sans décision
+  /// (`received`, `analyzed`), ou envoi impossible (`send_failed`). Un ticket
+  /// `validated` a déjà sa décision. Même définition pour le compteur du menu,
+  /// le filtre et la pastille de l'avatar.
   bool get toProcess =>
-      status == TicketStatus.received || status == TicketStatus.sendFailed;
+      status == TicketStatus.received ||
+      status == TicketStatus.analyzed ||
+      status == TicketStatus.sendFailed;
 
   /// Création transmise par l'appareil, mais toujours pas publiée après
   /// [kTicketSendDelay].
@@ -240,9 +302,8 @@ class Ticket {
   ///
   /// Le passage `pending` → `received` n'écrit pas `status_changed_at` : il ne
   /// compte pas. Sur l'appareil de l'auteur, une écriture en attente sur un ticket
-  /// déjà publié est `seen_by_author_at` (la relance `retry_requested_at` de
-  /// l'admin ne vise qu'un ticket `send_failed`), nulle dans le cache tant que
-  /// le serveur n'a pas répondu : le suivi est alors lu.
+  /// déjà publié est `seen_by_author_at`, nulle dans le cache tant que le
+  /// serveur n'a pas répondu : le suivi est alors lu.
   bool get unread {
     if (status == TicketStatus.pending || hasPendingWrites) return false;
     final changed = statusChangedAt;
@@ -277,6 +338,10 @@ class Ticket {
     }
 
     final deliveredPrNumber = entier('delivered_pr_number');
+    final allowedRaw = switch (data['allowed_decisions']) {
+      final List<Object?> list => list,
+      _ => const <Object?>[],
+    };
     return Ticket(
       id: id,
       type: type,
@@ -300,8 +365,14 @@ class Ticket {
       lastSendError: read.texteFacultatif('last_send_error'),
       issueMissingSince: read.date('issue_missing_since'),
       allowedDecisions: _allowedDecisions(data['allowed_decisions']),
+      canAnswer: allowedRaw.contains(kAnswerDecision),
+      canLaunchAnalysis: allowedRaw.contains(kLaunchAnalysisDecision),
+      canLaunchDevelopment: allowedRaw.contains(kLaunchDevelopmentDecision),
+      canLaunchDelivery: allowedRaw.contains(kLaunchDeliveryDecision),
+      canRelaunchDevelopment: allowedRaw.contains(kRelaunchDevelopmentDecision),
       decisionLeaseUntil: read.date('decision_lease_until'),
-      retryRequestedAt: read.date('retry_requested_at'),
+      screenshotPath: read.texteFacultatif('screenshot_path'),
+      screenshotExpiresAt: read.date('screenshot_expires_at'),
       hasPendingWrites: hasPendingWrites,
     );
   }
@@ -355,23 +426,33 @@ int? compareVersions(String a, String b) {
   return 0;
 }
 
-/// Décision de l'administrateur sur un ticket (ADR-006).
+/// Valeur de `allowed_decisions` qui permet « Répondre » (ADR-008). Ce n'est
+/// pas une décision de `decisions/` : elle ne devient jamais une
+/// [TicketDecisionAction].
+const kAnswerDecision = 'answer';
+
+/// Décision de l'administrateur sur un ticket (ADR-006), appliquée par la
+/// callable [callable] (ADR-008, T7).
 ///
 /// [nom] : « Validation », « Refus », « Clôture ». [feminin] accorde les
-/// phrases de l'écran (« Refus interrompu », « Clôture interrompue »).
+/// phrases de l'écran (« Validation demandée », « Refus demandé »).
 enum TicketDecisionAction {
-  validate('validate', 'Validation', feminin: true),
-  refuse('refuse', 'Refus', feminin: false),
-  close('close', 'Clôture', feminin: true);
+  validate('validate', 'Validation', 'validateTicket', feminin: true),
+  refuse('refuse', 'Refus', 'refuseTicket', feminin: false),
+  close('close', 'Clôture', 'closeTicket', feminin: true);
 
   const TicketDecisionAction(
     this.storedValue,
-    this.nom, {
+    this.nom,
+    this.callable, {
     required this.feminin,
   });
 
   final String storedValue;
   final String nom;
+
+  /// Callable du serveur qui applique la décision.
+  final String callable;
   final bool feminin;
 
   static TicketDecisionAction? fromStored(Object? value) {
@@ -382,7 +463,8 @@ enum TicketDecisionAction {
   }
 }
 
-/// État d'une décision : `pending` à la création, puis écrit par le serveur.
+/// État d'une décision, écrit par le serveur. `pending` : décision écrite par
+/// un client d'avant T7, jamais prise.
 enum TicketDecisionState {
   pending('pending'),
   applying('applying'),
@@ -403,8 +485,8 @@ enum TicketDecisionState {
   }
 }
 
-/// Document `tickets/{id}/decisions/{decisionId}`, lu par l'administrateur
-/// seul.
+/// Document `tickets/{id}/decisions/{decisionId}`, écrit par le serveur seul
+/// et lu par l'administrateur seul : l'historique des décisions.
 ///
 /// Lecture tolérante : une action ou un état que cette version ne connaît pas
 /// se lit `null` ou [TicketDecisionState.unknown], et la décision reste
@@ -418,8 +500,6 @@ class TicketDecision {
     this.text,
     this.requestedAt,
     this.errorReason,
-    this.leaseUntil,
-    this.hasPendingWrites = false,
   });
 
   final String id;
@@ -431,30 +511,13 @@ class TicketDecision {
   /// Motif ou commentaire saisi ; absent pour une validation.
   final String? text;
 
-  /// Heure du serveur ; `null` tant que la création l'attend.
+  /// Heure du serveur.
   final DateTime? requestedAt;
 
   /// Raison d'un rejet ou d'un échec, en français, écrite par le serveur.
   final String? errorReason;
 
-  /// Bail du serveur pendant l'application, s'il l'écrit.
-  final DateTime? leaseUntil;
-
-  /// La création, ou la reprise (`retry_requested_at`), attend encore le
-  /// serveur.
-  final bool hasPendingWrites;
-
-  /// La décision attend ou s'applique : aucune autre ne part.
-  bool get inProgress =>
-      hasPendingWrites ||
-      state == TicketDecisionState.pending ||
-      state == TicketDecisionState.applying;
-
-  factory TicketDecision.fromFirestore(
-    String id,
-    Map<String, dynamic> data, {
-    bool hasPendingWrites = false,
-  }) {
+  factory TicketDecision.fromFirestore(String id, Map<String, dynamic> data) {
     final read = LecteurChamps(data);
     return TicketDecision(
       id: id,
@@ -463,14 +526,12 @@ class TicketDecision {
       text: read.texteFacultatif('text'),
       requestedAt: read.date('requested_at'),
       errorReason: read.texteFacultatif('error_reason'),
-      leaseUntil: read.date('lease_until'),
-      hasPendingWrites: hasPendingWrites,
     );
   }
 }
 
-/// Décisions de la plus récente à la plus ancienne ; une création qui attend
-/// le serveur passe en tête.
+/// Décisions de la plus récente à la plus ancienne ; une décision sans date
+/// passe en tête.
 int compareDecisionsRecentFirst(TicketDecision a, TicketDecision b) {
   final da = a.requestedAt;
   final db = b.requestedAt;

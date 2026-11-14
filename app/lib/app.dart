@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/preferences/theme_mode_provider.dart';
 import 'core/presentation/breakpoints.dart';
+import 'core/presentation/logo_kass_beer.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -28,7 +30,7 @@ class KassBeerApp extends ConsumerWidget {
       localizationsDelegates: kLocalizationsDelegates,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
     );
   }
@@ -115,6 +117,8 @@ class _StartupMessage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const MedaillonKassBeer(taille: 120),
+                  const SizedBox(height: 24),
                   Icon(
                     Icons.error_outline,
                     size: 48,

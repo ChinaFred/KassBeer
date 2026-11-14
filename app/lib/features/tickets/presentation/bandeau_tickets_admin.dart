@@ -6,6 +6,7 @@ import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
+import '../domain/ticket_launch.dart';
 import 'tickets_providers.dart';
 
 /// Message du bandeau des tickets d'Admin.
@@ -16,10 +17,13 @@ typedef MessageBandeau = ({String text, bool error});
 /// « Impossible de lire les tickets. ».
 const kPanneComptageTickets = 'Impossible de compter les tickets bloqués.';
 
-/// Messages du bandeau : jeton refusé, expiré ou proche de l'échéance,
-/// tickets non transmis, Issues disparues. Liste vide quand tout va bien.
+/// Messages du bandeau : jeton GitHub refusé, expiré ou proche de
+/// l'échéance, jetons des routines refusés, tickets non transmis, Issues
+/// disparues. Liste vide quand tout va bien. Le plafond des lancements
+/// atteint n'y figure pas : c'est un état normal.
 List<MessageBandeau> messagesBandeauTickets({
   required AsyncValue<RechercheDocument<EtatJetonGithub>> status,
+  required AsyncValue<RechercheDocument<EtatLancements>> launches,
   required AsyncValue<ListeLue<Ticket>> tickets,
   required DateTime now,
 }) {
@@ -65,6 +69,36 @@ List<MessageBandeau> messagesBandeauTickets({
       break;
   }
 
+  final launchLookup = launches.value;
+  if (launchLookup == null && launches.hasError) {
+    messages.add((
+      text: 'Impossible de lire l\'état des lancements.',
+      error: true,
+    ));
+  }
+  switch (launchLookup) {
+    case DocumentTrouve<EtatLancements>(:final value):
+      for (final (since, nom) in [
+        (value.analysisInvalidSince, 'd\'analyse'),
+        (value.developmentInvalidSince, 'de développement'),
+      ]) {
+        if (since == null) continue;
+        messages.add((
+          text:
+              'Jeton de la routine $nom refusé depuis le '
+              '${formatDateChiffres(since)}. Remplacez-le dans Secret '
+              'Manager.',
+          error: true,
+        ));
+      }
+    case DocumentIllisibleTrouve<EtatLancements>():
+      messages.add((text: 'État des lancements illisible.', error: true));
+    case DocumentAbsent<EtatLancements>() ||
+        DocumentAbsentDuCache<EtatLancements>() ||
+        null:
+      break;
+  }
+
   final list = tickets.value;
   if (list == null && tickets.hasError) {
     messages.add((text: kPanneComptageTickets, error: true));
@@ -100,6 +134,7 @@ final messagesBandeauTicketsProvider =
     Provider.autoDispose<List<MessageBandeau>>(
       (ref) => messagesBandeauTickets(
         status: ref.watch(githubStatusProvider),
+        launches: ref.watch(launchStatusProvider),
         tickets: ref.watch(adminTicketsProvider),
         now: ref.watch(horlogeProvider)(),
       ),

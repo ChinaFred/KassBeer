@@ -10,12 +10,15 @@ import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../domain/ticket.dart';
 import 'admin_ticket_screen.dart';
 import 'bandeau_tickets_admin.dart';
-import 'ticket_statut.dart';
+import 'ligne_ticket.dart';
+import 'section_lancements.dart';
+import 'section_livraison.dart';
 import 'tickets_providers.dart';
 
 /// Filtre de la liste d'Admin › Tickets. Le choix n'est pas stocké.
@@ -106,11 +109,16 @@ class AdminTicketsScreen extends ConsumerWidget {
 
   static const titre = 'Tickets des membres';
   static const loadError = 'Impossible de lire les tickets.';
-  static const emptyMessage =
-      'Aucun ticket pour l\'instant. Les membres n\'ont encore rien signalé.';
-  static const nothingToProcess =
-      'Rien à traiter. Tous les tickets ont reçu une décision.';
-  static const nothingBlocked = 'Aucun ticket bloqué.';
+  static const emptyTitle = 'Aucun ticket';
+  static const nothingToProcessTitle = 'Tout est traité';
+  static const nothingBlockedTitle = 'Rien de bloqué';
+  static const emptyMessage = 'Les membres n\'ont encore rien signalé.';
+  static const nothingToProcess = 'Chaque ticket a reçu une décision.';
+
+  /// « Bloqué » : envoi impossible, en retard, ou Issue disparue
+  /// (`Ticket.isBlocked`).
+  static const nothingBlocked =
+      'Aucun envoi en échec ou en retard, aucune Issue disparue.';
   static const showAll = 'Afficher tous les tickets';
   static const noSelection = 'Choisissez un ticket pour voir son suivi.';
 
@@ -184,9 +192,18 @@ class _PanneauListe extends ConsumerWidget {
     final filtre = ref.watch(filtreTicketsProvider).filtre;
     final notifier = ref.read(filtreTicketsProvider.notifier);
     final valides = list?.valides ?? const <Ticket>[];
-    final toProcess = valides.where((t) => t.toProcess).length;
+    // « À traiter » de la liste : statut, plus les tickets En cours dont la
+    // PR est prête (décision 7 du 2026-11-14) ; le compteur du menu reste sur
+    // le statut seul.
+    final pretes = ref.watch(ticketsPrPreteProvider);
+    final prPretes = pretes.ids;
+    final toProcess = valides
+        .where((t) => t.toProcess || prPretes.contains(t.id))
+        .length;
     final blocked = valides.where((t) => t.isBlocked(now)).length;
-    if (list != null && !ref.read(filtreTicketsProvider).ajuste) {
+    // Le premier filtre attend l'état des PR des tickets En cours : un ticket
+    // dont la PR est prête est à traiter.
+    if (list != null && pretes.lu && !ref.read(filtreTicketsProvider).ajuste) {
       // Après la construction : un fournisseur ne change pas pendant un
       // build.
       WidgetsBinding.instance.addPostFrameCallback(
@@ -216,6 +233,7 @@ class _PanneauListe extends ConsumerWidget {
     } else {
       body = _Liste(
         list: list,
+        prPretes: prPretes,
         filtre: filtre,
         now: now,
         selectedId: selectedId,
@@ -230,6 +248,7 @@ class _PanneauListe extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const CompteurLancements(),
         _Filtres(
           filtre: filtre,
           toProcess: list == null ? null : toProcess,
@@ -307,6 +326,7 @@ class _Filtres extends StatelessWidget {
 class _Liste extends ConsumerWidget {
   const _Liste({
     required this.list,
+    required this.prPretes,
     required this.filtre,
     required this.now,
     required this.selectedId,
@@ -318,6 +338,9 @@ class _Liste extends ConsumerWidget {
   });
 
   final ListeLue<Ticket> list;
+
+  /// Tickets En cours dont la PR est prête : sous « À traiter ».
+  final Set<String> prPretes;
   final FiltreTickets filtre;
   final DateTime now;
   final String? selectedId;
@@ -333,7 +356,7 @@ class _Liste extends ConsumerWidget {
     final tickets = [
       for (final t in list.valides)
         if (switch (filtre) {
-          FiltreTickets.aTraiter => t.toProcess,
+          FiltreTickets.aTraiter => t.toProcess || prPretes.contains(t.id),
           FiltreTickets.tous => true,
           FiltreTickets.bloques => t.isBlocked(now),
         })
@@ -356,21 +379,25 @@ class _Liste extends ConsumerWidget {
       final empty = list.documents.isEmpty
           ? const EtatVide(
               icon: Icons.confirmation_number_outlined,
+              titre: AdminTicketsScreen.emptyTitle,
               message: AdminTicketsScreen.emptyMessage,
             )
           : switch (filtre) {
               FiltreTickets.aTraiter => EtatVide(
                 icon: Icons.inbox_outlined,
+                titre: AdminTicketsScreen.nothingToProcessTitle,
                 message: AdminTicketsScreen.nothingToProcess,
                 action: showAll,
               ),
               FiltreTickets.bloques => EtatVide(
                 icon: Icons.check_circle_outline,
+                titre: AdminTicketsScreen.nothingBlockedTitle,
                 message: AdminTicketsScreen.nothingBlocked,
                 action: showAll,
               ),
               FiltreTickets.tous => const EtatVide(
                 icon: Icons.confirmation_number_outlined,
+                titre: AdminTicketsScreen.emptyTitle,
                 message: AdminTicketsScreen.emptyMessage,
               ),
             };
@@ -396,16 +423,12 @@ class _Liste extends ConsumerWidget {
             onTap: () => onOpen(t.id),
           ),
         for (final d in invalid)
-          ListTile(
-            leading: Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            title: const Text('Ticket illisible'),
-            subtitle: const Text('Mettez l\'application à jour.'),
+          LigneListe(
+            icone: Icons.error_outline,
+            erreur: true,
+            titre: 'Ticket illisible',
+            details: const [Text('Mettez l\'application à jour.')],
             selected: d.id == selectedId,
-            selectedTileColor: Theme.of(context).colorScheme.secondaryContainer,
-            selectedColor: Theme.of(context).colorScheme.onSecondaryContainer,
             onTap: () => onOpen(d.id),
           ),
       ],
@@ -430,7 +453,6 @@ class _Ligne extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final created = ticket.createdAt;
     final number = ticket.issueNumber;
     final meta = [
@@ -438,36 +460,15 @@ class _Ligne extends StatelessWidget {
       auteurTicket(ticket, names),
       if (created != null) formatDateChiffres(created),
     ].join(' · ');
-    return ListTile(
-      leading: Semantics(
-        label: ticket.type.label,
-        child: ExcludeSemantics(
-          child: Icon(
-            ticketTypeIcon(ticket.type),
-            color: selected
-                ? scheme.onSecondaryContainer
-                : scheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-      title: Text(ticket.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(meta),
-            EtiquetteStatut(ticket: ticket),
-            ...pastillesAdmin(ticket, now),
-          ],
-        ),
-      ),
+    return LigneTicket(
+      ticket: ticket,
+      details: meta,
+      pastilles: [
+        ...pastillesAdmin(ticket, now),
+        PastilleLancement(ticket: ticket),
+        PastilleLivraison(ticket: ticket),
+      ],
       selected: selected,
-      // Ligne choisie : même marquage que « Mes tickets ».
-      selectedTileColor: scheme.secondaryContainer,
-      selectedColor: scheme.onSecondaryContainer,
       onTap: onTap,
     );
   }

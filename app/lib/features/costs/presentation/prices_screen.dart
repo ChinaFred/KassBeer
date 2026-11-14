@@ -3,17 +3,16 @@ import 'dart:async';
 import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/data/lecture_document.dart';
-import '../../../core/presentation/bandeau_hors_ligne.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
+import '../../../core/presentation/ligne_liste.dart';
+import '../../../core/presentation/page_secondaire.dart';
 import '../../../core/providers.dart';
-import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/fee.dart';
 import '../domain/price.dart';
@@ -32,9 +31,9 @@ class PricesScreen extends ConsumerWidget {
   static const chargement = 'Chargement de vos prix';
   static const lectureImpossible = 'Impossible de lire vos prix.';
   static const horsLigne = 'Prix indisponibles sur cet appareil hors ligne.';
+  static const aucunPrixTitre = 'Aucun prix';
   static const aucunPrix =
-      'Aucun prix enregistré. Ajoutez-en un, ou complétez-les depuis une '
-      'recette.';
+      'Ajoutez-en un, ou complétez-les depuis une recette.';
   static const aucunFrais =
       'Aucun frais. Ajoutez l\'eau, l\'électricité, les capsules… pour qu\'ils '
       'comptent dans le coût.';
@@ -113,29 +112,10 @@ class PricesScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppRoutes.home),
-        ),
-        title: const Text(titre),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (offline) const BandeauHorsLigne(),
-          Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-                child: body,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return PageSecondaire(
+      titre: titre,
+      horsLigne: offline,
+      body: body,
       floatingActionButton: compact && pret && !sansCache
           ? FloatingActionButton.extended(
               onPressed: nouveauPrix,
@@ -212,13 +192,14 @@ class _Contenu extends ConsumerWidget {
     final prixIllisibles = prices.documents
         .whereType<DocumentInvalide<Price>>();
 
-    Widget illisible({required bool frais, required String id}) => ListTile(
-      leading: Icon(Icons.error_outline, color: theme.colorScheme.error),
-      title: Text(frais ? 'Frais illisible' : 'Prix illisible'),
-      subtitle: Text(
-        frais ? PricesScreen.fraisIllisible : PricesScreen.prixIllisible,
-      ),
-      trailing: TextButton(
+    Widget illisible({required bool frais, required String id}) => LigneListe(
+      icone: Icons.error_outline,
+      erreur: true,
+      titre: frais ? 'Frais illisible' : 'Prix illisible',
+      details: [
+        Text(frais ? PricesScreen.fraisIllisible : PricesScreen.prixIllisible),
+      ],
+      action: TextButton(
         style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
         onPressed: () =>
             unawaited(_supprimerIllisible(context, ref, frais: frais, id: id)),
@@ -241,6 +222,8 @@ class _Contenu extends ConsumerWidget {
           storageKey: 'prix-${nature.prefix}',
           resume: '${items.length} prix',
           ouvert: ouvert,
+          niveau: NiveauTitre.sousSection,
+          margeHorizontale: 16,
           children: [
             for (final p in items)
               LignePrix(
@@ -254,25 +237,36 @@ class _Contenu extends ConsumerWidget {
                     initial: p,
                   ),
                 ),
-                trailing: p.hasPendingWrites
-                    ? const Etiquette(label: 'En attente du réseau')
-                    : null,
+                enAttente: p.hasPendingWrites,
               ),
           ],
         ),
       ];
     }
 
+    // Liste sans marge latérale : une ligne (LigneListe) porte la sienne et
+    // aligne son texte à 16 px, comme les titres, retirés de 16 px ici.
+    Widget retrait(Widget child) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: child,
+    );
+
     return ListView(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, compact ? 96 : 24),
+      padding: PageSecondaire.marges(
+        context,
+        EdgeInsets.only(top: 8, bottom: compact ? kMargeBoutonFlottant : 24),
+      ),
       children: [
-        TitreSection(
-          'Mes frais',
-          trailing: fees.documents.isEmpty
-              ? null
-              : '${fees.documents.length} frais',
+        retrait(
+          TitreSection(
+            'Mes frais',
+            trailing: fees.documents.isEmpty
+                ? null
+                : '${fees.documents.length} frais',
+          ),
         ),
-        if (fees.documents.isEmpty) const TexteAbsent(PricesScreen.aucunFrais),
+        if (fees.documents.isEmpty)
+          retrait(const TexteAbsent(PricesScreen.aucunFrais)),
         for (final f in mesFrais)
           _LigneFrais(
             fee: f,
@@ -282,21 +276,23 @@ class _Contenu extends ConsumerWidget {
         for (final d in fraisIllisibles) illisible(frais: true, id: d.id),
         const SizedBox(height: 8),
         if (fees.documents.length >= kMaxFees)
-          const Text(PricesScreen.limiteFrais)
+          retrait(const Text(PricesScreen.limiteFrais))
         else
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () =>
-                  unawaited(ouvrirFormulaireFrais(context, uid: uid)),
-              icon: const Icon(Icons.add),
-              label: const Text(PricesScreen.ajouterFrais),
+          retrait(
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () =>
+                    unawaited(ouvrirFormulaireFrais(context, uid: uid)),
+                icon: const Icon(Icons.add),
+                label: const Text(PricesScreen.ajouterFrais),
+              ),
             ),
           ),
-        const TitreSection('Ingrédients'),
+        retrait(const TitreSection('Ingrédients')),
         if (!compact)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: FilledButton.icon(
@@ -309,6 +305,7 @@ class _Contenu extends ConsumerWidget {
         if (prices.documents.isEmpty)
           const EtatVide(
             icon: Icons.sell_outlined,
+            titre: PricesScreen.aucunPrixTitre,
             message: PricesScreen.aucunPrix,
           ),
         for (final nature in IngredientNature.values)
@@ -319,7 +316,7 @@ class _Contenu extends ConsumerWidget {
   }
 }
 
-/// Ligne d'un frais : « Électricité · 2,00 € par brassin ».
+/// Ligne d'un frais : « Électricité », « 2,00 € par brassin ».
 class _LigneFrais extends StatelessWidget {
   const _LigneFrais({required this.fee, required this.onTap});
 
@@ -328,35 +325,16 @@ class _LigneFrais extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final texte = parties([
-      fee.name,
-      '${formatEurosSaisis(fee.amountEur)} ${libelleBase(fee.basis)}',
-    ]);
-    return MergeSemantics(
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  texte.texte,
-                  semanticsLabel: texte.parle,
-                  style: theme.textTheme.bodyLarge,
-                ),
-                if (fee.hasPendingWrites) ...[
-                  const SizedBox(height: 8),
-                  const Etiquette(label: 'En attente du réseau'),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    final montant =
+        '${formatEurosSaisis(fee.amountEur)} ${libelleBase(fee.basis)}';
+    return LigneListe(
+      titre: fee.name,
+      details: [Text(montant)],
+      etiquettes: [
+        if (fee.hasPendingWrites)
+          const Etiquette(label: 'En attente du réseau'),
+      ],
+      onTap: onTap,
     );
   }
 }

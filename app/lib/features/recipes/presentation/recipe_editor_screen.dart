@@ -21,6 +21,7 @@ import '../../equipment/presentation/equipment_providers.dart';
 import '../../library/domain/referentiel.dart';
 import '../../library/presentation/champ_bibliotheque.dart';
 import '../domain/beerjson.dart';
+import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
 import 'contenu_recette.dart';
 import 'ingredient_forms.dart';
@@ -30,9 +31,13 @@ import 'recipes_providers.dart';
 
 /// Nouvelle recette ([id] nul) ou modification d'une recette, en plein écran.
 class RecipeEditorScreen extends ConsumerWidget {
-  const RecipeEditorScreen({super.key, this.id});
+  const RecipeEditorScreen({super.key, this.id, this.retourParPop = false});
 
   final String? id;
+
+  /// Vrai : ouvert depuis la fiche importée ; « Enregistrer » ferme l'éditeur
+  /// par `pop` pour garder le compte rendu de l'import sous la fiche.
+  final bool retourParPop;
 
   static const readOnlyMessage = 'Seul l\'auteur modifie cette recette.';
 
@@ -68,16 +73,25 @@ class RecipeEditorScreen extends ConsumerWidget {
             ),
           );
         }
-        return _RecipeEditor(key: ValueKey(id), initial: recipe);
+        return _RecipeEditor(
+          key: ValueKey(id),
+          initial: recipe,
+          retourParPop: retourParPop,
+        );
       },
     );
   }
 }
 
 class _RecipeEditor extends ConsumerStatefulWidget {
-  const _RecipeEditor({super.key, required this.initial});
+  const _RecipeEditor({
+    super.key,
+    required this.initial,
+    this.retourParPop = false,
+  });
 
   final Recipe? initial;
+  final bool retourParPop;
 
   @override
   ConsumerState<_RecipeEditor> createState() => _RecipeEditorState();
@@ -257,7 +271,11 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       _saving = false;
       _dirty = false;
     });
-    context.go(AppRoutes.recipe(id));
+    if (widget.retourParPop && context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.recipe(id));
+    }
   }
 
   // ------------------------------------------------------------ lignes
@@ -509,18 +527,13 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
                     SizedBox(
                       width: kCalculationPanelWidth,
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(8, 16, 16, 24),
+                        // Sans marge haute : « Calculs » s'aligne sur le
+                        // premier titre du formulaire.
+                        padding: const EdgeInsets.fromLTRB(8, 0, 16, 24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Semantics(
-                              header: true,
-                              child: Text(
-                                'Calculs',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            const TitreSection('Calculs'),
                             BlocCalculs(
                               calculs: calculs,
                               content: content,
@@ -593,11 +606,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           autofocus: widget.initial == null,
           maxLength: kRecipeNameMaxLength,
           textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(
-            labelText: 'Nom',
-            errorText: _nameError,
-            border: const OutlineInputBorder(),
-          ),
+          decoration: InputDecoration(labelText: 'Nom', errorText: _nameError),
           onChanged: (v) => setState(() {
             _dirty = true;
             if (v.trim().isNotEmpty) _nameError = null;
@@ -631,7 +640,6 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
             labelText: 'Style (facultatif)',
             helperText: aide ?? styleAide,
             helperMaxLines: 8,
-            border: const OutlineInputBorder(),
           ),
           onChanged: _changed,
         ),
@@ -669,10 +677,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         key: ValueKey('equipement-$equipmentId'),
         initialValue: equipmentId,
         isExpanded: true,
-        decoration: const InputDecoration(
-          labelText: 'Équipement',
-          border: OutlineInputBorder(),
-        ),
+        decoration: const InputDecoration(labelText: 'Équipement'),
         items: [
           const DropdownMenuItem(value: null, child: Text('Aucun équipement')),
           for (final e in equipment)
@@ -822,10 +827,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         maxLength: kRecipeNotesMaxLength,
         minLines: 3,
         maxLines: 10,
-        decoration: const InputDecoration(
-          labelText: 'Notes (facultatif)',
-          border: OutlineInputBorder(),
-        ),
+        decoration: const InputDecoration(labelText: 'Notes (facultatif)'),
         onChanged: _changed,
       ),
     ];

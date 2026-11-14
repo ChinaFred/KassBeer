@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.29+30
+version: 0.1.55+56
 
 environment:
   sdk: ^3.11.4
@@ -67,6 +67,34 @@ dependencies:
   # (data_sources_screen.dart) sont ouvertes.
   url_launcher: 6.3.3
 
+  # Callable answerTicketAnalysis d'Admin › Tickets (ADR-008, lot T3). Famille
+  # FlutterFire : 6.5.0 est la version que résout firebase_core 4.15.0 (celle du
+  # pubspec.lock de Kass'Dalle) ; elle monte avec firebase_core (P6). L'instance
+  # FirebaseFunctions se construit au premier appel et reste mémorisée par le
+  # dépôt des tickets : rien n'est chargé au démarrage.
+  cloud_functions: 6.5.0
+
+  # Capture d'écran jointe à un ticket (ADR-008, lot T6) : dépôt par putData et
+  # lecture par getData, jamais d'URL de téléchargement. Famille FlutterFire :
+  # 13.6.0 est la version que résout firebase_core 4.15.0 (celle du pubspec.lock
+  # de Kass'Dalle, compilé sous Android) ; elle monte avec firebase_core (P6).
+  # L'instance FirebaseStorage se construit au premier dépôt ou à la première
+  # lecture et reste mémorisée par le dépôt des tickets : rien n'est chargé au
+  # démarrage.
+  firebase_storage: 13.6.0
+
+  # Analyses des tickets en Markdown (ADR-008, lot T3, P33). Version exacte : le
+  # rendu ne change qu'avec une montée relue. Importés par le seul fichier
+  # section_analyses.dart : aucune image chargée, liens http et https seuls, aucun
+  # HTML rendu.
+  flutter_markdown_plus: 1.0.7
+  markdown: 7.3.1
+
+  # SHA-256 de l'APK téléchargé, comparé au manifeste publié (ADR-012). Déjà
+  # résolu en 3.0.8 comme dépendance indirecte (exchange/) ; déclaré en version
+  # exacte parce que app/lib/ l'importe.
+  crypto: 3.0.8
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -85,3 +113,36 @@ flutter:
   # documentation/CHANGELOG.md, régénéré par la CI et deploy.yml avant chaque build.
   assets:
     - assets/changelog_recent.json
+    # Médaillon du logo, 384 px, tiré de assets/Kassbeer_transparent.png du dépôt.
+    - assets/images/logo_kass_beer.webp
+    # Licences des polices (SIL Open Font License 1.1), livrées avec elles.
+    - assets/fonts/OFL-Bitter.txt
+    - assets/fonts/OFL-Roboto.txt
+    - assets/fonts/OFL-NotoSansMath.txt
+
+  # Polices embarquées, réduites aux alphabets latins (app_theme.dart) : aucun
+  # téléchargement, ni au démarrage ni hors ligne. Une famille nommée « Roboto »
+  # empêche le moteur web de télécharger Roboto depuis fonts.gstatic.com.
+  fonts:
+    # Titres : Bitter demi-grasse (600), 38 Ko.
+    - family: Bitter
+      fonts:
+        - asset: assets/fonts/Bitter-SemiBold.ttf
+          weight: 600
+    # Texte : Roboto 400, 500, 700 et italique 400, 56 Ko chacune ; 600 prend la 700.
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Roboto-Italic.ttf
+          weight: 400
+          style: italic
+    # Secours : flèches (→ ↑ ↓ ↔) et ⋮, absentes de Roboto et de Bitter ; tirées
+    # de Noto Sans Math, 8 Ko.
+    - family: Symboles
+      fonts:
+        - asset: assets/fonts/Symboles.ttf

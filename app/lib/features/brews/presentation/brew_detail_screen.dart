@@ -1,6 +1,13 @@
 import 'dart:async';
 
-import 'package:brewing/brewing.dart' show fermentationDayNumber;
+import 'package:brewing/brewing.dart'
+    show
+        ActualDayDuration,
+        StepEventKind,
+        StepStatus,
+        fermentationDayNumber,
+        maxProcessOffsetDays,
+        processSessionDate;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,25 +25,37 @@ import '../../../core/presentation/page_document.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
+import '../../brew_day/domain/plan_du_jour.dart';
+import '../../brew_day/presentation/brew_day_screen.dart' show TextesJournee;
 import '../../brew_day/presentation/chronologie_jour.dart';
 import '../../brew_day/presentation/mesure_form.dart';
 import '../../costs/data/figeage_embouteillage.dart';
 import '../../costs/presentation/bloc_cout_brassin.dart';
 import '../../costs/presentation/costs_providers.dart';
+import '../../processes/domain/modele_processus.dart';
+import '../../processes/presentation/processes_providers.dart';
 import '../../recipes/domain/recipe.dart';
 import '../../recipes/presentation/contenu_recette.dart';
 import '../../recipes/presentation/recipe_calculations_view.dart';
 import '../../recipes/presentation/recipes_providers.dart';
 import '../data/brews_repository.dart';
+import '../domain/assemblage_deroule.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import '../domain/deroule.dart';
 import '../domain/releves.dart';
 import 'brews_providers.dart';
+import 'brews_screen.dart' show tonStatutBrassin;
+import 'changer_processus.dart';
+import 'choix_processus.dart';
 import 'embouteillage.dart';
+import 'maj_processus.dart';
+import 'new_brew_form.dart' show FormulaireNouveauBrassin;
 import 'prevu_et_mesure.dart';
 import 'releve_fermentation.dart';
+import 'section_deroule.dart';
 
-/// Fiche d'un brassin : copie figée, calculs, chronologie et saisies.
+/// Fiche d'un brassin : copie figée, calculs, déroulé et saisies.
 class BrewDetailScreen extends ConsumerStatefulWidget {
   const BrewDetailScreen({super.key, required this.id});
 
@@ -66,6 +85,24 @@ class BrewDetailScreen extends ConsumerStatefulWidget {
       'Embouteillage enregistré. Brassin en conditionnement.';
   static const embouteillageHorsLigne =
       'Embouteillage enregistré sur l\'appareil. Il partira au retour du réseau.';
+  static const recreateProcessKept =
+      'Son processus est appliqué de nouveau à la recette actuelle.';
+  static const recreateProcessDeleted =
+      'Son processus a été supprimé : le nouveau brassin n\'aura que la '
+      'chronologie de la recette.';
+  static const recreateProcessRefused =
+      'Son processus ne s\'applique pas à la recette actuelle : le nouveau '
+      'brassin n\'aura que la chronologie de la recette.';
+  static const recreateProcessUnread =
+      'Son processus n\'a pas pu être lu sur cet appareil : le nouveau brassin '
+      'n\'aura que la chronologie de la recette. Pour le garder, annulez et '
+      'réessayez avec le réseau.';
+  static const embouteillerSansJournee = 'Embouteiller sans suivre la journée';
+  static const prevueAujourdhui = 'Prévue aujourd\'hui';
+  static String prevueLe(DateTime date) => 'Prévue le ${formatJourMois(date)}';
+  static const recreatedWithoutProcess =
+      'Brassin recréé depuis la recette, sans son processus. Choisissez de '
+      'nouveau le processus sur la fiche.';
   static String recipeChanged(DateTime date) =>
       'La recette a changé depuis la création de ce brassin. Il garde la '
       'version du ${formatDateCourte(date)}.';
@@ -82,6 +119,10 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
 
   /// Vrai pendant une action : un second appui est ignoré.
   bool _actionEnCours = false;
+
+  /// Vrai entre la programmation et l'affichage de l'annonce d'un embouteillage
+  /// fait depuis la journée : un `build` de plus n'en programme pas une seconde.
+  bool _annonceProgrammee = false;
 
   /// Défilement de la fiche, titre et focus du bloc Coût : « Voir le coût ».
   final _scroll = ScrollController();
@@ -186,14 +227,46 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     if (access == null) return;
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
+    // Le processus du brassin se résout de nouveau avec la nouvelle copie de la
+    // recette (ADR-010), avant la confirmation : elle dit ce qu'il deviendra. Un
+    // modèle absent ou inapplicable ne s'invente pas.
+    final avecProcessus = brew.process != null;
+    final templateId = brew.process?.templateId;
+    final recherche = templateId == null
+        ? null
+        : ref.read(processTemplatesProvider).value?.chercher(templateId);
+    final evalue = switch (recherche) {
+      DocumentTrouve<ModeleProcessus>(:final value) => evaluerAssemblage(
+        modele: value,
+        recipe: recipe.content,
+        nouvelleCle: ref.read(processesRepositoryProvider).newKey,
+        errors: ref.read(errorReportServiceProvider),
+        reported: ref.read(derouleReportsProvider),
+      ),
+      _ => null,
+    };
+    final deroule = switch (evalue) {
+      AssemblageObtenu(:final assemble) => assemble.deroule,
+      _ => null,
+    };
+    final issue = !avecProcessus
+        ? null
+        : switch ((recherche, evalue)) {
+            (_, AssemblageObtenu()) => BrewDetailScreen.recreateProcessKept,
+            (_, AssemblageRefuse()) => BrewDetailScreen.recreateProcessRefused,
+            (DocumentAbsent<ModeleProcessus>(), _) =>
+              BrewDetailScreen.recreateProcessDeleted,
+            _ => BrewDetailScreen.recreateProcessUnread,
+          };
     // ticket: aucun (confirmation)
     final confirmed = await confirmerAction(
       context,
       titre: 'Recréer depuis la recette ?',
-      paragraphes: const [
+      paragraphes: [
         'Ce brassin est remplacé par un nouveau, à partir de la recette '
             'actuelle. Sa version figée de la recette est perdue ; ses notes sont '
             'recopiées.',
+        ?issue,
       ],
       libelle: 'Recréer',
     );
@@ -214,9 +287,23 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     suivreEcriture(
       messenger: messenger,
       written: Future.wait([created.written, removal]),
-      succes: 'Brassin recréé depuis la recette.',
+      succes: avecProcessus && deroule == null
+          ? BrewDetailScreen.recreatedWithoutProcess
+          : 'Brassin recréé depuis la recette.',
       refus: 'La recréation de « ${brew.name} » a échoué.',
     );
+    if (deroule != null) {
+      suivreDeroule(
+        messenger: messenger,
+        creation: created.written,
+        written: repo.setProcess(
+          brewId: created.id,
+          deroule: deroule,
+          ownerName: ownerName,
+        ),
+        refus: FormulaireNouveauBrassin.processRejected(brew.name),
+      );
+    }
     router.go(AppRoutes.brew(created.id));
   }
 
@@ -321,6 +408,123 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     );
   }
 
+  void _changerProcessus(Brew brew) {
+    unawaited(
+      // ticket: /brassins/:id/fenetre/processus
+      showFeuilleOuDialogue<void>(
+        context: context,
+        builder: (_) =>
+            FeuilleChangerProcessus(brew: brew, tokenName: _tokenName!),
+      ),
+    );
+  }
+
+  void _majProcessus(Brew brew) {
+    unawaited(
+      // ticket: /brassins/:id/fenetre/maj-processus
+      showFeuilleOuDialogue<void>(
+        context: context,
+        builder: (_) => FeuilleMajProcessus(brew: brew, tokenName: _tokenName!),
+      ),
+    );
+  }
+
+  /// « Changer la date » d'une journée après le brassage : sélecteur du jour de
+  /// départ à J+365, ou écart en jours sans date de départ. Réécrit `process` en
+  /// entier (ADR-010).
+  Future<void> _changerDate(Brew brew, JourneeDeroulee journee) async {
+    final process = brew.process;
+    if (process == null) return;
+    final depart = brew.departDeroule;
+    final int? ecart;
+    if (depart != null) {
+      // ticket: aucun (sélecteur du système)
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: journee.date(depart),
+        firstDate: processSessionDate(start: depart, offsetDays: 0),
+        lastDate: processSessionDate(
+          start: depart,
+          offsetDays: maxProcessOffsetDays,
+        ),
+        helpText: TextesDeroule.changerDate,
+      );
+      ecart = picked == null
+          ? null
+          : fermentationDayNumber(brewedAt: depart, at: picked);
+    } else {
+      // ticket: /brassins/:id/fenetre/ecart
+      ecart = await showFeuilleOuDialogue<int>(
+        context: context,
+        builder: (_) => FormulaireEcartJournee(journee: journee),
+      );
+    }
+    if (ecart == null || ecart == journee.offsetDays || !mounted) return;
+    await _ecrireEcart(brew, process, journee, ecart, SourceEcart.brasseur);
+  }
+
+  Future<void> _ecrireEcart(
+    Brew brew,
+    Deroule process,
+    JourneeDeroulee journee,
+    int ecart,
+    SourceEcart source,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final offline = _offline;
+    final ownerName = await _tokenName!;
+    if (!mounted) return;
+    final deroule = process.avecEcart(journee.key, ecart, source);
+    final date = journee.avecEcart(ecart, source).date(brew.departDeroule);
+    final name = journee.name.trim();
+    suivreEcriture(
+      messenger: messenger,
+      written: ref
+          .read(brewsRepositoryProvider)
+          .setProcess(brewId: brew.id, deroule: deroule, ownerName: ownerName),
+      succes: offline
+          ? TextesDeroule.ecartHorsLigne(name)
+          : date == null
+          ? TextesDeroule.prevuA(name, ecart)
+          : TextesDeroule.prevuLe(name, date),
+      refus: 'L\'enregistrement de « ${brew.name} » a échoué.',
+    );
+  }
+
+  /// Écarts que le processus d'origine donne aux journées dont le brasseur a
+  /// changé la date : le modèle, s'il existe encore, est assemblé de nouveau
+  /// avec la recette figée. Vide sans modèle lu.
+  Map<String, ({int offset, SourceEcart source})> _ecartsDuProcessus(
+    Brew brew,
+    ListeLue<ModeleProcessus>? modeles,
+  ) {
+    final process = brew.process;
+    final templateId = process?.templateId;
+    if (process == null ||
+        templateId == null ||
+        !process.journees.any((j) => j.sourceEcart == SourceEcart.brasseur)) {
+      return const {};
+    }
+    final modele = switch (modeles?.chercher(templateId)) {
+      DocumentTrouve<ModeleProcessus>(:final value) => value,
+      _ => null,
+    };
+    if (modele == null) return const {};
+    final evalue = evaluerAssemblage(
+      modele: modele,
+      recipe: brew.recipe,
+      nouvelleCle: clesApercu(),
+      errors: ref.read(errorReportServiceProvider),
+      reported: ref.read(derouleReportsProvider),
+    );
+    if (evalue is! AssemblageObtenu) return const {};
+    return {
+      for (final j in process.journees)
+        if (j.sourceEcart == SourceEcart.brasseur)
+          j.key: ?ecartDuProcessus(j, evalue.assemble.deroule),
+    };
+  }
+
   void _embouteiller(Brew brew, {required bool modification}) {
     final messenger = ScaffoldMessenger.of(context);
     final events = ref.read(brewEventsProvider(brew.id)).value;
@@ -362,34 +566,32 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required double? finalGravity,
     required bool modification,
   }) async {
-    final brews = ref.read(brewsRepositoryProvider);
-    final costs = ref.read(costsRepositoryProvider);
-    final errors = ref.read(errorReportServiceProvider);
-    final reported = ref.read(costReportsProvider);
-    final horloge = ref.read(horlogeProvider);
-    final uid = brew.ownerUid;
-    final prices = ref.read(pricesProvider(uid)).value;
-    final fees = ref.read(feesProvider(uid)).value;
-    final coutLu = ref
-        .read(brewCostProvider((uid: uid, brewId: brew.id)))
-        .value;
+    final envoyer = capturerEmbouteillage(ref, brew);
     final offline = _offline;
     final ownerName = await _tokenName!;
-    final envoi = enregistrerEmbouteillage(
-      brews: brews,
-      costs: costs,
-      errors: errors,
-      reported: reported,
+    _annoncerEmbouteillage(
+      messenger: messenger,
       brew: brew,
-      embouteillage: embouteillage,
-      finalGravity: finalGravity,
+      envoi: envoyer(
+        embouteillage: embouteillage,
+        finalGravity: finalGravity,
+        modification: modification,
+        ownerName: ownerName,
+      ),
+      offline: offline,
       modification: modification,
-      ownerName: ownerName,
-      prices: prices,
-      fees: fees,
-      coutLu: coutLu,
-      now: horloge(),
     );
+  }
+
+  /// Annonces d'un embouteillage envoyé depuis la fiche, ou depuis la journée
+  /// d'embouteillage à son retour sur la fiche (ADR-010). Aucun montant (SE7).
+  void _annoncerEmbouteillage({
+    required ScaffoldMessengerState messenger,
+    required Brew brew,
+    required EmbouteillageEnvoye envoi,
+    required bool offline,
+    required bool modification,
+  }) {
     final refus = 'L\'enregistrement de « ${brew.name} » a échoué.';
     final cout = envoi.cout;
     if (cout is FigeageNonDemande) {
@@ -461,10 +663,8 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     final mine = brew.ownerUid == readerUid;
     if (mine) {
       _tokenName ??= ref.read(authRepositoryProvider).currentTokenName();
+      _annoncerEmbouteillageDeLaJournee(brew);
     }
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
     final content = brew.recipe;
     final equipement = EquipementConnu(brew.equipmentRead);
     final calculs = evaluerRecette(
@@ -478,13 +678,49 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       if (calculs case CalculsObtenus(:final calculation))
         for (final h in calculation.hopBitterness) h.hop.index: h.ibu,
     };
+    final now = ref.read(horlogeProvider)();
     final plan = evaluerPlan(
       brew: brew,
       events: [...?events?.valides],
-      now: ref.read(horlogeProvider)(),
+      now: now,
       errors: ref.read(errorReportServiceProvider),
       reported: ref.read(planReportsProvider),
     );
+    // Journées après le brassage, chacune avec son plan (ADR-010, P37).
+    final plansJournees = <String, PlanEvalue>{
+      if (events != null)
+        for (final j in brew.deroule.journees.skip(1))
+          j.key: evaluerPlan(
+            brew: brew,
+            events: [...events.valides],
+            now: now,
+            errors: ref.read(errorReportServiceProvider),
+            reported: ref.read(planReportsProvider),
+            journee: j,
+          ),
+    };
+    // Prévu et réel des journées commencées (fiche seule, ADR-010).
+    final brassage = brew.deroule.brassage;
+    final durees = events == null
+        ? const <String, ActualDayDuration>{}
+        : dureesDesJournees(
+            brew: brew,
+            plans: {if (brassage != null) brassage.key: plan, ...plansJournees},
+            errors: ref.read(errorReportServiceProvider),
+            reported: ref.read(planReportsProvider),
+          );
+    // Même règle que la liste des brassins (prochaineJournee, ADR-010), avec
+    // les mêmes événements lus (evenementsLus).
+    final prochaine = mine && evenementsLus(events) != null
+        ? prochaineJournee(
+            brew: brew,
+            planDe: (j) => switch (plansJournees[j.key]) {
+              PlanObtenu(:final plan) => plan,
+              _ => null,
+            },
+          )
+        : null;
+    final avecEmbouteillage = brew.deroule.embouteillage != null;
 
     final recipesList = ref.watch(recipesListProvider).value;
     final source = brew.recipeId == null
@@ -543,6 +779,18 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               onPressed: () => context.go(AppRoutes.brewDay(brew.id)),
               child: const Text('Reprendre le brassage'),
             ),
+            BrewStatus.conditioning when prochaine != null => OutlinedButton(
+              style: outlinedStyle,
+              onPressed: () => unawaited(
+                _changerStatut(
+                  brew: brew,
+                  statut: BrewStatus.done,
+                  annonce: 'Brassin terminé.',
+                  annulation: BrewStatus.conditioning,
+                ),
+              ),
+              child: const Text('Marquer comme terminé'),
+            ),
             BrewStatus.conditioning => FilledButton(
               style: primaryStyle,
               onPressed: () => unawaited(
@@ -571,23 +819,36 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     final fermentationMine = mine && brew.status == BrewStatus.fermenting;
     void ajouterReleve() => ouvrirAjoutReleve(context, ref, brew);
     void embouteiller() => _embouteiller(brew, modification: false);
+    // Avec une journée d'embouteillage, « Embouteiller » passe dans le menu ⋮
+    // (« Embouteiller sans suivre la journée ») ; avec une journée à suivre,
+    // son bouton est l'action principale (ADR-010).
+    final releveSecondaire = prochaine != null;
+    final Widget boutonReleve = releveSecondaire
+        ? OutlinedButton(
+            style: outlinedStyle,
+            onPressed: ajouterReleve,
+            child: const Text('Ajouter un relevé'),
+          )
+        : FilledButton(
+            style: primaryStyle,
+            onPressed: ajouterReleve,
+            child: const Text('Ajouter un relevé'),
+          );
     final Widget? actionsFermentation = !fermentationMine
         ? null
         : compact
-        ? OutlinedButton(
-            style: outlinedStyle,
-            onPressed: embouteiller,
-            child: const Text('Embouteiller'),
-          )
+        ? (avecEmbouteillage
+              ? null
+              : OutlinedButton(
+                  style: outlinedStyle,
+                  onPressed: embouteiller,
+                  child: const Text('Embouteiller'),
+                ))
+        : avecEmbouteillage
+        ? boutonReleve
         : Row(
             children: [
-              Expanded(
-                child: FilledButton(
-                  style: primaryStyle,
-                  onPressed: ajouterReleve,
-                  child: const Text('Ajouter un relevé'),
-                ),
-              ),
+              Expanded(child: boutonReleve),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
@@ -605,6 +866,21 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             label: const Text('Ajouter un relevé'),
           )
         : null;
+    final actions = <Widget>[
+      if (prochaine != null)
+        _boutonJournee(brew, prochaine, plansJournees[prochaine.key], now),
+      ?principal,
+      ?actionsFermentation,
+      // Connu seulement dans la session : rien à dire quand l'information
+      // manque.
+      if (mine && brew.status == BrewStatus.planned && prepared)
+        Text(
+          'Préparé sur cet appareil',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+    ];
     final apresBrassage = switch (brew.status) {
       BrewStatus.fermenting ||
       BrewStatus.conditioning ||
@@ -615,22 +891,35 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
 
     final body = ListView(
       controller: _scroll,
-      padding: EdgeInsets.fromLTRB(16, 16, 16, fab == null ? 32 : 96),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        fab == null ? 32 : kMargeBoutonFlottant,
+      ),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Semantics(
-                header: true,
-                child: Text(brew.name, style: theme.textTheme.headlineSmall),
-              ),
+        EnTeteFiche(
+          titre: brew.name,
+          sousTitre: [
+            ?_detailStatut(brew),
+            if (!mine)
+              'Brassin de ${libelleAuteur(ownerUid: brew.ownerUid, ownerName: brew.ownerName, readerUid: readerUid)}',
+          ].join(' · '),
+          etiquettes: [
+            Etiquette(
+              label: brew.status.label,
+              ton: tonStatutBrassin(brew.status),
             ),
-            if (mine && brew.status != BrewStatus.planned)
-              _menuActions(brew, events == null || events.documents.isNotEmpty),
+            if (brew.hasPendingWrites)
+              const Etiquette(label: 'En attente du réseau'),
           ],
+          action: mine && brew.status != BrewStatus.planned
+              ? _menuActions(
+                  brew,
+                  events == null || events.documents.isNotEmpty,
+                )
+              : null,
         ),
-        Text(_ligneStatut(brew), style: muted),
         if (brew.recipeId != null)
           Align(
             alignment: Alignment.centerLeft,
@@ -639,18 +928,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               child: Text('Recette : ${content.name} ›'),
             ),
           ),
-        if (!mine)
-          Text(
-            'Brassin de ${libelleAuteur(ownerUid: brew.ownerUid, ownerName: brew.ownerName, readerUid: readerUid)}',
-            style: muted,
-          ),
-        if (brew.hasPendingWrites) ...[
-          const SizedBox(height: 8),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Etiquette(label: 'En attente du réseau'),
-          ),
-        ],
         if (recipeChanged) ...[
           const SizedBox(height: 8),
           Text(
@@ -667,18 +944,16 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               ),
             ),
         ],
-        const SizedBox(height: 16),
-        ?principal,
-        if (actionsFermentation != null) ...[
-          const SizedBox(height: 8),
-          actionsFermentation,
-        ],
+        // Prochaine journée et action principale, dans une carte d'action en
+        // tête de fiche.
+        if (actions.isNotEmpty) CarteSection(action: true, children: actions),
         if (mine && brew.status == BrewStatus.planned) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
-              OutlinedButton.icon(
+              FilledButton.tonalIcon(
                 onPressed: () => _edit(brew),
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Modifier'),
@@ -697,12 +972,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             ],
           ),
         ],
-        // Connu seulement dans la session : rien à dire quand l'information manque.
-        if (mine && brew.status == BrewStatus.planned && prepared)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text('Préparé sur cet appareil', style: muted),
-          ),
         ..._blocs(
           brew: brew,
           mine: mine,
@@ -711,11 +980,39 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           eventsAsync: eventsAsync,
           calculs: calculs,
           cout: cout,
-          chronologie: _chronologie(
+          deroule: _deroule(
             brew: brew,
-            eventsAsync: eventsAsync,
-            plan: plan,
             mine: mine,
+            readerUid: readerUid,
+            plans: plansJournees,
+            durees: durees,
+            chronologieJournee: (j) => switch (plansJournees[j.key]) {
+              PlanObtenu(:final plan) when plan.commencee => ChronologieJour(
+                plan: plan,
+                sansEtape: false,
+                durees: durees[j.key],
+                onTapSaisie: mine
+                    ? (e) => ouvrirCorrection(
+                        context: context,
+                        ref: ref,
+                        brew: brew,
+                        event: e,
+                        suivre: _suivre,
+                      )
+                    : null,
+              ),
+              PlanImpossible() => const TexteAbsent(
+                kCalculChronologieImpossible,
+              ),
+              _ => null,
+            },
+            chronologie: _chronologie(
+              brew: brew,
+              eventsAsync: eventsAsync,
+              plan: plan,
+              mine: mine,
+              durees: brassage == null ? null : durees[brassage.key],
+            ),
           ),
           recette: [
             BlocCalculs(
@@ -724,10 +1021,13 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               equipement: equipement,
             ),
             const SizedBox(height: 8),
-            ContenuRecette(content: content, hopIbu: hopIbu),
+            ContenuRecette(
+              content: content,
+              hopIbu: hopIbu,
+              niveauTitres: NiveauTitre.sousSection,
+            ),
           ],
           general: [
-            const TitreSection('Général'),
             LigneFiche(
               label: 'Date prévue',
               value: brew.plannedFor == null
@@ -749,14 +1049,230 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     return Scaffold(body: body, floatingActionButton: fab);
   }
 
-  /// Bloc « Chronologie », lecture ou panne des saisies.
+  /// Section « Déroulé » (ADR-010). Les modèles ne se lisent que pour un brassin
+  /// qui en a un : « Modèle supprimé depuis » et « Rétablir la date du
+  /// processus ».
+  Widget _deroule({
+    required Brew brew,
+    required bool mine,
+    required String? readerUid,
+    required Map<String, PlanEvalue> plans,
+    required Map<String, ActualDayDuration> durees,
+    required Widget chronologie,
+    required Widget? Function(JourneeDeroulee) chronologieJournee,
+  }) {
+    PlanDuJour? planDe(JourneeDeroulee j) => switch (plans[j.key]) {
+      PlanObtenu(:final plan) => plan,
+      _ => null,
+    };
+    bool terminee(JourneeDeroulee j) =>
+        journeeTerminee(brew: brew, journee: j, plan: planDe(j));
+    final suivi =
+        mine &&
+        (brew.status == BrewStatus.fermenting ||
+            brew.status == BrewStatus.conditioning);
+    // « Passer la journée » : journée « autre » non terminée, sans étape en
+    // cours (elle se termine alors par l'écran de la journée). L'embouteillage
+    // a « Embouteiller sans suivre la journée » (ADR-010).
+    final passables = <String>{
+      if (suivi)
+        for (final j in brew.deroule.journees.skip(1))
+          if (j.role == RoleJournee.autre &&
+              planDe(j) != null &&
+              planDe(j)!.enCours == null &&
+              !terminee(j))
+            j.key,
+    };
+    final templateId = brew.process?.templateId;
+    final modelesAsync = templateId == null
+        ? null
+        : ref.watch(processTemplatesProvider);
+    final modeles = modelesAsync?.value;
+    final majProcessus = etatMajProcessus(
+      brew: brew,
+      readerUid: readerUid,
+      offline: _offline,
+      modeles: modelesAsync,
+      durees: durees,
+      errors: ref.read(errorReportServiceProvider),
+      reported: ref.read(planReportsProvider),
+    );
+    final modifiable = mine && brew.derouleModifiable;
+    final enCours = brew.process != null && modifiable;
+    final ecarts = enCours
+        ? _ecartsDuProcessus(brew, modeles)
+        : const <String, ({int offset, SourceEcart source})>{};
+    return SectionDeroule(
+      brew: brew,
+      mine: mine,
+      chronologieBrassage: chronologie,
+      chronologieJournee: chronologieJournee,
+      resumeJournee: (j) => plans.containsKey(j.key) && terminee(j)
+          ? resumeJourneeTerminee(planDe(j))
+          : null,
+      passables: passables,
+      dureesJournee: (j) => durees[j.key],
+      actionProcessus: majProcessus == null
+          ? null
+          : ActionMajProcessus(
+              etat: majProcessus,
+              onOuvrir: () => _majProcessus(brew),
+              onReessayer: () => ref.invalidate(processTemplatesProvider),
+            ),
+      onPasser: (j) => unawaited(_passerJournee(brew, j, planDe(j))),
+      modeleSupprime:
+          templateId != null &&
+          modeles?.chercher(templateId) is DocumentAbsent<ModeleProcessus>,
+      onChangerProcessus: modifiable ? () => _changerProcessus(brew) : null,
+      onChangerDate: enCours ? (j) => unawaited(_changerDate(brew, j)) : null,
+      retablissables: ecarts.keys.toSet(),
+      onRetablirDate: enCours
+          ? (j) {
+              final e = ecarts[j.key];
+              if (e == null) return;
+              unawaited(
+                _ecrireEcart(brew, brew.process!, j, e.offset, e.source),
+              );
+            }
+          : null,
+    );
+  }
+
+  /// « Passer la journée » (ADR-010) : `step_skipped` pour chaque étape non
+  /// commencée, dans un `WriteBatch` (`writeSteps`), sans statut ni attente du
+  /// serveur.
+  Future<void> _passerJournee(
+    Brew brew,
+    JourneeDeroulee journee,
+    PlanDuJour? plan,
+  ) async {
+    if (plan == null) return;
+    final nom = journee.name.trim();
+    // ticket: aucun (confirmation)
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(TextesDeroule.passerTitre(nom)),
+        content: const Text(TextesDeroule.passerMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(TextesDeroule.garder),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(TextesDeroule.passer),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final writes = <StepWrite>[
+      for (final l in plan.lignes)
+        if (l.record?.startedAt == null && l.status != StepStatus.skipped)
+          (kind: StepEventKind.skipped, stepKey: l.step.key),
+    ];
+    if (writes.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final offline = _offline;
+    suivreEcriture(
+      messenger: messenger,
+      written: ref
+          .read(brewsRepositoryProvider)
+          .writeSteps(
+            brewId: brew.id,
+            ownerUid: brew.ownerUid,
+            writes: writes,
+            at: ref.read(horlogeProvider)(),
+          ),
+      succes: offline
+          ? TextesDeroule.passeeHorsLigne(nom)
+          : TextesDeroule.passee(nom),
+      refus: 'L\'enregistrement de « ${brew.name} » a échoué.',
+    );
+  }
+
+  /// « Préparer la journée « {nom} » », ou « Reprendre la journée « {nom} » »
+  /// une fois commencée, sous « Prévue le … » ou « Prévue aujourd'hui ».
+  Widget _boutonJournee(
+    Brew brew,
+    JourneeDeroulee journee,
+    PlanEvalue? evalue,
+    DateTime now,
+  ) {
+    final theme = Theme.of(context);
+    final nom = journee.name.trim();
+    final date = journee.date(brew.departDeroule);
+    final commencee = switch (evalue) {
+      PlanObtenu(:final plan) => plan.commencee,
+      _ => false,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (date != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              memeJour(date, now)
+                  ? BrewDetailScreen.prevueAujourdhui
+                  : BrewDetailScreen.prevueLe(date),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+        FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+          onPressed: () => context.go(
+            commencee
+                ? AppRoutes.journee(brew.id, journee.key)
+                : AppRoutes.prepareJournee(brew.id, journee.key),
+          ),
+          child: Text(
+            commencee
+                ? TextesJournee.reprendreNom(nom)
+                : TextesJournee.preparer(nom),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Annonce, au retour sur la fiche, un embouteillage envoyé depuis la journée
+  /// d'embouteillage (ADR-010) : mêmes annonces et même « Voir le coût » que
+  /// depuis la fiche. Une seule fois : la mémoire se vide après l'affichage,
+  /// jamais pendant le `build`.
+  void _annoncerEmbouteillageDeLaJournee(Brew brew) {
+    final annonces = ref.read(embouteillagesAAnnoncerProvider);
+    if (_annonceProgrammee || !annonces.containsKey(brew.id)) return;
+    _annonceProgrammee = true;
+    final messenger = ScaffoldMessenger.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _annonceProgrammee = false;
+      if (!mounted) return;
+      final annonce = annonces.remove(brew.id);
+      if (annonce == null) return;
+      _annoncerEmbouteillage(
+        messenger: messenger,
+        brew: brew,
+        envoi: annonce.envoi,
+        offline: annonce.offline,
+        modification: false,
+      );
+    });
+  }
+
+  /// Chronologie de la journée de brassage, lecture ou panne des saisies.
   Widget _chronologie({
     required Brew brew,
     required AsyncValue<ListeLue<BrewEvent>> eventsAsync,
     required PlanEvalue plan,
     required bool mine,
+    required ActualDayDuration? durees,
   }) {
-    final content = brew.recipe;
+    final probleme = messageDerouleIllisible(brew.deroule);
     if (eventsAsync.value == null && eventsAsync.hasError) {
       return Row(
         children: [
@@ -774,14 +1290,13 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     return switch (plan) {
       PlanImpossible() => const TexteAbsent(kCalculChronologieImpossible),
       PlanObtenu(:final plan) =>
-        content.brewStepsProblem != null
-            ? TexteAbsent(
-                messageChronologieIllisible(content.brewStepsProblem!),
-              )
+        probleme != null
+            ? TexteAbsent(probleme)
             : plan.lignes.isEmpty && plan.mesuresSansEtape.isEmpty
             ? const TexteAbsent('Aucune étape.')
             : ChronologieJour(
                 plan: plan,
+                durees: durees,
                 onTapSaisie: mine
                     ? (e) => ouvrirCorrection(
                         context: context,
@@ -804,13 +1319,12 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required AsyncValue<ListeLue<BrewEvent>> eventsAsync,
     required CalculsRecette calculs,
     required Widget? cout,
-    required Widget chronologie,
+    required Widget deroule,
     required List<Widget> recette,
     required List<Widget> general,
     required double width,
   }) {
     final offline = _offline;
-    final content = brew.recipe;
     final notes = brew.notes;
     final section = SectionReleve(
       brew: brew,
@@ -836,109 +1350,132 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           ? () => _embouteiller(brew, modification: true)
           : null,
     );
-    final notesTitre = <Widget>[
-      if (notes != null) ...[
-        const TitreSection('Notes'),
-        Text(notes, style: Theme.of(context).textTheme.bodyLarge),
-      ],
+    // Chaque bloc dans sa carte ; un bloc qui porte son titre (relevé,
+    // comparaison, embouteillage, coût) en est le premier enfant.
+    Widget carte(Widget bloc) => CarteSection(children: [bloc]);
+    final notesCarte = <Widget>[
+      if (notes != null)
+        CarteSection(
+          titre: 'Notes',
+          children: [Text(notes, style: Theme.of(context).textTheme.bodyLarge)],
+        ),
     ];
+    final carteGeneral = CarteSection(titre: 'Général', children: general);
     if (!apresBrassage) {
       final relevesExistent = relevesDe([
         ...?eventsAsync.value?.valides,
       ]).isNotEmpty;
       return [
-        const TitreSection('Calculs'),
-        ...recette.take(1),
-        const TitreSection('Chronologie'),
-        chronologie,
-        if (relevesExistent) section,
-        const TitreSection('Recette'),
-        ...recette.skip(2),
-        ...general,
-        ?cout,
-        ...notesTitre,
+        CarteSection(titre: 'Calculs', children: recette.take(1).toList()),
+        CarteSection(titre: TextesDeroule.titre, children: [deroule]),
+        if (relevesExistent) carte(section),
+        // Les sections de la recette figée restent des sous-sections de
+        // « Recette ».
+        CarteSection(titre: 'Recette', children: recette.skip(2).toList()),
+        carteGeneral,
+        if (cout != null) carte(cout),
+        ...notesCarte,
       ];
     }
     // Bloc Coût (propriétaire seul) : après l'embouteillage quand il existe,
     // sinon après la comparaison.
     final List<Widget> blocs = switch (brew.status) {
-      BrewStatus.fermenting => [section, comparaison, ?cout, ...notesTitre],
+      BrewStatus.fermenting => [
+        carte(section),
+        carte(comparaison),
+        if (cout != null) carte(cout),
+        ...notesCarte,
+      ],
       BrewStatus.conditioning => [
-        comparaison,
-        embouteillage,
-        ?cout,
-        section,
-        ...notesTitre,
+        carte(comparaison),
+        carte(embouteillage),
+        if (cout != null) carte(cout),
+        carte(section),
+        ...notesCarte,
       ],
       BrewStatus.done => [
-        comparaison,
-        embouteillage,
-        ?cout,
-        ..._notesTermine(brew, mine),
-        section,
+        carte(comparaison),
+        carte(embouteillage),
+        if (cout != null) carte(cout),
+        ?_notesTermine(brew, mine),
+        carte(section),
       ],
       _ => [
-        section,
-        comparaison,
-        if (brew.bottledAt != null) embouteillage,
-        ?cout,
-        ...notesTitre,
+        carte(section),
+        carte(comparaison),
+        if (brew.bottledAt != null) carte(embouteillage),
+        if (cout != null) carte(cout),
+        ...notesCarte,
       ],
     };
     return [
       ...blocs,
-      ...general,
-      SectionRepliable(
-        titre: 'Chronologie',
-        storageKey: 'chronologie-${brew.id}',
-        resume: formatEtapes(content.brewSteps.length),
-        children: [chronologie],
+      carteGeneral,
+      CarteSection(
+        repliable: true,
+        children: [
+          SectionRepliable(
+            titre: TextesDeroule.titre,
+            storageKey: 'deroule-${brew.id}',
+            resume: resumeDeroule(brew.deroule),
+            children: [deroule],
+          ),
+        ],
       ),
-      SectionRepliable(
-        titre: 'Recette et calculs prévus',
-        storageKey: 'recette-${brew.id}',
-        ouvert: width >= kExpandedMinWidth,
-        children: recette,
+      CarteSection(
+        repliable: true,
+        children: [
+          SectionRepliable(
+            titre: 'Recette et calculs prévus',
+            storageKey: 'recette-${brew.id}',
+            ouvert: width >= kExpandedMinWidth,
+            children: recette,
+          ),
+        ],
       ),
     ];
   }
 
-  /// Notes d'un brassin terminé : toujours affichées au propriétaire.
-  List<Widget> _notesTermine(Brew brew, bool mine) {
+  /// Carte « Notes » d'un brassin terminé : toujours affichée au propriétaire ;
+  /// `null` sans note pour un autre membre.
+  Widget? _notesTermine(Brew brew, bool mine) {
     final notes = brew.notes;
     if (notes != null) {
-      return [
-        const TitreSection('Notes'),
-        Text(notes, style: Theme.of(context).textTheme.bodyLarge),
-      ];
+      return CarteSection(
+        titre: 'Notes',
+        children: [Text(notes, style: Theme.of(context).textTheme.bodyLarge)],
+      );
     }
-    if (!mine) return const [];
-    return [
-      const TitreSection('Notes'),
-      const TexteAbsent('Aucune note. Ajoutez votre avis sur cette bière.'),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton(
-          onPressed: () => _edit(brew),
-          child: const Text('Modifier les notes'),
+    if (!mine) return null;
+    return CarteSection(
+      titre: 'Notes',
+      children: [
+        const TexteAbsent('Aucune note. Ajoutez votre avis sur cette bière.'),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => _edit(brew),
+            child: const Text('Modifier les notes'),
+          ),
         ),
-      ),
-    ];
+      ],
+    );
   }
 
-  /// Ligne de statut sous le nom.
-  String _ligneStatut(Brew brew) {
+  /// Détail du statut sous le nom, à côté de son étiquette : date du brassage
+  /// et jour de fermentation (« Brassé le 8 nov. 2026 (J+12) »), comme le titre
+  /// d'une journée, date d'embouteillage ; `null` sinon.
+  String? _detailStatut(Brew brew) {
     final brewed = brew.brewedAt;
     final bottled = brew.bottledAt;
     final now = ref.read(horlogeProvider)();
     return switch (brew.status) {
       BrewStatus.fermenting when brewed != null =>
-        'En fermentation · J+${fermentationDayNumber(brewedAt: brewed, at: now)}',
-      BrewStatus.conditioning when bottled != null =>
-        'En conditionnement · Embouteillé le ${formatDateCourte(bottled)}',
-      BrewStatus.done when bottled != null =>
-        'Terminé · Embouteillé le ${formatDateCourte(bottled)}',
-      _ => brew.status.label,
+        'Brassé le ${formatDateCourte(brewed)} '
+            '(J+${fermentationDayNumber(brewedAt: brewed, at: now)})',
+      BrewStatus.conditioning || BrewStatus.done when bottled != null =>
+        'Embouteillé le ${formatDateCourte(bottled)}',
+      _ => null,
     };
   }
 
@@ -969,6 +1506,12 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           PopupMenuItem(
             value: () => unawaited(_revenir(brew, retour)),
             child: Text('Revenir à ${retour.label}'),
+          ),
+        if (brew.status == BrewStatus.fermenting &&
+            brew.deroule.embouteillage != null)
+          PopupMenuItem(
+            value: () => _embouteiller(brew, modification: false),
+            child: const Text(BrewDetailScreen.embouteillerSansJournee),
           ),
         if (peutAbandonner)
           PopupMenuItem(
@@ -1119,7 +1662,6 @@ class _FormulaireBrassinState extends ConsumerState<_FormulaireBrassin> {
             decoration: InputDecoration(
               labelText: 'Nom du brassin',
               errorText: _nameError,
-              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 8),
@@ -1146,10 +1688,7 @@ class _FormulaireBrassinState extends ConsumerState<_FormulaireBrassin> {
             maxLength: kBrewNotesMaxLength,
             maxLines: 3,
             minLines: 1,
-            decoration: const InputDecoration(
-              labelText: 'Notes (facultatif)',
-              border: OutlineInputBorder(),
-            ),
+            decoration: const InputDecoration(labelText: 'Notes (facultatif)'),
           ),
           const SizedBox(height: 16),
           Wrap(

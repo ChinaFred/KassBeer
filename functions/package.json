@@ -1,7 +1,7 @@
 {
   "name": "kassbeer-functions",
   "private": true,
-  "description": "Cloud Functions de Kass'Beer (ADR-006) : publication des tickets en Issues GitHub et tâche horaire de relecture. Aucun point d'accès HTTP.",
+  "description": "Cloud Functions de Kass'Beer (ADR-006) : publication des tickets en Issues GitHub, tâche horaire de relecture, webhook GitHub signé et callable « Répondre » (ADR-008).",
   "main": "lib/index.js",
   "engines": {
     "node": "24"

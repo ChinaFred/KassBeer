@@ -7,6 +7,22 @@ const double kCompactMaxWidth = 600;
 const double kExpandedMinWidth = 840;
 const double kContentMaxWidth = 840;
 
+/// Marge basse d'une liste ou d'une fiche sous un bouton flottant étendu : sa
+/// hauteur (56) et ses marges, pour que la dernière ligne reste visible.
+const double kMargeBoutonFlottant = 96;
+
+/// Part de la largeur donnée au libellé d'une ligne de fiche (`LigneFiche`) à
+/// partir de [kCompactMaxWidth] ; la valeur suit, alignée à gauche.
+const double kLibelleFicheFraction = 0.4;
+
+/// Hauteur minimale d'une ligne de liste (`LigneListe`).
+const double kLigneListeMinHeight = 64;
+
+/// Échelle du texte au-delà de laquelle une ligne de liste range ses étiquettes
+/// sous le titre au lieu de les mettre à droite (Admin › Rapports d'erreur) :
+/// au-delà de 130 %, le titre garderait trop peu de largeur.
+const double kGrandTexteMinScale = 1.3;
+
 /// Largeur d'un dialogue de formulaire sur grand écran.
 const double kDialogMaxWidth = 480;
 
@@ -92,3 +108,20 @@ const double kTicketsAdminCoteACoteMinWidth =
 /// Hauteur maximale d'une liste de suggestions sous un champ de saisie : six
 /// lignes à deux lignes de texte, sans cacher tout le formulaire au téléphone.
 const double kSuggestionsMaxHeight = 280;
+
+/// Débord d'une carte de section (`CarteSection`) de chaque côté de sa colonne,
+/// sous [kCompactMaxWidth] : la carte s'étend sur la marge de la fiche et son
+/// contenu, retiré de 16 − 8 px, reste aligné sur l'en-tête de la fiche.
+const double kDebordCarteCompact = 8;
+
+/// Largeur de la colonne d'heure d'une ligne de la chronologie du jour, pour un
+/// texte à 100 % ; multipliée par l'échelle du texte, sans dépasser
+/// [kChronologieHeureMaxFraction] de la largeur de la chronologie (jamais
+/// moins que cette valeur). Les mesures, notes et débuts en double s'alignent
+/// sur la fin de cette colonne.
+const double kChronologieHeureWidth = 104;
+
+/// Part de la largeur de la chronologie que la colonne d'heure ne dépasse pas
+/// quand le texte grossit : à 200 % sur un téléphone de 360 px, le nom de
+/// l'étape garde la place de ses mots.
+const double kChronologieHeureMaxFraction = 0.3;

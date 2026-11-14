@@ -6,6 +6,7 @@
 /// [BrewingInputException] ; le paquet ne fait aucun `catch`.
 library;
 
+export 'src/actual_durations.dart';
 export 'src/alcohol.dart';
 export 'src/bitterness.dart';
 export 'src/boil_volume.dart';
@@ -19,6 +20,7 @@ export 'src/fermentables.dart';
 export 'src/fermentation.dart';
 export 'src/gravity.dart';
 export 'src/ingredient_key.dart';
+export 'src/process.dart';
 export 'src/recipe_calculation.dart';
 export 'src/schedule.dart';
 export 'src/yeast.dart';

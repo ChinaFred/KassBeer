@@ -3,6 +3,9 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "functions": [
     {
       "source": "functions",
@@ -15,6 +18,7 @@
   "emulators": {
     "auth": { "port": 9099 },
     "firestore": { "port": 8080 },
+    "storage": { "port": 9199 },
     "ui": { "enabled": false },
     "singleProjectMode": true
   },
@@ -73,6 +77,18 @@
       },
       {
         "source": "version.json",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "app-release.apk",
+        "headers": [
+          { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+          { "key": "Content-Disposition", "value": "attachment; filename=\"kass-beer.apk\"" },
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        ]
+      },
+      {
+        "source": "apk_release.json",
         "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
       }
     ]
