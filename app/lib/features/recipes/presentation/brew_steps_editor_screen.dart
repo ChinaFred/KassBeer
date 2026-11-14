@@ -24,9 +24,17 @@ import 'recipes_providers.dart';
 /// Éditeur de la chronologie d'une recette (CH), plein écran. N'écrit que
 /// `brew_steps`.
 class BrewStepsEditorScreen extends ConsumerWidget {
-  const BrewStepsEditorScreen({super.key, required this.id});
+  const BrewStepsEditorScreen({
+    super.key,
+    required this.id,
+    this.retourParPop = false,
+  });
 
   final String id;
+
+  /// Vrai : ouvert depuis la fiche importée ; « Enregistrer » ferme l'éditeur
+  /// par `pop` pour garder le compte rendu de l'import sous la fiche.
+  final bool retourParPop;
 
   static const titre = 'Chronologie du jour';
   static const readOnly = 'Seul l\'auteur modifie cette chronologie.';
@@ -61,16 +69,21 @@ class BrewStepsEditorScreen extends ConsumerWidget {
             ),
           );
         }
-        return _Editeur(key: ValueKey(id), recipe: recipe);
+        return _Editeur(
+          key: ValueKey(id),
+          recipe: recipe,
+          retourParPop: retourParPop,
+        );
       },
     );
   }
 }
 
 class _Editeur extends ConsumerStatefulWidget {
-  const _Editeur({super.key, required this.recipe});
+  const _Editeur({super.key, required this.recipe, this.retourParPop = false});
 
   final Recipe recipe;
+  final bool retourParPop;
 
   @override
   ConsumerState<_Editeur> createState() => _EditeurState();
@@ -239,7 +252,11 @@ class _EditeurState extends ConsumerState<_Editeur> {
       _saving = false;
       _dirty = false;
     });
-    context.go(AppRoutes.recipe(widget.recipe.id));
+    if (widget.retourParPop && context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.recipe(widget.recipe.id));
+    }
   }
 
   @override
