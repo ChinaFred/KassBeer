@@ -121,7 +121,7 @@ void main() {
         find.widgetWithText(Etiquette, BrewStatus.fermenting.label),
         findsOneWidget,
       );
-      expect(find.text('J+12'), findsOneWidget);
+      expect(find.text('Brassé le 8 nov. 2026 (J+12)'), findsOneWidget);
       expect(
         find.widgetWithText(FloatingActionButton, 'Ajouter un relevé'),
         findsOneWidget,
