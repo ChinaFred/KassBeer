@@ -229,7 +229,9 @@ void main() {
     });
 
     testWidgets('premier processus : « Proposer par défaut » coupé avant '
-        '« Enregistrer », aucun choix écrit', (tester) async {
+        '« Enregistrer » : refus écrit, aucun processus par défaut', (
+      tester,
+    ) async {
       final app = await open(
         tester,
         '/processus/nouveau?modele=exemple',
@@ -246,7 +248,9 @@ void main() {
       await tester.tap(find.text('Enregistrer'));
       await tester.pumpAndSettle();
       expect(app.processes.writes.single.kind, 'create');
-      expect(app.preferencesProcessus.saved, isEmpty);
+      // `default_template_id` nul : « Nouveau brassin » ne présélectionnera
+      // pas ce seul processus (ticket #61).
+      expect(app.preferencesProcessus.saved.single.templateId, isNull);
     });
 
     testWidgets('miens puis groupe, par nom ; résumé, auteur, « Par défaut »', (

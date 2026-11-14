@@ -8,8 +8,8 @@ données, outillage), ou les deux.
 
 ### v0.1.55 — fonctionnel
 
-« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et qu'aucun n'est
-proposé par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage)
+« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous
+n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage)
 autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie
 de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un
 processus », ou « Créer un processus » si vous n'en avez aucun. Une recette sans chronologie
@@ -21,8 +21,13 @@ propriétaire. Demandé par le ticket #61.
 
 ### v0.1.55 — technique
 
-`lireChoixProcessus` présélectionne le seul processus valide du lecteur quand aucun défaut
-valide n'existe ; le modèle d'exemple n'est jamais appliqué seul (P37). `AideChronologieSeule`,
+`lireChoixProcessus` présélectionne le seul processus valide du lecteur quand son document de
+préférence est absent (`DocumentAbsent`) ; un défaut coupé ou supprimé garde la chronologie
+seule. L'éditeur écrit `default_template_id` nul quand « Proposer par défaut » est décoché à
+la création alors qu'aucun choix n'existe. Le modèle d'exemple n'est jamais appliqué seul
+(P37). « Créer un processus » n'apparaît plus qu'une fois dans « Nouveau brassin »
+(`ChampProcessus.onCreer` facultatif) ; la feuille de la fiche se titre « Choisir un
+processus » sur un brassin prévu sans processus. `AideChronologieSeule`,
 `BoutonProcessus` et `choisirProcessus` (`choix_processus.dart`) sous « Chronologie de la
 recette seule » ; nouvelle fenêtre `/recettes/:id/fenetre/choix-processus` dans
 `kTicketElements`. `sansProcessusPrevu` (`section_deroule.dart`) remplace « Changer de

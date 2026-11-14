@@ -471,6 +471,32 @@ void main() {
       expect(deroule.journees[1].name, 'Houblonnage à cru');
     });
 
+    testWidgets('un seul processus, « Proposer par défaut » coupé : '
+        'chronologie seule', (tester) async {
+      await ouvrir(
+        tester,
+        before: (app) {
+          app.processes.publish([exemple()]);
+          app.preferencesProcessus.publishDefault('uid-brasseur', null);
+        },
+      );
+      expect(find.text(kChronologieSeule), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.ajouteVosEtapes), findsOneWidget);
+    });
+
+    testWidgets('un seul processus, défaut supprimé : chronologie seule et '
+        'message de suppression', (tester) async {
+      await ouvrir(
+        tester,
+        before: (app) {
+          app.processes.publish([exemple()]);
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'disparu');
+        },
+      );
+      expect(find.text(kChronologieSeule), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.defautSupprime), findsOneWidget);
+    });
+
     testWidgets('un seul processus, recette vide : paliers et ébullition '
         'préremplis', (tester) async {
       final app = await ouvrir(
@@ -563,6 +589,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(TextesChoixProcessus.ajouteVosEtapes), findsOneWidget);
+      // Un seul « Créer un processus », sous la chronologie seule.
+      expect(find.text(TextesChoixProcessus.creer), findsOneWidget);
       final creerProcessus = find.widgetWithText(
         OutlinedButton,
         TextesChoixProcessus.creer,
@@ -670,8 +698,8 @@ void main() {
         },
       );
       expect(find.text(TextesChoixProcessus.aucun), findsOneWidget);
-      // Sous le champ, et sous « Chronologie de la recette seule ».
-      expect(find.text(TextesChoixProcessus.creer), findsNWidgets(2));
+      // Sous « Chronologie de la recette seule » seulement.
+      expect(find.text(TextesChoixProcessus.creer), findsOneWidget);
       expect(find.text(TextesChoixProcessus.defautSupprime), findsOneWidget);
     });
 
@@ -1058,6 +1086,10 @@ void main() {
       await voir(tester, find.text(TextesChoixProcessus.choisir));
       await tester.tap(find.text(TextesChoixProcessus.choisir));
       await tester.pumpAndSettle();
+      // Feuille titrée « Choisir un processus », sans « un autre » (#61).
+      expect(find.text(TextesDeroule.changerProcessus), findsNothing);
+      expect(find.text(TextesDeroule.choisirUn), findsOneWidget);
+      expect(find.text(TextesDeroule.choisirAutre), findsNothing);
       await tester.tap(find.text(kChronologieSeule).last);
       await tester.pumpAndSettle();
       await tester.tap(find.text(kNomModeleExemple).last);

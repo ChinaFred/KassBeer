@@ -4,6 +4,7 @@ import 'package:brewing/brewing.dart' show BrewingInputException;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/services/error_report_service.dart';
@@ -107,8 +108,8 @@ class ChoixProcessus {
   final List<ModeleProcessus> miens;
 
   /// Présélection : le choix par défaut du lecteur s'il est un de ses modèles ;
-  /// sans choix par défaut valide, son seul modèle s'il n'en a qu'un ; sinon
-  /// `null` (« Chronologie de la recette seule »). Le modèle d'exemple n'est
+  /// s'il n'a jamais réglé de choix par défaut, son seul modèle s'il n'en a
+  /// qu'un ; sinon `null` (« Chronologie de la recette seule »). Le modèle d'exemple n'est
   /// jamais présélectionné ni créé (P37).
   final String? defaut;
 
@@ -146,9 +147,13 @@ ChoixProcessus lireChoixProcessus(
       );
   final prefere = idModeleParDefaut(preference);
   final prefereValide = miens.any((m) => m.id == prefere);
+  // Seul modèle présélectionné quand le lecteur n'a jamais réglé de choix par
+  // défaut (document absent d'une lecture du serveur) ; un choix coupé
+  // (`default_template_id` nul) ou supprimé garde la chronologie seule.
+  final jamaisRegle = preference is DocumentAbsent<PreferenceProcessus>;
   final defaut = prefereValide
       ? prefere
-      : (miens.length == 1 ? miens.single.id : null);
+      : (jamaisRegle && miens.length == 1 ? miens.single.id : null);
   final EtatChoixProcessus etat;
   if (list == null) {
     etat = async.hasError
@@ -256,7 +261,7 @@ class ChampProcessus extends StatelessWidget {
     required this.onChanged,
     required this.onRetry,
     required this.onGerer,
-    required this.onCreer,
+    this.onCreer,
     this.errorText,
     this.actuel,
     this.surLaFiche = false,
@@ -283,7 +288,7 @@ class ChampProcessus extends StatelessWidget {
   final VoidCallback onGerer;
 
   /// Ferme le formulaire et ouvre « Nouveau processus ».
-  final VoidCallback onCreer;
+  final VoidCallback? onCreer;
   final String? errorText;
 
   @override
@@ -345,10 +350,11 @@ class ChampProcessus extends StatelessWidget {
             child: Row(
               children: [
                 const Expanded(child: Text(TextesChoixProcessus.aucun)),
-                TextButton(
-                  onPressed: onCreer,
-                  child: const Text(TextesChoixProcessus.creer),
-                ),
+                if (onCreer case final creer?)
+                  TextButton(
+                    onPressed: creer,
+                    child: const Text(TextesChoixProcessus.creer),
+                  ),
               ],
             ),
           ),
@@ -421,10 +427,15 @@ class AideChronologieSeule extends StatelessWidget {
     required this.recetteSansEtape,
     required this.onChoisir,
     required this.onCreer,
+    this.suiteRecette,
   });
 
   final ChoixProcessus choix;
   final bool recetteSansEtape;
+
+  /// Sous le texte de recette vide : ce que le lecteur peut faire de la
+  /// recette elle-même (« Écrire la chronologie », ou « Seul l'auteur… »).
+  final Widget? suiteRecette;
   final VoidCallback onChoisir;
   final VoidCallback onCreer;
 
@@ -458,6 +469,7 @@ class AideChronologieSeule extends StatelessWidget {
               style: muted,
             ),
           ),
+        if (recetteSansEtape) ?suiteRecette,
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Text(TextesChoixProcessus.ajouteVosEtapes, style: muted),

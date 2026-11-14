@@ -29,6 +29,9 @@ abstract final class TextesDeroule {
       'Aucun processus choisi : le déroulé se limite à la chronologie de la '
       'recette.';
   static const choisirAutre = 'Choisissez un autre processus.';
+
+  /// Feuille ouverte sur un brassin prévu sans processus (ticket #61).
+  static const choisirUn = 'Choisissez un processus.';
   static const changerDate = 'Changer la date';
   static const retablirDate = 'Rétablir la date du processus';
   static const change = 'Déroulé changé.';

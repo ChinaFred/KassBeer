@@ -369,7 +369,8 @@ class _FormulaireNouveauBrassinState
             }),
             onRetry: () => ref.invalidate(processTemplatesProvider),
             onGerer: () => ouvrir(AppRoutes.processes),
-            onCreer: () => ouvrir(AppRoutes.newProcess),
+            // « Créer un processus » vit sous « Chronologie de la recette
+            // seule », près du texte qui l'explique (#61).
           ),
         ),
         const SizedBox(height: 8),
@@ -409,24 +410,26 @@ class _FormulaireNouveauBrassinState
                 recetteSansEtape: steps.isEmpty,
                 onChoisir: () => unawaited(_choisir(choix)),
                 onCreer: () => ouvrir(AppRoutes.newProcess),
+                suiteRecette: mine
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () =>
+                              ouvrir(AppRoutes.editBrewSteps(recipe.id)),
+                          child: const Text('Écrire la chronologie'),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          "Seul l'auteur écrit la chronologie de cette "
+                          'recette. Dupliquez-la pour écrire la vôtre.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
               ),
-              if (steps.isEmpty && !mine)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    "Seul l'auteur écrit la chronologie de cette recette. "
-                    'Dupliquez-la pour écrire la vôtre.',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ),
-              if (steps.isEmpty && mine)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () => ouvrir(AppRoutes.editBrewSteps(recipe.id)),
-                    child: const Text('Écrire la chronologie'),
-                  ),
-                ),
             ],
           ),
         ),
