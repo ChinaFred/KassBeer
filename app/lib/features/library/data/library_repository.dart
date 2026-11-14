@@ -59,11 +59,13 @@ abstract class LibraryRepository {
     bool cacheSeul = false,
   });
 
-  /// Fiche [id] de [nature].
+  /// Fiche [id] de [nature]. [cacheSeul] (hors ligne) : lue dans le cache
+  /// seul ; absente du cache, elle rend [DocumentAbsentDuCache] sans rapport.
   Future<RechercheDocument<FicheReferentiel>> lireFiche(
     NatureReferentiel nature,
-    String id,
-  );
+    String id, {
+    bool cacheSeul = false,
+  });
 
   /// Page de [kTaillePageRecettes] recettes publiques ordonnées par
   /// `search_name`, après [apres] ; [prefixe] : début du nom, normalisé comme
@@ -164,10 +166,41 @@ class FirestoreLibraryRepository implements LibraryRepository {
   @override
   Future<RechercheDocument<FicheReferentiel>> lireFiche(
     NatureReferentiel nature,
-    String id,
-  ) async {
+    String id, {
+    bool cacheSeul = false,
+  }) async {
     final path = '${nature.collection}/$id';
-    final snapshot = await _get('library.entry', path);
+    final DocumentSnapshot<Map<String, dynamic>> snapshot;
+    if (cacheSeul) {
+      try {
+        snapshot = await _firestore
+            .doc(path)
+            .get(const GetOptions(source: Source.cache));
+      } on FirebaseException catch (error, stackTrace) {
+        // `unavailable` : la fiche n'est pas dans le cache. Ce n'est pas une
+        // panne : rien n'est rapporté, l'appelant n'affiche rien.
+        if (error.code == 'unavailable') {
+          return DocumentAbsentDuCache<FicheReferentiel>();
+        }
+        _errors.reportError(
+          feature: 'library.entry',
+          error: error,
+          stackTrace: stackTrace,
+          context: path,
+        );
+        rethrow;
+      } catch (error, stackTrace) {
+        _errors.reportError(
+          feature: 'library.entry',
+          error: error,
+          stackTrace: stackTrace,
+          context: path,
+        );
+        rethrow;
+      }
+    } else {
+      snapshot = await _get('library.entry', path);
+    }
     final data = snapshot.data();
     if (data == null) return _absent(snapshot);
     try {

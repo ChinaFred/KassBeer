@@ -29,14 +29,20 @@ import '../../brews/data/brews_repository.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
 import '../../brews/domain/deroule.dart';
+import '../../brews/domain/prevu.dart';
 import '../../brews/presentation/brews_providers.dart';
 import '../../brews/presentation/embouteillage.dart';
 import '../../costs/data/figeage_embouteillage.dart';
 import '../../costs/presentation/costs_providers.dart';
 import '../../recipes/domain/chronologie.dart';
 import '../../recipes/presentation/contenu_recette.dart';
+import '../../recipes/presentation/recipe_calculations_view.dart'
+    show EquipementConnu, evaluerRecette;
+import '../../recipes/presentation/recipes_providers.dart'
+    show calculationReportsProvider;
 import '../domain/plan_du_jour.dart';
 import 'chronologie_jour.dart';
+import 'courbe_brassage.dart';
 import 'indicateur_envoi.dart';
 import 'mesure_form.dart';
 
@@ -1062,6 +1068,28 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     );
   }
 
+  /// Brassin et densité initiale prévue du dernier calcul : la recette figée
+  /// ne change pas d'une seconde à l'autre.
+  (Brew, double?)? _prevue;
+
+  /// Densité initiale prévue de la recette figée et de l'équipement, calculée
+  /// par `brewing/` comme le bloc « Prévu et mesuré » ; nulle si une donnée
+  /// manque ou si le calcul est refusé (rapporté par `evaluerRecette`).
+  double? _densiteInitialePrevue() {
+    final memo = _prevue;
+    if (memo != null && identical(memo.$1, _brew)) return memo.$2;
+    final calculs = evaluerRecette(
+      _brew.recipe,
+      EquipementConnu(_brew.equipmentRead),
+      errors: ref.read(errorReportServiceProvider),
+      reported: ref.read(calculationReportsProvider),
+      recipeKey: 'brew-${_brew.id}',
+    );
+    final valeur = prevuDe(_brew, calculs.calculOuNul).originalGravity;
+    _prevue = (_brew, valeur);
+    return valeur;
+  }
+
   @override
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(brewEventsProvider(_brew.id));
@@ -1110,6 +1138,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
       brew: _brew,
       journee: journee,
       plan: plan,
+      densiteInitialePrevue: journee == null ? _densiteInitialePrevue() : null,
       verrouRefuse: wakelock.failed,
       now: now,
       events: _lire(list),
@@ -1161,9 +1190,14 @@ class _Jour extends StatelessWidget {
     required this.onEmbouteiller,
     required this.onVoirRecette,
     required this.onRetour,
+    this.densiteInitialePrevue,
   });
 
   final Brew brew;
+
+  /// Densité initiale prévue de la recette figée (`computeRecipe`), ou nulle :
+  /// ligne de la courbe du jour de brassage.
+  final double? densiteInitialePrevue;
 
   /// Journée 2 ou suivante ; `null` pour le brassage.
   final JourneeDeroulee? journee;
@@ -1232,16 +1266,35 @@ class _Jour extends StatelessWidget {
           etiquetteSize: styles.etiquette,
           informationSize: styles.information,
         );
-        final chronologie = plan == null
+        // Courbe de la journée de brassage seule. À partir de 840 px, sous le
+        // panneau ; en deçà, par la bascule « Étapes » | « Courbe ».
+        // En paysage bas, la bascule garde panneau et minuteur visibles.
+        final large = constraints.maxWidth >= kExpandedMinWidth && !low;
+        final courbe = suivie == null
+            ? CourbeBrassage(
+                brew: brew,
+                plan: plan,
+                densiteInitialePrevue: densiteInitialePrevue,
+              )
+            : null;
+        final etapes = plan == null
+            ? null
+            : ChronologieJour(
+                plan: plan!,
+                onTapLigne: (l) => onTapLigne(l, plan!),
+                onTapSaisie: onTapSaisie,
+                onSupprimerDoublon: onSupprimerDoublon,
+              );
+        final Widget chronologie = courbe != null && !large
+            ? ZoneChronologieCourbe(
+                etapes: etapes ?? const SizedBox.shrink(),
+                courbe: courbe,
+              )
+            : etapes == null
             ? const SizedBox.shrink()
             : SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
-                child: ChronologieJour(
-                  plan: plan!,
-                  onTapLigne: (l) => onTapLigne(l, plan!),
-                  onTapSaisie: onTapSaisie,
-                  onSupprimerDoublon: onSupprimerDoublon,
-                ),
+                child: etapes,
               );
         final barre = _BarreActions(
           plan: plan,
@@ -1267,7 +1320,13 @@ class _Jour extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [panneau],
+                    children: [
+                      panneau,
+                      if (courbe != null && large) ...[
+                        const SizedBox(height: 24),
+                        courbe,
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -1837,4 +1896,66 @@ class _BarreActions extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Vue de la zone de chronologie sous 840 px.
+enum VueChronologie { etapes, courbe }
+
+/// Zone de chronologie de la journée de brassage sous 840 px : bascule
+/// « Étapes » | « Courbe » en tête, « Étapes » à l'ouverture. Le choix n'est
+/// pas gardé ; le panneau et le minuteur restent visibles au-dessus.
+class ZoneChronologieCourbe extends StatefulWidget {
+  const ZoneChronologieCourbe({
+    super.key,
+    required this.etapes,
+    required this.courbe,
+  });
+
+  final Widget etapes;
+  final Widget courbe;
+
+  static const libelleEtapes = 'Étapes';
+  static const libelleCourbe = 'Courbe';
+
+  @override
+  State<ZoneChronologieCourbe> createState() => _ZoneChronologieCourbeState();
+}
+
+class _ZoneChronologieCourbeState extends State<ZoneChronologieCourbe> {
+  var _vue = VueChronologie.etapes;
+
+  // La bascule défile avec son contenu : sur une zone basse (texte agrandi),
+  // rien ne déborde.
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<VueChronologie>(
+          segments: const [
+            ButtonSegment(
+              value: VueChronologie.etapes,
+              label: Text(ZoneChronologieCourbe.libelleEtapes),
+            ),
+            ButtonSegment(
+              value: VueChronologie.courbe,
+              label: Text(ZoneChronologieCourbe.libelleCourbe),
+            ),
+          ],
+          selected: {_vue},
+          showSelectedIcon: false,
+          onSelectionChanged: (choix) => setState(() => _vue = choix.single),
+        ),
+        const SizedBox(height: 8),
+        if (_vue == VueChronologie.etapes)
+          widget.etapes
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: widget.courbe,
+          ),
+      ],
+    ),
+  );
 }

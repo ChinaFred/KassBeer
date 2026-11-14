@@ -738,4 +738,49 @@ void main() {
       findsOneWidget,
     );
   });
+
+  group('courbe du jour de brassage', () {
+    testWidgets('sous 840 px : bascule « Étapes » | « Courbe », minuteur '
+        'toujours affiché, rien n\'est écrit', (tester) async {
+      final app = await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+      );
+      expect(find.text(ZoneChronologieCourbe.libelleEtapes), findsOneWidget);
+      expect(find.text('Visée (recalculée)'), findsNothing);
+      await tester.tap(find.text(ZoneChronologieCourbe.libelleCourbe));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Visée (recalculée)'), findsOneWidget);
+      expect(minuteur(), findsOneWidget);
+      expect(app.brews.writes, isEmpty);
+    });
+
+    testWidgets('à partir de 840 px : courbe sous le panneau, sans bascule', (
+      tester,
+    ) async {
+      await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+        width: 1200,
+      );
+      expect(find.text(ZoneChronologieCourbe.libelleCourbe), findsNothing);
+      expect(find.text('Visée (recalculée)'), findsOneWidget);
+      expect(minuteur(), findsOneWidget);
+    });
+
+    testWidgets('paysage bas, même large : bascule, panneau et minuteur '
+        'visibles', (tester) async {
+      await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+        width: 900,
+        height: 400,
+      );
+      expect(find.text(ZoneChronologieCourbe.libelleCourbe), findsOneWidget);
+      expect(minuteur(), findsOneWidget);
+    });
+  });
 }
