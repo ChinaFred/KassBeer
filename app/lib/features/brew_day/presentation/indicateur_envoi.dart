@@ -36,6 +36,19 @@ class IndicateurEnvoi extends StatelessWidget {
   /// « 3 saisies » ou « 1 saisie ».
   static String saisies(int n) => '$n saisie${n > 1 ? 's' : ''}';
 
+  /// En dessous de cette largeur d'écran, la pastille ne montre que l'icône
+  /// et le nombre : à 360 dp et texte à 200 %, le titre, l'heure et le menu du
+  /// compte restent dans la barre.
+  static const compactMaxWidth = 400.0;
+
+  /// Texte court de la pastille compacte : le nombre seul, rien pour
+  /// « Envoyé ». Le lecteur d'écran lit toujours le message entier.
+  String? _texteCompact() {
+    if (refus.isNotEmpty) return '${refus.length}';
+    if (enAttente == 0) return null;
+    return '$enAttente';
+  }
+
   ({IconData icon, String texte, String message}) _etat() {
     if (refus.isNotEmpty) {
       return (
@@ -123,6 +136,8 @@ class IndicateurEnvoi extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final etat = _etat();
+    final compact = MediaQuery.sizeOf(context).width < compactMaxWidth;
+    final texteAffiche = compact ? _texteCompact() : etat.texte;
     final isRefus = refus.isNotEmpty;
     final fond = isRefus ? scheme.errorContainer : scheme.secondaryContainer;
     final texte = isRefus
@@ -148,12 +163,14 @@ class IndicateurEnvoi extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(etat.icon, size: 20, color: texte),
-                  const SizedBox(width: 6),
-                  // Borné : à 200 %, le titre et l'heure restent visibles.
-                  MediaQuery.withClampedTextScaling(
-                    maxScaleFactor: 1.34,
-                    child: Text(etat.texte, style: TextStyle(color: texte)),
-                  ),
+                  if (texteAffiche != null) ...[
+                    const SizedBox(width: 6),
+                    // Borné : à 200 %, le titre et l'heure restent visibles.
+                    MediaQuery.withClampedTextScaling(
+                      maxScaleFactor: 1.34,
+                      child: Text(texteAffiche, style: TextStyle(color: texte)),
+                    ),
+                  ],
                 ],
               ),
             ),

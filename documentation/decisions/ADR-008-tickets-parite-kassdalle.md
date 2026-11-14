@@ -362,11 +362,14 @@ prix. ». Exception à P5 : la capture est un partage choisi par le membre vers 
    ticket accepté par le serveur, au plus 30 s après l'envoi. Échec ou hors ligne : ticket sans
    capture, « Ticket enregistré sans la capture. » (ce texte remplace « Ticket envoyé sans la
    capture. »).
-4. **`storage.rules` plus strict que Kass'Dalle.** Création et remplacement par l'auteur
-   membre seul, `tickets/{ticketId}` existant avec `author_uid == request.auth.uid`
-   (`firestore.get`), `screenshot.png` en `image/png` ou `screenshot.jpg` en `image/jpeg`, de
-   1 octet à 5 Mo ; lecture par l'auteur membre et l'administrateur ; liste et suppression
-   refusées. Tests sur l'émulateur Storage pour les cinq profils de P4 et la fixture
+4. **`storage.rules` plus strict que Kass'Dalle.** Création seule (`resource == null`), par
+   l'auteur membre, `tickets/{ticketId}` existant avec `author_uid == request.auth.uid`
+   (`firestore.get`), `screenshot.png` seul en `image/png` (le client ne produit que ce nom),
+   de 1 octet à 5 Mo ; lecture par l'auteur membre et l'administrateur ; remplacement, liste
+   et suppression refusés : la capture contrôlée par `attachTicketScreenshot` (signature PNG
+   seule) reste celle que l'administrateur lit. Ni l'application ni la callable ne
+   journalisent le message ou la pile d'une erreur de Cloud Storage, qui portent le chemin :
+   le code seul. Tests sur l'émulateur Storage pour les cinq profils de P4 et la fixture
    `member_access.json` (P31).
 5. **Phrase fixe sur chaque Issue.** « Capture éventuelle disponible dans Admin › Tickets. »
    termine le corps de toute Issue, qu'une capture soit jointe ou non (gabarit de P24) : la

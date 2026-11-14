@@ -7,6 +7,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/menu_compte.dart';
 import 'package:kass_beer/core/presentation/zone_capture.dart';
@@ -176,6 +177,11 @@ void main() {
       await brasseur(tester);
       await signaler(tester);
       expect(find.text(TicketFormScreen.capturePrices), findsOneWidget);
+      // Lu avant la case.
+      expect(
+        tester.getTopLeft(find.text(TicketFormScreen.capturePrices)).dy,
+        lessThan(tester.getTopLeft(caseCapture()).dy),
+      );
     });
 
     testWidgets('Préférences : aucun avertissement des prix', (tester) async {
@@ -399,6 +405,71 @@ void main() {
       app.container.read(routerProvider).go(AppRoutes.ticket('t1'));
       await avancer(tester);
       expect(find.text(TextesCapture.indisponible), findsOneWidget);
+      expect(find.text(TextesCapture.horsLigne), findsNothing);
+      // « Réessayer » relit la capture.
+      app.tickets.screenshots[chemin] = kPngDeTest;
+      await tester.tap(find.text(TextesCapture.reessayer));
+      await avancer(tester);
+      expect(app.tickets.screenshotReads, [chemin, chemin]);
+      expect(find.byType(VignetteCapture), findsOneWidget);
+    });
+
+    testWidgets('hors ligne : « La capture se lit avec le réseau. »', (
+      tester,
+    ) async {
+      final app = await brasseur(
+        tester,
+        path: AppRoutes.tickets,
+        offline: true,
+      );
+      app.tickets.publish([unTicket(screenshotPath: chemin)]);
+      app.container.read(routerProvider).go(AppRoutes.ticket('t1'));
+      await avancer(tester);
+      expect(find.text(TextesCapture.indisponible), findsOneWidget);
+      expect(find.text(TextesCapture.horsLigne), findsOneWidget);
+      expect(find.text(TextesCapture.reessayer), findsOneWidget);
+    });
+
+    testWidgets(
+      'vignette : bouton lu « Agrandir la capture », appui sémantique',
+      (tester) async {
+        final app = await brasseur(tester, path: AppRoutes.tickets);
+        app.tickets.screenshots[chemin] = kPngDeTest;
+        app.tickets.publish([unTicket(screenshotPath: chemin)]);
+        app.container.read(routerProvider).go(AppRoutes.ticket('t1'));
+        await avancer(tester);
+        final handle = tester.ensureSemantics();
+        expect(
+          find.bySemanticsLabel(RegExp('Agrandir la capture')),
+          findsOneWidget,
+        );
+        final node = tester.getSemantics(
+          find.bySemanticsLabel(RegExp('Agrandir la capture')),
+        );
+        expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+        handle.dispose();
+      },
+    );
+
+    testWidgets('image illisible : « Capture indisponible. », rapportée', (
+      tester,
+    ) async {
+      final app = await brasseur(tester, path: AppRoutes.tickets);
+      app.tickets.screenshots[chemin] = Uint8List.fromList([1, 2, 3, 4]);
+      app.tickets.publish([unTicket(screenshotPath: chemin)]);
+      await tester.runAsync(() async {
+        app.container.read(routerProvider).go(AppRoutes.ticket('t1'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      });
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(TextesCapture.indisponible), findsOneWidget);
+      final report = app.errors.reports.singleWhere(
+        (r) => r.feature == 'tickets.capture_display',
+      );
+      expect(report.context, isNot(contains('tickets/')));
     });
 
     testWidgets('sans capture : rien', (tester) async {
@@ -512,9 +583,11 @@ void main() {
       Object? panneDepot,
       Object? panneAppel,
       Map<String, Uint8List?> fichiers = const {},
+      Object? panneLecture,
+      FakeFirebaseFirestore? firestore,
     }) => FirestoreTicketsRepository(
       errorReportService: errors,
-      firestore: FakeFirebaseFirestore(),
+      firestore: firestore ?? FakeFirebaseFirestore(),
       deposer: (path, bytes, contentType) async {
         journal.add('depot $path $contentType ${bytes.length}');
         if (panneDepot != null) throw panneDepot;
@@ -526,6 +599,7 @@ void main() {
       },
       lire: (path, maxBytes) async {
         journal.add('lecture $path $maxBytes');
+        if (panneLecture != null) throw panneLecture;
         return fichiers[path];
       },
     );
@@ -563,6 +637,84 @@ void main() {
       expect(report.context, 'tickets/t1 step=upload code=unauthorized');
     });
 
+    test(
+      'panne Storage dont le message porte le chemin : rapport neutre',
+      () async {
+        final errors = RecordingErrorReportService();
+        const chemin = 'tickets/u/t1/screenshot.png';
+        final ok = await depot(
+          errors,
+          journal: [],
+          panneDepot: FirebaseException(
+            plugin: 'firebase_storage',
+            code: 'unauthorized',
+            message: "User does not have permission to access '$chemin'.",
+          ),
+        ).attachScreenshot(ticketId: 't1', authorUid: 'u', png: kPngDeTest);
+        expect(ok, isFalse);
+        final report = errors.reports.single;
+        expect(report.error, isA<StateError>());
+        expect('${report.error}', isNot(contains(chemin)));
+        expect('${report.error}', contains('unauthorized'));
+        expect(report.context, isNot(contains('screenshot')));
+      },
+    );
+
+    test(
+      'second dépôt refusé, ticket déjà doté : jointe, rapport neutre',
+      () async {
+        final errors = RecordingErrorReportService();
+        final firestore = FakeFirebaseFirestore();
+        await firestore.doc('tickets/t1').set({
+          'screenshot_path': 'tickets/u/t1/screenshot.png',
+        });
+        final ok = await depot(
+          errors,
+          journal: [],
+          firestore: firestore,
+          panneDepot: FirebaseException(
+            plugin: 'firebase_storage',
+            code: 'unauthorized',
+            message: "No permission for 'tickets/u/t1/screenshot.png'.",
+          ),
+        ).attachScreenshot(ticketId: 't1', authorUid: 'u', png: kPngDeTest);
+        expect(ok, isTrue);
+        expect(
+          errors.reports.single.context,
+          'tickets/t1 step=upload code=unauthorized',
+        );
+      },
+    );
+
+    test('loadScreenshot : panne Storage rapportée sans chemin', () async {
+      final errors = RecordingErrorReportService();
+      const chemin = 'tickets/u/t1/screenshot.png';
+      final repo = depot(
+        errors,
+        journal: [],
+        panneLecture: FirebaseException(
+          plugin: 'firebase_storage',
+          code: 'object-not-found',
+          message: "No object exists at '$chemin'.",
+        ),
+      );
+      await expectLater(repo.loadScreenshot(chemin), throwsA(anything));
+      final report = errors.reports.single;
+      expect('${report.error}', isNot(contains(chemin)));
+      expect(report.context, 'code=object-not-found');
+    });
+
+    test('motif : screenshot.png seul', () {
+      expect(
+        kTicketScreenshotPathPattern.hasMatch('tickets/u/t1/screenshot.png'),
+        isTrue,
+      );
+      expect(
+        kTicketScreenshotPathPattern.hasMatch('tickets/u/t1/screenshot.jpg'),
+        isFalse,
+      );
+    });
+
     test('callable refusée : faux, rapportée', () async {
       final errors = RecordingErrorReportService();
       final ok = await depot(
@@ -570,9 +722,7 @@ void main() {
         journal: [],
         panneAppel: FirebaseFunctionsException(
           code: 'invalid-argument',
-          message:
-              'Seules les images PNG ou JPEG de 5 Mo au plus sont '
-              'acceptées.',
+          message: 'Seules les images PNG de 5 Mo au plus sont acceptées.',
         ),
       ).attachScreenshot(ticketId: 't1', authorUid: 'u', png: kPngDeTest);
       expect(ok, isFalse);

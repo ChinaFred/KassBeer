@@ -89,7 +89,9 @@ suivi d'un ticket), « Nouveautés », « Sources des données » ou « Tickets 
 propre écran.
 
 Les entrées ouvrent leur page par-dessus l'écran courant, sauf « Tickets à traiter », qui
-remplace la pile, et « Se déconnecter ». Avant ces deux entrées et avant « Mes processus », un
+remplace la pile, et « Se déconnecter ». Sur l'écran du jour de brassage et sur une journée
+suivante, « Tickets à traiter » s'ouvre aussi par-dessus : l'écran du jour reste dessous,
+appareil gardé allumé, et le retour y ramène. Avant ces deux entrées et avant « Mes processus », un
 écran avec un travail non enregistré demande confirmation :
 
 - éditeur modifié : « Abandonner les modifications ? », comme ✕ ;
@@ -247,7 +249,7 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   capture de l'écran précédent », décochée à l'ouverture, aide « Seul l'administrateur la voit.
   Elle n'est jamais publiée. », puis la vignette, qui s'agrandit à l'appui. Sur un écran qui
   peut montrer des prix (Recette, Brassin, jour de brassage, journée suivante, Préparer la
-  journée, Mes prix), une ligne s'ajoute : « La capture peut montrer vos prix :
+  journée, Mes prix), une ligne s'ajoute avant la case : « La capture peut montrer vos prix :
   l'administrateur la verra. ». Pas de section depuis « Mes tickets », par l'adresse du
   formulaire ou par « Reprendre », ni quand l'image n'a pas pu être prise ou dépasse 5 Mo.
   Aucune image ne se choisit dans les fichiers de l'appareil.
@@ -266,7 +268,8 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   éventuelle disponible dans Admin › Tickets. ». Hors ligne, le ticket part sans elle :
   « Ticket enregistré sans la capture. Il partira au retour du réseau. ». Un dépôt en échec,
   ou un ticket que le serveur n'a pas accepté dans les 30 s, affiche « Ticket enregistré sans
-  la capture. » avec « Voir ». La capture ne se joint pas plus tard.
+  la capture. » avec « Voir ». La capture ne se joint pas plus tard, et une capture jointe ne
+  se remplace pas.
 - Quitter avec une saisie demande « Abandonner les modifications ? » / « Le texte saisi sera
   perdu. ». Un ticket envoyé ne se modifie ni ne s'annule.
 
@@ -290,7 +293,8 @@ jour. ». Hors ligne : bandeau hors ligne et liste du cache. Un ticket illisible
 hh:mm », phrase du statut, encadré du texte de l'administrateur quand il a répondu (titré
 « Motif du refus » pour un ticket refusé, « Commentaire de clôture » pour un ticket clos,
 « Réponse de l'administrateur » sinon), frise des étapes (voir ci-dessous), description, « Capture » quand une capture est jointe
-(vignette qui s'agrandit à l'appui, « Capture indisponible. » si elle ne se lit pas), « Écran :
+(vignette qui s'agrandit à l'appui ; si elle ne se lit pas, « Capture indisponible. », hors
+ligne « La capture se lit avec le réseau. », et « Réessayer »), « Écran :
 Recette », « Envoyé avec : … ». Le texte est sélectionnable. Ouvrir un
 ticket dont le suivi est à lire éteint la pastille, hors ligne compris. États : « Chargement du
 ticket », « Impossible de lire vos tickets. », « Ce ticket n'existe plus. », « Ce ticket n'est
@@ -550,7 +554,8 @@ coupé en ton d'erreur ; l'encadré du texte de
 l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
 « Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
 « Capture », quand l'auteur en a joint une (vignette qui s'agrandit à l'appui, « Capture
-indisponible. » si elle ne se lit pas) ;
+indisponible. » et « Réessayer » si elle ne se lit pas, avec « La capture se lit avec le
+réseau. » hors ligne) ;
 « Livraison (N) », section ouverte, pour un ticket En cours ou Livré, ou qui a déjà un compte
 rendu de livraison (voir ci-dessous) ;
 « Analyses (N) », pour un ticket qui a une Issue (voir ci-dessous) ;

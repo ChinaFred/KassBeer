@@ -510,9 +510,9 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
   }
 }
 
-/// Section « Capture » : case « Joindre une capture de l'écran précédent »,
-/// décochée à l'ouverture, et vignette de l'image ; avertissement quand
-/// l'écran capturé peut montrer des prix.
+/// Section « Capture » : avertissement quand l'écran capturé peut montrer des
+/// prix, lu avant la case ; case « Joindre une capture de l'écran
+/// précédent », décochée à l'ouverture ; vignette de l'image.
 class _SectionCapture extends StatelessWidget {
   const _SectionCapture({
     required this.capture,
@@ -542,15 +542,8 @@ class _SectionCapture extends StatelessWidget {
           header: true,
           child: Text(TextesCapture.titre, style: theme.textTheme.titleSmall),
         ),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-          value: joindre,
-          onChanged: enabled ? (v) => onChanged(v ?? false) : null,
-          title: const Text(TicketFormScreen.captureAttach),
-          subtitle: const Text(TicketFormScreen.captureHelp),
-        ),
         if (prix) ...[
+          const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -567,8 +560,16 @@ class _SectionCapture extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
         ],
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: joindre,
+          onChanged: enabled ? (v) => onChanged(v ?? false) : null,
+          title: const Text(TicketFormScreen.captureAttach),
+          subtitle: const Text(TicketFormScreen.captureHelp),
+        ),
         VignetteCapture(
           png: capture.png,
           libelle: TicketFormScreen.captureLabel,

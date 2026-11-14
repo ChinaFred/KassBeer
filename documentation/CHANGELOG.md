@@ -38,7 +38,7 @@ ouverte par `push`. Paquets ajoutés à `pubspec.lock` : `firebase_storage` 13.6
 `firebase_storage_platform_interface` 6.0.7, `firebase_storage_web` 3.11.13 ; aucune autre version
 ne change. `main.dart.js` : 5 417 304 octets avant (#37 et #39 compris), 5 510 208 après. `ci.yml`
 et `deploy.yml` : callable ajoutée à la liste fermée, émulateur Storage pour `rules-tests/`,
-`storage` au déploiement. `CLAUDE.md` : P5, P6, P23, P24, P25 et P31 modifiés, P48 ajouté.
+`storage` au déploiement. `CLAUDE.md` : P5, P6, P14, P23, P24, P25 et P31 modifiés, P48 ajouté.
 
 ### v0.1.40 — fonctionnel
 

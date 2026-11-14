@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:brewing/brewing.dart'
     show StepEvent, StepEventKind, StepStatus, readTimer;
@@ -1272,21 +1273,29 @@ class _Jour extends StatelessWidget {
             ],
           );
         } else {
-          body = Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: constraints.maxHeight * 0.6,
+          // Panneau à 60 % de l'écran au plus, et aux trois quarts du corps
+          // au plus : avec une barre du bas haute (texte à 200 %), la
+          // chronologie garde sa place.
+          body = LayoutBuilder(
+            builder: (context, corps) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: math.min(
+                      constraints.maxHeight * 0.6,
+                      corps.maxHeight * 0.75,
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: panneau,
+                  ),
                 ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: panneau,
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(child: chronologie),
-            ],
+                const Divider(height: 1),
+                Expanded(child: chronologie),
+              ],
+            ),
           );
         }
         return PopScope(
@@ -1314,6 +1323,8 @@ class _Jour extends StatelessWidget {
                           ? formatHeure(now)
                           : '$journee · ${formatHeure(now)}',
                       key: const ValueKey('heure-appareil'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),

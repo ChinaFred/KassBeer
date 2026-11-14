@@ -1,5 +1,5 @@
 // storage.rules (ADR-008, T6) : capture d'écran jointe à un ticket,
-// `tickets/{uid}/{ticketId}/screenshot.png|jpg`. Cinq profils de P4, cas de P11, et la
+// `tickets/{uid}/{ticketId}/screenshot.png (création seule)`. Cinq profils de P4, cas de P11, et la
 // fixture partagée test-fixtures/member_access.json (P31), rejouée ici contre la copie
 // de isMember et isAdmin de storage.rules.
 //
@@ -34,7 +34,7 @@ after(async () => {
 });
 beforeEach(async () => {
   await state.env.clearFirestore();
-  await state.env.clearStorage();
+  await clearBucket();
   await seed(state.env, {
     ...memberDocs(),
     "tickets/t-a": ticketOf("brewer-a"),
@@ -42,6 +42,19 @@ beforeEach(async () => {
     "tickets/t-admin": ticketOf("admin"),
   });
 });
+
+/// Vide le bucket, sous-dossiers compris : `clearStorage()` de rules-unit-testing ne
+/// liste que la racine, et une capture d'un test précédent ferait refuser une création.
+async function clearBucket() {
+  await state.env.withSecurityRulesDisabled(async (ctx) => {
+    const visit = async (ref) => {
+      const { items, prefixes } = await ref.listAll();
+      await Promise.all(items.map((item) => item.delete()));
+      for (const prefix of prefixes) await visit(prefix);
+    };
+    await visit(ctx.storage().ref());
+  });
+}
 
 function ticketOf(uid) {
   return {
@@ -118,16 +131,24 @@ describe("storage.rules — dépôt d'une capture, cinq profils (P4)", () => {
     await expectRule(true, upload("otherBrewer", "tickets/brewer-b/t-b/screenshot.png"));
   });
 
-  it("owner remplace sa capture : autorisé", async () => {
-    await seedFile(OWN);
+  // Création seule (2026-11-14) : la capture contrôlée par le serveur ne se remplace pas.
+  for (const name of ["owner", "admin"]) {
+    it(`${name} remplace screenshot.png existant : refusé`, async () => {
+      await seedFile(OWN);
+      await expectRule(false, upload(name, OWN));
+    });
+  }
+
+  it("owner, second dépôt après un premier réussi : refusé", async () => {
     await expectRule(true, upload("owner", OWN));
+    await expectRule(false, upload("owner", OWN));
   });
 });
 
 describe("storage.rules — contenu du dépôt", () => {
-  it("JPEG en screenshot.jpg : autorisé", async () => {
+  it("screenshot.jpg en image/jpeg : refusé (PNG seul)", async () => {
     await expectRule(
-      true,
+      false,
       upload("owner", "tickets/brewer-a/t-a/screenshot.jpg", {
         bytes: Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]),
         contentType: "image/jpeg",
@@ -152,7 +173,7 @@ describe("storage.rules — contenu du dépôt", () => {
     });
   }
 
-  it("PNG annoncé en screenshot.jpg : refusé", async () => {
+  it("screenshot.jpg en image/png : refusé", async () => {
     await expectRule(false, upload("owner", "tickets/brewer-a/t-a/screenshot.jpg"));
   });
 

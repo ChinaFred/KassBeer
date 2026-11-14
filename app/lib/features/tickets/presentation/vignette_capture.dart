@@ -4,19 +4,23 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers.dart';
+import '../../auth/presentation/access_providers.dart';
 import 'capture_ticket.dart';
 
 /// Libellés de la capture jointe à un ticket (ADR-008, T6).
 abstract final class TextesCapture {
   static const titre = 'Capture';
   static const indisponible = 'Capture indisponible.';
+  static const horsLigne = 'La capture se lit avec le réseau.';
+  static const reessayer = 'Réessayer';
   static const chargement = 'Chargement de la capture';
   static const agrandir = 'Agrandir la capture';
   static const fermer = 'Fermer';
 }
 
 /// Vignette d'une capture, agrandie à l'appui dans une boîte où l'image se
-/// zoome.
+/// zoome. L'effet d'appui et le focus se peignent au-dessus de l'image.
 class VignetteCapture extends StatelessWidget {
   const VignetteCapture({
     super.key,
@@ -34,32 +38,35 @@ class VignetteCapture extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    void agrandir() => unawaited(_agrandir(context));
     return Align(
       alignment: Alignment.centerLeft,
       child: Semantics(
         button: true,
         label: '$libelle. ${TextesCapture.agrandir}',
+        onTap: agrandir,
         excludeSemantics: true,
         child: Tooltip(
           message: TextesCapture.agrandir,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: () => unawaited(_agrandir(context)),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: theme.colorScheme.outlineVariant),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(4),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Image.memory(
-                  png,
-                  height: hauteur,
-                  fit: BoxFit.contain,
-                  gaplessPlayback: true,
-                  errorBuilder: (_, _, _) => const _Indisponible(),
-                ),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Stack(
+                children: [
+                  _ImageCapture(png: png, hauteur: hauteur),
+                  // Au-dessus de l'image : l'encre et le focus restent visibles.
+                  Positioned.fill(
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: InkWell(onTap: agrandir),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -84,11 +91,10 @@ class VignetteCapture extends StatelessWidget {
         body: InteractiveViewer(
           maxScale: 5,
           child: Center(
-            child: Image.memory(
-              png,
-              fit: BoxFit.contain,
-              semanticLabel: libelle,
-              errorBuilder: (_, _, _) => const _Indisponible(),
+            child: Semantics(
+              label: libelle,
+              image: true,
+              child: _ImageCapture(png: png),
             ),
           ),
         ),
@@ -97,8 +103,49 @@ class VignetteCapture extends StatelessWidget {
   );
 }
 
+/// Image d'une capture ; un décodage en échec affiche « Capture
+/// indisponible. » et se rapporte une fois, sans contenu ni chemin.
+class _ImageCapture extends ConsumerStatefulWidget {
+  const _ImageCapture({required this.png, this.hauteur});
+
+  final Uint8List png;
+  final double? hauteur;
+
+  @override
+  ConsumerState<_ImageCapture> createState() => _ImageCaptureState();
+}
+
+class _ImageCaptureState extends ConsumerState<_ImageCapture> {
+  bool _rapporte = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final errors = ref.read(errorReportServiceProvider);
+    return Image.memory(
+      widget.png,
+      height: widget.hauteur,
+      fit: BoxFit.contain,
+      gaplessPlayback: true,
+      excludeFromSemantics: true,
+      errorBuilder: (_, error, stackTrace) {
+        if (!_rapporte) {
+          _rapporte = true;
+          errors.reportError(
+            feature: 'tickets.capture_display',
+            error: error,
+            stackTrace: stackTrace,
+            context: 'capture illisible, ${widget.png.length} octets',
+          );
+        }
+        return const _Indisponible();
+      },
+    );
+  }
+}
+
 /// Capture d'un ticket lue dans Cloud Storage par `getData` : vignette, ou
-/// « Capture indisponible. » si la lecture échoue.
+/// « Capture indisponible. » et « Réessayer » si la lecture échoue ; hors
+/// ligne, « La capture se lit avec le réseau. ».
 class CaptureDuTicket extends ConsumerWidget {
   const CaptureDuTicket({super.key, required this.path});
 
@@ -108,6 +155,7 @@ class CaptureDuTicket extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final capture = ref.watch(ticketScreenshotProvider(path));
+    final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -121,7 +169,28 @@ class CaptureDuTicket extends ConsumerWidget {
             png: value,
             libelle: 'Capture jointe au ticket',
           ),
-          AsyncError() => const _Indisponible(),
+          AsyncError() => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _Indisponible(),
+              if (offline) ...[
+                const SizedBox(height: 4),
+                Text(
+                  TextesCapture.horsLigne,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              FilledButton.tonal(
+                onPressed: capture.isLoading
+                    ? null
+                    : () => ref.invalidate(ticketScreenshotProvider(path)),
+                child: const Text(TextesCapture.reessayer),
+              ),
+            ],
+          ),
           _ => const Align(
             alignment: Alignment.centerLeft,
             child: SizedBox.square(
@@ -145,10 +214,13 @@ class _Indisponible extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.broken_image_outlined,
-          color: theme.colorScheme.onSurfaceVariant,
+        ExcludeSemantics(
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(width: 8),
         Flexible(

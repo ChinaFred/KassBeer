@@ -194,7 +194,8 @@ fermée d'ADR-008 (P10, accord de l'utilisateur). Les lots T4 à T7 ajouteront l
 Le 2026-11-14, avec le lot T6 (ticket #38) et les décisions de l'utilisateur, P5 (exception des
 captures de ticket), P6 (`firebase_storage`), P23 (champ serveur `screenshot_path`), P24 (phrase
 fixe de la capture sur chaque Issue), P25 (`attachTicketScreenshot`) et P31 (`storage.rules`) sont
-modifiés, et P48 ajouté (règles Storage et callable des captures). `ci.yml` et `deploy.yml`
+modifiés, et P48 ajouté (règles Storage et callable des captures). P14 admet, pour T6, le seul rôle
+`roles/firebasestorage.viewer` de `github-deploy`, si la publication de `storage.rules` l'exige. `ci.yml` et `deploy.yml`
 ajoutent la callable à la liste fermée, l'émulateur Storage aux tests des règles et `storage` au
 déploiement (P10, signalé à l'utilisateur).
 

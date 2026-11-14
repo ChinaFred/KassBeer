@@ -43,11 +43,14 @@ service firebase.storage {
     // ---------------------------------------------------------------- Tickets
 
     // Capture d'écran jointe à un ticket (ADR-008, T6) : privée, jamais publiée sur
-    // GitHub. `tickets/{uid}/{ticketId}/screenshot.png` ou `.jpg`.
+    // GitHub. `tickets/{uid}/{ticketId}/screenshot.png` seul : le client ne produit que
+    // des PNG (note du 2026-11-14).
     //
-    // Dépôt par l'auteur membre seul, quand `tickets/{ticketId}` existe dans Firestore
-    // et porte `author_uid` égal à l'appelant : PNG ou JPEG de 5 Mo au plus. Lecture par
-    // l'auteur membre et l'administrateur. Aucune suppression, aucun listage.
+    // Création seule (`resource == null`), par l'auteur membre, quand `tickets/{ticketId}`
+    // existe dans Firestore et porte `author_uid` égal à l'appelant : PNG de 1 octet à
+    // 5 Mo. Une capture déposée ne se remplace pas : celle que le serveur a contrôlée reste
+    // celle que l'administrateur lit. Lecture par l'auteur membre et l'administrateur.
+    // Aucune mise à jour, aucune suppression, aucun listage.
     // `attachTicketScreenshot` vérifie ensuite l'auteur, la taille et les premiers
     // octets avant d'écrire `screenshot_path`.
     match /tickets/{uid}/{ticketId}/{fileName} {
@@ -60,16 +63,17 @@ service firebase.storage {
       allow get: if isMember()
         && (request.auth.uid == uid || isAdmin());
 
-      allow create, update: if request.auth != null
+      allow create: if request.auth != null
         && request.auth.uid == uid
-        && fileName in ['screenshot.png', 'screenshot.jpg']
+        && resource == null
+        && fileName == 'screenshot.png'
         && request.resource.size > 0
         && request.resource.size <= 5 * 1024 * 1024
-        && request.resource.contentType == (fileName == 'screenshot.png' ? 'image/png' : 'image/jpeg')
+        && request.resource.contentType == 'image/png'
         && isMember()
         && ticket().data.author_uid == request.auth.uid;
 
-      allow list, delete: if false;
+      allow update, list, delete: if false;
     }
   }
 }

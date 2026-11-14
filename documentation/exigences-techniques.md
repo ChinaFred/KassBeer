@@ -18,7 +18,7 @@ Functions »).
 | Fichier | Rôle |
 |---|---|
 | `firestore.rules` | règles d'accès, appliquant le modèle ci-dessous |
-| `storage.rules` | règles de Cloud Storage : `tickets/{uid}/{ticketId}/screenshot.png` ou `.jpg` seul (ADR-008, T6, voir « Règles d'accès ») |
+| `storage.rules` | règles de Cloud Storage : `tickets/{uid}/{ticketId}/screenshot.png` seul, en création seule (ADR-008, T6, voir « Règles d'accès ») |
 | `firestore.indexes.json` | index composites des requêtes de `tickets/`, TTL de `ticket_quotas/` |
 | `firebase.json` | Firestore, Storage (`storage.rules`), Functions (`functions/`, Node 24), émulateurs (auth 9099, firestore 8080, storage 9199), Hosting |
 | `functions/` | Cloud Functions des tickets, TypeScript (ADR-006, ADR-008) |
@@ -64,7 +64,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
 | `lib/core/data/nouveautes.dart` | `Nouveaute`, `lireNouveautes` (valide la forme de `assets/changelog_recent.json`, lève une `FormatException` sinon), `NouveautesRepository` (lecture de l'asset, panne journalisée sous `nouveautes` puis relancée) |
-| `lib/core/presentation/` | `AppShell` (barre du bas à icônes seules sous 600 px, `label` en infobulle et pour le lecteur d'écran ; rail défilable ; titre et retour reçus de la route ; menu du compte), `MenuCompte` (`menu_compte.dart` : avatar et menu du compte de la coquille et des pages pleines, rien sans `AccessGranted` ; `photo: false` sur l'écran du jour, initiale seule ; entrée de l'écran courant masquée par `kEntreeDeLEcran`, comparée au `fullPath` ; `avantDeQuitter` appelé avant « Tickets à traiter », « Mes processus » et « Se déconnecter », `avantDeDeconnecter` avant « Se déconnecter » ; `textePastille`, `infobulleCompte`), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` (menu du compte après l'action, `avantDeQuitter` = confirmation d'abandon si modifié ; bouton d'action borné par la largeur restante, libellé réduit par `FittedBox`) et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/presentation/` | `AppShell` (barre du bas à icônes seules sous 600 px, `label` en infobulle et pour le lecteur d'écran ; rail défilable ; titre et retour reçus de la route ; menu du compte), `MenuCompte` (`menu_compte.dart` : avatar et menu du compte de la coquille et des pages pleines, rien sans `AccessGranted` ; `photo: false` sur l'écran du jour, initiale seule ; entrée de l'écran courant masquée par `kEntreeDeLEcran`, comparée au `fullPath` ; `avantDeQuitter` appelé avant « Tickets à traiter », « Mes processus » et « Se déconnecter » ; « Tickets à traiter » par `go`, sauf sur `kEcransDuJour` (`/brassins/:id/jour`, `/brassins/:id/jour/:journee`), par `push` pour garder l'écran du jour et son verrou ; `avantDeDeconnecter` avant « Se déconnecter » ; `textePastille`, `infobulleCompte`), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` (menu du compte après l'action, `avantDeQuitter` = confirmation d'abandon si modifié ; bouton d'action borné par la largeur restante, libellé réduit par `FittedBox`) et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
 | `lib/core/preferences/` | préférence de thème gardée sur l'appareil (ADR-009) : `PreferencesAppareil` (`lireValeurTheme`, `ecrireTheme`), `PreferencesAppareilPlateforme` (canal `fr.kassbeer/prefs` sur Android, `preferences_web.dart` par `package:web` sur le web, `preferences_web_stub.dart` hors du web, import conditionnel), `lireTheme` (rend `LectureTheme`, ne lève pas), `themeModeProvider` (`ThemeModeNotifier.choisir`) ; fournis par `preferencesAppareilProvider` et `themeModeInitialProvider` |
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets)` rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
@@ -911,12 +911,25 @@ par-dessus l'écran du jour (P2).
 | `core/presentation/zone_capture.dart` | `ZoneCapture` (`RepaintBoundary`) : corps du `Scaffold` de la coquille (sans la barre du haut, la barre ou le rail de navigation) et de chaque page pleine qui porte `MenuCompte` ; `zoneCaptureDe(context)` : la première `ZoneCapture` sous le `Scaffold` le plus proche ; `echelleCapture` (échelle `kCaptureMaxScale` 2 au plus, plus grand côté `kCaptureMaxSide` 2 000 px au plus) ; `rendrePng` (PNG, `null` au-delà de `maxBytes`) |
 | `features/tickets/presentation/capture_ticket.dart` | `CaptureEcran` (`png`, `ecran`) ; `CaptureEnAttente` et `captureEnAttenteProvider` : dépôt en mémoire, écrit par le menu, vidé par le formulaire qui le lit une fois (`prendre`), jamais écrit sur l'appareil ; `capturerEcranProvider` et `capturerEcran` (délai `kCaptureTimeout` 5 s ; échec rapporté `tickets.capture`, sans contenu) ; `ticketScreenshotProvider` (`FutureProvider.autoDispose.family` par chemin, sans nouvel essai) |
 | `core/presentation/menu_compte.dart` | « Signaler ou proposer » : capture de la page sous le menu, puis `push` du formulaire avec le modèle de route `GoRouterState.of(context).fullPath` ; le menu ouvert, dans l'`Overlay`, n'est pas dans l'image |
-| `features/tickets/presentation/ticket_form_screen.dart` | section « Capture » si la capture prise correspond à l'écran d'origine et sans « Reprendre » ; case décochée ; avertissement des prix pour `kTicketScreensWithPrices` ; envoi : ticket écrit, formulaire fermé, puis, ticket accepté par le serveur en 30 s au plus (`captureWaitTimeout`), `attachScreenshot` ; hors ligne, rien ne part |
-| `features/tickets/presentation/vignette_capture.dart` | `VignetteCapture` (agrandie à l'appui dans un `Dialog.fullscreen` avec `InteractiveViewer`) ; `CaptureDuTicket` (lecture par `getData`, « Capture indisponible. ») ; `TextesCapture` |
-| `features/tickets/domain/ticket.dart` | `Ticket.screenshotPath` (`screenshot_path`) ; `kTicketScreenshotMaxBytes` (5 Mo) ; `kTicketScreenshotPathPattern` ; `ticketScreenshotPath(uid, ticketId)` |
+| `features/tickets/presentation/ticket_form_screen.dart` | section « Capture » si la capture prise correspond à l'écran d'origine et sans « Reprendre » ; avertissement des prix pour `kTicketScreensWithPrices`, avant la case ; case décochée ; envoi : ticket écrit, formulaire fermé, puis, ticket accepté par le serveur en 30 s au plus (`captureWaitTimeout`), `attachScreenshot` ; hors ligne, rien ne part |
+| `features/tickets/presentation/vignette_capture.dart` | `VignetteCapture` (`Semantics` bouton avec `onTap`, « Agrandir la capture » ; `InkWell` posé au-dessus de l'image, effet d'appui et focus visibles ; agrandie dans un `Dialog.fullscreen` avec `InteractiveViewer`) ; image illisible : « Capture indisponible. », rapportée une fois `tickets.capture_display` avec la taille seule ; `CaptureDuTicket` (lecture par `getData` ; en échec « Capture indisponible. », hors ligne « La capture se lit avec le réseau. », et « Réessayer », qui invalide `ticketScreenshotProvider`) ; `TextesCapture` |
+| `features/tickets/domain/ticket.dart` | `Ticket.screenshotPath` (`screenshot_path`) ; `kTicketScreenshotMaxBytes` (5 Mo) ; `kTicketScreenshotPathPattern` (`screenshot.png` seul) ; `ticketScreenshotPath(uid, ticketId)` |
 | `features/tickets/domain/ticket_screens.dart` | `kTicketScreensWithPrices` : Recette, Brassin, jour de brassage, journée suivante, Préparer la journée, Mes prix |
-| `features/tickets/data/tickets_repository.dart` | `attachScreenshot(ticketId:, authorUid:, png:)` : `putData` sous `tickets/{uid}/{ticketId}/screenshot.png` en `image/png` (délai 2 min), puis callable `attachTicketScreenshot` (`{ticketId, path}`) ; échec rapporté `tickets.screenshot` avec l'identifiant du ticket, l'étape et le code, jamais le chemin ni le contenu (P13) ; `loadScreenshot(path)` : chemin vérifié contre le motif, puis `getData(5 Mo)`, jamais d'URL de téléchargement ; échec rapporté `tickets.load_screenshot` avec le code seul ; `FirebaseStorage.instance` construite au premier dépôt ou à la première lecture et mémorisée par le dépôt (P6) ; `DeposerFichier` et `LireFichier` injectés par les tests |
+| `features/tickets/data/tickets_repository.dart` | `attachScreenshot(ticketId:, authorUid:, png:)` : `putData` sous `tickets/{uid}/{ticketId}/screenshot.png` en `image/png` (délai 2 min), puis callable `attachTicketScreenshot` (`{ticketId, path}`) ; échec rapporté `tickets.screenshot` par une erreur neutre (`StateError('storage <code>')`, le message d'une `FirebaseException` de Storage portant le chemin) avec l'identifiant du ticket, l'étape et le code, jamais le chemin ni le contenu (P13) ; après un échec, relit le ticket et rend vrai s'il porte déjà `screenshot_path` (second dépôt refusé par la création seule) ; `loadScreenshot(path)` : chemin vérifié contre le motif, puis `getData(5 Mo)`, jamais d'URL de téléchargement ; échec rapporté `tickets.load_screenshot` par la même erreur neutre, code seul ; `FirebaseStorage.instance` construite au premier dépôt ou à la première lecture et mémorisée par le dépôt (P6) ; `DeposerFichier` et `LireFichier` injectés par les tests |
 | `ticket_detail_screen.dart`, `admin_ticket_screen.dart` | « Capture » après la description, quand `screenshot_path` est posé |
+
+**Point à mesurer sur l'APK.** Le formulaire s'ouvre après le rendu PNG (`toImage`, puis
+`toByteData`), jusqu'à 5 s (`kCaptureTimeout`). Le temps entre l'appui sur « Signaler ou
+proposer » et l'ouverture n'a pas été mesuré sur un téléphone ; s'il se voit, ouvrir le
+formulaire pendant le rendu (la capture arrivant ensuite) est la piste retenue, pas encore
+faite.
+
+**Écran du jour.** `IndicateurEnvoi` passe en pastille compacte sous 400 dp de large
+(`compactMaxWidth`) : icône et nombre seuls, rien pour « Envoyé » ; le lecteur d'écran lit
+toujours le message entier. La ligne de l'heure tient sur une ligne (`maxLines: 1`, points de
+suspension). Sur téléphone, le panneau du haut fait au plus 60 % de l'écran et les trois
+quarts du corps, pour que la chronologie garde sa place sous une barre du bas haute (texte à
+200 %). Test : 360 dp, texte à 200 %, hors ligne, trois saisies en attente, sans débordement.
 
 **Paquets.** `firebase_storage` 13.6.0, en version exacte (avec
 `firebase_storage_platform_interface` 6.0.7 et `firebase_storage_web` 3.11.13, résolus par
@@ -1541,7 +1554,7 @@ le retire quand elle reprend le ticket.
 | `decision_lease_until` | timestamp : bail de deux minutes d'une décision ou d'une réponse en cours, de 150 s d'un lancement (T4), de 210 s d'une livraison (T5, plus que les 180 s de `launchTicketDelivery`), posé en transaction, retiré à la fin ; une décision, une réponse et un lancement ne tournent jamais ensemble sur un ticket |
 | `answer_reset_at` | timestamp : dernier retour à `received` d'un ticket `analyzed` ou `validated` par « Répondre » (ADR-008). Un état d'Issue dont `updated_at` est antérieur ou égal ne change plus le statut : une étiquette livrée en retard ne refait pas avancer le ticket |
 | `send_retried_at` | timestamp de la dernière relance demandée par l'admin : avec `send_attempts` remis à 0, il fait chercher l'Issue par sa référence avant un nouvel envoi |
-| `screenshot_path` | string : `tickets/{author_uid}/{ticketId}/screenshot.png` ou `.jpg`, écrit par `attachTicketScreenshot` après ses contrôles (ADR-008, T6). Absent : aucune capture. Jamais écrit par un client : les règles du ticket (`hasOnly`) le refusent, testé dans `rules-tests/` pour les cinq profils. La capture ne part jamais sur GitHub ; chaque Issue porte « Capture éventuelle disponible dans Admin › Tickets. » |
+| `screenshot_path` | string : `tickets/{author_uid}/{ticketId}/screenshot.png`, écrit par `attachTicketScreenshot` après ses contrôles (ADR-008, T6). Absent : aucune capture. Jamais écrit par un client : les règles du ticket (`hasOnly`) le refusent, testé dans `rules-tests/` pour les cinq profils. La capture ne part jamais sur GitHub ; chaque Issue porte « Capture éventuelle disponible dans Admin › Tickets. » |
 | `updated_at` | timestamp de la dernière écriture du serveur |
 
 Un statut ne recule pas, sauf à la réouverture de l'Issue, qui reprend le statut de ses
@@ -1774,15 +1787,18 @@ L'admin n'a aucun droit d'écriture sur le contenu des autres brasseurs.
 `firestore.rules` et lisent `members/{email en minuscules}` par `firestore.exists` et
 `firestore.get` ; les deux copies rejouent `test-fixtures/member_access.json` (P31).
 
-| Chemin | Lecture (`get`) | Création, remplacement | Liste, suppression |
+| Chemin | Lecture (`get`) | Création | Remplacement, liste, suppression |
 |---|---|---|---|
-| `tickets/{uid}/{ticketId}/{fileName}` | membre `uid` (l'auteur) ; admin | membre `uid` seul, `tickets/{ticketId}` existant dans Firestore avec `author_uid == request.auth.uid` (`firestore.get`), `fileName` égal à `screenshot.png` (`image/png`) ou `screenshot.jpg` (`image/jpeg`), taille de 1 octet à 5 Mo | personne |
+| `tickets/{uid}/{ticketId}/{fileName}` | membre `uid` (l'auteur) ; admin | membre `uid` seul, fichier absent (`resource == null`), `tickets/{ticketId}` existant dans Firestore avec `author_uid == request.auth.uid` (`firestore.get`), `fileName` égal à `screenshot.png`, type `image/png`, taille de 1 octet à 5 Mo | personne |
 | tout autre chemin | refusé | refusé | refusé |
 
 Chaque dépôt et chaque lecture coûtent une ou deux lectures Firestore facturées (`members/`,
 puis `tickets/`). `attachTicketScreenshot` recontrôle ensuite l'auteur, le type, la taille et
-les premiers octets (PNG `89 50 4E 47 0D 0A 1A 0A`, JPEG `FF D8 FF`) avant d'écrire
-`screenshot_path`. Une capture déposée sans `screenshot_path` (callable en échec) reste dans le
+les premiers octets (PNG `89 50 4E 47 0D 0A 1A 0A`) avant d'écrire `screenshot_path`. Une
+capture déposée ne se remplace pas (décision du 2026-11-14) : l'image que le serveur a
+contrôlée reste celle que l'administrateur lit. Un second dépôt pour le même ticket est
+refusé ; le client relit alors le ticket et ne dit « sans la capture » que si
+`screenshot_path` manque. Une capture déposée sans `screenshot_path` (callable en échec) reste dans le
 bucket, sans purge (décision de l'utilisateur, 2026-11-14) ; elle n'est lue par personne,
 l'application ne lisant que le chemin écrit par le serveur.
 
@@ -2747,19 +2763,21 @@ autre type ou plus long que sa borne brute, avant toute lecture (`invalid-argume
 **Capture** (`attachTicketScreenshot`, `src/tickets/screenshot.ts`, ADR-008, T6). Copie de
 Kass'Dalle. Dans l'ordre : `requireMember` (P30) ; `ticketId` (`requireBoundedText`, 128, puis
 `[A-Za-z0-9_-]`) ; `path` (`requireBoundedText`, 300), égal à
-`tickets/{uid de l'appelant}/{ticketId}/screenshot.png` ou `.jpg`, sinon `invalid-argument`
+`tickets/{uid de l'appelant}/{ticketId}/screenshot.png`, sinon `invalid-argument`
 (`details.code = path_invalid`, `details.field = path`) ; ticket absent : `not-found`
 (`ticket_missing`) ; `author_uid` autre que l'appelant : `permission-denied` (`not_author`) ;
-fichier absent : `not-found` (`file_missing`) ; type annoncé autre que celui de l'extension,
-taille nulle, illisible ou au-delà de 5 Mo, ou premiers octets ni PNG ni JPEG :
-`invalid-argument` (`file_refused`, « Seules les images PNG ou JPEG de 5 Mo au plus sont
+fichier absent : `not-found` (`file_missing`) ; type annoncé autre que `image/png`, taille
+nulle, illisible ou au-delà de 5 Mo, ou premiers octets autres que la signature PNG :
+`invalid-argument` (`file_refused`, « Seules les images PNG de 5 Mo au plus sont
 acceptées. ») ; sinon `screenshot_path` et `updated_at` écrits, `{ok: true}`. Une panne :
-`logError` avec l'identifiant du ticket seul, jamais le chemin ni le contenu, puis `internal`.
+`logError` avec l'identifiant du ticket et `errorCode` (`storageErrorCode` : statut HTTP,
+code court sans `/`, ou nom de la classe), jamais le message ni la pile de l'erreur, qui
+portent le chemin, puis `internal`.
 Un second appel réécrit le même chemin. `src/storage.ts` charge `firebase-admin/storage` au
 premier appel et mémorise le bucket par défaut (P26) ; `@google-cloud/storage` était déjà
 installé par `firebase-admin`, aucun paquet ajouté. Tests : `functions/test/screenshot.test.ts`
-(six profils de P30, bornes, chemins hors motif, auteur, fichier, tailles 0, 5 Mo et 5 Mo + 1,
-signatures, panne). La phrase « Capture éventuelle disponible dans Admin › Tickets. » termine
+(six profils de P30, bornes, chemins hors motif dont `.jpg`, auteur, fichier, tailles 0, 5 Mo
+et 5 Mo + 1, signatures, panne dont le message porte le chemin : journal capturé sans lui). La phrase « Capture éventuelle disponible dans Admin › Tickets. » termine
 chaque Issue (`ISSUE_SCREENSHOT_NOTE`, `src/tickets/model.ts`), qu'une capture soit jointe ou
 non.
 

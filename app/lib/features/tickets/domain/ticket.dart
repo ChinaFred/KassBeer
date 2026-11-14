@@ -13,10 +13,10 @@ const kTicketDescriptionMaxLength = 2000;
 /// `storage.rules` et `attachTicketScreenshot`.
 const kTicketScreenshotMaxBytes = 5 * 1024 * 1024;
 
-/// Chemin Storage d'une capture : `tickets/{uid}/{ticketId}/screenshot.png`
-/// ou `.jpg`.
+/// Chemin Storage d'une capture : `tickets/{uid}/{ticketId}/screenshot.png`,
+/// seul nom que `storage.rules` accepte.
 final kTicketScreenshotPathPattern = RegExp(
-  r'^tickets/[A-Za-z0-9_-]{1,128}/[A-Za-z0-9_-]{1,128}/screenshot\.(png|jpg)$',
+  r'^tickets/[A-Za-z0-9_-]{1,128}/[A-Za-z0-9_-]{1,128}/screenshot\.png$',
 );
 
 /// Chemin Storage de la capture PNG du ticket [ticketId] de [uid].

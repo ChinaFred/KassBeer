@@ -39,6 +39,10 @@ enum EntreeCompte {
   sources,
 }
 
+/// Écrans du jour de brassage et des journées suivantes (ADR-010) : « Tickets
+/// à traiter » s'y ouvre par `push`, pour garder l'écran et son verrou.
+const kEcransDuJour = {'/brassins/:id/jour', '/brassins/:id/jour/:journee'};
+
 /// Modèle de route (`fullPath`) → entrée qui mène à cet écran. Sur `/processus/:id`
 /// ou `/tickets/:id`, « Mes processus » et « Mes tickets » restent.
 const Map<String, EntreeCompte> kEntreeDeLEcran = {
@@ -59,9 +63,10 @@ const Map<String, EntreeCompte> kEntreeDeLEcran = {
 /// lire et, pour l'administrateur, les tickets à traiter. Rien sans accès
 /// accordé. L'entrée qui mène à l'écran courant est masquée.
 ///
-/// Les entrées s'ouvrent par `push`, sauf « Tickets à traiter » (`go`) et la
-/// déconnexion : avant elles, et avant « Mes processus », [avantDeQuitter] est
-/// appelé ; il rend `false` pour rester (travail non enregistré).
+/// Les entrées s'ouvrent par `push`, sauf « Tickets à traiter » (`go`, mais
+/// `push` sur [kEcransDuJour]) et la déconnexion : avant elles, et avant
+/// « Mes processus », [avantDeQuitter] est appelé ; il rend `false` pour
+/// rester (travail non enregistré).
 class MenuCompte extends ConsumerWidget {
   const MenuCompte({
     super.key,
@@ -118,7 +123,13 @@ class MenuCompte extends ConsumerWidget {
 
     Future<void> ouvrirTicketsATraiter() async {
       if (!await peutQuitter() || !context.mounted) return;
-      context.go(AppRoutes.adminTickets);
+      // Sur l'écran du jour et les journées, par `push` : l'écran reste
+      // dessous, avec son verrou d'écran, et le retour y ramène (P2).
+      if (kEcransDuJour.contains(fullPath)) {
+        unawaited(context.push(AppRoutes.adminTickets));
+      } else {
+        context.go(AppRoutes.adminTickets);
+      }
     }
 
     // Capture du contenu de la page, prise avant la navigation : le menu

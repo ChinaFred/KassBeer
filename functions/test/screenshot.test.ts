@@ -8,12 +8,13 @@ import { HttpsError } from "firebase-functions/v2/https";
 
 import type { MemberLookup, TokenClaims } from "../src/auth";
 import type { ScreenshotStore, StoredFile } from "../src/storage";
+import type { LogEntry } from "../src/logging";
 import {
   SCREENSHOT_MAX_BYTES,
   handleScreenshotCall,
   screenshotBytesMatch,
-  screenshotContentType,
-  screenshotPaths,
+  screenshotPath,
+  storageErrorCode,
 } from "../src/tickets/screenshot";
 import { FakeDb } from "./fakeFirestore";
 
@@ -57,7 +58,7 @@ const JPG_PATH = "tickets/brewer-a/t1/screenshot.jpg";
 class FakeStore implements ScreenshotStore {
   readonly files = new Map<string, { file: StoredFile; bytes: Uint8Array }>();
   calls = 0;
-  failWith: Error | null = null;
+  failWith: unknown = null;
 
   put(path: string, bytes: Uint8Array, contentType: string, size = bytes.length): void {
     this.files.set(path, { file: { exists: true, size, contentType }, bytes });
@@ -81,8 +82,9 @@ function setup() {
   db.seed("tickets/t2", { author_uid: "brewer-b", status: "received" });
   const store = new FakeStore();
   store.put(PNG_PATH, PNG, "image/png", 120_000);
-  const deps = { lookup, kit: async () => db.kit(), store };
-  return { db, store, deps };
+  const logs: LogEntry[] = [];
+  const deps = { lookup, kit: async () => db.kit(), store, log: (e: LogEntry) => logs.push(e) };
+  return { db, store, deps, logs };
 }
 
 function call(
@@ -107,23 +109,23 @@ async function rejectsWith(p: Promise<unknown>, code: string, machine?: string):
 }
 
 describe("chemins, types et signatures", () => {
-  it("deux chemins par ticket, sous l'uid de l'auteur", () => {
-    assert.deepEqual(screenshotPaths("u", "t"), [
-      "tickets/u/t/screenshot.png",
-      "tickets/u/t/screenshot.jpg",
-    ]);
-    assert.equal(screenshotContentType(PNG_PATH), "image/png");
-    assert.equal(screenshotContentType(JPG_PATH), "image/jpeg");
+  it("un seul chemin par ticket, PNG, sous l'uid de l'auteur", () => {
+    assert.equal(screenshotPath("u", "t"), "tickets/u/t/screenshot.png");
   });
 
-  it("signature PNG sur 8 octets, JPEG sur 3", () => {
-    assert.ok(screenshotBytesMatch(PNG, "image/png"));
-    assert.ok(screenshotBytesMatch(JPEG, "image/jpeg"));
-    assert.ok(!screenshotBytesMatch(JPEG, "image/png"));
-    assert.ok(!screenshotBytesMatch(PNG, "image/jpeg"));
-    assert.ok(!screenshotBytesMatch(GIF, "image/png"));
-    assert.ok(!screenshotBytesMatch(PNG.slice(0, 7), "image/png"));
-    assert.ok(!screenshotBytesMatch(PNG, "image/gif"));
+  it("signature PNG sur 8 octets", () => {
+    assert.ok(screenshotBytesMatch(PNG));
+    assert.ok(!screenshotBytesMatch(JPEG));
+    assert.ok(!screenshotBytesMatch(GIF));
+    assert.ok(!screenshotBytesMatch(PNG.slice(0, 7)));
+  });
+
+  it("code d'erreur : nombre, texte court, nom de classe, jamais le message", () => {
+    assert.equal(storageErrorCode(Object.assign(new Error(PNG_PATH), { code: 404 })), "404");
+    assert.equal(storageErrorCode({ code: "ECONNRESET" }), "ECONNRESET");
+    assert.equal(storageErrorCode({ code: PNG_PATH }), "inconnu");
+    assert.equal(storageErrorCode(new TypeError(PNG_PATH)), "TypeError");
+    assert.equal(storageErrorCode("texte"), "inconnu");
   });
 });
 
@@ -152,9 +154,9 @@ describe("attachTicketScreenshot — garde (P30)", () => {
   it("administrateur auteur de son ticket : capture jointe", async () => {
     const { db, store, deps } = setup();
     db.seed("tickets/t3", { author_uid: "admin" });
-    store.put("tickets/admin/t3/screenshot.jpg", JPEG, "image/jpeg");
-    await call("admin", { ticketId: "t3", path: "tickets/admin/t3/screenshot.jpg" }, deps);
-    assert.equal(db.read("tickets/t3")?.screenshot_path, "tickets/admin/t3/screenshot.jpg");
+    store.put("tickets/admin/t3/screenshot.png", PNG, "image/png");
+    await call("admin", { ticketId: "t3", path: "tickets/admin/t3/screenshot.png" }, deps);
+    assert.equal(db.read("tickets/t3")?.screenshot_path, "tickets/admin/t3/screenshot.png");
   });
 
   it("administrateur sur le ticket d'un brasseur : refusé", async () => {
@@ -208,6 +210,7 @@ describe("attachTicketScreenshot — arguments", () => {
       "tickets/brewer-b/t1/screenshot.png",
       "tickets/brewer-a/t2/screenshot.png",
       "tickets/brewer-a/t1/screenshot.gif",
+      JPG_PATH,
       "tickets/brewer-a/t1/capture.png",
       "tickets/brewer-a/t1/../t2/screenshot.png",
       "/tickets/brewer-a/t1/screenshot.png",
@@ -230,19 +233,20 @@ describe("attachTicketScreenshot — ticket et fichier", () => {
   });
 
   it("fichier absent", async () => {
-    const { deps } = setup();
+    const { store, deps } = setup();
+    store.files.clear();
     await rejectsWith(
-      call("owner", { ticketId: "t1", path: JPG_PATH }, deps),
+      call("owner", { ticketId: "t1", path: PNG_PATH }, deps),
       "not-found",
       "file_missing",
     );
   });
 
-  it("type annoncé autre que celui de l'extension", async () => {
+  it("type annoncé autre que image/png", async () => {
     const { store, deps } = setup();
-    store.put(JPG_PATH, JPEG, "image/png");
+    store.put(PNG_PATH, PNG, "image/jpeg");
     await rejectsWith(
-      call("owner", { ticketId: "t1", path: JPG_PATH }, deps),
+      call("owner", { ticketId: "t1", path: PNG_PATH }, deps),
       "invalid-argument",
       "file_refused",
     );
@@ -268,32 +272,38 @@ describe("attachTicketScreenshot — ticket et fichier", () => {
     });
   }
 
-  it("premiers octets ni PNG ni JPEG : refusé", async () => {
+  it("premiers octets autres que PNG : refusé", async () => {
     const { db, store, deps } = setup();
-    store.put(PNG_PATH, GIF, "image/png");
-    await rejectsWith(
-      call("owner", { ticketId: "t1", path: PNG_PATH }, deps),
-      "invalid-argument",
-      "file_refused",
-    );
-    store.put(JPG_PATH, PNG, "image/jpeg");
-    await rejectsWith(
-      call("owner", { ticketId: "t1", path: JPG_PATH }, deps),
-      "invalid-argument",
-      "file_refused",
-    );
+    for (const bytes of [GIF, JPEG]) {
+      store.put(PNG_PATH, bytes, "image/png");
+      await rejectsWith(
+        call("owner", { ticketId: "t1", path: PNG_PATH }, deps),
+        "invalid-argument",
+        "file_refused",
+      );
+    }
     assert.equal(db.read("tickets/t1")?.screenshot_path, undefined);
   });
 
-  it("panne du bucket : erreur interne, rien écrit", async () => {
-    const { db, store, deps } = setup();
-    store.failWith = new Error("bucket indisponible");
+  it("panne du bucket : erreur interne, rien écrit, journal sans le chemin", async () => {
+    const { db, store, deps, logs } = setup();
+    const gcs = Object.assign(
+      new Error(`No such object: kassbeer.firebasestorage.app/${PNG_PATH}`),
+      { code: 503 },
+    );
+    store.failWith = gcs;
     await rejectsWith(
       call("owner", { ticketId: "t1", path: PNG_PATH }, deps),
       "internal",
       "internal",
     );
     assert.equal(db.read("tickets/t1")?.screenshot_path, undefined);
+    assert.equal(logs.length, 1);
+    assert.equal(logs[0].error, undefined);
+    assert.deepEqual(logs[0].extra, { errorCode: "503" });
+    const written = JSON.stringify(logs);
+    assert.ok(!written.includes(PNG_PATH), written);
+    assert.ok(!written.includes("brewer-a"), written);
   });
 
   it("second appel : même chemin réécrit", async () => {

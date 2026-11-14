@@ -704,17 +704,30 @@ class FirestoreTicketsRepository implements TicketsRepository {
       });
       return true;
     } catch (error, stackTrace) {
+      _reportStorage('tickets.screenshot', error, stackTrace, [
+        'tickets/$ticketId',
+        'step=$step',
+      ]);
+    }
+    // `storage.rules` refuse un second dépôt (création seule) : le ticket est
+    // peut-être déjà doté. Seul `screenshot_path` écrit par le serveur le dit.
+    return _hasScreenshot(ticketId);
+  }
+
+  /// Vrai si `tickets/{ticketId}` porte `screenshot_path` (cache compris).
+  /// Une lecture en échec est rapportée et rend faux.
+  Future<bool> _hasScreenshot(String ticketId) async {
+    try {
+      final snapshot = await _tickets.doc(ticketId).get();
+      return snapshot.data()?['screenshot_path'] is String;
+    } catch (error, stackTrace) {
       _errors.reportError(
         feature: 'tickets.screenshot',
         error: error,
         stackTrace: stackTrace,
-        // Ni le contenu, ni le nom du fichier, ni son chemin.
         context:
-            'tickets/$ticketId step=$step '
-            'code=${switch (error) {
-              FirebaseException(:final code) => code,
-              _ => error.runtimeType,
-            }}',
+            'tickets/$ticketId step=check '
+            'code=${error is FirebaseException ? error.code : error.runtimeType}',
       );
       return false;
     }
@@ -732,17 +745,30 @@ class FirestoreTicketsRepository implements TicketsRepository {
       }
       return bytes;
     } catch (error, stackTrace) {
-      _errors.reportError(
-        feature: 'tickets.load_screenshot',
-        error: error,
-        stackTrace: stackTrace,
-        context:
-            'code=${switch (error) {
-              FirebaseException(:final code) => code,
-              _ => error.runtimeType,
-            }}',
-      );
+      _reportStorage('tickets.load_screenshot', error, stackTrace, const []);
       rethrow;
     }
+  }
+
+  /// Rapporte une panne de capture par une erreur neutre : le message d'une
+  /// `FirebaseException` de Storage porte le chemin du fichier (uid et
+  /// ticket), il n'entre jamais dans `error_reports/` (P13). Seuls le code et
+  /// [where] (sans chemin) partent.
+  void _reportStorage(
+    String feature,
+    Object error,
+    StackTrace stackTrace,
+    List<String> where,
+  ) {
+    final code = switch (error) {
+      FirebaseException(:final code) => code,
+      _ => '${error.runtimeType}',
+    };
+    _errors.reportError(
+      feature: feature,
+      error: StateError('storage $code'),
+      stackTrace: stackTrace,
+      context: [...where, 'code=$code'].join(' '),
+    );
   }
 }

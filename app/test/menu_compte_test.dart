@@ -201,6 +201,61 @@ void main() {
       return app;
     }
 
+    testWidgets(
+      '360 dp, texte à 200 %, hors ligne, 3 saisies : sans débordement',
+      (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final app = TestApp()..now = hm(12, 10);
+        await app.pump(tester, width: 360, height: 800);
+        app.signIn(avecPhoto, member: brewerMember, fromCache: true);
+        app.brews.publish([unBrassin(id: 'b1', brewedAt: hm(11, 45))]);
+        app.brews.publishEvents('b1', [
+          debut('e1', 'k-palier', hm(11, 45)),
+          for (var i = 0; i < 3; i++)
+            mesure(
+              'm$i',
+              'k-palier',
+              MeasureType.temperature,
+              66,
+              hm(12, i),
+              pending: true,
+            ),
+        ]);
+        await tester.pumpAndSettle();
+        app.container.read(routerProvider).go('/brassins/b1/jour');
+        await tester.pumpAndSettle();
+        expect(find.byType(BrewDayScreen), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        expect(find.byType(MenuCompte), findsOneWidget);
+      },
+    );
+
+    testWidgets('« Tickets à traiter » par push : l\'écran du jour reste', (
+      tester,
+    ) async {
+      final app = TestApp()..now = hm(12, 10);
+      await app.pump(tester, height: 900);
+      app.signIn(adminUser, member: adminMember);
+      app.tickets.publishAll(const []);
+      app.brews.publish([
+        unBrassin(id: 'b1', brewedAt: hm(11, 45), owner: 'uid-admin'),
+      ]);
+      app.brews.publishEvents('b1', [debut('e1', 'k-palier', hm(11, 45))]);
+      await tester.pumpAndSettle();
+      app.container.read(routerProvider).go('/brassins/b1/jour');
+      await tester.pumpAndSettle();
+      await ouvrirMenu(tester);
+      await tester.tap(entree('Tickets à traiter'));
+      await avancer(tester);
+      expect(
+        app.container.read(routerProvider).state.uri.path,
+        '/admin/tickets',
+      );
+      expect(find.byType(BrewDayScreen, skipOffstage: false), findsOneWidget);
+      expect(app.wakelockCalls.last, isTrue);
+    });
+
     testWidgets('initiale seule, aucune photo chargée', (tester) async {
       await jour(tester, events: [debut('e1', 'k-palier', hm(11, 45))]);
       expect(find.byType(BrewDayScreen), findsOneWidget);
