@@ -6,6 +6,53 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.49 — fonctionnel
+
+L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert
+pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres
+restent alignés d'une ligne à l'autre. Le médaillon du logo s'affiche à la connexion, au
+chargement, sur « Ce compte n'a pas accès » et en tête du menu sur grand écran. Le texte
+s'affiche dans la même police sur tous les appareils. Sur le web, l'application ne télécharge
+plus de police au démarrage, et les flèches s'affichent aussi sans réseau.
+
+Les listes de recettes, brassins, équipements, processus, tickets et l'accueil Admin ont la même
+ligne : une icône à gauche, le nom, les détails, puis les étiquettes. Les prix et les frais
+suivent la même ligne, sans icône. Le statut d'un brassin s'affiche dans une étiquette colorée. Une liste vide affiche un titre. Les titres de
+section se distinguent de leur contenu. Les messages d'erreur, d'avertissement et de succès
+s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le
+brassage », et chaque vérification prend la couleur de son état.
+
+### v0.1.49 — technique
+
+Revue visuelle de l'agent `ux-designer`, lots 1 à 3. Lot 1 : `app_theme.dart` construit la
+palette depuis quatre couleurs (couleurs principales en variante `fidelity`, conteneurs en
+variante `tonalSpot` pour qu'un bouton posé dessus garde son contraste), surfaces tirées du
+laiton, `ThemeExtension` `CouleursEtat` (succès), thèmes de barre, navigation, rail, cartes,
+champs, listes, puces, segments, séparateurs, `ExpansionTile` et bouton flottant ;
+`app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 sur 23 couples en clair et
+en sombre. Lot 2 : polices embarquées, sous SIL OFL 1.1, réduites par fonttools, chacune avec
+sa licence en asset (`OFL-Bitter.txt`, `OFL-Roboto.txt`, `OFL-NotoSansMath.txt`) : Bitter
+demi-grasse pour les titres, figée à la graisse 600 (38 736 octets) ; Roboto 400, 500, 700 et
+italique 400 pour le texte (56 Ko chacune, latin, latin étendu A, ponctuation, symboles), posée
+en `fontFamily` du thème : la famille « Roboto » du manifeste empêche le moteur web de la
+télécharger depuis `fonts.gstatic.com` au démarrage, et Windows ou macOS ne prennent plus Segoe UI
+ou SF ; `Symboles` (8 Ko, flèches et ⋮ tirés de Noto Sans Math) en `fontFamilyFallback` avec
+Roboto, pour les flèches de la chronologie du jour, du coût figé et de l'import, absentes de
+Roboto et de Bitter, que le web allait chercher dans une police Noto en ligne ; médaillon de 384 px en
+WebP (38 564 octets) tiré de `assets/Kassbeer_transparent.png` ; `MedaillonKassBeer` (48 px
+au moins) dans `logo_kass_beer.dart`, l'écran de panne au démarrage, `not_invited_screen.dart`
+et l'en-tête du rail étendu. Lot 3 : composants `LigneListe`, `Encadre`, `PageSecondaire` et
+`LigneTicket`, `TitreSection` à deux niveaux, `LigneFiche` en deux colonnes à partir de 600 px,
+`EtatVide` avec titre, constante `kMargeBoutonFlottant` ; `encadre_avertissement.dart` est
+supprimé ; tests dans `app/test/composants_test.dart`. Aucune dépendance changée ;
+`main.dart.js` (`flutter build web --release`) : 5 633 682 octets sur `main` à la v0.1.47 (code de
+`app/` inchangé à la v0.1.48),
+5 649 424 après (+ 15 742, dont 14 980 pour la déclaration des polices du texte et de secours) ;
+assets ajoutés : 325 546 octets (polices, licences et médaillon). APK de release compilé par
+le job « Android — compilation » de la CI (clé de signature absente du poste) ; APK de débogage
+compilé sur le poste. Corrections de la revue : « Tout est prêt » en `titleMedium` et annoncé,
+séparateurs à leur hauteur par défaut, ton neutre d'`Encadre` retiré faute d'usage.
+
 ### v0.1.48 — fonctionnel
 
 « Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran

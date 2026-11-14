@@ -10,14 +10,15 @@ import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../domain/ticket.dart';
 import 'admin_ticket_screen.dart';
 import 'bandeau_tickets_admin.dart';
+import 'ligne_ticket.dart';
 import 'section_lancements.dart';
 import 'section_livraison.dart';
-import 'ticket_statut.dart';
 import 'tickets_providers.dart';
 
 /// Filtre de la liste d'Admin › Tickets. Le choix n'est pas stocké.
@@ -413,16 +414,12 @@ class _Liste extends ConsumerWidget {
             onTap: () => onOpen(t.id),
           ),
         for (final d in invalid)
-          ListTile(
-            leading: Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            title: const Text('Ticket illisible'),
-            subtitle: const Text('Mettez l\'application à jour.'),
+          LigneListe(
+            icone: Icons.error_outline,
+            erreur: true,
+            titre: 'Ticket illisible',
+            details: const [Text('Mettez l\'application à jour.')],
             selected: d.id == selectedId,
-            selectedTileColor: Theme.of(context).colorScheme.secondaryContainer,
-            selectedColor: Theme.of(context).colorScheme.onSecondaryContainer,
             onTap: () => onOpen(d.id),
           ),
       ],
@@ -447,7 +444,6 @@ class _Ligne extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final created = ticket.createdAt;
     final number = ticket.issueNumber;
     final meta = [
@@ -455,38 +451,15 @@ class _Ligne extends StatelessWidget {
       auteurTicket(ticket, names),
       if (created != null) formatDateChiffres(created),
     ].join(' · ');
-    return ListTile(
-      leading: Semantics(
-        label: ticket.type.label,
-        child: ExcludeSemantics(
-          child: Icon(
-            ticketTypeIcon(ticket.type),
-            color: selected
-                ? scheme.onSecondaryContainer
-                : scheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-      title: Text(ticket.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(meta),
-            EtiquetteStatut(ticket: ticket),
-            ...pastillesAdmin(ticket, now),
-            PastilleLancement(ticket: ticket),
-            PastilleLivraison(ticket: ticket),
-          ],
-        ),
-      ),
+    return LigneTicket(
+      ticket: ticket,
+      details: meta,
+      pastilles: [
+        ...pastillesAdmin(ticket, now),
+        PastilleLancement(ticket: ticket),
+        PastilleLivraison(ticket: ticket),
+      ],
       selected: selected,
-      // Ligne choisie : même marquage que « Mes tickets ».
-      selectedTileColor: scheme.secondaryContainer,
-      selectedColor: scheme.onSecondaryContainer,
       onTap: onTap,
     );
   }

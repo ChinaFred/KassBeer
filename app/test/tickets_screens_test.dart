@@ -514,8 +514,17 @@ void main() {
       expect(find.text('07/11/26'), findsOneWidget);
       expect(find.text('En attente du réseau'), findsOneWidget);
       expect(find.text('Validé'), findsOneWidget);
+      // Pastille de non-lu lue avec la ligne du ticket validé.
       expect(
-        find.bySemanticsLabel(MyTicketsScreen.unreadLabel),
+        find.bySemanticsLabel(
+          RegExp(
+            'Récent[\\s\\S]*${RegExp.escape(MyTicketsScreen.unreadLabel)}',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp(MyTicketsScreen.unreadLabel)),
         findsOneWidget,
       );
       expect(find.text('Ticket illisible'), findsOneWidget);

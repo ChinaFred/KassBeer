@@ -263,6 +263,7 @@ class _Journee extends StatelessWidget {
             titre: titreJournee(journee, depart),
             storageKey: 'journee-$brewId-${journee.key}',
             resume: resume ?? resumeJourneeDeroulee(journee),
+            niveau: NiveauTitre.sousSection,
             children: [
               ?LigneDureeJournee.ou(duree),
               if (chronologie != null)

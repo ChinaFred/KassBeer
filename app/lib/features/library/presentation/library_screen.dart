@@ -9,6 +9,7 @@ import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -159,7 +160,6 @@ class _ChampRecherche extends StatelessWidget {
               labelText: label,
               helperText: helper,
               prefixIcon: const Icon(Icons.search),
-              border: const OutlineInputBorder(),
               suffixIcon: submit == null
                   ? null
                   : IconButton(
@@ -573,8 +573,8 @@ class _LigneRecette extends StatelessWidget {
   }
 }
 
-/// Ligne d'une liste : titre et détails, comme la liste des recettes.
-/// [erreur] : document illisible, sans action.
+/// Ligne d'une liste : titre et détails sur une ligne. [erreur] : document
+/// illisible, sans action.
 class _Ligne extends StatelessWidget {
   const _Ligne({
     required this.titre,
@@ -589,40 +589,11 @@ class _Ligne extends StatelessWidget {
   final bool erreur;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final content = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 56),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            if (erreur) ...[
-              Icon(Icons.error_outline, color: theme.colorScheme.error),
-              const SizedBox(width: 16),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(titre, style: theme.textTheme.titleMedium),
-                  if (details.isNotEmpty)
-                    Text(
-                      details.join(' · '),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    final tap = onTap;
-    return MergeSemantics(
-      child: tap == null ? content : InkWell(onTap: tap, child: content),
-    );
-  }
+  Widget build(BuildContext context) => LigneListe(
+    icone: erreur ? Icons.error_outline : null,
+    erreur: erreur,
+    titre: titre,
+    details: [if (details.isNotEmpty) Text(details.join(' · '))],
+    onTap: onTap,
+  );
 }

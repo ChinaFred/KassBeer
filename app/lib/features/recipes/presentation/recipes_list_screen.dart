@@ -7,6 +7,7 @@ import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -19,12 +20,13 @@ class RecipesListScreen extends ConsumerStatefulWidget {
   const RecipesListScreen({super.key});
 
   static const loadError = 'Impossible de lire les recettes.';
+  static const emptyTitle = 'Aucune recette';
+  static const mineEmptyTitle = 'Vous n\'avez pas encore de recette';
+
+  /// Message des deux états vides, sous [emptyTitle] ou [mineEmptyTitle].
   static const emptyMessage =
-      'Aucune recette. Appuyez sur Nouvelle recette pour commencer, ou '
-      'importez un fichier BeerXML ou BeerJSON.';
-  static const mineEmptyMessage =
-      'Vous n\'avez pas encore de recette. Appuyez sur Nouvelle recette pour '
-      'commencer, ou importez un fichier BeerXML ou BeerJSON.';
+      'Appuyez sur Nouvelle recette pour commencer, ou importez un fichier '
+      'BeerXML ou BeerJSON.';
   static String noMatch(String text) =>
       'Aucune recette ne correspond à « $text ».';
 
@@ -112,9 +114,10 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
       } else {
         empty = EtatVide(
           icon: Icons.menu_book_outlined,
-          message: _mineOnly
-              ? RecipesListScreen.mineEmptyMessage
-              : RecipesListScreen.emptyMessage,
+          titre: _mineOnly
+              ? RecipesListScreen.mineEmptyTitle
+              : RecipesListScreen.emptyTitle,
+          message: RecipesListScreen.emptyMessage,
           action: OutlinedButton.icon(
             onPressed: _import,
             icon: const Icon(Icons.upload_file),
@@ -125,7 +128,10 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
     }
 
     return ListView(
-      padding: EdgeInsets.only(top: 8, bottom: compact ? 96 : 24),
+      padding: EdgeInsets.only(
+        top: 8,
+        bottom: compact ? kMargeBoutonFlottant : 24,
+      ),
       children: [
         if (async.hasError)
           BandeauListePerimee(
@@ -154,7 +160,6 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Rechercher une recette',
                     prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -176,15 +181,15 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
         ?empty,
         for (final r in shown) _Row(recipe: r, readerUid: readerUid),
         for (final d in invalid)
-          ListTile(
-            leading: Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            title: const Text('Recette illisible'),
-            subtitle: const Text(
-              'Mettez l\'application à jour, ou prévenez l\'administrateur.',
-            ),
+          LigneListe(
+            icone: Icons.error_outline,
+            erreur: true,
+            titre: 'Recette illisible',
+            details: const [
+              Text(
+                'Mettez l\'application à jour, ou prévenez l\'administrateur.',
+              ),
+            ],
             onTap: () => context.go(AppRoutes.recipe(d.id)),
           ),
       ],
@@ -214,7 +219,6 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final c = recipe.content;
     final volume = c.batchVolumeL;
     final details = [
@@ -226,30 +230,15 @@ class _Row extends StatelessWidget {
         readerUid: readerUid,
       ),
     ].join(' · ');
-    return InkWell(
+    return LigneListe(
+      icone: Icons.menu_book_outlined,
+      titre: c.name,
+      details: [Text(details)],
+      etiquettes: [
+        if (recipe.hasPendingWrites)
+          const Etiquette(label: 'En attente du réseau'),
+      ],
       onTap: () => context.go(AppRoutes.recipe(recipe.id)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(c.name, style: theme.textTheme.titleMedium),
-              Text(
-                details,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              if (recipe.hasPendingWrites) ...[
-                const SizedBox(height: 8),
-                const Etiquette(label: 'En attente du réseau'),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

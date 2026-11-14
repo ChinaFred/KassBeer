@@ -12,7 +12,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/ecriture.dart';
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/etats.dart';
+import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/feuille_ou_dialogue.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/menu_compte.dart';
@@ -1044,7 +1046,10 @@ class _EcranJourState extends ConsumerState<_EcranJour>
                 _brew.recipe.name,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              ContenuRecette(content: _brew.recipe),
+              ContenuRecette(
+                content: _brew.recipe,
+                niveauTitres: NiveauTitre.sousSection,
+              ),
             ],
           ),
         ),
@@ -1413,20 +1418,12 @@ class _Jour extends StatelessWidget {
                     ValueListenableBuilder<bool>(
                       valueListenable: verrouRefuse,
                       builder: (context, refuse, _) => refuse
-                          ? Material(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.errorContainer,
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Text(
-                                  kVerrouRefuse,
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onErrorContainer,
-                                  ),
-                                ),
+                          ? const Padding(
+                              padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                              child: Encadre(
+                                ton: TonEncadre.erreur,
+                                icone: Icons.screen_lock_portrait_outlined,
+                                child: Text(kVerrouRefuse),
                               ),
                             )
                           : const SizedBox.shrink(),
@@ -1633,11 +1630,7 @@ class _Panneau extends StatelessWidget {
       ],
     );
     if (!depasse) return content;
-    return Material(
-      color: scheme.tertiaryContainer,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(padding: const EdgeInsets.all(12), child: content),
-    );
+    return Encadre(ton: TonEncadre.avertissement, child: content);
   }
 }
 

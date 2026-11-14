@@ -7,6 +7,17 @@ const double kCompactMaxWidth = 600;
 const double kExpandedMinWidth = 840;
 const double kContentMaxWidth = 840;
 
+/// Marge basse d'une liste ou d'une fiche sous un bouton flottant étendu : sa
+/// hauteur (56) et ses marges, pour que la dernière ligne reste visible.
+const double kMargeBoutonFlottant = 96;
+
+/// Part de la largeur donnée au libellé d'une ligne de fiche (`LigneFiche`) à
+/// partir de [kCompactMaxWidth] ; la valeur suit, alignée à gauche.
+const double kLibelleFicheFraction = 0.4;
+
+/// Hauteur minimale d'une ligne de liste (`LigneListe`).
+const double kLigneListeMinHeight = 64;
+
 /// Échelle du texte au-delà de laquelle une ligne de liste range ses étiquettes
 /// sous le titre au lieu de les mettre à droite (Admin › Rapports d'erreur) :
 /// au-delà de 130 %, le titre garderait trop peu de largeur.

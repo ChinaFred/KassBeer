@@ -8,6 +8,7 @@ import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/equipment.dart';
@@ -18,9 +19,9 @@ class EquipmentListScreen extends ConsumerWidget {
   const EquipmentListScreen({super.key});
 
   static const loadError = 'Impossible de lire les équipements.';
+  static const emptyTitle = 'Aucun équipement';
   static const emptyMessage =
-      'Aucun équipement. Appuyez sur Nouvel équipement pour décrire votre '
-      'installation.';
+      'Appuyez sur Nouvel équipement pour décrire votre installation.';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -88,7 +89,10 @@ class _List extends StatelessWidget {
     final items = list.valides..sort(compareEquipment(readerUid));
     final invalid = list.documents.whereType<DocumentInvalide<Equipment>>();
     return ListView(
-      padding: EdgeInsets.only(top: 8, bottom: compact ? 96 : 24),
+      padding: EdgeInsets.only(
+        top: 8,
+        bottom: compact ? kMargeBoutonFlottant : 24,
+      ),
       children: [
         if (stale) BandeauListePerimee(retrying: retrying, onRetry: onRetry),
         if (!compact)
@@ -106,23 +110,30 @@ class _List extends StatelessWidget {
         if (items.isEmpty && invalid.isEmpty)
           const EtatVide(
             icon: Icons.kitchen_outlined,
+            titre: EquipmentListScreen.emptyTitle,
             message: EquipmentListScreen.emptyMessage,
           ),
         for (final e in items) _Row(equipment: e, readerUid: readerUid),
         for (final d in invalid)
-          ListTile(
-            leading: Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            title: const Text('Équipement illisible'),
-            subtitle: const Text('Le document contient une valeur inattendue.'),
+          LigneListe(
+            icone: Icons.error_outline,
+            erreur: true,
+            titre: 'Équipement illisible',
+            details: const [
+              Text('Le document contient une valeur inattendue.'),
+            ],
             onTap: () => context.go(AppRoutes.equipmentItem(d.id)),
           ),
       ],
     );
   }
 }
+
+/// Repère d'un équipement dans la liste, selon son type.
+IconData _iconeEquipement(EquipmentKind kind) => switch (kind) {
+  EquipmentKind.multiVessel => Icons.view_week_outlined,
+  EquipmentKind.allInOne => Icons.coffee_maker_outlined,
+};
 
 class _Row extends StatelessWidget {
   const _Row({required this.equipment, required this.readerUid});
@@ -132,7 +143,6 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final c = equipment.content;
     final efficiency = c.mashEfficiencyPct;
     final details = [
@@ -146,30 +156,15 @@ class _Row extends StatelessWidget {
         readerUid: readerUid,
       ),
     ].join(' · ');
-    return InkWell(
+    return LigneListe(
+      icone: _iconeEquipement(c.kind),
+      titre: c.name,
+      details: [Text(details)],
+      etiquettes: [
+        if (equipment.hasPendingWrites)
+          const Etiquette(label: 'En attente du réseau'),
+      ],
       onTap: () => context.go(AppRoutes.equipmentItem(equipment.id)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(c.name, style: theme.textTheme.titleMedium),
-              Text(
-                details,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              if (equipment.hasPendingWrites) ...[
-                const SizedBox(height: 8),
-                const Etiquette(label: 'En attente du réseau'),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

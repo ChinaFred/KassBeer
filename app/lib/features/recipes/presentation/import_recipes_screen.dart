@@ -11,6 +11,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/fichiers/echange_fichiers.dart';
 import '../../../core/presentation/bandeau_hors_ligne.dart';
 import '../../../core/presentation/breakpoints.dart';
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
@@ -683,7 +684,6 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
       _centre(ListView(padding: const EdgeInsets.all(16), children: children));
 
   Widget _accueil(_Accueil etape) {
-    final theme = Theme.of(context);
     final erreur = etape.erreur;
     final Widget bouton;
     if (etape.reessayer) {
@@ -702,19 +702,11 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
     }
     return _colonne([
       if (erreur != null)
-        Semantics(
+        Encadre(
+          ton: TonEncadre.erreur,
+          icone: Icons.error_outline,
           liveRegion: true,
-          child: Material(
-            color: theme.colorScheme.errorContainer,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                erreur,
-                style: TextStyle(color: theme.colorScheme.onErrorContainer),
-              ),
-            ),
-          ),
+          child: Text(erreur),
         )
       else
         const Text(TextesImport.aide),
@@ -850,7 +842,6 @@ class _ImportRecipesScreenState extends ConsumerState<ImportRecipesScreen> {
           decoration: const InputDecoration(
             labelText: TextesImport.equipement,
             helperText: TextesImport.equipementAide,
-            border: OutlineInputBorder(),
           ),
           items: [
             const DropdownMenuItem(

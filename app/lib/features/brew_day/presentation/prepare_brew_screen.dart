@@ -7,12 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/breakpoints.dart';
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/page_document.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/services/screen_wakelock.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
@@ -409,9 +411,17 @@ extension on _PreparationState {
     if (_fromServer)
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'Tout est prêt. Vous pouvez couper le réseau.',
-          style: theme.textTheme.titleMedium,
+        // Confirmation principale de l'écran : annoncée, en titre.
+        child: Encadre(
+          ton: TonEncadre.succes,
+          icone: Icons.check_circle_outline,
+          liveRegion: true,
+          child: Builder(
+            builder: (context) => Text(
+              'Tout est prêt. Vous pouvez couper le réseau.',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
         ),
       ),
   ];
@@ -629,6 +639,18 @@ class _LigneVerif extends StatelessWidget {
   final String titre;
   final String detail;
 
+  /// Couleur de l'icône selon l'état qu'elle dit : fait, à surveiller, en
+  /// panne, ou simple information.
+  Color _couleur(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return switch (icon) {
+      Icons.check_circle_outline => CouleursEtat.of(context).succes,
+      Icons.warning_amber => scheme.tertiary,
+      Icons.error_outline => scheme.error,
+      _ => scheme.onSurfaceVariant,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -637,7 +659,7 @@ class _LigneVerif extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon),
+          Icon(icon, color: _couleur(context)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

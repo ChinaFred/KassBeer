@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/menu_compte.dart';
 import 'package:kass_beer/core/presentation/etiquette.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
@@ -698,15 +699,23 @@ void main() {
       final chip = tester.getRect(find.text('À traiter (2)'));
       final valider = tester.getRect(find.text('Valider'));
       expect(valider.left, greaterThan(chip.right));
-      final tile = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, 'Densité fausse'),
-      );
-      expect(tile.selected, isTrue);
+      final ligne = find.widgetWithText(LigneListe, 'Densité fausse');
+      expect(tester.widget<LigneListe>(ligne).selected, isTrue);
       expect(
-        tile.selectedTileColor,
+        tester
+            .widget<Material>(
+              find.descendant(of: ligne, matching: find.byType(Material)).first,
+            )
+            .color,
         Theme.of(
           tester.element(find.text('Valider')),
         ).colorScheme.secondaryContainer,
+      );
+      expect(
+        tester.getSemantics(
+          find.descendant(of: ligne, matching: find.text('Densité fausse')),
+        ),
+        isSemantics(isSelected: true, isButton: true, hasTapAction: true),
       );
       await tester.tap(find.text('Autre idée'));
       await tester.pumpAndSettle();
