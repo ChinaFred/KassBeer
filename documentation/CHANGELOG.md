@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.55 — fonctionnel
+### v0.1.56 — fonctionnel
 
 Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on
 le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » :
@@ -14,7 +14,7 @@ une recherche par code, nom ou catégorie, et tous les styles rangés par catég
 écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le
 style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49.
 
-### v0.1.55 — technique
+### v0.1.56 — technique
 
 `ChampBibliotheque` reçoit `choixDesStyles` (champ « Style » seul ; malts, houblons, ajouts et
 levures inchangés) et un quatrième argument `boutonListe` dans `fieldBuilder`. Nouveau
@@ -30,6 +30,51 @@ Bibliothèque » paraisse sur une recette existante sans focus ; états de la fe
 `breakpoints.dart` ; avertissement retenu pendant la frappe tant que le texte a des
 suggestions ; annonce « Style choisi » au lecteur d'écran ; curseur dans la recherche sur grand
 écran.
+
+### v0.1.55 — fonctionnel
+
+« Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple
+et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un
+nouveau processus prérempli ; rien n'est enregistré avant « Enregistrer ».
+
+Une courbe des températures accompagne le jour de brassage. Elle montre la température visée
+de chaque étape selon le plan de départ et selon les heures réelles, les températures et les
+densités mesurées, et la densité initiale prévue. Sur le téléphone, une bascule « Étapes » |
+« Courbe » l'affiche à la place de la chronologie ; sur grand écran, elle se place sous le
+minuteur. Sur la fiche du brassin, elle paraît en tête de la journée de brassage dès la
+première étape commencée. En paysage, sur un téléphone, la bascule garde le minuteur visible.
+
+La courbe de fermentation commence à la densité initiale du jour de brassage : un seul relevé
+suffit pour la voir. Elle montre aussi les densités initiale et finale prévues, et la plage de
+température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente
+de la Bibliothèque, ou sans plage, une ligne le dit.
+
+### v0.1.55 — technique
+
+`brewing/` : `brewDayTemperatureSeries` (`brew_day_curve.dart`) calcule les températures visées
+du plan de départ et recalculées, le retard et les débuts théoriques à partir de l'horaire de
+`recomputeSchedule` ; cas `brew_day_temperatures` et modèle `fiches` ajoutés d'abord à
+`brewing/test/fixtures/process.json`. Application : `modele_fiches.dart`, `modeles_a_copier.dart`
+(`ModeleACopier`, route `?modele=exemple|fiches`), section « Modèles à copier » de
+`process_list_screen.dart` ; « Partir du modèle d'exemple », `partirExemple` et
+`AppRoutes.newProcessFromExample` retirés (remplacés par `AppRoutes.newProcessFrom`).
+`courbe_brassage.dart` (`CourbeBrassage`, `donneesCourbeBrassage`, `resumeCourbeBrassage`),
+`ZoneChronologieCourbe` dans l'écran du jour (aussi en paysage bas), `TraceCourbeBrassage`,
+`LignePrevue` et `PlageTrace` dans `trace_courbe.dart`, seul import de `fl_chart` (P18) :
+graduations de densité rondes sur la grille, axe de droite sans libellés sous 200 px de tracé,
+info-bulle à distance euclidienne qui réunit les séries touchées. Légende partagée
+`legende_courbe.dart` (trait, disque, losange, aplat). `brewing/` : `gravityGapPoints` (cas
+`gravity_gap` de `gravity.json`) pour l'écart des densités prévues ; l'écart initial se compte
+sur la densité initiale retenue seule. `prevuDe` passe dans `brews/domain/prevu.dart`
+(`CalculsRecette.calculOuNul`), ce qui retire l'import circulaire entre
+`releve_fermentation.dart` et `prevu_et_mesure.dart`. Plage de la levure :
+`plage_levure.dart` (`plageLevureProvider`), résolution par le nom (`IndexBibliotheque.resoudre`)
+dans `beer_index/cultures`, puis `beer_cultures/{id}` par `get()` (P22) ; `lireFiche` reçoit
+`cacheSeul` pour le hors ligne. Lecture faite par la fiche seule ; le test « P2 » de
+`deroule_d4_test.dart` couvre les fichiers de la courbe du jour et refuse qu'ils lisent la
+Bibliothèque. Fiche : la courbe du jour ne paraît qu'après le premier début d'étape. « Mes
+processus » : « Modèles à copier » aussi sous une panne de lecture. Aucune écriture Firestore
+nouvelle, aucune règle changée, aucune dépendance changée.
 
 ### v0.1.54 — fonctionnel
 

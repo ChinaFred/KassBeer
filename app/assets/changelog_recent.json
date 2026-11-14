@@ -1,10 +1,19 @@
 {
   "versions": [
     {
-      "version": "0.1.55",
+      "version": "0.1.56",
       "date": "2026-11-14",
       "paragraphs": [
         "Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » : une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49."
+      ]
+    },
+    {
+      "version": "0.1.55",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "« Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un nouveau processus prérempli ; rien n'est enregistré avant « Enregistrer ».",
+        "Une courbe des températures accompagne le jour de brassage. Elle montre la température visée de chaque étape selon le plan de départ et selon les heures réelles, les températures et les densités mesurées, et la densité initiale prévue. Sur le téléphone, une bascule « Étapes » | « Courbe » l'affiche à la place de la chronologie ; sur grand écran, elle se place sous le minuteur. Sur la fiche du brassin, elle paraît en tête de la journée de brassage dès la première étape commencée. En paysage, sur un téléphone, la bascule garde le minuteur visible.",
+        "La courbe de fermentation commence à la densité initiale du jour de brassage : un seul relevé suffit pour la voir. Elle montre aussi les densités initiale et finale prévues, et la plage de température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente de la Bibliothèque, ou sans plage, une ligne le dit."
       ]
     },
     {
@@ -35,13 +44,6 @@
       "paragraphs": [
         "Les fiches d'une recette, d'un brassin, d'un équipement et d'un processus ont un en-tête avec le nom et ses étiquettes, puis des sections dans des cartes. Sur la fiche d'un brassin, la prochaine journée et son bouton sont en tête, dans une carte colorée. Les boutons suivent le même ordre partout : l'action principale en plein, « Modifier » en teinte, « Supprimer » en rouge. La liste des brassins est groupée : en cours, prévus, terminés et abandonnés. La recherche des recettes prend toute la largeur. Les listes vides de tickets, de prix et de membres ont un titre.",
         "Sur l'écran du jour, l'étape en cours est dans une carte, avec une barre qui montre le temps écoulé. Quand le temps est dépassé, la carte passe à l'ambre, avec un bord et une alarme. L'étape et l'heure de fin s'écrivent plus grand, pour se lire à deux mètres. Dans la chronologie, une étape faite est en vert et l'étape en cours en brun. Dans « Préparer le brassage », chaque vérification a l'icône et la couleur de son état, et le nom du brassin et sa date sont sur deux lignes."
-      ]
-    },
-    {
-      "version": "0.1.50",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur GitHub, au lieu de partir plus tard. Pendant l'action, la fiche affiche « … en cours sur GitHub. », puis un message court dit si c'est fait. En cas d'échec, le message dit pourquoi et le texte saisi est gardé. La boîte de Refuser et de Clore peut se fermer pendant l'envoi, et accepte maintenant 4 000 caractères. Ces actions demandent le réseau : hors ligne, les boutons restent visibles mais inactifs, avec « Ces actions demandent le réseau. ». L'historique des décisions d'un ticket reste affiché."
       ]
     }
   ]

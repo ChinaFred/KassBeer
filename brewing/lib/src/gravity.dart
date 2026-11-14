@@ -12,6 +12,14 @@ double sgToPoints(double sg) {
   return (sg - 1) * 1000;
 }
 
+/// Écart en points de [measured] sur [planned] : (mesurée − prévue) × 1000.
+/// 1.020 mesurée pour 1.012 prévue rend +8,0.
+///
+/// Lève [BrewingInputException] si une densité sort de [minGravity] à
+/// [maxGravity].
+double gravityGapPoints({required double measured, required double planned}) =>
+    sgToPoints(measured) - sgToPoints(planned);
+
 /// Convertit des points en densité SG décimale : 57.9 → 1.0579.
 ///
 /// C'est aussi la lecture de la colonne « Densité (1000 +) » des fiches (65 → 1.065).

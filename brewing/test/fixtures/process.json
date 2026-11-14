@@ -1,5 +1,5 @@
 {
-  "description": "Résolution d'un modèle de processus avec la recette figée d'un brassin, jour d'un houblon à cru et date d'une journée (ADR-010). Le paquet rend des brouillons sans clé ni libellé : chaque étape est « origine:indice ». template : place de l'élément dans la journée du modèle ; recipe_step : place dans brew_steps (clé gardée) ; prefill : place dans le préremplissage defaultBrewSteps ; dry_hop et packaging_hop : place dans hops ; packaging_other : place dans les ajouts. Noms et durées des étapes du modèle ne servent pas au calcul : ils documentent le cas, et le modèle « exemple » est relu par le test de l'application (modèle d'exemple, constante du domaine processes/).",
+  "description": "Résolution d'un modèle de processus avec la recette figée d'un brassin, jour d'un houblon à cru et date d'une journée (ADR-010). Le paquet rend des brouillons sans clé ni libellé : chaque étape est « origine:indice ». template : place de l'élément dans la journée du modèle ; recipe_step : place dans brew_steps (clé gardée) ; prefill : place dans le préremplissage defaultBrewSteps ; dry_hop et packaging_hop : place dans hops ; packaging_other : place dans les ajouts. Noms et durées des étapes du modèle ne servent pas au calcul : ils documentent le cas, et les modèles « exemple » et « fiches » sont relus par le test de l'application (modèles à copier, constantes du domaine processes/).",
   "rule": "Un bloc recipe_steps reçoit brew_steps, ou à défaut le préremplissage sans les étapes sans durée ; dry_hops reçoit un houblon à cru par étape, dans l'ordre de la recette ; packaging_additions reçoit les houblons au conditionnement puis les ajouts au conditionnement. Un bloc vide disparaît, et sa journée aussi si elle porte requires_recipe_block. Un houblon à cru qui a un jour d'ajout (day_minutes) tombe à J+round(day_minutes / 1440) ; sans jour, à l'écart du modèle. Une journée de houblonnage par jour distinct (rang 1, 2… s'il y en a plusieurs) ; écart de source recipe, sauf si un de ses houblons n'a pas de jour (template). Au-delà de 5 journées, les jours de houblonnage les plus tardifs se regroupent dans le premier jour regroupé. Tri par écart, à égalité dans l'ordre du modèle, la journée de brassage en tête (processSessionOrder, cas session_orders : il sert aussi au changement de date d'une journée sur le brassin). Date d'une journée : jour calendaire local du départ plus l'écart, à minuit, inverse de fermentationDayNumber.",
   "templates": {
     "exemple": {
@@ -84,6 +84,56 @@
         }
       ]
     },
+    "fiches": {
+      "name": "Plan de brassage des fiches",
+      "notes": "Tiré du plan de brassage des fiches Excel. Durées et températures à ajuster.",
+      "sessions": [
+        {
+          "name": "Brassage",
+          "offset_days": 0,
+          "items": [
+            { "kind": "step", "name": "Mise en place et nettoyage du matériel et de l'espace de travail", "duration_min": 30 },
+            { "kind": "step", "name": "Remplissage de la cuve", "duration_min": 10, "temp_c": 16 },
+            { "kind": "step", "name": "Correction de l'eau (sel et acide)", "duration_min": 5 },
+            { "kind": "step", "name": "Chauffe de l'eau et concassage des malts", "duration_min": 15, "temp_c": 68 },
+            { "kind": "recipe_steps" },
+            { "kind": "step", "name": "Début du refroidissement", "duration_min": 40, "temp_c": 100 },
+            { "kind": "step", "name": "Fin du refroidissement", "duration_min": 0, "temp_c": 25 },
+            { "kind": "step", "name": "Whirlpool", "duration_min": 5 },
+            { "kind": "step", "name": "Mesure de la densité initiale", "duration_min": 5 },
+            { "kind": "step", "name": "Transvasement dans la cuve de fermentation", "duration_min": 5 },
+            { "kind": "step", "name": "Ajout des levures", "duration_min": 2 },
+            { "kind": "step", "name": "Stockage en cave", "duration_min": 5 },
+            { "kind": "step", "name": "Nettoyage", "duration_min": 20 },
+            { "kind": "step", "name": "Rangement", "duration_min": 10 }
+          ]
+        },
+        {
+          "name": "Houblonnage à cru",
+          "offset_days": 4,
+          "requires_recipe_block": true,
+          "items": [
+            { "kind": "step", "name": "Désinfection du matériel", "duration_min": 10 },
+            { "kind": "step", "name": "Mesure de densité", "duration_min": 5 },
+            { "kind": "dry_hops" },
+            { "kind": "step", "name": "Nettoyage", "duration_min": 10 }
+          ]
+        },
+        {
+          "name": "Embouteillage",
+          "offset_days": 14,
+          "items": [
+            { "kind": "step", "name": "Lavage des bouteilles", "duration_min": 60 },
+            { "kind": "step", "name": "Désinfection des bouteilles et du matériel", "duration_min": 30 },
+            { "kind": "step", "name": "Préparation du sucre de resucrage", "duration_min": 15 },
+            { "kind": "step", "name": "Transfert en cuve d'embouteillage", "duration_min": 15 },
+            { "kind": "packaging_additions" },
+            { "kind": "step", "name": "Mise en bouteilles et capsulage", "duration_min": 60 },
+            { "kind": "step", "name": "Nettoyage et rangement", "duration_min": 30 }
+          ]
+        }
+      ]
+    },
     "brassage-seul": {
       "name": "Brassage seul",
       "sessions": [
@@ -100,6 +150,25 @@
     }
   },
   "cases": [
+    {
+      "id": "fiches-sans-houblon-a-cru",
+      "note": "Plan de brassage des fiches, recette de trois étapes sans houblon à cru ni ajout au conditionnement : la journée de houblonnage est retirée, l'embouteillage gardé sans son bloc.",
+      "template": "fiches",
+      "recipe": { "brew_step_count": 3, "hops": [{ "name": "Magnum", "mass_grams": 30, "use": "boil", "minutes": 60 }] },
+      "expected": {
+        "sessions": [
+          {
+            "template_session": 0, "offset_days": 0, "offset_source": "template", "role": "brew",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "recipe_step:0", "recipe_step:1", "recipe_step:2", "template:5", "template:6", "template:7", "template:8", "template:9", "template:10", "template:11", "template:12", "template:13"]
+          },
+          {
+            "template_session": 2, "offset_days": 14, "offset_source": "template", "role": "packaging",
+            "steps": ["template:0", "template:1", "template:2", "template:3", "template:5", "template:6"]
+          }
+        ],
+        "warnings": []
+      }
+    },
     {
       "id": "exemple-sans-houblon-a-cru",
       "note": "Modèle d'exemple, recette sans houblon à cru ni ajout au conditionnement : la journée de houblonnage (requires_recipe_block) est retirée ; l'embouteillage est gardé, son bloc retiré.",
@@ -1045,6 +1114,110 @@
           "day": { "kind": "none", "planned": 15, "without_end": 0 }
         }
       }
+    ]
+  },
+  "brew_day_temperatures": {
+    "rule": "Courbe du jour de brassage (brewDayTemperatureSeries). Les événements se réduisent par stepRecordsFromEvents, l'horaire par recomputeSchedule depuis planned_start. Origine : plus ancien début d'une étape faite ou en cours. Plan de départ : chaque étape commence à l'origine plus les durées prévues des étapes précédentes. Visée recalculée : début et fin de recomputeSchedule ; étape sautée ou non faite : aucun point. Une étape qui a une température donne deux points (début, fin), un seul pour 0 min ; les étapes qui se suivent avec une température forment un tracé (rampe de la fin de l'une au début de l'autre) ; une étape sans température, sautée ou non faite, ou qui commence avant le dernier point, interrompt le tracé. Retard : fin recalculée la plus tardive moins la fin du plan de départ, jamais négatif. step : place de l'étape ; planned et recomputed : un tableau par tracé.",
+    "cases": [
+      {
+        "id": "retard-et-etape-en-cours",
+        "note": "Mise en place finie 10 min en retard, palier commencé à 11:00 et en cours : le palier suivant et le nettoyage sont décalés de 20 min.",
+        "planned_start": "2026-11-21T09:00:00+01:00",
+        "now": "2026-11-21T11:30:00+01:00",
+        "steps": [
+          { "id": "mise", "planned_minutes": 30 },
+          { "id": "remplissage", "planned_minutes": 10, "temp_c": 16 },
+          { "id": "palier-1", "planned_minutes": 60, "temp_c": 66 },
+          { "id": "palier-2", "planned_minutes": 10, "temp_c": 72 },
+          { "id": "nettoyage", "planned_minutes": 20 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "mise", "at": "2026-11-21T10:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "mise", "at": "2026-11-21T10:40:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "remplissage", "at": "2026-11-21T10:40:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "remplissage", "at": "2026-11-21T10:55:00+01:00" },
+          { "id": "e5", "kind": "step_started", "step": "palier-1", "at": "2026-11-21T11:00:00+01:00" }
+        ],
+        "expected": {
+          "origin": "2026-11-21T10:00:00+01:00",
+          "planned_starts": ["2026-11-21T10:00:00+01:00", "2026-11-21T10:30:00+01:00", "2026-11-21T10:40:00+01:00", "2026-11-21T11:40:00+01:00", "2026-11-21T11:50:00+01:00"],
+          "planned": [[{ "at": "2026-11-21T10:30:00+01:00", "celsius": 16, "step": 1 }, { "at": "2026-11-21T10:40:00+01:00", "celsius": 16, "step": 1 }, { "at": "2026-11-21T10:40:00+01:00", "celsius": 66, "step": 2 }, { "at": "2026-11-21T11:40:00+01:00", "celsius": 66, "step": 2 }, { "at": "2026-11-21T11:40:00+01:00", "celsius": 72, "step": 3 }, { "at": "2026-11-21T11:50:00+01:00", "celsius": 72, "step": 3 }]],
+          "recomputed": [[{ "at": "2026-11-21T10:40:00+01:00", "celsius": 16, "step": 1 }, { "at": "2026-11-21T10:55:00+01:00", "celsius": 16, "step": 1 }, { "at": "2026-11-21T11:00:00+01:00", "celsius": 66, "step": 2 }, { "at": "2026-11-21T12:00:00+01:00", "celsius": 66, "step": 2 }, { "at": "2026-11-21T12:00:00+01:00", "celsius": 72, "step": 3 }, { "at": "2026-11-21T12:10:00+01:00", "celsius": 72, "step": 3 }]],
+          "delay_minutes": 20
+        }
+      },
+      {
+        "id": "etape-sautee-et-zero-minute",
+        "note": "L'étape sautée n'a aucun point et coupe le tracé recalculé ; l'étape de 0 min donne un point, relié par une rampe à l'étape suivante.",
+        "planned_start": "2026-11-21T08:00:00+01:00",
+        "now": "2026-11-21T08:20:00+01:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 10, "temp_c": 50 },
+          { "id": "b", "planned_minutes": 5, "temp_c": 60 },
+          { "id": "c", "planned_minutes": 0, "temp_c": 100 },
+          { "id": "d", "planned_minutes": 15, "temp_c": 25 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T08:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T08:10:00+01:00" },
+          { "id": "e3", "kind": "step_skipped", "step": "b", "at": "2026-11-21T08:10:00+01:00" },
+          { "id": "e4", "kind": "step_started", "step": "c", "at": "2026-11-21T08:12:00+01:00" },
+          { "id": "e5", "kind": "step_ended", "step": "c", "at": "2026-11-21T08:12:00+01:00" }
+        ],
+        "expected": {
+          "origin": "2026-11-21T08:00:00+01:00",
+          "planned_starts": ["2026-11-21T08:00:00+01:00", "2026-11-21T08:10:00+01:00", "2026-11-21T08:15:00+01:00", "2026-11-21T08:15:00+01:00"],
+          "planned": [[{ "at": "2026-11-21T08:00:00+01:00", "celsius": 50, "step": 0 }, { "at": "2026-11-21T08:10:00+01:00", "celsius": 50, "step": 0 }, { "at": "2026-11-21T08:10:00+01:00", "celsius": 60, "step": 1 }, { "at": "2026-11-21T08:15:00+01:00", "celsius": 60, "step": 1 }, { "at": "2026-11-21T08:15:00+01:00", "celsius": 100, "step": 2 }, { "at": "2026-11-21T08:15:00+01:00", "celsius": 25, "step": 3 }, { "at": "2026-11-21T08:30:00+01:00", "celsius": 25, "step": 3 }]],
+          "recomputed": [[{ "at": "2026-11-21T08:00:00+01:00", "celsius": 50, "step": 0 }, { "at": "2026-11-21T08:10:00+01:00", "celsius": 50, "step": 0 }], [{ "at": "2026-11-21T08:12:00+01:00", "celsius": 100, "step": 2 }, { "at": "2026-11-21T08:20:00+01:00", "celsius": 25, "step": 3 }, { "at": "2026-11-21T08:35:00+01:00", "celsius": 25, "step": 3 }]],
+          "delay_minutes": 5
+        }
+      },
+      {
+        "id": "avant-le-premier-debut",
+        "note": "Aucune étape commencée : pas d'origine, pas de plan de départ ni de retard ; la visée recalculée part de planned_start. L'étape sans température n'a aucun point.",
+        "planned_start": "2026-11-21T09:00:00+01:00",
+        "now": "2026-11-21T08:00:00+01:00",
+        "steps": [
+          { "id": "x", "planned_minutes": 10, "temp_c": 20 },
+          { "id": "y", "planned_minutes": 10 }
+        ],
+        "events": [],
+        "expected": {
+          "origin": null,
+          "planned_starts": null,
+          "planned": [],
+          "recomputed": [[{ "at": "2026-11-21T09:00:00+01:00", "celsius": 20, "step": 0 }, { "at": "2026-11-21T09:10:00+01:00", "celsius": 20, "step": 0 }]],
+          "delay_minutes": null
+        }
+      },
+      {
+        "id": "etapes-faites-dans-le-desordre",
+        "note": "La seconde étape est faite avant la première : le tracé recalculé s'interrompt plutôt que de revenir en arrière. Le retard se compte sur la fin la plus tardive.",
+        "planned_start": "2026-11-21T09:00:00+01:00",
+        "now": "2026-11-21T09:40:00+01:00",
+        "steps": [
+          { "id": "p", "planned_minutes": 10, "temp_c": 60 },
+          { "id": "q", "planned_minutes": 10, "temp_c": 70 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "q", "at": "2026-11-21T09:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "q", "at": "2026-11-21T09:10:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "p", "at": "2026-11-21T09:20:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "p", "at": "2026-11-21T09:30:00+01:00" }
+        ],
+        "expected": {
+          "origin": "2026-11-21T09:00:00+01:00",
+          "planned_starts": ["2026-11-21T09:00:00+01:00", "2026-11-21T09:10:00+01:00"],
+          "planned": [[{ "at": "2026-11-21T09:00:00+01:00", "celsius": 60, "step": 0 }, { "at": "2026-11-21T09:10:00+01:00", "celsius": 60, "step": 0 }, { "at": "2026-11-21T09:10:00+01:00", "celsius": 70, "step": 1 }, { "at": "2026-11-21T09:20:00+01:00", "celsius": 70, "step": 1 }]],
+          "recomputed": [[{ "at": "2026-11-21T09:20:00+01:00", "celsius": 60, "step": 0 }, { "at": "2026-11-21T09:30:00+01:00", "celsius": 60, "step": 0 }], [{ "at": "2026-11-21T09:00:00+01:00", "celsius": 70, "step": 1 }, { "at": "2026-11-21T09:10:00+01:00", "celsius": 70, "step": 1 }]],
+          "delay_minutes": 10
+        }
+      }
+    ],
+    "invalid": [
+      { "id": "temperatures-trop-courtes", "steps": ["a", "b"], "temps": [60], "schedule": ["a", "b"] },
+      { "id": "horaire-trop-court", "steps": ["a", "b"], "temps": [60, null], "schedule": ["a"] },
+      { "id": "horaire-dans-un-autre-ordre", "steps": ["a", "b"], "temps": [60, null], "schedule": ["b", "a"] }
     ]
   },
   "duration_updates": {
