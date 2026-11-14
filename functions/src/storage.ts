@@ -6,6 +6,7 @@
 
 import type * as AdminStorage from "firebase-admin/storage";
 
+import { ensureDefaultApp } from "./adminApp";
 import { STORAGE_BUCKET } from "./config";
 
 /** Ce que `attachTicketScreenshot` lit d'un fichier du bucket. */
@@ -30,8 +31,7 @@ async function screenshotBucket(): Promise<ReturnType<AdminStorage.Storage["buck
   if (bucket !== null) return bucket;
   const app = await import("firebase-admin/app");
   const st = await import("firebase-admin/storage");
-  // Aucun `await` entre le test et l'initialisation : une seule application.
-  if (app.getApps().length === 0) app.initializeApp();
+  ensureDefaultApp(app);
   bucket = st.getStorage().bucket(STORAGE_BUCKET);
   return bucket;
 }

@@ -6,6 +6,22 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.48 — fonctionnel
+
+« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran
+Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou
+« Journaux indisponibles pour l'instant ».
+
+### v0.1.48 — technique
+
+Chaque callable échouait en 500 sans détail (`app/no-app`, journaux du 2026-11-14) :
+`firebase-functions` crée son application nommée `__FIREBASE_FUNCTIONS_SDK__` pour vérifier
+le jeton avant le code de la fonction, et `firestore.ts` comme `storage.ts` ne créaient
+l'application par défaut que si `getApps()` était vide. `src/adminApp.ts`
+(`ensureDefaultApp`) la crée si aucune application `[DEFAULT]` n'existe ; test
+`functions/test/adminApp.test.ts`. Les déclencheurs n'étaient pas touchés. Aucun paquet ne
+change.
+
 ### v0.1.47 — fonctionnel
 
 Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle

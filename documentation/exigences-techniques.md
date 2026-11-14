@@ -2910,7 +2910,9 @@ aussi `GITHUB_WEBHOOK_SECRET`, et lui seul ; `launchTicketAnalysis` lit aussi
 `TICKETS_ROUTINE_DEV_TOKEN`, et elles seules (P25) : la livraison part par la routine de
 développement, aucun secret `TICKETS_ROUTINE_DELIVERY_*`. Chaque callable ne monte que les
 secrets de sa routine. App Check n'est pas exigé (ADR-008). `src/firestore.ts` charge le
-SDK Admin au premier appel ; le client GitHub (`src/tickets/github.ts`, `fetch`, aucun SDK)
+SDK Admin au premier appel et crée l'application par défaut si aucune application `[DEFAULT]`
+n'existe (`src/adminApp.ts`, `ensureDefaultApp`, partagé avec `src/storage.ts`) : pour une
+callable, `firebase-functions` a déjà créé son application nommée ; le client GitHub (`src/tickets/github.ts`, `fetch`, aucun SDK)
 se construit à l'appel avec le jeton (P26). `src/logging.ts` journalise par
 `firebase-functions/logger` (`logError` dans chaque `catch`) et retire tout ce qui a la forme
 d'un jeton GitHub. Les règles pures (`src/tickets/model.ts`, `src/tickets/text.ts`,
