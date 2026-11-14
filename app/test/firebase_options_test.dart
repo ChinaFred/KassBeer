@@ -32,6 +32,27 @@ void main() {
     expect(() => _empty.options(web: true), throwsStateError);
   });
 
+  test('bucket des captures nommé sur les deux plateformes', () {
+    const env = FirebaseEnv(
+      projectId: 'demo-kassbeer',
+      messagingSenderId: '1',
+      webApiKey: 'k',
+      webAppId: 'w',
+      authDomain: 'demo-kassbeer.firebaseapp.com',
+      androidApiKey: 'a',
+      androidAppId: 'b',
+      googleServerClientId: 'c',
+    );
+    expect(
+      env.options(web: true).storageBucket,
+      'demo-kassbeer.firebasestorage.app',
+    );
+    expect(
+      env.options(web: false).storageBucket,
+      'demo-kassbeer.firebasestorage.app',
+    );
+  });
+
   test('les tests compilent sans --dart-define : configuration absente', () {
     expect(FirebaseEnv.fromEnvironment().missingKeys(web: true), isNotEmpty);
   });

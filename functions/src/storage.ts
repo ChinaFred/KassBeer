@@ -1,10 +1,12 @@
 /**
- * Accès au bucket Cloud Storage par défaut, par le SDK Admin, chargé au premier usage et
+ * Accès au bucket Cloud Storage des captures (`STORAGE_BUCKET`), par le SDK Admin, chargé au premier usage et
  * mémorisé (ADR-008, T6, P26). Comme `firestore.ts` : la découverte des fonctions au
  * déploiement charge `index.js` sans ouvrir de client.
  */
 
 import type * as AdminStorage from "firebase-admin/storage";
+
+import { STORAGE_BUCKET } from "./config";
 
 /** Ce que `attachTicketScreenshot` lit d'un fichier du bucket. */
 export interface StoredFile {
@@ -24,20 +26,20 @@ export interface ScreenshotStore {
 
 let bucket: ReturnType<AdminStorage.Storage["bucket"]> | null = null;
 
-async function defaultBucket(): Promise<ReturnType<AdminStorage.Storage["bucket"]>> {
+async function screenshotBucket(): Promise<ReturnType<AdminStorage.Storage["bucket"]>> {
   if (bucket !== null) return bucket;
   const app = await import("firebase-admin/app");
   const st = await import("firebase-admin/storage");
   // Aucun `await` entre le test et l'initialisation : une seule application.
   if (app.getApps().length === 0) app.initializeApp();
-  bucket = st.getStorage().bucket();
+  bucket = st.getStorage().bucket(STORAGE_BUCKET);
   return bucket;
 }
 
-/** Le bucket par défaut du projet. Un chargement en échec lève et n'est pas mémorisé. */
+/** Le bucket des captures. Un chargement en échec lève et n'est pas mémorisé. */
 export const storageScreenshotStore: ScreenshotStore = {
   async stat(path) {
-    const file = (await defaultBucket()).file(path);
+    const file = (await screenshotBucket()).file(path);
     const [exists] = await file.exists();
     if (!exists) return { exists: false, size: Number.NaN, contentType: "" };
     const [metadata] = await file.getMetadata();
@@ -51,7 +53,7 @@ export const storageScreenshotStore: ScreenshotStore = {
     };
   },
   async head(path, count) {
-    const file = (await defaultBucket()).file(path);
+    const file = (await screenshotBucket()).file(path);
     const [bytes] = await file.download({ start: 0, end: count - 1 });
     return new Uint8Array(bytes);
   },
