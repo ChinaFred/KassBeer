@@ -6,8 +6,10 @@
  * `launchTicketDevelopment` (`mode: "start"` ou `"resume"`) et `launchTicketDelivery` après
  * `requireAdmin`.
  * Copie de `functions/src/tickets/launch.ts` de Kass'Dalle, adaptée : bail des décisions de
- * Kass'Beer (`decision_lease_until`), plafond `LAUNCHES_PER_DAY` de `config.ts`, pas de
- * compte fondateur, pas de type Question, règle « en cours » réduite à `retry_after`.
+ * Kass'Beer (`decision_lease_until`), plafond `LAUNCHES_PER_DAY` de `config.ts`, compte
+ * fondateur reconnu par `members/{email}.founder` (jamais par un e-mail écrit dans le code,
+ * P15) et compté à part (`FOUNDER_LAUNCHES_PER_DAY`), pas de type Question, règle « en
+ * cours » réduite à `retry_after`.
  *
  * Dans l'ordre :
  *  1. secrets de la routine présents et identifiant bien formé, sinon « Lancement non
@@ -21,8 +23,9 @@
  *     runs de la CI relus sur GitHub (état écrit dans `admin/delivery`), une seule PR
  *     éligible, aucun fichier sensible, CI verte ; puis verrou global des livraisons
  *     (`delivery_running`, P44) ;
- *  3. plafond du jour (P36) : transaction sur `ticket_quotas/launch_{AAAAMMJJ}` et
- *     `ticket_status/launches` ; refus au plafond ;
+ *  3. plafond du jour (P36) : transaction sur `ticket_quotas/launch_{AAAAMMJJ}` (ou
+ *     `launch_founder_{AAAAMMJJ}` pour le fondateur) et `ticket_status/launches` ; refus au
+ *     plafond du compteur de l'appelant ;
  *  4. Issue relue sur GitHub : fermée, ou étiquettes qui donnent un autre statut → l'état
  *     relu est appliqué, rien n'est lancé ;
  *  5. entrée d'historique écrite `unknown` AVANT l'appel : une fonction coupée pendant
@@ -49,7 +52,6 @@ import {
   COLL_TICKET_STATUS,
   COLL_TICKETS,
   LAUNCH_COST_CENTER,
-  LAUNCHES_PER_DAY,
   QUOTA_TTL_DAYS,
   TICKET_ADMIN_SUBCOLLECTION,
   TICKET_LAUNCHES_DOC,
@@ -90,6 +92,8 @@ import {
   closeRunningEntries,
   launchCommandText,
   launchFitsQuota,
+  launchLimitOf,
+  launchPoolOf,
   launchPrecondition,
   launchQuotaDocId,
   launchQuotaMessage,
@@ -101,6 +105,7 @@ import {
   runningLaunch,
   type LaunchAction,
   type LaunchEntryView,
+  type LaunchPool,
 } from "./launchModel";
 import { parisDay, statusFromIssue, type IssueView } from "./model";
 import {
@@ -253,6 +258,8 @@ interface Ctx {
   log: Logger;
   ticketId: string;
   action: LaunchAction;
+  /** Compteur du jour de l'appelant. */
+  pool: LaunchPool;
 }
 
 function base(ctx: Ctx, message: string, extra: LogEntry["extra"] = {}): LogEntry {
@@ -260,7 +267,7 @@ function base(ctx: Ctx, message: string, extra: LogEntry["extra"] = {}): LogEntr
     message,
     feature: "tickets",
     ticketId: ctx.ticketId,
-    extra: { action: ctx.action, cost_center: LAUNCH_COST_CENTER, ...extra },
+    extra: { action: ctx.action, cost_center: LAUNCH_COST_CENTER, pool: ctx.pool, ...extra },
   };
 }
 
@@ -278,8 +285,8 @@ function statusRef(kit: FirestoreKit) {
   return kit.db.collection(COLL_TICKET_STATUS).doc(TICKET_STATUS_LAUNCHES_DOC);
 }
 
-function quotaRef(kit: FirestoreKit, day: string) {
-  return kit.db.collection(COLL_TICKET_QUOTAS).doc(launchQuotaDocId(day));
+function quotaRef(kit: FirestoreKit, day: string, pool: LaunchPool = "group") {
+  return kit.db.collection(COLL_TICKET_QUOTAS).doc(launchQuotaDocId(day, pool));
 }
 
 /** Les entrées brutes de l'historique (objets seuls). */
@@ -396,19 +403,18 @@ async function releaseLease(ctx: Ctx, leaseUntilMs: number): Promise<void> {
 
 /**
  * Étape 3 : compte le lancement si le plafond le permet, en transaction : compteur du jour
- * et `ticket_status/launches`. Lève `resource-exhausted` au plafond.
+ * de l'appelant et `ticket_status/launches`. Lève `resource-exhausted` au plafond.
  */
 async function reserveLaunch(ctx: Ctx, day: string): Promise<void> {
   const { db, Timestamp } = ctx.kit;
-  const qRef = quotaRef(ctx.kit, day);
+  const qRef = quotaRef(ctx.kit, day, ctx.pool);
   const sRef = statusRef(ctx.kit);
+  const limit = launchLimitOf(ctx.pool);
   await db.runTransaction(async (tx) => {
     const [quota, status] = await Promise.all([tx.get(qRef), tx.get(sRef)]);
     const count = readLaunchCount(quota.get("count"));
-    if (!launchFitsQuota(count, LAUNCHES_PER_DAY)) {
-      throw refusal("resource-exhausted", launchQuotaMessage(LAUNCHES_PER_DAY), "quota_exceeded", {
-        limit: LAUNCHES_PER_DAY,
-      });
+    if (!launchFitsQuota(count, limit)) {
+      throw refusal("resource-exhausted", launchQuotaMessage(limit), "quota_exceeded", { limit });
     }
     tx.set(
       qRef,
@@ -419,14 +425,16 @@ async function reserveLaunch(ctx: Ctx, day: string): Promise<void> {
       },
       { merge: true },
     );
-    tx.set(sRef, nextLaunchStatus(status.data() ?? {}, day, count + 1, 1), { merge: true });
+    tx.set(sRef, nextLaunchStatus(status.data() ?? {}, day, count + 1, 1, ctx.pool), {
+      merge: true,
+    });
   });
 }
 
 /** Rend un lancement compté qui n'est pas parti. Au mieux, journalisé. */
 async function releaseLaunch(ctx: Ctx, day: string): Promise<void> {
   const { db } = ctx.kit;
-  const qRef = quotaRef(ctx.kit, day);
+  const qRef = quotaRef(ctx.kit, day, ctx.pool);
   const sRef = statusRef(ctx.kit);
   try {
     await db.runTransaction(async (tx) => {
@@ -434,7 +442,9 @@ async function releaseLaunch(ctx: Ctx, day: string): Promise<void> {
       const count = readLaunchCount(quota.get("count"));
       const next = Math.max(0, count - 1);
       if (quota.exists) tx.update(qRef, { count: next });
-      tx.set(sRef, nextLaunchStatus(status.data() ?? {}, day, next, -1), { merge: true });
+      tx.set(sRef, nextLaunchStatus(status.data() ?? {}, day, next, -1, ctx.pool), {
+        merge: true,
+      });
     });
   } catch (err) {
     ctx.log("error", {
@@ -630,13 +640,14 @@ async function checkIssue(ctx: Ctx, issueNumber: number, deps: LaunchDeps): Prom
 /**
  * Lance la routine de `action` sur le ticket. Rend `launched` ou `unknown` ; lève une
  * `HttpsError` (motif dans `details.reason`, code stable dans `details.code`) pour tout
- * refus.
+ * refus. `pool` : compteur du jour de l'appelant (`launchPoolOf`, d'après `requireAdmin`).
  */
 export async function launchTicketSession(
   ticketId: string,
   action: LaunchAction,
   uid: string,
   deps: LaunchDeps,
+  pool: LaunchPool = "group",
 ): Promise<LaunchResult> {
   const kit = await (deps.kit ?? firestore)();
   const ctx: Ctx = {
@@ -645,6 +656,7 @@ export async function launchTicketSession(
     log: deps.log ?? defaultLogger,
     ticketId,
     action,
+    pool,
   };
 
   // 1. Routine configurée, sinon rien compté, rien envoyé.
@@ -841,11 +853,11 @@ export async function handleLaunchCall(
   actionOf: LaunchAction | ((data: unknown) => LaunchAction),
   deps: LaunchDeps & { lookup?: MemberLookup },
 ): Promise<LaunchResult> {
-  const { uid } = await requireAdmin(req, deps.lookup);
+  const { uid, founder } = await requireAdmin(req, deps.lookup);
   const action = typeof actionOf === "function" ? actionOf(req.data) : actionOf;
   const ticketId = readTicketIdArg(req.data);
   try {
-    return await launchTicketSession(ticketId, action, uid, deps);
+    return await launchTicketSession(ticketId, action, uid, deps, launchPoolOf(founder));
   } catch (err) {
     if (err instanceof HttpsError) throw err;
     (deps.log ?? defaultLogger)("error", {
@@ -895,9 +907,10 @@ export async function closeRunningLaunches(
 }
 
 /**
- * Passe horaire : `ticket_status/launches` remis au jour de Paris (`day`, `count_day` lu
- * dans le compteur du jour, `month`, `per_day`), pour que l'admin lise le plafond du jour
- * avant le premier lancement. Au mieux, journalisé.
+ * Passe horaire : `ticket_status/launches` remis au jour de Paris (`day`, `count_day` et
+ * `founder_count_day` lus dans les deux compteurs du jour, `month`, `per_day`,
+ * `founder_per_day`), pour que l'admin lise le plafond du jour avant le premier lancement.
+ * Au mieux, journalisé.
  */
 export async function refreshLaunchStatus(
   kitOf: () => Promise<FirestoreKit> = firestore,
@@ -907,13 +920,19 @@ export async function refreshLaunchStatus(
     const kit = await kitOf();
     const day = parisDay(new Date(nowMs()));
     const qRef = quotaRef(kit, day);
+    const fRef = quotaRef(kit, day, "founder");
     const sRef = statusRef(kit);
     await kit.db.runTransaction(async (tx) => {
-      const [quota, status] = await Promise.all([tx.get(qRef), tx.get(sRef)]);
+      const [quota, founderQuota, status] = await Promise.all([
+        tx.get(qRef),
+        tx.get(fRef),
+        tx.get(sRef),
+      ]);
       const next = refreshedLaunchStatus(
         status.data() ?? {},
         day,
         readLaunchCount(quota.get("count")),
+        readLaunchCount(founderQuota.get("count")),
       );
       if (next !== null) tx.set(sRef, next, { merge: true });
     });

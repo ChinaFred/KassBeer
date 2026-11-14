@@ -8,6 +8,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import {
   ADMIN_DENIED_MESSAGE,
   MEMBER_DENIED_MESSAGE,
+  isFounder,
   memberAccess,
   requireAdmin,
   requireBoundedText,
@@ -22,6 +23,7 @@ interface FixtureCase {
   member_key: string | null;
   member: Record<string, unknown> | null;
   expect: "none" | "member" | "admin";
+  founder?: boolean;
 }
 
 // Compilé dans build-test/test/ : la racine du dépôt est trois dossiers plus haut.
@@ -55,9 +57,13 @@ describe("member_access.json — functions/src/auth.ts (P31)", () => {
       const member = requireMember(req, lookupOf(c));
       const admin = requireAdmin(req, lookupOf(c));
       if (c.expect === "none") await assert.rejects(member, HttpsError);
-      else assert.deepEqual(await member, { uid: "u" });
-      if (c.expect === "admin") assert.deepEqual(await admin, { uid: "u" });
-      else await assert.rejects(admin, HttpsError);
+      else assert.deepEqual(await member, { uid: "u", founder: c.founder ?? false });
+      if (c.expect === "admin") {
+        assert.deepEqual(await admin, { uid: "u", founder: c.founder ?? false });
+      } else await assert.rejects(admin, HttpsError);
+    });
+    it(`${c.name} : isFounder ${c.founder ?? false}`, () => {
+      assert.equal(isFounder(tokenOf(c), c.member), c.founder ?? false);
     });
   }
 });
@@ -90,6 +96,35 @@ async function code(promise: Promise<unknown>): Promise<string> {
     return err.code;
   }
 }
+
+describe("compte fondateur : members/{email}.founder (plafond des lancements)", () => {
+  const admin = google("admin@example.com");
+  it("admin avec founder === true : fondateur", () => {
+    assert.equal(isFounder(admin, { role: "admin", founder: true }), true);
+  });
+  it("booléen strict, admin seul, jeton vérifié", () => {
+    assert.equal(isFounder(admin, { role: "admin", founder: "true" }), false);
+    assert.equal(isFounder(admin, { role: "admin" }), false);
+    assert.equal(isFounder(admin, { role: "brewer", founder: true }), false);
+    assert.equal(
+      isFounder({ ...admin, email_verified: false }, { role: "admin", founder: true }),
+      false,
+    );
+    assert.equal(isFounder(admin, null), false);
+  });
+  it("requireAdmin rend founder, sans lecture de plus", async () => {
+    let count = 0;
+    const one: MemberLookup = async () => {
+      count++;
+      return { role: "admin", founder: true };
+    };
+    assert.deepEqual(await requireAdmin({ auth: { uid: "u", token: admin } }, one), {
+      uid: "u",
+      founder: true,
+    });
+    assert.equal(count, 1);
+  });
+});
 
 describe("requireAdmin et requireMember, six profils (P30)", () => {
   const cases: Array<[string, object, string, string]> = [

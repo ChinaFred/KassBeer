@@ -228,19 +228,37 @@ Map<String, Object?> equipmentSnapshot(Equipment equipment) => {
   'owner_name': ?equipment.ownerName,
 };
 
-int _bucket(BrewStatus status) => switch (status) {
-  BrewStatus.brewing => 0,
-  BrewStatus.fermenting || BrewStatus.conditioning => 1,
-  BrewStatus.planned => 2,
-  BrewStatus.done || BrewStatus.abandoned => 3,
+/// Groupe d'un brassin dans la liste, dans l'ordre de [compareBrews] : en
+/// cours (brassage, fermentation, conditionnement), prévus, puis terminés et
+/// abandonnés.
+enum GroupeBrassins {
+  enCours('En cours'),
+  prevus('Prévus'),
+  termines('Terminés et abandonnés');
+
+  const GroupeBrassins(this.libelle);
+
+  final String libelle;
+}
+
+GroupeBrassins groupeBrassin(BrewStatus status) => switch (status) {
+  BrewStatus.brewing ||
+  BrewStatus.fermenting ||
+  BrewStatus.conditioning => GroupeBrassins.enCours,
+  BrewStatus.planned => GroupeBrassins.prevus,
+  BrewStatus.done || BrewStatus.abandoned => GroupeBrassins.termines,
 };
 
-/// Tri de la liste (ST10) : en cours, puis en fermentation et en conditionnement, puis
-/// prévus par date croissante, puis terminés et abandonnés ; le reste du plus récent au
-/// plus ancien.
+/// Tri de la liste (ST10) : par [GroupeBrassins], le brassage du jour avant la
+/// fermentation et le conditionnement ; prévus par date croissante ; le reste
+/// du plus récent au plus ancien.
 int compareBrews(Brew a, Brew b) {
-  final byBucket = _bucket(a.status).compareTo(_bucket(b.status));
-  if (byBucket != 0) return byBucket;
+  final parGroupe = groupeBrassin(
+    a.status,
+  ).index.compareTo(groupeBrassin(b.status).index);
+  if (parGroupe != 0) return parGroupe;
+  final aBrasse = a.status == BrewStatus.brewing;
+  if (aBrasse != (b.status == BrewStatus.brewing)) return aBrasse ? -1 : 1;
   if (a.status == BrewStatus.planned) {
     final pa = a.plannedFor;
     final pb = b.plannedFor;

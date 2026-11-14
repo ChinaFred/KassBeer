@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/presentation/encadre.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/theme/app_theme.dart';
 import 'package:kass_beer/features/brew_day/presentation/brew_day_screen.dart';
@@ -44,15 +45,6 @@ Future<TestApp> ouvrir(
 }
 
 Finder minuteur() => find.byKey(const ValueKey('minuteur'));
-
-/// Retire l'annonce « Brassage repris… » : avec la carte de l'étape en cours,
-/// le bas de la chronologie passe sous elle (police de test, plus large).
-Future<void> masquerAnnonce(WidgetTester tester) async {
-  ScaffoldMessenger.of(
-    tester.element(find.byType(SnackBar)),
-  ).removeCurrentSnackBar();
-  await tester.pumpAndSettle();
-}
 
 void main() {
   testWidgets('MH2 : tuée puis relancée à 12:10 → 20:00 restantes', (
@@ -101,7 +93,6 @@ void main() {
         now: hm(12, 10),
         events: [debut('e1', 'k-palier', hm(11, 45))],
       );
-      await masquerAnnonce(tester);
       await tester.tap(find.text('Ébullition').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Commencer cette étape'));
@@ -147,7 +138,6 @@ void main() {
       ],
     );
     expect(find.textContaining('Début en double'), findsOneWidget);
-    await masquerAnnonce(tester);
     await tester.tap(find.text('Supprimer'));
     await tester.pump();
     expect(
@@ -289,8 +279,23 @@ void main() {
     app.brews.publish([unBrassin(id: _brassinId, brewedAt: hm(11, 45))]);
     app.brews.publishEvents(_brassinId, [debut('e1', 'k-palier', hm(11, 45))]);
     await tester.pumpAndSettle();
-    expect(find.text(BrewDayScreen.reprised), findsOneWidget);
+    // Encadré sous la carte de l'étape, jamais un SnackBar posé sur la
+    // chronologie.
+    expect(
+      find.descendant(
+        of: find.byType(Encadre),
+        matching: find.text(BrewDayScreen.reprised),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(SnackBar), findsNothing);
     expect(tester.widget<Text>(minuteur()).data, '20:00');
+    final fermer = find.widgetWithText(TextButton, 'Fermer');
+    await tester.ensureVisible(fermer);
+    await tester.pumpAndSettle();
+    await tester.tap(fermer);
+    await tester.pumpAndSettle();
+    expect(find.text(BrewDayScreen.reprised), findsNothing);
   });
 
   testWidgets('R6 : Les sauter et commencer, écritures simples une par une', (
@@ -629,7 +634,6 @@ void main() {
           now: hm(12, 10),
           events: [debut('e1', 'k-palier', hm(11, 45))],
         );
-        await masquerAnnonce(tester);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
         app.now = hm(12, 35);
@@ -646,19 +650,11 @@ void main() {
       testWidgets('texte à 200 %, $nom : aucun débordement', (tester) async {
         tester.platformDispatcher.textScaleFactorTestValue = 2;
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-        // Seule erreur écartée : l'annonce « Brassage repris » flottante qui
-        // ne tient pas au-dessus de la barre du bas en paysage à 200 %. Elle
-        // précède la carte de l'étape et se suit à part.
+        // Aucune erreur écartée : l'annonce « Brassage repris » est un encadré
+        // du panneau, plus un SnackBar flottant.
         final erreurs = <FlutterErrorDetails>[];
         final original = FlutterError.onError;
-        FlutterError.onError = (details) {
-          if (details.exceptionAsString().contains(
-            'Floating SnackBar presented off screen',
-          )) {
-            return;
-          }
-          erreurs.add(details);
-        };
+        FlutterError.onError = erreurs.add;
         try {
           final app = await ouvrir(
             tester,
@@ -668,6 +664,13 @@ void main() {
             events: [debut('e1', 'k-palier', hm(11, 45))],
           );
           expect(carte(), findsOneWidget);
+          expect(find.text(BrewDayScreen.reprised), findsOneWidget);
+          // L'encadré suit la carte de l'étape : il ne repousse pas le
+          // minuteur vers le bas.
+          expect(
+            tester.getRect(find.text(BrewDayScreen.reprised)).top,
+            greaterThan(tester.getRect(carte()).bottom),
+          );
           app.now = hm(12, 35);
           await tester.pump(const Duration(seconds: 1));
           expect(find.text('ÉTAPE 1 SUR 2 · DÉPASSÉ'), findsOneWidget);

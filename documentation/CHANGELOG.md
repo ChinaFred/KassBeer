@@ -31,6 +31,59 @@ cases de la grille suivant l'échelle du texte), texte MIT `DataSourcesScreen.li
 « Échelle des couleurs » dans l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des
 données » et dans `DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
 Pastille sur la fiche d'un malt et sur la recette : plus tard. Demandé par le ticket #48.
+### v0.1.53 — fonctionnel
+
+Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous
+l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste
+lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique
+que le panneau de l'étape continue plus bas.
+
+La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation
+(« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres
+fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes.
+
+### v0.1.53 — technique
+
+Suite du lot 4 de la revue visuelle (remarques « plus tard » de la revue UX). `GroupeBrassins` et
+`groupeBrassin` passent de `brews_screen.dart` à `domain/brew.dart` ; `compareBrews` trie
+d'après ce groupe, et `_bucket`, qui le recopiait, sort. L'annonce de reprise devient un
+`Encadre` du panneau (`liveRegion`), placé dans `_DefilementPanneau` (`Scrollbar` toujours
+visible, dessinée seulement si le contenu dépasse, sans la seconde barre du web de bureau),
+sous la carte de l'étape ; `scrollbarTheme` du thème en `onSurfaceVariant`, 6 px ; le test à 200 % n'écarte plus l'erreur
+« Floating SnackBar presented off screen », et `masquerAnnonce` sort des tests. Le test du thème
+contrôle le texte coloré sur `surfaceContainerLow` (fond des cartes), en clair et en sombre.
+Mise à jour de l'APK : le fichier téléchargé s'ouvre par `File.open(mode: FileMode.write)` à la
+place d'`openWrite`, qui sous Windows ne rendait jamais l'erreur d'un dossier absent ;
+`app_update_transport_test` « dossier absent » passe sur le poste. Une erreur inattendue du
+téléchargement (corps illisible, rappel qui lève) referme aussi le fichier avant de remonter,
+avec son test (relecture `securite`). Bornes de taille et SHA-256 inchangés (P51).
+
+### v0.1.52 — fonctionnel
+
+Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois
+celui des autres administrateurs. Ses lancements ne consomment pas les 10 du groupe, et
+inversement. Le compteur d'Admin › Tickets et la boîte de lancement affichent le plafond du
+compte connecté. Le mois compte tous les lancements.
+
+### v0.1.52 — technique
+
+Compte fondateur reconnu par le champ `founder: true` de `members/{email}`, posé dans la
+console Firebase (les règles refusent ce champ à tout client : liste blanche de `create`,
+`update` fermé ; aucun e-mail dans le code, P15). `requireAdmin` rend `founder` sans lecture de
+plus (`isFounder`, `functions/src/auth.ts`). `FOUNDER_LAUNCHES_PER_DAY` = 5 ×
+`LAUNCHES_PER_DAY` (`config.ts`), compteur `ticket_quotas/launch_founder_{AAAAMMJJ}`,
+`ticket_status/launches` gagne `founder_count_day` et `founder_per_day` (`launchModel.ts` :
+`LaunchPool`, `launchLimitOf`). Client : `Member.founder`, `EtatLancements.vuePour`, appliqué
+par `launchStatusProvider`. P36 et « Coûts variables » de `CLAUDE.md` modifiés (décision de
+l'utilisateur du 2026-11-14). Réglage après le déploiement : ajouter `founder` (booléen,
+`true`) au document `members/` du fondateur dans la console Firebase.
+
+La relecture ajoute des tests : compteur du fondateur rendu sur un échec, deux lancements
+simultanés du fondateur, champ `founder` refusé par les règles à l'admin ; cas fondateur ajoutés à
+`test-fixtures/member_access.json`, rejoués par `functions/test/auth.test.ts` et
+`app/test/members_repository_test.dart` (P31, ligne de « Logique dupliquée » mise à jour). P31
+nomme aussi `app/lib/features/members/domain/member.dart` (cinq fichiers au lieu de quatre, accord
+de l'utilisateur du 2026-11-14).
 
 ### v0.1.51 — fonctionnel
 
