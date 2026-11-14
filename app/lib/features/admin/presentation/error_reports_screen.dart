@@ -8,6 +8,7 @@ import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../data/error_reports_repository.dart';
 import '../domain/error_report.dart';
@@ -304,8 +305,6 @@ class _LigneRapportState extends ConsumerState<_LigneRapport> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final r = widget.rapport;
     final etiquette = Etiquette(
       label: r.libellePlateforme,
@@ -321,22 +320,24 @@ class _LigneRapportState extends ConsumerState<_LigneRapport> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final aDroite = !grandTexte && constraints.maxWidth >= kCompactMaxWidth;
-        return _tuile(r, scheme, etiquette, fleche, aDroite: aDroite);
+        return _tuile(r, etiquette, fleche, aDroite: aDroite);
       },
     );
   }
 
   Widget _tuile(
     ErrorReport r,
-    ColorScheme scheme,
     Widget etiquette,
     Widget fleche, {
     required bool aDroite,
   }) {
     final resume = r.resume;
     return ExpansionTile(
-      leading: ExcludeSemantics(
-        child: Icon(Icons.bug_report_outlined, color: scheme.error),
+      // Disque de 40 px comme LigneListe : le texte s'aligne sur celui de
+      // l'accueil Admin.
+      leading: const RepereDisque(
+        icone: Icons.bug_report_outlined,
+        erreur: true,
       ),
       title: Text(
         r.premiereLigne,

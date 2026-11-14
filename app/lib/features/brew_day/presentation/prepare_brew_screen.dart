@@ -282,22 +282,22 @@ class _PreparationState extends ConsumerState<_Preparation>
     ];
     final chrono = switch (evalue) {
       _ when illisible != null => (
-        icon: Icons.error_outline,
+        etat: _EtatVerif.panne,
         titre: 'Chronologie',
         detail: illisible,
       ),
       PlanImpossible() => (
-        icon: Icons.error_outline,
+        etat: _EtatVerif.panne,
         titre: 'Chronologie',
         detail: kCalculChronologieImpossible,
       ),
       PlanObtenu(:final plan) when plan.lignes.isEmpty => (
-        icon: Icons.warning_amber,
+        etat: _EtatVerif.aSurveiller,
         titre: 'Aucune étape',
         detail: 'Vous pourrez saisir des mesures, sans minuteur.',
       ),
       PlanObtenu(:final plan) => (
-        icon: Icons.check_circle_outline,
+        etat: _EtatVerif.fait,
         titre: 'Chronologie',
         detail:
             '$journee${formatEtapes(steps.length)} · '
@@ -316,14 +316,11 @@ class _PreparationState extends ConsumerState<_Preparation>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  planned == null
-                      ? brew.name
-                      : '${brew.name} · prévu ${formatDate(planned)}',
-                  style: theme.textTheme.headlineSmall,
-                ),
+              _Titre(
+                nom: brew.name,
+                detail: planned == null
+                    ? null
+                    : 'Prévu le ${formatDate(planned)}',
               ),
               const SizedBox(height: 4),
               const Text(
@@ -335,12 +332,12 @@ class _PreparationState extends ConsumerState<_Preparation>
               else ...[
                 _ligneBrassin('Brassin et recette figée'),
                 _LigneVerif(
-                  icon: Icons.check_circle_outline,
+                  etat: _EtatVerif.fait,
                   titre: 'Équipement',
                   detail: brew.equipment.name,
                 ),
                 _LigneVerif(
-                  icon: chrono.icon,
+                  etat: chrono.etat,
                   titre: chrono.titre,
                   detail: [
                     chrono.detail,
@@ -361,7 +358,9 @@ class _PreparationState extends ConsumerState<_Preparation>
                 child: Text(
                   brewing ? 'Reprendre le brassage' : 'Commencer le brassage',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 22),
+                  style: TextStyle(
+                    fontSize: StylesJourDeBrassage.of(context).bouton,
+                  ),
                 ),
               ),
             ],
@@ -378,14 +377,14 @@ extension on _PreparationState {
   /// minuteurs, navigateur, et « Tout est prêt » après la réponse du serveur.
   List<Widget> _lignesAppareil(ThemeData theme) => [
     const _LigneVerif(
-      icon: Icons.check_circle_outline,
+      etat: _EtatVerif.fait,
       titre: 'Compte',
       detail: 'Connexion gardée sur l\'appareil',
     ),
     ValueListenableBuilder<bool>(
       valueListenable: wakelock.failed,
       builder: (context, refuse, _) => _LigneVerif(
-        icon: refuse ? Icons.warning_amber : Icons.info_outline,
+        etat: refuse ? _EtatVerif.aSurveiller : _EtatVerif.information,
         titre: 'Écran',
         detail: refuse
             ? 'L\'appareil refuse de le garder allumé. Réglez la '
@@ -394,7 +393,7 @@ extension on _PreparationState {
       ),
     ),
     const _LigneVerif(
-      icon: Icons.info_outline,
+      etat: _EtatVerif.information,
       titre: 'Minuteurs',
       detail:
           'Aucune alarme ne sonne écran verrouillé : gardez l\'écran '
@@ -402,7 +401,7 @@ extension on _PreparationState {
     ),
     if (kIsWeb)
       const _LigneVerif(
-        icon: Icons.warning_amber,
+        etat: _EtatVerif.aSurveiller,
         titre: 'Navigateur',
         detail:
             'Gardez cet onglet ouvert. Une page rechargée sans '
@@ -430,9 +429,9 @@ extension on _PreparationState {
   _LigneVerif _ligneBrassin(String titre) {
     final brew = _brew;
     return _LigneVerif(
-      icon: brew.hasPendingWrites || _fromServer
-          ? Icons.check_circle_outline
-          : Icons.info_outline,
+      etat: brew.hasPendingWrites || _fromServer
+          ? _EtatVerif.fait
+          : _EtatVerif.information,
       titre: titre,
       detail: brew.hasPendingWrites
           ? 'Enregistré sur l\'appareil, envoi au retour du réseau'
@@ -481,20 +480,23 @@ extension on _PreparationState {
     final steps = journee.lignes;
     final etapes = switch ((events, plan)) {
       (null, _) when eventsAsync.hasError => (
-        icon: Icons.error_outline,
+        etat: _EtatVerif.panne,
         detail: TextesJournee.saisiesIllisibles,
       ),
-      (null, _) => (icon: Icons.info_outline, detail: 'Chargement des saisies'),
+      (null, _) => (
+        etat: _EtatVerif.information,
+        detail: 'Chargement des saisies',
+      ),
       (_, null) => (
-        icon: Icons.error_outline,
+        etat: _EtatVerif.panne,
         detail: kCalculChronologieImpossible,
       ),
       (_, final PlanDuJour p) when p.lignes.isEmpty => (
-        icon: Icons.warning_amber,
+        etat: _EtatVerif.aSurveiller,
         detail: 'Aucune étape. Vous pourrez saisir des mesures, sans minuteur.',
       ),
       (_, final PlanDuJour p) => (
-        icon: Icons.check_circle_outline,
+        etat: _EtatVerif.fait,
         detail:
             '${formatEtapes(steps.length)} · '
             '${formatDuree(dureeChronologie(steps))}'
@@ -522,19 +524,15 @@ extension on _PreparationState {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  [
-                    brew.name,
-                    nom,
-                    if (date != null)
-                      aujourdhui
-                          ? 'prévue aujourd\'hui'
-                          : 'prévue le ${formatJourMois(date)}',
-                  ].join(' · '),
-                  style: theme.textTheme.headlineSmall,
-                ),
+              _Titre(
+                nom: brew.name,
+                detail: [
+                  nom,
+                  if (date != null)
+                    aujourdhui
+                        ? 'prévue aujourd\'hui'
+                        : 'prévue le ${formatJourMois(date)}',
+                ].join(' · '),
               ),
               const SizedBox(height: 4),
               const Text(TextesJournee.preparerSurTelephone),
@@ -544,15 +542,13 @@ extension on _PreparationState {
               else ...[
                 _ligneBrassin('Brassin et déroulé figé'),
                 _LigneVerif(
-                  icon: etapes.icon,
+                  etat: etapes.etat,
                   titre: 'Étapes',
                   detail: etapes.detail,
                 ),
                 if (packaging)
                   _LigneVerif(
-                    icon: prixLus
-                        ? Icons.check_circle_outline
-                        : Icons.warning_amber,
+                    etat: prixLus ? _EtatVerif.fait : _EtatVerif.aSurveiller,
                     titre: 'Prix et frais',
                     detail: prixLus
                         ? TextesJournee.prixLus
@@ -576,7 +572,9 @@ extension on _PreparationState {
                 child: Text(
                   reprendre ? TextesJournee.reprendre : TextesJournee.commencer,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 22),
+                  style: TextStyle(
+                    fontSize: StylesJourDeBrassage.of(context).bouton,
+                  ),
                 ),
               ),
             ],
@@ -628,28 +626,82 @@ class _Attente extends StatelessWidget {
   }
 }
 
+/// Titre de « Préparer le brassage » et de « Préparer la journée » : nom du
+/// brassin, puis la journée ou la date sur une seconde ligne. Les deux lignes
+/// forment un seul en-tête.
+class _Titre extends StatelessWidget {
+  const _Titre({required this.nom, required this.detail});
+
+  final String nom;
+
+  /// Journée et date (« Houblonnage à cru · prévue le 27 nov. »), ou `null`.
+  final String? detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final detail = this.detail;
+    return Semantics(
+      header: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(nom, style: theme.textTheme.headlineSmall),
+          if (detail != null)
+            Text(
+              detail,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// État d'une ligne de vérification : il donne l'icône et sa couleur.
+enum _EtatVerif {
+  /// Vérifié : coche, couleur de succès.
+  fait,
+
+  /// À surveiller : triangle, `tertiary` (ambre).
+  aSurveiller,
+
+  /// En panne : cercle d'erreur, `error`.
+  panne,
+
+  /// Simple information : « i », `onSurfaceVariant`.
+  information;
+
+  IconData get icone => switch (this) {
+    fait => Icons.check_circle_outline,
+    aSurveiller => Icons.warning_amber,
+    panne => Icons.error_outline,
+    information => Icons.info_outline,
+  };
+
+  Color couleur(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return switch (this) {
+      fait => CouleursEtat.of(context).succes,
+      aSurveiller => scheme.tertiary,
+      panne => scheme.error,
+      information => scheme.onSurfaceVariant,
+    };
+  }
+}
+
 class _LigneVerif extends StatelessWidget {
   const _LigneVerif({
-    required this.icon,
+    required this.etat,
     required this.titre,
     required this.detail,
   });
 
-  final IconData icon;
+  final _EtatVerif etat;
   final String titre;
   final String detail;
-
-  /// Couleur de l'icône selon l'état qu'elle dit : fait, à surveiller, en
-  /// panne, ou simple information.
-  Color _couleur(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return switch (icon) {
-      Icons.check_circle_outline => CouleursEtat.of(context).succes,
-      Icons.warning_amber => scheme.tertiary,
-      Icons.error_outline => scheme.error,
-      _ => scheme.onSurfaceVariant,
-    };
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -659,7 +711,7 @@ class _LigneVerif extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: _couleur(context)),
+          Icon(etat.icone, color: etat.couleur(context)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

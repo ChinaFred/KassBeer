@@ -128,7 +128,21 @@ infobulle (appui long, survol) et le lecteur d'écran le lit ; de 600 à 839 px,
 à partir de 840 px, rail étendu et contenu centré sur 840 px au plus (sauf Admin › Tickets des
 membres, en liste et fiche côte à côte). Le rail défile quand
 ses destinations dépassent la hauteur (écran bas, grand texte). Dans le rail avec libellés, un
-libellé plus large que 160 px est réduit pour tenir sur une ligne.
+libellé plus large que 160 px est réduit pour tenir sur une ligne. En tête du rail étendu, le
+médaillon et « Kass'Beer » : quand le nom ne tient pas à côté du médaillon (texte agrandi), il
+passe dessous, en entier.
+
+**Fiches.** Les fiches d'une recette, d'un brassin, d'un équipement, d'un processus, d'une
+recette publique et d'un ticket (Admin › Tickets des membres) ont le même en-tête : le nom en
+grand, déclaré comme titre, puis une ligne grise (style, auteur, type, jour de fermentation…)
+et les étiquettes (statut, « En attente du réseau »). Les boutons suivent la même hiérarchie :
+l'action principale pleine (« Nouveau brassin » sur une recette), « Modifier » en bouton
+tonal, les autres en contour, « Supprimer » en contour rouge. Sur les fiches d'une recette,
+d'un brassin, d'un équipement, d'un processus et d'une recette publique, chaque section est
+une carte, espacée de 16 px de la suivante ; la fiche d'un ticket ne prend que l'en-tête
+commun et garde ses sections à plat. Les fiches ont la même largeur, celle du contenu (840 px
+au plus). Sous 600 px, les cartes s'étendent de 8 px sur la marge, carte d'action d'un brassin
+comprise, et leur contenu reste aligné sur l'en-tête.
 
 Recettes, Équipements et Brassins sont décrits ci-dessous. Au lancement, si le compte a un seul
 brassin en cours depuis moins de 24 h, l'écran du jour se rouvre avec le message « Brassage
@@ -140,7 +154,9 @@ Bibliothèque, Admin › Membres) porte son titre (« Recette », « Équipement
 éditeurs s'ouvrent en plein écran, hors de la barre de navigation, avec « Fermer » (✕), leur
 titre, « Enregistrer », le menu du compte, et le bandeau hors ligne quand l'appareil n'a pas de
 réseau. À 360 px et texte à 200 %, le libellé « Enregistrer » se réduit pour laisser la place à
-l'avatar.
+l'avatar. Les pages pleines ouvertes depuis le menu du compte (Mes prix, Mes processus,
+Préférences, Nouveautés, Sources des données) centrent leur contenu sur 840 px au plus ; la
+molette les fait défiler aussi quand le pointeur est sur les marges.
 
 **Hors ligne.** Quand l'appareil n'a plus de réseau, un bandeau « Hors ligne. Les
 modifications partiront au retour du réseau. » s'affiche sous la barre du haut, en pleine
@@ -340,8 +356,8 @@ dans Admin › Tickets : icône du type dans un disque (lue), titre sur deux lig
 « jj/mm/aa », étiquette du statut (icône et texte) dessous, et à droite un point « Nouveau suivi
 à lire », lu avec la ligne, quand le statut ou la réponse a changé depuis la dernière ouverture
 du ticket. Bouton flottant « Signaler ou
-proposer », absent de l'état vide, qui porte déjà ce bouton. Chargement « Chargement de vos tickets » ; aucun ticket : « Aucun ticket pour
-l'instant. Un bug, une idée ? Envoyez-les à l'administrateur. » et « Signaler ou proposer » ;
+proposer », absent de l'état vide, qui porte déjà ce bouton. Chargement « Chargement de vos tickets » ; aucun ticket : titre « Aucun ticket », puis « Un bug, une idée ?
+Envoyez-les à l'administrateur. » et « Signaler ou proposer » ;
 panne : « Impossible de lire vos tickets. » et « Réessayer » ; panne après une première
 lecture : la liste reste, sous « Mise à jour de la liste impossible. Elle peut ne plus être à
 jour. ». Hors ligne : bandeau hors ligne et liste du cache. Un ticket illisible s'affiche
@@ -415,7 +431,7 @@ refusé l'allume), « Import » (« Fiches Excel préparées en JSON »), « Rap
 fonctions du serveur »).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
-ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
+ligne : repère (icône de personne dans un disque, comme les lignes de l'accueil Admin, texte aligné sur le leur), nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
 « Brasseur » (« Rôle inconnu » pour une valeur stockée inattendue), étiquette « Vous » sur sa
 propre ligne, et « En attente du réseau » tant
 qu'une invitation faite hors ligne n'a pas atteint le serveur.
@@ -435,7 +451,7 @@ qu'une invitation faite hors ligne n'a pas atteint le serveur.
   boutons « Annuler » et « Retirer ». Après « Retirer », la ligne disparaît et l'écran
   affiche « {e-mail} est retiré. ». Si le serveur refuse, ce message est remplacé par « Le
   retrait de {e-mail} a échoué. »
-- Liste vide : « Aucun membre. Appuyez sur Inviter pour ajouter un compte. »
+- Liste vide : titre « Aucun membre », puis « Appuyez sur Inviter pour ajouter un compte. »
 - Liste illisible : « Impossible de lire la liste des membres. » et « Réessayer ». Une panne
   après une première lecture garde la liste affichée, avec au-dessus « Mise à jour de la
   liste impossible. Elle peut ne plus être à jour. » et « Réessayer ».
@@ -533,7 +549,7 @@ ne se supprime depuis l'écran.
 
 - **En tête** : « N rapports affichés » (« 1 rapport affiché ») et le bouton « Actualiser »,
   qui relit la première page. Tirer la liste vers le bas fait la même chose.
-- **Une ligne repliée** : icône de bug en ton d'erreur ; titre = première ligne de l'erreur,
+- **Une ligne repliée** : icône de bug dans un disque en ton d'erreur, texte aligné sur celui des lignes de l'accueil Admin ; titre = première ligne de l'erreur,
   deux lignes au plus (« Erreur sans message » si elle est vide) ; résumé « date · fonction ·
   v{version} », ce qui manque omis ; étiquette « Android » ou « Web », « Plateforme inconnue »
   en ton neutre si elle manque. L'étiquette est à droite du titre sur une ligne d'au moins
@@ -695,12 +711,12 @@ l'application à jour. ».
 
 États : « Chargement des tickets » ; « Impossible de lire les tickets. » et « Réessayer » ;
 panne après une lecture : bandeau « Mise à jour de la liste impossible. » au-dessus de la liste ;
-aucun ticket : « Aucun ticket pour l'instant. Les membres n'ont encore rien signalé. » ;
-« À traiter » vide : « Rien à traiter. Tous les tickets ont reçu une décision. » ; « Bloqués »
-vide : « Aucun ticket bloqué. » ; ces deux derniers avec « Afficher tous les tickets ».
+aucun ticket : titre « Aucun ticket », puis « Les membres n'ont encore rien signalé. » ;
+« À traiter » vide : titre « Tout est traité », puis « Chaque ticket a reçu une décision. » ; « Bloqués »
+vide : titre « Rien de bloqué », puis « Aucun envoi en échec ou en retard, aucune Issue disparue. » ; ces deux derniers avec « Afficher tous les tickets ».
 
-**Fiche « Ticket d'un membre ».** Texte sélectionnable, dans cet ordre : icône et type ; titre ;
-étiquette du statut (elle clignote trois fois quand le statut change, jamais au premier
+**Fiche « Ticket d'un membre ».** Texte sélectionnable, dans cet ordre : titre, en en-tête de
+fiche ; type sur la ligne grise ; étiquette du statut (elle clignote trois fois quand le statut change, jamais au premier
 affichage ni avec les animations réduites, et « Statut : Refusé » est annoncé) et « Issue #12 » ;
 « Ouvrir l'Issue #12 », et pour un ticket livré « Ouvrir la PR #34 » (adresse `https` de
 `github.com` seule, échec « Impossible d'ouvrir GitHub. ») ; pour un ticket En cours, « Ouvrir
@@ -715,8 +731,9 @@ l'heure. », « Envoi non relancé : <motif> », « Envoi non relancé : pas de 
 inactif et « Relancer l'envoi demande le réseau. ») ; pour une Issue disparue, « Issue introuvable sur GitHub
 depuis le jj/mm/aa. Vérifiez qu'elle n'a pas été supprimée. », précédé d'une icône de lien
 coupé en ton d'erreur ; l'encadré du texte de
-l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
-« Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
+l'administrateur, titré comme côté membre ; la frise ; les lignes « libellé : valeur »
+« Auteur », « Envoyé le » (« 08/11/26 à 09:30 »), « Envoyé avec » (« version 0.1.0,
+Android »), « Écran » ; « Description » (même titre de section que côté membre) ;
 « Capture », quand l'auteur en a joint une (vignette qui s'agrandit à l'appui, « Capture
 indisponible. » et « Réessayer » si elle ne se lit pas, avec « La capture se lit avec le
 réseau. » hors ligne ; « Capture effacée. » après 180 jours) ;
@@ -1079,14 +1096,17 @@ liste au-delà.
   après une première lecture garde la liste, avec « Mise à jour de la liste impossible. Elle
   peut ne plus être à jour. » et « Réessayer ».
 - Un document illisible (type inconnu, champ obligatoire absent) s'affiche « Équipement
-  illisible » ; l'erreur est rapportée.
+  illisible », avec le sous-titre « Mettez l'application à jour, ou prévenez
+  l'administrateur. », comme une recette ; l'erreur est rapportée.
 
-**Fiche.** Une colonne : nom, type, et « Équipement de {auteur} » pour un autre brasseur.
-Sections Rendement (rendement d'empâtage, évaporation, absorption du grain), Volumes (cuve
+**Fiche.** Même largeur que les autres fiches (840 px au plus). En-tête : nom, puis le type, et
+« Équipement de {auteur} » pour un autre brasseur, sur la ligne grise. Sections en cartes :
+Rendement (rendement d'empâtage, évaporation, absorption du grain), Volumes (cuve
 d'empâtage et cuve d'ébullition, ou « Volume de la cuve » pour un tout-en-un), Pertes
 (volumes morts, pertes au trub, pertes au fermenteur), Notes. Un champ vide affiche « Non
 renseigné ». Étiquette « En attente du réseau » tant qu'une écriture n'a pas atteint le
-serveur. L'auteur voit « Modifier » et « Supprimer » ; un autre brasseur ne les voit pas.
+serveur. L'auteur voit « Modifier » (tonal) et « Supprimer » (contour rouge) ; un autre
+brasseur ne les voit pas.
 
 - Équipement absent d'une réponse du serveur : « Cet équipement n'existe pas ou a été
   supprimé. » et « Revenir aux équipements ». Absent du cache, appareil hors ligne :
@@ -1117,10 +1137,10 @@ recette n'est modifiée.
 **Liste.** Toutes les recettes du groupe, la dernière modifiée en tête. Chaque ligne : icône,
 nom, puis style · volume · auteur ; étiquette « En attente du réseau » dessous. « Rechercher une
 recette » filtre sur le nom et le style ; « Toutes » / « Les miennes » filtre sur l'auteur.
-La recherche et le filtre ne sont pas enregistrés. Aucun calcul dans la liste. Bouton
-flottant « Nouvelle recette » sur téléphone, bouton en tête au-delà. « Importer » ouvre
-Recettes › Importer : sur téléphone après « Toutes / Les miennes », au-delà à côté de
-« Nouvelle recette ».
+La recherche et le filtre ne sont pas enregistrés. Aucun calcul dans la liste. En tête, la
+recherche sur toute la largeur, puis « Toutes / Les miennes », puis les actions. Bouton
+flottant « Nouvelle recette » sur téléphone, bouton après le filtre au-delà. « Importer »
+ouvre Recettes › Importer : après le filtre sur téléphone, après « Nouvelle recette » au-delà.
 
 - Liste vide : titre « Aucune recette » ; « Les miennes » vide : titre « Vous n'avez pas
   encore de recette » ; puis, pour les deux, « Appuyez sur Nouvelle recette pour commencer, ou
@@ -1151,9 +1171,10 @@ Recettes › Importer : sur téléphone après « Toutes / Les miennes », au-de
   document : la préparation garde « Réessayer » pour un brassin absent ou hors ligne
   seulement. Hors ligne, le rapport part au retour du réseau.
 
-**Fiche.** Nom, style, « Recette de {auteur} » pour un autre brasseur. Boutons, dans
-l'ordre : « Nouveau brassin », « Modifier » (auteur), « Dupliquer », « Exporter »,
-« Supprimer » (auteur). Puis le bloc Calculs (voir
+**Fiche.** En-tête : nom, puis style · « Recette de {auteur} » (autre brasseur) sur la ligne
+grise. Boutons, dans l'ordre : « Nouveau brassin » (plein), « Modifier » (auteur, tonal),
+« Dupliquer », « Exporter » (contour), « Supprimer » (auteur, contour rouge). Puis, chacun dans
+sa carte, le bloc Calculs (voir
 « Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (type de recette, « Non renseigné » s'il
 manque ; « Auteur indiqué par le fichier importé » quand une recette importée le porte ; volume en
 fermenteur, durée d'ébullition, équipement), Malts et sucres, Houblons
@@ -1563,10 +1584,11 @@ l'administrateur ; personne ne les modifie dans l'application.
 **Accès.** Destination « Bibliothèque » de la navigation, après Recettes. L'adresse
 `/bibliotheque` mène aux styles (`/bibliotheque/styles`). Six segments en puces :
 « Styles », « Malts et sucres », « Houblons », « Levures », « Divers », « Recettes
-publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). Sous 600 px, les puces
-tiennent sur une ligne qui défile à l'horizontale, et une icône d'information à leur droite
-(infobulle « Sources des données ») ouvre « Sources des données ». À partir de 600 px, les
-puces passent à la ligne et le lien « Sources des données » est écrit sous elles.
+publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). À toutes les largeurs,
+une icône d'information à droite des puces (infobulle « Sources des données ») ouvre
+« Sources des données ». Sous 600 px, les puces tiennent sur une ligne qui défile à
+l'horizontale et s'effacent en fondu au bord droit : une puce coupée annonce la suite. À
+partir de 600 px, les puces passent à la ligne.
 
 **Styles et ingrédients.** La liste du segment est lue à la première ouverture, puis gardée
 pour la session. Ordre alphabétique, avec le nombre d'entrées (« 812 entrées », « 3 sur
@@ -1610,7 +1632,9 @@ Dog (usage privé) · relevé le 8 novembre 2026 », et le lien « Sources des d
 donne le fichier et le commit. Le texte de la fiche est sélectionnable.
 
 **Recettes publiques.** Les recettes DIY Dog, par pages de 50 dans l'ordre alphabétique.
-Chaque ligne : nom, puis style · volume · « 4,5 % vol annoncés ». « Afficher les recettes
+Chaque ligne : le repère de la liste des recettes (icône de livre dans un disque ; les styles
+et les ingrédients n'en ont pas), nom, puis style · volume · « 4,5 % vol annoncés ».
+« Afficher les recettes
 suivantes » lit la page suivante. « Rechercher par début de nom » (aide : « Le début du nom.
 Validez pour chercher. ») cherche les noms qui commencent par le texte, sans tenir compte des
 majuscules, des accents ni de la ponctuation, quand le membre valide (Entrée ou flèche
@@ -1621,10 +1645,11 @@ lue, la liste reste et le bandeau « Impossible de lire la page suivante. » pro
 « Réessayer ».
 
 **Fiche d'une recette publique** (`/bibliotheque/recettes/{id}`, titre « Recette
-publique »). Nom, style, « Recette publique · DIY Dog », « Voir le style » quand le style est
+publique »). En-tête : nom, puis « {style} · Recette publique · DIY Dog » sur la ligne grise.
+« Voir le style » quand le style est
 reconnu dans la liste BJCP (ouvre sa fiche par-dessus ; les recettes DIY Dog n'en ont pas),
 bouton « Dupliquer » et « Dupliquer copie la recette dans vos recettes, pour la modifier et la
-brasser. ». Puis :
+brasser. ». Puis, chacune dans sa carte :
 
 - « Annoncé par la source » : « Valeurs données par la recette d'origine. Kass'Beer ne les a
   pas calculées. », puis densité initiale, densité finale, degré, amertume et couleur
@@ -1744,7 +1769,9 @@ refusé. Choisissez de nouveau le processus sur la fiche. ».
 
 **Liste** (tous les brassins du groupe). En cours, puis En fermentation et En conditionnement,
 puis prévus par date croissante, puis Terminés et Abandonnés, chaque groupe du plus récent au plus
-ancien. « Tous » / « Les miens », non enregistré. Chaque ligne :
+ancien. Chaque groupe non vide a son en-tête, déclaré comme titre : « En cours » (en cours, en
+fermentation, en conditionnement), « Prévus », « Terminés et abandonnés » ; les brassins
+illisibles suivent sous « Illisibles ». « Tous » / « Les miens », non enregistré. Chaque ligne :
 icône, nom, « {équipement} · {auteur} », date (« Prévu le sam. 15 nov. 2026 », « Commencé
 aujourd'hui à 11:15 », « Brassé le 11 févr. 2024 », « Embouteillé le 3 déc. 2026 » en
 conditionnement), puis l'étiquette du statut (neutre : Prévu, Abandonné ; ambre : En cours, En
@@ -1767,11 +1794,15 @@ placées après l'embouteillage une fois le brassin embouteillé. Vide : titre �
 sur Nouveau brassin. ». Statuts : Prévu, En
 cours, En fermentation, En conditionnement, Terminé, Abandonné.
 
-**Fiche.** Nom, ligne de statut (« En fermentation · J+12 », « En conditionnement · Embouteillé
-le 3 déc. 2026 », « Terminé · Embouteillé le 3 déc. 2026 »), lien vers la recette, « Brassin de
-{auteur} » pour un autre membre. Prévu et En cours : bloc Calculs sur la copie figée, Déroulé
-(voir ci-dessous), sections de la recette figée, Général (date prévue, brassé le,
-équipement). Après le brassage, dans l'ordre : en fermentation, Relevé, Prévu et mesuré, Notes ;
+**Fiche.** En-tête : nom, menu ⋮ à sa droite, ligne grise (« J+12 » en fermentation,
+« Embouteillé le 3 déc. 2026 » en conditionnement et terminé, « Brassin de {auteur} » pour un
+autre membre), statut en étiquette, du même ton que dans la liste. Puis le lien vers la
+recette. La prochaine journée, son bouton et l'action principale du statut sont dans une carte
+d'action en tête de fiche, sur fond de couleur primaire claire ; « Modifier » (tonal) et
+« Supprimer » (contour rouge) d'un brassin prévu suivent la carte. Chaque bloc ci-dessous est
+une carte. Prévu et En cours : bloc Calculs sur la copie figée, Déroulé
+(voir ci-dessous), carte « Recette » où les sections de la recette figée restent des
+sous-sections, Général (date prévue, brassé le, équipement). Après le brassage, dans l'ordre : en fermentation, Relevé, Prévu et mesuré, Notes ;
 en conditionnement, Prévu et mesuré, Embouteillage, Relevé, Notes ; terminé, Prévu et mesuré,
 Embouteillage, Notes, Relevé ; abandonné, Relevé, Prévu et mesuré, Embouteillage (si `bottled_at`
 existe), Notes. Puis Général, le pli « Déroulé » (fermé, résumé « 3 journées », ou le nombre
@@ -2069,7 +2100,8 @@ degré. ».
 
 Écran « Préparer le brassage » (propriétaire d'un brassin prévu ou en cours : un autre membre lit
 « Seul le brasseur de ce brassin suit son brassage. », un brassin fini « Le brassage de ce brassin
-est terminé. », sans bouton pour le relancer). À faire sur le téléphone qui
+est terminé. », sans bouton pour le relancer). Titre sur deux lignes : le nom du brassin, puis
+« Prévu le ven. 20 nov. 2026 » s'il a une date prévue. À faire sur le téléphone qui
 servira, avec du réseau, avant de le couper. Il attend une réponse du serveur, 15 s au plus, sans
 rien écrire, et liste : brassin et recette figée, équipement, chronologie (« 11 étapes · 5 h 40 ·
 fin vers 16:05 » ; avec un processus, « Brassage : 18 étapes · 6 h 10 · fin vers 16:05 » et
@@ -2096,10 +2128,16 @@ droite de la barre, après ⋮, l'avatar à l'initiale seule ouvre le menu du co
 autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
 sa fiche, en lecture seule.
 
-**Panneau.** Étape en cours : numéro, nom, minuteur lisible à deux mètres (« 32:15 », « 1:05:12 »),
-« restantes sur 45 min », température visée et dernière mesure, « Ensuite : {nom} · vers 12:30 »,
-« Fin prévue vers 16:05 · retard 12 min ». Durée dépassée : « +04:12 », fond distinct, « Dépassé de
-4 min · prévu 45 min » (« Dépassé · prévu 45 min » la première minute). Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
+**Panneau.** Étape en cours, dans une carte de la couleur primaire claire : « ÉTAPE 2 SUR 7 · EN
+COURS » avec une icône de minuteur, nom, minuteur lisible à deux mètres (« 32:15 », « 1:05:12 »),
+barre de progression de la part écoulée de l'étape (non lue par le lecteur d'écran, qui lit le
+minuteur), « restantes sur 45 min », température visée et dernière mesure, « Ensuite : {nom} ·
+vers 12:30 », « Fin prévue vers 16:05 · retard 12 min ». Étiquette d'étape et ligne « Fin
+prévue » en grand (18), lisibles à deux mètres. Durée dépassée : la carte passe en ambre avec un
+bord ambre plus foncé, l'étiquette devient « ÉTAPE 2 SUR 7 · DÉPASSÉ » avec une icône de réveil,
+la barre est pleine, « +04:12 », « Dépassé de 4 min · prévu 45 min » (« Dépassé · prévu 45 min »
+la première minute). La carte garde la même taille et la même marge dans les deux états : rien
+ne bouge au passage en dépassé. Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
 « Prévue vers 12:30 », bouton « Commencer l'étape » (« Fait » pour une étape de 0 min, début et
 fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
 « En fermentation »). Sans chronologie : « Aucune étape. Saisissez vos mesures. ».
@@ -2107,7 +2145,10 @@ fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer 
 **Fin d'un minuteur.** Vibration d'environ une seconde et son de notification, une seule fois
 par étape, écran ouvert seulement : aucune alarme ne sonne écran verrouillé.
 
-**Étapes.** Un appui sur une ligne ouvre : « Commencer cette étape », « Marquer comme sautée » /
+**Étapes.** Chaque ligne de la chronologie porte une icône d'état colorée : verte pour une
+étape faite, de la couleur primaire pour l'étape en cours, grise pour une étape à venir, sautée
+ou non faite ; le libellé (« Terminée », « En cours »…) dit l'état. La colonne d'heure s'élargit
+avec la taille du texte, jusqu'à 30 % de la largeur. Un appui sur une ligne ouvre : « Commencer cette étape », « Marquer comme sautée » /
 « Ne plus sauter », « Corriger l'heure de début », « Corriger l'heure de fin » (l'heure choisie se place au jour le plus proche de la valeur corrigée, sans jamais être dans le futur : un début à 23:50 corrigé à 00:05 passe au lendemain, une fin notée à 08:00 corrigée à 18:00 revient à la veille ; une heure à venir se place à la veille si la veille reste après le début du brassage, sinon elle est refusée ; « La fin doit suivre le début. »), « Annuler le début » / « Annuler la fin » (SnackBar
 « Annuler » 10 s), « Saisir une mesure pour cette étape ». Une étape jamais commencée s'affiche
 « Non faite » dès qu'une étape plus loin a commencé ; marquée sautée, elle s'affiche « Sautée » ; dans les deux cas, elle reste démarrable.
@@ -2126,7 +2167,8 @@ une heure à venir se place à la veille si la veille reste après le début du 
 ni par un glissement : seuls « Annuler » et l'enregistrement le ferment. « Enregistrer la mesure » ferme la
 feuille ; « Mesure enregistrée. » avec « Annuler » 10 s. Un appui sur une mesure ouvre sa
 correction (valeur, note, heure) et « Supprimer la mesure ». Pour changer de type, supprimer et
-ressaisir. Menu ⋮ : « Ajouter une note », « Voir la recette », « Terminer le brassage ». Terminer :
+ressaisir. Menu ⋮ : « Ajouter une note », « Voir la recette » (feuille dont le nom de la recette est
+l'en-tête, au-dessus de ses sous-sections), « Terminer le brassage ». Terminer :
 « Les étapes non commencées resteront non faites. Vous pourrez encore corriger les mesures. ».
 
 **Reprise.** L'application rouvre l'écran du jour au lancement (voir Accueil). Le minuteur se
@@ -2161,8 +2203,8 @@ recalcule depuis l'heure enregistrée, quel que soit le temps écoulé.
 
 Écran « Préparer la journée » d'une journée après le brassage (houblonnage à cru, embouteillage,
 toute journée 2 ou suivante du déroulé), ouvert depuis la fiche, dans la barre de navigation,
-retour vers la fiche. Titre : « Blonde · Houblonnage à cru · prévue le mer. 25 nov. » (« prévue
-aujourd'hui »). « Préparez la journée sur le téléphone qui servira. ». Comme « Préparer le
+retour vers la fiche. Titre sur deux lignes : « Blonde », puis « Houblonnage à cru · prévue le
+mer. 25 nov. » (« prévue aujourd'hui »). « Préparez la journée sur le téléphone qui servira. ». Comme « Préparer le
 brassage », il attend une réponse du serveur 15 s au plus, sans rien écrire, et liste :
 « Brassin et déroulé figé », « Étapes » (« 4 étapes · 25 min · fin vers 10:40 »), compte, écran
 gardé allumé, minuteurs, navigateur (web). Journée d'embouteillage : « Prix et frais », « Lus sur
@@ -2253,8 +2295,8 @@ tel quel jusqu'à 4 décimales, montant calculé au centime. « Ajouter un prix 
 sur téléphone, bouton sous le titre « Ingrédients » au-delà). Une écriture en attente porte « En attente du réseau ».
 Un appui sur une ligne ouvre sa modification.
 
-États : « Chargement de vos prix » ; « Impossible de lire vos prix. » et « Réessayer » ; « Aucun
-prix enregistré. Ajoutez-en un, ou complétez-les depuis une recette. » ; « Aucun frais. Ajoutez
+États : « Chargement de vos prix » ; « Impossible de lire vos prix. » et « Réessayer » ; titre « Aucun prix », puis « Ajoutez-en
+un, ou complétez-les depuis une recette. » ; « Aucun frais. Ajoutez
 l'eau, l'électricité, les capsules… pour qu'ils comptent dans le coût. » ; hors ligne sans
 cache, « Prix indisponibles sur cet appareil hors ligne. », sans « Réessayer » ni bouton d'ajout.
 Un prix ou un frais illisible s'affiche « Prix illisible » (« Ce prix ne peut pas être lu.
@@ -2336,8 +2378,8 @@ colonne centrée sur 840 pixels.
   préparation et de nettoyage, et les journées après le brassage. », avec « Partir du modèle
   d'exemple » et « Nouveau processus ». Le bouton flottant et le bouton en tête ne s'affichent
   pas en plus. La section du groupe reste dessous.
-- Document illisible : ligne « Processus illisible » / « Le document contient une valeur
-  inattendue. ». L'erreur est rapportée ; les autres processus restent affichés.
+- Document illisible : ligne « Processus illisible » / « Mettez l'application à jour, ou
+  prévenez l'administrateur. », comme une recette. L'erreur est rapportée ; les autres processus restent affichés.
 - Hors ligne : la liste vient du cache, les écritures attendent le réseau. Liste jamais lue
   sur l'appareil : « Processus indisponibles hors ligne. » et « Nouveau processus ».
 
@@ -2348,8 +2390,10 @@ des houblons à cru ; Embouteillage J+14). Rien n'est écrit avant « Enregistre
 demande « Abandonner les modifications ? ». Il n'est proposé que si le lecteur n'a aucun
 processus.
 
-**Fiche.** Barre « Processus », retour vers la liste. Nom, « Processus de {auteur} » pour un
-autre membre, notes. Une section par journée : « 1. Brassage · J+0 » ; la mention « Seulement
+**Fiche.** Barre « Processus », retour vers la liste. En-tête : nom, « Processus de {auteur} »
+sur la ligne grise pour un autre membre ; puis les notes. « Modifier » (tonal) et « Supprimer »
+(contour rouge) pour l'auteur, « Copier dans mes processus » (plein) pour un autre membre. Une
+carte par journée : « 1. Brassage · J+0 » ; la mention « Seulement
 si la recette a des houblons à cru » (ou « … des ajouts à l'embouteillage ») si la journée en
 dépend ; le résumé « 9 étapes · 4 h 15 + chronologie de la recette » (étapes du processus et
 leur durée, puis le bloc), ou le bloc seul pour une journée sans étape (« Houblons à cru ») ; puis chaque étape (« Mise en place du matériel · 30 min ·
@@ -2602,3 +2646,6 @@ affiche « Calcul impossible : {champ} hors des limites. » ; l'erreur est rappo
 
 Une version compilée sans configuration Firebase affiche « Configuration Firebase absente »
 et la liste des clés manquantes, au lieu de démarrer.
+
+Le même écran sert quand Firebase ne démarre pas (« Kass'Beer n'a pas pu démarrer »). Le
+médaillon, l'icône d'erreur, le titre et le message sont alignés à gauche.

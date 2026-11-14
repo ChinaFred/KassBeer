@@ -356,7 +356,6 @@ class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Nature du sucre (facultatif)',
-                border: OutlineInputBorder(),
               ),
               onChanged: (_) => _modifie(),
               onFieldSubmitted: (_) => _soumettre(),

@@ -87,10 +87,7 @@ class _FormulaireJourneeState extends State<FormulaireJournee> {
             textInputAction: widget.offsetFixe
                 ? TextInputAction.done
                 : TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Nom de la journée',
-              border: OutlineInputBorder(),
-            ),
+            decoration: const InputDecoration(labelText: 'Nom de la journée'),
             validator: (v) =>
                 (v ?? '').trim().isEmpty ? FormulaireJournee.nomManquant : null,
             onFieldSubmitted: widget.offsetFixe ? (_) => _submit() : null,

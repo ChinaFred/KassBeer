@@ -305,26 +305,16 @@ class _FicheState extends ConsumerState<_Fiche> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            Semantics(
-              header: true,
-              child: Text(c.name, style: theme.textTheme.headlineSmall),
+            EnTeteFiche(
+              titre: c.name,
+              sousTitre: mine
+                  ? null
+                  : 'Processus de ${libelleAuteur(ownerUid: modele.ownerUid, ownerName: modele.ownerName, readerUid: uid)}',
+              etiquettes: [
+                if (modele.hasPendingWrites)
+                  const Etiquette(label: 'En attente du réseau'),
+              ],
             ),
-            if (!mine) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Processus de ${libelleAuteur(ownerUid: modele.ownerUid, ownerName: modele.ownerName, readerUid: uid)}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            if (modele.hasPendingWrites) ...[
-              const SizedBox(height: 8),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Etiquette(label: 'En attente du réseau'),
-              ),
-            ],
             if (notes != null) ...[
               const SizedBox(height: 12),
               Text(notes, style: theme.textTheme.bodyLarge),
@@ -391,28 +381,31 @@ class _FicheState extends ConsumerState<_Fiche> {
                       : const Text(ProcessDetailScreen.copier),
                 ),
               ),
-            for (final (i, j) in c.journees.indexed) ...[
-              TitreSection('${i + 1}. ${j.name} · J+${j.offsetDays}'),
-              if (mentionCondition(j) case final mention?)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    mention,
+            for (final (i, j) in c.journees.indexed)
+              CarteSection(
+                titre: '${i + 1}. ${j.name} · J+${j.offsetDays}',
+                children: [
+                  if (mentionCondition(j) case final mention?)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        mention,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.tertiary,
+                        ),
+                      ),
+                    ),
+                  Text(
+                    resumeJournee(j),
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.tertiary,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ),
-              Text(
-                resumeJournee(j),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                  const SizedBox(height: 8),
+                  for (final e in j.elements)
+                    e.estBloc ? _LigneBloc(nature: e.nature) : _LigneEtape(e),
+                ],
               ),
-              const SizedBox(height: 8),
-              for (final e in j.elements)
-                e.estBloc ? _LigneBloc(nature: e.nature) : _LigneEtape(e),
-            ],
           ],
         ),
       ),

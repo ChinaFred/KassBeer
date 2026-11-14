@@ -495,7 +495,6 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
       labelText: LogsScreen.ticket,
       helperText: LogsScreen.aideTicket,
       errorText: _erreurTicket,
-      border: const OutlineInputBorder(),
     ),
     textInputAction: TextInputAction.done,
     onChanged: (v) {
@@ -513,7 +512,6 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
       helperMaxLines: 2,
       errorText: _erreurTexte,
       errorMaxLines: 2,
-      border: const OutlineInputBorder(),
     ),
     textInputAction: TextInputAction.done,
     onChanged: (v) {

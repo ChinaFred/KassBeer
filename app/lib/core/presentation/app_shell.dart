@@ -255,6 +255,10 @@ class AppShell extends ConsumerWidget {
 
 /// En-tête du rail étendu : médaillon de 48 px et nom de l'application. Exclu
 /// de la sémantique : la barre du haut porte déjà le titre de l'écran.
+///
+/// Le nom suit le médaillon sur sa ligne, et passe dessous quand il n'y tient
+/// pas (texte agrandi). Plus large que le rail, il est réduit : il n'est
+/// jamais coupé.
 class _EnteteRail extends StatelessWidget {
   const _EnteteRail();
 
@@ -266,14 +270,16 @@ class _EnteteRail extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: SizedBox(
           width: kRailEtenduWidth - 32,
-          child: Row(
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               const MedaillonKassBeer(taille: MedaillonKassBeer.tailleMin),
-              const SizedBox(width: 12),
-              Flexible(
+              FittedBox(
+                fit: BoxFit.scaleDown,
                 child: Text(
                   "Kass'Beer",
-                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: theme.colorScheme.primary,
                   ),

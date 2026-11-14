@@ -147,12 +147,13 @@ class _Fiche extends StatelessWidget {
     final liste = ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Semantics(
-          header: true,
-          child: Text(c.name, style: theme.textTheme.headlineSmall),
+        EnTeteFiche(
+          titre: c.name,
+          sousTitre: [
+            ?c.style,
+            if (source != null) 'Recette publique · $source',
+          ].join(' · '),
         ),
-        if (c.style != null) Text(c.style!, style: muted),
-        if (source != null) Text('Recette publique · $source', style: muted),
         // Style résolu par l'ingestion : sa fiche donne les plages du style.
         if (styleId != null)
           Align(
@@ -190,58 +191,76 @@ class _Fiche extends StatelessWidget {
           'la brasser.',
           style: muted,
         ),
-        const TitreSection(PublicRecipeScreen.announcedTitle),
-        if (a.vide)
-          const TexteAbsent('Aucune valeur annoncée.')
-        else ...[
-          Text(PublicRecipeScreen.announcedNote, style: muted),
-          if (a.originalGravity != null)
-            LigneFiche(
-              label: 'Densité initiale',
-              value: formatDensite(a.originalGravity!),
+        CarteSection(
+          titre: PublicRecipeScreen.announcedTitle,
+          children: [
+            if (a.vide)
+              const TexteAbsent('Aucune valeur annoncée.')
+            else ...[
+              Text(PublicRecipeScreen.announcedNote, style: muted),
+              if (a.originalGravity != null)
+                LigneFiche(
+                  label: 'Densité initiale',
+                  value: formatDensite(a.originalGravity!),
+                ),
+              if (a.finalGravity != null)
+                LigneFiche(
+                  label: 'Densité finale',
+                  value: formatDensite(a.finalGravity!),
+                ),
+              if (a.alcoholByVolume != null)
+                LigneFiche(
+                  label: 'Degré',
+                  value: formatDegre(a.alcoholByVolume!),
+                ),
+              if (a.ibu != null)
+                LigneFiche(label: 'Amertume', value: formatIbu(a.ibu!)),
+              if (a.colorEbc != null)
+                LigneFiche(label: 'Couleur', value: formatEbc(a.colorEbc!)),
+            ],
+          ],
+        ),
+        CarteSection(
+          titre: 'Calculs',
+          children: [
+            BlocCalculs(
+              calculs: calculs,
+              content: c,
+              equipement: const SansEquipement(),
+              messageManques: PublicRecipeScreen.missingNote,
             ),
-          if (a.finalGravity != null)
+          ],
+        ),
+        CarteSection(
+          titre: 'Général',
+          children: [
             LigneFiche(
-              label: 'Densité finale',
-              value: formatDensite(a.finalGravity!),
+              label: 'Type de recette',
+              value: c.type == null ? null : typesRecette.libelle(c.type!),
             ),
-          if (a.alcoholByVolume != null)
-            LigneFiche(label: 'Degré', value: formatDegre(a.alcoholByVolume!)),
-          if (a.ibu != null)
-            LigneFiche(label: 'Amertume', value: formatIbu(a.ibu!)),
-          if (a.colorEbc != null)
-            LigneFiche(label: 'Couleur', value: formatEbc(a.colorEbc!)),
-        ],
-        const TitreSection('Calculs'),
-        BlocCalculs(
-          calculs: calculs,
-          content: c,
-          equipement: const SansEquipement(),
-          messageManques: PublicRecipeScreen.missingNote,
-        ),
-        const TitreSection('Général'),
-        LigneFiche(
-          label: 'Type de recette',
-          value: c.type == null ? null : typesRecette.libelle(c.type!),
-        ),
-        LigneFiche(label: 'Auteur', value: c.author),
-        LigneFiche(
-          label: 'Volume en fermenteur',
-          value: volume == null ? null : formatLitres(volume),
-        ),
-        LigneFiche(
-          label: 'Durée d\'ébullition',
-          value: boil == null ? null : formatMinutes(boil),
+            LigneFiche(label: 'Auteur', value: c.author),
+            LigneFiche(
+              label: 'Volume en fermenteur',
+              value: volume == null ? null : formatLitres(volume),
+            ),
+            LigneFiche(
+              label: 'Durée d\'ébullition',
+              value: boil == null ? null : formatMinutes(boil),
+            ),
+          ],
         ),
         ContenuRecette(
           content: c,
           hopIbu: hopIbu,
+          enCartes: true,
           momentsOrigine: {
             for (final MapEntry(:key, :value) in recette.momentsOrigine.entries)
               key: libelleMomentOrigine(value),
           },
         ),
-        SectionProvenance(provenance: recette.provenance),
+        CarteSection(
+          children: [SectionProvenance(provenance: recette.provenance)],
+        ),
       ],
     );
     return Material(type: MaterialType.transparency, child: liste);

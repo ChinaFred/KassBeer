@@ -768,10 +768,7 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
                 minLines: 1,
                 maxLines: 4,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Note',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'Note'),
               )
             else
               Align(

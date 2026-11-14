@@ -11,6 +11,11 @@ import 'zone_capture.dart';
 /// compte ou une autre page : barre avec retour, titre et menu du compte ;
 /// bandeau hors ligne ; contenu centré sur [largeurMax].
 ///
+/// Le corps occupe toute la largeur : la molette fait défiler la page
+/// au-dessus des marges latérales. Une liste centre ses lignes par
+/// [PageSecondaire.marges] ; un état (`EtatVide`, `EtatErreur`) se borne
+/// lui-même.
+///
 /// Le retour ferme la page ouverte par `push`, sinon ouvre [repli] (adresse
 /// ouverte directement).
 class PageSecondaire extends StatelessWidget {
@@ -35,6 +40,18 @@ class PageSecondaire extends StatelessWidget {
   final double? largeurMax;
   final Widget? floatingActionButton;
 
+  /// Marges d'une liste de la page : [base], plus de chaque côté la marge qui
+  /// centre le contenu sur [largeurMax]. [context] doit être sous la page
+  /// (widget du corps, ou `Builder`).
+  static EdgeInsets marges(BuildContext context, EdgeInsets base) {
+    final page = context.dependOnInheritedWidgetOfExactType<_MargePage>();
+    assert(
+      page != null,
+      'PageSecondaire.marges appelé avec un contexte hors de la page.',
+    );
+    return base + EdgeInsets.symmetric(horizontal: page?.marge ?? 0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final largeur = largeurMax;
@@ -54,15 +71,14 @@ class PageSecondaire extends StatelessWidget {
             children: [
               if (horsLigne) const BandeauHorsLigne(),
               Expanded(
-                child: largeur == null
-                    ? body
-                    : Align(
-                        alignment: Alignment.topCenter,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: largeur),
-                          child: body,
-                        ),
-                      ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) => _MargePage(
+                    marge: largeur == null || constraints.maxWidth <= largeur
+                        ? 0
+                        : (constraints.maxWidth - largeur) / 2,
+                    child: body,
+                  ),
+                ),
               ),
             ],
           ),
@@ -71,4 +87,14 @@ class PageSecondaire extends StatelessWidget {
       floatingActionButton: floatingActionButton,
     );
   }
+}
+
+/// Marge latérale qui centre le contenu d'une [PageSecondaire].
+class _MargePage extends InheritedWidget {
+  const _MargePage({required this.marge, required super.child});
+
+  final double marge;
+
+  @override
+  bool updateShouldNotify(_MargePage oldWidget) => marge != oldWidget.marge;
 }

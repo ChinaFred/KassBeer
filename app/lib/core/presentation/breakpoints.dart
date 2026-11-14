@@ -108,3 +108,20 @@ const double kTicketsAdminCoteACoteMinWidth =
 /// Hauteur maximale d'une liste de suggestions sous un champ de saisie : six
 /// lignes à deux lignes de texte, sans cacher tout le formulaire au téléphone.
 const double kSuggestionsMaxHeight = 280;
+
+/// Débord d'une carte de section (`CarteSection`) de chaque côté de sa colonne,
+/// sous [kCompactMaxWidth] : la carte s'étend sur la marge de la fiche et son
+/// contenu, retiré de 16 − 8 px, reste aligné sur l'en-tête de la fiche.
+const double kDebordCarteCompact = 8;
+
+/// Largeur de la colonne d'heure d'une ligne de la chronologie du jour, pour un
+/// texte à 100 % ; multipliée par l'échelle du texte, sans dépasser
+/// [kChronologieHeureMaxFraction] de la largeur de la chronologie (jamais
+/// moins que cette valeur). Les mesures, notes et débuts en double s'alignent
+/// sur la fin de cette colonne.
+const double kChronologieHeureWidth = 104;
+
+/// Part de la largeur de la chronologie que la colonne d'heure ne dépasse pas
+/// quand le texte grossit : à 200 % sur un téléphone de 360 px, le nom de
+/// l'étape garde la place de ses mots.
+const double kChronologieHeureMaxFraction = 0.3;

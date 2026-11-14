@@ -343,8 +343,16 @@ void main() {
       tester,
     ) async {
       final app = await ouvrir(tester, chemin(cru.key));
+      // Titre sur deux lignes, un seul en-tête : brassin, puis journée et date.
+      final enTete = find.ancestor(
+        of: find.text('Houblonnage à cru · prévue aujourd\'hui'),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && (w.properties.header ?? false),
+        ),
+      );
+      expect(enTete, findsOneWidget);
       expect(
-        find.text('Blonde du jour · Houblonnage à cru · prévue aujourd\'hui'),
+        find.descendant(of: enTete, matching: find.text('Blonde du jour')),
         findsOneWidget,
       );
       expect(find.text('Brassin et déroulé figé'), findsOneWidget);

@@ -144,9 +144,9 @@ class _Liste extends StatelessWidget {
     final invalid = list.documents
         .whereType<DocumentInvalide<ModeleProcessus>>();
     return ListView(
-      padding: EdgeInsets.only(
-        top: 8,
-        bottom: compact ? kMargeBoutonFlottant : 24,
+      padding: PageSecondaire.marges(
+        context,
+        EdgeInsets.only(top: 8, bottom: compact ? kMargeBoutonFlottant : 24),
       ),
       children: [
         if (stale) BandeauListePerimee(retrying: retrying, onRetry: onRetry),
@@ -222,9 +222,7 @@ class _Liste extends StatelessWidget {
             icone: Icons.error_outline,
             erreur: true,
             titre: 'Processus illisible',
-            details: const [
-              Text('Le document contient une valeur inattendue.'),
-            ],
+            details: const [Text(kDetailLigneIllisible)],
             onTap: () => context.push(AppRoutes.process(d.id)),
           ),
       ],
