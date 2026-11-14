@@ -11,9 +11,11 @@
  *    chemin de l'appelant pour ce ticket ;
  * 3. le ticket existe et son `author_uid` est l'appelant ;
  * 4. le fichier existe, son type annoncé est `image/png`, sa taille va de 1 octet à 5 Mo, et
- *    ses premiers octets sont ceux d'un PNG ;
+ *    ses 24 premiers octets (seuls lus) sont ceux d'un PNG dont l'en-tête IHDR annonce une
+ *    largeur et une hauteur de 1 à 2 000 px (note du 2026-11-14) ;
  *
- * puis écrit `screenshot_path` sur le ticket. La capture ne part jamais sur GitHub. Ni son
+ * puis écrit `screenshot_path` et `screenshot_expires_at` (rattachement + 180 jours, date
+ * d'effacement par la règle de cycle de vie du bucket) sur le ticket. La capture ne part jamais sur GitHub. Ni son
  * contenu, ni son chemin, ni le message ou la pile d'une erreur de Cloud Storage (qui
  * portent le chemin) ne sont journalisés : le code de l'erreur seul (2026-11-14).
  */
@@ -30,8 +32,21 @@ import { readTicketIdArg } from "./answer";
 /** Taille maximale d'une capture, comme `storage.rules`. */
 export const SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024;
 
-/** Octets lus en tête d'une capture pour en vérifier la signature. */
-export const SCREENSHOT_SIGNATURE_BYTES = 8;
+/**
+ * Octets lus en tête d'une capture : signature (0 à 7), longueur et type du premier bloc
+ * (8 à 15, `IHDR`), largeur et hauteur (16 à 23). Lecture partielle : le reste du fichier
+ * n'est jamais téléchargé.
+ */
+export const SCREENSHOT_HEAD_BYTES = 24;
+
+/** Largeur et hauteur maximales d'une capture, en pixels (note du 2026-11-14). */
+export const SCREENSHOT_MAX_SIDE_PX = 2000;
+
+/**
+ * Durée de conservation d'une capture, en jours : la règle de cycle de vie du bucket
+ * l'efface après ce délai (`exigences-techniques.md`, réglages faits une fois).
+ */
+export const SCREENSHOT_RETENTION_DAYS = 180;
 
 /** Longueur brute maximale de `path` avant toute lecture. */
 export const SCREENSHOT_PATH_MAX_CHARS = 300;
@@ -56,6 +71,28 @@ export function screenshotBytesMatch(head: Uint8Array): boolean {
 }
 
 /**
+ * Largeur et hauteur lues dans l'en-tête IHDR d'un PNG (octets 16 à 23, gros-boutiste), ou
+ * `null` si la tête est trop courte, si la signature manque, si le premier bloc n'est pas
+ * un `IHDR` de 13 octets ou si un côté vaut 0. Pure.
+ */
+export function pngDimensions(head: Uint8Array): { width: number; height: number } | null {
+  if (head.length < SCREENSHOT_HEAD_BYTES || !screenshotBytesMatch(head)) return null;
+  const view = new DataView(head.buffer, head.byteOffset, head.byteLength);
+  if (view.getUint32(8) !== 13) return null;
+  const type = String.fromCharCode(head[12], head[13], head[14], head[15]);
+  if (type !== "IHDR") return null;
+  const width = view.getUint32(16);
+  const height = view.getUint32(20);
+  if (width === 0 || height === 0) return null;
+  return { width, height };
+}
+
+/** Vrai si la largeur et la hauteur valent au plus 2 000 px. Pure. */
+export function screenshotDimensionsAccepted(dims: { width: number; height: number }): boolean {
+  return dims.width <= SCREENSHOT_MAX_SIDE_PX && dims.height <= SCREENSHOT_MAX_SIDE_PX;
+}
+
+/**
  * Code d'une erreur de Cloud Storage ou de Firestore, seul élément journalisé : nombre
  * (statut HTTP) ou texte court sans `/` ; sinon le nom de la classe, sinon `inconnu`. Le
  * message et la pile portent le chemin du fichier. Pure.
@@ -73,6 +110,7 @@ export const SCREENSHOT_TICKET_MISSING = "Ce ticket n'existe plus.";
 export const SCREENSHOT_NOT_AUTHOR = "Ce ticket ne vous appartient pas.";
 export const SCREENSHOT_FILE_MISSING = "La capture n'a pas été trouvée.";
 export const SCREENSHOT_FILE_REFUSED = "Seules les images PNG de 5 Mo au plus sont acceptées.";
+export const SCREENSHOT_TOO_LARGE = "Cette image dépasse 2 000 pixels de côté.";
 export const SCREENSHOT_INTERNAL = "La capture n'a pas pu être jointe. Réessayez.";
 
 function refusal(
@@ -112,9 +150,14 @@ export interface ScreenshotDeps {
   store?: ScreenshotStore;
   /** Journal des erreurs, remplacé dans les tests. */
   log?: (entry: LogEntry) => void;
+  /** Heure courante en millisecondes, remplacée dans les tests. */
+  now?: () => number;
 }
 
-/** Vérifie la capture déposée et écrit `screenshot_path` (étapes 3 et 4). */
+/**
+ * Vérifie la capture déposée et écrit `screenshot_path` et `screenshot_expires_at`
+ * (étapes 3 et 4).
+ */
 export async function attachScreenshot(
   uid: string,
   ticketId: string,
@@ -138,13 +181,22 @@ export async function attachScreenshot(
   ) {
     throw refusal("invalid-argument", SCREENSHOT_FILE_REFUSED, "file_refused");
   }
-  const head = await store.head(path, SCREENSHOT_SIGNATURE_BYTES);
+  const head = await store.head(path, SCREENSHOT_HEAD_BYTES);
   if (!screenshotBytesMatch(head)) {
     throw refusal("invalid-argument", SCREENSHOT_FILE_REFUSED, "file_refused");
   }
+  const dims = pngDimensions(head);
+  if (dims === null) {
+    throw refusal("invalid-argument", SCREENSHOT_FILE_REFUSED, "file_refused");
+  }
+  if (!screenshotDimensionsAccepted(dims)) {
+    throw refusal("invalid-argument", SCREENSHOT_TOO_LARGE, "dimensions_refused");
+  }
 
+  const nowMs = (deps.now ?? Date.now)();
   await ref.update({
     screenshot_path: path,
+    screenshot_expires_at: kit.Timestamp.fromMillis(nowMs + SCREENSHOT_RETENTION_DAYS * 86_400_000),
     updated_at: kit.FieldValue.serverTimestamp(),
   });
 }

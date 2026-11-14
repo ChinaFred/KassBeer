@@ -64,9 +64,9 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
 | `lib/core/data/nouveautes.dart` | `Nouveaute`, `lireNouveautes` (valide la forme de `assets/changelog_recent.json`, lève une `FormatException` sinon), `NouveautesRepository` (lecture de l'asset, panne journalisée sous `nouveautes` puis relancée) |
-| `lib/core/presentation/` | `AppShell` (barre du bas à icônes seules sous 600 px, `label` en infobulle et pour le lecteur d'écran ; rail défilable ; titre et retour reçus de la route ; menu du compte), `MenuCompte` (`menu_compte.dart` : avatar et menu du compte de la coquille et des pages pleines, rien sans `AccessGranted` ; `photo: false` sur l'écran du jour, initiale seule ; entrée de l'écran courant masquée par `kEntreeDeLEcran`, comparée au `fullPath` ; `avantDeQuitter` appelé avant « Tickets à traiter », « Mes processus » et « Se déconnecter » ; « Tickets à traiter » par `go`, sauf sur `kEcransDuJour` (`/brassins/:id/jour`, `/brassins/:id/jour/:journee`), par `push` pour garder l'écran du jour et son verrou ; `avantDeDeconnecter` avant « Se déconnecter » ; `textePastille`, `infobulleCompte`), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` (menu du compte après l'action, `avantDeQuitter` = confirmation d'abandon si modifié ; bouton d'action borné par la largeur restante, libellé réduit par `FittedBox`) et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/presentation/` | `AppShell` (barre du bas à icônes seules sous 600 px, `label` en infobulle et pour le lecteur d'écran ; rail défilable ; titre et retour reçus de la route ; menu du compte), `MenuCompte` (`menu_compte.dart` : avatar et menu du compte de la coquille et des pages pleines, rien sans `AccessGranted` ; `photo: false` sur l'écran du jour, initiale seule ; entrée de l'écran courant masquée par `kEntreeDeLEcran`, comparée au `fullPath` ; `avantDeQuitter` appelé avant « Tickets à traiter », « Mes processus » et « Se déconnecter » ; « Tickets à traiter » par `go`, sauf sur `kEcransDuJour` (`/brassins/:id/jour`, `/brassins/:id/jour/:journee`), par `push` pour garder l'écran du jour et son verrou ; `avantDeDeconnecter` avant « Se déconnecter » ; `textePastille`, `infobulleCompte`), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` (menu du compte après l'action, `avantDeQuitter` = confirmation d'abandon si modifié ; bouton d'action borné par la largeur restante, libellé réduit par `FittedBox` ; `actionActive` faux : bouton grisé sous son libellé) et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
 | `lib/core/preferences/` | préférence de thème gardée sur l'appareil (ADR-009) : `PreferencesAppareil` (`lireValeurTheme`, `ecrireTheme`), `PreferencesAppareilPlateforme` (canal `fr.kassbeer/prefs` sur Android, `preferences_web.dart` par `package:web` sur le web, `preferences_web_stub.dart` hors du web, import conditionnel), `lireTheme` (rend `LectureTheme`, ne lève pas), `themeModeProvider` (`ThemeModeNotifier.choisir`) ; fournis par `preferencesAppareilProvider` et `themeModeInitialProvider` |
-| `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets)` rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
+| `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets, types)` (types facultatifs, `kTypesImages` pour une image de ticket) rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
@@ -311,12 +311,18 @@ vibration échouent séparément : chacun est rapporté une fois par session (`b
 tard ne sonne pas).
 
 **Choix et partage d'un fichier (ADR-007).** `EchangeFichiers` (`lib/core/fichiers/`). Sur
-Android, `MethodChannel('fr.kassbeer/files')`, méthodes `pickDocument` (`maxBytes`),
+Android, `MethodChannel('fr.kassbeer/files')`, méthodes `pickDocument` (`maxBytes`,
+`mimeTypes` facultatif),
 `shareFile` et `saveDocument` (`name`, `mimeType`, `bytes`), définies dans
 `EchangeFichiers.kt` et branchées par `MainActivity.configureFlutterEngine` (P17) :
 
 - `pickDocument` : `ACTION_OPEN_DOCUMENT`, `CATEGORY_OPENABLE`, type `*/*` (le format se lit au
-  contenu). `OpenableColumns.SIZE` au-delà de `maxBytes` rend `TOO_LARGE` (taille en `details`)
+  contenu). Avec `mimeTypes` (complément T6 du 2026-11-14, « Choisir une image ») : liste de 1
+  à 10 types conformes à `^[a-z]{1,20}/[a-z0-9.+*-]{1,60}$` (`kMotifTypeMime` et `kTypesMax`
+  côté Dart, mêmes valeurs en Kotlin), sinon `INVALID_ARGUMENT` sans ouvrir le sélecteur ;
+  `EXTRA_MIME_TYPES` porte la liste, et le type vaut `image/*` quand tous sont des images.
+  Le Dart refuse aussi une liste hors motif avant l'appel (`ChoixImpossible`, rapporté
+  `exchange.pick`). Le filtre n'est qu'un confort : le contenu reste contrôlé par l'appelant. `OpenableColumns.SIZE` au-delà de `maxBytes` rend `TOO_LARGE` (taille en `details`)
   sans ouvrir le flux ; sinon lecture bornée à `maxBytes + 1` octets, `TOO_LARGE` sans taille
   au-delà. Rend `{name, bytes}`, ou `null` sur une annulation. La borne vient du Dart
   (`kMaxOctetsParFichier`, 10 Mo) : aucune constante de taille en Kotlin.
@@ -343,7 +349,7 @@ Android, `MethodChannel('fr.kassbeer/files')`, méthodes `pickDocument` (`maxByt
 Côté Dart, garde `kIsWeb` avant le canal ; chaque `catch` appelle `reportError`
 (`exchange.pick`, `exchange.share`, `exchange.save`) avec un `context` limité au code et à la
 taille. Sur le web, `fichiers_web.dart` : `<input type="file">` créé et cliqué dans le geste de
-l'utilisateur, `File.size` au-delà de la borne refusé avant `arrayBuffer()`, événement
+l'utilisateur, attribut `accept` égal aux types demandés joints par des virgules, `File.size` au-delà de la borne refusé avant `arrayBuffer()`, événement
 `cancel` (un nouveau choix clôt le précédent comme annulé sur un navigateur qui ne l'émet
 pas) ; téléchargement par `Blob`, `URL.createObjectURL`, lien `download`, clic,
 `revokeObjectURL` une seconde après. Rien ne part vers un serveur. Tests :
@@ -991,13 +997,13 @@ par-dessus l'écran du jour (P2).
 | Fichier | Contenu |
 |---|---|
 | `core/presentation/zone_capture.dart` | `ZoneCapture` (`RepaintBoundary`) : corps du `Scaffold` de la coquille (sans la barre du haut, la barre ou le rail de navigation) et de chaque page pleine qui porte `MenuCompte` ; `zoneCaptureDe(context)` : la première `ZoneCapture` sous le `Scaffold` le plus proche ; `echelleCapture` (échelle `kCaptureMaxScale` 2 au plus, plus grand côté `kCaptureMaxSide` 2 000 px au plus) ; `rendrePng` (PNG, `null` au-delà de `maxBytes`) |
-| `features/tickets/presentation/capture_ticket.dart` | `CaptureEcran` (`png`, `ecran`) ; `CaptureEnAttente` et `captureEnAttenteProvider` : dépôt en mémoire, écrit par le menu, vidé par le formulaire qui le lit une fois (`prendre`), jamais écrit sur l'appareil ; `capturerEcranProvider` et `capturerEcran` (délai `kCaptureTimeout` 5 s ; échec rapporté `tickets.capture`, sans contenu) ; `ticketScreenshotProvider` (`FutureProvider.autoDispose.family` par chemin, sans nouvel essai) |
+| `features/tickets/presentation/capture_ticket.dart` | `CaptureEcran` (`png`, `ecran`) ; `CaptureEnAttente` et `captureEnAttenteProvider` : dépôt en mémoire, écrit par le menu, vidé par le formulaire qui le lit une fois (`prendre`), jamais écrit sur l'appareil ; `capturerEcranProvider` et `capturerEcran` (délai `kCaptureTimeout` 5 s ; échec rapporté `tickets.capture`, sans contenu) ; `preparerImageProvider` et `preparerImage` : en-tête lu d'abord sans décoder (`dimensionsImage` : PNG, JPEG, WebP ; `verifierImageAvantDecodage` lève `ImageRefusee` pour un autre format, un en-tête tronqué, un côté nul ou plus de `kImageChoisieMaxPixels`, 50 millions de pixels), puis image décodée par `dart:ui`, côté long réduit à 2 000 px par `tailleImageChoisie`, proportions gardées, sur les deux chemins : hors du web, `ImageDescriptor` (largeur et hauteur recontrôlées contre la même borne par `depasseMaxPixels`, puis `instantiateCodec(targetWidth, targetHeight)`, descripteur libéré avec son tampon après la première image) ; sur le web, où `ImageDescriptor.width` lève `UnsupportedError`, `instantiateImageCodecWithSize` ; comparaison au plafond sans produit (`depasseMaxPixels`), qui déborderait en Dart natif ; première image réencodée en PNG, ce qui retire les métadonnées EXIF ; lève si l'image ne se décode pas ; `ticketScreenshotProvider` (`FutureProvider.autoDispose.family` par chemin, sans nouvel essai) |
 | `core/presentation/menu_compte.dart` | « Signaler ou proposer » : capture de la page sous le menu, puis `push` du formulaire avec le modèle de route `GoRouterState.of(context).fullPath` ; le menu ouvert, dans l'`Overlay`, n'est pas dans l'image |
-| `features/tickets/presentation/ticket_form_screen.dart` | section « Capture » si la capture prise correspond à l'écran d'origine et sans « Reprendre » ; avertissement des prix pour `kTicketScreensWithPrices`, avant la case ; case décochée ; envoi : ticket écrit, formulaire fermé, puis, ticket accepté par le serveur en 30 s au plus (`captureWaitTimeout`), `attachScreenshot` ; hors ligne, rien ne part |
-| `features/tickets/presentation/vignette_capture.dart` | `VignetteCapture` (`Semantics` bouton avec `onTap`, « Agrandir la capture » ; `InkWell` posé au-dessus de l'image, effet d'appui et focus visibles ; agrandie dans un `Dialog.fullscreen` avec `InteractiveViewer`) ; image illisible : « Capture indisponible. », rapportée une fois `tickets.capture_display` avec la taille seule ; `CaptureDuTicket` (lecture par `getData` ; en échec « Capture indisponible. », hors ligne « La capture se lit avec le réseau. », et « Réessayer », qui invalide `ticketScreenshotProvider`) ; `TextesCapture` |
-| `features/tickets/domain/ticket.dart` | `Ticket.screenshotPath` (`screenshot_path`) ; `kTicketScreenshotMaxBytes` (5 Mo) ; `kTicketScreenshotPathPattern` (`screenshot.png` seul) ; `ticketScreenshotPath(uid, ticketId)` |
+| `features/tickets/presentation/ticket_form_screen.dart` | section « Capture » toujours affichée ; case et vignette si la capture prise correspond à l'écran d'origine et sans « Reprendre » ; « Choisir une image » (`choisir(maxOctets: 5 Mo, types: kTypesImages)`, puis `preparerImage` ; pendant la préparation, « Préparation de l'image… » (`liveRegion`) remplace le bouton et « Envoyer » est grisé (`EditeurPleinEcran.actionActive`) et la case est désactivée (`onChanged` nul) ; refus « Cette image n'a pas pu être ouverte. Choisissez-en une autre. » pour `ChoixImpossible`, une image refusée avant décodage (`ImageRefusee`) ou un décodage en échec, rapporté `tickets.image` avec la taille et le type d'erreur seuls, et « Cette image dépasse 5 Mo. Choisissez une image plus légère. » pour `FichierTropGros` ou un PNG réencodé de plus de 5 Mo), aperçu « Aperçu de l'image choisie » et « Retirer l'image » (focus après un choix, rendu à « Choisir une image » après le retrait, une annulation (`ChoixAnnule`) ou un refus (`_refuserImage`)) ; une seule image part : choisir décoche la case, cocher retire l'image et son erreur ; abandon : « Le texte saisi et l'image seront perdus. » avec une image choisie ou la capture cochée ; « Envoyer » attend la fin de la préparation ; avertissement des prix pour `kTicketScreensWithPrices`, avant la case ; case décochée ; envoi : ticket écrit, formulaire fermé, puis, ticket accepté par le serveur en 30 s au plus (`captureWaitTimeout`), `attachScreenshot` ; hors ligne, rien ne part |
+| `features/tickets/presentation/vignette_capture.dart` | `VignetteCapture` (`Semantics` bouton avec `onTap`, « Agrandir la capture » ; `InkWell` posé au-dessus de l'image, effet d'appui et focus visibles ; agrandie dans un `Dialog.fullscreen` avec `InteractiveViewer`) ; image illisible : « Capture indisponible. », rapportée une fois `tickets.capture_display` avec la taille seule ; `CaptureDuTicket` (lecture par `getData` ; en échec « Capture indisponible. », hors ligne « La capture se lit avec le réseau. », et « Réessayer », qui invalide `ticketScreenshotProvider` ; « Capture effacée. », sans lecture, quand `screenshot_expires_at` est passé à l'heure de `horlogeProvider`, et sans rapport ni « Réessayer » sur `CaptureEffacee`) ; `TextesCapture` |
+| `features/tickets/domain/ticket.dart` | `Ticket.screenshotPath` (`screenshot_path`) ; `Ticket.screenshotExpiresAt` (`screenshot_expires_at`) ; `CaptureEffacee` ; `kTicketScreenshotMaxBytes` (5 Mo) ; `kTicketScreenshotPathPattern` (`screenshot.png` seul) ; `ticketScreenshotPath(uid, ticketId)` |
 | `features/tickets/domain/ticket_screens.dart` | `kTicketScreensWithPrices` : Recette, Brassin, jour de brassage, journée suivante, Préparer la journée, Mes prix |
-| `features/tickets/data/tickets_repository.dart` | `attachScreenshot(ticketId:, authorUid:, png:)` : `putData` sous `tickets/{uid}/{ticketId}/screenshot.png` en `image/png` (délai 2 min), puis callable `attachTicketScreenshot` (`{ticketId, path}`) ; échec rapporté `tickets.screenshot` par une erreur neutre (`StateError('storage <code>')`, le message d'une `FirebaseException` de Storage portant le chemin) avec l'identifiant du ticket, l'étape et le code, jamais le chemin ni le contenu (P13) ; après un échec, relit le ticket et rend vrai s'il porte déjà `screenshot_path` (second dépôt refusé par la création seule) ; `loadScreenshot(path)` : chemin vérifié contre le motif, puis `getData(5 Mo)`, jamais d'URL de téléchargement ; échec rapporté `tickets.load_screenshot` par la même erreur neutre, code seul ; `FirebaseStorage.instance` construite au premier dépôt ou à la première lecture et mémorisée par le dépôt (P6) ; `DeposerFichier` et `LireFichier` injectés par les tests |
+| `features/tickets/data/tickets_repository.dart` | `attachScreenshot(ticketId:, authorUid:, png:)` : `putData` sous `tickets/{uid}/{ticketId}/screenshot.png` en `image/png` (délai 2 min), puis callable `attachTicketScreenshot` (`{ticketId, path}`) ; échec rapporté `tickets.screenshot` par une erreur neutre (`StateError('storage <code>')`, le message d'une `FirebaseException` de Storage portant le chemin) avec l'identifiant du ticket, l'étape et le code, jamais le chemin ni le contenu (P13) ; après un échec, relit le ticket et rend vrai s'il porte déjà `screenshot_path` (second dépôt refusé par la création seule) ; `loadScreenshot(path)` : chemin vérifié contre le motif, puis `getData(5 Mo)`, jamais d'URL de téléchargement ; `object-not-found` (capture effacée par la règle de cycle de vie) lève `CaptureEffacee`, sans rapport ; échec rapporté `tickets.load_screenshot` par la même erreur neutre, code seul ; `FirebaseStorage.instance` construite au premier dépôt ou à la première lecture et mémorisée par le dépôt (P6) ; `DeposerFichier` et `LireFichier` injectés par les tests |
 | `ticket_detail_screen.dart`, `admin_ticket_screen.dart` | « Capture » après la description, quand `screenshot_path` est posé |
 
 **Point à mesurer sur l'APK.** Le formulaire s'ouvre après le rendu PNG (`toImage`, puis
@@ -1640,6 +1646,7 @@ le retire quand elle reprend le ticket.
 | `answer_reset_at` | timestamp : dernier retour à `received` d'un ticket `analyzed` ou `validated` par « Répondre » (ADR-008). Un état d'Issue dont `updated_at` est antérieur ou égal ne change plus le statut : une étiquette livrée en retard ne refait pas avancer le ticket |
 | `send_retried_at` | timestamp de la dernière relance demandée par l'admin : avec `send_attempts` remis à 0, il fait chercher l'Issue par sa référence avant un nouvel envoi |
 | `screenshot_path` | string : `tickets/{author_uid}/{ticketId}/screenshot.png`, écrit par `attachTicketScreenshot` après ses contrôles (ADR-008, T6). Absent : aucune capture. Jamais écrit par un client : les règles du ticket (`hasOnly`) le refusent, testé dans `rules-tests/` pour les cinq profils. La capture ne part jamais sur GitHub ; chaque Issue porte « Capture éventuelle disponible dans Admin › Tickets. » |
+| `screenshot_expires_at` | timestamp : rattachement + 180 jours, écrit avec `screenshot_path` par `attachTicketScreenshot` (complément du 2026-11-14) ; date d'effacement de la capture par la règle de cycle de vie du bucket. Passé : « Capture effacée. », sans lecture. Jamais écrit par un client (`hasOnly`), testé dans `rules-tests/` pour les cinq profils |
 | `updated_at` | timestamp de la dernière écriture du serveur |
 
 Un statut ne recule pas, sauf à la réouverture de l'Issue, qui reprend le statut de ses
@@ -1868,24 +1875,28 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 L'admin n'a aucun droit d'écriture sur le contenu des autres brasseurs.
 
 **Cloud Storage (`storage.rules`, ADR-008, T6).** Bucket par défaut
-`kassbeer.firebasestorage.app`. `isGoogleVerified`, `isMember` et `isAdmin` y sont recopiés de
+`kassbeer.firebasestorage.app`, en `us-east1` (niveau gratuit de Cloud Storage ; Firestore et
+les Functions restent en `europe-west1`). `isGoogleVerified`, `isMember` et `isAdmin` y sont recopiés de
 `firestore.rules` et lisent `members/{email en minuscules}` par `firestore.exists` et
 `firestore.get` ; les deux copies rejouent `test-fixtures/member_access.json` (P31).
 
 | Chemin | Lecture (`get`) | Création | Remplacement, liste, suppression |
 |---|---|---|---|
-| `tickets/{uid}/{ticketId}/{fileName}` | membre `uid` (l'auteur) ; admin | membre `uid` seul, fichier absent (`resource == null`), `tickets/{ticketId}` existant dans Firestore avec `author_uid == request.auth.uid` (`firestore.get`), `fileName` égal à `screenshot.png`, type `image/png`, taille de 1 octet à 5 Mo | personne |
+| `tickets/{uid}/{ticketId}/{fileName}` | membre `uid` (l'auteur) ; admin | membre `uid` seul, fichier absent (`resource == null`), `tickets/{ticketId}` existant dans Firestore avec `author_uid == request.auth.uid` et `created_at` d'une heure au plus (`created_at > request.time - duration.value(1, 'h')`, `firestore.get`), `fileName` égal à `screenshot.png`, type `image/png`, taille de 1 octet à 5 Mo | personne |
 | tout autre chemin | refusé | refusé | refusé |
 
 Chaque dépôt et chaque lecture coûtent une ou deux lectures Firestore facturées (`members/`,
 puis `tickets/`). `attachTicketScreenshot` recontrôle ensuite l'auteur, le type, la taille et
-les premiers octets (PNG `89 50 4E 47 0D 0A 1A 0A`) avant d'écrire `screenshot_path`. Une
+les 24 premiers octets (signature PNG `89 50 4E 47 0D 0A 1A 0A`, bloc `IHDR`, largeur et
+hauteur d'au plus 2 000 px) avant d'écrire `screenshot_path` et `screenshot_expires_at`. Le
+délai d'une heure (complément du 2026-11-14) ferme le dépôt sur un ancien ticket : la capture
+part juste après la création du ticket, jamais depuis le suivi. Une
 capture déposée ne se remplace pas (décision du 2026-11-14) : l'image que le serveur a
 contrôlée reste celle que l'administrateur lit. Un second dépôt pour le même ticket est
 refusé ; le client relit alors le ticket et ne dit « sans la capture » que si
 `screenshot_path` manque. Une capture déposée sans `screenshot_path` (callable en échec) reste dans le
-bucket, sans purge (décision de l'utilisateur, 2026-11-14) ; elle n'est lue par personne,
-l'application ne lisant que le chemin écrit par le serveur.
+bucket jusqu'à son effacement par la règle de cycle de vie (180 jours) ; elle n'est lue par
+personne, l'application ne lisant que le chemin écrit par le serveur.
 
 `import_unresolved/` : un membre qui appelle Firestore directement, sans l'application, peut
 créer des documents à des noms de son choix, ou faire monter `count` sans plafond. Ce risque est
@@ -2854,9 +2865,14 @@ Kass'Dalle. Dans l'ordre : `requireMember` (P30) ; `ticketId` (`requireBoundedTe
 (`details.code = path_invalid`, `details.field = path`) ; ticket absent : `not-found`
 (`ticket_missing`) ; `author_uid` autre que l'appelant : `permission-denied` (`not_author`) ;
 fichier absent : `not-found` (`file_missing`) ; type annoncé autre que `image/png`, taille
-nulle, illisible ou au-delà de 5 Mo, ou premiers octets autres que la signature PNG :
-`invalid-argument` (`file_refused`, « Seules les images PNG de 5 Mo au plus sont
-acceptées. ») ; sinon `screenshot_path` et `updated_at` écrits, `{ok: true}`. Une panne :
+nulle, illisible ou au-delà de 5 Mo, premiers octets autres que la signature PNG, ou en-tête
+`IHDR` absent ou à côté nul : `invalid-argument` (`file_refused`, « Seules les images PNG de
+5 Mo au plus sont acceptées. ») ; largeur ou hauteur de l'en-tête `IHDR` (octets 16 à 23,
+gros-boutiste) au-delà de 2 000 px : `invalid-argument` (`dimensions_refused`, « Cette image
+dépasse 2 000 pixels de côté. ») ; seuls les 24 premiers octets sont lus
+(`SCREENSHOT_HEAD_BYTES`, lecture partielle `download({start: 0, end: 23})`) ; sinon
+`screenshot_path`, `screenshot_expires_at` (heure de l'appel + `SCREENSHOT_RETENTION_DAYS`,
+180 jours) et `updated_at` écrits, `{ok: true}`. Une panne :
 `logError` avec l'identifiant du ticket et `errorCode` (`storageErrorCode` : statut HTTP,
 code court sans `/`, ou nom de la classe), jamais le message ni la pile de l'erreur, qui
 portent le chemin, puis `internal`.
@@ -2864,7 +2880,9 @@ Un second appel réécrit le même chemin. `src/storage.ts` charge `firebase-adm
 premier appel et mémorise le bucket nommé `STORAGE_BUCKET` (P26) ; `@google-cloud/storage` était déjà
 installé par `firebase-admin`, aucun paquet ajouté. Tests : `functions/test/screenshot.test.ts`
 (six profils de P30, bornes, chemins hors motif dont `.jpg`, auteur, fichier, tailles 0, 5 Mo
-et 5 Mo + 1, signatures, panne dont le message porte le chemin : journal capturé sans lui). La phrase « Capture éventuelle disponible dans Admin › Tickets. » termine
+et 5 Mo + 1, signatures, en-tête `IHDR` absent ou tronqué, 2 000 × 2 000 accepté, 2 001 px
+refusé en largeur et en hauteur, 24 octets lus, échéance à 180 jours, panne dont le message
+porte le chemin : journal capturé sans lui). La phrase « Capture éventuelle disponible dans Admin › Tickets. » termine
 chaque Issue (`ISSUE_SCREENSHOT_NOTE`, `src/tickets/model.ts`), qu'une capture soit jointe ou
 non.
 
@@ -3863,9 +3881,15 @@ R7. Termine par un résumé : la pull request, le commit poussé et l'état de l
 À faire par un compte propriétaire du projet `kassbeer` **avant la fusion qui contient T6** :
 `deploy.yml` publie `storage.rules` à chaque déploiement (`firebase deploy --only
 …,storage`) sur le bucket nommé, et la publication échoue tant que ce bucket n'existe pas.
+Les points 1 et 5 (bucket, cycle de vie, suppression réversible) sont faits (2026-11-14) ;
+les autres points « à vérifier » se confirment au premier déploiement.
 
-1. **Bucket.** `kassbeer.firebasestorage.app`, en `us-east1` : `europe-west1` est hors du
-   niveau gratuit, et l'administrateur ne veut pas de dépense (décision du 2026-11-14). Firebase
+1. **Bucket (fait le 2026-11-14).** `kassbeer.firebasestorage.app`, créé par l'administrateur
+   en `us-east1` (vérifié par `gcloud storage buckets describe`) : `europe-west1` est hors du
+   niveau gratuit, et l'administrateur ne veut pas de dépense. Firestore et les Functions
+   restent en `europe-west1` ; le transfert entre régions (une capture de 5 Mo au plus
+   déposée, 24 octets lus par `attachTicketScreenshot`, puis lue par l'auteur ou l'admin) est
+   négligeable, et l'emplacement d'un bucket ne se change pas. Firebase
    ne rend pas de bucket par défaut pour le projet (404 sur `defaultBucket` au déploiement de
    la v0.1.41). Il est donc nommé partout : `storageBucket` des options Firebase
    (`<projet>.firebasestorage.app`, `firebase_options.dart`), `STORAGE_BUCKET` de
@@ -3891,7 +3915,7 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --role roles/firebaserules.firestoreServiceAgent --condition=None
 
 # 3. Compte d'exécution des Functions : lecture des captures par attachTicketScreenshot
-#    (existence, métadonnées, 8 premiers octets), sur ce bucket seul.
+#    (existence, métadonnées, 24 premiers octets), sur ce bucket seul.
 gcloud storage buckets add-iam-policy-binding "$BUCKET" \
   --member "serviceAccount:$RUN_SA" --role roles/storage.objectViewer
 
@@ -3904,7 +3928,27 @@ JSON
 gcloud storage buckets update "$BUCKET" --cors-file=/tmp/cors-kassbeer.json
 ```
 
-5. **Publication des règles par `github-deploy`.** `roles/firebaserules.admin` publie déjà
+5. **Rétention de 180 jours (fait le 2026-11-14).** Une règle de cycle de vie du bucket
+   efface chaque objet sous `tickets/` 180 jours après sa création (`Delete`, `age: 180`,
+   `matchesPrefix: ["tickets/"]`) ; la suppression réversible (soft delete) est désactivée,
+   sans quoi un objet effacé resterait facturé 7 jours. `attachTicketScreenshot` écrit la
+   même échéance dans `screenshot_expires_at` (`SCREENSHOT_RETENTION_DAYS`,
+   `functions/src/tickets/screenshot.ts`) ; passée, ou fichier absent
+   (`object-not-found`), la fiche affiche « Capture effacée. », sans lecture ni rapport
+   d'erreur. Commandes passées :
+
+```bash
+cat > /tmp/cycle-kassbeer.json <<'JSON'
+{"rule": [{"action": {"type": "Delete"},
+           "condition": {"age": 180, "matchesPrefix": ["tickets/"]}}]}
+JSON
+gcloud storage buckets update "$BUCKET" --lifecycle-file=/tmp/cycle-kassbeer.json
+gcloud storage buckets update "$BUCKET" --clear-soft-delete
+# Vérification : règle présente, softDeletePolicy à 0 seconde.
+gcloud storage buckets describe "$BUCKET" --format='yaml(lifecycle_config,soft_delete_policy)'
+```
+
+6. **Publication des règles par `github-deploy`.** `roles/firebaserules.admin` publie déjà
    les règles Firestore ; il couvre les règles Storage. `firebase-tools` lit aussi le bucket
    par défaut du projet : si la publication est refusée, ajouter le seul rôle que nomme le
    message (`roles/firebasestorage.viewer`, à vérifier), jamais `roles/storage.admin` ni
@@ -3912,8 +3956,8 @@ gcloud storage buckets update "$BUCKET" --cors-file=/tmp/cors-kassbeer.json
 
 Aucun secret. La callable `attachTicketScreenshot` est publique comme les autres callables
 (invocation par `allUsers`, posée par `firebase-tools`) ; `requireMember` est sa garde (P30).
-Sauvegarde : les captures ne sont pas dans l'export de Firestore ; une capture perdue ne casse
-pas le ticket. Sortie : vider puis supprimer le bucket, retirer le bloc `storage` de
+Sauvegarde : les captures ne sont pas dans l'export de Firestore ; une capture perdue ou
+effacée après 180 jours ne casse pas le ticket. Sortie : vider puis supprimer le bucket, retirer le bloc `storage` de
 `firebase.json` et `,storage` de `deploy.yml`.
 
 ## CI et déploiement
@@ -4407,7 +4451,7 @@ et troncature des entrées ; liste fermée égale aux exports ; champs de `loggi
 | Service | Appelé par | Usage | Accès |
 |---|---|---|---|
 | API REST GitHub (`api.github.com`) | `functions/` seul | créer une Issue, chercher une Issue par référence, lire Issues, commentaires, événements, PR d'un commit, `app/pubspec.yaml` à un commit ; depuis T5, lire les PR ouvertes, une PR, ses fichiers, les runs d'un commit (rien n'est écrit pour une livraison) | jeton à grain fin `GITHUB_TICKETS_TOKEN` (Secret Manager), en-tête `x-github-api-version: 2022-11-28` |
-| Cloud Storage for Firebase (bucket `kassbeer.firebasestorage.app`, `us-east1`, nommé dans le code) | l'application (`firebase_storage` : `putData`, `getData`) sous `storage.rules` ; `attachTicketScreenshot` (`firebase-admin/storage`) | captures jointes aux tickets, `tickets/{uid}/{ticketId}/screenshot.png` (ADR-008, T6) ; jamais d'URL de téléchargement | compte Google du membre (règles) ; compte d'exécution `tickets-functions` (`roles/storage.objectViewer` sur le bucket) |
+| Cloud Storage for Firebase (bucket `kassbeer.firebasestorage.app`, `us-east1`, nommé dans le code, cycle de vie de 180 jours sous `tickets/`) | l'application (`firebase_storage` : `putData`, `getData`) sous `storage.rules` ; `attachTicketScreenshot` (`firebase-admin/storage`) | captures jointes aux tickets, `tickets/{uid}/{ticketId}/screenshot.png` (ADR-008, T6) ; jamais d'URL de téléchargement | compte Google du membre (règles) ; compte d'exécution `tickets-functions` (`roles/storage.objectViewer` sur le bucket) |
 | API Cloud Logging (`logging.googleapis.com/v2/entries:list`) | `queryLogs` seul (`functions/src/logs/queryLogs.ts`, `fetch`, sans SDK) | lire la sortie des fonctions pour Admin › Journaux (ADR-011, J2, P49) | jeton du compte d'exécution lu au serveur de métadonnées, rôle `roles/logging.viewer` ; `redirect: "error"`, délai de 20 s |
 | API Routines de Claude Code (`api.anthropic.com/v1/claude_code/routines/{id}/fire`) | `launchTicketAnalysis` et `launchTicketDevelopment` seuls (`functions/src/tickets/routine.ts`, `fetch`, sans SDK) | lancer une session d'analyse ou de développement d'un ticket, corps `{"text": "analyse #N"}` ou `{"text": "developpement #N"}` (P35) ; API expérimentale, sans clé d'idempotence : un appel n'est jamais rejoué | identifiant et jeton de chaque routine (`TICKETS_ROUTINE_*`, Secret Manager), en-têtes `authorization: Bearer`, `anthropic-version: 2023-06-01` ; `redirect: "error"`, délai de 30 s |
 

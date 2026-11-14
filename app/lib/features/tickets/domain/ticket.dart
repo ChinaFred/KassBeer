@@ -13,6 +13,15 @@ const kTicketDescriptionMaxLength = 2000;
 /// `storage.rules` et `attachTicketScreenshot`.
 const kTicketScreenshotMaxBytes = 5 * 1024 * 1024;
 
+/// Capture absente du bucket : effacée par la règle de cycle de vie (180
+/// jours). Affichée « Capture effacée », jamais rapportée.
+class CaptureEffacee implements Exception {
+  const CaptureEffacee();
+
+  @override
+  String toString() => 'CaptureEffacee';
+}
+
 /// Chemin Storage d'une capture : `tickets/{uid}/{ticketId}/screenshot.png`,
 /// seul nom que `storage.rules` accepte.
 final kTicketScreenshotPathPattern = RegExp(
@@ -163,6 +172,7 @@ class Ticket {
     this.decisionLeaseUntil,
     this.retryRequestedAt,
     this.screenshotPath,
+    this.screenshotExpiresAt,
     this.hasPendingWrites = false,
   });
 
@@ -214,6 +224,11 @@ class Ticket {
   /// chemin hors de [kTicketScreenshotPathPattern] n'est jamais lu dans
   /// Storage : « Capture indisponible. ».
   final String? screenshotPath;
+
+  /// Date d'effacement de la capture par la règle de cycle de vie du bucket
+  /// (rattachement + 180 jours), écrite par `attachTicketScreenshot` seul avec
+  /// [screenshotPath]. Passée : « Capture effacée », sans lecture.
+  final DateTime? screenshotExpiresAt;
 
   /// Décisions que le statut permet, calculées par le serveur seul (P26).
   /// `null` : le serveur ne les a pas encore écrites. Une valeur que cette
@@ -369,6 +384,7 @@ class Ticket {
       decisionLeaseUntil: read.date('decision_lease_until'),
       retryRequestedAt: read.date('retry_requested_at'),
       screenshotPath: read.texteFacultatif('screenshot_path'),
+      screenshotExpiresAt: read.date('screenshot_expires_at'),
       hasPendingWrites: hasPendingWrites,
     );
   }
