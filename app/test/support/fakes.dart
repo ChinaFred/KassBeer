@@ -1041,6 +1041,9 @@ class FakeLibraryRepository implements LibraryRepository {
   final fiches = <String, RechercheDocument<FicheReferentiel>>{};
   final ficheReads = <String>[];
 
+  /// Lectures de fiche faites dans le cache seul (`cacheSeul`).
+  final ficheCacheReads = <String>[];
+
   /// Recettes publiques, dans l'ordre de `recipe.name`.
   final recettes = <RecettePublique>[];
 
@@ -1066,9 +1069,11 @@ class FakeLibraryRepository implements LibraryRepository {
   @override
   Future<RechercheDocument<FicheReferentiel>> lireFiche(
     NatureReferentiel nature,
-    String id,
-  ) async {
+    String id, {
+    bool cacheSeul = false,
+  }) async {
     ficheReads.add(id);
+    if (cacheSeul) ficheCacheReads.add(id);
     return fiches[id] ?? DocumentAbsent<FicheReferentiel>();
   }
 

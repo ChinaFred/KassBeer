@@ -26,6 +26,7 @@ import '../../features/library/presentation/library_screen.dart';
 import '../../features/library/presentation/public_recipe_screen.dart';
 import '../../features/library/presentation/reference_entry_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
+import '../../features/processes/domain/modeles_a_copier.dart';
 import '../../features/processes/presentation/process_detail_screen.dart';
 import '../../features/processes/presentation/process_editor_screen.dart';
 import '../../features/processes/presentation/process_list_screen.dart';
@@ -208,9 +209,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.newProcess,
         builder: (_, state) => ProcessEditorScreen(
-          exemple:
-              state.uri.queryParameters[AppRoutes.exampleQueryParam] ==
-              'exemple',
+          modele: ModeleACopier.deParametre(
+            state.uri.queryParameters[AppRoutes.modelQueryParam],
+          ),
         ),
       ),
       GoRoute(

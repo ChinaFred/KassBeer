@@ -104,6 +104,12 @@ String libelleEquipement(EquipementRecette equipement) => switch (equipement) {
 /// Résultat des calculs d'une recette, pour l'écran.
 sealed class CalculsRecette {
   const CalculsRecette();
+
+  /// Calcul obtenu, ou `null` s'il a été refusé.
+  RecipeCalculation? get calculOuNul => switch (this) {
+    CalculsObtenus(:final calculation) => calculation,
+    CalculsImpossibles() => null,
+  };
 }
 
 /// Calculs faits : chaque indicateur est une valeur ou ce qui lui manque.

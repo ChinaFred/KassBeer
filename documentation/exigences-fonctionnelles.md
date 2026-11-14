@@ -1971,6 +1971,51 @@ affichage. Le prévu de la journée compte les étapes sautées. L'écran du jou
 journée après le brassage ne changent pas. Un brassin sans processus (ancien, importé) montre
 aussi ses durées quand ses étapes ont des heures.
 
+**Courbe du jour de brassage.** Elle se dérive à l'affichage, rien n'est lu ni écrit en plus.
+Elle porte sur la journée de brassage : celle du déroulé, ou celle tirée de la chronologie de la
+recette pour un brassin sans processus (brassin importé d'une fiche compris).
+
+- Séries : « Visée (recalculée) » en trait plein de la couleur primaire ; « Visée (plan de
+  départ) » en tirets ; « Température mesurée » en disques, sans ligne ; « Densité mesurée »
+  en losanges, sans ligne, sur l'axe de droite ; « Densité initiale prévue » en pointillés sur
+  l'axe de droite, nommée avec sa valeur (« Densité initiale prévue 1063,0 »). La légende est
+  écrite et passe à la ligne avec un texte agrandi. Chaque ligne de la grille porte une
+  température et une densité rondes, d'au moins un point d'écart d'une ligne à l'autre. Quand le tracé garderait moins de 200 pixels de large
+  (téléphone, texte agrandi), l'axe de droite perd ses libellés ; la densité reste dans
+  l'info-bulle et le résumé.
+- Visée du plan de départ : chaque étape qui a une température visée, placée à son début
+  théorique (heure du premier début d'étape, plus les durées prévues des étapes précédentes,
+  sans retard). Visée recalculée : la même température, aux heures réelles d'une étape faite
+  et aux heures recalculées d'une étape à venir. Une étape sautée ou non faite n'a aucun point.
+  Une étape donne un palier sur sa durée, une rampe droite la relie à l'étape suivante si
+  celle-ci a une température ; sinon le trait s'interrompt. Une étape de 0 min donne un point.
+- Mesures : températures et densités de la journée de brassage, à leur heure de mesure. La
+  densité initiale prévue vient du calcul de la recette figée et de l'équipement, comme dans
+  « Prévu et mesuré » ; sans elle, la ligne est absente.
+- Axe des heures en « 10:00 ». Info-bulle au toucher, qui réunit les séries à moins de 24
+  pixels du doigt (à l'échelle du texte), verticalement comprises : « 11:50 · {étape} », « Visée 64 °C ·
+  prévue à 10:17 », « Mesurée 63,5 °C », « En attente du réseau » ; « Densité 1050,0 · initiale
+  prévue 1063,0 ».
+- Résumé lu par le lecteur d'écran : « Températures du brassage. Visée de 16 °C à 100 °C sur 9
+  étapes. 6 températures mesurées, de 15 °C à 99 °C. Retard de 1 h 20 sur le plan de départ.
+  Densité 1050,0 à 12:50, 1063,0 à 15:50 ; initiale prévue 1063,0. ».
+- États : « Aucune étape n'a de température visée. » (mesures seules) ; « Aucune température
+  mesurée. Saisissez-en par le bouton Mesure. » (visées seules ; « Aucune température
+  mesurée. » sur la fiche) ; ni l'un ni l'autre : « Aucune température visée ni mesurée. » sur
+  l'écran du jour, courbe masquée sur la fiche ; « Courbe indisponible : la chronologie ne peut
+  pas être calculée. » et déroulé illisible (son message habituel) sur l'écran du jour seul, la
+  chronologie de la fiche disant déjà la panne ; « Courbe indisponible : une valeur
+  enregistrée est refusée. », erreur rapportée, sur la fiche seulement après le premier début
+  d'étape.
+- Fiche du brassin : section « Déroulé », en tête de la journée Brassage, sous le
+  sous-titre « Températures du brassage », à partir du premier début d'étape ; lue par tous les
+  membres. Hauteur 220 pixels à l'échelle du texte. Tant qu'aucune étape n'a commencé : rien.
+- Écran du jour, sous 840 pixels de large ou en paysage bas (moins de 480 pixels de haut) :
+  bascule « Étapes » | « Courbe » en tête de la zone de la chronologie, « Étapes » à
+  l'ouverture ; le choix n'est pas gardé. À partir de 840 pixels, hors paysage bas : courbe
+  sous le panneau, dans la colonne de gauche, sans bascule. Le panneau et le
+  minuteur restent visibles. La courbe se redessine à chaque saisie et marche sans réseau.
+
 **Mettre à jour mon processus avec ce brassin** (propriétaire). Bouton dans la section Déroulé,
 sous « Le déroulé est figé depuis le début du brassage. », pour un brassin En fermentation, En
 conditionnement, Terminé ou Abandonné dont le processus d'origine existe encore, appartient au
@@ -2049,11 +2094,36 @@ récents puis « Voir les N relevés plus anciens ». Ligne : densité, tempéra
 de densité précédent (« −3,0 pts »), puis « sam. 15 nov. 18:30 · J+5 », la note, et « En attente
 du réseau ». Une densité ou une température saisie sur une étape d'une journée après le brassage
 porte aussi sa journée et son étape : « mer. 25 nov. 09:20 · J+4 · Houblonnage à cru : Mesure
-de densité ». J+N est l'écart en jours calendaires depuis le brassage. À partir de deux densités,
-une courbe s'affiche au-dessus de la liste (densité en trait plein, température en pointillés,
-légende écrite, info-bulle au toucher) ; sans date de brassage, seule la liste s'affiche. Une valeur
-enregistrée que le calcul refuse affiche « Courbe indisponible : une valeur enregistrée est
-refusée. » et la liste reste lisible.
+de densité ». J+N est l'écart en jours calendaires depuis le brassage. La courbe s'affiche au-dessus de la
+liste à partir de deux densités, densité initiale du jour de brassage comprise : un seul relevé
+de fermentation suffit. Sans date de brassage, seule la liste s'affiche.
+
+- Séries : « Densité mesurée » en trait plein, « Température mesurée (°C) » en tirets, légende
+  écrite, info-bulle au toucher.
+- Densité initiale : la densité initiale retenue du bloc « Prévu et mesuré » est le premier
+  point de la courbe, à son heure de mesure. Elle ne s'ajoute pas à la liste des relevés, ni à
+  leurs écarts.
+- Densités prévues : deux lignes horizontales en pointillés, « Initiale prévue 1063,0 » et
+  « Finale prévue 1012,0 », tirées du calcul de la recette figée et de l'équipement. Aucune
+  pente n'est tracée entre elles. L'axe des densités les inclut. Info-bulle : « Finale prévue
+  1012,0 · écart +8,0 pts » (dernière densité mesurée moins la finale prévue) ; l'écart de
+  l'initiale prévue se compte sur la densité initiale retenue du jour, jamais sur un relevé de
+  fermentation. Sans valeur prévue : « Densités prévues indisponibles : le calcul de la recette
+  est impossible. » ; une seule manque : « Densité initiale prévue indisponible : le calcul de
+  la recette ne la donne pas. » ou « Densité finale prévue indisponible : le calcul de la
+  recette ne la donne pas. ». Les mesures restent tracées. Le résumé lu ajoute « Initiale prévue 1063,0, finale prévue
+  1012,0. ».
+- Température visée : la levure de la recette se retrouve dans la Bibliothèque par son nom,
+  comme à l'import (nom ou autre nom exact, puis souche « Fermentis US-05 »). Avec une plage de
+  température, un aplat de la couleur tertiaire à 12 % la montre, légendé « Plage de la levure
+  (18 à 22 °C) » avec un contour d'un pixel, et le résumé lu ajoute « Plage de la levure 18 à
+  22 °C. ». Levure introuvable : « Levure « {nom} » absente de la Bibliothèque : pas de
+  température visée. » ; entrée sans plage complète : « Levure « {nom} » sans plage de
+  température dans la Bibliothèque : pas de température visée. ». Recette sans levure :
+  aucun message. Hors ligne, la lecture se fait dans la copie de l'appareil seule ; sans copie,
+  rien ne s'affiche. Seule la fiche du brassin fait cette lecture, jamais l'écran du jour.
+- Une valeur enregistrée que le calcul refuse affiche « Courbe indisponible : une valeur
+  enregistrée est refusée. » et la liste reste lisible.
 
 Brassin importé d'une fiche sans relevé de fermentation : la densité finale de l'en-tête de la
 fiche devient un relevé, daté par la fiche, sinon du jour du brassage + 28 jours à 12:00, avec la
@@ -2431,31 +2501,45 @@ pleine, hors de la barre de navigation, avec retour. Adresses : `/processus` (li
 `/processus/nouveau`, `/processus/{id}` (fiche), `/processus/{id}/modifier`.
 
 **Liste.** Titre « Mes processus ». Section « Mes processus » (les siens, par nom), puis
-« Processus du groupe » (ceux des autres membres, par nom, avec leur auteur), masquée si elle
-est vide. Ligne : icône de liste à cocher dans un disque, nom, puis « 3 journées · J+0, J+4, J+14 ». Étiquette « Par défaut » sur le
+« Modèles à copier », toujours affichée, puis « Processus du groupe » (ceux des autres membres,
+par nom, avec leur auteur), masquée si elle est vide. Ligne : icône de liste à cocher dans un disque, nom, puis « 3 journées · J+0, J+4, J+14 ». Étiquette « Par défaut » sur le
 processus choisi par défaut, « En attente du réseau » tant qu'une écriture n'a pas atteint le
 serveur. Le lecteur d'écran lit chaque ligne d'un bloc : « {nom}, 3 journées, de {auteur}, par
 défaut » ; le double appui ouvre la fiche. Bouton flottant « Nouveau processus » sur téléphone, bouton en tête au-delà ; une
 colonne centrée sur 840 pixels.
 
 - Chargement : « Chargement des processus ». Lecture impossible : « Impossible de lire les
-  processus. », « Réessayer » et « Nouveau processus ». Une panne après une première lecture garde la liste, avec
+  processus. », « Réessayer », « Nouveau processus » et la section « Modèles à copier ». Une panne après une première lecture garde la liste, avec
   le bandeau « Mise à jour de la liste impossible. Elle peut ne plus être à jour. ».
 - Aucun processus à soi : « Aucun processus. Un processus ajoute à vos brassins les étapes de
-  préparation et de nettoyage, et les journées après le brassage. », avec « Partir du modèle
-  d'exemple » et « Nouveau processus ». Le bouton flottant et le bouton en tête ne s'affichent
-  pas en plus. La section du groupe reste dessous.
+  préparation et de nettoyage, et les journées après le brassage. », avec « Nouveau
+  processus ». Le bouton flottant et le bouton en tête ne s'affichent pas en plus. Les
+  sections « Modèles à copier » et du groupe restent dessous.
 - Document illisible : ligne « Processus illisible » / « Mettez l'application à jour, ou
   prévenez l'administrateur. », comme une recette. L'erreur est rapportée ; les autres processus restent affichés.
 - Hors ligne : la liste vient du cache, les écritures attendent le réseau. Liste jamais lue
-  sur l'appareil : « Processus indisponibles hors ligne. » et « Nouveau processus ».
+  sur l'appareil : « Processus indisponibles hors ligne. », « Nouveau processus » et la
+  section « Modèles à copier », dont les modèles sont dans l'application.
 
-**Modèle d'exemple.** « Partir du modèle d'exemple » ouvre « Nouveau processus » prérempli :
-nom « Brassage, houblonnage à cru, embouteillage », notes « Durées typiques, à ajuster à votre
-matériel. », trois journées (Brassage J+0 ; Houblonnage à cru J+4, seulement si la recette a
-des houblons à cru ; Embouteillage J+14). Rien n'est écrit avant « Enregistrer » ; quitter
-demande « Abandonner les modifications ? ». Il n'est proposé que si le lecteur n'a aucun
-processus.
+**Modèles à copier.** Deux lignes : « Brassage, houblonnage à cru, embouteillage » (modèle
+d'exemple) et « Plan de brassage des fiches ». Chacune : icône de copie dans un disque, nom,
+« 3 journées · J+0, J+4, J+14 », sa note, étiquette « Modèle ». Le lecteur d'écran lit
+« Modèle à copier : {nom}, 3 journées ». Un appui ouvre « Nouveau processus » prérempli
+(`/processus/nouveau?modele=exemple` ou `?modele=fiches`) ; rien n'est écrit avant
+« Enregistrer », et quitter demande « Abandonner les modifications ? ».
+
+- Modèle d'exemple : notes « Durées typiques, à ajuster à votre matériel. », trois journées
+  (Brassage J+0 ; Houblonnage à cru J+4, seulement si la recette a des houblons à cru ;
+  Embouteillage J+14).
+- Plan de brassage des fiches : notes « Tiré du plan de brassage des fiches Excel. Durées et
+  températures à ajuster. ». Journée Brassage J+0 : Mise en place et nettoyage du matériel et
+  de l'espace de travail (30 min) ; Remplissage de la cuve (10 min, 16 °C) ; Correction de
+  l'eau (sel et acide) (5 min) ; Chauffe de l'eau et concassage des malts (15 min, 68 °C) ;
+  Chronologie de la recette ; Début du refroidissement (40 min, 100 °C) ; Fin du
+  refroidissement (0 min, 25 °C) ; Whirlpool (5 min) ; Mesure de la densité initiale (5 min) ;
+  Transvasement dans la cuve de fermentation (5 min) ; Ajout des levures (2 min) ; Stockage en
+  cave (5 min) ; Nettoyage (20 min) ; Rangement (10 min). Journées Houblonnage à cru J+4 et
+  Embouteillage J+14 : celles du modèle d'exemple.
 
 **Fiche.** Barre « Processus », retour vers la liste. En-tête : nom, « Processus de {auteur} »
 sur la ligne grise pour un autre membre ; puis les notes. « Modifier » (tonal) et « Supprimer »

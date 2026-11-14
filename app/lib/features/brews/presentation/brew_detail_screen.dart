@@ -28,6 +28,7 @@ import '../../auth/presentation/access_providers.dart';
 import '../../brew_day/domain/plan_du_jour.dart';
 import '../../brew_day/presentation/brew_day_screen.dart' show TextesJournee;
 import '../../brew_day/presentation/chronologie_jour.dart';
+import '../../brew_day/presentation/courbe_brassage.dart';
 import '../../brew_day/presentation/mesure_form.dart';
 import '../../costs/data/figeage_embouteillage.dart';
 import '../../costs/presentation/bloc_cout_brassin.dart';
@@ -43,6 +44,7 @@ import '../domain/assemblage_deroule.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
 import '../domain/deroule.dart';
+import '../domain/prevu.dart';
 import '../domain/releves.dart';
 import 'brews_providers.dart';
 import 'brews_screen.dart' show tonStatutBrassin;
@@ -1013,6 +1015,22 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               mine: mine,
               durees: brassage == null ? null : durees[brassage.key],
             ),
+            // Lue par tous les membres, à partir du premier début d'étape ;
+            // rien tant que les saisies ne sont pas lues.
+            courbe: events == null
+                ? null
+                : CourbeBrassage(
+                    brew: brew,
+                    plan: switch (plan) {
+                      PlanObtenu(:final plan) => plan,
+                      PlanImpossible() => null,
+                    },
+                    densiteInitialePrevue: prevuDe(
+                      brew,
+                      calculs.calculOuNul,
+                    ).originalGravity,
+                    surFiche: true,
+                  ),
           ),
           recette: [
             BlocCalculs(
@@ -1059,6 +1077,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required Map<String, PlanEvalue> plans,
     required Map<String, ActualDayDuration> durees,
     required Widget chronologie,
+    required Widget? courbe,
     required Widget? Function(JourneeDeroulee) chronologieJournee,
   }) {
     PlanDuJour? planDe(JourneeDeroulee j) => switch (plans[j.key]) {
@@ -1106,6 +1125,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       brew: brew,
       mine: mine,
       chronologieBrassage: chronologie,
+      courbeBrassage: courbe,
       chronologieJournee: chronologieJournee,
       resumeJournee: (j) => plans.containsKey(j.key) && terminee(j)
           ? resumeJourneeTerminee(planDe(j))
@@ -1331,6 +1351,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       eventsAsync: eventsAsync,
       mine: mine,
       offline: offline,
+      calculs: calculs,
     );
     final comparaison = BlocPrevuEtMesure(
       brew: brew,
