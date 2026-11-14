@@ -42,8 +42,31 @@ class DataSourcesScreen extends ConsumerWidget {
       'pour un usage privé (version e6c12ab de leur transcription).';
   static const srm2hex =
       'Teintes de la page « Couleurs EBC » et de la barre de couleur d\'un '
-      'style : 400 teintes reprises du paquet npm srm2hex, version 1.0.2. '
-      'Licence MIT. Seule la table des teintes est reprise.';
+      'style : 400 teintes reprises de la bibliothèque libre srm2hex, version '
+      '1.0.2, sous licence MIT. Seule la table des teintes est reprise. La '
+      'bibliothèque ne porte aucune mention de copyright ; voici le texte de '
+      'sa licence.';
+
+  /// Texte d'autorisation de la licence MIT de srm2hex, reproduit dans
+  /// l'application livrée comme la licence l'exige (« included in all
+  /// copies »). Le paquet n'a pas de ligne de copyright.
+  static const licenceMit =
+      'Permission is hereby granted, free of charge, to any person obtaining '
+      'a copy of this software and associated documentation files (the '
+      '"Software"), to deal in the Software without restriction, including '
+      'without limitation the rights to use, copy, modify, merge, publish, '
+      'distribute, sublicense, and/or sell copies of the Software, and to '
+      'permit persons to whom the Software is furnished to do so, subject to '
+      'the following conditions:\n\n'
+      'The above copyright notice and this permission notice shall be '
+      'included in all copies or substantial portions of the Software.\n\n'
+      'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS '
+      'OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF '
+      'MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. '
+      'IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY '
+      'CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, '
+      'TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE '
+      'SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
   static const openFailure =
       'Impossible d\'ouvrir le lien. Il reste sélectionnable sur cette page.';
 
@@ -107,6 +130,7 @@ class DataSourcesScreen extends ConsumerWidget {
               paragraphe(diyDog),
               const TitreSection('srm2hex'),
               paragraphe(srm2hex),
+              paragraphe(licenceMit),
             ],
           ),
         ),

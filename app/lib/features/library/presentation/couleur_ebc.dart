@@ -17,6 +17,19 @@ abstract final class TextesCouleurEbc {
       'et de l\'écran.';
   static const echelle = 'Échelle des couleurs';
 
+  /// Phrase affichée quand une plage dépasse la limite de la table.
+  static String auDela() =>
+      'Au-delà de ${formatNombre(teinteEbcLimite, decimales: 0)}${nbsp}EBC, '
+      'la teinte affichée ne fonce plus.';
+
+  /// Vrai si la plage monte au-delà de [teinteEbcLimite] : borne haute au-delà
+  /// de la limite, ou plage ouverte « à partir de ».
+  static bool depasseLimite(double? minimum, double? maximum) {
+    if (maximum == null) return true;
+    final haut = minimum != null && minimum > maximum ? minimum : maximum;
+    return haut > teinteEbcLimite;
+  }
+
   /// Libellé lu par un lecteur d'écran pour la barre d'une plage.
   static String plage(double? minimum, double? maximum) {
     if (minimum != null && maximum != null) {
@@ -95,24 +108,28 @@ class _BarreCouleurEbcState extends ConsumerState<BarreCouleurEbc> {
     final teintes = _teintes();
     if (teintes == null) return const SizedBox.shrink();
     final theme = Theme.of(context);
+    final p = widget.plage;
+    final auDela = TextesCouleurEbc.depasseLimite(p.minimum, p.maximum);
+    final petit = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Semantics(
           container: true,
-          label: TextesCouleurEbc.plage(
-            widget.plage.minimum,
-            widget.plage.maximum,
-          ),
+          label: auDela
+              ? '${TextesCouleurEbc.plage(p.minimum, p.maximum)}. '
+                    '${TextesCouleurEbc.auDela()}'
+              : TextesCouleurEbc.plage(p.minimum, p.maximum),
           child: BandeTeintes(teintes: teintes),
         ),
         const SizedBox(height: 4),
-        Text(
-          TextesCouleurEbc.mention,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        if (auDela)
+          ExcludeSemantics(
+            child: Text(TextesCouleurEbc.auDela(), style: petit),
           ),
-        ),
+        Text(TextesCouleurEbc.mention, style: petit),
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton.icon(

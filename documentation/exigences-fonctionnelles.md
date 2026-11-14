@@ -1620,7 +1620,9 @@ noms : … », puis :
   va de la teinte du minimum à celle du maximum, dans l'ordre croissant même si le minimum
   dépasse le maximum ; « à partir de X » va de X à 79 EBC, « jusqu'à X » de 0 à X ; au-delà de
   79 EBC, la teinte est unie. Le lecteur d'écran lit « Couleur de 12 EBC à 28 EBC » et ignore
-  la barre. Dessous : « Teinte indicative : la couleur réelle dépend du verre, de la lumière et
+  la barre. Quand la plage dépasse 79 EBC (borne haute au-delà, ou « à partir de X »), la
+  phrase « Au-delà de 79 EBC, la teinte affichée ne fonce plus. » s'affiche sous la barre et
+  s'ajoute à ce que lit le lecteur d'écran. Dessous : « Teinte indicative : la couleur réelle dépend du verre, de la lumière et
   de l'écran. » et le lien « Échelle des couleurs ». Sans plage de couleur, ni barre ni
   mention. Une borne négative ou non finie masque la barre et l'erreur est journalisée ;
 - malt ou sucre : nom français, type, couleur, rendement d'extrait, producteur, origine ;
@@ -1717,8 +1719,10 @@ l'écran. » Puis une valeur tous les 4 EBC, de « 0 EBC » à « 76 EBC », et 
 (limite de la table des teintes). Chaque valeur a une pastille de 40 × 40 px, bordée de la
 couleur `outlineVariant` du thème, et son libellé en EBC. Aucune valeur n'est donnée en SRM.
 Sous 600 px, une ligne par valeur. À partir de 600 px, un dégradé continu de 0 à 79 EBC
-au-dessus, puis les valeurs en grille qui passe à la ligne. Si la teinte ne peut pas se
-calculer : « Cette échelle ne peut pas s'afficher. L'erreur est signalée à l'administrateur. »
+au-dessus (lu « Dégradé de 0 à 79 EBC et plus »), puis les valeurs en grille qui passe à la
+ligne ; la largeur d'une case suit l'échelle du texte. Si la teinte ne peut pas se
+calculer : état d'erreur « Cette échelle ne peut pas s'afficher. L'erreur est signalée à
+l'administrateur. », sans bouton « Réessayer » (le calcul ne lit aucune donnée).
 
 ### Sources des données
 
@@ -1743,8 +1747,10 @@ s'affiche sans réseau.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
 - srm2hex : « Teintes de la page « Couleurs EBC » et de la barre de couleur d'un style :
-  400 teintes reprises du paquet npm srm2hex, version 1.0.2. Licence MIT. Seule la table des
-  teintes est reprise. »
+  400 teintes reprises de la bibliothèque libre srm2hex, version 1.0.2, sous licence MIT.
+  Seule la table des teintes est reprise. La bibliothèque ne porte aucune mention de
+  copyright ; voici le texte de sa licence. », puis le texte d'autorisation de la licence MIT,
+  en anglais, reproduit en entier comme la licence l'exige pour toute copie livrée.
 
 ### Brassins
 

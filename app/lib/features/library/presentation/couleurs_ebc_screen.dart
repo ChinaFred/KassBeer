@@ -73,9 +73,9 @@ class _CouleursEbcScreenState extends ConsumerState<CouleursEbcScreen> {
       titre: CouleursEbcScreen.title,
       repli: AppRoutes.library,
       body: echelle == null
-          ? const EtatVide(
-              icon: Icons.error_outline,
+          ? const EtatErreur(
               message: CouleursEbcScreen.unreadable,
+              onRetry: null,
             )
           : Builder(
               builder: (context) =>
@@ -95,6 +95,8 @@ class _Echelle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final compact = MediaQuery.sizeOf(context).width < kCompactMaxWidth;
+    // Largeur d'une case de la grille, suivie par l'échelle du texte.
+    final largeurCase = MediaQuery.textScalerOf(context).scale(168);
     final mention = Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
@@ -127,9 +129,7 @@ class _Echelle extends StatelessWidget {
         mention,
         Semantics(
           container: true,
-          label:
-              'Dégradé de ${formatEbc(0)} à '
-              '${CouleursEbcScreen.libelleLimite()}',
+          label: 'Dégradé de 0 à ${CouleursEbcScreen.libelleLimite()}',
           child: BandeTeintes(teintes: degrade),
         ),
         const SizedBox(height: 16),
@@ -138,7 +138,10 @@ class _Echelle extends StatelessWidget {
           runSpacing: 12,
           children: [
             for (final v in valeurs)
-              SizedBox(width: 168, child: _LigneTeinte(valeur: v)),
+              SizedBox(
+                width: largeurCase,
+                child: _LigneTeinte(valeur: v),
+              ),
           ],
         ),
       ],

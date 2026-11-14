@@ -79,6 +79,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(TextesCouleurEbc.mention), findsOneWidget);
+      expect(find.text(TextesCouleurEbc.auDela()), findsNothing);
       await tester.ensureVisible(find.text(TextesCouleurEbc.echelle));
       await tester.tap(find.text(TextesCouleurEbc.echelle));
       await tester.pumpAndSettle();
@@ -102,6 +103,37 @@ void main() {
       final couleurs = couleursBande(tester);
       expect(couleurs.first, couleurTeinte(teinteEbc(50)));
       expect(couleurs.last, couleurTeinte(teinteEbc(teinteEbcLimite)));
+      expect(find.text(TextesCouleurEbc.auDela()), findsOneWidget);
+    });
+
+    testWidgets('plage de 80 à 138 EBC : la phrase de limite s\'affiche et '
+        'se lit', (tester) async {
+      final handle = tester.ensureSemantics();
+      await open(
+        tester,
+        '/bibliotheque/styles/bjcp2021-21a',
+        before: (app) => seedStyle(app, {
+          ...styleDoc(),
+          'color': {
+            'minimum': {'value': 80, 'unit': 'EBC'},
+            'maximum': {'value': 138, 'unit': 'EBC'},
+          },
+        }),
+      );
+      expect(
+        TextesCouleurEbc.auDela(),
+        'Au-delà de 79${nbsp}EBC, la teinte '
+        'affichée ne fonce plus.',
+      );
+      expect(find.text(TextesCouleurEbc.auDela()), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          'Couleur de ${formatEbc(80)} à ${formatEbc(138)}. '
+          '${TextesCouleurEbc.auDela()}',
+        ),
+        findsOneWidget,
+      );
+      handle.dispose();
     });
 
     testWidgets('sans plage de couleur : aucune barre', (tester) async {
@@ -211,6 +243,24 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(CouleursEbcScreen), findsOneWidget);
     });
+
+    testWidgets('texte × 2 à 900 px : cases élargies, aucun débordement', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await open(tester, '/bibliotheque/couleurs', width: 900);
+      expect(tester.takeException(), isNull);
+      final caseGrille = tester.getSize(
+        find
+            .ancestor(
+              of: find.byKey(ValueKey('pastille ${formatEbc(0)}')),
+              matching: find.byType(SizedBox),
+            )
+            .last,
+      );
+      expect(caseGrille.width, 336);
+    });
   });
 
   testWidgets('Sources des données nomme srm2hex', (tester) async {
@@ -221,5 +271,11 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text(DataSourcesScreen.srm2hex), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text(DataSourcesScreen.licenceMit),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text(DataSourcesScreen.licenceMit), findsOneWidget);
   });
 }
