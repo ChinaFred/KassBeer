@@ -79,8 +79,9 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
   (`functions/`) : publication, suivi et décisions des tickets des membres (ADR-006, T1 et T2).
   ADR-008 (accepté) ajoute, lot par lot (T3 à T7), la parité avec Kass'Dalle : webhook GitHub,
   callables de l'admin, lancement de sessions Claude Code, livraison, captures dans Cloud
-  Storage. Le lot T6 est livré : bucket par défaut `kassbeer.firebasestorage.app` en
-  `europe-west1`, `storage.rules`, captures des tickets sous `tickets/{uid}/{ticketId}/`, lues
+  Storage. Le lot T6 est livré : bucket `kassbeer.firebasestorage.app` en `us-east1` (niveau
+  gratuit), nommé dans l'application, les Functions et `deploy.yml` (Firebase ne le déclare pas
+  comme bucket par défaut), `storage.rules`, captures des tickets sous `tickets/{uid}/{ticketId}/`, lues
   par `getData`, jointes par la callable `attachTicketScreenshot`. Le RAPT Pill viendra avec
   son ADR.
 - Import des 16 fiches Excel : fichiers JSON préparés par une session Claude Code, relus et

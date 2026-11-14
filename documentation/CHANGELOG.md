@@ -6,6 +6,16 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.42 — technique
+
+Le déploiement de la v0.1.41 échouait à la publication de `storage.rules` : Firebase ne rend
+pas de bucket par défaut pour le projet (404 sur `defaultBucket`). Le bucket existe, en
+`us-east1` pour rester dans le niveau gratuit. Il est maintenant nommé partout : `storageBucket` des options Firebase de l'application (sans lui,
+`FirebaseStorage.instance` n'avait aucun bucket et le dépôt d'une capture échouait),
+`STORAGE_BUCKET` de `functions/src/config.ts` pour `attachTicketScreenshot`, et une copie
+`firebase.deploy.json` écrite par `deploy.yml` avec le bucket nommé. `firebase.json` garde la
+forme que l'émulateur des tests de règles exige. Aucun paquet ne change.
+
 ### v0.1.41 — fonctionnel
 
 Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne

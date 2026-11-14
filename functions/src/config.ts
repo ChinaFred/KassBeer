@@ -14,6 +14,13 @@ export const REGION = "europe-west1";
 export const PROJECT_ID = "kassbeer";
 
 /**
+ * Bucket Cloud Storage des captures de tickets (ADR-008, T6), nommé : Firebase ne le
+ * déclare pas comme bucket par défaut du projet (déploiement de la v0.1.41), et
+ * `getStorage().bucket()` sans nom n'en trouverait aucun.
+ */
+export const STORAGE_BUCKET = `${PROJECT_ID}.firebasestorage.app`;
+
+/**
  * Compte d'exécution des fonctions, adresse complète. La forme courte `tickets-functions@`
  * n'est pas complétée par firebase-tools quand il donne au compte l'accès au secret
  * (`secrets:setIamPolicy` refusé en 400, déploiement du 2026-11-10).
