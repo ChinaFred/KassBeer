@@ -99,6 +99,14 @@ export const LAUNCH_COST_CENTER = "ticket_routine_launch";
  */
 export const LAUNCHES_PER_DAY = 10;
 
+/**
+ * Plafond des lancements du compte fondateur (`members/{email}.founder === true`, posé dans
+ * la console Firebase, jamais par un client), par jour de Paris : cinq fois celui du groupe,
+ * sur un compteur à part (`ticket_quotas/launch_founder_{AAAAMMJJ}`). Décision de
+ * l'utilisateur du 2026-11-14. Le client le lit dans `ticket_status/launches.founder_per_day`.
+ */
+export const FOUNDER_LAUNCHES_PER_DAY = 5 * LAUNCHES_PER_DAY;
+
 /** Plafonds du jour de Paris (ADR-006, décision 7) ; l'administrateur n'est pas compté. */
 export const MEMBER_DAILY_LIMIT = 5;
 export const GROUP_DAILY_LIMIT = 20;

@@ -7,7 +7,7 @@ import { describe, it } from "node:test";
 import { Timestamp } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 
-import { LAUNCHES_PER_DAY, LAUNCH_COST_CENTER } from "../src/config";
+import { FOUNDER_LAUNCHES_PER_DAY, LAUNCHES_PER_DAY, LAUNCH_COST_CENTER } from "../src/config";
 import type { LogEntry } from "../src/logging";
 import {
   closeRunningLaunches,
@@ -364,8 +364,10 @@ describe("ticket_status/launches : compteurs", () => {
   it("compter : jour et mois, per_day écrit ; nouveau mois repart de zéro", () => {
     assert.deepEqual(nextLaunchStatus({}, DAY, 1, 1), {
       per_day: LAUNCHES_PER_DAY,
+      founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
       day: DAY,
       count_day: 1,
+      founder_count_day: 0,
       month: "202611",
       count_month: 1,
     });
@@ -381,21 +383,41 @@ describe("ticket_status/launches : compteurs", () => {
   it("rendre : jamais sous zéro ; un autre jour ou mois garde ses compteurs", () => {
     assert.deepEqual(
       nextLaunchStatus({ day: DAY, count_day: 1, month: "202611", count_month: 0 }, DAY, 0, -1),
-      { per_day: LAUNCHES_PER_DAY, count_day: 0, count_month: 0 },
+      {
+        per_day: LAUNCHES_PER_DAY,
+        founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
+        count_day: 0,
+        count_month: 0,
+      },
     );
     assert.deepEqual(
       nextLaunchStatus({ day: "20261114", month: "202612", count_month: 3 }, DAY, 0, -1),
-      { per_day: LAUNCHES_PER_DAY },
+      { per_day: LAUNCHES_PER_DAY, founder_per_day: FOUNDER_LAUNCHES_PER_DAY },
     );
+  });
+  it("fondateur : founder_count_day, count_day du groupe gardé le même jour", () => {
+    const out = nextLaunchStatus(
+      { day: DAY, count_day: 10, month: "202611", count_month: 10 },
+      DAY,
+      1,
+      1,
+      "founder",
+    );
+    assert.equal(out.founder_count_day, 1);
+    assert.equal(out.count_day, undefined);
+    assert.equal(out.count_month, 11);
+    assert.equal(FOUNDER_LAUNCHES_PER_DAY, 5 * LAUNCHES_PER_DAY);
   });
   it("passe horaire : jour remis, rien si inchangé", () => {
     const fresh = refreshedLaunchStatus({}, DAY, 0);
     assert.deepEqual(fresh, {
       day: DAY,
       count_day: 0,
+      founder_count_day: 0,
       month: "202611",
       count_month: 0,
       per_day: LAUNCHES_PER_DAY,
+      founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
     });
     assert.equal(refreshedLaunchStatus(fresh ?? {}, DAY, 0), null);
   });
@@ -591,6 +613,52 @@ describe("lancement : plafond du jour (P36)", () => {
     assert.equal(h.db.read(`tickets/t-${LAUNCHES_PER_DAY}`)?.decision_lease_until, undefined);
   });
 
+  it("fondateur : compteur à part, 50e accepté, 51e refusé ; le groupe au plafond ne le bloque pas", async () => {
+    const h = harness();
+    h.db.seed(`ticket_quotas/launch_${DAY}`, { count: LAUNCHES_PER_DAY, day: DAY });
+    for (let i = 0; i <= FOUNDER_LAUNCHES_PER_DAY; i++) seedTicket(h, `t-${i}`);
+    for (let i = 0; i < FOUNDER_LAUNCHES_PER_DAY; i++) {
+      const out = await launchTicketSession(`t-${i}`, "analyse", "f-uid", h.deps(), "founder");
+      assert.equal(out.outcome, "launched", `lancement ${i + 1}`);
+    }
+    const err = await refusal(
+      launchTicketSession(`t-${FOUNDER_LAUNCHES_PER_DAY}`, "analyse", "f-uid", h.deps(), "founder"),
+    );
+    assert.equal(details(err).code, "quota_exceeded");
+    assert.equal(details(err).limit, FOUNDER_LAUNCHES_PER_DAY);
+    assert.equal(h.db.read(`ticket_quotas/launch_founder_${DAY}`)?.count, FOUNDER_LAUNCHES_PER_DAY);
+    assert.equal(quota(h), LAUNCHES_PER_DAY);
+    const status = h.db.read("ticket_status/launches");
+    assert.equal(status?.founder_count_day, FOUNDER_LAUNCHES_PER_DAY);
+    assert.equal(status?.founder_per_day, FOUNDER_LAUNCHES_PER_DAY);
+  });
+
+  it("callable : members/{email}.founder choisit le compteur du fondateur", async () => {
+    const h = harness();
+    h.db.seed(`ticket_quotas/launch_${DAY}`, { count: LAUNCHES_PER_DAY, day: DAY });
+    seedTicket(h, "t-1");
+    seedTicket(h, "t-2");
+    const token = {
+      email: "admin@example.com",
+      email_verified: true,
+      firebase: { sign_in_provider: "google.com" },
+    };
+    const req = (ticketId: string) => ({ auth: { uid: "a", token }, data: { ticketId } });
+    const other = await refusal(
+      handleLaunchCall(req("t-1"), "analyse", {
+        ...h.deps(),
+        lookup: async () => ({ role: "admin" }),
+      }),
+    );
+    assert.equal(details(other).code, "quota_exceeded");
+    const out = await handleLaunchCall(req("t-2"), "analyse", {
+      ...h.deps(),
+      lookup: async () => ({ role: "admin", founder: true }),
+    });
+    assert.equal(out.outcome, "launched");
+    assert.equal(h.db.read(`ticket_quotas/launch_founder_${DAY}`)?.count, 1);
+  });
+
   it("deux appels simultanés sur deux tickets : comptés deux fois", async () => {
     const h = harness();
     seedTicket(h, "t-1");
@@ -606,6 +674,23 @@ describe("lancement : plafond du jour (P36)", () => {
     assert.equal(quota(h), 2);
     assert.equal(h.db.read("ticket_status/launches")?.count_day, 2);
     assert.equal(h.db.read("ticket_status/launches")?.count_month, 2);
+  });
+
+  it("fondateur, deux appels simultanés sur deux tickets : comptés deux fois à part", async () => {
+    const h = harness();
+    seedTicket(h, "t-1");
+    seedTicket(h, "t-2");
+    const outs = await Promise.all([
+      launchTicketSession("t-1", "analyse", "f-uid", h.deps(), "founder"),
+      launchTicketSession("t-2", "analyse", "f-uid", h.deps(), "founder"),
+    ]);
+    assert.deepEqual(
+      outs.map((o) => o.outcome),
+      ["launched", "launched"],
+    );
+    assert.equal(h.db.read(`ticket_quotas/launch_founder_${DAY}`)?.count, 2);
+    assert.equal(quota(h), 0);
+    assert.equal(h.db.read("ticket_status/launches")?.founder_count_day, 2);
   });
 
   it("deux appels simultanés sur le même ticket : un seul part", async () => {
@@ -669,6 +754,18 @@ describe("lancement : échec, résultat inconnu, en cours (P35, P36)", () => {
     assert.equal(out.outcome, "launched");
     assert.equal(h.db.read("ticket_status/launches")?.analysis_invalid_since, null);
     assert.equal(quota(h), 1);
+  });
+
+  it("fondateur, 400 : compteur du fondateur rendu, celui du groupe inchangé", async () => {
+    const h = harness({ routine: async () => new Response("bad text", { status: 400 }) });
+    seedTicket(h, "t-1");
+    h.db.seed(`ticket_quotas/launch_${DAY}`, { count: 3, day: DAY });
+    h.db.seed(`ticket_quotas/launch_founder_${DAY}`, { count: 2, day: DAY });
+    const err = await refusal(launchTicketSession("t-1", "analyse", "f-uid", h.deps(), "founder"));
+    assert.equal(details(err).code, "routine_failed");
+    assert.equal(h.db.read(`ticket_quotas/launch_founder_${DAY}`)?.count, 2);
+    assert.equal(quota(h), 3);
+    assert.equal(history(h)[0].state, "failed");
   });
 
   it("404 : routine_invalid, alerte posée ; 429 : resource-exhausted ; 400 en pause", async () => {
@@ -964,6 +1061,7 @@ describe("passe horaire : ticket_status/launches remis au jour", () => {
   it("document absent : jour, compteur du jour et plafond écrits", async () => {
     const db = new FakeDb(() => NOW);
     db.seed(`ticket_quotas/launch_${DAY}`, { count: 3 });
+    db.seed(`ticket_quotas/launch_founder_${DAY}`, { count: 2 });
     await refreshLaunchStatus(
       async () => db.kit(),
       () => NOW,
@@ -971,9 +1069,11 @@ describe("passe horaire : ticket_status/launches remis au jour", () => {
     assert.deepEqual(db.read("ticket_status/launches"), {
       day: DAY,
       count_day: 3,
+      founder_count_day: 2,
       month: "202611",
-      count_month: 3,
+      count_month: 5,
       per_day: LAUNCHES_PER_DAY,
+      founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
     });
     const writes = db.writes.length;
     await refreshLaunchStatus(
@@ -1008,9 +1108,11 @@ describe("passe horaire : ticket_status/launches remis au jour", () => {
     assert.deepEqual(db.read("ticket_status/launches"), {
       day: "20261114",
       count_day: 0,
+      founder_count_day: 0,
       month: "202611",
       count_month: 12,
       per_day: LAUNCHES_PER_DAY,
+      founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
     });
   });
 });
