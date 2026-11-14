@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.53 — fonctionnel
+### v0.1.54 — fonctionnel
 
 « Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple
 et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un
@@ -24,7 +24,7 @@ suffit pour la voir. Elle montre aussi les densités initiale et finale prévues
 température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente
 de la Bibliothèque, ou sans plage, une ligne le dit.
 
-### v0.1.53 — technique
+### v0.1.54 — technique
 
 `brewing/` : `brewDayTemperatureSeries` (`brew_day_curve.dart`) calcule les températures visées
 du plan de départ et recalculées, le retard et les débuts théoriques à partir de l'horaire de
@@ -50,6 +50,33 @@ dans `beer_index/cultures`, puis `beer_cultures/{id}` par `get()` (P22) ; `lireF
 Bibliothèque. Fiche : la courbe du jour ne paraît qu'après le premier début d'étape. « Mes
 processus » : « Modèles à copier » aussi sous une panne de lecture. Aucune écriture Firestore
 nouvelle, aucune règle changée, aucune dépendance changée.
+
+### v0.1.53 — fonctionnel
+
+Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous
+l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste
+lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique
+que le panneau de l'étape continue plus bas.
+
+La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation
+(« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres
+fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes.
+
+### v0.1.53 — technique
+
+Suite du lot 4 de la revue visuelle (remarques « plus tard » de la revue UX). `GroupeBrassins` et
+`groupeBrassin` passent de `brews_screen.dart` à `domain/brew.dart` ; `compareBrews` trie
+d'après ce groupe, et `_bucket`, qui le recopiait, sort. L'annonce de reprise devient un
+`Encadre` du panneau (`liveRegion`), placé dans `_DefilementPanneau` (`Scrollbar` toujours
+visible, dessinée seulement si le contenu dépasse, sans la seconde barre du web de bureau),
+sous la carte de l'étape ; `scrollbarTheme` du thème en `onSurfaceVariant`, 6 px ; le test à 200 % n'écarte plus l'erreur
+« Floating SnackBar presented off screen », et `masquerAnnonce` sort des tests. Le test du thème
+contrôle le texte coloré sur `surfaceContainerLow` (fond des cartes), en clair et en sombre.
+Mise à jour de l'APK : le fichier téléchargé s'ouvre par `File.open(mode: FileMode.write)` à la
+place d'`openWrite`, qui sous Windows ne rendait jamais l'erreur d'un dossier absent ;
+`app_update_transport_test` « dossier absent » passe sur le poste. Une erreur inattendue du
+téléchargement (corps illisible, rappel qui lève) referme aussi le fichier avant de remonter,
+avec son test (relecture `securite`). Bornes de taille et SHA-256 inchangés (P51).
 
 ### v0.1.52 — fonctionnel
 

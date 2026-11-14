@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/bandeau_liste_perimee.dart';
 import 'package:kass_beer/core/presentation/etiquette.dart';
+import 'package:kass_beer/core/presentation/fiche.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
@@ -555,10 +556,22 @@ void main() {
       tester,
     ) async {
       await openDetail(tester, unTicket(replyText: 'Merci, c\'est noté.'));
+      // Métadonnées en lignes « libellé : valeur », comme la fiche de l'admin.
+      Finder ligne(String libelle, String valeur) => find.ancestor(
+        of: find.text(valeur),
+        matching: find.widgetWithText(LigneFiche, libelle),
+      );
       expect(find.text('Bug'), findsOneWidget);
       expect(find.text('Densité fausse'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(EnTeteFiche),
+          matching: find.text('Densité fausse'),
+        ),
+        findsOneWidget,
+      );
       expect(find.widgetWithText(Etiquette, 'Reçu'), findsOneWidget);
-      expect(find.text('Envoyé le 08/11/26 à 09:30'), findsOneWidget);
+      expect(ligne('Envoyé le', '08/11/26 à 09:30'), findsOneWidget);
       expect(
         find.text('L\'administrateur a reçu votre ticket.'),
         findsOneWidget,
@@ -566,8 +579,8 @@ void main() {
       expect(find.text('Réponse de l\'administrateur'), findsOneWidget);
       expect(find.text('Merci, c\'est noté.'), findsOneWidget);
       expect(find.text('La densité affichée est fausse.'), findsOneWidget);
-      expect(find.text('Écran : Recette'), findsOneWidget);
-      expect(find.text('Envoyé avec : version 0.1.0, Android'), findsOneWidget);
+      expect(ligne('Écran', 'Recette'), findsOneWidget);
+      expect(ligne('Envoyé avec', 'version 0.1.0, Android'), findsOneWidget);
       expect(find.byType(SelectionArea), findsOneWidget);
     });
 

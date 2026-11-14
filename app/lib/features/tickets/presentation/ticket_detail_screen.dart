@@ -150,9 +150,6 @@ class _DetailState extends ConsumerState<_Detail> {
         : null;
     final link = delivered ? lienGithub(ticket.deliveredPrUrl) : null;
     final reply = ticket.replyText;
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
     const gap = SizedBox(height: 16);
 
     return SelectionArea(
@@ -167,31 +164,10 @@ class _DetailState extends ConsumerState<_Detail> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      ExcludeSemantics(
-                        child: Icon(
-                          ticketTypeIcon(ticket.type),
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(child: Text(ticket.type.label, style: muted)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      ticket.title,
-                      style: theme.textTheme.headlineSmall,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
+                  EnTeteFiche(
+                    titre: ticket.title,
+                    sousTitre: ticket.type.label,
+                    etiquettes: [
                       EtiquetteStatut(ticket: ticket),
                       if (comparison != null)
                         Etiquette(
@@ -201,14 +177,6 @@ class _DetailState extends ConsumerState<_Detail> {
                         ),
                     ],
                   ),
-                  if (created != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Envoyé le ${formatDateChiffres(created)} à '
-                      '${formatHeure(created)}',
-                      style: muted,
-                    ),
-                  ],
                   gap,
                   for (final p in phrasesStatut(ticket, now))
                     Padding(
@@ -241,6 +209,25 @@ class _DetailState extends ConsumerState<_Detail> {
                   ],
                   gap,
                   FriseTicket(ticket: ticket),
+                  const SizedBox(height: 8),
+                  if (created != null)
+                    LigneFiche(
+                      label: 'Envoyé le',
+                      value:
+                          '${formatDateChiffres(created)} à '
+                          '${formatHeure(created)}',
+                    ),
+                  LigneFiche(
+                    label: 'Envoyé avec',
+                    value: versionEtPlateforme(
+                      version: ticket.appVersion,
+                      platform: ticket.platform,
+                    ),
+                  ),
+                  LigneFiche(
+                    label: 'Écran',
+                    value: ticketScreenLabel(ticket.screen),
+                  ),
                   const TitreSection('Description'),
                   Text(ticket.description, style: theme.textTheme.bodyLarge),
                   if (ticket.screenshotPath case final path?) ...[
@@ -250,19 +237,6 @@ class _DetailState extends ConsumerState<_Detail> {
                       expiresAt: ticket.screenshotExpiresAt,
                     ),
                   ],
-                  gap,
-                  Text(
-                    'Écran : ${ticketScreenLabel(ticket.screen)}',
-                    style: muted,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    envoyeAvec(
-                      version: ticket.appVersion,
-                      platform: ticket.platform,
-                    ),
-                    style: muted,
-                  ),
                 ],
               ),
             ),

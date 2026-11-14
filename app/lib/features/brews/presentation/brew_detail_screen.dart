@@ -1483,15 +1483,17 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     );
   }
 
-  /// Détail du statut sous le nom, à côté de son étiquette : jour de
-  /// fermentation (« J+12 »), date d'embouteillage ; `null` sinon.
+  /// Détail du statut sous le nom, à côté de son étiquette : date du brassage
+  /// et jour de fermentation (« Brassé le 8 nov. 2026 (J+12) »), comme le titre
+  /// d'une journée, date d'embouteillage ; `null` sinon.
   String? _detailStatut(Brew brew) {
     final brewed = brew.brewedAt;
     final bottled = brew.bottledAt;
     final now = ref.read(horlogeProvider)();
     return switch (brew.status) {
       BrewStatus.fermenting when brewed != null =>
-        'J+${fermentationDayNumber(brewedAt: brewed, at: now)}',
+        'Brassé le ${formatDateCourte(brewed)} '
+            '(J+${fermentationDayNumber(brewedAt: brewed, at: now)})',
       BrewStatus.conditioning || BrewStatus.done when bottled != null =>
         'Embouteillé le ${formatDateCourte(bottled)}',
       _ => null,

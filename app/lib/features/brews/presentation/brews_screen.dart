@@ -101,8 +101,9 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
         // `shown` suit l'ordre des groupes (compareBrews) : un en-tête avant
         // le premier brassin de chaque groupe.
         for (final (i, b) in shown.indexed) ...[
-          if (i == 0 || groupeBrassin(shown[i - 1]) != groupeBrassin(b))
-            _EnTeteGroupe(groupeBrassin(b).libelle),
+          if (i == 0 ||
+              groupeBrassin(shown[i - 1].status) != groupeBrassin(b.status))
+            _EnTeteGroupe(groupeBrassin(b.status).libelle),
           _Row(brew: b, readerUid: readerUid, now: now),
         ],
         if (invalid.isNotEmpty && shown.isNotEmpty)
@@ -119,27 +120,6 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
     );
   }
 }
-
-/// Groupe d'un brassin dans la liste, dans l'ordre de [compareBrews] : en
-/// cours (brassage, fermentation, conditionnement), prévus, puis terminés et
-/// abandonnés.
-enum GroupeBrassins {
-  enCours('En cours'),
-  prevus('Prévus'),
-  termines('Terminés et abandonnés');
-
-  const GroupeBrassins(this.libelle);
-
-  final String libelle;
-}
-
-GroupeBrassins groupeBrassin(Brew brew) => switch (brew.status) {
-  BrewStatus.brewing ||
-  BrewStatus.fermenting ||
-  BrewStatus.conditioning => GroupeBrassins.enCours,
-  BrewStatus.planned => GroupeBrassins.prevus,
-  BrewStatus.done || BrewStatus.abandoned => GroupeBrassins.termines,
-};
 
 /// En-tête d'un groupe de la liste, déclaré comme en-tête.
 class _EnTeteGroupe extends StatelessWidget {
