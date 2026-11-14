@@ -22,7 +22,7 @@ callables, dont `validateTicket`, `refuseTicket`, `closeTicket` et `retryTicketS
 | `firestore.indexes.json` | index composites des requêtes de `tickets/`, TTL de `ticket_quotas/` |
 | `firebase.json` | Firestore, Storage (`storage.rules`), Functions (`functions/`, Node 24), émulateurs (auth 9099, firestore 8080, storage 9199), Hosting |
 | `functions/` | Cloud Functions des tickets, TypeScript (ADR-006, ADR-008) |
-| `test-fixtures/` | fixtures rejouées par plusieurs suites : `member_access.json` (appartenance et rôle, P31), lue par `rules-tests/` (`firestore.rules` et `storage.rules`) et `functions/test/` |
+| `test-fixtures/` | fixtures rejouées par plusieurs suites : `member_access.json` (appartenance et rôle, P31), lue par `rules-tests/` (`firestore.rules` et `storage.rules`), `functions/test/` et, pour le compte fondateur (`Member.founder`), `app/test/members_repository_test.dart` |
 | `brewing/` | calculs de brassage, Dart pur (voir « Calculs de brassage ») |
 | `exchange/` | import et export de recettes BeerJSON et BeerXML, Dart pur, dépend de `brewing/` et de `xml` (ADR-005, voir « Échange de recettes ») |
 | `.firebaserc` | alias `default` : `kassbeer`, le projet Firebase de production |
@@ -2977,8 +2977,9 @@ non-membre et un brasseur (« Accès réservé à l'administrateur. », « Accè
 membres. ») : la réponse ne dit pas si le compte existe. C'est la vérification de
 `isMember()` et `isAdmin()` de `firestore.rules`, recopiée : la fixture
 `test-fixtures/member_access.json` est rejouée par `rules-tests/test/member_access.test.mjs`
-(sondes `beer_index/{nature}` en `get` et `ticket_status/github`) et par
-`functions/test/auth.test.ts`. `requireBoundedText` refuse un argument texte absent, d'un
+(sondes `beer_index/{nature}` en `get` et `ticket_status/github`), par
+`functions/test/auth.test.ts` (dont `isFounder`) et par `app/test/members_repository_test.dart`
+(`Member.founder`). `requireBoundedText` refuse un argument texte absent, d'un
 autre type ou plus long que sa borne brute, avant toute lecture (`invalid-argument`,
 `details.field`, `details.reason`).
 
