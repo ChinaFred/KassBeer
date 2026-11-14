@@ -10,7 +10,9 @@ import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/menu_compte.dart';
 import '../../../core/presentation/page_document.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -22,6 +24,7 @@ import 'my_tickets_screen.dart';
 import 'ticket_lien_github.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
+import 'vignette_capture.dart';
 
 /// Textes des états du suivi d'un ticket.
 const textesTicket = TextesDocument(
@@ -55,15 +58,18 @@ class TicketDetailScreen extends ConsumerWidget {
         leading: BackButton(
           onPressed: () => quitterPageTicket(context, AppRoutes.tickets),
         ),
+        actions: const [MenuCompte(), SizedBox(width: 8)],
       ),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (offline) const BandeauHorsLigne(),
-            Expanded(child: TicketDetailPane(id: id)),
-          ],
+      body: ZoneCapture(
+        child: SafeArea(
+          top: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (offline) const BandeauHorsLigne(),
+              Expanded(child: TicketDetailPane(id: id)),
+            ],
+          ),
         ),
       ),
     );
@@ -237,6 +243,10 @@ class _DetailState extends ConsumerState<_Detail> {
                   FriseTicket(ticket: ticket),
                   const TitreSection('Description'),
                   Text(ticket.description, style: theme.textTheme.bodyLarge),
+                  if (ticket.screenshotPath case final path?) ...[
+                    gap,
+                    CaptureDuTicket(path: path),
+                  ],
                   gap,
                   Text(
                     'Écran : ${ticketScreenLabel(ticket.screen)}',

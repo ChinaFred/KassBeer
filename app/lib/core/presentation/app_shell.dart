@@ -1,19 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/domain/session_user.dart';
 import '../../features/auth/presentation/access_providers.dart';
-import '../../features/auth/presentation/sign_out.dart';
 import '../../features/brew_day/presentation/reprise_brassage.dart';
-import '../../features/tickets/presentation/ticket_form_screen.dart';
-import '../../features/tickets/presentation/tickets_providers.dart';
-import '../providers.dart';
 import '../router/routes.dart';
 import 'bandeau_hors_ligne.dart';
 import 'breakpoints.dart';
+import 'menu_compte.dart';
+import 'zone_capture.dart';
 
 /// Destination de la navigation principale.
 class ShellDestination {
@@ -116,11 +111,7 @@ class AppShell extends ConsumerWidget {
           ? null
           : BackButton(onPressed: () => context.go(back)),
       automaticallyImplyLeading: false,
-      actions: [
-        if (granted != null)
-          _AccountMenu(user: granted.user, isAdmin: granted.member.isAdmin),
-        const SizedBox(width: 8),
-      ],
+      actions: [const MenuCompte(), const SizedBox(width: 8)],
     );
 
     final offline = granted?.offline ?? false;
@@ -142,12 +133,16 @@ class AppShell extends ConsumerWidget {
         if (size == WindowSize.compact) {
           return Scaffold(
             appBar: appBar,
-            body: withBanner(child),
+            // Zone de la capture de « Signaler ou proposer » : la barre du
+            // haut et la barre de navigation n'y figurent pas (ADR-008, T6).
+            body: ZoneCapture(child: withBanner(child)),
             // ticket: <coquille>/menu/navigation
             bottomNavigationBar: NavigationBar(
               selectedIndex: selected,
               onDestinationSelected: goTo,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              // Icônes seules sous 600 px : `label` reste l'infobulle et le
+              // nom lu par le lecteur d'écran.
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
               destinations: [
                 for (final d in destinations)
                   NavigationDestination(
@@ -213,18 +208,22 @@ class AppShell extends ConsumerWidget {
               ),
               const VerticalDivider(width: 1),
               Expanded(
-                child: withBanner(
-                  expanded && !fullWidth
-                      ? Align(
-                          alignment: Alignment.topCenter,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxWidth: kContentMaxWidth,
+                // Zone de la capture de « Signaler ou proposer » : le rail
+                // n'y figure pas (ADR-008, T6).
+                child: ZoneCapture(
+                  child: withBanner(
+                    expanded && !fullWidth
+                        ? Align(
+                            alignment: Alignment.topCenter,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: kContentMaxWidth,
+                              ),
+                              child: child,
                             ),
-                            child: child,
-                          ),
-                        )
-                      : child,
+                          )
+                        : child,
+                  ),
                 ),
               ),
             ],
@@ -242,166 +241,5 @@ class AppShell extends ConsumerWidget {
       }
     }
     return 0;
-  }
-}
-
-/// Texte d'une pastille : « 99+ » au-delà de 99.
-String textePastille(int count) => count > 99 ? '99+' : '$count';
-
-/// Infobulle de l'avatar : « Mon compte », suivie des suivis à lire et, pour
-/// l'administrateur, des tickets à traiter.
-String infobulleCompte({required int unread, required int toProcess}) => [
-  'Mon compte',
-  if (unread == 1) '1 suivi de ticket à lire',
-  if (unread > 1) '$unread suivis de ticket à lire',
-  if (toProcess == 1) '1 ticket à traiter',
-  if (toProcess > 1) '$toProcess tickets à traiter',
-].join(', ');
-
-/// Avatar Google et menu du compte : nom, e-mail, version, Mes prix, Mes processus,
-/// Préférences, Signaler ou proposer, Mes tickets, Tickets à traiter (admin), Nouveautés,
-/// Sources des données, déconnexion. La pastille compte les suivis de ticket à lire et, pour
-/// l'administrateur, les tickets à traiter.
-class _AccountMenu extends ConsumerWidget {
-  const _AccountMenu({required this.user, required this.isAdmin});
-
-  final SessionUser user;
-  final bool isAdmin;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final version = ref.watch(appVersionProvider);
-    final name = user.displayName?.trim();
-    final initial =
-        (name != null && name.isNotEmpty ? name : (user.email ?? '?'))
-            .characters
-            .first
-            .toUpperCase();
-    final photo = user.photoUrl;
-    final unread = ref.watch(unreadTicketsCountProvider);
-    final toProcess = ref.watch(ticketsToProcessCountProvider);
-    final total = unread + toProcess;
-
-    // ticket: <coquille>/menu/compte
-    return MenuAnchor(
-      menuChildren: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: kAccountMenuMaxWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (name != null && name.isNotEmpty)
-                  Text(name, style: theme.textTheme.titleMedium),
-                if (user.email != null)
-                  Text(user.email!, style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 8),
-                Text(
-                  version == null ? 'Version indisponible' : 'Version $version',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const Divider(),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.sell_outlined),
-          onPressed: () => unawaited(context.push(AppRoutes.prices)),
-          child: const Text('Mes prix'),
-        ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.checklist_outlined),
-          onPressed: () => unawaited(context.push(AppRoutes.processes)),
-          child: const Text('Mes processus'),
-        ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.tune),
-          onPressed: () => unawaited(context.push(AppRoutes.preferences)),
-          child: const Text('Préférences'),
-        ),
-        const Divider(),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.feedback_outlined),
-          // Le modèle de la route courante (`/recettes/:id`), jamais son
-          // adresse : l'écran part sur une Issue publique.
-          onPressed: () => unawaited(
-            context.push(
-              ticketFormLocation(GoRouter.of(context).state.fullPath),
-            ),
-          ),
-          child: const Text('Signaler ou proposer'),
-        ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.confirmation_number_outlined),
-          trailingIcon: unread == 0
-              ? null
-              : Badge(label: Text(textePastille(unread))),
-          semanticsLabel: unread == 0 ? null : 'Mes tickets, $unread à lire',
-          onPressed: () => unawaited(context.push(AppRoutes.tickets)),
-          child: const Text('Mes tickets'),
-        ),
-        if (isAdmin)
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.inbox_outlined),
-            trailingIcon: toProcess == 0
-                ? null
-                : Badge(label: Text(textePastille(toProcess))),
-            semanticsLabel: toProcess == 0
-                ? null
-                : 'Tickets à traiter, $toProcess',
-            onPressed: () => context.go(AppRoutes.adminTickets),
-            child: const Text('Tickets à traiter'),
-          ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.new_releases_outlined),
-          onPressed: () => unawaited(context.push(AppRoutes.news)),
-          child: const Text('Nouveautés'),
-        ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.info_outline),
-          onPressed: () => unawaited(context.push(AppRoutes.dataSources)),
-          child: const Text('Sources des données'),
-        ),
-        const Divider(),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.logout),
-          onPressed: () => signOutFrom(context, ref),
-          child: const Text('Se déconnecter'),
-        ),
-      ],
-      builder: (context, controller, _) => IconButton(
-        tooltip: infobulleCompte(unread: unread, toProcess: toProcess),
-        onPressed: () =>
-            controller.isOpen ? controller.close() : controller.open(),
-        icon: Badge(
-          isLabelVisible: total > 0,
-          label: Text(textePastille(total)),
-          child: CircleAvatar(
-            radius: 16,
-            foregroundImage: photo == null ? null : NetworkImage(photo),
-            onForegroundImageError: photo == null
-                ? null
-                : (error, stackTrace) => ref
-                      .read(errorReportServiceProvider)
-                      .reportError(
-                        feature: 'shell.avatar',
-                        error: error,
-                        stackTrace: stackTrace,
-                        // Ni l'URL de la photo (retirée aussi par le service), ni
-                        // l'adresse : le type d'erreur et le code HTTP suffisent.
-                        context: error is NetworkImageLoadException
-                            ? 'photo du compte Google illisible, HTTP ${error.statusCode}'
-                            : 'photo du compte Google illisible',
-                      ),
-            child: ExcludeSemantics(child: Text(initial)),
-          ),
-        ),
-      ),
-    );
   }
 }

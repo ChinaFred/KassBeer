@@ -10,10 +10,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/breakpoints.dart';
+import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/feuille_ou_dialogue.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/menu_compte.dart';
 import '../../../core/presentation/page_document.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/services/screen_wakelock.dart';
@@ -119,6 +122,34 @@ abstract final class TextesJournee {
   static String reprendreNom(String nom) => 'Reprendre la journée « $nom »';
 }
 
+/// Textes de « Se déconnecter » avec des saisies en attente du réseau.
+abstract final class TextesDeconnexion {
+  static const titre = 'Se déconnecter ?';
+  static const rester = 'Rester connecté';
+  static const deconnecter = 'Se déconnecter';
+
+  /// « 1 saisie attend le réseau… » ou « N saisies attendent le réseau… ».
+  static String message(int n) => n == 1
+      ? '1 saisie attend le réseau. Si vous vous déconnectez maintenant, elle '
+            'risque de ne jamais partir.'
+      : '$n saisies attendent le réseau. Si vous vous déconnectez maintenant, '
+            'elles risquent de ne jamais partir.';
+}
+
+/// « Se déconnecter ? » quand [enAttente] saisies du jour n'ont pas encore
+/// rejoint le serveur : vrai si l'utilisateur se déconnecte. Firestore garde
+/// ces écritures sous le compte qui les a faites ; elles ne partent qu'à la
+/// reconnexion du même compte sur cet appareil.
+Future<bool> confirmerDeconnexionSaisies(BuildContext context, int enAttente) =>
+    // ticket: aucun (confirmation)
+    confirmerAbandon(
+      context,
+      TextesDeconnexion.message(enAttente),
+      titre: TextesDeconnexion.titre,
+      continuer: TextesDeconnexion.rester,
+      abandonner: TextesDeconnexion.deconnecter,
+    );
+
 /// Raison d'une journée qui ne se suit pas, avec son icône.
 typedef RefusJournee = ({IconData icon, String message});
 
@@ -211,8 +242,9 @@ class BrewDayScreen extends ConsumerWidget {
           title: Text(
             journee == null ? 'Jour de brassage' : TextesJournee.titre,
           ),
+          actions: const [MenuCompte(photo: false), SizedBox(width: 8)],
         ),
-        body: SafeArea(child: state),
+        body: ZoneCapture(child: SafeArea(child: state)),
       ),
       builder: (context, brew) {
         final cle = journee;
@@ -295,14 +327,19 @@ class _Message extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(titre)),
-      body: SafeArea(
-        child: EtatVide(
-          icon: icon,
-          message: message,
-          action: FilledButton(
-            onPressed: () => context.go(path),
-            child: Text(action),
+      appBar: AppBar(
+        title: Text(titre),
+        actions: const [MenuCompte(photo: false), SizedBox(width: 8)],
+      ),
+      body: ZoneCapture(
+        child: SafeArea(
+          child: EtatVide(
+            icon: icon,
+            message: message,
+            action: FilledButton(
+              onPressed: () => context.go(path),
+              child: Text(action),
+            ),
           ),
         ),
       ),
@@ -1039,13 +1076,16 @@ class _EcranJourState extends ConsumerState<_EcranJour>
           appBar: AppBar(
             leading: BackButton(onPressed: retour),
             title: Text(_brew.name),
+            actions: const [MenuCompte(photo: false), SizedBox(width: 8)],
           ),
-          body: eventsAsync.hasError
-              ? EtatErreur(
-                  message: 'Impossible de lire les saisies.',
-                  onRetry: () => ref.invalidate(brewEventsProvider(_brew.id)),
-                )
-              : const EtatChargement(label: 'Chargement du brassin'),
+          body: ZoneCapture(
+            child: eventsAsync.hasError
+                ? EtatErreur(
+                    message: 'Impossible de lire les saisies.',
+                    onRetry: () => ref.invalidate(brewEventsProvider(_brew.id)),
+                  )
+                : const EtatChargement(label: 'Chargement du brassin'),
+          ),
         ),
       );
     }
@@ -1318,6 +1358,17 @@ class _Jour extends StatelessWidget {
                       ),
                   ],
                 ),
+                // Initiale seule : aucune image chargée par le réseau (P2).
+                MenuCompte(
+                  photo: false,
+                  avantDeDeconnecter: pending.isEmpty
+                      ? null
+                      : () => confirmerDeconnexionSaisies(
+                          context,
+                          pending.length,
+                        ),
+                ),
+                const SizedBox(width: 8),
               ],
             ),
             // En bas de l'écran, toujours visible : les SnackBar s'affichent
@@ -1342,41 +1393,45 @@ class _Jour extends StatelessWidget {
                     : barre,
               ),
             ),
-            body: SafeArea(
-              bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ValueListenableBuilder<bool>(
-                    valueListenable: verrouRefuse,
-                    builder: (context, refuse, _) => refuse
-                        ? Material(
-                            color: Theme.of(context).colorScheme.errorContainer,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Text(
-                                kVerrouRefuse,
-                                style: TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onErrorContainer,
+            body: ZoneCapture(
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ValueListenableBuilder<bool>(
+                      valueListenable: verrouRefuse,
+                      builder: (context, refuse, _) => refuse
+                          ? Material(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.errorContainer,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Text(
+                                  kVerrouRefuse,
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onErrorContainer,
+                                  ),
                                 ),
                               ),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: kBrewDayMaxWidth,
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: kBrewDayMaxWidth,
+                          ),
+                          child: body,
                         ),
-                        child: body,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -238,6 +238,9 @@ describe("tickets — forme à la création (P23)", () => {
     "champ serveur delivered_version": { delivered_version: "9.9.9" },
     "champ serveur allowed_decisions": { allowed_decisions: ["validate"] },
     "champ serveur validated_by_app_at": { validated_by_app_at: serverTimestamp() },
+    "champ serveur screenshot_path (T6)": {
+      screenshot_path: "tickets/brewer-a/nouveau/screenshot.png",
+    },
     "seen_by_author_at à la création": { seen_by_author_at: serverTimestamp() },
     "champ hors liste (display_name)": { display_name: "Brasseur A" },
     "champ hors liste (price_eur)": { price_eur: 3 },
@@ -284,6 +287,40 @@ describe("tickets — mise à jour par l'auteur", () => {
       );
     });
   }
+
+  // screenshot_path (ADR-008, T6) : écrit par attachTicketScreenshot seul (SDK Admin).
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} écrit screenshot_path sur le ticket de brewer-a : refusé`, async () => {
+      await seedTickets();
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("tickets/t-a")
+          .update({ screenshot_path: "tickets/brewer-a/t-a/screenshot.png" }),
+      );
+    });
+  }
+
+  it("owner marque le suivi lu et pose screenshot_path : refusé", async () => {
+    await seedTickets();
+    await expectRule(
+      false,
+      db(state.env, "owner").doc("tickets/t-a").update({
+        seen_by_author_at: serverTimestamp(),
+        screenshot_path: "tickets/brewer-a/t-a/screenshot.png",
+      }),
+    );
+  });
+
+  it("owner marque lu un ticket qui porte déjà screenshot_path : autorisé", async () => {
+    await seed(state.env, {
+      "tickets/t-a": { ...published, screenshot_path: "tickets/brewer-a/t-a/screenshot.png" },
+    });
+    await expectRule(
+      true,
+      db(state.env, "owner").doc("tickets/t-a").update({ seen_by_author_at: serverTimestamp() }),
+    );
+  });
 
   for (const field of ["answer_reset_at", "allowed_decisions"]) {
     it(`admin écrit ${field} (champ serveur de T3) : refusé`, async () => {

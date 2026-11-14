@@ -1,5 +1,5 @@
 /**
- * Cloud Functions de Kass'Beer (ADR-006, ADR-008). Huit fonctions, dont quatre points
+ * Cloud Functions de Kass'Beer (ADR-006, ADR-008). Neuf fonctions, dont cinq points
  * d'accès de la liste fermée d'ADR-008 (P25) :
  *
  * - `publishTicket` : déclencheur de création de `tickets/{ticketId}`, publie l'Issue ;
@@ -15,8 +15,11 @@
  * - `launchTicketAnalysis`, `launchTicketDevelopment` : `onCall` de l'admin, lancement d'une
  *   routine Claude Code d'analyse ou de développement (T4, P35, P36). Une callable par
  *   routine : chacune ne monte que les secrets de la sienne (P25).
+ * - `attachTicketScreenshot` : `onCall` de l'auteur membre (`requireMember`, P30), joint
+ *   la capture déposée dans Cloud Storage à son ticket (T6). Aucun secret.
  *
- * Ce module ne construit aucun client (P26) : Firestore et GitHub s'ouvrent à l'appel.
+ * Ce module ne construit aucun client (P26) : Firestore, Storage et GitHub s'ouvrent à
+ * l'appel.
  */
 
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
@@ -40,6 +43,7 @@ import { isRetryRequest } from "./tickets/decisionModel";
 import { applyDecision } from "./tickets/decisions";
 import { handleLaunchCall } from "./tickets/launch";
 import { publishTicket as publish } from "./tickets/publish";
+import { handleScreenshotCall } from "./tickets/screenshot";
 import { runHourlyPass } from "./tickets/sync";
 import { handleGithubWebhook } from "./tickets/webhook";
 
@@ -233,4 +237,20 @@ export const launchTicketDevelopment = onCall(
       }),
       githubToken: () => GITHUB_TICKETS_TOKEN.value(),
     }),
+);
+
+/**
+ * Capture d'écran jointe par l'auteur de son ticket (ADR-008, T6, P30). Aucun secret : la
+ * fonction lit Firestore et le bucket par défaut avec le compte d'exécution.
+ */
+export const attachTicketScreenshot = onCall(
+  {
+    region: REGION,
+    serviceAccount: RUNTIME_SERVICE_ACCOUNT,
+    cors: CALLABLE_ORIGINS,
+    maxInstances: 2,
+    memory: "256MiB",
+    timeoutSeconds: 60,
+  },
+  (req) => handleScreenshotCall(req),
 );

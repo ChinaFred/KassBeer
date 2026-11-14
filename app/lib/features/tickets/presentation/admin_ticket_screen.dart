@@ -31,6 +31,7 @@ import 'section_lancements.dart';
 import 'ticket_lien_github.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
+import 'vignette_capture.dart';
 
 /// Textes des états de la fiche d'un ticket d'Admin.
 const textesTicketAdmin = TextesDocument(
@@ -757,6 +758,10 @@ class _FicheState extends ConsumerState<_Fiche> {
       Text('Écran : ${ticketScreenLabel(ticket.screen)}', style: muted),
       const TitreSection('Description'),
       Text(ticket.description, style: theme.textTheme.bodyLarge),
+      if (ticket.screenshotPath case final path?) ...[
+        gap,
+        CaptureDuTicket(path: path),
+      ],
       // Sans Issue, il n'y a rien à analyser.
       if (ticket.issueNumber != null) SectionAnalyses(ticket: ticket),
       if (ticket.issueNumber != null)

@@ -29,6 +29,7 @@ Ticket unTicket({
   bool canLaunchDevelopment = false,
   DateTime? decisionLeaseUntil,
   DateTime? retryRequestedAt,
+  String? screenshotPath,
   bool hasPendingWrites = false,
 }) => Ticket(
   id: id,
@@ -60,6 +61,7 @@ Ticket unTicket({
   canLaunchDevelopment: canLaunchDevelopment,
   decisionLeaseUntil: decisionLeaseUntil,
   retryRequestedAt: retryRequestedAt,
+  screenshotPath: screenshotPath,
   hasPendingWrites: hasPendingWrites,
 );
 

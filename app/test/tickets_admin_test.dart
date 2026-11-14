@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kass_beer/core/presentation/app_shell.dart';
+import 'package:kass_beer/core/presentation/menu_compte.dart';
 import 'package:kass_beer/core/presentation/etiquette.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';

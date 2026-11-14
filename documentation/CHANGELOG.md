@@ -4,6 +4,42 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-14
+
+### v0.1.40 — fonctionnel
+
+Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne
+son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans :
+éditeurs, import, jour de brassage, Mes prix, Mes processus, Préférences, Nouveautés, Mes tickets.
+L'entrée de l'écran où vous êtes n'y figure pas. Quitter un éditeur modifié ou un import en cours
+par ce menu demande d'abord confirmation. Sur l'écran du jour de brassage, l'avatar montre votre
+initiale, et la déconnexion prévient quand des saisies attendent encore le réseau.
+
+« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de
+cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais
+publiée. Sur un écran qui montre vos prix, un avertissement le rappelle. La capture apparaît dans
+le suivi du ticket.
+
+### v0.1.40 — technique
+
+Demandé par les tickets #37, #38 et #39. #37 : `NavigationBar` en `alwaysHide` sous 600 px,
+`navigationBarTheme` retiré du thème. #39 : `_AccountMenu` devient `MenuCompte`
+(`core/presentation/menu_compte.dart`), posé sur la coquille et les 20 pages pleines, avec
+`photo: false` sur l'écran du jour (aucune `NetworkImage`, P2), `avantDeQuitter` et
+`avantDeDeconnecter`, entrée de l'écran courant masquée d'après `GoRouterState.of(context).fullPath` ;
+`kTicketAccountMenuScreens` donne l'élément `menu/compte` aux pages pleines. #38 : lot T6
+d'ADR-008 (note du 2026-11-14) : `ZoneCapture` (`RepaintBoundary`), image gardée en mémoire,
+dépôt dans Cloud Storage sous `tickets/{uid}/{ticketId}/screenshot.png`, callable
+`attachTicketScreenshot` (`requireMember`, `maxInstances: 2`, `timeoutSeconds: 60`) qui écrit
+`screenshot_path`, lecture par `getData` ; `storage.rules` exige un ticket existant de l'auteur ;
+phrase fixe « Capture éventuelle disponible dans Admin › Tickets. » sur chaque Issue. La cause du
+`/admin/tickets` signalé n'a pas été reproduite : deux tests de non-régression couvrent une page
+ouverte par `push`. Paquets ajoutés à `pubspec.lock` : `firebase_storage` 13.6.0,
+`firebase_storage_platform_interface` 6.0.7, `firebase_storage_web` 3.11.13 ; aucune autre version
+ne change. `main.dart.js` : 5 417 304 octets avant (#37 et #39 compris), 5 510 208 après. `ci.yml`
+et `deploy.yml` : callable ajoutée à la liste fermée, émulateur Storage pour `rules-tests/`,
+`storage` au déploiement. `CLAUDE.md` : P5, P6, P23, P24, P25 et P31 modifiés, P43 ajouté.
+
 ## 2026-11-13
 
 ### v0.1.39 — fonctionnel

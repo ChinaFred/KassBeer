@@ -14,7 +14,9 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_screens.dart';
+import 'capture_ticket.dart';
 import 'ticket_statut.dart';
+import 'vignette_capture.dart';
 
 /// Paramètre de `/tickets/nouveau` qui porte le modèle de route de l'écran
 /// quitté (`/recettes/:id`), jamais son adresse.
@@ -34,6 +36,11 @@ String ticketFormLocation(String? routePattern) {
 /// [ecranOrigine] : modèle de route de l'écran d'où vient le membre, réduit à
 /// l'ensemble fermé de `ticket_screens.dart`. [reprise] : contenu d'un ticket
 /// non transmis (« Reprendre ce ticket ») ; il part comme un nouveau ticket.
+///
+/// Ouvert depuis le menu du compte, le formulaire prend une fois la capture de
+/// l'écran quitté ([captureEnAttenteProvider]) et propose de la joindre, case
+/// décochée (ADR-008, T6). Aucune capture depuis « Mes tickets », l'adresse
+/// directe ou « Reprendre ».
 class TicketFormScreen extends ConsumerStatefulWidget {
   const TicketFormScreen({super.key, this.ecranOrigine, this.reprise});
 
@@ -59,6 +66,19 @@ class TicketFormScreen extends ConsumerStatefulWidget {
   static const elementHelp = 'Menu ou fenêtre concerné.';
   static const abandonMessage = 'Le texte saisi sera perdu.';
   static const refused = 'Votre ticket a été refusé. Il n\'est pas enregistré.';
+  static const captureAttach = 'Joindre une capture de l\'écran précédent';
+  static const captureHelp =
+      'Seul l\'administrateur la voit. Elle n\'est jamais publiée.';
+  static const capturePrices =
+      'La capture peut montrer vos prix : l\'administrateur la verra.';
+  static const captureLabel = 'Capture de l\'écran précédent';
+  static const sentWithoutCapture = 'Ticket enregistré sans la capture.';
+  static const sentOfflineWithoutCapture =
+      'Ticket enregistré sans la capture. Il partira au retour du réseau.';
+
+  /// Délai d'acceptation du ticket par le serveur avant le dépôt de la
+  /// capture ; au-delà, le ticket part sans elle.
+  static const captureWaitTimeout = Duration(seconds: 30);
 
   @override
   ConsumerState<TicketFormScreen> createState() => _TicketFormScreenState();
@@ -89,10 +109,27 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
   bool _dirty = false;
   bool _sending = false;
 
+  /// Capture de l'écran quitté, prise par le menu du compte ; `null` sans
+  /// capture. En mémoire seulement.
+  CaptureEcran? _capture;
+
+  /// « Joindre une capture de l'écran précédent », décochée à l'ouverture.
+  bool _joindre = false;
+
   @override
   void initState() {
     super.initState();
     final reprise = widget.reprise;
+    // Prise une fois, et retirée du fournisseur dans tous les cas : une
+    // capture ne sert qu'au formulaire ouvert juste après elle, depuis le
+    // même écran.
+    final capture = ref.read(captureEnAttenteProvider).prendre();
+    _capture =
+        reprise == null &&
+            capture != null &&
+            capture.ecran == ticketScreenValue(widget.ecranOrigine)
+        ? capture
+        : null;
     _id = ref.read(ticketsRepositoryProvider).newTicketId();
     _title = TextEditingController(text: reprise?.title ?? '');
     _description = TextEditingController(text: reprise?.description ?? '');
@@ -181,43 +218,89 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
       description: _description.text.trim(),
       screen: _element,
     );
-    final written = ref
-        .read(ticketsRepositoryProvider)
-        .create(
-          id: id,
-          brouillon: brouillon,
-          authorUid: access.user.uid,
-          authorEmail: email,
-          appVersion: _installedVersion,
-          platform: kIsWeb ? 'web' : 'android',
-        );
+    final repository = ref.read(ticketsRepositoryProvider);
+    final errors = ref.read(errorReportServiceProvider);
+    final capture = _joindre ? _capture : null;
+    final written = repository.create(
+      id: id,
+      brouillon: brouillon,
+      authorUid: access.user.uid,
+      authorEmail: email,
+      appVersion: _installedVersion,
+      platform: kIsWeb ? 'web' : 'android',
+    );
     setState(() => _dirty = false);
     if (router.canPop()) {
       router.pop();
     } else {
       router.go(AppRoutes.tickets);
     }
+    void voir() => unawaited(router.push(AppRoutes.ticket(id)));
+    // Hors ligne, la capture ne part pas : elle n'est gardée qu'en mémoire.
+    final sansCapture = capture != null && access.offline;
     annoncerAvecAction(
       messenger,
       access.offline
-          ? TicketFormScreen.sentOffline
+          ? (sansCapture
+                ? TicketFormScreen.sentOfflineWithoutCapture
+                : TicketFormScreen.sentOffline)
           : TicketFormScreen.sentOnline,
       action: 'Voir',
-      onAction: () => unawaited(router.push(AppRoutes.ticket(id))),
+      onAction: voir,
     );
-    unawaited(
-      written.catchError((Object _) {
-        // Déjà rapportée par le dépôt de données, sans le texte du ticket.
-        // « Reprendre » rouvre le formulaire avec le texte envoyé.
+    void refuse() => annoncerAvecAction(
+      messenger,
+      TicketFormScreen.refused,
+      action: 'Reprendre',
+      onAction: () =>
+          unawaited(router.push(AppRoutes.newTicket, extra: brouillon)),
+    );
+    // Un refus est déjà rapporté par le dépôt de données, sans le texte du
+    // ticket. « Reprendre » rouvre le formulaire avec le texte envoyé.
+    unawaited(written.then((_) {}, onError: (Object _) => refuse()));
+    if (capture == null || sansCapture) return;
+    unawaited(() async {
+      // Le dépôt attend le ticket accepté par le serveur, au plus
+      // [captureWaitTimeout]. `false` : ticket refusé, déjà rapporté et
+      // annoncé ci-dessus ; `null` : délai dépassé.
+      final accepte = await written
+          .then<bool?>((_) => true, onError: (Object _) => false)
+          .timeout(TicketFormScreen.captureWaitTimeout, onTimeout: () => null);
+      if (accepte == false) return;
+      if (accepte == null) {
+        errors.reportError(
+          feature: 'tickets.screenshot',
+          error: TimeoutException(
+            'ticket non accepté par le serveur',
+            TicketFormScreen.captureWaitTimeout,
+          ),
+          stackTrace: StackTrace.current,
+          context: 'tickets/$id step=wait',
+        );
         annoncerAvecAction(
           messenger,
-          TicketFormScreen.refused,
-          action: 'Reprendre',
-          onAction: () =>
-              unawaited(router.push(AppRoutes.newTicket, extra: brouillon)),
+          TicketFormScreen.sentWithoutCapture,
+          action: 'Voir',
+          onAction: voir,
         );
-      }),
-    );
+        return;
+      }
+      // Dépôt de l'image, puis `attachTicketScreenshot`. Le formulaire est
+      // déjà fermé ; un échec est rapporté par le dépôt de données.
+      final jointe = await repository.attachScreenshot(
+        ticketId: id,
+        authorUid: access.user.uid,
+        png: capture.png,
+      );
+      if (!jointe) {
+        annoncerAvecAction(
+          messenger,
+          TicketFormScreen.sentWithoutCapture,
+          action: 'Voir',
+          onAction: voir,
+        );
+      }
+    }());
   }
 
   /// Version installée sans `+build` ; `null` si illisible.
@@ -398,6 +481,15 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                       },
                     ),
                   ],
+                  if (_capture case final capture?) ...[
+                    gap,
+                    _SectionCapture(
+                      capture: capture,
+                      joindre: _joindre,
+                      enabled: !_sending,
+                      onChanged: (value) => setState(() => _joindre = value),
+                    ),
+                  ],
                   gap,
                   Text(
                     envoyeAvec(
@@ -414,6 +506,74 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Section « Capture » : case « Joindre une capture de l'écran précédent »,
+/// décochée à l'ouverture, et vignette de l'image ; avertissement quand
+/// l'écran capturé peut montrer des prix.
+class _SectionCapture extends StatelessWidget {
+  const _SectionCapture({
+    required this.capture,
+    required this.joindre,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final CaptureEcran capture;
+  final bool joindre;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final prix = kTicketScreensWithPrices.contains(
+      ticketElementScreen(capture.ecran) ?? capture.ecran,
+    );
+    final aide = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          header: true,
+          child: Text(TextesCapture.titre, style: theme.textTheme.titleSmall),
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: joindre,
+          onChanged: enabled ? (v) => onChanged(v ?? false) : null,
+          title: const Text(TicketFormScreen.captureAttach),
+          subtitle: const Text(TicketFormScreen.captureHelp),
+        ),
+        if (prix) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExcludeSemantics(
+                child: Icon(
+                  Icons.sell_outlined,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(TicketFormScreen.capturePrices, style: aide),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+        VignetteCapture(
+          png: capture.png,
+          libelle: TicketFormScreen.captureLabel,
+        ),
+      ],
     );
   }
 }

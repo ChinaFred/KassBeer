@@ -56,6 +56,13 @@ abstract final class TextesImport {
   /// Ligne d'une recette ignorée : son nom et sa raison.
   static String ignoree(String nom, String raison) => '$nom — $raison';
   static const nonCochee = 'Non cochée';
+  static const arretee = 'Import arrêté avant elle';
+  static const arreterTitre = 'Arrêter l\'import ?';
+  static const arreterTexte =
+      'Les recettes déjà écrites restent. Les suivantes ne seront pas '
+      'importées.';
+  static const continuer = 'Continuer l\'import';
+  static const arreter = 'Arrêter';
   static String refusee(String raison) => 'Refusée : $raison';
   static String enCours(int faites, int total) =>
       'Import en cours : $faites sur $total';

@@ -66,7 +66,7 @@ void main() {
           .map((d) => d.label)
           .toList();
       expect(labels, ['Recettes', 'Bibliothèque', 'Brassins', 'Équipements']);
-      await tester.tap(find.text('Bibliothèque'));
+      await tester.tap(find.byTooltip('Bibliothèque'));
       await tester.pumpAndSettle();
       // `/bibliotheque` redirige vers les styles.
       expect(location(app), '/bibliotheque/styles');
@@ -359,7 +359,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(NavigationBar),
-          matching: find.text('Bibliothèque'),
+          matching: find.byTooltip('Bibliothèque'),
         ),
         findsOneWidget,
       );

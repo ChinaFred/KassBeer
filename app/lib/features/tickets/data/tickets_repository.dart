@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
@@ -9,15 +13,18 @@ import '../domain/ticket_analysis.dart';
 import '../domain/ticket_launch.dart';
 
 /// Accès à `tickets/`, `ticket_status/github` et `ticket_status/launches`
-/// (ADR-006, P23, P41), et aux callables `answerTicketAnalysis`,
-/// `launchTicketAnalysis` et `launchTicketDevelopment` (ADR-008). Les écrans
-/// passent par cette interface ; les tests la remplacent par un double.
+/// (ADR-006, P23, P41), aux callables `answerTicketAnalysis`,
+/// `launchTicketAnalysis`, `launchTicketDevelopment` et
+/// `attachTicketScreenshot` (ADR-008), et aux captures dans Cloud Storage
+/// (T6). Les écrans passent par cette interface ; les tests la remplacent par
+/// un double.
 ///
 /// Lectures ordinaires avec le cache hors ligne ; aucune `runTransaction`,
-/// aucun `Source.server`. Les callables sont réservées à l'administrateur.
-/// Aucun rapport d'erreur ne porte le titre, la description, l'e-mail d'un
-/// ticket, le texte d'une analyse ou d'une réponse, ni un lien de session
-/// (P13, P33, P41).
+/// aucun `Source.server`. Les callables de décision sont réservées à
+/// l'administrateur ; `attachTicketScreenshot` à l'auteur du ticket. Aucun
+/// rapport d'erreur ne porte le titre, la description, l'e-mail d'un ticket,
+/// le texte d'une analyse ou d'une réponse, un lien de session, ni le contenu
+/// ou le nom de fichier d'une capture (P13, P33, P41).
 abstract class TicketsRepository {
   /// Identifiant d'un ticket, créé par l'appareil à l'ouverture du formulaire :
   /// un double appui écrit le même document.
@@ -105,7 +112,35 @@ abstract class TicketsRepository {
     required String ticketId,
     required ActionLancement action,
   });
+
+  /// Joint la capture [png] au ticket [ticketId] de [authorUid] : dépôt dans
+  /// `tickets/{authorUid}/{ticketId}/screenshot.png`, puis callable
+  /// `attachTicketScreenshot`, qui écrit `screenshot_path`. Rend vrai si la
+  /// capture est jointe ; un échec est rapporté ici, sans contenu ni nom de
+  /// fichier, et rend faux. À appeler une fois le ticket accepté par le
+  /// serveur.
+  Future<bool> attachScreenshot({
+    required String ticketId,
+    required String authorUid,
+    required Uint8List png,
+  });
+
+  /// Octets de la capture rangée sous [path] (`getData`, jamais d'URL de
+  /// téléchargement), pour l'auteur et l'administrateur. Un chemin hors motif
+  /// n'est pas lu. Un échec est rapporté ici, puis relancé.
+  Future<Uint8List> loadScreenshot(String path);
 }
+
+/// Dépôt d'un fichier dans Cloud Storage. Remplacé dans les tests.
+typedef DeposerFichier =
+    Future<void> Function(String path, Uint8List bytes, String contentType);
+
+/// Lecture d'un fichier de Cloud Storage, bornée à [maxBytes]. Remplacée dans
+/// les tests.
+typedef LireFichier = Future<Uint8List?> Function(String path, int maxBytes);
+
+/// Délai du dépôt d'une capture de 5 Mo au plus.
+const kScreenshotUploadTimeout = Duration(minutes: 2);
 
 /// Appel d'une callable : nom, données ; rend `data` de la réponse. Remplacé
 /// dans les tests.
@@ -131,15 +166,42 @@ class FirestoreTicketsRepository implements TicketsRepository {
     FirebaseFirestore? firestore,
     DateTime Function()? clock,
     AppelCallable? callable,
+    DeposerFichier? deposer,
+    LireFichier? lire,
   }) : _errors = errorReportService,
        _injectedFirestore = firestore,
        _clock = clock ?? DateTime.now,
-       _injectedCallable = callable;
+       _injectedCallable = callable,
+       _injectedDeposer = deposer,
+       _injectedLire = lire;
 
   final ErrorReportService _errors;
   final FirebaseFirestore? _injectedFirestore;
   final DateTime Function() _clock;
   final AppelCallable? _injectedCallable;
+  final DeposerFichier? _injectedDeposer;
+  final LireFichier? _injectedLire;
+
+  /// Client de Cloud Storage, construit au premier dépôt ou à la première
+  /// lecture d'une capture et mémorisé (P6) : rien n'est chargé au démarrage.
+  FirebaseStorage? _storage;
+
+  FirebaseStorage get _bucket => _storage ??= FirebaseStorage.instance;
+
+  Future<void> _deposer(String path, Uint8List bytes, String contentType) {
+    final injected = _injectedDeposer;
+    if (injected != null) return injected(path, bytes, contentType);
+    return _bucket
+        .ref(path)
+        .putData(bytes, SettableMetadata(contentType: contentType))
+        .timeout(kScreenshotUploadTimeout);
+  }
+
+  Future<Uint8List?> _lire(String path, int maxBytes) {
+    final injected = _injectedLire;
+    if (injected != null) return injected(path, maxBytes);
+    return _bucket.ref(path).getData(maxBytes);
+  }
 
   /// Client des Cloud Functions, construit au premier appel d'une callable
   /// et mémorisé (P6) : rien n'est chargé au démarrage.
@@ -599,6 +661,65 @@ class FirestoreTicketsRepository implements TicketsRepository {
       );
       // Sans réponse, la session est peut-être partie.
       return const ResultatLancement(IssueLancement.perdu);
+    }
+  }
+
+  @override
+  Future<bool> attachScreenshot({
+    required String ticketId,
+    required String authorUid,
+    required Uint8List png,
+  }) async {
+    final path = ticketScreenshotPath(authorUid, ticketId);
+    var step = 'upload';
+    try {
+      await _deposer(path, png, 'image/png');
+      step = 'attach';
+      await _call('attachTicketScreenshot', {
+        'ticketId': ticketId,
+        'path': path,
+      });
+      return true;
+    } catch (error, stackTrace) {
+      _errors.reportError(
+        feature: 'tickets.screenshot',
+        error: error,
+        stackTrace: stackTrace,
+        // Ni le contenu, ni le nom du fichier, ni son chemin.
+        context:
+            'tickets/$ticketId step=$step '
+            'code=${switch (error) {
+              FirebaseException(:final code) => code,
+              _ => error.runtimeType,
+            }}',
+      );
+      return false;
+    }
+  }
+
+  @override
+  Future<Uint8List> loadScreenshot(String path) async {
+    try {
+      if (!kTicketScreenshotPathPattern.hasMatch(path)) {
+        throw const FormatException('chemin de capture hors motif');
+      }
+      final bytes = await _lire(path, kTicketScreenshotMaxBytes);
+      if (bytes == null || bytes.isEmpty) {
+        throw const FormatException('capture vide');
+      }
+      return bytes;
+    } catch (error, stackTrace) {
+      _errors.reportError(
+        feature: 'tickets.load_screenshot',
+        error: error,
+        stackTrace: stackTrace,
+        context:
+            'code=${switch (error) {
+              FirebaseException(:final code) => code,
+              _ => error.runtimeType,
+            }}',
+      );
+      rethrow;
     }
   }
 }

@@ -103,11 +103,57 @@ const kTicketShellScreens = [
 ];
 
 /// Éléments de la coquille, ajoutés à chaque écran de [kTicketShellScreens].
-/// Les commentaires `// ticket:` de `app_shell.dart` citent, pour chaque écran
-/// de la coquille, sa clé `menu/compte` ou `menu/navigation`.
+/// Les commentaires `// ticket:` de `app_shell.dart` et de `menu_compte.dart`
+/// citent, pour chaque écran de la coquille, sa clé `menu/compte` ou
+/// `menu/navigation` (`<coquille>/…`).
 const kTicketShellElements = {
-  'menu/compte': 'Menu du compte',
+  'menu/compte': kTicketAccountMenu,
   'menu/navigation': 'Barre de navigation',
+};
+
+/// Nom de l'élément `menu/compte`.
+const kTicketAccountMenu = 'Menu du compte';
+
+/// Pages pleines, hors de la coquille, dont la barre du haut porte le menu du
+/// compte (`MenuCompte`) : elles reçoivent l'élément `menu/compte`. Le
+/// commentaire `// ticket:` de `menu_compte.dart` les cite par
+/// `<hors-coquille>/menu/compte`.
+///
+/// `test/ticket_screens_test.dart` vérifie que cette liste est celle des routes
+/// hors de la coquille, écrans d'accès et redirections exclus.
+const kTicketAccountMenuScreens = [
+  '/recettes/nouvelle',
+  '/recettes/importer',
+  '/recettes/:id/modifier',
+  '/recettes/:id/chronologie',
+  '/brassins/:id/jour',
+  '/brassins/:id/jour/:journee',
+  '/prix',
+  '/processus',
+  '/processus/nouveau',
+  '/processus/:id/modifier',
+  '/processus/:id',
+  '/preferences',
+  '/equipements/nouveau',
+  '/equipements/:id/modifier',
+  '/nouveautes',
+  '/sources-des-donnees',
+  '/tickets/nouveau',
+  '/tickets/:id',
+  '/tickets',
+  '/admin/import',
+];
+
+/// Écrans qui peuvent montrer les prix, les frais ou le coût du lecteur : la
+/// capture de l'un d'eux porte l'avertissement « La capture peut montrer vos
+/// prix » (ADR-008, note du 2026-11-14).
+const kTicketScreensWithPrices = {
+  '/recettes/:id',
+  '/brassins/:id',
+  '/brassins/:id/jour',
+  '/brassins/:id/jour/:journee',
+  '/brassins/:id/jour/:journee/preparer',
+  '/prix',
 };
 
 /// Éléments propres à un écran, dans l'ordre de la liste « Élément précis ».
@@ -190,6 +236,8 @@ final Map<String, String> kTicketElements = Map.unmodifiable({
   ..._kTicketScreenElements,
   for (final screen in kTicketShellScreens)
     for (final e in kTicketShellElements.entries) '$screen/${e.key}': e.value,
+  for (final screen in kTicketAccountMenuScreens)
+    '$screen/menu/compte': kTicketAccountMenu,
 });
 
 /// Libellé de « L'écran entier », valeur par défaut de « Élément précis ».

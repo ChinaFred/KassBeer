@@ -139,6 +139,12 @@ export interface IssueBodyInput {
   platform: TicketPlatform;
 }
 
+/**
+ * Phrase fixe de chaque Issue : la capture, quand le membre en joint une, reste dans
+ * Cloud Storage et ne se lit que dans Admin › Tickets (ADR-008, T6).
+ */
+export const ISSUE_SCREENSHOT_NOTE = "Capture éventuelle disponible dans Admin › Tickets.";
+
 /** Ligne qui porte la référence opaque du ticket, cherchée avant une republication. */
 export function referenceLine(ticketId: string): string {
   return `**Référence :** \`${ticketId}\``;
@@ -146,8 +152,9 @@ export function referenceLine(ticketId: string): string {
 
 /**
  * Corps de l'Issue, sur un gabarit fixe : type, écran (modèle de route), version,
- * plateforme, référence opaque, description nettoyée. Jamais le nom, l'e-mail, l'uid,
- * une recette ni un prix (P24).
+ * plateforme, référence opaque, description nettoyée, puis [ISSUE_SCREENSHOT_NOTE] sur
+ * chaque Issue, qu'une capture soit jointe ou non (ADR-008, note du 2026-11-14). Jamais le
+ * nom, l'e-mail, l'uid, une recette, un prix ni la capture (P24).
  */
 export function buildIssueBody(input: IssueBodyInput): string {
   const screen = routeTemplateOrNull(input.screen) ?? SCREEN_UNKNOWN;
@@ -164,6 +171,8 @@ export function buildIssueBody(input: IssueBodyInput): string {
     "",
     "---",
     "_Ticket envoyé depuis l'application Kass'Beer._",
+    "",
+    ISSUE_SCREENSHOT_NOTE,
   ].join("\n");
 }
 

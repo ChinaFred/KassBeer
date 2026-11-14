@@ -9,6 +9,20 @@ const kTicketTitleMaxLength = 100;
 const kTicketDescriptionMinLength = 10;
 const kTicketDescriptionMaxLength = 2000;
 
+/// Capture d'écran jointe à un ticket (ADR-008, T6) : 5 Mo au plus, comme
+/// `storage.rules` et `attachTicketScreenshot`.
+const kTicketScreenshotMaxBytes = 5 * 1024 * 1024;
+
+/// Chemin Storage d'une capture : `tickets/{uid}/{ticketId}/screenshot.png`
+/// ou `.jpg`.
+final kTicketScreenshotPathPattern = RegExp(
+  r'^tickets/[A-Za-z0-9_-]{1,128}/[A-Za-z0-9_-]{1,128}/screenshot\.(png|jpg)$',
+);
+
+/// Chemin Storage de la capture PNG du ticket [ticketId] de [uid].
+String ticketScreenshotPath(String uid, String ticketId) =>
+    'tickets/$uid/$ticketId/screenshot.png';
+
 /// Au-delà de ce délai, un ticket `pending` est en retard : la tâche horaire
 /// aurait dû le transmettre.
 const kTicketSendDelay = Duration(hours: 1);
@@ -146,6 +160,7 @@ class Ticket {
     this.canLaunchDevelopment = false,
     this.decisionLeaseUntil,
     this.retryRequestedAt,
+    this.screenshotPath,
     this.hasPendingWrites = false,
   });
 
@@ -191,6 +206,12 @@ class Ticket {
 
   /// L'Issue est introuvable sur GitHub depuis cette date (serveur).
   final DateTime? issueMissingSince;
+
+  /// Chemin Cloud Storage de la capture jointe, écrit par
+  /// `attachTicketScreenshot` seul (ADR-008, T6) ; `null` sans capture. Un
+  /// chemin hors de [kTicketScreenshotPathPattern] n'est jamais lu dans
+  /// Storage : « Capture indisponible. ».
+  final String? screenshotPath;
 
   /// Décisions que le statut permet, calculées par le serveur seul (P26).
   /// `null` : le serveur ne les a pas encore écrites. Une valeur que cette
@@ -336,6 +357,7 @@ class Ticket {
       canLaunchDevelopment: allowedRaw.contains(kLaunchDevelopmentDecision),
       decisionLeaseUntil: read.date('decision_lease_until'),
       retryRequestedAt: read.date('retry_requested_at'),
+      screenshotPath: read.texteFacultatif('screenshot_path'),
       hasPendingWrites: hasPendingWrites,
     );
   }

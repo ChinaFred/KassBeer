@@ -27,22 +27,31 @@ void main() {
   }
 
   testWidgets(
-    'moins de 600 px : barre de navigation en bas, libellés visibles',
+    'moins de 600 px : barre de navigation en bas, icônes seules, nom en '
+    'infobulle et pour le lecteur d\'écran',
     (tester) async {
+      final semantics = tester.ensureSemantics();
       await signedIn(tester, width: 400);
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(find.byType(NavigationRail), findsNothing);
       final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysShow);
-      for (final label in ['Recettes', 'Brassins', 'Équipements']) {
+      expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysHide);
+      for (final label in ['Recettes', 'Bibliothèque', 'Brassins']) {
+        final destination = find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byTooltip(label),
+        );
+        expect(destination, findsOneWidget, reason: label);
         expect(
           find.descendant(
             of: find.byType(NavigationBar),
-            matching: find.text(label),
+            matching: find.bySemanticsLabel(RegExp('^$label')),
           ),
           findsOneWidget,
+          reason: label,
         );
       }
+      semantics.dispose();
     },
   );
 
@@ -52,6 +61,13 @@ void main() {
     expect(rail.extended, isFalse);
     expect(rail.labelType, NavigationRailLabelType.all);
     expect(find.byType(NavigationBar), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(NavigationRail),
+        matching: find.text('Brassins'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('840 px et plus : rail étendu, contenu à 840 px au plus', (
@@ -70,12 +86,13 @@ void main() {
 
   testWidgets('un brasseur ne voit pas Admin', (tester) async {
     await signedIn(tester, width: 400);
+    expect(find.byTooltip('Admin'), findsNothing);
     expect(find.text('Admin'), findsNothing);
   });
 
   testWidgets('un admin voit Admin et ouvre Membres', (tester) async {
     await signedIn(tester, width: 400, admin: true);
-    await tester.tap(find.text('Admin'));
+    await tester.tap(find.byTooltip('Admin'));
     await tester.pumpAndSettle();
     expect(find.text('Membres'), findsOneWidget);
     expect(find.text('Inviter et retirer les comptes'), findsOneWidget);
@@ -89,10 +106,10 @@ void main() {
 
   testWidgets('navigation entre les sections', (tester) async {
     await signedIn(tester, width: 400);
-    await tester.tap(find.text('Brassins'));
+    await tester.tap(find.byTooltip('Brassins'));
     await tester.pumpAndSettle();
     expect(find.text(BrewsScreen.emptyMessage), findsOneWidget);
-    await tester.tap(find.text('Équipements'));
+    await tester.tap(find.byTooltip('Équipements'));
     await tester.pumpAndSettle();
     expect(find.text(EquipmentListScreen.emptyMessage), findsOneWidget);
   });
