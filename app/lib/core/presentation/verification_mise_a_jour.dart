@@ -123,6 +123,9 @@ class _VerificationMiseAJourState extends ConsumerState<VerificationMiseAJour> {
     // La reprise navigue dans le rappel d'après image où elle a décidé : la
     // route se relit une image plus tard.
     _attente = true;
+    // Dans un rappel d'après image, `endOfFrame` ne demande pas d'image : sans
+    // cette demande, la lecture attendrait le prochain geste du brasseur.
+    WidgetsBinding.instance.scheduleFrame();
     await WidgetsBinding.instance.endOfFrame;
     _attente = false;
     if (!mounted || etat.lancee || !_horsEcranDuJour) return;
