@@ -25,6 +25,24 @@ Décisions de l'utilisateur du 2026-11-14 :
 7. Seuls les houblons des recettes du groupe sont relus ; les autres s'affichent « non relu ».
 8. Un texte qui compare à un autre houblon (« proche du Cascade ») est permis.
 
+Corrections du cadrage, décidées le 2026-11-14 (l'utilisateur a délégué ces choix à la session
+principale) :
+
+9. L'export JSON d'Admin n'existe pas encore. Les noms des houblons du groupe viennent d'un
+   script en lecture seule, `ingest/lister-houblons-recettes.mjs` (Admin SDK, ADC), qui lit
+   `recipes/*.recipe.ingredients.hop_additions[].name` et `brews/*.recipe_snapshot` (même
+   chemin) et n'écrit que la liste des noms, sans identifiant de recette, de brassin ni de
+   membre.
+10. Les houblons des brassins comptent, y compris ceux d'une recette supprimée depuis.
+11. La résolution d'un nom vers `beer_hops/{id}` passe par `IndexBibliotheque.resoudre`
+    (`exchange/lib/src/resolution_import.dart`, nom et alias), comme Recettes › Importer.
+    `ingredientKey` ne convient pas : il rend `houblon-<clé>`, et les documents s'appellent
+    `hop-<clé>`. Zéro ou plusieurs correspondances : « non résolu », avec la raison.
+12. La fiche affiche « Confiance faible » quand `confidence` vaut `low`.
+13. L'essai porte sur une liste de noms donnée par l'admin (`--seulement`), résolue comme
+    en 11. Liste proposée : Cascade, Citra, Mosaic, Saaz, Hallertauer Mittelfrüh, East Kent
+    Golding, Magnum, Nelson Sauvin, Sorachi Ace, Bullion.
+
 ## Contexte
 
 La Bibliothèque montre pour un houblon (`beer_hops/{id}`, 466 documents après fusion,
@@ -88,14 +106,13 @@ pour `beer_hops/`, et le script local garde l'application sans IA.
   `ingest/lib/aromes/validation.mjs` ne chargent pas le SDK. Appels directs par
   `client.messages.create`, comptage par `client.messages.countTokens`, lots par
   `client.messages.batches.create`, `.retrieve` et `.results`.
-- **Liste des houblons du groupe** : `exchange/bin/lister_houblons_recettes.dart`. Il lit le
-  fichier de l'export JSON d'Admin, choisi par l'admin, et n'en lit que les noms des houblons
-  des recettes (`recipes[].recipe.ingredients.hop_additions[].name`). Il n'en lit ni prix, ni
-  frais, ni coût, ni nom de membre. Il dérive l'identifiant `hop-<clé>` par `ingredientKey`
-  (`brewing/lib/src/ingredient_key.dart`), comme la préparation des référentiels, et écrit
-  `import/ingest/aromes/houblons-recettes.json` (identifiants seuls). Un nom sans houblon
-  correspondant dans `beer_hops.json` va dans la liste « non résolus » du même fichier. La
-  résolution reste en Dart : aucune copie en Node.
+- **Liste des houblons du groupe** (décisions 9 à 11) : `ingest/lister-houblons-recettes.mjs`
+  lit `recipes/` et `brews/` en lecture seule et écrit `import/ingest/aromes/noms-houblons.json`
+  (noms seuls, triés, sans doublon). Puis `exchange/bin/lister_houblons_recettes.dart` résout
+  chaque nom par `IndexBibliotheque.resoudre` sur `import/ingest/prepare/beer_hops.json` et
+  écrit `import/ingest/aromes/houblons-recettes.json` : identifiants résolus, et liste « non
+  résolus » (nom, raison `aucun` ou `plusieurs`). La résolution reste en Dart : aucune copie
+  en Node.
 - **Écriture** : `ingest/ecrire.mjs`, liste blanche étendue à `beer_hop_aromas`, mêmes
   garde-fous (émulateur par défaut, `--production --projet kassbeer`, saisie du nom du
   projet, ADC `authorized_user`).
@@ -109,7 +126,8 @@ pour `beer_hops/`, et le script local garde l'application sans IA.
    `medium`. Pour comparer, l'admin le rejoue sur les mêmes 10 houblons avec `--effort low`
    et `--effort high` ; chaque sortie garde son effort dans son nom de fichier et dans le
    rapport. L'utilisateur lit les textes, choisit l'effort retenu et ajuste le prompt.
-2. `dart run bin/lister_houblons_recettes.dart <export.json>` dans `exchange/`, puis
+2. `node lister-houblons-recettes.mjs` dans `ingest/`, puis
+   `dart run bin/lister_houblons_recettes.dart` dans `exchange/`, puis
    `node generer-aromes.mjs --lot --seulement import/ingest/aromes/houblons-recettes.json
    --budget-usd <montant>` : lot de l'API Batches (− 50 %, résultat en 24 h au plus), repris
    par `--suivre <id du lot>`.
@@ -281,7 +299,7 @@ script ne tourne ni en CI ni dans les Functions.
 2. Ce qui existera en double : rien. La liste fermée des descripteurs vit dans un seul
    fichier Node ; le document porte le libellé, l'application ne fait que l'afficher. La
    fonction de contrôle est partagée par le générateur et l'écrivain, dans le même paquet.
-   La dérivation d'un identifiant de houblon reste en Dart (`ingredientKey`).
+   La résolution d'un nom de houblon reste en Dart (`IndexBibliotheque.resoudre`).
 3. Ce qui pèse au démarrage : rien côté application (un `get` à l'ouverture d'une fiche).
    Le SDK ne se charge que dans `generer-aromes.mjs`, au premier appel.
 4. Compilation de chaque cible : aucune dépendance Dart ajoutée ; l'APK et le web ne
