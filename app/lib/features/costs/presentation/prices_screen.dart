@@ -33,8 +33,7 @@ class PricesScreen extends ConsumerWidget {
   static const horsLigne = 'Prix indisponibles sur cet appareil hors ligne.';
   static const aucunPrixTitre = 'Aucun prix';
   static const aucunPrix =
-      'Aucun prix enregistré. Ajoutez-en un, ou complétez-les depuis une '
-      'recette.';
+      'Ajoutez-en un, ou complétez-les depuis une recette.';
   static const aucunFrais =
       'Aucun frais. Ajoutez l\'eau, l\'électricité, les capsules… pour qu\'ils '
       'comptent dans le coût.';

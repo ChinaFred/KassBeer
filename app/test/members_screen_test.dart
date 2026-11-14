@@ -263,7 +263,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(MembersScreen.emptyTitle), findsOneWidget);
     expect(
-      find.text('Aucun membre. Appuyez sur Inviter pour ajouter un compte.'),
+      find.text('Appuyez sur Inviter pour ajouter un compte.'),
       findsOneWidget,
     );
   });

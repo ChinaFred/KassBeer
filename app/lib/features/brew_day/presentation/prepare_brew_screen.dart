@@ -318,7 +318,9 @@ class _PreparationState extends ConsumerState<_Preparation>
             children: [
               _Titre(
                 nom: brew.name,
-                detail: planned == null ? null : 'Prévu ${formatDate(planned)}',
+                detail: planned == null
+                    ? null
+                    : 'Prévu le ${formatDate(planned)}',
               ),
               const SizedBox(height: 4),
               const Text(

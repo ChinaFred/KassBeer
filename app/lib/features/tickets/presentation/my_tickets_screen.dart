@@ -49,8 +49,7 @@ class MyTicketsScreen extends ConsumerWidget {
   static const loadError = 'Impossible de lire vos tickets.';
   static const emptyTitle = 'Aucun ticket';
   static const emptyMessage =
-      'Aucun ticket pour l\'instant. Un bug, une idée ? Envoyez-les à '
-      'l\'administrateur.';
+      'Un bug, une idée ? Envoyez-les à l\'administrateur.';
   static const unreadLabel = LigneTicket.nonLuLabel;
   static const noSelection = 'Choisissez un ticket pour voir son suivi.';
 

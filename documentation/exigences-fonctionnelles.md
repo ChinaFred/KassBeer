@@ -137,10 +137,12 @@ recette publique et d'un ticket (Admin › Tickets des membres) ont le même en-
 grand, déclaré comme titre, puis une ligne grise (style, auteur, type, jour de fermentation…)
 et les étiquettes (statut, « En attente du réseau »). Les boutons suivent la même hiérarchie :
 l'action principale pleine (« Nouveau brassin » sur une recette), « Modifier » en bouton
-tonal, les autres en contour, « Supprimer » en contour rouge. Chaque section est une carte,
-espacée de 16 px de la suivante. Les fiches ont la même largeur, celle du contenu (840 px au
-plus). Sous 600 px, les cartes s'étendent de 8 px sur la marge, et leur contenu reste aligné
-sur l'en-tête.
+tonal, les autres en contour, « Supprimer » en contour rouge. Sur les fiches d'une recette,
+d'un brassin, d'un équipement, d'un processus et d'une recette publique, chaque section est
+une carte, espacée de 16 px de la suivante ; la fiche d'un ticket ne prend que l'en-tête
+commun et garde ses sections à plat. Les fiches ont la même largeur, celle du contenu (840 px
+au plus). Sous 600 px, les cartes s'étendent de 8 px sur la marge, carte d'action d'un brassin
+comprise, et leur contenu reste aligné sur l'en-tête.
 
 Recettes, Équipements et Brassins sont décrits ci-dessous. Au lancement, si le compte a un seul
 brassin en cours depuis moins de 24 h, l'écran du jour se rouvre avec le message « Brassage
@@ -354,8 +356,8 @@ dans Admin › Tickets : icône du type dans un disque (lue), titre sur deux lig
 « jj/mm/aa », étiquette du statut (icône et texte) dessous, et à droite un point « Nouveau suivi
 à lire », lu avec la ligne, quand le statut ou la réponse a changé depuis la dernière ouverture
 du ticket. Bouton flottant « Signaler ou
-proposer », absent de l'état vide, qui porte déjà ce bouton. Chargement « Chargement de vos tickets » ; aucun ticket : titre « Aucun ticket », puis « Aucun ticket pour
-l'instant. Un bug, une idée ? Envoyez-les à l'administrateur. » et « Signaler ou proposer » ;
+proposer », absent de l'état vide, qui porte déjà ce bouton. Chargement « Chargement de vos tickets » ; aucun ticket : titre « Aucun ticket », puis « Un bug, une idée ?
+Envoyez-les à l'administrateur. » et « Signaler ou proposer » ;
 panne : « Impossible de lire vos tickets. » et « Réessayer » ; panne après une première
 lecture : la liste reste, sous « Mise à jour de la liste impossible. Elle peut ne plus être à
 jour. ». Hors ligne : bandeau hors ligne et liste du cache. Un ticket illisible s'affiche
@@ -449,7 +451,7 @@ qu'une invitation faite hors ligne n'a pas atteint le serveur.
   boutons « Annuler » et « Retirer ». Après « Retirer », la ligne disparaît et l'écran
   affiche « {e-mail} est retiré. ». Si le serveur refuse, ce message est remplacé par « Le
   retrait de {e-mail} a échoué. »
-- Liste vide : titre « Aucun membre », puis « Aucun membre. Appuyez sur Inviter pour ajouter un compte. »
+- Liste vide : titre « Aucun membre », puis « Appuyez sur Inviter pour ajouter un compte. »
 - Liste illisible : « Impossible de lire la liste des membres. » et « Réessayer ». Une panne
   après une première lecture garde la liste affichée, avec au-dessus « Mise à jour de la
   liste impossible. Elle peut ne plus être à jour. » et « Réessayer ».
@@ -706,9 +708,9 @@ l'application à jour. ».
 
 États : « Chargement des tickets » ; « Impossible de lire les tickets. » et « Réessayer » ;
 panne après une lecture : bandeau « Mise à jour de la liste impossible. » au-dessus de la liste ;
-aucun ticket : titre « Aucun ticket », puis « Aucun ticket pour l'instant. Les membres n'ont encore rien signalé. » ;
-« À traiter » vide : titre « Tout est traité », puis « Rien à traiter. Tous les tickets ont reçu une décision. » ; « Bloqués »
-vide : titre « Rien de bloqué », puis « Aucun ticket bloqué. » ; ces deux derniers avec « Afficher tous les tickets ».
+aucun ticket : titre « Aucun ticket », puis « Les membres n'ont encore rien signalé. » ;
+« À traiter » vide : titre « Tout est traité », puis « Chaque ticket a reçu une décision. » ; « Bloqués »
+vide : titre « Rien de bloqué », puis « Aucun envoi en échec ou en retard, aucune Issue disparue. » ; ces deux derniers avec « Afficher tous les tickets ».
 
 **Fiche « Ticket d'un membre ».** Texte sélectionnable, dans cet ordre : titre, en en-tête de
 fiche ; type sur la ligne grise ; étiquette du statut (elle clignote trois fois quand le statut change, jamais au premier
@@ -2096,7 +2098,7 @@ degré. ».
 Écran « Préparer le brassage » (propriétaire d'un brassin prévu ou en cours : un autre membre lit
 « Seul le brasseur de ce brassin suit son brassage. », un brassin fini « Le brassage de ce brassin
 est terminé. », sans bouton pour le relancer). Titre sur deux lignes : le nom du brassin, puis
-« Prévu ven. 20 nov. 2026 » s'il a une date prévue. À faire sur le téléphone qui
+« Prévu le ven. 20 nov. 2026 » s'il a une date prévue. À faire sur le téléphone qui
 servira, avec du réseau, avant de le couper. Il attend une réponse du serveur, 15 s au plus, sans
 rien écrire, et liste : brassin et recette figée, équipement, chronologie (« 11 étapes · 5 h 40 ·
 fin vers 16:05 » ; avec un processus, « Brassage : 18 étapes · 6 h 10 · fin vers 16:05 » et
@@ -2290,8 +2292,8 @@ tel quel jusqu'à 4 décimales, montant calculé au centime. « Ajouter un prix 
 sur téléphone, bouton sous le titre « Ingrédients » au-delà). Une écriture en attente porte « En attente du réseau ».
 Un appui sur une ligne ouvre sa modification.
 
-États : « Chargement de vos prix » ; « Impossible de lire vos prix. » et « Réessayer » ; titre « Aucun prix », puis « Aucun
-prix enregistré. Ajoutez-en un, ou complétez-les depuis une recette. » ; « Aucun frais. Ajoutez
+États : « Chargement de vos prix » ; « Impossible de lire vos prix. » et « Réessayer » ; titre « Aucun prix », puis « Ajoutez-en
+un, ou complétez-les depuis une recette. » ; « Aucun frais. Ajoutez
 l'eau, l'électricité, les capsules… pour qu'ils comptent dans le coût. » ; hors ligne sans
 cache, « Prix indisponibles sur cet appareil hors ligne. », sans « Réessayer » ni bouton d'ajout.
 Un prix ou un frais illisible s'affiche « Prix illisible » (« Ce prix ne peut pas être lu.

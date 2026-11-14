@@ -423,7 +423,7 @@ void main() {
       );
       // Un seul en-tête : le nom, puis la date sur la ligne suivante.
       final enTete = find.ancestor(
-        of: find.text('Prévu ven. 20 nov. 2026'),
+        of: find.text('Prévu le ven. 20 nov. 2026'),
         matching: find.byWidgetPredicate(
           (w) => w is Semantics && (w.properties.header ?? false),
         ),
@@ -434,7 +434,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        tester.getTopLeft(find.text('Prévu ven. 20 nov. 2026')).dy,
+        tester.getTopLeft(find.text('Prévu le ven. 20 nov. 2026')).dy,
         greaterThan(
           tester
                   .getBottomLeft(

@@ -6,6 +6,38 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.51 — fonctionnel
+
+Les fiches d'une recette, d'un brassin, d'un équipement et d'un processus ont un en-tête avec le
+nom et ses étiquettes, puis des sections dans des cartes. Sur la fiche d'un brassin, la prochaine
+journée et son bouton sont en tête, dans une carte colorée. Les boutons suivent le même ordre
+partout : l'action principale en plein, « Modifier » en teinte, « Supprimer » en rouge. La liste
+des brassins est groupée : en cours, prévus, terminés et abandonnés. La recherche des recettes
+prend toute la largeur. Les listes vides de tickets, de prix et de membres ont un titre.
+
+Sur l'écran du jour, l'étape en cours est dans une carte, avec une barre qui montre le temps
+écoulé. Quand le temps est dépassé, la carte passe à l'ambre, avec un bord et une alarme.
+L'étape et l'heure de fin s'écrivent plus grand, pour se lire à deux mètres. Dans la
+chronologie, une étape faite est en vert et l'étape en cours en brun. Dans « Préparer le
+brassage », chaque vérification a l'icône et la couleur de son état, et le nom du brassin et sa
+date sont sur deux lignes.
+
+### v0.1.51 — technique
+
+Lot 4 de la revue visuelle, en deux branches réunies (4a fiches et listes, 4b écran du jour).
+Composants `EnTeteFiche`, `CarteSection` (débord de `kDebordCarteCompact` sous 600 px),
+`RepereDisque`, `SurLigneChoisie` (contour de l'`Etiquette` sur une ligne choisie),
+`PageSecondaire.marges` (borne dans la liste, défilement à la molette au-dessus des marges),
+`ContenuRecette.enCartes`, `GroupeBrassins`, `kDetailLigneIllisible` ; fiche équipement à 840 px ;
+27 `OutlineInputBorder()` explicites retirés (le thème les fournit). Écran du jour : `_CarteEtape`
+(`primaryContainer`, puis `tertiaryContainer` et bord `tertiary` en dépassé, même marge),
+`TimerReading.elapsedFraction` dans `brewing/` avec ses cas dans `planning.json` (P3),
+`StylesJourDeBrassage` gagne `etiquette`, `information`, `bouton` et `saisie` (plus aucune taille en
+dur dans `brew_day/`), colonne d'heure de la chronologie `kChronologieHeureWidth` multipliée par
+l'échelle du texte et bornée à `kChronologieHeureMaxFraction`, état explicite des vérifications de
+« Préparer ». Aucune lecture ni écriture de l'écran du jour changée (P2). Aucune dépendance
+changée.
+
 ### v0.1.50 — fonctionnel
 
 Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur

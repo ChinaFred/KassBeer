@@ -609,6 +609,59 @@ void main() {
       );
     });
 
+    Widget carteAction() => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Builder(
+        builder: (context) => CarteSection(
+          action: true,
+          children: [
+            FilledButton(onPressed: () {}, child: const Text('Brasser')),
+            Text(
+              'Préparé sur cet appareil',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    testWidgets('action : primaryContainer, bord à 8 px sur téléphone', (
+      tester,
+    ) async {
+      await poser(tester, carteAction());
+      final material = tester.widget<Material>(
+        find
+            .descendant(of: find.byType(Card), matching: find.byType(Material))
+            .first,
+      );
+      expect(material.color, schema(tester).primaryContainer);
+      // Même débord qu'une carte de section, marge de 16 en haut, enfants
+      // espacés de 8.
+      expect(tester.getTopLeft(find.byType(Card)).dx, 16 - kDebordCarteCompact);
+      expect(tester.getTopLeft(find.byType(FilledButton)).dx, 16);
+      expect(
+        tester.getTopLeft(find.byType(FilledButton)).dy -
+            tester.getTopLeft(find.byType(Card)).dy,
+        16,
+      );
+      expect(
+        tester.getTopLeft(find.text('Préparé sur cet appareil')).dy -
+            tester.getBottomLeft(find.byType(FilledButton)).dy,
+        8,
+      );
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('action : contraste, thème ${brightness.name}', (
+        tester,
+      ) async {
+        await poser(tester, carteAction(), brightness: brightness);
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      });
+    }
+
     for (final brightness in Brightness.values) {
       testWidgets('contraste et cibles, thème ${brightness.name}', (
         tester,

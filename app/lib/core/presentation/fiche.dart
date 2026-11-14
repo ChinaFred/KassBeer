@@ -208,14 +208,20 @@ class EnTeteFiche extends StatelessWidget {
 /// (« Coût avec vos prix », « Relevé de fermentation »). Une carte [repliable]
 /// ne contient qu'une [SectionRepliable] : sans marge basse, son titre est
 /// centré dans sa ligne.
+///
+/// Une carte d'[action] (prochaine journée et action principale en tête d'une
+/// fiche) prend le fond `primaryContainer`, une marge de 16 en haut à la place
+/// du titre, et espace ses enfants de 8. Ses textes s'écrivent en
+/// `onPrimaryContainer`.
 class CarteSection extends StatelessWidget {
   const CarteSection({
     super.key,
     this.titre,
     this.trailing,
     this.repliable = false,
+    this.action = false,
     required this.children,
-  });
+  }) : assert(!(action && (repliable || titre != null)));
 
   /// Titre de section en tête de la carte ; `null` : le premier enfant porte
   /// le sien.
@@ -226,6 +232,9 @@ class CarteSection extends StatelessWidget {
 
   /// Vrai : la carte ne contient qu'une [SectionRepliable].
   final bool repliable;
+
+  /// Vrai : carte d'action, en `primaryContainer`, sans titre.
+  final bool action;
   final List<Widget> children;
 
   @override
@@ -237,12 +246,20 @@ class CarteSection extends StatelessWidget {
     // Chaque enfant garde son propre nœud de lecture : la carte ne réunit pas
     // ses textes en un seul.
     final carte = Card(
+      // `null` : couleur du `cardTheme`.
+      color: action ? Theme.of(context).colorScheme.primaryContainer : null,
       semanticContainer: false,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(cote, 0, cote, repliable ? 0 : 16),
+        padding: EdgeInsets.fromLTRB(
+          cote,
+          action ? 16 : 0,
+          cote,
+          repliable ? 0 : 16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
+          spacing: action ? 8 : 0,
           children: [
             if (titre != null) TitreSection(titre, trailing: trailing),
             ...children,

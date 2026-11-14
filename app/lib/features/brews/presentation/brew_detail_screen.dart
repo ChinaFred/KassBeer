@@ -946,10 +946,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
         ],
         // Prochaine journée et action principale, dans une carte d'action en
         // tête de fiche.
-        if (actions.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _CarteAction(children: actions),
-        ],
+        if (actions.isNotEmpty) CarteSection(action: true, children: actions),
         if (mine && brew.status == BrewStatus.planned) ...[
           const SizedBox(height: 16),
           Wrap(
@@ -1528,32 +1525,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Carte d'action en tête de la fiche, en `primaryContainer` : prochaine
-/// journée et son bouton, action principale du statut (« Préparer le
-/// brassage », « Ajouter un relevé »…), boutons en pleine largeur.
-class _CarteAction extends StatelessWidget {
-  const _CarteAction({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      color: scheme.primaryContainer,
-      semanticContainer: false,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 8,
-          children: children,
-        ),
-      ),
     );
   }
 }

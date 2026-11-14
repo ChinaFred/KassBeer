@@ -112,11 +112,13 @@ class AdminTicketsScreen extends ConsumerWidget {
   static const emptyTitle = 'Aucun ticket';
   static const nothingToProcessTitle = 'Tout est traité';
   static const nothingBlockedTitle = 'Rien de bloqué';
-  static const emptyMessage =
-      'Aucun ticket pour l\'instant. Les membres n\'ont encore rien signalé.';
-  static const nothingToProcess =
-      'Rien à traiter. Tous les tickets ont reçu une décision.';
-  static const nothingBlocked = 'Aucun ticket bloqué.';
+  static const emptyMessage = 'Les membres n\'ont encore rien signalé.';
+  static const nothingToProcess = 'Chaque ticket a reçu une décision.';
+
+  /// « Bloqué » : envoi impossible, en retard, ou Issue disparue
+  /// (`Ticket.isBlocked`).
+  static const nothingBlocked =
+      'Aucun envoi en échec ou en retard, aucune Issue disparue.';
   static const showAll = 'Afficher tous les tickets';
   static const noSelection = 'Choisissez un ticket pour voir son suivi.';
 

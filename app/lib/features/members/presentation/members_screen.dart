@@ -29,8 +29,7 @@ class MembersScreen extends ConsumerWidget {
       'Le retrait de $email a échoué.';
   static String removedMessage(String email) => '$email est retiré.';
   static const emptyTitle = 'Aucun membre';
-  static const emptyMessage =
-      'Aucun membre. Appuyez sur Inviter pour ajouter un compte.';
+  static const emptyMessage = 'Appuyez sur Inviter pour ajouter un compte.';
   static const selfNote = 'Vous ne pouvez pas vous retirer vous-même';
   static const otherAdminNote =
       'Un administrateur se retire depuis la console Firebase.';
