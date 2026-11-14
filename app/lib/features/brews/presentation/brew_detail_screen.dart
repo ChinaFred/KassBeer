@@ -45,6 +45,7 @@ import '../domain/brew_event.dart';
 import '../domain/deroule.dart';
 import '../domain/releves.dart';
 import 'brews_providers.dart';
+import 'brews_screen.dart' show tonStatutBrassin;
 import 'changer_processus.dart';
 import 'choix_processus.dart';
 import 'embouteillage.dart';
@@ -664,9 +665,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
       _tokenName ??= ref.read(authRepositoryProvider).currentTokenName();
       _annoncerEmbouteillageDeLaJournee(brew);
     }
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
     final content = brew.recipe;
     final equipement = EquipementConnu(brew.equipmentRead);
     final calculs = evaluerRecette(
@@ -868,6 +866,21 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             label: const Text('Ajouter un relevé'),
           )
         : null;
+    final actions = <Widget>[
+      if (prochaine != null)
+        _boutonJournee(brew, prochaine, plansJournees[prochaine.key], now),
+      ?principal,
+      ?actionsFermentation,
+      // Connu seulement dans la session : rien à dire quand l'information
+      // manque.
+      if (mine && brew.status == BrewStatus.planned && prepared)
+        Text(
+          'Préparé sur cet appareil',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+    ];
     final apresBrassage = switch (brew.status) {
       BrewStatus.fermenting ||
       BrewStatus.conditioning ||
@@ -885,20 +898,28 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
         fab == null ? 32 : kMargeBoutonFlottant,
       ),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Semantics(
-                header: true,
-                child: Text(brew.name, style: theme.textTheme.headlineSmall),
-              ),
+        EnTeteFiche(
+          titre: brew.name,
+          sousTitre: [
+            ?_detailStatut(brew),
+            if (!mine)
+              'Brassin de ${libelleAuteur(ownerUid: brew.ownerUid, ownerName: brew.ownerName, readerUid: readerUid)}',
+          ].join(' · '),
+          etiquettes: [
+            Etiquette(
+              label: brew.status.label,
+              ton: tonStatutBrassin(brew.status),
             ),
-            if (mine && brew.status != BrewStatus.planned)
-              _menuActions(brew, events == null || events.documents.isNotEmpty),
+            if (brew.hasPendingWrites)
+              const Etiquette(label: 'En attente du réseau'),
           ],
+          action: mine && brew.status != BrewStatus.planned
+              ? _menuActions(
+                  brew,
+                  events == null || events.documents.isNotEmpty,
+                )
+              : null,
         ),
-        Text(_ligneStatut(brew), style: muted),
         if (brew.recipeId != null)
           Align(
             alignment: Alignment.centerLeft,
@@ -907,18 +928,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               child: Text('Recette : ${content.name} ›'),
             ),
           ),
-        if (!mine)
-          Text(
-            'Brassin de ${libelleAuteur(ownerUid: brew.ownerUid, ownerName: brew.ownerName, readerUid: readerUid)}',
-            style: muted,
-          ),
-        if (brew.hasPendingWrites) ...[
-          const SizedBox(height: 8),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Etiquette(label: 'En attente du réseau'),
-          ),
-        ],
         if (recipeChanged) ...[
           const SizedBox(height: 8),
           Text(
@@ -935,22 +944,19 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               ),
             ),
         ],
-        const SizedBox(height: 16),
-        if (prochaine != null) ...[
-          _boutonJournee(brew, prochaine, plansJournees[prochaine.key], now),
-          const SizedBox(height: 8),
-        ],
-        ?principal,
-        if (actionsFermentation != null) ...[
-          const SizedBox(height: 8),
-          actionsFermentation,
+        // Prochaine journée et action principale, dans une carte d'action en
+        // tête de fiche.
+        if (actions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _CarteAction(children: actions),
         ],
         if (mine && brew.status == BrewStatus.planned) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
-              OutlinedButton.icon(
+              FilledButton.tonalIcon(
                 onPressed: () => _edit(brew),
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Modifier'),
@@ -969,12 +975,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             ],
           ),
         ],
-        // Connu seulement dans la session : rien à dire quand l'information manque.
-        if (mine && brew.status == BrewStatus.planned && prepared)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text('Préparé sur cet appareil', style: muted),
-          ),
         ..._blocs(
           brew: brew,
           mine: mine,
@@ -1031,7 +1031,6 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             ),
           ],
           general: [
-            const TitreSection('Général'),
             LigneFiche(
               label: 'Date prévue',
               value: brew.plannedFor == null
@@ -1221,7 +1220,9 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               memeJour(date, now)
                   ? BrewDetailScreen.prevueAujourdhui
                   : BrewDetailScreen.prevueLe(date),
-              style: theme.textTheme.bodyMedium,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
             ),
           ),
         FilledButton(
@@ -1352,109 +1353,130 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           ? () => _embouteiller(brew, modification: true)
           : null,
     );
-    final notesTitre = <Widget>[
-      if (notes != null) ...[
-        const TitreSection('Notes'),
-        Text(notes, style: Theme.of(context).textTheme.bodyLarge),
-      ],
+    // Chaque bloc dans sa carte ; un bloc qui porte son titre (relevé,
+    // comparaison, embouteillage, coût) en est le premier enfant.
+    Widget carte(Widget bloc) => CarteSection(children: [bloc]);
+    final notesCarte = <Widget>[
+      if (notes != null)
+        CarteSection(
+          titre: 'Notes',
+          children: [Text(notes, style: Theme.of(context).textTheme.bodyLarge)],
+        ),
     ];
+    final carteGeneral = CarteSection(titre: 'Général', children: general);
     if (!apresBrassage) {
       final relevesExistent = relevesDe([
         ...?eventsAsync.value?.valides,
       ]).isNotEmpty;
       return [
-        const TitreSection('Calculs'),
-        ...recette.take(1),
-        const TitreSection(TextesDeroule.titre),
-        deroule,
-        if (relevesExistent) section,
-        const TitreSection('Recette'),
-        ...recette.skip(2),
-        ...general,
-        ?cout,
-        ...notesTitre,
+        CarteSection(titre: 'Calculs', children: recette.take(1).toList()),
+        CarteSection(titre: TextesDeroule.titre, children: [deroule]),
+        if (relevesExistent) carte(section),
+        // Les sections de la recette figée restent des sous-sections de
+        // « Recette ».
+        CarteSection(titre: 'Recette', children: recette.skip(2).toList()),
+        carteGeneral,
+        if (cout != null) carte(cout),
+        ...notesCarte,
       ];
     }
     // Bloc Coût (propriétaire seul) : après l'embouteillage quand il existe,
     // sinon après la comparaison.
     final List<Widget> blocs = switch (brew.status) {
-      BrewStatus.fermenting => [section, comparaison, ?cout, ...notesTitre],
+      BrewStatus.fermenting => [
+        carte(section),
+        carte(comparaison),
+        if (cout != null) carte(cout),
+        ...notesCarte,
+      ],
       BrewStatus.conditioning => [
-        comparaison,
-        embouteillage,
-        ?cout,
-        section,
-        ...notesTitre,
+        carte(comparaison),
+        carte(embouteillage),
+        if (cout != null) carte(cout),
+        carte(section),
+        ...notesCarte,
       ],
       BrewStatus.done => [
-        comparaison,
-        embouteillage,
-        ?cout,
-        ..._notesTermine(brew, mine),
-        section,
+        carte(comparaison),
+        carte(embouteillage),
+        if (cout != null) carte(cout),
+        ?_notesTermine(brew, mine),
+        carte(section),
       ],
       _ => [
-        section,
-        comparaison,
-        if (brew.bottledAt != null) embouteillage,
-        ?cout,
-        ...notesTitre,
+        carte(section),
+        carte(comparaison),
+        if (brew.bottledAt != null) carte(embouteillage),
+        if (cout != null) carte(cout),
+        ...notesCarte,
       ],
     };
     return [
       ...blocs,
-      ...general,
-      SectionRepliable(
-        titre: TextesDeroule.titre,
-        storageKey: 'deroule-${brew.id}',
-        resume: resumeDeroule(brew.deroule),
-        children: [deroule],
+      carteGeneral,
+      CarteSection(
+        repliable: true,
+        children: [
+          SectionRepliable(
+            titre: TextesDeroule.titre,
+            storageKey: 'deroule-${brew.id}',
+            resume: resumeDeroule(brew.deroule),
+            children: [deroule],
+          ),
+        ],
       ),
-      SectionRepliable(
-        titre: 'Recette et calculs prévus',
-        storageKey: 'recette-${brew.id}',
-        ouvert: width >= kExpandedMinWidth,
-        children: recette,
+      CarteSection(
+        repliable: true,
+        children: [
+          SectionRepliable(
+            titre: 'Recette et calculs prévus',
+            storageKey: 'recette-${brew.id}',
+            ouvert: width >= kExpandedMinWidth,
+            children: recette,
+          ),
+        ],
       ),
     ];
   }
 
-  /// Notes d'un brassin terminé : toujours affichées au propriétaire.
-  List<Widget> _notesTermine(Brew brew, bool mine) {
+  /// Carte « Notes » d'un brassin terminé : toujours affichée au propriétaire ;
+  /// `null` sans note pour un autre membre.
+  Widget? _notesTermine(Brew brew, bool mine) {
     final notes = brew.notes;
     if (notes != null) {
-      return [
-        const TitreSection('Notes'),
-        Text(notes, style: Theme.of(context).textTheme.bodyLarge),
-      ];
+      return CarteSection(
+        titre: 'Notes',
+        children: [Text(notes, style: Theme.of(context).textTheme.bodyLarge)],
+      );
     }
-    if (!mine) return const [];
-    return [
-      const TitreSection('Notes'),
-      const TexteAbsent('Aucune note. Ajoutez votre avis sur cette bière.'),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton(
-          onPressed: () => _edit(brew),
-          child: const Text('Modifier les notes'),
+    if (!mine) return null;
+    return CarteSection(
+      titre: 'Notes',
+      children: [
+        const TexteAbsent('Aucune note. Ajoutez votre avis sur cette bière.'),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => _edit(brew),
+            child: const Text('Modifier les notes'),
+          ),
         ),
-      ),
-    ];
+      ],
+    );
   }
 
-  /// Ligne de statut sous le nom.
-  String _ligneStatut(Brew brew) {
+  /// Détail du statut sous le nom, à côté de son étiquette : jour de
+  /// fermentation (« J+12 »), date d'embouteillage ; `null` sinon.
+  String? _detailStatut(Brew brew) {
     final brewed = brew.brewedAt;
     final bottled = brew.bottledAt;
     final now = ref.read(horlogeProvider)();
     return switch (brew.status) {
       BrewStatus.fermenting when brewed != null =>
-        'En fermentation · J+${fermentationDayNumber(brewedAt: brewed, at: now)}',
-      BrewStatus.conditioning when bottled != null =>
-        'En conditionnement · Embouteillé le ${formatDateCourte(bottled)}',
-      BrewStatus.done when bottled != null =>
-        'Terminé · Embouteillé le ${formatDateCourte(bottled)}',
-      _ => brew.status.label,
+        'J+${fermentationDayNumber(brewedAt: brewed, at: now)}',
+      BrewStatus.conditioning || BrewStatus.done when bottled != null =>
+        'Embouteillé le ${formatDateCourte(bottled)}',
+      _ => null,
     };
   }
 
@@ -1506,6 +1528,32 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Carte d'action en tête de la fiche, en `primaryContainer` : prochaine
+/// journée et son bouton, action principale du statut (« Préparer le
+/// brassage », « Ajouter un relevé »…), boutons en pleine largeur.
+class _CarteAction extends StatelessWidget {
+  const _CarteAction({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      color: scheme.primaryContainer,
+      semanticContainer: false,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
+          children: children,
+        ),
+      ),
     );
   }
 }

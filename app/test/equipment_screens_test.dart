@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/data/lecture_document.dart';
+import 'package:kass_beer/core/presentation/breakpoints.dart';
+import 'package:kass_beer/core/presentation/fiche.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/equipment/presentation/equipment_detail_screen.dart';
@@ -84,6 +88,45 @@ void main() {
     final mine = tester.getTopLeft(find.text('Zébulon'));
     final other = tester.getTopLeft(find.text('Anvil'));
     expect(mine.dy, lessThan(other.dy));
+  });
+
+  testWidgets('fiche : largeur des autres fiches, sections en cartes', (
+    tester,
+  ) async {
+    final app = await open(tester, '/equipements/a', width: 1400);
+    app.equipment.publish([equipment('a', name: 'Zébulon')]);
+    await tester.pumpAndSettle();
+    // Borne de la coquille (840), plus de colonne à 480.
+    expect(
+      tester.getSize(find.byType(EnTeteFiche)).width,
+      kContentMaxWidth - 32,
+    );
+    for (final titre in ['Rendement', 'Volumes', 'Pertes', 'Notes']) {
+      expect(
+        find.widgetWithText(CarteSection, titre),
+        findsOneWidget,
+        reason: titre,
+      );
+    }
+    // Modifier en tonal, Supprimer en contour rouge.
+    expect(find.widgetWithText(FilledButton, 'Modifier'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Supprimer'), findsOneWidget);
+  });
+
+  testWidgets('ligne illisible : même texte que les recettes', (tester) async {
+    final app = await open(tester, '/equipements');
+    app.equipment.all.add(
+      ListeLue(
+        documents: [
+          DocumentValide('a', equipment('a')),
+          const DocumentInvalide('casse', DocumentIllisible('kind', 'x')),
+        ],
+        fromCache: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Équipement illisible'), findsOneWidget);
+    expect(find.text(kDetailLigneIllisible), findsOneWidget);
   });
 
   testWidgets('équipement d\'un autre : lecture seule', (tester) async {

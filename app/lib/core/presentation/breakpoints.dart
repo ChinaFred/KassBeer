@@ -108,3 +108,8 @@ const double kTicketsAdminCoteACoteMinWidth =
 /// Hauteur maximale d'une liste de suggestions sous un champ de saisie : six
 /// lignes à deux lignes de texte, sans cacher tout le formulaire au téléphone.
 const double kSuggestionsMaxHeight = 280;
+
+/// Débord d'une carte de section (`CarteSection`) de chaque côté de sa colonne,
+/// sous [kCompactMaxWidth] : la carte s'étend sur la marge de la fiche et son
+/// contenu, retiré de 16 − 8 px, reste aligné sur l'en-tête de la fiche.
+const double kDebordCarteCompact = 8;

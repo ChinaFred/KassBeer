@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/etats.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/processes/domain/modele_exemple.dart';
@@ -279,10 +280,7 @@ void main() {
               app.processes.publish([modele('a')], illisibles: ['casse']),
         );
         expect(find.text('Processus illisible'), findsOneWidget);
-        expect(
-          find.text('Le document contient une valeur inattendue.'),
-          findsOneWidget,
-        );
+        expect(find.text(kDetailLigneIllisible), findsOneWidget);
         expect(find.text(kNomModeleExemple), findsOneWidget);
         await tester.tap(find.text('Processus illisible'));
         await tester.pumpAndSettle();

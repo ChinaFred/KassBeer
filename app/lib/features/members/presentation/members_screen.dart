@@ -8,6 +8,7 @@ import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/feuille_ou_dialogue.dart';
+import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/member.dart';
@@ -27,6 +28,7 @@ class MembersScreen extends ConsumerWidget {
   static String removeRejected(String email) =>
       'Le retrait de $email a échoué.';
   static String removedMessage(String email) => '$email est retiré.';
+  static const emptyTitle = 'Aucun membre';
   static const emptyMessage =
       'Aucun membre. Appuyez sur Inviter pour ajouter un compte.';
   static const selfNote = 'Vous ne pouvez pas vous retirer vous-même';
@@ -169,7 +171,11 @@ class MembersScreen extends ConsumerWidget {
               ),
             ),
           if (members.isEmpty)
-            const EtatVide(icon: Icons.group_outlined, message: emptyMessage),
+            const EtatVide(
+              icon: Icons.group_outlined,
+              titre: emptyTitle,
+              message: emptyMessage,
+            ),
           for (final member in members)
             _MemberRow(
               member: member,
@@ -225,6 +231,9 @@ class _MemberRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Repère décoratif : le texte s'aligne sur celui de l'accueil Admin.
+          const RepereDisque(icone: Icons.person_outline),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

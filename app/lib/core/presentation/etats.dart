@@ -51,44 +51,49 @@ class EtatVide extends StatelessWidget {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ExcludeSemantics(
-              child: SizedBox.square(
-                dimension: 80,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: scheme.secondaryContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 40,
-                    color: scheme.onSecondaryContainer,
+        // Borné ici : dans une page sans borne (PageSecondaire), le message ne
+        // s'étale pas sur toute la largeur de la fenêtre.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: SizedBox.square(
+                  dimension: 80,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: scheme.secondaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 40,
+                      color: scheme.onSecondaryContainer,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            if (t != null) ...[
-              Semantics(
-                header: true,
-                child: Text(
-                  t,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleLarge,
+              const SizedBox(height: 16),
+              if (t != null) ...[
+                Semantics(
+                  header: true,
+                  child: Text(
+                    t,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge,
+                  ),
                 ),
+                const SizedBox(height: 8),
+              ],
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge,
               ),
-              const SizedBox(height: 8),
+              if (action != null) ...[const SizedBox(height: 24), action!],
             ],
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge,
-            ),
-            if (action != null) ...[const SizedBox(height: 24), action!],
-          ],
+          ),
         ),
       ),
     );

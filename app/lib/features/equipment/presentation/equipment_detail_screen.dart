@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/data/lecture_document.dart';
-import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
@@ -28,7 +27,8 @@ const textesEquipement = TextesDocument(
   retour: 'Revenir aux équipements',
 );
 
-/// Fiche d'un équipement : une colonne bornée à [kDialogMaxWidth].
+/// Fiche d'un équipement : en-tête, actions de l'auteur, sections en cartes, sur
+/// la largeur des autres fiches.
 class EquipmentDetailScreen extends ConsumerWidget {
   const EquipmentDetailScreen({super.key, required this.id});
 
@@ -135,57 +135,46 @@ class _Fiche extends StatelessWidget {
     final efficiency = c.mashEfficiencyPct;
     final boilOff = c.boilOffLPerH;
     final absorption = c.grainAbsorptionLPerKg;
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: kDialogMaxWidth),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+    // Même largeur que les autres fiches : la borne de la coquille.
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      children: [
+        EnTeteFiche(
+          titre: c.name,
+          sousTitre: mine
+              ? c.kind.label
+              : '${c.kind.label} · Équipement de '
+                    '${libelleAuteur(ownerUid: equipment.ownerUid, ownerName: equipment.ownerName, readerUid: readerUid)}',
+          etiquettes: [
+            if (equipment.hasPendingWrites)
+              const Etiquette(label: 'En attente du réseau'),
+          ],
+        ),
+        if (mine) ...[
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Modifier'),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                ),
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Supprimer'),
+              ),
+            ],
+          ),
+        ],
+        CarteSection(
+          titre: 'Rendement',
           children: [
-            Semantics(
-              header: true,
-              child: Text(c.name, style: theme.textTheme.headlineSmall),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              mine
-                  ? c.kind.label
-                  : '${c.kind.label} · Équipement de '
-                        '${libelleAuteur(ownerUid: equipment.ownerUid, ownerName: equipment.ownerName, readerUid: readerUid)}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (equipment.hasPendingWrites) ...[
-              const SizedBox(height: 8),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Etiquette(label: 'En attente du réseau'),
-              ),
-            ],
-            if (mine) ...[
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilledButton.tonalIcon(
-                    onPressed: onEdit,
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Modifier'),
-                  ),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: theme.colorScheme.error,
-                    ),
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Supprimer'),
-                  ),
-                ],
-              ),
-            ],
-            const TitreSection('Rendement'),
             LigneFiche(
               label: 'Rendement d\'empâtage',
               value: efficiency == null ? null : formatPourcent(efficiency),
@@ -198,7 +187,11 @@ class _Fiche extends StatelessWidget {
               label: 'Absorption du grain',
               value: absorption == null ? null : formatLitresParKg(absorption),
             ),
-            const TitreSection('Volumes'),
+          ],
+        ),
+        CarteSection(
+          titre: 'Volumes',
+          children: [
             if (allInOne)
               LigneFiche(
                 label: 'Volume de la cuve',
@@ -214,7 +207,11 @@ class _Fiche extends StatelessWidget {
                 value: litres(c.kettleVolumeL),
               ),
             ],
-            const TitreSection('Pertes'),
+          ],
+        ),
+        CarteSection(
+          titre: 'Pertes',
+          children: [
             LigneFiche(
               label: allInOne
                   ? 'Volume mort de la cuve'
@@ -231,7 +228,11 @@ class _Fiche extends StatelessWidget {
               label: 'Pertes au fermenteur',
               value: litres(c.fermenterLossL),
             ),
-            const TitreSection('Notes'),
+          ],
+        ),
+        CarteSection(
+          titre: 'Notes',
+          children: [
             Text(
               c.notes ?? 'Non renseigné',
               style: c.notes == null
@@ -243,7 +244,7 @@ class _Fiche extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }

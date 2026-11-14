@@ -445,6 +445,7 @@ void main() {
       );
       app.tickets.publish(const []);
       await tester.pumpAndSettle();
+      expect(find.text(MyTicketsScreen.emptyTitle), findsOneWidget);
       expect(find.text(MyTicketsScreen.emptyMessage), findsOneWidget);
       // Un seul « Signaler ou proposer » : pas de bouton flottant.
       expect(find.byType(FloatingActionButton), findsNothing);

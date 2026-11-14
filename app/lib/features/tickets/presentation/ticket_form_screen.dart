@@ -495,10 +495,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.deny(RegExp(r'[\n\r]')),
                     ],
-                    decoration: const InputDecoration(
-                      labelText: 'Titre',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Titre'),
                     validator: _titleError,
                     onChanged: _changed,
                   ),
@@ -524,7 +521,6 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Description',
                       alignLabelWithHint: true,
-                      border: OutlineInputBorder(),
                     ),
                     validator: _descriptionError,
                     onChanged: _changed,
@@ -536,7 +532,6 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                     itemHeight: null,
                     decoration: const InputDecoration(
                       labelText: 'Écran concerné',
-                      border: OutlineInputBorder(),
                     ),
                     items: [
                       for (final o in ticketScreenOptions(isAdmin: isAdmin))
@@ -567,7 +562,6 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                         labelText: 'Élément précis',
                         helperText: TicketFormScreen.elementHelp,
                         helperMaxLines: 3,
-                        border: OutlineInputBorder(),
                       ),
                       items: [
                         for (final o in elements)

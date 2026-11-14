@@ -258,7 +258,6 @@ class _FormulaireNouveauBrassinState
           decoration: InputDecoration(
             labelText: 'Nom du brassin',
             errorText: _nameError,
-            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 16),
@@ -272,7 +271,6 @@ class _FormulaireNouveauBrassinState
               labelText: 'Équipement',
               helperText: 'Les calculs du brassin utilisent cet équipement.',
               errorText: _equipmentError,
-              border: const OutlineInputBorder(),
             ),
             items: [
               for (final e in all)

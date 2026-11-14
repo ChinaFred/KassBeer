@@ -417,10 +417,7 @@ class ListeBeerJson extends StatelessWidget {
       initialValue: current,
       isExpanded: true,
       itemHeight: null,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
+      decoration: InputDecoration(labelText: label),
       items: [
         for (final v in entries)
           DropdownMenuItem(
@@ -509,7 +506,6 @@ mixin _FormulaireLigne<W extends ConsumerStatefulWidget, T>
         labelText: 'Nom',
         helperText: aide,
         helperMaxLines: 8,
-        border: const OutlineInputBorder(),
       ),
       // Le bouton « Reprendre les valeurs de la Bibliothèque » suit le nom.
       onChanged: nature == null ? null : (_) => setState(() {}),
@@ -1292,10 +1288,7 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
             isExpanded: true,
             // L'erreur s'efface dès qu'une utilisation est choisie.
             autovalidateMode: AutovalidateMode.onUserInteraction,
-            decoration: const InputDecoration(
-              labelText: 'Utilisation',
-              border: OutlineInputBorder(),
-            ),
+            decoration: const InputDecoration(labelText: 'Utilisation'),
             items: [
               const DropdownMenuItem(value: null, child: Text('Non précisée')),
               for (final u in OtherUse.values)
@@ -1710,10 +1703,7 @@ class _FormulaireEtapeState extends ConsumerState<FormulaireEtape>
             maxLength: kBrewStepNameMaxLength,
             textCapitalization: TextCapitalization.sentences,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Nom de l\'étape',
-              border: OutlineInputBorder(),
-            ),
+            decoration: const InputDecoration(labelText: 'Nom de l\'étape'),
             validator: (v) =>
                 (v ?? '').trim().isEmpty ? 'Donnez un nom à l\'étape.' : null,
           ),

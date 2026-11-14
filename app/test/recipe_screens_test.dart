@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
+import 'package:kass_beer/core/presentation/fiche.dart';
 import 'package:kass_beer/core/presentation/segments.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
@@ -155,6 +156,23 @@ void main() {
       expect(find.text('Autre brasseur'), findsOneWidget);
       expect(find.text('Vous'), findsOneWidget);
       expect(find.text('En attente du réseau'), findsOneWidget);
+      // Recherche sur toute la largeur, puis le filtre, puis les actions.
+      final recherche = find.widgetWithText(
+        TextField,
+        'Rechercher une recette',
+      );
+      final largeur = tester.getSize(find.byType(RecipesListScreen)).width;
+      expect(tester.getSize(recherche).width, largeur - 32);
+      final filtre = find.byType(SegmentedButton<bool>);
+      expect(
+        tester.getTopLeft(filtre).dy,
+        greaterThan(tester.getBottomLeft(recherche).dy),
+      );
+      final importer = find.widgetWithText(OutlinedButton, 'Importer');
+      expect(
+        tester.getTopLeft(importer).dy,
+        greaterThanOrEqualTo(tester.getTopLeft(filtre).dy),
+      );
 
       await tester.tap(find.text('Les miennes'));
       await tester.pumpAndSettle();
@@ -373,7 +391,15 @@ void main() {
         ),
       ]);
       await tester.pumpAndSettle();
-      expect(find.text('Recette de Zoé'), findsOneWidget);
+      // Auteur en sous-titre de l'en-tête ; sections en cartes.
+      expect(
+        find.descendant(
+          of: find.byType(EnTeteFiche),
+          matching: find.text('Recette de Zoé'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(CarteSection, 'Calculs'), findsOneWidget);
       expect(find.text('Modifier'), findsNothing);
       expect(find.text('Supprimer'), findsNothing);
       expect(find.text('Compléter la recette'), findsNothing);

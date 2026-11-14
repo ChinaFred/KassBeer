@@ -44,48 +44,50 @@ class PreferencesScreen extends ConsumerWidget {
 
     return PageSecondaire(
       titre: titre,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Semantics(
-            header: true,
-            child: Text(apparence, style: theme.textTheme.titleMedium),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: RadioGroup<ThemeMode>(
-              groupValue: mode,
-              onChanged: (choix) => unawaited(choisir(choix)),
-              child: const Column(
-                children: [
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.system,
-                    secondary: Icon(Icons.brightness_auto_outlined),
-                    title: Text(commeAppareil),
-                    subtitle: Text(commeAppareilAide),
-                  ),
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.light,
-                    secondary: Icon(Icons.light_mode_outlined),
-                    title: Text(clair),
-                  ),
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.dark,
-                    secondary: Icon(Icons.dark_mode_outlined),
-                    title: Text(sombre),
-                  ),
-                ],
+      body: Builder(
+        builder: (context) => ListView(
+          padding: PageSecondaire.marges(context, const EdgeInsets.all(16)),
+          children: [
+            Semantics(
+              header: true,
+              child: Text(apparence, style: theme.textTheme.titleMedium),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: RadioGroup<ThemeMode>(
+                groupValue: mode,
+                onChanged: (choix) => unawaited(choisir(choix)),
+                child: const Column(
+                  children: [
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.system,
+                      secondary: Icon(Icons.brightness_auto_outlined),
+                      title: Text(commeAppareil),
+                      subtitle: Text(commeAppareilAide),
+                    ),
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.light,
+                      secondary: Icon(Icons.light_mode_outlined),
+                      title: Text(clair),
+                    ),
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.dark,
+                      secondary: Icon(Icons.dark_mode_outlined),
+                      title: Text(sombre),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            noteAppareil,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(height: 8),
+            Text(
+              noteAppareil,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/etiquette.dart';
+import 'package:kass_beer/core/presentation/fiche.dart';
 import 'package:kass_beer/core/presentation/ligne_editeur.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/brew_day/presentation/brew_day_screen.dart';
@@ -74,6 +75,70 @@ void main() {
         before: (app) => app.brews.all.addError(Exception('refus')),
       );
       expect(find.text(BrewsScreen.loadError), findsOneWidget);
+    });
+
+    testWidgets('en-têtes des groupes : en cours, prévus, terminés', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await go(
+        tester,
+        '/brassins',
+        before: (app) => app.brews.publish([
+          unBrassin(id: 'd', status: BrewStatus.done),
+          unBrassin(id: 'p', status: BrewStatus.planned),
+          unBrassin(id: 'f', status: BrewStatus.fermenting),
+          unBrassin(id: 'b', status: BrewStatus.brewing),
+        ]),
+      );
+      Finder entete(GroupeBrassins g) =>
+          find.widgetWithText(TitreSection, g.libelle);
+      double haut(Finder f) => tester.getTopLeft(f).dy;
+      Finder statut(BrewStatus s) => find.widgetWithText(Etiquette, s.label);
+      for (final g in GroupeBrassins.values) {
+        expect(entete(g), findsOneWidget, reason: g.libelle);
+        expect(
+          tester.getSemantics(
+            find.descendant(of: entete(g), matching: find.text(g.libelle)),
+          ),
+          isSemantics(label: g.libelle, isHeader: true),
+        );
+      }
+      // Chaque en-tête précède les brassins de son groupe, et eux seuls.
+      final ordre = [
+        entete(GroupeBrassins.enCours),
+        statut(BrewStatus.brewing),
+        statut(BrewStatus.fermenting),
+        entete(GroupeBrassins.prevus),
+        statut(BrewStatus.planned),
+        entete(GroupeBrassins.termines),
+        statut(BrewStatus.done),
+      ];
+      for (var i = 1; i < ordre.length; i++) {
+        expect(haut(ordre[i - 1]), lessThan(haut(ordre[i])), reason: '$i');
+      }
+      semantics.dispose();
+    });
+
+    testWidgets('groupe vide : aucun en-tête', (tester) async {
+      await go(
+        tester,
+        '/brassins',
+        before: (app) =>
+            app.brews.publish([unBrassin(id: 'p', status: BrewStatus.planned)]),
+      );
+      expect(
+        find.widgetWithText(TitreSection, GroupeBrassins.prevus.libelle),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(TitreSection, GroupeBrassins.enCours.libelle),
+        findsNothing,
+      );
+      expect(
+        find.widgetWithText(TitreSection, GroupeBrassins.termines.libelle),
+        findsNothing,
+      );
     });
   });
 
@@ -178,6 +243,49 @@ void main() {
       expect(find.text('Supprimer'), findsOneWidget);
       expect(find.text('Pas encore préparé sur cet appareil'), findsNothing);
       expect(find.text('Préparé sur cet appareil'), findsNothing);
+      // En-tête : statut en étiquette.
+      expect(
+        find.descendant(
+          of: find.byType(EnTeteFiche),
+          matching: find.widgetWithText(Etiquette, 'Prévu'),
+        ),
+        findsOneWidget,
+      );
+      // Action principale dans la carte d'action, en primaryContainer.
+      final carteAction = tester.widget<Card>(
+        find.ancestor(
+          of: find.text('Préparer le brassage'),
+          matching: find.byType(Card),
+        ),
+      );
+      final scheme = Theme.of(
+        tester.element(find.byType(EnTeteFiche)),
+      ).colorScheme;
+      expect(carteAction.color, scheme.primaryContainer);
+      // Modifier en tonal, Supprimer en contour rouge.
+      expect(find.widgetWithText(FilledButton, 'Modifier'), findsOneWidget);
+      expect(find.widgetWithText(OutlinedButton, 'Supprimer'), findsOneWidget);
+      // Sections en cartes ; les sections de la recette figée restent des
+      // sous-sections de la carte « Recette ».
+      expect(find.widgetWithText(CarteSection, 'Calculs'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Houblons'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        find.descendant(
+          of: find.widgetWithText(CarteSection, 'Recette'),
+          matching: find.text('Houblons'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<TitreSection>(find.widgetWithText(TitreSection, 'Houblons'))
+            .niveau,
+        NiveauTitre.sousSection,
+      );
     });
 
     testWidgets('R5 : préparé dans la session, affiché', (tester) async {
@@ -191,6 +299,12 @@ void main() {
         },
       );
       expect(find.text('Préparé sur cet appareil'), findsOneWidget);
+      // Carte d'action : texte lisible sur primaryContainer, clair et sombre.
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpAndSettle();
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
     });
 
     testWidgets('C23 : lecture des saisies en échec, message et Réessayer', (

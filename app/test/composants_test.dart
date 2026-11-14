@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -460,6 +461,228 @@ void main() {
     });
   });
 
+  group('EnTeteFiche', () {
+    testWidgets('nom en en-tête, sous-titre atténué, étiquettes, action', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await poser(
+        tester,
+        EnTeteFiche(
+          titre: 'Blonde',
+          sousTitre: 'American Pale Ale · Recette de Zoé',
+          etiquettes: const [Etiquette(label: 'En attente du réseau')],
+          action: IconButton(
+            tooltip: 'Plus d\'actions',
+            onPressed: () {},
+            icon: const Icon(Icons.more_vert),
+          ),
+        ),
+      );
+      final theme = Theme.of(tester.element(find.byType(Scaffold)));
+      expect(
+        tester.widget<Text>(find.text('Blonde')).style,
+        theme.textTheme.headlineSmall,
+      );
+      expect(
+        tester.getSemantics(find.text('Blonde')),
+        isSemantics(label: 'Blonde', isHeader: true),
+      );
+      final sousTitre = find.text('American Pale Ale · Recette de Zoé');
+      expect(
+        tester.widget<Text>(sousTitre).style?.color,
+        theme.colorScheme.onSurfaceVariant,
+      );
+      // Nom, puis sous-titre, puis étiquettes ; action à droite du nom.
+      expect(
+        tester.getTopLeft(sousTitre).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(find.text('Blonde')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('En attente du réseau')).dy,
+        greaterThan(tester.getBottomLeft(sousTitre).dy),
+      );
+      expect(
+        tester.getTopLeft(find.byTooltip('Plus d\'actions')).dx,
+        greaterThan(tester.getTopRight(find.text('Blonde')).dx),
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('sans sous-titre ni étiquette : le nom seul', (tester) async {
+      await poser(tester, const EnTeteFiche(titre: 'Blonde', sousTitre: ''));
+      expect(find.byType(Text), findsOneWidget);
+      expect(find.byType(Wrap), findsNothing);
+    });
+
+    testWidgets('texte × 2 sur 320 px : aucun débordement', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await poser(
+        tester,
+        EnTeteFiche(
+          titre: 'Une recette au nom vraiment très long',
+          sousTitre: 'American Pale Ale · Recette de Zoé',
+          etiquettes: const [
+            Etiquette(label: 'En fermentation', ton: TonEtiquette.tertiaire),
+            Etiquette(label: 'En attente du réseau'),
+          ],
+          action: IconButton(
+            tooltip: 'Plus d\'actions',
+            onPressed: () {},
+            icon: const Icon(Icons.more_vert),
+          ),
+        ),
+        width: 320,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('CarteSection', () {
+    Widget carte() => const CarteSection(
+      titre: 'Rendement',
+      children: [LigneFiche(label: 'Évaporation', value: '3 l/h')],
+    );
+
+    testWidgets('carte du thème, titre en en-tête, marge de 16', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await poser(tester, carte(), width: 800);
+      final s = schema(tester);
+      final material = tester.widget<Material>(
+        find.descendant(of: find.byType(Card), matching: find.byType(Material)),
+      );
+      expect(material.color, s.surfaceContainerLow);
+      expect(
+        tester.getSemantics(find.text('Rendement')),
+        isSemantics(label: 'Rendement', isHeader: true),
+      );
+      final bord = tester.getTopLeft(find.byType(Card));
+      // Espace de 16 au-dessus de la carte, contenu à 16 de son bord.
+      expect(bord, const Offset(0, 16));
+      expect(tester.getTopLeft(find.text('Rendement')).dx, 16);
+      expect(tester.getTopLeft(find.text('Évaporation')).dx, 16);
+      expect(
+        tester.getBottomLeft(find.byType(Card)).dy -
+            tester.getBottomLeft(find.byType(LigneFiche)).dy,
+        16,
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('téléphone : déborde de 8 px, contenu aligné sur la colonne', (
+      tester,
+    ) async {
+      await poser(
+        tester,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: carte(),
+        ),
+      );
+      expect(tester.getTopLeft(find.byType(Card)).dx, 16 - kDebordCarteCompact);
+      expect(tester.getSize(find.byType(Card)).width, 400 - 32 + 16);
+      expect(tester.getTopLeft(find.text('Rendement')).dx, 16);
+      expect(tester.getTopLeft(find.text('Évaporation')).dx, 16);
+    });
+
+    testWidgets('repliable : sans marge basse', (tester) async {
+      await poser(
+        tester,
+        const CarteSection(
+          repliable: true,
+          children: [
+            SectionRepliable(
+              titre: 'Déroulé',
+              storageKey: 'deroule',
+              children: [Text('Brassage')],
+            ),
+          ],
+        ),
+        width: 800,
+      );
+      expect(
+        tester.getBottomLeft(find.byType(Card)).dy,
+        tester.getBottomLeft(find.byType(SectionRepliable)).dy,
+      );
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('contraste et cibles, thème ${brightness.name}', (
+        tester,
+      ) async {
+        await poser(
+          tester,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: CarteSection(
+              titre: 'Notes',
+              children: [
+                const Text('Belle mousse.'),
+                const TexteAbsent('Aucune note.'),
+                TextButton(onPressed: () {}, child: const Text('Modifier')),
+              ],
+            ),
+          ),
+          brightness: brightness,
+        );
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      });
+    }
+  });
+
+  group('Etiquette sur une ligne choisie', () {
+    BoxBorder? contour(WidgetTester tester, String label) =>
+        (tester
+                    .widget<DecoratedBox>(
+                      find
+                          .ancestor(
+                            of: find.text(label),
+                            matching: find.byType(DecoratedBox),
+                          )
+                          .first,
+                    )
+                    .decoration
+                as BoxDecoration)
+            .border;
+
+    testWidgets('ton normal : contour outlineVariant sur la ligne choisie', (
+      tester,
+    ) async {
+      await poser(
+        tester,
+        Column(
+          children: [
+            LigneListe(
+              titre: 'Densité fausse',
+              selected: true,
+              etiquettes: const [
+                Etiquette(label: 'Vous'),
+                Etiquette(label: 'Refusé', ton: TonEtiquette.neutre),
+              ],
+              onTap: () {},
+            ),
+            LigneListe(
+              titre: 'Mousse absente',
+              etiquettes: const [Etiquette(label: 'Moi')],
+              onTap: () {},
+            ),
+          ],
+        ),
+      );
+      expect(
+        contour(tester, 'Vous'),
+        Border.all(color: schema(tester).outlineVariant),
+      );
+      // Un autre ton se distingue déjà du fond ; une ligne ordinaire non plus.
+      expect(contour(tester, 'Refusé'), isNull);
+      expect(contour(tester, 'Moi'), isNull);
+    });
+  });
+
   group('PageSecondaire', () {
     Future<GoRouter> ouvrir(
       WidgetTester tester,
@@ -495,23 +718,44 @@ void main() {
       return router;
     }
 
-    testWidgets('titre, retour vers le repli, contenu borné à 840 px', (
+    testWidgets('titre, retour vers le repli, liste centrée sur 840 px', (
       tester,
     ) async {
       final router = await ouvrir(
         tester,
-        const PageSecondaire(
+        PageSecondaire(
           titre: 'Mes prix',
-          body: SizedBox.expand(key: ValueKey('contenu')),
+          body: Builder(
+            builder: (context) => ListView(
+              padding: PageSecondaire.marges(
+                context,
+                const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              children: [
+                for (var i = 0; i < 40; i++)
+                  SizedBox(height: 48, key: ValueKey('ligne-$i')),
+              ],
+            ),
+          ),
         ),
         width: 1400,
       );
       expect(find.widgetWithText(AppBar, 'Mes prix'), findsOneWidget);
       expect(find.byType(BandeauHorsLigne), findsNothing);
-      expect(
-        tester.getSize(find.byKey(const ValueKey('contenu'))).width,
-        kContentMaxWidth,
-      );
+      // Liste sur toute la largeur, lignes centrées sur 840 px moins les
+      // marges de la page.
+      expect(tester.getSize(find.byType(ListView)).width, 1400);
+      final ligne = find.byKey(const ValueKey('ligne-0'));
+      expect(tester.getSize(ligne).width, kContentMaxWidth - 32);
+      expect(tester.getTopLeft(ligne).dx, (1400 - kContentMaxWidth) / 2 + 16);
+      // La molette fait défiler la page au-dessus de la marge latérale.
+      final repere = find.byKey(const ValueKey('ligne-5'));
+      final avant = tester.getTopLeft(repere).dy;
+      final souris = TestPointer(1, PointerDeviceKind.mouse);
+      souris.hover(const Offset(40, 400));
+      await tester.sendEventToBinding(souris.scroll(const Offset(0, 100)));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(repere).dy, avant - 100);
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       expect(router.routerDelegate.currentConfiguration.uri.path, '/recettes');

@@ -66,7 +66,7 @@ class _ListeNouveautes extends StatelessWidget {
         : 'Version installée : $installedVersion.';
     return SelectionArea(
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: PageSecondaire.marges(context, const EdgeInsets.all(16)),
         children: [
           Text(
             '$intro Seules les versions qui changent ce que vous voyez '

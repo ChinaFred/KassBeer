@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/bandeau_liste_perimee.dart';
 import 'package:kass_beer/core/presentation/etats.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
 import 'package:kass_beer/features/admin/data/error_reports_repository.dart';
@@ -180,6 +181,10 @@ void main() {
         );
         expect(find.text('3 rapports affichés'), findsOneWidget);
         expect(find.text('StateError: panne 1'), findsOneWidget);
+        // Repère en disque de 40 px, en ton d'erreur : le texte s'aligne sur
+        // celui des lignes de l'accueil Admin (16 + 40 + 16).
+        expect(find.byType(RepereDisque), findsNWidgets(3));
+        expect(tester.getTopLeft(find.text('StateError: panne 1')).dx, 72);
         expect(find.text('#0 suite du message'), findsNothing);
         expect(
           find.text('14 nov. 10:30 · recipes.watch · v0.1.39+40'),

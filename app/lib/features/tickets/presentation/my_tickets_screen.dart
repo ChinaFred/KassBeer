@@ -47,6 +47,7 @@ class MyTicketsScreen extends ConsumerWidget {
 
   static const titre = 'Mes tickets';
   static const loadError = 'Impossible de lire vos tickets.';
+  static const emptyTitle = 'Aucun ticket';
   static const emptyMessage =
       'Aucun ticket pour l\'instant. Un bug, une idée ? Envoyez-les à '
       'l\'administrateur.';
@@ -167,6 +168,7 @@ class _Liste extends StatelessWidget {
     if (_estVide(list, stale: stale)) {
       return EtatVide(
         icon: Icons.confirmation_number_outlined,
+        titre: MyTicketsScreen.emptyTitle,
         message: MyTicketsScreen.emptyMessage,
         action: FilledButton(
           onPressed: onCreate,
@@ -193,12 +195,7 @@ class _Liste extends StatelessWidget {
             icone: Icons.error_outline,
             erreur: true,
             titre: 'Ticket illisible',
-            details: const [
-              Text(
-                'Mettez l\'application à jour, ou prévenez '
-                'l\'administrateur.',
-              ),
-            ],
+            details: const [Text(kDetailLigneIllisible)],
             selected: d.id == selectedId,
             onTap: () => onOpen(d.id),
           ),

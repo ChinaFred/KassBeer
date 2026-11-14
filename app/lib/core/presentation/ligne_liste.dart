@@ -2,6 +2,55 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import 'breakpoints.dart';
+import 'etiquette.dart';
+
+/// Détail de la ligne d'un document illisible (recette, brassin, équipement,
+/// processus, ticket).
+const kDetailLigneIllisible =
+    'Mettez l\'application à jour, ou prévenez l\'administrateur.';
+
+/// Repère d'une ligne : icône de 24 px dans un disque de 40 px, en
+/// `secondaryContainer`, en `secondary` sur une ligne choisie ([choisi]), en
+/// `errorContainer` pour un document illisible ([erreur]). Décoratif sans
+/// [label] ; lu [label] sinon (type d'un ticket).
+///
+/// Employé par [LigneListe], et par les lignes qui n'en sont pas (Admin ›
+/// Membres, Admin › Rapports d'erreur) pour aligner leur texte sur les siennes.
+class RepereDisque extends StatelessWidget {
+  const RepereDisque({
+    super.key,
+    required this.icone,
+    this.erreur = false,
+    this.choisi = false,
+    this.label,
+  });
+
+  final IconData icone;
+  final bool erreur;
+  final bool choisi;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (fond, avant) = erreur
+        ? (scheme.errorContainer, scheme.onErrorContainer)
+        : choisi
+        ? (scheme.secondary, scheme.onSecondary)
+        : (scheme.secondaryContainer, scheme.onSecondaryContainer);
+    final disque = ExcludeSemantics(
+      child: SizedBox.square(
+        dimension: 40,
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: fond, shape: BoxShape.circle),
+          child: Icon(icone, size: 24, color: avant),
+        ),
+      ),
+    );
+    final label = this.label;
+    return label == null ? disque : Semantics(label: label, child: disque);
+  }
+}
 
 /// Ligne d'une liste : repère à gauche, titre, détails, étiquettes dessous,
 /// élément à droite. Hauteur d'au moins [kLigneListeMinHeight], lue d'un bloc
@@ -74,28 +123,14 @@ class LigneListe extends StatelessWidget {
     final trailing = this.trailing;
     final action = this.action;
 
-    Widget? repere;
-    if (icone != null) {
-      final (fond, avant) = erreur
-          ? (scheme.errorContainer, scheme.onErrorContainer)
-          : selected
-          ? (scheme.secondary, scheme.onSecondary)
-          : (scheme.secondaryContainer, scheme.onSecondaryContainer);
-      final disque = SizedBox.square(
-        dimension: 40,
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: fond, shape: BoxShape.circle),
-          child: Icon(icone, size: 24, color: avant),
-        ),
-      );
-      final label = iconeLabel;
-      repere = label == null
-          ? ExcludeSemantics(child: disque)
-          : Semantics(
-              label: label,
-              child: ExcludeSemantics(child: disque),
-            );
-    }
+    final repere = icone == null
+        ? null
+        : RepereDisque(
+            icone: icone,
+            erreur: erreur,
+            choisi: selected,
+            label: iconeLabel,
+          );
 
     final contenu = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: kLigneListeMinHeight),
@@ -153,10 +188,13 @@ class LigneListe extends StatelessWidget {
       ),
     );
 
+    // Ligne choisie : une étiquette de ton normal, de la couleur du fond, y
+    // prend un contour.
+    final pose = selected ? SurLigneChoisie(child: contenu) : contenu;
     final tap = onTap;
     final zone = tap == null
-        ? contenu
-        : InkWell(onTap: tap, customBorder: forme, child: contenu);
+        ? pose
+        : InkWell(onTap: tap, customBorder: forme, child: pose);
     final label = semanticsLabel;
     // `selected` nul hors sélection : une ligne ordinaire n'est pas lue « non
     // sélectionnée ».
