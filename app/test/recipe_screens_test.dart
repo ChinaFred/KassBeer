@@ -57,6 +57,14 @@ Future<TestApp> open(
   return app;
 }
 
+/// Lectures d'index sans celles des styles : le champ « Style » de l'éditeur
+/// lit son index dès l'ouverture (ticket #49).
+List<NatureReferentiel> lecturesHorsStyles(List<NatureReferentiel> lectures) =>
+    [
+      for (final n in lectures)
+        if (n != NatureReferentiel.styles) n,
+    ];
+
 Finder inSheet(Finder finder) =>
     find.descendant(of: find.byType(BottomSheet), matching: finder);
 
@@ -1822,7 +1830,9 @@ void main() {
           before: bibliotheque,
         );
         await openSheet(tester, 'Ajouter un malt ou un sucre');
-        expect(app.library.indexReads, [NatureReferentiel.fermentables]);
+        expect(lecturesHorsStyles(app.library.indexReads), [
+          NatureReferentiel.fermentables,
+        ]);
         await tester.enterText(sheetField('Nom'), 'pils fic');
         await tester.pumpAndSettle();
         expect(find.text('Pilsner Fictif'), findsOneWidget);
@@ -2008,7 +2018,9 @@ void main() {
       attente.complete();
       await tester.pumpAndSettle();
       expect(find.text('Pilsner Fictif'), findsOneWidget);
-      expect(app.library.indexReads, [NatureReferentiel.fermentables]);
+      expect(lecturesHorsStyles(app.library.indexReads), [
+        NatureReferentiel.fermentables,
+      ]);
     });
 
     group('style : liste et feuille « Choisir un style » (ticket #49)', () {
@@ -2135,16 +2147,21 @@ void main() {
         await tester.enterText(champStyle(), 'IPA américaine');
         await tester.pumpAndSettle();
         expect(find.text(kStyleHorsBibliotheque), findsOneWidget);
-        // Nom exact à la casse près : l'export BeerXML le refuserait.
+        // Nom exact à la casse près : l'export BeerXML le refuserait. Pendant
+        // la frappe, un texte qui a des suggestions n'affiche pas
+        // l'avertissement ; il paraît à la sortie du champ.
         await tester.enterText(champStyle(), 'american ipa');
         await tester.pumpAndSettle();
-        expect(find.text(kStyleHorsBibliotheque), findsOneWidget);
-        await tester.enterText(champStyle(), 'IPA américaine');
-        await tester.pumpAndSettle();
+        expect(find.text(kStyleHorsBibliotheque), findsNothing);
         await tester.enterText(
           find.widgetWithText(TextFormField, 'Nom').first,
           'Mon IPA',
         );
+        await tester.pumpAndSettle();
+        expect(find.text(kStyleHorsBibliotheque), findsOneWidget);
+        await focusStyle(tester);
+        await tester.enterText(champStyle(), 'IPA américaine');
+        await tester.pumpAndSettle();
         await tester.pump();
         await tester.tap(find.text('Enregistrer'));
         await tester.pumpAndSettle();
@@ -2155,7 +2172,8 @@ void main() {
         tester,
       ) async {
         await open(tester, '/recettes/nouvelle');
-        await focusStyle(tester);
+        await tester.ensureVisible(champStyle());
+        // Index lu à l'ouverture de l'éditeur, sans focus.
         expect(find.text(kBibliothequeVide), findsOneWidget);
         expect(tester.widget<IconButton>(bouton()).onPressed, isNull);
         expect(find.text(kChoisirStyle), findsNothing);
@@ -2182,6 +2200,69 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('10A · Weissbier'), findsOneWidget);
         expect(app.library.indexReads, [NatureReferentiel.styles]);
+      });
+
+      testWidgets('recette existante : aide « hors Bibliothèque » sans focus', (
+        tester,
+      ) async {
+        await open(
+          tester,
+          '/recettes/m/modifier',
+          before: (app) {
+            styles(app);
+            app.recipes.publish([
+              recipe(
+                'm',
+                const RecipeContent(name: 'Blonde', style: 'IPA américaine'),
+              ),
+            ]);
+          },
+        );
+        await tester.ensureVisible(champStyle());
+        expect(find.text(kStyleHorsBibliotheque), findsOneWidget);
+        expect(
+          tester.widget<TextFormField>(champStyle()).controller!.text,
+          'IPA américaine',
+        );
+      });
+
+      testWidgets('feuille : panne, « Réessayer » relit l\'index', (
+        tester,
+      ) async {
+        final attente = Completer<void>();
+        final app = await open(
+          tester,
+          '/recettes/nouvelle',
+          before: (app) {
+            styles(app);
+            app.library.indexAttente[NatureReferentiel.styles] = attente;
+            app.library.indexErrors[NatureReferentiel.styles] = Exception(
+              'réseau',
+            );
+          },
+        );
+        await tester.ensureVisible(champStyle());
+        await tester.tap(bouton());
+        await tester.pump();
+        app.library.indexAttente.clear();
+        attente.complete();
+        await tester.pumpAndSettle();
+        expect(find.text(kStylesIndisponibles), findsOneWidget);
+        app.library.indexErrors.clear();
+        final relecture = Completer<void>();
+        app.library.indexAttente[NatureReferentiel.styles] = relecture;
+        await tester.tap(find.text('Réessayer'));
+        await tester.pump();
+        // Nouvelle lecture en cours : le bouton attend.
+        expect(find.text(kLectureStyles), findsOneWidget);
+        expect(find.text('Réessayer'), findsNothing);
+        relecture.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('10A · Weissbier'), findsOneWidget);
+        expect(app.library.indexReads, [
+          NatureReferentiel.styles,
+          NatureReferentiel.styles,
+        ]);
       });
 
       testWidgets('grand écran : boîte de dialogue de 560 px au plus', (
@@ -2241,8 +2322,8 @@ void main() {
     ) async {
       await open(tester, '/recettes/nouvelle');
       await openSheet(tester, 'Ajouter un malt ou un sucre');
-      expect(find.text(kBibliothequeVide), findsOneWidget);
-      expect(find.text(kSuggestionsIndisponibles), findsNothing);
+      expect(inSheet(find.text(kBibliothequeVide)), findsOneWidget);
+      expect(inSheet(find.text(kSuggestionsIndisponibles)), findsNothing);
     });
 
     testWidgets('hors ligne : index lu dans le cache, suggestions', (
@@ -2256,9 +2337,13 @@ void main() {
       app.container.read(routerProvider).go('/recettes/nouvelle');
       await tester.pumpAndSettle();
       await openSheet(tester, 'Ajouter un malt ou un sucre');
-      expect(app.library.indexReads, [NatureReferentiel.fermentables]);
+      expect(lecturesHorsStyles(app.library.indexReads), [
+        NatureReferentiel.fermentables,
+      ]);
       // Hors ligne : le cache seul, aucune lecture serveur.
-      expect(app.library.indexCacheReads, [NatureReferentiel.fermentables]);
+      expect(lecturesHorsStyles(app.library.indexCacheReads), [
+        NatureReferentiel.fermentables,
+      ]);
       await tester.enterText(sheetField('Nom'), 'Pils Fictif');
       await tester.pumpAndSettle();
       expect(find.text('Pilsner Fictif'), findsOneWidget);
@@ -2278,17 +2363,17 @@ void main() {
         },
       );
       await openSheet(tester, 'Ajouter un malt ou un sucre');
-      expect(find.text(kSuggestionsIndisponibles), findsOneWidget);
+      expect(inSheet(find.text(kSuggestionsIndisponibles)), findsOneWidget);
       app.library.indexErrors.clear();
       await tester.tap(sheetField('Quantité (kg)'));
       await tester.pumpAndSettle();
       await tester.tap(sheetField('Nom'));
       await tester.pumpAndSettle();
-      expect(app.library.indexReads, [
+      expect(lecturesHorsStyles(app.library.indexReads), [
         NatureReferentiel.fermentables,
         NatureReferentiel.fermentables,
       ]);
-      expect(find.text(kSuggestionsIndisponibles), findsNothing);
+      expect(inSheet(find.text(kSuggestionsIndisponibles)), findsNothing);
       await tester.enterText(sheetField('Nom'), 'Pils Fictif');
       await tester.pumpAndSettle();
       expect(find.text('Pilsner Fictif'), findsOneWidget);

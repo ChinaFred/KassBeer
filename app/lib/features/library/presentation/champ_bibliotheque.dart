@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -70,9 +71,10 @@ String? detailStyle(EntreeIndex e) =>
 /// de place.
 ///
 /// [choixDesStyles], réservé au champ « Style » ([NatureReferentiel.styles]) :
-/// la liste s'ouvre aussi sur un champ vide, l'aide dit si le texte est un
-/// style de la Bibliothèque ([aideStyleSaisi]), et `fieldBuilder` reçoit
-/// l'icône qui ouvre « Choisir un style », désactivée sans index.
+/// l'index est lu dès l'ouverture du champ, sans attendre le focus ; la liste
+/// s'ouvre aussi sur un champ vide ; l'aide dit si le texte est un style de la
+/// Bibliothèque ([aideStyleSaisi]) ; `fieldBuilder` reçoit l'icône qui ouvre
+/// « Choisir un style », désactivée sans index.
 class ChampBibliotheque extends ConsumerStatefulWidget {
   const ChampBibliotheque({
     super.key,
@@ -144,8 +146,15 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
     widget.focusNode.addListener(_surFocus);
     widget.controller.addListener(_surTexte);
     // Champ ouvert avec le focus (`autofocus`) : la lecture part aussitôt.
+    // Champ « Style » : elle part toujours, pour que l'aide dise dès
+    // l'ouverture si le style d'une recette existante est hors Bibliothèque.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _surFocus();
+      if (!mounted) return;
+      if (widget.choixDesStyles) {
+        _demarrerLecture();
+      } else {
+        _surFocus();
+      }
     });
   }
 
@@ -166,6 +175,8 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
   }
 
   void _surFocus() {
+    // L'aide du champ « Style » dépend du focus (voir [_aideAffichee]).
+    if (widget.choixDesStyles && mounted) setState(() {});
     if (!widget.focusNode.hasFocus) return;
     _demarrerLecture();
   }
@@ -247,14 +258,7 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
   /// L'index déjà lu s'affiche aussitôt ; sinon la feuille attend sa lecture.
   Future<void> _ouvrirListe() async {
     widget.focusNode.unfocus();
-    _demarrerLecture();
-    final enCours = _enCours;
-    final choix = await choisirStyle(
-      context,
-      index: (enCours ?? Future<void>.value()).then(
-        (_) => (entrees: _indexLu ? _entrees : null, aide: _aide),
-      ),
-    );
+    final choix = await choisirStyle(context, lire: _indexPourFeuille);
     if (choix == null || !mounted) return;
     _deplace = false;
     widget.controller.value = TextEditingValue(
@@ -262,14 +266,42 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
       selection: TextSelection.collapsed(offset: choix.name.length),
     );
     widget.onSelected(choix);
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        styleChoisi(choix.name),
+        Directionality.of(context),
+      ),
+    );
+  }
+
+  /// Index pour la feuille : lance la lecture si elle n'est ni faite ni en
+  /// cours (premier appel, ou « Réessayer » après une panne), puis rend
+  /// l'index lu, ou rien avec la raison.
+  Future<IndexStyles> _indexPourFeuille() async {
+    _demarrerLecture();
+    await _enCours;
+    return (
+      entrees: _indexLu ? _entrees : null,
+      vide: _aide == kBibliothequeVide,
+    );
   }
 
   /// Aide affichée sous le champ : panne ou Bibliothèque vide d'abord, puis,
-  /// pour le champ « Style », l'aide du style saisi.
+  /// pour le champ « Style », l'aide du style saisi. Pendant la frappe, un
+  /// texte qui a encore des suggestions n'affiche pas « hors Bibliothèque » :
+  /// l'avertissement attend la sortie du champ.
   String? get _aideAffichee {
     final aide = _aide;
     if (aide != null || !widget.choixDesStyles || !_indexLu) return aide;
-    return aideStyleSaisi(_entrees, widget.controller.text);
+    final texte = widget.controller.text;
+    final style = aideStyleSaisi(_entrees, texte);
+    if (style == kStyleHorsBibliotheque &&
+        widget.focusNode.hasFocus &&
+        suggestionsPour(_entrees, texte).isNotEmpty) {
+      return null;
+    }
+    return style;
   }
 
   @override

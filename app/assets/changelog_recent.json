@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.54",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » : une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49."
+      ]
+    },
+    {
       "version": "0.1.52",
       "date": "2026-11-14",
       "paragraphs": [
@@ -35,13 +42,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou « Journaux indisponibles pour l'instant »."
-      ]
-    },
-    {
-      "version": "0.1.47",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui de la version installée et la taille du téléchargement. « Plus tard » la ferme jusqu'au lancement suivant. « Mettre à jour » télécharge la version dans l'application, contrôle le fichier, puis ouvre l'écran d'installation d'Android. La première fois, Android demande d'autoriser Kass'Beer à installer des applications : la fenêtre ouvre le bon réglage. Une coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre jamais pendant le jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36."
       ]
     }
   ]

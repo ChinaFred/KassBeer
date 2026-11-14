@@ -1420,11 +1420,16 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   plein écran au téléphone, boîte de 560 px au plus sur grand écran, champ « Rechercher un code
   ou un nom » (code, nom, autre nom, catégorie), styles groupés par catégorie, lignes « 21A ·
   American IPA » avec la catégorie en seconde ligne, indicateur pendant la lecture, « Aucun
-  style ne correspond à « {texte} ». Vous pouvez garder votre saisie. », bouton « Fermer » ;
-  l'icône est désactivée quand la Bibliothèque est vide ou illisible ; le choix écrit le nom
-  exact du style ; la saisie libre reste possible ; une fois la Bibliothèque lue, l'aide
-  devient « Style de la Bibliothèque : 21A · IPA » pour un nom exact, ou « Style hors
-  Bibliothèque : l'export BeerXML le refusera. », casse et accents compris),
+  style ne correspond à « {texte} ». Vous pouvez garder votre saisie. », « La Bibliothèque ne
+  contient encore aucun style. », « La liste des styles est indisponible. Vous pouvez fermer et
+  saisir le nom. » avec « Réessayer », bouton « Fermer » ; sur grand écran, le curseur est dans
+  la recherche à l'ouverture ; l'icône est désactivée quand la Bibliothèque est vide ou
+  illisible ; le choix écrit le nom exact du style, et le lecteur d'écran annonce « Style
+  choisi : {nom} » ; la saisie libre reste possible ; la Bibliothèque est lue à l'ouverture de
+  l'éditeur, et l'aide devient « Style de la Bibliothèque : 21A · IPA » pour un nom exact, ou
+  « Style hors Bibliothèque : l'export BeerXML le refusera. » (la casse et les accents comptent,
+  comme à l'export BeerXML) ; pendant la frappe, un texte qui a encore des suggestions garde
+  l'aide générale, et l'avertissement paraît à la sortie du champ),
   « Type de recette » (liste déroulante : « Non précisé », Tout grain, Empâtage partiel,
   Extrait), « Volume en fermenteur (L) » (plus de 0), « Durée d'ébullition (min) » (entier
   de 0 à 600), « Équipement » (« Aucun

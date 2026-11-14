@@ -24,6 +24,13 @@ partagé entre la liste et la feuille, aucun `snapshots()` (P22). Aucune dépend
 changée. L'aide « Style de la Bibliothèque » demande le nom exact, casse comprise, comme
 l'export BeerXML. Demandé par le ticket #49.
 
+La relecture ajoute : index des styles lu dès l'ouverture de l'éditeur, pour que l'aide « hors
+Bibliothèque » paraisse sur une recette existante sans focus ; états de la feuille par
+`EtatChargement`, `EtatVide` et `EtatErreur` (« Réessayer ») ; tailles de la feuille dans
+`breakpoints.dart` ; avertissement retenu pendant la frappe tant que le texte a des
+suggestions ; annonce « Style choisi » au lecteur d'écran ; curseur dans la recherche sur grand
+écran.
+
 ### v0.1.52 — fonctionnel
 
 Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois

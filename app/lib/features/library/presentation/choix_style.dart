@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/presentation/breakpoints.dart';
+import '../../../core/presentation/etats.dart';
 import '../domain/referentiel.dart';
 
 /// Titre de la feuille de choix d'un style.
@@ -19,8 +20,19 @@ const kStyleHorsBibliotheque =
 /// Groupe des styles sans catégorie.
 const kSansCategorie = 'Sans catégorie';
 
-/// Largeur maximale de la boîte de dialogue sur grand écran.
-const double kChoixStyleMaxWidth = 560;
+/// Libellé du chargement de la feuille, lu par le lecteur d'écran.
+const kLectureStyles = 'Lecture des styles';
+
+/// Feuille ouverte sans index lisible (panne, absent du cache hors ligne).
+const kStylesIndisponibles =
+    'La liste des styles est indisponible. Vous pouvez fermer et saisir le nom.';
+
+/// Feuille ouverte quand l'index est absent du serveur.
+const kAucunStyleBibliotheque =
+    'La Bibliothèque ne contient encore aucun style.';
+
+/// Annonce du lecteur d'écran après un choix dans la feuille.
+String styleChoisi(String nom) => 'Style choisi : $nom';
 
 /// « Style de la Bibliothèque : 21A · IPA ».
 String aideStyleBibliotheque(EntreeStyle style) =>
@@ -67,21 +79,28 @@ List<({String categorie, List<EntreeStyle> styles})> stylesGroupes(
   ];
 }
 
-/// Index lu pour la feuille : [entrees] quand il est lu, sinon `null` et
-/// [aide], le message affiché à la place de la liste.
-typedef IndexStyles = ({List<EntreeIndex>? entrees, String? aide});
+/// Index lu pour la feuille : [entrees] quand il est lu ; sinon `null`, et
+/// [vide] vrai quand l'index est absent du serveur (Bibliothèque pas encore
+/// remplie), faux pour une panne qu'une nouvelle lecture peut corriger.
+typedef IndexStyles = ({List<EntreeIndex>? entrees, bool vide});
 
 /// Ouvre « Choisir un style » : feuille du bas presque plein écran sous
-/// [kCompactMaxWidth], boîte de dialogue de [kChoixStyleMaxWidth] au plus
-/// au-delà. [index] : l'index lu, ou sa lecture en cours (indicateur de
-/// chargement). Rend le style choisi, ou `null` (« Fermer »).
+/// [kCompactMaxWidth], boîte de dialogue de [kDialogueListeMaxWidth] au plus
+/// au-delà. [lire] rend l'index lu, ou sa lecture en cours (indicateur de
+/// chargement) ; « Réessayer » le rappelle après une panne. Rend le style
+/// choisi, ou `null` (« Fermer »).
+///
+/// `showFeuilleOuDialogue` n'est pas repris : il place le contenu dans un
+/// `SingleChildScrollView`, où la liste en `Expanded` n'a pas de hauteur.
 Future<EntreeStyle?> choisirStyle(
   BuildContext context, {
-  required Future<IndexStyles> index,
+  required Future<IndexStyles> Function() lire,
 }) {
   final taille = MediaQuery.sizeOf(context);
-  Widget contenu(BuildContext context) => _ChoixStyle(index: index);
-  if (taille.width < kCompactMaxWidth) {
+  final grandEcran = taille.width >= kCompactMaxWidth;
+  Widget contenu(BuildContext context) =>
+      _ChoixStyle(lire: lire, autofocus: grandEcran);
+  if (!grandEcran) {
     // ticket: /recettes/nouvelle/fenetre/style, /recettes/:id/modifier/fenetre/style
     return showModalBottomSheet<EntreeStyle>(
       context: context,
@@ -89,7 +108,7 @@ Future<EntreeStyle?> choisirStyle(
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) => SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.9,
+        height: MediaQuery.sizeOf(context).height * kFeuilleListeHauteur,
         child: contenu(context),
       ),
     );
@@ -100,8 +119,8 @@ Future<EntreeStyle?> choisirStyle(
     builder: (context) => Dialog(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: kChoixStyleMaxWidth,
-          maxHeight: taille.height * 0.8,
+          maxWidth: kDialogueListeMaxWidth,
+          maxHeight: taille.height * kDialogueListeHauteur,
         ),
         child: Padding(
           padding: const EdgeInsets.only(top: 16),
@@ -113,9 +132,13 @@ Future<EntreeStyle?> choisirStyle(
 }
 
 class _ChoixStyle extends StatefulWidget {
-  const _ChoixStyle({required this.index});
+  const _ChoixStyle({required this.lire, required this.autofocus});
 
-  final Future<IndexStyles> index;
+  final Future<IndexStyles> Function() lire;
+
+  /// Curseur dans la recherche à l'ouverture : grand écran seulement ; au
+  /// téléphone, le clavier cacherait la moitié de la liste.
+  final bool autofocus;
 
   @override
   State<_ChoixStyle> createState() => _ChoixStyleState();
@@ -123,6 +146,7 @@ class _ChoixStyle extends StatefulWidget {
 
 class _ChoixStyleState extends State<_ChoixStyle> {
   final _recherche = TextEditingController();
+  late Future<IndexStyles> _index = widget.lire();
 
   @override
   void dispose() {
@@ -149,6 +173,7 @@ class _ChoixStyleState extends State<_ChoixStyle> {
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
             child: TextField(
               controller: _recherche,
+              autofocus: widget.autofocus,
               textInputAction: TextInputAction.search,
               decoration: const InputDecoration(
                 labelText: kRechercherStyle,
@@ -159,15 +184,30 @@ class _ChoixStyleState extends State<_ChoixStyle> {
           ),
           Expanded(
             child: FutureBuilder<IndexStyles>(
-              future: widget.index,
+              future: _index,
               builder: (context, lu) {
                 final data = lu.data;
                 if (data == null) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const EtatChargement(label: kLectureStyles);
                 }
                 final entrees = data.entrees;
                 if (entrees == null) {
-                  return _Message(data.aide ?? '');
+                  if (data.vide) {
+                    return const EtatVide(
+                      icon: Icons.menu_book_outlined,
+                      message: kAucunStyleBibliotheque,
+                    );
+                  }
+                  // Pendant une nouvelle lecture, `FutureBuilder` garde la
+                  // réponse précédente : le bouton attend.
+                  return EtatErreur(
+                    message: kStylesIndisponibles,
+                    retrying: lu.connectionState != ConnectionState.done,
+                    retryingLabel: kLectureStyles,
+                    onRetry: () => setState(() {
+                      _index = widget.lire();
+                    }),
+                  );
                 }
                 return _Liste(
                   groupes: stylesGroupes(entrees, _recherche.text),
@@ -192,18 +232,6 @@ class _ChoixStyleState extends State<_ChoixStyle> {
   }
 }
 
-class _Message extends StatelessWidget {
-  const _Message(this.texte);
-
-  final String texte;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(24),
-    child: Text(texte, textAlign: TextAlign.center),
-  );
-}
-
 class _Liste extends StatelessWidget {
   const _Liste({required this.groupes, required this.recherche});
 
@@ -212,7 +240,9 @@ class _Liste extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (groupes.isEmpty) return _Message(aucunStyle(recherche));
+    if (groupes.isEmpty) {
+      return EtatVide(icon: Icons.search_off, message: aucunStyle(recherche));
+    }
     final theme = Theme.of(context);
     final lignes = <Widget>[];
     for (final g in groupes) {

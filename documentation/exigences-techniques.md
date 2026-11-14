@@ -712,17 +712,24 @@ encore celui de l'ouverture du champ. Les formulaires de ligne affichent sous «
 `liveRegion`, les valeurs remplies (`ValeurRemplie`, `valeursReprises`).
 
 Champ « Style » (`ChampBibliotheque(choixDesStyles: true)`, réservé à
-`NatureReferentiel.styles`, ticket #49) : sur un champ vide, `suggestionsPour(stylesSiVide:
+`NatureReferentiel.styles`, ticket #49) : l'index est lu dès l'ouverture du champ, sans
+attendre le focus (`get()` mémorisé par le dépôt, une lecture par session) ; sur un champ vide, `suggestionsPour(stylesSiVide:
 true)` rend les 8 premiers styles dans l'ordre des codes BJCP (`stylesParCode`,
 `comparerCodesStyle` de `referentiel.dart` : nombre de tête, puis reste du code), et l'index
 arrivé au focus ouvre la liste. L'icône de fin de champ (`Icons.list`, info-bulle « Choisir un
 style dans la Bibliothèque ») ouvre `choisirStyle` (`choix_style.dart`) : feuille du bas sous
-`kCompactMaxWidth`, boîte de dialogue de 560 px au plus au-delà ; elle attend la lecture en cours
-ou reprend l'index déjà lu, sans seconde lecture. Recherche en mémoire (`stylesGroupes` : code,
+`kCompactMaxWidth`, boîte de dialogue de `kDialogueListeMaxWidth` (560 px) au plus au-delà
+(`kFeuilleListeHauteur`, `kDialogueListeHauteur` de `breakpoints.dart` ;
+`showFeuilleOuDialogue` n'est pas repris, son `SingleChildScrollView` ne donne pas de hauteur à
+la liste) ; elle attend la lecture en cours ou reprend l'index déjà lu, sans seconde lecture.
+États par `etats.dart` : `EtatChargement`, `EtatVide` (index absent du serveur, aucun résultat),
+`EtatErreur` avec « Réessayer », qui relance la lecture après une panne. Recherche en mémoire (`stylesGroupes` : code,
 nom, autre nom, catégorie), styles groupés par catégorie. Le focus quitte le champ avant
-l'ouverture. L'icône est désactivée quand la dernière lecture n'a pas rendu d'index ; elle reste
-active avant la première lecture, qu'elle lance. L'aide du champ (`aideStyleSaisi`) compare le
-texte, espaces de bord retirées, au `name` exact d'un style, comme l'export BeerXML. Aucun
+l'ouverture ; après un choix, `SemanticsService.sendAnnouncement` dit « Style choisi : {nom} ».
+L'icône est désactivée quand la dernière lecture n'a pas rendu d'index ; pendant la première
+lecture, elle ouvre la feuille sur l'indicateur. L'aide du champ (`aideStyleSaisi`) compare le
+texte, espaces de bord retirées, au `name` exact d'un style, comme l'export BeerXML ; champ actif,
+« hors Bibliothèque » attend la sortie du champ tant que le texte a des suggestions. Aucun
 `snapshots()` ni lecture de `beer_styles/` (P22) ; `recipe.style.name` inchangé.
 
 **Signalement des noms non résolus (`signalerNonResolus`, E6).** Après l'écriture des recettes
