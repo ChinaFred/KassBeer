@@ -27,6 +27,7 @@ const Map<String, String> kTicketScreenNames = {
   '/recettes/:id': 'Recette',
   '/recettes/nouvelle': 'Nouvelle recette',
   '/recettes/importer': 'Importer des recettes',
+  '/recettes/importer/:id': 'Recette importée',
   '/recettes/:id/modifier': 'Modifier la recette',
   '/recettes/:id/chronologie': 'Chronologie du jour',
   '/bibliotheque': 'Bibliothèque',
@@ -128,6 +129,7 @@ const kTicketAccountMenu = 'Menu du compte';
 const kTicketAccountMenuScreens = [
   '/recettes/nouvelle',
   '/recettes/importer',
+  '/recettes/importer/:id',
   '/recettes/:id/modifier',
   '/recettes/:id/chronologie',
   '/brassins/:id/jour',
@@ -153,6 +155,7 @@ const kTicketAccountMenuScreens = [
 /// prix » (ADR-008, note du 2026-11-14).
 const kTicketScreensWithPrices = {
   '/recettes/:id',
+  '/recettes/importer/:id',
   '/brassins/:id',
   '/brassins/:id/jour',
   '/brassins/:id/jour/:journee',
@@ -166,6 +169,10 @@ const _kTicketScreenElements = {
   '/recettes/:id/fenetre/nouveau-brassin': 'Nouveau brassin',
   '/recettes/:id/fenetre/prix': 'Prix d\'un ingrédient',
   '/recettes/:id/fenetre/reprendre': 'Reprendre un prix',
+  '/recettes/importer/:id/fenetre/exporter': 'Exporter la recette',
+  '/recettes/importer/:id/fenetre/nouveau-brassin': 'Nouveau brassin',
+  '/recettes/importer/:id/fenetre/prix': 'Prix d\'un ingrédient',
+  '/recettes/importer/:id/fenetre/reprendre': 'Reprendre un prix',
   '/recettes/nouvelle/fenetre/malt': 'Malt ou sucre',
   '/recettes/nouvelle/fenetre/houblon': 'Houblon',
   '/recettes/nouvelle/fenetre/ajout': 'Autre ajout',

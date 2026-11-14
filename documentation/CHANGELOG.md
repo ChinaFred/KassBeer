@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.54 — fonctionnel
+### v0.1.55 — fonctionnel
 
 Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on
 le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » :
@@ -14,7 +14,7 @@ une recherche par code, nom ou catégorie, et tous les styles rangés par catég
 écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le
 style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49.
 
-### v0.1.54 — technique
+### v0.1.55 — technique
 
 `ChampBibliotheque` reçoit `choixDesStyles` (champ « Style » seul ; malts, houblons, ajouts et
 levures inchangés) et un quatrième argument `boutonListe` dans `fieldBuilder`. Nouveau
@@ -30,6 +30,30 @@ Bibliothèque » paraisse sur une recette existante sans focus ; états de la fe
 `breakpoints.dart` ; avertissement retenu pendant la frappe tant que le texte a des
 suggestions ; annonce « Style choisi » au lecteur d'écran ; curseur dans la recherche sur grand
 écran.
+
+### v0.1.54 — fonctionnel
+
+Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche.
+Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie »,
+« Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi
+compléter les recettes importées l'une après l'autre. Demandé par le ticket #60.
+
+### v0.1.54 — technique
+
+Recettes › Importer : la fiche d'une recette créée s'ouvre par `push` sur une route hors de la
+coquille, `/recettes/importer/:id` (`AppRoutes.importedRecipe`, `ImportedRecipeScreen` :
+`RecipeDetailScreen` dans une `PageSecondaire` « Recette »). L'import est ouvert par `push`
+depuis la liste des recettes, donc au-dessus de la coquille ; un `push` de `/recettes/:id`
+ajoutait une seconde page de coquille de même clé, le `Navigator` levait l'assertion
+`!keyReservation.contains(key)` et la fiche ne s'affichait pas. Nouvelle route inscrite dans
+`ticket_screens.dart` (nom d'écran, menu du compte, écrans à prix, et les quatre fenêtres de la
+fiche : Exporter, Nouveau brassin, Prix d'un ingrédient, Reprendre un prix). Les sorties de la
+fiche gardent le compte rendu dans la pile : `RecipeDetailScreen(depuisImport: true)` ouvre
+`RecipeEditorScreen` et `BrewStepsEditorScreen` avec `extra: AppRoutes.retourParPop`, qui se
+ferment par `pop` après « Enregistrer » ; Supprimer fait `pop`, Dupliquer ouvre la copie par
+`push` sur `/recettes/importer/:id`, l'état absent affiche « Revenir au compte rendu ». Tests
+ajoutés à `import_recipes_test.dart` sur le parcours réel (liste, import, fiche, retour ;
+Modifier puis Enregistrer ; Supprimer) ; le test 11 est gardé. Demandé par le ticket #60.
 
 ### v0.1.53 — fonctionnel
 

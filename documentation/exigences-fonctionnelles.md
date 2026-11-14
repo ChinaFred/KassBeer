@@ -1367,7 +1367,10 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
 9. « Import terminé », « 9 créées · 2 ignorées · 1 en erreur » ; hors ligne, « {n} recettes
    créées sur l'appareil. Elles partiront au retour du réseau. » ; sections « Créées »
    (toucher ouvre la fiche par-dessus le compte rendu, qui revient au retour ; « En attente
-   du réseau » jusqu'à la réponse du serveur), « Ignorées » avec leur raison (« Saison —
+   du réseau » jusqu'à la réponse du serveur ; depuis cette fiche, « Enregistrer » dans
+   « Modifier » ou « Modifier la chronologie » revient à la fiche, « Supprimer » revient au
+   compte rendu, « Dupliquer » ouvre la copie par-dessus, et une recette absente affiche
+   « Revenir au compte rendu »), « Ignorées » avec leur raison (« Saison —
    Non cochée », « Porter — Refusée : Nom absent. »), « En erreur » (« L'enregistrement de
    « {nom} » a échoué. ») ; boutons « Revenir aux recettes » et « Importer un autre
    fichier ». « Import terminé. » et le bilan sont annoncés une fois au lecteur d'écran, refus reçus pendant l'écriture compris ; un refus reçu

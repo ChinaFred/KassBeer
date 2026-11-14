@@ -34,7 +34,7 @@ Future<void> ouvrirExport(
   required CalculsRecette calculs,
   required VoidCallback? onCompleter,
   required VoidCallback onDupliquer,
-  // ticket: /recettes/:id/fenetre/exporter
+  // ticket: /recettes/:id/fenetre/exporter, /recettes/importer/:id/fenetre/exporter
 }) => showFeuilleOuDialogue<void>(
   context: context,
   builder: (_) => ExportRecipeSheet(
