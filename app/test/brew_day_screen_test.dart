@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/router/app_router.dart';
+import 'package:kass_beer/core/theme/app_theme.dart';
 import 'package:kass_beer/features/brew_day/presentation/brew_day_screen.dart';
+import 'package:kass_beer/features/brew_day/presentation/chronologie_jour.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/presentation/brew_detail_screen.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
@@ -42,6 +44,15 @@ Future<TestApp> ouvrir(
 }
 
 Finder minuteur() => find.byKey(const ValueKey('minuteur'));
+
+/// Retire l'annonce « Brassage repris… » : avec la carte de l'étape en cours,
+/// le bas de la chronologie passe sous elle (police de test, plus large).
+Future<void> masquerAnnonce(WidgetTester tester) async {
+  ScaffoldMessenger.of(
+    tester.element(find.byType(SnackBar)),
+  ).removeCurrentSnackBar();
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets('MH2 : tuée puis relancée à 12:10 → 20:00 restantes', (
@@ -90,6 +101,7 @@ void main() {
         now: hm(12, 10),
         events: [debut('e1', 'k-palier', hm(11, 45))],
       );
+      await masquerAnnonce(tester);
       await tester.tap(find.text('Ébullition').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Commencer cette étape'));
@@ -135,6 +147,7 @@ void main() {
       ],
     );
     expect(find.textContaining('Début en double'), findsOneWidget);
+    await masquerAnnonce(tester);
     await tester.tap(find.text('Supprimer'));
     await tester.pump();
     expect(
@@ -517,5 +530,212 @@ void main() {
     // « Terminer » n'en a provoqué aucune lecture avant d'écrire.
     expect(lecturesAuFinish, lectures);
     expect(app.auth.tokenReads, lectures + 1);
+  });
+
+  group('carte de l\'étape en cours', () {
+    Finder carte() => find.byKey(const ValueKey('carte-etape'));
+    Finder progression() => find.byKey(const ValueKey('progression-etape'));
+    RoundedRectangleBorder forme(WidgetTester tester) =>
+        tester.widget<Material>(carte()).shape! as RoundedRectangleBorder;
+
+    testWidgets('en cours puis dépassé : couleurs, bord, icône, même marge', (
+      tester,
+    ) async {
+      final app = await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+      );
+      final scheme = Theme.of(tester.element(carte())).colorScheme;
+      expect(tester.widget<Material>(carte()).color, scheme.primaryContainer);
+      expect(forme(tester).side.width, 2);
+      expect(forme(tester).side.color, scheme.primaryContainer);
+      expect(find.text('ÉTAPE 1 SUR 2 · EN COURS'), findsOneWidget);
+      expect(
+        tester
+            .widget<Icon>(find.byKey(const ValueKey('icone-etat-etape')))
+            .icon,
+        Icons.timer_outlined,
+      );
+      final haut = tester.getTopLeft(carte());
+      final nom = tester.getTopLeft(find.text('Palier 68').first) - haut;
+      final chrono = tester.getTopLeft(minuteur()) - haut;
+
+      // 12:35 : la durée de 45 min est dépassée de 5 min.
+      app.now = hm(12, 35);
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.widget<Material>(carte()).color, scheme.tertiaryContainer);
+      expect(forme(tester).side.width, 2);
+      expect(forme(tester).side.color, scheme.tertiary);
+      expect(find.text('ÉTAPE 1 SUR 2 · DÉPASSÉ'), findsOneWidget);
+      expect(
+        tester
+            .widget<Icon>(find.byKey(const ValueKey('icone-etat-etape')))
+            .icon,
+        Icons.alarm,
+      );
+      // Même place pour la carte et son contenu : rien ne saute.
+      expect(tester.getTopLeft(carte()), haut);
+      expect(tester.getTopLeft(find.text('Palier 68').first) - haut, nom);
+      expect(tester.getTopLeft(minuteur()) - haut, chrono);
+    });
+
+    testWidgets('barre : part écoulée de brewing, exclue de la lecture', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final app = await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+      );
+      LinearProgressIndicator barre() =>
+          tester.widget<LinearProgressIndicator>(progression());
+      // 25 min écoulées sur 45.
+      expect(barre().value, closeTo(25 / 45, 1e-9));
+      expect(
+        find.ancestor(
+          of: progression(),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsWidgets,
+      );
+      expect(find.semantics.byValue('56'), findsNothing);
+      expect(
+        find.bySemanticsLabel('20 minutes 0 seconde restantes'),
+        findsOneWidget,
+      );
+
+      app.now = hm(12, 20);
+      await tester.pump(const Duration(seconds: 1));
+      expect(barre().value, closeTo(35 / 45, 1e-9));
+
+      app.now = hm(12, 35);
+      await tester.pump(const Duration(seconds: 1));
+      expect(barre().value, 1);
+      final scheme = Theme.of(tester.element(carte())).colorScheme;
+      expect(barre().color, scheme.tertiary);
+      semantics.dispose();
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('contraste et cibles, thème ${brightness.name}', (
+        tester,
+      ) async {
+        tester.platformDispatcher.platformBrightnessTestValue = brightness;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+        final app = await ouvrir(
+          tester,
+          now: hm(12, 10),
+          events: [debut('e1', 'k-palier', hm(11, 45))],
+        );
+        await masquerAnnonce(tester);
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        app.now = hm(12, 35);
+        await tester.pump(const Duration(seconds: 1));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      });
+    }
+
+    for (final (nom, largeur, hauteur) in [
+      ('portrait', 400.0, 900.0),
+      ('paysage', 844.0, 390.0),
+    ]) {
+      testWidgets('texte à 200 %, $nom : aucun débordement', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        // Seule erreur écartée : l'annonce « Brassage repris » flottante qui
+        // ne tient pas au-dessus de la barre du bas en paysage à 200 %. Elle
+        // précède la carte de l'étape et se suit à part.
+        final erreurs = <FlutterErrorDetails>[];
+        final original = FlutterError.onError;
+        FlutterError.onError = (details) {
+          if (details.exceptionAsString().contains(
+            'Floating SnackBar presented off screen',
+          )) {
+            return;
+          }
+          erreurs.add(details);
+        };
+        try {
+          final app = await ouvrir(
+            tester,
+            now: hm(12, 10),
+            width: largeur,
+            height: hauteur,
+            events: [debut('e1', 'k-palier', hm(11, 45))],
+          );
+          expect(carte(), findsOneWidget);
+          app.now = hm(12, 35);
+          await tester.pump(const Duration(seconds: 1));
+          expect(find.text('ÉTAPE 1 SUR 2 · DÉPASSÉ'), findsOneWidget);
+          expect(find.text('Terminer l\'étape'), findsOneWidget);
+        } finally {
+          FlutterError.onError = original;
+        }
+        expect(erreurs.map((e) => e.exceptionAsString()), isEmpty);
+      });
+    }
+  });
+
+  testWidgets('chronologie : icône d\'état colorée selon l\'état', (
+    tester,
+  ) async {
+    await ouvrir(
+      tester,
+      now: hm(12, 10),
+      brew: unBrassin(
+        id: _brassinId,
+        brewedAt: hm(11, 0),
+        steps: const [palier, ajout, ebullition],
+      ),
+      events: [
+        debut('e1', 'k-palier', hm(11, 0)),
+        fin('e2', 'k-palier', hm(11, 45)),
+        saut('e3', 'k-ajout', hm(11, 46)),
+        debut('e4', 'k-ebullition', hm(11, 50)),
+      ],
+    );
+    final chronologie = find.byType(ChronologieJour);
+    Color? couleur(IconData icone) => tester
+        .widget<Icon>(
+          find.descendant(of: chronologie, matching: find.byIcon(icone)),
+        )
+        .color;
+    final context = tester.element(chronologie);
+    final scheme = Theme.of(context).colorScheme;
+    expect(
+      couleur(Icons.check_circle_outline),
+      CouleursEtat.of(context).succes,
+    );
+    expect(couleur(Icons.play_circle_outline), scheme.primary);
+    expect(couleur(Icons.skip_next), scheme.onSurfaceVariant);
+  });
+
+  testWidgets('feuille Recette : nom de la recette en en-tête', (tester) async {
+    await ouvrir(
+      tester,
+      now: hm(12, 10),
+      events: [debut('e1', 'k-palier', hm(11, 45))],
+    );
+    await tester.tap(find.byTooltip('Plus d\'actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voir la recette'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Semantics &&
+              (w.properties.header ?? false) &&
+              w.child is Text &&
+              (w.child! as Text).data == 'Blonde',
+        ),
+      ),
+      findsOneWidget,
+    );
   });
 }

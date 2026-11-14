@@ -2095,7 +2095,8 @@ degré. ».
 
 Écran « Préparer le brassage » (propriétaire d'un brassin prévu ou en cours : un autre membre lit
 « Seul le brasseur de ce brassin suit son brassage. », un brassin fini « Le brassage de ce brassin
-est terminé. », sans bouton pour le relancer). À faire sur le téléphone qui
+est terminé. », sans bouton pour le relancer). Titre sur deux lignes : le nom du brassin, puis
+« Prévu ven. 20 nov. 2026 » s'il a une date prévue. À faire sur le téléphone qui
 servira, avec du réseau, avant de le couper. Il attend une réponse du serveur, 15 s au plus, sans
 rien écrire, et liste : brassin et recette figée, équipement, chronologie (« 11 étapes · 5 h 40 ·
 fin vers 16:05 » ; avec un processus, « Brassage : 18 étapes · 6 h 10 · fin vers 16:05 » et
@@ -2122,10 +2123,16 @@ droite de la barre, après ⋮, l'avatar à l'initiale seule ouvre le menu du co
 autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
 sa fiche, en lecture seule.
 
-**Panneau.** Étape en cours : numéro, nom, minuteur lisible à deux mètres (« 32:15 », « 1:05:12 »),
-« restantes sur 45 min », température visée et dernière mesure, « Ensuite : {nom} · vers 12:30 »,
-« Fin prévue vers 16:05 · retard 12 min ». Durée dépassée : « +04:12 », fond distinct, « Dépassé de
-4 min · prévu 45 min » (« Dépassé · prévu 45 min » la première minute). Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
+**Panneau.** Étape en cours, dans une carte de la couleur primaire claire : « ÉTAPE 2 SUR 7 · EN
+COURS » avec une icône de minuteur, nom, minuteur lisible à deux mètres (« 32:15 », « 1:05:12 »),
+barre de progression de la part écoulée de l'étape (non lue par le lecteur d'écran, qui lit le
+minuteur), « restantes sur 45 min », température visée et dernière mesure, « Ensuite : {nom} ·
+vers 12:30 », « Fin prévue vers 16:05 · retard 12 min ». Étiquette d'étape et ligne « Fin
+prévue » en grand (18), lisibles à deux mètres. Durée dépassée : la carte passe en ambre avec un
+bord ambre plus foncé, l'étiquette devient « ÉTAPE 2 SUR 7 · DÉPASSÉ » avec une icône de réveil,
+la barre est pleine, « +04:12 », « Dépassé de 4 min · prévu 45 min » (« Dépassé · prévu 45 min »
+la première minute). La carte garde la même taille et la même marge dans les deux états : rien
+ne bouge au passage en dépassé. Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
 « Prévue vers 12:30 », bouton « Commencer l'étape » (« Fait » pour une étape de 0 min, début et
 fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
 « En fermentation »). Sans chronologie : « Aucune étape. Saisissez vos mesures. ».
@@ -2133,7 +2140,10 @@ fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer 
 **Fin d'un minuteur.** Vibration d'environ une seconde et son de notification, une seule fois
 par étape, écran ouvert seulement : aucune alarme ne sonne écran verrouillé.
 
-**Étapes.** Un appui sur une ligne ouvre : « Commencer cette étape », « Marquer comme sautée » /
+**Étapes.** Chaque ligne de la chronologie porte une icône d'état colorée : verte pour une
+étape faite, de la couleur primaire pour l'étape en cours, grise pour une étape à venir, sautée
+ou non faite ; le libellé (« Terminée », « En cours »…) dit l'état. La colonne d'heure s'élargit
+avec la taille du texte, jusqu'à 30 % de la largeur. Un appui sur une ligne ouvre : « Commencer cette étape », « Marquer comme sautée » /
 « Ne plus sauter », « Corriger l'heure de début », « Corriger l'heure de fin » (l'heure choisie se place au jour le plus proche de la valeur corrigée, sans jamais être dans le futur : un début à 23:50 corrigé à 00:05 passe au lendemain, une fin notée à 08:00 corrigée à 18:00 revient à la veille ; une heure à venir se place à la veille si la veille reste après le début du brassage, sinon elle est refusée ; « La fin doit suivre le début. »), « Annuler le début » / « Annuler la fin » (SnackBar
 « Annuler » 10 s), « Saisir une mesure pour cette étape ». Une étape jamais commencée s'affiche
 « Non faite » dès qu'une étape plus loin a commencé ; marquée sautée, elle s'affiche « Sautée » ; dans les deux cas, elle reste démarrable.
@@ -2152,7 +2162,8 @@ une heure à venir se place à la veille si la veille reste après le début du 
 ni par un glissement : seuls « Annuler » et l'enregistrement le ferment. « Enregistrer la mesure » ferme la
 feuille ; « Mesure enregistrée. » avec « Annuler » 10 s. Un appui sur une mesure ouvre sa
 correction (valeur, note, heure) et « Supprimer la mesure ». Pour changer de type, supprimer et
-ressaisir. Menu ⋮ : « Ajouter une note », « Voir la recette », « Terminer le brassage ». Terminer :
+ressaisir. Menu ⋮ : « Ajouter une note », « Voir la recette » (feuille dont le nom de la recette est
+l'en-tête, au-dessus de ses sous-sections), « Terminer le brassage ». Terminer :
 « Les étapes non commencées resteront non faites. Vous pourrez encore corriger les mesures. ».
 
 **Reprise.** L'application rouvre l'écran du jour au lancement (voir Accueil). Le minuteur se
@@ -2187,8 +2198,8 @@ recalcule depuis l'heure enregistrée, quel que soit le temps écoulé.
 
 Écran « Préparer la journée » d'une journée après le brassage (houblonnage à cru, embouteillage,
 toute journée 2 ou suivante du déroulé), ouvert depuis la fiche, dans la barre de navigation,
-retour vers la fiche. Titre : « Blonde · Houblonnage à cru · prévue le mer. 25 nov. » (« prévue
-aujourd'hui »). « Préparez la journée sur le téléphone qui servira. ». Comme « Préparer le
+retour vers la fiche. Titre sur deux lignes : « Blonde », puis « Houblonnage à cru · prévue le
+mer. 25 nov. » (« prévue aujourd'hui »). « Préparez la journée sur le téléphone qui servira. ». Comme « Préparer le
 brassage », il attend une réponse du serveur 15 s au plus, sans rien écrire, et liste :
 « Brassin et déroulé figé », « Étapes » (« 4 étapes · 25 min · fin vers 10:40 »), compte, écran
 gardé allumé, minuteurs, navigateur (web). Journée d'embouteillage : « Prix et frais », « Lus sur

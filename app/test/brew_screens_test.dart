@@ -5,6 +5,7 @@ import 'package:kass_beer/core/presentation/etiquette.dart';
 import 'package:kass_beer/core/presentation/fiche.dart';
 import 'package:kass_beer/core/presentation/ligne_editeur.dart';
 import 'package:kass_beer/core/router/app_router.dart';
+import 'package:kass_beer/core/theme/app_theme.dart';
 import 'package:kass_beer/features/brew_day/presentation/brew_day_screen.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/presentation/brew_detail_screen.dart';
@@ -404,6 +405,66 @@ void main() {
   });
 
   group('Préparer', () {
+    testWidgets('titre sur deux lignes, icônes colorées selon leur état', (
+      tester,
+    ) async {
+      await go(
+        tester,
+        '/brassins/b1/preparer',
+        before: (app) {
+          app.brews.publish([
+            unBrassin(
+              status: BrewStatus.planned,
+              plannedFor: DateTime(2026, 11, 20),
+            ),
+          ]);
+          app.brews.publishEvents('b1', const []);
+        },
+      );
+      // Un seul en-tête : le nom, puis la date sur la ligne suivante.
+      final enTete = find.ancestor(
+        of: find.text('Prévu ven. 20 nov. 2026'),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && (w.properties.header ?? false),
+        ),
+      );
+      expect(enTete, findsOneWidget);
+      expect(
+        find.descendant(of: enTete, matching: find.text('Blonde du jour')),
+        findsOneWidget,
+      );
+      expect(
+        tester.getTopLeft(find.text('Prévu ven. 20 nov. 2026')).dy,
+        greaterThan(
+          tester
+                  .getBottomLeft(
+                    find.descendant(
+                      of: enTete,
+                      matching: find.text('Blonde du jour'),
+                    ),
+                  )
+                  .dy -
+              1,
+        ),
+      );
+      // Couleur dérivée de l'état de la ligne : fait (Équipement) en succès,
+      // information (Minuteurs) en onSurfaceVariant.
+      Icon icone(String titre) => tester.widget<Icon>(
+        find.descendant(
+          of: find.ancestor(of: find.text(titre), matching: find.byType(Row)),
+          matching: find.byType(Icon),
+        ),
+      );
+      final context = tester.element(find.text('Équipement'));
+      expect(icone('Équipement').icon, Icons.check_circle_outline);
+      expect(icone('Équipement').color, CouleursEtat.of(context).succes);
+      expect(icone('Minuteurs').icon, Icons.info_outline);
+      expect(
+        icone('Minuteurs').color,
+        Theme.of(context).colorScheme.onSurfaceVariant,
+      );
+    });
+
     testWidgets('n\'écrit rien, puis Commencer : lot, nom lu à l\'ouverture', (
       tester,
     ) async {
