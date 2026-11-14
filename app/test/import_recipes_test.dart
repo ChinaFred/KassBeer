@@ -13,7 +13,9 @@ import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/recipes/domain/import_recettes.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
+import 'package:kass_beer/features/recipes/presentation/imported_recipe_screen.dart';
 import 'package:kass_beer/features/recipes/presentation/libelles_echange.dart';
+import 'package:kass_beer/features/recipes/presentation/recipe_detail_screen.dart';
 import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
 
 import 'support/brew_fixtures.dart';
@@ -1014,6 +1016,105 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text(TextesImport.termine), findsOneWidget);
       });
+
+      // Parcours réel du ticket #60 : la coquille (liste des recettes) est
+      // dans la pile sous l'import, ouvert par `push` ; la fiche importée est
+      // ouverte depuis le compte rendu.
+      Future<TestApp> ouvrirFicheImportee(WidgetTester tester) async {
+        final app = TestApp();
+        await app.pump(tester, height: 4000);
+        app.signIn(brewerUser, member: brewerMember);
+        app.equipment.publish([grainfather]);
+        await tester.pumpAndSettle();
+        expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Importer'));
+        await tester.pumpAndSettle();
+        expect(find.text(TextesImport.titre), findsOneWidget);
+        await choisir(
+          tester,
+          app,
+          FichierChoisi('blonde.json', fixture('export/blonde-essai.json')),
+        );
+        await tester.tap(find.text(TextesImport.importer(1)));
+        await tester.pumpAndSettle();
+        expect(find.text(TextesImport.termine), findsOneWidget);
+        // Le faux dépôt n'ajoute pas la recette créée à la liste lue : la
+        // lecture du cache la rend, comme l'écriture locale de Firestore.
+        final write = app.recipes.writes.single;
+        app.recipes.publish([
+          Recipe(
+            id: write.id,
+            ownerUid: write.ownerUid!,
+            content: write.content!,
+          ),
+        ]);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Blonde d\'essai'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byType(RecipeDetailScreen), findsOneWidget);
+        expect(
+          find.widgetWithText(AppBar, ImportedRecipeScreen.titre),
+          findsOneWidget,
+        );
+        expect(find.text(TextesImport.termine), findsNothing);
+        return app;
+      }
+
+      testWidgets(
+        'ticket #60 : depuis la liste, la fiche s\'ouvre par-dessus le compte '
+        'rendu, et le retour y ramène',
+        (tester) async {
+          await ouvrirFicheImportee(tester);
+
+          await tester.tap(find.byType(BackButton));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.byType(RecipeDetailScreen), findsNothing);
+          expect(find.text(TextesImport.termine), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'ticket #60 : Modifier puis Enregistrer ramène à la fiche importée, '
+        'puis au compte rendu',
+        (tester) async {
+          await ouvrirFicheImportee(tester);
+
+          await tester.tap(find.text('Modifier'));
+          await tester.pumpAndSettle();
+          expect(find.text('Modifier la recette'), findsOneWidget);
+          await tester.tap(find.text('Enregistrer'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(
+            find.widgetWithText(AppBar, ImportedRecipeScreen.titre),
+            findsOneWidget,
+          );
+          expect(find.byType(RecipeDetailScreen), findsOneWidget);
+
+          await tester.tap(find.byType(BackButton));
+          await tester.pumpAndSettle();
+          expect(find.text(TextesImport.termine), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'ticket #60 : Supprimer depuis la fiche importée ramène au compte '
+        'rendu',
+        (tester) async {
+          await ouvrirFicheImportee(tester);
+
+          await tester.tap(find.text('Supprimer'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.widgetWithText(FilledButton, 'Supprimer'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.byType(RecipeDetailScreen), findsNothing);
+          expect(find.text(TextesImport.termine), findsOneWidget);
+        },
+      );
 
       testWidgets('20 : « Import terminé » annoncé une fois ; refus annoncé', (
         tester,

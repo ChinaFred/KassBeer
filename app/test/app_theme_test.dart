@@ -45,6 +45,12 @@ void main() {
         'succès': (etat.succes, etat.surSucces),
         'conteneur succès': (etat.conteneurSucces, etat.surConteneurSucces),
         'surface / succès': (s.surface, etat.succes),
+        // Texte coloré dans une carte (`cardTheme` : surfaceContainerLow).
+        'surfaceContainerLow / onSurface': (s.surfaceContainerLow, s.onSurface),
+        'surfaceContainerLow / primary': (s.surfaceContainerLow, s.primary),
+        'surfaceContainerLow / tertiary': (s.surfaceContainerLow, s.tertiary),
+        'surfaceContainerLow / error': (s.surfaceContainerLow, s.error),
+        'surfaceContainerLow / succès': (s.surfaceContainerLow, etat.succes),
         // Bouton texte posé dans un encadré coloré.
         'primaryContainer / primary': (s.primaryContainer, s.primary),
         'secondaryContainer / primary': (s.secondaryContainer, s.primary),
@@ -57,6 +63,17 @@ void main() {
           expect(contraste(fond, texte), greaterThanOrEqualTo(4.5));
         });
       }
+
+      test('barre de défilement en onSurfaceVariant, 6 px', () {
+        final barre = theme.scrollbarTheme;
+        for (final etat in [
+          <WidgetState>{},
+          {WidgetState.hovered},
+        ]) {
+          expect(barre.thumbColor?.resolve(etat), s.onSurfaceVariant);
+          expect(barre.thickness?.resolve(etat), 6);
+        }
+      });
 
       test('les surfaces vont de la plus basse à la plus haute', () {
         final niveaux = [
