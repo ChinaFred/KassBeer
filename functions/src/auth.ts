@@ -80,31 +80,46 @@ export const UNAUTHENTICATED_MESSAGE = "Connexion requise.";
 export const MEMBER_DENIED_MESSAGE = "Accès réservé aux membres.";
 export const ADMIN_DENIED_MESSAGE = "Accès réservé à l'administrateur.";
 
+/**
+ * Vrai pour le compte fondateur : administrateur dont le document `members/` porte
+ * `founder === true` (booléen strict). Les règles refusent ce champ à tout client : seule la
+ * console Firebase le pose. Il ne change aucun accès, seulement le plafond des lancements
+ * (`FOUNDER_LAUNCHES_PER_DAY`). Pure.
+ */
+export function isFounder(
+  token: TokenClaims | null | undefined,
+  member: Record<string, unknown> | null,
+): boolean {
+  return accessFrom(token, member) === "admin" && member?.founder === true;
+}
+
 async function requireAccess(
   req: AuthLike,
   need: "member" | "admin",
   lookup: MemberLookup,
-): Promise<{ uid: string }> {
+): Promise<{ uid: string; founder: boolean }> {
   const auth = req.auth;
   if (auth === null || auth === undefined || typeof auth.uid !== "string") {
     throw new HttpsError("unauthenticated", UNAUTHENTICATED_MESSAGE, {
       reason: UNAUTHENTICATED_MESSAGE,
     });
   }
-  const access = await memberAccess(auth.token, lookup);
+  const key = memberKeyOf(auth.token);
+  const member = key === null ? null : await lookup(key);
+  const access = accessFrom(auth.token, member);
   const granted = need === "admin" ? access === "admin" : access !== "none";
   if (!granted) {
     const message = need === "admin" ? ADMIN_DENIED_MESSAGE : MEMBER_DENIED_MESSAGE;
     throw new HttpsError("permission-denied", message, { reason: message });
   }
-  return { uid: auth.uid };
+  return { uid: auth.uid, founder: isFounder(auth.token, member) };
 }
 
 /** Exige un membre (P30). Première instruction de chaque callable ouverte aux membres. */
 export function requireMember(
   req: AuthLike,
   lookup: MemberLookup = firestoreMemberLookup,
-): Promise<{ uid: string }> {
+): Promise<{ uid: string; founder: boolean }> {
   return requireAccess(req, "member", lookup);
 }
 
@@ -112,7 +127,7 @@ export function requireMember(
 export function requireAdmin(
   req: AuthLike,
   lookup: MemberLookup = firestoreMemberLookup,
-): Promise<{ uid: string }> {
+): Promise<{ uid: string; founder: boolean }> {
   return requireAccess(req, "admin", lookup);
 }
 

@@ -196,6 +196,40 @@ void main() {
       );
     });
 
+    test('compte fondateur : son compteur et son plafond, à part du groupe', () {
+      final etat = EtatLancements.fromFirestore({
+        'day': '20261114',
+        'count_day': 10,
+        'founder_count_day': 4,
+        'month': '202611',
+        'count_month': 14,
+        'per_day': 10,
+        'founder_per_day': 50,
+      });
+      expect(etat.vuePour(fondateur: false).plafondAtteint, isTrue);
+      final fondateur = etat.vuePour(fondateur: true);
+      expect(fondateur.restants, 46);
+      expect(
+        ligneQuota(fondateur),
+        'Lancements restants le 14/11 : 46 sur 50.',
+      );
+      expect(
+        ligneCompteur(fondateur),
+        'Lancements de sessions : 4 sur 50 le 14/11 · 14 en novembre 2026',
+      );
+      // Document d'avant le compteur du fondateur : inconnu, jamais le groupe.
+      expect(
+        ligneQuota(
+          const EtatLancements(
+            day: '20261114',
+            countDay: 10,
+            perDay: 10,
+          ).vuePour(fondateur: true),
+        ),
+        'Lancements restants : inconnu.',
+      );
+    });
+
     test('lien de session : https sur claude.ai seul', () {
       expect(
         lienSessionOuvrable('https://claude.ai/code/session_1'),
