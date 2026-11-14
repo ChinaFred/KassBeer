@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
 
 import 'support/fakes.dart';
 
@@ -185,43 +187,153 @@ void main() {
     expect(m.allowedDecisions, isNull);
   });
 
-  test(
-    'décision : champs du contrat seuls, sans le texte au rapport',
-    () async {
-      await firestore.collection('tickets').doc('a').set({
-        'status': 'received',
+  group('décisions par callable (T7)', () {
+    final calls = <(String, Map<String, Object?>)>[];
+    FirestoreTicketsRepository depot(AppelCallable callable) =>
+        FirestoreTicketsRepository(
+          errorReportService: errors,
+          firestore: firestore,
+          callable: callable,
+        );
+
+    setUp(calls.clear);
+
+    test('Valider, Refuser, Clore : nom de la callable et arguments', () async {
+      final repository = depot((name, data) async {
+        calls.add((name, data));
+        return {'status': 'refused', 'changed': true, 'textKept': false};
       });
-      await repository.createDecision(
+      final valide = await repository.decide(
         ticketId: 'a',
-        id: 'd1',
+        action: TicketDecisionAction.validate,
+      );
+      expect(valide.echec, isNull);
+      expect(valide.texteGarde, isFalse);
+      await repository.decide(
+        ticketId: 'a',
         action: TicketDecisionAction.refuse,
         text: 'Hors du périmètre.',
-        requestedByUid: 'uid-admin',
       );
-      await repository.createDecision(
+      await repository.decide(
         ticketId: 'a',
-        id: 'd2',
-        action: TicketDecisionAction.validate,
-        text: null,
-        requestedByUid: 'uid-admin',
+        action: TicketDecisionAction.close,
+        text: 'Fait.',
       );
-      final decisions = firestore.collection('tickets/a/decisions');
-      final d1 = (await decisions.doc('d1').get()).data()!;
-      expect(d1.keys.toSet(), {
-        'action',
-        'text',
-        'state',
-        'requested_by_uid',
-        'requested_at',
+      expect(calls.map((c) => c.$1), [
+        'validateTicket',
+        'refuseTicket',
+        'closeTicket',
+      ]);
+      expect(calls.map((c) => c.$2), [
+        {'ticketId': 'a'},
+        {'ticketId': 'a', 'text': 'Hors du périmètre.'},
+        {'ticketId': 'a', 'text': 'Fait.'},
+      ]);
+      expect(errors.reports, isEmpty);
+      // Aucune écriture client dans `decisions/` ni sur le ticket.
+      expect((await firestore.collection('tickets').get()).docs, isEmpty);
+    });
+
+    test('texte gardé par le serveur : rendu', () async {
+      final repository = depot(
+        (name, data) async => {
+          'status': 'refused',
+          'changed': true,
+          'decisionId': 'd1',
+          'textKept': true,
+        },
+      );
+      final resultat = await repository.decide(
+        ticketId: 'a',
+        action: TicketDecisionAction.refuse,
+        text: 'Nouveau texte.',
+      );
+      expect(resultat.echec, isNull);
+      expect(resultat.texteGarde, isTrue);
+    });
+
+    test('refus motivé : rendu, rapporté sans le texte', () async {
+      final repository = depot(
+        (name, data) async => throw FirebaseFunctionsException(
+          code: 'aborted',
+          message: 'Motif publié, mais l\'Issue n\'a pas été fermée.',
+          details: {
+            'reason': 'Motif publié, mais l\'Issue n\'a pas été fermée.',
+            'code': 'refuse_partial',
+            'partial': true,
+          },
+        ),
+      );
+      final echec = await repository.decide(
+        ticketId: 'a',
+        action: TicketDecisionAction.refuse,
+        text: 'Texte secret du motif',
+      );
+      expect(echec.echec!.partiel, isTrue);
+      final report = errors.reports.single;
+      expect(report.feature, 'tickets.decide');
+      expect(report.context, contains('action=refuse'));
+      expect(report.context, contains('reason_code=refuse_partial'));
+      expect(report.context, contains('partial'));
+      expect(report.context, isNot(contains('secret')));
+    });
+
+    test('panne interne ou erreur sans réponse : résultat inconnu', () async {
+      final interne = depot(
+        (name, data) async =>
+            throw FirebaseFunctionsException(code: 'internal', message: 'x'),
+      );
+      expect(
+        (await interne.decide(
+          ticketId: 'a',
+          action: TicketDecisionAction.validate,
+        )).echec!.cause,
+        CauseEchecReponse.delai,
+      );
+      final perdu = depot((name, data) async => throw StateError('coupure'));
+      expect(
+        (await perdu.decide(
+          ticketId: 'a',
+          action: TicketDecisionAction.validate,
+        )).echec!.cause,
+        CauseEchecReponse.delai,
+      );
+      expect(errors.reports.map((r) => r.feature), [
+        'tickets.decide',
+        'tickets.decide',
+      ]);
+    });
+
+    test('Relancer l\'envoi : statut et Issue rendus par le serveur', () async {
+      final repository = depot((name, data) async {
+        calls.add((name, data));
+        return {'status': 'received', 'changed': true, 'issueNumber': 12};
       });
-      expect(d1['action'], 'refuse');
-      expect(d1['state'], 'pending');
-      expect(d1['requested_at'], isA<Timestamp>());
-      final d2 = (await decisions.doc('d2').get()).data()!;
-      expect(d2.containsKey('text'), isFalse);
-      expect(repository.newDecisionId('a'), isNotEmpty);
-    },
-  );
+      final resultat = await repository.retrySend('a');
+      expect(calls.single.$1, 'retryTicketSend');
+      expect(calls.single.$2, {'ticketId': 'a'});
+      expect(resultat.status, TicketStatus.received);
+      expect(resultat.issueNumber, 12);
+      expect(resultat.echec, isNull);
+    });
+
+    test('relance refusée : rapportée, échec rendu', () async {
+      final repository = depot(
+        (name, data) async => throw FirebaseFunctionsException(
+          code: 'not-found',
+          message: 'Ce ticket n\'existe plus.',
+          details: {
+            'reason': 'Ce ticket n\'existe plus.',
+            'code': 'ticket_missing',
+          },
+        ),
+      );
+      final resultat = await repository.retrySend('absent');
+      expect(resultat.echec!.cause, CauseEchecReponse.motif);
+      expect(errors.reports.single.feature, 'tickets.retry_send');
+      expect(errors.reports.single.context, startsWith('tickets/absent '));
+    });
+  });
 
   test('décisions lues : tolérance aux valeurs inconnues', () async {
     final decisions = firestore.collection('tickets/a/decisions');
@@ -254,32 +366,6 @@ void main() {
     );
     expect(errors.reports.single.feature, 'tickets.read_decision');
     expect(errors.reports.single.context, isNot(contains('12')));
-  });
-
-  test('relances : retry_requested_at seul', () async {
-    final ticket = firestore.collection('tickets').doc('a');
-    await ticket.set({'status': 'send_failed'});
-    await ticket.collection('decisions').doc('d1').set({'state': 'failed'});
-    expect(await repository.retrySend('a'), isTrue);
-    expect(
-      await repository.retryDecision(ticketId: 'a', decisionId: 'd1'),
-      isTrue,
-    );
-    expect(
-      (await ticket.get()).data()!['retry_requested_at'],
-      isA<Timestamp>(),
-    );
-    expect(
-      (await ticket.collection('decisions').doc('d1').get())
-          .data()!['retry_requested_at'],
-      isA<Timestamp>(),
-    );
-  });
-
-  test('relance refusée : rapportée sans texte, rend faux', () async {
-    expect(await repository.retrySend('absent'), isFalse);
-    expect(errors.reports.single.feature, 'tickets.retry_send');
-    expect(errors.reports.single.context, startsWith('tickets/absent '));
   });
 
   test('état du jeton : absent, lu, illisible', () async {

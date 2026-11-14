@@ -118,8 +118,11 @@ export const ISSUES_PER_PASS = 30;
 /** Tickets `pending` renvoyés au plus par passe. */
 export const PENDING_PER_PASS = 20;
 
-/** Longueur gardée d'une réponse relevée sur GitHub. */
-export const REPLY_MAX_CHARS = 2000;
+/**
+ * Longueur gardée d'une réponse relevée sur GitHub (`reply_text`), en points de code : celle
+ * du motif de Refuser et du commentaire de Clore (4 000 depuis T7, P53).
+ */
+export const REPLY_MAX_CHARS = 4000;
 
 /**
  * Fonctions dont Admin › Journaux filtre la sortie (`queryLogs`, ADR-011, J2, P49) : les
@@ -129,11 +132,13 @@ export const REPLY_MAX_CHARS = 2000;
  */
 export const QUERYABLE_FUNCTIONS = [
   "publishTicket",
-  "onDecisionCreated",
-  "onDecisionUpdated",
   "syncTickets",
   "githubTicketWebhook",
   "answerTicketAnalysis",
+  "validateTicket",
+  "refuseTicket",
+  "closeTicket",
+  "retryTicketSend",
   "launchTicketAnalysis",
   "launchTicketDevelopment",
   "launchTicketDelivery",

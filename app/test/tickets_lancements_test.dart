@@ -584,6 +584,11 @@ void main() {
         ),
         findsOneWidget,
       );
+      // Résultat inconnu : message d'échec de 10 s.
+      expect(
+        tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+        kDureeMessageEchec,
+      );
       expect(app.tickets.launches, hasLength(1));
     });
 
@@ -796,18 +801,20 @@ void main() {
       },
     );
 
-    testWidgets('section vide : pas d\'invitation avant la lecture des '
-        'décisions', (tester) async {
+    testWidgets('section vide : invitation sans attendre l\'historique des '
+        'décisions (T7)', (tester) async {
       const invitation =
           'Appuyez sur « Lancer l\'analyse », en bas de la fiche.';
       await fiche(tester, recu(), etat: quota, decisionsLues: false);
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Lancer l\'analyse'), findsNothing);
+      // La barre ne dépend plus de l'historique des décisions : le bouton
+      // vient de `allowed_decisions` seul.
+      expect(find.text('Lancer l\'analyse'), findsOneWidget);
       await tester.ensureVisible(find.text('Lancements (0)'));
       await tester.tap(find.text('Lancements (0)'));
       await tester.pump(const Duration(seconds: 1));
       expect(find.text(SectionLancements.vide), findsOneWidget);
-      expect(find.text(invitation), findsNothing);
+      expect(find.text(invitation), findsOneWidget);
     });
 
     testWidgets('plafond atteint et précisions en attente : deux lignes', (
@@ -859,7 +866,7 @@ void main() {
         tester.widget<ButtonStyleButton>(bouton('Lancer l\'analyse')).onPressed,
         isNull,
       );
-      expect(find.text(kRepondreEtLancerHorsLigne), findsOneWidget);
+      expect(find.text(kActionsHorsLigne), findsOneWidget);
       expect(find.byType(BoiteLancement), findsNothing);
     });
 
@@ -874,7 +881,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Lancer l\'analyse'), findsNothing);
-      expect(find.text(kLancerHorsLigne), findsOneWidget);
+      expect(find.text(kActionsHorsLigne), findsOneWidget);
       expect(find.text(SectionLancements.horsLigne), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsNothing);
     });

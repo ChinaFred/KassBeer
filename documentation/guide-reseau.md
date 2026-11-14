@@ -212,6 +212,14 @@ ticket validé dans l'application (P42). La section « Coûts variables » de
 `CLAUDE.md` décrit ce premier poste. `ci.yml` et `deploy.yml` ajoutent les deux callables de T4 à la
 liste fermée et leurs secrets au contrôle des secrets (P10, accord de l'utilisateur).
 
+Le 2026-11-14, lot T7 avec l'accord de l'utilisateur : P23, P25, P26, P42 et P44 modifiés, P53
+ajouté (`securite`) : Valider, Refuser, Clore et « Relancer l'envoi » deviennent les callables
+`validateTicket`, `refuseTicket`, `closeTicket` et `retryTicketSend` (une instance chacune) ;
+`tickets/{id}/decisions/` reste l'historique, écrit par le serveur seul ; motif de 5 à 4 000
+caractères ; reprise d'une décision interrompue par l'admin seul. « Le projet » et « Tickets »
+suivent. `ci.yml` et `deploy.yml` ajoutent les quatre callables et une liste fermée des
+déclencheurs (P10, accord de l'utilisateur).
+
 Le 2026-11-14, complément du lot T6 avec l'accord de l'utilisateur : P23 et P48 modifiés (capture
 envoyée dans l'heure, dimensions contrôlées, image choisie réencodée en PNG, rétention de 180 jours).
 

@@ -1,8 +1,9 @@
 /**
- * Règles pures des décisions de l'administrateur (ADR-006, lot T2) : décisions permises
- * par statut, prise d'une décision, gabarit du commentaire, reconnaissance de ce qui est
- * déjà fait sur GitHub, étapes à faire et message d'échec. Aucune lecture ni écriture ici :
- * `decisions.ts` lit et écrit.
+ * Règles pures des décisions de l'administrateur (ADR-006, lot T2 ; ADR-008, lot T7) :
+ * décisions permises par statut, précondition de `validateTicket`, `refuseTicket` et
+ * `closeTicket`, texte de Refuser et de Clore, gabarit du commentaire, reconnaissance de ce
+ * qui est déjà fait sur GitHub, étapes à faire et message d'échec. Aucune lecture ni écriture
+ * ici : `decisions.ts` lit et écrit.
  */
 
 import {
@@ -13,7 +14,7 @@ import {
   type IssueView,
   type TicketStatus,
 } from "./model";
-import { publicText } from "./text";
+import { cleanMultiline, publicText } from "./text";
 
 export const DECISION_ACTIONS = ["validate", "refuse", "close"] as const;
 export type DecisionAction = (typeof DECISION_ACTIONS)[number];
@@ -22,24 +23,19 @@ export function isDecisionAction(value: unknown): value is DecisionAction {
   return typeof value === "string" && (DECISION_ACTIONS as readonly string[]).includes(value);
 }
 
-/** Identifiant de décision plausible : il part sur le dépôt public (ligne « Décision »). */
-export function isPlausibleDecisionId(value: string): boolean {
-  return /^[A-Za-z0-9_-]{1,128}$/.test(value);
-}
-
 // ── Décisions permises ──────────────────────────────────────────────────────
 
 /**
- * « Répondre » (`answerTicketAnalysis`, ADR-008, T3) : une callable, pas un document de
- * `decisions/` (les règles refusent `answer` dans `decisions/`). Elle figure dans
- * `allowed_decisions`, que le client lit à part des trois actions des documents.
+ * « Répondre » (`answerTicketAnalysis`, ADR-008, T3) : une callable qui n'écrit aucun
+ * document de `decisions/`. Elle figure dans `allowed_decisions`, que le client lit à part
+ * des trois décisions.
  */
 export const ANSWER_ACTION = "answer";
 
 /**
  * « Lancer l'analyse » et « Lancer le développement » (`launchTicketAnalysis`,
- * `launchTicketDevelopment`, ADR-008, T4) : des callables, jamais des documents de
- * `decisions/` (les règles les refusent). Le client lit ces entrées à part, comme `answer`.
+ * `launchTicketDevelopment`, ADR-008, T4) : des callables qui n'écrivent aucun document de
+ * `decisions/`. Le client lit ces entrées à part, comme `answer`.
  */
 export const LAUNCH_ANALYSIS_ACTION = "launch_analysis";
 export const LAUNCH_DEVELOPMENT_ACTION = "launch_development";
@@ -63,7 +59,7 @@ export type AllowedDecision =
 
 /**
  * Vrai si `validated_by_app_at` est posé : Valider a été appliqué depuis l'application
- * (décision `validate` de `decisions/`) depuis le dernier retour du ticket sous `validated`.
+ * (`validateTicket`) depuis le dernier retour du ticket sous `validated`.
  * Une étiquette `validé` posée sur GitHub ne le pose pas (ADR-008, décision de
  * l'utilisateur du 2026-11-13). Pure.
  */
@@ -142,167 +138,181 @@ export const REJECT_NOT_ALLOWED = "Cette décision n'est plus possible pour ce s
 export const REJECT_LEASE_TAKEN = "Une décision est déjà en cours sur ce ticket.";
 export const REJECT_TICKET_MISSING = "Ce ticket n'existe plus.";
 export const REJECT_NO_ISSUE = "Ce ticket n'a pas encore d'Issue GitHub.";
-export const REJECT_INVALID = "Décision illisible.";
 export const REJECT_ISSUE_CLOSED = "Ce ticket a déjà été clos sur GitHub.";
 /** Refuser ou Clore pendant la livraison de ce ticket (P44, décision du 2026-11-14). */
 export const REJECT_DELIVERY_RUNNING = "Une livraison est en cours sur ce ticket. Attendez sa fin.";
 
-export interface DecisionClaimInput {
-  decision: {
-    state: unknown;
-    action: unknown;
-    text: unknown;
-    /** `lease_until` de la décision, en millisecondes, ou `null`. */
-    leaseUntilMs: number | null;
-    /** Vrai si `retry_requested_at` est posé. */
-    retryRequested: boolean;
-  };
-  /** `null` si le ticket n'existe plus. */
+/** Décision la plus récente du ticket (`requested_at` décroissant), telle que lue. */
+export interface LatestDecision {
+  id: string;
+  action: unknown;
+  state: unknown;
+  /** `lease_until` de la décision, en millisecondes, ou `null`. */
+  leaseUntilMs: number | null;
+  stepsDone: unknown;
+  text: unknown;
+  commentId: unknown;
+}
+
+export interface DecisionStartInput {
+  action: DecisionAction;
+  /** `null` si le ticket n'existe pas. */
   ticket: {
     status: unknown;
-    allowedDecisions: unknown;
     /** `validated_by_app_at` du ticket, tel que lu. */
-    validatedByAppAt?: unknown;
+    validatedByAppAt: unknown;
     /** `decision_lease_until` du ticket, en millisecondes, ou `null`. */
     leaseUntilMs: number | null;
     issueNumber: unknown;
     /**
      * Vrai si `ticket_status/launches.delivery_running` porte ce ticket et que son échéance
-     * est future : Refuser et Clore sont rejetés (P44). Absent : faux.
+     * est future : Refuser et Clore sont refusés (P44).
      */
-    deliveryRunning?: boolean;
+    deliveryRunning: boolean;
   } | null;
+  latest: LatestDecision | null;
   nowMs: number;
 }
 
-export type DecisionClaimVerdict =
-  | { kind: "skip"; why: "done" | "in_progress" | "failed_without_retry" | "unknown_state" }
-  | { kind: "reject"; reason: string }
-  | { kind: "claim"; action: DecisionAction; issueNumber: number; resumed: boolean };
+/** Refus d'une décision avant tout appel à GitHub : code de `HttpsError`, code stable, motif. */
+export interface DecisionRefusal {
+  kind: "refuse";
+  code: "not-found" | "failed-precondition";
+  machine: string;
+  reason: string;
+}
+
+export type DecisionStart =
+  | DecisionRefusal
+  /** Déjà fait (réponse perdue puis second appui) : rien n'est publié. */
+  | { kind: "done"; status: TicketStatus }
+  | {
+      kind: "start";
+      issueNumber: number;
+      /**
+       * Décision reprise (même identifiant, même ligne `Décision <id>`), ou `null` : une
+       * nouvelle décision est créée. `keepText` : le commentaire est déjà publié, le texte
+       * stocké est gardé et le texte reçu ignoré.
+       */
+      resume: { id: string; keepText: boolean; knownCommentId: number | null } | null;
+    };
+
+function refuse(code: DecisionRefusal["code"], machine: string, reason: string): DecisionRefusal {
+  return { kind: "refuse", code, machine, reason };
+}
+
+/** Vrai si `stepsDone` lu dans une décision contient l'étape `step`. Pure. */
+function hasStep(stepsDone: unknown, step: DecisionStep): boolean {
+  return Array.isArray(stepsDone) && stepsDone.includes(step);
+}
 
 /**
- * Ce que fait le déclencheur d'une décision lue en transaction avec son ticket.
+ * Ce que fait `validateTicket`, `refuseTicket` ou `closeTicket` (ADR-008, T7, P53), lu dans
+ * la transaction du bail avec le ticket, le verrou des livraisons et la décision la plus
+ * récente du ticket. Dans l'ordre :
  *
- * - `applied` et `rejected` : rien (rejeu) ; `applying` au bail actif : rien ;
- *   `failed` sans reprise demandée : rien.
- * - `pending`, `failed` avec reprise, `applying` au bail expiré : la décision est prise,
- *   sauf si le ticket n'existe plus, n'a pas d'Issue, porte le bail d'une autre décision,
- *   ou si son statut ne permet plus l'action : absente de `allowed_decisions` stocké, ou de
- *   `allowedDecisions(status)` recalculé (P42), ou si une livraison de ce ticket est en
- *   cours et l'action est Refuser ou Clore (P44).
- *
- * Une reprise (`failed` ou `applying`) sur un ticket déjà au statut visé passe aussi :
- * la passe horaire a pu appliquer ce qu'un essai précédent a fait sur GitHub, et la
- * reconnaissance des étapes faites empêche une double publication. Pure.
+ * 1. ticket absent : `not-found` ;
+ * 2. déjà fait : Valider sur un ticket validé dans l'application ; Refuser ou Clore sur un
+ *    ticket déjà au statut visé dont la dernière décision de cette action est `applied` ;
+ * 3. Issue absente, bail actif : refus ;
+ * 4. reprise de la décision la plus récente si elle est de la même action et `failed`,
+ *    `pending` (écrite par un client d'avant T7, jamais prise), ou `applying` au bail
+ *    expiré ;
+ * 5. action absente de `allowedDecisions(status, validatedByApp)` recalculé, sans lire la
+ *    liste stockée (P42) : refus, sauf pour une reprise sur un ticket déjà au statut visé
+ *    (la passe horaire a pu relire l'Issue fermée par l'essai précédent) ;
+ * 6. Refuser ou Clore pendant une livraison de ce ticket : refus (P44). Pure.
  */
-export function decisionClaimVerdict(input: DecisionClaimInput): DecisionClaimVerdict {
-  const { decision, ticket, nowMs } = input;
-  const state = decision.state;
-  if (state === "applied" || state === "rejected") return { kind: "skip", why: "done" };
-  let resumed = false;
-  if (state === "applying") {
-    if (decision.leaseUntilMs !== null && decision.leaseUntilMs > nowMs) {
-      return { kind: "skip", why: "in_progress" };
+export function decisionStart(input: DecisionStartInput): DecisionStart {
+  const { action, ticket, latest, nowMs } = input;
+  if (ticket === null) return refuse("not-found", "ticket_missing", REJECT_TICKET_MISSING);
+  const byApp = isValidatedByApp(ticket.validatedByAppAt);
+  const target = statusAfterDecision(action);
+  const sameAction = latest !== null && latest.action === action;
+  if (action === "validate" ? ticket.status === target && byApp : ticket.status === target) {
+    if (action === "validate" || (sameAction && latest?.state === "applied")) {
+      return { kind: "done", status: target };
     }
-    resumed = true;
-  } else if (state === "failed") {
-    if (!decision.retryRequested) return { kind: "skip", why: "failed_without_retry" };
-    resumed = true;
-  } else if (state !== "pending") {
-    return { kind: "skip", why: "unknown_state" };
   }
-
-  const action = decision.action;
-  if (!isDecisionAction(action) || !textFitsAction(action, decision.text)) {
-    return { kind: "reject", reason: REJECT_INVALID };
-  }
-  if (ticket === null) return { kind: "reject", reason: REJECT_TICKET_MISSING };
   const issueNumber = ticket.issueNumber;
   if (typeof issueNumber !== "number" || !Number.isSafeInteger(issueNumber) || issueNumber < 1) {
-    return { kind: "reject", reason: REJECT_NO_ISSUE };
+    return refuse("failed-precondition", "no_issue", REJECT_NO_ISSUE);
   }
-  // Une décision reprise après l'expiration de son bail retrouve le bail du ticket
-  // expiré lui aussi (posés ensemble) ; un bail actif est celui d'une autre décision.
   if (ticket.leaseUntilMs !== null && ticket.leaseUntilMs > nowMs) {
-    return { kind: "reject", reason: REJECT_LEASE_TAKEN };
+    return refuse("failed-precondition", "decision_in_progress", REJECT_LEASE_TAKEN);
   }
-  const stored = Array.isArray(ticket.allowedDecisions)
-    ? (ticket.allowedDecisions as unknown[])
-    : [];
-  // P42 : la liste stockée peut dater d'une règle plus ancienne (elle n'est réécrite qu'au
-  // changement de statut ou par la passe horaire) ; la règle du code tranche aussi.
-  const allowed =
-    stored.includes(action) &&
-    (
-      allowedDecisions(ticket.status, isValidatedByApp(ticket.validatedByAppAt)) as string[]
-    ).includes(action);
-  // Une reprise de Valider sur un ticket déjà `validated` passe seulement si la validation
-  // de l'application n'est pas encore écrite (sinon il n'y a rien à refaire).
-  const alreadyThere =
-    resumed &&
-    ticket.status === statusAfterDecision(action) &&
-    !(action === "validate" && isValidatedByApp(ticket.validatedByAppAt));
+  const resumable =
+    sameAction &&
+    (latest.state === "failed" ||
+      latest.state === "pending" ||
+      (latest.state === "applying" &&
+        (latest.leaseUntilMs === null || latest.leaseUntilMs <= nowMs)));
+  const alreadyThere = resumable && ticket.status === target && !(action === "validate" && byApp);
+  const allowed = (allowedDecisions(ticket.status, byApp) as string[]).includes(action);
   if (!allowed && !alreadyThere) {
-    return { kind: "reject", reason: REJECT_NOT_ALLOWED };
+    return refuse("failed-precondition", "not_allowed", REJECT_NOT_ALLOWED);
   }
   // Une Issue fermée ou refusée pendant que la session fusionne la PR qui la ferme laisserait
   // un ticket clos avec une PR livrée (P44).
-  if (ticket.deliveryRunning === true && action !== "validate" && !alreadyThere) {
-    return { kind: "reject", reason: REJECT_DELIVERY_RUNNING };
+  if (ticket.deliveryRunning && action !== "validate" && !alreadyThere) {
+    return refuse("failed-precondition", "delivery_running", REJECT_DELIVERY_RUNNING);
   }
-  return { kind: "claim", action, issueNumber, resumed };
+  if (!resumable) return { kind: "start", issueNumber, resume: null };
+  const commentId = latest.commentId;
+  return {
+    kind: "start",
+    issueNumber,
+    resume: {
+      id: latest.id,
+      keepText:
+        actionHasComment(action) &&
+        hasStep(latest.stepsDone, "comment") &&
+        typeof latest.text === "string",
+      knownCommentId:
+        typeof commentId === "number" && Number.isSafeInteger(commentId) ? commentId : null,
+    },
+  };
+}
+
+// ── Texte de Refuser et de Clore ────────────────────────────────────────────
+
+export const DECISION_TEXT_MIN_CHARS = 5;
+/** Comme « Répondre » (décision de l'utilisateur du 2026-11-14, P53). */
+export const DECISION_TEXT_MAX_CHARS = 4000;
+/** Garde de taille brute, avant le nettoyage (`requireBoundedText`). */
+export const DECISION_TEXT_RAW_MAX_CHARS = 16_000;
+
+/** Motif du refus d'un texte trop court ou trop long, selon l'action. Pure. */
+export function decisionTextLengthReason(action: "refuse" | "close", tooLong: boolean): string {
+  const name = action === "refuse" ? "Le motif" : "Le commentaire";
+  return tooLong
+    ? `${name} ne doit pas dépasser 4 000 caractères.`
+    : `${name} doit faire au moins 5 caractères.`;
 }
 
 /**
- * Texte présent pour `refuse` et `close`, absent pour `validate`. Les règles bornent la
- * longueur (5 à 2 000) ; le serveur refuse en plus un texte fait d'espaces, qui
- * publierait un commentaire vide, et compte les caractères comme l'écran. Pure.
+ * Le texte de Refuser ou de Clore, ou le motif du refus. Caractères de contrôle retirés
+ * (retours à la ligne gardés), NFC, espaces de bord retirées, 5 à 4 000 caractères comptés
+ * comme l'écran (points de code) ; un texte qui ne publie rien de lisible par `publicText`
+ * est trop court. Le texte rendu est celui qui est stocké dans la décision : il passe par
+ * `publicText` à la publication (`decisionCommentBody`). Pure.
  */
-export function textFitsAction(action: DecisionAction, text: unknown): boolean {
-  if (action === "validate") return text === undefined || text === null;
-  return typeof text === "string" && text.trim().length > 0 && Array.from(text).length <= 2000;
-}
-
-/**
- * Vrai si la mise à jour d'une décision est une reprise demandée par l'administrateur :
- * `retry_requested_at` posé après, absent ou différent avant. Les écritures du serveur
- * (état, bail, motif) déclenchent aussi `onDocumentUpdated` et ne font rien. Pure.
- */
-export function isRetryRequest(beforeMs: number | null, afterMs: number | null): boolean {
-  return afterMs !== null && afterMs !== beforeMs;
-}
-
-// ── Reprise par la passe horaire ────────────────────────────────────────────
-
-/**
- * Délai après lequel une décision encore `pending` est reprise par la passe horaire : le
- * déclencheur de création (60 s au plus, sans rejeu) s'est arrêté avant la prise.
- */
-export const PENDING_DECISION_GRACE_MS = 5 * 60 * 1000;
-
-/** Date limite de `requested_at` d'une décision `pending` à reprendre. Pure. */
-export function stalePendingCutoffMs(nowMs: number): number {
-  return nowMs - PENDING_DECISION_GRACE_MS;
-}
-
-/**
- * Vrai si la passe horaire reprend cette décision : `applying` au bail expiré, ou
- * `pending` créée depuis plus de cinq minutes. La transaction de prise tranche ensuite si
- * le déclencheur tourne encore. Pure.
- */
-export function isResumableByPass(args: {
-  state: unknown;
-  leaseUntilMs: number | null;
-  requestedAtMs: number | null;
-  nowMs: number;
-}): boolean {
-  if (args.state === "applying") {
-    return args.leaseUntilMs === null || args.leaseUntilMs <= args.nowMs;
+export function readDecisionText(
+  action: "refuse" | "close",
+  raw: string,
+): { ok: true; text: string } | { ok: false; reason: string } {
+  const text = cleanMultiline(raw).normalize("NFC").trim();
+  const length = Array.from(text).length;
+  if (length < DECISION_TEXT_MIN_CHARS) {
+    return { ok: false, reason: decisionTextLengthReason(action, false) };
   }
-  if (args.state === "pending") {
-    return args.requestedAtMs !== null && args.requestedAtMs < stalePendingCutoffMs(args.nowMs);
+  if (length > DECISION_TEXT_MAX_CHARS) {
+    return { ok: false, reason: decisionTextLengthReason(action, true) };
   }
-  return false;
+  if (publicText(text).trim().length === 0) {
+    return { ok: false, reason: decisionTextLengthReason(action, false) };
+  }
+  return { ok: true, text };
 }
 
 // ── Commentaire publié (P24) ────────────────────────────────────────────────
@@ -332,6 +342,17 @@ export function replyTextOfComment(
   maxChars: number,
 ): string | null {
   return replyFromComment({ authorId: maintainerId, body }, maintainerId, maxChars);
+}
+
+/**
+ * Le texte d'un commentaire de décision publié (`Réponse : <texte>`, ligne `Décision <id>`
+ * retirée), borné à `DECISION_TEXT_MAX_CHARS` points de code (coupé par « … ») : il remplace
+ * le `text` de la décision quand un essai précédent l'a publié. Un commentaire modifié sur
+ * GitHub ne fait pas grossir le document au-delà. `null` si le commentaire n'a pas la forme
+ * d'une réponse. Pure.
+ */
+export function decisionTextOfComment(body: string, maintainerId: number): string | null {
+  return replyFromComment({ authorId: maintainerId, body }, maintainerId, DECISION_TEXT_MAX_CHARS);
 }
 
 /**
@@ -444,4 +465,39 @@ export function failureReason(
   }
   if (kind === "rate_limit") return FAILURE_RATE_LIMIT;
   return "GitHub n'a pas répondu, rien n'a été publié. Réessayez.";
+}
+
+/** Erreur rendue au client après un échec sur GitHub (ADR-008, T7, P53). */
+export interface DecisionFailure {
+  code: "failed-precondition" | "not-found" | "unavailable" | "aborted";
+  machine: string;
+  reason: string;
+  /** Le commentaire est publié : le texte ne doit plus changer. */
+  partial: boolean;
+}
+
+/**
+ * Code de `HttpsError`, code stable et motif d'un échec sur GitHub. Commentaire déjà
+ * publié : `aborted`, `refuse_partial` ou `close_partial`, `partial`. Sinon rien n'est
+ * publié : jeton refusé, Issue introuvable, limite de débit ou GitHub muet. Pure.
+ */
+export function decisionFailure(
+  action: DecisionAction,
+  stepsDone: readonly DecisionStep[],
+  kind: FailureKind,
+): DecisionFailure {
+  const reason = failureReason(action, stepsDone, kind);
+  if (stepsDone.includes("comment")) {
+    return { code: "aborted", machine: `${action}_partial`, reason, partial: true };
+  }
+  switch (kind) {
+    case "token":
+      return { code: "failed-precondition", machine: "github_token", reason, partial: false };
+    case "not_found":
+      return { code: "not-found", machine: "issue_not_found", reason, partial: false };
+    case "rate_limit":
+      return { code: "unavailable", machine: "github_rate_limit", reason, partial: false };
+    default:
+      return { code: "unavailable", machine: "github_unavailable", reason, partial: false };
+  }
 }

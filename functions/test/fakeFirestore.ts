@@ -1,10 +1,12 @@
-// Base Firestore en mémoire pour les tests des lancements (ADR-008, T4 et T5). Elle couvre ce que
-// lit et écrit `src/tickets/launch.ts` et `src/tickets/delivery.ts` (et, dans
-// `validatedByApp.test.ts`, les décisions, la réponse, `applyIssue` et le report de `sync.ts`) :
-// documents et sous-collections, `where(champ, "==", valeur)`, `get`, `set` (fusion
-// de premier niveau), `update`, transactions exécutées l'une après l'autre (deux appels
-// simultanés se suivent, comme deux transactions Firestore qui se rejouent), `Timestamp`,
-// `FieldValue.delete()` et `FieldValue.serverTimestamp()` du SDK Admin.
+// Base Firestore en mémoire pour les tests des lancements (ADR-008, T4 et T5) et des
+// décisions (T7). Elle couvre ce que lit et écrit `src/tickets/launch.ts`,
+// `src/tickets/delivery.ts` et `src/tickets/decisions.ts` (et, dans `validatedByApp.test.ts`,
+// la réponse, `applyIssue` et le report de `sync.ts`) : documents et sous-collections,
+// identifiant tiré par `doc()`, `where(champ, "==", valeur)`, `orderBy(champ, "desc")` sur un
+// `Timestamp`, `get` (requête lue aussi en transaction), `set` (fusion de premier niveau),
+// `update`, transactions exécutées l'une après l'autre (deux appels simultanés se suivent,
+// comme deux transactions Firestore qui se rejouent), `Timestamp`, `FieldValue.delete()` et
+// `FieldValue.serverTimestamp()` du SDK Admin.
 
 import { FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore";
 
@@ -20,6 +22,7 @@ export class FakeDb {
   /** Écritures validées, dans l'ordre (chemin du document). */
   readonly writes: string[] = [];
   private queue: Promise<unknown> = Promise.resolve();
+  private nextId = 0;
 
   constructor(private readonly now: () => number = Date.now) {}
 
@@ -30,6 +33,12 @@ export class FakeDb {
   read(path: string): Data | undefined {
     const d = this.docs.get(path);
     return d === undefined ? undefined : { ...d };
+  }
+
+  /** Identifiant tiré par `doc()` sans argument : `auto-1`, `auto-2`… */
+  newId(): string {
+    this.nextId += 1;
+    return `auto-${this.nextId}`;
   }
 
   seed(path: string, data: Data): void {
@@ -83,14 +92,21 @@ export class FakeCollection {
     readonly path: string,
   ) {}
 
-  doc(id: string): FakeDocRef {
-    return new FakeDocRef(this.db, `${this.path}/${id}`, id);
+  doc(id?: string): FakeDocRef {
+    const docId = id ?? this.db.newId();
+    return new FakeDocRef(this.db, `${this.path}/${docId}`, docId);
   }
 
-  /** Requête par identifiant de document seule (report de `sync.ts`). */
-  orderBy(field: unknown): FakeQuery {
+  /**
+   * Requête par identifiant de document (report de `sync.ts`), ou par un champ `Timestamp`
+   * en ordre décroissant (décision la plus récente, `decisions.ts`).
+   */
+  orderBy(field: unknown, direction?: string): FakeQuery {
+    if (typeof field === "string" && direction === "desc") {
+      return new FakeQuery(this.db, this, null, null, [], field);
+    }
     if (!(field instanceof FieldPath) || !field.isEqual(FieldPath.documentId())) {
-      throw new Error("FakeCollection : seul orderBy(FieldPath.documentId()) est permis");
+      throw new Error('FakeCollection : orderBy(documentId) ou orderBy(champ, "desc") seuls');
     }
     return new FakeQuery(this.db, this, null, null);
   }
@@ -110,6 +126,7 @@ export class FakeQuery {
     private readonly max: number | null,
     private readonly afterId: string | null,
     private readonly filters: readonly { field: string; value: unknown }[] = [],
+    private readonly descBy: string | null = null,
   ) {}
 
   select(..._fields: string[]): FakeQuery {
@@ -117,11 +134,11 @@ export class FakeQuery {
   }
 
   limit(n: number): FakeQuery {
-    return new FakeQuery(this.db, this.coll, n, this.afterId, this.filters);
+    return new FakeQuery(this.db, this.coll, n, this.afterId, this.filters, this.descBy);
   }
 
   startAfter(snap: FakeSnapshot): FakeQuery {
-    return new FakeQuery(this.db, this.coll, this.max, snap.id, this.filters);
+    return new FakeQuery(this.db, this.coll, this.max, snap.id, this.filters, this.descBy);
   }
 
   async get(): Promise<{ docs: FakeSnapshot[] }> {
@@ -135,6 +152,13 @@ export class FakeQuery {
         const data = this.db.read(`${this.coll.path}/${id}`) ?? {};
         return this.filters.every((f) => data[f.field] === f.value);
       });
+    const descBy = this.descBy;
+    if (descBy !== null) {
+      // Comme Firestore : un document sans le champ trié n'est pas rendu.
+      const at = (id: string) => this.db.read(`${this.coll.path}/${id}`)?.[descBy];
+      ids.splice(0, ids.length, ...ids.filter((id) => at(id) instanceof Timestamp));
+      ids.sort((a, b) => (at(b) as Timestamp).toMillis() - (at(a) as Timestamp).toMillis());
+    }
     const page = this.max === null ? ids : ids.slice(0, this.max);
     const docs = page.map((id) => {
       const ref = this.coll.doc(id);
@@ -198,8 +222,11 @@ export class FakeTx {
 
   constructor(private readonly db: FakeDb) {}
 
-  async get(ref: FakeDocRef): Promise<FakeSnapshot> {
-    return new FakeSnapshot(ref, this.db.read(ref.path));
+  get(ref: FakeDocRef): Promise<FakeSnapshot>;
+  get(query: FakeQuery): Promise<{ docs: FakeSnapshot[] }>;
+  async get(target: FakeDocRef | FakeQuery): Promise<FakeSnapshot | { docs: FakeSnapshot[] }> {
+    if (target instanceof FakeQuery) return target.get();
+    return new FakeSnapshot(target, this.db.read(target.path));
   }
 
   set(ref: FakeDocRef, data: Data, opts: { merge?: boolean } = {}): void {

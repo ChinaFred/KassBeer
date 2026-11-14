@@ -1,12 +1,14 @@
 /**
- * Application d'une décision de l'administrateur (ADR-006, lot T2). Appelée par les
- * déclencheurs de `tickets/{ticketId}/decisions/{decisionId}` (création, reprise demandée)
- * et par la passe horaire (décision `applying` au bail expiré). Aucune callable (P25).
+ * Application d'une décision de l'administrateur (ADR-006, lot T2 ; ADR-008, lot T7).
+ * Appelée par les callables `validateTicket`, `refuseTicket` et `closeTicket`
+ * (`decisionCalls.ts`), pendant l'appel ; aucun déclencheur, aucune reprise par la tâche
+ * horaire.
  *
- * 1. Transaction : la décision est prise (`decisionClaimVerdict`, verrou des livraisons lu
- *    pour Refuser et Clore, P44) ; bail de deux minutes
- *    sur le ticket (`decision_lease_until`) et sur la décision (`lease_until`), état
- *    `applying`. Sinon `rejected` avec son motif, ou rien (rejeu).
+ * 1. Transaction : ticket, verrou des livraisons (P44) et décision la plus récente du ticket
+ *    lus ; précondition (`decisionStart`) ; bail de deux minutes sur le ticket
+ *    (`decision_lease_until`) et sur la décision (`lease_until`), état `applying`. La
+ *    décision est créée (identifiant tiré par le serveur) ou reprise (même identifiant).
+ *    Sinon refus en `HttpsError`, ou réponse « déjà fait ».
  * 2. Relecture de l'Issue ; pour `refuse` et `close`, recherche du commentaire qui porte
  *    la ligne `Décision <id>` (essai précédent). Issue déjà fermée par un autre geste :
  *    l'état lu est appliqué au ticket, la décision passe `rejected`.
@@ -17,12 +19,14 @@
  *    relevé des analyses et précisions de l'Issue. Un échec est journalisé, la décision
  *    reste faite.
  *
- * Un échec laisse la décision `failed` avec `steps_done` et `error_reason`, et retire les
- * baux. Un jeton refusé pose `token_invalid_since`. Chaque écriture finale vérifie que le
- * bail est encore le sien : un essai repris par un autre ne l'écrase pas.
+ * Un échec laisse la décision `failed` avec `steps_done` et `error_reason`, retire les baux
+ * et lève une `HttpsError` (`details.partial` si le commentaire est publié). Un jeton refusé
+ * pose `token_invalid_since`. Chaque écriture finale vérifie que le bail est encore le sien.
+ * Le texte de la décision n'est jamais journalisé (P53).
  */
 
 import type { DocumentReference, Transaction } from "firebase-admin/firestore";
+import { HttpsError } from "firebase-functions/v2/https";
 
 import { COLL_TICKETS, GITHUB_MAINTAINER_ID, REPLY_MAX_CHARS } from "../config";
 import { firestore } from "../firestore";
@@ -33,11 +37,12 @@ import {
   actionHasComment,
   allowedDecisions,
   commentCarriesDecision,
-  decisionClaimVerdict,
   decisionCommentBody,
+  decisionFailure,
+  decisionTextOfComment,
   decisionPlan,
+  decisionStart,
   failureReason,
-  isPlausibleDecisionId,
   replyTextOfComment,
   statusAfterDecision,
   type DecisionAction,
@@ -48,111 +53,156 @@ import { recordValidatedAt, refreshAnalyses } from "./analyses";
 import { deliveryRunningFor } from "./delivery";
 import { GithubError, githubClient, type FetchLike, type GithubClient } from "./github";
 import { applyIssue } from "./issueState";
-import { isPlausibleTicketId } from "./publish";
+import type { TicketStatus } from "./model";
 import { markTokenInvalid, recordTokenAccepted } from "./tokenStatus";
 
 export const COLL_DECISIONS = "decisions";
 
 /**
- * Bail d'une décision. Plus long que le délai d'exécution des fonctions (60 s) : un bail
- * expiré veut dire que la fonction s'est arrêtée.
+ * Bail d'une décision. Plus long que le délai des callables (60 s) : un bail expiré veut
+ * dire que la fonction s'est arrêtée.
  */
 export const DECISION_LEASE_MS = 2 * 60 * 1000;
 
-export type DecisionOutcome = "applied" | "rejected" | "skipped" | "failed" | "token" | "invalid";
+/** Réponse des callables de décision. `changed: false` : déjà fait, rien publié. */
+export type DecisionResult =
+  | { status: TicketStatus; changed: false }
+  | {
+      status: TicketStatus;
+      changed: true;
+      decisionId: string;
+      /**
+       * Vrai si le commentaire publié par un essai précédent est gardé et que le texte reçu
+       * en diffère : le nouveau texte n'est pas publié (P53).
+       */
+      textKept: boolean;
+    };
 
 export interface Refs {
   ticket: DocumentReference;
   decision: DocumentReference;
 }
 
-async function refsOf(ticketId: string, decisionId: string): Promise<Refs> {
-  const { db } = await firestore();
-  const ticket = db.collection(COLL_TICKETS).doc(ticketId);
-  return { ticket, decision: ticket.collection(COLL_DECISIONS).doc(decisionId) };
+/** Erreur rendue au client : `details.reason` (français), `details.code` (stable). */
+function refusal(
+  code: "failed-precondition" | "not-found" | "unavailable" | "aborted" | "internal",
+  reason: string,
+  machine: string,
+  partial = false,
+): HttpsError {
+  return new HttpsError(code, reason, { reason, code: machine, ...(partial ? { partial } : {}) });
 }
 
 export type Claim =
-  | { kind: "skip" }
-  | { kind: "rejected" }
+  | { kind: "done"; status: TicketStatus }
   | {
       kind: "claimed";
+      refs: Refs;
       action: DecisionAction;
+      /** Texte publié (Refuser, Clore) : le texte stocké si le commentaire est publié. */
       text: string | null;
+      /** Texte reçu par cet appel (Refuser, Clore), `null` pour Valider. */
+      receivedText: string | null;
       issueNumber: number;
       leaseUntilMs: number;
       /** `comment_id` écrit par un essai précédent, ou `null`. */
       knownCommentId: number | null;
+      /** Vrai si la décision reprend un essai dont le commentaire est publié. */
+      storedTextKept: boolean;
     };
 
-async function claim(refs: Refs, now: Date): Promise<Claim> {
+/**
+ * Étape 1. `text` : texte reçu, déjà lu (`readDecisionText`), `null` pour Valider. Lève une
+ * `HttpsError` pour un refus.
+ */
+async function claim(
+  ticketId: string,
+  action: DecisionAction,
+  text: string | null,
+  uid: string,
+  now: Date,
+): Promise<Claim> {
   const kit = await firestore();
   const { db, FieldValue, Timestamp } = kit;
+  const ticketRef = db.collection(COLL_TICKETS).doc(ticketId);
+  const decisions = ticketRef.collection(COLL_DECISIONS);
   const millis = (v: unknown) => (v instanceof Timestamp ? v.toMillis() : null);
   return db.runTransaction(async (tx): Promise<Claim> => {
-    const [decisionSnap, ticketSnap, deliveryRunning] = await Promise.all([
-      tx.get(refs.decision),
-      tx.get(refs.ticket),
-      // P44 : Refuser et Clore rejetés pendant une livraison de ce ticket.
-      deliveryRunningFor(tx, kit, refs.ticket.id, now.getTime()),
+    const [ticketSnap, latestSnap, deliveryRunning] = await Promise.all([
+      tx.get(ticketRef),
+      tx.get(decisions.orderBy("requested_at", "desc").limit(1)),
+      // P44 : Refuser et Clore refusés pendant une livraison de ce ticket.
+      deliveryRunningFor(tx, kit, ticketId, now.getTime()),
     ]);
-    if (!decisionSnap.exists) return { kind: "skip" };
-    const d = decisionSnap.data() ?? {};
     const t = ticketSnap.exists ? (ticketSnap.data() ?? {}) : null;
-    const verdict = decisionClaimVerdict({
-      decision: {
-        state: d.state,
-        action: d.action,
-        text: d.text,
-        leaseUntilMs: millis(d.lease_until),
-        retryRequested: d.retry_requested_at != null,
-      },
+    const latestDoc = latestSnap.docs[0];
+    const latest =
+      latestDoc === undefined
+        ? null
+        : {
+            id: latestDoc.id,
+            action: latestDoc.get("action"),
+            state: latestDoc.get("state"),
+            leaseUntilMs: millis(latestDoc.get("lease_until")),
+            stepsDone: latestDoc.get("steps_done"),
+            text: latestDoc.get("text"),
+            commentId: latestDoc.get("comment_id"),
+          };
+    const start = decisionStart({
+      action,
       ticket:
         t === null
           ? null
           : {
               status: t.status,
-              allowedDecisions: t.allowed_decisions,
               validatedByAppAt: t.validated_by_app_at,
               leaseUntilMs: millis(t.decision_lease_until),
               issueNumber: t.github_issue_number,
               deliveryRunning,
             },
+      latest,
       nowMs: now.getTime(),
     });
+    if (start.kind === "refuse") throw refusal(start.code, start.reason, start.machine);
+    if (start.kind === "done") return { kind: "done", status: start.status };
+
     const nowTs = Timestamp.fromDate(now);
-    if (verdict.kind === "skip") return { kind: "skip" };
-    if (verdict.kind === "reject") {
-      tx.update(refs.decision, {
-        state: "rejected",
-        error_reason: verdict.reason,
-        retry_requested_at: FieldValue.delete(),
-        lease_until: FieldValue.delete(),
-        updated_at: nowTs,
-      });
-      return { kind: "rejected" };
-    }
     const leaseUntilMs = now.getTime() + DECISION_LEASE_MS;
     const lease = Timestamp.fromMillis(leaseUntilMs);
-    tx.update(refs.ticket, { decision_lease_until: lease, updated_at: nowTs });
-    tx.update(refs.decision, {
-      state: "applying",
-      lease_until: lease,
-      // Retirée à la prise : l'échec suivant n'est pas repris sans nouvelle demande.
-      retry_requested_at: FieldValue.delete(),
-      error_reason: FieldValue.delete(),
-      updated_at: nowTs,
-    });
+    const resume = start.resume;
+    const decisionRef = resume === null ? decisions.doc() : decisions.doc(resume.id);
+    tx.update(ticketRef, { decision_lease_until: lease, updated_at: nowTs });
+    let published = text;
+    if (resume === null) {
+      tx.set(decisionRef, {
+        action,
+        ...(text !== null ? { text } : {}),
+        state: "applying",
+        requested_by_uid: uid,
+        requested_at: nowTs,
+        lease_until: lease,
+        updated_at: nowTs,
+      });
+    } else {
+      if (resume.keepText) published = String(latest?.text);
+      tx.update(decisionRef, {
+        state: "applying",
+        lease_until: lease,
+        error_reason: FieldValue.delete(),
+        ...(!resume.keepText && text !== null ? { text } : {}),
+        updated_at: nowTs,
+      });
+    }
     return {
       kind: "claimed",
-      action: verdict.action,
-      text: typeof d.text === "string" ? d.text : null,
-      issueNumber: verdict.issueNumber,
+      refs: { ticket: ticketRef, decision: decisionRef },
+      action,
+      text: published,
+      receivedText: text,
+      issueNumber: start.issueNumber,
       leaseUntilMs,
-      knownCommentId:
-        typeof d.comment_id === "number" && Number.isSafeInteger(d.comment_id)
-          ? d.comment_id
-          : null,
+      knownCommentId: resume?.knownCommentId ?? null,
+      storedTextKept: resume?.keepText ?? false,
     };
   });
 }
@@ -207,6 +257,7 @@ async function recordFailure(
   reason: string,
   stepsDone: readonly DecisionStep[],
   commentId: number | null,
+  publishedText: string | null = null,
 ): Promise<void> {
   try {
     const { FieldValue, Timestamp } = await firestore();
@@ -217,6 +268,7 @@ async function recordFailure(
         error_reason: reason,
         steps_done: [...stepsDone],
         ...(commentId !== null ? { comment_id: commentId } : {}),
+        ...(publishedText !== null ? { text: publishedText } : {}),
         lease_until: FieldValue.delete(),
         updated_at: now,
       });
@@ -231,7 +283,7 @@ async function recordFailure(
       });
     }
   } catch (err) {
-    // Les baux expirent seuls en deux minutes ; la passe horaire reprend la décision.
+    // Les baux expirent seuls en deux minutes ; l'admin reprend la décision par un nouvel appel.
     logError({
       message: "Tickets : échec de décision non enregistré",
       feature: "tickets",
@@ -244,9 +296,10 @@ async function recordFailure(
 
 /**
  * Commentaire déjà publié par un essai précédent (ligne `Décision <id>` d'un commentaire
- * du compte 16348852), ou `null`. Avec `knownCommentId` (`comment_id` de la décision), ce
- * seul commentaire est relu : supprimé (404 ou 410), il est à republier sans relire les
- * pages ; modifié au point de perdre sa ligne, les pages sont relues (cinq de 100 au plus).
+ * du compte 16348852), avec son texte, ou `null`. Avec `knownCommentId` (`comment_id` de la
+ * décision), ce seul commentaire est relu : supprimé (404 ou 410), il est à republier sans
+ * relire les pages ; modifié au point de perdre sa ligne, les pages sont relues (cinq de 100
+ * au plus).
  */
 export async function findPublishedComment(
   client: GithubClient,
@@ -254,33 +307,40 @@ export async function findPublishedComment(
   commentCount: number,
   decisionId: string,
   knownCommentId: number | null,
-): Promise<{ id: number | null } | null> {
+): Promise<{ id: number | null; body: string } | null> {
   if (knownCommentId !== null) {
     const known = await client.getComment(knownCommentId);
     if (known === null) return null;
     if (commentCarriesDecision(known, decisionId, GITHUB_MAINTAINER_ID)) {
-      return { id: known.id ?? knownCommentId };
+      return { id: known.id ?? knownCommentId, body: known.body ?? "" };
     }
   }
   if (commentCount < 1) return null;
   for await (const page of client.lastCommentsFirst(issueNumber, commentCount)) {
     for (const comment of page) {
       if (commentCarriesDecision(comment, decisionId, GITHUB_MAINTAINER_ID)) {
-        return { id: comment.id };
+        return { id: comment.id, body: comment.body ?? "" };
       }
     }
   }
   return null;
 }
 
+type Claimed = Extract<Claim, { kind: "claimed" }>;
+
 export type GithubRun =
   | {
       kind: "done";
       stepsDone: DecisionStep[];
       commentId: number | null;
+      /** Texte du commentaire tel qu'il est sur l'Issue (publié ou retrouvé). */
       commentBody: string | null;
       /** Nombre de commentaires de l'Issue après la décision, pour le relevé des analyses. */
       commentCount: number;
+      /** Texte du commentaire d'un essai précédent retrouvé sur l'Issue, ou `null`. */
+      publishedText: string | null;
+      /** Vrai si ce commentaire retrouvé diffère du texte reçu : il est gardé. */
+      textKept: boolean;
     }
   | { kind: "closed_elsewhere"; stepsDone: DecisionStep[] };
 
@@ -289,23 +349,22 @@ class StepFailure extends Error {
     readonly cause: unknown,
     readonly stepsDone: DecisionStep[],
     readonly commentId: number | null,
+    readonly publishedText: string | null = null,
   ) {
     super("étape GitHub en échec");
   }
 }
 
-/** Étapes 2 à 5 sur GitHub. Exportée pour les tests ; `refs` ne sert qu'à une Issue fermée. */
-export async function runOnGithub(
-  client: GithubClient,
-  refs: Refs,
-  decisionId: string,
-  claimed: Extract<Claim, { kind: "claimed" }>,
-): Promise<GithubRun> {
+/** Étapes 2 à 5 sur GitHub. Exportée pour les tests ; `refs.ticket` ne sert qu'à une Issue fermée. */
+export async function runOnGithub(client: GithubClient, claimed: Claimed): Promise<GithubRun> {
+  const decisionId = claimed.refs.decision.id;
   const stepsDone: DecisionStep[] = [];
   let commentId: number | null = null;
+  let publishedText: string | null = null;
+  let textKept = false;
   try {
     const issue = await client.getIssue(claimed.issueNumber);
-    const body =
+    let body =
       actionHasComment(claimed.action) && claimed.text !== null
         ? decisionCommentBody(claimed.text, decisionId)
         : null;
@@ -321,10 +380,25 @@ export async function runOnGithub(
     if (found !== null) {
       stepsDone.push("comment");
       commentId = found.id;
+      // Le texte publié par l'essai précédent fait foi pour `reply_text` et pour le `text`
+      // de la décision ; un texte reçu différent n'est pas publié.
+      publishedText = decisionTextOfComment(found.body, GITHUB_MAINTAINER_ID);
+      const received =
+        claimed.receivedText === null
+          ? null
+          : decisionTextOfComment(
+              decisionCommentBody(claimed.receivedText, decisionId),
+              GITHUB_MAINTAINER_ID,
+            );
+      textKept = received !== null && received !== publishedText;
+      body = found.body;
+    } else if (claimed.storedTextKept) {
+      // Commentaire supprimé depuis : le texte stocké est republié, pas le texte reçu.
+      textKept = claimed.receivedText !== null && claimed.receivedText !== claimed.text;
     }
     const plan = decisionPlan(claimed.action, issue, found !== null);
     if (plan.kind === "reject_closed") {
-      const ticketSnap = await refs.ticket.get();
+      const ticketSnap = await claimed.refs.ticket.get();
       if (ticketSnap.exists) await applyIssue(client, ticketSnap, issue);
       return { kind: "closed_elsewhere", stepsDone };
     }
@@ -342,9 +416,17 @@ export async function runOnGithub(
       stepsDone.push("close");
     }
     const commentCount = issue.comments + (plan.comment ? 1 : 0);
-    return { kind: "done", stepsDone, commentId, commentBody: body, commentCount };
+    return {
+      kind: "done",
+      stepsDone,
+      commentId,
+      commentBody: body,
+      commentCount,
+      publishedText,
+      textKept,
+    };
   } catch (err) {
-    throw new StepFailure(err, stepsDone, commentId);
+    throw new StepFailure(err, stepsDone, commentId, publishedText);
   }
 }
 
@@ -355,7 +437,7 @@ export async function runOnGithub(
 async function afterDecision(
   client: GithubClient,
   ticketId: string,
-  claimed: Extract<Claim, { kind: "claimed" }>,
+  claimed: Claimed,
   run: Extract<GithubRun, { kind: "done" }>,
 ): Promise<void> {
   try {
@@ -373,39 +455,23 @@ async function afterDecision(
 }
 
 /**
- * Applique la décision `decisionId` du ticket `ticketId`. Ne lève pas : chaque erreur est
- * journalisée et le résultat dit ce qui s'est passé.
+ * Applique `action` sur le ticket `ticketId` pendant l'appel de l'administrateur `uid`.
+ * `text` : texte lu (`readDecisionText`) pour Refuser et Clore, `null` pour Valider. Rend le
+ * statut ; lève une `HttpsError` pour un refus ou un échec, déjà journalisé.
  */
-export async function applyDecision(
+export async function decideTicket(
   ticketId: string,
-  decisionId: string,
+  action: DecisionAction,
+  text: string | null,
+  uid: string,
   token: string,
   fetchImpl?: FetchLike,
-): Promise<DecisionOutcome> {
-  if (!isPlausibleTicketId(ticketId) || !isPlausibleDecisionId(decisionId)) {
-    logError({
-      message: "Tickets : identifiant de décision refusé",
-      feature: "tickets",
-      extra: { ticketIdLength: ticketId.length, decisionIdLength: decisionId.length },
-    });
-    return "invalid";
-  }
-  const log = { feature: "tickets", ticketId, extra: { decisionId } };
-
-  let refs: Refs;
-  let claimed: Claim;
-  try {
-    refs = await refsOf(ticketId, decisionId);
-    claimed = await claim(refs, new Date());
-  } catch (err) {
-    logError({ ...log, message: "Tickets : décision impossible à prendre", error: err });
-    return "failed";
-  }
-  if (claimed.kind === "skip") return "skipped";
-  if (claimed.kind === "rejected") {
-    logInfo({ ...log, message: "Tickets : décision refusée par le serveur" });
-    return "rejected";
-  }
+): Promise<DecisionResult> {
+  const claimed = await claim(ticketId, action, text, uid, new Date());
+  if (claimed.kind === "done") return { status: claimed.status, changed: false };
+  const refs = claimed.refs;
+  const decisionId = refs.decision.id;
+  const log = { feature: "tickets", ticketId, extra: { decisionId, action } };
 
   const trimmed = token.trim();
   if (trimmed.length === 0) {
@@ -414,17 +480,18 @@ export async function applyDecision(
       refs,
       ticketId,
       claimed.leaseUntilMs,
-      failureReason(claimed.action, [], "token"),
+      failureReason(action, [], "token"),
       [],
       null,
     );
-    return "token";
+    const f = decisionFailure(action, [], "token");
+    throw refusal(f.code, f.reason, f.machine);
   }
 
   const client = githubClient(trimmed, fetchImpl);
   let run: GithubRun;
   try {
-    run = await runOnGithub(client, refs, decisionId, claimed);
+    run = await runOnGithub(client, claimed);
   } catch (err) {
     const failure = err instanceof StepFailure ? err : new StepFailure(err, [], null);
     const cause = failure.cause;
@@ -433,24 +500,28 @@ export async function applyDecision(
       ...log,
       message: "Tickets : décision en échec sur GitHub",
       error: cause,
-      extra: { decisionId, kind, steps: failure.stepsDone.join(",") },
+      extra: { ...log.extra, kind, steps: failure.stepsDone.join(",") },
     });
     if (kind === "token") await markTokenInvalid(cause as GithubError);
+    const f = decisionFailure(action, failure.stepsDone, kind);
     await recordFailure(
       refs,
       ticketId,
       claimed.leaseUntilMs,
-      failureReason(claimed.action, failure.stepsDone, kind),
+      f.reason,
       failure.stepsDone,
       failure.commentId,
+      failure.publishedText,
     );
-    return kind === "token" ? "token" : "failed";
+    throw refusal(f.code, f.reason, f.machine, f.partial);
   }
 
+  const status = statusAfterDecision(action);
+  let written: boolean;
   try {
     const { FieldValue, Timestamp } = await firestore();
     const now = Timestamp.now();
-    const written = await writeIfLeaseHeld(refs, claimed.leaseUntilMs, (tx, ticket) => {
+    written = await writeIfLeaseHeld(refs, claimed.leaseUntilMs, (tx, ticket) => {
       if (run.kind === "closed_elsewhere") {
         tx.update(refs.decision, {
           state: "rejected",
@@ -462,7 +533,6 @@ export async function applyDecision(
         releaseTicketLease(tx, refs, ticket, claimed.leaseUntilMs, {}, FieldValue.delete());
         return;
       }
-      const status = statusAfterDecision(claimed.action);
       const reply =
         run.commentBody === null
           ? null
@@ -478,6 +548,7 @@ export async function applyDecision(
         applied_at: now,
         steps_done: run.stepsDone,
         ...(run.commentId !== null ? { comment_id: run.commentId } : {}),
+        ...(run.publishedText !== null ? { text: run.publishedText } : {}),
         lease_until: FieldValue.delete(),
         error_reason: FieldValue.delete(),
         updated_at: now,
@@ -489,11 +560,11 @@ export async function applyDecision(
         claimed.leaseUntilMs,
         {
           status,
-          // Valider appliqué depuis l'application : seul chemin qui pose
-          // `validated_by_app_at` et ouvre « Lancer le développement » (ADR-008,
-          // 2026-11-13). Refuser et Clore l'effacent.
-          allowed_decisions: allowedDecisions(status, claimed.action === "validate"),
-          validated_by_app_at: claimed.action === "validate" ? now : null,
+          // Valider depuis l'application : seul chemin qui pose `validated_by_app_at` et
+          // ouvre « Lancer le développement » (ADR-008, 2026-11-13). Refuser et Clore
+          // l'effacent.
+          allowed_decisions: allowedDecisions(status, action === "validate"),
+          validated_by_app_at: action === "validate" ? now : null,
           updated_at: now,
           ...(changed ? { status_changed_at: now } : {}),
           ...(reply !== null && changed ? { reply_text: reply, reply_at: now } : {}),
@@ -501,10 +572,6 @@ export async function applyDecision(
         FieldValue.delete(),
       );
     });
-    if (!written) {
-      logWarn({ ...log, message: "Tickets : décision faite, bail repris par un autre essai" });
-      return "skipped";
-    }
   } catch (err) {
     logError({ ...log, message: "Tickets : décision faite sur GitHub, non écrite", error: err });
     await recordFailure(
@@ -514,18 +581,39 @@ export async function applyDecision(
       FAILURE_TICKET_NOT_WRITTEN,
       run.stepsDone,
       run.kind === "done" ? run.commentId : null,
+      run.kind === "done" ? run.publishedText : null,
     );
-    return "failed";
+    throw refusal(
+      "internal",
+      FAILURE_TICKET_NOT_WRITTEN,
+      "ticket_not_written",
+      run.stepsDone.includes("comment"),
+    );
+  }
+  if (!written) {
+    // Le bail a expiré et un autre appel l'a repris : il écrira l'issue.
+    logWarn({ ...log, message: "Tickets : décision faite, bail repris par un autre essai" });
+    throw refusal(
+      "internal",
+      FAILURE_TICKET_NOT_WRITTEN,
+      "ticket_not_written",
+      run.stepsDone.includes("comment"),
+    );
   }
   await recordTokenAccepted(client);
-  if (run.kind === "done") await afterDecision(client, ticketId, claimed, run);
   if (run.kind === "closed_elsewhere") {
     logInfo({ ...log, message: "Tickets : Issue déjà fermée sur GitHub, décision refusée" });
-    return "rejected";
+    throw refusal("failed-precondition", REJECT_ISSUE_CLOSED, "issue_closed");
   }
+  await afterDecision(client, ticketId, claimed, run);
   logInfo({
     ...log,
-    message: `Tickets : décision ${claimed.action} appliquée sur l'Issue #${claimed.issueNumber}`,
+    message: `Tickets : décision ${action} appliquée sur l'Issue #${claimed.issueNumber}`,
+    extra: {
+      ...log.extra,
+      stored_text_kept: claimed.storedTextKept,
+      published_text_kept: run.textKept,
+    },
   });
-  return "applied";
+  return { status, changed: true, decisionId, textKept: run.textKept };
 }

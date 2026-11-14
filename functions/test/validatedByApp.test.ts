@@ -1,5 +1,5 @@
 // Écritures de `validated_by_app_at` (ADR-008, T4, décision du 2026-11-13) : posé par
-// Valider appliqué depuis l'application, effacé par Refuser, Clore, « Répondre » et toute
+// `validateTicket` (T7), effacé par Refuser, Clore, « Répondre » et toute
 // Issue qui sort le ticket de `validated` et `in_progress`. Firestore en mémoire
 // (`fakeFirestore.ts`), GitHub par un `fetch` simulé.
 
@@ -11,7 +11,7 @@ import { Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import * as firestoreModule from "../src/firestore";
 import { answerTicket } from "../src/tickets/answer";
 import { allowedDecisions } from "../src/tickets/decisionModel";
-import { applyDecision } from "../src/tickets/decisions";
+import { decideTicket } from "../src/tickets/decisions";
 import { githubClient, type FetchLike } from "../src/tickets/github";
 import { applyIssue } from "../src/tickets/issueState";
 import type { IssueView } from "../src/tickets/model";
@@ -168,21 +168,14 @@ describe("validated_by_app_at : applyIssue", () => {
   });
 });
 
-describe("validated_by_app_at : applyDecision", () => {
-  function seedDecision(action: string, text?: string): void {
-    db.seed("tickets/t-1/decisions/dec_1", {
-      state: "pending",
-      action,
-      ...(text !== undefined ? { text } : {}),
-      requested_at: Timestamp.now(),
-    });
-  }
+describe("validated_by_app_at : decideTicket", () => {
+  const TEXT = "Hors du périmètre de l'application.";
 
   it("validate : champ posé, « Lancer le développement » offert", async () => {
     seedTicket({ status: "analyzed", allowed_decisions: allowedDecisions("analyzed") });
-    seedDecision("validate");
     const gh = fakeGithub({ labels: ["source:app", "statut:analysé"] });
-    assert.equal(await applyDecision("t-1", "dec_1", TOKEN, gh.fetch), "applied");
+    const out = await decideTicket("t-1", "validate", null, "admin-uid", TOKEN, gh.fetch);
+    assert.equal(out.changed, true);
     const t = ticket();
     assert.equal(t.status, "validated");
     assert.ok(t.validated_by_app_at instanceof Timestamp);
@@ -196,9 +189,8 @@ describe("validated_by_app_at : applyDecision", () => {
       validated_by_app_at: null,
       allowed_decisions: allowedDecisions("validated", false),
     });
-    seedDecision("validate");
     const gh = fakeGithub({ labels: ["source:app", "validé"] });
-    assert.equal(await applyDecision("t-1", "dec_1", TOKEN, gh.fetch), "applied");
+    await decideTicket("t-1", "validate", null, "admin-uid", TOKEN, gh.fetch);
     assert.ok(ticket().validated_by_app_at instanceof Timestamp);
   });
 
@@ -209,9 +201,8 @@ describe("validated_by_app_at : applyDecision", () => {
         validated_by_app_at: VALIDATED_AT,
         allowed_decisions: allowedDecisions("validated", true),
       });
-      seedDecision(action, "Hors du périmètre de l'application.");
       const gh = fakeGithub({ labels: ["source:app", "validé"] });
-      assert.equal(await applyDecision("t-1", "dec_1", TOKEN, gh.fetch), "applied");
+      await decideTicket("t-1", action, TEXT, "admin-uid", TOKEN, gh.fetch);
       const t = ticket();
       assert.equal(t.status, action === "refuse" ? "refused" : "closed");
       assert.equal(t.validated_by_app_at, null);

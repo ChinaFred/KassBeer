@@ -15,6 +15,7 @@ import '../domain/ticket_launch.dart';
 
 /// Accès à `tickets/`, `ticket_status/github` et `ticket_status/launches`
 /// (ADR-006, P23, P41), aux callables `answerTicketAnalysis`,
+/// `validateTicket`, `refuseTicket`, `closeTicket`, `retryTicketSend`,
 /// `launchTicketAnalysis`, `launchTicketDevelopment`, `launchTicketDelivery` et
 /// `attachTicketScreenshot` (ADR-008), et aux captures dans Cloud Storage
 /// (T6). Les écrans passent par cette interface ; les tests la remplacent par
@@ -58,35 +59,25 @@ abstract class TicketsRepository {
   /// menu, bandeau).
   Stream<ListeLue<Ticket>> watchAll();
 
-  /// Décisions du ticket [ticketId], pour l'administrateur.
+  /// Historique des décisions du ticket [ticketId], écrit par le serveur,
+  /// pour l'administrateur.
   Stream<ListeLue<TicketDecision>> watchDecisions(String ticketId);
 
-  /// Identifiant d'une décision, créé par l'appareil.
-  String newDecisionId(String ticketId);
-
-  /// Crée `tickets/{ticketId}/decisions/{id}` (`state: pending`,
-  /// `requested_at` à l'heure du serveur). Écrit dans le cache dès l'appel ;
-  /// la `Future` rend vrai quand le serveur l'a acceptée, faux s'il l'a
-  /// refusée. Un refus est rapporté ici, sans le texte (P13) : l'écran
-  /// n'attrape rien, il annonce le refus.
-  Future<bool> createDecision({
+  /// Applique [action] sur [ticketId] par sa callable (`validateTicket`,
+  /// `refuseTicket`, `closeTicket`, ADR-008, T7) ; [text] : motif ou
+  /// commentaire, absent pour Valider. Un seul appel, jamais rejoué. Rend un
+  /// échec `null` si le serveur l'a appliquée (`texteGarde` lu dans
+  /// `textKept`) ; sinon l'échec, déjà rapporté sans le texte (P13). Sans
+  /// réponse du serveur, le résultat est inconnu ([CauseEchecReponse.delai]).
+  Future<ResultatDecision> decide({
     required String ticketId,
-    required String id,
     required TicketDecisionAction action,
-    required String? text,
-    required String requestedByUid,
+    String? text,
   });
 
-  /// Demande un nouvel essai de publication d'un ticket `send_failed`
-  /// (`retry_requested_at`). Même déroulé que [createDecision].
-  Future<bool> retrySend(String ticketId);
-
-  /// Demande la reprise d'une décision `failed` (`retry_requested_at`). Même
-  /// déroulé que [createDecision].
-  Future<bool> retryDecision({
-    required String ticketId,
-    required String decisionId,
-  });
+  /// Relance la publication d'un ticket `send_failed` par `retryTicketSend`
+  /// (ADR-008, T7) : un essai pendant l'appel. Un échec est rapporté ici.
+  Future<ResultatRelanceEnvoi> retrySend(String ticketId);
 
   /// `tickets/{ticketId}/admin/analysis`, pour l'administrateur seul.
   Stream<RechercheDocument<TicketAnalysisDoc>> watchAnalysis(String ticketId);
@@ -325,11 +316,7 @@ class FirestoreTicketsRepository implements TicketsRepository {
     try {
       return DocumentValide(
         doc.id,
-        TicketDecision.fromFirestore(
-          doc.id,
-          doc.data(),
-          hasPendingWrites: doc.metadata.hasPendingWrites,
-        ),
+        TicketDecision.fromFirestore(doc.id, doc.data()),
       );
     } on DocumentIllisible catch (error, stackTrace) {
       _errors.reportError(
@@ -343,70 +330,94 @@ class FirestoreTicketsRepository implements TicketsRepository {
   }
 
   @override
-  String newDecisionId(String ticketId) => _decisions(ticketId).doc().id;
-
-  @override
-  Future<bool> createDecision({
+  Future<ResultatDecision> decide({
     required String ticketId,
-    required String id,
     required TicketDecisionAction action,
-    required String? text,
-    required String requestedByUid,
-  }) => _write(
-    'tickets.create_decision',
-    'tickets/$ticketId/decisions/$id action=${action.storedValue}',
-    () => _decisions(ticketId).doc(id).set({
-      'action': action.storedValue,
-      'text': ?text,
-      'state': TicketDecisionState.pending.storedValue,
-      'requested_by_uid': requestedByUid,
-      'requested_at': FieldValue.serverTimestamp(),
-    }),
-  );
+    String? text,
+  }) async {
+    try {
+      final data = await _call(action.callable, {
+        'ticketId': ticketId,
+        'text': ?text,
+      });
+      final garde = data is Map && data['textKept'] == true;
+      return (echec: null, texteGarde: garde);
+    } catch (error, stackTrace) {
+      return (
+        echec: _echecAdmin(
+          'tickets.decide',
+          'tickets/$ticketId action=${action.storedValue}',
+          error,
+          stackTrace,
+        ),
+        texteGarde: false,
+      );
+    }
+  }
 
   @override
-  Future<bool> retrySend(String ticketId) => _write(
-    'tickets.retry_send',
-    'tickets/$ticketId',
-    () => _tickets.doc(ticketId).update({
-      'retry_requested_at': FieldValue.serverTimestamp(),
-    }),
-  );
+  Future<ResultatRelanceEnvoi> retrySend(String ticketId) async {
+    try {
+      final data = await _call('retryTicketSend', {'ticketId': ticketId});
+      final map = data is Map ? data : const {};
+      final status = switch (map['status']) {
+        final String s => TicketStatus.fromStored(s),
+        _ => TicketStatus.unknown,
+      };
+      final issue = map['issueNumber'];
+      return ResultatRelanceEnvoi.envoi(
+        status: status,
+        issueNumber: issue is int ? issue : null,
+      );
+    } catch (error, stackTrace) {
+      return ResultatRelanceEnvoi.echec(
+        _echecAdmin(
+          'tickets.retry_send',
+          'tickets/$ticketId',
+          error,
+          stackTrace,
+        ),
+      );
+    }
+  }
 
-  @override
-  Future<bool> retryDecision({
-    required String ticketId,
-    required String decisionId,
-  }) => _write(
-    'tickets.retry_decision',
-    'tickets/$ticketId/decisions/$decisionId',
-    () => _decisions(ticketId).doc(decisionId).update({
-      'retry_requested_at': FieldValue.serverTimestamp(),
-    }),
-  );
-
-  /// Écriture d'administration : vrai si le serveur l'accepte. Un refus est
-  /// rapporté avec [where] (chemin et action, jamais le texte : P13) et rend
-  /// faux.
-  Future<bool> _write(
+  /// Rapporte l'échec d'une callable de décision ou de relance, avec [where]
+  /// et les codes seuls (ni texte ni motif, P13), puis le rend. Une panne
+  /// interne ou une erreur sans réponse du serveur rend un résultat inconnu :
+  /// la décision est peut-être appliquée.
+  EchecReponse _echecAdmin(
     String feature,
     String where,
-    Future<void> Function() write,
-  ) async {
-    try {
-      await write();
-      return true;
-    } catch (error, stackTrace) {
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    if (error is FirebaseFunctionsException) {
+      final lu = EchecReponse.depuis(code: error.code, details: error.details);
+      final echec =
+          lu.cause == CauseEchecReponse.autre &&
+              (error.code == 'internal' || error.code == 'unknown')
+          ? const EchecReponse(CauseEchecReponse.delai)
+          : lu;
       _errors.reportError(
         feature: feature,
+        // Le message vient du serveur, jamais du texte saisi (P13).
         error: error,
         stackTrace: stackTrace,
         context:
-            '$where '
-            'code=${error is FirebaseException ? error.code : error.runtimeType}',
+            '$where code=${error.code}'
+            '${lu.codeServeur == null ? '' : ' reason_code=${lu.codeServeur}'}'
+            '${lu.champ == null ? '' : ' field=${lu.champ}'}'
+            '${lu.partiel ? ' partial' : ''}',
       );
-      return false;
+      return echec;
     }
+    _errors.reportError(
+      feature: feature,
+      error: error,
+      stackTrace: stackTrace,
+      context: '$where code=${error.runtimeType}',
+    );
+    return const EchecReponse(CauseEchecReponse.delai);
   }
 
   Stream<ListeLue<Ticket>> _watch(

@@ -2,7 +2,7 @@
  * « Répondre » (`answerTicketAnalysis`, ADR-008, T3, P34) : l'administrateur publie ses
  * précisions à la dernière analyse sur l'Issue, et le ticket repasse à « Reçu ». Copie de
  * `answerTicketDecision` de Kass'Dalle (`functions/src/tickets/decisions.ts`), adaptée au
- * bail des décisions de Kass'Beer (`decision_lease_until`, partagé avec les décisions T2).
+ * bail des décisions de Kass'Beer (`decision_lease_until`, partagé avec les décisions de T7).
  *
  * 1. `requireAdmin` (P30), puis les arguments : `ticketId`, `answer` (taille brute, puis
  *    5 à 4 000 caractères après nettoyage, texte publié par `publicText`, P24).

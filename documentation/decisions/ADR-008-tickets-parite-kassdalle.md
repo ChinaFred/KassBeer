@@ -70,7 +70,7 @@ signé HMAC, doublé de la tâche horaire. Les captures vivent dans Cloud Storag
 | `launchTicketDevelopment` | `onCall` | `requireAdmin` | T4 | 1, 120 s |
 | `launchTicketDelivery` | `onCall` | `requireAdmin` | T5 | 1, 180 s |
 | `attachTicketScreenshot` | `onCall` | `requireMember`, auteur du ticket | T6 | 2, 60 s |
-| `validateTicket`, `refuseTicket`, `closeTicket`, `retryTicketSend` | `onCall` | `requireAdmin` | T7 | 2, 60 s |
+| `validateTicket`, `refuseTicket`, `closeTicket`, `retryTicketSend` | `onCall` | `requireAdmin` | T7 | 1, 60 s |
 
 Tout autre `onRequest` ou `onCall` demande un nouvel ADR.
 
@@ -94,6 +94,28 @@ documents `decisions/` déjà écrits restent en base ; plus rien ne les lit. En
 « Répondre » est une callable et les trois autres décisions des documents : état transitoire
 accepté. Sauter T7 est l'option moins lourde. Elle garde un modèle de décision différent de
 Kass'Dalle.
+
+2026-11-14 (lot T7), décisions de l'utilisateur : Valider, Refuser, Clore et « Relancer
+l'envoi » passent en callables (`validateTicket`, `refuseTicket`, `closeTicket`,
+`retryTicketSend`), avec `maxInstances: 1` et 60 s chacune : l'admin seul les appelle (le
+tableau ci-dessus portait 2 instances, il est corrigé). `onDecisionCreated` et `onDecisionUpdated` sont
+retirés, ainsi que la relance des envois (`retryFailedSends`) et la reprise des décisions
+(`resumeStuckDecisions`) par la tâche horaire. `tickets/{id}/decisions/` reste l'historique,
+écrit par les trois callables seules et lu par l'admin (`allow read: if isAdmin(); allow write:
+if false`) : ce point remplace « plus rien ne les lit ». La ligne `Décision <id>` du commentaire
+est gardée ; l'identifiant est tiré par le serveur. Une décision interrompue (`failed`,
+`applying` au bail expiré, ou `pending` écrite par un client d'avant T7) se reprend par l'admin
+seul, en rappelant la même callable : même
+identifiant, commentaire déjà publié reconnu, texte stocké gardé dès qu'il est publié. Le motif
+de Refuser et le commentaire de Clore passent de 2 000 à 4 000 caractères, comme « Répondre ».
+Les décisions demandent le réseau : hors ligne, les boutons restent visibles et inactifs, le
+texte saisi reste en brouillon, rien ne part au retour du réseau. Les deux déclencheurs sont
+supprimés à la main par l'utilisateur avant la fusion (`deploy.yml` ne passe pas `--force`).
+`ci.yml` et `deploy.yml` vérifient une liste fermée des déclencheurs : `publishTicket` seul
+déclencheur Firestore, `syncTickets` seule tâche planifiée. Après T7 : onze points d'accès
+publics (dix callables, dont `queryLogs` d'ADR-011, et le webhook), dix-sept instances au plus ;
+sur la base de ≈ 64 $ par mois et par instance saturée (tarifs à vérifier), ≈ 1 090 $ par mois
+en théorie sous une attaque continue de tous les points, l'alerte à 5 € part avant.
 
 ### Protection des callables
 
@@ -173,8 +195,9 @@ l'étiquette, et le webhook `pull_request` ne change aucun statut.
 `relaunch_development` (« Relancer le développement ») n'entrent dans `allowed_decisions` que
 pour un ticket `in_progress` validé dans l'application (`validated_by_app_at`), comme « Lancer le
 développement ». Version 5 de la règle. Refuser et Clore restent dans la liste, mais sont masqués
-par le client et rejetés par `decisionClaimVerdict` tant que le verrou des livraisons porte ce
-ticket (« Une livraison est en cours sur ce ticket. Attendez sa fin. »).
+par le client et rejetés par `decisionClaimVerdict` (depuis T7 : `refuseTicket` et
+`closeTicket`, P44) tant que le verrou des livraisons porte ce ticket (« Une livraison est en
+cours sur ce ticket. Attendez sa fin. »).
 
 ### Analyses et « Répondre »
 
@@ -476,6 +499,7 @@ Ils commencent après la fusion de T2. Estimations non mesurées, tirées des ta
 | T4 | deux routines sur claude.ai/code, dépôt `ChinaFred/KassBeer` seul, aucun connecteur, déclencheur API, prompts collés ; secrets `TICKETS_ROUTINE_ANALYSIS_ID`, `TICKETS_ROUTINE_ANALYSIS_TOKEN`, `TICKETS_ROUTINE_DEV_ID`, `TICKETS_ROUTINE_DEV_TOKEN`, même vides, avant le déploiement |
 | T5 | avant la fusion : jeton `GITHUB_TICKETS_TOKEN` étendu à Actions en lecture, prompt de la routine de développement recollé sur claude.ai (compatible avec le serveur de T4), événements « Pull requests » et « Workflow runs » cochés sur le webhook du dépôt ; aucun secret nouveau |
 | T6 | bucket en `us-east1`, nommé dans le code (point E du complément du 2026-11-14 et note du 2026-11-14 ci-dessus), cycle de vie de 180 jours sous `tickets/` et suppression réversible désactivée (point C) ; accès de l'agent Storage à Firestore ; CORS du bucket si `getData()` l'exige ; rôle de `github-deploy` pour publier les règles Storage (à vérifier) |
+| T7 | avant la fusion : aucune décision `pending` ni `applying` (requête de groupe sur `decisions` dans la console), puis `firebase functions:delete onDecisionCreated onDecisionUpdated --region europe-west1 --project kassbeer --force` depuis le poste de l'utilisateur ; après le déploiement : invocation publique de `validateTicket`, `refuseTicket`, `closeTicket` et `retryTicketSend` à vérifier (une erreur `unauthenticated` pour l'admin signale un réglage manquant) ; facultatif : suppression des index `tickets (status, retry_requested_at)` et `decisions (state, lease_until)`, `decisions (state, requested_at)` dans la console |
 
 Six secrets en tout : la limite de six versions actives gratuites est atteinte (à vérifier).
 Une rotation détruit la version précédente (`gcloud secrets versions destroy`). Un secret

@@ -175,7 +175,7 @@ String imageNonAffichee(String? alt) {
   return text.isEmpty ? '[Image non affichée]' : '[Image non affichée : $text]';
 }
 
-/// Cause d'un échec de « Répondre ».
+/// Cause d'un échec de « Répondre », d'une décision ou de « Relancer l'envoi ».
 enum CauseEchecReponse {
   /// `unavailable` sans motif : pas de réseau. Avec un motif (GitHub
   /// indisponible, écrit par le serveur), c'est [motif].
@@ -195,7 +195,9 @@ enum CauseEchecReponse {
   autre,
 }
 
-/// Échec de `answerTicketAnalysis`, rendu par le dépôt après son rapport.
+/// Échec d'une callable de l'administrateur sur un ticket
+/// (`answerTicketAnalysis`, `validateTicket`, `refuseTicket`, `closeTicket`,
+/// `retryTicketSend`), rendu par le dépôt après son rapport.
 @immutable
 class EchecReponse {
   const EchecReponse(
@@ -211,15 +213,15 @@ class EchecReponse {
   /// `details.reason` : texte français court écrit par le serveur.
   final String? motif;
 
-  /// `details.field` : champ refusé (`answer`, `ticketId`).
+  /// `details.field` : champ refusé (`answer`, `text`, `ticketId`).
   final String? champ;
 
   /// `details.code` : code stable du serveur (`not_answerable`,
   /// `github_unavailable`…), pour le rapport d'erreur seul.
   final String? codeServeur;
 
-  /// `details.partial` : la réponse est publiée sur GitHub, mais le statut n'a
-  /// pas été ramené à Reçu. Le texte ne doit plus changer.
+  /// `details.partial` : le texte est publié sur GitHub (réponse, motif ou
+  /// commentaire), mais la suite n'a pas abouti. Le texte ne doit plus changer.
   final bool partiel;
 
   /// Lit le code et les `details` d'une `HttpsError`.
@@ -254,6 +256,32 @@ class EchecReponse {
     );
   }
 
-  /// Le motif se pose sous le champ « Votre réponse ».
-  bool get surLeChamp => cause == CauseEchecReponse.motif && champ == 'answer';
+  /// Le motif se pose sous le champ de texte de la boîte (« Votre réponse »,
+  /// « Motif du refus », « Commentaire de clôture »).
+  bool get surLeChamp =>
+      cause == CauseEchecReponse.motif &&
+      (champ == 'answer' || champ == 'text');
+}
+
+/// Résultat d'une décision (`validateTicket`, `refuseTicket`, `closeTicket`,
+/// ADR-008, T7) : [echec] `null` si le serveur l'a appliquée, déjà rapporté
+/// sinon. [texteGarde] : le motif ou le commentaire publié par un essai
+/// précédent est gardé, et le texte envoyé n'est pas publié (P53).
+typedef ResultatDecision = ({EchecReponse? echec, bool texteGarde});
+
+/// Résultat de « Relancer l'envoi » (`retryTicketSend`, ADR-008, T7) : statut
+/// lu par le serveur après l'essai et numéro de l'Issue publiée, ou l'échec,
+/// déjà rapporté par le dépôt.
+@immutable
+class ResultatRelanceEnvoi {
+  const ResultatRelanceEnvoi.envoi({required this.status, this.issueNumber})
+    : echec = null;
+
+  const ResultatRelanceEnvoi.echec(EchecReponse this.echec)
+    : status = null,
+      issueNumber = null;
+
+  final TicketStatus? status;
+  final int? issueNumber;
+  final EchecReponse? echec;
 }

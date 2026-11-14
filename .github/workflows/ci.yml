@@ -254,9 +254,11 @@ jobs:
       - name: Manifeste des fonctions (P25)
         # Même découverte que deploy.yml. Points d'accès HTTP et callables limités à
         # la liste fermée d'ADR-008 et d'ADR-011 déjà livrée (githubTicketWebhook seul public,
-        # answerTicketAnalysis, launchTicketAnalysis, launchTicketDevelopment,
-        # launchTicketDelivery, attachTicketScreenshot, queryLogs), avec leurs
-        # maxInstances et délais (queryLogs : concurrency 1) ; aucun déclencheur bloquant ni de file ; maxInstances posé
+        # answerTicketAnalysis, validateTicket, refuseTicket, closeTicket, retryTicketSend,
+        # launchTicketAnalysis, launchTicketDevelopment, launchTicketDelivery,
+        # attachTicketScreenshot, queryLogs), avec leurs maxInstances et délais (queryLogs :
+        # concurrency 1) ; publishTicket seul déclencheur Firestore et syncTickets seule tâche
+        # planifiée (T7) ; aucun déclencheur bloquant ni de file ; maxInstances posé
         # sur chaque fonction ; chaque secret monté par les seules fonctions de P25, aucun par
         # queryLogs.
         env:
@@ -269,10 +271,16 @@ jobs:
             def keys_with(f): [.endpoints | to_entries[] | select(.value | f) | .key];
             (keys_with(has("blockingTrigger") or has("taskQueueTrigger")) | length == 0)
             and ((keys_with(has("httpsTrigger")) - ["githubTicketWebhook"]) | length == 0)
-            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis", "launchTicketAnalysis", "launchTicketDevelopment", "launchTicketDelivery", "attachTicketScreenshot", "queryLogs"]) | length == 0)
+            and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis", "validateTicket", "refuseTicket", "closeTicket", "retryTicketSend", "launchTicketAnalysis", "launchTicketDevelopment", "launchTicketDelivery", "attachTicketScreenshot", "queryLogs"]) | length == 0)
+            and ((keys_with(has("eventTrigger")) - ["publishTicket"]) | length == 0)
+            and ((keys_with(has("scheduleTrigger")) - ["syncTickets"]) | length == 0)
             and ((keys_with((.httpsTrigger.invoker // []) | index("public") != null)) - ["githubTicketWebhook"] | length == 0)
             and ((.endpoints.githubTicketWebhook // null) | . == null or (.maxInstances == 5 and .timeoutSeconds == 60))
             and ((.endpoints.answerTicketAnalysis // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 60))
+            and ((.endpoints.validateTicket // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 60))
+            and ((.endpoints.refuseTicket // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 60))
+            and ((.endpoints.closeTicket // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 60))
+            and ((.endpoints.retryTicketSend // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 60))
             and ((.endpoints.launchTicketAnalysis // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 120))
             and ((.endpoints.launchTicketDevelopment // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 120))
             and ((.endpoints.launchTicketDelivery // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 180))
