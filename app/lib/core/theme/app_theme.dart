@@ -85,6 +85,15 @@ abstract final class AppTheme {
   /// Police des titres, embarquée (`assets/fonts/`, demi-grasse seule).
   static const String policeTitres = 'Bitter';
 
+  /// Police du texte, embarquée sur toutes les plateformes : sans elle, le web
+  /// prend la police du système (Segoe UI, SF) ou télécharge Roboto.
+  static const String policeTexte = 'Roboto';
+
+  /// Polices de secours, embarquées : Roboto pour les caractères absents de
+  /// Bitter (≈, ≤, İ), puis les flèches et ⋮ absents des deux. Sans elles, le
+  /// web télécharge une police Noto, ce qui échoue hors ligne.
+  static const List<String> policesSecours = ['Roboto', 'Symboles'];
+
   /// Titres en Bitter demi-grasse ; chiffres de largeur fixe partout, pour que
   /// densités, heures et quantités restent alignées d'une ligne à l'autre.
   static TextTheme _textes(TextTheme t) {
@@ -115,7 +124,12 @@ abstract final class AppTheme {
   }
 
   static ThemeData _build(ColorScheme scheme) {
-    final defaut = ThemeData(colorScheme: scheme, useMaterial3: true);
+    final defaut = ThemeData(
+      colorScheme: scheme,
+      useMaterial3: true,
+      fontFamily: policeTexte,
+      fontFamilyFallback: policesSecours,
+    );
     final base = defaut.copyWith(textTheme: _textes(defaut.textTheme));
     final text = base.textTheme;
     final bordChamp = OutlineInputBorder(

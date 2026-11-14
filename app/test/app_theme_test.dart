@@ -77,6 +77,19 @@ void main() {
           );
         }
       });
+
+      test('polices embarquées : Roboto, Bitter aux titres, secours', () {
+        final t = theme.textTheme;
+        for (final style in [t.bodyMedium, t.labelLarge, t.titleMedium]) {
+          expect(style?.fontFamily, 'Roboto');
+          expect(style?.fontFamilyFallback, ['Roboto', 'Symboles']);
+        }
+        for (final style in [t.headlineLarge, t.titleLarge]) {
+          expect(style?.fontFamily, 'Bitter');
+          expect(style?.fontWeight, FontWeight.w600);
+          expect(style?.fontFamilyFallback, ['Roboto', 'Symboles']);
+        }
+      });
     });
   }
 }
