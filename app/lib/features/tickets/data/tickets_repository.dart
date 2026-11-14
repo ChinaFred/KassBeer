@@ -132,7 +132,9 @@ abstract class TicketsRepository {
 
   /// Octets de la capture rangée sous [path] (`getData`, jamais d'URL de
   /// téléchargement), pour l'auteur et l'administrateur. Un chemin hors motif
-  /// n'est pas lu. Un échec est rapporté ici, puis relancé.
+  /// n'est pas lu. Un échec est rapporté ici, puis relancé ; une capture
+  /// absente du bucket (`object-not-found`, effacée après 180 jours) lève
+  /// [CaptureEffacee] sans rapport.
   Future<Uint8List> loadScreenshot(String path);
 }
 
@@ -744,6 +746,12 @@ class FirestoreTicketsRepository implements TicketsRepository {
         throw const FormatException('capture vide');
       }
       return bytes;
+    } on FirebaseException catch (error, stackTrace) {
+      // Capture effacée par la règle de cycle de vie du bucket : un état
+      // attendu, sans rapport (complément T6 du 2026-11-14).
+      if (error.code == 'object-not-found') throw const CaptureEffacee();
+      _reportStorage('tickets.load_screenshot', error, stackTrace, const []);
+      rethrow;
     } catch (error, stackTrace) {
       _reportStorage('tickets.load_screenshot', error, stackTrace, const []);
       rethrow;

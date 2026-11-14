@@ -212,6 +212,9 @@ ticket validé dans l'application (P42). La section « Coûts variables » de
 `CLAUDE.md` décrit ce premier poste. `ci.yml` et `deploy.yml` ajoutent les deux callables de T4 à la
 liste fermée et leurs secrets au contrôle des secrets (P10, accord de l'utilisateur).
 
+Le 2026-11-14, complément du lot T6 avec l'accord de l'utilisateur : P23 et P48 modifiés (capture
+envoyée dans l'heure, dimensions contrôlées, image choisie réencodée en PNG, rétention de 180 jours).
+
 Le 2026-11-14, avec le lot T5 et l'accord de l'utilisateur, P14, P24, P25, P29, P35, P36 et P39 à
 P42 sont modifiés et P43 à P47 ajoutés : `launchTicketDelivery` et ses refus (P43), verrou des
 livraisons (P44), état « PR prête » et comptes rendus (P45), relecture des PR et des runs (P46),

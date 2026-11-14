@@ -281,7 +281,8 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   l'administrateur. Le suivi affiche « Brassin › Embouteillage ». Les confirmations (« Supprimer
   ? », « Abandonner les modifications ? ») et les sélecteurs de date et d'heure n'y figurent pas.
   « Sources des données », sans menu ni fenêtre, n'a pas de champ « Élément précis ».
-- « Capture », ouvert depuis le menu du compte seulement (ADR-008, T6). L'image du contenu de
+- « Capture » (ADR-008, T6). La capture de l'écran précédent n'existe que depuis le menu du
+  compte. L'image du contenu de
   la page quittée est prise au moment de l'appui sur « Signaler ou proposer », avant
   l'ouverture du formulaire : ni le menu, ni la barre du haut, ni la barre de navigation n'y
   figurent. Elle reste en mémoire et n'est jamais écrite sur l'appareil. Case « Joindre une
@@ -289,9 +290,23 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   Elle n'est jamais publiée. », puis la vignette, qui s'agrandit à l'appui. Sur un écran qui
   peut montrer des prix (Recette, Brassin, jour de brassage, journée suivante, Préparer la
   journée, Mes prix), une ligne s'ajoute avant la case : « La capture peut montrer vos prix :
-  l'administrateur la verra. ». Pas de section depuis « Mes tickets », par l'adresse du
-  formulaire ou par « Reprendre », ni quand l'image n'a pas pu être prise ou dépasse 5 Mo.
-  Aucune image ne se choisit dans les fichiers de l'appareil.
+  l'administrateur la verra. ». Pas de case depuis « Mes tickets », par l'adresse du
+  formulaire ou par « Reprendre », ni quand l'image n'a pas pu être prise ou dépasse 5 Mo :
+  la section n'offre alors que « Choisir une image », sous l'aide « Seul l'administrateur la
+  voit. Elle n'est jamais publiée. ».
+- « Choisir une image » (complément du 2026-11-14), sous la case : le sélecteur du système ne
+  propose que des images (PNG, JPEG, WebP). L'image choisie est réduite à 2 000 pixels de côté
+  au plus et réenregistrée en PNG, sans ses métadonnées (date, lieu de prise de vue). Son
+  aperçu remplace le bouton, avec « Retirer l'image », qui reçoit le focus ; après le retrait,
+  une annulation ou un refus, le focus revient sur « Choisir une image ». Pendant la
+  préparation, « Préparation de l'image… » remplace le bouton, « Envoyer » reste grisé et la
+  case de capture est désactivée. Une seule image part : choisir une
+  image décoche la case, cocher la case retire l'image et efface le message d'erreur. Refus,
+  sous le bouton : « Cette image n'a pas pu être ouverte. Choisissez-en une autre. » (fichier
+  illisible, qui n'est pas une image PNG, JPEG ou WebP, ou de plus de 50 millions de pixels,
+  refusé avant d'être ouvert) et « Cette image dépasse 5 Mo. Choisissez une image plus
+  légère. » (fichier, ou image réenregistrée, de plus de 5 Mo). Sélecteur fermé sans choix :
+  rien d'autre ne change.
 - Ligne grise : « Envoyé avec : version 0.2.0, Android » (ou « web », « version
   indisponible »).
 - Erreurs à l'appui sur « Envoyer », le premier champ en erreur reçoit le focus : « Choisissez
@@ -302,15 +317,17 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   « Ticket enregistré. Il partira au retour du réseau. ») avec « Voir ». Un double appui
   n'écrit qu'un ticket. Un refus du serveur affiche « Votre ticket a été refusé. Il n'est pas
   enregistré. » avec « Reprendre », qui rouvre le formulaire avec le texte envoyé.
-- Capture cochée : une fois le ticket accepté par le serveur, l'image part en arrière-plan,
+- Capture cochée ou image choisie : une fois le ticket accepté par le serveur, l'image part en arrière-plan,
   formulaire déjà fermé. Elle ne part jamais sur GitHub ; chaque Issue porte « Capture
   éventuelle disponible dans Admin › Tickets. ». Hors ligne, le ticket part sans elle :
   « Ticket enregistré sans la capture. Il partira au retour du réseau. ». Un dépôt en échec,
   ou un ticket que le serveur n'a pas accepté dans les 30 s, affiche « Ticket enregistré sans
-  la capture. » avec « Voir ». La capture ne se joint pas plus tard, et une capture jointe ne
-  se remplace pas.
+  la capture. » avec « Voir ». La capture ne se joint pas plus tard (le dépôt est refusé une
+  heure après la création du ticket), et une capture jointe ne se remplace pas. Elle est
+  effacée 180 jours après son envoi.
 - Quitter avec une saisie demande « Abandonner les modifications ? » / « Le texte saisi sera
-  perdu. ». Un ticket envoyé ne se modifie ni ne s'annule.
+  perdu. » (« Le texte saisi et l'image seront perdus. » quand une image est choisie ou la
+  capture cochée). Un ticket envoyé ne se modifie ni ne s'annule.
 
 **Mes tickets** (`/tickets`). Tickets du membre, le plus récent en tête (un ticket encore sur
 l'appareil d'abord). Dans une fenêtre de 840 px ou plus, la liste fait 380 px à gauche et le
@@ -333,7 +350,8 @@ hh:mm », phrase du statut, encadré du texte de l'administrateur quand il a ré
 « Motif du refus » pour un ticket refusé, « Commentaire de clôture » pour un ticket clos,
 « Réponse de l'administrateur » sinon), frise des étapes (voir ci-dessous), description, « Capture » quand une capture est jointe
 (vignette qui s'agrandit à l'appui ; si elle ne se lit pas, « Capture indisponible. », hors
-ligne « La capture se lit avec le réseau. », et « Réessayer »), « Écran :
+ligne « La capture se lit avec le réseau. », et « Réessayer » ; « Capture effacée. » quand ses
+180 jours sont passés ou qu'elle n'est plus dans le stockage, sans « Réessayer »), « Écran :
 Recette », « Envoyé avec : … ». Le texte est sélectionnable. Ouvrir un
 ticket dont le suivi est à lire éteint la pastille, hors ligne compris. États : « Chargement du
 ticket », « Impossible de lire vos tickets. », « Ce ticket n'existe plus. », « Ce ticket n'est
@@ -692,7 +710,7 @@ l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », «
 « Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
 « Capture », quand l'auteur en a joint une (vignette qui s'agrandit à l'appui, « Capture
 indisponible. » et « Réessayer » si elle ne se lit pas, avec « La capture se lit avec le
-réseau. » hors ligne) ;
+réseau. » hors ligne ; « Capture effacée. » après 180 jours) ;
 « Livraison (N) », section ouverte, pour un ticket En cours ou Livré, ou qui a déjà un compte
 rendu de livraison (voir ci-dessous) ;
 « Analyses (N) », pour un ticket qui a une Issue (voir ci-dessous) ;

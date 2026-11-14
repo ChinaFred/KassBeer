@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.45 — fonctionnel
+### v0.1.46 — fonctionnel
 
 Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle
 version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui
@@ -18,7 +18,7 @@ coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre 
 jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change
 sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36.
 
-### v0.1.45 — technique
+### v0.1.46 — technique
 
 ADR-012 (option A), ticket #36. Le job `build` de `deploy.yml` copie l'APK signé dans
 `app/build/web/app-release.apk` et écrit `app/build/web/apk_release.json` (`version`,
@@ -46,6 +46,39 @@ passe de `transitive` à `direct main`, aucune version ne change. `main.dart.js`
 octets avant, 5 612 436 octets après (+ 2 126). Taille de l'APK non mesurée (pas de SDK Android dans
 la session) : à relever dans le résumé du job `build` du premier déploiement. Réglage hors
 dépôt : rétention des versions de Hosting.
+
+### v0.1.45 — fonctionnel
+
+Dans « Signaler ou proposer », un bouton « Choisir une image » permet de joindre une image de
+l'appareil à la place de la capture de l'écran. Seules les images PNG, JPEG et WebP sont
+proposées. L'image est réduite à 2 000 pixels de côté au plus et réenregistrée sans ses
+métadonnées (date, lieu de prise de vue). Une seule image part avec le ticket : choisir une image
+décoche la capture de l'écran, et l'inverse. Pendant la préparation de l'image, « Envoyer » est
+grisé. Une capture doit être envoyée dans l'heure qui suit le ticket. Les captures sont effacées
+au bout de 180 jours ; la fiche du ticket affiche alors « Capture effacée. ».
+
+### v0.1.45 — technique
+
+ADR-008, complément du lot T6 (décisions de l'utilisateur du 2026-11-14, note datée de l'ADR,
+points A à E ; P23 et P48 modifiés). `storage.rules` : `create` refusé si
+`tickets/{ticketId}.created_at` n'est pas une date de moins d'une heure (`ticketOpenToCapture`),
+tests de `rules-tests/` (55 et 61 min, champ absent ou texte, cinq profils sur un ticket de
+90 min). `attachTicketScreenshot` lit 24 octets : signature, IHDR de 13 octets, largeur et
+hauteur de 1 à 2 000 px (`dimensions_refused` sinon) ; écrit `screenshot_expires_at` (+ 180
+jours) avec `screenshot_path`, champ serveur refusé au client (tests des cinq profils). Client :
+« Capture effacée. » sans lecture ni rapport quand l'échéance est passée ou que Storage rend
+`object-not-found` (`CaptureEffacee`). Canal `fr.kassbeer/files` (P17, P28) : `pickDocument`
+reçoit `mimeTypes` en option (1 à 10 types, même motif vérifié en Dart et en Kotlin, test
+d'égalité), envoyés par `EXTRA_MIME_TYPES` ; attribut `accept` sur le web ; sans filtre, appel
+inchangé. Formulaire : `kTypesImages` (PNG, JPEG, WebP), lecture bornée à 5 Mo par le Dart,
+`dimensionsImage` lit la taille dans l'en-tête (PNG IHDR, JPEG SOFn, WebP VP8, VP8L, VP8X) sans
+décoder, refus au-delà de 50 millions de pixels par `depasseMaxPixels` (comparaison sans
+produit), recontrôle du descripteur hors web, décodage `dart:ui` (côté long à 2 000 px) et
+réencodage PNG ; `EditeurPleinEcran.actionActive` grise « Envoyer » pendant la préparation.
+Réglages faits le 2026-11-14 : bucket en `us-east1` (documentation corrigée, constat du
+stockage hors UE dans ADR-008), cycle de vie de 180 jours sous `tickets/`, suppression réversible
+désactivée. Taille de `main.dart.js` (`flutter build web --release`) : 5 610 310 octets avant (v0.1.44),
+5 619 084 après (+ 8 774). Kotlin modifié : APK compilé par le job CI « Android — compilation ».
 
 ### v0.1.44 — fonctionnel
 

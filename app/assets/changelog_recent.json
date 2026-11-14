@@ -1,10 +1,17 @@
 {
   "versions": [
     {
-      "version": "0.1.45",
+      "version": "0.1.46",
       "date": "2026-11-14",
       "paragraphs": [
         "Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui de la version installée et la taille du téléchargement. « Plus tard » la ferme jusqu'au lancement suivant. « Mettre à jour » télécharge la version dans l'application, contrôle le fichier, puis ouvre l'écran d'installation d'Android. La première fois, Android demande d'autoriser Kass'Beer à installer des applications : la fenêtre ouvre le bon réglage. Une coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre jamais pendant le jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36."
+      ]
+    },
+    {
+      "version": "0.1.45",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Dans « Signaler ou proposer », un bouton « Choisir une image » permet de joindre une image de l'appareil à la place de la capture de l'écran. Seules les images PNG, JPEG et WebP sont proposées. L'image est réduite à 2 000 pixels de côté au plus et réenregistrée sans ses métadonnées (date, lieu de prise de vue). Une seule image part avec le ticket : choisir une image décoche la capture de l'écran, et l'inverse. Pendant la préparation de l'image, « Envoyer » est grisé. Une capture doit être envoyée dans l'heure qui suit le ticket. Les captures sont effacées au bout de 180 jours ; la fiche du ticket affiche alors « Capture effacée. »."
       ]
     },
     {
@@ -34,13 +41,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "L'administrateur peut livrer un ticket depuis sa fiche. Quand la pull request d'un ticket En cours est prête, CI verte, « Livrer » lance une session Claude Code qui la met à jour, la fusionne et suit le déploiement. La boîte de confirmation rappelle que la fusion met l'application en ligne pour tout le groupe. Une seule livraison tourne à la fois. La section « Livraison » de la fiche montre le compte rendu de la session : terminée, ou arrêtée avec la raison. Si la CI d'une pull request est en échec, « Relancer le développement » lance une session qui corrige la même branche. Dans la liste, des pastilles signalent « PR prête », « CI en cours », « Livraison en cours » et « Correction en cours »."
-      ]
-    },
-    {
-      "version": "0.1.39",
-      "date": "2026-11-13",
-      "paragraphs": [
-        "Dans la liste des brassins, « Prochaine journée » annonce pour vos brassins la même journée que leur fiche. Une journée faite avant sa date n'est plus annoncée : la suivante prend sa place. Une journée commencée et pas terminée affiche « en cours ». Une journée dont la date est passée sans qu'elle soit commencée affiche « en retard », suivi de sa date prévue. Une fois le brassin embouteillé, seule une journée prévue après l'embouteillage reste annoncée ; sans elle, ou une fois toutes les journées faites, la ligne reprend la date du brassin. La fiche ne propose plus une journée placée avant une journée déjà faite. Une journée prévue après l'embouteillage reste proposée sur la fiche. Les brassins des autres membres, et les vôtres tant que leurs saisies ne sont pas lues, suivent les dates prévues, comme avant."
       ]
     }
   ]

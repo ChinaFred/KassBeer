@@ -790,7 +790,7 @@ class _FicheState extends ConsumerState<_Fiche> {
       Text(ticket.description, style: theme.textTheme.bodyLarge),
       if (ticket.screenshotPath case final path?) ...[
         gap,
-        CaptureDuTicket(path: path),
+        CaptureDuTicket(path: path, expiresAt: ticket.screenshotExpiresAt),
       ],
       // Livraison avant Analyses : pour un ticket En cours, le blocage est le
       // texte à lire maintenant (UX T5, point 4).

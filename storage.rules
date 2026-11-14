@@ -47,8 +47,8 @@ service firebase.storage {
     // des PNG (note du 2026-11-14).
     //
     // Création seule (`resource == null`), par l'auteur membre, quand `tickets/{ticketId}`
-    // existe dans Firestore et porte `author_uid` égal à l'appelant : PNG de 1 octet à
-    // 5 Mo. Une capture déposée ne se remplace pas : celle que le serveur a contrôlée reste
+    // existe dans Firestore, porte `author_uid` égal à l'appelant et a été créé il y a une
+    // heure au plus (`created_at`, complément du 2026-11-14) : PNG de 1 octet à 5 Mo. Une capture déposée ne se remplace pas : celle que le serveur a contrôlée reste
     // celle que l'administrateur lit. Lecture par l'auteur membre et l'administrateur.
     // Aucune mise à jour, aucune suppression, aucun listage.
     // `attachTicketScreenshot` vérifie ensuite l'auteur, la taille et les premiers
@@ -58,6 +58,14 @@ service firebase.storage {
       // refus. Une seule lecture facturée.
       function ticket() {
         return firestore.get(/databases/(default)/documents/tickets/$(ticketId));
+      }
+
+      // Ticket de l'appelant, créé il y a une heure au plus. `created_at` est l'heure du
+      // serveur posée à la création (firestore.rules, `created_at == request.time`).
+      function ticketOpenToCapture(t) {
+        return t.author_uid == request.auth.uid
+          && t.created_at is timestamp
+          && t.created_at > request.time - duration.value(1, 'h');
       }
 
       allow get: if isMember()
@@ -71,7 +79,7 @@ service firebase.storage {
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType == 'image/png'
         && isMember()
-        && ticket().data.author_uid == request.auth.uid;
+        && ticketOpenToCapture(ticket().data);
 
       allow update, list, delete: if false;
     }
