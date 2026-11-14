@@ -105,7 +105,6 @@ class _InviteMemberFormState extends State<InviteMemberForm> {
           decoration: InputDecoration(
             labelText: 'Adresse e-mail Google',
             errorText: _emailError,
-            border: const OutlineInputBorder(),
           ),
           onChanged: (_) {
             if (_emailError != null) setState(() => _emailError = null);
@@ -120,10 +119,7 @@ class _InviteMemberFormState extends State<InviteMemberForm> {
           maxLength: kMemberDisplayNameMaxLength,
           textCapitalization: TextCapitalization.words,
           textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
-            labelText: 'Nom (facultatif)',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Nom (facultatif)'),
           onSubmitted: (_) => _submit(),
         ),
         const SizedBox(height: 8),

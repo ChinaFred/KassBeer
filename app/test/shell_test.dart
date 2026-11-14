@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/bandeau_hors_ligne.dart';
+import 'package:kass_beer/core/presentation/logo_kass_beer.dart';
 import 'package:kass_beer/core/presentation/ligne_liste.dart';
 
 import 'package:kass_beer/features/equipment/presentation/equipment_list_screen.dart';
@@ -147,6 +149,46 @@ void main() {
         matching: find.byType(SingleChildScrollView),
       ),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('rail étendu, texte × 2 : nom sous le médaillon, entier', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await signedIn(tester, width: 1400);
+    expect(tester.takeException(), isNull);
+    final nom = find.descendant(
+      of: find.byType(NavigationRail),
+      matching: find.text("Kass'Beer"),
+    );
+    final medaillon = find.descendant(
+      of: find.byType(NavigationRail),
+      matching: find.byType(MedaillonKassBeer),
+    );
+    expect(
+      tester.getTopLeft(nom).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(medaillon).dy),
+    );
+    // Une seule ligne, sans points de suspension, dans la largeur du rail.
+    final paragraphe = tester.renderObject<RenderParagraph>(
+      find.descendant(of: nom, matching: find.byType(RichText)),
+    );
+    expect(paragraphe.didExceedMaxLines, isFalse);
+    expect(paragraphe.overflow, isNot(TextOverflow.ellipsis));
+    expect(
+      paragraphe
+          .getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 9),
+          )
+          .map((b) => b.top)
+          .toSet(),
+      hasLength(1),
+    );
+    expect(
+      tester.getRect(nom).right,
+      lessThanOrEqualTo(tester.getRect(find.byType(NavigationRail)).right),
     );
   });
 

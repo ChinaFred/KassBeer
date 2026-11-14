@@ -223,6 +223,7 @@ void main() {
         '/prix',
         before: (app) => publierPrix(app, prices: const [], fees: const []),
       );
+      expect(find.text(PricesScreen.aucunPrixTitre), findsOneWidget);
       expect(find.text(PricesScreen.aucunPrix), findsOneWidget);
       expect(find.text(PricesScreen.aucunFrais), findsOneWidget);
       expect(find.text('Ajouter un prix'), findsOneWidget);
@@ -248,6 +249,12 @@ void main() {
       final capsulesY = tester.getTopLeft(find.text('Capsules')).dy;
       final electriciteY = tester.getTopLeft(find.text('Électricité')).dy;
       expect(capsulesY, lessThan(electriciteY));
+      // Lignes, titres et sections alignés à 16 px du bord.
+      final bord = tester.getTopLeft(find.text('Mes frais')).dx;
+      expect(bord, 16);
+      expect(tester.getTopLeft(find.text('Capsules')).dx, bord);
+      expect(tester.getTopLeft(find.text('Ingrédients')).dx, bord);
+      expect(tester.getTopLeft(find.text('Malts')).dx, bord);
       expect(
         tester.getTopLeft(find.text('${eur('0,05')} par bouteille')).dy,
         greaterThan(capsulesY),
@@ -269,6 +276,7 @@ void main() {
         tester.getTopLeft(find.text('Munich')).dy,
         lessThan(tester.getTopLeft(find.text('Pils')).dy),
       );
+      expect(tester.getTopLeft(find.text('Munich')).dx, bord);
       await tester.tap(find.text('Levures'));
       await tester.pumpAndSettle();
       expect(

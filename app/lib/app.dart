@@ -117,7 +117,7 @@ class _StartupMessage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Center(child: MedaillonKassBeer(taille: 120)),
+                  const MedaillonKassBeer(taille: 120),
                   const SizedBox(height: 24),
                   Icon(
                     Icons.error_outline,

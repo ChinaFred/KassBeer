@@ -269,7 +269,6 @@ class _EquipmentFormState extends ConsumerState<_EquipmentForm> {
                     textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
                       labelText: 'Nom de l\'équipement',
-                      border: OutlineInputBorder(),
                     ),
                     validator: (v) =>
                         (v ?? '').trim().isEmpty ? nameMissing : null,
@@ -358,7 +357,6 @@ class _EquipmentFormState extends ConsumerState<_EquipmentForm> {
                     maxLines: 8,
                     decoration: const InputDecoration(
                       labelText: 'Notes (facultatif)',
-                      border: OutlineInputBorder(),
                     ),
                     onChanged: _changed,
                   ),

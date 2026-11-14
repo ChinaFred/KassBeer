@@ -751,6 +751,7 @@
       ]
     }
   ],
+  "timer_rule": "Lecture d'un minuteur à now depuis son début enregistré : écoulé (zéro avant le début), restant et dépassement jamais négatifs, fini quand le restant est nul. Part écoulée (elapsed_fraction) : écoulé / durée, de 0 à 1 ; 1 dès que la durée est atteinte, dépassée ou nulle. Elle règle la barre de progression de l'écran du jour.",
   "timer_cases": [
     {
       "id": "palier-en-cours",
@@ -762,7 +763,8 @@
         "elapsed_seconds": 1500,
         "remaining_seconds": 1200,
         "overrun_seconds": 0,
-        "finished": false
+        "finished": false,
+        "elapsed_fraction": 0.5555555555555556
       }
     },
     {
@@ -775,11 +777,13 @@
         "elapsed_seconds": 3000,
         "remaining_seconds": 0,
         "overrun_seconds": 300,
-        "finished": true
+        "finished": true,
+        "elapsed_fraction": 1
       }
     },
     {
       "id": "pile-a-l-heure",
+      "note": "Fin : la durée est atteinte, la barre est pleine.",
       "started_at": "2026-11-07T10:00:00",
       "duration_minutes": 10,
       "now": "2026-11-07T10:10:00",
@@ -787,7 +791,62 @@
         "elapsed_seconds": 600,
         "remaining_seconds": 0,
         "overrun_seconds": 0,
-        "finished": true
+        "finished": true,
+        "elapsed_fraction": 1
+      }
+    },
+    {
+      "id": "debut",
+      "note": "Début : l'étape vient de commencer, la barre est vide.",
+      "started_at": "2026-11-07T10:00:00",
+      "duration_minutes": 10,
+      "now": "2026-11-07T10:00:00",
+      "expected": {
+        "elapsed_seconds": 0,
+        "remaining_seconds": 600,
+        "overrun_seconds": 0,
+        "finished": false,
+        "elapsed_fraction": 0
+      }
+    },
+    {
+      "id": "milieu",
+      "started_at": "2026-11-07T10:00:00",
+      "duration_minutes": 10,
+      "now": "2026-11-07T10:05:00",
+      "expected": {
+        "elapsed_seconds": 300,
+        "remaining_seconds": 300,
+        "overrun_seconds": 0,
+        "finished": false,
+        "elapsed_fraction": 0.5
+      }
+    },
+    {
+      "id": "duree-nulle",
+      "note": "Action sans durée : finie dès son début, barre pleine, aucune division par zéro.",
+      "started_at": "2026-11-07T10:00:00",
+      "duration_minutes": 0,
+      "now": "2026-11-07T10:00:00",
+      "expected": {
+        "elapsed_seconds": 0,
+        "remaining_seconds": 0,
+        "overrun_seconds": 0,
+        "finished": true,
+        "elapsed_fraction": 1
+      }
+    },
+    {
+      "id": "duree-nulle-depassee",
+      "started_at": "2026-11-07T10:00:00",
+      "duration_minutes": 0,
+      "now": "2026-11-07T10:02:00",
+      "expected": {
+        "elapsed_seconds": 120,
+        "remaining_seconds": 0,
+        "overrun_seconds": 120,
+        "finished": true,
+        "elapsed_fraction": 1
       }
     },
     {
@@ -799,7 +858,8 @@
         "elapsed_seconds": 0,
         "remaining_seconds": 600,
         "overrun_seconds": 0,
-        "finished": false
+        "finished": false,
+        "elapsed_fraction": 0
       }
     },
     {
@@ -811,7 +871,8 @@
         "elapsed_seconds": 42,
         "remaining_seconds": 18,
         "overrun_seconds": 0,
-        "finished": false
+        "finished": false,
+        "elapsed_fraction": 0.7
       }
     },
     {
@@ -823,7 +884,8 @@
         "elapsed_seconds": 54300,
         "remaining_seconds": 0,
         "overrun_seconds": 50700,
-        "finished": true
+        "finished": true,
+        "elapsed_fraction": 1
       }
     }
   ],

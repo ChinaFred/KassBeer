@@ -172,10 +172,7 @@ class _FormulaireFraisState extends ConsumerState<FormulaireFrais> {
               maxLength: kFeeNameMaxLength,
               textCapitalization: TextCapitalization.sentences,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Nom',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Nom'),
               validator: (text) => text == null || text.trim().isEmpty
                   ? ErreursNombre.obligatoire
                   : null,

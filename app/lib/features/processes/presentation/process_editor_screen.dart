@@ -574,7 +574,6 @@ class _EditeurState extends ConsumerState<_Editeur> {
                           textCapitalization: TextCapitalization.sentences,
                           decoration: const InputDecoration(
                             labelText: 'Nom du processus',
-                            border: OutlineInputBorder(),
                           ),
                           validator: (v) =>
                               (v ?? '').trim().isEmpty ? nameMissing : null,
@@ -588,7 +587,6 @@ class _EditeurState extends ConsumerState<_Editeur> {
                           maxLines: 6,
                           decoration: const InputDecoration(
                             labelText: 'Notes (facultatif)',
-                            border: OutlineInputBorder(),
                           ),
                           onChanged: _changed,
                         ),

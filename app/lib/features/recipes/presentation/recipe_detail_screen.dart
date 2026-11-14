@@ -206,9 +206,6 @@ class _Fiche extends StatelessWidget {
     final c = recipe.content;
     final edit = onEdit;
     final delete = onDelete;
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
     final volume = c.batchVolumeL;
     final boil = c.boilTimeMin;
     final hopIbu = <int, double>{
@@ -218,23 +215,18 @@ class _Fiche extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Semantics(
-          header: true,
-          child: Text(c.name, style: theme.textTheme.headlineSmall),
+        EnTeteFiche(
+          titre: c.name,
+          sousTitre: [
+            ?c.style,
+            if (edit == null)
+              'Recette de ${libelleAuteur(ownerUid: recipe.ownerUid, ownerName: recipe.ownerName, readerUid: readerUid)}',
+          ].join(' · '),
+          etiquettes: [
+            if (recipe.hasPendingWrites)
+              const Etiquette(label: 'En attente du réseau'),
+          ],
         ),
-        if (c.style != null) Text(c.style!, style: muted),
-        if (edit == null)
-          Text(
-            'Recette de ${libelleAuteur(ownerUid: recipe.ownerUid, ownerName: recipe.ownerName, readerUid: readerUid)}',
-            style: muted,
-          ),
-        if (recipe.hasPendingWrites) ...[
-          const SizedBox(height: 8),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Etiquette(label: 'En attente du réseau'),
-          ),
-        ],
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
@@ -278,40 +270,54 @@ class _Fiche extends StatelessWidget {
               ),
           ],
         ),
-        const TitreSection('Calculs'),
-        BlocCalculs(
-          calculs: calculs,
-          content: c,
-          equipement: equipement,
-          onComplete: edit,
+        CarteSection(
+          titre: 'Calculs',
+          children: [
+            BlocCalculs(
+              calculs: calculs,
+              content: c,
+              equipement: equipement,
+              onComplete: edit,
+            ),
+          ],
         ),
         // « Coût avec vos prix » : avec les prix du lecteur, auteur ou non
         // (CR7). Le bloc porte son titre.
-        BlocCoutRecette(recipe: recipe, onCompleter: edit),
-        const TitreSection('Général'),
-        LigneFiche(
-          label: 'Type de recette',
-          value: c.type == null ? null : typesRecette.libelle(c.type!),
+        CarteSection(
+          children: [BlocCoutRecette(recipe: recipe, onCompleter: edit)],
         ),
-        // Auteur indiqué par le fichier importé (recipe.author) ; absent d'une
-        // recette saisie.
-        if (c.author != null)
-          LigneFiche(
-            label: 'Auteur indiqué par le fichier importé',
-            value: c.author,
-          ),
-        LigneFiche(
-          label: 'Volume en fermenteur',
-          value: volume == null ? null : formatLitres(volume),
+        CarteSection(
+          titre: 'Général',
+          children: [
+            LigneFiche(
+              label: 'Type de recette',
+              value: c.type == null ? null : typesRecette.libelle(c.type!),
+            ),
+            // Auteur indiqué par le fichier importé (recipe.author) ; absent
+            // d'une recette saisie.
+            if (c.author != null)
+              LigneFiche(
+                label: 'Auteur indiqué par le fichier importé',
+                value: c.author,
+              ),
+            LigneFiche(
+              label: 'Volume en fermenteur',
+              value: volume == null ? null : formatLitres(volume),
+            ),
+            LigneFiche(
+              label: 'Durée d\'ébullition',
+              value: boil == null ? null : formatMinutes(boil),
+            ),
+            LigneFiche(
+              label: 'Équipement',
+              value: libelleEquipement(equipement),
+            ),
+          ],
         ),
-        LigneFiche(
-          label: 'Durée d\'ébullition',
-          value: boil == null ? null : formatMinutes(boil),
-        ),
-        LigneFiche(label: 'Équipement', value: libelleEquipement(equipement)),
         ContenuRecette(
           content: c,
           hopIbu: hopIbu,
+          enCartes: true,
           chronologie: _Chronologie(
             content: c,
             onEdit: edit == null ? null : onEditSteps,

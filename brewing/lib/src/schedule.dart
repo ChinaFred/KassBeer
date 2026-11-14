@@ -440,6 +440,15 @@ class TimerReading {
 
   /// Vrai quand la durée est atteinte.
   bool get isFinished => remaining == Duration.zero;
+
+  /// Part écoulée de la durée, de 0 à 1 : 0 avant le début, 1 dès que la
+  /// durée est atteinte, dépassée ou nulle. La durée vaut
+  /// `elapsed + remaining - overrun`.
+  double get elapsedFraction {
+    final duration = elapsed + remaining - overrun;
+    if (isFinished || duration <= Duration.zero) return 1;
+    return elapsed.inMicroseconds / duration.inMicroseconds;
+  }
 }
 
 /// Lit un minuteur à partir de son heure de début enregistrée.

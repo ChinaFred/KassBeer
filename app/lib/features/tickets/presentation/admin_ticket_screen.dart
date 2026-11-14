@@ -683,29 +683,10 @@ class _FicheState extends ConsumerState<_Fiche> {
     final missing = ticket.issueMissingSince;
 
     final contenu = <Widget>[
-      Row(
-        children: [
-          ExcludeSemantics(
-            child: Icon(
-              ticketTypeIcon(ticket.type),
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(child: Text(ticket.type.label, style: muted)),
-        ],
-      ),
-      const SizedBox(height: 8),
-      Semantics(
-        header: true,
-        child: Text(ticket.title, style: theme.textTheme.headlineSmall),
-      ),
-      const SizedBox(height: 8),
-      Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
+      EnTeteFiche(
+        titre: ticket.title,
+        sousTitre: ticket.type.label,
+        etiquettes: [
           EtiquetteStatut(ticket: ticket, clignoteAuChangement: true),
           if (number != null) Text('Issue #$number', style: muted),
           ...pastillesAdmin(ticket, now),
@@ -770,21 +751,20 @@ class _FicheState extends ConsumerState<_Fiche> {
       gap,
       FriseTicket(ticket: ticket),
       const SizedBox(height: 8),
-      Text('Auteur : ${auteurTicket(ticket, names)}', style: muted),
-      if (created != null) ...[
-        const SizedBox(height: 4),
-        Text(
-          'Envoyé le ${formatDateChiffres(created)} à ${formatHeure(created)}',
-          style: muted,
+      LigneFiche(label: 'Auteur', value: auteurTicket(ticket, names)),
+      if (created != null)
+        LigneFiche(
+          label: 'Envoyé le',
+          value: '${formatDateChiffres(created)} à ${formatHeure(created)}',
         ),
-      ],
-      const SizedBox(height: 4),
-      Text(
-        envoyeAvec(version: ticket.appVersion, platform: ticket.platform),
-        style: muted,
+      LigneFiche(
+        label: 'Envoyé avec',
+        value: versionEtPlateforme(
+          version: ticket.appVersion,
+          platform: ticket.platform,
+        ),
       ),
-      const SizedBox(height: 4),
-      Text('Écran : ${ticketScreenLabel(ticket.screen)}', style: muted),
+      LigneFiche(label: 'Écran', value: ticketScreenLabel(ticket.screen)),
       const TitreSection('Description'),
       Text(ticket.description, style: theme.textTheme.bodyLarge),
       if (ticket.screenshotPath case final path?) ...[

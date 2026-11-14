@@ -1042,9 +1042,14 @@ class _EcranJourState extends ConsumerState<_EcranJour>
             controller: controller,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             children: [
-              Text(
-                _brew.recipe.name,
-                style: Theme.of(context).textTheme.titleLarge,
+              // En-tête de la feuille, au-dessus des sous-sections de la
+              // recette (NiveauTitre.sousSection).
+              Semantics(
+                header: true,
+                child: Text(
+                  _brew.recipe.name,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
               ContenuRecette(
                 content: _brew.recipe,
@@ -1224,6 +1229,8 @@ class _Jour extends StatelessWidget {
           timerSize: timerSize,
           etapeSize: etapeSize,
           ensuiteSize: styles.ensuite,
+          etiquetteSize: styles.etiquette,
+          informationSize: styles.information,
         );
         final chronologie = plan == null
             ? const SizedBox.shrink()
@@ -1247,6 +1254,7 @@ class _Jour extends StatelessWidget {
           onEmbouteiller: onEmbouteiller,
           onRetour: onRetour,
           height: low ? 64 : 72,
+          texteSize: styles.bouton,
         );
         final Widget body;
         if (twoColumns) {
@@ -1458,6 +1466,8 @@ class _Panneau extends StatelessWidget {
     required this.timerSize,
     required this.etapeSize,
     required this.ensuiteSize,
+    required this.etiquetteSize,
+    required this.informationSize,
   });
 
   final PlanDuJour? plan;
@@ -1471,27 +1481,26 @@ class _Panneau extends StatelessWidget {
   final double timerSize;
   final double etapeSize;
   final double ensuiteSize;
+  final double etiquetteSize;
+  final double informationSize;
 
-  Widget _texte(
-    BuildContext context,
-    String text,
-    double size, {
-    int? maxLines,
-  }) => Text(
+  /// Texte en demi-gras, couleur héritée : `onSurface` hors de la carte,
+  /// couleur du texte de la carte dedans.
+  Widget _texte(String text, double size, {int? maxLines}) => Text(
     text,
     maxLines: maxLines,
     overflow: maxLines == null ? null : TextOverflow.ellipsis,
-    style: TextStyle(
-      fontSize: size,
-      fontWeight: FontWeight.w600,
-      color: Theme.of(context).colorScheme.onSurface,
-    ),
+    style: TextStyle(fontSize: size, fontWeight: FontWeight.w600),
   );
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final etiquette = theme.textTheme.labelLarge?.copyWith(
+      fontSize: etiquetteSize,
+    );
+    final information = TextStyle(fontSize: informationSize);
     final p = plan;
     final raison = illisible;
     if (raison != null) {
@@ -1507,13 +1516,9 @@ class _Panneau extends StatelessWidget {
       );
     }
     if (p.lignes.isEmpty) {
-      return _texte(
-        context,
-        'Aucune étape. Saisissez vos mesures.',
-        ensuiteSize,
-      );
+      return _texte('Aucune étape. Saisissez vos mesures.', ensuiteSize);
     }
-    if (p.termine) return _texte(context, toutFait, ensuiteSize);
+    if (p.termine) return _texte(toutFait, ensuiteSize);
     final finPrevue = p.finPrevue;
     final ligneFin = finPrevue == null
         ? null
@@ -1529,10 +1534,9 @@ class _Panneau extends StatelessWidget {
         children: [
           Text(
             'Étape ${next.index + 1} sur ${p.lignes.length}'.toUpperCase(),
-            style: theme.textTheme.labelLarge,
+            style: etiquette,
           ),
           _texte(
-            context,
             next.step.durationMin == 0
                 ? 'Action : ${next.step.name}'
                 : 'Prochaine étape : ${next.step.name}',
@@ -1551,7 +1555,10 @@ class _Panneau extends StatelessWidget {
             ].join(' · '),
             style: TextStyle(fontSize: ensuiteSize),
           ),
-          if (ligneFin != null) ...[const SizedBox(height: 8), Text(ligneFin)],
+          if (ligneFin != null) ...[
+            const SizedBox(height: 8),
+            Text(ligneFin, style: information),
+          ],
         ],
       );
     }
@@ -1560,77 +1567,165 @@ class _Panneau extends StatelessWidget {
       duration: running.duree,
       now: now,
     );
-    final depasse = reading.isFinished && reading.overrun > Duration.zero;
     final fini = reading.isFinished;
     final suivante = p.suivanteDe(running);
     final mesure = running.mesures
         .where((m) => m.measureType == MeasureType.temperature)
         .lastOrNull;
     final temp = running.step.tempC;
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Étape ${running.index + 1} sur ${p.lignes.length} · En cours'
-              .toUpperCase(),
-          style: theme.textTheme.labelLarge,
-        ),
-        _texte(context, running.step.name, etapeSize, maxLines: 2),
-        Semantics(
-          label: fini
-              ? 'Dépassé de ${minuteurParle(reading.overrun)}'
-              : '${minuteurParle(reading.remaining)} restantes',
-          excludeSemantics: true,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              fini
-                  ? formatMinuteur(reading.overrun, depassement: true)
-                  : formatMinuteur(reading.remaining),
-              key: const ValueKey('minuteur'),
-              style: TextStyle(
-                fontSize: timerSize,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: fini ? scheme.onTertiaryContainer : scheme.onSurface,
+    return _CarteEtape(
+      depasse: fini,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // L'icône et l'étiquette disent le dépassement, en plus de la
+          // couleur et du bord de la carte. Même place dans les deux états.
+          Row(
+            children: [
+              ExcludeSemantics(
+                child: Icon(
+                  fini ? Icons.alarm : Icons.timer_outlined,
+                  key: const ValueKey('icone-etat-etape'),
+                  size: MediaQuery.textScalerOf(
+                    context,
+                  ).scale(etiquetteSize * 1.4),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Étape ${running.index + 1} sur ${p.lignes.length} · '
+                          '${fini ? 'Dépassé' : 'En cours'}'
+                      .toUpperCase(),
+                  // `labelLarge` porte `onSurface` : la couleur du texte de la
+                  // carte la remplace.
+                  style: etiquette?.copyWith(
+                    color: fini
+                        ? scheme.onTertiaryContainer
+                        : scheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          _texte(running.step.name, etapeSize, maxLines: 2),
+          Semantics(
+            label: fini
+                ? 'Dépassé de ${minuteurParle(reading.overrun)}'
+                : '${minuteurParle(reading.remaining)} restantes',
+            excludeSemantics: true,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                fini
+                    ? formatMinuteur(reading.overrun, depassement: true)
+                    : formatMinuteur(reading.remaining),
+                key: const ValueKey('minuteur'),
+                style: TextStyle(
+                  fontSize: timerSize,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ),
           ),
-        ),
-        Text(
-          !fini
-              ? 'restantes sur ${formatDuree(running.duree)}'
-              : reading.overrun < const Duration(minutes: 1)
-              ? 'Dépassé · prévu ${formatDuree(running.duree)}'
-              : 'Dépassé de ${formatDuree(reading.overrun)} · prévu ${formatDuree(running.duree)}',
-          style: TextStyle(fontSize: ensuiteSize),
-        ),
-        if (temp != null)
-          Text(
-            mesure == null
-                ? 'Visée ${formatCelsius(temp)}'
-                : 'Visée ${formatCelsius(temp)} · mesurée '
-                      '${formatCelsius(mesure.value!)} à ${formatHeure(mesure.measuredAt)}',
-            style: TextStyle(fontSize: ensuiteSize),
-          ),
-        if (suivante != null)
+          // Part écoulée, calculée par `brewing/` à la même lecture que le
+          // minuteur ; exclue de la lecture : le minuteur est déjà lu.
           Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Ensuite : ${[suivante.step.name, if (suivante.step.tempC != null) formatCelsius(suivante.step.tempC!), 'vers ${formatHeure(suivante.schedule.expectedStart)}'].join(' · ')}',
-              style: TextStyle(fontSize: ensuiteSize),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: ExcludeSemantics(
+              child: LinearProgressIndicator(
+                key: const ValueKey('progression-etape'),
+                value: reading.elapsedFraction,
+                minHeight: 12,
+                borderRadius: BorderRadius.circular(6),
+                color: fini ? scheme.tertiary : scheme.primary,
+                backgroundColor: scheme.surfaceContainerLowest,
+              ),
             ),
           ),
-        if (ligneFin != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(ligneFin),
+          Text(
+            !fini
+                ? 'restantes sur ${formatDuree(running.duree)}'
+                : reading.overrun < const Duration(minutes: 1)
+                ? 'Dépassé · prévu ${formatDuree(running.duree)}'
+                : 'Dépassé de ${formatDuree(reading.overrun)} · prévu ${formatDuree(running.duree)}',
+            style: TextStyle(fontSize: ensuiteSize),
           ),
-      ],
+          if (temp != null)
+            Text(
+              mesure == null
+                  ? 'Visée ${formatCelsius(temp)}'
+                  : 'Visée ${formatCelsius(temp)} · mesurée '
+                        '${formatCelsius(mesure.value!)} à ${formatHeure(mesure.measuredAt)}',
+              style: TextStyle(fontSize: ensuiteSize),
+            ),
+          if (suivante != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Ensuite : ${[suivante.step.name, if (suivante.step.tempC != null) formatCelsius(suivante.step.tempC!), 'vers ${formatHeure(suivante.schedule.expectedStart)}'].join(' · ')}',
+                style: TextStyle(fontSize: ensuiteSize),
+              ),
+            ),
+          if (ligneFin != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(ligneFin, style: information),
+            ),
+        ],
+      ),
     );
-    if (!depasse) return content;
-    return Encadre(ton: TonEncadre.avertissement, child: content);
+  }
+}
+
+/// Épaisseur du bord de la carte de l'étape en cours, dans les deux états :
+/// seule sa couleur change au passage en dépassé.
+const double _kBordCarteEtape = 2;
+
+/// Carte de l'étape en cours : `primaryContainer` en cours ; ton avertissement
+/// (`tertiaryContainer`, bord `tertiary`) en dépassé. Marge intérieure et
+/// épaisseur du bord identiques dans les deux états. Les textes et icônes sans
+/// couleur propre prennent la couleur du texte du fond.
+class _CarteEtape extends StatelessWidget {
+  const _CarteEtape({required this.depasse, required this.child});
+
+  final bool depasse;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (fond, texte, bord) = depasse
+        ? (
+            scheme.tertiaryContainer,
+            scheme.onTertiaryContainer,
+            scheme.tertiary,
+          )
+        : (
+            scheme.primaryContainer,
+            scheme.onPrimaryContainer,
+            scheme.primaryContainer,
+          );
+    return Material(
+      key: const ValueKey('carte-etape'),
+      color: fond,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.rayon),
+        side: BorderSide(color: bord, width: _kBordCarteEtape),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: texte),
+          child: IconTheme.merge(
+            data: IconThemeData(color: texte),
+            child: child,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1646,6 +1741,7 @@ class _BarreActions extends StatelessWidget {
     required this.onEmbouteiller,
     required this.onRetour,
     required this.height,
+    required this.texteSize,
   });
 
   final PlanDuJour? plan;
@@ -1660,6 +1756,9 @@ class _BarreActions extends StatelessWidget {
   final VoidCallback onEmbouteiller;
   final VoidCallback onRetour;
   final double height;
+
+  /// Taille du libellé des deux boutons ([StylesJourDeBrassage.bouton]).
+  final double texteSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1693,7 +1792,7 @@ class _BarreActions extends StatelessWidget {
       principal = null;
       action = null;
     }
-    final textStyle = TextStyle(fontSize: 22, color: scheme.onPrimary);
+    final textStyle = TextStyle(fontSize: texteSize, color: scheme.onPrimary);
     // Hauteur minimale, pas fixe : à 200 %, le libellé garde sa place.
     final taille = Size.fromHeight(height);
     return IntrinsicHeight(
@@ -1709,12 +1808,12 @@ class _BarreActions extends StatelessWidget {
               ),
               onPressed: () => onMesure(running),
               icon: const Icon(Icons.edit_outlined, size: 24),
-              label: const FittedBox(
+              label: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   'Mesure',
                   maxLines: 1,
-                  style: TextStyle(fontSize: 22),
+                  style: TextStyle(fontSize: texteSize),
                 ),
               ),
             ),

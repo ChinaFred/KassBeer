@@ -76,28 +76,33 @@ class DataSourcesScreen extends ConsumerWidget {
       titre: title,
       repli: AppRoutes.library,
       body: SelectionArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            paragraphe(intro),
-            const TitreSection('Brewtarget'),
-            paragraphe(brewtarget),
-            const TitreSection('BJCP 2021'),
-            paragraphe(bjcp),
-            const TitreSection('beer-analytics.com'),
-            paragraphe(beerAnalytics),
-            paragraphe('Licence : $kLicenceCcBySa'),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: () => _ouvrirLicence(context, ref),
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Lire la licence CC BY-SA 4.0'),
-              ),
+        child: Builder(
+          builder: (context) => ListView(
+            padding: PageSecondaire.marges(
+              context,
+              const EdgeInsets.fromLTRB(16, 8, 16, 32),
             ),
-            const TitreSection('DIY Dog'),
-            paragraphe(diyDog),
-          ],
+            children: [
+              paragraphe(intro),
+              const TitreSection('Brewtarget'),
+              paragraphe(brewtarget),
+              const TitreSection('BJCP 2021'),
+              paragraphe(bjcp),
+              const TitreSection('beer-analytics.com'),
+              paragraphe(beerAnalytics),
+              paragraphe('Licence : $kLicenceCcBySa'),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () => _ouvrirLicence(context, ref),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Lire la licence CC BY-SA 4.0'),
+                ),
+              ),
+              const TitreSection('DIY Dog'),
+              paragraphe(diyDog),
+            ],
+          ),
         ),
       ),
     );

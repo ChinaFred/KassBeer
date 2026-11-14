@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/menu_compte.dart';
 import 'package:kass_beer/core/presentation/etiquette.dart';
+import 'package:kass_beer/core/presentation/fiche.dart';
 import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
@@ -540,6 +541,7 @@ void main() {
       final app = await admin(tester);
       app.tickets.publishAll(const []);
       await go(tester, app, AppRoutes.adminTickets);
+      expect(find.text(AdminTicketsScreen.emptyTitle), findsOneWidget);
       expect(find.text(AdminTicketsScreen.emptyMessage), findsOneWidget);
     });
 
@@ -610,8 +612,13 @@ void main() {
       expect(tous.selected, isTrue);
       expect(find.text('Densité fausse'), findsOneWidget);
       await tapChip(tester, 'À traiter (0)');
+      expect(
+        find.text(AdminTicketsScreen.nothingToProcessTitle),
+        findsOneWidget,
+      );
       expect(find.text(AdminTicketsScreen.nothingToProcess), findsOneWidget);
       await tapChip(tester, 'Bloqués (0)');
+      expect(find.text(AdminTicketsScreen.nothingBlockedTitle), findsOneWidget);
       expect(find.text(AdminTicketsScreen.nothingBlocked), findsOneWidget);
       await tester.tap(find.text(AdminTicketsScreen.showAll));
       await tester.pumpAndSettle();
@@ -770,8 +777,20 @@ void main() {
         decisions: [uneDecision(state: TicketDecisionState.applied)],
       );
       expect(find.text('Issue #12'), findsOneWidget);
-      expect(find.text('Auteur : brasseur@exemple.fr'), findsOneWidget);
-      expect(find.text('Envoyé le 08/11/26 à 09:30'), findsOneWidget);
+      // Métadonnées en lignes « libellé : valeur ».
+      Finder ligne(String libelle, String valeur) => find.ancestor(
+        of: find.text(valeur),
+        matching: find.widgetWithText(LigneFiche, libelle),
+      );
+      expect(ligne('Auteur', 'brasseur@exemple.fr'), findsOneWidget);
+      expect(ligne('Envoyé le', '08/11/26 à 09:30'), findsOneWidget);
+      expect(ligne('Envoyé avec', 'version 0.1.0, Android'), findsOneWidget);
+      expect(ligne('Écran', 'Recette'), findsOneWidget);
+      // En-tête de fiche : titre déclaré en-tête, type en sous-titre.
+      expect(
+        find.ancestor(of: find.text('Bug'), matching: find.byType(EnTeteFiche)),
+        findsOneWidget,
+      );
       expect(find.text('Motif du refus'), findsOneWidget);
       expect(find.text('Hors du périmètre.'), findsOneWidget);
       expect(find.text('La densité affichée est fausse.'), findsOneWidget);
