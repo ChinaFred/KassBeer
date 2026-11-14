@@ -160,6 +160,18 @@ travailler. Version 4
 de la règle (`ALLOWED_DECISIONS_VERSION`) : les tickets déjà validés avant ce changement
 doivent être validés à nouveau dans l'application.
 
+2026-11-14, décision de l'utilisateur (lot T5) : `in_progress` reste dérivé de la seule
+étiquette `statut:en-cours`. Le second cas écrit plus haut (PR ouverte d'un auteur de confiance
+qui ferme l'Issue, règle de Kass'Dalle) est abandonné : la session de développement pose déjà
+l'étiquette, et le webhook `pull_request` ne change aucun statut.
+
+2026-11-14, décisions de l'utilisateur (lot T5) : `launch_delivery` (« Livrer ») et
+`relaunch_development` (« Relancer le développement ») n'entrent dans `allowed_decisions` que
+pour un ticket `in_progress` validé dans l'application (`validated_by_app_at`), comme « Lancer le
+développement ». Version 5 de la règle. Refuser et Clore restent dans la liste, mais sont masqués
+par le client et rejetés par `decisionClaimVerdict` tant que le verrou des livraisons porte ce
+ticket (« Une livraison est en cours sur ce ticket. Attendez sa fin. »).
+
 ### Analyses et « Répondre »
 
 Copie de Kass'Dalle. `tickets/{id}/admin/analysis` (dix entrées, 20 000 caractères chacune,
@@ -194,6 +206,33 @@ jusqu'à T5, qui y ajoutera `livraison` avec `launchTicketDelivery`. `routine_in
 écrit en deux champs, un par routine : `analysis_invalid_since` et `development_invalid_since`
 de `ticket_status/launches`. `delivery_running` arrive avec T5.
 
+2026-11-14 (lot T5) : le motif devient `^(analyse|developpement|livraison|reprise) #[1-9][0-9]{0,6}$`.
+`livraison #N` et `reprise #N` partent par la routine de développement : aucune troisième
+routine, aucun secret nouveau ; `TICKETS_ROUTINE_DEV_*` est monté par `launchTicketDevelopment`
+et `launchTicketDelivery`, et leur refus pose `development_invalid_since`. Décisions de
+l'utilisateur :
+
+- « Relancer le développement » (décision 9, conception revue par l'architecte) : sur un ticket
+  En cours dont la CI de la PR est rouge (`failure`, `timed_out` ou `startup_failure` ;
+  `cancelled` ne compte pas), action `reprise`, par la callable existante
+  `launchTicketDevelopment` avec l'argument `mode: "resume"` (absent : `start`, jamais déduit
+  du statut). Aucun point d'accès nouveau. Préconditions au serveur (P47), dont
+  `admin/delivery.relaunch_ready` écrit par le serveur ;
+- relance seulement après l'échéance de 3 h du développement ou de la reprise précédents
+  (décision 10) ; aucune limite de reprises par ticket en plus du plafond du jour (décision 13) ;
+- une reprise qui s'arrête ne publie rien sur GitHub ; sa raison est dans le résumé de la
+  session (décision 11) ;
+- « Livrer » est refusé (`reprise_running`) tant qu'une reprise du même ticket est en cours ;
+  le premier développement ne bloque pas la livraison (décision 12) ;
+- la livraison et la reprise sont des lancements du même poste `ticket_routine_launch` et du
+  même plafond (10 par jour), comptés seulement après leurs contrôles et la prise du verrou
+  (décision 6).
+
+Règle « en cours » par action : une livraison est bloquée par une livraison ou une reprise en
+cours ; une reprise par un développement, une reprise ou une livraison en cours ; l'analyse et
+le premier développement restent bloqués par la même action seule. Bail de 210 s pour une
+livraison, plus long que les 180 s de `launchTicketDelivery`.
+
 ### Livraison
 
 Copie de `delivery.ts` : état « PR prête » (`tickets/{id}/admin/delivery`), verrou global
@@ -214,6 +253,59 @@ le hook `format-on-edit.mjs` et `npm ci` exécutent (P10), et les fichiers de co
 Android (`*.gradle`, `*.gradle.kts`, `gradle.properties`, `settings.gradle*`, `gradle/**`
 sous `app/android/`), exécutés par la compilation de l'APK.
 
+2026-11-14, décisions de l'utilisateur (lot T5) :
+
+- `app/pubspec.lock`, `brewing/pubspec.lock` et `exchange/pubspec.lock` sont sensibles pour la
+  livraison seule : un nouveau paquet exécute son code de construction dans le job `build` de
+  `deploy.yml`, qui détient les secrets de signature. La session de développement peut ajouter
+  un paquet ; « Livrer » refuse alors (`delivery_sensitive_files`) et l'administrateur fusionne
+  à la main après relecture. La liste vit une seule fois dans
+  `functions/src/tickets/delivery.ts` (`SENSITIVE_DELIVERY_PATTERNS`) ; le bloc L3 du prompt
+  de développement en est la copie, comparée par `functions/test/prompts.test.ts` ;
+- « Livrer » n'est offert que pour un ticket validé dans l'application, comme « Lancer le
+  développement » (décision 1) ;
+- quand une condition de L1 ou de L2 manque, la session de livraison publie un
+  `## Livraison — blocage` qui la nomme, ce qui libère le verrou à la relecture suivante ; elle
+  ne reste silencieuse que pour un texte de lancement refusé et pour L4 (décision 3) ;
+- « PR prête » exige que le dernier run de `.github/workflows/ci.yml` (chemin et nom « CI ») de
+  chaque événement sur la tête soit terminé en `success`, et que les deux événements `push` et
+  `pull_request` soient présents : dans Kass'Beer, chaque tête a deux runs, et la CI de la
+  fusion avec `main` compte. Un run dont `head_repository.full_name` n'est pas
+  `ChinaFred/KassBeer` est ignoré ;
+- le serveur écrit les échéances à jour : un blocage relevé libère le verrou, ramène le
+  `retry_after` de l'entrée de livraison à l'heure du relevé et la marque
+  `ended_by: "blocked"` ; un ticket qui quitte « En cours » libère le verrou qu'il tient. Le
+  client ne lit que `retry_after` et `ended_by` (texte « s'est arrêtée » ou « n'a rien
+  fusionné »), sans règle recopiée ni fixture partagée ;
+- un ticket dont la PR est prête entre dans le filtre « À traiter » de la liste seulement ; le
+  compteur du menu reste calculé sur le statut (décision 7) ;
+- la section « Livraison (N) » se place juste après la description, avant « Analyses », ouverte
+  (décision 8) ;
+- un 403 sur `GET /actions/runs` est une panne à part (décision 14) : `launchTicketDelivery`
+  refuse en `github_actions_forbidden` (« Le jeton GitHub ne peut pas lire la CI : sur
+  GitHub, donnez-lui le droit « Actions : lecture ». »), sans décompte ; le serveur pose
+  `ticket_status/launches.ci_read_denied_since`, effacé à la lecture suivante réussie des runs
+  d'une PR éligible. La fiche d'un ticket En cours affiche cette ligne seulement si
+  `admin/delivery` porte une seule PR éligible, et la liste ne montre ni « CI en cours » ni
+  « PR prête » tant que le champ est posé. `token_invalid_since` n'est pas posé : le jeton
+  sert par ailleurs (exception écrite dans P25) ;
+- sont sensibles aussi (décision 15) : `app/android/gradlew` et `app/android/gradlew.bat`
+  (lancés par `flutter build apk` dans le job qui détient la clé de signature), `**/hook/**`
+  (build hooks Dart, exécutés à la compilation), `**/.claude/**` à toute profondeur (au lieu
+  de `.claude/**` à la racine seule : consignes chargées par les sessions suivantes). Ces
+  quatre motifs sont interdits à la session de développement, comme les fichiers de
+  construction Android. `functions/src/auth.ts`, `functions/src/config.ts`,
+  `functions/src/tickets/delivery.ts` et `test-fixtures/member_access.json` portent le
+  contrôle des livraisons, le plafond et l'appartenance : ils sont sensibles pour la livraison
+  seule, comme les `pubspec.lock` (la session peut les modifier ; « Livrer » refuse et
+  l'administrateur fusionne à la main).
+
+2026-11-14 : l'utilisateur a refusé de rendre tout `functions/src/` sensible pour la
+livraison ; seuls `auth.ts`, `config.ts`, `delivery.ts` et `member_access.json` le sont.
+Risque accepté : une PR qui modifie un autre fichier du serveur (`launch.ts`, `index.ts`…)
+peut retirer un contrôle et rester livrable par « Livrer » ; la liste L3 du prompt et la
+relecture de la PR par l'administrateur restent les protections.
+
 ### Prompts
 
 Les deux prompts de Kass'Dalle sont repris dans `exigences-techniques.md` avec ces
@@ -229,6 +321,12 @@ fermée : lire l'Issue et ses commentaires, publier un commentaire « ## Analyse
 `statut:à-analyser` et poser `statut:analysé`. Tout autre appel est interdit : aucune autre
 étiquette (ni `validé`), aucune fermeture, aucune autre Issue ou pull request, aucune fusion. Un test de `functions/test/` vérifie que la liste des
 fichiers sensibles du prompt égale celle de `delivery.ts`.
+
+2026-11-14 (lot T5) : le prompt de développement s'aiguille sur le premier mot du texte :
+`developpement` (points 2 à 9), `livraison` (partie « Livraison », L0 à L11) et `reprise`
+(partie « Reprise », R1 à R7 : même branche et même PR, aucune nouvelle PR, aucune étiquette,
+aucun `--force`, aucune relance de workflow, arrêt expliqué dans le résumé seulement).
+`prompts.test.ts` raisonne par routine et compare la liste L3 à `delivery.ts`.
 
 ### Capture d'écran
 
@@ -284,7 +382,7 @@ Ils commencent après la fusion de T2. Estimations non mesurées, tirées des ta
 |---|---|
 | T3 | secret `GITHUB_WEBHOOK_SECRET` (`openssl rand -hex 32`) créé avant le déploiement ; webhook du dépôt : adresse de `githubTicketWebhook` affichée par le déploiement, `application/json`, ce secret, SSL vérifié, événements Issues et Issue comments (T5 : Pull requests, Workflow runs), `ping` en 200 ; rôles de `github-deploy` sur ce secret ; invocation publique des callables et du webhook (Cloud Run) |
 | T4 | deux routines sur claude.ai/code, dépôt `ChinaFred/KassBeer` seul, aucun connecteur, déclencheur API, prompts collés ; secrets `TICKETS_ROUTINE_ANALYSIS_ID`, `TICKETS_ROUTINE_ANALYSIS_TOKEN`, `TICKETS_ROUTINE_DEV_ID`, `TICKETS_ROUTINE_DEV_TOKEN`, même vides, avant le déploiement |
-| T5 | jeton `GITHUB_TICKETS_TOKEN` étendu à Actions en lecture |
+| T5 | avant la fusion : jeton `GITHUB_TICKETS_TOKEN` étendu à Actions en lecture, prompt de la routine de développement recollé sur claude.ai (compatible avec le serveur de T4), événements « Pull requests » et « Workflow runs » cochés sur le webhook du dépôt ; aucun secret nouveau |
 | T6 | bucket par défaut en `europe-west1` ; accès de l'agent Storage à Firestore ; CORS du bucket si `getData()` l'exige ; rôle de `github-deploy` pour publier les règles Storage (à vérifier) |
 
 Six secrets en tout : la limite de six versions actives gratuites est atteinte (à vérifier).

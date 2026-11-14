@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   classifyGithubFailure,
+  GithubActionsForbidden,
   GithubError,
   githubClient,
   isIssueOfTicket,
@@ -263,6 +264,45 @@ describe("client GitHub", () => {
       }),
     );
     assert.equal(await client.fileAtCommit("app/pubspec.yaml", "abcdef1"), "version: 0.3.1+50\n");
+  });
+
+  it("403 sur /actions/runs : GithubActionsForbidden, kind other, jamais token (P25)", async () => {
+    const client = githubClient(TOKEN, async () =>
+      reply(403, { message: "Resource not accessible by personal access token" }),
+    );
+    let caught: unknown = null;
+    try {
+      await client.listRunsForCommit("a".repeat(40));
+    } catch (err) {
+      caught = err;
+    }
+    assert.ok(caught instanceof GithubActionsForbidden);
+    assert.ok(caught instanceof GithubError);
+    assert.equal(caught.kind, "other");
+    assert.notEqual(caught.kind, "token");
+    assert.equal(caught.status, 403);
+    assert.ok(!caught.message.includes("secretsecret"));
+  });
+
+  it("403 limite de débit sur /actions/runs : rate_limit, pas GithubActionsForbidden", async () => {
+    const client = githubClient(TOKEN, async () =>
+      reply(403, { message: "API rate limit exceeded" }, { "x-ratelimit-remaining": "0" }),
+    );
+    await assert.rejects(
+      client.listRunsForCommit("a".repeat(40)),
+      (err: unknown) =>
+        err instanceof GithubError &&
+        !(err instanceof GithubActionsForbidden) &&
+        err.kind === "rate_limit",
+    );
+  });
+
+  it("401 sur /actions/runs : jeton refusé", async () => {
+    const client = githubClient(TOKEN, async () => reply(401, { message: "Bad credentials" }));
+    await assert.rejects(
+      client.listRunsForCommit("a".repeat(40)),
+      (err: unknown) => err instanceof GithubError && err.kind === "token",
+    );
   });
 });
 

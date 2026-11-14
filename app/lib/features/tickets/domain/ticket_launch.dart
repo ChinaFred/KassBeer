@@ -3,18 +3,23 @@ import 'package:flutter/foundation.dart';
 import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/formats.dart';
 
-/// Valeurs de `allowed_decisions` qui permettent « Lancer l'analyse » et
-/// « Lancer le développement » (ADR-008, T4). Écrites par le serveur seul ;
-/// les règles de `decisions/` les refusent : elles ne deviennent jamais une
-/// décision.
+/// Valeurs de `allowed_decisions` qui permettent « Lancer l'analyse »,
+/// « Lancer le développement » (ADR-008, T4), « Livrer » et « Relancer le
+/// développement » (T5). Écrites par le serveur seul ; les règles de
+/// `decisions/` les refusent : elles ne deviennent jamais une décision.
 const kLaunchAnalysisDecision = 'launch_analysis';
 const kLaunchDevelopmentDecision = 'launch_development';
+const kLaunchDeliveryDecision = 'launch_delivery';
+const kRelaunchDevelopmentDecision = 'relaunch_development';
 
-/// Les deux lancements de session Claude Code d'un ticket. [storedValue] est
-/// la valeur `action` de l'historique, écrite par le serveur.
+/// Les lancements de session Claude Code d'un ticket. [storedValue] est la
+/// valeur `action` de l'historique, écrite par le serveur. `reprise` :
+/// « Relancer le développement » d'un ticket En cours dont la CI est rouge.
 enum ActionLancement {
   analyse('analyse'),
-  developpement('developpement');
+  developpement('developpement'),
+  livraison('livraison'),
+  reprise('reprise');
 
   const ActionLancement(this.storedValue);
 
@@ -28,29 +33,44 @@ enum ActionLancement {
     return null;
   }
 
-  /// Callable du serveur (ADR-008, « Points d'accès autorisés »).
+  /// Callable du serveur (ADR-008, « Points d'accès autorisés ») : la reprise
+  /// passe par `launchTicketDevelopment` avec `mode: "resume"` (P47).
   String get callable => switch (this) {
     ActionLancement.analyse => 'launchTicketAnalysis',
-    ActionLancement.developpement => 'launchTicketDevelopment',
+    ActionLancement.developpement ||
+    ActionLancement.reprise => 'launchTicketDevelopment',
+    ActionLancement.livraison => 'launchTicketDelivery',
   };
 
-  /// « Analyse » / « Développement », en tête de « … en cours ».
+  /// Arguments de la callable en plus de `ticketId`.
+  Map<String, Object?> get arguments => switch (this) {
+    ActionLancement.reprise => const {'mode': 'resume'},
+    _ => const {},
+  };
+
+  /// « Analyse », « Développement »…, en tête de « … en cours ».
   String get nom => switch (this) {
     ActionLancement.analyse => 'Analyse',
     ActionLancement.developpement => 'Développement',
+    ActionLancement.livraison => 'Livraison',
+    ActionLancement.reprise => 'Correction',
   };
 
   /// Titre d'une carte de l'historique.
   String get titreHistorique => switch (this) {
     ActionLancement.analyse => 'Analyse lancée',
     ActionLancement.developpement => 'Développement lancé',
+    ActionLancement.livraison => 'Livraison lancée',
+    ActionLancement.reprise => 'Correction lancée',
   };
 
   /// Complément des libellés : « Lancer l'analyse », « Relancer le
   /// développement ».
   String get complement => switch (this) {
     ActionLancement.analyse => 'l\'analyse',
-    ActionLancement.developpement => 'le développement',
+    ActionLancement.developpement ||
+    ActionLancement.reprise => 'le développement',
+    ActionLancement.livraison => 'la livraison',
   };
 }
 
@@ -85,6 +105,7 @@ class TicketLaunch {
     this.retryAfter,
     this.sessionUrl,
     this.reason,
+    this.endedBy,
   });
 
   /// `null` : action inconnue de cette version.
@@ -106,6 +127,14 @@ class TicketLaunch {
 
   /// Raison d'un échec, en français, écrite par le serveur.
   final String? reason;
+
+  /// Fin d'une livraison écrite par le serveur : `blocked` quand un compte
+  /// rendu `## Livraison — blocage` a été relevé après son lancement (P45).
+  /// Le client choisit son texte d'après ce champ, sans comparer de dates.
+  final String? endedBy;
+
+  /// Livraison close par un blocage relevé par le serveur.
+  bool get arreteeParBlocage => endedBy == kLivraisonFinBlocage;
 
   /// En cours : [retryAfter] après [now]. Aucune autre condition (ADR-008 :
   /// le client ne recopie pas la règle du serveur).
@@ -139,6 +168,7 @@ class TicketLaunchesDoc {
           retryAfter: e.date('retry_after'),
           sessionUrl: e.texteFacultatif('session_url'),
           reason: e.texteFacultatif('reason'),
+          endedBy: e.texteFacultatif('ended_by'),
         ),
     ];
     final far = DateTime.utc(1);
@@ -186,6 +216,35 @@ class TicketLaunchesDoc {
 /// Entrées gardées par le serveur.
 const kTicketLaunchHistoryMax = 20;
 
+/// `ended_by` d'une livraison close par un blocage (`DELIVERY_ENDED_BY_BLOCKAGE`
+/// du serveur).
+const kLivraisonFinBlocage = 'blocked';
+
+/// `ticket_status/launches.delivery_running` (P44) : verrou des livraisons,
+/// écrit par le serveur seul. Il tient tant que [retryAfter] n'est pas passé :
+/// le serveur le libère dès qu'un blocage est relevé ou que le ticket quitte
+/// « En cours » ; le client ne recopie pas cette règle.
+@immutable
+class VerrouLivraison {
+  const VerrouLivraison({
+    required this.ticketId,
+    this.issueNumber,
+    this.launchedAt,
+    this.retryAfter,
+  });
+
+  final String ticketId;
+  final int? issueNumber;
+  final DateTime? launchedAt;
+  final DateTime? retryAfter;
+
+  /// Échéance future.
+  bool tient(DateTime now) {
+    final until = retryAfter;
+    return until != null && until.isAfter(now);
+  }
+}
+
 /// Document `ticket_status/launches`, écrit par le serveur seul et lu par
 /// l'administrateur seul (P41). Le plafond [perDay] vient du serveur
 /// (`LAUNCHES_PER_DAY`) : aucune constante en Dart (P39).
@@ -199,6 +258,8 @@ class EtatLancements {
     this.perDay,
     this.analysisInvalidSince,
     this.developmentInvalidSince,
+    this.deliveryRunning,
+    this.ciReadDeniedSince,
   });
 
   /// Jour de Paris du compteur, `AAAAMMJJ`, écrit par le serveur. Le client
@@ -214,6 +275,14 @@ class EtatLancements {
   /// Jeton de la routine refusé depuis cette date.
   final DateTime? analysisInvalidSince;
   final DateTime? developmentInvalidSince;
+
+  /// Verrou des livraisons, ou `null` (absent ou libéré).
+  final VerrouLivraison? deliveryRunning;
+
+  /// GitHub refuse au jeton la lecture des runs de la CI (403, permission
+  /// « Actions : lecture » absente) depuis cette date ; effacé par le serveur
+  /// à la lecture suivante réussie (décision de l'utilisateur du 2026-11-14).
+  final DateTime? ciReadDeniedSince;
 
   static final _jour = RegExp(r'^\d{8}$');
   static final _mois = RegExp(r'^\d{6}$');
@@ -247,6 +316,23 @@ class EtatLancements {
       perDay: entier('per_day'),
       analysisInvalidSince: read.date('analysis_invalid_since'),
       developmentInvalidSince: read.date('development_invalid_since'),
+      deliveryRunning: _verrou(read.objetFacultatif('delivery_running')),
+      ciReadDeniedSince: read.date('ci_read_denied_since'),
+    );
+  }
+
+  static VerrouLivraison? _verrou(LecteurChamps? read) {
+    if (read == null) return null;
+    final ticketId = read.texteFacultatif('ticket_id');
+    if (ticketId == null || ticketId.isEmpty) return null;
+    final n = read.nombreFacultatif('issue_number');
+    return VerrouLivraison(
+      ticketId: ticketId,
+      issueNumber: n != null && n == n.truncateToDouble() && n > 0
+          ? n.toInt()
+          : null,
+      launchedAt: read.date('launched_at'),
+      retryAfter: read.date('retry_after'),
     );
   }
 
@@ -377,7 +463,17 @@ enum IssueLancement {
   perdu,
 }
 
-/// Résultat de `launchTicketAnalysis` ou `launchTicketDevelopment`.
+/// Codes des refus de livraison qui demandent une fusion à la main : la PR
+/// touche un fichier protégé, ou sa liste de fichiers est trop longue pour
+/// être vérifiée. « Livrer » reste inactif tant que la boîte est ouverte : un
+/// nouvel essai donnerait le même refus.
+const kRefusFusionALaMain = {
+  'delivery_sensitive_files',
+  'delivery_files_unreadable',
+};
+
+/// Résultat de `launchTicketAnalysis`, `launchTicketDevelopment` ou
+/// `launchTicketDelivery`.
 @immutable
 class ResultatLancement {
   const ResultatLancement(this.issue, {this.motif, this.code});
