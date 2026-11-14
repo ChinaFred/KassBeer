@@ -15,6 +15,8 @@ import 'package:kass_beer/core/providers.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/admin/data/error_reports_repository.dart';
 import 'package:kass_beer/features/admin/domain/error_report.dart';
+import 'package:kass_beer/features/admin/data/logs_repository.dart';
+import 'package:kass_beer/features/admin/domain/log_entry.dart';
 import 'package:kass_beer/features/auth/data/auth_repository.dart';
 import 'package:kass_beer/features/auth/domain/session_user.dart';
 import 'package:kass_beer/features/brew_day/data/alerte_minuteur.dart';
@@ -1201,6 +1203,30 @@ class FakeErrorReportsRepository implements ErrorReportsRepository {
   }
 }
 
+/// Admin › Journaux : chaque recherche est notée ; [reponses] sert les pages
+/// dans l'ordre, une [EchecJournaux] ou autre erreur est levée.
+class FakeLogsRepository implements LogsRepository {
+  final reponses = <Object>[];
+  final demandes = <({FiltresJournaux filtres, String? suite})>[];
+
+  /// Réponse retenue jusqu'à ce que ce `Completer` soit complété.
+  Completer<void>? attente;
+
+  @override
+  Future<PageJournaux> rechercher(
+    FiltresJournaux filtres, {
+    String? suite,
+  }) async {
+    demandes.add((filtres: filtres, suite: suite));
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
+    if (reponses.isEmpty) throw StateError('aucune réponse prévue');
+    final r = reponses.removeAt(0);
+    if (r is PageJournaux) return r;
+    throw r;
+  }
+}
+
 /// Décision reçue par [FakeTicketsRepository.createDecision].
 typedef DecisionCreee = ({
   String ticketId,
@@ -1263,6 +1289,7 @@ class TestApp {
        fichiers = FakeEchangeFichiers(),
        library = FakeLibraryRepository(),
        errorReports = FakeErrorReportsRepository(),
+       logs = FakeLogsRepository(),
        processes = FakeProcessesRepository(),
        preferencesProcessus = FakePreferencesProcessusRepository(),
        importFirestore = FakeFirebaseFirestore(),
@@ -1286,6 +1313,7 @@ class TestApp {
         ticketsRepositoryProvider.overrideWithValue(tickets),
         libraryRepositoryProvider.overrideWithValue(library),
         errorReportsRepositoryProvider.overrideWithValue(errorReports),
+        logsRepositoryProvider.overrideWithValue(logs),
         importFichesRepositoryProvider.overrideWithValue(
           FirestoreImportFichesRepository(firestore: importFirestore),
         ),
@@ -1325,6 +1353,7 @@ class TestApp {
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
   final FakeErrorReportsRepository errorReports;
+  final FakeLogsRepository logs;
   final FakeProcessesRepository processes;
   final FakePreferencesProcessusRepository preferencesProcessus;
 

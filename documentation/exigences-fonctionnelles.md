@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -283,13 +283,14 @@ d'une étape).
 
 ### Admin
 
-Réservé à l'administrateur. Quatre entrées : « Membres » (« Inviter et retirer les comptes »),
+Réservé à l'administrateur. Cinq entrées : « Membres » (« Inviter et retirer les comptes »),
 « Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
 et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas, un jeton de routine
-refusé l'allume), « Import » (« Fiches Excel préparées en JSON ») et « Rapports d'erreur »
-(« Pannes rencontrées dans l'application par les membres »).
+refusé l'allume), « Import » (« Fiches Excel préparées en JSON »), « Rapports d'erreur »
+(« Pannes rencontrées dans l'application par les membres ») et « Journaux » (« Messages des
+fonctions du serveur »).
 
 **Admin › Membres.** Liste des membres, administrateurs d'abord, puis par adresse. Chaque
 ligne : nom (ou « Nom non renseigné »), adresse, étiquette « Administrateur » ou
@@ -435,6 +436,67 @@ ne se supprime depuis l'écran.
   « Hors ligne. Rapports lus sur cet appareil : la liste peut être incomplète. » et
   « Réessayer ». Sans aucun rapport dans l'appareil, sans ce bandeau : « Aucun rapport lu sur
   cet appareil. Réessayez avec le réseau. » et « Réessayer ».
+
+### Admin › Journaux
+
+Réservé à l'administrateur (ADR-011, J2). Adresse `/admin/journaux`, titre « Journaux », retour
+vers Admin. L'écran cherche dans les messages écrits par les fonctions du serveur (tickets,
+lancements, livraisons), du plus récent au plus ancien, 50 à la fois. Lecture seule.
+
+- **Ouverture** : aucune recherche ne part. L'écran affiche les filtres et « Choisissez les
+  filtres, puis appuyez sur Rechercher. ».
+- **Filtres** : « Gravité » (« Info et plus » par défaut, « Avertissements et plus »,
+  « Erreurs », « Débogage seul »), boutons segmentés qui passent en colonne quand ils ne
+  tiennent pas ; « Période » (« 1 h » par défaut, « 24 h », « 7 jours ») ; « Fonction »
+  (« Toutes les fonctions », puis la liste rendue par le serveur ; avant la première réponse,
+  aide « La liste des fonctions arrive avec la première recherche. ») ; « Ticket » (aide
+  « Identifiant du ticket ») ; « Texte à chercher » (aide « Mot ou expression contenu dans le
+  message »). La touche Entrée d'un champ ne lance rien.
+- **Rechercher** : bouton « Rechercher ». Pendant un appel, seul le bouton appuyé
+  (« Rechercher », « Réessayer » ou « Charger la suite ») affiche « Recherche en cours » ; les
+  autres sont désactivés, sans indicateur. Après une recherche, « N entrées affichées » (« 1 entrée affichée ») est
+  annoncé.
+- **Filtre changé après une recherche** : la liste reste, avec « Filtres modifiés : appuyez sur
+  Rechercher pour mettre la liste à jour. », et « Charger la suite » disparaît.
+- **Téléphone** : filtres et liste dans le même défilement. Après une recherche réussie, les
+  filtres se replient en une ligne (« Info et plus · 1 h · Toutes les fonctions », suivie du
+  ticket et du texte s'ils sont remplis) avec « Modifier les filtres ». **Grand écran** (fenêtre
+  d'au moins 840 px) : filtres toujours dépliés, « Gravité » et « Période » sur une ligne,
+  « Fonction », « Ticket » et « Texte à chercher » côte à côte, « Rechercher » à droite.
+- **Note fixe** sous les filtres : « Les journaux peuvent contenir des adresses e-mail. Ne les
+  recopiez pas dans une Issue. » Les adresses ne sont pas masquées (choix de l'utilisateur du
+  2026-11-14).
+- **Une entrée repliée** : icône et couleur de la gravité (erreur, avertissement, information,
+  débogage), lue « Erreur », « Avertissement », « Information » ou « Débogage » ; `CRITICAL`,
+  `ALERT` et `EMERGENCY` s'affichent en erreur, `NOTICE` en information, toute autre gravité
+  avec une icône de cercle, lue « Gravité inconnue » ; titre = la première ligne du message,
+  deux lignes au plus ; sous-titre « date et heure avec les secondes · fonction »
+  (« 14 nov. 10:30:05 · synctickets »).
+- **Une entrée dépliée** : « Message » (le message entier, en chasse fixe s'il tient sur
+  plusieurs lignes, comme une pile d'appels) et « Données » (le reste de l'entrée, en chasse
+  fixe), texte sélectionnable ; « Texte coupé à N caractères. » sous « Message » ou sous
+  « Données » quand le serveur a coupé ce texte, N étant la longueur gardée que le serveur
+  indique (8 000 aujourd'hui). Une entrée
+  dépliée le reste quand elle sort de l'écran et y revient ; une nouvelle recherche replie
+  tout ; « Copier l'entrée », puis « Entrée copiée. » (« Impossible de copier l'entrée. »
+  en cas d'échec).
+- **Suite** : « Charger la suite » lit les 50 suivantes ; sans suite, « Fin des journaux pour
+  cette période. ».
+- Chargement : « Recherche des journaux ». Aucune entrée : « Aucune entrée pour ces filtres.
+  Élargissez la période ou videz un champ, puis relancez la recherche. »
+- **Pannes**, seules sans liste, en bandeau au-dessus d'une liste déjà affichée : « Quota de
+  lecture des journaux atteint, réessayez dans une minute. » ; « Journaux indisponibles pour
+  l'instant. » ; « Hors ligne. La recherche des journaux demande le réseau. », chacune avec
+  « Réessayer », qui rejoue le dernier appel ; « Page suivante refusée par le serveur. Relancez
+  la recherche. » (page demandée trop tard pour sa période, ou illisible), dont « Réessayer »
+  relit la première page avec les filtres de la liste (« Recherche en cours » sur le bouton du
+  bandeau pendant la relance) ; « Lecture des journaux non autorisée : rôle IAM manquant. »,
+  « Journaux non disponibles dans l'émulateur. », « Réservé à l'administrateur. » et
+  « Recherche refusée par le serveur. » (autre filtre refusé), sans « Réessayer ». Pendant une nouvelle tentative, la panne reste
+  affichée jusqu'à la réponse.
+- **Champ refusé** par le serveur (ticket ou texte) : le message rendu par le serveur
+  s'affiche sous le champ, qui prend le focus, et une panne affichée auparavant disparaît.
+  L'application ne recopie ni la forme d'un identifiant ni la longueur permise du texte.
 
 ### Admin › Tickets des membres
 

@@ -1,6 +1,6 @@
 /**
- * Cloud Functions de Kass'Beer (ADR-006, ADR-008). Neuf fonctions, dont cinq points
- * d'accès de la liste fermée d'ADR-008 (P25) :
+ * Cloud Functions de Kass'Beer (ADR-006, ADR-008, ADR-011). Dix fonctions, dont six points
+ * d'accès de la liste fermée d'ADR-008 et d'ADR-011 (P25) :
  *
  * - `publishTicket` : déclencheur de création de `tickets/{ticketId}`, publie l'Issue ;
  * - `onDecisionCreated` : déclencheur de création de
@@ -16,7 +16,10 @@
  *   routine Claude Code d'analyse ou de développement (T4, P35, P36) ; le développement
  *   accepte `mode: "resume"`, « Relancer le développement » (T5, P47) ;
  * - `launchTicketDelivery` : `onCall` de l'admin, « Livrer » (T5, P43, P44), par la routine
- *   de développement. Chaque callable ne monte que les secrets de sa routine (P25).
+ *   de développement. Chaque callable ne monte que les secrets de sa routine (P25) ;
+ * - `queryLogs` : `onCall` de l'admin, Admin › Journaux (ADR-011, J2, P48), aucun secret.
+ *
+ * `QUERYABLE_FUNCTIONS` de `config.ts` reprend ces noms (`logs.test.ts`).
  *
  * Ce module ne construit aucun client (P26) : Firestore et GitHub s'ouvrent à l'appel.
  */
@@ -37,6 +40,7 @@ import {
   TICKETS_ROUTINE_DEV_TOKEN,
 } from "./config";
 import { logError } from "./logging";
+import { handleQueryLogsCall } from "./logs/queryLogs";
 import { handleAnswerCall } from "./tickets/answer";
 import { isRetryRequest } from "./tickets/decisionModel";
 import { applyDecision } from "./tickets/decisions";
@@ -259,4 +263,22 @@ export const launchTicketDelivery = onCall(
       routine: devRoutine,
       githubToken: () => GITHUB_TICKETS_TOKEN.value(),
     }),
+);
+
+/**
+ * Admin › Journaux (ADR-011, J2, P48) : lecture de la sortie des fonctions dans Cloud
+ * Logging. Aucun secret ; jeton du compte d'exécution (`roles/logging.viewer`). Une
+ * instance, une requête à la fois : le quota de `entries.list` est de 60 par minute.
+ */
+export const queryLogs = onCall(
+  {
+    region: REGION,
+    serviceAccount: RUNTIME_SERVICE_ACCOUNT,
+    cors: CALLABLE_ORIGINS,
+    maxInstances: 1,
+    concurrency: 1,
+    memory: "256MiB",
+    timeoutSeconds: 60,
+  },
+  (req) => handleQueryLogsCall(req),
 );

@@ -84,19 +84,21 @@ class IndicateurBouton extends StatelessWidget {
   }
 }
 
-/// Panne : message et bouton « Réessayer ».
+/// Panne : message et bouton « Réessayer », absent si [onRetry] est `null`
+/// (panne qu'une nouvelle tentative ne corrige pas).
 class EtatErreur extends StatelessWidget {
   const EtatErreur({
     super.key,
     required this.message,
     required this.onRetry,
     this.retrying = false,
+    this.retryEnabled = true,
     this.secondaryAction,
     this.retryingLabel = 'Vérification en cours',
   });
 
   final String message;
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
 
   /// Libellé du bouton pendant la nouvelle lecture (« Lecture en cours » pour une
   /// liste).
@@ -104,6 +106,10 @@ class EtatErreur extends StatelessWidget {
 
   /// Une nouvelle lecture est en cours : le bouton attend.
   final bool retrying;
+
+  /// Faux : le bouton est désactivé sans indicateur (un autre appel est en
+  /// cours).
+  final bool retryEnabled;
 
   /// Action de repli sous le bouton, par exemple « Se déconnecter ».
   final Widget? secondaryAction;
@@ -133,13 +139,15 @@ class EtatErreur extends StatelessWidget {
                   style: theme.textTheme.bodyLarge,
                 ),
               ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: retrying ? null : onRetry,
-                child: retrying
-                    ? IndicateurBouton(label: retryingLabel)
-                    : const Text('Réessayer'),
-              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: retrying || !retryEnabled ? null : onRetry,
+                  child: retrying
+                      ? IndicateurBouton(label: retryingLabel)
+                      : const Text('Réessayer'),
+                ),
+              ],
               if (secondaryAction != null) ...[
                 const SizedBox(height: 8),
                 secondaryAction!,

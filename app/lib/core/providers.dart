@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/admin/data/error_reports_repository.dart';
+import '../features/admin/data/logs_repository.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/brew_day/data/alerte_minuteur.dart';
 import '../features/brews/data/brews_repository.dart';
@@ -87,6 +88,11 @@ final ticketsRepositoryProvider = Provider<TicketsRepository>(
 final errorReportsRepositoryProvider = Provider<ErrorReportsRepository>(
   (ref) =>
       throw UnimplementedError('errorReportsRepositoryProvider non fourni'),
+);
+
+/// Admin › Journaux (ADR-011, J2) : callable `queryLogs`.
+final logsRepositoryProvider = Provider<LogsRepository>(
+  (ref) => throw UnimplementedError('logsRepositoryProvider non fourni'),
 );
 
 /// Heure de l'appareil. Injectée pour les tests : un minuteur se recalcule à

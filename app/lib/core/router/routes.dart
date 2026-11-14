@@ -29,6 +29,9 @@ abstract final class AppRoutes {
   /// Admin › Rapports d'erreur (ADR-011, J1), dans la coquille.
   static const adminErrorReports = '/admin/rapports-erreur';
 
+  /// Admin › Journaux (ADR-011, J2), dans la coquille.
+  static const adminLogs = '/admin/journaux';
+
   /// Admin › Tickets des membres (ADR-006, T2), dans la coquille.
   static const adminTickets = '/admin/tickets';
   static String adminTicket(String id) => '$adminTickets/$id';

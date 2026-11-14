@@ -135,7 +135,7 @@ client n'entre dans le filtre sans passer par l'une de ces lectures :
 
 **Réponse** : par entrée, `timestamp` (chaîne RFC 3339 rendue par l'API), `severity`,
 `functionName`, `message`, `insertId`, et `payload` : le `jsonPayload` sans `message`,
-sérialisé et coupé à 8 000 caractères. Chaque texte repasse par `redactSecrets`. Les adresses
+sérialisé. Chaque texte passe par `redactSecrets`, puis est coupé à 8 000 caractères. Les adresses
 e-mail restent visibles (choix du 2026-11-14). La réponse porte aussi `nextPageToken` et la
 liste `functions` des noms filtrables : le client construit son menu depuis cette liste et ne
 la recopie pas. Le filtre n'est pas rendu.
@@ -158,6 +158,32 @@ période » quand il manque ; « DEBUG » masqué par défaut. `FirebaseFunction
 requêtes au compte qui exécute les fonctions ; la clause imposée par le serveur est la seule
 limite de ce que `queryLogs` rend. `roles/logging.viewer` ne donne pas accès aux journaux
 d'accès aux données (`roles/logging.privateLogViewer`).
+
+**Livraison de J2 (v0.1.42, 2026-11-14).** Précisions apportées à la livraison, sans changer la
+décision :
+
+- `nextPageToken` rendu au client vaut `<période>|<début de la période en ISO>|<jeton de
+  l'API>` : la page suivante rejoue le même filtre, que l'API exige identique, au lieu de
+  recalculer « maintenant − période ». La période est relue dans la liste fermée ; le début
+  n'est ni futur ni antérieur à maintenant − période − 5 minutes. Une page demandée plus tard
+  est refusée, et le client relit la première page. Le tout reste borné à 2 000 caractères.
+- La réponse porte `maxChars` (8 000) et, par entrée, `messageTruncated` et
+  `payloadTruncated`, calculés après `redactSecrets` : le texte est nettoyé avant d'être coupé.
+  Le client affiche « Texte coupé à N caractères. » depuis cette valeur, et le message d'un refus de champ depuis la `HttpsError`.
+  Aucune borne du serveur n'est recopiée en Dart.
+- Les contrôles du manifeste de `ci.yml` et `deploy.yml` vérifient `queryLogs` : `maxInstances`
+  1, 60 s, `concurrency` 1, aucun secret.
+- `message` vient de `jsonPayload.message`, ou de `textPayload` pour une ligne non structurée
+  de `stderr`, et est coupé à 8 000 caractères comme `payload`. Pour un `ERROR`,
+  `firebase-functions/logger` écrit la pile de l'appel dans `message` : le filtre `freeText`
+  porte aussi sur elle.
+- `details.reason` des refus du serveur hors `invalid-argument` est un code (`quota`, `iam`,
+  `emulator`, `logging_unavailable`) : le client distingue un `unavailable` du serveur d'une
+  coupure du réseau (`unavailable` sans `reason`).
+- `roles/logging.viewer` est le seul réglage à faire ; `github-deploy` ne reçoit aucun rôle.
+- Noms à vérifier sur le premier journal lu en production : `LOG_ID` `run.googleapis.com/stdout`
+  et `stderr`, type `cloud_run_revision`, `service_name` égal au nom de la fonction en
+  minuscules.
 
 ## Réponses aux questions de l'architecte
 

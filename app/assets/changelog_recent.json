@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.42",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien, 50 à la fois. On choisit la gravité, la période (1 h, 24 h ou 7 jours), une fonction, un ticket ou un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni pendant la frappe. Une entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue."
+      ]
+    },
+    {
       "version": "0.1.41",
       "date": "2026-11-14",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "paragraphs": [
         "Sur la fiche d'un brassin, le déroulé compare le prévu et le réel. Dès qu'une étape a un début et une fin, sa ligne donne la durée prévue, la durée réelle et l'écart : « prévu 45 min · réel 57 min · +12 min ». Une étape sautée, en cours ou restée sans heure de fin le dit. Chaque journée commencée affiche sa durée totale prévue et réelle, avec le temps passé entre les étapes. L'écran du jour ne change pas.",
         "Après le brassage, « Mettre à jour mon processus avec ce brassin » reprend dans votre processus les durées réelles que vous cochez. Seules les étapes venues du processus se proposent, quand leur durée réelle diffère de celle du processus. Pour un houblonnage à cru fait sur plusieurs journées, vous choisissez la durée d'une des journées. Seules ces durées changent, et vos brassins gardent leur déroulé. Pendant 10 secondes, « Annuler » rétablit les durées d'avant."
-      ]
-    },
-    {
-      "version": "0.1.36",
-      "date": "2026-11-13",
-      "paragraphs": [
-        "L'administrateur peut lancer depuis la fiche d'un ticket une session Claude Code qui analyse la demande, puis, une fois le ticket validé, une session qui en écrit le code. Chaque lancement passe par une boîte de confirmation qui affiche les lancements restants du jour. La fiche garde l'historique des lancements avec le lien vers chaque session. « Valider » n'est plus proposé qu'une fois le ticket analysé. Le développement ne se lance que pour un ticket validé depuis l'application : un ticket validé sur GitHub propose de nouveau « Valider »."
       ]
     }
   ]
