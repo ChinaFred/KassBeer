@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -196,6 +196,38 @@ d'où le membre est parti ; ouvert par son adresse, elle mène à l'accueil.
   l'accueil ».
 - Le texte est livré avec l'application : l'écran marche sans réseau, sans bandeau hors ligne.
   Colonne de 840 px au plus.
+
+### Nouvelle version (Android)
+
+Demandé par le ticket #36 (ADR-012). Sur l'application Android seule, pour tout membre
+connecté. Rien sur le web : ni vérification, ni fenêtre, ni lien vers l'APK.
+
+- Une vérification par lancement, après la connexion, en arrière-plan. Si une version plus
+  récente que celle installée est publiée, la fenêtre « Nouvelle version » s'ouvre au-dessus de
+  l'écran courant.
+- Sur l'écran du jour de brassage et sur l'écran d'une journée du déroulé, la fenêtre ne
+  s'ouvre pas : elle attend que le brasseur quitte ces écrans.
+- Offre : « Kass'Beer X.Y.Z est disponible (vous avez X.Y.Z). », puis « Téléchargement de
+  48,2 Mo. ». Boutons « Plus tard » et « Mettre à jour ».
+- « Plus tard » ferme la fenêtre. Rien n'est retenu : elle revient au lancement suivant.
+- « Mettre à jour », sans autorisation d'installer : « Autorisez Kass'Beer à installer des
+  applications », « Dans les réglages, activez « Autoriser cette source », puis revenez ici. »,
+  boutons « Plus tard » et « Ouvrir les réglages ». Au retour dans l'application avec
+  l'autorisation, le téléchargement part seul.
+- Téléchargement : barre de progression, « 12,3 Mo sur 48,2 Mo », bouton « Annuler ». Le
+  retour du téléphone ne ferme pas la fenêtre pendant le téléchargement.
+- Fichier reçu et contrôlé : « Ouverture de l'installateur… », puis l'écran d'installation
+  d'Android, qui demande sa propre confirmation. La fenêtre se ferme.
+- Échec, avec « Réessayer » et « Plus tard » :
+  - coupure du réseau : « Le téléchargement s'est interrompu. Vérifiez la connexion. » ;
+  - « Annuler » : « Téléchargement annulé. » ;
+  - fichier différent de la version annoncée : « Le fichier reçu ne correspond pas à la version
+    annoncée. Il a été effacé. » (la panne est journalisée) ;
+  - écriture impossible : « Le fichier n'a pas pu être enregistré sur l'appareil. » ;
+  - installateur non ouvert : « L'installateur du système n'a pas pu s'ouvrir. » ;
+  - réglages non ouverts : « Les réglages n'ont pas pu s'ouvrir. ».
+- Vérification impossible (pas de réseau, serveur injoignable) : rien ne s'affiche.
+- L'invitation d'App Distribution reste le chemin de la première installation.
 
 ### Tickets
 

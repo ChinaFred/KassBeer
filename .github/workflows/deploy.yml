@@ -3,17 +3,21 @@ name: Déploiement
 # Déploie le web (Firebase Hosting), les règles et les index Firestore après une
 # CI verte sur un push de main. Publie un nouvel APK sur Firebase App
 # Distribution (groupe « brasseurs ») quand le numéro de build de
-# app/pubspec.yaml dépasse celui de la dernière version publiée. Déploie les
-# Cloud Functions (ADR-006) quand le commit change functions/, et à chaque
-# lancement manuel.
+# app/pubspec.yaml dépasse celui de la dernière version publiée. Le même APK
+# est publié sur Hosting avec son manifeste apk_release.json, que l'application
+# Android lit au lancement (ADR-012) ; sans nouvel APK, la paire en ligne est
+# recopiée dans le site déployé. Déploie les Cloud Functions (ADR-006) quand le
+# commit change functions/, et à chaque lancement manuel.
 #
 # Six jobs, pour que le code compilé ne tourne jamais à côté d'un accès à
 # Google Cloud :
 #   gate             le commit est la tête de main ; change-t-il functions/ ? ;
 #   plan             configuration présente, faut-il un nouvel APK ? (jeton Google, aucun build) ;
-#   build            web et APK signé (secrets de signature, aucun jeton Google) ;
+#   build            web et APK signé, APK et manifeste copiés dans le web
+#                    (secrets de signature, aucun jeton Google) ;
 #   build-functions  npm ci, build et manifeste des fonctions (ni secret, ni jeton Google) ;
-#   deploy           Hosting, règles, index, Functions, App Distribution (jeton Google,
+#   deploy           paire APK + manifeste en ligne recopiée sans nouvel APK (avant le
+#                    jeton), Hosting, règles, index, Functions, App Distribution (jeton Google,
 #                    aucun build, aucun npm ci de functions/ ni code des fonctions exécuté :
 #                    firebase-tools lit le manifeste functions.yaml au lieu de charger
 #                    le code, P14) ;
@@ -223,14 +227,18 @@ jobs:
       - name: Faut-il un nouvel APK ?
         id: apk
         # Compare le numéro de build N (app/pubspec.yaml, X.Y.Z+N) au
-        # buildVersion de la dernière version publiée sur App Distribution. P7
-        # garantit que N monte d'un à chaque version. Une version publiée
-        # expirée (150 jours) est republiée. Une réponse illisible arrête le
-        # déploiement : aucune décision par défaut.
+        # buildVersion de la dernière version publiée sur App Distribution, et au
+        # build_number du manifeste en ligne sur Hosting (ADR-012). P7 garantit
+        # que N monte d'un à chaque version. Une version publiée expirée
+        # (150 jours) est republiée. Un manifeste en ligne absent ou hors des
+        # formes de scripts/garder-apk-en-ligne.sh fait construire l'APK. Une
+        # réponse illisible d'App Distribution arrête le déploiement : aucune
+        # décision par défaut.
         if: steps.config.outputs.ready == 'true'
         env:
           TOKEN: ${{ steps.auth.outputs.access_token }}
           APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
+          PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           number=$(printf '%s' "$APP_ID" | cut -d: -f2)
@@ -263,6 +271,33 @@ jobs:
             decision=false
           fi
           rm -f "$response"
+          # Manifeste en ligne, lu sans jeton. Hosting sert index.html en 200 pour
+          # un fichier absent : seul un manifeste aux formes attendues compte.
+          online="$RUNNER_TEMP/apk_release.json"
+          if ! curl -sS --max-time 60 -o "$online" \
+               "https://$PROJECT.web.app/apk_release.json?t=$(date +%s)"; then
+            rm -f "$online"
+          fi
+          hosted=""
+          if [ -f "$online" ]; then
+            hosted=$(jq -er '
+              select(type == "object"
+                and (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
+                and (.build_number | type == "number" and . == floor and . >= 1 and . <= 2100000000)
+                and (.size_bytes | type == "number" and . == floor and . >= 1 and . <= 200000000)
+                and (.sha256 | type == "string" and test("^[0-9a-f]{64}$")))
+              | .build_number' "$online" 2>/dev/null) || hosted=""
+            rm -f "$online"
+          fi
+          if [ -z "$hosted" ]; then
+            echo "Manifeste en ligne absent ou illisible : construction de v$VERSION."
+            decision=true
+          elif [ "$build" -gt "$hosted" ]; then
+            echo "Hosting : build $hosted. app/pubspec.yaml : v$VERSION. Construction."
+            decision=true
+          else
+            echo "Hosting : build $hosted, à jour."
+          fi
           echo "build=$decision" >> "$GITHUB_OUTPUT"
 
   build:
@@ -379,6 +414,33 @@ jobs:
           [ -f "$apk" ] || { echo "::error::flutter build apk n'a pas produit $apk."; exit 1; }
           mkdir -p "$RUNNER_TEMP/apk"
           cp "$apk" "$RUNNER_TEMP/apk/app-release.apk"
+
+      - name: APK et manifeste dans le web
+        # Seul endroit où apk_release.json est écrit (ADR-012, P52) : au moment où
+        # l'APK est construit, à côté de lui. version et build viennent de
+        # app/pubspec.yaml, taille et SHA-256 du fichier copié.
+        if: needs.plan.outputs.apk == 'true'
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          cp "$RUNNER_TEMP/apk/app-release.apk" build/web/app-release.apk
+          size=$(stat -c %s build/web/app-release.apk)
+          sha=$(sha256sum build/web/app-release.apk | cut -d' ' -f1)
+          if [ "$size" -lt 1 ] || [ "$size" -gt 200000000 ]; then
+            echo "::error::APK de $size octets, hors de la borne de 200 000 000 lue par l'application."
+            exit 1
+          fi
+          jq -n \
+            --arg version "${VERSION%%+*}" \
+            --argjson build "${VERSION#*+}" \
+            --argjson size "$size" \
+            --arg sha "$sha" \
+            --arg built "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{version: $version, build_number: $build, file: "app-release.apk",
+              size_bytes: $size, sha256: $sha, built_at: $built}' \
+            > build/web/apk_release.json
+          cat build/web/apk_release.json
+          echo "### APK : $size octets" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Supprimer la configuration Firebase du runner
         if: always()
@@ -535,6 +597,15 @@ jobs:
         with:
           name: web
           path: app/build/web
+
+      - name: APK et manifeste en ligne conservés
+        # Sans nouvel APK, le site déployé recopie la paire en ligne (ADR-012) ;
+        # une paire incohérente arrête le déploiement (P52). Avant
+        # l'authentification : curl, jq et sha256sum seuls, sans jeton Google.
+        if: needs.plan.outputs.apk != 'true'
+        env:
+          PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: bash scripts/garder-apk-en-ligne.sh app/build/web "https://$PROJECT.web.app"
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: needs.plan.outputs.apk == 'true'
@@ -694,16 +765,16 @@ jobs:
           {
             echo "### Déployé : v$VERSION ($(git rev-parse --short HEAD))"
             echo
-            echo "Web (Hosting), règles et index Firestore."
+            echo "Web (Hosting, avec l'APK et son manifeste), règles et index Firestore."
             if [ "$FUNCTIONS" = true ]; then
               echo "Cloud Functions des tickets."
             else
               echo "Functions inchangées : functions/ n'a pas changé."
             fi
             if [ "$APK" = true ]; then
-              echo "Nouvel APK publié sur App Distribution, groupe « brasseurs »."
+              echo "Nouvel APK publié sur Hosting et sur App Distribution, groupe « brasseurs »."
             else
-              echo "APK inchangé : le numéro de build publié est à jour."
+              echo "APK inchangé : le numéro de build publié est à jour ; paire en ligne recopiée."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 

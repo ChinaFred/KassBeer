@@ -55,7 +55,9 @@ scripts/
 ├── check-agents.mjs            vérifie les en-têtes YAML et les noms cités dans CLAUDE.md
 ├── check-agents.test.mjs       node --test scripts/check-agents.test.mjs
 ├── check-version.mjs           avant une fusion : version de la branche > version de main
-└── check-version.test.mjs      node --test scripts/check-version.test.mjs
+├── check-version.test.mjs      node --test scripts/check-version.test.mjs
+└── garder-apk-en-ligne.sh      deploy.yml sans nouvel APK : recopie l'APK et apk_release.json
+                                en ligne dans app/build/web, refuse une paire incohérente (ADR-012)
 documentation/                  modèles de documents, leçons apprises, ce guide
 ```
 
@@ -222,6 +224,14 @@ P49 (filtre et réponse de `queryLogs`, `securite`) et P50 (champs du journal lu
 recherche par un bouton, rapports d'erreur paginés, `relecteur-regles`). « Règles de code »
 précise que la lecture des journaux passe aussi par l'API REST et `fetch`, et « Le projet » cite
 ADR-011.
+
+Le 2026-11-14, ADR-012 (mise à jour de l'APK, ticket #36) et les décisions de l'utilisateur
+étendent P1 (paire APK et manifeste en `no-cache`), P17 (canal `fr.kassbeer/updates`) et P28
+(second `FileProvider`, `REQUEST_INSTALL_PACKAGES`), et ajoutent P51 (client et canal de la
+mise à jour, `securite`) et P52 (paire écrite par `build`, restaurée par
+`garder-apk-en-ligne.sh`, `relecteur-regles`). « Règles de code » reçoit une exception à
+« Aucun `catch` silencieux » pour les échecs réseau de la mise à jour, et « Le projet » cite
+ADR-012.
 
 Le 2026-11-10, ADR-006 (tickets) a ajouté les contrôles P23 à P27 (règles de `tickets/`, texte
 publié sur GitHub, exposition des Functions, publication sans doublon, PR d'un ticket), étendu
