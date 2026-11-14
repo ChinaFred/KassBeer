@@ -371,6 +371,10 @@ class _EcranJour extends ConsumerStatefulWidget {
 class _EcranJourState extends ConsumerState<_EcranJour>
     with KeepScreenAwake<_EcranJour> {
   Timer? _ticker;
+
+  /// Vrai après une reprise automatique (`reprise`) : encadré sous la carte
+  /// de l'étape jusqu'à « Fermer ».
+  bool _annonceReprise = false;
   final _alertedSteps = <String>{};
   final _refus = <SaisieRefusee>[];
   DateTime? _lastAction;
@@ -401,14 +405,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     // l'attend pas à chaque appui (règle owner_name).
     _tokenName = ref.read(authRepositoryProvider).currentTokenName();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
-    if (widget.reprise) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text(BrewDayScreen.reprised)));
-      });
-    }
+    _annonceReprise = widget.reprise;
   }
 
   @override
@@ -1134,6 +1131,8 @@ class _EcranJourState extends ConsumerState<_EcranJour>
       onEmbouteiller: () => unawaited(_embouteiller(plan)),
       onVoirRecette: _voirRecette,
       onRetour: retour,
+      annonceReprise: _annonceReprise,
+      onFermerAnnonce: () => setState(() => _annonceReprise = false),
     );
   }
 }
@@ -1161,6 +1160,8 @@ class _Jour extends StatelessWidget {
     required this.onEmbouteiller,
     required this.onVoirRecette,
     required this.onRetour,
+    required this.annonceReprise,
+    required this.onFermerAnnonce,
   });
 
   final Brew brew;
@@ -1185,6 +1186,12 @@ class _Jour extends StatelessWidget {
   final VoidCallback onEmbouteiller;
   final VoidCallback onVoirRecette;
   final VoidCallback onRetour;
+
+  /// Encadré « Brassage repris » sous la carte de l'étape : le minuteur reste
+  /// en vue, l'encadré défile avec le panneau et ne couvre pas la chronologie,
+  /// en paysage et à 200 % compris.
+  final bool annonceReprise;
+  final VoidCallback onFermerAnnonce;
 
   @override
   Widget build(BuildContext context) {
@@ -1219,6 +1226,28 @@ class _Jour extends StatelessWidget {
             ? styles.minuteurPaysage
             : (wide ? styles.minuteurLarge : styles.minuteur);
         final etapeSize = !low && wide ? styles.etapeLarge : styles.etape;
+        final annonce = annonceReprise
+            ? Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Encadre(
+                  icone: Icons.replay,
+                  liveRegion: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(BrewDayScreen.reprised),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: TextButton(
+                          onPressed: onFermerAnnonce,
+                          child: const Text('Fermer'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : null;
         final panneau = _Panneau(
           plan: plan,
           toutFait: role == RoleJournee.autre
@@ -1263,12 +1292,9 @@ class _Jour extends StatelessWidget {
             children: [
               Expanded(
                 flex: 55,
-                child: SingleChildScrollView(
+                child: _DefilementPanneau(
                   padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [panneau],
-                  ),
+                  children: [panneau, ?annonce],
                 ),
               ),
               const VerticalDivider(width: 1),
@@ -1300,9 +1326,9 @@ class _Jour extends StatelessWidget {
                       corps.maxHeight * 0.75,
                     ),
                   ),
-                  child: SingleChildScrollView(
+                  child: _DefilementPanneau(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    child: panneau,
+                    children: [panneau, ?annonce],
                   ),
                 ),
                 const Divider(height: 1),
@@ -1455,6 +1481,47 @@ class _Jour extends StatelessWidget {
       },
     );
   }
+}
+
+/// Défilement du panneau, avec une barre toujours visible : sur un petit
+/// téléphone, le panneau tenu à 60 % de l'écran peut cacher sa fin. La barre
+/// ne se dessine que si le contenu dépasse.
+class _DefilementPanneau extends StatefulWidget {
+  const _DefilementPanneau({required this.padding, required this.children});
+
+  final EdgeInsets padding;
+  final List<Widget> children;
+
+  @override
+  State<_DefilementPanneau> createState() => _DefilementPanneauState();
+}
+
+class _DefilementPanneauState extends State<_DefilementPanneau> {
+  final _controleur = ScrollController();
+
+  @override
+  void dispose() {
+    _controleur.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scrollbar(
+    controller: _controleur,
+    thumbVisibility: true,
+    // Sans la barre que le web de bureau ajoute d'office : une seule barre.
+    child: ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: SingleChildScrollView(
+        controller: _controleur,
+        padding: widget.padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: widget.children,
+        ),
+      ),
+    ),
+  );
 }
 
 class _Panneau extends StatelessWidget {

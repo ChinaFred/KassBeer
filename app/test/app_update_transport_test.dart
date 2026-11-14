@@ -179,6 +179,27 @@ void main() {
       expect(issue, isA<TransfertEcritureImpossible>());
     });
 
+    test('rappel qui lève : erreur rendue, fichier refermé', () async {
+      repondre = (r) async {
+        r.response.add(contenu);
+        await r.response.close();
+      };
+      final chemin = '${dossier.path}/kass-beer-update.apk';
+      await expectLater(
+        transport.telecharger(
+          url('/app-release.apk'),
+          chemin,
+          maxOctets: 5000,
+          annule: () => false,
+          progression: (_) => throw StateError('rappel'),
+        ),
+        throwsStateError,
+      );
+      // Un fichier resté ouvert ne s'efface pas sous Windows.
+      await transport.supprimer(chemin);
+      expect(await File(chemin).exists(), isFalse);
+    });
+
     test('supprimer : fichier effacé, absent sans erreur', () async {
       final f = File('${dossier.path}/kass-beer-update.apk');
       await f.writeAsBytes([1]);
