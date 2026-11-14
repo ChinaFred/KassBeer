@@ -5,7 +5,7 @@
  * lecture ni écriture ici : `launch.ts` lit et écrit.
  */
 
-import { LAUNCHES_PER_DAY } from "../config";
+import { FOUNDER_LAUNCHES_PER_DAY, LAUNCHES_PER_DAY } from "../config";
 import {
   LAUNCH_ANALYSIS_ACTION,
   LAUNCH_DELIVERY_ACTION,
@@ -219,10 +219,36 @@ export function closeRunningEntries(
 
 // ── Plafond (P36) ───────────────────────────────────────────────────────────
 
-/** Compteur du jour des lancements : `ticket_quotas/launch_{AAAAMMJJ}`. */
-export function launchQuotaDocId(day: string): string {
-  return `launch_${day}`;
+/**
+ * Compteur d'un lancement : `group` (tous les admins hors fondateur, `LAUNCHES_PER_DAY`) ou
+ * `founder` (compte fondateur, `FOUNDER_LAUNCHES_PER_DAY`). Deux compteurs séparés : l'un ne
+ * consomme pas l'autre (décision de l'utilisateur du 2026-11-14).
+ */
+export type LaunchPool = "group" | "founder";
+
+/** Le compteur d'un appelant. Pure. */
+export function launchPoolOf(founder: boolean): LaunchPool {
+  return founder ? "founder" : "group";
 }
+
+/** Le plafond du jour d'un compteur. Pure. */
+export function launchLimitOf(pool: LaunchPool): number {
+  return pool === "founder" ? FOUNDER_LAUNCHES_PER_DAY : LAUNCHES_PER_DAY;
+}
+
+/**
+ * Compteur du jour des lancements : `ticket_quotas/launch_{AAAAMMJJ}` pour le groupe,
+ * `ticket_quotas/launch_founder_{AAAAMMJJ}` pour le fondateur.
+ */
+export function launchQuotaDocId(day: string, pool: LaunchPool = "group"): string {
+  return pool === "founder" ? `launch_founder_${day}` : `launch_${day}`;
+}
+
+/** Champs de `ticket_status/launches` d'un compteur : compte du jour et plafond. */
+const POOL_FIELDS: Record<LaunchPool, { count: string; limit: string }> = {
+  group: { count: "count_day", limit: "per_day" },
+  founder: { count: "founder_count_day", limit: "founder_per_day" },
+};
 
 /** Message du plafond du jour (Kass'Dalle). Pure. */
 export function launchQuotaMessage(limit: number): string {
@@ -241,52 +267,64 @@ export function readLaunchCount(raw: unknown): number {
 
 /**
  * Les champs de `ticket_status/launches` après un lancement compté (`delta` = 1) ou rendu
- * (`delta` = -1), le jour `day` étant celui où il a été compté et `quotaCount` le compteur
- * du jour après l'écriture (source de `count_day`).
+ * (`delta` = -1) sur le compteur `pool`, le jour `day` étant celui où il a été compté et
+ * `quotaCount` ce compteur après l'écriture (source de `count_day` ou `founder_count_day`).
  *
- * Compter : un mois différent repart de zéro. Rendre : un document déjà passé à un autre
- * jour ou à un autre mois garde ses compteurs. Aucun ne descend sous zéro. `per_day` est
- * réécrit à chaque fois. Pure.
+ * Compter : un autre jour remet l'autre compteur à zéro ; un mois différent repart de zéro.
+ * Rendre : un document déjà passé à un autre jour ou à un autre mois garde ses compteurs.
+ * Aucun ne descend sous zéro. `count_month` compte les deux compteurs ensemble. `per_day` et
+ * `founder_per_day` sont réécrits à chaque fois. Pure.
  */
 export function nextLaunchStatus(
   current: Record<string, unknown>,
   day: string,
   quotaCount: number,
   delta: 1 | -1,
+  pool: LaunchPool = "group",
 ): Record<string, unknown> {
   const month = day.slice(0, 6);
-  const out: Record<string, unknown> = { per_day: LAUNCHES_PER_DAY };
+  const fields = POOL_FIELDS[pool];
+  const other = POOL_FIELDS[pool === "group" ? "founder" : "group"];
+  const out: Record<string, unknown> = {
+    per_day: LAUNCHES_PER_DAY,
+    founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
+  };
   const sameMonth = current.month === month;
   const monthCount = sameMonth ? readLaunchCount(current.count_month) : 0;
   if (delta === 1) {
     out.day = day;
-    out.count_day = quotaCount;
+    out[fields.count] = quotaCount;
+    if (current.day !== day) out[other.count] = 0;
     out.month = month;
     out.count_month = monthCount + 1;
     return out;
   }
-  if (current.day === day) out.count_day = quotaCount;
+  if (current.day === day) out[fields.count] = quotaCount;
   if (sameMonth) out.count_month = Math.max(0, monthCount - 1);
   return out;
 }
 
 /**
  * Les champs de `ticket_status/launches` pour le jour `day`, sans lancement : jour et mois
- * remis à jour par la passe horaire, `count_day` égal au compteur du jour. `null` si rien
- * ne change. Pure.
+ * remis à jour par la passe horaire, `count_day` et `founder_count_day` égaux aux compteurs
+ * du jour. `null` si rien ne change. Pure.
  */
 export function refreshedLaunchStatus(
   current: Record<string, unknown>,
   day: string,
   quotaCount: number,
+  founderCount: number = 0,
 ): Record<string, unknown> | null {
   const month = day.slice(0, 6);
   const wanted: Record<string, unknown> = {
     day,
     count_day: quotaCount,
+    founder_count_day: founderCount,
     month,
-    count_month: current.month === month ? readLaunchCount(current.count_month) : quotaCount,
+    count_month:
+      current.month === month ? readLaunchCount(current.count_month) : quotaCount + founderCount,
     per_day: LAUNCHES_PER_DAY,
+    founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
   };
   const same = Object.entries(wanted).every(([k, v]) => current[k] === v);
   return same ? null : wanted;

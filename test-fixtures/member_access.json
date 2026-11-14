@@ -1,6 +1,30 @@
 {
-  "_commentaire": "Appartenance et rôle (P11, P31, ADR-008). Rejouée par rules-tests/test/member_access.test.mjs (firestore.rules : isMember, isAdmin) et par functions/test/auth.test.ts (functions/src/auth.ts : requireMember, requireAdmin). « token » : jeton du compte (null = anonyme) ; « member » : document members/{clé} semé, la clé étant « member_key » (null = aucun document) ; « expect » : accès attendu, none, member ou admin. Adresses fictives en @example.com (P15).",
+  "_commentaire": "Appartenance et rôle (P11, P31, ADR-008). Rejouée par rules-tests/test/member_access.test.mjs (firestore.rules : isMember, isAdmin) par functions/test/auth.test.ts (functions/src/auth.ts : requireMember, requireAdmin, isFounder) et par app/test/members_repository_test.dart (Member.founder). « token » : jeton du compte (null = anonyme) ; « member » : document members/{clé} semé, la clé étant « member_key » (null = aucun document) ; « expect » : accès attendu, none, member ou admin ; « founder » : compte fondateur attendu (isFounder de functions/src/auth.ts, Member.founder de app/lib/features/members/domain/member.dart), absent = false. Adresses fictives en @example.com (P15).",
   "cases": [
+    {
+      "name": "administrateur fondateur",
+      "token": { "email": "fixture.founder@example.com", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.founder@example.com",
+      "member": { "role": "admin", "founder": true },
+      "expect": "admin",
+      "founder": true
+    },
+    {
+      "name": "brasseur marqué fondateur",
+      "token": { "email": "fixture.brewer.founder@example.com", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.brewer.founder@example.com",
+      "member": { "role": "brewer", "founder": true },
+      "expect": "member",
+      "founder": false
+    },
+    {
+      "name": "administrateur, founder en texte",
+      "token": { "email": "fixture.admin.text@example.com", "email_verified": true, "sign_in_provider": "google.com" },
+      "member_key": "fixture.admin.text@example.com",
+      "member": { "role": "admin", "founder": "true" },
+      "expect": "admin",
+      "founder": false
+    },
     {
       "name": "anonyme",
       "token": null,

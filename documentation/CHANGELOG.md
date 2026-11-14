@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.52 — fonctionnel
+### v0.1.53 — fonctionnel
 
 « Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple
 et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un
@@ -24,7 +24,7 @@ suffit pour la voir. Elle montre aussi les densités initiale et finale prévues
 température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente
 de la Bibliothèque, ou sans plage, une ligne le dit.
 
-### v0.1.52 — technique
+### v0.1.53 — technique
 
 `brewing/` : `brewDayTemperatureSeries` (`brew_day_curve.dart`) calcule les températures visées
 du plan de départ et recalculées, le retard et les débuts théoriques à partir de l'horaire de
@@ -50,6 +50,33 @@ dans `beer_index/cultures`, puis `beer_cultures/{id}` par `get()` (P22) ; `lireF
 Bibliothèque. Fiche : la courbe du jour ne paraît qu'après le premier début d'étape. « Mes
 processus » : « Modèles à copier » aussi sous une panne de lecture. Aucune écriture Firestore
 nouvelle, aucune règle changée, aucune dépendance changée.
+
+### v0.1.52 — fonctionnel
+
+Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois
+celui des autres administrateurs. Ses lancements ne consomment pas les 10 du groupe, et
+inversement. Le compteur d'Admin › Tickets et la boîte de lancement affichent le plafond du
+compte connecté. Le mois compte tous les lancements.
+
+### v0.1.52 — technique
+
+Compte fondateur reconnu par le champ `founder: true` de `members/{email}`, posé dans la
+console Firebase (les règles refusent ce champ à tout client : liste blanche de `create`,
+`update` fermé ; aucun e-mail dans le code, P15). `requireAdmin` rend `founder` sans lecture de
+plus (`isFounder`, `functions/src/auth.ts`). `FOUNDER_LAUNCHES_PER_DAY` = 5 ×
+`LAUNCHES_PER_DAY` (`config.ts`), compteur `ticket_quotas/launch_founder_{AAAAMMJJ}`,
+`ticket_status/launches` gagne `founder_count_day` et `founder_per_day` (`launchModel.ts` :
+`LaunchPool`, `launchLimitOf`). Client : `Member.founder`, `EtatLancements.vuePour`, appliqué
+par `launchStatusProvider`. P36 et « Coûts variables » de `CLAUDE.md` modifiés (décision de
+l'utilisateur du 2026-11-14). Réglage après le déploiement : ajouter `founder` (booléen,
+`true`) au document `members/` du fondateur dans la console Firebase.
+
+La relecture ajoute des tests : compteur du fondateur rendu sur un échec, deux lancements
+simultanés du fondateur, champ `founder` refusé par les règles à l'admin ; cas fondateur ajoutés à
+`test-fixtures/member_access.json`, rejoués par `functions/test/auth.test.ts` et
+`app/test/members_repository_test.dart` (P31, ligne de « Logique dupliquée » mise à jour). P31
+nomme aussi `app/lib/features/members/domain/member.dart` (cinq fichiers au lieu de quatre, accord
+de l'utilisateur du 2026-11-14).
 
 ### v0.1.51 — fonctionnel
 

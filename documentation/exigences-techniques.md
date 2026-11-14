@@ -22,7 +22,7 @@ callables, dont `validateTicket`, `refuseTicket`, `closeTicket` et `retryTicketS
 | `firestore.indexes.json` | index composites des requêtes de `tickets/`, TTL de `ticket_quotas/` |
 | `firebase.json` | Firestore, Storage (`storage.rules`), Functions (`functions/`, Node 24), émulateurs (auth 9099, firestore 8080, storage 9199), Hosting |
 | `functions/` | Cloud Functions des tickets, TypeScript (ADR-006, ADR-008) |
-| `test-fixtures/` | fixtures rejouées par plusieurs suites : `member_access.json` (appartenance et rôle, P31), lue par `rules-tests/` (`firestore.rules` et `storage.rules`) et `functions/test/` |
+| `test-fixtures/` | fixtures rejouées par plusieurs suites : `member_access.json` (appartenance et rôle, P31), lue par `rules-tests/` (`firestore.rules` et `storage.rules`), `functions/test/` et, pour le compte fondateur (`Member.founder`), `app/test/members_repository_test.dart` |
 | `brewing/` | calculs de brassage, Dart pur (voir « Calculs de brassage ») |
 | `exchange/` | import et export de recettes BeerJSON et BeerXML, Dart pur, dépend de `brewing/` et de `xml` (ADR-005, voir « Échange de recettes ») |
 | `.firebaserc` | alias `default` : `kassbeer`, le projet Firebase de production |
@@ -1225,6 +1225,7 @@ admin se crée dans la console Firebase.
 | `display_name` | string \| null, facultatif | saisi par l'admin à l'invitation, 80 caractères au plus |
 | `invited_at` | timestamp | `serverTimestamp()` |
 | `invited_by` | string | uid de l'admin qui invite ; `console` pour le premier admin, créé hors de l'application |
+| `founder` | boolean, facultatif | `true` : compte fondateur, posé dans la console Firebase seule (`create` le refuse par sa liste blanche, `update` est fermé). Lu par le serveur (`requireAdmin`, `isFounder`) sur un admin seulement, booléen strict : son plafond de lancements est `FOUNDER_LAUNCHES_PER_DAY` sur un compteur à part. Aucun autre droit. Décision de l'utilisateur du 2026-11-14 ; aucun e-mail dans le code (P15) |
 
 Aucune modification en v1 : pour changer le rôle d'un brasseur, l'admin le retire puis le
 réinvite. Un admin ne retire ni son propre document ni celui d'un autre admin : un
@@ -1913,7 +1914,9 @@ Compteurs du plafond du jour de Paris, lus et écrits par le serveur seul :
 `member_{uid}_{AAAAMMJJ}` (5 par membre) et `group_{AAAAMMJJ}` (20 pour le groupe), écrits par
 le déclencheur de publication ; `launch_{AAAAMMJJ}` (lancements de routines, `LAUNCHES_PER_DAY`
 = 10 pour le groupe, analyse, développement, reprise et livraison confondus, poste
-`ticket_routine_launch`, T4 et T5), écrit par les trois callables de lancement. Champs `count`, `day`, `expires_at` (date
+`ticket_routine_launch`, T4 et T5), écrit par les trois callables de lancement ;
+`launch_founder_{AAAAMMJJ}` (lancements du compte fondateur, `FOUNDER_LAUNCHES_PER_DAY` = 50,
+compteur à part : il ne consomme pas celui du groupe et inversement). Champs `count`, `day`, `expires_at` (date
 d'écriture + 7 jours, champ TTL de `firestore.indexes.json`). Les tickets de l'administrateur
 ne sont ni refusés ni comptés ; ses lancements sont comptés.
 
@@ -1941,10 +1944,12 @@ au jour de Paris), lus par l'admin seul. Aucun jeton ni identifiant de routine.
 | Champ | Contenu |
 |---|---|
 | `day` | `AAAAMMJJ`, jour de Paris du compteur `count_day` |
-| `count_day` | entier : lancements comptés ce jour-là (copie de `ticket_quotas/launch_{day}.count`) |
+| `count_day` | entier : lancements du groupe comptés ce jour-là (copie de `ticket_quotas/launch_{day}.count`) |
+| `founder_count_day` | entier : lancements du compte fondateur comptés ce jour-là (copie de `ticket_quotas/launch_founder_{day}.count`) ; remis à 0 avec `count_day` au changement de jour |
 | `month` | `AAAAMM`, mois de Paris de `count_month` |
-| `count_month` | entier : lancements comptés ce mois-là ; repart de zéro au changement de mois |
+| `count_month` | entier : lancements comptés ce mois-là, les deux compteurs ensemble ; repart de zéro au changement de mois |
 | `per_day` | entier : `LAUNCHES_PER_DAY` de `functions/src/config.ts`, réécrit à chaque écriture. Le client calcule « N restants le JJ/MM » avec `per_day`, `count_day` et `day`, sans constante en Dart ni calcul du jour |
+| `founder_per_day` | entier : `FOUNDER_LAUNCHES_PER_DAY` (5 × `LAUNCHES_PER_DAY`), réécrit à chaque écriture. Le client du compte fondateur (`members/{email}.founder`) lit `founder_count_day` et `founder_per_day` à la place de `count_day` et `per_day` (`EtatLancements.vuePour`) ; sans eux, « inconnu » |
 | `analysis_invalid_since`, `development_invalid_since` | timestamp du premier refus de la routine d'analyse ou de développement (401, 403, 404) ; `null` après le premier lancement réussi de cette routine. Une livraison et une reprise partent par la routine de développement : leur refus pose `development_invalid_since` |
 | `ci_read_denied_since` | timestamp (horloge du serveur) du premier 403 sur `GET /actions/runs` (T5, décision de l'utilisateur du 2026-11-14) : le jeton GitHub n'a pas « Actions : lecture ». Écrit par toute relecture de la CI (webhook, passe horaire, `launchTicketDelivery`) seulement quand l'état change, remis à `null` à la lecture suivante réussie des runs, qui n'a lieu que pour une seule PR éligible. La fiche d'un ticket En cours affiche « Le jeton GitHub ne peut pas lire la CI : sur GitHub, donnez-lui le droit « Actions : lecture ». » seulement si `admin/delivery.eligible_pr_count` vaut 1 : sans PR éligible, le champ peut rester posé après la correction du jeton, et la ligne masquerait « Aucune pull request prête ». Tant qu'il est posé, la liste n'affiche ni « CI en cours » ni « PR prête » et le filtre « À traiter » ignore la PR prête ; `token_invalid_since` n'est pas posé |
 | `delivery_running` | verrou des livraisons (T5, P44) : `ticket_id`, `issue_number`, `launched_at`, `retry_after` (`launched_at` + 3 h), ou `null`. Pris en transaction par `launchTicketDelivery` avant le comptage ; refus `delivery_running_elsewhere` tant qu'un autre ticket le tient (échéance future, ticket verrouillé toujours `in_progress`) ; rendu si rien n'est parti ; gardé sur `launched` et `unknown` ; libéré par le serveur quand un `## Livraison — blocage` postérieur à `launched_at` est relevé sur ce ticket, ou quand ce ticket quitte `in_progress` (relecture de l'Issue, passe horaire). Le client compare seulement l'heure à `retry_after` |
@@ -3022,8 +3027,9 @@ non-membre et un brasseur (« Accès réservé à l'administrateur. », « Accè
 membres. ») : la réponse ne dit pas si le compte existe. C'est la vérification de
 `isMember()` et `isAdmin()` de `firestore.rules`, recopiée : la fixture
 `test-fixtures/member_access.json` est rejouée par `rules-tests/test/member_access.test.mjs`
-(sondes `beer_index/{nature}` en `get` et `ticket_status/github`) et par
-`functions/test/auth.test.ts`. `requireBoundedText` refuse un argument texte absent, d'un
+(sondes `beer_index/{nature}` en `get` et `ticket_status/github`), par
+`functions/test/auth.test.ts` (dont `isFounder`) et par `app/test/members_repository_test.dart`
+(`Member.founder`). `requireBoundedText` refuse un argument texte absent, d'un
 autre type ou plus long que sa borne brute, avant toute lecture (`invalid-argument`,
 `details.field`, `details.reason`).
 
@@ -3173,8 +3179,9 @@ réseau côté client n'en porte pas.
 `src/tickets/routine.ts`, `launchTicketAnalysis`, `launchTicketDevelopment` et
 `launchTicketDelivery`, ADR-008, T4 et T5, P35, P36, P41, P43, P44, P47). Copie de `launch.ts`,
 `routine.ts` et des règles « Lancements » de `rules.ts` de Kass'Dalle ; écarts : bail des
-décisions de Kass'Beer (`decision_lease_until`), plafond `LAUNCHES_PER_DAY` de `config.ts` sans
-compte fondateur, pas de type Question, règle « en cours » réduite à `retry_after`, reprise du
+décisions de Kass'Beer (`decision_lease_until`), plafond `LAUNCHES_PER_DAY` de `config.ts`, compte
+fondateur lu dans `members/{email}.founder` (et non par un e-mail écrit dans le code) et compté
+à part (`FOUNDER_LAUNCHES_PER_DAY`, compteur `launch_founder_{AAAAMMJJ}`), pas de type Question, règle « en cours » réduite à `retry_after`, reprise du
 développement (T5). Entrée `{ticketId: string}`, plus `mode` pour `launchTicketDevelopment`
 (`"start"`, valeur par défaut, ou `"resume"` : « Relancer le développement », action
 `reprise` ; toute autre valeur refusée en `invalid-argument`, `field: "mode"`, après
@@ -3211,9 +3218,10 @@ relancer. »). Un résultat `unknown` est compté et bloque une relance jusqu'à
    sinon `delivery_ci_not_green` ; puis verrou des
    livraisons pris en transaction (`delivery_running_elsewhere` s'il est tenu par un autre
    ticket encore `in_progress`). Le serveur n'écrit rien sur GitHub pour une livraison.
-4. Transaction sur `ticket_quotas/launch_{AAAAMMJJ}` (jour de Paris) et
-   `ticket_status/launches` : refus `quota_exceeded` au plafond, sinon compteur + 1,
-   `count_day`, `count_month`, `per_day` écrits.
+4. Transaction sur `ticket_quotas/launch_{AAAAMMJJ}` (`launch_founder_{AAAAMMJJ}` pour le
+   fondateur ; jour de Paris) et `ticket_status/launches` : refus `quota_exceeded` au plafond
+   du compteur de l'appelant (`details.limit`), sinon compteur + 1, `count_day` ou
+   `founder_count_day`, `count_month`, `per_day` et `founder_per_day` écrits.
 5. Issue relue sur GitHub : fermée, ou étiquettes qui donnent un autre statut que celui du
    lancement → état relu appliqué au ticket, refus `ticket_changed`.
 6. Entrée `unknown` ajoutée en tête de `admin/launches` (vingt au plus) **avant** l'appel :
@@ -4721,4 +4729,4 @@ ici et son plafond.
 
 | Poste | Appelé par | Facturation et limites du fournisseur | Plafond | Compteurs |
 |---|---|---|---|---|
-| `ticket_routine_launch` | `launchTicketAnalysis`, `launchTicketDevelopment` (développement et, avec `mode: "resume"`, reprise), `launchTicketDelivery` (ADR-008, T4 et T5) | abonnement Claude de l'administrateur, aucune facture à l'appel ; 30 appels par heure et par routine, 100 par heure et par compte (API, quota partagé avec Kass'Dalle) ; la livraison et la reprise partagent la limite de la routine de développement ; une session de livraison dure jusqu'à 2 h 30 (part des limites d'usage de l'abonnement à vérifier) | `LAUNCHES_PER_DAY` = 10 par jour de Paris pour le groupe, analyse, développement, reprise et livraison confondus (`functions/src/config.ts`), compté en transaction avant l'appel, et pour une livraison ou une reprise seulement après leurs contrôles (P43, P47) et la prise du verrou (P44) ; aucune limite de reprises par ticket ; boîte de confirmation obligatoire côté client (P39) | `ticket_quotas/launch_{AAAAMMJJ}`, `ticket_status/launches` (`count_day`, `count_month`, `per_day`) |
+| `ticket_routine_launch` | `launchTicketAnalysis`, `launchTicketDevelopment` (développement et, avec `mode: "resume"`, reprise), `launchTicketDelivery` (ADR-008, T4 et T5) | abonnement Claude de l'administrateur, aucune facture à l'appel ; 30 appels par heure et par routine, 100 par heure et par compte (API, quota partagé avec Kass'Dalle) ; la livraison et la reprise partagent la limite de la routine de développement ; une session de livraison dure jusqu'à 2 h 30 (part des limites d'usage de l'abonnement à vérifier) | `LAUNCHES_PER_DAY` = 10 par jour de Paris pour le groupe, et `FOUNDER_LAUNCHES_PER_DAY` = 50 sur un compteur à part pour le compte fondateur (`members/{email}.founder`), analyse, développement, reprise et livraison confondus (`functions/src/config.ts`), compté en transaction avant l'appel, et pour une livraison ou une reprise seulement après leurs contrôles (P43, P47) et la prise du verrou (P44) ; aucune limite de reprises par ticket ; boîte de confirmation obligatoire côté client (P39) | `ticket_quotas/launch_{AAAAMMJJ}` et `launch_founder_{AAAAMMJJ}`, `ticket_status/launches` (`count_day`, `founder_count_day`, `count_month`, `per_day`, `founder_per_day`) |
