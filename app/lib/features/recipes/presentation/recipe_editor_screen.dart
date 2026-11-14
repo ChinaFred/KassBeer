@@ -31,9 +31,13 @@ import 'recipes_providers.dart';
 
 /// Nouvelle recette ([id] nul) ou modification d'une recette, en plein écran.
 class RecipeEditorScreen extends ConsumerWidget {
-  const RecipeEditorScreen({super.key, this.id});
+  const RecipeEditorScreen({super.key, this.id, this.retourParPop = false});
 
   final String? id;
+
+  /// Vrai : ouvert depuis la fiche importée ; « Enregistrer » ferme l'éditeur
+  /// par `pop` pour garder le compte rendu de l'import sous la fiche.
+  final bool retourParPop;
 
   static const readOnlyMessage = 'Seul l\'auteur modifie cette recette.';
 
@@ -69,16 +73,25 @@ class RecipeEditorScreen extends ConsumerWidget {
             ),
           );
         }
-        return _RecipeEditor(key: ValueKey(id), initial: recipe);
+        return _RecipeEditor(
+          key: ValueKey(id),
+          initial: recipe,
+          retourParPop: retourParPop,
+        );
       },
     );
   }
 }
 
 class _RecipeEditor extends ConsumerStatefulWidget {
-  const _RecipeEditor({super.key, required this.initial});
+  const _RecipeEditor({
+    super.key,
+    required this.initial,
+    this.retourParPop = false,
+  });
 
   final Recipe? initial;
+  final bool retourParPop;
 
   @override
   ConsumerState<_RecipeEditor> createState() => _RecipeEditorState();
@@ -258,7 +271,11 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       _saving = false;
       _dirty = false;
     });
-    context.go(AppRoutes.recipe(id));
+    if (widget.retourParPop && context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.recipe(id));
+    }
   }
 
   // ------------------------------------------------------------ lignes

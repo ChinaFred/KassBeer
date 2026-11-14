@@ -69,6 +69,11 @@ abstract final class AppRoutes {
   /// compte rendu (ticket #60).
   static String importedRecipe(String id) => '$importRecipes/$id';
 
+  /// `extra` d'un éditeur de recette ouvert depuis la fiche importée : après
+  /// « Enregistrer », l'éditeur se ferme par `pop` et ramène à cette fiche,
+  /// au lieu d'ouvrir la fiche de la coquille (ticket #60).
+  static const retourParPop = 'retour-par-pop';
+
   static const newEquipment = '/equipements/nouveau';
   static String equipmentItem(String id) => '$equipment/$id';
   static String editEquipment(String id) => '$equipment/$id/modifier';

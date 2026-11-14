@@ -168,13 +168,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppRoutes.recipes}/:id/modifier',
-        builder: (_, state) =>
-            RecipeEditorScreen(id: state.pathParameters['id']),
+        builder: (_, state) => RecipeEditorScreen(
+          id: state.pathParameters['id'],
+          retourParPop: state.extra == AppRoutes.retourParPop,
+        ),
       ),
       GoRoute(
         path: '${AppRoutes.recipes}/:id/chronologie',
-        builder: (_, state) =>
-            BrewStepsEditorScreen(id: state.pathParameters['id']!),
+        builder: (_, state) => BrewStepsEditorScreen(
+          id: state.pathParameters['id']!,
+          retourParPop: state.extra == AppRoutes.retourParPop,
+        ),
       ),
       // Écran du jour : plein écran, hors de la coquille. Journée de brassage,
       // puis journées suivantes du déroulé (ADR-010).

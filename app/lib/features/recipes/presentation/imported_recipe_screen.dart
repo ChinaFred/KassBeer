@@ -37,7 +37,7 @@ class ImportedRecipeScreen extends ConsumerWidget {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-          child: RecipeDetailScreen(id: id),
+          child: RecipeDetailScreen(id: id, depuisImport: true),
         ),
       ),
     );
