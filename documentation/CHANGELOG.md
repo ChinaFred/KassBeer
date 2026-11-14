@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.54 — fonctionnel
+### v0.1.55 — fonctionnel
 
 « Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple
 et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un
@@ -24,7 +24,7 @@ suffit pour la voir. Elle montre aussi les densités initiale et finale prévues
 température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente
 de la Bibliothèque, ou sans plage, une ligne le dit.
 
-### v0.1.54 — technique
+### v0.1.55 — technique
 
 `brewing/` : `brewDayTemperatureSeries` (`brew_day_curve.dart`) calcule les températures visées
 du plan de départ et recalculées, le retard et les débuts théoriques à partir de l'horaire de
@@ -50,6 +50,30 @@ dans `beer_index/cultures`, puis `beer_cultures/{id}` par `get()` (P22) ; `lireF
 Bibliothèque. Fiche : la courbe du jour ne paraît qu'après le premier début d'étape. « Mes
 processus » : « Modèles à copier » aussi sous une panne de lecture. Aucune écriture Firestore
 nouvelle, aucune règle changée, aucune dépendance changée.
+
+### v0.1.54 — fonctionnel
+
+Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche.
+Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie »,
+« Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi
+compléter les recettes importées l'une après l'autre. Demandé par le ticket #60.
+
+### v0.1.54 — technique
+
+Recettes › Importer : la fiche d'une recette créée s'ouvre par `push` sur une route hors de la
+coquille, `/recettes/importer/:id` (`AppRoutes.importedRecipe`, `ImportedRecipeScreen` :
+`RecipeDetailScreen` dans une `PageSecondaire` « Recette »). L'import est ouvert par `push`
+depuis la liste des recettes, donc au-dessus de la coquille ; un `push` de `/recettes/:id`
+ajoutait une seconde page de coquille de même clé, le `Navigator` levait l'assertion
+`!keyReservation.contains(key)` et la fiche ne s'affichait pas. Nouvelle route inscrite dans
+`ticket_screens.dart` (nom d'écran, menu du compte, écrans à prix, et les quatre fenêtres de la
+fiche : Exporter, Nouveau brassin, Prix d'un ingrédient, Reprendre un prix). Les sorties de la
+fiche gardent le compte rendu dans la pile : `RecipeDetailScreen(depuisImport: true)` ouvre
+`RecipeEditorScreen` et `BrewStepsEditorScreen` avec `extra: AppRoutes.retourParPop`, qui se
+ferment par `pop` après « Enregistrer » ; Supprimer fait `pop`, Dupliquer ouvre la copie par
+`push` sur `/recettes/importer/:id`, l'état absent affiche « Revenir au compte rendu ». Tests
+ajoutés à `import_recipes_test.dart` sur le parcours réel (liste, import, fiche, retour ;
+Modifier puis Enregistrer ; Supprimer) ; le test 11 est gardé. Demandé par le ticket #60.
 
 ### v0.1.53 — fonctionnel
 

@@ -1,12 +1,19 @@
 {
   "versions": [
     {
-      "version": "0.1.54",
+      "version": "0.1.55",
       "date": "2026-11-14",
       "paragraphs": [
         "« Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un nouveau processus prérempli ; rien n'est enregistré avant « Enregistrer ».",
         "Une courbe des températures accompagne le jour de brassage. Elle montre la température visée de chaque étape selon le plan de départ et selon les heures réelles, les températures et les densités mesurées, et la densité initiale prévue. Sur le téléphone, une bascule « Étapes » | « Courbe » l'affiche à la place de la chronologie ; sur grand écran, elle se place sous le minuteur. Sur la fiche du brassin, elle paraît en tête de la journée de brassage dès la première étape commencée. En paysage, sur un téléphone, la bascule garde le minuteur visible.",
         "La courbe de fermentation commence à la densité initiale du jour de brassage : un seul relevé suffit pour la voir. Elle montre aussi les densités initiale et finale prévues, et la plage de température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente de la Bibliothèque, ou sans plage, une ligne le dit."
+      ]
+    },
+    {
+      "version": "0.1.54",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche. Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie », « Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi compléter les recettes importées l'une après l'autre. Demandé par le ticket #60."
       ]
     },
     {
@@ -37,14 +44,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur GitHub, au lieu de partir plus tard. Pendant l'action, la fiche affiche « … en cours sur GitHub. », puis un message court dit si c'est fait. En cas d'échec, le message dit pourquoi et le texte saisi est gardé. La boîte de Refuser et de Clore peut se fermer pendant l'envoi, et accepte maintenant 4 000 caractères. Ces actions demandent le réseau : hors ligne, les boutons restent visibles mais inactifs, avec « Ces actions demandent le réseau. ». L'historique des décisions d'un ticket reste affiché."
-      ]
-    },
-    {
-      "version": "0.1.49",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres restent alignés d'une ligne à l'autre. Le médaillon du logo s'affiche à la connexion, au chargement, sur « Ce compte n'a pas accès » et en tête du menu sur grand écran. Le texte s'affiche dans la même police sur tous les appareils. Sur le web, l'application ne télécharge plus de police au démarrage, et les flèches s'affichent aussi sans réseau.",
-        "Les listes de recettes, brassins, équipements, processus, tickets et l'accueil Admin ont la même ligne : une icône à gauche, le nom, les détails, puis les étiquettes. Les prix et les frais suivent la même ligne, sans icône. Le statut d'un brassin s'affiche dans une étiquette colorée. Une liste vide affiche un titre. Les titres de section se distinguent de leur contenu. Les messages d'erreur, d'avertissement et de succès s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le brassage », et chaque vérification prend la couleur de son état."
       ]
     }
   ]
