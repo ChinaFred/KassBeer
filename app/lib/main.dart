@@ -11,6 +11,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'app.dart';
 import 'core/preferences/preferences_appareil.dart';
 import 'core/providers.dart';
+import 'core/services/app_installer.dart';
+import 'core/services/app_update_service.dart';
 import 'core/services/error_report_service.dart';
 import 'features/admin/data/error_reports_repository.dart';
 import 'features/admin/data/logs_repository.dart';
@@ -59,11 +61,16 @@ Future<void> main() async {
   }
 
   String? version;
+  int? build;
   Object? versionError;
   StackTrace? versionStack;
   try {
-    version = (await PackageInfo.fromPlatform()).version;
+    final info = await PackageInfo.fromPlatform();
+    version = info.version;
     if (version.isEmpty) version = null;
+    // Numéro après « + » : versionCode de l'APK, comparé au manifeste publié
+    // (ADR-012). Illisible : aucune mise à jour n'est proposée.
+    build = int.tryParse(info.buildNumber);
   } catch (error, stackTrace) {
     versionError = error;
     versionStack = stackTrace;
@@ -159,6 +166,14 @@ Future<void> main() async {
         ),
         logsRepositoryProvider.overrideWithValue(
           FunctionsLogsRepository(errorReportService: errors),
+        ),
+        appUpdateServiceProvider.overrideWithValue(
+          AppUpdateService(
+            errorReportService: errors,
+            installateur: InstallateurApkPlateforme(errorReportService: errors),
+            buildInstalle: build,
+            versionInstallee: version,
+          ),
         ),
       ],
       child: const KassBeerApp(),

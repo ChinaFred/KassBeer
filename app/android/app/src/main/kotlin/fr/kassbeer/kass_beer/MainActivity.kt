@@ -23,15 +23,23 @@ class MainActivity : FlutterActivity() {
     // Canal de la préférence de thème (ADR-009), branché avec le moteur.
     private var preferences: PreferencesAppareil? = null
 
+    // Canal des mises à jour de l'APK (ADR-012), branché avec le moteur.
+    private var misesAJour: MisesAJour? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Lancement neuf : le fichier exporté au lancement précédent est effacé.
-        if (savedInstanceState == null) fichiers?.viderExports()
+        // Lancement neuf : le fichier exporté et l'APK téléchargé au lancement
+        // précédent sont effacés.
+        if (savedInstanceState == null) {
+            fichiers?.viderExports()
+            misesAJour?.viderMisesAJour()
+        }
     }
 
     override fun onDestroy() {
         fichiers?.fermer()
         preferences?.fermer()
+        misesAJour?.fermer()
         super.onDestroy()
     }
 
@@ -52,6 +60,11 @@ class MainActivity : FlutterActivity() {
         // Canal de la préférence de thème : mêmes noms que
         // app/lib/core/preferences/preferences_appareil.dart (P17).
         preferences = PreferencesAppareil(this).also {
+            it.brancher(flutterEngine.dartExecutor.binaryMessenger)
+        }
+        // Canal des mises à jour de l'APK : mêmes noms que
+        // app/lib/core/services/app_installer.dart (P17).
+        misesAJour = MisesAJour(this).also {
             it.brancher(flutterEngine.dartExecutor.binaryMessenger)
         }
         // Canal de l'alerte de fin de minuteur : mêmes noms que

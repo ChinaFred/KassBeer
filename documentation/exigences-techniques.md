@@ -38,6 +38,8 @@ Dossier publié : `app/build/web`. Toute URL sans fichier correspondant est ré�
 | `canvaskit/**` | `public, max-age=31536000, immutable` (seul chemin immuable, P1) |
 | `/`, toute URL sans extension (`**/!(*.*)`), `index.html` | `no-cache, no-store, must-revalidate`, plus `Pragma: no-cache` et `Expires: 0` |
 | `flutter_bootstrap.js`, `flutter.js`, `main.dart.js`, `version.json` | `no-cache, no-store, must-revalidate` |
+| `app-release.apk` | `no-cache, no-store, must-revalidate`, plus `Content-Type: application/vnd.android.package-archive` et `Content-Disposition: attachment; filename="kass-beer.apk"` (ADR-012) |
+| `apk_release.json` | `no-cache, no-store, must-revalidate` (ADR-012) |
 | autres fichiers | réglage par défaut de Hosting |
 
 Les URL sans extension (`/`, `/recettes/12`) reçoivent l'en-tête de `index.html` : Hosting
@@ -67,6 +69,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/presentation/` | `AppShell` (barre du bas à icônes seules sous 600 px, `label` en infobulle et pour le lecteur d'écran ; rail défilable ; titre et retour reçus de la route ; menu du compte), `MenuCompte` (`menu_compte.dart` : avatar et menu du compte de la coquille et des pages pleines, rien sans `AccessGranted` ; `photo: false` sur l'écran du jour, initiale seule ; entrée de l'écran courant masquée par `kEntreeDeLEcran`, comparée au `fullPath` ; `avantDeQuitter` appelé avant « Tickets à traiter », « Mes processus » et « Se déconnecter » ; « Tickets à traiter » par `go`, sauf sur `kEcransDuJour` (`/brassins/:id/jour`, `/brassins/:id/jour/:journee`), par `push` pour garder l'écran du jour et son verrou ; `avantDeDeconnecter` avant « Se déconnecter » ; `textePastille`, `infobulleCompte`), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte), `etats.dart` (`EtatChargement`, `EtatVide` avec action facultative, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette`, `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` (menu du compte après l'action, `avantDeQuitter` = confirmation d'abandon si modifié ; bouton d'action borné par la largeur restante, libellé réduit par `FittedBox` ; `actionActive` faux : bouton grisé sous son libellé) et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche`, `TitreSection`, `LigneDeuxNiveaux`, `TexteAbsent`, `SectionRepliable`), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
 | `lib/core/preferences/` | préférence de thème gardée sur l'appareil (ADR-009) : `PreferencesAppareil` (`lireValeurTheme`, `ecrireTheme`), `PreferencesAppareilPlateforme` (canal `fr.kassbeer/prefs` sur Android, `preferences_web.dart` par `package:web` sur le web, `preferences_web_stub.dart` hors du web, import conditionnel), `lireTheme` (rend `LectureTheme`, ne lève pas), `themeModeProvider` (`ThemeModeNotifier.choisir`) ; fournis par `preferencesAppareilProvider` et `themeModeInitialProvider` |
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets, types)` (types facultatifs, `kTypesImages` pour une image de ticket) rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
+| `lib/core/services/app_update_service.dart`, `app_update_transport*.dart`, `app_installer.dart` | mise à jour de l'APK (ADR-012) : `AppUpdateService` (`verifier`, `telecharger`, `installer`), `ManifesteApk.lire`, `TransportMiseAJour` (`dart:io` sur Android par import conditionnel, stub sur le web), `InstallateurApkPlateforme` (canal `fr.kassbeer/updates`) ; fourni par `appUpdateServiceProvider` (`main.dart`). Fenêtre `app_update_dialog.dart`, vérification au lancement `verification_mise_a_jour.dart` (dans la coquille) |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
 | `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
@@ -355,6 +358,80 @@ pas) ; téléchargement par `Blob`, `URL.createObjectURL`, lien `download`, clic
 `revokeObjectURL` une seconde après. Rien ne part vers un serveur. Tests :
 `echange_fichiers_test.dart` (`TestDefaultBinaryMessenger`) ; le Kotlin et le web se vérifient
 par la compilation et un essai à la main.
+
+**Mise à jour de l'APK (ADR-012).** Android seul : sur le web, `AppUpdateService.verifier` rend
+`null` avant tout appel, l'import conditionnel ne charge que `app_update_transport_stub.dart`,
+et aucun lien vers l'APK n'est affiché. App Distribution reste publié en parallèle.
+
+- *Manifeste* `https://kassbeer.web.app/apk_release.json`, écrit par le job `build` de
+  `deploy.yml` et nulle part ailleurs (P52) :
+  `{"version": "X.Y.Z", "build_number": N, "file": "app-release.apk", "size_bytes": …,
+  "sha256": "<64 hex>", "built_at": "<ISO 8601>"}`. Lu par `HttpClient` de `dart:io`
+  (`?t=<horodatage>`, `Cache-Control: no-cache`), délai de 8 s, corps lu jusqu'à
+  4 096 + 1 octets. `ManifesteApk.lire` exige `version` `^\d+\.\d+\.\d+$`, `build_number`
+  entier de 1 à 2 100 000 000, `size_bytes` entier de 1 à 200 000 000, `sha256` de 64
+  caractères `[0-9a-f]` ; `file` et `built_at` ne sont pas lus. Aucun repli sur `version.json`.
+- *Comparaison* : `build_number` contre le numéro de build installé (`buildNumber` de
+  `package_info_plus`, lu par `main.dart`) ; aucune comparaison de `X.Y.Z`. Build installé
+  illisible : aucune vérification.
+- *Erreurs de la vérification* : `SocketException`, `TimeoutException`, `HttpException`,
+  `TlsException` ou code différent de 200 : rien ne s'affiche, aucun rapport (arbitrage 2). Une
+  réponse 200 illisible (dont `index.html`, que Hosting sert pour un manifeste absent) :
+  rapport `app_update_check`, `context` « raison: <champ> », sans valeur.
+- *Moment* : `VerificationMiseAJour`, monté dans la coquille (`app_shell.dart`) : la coquille
+  n'est affichée qu'à un membre connecté. Une lecture du manifeste par lancement
+  (`etatMiseAJourProvider`, en mémoire) ; « Plus tard » n'est pas mémorisé. La lecture attend
+  que la reprise du brassage ait décidé (`repriseTraiteeProvider`, relu à chaque liste de
+  `brewsListProvider`, écoute fermée dès la lecture partie ; une liste en panne vaut décision),
+  puis une image de plus, le temps que la reprise ouvre l'écran du jour. Ni la lecture ni la
+  fenêtre n'ont lieu tant que la route courante (`GoRouter.state`, pages ouvertes par `push`
+  comprises) est `/brassins/:id/jour` ou `/brassins/:id/jour/:journee` (`routeSansMiseAJour`) :
+  elles attendent le retour sur un autre écran. `proposee` ne passe à vrai qu'à l'ouverture de
+  la fenêtre. La fenêtre rend `true` sur un choix du brasseur (« Plus tard », retour du
+  système, installateur ouvert) ; retirée sans choix (page remplacée sous elle), elle rend
+  `null` et revient au prochain écran permis du même lancement. L'écran du jour et les
+  journées n'importent aucun fichier de la mise à jour (P2, P51).
+- *Fenêtre* « Nouvelle version » (`app_update_dialog.dart`, `AlertDialog(scrollable: true)`) :
+  offre (« Kass'Beer X.Y.Z est disponible (vous avez X.Y.Z). », taille, « Plus tard »,
+  « Mettre à jour ») ; autorisation (« Autorisez Kass'Beer à installer des applications »,
+  « Ouvrir les réglages », nouvelle lecture de `canRequestInstall` au retour par
+  `AppLifecycleListener` ; sans autorisation au retour, « L'autorisation n'est pas encore
+  donnée. ») ; téléchargement (progression nommée « Téléchargement de la nouvelle version »,
+  valeur en pourcentage, « Annuler ») ; installation ; échec (« Réessayer », « Plus tard »).
+  « Mettre à jour », « Réessayer » et « Ouvrir les réglages » sont désactivés pendant leur
+  action (`_enCours`), « Annuler » après un premier appui. Message d'échec, ligne
+  d'installation et ligne d'autorisation en `Semantics(liveRegion: true)`. Retour du système
+  refusé pendant le téléchargement et l'installation. Aucun repli vers le navigateur.
+- *Téléchargement* : `https://kassbeer.web.app/app-release.apk` vers
+  `cacheDir/updates/kass-beer-update.apk` (dossier rendu par le canal), SHA-256 calculé au fil
+  de l'écriture (`package:crypto`), lecture arrêtée à `size_bytes` + 1 octets, 30 s sans octet
+  reçu = coupure. Annulation lue sur un drapeau à chaque bloc. Coupure, délai, code différent de
+  200 ou annulation : fichier effacé, aucun rapport, la fenêtre affiche l'échec (arbitrage 6).
+  Taille ou SHA-256 différents du manifeste : fichier effacé, rapport `app_update_download`
+  (« raison: taille » ou « raison: sha256 »). Écriture impossible : rapport, erreur neutre (le
+  message d'une `FileSystemException` porte le chemin et n'est pas recopié).
+- *Canal* `MethodChannel('fr.kassbeer/updates')` (`MisesAJour.kt`, branché par
+  `MainActivity.configureFlutterEngine`, P17) : `updatesDir` (crée et rend `cacheDir/updates/`,
+  hors du fil principal) ; `canRequestInstall` (`canRequestPackageInstalls()`, vrai sous
+  Android 8) ; `openInstallSettings` (`ACTION_MANAGE_UNKNOWN_APP_SOURCES` sur
+  `package:<applicationId>`) ; `installApk(expectedBuild)` : aucun chemin reçu du Dart, lit
+  `cacheDir/updates/kass-beer-update.apk` hors du fil principal, `getPackageArchiveInfo` doit
+  rendre le paquet de l'application et un `longVersionCode` égal à `expectedBuild`, sinon
+  `apk_invalid` et fichier effacé (rapporté côté Dart sous `app_update_download`) ; puis URI de
+  `MisesAJourFileProvider` (autorité `${applicationId}.updates`, `exported="false"`,
+  `res/xml/updates_paths.xml` réduit à `<cache-path name="updates" path="updates/"/>`),
+  `ACTION_VIEW` de type `application/vnd.android.package-archive`,
+  `FLAG_GRANT_READ_URI_PERMISSION`. Une installation pendant une autre rend `ALREADY_ACTIVE`.
+  Autres codes : `dir_unavailable`, `apk_missing`, `install_failed`, `settings_unavailable`,
+  rapportés côté Dart sous `app_update_install` avec la méthode et le code seuls.
+  `cacheDir/updates/` est vidé à chaque lancement neuf. Permission
+  `REQUEST_INSTALL_PACKAGES` ; aucune permission de stockage. Android affiche toujours son écran
+  de confirmation et refuse une mise à jour signée par une autre clé (P8).
+- Tests : `app_update_service_test.dart` (manifeste champ par champ, comparaison, rapports),
+  `app_update_transport_test.dart` (serveur HTTP local : 200, 404, borne, délai, connexion
+  refusée ou coupée, écriture impossible), `app_update_dialog_test.dart` (étapes et libellés,
+  vérification depuis la coquille, canal par `TestDefaultBinaryMessenger`). Le Kotlin se
+  vérifie par la compilation de l'APK et un essai sur téléphone.
 
 **Verrou d'écran (`wakelock_plus`).** Pris à l'ouverture de « Préparer le brassage » et de
 l'écran du jour, relâché en quittant, repris au retour d'arrière-plan. Compté par
@@ -4012,10 +4089,10 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | Job | Environnement, droits | Ce qu'il fait |
 |---|---|---|
 | `gate` | aucun, `contents: read` | vérifie que le commit est la tête de `main` ; sinon s'arrête en vert. Décide du déploiement des Functions : `git diff HEAD^1 HEAD -- functions/` non vide, ou lancement manuel |
-| `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et décide s'il faut un nouvel APK |
-| `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; dépose les deux en artefacts conservés un jour |
+| `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et, sans jeton, le manifeste `apk_release.json` en ligne ; décide s'il faut un nouvel APK |
+| `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; avec un nouvel APK, le copie dans `app/build/web/app-release.apk` et écrit `app/build/web/apk_release.json` (ADR-012, seul endroit où il s'écrit) ; dépose le web et l'APK en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
-| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008 et d'ADR-011, `queryLogs` en `maxInstances` 1, 60 s et `concurrency` 1, sans secret, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et chacun des autres monté par les seules fonctions de P25 : `GITHUB_WEBHOOK_SECRET` par `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_ID` et `_TOKEN` par `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_ID` et `_TOKEN` par `launchTicketDevelopment` et `launchTicketDelivery`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage` (`storage` : `storage.rules`, ADR-008, T6) ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
+| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; sans nouvel APK, lance `scripts/garder-apk-en-ligne.sh` avant l'authentification (paire en ligne recopiée dans `app/build/web`, refusée si incohérente) ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008 et d'ADR-011, `queryLogs` en `maxInstances` 1, 60 s et `concurrency` 1, sans secret, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et chacun des autres monté par les seules fonctions de P25 : `GITHUB_WEBHOOK_SECRET` par `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_ID` et `_TOKEN` par `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_ID` et `_TOKEN` par `launchTicketDevelopment` et `launchTicketDelivery`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage` (`storage` : `storage.rules`, ADR-008, T6) ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
 | `tag` | aucun, `contents: write` | après un `deploy` réussi seulement (condition `!cancelled() && needs.deploy.result == 'success'`, pour que l'absence de `build-functions` ne l'ignore pas) : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et
@@ -4048,7 +4125,24 @@ construire.
 `firebaseappdistribution.googleapis.com/v1/…/releases`). Un APK se construit quand aucune
 version n'est publiée, quand `N` est plus grand, ou quand la dernière version publiée a
 expiré. Une réponse de l'API autre que 200 arrête le déploiement. P7 garantit que `N` monte
-à chaque version.
+à chaque version. `plan` lit aussi `https://<projet>.web.app/apk_release.json` (ADR-012) : un
+manifeste absent, illisible ou hors des formes de `garder-apk-en-ligne.sh`, ou un
+`build_number` inférieur à `N`, fait construire l'APK.
+
+**APK et manifeste sur Hosting (ADR-012).** Un déploiement de Hosting remplace tout le site par
+`app/build/web`. Avec un nouvel APK, `build` y copie l'APK et écrit le manifeste (`jq -n` :
+version et build tirés de `app/pubspec.yaml`, `size_bytes` par `stat`, `sha256` par
+`sha256sum`, `built_at` en UTC) ; un APK au-delà de 200 000 000 octets arrête le job. Sans nouvel
+APK, `deploy` lance `scripts/garder-apk-en-ligne.sh app/build/web https://<projet>.web.app`
+avant l'authentification Google (`curl`, `jq`, `sha256sum`) : paire cohérente (manifeste aux
+formes du client, APK qui commence par `PK`, taille et SHA-256 égaux au manifeste) recopiée ;
+paire absente (page de repli `index.html` pour les deux) : rien, avertissement ; APK seul :
+recopié sans manifeste, avertissement ; manifeste seul, manifeste JSON hors des formes, paire
+incohérente, site injoignable : échec du déploiement. Ordre du job inchangé : Hosting (avec la
+paire), règles et index, Functions, App Distribution. Un échec d'App Distribution après Hosting
+laisse l'application à jour par Hosting ; App Tester a alors une version de retard. Aucun rôle
+ajouté à `github-deploy`. Le contrôle du manifeste existe en bash (`plan`, script) et en Dart,
+sans fixture partagée (ADR-012, arbitrage 9).
 
 **Configuration Firebase du client.** `app/firebase.env.example.json` liste les clés que
 l'application lit par `String.fromEnvironment` (`app/lib/firebase_options.dart`). `build`
@@ -4209,7 +4303,15 @@ message d'erreur, pas un rôle large comme `roles/firebase.admin`.
 
 Chaque nouvel APK part vers ce groupe, avec en notes de version la version, le commit et
 l'entrée de cette version dans `CHANGELOG.md`. Le testeur reçoit un e-mail, puis installe
-par l'application App Tester ou par le lien.
+par l'application App Tester ou par le lien. Le même APK est publié sur Hosting avec son
+manifeste (ADR-012) : une version qui porte la mise à jour depuis l'application propose les
+suivantes elle-même. App Tester reste le chemin de la première installation.
+
+**Réglages hors dépôt (ADR-012).** Console Firebase › Hosting › paramètres de rétention des
+versions : chaque version garde son APK (≈ 50 Mo, stockage facturé au-delà de 10 Go) ; régler
+une rétention courte (par exemple 5 versions). Sur chaque téléphone, à la première mise à jour :
+autorisation « installer des applications inconnues » accordée à Kass'Beer (« Ouvrir les
+réglages » de la fenêtre).
 
 ### Firebase Auth et clés d'API
 

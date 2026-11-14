@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.47",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui de la version installée et la taille du téléchargement. « Plus tard » la ferme jusqu'au lancement suivant. « Mettre à jour » télécharge la version dans l'application, contrôle le fichier, puis ouvre l'écran d'installation d'Android. La première fois, Android demande d'autoriser Kass'Beer à installer des applications : la fenêtre ouvre le bon réglage. Une coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre jamais pendant le jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36."
+      ]
+    },
+    {
       "version": "0.1.46",
       "date": "2026-11-14",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "paragraphs": [
         "Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans : éditeurs, import, jour de brassage, Mes prix, Mes processus, Préférences, Nouveautés, Mes tickets. L'entrée de l'écran où vous êtes n'y figure pas. Quitter un éditeur modifié ou un import en cours par ce menu demande d'abord confirmation. Sur l'écran du jour de brassage, l'avatar montre votre initiale, et la déconnexion prévient quand des saisies attendent encore le réseau.",
         "« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais publiée. Sur un écran qui montre vos prix, un avertissement le rappelle, avant la case. Une capture jointe ne se remplace plus. Elle apparaît dans le suivi du ticket ; si elle ne se lit pas, un bouton « Réessayer » la recharge, et sans réseau un message le dit. Sur l'écran du jour de brassage, l'administrateur ouvre « Tickets à traiter » par-dessus l'écran, qui reste allumé ; au téléphone, la pastille d'envoi passe en icône et nombre pour laisser la place au nom du brassin."
-      ]
-    },
-    {
-      "version": "0.1.40",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "L'administrateur peut livrer un ticket depuis sa fiche. Quand la pull request d'un ticket En cours est prête, CI verte, « Livrer » lance une session Claude Code qui la met à jour, la fusionne et suit le déploiement. La boîte de confirmation rappelle que la fusion met l'application en ligne pour tout le groupe. Une seule livraison tourne à la fois. La section « Livraison » de la fiche montre le compte rendu de la session : terminée, ou arrêtée avec la raison. Si la CI d'une pull request est en échec, « Relancer le développement » lance une session qui corrige la même branche. Dans la liste, des pastilles signalent « PR prête », « CI en cours », « Livraison en cours » et « Correction en cours »."
       ]
     }
   ]

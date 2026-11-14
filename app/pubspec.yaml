@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.46+47
+version: 0.1.47+48
 
 environment:
   sdk: ^3.11.4
@@ -89,6 +89,11 @@ dependencies:
   # HTML rendu.
   flutter_markdown_plus: 1.0.7
   markdown: 7.3.1
+
+  # SHA-256 de l'APK téléchargé, comparé au manifeste publié (ADR-012). Déjà
+  # résolu en 3.0.8 comme dépendance indirecte (exchange/) ; déclaré en version
+  # exacte parce que app/lib/ l'importe.
+  crypto: 3.0.8
 
 dev_dependencies:
   flutter_test:
