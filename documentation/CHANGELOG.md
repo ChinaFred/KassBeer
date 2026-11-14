@@ -29,7 +29,9 @@ l'utilisateur du 2026-11-14). Réglage après le déploiement : ajouter `founder
 La relecture ajoute des tests : compteur du fondateur rendu sur un échec, deux lancements
 simultanés du fondateur, champ `founder` refusé par les règles à l'admin ; cas fondateur ajoutés à
 `test-fixtures/member_access.json`, rejoués par `functions/test/auth.test.ts` et
-`app/test/members_repository_test.dart` (P31, ligne de « Logique dupliquée » mise à jour).
+`app/test/members_repository_test.dart` (P31, ligne de « Logique dupliquée » mise à jour). P31
+nomme aussi `app/lib/features/members/domain/member.dart` (cinq fichiers au lieu de quatre, accord
+de l'utilisateur du 2026-11-14).
 
 ### v0.1.51 — fonctionnel
 
