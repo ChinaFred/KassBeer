@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.48",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "« Lancer l'analyse », les autres lancements de session, l'écran Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou « Journaux indisponibles pour l'instant »."
+      ]
+    },
+    {
       "version": "0.1.47",
       "date": "2026-11-14",
       "paragraphs": [
@@ -33,14 +40,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50 à la fois, avec « Charger la suite » pour les précédentes. Chaque ligne donne la date, la partie de l'application concernée, la version et la plateforme (Android ou Web). Une ligne se déplie sur l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application."
-      ]
-    },
-    {
-      "version": "0.1.41",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans : éditeurs, import, jour de brassage, Mes prix, Mes processus, Préférences, Nouveautés, Mes tickets. L'entrée de l'écran où vous êtes n'y figure pas. Quitter un éditeur modifié ou un import en cours par ce menu demande d'abord confirmation. Sur l'écran du jour de brassage, l'avatar montre votre initiale, et la déconnexion prévient quand des saisies attendent encore le réseau.",
-        "« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais publiée. Sur un écran qui montre vos prix, un avertissement le rappelle, avant la case. Une capture jointe ne se remplace plus. Elle apparaît dans le suivi du ticket ; si elle ne se lit pas, un bouton « Réessayer » la recharge, et sans réseau un message le dit. Sur l'écran du jour de brassage, l'administrateur ouvre « Tickets à traiter » par-dessus l'écran, qui reste allumé ; au téléphone, la pastille d'envoi passe en icône et nombre pour laisser la place au nom du brassin."
       ]
     }
   ]
