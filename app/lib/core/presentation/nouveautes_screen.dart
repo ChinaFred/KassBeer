@@ -9,6 +9,8 @@ import 'breakpoints.dart';
 import 'etats.dart';
 import 'etiquette.dart';
 import 'formats.dart';
+import 'menu_compte.dart';
+import 'zone_capture.dart';
 
 /// Écran « Nouveautés », ouvert depuis le menu du compte : les dernières versions
 /// qui ont une entrée « fonctionnel » au CHANGELOG, livrées avec l'application.
@@ -55,8 +57,9 @@ class NouveautesScreen extends ConsumerWidget {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppRoutes.home),
         ),
+        actions: const [MenuCompte(), SizedBox(width: 8)],
       ),
-      body: SafeArea(top: false, child: body),
+      body: ZoneCapture(child: SafeArea(top: false, child: body)),
     );
   }
 }

@@ -14,7 +14,7 @@ import '../domain/log_entry.dart';
 
 /// Admin › Journaux (ADR-011, J2) : sortie des Cloud Functions, lue par la
 /// callable `queryLogs`. La recherche part sur « Rechercher » seul, jamais à
-/// l'ouverture ni sur une frappe (P49). Le menu « Fonction » vient de la liste
+/// l'ouverture ni sur une frappe (P50). Le menu « Fonction » vient de la liste
 /// rendue par le serveur.
 class LogsScreen extends ConsumerStatefulWidget {
   const LogsScreen({super.key});
@@ -460,7 +460,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
     );
   }
 
-  /// Menu des fonctions, tiré de la liste rendue par le serveur (P49).
+  /// Menu des fonctions, tiré de la liste rendue par le serveur (P50).
   Widget _menuFonction(double? largeur) {
     final fonctions = _fonctions;
     return DropdownMenu<String>(

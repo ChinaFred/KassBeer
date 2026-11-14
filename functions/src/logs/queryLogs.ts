@@ -1,5 +1,5 @@
 /**
- * Admin › Journaux : callable `queryLogs` (ADR-011, J2, P48). Lit la sortie des Cloud
+ * Admin › Journaux : callable `queryLogs` (ADR-011, J2, P49). Lit la sortie des Cloud
  * Functions dans Cloud Logging par l'API REST `entries:list`, par `fetch` (leçon 5, P26).
  *
  * 1. `requireAdmin` (P30), avant toute lecture des arguments.
@@ -24,12 +24,12 @@ import { requireAdmin, requireBoundedText, type AuthLike, type MemberLookup } fr
 import { QUERYABLE_FUNCTIONS, QUERYABLE_PERIODS_MINUTES, QUERYABLE_SEVERITIES } from "../config";
 import { logError, redactSecrets, type LogEntry } from "../logging";
 
-/** Clause imposée en tête de chaque filtre : sortie des fonctions seule (ADR-011, P48). */
+/** Clause imposée en tête de chaque filtre : sortie des fonctions seule (ADR-011, P49). */
 export const BASE_CLAUSE =
   'resource.type="cloud_run_revision" AND ' +
   '(LOG_ID("run.googleapis.com/stdout") OR LOG_ID("run.googleapis.com/stderr"))';
 
-/** Champs de `jsonPayload` filtrés, écrits par `logging.ts` (P49, `logs.test.ts`). */
+/** Champs de `jsonPayload` filtrés, écrits par `logging.ts` (P50, `logs.test.ts`). */
 export const FILTERED_FIELDS = { ticketId: "ticketId", message: "message" } as const;
 
 export const PAGE_SIZE = 50;
@@ -109,7 +109,7 @@ function oneOf<T extends string | number>(
   return value as T;
 }
 
-/** Arguments de `queryLogs`, contrôlés (P48). Lève `invalid-argument`. Pure, sauf `now`. */
+/** Arguments de `queryLogs`, contrôlés (P49). Lève `invalid-argument`. Pure, sauf `now`. */
 export function readLogsQuery(data: unknown, now: Date): LogsQuery {
   const d = (data !== null && typeof data === "object" ? data : {}) as Record<string, unknown>;
   const severity = oneOf(d.severity, QUERYABLE_SEVERITIES, "severity", "Gravité");
@@ -287,7 +287,7 @@ async function accessToken(doFetch: FetchLike, cache: TokenCache, nowMs: number)
   return body.access_token;
 }
 
-/** `queryLogs` (ADR-011, J2, P48). */
+/** `queryLogs` (ADR-011, J2, P49). */
 export async function handleQueryLogsCall(
   req: AuthLike & { data?: unknown },
   deps: LogsDeps = {},

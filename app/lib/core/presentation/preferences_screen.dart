@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../preferences/theme_mode_provider.dart';
 import '../router/routes.dart';
 import 'breakpoints.dart';
+import 'menu_compte.dart';
+import 'zone_capture.dart';
 
 /// Page « Préférences », ouverte depuis le menu du compte : thème de cet
 /// appareil (ADR-009). Un choix s'applique et s'enregistre aussitôt.
@@ -51,55 +53,58 @@ class PreferencesScreen extends ConsumerWidget {
               context.canPop() ? context.pop() : context.go(AppRoutes.home),
         ),
         title: const Text(titre),
+        actions: const [MenuCompte(), SizedBox(width: 8)],
       ),
-      body: SafeArea(
-        top: false,
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text(apparence, style: theme.textTheme.titleMedium),
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: RadioGroup<ThemeMode>(
-                    groupValue: mode,
-                    onChanged: (choix) => unawaited(choisir(choix)),
-                    child: const Column(
-                      children: [
-                        RadioListTile<ThemeMode>(
-                          value: ThemeMode.system,
-                          secondary: Icon(Icons.brightness_auto_outlined),
-                          title: Text(commeAppareil),
-                          subtitle: Text(commeAppareilAide),
-                        ),
-                        RadioListTile<ThemeMode>(
-                          value: ThemeMode.light,
-                          secondary: Icon(Icons.light_mode_outlined),
-                          title: Text(clair),
-                        ),
-                        RadioListTile<ThemeMode>(
-                          value: ThemeMode.dark,
-                          secondary: Icon(Icons.dark_mode_outlined),
-                          title: Text(sombre),
-                        ),
-                      ],
+      body: ZoneCapture(
+        child: SafeArea(
+          top: false,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(apparence, style: theme.textTheme.titleMedium),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    child: RadioGroup<ThemeMode>(
+                      groupValue: mode,
+                      onChanged: (choix) => unawaited(choisir(choix)),
+                      child: const Column(
+                        children: [
+                          RadioListTile<ThemeMode>(
+                            value: ThemeMode.system,
+                            secondary: Icon(Icons.brightness_auto_outlined),
+                            title: Text(commeAppareil),
+                            subtitle: Text(commeAppareilAide),
+                          ),
+                          RadioListTile<ThemeMode>(
+                            value: ThemeMode.light,
+                            secondary: Icon(Icons.light_mode_outlined),
+                            title: Text(clair),
+                          ),
+                          RadioListTile<ThemeMode>(
+                            value: ThemeMode.dark,
+                            secondary: Icon(Icons.dark_mode_outlined),
+                            title: Text(sombre),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  noteAppareil,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  const SizedBox(height: 8),
+                  Text(
+                    noteAppareil,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

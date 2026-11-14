@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.42+43
+version: 0.1.43+44
 
 environment:
   sdk: ^3.11.4
@@ -73,6 +73,15 @@ dependencies:
   # FirebaseFunctions se construit au premier appel et reste mémorisée par le
   # dépôt des tickets : rien n'est chargé au démarrage.
   cloud_functions: 6.5.0
+
+  # Capture d'écran jointe à un ticket (ADR-008, lot T6) : dépôt par putData et
+  # lecture par getData, jamais d'URL de téléchargement. Famille FlutterFire :
+  # 13.6.0 est la version que résout firebase_core 4.15.0 (celle du pubspec.lock
+  # de Kass'Dalle, compilé sous Android) ; elle monte avec firebase_core (P6).
+  # L'instance FirebaseStorage se construit au premier dépôt ou à la première
+  # lecture et reste mémorisée par le dépôt des tickets : rien n'est chargé au
+  # démarrage.
+  firebase_storage: 13.6.0
 
   # Analyses des tickets en Markdown (ADR-008, lot T3, P33). Version exacte : le
   # rendu ne change qu'avec une montée relue. Importés par le seul fichier

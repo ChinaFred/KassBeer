@@ -334,6 +334,9 @@ aucun `--force`, aucune relance de workflow, arrêt expliqué dans le résumé s
 
 ### Capture d'écran
 
+Remplacé en partie par la note du 2026-11-14 (point 4) : création seule, PNG seul, aucun choix
+d'image pour l'instant.
+
 Copie de Kass'Dalle. Case « Joindre une capture de l'écran précédent » décochée par défaut,
 capture par un `RepaintBoundary` autour du routeur, ou choix d'une image. PNG ou JPEG, 5 Mo au
 plus, textes de Kass'Dalle. Envoi : le ticket se crée dans Firestore (T1), puis l'image monte
@@ -346,6 +349,45 @@ Deux écarts. Le choix d'image passe par le canal d'ADR-007 (`choisir(maxOctets:
 par `image_picker` : P28 refuse un sélecteur tiers sans ADR qui remplace ADR-007. Sur un écran
 de coût ou de prix, la case n'est pas offerte, et l'avertissement ajoute « Elle peut montrer vos
 prix. ». Exception à P5 : la capture est un partage choisi par le membre vers l'administrateur.
+
+2026-11-14, décisions de l'utilisateur (lot T6, ticket #38) : six écarts à ce qui précède.
+
+1. **Capture partout, prix compris.** La case est offerte à tout membre sur toute page qui porte
+   le menu du compte, écrans de prix et de coût compris (Recette, Brassin, jour de brassage,
+   journée suivante, Préparer la journée, Mes prix). Sur ces écrans, la section affiche « La
+   capture peut montrer vos prix : l'administrateur la verra. ». C'est un écart à P5 et à
+   l'écart « la case n'est pas offerte » ci-dessus : la capture est un partage choisi par le
+   membre vers l'administrateur, case décochée par défaut. Elle ne part jamais sur GitHub ni
+   dans un rapport d'erreur, et ni son contenu ni son nom de fichier n'entrent dans un journal.
+2. **Pas de choix d'image.** Ni `image_picker`, ni le canal d'ADR-007 : seule la capture de
+   l'écran quitté, prise par un `RepaintBoundary` autour du contenu de la page (corps du
+   `Scaffold` de la coquille et des pages pleines, sans barre du haut ni barre de navigation),
+   au moment de l'appui et avant la navigation. PNG seul côté client, échelle 2 au plus,
+   2 000 px au plus de côté, 5 Mo au plus, en mémoire seulement. Aucune capture depuis « Mes
+   tickets », l'adresse du formulaire ou « Reprendre ».
+3. **Envoi en arrière-plan.** Le formulaire se ferme sans attendre ; le dépôt part une fois le
+   ticket accepté par le serveur, au plus 30 s après l'envoi. Échec ou hors ligne : ticket sans
+   capture, « Ticket enregistré sans la capture. » (ce texte remplace « Ticket envoyé sans la
+   capture. »).
+4. **`storage.rules` plus strict que Kass'Dalle.** Création seule (`resource == null`), par
+   l'auteur membre, `tickets/{ticketId}` existant avec `author_uid == request.auth.uid`
+   (`firestore.get`), `screenshot.png` seul en `image/png` (le client ne produit que ce nom),
+   de 1 octet à 5 Mo ; lecture par l'auteur membre et l'administrateur ; remplacement, liste
+   et suppression refusés : la capture contrôlée par `attachTicketScreenshot` (signature PNG
+   seule) reste celle que l'administrateur lit. Ni l'application ni la callable ne
+   journalisent le message ou la pile d'une erreur de Cloud Storage, qui portent le chemin :
+   le code seul. Tests sur l'émulateur Storage pour les cinq profils de P4 et la fixture
+   `member_access.json` (P31).
+5. **Phrase fixe sur chaque Issue.** « Capture éventuelle disponible dans Admin › Tickets. »
+   termine le corps de toute Issue, qu'une capture soit jointe ou non (gabarit de P24) : la
+   phrase ne dit pas qu'un ticket a une capture.
+6. **Pas de purge.** Une capture reste dans le bucket ; une capture déposée sans
+   `screenshot_path` (callable en échec) n'est lue par personne.
+
+`github-deploy` peut demander, pour publier `storage.rules`, un rôle de lecture du bucket par
+défaut (`roles/firebasestorage.viewer`, à vérifier au premier déploiement) : c'est le seul rôle
+que T6 peut ajouter à la liste de P14. `tickets-functions` reçoit `roles/storage.objectViewer`
+sur le seul bucket par défaut.
 
 **Cloud Storage.** Bucket par défaut `kassbeer.firebasestorage.app`, créé en `europe-west1`
 (région de la base ; choix définitif à la création). `storage.rules` :

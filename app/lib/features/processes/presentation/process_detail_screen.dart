@@ -11,7 +11,9 @@ import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
+import '../../../core/presentation/menu_compte.dart';
 import '../../../core/presentation/page_document.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
@@ -112,25 +114,29 @@ class _ProcessDetailScreenState extends ConsumerState<ProcessDetailScreen> {
                       ),
                     ],
                   ),
+          const MenuCompte(),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (offline) const BandeauHorsLigne(),
-          Expanded(
-            child: PageDocument<ModeleProcessus>(
-              async: listAsync,
-              id: id,
-              offline: offline,
-              textes: textesProcessus,
-              onRetry: () => ref.invalidate(processTemplatesProvider),
-              onBack: () => context.go(AppRoutes.processes),
-              builder: (context, modele) =>
-                  _Fiche(key: ValueKey(modele.id), modele: modele),
+      body: ZoneCapture(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (offline) const BandeauHorsLigne(),
+            Expanded(
+              child: PageDocument<ModeleProcessus>(
+                async: listAsync,
+                id: id,
+                offline: offline,
+                textes: textesProcessus,
+                onRetry: () => ref.invalidate(processTemplatesProvider),
+                onBack: () => context.go(AppRoutes.processes),
+                builder: (context, modele) =>
+                    _Fiche(key: ValueKey(modele.id), modele: modele),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -33,6 +33,7 @@ import 'section_livraison.dart';
 import 'ticket_lien_github.dart';
 import 'ticket_statut.dart';
 import 'tickets_providers.dart';
+import 'vignette_capture.dart';
 
 /// Textes des états de la fiche d'un ticket d'Admin.
 const textesTicketAdmin = TextesDocument(
@@ -787,6 +788,10 @@ class _FicheState extends ConsumerState<_Fiche> {
       Text('Écran : ${ticketScreenLabel(ticket.screen)}', style: muted),
       const TitreSection('Description'),
       Text(ticket.description, style: theme.textTheme.bodyLarge),
+      if (ticket.screenshotPath case final path?) ...[
+        gap,
+        CaptureDuTicket(path: path),
+      ],
       // Livraison avant Analyses : pour un ticket En cours, le blocage est le
       // texte à lire maintenant (UX T5, point 4).
       if (ticket.issueNumber != null)

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/presentation/app_shell.dart';
+import '../../../core/presentation/menu_compte.dart';
 import '../../../core/router/routes.dart';
 import 'error_reports_screen.dart';
 import 'logs_screen.dart';

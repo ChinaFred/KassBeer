@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,10 +9,18 @@ import '../../features/auth/presentation/access_providers.dart';
 import 'bandeau_hors_ligne.dart';
 import 'ecriture.dart';
 import 'etats.dart';
+import 'menu_compte.dart';
+import 'zone_capture.dart';
+
+/// Largeur de la barre du haut hors bouton d'action : ✕ (56), marge du bouton
+/// (8), menu du compte (48) et sa marge (8).
+const double _largeurHorsAction = 56 + 8 + 48 + 8;
 
 /// Cadre d'un éditeur plein écran, hors de la coquille : ✕ « Fermer », titre,
-/// « Enregistrer » (ou [libelleAction]), bandeau hors ligne. Quitter avec des
-/// changements (✕, retour Android) demande « Abandonner les modifications ? ».
+/// « Enregistrer » (ou [libelleAction]), menu du compte, bandeau hors ligne.
+/// Quitter avec des changements (✕, retour Android, « Tickets à traiter »,
+/// « Mes processus » ou « Se déconnecter » du menu du compte) demande
+/// « Abandonner les modifications ? ».
 class EditeurPleinEcran extends ConsumerWidget {
   const EditeurPleinEcran({
     super.key,
@@ -58,9 +67,14 @@ class EditeurPleinEcran extends ConsumerWidget {
   /// directement).
   final bool fermerParRetour;
 
+  /// Vrai si rien n'est à perdre, ou si l'utilisateur abandonne.
+  Future<bool> _peutQuitter(BuildContext context) async =>
+      !dirty ||
+      // ticket: aucun (confirmation)
+      await confirmerAbandon(context, abandonMessage);
+
   Future<void> _leave(BuildContext context) async {
-    // ticket: aucun (confirmation)
-    if (dirty && !await confirmerAbandon(context, abandonMessage)) return;
+    if (!await _peutQuitter(context)) return;
     if (!context.mounted) return;
     if (fermerParRetour && context.canPop()) {
       context.pop();
@@ -92,21 +106,43 @@ class EditeurPleinEcran extends ConsumerWidget {
             if (save != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: FilledButton(
-                  onPressed: saving ? null : save,
-                  child: saving
-                      ? IndicateurBouton(label: libelleEnCours)
-                      : Text(libelleAction),
+                // Borné par la place que laissent ✕ et le menu du compte : à
+                // 360 dp et texte à 200 %, le libellé se réduit au lieu de
+                // déborder.
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: math.max(
+                      0,
+                      MediaQuery.sizeOf(context).width - _largeurHorsAction,
+                    ),
+                  ),
+                  child: FilledButton(
+                    onPressed: saving ? null : save,
+                    child: saving
+                        ? IndicateurBouton(label: libelleEnCours)
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(libelleAction),
+                          ),
+                  ),
                 ),
               ),
+            // Quitter par le menu avec des changements : même confirmation
+            // que ✕.
+            MenuCompte(
+              avantDeQuitter: dirty ? () => _peutQuitter(context) : null,
+            ),
+            const SizedBox(width: 8),
           ],
         ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (offline) const BandeauHorsLigne(),
-            Expanded(child: body),
-          ],
+        body: ZoneCapture(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (offline) const BandeauHorsLigne(),
+              Expanded(child: body),
+            ],
+          ),
         ),
         bottomNavigationBar: bottomBar,
       ),

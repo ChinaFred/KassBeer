@@ -141,7 +141,7 @@ describe("queryLogs — garde (P30)", () => {
   });
 });
 
-describe("queryLogs — arguments (P48)", () => {
+describe("queryLogs — arguments (P49)", () => {
   const refused: [string, Record<string, unknown>, string][] = [
     ["gravité hors liste", { severity: "CRITICAL" }, "severity"],
     ["gravité en minuscules", { severity: "error" }, "severity"],
@@ -202,7 +202,7 @@ describe("queryLogs — arguments (P48)", () => {
   });
 });
 
-describe("queryLogs — filtre (P48)", () => {
+describe("queryLogs — filtre (P49)", () => {
   it("clause imposée en tête, quels que soient les arguments", () => {
     for (const data of [
       {},
@@ -288,7 +288,7 @@ describe("queryLogs — filtre (P48)", () => {
   });
 });
 
-describe("queryLogs — jeton de page (P48)", () => {
+describe("queryLogs — jeton de page (P49)", () => {
   it("période relue dans le jeton, début dans la marge de 5 minutes accepté", () => {
     const q = readLogsQuery({ pageToken: "1440|2026-11-13T11:55:00.000Z|tok" }, NOW);
     assert.equal(q.periodMinutes, 1440);
@@ -309,7 +309,7 @@ describe("queryLogs — jeton de page (P48)", () => {
   });
 });
 
-describe("queryLogs — appel et erreurs (P48)", () => {
+describe("queryLogs — appel et erreurs (P49)", () => {
   it("un seul appel à entries:list, jeton mémorisé", async () => {
     const calls: Call[] = [];
     const cache: TokenCache = { value: null, expiresAt: 0 };
@@ -421,7 +421,7 @@ describe("queryLogs — appel et erreurs (P48)", () => {
   });
 });
 
-describe("queryLogs — réponse (P48)", () => {
+describe("queryLogs — réponse (P49)", () => {
   it("entrée réduite, payload sans message, coupé à 8 000 caractères, jetons retirés", async () => {
     const long = "x".repeat(TEXT_MAX_CHARS + 10);
     const res = await handleQueryLogsCall(
@@ -472,7 +472,7 @@ describe("queryLogs — réponse (P48)", () => {
   });
 });
 
-describe("queryLogs — coupe après nettoyage (P48)", () => {
+describe("queryLogs — coupe après nettoyage (P49)", () => {
   it("un jeton à cheval sur la coupe est retiré avant la coupe", () => {
     const entry = toEntry({
       jsonPayload: { message: "m", detail: "x".repeat(7990) + "ghp_" + "A".repeat(30) },
@@ -496,7 +496,7 @@ describe("queryLogs — coupe après nettoyage (P48)", () => {
   });
 });
 
-describe("queryLogs — liste fermée et champs de logging.ts (P48, P49)", () => {
+describe("queryLogs — liste fermée et champs de logging.ts (P49, P50)", () => {
   it("QUERYABLE_FUNCTIONS est la liste des exports de index.ts", () => {
     assert.deepEqual([...QUERYABLE_FUNCTIONS].sort(), Object.keys(index).sort());
   });
@@ -512,14 +512,14 @@ describe("queryLogs — liste fermée et champs de logging.ts (P48, P49)", () =>
     process.stdout.write = capture as typeof process.stdout.write;
     process.stderr.write = capture as typeof process.stderr.write;
     try {
-      logError({ message: "Message de test P49", feature: "tickets", ticketId: "T-P49" });
+      logError({ message: "Message de test P50", feature: "tickets", ticketId: "T-P50" });
     } finally {
       process.stdout.write = out;
       process.stderr.write = err;
     }
     const entry = JSON.parse(lines.join("").trim()) as Record<string, unknown>;
-    assert.equal(entry[FILTERED_FIELDS.ticketId], "T-P49");
-    assert.ok(String(entry[FILTERED_FIELDS.message]).includes("Message de test P49"));
+    assert.equal(entry[FILTERED_FIELDS.ticketId], "T-P50");
+    assert.ok(String(entry[FILTERED_FIELDS.message]).includes("Message de test P50"));
     assert.equal(entry.severity, "ERROR");
   });
 

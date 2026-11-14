@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   buildIssueBody,
+  ISSUE_SCREENSHOT_NOTE,
   buildIssueTitle,
   closingCommitFromEvents,
   closingIssueNumbers,
@@ -43,6 +44,12 @@ describe("corps et titre de l'Issue (P24)", () => {
     assert.match(body, /^\*\*Plateforme :\*\* Android$/m);
     assert.match(body, /^\*\*Référence :\*\* `abc123`$/m);
     assert.match(body, /^### Description$/m);
+  });
+
+  it("phrase fixe de la capture sur chaque Issue, en dernière ligne (ADR-008, T6)", () => {
+    assert.equal(ISSUE_SCREENSHOT_NOTE, "Capture éventuelle disponible dans Admin › Tickets.");
+    assert.equal(body.split("\n").at(-1), ISSUE_SCREENSHOT_NOTE);
+    assert.ok(!/screenshot|tickets\//.test(body));
   });
 
   it("description nettoyée : ni adresse, ni mention, ni renvoi actif", () => {

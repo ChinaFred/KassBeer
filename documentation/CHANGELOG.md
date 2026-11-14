@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
-### v0.1.42 — fonctionnel
+### v0.1.43 — fonctionnel
 
 L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les
 messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien,
@@ -15,7 +15,7 @@ un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni p
 entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux
 peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue.
 
-### v0.1.42 — technique
+### v0.1.43 — technique
 
 ADR-011, lot J2 : callable `queryLogs` (`functions/src/logs/queryLogs.ts`, exportée par
 `index.ts`) : `onCall`, `requireAdmin` en premier, `maxInstances` 1, `concurrency` 1, 60 s,
@@ -30,8 +30,8 @@ page vaut `<période>|<début ISO>|<jeton de l'API>` : la page suivante rejoue l
 période est relue dans la liste fermée, et un début antérieur à maintenant − période − 5 min est
 refusé. `payload` et `message` passent par `redactSecrets` avant d'être coupés à 8 000 caractères,
 avec `payloadTruncated` et `messageTruncated` calculés sur le texte nettoyé, et la longueur
-rendue au client (`maxChars`) ; e-mails visibles (P48). Tests : `functions/test/logs.test.ts`, dont les champs
-`ticketId` et `message` écrits par `logging.ts` (P49). Diffs des workflows (P10, P14) :
+rendue au client (`maxChars`) ; e-mails visibles (P49). Tests : `functions/test/logs.test.ts`, dont les champs
+`ticketId` et `message` écrits par `logging.ts` (P50). Diffs des workflows (P10, P14) :
 dans `.github/workflows/ci.yml` et deux fois dans `.github/workflows/deploy.yml`, `queryLogs`
 ajouté à la liste des callables du contrôle du manifeste, avec une ligne `jq` qui exige
 `maxInstances` 1, `timeoutSeconds` 60 et `concurrency` 1 ; dans les deux `secrets_filter`, une
@@ -49,9 +49,11 @@ indicateur. L'écran ne recopie aucune borne du serveur : message d'un champ ref
 serveur. », sans « Réessayer » ; seul un refus de `pageToken` relit la première page. Une
 nouvelle recherche replie toutes les entrées (numéro de recherche dans la clé). Tests : `app/test/logs_test.dart`,
 `app/test/formats_test.dart`. Aucun paquet Dart ni npm ajouté ou monté. `main.dart.js`
-(`flutter build web --release`) passe de 5 458 499 (v0.1.41) à 5 499 631 octets (+ 41 132).
+(`flutter build web --release`) passe de 5 458 499 à 5 499 631 octets (+ 41 132) avant la
+fusion de `main` ; mesuré sur `main` à la v0.1.41, avec J1 et J2 : 5 542 375 → 5 600 569 octets
+(+ 58 194).
 
-### v0.1.41 — fonctionnel
+### v0.1.42 — fonctionnel
 
 L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les
 pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50
@@ -60,7 +62,7 @@ l'application concernée, la version et la plateforme (Android ou Web). Une lign
 l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie
 le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application.
 
-### v0.1.41 — technique
+### v0.1.42 — technique
 
 ADR-011, lot J1 : Admin › Rapports d'erreur (`/admin/rapports-erreur`, `PageDeCoquille` sous
 `/admin`, réservé à l'admin par le routeur). Fichiers ajoutés dans `app/lib/features/admin/` :
@@ -68,17 +70,57 @@ ADR-011, lot J1 : Admin › Rapports d'erreur (`/admin/rapports-erreur`, `PageDe
 `FirestoreErrorReportsRepository`, fourni par `errorReportsRepositoryProvider`),
 `presentation/error_reports_screen.dart` ; tuile dans `admin_screen.dart`. Lecture de
 `error_reports` par `orderBy('created_at', descending: true)`, `limit(50)`, `get()` et
-`startAfterDocument`, sans `snapshots()` ni suppression (P49) ; une lecture ou une copie en échec
+`startAfterDocument`, sans `snapshots()` ni suppression (P50) ; une lecture ou une copie en échec
 passe par `reportError`, sans texte de rapport dans `context` (P13). `firestore.rules` est
 inchangé ; `rules-tests/test/error_reports.test.mjs` ajoute la requête paginée (page de 50 et
 suite) pour les cinq profils de P4. Tests : `app/test/error_reports_test.dart`. Aucune dépendance
 ajoutée ni montée. Évolutions du réseau ajoutées avec ADR-011 : `queryLogs` dans la liste fermée de
-P25, contrôles P48 (`queryLogs`) et P49 (champs de `logging.ts`, Admin › Journaux, Admin › Rapports
+P25, contrôles P49 (`queryLogs`) et P50 (champs de `logging.ts`, Admin › Journaux, Admin › Rapports
 d'erreur), lecture des journaux par l'API REST et `fetch` dans « Règles de code » de `CLAUDE.md`,
 note de renvoi dans ADR-008. Seuil `kGrandTexteMinScale` (1,3) ajouté à
 `core/presentation/breakpoints.dart`. `main.dart.js` (`flutter build web --release`) passe de
 5 431 748 (`main` à la v0.1.40) à 5 458 499 octets (+ 26 751). Admin › Journaux et la callable `queryLogs` viendront
 avec le lot J2.
+### v0.1.41 — fonctionnel
+
+Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne
+son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans :
+éditeurs, import, jour de brassage, Mes prix, Mes processus, Préférences, Nouveautés, Mes tickets.
+L'entrée de l'écran où vous êtes n'y figure pas. Quitter un éditeur modifié ou un import en cours
+par ce menu demande d'abord confirmation. Sur l'écran du jour de brassage, l'avatar montre votre
+initiale, et la déconnexion prévient quand des saisies attendent encore le réseau.
+
+« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de
+cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais
+publiée. Sur un écran qui montre vos prix, un avertissement le rappelle, avant la case. Une capture
+jointe ne se remplace plus. Elle apparaît dans le suivi du ticket ; si elle ne se lit pas, un
+bouton « Réessayer » la recharge, et sans réseau un message le dit. Sur l'écran du jour de
+brassage, l'administrateur ouvre « Tickets à traiter » par-dessus l'écran, qui reste allumé ; au
+téléphone, la pastille d'envoi passe en icône et nombre pour laisser la place au nom du brassin.
+
+### v0.1.41 — technique
+
+Demandé par les tickets #37, #38 et #39. #37 : `NavigationBar` en `alwaysHide` sous 600 px,
+`navigationBarTheme` retiré du thème. #39 : `_AccountMenu` devient `MenuCompte`
+(`core/presentation/menu_compte.dart`), posé sur la coquille et les 20 pages pleines, avec
+`photo: false` sur l'écran du jour (aucune `NetworkImage`, P2), `avantDeQuitter` et
+`avantDeDeconnecter`, entrée de l'écran courant masquée d'après `GoRouterState.of(context).fullPath` ;
+`kTicketAccountMenuScreens` donne l'élément `menu/compte` aux pages pleines. #38 : lot T6
+d'ADR-008 (note du 2026-11-14) : `ZoneCapture` (`RepaintBoundary`), image gardée en mémoire,
+dépôt dans Cloud Storage sous `tickets/{uid}/{ticketId}/screenshot.png`, callable
+`attachTicketScreenshot` (`requireMember`, `maxInstances: 2`, `timeoutSeconds: 60`) qui écrit
+`screenshot_path`, lecture par `getData` ; `storage.rules` en création seule (`resource == null`), `screenshot.png`
+en `image/png` seul, ticket existant de l'auteur (`firestore.get`), callable et client alignés sur
+le PNG seul ; rapports d'erreur Storage neutres (`StateError('storage <code>')` côté client,
+`errorCode` seul côté serveur), image illisible rapportée `tickets.capture_display` ;
+phrase fixe « Capture éventuelle disponible dans Admin › Tickets. » sur chaque Issue. La cause du
+`/admin/tickets` signalé n'a pas été reproduite : deux tests de non-régression couvrent une page
+ouverte par `push`. Écran du jour : « Tickets à traiter » en `push` (`kEcransDuJour`), pastille
+d'envoi compacte sous 400 dp, panneau du haut à 75 % du corps au plus (360 dp, texte à 200 %). Paquets ajoutés à `pubspec.lock` : `firebase_storage` 13.6.0,
+`firebase_storage_platform_interface` 6.0.7, `firebase_storage_web` 3.11.13 ; aucune autre version
+ne change. `main.dart.js` : 5 417 304 octets avant (#37 et #39 compris), 5 510 208 après. `ci.yml`
+et `deploy.yml` : callable ajoutée à la liste fermée, émulateur Storage pour `rules-tests/`,
+`storage` au déploiement. `CLAUDE.md` : P5, P6, P14, P23, P24, P25 et P31 modifiés, P48 ajouté.
 
 ### v0.1.40 — fonctionnel
 

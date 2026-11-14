@@ -10,8 +10,8 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), lire ses seuls tickets, leur statut et la réponse de l'administrateur (« Mes tickets ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -75,6 +75,43 @@ tickets », « Tickets à traiter » (administrateur seul), « Nouveautés », �
 déconnecter ». Une déconnexion qui échoue
 affiche « Déconnexion impossible. Réessayez. ».
 
+Le même avatar et le même menu sont à droite de la barre du haut de chaque page pleine, hors de
+la barre de navigation : éditeurs (recette, chronologie, processus, équipement, « Signaler ou
+proposer »), Recettes › Importer, écran du jour et journées suivantes, « Mes prix », « Mes
+processus » et la fiche d'un processus, « Préférences », « Nouveautés », « Sources des
+données », « Mes tickets » et le suivi d'un ticket, Admin › Import. Ni les écrans d'accès
+(chargement, connexion, non invité, erreur), ni la page introuvable ne l'ont.
+
+L'entrée qui mène à l'écran affiché est masquée : pas de « Mes prix » sur « Mes prix », ni de
+« Mes processus » sur sa liste (l'entrée reste sur la fiche d'un processus et dans les
+éditeurs), ni de « Préférences », « Signaler ou proposer », « Mes tickets » (elle reste sur le
+suivi d'un ticket), « Nouveautés », « Sources des données » ou « Tickets à traiter » sur leur
+propre écran.
+
+Les entrées ouvrent leur page par-dessus l'écran courant, sauf « Tickets à traiter », qui
+remplace la pile, et « Se déconnecter ». Sur l'écran du jour de brassage et sur une journée
+suivante, « Tickets à traiter » s'ouvre aussi par-dessus : l'écran du jour reste dessous,
+appareil gardé allumé, et le retour y ramène. Avant ces deux entrées et avant « Mes processus », un
+écran avec un travail non enregistré demande confirmation :
+
+- éditeur modifié : « Abandonner les modifications ? », comme ✕ ;
+- Admin › Import pendant l'écriture : « Arrêter l'import ? », comme le retour ;
+- Recettes › Importer pendant l'écriture : « Arrêter l'import ? » / « Les recettes déjà
+  écrites restent. Les suivantes ne seront pas importées. » / « Continuer l'import » /
+  « Arrêter ». Les recettes non écrites passent dans les ignorées, raison « Import arrêté
+  avant elle ».
+
+Sans modification, l'action part sans question.
+
+Sur l'écran du jour et les journées suivantes, l'avatar montre l'initiale seule, sans photo :
+aucune image n'est chargée par le réseau. Les entrées ouvrent leur page par-dessus l'écran du
+jour, qui reste ouvert et garde l'écran allumé. « Se déconnecter » avec des saisies en attente
+du réseau demande « Se déconnecter ? » / « 2 saisies attendent le réseau. Si vous vous
+déconnectez maintenant, elles risquent de ne jamais partir. » (« 1 saisie attend le réseau…
+elle risque… » au singulier) / « Rester connecté » / « Se déconnecter ». Ces saisies restent
+sur l'appareil sous le compte qui les a faites : elles ne partent que si ce compte se
+reconnecte sur cet appareil.
+
 Une pastille chiffrée sur l'avatar et sur « Mes tickets » compte les tickets dont le suivi est
 à lire (« 99+ » au-delà de 99) ; elle est lue « Mon compte, 2 suivis de ticket à lire » et
 « Mes tickets, 2 à lire ». Sans suivi à lire, rien ne change. Voir « Tickets ».
@@ -86,7 +123,8 @@ tickets à traiter, et l'avatar est lu « Mon compte, 1 suivi de ticket à lire,
 traiter ».
 
 Destinations : Recettes, Bibliothèque, Brassins, Équipements, et Admin pour l'administrateur seul. Sous
-600 px, barre de navigation en bas ; de 600 à 839 px, rail de navigation avec libellés ;
+600 px, barre de navigation en bas, icônes seules : le nom de chaque destination s'affiche en
+infobulle (appui long, survol) et le lecteur d'écran le lit ; de 600 à 839 px, rail de navigation avec libellés ;
 à partir de 840 px, rail étendu et contenu centré sur 840 px au plus (sauf Admin › Tickets des
 membres, en liste et fiche côte à côte). Le rail défile quand
 ses destinations dépassent la hauteur (écran bas, grand texte). Dans le rail avec libellés, un
@@ -100,7 +138,9 @@ Une page de second niveau (fiche d'une recette, d'un équipement, d'une entrée 
 Bibliothèque, Admin › Membres) porte son titre (« Recette », « Équipement », « Houblon »,
 « Recette publique », « Membres ») et un bouton retour vers sa liste. Les
 éditeurs s'ouvrent en plein écran, hors de la barre de navigation, avec « Fermer » (✕), leur
-titre, « Enregistrer », et le bandeau hors ligne quand l'appareil n'a pas de réseau.
+titre, « Enregistrer », le menu du compte, et le bandeau hors ligne quand l'appareil n'a pas de
+réseau. À 360 px et texte à 200 %, le libellé « Enregistrer » se réduit pour laisser la place à
+l'avatar.
 
 **Hors ligne.** Quand l'appareil n'a plus de réseau, un bandeau « Hors ligne. Les
 modifications partiront au retour du réseau. » s'affiche sous la barre du haut, en pleine
@@ -161,7 +201,8 @@ d'où le membre est parti ; ouvert par son adresse, elle mène à l'accueil.
 
 Un membre signale un bug ou propose une évolution depuis l'application, sans compte GitHub
 (ADR-006). Le ticket devient une Issue publique du dépôt ; l'administrateur la traite, et le
-membre suit son statut dans « Mes tickets ». Aucun accès depuis l'écran du jour de brassage.
+membre suit son statut dans « Mes tickets ». Sur l'écran du jour de brassage, seul le menu du
+compte y mène, par une page ouverte par-dessus l'écran du jour.
 Trois pages pleines, hors de la barre de navigation, ouvertes depuis le menu du compte. Leur
 flèche retour revient à l'écran précédent ; ouvertes par leur adresse, elle mène à « Mes
 tickets » ou à l'accueil.
@@ -179,15 +220,16 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
 - Plan de description propre au type, en texte fixe au-dessus de la description (bug : « Ce
   que vous faisiez : … / Ce qui s'est passé : … / Ce que vous attendiez : … »).
 - « Description », 10 à 2 000 caractères, avec compteur.
-- « Écran concerné » : liste préremplie par l'écran d'où le membre a ouvert le menu (« Recette »,
-  « Équipements »…), modifiable, terminée par « Autre écran » et « Je ne sais pas ». Ouvert
+- « Écran concerné » : liste préremplie par la page visible sous le menu au moment de l'appui
+  (« Recette », « Équipements », « Admin › Ticket d'un membre »…), y compris une page ouverte
+  par-dessus une autre, modifiable, terminée par « Autre écran » et « Je ne sais pas ». Ouvert
   depuis « Mes tickets » ou par son adresse : « Je ne sais pas ». Les écrans d'Admin n'y
   figurent que pour l'administrateur. Seul le nom de l'écran part, jamais l'identifiant de la
   recette ou du brassin.
 - « Élément précis », sous « Écran concerné », quand l'écran choisi a des menus ou des
   fenêtres : « L'écran entier » par défaut, puis ses éléments (« Menu du compte », « Barre de
   navigation » sur les écrans à barre de navigation, listes et fiches de la Bibliothèque
-  comprises ; « Embouteillage », « Relevé de
+  comprises ; « Menu du compte » aussi sur chaque page pleine qui le porte ; « Embouteillage », « Relevé de
   fermentation », « Coût du brassin »… sur la fiche d'un brassin ; « Malt ou sucre »,
   « Houblon »… dans l'éditeur de recette ; « Journée », « Étape », « Actions d'une journée »,
   « Insérer un bloc de la recette » dans l'éditeur de processus ; « Plus d'actions » sur la
@@ -200,6 +242,17 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   l'administrateur. Le suivi affiche « Brassin › Embouteillage ». Les confirmations (« Supprimer
   ? », « Abandonner les modifications ? ») et les sélecteurs de date et d'heure n'y figurent pas.
   « Sources des données », sans menu ni fenêtre, n'a pas de champ « Élément précis ».
+- « Capture », ouvert depuis le menu du compte seulement (ADR-008, T6). L'image du contenu de
+  la page quittée est prise au moment de l'appui sur « Signaler ou proposer », avant
+  l'ouverture du formulaire : ni le menu, ni la barre du haut, ni la barre de navigation n'y
+  figurent. Elle reste en mémoire et n'est jamais écrite sur l'appareil. Case « Joindre une
+  capture de l'écran précédent », décochée à l'ouverture, aide « Seul l'administrateur la voit.
+  Elle n'est jamais publiée. », puis la vignette, qui s'agrandit à l'appui. Sur un écran qui
+  peut montrer des prix (Recette, Brassin, jour de brassage, journée suivante, Préparer la
+  journée, Mes prix), une ligne s'ajoute avant la case : « La capture peut montrer vos prix :
+  l'administrateur la verra. ». Pas de section depuis « Mes tickets », par l'adresse du
+  formulaire ou par « Reprendre », ni quand l'image n'a pas pu être prise ou dépasse 5 Mo.
+  Aucune image ne se choisit dans les fichiers de l'appareil.
 - Ligne grise : « Envoyé avec : version 0.2.0, Android » (ou « web », « version
   indisponible »).
 - Erreurs à l'appui sur « Envoyer », le premier champ en erreur reçoit le focus : « Choisissez
@@ -210,6 +263,13 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   « Ticket enregistré. Il partira au retour du réseau. ») avec « Voir ». Un double appui
   n'écrit qu'un ticket. Un refus du serveur affiche « Votre ticket a été refusé. Il n'est pas
   enregistré. » avec « Reprendre », qui rouvre le formulaire avec le texte envoyé.
+- Capture cochée : une fois le ticket accepté par le serveur, l'image part en arrière-plan,
+  formulaire déjà fermé. Elle ne part jamais sur GitHub ; chaque Issue porte « Capture
+  éventuelle disponible dans Admin › Tickets. ». Hors ligne, le ticket part sans elle :
+  « Ticket enregistré sans la capture. Il partira au retour du réseau. ». Un dépôt en échec,
+  ou un ticket que le serveur n'a pas accepté dans les 30 s, affiche « Ticket enregistré sans
+  la capture. » avec « Voir ». La capture ne se joint pas plus tard, et une capture jointe ne
+  se remplace pas.
 - Quitter avec une saisie demande « Abandonner les modifications ? » / « Le texte saisi sera
   perdu. ». Un ticket envoyé ne se modifie ni ne s'annule.
 
@@ -232,7 +292,10 @@ jour. ». Hors ligne : bandeau hors ligne et liste du cache. Un ticket illisible
 **Suivi d'un ticket** (`/tickets/:id`). Type, titre, étiquette du statut, « Envoyé le jj/mm/aa à
 hh:mm », phrase du statut, encadré du texte de l'administrateur quand il a répondu (titré
 « Motif du refus » pour un ticket refusé, « Commentaire de clôture » pour un ticket clos,
-« Réponse de l'administrateur » sinon), frise des étapes (voir ci-dessous), description, « Écran : Recette », « Envoyé avec : … ». Le texte est sélectionnable. Ouvrir un
+« Réponse de l'administrateur » sinon), frise des étapes (voir ci-dessous), description, « Capture » quand une capture est jointe
+(vignette qui s'agrandit à l'appui ; si elle ne se lit pas, « Capture indisponible. », hors
+ligne « La capture se lit avec le réseau. », et « Réessayer »), « Écran :
+Recette », « Envoyé avec : … ». Le texte est sélectionnable. Ouvrir un
 ticket dont le suivi est à lire éteint la pastille, hors ligne compris. États : « Chargement du
 ticket », « Impossible de lire vos tickets. », « Ce ticket n'existe plus. », « Ce ticket n'est
 pas disponible hors ligne. », « Ce ticket est illisible. », avec « Retour à mes tickets ».
@@ -588,6 +651,9 @@ depuis le jj/mm/aa. Vérifiez qu'elle n'a pas été supprimée. », précédé d
 coupé en ton d'erreur ; l'encadré du texte de
 l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
 « Envoyé avec : … », « Écran : … » ; « Description » (même titre de section que côté membre) ;
+« Capture », quand l'auteur en a joint une (vignette qui s'agrandit à l'appui, « Capture
+indisponible. » et « Réessayer » si elle ne se lit pas, avec « La capture se lit avec le
+réseau. » hors ligne) ;
 « Livraison (N) », section ouverte, pour un ticket En cours ou Livré, ou qui a déjà un compte
 rendu de livraison (voir ci-dessous) ;
 « Analyses (N) », pour un ticket qui a une Issue (voir ci-dessous) ;
@@ -1916,7 +1982,8 @@ barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le m
 processus, la seconde ligne nomme la journée (« Brassage · 10:42 », lu « Journée Brassage, heure
 actuelle 10:42 »), et l'écran suit les seules étapes de la journée de brassage du déroulé
 (« Étape 3 sur 18 », « Fin prévue » de la journée). Quand le brassage
-est affiché, ou pendant la lecture des saisies, le retour Android ramène à la fiche du brassin. Un
+est affiché, ou pendant la lecture des saisies, le retour Android ramène à la fiche du brassin. À
+droite de la barre, après ⋮, l'avatar à l'initiale seule ouvre le menu du compte (voir Accueil). Un
 autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
 sa fiche, en lecture seule.
 

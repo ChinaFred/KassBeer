@@ -31,9 +31,6 @@ abstract final class AppTheme {
       // Cibles de 48 px sur toutes les plateformes, web compris.
       materialTapTargetSize: MaterialTapTargetSize.padded,
       visualDensity: VisualDensity.standard,
-      navigationBarTheme: const NavigationBarThemeData(
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      ),
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
       ),

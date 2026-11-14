@@ -1,17 +1,25 @@
 {
   "versions": [
     {
-      "version": "0.1.42",
+      "version": "0.1.43",
       "date": "2026-11-14",
       "paragraphs": [
         "L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien, 50 à la fois. On choisit la gravité, la période (1 h, 24 h ou 7 jours), une fonction, un ticket ou un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni pendant la frappe. Une entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue."
       ]
     },
     {
-      "version": "0.1.41",
+      "version": "0.1.42",
       "date": "2026-11-14",
       "paragraphs": [
         "L'administrateur trouve dans Administration un nouvel écran, « Rapports d'erreur ». Il liste les pannes rencontrées dans l'application par les membres, de la plus récente à la plus ancienne, 50 à la fois, avec « Charger la suite » pour les précédentes. Chaque ligne donne la date, la partie de l'application concernée, la version et la plateforme (Android ou Web). Une ligne se déplie sur l'erreur, son contexte, la pile d'appels et l'identifiant du compte, et « Copier le rapport » copie le tout. L'écran est en lecture seule : aucun rapport ne se supprime depuis l'application."
+      ]
+    },
+    {
+      "version": "0.1.41",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Au téléphone, la barre du bas n'affiche plus que les icônes ; un appui long sur une icône donne son nom. Le menu du compte (votre avatar en haut à droite) est maintenant sur tous les écrans : éditeurs, import, jour de brassage, Mes prix, Mes processus, Préférences, Nouveautés, Mes tickets. L'entrée de l'écran où vous êtes n'y figure pas. Quitter un éditeur modifié ou un import en cours par ce menu demande d'abord confirmation. Sur l'écran du jour de brassage, l'avatar montre votre initiale, et la déconnexion prévient quand des saisies attendent encore le réseau.",
+        "« Signaler ou proposer » reprend l'écran que vous regardiez, et propose de joindre une capture de cet écran (case décochée). Seuls vous et l'administrateur voyez la capture ; elle n'est jamais publiée. Sur un écran qui montre vos prix, un avertissement le rappelle, avant la case. Une capture jointe ne se remplace plus. Elle apparaît dans le suivi du ticket ; si elle ne se lit pas, un bouton « Réessayer » la recharge, et sans réseau un message le dit. Sur l'écran du jour de brassage, l'administrateur ouvre « Tickets à traiter » par-dessus l'écran, qui reste allumé ; au téléphone, la pastille d'envoi passe en icône et nombre pour laisser la place au nom du brassin."
       ]
     },
     {
@@ -33,14 +41,6 @@
       "date": "2026-11-13",
       "paragraphs": [
         "L'administrateur peut importer les 16 fiches Excel de brassage depuis Administration › Import. Il choisit le fichier préparé, relit chaque fiche avec ses points à revoir (divergences, corrections, heures reprises, coût), puis confirme. Chaque fiche devient une recette et un brassin terminé, avec sa chronologie, ses mesures et ses relevés de fermentation. Le coût de chaque brassin est figé avec les prix de sa fiche, visible par l'administrateur seul. Un second import du même fichier n'écrit rien, et un import interrompu reprend où il s'était arrêté."
-      ]
-    },
-    {
-      "version": "0.1.37",
-      "date": "2026-11-13",
-      "paragraphs": [
-        "Sur la fiche d'un brassin, le déroulé compare le prévu et le réel. Dès qu'une étape a un début et une fin, sa ligne donne la durée prévue, la durée réelle et l'écart : « prévu 45 min · réel 57 min · +12 min ». Une étape sautée, en cours ou restée sans heure de fin le dit. Chaque journée commencée affiche sa durée totale prévue et réelle, avec le temps passé entre les étapes. L'écran du jour ne change pas.",
-        "Après le brassage, « Mettre à jour mon processus avec ce brassin » reprend dans votre processus les durées réelles que vous cochez. Seules les étapes venues du processus se proposent, quand leur durée réelle diffère de celle du processus. Pour un houblonnage à cru fait sur plusieurs journées, vous choisissez la durée d'une des journées. Seules ces durées changent, et vos brassins gardent leur déroulé. Pendant 10 secondes, « Annuler » rétablit les durées d'avant."
       ]
     }
   ]

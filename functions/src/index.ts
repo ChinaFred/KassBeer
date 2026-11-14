@@ -16,12 +16,15 @@
  *   routine Claude Code d'analyse ou de développement (T4, P35, P36) ; le développement
  *   accepte `mode: "resume"`, « Relancer le développement » (T5, P47) ;
  * - `launchTicketDelivery` : `onCall` de l'admin, « Livrer » (T5, P43, P44), par la routine
- *   de développement. Chaque callable ne monte que les secrets de sa routine (P25) ;
- * - `queryLogs` : `onCall` de l'admin, Admin › Journaux (ADR-011, J2, P48), aucun secret.
+ *   de développement. Chaque callable ne monte que les secrets de sa routine (P25).
+ * - `attachTicketScreenshot` : `onCall` de l'auteur membre (`requireMember`, P30), joint
+ *   la capture déposée dans Cloud Storage à son ticket (T6). Aucun secret ;
+ * - `queryLogs` : `onCall` de l'admin, Admin › Journaux (ADR-011, J2, P49), aucun secret.
  *
  * `QUERYABLE_FUNCTIONS` de `config.ts` reprend ces noms (`logs.test.ts`).
  *
- * Ce module ne construit aucun client (P26) : Firestore et GitHub s'ouvrent à l'appel.
+ * Ce module ne construit aucun client (P26) : Firestore, Storage et GitHub s'ouvrent à
+ * l'appel.
  */
 
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
@@ -46,6 +49,7 @@ import { isRetryRequest } from "./tickets/decisionModel";
 import { applyDecision } from "./tickets/decisions";
 import { handleDevelopmentCall, handleLaunchCall } from "./tickets/launch";
 import { publishTicket as publish } from "./tickets/publish";
+import { handleScreenshotCall } from "./tickets/screenshot";
 import { runHourlyPass } from "./tickets/sync";
 import { handleGithubWebhook } from "./tickets/webhook";
 
@@ -266,7 +270,23 @@ export const launchTicketDelivery = onCall(
 );
 
 /**
- * Admin › Journaux (ADR-011, J2, P48) : lecture de la sortie des fonctions dans Cloud
+ * Capture d'écran jointe par l'auteur de son ticket (ADR-008, T6, P30). Aucun secret : la
+ * fonction lit Firestore et le bucket par défaut avec le compte d'exécution.
+ */
+export const attachTicketScreenshot = onCall(
+  {
+    region: REGION,
+    serviceAccount: RUNTIME_SERVICE_ACCOUNT,
+    cors: CALLABLE_ORIGINS,
+    maxInstances: 2,
+    memory: "256MiB",
+    timeoutSeconds: 60,
+  },
+  (req) => handleScreenshotCall(req),
+);
+
+/**
+ * Admin › Journaux (ADR-011, J2, P49) : lecture de la sortie des fonctions dans Cloud
  * Logging. Aucun secret ; jeton du compte d'exécution (`roles/logging.viewer`). Une
  * instance, une requête à la fois : le quota de `entries.list` est de 60 par minute.
  */

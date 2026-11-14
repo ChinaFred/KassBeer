@@ -1,13 +1,13 @@
 {
   "name": "kassbeer-rules-tests",
   "private": true,
-  "description": "Tests de firestore.rules rejoués contre l'émulateur Firebase (projet demo-kassbeer, sans contact avec la production).",
+  "description": "Tests de firestore.rules et storage.rules rejoués contre les émulateurs Firebase (projet demo-kassbeer, sans contact avec la production).",
   "type": "module",
   "engines": {
     "node": "22"
   },
   "scripts": {
-    "test": "firebase --config ../firebase.json emulators:exec --only firestore --project demo-kassbeer \"node --test --test-concurrency=1 test/*.test.mjs\"",
+    "test": "firebase --config ../firebase.json emulators:exec --only firestore,storage --project demo-kassbeer \"node --test --test-concurrency=1 test/*.test.mjs\"",
     "format": "prettier --write \"test/**/*.mjs\"",
     "format:check": "prettier --check \"test/**/*.mjs\""
   },

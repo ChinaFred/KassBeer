@@ -15,7 +15,7 @@ import '../domain/error_report.dart';
 /// Admin › Rapports d'erreur (ADR-011, J1) : `error_reports/` du plus récent au
 /// plus ancien, par pages de [kTaillePageRapports], en lecture seule. Aucune
 /// suppression depuis l'écran (choix de l'utilisateur du 2026-11-14), aucun
-/// écouteur (P49).
+/// écouteur (P50).
 class ErrorReportsScreen extends ConsumerStatefulWidget {
   const ErrorReportsScreen({super.key});
 

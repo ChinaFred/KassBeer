@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/error_report_service.dart';
 import '../domain/error_report.dart';
 
-/// Taille d'une page d'Admin › Rapports d'erreur (ADR-011, J1 ; P49).
+/// Taille d'une page d'Admin › Rapports d'erreur (ADR-011, J1 ; P50).
 const kTaillePageRapports = 50;
 
 /// Position après le dernier rapport d'une page : opaque pour l'écran.
@@ -38,7 +38,7 @@ abstract class ErrorReportsRepository {
 }
 
 /// [ErrorReportsRepository] sur Cloud Firestore : `get()` paginé, aucun
-/// écouteur (P49).
+/// écouteur (P50).
 class FirestoreErrorReportsRepository implements ErrorReportsRepository {
   FirestoreErrorReportsRepository({
     required ErrorReportService errorReportService,

@@ -10,6 +10,8 @@ import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/presentation/menu_compte.dart';
+import '../../../core/presentation/zone_capture.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/ticket.dart';
@@ -109,36 +111,39 @@ class MyTicketsScreen extends ConsumerWidget {
         leading: BackButton(
           onPressed: () => quitterPageTicket(context, AppRoutes.home),
         ),
+        actions: const [MenuCompte(), SizedBox(width: 8)],
       ),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (offline) const BandeauHorsLigne(),
-            Expanded(
-              child: wide
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(width: kListeMesTicketsWidth, child: body),
-                        const VerticalDivider(width: 1),
-                        Expanded(
-                          child: selected == null
-                              ? const EtatVide(
-                                  icon: Icons.confirmation_number_outlined,
-                                  message: noSelection,
-                                )
-                              : TicketDetailPane(
-                                  key: ValueKey(selected),
-                                  id: selected,
-                                ),
-                        ),
-                      ],
-                    )
-                  : body,
-            ),
-          ],
+      body: ZoneCapture(
+        child: SafeArea(
+          top: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (offline) const BandeauHorsLigne(),
+              Expanded(
+                child: wide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(width: kListeMesTicketsWidth, child: body),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: selected == null
+                                ? const EtatVide(
+                                    icon: Icons.confirmation_number_outlined,
+                                    message: noSelection,
+                                  )
+                                : TicketDetailPane(
+                                    key: ValueKey(selected),
+                                    id: selected,
+                                  ),
+                          ),
+                        ],
+                      )
+                    : body,
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: empty

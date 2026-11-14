@@ -115,7 +115,7 @@ export const PENDING_PER_PASS = 20;
 export const REPLY_MAX_CHARS = 2000;
 
 /**
- * Fonctions dont Admin › Journaux filtre la sortie (`queryLogs`, ADR-011, J2, P48) : les
+ * Fonctions dont Admin › Journaux filtre la sortie (`queryLogs`, ADR-011, J2, P49) : les
  * noms exportés par `index.ts`, dans son ordre. Le client construit son menu depuis la
  * liste rendue par `queryLogs`, jamais d'une copie. `logs.test.ts` vérifie l'égalité avec
  * les exports.
@@ -130,11 +130,12 @@ export const QUERYABLE_FUNCTIONS = [
   "launchTicketAnalysis",
   "launchTicketDevelopment",
   "launchTicketDelivery",
+  "attachTicketScreenshot",
   "queryLogs",
 ] as const;
 
-/** Gravités filtrables par `queryLogs` (vocabulaire de Cloud Logging, P48). */
+/** Gravités filtrables par `queryLogs` (vocabulaire de Cloud Logging, P49). */
 export const QUERYABLE_SEVERITIES = ["DEBUG", "INFO", "WARNING", "ERROR"] as const;
 
-/** Périodes de `queryLogs`, en minutes : 1 h, 24 h, 7 jours (P48). */
+/** Périodes de `queryLogs`, en minutes : 1 h, 24 h, 7 jours (P49). */
 export const QUERYABLE_PERIODS_MINUTES = [60, 1440, 10080] as const;

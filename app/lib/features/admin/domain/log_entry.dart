@@ -50,7 +50,7 @@ enum FiltrePeriode {
   final String libelle;
 }
 
-/// Filtres d'une recherche. Le serveur contrôle chaque valeur (P48) : le
+/// Filtres d'une recherche. Le serveur contrôle chaque valeur (P49) : le
 /// client ne recopie ni la forme d'un identifiant de ticket ni la borne du
 /// texte.
 @immutable
