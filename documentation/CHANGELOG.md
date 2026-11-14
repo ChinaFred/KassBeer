@@ -6,6 +6,38 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.50 — fonctionnel
+
+Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur
+GitHub, au lieu de partir plus tard. Pendant l'action, la fiche affiche « … en cours sur
+GitHub. », puis un message court dit si c'est fait. En cas d'échec, le message dit pourquoi et
+le texte saisi est gardé. La boîte de Refuser et de Clore peut se fermer pendant l'envoi, et
+accepte maintenant 4 000 caractères. Ces actions demandent le réseau : hors ligne, les boutons
+restent visibles mais inactifs, avec « Ces actions demandent le réseau. ». L'historique des
+décisions d'un ticket reste affiché.
+
+### v0.1.50 — technique
+
+ADR-008, lot T7 (décisions de l'utilisateur du 2026-11-14 ; P23, P25, P26, P42, P44 modifiés,
+P53 ajouté) : callables `validateTicket`, `refuseTicket`, `closeTicket` et `retryTicketSend`
+(`functions/src/tickets/decisionCalls.ts`, `requireAdmin`, `maxInstances` 1, 60 s, secret
+`GITHUB_TICKETS_TOKEN` seul). La décision se prend dans la transaction du bail
+`decision_lease_until` (`decisionStart`) : `allowedDecisions` recalculé, verrou des
+livraisons, reprise par l'admin de la décision la plus récente de même action (`failed`,
+`applying` au bail expiré, ou `pending` d'avant T7) avec le même identifiant, commentaire déjà
+publié reconnu sans republication (`textKept` dans la réponse), échec partiel en `aborted`.
+Retirés : `onDecisionCreated`, `onDecisionUpdated`, `resumeStuckDecisions`,
+`retryFailedSends`, la relance par `retry_requested_at`, trois index. `tickets/{id}/decisions/`
+reste l'historique, en `allow read: if isAdmin(); allow write: if false`. `REPLY_MAX_CHARS` et
+le motif passent à 4 000. Client : appels directs avec état « en cours » et « dernier échec »
+dans `decisionsFicheProvider`, messages d'échec de 10 s, un seul appel à la fois par fiche,
+boîte « Répondre » corrigée (`route.isActive`). Diffs des workflows (P10) : dans `ci.yml` et deux
+fois dans `deploy.yml`, les quatre callables ajoutées à la liste fermée avec `maxInstances` 1 et
+60 s, et une liste fermée des déclencheurs (`publishTicket` seul en déclencheur Firestore,
+`syncTickets` seul en tâche planifiée). Réglages avant la fusion : aucune décision `pending` ou
+`applying` en base, puis suppression manuelle des deux déclencheurs
+(`firebase functions:delete`), sans quoi le déploiement des Functions échoue.
+
 ### v0.1.49 — fonctionnel
 
 L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert

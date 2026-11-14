@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
+import 'package:kass_beer/features/members/domain/member.dart';
 import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
 import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
@@ -650,7 +651,7 @@ void main() {
         ),
       );
       expect(bouton.onPressed, isNull);
-      expect(find.text(kRepondreHorsLigne), findsOneWidget);
+      expect(find.text(kActionsHorsLigne), findsOneWidget);
     });
 
     testWidgets('reçu : précisions en attente annoncées', (tester) async {
@@ -762,6 +763,84 @@ void main() {
       expect(find.text('Sur Android.'), findsOneWidget);
     });
 
+    testWidgets('boîte fermée pendant son animation : échec en message', (
+      tester,
+    ) async {
+      final app = await fiche(tester, analyse0(), analyses: docComplet);
+      await tester.pumpAndSettle();
+      final server = Completer<EchecReponse?>();
+      app.tickets.answerResult = () => server.future;
+      await tester.tap(find.text('Répondre'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Sur Android.');
+      await tester.tap(find.text('Publier'));
+      await tester.pump();
+      await tester.tap(find.text('Fermer'));
+      // La boîte est encore montée : son animation de sortie n'est pas finie.
+      await tester.pump(const Duration(milliseconds: 50));
+      server.complete(const EchecReponse(CauseEchecReponse.reseau));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        find.text(
+          'Réponse non publiée : pas de réseau. Votre texte est gardé.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+        kDureeMessageEchec,
+      );
+    });
+
+    testWidgets('boîte ouverte, réseau perdu : Publier inactif, phrase', (
+      tester,
+    ) async {
+      final app = await fiche(tester, analyse0(), analyses: docComplet);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Répondre'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Sur Android.');
+      app.members
+          .lookup(adminUser.memberKey!)
+          .add(MemberLookup(member: adminMember, fromCache: true));
+      await tester.pumpAndSettle();
+      expect(find.text(FormulaireReponse.horsLigne), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Publier'))
+            .onPressed,
+        isNull,
+      );
+      // Le texte saisi reste.
+      expect(find.text('Sur Android.'), findsOneWidget);
+    });
+
+    testWidgets('boîte : motif sur le champ réaffiché à la réouverture', (
+      tester,
+    ) async {
+      final app = await fiche(tester, analyse0(), analyses: docComplet);
+      await tester.pumpAndSettle();
+      app.tickets.answerResult = () async => const EchecReponse(
+        CauseEchecReponse.motif,
+        motif: 'Texte vide après nettoyage.',
+        champ: 'answer',
+      );
+      await tester.tap(find.text('Répondre'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '@@@@@@');
+      await tester.tap(find.text('Publier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Répondre'));
+      await tester.pumpAndSettle();
+      expect(find.text('Texte vide après nettoyage.'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField), 'Sur Android.');
+      await tester.pumpAndSettle();
+      expect(find.text('Texte vide après nettoyage.'), findsNothing);
+    });
+
     testWidgets('boîte : motif sur le champ, échec partiel figé', (
       tester,
     ) async {
@@ -792,65 +871,6 @@ void main() {
       expect(find.textContaining('Réponse non publiée'), findsNothing);
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.readOnly, isTrue);
-    });
-
-    testWidgets('publication : sa ligne passe avant une décision écartée', (
-      tester,
-    ) async {
-      final app = await fiche(tester, analyse0(), analyses: docComplet);
-      app.tickets.publishDecisions('t1', [
-        uneDecision(
-          state: TicketDecisionState.rejected,
-          errorReason: 'Cette décision n\'est plus possible pour ce statut.',
-        ),
-      ]);
-      await tester.pumpAndSettle();
-      const rejet = 'Cette décision n\'est plus possible pour ce statut.';
-      expect(find.text(rejet), findsOneWidget);
-      final server = Completer<EchecReponse?>();
-      app.tickets.answerResult = () => server.future;
-      await tester.tap(find.text('Répondre'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), 'Sur Android.');
-      await tester.tap(find.text('Publier'));
-      await tester.pump();
-      await tester.tap(find.text('Fermer'));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text(kPublicationReponseEnCours), findsOneWidget);
-      expect(find.text(rejet), findsNothing);
-      server.complete(null);
-      await tester.pumpAndSettle();
-      expect(find.text(rejet), findsOneWidget);
-    });
-
-    testWidgets('publication : sa ligne passe avant une décision en échec', (
-      tester,
-    ) async {
-      final app = await fiche(tester, analyse0(), analyses: docComplet);
-      app.tickets.publishDecisions('t1', [
-        uneDecision(
-          state: TicketDecisionState.failed,
-          errorReason: 'GitHub indisponible.',
-        ),
-      ]);
-      await tester.pumpAndSettle();
-      expect(find.textContaining('n\'a pas abouti'), findsOneWidget);
-      final server = Completer<EchecReponse?>();
-      app.tickets.answerResult = () => server.future;
-      await tester.tap(find.text('Répondre'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), 'Sur Android.');
-      await tester.tap(find.text('Publier'));
-      await tester.pump();
-      await tester.tap(find.text('Fermer'));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text(kPublicationReponseEnCours), findsOneWidget);
-      expect(find.textContaining('n\'a pas abouti'), findsNothing);
-      server.complete(null);
-      await tester.pumpAndSettle();
-      expect(find.textContaining('n\'a pas abouti'), findsOneWidget);
     });
 
     testWidgets('boîte : compteur et limite en points de code', (tester) async {

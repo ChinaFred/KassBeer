@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.50",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur GitHub, au lieu de partir plus tard. Pendant l'action, la fiche affiche « … en cours sur GitHub. », puis un message court dit si c'est fait. En cas d'échec, le message dit pourquoi et le texte saisi est gardé. La boîte de Refuser et de Clore peut se fermer pendant l'envoi, et accepte maintenant 4 000 caractères. Ces actions demandent le réseau : hors ligne, les boutons restent visibles mais inactifs, avec « Ces actions demandent le réseau. ». L'historique des décisions d'un ticket reste affiché."
+      ]
+    },
+    {
       "version": "0.1.49",
       "date": "2026-11-14",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Dans « Signaler ou proposer », un bouton « Choisir une image » permet de joindre une image de l'appareil à la place de la capture de l'écran. Seules les images PNG, JPEG et WebP sont proposées. L'image est réduite à 2 000 pixels de côté au plus et réenregistrée sans ses métadonnées (date, lieu de prise de vue). Une seule image part avec le ticket : choisir une image décoche la capture de l'écran, et l'inverse. Pendant la préparation de l'image, « Envoyer » est grisé. Une capture doit être envoyée dans l'heure qui suit le ticket. Les captures sont effacées au bout de 180 jours ; la fiche du ticket affiche alors « Capture effacée. »."
-      ]
-    },
-    {
-      "version": "0.1.44",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "L'administrateur trouve dans Administration un nouvel écran, « Journaux ». Il cherche dans les messages écrits par le serveur (tickets, lancements, livraisons), du plus récent au plus ancien, 50 à la fois. On choisit la gravité, la période (1 h, 24 h ou 7 jours), une fonction, un ticket ou un texte, puis on appuie sur « Rechercher » : rien ne part à l'ouverture ni pendant la frappe. Une entrée se déplie sur son message et ses données, et « Copier l'entrée » les copie. Les journaux peuvent contenir des adresses e-mail : l'écran rappelle de ne pas les recopier dans une Issue."
       ]
     }
   ]

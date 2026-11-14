@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué et reprendre une décision en échec ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -703,11 +703,13 @@ affichage ni avec les animations réduites, et « Statut : Refusé » est annonc
 `github.com` seule, échec « Impossible d'ouvrir GitHub. ») ; pour un ticket En cours, « Ouvrir
 la PR #34 » quand le serveur retient une seule pull request éligible (adresse
 `https://github.com/ChinaFred/KassBeer/pull/<n>` seule) ; pour un envoi impossible,
-« Essais d'envoi : 10 », « Dernière erreur : … » et « Relancer l'envoi », puis « Nouvel essai
-demandé le jj/mm/aa à hh:mm. Il partira dans l'heure. » jusqu'au changement de statut (hors
-ligne : « Nouvel essai enregistré sur cet appareil. Il partira au retour du réseau. », tant
-que la relance attend le réseau, même après un changement de disposition ; échec :
-« Relance non enregistrée. Réessayez. ») ; pour une Issue disparue, « Issue introuvable sur GitHub
+« Essais d'envoi : 10 », « Dernière erreur : … » et « Relancer l'envoi » (ADR-008, T7 :
+publication essayée pendant l'appel, sans confirmation ; « Relance en cours » sur le bouton
+inactif pendant l'appel ; message en bas d'écran « Ticket envoyé sur GitHub : Issue #12. »,
+« Envoi relancé, mais GitHub n'a pas encore publié l'Issue. Un nouvel essai partira dans
+l'heure. », « Envoi non relancé : <motif> », « Envoi non relancé : pas de réseau. » ou
+« Résultat inconnu : regardez le statut du ticket avant de relancer. » ; hors ligne, bouton
+inactif et « Relancer l'envoi demande le réseau. ») ; pour une Issue disparue, « Issue introuvable sur GitHub
 depuis le jj/mm/aa. Vérifiez qu'elle n'a pas été supprimée. », précédé d'une icône de lien
 coupé en ton d'erreur ; l'encadré du texte de
 l'administrateur, titré comme côté membre ; la frise ; « Auteur : … », « Envoyé le … à … »,
@@ -719,9 +721,10 @@ réseau. » hors ligne ; « Capture effacée. » après 180 jours) ;
 rendu de livraison (voir ci-dessous) ;
 « Analyses (N) », pour un ticket qui a une Issue (voir ci-dessous) ;
 « Lancements (N) », section repliée, pour un ticket qui a une Issue (voir ci-dessous) ;
-« Décisions (N) », section repliée, la
+« Décisions (N) », section repliée, historique écrit par le serveur, la
 plus récente en haut (« Refus demandé le jj/mm/aa à hh:mm · Appliqué », « Clôture demandée le …
-· Échec : … », « Validation demandée le … · Refusée par le serveur : … »). États : « Chargement
+· Échec : … », « Validation demandée le … · Refusée par le serveur : … ») ; historique illisible :
+« Impossible de lire les décisions. » et « Réessayer », sans effet sur la barre de décision. États : « Chargement
 du ticket », « Impossible de lire les tickets. », « Ce ticket n'existe plus. », « Ce ticket n'est
 pas disponible hors ligne. », « Ticket illisible. Mettez l'application à jour. », avec « Retour
 aux tickets ».
@@ -798,7 +801,7 @@ ne s'ouvre.
 et « Réessayer » ; hors ligne, absent du cache : « Lancements non disponibles hors ligne. » ;
 document illisible : « Lancements illisibles. Mettez l'application à jour. » ; aucun :
 « Aucune session lancée pour ce ticket. », suivi, quand le bouton de lancement est affiché et
-actif dans la barre (décisions lues, aucune décision ni réponse en cours, en ligne, plafond non
+actif dans la barre (aucune décision, relance ni réponse en cours, en ligne, plafond non
 atteint, aucun appel en cours), de « Appuyez sur « Lancer l'analyse », en bas de la fiche. »
 (ou « Appuyez sur « Lancer le développement », en bas de la fiche. »).
 
@@ -823,13 +826,12 @@ n'est offert qu'après un « Valider » fait dans l'application (ADR-008, décis
 2026-11-13). Une étiquette « validé » posée sur GitHub change le statut affiché en Validé, mais
 le serveur offre alors « Valider » à la place du lancement, et la ligne « Validé sur GitHub :
 validez depuis l'application pour lancer le développement. » suit les boutons. Un retour à
-Reçu ou Analysé, un refus ou une clôture effacent la validation de l'application. « Répondre » et les lancements
-appellent le serveur : hors ligne, ils sont inactifs, et la ligne « Répondre demande le
-réseau. », « Lancer une session demande le réseau. » ou « Répondre et lancer une session
-demandent le réseau. » le dit sous les boutons. Hors ligne, la ligne « Lancer une session
-demande le réseau. » s'affiche dès que le serveur permet un lancement, même quand l'historique
-des lancements, absent du cache, retient le bouton ; aucune barre de progression ne s'affiche
-alors.
+Reçu ou Analysé, un refus ou une clôture effacent la validation de l'application. Valider,
+Refuser, Clore, « Répondre » et les lancements appellent le serveur (ADR-008, T7) : hors ligne,
+les boutons offerts restent visibles et inactifs, et une seule ligne, « Ces actions demandent le
+réseau. », précédée d'une icône hors ligne, le dit sous les boutons. Elle s'affiche aussi quand
+l'historique des lancements, absent du cache, retient le bouton de lancement ; aucune barre de
+progression ne s'affiche alors.
 
 Un lancement est « en cours » tant que l'échéance écrite par le serveur n'est pas passée (une
 heure pour une analyse, trois pour un développement) : pas de bouton de lancement, et la barre
@@ -893,26 +895,43 @@ Pour un ticket
 reçu dont la dernière réponse suit la dernière analyse, la ligne « Vos précisions du jj/mm/aa à
 hh:mm seront lues par la prochaine analyse. » précède les boutons. Pendant la publication d'une
 réponse, pas de boutons : barre de progression (« Publication en cours » pour un lecteur
-d'écran) et « Publication de la réponse en cours sur GitHub. ». Pendant la publication, cette
-ligne remplace celle de la dernière décision quand celle-ci n'a pas de barre de progression
-(écartée, en échec, interrompue, écrite hors ligne, état inconnu). Liste vide : pas de barre. Liste pas encore écrite par le serveur : « Le serveur n'a pas
-encore calculé les décisions possibles pour ce ticket. ». Pendant une décision en attente ou en
-cours, pas de boutons. Pendant la lecture des décisions, une barre de progression (« Lecture des
-décisions ») remplace la barre. Décisions illisibles : « Impossible de lire les décisions. » et
-« Réessayer » dans la fiche, et aucun bouton de décision. Au-dessus des boutons, une ligne
-d'état de la dernière décision, annoncée :
+d'écran) et « Publication de la réponse en cours sur GitHub. ». Liste vide : pas de barre.
+Liste pas encore écrite par le serveur : « Le serveur n'a pas encore calculé les décisions
+possibles pour ce ticket. ». La barre ne dépend pas de l'historique des décisions.
 
-| État | Ligne |
+Pendant l'appel d'une décision depuis la fiche, pas de boutons (ni « Répondre », ni
+lancement) : barre de progression (« Validation en cours », « Refus en cours », « Clôture en
+cours » pour un lecteur d'écran) et ligne annoncée « Validation en cours sur GitHub. »,
+« Refus en cours sur GitHub. » ou « Clôture en cours sur GitHub. ». Tant que le serveur tient
+le bail d'une décision prise ailleurs (autre appareil), pas de boutons : « Décision en cours sur
+GitHub. ». Un seul appel part à la fois depuis une fiche. L'appel continue si la disposition
+change (liste et fiche côte à côte, ou fiche seule).
+
+Résultat, en message en bas d'écran, en plus du clignotement de l'étiquette : « Ticket validé.
+Le membre voit « Validé ». » (ticket validé sur GitHub seul : « Validation enregistrée. Vous
+pouvez lancer le développement. ») ; « Ticket refusé. L'Issue est fermée. » ; « Ticket clos.
+L'Issue est fermée. ». Échecs (Refuser ; Clore et Valider sur le même modèle) :
+
+| Cause | Message |
 |---|---|
-| écrite sur l'appareil hors ligne | « Refus enregistré sur cet appareil. Il partira au retour du réseau. » |
-| en attente ou en cours | barre de progression, « Refus en cours sur GitHub. » |
-| en attente depuis plus de 2 min | barre de progression, « Le serveur n'a pas encore pris ce refus en compte. » |
-| en cours, bail du serveur expiré | « Refus interrompu. Le serveur le reprendra dans l'heure. » |
-| appliquée | pas de ligne ; l'étiquette du statut clignote |
-| écartée par le serveur | sa raison (« Cette décision n'est plus possible pour ce statut. »…) ; les boutons reviennent |
-| en échec | « Le refus n'a pas abouti : <raison> », puis « Réessayez, ou prenez une autre décision. », « Réessayer » (reprise de la même décision) et les boutons de décision ; une reprise demandée hors ligne remplace la ligne par « Nouvel essai enregistré sur cet appareil. Il partira au retour du réseau. », sans boutons, jusqu'au retour du réseau |
+| refus motivé du serveur | « Refus non publié : <motif> Votre texte est gardé. » (Valider : « Validation non enregistrée : <motif> ») |
+| pas de réseau | « Refus non publié : pas de réseau. Votre texte est gardé. » |
+| délai, coupure, panne interne | « Résultat inconnu : le serveur n'a pas répondu à temps. Regardez le statut du ticket avant de refuser à nouveau. Votre texte est gardé. » |
+| accès refusé | « Refus non publié : accès administrateur refusé. » |
+| motif publié, Issue non fermée | « Le motif est publié sur GitHub, mais l'Issue n'est pas fermée. Refuser à nouveau termine sans republier. » (Clore : « Le commentaire est publié… Clore à nouveau termine sans republier. ») |
+| autre | « Refus non publié. Votre texte est gardé. » |
 
-Les phrases s'accordent : « Validation enregistrée… Elle partira », « Clôture interrompue ».
+Les messages d'échec en bas d'écran (décisions, « Répondre », « Relancer l'envoi ») restent
+10 s, comme l'échec ou le résultat inconnu d'un lancement affiché après « Fermer » ; les
+messages de succès gardent la durée habituelle. Pendant l'appel d'un lancement, Valider,
+Refuser, Clore et « Répondre » sont visibles et inactifs : un seul appel part à la fois depuis
+une fiche. Quand aucun bouton de lancement n'est affiché (statut changé pendant l'appel), la
+ligne « Lancement en cours. », avec une barre de progression, dit pourquoi.
+
+Une décision interrompue se reprend en la demandant à nouveau : le serveur reconnaît le
+commentaire déjà publié et ne le republie pas. Après un résultat inconnu, la fiche écoute le
+ticket : si la décision a été appliquée, le statut change et l'étiquette clignote, et les
+brouillons de Refuser et Clore s'effacent quand le statut devient Refusé ou Clos.
 
 **Boîte de lancement** (ADR-008, P39). « Lancer l'analyse » ou « Lancer le développement »
 ouvre « Lancer l'analyse de ce ticket ? » / « Lancer le développement de ce ticket ? »
@@ -929,7 +948,7 @@ l'administrateur. Ce coût n'apparaît pas dans le suivi des coûts de l'applica
 
 Pendant l'appel : « Lancer » inactif avec « Lancement en cours », « Annuler » devient « Fermer »,
 ligne annoncée « Lancement en cours. Vous pouvez fermer : le résultat s'affichera dans la
-section Lancements. ». « Fermer », le retour et Échap ferment la boîte sans couper l'appel ;
+section Lancements. ». « Fermer » et le retour ferment la boîte sans couper l'appel ;
 un seul appel part à la fois. Un refus du serveur reste dans la boîte, en ton d'erreur, avec
 son motif (plafond, ticket changé sur GitHub, routine non configurée, en pause, jeton refusé,
 limite de l'API…). Message en bas d'écran, boîte ouverte ou fermée : « Session lancée. Le lien
@@ -971,19 +990,36 @@ un glissement ne ferment. Les deux portent l'encadré « Publié sur un site pub
 nom ni adresse. Le membre lira aussi ce texte. », et pour un ticket en cours « Une pull request
 est peut-être ouverte. Elle ne sera pas fermée. ».
 
-- « Refuser ce ticket » : champ « Motif du refus », 3 à 8 lignes, compteur de 2 000, aide
-  « L'Issue sera fermée comme non prévue. », erreur « Le motif doit faire au moins 5
-  caractères. », boutons « Annuler » et « Refuser ».
+- « Refuser ce ticket » : champ « Motif du refus », 3 à 8 lignes, compteur de 4 000 en points
+  de code (« 12/4000 », annoncé « 3 988 caractères restants », en ton d'erreur au-delà ; la
+  saisie n'est pas coupée), aide « L'Issue sera fermée comme non prévue. », erreurs « Le motif
+  doit faire au moins 5 caractères. » et « Le motif ne doit pas dépasser 4 000 caractères. »,
+  boutons « Annuler » et « Refuser ».
 - « Clore ce ticket » : « Le ticket passera à « Clos » et l'Issue sera fermée. », champ
-  « Commentaire de clôture », aide « Le membre lira ce texte : réponse, ou raison de la
-  clôture. », erreur « Le commentaire doit faire au moins 5 caractères. », boutons « Annuler »
-  et « Clore ».
+  « Commentaire de clôture », même compteur, aide « Le membre lira ce texte : réponse, ou raison
+  de la clôture. », erreurs « Le commentaire doit faire au moins 5 caractères. » et « Le
+  commentaire ne doit pas dépasser 4 000 caractères. », boutons « Annuler » et « Clore ».
 
-Le champ reçoit le focus, et le reprend après une erreur. La boîte se ferme dès l'écriture sur
-l'appareil. Un texte non envoyé reste dans la fiche et revient à la réouverture ; après une
-décision écartée ou en échec, la boîte reprend le texte envoyé. Une écriture refusée par le
-serveur affiche « Décision non enregistrée. Réessayez. » et rend boutons et texte. Pas de
-message de succès après une décision appliquée.
+Le champ reçoit le focus, et le reprend après une erreur. « Refuser » (« Clore ») appelle le
+serveur, et la boîte reste ouverte pendant l'appel : bouton inactif avec « Refus en cours »
+(« Clôture en cours »), champ inactif, « Annuler » devient « Fermer », ligne annoncée « Refus en
+cours. Vous pouvez fermer : le résultat s'affichera dans un message. ». « Fermer » et le retour
+ferment la boîte sans couper l'appel. Succès : la boîte se ferme, le texte s'efface, le
+message s'affiche. Quand le serveur garde le motif publié par un essai précédent et que le texte
+envoyé en diffère, le message le dit : « Ticket refusé. L'Issue est fermée. Le motif déjà publié
+est gardé : votre nouveau texte n'est pas publié. » (Clore : « Le commentaire déjà publié est
+gardé : … »). Échec, boîte ouverte : le message reste dans la boîte au-dessus des boutons, avec le
+texte, et le focus va au champ ; un motif qui porte sur le texte s'affiche sous le champ, revient
+à la réouverture de la boîte et s'efface à la première frappe. Échec, boîte fermée (même pendant
+son animation de fermeture) : message en bas d'écran, affiché 10 s ; le texte reste en brouillon
+et revient à la réouverture. Après un motif publié sans fermeture de l'Issue, le texte est figé
+(lecture seule) et le focus va au bouton « Refuser » (« Clore »), à l'échec comme à la
+réouverture de la boîte ; si ce bouton est inactif (hors ligne, autre appel), le focus va au
+champ à l'échec et à « Annuler » à la réouverture.
+Un texte non envoyé reste dans la fiche et revient à la réouverture ; après une décision écartée
+ou en échec de l'historique, la boîte reprend le texte envoyé. Hors ligne, la boîte ouverte reste
+modifiable, son bouton d'envoi est inactif, et la ligne « Refuser demande le réseau. Votre texte
+est gardé. » (« Clore demande le réseau. … ») le dit ; rien ne part au retour du réseau.
 
 **Boîte « Répondre ».** Feuille du bas au téléphone, dialogue sinon, que ni un appui à côté ni
 un glissement ne ferment. Titre « Répondre à l'analyse » (ticket reçu : « Répondre au ticket »),
@@ -1003,8 +1039,8 @@ l'application ne contrôle que la longueur.
 
 - Pendant l'envoi : « Publier » inactif (« Publication en cours »), champ inactif, « Annuler »
   devient « Fermer », ligne annoncée « Publication en cours. Vous pouvez fermer : le résultat
-  s'affichera dans un message. ». Fermer la boîte (retour, Échap, « Fermer ») ne coupe pas
-  l'appel. Un seul appel part à la fois.
+  s'affichera dans un message. ». Fermer la boîte (retour, « Fermer ») ne coupe pas
+  l'appel. Un seul appel part à la fois, décisions et lancements compris.
 - Succès : la boîte se ferme et le message « Réponse publiée. Le ticket repasse à Reçu. »
   s'affiche (ticket reçu : « Réponse publiée. Elle sera lue par la prochaine analyse. »).
 - Échec : la boîte reste ouverte avec le texte, et une ligne annoncée en ton d'erreur ; boîte
@@ -1012,9 +1048,17 @@ l'application ne contrôle que la longueur.
   est gardé. » ; « Réponse non publiée : pas de réseau. Votre texte est gardé. » ; « Réponse non
   publiée : le serveur n'a pas répondu à temps. Vérifiez l'Issue avant de publier à
   nouveau. » ; « Réponse non publiée : accès administrateur refusé. » ; sinon « Réponse non
-  publiée. Votre texte est gardé. ». Un motif qui porte sur le texte s'affiche sous le champ.
+  publiée. Votre texte est gardé. » ; ces messages restent 10 s. Un motif qui porte sur le
+  texte s'affiche sous le champ, revient à la réouverture de la boîte et s'efface à la première
+  frappe ; après un échec, boîte ouverte, le focus va au champ.
 - Échec partiel (réponse publiée, ticket pas ramené à Reçu) : le texte passe en lecture seule
-  et « Cette réponse est déjà publiée sur GitHub. Publier remet le ticket à Reçu. » s'affiche.
+  et « Cette réponse est déjà publiée sur GitHub. Publier remet le ticket à Reçu. » s'affiche ;
+  le focus va à « Publier », à l'échec comme à la réouverture de la boîte ; si « Publier » est
+  inactif (hors ligne, autre appel), le focus va au champ à l'échec et à « Annuler » à la
+  réouverture.
+- Hors ligne, la boîte ouverte reste modifiable, « Publier » est inactif, et la ligne
+  « Répondre demande le réseau. Votre texte est gardé. » le dit. « Publier » est aussi inactif
+  pendant un autre appel de la fiche.
 - Le texte non publié reste dans la fiche, même après un changement de disposition, et revient
   à la réouverture ; il s'efface après une publication réussie.
 
