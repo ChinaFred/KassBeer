@@ -6,6 +6,25 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.46 — fonctionnel
+
+Dans « Rapports d'erreur », une relecture n'affiche plus qu'une seule attente, sur le bouton
+appuyé. Après une panne, « Réessayer » montre l'attente dans le bandeau, et le bouton
+« Actualiser » reste en place, désactivé. Tirer la liste vers le bas n'ajoute plus d'indicateur
+en haut de l'écran.
+
+### v0.1.46 — technique
+
+`error_reports_screen.dart` remplace le drapeau `_actualisation` par l'origine de la lecture
+(`_Origine` : en-tête, bandeau, état vide hors ligne, suite, geste), comme `logs_screen.dart` : l'indicateur de
+l'en-tête ne s'affiche que pour « Actualiser », celui du bandeau que pour son « Réessayer »
+(`retryEnabled: false` sinon), celui de « Charger la suite » que pour la suite, et
+« tirer pour actualiser » garde le seul indicateur du `RefreshIndicator`. Quatre tests ajoutés à
+`app/test/error_reports_test.dart`. Point relevé à la livraison d'ADR-011 :
+deux indicateurs « Lecture en cours » pendant un « Réessayer » sous une liste. Aucune dépendance changée ;
+`main.dart.js` (`flutter build web --release`) : 5 619 084 octets sur `main` à la v0.1.45,
+5 609 932 après (− 9 152).
+
 ### v0.1.45 — fonctionnel
 
 Dans « Signaler ou proposer », un bouton « Choisir une image » permet de joindre une image de

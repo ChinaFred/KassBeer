@@ -495,10 +495,15 @@ première ligne, résumé, texte copié), `data/error_reports_repository.dart`
   page » ou « page suivante »), puis l'écran affiche la panne. Une copie en échec rapporte
   `admin.error_reports.copy`. Aucun texte de rapport ne part dans `context` (P13).
 - `uid` est affiché tel quel ; ni `users/` ni `members/` ne sont lus pour le traduire.
+- Attente : l'écran retient ce qui a lancé la lecture (`_Origine` : en-tête, bandeau, état vide
+  hors ligne, suite, geste) ; seul ce bouton montre l'indicateur, les autres sont désactivés
+  (`BandeauListePerimee.retryEnabled`), comme Admin › Journaux.
 - Tests : `app/test/error_reports_test.dart` (lecture d'un document, pages de 50 sur
   `fake_cloud_firestore`, panne rapportée ; écran : tuile, accès refusé au brasseur, liste,
   plateforme inconnue, aucune suppression, sections et copie, « Charger la suite » et « Fin
-  des rapports. », vide, panne de la première page et de la suite, « Actualiser », hors ligne,
+  des rapports. », vide, panne de la première page et de la suite, « Actualiser », un seul indicateur
+  pendant « Réessayer » du bandeau, pendant « Actualiser » sous un bandeau, pendant « Réessayer »
+  de l'état vide hors ligne et pendant « tirer pour actualiser », hors ligne,
   texte à 200 %, ligne large) ; `rules-tests/test/error_reports.test.mjs` : page de 50 par
   `created_at` décroissant et suite par `startAfter`, pour les cinq profils (admin seul).
 

@@ -64,10 +64,9 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
   /// Lecture qui a échoué, rejouée par « Réessayer » du bandeau.
   bool _erreurSurSuite = false;
 
-  /// La lecture en cours est une relecture de la première page (« Actualiser »,
-  /// « Réessayer ») : l'en-tête montre l'attente, « Charger la suite » attend
-  /// sans libellé.
-  bool _actualisation = false;
+  /// Bouton qui a lancé la lecture en cours : lui seul montre l'attente, les
+  /// autres sont seulement désactivés.
+  _Origine? _origine;
 
   /// Numéro de la dernière lecture : une réponse plus ancienne est ignorée.
   int _lecture = 0;
@@ -80,27 +79,27 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
 
   /// Relit la première page ; la liste affichée, et une panne affichée, restent
   /// visibles jusqu'à la réponse.
-  Future<void> _actualiser() {
+  Future<void> _actualiser([_Origine origine = _Origine.entete]) {
     setState(() {
       _chargement = true;
-      _actualisation = true;
+      _origine = origine;
     });
     return _lire(apres: null);
   }
 
-  void _chargerSuite() {
+  void _chargerSuite([_Origine origine = _Origine.suite]) {
     setState(() {
       _chargement = true;
-      _actualisation = false;
+      _origine = origine;
     });
     unawaited(_lire(apres: _suite));
   }
 
   void _reessayer() {
     if (_erreurSurSuite) {
-      _chargerSuite();
+      _chargerSuite(_Origine.bandeau);
     } else {
-      unawaited(_actualiser());
+      unawaited(_actualiser(_Origine.bandeau));
     }
   }
 
@@ -116,7 +115,6 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
         _erreur = error;
         _erreurSurSuite = apres != null;
         _chargement = false;
-        _actualisation = false;
       });
       return;
     }
@@ -135,7 +133,6 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
       _erreur = null;
       _lue = true;
       _chargement = false;
-      _actualisation = false;
     });
   }
 
@@ -150,7 +147,7 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
               message: ErrorReportsScreen.erreurLecture,
               retrying: _chargement,
               retryingLabel: ErrorReportsScreen.lectureEnCours,
-              onRetry: () => unawaited(_actualiser()),
+              onRetry: () => unawaited(_actualiser(_Origine.bandeau)),
             );
     }
 
@@ -159,14 +156,16 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
       if (_erreur != null)
         BandeauListePerimee(
           message: ErrorReportsScreen.erreurListe,
-          retrying: _chargement,
+          retrying: _chargement && _origine == _Origine.bandeau,
+          retryEnabled: !_chargement,
           onRetry: _reessayer,
         )
       else if (_fromCache && _rapports.isNotEmpty)
         BandeauListePerimee(
           message: ErrorReportsScreen.horsLigne,
-          retrying: _chargement,
-          onRetry: () => unawaited(_actualiser()),
+          retrying: _chargement && _origine == _Origine.bandeau,
+          retryEnabled: !_chargement,
+          onRetry: () => unawaited(_actualiser(_Origine.bandeau)),
         ),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
@@ -181,7 +180,7 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
                 ),
               ),
             ),
-            if (_actualisation)
+            if (_chargement && _origine == _Origine.entete)
               Semantics(
                 label: ErrorReportsScreen.lectureEnCours,
                 liveRegion: true,
@@ -213,8 +212,12 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
                 action: TextButton(
                   onPressed: _chargement
                       ? null
-                      : () => unawaited(_actualiser()),
-                  child: const Text('Réessayer'),
+                      : () => unawaited(_actualiser(_Origine.vide)),
+                  child: _chargement && _origine == _Origine.vide
+                      ? const IndicateurBouton(
+                          label: ErrorReportsScreen.lectureEnCours,
+                        )
+                      : const Text('Réessayer'),
                 ),
               )
             : const EtatVide(
@@ -238,7 +241,7 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
                   )
                 : OutlinedButton(
                     onPressed: _chargement ? null : _chargerSuite,
-                    child: _chargement && !_actualisation
+                    child: _chargement && _origine == _Origine.suite
                         ? const IndicateurBouton(
                             label: ErrorReportsScreen.lectureEnCours,
                           )
@@ -249,7 +252,8 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
     ];
 
     return RefreshIndicator(
-      onRefresh: _actualiser,
+      // Le geste a son propre indicateur : l'en-tête n'en ajoute pas.
+      onRefresh: () => _actualiser(_Origine.tirage),
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 24),
@@ -409,3 +413,8 @@ class _Section extends StatelessWidget {
     );
   }
 }
+
+/// Ce qui a lancé une lecture : bouton de l'en-tête, « Réessayer » d'un bandeau
+/// ou d'une panne, « Réessayer » de l'état vide hors ligne, « Charger la suite »,
+/// ou le geste « tirer pour actualiser ».
+enum _Origine { entete, bandeau, vide, suite, tirage }
