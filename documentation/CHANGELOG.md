@@ -6,6 +6,28 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.66 — fonctionnel
+
+Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
+Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
+houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
+
+### v0.1.66 — technique
+
+`_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
+jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
+insécable avant « · » pour couper la ligne après le point médian. Tests ajoutés
+dans `brew_day_screen_test.dart` et `deroule_d4_test.dart`.
+
+P15 accepte `noreply@anthropic.com`, l'adresse des sessions Claude Code, comme l'adresse
+`noreply` de GitHub, pour les commits et les tags (décision de l'utilisateur du 2026-11-15).
+Aucune des deux ne désigne une personne. `session-start.sh` n'avertit plus pour cette adresse.
+Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte à recoller sur
+claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
+
+Ces deux changements avaient été numérotés v0.1.62 et v0.1.63 sur leur branche, numéros pris
+entre-temps par la branche principale, puis v0.1.64 et v0.1.65, pris aussi : ils sont renumérotés en v0.1.66.
+
 ### v0.1.65 — fonctionnel
 
 Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux

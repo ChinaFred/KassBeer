@@ -71,7 +71,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets, types)` (types facultatifs, `kTypesImages` pour une image de ticket) rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/app_update_service.dart`, `app_update_transport*.dart`, `app_installer.dart` | mise à jour de l'APK (ADR-012) : `AppUpdateService` (`verifier`, `telecharger`, `installer`), `ManifesteApk.lire`, `TransportMiseAJour` (`dart:io` sur Android par import conditionnel, stub sur le web), `InstallateurApkPlateforme` (canal `fr.kassbeer/updates`) ; fourni par `appUpdateServiceProvider` (`main.dart`). Fenêtre `app_update_dialog.dart`, vérification au lancement `verification_mise_a_jour.dart` (dans la coquille) |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
-| `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite : palette tirée du logo (primaire brun, secondaire et surfaces laiton, tertiaire ambre pour « en cours » et les avertissements ; couleurs principales en variante `fidelity`, conteneurs en `tonalSpot`), `CouleursEtat` (succès, vert), `StylesJourDeBrassage` (tailles de l'écran du jour et de « Préparer le brassage » : minuteur 88, 72 en paysage, 128 en large ; étape 36 ou 45 ; ligne « Ensuite » 22 ; chronologie 16 ; étiquette d'étape 18 ; ligne d'information « Fin prévue vers… » 18 ; libellé des boutons 22 ; chiffres d'une mesure saisie 28 ; aucune taille écrite en dur dans `features/brew_day/`) ; texte en Roboto, titres `display*`, `headline*` et `titleLarge` en Bitter demi-grasse, polices de secours Roboto puis `Symboles`, chiffres tabulaires dans tous les styles ; `app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 en clair et en sombre |
+| `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite : palette tirée du logo (primaire brun, secondaire et surfaces laiton, tertiaire ambre pour « en cours » et les avertissements ; couleurs principales en variante `fidelity`, conteneurs en `tonalSpot`), `CouleursEtat` (succès, vert), `StylesJourDeBrassage` (tailles de l'écran du jour et de « Préparer le brassage » : minuteur 88, 72 en paysage, 128 en large ; étape 36 ou 45 ; ligne « Ensuite » 22 ; chronologie 16 ; étiquette d'étape 18 ; ligne d'information « Fin du brassage prévue vers… » 18 ; libellé des boutons 22 ; chiffres d'une mesure saisie 28 ; aucune taille écrite en dur dans `features/brew_day/`) ; texte en Roboto, titres `display*`, `headline*` et `titleLarge` en Bitter demi-grasse, polices de secours Roboto puis `Symboles`, chiffres tabulaires dans tous les styles ; `app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 en clair et en sombre |
 | `assets/fonts/`, `assets/images/` | polices embarquées, sous SIL OFL 1.1, chacune avec sa licence en asset (`OFL-Bitter.txt`, `OFL-Roboto.txt`, `OFL-NotoSansMath.txt`) : `Bitter-SemiBold.ttf` (titres, graisse 600, 38 Ko) ; `Roboto-Regular`, `-Medium`, `-Bold`, `-Italic` (texte, 56 Ko chacune ; une famille « Roboto » au manifeste empêche le moteur web de la télécharger depuis `fonts.gstatic.com`) ; `Symboles.ttf` (flèches et ⋮ tirés de Noto Sans Math, 8 Ko, police de secours). Réduites au latin, au latin étendu A, à la ponctuation et aux symboles employés : un caractère hors de ces jeux fait télécharger une police Noto sur le web. `logo_kass_beer.webp` (médaillon de 384 px, 38 Ko, tiré de `assets/Kassbeer_transparent.png` à la racine du dépôt) |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
@@ -4420,7 +4420,8 @@ particulier « Chaîne de travail », « Version », « Tickets », « Git » et
    - tu ne modifies ni ne supprimes aucun commentaire existant.
 6. Avant le premier commit, dans cet ordre :
    - lis git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT. Si l'une des deux adresses
-     n'est pas une adresse noreply de GitHub (…@users.noreply.github.com), ne commite rien :
+     n'est ni une adresse noreply de GitHub (…@users.noreply.github.com) ni
+     noreply@anthropic.com, ne commite rien :
      publie un commentaire qui commence par « ## Analyse — compléments » et dit « adresse
      d'auteur ou de commiteur hors noreply : session arrêtée », sans citer l'adresse, puis
      arrête-toi ;
@@ -4517,7 +4518,8 @@ L5. Prends la branche de la pull request, git fetch origin, puis intègre origin
     puis blocage. Sans conflit, si la version de la pull request n'est plus supérieure à
     celle de origin/main, fais la même correction.
 L6. Avant le commit de fusion, lis git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT :
-    une adresse hors noreply de GitHub (…@users.noreply.github.com) est un blocage, sans
+    une adresse autre que noreply de GitHub (…@users.noreply.github.com) ou
+    noreply@anthropic.com est un blocage, sans
     citer l'adresse. git fetch --tags && node scripts/check-version.mjs doit réussir ; sinon
     corrige seulement la version et le CHANGELOG comme en L5, ou blocage. Commite la fusion
     et pousse sur la branche claude/… de la pull request : jamais sur main, jamais --force.
@@ -4571,7 +4573,7 @@ R4. Corrige en suivant la « Chaîne de travail » comme au point 7 : contrôles
     version passe à celle de origin/main augmentée de un, numéro de build compris ; seuls
     conflits permis : app/pubspec.yaml et documentation/CHANGELOG.md, comme en L5. Avant le
     premier commit, git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT doivent être des
-    adresses noreply ; sinon arrête-toi sans commenter. Les fichiers interdits du point 5
+    adresses noreply de GitHub ou noreply@anthropic.com ; sinon arrête-toi sans commenter. Les fichiers interdits du point 5
     restent interdits.
 R5. git push origin <head.ref>, sans --force. Poussée refusée : git fetch, git merge, rejoue
     les contrôles une fois et repousse ; second refus : arrête-toi. Suis la CI jusqu'au vert.
