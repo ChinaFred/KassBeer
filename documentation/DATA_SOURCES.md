@@ -9,8 +9,9 @@ Public Domain » (relevé du 2026-11-11), mais le téléchargement demande un co
 poste ; l'ingestion de `style_stats` est reportée (ADR-005, amendements de L3, D1).
 
 Aucun fichier de ces sources n'entre dans le dépôt public, un asset ou l'APK, sauf la table des
-teintes de `srm2hex` (MIT), reprise dans `brewing/` avec sa licence. Les données vivent
-dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
+teintes de `srm2hex` (MIT), reprise dans `brewing/` avec sa licence, et le fichier des fiches
+des fabricants, écrit à la main dans `exchange/donnees/fabricants/cultures.json` (décision de
+l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 
 ## Sources, versions et licences
 
@@ -25,12 +26,15 @@ dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 | dépôt GitHub `diydog-beerxml` | `d469275` | aucune | tests locaux, hors CI | Firestore, dépôt |
 | Kaggle « Brewer's Friend Beer Recipes » | non téléchargé | « CC0: Public Domain » déclarée sur la page (relevé du 2026-11-11) ; ingestion reportée (ADR-005, D1) | statistiques par style | lignes brutes, CSV |
 | BeerJSON | `4370892d44` | MIT | schémas pour ajv en CI et à l'ingestion | — |
+| Fiches techniques Fermentis (`fermentis.com/en/product/…`), recopiées à la main dans `exchange/donnees/fabricants/cultures.json` (BeerJSON 2.01, versionné) | relevé du 2026-11-14 ; fichier écrit à la main, SHA-256 `1eb1f9ae2e05e36fc4bd2bd9b279582cde3f8907912d897ca436615fcff4dbdf` au versement | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-14 | 25 cultures (23 levures, 2 bactéries) : nom, type, forme, producteur, référence, atténuation apparente, plage de température | floculation (la fiche donne un temps de sédimentation), tolérance à l'alcool, dosage, descriptions |
 | paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
 | Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
 beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, origines
-ramenées à une liste de pays, doublons fusionnés et renommés), DIY Dog et srm2hex (MIT, avec le texte de la licence), et dit que les descriptions
+ramenées à une liste de pays, doublons fusionnés et renommés), les fiches des fabricants (données
+publiées en accès libre par le fabricant), DIY Dog et srm2hex (MIT, avec le texte de la licence),
+et dit que les descriptions
 aromatiques des houblons sont rédigées par une IA (Claude, d'Anthropic) pour Kass'Beer. Chaque
 entrée de Firestore
 porte sa licence dans `provenance[]` ; la licence de srm2hex est en tête de `teintes_srm.dart`
@@ -239,6 +243,30 @@ Une recette sans moment ou sans durée d'ajout, avec un houblon en volume ou d'u
 `All Grain`, `Partial Mash`, `Extract` ne s'exporte pas en BeerXML : l'export liste ce qui
 manque. Aucune étape de fermentation n'est écrite : Kass'Beer n'en stocke pas.
 
+## Fiches des fabricants → `beer_cultures`
+
+Fichier écrit à la main, versionné dans `exchange/donnees/fabricants/cultures.json` depuis le
+2026-11-15 (lu par défaut par `bin/preparer_referentiels.dart`, option `--fabricants`), au format
+BeerJSON 2.01 (liste `cultures`, mêmes champs que 003 et 004) ; en-tête en `//` avec l'adresse des
+fiches. Il ne contient que noms et valeurs techniques, aucun texte des fiches.
+`exchange/test/fabricants_donnees_test.dart` le lit : 25 entrées, aucun rejet, quatre atténuations
+écartées.
+Lu par `lireFabricants` d'`exchange/` ; toute autre liste est ignorée et comptée. Fermentis
+seul au relevé du 2026-11-14.
+
+| Valeur de la fiche | Champ |
+|---|---|
+| nom commercial sans ™ (`SafAle US-05`), référence (`US-05`), Fermentis | `name`, `product_id`, `producer` |
+| espèce et usage : *S. cerevisiae* → `ale`, et `wheat` pour une levure de bière de blé (WB-06, W-68, BW-20) ; *S. pastorianus* → `lager` ; *Brettanomyces* → `brett` ; *Lactiplantibacillus*, *Levilactobacillus* → `lacto` ; *Torulaspora* → `other` | `type` |
+| levure sèche | `form` : `dry` |
+| « Apparent attenuation » ; LA-01 : 15 % (valeur unique, plage de 15 à 15) | `attenuation` |
+| plage « ideally » de « Dosage / Temperature » ; BR-8 et F-2 : plage optimale ou d'usage ; LP 652 : 37 °C ± 3 ; LB 1 : 32 °C ± 5 | `temperature_range` |
+
+HA-18, DA-16, DW-17 et LD-20 (levure et enzyme) annoncent 98 à 102 % : la borne des pourcentages
+(100) écarte la plage, comptée au rapport, et l'atténuation reste absente. F-2, BR-8 et les deux
+bactéries n'ont pas d'atténuation sur leur fiche. La fiche, prioritaire, donne toutes les
+valeurs : la floculation d'une levure déjà connue de Brewtarget n'est plus reprise.
+
 ## Correspondance DotBeer (fichier 005) → référentiels
 
 | Champ DotBeer | Champ retenu |
@@ -438,5 +466,6 @@ quartiles, une médiane et un maximum. Si une colonne est en Plato ou en SRM, la
 2. **Styles.** `beer_styles` ne prend que les 110 styles BJCP 2021 du fichier 002.
 3. **`twist` de DIY Dog** (178 recettes). Le texte d'origine va dans `recipe.notes`. C'est la seule
    exception à l'écart des textes libres de DIY Dog.
-4. **Priorité entre sources** pour un même ingrédient : 005, puis 003 et 004, puis 001. Les autres
+4. **Priorité entre sources** pour un même ingrédient : fiches des fabricants (depuis le
+   2026-11-14), puis 005, puis 003 et 004, puis 001. Les autres
    fichiers fournissent les alias et une ligne de `provenance[]`.

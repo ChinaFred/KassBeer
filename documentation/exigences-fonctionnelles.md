@@ -1095,9 +1095,9 @@ non reconnus ». Lecture seule : l'écran n'écrit rien. La mise à jour (ingest
 le poste de l'administrateur (`exchange/bin/preparer_referentiels.dart`, puis
 `ingest/ecrire.mjs`).
 
-En tête : « Mise à jour de la Bibliothèque depuis les sources externes (Brewtarget, BJCP, DIY
-Dog). » et le bouton icône « Actualiser » (48 px), qui relit la dernière mise à jour et la
-première page des noms non reconnus. Tirer la page vers le bas fait la même chose. Pendant la
+En tête : « Mise à jour de la Bibliothèque depuis les sources externes (Brewtarget, BJCP, fiches
+des fabricants, DIY Dog). » et le bouton icône « Actualiser » (48 px), qui relit la dernière
+mise à jour et la première page des noms non reconnus. Tirer la page vers le bas fait la même chose. Pendant la
 lecture lancée par ce bouton, il laisse la place à un indicateur de même taille, annoncé
 « Lecture en cours » ; pendant toute lecture, les autres boutons de lecture sont désactivés.
 Ce qui est affiché reste visible jusqu'à la réponse.
@@ -1116,8 +1116,9 @@ de l'écrivain, lue à l'ouverture.
   « 412 écrits · 3 inchangés · 0 refusé ». Une collection inconnue de l'application suit, sous
   son nom technique. Si des documents sont refusés : « 2 documents refusés. Le détail est dans
   le rapport local. », dans un encadré d'erreur.
-- « Sources lues » (sous-section) : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 »
-  et « DIY Dog », chacun avec sa version (`v5.2.3 ea10908`, `e6c12ab`).
+- « Sources lues » (sous-section) : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 »,
+  « Fiches des fabricants » et « DIY Dog », chacun avec sa version (`v5.2.3 ea10908`, date du
+  relevé `2026-11-14`, `e6c12ab`).
 - « Noms non reconnus lors de cette mise à jour » (sous-section) : le nombre par nature
   (« Malts et sucres », « Houblons », « Levures », « Divers »), écrit « 12 noms ».
 
@@ -1741,7 +1742,8 @@ La ligne « Nom français » est masquée quand la valeur est absente. Une autre
 s'affiche « Non renseigné ». Une valeur que l'application ne sait pas traduire s'affiche
 telle quelle. Section « Provenance » : une ligne courte par source, sans doublon,
 « Brewtarget 5.2.3 · licence GPL-3.0 · relevé le 8 novembre 2026 » ou « DIY Dog · licence DIY
-Dog (usage privé) · relevé le 8 novembre 2026 », et le lien « Sources des données », qui
+Dog (usage privé) · relevé le 8 novembre 2026 » ou « Fiches des fabricants · données publiées
+par le fabricant · relevé le 14 novembre 2026 », et le lien « Sources des données », qui
 donne le fichier et le commit. Le texte de la fiche est sélectionnable.
 
 **Arômes d'un houblon** (ADR-013). Sur la fiche d'un houblon seulement, une section
@@ -1893,6 +1895,11 @@ s'affiche sans réseau.
   `https://creativecommons.org/licenses/by-sa/4.0/` en texte et le bouton « Lire la licence
   CC BY-SA 4.0 », qui l'ouvre hors de l'application. Si le système refuse : « Impossible
   d'ouvrir le lien. Il reste sélectionnable sur cette page. », et l'échec est journalisé.
+- Fiches des fabricants : levures et bactéries de Fermentis, noms, type, forme, atténuation et
+  températures recopiés des fiches techniques publiées par le fabricant, relevées le 14 novembre
+  2026 ; données publiées en accès libre par le fabricant ; ces valeurs remplacent celles de
+  Brewtarget pour les mêmes levures ; la floculation n'y figure pas ; textes des fiches non
+  repris.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
 - srm2hex : « Teintes de la page « Échelle des couleurs » et de la barre de couleur d'un style :

@@ -6,7 +6,18 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.63 — technique
+### v0.1.64 — fonctionnel
+
+Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
+Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
+houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
+
+### v0.1.64 — technique
+
+`_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
+jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
+insécable avant « · » pour couper la ligne après le point médian. Tests ajoutés
+dans `brew_day_screen_test.dart` et `deroule_d4_test.dart`.
 
 P15 accepte `noreply@anthropic.com`, l'adresse des sessions Claude Code, comme l'adresse
 `noreply` de GitHub, pour les commits et les tags (décision de l'utilisateur du 2026-11-15).
@@ -14,18 +25,43 @@ Aucune des deux ne désigne une personne. `session-start.sh` n'avertit plus pour
 Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte à recoller sur
 claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
 
+Ces deux changements avaient été numérotés v0.1.62 et v0.1.63 sur leur branche, numéros pris
+entre-temps par la branche principale : ils sont renumérotés en v0.1.64.
+
+### v0.1.63 — technique
+
+Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
+l'utilisateur) : le fichier BeerJSON 2.01 des 25 cultures Fermentis, relevé le 2026-11-14 et
+écrit à la main, entre dans le dépôt sous `exchange/donnees/fabricants/cultures.json`.
+`bin/preparer_referentiels.dart` le lit par défaut (option `--fabricants` pour un autre
+chemin) : l'administrateur n'a plus à le copier dans `import/sources/`. Le fichier ne contient
+que noms et valeurs techniques ; il n'est ni un asset ni servi par Hosting.
+`exchange/test/fabricants_donnees_test.dart` le lit : 25 entrées, aucun rejet, les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 écartées. `DATA_SOURCES.md` (exception à « aucun
+fichier de ces sources dans le dépôt », SHA-256 du fichier), ADR-005, `exigences-techniques.md`,
+« Structure » de `CLAUDE.md` et `guide-reseau.md` mis à jour.
+
 ### v0.1.62 — fonctionnel
 
-Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
-Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
-houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
+La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le
+référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf
+absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et
+LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant.
+« Sources des données » nomme cette nouvelle source.
 
 ### v0.1.62 — technique
 
-`_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
-jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
-insécable avant « · » pour couper la ligne après le point médian. Tests ajoutés
-dans `brew_day_screen_test.dart` et `deroule_d4_test.dart`.
+ADR-005, amendement du 2026-11-14 : source `fabricants` de l'ingestion, fichier BeerJSON 2.01
+écrit à la main (`import/sources/fabricants/cultures.json`, hors dépôt), lu par
+`lireFabricants` d'`exchange/` et exigé par `bin/preparer_referentiels.dart`. Rang 0 : elle
+passe avant 005, et les rangs des autres sources montent d'un. Une souche déjà connue de
+Brewtarget garde l'identifiant de son document (`ingest/ecrire.mjs` n'efface rien). Licence
+`Données publiées par le fabricant`, version et date du relevé `2026-11-14`, acceptées par
+`ingest/lib/validation.mjs`. L'application affiche « Fiches des fabricants ». Les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 dépassent la borne de 100 % : écartées et
+comptées au rapport. Admin › Sources nomme la source « Fiches des fabricants » dans
+« Sources lues » (`libelleSourceExecution`) et dans son introduction. `DATA_SOURCES.md`,
+`exigences-techniques.md` et `exigences-fonctionnelles.md` mis à jour.
 
 ### v0.1.61 — fonctionnel
 

@@ -235,6 +235,7 @@ void main() {
         libelleSourceExecution('brewtarget-005'),
         'Brewtarget, fichier 005',
       );
+      expect(libelleSourceExecution('fabricants'), 'Fiches des fabricants');
       expect(libelleSourceExecution('diydog'), 'DIY Dog');
       expect(libelleSourceExecution('kaggle'), 'kaggle');
     });
@@ -782,6 +783,8 @@ void main() {
       app.sources.pageError = Exception('refus');
       final more = find.text(AdminSourcesScreen.chargerSuite);
       await tester.scrollUntilVisible(more, 300, scrollable: _liste);
+      await tester.ensureVisible(more);
+      await tester.pumpAndSettle();
       await tester.tap(more);
       await tester.pumpAndSettle();
       expect(app.sources.pages, hasLength(2));

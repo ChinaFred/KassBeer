@@ -1,6 +1,7 @@
 import 'cles.dart';
 import 'fusions.dart';
 import 'lecture_sources.dart';
+import 'sources.dart';
 
 /// Fusion des entrées des sources en documents de référentiel, et recherche
 /// d'un nom (spécification de L3 : « Identifiants » ; `DATA_SOURCES.md`,
@@ -196,7 +197,11 @@ class Referentiel {
   /// Une culture qui porte un producteur et une référence se regroupe d'abord
   /// avec celles de même producteur et de même référence : c'est la même
   /// souche, quel que soit le nom écrit (`SafAle S-04` et `SafAle English
-  /// Ale`). Son identifiant prend le nom de l'entrée la plus prioritaire.
+  /// Ale`). Son identifiant prend le nom de l'entrée la plus prioritaire,
+  /// hors fiches des fabricants : une souche déjà connue de Brewtarget garde
+  /// l'identifiant de son document, et `ingest/ecrire.mjs`, qui n'efface
+  /// rien, ne laisse pas d'ancien document à côté du nouveau. Une souche que
+  /// seule une fiche connaît prend l'identifiant de la fiche.
   factory Referentiel.fusionner(
     List<EntreeBrute> entrees, {
     List<Fusion> fusions = const [],
@@ -230,6 +235,12 @@ class Referentiel {
       return rang != 0 ? rang : a.$1.compareTo(b.$1);
     }
 
+    int ordreIdentifiant((int, EntreeBrute) a, (int, EntreeBrute) b) {
+      final fa = a.$2.source == Source.fabricants ? 1 : 0;
+      final fb = b.$2.source == Source.fabricants ? 1 : 0;
+      return fa != fb ? fa.compareTo(fb) : ordre(a, b);
+    }
+
     final souches = <String, List<(int, EntreeBrute)>>{};
     for (var i = 0; i < entrees.length; i++) {
       final cle = _cleSouche(entrees[i]);
@@ -237,7 +248,7 @@ class Referentiel {
     }
     final idSouche = <String, String>{};
     for (final MapEntry(:key, :value) in souches.entries) {
-      idSouche[key] = idDe((value..sort(ordre)).first.$2);
+      idSouche[key] = idDe((value..sort(ordreIdentifiant)).first.$2);
     }
     final groupes = <String, List<(int, EntreeBrute)>>{};
     for (var i = 0; i < entrees.length; i++) {

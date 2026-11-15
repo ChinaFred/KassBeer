@@ -38,6 +38,13 @@ class DataSourcesScreen extends ConsumerWidget {
       'beer-analytics.com, sous licence CC BY-SA 4.0. Modifications : unités '
       'normalisées, origines ramenées à une liste de pays, doublons fusionnés '
       'et renommés.';
+  static const fabricants =
+      'Levures et bactéries de Fermentis : noms, type, forme, atténuation et '
+      'températures recopiés des fiches techniques publiées par le fabricant, '
+      'relevées le 14 novembre 2026. Données publiées en accès libre par le '
+      'fabricant. Ces valeurs remplacent celles de Brewtarget pour les mêmes '
+      'levures. La floculation n\'y figure pas. Les textes des fiches ne sont '
+      'pas repris.';
   static const diyDog =
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '
       'pour un usage privé (version e6c12ab de leur transcription).';
@@ -135,6 +142,8 @@ class DataSourcesScreen extends ConsumerWidget {
                   label: const Text('Lire la licence CC BY-SA 4.0'),
                 ),
               ),
+              const TitreSection('Fiches des fabricants'),
+              paragraphe(fabricants),
               const TitreSection('DIY Dog'),
               paragraphe(diyDog),
               const TitreSection('srm2hex'),
