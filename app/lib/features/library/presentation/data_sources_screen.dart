@@ -41,7 +41,7 @@ class DataSourcesScreen extends ConsumerWidget {
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '
       'pour un usage privé (version e6c12ab de leur transcription).';
   static const srm2hex =
-      'Teintes de la page « Couleurs EBC » et de la barre de couleur d\'un '
+      'Teintes de la page « Échelle des couleurs » et de la barre de couleur d\'un '
       'style : 400 teintes reprises de la bibliothèque libre srm2hex, version '
       '1.0.2, sous licence MIT. Seule la table des teintes est reprise. La '
       'bibliothèque ne porte aucune mention de copyright ; voici le texte de '

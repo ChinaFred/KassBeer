@@ -148,6 +148,75 @@ void main() {
     });
   });
 
+  group('pastille d\'un malt', () {
+    void seedMalt(TestApp app, Map<String, dynamic> doc) =>
+        app.library.fiches['pils'] = DocumentTrouve(
+          FicheReferentiel.fromFirestore(
+            NatureReferentiel.fermentables,
+            'pils',
+            doc,
+          ),
+        );
+
+    testWidgets('teinte de la couleur du malt, devant la valeur', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await open(
+        tester,
+        '/bibliotheque/malts/pils',
+        before: (app) => seedMalt(app, {
+          'name': 'Pils',
+          'color': {'value': 8, 'unit': 'EBC'},
+        }),
+      );
+      expect(find.text(formatEbc(8)), findsOneWidget);
+      final carre = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(PastilleEbc),
+          matching: find.byType(Container),
+        ),
+      );
+      expect(
+        (carre.decoration! as BoxDecoration).color,
+        couleurTeinte(teinteEbc(8)),
+      );
+      // Un seul nœud lu : libellé et valeur, sans la pastille.
+      expect(
+        find.bySemanticsLabel(
+          RegExp('^Couleur\\s+${RegExp.escape(formatEbc(8))}\$'),
+        ),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('sans couleur : pas de pastille', (tester) async {
+      await open(
+        tester,
+        '/bibliotheque/malts/pils',
+        before: (app) => seedMalt(app, {'name': 'Pils'}),
+      );
+      expect(find.byType(PastilleEbc), findsNothing);
+    });
+
+    testWidgets('couleur négative : pas de pastille, un seul rapport', (
+      tester,
+    ) async {
+      final errors = RecordingErrorReportService();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [errorReportServiceProvider.overrideWithValue(errors)],
+          child: const MaterialApp(home: Scaffold(body: PastilleEbc(ebc: -1))),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(CarreTeinte), findsNothing);
+      expect(errors.reports, hasLength(1));
+      expect(errors.reports.single.feature, 'library.color_swatch');
+    });
+  });
+
   group('barre seule', () {
     Future<RecordingErrorReportService> pumpBarre(
       WidgetTester tester,
@@ -189,7 +258,7 @@ void main() {
     });
   });
 
-  group('page Couleurs EBC', () {
+  group('page Échelle des couleurs', () {
     testWidgets('téléphone : depuis la Bibliothèque, pas de 4 EBC, en EBC '
         'seulement', (tester) async {
       final app = await open(tester, '/bibliotheque');
@@ -208,7 +277,10 @@ void main() {
       expect(find.text(formatEbc(76)), findsOneWidget);
       expect(find.textContaining('SRM'), findsNothing);
       final pastille = tester.widget<Container>(
-        find.byKey(const ValueKey('pastille 79${nbsp}EBC et plus')),
+        find.descendant(
+          of: find.byKey(const ValueKey('pastille 79${nbsp}EBC et plus')),
+          matching: find.byType(Container),
+        ),
       );
       final decoration = pastille.decoration! as BoxDecoration;
       expect(decoration.color, couleurTeinte(teinteEbc(teinteEbcLimite)));
@@ -216,7 +288,7 @@ void main() {
         (decoration.border! as Border).top.color,
         Theme.of(
           tester.element(find.byType(CouleursEbcScreen)),
-        ).colorScheme.outlineVariant,
+        ).colorScheme.outline,
       );
       // Aucune lecture de la Bibliothèque pour cette page.
       expect(app.library.ficheReads, isEmpty);
