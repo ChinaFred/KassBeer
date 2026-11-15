@@ -6,6 +6,30 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.73 — fonctionnel
+
+La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures
+sèches (Pinnacle, Dried Lutra), Brettanomyces, kveiks et deux bactéries qui acidifient la
+bière. Type, atténuation, plage
+de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles
+de l'ancienne base pour les 75 cultures déjà connues. 29 cultures absentes jusqu'ici
+apparaissent, dont les variantes « + » et les levures sèches. L'écran « Sources des
+données » nomme Omega Yeast et la date du relevé. Les cultures arrivent dans la Bibliothèque
+quand l'administrateur relance l'ingestion.
+
+### v0.1.73 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 104 cultures Omega Yeast relevées le 2026-11-15
+sur `omegayeast.com`, règles dans l'en-tête : référence OYL du titre ou de la page, cinq
+Pinnacle sans référence (identifiant tiré du nom), `type` d'après « Strain Type » puis kveik,
+blé, `mixed-culture` (C2C), `lacto`, `pedio`, `other` (*Lachancea*), températures en °F.
+`kDatesReleveFabricants` reçoit `omega-yeast`. Préparation rejouée sur les sources du
+2026-11-08 : 75 fiches rejoignent leur document Brewtarget, 29 en créent un (903 documents
+`beer_cultures`), aucun autre document changé. Les variantes « + » rendent ambigus cinq noms
+de plus (`kolsch-ii`, `german-lager-i`, `bayern-lager`, `point-loma`, `extra-special`),
+résolus par la souche. `fabricants_donnees_test.dart` : 200 entrées, types et champs absents
+d'Omega. `DATA_SOURCES.md`, ADR-005, exigences et écran « Sources des données » à jour.
+
 ### v0.1.72 — fonctionnel
 
 Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à
