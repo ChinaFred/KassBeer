@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.64 — fonctionnel
+### v0.1.65 — fonctionnel
 
 Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
 commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
@@ -16,7 +16,7 @@ un message « Étape « Ébullition » commencée. » s'affiche dix secondes ave
 appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son
 action, comme celui qui annule un début ou une fin d'étape.
 
-### v0.1.64 — technique
+### v0.1.65 — technique
 
 `brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
 de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
@@ -29,6 +29,14 @@ plan et supprime `startEventId` de l'étape commencée et `endEventId` de la pr�
 est déjà terminée ou sautée. Tests de `brew_day_screen_test.dart` adaptés, quatre cas ajoutés
 (dernière étape, suivante de 0 min, « Annuler », « Annuler » après la fin).
 
+### v0.1.64 — technique
+
+ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par
+hop-columbus, hop-ctz », 3 noms partagés). Le fichier 003 de Brewtarget porte `CTZ`,
+`Tomahawk` et `Zeus` en documents à part. La ligne `Columbus` de `kFusions` les absorbe
+(`EntreeDesignee` du 003) au lieu de les ajouter en alias ; leurs noms restent des alias de
+`hop-columbus`. Cas ajoutés aux sources inventées de `fusions_test.dart`. Documents attendus en
+moins : 24 (466 → 442), `DATA_SOURCES.md` à jour.
 ### v0.1.63 — technique
 
 Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
