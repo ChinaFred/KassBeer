@@ -6,13 +6,13 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.64 — fonctionnel
+### v0.1.65 — fonctionnel
 
 Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
 Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
 houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
 
-### v0.1.64 — technique
+### v0.1.65 — technique
 
 `_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
 jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
@@ -26,8 +26,16 @@ Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte �
 claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
 
 Ces deux changements avaient été numérotés v0.1.62 et v0.1.63 sur leur branche, numéros pris
-entre-temps par la branche principale : ils sont renumérotés en v0.1.64.
+entre-temps par la branche principale, puis v0.1.64, pris aussi : ils sont renumérotés en v0.1.65.
 
+### v0.1.64 — technique
+
+ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par
+hop-columbus, hop-ctz », 3 noms partagés). Le fichier 003 de Brewtarget porte `CTZ`,
+`Tomahawk` et `Zeus` en documents à part. La ligne `Columbus` de `kFusions` les absorbe
+(`EntreeDesignee` du 003) au lieu de les ajouter en alias ; leurs noms restent des alias de
+`hop-columbus`. Cas ajoutés aux sources inventées de `fusions_test.dart`. Documents attendus en
+moins : 24 (466 → 442), `DATA_SOURCES.md` à jour.
 ### v0.1.63 — technique
 
 Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
