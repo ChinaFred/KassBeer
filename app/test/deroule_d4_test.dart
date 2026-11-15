@@ -495,6 +495,11 @@ void main() {
           debut('e1', derniere.key, debutCru),
         ],
       );
+      expect(
+        find.textContaining('Fin de la journée prévue vers '),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Fin du brassage prévue'), findsNothing);
       await tester.tap(
         find.widgetWithText(FilledButton, TextesJournee.terminer),
       );

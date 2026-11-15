@@ -6,6 +6,19 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.62 — fonctionnel
+
+Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
+Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
+houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
+
+### v0.1.62 — technique
+
+`_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
+jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
+insécable avant « · » pour couper la ligne après le point médian. Tests ajoutés
+dans `brew_day_screen_test.dart` et `deroule_d4_test.dart`.
+
 ### v0.1.61 — fonctionnel
 
 La Bibliothèque des houblons est plus propre. Un même houblon n'apparaît plus plusieurs fois
