@@ -48,6 +48,8 @@ class DataSourcesScreen extends ConsumerWidget {
   /// floculation.
   static const fabricantsLignes = [
     'Fermentis : fiches relevées le 14 novembre 2026, sans floculation.',
+    'Imperial Yeast : fiches relevées le 15 novembre 2026, floculation '
+        'comprise.',
     'Mangrove Jack\'s : fiches relevées le 15 novembre 2026, floculation '
         'comprise.',
   ];
