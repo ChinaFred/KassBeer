@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.70 — technique
+### v0.1.72 — technique
 
 ADR-015 (assistant de recette) et ADR-016 (socle IA) sont acceptés. L'utilisateur a tranché
 quinze questions, une par une. La règle « Aucune IA dans l'application » d'ADR-001 est
@@ -48,6 +48,54 @@ La procédure d'effacement RGPD couvre `ai_usage/` et `ai_quotas/`. La dépense 
 bornée à environ 31 $, poste ouvert à tous, sous la limite de 20 $ de la Console. ADR-015
 reçoit les décisions sur les écrans du lot A1 : icône « Assistant » dans la barre du haut,
 commutateur « Calculs / Assistant » de 840 à 1 279 px, champ « Efforts acceptés ».
+
+### v0.1.71 — fonctionnel
+
+La Bibliothèque reprend les fiches de 55 levures liquides d'Imperial Yeast : type, atténuation,
+plage de température et floculation, telles que le fabricant les publie. Ces valeurs remplacent
+celles de l'ancienne base pour les 36 levures déjà connues. 19 levures absentes jusqu'ici
+apparaissent, dont des lagers (Alpha, Kanpai, Lookr) et les Liquid Brick. L'écran « Sources
+des données » nomme Imperial Yeast et la date du relevé. Les levures arrivent dans la
+Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.71 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 55 cultures Imperial Yeast relevées le
+2026-11-15 sur `www.imperialyeast.com` (aucun `robots.txt`), règles dans l'en-tête :
+températures en °F de la fiche, converties par le lecteur ; floculation `low-medium` →
+`medium low`, `medium-high` → `medium high`, `very-high` → `very high` ; `type` d'après la
+catégorie (kveik pour A37, A43, A44, A46 ; `wheat` pour G01). A40, W01 et W04 (cidre, vin)
+non reprises. `kDatesReleveFabricants` reçoit `imperial-yeast`. Préparation rejouée sur les
+sources du 2026-11-08 : 36 fiches rejoignent leur document Brewtarget, 19 en créent un
+(874 documents `beer_cultures`), aucun autre document changé. `fabricants_donnees_test.dart` :
+96 entrées, conversion des °F et floculation d'Imperial. `DATA_SOURCES.md`, ADR-005,
+`exigences-techniques.md`, `exigences-fonctionnelles.md` et l'écran « Sources des données »
+à jour.
+
+### v0.1.70 — fonctionnel
+
+La Bibliothèque reprend les fiches des 16 levures de bière sèches de Mangrove Jack's : type,
+atténuation, plage de température et floculation, telles que le fabricant les publie. Ces
+valeurs remplacent celles de l'ancienne base pour les mêmes levures. La M24 Versa Lager, absente
+jusqu'ici, apparaît. L'écran « Sources des données » nomme Mangrove Jack's et la date du relevé.
+Les levures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.70 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 16 cultures Mangrove Jack's relevées le
+2026-11-15 sur `mangrovejacks.com` (collection « Beer Yeasts »), avec leurs règles dans
+l'en-tête : `type` sans espèce sur la fiche (haute → `ale`, basse → `lager`, bière de blé →
+`wheat`, M12 → `kveik`), floculation reprise, M76 sans atténuation, °C gardés quand les °F de
+M20 et M44 ne correspondent pas. Chaque fabricant a sa date de relevé :
+`kDatesReleveFabricants` (`sources.dart`) remplace `kDateReleveFabricants`, `provenance[]`
+prend la date du producteur de la fiche, une fiche d'un producteur sans date est refusée, et la
+version de la source `fabricants` au rapport est le relevé le plus récent. Les 25 fiches
+Fermentis gardent `2026-11-14`. Préparation rejouée sur les sources du 2026-11-08 : 15 fiches
+rejoignent leur document Brewtarget, M24 crée `culture-mangrove-jack-s-m24-versa-lager`
+(855 documents `beer_cultures`), aucun autre document changé. `fabricants_donnees_test.dart` :
+41 entrées, dates par producteur, floculation ; `ingestion_test.dart` : version au rapport et
+refus d'un producteur sans date. `DATA_SOURCES.md`, `exigences-techniques.md`,
+`exigences-fonctionnelles.md` et l'écran « Sources des données » à jour.
 
 ### v0.1.69 — fonctionnel
 

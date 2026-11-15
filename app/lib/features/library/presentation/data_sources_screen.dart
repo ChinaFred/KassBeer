@@ -39,12 +39,20 @@ class DataSourcesScreen extends ConsumerWidget {
       'normalisées, origines ramenées à une liste de pays, doublons fusionnés '
       'et renommés.';
   static const fabricants =
-      'Levures et bactéries de Fermentis : noms, type, forme, atténuation et '
-      'températures recopiés des fiches techniques publiées par le fabricant, '
-      'relevées le 14 novembre 2026. Données publiées en accès libre par le '
-      'fabricant. Ces valeurs remplacent celles de Brewtarget pour les mêmes '
-      'levures. La floculation n\'y figure pas. Les textes des fiches ne sont '
-      'pas repris.';
+      'Levures et bactéries : noms, type, forme, atténuation et températures '
+      'recopiés des fiches techniques que chaque fabricant publie en accès '
+      'libre. Ces valeurs remplacent celles de Brewtarget pour les mêmes '
+      'levures. Les textes des fiches ne sont pas repris.';
+
+  /// Une ligne par fabricant, dans l'ordre alphabétique : date du relevé et
+  /// floculation.
+  static const fabricantsLignes = [
+    'Fermentis : fiches relevées le 14 novembre 2026, sans floculation.',
+    'Imperial Yeast : fiches relevées le 15 novembre 2026, floculation '
+        'comprise.',
+    'Mangrove Jack\'s : fiches relevées le 15 novembre 2026, floculation '
+        'comprise.',
+  ];
   static const diyDog =
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '
       'pour un usage privé (version e6c12ab de leur transcription).';
@@ -144,6 +152,7 @@ class DataSourcesScreen extends ConsumerWidget {
               ),
               const TitreSection('Fiches des fabricants'),
               paragraphe(fabricants),
+              for (final ligne in fabricantsLignes) paragraphe(ligne),
               const TitreSection('DIY Dog'),
               paragraphe(diyDog),
               const TitreSection('srm2hex'),

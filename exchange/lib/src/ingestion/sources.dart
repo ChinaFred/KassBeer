@@ -12,9 +12,25 @@ const kVersionDiyDog = 'e6c12ab';
 /// Date du relevé des sources de Brewtarget et de DIY Dog.
 const kDateReleve = '2026-11-08';
 
-/// Date du relevé des fiches techniques des fabricants
-/// (`exchange/donnees/fabricants/cultures.json`), qui tient lieu de version.
-const kDateReleveFabricants = '2026-11-14';
+/// Date du relevé des fiches techniques de chaque fabricant
+/// (`exchange/donnees/fabricants/cultures.json`), par clé de producteur
+/// (`cleProducteur`). Elle tient lieu de version dans `provenance[]`. Une
+/// entrée d'un producteur absent de cette table est refusée.
+const Map<String, String> kDatesReleveFabricants = {
+  'fermentis': '2026-11-14',
+  'mangrove-jack-s': '2026-11-15',
+  'imperial-yeast': '2026-11-15',
+};
+
+/// Date du relevé le plus récent de [dates] : version de la source
+/// `fabricants` au rapport ; `null` si [dates] est vide.
+String? dernierReleve(Map<String, String> dates) {
+  String? dernier;
+  for (final d in dates.values) {
+    if (dernier == null || d.compareTo(dernier) > 0) dernier = d;
+  }
+  return dernier;
+}
 
 /// Licences écrites dans `provenance[].licence`.
 abstract final class Licence {
@@ -84,29 +100,39 @@ enum Source {
   /// Fichier ou dossier de la source, sous son dossier dans `import/sources/`.
   final String fichier;
 
-  /// Version figée de la source.
-  String get version => switch (this) {
+  /// Version figée de la source ; pour les fiches des fabricants, date du
+  /// relevé le plus récent de [datesFabricants], et [StateError] si la table
+  /// est vide.
+  String version([
+    Map<String, String> datesFabricants = kDatesReleveFabricants,
+  ]) => switch (this) {
     diydog => kVersionDiyDog,
-    fabricants => kDateReleveFabricants,
+    fabricants =>
+      dernierReleve(datesFabricants) ??
+          (throw StateError('aucune date de relevé des fabricants')),
     _ => kVersionBrewtarget,
   };
-
-  /// Date du relevé de la source.
-  String get releve => this == fabricants ? kDateReleveFabricants : kDateReleve;
 }
 
-/// Ligne de `provenance[]`.
+/// Ligne de `provenance[]`. [releveFabricant] : date du relevé de la fiche,
+/// obligatoire pour [Source.fabricants], qui la prend pour version.
 Map<String, Object> provenance(
   Source source,
   String sourceId,
-  String licence,
-) => {
-  'source': source.id,
-  'source_id': sourceId,
-  'version': source.version,
-  'licence': licence,
-  'retrieved': source.releve,
-};
+  String licence, {
+  String? releveFabricant,
+}) {
+  if (source == Source.fabricants && releveFabricant == null) {
+    throw ArgumentError.notNull('releveFabricant');
+  }
+  return {
+    'source': source.id,
+    'source_id': sourceId,
+    'version': releveFabricant ?? source.version(),
+    'licence': licence,
+    'retrieved': releveFabricant ?? kDateReleve,
+  };
+}
 
 /// Licence d'une entrée du fichier 005 selon son `folder_path` : The Swaen,
 /// la Canadian Homebrewers Association et les exemples dotBeer (agents de

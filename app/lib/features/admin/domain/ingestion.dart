@@ -23,8 +23,8 @@ class SourceExecution {
   /// `brewtarget-001` à `brewtarget-005`, `fabricants`, `diydog`.
   final String source;
 
-  /// `v5.2.3 ea10908`, `e6c12ab`, ou la date du relevé des fiches des
-  /// fabricants (`2026-11-14`).
+  /// `v5.2.3 ea10908`, `e6c12ab`, ou la date du relevé le plus récent des
+  /// fiches des fabricants (`2026-11-15`).
   final String version;
 }
 

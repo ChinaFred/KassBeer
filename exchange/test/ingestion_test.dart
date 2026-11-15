@@ -31,6 +31,10 @@ const _alias = [
 
 const _ajouts = ['Fruit Inconnu', 'Jus Fictif'];
 
+/// Dates de relevé inventées : `Labo Fictif` pour la fixture des fiches, et
+/// un second producteur pour la version de la source (relevé le plus récent).
+const _datesFiches = {'labo-fictif': '2026-11-01', 'autre': '2026-11-03'};
+
 SourcesBrutes _sources() {
   String texte(String f) => File('$_dossier/brewtarget/$f').readAsStringSync();
   return SourcesBrutes(
@@ -686,6 +690,7 @@ void main() {
         alias: _alias,
         ajoutsDansHoublons: _ajouts,
         fusions: const [],
+        datesReleveFabricants: _datesFiches,
       );
     });
 
@@ -706,9 +711,9 @@ void main() {
       expect(provenance.first, {
         'source': 'fabricants',
         'source_id': 'labo-fictif-lf1',
-        'version': kDateReleveFabricants,
+        'version': '2026-11-01',
         'licence': Licence.fabricant,
-        'retrieved': kDateReleveFabricants,
+        'retrieved': '2026-11-01',
       });
       expect(provenance, hasLength(3));
     });
@@ -731,6 +736,22 @@ void main() {
         ),
         isNotEmpty,
       );
+    });
+
+    test('version des fiches : relevé le plus récent', () {
+      final sources = p.rapport['sources']! as List;
+      expect(sources.first, {'source': 'fabricants', 'version': '2026-11-03'});
+    });
+
+    test('producteur sans date de relevé : entrée refusée', () {
+      final lecture = LectureReferentiels(datesReleveFabricants: const {})
+        ..lireFabricants(
+          File('$_dossier/fabricants/cultures.json').readAsStringSync(),
+        );
+      expect(lecture.entrees, isEmpty);
+      expect(lecture.rejets.map((r) => r.raison).toSet(), {
+        'date du relevé inconnue',
+      });
     });
 
     test('liste autre que cultures ignorée et comptée', () {
