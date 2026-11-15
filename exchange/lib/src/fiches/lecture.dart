@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import 'package:brewing/brewing.dart' show CostUnit, FeeBasis;
+import 'package:brewing/brewing.dart'
+    show CostUnit, FeeBasis, theoreticalStarts;
 
 import '../analyse.dart';
 import '../compte_rendu.dart';
@@ -8,7 +9,8 @@ import '../empreinte.dart';
 import '../texte.dart';
 import 'modele.dart';
 
-/// Lecture du format `kassbeer_fiches` v1 (v0.6, FO1 à FO7) : un fichier JSON
+/// Lecture du format `kassbeer_fiches` v2 (v0.6, FO1 à FO7 ; heures estimées
+/// depuis la v0.1.69) : un fichier JSON
 /// dont la racine porte `beerjson` (les recettes, lues par [analyserFichier]
 /// comme dans Recettes › Importer) et `kassbeer_fiches` (chronologies,
 /// mesures, relevés, embouteillage, prix et écarts des fiches Excel).
@@ -18,10 +20,11 @@ import 'modele.dart';
 /// le chemin du premier champ en cause ; les autres fiches restent lisibles.
 /// Aucun refus ne porte une valeur du fichier, donc aucun prix. Rien n'est
 /// écrit, rien ne part sur le réseau, et aucun `catch` : l'application et la
-/// préparation (`bin/verifier_fiches.dart`) lisent avec ce même code.
+/// préparation (`bin/verifier_fiches.dart`) lisent avec ce même code. Une
+/// heure estimée (`time_source: estimee`) est calculée ici par `brewing/`.
 
 /// Version du format lue.
-const int kVersionFormatFiches = 1;
+const int kVersionFormatFiches = 2;
 
 /// Date la plus ancienne d'une fiche : 1er janvier 2015 (FO4).
 final DateTime kDebutDesFiches = DateTime.utc(2015);
@@ -478,9 +481,8 @@ class _Lecteur {
     }
     _controlerRecette();
     final etapes = _etapes(f['brew_steps']);
-    final cles = {for (final e in etapes) e.key};
     final brassin = _brassin(f['brew']);
-    final evenements = _evenements(f['events'], cles);
+    final evenements = _evenements(f['events'], etapes, brassin.startAt);
     final retenues = _retenues(f['retained'], evenements);
     final cout = _cout(f['cost']);
     final corrections = _corrections(f['corrections']);
@@ -635,9 +637,15 @@ class _Lecteur {
     );
   }
 
-  List<EvenementFiche> _evenements(Object? valeur, Set<String> cles) {
-    final evenements = <EvenementFiche>[];
+  List<EvenementFiche> _evenements(
+    Object? valeur,
+    List<EtapeFiche> etapes,
+    DateTime debutPrevu,
+  ) {
+    final cles = {for (final e in etapes) e.key};
+    final lus = <_EvenementLu>[];
     final vus = <String>{};
+    final debuts = <String>{};
     for (final (i, brute) in _liste(
       valeur,
       'events',
@@ -658,7 +666,7 @@ class _Lecteur {
           'phase',
           'time_source',
         },
-        obligatoires: const {'id', 'kind', 'measured_at', 'time_source'},
+        obligatoires: const {'id', 'kind', 'time_source'},
       );
       if (e == null) return const [];
       final id = _id(e['id'], '$chemin.id', _cle);
@@ -689,6 +697,8 @@ class _Lecteur {
         case NatureEvenementFiche.debutEtape:
           if (stepKey == null) {
             _refuser('$chemin.step_key', CodeRefusFiche.champAbsent);
+          } else if (!_refusee && !debuts.add(stepKey)) {
+            _refuser('$chemin.step_key', CodeRefusFiche.debutEnDouble);
           }
           _sansMesure(e, chemin);
           if (fermentation) {
@@ -715,22 +725,115 @@ class _Lecteur {
           }
           _sansMesure(e, chemin);
       }
-      evenements.add(
-        EvenementFiche(
+      final origine = _parmi(
+        e['time_source'],
+        '$chemin.time_source',
+        OrigineHeure.values,
+        (o) => o.valeur,
+      );
+      // Date J+28 : relevé de mesure ou de note seulement, comme
+      // `date_estimated` dans `firestore.rules` (refusé sur un début d'étape).
+      if (origine == OrigineHeure.estimeeJ28 &&
+          nature == NatureEvenementFiche.debutEtape) {
+        _refuser('$chemin.time_source', CodeRefusFiche.horsBornes);
+      }
+      // `estimee` : heure calculée ci-dessous, jamais écrite dans le fichier ;
+      // les autres origines portent leur heure.
+      DateTime? heure;
+      if (origine == OrigineHeure.estimee) {
+        if (e['measured_at'] != null) {
+          _refuser('$chemin.measured_at', CodeRefusFiche.heureEnTrop);
+        }
+      } else if (e['measured_at'] == null) {
+        _refuser('$chemin.measured_at', CodeRefusFiche.champAbsent);
+      } else {
+        heure = _dateHeure(e['measured_at'], '$chemin.measured_at');
+      }
+      lus.add(
+        _EvenementLu(
           id: id,
           nature: nature,
           stepKey: stepKey,
           typeMesure: type,
           valeur: mesure,
           note: note,
-          measuredAt: _dateHeure(e['measured_at'], '$chemin.measured_at'),
+          measuredAt: heure,
           fermentation: fermentation,
-          origineHeure: _parmi(
-            e['time_source'],
-            '$chemin.time_source',
-            OrigineHeure.values,
-            (o) => o.valeur,
-          ),
+          origineHeure: origine,
+          chemin: chemin,
+        ),
+      );
+    }
+    if (_refusee) return const [];
+    return _dater(lus, etapes, debutPrevu);
+  }
+
+  /// Contrôle l'ordre des heures notées de début d'étape et calcule l'heure
+  /// des événements `estimee` : heure théorique de l'étape par
+  /// [theoreticalStarts] de `brewing/` (P3), ancrée sur le début prévu ; pour
+  /// une mesure ou une note d'étape, l'heure de début de son étape ; sans
+  /// étape, l'heure de l'événement précédent de la fiche (le début prévu pour
+  /// le premier).
+  List<EvenementFiche> _dater(
+    List<_EvenementLu> lus,
+    List<EtapeFiche> etapes,
+    DateTime debutPrevu,
+  ) {
+    final notees = <String, ({DateTime heure, String chemin})>{};
+    for (final e in lus) {
+      final heure = e.measuredAt;
+      if (e.nature == NatureEvenementFiche.debutEtape &&
+          e.origineHeure == OrigineHeure.fiche &&
+          heure != null) {
+        notees[e.stepKey!] = (heure: heure, chemin: e.chemin);
+      }
+    }
+    DateTime? precedente;
+    for (final etape in etapes) {
+      final notee = notees[etape.key];
+      if (notee == null) continue;
+      final avant = precedente;
+      if (avant != null && notee.heure.isBefore(avant)) {
+        _refuser('${notee.chemin}.measured_at', CodeRefusFiche.heuresHorsOrdre);
+        return const [];
+      }
+      precedente = notee.heure;
+    }
+    final theoriques = theoreticalStarts(
+      planned: [
+        for (final e in etapes) Duration(seconds: (e.durationMin * 60).round()),
+      ],
+      notedStarts: [for (final e in etapes) notees[e.key]?.heure],
+      anchor: debutPrevu,
+    );
+    final heureEtape = <String, DateTime>{
+      for (final (i, e) in etapes.indexed) e.key: theoriques[i]!,
+    };
+    for (final e in lus) {
+      final heure = e.measuredAt;
+      if (e.nature == NatureEvenementFiche.debutEtape && heure != null) {
+        heureEtape[e.stepKey!] = heure;
+      }
+    }
+    final evenements = <EvenementFiche>[];
+    DateTime? derniere;
+    for (final e in lus) {
+      final cle = e.stepKey;
+      final heure =
+          e.measuredAt ??
+          (cle != null ? heureEtape[cle]! : derniere ?? debutPrevu);
+      derniere = heure;
+      evenements.add(
+        EvenementFiche(
+          id: e.id,
+          nature: e.nature,
+          stepKey: cle,
+          typeMesure: e.typeMesure,
+          valeur: e.valeur,
+          note: e.note,
+          measuredAt: heure,
+          fermentation: e.fermentation,
+          origineHeure: e.origineHeure,
         ),
       );
     }
@@ -920,4 +1023,35 @@ class _Lecteur {
     }
     return List.unmodifiable(corrections);
   }
+}
+
+/// Événement lu, avant le calcul des heures estimées.
+class _EvenementLu {
+  const _EvenementLu({
+    required this.id,
+    required this.nature,
+    required this.stepKey,
+    required this.typeMesure,
+    required this.valeur,
+    required this.note,
+    required this.measuredAt,
+    required this.fermentation,
+    required this.origineHeure,
+    required this.chemin,
+  });
+
+  final String id;
+  final NatureEvenementFiche nature;
+  final String? stepKey;
+  final TypeMesureFiche? typeMesure;
+  final double? valeur;
+  final String? note;
+
+  /// Heure du fichier ; nulle pour [OrigineHeure.estimee].
+  final DateTime? measuredAt;
+  final bool fermentation;
+  final OrigineHeure origineHeure;
+
+  /// Chemin de l'événement dans la fiche, pour un refus.
+  final String chemin;
 }

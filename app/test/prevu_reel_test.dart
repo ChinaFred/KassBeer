@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/brew_day/domain/plan_du_jour.dart';
+import 'package:kass_beer/features/brew_day/presentation/chronologie_jour.dart';
 import 'package:kass_beer/features/brews/domain/assemblage_deroule.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
@@ -21,6 +22,8 @@ import 'package:kass_beer/features/brews/domain/mise_a_jour_processus.dart';
 import 'package:kass_beer/features/brews/presentation/choix_processus.dart';
 import 'package:kass_beer/features/brews/presentation/libelles_deroule.dart';
 import 'package:kass_beer/features/brews/presentation/maj_processus.dart';
+import 'package:kass_beer/features/brews/presentation/prevu_et_mesure.dart';
+import 'package:kass_beer/features/brews/presentation/releve_fermentation.dart';
 import 'package:kass_beer/features/brews/presentation/section_deroule.dart';
 import 'package:kass_beer/features/processes/domain/modele_exemple.dart';
 import 'package:kass_beer/features/processes/domain/modele_processus.dart';
@@ -286,12 +289,112 @@ void main() {
       );
       expect(
         lisible(etapeDe(ActualStepKind.missingEnd, 45)!.affiche),
-        'prévu 45 min · réel sans heure de fin',
+        'prévu 45 min · réel inconnu',
       );
+      final estimee = etapeDe(ActualStepKind.estimated, 60)!;
+      expect(lisible(estimee.affiche), 'prévu 1 h 00 · réel inconnu');
+      expect(lisible(estimee.lu), 'prévu 1 h 00, durée réelle inconnue');
+      // Étape non notée d'un brassin importé : prévu seul.
+      final nonNotee = dureeEtapeReelle(
+        const ActualStepDuration(kind: ActualStepKind.none, plannedMinutes: 15),
+        StepStatus.notDone,
+        nonNotee: true,
+      )!;
+      expect(lisible(nonNotee.affiche), 'prévu 15 min');
       expect(etapeDe(ActualStepKind.action, 0), isNull);
       // Seuls nombre et unité sont soudés : la ligne se coupe entre les mots.
       final affiche = etapeDe(ActualStepKind.missingEnd, 45)!.affiche;
-      expect(affiche, 'prévu 45${nbsp}min · réel sans heure de fin');
+      expect(affiche, 'prévu 45${nbsp}min · réel inconnu');
+    });
+
+    test('date d\'une saisie : notée, estimée, sans heure, date estimée, lue '
+        'dans les champs et jamais d\'après 12:00', () {
+      BrewEvent e({
+        bool heure = false,
+        bool date = false,
+        PhaseEvenement? phase,
+        DateTime? at,
+      }) => BrewEvent(
+        id: 'x',
+        ownerUid: 'u',
+        kind: BrewEventKind.measurement,
+        measureType: MeasureType.gravity,
+        value: 1.05,
+        measuredAt: at ?? DateTime(2026, 11, 15, 12, 10),
+        phase: phase,
+        timeEstimated: heure,
+        dateEstimated: date,
+      );
+      const f = PhaseEvenement.fermentation;
+      final midi = DateTime(2026, 11, 15, 12);
+      expect(e().natureHeure, NatureHeure.notee);
+      expect(e(at: midi, phase: f).natureHeure, NatureHeure.notee);
+      expect(e(heure: true).natureHeure, NatureHeure.estimee);
+      expect(e(heure: true, phase: f).natureHeure, NatureHeure.nonNotee);
+      expect(
+        e(heure: true, date: true, phase: f).natureHeure,
+        NatureHeure.dateEstimee,
+      );
+      // Relevé de fermentation (liste et info-bulle de la courbe).
+      expect(dateDeReleve(e(at: midi, phase: f)).affiche, 'dim. 15 nov. 12:00');
+      expect(
+        dateDeReleve(e(heure: true, at: midi, phase: f)).affiche,
+        'dim. 15 nov. · heure non notée',
+      );
+      expect(
+        dateDeReleve(e(heure: true, date: true, at: midi, phase: f)).affiche,
+        'dim. 15 nov. · date estimée',
+      );
+      expect(
+        dateDeReleve(e(heure: true, date: true, at: midi, phase: f)).lu,
+        'Dimanche 15 novembre, date estimée',
+      );
+      // Prévu et mesuré.
+      expect(lisible(dateDeMesure(e()).affiche), '15 nov. 12:10');
+      expect(
+        lisible(dateDeMesure(e(heure: true)).affiche),
+        '15 nov. 12:10 (estimée)',
+      );
+      expect(
+        dateDeMesure(e(heure: true)).lu,
+        'Dimanche 15 novembre vers 12 h 10, heure estimée',
+      );
+      expect(
+        lisible(dateDeMesure(e(heure: true, date: true, phase: f)).affiche),
+        '15 nov. (date estimée)',
+      );
+      expect(
+        lisible(dateDeMesure(e(heure: true, phase: f)).affiche),
+        '15 nov. (heure non notée)',
+      );
+      // Une saisie estimée s'affiche « vers ».
+      expect(libelleSaisie(e(heure: true)), startsWith('vers 12:10 · '));
+      expect(libelleSaisie(e()), startsWith('12:10 · '));
+    });
+
+    test('état affiché : en cours devient terminée dans une journée close', () {
+      expect(statutAffiche(StepStatus.running, close: true), StepStatus.done);
+      expect(
+        statutAffiche(StepStatus.running, close: false),
+        StepStatus.running,
+      );
+      expect(
+        statutAffiche(StepStatus.notDone, close: true),
+        StepStatus.notDone,
+      );
+    });
+
+    test('écart de début : en mots, sans signe, absent à zéro', () {
+      final retard = ecartDeDebut(25)!;
+      expect(lisible(retard.affiche), 'Début : 25 min de retard');
+      expect(retard.affiche, 'Début$nbsp: 25${nbsp}min de retard');
+      expect(lisible(retard.lu), 'début 25 minutes en retard');
+      final avance = ecartDeDebut(-5)!;
+      expect(lisible(avance.affiche), "Début : 5 min d'avance");
+      expect(lisible(avance.lu), 'début 5 minutes en avance');
+      expect(lisible(ecartDeDebut(75)!.affiche), 'Début : 1 h 15 de retard');
+      expect(ecartDeDebut(0), isNull);
+      expect(ecartDeDebut(null), isNull);
     });
 
     test('journée : réel, attentes, en cours, sans fin, jamais commencée', () {
@@ -299,13 +402,13 @@ void main() {
         ActualDayKind kind, {
         int? reel,
         int? entre,
-        int sansFin = 0,
+        int sansHeure = 0,
       }) => ActualDayDuration(
         kind: kind,
         plannedMinutes: 370,
         actualMinutes: reel,
         betweenStepsMinutes: entre,
-        stepsWithoutEnd: sansFin,
+        stepsWithoutTime: sansHeure,
         steps: const [],
       );
       final reel = dureeJourneeReelle(
@@ -340,18 +443,22 @@ void main() {
         'Durée totale : prévu 6 h 10 · réel en cours',
       );
       expect(
-        lisible(
-          dureeJourneeReelle(
-            jour(ActualDayKind.missingEnd, sansFin: 1),
-          )!.affiche,
-        ),
-        'Durée totale : prévu 6 h 10 · réel inconnu : 1 étape sans heure de '
-        'fin',
+        lisible(dureeJourneeReelle(jour(ActualDayKind.endNotNoted))!.affiche),
+        'Durée totale : prévu 6 h 10 · réel inconnu : fin non notée',
       );
       expect(
-        dureeJourneeReelle(jour(ActualDayKind.missingEnd, sansFin: 2))!.affiche,
-        contains('2 étapes'),
+        lisible(dureeJourneeReelle(jour(ActualDayKind.startNotNoted))!.lu),
+        'Durée totale : prévue 6 h 10, réelle inconnue : début non noté.',
       );
+      final partielle = dureeJourneeReelle(
+        jour(ActualDayKind.partial, reel: 412, sansHeure: 3),
+      )!;
+      expect(
+        lisible(partielle.affiche),
+        'Durée totale : prévu 6 h 10 · réel 6 h 52 · +42 min · 3 étapes sans '
+        'heure notée',
+      );
+      expect(partielle.affiche, isNot(contains('entre les étapes')));
       expect(dureeJourneeReelle(jour(ActualDayKind.none)), isNull);
     });
   });
@@ -613,12 +720,115 @@ void main() {
       expect(
         find.bySemanticsLabel(
           RegExp(
-            'Mise en place du matériel, Terminée, .*prévu.30.min, '
+            'Mise en place du matériel, terminée, .*prévu.30.min, '
             'réel.42.min, 12 minutes de plus',
           ),
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('brassin importé : heure notée, estimée, non notée, écart de '
+        'début', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final estime = BrewEvent(
+        id: 'e3',
+        ownerUid: 'uid-brasseur',
+        kind: BrewEventKind.started,
+        stepKey: etape(2),
+        measuredAt: h(8, 50),
+        timeEstimated: true,
+      );
+      Brew importe(String? marque) => unBrassin(
+        status: BrewStatus.done,
+        brewedAt: brasse,
+        recipe: recetteAvecCru,
+        process: deroule,
+        importedFrom: marque,
+      );
+      final events = [
+        debut('e1', etape(0), h(8, 0)),
+        estime,
+        debut('e4', etape(3), h(9, 45)),
+      ];
+      await ouvrir(
+        tester,
+        brew: importe('Fiche Excel · essai · sha256:abc'),
+        events: events,
+      );
+      await ouvrirDeroule(tester);
+      final noms = [for (final l in brassage.lignes) l.name];
+      // Début noté, étape suivante absente : réel inconnu, aucun écart de début.
+      expect(texte('Terminée · prévu 30 min · réel inconnu'), findsOneWidget);
+      // Étape absente de la fiche : « Non notée », heure théorique dérivée.
+      expect(texte('Non notée · prévu 20 min'), findsOneWidget);
+      expect(texte('vers 08:30'), findsOneWidget);
+      expect(find.byIcon(Icons.help_outline), findsOneWidget);
+      // Début estimé à l'import.
+      expect(texte('vers 08:50'), findsOneWidget);
+      expect(
+        texte('Terminée · heure estimée · prévu 40 min · réel inconnu'),
+        findsOneWidget,
+      );
+      // Début noté après les autres : retard accumulé depuis 08:00.
+      expect(texte('Début : 15 min de retard'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            '^${RegExp.escape(noms[1])}, non notée sur la fiche, heure prévue '
+            'vers 8 h 30, prévu.20.min\$',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            '^${RegExp.escape(noms[2])}, terminée, heure estimée vers 8 h 50, '
+            'prévu.40.min, durée réelle inconnue\$',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            // Dernière étape commencée, sans fin, journée close : « Terminée ».
+            '^${RegExp.escape(noms[3])}, terminée, commencée à 9 h 45, .*'
+            'début 15 minutes en retard\$',
+          ),
+        ),
+        findsOneWidget,
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('brassin de l\'application : étape non faite inchangée', (
+      tester,
+    ) async {
+      await ouvrir(
+        tester,
+        brew: unBrassin(
+          status: BrewStatus.done,
+          brewedAt: brasse,
+          recipe: recetteAvecCru,
+          process: deroule,
+        ),
+        events: [
+          debut('e1', etape(0), h(8, 0)),
+          fin('f1', etape(0), h(8, 30)),
+          debut('e3', etape(2), h(8, 35)),
+          fin('f3', etape(2), h(9, 15)),
+        ],
+      );
+      await ouvrirDeroule(tester);
+      expect(texte('Non faite · prévu 20 min · réel —'), findsOneWidget);
+      expect(find.textContaining('Non notée'), findsNothing);
+      expect(find.byIcon(Icons.help_outline), findsNothing);
+      // Fin de la mise en place à 08:30, chauffe commencée 15 min avant son
+      // plan d'origine (08:00 + 30 + 20).
+      expect(texte('08:00 → 08:30'), findsOneWidget);
+      expect(texte("Début : 15 min d'avance"), findsOneWidget);
     });
 
     testWidgets('étape sans fin après le brassage : journée sans réel', (
@@ -633,15 +843,13 @@ void main() {
         ],
       );
       await ouvrirDeroule(tester);
+      // Journée close : l'étape restée en cours s'affiche terminée, sans fond
+      // ni icône de lecture.
+      expect(texte('Terminée · prévu 20 min · réel inconnu'), findsOneWidget);
+      expect(find.textContaining('En cours'), findsNothing);
+      expect(find.byIcon(Icons.play_circle_outline), findsNothing);
       expect(
-        texte('En cours · prévu 20 min · réel sans heure de fin'),
-        findsOneWidget,
-      );
-      expect(
-        texte(
-          'Durée totale : prévu 6 h 00 · réel inconnu : 1 étape sans heure '
-          'de fin',
-        ),
+        texte('Durée totale : prévu 6 h 00 · réel inconnu : fin non notée'),
         findsOneWidget,
       );
     });
@@ -666,9 +874,7 @@ void main() {
       bool lettre(String c) =>
           RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(c);
       for (final attendu in [
-        'En cours · prévu 20 min · réel sans heure de fin',
-        'Durée totale : prévu 6 h 00 · réel inconnu : 1 étape sans heure de '
-            'fin',
+        'Durée totale : prévu 6 h 00 · réel inconnu : fin non notée',
       ]) {
         final finder = texte(attendu);
         await tester.ensureVisible(finder);

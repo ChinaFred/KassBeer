@@ -81,13 +81,16 @@ bool _rapport(List<RecetteDuFichier> recettes, List<FicheDuFichier> fiches) {
         .where((e) => e.nature == NatureEvenementFiche.debutEtape)
         .length;
     final releves = f.evenements.where((e) => e.fermentation).length;
-    final estimees = f.evenements
+    final notees = f.evenements.where((e) => !e.heureEstimee).length;
+    final estimees = f.evenements.where((e) => e.heureEstimee).length;
+    final j28 = f.evenements
         .where((e) => e.origineHeure == OrigineHeure.estimeeJ28)
         .length;
     stdout.writeln(
       '  ${f.ficheId} : ${f.etapes.length} étapes, '
-      '${f.evenements.length} événements ($debuts heures réelles, '
-      '$releves relevés, $estimees datés J+28), '
+      '${f.evenements.length} événements ($debuts débuts d\'étape, '
+      '$notees heures notées, $estimees heures estimées dont $j28 datées '
+      'J+28, $releves relevés), '
       '${f.cout == null ? 'sans coût' : '${f.cout!.prix.length} prix et ${f.cout!.frais.length} frais'}, '
       '${f.corrections.length} corrections, ${f.deductions.length} déductions, '
       '${f.divergences.length} divergences, ${f.nonImporte.length} non importés.',
@@ -109,7 +112,8 @@ String _raisonFichier(RaisonFichierFiches raison) => switch (raison) {
   RaisonFichierFiches.tropGros => 'plus de 10 Mo',
   RaisonFichierFiches.pasUnFichierDeFiches =>
     'ni `beerjson` ni `kassbeer_fiches` lisibles, ou champ inconnu à la racine',
-  RaisonFichierFiches.versionInconnue => 'format_version autre que 1',
+  RaisonFichierFiches.versionInconnue =>
+    'format_version autre que 2 (un fichier v1 est à préparer de nouveau)',
   RaisonFichierFiches.tropDeFiches => 'plus de $kMaxFiches fiches',
   RaisonFichierFiches.identifiantEnDouble => 'fiche_id en double',
 };
@@ -121,6 +125,11 @@ String _code(RefusFiche refus) => switch (refus.code) {
   CodeRefusFiche.horsBornes => 'valeur hors bornes',
   CodeRefusFiche.formatInvalide => 'format invalide',
   CodeRefusFiche.enDouble => 'en double',
+  CodeRefusFiche.debutEnDouble => 'deux débuts pour la même étape',
+  CodeRefusFiche.heuresHorsOrdre =>
+    'heure notée antérieure au début d\'une étape précédente',
+  CodeRefusFiche.heureEnTrop =>
+    'measured_at écrit sur un événement estimee (heure calculée à la lecture)',
   CodeRefusFiche.etapeInconnue => 'step_key absente de brew_steps',
   CodeRefusFiche.evenementInconnu => 'ne désigne aucun événement du bon type',
   CodeRefusFiche.adresseWeb => 'adresse web',

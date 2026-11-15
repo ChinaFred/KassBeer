@@ -501,47 +501,67 @@ l'utilisateur pendant la préparation ; l'application n'en fait aucune.
    · 490 heures et mesures · 8 coûts figés » et les comptes par état sans les zéros (« 14
    nouvelles · 1 à compléter · 1 refusée »). Une ligne par fiche : case, « Ale blonde · 14
    juil. 2024 », identifiant de la fiche, étiquette d'état, points à revoir (« 3 divergences
-   · 2 heures reprises »), détail dépliable. États : « Nouvelle » et « À compléter » (« Import
-   commencé et non terminé : seul ce qui manque sera écrit. »), cochées ; « Déjà importée » ;
-   « Déjà importée, contenu différent » (« Le fichier a changé depuis l'import. Pour remplacer
-   cette fiche, supprimez son brassin et sa recette, puis importez de nouveau. ») ;
-   « Refusée : {raison} », avec le champ en cause (par exemple « montant dans un texte lu
-   par le groupe (brew.notes). » : un prix ne va que dans le coût figé). Seules les deux
-   premières se cochent. Le lecteur d'écran lit la ligne d'un bloc, explication de l'état
+   · 2 heures estimées »), détail dépliable. États : « Nouvelle » et « À compléter » (« Import
+   commencé et non terminé : seul ce qui manque sera écrit. »), cochées ; « Remplacement à
+   terminer » (étiquette au ton tertiaire, « Remplacement commencé et non terminé : l'import le
+   terminera. »), cochée ; « Déjà importée » ; « Déjà importée, contenu différent » (« Le
+   fichier a changé depuis l'import. »), non cochable, avec en dessous une case de 48 px au
+   moins, non cochée, « Remplacer ce brassin » ; « Refusée : {raison} », avec le champ en cause
+   (par exemple « montant dans un texte lu par le groupe (brew.notes). » : un prix ne va que
+   dans le coût figé). Le lecteur d'écran lit la ligne d'un bloc, explication de l'état
    comprise : « Ale blonde, 14 juillet 2024, à compléter, 3 points à revoir, Import commencé
-   et non terminé : seul ce qui manque sera écrit. ». Le détail liste, sans rubrique vide :
+   et non terminé : seul ce qui manque sera écrit. », « …, déjà importée, contenu différent,
+   Le fichier a changé depuis l'import. » puis « Remplacer ce brassin, non cochée ». Le détail
+   liste, sans rubrique vide :
    nom en double (« Une de vos recettes s'appelle déjà « Ale blonde ». »), « À compléter dans
    la recette », « Divergences », « Corrections validées », « Valeurs déduites » (dont unités
    converties, durées arrondies, moments et style simplifiés, textes coupés à la lecture de la
-   recette), « Reprises de la Bibliothèque », « Heures reprises » (dont « Relevé sans date :
-   daté de 28 jours après le brassage. »), « Non importé » (dont parties de la recette non
+   recette), « Reprises de la Bibliothèque », « Heures estimées » (« Aucune heure notée :
+   brassage daté de l'heure de début prévue. », « Heure non notée : estimée d'après la
+   chronologie (3). », « Relevé sans heure : daté de 12:00 (2). », « Relevé sans date : daté de
+   28 jours après le brassage. »), « Non importé » (dont parties de la recette non
    importées et valeurs rejetées), « Coût » (« Coût figé : 49,04 € », « Coût non figé : prix
    manquant pour Houblon Saaz. Vous pourrez le figer depuis le brassin. », « Écart avec la
    fiche : … dans la fiche, … recalculé. »). Hors ligne, « Choisir un autre fichier »
    disparaît.
-4. **Barre du bas.** « Importer N fiches » ; sans case cochée, « Cochez au moins une
-   fiche. » ; quand rien n'est cochable, « Toutes les fiches de ce fichier sont déjà
-   importées. Rien à écrire. » à la place du bouton ; hors ligne, « Import impossible hors
-   ligne. Reconnectez-vous pour importer les fiches cochées. ». Le second import d'un même
-   fichier n'écrit donc rien.
+4. **Barre du bas.** « Importer N fiches » (remplacements compris) ; remplacements seuls,
+   « Remplacer N fiches » ; sans case cochée, « Cochez au moins une fiche. » ; rien de
+   nouveau mais des fiches au contenu différent, « Rien de nouveau à importer. Cochez
+   « Remplacer » pour réécrire une fiche modifiée. » ; quand rien n'est cochable ni
+   remplaçable, « Toutes les fiches de ce fichier sont déjà importées. Rien à écrire. » à la
+   place du bouton ; hors ligne, « Import impossible hors ligne. Reconnectez-vous pour
+   importer les fiches cochées. ». Le second import d'un même fichier n'écrit donc rien.
 5. **Confirmation.** « Importer 16 fiches ? » / « 16 brassins et 15 recettes seront écrits
    sous votre compte. Ils seront visibles du groupe. Les coûts restent privés. » (une fiche :
    « 1 brassin sera écrit sous votre compte. Il sera visible du groupe. … »), boutons
-   « Annuler » et « Importer ». Une recette déjà enregistrée n'entre pas dans le compte.
-6. **Écriture.** « Fiche 4 sur 16 · Ale blonde », barre de progression et « 212 écritures sur
-   610 », ce dernier texte absent tant que le total n'est pas connu ; annonce au lecteur
+   « Annuler » et « Importer ». Une recette déjà enregistrée n'entre pas dans le compte. Avec
+   des remplacements : « Importer 14 fiches et en remplacer 2 ? » / « 14 brassins et 13
+   recettes seront écrits sous votre compte. 2 brassins seront remplacés. Leurs étapes, leurs
+   mesures et leurs coûts figés seront supprimés puis écrits de nouveau. Les heures corrigées
+   depuis l'import seront perdues. Ils seront visibles du groupe. Les coûts restent
+   privés. », boutons « Annuler » et « Importer et remplacer » ; remplacements seuls :
+   « Remplacer 16 brassins ? » / « 16 brassins seront remplacés. Leurs étapes, leurs mesures
+   et leurs coûts figés seront supprimés puis écrits de nouveau. Les heures corrigées depuis
+   l'import seront perdues. », boutons « Annuler » et « Remplacer ». Une fiche « Remplacement
+   à terminer » compte parmi les remplacements.
+6. **Écriture.** « Fiche 4 sur 16 · Ale blonde » (« · remplacement » pour une fiche
+   remplacée), barre de progression et « 212 écritures sur 610 » (suppressions comprises), ce
+   dernier texte absent tant que le total n'est pas connu ; annonce au lecteur
    d'écran une fois par fiche. Quitter demande « Arrêter l'import ? » / « La fiche en cours
    sera reprise au prochain import du même fichier. », boutons « Continuer l'import » et
    « Arrêter ». Une écriture sans accusé du serveur en 30 s, ou la perte de la connexion,
    arrête l'import.
-7. **Compte rendu.** « Import terminé · 16 créées · 0 ignorées · 0 en erreur », annoncé au
-   lecteur d'écran sans montant ; après une perte de connexion ou un accusé absent, le titre
+7. **Compte rendu.** « Import terminé · 16 créées · 0 ignorées · 0 en erreur » (« Import
+   terminé · 12 créées · 2 remplacées · 2 ignorées · 0 en erreur » avec des remplacements),
+   annoncé au lecteur d'écran sans montant ; après une perte de connexion ou un accusé absent, le titre
    et l'annonce disent « Import arrêté · 4 créées · 11 ignorées · 1 en erreur », suivis de
    « Connexion perdue. Import arrêté à la fiche 5 sur 16. Reconnectez-vous puis choisissez de
    nouveau le fichier : les fiches commencées seront reprises. ». Sections « Fiches à revoir » (rubriques du détail),
-   « Ignorées » (« Non cochée », « Déjà importée », « Refusée : … », « Non traitée : import
-   arrêté ») et « En erreur » (« Ale blonde (2024-07-14-ale-blonde) — événements, lot 3 :
-   écriture refusée. Relancez l'import du même fichier pour reprendre. »). Une fiche en
+   « Supprimés » (« Ale blonde (2024-07-14-ale-blonde) : 34 heures et mesures, 1 coût
+   figé »), « Ignorées » (« Non cochée », « Non cochée : contenu différent », « Déjà
+   importée », « Refusée : … », « Non traitée : import arrêté ») et « En erreur » (« Ale blonde
+   (2024-07-14-ale-blonde) — événements, lot 3 : écriture refusée. Relancez l'import du même
+   fichier pour reprendre. », « … — suppression, lot 2 : écriture refusée. … »). Une fiche en
    erreur est passée, les suivantes continuent. Boutons « Voir les brassins » et « Revenir
    à l'administration ». Le compte rendu se relit en choisissant de nouveau le fichier.
 
@@ -553,7 +573,25 @@ Excel) » ou « Brew in bag (fiches Excel) ») et donc une densité prévue « �
 ses heures réelles (débuts d'étape), mesures, relevés de fermentation, nombre de bouteilles,
 volume conditionné et nature du sucre de resucrage ; le coût figé de la fiche quand tous
 ses prix sont connus (voir « Coût »). Rien n'est écrit dans « Mes prix » ni dans « Mes
-frais ». Une recette ou un brassin déjà présent à l'identifiant prévu n'est pas réécrit.
+frais ». Une recette ou un brassin déjà présent à l'identifiant prévu n'est pas réécrit, sauf
+remplacement demandé.
+
+**Heures d'une fiche importée.** Une étape dont la fiche note l'heure reçoit cette heure. Une
+étape citée sans heure (avec une mesure) reçoit son heure théorique, marquée estimée : dernière
+heure notée avant elle, plus la durée prévue de chaque étape entre les deux ; sans heure notée
+avant, l'heure de début prévue de la fiche. Une mesure sans heure prend l'heure de son étape,
+ou celle de la ligne précédente de la fiche. Une étape absente de la fiche n'a aucune heure
+écrite : la fiche du brassin affiche son heure théorique, calculée à l'affichage. Le brassage
+est daté du début de la première étape, noté ou estimé.
+
+**Remplacer une fiche.** Cocher « Remplacer ce brassin » sur une fiche « Déjà importée,
+contenu différent » la réécrit, réseau exigé : le brassin est marqué « remplacement », ses
+heures et mesures sont supprimées par lots, puis le brassin et son coût figé ensemble, puis
+la fiche est écrite comme une fiche nouvelle (coût figé recalculé avec les prix de la fiche,
+au jour du brassage). La recette est toujours gardée ; le brassin reçoit sa copie figée depuis
+le fichier. Une coupure laisse la fiche « Remplacement à terminer », cochée au prochain
+import, qui termine sans doublon. Une fiche dont un document appartient à un autre compte reste
+« Refusée », rien n'est supprimé.
 
 
 ### Admin › Rapports d'erreur
@@ -2088,28 +2126,49 @@ annonce « Journée « Houblonnage à cru » passée. », hors ligne « Journée
 passée sur l'appareil. Elle partira au retour du réseau. ». La journée d'embouteillage ne le
 propose pas : « Embouteiller sans suivre la journée » en tient lieu.
 
-**Prévu et réel** (Déroulé de la fiche, tous les lecteurs). Dès qu'une étape d'une journée a un
-début et une fin, la journée passe en prévu et réel. La deuxième ligne de chaque étape devient
-« Terminée · prévu 45 min · réel 57 min · +12 min » (écart « −5 min », « 0 min », « +1 h 15 » au-delà
-d'une heure ; lu « 12 minutes de plus », « 5 minutes de moins », « sans écart »). Étape sautée
-ou non faite : « prévu 45 min · réel — » (lu « pas de durée réelle ») ; à venir : « À venir · prévu
-45 min » (lu « prévu 45 min ») ; en cours :
-« réel en cours » ; commencée sans fin, ou restée en cours après la fin de la journée (brassage
-terminé, journée terminée, brassin terminé ou abandonné) : « réel sans heure de fin ». Une
-action de 0 min garde « Action ». La durée réelle d'une étape va de son premier début à sa
-dernière fin retenue, arrondie à la minute la plus proche ; le prévu s'arrondit de même. Une
-ligne « Durée totale : prévu 6 h 10 · réel 6 h 52, dont 32 min entre les étapes · +42 min » se place
-sous le titre de la journée de brassage, et en tête du pli des journées suivantes (le résumé du pli
-ne change pas). Le réel de la journée va du premier début à la dernière fin ; « dont … entre les
-étapes » (écoulé moins la somme des réels des étapes) n'apparaît qu'à partir d'une minute. Étape
-en cours : « réel en cours » ; étape sans fin : « réel inconnu : 1 étape sans heure de fin ». Lu :
-« Durée totale : prévue 6 h 10, réelle 6 h 52 dont 32 minutes entre les étapes, 42 minutes de plus
-que prévu. ». Aucune couleur : l'écart se lit au signe. Seuls le nombre et son unité (« 45 min »,
-« 6 h 10 ») et l'espace avant « : » sont insécables : à 200 % sur un téléphone, la ligne se coupe
-entre les mots, jamais au milieu d'un mot. Une journée jamais commencée garde son
-affichage. Le prévu de la journée compte les étapes sautées. L'écran du jour et l'écran d'une
-journée après le brassage ne changent pas. Un brassin sans processus (ancien, importé) montre
-aussi ses durées quand ses étapes ont des heures.
+**Prévu et réel** (Déroulé de la fiche, écran du jour et écran d'une journée après le brassage,
+tous les lecteurs). Seule une heure notée compte : une heure estimée à l'import d'une fiche date
+l'étape, sans réel ni écart. La fin d'une étape est l'heure de « Terminer », sinon le début noté de
+l'étape suivante (étapes sautées passées). Chaque étape porte sur sa deuxième ligne :
+« Terminée · prévu 45 min · réel 57 min · +12 min » (écart « −5 min », « 0 min », « +1 h 15 »
+au-delà d'une heure ; lu « 12 minutes de plus », « 5 minutes de moins », « sans écart »), et la
+colonne d'heure « 12:10 → 12:57 » (lu « de 12 h 10 à 12 h 57 »), ou « 12:10 » sans fin (lu
+« commencée à 12 h 10 »). Étape sautée ou non faite : « prévu 45 min · réel — » (lu « pas de durée
+réelle ») ; à venir : « 13:30 · À venir · prévu 60 min », sans « vers » ; en cours : « réel en
+cours » ; début noté sans fin retenue, ou début estimé : « réel inconnu » (lu « durée réelle
+inconnue »). Dans une journée terminée, une étape restée en cours s'affiche « Terminée · prévu
+45 min · réel inconnu », sans fond ni icône de lecture (lu « terminée »). Une action de 0 min garde
+« Action ». Durées arrondies à la minute la plus proche.
+
+Début estimé : « vers 13:02 », « Terminée · heure estimée · prévu 60 min · réel inconnu » (lu
+« Ébullition, terminée, heure estimée vers 13 h 02, prévu 60 min, durée réelle inconnue. ») ;
+action : « Terminée · heure estimée · Action ». Sur un brassin importé d'une fiche (marque
+« Fiche Excel »), une étape sans début est « Non notée » (au lieu de « Non faite »), icône point
+d'interrogation en couleur atténuée, à son heure théorique « vers 12:57 », « Non notée · prévu
+15 min » ou « Non notée · Action » (lu « Rinçage des drêches, non notée sur la fiche, heure prévue
+vers 12 h 57, prévu 15 min. »). Une étape non faite d'un brassin de l'application reste « Non
+faite ». Une mesure à heure estimée s'affiche « vers 12:10 · 67,5 °C ».
+
+Écart de début : une troisième ligne « Début : 25 min de retard » ou « Début : 5 min d'avance »,
+en mots, sans signe ni couleur (lu « début 25 minutes en retard »), pour une étape au début noté.
+Il compare au plan d'origine : premier début noté de la journée, plus la durée prévue de chaque
+étape avant elle ; le retard s'accumule. Absente à 0 min, donc jamais sur la première étape. Sur
+grand écran (largeur « étendue »), elle rejoint la deuxième ligne après « · ».
+
+Une ligne « Durée totale : prévu 6 h 10 · réel 6 h 52, dont 32 min entre les étapes · +42 min » se
+place sous le titre de la journée de brassage, et en tête du pli des journées suivantes (le résumé
+du pli ne change pas). Le réel de la journée va du premier début noté à la dernière fin ; « dont …
+entre les étapes » (écoulé moins la somme des réels des étapes) n'apparaît qu'à partir d'une
+minute. Étapes intermédiaires sans réel : « … · réel 6 h 52 · +42 min · 3 étapes sans heure
+notée », sans « dont … ». Étape en cours : « réel en cours » ; première étape à heure estimée :
+« réel inconnu : début non noté » ; dernière étape sans fin : « réel inconnu : fin non notée ».
+Lu : « Durée totale : prévue 6 h 10, réelle 6 h 52 dont 32 minutes entre les étapes, 42 minutes de
+plus que prévu. ». Aucune couleur : l'écart se lit au signe. Seuls le nombre et son unité
+(« 45 min », « 6 h 10 ») et l'espace avant « : » sont insécables : à 200 % sur un téléphone, la
+ligne se coupe entre les mots, jamais au milieu d'un mot. Une journée jamais commencée garde son
+affichage. Le prévu de la journée compte les étapes sautées. Un brassin sans processus (ancien,
+importé) montre aussi ses durées quand ses étapes ont des heures. Corriger l'heure d'une saisie
+estimée la rend notée.
 
 **Courbe du jour de brassage.** Elle se dérive à l'affichage, rien n'est lu ni écrit en plus.
 Elle porte sur la journée de brassage : celle du déroulé, ou celle tirée de la chronologie de la
@@ -2266,10 +2325,13 @@ de fermentation suffit. Sans date de brassage, seule la liste s'affiche.
   enregistrée est refusée. » et la liste reste lisible.
 
 Brassin importé d'une fiche sans relevé de fermentation : la densité finale de l'en-tête de la
-fiche devient un relevé, daté par la fiche, sinon du jour du brassage + 28 jours à 12:00, avec la
-note « Date estimée : jour du brassage + 28 jours. ». La date est fixée à la préparation du
-fichier ; l'application n'en calcule aucune. Ce relevé compte dans la densité finale retenue.
-Les relevés des fiches, qui n'ont pas d'heure, sont datés de 12:00.
+fiche devient un relevé, daté par la fiche, sinon du jour du brassage + 28 jours à 12:00, marqué
+« date estimée » (« sam. 13 déc. · date estimée · J+28 », lu « Samedi 13 décembre, date
+estimée »). La date est fixée à la préparation du fichier ; l'application n'en calcule aucune.
+Ce relevé compte dans la densité finale retenue. Les relevés des fiches notés sans heure sont
+datés de 12:00 et marqués « heure non notée » (« sam. 15 nov. · heure non notée · J+5 »), dans
+la liste comme dans l'info-bulle de la courbe ; la marque est enregistrée avec le relevé, jamais
+déduite de l'heure 12:00.
 
 « Ajouter un relevé » (propriétaire, En fermentation ou En conditionnement) : « Densité »
 (0,980 à 1,200), « Température (°C) » (0 à 110), « Date et heure » (maintenant par défaut,
@@ -2344,6 +2406,8 @@ propriétaire choisit. Densité finale retenue : la dernière densité de fermen
 retenue comme densité initiale) ou celle choisie ; hors statut En fermentation, seuls comptent les
 relevés d'un jour au plus égal à celui de l'embouteillage. Chaque valeur affiche son origine
 (« Refroidissement · 8 nov. 15:20 · Dernière mesure », « Relevé J+12 · 20 nov. 18:30 · Choisie »,
+« Empâtage · 15 nov. 12:10 (estimée) · Dernière mesure » pour une heure estimée à l'import, lu
+« … vers 12 h 10, heure estimée », « Relevé J+28 · 13 déc. (date estimée) · Dernière mesure »,
 « Houblonnage à cru · Mesure de densité · 26 nov. 09:20 · Dernière mesure » pour une mesure prise
 sur une étape d'une journée après le brassage)
 et « Changer » (propriétaire), qui liste les mesures possibles et, si une mesure est retenue, « Dernière mesure (automatique) ».
@@ -2440,8 +2504,11 @@ avec la taille du texte, jusqu'à 30 % de la largeur. Un appui sur une ligne ouv
 « Ne plus sauter », « Corriger l'heure de début », « Corriger l'heure de fin » (l'heure choisie se place au jour le plus proche de la valeur corrigée, sans jamais être dans le futur : un début à 23:50 corrigé à 00:05 passe au lendemain, une fin notée à 08:00 corrigée à 18:00 revient à la veille ; une heure à venir se place à la veille si la veille reste après le début du brassage, sinon elle est refusée ; « La fin doit suivre le début. »), « Annuler le début » / « Annuler la fin » (SnackBar
 « Annuler » 10 s), « Saisir une mesure pour cette étape ». Une étape jamais commencée s'affiche
 « Non faite » dès qu'une étape plus loin a commencé ; marquée sautée, elle s'affiche « Sautée » ; dans les deux cas, elle reste démarrable.
-Étapes faites : heure réelle de début et de fin. À venir : heure attendue, recalculée à partir
-des heures réelles (un retard décale la suite). Commencer une étape alors qu'une autre tourne
+Étapes faites : heure réelle de début et de fin (fin retenue : « Terminer », sinon le début
+noté de l'étape suivante). À venir : heure attendue, recalculée à partir des heures réelles (un
+retard décale la suite). Chaque étape porte aussi son prévu et réel et son écart de début (voir
+« Prévu et réel » sur la fiche), heures estimées et étapes « Non notées » d'un brassin importé
+comprises ; tout se calcule sur l'appareil, sans réseau. Commencer une étape alors qu'une autre tourne
 demande « « {nom} » est en cours. », « Terminer et commencer » ; après des étapes non commencées,
 « Les sauter et commencer ». Un double appui n'écrit qu'un événement. Deux débuts pour une étape
 (deux appareils hors ligne) : le plus ancien compte, l'autre s'affiche « Début en double »,
