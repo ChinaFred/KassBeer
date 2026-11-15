@@ -1836,7 +1836,7 @@ recette ne lisent pas les arômes.
 
 **Descriptions aromatiques (administrateur, hors de l'application).** L'administrateur fait
 rédiger les textes par l'API Claude depuis son poste, puis les écrit dans la Bibliothèque par
-le script d'ingestion ; l'application n'appelle aucune IA. Ordre : un essai sur 10 houblons
+le script d'ingestion ; l'application n'appelle pas ce script. Ordre : un essai sur 10 houblons
 choisis, puis les houblons utilisés dans les recettes et les brassins du groupe, puis le
 reste. L'administrateur relit les textes des houblons du groupe avant leur écriture ; les
 autres paraissent « non relu ». Un houblon ajouté plus tard reçoit sa description par une
