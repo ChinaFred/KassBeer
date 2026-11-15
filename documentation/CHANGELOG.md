@@ -38,7 +38,9 @@ désignent désormais deux documents de producteurs différents (`cream-ale-blen
 `berliner-weisse-blend` et `french-saison`, déjà partagés, gagnent un document. Tests :
 `fusions_test.dart` (fixtures inventées, un cas par ligne de la table), `fabricants_donnees_test.dart` (537 entrées, chaque ligne de la table
 désigne une fiche). `DATA_SOURCES.md`, ADR-005, exigences et écran « Sources des données » à
-jour.
+jour. `CLAUDE.md`, P56 (décision de l'utilisateur) : pour les cultures, un nom normalisé ne
+désigne pas deux documents d'un même producteur ; un nom partagé entre deux producteurs reste
+permis et compté au rapport. `guide-reseau.md` à jour.
 
 ### v0.1.76 — fonctionnel
 
