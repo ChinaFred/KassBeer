@@ -697,6 +697,34 @@ void main() {
       );
     });
 
+    test('nom partagé par deux producteurs : deux documents, nom compté '
+        'dans nomsPartages', () {
+      final lecture =
+          LectureReferentiels(
+              datesReleveFabricants: const {
+                'labo-fictif': '2026-11-01',
+                'autre-labo': '2026-11-01',
+              },
+            )
+            ..lireFabricants(_texteFiches(const [('Souche Courte', 80)]))
+            ..lireFabricants(
+              _texteFiches(const [
+                ('Souche Courte', 70),
+              ], producteur: 'Autre Labo'),
+            );
+      final r = Referentiel.fusionner(lecture.entrees);
+      expect(r.parNature[NatureReferentiel.culture]!.keys, {
+        'culture-labo-fictif-souche-courte',
+        'culture-autre-labo-souche-courte',
+      });
+      expect(r.nomsPartages(NatureReferentiel.culture), {
+        'souche-courte': [
+          'culture-autre-labo-souche-courte',
+          'culture-labo-fictif-souche-courte',
+        ],
+      });
+    });
+
     test('cible Brewtarget qui porte une référence : StateError', () {
       // Avec la référence, l'identifiant de la cible est celui de sa souche
       // (`culture-labo-fictif-lf9-souche-courte-belge`) : la ligne créerait
@@ -834,6 +862,9 @@ void main() {
             reason: f.nom,
           );
         }
+        // P56, nature `culture` : la table ne laisse aucun nom normalisé
+        // partagé entre deux documents de ce référentiel.
+        expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
       },
     );
 

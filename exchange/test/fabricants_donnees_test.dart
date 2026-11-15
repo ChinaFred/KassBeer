@@ -107,6 +107,21 @@ void main() {
     },
   );
 
+  test(
+    'P56 : aucun nom normalisé porté par deux fiches d\'un même producteur',
+    () {
+      final parProducteur = <String, List<String>>{};
+      for (final e in lecture.entrees) {
+        parProducteur
+            .putIfAbsent(e.producteur!, () => [])
+            .add(cleNormalisee(e.nom));
+      }
+      for (final MapEntry(:key, :value) in parProducteur.entries) {
+        expect(value.toSet(), hasLength(value.length), reason: key);
+      }
+    },
+  );
+
   test('Omega : variantes « Plus », noms normalisés distincts', () {
     final noms = [
       for (final e in lecture.entrees)

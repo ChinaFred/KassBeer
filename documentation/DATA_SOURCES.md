@@ -437,6 +437,11 @@ même nom : `cream-ale-blend`, `lactobacillus-delbrueckii`, `northwest-ale`, `fr
 `granvin`, `midtbust`. Deux noms déjà partagés gagnent le document d'Escarpment :
 `berliner-weisse-blend` et `french-saison`. Un import
 qui ne donne que ce nom ne le résout plus ; le producteur ne départage pas un nom seul.
+Ces noms partagés entre deux producteurs sont permis (P56, décision de l'utilisateur du
+2026-11-15) et comptés dans `noms_partages.culture` du rapport (97 noms). Aucun nom ne désigne
+deux documents d'Escarpment. Dix-huit noms désignent deux documents d'un même producteur, tous
+antérieurs à cet ajout : doublons Brewtarget, dont les six de la Private Collection de Wyeast
+(section Wyeast).
 
 ## Correspondance DotBeer (fichier 005) → référentiels
 

@@ -40,7 +40,13 @@ désignent désormais deux documents de producteurs différents (`cream-ale-blen
 désigne une fiche). `DATA_SOURCES.md`, ADR-005, exigences et écran « Sources des données » à
 jour. `CLAUDE.md`, P56 (décision de l'utilisateur) : pour les cultures, un nom normalisé ne
 désigne pas deux documents d'un même producteur ; un nom partagé entre deux producteurs reste
-permis et compté au rapport. `guide-reseau.md` à jour.
+permis et compté au rapport. `guide-reseau.md` à jour. Tests de cette règle :
+`fabricants_donnees_test.dart` vérifie qu'aucune fiche ne partage son nom normalisé avec une
+fiche du même producteur ; `fusions_test.dart` vérifie qu'un nom porté par deux producteurs
+donne deux documents listés par `nomsPartages`, et que la table de fusion ne crée aucun nom
+partagé. La préparation rejouée compte 18 noms qui désignent deux documents d'un même
+producteur, tous antérieurs aux fiches Escarpment (doublons Brewtarget, dont six de la Private
+Collection de Wyeast) ; la préparation ne les refuse pas.
 
 ### v0.1.76 — fonctionnel
 
