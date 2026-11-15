@@ -2,6 +2,7 @@
 // Relevé du 2026-11-14 sur https://fermentis.com/en/product/<id sans « fermentis- »>/
 // Certaines adresses écrivent le trait d'union en U+2011 (safale-s‑04).
 // Fermentis : 23 levures et 2 bactéries de brassage, forme sèche.
+// name : nom de la fiche sans ™ (« SafAle US-05 ») ; product_id : référence (« US-05 »).
 // attenuation_range : « Apparent attenuation » de la fiche ; LA-01 : 15 % (valeur unique).
 // temperature_range : plage « ideally » de « Dosage / Temperature » ; BR-8 et F-2 :
 //   plage optimale ou d'usage ; LP 652 : 37 °C ± 3 ; LB 1 : 32 °C ± 5.
@@ -76,7 +77,7 @@
 //   description nomme plusieurs genres (Saccharomyces, Brettanomyces, Lactobacillus,
 //   Pediococcus, Lachancea) → mixed-culture, Brettanomyces seules → brett ; série 800 à 999
 //   et lagers nommées → lager ; Hefeweizen, Weizen, Wit, Grodziskie → wheat ; les autres →
-//   ale. WLP631 Appalachian Tart et WLP6420 Acid Tripp : espèce non dite, type absent.
+//   ale. WLP631 et WLP6420 : espèce non dite, type absent.
 {
   "beerjson": {
     "version": 2.01,
