@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Couleurs EBC » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -297,7 +297,7 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   « Autre écran » et « Je ne sais pas ». Les éléments d'Admin ne figurent que pour
   l'administrateur. Le suivi affiche « Brassin › Embouteillage ». Les confirmations (« Supprimer
   ? », « Abandonner les modifications ? ») et les sélecteurs de date et d'heure n'y figurent pas.
-  « Sources des données » et « Couleurs EBC », sans menu ni fenêtre, n'ont pas de champ
+  « Sources des données » et « Échelle des couleurs », sans menu ni fenêtre, n'ont pas de champ
   « Élément précis ».
 - « Capture » (ADR-008, T6). La capture de l'écran précédent n'existe que depuis le menu du
   compte. L'image du contenu de
@@ -1592,7 +1592,7 @@ l'administrateur ; personne ne les modifie dans l'application.
 `/bibliotheque` mène aux styles (`/bibliotheque/styles`). Six segments en puces :
 « Styles », « Malts et sucres », « Houblons », « Levures », « Divers », « Recettes
 publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). À droite des puces,
-« Échelle des couleurs » ouvre la page « Couleurs EBC » : une icône de palette sous 600 px
+« Échelle des couleurs » ouvre la page du même nom : une icône de palette sous 600 px
 (infobulle « Échelle des couleurs »), le texte avec l'icône au-delà. À toutes les largeurs,
 une icône d'information à droite des puces (infobulle « Sources des données ») ouvre
 « Sources des données ». Sous 600 px, les puces tiennent sur une ligne qui défile à
@@ -1635,6 +1635,9 @@ noms : … », puis :
   de l'écran. » et le lien « Échelle des couleurs ». Sans plage de couleur, ni barre ni
   mention. Une borne négative ou non finie masque la barre et l'erreur est journalisée ;
 - malt ou sucre : nom français, type, couleur, rendement d'extrait, producteur, origine ;
+  une pastille de 20 px de la teinte indicative précède la couleur en EBC, ignorée par le
+  lecteur d'écran ; une couleur refusée par le calcul de teinte masque la pastille et
+  l'erreur est journalisée ;
 - houblon : nom français, forme, acides alpha, acides bêta, usage (« Aromatique »,
   « Amérisant », « Aromatique et amérisant », « Double usage »), origine ;
 - levure : producteur, type, forme, atténuation et température de fermentation en plages,
@@ -1761,9 +1764,9 @@ porte « Hors ligne : liste lue sur l'appareil. Elle peut être incomplète. ».
 marche hors ligne, comme la création d'une recette. Le jour de brassage ne lit rien de la
 Bibliothèque.
 
-### Couleurs EBC
+### Échelle des couleurs
 
-Page « Couleurs EBC » (adresse `/bibliotheque/couleurs`, demandée par le ticket #48), ouverte
+Page « Échelle des couleurs » (adresse `/bibliotheque/couleurs`, demandée par le ticket #48), ouverte
 depuis l'en-tête de la Bibliothèque et depuis la fiche d'un style, pour tout membre. Plein
 écran, hors de la barre de navigation, flèche retour (vers l'écran d'origine ; ouverte par son
 adresse, vers la Bibliothèque). Elle ne lit rien dans Firestore : elle s'affiche hors ligne.
@@ -1771,7 +1774,7 @@ adresse, vers la Bibliothèque). Elle ne lit rien dans Firestore : elle s'affich
 En tête : « Teinte indicative : la couleur réelle dépend du verre, de la lumière et de
 l'écran. » Puis une valeur tous les 4 EBC, de « 0 EBC » à « 76 EBC », et « 79 EBC et plus »
 (limite de la table des teintes). Chaque valeur a une pastille de 40 × 40 px, bordée de la
-couleur `outlineVariant` du thème, et son libellé en EBC. Aucune valeur n'est donnée en SRM.
+couleur `outline` du thème (assez contrastée pour une teinte foncée sur un fond sombre), et son libellé en EBC. Aucune valeur n'est donnée en SRM.
 Sous 600 px, une ligne par valeur. À partir de 600 px, un dégradé continu de 0 à 79 EBC
 au-dessus (lu « Dégradé de 0 à 79 EBC et plus »), puis les valeurs en grille qui passe à la
 ligne ; la largeur d'une case suit l'échelle du texte. La page n'a ni chargement ni état
@@ -1799,7 +1802,7 @@ s'affiche sans réseau.
   d'ouvrir le lien. Il reste sélectionnable sur cette page. », et l'échec est journalisé.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
-- srm2hex : « Teintes de la page « Couleurs EBC » et de la barre de couleur d'un style :
+- srm2hex : « Teintes de la page « Échelle des couleurs » et de la barre de couleur d'un style :
   400 teintes reprises de la bibliothèque libre srm2hex, version 1.0.2, sous licence MIT.
   Seule la table des teintes est reprise. La bibliothèque ne porte aucune mention de
   copyright ; voici le texte de sa licence. », puis le texte d'autorisation de la licence MIT,
@@ -2749,7 +2752,9 @@ contient de montant.
 ### Calculs affichés
 
 La fiche et l'éditeur affichent cinq tuiles : « Densité initiale », « Densité finale »,
-« Degré », « Amertume », « Couleur ». Rien n'est enregistré : tout est recalculé à chaque
+« Degré », « Amertume », « Couleur ». Quand la couleur est calculée, une pastille de 24 px
+de sa teinte indicative précède la valeur en EBC (bordure `outline`, ignorée par le lecteur
+d'écran, qui lit « Couleur, 12 EBC »). Rien n'est enregistré : tout est recalculé à chaque
 affichage, avec l'équipement tel qu'il est au moment de l'affichage. Deux brasseurs voient les
 mêmes valeurs.
 

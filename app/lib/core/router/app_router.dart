@@ -250,7 +250,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.dataSources,
         builder: (_, _) => const DataSourcesScreen(),
       ),
-      // Couleurs EBC (ticket #48) : plein écran, hors de la coquille, ouvert
+      // Échelle des couleurs (ticket #48) : plein écran, hors de la coquille, ouvert
       // par `push` depuis la Bibliothèque et la fiche d'un style.
       GoRoute(
         path: AppRoutes.libraryColors,

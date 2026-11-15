@@ -43,7 +43,7 @@ const Map<String, String> kTicketScreenNames = {
   '/bibliotheque/divers/:id': 'Bibliothèque › Ajout divers',
   '/bibliotheque/recettes': 'Bibliothèque › Recettes publiques',
   '/bibliotheque/recettes/:id': 'Bibliothèque › Recette publique',
-  '/bibliotheque/couleurs': 'Bibliothèque › Couleurs EBC',
+  '/bibliotheque/couleurs': 'Bibliothèque › Échelle des couleurs',
   '/sources-des-donnees': 'Sources des données',
   '/brassins': 'Brassins',
   '/brassins/:id': 'Brassin',

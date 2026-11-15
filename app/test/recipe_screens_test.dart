@@ -4,6 +4,7 @@ import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/features/library/presentation/couleur_ebc.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
 import 'package:kass_beer/core/presentation/fiche.dart';
@@ -374,6 +375,12 @@ void main() {
       expect(find.text('À compléter'), findsNothing);
       expect(
         find.text('Pour 20 L · Grainfather (72 %) · US-05 78 %'),
+        findsOneWidget,
+      );
+      // Ticket #48 : pastille de teinte devant la couleur calculée, seule.
+      expect(find.byType(PastilleEbc), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp(r'^Couleur, [0-9,]+\u00a0EBC$')),
         findsOneWidget,
       );
     });

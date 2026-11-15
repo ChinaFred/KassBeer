@@ -13,14 +13,14 @@ const int kPasEchelleEbc = 4;
 /// Une valeur de l'échelle : libellé et teinte `0xRRGGBB`.
 typedef ValeurEchelle = ({String libelle, int teinte});
 
-/// Page « Couleurs EBC » : la teinte indicative de 0 EBC à la limite de la
+/// Page « Échelle des couleurs » : la teinte indicative de 0 EBC à la limite de la
 /// table, tous les [kPasEchelleEbc] EBC, puis « 79 EBC et plus ». Ouverte par
 /// `push` depuis la Bibliothèque et la fiche d'un style. Page statique : elle
 /// ne lit rien dans Firestore et s'affiche hors ligne.
 class CouleursEbcScreen extends StatelessWidget {
   const CouleursEbcScreen({super.key});
 
-  static const title = 'Couleurs EBC';
+  static const title = TextesCouleurEbc.echelle;
 
   /// Libellé de la dernière valeur : la limite de la table, arrondie.
   static String libelleLimite() =>
@@ -109,7 +109,7 @@ class _Echelle extends StatelessWidget {
   }
 }
 
-/// Pastille de 40 × 40 px bordée par `outlineVariant`, puis le libellé.
+/// Pastille de 40 × 40 px bordée par `outline`, puis le libellé.
 class _LigneTeinte extends StatelessWidget {
   const _LigneTeinte({required this.valeur});
 
@@ -120,17 +120,10 @@ class _LigneTeinte extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        ExcludeSemantics(
-          child: Container(
-            key: ValueKey('pastille ${valeur.libelle}'),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: couleurTeinte(valeur.teinte),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: theme.colorScheme.outlineVariant),
-            ),
-          ),
+        CarreTeinte(
+          key: ValueKey('pastille ${valeur.libelle}'),
+          teinte: valeur.teinte,
+          taille: 40,
         ),
         const SizedBox(width: 12),
         Expanded(child: Text(valeur.libelle, style: theme.textTheme.bodyLarge)),

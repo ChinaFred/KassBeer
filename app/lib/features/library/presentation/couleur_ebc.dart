@@ -10,7 +10,7 @@ import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../domain/referentiel.dart';
 
-/// Textes communs à la barre de couleur et à la page « Couleurs EBC ».
+/// Textes communs à la barre de couleur et à la page « Échelle des couleurs ».
 abstract final class TextesCouleurEbc {
   static const mention =
       'Teinte indicative : la couleur réelle dépend du verre, de la lumière '
@@ -45,8 +45,74 @@ abstract final class TextesCouleurEbc {
 /// Couleur Flutter d'une teinte `0xRRGGBB` rendue par `brewing/`.
 Color couleurTeinte(int teinte) => Color(0xFF000000 | teinte);
 
+/// Bordure des teintes : `outline`, assez contrastée pour détacher une teinte
+/// foncée d'un fond sombre comme une teinte claire d'un fond clair.
+Border bordureTeinte(BuildContext context) =>
+    Border.all(color: Theme.of(context).colorScheme.outline);
+
+/// Carré de [taille] px d'une teinte `0xRRGGBB`, coins arrondis, bordé.
+/// Décoratif : l'appelant écrit la valeur à côté.
+class CarreTeinte extends StatelessWidget {
+  const CarreTeinte({super.key, required this.teinte, required this.taille});
+
+  final int teinte;
+  final double taille;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Container(
+      width: taille,
+      height: taille,
+      decoration: BoxDecoration(
+        color: couleurTeinte(teinte),
+        borderRadius: BorderRadius.circular(taille / 5),
+        border: bordureTeinte(context),
+      ),
+    ),
+  );
+}
+
+/// Pastille de teinte d'une couleur [ebc] (fiche d'un malt, couleur calculée
+/// d'une recette). Une valeur refusée par `brewing/` masque la pastille et
+/// passe une fois par `reportError` (`library.color_swatch`).
+class PastilleEbc extends ConsumerStatefulWidget {
+  const PastilleEbc({super.key, required this.ebc, this.taille = 20});
+
+  final double ebc;
+  final double taille;
+
+  @override
+  ConsumerState<PastilleEbc> createState() => _PastilleEbcState();
+}
+
+class _PastilleEbcState extends ConsumerState<PastilleEbc> {
+  bool _signale = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final int teinte;
+    try {
+      teinte = teinteEbc(widget.ebc);
+    } on BrewingInputException catch (error, stackTrace) {
+      if (!_signale) {
+        _signale = true;
+        ref
+            .read(errorReportServiceProvider)
+            .reportError(
+              feature: 'library.color_swatch',
+              error: error,
+              stackTrace: stackTrace,
+              context: 'couleur refusée par brewing : ${error.field}',
+            );
+      }
+      return const SizedBox.shrink();
+    }
+    return CarreTeinte(teinte: teinte, taille: widget.taille);
+  }
+}
+
 /// Dégradé horizontal de [teintes] (`0xRRGGBB`), 16 px de haut, coins arrondis,
-/// bordure `outlineVariant` du thème. Décoratif : l'appelant porte le texte.
+/// bordure `outline` du thème. Décoratif : l'appelant porte le texte.
 class BandeTeintes extends StatelessWidget {
   const BandeTeintes({super.key, required this.teintes});
 
@@ -58,7 +124,7 @@ class BandeTeintes extends StatelessWidget {
       height: 16,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        border: bordureTeinte(context),
         gradient: LinearGradient(colors: teintes.map(couleurTeinte).toList()),
       ),
     ),
