@@ -173,7 +173,11 @@ const List<Fusion> kFusions = [
     entrees: [
       EntreeDesignee(_s001, 'Columbus/Tomahawk/Zeus'),
       EntreeDesignee(_s005, 'Columbus/Tomahawk/Zeus (CTZ)'),
+      // Documents à part dans le fichier 003 (relevé du 2026-11-15) : même
+      // variété, leurs noms deviennent des alias.
+      EntreeDesignee(_s003, 'CTZ'),
+      EntreeDesignee(_s003, 'Tomahawk'),
+      EntreeDesignee(_s003, 'Zeus'),
     ],
-    alias: ['CTZ', 'Tomahawk', 'Zeus'],
   ),
 ];

@@ -1641,7 +1641,7 @@ brassin terminé ou abandonné ; une étape restée en cours y est sans fin (« 
 (heures théoriques et écarts de début des étapes), et rapporte un refus de `brewing/` une fois
 (`brews.actual_durations`, `planReportsProvider`) en rendant `null` ; `dureesDesJournees` rend
 les durées de chaque journée de la fiche. `ChronologieJour` reçoit `durees` sur la fiche, sur
-l'écran du jour et sur l'écran d'une journée (v0.1.64, calcul local, P2), et `importe`
+l'écran du jour et sur l'écran d'une journée (v0.1.65, calcul local, P2), et `importe`
 (`Brew.importeDUneFiche`, `imported_from` qui commence par « Fiche Excel ») : une étape non
 faite d'un brassin importé est « Non notée » à son heure théorique. `heureDeLigne` rend la
 colonne d'heure affichée et lue (fin retenue par `ActualStepDuration.end`, « vers » pour un
@@ -1788,8 +1788,8 @@ règles au retour du réseau.
 | `measured_at` | timestamp, obligatoire : heure de l'appareil |
 | `created_at` | timestamp, obligatoire : `serverTimestamp()`, audit seul |
 | `phase` | string \| null : absent ou nul pour le jour de brassage, `fermentation` pour un relevé et pour une mesure ou une note d'une journée 2 ou suivante (avec son `step_key`, v0.1.35) ; permis sur `measurement` et `note`, refusé sur un événement d'étape ; immuable |
-| `time_estimated` | booléen `true` ou absent (v0.1.64) : heure non notée, écrite par Admin › Import pour tout événement d'une fiche dont `time_source` n'est pas `fiche` ; permis sur `step_started`, `measurement`, `note` ; ne s'ajoute jamais ; se retire seulement avec `measured_at` changé (correction d'une saisie : l'heure devient notée) |
-| `date_estimated` | booléen `true` ou absent (v0.1.64) : date elle-même estimée, relevé de densité finale daté du jour du brassage + 28 jours (`estimee_j28`) ; sur `measurement` ou `note`, seulement avec `time_estimated` ; retiré avec lui |
+| `time_estimated` | booléen `true` ou absent (v0.1.65) : heure non notée, écrite par Admin › Import pour tout événement d'une fiche dont `time_source` n'est pas `fiche` ; permis sur `step_started`, `measurement`, `note` ; ne s'ajoute jamais ; se retire seulement avec `measured_at` changé (correction d'une saisie : l'heure devient notée) |
+| `date_estimated` | booléen `true` ou absent (v0.1.65) : date elle-même estimée, relevé de densité finale daté du jour du brassage + 28 jours (`estimee_j28`) ; sur `measurement` ou `note`, seulement avec `time_estimated` ; retiré avec lui |
 
 `time_estimated` et `date_estimated` distinguent les trois heures non notées d'une fiche
 sans rien déduire de l'heure : jour du brassage (`time_estimated` sans `phase`, « vers
@@ -2613,7 +2613,7 @@ d'exemple, 11 modèles invalides, 2 recettes invalides, 6 jours d'ajout, 9 dates
 changements d'heure du 2026-10-25 et du 2027-03-28, et 5 ordres de journées (`session_orders`,
 4 refusés).
 
-**Durées réelles (v0.1.37, heures estimées v0.1.64).** `actualDurations(steps:, dayClosed:,
+**Durées réelles (v0.1.37, heures estimées v0.1.65).** `actualDurations(steps:, dayClosed:,
 plannedStart:)` (`actual_durations.dart`) reçoit pour chaque étape sa durée prévue, son état
 (`recomputeSchedule`) et son enregistrement (`stepRecordsFromEvents`) dans un `StepTiming`.
 `StepEvent.estimated` (`time_estimated`) devient `StepRecord.startEstimated` : un début estimé
@@ -2640,7 +2640,7 @@ le temps écoulé. `durationUpdateIssue` rend la raison de ne pas proposer une d
 (`actual_durations` : faite, sautée, non faite, en cours, journée close, sans fin, fin écartée,
 début en double, action, arrondi de 30 s, durée hors de 1 à 600, attentes, minuit, 2026-10-25,
 2027-03-28, jamais commencée, journée passée), 12 cas de `duration_updates` et 4 arrondis ;
-la v0.1.64 y ajoute 4 cas (fiche importée à heures notées, estimée et absente ; première étape
+la v0.1.65 y ajoute 4 cas (fiche importée à heures notées, estimée et absente ; première étape
 estimée ; étape sautée puis non faite ; début estimé avec fin), l'écart de début de chaque cas
 (`start_delta`), les heures théoriques (`theoretical`) et la fin retenue (`end`), et revoit
 les cas « commencée sans fin » (fin au début noté de l'étape suivante).
@@ -3048,7 +3048,7 @@ brassin importé, daté par `brewed_at`, ne peut plus en recevoir. Il se lit par
 comme une seule journée tirée de `recipe_snapshot.brew_steps` (P37), test dans
 `import_fiches_test.dart`.
 
-**Remplacement (v0.1.64).** Une fiche « Déjà importée, contenu différent » dont « Remplacer ce
+**Remplacement (v0.1.65).** Une fiche « Déjà importée, contenu différent » dont « Remplacer ce
 brassin » est cochée, ou « Remplacement à terminer », suit `planDeRemplacement` : modification
 de `imported_from` à `Fiche Excel · {fiche_id} · remplacement` (`marqueRemplacement`, omise si
 elle est déjà posée), suppression des événements lus à l'analyse par lots de 10
@@ -3073,7 +3073,7 @@ importée » ; autre marque, « Déjà importée, contenu différent » ; recett
 (`DocumentDUnAutreMembre`), « Refusée ». Erreur :
 `reportError(feature: 'import.fiches')`, contexte « fiche n° 3, étape evenements, lot 2, code
 permission-denied », sans valeur ni texte de la fiche (P13). Règles : `time_estimated` et
-`date_estimated` des événements (v0.1.64, voir `brews/{brewId}/events/{eventId}`) ;
+`date_estimated` des événements (v0.1.65, voir `brews/{brewId}/events/{eventId}`) ;
 `rules-tests/test/import_fiches.test.mjs` rejoue ces écritures et le remplacement pour les cinq
 profils et mesure le budget sur le plus grand brassin importé (P21).
 
@@ -3153,7 +3153,7 @@ Table de fusion des houblons (ADR-014, `lib/src/ingestion/fusions.dart`, `kFusio
 à la main et distincte de la table d'alias. Une ligne : nom du document (identifiant
 `hop-<clé du nom>`), origine imposée s'il le faut, entrées rattachées (source, nom, et origine
 lue quand deux entrées de même nom diffèrent par le pays, comme les « Saaz » américains du
-005), noms ajoutés aux `aliases` (`Denali`, `CTZ`), noms écartés des `aliases` (`Saaz` pour
+005), noms ajoutés aux `aliases` (`Denali`), noms écartés des `aliases` (`Saaz` pour
 `hop-saaz-us`). Une variété et un pays de culture font un document ; le nom court désigne la
 variété dans son pays d'origine (`hop-saaz` tchèque). Les valeurs viennent de l'entrée la
 plus prioritaire du groupe. Une ligne qui ne désigne aucune entrée, une entrée désignée par

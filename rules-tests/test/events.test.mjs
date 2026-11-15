@@ -370,7 +370,7 @@ describe("events — compte non invité, sur son propre uid", () => {
   });
 });
 
-// Heures estimées à l'import d'une fiche (v0.1.64) : time_estimated et
+// Heures estimées à l'import d'une fiche (v0.1.65) : time_estimated et
 // date_estimated, booléens vrais seulement ; seul passage permis, vrai → absent,
 // avec measured_at changé.
 describe("events — heure estimée, cinq profils", () => {

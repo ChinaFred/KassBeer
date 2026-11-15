@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.64 — fonctionnel
+### v0.1.65 — fonctionnel
 
 Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
 sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
@@ -20,7 +20,7 @@ heure portent « heure non notée », la densité finale datée de 28 jours apr�
 remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
 import.
 
-### v0.1.64 — technique
+### v0.1.65 — technique
 
 `brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
 noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
@@ -47,6 +47,14 @@ l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
 remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
 rubrique « Heures estimées ». Aucune dépendance ne change.
 
+### v0.1.64 — technique
+
+ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par
+hop-columbus, hop-ctz », 3 noms partagés). Le fichier 003 de Brewtarget porte `CTZ`,
+`Tomahawk` et `Zeus` en documents à part. La ligne `Columbus` de `kFusions` les absorbe
+(`EntreeDesignee` du 003) au lieu de les ajouter en alias ; leurs noms restent des alias de
+`hop-columbus`. Cas ajoutés aux sources inventées de `fusions_test.dart`. Documents attendus en
+moins : 24 (466 → 442), `DATA_SOURCES.md` à jour.
 ### v0.1.63 — technique
 
 Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
