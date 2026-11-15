@@ -18,6 +18,7 @@ import 'package:kass_beer/features/brews/presentation/section_deroule.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/processes/domain/modele_exemple.dart';
 import 'package:kass_beer/features/processes/domain/modele_processus.dart';
+import 'package:kass_beer/features/processes/presentation/process_list_screen.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
 
@@ -591,6 +592,8 @@ void main() {
       expect(find.text(TextesChoixProcessus.ajouteVosEtapes), findsOneWidget);
       // Un seul « Créer un processus », sous la chronologie seule.
       expect(find.text(TextesChoixProcessus.creer), findsOneWidget);
+      // « Gérer mes processus » reste sous le champ « Processus ».
+      expect(find.text('Gérer mes processus'), findsOneWidget);
       final creerProcessus = find.widgetWithText(
         OutlinedButton,
         TextesChoixProcessus.creer,
@@ -601,7 +604,8 @@ void main() {
       await tester.pumpAndSettle();
       // Aucun modèle n'est écrit à la place du brasseur (P37).
       expect(app.processes.writes, isEmpty);
-      expect(find.text('Nouveau processus'), findsOneWidget);
+      // « Mes processus » s'ouvre, avec ses modèles à copier.
+      expect(find.byType(ProcessListScreen), findsOneWidget);
     });
 
     testWidgets('préférence parmi plusieurs processus : gardée', (
@@ -1124,6 +1128,23 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
       }
     }
+
+    testWidgets('aucun processus : « Créer un processus » seul, sans '
+        '« Gérer mes processus »', (tester) async {
+      await fiche(
+        tester,
+        unBrassin(
+          status: BrewStatus.planned,
+          recipe: recetteAvecCru,
+          process: derouleExemple(),
+        ),
+        modeles: const [],
+      );
+      await ouvrirFeuille(tester);
+      expect(find.text(TextesChoixProcessus.aucun), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.creer), findsOneWidget);
+      expect(find.text('Gérer mes processus'), findsNothing);
+    });
 
     testWidgets('modèle supprimé : « (actuel) » présélectionné, rien effacé', (
       tester,

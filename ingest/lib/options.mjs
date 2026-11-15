@@ -17,11 +17,11 @@ export const PROJET_EMULATEUR = "demo-kassbeer";
 /// Erreur d'utilisation : message montré tel quel, code de sortie 2.
 export class ErreurOptions extends Error {}
 
-const AIDE = `Usage : node ecrire.mjs [--simulation] [--dossier <prepare>] [--rapports <dossier>]
+const AIDE = `Usage : node ecrire.mjs [--simulation] [--dossier <prepare>] [--rapports <dossier>] [--aromes <dossier>]
         node ecrire.mjs --production --projet ${PROJET_PRODUCTION} [--simulation] [...]`;
 
 /// Lit [argv] (sans `node` ni le script) et [env]. Rend
-/// `{ cible, projet, simulation, dossier, rapports }` ; lève ErreurOptions.
+/// `{ cible, projet, simulation, dossier, rapports, aromes }` ; lève ErreurOptions.
 export function lireOptions(argv, env) {
   const options = {
     production: false,
@@ -29,6 +29,7 @@ export function lireOptions(argv, env) {
     projet: null,
     dossier: null,
     rapports: null,
+    aromes: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const nom = argv[i];
@@ -41,7 +42,8 @@ export function lireOptions(argv, env) {
         break;
       case "--projet":
       case "--dossier":
-      case "--rapports": {
+      case "--rapports":
+      case "--aromes": {
         const valeur = argv[++i];
         if (valeur === undefined || valeur.startsWith("--")) {
           throw new ErreurOptions(`${nom} demande une valeur.\n${AIDE}`);
@@ -96,6 +98,7 @@ export function lireOptions(argv, env) {
     simulation: options.simulation,
     dossier: options.dossier,
     rapports: options.rapports,
+    aromes: options.aromes,
   };
 }
 

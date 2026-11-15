@@ -32,6 +32,7 @@ import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/import/data/import_fiches_repository.dart';
 import 'package:kass_beer/features/library/data/library_repository.dart';
+import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
@@ -1042,6 +1043,18 @@ class FakeLibraryRepository implements LibraryRepository {
   /// Lectures de fiche faites dans le cache seul (`cacheSeul`).
   final ficheCacheReads = <String>[];
 
+  /// Réponse à `lireAromesHoublon`, par identifiant ; absente :
+  /// `DocumentAbsent`.
+  final aromes = <String, RechercheDocument<AromesHoublon>>{};
+
+  /// Panne de `lireAromesHoublon`, par identifiant.
+  final aromesErrors = <String, Object>{};
+
+  /// Réponse retenue jusqu'à ce que le `Completer` de l'identifiant soit
+  /// complété.
+  final aromesAttente = <String, Completer<void>>{};
+  final aromesReads = <String>[];
+
   /// Recettes publiques, dans l'ordre de `recipe.name`.
   final recettes = <RecettePublique>[];
 
@@ -1073,6 +1086,16 @@ class FakeLibraryRepository implements LibraryRepository {
     ficheReads.add(id);
     if (cacheSeul) ficheCacheReads.add(id);
     return fiches[id] ?? DocumentAbsent<FicheReferentiel>();
+  }
+
+  @override
+  Future<RechercheDocument<AromesHoublon>> lireAromesHoublon(String id) async {
+    aromesReads.add(id);
+    final attente = aromesAttente[id];
+    if (attente != null) await attente.future;
+    final error = aromesErrors[id];
+    if (error != null) throw error;
+    return aromes[id] ?? DocumentAbsent<AromesHoublon>();
   }
 
   @override

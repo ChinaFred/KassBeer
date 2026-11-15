@@ -409,7 +409,8 @@ class _FormulaireNouveauBrassinState
                 choix: choix,
                 recetteSansEtape: steps.isEmpty,
                 onChoisir: () => unawaited(_choisir(choix)),
-                onCreer: () => ouvrir(AppRoutes.newProcess),
+                // « Mes processus » : modèles à copier et nouveau processus (#61).
+                onCreer: () => ouvrir(AppRoutes.processes),
                 suiteRecette: mine
                     ? Align(
                         alignment: Alignment.centerLeft,

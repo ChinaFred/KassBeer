@@ -191,7 +191,8 @@ class _FeuilleChangerProcessusState
           }),
           onRetry: () => ref.invalidate(processTemplatesProvider),
           onGerer: () => _ouvrir(AppRoutes.processes),
-          onCreer: () => _ouvrir(AppRoutes.newProcess),
+          // « Mes processus » : modèles à copier et nouveau processus (#61).
+          onCreer: () => _ouvrir(AppRoutes.processes),
         ),
         const SizedBox(height: 8),
         DerouleProcessusPrevu(

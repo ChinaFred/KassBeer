@@ -1,11 +1,18 @@
 {
   "versions": [
     {
+      "version": "0.1.58",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage) autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un processus », ou « Créer un processus » si vous n'en avez aucun : ce bouton ouvre « Mes processus », où le modèle d'exemple et le plan de brassage des fiches sont prêts à copier. Une recette sans chronologie affiche « sans processus, le brassin n'aura aucune étape ».",
+        "Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son propriétaire. Demandé par le ticket #61."
+      ]
+    },
+    {
       "version": "0.1.57",
       "date": "2026-11-15",
       "paragraphs": [
-        "« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage) autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un processus », ou « Créer un processus » si vous n'en avez aucun. Une recette sans chronologie affiche « sans processus, le brassin n'aura aucune étape ».",
-        "Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son propriétaire. Demandé par le ticket #61."
+        "La fiche d'un houblon de la Bibliothèque montre ses arômes : des descripteurs (agrumes, floral, résineux…) et un court texte pour chaque moment d'ajout, du premier moût au houblonnage à cru. Ces textes sont rédigés par une IA pour Kass'Beer. La fiche dit s'ils ont été relus par l'administrateur, et signale une confiance faible. Les houblons de vos recettes sont relus en premier. Un houblon trop peu documenté l'indique au lieu d'inventer. L'écran « Sources des données » explique d'où viennent ces textes."
       ]
     },
     {
@@ -37,13 +44,6 @@
       "paragraphs": [
         "Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique que le panneau de l'étape continue plus bas.",
         "La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation (« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes."
-      ]
-    },
-    {
-      "version": "0.1.52",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois celui des autres administrateurs. Ses lancements ne consomment pas les 10 du groupe, et inversement. Le compteur d'Admin › Tickets et la boîte de lancement affichent le plafond du compte connecté. Le mois compte tous les lancements."
       ]
     }
   ]

@@ -1,0 +1,14 @@
+{
+  "format": "kassbeer_houblons_recettes",
+  "version": 1,
+  "target": "emulator",
+  "generated_at": "2026-11-14T10:00:00.000Z",
+  "resolus": [
+    { "id": "hop-houblon-fictif", "noms": ["Houblon Fictif", "fictif doré"] },
+    { "id": "hop-saaz-fictif", "noms": ["Saaz fictif"] }
+  ],
+  "non_resolus": [
+    { "nom": "Houblon Inconnu", "raison": "aucun" },
+    { "nom": "Imaginaire", "raison": "plusieurs" }
+  ]
+}

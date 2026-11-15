@@ -287,7 +287,10 @@ class ChampProcessus extends StatelessWidget {
   /// Ferme le formulaire et ouvre « Mes processus ».
   final VoidCallback onGerer;
 
-  /// Ferme le formulaire et ouvre « Nouveau processus ».
+  /// « Créer un processus » à côté de « Aucun processus. » : ferme le
+  /// formulaire et ouvre « Mes processus », et remplace alors « Gérer mes
+  /// processus ». Nul : aucun bouton (« Nouveau brassin » le place sous la
+  /// chronologie seule).
   final VoidCallback? onCreer;
   final String? errorText;
 
@@ -374,13 +377,15 @@ class ChampProcessus extends StatelessWidget {
             padding: EdgeInsets.only(top: 8),
             child: Text(TextesChoixProcessus.defautSupprime),
           ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: onGerer,
-            child: const Text('Gérer mes processus'),
+        // Sans processus, « Créer un processus » ouvre déjà « Mes processus » (#61).
+        if (choix.etat != EtatChoixProcessus.aucun || onCreer == null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: onGerer,
+              child: const Text('Gérer mes processus'),
+            ),
           ),
-        ),
       ],
     );
   }

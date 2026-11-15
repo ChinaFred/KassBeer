@@ -6,27 +6,32 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.57 — fonctionnel
+### v0.1.58 — fonctionnel
 
 « Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous
 n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage)
 autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie
 de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un
-processus », ou « Créer un processus » si vous n'en avez aucun. Une recette sans chronologie
+processus », ou « Créer un processus » si vous n'en avez aucun : ce bouton ouvre « Mes
+processus », où le modèle d'exemple et le plan de brassage des fiches sont prêts à copier. Une
+recette sans chronologie
 affiche « sans processus, le brassin n'aura aucune étape ».
 
 Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus
 choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son
 propriétaire. Demandé par le ticket #61.
 
-### v0.1.57 — technique
+### v0.1.58 — technique
 
 `lireChoixProcessus` présélectionne le seul processus valide du lecteur quand son document de
 préférence est absent (`DocumentAbsent`) ; un défaut coupé ou supprimé garde la chronologie
 seule. L'éditeur écrit `default_template_id` nul quand « Proposer par défaut » est décoché à
-la création alors qu'aucun choix n'existe. Le modèle d'exemple n'est jamais appliqué seul
+la création alors qu'aucun choix n'existe. Aucun modèle à copier n'est appliqué seul
 (P37). « Créer un processus » n'apparaît plus qu'une fois dans « Nouveau brassin »
-(`ChampProcessus.onCreer` facultatif) ; la feuille de la fiche se titre « Choisir un
+(`ChampProcessus.onCreer` facultatif) et ouvre `AppRoutes.processes` (« Mes processus » et
+ses modèles à copier) au lieu de `AppRoutes.newProcess`, dans le formulaire comme dans la
+feuille de la fiche ; dans cette feuille, sans processus, « Gérer mes processus » est retiré,
+car « Créer un processus » ouvre le même écran ; la feuille de la fiche se titre « Choisir un
 processus » sur un brassin prévu sans processus. `AideChronologieSeule`,
 `BoutonProcessus` et `choisirProcessus` (`choix_processus.dart`) sous « Chronologie de la
 recette seule » ; nouvelle fenêtre `/recettes/:id/fenetre/choix-processus` (et `/recettes/importer/:id/…`) dans
@@ -37,6 +42,33 @@ données ne change ; l'écran du jour et les journées ne sont pas touchés (P2)
 de la voie « Chronologie de la recette seule » n'est pas fait (point 5 de l'analyse). Tests de
 widgets ajoutés dans `deroule_d3_test.dart` et `process_screens_test.dart`. Demandé par le
 ticket #61.
+
+### v0.1.57 — fonctionnel
+
+La fiche d'un houblon de la Bibliothèque montre ses arômes : des descripteurs (agrumes, floral,
+résineux…) et un court texte pour chaque moment d'ajout, du premier moût au houblonnage à cru.
+Ces textes sont rédigés par une IA pour Kass'Beer. La fiche dit s'ils ont été relus par
+l'administrateur, et signale une confiance faible. Les houblons de vos recettes sont relus en
+premier. Un houblon trop peu documenté l'indique au lieu d'inventer. L'écran « Sources des
+données » explique d'où viennent ces textes.
+
+### v0.1.57 — technique
+
+ADR-013 : descriptions aromatiques des houblons rédigées par l'API Claude (`claude-fable-5-2`,
+effort `medium` par défaut) depuis le poste de l'admin. `ingest/generer-aromes.mjs` et
+`ingest/lib/aromes/` (SDK `@anthropic-ai/sdk` 1.8.0 en version exacte, chargé au premier appel,
+sorties structurées, API Batches, tarif lu dans `import/ingest/aromes/tarif.json`, budget,
+confirmation, `--nouveaux` pour les houblons ajoutés depuis) ; `ingest/lister-houblons-recettes.mjs`
+(lecture seule de `recipes/` et `brews/`) et `exchange/bin/lister_houblons_recettes.dart`
+(`IndexBibliotheque.resoudre`, nouvelle `correspondances`) ; `ecrire.mjs --aromes` écrit
+`beer_hop_aromas/` après validation et relecture, et compte les houblons sans description.
+`firestore.rules` : `beer_hop_aromas/{id}` en `get` par `isMember()`, aucune liste ni écriture,
+tests des cinq profils. Application : `AromesHoublon`, `lireAromesHoublon` (un `get`),
+`SectionAromes` dans la fiche d'un houblon, paragraphe de « Sources des données ». Nouveau
+poste de coût `hop_aroma_generation` ; contrôles P54 et P55. Paquets ajoutés à
+`ingest/package-lock.json` : `@anthropic-ai/sdk` 1.8.0, `json-schema-to-ts` 3.1.1,
+`@babel/runtime` 7.29.14, `ts-algebra` 2.0.0, `standardwebhooks` 1.1.1, `@stablelib/base64`
+1.0.1, `fast-sha256` 1.3.0. Aucune dépendance de l'application ne change.
 
 ## 2026-11-14
 

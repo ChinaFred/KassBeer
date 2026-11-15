@@ -67,6 +67,14 @@ class DataSourcesScreen extends ConsumerWidget {
       'CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, '
       'TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE '
       'SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
+
+  static const aromesHoublons =
+      'Arômes des houblons : textes rédigés pour Kass\'Beer par une IA (Claude, '
+      'd\'Anthropic), à partir du nom, des autres noms, de l\'origine, des '
+      'acides et de l\'usage de chaque houblon. Ils ne sont copiés d\'aucune '
+      'source. L\'administrateur relit ceux des houblons utilisés dans les '
+      'recettes du groupe ; les autres sont marqués « non relu ». Un texte peut '
+      'contenir des erreurs.';
   static const openFailure =
       'Impossible d\'ouvrir le lien. Il reste sélectionnable sur cette page.';
 
@@ -131,6 +139,8 @@ class DataSourcesScreen extends ConsumerWidget {
               const TitreSection('srm2hex'),
               paragraphe(srm2hex),
               paragraphe(licenceMit),
+              const TitreSection('Descriptions aromatiques'),
+              paragraphe(aromesHoublons),
             ],
           ),
         ),

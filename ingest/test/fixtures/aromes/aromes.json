@@ -1,0 +1,30 @@
+[
+  {
+    "id": "hop-houblon-fictif",
+    "data": {
+      "hop_name": "Houblon Fictif",
+      "status": "described",
+      "confidence": "medium",
+      "descriptors": [
+        { "key": "citrus", "label": "agrumes" },
+        { "key": "floral", "label": "floral" }
+      ],
+      "uses": {
+        "late_boil": { "text": "Texte inventé pour les tests : notes d'agrumes légères en fin d'ébullition." },
+        "dry_hop": { "text": "Texte inventé pour les tests : parfum floral discret en houblonnage à cru." }
+      },
+      "reviewed": true,
+      "reviewed_at": "2026-11-14",
+      "provenance": [
+        {
+          "source": "claude-api",
+          "source_id": "hop-houblon-fictif",
+          "version": "claude-fable-5-2 / prompt 1 / effort medium",
+          "licence": "Texte généré pour Kass'Beer",
+          "retrieved": "2026-11-14"
+        }
+      ],
+      "input_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  }
+]
