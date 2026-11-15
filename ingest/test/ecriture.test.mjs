@@ -181,8 +181,59 @@ describe("planifierSuppressions (ADR-014)", () => {
     );
   });
 
+  it("beer_cultures (amendement du 2026-11-15) : absents supprimables, motif culture-", () => {
+    const prepares = ids(40, "culture-p");
+    const plan = planifierSuppressions({
+      collection: "beer_cultures",
+      enLigne: [...prepares, "culture-omega-oyl-044-kolsch-ii", "hop-ancien", "Culture_Mauvaise"],
+      prepares,
+    });
+    assert.deepEqual(plan.candidates, ["culture-omega-oyl-044-kolsch-ii"]);
+    assert.deepEqual(
+      plan.ignored.map((i) => i.id),
+      ["Culture_Mauvaise", "hop-ancien"],
+    );
+    assert.deepEqual(
+      idsPrepares("beer_cultures", { documents: { beer_cultures: [{ id: "culture-a" }] } }, null),
+      ["culture-a"],
+    );
+  });
+
+  it("beer_cultures : plafond de 30 dépassé refusé", () => {
+    const prepares = ids(1000, "culture-p");
+    assert.throws(
+      () =>
+        planifierSuppressions({
+          collection: "beer_cultures",
+          enLigne: [...prepares, ...ids(PLAFOND_SUPPRESSIONS + 1, "culture-x")],
+          prepares,
+        }),
+      (e) => e instanceof ErreurOptions && /30 au plus/.test(e.message),
+    );
+  });
+
+  it("beer_cultures : préparation à moins de 90 % refusée", () => {
+    const prepares = ids(90, "culture-p");
+    assert.throws(
+      () =>
+        planifierSuppressions({
+          collection: "beer_cultures",
+          enLigne: [...prepares, ...ids(11, "culture-x")],
+          prepares,
+        }),
+      (e) => e instanceof ErreurOptions && /moins de 90 %/.test(e.message),
+    );
+  });
+
   it("autre collection : refusée", () => {
-    for (const collection of ["beer_fermentables", "beer_index", "public_recipes", "recipes"]) {
+    for (const collection of [
+      "beer_fermentables",
+      "beer_miscs",
+      "beer_styles",
+      "beer_index",
+      "public_recipes",
+      "recipes",
+    ]) {
       assert.throws(
         () => planifierSuppressions({ collection, enLigne: ["x"], prepares: ["x"] }),
         ErreurOptions,

@@ -6,6 +6,18 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.78 — technique
+
+`ingest/ecrire.mjs --supprimer-absents` accepte aussi `beer_cultures` (ADR-014, amendement du
+2026-11-15, décision de l'utilisateur). Des fiches de fabricants renommées laissaient
+d'anciens documents `culture-…` en ligne : les douze variantes Omega en « + » s'écrivent
+« Plus » (« Kolsch II+ » devient « Kolsch II Plus »), et des entrées Wyeast changent aussi. Les garde-fous sont ceux de
+`beer_hops` : simulation, liste avant confirmation, 30 suppressions au plus, refus sous 90 %
+des documents en ligne, saisie du nombre, motif `culture-…`, une collection par lancement.
+`COLLECTIONS_SUPPRIMABLES` (`ingest/lib/options.mjs`) gagne `beer_cultures` ; tests unitaires
+(acceptation, plafond, seuil, `beer_styles` et `beer_miscs` refusées) et test sous
+l'émulateur (simulation puis suppression d'un ancien identifiant).
+
 ### v0.1.73 — fonctionnel
 
 La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures

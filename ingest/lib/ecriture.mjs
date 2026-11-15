@@ -5,8 +5,9 @@
 // posé par le serveur.
 //
 // Suppression des documents absents de la préparation (ADR-014, section 3, P19) : seulement
-// sur option (--supprimer-absents <collection>), dans beer_hops ou beer_hop_aromas, 30 au
-// plus par lancement, refusée si la préparation compte moins de 90 % des documents en ligne.
+// sur option (--supprimer-absents <collection>), dans beer_hops, beer_hop_aromas ou
+// beer_cultures (amendement du 2026-11-15), 30 au plus par lancement, refusée si la
+// préparation compte moins de 90 % des documents en ligne.
 // Un identifiant hors du motif de la collection n'est jamais supprimé.
 
 import { COLLECTIONS_SUPPRIMABLES, ErreurOptions } from "./options.mjs";
@@ -92,7 +93,7 @@ export async function idsEnLigne(db, collection) {
 export function planifierSuppressions({ collection, enLigne, prepares }) {
   if (!COLLECTIONS_SUPPRIMABLES.includes(collection)) {
     throw new ErreurOptions(
-      `Suppression refusée dans ${collection} : seules ${COLLECTIONS_SUPPRIMABLES.join(" et ")} ` +
+      `Suppression refusée dans ${collection} : seules ${COLLECTIONS_SUPPRIMABLES.join(", ")} ` +
         "sont permises (ADR-014). Rien n'est écrit ni supprimé.",
     );
   }
