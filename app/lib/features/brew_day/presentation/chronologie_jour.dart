@@ -16,6 +16,8 @@ import '../../../core/services/error_report_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/domain/densites.dart';
+import '../../brews/presentation/saisie_densite.dart';
 import '../../brews/domain/deroule.dart';
 import '../../brews/presentation/libelles_deroule.dart';
 import '../domain/plan_du_jour.dart';
@@ -190,13 +192,19 @@ String heureDeLigne(LigneJour ligne, PlanDuJour plan) {
   return formatHeure(ligne.schedule.expectedStart);
 }
 
-/// Mesure ou note d'une étape, en une ligne : « 12:10 · 67,5 °C · note ».
-String libelleSaisie(BrewEvent e) {
+/// Mesure ou note d'une étape, en une ligne : « 12:10 · 67,5 °C · note »,
+/// « 12:10 · Densité 1070,7 · corrigée, lue 1050,0 à 68 °C ». Une densité passe
+/// par `densiteDe` (`brewing/`) ; [densiteInitiale] : densité initiale retenue
+/// du brassin.
+String libelleSaisie(BrewEvent e, {double? densiteInitiale}) {
   final type = e.measureType;
   final value = e.value;
   return [
     formatHeure(e.measuredAt),
-    if (type != null && value != null) libelleMesure(type, value),
+    if (e.isGravity)
+      libelleDensiteMesure(e, densiteDe(e, densiteInitiale: densiteInitiale))
+    else if (type != null && value != null)
+      libelleMesure(type, value),
     if (e.note != null) e.note!,
   ].join(' · ');
 }
@@ -308,6 +316,7 @@ class ChronologieJour extends StatelessWidget {
           for (final s in l.mesures)
             _Saisie(
               event: s,
+              densiteInitiale: plan.densiteInitiale,
               retrait: retrait,
               onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
             ),
@@ -321,6 +330,7 @@ class ChronologieJour extends StatelessWidget {
           for (final s in plan.mesuresSansEtape)
             _Saisie(
               event: s,
+              densiteInitiale: plan.densiteInitiale,
               retrait: retrait,
               onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
             ),
@@ -419,11 +429,13 @@ class _Ligne extends StatelessWidget {
 class _Saisie extends StatelessWidget {
   const _Saisie({
     required this.event,
+    required this.densiteInitiale,
     required this.retrait,
     required this.onTap,
   });
 
   final BrewEvent event;
+  final double? densiteInitiale;
 
   /// Retrait à gauche : fin de la colonne d'heure.
   final double retrait;
@@ -444,7 +456,7 @@ class _Saisie extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    libelleSaisie(event),
+                    libelleSaisie(event, densiteInitiale: densiteInitiale),
                     style: theme.textTheme.bodyMedium,
                   ),
                 ),

@@ -5,6 +5,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
 import '../../brews/domain/deroule.dart';
+import '../../brews/domain/mesures_retenues.dart';
 import '../../recipes/domain/chronologie.dart';
 
 /// Une étape de la chronologie d'un brassin, à l'instant du calcul.
@@ -45,6 +46,7 @@ class PlanDuJour {
     required this.etapeIncoherente,
     required this.finPrevue,
     required this.retard,
+    this.densiteInitiale,
   });
 
   final List<LigneJour> lignes;
@@ -61,6 +63,10 @@ class PlanDuJour {
 
   /// Écart de la fin prévue avec le plan depuis le premier début.
   final Duration retard;
+
+  /// Densité initiale retenue du brassin (SG), pour corriger de l'alcool une
+  /// lecture de réfractomètre d'une journée 2 ou suivante.
+  final double? densiteInitiale;
 
   bool get horairesFiables => etapeIncoherente == null;
 
@@ -258,6 +264,7 @@ class PlanDuJour {
       etapeIncoherente: incoherente,
       finPrevue: finPrevue,
       retard: retard,
+      densiteInitiale: MesuresRetenues.de(brew, events).densiteInitialeSg,
     );
   }
 }

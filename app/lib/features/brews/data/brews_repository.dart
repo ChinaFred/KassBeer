@@ -112,11 +112,13 @@ abstract class BrewsRepository {
     required BrewEventInput input,
   });
 
-  /// Corrige une saisie : valeur, note et heure seulement (règles).
+  /// Corrige une saisie : valeur, note et heure seulement (règles) ; pour une
+  /// densité, [densite] remplace la valeur, l'instrument et la lecture brute.
   Future<void> correct({
     required String brewId,
     required String eventId,
     required double? value,
+    DensiteSaisie? densite,
     required String? note,
     required DateTime measuredAt,
   });
@@ -171,7 +173,7 @@ abstract class BrewsRepository {
     required String ownerUid,
     required Embouteillage embouteillage,
     required BrewStatus? nouveauStatut,
-    double? finalGravity,
+    DensiteSaisie? finalGravity,
     required String? ownerName,
   });
 
@@ -212,6 +214,7 @@ class BrewEventInput {
     this.note,
     required this.measuredAt,
     this.phase,
+    this.densite,
   });
 
   final String ownerUid;
@@ -220,6 +223,9 @@ class BrewEventInput {
   final MeasureType? measureType;
   final double? value;
   final String? note;
+
+  /// Instrument et lecture brute d'une densité ; `null` sans instrument.
+  final DetailDensite? densite;
   final DateTime measuredAt;
 
   /// `fermentation` pour une saisie d'une journée 2 ou suivante (ADR-010),
@@ -240,7 +246,8 @@ class ReleveSaisi {
     required this.measuredAt,
   });
 
-  final double? gravity;
+  /// Densité lue et son instrument ; `null` sans densité.
+  final DensiteSaisie? gravity;
   final double? temperature;
   final String? note;
   final DateTime measuredAt;
@@ -647,6 +654,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
       note: input.note,
       measuredAt: input.measuredAt,
       phase: input.phase,
+      densite: input.densite,
     );
     final written = _guardCreation(
       refs: [ref],
@@ -664,12 +672,13 @@ class FirestoreBrewsRepository implements BrewsRepository {
     required String brewId,
     required String eventId,
     required double? value,
+    DensiteSaisie? densite,
     required String? note,
     required DateTime measuredAt,
   }) => _guard(
     'brews.event_correct',
     () => _events(brewId).doc(eventId).update({
-      'value': value,
+      if (densite == null) 'value': value else ...densite.champsCorrection(),
       'note': note == null || note.trim().isEmpty ? null : note.trim(),
       'measured_at': Timestamp.fromDate(measuredAt),
     }),
@@ -694,6 +703,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
     required BrewEventKind kind,
     MeasureType? type,
     double? value,
+    DetailDensite? densite,
     String? note,
     required DateTime at,
   }) => BrewEvent(
@@ -705,6 +715,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
     note: note,
     measuredAt: at,
     phase: PhaseEvenement.fermentation,
+    densite: densite,
   ).toFirestore();
 
   String? _texteNote(String? note) {
@@ -729,13 +740,15 @@ class FirestoreBrewsRepository implements BrewsRepository {
       kinds.add(kind);
     }
 
-    if (releve.gravity != null) {
+    final gravity = releve.gravity;
+    if (gravity != null) {
       add(
         _releveEvent(
           ownerUid: ownerUid,
           kind: BrewEventKind.measurement,
           type: MeasureType.gravity,
-          value: releve.gravity,
+          value: gravity.sg,
+          densite: gravity.detail,
           note: note,
           at: releve.measuredAt,
         ),
@@ -786,14 +799,19 @@ class FirestoreBrewsRepository implements BrewsRepository {
     final refs = <DocumentReference<Map<String, dynamic>>>[];
     final kinds = <String>[];
 
+    // [densite] : densité d'un relevé, avec instrument et lecture brute ; nulle
+    // pour la température.
     void slot(
       BrewEvent? existant,
       MeasureType type,
       double? value,
-      String? noteDeSlot,
-    ) {
+      String? noteDeSlot, {
+      DensiteSaisie? densite,
+      bool present = false,
+    }) {
+      final aUneValeur = value != null || present;
       if (existant == null) {
-        if (value == null) return;
+        if (!aUneValeur) return;
         final ref = _events(brewId).doc();
         batch.set(
           ref,
@@ -802,32 +820,44 @@ class FirestoreBrewsRepository implements BrewsRepository {
             kind: BrewEventKind.measurement,
             type: type,
             value: value,
+            densite: densite?.detail,
             note: noteDeSlot,
             at: releve.measuredAt,
           ),
         );
         refs.add(ref);
         kinds.add('measurement:${type.storedValue}');
-      } else if (value == null) {
+      } else if (!aUneValeur) {
         batch.delete(_events(brewId).doc(existant.id));
       } else {
         batch.update(_events(brewId).doc(existant.id), {
-          'value': value,
+          if (densite == null)
+            'value': value
+          else
+            ...densite.champsCorrection(),
           'note': noteDeSlot,
           'measured_at': at,
         });
       }
     }
 
-    slot(avant.gravity, MeasureType.gravity, releve.gravity, note);
+    final gravity = releve.gravity;
+    slot(
+      avant.gravity,
+      MeasureType.gravity,
+      gravity?.sg,
+      note,
+      densite: gravity,
+      present: gravity != null,
+    );
     slot(
       avant.temperature,
       MeasureType.temperature,
       releve.temperature,
-      releve.gravity == null ? note : null,
+      gravity == null ? note : null,
     );
 
-    final aDesValeurs = releve.gravity != null || releve.temperature != null;
+    final aDesValeurs = gravity != null || releve.temperature != null;
     final noteEvent = avant.noteEvent;
     if (noteEvent != null && aDesValeurs) {
       batch.delete(_events(brewId).doc(noteEvent.id));
@@ -897,7 +927,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
     required String ownerUid,
     required Embouteillage embouteillage,
     required BrewStatus? nouveauStatut,
-    double? finalGravity,
+    DensiteSaisie? finalGravity,
     required String? ownerName,
   }) {
     final fields = <String, Object?>{
@@ -939,7 +969,8 @@ class FirestoreBrewsRepository implements BrewsRepository {
         ownerUid: ownerUid,
         kind: BrewEventKind.measurement,
         type: MeasureType.gravity,
-        value: finalGravity,
+        value: finalGravity.sg,
+        densite: finalGravity.detail,
         at: embouteillage.bottledAt,
       ),
     );

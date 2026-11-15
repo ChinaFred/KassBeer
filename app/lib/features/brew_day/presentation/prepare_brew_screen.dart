@@ -19,7 +19,9 @@ import '../../auth/presentation/access_providers.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
 import '../../brews/domain/deroule.dart';
+import '../../brews/domain/preference_mesure.dart';
 import '../../brews/presentation/brews_providers.dart';
+import '../../brews/presentation/saisie_densite.dart';
 import '../../costs/presentation/costs_providers.dart';
 import '../../recipes/domain/chronologie.dart';
 import '../domain/plan_du_jour.dart';
@@ -345,6 +347,7 @@ class _PreparationState extends ConsumerState<_Preparation>
                       'Ensuite : ${ensuite.join(', ')}',
                   ].join('\n'),
                 ),
+                _ligneDensimetre(),
                 ..._lignesAppareil(theme),
               ],
               const SizedBox(height: 16),
@@ -424,6 +427,32 @@ extension on _PreparationState {
         ),
       ),
   ];
+
+  /// Ligne « Densimètre » : instrument du brasseur, lu ici pour rester dans le
+  /// cache de l'écran du jour (P2) ; « Changer » ouvre le choix. Rien n'est
+  /// écrit sans action du brasseur ; un document illisible (rapporté par le
+  /// dépôt) s'affiche « À choisir ».
+  _LigneVerif _ligneDensimetre() {
+    final uid = ref.watch(grantedAccessProvider)?.user.uid;
+    final preference = uid == null
+        ? null
+        : preferenceMesureDe(ref.watch(preferenceMesureProvider(uid)).value);
+    return _LigneVerif(
+      etat: preference == null ? _EtatVerif.aSurveiller : _EtatVerif.fait,
+      titre: 'Densimètre',
+      detail: resumeInstrument(preference),
+      action: BoutonChangerDensimetre(
+        onPressed: () => unawaited(_changerDensimetre(preference)),
+      ),
+    );
+  }
+
+  Future<void> _changerDensimetre(PreferenceMesure? actuelle) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final choix = await choisirInstrument(context, actuelle: actuelle);
+    if (choix == null || !mounted) return;
+    enregistrerPreferenceMesure(ref, messenger, choix);
+  }
 
   /// Ligne « Brassin et … » : réponse du serveur, ou écriture en attente.
   _LigneVerif _ligneBrassin(String titre) {
@@ -554,6 +583,7 @@ extension on _PreparationState {
                         ? TextesJournee.prixLus
                         : TextesJournee.prixIndisponibles,
                   ),
+                _ligneDensimetre(),
                 ..._lignesAppareil(theme),
                 if (date != null && !aujourdhui)
                   _Info(TextesJournee.prevueLe(date)),
@@ -697,11 +727,15 @@ class _LigneVerif extends StatelessWidget {
     required this.etat,
     required this.titre,
     required this.detail,
+    this.action,
   });
 
   final _EtatVerif etat;
   final String titre;
   final String detail;
+
+  /// Bouton à droite de la ligne (« Changer »), ou `null`.
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -722,6 +756,7 @@ class _LigneVerif extends StatelessWidget {
               ],
             ),
           ),
+          ?action,
         ],
       ),
     );
