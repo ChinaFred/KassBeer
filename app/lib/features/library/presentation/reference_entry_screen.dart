@@ -12,6 +12,7 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../recipes/domain/beerjson.dart';
 import '../domain/referentiel.dart';
+import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
 
@@ -195,6 +196,7 @@ class _Fiche extends StatelessWidget {
       LigneFiche(label: 'Degré', value: formatPlage(f.abv, formatDegre)),
       LigneFiche(label: 'Amertume', value: formatPlage(f.ibu, formatIbu)),
       LigneFiche(label: 'Couleur', value: formatPlage(f.color, formatEbc)),
+      if (f.color case final couleur?) BarreCouleurEbc(plage: couleur),
     ],
     FicheFermentable() => [
       const TitreSection('Valeurs'),

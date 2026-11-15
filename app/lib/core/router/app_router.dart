@@ -19,12 +19,14 @@ import '../../features/costs/presentation/prices_screen.dart';
 import '../../features/equipment/presentation/equipment_detail_screen.dart';
 import '../../features/equipment/presentation/equipment_editor_screen.dart';
 import '../../features/equipment/presentation/equipment_list_screen.dart';
+import '../../features/library/presentation/couleurs_ebc_screen.dart';
 import '../../features/library/presentation/data_sources_screen.dart';
 import '../../features/library/presentation/library_providers.dart';
 import '../../features/library/presentation/library_screen.dart';
 import '../../features/library/presentation/public_recipe_screen.dart';
 import '../../features/library/presentation/reference_entry_screen.dart';
 import '../../features/members/presentation/members_screen.dart';
+import '../../features/processes/domain/modeles_a_copier.dart';
 import '../../features/processes/presentation/process_detail_screen.dart';
 import '../../features/processes/presentation/process_editor_screen.dart';
 import '../../features/processes/presentation/process_list_screen.dart';
@@ -207,9 +209,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.newProcess,
         builder: (_, state) => ProcessEditorScreen(
-          exemple:
-              state.uri.queryParameters[AppRoutes.exampleQueryParam] ==
-              'exemple',
+          modele: ModeleACopier.deParametre(
+            state.uri.queryParameters[AppRoutes.modelQueryParam],
+          ),
         ),
       ),
       GoRoute(
@@ -247,6 +249,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.dataSources,
         builder: (_, _) => const DataSourcesScreen(),
+      ),
+      // Couleurs EBC (ticket #48) : plein écran, hors de la coquille, ouvert
+      // par `push` depuis la Bibliothèque et la fiche d'un style.
+      GoRoute(
+        path: AppRoutes.libraryColors,
+        builder: (_, _) => const CouleursEbcScreen(),
       ),
       // Tickets (ADR-006) : pleines pages hors de la coquille, ouvertes par
       // `push`. « nouveau » avant « :id », sans quoi il serait lu comme un

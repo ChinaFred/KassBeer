@@ -6,6 +6,78 @@ données, outillage), ou les deux.
 
 ## 2026-11-14
 
+### v0.1.56 — fonctionnel
+
+Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur » la teinte de la
+bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de
+0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et
+depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle
+dépend du verre, de la lumière et de l'écran. Au-delà de 79 EBC, la teinte ne fonce plus, et la
+fiche le dit. « Sources des données » nomme la source des teintes et donne le texte de sa
+licence. Demandé par le ticket #48.
+
+### v0.1.56 — technique
+
+`brewing/` : `teinteEbc` (EBC → `0xRRGGBB`), `degradeEbc` (arrêts d'un dégradé de plage) et
+`teinteEbcLimite` (78,8 EBC), sur la table générée `teintes_srm.dart` : 400 triplets du paquet
+npm srm2hex 1.0.2 (MIT, archive de SHA-1 d84847e600a65eaee38247e2bce6e6d33c214d14), repris par
+script, indexés par floor(`ebcToSrm` × 10). Au-delà de 40 SRM, dernière teinte de la table.
+Fixture écrite à la main `brewing/test/fixtures/teinte.json` (14 teintes dont une frontière à
+11,82 EBC, 4 dégradés, 4 cas refusés, empreinte FNV-1a de `lookup.js` qui vérifie la table
+générée ; génération décrite dans `DATA_SOURCES.md`). Application : `couleur_ebc.dart`
+(`BarreCouleurEbc`, `BandeTeintes`, `TextesCouleurEbc.depasseLimite` et `auDela`),
+`couleurs_ebc_screen.dart` (sans état d'erreur : ses entrées sont des constantes valides,
+cases de la grille suivant l'échelle du texte), texte MIT `DataSourcesScreen.licenceMit`,
+route `/bibliotheque/couleurs` hors de la coquille, lien « Échelle des couleurs » dans
+l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des données » et dans
+`DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
+Pastille sur la fiche d'un malt et sur la recette : plus tard. Demandé par le ticket #48.
+
+### v0.1.55 — fonctionnel
+
+« Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple
+et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un
+nouveau processus prérempli ; rien n'est enregistré avant « Enregistrer ».
+
+Une courbe des températures accompagne le jour de brassage. Elle montre la température visée
+de chaque étape selon le plan de départ et selon les heures réelles, les températures et les
+densités mesurées, et la densité initiale prévue. Sur le téléphone, une bascule « Étapes » |
+« Courbe » l'affiche à la place de la chronologie ; sur grand écran, elle se place sous le
+minuteur. Sur la fiche du brassin, elle paraît en tête de la journée de brassage dès la
+première étape commencée. En paysage, sur un téléphone, la bascule garde le minuteur visible.
+
+La courbe de fermentation commence à la densité initiale du jour de brassage : un seul relevé
+suffit pour la voir. Elle montre aussi les densités initiale et finale prévues, et la plage de
+température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente
+de la Bibliothèque, ou sans plage, une ligne le dit.
+
+### v0.1.55 — technique
+
+`brewing/` : `brewDayTemperatureSeries` (`brew_day_curve.dart`) calcule les températures visées
+du plan de départ et recalculées, le retard et les débuts théoriques à partir de l'horaire de
+`recomputeSchedule` ; cas `brew_day_temperatures` et modèle `fiches` ajoutés d'abord à
+`brewing/test/fixtures/process.json`. Application : `modele_fiches.dart`, `modeles_a_copier.dart`
+(`ModeleACopier`, route `?modele=exemple|fiches`), section « Modèles à copier » de
+`process_list_screen.dart` ; « Partir du modèle d'exemple », `partirExemple` et
+`AppRoutes.newProcessFromExample` retirés (remplacés par `AppRoutes.newProcessFrom`).
+`courbe_brassage.dart` (`CourbeBrassage`, `donneesCourbeBrassage`, `resumeCourbeBrassage`),
+`ZoneChronologieCourbe` dans l'écran du jour (aussi en paysage bas), `TraceCourbeBrassage`,
+`LignePrevue` et `PlageTrace` dans `trace_courbe.dart`, seul import de `fl_chart` (P18) :
+graduations de densité rondes sur la grille, axe de droite sans libellés sous 200 px de tracé,
+info-bulle à distance euclidienne qui réunit les séries touchées. Légende partagée
+`legende_courbe.dart` (trait, disque, losange, aplat). `brewing/` : `gravityGapPoints` (cas
+`gravity_gap` de `gravity.json`) pour l'écart des densités prévues ; l'écart initial se compte
+sur la densité initiale retenue seule. `prevuDe` passe dans `brews/domain/prevu.dart`
+(`CalculsRecette.calculOuNul`), ce qui retire l'import circulaire entre
+`releve_fermentation.dart` et `prevu_et_mesure.dart`. Plage de la levure :
+`plage_levure.dart` (`plageLevureProvider`), résolution par le nom (`IndexBibliotheque.resoudre`)
+dans `beer_index/cultures`, puis `beer_cultures/{id}` par `get()` (P22) ; `lireFiche` reçoit
+`cacheSeul` pour le hors ligne. Lecture faite par la fiche seule ; le test « P2 » de
+`deroule_d4_test.dart` couvre les fichiers de la courbe du jour et refuse qu'ils lisent la
+Bibliothèque. Fiche : la courbe du jour ne paraît qu'après le premier début d'étape. « Mes
+processus » : « Modèles à copier » aussi sous une panne de lecture. Aucune écriture Firestore
+nouvelle, aucune règle changée, aucune dépendance changée.
+
 ### v0.1.54 — fonctionnel
 
 Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche.

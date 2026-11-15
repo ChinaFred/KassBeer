@@ -341,4 +341,117 @@ void main() {
       );
     }
   });
+
+  group('températures visées du jour de brassage', () {
+    final section = fixture['brew_day_temperatures'] as Map<String, Object?>;
+    List<List<String>> lines(List<List<TargetTemperaturePoint>> raw) => [
+      for (final l in raw)
+        [
+          for (final p in l)
+            '${p.at.toUtc().toIso8601String()} ${p.celsius} ${p.stepIndex}',
+        ],
+    ];
+    List<List<String>> expectedLines(Object? raw) => [
+      for (final l in raw! as List<Object?>)
+        [
+          for (final p in objects(l))
+            '${DateTime.parse(p['at'] as String).toUtc().toIso8601String()} '
+                '${number(p['celsius'])} ${p['step']}',
+        ],
+    ];
+    for (final c in objects(section['cases'])) {
+      test(label(c), () {
+        final rawSteps = objects(c['steps']);
+        final steps = [
+          for (final s in rawSteps)
+            PlannedStep(
+              id: s['id'] as String,
+              duration: Duration(minutes: s['planned_minutes'] as int),
+            ),
+        ];
+        final events = [
+          for (final e in objects(c['events']))
+            StepEvent(
+              id: e['id'] as String,
+              kind: StepEventKind.fromStored(e['kind'] as String),
+              stepKey: e['step'] as String,
+              measuredAt: DateTime.parse(e['at'] as String),
+            ),
+        ];
+        final schedule = recomputeSchedule(
+          steps: steps,
+          plannedStart: DateTime.parse(c['planned_start'] as String),
+          records: stepRecordsFromEvents(steps: steps, events: events).records,
+          now: DateTime.parse(c['now'] as String),
+        );
+        final result = brewDayTemperatureSeries(
+          steps: steps,
+          targetCelsius: [
+            for (final s in rawSteps) optionalNumber(s['temp_c']),
+          ],
+          schedule: schedule,
+        );
+        final expected = c['expected'] as Map<String, Object?>;
+        final origin = expected['origin'] as String?;
+        expect(
+          result.origin?.toUtc(),
+          origin == null ? null : DateTime.parse(origin).toUtc(),
+          reason: 'origine',
+        );
+        final starts = expected['planned_starts'] as List<Object?>?;
+        expect(
+          result.plannedStarts?.map((d) => d.toUtc()).toList(),
+          starts?.map((d) => DateTime.parse(d! as String).toUtc()).toList(),
+          reason: 'débuts du plan de départ',
+        );
+        expect(lines(result.planned), expectedLines(expected['planned']));
+        expect(lines(result.recomputed), expectedLines(expected['recomputed']));
+        expect(result.delay?.inMinutes, expected['delay_minutes']);
+      });
+    }
+
+    test('entrées incohérentes refusées', () {
+      final at = DateTime.utc(2026, 11, 21, 9);
+      for (final c in objects(section['invalid'])) {
+        expectInvalid(
+          () => brewDayTemperatureSeries(
+            steps: [
+              for (final id in c['steps']! as List<Object?>)
+                PlannedStep(id: id! as String, duration: Duration.zero),
+            ],
+            targetCelsius: [
+              for (final t in c['temps']! as List<Object?>) optionalNumber(t),
+            ],
+            schedule: [
+              for (final id in c['schedule']! as List<Object?>)
+                ScheduledStep(
+                  stepId: id! as String,
+                  expectedStart: at,
+                  start: at,
+                  end: at,
+                  status: StepStatus.pending,
+                ),
+            ],
+          ),
+          label(c),
+        );
+      }
+      expectInvalid(
+        () => brewDayTemperatureSeries(
+          steps: [PlannedStep(id: 'a', duration: Duration.zero)],
+          targetCelsius: const [double.nan],
+          schedule: [
+            ScheduledStep(
+              stepId: 'a',
+              expectedStart: at,
+              start: at,
+              end: at,
+              status: StepStatus.pending,
+            ),
+          ],
+        ),
+        'température non finie',
+      );
+    });
+  });
 }
