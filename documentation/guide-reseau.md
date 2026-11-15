@@ -240,6 +240,13 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
+Le 2026-11-15 (v0.1.74), décisions de l'utilisateur : P15 accepte, dans le champ `name`
+d'une entrée de `exchange/donnees/fabricants/cultures.json`, le nom de la fiche du fabricant,
+relevée à l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name`
+de cet en-tête, même s'il contient le nom d'une personne (WLP520) ; « Structure » de `CLAUDE.md` décrit
+`exchange/donnees/fabricants/` sans liste de fabricants. Aucun contrôle, agent, skill ni hook
+nouveau.
+
 Le 2026-11-15 (v0.1.68), décision de l'utilisateur : P19 abaisse le seuil de
 `--supprimer-absents` de 95 % à 90 % des documents en ligne (ADR-014, note du 2026-11-15).
 Aucun contrôle, agent, skill ni hook nouveau.
@@ -467,3 +474,8 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   explicite et confirmation, liste blanche de collections, identifiants déterministes, rapport
   JSON chiffré. Admin › Sources affiche les compteurs et les noms non reconnus (L4). ADR-005,
   évolution acceptée le 2026-11-08.
+- 2026-11-15 : exception à P15. Le champ `name` d'une entrée de
+  `exchange/donnees/fabricants/cultures.json` reprend le nom de la fiche du fabricant, relevée à
+  l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name` de cet
+  en-tête, même s'il contient le nom d'une personne (WLP520, WLP4045, WLP4046) ; aucun e-mail, aucune autre donnée,
+  aucun commentaire. Décision de l'utilisateur.
