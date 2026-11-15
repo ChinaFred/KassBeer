@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "0.1.59",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données ». Le bouton « Actualiser », ou un geste qui tire la page vers le bas, relit l'écran sans effacer ce qui est affiché. Si cette lecture échoue, un message le dit au-dessus du compte rendu ou de la liste, qui restent visibles.",
+        "En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50, avec le nombre de noms affichés, « Charger la suite » et la fin de la liste signalée. Chaque ligne donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur."
+      ]
+    },
+    {
       "version": "0.1.58",
       "date": "2026-11-15",
       "paragraphs": [
@@ -35,14 +43,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche. Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie », « Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi compléter les recettes importées l'une après l'autre. Demandé par le ticket #60."
-      ]
-    },
-    {
-      "version": "0.1.53",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique que le panneau de l'étape continue plus bas.",
-        "La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation (« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes."
       ]
     }
   ]

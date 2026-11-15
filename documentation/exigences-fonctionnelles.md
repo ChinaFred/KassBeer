@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Couleurs EBC » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -425,12 +425,13 @@ d'une étape).
 
 ### Admin
 
-Réservé à l'administrateur. Cinq entrées : « Membres » (« Inviter et retirer les comptes »),
+Réservé à l'administrateur. Six entrées : « Membres » (« Inviter et retirer les comptes »),
 « Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
 et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas, un jeton de routine
-refusé l'allume), « Import » (« Fiches Excel préparées en JSON »), « Rapports d'erreur »
+refusé l'allume), « Sources » (« Dernière mise à jour de la Bibliothèque et noms non
+reconnus »), « Import » (« Fiches Excel préparées en JSON »), « Rapports d'erreur »
 (« Pannes rencontrées dans l'application par les membres ») et « Journaux » (« Messages des
 fonctions du serveur »).
 
@@ -1085,6 +1086,83 @@ l'application ne contrôle que la longueur.
   pendant un autre appel de la fiche.
 - Le texte non publié reste dans la fiche, même après un changement de disposition, et revient
   à la réouverture ; il s'efface après une publication réussie.
+
+### Admin › Sources
+
+Réservé à l'administrateur (ADR-005, L4). Adresse `/admin/sources`, titre « Sources », retour
+vers Admin. Sous-titre de l'entrée dans Admin : « Dernière mise à jour de la Bibliothèque et noms
+non reconnus ». Lecture seule : l'écran n'écrit rien. La mise à jour (ingestion) se lance depuis
+le poste de l'administrateur (`exchange/bin/preparer_referentiels.dart`, puis
+`ingest/ecrire.mjs`).
+
+En tête : « Mise à jour de la Bibliothèque depuis les sources externes (Brewtarget, BJCP, DIY
+Dog). » et le bouton icône « Actualiser » (48 px), qui relit la dernière mise à jour et la
+première page des noms non reconnus. Tirer la page vers le bas fait la même chose. Pendant la
+lecture lancée par ce bouton, il laisse la place à un indicateur de même taille, annoncé
+« Lecture en cours » ; pendant toute lecture, les autres boutons de lecture sont désactivés.
+Ce qui est affiché reste visible jusqu'à la réponse.
+
+L'écran prend la largeur du contenu, sans borne propre.
+
+**Dernière mise à jour.** Carte titrée « Dernière mise à jour » : l'exécution la plus récente
+de l'écrivain, lue à l'ouverture.
+
+- « Terminée le » : « 11 novembre 2026 à 13:49 » ; « Cible » : « Production » ou
+  « Émulateur » ; « Rapport local » : `import/ingest/rapports/20261111T124912Z.json`, texte
+  sélectionnable.
+- « Documents » (sous-section) : une ligne par collection, dans l'ordre des segments de la
+  Bibliothèque (« Styles », « Malts et sucres », « Houblons », « Levures », « Divers »,
+  « Recettes publiques »), puis « Index de la Bibliothèque » et « Noms non reconnus », avec
+  « 412 écrits · 3 inchangés · 0 refusé ». Une collection inconnue de l'application suit, sous
+  son nom technique. Si des documents sont refusés : « 2 documents refusés. Le détail est dans
+  le rapport local. », dans un encadré d'erreur.
+- « Sources lues » (sous-section) : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 »
+  et « DIY Dog », chacun avec sa version (`v5.2.3 ea10908`, `e6c12ab`).
+- « Noms non reconnus lors de cette mise à jour » (sous-section) : le nombre par nature
+  (« Malts et sucres », « Houblons », « Levures », « Divers »), écrit « 12 noms ».
+
+Le lien « Sources des données », dernier élément de la carte, ouvre l'écran du même nom.
+
+**Tous les noms non reconnus.** Titre de section, puis l'aide : « Noms qu'aucune source n'a
+rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent. ». Au-dessus
+des lignes, « 12 noms affichés » (« 1 nom affiché »), annoncé à chaque changement. Pages de 50 :
+« Charger la suite » lit la page suivante ; après la dernière page, « Fin des noms non
+reconnus. ». Chaque ligne, sans action : repère « lien rompu », le nom (deux lignes au plus),
+puis « Houblon · recettes DIY Dog · 12 fois · le 11 nov. 2026 ». Nature : « Malt ou sucre »,
+« Houblon », « Levure », « Ajout divers », comme les fiches de la Bibliothèque. Origine :
+« recettes DIY Dog », ou « import d'un membre ». Un document illisible s'affiche « Nom
+illisible » / « Mettez l'application à jour. », repère en ton d'erreur. Cette liste montre à
+l'administrateur les noms à ajouter à la table d'alias de l'ingestion : un nom rattaché donne
+ses valeurs à la ligne de recette, qui peut alors se calculer.
+
+**États**, dans chaque bloc (aucun état en plein écran) :
+
+- chargement : indicateur « Chargement de la dernière mise à jour » dans la carte, ou
+  « Chargement des noms non reconnus » sous le titre de la liste ;
+- vide : « Aucune mise à jour enregistrée. Lancez-la depuis votre poste : son compte rendu
+  s'affichera ici. » dans la carte ; « Aucun nom non reconnu. » en italique sous la liste ;
+- panne de la première lecture : encadré d'erreur, annoncé, « Impossible de lire la dernière
+  mise à jour. » ou « Impossible de lire les noms non reconnus. », avec « Réessayer » ;
+  l'erreur est journalisée ;
+- relecture du compte rendu en échec alors qu'un compte rendu est affiché : encadré d'erreur
+  annoncé au-dessus de lui, « Impossible de relire la dernière mise à jour. Le compte rendu
+  affiché peut ne plus être à jour. », avec « Réessayer » ;
+- relecture de la liste en échec (« Actualiser » ou geste) alors que des noms sont affichés :
+  encadré d'erreur annoncé en tête de la liste, « Lecture impossible. Les noms déjà affichés
+  restent visibles. », avec « Réessayer », qui relit la première page ; les lignes restent ;
+- page suivante en échec : le même encadré sous la dernière ligne, à la place de « Charger la
+  suite », avec « Réessayer », qui relit la page suivante ; les lignes restent ;
+- compte rendu illisible : encadré d'erreur dans la carte, « Le compte rendu de la dernière
+  mise à jour est illisible. Mettez l'application à jour. », sans « Réessayer » ;
+- hors ligne, sans rien dans le cache : encadré d'avertissement « Dernière mise à jour
+  indisponible hors ligne. » ou « Liste indisponible hors ligne. », avec « Réessayer » ; lu
+  depuis le cache : encadré d'avertissement « Hors ligne : lu sur l'appareil. Ce compte rendu
+  peut ne plus être à jour. » en tête de la carte, et encadré d'avertissement du même ton « Hors
+  ligne : lu sur l'appareil. Cette liste peut ne plus être à jour. », avec « Réessayer », en tête
+  de la liste.
+
+Pendant une lecture lancée par un « Réessayer » ou par « Charger la suite », ce bouton affiche
+« Lecture en cours ».
 
 ### Équipements
 
@@ -1794,7 +1872,7 @@ d'erreur : elle ne lit aucune donnée.
 
 ### Sources des données
 
-Ouvert depuis la Bibliothèque, depuis la section « Provenance » d'une fiche et depuis le menu
+Ouvert depuis la Bibliothèque, depuis la section « Provenance » d'une fiche, depuis Admin › Sources et depuis le menu
 du compte, pour tout membre (adresse `/sources-des-donnees`). Plein écran, hors de la barre de
 navigation, titre « Sources des données » et flèche retour (vers l'écran d'origine ; ouvert
 par son adresse, vers la Bibliothèque). Texte sélectionnable, livré avec l'application : il

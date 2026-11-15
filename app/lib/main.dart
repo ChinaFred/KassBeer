@@ -16,6 +16,7 @@ import 'core/services/app_update_service.dart';
 import 'core/services/error_report_service.dart';
 import 'features/admin/data/error_reports_repository.dart';
 import 'features/admin/data/logs_repository.dart';
+import 'features/admin/data/sources_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/brews/data/brews_repository.dart';
 import 'features/costs/data/costs_repository.dart';
@@ -157,6 +158,9 @@ Future<void> main() async {
         ),
         libraryRepositoryProvider.overrideWithValue(
           FirestoreLibraryRepository(errorReportService: errors),
+        ),
+        sourcesRepositoryProvider.overrideWithValue(
+          FirestoreSourcesRepository(errorReportService: errors),
         ),
         ticketsRepositoryProvider.overrideWithValue(
           FirestoreTicketsRepository(errorReportService: errors),
