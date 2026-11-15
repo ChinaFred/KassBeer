@@ -284,6 +284,11 @@ l'installation verrouillée de firebase-tools, sans script, y est permise), et a
 « Tickets » de `CLAUDE.md`. `formatters.json` formate le TypeScript de `functions/` par
 prettier, et `setup-projet.sh` y lance `npm ci`.
 
+Le 2026-11-15, à la demande de l'utilisateur, `CLAUDE.md` (« Ton ») ajoute « Poser ses
+questions une par une » : quand plusieurs décisions lui reviennent, la session pose une
+question par message, avec son contexte, ses options et sa recommandation, et attend la
+réponse avant la suivante.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

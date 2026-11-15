@@ -6,6 +6,15 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.65 — technique
+
+`CLAUDE.md`, section « Ton » : ajout de « Poser ses questions une par une ». Quand plusieurs
+décisions reviennent à l'utilisateur, la session pose une question par message, avec son
+contexte, ses options et sa recommandation. Demandé par l'utilisateur après l'avis de
+l'architecte sur l'assistant de recette, qui listait treize questions d'un coup.
+`documentation/guide-reseau.md` décrit le changement. ADR-015 (assistant de recette) est
+ajouté au statut « proposé », en attente des décisions de l'utilisateur.
+
 ### v0.1.64 — technique
 
 ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par

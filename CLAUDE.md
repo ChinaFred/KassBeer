@@ -58,6 +58,17 @@ code pour répondre reste permis.
 
 Un doute sur la nature de la demande se traite comme une question.
 
+### Poser ses questions une par une
+
+Quand plusieurs décisions reviennent à l'utilisateur (avis d'un agent, cadrage, arbitrage),
+on pose **une question par message**, et on attend sa réponse avant la suivante. Pas de
+liste numérotée de questions à trancher d'un coup.
+
+Chaque question porte son contexte : ce qui est en jeu, les options avec leur effet et leur
+coût, la recommandation et sa raison. L'utilisateur doit pouvoir répondre sans relire
+l'avis complet. Une réponse qui rend une question suivante sans objet la retire.
+(Demande de l'utilisateur du 2026-11-15.)
+
 ## Le projet
 
 Kass'Beer remplace les fiches Excel de brassage amateur d'un brasseur et de quelques amis
