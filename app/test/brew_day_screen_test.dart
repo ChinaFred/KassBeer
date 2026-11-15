@@ -108,6 +108,57 @@ void main() {
     expect(write.detail['writes'], ['step_ended:k-palier']);
   });
 
+  testWidgets('Étape suivante : message, Annuler supprime fin et début', (
+    tester,
+  ) async {
+    final app = await ouvrir(
+      tester,
+      now: hm(12, 10),
+      events: [debut('e1', 'k-palier', hm(11, 45))],
+    );
+    await tester.tap(find.text(libelleEtapeSuivante));
+    await tester.pump();
+    expect(find.text(texteEtapeCommencee('Ébullition')), findsOneWidget);
+    app.brews.publishEvents(_brassinId, [
+      debut('e1', 'k-palier', hm(11, 45)),
+      fin('e2', 'k-palier', hm(12, 10)),
+      debut('e3', 'k-ebullition', hm(12, 10)),
+    ]);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('Annuler'));
+    await tester.pump();
+    final suppr = app.brews.writes
+        .where((w) => w.kind == 'delete_events')
+        .single;
+    expect(suppr.detail['ids'], ['e3', 'e2']);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text(texteEtapeReprise('Palier 68')), findsOneWidget);
+  });
+
+  testWidgets('Annuler après la fin de l\'étape commencée : rien supprimé', (
+    tester,
+  ) async {
+    final app = await ouvrir(
+      tester,
+      now: hm(12, 10),
+      events: [debut('e1', 'k-palier', hm(11, 45))],
+    );
+    await tester.tap(find.text(libelleEtapeSuivante));
+    await tester.pump();
+    app.brews.publishEvents(_brassinId, [
+      debut('e1', 'k-palier', hm(11, 45)),
+      fin('e2', 'k-palier', hm(12, 10)),
+      debut('e3', 'k-ebullition', hm(12, 10)),
+      fin('e4', 'k-ebullition', hm(12, 10)),
+    ]);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('Annuler'));
+    await tester.pump();
+    expect(app.brews.writes.where((w) => w.kind == 'delete_events'), isEmpty);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text(texteAnnulationImpossible('Ébullition')), findsOneWidget);
+  });
+
   testWidgets('suivante de 0 minute : Terminer l\'étape, puis Fait', (
     tester,
   ) async {

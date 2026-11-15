@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:brewing/brewing.dart'
-    show StepEvent, StepEventKind, StepStatus, readTimer;
+    show StepEvent, StepEventKind, StepRecord, StepStatus, readTimer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -626,6 +626,48 @@ class _EcranJourState extends ConsumerState<_EcranJour>
         (kind: StepEventKind.started, stepKey: suivante.step.key),
       ], 'Début de « ${suivante.step.name} »'),
     );
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 10),
+        // Sous TalkBack, le message reste ouvert : « Annuler » doit rester
+        // joignable au balayage.
+        persist: MediaQuery.accessibleNavigationOf(context),
+        content: Text(texteEtapeCommencee(suivante.step.name)),
+        action: SnackBarAction(
+          label: 'Annuler',
+          onPressed: () => _annulerEnchainement(enCours, suivante),
+        ),
+      ),
+    );
+  }
+
+  /// « Annuler » du message de « Étape suivante » : supprime le début de
+  /// [suivante] et la fin de [enCours] dans un même lot, si [suivante] est
+  /// toujours en cours ; sinon renvoie au menu de l'étape.
+  void _annulerEnchainement(LigneJour enCours, LigneJour suivante) {
+    final evalue = _evaluer();
+    if (evalue is! PlanObtenu) return;
+    StepRecord? record(String key) =>
+        evalue.plan.lignes.where((l) => l.step.key == key).firstOrNull?.record;
+    final debut = record(suivante.step.key);
+    final finId = record(enCours.step.key)?.endEventId;
+    final debutId = debut?.startEventId;
+    if (debutId == null ||
+        finId == null ||
+        debut?.endEventId != null ||
+        debut!.skipEventIds.isNotEmpty) {
+      _message(texteAnnulationImpossible(suivante.step.name));
+      return;
+    }
+    _suivre(
+      ref
+          .read(brewsRepositoryProvider)
+          .deleteEvents(brewId: _brew.id, eventIds: [debutId, finId]),
+      'Annulation de « Étape suivante »',
+    );
+    _message(texteEtapeReprise(enCours.step.name));
   }
 
   Future<void> _terminerBrassage() async {
@@ -1003,7 +1045,9 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     messenger.showSnackBar(
       SnackBar(
         duration: const Duration(seconds: 10),
-        persist: false,
+        // Sous TalkBack, le message reste ouvert : « Annuler » doit rester
+        // joignable au balayage.
+        persist: MediaQuery.accessibleNavigationOf(context),
         content: Text(
           kind == StepEventKind.ended
               ? 'La fin est annulée.'
@@ -1877,6 +1921,17 @@ class _CarteEtape extends StatelessWidget {
 /// Libellé du bouton principal qui termine l'étape en cours et commence la
 /// suivante.
 const libelleEtapeSuivante = 'Étape suivante';
+
+/// Message après « Étape suivante ».
+String texteEtapeCommencee(String nom) => 'Étape « $nom » commencée.';
+
+/// Message après « Annuler » : l'étape [nom] a repris.
+String texteEtapeReprise(String nom) => 'Étape « $nom » reprise.';
+
+/// « Annuler » quand l'étape commencée [nom] est déjà terminée ou sautée.
+String texteAnnulationImpossible(String nom) =>
+    'L\'étape « $nom » est déjà terminée ou sautée : touchez chaque étape '
+    'pour la corriger.';
 
 class _BarreActions extends StatelessWidget {
   const _BarreActions({

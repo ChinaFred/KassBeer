@@ -6,6 +6,29 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.64 — fonctionnel
+
+Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
+commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
+l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le
+bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ». Après l'appui,
+un message « Étape « Ébullition » commencée. » s'affiche dix secondes avec « Annuler » : un
+appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son
+action, comme celui qui annule un début ou une fin d'étape.
+
+### v0.1.64 — technique
+
+`brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
+de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
+(P2), et prépare l'alerte du minuteur. `_BarreActions` l'affiche quand la suivante a une
+durée ; sinon « Terminer l'étape » reste. Le libellé lu par TalkBack nomme les deux étapes.
+Une `SnackBar` (10 s, `persist` vrai sous TalkBack par `MediaQuery.accessibleNavigationOf`,
+comme celle de `_annuler`) propose « Annuler » : `_annulerEnchainement` relit le
+plan et supprime `startEventId` de l'étape commencée et `endEventId` de la précédente par
+`deleteEvents`, un `WriteBatch` sans transaction ; rien n'est supprimé si l'étape commencée
+est déjà terminée ou sautée. Tests de `brew_day_screen_test.dart` adaptés, quatre cas ajoutés
+(dernière étape, suivante de 0 min, « Annuler », « Annuler » après la fin).
+
 ### v0.1.63 — technique
 
 Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
