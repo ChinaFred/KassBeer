@@ -6,6 +6,31 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.58 — fonctionnel
+
+Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on
+le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » :
+une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui
+écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le
+style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49.
+
+### v0.1.58 — technique
+
+`ChampBibliotheque` reçoit `choixDesStyles` (champ « Style » seul ; malts, houblons, ajouts et
+levures inchangés) et un quatrième argument `boutonListe` dans `fieldBuilder`. Nouveau
+`choix_style.dart` (`choisirStyle`, `stylesGroupes`, `aideStyleSaisi`) ; `stylesParCode` et
+`comparerCodesStyle` dans `referentiel.dart`. Index `beer_index/styles` lu par `get()` une fois,
+partagé entre la liste et la feuille, aucun `snapshots()` (P22). Aucune dépendance ni règle
+changée. L'aide « Style de la Bibliothèque » demande le nom exact, casse comprise, comme
+l'export BeerXML. Demandé par le ticket #49.
+
+La relecture ajoute : index des styles lu dès l'ouverture de l'éditeur, pour que l'aide « hors
+Bibliothèque » paraisse sur une recette existante sans focus ; états de la feuille par
+`EtatChargement`, `EtatVide` et `EtatErreur` (« Réessayer ») ; tailles de la feuille dans
+`breakpoints.dart` ; avertissement retenu pendant la frappe tant que le texte a des
+suggestions ; annonce « Style choisi » au lecteur d'écran ; curseur dans la recherche sur grand
+écran.
+
 ### v0.1.57 — fonctionnel
 
 La fiche d'un houblon de la Bibliothèque montre ses arômes : des descripteurs (agrumes, floral,

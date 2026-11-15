@@ -125,3 +125,15 @@ const double kChronologieHeureWidth = 104;
 /// quand le texte grossit : à 200 % sur un téléphone de 360 px, le nom de
 /// l'étape garde la place de ses mots.
 const double kChronologieHeureMaxFraction = 0.3;
+
+/// Largeur maximale d'une boîte de dialogue de liste longue sur grand écran
+/// (« Choisir un style »).
+const double kDialogueListeMaxWidth = 560;
+
+/// Part de la hauteur de l'écran prise par une feuille du bas de liste longue,
+/// sous [kCompactMaxWidth].
+const double kFeuilleListeHauteur = 0.9;
+
+/// Part de la hauteur de l'écran que ne dépasse pas une boîte de dialogue de
+/// liste longue, à partir de [kCompactMaxWidth].
+const double kDialogueListeHauteur = 0.8;
