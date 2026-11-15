@@ -38,7 +38,7 @@ class AdminSourcesScreen extends ConsumerStatefulWidget {
       'Dernière mise à jour de la Bibliothèque et noms non reconnus';
   static const intro =
       'Mise à jour de la Bibliothèque depuis les sources externes '
-      '(Brewtarget, BJCP, DIY Dog).';
+      '(Brewtarget, BJCP, fiches des fabricants, DIY Dog).';
   static const actualiser = 'Actualiser';
   static const lectureEnCours = 'Lecture en cours';
   static const runTitle = 'Dernière mise à jour';
