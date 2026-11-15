@@ -79,7 +79,18 @@ Future<void> main(List<String> arguments) async {
       '${r['taux_apres_alias']} % après alias',
     );
   }
-  stdout.writeln('rapport : ${dossier.path}/rapport.json');
+  final inconnues = preparation.rapport['origines_inconnues']! as List;
+  final restants = preparation.rapport['groupes_sans_parenthese']! as List;
+  stdout
+    ..writeln(
+      'origines hors de la liste des pays : ${inconnues.length} '
+      '(origines_inconnues)',
+    )
+    ..writeln(
+      'houblons de même nom sans parenthèse : ${restants.length} groupes '
+      '(groupes_sans_parenthese)',
+    )
+    ..writeln('rapport : ${dossier.path}/rapport.json');
 }
 
 /// [fichier], si sa taille ne dépasse pas [kMaxOctetsParFichier] (10 Mo) ;

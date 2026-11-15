@@ -9,9 +9,13 @@
 //   Production (identifiants ADC, confirmation au terminal) :
 //     node ecrire.mjs --production --projet kassbeer
 //   Compter sans écrire : --simulation.
+//   Supprimer les documents absents de la préparation (ADR-014) : --supprimer-absents
+//   beer_hops ou beer_hop_aromas, 30 au plus, confirmation par la saisie de leur nombre ;
+//   avec --simulation, la liste seule.
 //
-// Codes de sortie : 0 tout écrit ; 1 échec ; 2 utilisation refusée ; 3 documents refusés
-// par le contrôle (les autres sont écrits, la liste est dans le rapport).
+// Codes de sortie : 0 tout écrit ; 1 échec (dont une suppression en erreur) ; 2 utilisation
+// refusée ; 3 documents refusés par le contrôle (les autres sont écrits, la liste est dans
+// le rapport).
 
 import { executer, messageSansDescription } from "./lib/execution.mjs";
 import { ErreurOptions } from "./lib/options.mjs";
@@ -33,12 +37,24 @@ try {
   if (rapport.aromas_file === "absent") {
     console.log("beer_hop_aromas : aromes.json absent, aucune description écrite");
   }
+  const d = rapport.deletions;
+  if (d !== undefined) {
+    const verbe = rapport.simulation ? "à supprimer" : "supprimés";
+    const nombre = rapport.simulation ? d.candidates.length : d.deleted.length;
+    console.log(
+      `${d.collection} : ${d.online} en ligne, ${d.prepared} préparés, ${nombre} ${verbe}, ` +
+        `${d.ignored.length} ignorés, ${d.errors.length} en erreur`,
+    );
+    for (const id of rapport.simulation ? d.candidates : d.deleted) console.log(`  ${id}`);
+    for (const e of d.errors) console.error(`  ${e.id} : ${e.erreur}`);
+    if (d.errors.length > 0) process.exitCode = 1;
+  }
   console.log(`Rapport : ${rapport.fichier}`);
   const sansDescription = messageSansDescription(rapport.hops_without_aroma);
   if (sansDescription !== null) console.log(sansDescription);
   if (rapport.refused.length > 0) {
     console.error(`${rapport.refused.length} documents refusés : voir le rapport.`);
-    process.exitCode = 3;
+    process.exitCode ??= 3;
   }
 } catch (erreur) {
   if (erreur instanceof ErreurOptions) {

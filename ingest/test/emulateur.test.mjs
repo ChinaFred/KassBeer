@@ -3,7 +3,7 @@
 // passés : l'écrivain refuserait de toute façon de viser la production sans option.
 
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -14,6 +14,7 @@ import { ErreurOptions } from "../lib/options.mjs";
 
 const HOTE = process.env.FIRESTORE_EMULATOR_HOST;
 const FIXTURE = fileURLToPath(new URL("./fixtures/prepare/", import.meta.url));
+const AROMES = fileURLToPath(new URL("./fixtures/aromes/", import.meta.url));
 const PROJET = "demo-kassbeer";
 
 async function viderEmulateur() {
@@ -194,6 +195,179 @@ describe(
         }),
         ErreurOptions,
       );
+    });
+  },
+);
+
+describe(
+  "--supprimer-absents contre l'émulateur (ADR-014)",
+  { skip: HOTE ? false : "FIRESTORE_EMULATOR_HOST absent" },
+  () => {
+    let prepare;
+    let rapports;
+    let app;
+    let db;
+    let horloge = Date.parse("2026-11-15T10:00:00Z");
+    const maintenant = () => new Date((horloge += 1000));
+    const PREPARES = 61;
+    const ne = () => {
+      throw new Error("confirmation demandée à tort");
+    };
+    const lancer = (argv, confirmerSuppression = ne) =>
+      executer({
+        argv: ["--dossier", prepare, "--rapports", rapports, ...argv],
+        env: { FIRESTORE_EMULATOR_HOST: HOTE },
+        entree: process.stdin,
+        sortie: process.stdout,
+        maintenant,
+        confirmerSuppression,
+      });
+    const existe = async (chemin) => (await db.doc(chemin).get()).exists;
+    const semer = async (collection, ids) => {
+      for (const id of ids) await db.collection(collection).doc(id).set({ name: id });
+    };
+
+    before(async () => {
+      prepare = mkdtempSync(join(tmpdir(), "kassbeer-prepare-"));
+      rapports = mkdtempSync(join(tmpdir(), "kassbeer-rapports-"));
+      cpSync(FIXTURE, prepare, { recursive: true });
+      // 61 houblons préparés : le fictif de la fixture et 60 copies.
+      const [fictif] = JSON.parse(readFileSync(join(FIXTURE, "beer_hops.json"), "utf8"));
+      const hops = [fictif];
+      for (let i = 1; i < PREPARES; i++) {
+        hops.push({ id: `hop-prepare-${i}`, data: { ...fictif.data, name: `Préparé ${i}` } });
+      }
+      writeFileSync(join(prepare, "beer_hops.json"), JSON.stringify(hops));
+      const { initializeApp } = await import("firebase-admin/app");
+      const { getFirestore } = await import("firebase-admin/firestore");
+      app = initializeApp({ projectId: PROJET }, "suppression-test");
+      db = getFirestore(app);
+    });
+    after(async () => {
+      const { deleteApp } = await import("firebase-admin/app");
+      await deleteApp(app);
+      rmSync(prepare, { recursive: true, force: true });
+      rmSync(rapports, { recursive: true, force: true });
+    });
+
+    it("sans l'option : aucun document supprimé", async () => {
+      await viderEmulateur();
+      await semer("beer_hops", ["hop-ancien-1"]);
+      const r = await lancer([]);
+      assert.equal(r.deletions, undefined);
+      assert.equal(await existe("beer_hops/hop-ancien-1"), true);
+    });
+
+    it("simulation : liste des absents, rien supprimé ni demandé", async () => {
+      // En ligne : 61 préparés, 2 absents conformes, 1 identifiant hors motif (64, 95,3 %).
+      await semer("beer_hops", ["hop-ancien-1", "hop-ancien-2", "Hop_Mauvais"]);
+      const r = await lancer(["--supprimer-absents", "beer_hops", "--simulation"]);
+      assert.deepEqual(r.deletions, {
+        collection: "beer_hops",
+        online: 64,
+        prepared: PREPARES,
+        candidates: ["hop-ancien-1", "hop-ancien-2"],
+        deleted: [],
+        ignored: [{ id: "Hop_Mauvais", raison: "identifiant hors du motif de la collection" }],
+        errors: [],
+      });
+      assert.equal(await existe("beer_hops/hop-ancien-1"), true);
+      const fichier = JSON.parse(readFileSync(r.fichier, "utf8"));
+      assert.deepEqual(fichier.deletions.candidates, ["hop-ancien-1", "hop-ancien-2"]);
+    });
+
+    it("nombre non confirmé : rien n'est écrit ni supprimé", async () => {
+      await db.doc("beer_hops/hop-prepare-1").delete();
+      const executions = (await db.collection("ingest_runs").get()).size;
+      let demande = null;
+      await assert.rejects(
+        lancer(["--supprimer-absents", "beer_hops"], async (collection, ids) => {
+          demande = { collection, ids };
+          return false;
+        }),
+        (e) => e instanceof ErreurOptions && /non confirmé/.test(e.message),
+      );
+      assert.deepEqual(demande, {
+        collection: "beer_hops",
+        ids: ["hop-ancien-1", "hop-ancien-2"],
+      });
+      assert.equal(await existe("beer_hops/hop-ancien-1"), true);
+      assert.equal(await existe("beer_hops/hop-prepare-1"), false, "aucune écriture");
+      assert.equal((await db.collection("ingest_runs").get()).size, executions);
+    });
+
+    it("nombre confirmé : absents supprimés, hors motif gardé, rapport chiffré", async () => {
+      const r = await lancer(["--supprimer-absents", "beer_hops"], async () => true);
+      assert.deepEqual(r.deletions.deleted, ["hop-ancien-1", "hop-ancien-2"]);
+      assert.deepEqual(r.deletions.errors, []);
+      assert.equal(r.deletions.ignored.length, 1);
+      assert.equal(r.counts.beer_hops.written, 1);
+      assert.equal(await existe("beer_hops/hop-ancien-1"), false);
+      assert.equal(await existe("beer_hops/hop-ancien-2"), false);
+      assert.equal(await existe("beer_hops/Hop_Mauvais"), true);
+      assert.equal(await existe("beer_hops/hop-prepare-1"), true);
+      const encore = await lancer(["--supprimer-absents", "beer_hops"]);
+      assert.deepEqual(encore.deletions.candidates, [], "rien à confirmer");
+    });
+
+    it("préparation à moins de 95 % des documents en ligne : refusée", async () => {
+      await semer("beer_hops", ["hop-ancien-1", "hop-ancien-2", "hop-ancien-3", "hop-ancien-4"]);
+      await assert.rejects(
+        lancer(["--supprimer-absents", "beer_hops"], async () => true),
+        /moins de 95 %/,
+      );
+      assert.equal(await existe("beer_hops/hop-ancien-1"), true);
+    });
+
+    it("plus de 30 absents : refusé", async () => {
+      await viderEmulateur();
+      await semer(
+        "beer_hops",
+        Array.from({ length: 31 }, (_, i) => `hop-ancien-${i}`),
+      );
+      await assert.rejects(
+        lancer(["--supprimer-absents", "beer_hops"], async () => true),
+        /30 au plus/,
+      );
+      assert.equal(await existe("beer_hops/hop-ancien-0"), true);
+      assert.equal(await existe("beer_hops/hop-houblon-fictif"), false, "aucune écriture");
+    });
+
+    it("autre collection : refusée avant toute lecture", async () => {
+      await semer("beer_fermentables", ["fermentable-ancien"]);
+      await assert.rejects(
+        lancer(["--supprimer-absents", "beer_fermentables"], async () => true),
+        ErreurOptions,
+      );
+      assert.equal(await existe("beer_fermentables/fermentable-ancien"), true);
+    });
+
+    it("beer_hop_aromas : absent d'aromes.json supprimé ; sans aromes.json refusé", async () => {
+      await viderEmulateur();
+      const vide = mkdtempSync(join(tmpdir(), "kassbeer-sans-aromes-"));
+      try {
+        await assert.rejects(
+          lancer(["--supprimer-absents", "beer_hop_aromas", "--aromes", vide]),
+          /sans aromes.json/,
+        );
+      } finally {
+        rmSync(vide, { recursive: true, force: true });
+      }
+      // aromes.json de la fixture : 1 entrée (hop-houblon-fictif) ; en ligne : elle seule,
+      // puis un orphelin : 1 pour 2, refusé ; l'orphelin seul en ligne : supprimé.
+      await semer("beer_hop_aromas", ["hop-houblon-fictif", "hop-orphelin"]);
+      await assert.rejects(
+        lancer(["--supprimer-absents", "beer_hop_aromas", "--aromes", AROMES], async () => true),
+        /moins de 95 %/,
+      );
+      await db.doc("beer_hop_aromas/hop-houblon-fictif").delete();
+      const r = await lancer(
+        ["--supprimer-absents", "beer_hop_aromas", "--aromes", AROMES],
+        async () => true,
+      );
+      assert.deepEqual(r.deletions.deleted, ["hop-orphelin"]);
+      assert.equal(await existe("beer_hop_aromas/hop-orphelin"), false);
+      assert.equal(await existe("beer_hop_aromas/hop-houblon-fictif"), true, "écrit");
     });
   },
 );

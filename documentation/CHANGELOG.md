@@ -6,6 +6,30 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.61 — fonctionnel
+
+La Bibliothèque des houblons est plus propre. Un même houblon n'apparaît plus plusieurs fois
+sous des noms voisins : « Saaz (CZ) » et « Saaz (Czech Republic) », par exemple, ne font plus
+qu'un. « Saaz » désigne le Saaz tchèque, et le Saaz cultivé aux États-Unis s'appelle « Saaz
+(US) ». Les pays d'origine des houblons et des malts s'écrivent d'une seule façon. Une recette
+qui cite « Hallertau », « Tettnanger », « CTZ » ou « Denali » retrouve le bon houblon. Ces
+corrections arrivent dans l'application après la prochaine mise à jour de la Bibliothèque par
+l'administrateur.
+
+### v0.1.61 — technique
+
+ADR-014 (option B). `exchange/lib/src/ingestion/origines.dart` : liste fermée des pays
+(`kPays`) et table des graphies (`kGraphiesOrigine`), appliquées aux houblons et aux malts dans
+`lecture_sources.dart` ; graphie inconnue ou double laissée absente et listée dans
+`rapport.json` (`origines_inconnues`). `fusions.dart` : table de fusion écrite à la main
+(`kFusions`, 16 lignes) branchée dans `Referentiel.fusionner`, identifiant inchangé
+`hop-<cleNormalisee(nom)>`, noms écartés des alias ; la préparation s'arrête sur une ligne sans
+entrée, une entrée désignée deux fois ou un nom porté par deux houblons ; trois alias DIY Dog
+réorientés vers `hop-hallertauer-…`. `ingest/ecrire.mjs --supprimer-absents <beer_hops|beer_hop_aromas>` :
+suppression contrôlée (30 au plus par lancement et par collection, refus sous 95 %, motif
+d'identifiant, confirmation par la saisie du nombre, simulation, rapport `deletions`). 21
+documents de `beer_hops` attendus en moins (466 → 445). Contrôles P19 complété et P56.
+
 ### v0.1.60 — fonctionnel
 
 La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et

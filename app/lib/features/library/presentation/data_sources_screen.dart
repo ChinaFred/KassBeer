@@ -36,7 +36,8 @@ class DataSourcesScreen extends ConsumerWidget {
   static const beerAnalytics =
       'Une partie des ingrédients du fichier 005 de Brewtarget vient de '
       'beer-analytics.com, sous licence CC BY-SA 4.0. Modifications : unités '
-      'normalisées, doublons fusionnés.';
+      'normalisées, origines ramenées à une liste de pays, doublons fusionnés '
+      'et renommés.';
   static const diyDog =
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '
       'pour un usage privé (version e6c12ab de leur transcription).';
