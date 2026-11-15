@@ -318,6 +318,10 @@ refusé et `history` d'au moins 2 messages en mode résumé, liste des huit bloc
 un test de prompt par bloc) et P60 (« Résumer et continuer » sans seuil en Dart) sont
 complétés.
 
+Le 2026-11-15, avec la livraison du lot A1, `CLAUDE.md` passe P25 et « Coûts variables » de « à
+livrer » à « livrés au lot A1 », ajoute la feature `ai` à « Structure » et retire les mentions
+« (lot A1) » de la fixture `ai_cost_centers.json` et du calcul du coût.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

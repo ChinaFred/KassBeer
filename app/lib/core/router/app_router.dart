@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/admin/presentation/admin_sources_screen.dart';
+import '../../features/admin/presentation/couts_ia_screen.dart';
 import '../../features/admin/presentation/error_reports_screen.dart';
 import '../../features/admin/presentation/logs_screen.dart';
+import '../../features/admin/presentation/moteur_ia_screen.dart';
 import '../../features/import/presentation/import_fiches_screen.dart';
 import '../../features/auth/presentation/access_error_screen.dart';
 import '../../features/auth/presentation/access_providers.dart';
@@ -412,6 +414,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                 titre: LogsScreen.titre,
                 retour: AppRoutes.admin,
                 builder: (_, _) => const LogsScreen(),
+              ),
+              PageDeCoquille(
+                path: 'moteur-ia',
+                titre: TextesMoteurIa.titre,
+                retour: AppRoutes.admin,
+                builder: (_, _) => const MoteurIaScreen(),
+              ),
+              PageDeCoquille(
+                path: 'couts-ia',
+                titre: CoutsIaScreen.titre,
+                retour: AppRoutes.admin,
+                builder: (_, _) => const CoutsIaScreen(),
               ),
               PageDeCoquille(
                 path: 'sources',
