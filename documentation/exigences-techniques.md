@@ -3152,7 +3152,7 @@ lancement ; toute autre est refusée par `lireOptions`) lit les identifiants en 
 (`select()`, sans les champs) et les compare aux identifiants préparés, refusés compris
 (`beer_hops.json`, ou `aromes.json` pour `beer_hop_aromas`, exigé). Avant toute écriture,
 `planifierSuppressions` (`lib/ecriture.mjs`) refuse : une autre collection ; une préparation
-qui compte moins de 95 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
+qui compte moins de 90 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
 suppressions (`PLAFOND_SUPPRESSIONS`). Un identifiant hors du motif de la collection
 (`motifIdentifiant`, celui de `beer_hops` pour les arômes) n'est jamais supprimé : il est
 compté « ignoré ». Avec `--simulation`, la liste seule. Sinon, la liste s'affiche et la
@@ -3184,7 +3184,7 @@ houblons, résolution de « Saaz », « Hallertau », « Tettnanger », « CTZ �
 fixture `test/fixtures/prepare/` contre l'émulateur, la seconde sans aucun référentiel ni
 aucune recette réécrit, seul son document `ingest_runs` créé ; `--supprimer-absents` : sans
 l'option rien n'est supprimé, simulation, nombre non confirmé sans écriture, suppression
-confirmée, identifiant hors motif gardé, préparation à moins de 95 % refusée, plus de 30
+confirmée, identifiant hors motif gardé, préparation à moins de 90 % refusée, plus de 30
 absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé) ;
 `npm run test:unitaires` sans émulateur. La CI ne lance pas encore `ingest/` (ADR-005, D2).
 

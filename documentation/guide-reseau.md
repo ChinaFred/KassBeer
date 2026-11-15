@@ -240,6 +240,10 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
+Le 2026-11-15 (v0.1.67), décision de l'utilisateur : P19 abaisse le seuil de
+`--supprimer-absents` de 95 % à 90 % des documents en ligne (ADR-014, note du 2026-11-15).
+Aucun contrôle, agent, skill ni hook nouveau.
+
 Le 2026-11-15 (v0.1.63), décision de l'utilisateur : « Structure » de `CLAUDE.md` décrit
 `exchange/donnees/fabricants/`, fichier des fiches des fabricants versionné (ADR-005, amendement
 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.
