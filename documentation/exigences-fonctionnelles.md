@@ -2413,7 +2413,17 @@ la barre est pleine, « +04:12 », « Dépassé de 4 min · prévu 45 min » («
 la première minute). La carte garde la même taille et la même marge dans les deux états : rien
 ne bouge au passage en dépassé. Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
 « Prévue vers 12:30 », bouton « Commencer l'étape » (« Fait » pour une étape de 0 min, début et
-fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
+fin au même instant). Étape en cours suivie d'une étape avec une durée : bouton « Étape
+suivante », qui termine l'étape en cours et commence la suivante en un appui (un seul lot
+`step_ended` + `step_started`) ; la lecture d'écran nomme les deux étapes (« Terminer « Palier
+68 » et commencer « Ébullition » »). Après l'appui, un message « Étape « {nom} » commencée. »
+reste 10 s (ouvert tant que TalkBack est actif) avec « Annuler », qui supprime dans un même lot
+le début de l'étape commencée et la fin de la précédente, puis affiche « Étape « {précédente} »
+reprise. » ; si l'étape commencée est déjà terminée ou sautée, rien n'est supprimé et le message
+« L'étape « {nom} » est déjà terminée ou sautée : touchez chaque étape pour la corriger. »
+s'affiche. Étape en cours suivie d'une étape de 0 min, ou dernière
+étape : bouton « Terminer l'étape » (« Terminer la journée » sur la dernière étape d'une journée
+autre que le brassage et l'embouteillage) ; l'étape de 0 min garde son appui « Fait ». Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
 « En fermentation »). Sans chronologie : « Aucune étape. Saisissez vos mesures. ». Quand le
 panneau ne tient pas dans sa place (60 % de l'écran au plus en portrait), une barre de
 défilement reste visible à sa droite (couleur `onSurfaceVariant`, 6 px, comme les autres
