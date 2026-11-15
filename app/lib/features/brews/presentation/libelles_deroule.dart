@@ -93,12 +93,18 @@ String _ecartLu(int minutes) => minutes == 0
     ? 'sans écart'
     : '${_minutesLues(minutes.abs())} de ${minutes > 0 ? 'plus' : 'moins'}';
 
-/// Durée d'une étape sur la fiche, après son état : « prévu 45 min · réel
-/// 57 min · +12 min », « prévu 45 min · réel — » (sautée, non faite),
-/// « prévu 45 min » (à venir), « prévu 45 min · réel en cours », « prévu
-/// 45 min · réel sans heure de fin ». `null` pour une action de 0 min : sa
-/// ligne ne change pas. [status] : état de la ligne. Valeurs de `brewing/` (P3).
-TexteDuree? dureeEtapeReelle(ActualStepDuration duree, StepStatus status) {
+/// Durée d'une étape sur la fiche et l'écran du jour, après son état :
+/// « prévu 45 min · réel 57 min · +12 min », « prévu 45 min · réel — »
+/// (sautée, non faite), « prévu 45 min » (à venir, ou non notée sur une fiche
+/// importée : [nonNotee]), « prévu 45 min · réel en cours », « prévu 45 min ·
+/// réel inconnu » (début estimé, ou fin non notée). `null` pour une action de
+/// 0 min : sa ligne ne change pas. [status] : état de la ligne. Valeurs de
+/// `brewing/` (P3).
+TexteDuree? dureeEtapeReelle(
+  ActualStepDuration duree,
+  StepStatus status, {
+  bool nonNotee = false,
+}) {
   final prevu = 'prévu ${_minutes(duree.plannedMinutes)}';
   final reel = duree.actualMinutes;
   final ecart = duree.deltaMinutes;
@@ -112,24 +118,39 @@ TexteDuree? dureeEtapeReelle(ActualStepDuration duree, StepStatus status) {
       affiche: '$prevu · réel en cours',
       lu: '$prevu, réel en cours',
     ),
-    ActualStepKind.missingEnd => (
-      affiche: '$prevu · réel sans heure de fin',
-      lu: '$prevu, réel sans heure de fin',
+    ActualStepKind.missingEnd || ActualStepKind.estimated => (
+      affiche: '$prevu · réel inconnu',
+      lu: '$prevu, durée réelle inconnue',
     ),
-    ActualStepKind.none when status == StepStatus.pending => (
+    ActualStepKind.none when status == StepStatus.pending || nonNotee => (
       affiche: prevu,
       lu: prevu,
     ),
     ActualStepKind.measured || ActualStepKind.none => (
-      affiche: '$prevu · réel —',
+      affiche: '$prevu · réel$nbsp—',
       lu: '$prevu, pas de durée réelle',
     ),
   };
 }
 
+/// Écart de début d'une étape : « Début : 25 min de retard », « Début :
+/// 5 min d'avance », en mots, sans signe ni couleur. `null` sans début noté ou
+/// sans écart (la première étape n'en a jamais). Valeur de `brewing/` (P3).
+TexteDuree? ecartDeDebut(int? minutes) {
+  if (minutes == null || minutes == 0) return null;
+  final duree = _minutes(minutes.abs());
+  final quoi = minutes > 0 ? 'de retard' : 'd\'avance';
+  return (
+    affiche: 'Début$nbsp: $duree $quoi',
+    lu: 'début ${_minutesLues(minutes.abs())} en ${minutes > 0 ? 'retard' : 'avance'}',
+  );
+}
+
 /// Ligne de durée d'une journée sur la fiche : « Durée totale : prévu 6 h 10 ·
-/// réel 6 h 52, dont 32 min entre les étapes · +42 min ». `null` tant
-/// qu'aucune étape n'a début et fin. Valeurs de `brewing/` (P3).
+/// réel 6 h 52, dont 32 min entre les étapes · +42 min » ; « … · réel 6 h 52 ·
+/// +42 min · 3 étapes sans heure notée » quand des étapes n'ont pas de réel ;
+/// « … · réel inconnu : début non noté » ou « : fin non notée ». `null` tant
+/// qu'aucune étape n'a de réel. Valeurs de `brewing/` (P3).
 TexteDuree? dureeJourneeReelle(ActualDayDuration duree) {
   final prevu = _minutes(duree.plannedMinutes);
   const titre = 'Durée totale$nbsp:';
@@ -144,13 +165,28 @@ TexteDuree? dureeJourneeReelle(ActualDayDuration duree) {
         affiche: '$titre prévu $prevu · réel en cours',
         lu: '$titre prévue $prevu, réelle en cours.',
       );
-    case ActualDayKind.missingEnd:
-      final sansFin =
-          '${formatEtapes(duree.stepsWithoutEnd).replaceFirst(' ', nbsp)} '
-          'sans heure de fin';
+    case ActualDayKind.startNotNoted:
+    case ActualDayKind.endNotNoted:
+      final quoi = duree.kind == ActualDayKind.startNotNoted
+          ? 'début non noté'
+          : 'fin non notée';
       return (
-        affiche: '$titre prévu $prevu · réel inconnu$nbsp: $sansFin',
-        lu: '$titre prévue $prevu, réelle inconnue : $sansFin.',
+        affiche: '$titre prévu $prevu · réel inconnu$nbsp: $quoi',
+        lu: '$titre prévue $prevu, réelle inconnue : $quoi.',
+      );
+    case ActualDayKind.partial:
+      if (reel == null || ecart == null) return null;
+      final sansHeure =
+          '${formatEtapes(duree.stepsWithoutTime).replaceFirst(' ', nbsp)} '
+          'sans heure notée';
+      return (
+        affiche:
+            '$titre prévu $prevu · réel ${_minutes(reel)} · '
+            '${formatEcartMinutes(ecart)} · $sansHeure',
+        lu:
+            '$titre prévue $prevu, réelle ${_minutes(reel)}, '
+            '${ecart == 0 ? 'sans écart' : '${_ecartLu(ecart)} que prévu'}, '
+            '$sansHeure.',
       );
     case ActualDayKind.measured:
       if (reel == null || ecart == null) return null;

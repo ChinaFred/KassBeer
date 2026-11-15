@@ -104,6 +104,10 @@ bool memeJour(DateTime a, DateTime b) =>
 String formatHeure(DateTime when) =>
     '${_deuxChiffres(when.hour)}:${_deuxChiffres(when.minute)}';
 
+/// Heure lue par un lecteur d'écran : « 12 h 10 », « 9 h 05 ».
+String heureParlee(DateTime when) =>
+    '${when.hour} h ${_deuxChiffres(when.minute)}';
+
 /// Durée en heures et minutes : « 45 min », « 5 h 40 ».
 String formatDuree(Duration duree) {
   final minutes = duree.inMinutes;
@@ -134,6 +138,10 @@ String formatDate(DateTime date) =>
 /// Date avec le jour, sans l'année : « sam. 22 nov. ».
 String formatJourMois(DateTime date) =>
     '${_joursCourts[date.weekday - 1]} ${date.day} ${_moisCourts[date.month - 1]}';
+
+/// Jour et mois courts : « 13 déc. ».
+String formatJourCourt(DateTime date) =>
+    '${date.day} ${_moisCourts[date.month - 1]}';
 
 /// Date sans le jour : « 11 févr. 2024 ».
 String formatDateCourte(DateTime date) =>
@@ -182,6 +190,12 @@ String jourHeureParle(DateTime when) =>
     '${_joursComplets[when.weekday - 1]} ${when.day} '
     '${_moisComplets[when.month - 1]} ${when.hour} heures '
     '${_deuxChiffres(when.minute)}';
+
+/// Lecture d'une date sans heure pour un lecteur d'écran : « Samedi 15
+/// novembre ».
+String jourParle(DateTime when) =>
+    '${_joursComplets[when.weekday - 1]} ${when.day} '
+    '${_moisComplets[when.month - 1]}';
 
 /// Date en chiffres : « 08/11/26 ».
 String formatDateChiffres(DateTime date) =>

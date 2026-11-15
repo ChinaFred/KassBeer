@@ -219,9 +219,11 @@ void main() {
               kind: StepEventKind.fromStored(e['kind'] as String),
               stepKey: e['step'] as String,
               measuredAt: DateTime.parse(e['at'] as String),
+              estimated: e['estimated'] as bool? ?? false,
             ),
         ];
         final now = DateTime.parse(c['now'] as String);
+        final plannedStart = c['planned_start'] as String?;
         final records = stepRecordsFromEvents(
           steps: steps,
           events: events,
@@ -250,6 +252,9 @@ void main() {
               ),
           ],
           dayClosed: c['day_closed'] as bool? ?? false,
+          plannedStart: plannedStart == null
+              ? null
+              : DateTime.parse(plannedStart),
         );
 
         final expected = c['expected'] as Map<String, Object?>;
@@ -262,6 +267,23 @@ void main() {
           expect(s.plannedMinutes, e['planned'], reason: at);
           expect(s.actualMinutes, e['actual'], reason: at);
           expect(s.deltaMinutes, e['delta'], reason: at);
+          expect(s.startDeltaMinutes, e['start_delta'], reason: '$at début');
+          if (e.containsKey('theoretical')) {
+            final t = e['theoretical'] as String?;
+            expect(
+              s.theoreticalStart?.toUtc(),
+              t == null ? null : DateTime.parse(t).toUtc(),
+              reason: '$at heure théorique',
+            );
+          }
+          if (e.containsKey('end')) {
+            final t = e['end'] as String?;
+            expect(
+              s.end?.toUtc(),
+              t == null ? null : DateTime.parse(t).toUtc(),
+              reason: '$at fin',
+            );
+          }
         }
         final day = expected['day'] as Map<String, Object?>;
         expect(result.kind.name, day['kind'], reason: 'journée');
@@ -269,7 +291,11 @@ void main() {
         expect(result.actualMinutes, day['actual'], reason: 'réel');
         expect(result.betweenStepsMinutes, day['between'], reason: 'entre');
         expect(result.deltaMinutes, day['delta'], reason: 'écart');
-        expect(result.stepsWithoutEnd, day['without_end'], reason: 'sans fin');
+        expect(
+          result.stepsWithoutTime,
+          day['without_time'] ?? 0,
+          reason: 'sans heure',
+        );
       });
     }
 
@@ -291,6 +317,32 @@ void main() {
           status: StepStatus.pending,
         ),
         'prévu négatif',
+      );
+    });
+
+    test('heures théoriques : une heure par étape, durée positive', () {
+      expectInvalid(
+        () => theoreticalStarts(
+          planned: const [Duration(minutes: 5)],
+          notedStarts: const [],
+        ),
+        'heures sans une par étape',
+      );
+      expectInvalid(
+        () => theoreticalStarts(
+          planned: const [Duration(minutes: 5)],
+          notedStarts: const [null],
+          skipped: const [],
+        ),
+        'sauts sans un par étape',
+      );
+      expectInvalid(
+        () => theoreticalStarts(
+          planned: const [Duration(minutes: -5)],
+          notedStarts: const [null],
+          anchor: DateTime.utc(2026),
+        ),
+        'durée négative',
       );
     });
   });

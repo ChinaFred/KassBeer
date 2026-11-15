@@ -79,6 +79,25 @@ enum PhaseEvenement {
   }
 }
 
+/// Nature de l'heure d'une saisie, lue dans `time_estimated`,
+/// `date_estimated` et `phase` : jamais déduite de l'heure elle-même.
+enum NatureHeure {
+  /// Heure notée (sur l'appareil, ou dans la fiche importée).
+  notee,
+
+  /// Saisie du jour de brassage d'une fiche importée, citée sans heure : heure
+  /// estimée d'après la chronologie.
+  estimee,
+
+  /// Relevé d'une fiche importée noté sans heure : date gardée, heure posée à
+  /// 12:00 par la préparation.
+  nonNotee,
+
+  /// Relevé de l'en-tête d'une fiche importée, sans date : jour du brassage
+  /// + 28 jours.
+  dateEstimee,
+}
+
 /// Valeur d'une mesure à l'écran : « 67,5 °C », « 1057,9 », « 23,0 L », « pH 5,42 ».
 String libelleMesure(MeasureType type, double value) => switch (type) {
   MeasureType.temperature => formatCelsius(value),
@@ -102,6 +121,8 @@ class BrewEvent {
     this.note,
     required this.measuredAt,
     this.phase,
+    this.timeEstimated = false,
+    this.dateEstimated = false,
     this.hasPendingWrites = false,
   });
 
@@ -121,6 +142,16 @@ class BrewEvent {
   /// Relevé de fermentation, ou `null` pour le jour de brassage (FE4).
   final PhaseEvenement? phase;
 
+  /// Heure estimée à l'import d'une fiche (`time_estimated: true`) : l'heure
+  /// n'a pas été notée. Elle date l'événement, sans réel ni écart. Retirée
+  /// quand une correction change l'heure.
+  final bool timeEstimated;
+
+  /// Date elle-même estimée (`date_estimated: true`) : relevé de l'en-tête
+  /// daté du jour du brassage + 28 jours par la préparation. Toujours avec
+  /// [timeEstimated].
+  final bool dateEstimated;
+
   /// Écriture locale pas encore reçue par le serveur.
   final bool hasPendingWrites;
 
@@ -135,6 +166,8 @@ class BrewEvent {
       throw const DocumentIllisible('measured_at', 'heure absente');
     }
     final kind = BrewEventKind.fromStored(data['kind']);
+    final timeEstimated = read.boolFacultatif('time_estimated') ?? false;
+    final dateEstimated = read.boolFacultatif('date_estimated') ?? false;
     final stepKey = read.texteFacultatif('step_key');
     if (kind.stepKind != null && stepKey == null) {
       throw const DocumentIllisible('step_key', 'clé d\'étape absente');
@@ -149,6 +182,8 @@ class BrewEvent {
       note: read.texteFacultatif('note'),
       measuredAt: measuredAt,
       phase: PhaseEvenement.fromStored(data['phase']),
+      timeEstimated: timeEstimated || dateEstimated,
+      dateEstimated: dateEstimated,
       hasPendingWrites: hasPendingWrites,
     );
   }
@@ -159,7 +194,13 @@ class BrewEvent {
     final step = kind.stepKind;
     final key = stepKey;
     if (step == null || key == null) return null;
-    return StepEvent(id: id, kind: step, stepKey: key, measuredAt: measuredAt);
+    return StepEvent(
+      id: id,
+      kind: step,
+      stepKey: key,
+      measuredAt: measuredAt,
+      estimated: timeEstimated,
+    );
   }
 
   /// Champs à écrire. `created_at` est posée par le serveur (audit seul).
@@ -172,6 +213,8 @@ class BrewEvent {
     if (note != null) 'note': note,
     'measured_at': Timestamp.fromDate(measuredAt),
     if (phase != null) 'phase': phase!.storedValue,
+    if (timeEstimated || dateEstimated) 'time_estimated': true,
+    if (dateEstimated) 'date_estimated': true,
     'created_at': FieldValue.serverTimestamp(),
   };
 
@@ -179,6 +222,15 @@ class BrewEvent {
       kind == BrewEventKind.measurement || kind == BrewEventKind.note;
 
   bool get isFermentation => phase == PhaseEvenement.fermentation;
+
+  /// Nature de [measuredAt] ([NatureHeure]).
+  NatureHeure get natureHeure => dateEstimated
+      ? NatureHeure.dateEstimee
+      : !timeEstimated
+      ? NatureHeure.notee
+      : isFermentation
+      ? NatureHeure.nonNotee
+      : NatureHeure.estimee;
 
   bool get isGravity =>
       kind == BrewEventKind.measurement && measureType == MeasureType.gravity;

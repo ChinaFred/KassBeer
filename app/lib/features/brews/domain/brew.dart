@@ -75,6 +75,7 @@ class Brew {
     this.sugarsInWort,
     this.notes,
     this.process,
+    this.importedFrom,
     this.createdAt,
     this.hasPendingWrites = false,
   });
@@ -133,6 +134,14 @@ class Brew {
   /// brassin se lisent par [deroule], jamais par `recipe.brewSteps` (P37).
   final Deroule? process;
 
+  /// Origine d'un brassin importé (`imported_from`, marque d'Admin › Import),
+  /// ou `null` pour un brassin créé dans l'application.
+  final String? importedFrom;
+
+  /// Vrai pour un brassin importé d'une fiche Excel : une étape sans début
+  /// y est « Non notée » sur la fiche, et non « Non faite ».
+  bool get importeDUneFiche => importedFrom?.startsWith('Fiche Excel') ?? false;
+
   /// `null` tant qu'une écriture locale attend le serveur.
   final DateTime? createdAt;
   final bool hasPendingWrites;
@@ -174,6 +183,7 @@ class Brew {
       sugarsInWort: read.boolFacultatif('sugars_in_wort'),
       notes: read.texteFacultatif('notes'),
       process: data['process'] == null ? null : lireDeroule(data['process']),
+      importedFrom: read.texteFacultatif('imported_from'),
       createdAt: read.date('created_at'),
       hasPendingWrites: hasPendingWrites,
     );

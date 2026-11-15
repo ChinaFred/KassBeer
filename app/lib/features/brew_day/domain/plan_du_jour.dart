@@ -45,6 +45,7 @@ class PlanDuJour {
     required this.etapeIncoherente,
     required this.finPrevue,
     required this.retard,
+    this.depart,
   });
 
   final List<LigneJour> lignes;
@@ -61,6 +62,10 @@ class PlanDuJour {
 
   /// Écart de la fin prévue avec le plan depuis le premier début.
   final Duration retard;
+
+  /// Départ prévu de la journée : ancre des heures théoriques d'une étape non
+  /// notée ([durees]).
+  final DateTime? depart;
 
   bool get horairesFiables => etapeIncoherente == null;
 
@@ -88,14 +93,16 @@ class PlanDuJour {
   /// Prévu et réel de la journée et de chaque étape, dans l'ordre de [lignes],
   /// calculés par `brewing/` (P3) à partir des heures enregistrées. [close] :
   /// la journée est close (voir [journeeClose]) ; une étape restée en cours y
-  /// est sans heure de fin. Lève `BrewingInputException` pour une étape faite
-  /// sans début.
+  /// est sans fin. Heures théoriques ancrées sur [depart], écarts de
+  /// début, fin d'une étape au début noté de la suivante : `brewing/` (P3).
+  /// Lève `BrewingInputException` pour une étape faite sans début.
   ActualDayDuration durees({required bool close}) => actualDurations(
     steps: [
       for (final l in lignes)
         StepTiming(planned: l.duree, status: l.status, record: l.record),
     ],
     dayClosed: close,
+    plannedStart: depart,
   );
 
   /// Étape à venir après [ligne], ou `null`.
@@ -258,6 +265,7 @@ class PlanDuJour {
       etapeIncoherente: incoherente,
       finPrevue: finPrevue,
       retard: retard,
+      depart: plannedStart,
     );
   }
 }

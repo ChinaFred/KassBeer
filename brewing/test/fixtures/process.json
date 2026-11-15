@@ -755,8 +755,117 @@
   ],
   "invalid_session_orders": [[], [3, 4], [0, 366], [0, -1]],
   "actual_durations": {
-    "rule": "Prévu et réel d'une journée, sur la fiche d'un brassin. Les événements se réduisent par stepRecordsFromEvents (début le plus ancien, dernière fin à ou après ce début ; une fin antérieure est écartée), puis l'horaire par recomputeSchedule (départ : premier début, sinon now). Durée réelle d'une étape : fin retenue moins début retenu (jamais la fin estimée de ScheduledStep.end), arrondie à la minute la plus proche, 30 s vers le haut. Prévu arrondi de même. Écart = réel arrondi moins prévu arrondi. Étape de 0 min prévue : action, ligne inchangée. Sautée, non faite ou à venir : none. Commencée sans fin : running si elle est l'étape en cours et que la journée n'est pas close (day_closed), sinon missingEnd. Journée : prévu = somme des durées prévues, sautées comprises, arrondie ; none tant qu'aucune étape n'a début et fin ; running si une étape est en cours ; missingEnd si une étape a commencé sans fin ; sinon réel = dernière fin moins premier début, arrondi, et between = réel moins la somme des réels arrondis des étapes qui ont début et fin. Heures avec fuseau : l'écart se calcule en temps écoulé, changement d'heure compris.",
+    "rule": "Prévu et réel d'une journée, sur la fiche d'un brassin et l'écran du jour. Les événements se réduisent par stepRecordsFromEvents (début le plus ancien, dernière fin à ou après ce début ; une fin antérieure est écartée ; estimated : heure estimée à l'import d'une fiche, time_estimated), puis l'horaire par recomputeSchedule (départ : premier début, sinon now). Seul un début noté (non estimé) compte. Fin d'une étape : sa fin retenue (step_ended), sinon le début noté de l'étape suivante, étapes sautées passées ; jamais la fin estimée de ScheduledStep.end. Durée réelle : fin moins début noté, arrondie à la minute la plus proche, 30 s vers le haut. Prévu arrondi de même. Écart = réel arrondi moins prévu arrondi. Étape de 0 min prévue : action, ligne inchangée. Sautée, non faite ou à venir : none. Commencée à une heure estimée : estimated (réel inconnu). Commencée sans fin : running si elle est l'étape en cours et que la journée n'est pas close (day_closed), sinon missingEnd (réel inconnu). start_delta : début noté moins début du plan d'origine (premier début noté de la journée plus les durées prévues de chaque étape entre les deux, sautées comprises), arrondi, signé ; nul sans début noté. end (vérifiée quand la clé est présente) : fin retenue d'une étape measured, nulle sinon. theoretical (vérifiée quand la clé est présente) : dernier début noté qui précède l'étape (le sien compris) plus les durées prévues des étapes entre les deux (non notée : durée prévue, sautée : zéro) ; sans début noté avant, planned_start ; sans planned_start, nulle. Journée : prévu = somme des durées prévues, sautées comprises, arrondie ; none tant qu'aucune étape n'a de réel ; running si une étape est en cours ; startNotNoted si la première étape commencée a un début estimé ; endNotNoted si la dernière étape commencée n'a pas de fin (fin enregistrée, ou début noté d'une action) ; sinon réel = dernière fin moins premier début, arrondi ; measured si toutes les étapes commencées ont un réel (ou sont des actions), et between = réel moins la somme des réels arrondis ; partial sinon, without_time = nombre d'étapes commencées estimated ou missingEnd, sans between. Heures avec fuseau : l'écart se calcule en temps écoulé, changement d'heure compris.",
     "cases": [
+      {
+        "id": "fiche-importee-heures-estimees",
+        "note": "Brassin importé d'une fiche (journée close) : heures notées, une étape absente de la fiche (rinçage, non faite, aucun événement), une étape citée sans heure (ébullition, début estimé à 13:10 = 12:10 + 45 + 15). L'empâtage finit au début de l'étape suivante, absente : réel inconnu. Le refroidissement finit au début noté de la densité. Le retard de début s'accumule depuis le premier début noté. Journée : réel de 12:10 à 14:45 (action finale), deux étapes sans réel.",
+        "now": "2024-07-14T20:00:00+02:00",
+        "day_closed": true,
+        "planned_start": "2024-07-14T11:45:00+02:00",
+        "steps": [
+          { "id": "empatage", "planned_minutes": 45 },
+          { "id": "rincage", "planned_minutes": 15 },
+          { "id": "ebullition", "planned_minutes": 60 },
+          { "id": "houblon", "planned_minutes": 0 },
+          { "id": "refroidissement", "planned_minutes": 20 },
+          { "id": "densite", "planned_minutes": 0 }
+        ],
+        "events": [
+          { "id": "e01", "kind": "step_started", "step": "empatage", "at": "2024-07-14T12:10:00+02:00" },
+          { "id": "e02", "kind": "step_started", "step": "ebullition", "at": "2024-07-14T13:10:00+02:00", "estimated": true },
+          { "id": "e03", "kind": "step_started", "step": "houblon", "at": "2024-07-14T14:15:00+02:00" },
+          { "id": "e04", "kind": "step_started", "step": "refroidissement", "at": "2024-07-14T14:20:00+02:00" },
+          { "id": "e05", "kind": "step_started", "step": "densite", "at": "2024-07-14T14:45:00+02:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "missingEnd", "planned": 45, "start_delta": 0, "theoretical": "2024-07-14T12:10:00+02:00", "end": null },
+            { "kind": "none", "planned": 15, "theoretical": "2024-07-14T12:55:00+02:00" },
+            { "kind": "estimated", "planned": 60, "theoretical": "2024-07-14T13:10:00+02:00" },
+            { "kind": "action", "planned": 0, "start_delta": 5, "theoretical": "2024-07-14T14:15:00+02:00" },
+            { "kind": "measured", "planned": 20, "actual": 25, "delta": 5, "start_delta": 10, "theoretical": "2024-07-14T14:20:00+02:00", "end": "2024-07-14T14:45:00+02:00" },
+            { "kind": "action", "planned": 0, "start_delta": 15, "theoretical": "2024-07-14T14:45:00+02:00" }
+          ],
+          "day": { "kind": "partial", "planned": 140, "actual": 155, "delta": 15, "without_time": 2 }
+        }
+      },
+      {
+        "id": "premiere-etape-estimee",
+        "note": "Première étape commencée à une heure estimée : la journée a son début non noté. Heure théorique de la première étape : planned_start. Le plan d'origine part du premier début noté (b).",
+        "now": "2024-07-14T20:00:00+02:00",
+        "day_closed": true,
+        "planned_start": "2024-07-14T09:00:00+02:00",
+        "steps": [
+          { "id": "a", "planned_minutes": 30 },
+          { "id": "b", "planned_minutes": 30 },
+          { "id": "c", "planned_minutes": 10 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2024-07-14T09:00:00+02:00", "estimated": true },
+          { "id": "e2", "kind": "step_started", "step": "b", "at": "2024-07-14T09:40:00+02:00" },
+          { "id": "e3", "kind": "step_started", "step": "c", "at": "2024-07-14T10:20:00+02:00" },
+          { "id": "e4", "kind": "step_ended", "step": "c", "at": "2024-07-14T10:30:00+02:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "estimated", "planned": 30, "theoretical": "2024-07-14T09:00:00+02:00" },
+            { "kind": "measured", "planned": 30, "actual": 40, "delta": 10, "start_delta": 0, "theoretical": "2024-07-14T09:40:00+02:00" },
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0, "start_delta": 10, "theoretical": "2024-07-14T10:20:00+02:00" }
+          ],
+          "day": { "kind": "startNotNoted", "planned": 70 }
+        }
+      },
+      {
+        "id": "sautee-puis-non-faite",
+        "note": "Une étape sautée compte zéro dans l'heure théorique, et sa durée prévue dans le plan d'origine. L'étape avant une étape non faite n'a pas de fin : réel inconnu, journée partielle.",
+        "now": "2026-11-21T12:00:00+01:00",
+        "day_closed": true,
+        "steps": [
+          { "id": "a", "planned_minutes": 20 },
+          { "id": "b", "planned_minutes": 10 },
+          { "id": "c", "planned_minutes": 30 },
+          { "id": "d", "planned_minutes": 15 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T08:00:00+01:00" },
+          { "id": "e2", "kind": "step_skipped", "step": "b", "at": "2026-11-21T08:20:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "d", "at": "2026-11-21T09:00:00+01:00" },
+          { "id": "e4", "kind": "step_ended", "step": "d", "at": "2026-11-21T09:15:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "missingEnd", "planned": 20, "start_delta": 0, "theoretical": "2026-11-21T08:00:00+01:00" },
+            { "kind": "none", "planned": 10, "theoretical": "2026-11-21T08:20:00+01:00" },
+            { "kind": "none", "planned": 30, "theoretical": "2026-11-21T08:20:00+01:00" },
+            { "kind": "measured", "planned": 15, "actual": 15, "delta": 0, "start_delta": 0, "theoretical": "2026-11-21T09:00:00+01:00" }
+          ],
+          "day": { "kind": "partial", "planned": 75, "actual": 75, "delta": 0, "without_time": 1 }
+        }
+      },
+      {
+        "id": "estimee-avec-fin",
+        "note": "Étape commencée à une heure estimée et terminée (Terminer) : la fin est notée, le début ne l'est pas ; réel inconnu, et la fin date la journée.",
+        "now": "2026-11-21T12:00:00+01:00",
+        "day_closed": true,
+        "steps": [
+          { "id": "a", "planned_minutes": 30 },
+          { "id": "b", "planned_minutes": 30 }
+        ],
+        "events": [
+          { "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T08:00:00+01:00" },
+          { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-11-21T08:35:00+01:00" },
+          { "id": "e3", "kind": "step_started", "step": "b", "at": "2026-11-21T08:30:00+01:00", "estimated": true },
+          { "id": "e4", "kind": "step_ended", "step": "b", "at": "2026-11-21T09:10:00+01:00" }
+        ],
+        "expected": {
+          "steps": [
+            { "kind": "measured", "planned": 30, "actual": 35, "delta": 5, "start_delta": 0, "theoretical": "2026-11-21T08:00:00+01:00", "end": "2026-11-21T08:35:00+01:00" },
+            { "kind": "estimated", "planned": 30, "theoretical": "2026-11-21T08:30:00+01:00", "end": null }
+          ],
+          "day": { "kind": "partial", "planned": 60, "actual": 70, "delta": 10, "without_time": 1 }
+        }
+      },
       {
         "id": "journee-avec-attentes",
         "note": "Cinq étapes faites, des attentes entre elles ; l'ajout de 0 min, fait pendant l'ébullition, reste une action.",
@@ -782,13 +891,13 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "measured", "planned": 30, "actual": 35, "delta": 5 },
-            { "kind": "measured", "planned": 60, "actual": 58, "delta": -2 },
-            { "kind": "measured", "planned": 90, "actual": 102, "delta": 12 },
-            { "kind": "action", "planned": 0 },
-            { "kind": "measured", "planned": 60, "actual": 60, "delta": 0 }
+            { "kind": "measured", "planned": 30, "actual": 35, "delta": 5, "start_delta": 0 },
+            { "kind": "measured", "planned": 60, "actual": 58, "delta": -2, "start_delta": 20 },
+            { "kind": "measured", "planned": 90, "actual": 102, "delta": 12, "start_delta": 20 },
+            { "kind": "action", "planned": 0, "start_delta": -40 },
+            { "kind": "measured", "planned": 60, "actual": 60, "delta": 0, "start_delta": 40 }
           ],
-          "day": { "kind": "measured", "planned": 240, "actual": 280, "between": 25, "delta": 40, "without_end": 0 }
+          "day": { "kind": "measured", "planned": 240, "actual": 280, "between": 25, "delta": 40, "without_time": 0 }
         }
       },
       {
@@ -810,12 +919,12 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "measured", "planned": 20, "actual": 22, "delta": 2 },
+            { "kind": "measured", "planned": 20, "actual": 22, "delta": 2, "start_delta": 0 },
             { "kind": "none", "planned": 15 },
             { "kind": "none", "planned": 10 },
-            { "kind": "measured", "planned": 30, "actual": 25, "delta": -5 }
+            { "kind": "measured", "planned": 30, "actual": 25, "delta": -5, "start_delta": -20 }
           ],
-          "day": { "kind": "measured", "planned": 75, "actual": 50, "between": 3, "delta": -25, "without_end": 0 }
+          "day": { "kind": "measured", "planned": 75, "actual": 50, "between": 3, "delta": -25, "without_time": 0 }
         }
       },
       {
@@ -834,16 +943,16 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "measured", "planned": 30, "actual": 30, "delta": 0 },
-            { "kind": "running", "planned": 45 },
+            { "kind": "measured", "planned": 30, "actual": 30, "delta": 0, "start_delta": 0 },
+            { "kind": "running", "planned": 45, "start_delta": 1 },
             { "kind": "none", "planned": 10 }
           ],
-          "day": { "kind": "running", "planned": 85, "without_end": 0 }
+          "day": { "kind": "running", "planned": 85 }
         }
       },
       {
         "id": "etape-en-cours-journee-close",
-        "note": "Mêmes heures, journée close par « Terminer le brassage » du menu sans fin de l'étape en cours : elle reste sans heure de fin, la journée sans réel.",
+        "note": "Mêmes heures, journée close par « Terminer le brassage » du menu sans fin de l'étape en cours : elle reste sans fin (réel inconnu), la journée a sa fin non notée.",
         "now": "2026-11-21T11:00:00+01:00",
         "day_closed": true,
         "steps": [
@@ -857,15 +966,15 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "measured", "planned": 30, "actual": 30, "delta": 0 },
-            { "kind": "missingEnd", "planned": 45 }
+            { "kind": "measured", "planned": 30, "actual": 30, "delta": 0, "start_delta": 0 },
+            { "kind": "missingEnd", "planned": 45, "start_delta": 1 }
           ],
-          "day": { "kind": "missingEnd", "planned": 75, "without_end": 1 }
+          "day": { "kind": "endNotNoted", "planned": 75 }
         }
       },
       {
         "id": "commencee-sans-fin",
-        "note": "Deux étapes commencées sans fin : la plus récente est en cours, l'autre est faite, sans heure de fin. Une étape en cours l'emporte pour la journée.",
+        "note": "Deux étapes commencées sans fin : la plus récente est en cours, l'autre est faite, et finit au début noté de la suivante. Une étape en cours l'emporte pour la journée.",
         "now": "2026-11-21T12:00:00+01:00",
         "steps": [
           { "id": "a", "planned_minutes": 30 },
@@ -880,16 +989,16 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "missingEnd", "planned": 30 },
-            { "kind": "running", "planned": 20 },
-            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0 }
+            { "kind": "measured", "planned": 30, "actual": 40, "delta": 10, "start_delta": 0 },
+            { "kind": "running", "planned": 20, "start_delta": 10 },
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0, "start_delta": 10 }
           ],
-          "day": { "kind": "running", "planned": 60, "without_end": 1 }
+          "day": { "kind": "running", "planned": 60 }
         }
       },
       {
         "id": "commencee-sans-fin-journee-close",
-        "note": "Mêmes heures, journée close : les deux étapes sont sans heure de fin, la journée sans réel.",
+        "note": "Mêmes heures, journée close : chaque étape sans fin finit au début noté de la suivante ; la journée a son réel.",
         "now": "2026-11-21T12:00:00+01:00",
         "day_closed": true,
         "steps": [
@@ -905,11 +1014,11 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "missingEnd", "planned": 30 },
-            { "kind": "missingEnd", "planned": 20 },
-            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0 }
+            { "kind": "measured", "planned": 30, "actual": 40, "delta": 10, "start_delta": 0 },
+            { "kind": "measured", "planned": 20, "actual": 20, "delta": 0, "start_delta": 10 },
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0, "start_delta": 10 }
           ],
-          "day": { "kind": "missingEnd", "planned": 60, "without_end": 2 }
+          "day": { "kind": "measured", "planned": 60, "actual": 70, "between": 0, "delta": 10, "without_time": 0 }
         }
       },
       {
@@ -923,8 +1032,8 @@
           { "id": "e3", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:31:00+01:00" }
         ],
         "expected": {
-          "steps": [{ "kind": "measured", "planned": 30, "actual": 31, "delta": 1 }],
-          "day": { "kind": "measured", "planned": 30, "actual": 31, "between": 0, "delta": 1, "without_end": 0 }
+          "steps": [{ "kind": "measured", "planned": 30, "actual": 31, "delta": 1, "start_delta": 0 }],
+          "day": { "kind": "measured", "planned": 30, "actual": 31, "between": 0, "delta": 1, "without_time": 0 }
         }
       },
       {
@@ -938,8 +1047,8 @@
           { "id": "e3", "kind": "step_ended", "step": "a", "at": "2026-11-21T10:40:00+01:00" }
         ],
         "expected": {
-          "steps": [{ "kind": "measured", "planned": 30, "actual": 40, "delta": 10 }],
-          "day": { "kind": "measured", "planned": 30, "actual": 40, "between": 0, "delta": 10, "without_end": 0 }
+          "steps": [{ "kind": "measured", "planned": 30, "actual": 40, "delta": 10, "start_delta": 0 }],
+          "day": { "kind": "measured", "planned": 30, "actual": 40, "between": 0, "delta": 10, "without_time": 0 }
         }
       },
       {
@@ -958,10 +1067,10 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0 },
-            { "kind": "action", "planned": 0 }
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0, "start_delta": 0 },
+            { "kind": "action", "planned": 0, "start_delta": 0 }
           ],
-          "day": { "kind": "measured", "planned": 10, "actual": 10, "between": 0, "delta": 0, "without_end": 0 }
+          "day": { "kind": "measured", "planned": 10, "actual": 10, "between": 0, "delta": 0, "without_time": 0 }
         }
       },
       {
@@ -983,11 +1092,11 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "measured", "planned": 10, "actual": 11, "delta": 1 },
-            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0 },
-            { "kind": "measured", "planned": 13, "actual": 12, "delta": -1 }
+            { "kind": "measured", "planned": 10, "actual": 11, "delta": 1, "start_delta": 0 },
+            { "kind": "measured", "planned": 10, "actual": 10, "delta": 0, "start_delta": 1 },
+            { "kind": "measured", "planned": 13, "actual": 12, "delta": -1, "start_delta": 1 }
           ],
-          "day": { "kind": "measured", "planned": 33, "actual": 33, "between": 0, "delta": 0, "without_end": 0 }
+          "day": { "kind": "measured", "planned": 33, "actual": 33, "between": 0, "delta": 0, "without_time": 0 }
         }
       },
       {
@@ -1006,10 +1115,10 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "measured", "planned": 600, "actual": 605, "delta": 5 },
-            { "kind": "measured", "planned": 5, "actual": 0, "delta": -5 }
+            { "kind": "measured", "planned": 600, "actual": 605, "delta": 5, "start_delta": 0 },
+            { "kind": "measured", "planned": 5, "actual": 0, "delta": -5, "start_delta": 5 }
           ],
-          "day": { "kind": "measured", "planned": 605, "actual": 605, "between": 0, "delta": 0, "without_end": 0 }
+          "day": { "kind": "measured", "planned": 605, "actual": 605, "between": 0, "delta": 0, "without_time": 0 }
         }
       },
       {
@@ -1027,10 +1136,10 @@
         ],
         "expected": {
           "steps": [
-            { "kind": "measured", "planned": 60, "actual": 70, "delta": 10 },
-            { "kind": "measured", "planned": 30, "actual": 25, "delta": -5 }
+            { "kind": "measured", "planned": 60, "actual": 70, "delta": 10, "start_delta": 0 },
+            { "kind": "measured", "planned": 30, "actual": 25, "delta": -5, "start_delta": 15 }
           ],
-          "day": { "kind": "measured", "planned": 90, "actual": 100, "between": 5, "delta": 10, "without_end": 0 }
+          "day": { "kind": "measured", "planned": 90, "actual": 100, "between": 5, "delta": 10, "without_time": 0 }
         }
       },
       {
@@ -1043,8 +1152,8 @@
           { "id": "e2", "kind": "step_ended", "step": "a", "at": "2026-10-25T02:45:00+01:00" }
         ],
         "expected": {
-          "steps": [{ "kind": "measured", "planned": 120, "actual": 135, "delta": 15 }],
-          "day": { "kind": "measured", "planned": 120, "actual": 135, "between": 0, "delta": 15, "without_end": 0 }
+          "steps": [{ "kind": "measured", "planned": 120, "actual": 135, "delta": 15, "start_delta": 0 }],
+          "day": { "kind": "measured", "planned": 120, "actual": 135, "between": 0, "delta": 15, "without_time": 0 }
         }
       },
       {
@@ -1057,8 +1166,8 @@
           { "id": "e2", "kind": "step_ended", "step": "a", "at": "2027-03-28T03:20:00+02:00" }
         ],
         "expected": {
-          "steps": [{ "kind": "measured", "planned": 60, "actual": 50, "delta": -10 }],
-          "day": { "kind": "measured", "planned": 60, "actual": 50, "between": 0, "delta": -10, "without_end": 0 }
+          "steps": [{ "kind": "measured", "planned": 60, "actual": 50, "delta": -10, "start_delta": 0 }],
+          "day": { "kind": "measured", "planned": 60, "actual": 50, "between": 0, "delta": -10, "without_time": 0 }
         }
       },
       {
@@ -1071,10 +1180,10 @@
         "events": [],
         "expected": {
           "steps": [
-            { "kind": "none", "planned": 30 },
+            { "kind": "none", "planned": 30, "theoretical": null },
             { "kind": "none", "planned": 20 }
           ],
-          "day": { "kind": "none", "planned": 50, "without_end": 0 }
+          "day": { "kind": "none", "planned": 50 }
         }
       },
       {
@@ -1088,10 +1197,10 @@
         "events": [{ "id": "e1", "kind": "step_started", "step": "a", "at": "2026-11-21T10:00:00+01:00" }],
         "expected": {
           "steps": [
-            { "kind": "running", "planned": 30 },
+            { "kind": "running", "planned": 30, "start_delta": 0 },
             { "kind": "none", "planned": 20 }
           ],
-          "day": { "kind": "none", "planned": 50, "without_end": 0 }
+          "day": { "kind": "none", "planned": 50 }
         }
       },
       {
@@ -1111,7 +1220,7 @@
             { "kind": "none", "planned": 10 },
             { "kind": "none", "planned": 5 }
           ],
-          "day": { "kind": "none", "planned": 15, "without_end": 0 }
+          "day": { "kind": "none", "planned": 15 }
         }
       }
     ]

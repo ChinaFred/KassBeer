@@ -31,6 +31,7 @@ class StepRecord {
     this.startEventId,
     this.endEventId,
     this.skipEventIds = const [],
+    this.startEstimated = false,
   }) {
     final start = startedAt;
     final end = endedAt;
@@ -66,6 +67,10 @@ class StepRecord {
 
   /// Événements `step_skipped` de l'étape, par heure croissante.
   final List<String> skipEventIds;
+
+  /// Vrai si [startedAt] est une heure estimée (`time_estimated`), et non une
+  /// heure notée : elle date l'étape, mais ne sert à aucun réel ni écart.
+  final bool startEstimated;
 }
 
 /// État d'une étape à l'instant du calcul.
@@ -278,6 +283,7 @@ class StepEvent {
     required this.kind,
     required this.stepKey,
     required this.measuredAt,
+    this.estimated = false,
   });
 
   /// Identifiant du document, créé par l'appareil.
@@ -291,6 +297,10 @@ class StepEvent {
 
   /// Heure de l'appareil (`measured_at`).
   final DateTime measuredAt;
+
+  /// Vrai si [measuredAt] est une heure estimée à l'import d'une fiche
+  /// (`time_estimated: true`), et non une heure notée.
+  final bool estimated;
 }
 
 /// Raison pour laquelle un événement d'étape n'est pas retenu.
@@ -405,6 +415,7 @@ StepEventReduction stepRecordsFromEvents({
         startEventId: start?.id,
         endEventId: end?.id,
         skipEventIds: skips,
+        startEstimated: start?.estimated ?? false,
       ),
     );
   }

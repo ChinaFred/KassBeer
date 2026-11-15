@@ -602,6 +602,9 @@ void ouvrirCorrection({
             value: saisie.value,
             note: saisie.note,
             measuredAt: saisie.at,
+            heureEstimeeCorrigee:
+                event.timeEstimated &&
+                !saisie.at.isAtSameMomentAs(event.measuredAt),
           ),
           'Correction',
         ),
