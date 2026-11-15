@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers.dart';
+import '../../tickets/presentation/tickets_providers.dart';
 import '../domain/member.dart';
+import 'members_providers.dart';
 
 /// Invitation validée par le formulaire, prête à écrire.
 @immutable
@@ -23,7 +27,7 @@ class InviteRequest {
 
 /// Formulaire d'invitation. Rend un [InviteRequest] par `Navigator.pop`, ou rien sur
 /// « Annuler ».
-class InviteMemberForm extends StatefulWidget {
+class InviteMemberForm extends ConsumerStatefulWidget {
   const InviteMemberForm({
     super.key,
     required this.existingEmails,
@@ -32,6 +36,19 @@ class InviteMemberForm extends StatefulWidget {
 
   static const invalidEmail = 'Adresse e-mail invalide.';
   static const alreadyMember = 'Cette adresse est déjà membre.';
+  static const consoleHint =
+      'Google refuse la connexion tant que l\'adresse n\'est pas dans les '
+      'utilisateurs test du projet. Ajoutez-la dans la console Google.';
+  static const consoleButton = 'Copier l\'adresse et ouvrir la console Google';
+  static String consoleCopied(String email) =>
+      'Adresse copiée ($email) : collez-la dans « Utilisateurs test » › '
+      '« Ajouter des utilisateurs ».';
+  static const consoleNoEmail =
+      'Aucune adresse valide à copier : saisissez-la d\'abord.';
+  static const consoleCopyFailed =
+      'Copie impossible : recopiez l\'adresse à la main.';
+  static const consoleOpenFailure =
+      'Impossible d\'ouvrir la console. Adresse de la page :';
 
   /// Adresses déjà membres, en minuscules.
   final Set<String> existingEmails;
@@ -40,15 +57,19 @@ class InviteMemberForm extends StatefulWidget {
   final bool submitOnEnter;
 
   @override
-  State<InviteMemberForm> createState() => _InviteMemberFormState();
+  ConsumerState<InviteMemberForm> createState() => _InviteMemberFormState();
 }
 
-class _InviteMemberFormState extends State<InviteMemberForm> {
+class _InviteMemberFormState extends ConsumerState<InviteMemberForm> {
   final _email = TextEditingController();
   final _name = TextEditingController();
   final _nameFocus = FocusNode();
   MemberRole _role = MemberRole.brewer;
   String? _emailError;
+  bool _consoleBusy = false;
+  String? _consoleMessage;
+  bool _consoleMessageIsError = false;
+  Uri? _consoleFailedUri;
 
   @override
   void dispose() {
@@ -80,9 +101,71 @@ class _InviteMemberFormState extends State<InviteMemberForm> {
     );
   }
 
+  /// Copie l'adresse saisie si elle est valide, puis ouvre la page des
+  /// utilisateurs test dans le navigateur.
+  Future<void> _openConsole(Uri uri) async {
+    final errors = ref.read(errorReportServiceProvider);
+    final open = ref.read(ouvrirLienProvider);
+    setState(() {
+      _consoleBusy = true;
+      _consoleMessage = null;
+      _consoleFailedUri = null;
+    });
+    final email = normalizeMemberEmail(_email.text);
+    var copied = false;
+    final valid = isValidMemberEmail(email);
+    if (valid) {
+      try {
+        await Clipboard.setData(ClipboardData(text: email));
+        copied = true;
+      } catch (error, stackTrace) {
+        errors.reportError(
+          feature: 'members.copy_email',
+          error: error,
+          stackTrace: stackTrace,
+          context: 'copie de l\'adresse invitée',
+        );
+      }
+    }
+    Object? error;
+    StackTrace? stackTrace;
+    var opened = false;
+    try {
+      opened = await open(uri);
+    } catch (e, st) {
+      error = e;
+      stackTrace = st;
+    }
+    if (!opened) {
+      errors.reportError(
+        feature: 'members.open_console',
+        error: error ?? StateError('ouverture refusée par le système'),
+        stackTrace: stackTrace ?? StackTrace.current,
+        context: 'page des utilisateurs test de la console Google',
+      );
+    }
+    if (!mounted) return;
+    setState(() {
+      _consoleBusy = false;
+      _consoleMessage = copied
+          ? InviteMemberForm.consoleCopied(email)
+          : valid
+          ? InviteMemberForm.consoleCopyFailed
+          : InviteMemberForm.consoleNoEmail;
+      _consoleMessageIsError = valid && !copied;
+      _consoleFailedUri = opened ? null : uri;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final consoleUri = consoleUtilisateursTest(
+      ref.watch(firebaseProjectIdProvider),
+    );
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,7 +190,12 @@ class _InviteMemberFormState extends State<InviteMemberForm> {
             errorText: _emailError,
           ),
           onChanged: (_) {
-            if (_emailError != null) setState(() => _emailError = null);
+            if (_emailError != null || _consoleMessage != null) {
+              setState(() {
+                _emailError = null;
+                _consoleMessage = null;
+              });
+            }
           },
           onSubmitted: (_) =>
               widget.submitOnEnter ? _submit() : _nameFocus.requestFocus(),
@@ -137,6 +225,42 @@ class _InviteMemberFormState extends State<InviteMemberForm> {
           onSelectionChanged: (selection) =>
               setState(() => _role = selection.single),
         ),
+        if (consoleUri != null) ...[
+          const SizedBox(height: 16),
+          Text(InviteMemberForm.consoleHint, style: muted),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _consoleBusy ? null : () => _openConsole(consoleUri),
+              icon: const Icon(Icons.open_in_new),
+              label: const Text(InviteMemberForm.consoleButton),
+            ),
+          ),
+          if (_consoleMessage case final message?)
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                message,
+                style: _consoleMessageIsError
+                    ? theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                      )
+                    : muted,
+              ),
+            ),
+          if (_consoleFailedUri case final failed?) ...[
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                InviteMemberForm.consoleOpenFailure,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+            SelectableText(failed.toString()),
+          ],
+        ],
         const SizedBox(height: 24),
         Wrap(
           alignment: WrapAlignment.end,
