@@ -3088,7 +3088,7 @@ Table de fusion des houblons (ADR-014, `lib/src/ingestion/fusions.dart`, `kFusio
 à la main et distincte de la table d'alias. Une ligne : nom du document (identifiant
 `hop-<clé du nom>`), origine imposée s'il le faut, entrées rattachées (source, nom, et origine
 lue quand deux entrées de même nom diffèrent par le pays, comme les « Saaz » américains du
-005), noms ajoutés aux `aliases` (`Denali`, `CTZ`), noms écartés des `aliases` (`Saaz` pour
+005), noms ajoutés aux `aliases` (`Denali`), noms écartés des `aliases` (`Saaz` pour
 `hop-saaz-us`). Une variété et un pays de culture font un document ; le nom court désigne la
 variété dans son pays d'origine (`hop-saaz` tchèque). Les valeurs viennent de l'entrée la
 plus prioritaire du groupe. Une ligne qui ne désigne aucune entrée, une entrée désignée par

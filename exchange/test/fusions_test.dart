@@ -66,6 +66,10 @@ const List<_Houblon> _h003 = [
   ('Sultana (Denali)', 'United States of America (USA)', 32.0),
   ('Tettnang (US)', 'United States of America (USA)', 32.1),
   ('Tettnanger', 'Germany', 32.2),
+  // Documents à part dans le 003, absorbés par Columbus.
+  ('CTZ', 'United States of America (USA)', 30.31),
+  ('Tomahawk', 'United States of America (USA)', 30.32),
+  ('Zeus', 'United States of America (USA)', 30.33),
 ];
 
 /// Houblons du fichier 001.
