@@ -17,6 +17,8 @@ des documents en ligne, saisie du nombre, motif `culture-…`, une collection pa
 `COLLECTIONS_SUPPRIMABLES` (`ingest/lib/options.mjs`) gagne `beer_cultures` ; tests unitaires
 (acceptation, plafond, seuil, `beer_styles` et `beer_miscs` refusées) et test sous
 l'émulateur (simulation puis suppression d'un ancien identifiant).
+`CLAUDE.md` : P19 et « Commandes utiles » nomment `beer_cultures` parmi les collections
+permises ; `guide-reseau.md` à jour.
 
 ### v0.1.73 — fonctionnel
 
