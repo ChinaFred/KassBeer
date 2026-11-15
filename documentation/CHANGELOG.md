@@ -6,6 +6,15 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.62 — technique
+
+ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par
+hop-columbus, hop-ctz », 3 noms partagés). Le fichier 003 de Brewtarget porte `CTZ`,
+`Tomahawk` et `Zeus` en documents à part. La ligne `Columbus` de `kFusions` les absorbe
+(`EntreeDesignee` du 003) au lieu de les ajouter en alias ; leurs noms restent des alias de
+`hop-columbus`. Cas ajoutés aux sources inventées de `fusions_test.dart`. Documents attendus en
+moins : 24 (466 → 442), `DATA_SOURCES.md` à jour.
+
 ### v0.1.61 — fonctionnel
 
 La Bibliothèque des houblons est plus propre. Un même houblon n'apparaît plus plusieurs fois

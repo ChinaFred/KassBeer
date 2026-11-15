@@ -63,7 +63,7 @@ levures (une même souche chez un même producteur ne fait qu'un document, voir
 `exigences-techniques.md`, « Référentiels et recettes publiques »), 122 ajouts, 110 styles.
 
 Après la table de fusion des houblons (ADR-014, estimation sur le relevé du 2026-11-15, à
-confirmer par la préparation) : 445 houblons au lieu de 466. Les 21 documents qui
+confirmer par la préparation) : 442 houblons au lieu de 466. Les 24 documents qui
 disparaissent sont rattachés à un autre (table ci-dessous). Les autres référentiels ne
 changent pas de nombre : seules leurs origines changent.
 
@@ -116,17 +116,17 @@ puis 001) ; l'origine est imposée quand cette entrée la porte fausse.
 | `hop-hallertauer-mittelfruh` « Hallertauer Mittelfrüh » | `Germany` | `Hallertau Mittelfrüh` (003), `Hallertauer Mittelfrueh` (005), `Hallertau` (001) | — |
 | `hop-tettnang` | `Germany` | `Tettnanger` (005, 003) ; `Tettnang (US)` reste seul | — |
 | `hop-sultana` | `United States` | `Sultana (Denali)` (003) | « Denali » (ancien nom commercial) |
-| `hop-columbus` | `United States` | `Columbus/Tomahawk/Zeus` (001), `Columbus/Tomahawk/Zeus (CTZ)` (005) | « CTZ », « Tomahawk », « Zeus » |
+| `hop-columbus` | `United States` | `Columbus/Tomahawk/Zeus` (001), `Columbus/Tomahawk/Zeus (CTZ)` (005), `CTZ`, `Tomahawk`, `Zeus` (003, ajoutés le 2026-11-15 après la première préparation réelle) | « CTZ », « Tomahawk », « Zeus » |
 
 `Hallertau (NZ)`, `Hallertau (US)`, `Saaz Late` et les autres `Hallertauer …` restent seuls.
-Les noms rattachés deviennent des alias. Documents qui disparaissent (21) : `hop-saaz-cz`,
+Les noms rattachés deviennent des alias. Documents qui disparaissent (24) : `hop-saaz-cz`,
 `hop-saaz-czech-republic`, `hop-saaz-usa`, `hop-magnum-gr`, `hop-northern-brewer-gr`,
 `hop-perle-gr`, `hop-brewer-s-gold-gr`, `hop-east-kent-golding`,
 `hop-east-kent-goldings-ekg`, `hop-east-kent-goldings-ekg-1`, `hop-hallertau`,
 `hop-hallertau-blanc`, `hop-hallertau-gold`, `hop-hallertau-mittelfruh`,
 `hop-hallertau-taurus`, `hop-hallertau-tradition`, `hop-hallertauer-mittelfrueh`,
 `hop-tettnanger`, `hop-sultana-denali`, `hop-columbus-tomahawk-zeus`,
-`hop-columbus-tomahawk-zeus-ctz`. Ils sortent de Firestore par `ecrire.mjs
+`hop-columbus-tomahawk-zeus-ctz`, `hop-ctz`, `hop-tomahawk`, `hop-zeus`. Ils sortent de Firestore par `ecrire.mjs
 --supprimer-absents beer_hops`, avec leurs arômes (`beer_hop_aromas`). `hop-saaz` et
 `hop-magnum` restent, mais désignent désormais la variété tchèque et allemande. Les
 abréviations de DIY Dog `H. Blanc`, `H. Mittelfruh`, `H. Taurus` (`alias.dart`) visent les
