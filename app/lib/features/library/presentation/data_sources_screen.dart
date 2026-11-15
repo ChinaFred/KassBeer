@@ -58,6 +58,7 @@ class DataSourcesScreen extends ConsumerWidget {
         'comprise.',
     'White Labs : fiches relevées le 15 novembre 2026, floculation '
         'comprise.',
+    'Wyeast : fiches relevées le 15 novembre 2026, floculation comprise.',
   ];
   static const diyDog =
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '

@@ -6,6 +6,29 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.75 — fonctionnel
+
+La Bibliothèque reprend les fiches de 77 cultures de Wyeast : levures d'ale, de lager et de
+bière de blé, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation,
+plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent
+celles de l'ancienne base pour 74 cultures déjà connues, et 3 cultures apparaissent. Les
+cultures de vin, de cidre, d'hydromel et de saké ne sont pas reprises. L'écran « Sources des
+données » nomme Wyeast. Les cultures arrivent dans la Bibliothèque quand l'administrateur
+relance l'ingestion.
+
+### v0.1.75 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 77 cultures Wyeast relevées le 2026-11-15 sur
+`wyeastlab.com` (Crawl-delay de 10 s), règles dans l'en-tête : `type` d'après « Species »,
+référence sans le suffixe `-PC`, températures en °F, floculation `Low - High` absente ; série
+4000 (vin, cidre, hydromel, saké, distillerie) non reprise. `kDatesReleveFabricants` reçoit
+`wyeast`. Préparation rejouée sur les sources du 2026-11-08 : 74 fiches rejoignent un document
+Brewtarget, 3 en créent un (945 documents `beer_cultures`), aucun autre document changé. Les
+doublons Brewtarget de la Private Collection (`WY2001-PC` et `2001`) restent, et six noms
+deviennent ambigus ; `DATA_SOURCES.md` décrit la correction possible par `cleProduit`.
+`fabricants_donnees_test.dart` : 439 entrées, types et références Wyeast. `DATA_SOURCES.md`,
+ADR-005, exigences et écran « Sources des données » à jour.
+
 ### v0.1.74 — fonctionnel
 
 La Bibliothèque reprend les fiches de 162 cultures de White Labs et de sa gamme The Yeast Bay :
