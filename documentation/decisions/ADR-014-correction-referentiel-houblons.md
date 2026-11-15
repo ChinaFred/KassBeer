@@ -1,9 +1,22 @@
 # ADR-014 — Correction du référentiel des houblons : origines et doublons
 
-- **Statut** : proposé
+- **Statut** : accepté (2026-11-15), option B
 - **Date** : 2026-11-15
 - **Remplace** : — (complète ADR-005, « Exception durable » de l'ingestion, et ADR-013,
   « Idempotence »)
+
+Décisions de l'utilisateur du 2026-11-15 :
+
+1. Option B : liste fermée des pays, table de fusion écrite à la main, suppression contrôlée
+   des documents absents de la préparation, régénération des arômes touchés.
+2. `Austria/Slovenia` : origine laissée absente et listée au rapport de préparation.
+3. Sultana et Denali sont la même variété (Denali est l'ancien nom commercial) : fusion.
+4. Traduction des pays en français à l'affichage : lot suivant, hors de cet ADR ; ce lot
+   amendera P56 (liste des pays en Dart seulement) ou lira les libellés depuis `exchange/`.
+5. Dans ce lot, mesure des origines de `beer_fermentables`, `beer_cultures` et `beer_miscs`, et
+   liste des pays appliquée aussi aux malts ; fusions de ces référentiels dans un lot suivant.
+6. Contrôles acceptés : fin de P19 (suppression contrôlée) et P56 (table de fusion, liste des
+   pays).
 
 ## Contexte
 
@@ -73,9 +86,12 @@ membre, et la suppression reste un pas de l'ingestion locale déjà encadrée pa
   aucun changement de modèle ni de règle.
 - Graphie inconnue : `origin` absent, entrée listée dans `rapport.json` (identifiant, graphie
   lue). Aucune valeur inventée (« Pas de valeur de repli figée »). Origine vide : absente.
-- Origine double (`Austria/Slovenia`) : décision de l'utilisateur (question 3).
+- Origine double (`Austria/Slovenia`) : absente et listée au rapport (décision 2).
 - La table s'applique aux houblons et aux malts dans le même lot : la fiche affiche les deux.
-- Traduction en français à l'affichage : hors de cet ADR (question 5).
+- Traduction en français à l'affichage : lot suivant (décision 4).
+- Mesure du 2026-11-15 (décision 5) : `beer_cultures` (845) et `beer_miscs` (122) n'ont aucune
+  origine, rien à normaliser ; `beer_fermentables` (462) : 11 graphies (`US`, `United States`,
+  `UK`, `United Kingdom`, `New Zealand, Canterbury`…, `Netherlands` en plus), 161 sans origine.
 
 ### 2. Table de fusion
 
@@ -85,7 +101,7 @@ membre, et la suppression reste un pas de l'ingestion locale déjà encadrée pa
 - Règle : une variété et un pays de culture font un document. Le nom court désigne la
   variété dans son pays d'origine (`Saaz` tchèque, `Hallertau` allemand). Une culture
   ailleurs garde son document, nommé avec le pays (`Saaz (US)`), car ses acides diffèrent.
-  Deux noms d'une même variété (« Denali » et « Sultana », à vérifier) fusionnent.
+  Deux noms d'une même variété (« Denali » et « Sultana », décision 3) fusionnent.
 - L'identifiant d'un document reste `<nature>-<cleNormalisee(nom du document)>`.
   `Referentiel.parNomExact` cherche d'abord cet identifiant direct : un autre schéma le
   casserait. `hop-saaz` désigne donc le Saaz tchèque. Aucune recette ne garde cet
@@ -127,7 +143,8 @@ membre, et la suppression reste un pas de l'ingestion locale déjà encadrée pa
 
 ### 5. Ordre de mise en œuvre
 
-1. Code et tests dans `exchange/` et `ingest/` ; CI verte.
+1. Code et tests dans `exchange/` et `ingest/` ; liste des pays appliquée aux houblons et aux
+   malts (décision 5) ; CI verte.
 2. Préparation ; relire `rapport.json` (graphies inconnues, groupes restants, fusions).
 3. `ecrire.mjs` sur l'émulateur, avec et sans `--supprimer-absents`.
 4. Production : `--simulation`, puis écriture, puis `--supprimer-absents`.
@@ -163,9 +180,8 @@ membre, et la suppression reste un pas de l'ingestion locale déjà encadrée pa
 - `public_recipes/` est réécrit en partie : `alpha_acid` recopié d'un houblon fusionné peut
   changer (DIY Dog sans attribut d'acide alpha).
 - Un nouveau type d'opération en production (suppression) existe, borné par la section 3.
-- Contrôles proposés pour `CLAUDE.md` : extension de P19 ou P55 (suppression contrôlée),
-  nouveau contrôle sur la table de fusion et la liste des origines (voir le livrable de
-  l'architecte du 2026-11-15).
+- Contrôles de `CLAUDE.md` (décision 6) : P19 complété (suppression contrôlée), P56 ajouté
+  (table de fusion et liste des pays), P55 borné à cet ADR pour la préparation de `beer_hops`.
 - `DATA_SOURCES.md` : section « Origines » et table de fusion décrites ; volumes « Après
   fusion » mis à jour.
 
@@ -177,4 +193,4 @@ membre, et la suppression reste un pas de l'ingestion locale déjà encadrée pa
   par l'architecte (`import/` absent de cette copie du dépôt).
 - Coût par houblon : ADR-013, section 5 (estimation, tarif à vérifier dans
   `import/ingest/aromes/tarif.json`).
-- Sultana, ancien nom Denali : à vérifier auprès du sélectionneur avant la ligne de fusion.
+- Sultana, ancien nom Denali : fusion décidée par l'utilisateur (décision 3).

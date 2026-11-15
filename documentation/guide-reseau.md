@@ -233,6 +233,10 @@ nomme `ingest/lister-houblons-recettes.mjs` et `IndexBibliotheque.resoudre` ; «
 `CLAUDE.md` décrit `ingest/generer-aromes.mjs`, `ingest/lister-houblons-recettes.mjs` et
 `exchange/bin/lister_houblons_recettes.dart`, et « Commandes utiles » leurs commandes.
 
+Le 2026-11-15, ADR-014 accepté par l'utilisateur (option B) : P19 complété par la suppression
+contrôlée de `ingest/ecrire.mjs --supprimer-absents` (`securite`), P56 ajouté (`relecteur-regles`,
+table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent, skill ni hook nouveau.
+
 Le 2026-11-14, à la demande de l'utilisateur : P36 et la section « Coûts variables » de
 `CLAUDE.md` ajoutent le compte fondateur (`members/{email}.founder`, posé dans la console
 Firebase) et son plafond `FOUNDER_LAUNCHES_PER_DAY`, cinq fois celui du groupe, sur un compteur
