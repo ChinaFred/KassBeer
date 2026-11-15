@@ -29,8 +29,8 @@ dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 | Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
-beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, doublons
-fusionnés), DIY Dog et srm2hex (MIT, avec le texte de la licence), et dit que les descriptions
+beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, origines
+ramenées à une liste de pays, doublons fusionnés et renommés), DIY Dog et srm2hex (MIT, avec le texte de la licence), et dit que les descriptions
 aromatiques des houblons sont rédigées par une IA (Claude, d'Anthropic) pour Kass'Beer. Chaque
 entrée de Firestore
 porte sa licence dans `provenance[]` ; la licence de srm2hex est en tête de `teintes_srm.dart`
@@ -61,6 +61,81 @@ ne lit que les listes du premier niveau du 001 : 248 malts et sucres, 62 houblon
 8 levures. Après fusion (relevé du 2026-11-11) : 462 malts et sucres, 466 houblons, 845
 levures (une même souche chez un même producteur ne fait qu'un document, voir
 `exigences-techniques.md`, « Référentiels et recettes publiques »), 122 ajouts, 110 styles.
+
+Après la table de fusion des houblons (ADR-014, estimation sur le relevé du 2026-11-15, à
+confirmer par la préparation) : 445 houblons au lieu de 466. Les 21 documents qui
+disparaissent sont rattachés à un autre (table ci-dessous). Les autres référentiels ne
+changent pas de nombre : seules leurs origines changent.
+
+## Origines
+
+`origin` d'un malt ou d'un houblon est ramené à une liste fermée de pays, en graphie anglaise,
+la plus fréquente dans les sources (`exchange/lib/src/ingestion/origines.dart`, ADR-014). Mesure
+du 2026-11-15 : 35 graphies d'origine pour une vingtaine de pays dans `beer_hops`
+(`United States` 166, `United States of America (USA)` 20, `US` 3…), 11 graphies et 161
+malts sans origine dans `beer_fermentables` ; aucune origine dans `beer_cultures` ni
+`beer_miscs`.
+
+| Graphie lue | Pays |
+|---|---|
+| `US`, `USA`, `United States of America (USA)` | `United States` |
+| `Germany (GER)` | `Germany` |
+| `United Kingdom`, `United Kingdom (UK)`, `UK`, `England` | `Great Britain` |
+| `Czech Replublic (CZH)` | `Czech Republic` |
+| `New Zealand (NZ)`, `New Zealand, Canterbury` | `New Zealand` |
+| `Australia (AUS)`, `Poland (POL)`, `Slovenia (SLO)`, `France (FR)`, `Canada (CAN)`, `China (CN)` | le pays sans le code |
+
+Liste des pays : Argentina, Australia, Austria, Belgium, Canada, China, Czech Republic,
+France, Germany, Great Britain, Japan, Netherlands, New Zealand, Poland, Russia, Serbia,
+Slovenia, South Africa, Sweden, Ukraine, United States. Le nom d'un pays de la liste est
+accepté tel quel, sans casse. Une graphie absente de la table, ou qui nomme deux pays
+(`Austria/Slovenia`, décision de l'utilisateur du 2026-11-15), laisse `origin` absent et part
+dans `rapport.json` (`origines_inconnues`). Une origine vide reste absente. La traduction en
+français à l'affichage viendra avec un lot suivant.
+
+## Table de fusion des houblons
+
+Écrite à la main (`exchange/lib/src/ingestion/fusions.dart`), validée par l'utilisateur le
+2026-11-15 (ADR-014). Règle : une variété et un pays de culture font un document. Le nom court
+désigne la variété dans son pays d'origine ; une culture ailleurs garde son document, nommé
+avec le pays. Les valeurs viennent de l'entrée la plus prioritaire du groupe (005, puis 003,
+puis 001) ; l'origine est imposée quand cette entrée la porte fausse.
+
+| Document | Origine | Entrées rattachées | Alias ajoutés, noms écartés |
+|---|---|---|---|
+| `hop-saaz` « Saaz » | `Czech Republic` (imposée) | `Saaz (CZ)` (003), `Saaz (Czech Republic)` (001), entrées « Saaz » non américaines | — |
+| `hop-saaz-us` « Saaz (US) » | `United States` | `Saaz (US)` (003), `Saaz (USA)` (001), entrées « Saaz » américaines du 005 | « Saaz » écarté |
+| `hop-magnum` « Magnum » | `Germany` (imposée) | `Magnum (GR)` (003), entrées « Magnum » non américaines | — |
+| `hop-magnum-us` « Magnum (US) » | `United States` | `Magnum (US)` (003), entrées « Magnum » américaines du 005 | « Magnum » écarté |
+| `hop-northern-brewer` | `Germany` | `Northern Brewer (GR)` (003) ; `Northern Brewer (US)` reste seul | — |
+| `hop-perle` | `Germany` | `Perle (GR)` (003) ; `Perle (US)` reste seul | — |
+| `hop-brewer-s-gold` | `Germany` | `Brewer's Gold (GR)` (003) ; `Brewer's Gold (US)` reste seul | — |
+| `hop-east-kent-goldings` | `Great Britain` | `East Kent Golding`, `East Kent Goldings (EKG)`, `East Kent Goldings (EKG) (1)` (005) | — |
+| `hop-hallertauer-blanc`, `-gold`, `-tradition` | `Germany` | `Hallertau Blanc`, `Hallertau Gold`, `Hallertau Tradition` (003) | — |
+| `hop-hallertauer-taurus` | `Germany` (imposée) | `Hallertau Taurus` (003, dit britannique) | — |
+| `hop-hallertauer-mittelfruh` « Hallertauer Mittelfrüh » | `Germany` | `Hallertau Mittelfrüh` (003), `Hallertauer Mittelfrueh` (005), `Hallertau` (001) | — |
+| `hop-tettnang` | `Germany` | `Tettnanger` (005, 003) ; `Tettnang (US)` reste seul | — |
+| `hop-sultana` | `United States` | `Sultana (Denali)` (003) | « Denali » (ancien nom commercial) |
+| `hop-columbus` | `United States` | `Columbus/Tomahawk/Zeus` (001), `Columbus/Tomahawk/Zeus (CTZ)` (005) | « CTZ », « Tomahawk », « Zeus » |
+
+`Hallertau (NZ)`, `Hallertau (US)`, `Saaz Late` et les autres `Hallertauer …` restent seuls.
+Les noms rattachés deviennent des alias. Documents qui disparaissent (21) : `hop-saaz-cz`,
+`hop-saaz-czech-republic`, `hop-saaz-usa`, `hop-magnum-gr`, `hop-northern-brewer-gr`,
+`hop-perle-gr`, `hop-brewer-s-gold-gr`, `hop-east-kent-golding`,
+`hop-east-kent-goldings-ekg`, `hop-east-kent-goldings-ekg-1`, `hop-hallertau`,
+`hop-hallertau-blanc`, `hop-hallertau-gold`, `hop-hallertau-mittelfruh`,
+`hop-hallertau-taurus`, `hop-hallertau-tradition`, `hop-hallertauer-mittelfrueh`,
+`hop-tettnanger`, `hop-sultana-denali`, `hop-columbus-tomahawk-zeus`,
+`hop-columbus-tomahawk-zeus-ctz`. Ils sortent de Firestore par `ecrire.mjs
+--supprimer-absents beer_hops`, avec leurs arômes (`beer_hop_aromas`). `hop-saaz` et
+`hop-magnum` restent, mais désignent désormais la variété tchèque et allemande. Les
+abréviations de DIY Dog `H. Blanc`, `H. Mittelfruh`, `H. Taurus` (`alias.dart`) visent les
+documents `hop-hallertauer-…`.
+
+Un nom (nom du document ou alias) porté par deux houblons arrête la préparation : la
+résolution par nom d'un import ne saurait lequel choisir. `rapport.json` liste les groupes
+de houblons de même nom une fois les parenthèses retirées (`groupes_sans_parenthese`) pour la
+revue suivante de la table.
 
 ## Unités
 

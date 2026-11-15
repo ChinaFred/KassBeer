@@ -116,6 +116,12 @@ membre, et la suppression reste un pas de l'ingestion locale déjà encadrée pa
 - `rapport.json` liste les groupes de noms qui restent identiques une fois la parenthèse
   retirée, pour la revue suivante.
 
+Note du 2026-11-15 (livraison, v0.1.61) : une ligne de `fusions.dart` ne nomme pas l'entrée
+qui donne les valeurs. Les valeurs viennent de l'entrée la plus prioritaire du groupe (005, puis
+003 et 004, puis 001), comme pour toute fusion ; la ligne impose au besoin l'origine et ajoute ou
+écarte des alias. Une entrée absorbée est désignée par source, nom et, si besoin, origine après
+la table des graphies.
+
 ### 3. Suppression contrôlée
 
 - `ecrire.mjs --supprimer-absents` : supprime les documents présents dans Firestore et

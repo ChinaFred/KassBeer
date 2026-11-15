@@ -2,6 +2,7 @@ import '../decodage_xml.dart';
 import '../schema.dart';
 import 'cles.dart';
 import 'json_commentaires.dart';
+import 'origines.dart';
 import 'sources.dart';
 import 'valeurs.dart';
 
@@ -53,6 +54,7 @@ class EntreeBrute {
     required this.source,
     required this.sourceId,
     required this.licence,
+    this.origineInconnue,
   });
 
   /// Nature de l'entrée.
@@ -73,6 +75,13 @@ class EntreeBrute {
 
   /// Licence de l'entrée.
   final String licence;
+
+  /// Origine lue et absente de la table des graphies (`origines.dart`), ou
+  /// `null` : `valeurs` n'a alors pas d'`origin` (ADR-014).
+  final String? origineInconnue;
+
+  /// Origine du document, en graphie canonique, ou `null`.
+  String? get origine => valeurs['origin'] as String?;
 
   /// Producteur d'une culture, ou `null`.
   String? get producteur => valeurs['producer'] as String?;
@@ -167,16 +176,23 @@ class LectureReferentiels {
       rejets.add(EntreeRejetee(source.id, nature.prefixe, nom, 'nom absent'));
       return;
     }
+    // Origine ramenée à la liste des pays : une graphie inconnue est retirée
+    // et gardée pour le rapport (ADR-014).
+    final lue = valeurs['origin'] as String?;
+    final pays = lue == null ? null : paysDeGraphie(lue);
     entrees.add(
       EntreeBrute(
         nature: nature,
         nom: nom,
         valeurs: {
-          for (final MapEntry(:key, :value) in valeurs.entries) key: ?value,
+          for (final MapEntry(:key, :value) in valeurs.entries)
+            if (key != 'origin') key: ?value,
+          'origin': ?pays,
         },
         source: source,
         sourceId: sourceId ?? nom,
         licence: licence,
+        origineInconnue: lue != null && pays == null ? lue : null,
       ),
     );
   }

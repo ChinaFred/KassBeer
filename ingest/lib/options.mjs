@@ -14,14 +14,20 @@ export const PROJET_PRODUCTION = "kassbeer";
 /// Projet de l'émulateur par défaut.
 export const PROJET_EMULATEUR = "demo-kassbeer";
 
+/// Collections où `--supprimer-absents` peut supprimer (ADR-014, P19), une par lancement.
+export const COLLECTIONS_SUPPRIMABLES = ["beer_hops", "beer_hop_aromas"];
+
 /// Erreur d'utilisation : message montré tel quel, code de sortie 2.
 export class ErreurOptions extends Error {}
 
 const AIDE = `Usage : node ecrire.mjs [--simulation] [--dossier <prepare>] [--rapports <dossier>] [--aromes <dossier>]
-        node ecrire.mjs --production --projet ${PROJET_PRODUCTION} [--simulation] [...]`;
+        node ecrire.mjs --production --projet ${PROJET_PRODUCTION} [--simulation] [...]
+        node ecrire.mjs [...] --supprimer-absents <${COLLECTIONS_SUPPRIMABLES.join("|")}>`;
 
 /// Lit [argv] (sans `node` ni le script) et [env]. Rend
-/// `{ cible, projet, simulation, dossier, rapports, aromes }` ; lève ErreurOptions.
+/// `{ cible, projet, simulation, dossier, rapports, aromes, supprimerAbsents }` ; lève
+/// ErreurOptions. `supprimerAbsents` : collection où supprimer les documents absents de la
+/// préparation, ou null (aucune suppression).
 export function lireOptions(argv, env) {
   const options = {
     production: false,
@@ -30,6 +36,7 @@ export function lireOptions(argv, env) {
     dossier: null,
     rapports: null,
     aromes: null,
+    "supprimer-absents": null,
   };
   for (let i = 0; i < argv.length; i++) {
     const nom = argv[i];
@@ -43,7 +50,8 @@ export function lireOptions(argv, env) {
       case "--projet":
       case "--dossier":
       case "--rapports":
-      case "--aromes": {
+      case "--aromes":
+      case "--supprimer-absents": {
         const valeur = argv[++i];
         if (valeur === undefined || valeur.startsWith("--")) {
           throw new ErreurOptions(`${nom} demande une valeur.\n${AIDE}`);
@@ -54,6 +62,13 @@ export function lireOptions(argv, env) {
       default:
         throw new ErreurOptions(`Option inconnue : ${nom}\n${AIDE}`);
     }
+  }
+  const supprimer = options["supprimer-absents"];
+  if (supprimer !== null && !COLLECTIONS_SUPPRIMABLES.includes(supprimer)) {
+    throw new ErreurOptions(
+      `--supprimer-absents : « ${supprimer} » refusée, seules ` +
+        `${COLLECTIONS_SUPPRIMABLES.join(" et ")} sont permises (ADR-014).`,
+    );
   }
   for (const cle of Object.keys(env)) {
     const majuscule = cle.toUpperCase();
@@ -99,6 +114,7 @@ export function lireOptions(argv, env) {
     dossier: options.dossier,
     rapports: options.rapports,
     aromes: options.aromes,
+    supprimerAbsents: supprimer,
   };
 }
 
@@ -152,6 +168,29 @@ export function controlerIdentifiants(chemin, lire) {
     );
   }
   return type;
+}
+
+/// Demande sur un terminal la saisie du nombre de suppressions [n], après avoir montré
+/// [ids] et la [collection]. Rend vrai si la saisie est exactement ce nombre ; lève
+/// ErreurOptions sans terminal : rien n'est écrit ni supprimé.
+export async function confirmerSuppressions(collection, ids, entree, sortie) {
+  if (!entree.isTTY || !sortie.isTTY) {
+    throw new ErreurOptions(
+      "Suppression sans terminal : la confirmation est impossible, rien n'est écrit ni supprimé.",
+    );
+  }
+  const { createInterface } = await import("node:readline/promises");
+  const rl = createInterface({ input: entree, output: sortie });
+  try {
+    sortie.write(`Documents de ${collection} absents de la préparation :\n`);
+    for (const id of ids) sortie.write(`  ${id}\n`);
+    const saisie = await rl.question(
+      `Suppression de ${ids.length} documents de ${collection}. Saisissez leur nombre pour confirmer : `,
+    );
+    return saisie.trim() === String(ids.length);
+  } finally {
+    rl.close();
+  }
 }
 
 /// Demande la saisie du nom du projet sur un terminal. [entree] et [sortie] : flux

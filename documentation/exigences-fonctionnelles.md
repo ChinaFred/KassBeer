@@ -1889,7 +1889,7 @@ s'affiche sans réseau.
 - BJCP 2021 : noms, codes, catégories et plages chiffrées des styles, lus dans le fichier 002
   de Brewtarget, sans descriptions.
 - beer-analytics.com : une partie des ingrédients du fichier 005 de Brewtarget, sous licence
-  CC BY-SA 4.0, « Modifications : unités normalisées, doublons fusionnés. », l'adresse
+  CC BY-SA 4.0, « Modifications : unités normalisées, origines ramenées à une liste de pays, doublons fusionnés et renommés. », l'adresse
   `https://creativecommons.org/licenses/by-sa/4.0/` en texte et le bouton « Lire la licence
   CC BY-SA 4.0 », qui l'ouvre hors de l'application. Si le système refuse : « Impossible
   d'ouvrir le lien. Il reste sélectionnable sur cette page. », et l'échec est journalisé.

@@ -46,8 +46,14 @@ SourcesBrutes _sources() {
   );
 }
 
-Preparation _preparer() =>
-    preparer(_sources(), alias: _alias, ajoutsDansHoublons: _ajouts);
+/// Sans table de fusion : celle du projet désigne des entrées absentes des
+/// fixtures. La table est essayée par `fusions_test.dart`.
+Preparation _preparer() => preparer(
+  _sources(),
+  alias: _alias,
+  ajoutsDansHoublons: _ajouts,
+  fusions: const [],
+);
 
 /// Données du document [id] de [collection].
 Map<String, Object?> _doc(Preparation p, String collection, String id) {
@@ -746,6 +752,24 @@ void main() {
       });
     });
 
+    test('origine hors de la liste des pays : absente, listée (ADR-014)', () {
+      final inconnues = (p.rapport['origines_inconnues']! as List)
+          .map((l) => '${(l as Map)['id']}|${l['source']}|${l['graphie']}')
+          .toList();
+      expect(
+        inconnues,
+        [
+          'fermentable-malt-imaginaire|brewtarget-001|Pays fictif',
+          'hop-houblon-test|brewtarget-005|Pays fictif',
+          'hop-houblon-test|brewtarget-003|Pays fictif',
+          'hop-houblon-test|brewtarget-001|Pays fictif',
+          'hop-houblon-second|brewtarget-003|Pays fictif',
+        ]..sort(),
+      );
+      final houblon = _doc(p, 'beer_hops', 'hop-houblon-test');
+      expect(houblon.containsKey('origin'), isFalse);
+    });
+
     test('entrées par source et fusions', () {
       expect(p.rapport['entrees_par_source'], {
         'brewtarget-001': {'fermentable': 4, 'hop': 1, 'misc': 1, 'culture': 1},
@@ -818,6 +842,21 @@ void main() {
       throwsStateError,
       reason: 'nature différente',
     );
+  });
+
+  test('table d\'alias du projet : aucune cible n\'est un houblon absorbé', () {
+    // ADR-014 : un identifiant absorbé par une ligne de kFusions disparaît.
+    final gardes = {for (final f in kFusions) f.id};
+    final absorbes = {
+      for (final f in kFusions)
+        for (final e in f.entrees)
+          idEntree(NatureReferentiel.hop, cleNormalisee(e.nom)),
+    }..removeAll(gardes);
+    for (final a in kAlias) {
+      if (a.nature == NatureReferentiel.hop && a.cible != null) {
+        expect(absorbes, isNot(contains(a.cible)), reason: a.nom);
+      }
+    }
   });
 
   test('table d\'alias du projet : chaque cible existe dans sa nature', () {
