@@ -15,6 +15,7 @@ import '../domain/referentiel.dart';
 import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
+import 'section_aromes.dart';
 
 /// Textes des états d'une fiche de la Bibliothèque.
 abstract final class TextesFicheBibliotheque {
@@ -168,6 +169,7 @@ class _Fiche extends StatelessWidget {
           if (f.aliases.isNotEmpty)
             Text('Autres noms : ${f.aliases.join(', ')}', style: muted),
           ..._valeurs(f),
+          if (f is FicheHoublon) SectionAromes(id: f.id),
           SectionProvenance(provenance: f.provenance),
         ],
       ),
