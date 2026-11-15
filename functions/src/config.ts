@@ -54,6 +54,14 @@ export const TICKETS_ROUTINE_DEV_ID = defineSecret("TICKETS_ROUTINE_DEV_ID");
 export const TICKETS_ROUTINE_DEV_TOKEN = defineSecret("TICKETS_ROUTINE_DEV_TOKEN");
 
 /**
+ * Clé de l'API Messages d'Anthropic réservée aux Functions (ADR-016, section 10) : seconde
+ * clé de l'espace de travail Kass'Beer de la Console, distincte de celle du poste de l'admin
+ * (ADR-013). Montée par les seules callables qui appellent `runClaudeTurn` :
+ * `recipeAssistantTurn` au lot A1 (P25, P57). Jamais journalisée.
+ */
+export const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+
+/**
  * Origines admises par les callables (ADR-008, P25) : l'application web hébergée. Cette
  * liste limite les navigateurs, pas un script.
  */
@@ -152,6 +160,8 @@ export const QUERYABLE_FUNCTIONS = [
   "launchTicketDelivery",
   "attachTicketScreenshot",
   "queryLogs",
+  "saveAiSettings",
+  "recipeAssistantTurn",
 ] as const;
 
 /** Gravités filtrables par `queryLogs` (vocabulaire de Cloud Logging, P49). */
@@ -159,3 +169,26 @@ export const QUERYABLE_SEVERITIES = ["DEBUG", "INFO", "WARNING", "ERROR"] as con
 
 /** Périodes de `queryLogs`, en minutes : 1 h, 24 h, 7 jours (P49). */
 export const QUERYABLE_PERIODS_MINUTES = [60, 1440, 10080] as const;
+
+// ── IA (ADR-016, ADR-015) ───────────────────────────────────────────────────
+
+/**
+ * Borne haute de chaque plafond de tours de la politique (`turns_per_day`,
+ * `founder_turns_per_day`, `turns_per_conversation`) : décision 7 d'ADR-016. Seul endroit où
+ * elle est écrite (P57) ; Moteur d'IA lit le refus de `saveAiSettings` (`details.field`).
+ */
+export const AI_MAX_TURNS = 100;
+
+/** Réglages de l'IA : `ai_config/policy` (membres) et `ai_config/pricing` (admin). */
+export const COLL_AI_CONFIG = "ai_config";
+export const AI_POLICY_DOC = "policy";
+export const AI_PRICING_DOC = "pricing";
+
+/** Tours réservés du jour de Paris, par membre : `ai_quotas/{uid}`. */
+export const COLL_AI_QUOTAS = "ai_quotas";
+
+/** Comptes du mois, par membre : `ai_usage/{AAAA-MM}_{uid}`. */
+export const COLL_AI_USAGE = "ai_usage";
+
+/** Durée de conservation des comptes du mois, en mois (TTL de `ai_usage/`, ADR-016). */
+export const AI_USAGE_RETENTION_MONTHS = 13;

@@ -5,11 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/presentation/menu_compte.dart';
 import '../../../core/router/routes.dart';
+import '../../ai/presentation/ai_providers.dart';
 import '../../tickets/presentation/admin_tickets_screen.dart';
 import '../../tickets/presentation/bandeau_tickets_admin.dart';
 import 'admin_sources_screen.dart';
+import 'couts_ia_screen.dart';
 import 'error_reports_screen.dart';
 import 'logs_screen.dart';
+import 'moteur_ia_screen.dart';
 
 /// Accueil de l'administration : réservé au rôle `admin` (le routeur le vérifie).
 class AdminScreen extends ConsumerWidget {
@@ -29,6 +32,12 @@ class AdminScreen extends ConsumerWidget {
         .watch(messagesBandeauTicketsProvider)
         .where((m) => m.error)
         .length;
+    // Grille absente ou illisible, poste sans réglage lisible : lus par
+    // `get()` à l'ouverture de l'accueil Admin.
+    final alertesIa = alertesMoteurIa(
+      grille: ref.watch(grilleIaProvider).value,
+      politique: ref.watch(politiqueIaProvider).value,
+    );
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
@@ -57,6 +66,32 @@ class AdminScreen extends ConsumerWidget {
                     '${alerts == 1 ? '1 alerte' : '$alerts alertes'}, '
                     '$ticketsSubtitle',
           onTap: () => context.go(AppRoutes.adminTickets),
+        ),
+        LigneListe(
+          icone: Icons.smart_toy_outlined,
+          titre: TextesMoteurIa.titre,
+          details: const [Text(TextesMoteurIa.sousTitre)],
+          trailing: alertesIa > 0
+              ? Badge(
+                  label: Text(textePastille(alertesIa)),
+                  backgroundColor: scheme.error,
+                  textColor: scheme.onError,
+                )
+              : null,
+          chevron: true,
+          semanticsLabel: alertesIa == 0
+              ? null
+              : '${TextesMoteurIa.titre}, '
+                    '${alertesIa == 1 ? '1 alerte' : '$alertesIa alertes'}, '
+                    '${TextesMoteurIa.sousTitre}',
+          onTap: () => context.go(AppRoutes.adminAiEngine),
+        ),
+        LigneListe(
+          icone: Icons.payments_outlined,
+          titre: CoutsIaScreen.titre,
+          details: const [Text(CoutsIaScreen.sousTitre)],
+          chevron: true,
+          onTap: () => context.go(AppRoutes.adminAiCosts),
         ),
         LigneListe(
           icone: Icons.source_outlined,

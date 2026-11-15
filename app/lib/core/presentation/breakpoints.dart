@@ -63,6 +63,24 @@ const double kEditorMaxWidth = 920;
 /// [kExpandedMinWidth].
 const double kCalculationPanelWidth = 340;
 
+/// Largeur de fenêtre à partir de laquelle l'éditeur de recette montre le
+/// formulaire, les calculs et l'assistant en trois colonnes. De
+/// [kExpandedMinWidth] à cette largeur, la colonne de droite porte un
+/// commutateur « Calculs / Assistant » (ADR-015, écrans du lot A1).
+const double kEditeurAssistantCoteACoteMinWidth = 1280;
+
+/// Largeur de la colonne de l'assistant dans l'éditeur de recette.
+const double kAssistantPanelWidth = 400;
+
+/// Largeur de l'éditeur de recette quand la colonne de droite montre
+/// l'assistant (de [kExpandedMinWidth] à
+/// [kEditeurAssistantCoteACoteMinWidth]) : 60 de plus que [kEditorMaxWidth].
+const double kEditorAvecAssistantMaxWidth =
+    kEditorMaxWidth + kAssistantPanelWidth - kCalculationPanelWidth;
+
+/// Largeur de l'éditeur de recette en trois colonnes, assistant ouvert.
+const double kEditorTroisColonnesMaxWidth = 1320;
+
 /// Largeur minimale d'une tuile de calcul pour un texte à 100 % ; multipliée par
 /// l'échelle du texte pour que « 1057,9 » ne se coupe pas.
 const double kCalculationTileMinWidth = 120;
