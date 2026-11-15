@@ -66,8 +66,8 @@ class Provenance {
   /// `brewtarget-001` à `brewtarget-005`, `fabricants`, `diydog`.
   final String source;
 
-  /// `v5.2.3 ea10908`, `e6c12ab`, ou la date du relevé des fiches des
-  /// fabricants (`2026-11-14`).
+  /// `v5.2.3 ea10908`, `e6c12ab`, ou la date du relevé des fiches du
+  /// producteur (`2026-11-14` pour Fermentis).
   final String version;
 
   /// `GPL-3.0`, `CC BY-SA 4.0`, `BJCP (noms et plages)`, `DIY Dog (usage privé)`,

@@ -1167,7 +1167,7 @@ de l'écrivain, lue à l'ouverture.
   le rapport local. », dans un encadré d'erreur.
 - « Sources lues » (sous-section) : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 »,
   « Fiches des fabricants » et « DIY Dog », chacun avec sa version (`v5.2.3 ea10908`, date du
-  relevé `2026-11-14`, `e6c12ab`).
+  relevé le plus récent `2026-11-15`, `e6c12ab`).
 - « Noms non reconnus lors de cette mise à jour » (sous-section) : le nombre par nature
   (« Malts et sucres », « Houblons », « Levures », « Divers »), écrit « 12 noms ».
 
@@ -1944,11 +1944,12 @@ s'affiche sans réseau.
   `https://creativecommons.org/licenses/by-sa/4.0/` en texte et le bouton « Lire la licence
   CC BY-SA 4.0 », qui l'ouvre hors de l'application. Si le système refuse : « Impossible
   d'ouvrir le lien. Il reste sélectionnable sur cette page. », et l'échec est journalisé.
-- Fiches des fabricants : levures et bactéries de Fermentis, noms, type, forme, atténuation et
-  températures recopiés des fiches techniques publiées par le fabricant, relevées le 14 novembre
-  2026 ; données publiées en accès libre par le fabricant ; ces valeurs remplacent celles de
-  Brewtarget pour les mêmes levures ; la floculation n'y figure pas ; textes des fiches non
-  repris.
+- Fiches des fabricants : « Levures et bactéries : noms, type, forme, atténuation et
+  températures recopiés des fiches techniques que chaque fabricant publie en accès libre. Ces
+  valeurs remplacent celles de Brewtarget pour les mêmes levures. Les textes des fiches ne sont
+  pas repris. », puis une ligne par fabricant, dans l'ordre alphabétique : « Fermentis : fiches
+  relevées le 14 novembre 2026, sans floculation. », « Mangrove Jack's : fiches relevées le
+  15 novembre 2026, floculation comprise. ». Un fabricant ajouté ajoute sa ligne.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
 - srm2hex : « Teintes de la page « Échelle des couleurs » et de la barre de couleur d'un style :

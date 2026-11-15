@@ -16,18 +16,48 @@ void main() {
       );
   });
 
-  test('25 cultures Fermentis, aucun rejet', () {
-    expect(lecture.entrees, hasLength(25));
+  test('41 cultures (25 Fermentis, 16 Mangrove Jack\'s), aucun rejet', () {
+    expect(lecture.entrees, hasLength(41));
+    final parProducteur = <String, int>{};
+    for (final e in lecture.entrees) {
+      parProducteur[e.producteur!] = (parProducteur[e.producteur!] ?? 0) + 1;
+    }
+    expect(parProducteur, {'Fermentis': 25, "Mangrove Jack's": 16});
     expect(lecture.rejets, isEmpty);
     expect(lecture.listesIgnorees, isEmpty);
     expect(lecture.entrees.map((e) => e.source).toSet(), {Source.fabricants});
     expect(lecture.entrees.map((e) => e.nature).toSet(), {
       NatureReferentiel.culture,
     });
-    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(25));
+    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(41));
   });
 
-  test('atténuations de 98 à 102 % écartées, et elles seules', () {
+  test('chaque fiche porte la date du relevé de son producteur', () {
+    for (final e in lecture.entrees) {
+      expect(e.releveFabricant, switch (e.producteur) {
+        'Fermentis' => '2026-11-14',
+        _ => '2026-11-15',
+      }, reason: e.nom);
+    }
+  });
+
+  test(
+    'Mangrove Jack\'s : floculation sur chaque fiche, M76 sans atténuation',
+    () {
+      final mj = lecture.entrees.where(
+        (e) => e.producteur == "Mangrove Jack's",
+      );
+      expect(mj.every((e) => e.valeurs.containsKey('flocculation')), isTrue);
+      expect(
+        mj
+            .where((e) => !e.valeurs.containsKey('attenuation'))
+            .map((e) => e.nom),
+        ['M76 Bavarian Lager'],
+      );
+    },
+  );
+
+  test('atténuations de 98 à 102 % de Fermentis écartées, et elles seules', () {
     final ecartees = lecture.journal.ecartees;
     expect(ecartees.every((e) => e.source == 'fabricants'), isTrue);
     expect(

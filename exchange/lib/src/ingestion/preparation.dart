@@ -88,19 +88,23 @@ int _parNom(Map<String, Object?> a, Map<String, Object?> b) {
 ///
 /// Un nom (nom du document ou alias) porté par deux houblons lève
 /// [StateError] (ADR-014) : la résolution par nom ne saurait lequel choisir.
+/// [datesReleveFabricants] : date du relevé des fiches de chaque producteur
+/// (`kDatesReleveFabricants`).
 Preparation preparer(
   SourcesBrutes sources, {
   List<Alias> alias = kAlias,
   List<String> ajoutsDansHoublons = kAjoutsDansHoublons,
   List<Fusion> fusions = kFusions,
+  Map<String, String> datesReleveFabricants = kDatesReleveFabricants,
 }) {
-  final lecture = LectureReferentiels()
-    ..lire001(sources.octets001)
-    ..lire002(sources.texte002)
-    ..lire003ou004(sources.texte003, Source.brewtarget003)
-    ..lire003ou004(sources.texte004, Source.brewtarget004)
-    ..lire005(sources.texte005)
-    ..lireFabricants(sources.texteFabricants);
+  final lecture =
+      LectureReferentiels(datesReleveFabricants: datesReleveFabricants)
+        ..lire001(sources.octets001)
+        ..lire002(sources.texte002)
+        ..lire003ou004(sources.texte003, Source.brewtarget003)
+        ..lire003ou004(sources.texte004, Source.brewtarget004)
+        ..lire005(sources.texte005)
+        ..lireFabricants(sources.texteFabricants);
   final referentiel = Referentiel.fusionner(lecture.entrees, fusions: fusions);
   final resolveur = Resolveur(
     referentiel,
@@ -193,7 +197,8 @@ Preparation preparer(
   parSource[Source.diydog.id] = {'recette': sources.diyDog.length};
   final rapport = <String, Object?>{
     'sources': [
-      for (final s in Source.values) {'source': s.id, 'version': s.version},
+      for (final s in Source.values)
+        {'source': s.id, 'version': s.version(datesReleveFabricants)},
     ],
     'entrees_par_source': parSource,
     'entrees_rejetees': [for (final r in lecture.rejets) r.toJson()],
