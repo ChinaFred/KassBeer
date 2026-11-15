@@ -3,6 +3,8 @@
 - **Statut** : accepté le 2026-11-08 (révisé le même jour après treize décisions de l'utilisateur)
 - **Date** : 2026-11-08
 - **Remplace** : — (modifie ADR-001, qui renvoyait l'export BeerXML après la v1)
+- **Complété par ADR-013** (2026-11-14) : `beer_hop_aromas/` porte un texte rédigé par l'API
+  Claude, relu par l'admin. P20 reste inchangé pour les données des sources.
 
 ## Contexte
 

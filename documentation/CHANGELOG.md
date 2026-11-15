@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.57 — fonctionnel
+### v0.1.58 — fonctionnel
 
 Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on
 le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » :
@@ -14,7 +14,7 @@ une recherche par code, nom ou catégorie, et tous les styles rangés par catég
 écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le
 style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49.
 
-### v0.1.57 — technique
+### v0.1.58 — technique
 
 `ChampBibliotheque` reçoit `choixDesStyles` (champ « Style » seul ; malts, houblons, ajouts et
 levures inchangés) et un quatrième argument `boutonListe` dans `fieldBuilder`. Nouveau
@@ -30,6 +30,33 @@ Bibliothèque » paraisse sur une recette existante sans focus ; états de la fe
 `breakpoints.dart` ; avertissement retenu pendant la frappe tant que le texte a des
 suggestions ; annonce « Style choisi » au lecteur d'écran ; curseur dans la recherche sur grand
 écran.
+
+### v0.1.57 — fonctionnel
+
+La fiche d'un houblon de la Bibliothèque montre ses arômes : des descripteurs (agrumes, floral,
+résineux…) et un court texte pour chaque moment d'ajout, du premier moût au houblonnage à cru.
+Ces textes sont rédigés par une IA pour Kass'Beer. La fiche dit s'ils ont été relus par
+l'administrateur, et signale une confiance faible. Les houblons de vos recettes sont relus en
+premier. Un houblon trop peu documenté l'indique au lieu d'inventer. L'écran « Sources des
+données » explique d'où viennent ces textes.
+
+### v0.1.57 — technique
+
+ADR-013 : descriptions aromatiques des houblons rédigées par l'API Claude (`claude-fable-5-2`,
+effort `medium` par défaut) depuis le poste de l'admin. `ingest/generer-aromes.mjs` et
+`ingest/lib/aromes/` (SDK `@anthropic-ai/sdk` 1.8.0 en version exacte, chargé au premier appel,
+sorties structurées, API Batches, tarif lu dans `import/ingest/aromes/tarif.json`, budget,
+confirmation, `--nouveaux` pour les houblons ajoutés depuis) ; `ingest/lister-houblons-recettes.mjs`
+(lecture seule de `recipes/` et `brews/`) et `exchange/bin/lister_houblons_recettes.dart`
+(`IndexBibliotheque.resoudre`, nouvelle `correspondances`) ; `ecrire.mjs --aromes` écrit
+`beer_hop_aromas/` après validation et relecture, et compte les houblons sans description.
+`firestore.rules` : `beer_hop_aromas/{id}` en `get` par `isMember()`, aucune liste ni écriture,
+tests des cinq profils. Application : `AromesHoublon`, `lireAromesHoublon` (un `get`),
+`SectionAromes` dans la fiche d'un houblon, paragraphe de « Sources des données ». Nouveau
+poste de coût `hop_aroma_generation` ; contrôles P54 et P55. Paquets ajoutés à
+`ingest/package-lock.json` : `@anthropic-ai/sdk` 1.8.0, `json-schema-to-ts` 3.1.1,
+`@babel/runtime` 7.29.14, `ts-algebra` 2.0.0, `standardwebhooks` 1.1.1, `@stablelib/base64`
+1.0.1, `fast-sha256` 1.3.0. Aucune dépendance de l'application ne change.
 
 ## 2026-11-14
 

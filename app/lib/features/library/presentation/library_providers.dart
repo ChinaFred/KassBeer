@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/providers.dart';
+import '../../auth/presentation/access_providers.dart';
+import '../domain/aromes_houblon.dart';
 import '../domain/recette_publique.dart';
 import '../domain/referentiel.dart';
 
@@ -101,3 +103,11 @@ final recettePubliqueProvider = FutureProvider.autoDispose
       (ref, id) => ref.watch(libraryRepositoryProvider).lireRecettePublique(id),
       retry: _sansNouvelEssai,
     );
+
+/// Description aromatique d'un houblon, lue par `get()` à l'ouverture de sa fiche
+/// (ADR-013). Relue au passage hors ligne ou au retour du réseau.
+final aromesHoublonProvider = FutureProvider.autoDispose
+    .family<RechercheDocument<AromesHoublon>, String>((ref, id) {
+      ref.watch(grantedAccessProvider.select((a) => a?.offline));
+      return ref.watch(libraryRepositoryProvider).lireAromesHoublon(id);
+    }, retry: _sansNouvelEssai);

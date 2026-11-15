@@ -3,6 +3,7 @@ import 'package:exchange/exchange.dart' show NomNonResolu;
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
+import '../domain/aromes_houblon.dart';
 import '../domain/recette_publique.dart';
 import '../domain/referentiel.dart';
 
@@ -66,6 +67,12 @@ abstract class LibraryRepository {
     String id, {
     bool cacheSeul = false,
   });
+
+  /// Description aromatique du houblon [id] (`beer_hop_aromas/{id}`, ADR-013),
+  /// lue par un `get` à l'ouverture de sa fiche, jamais par un écouteur (P22).
+  /// Panne rapportée puis relancée ; document illisible rapporté sans aucun
+  /// texte du document.
+  Future<RechercheDocument<AromesHoublon>> lireAromesHoublon(String id);
 
   /// Page de [kTaillePageRecettes] recettes publiques ordonnées par
   /// `search_name`, après [apres] ; [prefixe] : début du nom, normalisé comme
@@ -207,6 +214,19 @@ class FirestoreLibraryRepository implements LibraryRepository {
       return DocumentTrouve(FicheReferentiel.fromFirestore(nature, id, data));
     } on DocumentIllisible catch (error, stackTrace) {
       return _illisible('library.entry', path, error, stackTrace);
+    }
+  }
+
+  @override
+  Future<RechercheDocument<AromesHoublon>> lireAromesHoublon(String id) async {
+    final path = '$kCollectionAromesHoublons/$id';
+    final snapshot = await _get('library.hop_aroma', path);
+    final data = snapshot.data();
+    if (data == null) return _absent(snapshot);
+    try {
+      return DocumentTrouve(AromesHoublon.fromFirestore(data));
+    } on DocumentIllisible catch (error, stackTrace) {
+      return _illisible('library.hop_aroma', path, error, stackTrace);
     }
   }
 
