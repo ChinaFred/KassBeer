@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/admin_screen.dart';
+import '../../features/admin/presentation/admin_sources_screen.dart';
 import '../../features/admin/presentation/error_reports_screen.dart';
 import '../../features/admin/presentation/logs_screen.dart';
 import '../../features/import/presentation/import_fiches_screen.dart';
@@ -250,7 +251,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.dataSources,
         builder: (_, _) => const DataSourcesScreen(),
       ),
-      // Couleurs EBC (ticket #48) : plein écran, hors de la coquille, ouvert
+      // Échelle des couleurs (ticket #48) : plein écran, hors de la coquille, ouvert
       // par `push` depuis la Bibliothèque et la fiche d'un style.
       GoRoute(
         path: AppRoutes.libraryColors,
@@ -411,6 +412,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 titre: LogsScreen.titre,
                 retour: AppRoutes.admin,
                 builder: (_, _) => const LogsScreen(),
+              ),
+              PageDeCoquille(
+                path: 'sources',
+                titre: AdminSourcesScreen.titre,
+                retour: AppRoutes.admin,
+                builder: (_, _) => const AdminSourcesScreen(),
               ),
               // Liste et fiche sont deux routes sœurs : en large, elles
               // partagent la même page (cleDePageTicketsAdmin), et seul le

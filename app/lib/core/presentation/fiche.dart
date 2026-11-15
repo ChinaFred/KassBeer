@@ -18,12 +18,23 @@ TextStyle? _styleTitre(ThemeData theme, NiveauTitre niveau) => switch (niveau) {
 /// Sous [kCompactMaxWidth] de large, libellé et valeur se suivent et passent
 /// l'un sous l'autre quand la place manque. À partir de [kCompactMaxWidth], le
 /// libellé occupe une colonne de [kLibelleFicheFraction] de la largeur et la
-/// valeur suit, alignée à gauche.
+/// valeur suit, alignée à gauche. [avant], décoratif (une pastille de
+/// teinte), se place devant la valeur ; il est exclu de la lecture d'écran.
 class LigneFiche extends StatelessWidget {
-  const LigneFiche({super.key, required this.label, required this.value});
+  const LigneFiche({
+    super.key,
+    required this.label,
+    required this.value,
+    this.avant,
+    this.selectionnable = false,
+  });
 
   final String label;
   final String? value;
+  final Widget? avant;
+
+  /// Vrai : la valeur se sélectionne et se copie (chemin d'un fichier).
+  final bool selectionnable;
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +46,28 @@ class LigneFiche extends StatelessWidget {
         color: theme.colorScheme.onSurfaceVariant,
       ),
     );
-    final valeur = Text(
-      v ?? 'Non renseigné',
-      style: v == null
-          ? theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontStyle: FontStyle.italic,
-            )
-          : theme.textTheme.bodyLarge,
-    );
+    final Widget texte = v != null && selectionnable
+        ? SelectableText(v, style: theme.textTheme.bodyLarge)
+        : Text(
+            v ?? 'Non renseigné',
+            style: v == null
+                ? theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  )
+                : theme.textTheme.bodyLarge,
+          );
+    final a = avant;
+    final valeur = a == null
+        ? texte
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(child: a),
+              const SizedBox(width: 8),
+              Flexible(child: texte),
+            ],
+          );
     return MergeSemantics(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),

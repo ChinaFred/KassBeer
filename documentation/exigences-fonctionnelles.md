@@ -10,8 +10,8 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Couleurs EBC » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -297,7 +297,7 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   « Autre écran » et « Je ne sais pas ». Les éléments d'Admin ne figurent que pour
   l'administrateur. Le suivi affiche « Brassin › Embouteillage ». Les confirmations (« Supprimer
   ? », « Abandonner les modifications ? ») et les sélecteurs de date et d'heure n'y figurent pas.
-  « Sources des données » et « Couleurs EBC », sans menu ni fenêtre, n'ont pas de champ
+  « Sources des données » et « Échelle des couleurs », sans menu ni fenêtre, n'ont pas de champ
   « Élément précis ».
 - « Capture » (ADR-008, T6). La capture de l'écran précédent n'existe que depuis le menu du
   compte. L'image du contenu de
@@ -425,12 +425,13 @@ d'une étape).
 
 ### Admin
 
-Réservé à l'administrateur. Cinq entrées : « Membres » (« Inviter et retirer les comptes »),
+Réservé à l'administrateur. Six entrées : « Membres » (« Inviter et retirer les comptes »),
 « Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
 et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas, un jeton de routine
-refusé l'allume), « Import » (« Fiches Excel préparées en JSON »), « Rapports d'erreur »
+refusé l'allume), « Sources » (« Dernière mise à jour de la Bibliothèque et noms non
+reconnus »), « Import » (« Fiches Excel préparées en JSON »), « Rapports d'erreur »
 (« Pannes rencontrées dans l'application par les membres ») et « Journaux » (« Messages des
 fonctions du serveur »).
 
@@ -1086,6 +1087,83 @@ l'application ne contrôle que la longueur.
 - Le texte non publié reste dans la fiche, même après un changement de disposition, et revient
   à la réouverture ; il s'efface après une publication réussie.
 
+### Admin › Sources
+
+Réservé à l'administrateur (ADR-005, L4). Adresse `/admin/sources`, titre « Sources », retour
+vers Admin. Sous-titre de l'entrée dans Admin : « Dernière mise à jour de la Bibliothèque et noms
+non reconnus ». Lecture seule : l'écran n'écrit rien. La mise à jour (ingestion) se lance depuis
+le poste de l'administrateur (`exchange/bin/preparer_referentiels.dart`, puis
+`ingest/ecrire.mjs`).
+
+En tête : « Mise à jour de la Bibliothèque depuis les sources externes (Brewtarget, BJCP, DIY
+Dog). » et le bouton icône « Actualiser » (48 px), qui relit la dernière mise à jour et la
+première page des noms non reconnus. Tirer la page vers le bas fait la même chose. Pendant la
+lecture lancée par ce bouton, il laisse la place à un indicateur de même taille, annoncé
+« Lecture en cours » ; pendant toute lecture, les autres boutons de lecture sont désactivés.
+Ce qui est affiché reste visible jusqu'à la réponse.
+
+L'écran prend la largeur du contenu, sans borne propre.
+
+**Dernière mise à jour.** Carte titrée « Dernière mise à jour » : l'exécution la plus récente
+de l'écrivain, lue à l'ouverture.
+
+- « Terminée le » : « 11 novembre 2026 à 13:49 » ; « Cible » : « Production » ou
+  « Émulateur » ; « Rapport local » : `import/ingest/rapports/20261111T124912Z.json`, texte
+  sélectionnable.
+- « Documents » (sous-section) : une ligne par collection, dans l'ordre des segments de la
+  Bibliothèque (« Styles », « Malts et sucres », « Houblons », « Levures », « Divers »,
+  « Recettes publiques »), puis « Index de la Bibliothèque » et « Noms non reconnus », avec
+  « 412 écrits · 3 inchangés · 0 refusé ». Une collection inconnue de l'application suit, sous
+  son nom technique. Si des documents sont refusés : « 2 documents refusés. Le détail est dans
+  le rapport local. », dans un encadré d'erreur.
+- « Sources lues » (sous-section) : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 »
+  et « DIY Dog », chacun avec sa version (`v5.2.3 ea10908`, `e6c12ab`).
+- « Noms non reconnus lors de cette mise à jour » (sous-section) : le nombre par nature
+  (« Malts et sucres », « Houblons », « Levures », « Divers »), écrit « 12 noms ».
+
+Le lien « Sources des données », dernier élément de la carte, ouvre l'écran du même nom.
+
+**Tous les noms non reconnus.** Titre de section, puis l'aide : « Noms qu'aucune source n'a
+rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent. ». Au-dessus
+des lignes, « 12 noms affichés » (« 1 nom affiché »), annoncé à chaque changement. Pages de 50 :
+« Charger la suite » lit la page suivante ; après la dernière page, « Fin des noms non
+reconnus. ». Chaque ligne, sans action : repère « lien rompu », le nom (deux lignes au plus),
+puis « Houblon · recettes DIY Dog · 12 fois · le 11 nov. 2026 ». Nature : « Malt ou sucre »,
+« Houblon », « Levure », « Ajout divers », comme les fiches de la Bibliothèque. Origine :
+« recettes DIY Dog », ou « import d'un membre ». Un document illisible s'affiche « Nom
+illisible » / « Mettez l'application à jour. », repère en ton d'erreur. Cette liste montre à
+l'administrateur les noms à ajouter à la table d'alias de l'ingestion : un nom rattaché donne
+ses valeurs à la ligne de recette, qui peut alors se calculer.
+
+**États**, dans chaque bloc (aucun état en plein écran) :
+
+- chargement : indicateur « Chargement de la dernière mise à jour » dans la carte, ou
+  « Chargement des noms non reconnus » sous le titre de la liste ;
+- vide : « Aucune mise à jour enregistrée. Lancez-la depuis votre poste : son compte rendu
+  s'affichera ici. » dans la carte ; « Aucun nom non reconnu. » en italique sous la liste ;
+- panne de la première lecture : encadré d'erreur, annoncé, « Impossible de lire la dernière
+  mise à jour. » ou « Impossible de lire les noms non reconnus. », avec « Réessayer » ;
+  l'erreur est journalisée ;
+- relecture du compte rendu en échec alors qu'un compte rendu est affiché : encadré d'erreur
+  annoncé au-dessus de lui, « Impossible de relire la dernière mise à jour. Le compte rendu
+  affiché peut ne plus être à jour. », avec « Réessayer » ;
+- relecture de la liste en échec (« Actualiser » ou geste) alors que des noms sont affichés :
+  encadré d'erreur annoncé en tête de la liste, « Lecture impossible. Les noms déjà affichés
+  restent visibles. », avec « Réessayer », qui relit la première page ; les lignes restent ;
+- page suivante en échec : le même encadré sous la dernière ligne, à la place de « Charger la
+  suite », avec « Réessayer », qui relit la page suivante ; les lignes restent ;
+- compte rendu illisible : encadré d'erreur dans la carte, « Le compte rendu de la dernière
+  mise à jour est illisible. Mettez l'application à jour. », sans « Réessayer » ;
+- hors ligne, sans rien dans le cache : encadré d'avertissement « Dernière mise à jour
+  indisponible hors ligne. » ou « Liste indisponible hors ligne. », avec « Réessayer » ; lu
+  depuis le cache : encadré d'avertissement « Hors ligne : lu sur l'appareil. Ce compte rendu
+  peut ne plus être à jour. » en tête de la carte, et encadré d'avertissement du même ton « Hors
+  ligne : lu sur l'appareil. Cette liste peut ne plus être à jour. », avec « Réessayer », en tête
+  de la liste.
+
+Pendant une lecture lancée par un « Réessayer » ou par « Charger la suite », ce bouton affiche
+« Lecture en cours ».
+
 ### Équipements
 
 **Liste.** Tous les équipements du groupe, les siens d'abord, puis par nom. Chaque ligne :
@@ -1419,9 +1497,24 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
 
 - Général : « Nom » (seul champ obligatoire, 120 caractères ; sinon « Donnez un nom à la
   recette. », l'écran remonte au champ et y place le curseur), « Style (facultatif) »
-  (aide « Tapez un code (21A) ou un nom, puis choisissez une suggestion. L'export BeerXML
-  demande un style de la Bibliothèque. » ; à la frappe, 8 styles au plus, « American IPA » puis « 21A · IPA », par code
-  ou par nom ; le choix écrit le nom exact du style ; la saisie libre reste possible),
+  (aide « Tapez un code (21A) ou un nom, puis choisissez une suggestion, ou ouvrez la liste
+  des styles. L'export BeerXML demande un style de la Bibliothèque. » ; au focus d'un champ
+  vide, les 8 premiers styles par ordre de code BJCP ; à la frappe, 8 styles au plus,
+  « American IPA » puis « 21A · IPA », par code ou par nom ; une icône de liste en fin de champ
+  (« Choisir un style dans la Bibliothèque ») ouvre « Choisir un style » : feuille du bas presque
+  plein écran au téléphone, boîte de 560 px au plus sur grand écran, champ « Rechercher un code
+  ou un nom » (code, nom, autre nom, catégorie), styles groupés par catégorie, lignes « 21A ·
+  American IPA » avec la catégorie en seconde ligne, indicateur pendant la lecture, « Aucun
+  style ne correspond à « {texte} ». Vous pouvez garder votre saisie. », « La Bibliothèque ne
+  contient encore aucun style. », « La liste des styles est indisponible. Vous pouvez fermer et
+  saisir le nom. » avec « Réessayer », bouton « Fermer » ; sur grand écran, le curseur est dans
+  la recherche à l'ouverture ; l'icône est désactivée quand la Bibliothèque est vide ou
+  illisible ; le choix écrit le nom exact du style, et le lecteur d'écran annonce « Style
+  choisi : {nom} » ; la saisie libre reste possible ; la Bibliothèque est lue à l'ouverture de
+  l'éditeur, et l'aide devient « Style de la Bibliothèque : 21A · IPA » pour un nom exact, ou
+  « Style hors Bibliothèque : l'export BeerXML le refusera. » (la casse et les accents comptent,
+  comme à l'export BeerXML) ; pendant la frappe, un texte qui a encore des suggestions garde
+  l'aide générale, et l'avertissement paraît à la sortie du champ),
   « Type de recette » (liste déroulante : « Non précisé », Tout grain, Empâtage partiel,
   Extrait), « Volume en fermenteur (L) » (plus de 0), « Durée d'ébullition (min) » (entier
   de 0 à 600), « Équipement » (« Aucun
@@ -1592,7 +1685,7 @@ l'administrateur ; personne ne les modifie dans l'application.
 `/bibliotheque` mène aux styles (`/bibliotheque/styles`). Six segments en puces :
 « Styles », « Malts et sucres », « Houblons », « Levures », « Divers », « Recettes
 publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). À droite des puces,
-« Échelle des couleurs » ouvre la page « Couleurs EBC » : une icône de palette sous 600 px
+« Échelle des couleurs » ouvre la page du même nom : une icône de palette sous 600 px
 (infobulle « Échelle des couleurs »), le texte avec l'icône au-delà. À toutes les largeurs,
 une icône d'information à droite des puces (infobulle « Sources des données ») ouvre
 « Sources des données ». Sous 600 px, les puces tiennent sur une ligne qui défile à
@@ -1635,6 +1728,9 @@ noms : … », puis :
   de l'écran. » et le lien « Échelle des couleurs ». Sans plage de couleur, ni barre ni
   mention. Une borne négative ou non finie masque la barre et l'erreur est journalisée ;
 - malt ou sucre : nom français, type, couleur, rendement d'extrait, producteur, origine ;
+  une pastille de 20 px de la teinte indicative précède la couleur en EBC, ignorée par le
+  lecteur d'écran ; une couleur refusée par le calcul de teinte masque la pastille et
+  l'erreur est journalisée ;
 - houblon : nom français, forme, acides alpha, acides bêta, usage (« Aromatique »,
   « Amérisant », « Aromatique et amérisant », « Double usage »), origine ;
 - levure : producteur, type, forme, atténuation et température de fermentation en plages,
@@ -1761,9 +1857,9 @@ porte « Hors ligne : liste lue sur l'appareil. Elle peut être incomplète. ».
 marche hors ligne, comme la création d'une recette. Le jour de brassage ne lit rien de la
 Bibliothèque.
 
-### Couleurs EBC
+### Échelle des couleurs
 
-Page « Couleurs EBC » (adresse `/bibliotheque/couleurs`, demandée par le ticket #48), ouverte
+Page « Échelle des couleurs » (adresse `/bibliotheque/couleurs`, demandée par le ticket #48), ouverte
 depuis l'en-tête de la Bibliothèque et depuis la fiche d'un style, pour tout membre. Plein
 écran, hors de la barre de navigation, flèche retour (vers l'écran d'origine ; ouverte par son
 adresse, vers la Bibliothèque). Elle ne lit rien dans Firestore : elle s'affiche hors ligne.
@@ -1771,7 +1867,7 @@ adresse, vers la Bibliothèque). Elle ne lit rien dans Firestore : elle s'affich
 En tête : « Teinte indicative : la couleur réelle dépend du verre, de la lumière et de
 l'écran. » Puis une valeur tous les 4 EBC, de « 0 EBC » à « 76 EBC », et « 79 EBC et plus »
 (limite de la table des teintes). Chaque valeur a une pastille de 40 × 40 px, bordée de la
-couleur `outlineVariant` du thème, et son libellé en EBC. Aucune valeur n'est donnée en SRM.
+couleur `outline` du thème (assez contrastée pour une teinte foncée sur un fond sombre), et son libellé en EBC. Aucune valeur n'est donnée en SRM.
 Sous 600 px, une ligne par valeur. À partir de 600 px, un dégradé continu de 0 à 79 EBC
 au-dessus (lu « Dégradé de 0 à 79 EBC et plus »), puis les valeurs en grille qui passe à la
 ligne ; la largeur d'une case suit l'échelle du texte. La page n'a ni chargement ni état
@@ -1779,7 +1875,7 @@ d'erreur : elle ne lit aucune donnée.
 
 ### Sources des données
 
-Ouvert depuis la Bibliothèque, depuis la section « Provenance » d'une fiche et depuis le menu
+Ouvert depuis la Bibliothèque, depuis la section « Provenance » d'une fiche, depuis Admin › Sources et depuis le menu
 du compte, pour tout membre (adresse `/sources-des-donnees`). Plein écran, hors de la barre de
 navigation, titre « Sources des données » et flèche retour (vers l'écran d'origine ; ouvert
 par son adresse, vers la Bibliothèque). Texte sélectionnable, livré avec l'application : il
@@ -1799,7 +1895,7 @@ s'affiche sans réseau.
   d'ouvrir le lien. Il reste sélectionnable sur cette page. », et l'échec est journalisé.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
-- srm2hex : « Teintes de la page « Couleurs EBC » et de la barre de couleur d'un style :
+- srm2hex : « Teintes de la page « Échelle des couleurs » et de la barre de couleur d'un style :
   400 teintes reprises de la bibliothèque libre srm2hex, version 1.0.2, sous licence MIT.
   Seule la table des teintes est reprise. La bibliothèque ne porte aucune mention de
   copyright ; voici le texte de sa licence. », puis le texte d'autorisation de la licence MIT,
@@ -2777,7 +2873,9 @@ contient de montant.
 ### Calculs affichés
 
 La fiche et l'éditeur affichent cinq tuiles : « Densité initiale », « Densité finale »,
-« Degré », « Amertume », « Couleur ». Rien n'est enregistré : tout est recalculé à chaque
+« Degré », « Amertume », « Couleur ». Quand la couleur est calculée, une pastille de 24 px
+de sa teinte indicative précède la valeur en EBC (bordure `outline`, ignorée par le lecteur
+d'écran, qui lit « Couleur, 12 EBC »). Rien n'est enregistré : tout est recalculé à chaque
 affichage, avec l'équipement tel qu'il est au moment de l'affichage. Deux brasseurs voient les
 mêmes valeurs.
 

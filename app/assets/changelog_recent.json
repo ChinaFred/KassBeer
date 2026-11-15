@@ -1,11 +1,33 @@
 {
   "versions": [
     {
-      "version": "0.1.58",
+      "version": "0.1.61",
       "date": "2026-11-15",
       "paragraphs": [
         "« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage) autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un processus », ou « Créer un processus » si vous n'en avez aucun : ce bouton ouvre « Mes processus », où le modèle d'exemple et le plan de brassage des fiches sont prêts à copier. Une recette sans chronologie affiche « sans processus, le brassin n'aura aucune étape ».",
         "Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son propriétaire. Demandé par le ticket #61."
+      ]
+    },
+    {
+      "version": "0.1.60",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et devant la couleur calculée d'une recette. La page des teintes s'appelle désormais « Échelle des couleurs », comme le lien qui l'ouvre. En thème sombre, les teintes foncées ont une bordure plus visible. Demandé par le ticket #48."
+      ]
+    },
+    {
+      "version": "0.1.59",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données ». Le bouton « Actualiser », ou un geste qui tire la page vers le bas, relit l'écran sans effacer ce qui est affiché. Si cette lecture échoue, un message le dit au-dessus du compte rendu ou de la liste, qui restent visibles.",
+        "En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50, avec le nombre de noms affichés, « Charger la suite » et la fin de la liste signalée. Chaque ligne donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur."
+      ]
+    },
+    {
+      "version": "0.1.58",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » : une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49."
       ]
     },
     {
@@ -20,30 +42,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur » la teinte de la bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de 0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle dépend du verre, de la lumière et de l'écran. Au-delà de 79 EBC, la teinte ne fonce plus, et la fiche le dit. « Sources des données » nomme la source des teintes et donne le texte de sa licence. Demandé par le ticket #48."
-      ]
-    },
-    {
-      "version": "0.1.55",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "« Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un nouveau processus prérempli ; rien n'est enregistré avant « Enregistrer ».",
-        "Une courbe des températures accompagne le jour de brassage. Elle montre la température visée de chaque étape selon le plan de départ et selon les heures réelles, les températures et les densités mesurées, et la densité initiale prévue. Sur le téléphone, une bascule « Étapes » | « Courbe » l'affiche à la place de la chronologie ; sur grand écran, elle se place sous le minuteur. Sur la fiche du brassin, elle paraît en tête de la journée de brassage dès la première étape commencée. En paysage, sur un téléphone, la bascule garde le minuteur visible.",
-        "La courbe de fermentation commence à la densité initiale du jour de brassage : un seul relevé suffit pour la voir. Elle montre aussi les densités initiale et finale prévues, et la plage de température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente de la Bibliothèque, ou sans plage, une ligne le dit."
-      ]
-    },
-    {
-      "version": "0.1.54",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche. Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie », « Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi compléter les recettes importées l'une après l'autre. Demandé par le ticket #60."
-      ]
-    },
-    {
-      "version": "0.1.53",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique que le panneau de l'étape continue plus bas.",
-        "La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation (« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes."
       ]
     }
   ]

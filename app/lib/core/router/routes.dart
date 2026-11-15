@@ -17,7 +17,7 @@ abstract final class AppRoutes {
   static String libraryEntry(String slug, String id) =>
       '$library/$slug/${Uri.encodeComponent(id)}';
 
-  /// « Couleurs EBC » (ticket #48) : page pleine hors de la coquille, ouverte
+  /// « Échelle des couleurs » (ticket #48) : page pleine hors de la coquille, ouverte
   /// par `push` depuis la Bibliothèque et la fiche d'un style. « couleurs »
   /// n'est le chemin d'aucun segment.
   static const libraryColors = '$library/couleurs';
@@ -40,6 +40,10 @@ abstract final class AppRoutes {
   /// Admin › Tickets des membres (ADR-006, T2), dans la coquille.
   static const adminTickets = '/admin/tickets';
   static String adminTicket(String id) => '$adminTickets/$id';
+
+  /// Admin › Sources (ADR-005, L4) : dernière ingestion et ingrédients non
+  /// résolus.
+  static const adminSources = '/admin/sources';
 
   /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
   static const prices = '/prix';

@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.58 — fonctionnel
+### v0.1.61 — fonctionnel
 
 « Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous
 n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage)
@@ -21,7 +21,7 @@ Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit 
 choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son
 propriétaire. Demandé par le ticket #61.
 
-### v0.1.58 — technique
+### v0.1.61 — technique
 
 `lireChoixProcessus` présélectionne le seul processus valide du lecteur quand son document de
 préférence est absent (`DocumentAbsent`) ; un défaut coupé ou supprimé garde la chronologie
@@ -42,6 +42,84 @@ données ne change ; l'écran du jour et les journées ne sont pas touchés (P2)
 de la voie « Chronologie de la recette seule » n'est pas fait (point 5 de l'analyse). Tests de
 widgets ajoutés dans `deroule_d3_test.dart` et `process_screens_test.dart`. Demandé par le
 ticket #61.
+
+### v0.1.60 — fonctionnel
+
+La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et
+devant la couleur calculée d'une recette. La page des teintes s'appelle désormais « Échelle
+des couleurs », comme le lien qui l'ouvre. En thème sombre, les teintes foncées ont une
+bordure plus visible. Demandé par le ticket #48.
+
+### v0.1.60 — technique
+
+Suites du ticket #48. `couleur_ebc.dart` : `CarreTeinte` (carré bordé d'une teinte),
+`PastilleEbc` (teinte d'une valeur EBC par `teinteEbc` de `brewing/`, masquée et rapportée
+une fois `library.color_swatch` si la valeur est refusée), `bordureTeinte` (`outline` au lieu
+de `outlineVariant` sur la barre, les pastilles de l'échelle et les nouvelles pastilles).
+`LigneFiche.avant` place un widget décoratif, exclu de la lecture d'écran, devant la valeur :
+pastille de 20 px devant la couleur d'un malt. `_Indicateur.teinte` : pastille de 24 px dans
+la tuile « Couleur » des calculs d'une recette. Titre de la page, nom de l'écran dans les
+tickets et « Sources des données » : « Échelle des couleurs ». Aucune formule ni table dans
+`app/lib/` (P3), aucune dépendance ajoutée.
+
+### v0.1.59 — fonctionnel
+
+Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière
+mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de
+documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur
+version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données ».
+Le bouton « Actualiser », ou un geste qui tire la page vers le bas, relit l'écran sans effacer
+ce qui est affiché. Si cette lecture échoue, un message le dit au-dessus du compte rendu ou de
+la liste, qui restent visibles.
+
+En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un
+ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50, avec le
+nombre de noms affichés, « Charger la suite » et la fin de la liste signalée. Chaque ligne
+donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de
+fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un
+nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne
+fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur.
+
+### v0.1.59 — technique
+
+Dernière partie de L4 d'ADR-005, préparée en v0.1.29 (PR #33) et reprise sur la branche
+principale par une fusion. `features/admin/` : `SourcesRepository` (`ingest_runs/` par
+`limit(1)`, `import_unresolved/` par pages de 50, `get()` seul), `domain/ingestion.dart`,
+`admin_sources_screen.dart`, `libelles_sources.dart` ; route `/admin/sources`. L'entrée d'Admin
+passe sur `LigneListe`, comme les autres, avec `AdminSourcesScreen.sousTitre`. L'écran suit
+Admin › Rapports d'erreur : `CarteSection` et `TitreSection` (sous-sections), états en `Encadre`
+dans chaque bloc au lieu d'`EtatVide`, d'`EtatErreur` et de `BandeauListePerimee` (panne de la
+page suivante dans le pied, à la place de « Charger la suite »), lignes en
+`LigneListe`, `IconButton` « Actualiser » de 48 px et `RefreshIndicator`, compte rendu sans la
+borne `kDialogMaxWidth`. L'échec d'une relecture sous un compte rendu affiché se lit par
+`hasError && hasValue` (Riverpod 3 garde la valeur). `LigneFiche` reçoit `selectionnable`
+(chemin du rapport en `SelectableText`). `firestore.rules` inchangé : les deux collections sont
+déjà lues par l'admin seul (P19).
+
+### v0.1.58 — fonctionnel
+
+Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on
+le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » :
+une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui
+écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le
+style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49.
+
+### v0.1.58 — technique
+
+`ChampBibliotheque` reçoit `choixDesStyles` (champ « Style » seul ; malts, houblons, ajouts et
+levures inchangés) et un quatrième argument `boutonListe` dans `fieldBuilder`. Nouveau
+`choix_style.dart` (`choisirStyle`, `stylesGroupes`, `aideStyleSaisi`) ; `stylesParCode` et
+`comparerCodesStyle` dans `referentiel.dart`. Index `beer_index/styles` lu par `get()` une fois,
+partagé entre la liste et la feuille, aucun `snapshots()` (P22). Aucune dépendance ni règle
+changée. L'aide « Style de la Bibliothèque » demande le nom exact, casse comprise, comme
+l'export BeerXML. Demandé par le ticket #49.
+
+La relecture ajoute : index des styles lu dès l'ouverture de l'éditeur, pour que l'aide « hors
+Bibliothèque » paraisse sur une recette existante sans focus ; états de la feuille par
+`EtatChargement`, `EtatVide` et `EtatErreur` (« Réessayer ») ; tailles de la feuille dans
+`breakpoints.dart` ; avertissement retenu pendant la frappe tant que le texte a des
+suggestions ; annonce « Style choisi » au lecteur d'écran ; curseur dans la recherche sur grand
+écran.
 
 ### v0.1.57 — fonctionnel
 

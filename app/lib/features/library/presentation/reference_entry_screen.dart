@@ -211,6 +211,7 @@ class _Fiche extends StatelessWidget {
       LigneFiche(
         label: 'Couleur',
         value: f.colorEbc == null ? null : formatEbc(f.colorEbc!),
+        avant: f.colorEbc == null ? null : PastilleEbc(ebc: f.colorEbc!),
       ),
       LigneFiche(
         label: 'Rendement d\'extrait',
