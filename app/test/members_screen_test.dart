@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
+import 'package:kass_beer/features/members/presentation/invite_member_form.dart';
+import 'package:kass_beer/features/members/presentation/members_providers.dart';
 import 'package:kass_beer/features/members/presentation/members_screen.dart';
 
 import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
@@ -188,6 +191,117 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Cette adresse est déjà membre.'), findsOneWidget);
       expect(app.members.invitations, isEmpty);
+    });
+
+    group('console Google', () {
+      String? copied;
+      setUp(() => copied = null);
+
+      void mockClipboard(WidgetTester tester) {
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          (call) async {
+            if (call.method == 'Clipboard.setData') {
+              copied =
+                  (call.arguments as Map<Object?, Object?>)['text'] as String?;
+            }
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.platform,
+            null,
+          ),
+        );
+      }
+
+      test('adresse de la page des utilisateurs test', () {
+        expect(
+          consoleUtilisateursTest('kassbeer').toString(),
+          'https://console.cloud.google.com/auth/audience?project=kassbeer',
+        );
+        expect(consoleUtilisateursTest(''), isNull);
+        expect(consoleUtilisateursTest('a/b?x'), isNull);
+      });
+
+      testWidgets('adresse valide : copiée, page ouverte', (tester) async {
+        mockClipboard(tester);
+        final app = await _openMembers(tester);
+        await tester.tap(find.byType(FloatingActionButton));
+        await tester.pumpAndSettle();
+        expect(find.text(InviteMemberForm.consoleHint), findsOneWidget);
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Adresse e-mail Google'),
+          'Nina@Exemple.fr',
+        );
+        await tester.ensureVisible(find.text(InviteMemberForm.consoleButton));
+        await tester.tap(find.text(InviteMemberForm.consoleButton));
+        await tester.pumpAndSettle();
+        expect(copied, 'nina@exemple.fr');
+        expect(app.openedLinks, [
+          Uri.parse(
+            'https://console.cloud.google.com/auth/audience?project=demo-kassbeer',
+          ),
+        ]);
+        expect(
+          find.text(InviteMemberForm.consoleCopied('nina@exemple.fr')),
+          findsOneWidget,
+        );
+        // L'adresse changée efface le message de copie.
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Adresse e-mail Google'),
+          'nino@exemple.fr',
+        );
+        await tester.pump();
+        expect(
+          find.text(InviteMemberForm.consoleCopied('nina@exemple.fr')),
+          findsNothing,
+        );
+        // Le formulaire reste ouvert : l'invitation n'est pas encore écrite.
+        expect(app.members.invitations, isEmpty);
+        expect(find.text('Inviter un membre'), findsOneWidget);
+      });
+
+      testWidgets('adresse vide : page ouverte sans copie', (tester) async {
+        mockClipboard(tester);
+        final app = await _openMembers(tester);
+        await tester.tap(find.byType(FloatingActionButton));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text(InviteMemberForm.consoleButton));
+        await tester.tap(find.text(InviteMemberForm.consoleButton));
+        await tester.pumpAndSettle();
+        expect(copied, isNull);
+        expect(app.openedLinks, hasLength(1));
+        expect(find.text(InviteMemberForm.consoleNoEmail), findsOneWidget);
+      });
+
+      testWidgets('ouverture refusée : rapport sans adresse, lien affiché', (
+        tester,
+      ) async {
+        mockClipboard(tester);
+        final app = await _openMembers(tester);
+        app.openLinkResult = false;
+        await tester.tap(find.byType(FloatingActionButton));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Adresse e-mail Google'),
+          'nina@exemple.fr',
+        );
+        await tester.ensureVisible(find.text(InviteMemberForm.consoleButton));
+        await tester.tap(find.text(InviteMemberForm.consoleButton));
+        await tester.pumpAndSettle();
+        expect(find.text(InviteMemberForm.consoleOpenFailure), findsOneWidget);
+        expect(
+          find.text(
+            'https://console.cloud.google.com/auth/audience?project=demo-kassbeer',
+          ),
+          findsOneWidget,
+        );
+        final report = app.errors.reports.single;
+        expect(report.feature, 'members.open_console');
+        expect(report.context, isNot(contains('nina')));
+      });
     });
 
     testWidgets('adresse invalide refusée', (tester) async {

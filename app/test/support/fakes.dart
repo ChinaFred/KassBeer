@@ -39,6 +39,7 @@ import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
+import 'package:kass_beer/features/members/presentation/members_providers.dart';
 import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
@@ -1468,6 +1469,7 @@ class TestApp {
         preferencesProcessusRepositoryProvider.overrideWithValue(
           preferencesProcessus,
         ),
+        firebaseProjectIdProvider.overrideWithValue('demo-kassbeer'),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
           return openLinkResult;

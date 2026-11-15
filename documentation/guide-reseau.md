@@ -44,7 +44,8 @@ CLAUDE.md                       règles, chaîne de travail, tableaux à remplir
 ├── skills/                     quatre skills
 └── hooks/
     ├── session-start.sh        vérifie agents et skills, lance setup-projet.sh s'il existe,
-    │                           avertit si l'adresse git n'est pas noreply (ADR-002)
+    │                           avertit si l'adresse git n'est pas noreply de GitHub
+    │                           ou noreply@anthropic.com (ADR-002, P15)
     ├── setup-projet.sh         session cloud : installe Flutter 3.44.6 et les dépendances
     │                           (app, brewing, rules-tests, functions)
     └── format-on-edit.mjs      formate le fichier écrit, selon formatters.json

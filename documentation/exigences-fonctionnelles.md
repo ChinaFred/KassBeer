@@ -444,7 +444,18 @@ qu'une invitation faite hors ligne n'a pas atteint le serveur.
 - **Inviter** : bouton flottant « Inviter » sur téléphone, bouton en tête de liste sur
   grand écran. Le formulaire « Inviter un membre » (feuille du bas sur téléphone, dialogue
   sinon) demande « Adresse e-mail Google » (mise en minuscules), « Nom (facultatif) » et,
-  sous le titre « Rôle », « Brasseur » (par défaut) ou « Administrateur ». Sur le web, Entrée valide. Erreurs :
+  sous le titre « Rôle », « Brasseur » (par défaut) ou « Administrateur ». Sous le rôle, la
+  phrase « Google refuse la connexion tant que l'adresse n'est pas dans les utilisateurs test
+  du projet. Ajoutez-la dans la console Google. » et le bouton « Copier l'adresse et ouvrir la
+  console Google » : il copie l'adresse saisie quand elle est valide (« Adresse copiée ({e-mail}) :
+  collez-la dans « Utilisateurs test » › « Ajouter des utilisateurs ». » ; sans adresse valide,
+  « Aucune adresse valide à copier : saisissez-la d'abord. » ; copie en échec, « Copie
+  impossible : recopiez l'adresse à la main. » ; le message s'efface à la frappe suivante) et ouvre dans le
+  navigateur la page Audience de Google Auth Platform du projet
+  (`console.cloud.google.com/auth/audience?project=<projet>`). Google ne fournit aucune API
+  pour ajouter un utilisateur test : l'ajout reste manuel. Si le système refuse d'ouvrir la
+  page, le formulaire affiche « Impossible d'ouvrir la console. Adresse de la page : » et
+  l'adresse, sélectionnable. Le formulaire reste ouvert. Sur le web, Entrée valide. Erreurs :
   « Adresse e-mail invalide. », « Cette adresse est déjà membre. ». Après « Inviter », le
   formulaire se ferme aussitôt, même hors ligne, et l'écran affiche « {e-mail} est invité.
   Aucun e-mail n'est envoyé : prévenez-le. ». Si le serveur refuse l'invitation, ce message
@@ -2448,7 +2459,7 @@ ouvert. Une page rechargée sans réseau ne s'ouvre plus. ».
 barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le minuteur ; avec un
 processus, la seconde ligne nomme la journée (« Brassage · 10:42 », lu « Journée Brassage, heure
 actuelle 10:42 »), et l'écran suit les seules étapes de la journée de brassage du déroulé
-(« Étape 3 sur 18 », « Fin prévue » de la journée). Quand le brassage
+(« Étape 3 sur 18 », « Fin du brassage prévue »). Quand le brassage
 est affiché, ou pendant la lecture des saisies, le retour Android ramène à la fiche du brassin. À
 droite de la barre, après ⋮, l'avatar à l'initiale seule ouvre le menu du compte (voir Accueil). Un
 autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
@@ -2458,8 +2469,9 @@ sa fiche, en lecture seule.
 COURS » avec une icône de minuteur, nom, minuteur lisible à deux mètres (« 32:15 », « 1:05:12 »),
 barre de progression de la part écoulée de l'étape (non lue par le lecteur d'écran, qui lit le
 minuteur), « restantes sur 45 min », température visée et dernière mesure, « Ensuite : {nom} ·
-vers 12:30 », « Fin prévue vers 16:05 · retard 12 min ». Étiquette d'étape et ligne « Fin
-prévue » en grand (18), lisibles à deux mètres. Durée dépassée : la carte passe en ambre avec un
+vers 12:30 », « Fin du brassage prévue vers 16:05 · retard 12 min » (« Fin de la journée prévue
+vers… » sur une journée 2 ou suivante), distincte de la fin de l'étape en cours. Étiquette d'étape et
+ligne de fin prévue en grand (18), lisibles à deux mètres. Durée dépassée : la carte passe en ambre avec un
 bord ambre plus foncé, l'étiquette devient « ÉTAPE 2 SUR 7 · DÉPASSÉ » avec une icône de réveil,
 la barre est pleine, « +04:12 », « Dépassé de 4 min · prévu 45 min » (« Dépassé · prévu 45 min »
 la première minute). La carte garde la même taille et la même marge dans les deux états : rien
@@ -2566,7 +2578,7 @@ l'administrateur. ».
 « Préparer la journée »), ouvert au statut En fermentation ou En conditionnement (En fermentation
 seulement pour l'embouteillage). Il reprend l'écran du jour de brassage : barre « Blonde » puis
 « Houblonnage à cru · 10:42 » (lu « Journée Houblonnage à cru, heure actuelle 10:42 »), panneau,
-minuteurs, alerte de fin, étapes, corrections, « Fin prévue » de la journée, écran allumé. Départ
+minuteurs, alerte de fin, étapes, corrections, « Fin de la journée prévue », écran allumé. Départ
 prévu de la journée : son premier début, sinon l'heure de l'appareil. Les étapes du brassage et
 des autres journées n'y figurent pas et ne changent pas d'état.
 

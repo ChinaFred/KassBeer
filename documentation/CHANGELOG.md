@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.65 — fonctionnel
+### v0.1.67 — fonctionnel
 
 Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
 sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
@@ -20,7 +20,7 @@ heure portent « heure non notée », la densité finale datée de 28 jours apr�
 remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
 import.
 
-### v0.1.65 — technique
+### v0.1.67 — technique
 
 `brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
 noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
@@ -46,6 +46,44 @@ l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
 `SuppressionBrassin`, état `remplacementATerminer` (marque `Fiche Excel · {id} ·
 remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
 rubrique « Heures estimées ». Aucune dépendance ne change.
+
+### v0.1.66 — fonctionnel
+
+Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
+Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
+houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
+
+### v0.1.66 — technique
+
+`_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
+jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
+insécable avant « · » pour couper la ligne après le point médian. Tests ajoutés
+dans `brew_day_screen_test.dart` et `deroule_d4_test.dart`.
+
+P15 accepte `noreply@anthropic.com`, l'adresse des sessions Claude Code, comme l'adresse
+`noreply` de GitHub, pour les commits et les tags (décision de l'utilisateur du 2026-11-15).
+Aucune des deux ne désigne une personne. `session-start.sh` n'avertit plus pour cette adresse.
+Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte à recoller sur
+claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
+
+Ces deux changements avaient été numérotés v0.1.62 et v0.1.63 sur leur branche, numéros pris
+entre-temps par la branche principale, puis v0.1.64 et v0.1.65, pris aussi : ils sont renumérotés en v0.1.66.
+
+### v0.1.65 — fonctionnel
+
+Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux
+utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion.
+Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à
+la coller. Google ne permet pas d'ajouter cette adresse automatiquement.
+
+### v0.1.65 — technique
+
+`invite_member_form.dart` devient un `ConsumerStatefulWidget` et ouvre
+`console.cloud.google.com/auth/audience?project=<FIREBASE_PROJECT_ID>` par `ouvrirLienProvider`.
+L'identifiant vient de `firebaseProjectIdProvider` (`members_providers.dart`, lu à la
+compilation) et `consoleUtilisateursTest` le contrôle avant de construire l'adresse ; sans
+identifiant valide, le bloc ne s'affiche pas. Échecs rapportés sous `members.open_console` et
+`members.copy_email`, sans l'adresse. Aucune dépendance ajoutée.
 
 ### v0.1.64 — technique
 
