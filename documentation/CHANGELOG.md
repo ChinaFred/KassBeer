@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.67 — technique
+### v0.1.68 — technique
 
 ADR-014 : `ecrire.mjs --supprimer-absents` refusait de supprimer les 24 doublons de
 `beer_hops`, car la préparation compte 442 documents pour 466 en ligne (94,85 %, sous le seuil
@@ -14,6 +14,29 @@ de 95 %). Décision de l'utilisateur : `PART_MIN_PREPAREE` passe à 0,9
 (`ingest/lib/ecriture.mjs`). Tests de `ingest/` adaptés (90 préparés pour 100 acceptés, 11
 absents refusés ; émulateur à 61 pour 72 refusé). P19 de `CLAUDE.md`, `exigences-techniques.md`
 et ADR-014 (note du 2026-11-15) mis à jour.
+
+### v0.1.67 — fonctionnel
+
+Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
+commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
+l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le
+bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ». Après l'appui,
+un message « Étape « Ébullition » commencée. » s'affiche dix secondes avec « Annuler » : un
+appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son
+action, comme celui qui annule un début ou une fin d'étape.
+
+### v0.1.67 — technique
+
+`brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
+de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
+(P2), et prépare l'alerte du minuteur. `_BarreActions` l'affiche quand la suivante a une
+durée ; sinon « Terminer l'étape » reste. Le libellé lu par TalkBack nomme les deux étapes.
+Une `SnackBar` (10 s, `persist` vrai sous TalkBack par `MediaQuery.accessibleNavigationOf`,
+comme celle de `_annuler`) propose « Annuler » : `_annulerEnchainement` relit le
+plan et supprime `startEventId` de l'étape commencée et `endEventId` de la précédente par
+`deleteEvents`, un `WriteBatch` sans transaction ; rien n'est supprimé si l'étape commencée
+est déjà terminée ou sautée. Tests de `brew_day_screen_test.dart` adaptés, quatre cas ajoutés
+(dernière étape, suivante de 0 min, « Annuler », « Annuler » après la fin).
 
 ### v0.1.66 — fonctionnel
 
