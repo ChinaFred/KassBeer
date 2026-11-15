@@ -1348,6 +1348,9 @@ class _Jour extends StatelessWidget {
           toutFait: role == RoleJournee.autre
               ? TextesJournee.toutFait
               : 'Toutes les étapes sont faites.',
+          libelleFin: role == null
+              ? 'Fin du brassage prévue'
+              : 'Fin de la journée prévue',
           illisible: messageDerouleIllisible(brew.deroule),
           now: now,
           timerSize: timerSize,
@@ -1650,6 +1653,7 @@ class _Panneau extends StatelessWidget {
   const _Panneau({
     required this.plan,
     required this.toutFait,
+    required this.libelleFin,
     required this.illisible,
     required this.now,
     required this.timerSize,
@@ -1663,6 +1667,10 @@ class _Panneau extends StatelessWidget {
 
   /// Texte affiché quand toutes les étapes sont faites.
   final String toutFait;
+
+  /// Début de la ligne d'heure de fin (« Fin du brassage prévue »), suivi de
+  /// « vers 16:05 ». Distinct de la fin de l'étape en cours.
+  final String libelleFin;
 
   /// Texte d'un déroulé illisible ([messageDerouleIllisible]), ou `null`.
   final String? illisible;
@@ -1711,8 +1719,8 @@ class _Panneau extends StatelessWidget {
     final finPrevue = p.finPrevue;
     final ligneFin = finPrevue == null
         ? null
-        : 'Fin prévue vers ${formatHeure(finPrevue)}'
-              '${p.retard > Duration.zero ? ' · retard ${formatDuree(p.retard)}' : ''}';
+        : '$libelleFin vers ${formatHeure(finPrevue)}'
+              '${p.retard > Duration.zero ? '\u00A0· retard ${formatDuree(p.retard)}' : ''}';
     final running = p.enCours;
     if (running == null) {
       final next = p.prochaine!;

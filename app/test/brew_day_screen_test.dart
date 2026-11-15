@@ -652,6 +652,11 @@ void main() {
       expect(forme(tester).side.width, 2);
       expect(forme(tester).side.color, scheme.primaryContainer);
       expect(find.text('ÉTAPE 1 SUR 2 · EN COURS'), findsOneWidget);
+      // Heure de fin du brassage, distincte de la fin de l'étape en cours.
+      expect(
+        find.textContaining('Fin du brassage prévue vers '),
+        findsOneWidget,
+      );
       expect(
         tester
             .widget<Icon>(find.byKey(const ValueKey('icone-etat-etape')))
