@@ -6,6 +6,15 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.68 — technique
+
+ADR-014 : `ecrire.mjs --supprimer-absents` refusait de supprimer les 24 doublons de
+`beer_hops`, car la préparation compte 442 documents pour 466 en ligne (94,85 %, sous le seuil
+de 95 %). Décision de l'utilisateur : `PART_MIN_PREPAREE` passe à 0,9
+(`ingest/lib/ecriture.mjs`). Tests de `ingest/` adaptés (90 préparés pour 100 acceptés, 11
+absents refusés ; émulateur à 61 pour 72 refusé). P19 de `CLAUDE.md`, `exigences-techniques.md`
+et ADR-014 (note du 2026-11-15) mis à jour.
+
 ### v0.1.67 — fonctionnel
 
 Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
