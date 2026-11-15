@@ -1948,7 +1948,8 @@ s'affiche sans réseau.
   températures recopiés des fiches techniques que chaque fabricant publie en accès libre. Ces
   valeurs remplacent celles de Brewtarget pour les mêmes levures. Les textes des fiches ne sont
   pas repris. », puis une ligne par fabricant, dans l'ordre alphabétique : « Fermentis : fiches
-  relevées le 14 novembre 2026, sans floculation. », « Mangrove Jack's : fiches relevées le
+  relevées le 14 novembre 2026, sans floculation. », « Imperial Yeast : fiches relevées le
+  15 novembre 2026, floculation comprise. », « Mangrove Jack's : fiches relevées le
   15 novembre 2026, floculation comprise. ». Un fabricant ajouté ajoute sa ligne.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
