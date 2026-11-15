@@ -6,6 +6,19 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.63 — technique
+
+Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
+l'utilisateur) : le fichier BeerJSON 2.01 des 25 cultures Fermentis, relevé le 2026-11-14 et
+écrit à la main, entre dans le dépôt sous `exchange/donnees/fabricants/cultures.json`.
+`bin/preparer_referentiels.dart` le lit par défaut (option `--fabricants` pour un autre
+chemin) : l'administrateur n'a plus à le copier dans `import/sources/`. Le fichier ne contient
+que noms et valeurs techniques ; il n'est ni un asset ni servi par Hosting.
+`exchange/test/fabricants_donnees_test.dart` le lit : 25 entrées, aucun rejet, les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 écartées. `DATA_SOURCES.md` (exception à « aucun
+fichier de ces sources dans le dépôt », SHA-256 du fichier), ADR-005, `exigences-techniques.md`,
+« Structure » de `CLAUDE.md` et `guide-reseau.md` mis à jour.
+
 ### v0.1.62 — fonctionnel
 
 La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le

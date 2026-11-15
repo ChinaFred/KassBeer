@@ -13,7 +13,7 @@ const kVersionDiyDog = 'e6c12ab';
 const kDateReleve = '2026-11-08';
 
 /// Date du relevé des fiches techniques des fabricants
-/// (`import/sources/fabricants/cultures.json`), qui tient lieu de version.
+/// (`exchange/donnees/fabricants/cultures.json`), qui tient lieu de version.
 const kDateReleveFabricants = '2026-11-14';
 
 /// Licences écrites dans `provenance[].licence`.
