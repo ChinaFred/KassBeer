@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/etats.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/processes/domain/modele_exemple.dart';
+import 'package:kass_beer/features/processes/domain/modele_fiches.dart';
 import 'package:kass_beer/features/processes/domain/modele_processus.dart';
 import 'package:kass_beer/features/processes/domain/preference_processus.dart';
 import 'package:kass_beer/features/processes/presentation/process_detail_screen.dart';
@@ -188,7 +190,8 @@ void main() {
       expect(find.text('Réessayer'), findsOneWidget);
     });
 
-    testWidgets('vide : modèle d\'exemple prérempli, écrit à « Enregistrer » '
+    testWidgets('vide : modèle d\'exemple à copier prérempli, écrit à '
+        '« Enregistrer » '
         'seulement, proposé par défaut', (tester) async {
       final app = await open(
         tester,
@@ -196,9 +199,12 @@ void main() {
         before: (app) => app.processes.publish(const []),
       );
       expect(find.text(ProcessListScreen.aucun), findsOneWidget);
-      // Les deux boutons de création sont dans l'état vide.
+      // Le bouton de création est dans l'état vide ; « Partir du modèle
+      // d'exemple » a laissé la place à « Modèles à copier ».
       expect(find.byType(FloatingActionButton), findsNothing);
-      await tester.tap(find.text(ProcessListScreen.partirExemple));
+      expect(find.text('Partir du modèle d\'exemple'), findsNothing);
+      expect(find.text(ProcessListScreen.nouveau), findsOneWidget);
+      await tester.tap(find.text(kNomModeleExemple));
       await tester.pumpAndSettle();
       expect(find.text(ProcessEditorScreen.titreNouveau), findsOneWidget);
       expect(find.text(kNomModeleExemple), findsOneWidget);
@@ -233,9 +239,15 @@ void main() {
       await open(
         tester,
         '/processus',
+        height: 1400,
         before: (app) {
           app.processes.publish([
-            modele('z', owner: 'uid-zoe', ownerName: 'Zoé'),
+            modele(
+              'z',
+              owner: 'uid-zoe',
+              ownerName: 'Zoé',
+              content: uneJournee('Zythum'),
+            ),
             modele('b', content: uneJournee('Brassage seul')),
             modele(
               'a',
@@ -247,21 +259,26 @@ void main() {
         },
       );
       expect(find.text('Processus du groupe'), findsOneWidget);
-      expect(find.text('3 journées · J+0, J+4, J+14'), findsOneWidget);
+      expect(find.text('1 journée · J+0'), findsNWidgets(3));
       expect(find.text('Zoé'), findsOneWidget);
       expect(find.text('Par défaut'), findsOneWidget);
       expect(find.text('En attente du réseau'), findsOneWidget);
       final a = tester.getTopLeft(find.text('Avec embouteillage')).dy;
       final b = tester.getTopLeft(find.text('Brassage seul')).dy;
-      final z = tester.getTopLeft(find.text(kNomModeleExemple)).dy;
+      final copier = tester
+          .getTopLeft(find.text(ProcessListScreen.modelesACopier))
+          .dy;
+      final z = tester.getTopLeft(find.text('Zythum')).dy;
       expect(a, lessThan(b));
-      expect(b, lessThan(z));
+      // Modèles à copier sous « Mes processus », au-dessus du groupe.
+      expect(b, lessThan(copier));
+      expect(copier, lessThan(z));
       expect(
         find.bySemanticsLabel('Brassage seul, 1 journée, par défaut'),
         findsOneWidget,
       );
       expect(
-        find.bySemanticsLabel('$kNomModeleExemple, 3 journées, de Zoé'),
+        find.bySemanticsLabel('Zythum, 1 journée, de Zoé'),
         findsOneWidget,
       );
       // Un processus à soi : le bouton flottant de création revient.
@@ -279,11 +296,9 @@ void main() {
               app.processes.publish([modele('a')], illisibles: ['casse']),
         );
         expect(find.text('Processus illisible'), findsOneWidget);
-        expect(
-          find.text('Le document contient une valeur inattendue.'),
-          findsOneWidget,
-        );
-        expect(find.text(kNomModeleExemple), findsOneWidget);
+        expect(find.text(kDetailLigneIllisible), findsOneWidget);
+        // Le processus « a » et sa ligne de « Modèles à copier ».
+        expect(find.text(kNomModeleExemple), findsNWidgets(2));
         await tester.tap(find.text('Processus illisible'));
         await tester.pumpAndSettle();
         expect(find.text(textesProcessus.illisible), findsOneWidget);
@@ -321,6 +336,9 @@ void main() {
             app.processes.all.addError(Exception('permission-denied')),
       );
       expect(find.text(ProcessListScreen.lectureImpossible), findsOneWidget);
+      // Les modèles à copier ne dépendent pas de la lecture.
+      expect(find.text(ProcessListScreen.modelesACopier), findsOneWidget);
+      expect(find.text(kNomModeleFiches), findsOneWidget);
       await tester.tap(find.text(ProcessListScreen.nouveau));
       await tester.pumpAndSettle();
       expect(find.text(ProcessEditorScreen.titreNouveau), findsOneWidget);
@@ -336,6 +354,85 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(ProcessListScreen.horsLigne), findsOneWidget);
       expect(find.text(ProcessListScreen.nouveau), findsOneWidget);
+      // Les modèles à copier restent proposés hors ligne.
+      expect(find.text(ProcessListScreen.modelesACopier), findsOneWidget);
+      expect(find.text(kNomModeleExemple), findsOneWidget);
+      expect(find.text(kNomModeleFiches), findsOneWidget);
+    });
+  });
+
+  group('modèles à copier', () {
+    testWidgets('deux lignes : résumé, note, étiquette, lecteur d\'écran', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await open(
+        tester,
+        '/processus',
+        before: (app) =>
+            app.processes.publish([modele('b', content: uneJournee('Simple'))]),
+      );
+      expect(find.text(ProcessListScreen.modelesACopier), findsOneWidget);
+      expect(find.text(kNomModeleExemple), findsOneWidget);
+      expect(find.text(kNomModeleFiches), findsOneWidget);
+      expect(find.text(kNoteModeleExemple), findsOneWidget);
+      expect(find.text(kNoteModeleFiches), findsOneWidget);
+      expect(find.text('3 journées · J+0, J+4, J+14'), findsNWidgets(2));
+      expect(find.text('Modèle'), findsNWidgets(2));
+      expect(find.byIcon(Icons.content_copy_outlined), findsNWidgets(2));
+      expect(
+        find.bySemanticsLabel(
+          'Modèle à copier : $kNomModeleExemple, 3 journées',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(
+          'Modèle à copier : $kNomModeleFiches, 3 journées',
+        ),
+        findsOneWidget,
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('plan des fiches : « Nouveau processus » prérempli, rien '
+        'd\'écrit avant « Enregistrer »', (tester) async {
+      final app = await open(
+        tester,
+        '/processus',
+        before: (app) =>
+            app.processes.publish([modele('b', content: uneJournee('Simple'))]),
+      );
+      await tester.tap(find.text(kNomModeleFiches));
+      await tester.pumpAndSettle();
+      expect(find.text(ProcessEditorScreen.titreNouveau), findsOneWidget);
+      expect(find.text(kNomModeleFiches), findsOneWidget);
+      expect(find.text(kNoteModeleFiches), findsOneWidget);
+      expect(hors('2. Houblonnage à cru · J+4'), findsOneWidget);
+      expect(hors('3. Embouteillage · J+14'), findsOneWidget);
+      expect(app.processes.writes, isEmpty);
+
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      final write = app.processes.writes.single;
+      expect(write.kind, 'create');
+      expect(write.content!.name, kNomModeleFiches);
+      final brassage = write.content!.journees.first;
+      expect(brassage.elements, hasLength(14));
+      expect(
+        [
+          for (final e in brassage.elements)
+            if (e.tempC != null) e.tempC,
+        ],
+        [16, 68, 100, 25],
+      );
+    });
+
+    testWidgets('paramètre inconnu : nouveau processus vide', (tester) async {
+      await open(tester, '/processus/nouveau?modele=autre');
+      expect(find.text(ProcessEditorScreen.titreNouveau), findsOneWidget);
+      expect(find.text(kNomModeleFiches), findsNothing);
+      expect(find.text(kNomModeleExemple), findsNothing);
     });
   });
 

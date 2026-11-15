@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
+import 'package:kass_beer/features/members/presentation/members_screen.dart';
 
 import 'package:kass_beer/features/recipes/presentation/recipes_list_screen.dart';
 
@@ -49,6 +51,10 @@ void main() {
       find.text('Vous ne pouvez pas vous retirer vous-même'),
       findsOneWidget,
     );
+    // Repère en disque de 40 px : le texte s'aligne sur celui des lignes de
+    // l'accueil Admin (16 + 40 + 16).
+    expect(find.byType(RepereDisque), findsNWidgets(3));
+    expect(tester.getTopLeft(find.text('Bob')).dx, 72);
   });
 
   testWidgets('retrait absent de sa propre ligne', (tester) async {
@@ -255,8 +261,9 @@ void main() {
     await tester.pumpAndSettle();
     app.container.read(routerProvider).go('/admin/membres');
     await tester.pumpAndSettle();
+    expect(find.text(MembersScreen.emptyTitle), findsOneWidget);
     expect(
-      find.text('Aucun membre. Appuyez sur Inviter pour ajouter un compte.'),
+      find.text('Appuyez sur Inviter pour ajouter un compte.'),
       findsOneWidget,
     );
   });

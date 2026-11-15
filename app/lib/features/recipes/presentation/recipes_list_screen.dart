@@ -138,32 +138,25 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
             retrying: async.isLoading,
             onRetry: () => ref.invalidate(recipesListProvider),
           ),
+        // Recherche sur toute la largeur, puis le filtre, puis les actions.
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: TextField(
+            controller: _search,
+            decoration: const InputDecoration(
+              labelText: 'Rechercher une recette',
+              prefixIcon: Icon(Icons.search),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: Wrap(
             spacing: 12,
             runSpacing: 12,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (!compact) ...[
-                FilledButton.icon(
-                  onPressed: _create,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nouvelle recette'),
-                ),
-                _BoutonImporter(onPressed: _import),
-              ],
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: kFormMaxWidth),
-                child: TextField(
-                  controller: _search,
-                  decoration: const InputDecoration(
-                    labelText: 'Rechercher une recette',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
               SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(value: false, label: Text('Toutes')),
@@ -172,9 +165,14 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
                 selected: {_mineOnly},
                 onSelectionChanged: (s) => setState(() => _mineOnly = s.single),
               ),
-              // Téléphone : après « Toutes / Les miennes » ; le bouton flottant
-              // reste « Nouvelle recette ».
-              if (compact) _BoutonImporter(onPressed: _import),
+              // Téléphone : le bouton flottant reste « Nouvelle recette ».
+              if (!compact)
+                FilledButton.icon(
+                  onPressed: _create,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Nouvelle recette'),
+                ),
+              _BoutonImporter(onPressed: _import),
             ],
           ),
         ),
@@ -185,11 +183,7 @@ class _RecipesListScreenState extends ConsumerState<RecipesListScreen> {
             icone: Icons.error_outline,
             erreur: true,
             titre: 'Recette illisible',
-            details: const [
-              Text(
-                'Mettez l\'application à jour, ou prévenez l\'administrateur.',
-              ),
-            ],
+            details: const [Text(kDetailLigneIllisible)],
             onTap: () => context.go(AppRoutes.recipe(d.id)),
           ),
       ],

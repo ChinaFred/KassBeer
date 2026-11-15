@@ -17,6 +17,11 @@ abstract final class AppRoutes {
   static String libraryEntry(String slug, String id) =>
       '$library/$slug/${Uri.encodeComponent(id)}';
 
+  /// « Échelle des couleurs » (ticket #48) : page pleine hors de la coquille, ouverte
+  /// par `push` depuis la Bibliothèque et la fiche d'un style. « couleurs »
+  /// n'est le chemin d'aucun segment.
+  static const libraryColors = '$library/couleurs';
+
   /// « Sources des données » : page pleine hors de la coquille, ouverte par
   /// `push` depuis la Bibliothèque et depuis le menu du compte.
   static const dataSources = '/sources-des-donnees';
@@ -36,16 +41,22 @@ abstract final class AppRoutes {
   static const adminTickets = '/admin/tickets';
   static String adminTicket(String id) => '$adminTickets/$id';
 
+  /// Admin › Sources (ADR-005, L4) : dernière ingestion et ingrédients non
+  /// résolus.
+  static const adminSources = '/admin/sources';
+
   /// « Mes prix » : page pleine hors de la coquille, ouverte par `push`.
   static const prices = '/prix';
 
   /// « Mes processus » (ADR-010) : pages pleines hors de la coquille, la liste
-  /// ouverte par `push` depuis le menu du compte. `?modele=exemple` ouvre
-  /// « Nouveau processus » prérempli du modèle d'exemple.
+  /// ouverte par `push` depuis le menu du compte. `?modele=exemple` ou
+  /// `?modele=fiches` ouvre « Nouveau processus » prérempli d'un modèle à
+  /// copier.
   static const processes = '/processus';
   static const newProcess = '/processus/nouveau';
-  static const exampleQueryParam = 'modele';
-  static const newProcessFromExample = '$newProcess?$exampleQueryParam=exemple';
+  static const modelQueryParam = 'modele';
+  static String newProcessFrom(String modele) =>
+      '$newProcess?$modelQueryParam=$modele';
   static String process(String id) => '$processes/$id';
   static String editProcess(String id) => '$processes/$id/modifier';
 
@@ -63,6 +74,16 @@ abstract final class AppRoutes {
   /// « Importer des recettes » : page pleine hors de la coquille, ouverte par
   /// `push` depuis la liste des recettes.
   static const importRecipes = '/recettes/importer';
+
+  /// Fiche d'une recette ouverte depuis le compte rendu de l'import : page
+  /// pleine hors de la coquille, ouverte par `push`, dont le retour ramène au
+  /// compte rendu (ticket #60).
+  static String importedRecipe(String id) => '$importRecipes/$id';
+
+  /// `extra` d'un éditeur de recette ouvert depuis la fiche importée : après
+  /// « Enregistrer », l'éditeur se ferme par `pop` et ramène à cette fiche,
+  /// au lieu d'ouvrir la fiche de la coquille (ticket #60).
+  static const retourParPop = 'retour-par-pop';
 
   static const newEquipment = '/equipements/nouveau';
   static String equipmentItem(String id) => '$equipment/$id';

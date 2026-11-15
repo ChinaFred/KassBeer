@@ -10,6 +10,7 @@ import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/services/error_report_service.dart';
 import '../../equipment/domain/equipment.dart';
+import '../../library/presentation/couleur_ebc.dart';
 import '../domain/beerjson.dart';
 import '../domain/recipe.dart';
 import 'ingredient_forms.dart' show kHoublonEnVolume, kHoublonEnVolumePhrase;
@@ -104,6 +105,12 @@ String libelleEquipement(EquipementRecette equipement) => switch (equipement) {
 /// Résultat des calculs d'une recette, pour l'écran.
 sealed class CalculsRecette {
   const CalculsRecette();
+
+  /// Calcul obtenu, ou `null` s'il a été refusé.
+  RecipeCalculation? get calculOuNul => switch (this) {
+    CalculsObtenus(:final calculation) => calculation,
+    CalculsImpossibles() => null,
+  };
 }
 
 /// Calculs faits : chaque indicateur est une valeur ou ce qui lui manque.
@@ -338,12 +345,14 @@ String libelleManqueExport(
 /// Mention des houblons mesurés en volume (décision du 2026-11-10).
 String houblonsEnVolume(String noms) => '$kHoublonEnVolumePhrase : $noms.';
 
-/// Un indicateur : libellé, abréviation de la barre, mise en forme.
+/// Un indicateur : libellé, abréviation de la barre, mise en forme ; [teinte] :
+/// pastille de teinte devant la valeur calculée (couleur, ticket #48).
 typedef _Indicateur = ({
   String label,
   String short,
   CalculationResult result,
   String Function(double) format,
+  bool teinte,
 });
 
 List<_Indicateur> _indicateurs(RecipeCalculation c) => [
@@ -352,16 +361,36 @@ List<_Indicateur> _indicateurs(RecipeCalculation c) => [
     short: 'DI',
     result: c.originalGravity,
     format: formatDensite,
+    teinte: false,
   ),
   (
     label: 'Densité finale',
     short: 'DF',
     result: c.finalGravity,
     format: formatDensite,
+    teinte: false,
   ),
-  (label: 'Degré', short: '%', result: c.alcoholByVolume, format: formatDegre),
-  (label: 'Amertume', short: 'IBU', result: c.bitternessIbu, format: formatIbu),
-  (label: 'Couleur', short: 'EBC', result: c.colorEbc, format: formatEbc),
+  (
+    label: 'Degré',
+    short: '%',
+    result: c.alcoholByVolume,
+    format: formatDegre,
+    teinte: false,
+  ),
+  (
+    label: 'Amertume',
+    short: 'IBU',
+    result: c.bitternessIbu,
+    format: formatIbu,
+    teinte: false,
+  ),
+  (
+    label: 'Couleur',
+    short: 'EBC',
+    result: c.colorEbc,
+    format: formatEbc,
+    teinte: true,
+  ),
 ];
 
 /// Ligne d'hypothèses : « Pour 20 L · Grainfather (72 %) · US-05 78 % ».
@@ -518,10 +547,23 @@ class _Tuile extends StatelessWidget {
     switch (result) {
       case CalculationComputed(:final value):
         final text = indicateur.format(value);
+        final texte = Text(text, style: theme.textTheme.headlineSmall);
         return _frame(
           context,
           '${indicateur.label}, $text',
-          Text(text, style: theme.textTheme.headlineSmall),
+          indicateur.teinte
+              // Wrap : faute de place, la valeur passe sous la pastille au
+              // lieu de se couper (« 120 EBC » reste entier).
+              ? Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    PastilleEbc(ebc: value, taille: 24),
+                    texte,
+                  ],
+                )
+              : texte,
         );
       case CalculationUnavailable(:final missing):
         value = 'Indisponible';

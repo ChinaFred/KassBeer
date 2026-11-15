@@ -18,6 +18,19 @@ enum TonEtiquette {
   erreur,
 }
 
+/// Contenu posé sur une ligne choisie (`LigneListe.selected`, fond
+/// `secondaryContainer`) : une [Etiquette] de ton [TonEtiquette.normal], de la
+/// couleur de ce fond, y prend un contour `outlineVariant`.
+class SurLigneChoisie extends InheritedWidget {
+  const SurLigneChoisie({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SurLigneChoisie>() != null;
+
+  @override
+  bool updateShouldNotify(SurLigneChoisie oldWidget) => false;
+}
+
 /// Étiquette non interactive (« Vous », « En attente du réseau », rôle, statut
 /// d'un ticket).
 class Etiquette extends StatelessWidget {
@@ -58,10 +71,12 @@ class Etiquette extends StatelessWidget {
     ).textTheme.labelMedium?.copyWith(color: foreground);
     final text = Text(label, style: style);
     final icon = this.icon;
+    final contour = ton == TonEtiquette.normal && SurLigneChoisie.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(8),
+        border: contour ? Border.all(color: scheme.outlineVariant) : null,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

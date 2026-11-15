@@ -12,8 +12,10 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../recipes/domain/beerjson.dart';
 import '../domain/referentiel.dart';
+import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
+import 'section_aromes.dart';
 
 /// Textes des états d'une fiche de la Bibliothèque.
 abstract final class TextesFicheBibliotheque {
@@ -167,6 +169,7 @@ class _Fiche extends StatelessWidget {
           if (f.aliases.isNotEmpty)
             Text('Autres noms : ${f.aliases.join(', ')}', style: muted),
           ..._valeurs(f),
+          if (f is FicheHoublon) SectionAromes(id: f.id),
           SectionProvenance(provenance: f.provenance),
         ],
       ),
@@ -195,6 +198,7 @@ class _Fiche extends StatelessWidget {
       LigneFiche(label: 'Degré', value: formatPlage(f.abv, formatDegre)),
       LigneFiche(label: 'Amertume', value: formatPlage(f.ibu, formatIbu)),
       LigneFiche(label: 'Couleur', value: formatPlage(f.color, formatEbc)),
+      if (f.color case final couleur?) BarreCouleurEbc(plage: couleur),
     ],
     FicheFermentable() => [
       const TitreSection('Valeurs'),
@@ -207,6 +211,7 @@ class _Fiche extends StatelessWidget {
       LigneFiche(
         label: 'Couleur',
         value: f.colorEbc == null ? null : formatEbc(f.colorEbc!),
+        avant: f.colorEbc == null ? null : PastilleEbc(ebc: f.colorEbc!),
       ),
       LigneFiche(
         label: 'Rendement d\'extrait',

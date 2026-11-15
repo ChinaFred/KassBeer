@@ -31,9 +31,9 @@ class PricesScreen extends ConsumerWidget {
   static const chargement = 'Chargement de vos prix';
   static const lectureImpossible = 'Impossible de lire vos prix.';
   static const horsLigne = 'Prix indisponibles sur cet appareil hors ligne.';
+  static const aucunPrixTitre = 'Aucun prix';
   static const aucunPrix =
-      'Aucun prix enregistré. Ajoutez-en un, ou complétez-les depuis une '
-      'recette.';
+      'Ajoutez-en un, ou complétez-les depuis une recette.';
   static const aucunFrais =
       'Aucun frais. Ajoutez l\'eau, l\'électricité, les capsules… pour qu\'ils '
       'comptent dans le coût.';
@@ -223,6 +223,7 @@ class _Contenu extends ConsumerWidget {
           resume: '${items.length} prix',
           ouvert: ouvert,
           niveau: NiveauTitre.sousSection,
+          margeHorizontale: 16,
           children: [
             for (final p in items)
               LignePrix(
@@ -243,21 +244,29 @@ class _Contenu extends ConsumerWidget {
       ];
     }
 
+    // Liste sans marge latérale : une ligne (LigneListe) porte la sienne et
+    // aligne son texte à 16 px, comme les titres, retirés de 16 px ici.
+    Widget retrait(Widget child) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: child,
+    );
+
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        8,
-        16,
-        compact ? kMargeBoutonFlottant : 24,
+      padding: PageSecondaire.marges(
+        context,
+        EdgeInsets.only(top: 8, bottom: compact ? kMargeBoutonFlottant : 24),
       ),
       children: [
-        TitreSection(
-          'Mes frais',
-          trailing: fees.documents.isEmpty
-              ? null
-              : '${fees.documents.length} frais',
+        retrait(
+          TitreSection(
+            'Mes frais',
+            trailing: fees.documents.isEmpty
+                ? null
+                : '${fees.documents.length} frais',
+          ),
         ),
-        if (fees.documents.isEmpty) const TexteAbsent(PricesScreen.aucunFrais),
+        if (fees.documents.isEmpty)
+          retrait(const TexteAbsent(PricesScreen.aucunFrais)),
         for (final f in mesFrais)
           _LigneFrais(
             fee: f,
@@ -267,21 +276,23 @@ class _Contenu extends ConsumerWidget {
         for (final d in fraisIllisibles) illisible(frais: true, id: d.id),
         const SizedBox(height: 8),
         if (fees.documents.length >= kMaxFees)
-          const Text(PricesScreen.limiteFrais)
+          retrait(const Text(PricesScreen.limiteFrais))
         else
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () =>
-                  unawaited(ouvrirFormulaireFrais(context, uid: uid)),
-              icon: const Icon(Icons.add),
-              label: const Text(PricesScreen.ajouterFrais),
+          retrait(
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () =>
+                    unawaited(ouvrirFormulaireFrais(context, uid: uid)),
+                icon: const Icon(Icons.add),
+                label: const Text(PricesScreen.ajouterFrais),
+              ),
             ),
           ),
-        const TitreSection('Ingrédients'),
+        retrait(const TitreSection('Ingrédients')),
         if (!compact)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: FilledButton.icon(
@@ -294,6 +305,7 @@ class _Contenu extends ConsumerWidget {
         if (prices.documents.isEmpty)
           const EtatVide(
             icon: Icons.sell_outlined,
+            titre: PricesScreen.aucunPrixTitre,
             message: PricesScreen.aucunPrix,
           ),
         for (final nature in IngredientNature.values)

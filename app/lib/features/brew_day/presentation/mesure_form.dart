@@ -10,6 +10,7 @@ import '../../../core/presentation/editeur_plein_ecran.dart';
 import '../../../core/presentation/feuille_ou_dialogue.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../brews/data/brews_repository.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
@@ -283,7 +284,7 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
 
   Widget _champValeur() {
     final type = _type!;
-    const grand = TextStyle(fontSize: 28);
+    final grand = TextStyle(fontSize: StylesJourDeBrassage.of(context).saisie);
     final autofocus = _edit == null;
     switch (type) {
       case MeasureType.gravity:
@@ -364,10 +365,7 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
             DropdownButtonFormField<String?>(
               initialValue: _stepKey,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Étape',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Étape'),
               items: [
                 const DropdownMenuItem(value: null, child: Text('Sans étape')),
                 for (final s in widget.steps)
@@ -440,7 +438,6 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
               labelText: _isNote ? 'Note' : 'Note (facultatif)',
-              border: const OutlineInputBorder(),
             ),
             validator: (v) => _isNote && (v ?? '').trim().isEmpty
                 ? 'Écrivez une note.'
@@ -535,7 +532,8 @@ class ChampDensite extends StatefulWidget {
   /// Faux : un champ vide est accepté (densité finale de l'embouteillage).
   final bool obligatoire;
 
-  /// Chiffres en grand (28 sp), pour une saisie à côté de la cuve.
+  /// Chiffres en grand ([StylesJourDeBrassage.saisie]), pour une saisie à
+  /// côté de la cuve.
   final bool grand;
 
   @override
@@ -556,11 +554,12 @@ class _ChampDensiteState extends State<ChampDensite> {
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textInputAction: widget.textInputAction,
       autovalidateMode: AutovalidateMode.onUserInteraction,
-      style: widget.grand ? const TextStyle(fontSize: 28) : null,
+      style: widget.grand
+          ? TextStyle(fontSize: StylesJourDeBrassage.of(context).saisie)
+          : null,
       decoration: InputDecoration(
         labelText: widget.label,
         helperText: preview ?? '1057,9 ou 1.058',
-        border: const OutlineInputBorder(),
       ),
       validator: (text) {
         final value = text ?? '';

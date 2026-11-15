@@ -8,6 +8,7 @@ import 'package:brewing/brewing.dart'
         GravityRead,
         fermentationDayNumber,
         fermentationSeries,
+        gravityGapPoints,
         readGravity;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,13 +26,18 @@ import '../../../core/providers.dart';
 import '../../../core/services/error_report_service.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../brew_day/presentation/mesure_form.dart';
+import '../../recipes/presentation/recipe_calculations_view.dart'
+    show CalculsRecette;
 import '../data/brews_repository.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
 import '../domain/deroule.dart';
+import '../domain/mesures_retenues.dart';
+import '../domain/prevu.dart';
 import '../domain/releves.dart';
 import 'brews_providers.dart';
 import 'courbe_fermentation.dart';
+import 'plage_levure.dart';
 
 /// Relevés affichés sur téléphone avant « Voir les N relevés plus anciens ».
 const kRelevesVisibles = 5;
@@ -53,17 +59,26 @@ bool jourAvant(DateTime a, DateTime b) =>
 /// Série calculée par `brewing/` des relevés qui portent une valeur, ou `null` si une
 /// valeur enregistrée est refusée (rapportée une fois par brassin). Sans `brewed_at`,
 /// la première mesure sert d'origine : seuls les écarts sont alors lus.
+///
+/// [initiale] : densité initiale retenue du jour de brassage, ajoutée en tête
+/// de la série de la courbe ; nulle pour la série de la liste.
 List<FermentationPoint>? serieDesReleves({
   required Brew brew,
   required List<Releve> ascendants,
   required ErrorReportService errors,
   required Set<String> reported,
+  BrewEvent? initiale,
 }) {
   if (ascendants.isEmpty) return const [];
   try {
     return fermentationSeries(
       brewedAt: brew.brewedAt ?? ascendants.first.measuredAt,
       readings: [
+        if (initiale != null)
+          FermentationReading(
+            measuredAt: initiale.measuredAt,
+            gravity: initiale.value,
+          ),
         for (final r in ascendants)
           FermentationReading(
             measuredAt: r.measuredAt,
@@ -140,12 +155,16 @@ class SectionReleve extends ConsumerStatefulWidget {
     required this.eventsAsync,
     required this.mine,
     required this.offline,
+    required this.calculs,
   });
 
   final Brew brew;
   final AsyncValue<ListeLue<BrewEvent>> eventsAsync;
   final bool mine;
   final bool offline;
+
+  /// Calculs de la recette figée : densités prévues de la courbe.
+  final CalculsRecette calculs;
 
   @override
   ConsumerState<SectionReleve> createState() => _SectionReleveState();
@@ -228,13 +247,53 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
         for (final (i, r) in ascendants.indexed) r.cle: points[i],
     };
     final brewedAt = brew.brewedAt;
+    // Courbe : la densité initiale retenue du jour de brassage (« Prévu et
+    // mesuré ») en premier point, à son heure de mesure ; elle n'entre pas
+    // dans la liste des relevés ni dans leurs écarts.
+    final initiale = MesuresRetenues.de(brew, liste.valides).densiteInitiale;
+    final dejaReleve =
+        initiale != null &&
+        ascendants.any((r) => r.events.any((e) => e.id == initiale.event.id));
+    final pointsCourbe = initiale == null || dejaReleve || points == null
+        ? points
+        : serieDesReleves(
+            brew: brew,
+            ascendants: ascendants,
+            initiale: initiale.event,
+            errors: ref.read(errorReportServiceProvider),
+            reported: ref.read(planReportsProvider),
+          );
+    final prevu = prevuDe(brew, widget.calculs.calculOuNul);
+    final derniere = pointsCourbe?.lastWhere(
+      (p) => p.gravity != null,
+      orElse: () => pointsCourbe.first,
+    );
+    final ecarts = _ecarts(
+      initiale: initiale?.value,
+      derniere: derniere?.gravity,
+      prevuInitiale: prevu.originalGravity,
+      prevuFinale: prevu.finalGravity,
+    );
+    // Plage de la levure : lue pour la courbe de la fiche seule, par `get()`
+    // (P22) ; hors ligne, dans le cache seul.
+    final nomLevure = brew.recipe.yeasts.firstOrNull?.name;
+    final plage = brewedAt == null || pointsCourbe == null || nomLevure == null
+        ? null
+        : ref
+              .watch(
+                plageLevureProvider((
+                  nom: nomLevure,
+                  cacheSeul: widget.offline,
+                )),
+              )
+              .value;
     final compact = MediaQuery.sizeOf(context).width < kCompactMaxWidth;
     final visibles = _tout || !compact
         ? releves
         : releves.take(kRelevesVisibles).toList();
     final masques = releves.length - visibles.length;
     return [
-      if (points == null)
+      if (pointsCourbe == null)
         const Padding(
           padding: EdgeInsets.only(bottom: 12),
           child: TexteAbsent(
@@ -242,7 +301,14 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
           ),
         )
       else if (brewedAt != null)
-        CourbeFermentation(points: points),
+        CourbeFermentation(
+          points: pointsCourbe,
+          densiteInitialePrevue: prevu.originalGravity,
+          densiteFinalePrevue: prevu.finalGravity,
+          ecartInitiale: ecarts.initiale,
+          ecartFinale: ecarts.finale,
+          plageLevure: plage,
+        ),
       for (final r in visibles)
         _LigneReleve(
           releve: r,
@@ -264,6 +330,43 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
           ),
         ),
     ];
+  }
+
+  /// Écarts en points des densités prévues, calculés par `brewing/` (P3) :
+  /// densité initiale retenue du jour sur l'initiale prévue (jamais un relevé
+  /// de fermentation), dernière densité de la courbe sur la finale prévue. Un
+  /// refus est rapporté une fois par brassin et laisse l'écart absent.
+  ({double? initiale, double? finale}) _ecarts({
+    required double? initiale,
+    required double? derniere,
+    required double? prevuInitiale,
+    required double? prevuFinale,
+  }) {
+    double? ecart(String nom, double? mesuree, double? prevue) {
+      if (mesuree == null || prevue == null) return null;
+      try {
+        return gravityGapPoints(measured: mesuree, planned: prevue);
+      } on BrewingInputException catch (error, stackTrace) {
+        if (ref
+            .read(planReportsProvider)
+            .add('ecart|${widget.brew.id}|$nom|${error.field}')) {
+          ref
+              .read(errorReportServiceProvider)
+              .reportError(
+                feature: 'brews.fermentation_gap',
+                error: error,
+                stackTrace: stackTrace,
+                context: 'brews/${widget.brew.id} : écart $nom refusé',
+              );
+        }
+        return null;
+      }
+    }
+
+    return (
+      initiale: ecart('initiale', initiale, prevuInitiale),
+      finale: ecart('finale', derniere, prevuFinale),
+    );
   }
 
   void _corriger(Releve releve) => ouvrirCorrectionReleve(
@@ -768,10 +871,7 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
                 minLines: 1,
                 maxLines: 4,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Note',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'Note'),
               )
             else
               Align(

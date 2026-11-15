@@ -1,46 +1,46 @@
 {
   "versions": [
     {
-      "version": "0.1.51",
-      "date": "2026-11-14",
+      "version": "0.1.61",
+      "date": "2026-11-15",
       "paragraphs": [
         "La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant. « Sources des données » nomme cette nouvelle source."
       ]
     },
     {
-      "version": "0.1.50",
-      "date": "2026-11-14",
+      "version": "0.1.60",
+      "date": "2026-11-15",
       "paragraphs": [
-        "Pour l'administrateur, Valider, Refuser, Clore et « Relancer l'envoi » agissent tout de suite sur GitHub, au lieu de partir plus tard. Pendant l'action, la fiche affiche « … en cours sur GitHub. », puis un message court dit si c'est fait. En cas d'échec, le message dit pourquoi et le texte saisi est gardé. La boîte de Refuser et de Clore peut se fermer pendant l'envoi, et accepte maintenant 4 000 caractères. Ces actions demandent le réseau : hors ligne, les boutons restent visibles mais inactifs, avec « Ces actions demandent le réseau. ». L'historique des décisions d'un ticket reste affiché."
+        "La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et devant la couleur calculée d'une recette. La page des teintes s'appelle désormais « Échelle des couleurs », comme le lien qui l'ouvre. En thème sombre, les teintes foncées ont une bordure plus visible. Demandé par le ticket #48."
       ]
     },
     {
-      "version": "0.1.49",
-      "date": "2026-11-14",
+      "version": "0.1.59",
+      "date": "2026-11-15",
       "paragraphs": [
-        "L'application prend les couleurs du logo : brun du bois, laiton, ambre de la chope et vert pour ce qui est fait. Les titres s'écrivent dans une police à empattements, et les chiffres restent alignés d'une ligne à l'autre. Le médaillon du logo s'affiche à la connexion, au chargement, sur « Ce compte n'a pas accès » et en tête du menu sur grand écran. Le texte s'affiche dans la même police sur tous les appareils. Sur le web, l'application ne télécharge plus de police au démarrage, et les flèches s'affichent aussi sans réseau.",
-        "Les listes de recettes, brassins, équipements, processus, tickets et l'accueil Admin ont la même ligne : une icône à gauche, le nom, les détails, puis les étiquettes. Les prix et les frais suivent la même ligne, sans icône. Le statut d'un brassin s'affiche dans une étiquette colorée. Une liste vide affiche un titre. Les titres de section se distinguent de leur contenu. Les messages d'erreur, d'avertissement et de succès s'affichent dans des encadrés de couleur ; « Tout est prêt » passe en vert dans « Préparer le brassage », et chaque vérification prend la couleur de son état."
+        "Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données ». Le bouton « Actualiser », ou un geste qui tire la page vers le bas, relit l'écran sans effacer ce qui est affiché. Si cette lecture échoue, un message le dit au-dessus du compte rendu ou de la liste, qui restent visibles.",
+        "En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50, avec le nombre de noms affichés, « Charger la suite » et la fin de la liste signalée. Chaque ligne donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur."
       ]
     },
     {
-      "version": "0.1.48",
-      "date": "2026-11-14",
+      "version": "0.1.58",
+      "date": "2026-11-15",
       "paragraphs": [
-        "« Lancer l'analyse », les autres lancements de session, « Répondre » à une analyse, l'écran Journaux et la vérification d'une capture jointe à un ticket marchent de nouveau. Ils échouaient avec « Réponse perdue » ou « Journaux indisponibles pour l'instant »."
+        "Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » : une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49."
       ]
     },
     {
-      "version": "0.1.47",
-      "date": "2026-11-14",
+      "version": "0.1.57",
+      "date": "2026-11-15",
       "paragraphs": [
-        "Sur Android, l'application vérifie à chaque lancement, une fois connecté, si une nouvelle version existe. Si oui, une fenêtre « Nouvelle version » donne le numéro de la version, celui de la version installée et la taille du téléchargement. « Plus tard » la ferme jusqu'au lancement suivant. « Mettre à jour » télécharge la version dans l'application, contrôle le fichier, puis ouvre l'écran d'installation d'Android. La première fois, Android demande d'autoriser Kass'Beer à installer des applications : la fenêtre ouvre le bon réglage. Une coupure du réseau affiche l'échec et « Réessayer ». La fenêtre ne s'ouvre jamais pendant le jour de brassage ou une journée du déroulé : elle attend que vous en sortiez. Rien ne change sur le web. L'invitation par e-mail reste en place. Demandé par le ticket #36."
+        "La fiche d'un houblon de la Bibliothèque montre ses arômes : des descripteurs (agrumes, floral, résineux…) et un court texte pour chaque moment d'ajout, du premier moût au houblonnage à cru. Ces textes sont rédigés par une IA pour Kass'Beer. La fiche dit s'ils ont été relus par l'administrateur, et signale une confiance faible. Les houblons de vos recettes sont relus en premier. Un houblon trop peu documenté l'indique au lieu d'inventer. L'écran « Sources des données » explique d'où viennent ces textes."
       ]
     },
     {
-      "version": "0.1.46",
+      "version": "0.1.56",
       "date": "2026-11-14",
       "paragraphs": [
-        "Dans « Rapports d'erreur », une relecture n'affiche plus qu'une seule attente, sur le bouton appuyé. Après une panne, « Réessayer » montre l'attente dans le bandeau, et le bouton « Actualiser » reste en place, désactivé. Tirer la liste vers le bas n'ajoute plus d'indicateur en haut de l'écran."
+        "Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur » la teinte de la bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de 0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle dépend du verre, de la lumière et de l'écran. Au-delà de 79 EBC, la teinte ne fonce plus, et la fiche le dit. « Sources des données » nomme la source des teintes et donne le texte de sa licence. Demandé par le ticket #48."
       ]
     }
   ]

@@ -17,6 +17,8 @@ import 'package:kass_beer/core/services/app_update_service.dart';
 import 'package:kass_beer/core/services/app_update_transport.dart';
 import 'package:kass_beer/core/services/error_report_service.dart';
 import 'package:kass_beer/features/admin/data/error_reports_repository.dart';
+import 'package:kass_beer/features/admin/data/sources_repository.dart';
+import 'package:kass_beer/features/admin/domain/ingestion.dart';
 import 'package:kass_beer/features/admin/domain/error_report.dart';
 import 'package:kass_beer/features/admin/data/logs_repository.dart';
 import 'package:kass_beer/features/admin/domain/log_entry.dart';
@@ -32,6 +34,7 @@ import 'package:kass_beer/features/equipment/data/equipment_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/import/data/import_fiches_repository.dart';
 import 'package:kass_beer/features/library/data/library_repository.dart';
+import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
@@ -1039,6 +1042,21 @@ class FakeLibraryRepository implements LibraryRepository {
   final fiches = <String, RechercheDocument<FicheReferentiel>>{};
   final ficheReads = <String>[];
 
+  /// Lectures de fiche faites dans le cache seul (`cacheSeul`).
+  final ficheCacheReads = <String>[];
+
+  /// Réponse à `lireAromesHoublon`, par identifiant ; absente :
+  /// `DocumentAbsent`.
+  final aromes = <String, RechercheDocument<AromesHoublon>>{};
+
+  /// Panne de `lireAromesHoublon`, par identifiant.
+  final aromesErrors = <String, Object>{};
+
+  /// Réponse retenue jusqu'à ce que le `Completer` de l'identifiant soit
+  /// complété.
+  final aromesAttente = <String, Completer<void>>{};
+  final aromesReads = <String>[];
+
   /// Recettes publiques, dans l'ordre de `recipe.name`.
   final recettes = <RecettePublique>[];
 
@@ -1064,10 +1082,22 @@ class FakeLibraryRepository implements LibraryRepository {
   @override
   Future<RechercheDocument<FicheReferentiel>> lireFiche(
     NatureReferentiel nature,
-    String id,
-  ) async {
+    String id, {
+    bool cacheSeul = false,
+  }) async {
     ficheReads.add(id);
+    if (cacheSeul) ficheCacheReads.add(id);
     return fiches[id] ?? DocumentAbsent<FicheReferentiel>();
+  }
+
+  @override
+  Future<RechercheDocument<AromesHoublon>> lireAromesHoublon(String id) async {
+    aromesReads.add(id);
+    final attente = aromesAttente[id];
+    if (attente != null) await attente.future;
+    final error = aromesErrors[id];
+    if (error != null) throw error;
+    return aromes[id] ?? DocumentAbsent<AromesHoublon>();
   }
 
   @override
@@ -1115,6 +1145,57 @@ class FakeLibraryRepository implements LibraryRepository {
   @override
   Future<void> signalerNonResolus(List<NomNonResolu> noms) async {
     signales.add(noms);
+  }
+}
+
+/// Double d'Admin › Sources : réponses fixées par le test.
+class FakeSourcesRepository implements SourcesRepository {
+  /// Réponse à `derniereExecution` ; `null` : aucune exécution sur le serveur.
+  LectureExecution? execution;
+
+  /// Panne de `derniereExecution`.
+  Object? executionError;
+  int executionReads = 0;
+
+  /// Ingrédients non résolus, déjà triés par `count` décroissant.
+  final nonResolus = <DocumentLu<IngredientNonResolu>>[];
+
+  /// Panne de la prochaine page demandée.
+  Object? pageError;
+  bool pagesFromCache = false;
+  final pages = <CurseurPage?>[];
+
+  /// Réponses retenues jusqu'à ce que ce `Completer` soit complété.
+  Completer<void>? attente;
+
+  @override
+  Future<LectureExecution> derniereExecution() async {
+    executionReads++;
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
+    final error = executionError;
+    if (error != null) throw error;
+    return execution ??
+        const LectureExecution(execution: DocumentAbsent(), fromCache: false);
+  }
+
+  @override
+  Future<PageNonResolus> pageNonResolus({CurseurPage? apres}) async {
+    pages.add(apres);
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
+    final error = pageError;
+    if (error != null) {
+      pageError = null;
+      throw error;
+    }
+    final start = apres == null ? 0 : apres.valeur as int;
+    final end = (start + kTaillePageNonResolus).clamp(0, nonResolus.length);
+    return PageNonResolus(
+      documents: nonResolus.sublist(start, end),
+      suite: end - start < kTaillePageNonResolus ? null : CurseurPage(end),
+      fromCache: pagesFromCache,
+    );
   }
 }
 
@@ -1343,6 +1424,7 @@ class TestApp {
        tickets = FakeTicketsRepository(),
        fichiers = FakeEchangeFichiers(),
        library = FakeLibraryRepository(),
+       sources = FakeSourcesRepository(),
        errorReports = FakeErrorReportsRepository(),
        logs = FakeLogsRepository(),
        processes = FakeProcessesRepository(),
@@ -1369,6 +1451,7 @@ class TestApp {
         costsRepositoryProvider.overrideWithValue(costs),
         ticketsRepositoryProvider.overrideWithValue(tickets),
         libraryRepositoryProvider.overrideWithValue(library),
+        sourcesRepositoryProvider.overrideWithValue(sources),
         errorReportsRepositoryProvider.overrideWithValue(errorReports),
         logsRepositoryProvider.overrideWithValue(logs),
         importFichesRepositoryProvider.overrideWithValue(
@@ -1428,6 +1511,7 @@ class TestApp {
   final FakeTicketsRepository tickets;
   final FakeEchangeFichiers fichiers;
   final FakeLibraryRepository library;
+  final FakeSourcesRepository sources;
   final FakeErrorReportsRepository errorReports;
   final FakeLogsRepository logs;
   final FakeProcessesRepository processes;

@@ -47,6 +47,41 @@ class DataSourcesScreen extends ConsumerWidget {
   static const diyDog =
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '
       'pour un usage privé (version e6c12ab de leur transcription).';
+  static const srm2hex =
+      'Teintes de la page « Échelle des couleurs » et de la barre de couleur d\'un '
+      'style : 400 teintes reprises de la bibliothèque libre srm2hex, version '
+      '1.0.2, sous licence MIT. Seule la table des teintes est reprise. La '
+      'bibliothèque ne porte aucune mention de copyright ; voici le texte de '
+      'sa licence.';
+
+  /// Texte d'autorisation de la licence MIT de srm2hex, reproduit dans
+  /// l'application livrée comme la licence l'exige (« included in all
+  /// copies »). Le paquet n'a pas de ligne de copyright.
+  static const licenceMit =
+      'Permission is hereby granted, free of charge, to any person obtaining '
+      'a copy of this software and associated documentation files (the '
+      '"Software"), to deal in the Software without restriction, including '
+      'without limitation the rights to use, copy, modify, merge, publish, '
+      'distribute, sublicense, and/or sell copies of the Software, and to '
+      'permit persons to whom the Software is furnished to do so, subject to '
+      'the following conditions:\n\n'
+      'The above copyright notice and this permission notice shall be '
+      'included in all copies or substantial portions of the Software.\n\n'
+      'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS '
+      'OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF '
+      'MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. '
+      'IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY '
+      'CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, '
+      'TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE '
+      'SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
+
+  static const aromesHoublons =
+      'Arômes des houblons : textes rédigés pour Kass\'Beer par une IA (Claude, '
+      'd\'Anthropic), à partir du nom, des autres noms, de l\'origine, des '
+      'acides et de l\'usage de chaque houblon. Ils ne sont copiés d\'aucune '
+      'source. L\'administrateur relit ceux des houblons utilisés dans les '
+      'recettes du groupe ; les autres sont marqués « non relu ». Un texte peut '
+      'contenir des erreurs.';
   static const openFailure =
       'Impossible d\'ouvrir le lien. Il reste sélectionnable sur cette page.';
 
@@ -83,30 +118,40 @@ class DataSourcesScreen extends ConsumerWidget {
       titre: title,
       repli: AppRoutes.library,
       body: SelectionArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            paragraphe(intro),
-            const TitreSection('Brewtarget'),
-            paragraphe(brewtarget),
-            const TitreSection('BJCP 2021'),
-            paragraphe(bjcp),
-            const TitreSection('beer-analytics.com'),
-            paragraphe(beerAnalytics),
-            paragraphe('Licence : $kLicenceCcBySa'),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: () => _ouvrirLicence(context, ref),
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Lire la licence CC BY-SA 4.0'),
-              ),
+        child: Builder(
+          builder: (context) => ListView(
+            padding: PageSecondaire.marges(
+              context,
+              const EdgeInsets.fromLTRB(16, 8, 16, 32),
             ),
-            const TitreSection('Fiches des fabricants'),
-            paragraphe(fabricants),
-            const TitreSection('DIY Dog'),
-            paragraphe(diyDog),
-          ],
+            children: [
+              paragraphe(intro),
+              const TitreSection('Brewtarget'),
+              paragraphe(brewtarget),
+              const TitreSection('BJCP 2021'),
+              paragraphe(bjcp),
+              const TitreSection('beer-analytics.com'),
+              paragraphe(beerAnalytics),
+              paragraphe('Licence : $kLicenceCcBySa'),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () => _ouvrirLicence(context, ref),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Lire la licence CC BY-SA 4.0'),
+                ),
+              ),
+              const TitreSection('Fiches des fabricants'),
+              paragraphe(fabricants),
+              const TitreSection('DIY Dog'),
+              paragraphe(diyDog),
+              const TitreSection('srm2hex'),
+              paragraphe(srm2hex),
+              paragraphe(licenceMit),
+              const TitreSection('Descriptions aromatiques'),
+              paragraphe(aromesHoublons),
+            ],
+          ),
         ),
       ),
     );

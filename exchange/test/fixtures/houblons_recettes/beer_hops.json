@@ -1,0 +1,18 @@
+[
+  {
+    "id": "hop-houblon-fictif",
+    "data": { "name": "Houblon Fictif", "aliases": ["Fictif Doré"] }
+  },
+  {
+    "id": "hop-houblon-imaginaire",
+    "data": { "name": "Houblon Imaginaire", "aliases": ["Imaginaire"] }
+  },
+  {
+    "id": "hop-imaginaire-du-nord",
+    "data": { "name": "Imaginaire du Nord", "aliases": ["Imaginaire"] }
+  },
+  {
+    "id": "hop-saaz-fictif",
+    "data": { "name": "Saaz Fictif", "aliases": [] }
+  }
+]

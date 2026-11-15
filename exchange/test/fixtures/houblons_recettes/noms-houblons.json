@@ -1,0 +1,7 @@
+{
+  "format": "kassbeer_noms_houblons",
+  "version": 1,
+  "generated_at": "2026-11-14T10:00:00.000Z",
+  "target": "emulator",
+  "noms": ["fictif doré", "Houblon Fictif", "Houblon Inconnu", "Imaginaire", "Saaz fictif"]
+}

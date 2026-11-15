@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,6 +10,7 @@ import '../../../core/presentation/breakpoints.dart';
 import '../../../core/providers.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/referentiel.dart';
+import 'choix_style.dart';
 
 /// Nombre de suggestions affichées sous le champ.
 const kMaxSuggestions = 8;
@@ -32,10 +34,19 @@ String nombreSuggestions(int n) => n == 1
 
 /// Entrées de [entrees] qui correspondent à [texte] (nom, alias, code de
 /// style, producteur), celles dont le nom commence par le texte en tête,
-/// [kMaxSuggestions] au plus. Vide pour un texte vide.
-List<EntreeIndex> suggestionsPour(List<EntreeIndex> entrees, String texte) {
+/// [kMaxSuggestions] au plus. Pour un texte vide : rien, ou, avec
+/// [stylesSiVide], les premiers styles dans l'ordre des codes BJCP.
+List<EntreeIndex> suggestionsPour(
+  List<EntreeIndex> entrees,
+  String texte, {
+  bool stylesSiVide = false,
+}) {
   final requete = normaliserRecherche(texte.trim());
-  if (requete.isEmpty) return const [];
+  if (requete.isEmpty) {
+    return stylesSiVide
+        ? stylesParCode(entrees).take(kMaxSuggestions).toList()
+        : const [];
+  }
   final debut = <EntreeIndex>[];
   final ailleurs = <EntreeIndex>[];
   for (final e in entrees) {
@@ -58,6 +69,12 @@ String? detailStyle(EntreeIndex e) =>
 /// surlignée qu'après un déplacement par ↑ ou ↓ ; sinon le nom tapé reste et
 /// le focus passe au champ suivant. La liste s'ouvre du côté où il y a le plus
 /// de place.
+///
+/// [choixDesStyles], réservé au champ « Style » ([NatureReferentiel.styles]) :
+/// l'index est lu dès l'ouverture du champ, sans attendre le focus ; la liste
+/// s'ouvre aussi sur un champ vide ; l'aide dit si le texte est un style de la
+/// Bibliothèque ([aideStyleSaisi]) ; `fieldBuilder` reçoit l'icône qui ouvre
+/// « Choisir un style », désactivée sans index.
 class ChampBibliotheque extends ConsumerStatefulWidget {
   const ChampBibliotheque({
     super.key,
@@ -67,7 +84,8 @@ class ChampBibliotheque extends ConsumerStatefulWidget {
     required this.onSelected,
     required this.fieldBuilder,
     this.detail,
-  });
+    this.choixDesStyles = false,
+  }) : assert(!choixDesStyles || nature == NatureReferentiel.styles);
 
   final NatureReferentiel nature;
   final TextEditingController controller;
@@ -76,16 +94,22 @@ class ChampBibliotheque extends ConsumerStatefulWidget {
 
   /// Construit le champ de texte, avec [controller] et [focusNode] ; [aide] :
   /// texte d'aide quand les suggestions sont indisponibles ; [onSubmitted] :
-  /// à appeler par `onFieldSubmitted`.
+  /// à appeler par `onFieldSubmitted` ; [boutonListe] : icône « Liste des
+  /// styles » (`suffixIcon`), `null` sans [choixDesStyles].
   final Widget Function(
     BuildContext context,
     String? aide,
     VoidCallback onSubmitted,
+    Widget? boutonListe,
   )
   fieldBuilder;
 
   /// Seconde ligne d'une suggestion (code, valeurs), ou `null`.
   final String? Function(EntreeIndex entree)? detail;
+
+  /// Champ « Style » : liste ouverte sur un champ vide, aide du style saisi,
+  /// icône « Liste des styles ».
+  final bool choixDesStyles;
 
   @override
   ConsumerState<ChampBibliotheque> createState() => _ChampBibliothequeState();
@@ -94,6 +118,12 @@ class ChampBibliotheque extends ConsumerStatefulWidget {
 class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
   List<EntreeIndex> _entrees = const [];
   bool _lecture = false;
+
+  /// Vrai quand l'index est lu (`DocumentTrouve`).
+  bool _indexLu = false;
+
+  /// Lecture en cours, attendue par la feuille « Choisir un style ».
+  Future<void>? _enCours;
 
   /// Aide affichée sous le champ : [kSuggestionsIndisponibles],
   /// [kBibliothequeVide], ou `null` quand l'index est lu.
@@ -116,8 +146,15 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
     widget.focusNode.addListener(_surFocus);
     widget.controller.addListener(_surTexte);
     // Champ ouvert avec le focus (`autofocus`) : la lecture part aussitôt.
+    // Champ « Style » : elle part toujours, pour que l'aide dise dès
+    // l'ouverture si le style d'une recette existante est hors Bibliothèque.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _surFocus();
+      if (!mounted) return;
+      if (widget.choixDesStyles) {
+        _demarrerLecture();
+      } else {
+        _surFocus();
+      }
     });
   }
 
@@ -133,12 +170,24 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
     if (texte == _dernierTexte) return;
     _dernierTexte = texte;
     _deplace = false;
+    // L'aide du champ « Style » suit le texte.
+    if (widget.choixDesStyles && _indexLu && mounted) setState(() {});
   }
 
   void _surFocus() {
-    if (!widget.focusNode.hasFocus || _lecture) return;
+    // L'aide du champ « Style » dépend du focus (voir [_aideAffichee]).
+    if (widget.choixDesStyles && mounted) setState(() {});
+    if (!widget.focusNode.hasFocus) return;
+    _demarrerLecture();
+  }
+
+  /// Lance la lecture de l'index, sauf si elle est faite ou en cours.
+  void _demarrerLecture() {
+    if (_lecture) return;
     _lecture = true;
-    unawaited(_lire());
+    final lecture = _lire();
+    _enCours = lecture;
+    unawaited(lecture.whenComplete(() => _enCours = null));
   }
 
   /// Lit l'index par `get()` : du serveur en ligne, du cache seul hors ligne.
@@ -170,6 +219,7 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
     if (entrees == null) _lecture = false;
     setState(() {
       _entrees = entrees ?? const [];
+      _indexLu = entrees != null;
       _aide = aide;
     });
     if (entrees != null) _recalculer();
@@ -182,11 +232,10 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
   void _recalculer() {
     final controller = widget.controller;
     final valeur = controller.value;
-    if (!widget.focusNode.hasFocus ||
-        valeur.text.trim().isEmpty ||
-        valeur.text == _texteInitial) {
-      return;
-    }
+    if (!widget.focusNode.hasFocus) return;
+    // Champ « Style » vide : la liste s'ouvre sur les premiers styles.
+    final vide = valeur.text.trim().isEmpty;
+    if (vide ? !widget.choixDesStyles : valeur.text == _texteInitial) return;
     final deplace = _deplace;
     controller.value = valeur.copyWith(text: '${valeur.text} ');
     controller.value = valeur;
@@ -204,14 +253,78 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
     return KeyEventResult.ignored;
   }
 
+  /// Ouvre « Choisir un style ». Le focus quitte le champ avant l'ouverture :
+  /// au retour, la liste des suggestions ne s'ouvre pas sur le style choisi.
+  /// L'index déjà lu s'affiche aussitôt ; sinon la feuille attend sa lecture.
+  Future<void> _ouvrirListe() async {
+    widget.focusNode.unfocus();
+    final choix = await choisirStyle(context, lire: _indexPourFeuille);
+    if (choix == null || !mounted) return;
+    _deplace = false;
+    widget.controller.value = TextEditingValue(
+      text: choix.name,
+      selection: TextSelection.collapsed(offset: choix.name.length),
+    );
+    widget.onSelected(choix);
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        styleChoisi(choix.name),
+        Directionality.of(context),
+      ),
+    );
+  }
+
+  /// Index pour la feuille : lance la lecture si elle n'est ni faite ni en
+  /// cours (premier appel, ou « Réessayer » après une panne), puis rend
+  /// l'index lu, ou rien avec la raison.
+  Future<IndexStyles> _indexPourFeuille() async {
+    _demarrerLecture();
+    await _enCours;
+    return (
+      entrees: _indexLu ? _entrees : null,
+      vide: _aide == kBibliothequeVide,
+    );
+  }
+
+  /// Aide affichée sous le champ : panne ou Bibliothèque vide d'abord, puis,
+  /// pour le champ « Style », l'aide du style saisi. Pendant la frappe, un
+  /// texte qui a encore des suggestions n'affiche pas « hors Bibliothèque » :
+  /// l'avertissement attend la sortie du champ.
+  String? get _aideAffichee {
+    final aide = _aide;
+    if (aide != null || !widget.choixDesStyles || !_indexLu) return aide;
+    final texte = widget.controller.text;
+    final style = aideStyleSaisi(_entrees, texte);
+    if (style == kStyleHorsBibliotheque &&
+        widget.focusNode.hasFocus &&
+        suggestionsPour(_entrees, texte).isNotEmpty) {
+      return null;
+    }
+    return style;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final boutonListe = widget.choixDesStyles
+        ? IconButton(
+            icon: const Icon(Icons.list),
+            tooltip: kListeStylesLibelle,
+            // Sans index (absent, panne, hors ligne sans cache) : désactivée ;
+            // la prochaine prise du focus relit l'index.
+            onPressed: _aide == null ? () => unawaited(_ouvrirListe()) : null,
+          )
+        : null;
     return RawAutocomplete<EntreeIndex>(
       textEditingController: widget.controller,
       focusNode: widget.focusNode,
       optionsViewOpenDirection: OptionsViewOpenDirection.mostSpace,
       displayStringForOption: (e) => e.name,
-      optionsBuilder: (value) => suggestionsPour(_entrees, value.text),
+      optionsBuilder: (value) => suggestionsPour(
+        _entrees,
+        value.text,
+        stylesSiVide: widget.choixDesStyles,
+      ),
       onSelected: (e) {
         _deplace = false;
         widget.onSelected(e);
@@ -220,11 +333,11 @@ class _ChampBibliothequeState extends ConsumerState<ChampBibliotheque> {
         canRequestFocus: false,
         skipTraversal: true,
         onKeyEvent: _surTouche,
-        child: widget.fieldBuilder(context, _aide, () {
+        child: widget.fieldBuilder(context, _aideAffichee, () {
           // Sans déplacement par ↑ ou ↓, le nom tapé reste : l'action du
           // clavier (« Suivant ») fait passer le focus au champ suivant.
           if (_deplace) onSubmitted();
-        }),
+        }, boutonListe),
       ),
       optionsViewBuilder: (context, onSelected, options) => _Suggestions(
         options: options.toList(),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,11 +38,32 @@ const textesRecette = TextesDocument(
   retour: 'Revenir aux recettes',
 );
 
+/// Textes de la fiche ouverte depuis le compte rendu de l'import : le retour
+/// ferme la fiche et ramène au compte rendu (ticket #60).
+final textesRecetteImportee = TextesDocument(
+  chargement: textesRecette.chargement,
+  lectureImpossible: textesRecette.lectureImpossible,
+  absent: textesRecette.absent,
+  horsLigne: textesRecette.horsLigne,
+  illisible: textesRecette.illisible,
+  retour: 'Revenir au compte rendu',
+);
+
 /// Fiche d'une recette : calculs, ingrédients, paliers, notes.
 class RecipeDetailScreen extends ConsumerStatefulWidget {
-  const RecipeDetailScreen({super.key, required this.id});
+  const RecipeDetailScreen({
+    super.key,
+    required this.id,
+    this.depuisImport = false,
+  });
 
   final String id;
+
+  /// Vrai : fiche ouverte par `push` depuis le compte rendu de l'import
+  /// (`ImportedRecipeScreen`). Les sorties de la fiche gardent le compte rendu
+  /// dans la pile : retour et suppression par `pop`, copie et éditeurs par
+  /// `push` (ticket #60).
+  final bool depuisImport;
 
   static const saved = 'Recette enregistrée.';
   static const savedOffline =
@@ -92,7 +115,11 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
       refus: RecipeDetailScreen.duplicateRejected(recipe.name),
     );
     setState(() => _duplicating = false);
-    context.go(AppRoutes.recipe(created.id));
+    if (widget.depuisImport) {
+      unawaited(context.push(AppRoutes.importedRecipe(created.id)));
+    } else {
+      context.go(AppRoutes.recipe(created.id));
+    }
   }
 
   Future<void> _delete(Recipe recipe) async {
@@ -111,7 +138,17 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
       succes: RecipeDetailScreen.deleted,
       refus: RecipeDetailScreen.deleteRejected(recipe.name),
     );
-    context.go(AppRoutes.recipes);
+    _quitter();
+  }
+
+  /// Sortie de la fiche : `pop` vers le compte rendu de l'import, sinon la
+  /// liste des recettes.
+  void _quitter() {
+    if (widget.depuisImport && context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.recipes);
+    }
   }
 
   @override
@@ -122,9 +159,9 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
       async: ref.watch(recipesListProvider),
       id: widget.id,
       offline: access?.offline ?? false,
-      textes: textesRecette,
+      textes: widget.depuisImport ? textesRecetteImportee : textesRecette,
       onRetry: () => ref.invalidate(recipesListProvider),
-      onBack: () => context.go(AppRoutes.recipes),
+      onBack: _quitter,
       builder: (context, recipe) {
         final equipement = equipementDe(
           recipe.content.equipmentId,
@@ -132,7 +169,10 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           offline: access?.offline ?? false,
         );
         final mine = recipe.ownerUid == access?.user.uid;
-        void edit() => context.push(AppRoutes.editRecipe(recipe.id));
+        // Depuis l'import, l'éditeur se ferme par `pop` après « Enregistrer ».
+        final extra = widget.depuisImport ? AppRoutes.retourParPop : null;
+        void edit() =>
+            context.push(AppRoutes.editRecipe(recipe.id), extra: extra);
         final calculs = evaluerRecette(
           recipe.content,
           equipement,
@@ -142,7 +182,8 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         );
         return _Fiche(
           onNewBrew: () => ouvrirNouveauBrassin(context, recipe),
-          onEditSteps: () => context.push(AppRoutes.editBrewSteps(recipe.id)),
+          onEditSteps: () =>
+              context.push(AppRoutes.editBrewSteps(recipe.id), extra: extra),
           recipe: recipe,
           readerUid: access?.user.uid,
           equipement: equipement,
@@ -206,9 +247,6 @@ class _Fiche extends StatelessWidget {
     final c = recipe.content;
     final edit = onEdit;
     final delete = onDelete;
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
     final volume = c.batchVolumeL;
     final boil = c.boilTimeMin;
     final hopIbu = <int, double>{
@@ -218,23 +256,18 @@ class _Fiche extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Semantics(
-          header: true,
-          child: Text(c.name, style: theme.textTheme.headlineSmall),
+        EnTeteFiche(
+          titre: c.name,
+          sousTitre: [
+            ?c.style,
+            if (edit == null)
+              'Recette de ${libelleAuteur(ownerUid: recipe.ownerUid, ownerName: recipe.ownerName, readerUid: readerUid)}',
+          ].join(' · '),
+          etiquettes: [
+            if (recipe.hasPendingWrites)
+              const Etiquette(label: 'En attente du réseau'),
+          ],
         ),
-        if (c.style != null) Text(c.style!, style: muted),
-        if (edit == null)
-          Text(
-            'Recette de ${libelleAuteur(ownerUid: recipe.ownerUid, ownerName: recipe.ownerName, readerUid: readerUid)}',
-            style: muted,
-          ),
-        if (recipe.hasPendingWrites) ...[
-          const SizedBox(height: 8),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Etiquette(label: 'En attente du réseau'),
-          ),
-        ],
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
@@ -278,40 +311,54 @@ class _Fiche extends StatelessWidget {
               ),
           ],
         ),
-        const TitreSection('Calculs'),
-        BlocCalculs(
-          calculs: calculs,
-          content: c,
-          equipement: equipement,
-          onComplete: edit,
+        CarteSection(
+          titre: 'Calculs',
+          children: [
+            BlocCalculs(
+              calculs: calculs,
+              content: c,
+              equipement: equipement,
+              onComplete: edit,
+            ),
+          ],
         ),
         // « Coût avec vos prix » : avec les prix du lecteur, auteur ou non
         // (CR7). Le bloc porte son titre.
-        BlocCoutRecette(recipe: recipe, onCompleter: edit),
-        const TitreSection('Général'),
-        LigneFiche(
-          label: 'Type de recette',
-          value: c.type == null ? null : typesRecette.libelle(c.type!),
+        CarteSection(
+          children: [BlocCoutRecette(recipe: recipe, onCompleter: edit)],
         ),
-        // Auteur indiqué par le fichier importé (recipe.author) ; absent d'une
-        // recette saisie.
-        if (c.author != null)
-          LigneFiche(
-            label: 'Auteur indiqué par le fichier importé',
-            value: c.author,
-          ),
-        LigneFiche(
-          label: 'Volume en fermenteur',
-          value: volume == null ? null : formatLitres(volume),
+        CarteSection(
+          titre: 'Général',
+          children: [
+            LigneFiche(
+              label: 'Type de recette',
+              value: c.type == null ? null : typesRecette.libelle(c.type!),
+            ),
+            // Auteur indiqué par le fichier importé (recipe.author) ; absent
+            // d'une recette saisie.
+            if (c.author != null)
+              LigneFiche(
+                label: 'Auteur indiqué par le fichier importé',
+                value: c.author,
+              ),
+            LigneFiche(
+              label: 'Volume en fermenteur',
+              value: volume == null ? null : formatLitres(volume),
+            ),
+            LigneFiche(
+              label: 'Durée d\'ébullition',
+              value: boil == null ? null : formatMinutes(boil),
+            ),
+            LigneFiche(
+              label: 'Équipement',
+              value: libelleEquipement(equipement),
+            ),
+          ],
         ),
-        LigneFiche(
-          label: 'Durée d\'ébullition',
-          value: boil == null ? null : formatMinutes(boil),
-        ),
-        LigneFiche(label: 'Équipement', value: libelleEquipement(equipement)),
         ContenuRecette(
           content: c,
           hopIbu: hopIbu,
+          enCartes: true,
           chronologie: _Chronologie(
             content: c,
             onEdit: edit == null ? null : onEditSteps,

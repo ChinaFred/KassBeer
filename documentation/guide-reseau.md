@@ -220,6 +220,28 @@ caractères ; reprise d'une décision interrompue par l'admin seul. « Le projet
 suivent. `ci.yml` et `deploy.yml` ajoutent les quatre callables et une liste fermée des
 déclencheurs (P10, accord de l'utilisateur).
 
+Le 2026-11-14, ADR-013 avec l'accord de l'utilisateur : P19, P20 et P22 étendus à
+`beer_hop_aromas/`, P54 (`securite`, génération des descriptions aromatiques des houblons par
+l'API Claude depuis le poste de l'admin) et P55 (`relecteur-regles`, collection, validation et
+affichage) ajoutés. « Le projet » et « Coûts variables » de `CLAUDE.md` nomment le second poste
+de coût, `hop_aroma_generation`, et la seule exception à « une API facturée passe par le
+serveur ». Aucun agent, skill ni hook nouveau.
+
+Le 2026-11-15, livraison d'ADR-013 (v0.1.57), choix délégués par l'utilisateur à la session
+principale : P55 lit « relu le <date longue> » (`formatDateLongue`) au lieu de « JJ/MM/AAAA » et
+nomme `ingest/lister-houblons-recettes.mjs` et `IndexBibliotheque.resoudre` ; « Structure » de
+`CLAUDE.md` décrit `ingest/generer-aromes.mjs`, `ingest/lister-houblons-recettes.mjs` et
+`exchange/bin/lister_houblons_recettes.dart`, et « Commandes utiles » leurs commandes.
+
+Le 2026-11-14, à la demande de l'utilisateur : P36 et la section « Coûts variables » de
+`CLAUDE.md` ajoutent le compte fondateur (`members/{email}.founder`, posé dans la console
+Firebase) et son plafond `FOUNDER_LAUNCHES_PER_DAY`, cinq fois celui du groupe, sur un compteur
+à part (v0.1.52). La ligne `member_access.json` du tableau « Logique dupliquée » ajoute le compte
+fondateur : `Member.founder` côté client, `isFounder` côté serveur, cas rejoués par la fixture.
+P31 compte cinq fichiers au lieu de quatre : `app/lib/features/members/domain/member.dart`
+y entre, et un diff de `Member.founder` sans cas ajouté à `member_access.json` est une anomalie
+(accord de l'utilisateur du 2026-11-14).
+
 Le 2026-11-14, complément du lot T6 avec l'accord de l'utilisateur : P23 et P48 modifiés (capture
 envoyée dans l'heure, dimensions contrôlées, image choisie réencodée en PNG, rétention de 180 jours).
 
@@ -406,5 +428,5 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   L'ingestion d'une source externe (référentiels, recettes publiques) passe par un script local
   lancé par l'administrateur (`ingest/`) : émulateur par défaut, production sur option
   explicite et confirmation, liste blanche de collections, identifiants déterministes, rapport
-  JSON chiffré. Admin › Sources affichera les compteurs et les non résolus (L4). ADR-005,
+  JSON chiffré. Admin › Sources affiche les compteurs et les noms non reconnus (L4). ADR-005,
   évolution acceptée le 2026-11-08.

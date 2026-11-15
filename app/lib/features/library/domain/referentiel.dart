@@ -66,10 +66,12 @@ class Provenance {
   /// `brewtarget-001` à `brewtarget-005`, `fabricants`, `diydog`.
   final String source;
 
-  /// `v5.2.3 ea10908`, `e6c12ab`.
+  /// `v5.2.3 ea10908`, `e6c12ab`, ou la date du relevé des fiches des
+  /// fabricants (`2026-11-14`).
   final String version;
 
-  /// `GPL-3.0`, `CC BY-SA 4.0`, `BJCP (noms et plages)`, `DIY Dog (usage privé)`.
+  /// `GPL-3.0`, `CC BY-SA 4.0`, `BJCP (noms et plages)`, `DIY Dog (usage privé)`,
+  /// `Données publiées par le fabricant`.
   final String licence;
 
   /// Date du relevé, telle qu'écrite (`2026-11-08`).
@@ -303,6 +305,34 @@ class EntreeStyle extends EntreeIndex {
 
   @override
   List<String> get autresTextes => [code];
+}
+
+/// Ordre des codes de style BJCP : nombre de tête croissant (« 2A » avant
+/// « 10A »), puis le reste du code ; un code sans nombre de tête vient après.
+int comparerCodesStyle(String a, String b) {
+  final ma = _codeStyle.firstMatch(a);
+  final mb = _codeStyle.firstMatch(b);
+  if (ma != null && mb != null) {
+    final n = int.parse(ma[1]!).compareTo(int.parse(mb[1]!));
+    if (n != 0) return n;
+    return ma[2]!.compareTo(mb[2]!);
+  }
+  if (ma != null) return -1;
+  if (mb != null) return 1;
+  return a.compareTo(b);
+}
+
+final _codeStyle = RegExp(r'^(\d+)(.*)$');
+
+/// Styles de [entrees], dans l'ordre de leur code BJCP ([comparerCodesStyle]),
+/// puis de leur nom.
+List<EntreeStyle> stylesParCode(Iterable<EntreeIndex> entrees) {
+  final styles = entrees.whereType<EntreeStyle>().toList()
+    ..sort((a, b) {
+      final c = comparerCodesStyle(a.code, b.code);
+      return c != 0 ? c : a.name.compareTo(b.name);
+    });
+  return styles;
 }
 
 class EntreeFermentable extends EntreeIndex {

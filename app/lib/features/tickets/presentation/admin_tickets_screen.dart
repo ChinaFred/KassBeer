@@ -109,11 +109,16 @@ class AdminTicketsScreen extends ConsumerWidget {
 
   static const titre = 'Tickets des membres';
   static const loadError = 'Impossible de lire les tickets.';
-  static const emptyMessage =
-      'Aucun ticket pour l\'instant. Les membres n\'ont encore rien signalé.';
-  static const nothingToProcess =
-      'Rien à traiter. Tous les tickets ont reçu une décision.';
-  static const nothingBlocked = 'Aucun ticket bloqué.';
+  static const emptyTitle = 'Aucun ticket';
+  static const nothingToProcessTitle = 'Tout est traité';
+  static const nothingBlockedTitle = 'Rien de bloqué';
+  static const emptyMessage = 'Les membres n\'ont encore rien signalé.';
+  static const nothingToProcess = 'Chaque ticket a reçu une décision.';
+
+  /// « Bloqué » : envoi impossible, en retard, ou Issue disparue
+  /// (`Ticket.isBlocked`).
+  static const nothingBlocked =
+      'Aucun envoi en échec ou en retard, aucune Issue disparue.';
   static const showAll = 'Afficher tous les tickets';
   static const noSelection = 'Choisissez un ticket pour voir son suivi.';
 
@@ -374,21 +379,25 @@ class _Liste extends ConsumerWidget {
       final empty = list.documents.isEmpty
           ? const EtatVide(
               icon: Icons.confirmation_number_outlined,
+              titre: AdminTicketsScreen.emptyTitle,
               message: AdminTicketsScreen.emptyMessage,
             )
           : switch (filtre) {
               FiltreTickets.aTraiter => EtatVide(
                 icon: Icons.inbox_outlined,
+                titre: AdminTicketsScreen.nothingToProcessTitle,
                 message: AdminTicketsScreen.nothingToProcess,
                 action: showAll,
               ),
               FiltreTickets.bloques => EtatVide(
                 icon: Icons.check_circle_outline,
+                titre: AdminTicketsScreen.nothingBlockedTitle,
                 message: AdminTicketsScreen.nothingBlocked,
                 action: showAll,
               ),
               FiltreTickets.tous => const EtatVide(
                 icon: Icons.confirmation_number_outlined,
+                titre: AdminTicketsScreen.emptyTitle,
                 message: AdminTicketsScreen.emptyMessage,
               ),
             };

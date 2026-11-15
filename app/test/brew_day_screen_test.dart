@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/presentation/encadre.dart';
 import 'package:kass_beer/core/router/app_router.dart';
+import 'package:kass_beer/core/theme/app_theme.dart';
 import 'package:kass_beer/features/brew_day/presentation/brew_day_screen.dart';
+import 'package:kass_beer/features/brew_day/presentation/chronologie_jour.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
 import 'package:kass_beer/features/brews/presentation/brew_detail_screen.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
@@ -135,6 +138,8 @@ void main() {
       ],
     );
     expect(find.textContaining('Début en double'), findsOneWidget);
+    await tester.ensureVisible(find.text('Supprimer'));
+    await tester.pump();
     await tester.tap(find.text('Supprimer'));
     await tester.pump();
     expect(
@@ -276,8 +281,23 @@ void main() {
     app.brews.publish([unBrassin(id: _brassinId, brewedAt: hm(11, 45))]);
     app.brews.publishEvents(_brassinId, [debut('e1', 'k-palier', hm(11, 45))]);
     await tester.pumpAndSettle();
-    expect(find.text(BrewDayScreen.reprised), findsOneWidget);
+    // Encadré sous la carte de l'étape, jamais un SnackBar posé sur la
+    // chronologie.
+    expect(
+      find.descendant(
+        of: find.byType(Encadre),
+        matching: find.text(BrewDayScreen.reprised),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(SnackBar), findsNothing);
     expect(tester.widget<Text>(minuteur()).data, '20:00');
+    final fermer = find.widgetWithText(TextButton, 'Fermer');
+    await tester.ensureVisible(fermer);
+    await tester.pumpAndSettle();
+    await tester.tap(fermer);
+    await tester.pumpAndSettle();
+    expect(find.text(BrewDayScreen.reprised), findsNothing);
   });
 
   testWidgets('R6 : Les sauter et commencer, écritures simples une par une', (
@@ -517,5 +537,255 @@ void main() {
     // « Terminer » n'en a provoqué aucune lecture avant d'écrire.
     expect(lecturesAuFinish, lectures);
     expect(app.auth.tokenReads, lectures + 1);
+  });
+
+  group('carte de l\'étape en cours', () {
+    Finder carte() => find.byKey(const ValueKey('carte-etape'));
+    Finder progression() => find.byKey(const ValueKey('progression-etape'));
+    RoundedRectangleBorder forme(WidgetTester tester) =>
+        tester.widget<Material>(carte()).shape! as RoundedRectangleBorder;
+
+    testWidgets('en cours puis dépassé : couleurs, bord, icône, même marge', (
+      tester,
+    ) async {
+      final app = await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+      );
+      final scheme = Theme.of(tester.element(carte())).colorScheme;
+      expect(tester.widget<Material>(carte()).color, scheme.primaryContainer);
+      expect(forme(tester).side.width, 2);
+      expect(forme(tester).side.color, scheme.primaryContainer);
+      expect(find.text('ÉTAPE 1 SUR 2 · EN COURS'), findsOneWidget);
+      expect(
+        tester
+            .widget<Icon>(find.byKey(const ValueKey('icone-etat-etape')))
+            .icon,
+        Icons.timer_outlined,
+      );
+      final haut = tester.getTopLeft(carte());
+      final nom = tester.getTopLeft(find.text('Palier 68').first) - haut;
+      final chrono = tester.getTopLeft(minuteur()) - haut;
+
+      // 12:35 : la durée de 45 min est dépassée de 5 min.
+      app.now = hm(12, 35);
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.widget<Material>(carte()).color, scheme.tertiaryContainer);
+      expect(forme(tester).side.width, 2);
+      expect(forme(tester).side.color, scheme.tertiary);
+      expect(find.text('ÉTAPE 1 SUR 2 · DÉPASSÉ'), findsOneWidget);
+      expect(
+        tester
+            .widget<Icon>(find.byKey(const ValueKey('icone-etat-etape')))
+            .icon,
+        Icons.alarm,
+      );
+      // Même place pour la carte et son contenu : rien ne saute.
+      expect(tester.getTopLeft(carte()), haut);
+      expect(tester.getTopLeft(find.text('Palier 68').first) - haut, nom);
+      expect(tester.getTopLeft(minuteur()) - haut, chrono);
+    });
+
+    testWidgets('barre : part écoulée de brewing, exclue de la lecture', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final app = await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+      );
+      LinearProgressIndicator barre() =>
+          tester.widget<LinearProgressIndicator>(progression());
+      // 25 min écoulées sur 45.
+      expect(barre().value, closeTo(25 / 45, 1e-9));
+      expect(
+        find.ancestor(
+          of: progression(),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsWidgets,
+      );
+      expect(find.semantics.byValue('56'), findsNothing);
+      expect(
+        find.bySemanticsLabel('20 minutes 0 seconde restantes'),
+        findsOneWidget,
+      );
+
+      app.now = hm(12, 20);
+      await tester.pump(const Duration(seconds: 1));
+      expect(barre().value, closeTo(35 / 45, 1e-9));
+
+      app.now = hm(12, 35);
+      await tester.pump(const Duration(seconds: 1));
+      expect(barre().value, 1);
+      final scheme = Theme.of(tester.element(carte())).colorScheme;
+      expect(barre().color, scheme.tertiary);
+      semantics.dispose();
+    });
+
+    for (final brightness in Brightness.values) {
+      testWidgets('contraste et cibles, thème ${brightness.name}', (
+        tester,
+      ) async {
+        tester.platformDispatcher.platformBrightnessTestValue = brightness;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+        final app = await ouvrir(
+          tester,
+          now: hm(12, 10),
+          events: [debut('e1', 'k-palier', hm(11, 45))],
+        );
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        app.now = hm(12, 35);
+        await tester.pump(const Duration(seconds: 1));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      });
+    }
+
+    for (final (nom, largeur, hauteur) in [
+      ('portrait', 400.0, 900.0),
+      ('paysage', 844.0, 390.0),
+    ]) {
+      testWidgets('texte à 200 %, $nom : aucun débordement', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        // Aucune erreur écartée : l'annonce « Brassage repris » est un encadré
+        // du panneau, plus un SnackBar flottant.
+        final erreurs = <FlutterErrorDetails>[];
+        final original = FlutterError.onError;
+        FlutterError.onError = erreurs.add;
+        try {
+          final app = await ouvrir(
+            tester,
+            now: hm(12, 10),
+            width: largeur,
+            height: hauteur,
+            events: [debut('e1', 'k-palier', hm(11, 45))],
+          );
+          expect(carte(), findsOneWidget);
+          expect(find.text(BrewDayScreen.reprised), findsOneWidget);
+          // L'encadré suit la carte de l'étape : il ne repousse pas le
+          // minuteur vers le bas.
+          expect(
+            tester.getRect(find.text(BrewDayScreen.reprised)).top,
+            greaterThan(tester.getRect(carte()).bottom),
+          );
+          app.now = hm(12, 35);
+          await tester.pump(const Duration(seconds: 1));
+          expect(find.text('ÉTAPE 1 SUR 2 · DÉPASSÉ'), findsOneWidget);
+          expect(find.text('Terminer l\'étape'), findsOneWidget);
+        } finally {
+          FlutterError.onError = original;
+        }
+        expect(erreurs.map((e) => e.exceptionAsString()), isEmpty);
+      });
+    }
+  });
+
+  testWidgets('chronologie : icône d\'état colorée selon l\'état', (
+    tester,
+  ) async {
+    await ouvrir(
+      tester,
+      now: hm(12, 10),
+      brew: unBrassin(
+        id: _brassinId,
+        brewedAt: hm(11, 0),
+        steps: const [palier, ajout, ebullition],
+      ),
+      events: [
+        debut('e1', 'k-palier', hm(11, 0)),
+        fin('e2', 'k-palier', hm(11, 45)),
+        saut('e3', 'k-ajout', hm(11, 46)),
+        debut('e4', 'k-ebullition', hm(11, 50)),
+      ],
+    );
+    final chronologie = find.byType(ChronologieJour);
+    Color? couleur(IconData icone) => tester
+        .widget<Icon>(
+          find.descendant(of: chronologie, matching: find.byIcon(icone)),
+        )
+        .color;
+    final context = tester.element(chronologie);
+    final scheme = Theme.of(context).colorScheme;
+    expect(
+      couleur(Icons.check_circle_outline),
+      CouleursEtat.of(context).succes,
+    );
+    expect(couleur(Icons.play_circle_outline), scheme.primary);
+    expect(couleur(Icons.skip_next), scheme.onSurfaceVariant);
+  });
+
+  testWidgets('feuille Recette : nom de la recette en en-tête', (tester) async {
+    await ouvrir(
+      tester,
+      now: hm(12, 10),
+      events: [debut('e1', 'k-palier', hm(11, 45))],
+    );
+    await tester.tap(find.byTooltip('Plus d\'actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voir la recette'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Semantics &&
+              (w.properties.header ?? false) &&
+              w.child is Text &&
+              (w.child! as Text).data == 'Blonde',
+        ),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  group('courbe du jour de brassage', () {
+    testWidgets('sous 840 px : bascule « Étapes » | « Courbe », minuteur '
+        'toujours affiché, rien n\'est écrit', (tester) async {
+      final app = await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+      );
+      expect(find.text(ZoneChronologieCourbe.libelleEtapes), findsOneWidget);
+      expect(find.text('Visée (recalculée)'), findsNothing);
+      await tester.tap(find.text(ZoneChronologieCourbe.libelleCourbe));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Visée (recalculée)'), findsOneWidget);
+      expect(minuteur(), findsOneWidget);
+      expect(app.brews.writes, isEmpty);
+    });
+
+    testWidgets('à partir de 840 px : courbe sous le panneau, sans bascule', (
+      tester,
+    ) async {
+      await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+        width: 1200,
+      );
+      expect(find.text(ZoneChronologieCourbe.libelleCourbe), findsNothing);
+      expect(find.text('Visée (recalculée)'), findsOneWidget);
+      expect(minuteur(), findsOneWidget);
+    });
+
+    testWidgets('paysage bas, même large : bascule, panneau et minuteur '
+        'visibles', (tester) async {
+      await ouvrir(
+        tester,
+        now: hm(12, 10),
+        events: [debut('e1', 'k-palier', hm(11, 45))],
+        width: 900,
+        height: 400,
+      );
+      expect(find.text(ZoneChronologieCourbe.libelleCourbe), findsOneWidget);
+      expect(minuteur(), findsOneWidget);
+    });
   });
 }

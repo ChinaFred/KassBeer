@@ -343,8 +343,16 @@ void main() {
       tester,
     ) async {
       final app = await ouvrir(tester, chemin(cru.key));
+      // Titre sur deux lignes, un seul en-tête : brassin, puis journée et date.
+      final enTete = find.ancestor(
+        of: find.text('Houblonnage à cru · prévue aujourd\'hui'),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && (w.properties.header ?? false),
+        ),
+      );
+      expect(enTete, findsOneWidget);
       expect(
-        find.text('Blonde du jour · Houblonnage à cru · prévue aujourd\'hui'),
+        find.descendant(of: enTete, matching: find.text('Blonde du jour')),
         findsOneWidget,
       );
       expect(find.text('Brassin et déroulé figé'), findsOneWidget);
@@ -961,6 +969,12 @@ void main() {
       'lib/features/brew_day/presentation/indicateur_envoi.dart',
       'lib/features/brews/presentation/embouteillage.dart',
       'lib/features/costs/data/figeage_embouteillage.dart',
+      // Courbe du jour de brassage et ce qu'elle appelle.
+      'lib/features/brew_day/presentation/courbe_brassage.dart',
+      'lib/features/brews/presentation/trace_courbe.dart',
+      'lib/features/brews/presentation/legende_courbe.dart',
+      'lib/features/brews/domain/prevu.dart',
+      'lib/features/recipes/presentation/recipe_calculations_view.dart',
     ];
     final offenders = <String>[];
     for (final f in fichiers) {
@@ -969,6 +983,10 @@ void main() {
         if (RegExp(
           r'runTransaction|Source\.server|package:http|HttpClient|httpsCallable|arrayUnion',
         ).hasMatch(line)) {
+          offenders.add('$f : $line');
+        }
+        // La plage de la levure se lit dans la Bibliothèque : fiche seule.
+        if (RegExp(r'plage_levure|libraryRepositoryProvider').hasMatch(line)) {
           offenders.add('$f : $line');
         }
       }

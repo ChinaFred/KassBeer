@@ -6,6 +6,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
+import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
@@ -17,8 +18,9 @@ import '../domain/brew.dart';
 import '../domain/deroule.dart';
 import 'brews_providers.dart';
 
-/// Brassins du groupe : en cours d'abord, puis prévus, puis les autres ; filtre
-/// « Tous » / « Les miens », état de l'écran, jamais écrit en base.
+/// Brassins du groupe : en cours d'abord, puis prévus, puis les autres, chaque
+/// groupe non vide sous son en-tête ([GroupeBrassins]) ; filtre « Tous » /
+/// « Les miens », état de l'écran, jamais écrit en base.
 class BrewsScreen extends ConsumerStatefulWidget {
   const BrewsScreen({super.key});
 
@@ -29,6 +31,9 @@ class BrewsScreen extends ConsumerStatefulWidget {
   /// Message des deux états vides, sous [emptyTitle] ou [mineEmptyTitle].
   static const emptyMessage =
       'Ouvrez une recette et appuyez sur Nouveau brassin.';
+
+  /// En-tête des brassins illisibles, après les groupes.
+  static const illisibles = 'Illisibles';
 
   @override
   ConsumerState<BrewsScreen> createState() => _BrewsScreenState();
@@ -93,22 +98,40 @@ class _BrewsScreenState extends ConsumerState<BrewsScreen> {
                     child: const Text('Voir les recettes'),
                   ),
           ),
-        for (final b in shown) _Row(brew: b, readerUid: readerUid, now: now),
+        // `shown` suit l'ordre des groupes (compareBrews) : un en-tête avant
+        // le premier brassin de chaque groupe.
+        for (final (i, b) in shown.indexed) ...[
+          if (i == 0 ||
+              groupeBrassin(shown[i - 1].status) != groupeBrassin(b.status))
+            _EnTeteGroupe(groupeBrassin(b.status).libelle),
+          _Row(brew: b, readerUid: readerUid, now: now),
+        ],
+        if (invalid.isNotEmpty && shown.isNotEmpty)
+          const _EnTeteGroupe(BrewsScreen.illisibles),
         for (final d in invalid)
           LigneListe(
             icone: Icons.error_outline,
             erreur: true,
             titre: 'Brassin illisible',
-            details: const [
-              Text(
-                'Mettez l\'application à jour, ou prévenez l\'administrateur.',
-              ),
-            ],
+            details: const [Text(kDetailLigneIllisible)],
             onTap: () => context.go(AppRoutes.brew(d.id)),
           ),
       ],
     );
   }
+}
+
+/// En-tête d'un groupe de la liste, déclaré comme en-tête.
+class _EnTeteGroupe extends StatelessWidget {
+  const _EnTeteGroupe(this.libelle);
+
+  final String libelle;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: TitreSection(libelle, niveau: NiveauTitre.sousSection),
+  );
 }
 
 /// Date affichée dans la ligne d'un brassin. En fermentation et en
@@ -209,7 +232,7 @@ class _Row extends ConsumerWidget {
         if (date.isNotEmpty) Text(date),
       ],
       etiquettes: [
-        Etiquette(label: brew.status.label, ton: _tonStatut(brew.status)),
+        Etiquette(label: brew.status.label, ton: tonStatutBrassin(brew.status)),
         if (brew.hasPendingWrites)
           const Etiquette(label: 'En attente du réseau'),
       ],
@@ -218,9 +241,10 @@ class _Row extends ConsumerWidget {
   }
 }
 
-/// Ton de l'étiquette du statut d'un brassin dans la liste : neutre avant et
-/// hors du travail, tertiaire pendant, primaire une fois terminé.
-TonEtiquette _tonStatut(BrewStatus status) => switch (status) {
+/// Ton de l'étiquette du statut d'un brassin, dans la liste et sur la fiche :
+/// neutre avant et hors du travail, tertiaire pendant, primaire une fois
+/// terminé.
+TonEtiquette tonStatutBrassin(BrewStatus status) => switch (status) {
   BrewStatus.planned || BrewStatus.abandoned => TonEtiquette.neutre,
   BrewStatus.brewing ||
   BrewStatus.fermenting ||

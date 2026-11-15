@@ -242,6 +242,12 @@ abstract final class AppTheme {
         backgroundColor: scheme.primaryContainer,
         foregroundColor: scheme.onPrimaryContainer,
       ),
+      // Barre de défilement lisible (`onSurfaceVariant`, au moins 3:1 sur les
+      // surfaces) : le gris par défaut n'atteint pas 2:1 en clair.
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: WidgetStatePropertyAll(scheme.onSurfaceVariant),
+        thickness: const WidgetStatePropertyAll(6),
+      ),
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
       ),
@@ -314,7 +320,8 @@ class CouleursEtat extends ThemeExtension<CouleursEtat> {
   }
 }
 
-/// Tailles de texte de l'écran du jour de brassage, lisible à deux mètres.
+/// Tailles de texte de l'écran du jour de brassage, lisible à deux mètres, et
+/// de « Préparer le brassage ».
 @immutable
 class StylesJourDeBrassage extends ThemeExtension<StylesJourDeBrassage> {
   const StylesJourDeBrassage({
@@ -325,6 +332,10 @@ class StylesJourDeBrassage extends ThemeExtension<StylesJourDeBrassage> {
     required this.etapeLarge,
     required this.ensuite,
     required this.chronologie,
+    required this.etiquette,
+    required this.information,
+    required this.bouton,
+    required this.saisie,
   });
 
   static const standard = StylesJourDeBrassage(
@@ -335,6 +346,10 @@ class StylesJourDeBrassage extends ThemeExtension<StylesJourDeBrassage> {
     etapeLarge: 45,
     ensuite: 22,
     chronologie: 16,
+    etiquette: 18,
+    information: 18,
+    bouton: 22,
+    saisie: 28,
   );
 
   static StylesJourDeBrassage of(BuildContext context) =>
@@ -348,6 +363,18 @@ class StylesJourDeBrassage extends ThemeExtension<StylesJourDeBrassage> {
   final double ensuite;
   final double chronologie;
 
+  /// Étiquette d'étape (« ÉTAPE 2 SUR 7 · EN COURS »).
+  final double etiquette;
+
+  /// Ligne d'information sous le panneau (« Fin prévue vers… »).
+  final double information;
+
+  /// Libellé des boutons de l'écran du jour et de « Commencer le brassage ».
+  final double bouton;
+
+  /// Chiffres d'une mesure saisie à côté de la cuve.
+  final double saisie;
+
   @override
   StylesJourDeBrassage copyWith({double? minuteur, double? etape}) =>
       StylesJourDeBrassage(
@@ -358,6 +385,10 @@ class StylesJourDeBrassage extends ThemeExtension<StylesJourDeBrassage> {
         etapeLarge: etapeLarge,
         ensuite: ensuite,
         chronologie: chronologie,
+        etiquette: etiquette,
+        information: information,
+        bouton: bouton,
+        saisie: saisie,
       );
 
   @override

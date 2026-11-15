@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:brewing/brewing.dart' show alcoholByVolume;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/core/presentation/etiquette.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
@@ -115,7 +116,12 @@ void main() {
       tester,
     ) async {
       await fiche(tester, brew: fermentation());
-      expect(find.text('En fermentation · J+12'), findsOneWidget);
+      // Statut en étiquette, jour de fermentation en sous-titre.
+      expect(
+        find.widgetWithText(Etiquette, BrewStatus.fermenting.label),
+        findsOneWidget,
+      );
+      expect(find.text('Brassé le 8 nov. 2026 (J+12)'), findsOneWidget);
       expect(
         find.widgetWithText(FloatingActionButton, 'Ajouter un relevé'),
         findsOneWidget,
@@ -169,9 +175,10 @@ void main() {
         ),
       );
       expect(
-        find.text('En conditionnement · Embouteillé le 15 nov. 2026'),
+        find.widgetWithText(Etiquette, BrewStatus.conditioning.label),
         findsOneWidget,
       );
+      expect(find.text('Embouteillé le 15 nov. 2026'), findsOneWidget);
       await tester.tap(find.text('Marquer comme terminé'));
       await tester.pumpAndSettle();
       expect(find.text('Brassin terminé.'), findsOneWidget);

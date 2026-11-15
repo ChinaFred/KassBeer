@@ -229,8 +229,14 @@ String libellePlateforme(String? platform) => switch (platform) {
   final other => other,
 };
 
-/// « Envoyé avec : version 0.2.0, Android ».
-String envoyeAvec({required String? version, required String? platform}) =>
-    'Envoyé avec : '
+/// « version 0.2.0, Android ».
+String versionEtPlateforme({
+  required String? version,
+  required String? platform,
+}) =>
     '${version == null ? 'version indisponible' : 'version $version'}, '
     '${libellePlateforme(platform)}';
+
+/// « Envoyé avec : version 0.2.0, Android ».
+String envoyeAvec({required String? version, required String? platform}) =>
+    'Envoyé avec : ${versionEtPlateforme(version: version, platform: platform)}';

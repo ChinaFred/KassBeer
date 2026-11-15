@@ -92,6 +92,13 @@ class TransportMiseAJourPlateforme implements TransportMiseAJour {
       issue = const TransfertInterrompu();
     } on FileSystemException catch (erreur, pile) {
       issue = TransfertEcritureImpossible(erreur, pile);
+    } catch (erreur, pile) {
+      // Erreur inattendue (corps compressé illisible, rappel qui lève) : le
+      // fichier est refermé, puis l'erreur remonte à `AppUpdateService`, qui
+      // la rapporte et efface le fichier. Une erreur de `close` remonterait à
+      // sa place, rapportée de même.
+      await ecriture.sortie?.close();
+      Error.throwWithStackTrace(erreur, pile);
     } finally {
       client.close(force: true);
     }
@@ -127,7 +134,10 @@ class TransportMiseAJourPlateforme implements TransportMiseAJour {
     }
     final empreinte = _Empreinte();
     final calcul = sha256.startChunkedConversion(empreinte);
-    final sortie = File(chemin).openWrite();
+    // `open` lève l'erreur d'un dossier absent ou refusé à l'ouverture, sur
+    // Android comme ailleurs ; `openWrite` la rend plus tard, ou jamais sous
+    // Windows, où `flush` reste alors en attente.
+    final sortie = await File(chemin).open(mode: FileMode.write);
     ecriture.sortie = sortie;
     var recus = 0;
     await for (final bloc in reponse.timeout(delaiSilence)) {
@@ -137,7 +147,7 @@ class TransportMiseAJourPlateforme implements TransportMiseAJour {
       recus += part.length;
       if (recus > maxOctets) return const TransfertTropLong();
       calcul.add(part);
-      sortie.add(part);
+      await sortie.writeFrom(part);
       progression(recus);
     }
     if (annule()) return const TransfertInterrompu();
@@ -155,7 +165,7 @@ class TransportMiseAJourPlateforme implements TransportMiseAJour {
 
 /// Fichier ouvert par un téléchargement, refermé par l'appelant.
 class _Ecriture {
-  IOSink? sortie;
+  RandomAccessFile? sortie;
 }
 
 /// Reçoit le SHA-256 calculé au fil de l'écriture.

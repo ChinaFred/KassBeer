@@ -4,9 +4,9 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
-## 2026-11-14
+## 2026-11-15
 
-### v0.1.51 — fonctionnel
+### v0.1.61 — fonctionnel
 
 La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le
 référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf
@@ -14,7 +14,7 @@ absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, 
 LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant.
 « Sources des données » nomme cette nouvelle source.
 
-### v0.1.51 — technique
+### v0.1.61 — technique
 
 ADR-005, amendement du 2026-11-14 : source `fabricants` de l'ingestion, fichier BeerJSON 2.01
 écrit à la main (`import/sources/fabricants/cultures.json`, hors dépôt), lu par
@@ -24,8 +24,298 @@ Brewtarget garde l'identifiant de son document (`ingest/ecrire.mjs` n'efface rie
 `Données publiées par le fabricant`, version et date du relevé `2026-11-14`, acceptées par
 `ingest/lib/validation.mjs`. L'application affiche « Fiches des fabricants ». Les atténuations
 de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 dépassent la borne de 100 % : écartées et
-comptées au rapport. `DATA_SOURCES.md`, `exigences-techniques.md` et
-`exigences-fonctionnelles.md` mis à jour.
+comptées au rapport. Admin › Sources nomme la source « Fiches des fabricants » dans
+« Sources lues » (`libelleSourceExecution`) et dans son introduction. `DATA_SOURCES.md`,
+`exigences-techniques.md` et `exigences-fonctionnelles.md` mis à jour.
+
+### v0.1.60 — fonctionnel
+
+La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et
+devant la couleur calculée d'une recette. La page des teintes s'appelle désormais « Échelle
+des couleurs », comme le lien qui l'ouvre. En thème sombre, les teintes foncées ont une
+bordure plus visible. Demandé par le ticket #48.
+
+### v0.1.60 — technique
+
+Suites du ticket #48. `couleur_ebc.dart` : `CarreTeinte` (carré bordé d'une teinte),
+`PastilleEbc` (teinte d'une valeur EBC par `teinteEbc` de `brewing/`, masquée et rapportée
+une fois `library.color_swatch` si la valeur est refusée), `bordureTeinte` (`outline` au lieu
+de `outlineVariant` sur la barre, les pastilles de l'échelle et les nouvelles pastilles).
+`LigneFiche.avant` place un widget décoratif, exclu de la lecture d'écran, devant la valeur :
+pastille de 20 px devant la couleur d'un malt. `_Indicateur.teinte` : pastille de 24 px dans
+la tuile « Couleur » des calculs d'une recette. Titre de la page, nom de l'écran dans les
+tickets et « Sources des données » : « Échelle des couleurs ». Aucune formule ni table dans
+`app/lib/` (P3), aucune dépendance ajoutée.
+
+### v0.1.59 — fonctionnel
+
+Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière
+mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de
+documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur
+version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données ».
+Le bouton « Actualiser », ou un geste qui tire la page vers le bas, relit l'écran sans effacer
+ce qui est affiché. Si cette lecture échoue, un message le dit au-dessus du compte rendu ou de
+la liste, qui restent visibles.
+
+En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un
+ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50, avec le
+nombre de noms affichés, « Charger la suite » et la fin de la liste signalée. Chaque ligne
+donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de
+fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un
+nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne
+fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur.
+
+### v0.1.59 — technique
+
+Dernière partie de L4 d'ADR-005, préparée en v0.1.29 (PR #33) et reprise sur la branche
+principale par une fusion. `features/admin/` : `SourcesRepository` (`ingest_runs/` par
+`limit(1)`, `import_unresolved/` par pages de 50, `get()` seul), `domain/ingestion.dart`,
+`admin_sources_screen.dart`, `libelles_sources.dart` ; route `/admin/sources`. L'entrée d'Admin
+passe sur `LigneListe`, comme les autres, avec `AdminSourcesScreen.sousTitre`. L'écran suit
+Admin › Rapports d'erreur : `CarteSection` et `TitreSection` (sous-sections), états en `Encadre`
+dans chaque bloc au lieu d'`EtatVide`, d'`EtatErreur` et de `BandeauListePerimee` (panne de la
+page suivante dans le pied, à la place de « Charger la suite »), lignes en
+`LigneListe`, `IconButton` « Actualiser » de 48 px et `RefreshIndicator`, compte rendu sans la
+borne `kDialogMaxWidth`. L'échec d'une relecture sous un compte rendu affiché se lit par
+`hasError && hasValue` (Riverpod 3 garde la valeur). `LigneFiche` reçoit `selectionnable`
+(chemin du rapport en `SelectableText`). `firestore.rules` inchangé : les deux collections sont
+déjà lues par l'admin seul (P19).
+
+### v0.1.58 — fonctionnel
+
+Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on
+le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » :
+une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui
+écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le
+style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49.
+
+### v0.1.58 — technique
+
+`ChampBibliotheque` reçoit `choixDesStyles` (champ « Style » seul ; malts, houblons, ajouts et
+levures inchangés) et un quatrième argument `boutonListe` dans `fieldBuilder`. Nouveau
+`choix_style.dart` (`choisirStyle`, `stylesGroupes`, `aideStyleSaisi`) ; `stylesParCode` et
+`comparerCodesStyle` dans `referentiel.dart`. Index `beer_index/styles` lu par `get()` une fois,
+partagé entre la liste et la feuille, aucun `snapshots()` (P22). Aucune dépendance ni règle
+changée. L'aide « Style de la Bibliothèque » demande le nom exact, casse comprise, comme
+l'export BeerXML. Demandé par le ticket #49.
+
+La relecture ajoute : index des styles lu dès l'ouverture de l'éditeur, pour que l'aide « hors
+Bibliothèque » paraisse sur une recette existante sans focus ; états de la feuille par
+`EtatChargement`, `EtatVide` et `EtatErreur` (« Réessayer ») ; tailles de la feuille dans
+`breakpoints.dart` ; avertissement retenu pendant la frappe tant que le texte a des
+suggestions ; annonce « Style choisi » au lecteur d'écran ; curseur dans la recherche sur grand
+écran.
+
+### v0.1.57 — fonctionnel
+
+La fiche d'un houblon de la Bibliothèque montre ses arômes : des descripteurs (agrumes, floral,
+résineux…) et un court texte pour chaque moment d'ajout, du premier moût au houblonnage à cru.
+Ces textes sont rédigés par une IA pour Kass'Beer. La fiche dit s'ils ont été relus par
+l'administrateur, et signale une confiance faible. Les houblons de vos recettes sont relus en
+premier. Un houblon trop peu documenté l'indique au lieu d'inventer. L'écran « Sources des
+données » explique d'où viennent ces textes.
+
+### v0.1.57 — technique
+
+ADR-013 : descriptions aromatiques des houblons rédigées par l'API Claude (`claude-fable-5-2`,
+effort `medium` par défaut) depuis le poste de l'admin. `ingest/generer-aromes.mjs` et
+`ingest/lib/aromes/` (SDK `@anthropic-ai/sdk` 1.8.0 en version exacte, chargé au premier appel,
+sorties structurées, API Batches, tarif lu dans `import/ingest/aromes/tarif.json`, budget,
+confirmation, `--nouveaux` pour les houblons ajoutés depuis) ; `ingest/lister-houblons-recettes.mjs`
+(lecture seule de `recipes/` et `brews/`) et `exchange/bin/lister_houblons_recettes.dart`
+(`IndexBibliotheque.resoudre`, nouvelle `correspondances`) ; `ecrire.mjs --aromes` écrit
+`beer_hop_aromas/` après validation et relecture, et compte les houblons sans description.
+`firestore.rules` : `beer_hop_aromas/{id}` en `get` par `isMember()`, aucune liste ni écriture,
+tests des cinq profils. Application : `AromesHoublon`, `lireAromesHoublon` (un `get`),
+`SectionAromes` dans la fiche d'un houblon, paragraphe de « Sources des données ». Nouveau
+poste de coût `hop_aroma_generation` ; contrôles P54 et P55. Paquets ajoutés à
+`ingest/package-lock.json` : `@anthropic-ai/sdk` 1.8.0, `json-schema-to-ts` 3.1.1,
+`@babel/runtime` 7.29.14, `ts-algebra` 2.0.0, `standardwebhooks` 1.1.1, `@stablelib/base64`
+1.0.1, `fast-sha256` 1.3.0. Aucune dépendance de l'application ne change.
+
+## 2026-11-14
+
+### v0.1.56 — fonctionnel
+
+Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur » la teinte de la
+bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de
+0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et
+depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle
+dépend du verre, de la lumière et de l'écran. Au-delà de 79 EBC, la teinte ne fonce plus, et la
+fiche le dit. « Sources des données » nomme la source des teintes et donne le texte de sa
+licence. Demandé par le ticket #48.
+
+### v0.1.56 — technique
+
+`brewing/` : `teinteEbc` (EBC → `0xRRGGBB`), `degradeEbc` (arrêts d'un dégradé de plage) et
+`teinteEbcLimite` (78,8 EBC), sur la table générée `teintes_srm.dart` : 400 triplets du paquet
+npm srm2hex 1.0.2 (MIT, archive de SHA-1 d84847e600a65eaee38247e2bce6e6d33c214d14), repris par
+script, indexés par floor(`ebcToSrm` × 10). Au-delà de 40 SRM, dernière teinte de la table.
+Fixture écrite à la main `brewing/test/fixtures/teinte.json` (14 teintes dont une frontière à
+11,82 EBC, 4 dégradés, 4 cas refusés, empreinte FNV-1a de `lookup.js` qui vérifie la table
+générée ; génération décrite dans `DATA_SOURCES.md`). Application : `couleur_ebc.dart`
+(`BarreCouleurEbc`, `BandeTeintes`, `TextesCouleurEbc.depasseLimite` et `auDela`),
+`couleurs_ebc_screen.dart` (sans état d'erreur : ses entrées sont des constantes valides,
+cases de la grille suivant l'échelle du texte), texte MIT `DataSourcesScreen.licenceMit`,
+route `/bibliotheque/couleurs` hors de la coquille, lien « Échelle des couleurs » dans
+l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des données » et dans
+`DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
+Pastille sur la fiche d'un malt et sur la recette : plus tard. Demandé par le ticket #48.
+
+### v0.1.55 — fonctionnel
+
+« Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple
+et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un
+nouveau processus prérempli ; rien n'est enregistré avant « Enregistrer ».
+
+Une courbe des températures accompagne le jour de brassage. Elle montre la température visée
+de chaque étape selon le plan de départ et selon les heures réelles, les températures et les
+densités mesurées, et la densité initiale prévue. Sur le téléphone, une bascule « Étapes » |
+« Courbe » l'affiche à la place de la chronologie ; sur grand écran, elle se place sous le
+minuteur. Sur la fiche du brassin, elle paraît en tête de la journée de brassage dès la
+première étape commencée. En paysage, sur un téléphone, la bascule garde le minuteur visible.
+
+La courbe de fermentation commence à la densité initiale du jour de brassage : un seul relevé
+suffit pour la voir. Elle montre aussi les densités initiale et finale prévues, et la plage de
+température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente
+de la Bibliothèque, ou sans plage, une ligne le dit.
+
+### v0.1.55 — technique
+
+`brewing/` : `brewDayTemperatureSeries` (`brew_day_curve.dart`) calcule les températures visées
+du plan de départ et recalculées, le retard et les débuts théoriques à partir de l'horaire de
+`recomputeSchedule` ; cas `brew_day_temperatures` et modèle `fiches` ajoutés d'abord à
+`brewing/test/fixtures/process.json`. Application : `modele_fiches.dart`, `modeles_a_copier.dart`
+(`ModeleACopier`, route `?modele=exemple|fiches`), section « Modèles à copier » de
+`process_list_screen.dart` ; « Partir du modèle d'exemple », `partirExemple` et
+`AppRoutes.newProcessFromExample` retirés (remplacés par `AppRoutes.newProcessFrom`).
+`courbe_brassage.dart` (`CourbeBrassage`, `donneesCourbeBrassage`, `resumeCourbeBrassage`),
+`ZoneChronologieCourbe` dans l'écran du jour (aussi en paysage bas), `TraceCourbeBrassage`,
+`LignePrevue` et `PlageTrace` dans `trace_courbe.dart`, seul import de `fl_chart` (P18) :
+graduations de densité rondes sur la grille, axe de droite sans libellés sous 200 px de tracé,
+info-bulle à distance euclidienne qui réunit les séries touchées. Légende partagée
+`legende_courbe.dart` (trait, disque, losange, aplat). `brewing/` : `gravityGapPoints` (cas
+`gravity_gap` de `gravity.json`) pour l'écart des densités prévues ; l'écart initial se compte
+sur la densité initiale retenue seule. `prevuDe` passe dans `brews/domain/prevu.dart`
+(`CalculsRecette.calculOuNul`), ce qui retire l'import circulaire entre
+`releve_fermentation.dart` et `prevu_et_mesure.dart`. Plage de la levure :
+`plage_levure.dart` (`plageLevureProvider`), résolution par le nom (`IndexBibliotheque.resoudre`)
+dans `beer_index/cultures`, puis `beer_cultures/{id}` par `get()` (P22) ; `lireFiche` reçoit
+`cacheSeul` pour le hors ligne. Lecture faite par la fiche seule ; le test « P2 » de
+`deroule_d4_test.dart` couvre les fichiers de la courbe du jour et refuse qu'ils lisent la
+Bibliothèque. Fiche : la courbe du jour ne paraît qu'après le premier début d'étape. « Mes
+processus » : « Modèles à copier » aussi sous une panne de lecture. Aucune écriture Firestore
+nouvelle, aucune règle changée, aucune dépendance changée.
+
+### v0.1.54 — fonctionnel
+
+Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche.
+Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie »,
+« Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi
+compléter les recettes importées l'une après l'autre. Demandé par le ticket #60.
+
+### v0.1.54 — technique
+
+Recettes › Importer : la fiche d'une recette créée s'ouvre par `push` sur une route hors de la
+coquille, `/recettes/importer/:id` (`AppRoutes.importedRecipe`, `ImportedRecipeScreen` :
+`RecipeDetailScreen` dans une `PageSecondaire` « Recette »). L'import est ouvert par `push`
+depuis la liste des recettes, donc au-dessus de la coquille ; un `push` de `/recettes/:id`
+ajoutait une seconde page de coquille de même clé, le `Navigator` levait l'assertion
+`!keyReservation.contains(key)` et la fiche ne s'affichait pas. Nouvelle route inscrite dans
+`ticket_screens.dart` (nom d'écran, menu du compte, écrans à prix, et les quatre fenêtres de la
+fiche : Exporter, Nouveau brassin, Prix d'un ingrédient, Reprendre un prix). Les sorties de la
+fiche gardent le compte rendu dans la pile : `RecipeDetailScreen(depuisImport: true)` ouvre
+`RecipeEditorScreen` et `BrewStepsEditorScreen` avec `extra: AppRoutes.retourParPop`, qui se
+ferment par `pop` après « Enregistrer » ; Supprimer fait `pop`, Dupliquer ouvre la copie par
+`push` sur `/recettes/importer/:id`, l'état absent affiche « Revenir au compte rendu ». Tests
+ajoutés à `import_recipes_test.dart` sur le parcours réel (liste, import, fiche, retour ;
+Modifier puis Enregistrer ; Supprimer) ; le test 11 est gardé. Demandé par le ticket #60.
+
+### v0.1.53 — fonctionnel
+
+Quand l'écran du jour se rouvre après une coupure, le message « Brassage repris » s'affiche sous
+l'étape en cours, avec un bouton « Fermer ». Il ne cache plus le bas de la chronologie et reste
+lisible en paysage avec un grand texte. Sur un petit téléphone, une barre de défilement indique
+que le panneau de l'étape continue plus bas.
+
+La fiche d'un brassin en fermentation indique la date du brassage avant le jour de fermentation
+(« Brassé le 8 nov. 2026 (J+12) »). Le suivi d'un ticket prend la présentation des autres
+fiches : titre, type et statut en tête, puis la date d'envoi, la version et l'écran en lignes.
+
+### v0.1.53 — technique
+
+Suite du lot 4 de la revue visuelle (remarques « plus tard » de la revue UX). `GroupeBrassins` et
+`groupeBrassin` passent de `brews_screen.dart` à `domain/brew.dart` ; `compareBrews` trie
+d'après ce groupe, et `_bucket`, qui le recopiait, sort. L'annonce de reprise devient un
+`Encadre` du panneau (`liveRegion`), placé dans `_DefilementPanneau` (`Scrollbar` toujours
+visible, dessinée seulement si le contenu dépasse, sans la seconde barre du web de bureau),
+sous la carte de l'étape ; `scrollbarTheme` du thème en `onSurfaceVariant`, 6 px ; le test à 200 % n'écarte plus l'erreur
+« Floating SnackBar presented off screen », et `masquerAnnonce` sort des tests. Le test du thème
+contrôle le texte coloré sur `surfaceContainerLow` (fond des cartes), en clair et en sombre.
+Mise à jour de l'APK : le fichier téléchargé s'ouvre par `File.open(mode: FileMode.write)` à la
+place d'`openWrite`, qui sous Windows ne rendait jamais l'erreur d'un dossier absent ;
+`app_update_transport_test` « dossier absent » passe sur le poste. Une erreur inattendue du
+téléchargement (corps illisible, rappel qui lève) referme aussi le fichier avant de remonter,
+avec son test (relecture `securite`). Bornes de taille et SHA-256 inchangés (P51).
+
+### v0.1.52 — fonctionnel
+
+Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois
+celui des autres administrateurs. Ses lancements ne consomment pas les 10 du groupe, et
+inversement. Le compteur d'Admin › Tickets et la boîte de lancement affichent le plafond du
+compte connecté. Le mois compte tous les lancements.
+
+### v0.1.52 — technique
+
+Compte fondateur reconnu par le champ `founder: true` de `members/{email}`, posé dans la
+console Firebase (les règles refusent ce champ à tout client : liste blanche de `create`,
+`update` fermé ; aucun e-mail dans le code, P15). `requireAdmin` rend `founder` sans lecture de
+plus (`isFounder`, `functions/src/auth.ts`). `FOUNDER_LAUNCHES_PER_DAY` = 5 ×
+`LAUNCHES_PER_DAY` (`config.ts`), compteur `ticket_quotas/launch_founder_{AAAAMMJJ}`,
+`ticket_status/launches` gagne `founder_count_day` et `founder_per_day` (`launchModel.ts` :
+`LaunchPool`, `launchLimitOf`). Client : `Member.founder`, `EtatLancements.vuePour`, appliqué
+par `launchStatusProvider`. P36 et « Coûts variables » de `CLAUDE.md` modifiés (décision de
+l'utilisateur du 2026-11-14). Réglage après le déploiement : ajouter `founder` (booléen,
+`true`) au document `members/` du fondateur dans la console Firebase.
+
+La relecture ajoute des tests : compteur du fondateur rendu sur un échec, deux lancements
+simultanés du fondateur, champ `founder` refusé par les règles à l'admin ; cas fondateur ajoutés à
+`test-fixtures/member_access.json`, rejoués par `functions/test/auth.test.ts` et
+`app/test/members_repository_test.dart` (P31, ligne de « Logique dupliquée » mise à jour). P31
+nomme aussi `app/lib/features/members/domain/member.dart` (cinq fichiers au lieu de quatre, accord
+de l'utilisateur du 2026-11-14).
+
+### v0.1.51 — fonctionnel
+
+Les fiches d'une recette, d'un brassin, d'un équipement et d'un processus ont un en-tête avec le
+nom et ses étiquettes, puis des sections dans des cartes. Sur la fiche d'un brassin, la prochaine
+journée et son bouton sont en tête, dans une carte colorée. Les boutons suivent le même ordre
+partout : l'action principale en plein, « Modifier » en teinte, « Supprimer » en rouge. La liste
+des brassins est groupée : en cours, prévus, terminés et abandonnés. La recherche des recettes
+prend toute la largeur. Les listes vides de tickets, de prix et de membres ont un titre.
+
+Sur l'écran du jour, l'étape en cours est dans une carte, avec une barre qui montre le temps
+écoulé. Quand le temps est dépassé, la carte passe à l'ambre, avec un bord et une alarme.
+L'étape et l'heure de fin s'écrivent plus grand, pour se lire à deux mètres. Dans la
+chronologie, une étape faite est en vert et l'étape en cours en brun. Dans « Préparer le
+brassage », chaque vérification a l'icône et la couleur de son état, et le nom du brassin et sa
+date sont sur deux lignes.
+
+### v0.1.51 — technique
+
+Lot 4 de la revue visuelle, en deux branches réunies (4a fiches et listes, 4b écran du jour).
+Composants `EnTeteFiche`, `CarteSection` (débord de `kDebordCarteCompact` sous 600 px),
+`RepereDisque`, `SurLigneChoisie` (contour de l'`Etiquette` sur une ligne choisie),
+`PageSecondaire.marges` (borne dans la liste, défilement à la molette au-dessus des marges),
+`ContenuRecette.enCartes`, `GroupeBrassins`, `kDetailLigneIllisible` ; fiche équipement à 840 px ;
+27 `OutlineInputBorder()` explicites retirés (le thème les fournit). Écran du jour : `_CarteEtape`
+(`primaryContainer`, puis `tertiaryContainer` et bord `tertiary` en dépassé, même marge),
+`TimerReading.elapsedFraction` dans `brewing/` avec ses cas dans `planning.json` (P3),
+`StylesJourDeBrassage` gagne `etiquette`, `information`, `bouton` et `saisie` (plus aucune taille en
+dur dans `brew_day/`), colonne d'heure de la chronologie `kChronologieHeureWidth` multipliée par
+l'échelle du texte et bornée à `kChronologieHeureMaxFraction`, état explicite des vérifications de
+« Préparer ». Aucune lecture ni écriture de l'écran du jour changée (P2). Aucune dépendance
+changée.
 
 ### v0.1.50 — fonctionnel
 

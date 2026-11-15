@@ -31,9 +31,13 @@ import 'recipes_providers.dart';
 
 /// Nouvelle recette ([id] nul) ou modification d'une recette, en plein écran.
 class RecipeEditorScreen extends ConsumerWidget {
-  const RecipeEditorScreen({super.key, this.id});
+  const RecipeEditorScreen({super.key, this.id, this.retourParPop = false});
 
   final String? id;
+
+  /// Vrai : ouvert depuis la fiche importée ; « Enregistrer » ferme l'éditeur
+  /// par `pop` pour garder le compte rendu de l'import sous la fiche.
+  final bool retourParPop;
 
   static const readOnlyMessage = 'Seul l\'auteur modifie cette recette.';
 
@@ -69,16 +73,25 @@ class RecipeEditorScreen extends ConsumerWidget {
             ),
           );
         }
-        return _RecipeEditor(key: ValueKey(id), initial: recipe);
+        return _RecipeEditor(
+          key: ValueKey(id),
+          initial: recipe,
+          retourParPop: retourParPop,
+        );
       },
     );
   }
 }
 
 class _RecipeEditor extends ConsumerStatefulWidget {
-  const _RecipeEditor({super.key, required this.initial});
+  const _RecipeEditor({
+    super.key,
+    required this.initial,
+    this.retourParPop = false,
+  });
 
   final Recipe? initial;
+  final bool retourParPop;
 
   @override
   ConsumerState<_RecipeEditor> createState() => _RecipeEditorState();
@@ -117,8 +130,9 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
 
   /// Aide du champ « Style ».
   static const styleAide =
-      'Tapez un code (21A) ou un nom, puis choisissez une suggestion. '
-      'L\'export BeerXML demande un style de la Bibliothèque.';
+      'Tapez un code (21A) ou un nom, puis choisissez une suggestion, ou '
+      'ouvrez la liste des styles. L\'export BeerXML demande un style de la '
+      'Bibliothèque.';
 
   @override
   void initState() {
@@ -258,7 +272,11 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       _saving = false;
       _dirty = false;
     });
-    context.go(AppRoutes.recipe(id));
+    if (widget.retourParPop && context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.recipe(id));
+    }
   }
 
   // ------------------------------------------------------------ lignes
@@ -604,14 +622,16 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       const SizedBox(height: 8),
       // Style BJCP choisi dans la Bibliothèque par son code ou son nom
       // (ADR-005, E3) : son nom exact est écrit, l'export BeerXML le retrouve.
-      // La saisie libre reste possible.
+      // La saisie libre reste possible. La liste s'ouvre sur un champ vide, et
+      // l'icône de fin de champ ouvre « Choisir un style » (ticket #49).
       ChampBibliotheque(
         nature: NatureReferentiel.styles,
+        choixDesStyles: true,
         controller: _style,
         focusNode: _styleFocus,
         detail: detailStyle,
         onSelected: _changed,
-        fieldBuilder: (context, aide, onSubmitted) => TextFormField(
+        fieldBuilder: (context, aide, onSubmitted, boutonListe) => TextFormField(
           controller: _style,
           focusNode: _styleFocus,
           // Entrée choisit la suggestion surlignée après ↑ ou ↓ ; sinon le style
@@ -622,6 +642,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           decoration: InputDecoration(
             labelText: 'Style (facultatif)',
             helperText: aide ?? styleAide,
+            suffixIcon: boutonListe,
             helperMaxLines: 8,
           ),
           onChanged: _changed,

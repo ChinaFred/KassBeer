@@ -119,9 +119,7 @@ class _List extends StatelessWidget {
             icone: Icons.error_outline,
             erreur: true,
             titre: 'Équipement illisible',
-            details: const [
-              Text('Le document contient une valeur inattendue.'),
-            ],
+            details: const [Text(kDetailLigneIllisible)],
             onTap: () => context.go(AppRoutes.equipmentItem(d.id)),
           ),
       ],

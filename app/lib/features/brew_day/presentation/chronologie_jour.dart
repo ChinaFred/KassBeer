@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:brewing/brewing.dart'
     show
         ActualDayDuration,
@@ -8,6 +10,7 @@ import 'package:brewing/brewing.dart'
         StepStatus;
 import 'package:flutter/material.dart';
 
+import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/services/error_report_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -158,6 +161,20 @@ IconData iconeEtat(StepStatus status) => switch (status) {
   StepStatus.notDone => Icons.remove_circle_outline,
 };
 
+/// Couleur de l'icône d'état : fait en succès, en cours en `primary`, le reste
+/// (à venir, sautée, non faite) en `onSurfaceVariant`. Le libellé
+/// ([libelleEtat]) dit l'état, la couleur ne fait que le souligner.
+Color couleurEtat(BuildContext context, StepStatus status) {
+  final scheme = Theme.of(context).colorScheme;
+  return switch (status) {
+    StepStatus.done => CouleursEtat.of(context).succes,
+    StepStatus.running => scheme.primary,
+    StepStatus.pending ||
+    StepStatus.skipped ||
+    StepStatus.notDone => scheme.onSurfaceVariant,
+  };
+}
+
 /// Colonne d'heure d'une ligne : heure réelle pour une étape faite ou en cours,
 /// heure attendue pour une étape à venir (vide si les heures sont incohérentes).
 String heureDeLigne(LigneJour ligne, PlanDuJour plan) {
@@ -183,6 +200,21 @@ String libelleSaisie(BrewEvent e) {
     if (e.note != null) e.note!,
   ].join(' · ');
 }
+
+/// Marge horizontale d'une ligne d'étape.
+const double _kMargeLigne = 8;
+
+/// Largeur de la colonne d'heure pour une chronologie large de [largeur] et une
+/// échelle du texte [echelle] : [kChronologieHeureWidth] × [echelle], bornée à
+/// [kChronologieHeureMaxFraction] de [largeur], jamais sous
+/// [kChronologieHeureWidth].
+double largeurColonneHeure(double largeur, double echelle) => math.max(
+  kChronologieHeureWidth,
+  math.min(
+    kChronologieHeureWidth * echelle,
+    largeur * kChronologieHeureMaxFraction,
+  ),
+);
 
 /// Liste des étapes d'un brassin, sur la fiche et l'écran du jour.
 class ChronologieJour extends StatelessWidget {
@@ -223,6 +255,26 @@ class ChronologieJour extends StatelessWidget {
     final reelles = etapes != null && etapes.length == plan.lignes.length
         ? etapes
         : null;
+    final echelle = MediaQuery.textScalerOf(context).scale(1);
+    return LayoutBuilder(
+      builder: (context, constraints) => _colonne(
+        theme,
+        textSize,
+        reelles,
+        largeurColonneHeure(constraints.maxWidth, echelle),
+      ),
+    );
+  }
+
+  Widget _colonne(
+    ThemeData theme,
+    double textSize,
+    List<ActualStepDuration>? reelles,
+    double heure,
+  ) {
+    // Mesures, notes et débuts en double : alignés sur la fin de la colonne
+    // d'heure.
+    final retrait = _kMargeLigne + heure;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -242,11 +294,13 @@ class ChronologieJour extends StatelessWidget {
             heure: heureDeLigne(l, plan),
             reelle: reelles?[i],
             textSize: textSize,
+            largeurHeure: heure,
             onTap: onTapLigne == null ? null : () => onTapLigne!(l),
           ),
           for (final d in l.doublons)
             _Doublon(
               event: d,
+              retrait: retrait,
               onSupprimer: onSupprimerDoublon == null
                   ? null
                   : () => onSupprimerDoublon!(d),
@@ -254,6 +308,7 @@ class ChronologieJour extends StatelessWidget {
           for (final s in l.mesures)
             _Saisie(
               event: s,
+              retrait: retrait,
               onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
             ),
         ],
@@ -266,6 +321,7 @@ class ChronologieJour extends StatelessWidget {
           for (final s in plan.mesuresSansEtape)
             _Saisie(
               event: s,
+              retrait: retrait,
               onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
             ),
       ],
@@ -279,6 +335,7 @@ class _Ligne extends StatelessWidget {
     required this.heure,
     required this.reelle,
     required this.textSize,
+    required this.largeurHeure,
     required this.onTap,
   });
 
@@ -288,6 +345,9 @@ class _Ligne extends StatelessWidget {
   /// Prévu et réel de l'étape (fiche), ou nul : durée prévue seule.
   final ActualStepDuration? reelle;
   final double textSize;
+
+  /// Largeur de la colonne d'heure ([largeurColonneHeure]).
+  final double largeurHeure;
   final VoidCallback? onTap;
 
   @override
@@ -305,14 +365,21 @@ class _Ligne extends StatelessWidget {
     final content = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 64),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: _kMargeLigne,
+          vertical: 8,
+        ),
         child: Row(
           children: [
             SizedBox(
-              width: 104,
+              width: largeurHeure,
               child: Text(heure, style: TextStyle(fontSize: textSize)),
             ),
-            Icon(iconeEtat(ligne.status), size: 24),
+            Icon(
+              iconeEtat(ligne.status),
+              size: 24,
+              color: couleurEtat(context, ligne.status),
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -337,8 +404,11 @@ class _Ligne extends StatelessWidget {
           '$durationLue',
       onTap: onTap,
       excludeSemantics: true,
+      // Fond seulement pour l'étape en cours ; les autres lignes restent sur
+      // le fond de la liste (Material transparent, sans couleur).
       child: Material(
-        color: running ? scheme.primaryContainer : Colors.transparent,
+        type: running ? MaterialType.canvas : MaterialType.transparency,
+        color: running ? scheme.primaryContainer : null,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(onTap: onTap, child: content),
       ),
@@ -347,9 +417,16 @@ class _Ligne extends StatelessWidget {
 }
 
 class _Saisie extends StatelessWidget {
-  const _Saisie({required this.event, required this.onTap});
+  const _Saisie({
+    required this.event,
+    required this.retrait,
+    required this.onTap,
+  });
 
   final BrewEvent event;
+
+  /// Retrait à gauche : fin de la colonne d'heure.
+  final double retrait;
   final VoidCallback? onTap;
 
   @override
@@ -362,7 +439,7 @@ class _Saisie extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(112, 4, 8, 4),
+            padding: EdgeInsets.fromLTRB(retrait, 4, 8, 4),
             child: Row(
               children: [
                 Expanded(
@@ -391,9 +468,16 @@ class _Saisie extends StatelessWidget {
 }
 
 class _Doublon extends StatelessWidget {
-  const _Doublon({required this.event, required this.onSupprimer});
+  const _Doublon({
+    required this.event,
+    required this.retrait,
+    required this.onSupprimer,
+  });
 
   final StepEvent event;
+
+  /// Retrait à gauche : fin de la colonne d'heure.
+  final double retrait;
   final VoidCallback? onSupprimer;
 
   @override
@@ -401,7 +485,7 @@ class _Doublon extends StatelessWidget {
     final theme = Theme.of(context);
     final supprimer = onSupprimer;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(112, 0, 8, 4),
+      padding: EdgeInsets.fromLTRB(retrait, 0, 8, 4),
       child: Row(
         children: [
           Expanded(
