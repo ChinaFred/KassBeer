@@ -19,6 +19,7 @@ import 'features/admin/data/logs_repository.dart';
 import 'features/admin/data/sources_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/brews/data/brews_repository.dart';
+import 'features/brews/data/preference_mesure_repository.dart';
 import 'features/costs/data/costs_repository.dart';
 import 'features/equipment/data/equipment_repository.dart';
 import 'features/import/data/import_fiches_repository.dart';
@@ -143,6 +144,9 @@ Future<void> main() async {
         ),
         brewsRepositoryProvider.overrideWithValue(
           FirestoreBrewsRepository(errorReportService: errors),
+        ),
+        preferenceMesureRepositoryProvider.overrideWithValue(
+          FirestorePreferenceMesureRepository(errorReportService: errors),
         ),
         costsRepositoryProvider.overrideWithValue(
           FirestoreCostsRepository(errorReportService: errors),

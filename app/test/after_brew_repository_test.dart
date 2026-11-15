@@ -53,7 +53,7 @@ void main() {
           brewId: brewId,
           ownerUid: owner,
           releve: ReleveSaisi(
-            gravity: 1.02,
+            gravity: const DensiteSaisie(sg: 1.02),
             temperature: 18.5,
             note: ' Fermentation active ',
             measuredAt: at,
@@ -102,7 +102,7 @@ void main() {
         brewId: brewId,
         ownerUid: owner,
         releve: ReleveSaisi(
-          gravity: gravity,
+          gravity: gravity == null ? null : DensiteSaisie(sg: gravity),
           temperature: temperature,
           note: note,
           measuredAt: at,
@@ -123,7 +123,7 @@ void main() {
         ownerUid: owner,
         avant: avant,
         releve: ReleveSaisi(
-          gravity: 1.019,
+          gravity: const DensiteSaisie(sg: 1.019),
           temperature: 17.5,
           measuredAt: nouvelleHeure,
         ),
@@ -145,7 +145,10 @@ void main() {
         brewId: brewId,
         ownerUid: owner,
         avant: avant,
-        releve: ReleveSaisi(gravity: 1.02, measuredAt: at),
+        releve: ReleveSaisi(
+          gravity: const DensiteSaisie(sg: 1.02),
+          measuredAt: at,
+        ),
       );
       final data = await relus();
       expect(data.length, 1);
@@ -160,7 +163,11 @@ void main() {
           brewId: brewId,
           ownerUid: owner,
           avant: avant,
-          releve: ReleveSaisi(gravity: 1.02, temperature: 18, measuredAt: at),
+          releve: ReleveSaisi(
+            gravity: const DensiteSaisie(sg: 1.02),
+            temperature: 18,
+            measuredAt: at,
+          ),
         );
         final data = await relus();
         expect(data.length, 2);
@@ -180,7 +187,11 @@ void main() {
           brewId: brewId,
           ownerUid: owner,
           avant: avant,
-          releve: ReleveSaisi(gravity: 1.02, note: 'Bulles', measuredAt: at),
+          releve: ReleveSaisi(
+            gravity: const DensiteSaisie(sg: 1.02),
+            note: 'Bulles',
+            measuredAt: at,
+          ),
         );
         final data = (await relus()).values.single;
         expect(data['kind'], 'measurement');
@@ -215,7 +226,11 @@ void main() {
       final created = repository.addReleve(
         brewId: brewId,
         ownerUid: owner,
-        releve: ReleveSaisi(gravity: 1.02, temperature: 18, measuredAt: at),
+        releve: ReleveSaisi(
+          gravity: const DensiteSaisie(sg: 1.02),
+          temperature: 18,
+          measuredAt: at,
+        ),
       );
       await created.written;
       final docs = await events().get();
@@ -261,7 +276,7 @@ void main() {
           primingSugarName: 'Saccharose',
         ),
         nouveauStatut: BrewStatus.conditioning,
-        finalGravity: 1.012,
+        finalGravity: const DensiteSaisie(sg: 1.012),
         ownerName: null,
       );
       final data = await brassin();

@@ -17,7 +17,7 @@ double platoToSg(double plato) {
   if (!plato.isFinite) {
     throw BrewingInputException('plato', plato, 'nombre fini attendu');
   }
-  final sg = 1 + plato / (258.6 - (plato / 258.2) * 227.1);
+  final sg = platoVersSgSansBornes(plato);
   if (!sg.isFinite || sg < minGravity || sg > maxGravity) {
     throw BrewingInputException(
       'plato',
@@ -27,6 +27,13 @@ double platoToSg(double plato) {
   }
   return sg;
 }
+
+/// Formule de [platoToSg], sans contrôle de bornes : le résultat peut sortir de
+/// [minGravity]–[maxGravity] ou ne pas être fini. Lue par [platoToSg] et par la
+/// lecture d'un réfractomètre, qui contrôle le résultat sans exception. Non
+/// exportée par `brewing.dart`.
+double platoVersSgSansBornes(double plato) =>
+    1 + plato / (258.6 - (plato / 258.2) * 227.1);
 
 /// Degrés Plato d'une densité SG décimale (polynôme de l'ASBC) :
 /// P = −616,868 + 1111,14 × SG − 630,272 × SG² + 135,997 × SG³.

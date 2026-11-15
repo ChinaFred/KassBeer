@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
 import 'package:kass_beer/features/brews/domain/brew_event.dart';
+import 'package:kass_beer/features/brews/domain/mesures_retenues.dart';
 import 'package:kass_beer/features/brews/domain/releves.dart';
 import 'package:kass_beer/features/brews/presentation/courbe_fermentation.dart';
 import 'package:kass_beer/features/brews/presentation/plage_levure.dart';
@@ -206,7 +207,7 @@ void main() {
     final courbe = serieDesReleves(
       brew: brew,
       ascendants: ascendants,
-      initiale: og,
+      initiale: MesuresRetenues.de(brew, [og]).densiteInitiale,
       errors: errors,
       reported: {},
     )!;
