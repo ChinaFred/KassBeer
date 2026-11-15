@@ -16,9 +16,9 @@ void main() {
       );
   });
 
-  test('200 cultures (25 Fermentis, 16 Mangrove Jack\'s, 55 Imperial, '
-      '104 Omega), aucun rejet', () {
-    expect(lecture.entrees, hasLength(200));
+  test('362 cultures (25 Fermentis, 16 Mangrove Jack\'s, 55 Imperial, '
+      '104 Omega, 115 White Labs, 47 The Yeast Bay), aucun rejet', () {
+    expect(lecture.entrees, hasLength(362));
     final parProducteur = <String, int>{};
     for (final e in lecture.entrees) {
       parProducteur[e.producteur!] = (parProducteur[e.producteur!] ?? 0) + 1;
@@ -28,6 +28,8 @@ void main() {
       "Mangrove Jack's": 16,
       'Imperial Yeast': 55,
       'Omega Yeast': 104,
+      'White Labs': 115,
+      'The Yeast Bay': 47,
     });
     expect(lecture.rejets, isEmpty);
     expect(lecture.listesIgnorees, isEmpty);
@@ -35,7 +37,7 @@ void main() {
     expect(lecture.entrees.map((e) => e.nature).toSet(), {
       NatureReferentiel.culture,
     });
-    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(200));
+    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(362));
   });
 
   test('chaque fiche porte la date du relevé de son producteur', () {
@@ -46,6 +48,37 @@ void main() {
       }, reason: e.nom);
     }
   });
+
+  test(
+    'White Labs et The Yeast Bay : WLP partout, types et champs absents attendus',
+    () {
+      final wl = {
+        for (final e in lecture.entrees.where(
+          (e) =>
+              e.producteur == 'White Labs' || e.producteur == 'The Yeast Bay',
+        ))
+          e.produit!: e,
+      };
+      expect(wl.keys.every((k) => k.startsWith('WLP')), isTrue);
+      expect(wl['WLP001']!.valeurs['type'], 'ale');
+      expect(wl['WLP800']!.valeurs['type'], 'lager');
+      expect(wl['WLP300']!.valeurs['type'], 'wheat');
+      expect(wl['WLP650']!.valeurs['type'], 'brett');
+      expect(wl['WLP665']!.valeurs['type'], 'mixed-culture');
+      expect(wl['WLP4050']!.valeurs['type'], 'kveik');
+      expect(
+        wl.values
+            .where((e) => !e.valeurs.containsKey('type'))
+            .map((e) => e.produit),
+        unorderedEquals(['WLP631', 'WLP6420']),
+      );
+      expect(
+        wl.values.where((e) => !e.valeurs.containsKey('attenuation')),
+        hasLength(18),
+      );
+      expect(wl.keys.where((k) => k.startsWith('WLP7')), isEmpty);
+    },
+  );
 
   test('Omega : types tirés de la fiche, champs absents attendus', () {
     final om = {

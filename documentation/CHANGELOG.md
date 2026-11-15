@@ -6,6 +6,33 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.74 — fonctionnel
+
+La Bibliothèque reprend les fiches de 162 cultures de White Labs et de sa gamme The Yeast Bay :
+levures d'ale et de lager, levures de bière de blé, kveiks, Brettanomyces, bactéries et
+assemblages pour bières acides. Type, atténuation, plage de température et floculation
+viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour les
+123 cultures déjà connues. 39 cultures absentes jusqu'ici apparaissent. Les levures de vin, de
+cidre et de distillerie ne sont pas reprises. L'écran « Sources des données » nomme White Labs
+et The Yeast Bay. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance
+l'ingestion.
+
+### v0.1.74 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 162 cultures WLP relevées le 2026-11-15 sur
+`www.whitelabs.com` (115 White Labs, 47 The Yeast Bay d'après le titre de la fiche), règles
+dans l'en-tête ; non reprises : WLP700 à WLP799, WLP616, distillerie, kombucha, bactéries
+acétiques et malolactiques, WLP686, WLP692, produits revendus. `kDatesReleveFabricants` reçoit
+`white-labs` et `the-yeast-bay`. Préparation rejouée sur les sources du 2026-11-08 : 123 fiches
+rejoignent leur document Brewtarget, 39 en créent un (942 documents `beer_cultures`), aucun
+autre document changé, aucun nom rendu ambigu ; WLP4042 et WLP4044 restent en double (White
+Labs sur la fiche, The Yeast Bay chez Brewtarget). `fabricants_donnees_test.dart` : 362
+entrées, types et champs absents de White Labs. `DATA_SOURCES.md`, ADR-005, exigences et
+écran « Sources des données » à jour. `CLAUDE.md`, décisions de l'utilisateur : P15 accepte le
+nom commercial d'une souche publié par son fabricant (WLP520, WLP4045, WLP4046), et
+« Structure » décrit `exchange/donnees/fabricants/` sans liste de fabricants ;
+`guide-reseau.md` à jour.
+
 ### v0.1.73 — fonctionnel
 
 La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures
