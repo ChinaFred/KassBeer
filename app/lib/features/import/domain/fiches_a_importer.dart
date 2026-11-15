@@ -17,8 +17,9 @@ import '../../recipes/domain/recipe.dart';
 /// puis écrites sous le compte de l'administrateur. Ce fichier ne lit rien et
 /// n'écrit rien : il prépare les documents et le plan d'écriture d'une fiche.
 /// Aucune formule de brassage ici : le coût figé passe par [evaluerFigeage],
-/// donc par `brewing/` (P3). Aucune date n'est calculée : chaque heure vient
-/// du fichier (Q2).
+/// donc par `brewing/` (P3). Aucune date n'est calculée ici : chaque heure
+/// vient du fichier, ou du lecteur `package:exchange/fiches.dart` pour une
+/// heure estimée, calculée par `brewing/` (Q2).
 
 /// Identifiant du brassin d'une fiche (ID1).
 String brewIdDeFiche(String ficheId) => 'fiche-$ficheId';
@@ -33,6 +34,12 @@ String _prefixeMarque(String ficheId) => 'Fiche Excel · $ficheId · ';
 /// entrée et de sa recette, 200 caractères au plus.
 String marqueDeFin(String ficheId, String empreinte) =>
     '${_prefixeMarque(ficheId)}$empreinte';
+
+/// `imported_from` posé sur un brassin avant sa suppression par un
+/// remplacement : un remplacement coupé se reconnaît à cette marque
+/// ([EtatFiche.remplacementATerminer]) et se termine au prochain import.
+String marqueRemplacement(String ficheId) =>
+    '${_prefixeMarque(ficheId)}remplacement';
 
 /// Brassin déjà enregistré à l'identifiant d'une fiche, lu sur le serveur.
 @immutable
@@ -90,8 +97,16 @@ class EtatServeur {
   final Set<String> evenementsDAutrui;
 }
 
-/// État d'une fiche à l'analyse (EC4).
-enum EtatFiche { nouvelle, aCompleter, dejaImportee, contenuDifferent, refusee }
+/// État d'une fiche à l'analyse (EC4). [remplacementATerminer] : brassin
+/// marqué par [marqueRemplacement], remplacement commencé et coupé.
+enum EtatFiche {
+  nouvelle,
+  aCompleter,
+  remplacementATerminer,
+  dejaImportee,
+  contenuDifferent,
+  refusee,
+}
 
 /// Raison du refus d'une fiche.
 @immutable
@@ -198,11 +213,11 @@ class FicheAImporter {
     return f == null ? null : marqueDeFin(f.ficheId, source.empreinte);
   }
 
-  /// Vrai si aucun début d'étape ne date le brassage (CR4).
+  /// Vrai si aucun début d'étape noté ne date le brassage (CR4).
   bool get brassageDateParLePlan =>
       fiche != null &&
       !fiche!.evenements.any(
-        (e) => e.nature == NatureEvenementFiche.debutEtape,
+        (e) => e.nature == NatureEvenementFiche.debutEtape && !e.heureEstimee,
       );
 }
 
@@ -285,12 +300,18 @@ FicheAImporter _preparer(
         note: e.note,
         measuredAt: e.measuredAt,
         phase: e.fermentation ? PhaseEvenement.fermentation : null,
+        timeEstimated: e.heureEstimee,
+        dateEstimated: e.origineHeure == OrigineHeure.estimeeJ28,
       ),
   ];
+  // Début de la première étape de la chronologie : noté, ou estimé par le
+  // lecteur depuis le début prévu ; sans début de cette étape, le début prévu,
+  // qui est aussi son heure théorique (CR4). Il sert d'ancre aux heures
+  // théoriques des étapes non notées à l'affichage.
+  final premiere = fiche.etapes.isEmpty ? null : fiche.etapes.first.key;
   DateTime? premier;
   for (final e in fiche.evenements) {
-    if (e.nature != NatureEvenementFiche.debutEtape) continue;
-    if (premier == null || e.measuredAt.isBefore(premier)) {
+    if (e.nature == NatureEvenementFiche.debutEtape && e.stepKey == premiere) {
       premier = e.measuredAt;
     }
   }
@@ -397,18 +418,33 @@ CoutDeFiche _cout(
   if (brassin == null) return (etat: EtatFiche.nouvelle, refus: null);
   final marque = brassin.importedFrom;
   if (marque == null) return (etat: EtatFiche.aCompleter, refus: null);
+  if (marque == marqueRemplacement(fiche.ficheId)) {
+    return (etat: EtatFiche.remplacementATerminer, refus: null);
+  }
   if (marque == f.marque) return (etat: EtatFiche.dejaImportee, refus: null);
   return (etat: EtatFiche.contenuDifferent, refus: null);
 }
 
 /// Vrai si l'état se coche, et se coche par défaut (EC4).
 bool cochable(EtatFiche etat) =>
-    etat == EtatFiche.nouvelle || etat == EtatFiche.aCompleter;
+    etat == EtatFiche.nouvelle ||
+    etat == EtatFiche.aCompleter ||
+    etat == EtatFiche.remplacementATerminer;
+
+/// Vrai si la fiche se remplace sur demande (« Remplacer ce brassin », non
+/// cochée par défaut).
+bool remplacable(EtatFiche etat) => etat == EtatFiche.contenuDifferent;
+
+/// Vrai si l'écriture de la fiche supprime d'abord son brassin.
+bool estRemplacement(EtatFiche etat) =>
+    etat == EtatFiche.contenuDifferent ||
+    etat == EtatFiche.remplacementATerminer;
 
 // ---------------------------------------------------------------- Plan
 
 /// Étape d'écriture d'une fiche, nommée au compte rendu (EC8, EC10).
 enum EtapeEcriture {
+  suppression('suppression'),
   recette('recette'),
   brassin('brassin'),
   dateDeBrassage('date de brassage'),
@@ -484,6 +520,32 @@ class LotEvenements extends EcritureImport {
   final List<BrewEvent> evenements;
 }
 
+/// Lot de 10 événements au plus supprimés d'un brassin remplacé, dans un
+/// `WriteBatch`.
+class LotSuppression extends EcritureImport {
+  const LotSuppression(this.brewId, this.numero, this.ids)
+    : super(EtapeEcriture.suppression);
+
+  final String brewId;
+
+  /// Rang du lot, à partir de 1.
+  final int numero;
+  final List<String> ids;
+}
+
+/// Suppression du brassin remplacé et de son coût figé dans un même lot
+/// (CB19), après relecture sur le serveur des événements restants, supprimés
+/// d'abord.
+class SuppressionBrassin extends EcritureImport {
+  const SuppressionBrassin(this.brewId, {required this.numero})
+    : super(EtapeEcriture.suppression);
+
+  final String brewId;
+
+  /// Rang de cette écriture parmi les suppressions, à partir de 1.
+  final int numero;
+}
+
 /// Coût figé `users/{uid}/brew_costs/{brewId}`, `freeze_kind: initial`.
 class FigeageCout extends EcritureImport {
   const FigeageCout(this.cout) : super(EtapeEcriture.cout);
@@ -493,6 +555,48 @@ class FigeageCout extends EcritureImport {
 
 /// Événements au plus par lot (CR3).
 const kEvenementsParLot = 10;
+
+/// Plan d'un remplacement de [f] : marque de remplacement sur le brassin
+/// (sauf si elle y est déjà), suppression des événements lus à l'analyse par
+/// lots de 10, suppression du brassin et de son coût figé, puis le plan d'une
+/// fiche nouvelle ([planDeFiche]). La recette existante est gardée ; le
+/// brassin reçoit sa copie figée depuis le fichier.
+List<EcritureImport> planDeRemplacement(
+  FicheAImporter f, {
+  required BrassinExistant existant,
+  required bool recetteAbsente,
+}) {
+  final brewId = f.brewId;
+  final ficheId = f.fiche!.ficheId;
+  final ids = existant.eventIds.toList()..sort();
+  final lots = <EcritureImport>[
+    for (var i = 0; i < ids.length; i += kEvenementsParLot)
+      LotSuppression(
+        brewId,
+        i ~/ kEvenementsParLot + 1,
+        ids.sublist(
+          i,
+          i + kEvenementsParLot < ids.length
+              ? i + kEvenementsParLot
+              : ids.length,
+        ),
+      ),
+  ];
+  return [
+    if (existant.importedFrom != marqueRemplacement(ficheId))
+      ModificationBrassin(EtapeEcriture.suppression, brewId, {
+        'imported_from': marqueRemplacement(ficheId),
+      }),
+    ...lots,
+    SuppressionBrassin(brewId, numero: lots.length + 1),
+    ...planDeFiche(
+      f,
+      existant: null,
+      recetteAbsente: recetteAbsente,
+      coutFige: false,
+    ),
+  ];
+}
 
 /// Plan d'écriture de [f], dans l'ordre de CR3 : recette si [recetteAbsente],
 /// brassin s'il n'existe pas, modifications par groupe, événements absents

@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.68 — technique
+### v0.1.70 — technique
 
 ADR-015 (assistant de recette) et ADR-016 (socle IA) sont acceptés. L'utilisateur a tranché
 quinze questions, une par une. La règle « Aucune IA dans l'application » d'ADR-001 est
@@ -48,6 +48,56 @@ La procédure d'effacement RGPD couvre `ai_usage/` et `ai_quotas/`. La dépense 
 bornée à environ 31 $, poste ouvert à tous, sous la limite de 20 $ de la Console. ADR-015
 reçoit les décisions sur les écrans du lot A1 : icône « Assistant » dans la barre du haut,
 commutateur « Calculs / Assistant » de 840 à 1 279 px, champ « Efforts acceptés ».
+
+### v0.1.69 — fonctionnel
+
+Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
+sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
+s'affiche « Non notée » à son heure prévue, au lieu de « Non faite ». Une heure estimée ne
+compte dans aucune durée réelle. Chaque étape d'un brassin, importé ou non, montre aussi
+son écart de début : « Début : 25 min de retard » ou « Début : 5 min d'avance », sur la fiche
+du brassin comme sur l'écran du jour. Une étape sans « Terminer » finit au début de l'étape
+suivante. La durée totale dit quand une étape n'a pas d'heure notée. Les relevés importés sans
+heure portent « heure non notée », la densité finale datée de 28 jours après le brassage
+« date estimée ». Dans Admin › Import, une fiche modifiée depuis son import peut être
+remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
+import.
+
+### v0.1.69 — technique
+
+`brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
+noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
+(début estimé, sans réel ni écart) ; `actualDurations(plannedStart:)` rend la fin retenue
+(`end` : fin enregistrée, sinon début noté de l'étape suivante), l'écart de début au plan
+d'origine (`startDeltaMinutes`), l'heure théorique (`theoreticalStart`), la nature
+`ActualStepKind.estimated` et les natures de journée `partial`, `startNotNoted`,
+`endNotNoted` (`stepsWithoutTime` remplace `stepsWithoutEnd`, `ActualDayKind.missingEnd`
+retiré). `fixtures/process.json` : 4 cas ajoutés, écarts de début, heures théoriques et fins
+sur les cas existants ; les cas « commencée sans fin » changent (fin au début noté suivant).
+`exchange/` : format `kassbeer_fiches` v2 (un fichier v1 est refusé) : `time_source`
+`fiche`, `estimee` (heure calculée par le lecteur avec `brewing/`), `midi`, `estimee_j28` ;
+`ligne_precedente` et `debut_brassage` retirés ; codes de refus `debutEnDouble`,
+`heuresHorsOrdre`, `heureEnTrop` ; `verifier_fiches.dart` compte heures notées et estimées.
+Firestore : `brews/{id}/events/{eventId}.time_estimated` et `date_estimated` (booléens
+vrais seulement ; retirés seulement avec `measured_at` changé, `estimatedOk` et
+`estimationRetireeOk`), tests des cinq profils dans `events.test.mjs` et
+`import_fiches.test.mjs` (remplacement compris), budget noté (16 `pad10()` sur un lot de
+10 événements). Application : `BrewEvent.timeEstimated`, `dateEstimated`, `natureHeure` ;
+`Brew.importedFrom` et `importeDUneFiche` ; `ChronologieJour` reçoit les durées et l'écart de
+début aussi sur l'écran du jour (calcul local, P2) ; une correction d'heure retire
+l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
+`SuppressionBrassin`, état `remplacementATerminer` (marque `Fiche Excel · {id} ·
+remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
+rubrique « Heures estimées ». Aucune dépendance ne change.
+
+### v0.1.68 — technique
+
+ADR-014 : `ecrire.mjs --supprimer-absents` refusait de supprimer les 24 doublons de
+`beer_hops`, car la préparation compte 442 documents pour 466 en ligne (94,85 %, sous le seuil
+de 95 %). Décision de l'utilisateur : `PART_MIN_PREPAREE` passe à 0,9
+(`ingest/lib/ecriture.mjs`). Tests de `ingest/` adaptés (90 préparés pour 100 acceptés, 11
+absents refusés ; émulateur à 61 pour 72 refusé). P19 de `CLAUDE.md`, `exigences-techniques.md`
+et ADR-014 (note du 2026-11-15) mis à jour.
 
 ### v0.1.67 — fonctionnel
 

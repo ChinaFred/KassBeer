@@ -1645,13 +1645,21 @@ rattachée. Aucun calcul d'heure nouveau dans `brewing/` : aucun cas ajouté à 
 lignes d'une journée (durée prévue, état de `recomputeSchedule`, enregistrement de
 `stepRecordsFromEvents`) à `actualDurations` de `brewing/` (P3). `journeeClose` : le brassage
 dès que le statut a quitté « En cours », une autre journée terminée (`journeeTerminee`), ou un
-brassin terminé ou abandonné ; une étape restée en cours y est « sans heure de fin ».
-`evaluerDurees` (`chronologie_jour.dart`) rend `null` tant qu'aucune étape n'a début et fin, et
-rapporte un refus de `brewing/` une fois (`brews.actual_durations`, `planReportsProvider`) ;
-`dureesDesJournees` rend les durées de chaque journée de la fiche. `ChronologieJour` reçoit
-`durees` sur la fiche seule ; l'écran du jour et l'écran d'une journée ne le passent pas et
-gardent leurs lignes. `dureeEtapeReelle` et `dureeJourneeReelle` (`libelles_deroule.dart`)
-construisent le texte affiché et le texte lu, sans calcul ; `LigneDureeJournee`
+brassin terminé ou abandonné ; une étape restée en cours y est sans fin (« réel inconnu »).
+`ChronologieJour(close:)` reçoit `journeeClose` (fiche du brassin et écran du jour), et
+`statutAffiche(status, close:)` affiche alors « Terminée » pour une étape restée en cours.
+`evaluerDurees` (`chronologie_jour.dart`) rend les durées de la journée, `kind: none` compris
+(heures théoriques et écarts de début des étapes), et rapporte un refus de `brewing/` une fois
+(`brews.actual_durations`, `planReportsProvider`) en rendant `null` ; `dureesDesJournees` rend
+les durées de chaque journée de la fiche. `ChronologieJour` reçoit `durees` sur la fiche, sur
+l'écran du jour et sur l'écran d'une journée (v0.1.69, calcul local, P2), et `importe`
+(`Brew.importeDUneFiche`, `imported_from` qui commence par « Fiche Excel ») : une étape non
+faite d'un brassin importé est « Non notée » à son heure théorique. `heureDeLigne` rend la
+colonne d'heure affichée et lue (fin retenue par `ActualStepDuration.end`, « vers » pour un
+début estimé) ; `ecartDeDebut` la ligne « Début : 25 min de retard » ; sur grand écran
+(`WindowSize.expanded`, dans le `LayoutBuilder` de `ChronologieJour`), elle rejoint la deuxième
+ligne. `dureeEtapeReelle` et `dureeJourneeReelle` (`libelles_deroule.dart`) construisent le
+texte affiché et le texte lu, sans calcul ; `LigneDureeJournee`
 (`section_deroule.dart`) place la ligne de journée. « Mettre à jour mon processus avec ce
 brassin » : `proposerMiseAJour` (`brews/domain/mise_a_jour_processus.dart`) rattache chaque
 étape d'origine `template` à l'élément du modèle par `template_step_key`, puis
@@ -1791,6 +1799,14 @@ règles au retour du réseau.
 | `measured_at` | timestamp, obligatoire : heure de l'appareil |
 | `created_at` | timestamp, obligatoire : `serverTimestamp()`, audit seul |
 | `phase` | string \| null : absent ou nul pour le jour de brassage, `fermentation` pour un relevé et pour une mesure ou une note d'une journée 2 ou suivante (avec son `step_key`, v0.1.35) ; permis sur `measurement` et `note`, refusé sur un événement d'étape ; immuable |
+| `time_estimated` | booléen `true` ou absent (v0.1.69) : heure non notée, écrite par Admin › Import pour tout événement d'une fiche dont `time_source` n'est pas `fiche` ; permis sur `step_started`, `measurement`, `note` ; ne s'ajoute jamais ; se retire seulement avec `measured_at` changé (correction d'une saisie : l'heure devient notée) |
+| `date_estimated` | booléen `true` ou absent (v0.1.69) : date elle-même estimée, relevé de densité finale daté du jour du brassage + 28 jours (`estimee_j28`) ; sur `measurement` ou `note`, seulement avec `time_estimated` ; retiré avec lui |
+
+`time_estimated` et `date_estimated` distinguent les trois heures non notées d'une fiche
+sans rien déduire de l'heure : jour du brassage (`time_estimated` sans `phase`, « vers
+12:10 »), relevé daté de midi (`time_estimated` avec `phase: fermentation`, « heure non
+notée »), relevé J+28 (`date_estimated`, « date estimée ») ; `BrewEvent.natureHeure` les lit.
+Aucun champ n'est ajouté au brassin.
 
 Forme selon `kind` (règles) :
 
@@ -2171,7 +2187,7 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 | `recipes/`, `equipment/` | membres | membre, à son `owner_uid` ; `owner_name` absent ou égal au nom du jeton (`request.auth.token.name`, 1 à 80 caractères) | propriétaire, `owner_uid` et `created_at` inchangés, `owner_name` comme à la création | propriétaire |
 | `brews/` | membres | membre, à son `owner_uid` ; `owner_name` comme dans `recipes/` ; champs de création seuls (`owner_uid`, `owner_name`, `recipe_id`, `name`, `status`, `planned_for`, `notes`, `imported_from`, copies, dates) ; `recipe_snapshot` contrôlé comme `recipes/` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés ; liste blanche des clés ; seuls les champs changés sont contrôlés, par groupe (nom, statut, dates, ajustements, embouteillage, mesures retenues et `sugars_in_wort`, notes et `imported_from`, `process`) ; `process` changé seulement si `brewed_at` est nul avant et après l'écriture, nul ou map aux clés `format_version` (== 1), `template_id` (128), `template_name` (120), `sessions` (liste de 1 à 5) ; `owner_name` comme à la création | propriétaire |
 | `process_templates/` | membres | membre, à son `owner_uid` (`createdByMe`), `owner_name` comme dans `recipes/` ; clés en liste blanche, `format_version == 1`, `name` 1 à 120, `notes` 10 000, `sessions` liste de 1 à 5 | propriétaire (`updatedByOwner`), même forme | propriétaire |
-| `brews/{id}/events/` | membres | propriétaire du brassin existant, à son `owner_uid`, forme selon `kind` | auteur : `value`, `note`, `measured_at`, forme gardée | auteur |
+| `brews/{id}/events/` | membres | propriétaire du brassin existant, à son `owner_uid`, forme selon `kind` ; `time_estimated` et `date_estimated` à `true` seulement (`estimatedOk`) | auteur : `value`, `note`, `measured_at`, forme gardée ; `time_estimated` et `date_estimated` seulement retirés, avec `measured_at` changé (`estimationRetireeOk`) | auteur |
 | `users/{uid}/**` | propriétaire | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous |
 | `users/{uid}/prices/`, `fees/` | propriétaire | propriétaire, forme et bornes contrôlées | propriétaire, forme et bornes contrôlées | propriétaire |
 | `users/{uid}/brew_costs/` | propriétaire | propriétaire, forme contrôlée, `freeze_kind == 'initial'` | propriétaire, forme contrôlée, `freeze_kind == 'recalculation'` | propriétaire |
@@ -2609,23 +2625,37 @@ d'exemple, 11 modèles invalides, 2 recettes invalides, 6 jours d'ajout, 9 dates
 changements d'heure du 2026-10-25 et du 2027-03-28, et 5 ordres de journées (`session_orders`,
 4 refusés).
 
-**Durées réelles (v0.1.37).** `actualDurations(steps:, dayClosed:)` (`actual_durations.dart`)
-reçoit pour chaque étape sa durée prévue, son état (`recomputeSchedule`) et son enregistrement
-(`stepRecordsFromEvents`) dans un `StepTiming`. Durée réelle d'une étape : `StepRecord.endedAt`
-moins `StepRecord.startedAt`, jamais `ScheduledStep.end`, arrondie à la minute la plus proche
-(30 s vers le haut) ; le prévu s'arrondit de même ; écart = réel arrondi moins prévu arrondi.
-Natures (`ActualStepKind`) : `measured`, `action` (prévue à 0 min), `none` (sautée, non faite,
-à venir), `running`, `missingEnd` (faite sans fin, ou en cours dans une journée close). Journée
-(`ActualDayDuration`) : prévu = somme des durées prévues, sautées comprises ; `none` tant
-qu'aucune étape n'a début et fin, `running`, `missingEnd` avec le nombre d'étapes sans fin,
-sinon réel = dernière fin moins premier début et `betweenStepsMinutes` = réel moins la somme des
-réels arrondis. Les heures sont des instants : minuit et les changements d'heure ne changent pas
+**Durées réelles (v0.1.37, heures estimées v0.1.69).** `actualDurations(steps:, dayClosed:,
+plannedStart:)` (`actual_durations.dart`) reçoit pour chaque étape sa durée prévue, son état
+(`recomputeSchedule`) et son enregistrement (`stepRecordsFromEvents`) dans un `StepTiming`.
+`StepEvent.estimated` (`time_estimated`) devient `StepRecord.startEstimated` : un début estimé
+date l'étape sans compter pour aucun réel ni écart. Fin d'une étape : `StepRecord.endedAt`, sinon
+le début noté de l'étape suivante (sautées passées), jamais `ScheduledStep.end`. Durée réelle :
+fin moins début noté, arrondie à la minute la plus proche (30 s vers le haut) ; le prévu
+s'arrondit de même ; écart = réel arrondi moins prévu arrondi. Natures (`ActualStepKind`) :
+`measured` (avec sa fin `end`), `action` (prévue à 0 min), `none` (sautée, non faite, à venir),
+`running`, `missingEnd` (début noté sans fin retenue), `estimated` (début estimé).
+`startDeltaMinutes` : début noté moins plan d'origine (premier début noté de la journée plus les
+durées prévues des étapes entre les deux, sautées comprises). `theoreticalStart` :
+`theoreticalStarts(planned:, notedStarts:, skipped:, anchor:)`, dernier début noté qui précède
+l'étape plus les durées prévues entre les deux (non notée : durée prévue, sautée : zéro), sinon
+l'ancre (`plannedStart`, `brewed_at` du brassin) ; le lecteur des fiches l'emploie aussi pour
+dater une étape citée sans heure. Journée (`ActualDayDuration`) : prévu = somme des durées
+prévues, sautées comprises ; `none` tant qu'aucune étape n'a de réel, `running`,
+`startNotNoted` (première étape commencée à une heure estimée), `endNotNoted` (dernière sans
+fin), sinon réel = dernière fin moins premier début ; `measured` et `betweenStepsMinutes` = réel
+moins la somme des réels arrondis, ou `partial` avec `stepsWithoutTime` (étapes `estimated` ou
+`missingEnd`), sans `betweenStepsMinutes`. Les heures sont des instants : minuit et les changements d'heure ne changent pas
 le temps écoulé. `durationUpdateIssue` rend la raison de ne pas proposer une durée réelle à une
 étape de modèle (`noActual`, `outOfBounds` hors de 1 à 600 min, `unchanged` égale à
 `roundedStepMinutes` de la durée actuelle). `fixtures/process.json` y ajoute 17 cas
 (`actual_durations` : faite, sautée, non faite, en cours, journée close, sans fin, fin écartée,
 début en double, action, arrondi de 30 s, durée hors de 1 à 600, attentes, minuit, 2026-10-25,
-2027-03-28, jamais commencée, journée passée), 12 cas de `duration_updates` et 4 arrondis.
+2027-03-28, jamais commencée, journée passée), 12 cas de `duration_updates` et 4 arrondis ;
+la v0.1.69 y ajoute 4 cas (fiche importée à heures notées, estimée et absente ; première étape
+estimée ; étape sautée puis non faite ; début estimé avec fin), l'écart de début de chaque cas
+(`start_delta`), les heures théoriques (`theoretical`) et la fin retenue (`end`), et revoit
+les cas « commencée sans fin » (fin au début noté de l'étape suivante).
 
 **Comparaison prévu / mesuré.** `compareBrewWithPlan` (`brew_comparison.dart`) rend pour chaque
 ligne la valeur prévue, le résultat mesuré (`MeasuredComputed`, `MeasuredUnavailable` et la liste
@@ -2934,7 +2964,7 @@ Une session Claude Code lit les extraits texte des 16 fiches `.xlsx` et écrit u
 Aucun code de préparation n'entre dans le dépôt. La session passe le fichier au vérificateur,
 puis l'administrateur le choisit dans Admin › Import.
 
-### Format `kassbeer_fiches` v1
+### Format `kassbeer_fiches` v2
 
 Fichier JSON en UTF-8, 10 Mo au plus. Racine : `beerjson` et `kassbeer_fiches`, rien d'autre.
 Exemple complet, fictif : `exchange/test/fixtures/fiches/fiches-valide.json`.
@@ -2944,8 +2974,9 @@ Exemple complet, fictif : `exchange/test/fixtures/fiches/fiches-valide.json`.
   compte rendu, même reprise de la Bibliothèque. Aucune adresse web dans aucune chaîne de
   la recette (noms et notes des lignes, auteur, style compris) ; aucun montant dans `name`
   ni `notes`.
-- `kassbeer_fiches` : `format_version` (1, sinon le fichier est refusé) et `fiches` (50 au plus,
-  `fiche_id` uniques, sinon le fichier est refusé).
+- `kassbeer_fiches` : `format_version` (2, sinon le fichier est refusé : un fichier v1 se
+  prépare de nouveau) et `fiches` (50 au plus, `fiche_id` uniques, sinon le fichier est
+  refusé).
 
 Une entrée de `fiches` (tout champ inconnu refuse la fiche) :
 
@@ -2956,15 +2987,23 @@ Une entrée de `fiches` (tout champ inconnu refuse la fiche) :
 | `recipe_doc_id` | `^[a-z0-9-]{1,100}$` ; deux fiches au même identifiant ont le même `recipe_index` et la même chronologie (CR2) |
 | `brew_steps` | 60 au plus : `key` (`^[A-Za-z0-9_-]{1,100}$`, unique), `name` (1 à 120), `duration_min` (0 à 600), `temp_c` (0 à 100, facultatif) |
 | `brew` | `name` (1 à 120), `planned_for`, `start_at` (heure de début du plan), `notes` (10 000, facultatif, lues par le groupe : ni prix ni prénom), `bottles_count` (1 à 9 999), `packaged_volume_l` (0 exclu à 1 000), `priming_sugar_name` (1 à 80), `equipment` : `name` (1 à 120), `kind` (`multi_vessel` ou `all_in_one`) |
-| `events` | 300 au plus, `id` unique (`^[A-Za-z0-9_-]{1,100}$`), `kind` (`step_started`, `measurement`, `note`), `step_key` (clé de `brew_steps`, obligatoire pour `step_started`), `measure_type` et `value` (mesure seule : température 0 à 110, densité 0,980 à 1,200, volume 0 exclu à 1 000, pH 0 à 14), `note` (2 000, obligatoire pour `note`), `measured_at`, `phase` (`fermentation`, mesure ou note seule), `time_source` (`fiche`, `ligne_precedente`, `debut_brassage`, `midi`, `estimee_j28`) |
+| `events` | 300 au plus, `id` unique (`^[A-Za-z0-9_-]{1,100}$`), `kind` (`step_started`, `measurement`, `note`), `step_key` (clé de `brew_steps`, obligatoire pour `step_started`), `measure_type` et `value` (mesure seule : température 0 à 110, densité 0,980 à 1,200, volume 0 exclu à 1 000, pH 0 à 14), `note` (2 000, obligatoire pour `note`), `measured_at` (obligatoire, sauf `estimee` : interdit), `phase` (`fermentation`, mesure ou note seule), `time_source` (`fiche`, `estimee`, `midi`, `estimee_j28`, ce dernier sur `measurement` ou `note` seulement) ; un seul `step_started` par étape ; les heures `fiche` des débuts d'étape dans l'ordre de `brew_steps` |
 | `retained` | facultatif : `og_event_id` (densité), `fg_event_id` (densité de fermentation), `fermenter_volume_event_id` (volume hors fermentation), chacun l'`id` d'un événement de la fiche |
 | `cost` | facultatif : `prices` (`key` au format de `users/{uid}/prices`, unique ; `name` 1 à 120 ; `price_eur` 0 à 100 000 ; `quantity` 0 exclu à 10⁹ ; `unit` `g`, `unit` ou `l`), `fees` (`name` 1 à 60, `amount_eur` 0 à 10 000, `basis` `per_brew` ou `per_bottle`), 200 lignes au plus ensemble ; `fiche_total_eur` (facultatif) |
 | `corrections` | 200 au plus : `subject`, `fiche_value`, `imported_value`, `reason` (textes de 2 000 au plus) |
 | `deductions`, `divergences`, `not_imported` | 200 textes au plus, 2 000 caractères chacun ; lus par l'administrateur seul |
 
 Dates : ISO 8601 avec le décalage d'Europe/Paris du jour (`2024-07-14T11:15:00+02:00`),
-entre le 1er janvier 2015 et l'heure de l'import. La préparation écrit chaque heure, dont la
-date J+28 à 12:00 du relevé de densité finale estimé (Q2) ; l'application n'en calcule aucune.
+entre le 1er janvier 2015 et l'heure de l'import. `time_source` (v2) : `fiche`, heure notée dans
+la fiche ; `estimee`, étape citée sans heure ou mesure sans heure, sans `measured_at` dans le
+fichier : le lecteur calcule l'heure par `theoreticalStarts` de `brewing/` (dernier début
+`fiche` avant l'étape plus les durées prévues, ancre `start_at`) ; une mesure ou une note d'étape
+prend l'heure de début de son étape, une mesure sans étape celle de l'événement précédent de la
+fiche (`start_at` pour le premier) ; `midi` et `estimee_j28`, date écrite par la préparation
+(relevé à 12:00 du jour noté, densité finale J+28 à 12:00, Q2). Une étape absente de la fiche
+n'a aucun événement. La préparation n'écrit plus de note « Date estimée : jour du brassage +
+28 jours. » : le relevé porte `date_estimated`. Tout événement non `fiche` s'écrit avec
+`time_estimated: true`.
 Textes : contrôles bidirectionnels et caractères de contrôle retirés (P9) ; une adresse web
 dans un texte écrit en base refuse la fiche (code `adresseWeb`, FO5). Un texte lu par le
 groupe qui contient un montant (`€`, `EUR`, `euro` ou `euros`, sans distinction de casse)
@@ -2983,9 +3022,16 @@ refus ne porte de valeur, donc aucun prix. Un JSON mal formé lève la `FormatEx
 `jsonDecode` ; l'écran la rapporte avec sa seule position. L'empreinte d'une fiche
 (`lireEmpreinte` de l'entrée et de sa recette) change avec toute valeur de l'une ou l'autre.
 
+Codes de refus des heures (v2) : `debutEnDouble` (deux `step_started` pour une étape),
+`heuresHorsOrdre` (heure `fiche` d'un début d'étape antérieure à celle d'une étape précédente),
+`heureEnTrop` (`measured_at` écrit avec `estimee`), `champAbsent` (`measured_at` absent avec une
+autre origine) ; `ligne_precedente` et `debut_brassage` sont hors bornes.
+
 `dart run bin/verifier_fiches.dart <fichier>`, depuis `exchange/`, lit le fichier avec ce
-même lecteur et affiche les comptes et les refus, sans prix ; code de sortie 0 si toutes les
-fiches sont lues, 1 sinon.
+même lecteur et affiche les comptes, dont par fiche les heures notées et estimées (« 6
+événements (2 débuts d'étape, 1 heures notées, 5 heures estimées dont 0 datées J+28, 2
+relevés) »), et les refus, sans prix ; code de sortie 0 si toutes les fiches sont lues, 1
+sinon.
 
 ### Écritures
 
@@ -2999,9 +3045,10 @@ serveur avant la suivante, 30 s au plus (`kDelaiEcriture`), et la perte de la co
    `Fiche Excel · {fiche_id}`, sans `equipment_id` ;
 2. `brews/fiche-{fiche_id}` s'il n'existe pas : statut `done`, `planned_for`, copie figée de
    la recette, copie d'équipement réduite à `name`, `kind`, `owner_uid`, `owner_name` ;
-3. modifications, une écriture par groupe : `brewed_at` (premier `step_started`, sinon
-   `start_at`) ; `bottles_count`, `packaged_volume_l`, `priming_sugar_name` ; `notes` ;
-4. événements absents, par lots de 10 dans un `WriteBatch` (`created_at` du serveur) ;
+3. modifications, une écriture par groupe : `brewed_at` (début, noté ou estimé, de la première
+   étape de la chronologie, sinon `start_at` : ancre des heures théoriques à l'affichage) ; `bottles_count`, `packaged_volume_l`, `priming_sugar_name` ; `notes` ;
+4. événements absents, par lots de 10 dans un `WriteBatch` (`created_at` du serveur ;
+   `time_estimated: true` pour une heure non notée, `date_estimated: true` pour `estimee_j28`) ;
 5. `og_event_id`, `fg_event_id`, `fermenter_volume_event_id` ;
 6. `users/{uid}/brew_costs/fiche-{fiche_id}`, `freeze_kind: initial`, s'il n'existe pas et si
    `evaluerFigeage` le calcule avec les prix et frais de la fiche (Q1), `computed_at` =
@@ -3013,24 +3060,42 @@ brassin importé, daté par `brewed_at`, ne peut plus en recevoir. Il se lit par
 comme une seule journée tirée de `recipe_snapshot.brew_steps` (P37), test dans
 `import_fiches_test.dart`.
 
+**Remplacement (v0.1.69).** Une fiche « Déjà importée, contenu différent » dont « Remplacer ce
+brassin » est cochée, ou « Remplacement à terminer », suit `planDeRemplacement` : modification
+de `imported_from` à `Fiche Excel · {fiche_id} · remplacement` (`marqueRemplacement`, omise si
+elle est déjà posée), suppression des événements lus à l'analyse par lots de 10
+(`LotSuppression`, `WriteBatch`), puis `supprimerBrassin` (`SuppressionBrassin`) : événements
+restants relus en `Source.server` et supprimés, puis brassin et
+`users/{uid}/brew_costs/fiche-{fiche_id}` dans un même lot (CB19) ; enfin les écritures 2 à 7
+d'une fiche nouvelle, coût figé recalculé avec les prix de la fiche. La recette existante est
+gardée. Toutes ces écritures sont étape `suppression` au compte rendu et au rapport (« fiche
+n° 3, étape suppression, lot 2, code permission-denied »), sans heure ni texte (P13).
+`executerImport(aRemplacer:)` reçoit les brassins à remplacer ; `FicheEcrite` rend
+`remplacee`, `evenementsSupprimes`, `coutSupprime` (rubrique « Supprimés »). Une coupure laisse
+la marque de remplacement : état `remplacementATerminer`, coché, terminé au prochain import
+sans doublon (les identifiants viennent du fichier).
+
 Un groupe déjà écrit avec les mêmes valeurs n'est pas réécrit. Analyse : recettes, brassins,
 événements et coûts figés aux identifiants du fichier, lus en `Source.server` avec les index
 de la Bibliothèque. Les événements de `brews/fiche-{id}` sont lus même sans brassin : un
 événement laissé par un autre compte serait sinon pris pour un événement déjà écrit.
 États : brassin absent, « Nouvelle » ; présent sans marque, « À compléter » (reprise de ce
-qui manque) ; marque égale, « Déjà importée » ; autre marque, « Déjà importée, contenu
-différent » ; recette, brassin ou événement d'un autre compte à ces identifiants
+qui manque) ; marque de remplacement, « Remplacement à terminer » ; marque égale, « Déjà
+importée » ; autre marque, « Déjà importée, contenu différent » ; recette, brassin ou événement d'un autre compte à ces identifiants
 (`DocumentDUnAutreMembre`), « Refusée ». Erreur :
 `reportError(feature: 'import.fiches')`, contexte « fiche n° 3, étape evenements, lot 2, code
-permission-denied », sans valeur ni texte de la fiche (P13). Aucune règle Firestore ne change :
-`rules-tests/test/import_fiches.test.mjs` rejoue ces écritures pour les cinq profils et mesure
-le budget sur le plus grand brassin importé (P21).
+permission-denied », sans valeur ni texte de la fiche (P13). Règles : `time_estimated` et
+`date_estimated` des événements (v0.1.69, voir `brews/{brewId}/events/{eventId}`) ;
+`rules-tests/test/import_fiches.test.mjs` rejoue ces écritures et le remplacement pour les cinq
+profils et mesure le budget sur le plus grand brassin importé (P21).
 
 **Tests.** `exchange/test/fiches_test.dart` (fichier valide, relevé J+28, empreinte, refus de
 FO4 un par un, champ inconnu, `step_key` inconnue, identifiants en double, version inconnue,
 contrôles bidirectionnels, adresse web dans toute chaîne de la recette, montant dans un texte
-lu par le groupe et permis dans les divergences, aucune valeur dans un refus, vérificateur) ;
-`app/test/import_fiches_test.dart` (plan et ordre, lots de 10, coût figé avec les prix de la
+lu par le groupe et permis dans les divergences, aucune valeur dans un refus, heures estimées
+calculées, refus des heures v2, vérificateur) ;
+`app/test/import_fiches_test.dart` (plan et ordre, lots de 10, `time_estimated` et
+`date_estimated` écrits, date de brassage, remplacement complet et coupé puis terminé, coût figé avec les prix de la
 fiche sans écriture sous `prices` ni `fees`, relevé J+28 retenu comme densité finale d'un
 brassin Terminé, second import sans écriture, contenu différent, reprise sans doublon, erreur
 partielle, connexion perdue, délai, hors ligne, recette, brassin ou événement d'un autre
@@ -3153,7 +3218,7 @@ lancement ; toute autre est refusée par `lireOptions`) lit les identifiants en 
 (`select()`, sans les champs) et les compare aux identifiants préparés, refusés compris
 (`beer_hops.json`, ou `aromes.json` pour `beer_hop_aromas`, exigé). Avant toute écriture,
 `planifierSuppressions` (`lib/ecriture.mjs`) refuse : une autre collection ; une préparation
-qui compte moins de 95 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
+qui compte moins de 90 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
 suppressions (`PLAFOND_SUPPRESSIONS`). Un identifiant hors du motif de la collection
 (`motifIdentifiant`, celui de `beer_hops` pour les arômes) n'est jamais supprimé : il est
 compté « ignoré ». Avec `--simulation`, la liste seule. Sinon, la liste s'affiche et la
@@ -3185,7 +3250,7 @@ houblons, résolution de « Saaz », « Hallertau », « Tettnanger », « CTZ �
 fixture `test/fixtures/prepare/` contre l'émulateur, la seconde sans aucun référentiel ni
 aucune recette réécrit, seul son document `ingest_runs` créé ; `--supprimer-absents` : sans
 l'option rien n'est supprimé, simulation, nombre non confirmé sans écriture, suppression
-confirmée, identifiant hors motif gardé, préparation à moins de 95 % refusée, plus de 30
+confirmée, identifiant hors motif gardé, préparation à moins de 90 % refusée, plus de 30
 absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé) ;
 `npm run test:unitaires` sans émulateur. La CI ne lance pas encore `ingest/` (ADR-005, D2).
 

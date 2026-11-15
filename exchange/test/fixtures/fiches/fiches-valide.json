@@ -64,7 +64,7 @@
     ]
   },
   "kassbeer_fiches": {
-    "format_version": 1,
+    "format_version": 2,
     "fiches": [
       {
         "fiche_id": "2024-07-14-blonde-essai",
@@ -91,8 +91,8 @@
           { "id": "e03", "kind": "step_started", "step_key": "ebullition", "measured_at": "2024-07-14T10:40:00+02:00", "time_source": "fiche" },
           { "id": "e04", "kind": "step_started", "step_key": "densite-initiale", "measured_at": "2024-07-14T12:05:00+02:00", "time_source": "fiche" },
           { "id": "e05", "kind": "measurement", "step_key": "densite-initiale", "measure_type": "gravity", "value": 1.052, "note": "corrigée à 20 °C", "measured_at": "2024-07-14T12:05:00+02:00", "time_source": "fiche" },
-          { "id": "e06", "kind": "measurement", "step_key": "densite-initiale", "measure_type": "volume", "value": 20, "measured_at": "2024-07-14T12:05:00+02:00", "time_source": "ligne_precedente" },
-          { "id": "e07", "kind": "measurement", "measure_type": "gravity", "value": 1.023, "note": "Date estimée : jour du brassage + 28 jours.", "measured_at": "2024-08-11T12:00:00+02:00", "phase": "fermentation", "time_source": "estimee_j28" }
+          { "id": "e06", "kind": "measurement", "step_key": "densite-initiale", "measure_type": "volume", "value": 20, "time_source": "estimee" },
+          { "id": "e07", "kind": "measurement", "measure_type": "gravity", "value": 1.023, "measured_at": "2024-08-11T12:00:00+02:00", "phase": "fermentation", "time_source": "estimee_j28" }
         ],
         "retained": { "og_event_id": "e05", "fermenter_volume_event_id": "e06" },
         "cost": {
@@ -135,7 +135,9 @@
         },
         "events": [
           { "id": "a01", "kind": "step_started", "step_key": "empatage", "measured_at": "2023-04-02T10:10:00+02:00", "time_source": "fiche" },
-          { "id": "a02", "kind": "measurement", "step_key": "empatage", "measure_type": "temperature", "value": 67, "measured_at": "2023-04-02T10:10:00+02:00", "time_source": "debut_brassage" },
+          { "id": "a02", "kind": "measurement", "step_key": "empatage", "measure_type": "temperature", "value": 67, "time_source": "estimee" },
+          { "id": "a05", "kind": "step_started", "step_key": "ebullition", "time_source": "estimee" },
+          { "id": "a06", "kind": "measurement", "measure_type": "ph", "value": 5.4, "time_source": "estimee" },
           { "id": "a03", "kind": "measurement", "measure_type": "gravity", "value": 1.058, "measured_at": "2023-04-03T12:00:00+02:00", "phase": "fermentation", "time_source": "midi" },
           { "id": "a04", "kind": "note", "note": "Fermentation lente.", "measured_at": "2023-04-05T12:00:00+02:00", "phase": "fermentation", "time_source": "midi" }
         ]

@@ -114,6 +114,10 @@ class ImportFichesScreen extends ConsumerStatefulWidget {
 class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
   _Etape _etape = const _Accueil();
   final _coches = <int>{};
+
+  /// Fiches « Déjà importée, contenu différent » à remplacer, cochées une à
+  /// une (« Remplacer ce brassin »), jamais par défaut.
+  final _remplacements = <int>{};
   bool _choixEnCours = false;
   bool _arret = false;
   Completer<void>? _horsLigne;
@@ -304,6 +308,7 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
       );
     }
     setState(() {
+      _remplacements.clear();
       _coches
         ..clear()
         ..addAll([
@@ -338,10 +343,16 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
 
   Future<void> _importer(_Analyse analyse) async {
     final access = ref.read(grantedAccessProvider);
-    if (access == null || _coches.isEmpty) return;
+    if (access == null || (_coches.isEmpty && _remplacements.isEmpty)) return;
     final choisies = [
-      for (final i in _coches.toList()..sort()) analyse.lignes[i],
+      for (final i in {..._coches, ..._remplacements}.toList()..sort())
+        analyse.lignes[i],
     ];
+    final remplacees = [
+      for (final l in choisies)
+        if (estRemplacement(l.etat)) l,
+    ];
+    final ecrites = choisies.length - remplacees.length;
     final recettes = {
       for (final l in choisies)
         if (!analyse.etat.recettes.containsKey(l.fiche.fiche!.recipeDocId))
@@ -350,11 +361,25 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
     // ticket: aucun (confirmation)
     final ok = await confirmerAction(
       context,
-      titre: TextesImportFiches.confirmationTitre(choisies.length),
+      titre: TextesImportFiches.confirmationTitre(
+        ecrites,
+        remplacements: remplacees.length,
+      ),
       paragraphes: [
-        TextesImportFiches.confirmation(choisies.length, recettes.length),
+        if (remplacees.isEmpty)
+          TextesImportFiches.confirmation(ecrites, recettes.length)
+        else
+          TextesImportFiches.confirmationRemplacement(
+            brassins: ecrites,
+            recettes: recettes.length,
+            remplacementsN: remplacees.length,
+          ),
       ],
-      libelle: 'Importer',
+      libelle: TextesImportFiches.confirmationBouton(
+        ecrites,
+        remplacees.length,
+      ),
+      destructive: remplacees.isNotEmpty,
     );
     if (!ok || !mounted) return;
     final horsLigne = Completer<void>();
@@ -366,6 +391,7 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
         fiche: 1,
         fiches: choisies.length,
         nom: choisies.first.nom,
+        remplacement: estRemplacement(choisies.first.etat),
         ecritures: 0,
         total: 0,
       )),
@@ -382,13 +408,21 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
       couts: ref.read(costsRepositoryProvider),
       errors: ref.read(errorReportServiceProvider),
       perteConnexion: horsLigne.future,
+      aRemplacer: {for (final l in remplacees) l.fiche.brewId},
       arret: () => _arret,
       surProgression: (p) {
         if (!mounted) return;
         setState(() => _etape = _Ecriture(p));
         if (p.fiche != annoncee && p.nom.isNotEmpty) {
           annoncee = p.fiche;
-          _annoncer(TextesImportFiches.progression(p.fiche, p.fiches, p.nom));
+          _annoncer(
+            TextesImportFiches.progression(
+              p.fiche,
+              p.fiches,
+              p.nom,
+              remplacement: p.remplacement,
+            ),
+          );
         }
       },
     );
@@ -396,12 +430,13 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
     if (!mounted) return;
     final termine = _Termine(analyse, choisies, issues);
     setState(() => _etape = termine);
-    final (:creees, :ignorees, :erreurs) = _comptes(termine);
+    final bilan = _comptes(termine);
     _annoncer(
       TextesImportFiches.bilanParle(
-        creees,
-        ignorees,
-        erreurs,
+        bilan.creees,
+        bilan.ignorees,
+        bilan.erreurs,
+        remplacees: bilan.remplacees,
         arret: _arrete(termine),
       ),
     );
@@ -410,14 +445,19 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
     });
   }
 
-  ({int creees, int ignorees, int erreurs}) _comptes(_Termine t) {
-    final creees = t.issues.whereType<FicheEcrite>().length;
+  ({int creees, int remplacees, int ignorees, int erreurs}) _comptes(
+    _Termine t,
+  ) {
+    final ecrites = t.issues.whereType<FicheEcrite>();
+    final remplacees = ecrites.where((e) => e.remplacee).length;
+    final creees = ecrites.length - remplacees;
     final erreurs = t.issues
         .where((i) => i is FicheEnErreur || i is FicheInterrompue)
         .length;
     return (
       creees: creees,
-      ignorees: t.analyse.lignes.length - creees - erreurs,
+      remplacees: remplacees,
+      ignorees: t.analyse.lignes.length - ecrites.length - erreurs,
       erreurs: erreurs,
     );
   }
@@ -621,13 +661,20 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
             onChanged: cochable(lignes[i].etat)
                 ? (v) => setState(() => v ? _coches.add(i) : _coches.remove(i))
                 : null,
+            remplacer: _remplacements.contains(i),
+            onRemplacer: remplacable(lignes[i].etat) && !offline
+                ? (v) => setState(
+                    () => v ? _remplacements.add(i) : _remplacements.remove(i),
+                  )
+                : null,
           );
         },
       ),
     );
-    final n = _coches.length;
+    final remplacables = lignes.where((l) => remplacable(l.etat)).length;
+    final n = _coches.length + _remplacements.length;
     final Widget barre;
-    if (cochables.isEmpty) {
+    if (cochables.isEmpty && remplacables == 0) {
       barre = Semantics(
         liveRegion: true,
         child: Text(
@@ -645,13 +692,21 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
           if (n == 0) ...[
             Semantics(
               liveRegion: true,
-              child: const Text(TextesImportFiches.aucuneCochee),
+              child: Text(
+                cochables.isEmpty
+                    ? TextesImportFiches.rienDeNouveau
+                    : TextesImportFiches.aucuneCochee,
+              ),
             ),
             const SizedBox(height: 8),
           ],
           FilledButton(
             onPressed: n == 0 ? null : () => unawaited(_importer(analyse)),
-            child: Text(TextesImportFiches.importer(n)),
+            child: Text(
+              _queDesRemplacements(lignes)
+                  ? TextesImportFiches.remplacer(n)
+                  : TextesImportFiches.importer(n),
+            ),
           ),
         ],
       );
@@ -669,6 +724,15 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
     );
   }
 
+  /// Vrai si toutes les fiches choisies sont des remplacements (« Remplacer
+  /// ce brassin » cochée, ou « Remplacement à terminer ») : la barre dit
+  /// « Remplacer n fiches ».
+  bool _queDesRemplacements(List<_Ligne> lignes) {
+    final choisies = {..._coches, ..._remplacements};
+    return choisies.isNotEmpty &&
+        choisies.every((i) => estRemplacement(lignes[i].etat));
+  }
+
   Widget _progression(ProgressionImport p) {
     return Center(
       child: Padding(
@@ -678,7 +742,14 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(TextesImportFiches.progression(p.fiche, p.fiches, p.nom)),
+              Text(
+                TextesImportFiches.progression(
+                  p.fiche,
+                  p.fiches,
+                  p.nom,
+                  remplacement: p.remplacement,
+                ),
+              ),
               const SizedBox(height: 16),
               LinearProgressIndicator(
                 value: p.total == 0 ? null : p.ecritures / p.total,
@@ -708,16 +779,27 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
 
   Widget _bilan(_Termine t) {
     final theme = Theme.of(context);
-    final (:creees, :ignorees, :erreurs) = _comptes(t);
+    final (:creees, :remplacees, :ignorees, :erreurs) = _comptes(t);
     final aRevoir = <_Ligne>[];
+    final supprimes = <String>[];
     final enErreur = <String>[];
     final ignores = <String>[];
     int? interrompue;
     final choisies = {for (final l in t.choisies) l};
     for (final (i, l) in t.choisies.indexed) {
       switch (t.issues[i]) {
-        case FicheEcrite():
+        case final FicheEcrite e:
           if (l.rubriques.isNotEmpty) aRevoir.add(l);
+          if (e.remplacee) {
+            supprimes.add(
+              TextesImportFiches.supprime(
+                l.nom,
+                l.ficheId,
+                e.evenementsSupprimes,
+                e.coutSupprime,
+              ),
+            );
+          }
         case final FicheEnErreur e:
           enErreur.add(TextesImportFiches.erreur(l.nom, l.ficheId, e));
         case FicheInterrompue():
@@ -736,7 +818,10 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
           EtatFiche.refusee => TextesImport.refusee(
             l.refus == null ? '' : libelleRefusImport(l.refus!),
           ),
-          EtatFiche.nouvelle || EtatFiche.aCompleter => TextesImport.nonCochee,
+          EtatFiche.nouvelle ||
+          EtatFiche.aCompleter ||
+          EtatFiche.remplacementATerminer => TextesImport.nonCochee,
+          EtatFiche.contenuDifferent => TextesImportFiches.nonCocheeDifferente,
           final e => TextesImportFiches.etat(e),
         }),
       );
@@ -751,6 +836,7 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
               creees,
               ignorees,
               erreurs,
+              remplacees: remplacees,
               arret: _arrete(t),
             ),
             style: theme.textTheme.headlineSmall,
@@ -770,6 +856,14 @@ class _ImportFichesScreenState extends ConsumerState<ImportFichesScreen> {
             titre: '${l.nom} (${l.ficheId})',
             storageKey: 'bilan-${l.ficheId}',
             children: [_Rubriques(l.rubriques)],
+          ),
+      ],
+      if (supprimes.isNotEmpty) ...[
+        const TitreSection(TextesImportFiches.supprimes),
+        for (final x in supprimes)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(x),
           ),
       ],
       if (ignores.isNotEmpty) ...[
@@ -814,11 +908,19 @@ class _LigneFiche extends StatelessWidget {
     required this.ligne,
     required this.cochee,
     required this.onChanged,
+    required this.remplacer,
+    required this.onRemplacer,
   });
 
   final _Ligne ligne;
   final bool cochee;
   final ValueChanged<bool>? onChanged;
+
+  /// Case « Remplacer ce brassin » d'une fiche au contenu différent.
+  final bool remplacer;
+
+  /// `null` sans case de remplacement, ou hors ligne.
+  final ValueChanged<bool>? onRemplacer;
 
   @override
   Widget build(BuildContext context) {
@@ -852,7 +954,8 @@ class _LigneFiche extends StatelessWidget {
           label: libelleEtat,
           ton: switch (etat) {
             EtatFiche.nouvelle => TonEtiquette.primaire,
-            EtatFiche.aCompleter => TonEtiquette.tertiaire,
+            EtatFiche.aCompleter ||
+            EtatFiche.remplacementATerminer => TonEtiquette.tertiaire,
             EtatFiche.dejaImportee => TonEtiquette.neutre,
             EtatFiche.contenuDifferent => TonEtiquette.neutre,
             EtatFiche.refusee => TonEtiquette.erreur,
@@ -898,6 +1001,31 @@ class _LigneFiche extends StatelessWidget {
                   onChanged: (v) => onChanged(v ?? false),
                 ),
         ),
+        if (remplacable(etat))
+          Padding(
+            padding: const EdgeInsets.only(left: 40),
+            child: Semantics(
+              label: TextesImportFiches.remplacerCeBrassin,
+              checked: remplacer,
+              enabled: onRemplacer != null,
+              excludeSemantics: true,
+              onTap: onRemplacer == null
+                  ? null
+                  : () => onRemplacer!(!remplacer),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: CheckboxListTile(
+                  value: remplacer,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text(TextesImportFiches.remplacerCeBrassin),
+                  onChanged: onRemplacer == null
+                      ? null
+                      : (v) => onRemplacer!(v ?? false),
+                ),
+              ),
+            ),
+          ),
         if (ligne.rubriques.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 40),

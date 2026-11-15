@@ -115,6 +115,7 @@ class CourbeFermentation extends StatelessWidget {
     this.ecartInitiale,
     this.ecartFinale,
     this.plageLevure,
+    this.libelleDate = formatJourHeure,
   });
 
   /// Points de `fermentationSeries`, triés par heure de mesure : densité
@@ -134,6 +135,10 @@ class CourbeFermentation extends StatelessWidget {
   /// Plage de la levure lue dans la Bibliothèque ; `null` : rien à dire
   /// (recette sans levure, lecture en cours, hors ligne sans copie).
   final EtatPlageLevure? plageLevure;
+
+  /// Date d'un point dans l'info-bulle : « sam. 15 nov. 18:30 », ou la date
+  /// d'un relevé importé sans heure ou sans date (`dateDeReleve`).
+  final String Function(DateTime) libelleDate;
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +254,7 @@ class CourbeFermentation extends StatelessWidget {
                       plageTemperature: plage == null
                           ? null
                           : PlageTrace(min: plage.minimum, max: plage.maximum),
-                      libelleDate: (p) => formatJourHeure(p.measuredAt),
+                      libelleDate: (p) => libelleDate(p.measuredAt),
                       libelleDensite: formatDensite,
                       libelleTemperature: formatCelsius,
                     ),

@@ -124,6 +124,29 @@ class _DepotPiege implements ImportFichesRepository {
     if (evenementsSansReponse) return Completer<void>().future;
     return vrai.ecrireEvenements(lot);
   }
+
+  /// Lot de suppression refusé (`permission-denied`), à partir de 1.
+  int? suppressionRefusee;
+
+  @override
+  Future<void> supprimerEvenements(LotSuppression lot) {
+    ecritures++;
+    if (lot.numero == suppressionRefusee) {
+      return Future.error(
+        FirebaseException(plugin: 'cloud_firestore', code: 'permission-denied'),
+      );
+    }
+    return vrai.supprimerEvenements(lot);
+  }
+
+  @override
+  Future<int> supprimerBrassin(
+    SuppressionBrassin suppression, {
+    required String uid,
+  }) {
+    ecritures++;
+    return vrai.supprimerBrassin(suppression, uid: uid);
+  }
 }
 
 void main() {
@@ -211,8 +234,51 @@ void main() {
       expect(releve.measuredAt, DateTime.parse('2024-08-11T12:00:00+02:00'));
       expect(releve.phase, PhaseEvenement.fermentation);
       expect(
-        heuresReprises(blonde),
+        heuresEstimees(blonde),
         contains('Relevé sans date : daté de 28 jours après le brassage.'),
+      );
+    });
+
+    test('heures estimées : time_estimated sur tout événement non noté, '
+        'date_estimated sur le relevé J+28', () {
+      final fiches = _preparer(RecordingErrorReportService());
+      final blonde = fiches[0];
+      final parId = {for (final e in blonde.evenements) e.id: e};
+      // toFirestore() n'est pas appelé ici : FieldValue.serverTimestamp()
+      // figerait la plateforme avant FakeFirebaseFirestore (écritures vérifiées
+      // dans « import complet »).
+      expect(parId['e01']!.timeEstimated, isFalse);
+      expect(parId['e06']!.timeEstimated, isTrue);
+      expect(parId['e06']!.dateEstimated, isFalse);
+      expect(parId['e07']!.timeEstimated, isTrue);
+      expect(parId['e07']!.dateEstimated, isTrue);
+      final ambree = fiches[1];
+      // Relevé daté de midi : heure non notée, date gardée.
+      final midi = ambree.evenements.firstWhere((e) => e.id == 'a03');
+      expect(midi.timeEstimated, isTrue);
+      expect(midi.dateEstimated, isFalse);
+      // Étape citée sans heure : début estimé, lu comme tel par brewing/.
+      final ebullition = ambree.evenements.firstWhere((e) => e.id == 'a05');
+      expect(ebullition.toStepEvent()!.estimated, isTrue);
+      expect(heuresEstimees(ambree), [
+        'Heure non notée : estimée d\'après la chronologie (3).',
+        'Relevé sans heure : daté de 12:00 (2).',
+      ]);
+      expect(nombreHeuresEstimees(ambree), 5);
+    });
+
+    test('date de brassage : début de la première étape, noté ou estimé ; '
+        'sinon début prévu', () {
+      final json = _json();
+      final ambree =
+          ((json['kassbeer_fiches']! as Map)['fiches']! as List)[1] as Map;
+      (ambree['events']! as List).removeAt(0);
+      final f = _preparer(RecordingErrorReportService(), json)[1];
+      expect(f.brewedAt, DateTime.parse('2023-04-02T10:00:00+02:00'));
+      expect(f.brassageDateParLePlan, isTrue);
+      expect(
+        heuresEstimees(f).first,
+        'Aucune heure notée : brassage daté de l\'heure de début prévue.',
       );
     });
   });
@@ -296,6 +362,19 @@ void main() {
         'densite-initiale',
       ]);
       expect(data['imported_from'], fiches.first.marque);
+      final ecrits = {
+        for (final d
+            in (await firestore
+                    .collection('brews/fiche-2024-07-14-blonde-essai/events')
+                    .get())
+                .docs)
+          d.id: d.data(),
+      };
+      expect(ecrits['e01']!.containsKey('time_estimated'), isFalse);
+      expect(ecrits['e06']!['time_estimated'], isTrue);
+      expect(ecrits['e06']!.containsKey('date_estimated'), isFalse);
+      expect(ecrits['e07']!['time_estimated'], isTrue);
+      expect(ecrits['e07']!['date_estimated'], isTrue);
       expect(
         (data['equipment_snapshot'] as Map)['name'],
         'Installation à cuves (fiches Excel)',
@@ -348,6 +427,145 @@ void main() {
       expect(await nombreDocuments(), avant);
     });
 
+    Future<List<FicheAImporter>> changerBlonde() async {
+      final json = _json();
+      final fiche =
+          ((json['kassbeer_fiches']! as Map)['fiches']! as List).first as Map;
+      (fiche['brew']! as Map)['bottles_count'] = 49;
+      return _preparer(errors, json);
+    }
+
+    test('remplacement : événements, brassin et coût figé supprimés puis '
+        'écrits de nouveau, recette gardée', () async {
+      await importer(_preparer(errors));
+      // Une heure corrigée depuis l'import, un relevé ajouté : perdus.
+      await firestore
+          .doc('brews/fiche-2024-07-14-blonde-essai/events/ajout')
+          .set({
+            'owner_uid': _uid,
+            'kind': 'note',
+            'note': 'Ajoutée après l\'import',
+            'measured_at': Timestamp.fromDate(DateTime.utc(2024, 7, 20)),
+            'phase': 'fermentation',
+          });
+      final recetteAvant = await firestore
+          .doc('recipes/fiche-blonde-essai')
+          .get();
+      final changees = await changerBlonde();
+      final blonde = changees.first;
+      final serveur = await etat([blonde]);
+      expect(
+        etatDe(blonde, serveur, uid: _uid).etat,
+        EtatFiche.contenuDifferent,
+      );
+      final plan = planDeRemplacement(
+        blonde,
+        existant: serveur.brassins[blonde.brewId]!,
+        recetteAbsente: false,
+      );
+      expect(
+        plan.take(3).map((e) => e.etape),
+        everyElement(EtapeEcriture.suppression),
+      );
+      expect(plan.whereType<LotSuppression>().map((l) => l.ids.length), [8]);
+      expect(plan.whereType<CreationRecette>(), isEmpty);
+      final issues = await executerImport(
+        fiches: [blonde],
+        etat: serveur,
+        uid: _uid,
+        ownerName: 'Alice Admin',
+        depot: depot,
+        couts: couts,
+        errors: errors,
+        perteConnexion: Completer<void>().future,
+        aRemplacer: {blonde.brewId},
+      );
+      final ecrite = issues.single as FicheEcrite;
+      expect(ecrite.remplacee, isTrue);
+      expect(ecrite.evenementsSupprimes, 8);
+      expect(ecrite.coutSupprime, isTrue);
+      final doc = await firestore.doc('brews/${blonde.brewId}').get();
+      expect(doc.data()!['bottles_count'], 49);
+      expect(doc.data()!['imported_from'], blonde.marque);
+      final events = await firestore
+          .collection('brews/${blonde.brewId}/events')
+          .get();
+      expect(events.docs.map((d) => d.id), isNot(contains('ajout')));
+      expect(events.size, 7);
+      final cout = await firestore
+          .doc('users/$_uid/brew_costs/${blonde.brewId}')
+          .get();
+      expect(cout.data()!['bottles_count'], 49);
+      expect(cout.data()!['freeze_kind'], 'initial');
+      expect(
+        (await firestore.doc('recipes/fiche-blonde-essai').get()).data(),
+        recetteAvant.data(),
+      );
+      expect(errors.reports, isEmpty);
+    });
+
+    test('remplacement coupé : « Remplacement à terminer », coché, terminé '
+        'au prochain import sans doublon', () async {
+      await importer(_preparer(errors));
+      final changees = await changerBlonde();
+      final blonde = changees.first;
+      final piege = _DepotPiege(depot)..suppressionRefusee = 1;
+      final issues = await executerImport(
+        fiches: [blonde],
+        etat: await etat([blonde]),
+        uid: _uid,
+        ownerName: 'Alice Admin',
+        depot: piege,
+        couts: couts,
+        errors: errors,
+        perteConnexion: Completer<void>().future,
+        aRemplacer: {blonde.brewId},
+      );
+      final erreur = issues.single as FicheEnErreur;
+      expect(erreur.etape, EtapeEcriture.suppression);
+      expect(erreur.lot, 1);
+      expect(
+        errors.reports.single.context,
+        'fiche n° 1, étape suppression, lot 1, code permission-denied',
+      );
+      expect(
+        TextesImportFiches.erreur('Ale blonde', 'x', erreur),
+        'Ale blonde (x) — suppression, lot 1 : écriture refusée. Relancez '
+        'l\'import du même fichier pour reprendre.',
+      );
+      final serveur = await etat([blonde]);
+      final e = etatDe(blonde, serveur, uid: _uid).etat;
+      expect(e, EtatFiche.remplacementATerminer);
+      expect(cochable(e), isTrue);
+      expect(estRemplacement(e), isTrue);
+      // La marque est déjà posée : le plan ne la récrit pas.
+      final plan = planDeRemplacement(
+        blonde,
+        existant: serveur.brassins[blonde.brewId]!,
+        recetteAbsente: false,
+      );
+      expect(plan.first, isA<LotSuppression>());
+      final fin = await executerImport(
+        fiches: [blonde],
+        etat: serveur,
+        uid: _uid,
+        ownerName: 'Alice Admin',
+        depot: depot,
+        couts: couts,
+        errors: errors,
+        perteConnexion: Completer<void>().future,
+        aRemplacer: {blonde.brewId},
+      );
+      expect((fin.single as FicheEcrite).remplacee, isTrue);
+      final apres = await etat([blonde]);
+      expect(etatDe(blonde, apres, uid: _uid).etat, EtatFiche.dejaImportee);
+      expect(
+        (await firestore.collection('brews/${blonde.brewId}/events').get())
+            .size,
+        7,
+      );
+    });
+
     test(
       'fiche changée après l\'import : contenu différent, non cochable',
       () async {
@@ -361,6 +579,7 @@ void main() {
         final e = etatDe(changees.first, serveur, uid: _uid).etat;
         expect(e, EtatFiche.contenuDifferent);
         expect(cochable(e), isFalse);
+        expect(remplacable(e), isTrue);
       },
     );
 
@@ -606,7 +825,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.text(
-          '3 fiches · 2 recettes · 3 brassins · 12 heures et mesures · '
+          '3 fiches · 2 recettes · 3 brassins · 14 heures et mesures · '
           '1 coût figé',
         ),
         findsOneWidget,
@@ -675,6 +894,120 @@ void main() {
       });
       await tester.pumpAndSettle();
     }
+
+    testWidgets('remplacement : case « Remplacer ce brassin », confirmation, '
+        'compte rendu', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final app = await ouvrir(tester);
+      await analyser(tester, app);
+      await tester.tap(find.text('Importer 3 fiches'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Importer'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      });
+      await tester.pumpAndSettle();
+      // Le fichier change : la première fiche a 49 bouteilles.
+      final json = _json();
+      final fiche =
+          ((json['kassbeer_fiches']! as Map)['fiches']! as List).first as Map;
+      (fiche['brew']! as Map)['bottles_count'] = 49;
+      app.container.read(routerProvider).go(AppRoutes.admin);
+      await tester.pumpAndSettle();
+      app.container.read(routerProvider).go(AppRoutes.adminImport);
+      await tester.pumpAndSettle();
+      app.fichiers.choix = FichierChoisi(
+        'fiches.json',
+        Uint8List.fromList(utf8.encode(jsonEncode(json))),
+      );
+      await tester.tap(find.text(TextesImportFiches.choisir));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('Déjà importée, contenu différent'), findsOneWidget);
+      expect(
+        find.text('Le fichier a changé depuis l\'import.'),
+        findsOneWidget,
+      );
+      expect(find.text(TextesImportFiches.rienDeNouveau), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            r"^Blonde d'essai, .*déjà importée, contenu différent, (.*, )?Le "
+            r"fichier "
+            r"a changé depuis l'import\.$",
+          ),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text(TextesImportFiches.remplacerCeBrassin));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remplacer 1 fiche'));
+      await tester.pumpAndSettle();
+      expect(find.text('Remplacer 1 brassin ?'), findsOneWidget);
+      expect(
+        find.text(
+          '1 brassin sera remplacé. Ses étapes, ses mesures et son coût figé '
+          'seront supprimés puis écrits de nouveau. Les heures corrigées '
+          'depuis l\'import seront perdues.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Remplacer'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      });
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Import terminé · 0 créée · 1 remplacée · 2 ignorées · 0 en erreur',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(TextesImportFiches.supprimes), findsOneWidget);
+      expect(
+        find.text(
+          // Coût figé écrit par le faux dépôt des coûts, hors de ce Firestore
+          // en mémoire : rien à supprimer ici (voir « remplacement » ci-dessus).
+          "Blonde d'essai (2024-07-14-blonde-essai) : 7 heures et mesures",
+        ),
+        findsOneWidget,
+      );
+      final brassin = await app.importFirestore
+          .doc('brews/fiche-2024-07-14-blonde-essai')
+          .get();
+      expect(brassin.data()!['bottles_count'], 49);
+      semantics.dispose();
+    });
+
+    testWidgets('« Remplacement à terminer » coché ; seuls des remplacements '
+        'choisis : « Remplacer n fiches »', (tester) async {
+      final app = await ouvrir(tester);
+      await app.importFirestore.doc('brews/fiche-2023-04-02-ambree-essai').set({
+        'owner_uid': adminUser.uid,
+        'imported_from': 'Fiche Excel · 2023-04-02-ambree-essai · remplacement',
+      });
+      await analyser(tester, app);
+      expect(find.text('Remplacement à terminer'), findsOneWidget);
+      expect(
+        find.text(
+          'Remplacement commencé et non terminé : l\'import le terminera.',
+        ),
+        findsOneWidget,
+      );
+      // Deux nouvelles et un remplacement : « Importer ».
+      expect(find.text('Importer 3 fiches'), findsOneWidget);
+      final cases = find.byType(CheckboxListTile);
+      await tester.tap(cases.at(0));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(cases.at(2));
+      await tester.pumpAndSettle();
+      await tester.tap(cases.at(2));
+      await tester.pumpAndSettle();
+      expect(find.text('Remplacer 1 fiche'), findsOneWidget);
+      expect(find.text('Importer 1 fiche'), findsNothing);
+    });
 
     testWidgets('U3 : libellé accessible d\'une ligne, explication comprise', (
       tester,

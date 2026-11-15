@@ -11,7 +11,7 @@ const maxStepUpdateMinutes = 600;
 
 /// Nature de la durée réelle d'une étape.
 enum ActualStepKind {
-  /// Début et fin enregistrés : [ActualStepDuration.actualMinutes] est connue.
+  /// Début noté et fin retenue : [ActualStepDuration.actualMinutes] est connue.
   measured,
 
   /// Étape prévue à 0 min (« Fait ») : ni réel ni écart.
@@ -23,12 +23,15 @@ enum ActualStepKind {
   /// En cours.
   running,
 
-  /// Commencée sans fin retenue : faite sans heure de fin, ou restée en cours
-  /// dans une journée close.
+  /// Commencée à une heure notée, sans fin retenue : ni fin enregistrée, ni
+  /// début noté de l'étape suivante. Réel inconnu.
   missingEnd,
+
+  /// Commencée à une heure estimée (`time_estimated`) : réel inconnu.
+  estimated,
 }
 
-/// Prévu et réel d'une étape, en minutes entières.
+/// Prévu et réel d'une étape, en minutes entières, et ses heures.
 class ActualStepDuration {
   /// Crée le résultat. [actualMinutes] n'est donné que pour
   /// [ActualStepKind.measured].
@@ -36,6 +39,9 @@ class ActualStepDuration {
     required this.kind,
     required this.plannedMinutes,
     this.actualMinutes,
+    this.startDeltaMinutes,
+    this.theoreticalStart,
+    this.end,
   });
 
   /// Nature.
@@ -44,9 +50,20 @@ class ActualStepDuration {
   /// Durée prévue, arrondie à la minute la plus proche.
   final int plannedMinutes;
 
-  /// Durée réelle (fin retenue moins début retenu), arrondie à la minute la
-  /// plus proche ; nulle sans début et fin.
+  /// Durée réelle (fin retenue moins début noté), arrondie à la minute la
+  /// plus proche ; nulle sans début noté et fin.
   final int? actualMinutes;
+
+  /// Début noté moins début du plan d'origine, arrondi : positif en retard,
+  /// négatif en avance. Nul sans début noté.
+  final int? startDeltaMinutes;
+
+  /// Heure théorique de début ([theoreticalStarts]) ; nulle sans ancre.
+  final DateTime? theoreticalStart;
+
+  /// Fin retenue d'une étape [ActualStepKind.measured] : fin enregistrée, ou
+  /// début noté de l'étape suivante. Nulle pour les autres natures.
+  final DateTime? end;
 
   /// Réel moins prévu, en minutes ; nul sans réel.
   int? get deltaMinutes {
@@ -57,17 +74,24 @@ class ActualStepDuration {
 
 /// Nature de la durée réelle d'une journée.
 enum ActualDayKind {
-  /// Aucune étape n'a début et fin : la journée n'a que son prévu.
+  /// Aucune étape n'a début noté et fin : la journée n'a que son prévu.
   none,
 
-  /// Réel connu.
+  /// Réel connu, toutes les étapes commencées ont leur réel.
   measured,
+
+  /// Réel connu du premier début à la dernière fin, mais des étapes
+  /// intermédiaires sont sans réel ([ActualDayDuration.stepsWithoutTime]).
+  partial,
 
   /// Une étape est en cours.
   running,
 
-  /// Une étape a commencé sans fin retenue.
-  missingEnd,
+  /// Première étape commencée à une heure estimée : réel inconnu.
+  startNotNoted,
+
+  /// Dernière étape commencée sans fin retenue : réel inconnu.
+  endNotNoted,
 }
 
 /// Prévu et réel d'une journée et de ses étapes, en minutes entières.
@@ -77,7 +101,7 @@ class ActualDayDuration {
     required this.kind,
     required this.plannedMinutes,
     required this.steps,
-    required this.stepsWithoutEnd,
+    this.stepsWithoutTime = 0,
     this.actualMinutes,
     this.betweenStepsMinutes,
   });
@@ -89,16 +113,18 @@ class ActualDayDuration {
   final int plannedMinutes;
 
   /// Temps écoulé du premier début à la dernière fin, arrondi ; nul hors de
-  /// [ActualDayKind.measured].
+  /// [ActualDayKind.measured] et [ActualDayKind.partial].
   final int? actualMinutes;
 
-  /// [actualMinutes] moins la somme des réels arrondis des étapes qui ont début
-  /// et fin : le temps passé entre les étapes. Négatif quand des étapes se
-  /// chevauchent. Nul hors de [ActualDayKind.measured].
+  /// [actualMinutes] moins la somme des réels arrondis des étapes : le temps
+  /// passé entre les étapes. Négatif quand des étapes se chevauchent. Nul hors
+  /// de [ActualDayKind.measured].
   final int? betweenStepsMinutes;
 
-  /// Nombre d'étapes [ActualStepKind.missingEnd].
-  final int stepsWithoutEnd;
+  /// Étapes commencées sans réel ([ActualStepKind.estimated],
+  /// [ActualStepKind.missingEnd]) entre la première et la dernière, pour
+  /// [ActualDayKind.partial].
+  final int stepsWithoutTime;
 
   /// Une durée par étape, dans l'ordre reçu.
   final List<ActualStepDuration> steps;
@@ -129,6 +155,12 @@ class StepTiming {
 
   /// Heures retenues, ou nul.
   final StepRecord? record;
+
+  /// Début noté : début retenu qui n'est pas une heure estimée.
+  DateTime? get _notedStart {
+    final r = record;
+    return r == null || r.startEstimated ? null : r.startedAt;
+  }
 }
 
 /// Minutes entières les plus proches de [duration] : 30 s comptent pour une
@@ -138,105 +170,228 @@ int _minutes(Duration duration) {
   return (duration.inMicroseconds + minute ~/ 2) ~/ minute;
 }
 
+/// Heure théorique de début de chaque étape d'une journée.
+///
+/// Une étape commence au dernier début noté qui la précède ([notedStarts],
+/// une étape avec un début noté compte pour elle-même), plus la durée prévue
+/// de chaque étape entre les deux, celle de l'étape notée comprise. Une étape
+/// sans heure notée compte sa durée prévue ; une étape sautée ([skipped])
+/// compte zéro. Sans début noté avant elle, l'ancre est [anchor] (heure de
+/// début prévue) ; sans ancre, l'heure est nulle. Les heures sont des
+/// instants : un changement d'heure ne décale rien.
+///
+/// Sert à dater une étape citée sans heure (import des fiches) et à afficher
+/// l'heure d'une étape non notée. Fonction pure : rien ne s'écrit à
+/// l'affichage (P2).
+///
+/// Lève [BrewingInputException] si les listes n'ont pas la même longueur ou si
+/// une durée est négative.
+List<DateTime?> theoreticalStarts({
+  required List<Duration> planned,
+  required List<DateTime?> notedStarts,
+  List<bool>? skipped,
+  DateTime? anchor,
+}) {
+  if (notedStarts.length != planned.length ||
+      (skipped != null && skipped.length != planned.length)) {
+    throw BrewingInputException(
+      'notedStarts',
+      notedStarts.length,
+      'une heure par étape attendue (${planned.length})',
+    );
+  }
+  final result = <DateTime?>[];
+  var cursor = anchor;
+  for (final (i, duration) in planned.indexed) {
+    if (duration.isNegative) {
+      throw BrewingInputException('planned[$i]', duration, 'durée négative');
+    }
+    final noted = notedStarts[i];
+    if (noted != null) cursor = noted;
+    result.add(cursor);
+    final skip = skipped?[i] ?? false;
+    final at = cursor;
+    if (at != null && !skip) cursor = at.add(duration);
+  }
+  return List.unmodifiable(result);
+}
+
 /// Prévu et réel des étapes d'une journée, et de la journée (ADR-010).
 ///
-/// Durée réelle d'une étape : fin retenue moins début retenu
-/// ([StepRecord.endedAt], jamais la fin estimée [ScheduledStep.end]), arrondie
-/// à la minute la plus proche. Une étape prévue à 0 min reste une action, sans
-/// réel ni écart. Une étape commencée sans fin est en cours si [recomputeSchedule]
+/// Seule une heure notée compte : un début estimé (`time_estimated`, import
+/// d'une fiche) date l'étape sans donner de réel ni d'écart. Fin d'une étape :
+/// sa fin enregistrée ([StepRecord.endedAt], « Terminer »), sinon le début noté
+/// de l'étape suivante (les étapes sautées passées), jamais la fin estimée
+/// [ScheduledStep.end]. Durée réelle : fin moins début noté, arrondie à la
+/// minute la plus proche. Une étape prévue à 0 min reste une action, sans réel
+/// ni écart. Une étape commencée sans fin est en cours si [recomputeSchedule]
 /// la rend en cours et que la journée n'est pas close ([dayClosed] : brassage
-/// terminé, journée terminée) ; sinon elle est sans heure de fin.
+/// terminé, journée terminée).
+///
+/// Écart de début : début noté moins début du plan d'origine (premier début
+/// noté de la journée, plus la durée prévue de chaque étape entre les deux) :
+/// le retard s'accumule. Heure théorique : [theoreticalStarts], ancrée sur
+/// [plannedStart].
 ///
 /// Journée : réel du premier début à la dernière fin, seulement quand une étape
-/// au moins a début et fin, qu'aucune n'est en cours et qu'aucune n'a commencé
-/// sans fin. Les heures sont des instants : un changement d'heure ou minuit ne
-/// changent pas le temps écoulé.
+/// au moins a un réel et qu'aucune n'est en cours ; première étape commencée à
+/// une heure estimée : début non noté ; dernière sans fin : fin non notée ;
+/// étapes intermédiaires sans réel : réel connu, compté à part
+/// ([ActualDayKind.partial]). Les heures sont des instants : un changement
+/// d'heure ou minuit ne changent pas le temps écoulé.
 ///
 /// Lève [BrewingInputException] pour une étape faite ou en cours sans début.
 ActualDayDuration actualDurations({
   required List<StepTiming> steps,
   bool dayClosed = false,
+  DateTime? plannedStart,
 }) {
-  final results = <ActualStepDuration>[];
-  var planned = Duration.zero;
-  var measuredSum = 0;
-  var complete = false;
-  var running = false;
-  var withoutEnd = 0;
-  DateTime? firstStart;
-  DateTime? lastEnd;
   for (final (i, step) in steps.indexed) {
-    planned += step.planned;
-    final plannedMinutes = _minutes(step.planned);
-    final record = step.record;
-    final start = record?.startedAt;
-    final end = record?.endedAt;
     final started =
         step.status == StepStatus.done || step.status == StepStatus.running;
-    if (started && start == null) {
+    if (started && step.record?.startedAt == null) {
       throw BrewingInputException(
         'steps[$i].record',
         step.status.name,
         'étape commencée sans début enregistré',
       );
     }
+  }
+  final theoretical = theoreticalStarts(
+    planned: [for (final s in steps) s.planned],
+    notedStarts: [for (final s in steps) s._notedStart],
+    skipped: [for (final s in steps) s.status == StepStatus.skipped],
+    anchor: plannedStart,
+  );
+  // Plan d'origine : depuis le premier début noté, durées prévues cumulées.
+  final origin = <DateTime?>[];
+  DateTime? originCursor;
+  for (final step in steps) {
+    originCursor ??= step._notedStart;
+    origin.add(originCursor);
+    final at = originCursor;
+    if (at != null) originCursor = at.add(step.planned);
+  }
+
+  final results = <ActualStepDuration>[];
+  var planned = Duration.zero;
+  var measuredSum = 0;
+  var complete = false;
+  var running = false;
+  for (final (i, step) in steps.indexed) {
+    planned += step.planned;
+    final plannedMinutes = _minutes(step.planned);
+    final record = step.record;
+    final start = step._notedStart;
+    final open =
+        step.status == StepStatus.running &&
+        !dayClosed &&
+        record?.endedAt == null;
+    final end = open ? null : record?.endedAt ?? _nextNotedStart(steps, i);
+    final started =
+        step.status == StepStatus.done || step.status == StepStatus.running;
     int? actual;
-    if (start != null && end != null) {
+    if (start != null && end != null && !end.isBefore(start)) {
       actual = _minutes(end.difference(start));
-      complete = true;
-      measuredSum += actual;
-      if (firstStart == null || start.isBefore(firstStart)) firstStart = start;
-      if (lastEnd == null || end.isAfter(lastEnd)) lastEnd = end;
     }
-    // Une action s'enregistre début et fin d'un coup : sans fin, elle ne
-    // retient pas la journée.
     final ActualStepKind kind;
     if (step.planned == Duration.zero) {
       kind = ActualStepKind.action;
       actual = null;
     } else if (!started) {
       kind = ActualStepKind.none;
-    } else if (actual != null) {
-      kind = ActualStepKind.measured;
-    } else if (step.status == StepStatus.running && !dayClosed) {
+    } else if (record?.startEstimated ?? false) {
+      kind = ActualStepKind.estimated;
+      actual = null;
+    } else if (open) {
       kind = ActualStepKind.running;
       running = true;
+      actual = null;
+    } else if (actual != null) {
+      kind = ActualStepKind.measured;
+      complete = true;
+      measuredSum += actual;
     } else {
       kind = ActualStepKind.missingEnd;
-      withoutEnd++;
     }
+    final originStart = origin[i];
     results.add(
       ActualStepDuration(
         kind: kind,
         plannedMinutes: plannedMinutes,
         actualMinutes: actual,
+        startDeltaMinutes: start == null || originStart == null
+            ? null
+            : _signedMinutes(start.difference(originStart)),
+        theoreticalStart: theoretical[i],
+        end: kind == ActualStepKind.measured ? end : null,
       ),
     );
   }
 
-  final ActualDayKind dayKind;
+  final startedIndexes = [
+    for (final (i, s) in steps.indexed)
+      if (s.status == StepStatus.done || s.status == StepStatus.running) i,
+  ];
+  ActualDayKind dayKind;
   int? actual;
   int? between;
+  var withoutTime = 0;
   if (!complete) {
     dayKind = ActualDayKind.none;
   } else if (running) {
     dayKind = ActualDayKind.running;
-  } else if (withoutEnd > 0) {
-    dayKind = ActualDayKind.missingEnd;
   } else {
-    dayKind = ActualDayKind.measured;
-    actual = _minutes(lastEnd!.difference(firstStart!));
-    between = actual - measuredSum;
+    final first = startedIndexes.first;
+    final last = startedIndexes.last;
+    final firstStart = steps[first]._notedStart;
+    final lastStep = steps[last];
+    final lastEnd =
+        lastStep.record?.endedAt ??
+        (lastStep.planned == Duration.zero ? lastStep._notedStart : null);
+    if (firstStart == null) {
+      dayKind = ActualDayKind.startNotNoted;
+    } else if (lastEnd == null || lastEnd.isBefore(firstStart)) {
+      dayKind = ActualDayKind.endNotNoted;
+    } else {
+      for (final i in startedIndexes) {
+        final k = results[i].kind;
+        if (k == ActualStepKind.estimated || k == ActualStepKind.missingEnd) {
+          withoutTime++;
+        }
+      }
+      actual = _minutes(lastEnd.difference(firstStart));
+      if (withoutTime == 0) {
+        dayKind = ActualDayKind.measured;
+        between = actual - measuredSum;
+      } else {
+        dayKind = ActualDayKind.partial;
+      }
+    }
   }
   return ActualDayDuration(
     kind: dayKind,
     plannedMinutes: _minutes(planned),
     actualMinutes: actual,
     betweenStepsMinutes: between,
-    stepsWithoutEnd: withoutEnd,
+    stepsWithoutTime: withoutTime,
     steps: List.unmodifiable(results),
   );
 }
+
+/// Début noté de l'étape qui suit [index], étapes sautées passées ; nul si
+/// cette étape n'a pas de début noté.
+DateTime? _nextNotedStart(List<StepTiming> steps, int index) {
+  for (var i = index + 1; i < steps.length; i++) {
+    if (steps[i].status == StepStatus.skipped) continue;
+    return steps[i]._notedStart;
+  }
+  return null;
+}
+
+/// Minutes entières les plus proches de [duration], signe gardé.
+int _signedMinutes(Duration duration) =>
+    duration.isNegative ? -_minutes(-duration) : _minutes(duration);
 
 /// Raison pour laquelle une durée réelle n'est pas proposée à une étape de
 /// modèle de processus.

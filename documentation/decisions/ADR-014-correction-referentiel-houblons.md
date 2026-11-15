@@ -127,7 +127,7 @@ la table des graphies.
 - `ecrire.mjs --supprimer-absents` : supprime les documents présents dans Firestore et
   absents de la préparation, dans `beer_hops` et `beer_hop_aromas` seulement pour ce lot.
 - Garde-fous : simulation d'abord (liste des identifiants), plafond de 30 suppressions par
-  lancement, refus si la préparation compte moins de 95 % des documents en ligne de la
+  lancement, refus si la préparation compte moins de 90 % des documents en ligne de la
   collection, confirmation par la saisie du nombre de suppressions, identifiant conforme au
   motif de la collection (`ingest/lib/validation.mjs`, ligne 114), rapport chiffré
   (supprimés, ignorés, en erreur) avec les identifiants. Émulateur par défaut, production
@@ -190,6 +190,15 @@ la table des graphies.
   (table de fusion et liste des pays), P55 borné à cet ADR pour la préparation de `beer_hops`.
 - `DATA_SOURCES.md` : section « Origines » et table de fusion décrites ; volumes « Après
   fusion » mis à jour.
+
+## Note du 2026-11-15 : seuil de la suppression à 90 %
+
+Le premier lancement en production de `--supprimer-absents beer_hops` a été refusé : la
+préparation compte 442 documents pour 466 en ligne, soit 94,85 %, sous le seuil de 95 %
+fixé à la section 3. Les 24 absents sont les doublons retirés par la table de fusion.
+Décision de l'utilisateur : le seuil passe à 90 % (`PART_MIN_PREPAREE`,
+`ingest/lib/ecriture.mjs`). Les autres garde-fous ne changent pas (30 suppressions au plus,
+simulation, saisie du nombre).
 
 ## Sources
 
