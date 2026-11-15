@@ -1,5 +1,5 @@
 // Fixture écrite à la main : entrées inventées, dans la forme de
-// import/sources/fabricants/cultures.json.
+// exchange/donnees/fabricants/cultures.json.
 {
   "beerjson": {
     "version": 2.01,
