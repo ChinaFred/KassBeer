@@ -29,6 +29,7 @@ l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`
 | Fiches techniques Fermentis (`fermentis.com/en/product/…`), recopiées à la main dans `exchange/donnees/fabricants/cultures.json` (BeerJSON 2.01, versionné) | relevé du 2026-11-14 ; fichier écrit à la main, SHA-256 `1eb1f9ae2e05e36fc4bd2bd9b279582cde3f8907912d897ca436615fcff4dbdf` au versement | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-14 | 25 cultures (23 levures, 2 bactéries) : nom, type, forme, producteur, référence, atténuation apparente, plage de température | floculation (la fiche donne un temps de sédimentation), tolérance à l'alcool, dosage, descriptions |
 | Fiches techniques Mangrove Jack's (`mangrovejacks.com/products/…`, collection « Beer Yeasts »), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `695254c9d80eabf56d450ed7f7904dafbf730226a80daa839b403ef0af3098f2` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 16 levures de bière : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | levures de vin, de cidre, d'hydromel et de hard seltzer, tolérance à l'alcool, dosage, descriptions |
 | Fiches techniques Imperial Yeast (`imperialyeast.com/yeast-strains/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `149051162efdff5de2c91b6709092eaf85c23fea778551ac51a9ed3936e50f23` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 55 levures de bière : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | A40 Bubbles (cidre), W01 Champion et W04 Paramount (levures de vin), tolérance à l'alcool, descripteurs, descriptions |
+| Fiches techniques Omega Yeast (`omegayeast.com/products/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `77ade05bd46079eaa5bce980ca8fbae031a833c9f98d1d573878b790a7c3b76b` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 104 cultures (102 levures liquides ou sèches, 2 bactéries) : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | tolérance à l'alcool, notes de dégustation, descriptions |
 | paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
 | Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
 
@@ -251,13 +252,13 @@ Fichier écrit à la main, versionné dans `exchange/donnees/fabricants/cultures
 2026-11-15 (lu par défaut par `bin/preparer_referentiels.dart`, option `--fabricants`), au format
 BeerJSON 2.01 (liste `cultures`, mêmes champs que 003 et 004) ; en-tête en `//` avec l'adresse des
 fiches. Il ne contient que noms et valeurs techniques, aucun texte des fiches.
-`exchange/test/fabricants_donnees_test.dart` le lit : 96 entrées (25 Fermentis, 16 Mangrove
-Jack's, 55 Imperial Yeast), aucun rejet, quatre atténuations écartées (Fermentis).
+`exchange/test/fabricants_donnees_test.dart` le lit : 200 entrées (25 Fermentis, 16 Mangrove
+Jack's, 55 Imperial Yeast, 104 Omega Yeast), aucun rejet, quatre atténuations écartées (Fermentis).
 Lu par `lireFabricants` d'`exchange/` ; toute autre liste est ignorée et comptée.
 
 Chaque fabricant a sa date de relevé, dans `kDatesReleveFabricants` (`exchange/lib/src/ingestion/sources.dart`),
-par clé de producteur : Fermentis le 2026-11-14, Mangrove Jack's et Imperial Yeast le
-2026-11-15. Cette date
+par clé de producteur : Fermentis le 2026-11-14, Mangrove Jack's, Imperial Yeast et
+Omega Yeast le 2026-11-15. Cette date
 devient `version` et `retrieved` dans `provenance[]` de chaque fiche. Une fiche d'un producteur
 absent de la table est refusée (« date du relevé inconnue »). Au rapport, la version de la source
 `fabricants` est la date du relevé le plus récent.
@@ -316,6 +317,30 @@ Mesure sur les sources du relevé du 2026-11-08 : 36 fiches rejoignent le docume
 même référence (B53, nommée Fish Finder chez Brewtarget, garde l'identifiant
 `culture-imperial-yeast-b53-fish-finder` et prend le nom `B53 Precious`), 19 créent un
 document ; 874 documents `beer_cultures` au lieu de 855.
+
+### Omega Yeast
+
+Relevé du 2026-11-15 sur `omegayeast.com/products/<fiche>` : 104 cultures, dont deux bactéries.
+La forme est sèche pour les cinq Pinnacle et pour Dried Lutra, liquide pour les autres.
+
+| Valeur de la fiche | Champ |
+|---|---|
+| nom sans la référence ni « Yeast » (`Voss Kveik`) ; référence OYL du titre, sinon celle que porte la page (Belgian Ale DK : `OYL-049`) ; Omega Yeast. Les cinq Pinnacle n'ont pas de référence : identifiant tiré du nom | `name`, `product_id`, `producer` |
+| « Strain Type » (Ale → `ale`, Lager → `lager`, Brett → `brett`), puis : kveik dans le nom ou la fiche (Vossa Nova) → `kveik` ; bière de blé (Hefeweizen, Bavarian Wheat, American Wheat, Wit, Grand Cru, Belgian Wheat) → `wheat` ; saison et Brettanomyces (C2C) → `mixed-culture` ; *Lactobacillus* → `lacto` ; *Pediococcus* → `pedio` ; *Lachancea* (Pinnacle Crisp Sour) → `other` | `type` |
+| levure liquide ou sèche | `form` |
+| plage chiffrée de « Attenuation » (`Medium: 76-82%`) | `attenuation` |
+| « Temperature Range » en °F | `temperature_range` |
+| « Flocculation » : `Low-Medium` → `medium low`, `Medium-High` → `medium high` | `flocculation` |
+
+Champs absents : l'atténuation de Lacto, Pediococcus, Solsta et Pinnacle Low Alcohol ; la plage
+de température de Pinnacle Low Alcohol ; la floculation des deux bactéries.
+
+Mesure sur les sources du relevé du 2026-11-08 : 75 fiches rejoignent le document Brewtarget de
+même référence, 29 créent un document ; 903 documents `beer_cultures` au lieu de 874. Les
+variantes « + » (Kolsch II+, German Lager I+, Bayern Lager+, Point Loma+, Extra Special+…)
+ont le même nom normalisé que la souche d'origine : cinq noms de plus désignent deux
+documents (`kolsch-ii`, `german-lager-i`, `bayern-lager`, `point-loma`, `extra-special`), et un
+import qui ne donne que ce nom ne le résout plus ; la souche (`Omega OYL-044`) le résout.
 
 ## Correspondance DotBeer (fichier 005) → référentiels
 

@@ -20,6 +20,7 @@ const Map<String, String> kDatesReleveFabricants = {
   'fermentis': '2026-11-14',
   'mangrove-jack-s': '2026-11-15',
   'imperial-yeast': '2026-11-15',
+  'omega-yeast': '2026-11-15',
 };
 
 /// Date du relevé le plus récent de [dates] : version de la source

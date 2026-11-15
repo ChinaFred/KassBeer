@@ -16,9 +16,9 @@ void main() {
       );
   });
 
-  test('96 cultures (25 Fermentis, 16 Mangrove Jack\'s, 55 Imperial), '
-      'aucun rejet', () {
-    expect(lecture.entrees, hasLength(96));
+  test('200 cultures (25 Fermentis, 16 Mangrove Jack\'s, 55 Imperial, '
+      '104 Omega), aucun rejet', () {
+    expect(lecture.entrees, hasLength(200));
     final parProducteur = <String, int>{};
     for (final e in lecture.entrees) {
       parProducteur[e.producteur!] = (parProducteur[e.producteur!] ?? 0) + 1;
@@ -27,6 +27,7 @@ void main() {
       'Fermentis': 25,
       "Mangrove Jack's": 16,
       'Imperial Yeast': 55,
+      'Omega Yeast': 104,
     });
     expect(lecture.rejets, isEmpty);
     expect(lecture.listesIgnorees, isEmpty);
@@ -34,7 +35,7 @@ void main() {
     expect(lecture.entrees.map((e) => e.nature).toSet(), {
       NatureReferentiel.culture,
     });
-    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(96));
+    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(200));
   });
 
   test('chaque fiche porte la date du relevé de son producteur', () {
@@ -44,6 +45,37 @@ void main() {
         _ => '2026-11-15',
       }, reason: e.nom);
     }
+  });
+
+  test('Omega : types tirés de la fiche, champs absents attendus', () {
+    final om = {
+      for (final e in lecture.entrees.where(
+        (e) => e.producteur == 'Omega Yeast',
+      ))
+        e.sourceId: e,
+    };
+    expect(om['omega-yeast-oyl-061']!.valeurs['type'], 'kveik');
+    expect(om['omega-yeast-oyl-605']!.valeurs['type'], 'lacto');
+    expect(om['omega-yeast-oyl-606']!.valeurs['type'], 'pedio');
+    expect(om['omega-yeast-oyl-217']!.valeurs['type'], 'mixed-culture');
+    expect(om['omega-yeast-pinnacle-crisp-sour']!.valeurs['type'], 'other');
+    expect(om['omega-yeast-pinnacle-crisp-sour']!.valeurs['form'], 'dry');
+    expect(
+      om.values.where((e) => e.produit == null).map((e) => e.sourceId),
+      hasLength(5),
+    );
+    expect(
+      om.values
+          .where((e) => !e.valeurs.containsKey('attenuation'))
+          .map((e) => e.sourceId)
+          .toSet(),
+      {
+        'omega-yeast-oyl-410',
+        'omega-yeast-oyl-605',
+        'omega-yeast-oyl-606',
+        'omega-yeast-pinnacle-low-alcohol',
+      },
+    );
   });
 
   test(
