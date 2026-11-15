@@ -6,7 +6,7 @@
 //
 // Suppression des documents absents de la préparation (ADR-014, section 3, P19) : seulement
 // sur option (--supprimer-absents <collection>), dans beer_hops ou beer_hop_aromas, 30 au
-// plus par lancement, refusée si la préparation compte moins de 95 % des documents en ligne.
+// plus par lancement, refusée si la préparation compte moins de 90 % des documents en ligne.
 // Un identifiant hors du motif de la collection n'est jamais supprimé.
 
 import { COLLECTIONS_SUPPRIMABLES, ErreurOptions } from "./options.mjs";
@@ -73,7 +73,7 @@ export async function ecrireCollections({ db, FieldValue, documents, simulation 
 export const PLAFOND_SUPPRESSIONS = 30;
 
 /// Part minimale des documents en ligne que la préparation doit compter.
-export const PART_MIN_PREPAREE = 0.95;
+export const PART_MIN_PREPAREE = 0.9;
 
 /// Identifiants des documents de [collection] en ligne dans [db] (lecture des seuls
 /// identifiants, sans les champs).

@@ -1,7 +1,7 @@
 // v0.6 — Admin › Import des fiches Excel : les écritures d'une fiche importée
 // (FirestoreImportFichesRepository, CR3) passent sous le compte de celui qui importe,
 // pour les cinq profils de P4, et le plus grand brassin importé tient dans le budget
-// de 1 000 expressions (P21). v0.1.68 : heures estimées (time_estimated,
+// de 1 000 expressions (P21). v0.1.69 : heures estimées (time_estimated,
 // date_estimated) et remplacement d'une fiche au contenu différent (marque, suppression
 // des événements, du brassin et du coût figé, puis nouvelle écriture). Fiche fictive
 // (P15).
@@ -364,7 +364,7 @@ describe("import des fiches — création du brassin", () => {
   });
 });
 
-// Remplacement d'une fiche au contenu différent (v0.1.68), dans l'ordre de
+// Remplacement d'une fiche au contenu différent (v0.1.69), dans l'ordre de
 // planDeRemplacement : marque de remplacement, événements supprimés par lots,
 // brassin et coût figé dans un même lot (CB19), puis les écritures de CR3. Seul le
 // propriétaire du brassin importé remplace ; la recette est gardée.

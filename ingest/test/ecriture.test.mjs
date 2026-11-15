@@ -162,22 +162,22 @@ describe("planifierSuppressions (ADR-014)", () => {
     );
   });
 
-  it("préparation à moins de 95 % des documents en ligne : refusée", () => {
-    const prepares = ids(95);
+  it("préparation à moins de 90 % des documents en ligne : refusée", () => {
+    const prepares = ids(90);
     const ok = planifierSuppressions({
       collection: "beer_hop_aromas",
-      enLigne: [...prepares, ...ids(5, "hop-x")],
+      enLigne: [...prepares, ...ids(10, "hop-x")],
       prepares,
     });
-    assert.equal(ok.candidates.length, 5);
+    assert.equal(ok.candidates.length, 10);
     assert.throws(
       () =>
         planifierSuppressions({
           collection: "beer_hop_aromas",
-          enLigne: [...prepares, ...ids(6, "hop-x")],
+          enLigne: [...prepares, ...ids(11, "hop-x")],
           prepares,
         }),
-      (e) => e instanceof ErreurOptions && /moins de 95 %/.test(e.message),
+      (e) => e instanceof ErreurOptions && /moins de 90 %/.test(e.message),
     );
   });
 

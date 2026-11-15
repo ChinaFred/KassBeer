@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.68 — fonctionnel
+### v0.1.69 — fonctionnel
 
 Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
 sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
@@ -20,7 +20,7 @@ heure portent « heure non notée », la densité finale datée de 28 jours apr�
 remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
 import.
 
-### v0.1.68 — technique
+### v0.1.69 — technique
 
 `brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
 noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
@@ -46,6 +46,15 @@ l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
 `SuppressionBrassin`, état `remplacementATerminer` (marque `Fiche Excel · {id} ·
 remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
 rubrique « Heures estimées ». Aucune dépendance ne change.
+
+### v0.1.68 — technique
+
+ADR-014 : `ecrire.mjs --supprimer-absents` refusait de supprimer les 24 doublons de
+`beer_hops`, car la préparation compte 442 documents pour 466 en ligne (94,85 %, sous le seuil
+de 95 %). Décision de l'utilisateur : `PART_MIN_PREPAREE` passe à 0,9
+(`ingest/lib/ecriture.mjs`). Tests de `ingest/` adaptés (90 préparés pour 100 acceptés, 11
+absents refusés ; émulateur à 61 pour 72 refusé). P19 de `CLAUDE.md`, `exigences-techniques.md`
+et ADR-014 (note du 2026-11-15) mis à jour.
 
 ### v0.1.67 — fonctionnel
 

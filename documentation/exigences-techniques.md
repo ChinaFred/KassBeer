@@ -1652,7 +1652,7 @@ brassin terminé ou abandonné ; une étape restée en cours y est sans fin (« 
 (heures théoriques et écarts de début des étapes), et rapporte un refus de `brewing/` une fois
 (`brews.actual_durations`, `planReportsProvider`) en rendant `null` ; `dureesDesJournees` rend
 les durées de chaque journée de la fiche. `ChronologieJour` reçoit `durees` sur la fiche, sur
-l'écran du jour et sur l'écran d'une journée (v0.1.68, calcul local, P2), et `importe`
+l'écran du jour et sur l'écran d'une journée (v0.1.69, calcul local, P2), et `importe`
 (`Brew.importeDUneFiche`, `imported_from` qui commence par « Fiche Excel ») : une étape non
 faite d'un brassin importé est « Non notée » à son heure théorique. `heureDeLigne` rend la
 colonne d'heure affichée et lue (fin retenue par `ActualStepDuration.end`, « vers » pour un
@@ -1799,8 +1799,8 @@ règles au retour du réseau.
 | `measured_at` | timestamp, obligatoire : heure de l'appareil |
 | `created_at` | timestamp, obligatoire : `serverTimestamp()`, audit seul |
 | `phase` | string \| null : absent ou nul pour le jour de brassage, `fermentation` pour un relevé et pour une mesure ou une note d'une journée 2 ou suivante (avec son `step_key`, v0.1.35) ; permis sur `measurement` et `note`, refusé sur un événement d'étape ; immuable |
-| `time_estimated` | booléen `true` ou absent (v0.1.68) : heure non notée, écrite par Admin › Import pour tout événement d'une fiche dont `time_source` n'est pas `fiche` ; permis sur `step_started`, `measurement`, `note` ; ne s'ajoute jamais ; se retire seulement avec `measured_at` changé (correction d'une saisie : l'heure devient notée) |
-| `date_estimated` | booléen `true` ou absent (v0.1.68) : date elle-même estimée, relevé de densité finale daté du jour du brassage + 28 jours (`estimee_j28`) ; sur `measurement` ou `note`, seulement avec `time_estimated` ; retiré avec lui |
+| `time_estimated` | booléen `true` ou absent (v0.1.69) : heure non notée, écrite par Admin › Import pour tout événement d'une fiche dont `time_source` n'est pas `fiche` ; permis sur `step_started`, `measurement`, `note` ; ne s'ajoute jamais ; se retire seulement avec `measured_at` changé (correction d'une saisie : l'heure devient notée) |
+| `date_estimated` | booléen `true` ou absent (v0.1.69) : date elle-même estimée, relevé de densité finale daté du jour du brassage + 28 jours (`estimee_j28`) ; sur `measurement` ou `note`, seulement avec `time_estimated` ; retiré avec lui |
 
 `time_estimated` et `date_estimated` distinguent les trois heures non notées d'une fiche
 sans rien déduire de l'heure : jour du brassage (`time_estimated` sans `phase`, « vers
@@ -2624,7 +2624,7 @@ d'exemple, 11 modèles invalides, 2 recettes invalides, 6 jours d'ajout, 9 dates
 changements d'heure du 2026-10-25 et du 2027-03-28, et 5 ordres de journées (`session_orders`,
 4 refusés).
 
-**Durées réelles (v0.1.37, heures estimées v0.1.68).** `actualDurations(steps:, dayClosed:,
+**Durées réelles (v0.1.37, heures estimées v0.1.69).** `actualDurations(steps:, dayClosed:,
 plannedStart:)` (`actual_durations.dart`) reçoit pour chaque étape sa durée prévue, son état
 (`recomputeSchedule`) et son enregistrement (`stepRecordsFromEvents`) dans un `StepTiming`.
 `StepEvent.estimated` (`time_estimated`) devient `StepRecord.startEstimated` : un début estimé
@@ -2651,7 +2651,7 @@ le temps écoulé. `durationUpdateIssue` rend la raison de ne pas proposer une d
 (`actual_durations` : faite, sautée, non faite, en cours, journée close, sans fin, fin écartée,
 début en double, action, arrondi de 30 s, durée hors de 1 à 600, attentes, minuit, 2026-10-25,
 2027-03-28, jamais commencée, journée passée), 12 cas de `duration_updates` et 4 arrondis ;
-la v0.1.68 y ajoute 4 cas (fiche importée à heures notées, estimée et absente ; première étape
+la v0.1.69 y ajoute 4 cas (fiche importée à heures notées, estimée et absente ; première étape
 estimée ; étape sautée puis non faite ; début estimé avec fin), l'écart de début de chaque cas
 (`start_delta`), les heures théoriques (`theoretical`) et la fin retenue (`end`), et revoit
 les cas « commencée sans fin » (fin au début noté de l'étape suivante).
@@ -3059,7 +3059,7 @@ brassin importé, daté par `brewed_at`, ne peut plus en recevoir. Il se lit par
 comme une seule journée tirée de `recipe_snapshot.brew_steps` (P37), test dans
 `import_fiches_test.dart`.
 
-**Remplacement (v0.1.68).** Une fiche « Déjà importée, contenu différent » dont « Remplacer ce
+**Remplacement (v0.1.69).** Une fiche « Déjà importée, contenu différent » dont « Remplacer ce
 brassin » est cochée, ou « Remplacement à terminer », suit `planDeRemplacement` : modification
 de `imported_from` à `Fiche Excel · {fiche_id} · remplacement` (`marqueRemplacement`, omise si
 elle est déjà posée), suppression des événements lus à l'analyse par lots de 10
@@ -3084,7 +3084,7 @@ importée » ; autre marque, « Déjà importée, contenu différent » ; recett
 (`DocumentDUnAutreMembre`), « Refusée ». Erreur :
 `reportError(feature: 'import.fiches')`, contexte « fiche n° 3, étape evenements, lot 2, code
 permission-denied », sans valeur ni texte de la fiche (P13). Règles : `time_estimated` et
-`date_estimated` des événements (v0.1.68, voir `brews/{brewId}/events/{eventId}`) ;
+`date_estimated` des événements (v0.1.69, voir `brews/{brewId}/events/{eventId}`) ;
 `rules-tests/test/import_fiches.test.mjs` rejoue ces écritures et le remplacement pour les cinq
 profils et mesure le budget sur le plus grand brassin importé (P21).
 
@@ -3217,7 +3217,7 @@ lancement ; toute autre est refusée par `lireOptions`) lit les identifiants en 
 (`select()`, sans les champs) et les compare aux identifiants préparés, refusés compris
 (`beer_hops.json`, ou `aromes.json` pour `beer_hop_aromas`, exigé). Avant toute écriture,
 `planifierSuppressions` (`lib/ecriture.mjs`) refuse : une autre collection ; une préparation
-qui compte moins de 95 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
+qui compte moins de 90 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
 suppressions (`PLAFOND_SUPPRESSIONS`). Un identifiant hors du motif de la collection
 (`motifIdentifiant`, celui de `beer_hops` pour les arômes) n'est jamais supprimé : il est
 compté « ignoré ». Avec `--simulation`, la liste seule. Sinon, la liste s'affiche et la
@@ -3249,7 +3249,7 @@ houblons, résolution de « Saaz », « Hallertau », « Tettnanger », « CTZ �
 fixture `test/fixtures/prepare/` contre l'émulateur, la seconde sans aucun référentiel ni
 aucune recette réécrit, seul son document `ingest_runs` créé ; `--supprimer-absents` : sans
 l'option rien n'est supprimé, simulation, nombre non confirmé sans écriture, suppression
-confirmée, identifiant hors motif gardé, préparation à moins de 95 % refusée, plus de 30
+confirmée, identifiant hors motif gardé, préparation à moins de 90 % refusée, plus de 30
 absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé) ;
 `npm run test:unitaires` sans émulateur. La CI ne lance pas encore `ingest/` (ADR-005, D2).
 
