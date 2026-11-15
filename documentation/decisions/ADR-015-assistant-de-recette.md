@@ -377,6 +377,7 @@ La relecture de l'agent `securite` complète les sections 1, 4 et 7. P59 en est 
 - **Lot A2** : une proposition hors schéma ou de plus de 30 opérations est rendue sans
   proposition, et le tour est compté.
 
-Point laissé ouvert : un compte d'exécution propre à `recipeAssistantTurn`, seul à lire
-`ANTHROPIC_API_KEY`. Aujourd'hui, toutes les fonctions tournent sous `tickets-functions`, comme
-pour les autres secrets.
+Compte d'exécution : décision de l'utilisateur du 2026-11-15, `recipeAssistantTurn` tourne
+sous `tickets-functions`, comme les autres fonctions et les autres secrets. Aucun compte propre
+à l'assistant. Une fuite de `ANTHROPIC_API_KEY` reste bornée par la limite de 20 $ de l'espace
+de travail.
