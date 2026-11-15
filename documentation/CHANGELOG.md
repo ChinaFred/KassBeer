@@ -38,6 +38,17 @@ ligne « IA ce mois » selon le membre, refus d'une grille qui retire un modèle
 « Résumer et continuer ». Ce dernier ajoute les clés `mode` et `summary` à la requête de
 l'assistant, avec leurs bornes ; P57, P58, P59 et P60 sont complétés en conséquence.
 
+Les relectures de `relecteur-regles` et de `securite` complètent ces amendements. En mode
+résumé, les bornes par champ et la forme de l'historique restent, `message` est refusé et
+`history` compte au moins 2 messages. Le prompt nomme huit blocs de données, dont `RESUME`,
+jamais suivis comme consignes. La grille et la politique se relisent l'une dans la
+transaction de l'autre, et une grille qui retire un modèle ou un effort utilisé est refusée.
+`ai_usage/` est gardé 13 mois, par `expires_at` et une règle TTL (décision de l'utilisateur).
+La procédure d'effacement RGPD couvre `ai_usage/` et `ai_quotas/`. La dépense par jour est
+bornée à environ 31 $, poste ouvert à tous, sous la limite de 20 $ de la Console. ADR-015
+reçoit les décisions sur les écrans du lot A1 : icône « Assistant » dans la barre du haut,
+commutateur « Calculs / Assistant » de 840 à 1 279 px, champ « Efforts acceptés ».
+
 ### v0.1.67 — fonctionnel
 
 Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et

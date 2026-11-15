@@ -175,7 +175,7 @@ jamais : aucune logique de coût en double, aucune fixture de coût.
 | Document | Contenu | Écrit par | Lu par |
 |---|---|---|---|
 | `ai_quotas/{uid}` | par poste : `day` (`AAAAMMJJ`, jour de Paris), `count`, `resets_at` (minuit suivant à Paris) | serveur, en transaction avant l'appel | le membre (`get` du sien), l'admin |
-| `ai_usage/{AAAA-MM}_{uid}` | `month`, `uid`, par poste : `calls`, `failed_calls`, `unpriced_calls`, `input_tokens`, `cache_write_tokens`, `cache_read_tokens`, `output_tokens`, `cost_usd` | serveur, après l'appel | le membre (`get` du sien), l'admin (`list` par `month`, 50 au plus) |
+| `ai_usage/{AAAA-MM}_{uid}` | `month`, `uid`, `member_email` et `expires_at` (amendement « cadrage du lot A1 »), par poste : `calls`, `failed_calls`, `unpriced_calls`, `input_tokens`, `cache_write_tokens`, `cache_read_tokens`, `output_tokens`, `cost_usd` | serveur, après l'appel | le membre (`get` du sien), l'admin (`list` par `month`, 50 au plus) |
 | journal de l'appel (`logInfo`) | `cost_center`, `uid`, modèle, effort, jetons, `cost_usd` ou `unpriced: true`, durée, `stop_reason`, identifiant de corrélation fourni par le poste | serveur | l'admin, par Admin › Journaux (ADR-011) |
 
 `resets_at` dispense le client de tout calcul de jour de Paris : un `count` dont `resets_at` est
@@ -184,7 +184,8 @@ Aucune ligne Firestore par appel : le détail vit 30 jours dans Cloud Logging (r
 défaut, à vérifier), les comptes du mois restent.
 
 Un membre lit ses propres comptes : tours restants du jour dans le panneau du poste, et dans
-« Mon compte » une ligne « IA ce mois : N tours, ≈ X $ ». L'admin lit tout.
+« Mon compte » une ligne « IA ce mois : N tours, ≈ X $ », affichée selon l'amendement « cadrage
+du lot A1 » d'ADR-015. L'admin lit tout.
 
 ### 7. Règles Firestore
 
@@ -337,10 +338,24 @@ Aucune migration.
 
 ## Amendement du 2026-11-15 : cadrage du lot A1
 
-- **`member_email`** : le serveur écrit l'e-mail en minuscules du membre dans
+Décisions de l'utilisateur sur le cadrage de l'analyste-métier :
+
+- **`member_email`** : le serveur écrit l'e-mail en minuscules du membre, tiré du jeton vérifié
+  par `requireMember` et jamais d'un argument, dans
   `ai_usage/{AAAA-MM}_{uid}`. Admin › Coûts de l'IA retrouve le nom dans `members/` par cet
   e-mail ; un membre retiré s'affiche « Membre retiré » avec son e-mail. C'est le précédent de
   `author_email` dans `tickets/`. Le document reste lisible par son membre et par l'admin seuls.
-- **Grille et politique** : `saveAiSettings` refuse une grille qui retire un modèle cité par la
-  politique d'un poste (`details.field` sur ce modèle, message « Ce modèle sert au poste
-  « <libellé> » : choisissez-en un autre d'abord. »).
+- **Grille et politique** : `saveAiSettings` relit la politique dans la transaction qui écrit la
+  grille, et la grille dans celle qui écrit la politique. Il refuse une grille qui retire un
+  modèle cité par la politique d'un poste (`details.field` `models.<id>`, message « Ce modèle
+  sert au poste « <libellé> » : choisissez-en un autre d'abord. »), ou qui retire d'un modèle
+  l'effort choisi par un poste (`details.field` `models.<id>.efforts`, message « L'effort
+  « <effort> » sert au poste « <libellé> » : changez-le d'abord. »).
+- **Conservation de `ai_usage/`** : 13 mois, décision de l'utilisateur sur la proposition de
+  l'agent `securite`. Le serveur écrit `expires_at` avec chaque compte du mois : le premier jour
+  du mois M + 13, à minuit heure de Paris (le mois 2026-12 expire le 2028-01-01). Une règle TTL
+  de Firestore (`fieldOverrides` de `firestore.indexes.json`, `collectionGroup: "ai_usage"`,
+  `fieldPath: "expires_at"`, `ttl: true`), comme pour `ticket_quotas`, efface le document,
+  en général dans les 24 h après l'échéance. L'écran filtre par `month` et ne compte pas sur
+  l'effacement. Aucune tâche planifiée. Tests : `expires_at` du mois 2026-12 égal au
+  2028-01-01 à minuit de Paris ; `expires_at` inchangé quand un appel s'ajoute au même mois.

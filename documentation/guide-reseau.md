@@ -299,6 +299,14 @@ P59 (requête de l'assistant, `securite`), P60 (client IA, `relecteur-regles`) e
 « Le projet », « Structure », « Coûts variables » et « Recettes en BeerJSON partiel » sont mis
 à jour.
 
+Le 2026-11-15, avec les décisions du cadrage du lot A1 de l'assistant, P57 (`member_email` tiré
+du jeton, `expires_at`), P58 (TTL de 13 mois sur `ai_usage`, grille et politique relues l'une
+dans la transaction de l'autre, refus d'une grille qui retire un modèle ou un effort utilisé),
+P59 (clés `mode` et `summary`, refus `conversation_full`, bornes du mode résumé, `message`
+refusé et `history` d'au moins 2 messages en mode résumé, liste des huit blocs de données avec
+un test de prompt par bloc) et P60 (« Résumer et continuer » sans seuil en Dart) sont
+complétés.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 
