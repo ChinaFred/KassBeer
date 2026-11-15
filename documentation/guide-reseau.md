@@ -240,6 +240,12 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
+Le 2026-11-15 (v0.1.74), décisions de l'utilisateur : P15 accepte le nom commercial d'une
+souche publié par son fabricant, recopié dans `exchange/donnees/fabricants/cultures.json`
+(« WLP520 Sigmund Kveik Ale ») ; « Structure » de `CLAUDE.md` décrit
+`exchange/donnees/fabricants/` sans liste de fabricants. Aucun contrôle, agent, skill ni hook
+nouveau.
+
 Le 2026-11-15 (v0.1.68), décision de l'utilisateur : P19 abaisse le seuil de
 `--supprimer-absents` de 95 % à 90 % des documents en ligne (ADR-014, note du 2026-11-15).
 Aucun contrôle, agent, skill ni hook nouveau.
@@ -445,3 +451,6 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   explicite et confirmation, liste blanche de collections, identifiants déterministes, rapport
   JSON chiffré. Admin › Sources affiche les compteurs et les noms non reconnus (L4). ADR-005,
   évolution acceptée le 2026-11-08.
+- 2026-11-15 : exception à P15. Le nom commercial d'une souche publié par son fabricant peut
+  contenir le nom d'une personne (« WLP520 Sigmund Kveik Ale ») ; il est recopié tel quel dans
+  `exchange/donnees/fabricants/cultures.json`. Décision de l'utilisateur.
