@@ -10,6 +10,20 @@
 //   Lactiplantibacillus et Levilactobacillus : lacto ; Torulaspora : other).
 // Non repris : floculation (la fiche donne un temps de sédimentation), tolérance à
 //   l'alcool, dosage, textes.
+//
+// Mangrove Jack's : relevé du 2026-11-15 sur https://mangrovejacks.com/products/<fiche>,
+// collection « Beer Yeasts » : 16 levures de bière, forme sèche. Levures de vin, de
+// cidre, d'hydromel et de hard seltzer non reprises.
+// name : nom commercial sans « Yeast » ni le conditionnement (« M44 US West Coast »).
+// attenuation_range : « Attenuation » en pourcentage ; M76 : « High » sans chiffre, absente.
+// temperature_range : plage « For best results » ; M12 et M24 : plage « optimal results ».
+//   M20 et M44 : la fiche écrit des °F qui ne correspondent pas aux °C (59-86 °F pour
+//   18-30 °C, 59-74 °F pour 18-23 °C) ; les °C sont repris.
+// flocculation : « Flocculation » de la fiche (Low, Medium, High, Very High).
+// type : la fiche ne nomme pas l'espèce. Levure haute ou d'ale → ale ; levure basse ou
+//   « lager strain » → lager ; bière de blé (Hefeweizen, Witbier : M20, M21) → wheat,
+//   comme BW-20 ; « Kveik » dans le nom (M12) → kveik ; mélange levure et enzyme (M66)
+//   → ale, comme HA-18.
 {
   "beerjson": {
     "version": 2.01,
@@ -38,7 +52,23 @@
       {"id": "fermentis-safbrew-la-02", "name": "SafBrew LA-02", "type": "other", "form": "dry", "producer": "Fermentis", "product_id": "LA-02", "attenuation_range": {"minimum": {"unit": "%", "value": 5}, "maximum": {"unit": "%", "value": 10}}, "temperature_range": {"minimum": {"unit": "C", "value": 20}, "maximum": {"unit": "C", "value": 25}}},
       {"id": "fermentis-safbrew-br-8", "name": "SafBrew BR-8", "type": "brett", "form": "dry", "producer": "Fermentis", "product_id": "BR-8", "temperature_range": {"minimum": {"unit": "C", "value": 15}, "maximum": {"unit": "C", "value": 25}}},
       {"id": "fermentis-saf-sour-lp-652", "name": "SafSour LP 652", "type": "lacto", "form": "dry", "producer": "Fermentis", "product_id": "LP 652", "temperature_range": {"minimum": {"unit": "C", "value": 34}, "maximum": {"unit": "C", "value": 40}}},
-      {"id": "fermentis-safsour-lb-1", "name": "SafSour LB 1", "type": "lacto", "form": "dry", "producer": "Fermentis", "product_id": "LB 1", "temperature_range": {"minimum": {"unit": "C", "value": 27}, "maximum": {"unit": "C", "value": 37}}}
+      {"id": "fermentis-safsour-lb-1", "name": "SafSour LB 1", "type": "lacto", "form": "dry", "producer": "Fermentis", "product_id": "LB 1", "temperature_range": {"minimum": {"unit": "C", "value": 27}, "maximum": {"unit": "C", "value": 37}}},
+      {"id": "mangrove-jacks-m12", "name": "M12 Kveik", "type": "kveik", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M12", "attenuation_range": {"minimum": {"unit": "%", "value": 77}, "maximum": {"unit": "%", "value": 82}}, "temperature_range": {"minimum": {"unit": "C", "value": 30}, "maximum": {"unit": "C", "value": 40}}, "flocculation": "very high"},
+      {"id": "mangrove-jacks-m15", "name": "M15 Empire Ale", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M15", "attenuation_range": {"minimum": {"unit": "%", "value": 70}, "maximum": {"unit": "%", "value": 75}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 22}}, "flocculation": "high"},
+      {"id": "mangrove-jacks-m20", "name": "M20 Bavarian Wheat", "type": "wheat", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M20", "attenuation_range": {"minimum": {"unit": "%", "value": 70}, "maximum": {"unit": "%", "value": 75}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 30}}, "flocculation": "low"},
+      {"id": "mangrove-jacks-m21", "name": "M21 Belgian Wit", "type": "wheat", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M21", "attenuation_range": {"minimum": {"unit": "%", "value": 70}, "maximum": {"unit": "%", "value": 75}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 25}}, "flocculation": "low"},
+      {"id": "mangrove-jacks-m24", "name": "M24 Versa Lager", "type": "lager", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M24", "attenuation_range": {"minimum": {"unit": "%", "value": 78}, "maximum": {"unit": "%", "value": 84}}, "temperature_range": {"minimum": {"unit": "C", "value": 10}, "maximum": {"unit": "C", "value": 20}}, "flocculation": "medium"},
+      {"id": "mangrove-jacks-m29", "name": "M29 French Saison", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M29", "attenuation_range": {"minimum": {"unit": "%", "value": 85}, "maximum": {"unit": "%", "value": 95}}, "temperature_range": {"minimum": {"unit": "C", "value": 26}, "maximum": {"unit": "C", "value": 32}}, "flocculation": "medium"},
+      {"id": "mangrove-jacks-m31", "name": "M31 Belgian Tripel", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M31", "attenuation_range": {"minimum": {"unit": "%", "value": 82}, "maximum": {"unit": "%", "value": 92}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 28}}, "flocculation": "medium"},
+      {"id": "mangrove-jacks-m36", "name": "M36 Liberty Bell Ale", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M36", "attenuation_range": {"minimum": {"unit": "%", "value": 74}, "maximum": {"unit": "%", "value": 78}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 23}}, "flocculation": "high"},
+      {"id": "mangrove-jacks-m41", "name": "M41 Belgian Ale", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M41", "attenuation_range": {"minimum": {"unit": "%", "value": 82}, "maximum": {"unit": "%", "value": 92}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 28}}, "flocculation": "medium"},
+      {"id": "mangrove-jacks-m42", "name": "M42 New World Strong Ale", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M42", "attenuation_range": {"minimum": {"unit": "%", "value": 77}, "maximum": {"unit": "%", "value": 82}}, "temperature_range": {"minimum": {"unit": "C", "value": 16}, "maximum": {"unit": "C", "value": 22}}, "flocculation": "very high"},
+      {"id": "mangrove-jacks-m44", "name": "M44 US West Coast", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M44", "attenuation_range": {"minimum": {"unit": "%", "value": 77}, "maximum": {"unit": "%", "value": 85}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 23}}, "flocculation": "high"},
+      {"id": "mangrove-jacks-m47", "name": "M47 Belgian Abbey", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M47", "attenuation_range": {"minimum": {"unit": "%", "value": 73}, "maximum": {"unit": "%", "value": 77}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 25}}, "flocculation": "high"},
+      {"id": "mangrove-jacks-m54", "name": "M54 Californian Lager", "type": "lager", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M54", "attenuation_range": {"minimum": {"unit": "%", "value": 77}, "maximum": {"unit": "%", "value": 82}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 20}}, "flocculation": "high"},
+      {"id": "mangrove-jacks-m66", "name": "M66 Hophead Ale", "type": "ale", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M66", "attenuation_range": {"minimum": {"unit": "%", "value": 74}, "maximum": {"unit": "%", "value": 82}}, "temperature_range": {"minimum": {"unit": "C", "value": 18}, "maximum": {"unit": "C", "value": 22}}, "flocculation": "high"},
+      {"id": "mangrove-jacks-m76", "name": "M76 Bavarian Lager", "type": "lager", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M76", "temperature_range": {"minimum": {"unit": "C", "value": 8}, "maximum": {"unit": "C", "value": 14}}, "flocculation": "medium"},
+      {"id": "mangrove-jacks-m84", "name": "M84 Bohemian Lager", "type": "lager", "form": "dry", "producer": "Mangrove Jack's", "product_id": "M84", "attenuation_range": {"minimum": {"unit": "%", "value": 72}, "maximum": {"unit": "%", "value": 76}}, "temperature_range": {"minimum": {"unit": "C", "value": 10}, "maximum": {"unit": "C", "value": 15}}, "flocculation": "high"}
     ]
   }
 }
