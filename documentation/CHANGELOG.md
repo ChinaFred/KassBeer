@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.65 — fonctionnel
+### v0.1.66 — fonctionnel
 
 Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
 commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
@@ -16,7 +16,7 @@ un message « Étape « Ébullition » commencée. » s'affiche dix secondes ave
 appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son
 action, comme celui qui annule un début ou une fin d'étape.
 
-### v0.1.65 — technique
+### v0.1.66 — technique
 
 `brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
 de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
@@ -28,6 +28,22 @@ plan et supprime `startEventId` de l'étape commencée et `endEventId` de la pr�
 `deleteEvents`, un `WriteBatch` sans transaction ; rien n'est supprimé si l'étape commencée
 est déjà terminée ou sautée. Tests de `brew_day_screen_test.dart` adaptés, quatre cas ajoutés
 (dernière étape, suivante de 0 min, « Annuler », « Annuler » après la fin).
+
+### v0.1.65 — fonctionnel
+
+Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux
+utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion.
+Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à
+la coller. Google ne permet pas d'ajouter cette adresse automatiquement.
+
+### v0.1.65 — technique
+
+`invite_member_form.dart` devient un `ConsumerStatefulWidget` et ouvre
+`console.cloud.google.com/auth/audience?project=<FIREBASE_PROJECT_ID>` par `ouvrirLienProvider`.
+L'identifiant vient de `firebaseProjectIdProvider` (`members_providers.dart`, lu à la
+compilation) et `consoleUtilisateursTest` le contrôle avant de construire l'adresse ; sans
+identifiant valide, le bloc ne s'affiche pas. Échecs rapportés sous `members.open_console` et
+`members.copy_email`, sans l'adresse. Aucune dépendance ajoutée.
 
 ### v0.1.64 — technique
 
