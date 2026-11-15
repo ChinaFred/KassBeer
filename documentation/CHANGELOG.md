@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.68 — fonctionnel
+### v0.1.69 — fonctionnel
 
 Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à
 20 °C ou à 15,6 °C, réfractomètre, densimètre électronique, ou autre instrument sans
@@ -22,7 +22,7 @@ degré et rendement. Les mesures déjà enregistrées ne changent pas. Installez
 avant d'utiliser le réfractomètre : une ancienne version de l'application ne peut pas afficher
 « Prévu et mesuré » d'un brassin mesuré au réfractomètre.
 
-### v0.1.68 — technique
+### v0.1.69 — technique
 
 Module `brewing/lib/src/gravity_instruments.dart` : `InstrumentDensite` (liste fermée),
 `masseVolumiqueEau` (Kell 1975), `corrigerDensimetre`, `plageCorrection` (0–40 °C, 40–75 °C
@@ -41,9 +41,20 @@ correction de l'instrument permise, préférence en liste blanche ; tests
 `rules-tests/test/gravity_instruments.test.mjs` ; budget mesuré (environ 600 expressions de
 marge, cas ajoutés à la suite « budget des règles » de `recipe_format.test.mjs`).
 `kReleveChampMinWidth` retiré (relevé en une colonne). Aucune dépendance ajoutée. Une lecture
-de réfractomètre a `value` nulle : les versions 0.1.67 et antérieures lisent `event.value!` sur
+de réfractomètre a `value` nulle : les versions 0.1.68 et antérieures lisent `event.value!` sur
 une densité retenue et plantent sur « Prévu et mesuré » d'un tel brassin ; risque accepté par
 l'utilisateur, couvert par la mise à jour proposée au lancement (ADR-012).
+
+### v0.1.68 — technique
+
+ADR-014 : `ecrire.mjs --supprimer-absents` refusait de supprimer les 24 doublons de
+`beer_hops`, car la préparation compte 442 documents pour 466 en ligne (94,85 %, sous le seuil
+de 95 %). Décision de l'utilisateur : `PART_MIN_PREPAREE` passe à 0,9
+(`ingest/lib/ecriture.mjs`). Tests de `ingest/` adaptés (90 préparés pour 100 acceptés, 11
+absents refusés ; émulateur à 61 pour 72 refusé). P19 de `CLAUDE.md`, `exigences-techniques.md`
+et ADR-014 (note du 2026-11-15) mis à jour.
+
+### v0.1.67 — fonctionnel
 
 Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
 commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer

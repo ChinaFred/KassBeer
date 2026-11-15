@@ -579,7 +579,7 @@ describe("recipes et brews — budget des règles", () => {
     );
   });
 
-  // v0.1.68 : densité avec instrument (densityOk), mesures de la plus grande forme.
+  // v0.1.69 : densité avec instrument (densityOk), mesures de la plus grande forme.
   const REFRACTO = {
     measure_type: "gravity",
     gravity_instrument: "refractometer",

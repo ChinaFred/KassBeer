@@ -310,11 +310,14 @@ describe(
       assert.deepEqual(encore.deletions.candidates, [], "rien à confirmer");
     });
 
-    it("préparation à moins de 95 % des documents en ligne : refusée", async () => {
-      await semer("beer_hops", ["hop-ancien-1", "hop-ancien-2", "hop-ancien-3", "hop-ancien-4"]);
+    it("préparation à moins de 90 % des documents en ligne : refusée", async () => {
+      await semer(
+        "beer_hops",
+        Array.from({ length: 10 }, (_, i) => `hop-ancien-${i + 1}`),
+      );
       await assert.rejects(
         lancer(["--supprimer-absents", "beer_hops"], async () => true),
-        /moins de 95 %/,
+        /moins de 90 %/,
       );
       assert.equal(await existe("beer_hops/hop-ancien-1"), true);
     });
@@ -358,7 +361,7 @@ describe(
       await semer("beer_hop_aromas", ["hop-houblon-fictif", "hop-orphelin"]);
       await assert.rejects(
         lancer(["--supprimer-absents", "beer_hop_aromas", "--aromes", AROMES], async () => true),
-        /moins de 95 %/,
+        /moins de 90 %/,
       );
       await db.doc("beer_hop_aromas/hop-houblon-fictif").delete();
       const r = await lancer(

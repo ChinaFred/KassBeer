@@ -575,7 +575,7 @@ service cloud.firestore {
           && (isStepEvent(d) || isMeasurement(d) || isNote(d));
       }
 
-      // Budget mesuré en v0.1.68 (même émulateur, pad10() ajoutés à la règle) :
+      // Budget mesuré en v0.1.69 (même émulateur, pad10() ajoutés à la règle) :
       // création d'une lecture de réfractomètre en fermentation avec une note de
       // 2 000 caractères, et correction d'un flottant en réfractomètre, passent
       // avec 15 pad10() et sont refusées à 17 (17 passaient et 19 étaient refusés
