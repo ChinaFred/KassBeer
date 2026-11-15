@@ -16,6 +16,7 @@ import '../../auth/presentation/access_providers.dart';
 import '../data/library_repository.dart';
 import '../domain/recette_publique.dart';
 import '../domain/referentiel.dart';
+import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
 
@@ -58,7 +59,8 @@ class LibraryScreen extends StatelessWidget {
   }
 }
 
-/// Segments et accès à « Sources des données », une icône à droite des puces à
+/// Segments, accès à « Échelle des couleurs » (icône sur téléphone, texte
+/// au-delà) et à « Sources des données », une icône à droite des puces à
 /// toutes les largeurs. Sur téléphone, les puces tiennent sur une ligne qui
 /// défile à l'horizontale, en fondu au bord droit ; au-delà, elles passent à
 /// la ligne.
@@ -121,6 +123,18 @@ class _EnTete extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: segments),
+          if (compact)
+            IconButton(
+              tooltip: TextesCouleurEbc.echelle,
+              onPressed: () => unawaited(context.push(AppRoutes.libraryColors)),
+              icon: const Icon(Icons.palette_outlined),
+            )
+          else
+            TextButton.icon(
+              onPressed: () => unawaited(context.push(AppRoutes.libraryColors)),
+              icon: const Icon(Icons.palette_outlined),
+              label: const Text(TextesCouleurEbc.echelle),
+            ),
           IconButton(
             tooltip: LibraryScreen.sourcesLabel,
             onPressed: () => unawaited(context.push(AppRoutes.dataSources)),

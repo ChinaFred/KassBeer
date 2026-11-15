@@ -594,6 +594,7 @@ invité), le rapport part sur la console (`debugPrint`), dernier recours documen
 | `/bibliotheque` | redirige vers `/bibliotheque/styles` (route sans écran, hors de la coquille) : une seule page par segment, que le retour d'une fiche retrouve avec sa recherche | membre |
 | `/bibliotheque/{segment}` | Bibliothèque, dans la coquille ; segments `styles`, `malts`, `houblons`, `levures`, `divers`, `recettes` ; chaque segment est une route de premier niveau de la coquille | membre |
 | `/bibliotheque/{segment}/:id` | fiche d'un style, d'un ingrédient ou d'une recette publique, dans la coquille, retour vers le segment ; route fille du segment, qui garde la liste et ses pages lues au retour | membre |
+| `/bibliotheque/couleurs` | « Couleurs EBC » (`CouleursEbcScreen`, ticket #48), page pleine avec retour, hors coquille, déclarée avant la coquille, ouverte par `push` depuis l'en-tête de la Bibliothèque et la fiche d'un style ; « couleurs » n'est le chemin d'aucun segment ; aucune lecture Firestore | membre |
 | `/sources-des-donnees` | « Sources des données », page pleine avec retour, hors coquille, ouverte par `push` depuis la Bibliothèque, une fiche ou le menu du compte | membre |
 | `/prix` | « Mes prix », page pleine avec retour, hors coquille, ouverte par `push` depuis le menu du compte | membre ; ses seuls prix et frais |
 | `/processus` | « Mes processus », page pleine avec retour, hors coquille, ouverte par `push` depuis le menu du compte | membre ; ses processus puis ceux du groupe |
@@ -855,6 +856,22 @@ Les recettes publiques portent le repère de la liste des recettes (`Icons.menu_
 les styles et les ingrédients aucun. La fiche d'une recette publique est
 dans un `Material` transparent : son `ExpansionTile` garde son encre quand une fiche s'ouvre
 par-dessus dans la coquille.
+
+**Couleur d'un style (ticket #48).** `couleur_ebc.dart` : `BarreCouleurEbc` sous la ligne
+« Couleur » d'un style (bornes absentes : 0 et `teinteEbcLimite`), `BandeTeintes` (16 px,
+`LinearGradient` des teintes de `degradeEbc`, bordure `outlineVariant`, dans un
+`ExcludeSemantics`, avec un `Semantics` qui lit la plage), `couleurTeinte` (entier
+`0xRRGGBB` → `Color`, sans calcul). `TextesCouleurEbc.depasseLimite` (borne haute au-delà de
+`teinteEbcLimite`, ou plage « à partir de ») affiche `TextesCouleurEbc.auDela()` (« Au-delà de
+79 EBC, la teinte affichée ne fonce plus. ») sous la barre et l'ajoute au libellé du
+`Semantics`. Une `BrewingInputException` masque la barre et passe une fois par `reportError`
+(`library.color_gradient`, champ refusé seul). `couleurs_ebc_screen.dart` : pas de
+`kPasEchelleEbc` (4 EBC), valeurs lues par `teinteEbc` sur des constantes valides (aucun état
+d'erreur : `brewing/` ne les refuse pas), dégradé de 40 points au-delà de 600 px, largeur des
+cases de la grille multipliée par l'échelle du texte. « Sources des données » affiche
+`DataSourcesScreen.licenceMit`, le texte d'autorisation MIT de srm2hex, que la licence exige
+dans toute copie livrée. Aucune table ni conversion de couleur dans `app/lib/` (P3) ; aucune
+valeur SRM affichée. Tests : `app/test/couleurs_ebc_test.dart`.
 
 **Lien externe.** « Sources des données » n'ouvre qu'une adresse, la constante
 `kLicenceCcBySa` (`https://creativecommons.org/licenses/by-sa/4.0/`), par
@@ -2359,6 +2376,7 @@ calcul de coût par `CalculCoutRefuse`, qui ne porte que le type de l'erreur d'o
 | Couleur | `moreyColorEbc`, `moreyColorEbcOfGrist` | Morey : MCU = Σ (EBC / 1,97 × lb) / gal ; SRM = 1,4922 × MCU^0,6859 ; EBC = SRM × 1,97 ; la seconde ne prend que masses et couleurs |
 | Plato ↔ SG (v0.1.17) | `platoToSg`, `sgToPlato` | SG = 1 + P / (258,6 − (P / 258,2) × 227,1) ; P = −616,868 + 1111,14 × SG − 630,272 × SG² + 135,997 × SG³ (ASBC). Pas l'inverse exact l'une de l'autre : 12 °P → 12,002 °P. Densité hors de 0,980 – 1,200 refusée |
 | SRM, Lovibond ↔ EBC (v0.1.17) | `srmToEbc`, `ebcToSrm`, `lovibondToEbc`, `ebcToLovibond` | EBC = SRM × 1,97 ; le degré Lovibond d'un grain est lu comme un SRM, comme dans Morey ci-dessus (une couleur importée donne la même couleur de bière que dans le logiciel d'origine) |
+| Teinte d'une couleur (ticket #48) | `teinteEbc`, `degradeEbc`, `teinteEbcLimite` | teinte `0xRRGGBB` de la table `teintesSrm` (`teintes_srm.dart`, fichier généré : 400 triplets du paquet npm srm2hex 1.0.2, MIT, indexés par dixième de SRM), indice = floor(`ebcToSrm`(EBC) × 10) ; 0 EBC : première teinte ; à partir de `teinteEbcLimite` (40 SRM = 78,8 EBC, affichée « 79 EBC et plus ») : dernière ; `degradeEbc` rend `points` teintes régulières (24 par défaut, 2 au moins) de la plus petite à la plus grande borne. Valeur négative ou non finie : `BrewingInputException`. Cas : `brewing/test/fixtures/teinte.json` |
 | Rendement donné en densité (v0.1.17) | `potentialToYieldPercent` | % = (potentiel − 1) × 1000 / 46,214 × 100 (`yield.potential` de BeerJSON, densité d'une livre dans un gallon) ; potentiel de 1,000 à 1,046214 |
 | Nature et forme d'une valeur BeerJSON (v0.1.17) | `FermentableKind.ofType`, `HopForm.ofBeerJson` | voir `recipes/` : extrait, miel, fruit, jus comptés comme un sucre ; `plug` comme des cônes ; `other`, `powder`, `extract`, `leaf (wet)` sans valeur de calcul |
 | Calculs d'une recette | `computeRecipe` | OG, FG, degré, IBU, EBC, IBU par houblon : voir « Calculs d'une recette » |

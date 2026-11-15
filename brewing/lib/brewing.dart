@@ -24,4 +24,5 @@ export 'src/ingredient_key.dart';
 export 'src/process.dart';
 export 'src/recipe_calculation.dart';
 export 'src/schedule.dart';
+export 'src/teinte.dart';
 export 'src/yeast.dart';
