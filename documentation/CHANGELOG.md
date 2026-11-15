@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.56 — fonctionnel
+### v0.1.58 — fonctionnel
 
 Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière
 mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de
@@ -24,7 +24,7 @@ fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la ta
 nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne
 fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur.
 
-### v0.1.56 — technique
+### v0.1.58 — technique
 
 Dernière partie de L4 d'ADR-005, préparée en v0.1.29 (PR #33) et reprise sur la branche
 principale par une fusion. `features/admin/` : `SourcesRepository` (`ingest_runs/` par
@@ -40,7 +40,61 @@ borne `kDialogMaxWidth`. L'échec d'une relecture sous un compte rendu affiché 
 (chemin du rapport en `SelectableText`). `firestore.rules` inchangé : les deux collections sont
 déjà lues par l'admin seul (P19).
 
+### v0.1.57 — fonctionnel
+
+La fiche d'un houblon de la Bibliothèque montre ses arômes : des descripteurs (agrumes, floral,
+résineux…) et un court texte pour chaque moment d'ajout, du premier moût au houblonnage à cru.
+Ces textes sont rédigés par une IA pour Kass'Beer. La fiche dit s'ils ont été relus par
+l'administrateur, et signale une confiance faible. Les houblons de vos recettes sont relus en
+premier. Un houblon trop peu documenté l'indique au lieu d'inventer. L'écran « Sources des
+données » explique d'où viennent ces textes.
+
+### v0.1.57 — technique
+
+ADR-013 : descriptions aromatiques des houblons rédigées par l'API Claude (`claude-fable-5-2`,
+effort `medium` par défaut) depuis le poste de l'admin. `ingest/generer-aromes.mjs` et
+`ingest/lib/aromes/` (SDK `@anthropic-ai/sdk` 1.8.0 en version exacte, chargé au premier appel,
+sorties structurées, API Batches, tarif lu dans `import/ingest/aromes/tarif.json`, budget,
+confirmation, `--nouveaux` pour les houblons ajoutés depuis) ; `ingest/lister-houblons-recettes.mjs`
+(lecture seule de `recipes/` et `brews/`) et `exchange/bin/lister_houblons_recettes.dart`
+(`IndexBibliotheque.resoudre`, nouvelle `correspondances`) ; `ecrire.mjs --aromes` écrit
+`beer_hop_aromas/` après validation et relecture, et compte les houblons sans description.
+`firestore.rules` : `beer_hop_aromas/{id}` en `get` par `isMember()`, aucune liste ni écriture,
+tests des cinq profils. Application : `AromesHoublon`, `lireAromesHoublon` (un `get`),
+`SectionAromes` dans la fiche d'un houblon, paragraphe de « Sources des données ». Nouveau
+poste de coût `hop_aroma_generation` ; contrôles P54 et P55. Paquets ajoutés à
+`ingest/package-lock.json` : `@anthropic-ai/sdk` 1.8.0, `json-schema-to-ts` 3.1.1,
+`@babel/runtime` 7.29.14, `ts-algebra` 2.0.0, `standardwebhooks` 1.1.1, `@stablelib/base64`
+1.0.1, `fast-sha256` 1.3.0. Aucune dépendance de l'application ne change.
+
 ## 2026-11-14
+
+### v0.1.56 — fonctionnel
+
+Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur » la teinte de la
+bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de
+0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et
+depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle
+dépend du verre, de la lumière et de l'écran. Au-delà de 79 EBC, la teinte ne fonce plus, et la
+fiche le dit. « Sources des données » nomme la source des teintes et donne le texte de sa
+licence. Demandé par le ticket #48.
+
+### v0.1.56 — technique
+
+`brewing/` : `teinteEbc` (EBC → `0xRRGGBB`), `degradeEbc` (arrêts d'un dégradé de plage) et
+`teinteEbcLimite` (78,8 EBC), sur la table générée `teintes_srm.dart` : 400 triplets du paquet
+npm srm2hex 1.0.2 (MIT, archive de SHA-1 d84847e600a65eaee38247e2bce6e6d33c214d14), repris par
+script, indexés par floor(`ebcToSrm` × 10). Au-delà de 40 SRM, dernière teinte de la table.
+Fixture écrite à la main `brewing/test/fixtures/teinte.json` (14 teintes dont une frontière à
+11,82 EBC, 4 dégradés, 4 cas refusés, empreinte FNV-1a de `lookup.js` qui vérifie la table
+générée ; génération décrite dans `DATA_SOURCES.md`). Application : `couleur_ebc.dart`
+(`BarreCouleurEbc`, `BandeTeintes`, `TextesCouleurEbc.depasseLimite` et `auDela`),
+`couleurs_ebc_screen.dart` (sans état d'erreur : ses entrées sont des constantes valides,
+cases de la grille suivant l'échelle du texte), texte MIT `DataSourcesScreen.licenceMit`,
+route `/bibliotheque/couleurs` hors de la coquille, lien « Échelle des couleurs » dans
+l'en-tête de la Bibliothèque, ligne srm2hex dans « Sources des données » et dans
+`DATA_SOURCES.md`. Aucune lecture Firestore, aucune dépendance ajoutée.
+Pastille sur la fiche d'un malt et sur la recette : plus tard. Demandé par le ticket #48.
 
 ### v0.1.55 — fonctionnel
 

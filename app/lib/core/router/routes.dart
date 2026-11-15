@@ -17,6 +17,11 @@ abstract final class AppRoutes {
   static String libraryEntry(String slug, String id) =>
       '$library/$slug/${Uri.encodeComponent(id)}';
 
+  /// « Couleurs EBC » (ticket #48) : page pleine hors de la coquille, ouverte
+  /// par `push` depuis la Bibliothèque et la fiche d'un style. « couleurs »
+  /// n'est le chemin d'aucun segment.
+  static const libraryColors = '$library/couleurs';
+
   /// « Sources des données » : page pleine hors de la coquille, ouverte par
   /// `push` depuis la Bibliothèque et depuis le menu du compte.
   static const dataSources = '/sources-des-donnees';

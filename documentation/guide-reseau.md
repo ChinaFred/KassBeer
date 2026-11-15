@@ -220,6 +220,19 @@ caractères ; reprise d'une décision interrompue par l'admin seul. « Le projet
 suivent. `ci.yml` et `deploy.yml` ajoutent les quatre callables et une liste fermée des
 déclencheurs (P10, accord de l'utilisateur).
 
+Le 2026-11-14, ADR-013 avec l'accord de l'utilisateur : P19, P20 et P22 étendus à
+`beer_hop_aromas/`, P54 (`securite`, génération des descriptions aromatiques des houblons par
+l'API Claude depuis le poste de l'admin) et P55 (`relecteur-regles`, collection, validation et
+affichage) ajoutés. « Le projet » et « Coûts variables » de `CLAUDE.md` nomment le second poste
+de coût, `hop_aroma_generation`, et la seule exception à « une API facturée passe par le
+serveur ». Aucun agent, skill ni hook nouveau.
+
+Le 2026-11-15, livraison d'ADR-013 (v0.1.57), choix délégués par l'utilisateur à la session
+principale : P55 lit « relu le <date longue> » (`formatDateLongue`) au lieu de « JJ/MM/AAAA » et
+nomme `ingest/lister-houblons-recettes.mjs` et `IndexBibliotheque.resoudre` ; « Structure » de
+`CLAUDE.md` décrit `ingest/generer-aromes.mjs`, `ingest/lister-houblons-recettes.mjs` et
+`exchange/bin/lister_houblons_recettes.dart`, et « Commandes utiles » leurs commandes.
+
 Le 2026-11-14, à la demande de l'utilisateur : P36 et la section « Coûts variables » de
 `CLAUDE.md` ajoutent le compte fondateur (`members/{email}.founder`, posé dans la console
 Firebase) et son plafond `FOUNDER_LAUNCHES_PER_DAY`, cinq fois celui du groupe, sur un compteur

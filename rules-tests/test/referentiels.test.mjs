@@ -1,4 +1,5 @@
-// Référentiels, recettes publiques et comptes rendus de l'ingestion (ADR-005, P19) :
+// Référentiels, descriptions aromatiques (ADR-013, P55), recettes publiques et comptes
+// rendus de l'ingestion (ADR-005, P19) :
 // écrits par aucun client, lus par les membres (ingest_runs et import_unresolved : par
 // l'admin). Cinq profils de P4, plus les connexions non conformes de P11. L'écriture
 // d'un import_unresolved par un membre (E6) : import_unresolved.test.mjs.
@@ -35,6 +36,25 @@ const DOCS = {
     alpha_acid: { value: 7, unit: "%" },
     provenance: PROVENANCE,
     content_sha256: "b".repeat(64),
+  },
+  "beer_hop_aromas/hop-houblon-fictif": {
+    hop_name: "Houblon Fictif",
+    status: "described",
+    confidence: "medium",
+    descriptors: [{ key: "citrus", label: "agrumes" }],
+    uses: { dry_hop: { text: "Texte fictif de quarante caractères au moins, pour le test." } },
+    reviewed: false,
+    provenance: [
+      {
+        source: "claude-api",
+        source_id: "hop-houblon-fictif",
+        version: "claude-fable-5-2 / prompt 1 / effort medium",
+        licence: "Texte généré pour Kass'Beer",
+        retrieved: "2026-11-14",
+      },
+    ],
+    input_sha256: "3".repeat(64),
+    content_sha256: "4".repeat(64),
   },
   "beer_cultures/culture-labo-fictif-lf1-levure-fictive": {
     name: "Levure Fictive",
@@ -92,6 +112,7 @@ const DOCS = {
 const LUS_PAR_LES_MEMBRES = [
   "beer_fermentables",
   "beer_hops",
+  "beer_hop_aromas",
   "beer_cultures",
   "beer_miscs",
   "beer_styles",

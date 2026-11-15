@@ -1,0 +1,6 @@
+{
+  "format": "kassbeer_houblons_recettes",
+  "version": 1,
+  "resolus": [{ "id": "hop-houblon-fictif", "noms": ["Houblon Fictif"] }],
+  "non_resolus": []
+}

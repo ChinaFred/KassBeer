@@ -9,6 +9,7 @@ library;
 export 'src/ingestion/alias.dart';
 export 'src/ingestion/cles.dart';
 export 'src/ingestion/diydog.dart';
+export 'src/ingestion/houblons_recettes.dart';
 export 'src/ingestion/json_commentaires.dart';
 export 'src/ingestion/lecture_sources.dart';
 export 'src/ingestion/preparation.dart';

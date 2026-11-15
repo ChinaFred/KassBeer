@@ -114,6 +114,16 @@ class IndexBibliotheque {
   static EntreeBibliotheque? _seule(Set<EntreeBibliotheque>? entrees) =>
       entrees != null && entrees.length == 1 ? entrees.single : null;
 
+  /// Nombre d'entrées dont l'identifiant (`<nature>-<clé du nom>`), le nom ou
+  /// un alias a la clé de [nom] : 0 ou au moins 2 quand [resoudre] rend `null`
+  /// pour un malt, un houblon ou un ajout. Sert à dire pourquoi un nom n'est
+  /// pas résolu (`exchange/bin/lister_houblons_recettes.dart`, ADR-013).
+  int correspondances(String nom) {
+    final cle = cleNormalisee(nom);
+    if (cle.isEmpty) return 0;
+    return {?_parId['$_prefixe-$cle'], ...?_parNom[cle]}.length;
+  }
+
   /// Entrée de [nom], ou `null` si aucune ou plusieurs correspondent.
   ///
   /// Dans l'ordre : l'entrée d'identifiant `<nature>-<clé du nom>` ; la seule

@@ -4,7 +4,7 @@
 // n'écrit rien. Chaque document est écrit en entier (set sans fusion), avec updated_at
 // posé par le serveur.
 
-import { COLLECTIONS } from "./validation.mjs";
+import { COLLECTIONS_ECRITES } from "./validation.mjs";
 
 /// Écritures par lot (limite Firestore : 500).
 export const TAILLE_LOT = 400;
@@ -40,7 +40,7 @@ export async function ecrireCollections({ db, FieldValue, documents, simulation 
       dansLot = 0;
     }
   };
-  for (const collection of COLLECTIONS) {
+  for (const collection of COLLECTIONS_ECRITES) {
     const docs = documents[collection] ?? [];
     const compte = { written: 0, unchanged: 0 };
     for (let i = 0; i < docs.length; i += TAILLE_LECTURE) {
