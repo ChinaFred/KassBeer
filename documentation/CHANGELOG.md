@@ -6,6 +6,22 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.65 — fonctionnel
+
+Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux
+utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion.
+Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à
+la coller. Google ne permet pas d'ajouter cette adresse automatiquement.
+
+### v0.1.65 — technique
+
+`invite_member_form.dart` devient un `ConsumerStatefulWidget` et ouvre
+`console.cloud.google.com/auth/audience?project=<FIREBASE_PROJECT_ID>` par `ouvrirLienProvider`.
+L'identifiant vient de `firebaseProjectIdProvider` (`members_providers.dart`, lu à la
+compilation) et `consoleUtilisateursTest` le contrôle avant de construire l'adresse ; sans
+identifiant valide, le bloc ne s'affiche pas. Échecs rapportés sous `members.open_console` et
+`members.copy_email`, sans l'adresse. Aucune dépendance ajoutée.
+
 ### v0.1.64 — technique
 
 ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par
