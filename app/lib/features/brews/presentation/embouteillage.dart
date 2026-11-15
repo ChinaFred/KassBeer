@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:brewing/brewing.dart' show GravityRead, readGravity;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,12 +9,12 @@ import '../../../core/presentation/editeur_plein_ecran.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
-import '../../brew_day/presentation/mesure_form.dart';
 import '../../costs/data/figeage_embouteillage.dart';
 import '../../costs/presentation/costs_providers.dart';
 import '../data/brews_repository.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import 'saisie_densite.dart';
 
 /// Refus du formulaire d'embouteillage (EM2).
 const kDateFutureRefusee = 'La date ne peut pas être dans le futur.';
@@ -89,15 +88,20 @@ class FormulaireEmbouteillage extends StatefulWidget {
     required this.fermentationMesuree,
     required this.now,
     required this.onSubmit,
+    this.densiteInitiale,
   });
 
   final Brew brew;
   final bool modification;
 
+  /// Densité initiale retenue du brassin, pour corriger de l'alcool une
+  /// densité finale lue au réfractomètre.
+  final double? densiteInitiale;
+
   /// Vrai si une densité de fermentation existe déjà : l'information ne s'affiche pas.
   final bool fermentationMesuree;
   final DateTime Function() now;
-  final void Function(Embouteillage embouteillage, double? finalGravity)
+  final void Function(Embouteillage embouteillage, DensiteSaisie? finalGravity)
   onSubmit;
 
   @override
@@ -107,7 +111,7 @@ class FormulaireEmbouteillage extends StatefulWidget {
 
 class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
   final _formKey = GlobalKey<FormState>();
-  final _densite = TextEditingController();
+  final _densite = SaisieDensiteControleur();
   final _bouteilles = TextEditingController();
   final _volume = TextEditingController();
   final _sucre = TextEditingController();
@@ -129,13 +133,24 @@ class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
     _volume.text = texteSaisi(brew.packagedVolumeL);
     _sucre.text = texteSaisi(brew.primingSugarG);
     _nature.text = brew.primingSugarName ?? '';
-    _densite.addListener(_densiteChangee);
+    _densite.lecture.addListener(_densiteChangee);
+    _densite.temperature.addListener(_saisieDensite);
+    // Instrument changé ou case « Corriger » : le contrôleur notifie.
+    _densite.addListener(_saisieDensite);
   }
 
   /// La ligne d'information dépend du champ : l'écran se redessine à chaque frappe.
   void _densiteChangee() => setState(() {
-    if (_densite.text.isNotEmpty) _dirty = true;
+    if (_densite.lecture.text.isNotEmpty) _dirty = true;
   });
+
+  /// Température de l'échantillon, instrument ou « Corriger » changés : une
+  /// sortie demande confirmation.
+  void _saisieDensite() {
+    if (_densite.temperature.text.isNotEmpty || _densite.instrument != null) {
+      setState(() => _dirty = true);
+    }
+  }
 
   @override
   void dispose() {
@@ -218,13 +233,9 @@ class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
     }
     final bouteilles = lireNombre(_bouteilles.text).valeur;
     final nature = _nature.text.trim();
-    final double? finalGravity =
-        widget.modification || _densite.text.trim().isEmpty
+    final finalGravity = widget.modification || _densite.vide
         ? null
-        : switch (readGravity(_densite.text)) {
-            GravityRead(:final sg) => sg,
-            _ => null,
-          };
+        : _densite.saisie();
     _envoye = true;
     Navigator.of(context).pop();
     widget.onSubmit(
@@ -261,9 +272,7 @@ class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
     final volume = lireNombre(_volume.text).valeur;
     final sucre = lireNombre(_sucre.text).valeur;
     final sansDensite =
-        !modification &&
-        !widget.fermentationMesuree &&
-        _densite.text.trim().isEmpty;
+        !modification && !widget.fermentationMesuree && _densite.vide;
     return PopScope(
       canPop: !_dirty,
       onPopInvokedWithResult: (didPop, result) {
@@ -304,14 +313,16 @@ class _FormulaireEmbouteillageState extends State<FormulaireEmbouteillage> {
               ),
             const SizedBox(height: 16),
             if (!modification) ...[
-              ChampDensite(
-                controller: _densite,
+              BlocDensite(
+                controleur: _densite,
                 focusNode: _densiteFocus,
-                autofocus: false,
-                label: 'Densité finale (facultatif)',
+                prefixeLibelle: 'Densité finale',
+                suffixeLibelle: ' (facultatif)',
                 textInputAction: TextInputAction.next,
                 obligatoire: false,
                 grand: false,
+                enFermentation: true,
+                densiteInitiale: widget.densiteInitiale,
                 onSubmit: () => FocusScope.of(context).nextFocus(),
               ),
               const SizedBox(height: 12),
@@ -400,7 +411,7 @@ bool densiteDeFermentationMesuree(List<BrewEvent> events) =>
 typedef EnvoiEmbouteillage =
     EmbouteillageEnvoye Function({
       required Embouteillage embouteillage,
-      required double? finalGravity,
+      required DensiteSaisie? finalGravity,
       required bool modification,
       required String? ownerName,
     });
@@ -422,7 +433,7 @@ EnvoiEmbouteillage capturerEmbouteillage(WidgetRef ref, Brew brew) {
   final coutLu = ref.read(brewCostProvider((uid: uid, brewId: brew.id))).value;
   return ({
     required Embouteillage embouteillage,
-    required double? finalGravity,
+    required DensiteSaisie? finalGravity,
     required bool modification,
     required String? ownerName,
   }) => enregistrerEmbouteillage(

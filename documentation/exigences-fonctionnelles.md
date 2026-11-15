@@ -177,6 +177,9 @@ plus.
   - « Comme l'appareil », « Suit le mode clair ou sombre du téléphone ou du navigateur. » ;
   - « Clair » ;
   - « Sombre ».
+- L'instrument de densité ne se choisit pas ici : il se choisit à « Préparer le brassage »,
+  « Préparer la journée » ou dans le formulaire d'une densité (voir « Densimètre et correction
+  des densités »), et il est gardé sur le compte, pas sur l'appareil.
 - Sous la carte : « Ce choix vaut pour cet appareil seulement. ».
 - Par défaut, et quand rien n'a été enregistré : « Comme l'appareil ».
 - Un choix change le thème de toute l'application aussitôt et s'enregistre sur l'appareil,
@@ -1950,7 +1953,8 @@ s'affiche sans réseau.
   pas repris. », puis une ligne par fabricant, dans l'ordre alphabétique : « Fermentis : fiches
   relevées le 14 novembre 2026, sans floculation. », « Imperial Yeast : fiches relevées le
   15 novembre 2026, floculation comprise. », « Mangrove Jack's : fiches relevées le
-  15 novembre 2026, floculation comprise. ». Un fabricant ajouté ajoute sa ligne.
+  15 novembre 2026, floculation comprise. », « Omega Yeast : fiches relevées le 15 novembre
+  2026, floculation comprise. ». Un fabricant ajouté ajoute sa ligne.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
 - srm2hex : « Teintes de la page « Échelle des couleurs » et de la barre de couleur d'un style :
@@ -2286,6 +2290,77 @@ réelles notées à côté) et ne portent ni prix ni prénom. Sa copie d'équipe
 et son type : la densité prévue est « à compléter », la densité mesurée, le degré mesuré et le
 rendement réel restent calculés.
 
+### Densimètre et correction des densités
+
+Chaque brasseur choisit son instrument de mesure de la densité dans une liste fermée. Chaque
+ligne dit ce que l'instrument demande :
+
+| Instrument | Demande | Correction |
+|---|---|---|
+| Densimètre flottant, étalonné à 20 °C | densité lue, température de l'échantillon | température |
+| Densimètre flottant, étalonné à 15,6 °C | densité lue, température de l'échantillon | température |
+| Réfractomètre | lecture en °Brix, facteur de correction du moût | conversion en densité, puis alcool en fermentation |
+| Densimètre électronique | densité seule | aucune |
+| Autre instrument, sans correction | densité seule | aucune |
+
+Le choix est une préférence du brasseur, propre à lui et à aucun brassin. Il se fait par la
+ligne « Densimètre » de « Préparer le brassage » et de « Préparer la journée » (« Changer »),
+ou par la ligne « Densimètre : … · Changer » du formulaire d'une densité (« Densimètre :
+Réfractomètre, facteur 1,04 » ; le bouton est lu « Changer le densimètre »). La feuille
+« Densimètre » liste les cinq instruments ; « Enregistrer » sans instrument coché affiche
+« Choisissez un instrument. » ; pour le réfractomètre, elle ajoute « Facteur de correction du moût »
+(0,9 à 1,2, facultatif). Un choix fait dans un formulaire vaut pour la mesure en cours et
+devient la préférence. Rien n'est écrit sans action du brasseur. Sans préférence, la ligne
+affiche « À choisir » (icône ambre) : aucun instrument n'est présélectionné, la saisie reste
+une densité simple. Une préférence illisible s'affiche aussi « À choisir », et l'erreur est
+signalée.
+
+**La lecture brute est enregistrée, jamais la valeur corrigée.** Une densité garde son
+instrument, sa lecture (densité lue ou °Brix), la température de l'échantillon (flottant), le
+facteur (réfractomètre) et la case « Corriger ». La valeur corrigée se calcule à l'affichage.
+Elle sert partout : chronologie, relevé, courbes, « Prévu et mesuré », densités initiale et
+finale retenues, degré, rendement, écarts. Case décochée ou correction impossible : la lecture
+brute sert. Une mesure enregistrée avant cette version, sans instrument, s'affiche et se calcule
+comme avant.
+
+**Densimètre flottant.** Champs « Densité lue » (aperçu « = 1057,9 ») et « Température de
+l'échantillon (°C) » (0 à 100, aide « Pour proposer la densité corrigée. »). Un encadré annoncé
+donne « Densité corrigée à 20 °C : 1070,7 (+20,7 pts) », l'interrupteur
+« Corriger » (coché par défaut) et « Valeur retenue : 1070,7, corrigée » ou « Valeur retenue :
+1050,0, lue à 68 °C ». Le lecteur d'écran annonce les seuls changements d'état (correction
+approchée ou impossible, calcul refusé, facteur ou densité initiale manquants), pas chaque
+valeur. De 0 à 40 °C la correction est sans réserve ; au-delà de 40 jusqu'à 75 °C
+elle est marquée « ≈ », encadré ambre, « Correction approchée au-delà de 40 °C. Refroidissez
+l'échantillon vers 20 °C pour une mesure fiable. ». Au-delà de 75 °C : « Correction impossible
+au-delà de 75 °C. », sans interrupteur, la lecture brute est retenue. Sans température : « Sans
+température, la densité lue est retenue. ». Un calcul refusé affiche « Correction impossible :
+le calcul est refusé. La lecture est retenue. » et l'erreur est signalée.
+
+**Réfractomètre.** Champ « Lecture (°Brix) » (0 à 40). Sans facteur : « Facteur à renseigner :
+aucune conversion en densité. Appuyez sur Changer. » ; la lecture est enregistrée mais ne donne
+aucune densité, et elle n'est jamais retenue automatiquement. Avec facteur, avant la
+fermentation : « Valeur retenue : 1048,1, lue 12,4 °Brix ». Après le début de la fermentation
+(relevé, journée 2 ou suivante, densité finale de l'embouteillage), la lecture se corrige de
+l'alcool à partir de la densité initiale retenue du brassin : « Densité corrigée de l'alcool :
+1012,1 (−12,6 pts) » (lecture 6,5 °Brix, facteur 1,04, densité initiale
+1050,0), interrupteur « Corriger » ; sans densité initiale retenue :
+« Densité initiale à saisir : la lecture n'est pas corrigée de l'alcool. ».
+
+**Électronique et autre instrument.** Champ « Densité », sans correction, comme avant.
+
+**Affichage.** Chronologie : « Densité 1070,7 · corrigée, lue 1050,0 à 68 °C » (« Densité
+≈ 1070,7 · … » pour une correction approchée), « Densité 1050,0 · lue à 68 °C, sans
+correction », « Densité 1048,1 · lue 12,4 °Brix », « Densité 12,4 °Brix · facteur à
+renseigner ». Relevé de fermentation et « Prévu et mesuré » : étiquette « corrigée » à côté
+d'un complément qui commence par la lecture (« lue 1050,0 à 68 °C »), sans répéter
+« corrigée ». Courbes : un point par mesure à la valeur retenue ; l'info-bulle et
+le résumé lu disent « corrigée ». Une lecture sans densité (réfractomètre sans facteur) n'a pas
+de point.
+
+Les quatre saisies de densité suivent ces règles : mesure du jour de brassage et des journées
+suivantes (correction comprise), « Ajouter un relevé », densité finale de l'embouteillage,
+« Saisir la densité initiale » de « Prévu et mesuré ». Le RAPT Pill n'est pas dans la liste.
+
 ### Relevé de fermentation
 
 Section « Relevé de fermentation » de la fiche, visible à partir de En fermentation, et dans tout
@@ -2334,8 +2409,12 @@ datés de 12:00 et marqués « heure non notée » (« sam. 15 nov. · heure non
 la liste comme dans l'info-bulle de la courbe ; la marque est enregistrée avec le relevé, jamais
 déduite de l'heure 12:00.
 
-« Ajouter un relevé » (propriétaire, En fermentation ou En conditionnement) : « Densité »
-(0,980 à 1,200), « Température (°C) » (0 à 110), « Date et heure » (maintenant par défaut,
+« Ajouter un relevé » (propriétaire, En fermentation ou En conditionnement) : « Température du
+fermenteur (°C) » (0 à 110), puis la densité selon l'instrument (voir « Densimètre et correction
+des densités » ; densité 0,980 à 1,200) ; pour un densimètre flottant, « Température de
+l'échantillon (°C) » reprend la température du fermenteur à l'ouverture (correction comprise),
+à chaque frappe et au passage à un densimètre flottant, tant que le brasseur ne la modifie
+pas, « Date et heure » (maintenant par défaut,
 « Changer la date »), « Ajouter une note » (2 000 caractères). Densité, température et note sont
 facultatives, sauf les trois vides : « Saisissez une densité, une température ou une note. ». Une
 heure à venir : « L'heure ne peut pas être dans le futur. » ; un jour antérieur au brassage : « Le
@@ -2365,7 +2444,9 @@ indisponibles sur cet appareil hors ligne. ».
 le menu ⋮ quand le déroulé a une journée d'embouteillage ; ou « Embouteiller » en fin de journée
 d'embouteillage, voir « Journée après le brassage ») ouvre le formulaire : « Date d'embouteillage »
 (aujourd'hui par défaut, ni future ni antérieure au jour du brassage), « Densité finale
-(facultatif) », « Nombre de bouteilles (facultatif) » (entier de 1 à 9 999), « Volume conditionné
+(facultatif) » selon l'instrument (« Densité finale lue (facultatif) » pour un flottant,
+« Densité finale, lecture (°Brix) (facultatif) » pour un réfractomètre) (voir « Densimètre et correction des densités » ; un
+réfractomètre s'y corrige de l'alcool), « Nombre de bouteilles (facultatif) » (entier de 1 à 9 999), « Volume conditionné
 (L) (facultatif) » (0 exclu à 1 000), « Sucre de resucrage (g) (facultatif) » (0 à 100 000),
 « Nature du sucre (facultatif) » (80 caractères). Densité finale remplie : un relevé de
 fermentation est créé à l'heure d'embouteillage, dans le même envoi que le statut. Seule la date
@@ -2401,6 +2482,12 @@ finale, Degré, Volume en fermenteur, Rendement. Écart = mesuré moins prévu, 
 densités et le rendement, en % vol pour le degré, en litres pour le volume, sans couleur. Tout est
 recalculé à l'affichage ; aucune valeur n'est enregistrée, et aucune valeur prévue ne remplace une
 mesure absente (« — » dans sa colonne et dans l'écart).
+
+Les densités sont les valeurs retenues de « Densimètre et correction des densités » :
+corrigées si la case « Corriger » est cochée et la correction possible, sinon brutes ; une
+densité corrigée porte l'étiquette « corrigée » et la lecture dans l'origine (« Relevé J+12
+· 20 nov. 18:30 · Choisie · lue 6,5 °Brix »). « Saisir la densité initiale » suit
+l'instrument du brasseur.
 
 Densité initiale et volume retenus : la dernière mesure du jour de brassage, ou celle que le
 propriétaire choisit. Densité finale retenue : la dernière densité de fermentation (hors celle
@@ -2446,7 +2533,9 @@ rien écrire, et liste : brassin et recette figée, équipement, chronologie («
 fin vers 16:05 » ; avec un processus, « Brassage : 18 étapes · 6 h 10 · fin vers 16:05 » et
 « Ensuite : Houblonnage à cru le mer. 25 nov., Embouteillage le sam. 5 déc. », ou « à J+4 »
 sans date prévue), compte, écran gardé allumé, minuteurs (« Aucune alarme ne sonne écran
-verrouillé : gardez l'écran visible. »), chaque ligne avec une icône colorée selon son état (vert : fait ; ambre : à surveiller ; rouge : en panne ; gris : information). Réponse reçue, dans un encadré vert : « Tout est prêt. Vous pouvez couper le
+verrouillé : gardez l'écran visible. »), densimètre (« Densimètre flottant, étalonné à 20 °C »,
+« Réfractomètre, facteur 1,04 », « À choisir », avec « Changer », voir « Densimètre et correction
+des densités »), chaque ligne avec une icône colorée selon son état (vert : fait ; ambre : à surveiller ; rouge : en panne ; gris : information). Réponse reçue, dans un encadré vert : « Tout est prêt. Vous pouvez couper le
 réseau. ». Sans réponse ni réseau : « Préparation impossible sans réseau. Le brassin est lisible
 sur cet appareil, mais peut ne pas être à jour. ». « Commencer le brassage » passe le brassin « En
 cours » avec l'heure de l'appareil, démarre la première étape si elle a une durée, et ouvre
@@ -2518,7 +2607,8 @@ finit avant de commencer. Corrigez son heure. ».
 
 **Mesures.** Bouton « Mesure » : étape (ou « Sans étape »), type (Température 0 à 110 °C, Densité,
 Volume au-delà de 0 et jusqu'à 1 000 L, pH 0 à 14, Note), heure (« maintenant » par défaut,
-une heure à venir se place à la veille si la veille reste après le début du brassage, comme 23:55 saisi à 00:05 ; sinon elle est refusée), note facultative. Densité : « 1057,9 » ou « 1.058 » (« Densité illisible.
+une heure à venir se place à la veille si la veille reste après le début du brassage, comme 23:55 saisi à 00:05 ; sinon elle est refusée), note facultative. Densité : selon l'instrument du brasseur (voir « Densimètre et correction des
+densités »), « 1057,9 » ou « 1.058 » (« Densité illisible.
 Écrivez 1057,9 ou 1.058. », « Densité hors de 980 à 1200. »). Le formulaire ne se ferme pas par un appui hors de la feuille
 ni par un glissement : seuls « Annuler » et l'enregistrement le ferment. « Enregistrer la mesure » ferme la
 feuille ; « Mesure enregistrée. » avec « Annuler » 10 s. Un appui sur une mesure ouvre sa
@@ -2562,7 +2652,8 @@ toute journée 2 ou suivante du déroulé), ouvert depuis la fiche, dans la barr
 retour vers la fiche. Titre sur deux lignes : « Blonde », puis « Houblonnage à cru · prévue le
 mer. 25 nov. » (« prévue aujourd'hui »). « Préparez la journée sur le téléphone qui servira. ». Comme « Préparer le
 brassage », il attend une réponse du serveur 15 s au plus, sans rien écrire, et liste :
-« Brassin et déroulé figé », « Étapes » (« 4 étapes · 25 min · fin vers 10:40 »), compte, écran
+« Brassin et déroulé figé », « Étapes » (« 4 étapes · 25 min · fin vers 10:40 »), « Densimètre »
+avec « Changer » (comme « Préparer le brassage »), compte, écran
 gardé allumé, minuteurs, navigateur (web). Journée d'embouteillage : « Prix et frais », « Lus sur
 l'appareil : le coût se figera à l'embouteillage. » ou « Prix indisponibles sur cet appareil hors
 ligne. Le coût ne se figera pas. ». Informations : « Prévue le mer. 25 nov. Vous pouvez la

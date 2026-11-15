@@ -1,0 +1,31 @@
+{
+  "description": "Réfractomètre : lecture en °Brix divisée par le facteur de correction du moût saisi par le brasseur (aucun facteur par défaut), conversion en SG, puis, après le début de la fermentation, correction de l'alcool par la formule cubique de Sean Terrill (2011). Valeurs attendues calculées hors du paquet avec les formules ci-dessous.",
+  "sources": {
+    "brix_to_sg": "SG = 1 + B / (258,6 − (B / 258,2) × 227,1), B en °Brix corrigé du facteur, lu comme des degrés Plato : même formule que platoToSg (conversions.json).",
+    "sg_to_brix": "Brix initial tiré de la densité initiale retenue par le polynôme de l'ASBC (sgToPlato) : P = −616,868 + 1111,14 × SG − 630,272 × SG² + 135,997 × SG³.",
+    "terrill": "Sean Terrill, « Refractometer FG Results », seanterrill.com, 7 avril 2011, équation cubique : FG = 1,0000 − 0,0044993 OB + 0,011774 FB + 0,00027581 OB² − 0,0012717 FB² − 0,0000072800 OB³ + 0,000063293 FB³, OB et FB en °Brix corrigés du facteur.",
+    "note": "Les valeurs Terrill de ce fichier sont calculées avec les coefficients publiés ; elles n'ont pas été comparées à une table indépendante."
+  },
+  "brix_to_sg": [
+    { "id": "12,4 °Brix, facteur 1,04", "brix": 12.4, "factor": 1.04, "expected": 1.048055018, "tolerance": 1e-9 },
+    { "id": "12 °Brix, facteur 1,00", "brix": 12, "factor": 1.0, "expected": 1.048378242, "tolerance": 1e-9 },
+    { "id": "20 °Brix, facteur 1,03", "brix": 20, "factor": 1.03, "expected": 1.08039652, "tolerance": 1e-9 },
+    { "id": "0 °Brix, facteur 1,04", "brix": 0, "factor": 1.04, "expected": 1.0, "tolerance": 1e-12 }
+  ],
+  "terrill": [
+    { "id": "OB 12,4, FB 6,3", "original_brix": 12.4, "final_brix": 6.3, "expected": 1.0122657, "tolerance": 1e-6 },
+    { "id": "OB 20, FB 10", "original_brix": 20, "final_brix": 10, "expected": 1.015961, "tolerance": 1e-6 },
+    { "id": "OB 15, FB 7,5", "original_brix": 15, "final_brix": 7.5, "expected": 1.0134714, "tolerance": 1e-6 },
+    { "id": "OB 12, FB 12 : aucune fermentation, la formule ne rend pas l'initiale", "original_brix": 12, "final_brix": 12, "expected": 1.0406787, "tolerance": 1e-6 }
+  ],
+  "fermentation": [
+    { "id": "densité initiale retenue 1.050, lecture 6,5 °Brix, facteur 1,04", "original_gravity": 1.05, "brix": 6.5, "factor": 1.04, "expected": 1.0121137, "tolerance": 1e-6 },
+    { "id": "densité initiale retenue 1.0484, lecture 6,3 °Brix, facteur 1,00", "original_gravity": 1.0484, "brix": 6.3, "factor": 1.0, "expected": 1.0126663, "tolerance": 1e-6 }
+  ],
+  "invalid": [
+    { "id": "Brix négatif", "brix": -1, "factor": 1.04 },
+    { "id": "Brix au-delà de 40", "brix": 40.5, "factor": 1.04 },
+    { "id": "facteur sous 0,9", "brix": 12, "factor": 0.8 },
+    { "id": "facteur au-delà de 1,2", "brix": 12, "factor": 1.3 }
+  ]
+}

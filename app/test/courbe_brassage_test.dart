@@ -92,7 +92,7 @@ void main() {
       expect(d.visees.planned, hasLength(1));
       expect(d.visees.recomputed, hasLength(1));
       expect(d.temperatures.map((e) => e.id), ['m1', 'm2']);
-      expect(d.densites.map((e) => e.id), ['m3']);
+      expect(d.densites.map((e) => e.event.id), ['m3']);
       expect(d.etapeDe(d.temperatures.first), 'Remplissage de la cuve');
       expect(
         lisible(resumeCourbeBrassage(d)),

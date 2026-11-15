@@ -4,6 +4,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
 import '../../brews/data/brews_repository.dart';
 import '../../brews/domain/brew.dart';
+import '../../brews/domain/brew_event.dart';
 import '../domain/brew_cost.dart';
 import '../domain/cost_evaluation.dart';
 import '../domain/fee.dart';
@@ -64,7 +65,7 @@ EmbouteillageEnvoye enregistrerEmbouteillage({
   required Set<String> reported,
   required Brew brew,
   required Embouteillage embouteillage,
-  required double? finalGravity,
+  required DensiteSaisie? finalGravity,
   required bool modification,
   required String? ownerName,
   required ListeLue<Price>? prices,

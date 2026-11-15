@@ -16,6 +16,7 @@ import {
   db,
   deleteField,
   equipment,
+  event,
   FIVE_PROFILES,
   flatRecipe,
   fresh,
@@ -576,6 +577,107 @@ describe("recipes et brews — budget des règles", () => {
           updated_at: serverTimestamp(),
         }),
     );
+  });
+
+  // v0.1.72 : densité avec instrument (densityOk), mesures de la plus grande forme.
+  const REFRACTO = {
+    measure_type: "gravity",
+    gravity_instrument: "refractometer",
+    value: null,
+    brix: 6.5,
+    refractometer_factor: 1.04,
+    correct: true,
+  };
+
+  it("densité au réfractomètre en fermentation, note de 2 000 caractères : autorisé", async () => {
+    await seed22({ adjustments: adjustments11 });
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("brews/b-22/events/" + "r".repeat(20))
+        .set({
+          ...event(uidOf("owner"), {
+            ...REFRACTO,
+            step_key: null,
+            phase: "fermentation",
+            note: "n".repeat(2000),
+          }),
+          created_at: serverTimestamp(),
+        }),
+    );
+  });
+
+  it("correction : flottant devenu réfractomètre, note de 2 000 caractères : autorisé", async () => {
+    await seed22({ adjustments: adjustments11 });
+    await seed(state.env, {
+      "brews/b-22/events/c": event(uidOf("owner"), {
+        measure_type: "gravity",
+        value: 1.05,
+        gravity_instrument: "hydrometer_20c",
+        sample_temperature: 68,
+        correct: true,
+      }),
+    });
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("brews/b-22/events/c")
+        .update({ ...REFRACTO, sample_temperature: deleteField(), note: "n".repeat(2000) }),
+    );
+  });
+
+  // Marge la plus faible mesurée en v0.1.72 (14 pad10()) : estimationRetireeOk et
+  // densityOk dans la même correction.
+  it("correction : flottant à heure estimée devenu réfractomètre, heure changée, note de 2 000 caractères : autorisé", async () => {
+    await seed22({ adjustments: adjustments11 });
+    await seed(state.env, {
+      "brews/b-22/events/e": event(uidOf("owner"), {
+        measure_type: "gravity",
+        value: 1.05,
+        gravity_instrument: "hydrometer_20c",
+        sample_temperature: 68,
+        correct: true,
+        time_estimated: true,
+      }),
+    });
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("brews/b-22/events/e")
+        .update({
+          ...REFRACTO,
+          sample_temperature: deleteField(),
+          time_estimated: deleteField(),
+          measured_at: at("2026-11-22T10:15:00Z"),
+          note: "n".repeat(2000),
+        }),
+    );
+  });
+
+  it("embouteillage avec densité finale au réfractomètre dans le même lot : autorisé", async () => {
+    await seed22({ adjustments: adjustments11 });
+    const fs = db(state.env, "owner");
+    const batch = fs.batch();
+    batch.update(fs.doc("brews/b-22"), {
+      bottled_at: at("2026-12-07T10:00:00Z"),
+      bottles_count: 50,
+      packaged_volume_l: 18,
+      priming_sugar_g: 110,
+      priming_sugar_name: "Dextrose",
+      status: "conditioning",
+      owner_name: nameOf("owner"),
+      updated_at: serverTimestamp(),
+    });
+    batch.set(fs.doc("brews/b-22/events/" + "e".repeat(20)), {
+      ...event(uidOf("owner"), {
+        ...REFRACTO,
+        step_key: null,
+        phase: "fermentation",
+        measured_at: at("2026-12-07T10:00:00Z"),
+      }),
+      created_at: serverTimestamp(),
+    });
+    await expectRule(true, batch.commit());
   });
 
   it("brassin du 22 novembre : écriture de 11 ajustements valides : autorisé", async () => {

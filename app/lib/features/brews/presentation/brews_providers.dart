@@ -6,6 +6,7 @@ import '../../../core/providers.dart';
 import '../../costs/data/figeage_embouteillage.dart';
 import '../domain/brew.dart';
 import '../domain/brew_event.dart';
+import '../domain/preference_mesure.dart';
 
 /// Brassins du groupe, lus par tous les membres.
 final brewsListProvider = StreamProvider.autoDispose<ListeLue<Brew>>(
@@ -17,6 +18,15 @@ final brewsListProvider = StreamProvider.autoDispose<ListeLue<Brew>>(
 final brewEventsProvider = StreamProvider.autoDispose
     .family<ListeLue<BrewEvent>, String>(
       (ref, brewId) => ref.watch(brewsRepositoryProvider).watchEvents(brewId),
+      retry: (retryCount, error) => null,
+    );
+
+/// Instrument de densité du compte [uid], lu par lui seul. Écouté par
+/// « Préparer le brassage » et « Préparer la journée » : la lecture reste dans
+/// le cache pour l'écran du jour hors ligne (P2).
+final preferenceMesureProvider = StreamProvider.autoDispose
+    .family<RechercheDocument<PreferenceMesure>, String>(
+      (ref, uid) => ref.watch(preferenceMesureRepositoryProvider).watch(uid),
       retry: (retryCount, error) => null,
     );
 

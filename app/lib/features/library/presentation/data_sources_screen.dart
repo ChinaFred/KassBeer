@@ -52,6 +52,8 @@ class DataSourcesScreen extends ConsumerWidget {
         'comprise.',
     'Mangrove Jack\'s : fiches relevées le 15 novembre 2026, floculation '
         'comprise.',
+    'Omega Yeast : fiches relevées le 15 novembre 2026, floculation '
+        'comprise.',
   ];
   static const diyDog =
       'Recettes publiques : recettes DIY Dog publiées par BrewDog, reprises '

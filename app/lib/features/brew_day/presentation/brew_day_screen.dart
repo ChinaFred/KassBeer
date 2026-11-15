@@ -764,6 +764,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
           brew: _brew,
           modification: false,
           fermentationMesuree: densiteDeFermentationMesuree(events),
+          densiteInitiale: densiteInitialeLue(ref, _brew),
           now: _now,
           onSubmit: (embouteillage, finalGravity) =>
               unawaited(_envoyerEmbouteillage(embouteillage, finalGravity)),
@@ -779,7 +780,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
   /// serveur : `enregistrerEmbouteillage` n'écrit aucune étape.
   Future<void> _envoyerEmbouteillage(
     Embouteillage embouteillage,
-    double? finalGravity,
+    DensiteSaisie? finalGravity,
   ) async {
     final envoyer = capturerEmbouteillage(ref, _brew);
     final offline = ref.read(grantedAccessProvider)?.offline ?? false;
@@ -819,10 +820,12 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     MeasureType? type,
     bool note = false,
     double? initialValue,
+    DensiteSaisie? initialDensite,
     DateTime? initialAt,
     String? initialNote,
   }) {
     final messenger = ScaffoldMessenger.of(context);
+    final densiteInitiale = densiteInitialeLue(ref, _brew);
     unawaited(
       // ticket: /brassins/:id/jour/fenetre/mesure, /brassins/:id/jour/:journee/fenetre/mesure
       showFeuilleOuDialogue<void>(
@@ -837,6 +840,8 @@ class _EcranJourState extends ConsumerState<_EcranJour>
           note: note,
           now: _now,
           initialValue: initialValue,
+          initialDensite: initialDensite,
+          densiteInitiale: densiteInitiale,
           initialAt: initialAt,
           initialNote: initialNote,
           plancher: _brew.brewedAt,
@@ -856,6 +861,12 @@ class _EcranJourState extends ConsumerState<_EcranJour>
                         stepKey: saisie.stepKey,
                         type: saisie.type,
                         initialValue: saisie.value,
+                        initialDensite: saisie.type == MeasureType.gravity
+                            ? DensiteSaisie(
+                                sg: saisie.value,
+                                detail: saisie.densite,
+                              )
+                            : null,
                         initialAt: saisie.at,
                         initialNote: saisie.note,
                       )
