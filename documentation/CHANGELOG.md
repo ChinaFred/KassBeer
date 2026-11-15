@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.72 — fonctionnel
+### v0.1.73 — fonctionnel
 
 La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures
 sèches (Pinnacle, Dried Lutra), Brettanomyces, kveiks et deux bactéries qui acidifient la
@@ -17,7 +17,7 @@ apparaissent, dont les variantes « + » et les levures sèches. L'écran « Sou
 données » nomme Omega Yeast et la date du relevé. Les cultures arrivent dans la Bibliothèque
 quand l'administrateur relance l'ingestion.
 
-### v0.1.72 — technique
+### v0.1.73 — technique
 
 `exchange/donnees/fabricants/cultures.json` : 104 cultures Omega Yeast relevées le 2026-11-15
 sur `omegayeast.com`, règles dans l'en-tête : référence OYL du titre ou de la page, cinq
@@ -29,6 +29,50 @@ blé, `mixed-culture` (C2C), `lacto`, `pedio`, `other` (*Lachancea*), températu
 de plus (`kolsch-ii`, `german-lager-i`, `bayern-lager`, `point-loma`, `extra-special`),
 résolus par la souche. `fabricants_donnees_test.dart` : 200 entrées, types et champs absents
 d'Omega. `DATA_SOURCES.md`, ADR-005, exigences et écran « Sources des données » à jour.
+
+### v0.1.72 — fonctionnel
+
+Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à
+20 °C ou à 15,6 °C, réfractomètre, densimètre électronique, ou autre instrument sans
+correction. Le choix se fait par la ligne « Densimètre » de « Préparer le brassage » et de
+« Préparer la journée », ou depuis le formulaire d'une densité. Avec un densimètre flottant,
+vous saisissez aussi la température de l'échantillon : l'application propose la densité
+corrigée (1050,0 lue à 68 °C donne 1070,7), approchée au-delà de 40 °C, impossible au-delà de
+75 °C. Avec un réfractomètre, vous saisissez des °Brix et le facteur de votre appareil ; après
+le début de la fermentation, la lecture est corrigée de l'alcool à partir de la densité
+initiale. La case « Corriger » permet de garder la lecture telle quelle. La lecture d'origine
+est toujours gardée, et la valeur retenue sert partout : relevé, courbes, « Prévu et mesuré »,
+degré et rendement. Les mesures déjà enregistrées ne changent pas. Installez cette mise à jour
+avant d'utiliser le réfractomètre : une ancienne version de l'application ne peut pas afficher
+« Prévu et mesuré » d'un brassin mesuré au réfractomètre.
+
+### v0.1.72 — technique
+
+Module `brewing/lib/src/gravity_instruments.dart` : `InstrumentDensite` (liste fermée),
+`masseVolumiqueEau` (Kell 1975), `corrigerDensimetre`, `plageCorrection` (0–40 °C, 40–75 °C
+approchée, impossible au-delà), `brixCorrige` (°Brix divisé par le facteur, converti par la formule de
+`platoToSg`, partagée sans bornes par `platoVersSgSansBornes`, non exportée), `densiteTerrill` (Terrill 2011, cubique) et
+`densiteRetenue`, seule lecture d'une densité mesurée ; cas d'abord dans
+`brewing/test/fixtures/hydrometer.json` et `refractometer.json`. Événements : champs
+`gravity_instrument`, `brix`, `sample_temperature`, `refractometer_factor`, `correct` ; la
+lecture brute est stockée, `value` reste la densité lue en SG et est nulle pour un
+réfractomètre. `densiteDe` (`app/lib/features/brews/domain/densites.dart`) remplace la lecture
+de `value` dans `MesuresRetenues`, `relevesDe`, la chronologie, les deux courbes et
+« Prévu et mesuré ». Préférence `users/{uid}/preferences/measurement` (dépôt
+`PreferenceMesureRepository`, écriture simple sans transaction). Saisie commune `BlocDensite`
+(`saisie_densite.dart`) dans les quatre formulaires de densité. `firestore.rules` : `densityOk`,
+correction de l'instrument permise, préférence en liste blanche ; tests
+`rules-tests/test/gravity_instruments.test.mjs` ; budget mesuré après la fusion avec la v0.1.69 : environ 560 expressions de marge (14
+`pad10()`) sur la correction d'un flottant à heure estimée en réfractomètre. Quatre cas
+« autorisé » ajoutés à la suite « budget des règles » de `recipe_format.test.mjs`, sur le
+brassin du 22 novembre : création d'une lecture au réfractomètre en fermentation, correction
+d'un flottant en réfractomètre et la même correction sur une heure estimée avec l'heure changée,
+ces trois cas avec une note de 2 000 caractères ; enfin embouteillage avec une densité finale
+au réfractomètre dans le même lot.
+`kReleveChampMinWidth` retiré (relevé en une colonne). Aucune dépendance ajoutée. Une lecture
+de réfractomètre a `value` nulle : les versions 0.1.71 et antérieures lisent `event.value!` sur
+une densité retenue et plantent sur « Prévu et mesuré » d'un tel brassin ; risque accepté par
+l'utilisateur, couvert par la mise à jour proposée au lancement (ADR-012).
 
 ### v0.1.71 — fonctionnel
 

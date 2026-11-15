@@ -1,0 +1,41 @@
+{
+  "description": "Correction en température d'un densimètre flottant. Densité corrigée = lecture × ρ(étalonnage) / ρ(échantillon), ρ masse volumique de l'eau. Valeurs attendues calculées hors du paquet avec la formule de Kell, ci-dessous.",
+  "source": "G. S. Kell, « Density, thermal expansivity, and compressibility of liquid water from 0 to 150 °C », Journal of Chemical and Engineering Data 20 (1), 1975, p. 97-105, équation (16).",
+  "formulas": {
+    "water_density": "ρ (kg/m³) = (999,83952 + 16,945176 t − 7,9870401e-3 t² − 46,170461e-6 t³ + 105,56302e-9 t⁴ − 280,54253e-12 t⁵) / (1 + 16,879850e-3 t), t en °C, valable de 0 à 150 °C",
+    "correction": "SG corrigée = SG lue × ρ(t étalonnage) / ρ(t échantillon)"
+  },
+  "ranges": {
+    "note": "0 à 40 °C : correction sans réserve ; plus de 40 jusqu'à 75 °C : correction approchée ; sous 0 °C (too_cold) ou au-delà de 75 °C (too_hot) : correction impossible, la lecture brute est retenue.",
+    "min_c": 0,
+    "exact_max_c": 40,
+    "approximate_max_c": 75
+  },
+  "water_density": [
+    { "id": "0 °C (table de référence 999,8395)", "celsius": 0, "expected": 999.8395, "tolerance": 0.005 },
+    { "id": "4 °C (999,9720)", "celsius": 4, "expected": 999.972, "tolerance": 0.005 },
+    { "id": "20 °C (998,2071, échelle ITS-90 ; Kell, ITS-68, rend 998,2041)", "celsius": 20, "expected": 998.2071, "tolerance": 0.005 },
+    { "id": "40 °C (992,2152)", "celsius": 40, "expected": 992.2152, "tolerance": 0.005 },
+    { "id": "100 °C (958,3665)", "celsius": 100, "expected": 958.3665, "tolerance": 0.005 }
+  ],
+  "correction": [
+    { "id": "étalonné à 20 °C, échantillon à 20 °C : inchangée", "instrument": "hydrometer_20c", "reading": 1.05, "sample_c": 20, "expected": 1.05, "tolerance": 1e-9, "range": "exact" },
+    { "id": "étalonné à 15,6 °C, échantillon à 15,6 °C : inchangée", "instrument": "hydrometer_15_6c", "reading": 1.04, "sample_c": 15.6, "expected": 1.04, "tolerance": 1e-9, "range": "exact" },
+    { "id": "20 °C, échantillon à 30 °C", "instrument": "hydrometer_20c", "reading": 1.05, "sample_c": 30, "expected": 1.0526965, "tolerance": 1e-6, "range": "exact" },
+    { "id": "15,6 °C, échantillon à 30 °C", "instrument": "hydrometer_15_6c", "reading": 1.05, "sample_c": 30, "expected": 1.0535432, "tolerance": 1e-6, "range": "exact" },
+    { "id": "20 °C, échantillon à 40 °C : dernière valeur sans réserve", "instrument": "hydrometer_20c", "reading": 1.05, "sample_c": 40, "expected": 1.0563371, "tolerance": 1e-6, "range": "exact" },
+    { "id": "20 °C, lecture 1.050 à 68 °C : environ 1.0707 (contrôle de la demande)", "instrument": "hydrometer_20c", "reading": 1.05, "sample_c": 68, "expected": 1.070706, "tolerance": 1e-6, "range": "approximate" },
+    { "id": "15,6 °C, lecture 1.050 à 68 °C", "instrument": "hydrometer_15_6c", "reading": 1.05, "sample_c": 68, "expected": 1.0715672, "tolerance": 1e-6, "range": "approximate" },
+    { "id": "20 °C, échantillon à 75 °C : dernière valeur approchée", "instrument": "hydrometer_20c", "reading": 1.05, "sample_c": 75, "expected": 1.0751556, "tolerance": 1e-6, "range": "approximate" },
+    { "id": "20 °C, eau à 4 °C : sous 1,000", "instrument": "hydrometer_20c", "reading": 1.0, "sample_c": 4, "expected": 0.9982321, "tolerance": 1e-6, "range": "exact" }
+  ],
+  "impossible": [
+    { "id": "76 °C : au-delà de 75 °C", "instrument": "hydrometer_20c", "reading": 1.05, "sample_c": 76, "range": "too_hot" },
+    { "id": "100 °C", "instrument": "hydrometer_15_6c", "reading": 1.05, "sample_c": 100, "range": "too_hot" },
+    { "id": "−0,5 °C : sous 0 °C", "instrument": "hydrometer_20c", "reading": 1.05, "sample_c": -0.5, "range": "too_cold" }
+  ],
+  "invalid": [
+    { "id": "lecture hors de 0,980 à 1,200", "reading": 1.25, "sample_c": 20 },
+    { "id": "température non finie", "reading": 1.05, "sample_c": "NaN" }
+  ]
+}

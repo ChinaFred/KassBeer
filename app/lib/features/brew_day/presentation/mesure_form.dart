@@ -14,8 +14,11 @@ import '../../../core/theme/app_theme.dart';
 import '../../brews/data/brews_repository.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/domain/mesures_retenues.dart';
+import '../../brews/presentation/brews_providers.dart';
 import '../../brews/presentation/releve_fermentation.dart'
     show jourAvant, kReleveApresEmbouteillage;
+import '../../brews/presentation/saisie_densite.dart';
 import '../../recipes/domain/chronologie.dart';
 
 /// Heure future refusée (JB7).
@@ -123,11 +126,18 @@ class SaisieMesure {
     this.stepKey,
     this.note,
     required this.at,
+    this.densite,
   });
 
   final BrewEventKind kind;
   final MeasureType? type;
+
+  /// Valeur saisie ; pour une densité, la lecture brute en SG (nulle pour un
+  /// réfractomètre).
   final double? value;
+
+  /// Instrument et lecture brute d'une densité ; `null` sans instrument.
+  final DetailDensite? densite;
   final String? stepKey;
   final String? note;
   final DateTime at;
@@ -158,6 +168,8 @@ class FormulaireMesure extends StatefulWidget {
     this.plancher,
     this.releve = false,
     this.bottledAt,
+    this.initialDensite,
+    this.densiteInitiale,
   });
 
   final List<BrewStepLine> steps;
@@ -187,6 +199,13 @@ class FormulaireMesure extends StatefulWidget {
   final bool releve;
   final DateTime? bottledAt;
 
+  /// Densité reprise d'une saisie refusée (« Saisir à nouveau »).
+  final DensiteSaisie? initialDensite;
+
+  /// Densité initiale retenue du brassin, pour corriger de l'alcool une lecture
+  /// de réfractomètre d'une journée 2 ou suivante.
+  final double? densiteInitiale;
+
   @override
   State<FormulaireMesure> createState() => _FormulaireMesureState();
 }
@@ -202,8 +221,12 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
   String? _heureErreur;
   final _valueFocus = FocusNode();
   final _noteFocus = FocusNode();
+  late final SaisieDensiteControleur _densite;
 
   BrewEvent? get _edit => widget.correction;
+
+  /// Une mesure d'une journée 2 ou suivante porte `phase: fermentation`.
+  bool get _enFermentation => _edit?.isFermentation ?? widget.releve;
 
   @override
   void initState() {
@@ -213,11 +236,18 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
     _type = edit?.measureType ?? widget.initialType;
     _stepKey = edit?.stepKey ?? widget.initialStepKey;
     _at = edit?.measuredAt ?? widget.initialAt;
+    final initialDensite = widget.initialDensite;
+    _densite = edit != null && edit.isGravity
+        ? SaisieDensiteControleur.depuis(edit.value, edit.densite)
+        : initialDensite != null
+        ? SaisieDensiteControleur.depuis(
+            initialDensite.sg,
+            initialDensite.detail,
+          )
+        : SaisieDensiteControleur();
     final value = edit?.value ?? widget.initialValue;
-    if (value != null) {
-      _value.text = _type == MeasureType.gravity
-          ? formatDensite(value)
-          : texteSaisi(value);
+    if (value != null && _type != MeasureType.gravity) {
+      _value.text = texteSaisi(value);
     }
     _note.text = edit?.note ?? widget.initialNote ?? '';
   }
@@ -225,6 +255,7 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
   @override
   void dispose() {
     _value.dispose();
+    _densite.dispose();
     _note.dispose();
     _valueFocus.dispose();
     _noteFocus.dispose();
@@ -251,14 +282,13 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
       );
     } else {
       final type = _type!;
-      final double value = switch (readGravity(_value.text)) {
-        GravityRead(:final sg) when type == MeasureType.gravity => sg,
-        _ => lireNombre(_value.text).valeur!,
-      };
+      final densite = type == MeasureType.gravity ? _densite.saisie() : null;
+      if (type == MeasureType.gravity && densite == null) return;
       result = SaisieMesure(
         kind: BrewEventKind.measurement,
         type: type,
-        value: value,
+        value: densite == null ? lireNombre(_value.text).valeur! : densite.sg,
+        densite: densite?.detail,
         stepKey: _stepKey,
         note: note.isEmpty ? null : note,
         at: at,
@@ -288,11 +318,13 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
     final autofocus = _edit == null;
     switch (type) {
       case MeasureType.gravity:
-        return ChampDensite(
-          controller: _value,
+        return BlocDensite(
+          controleur: _densite,
           onSubmit: _submit,
           focusNode: _valueFocus,
           autofocus: autofocus,
+          enFermentation: _enFermentation,
+          densiteInitiale: widget.densiteInitiale,
         );
       case MeasureType.temperature:
         return ChampNombre(
@@ -389,6 +421,7 @@ class _FormulaireMesureState extends State<FormulaireMesure> {
                       _isNote = false;
                       _type = type;
                       _value.clear();
+                      _densite.lecture.clear();
                     }),
                   ),
                 ChoiceChip(
@@ -572,6 +605,14 @@ class _ChampDensiteState extends State<ChampDensite> {
   }
 }
 
+/// Densité initiale retenue de [brew] d'après les saisies déjà lues (aucune
+/// lecture réseau, P2), pour corriger de l'alcool une lecture de réfractomètre.
+double? densiteInitialeLue(WidgetRef ref, Brew brew) {
+  final events = ref.read(brewEventsProvider(brew.id)).value?.valides;
+  if (events == null) return null;
+  return MesuresRetenues.de(brew, events).densiteInitialeSg;
+}
+
 /// Correction d'une saisie depuis la feuille : le résultat est écrit par le dépôt.
 /// Une suppression propose « Annuler » : réécrit le même identifiant (ME6).
 void ouvrirCorrection({
@@ -583,6 +624,7 @@ void ouvrirCorrection({
 }) {
   final repo = ref.read(brewsRepositoryProvider);
   final messenger = ScaffoldMessenger.of(context);
+  final densiteInitiale = densiteInitialeLue(ref, brew);
   unawaited(
     // ticket: /brassins/:id/fenetre/correction, /brassins/:id/jour/fenetre/correction, /brassins/:id/jour/:journee/fenetre/correction
     showFeuilleOuDialogue<void>(
@@ -595,11 +637,15 @@ void ouvrirCorrection({
         initialType: event.measureType,
         now: ref.read(horlogeProvider),
         correction: event,
+        densiteInitiale: densiteInitiale,
         onSubmit: (saisie) => suivre(
           repo.correct(
             brewId: brew.id,
             eventId: event.id,
             value: saisie.value,
+            densite: event.isGravity
+                ? DensiteSaisie(sg: saisie.value, detail: saisie.densite)
+                : null,
             note: saisie.note,
             measuredAt: saisie.at,
             heureEstimeeCorrigee:
@@ -656,14 +702,18 @@ void enregistrerSaisie({
       note: saisie.note,
       measuredAt: saisie.at,
       phase: phase,
+      densite: saisie.densite,
     ),
   );
   final type = saisie.type;
   final value = saisie.value;
+  final brix = saisie.densite?.brix;
   suivre(
     created.written,
     saisie.kind == BrewEventKind.note
         ? 'Note à ${formatHeure(saisie.at)}'
+        : brix != null
+        ? '${type!.label} ${formatNombre(brix, decimales: 1, fixe: true)}$nbsp°Brix à ${formatHeure(saisie.at)}'
         : '${type!.label} ${libelleMesure(type, value!)} à ${formatHeure(saisie.at)}',
   );
   messenger.hideCurrentSnackBar();

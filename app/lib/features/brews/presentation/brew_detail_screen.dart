@@ -541,6 +541,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           fermentationMesuree: densiteDeFermentationMesuree([
             ...?events?.valides,
           ]),
+          densiteInitiale: densiteInitialeLue(ref, brew),
           now: ref.read(horlogeProvider),
           onSubmit: (embouteillage, finalGravity) {
             unawaited(
@@ -565,7 +566,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required ScaffoldMessengerState messenger,
     required Brew brew,
     required Embouteillage embouteillage,
-    required double? finalGravity,
+    required DensiteSaisie? finalGravity,
     required bool modification,
   }) async {
     final envoyer = capturerEmbouteillage(ref, brew);
