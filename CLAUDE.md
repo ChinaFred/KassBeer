@@ -134,6 +134,8 @@ exchange/             # paquet Dart pur, dépend de brewing/ : lecture et écrit
 ├── lib/fiches.dart   # lecture bornée du fichier d'import des 16 fiches (Admin › Import) ;
 │                     # bin/verifier_fiches.dart la rejoue à la préparation
 ├── bin/lister_houblons_recettes.dart  # noms des houblons du groupe résolus vers beer_hops/ (ADR-013)
+├── donnees/fabricants/  # fiches des fabricants (Fermentis), écrites à la main, versionnées et lues
+│                     # par défaut par bin/preparer_referentiels.dart (ADR-005, amendement du 2026-11-15)
 └── test/fixtures/    # fichiers de lecture et d'export attendus ; ingestion/ : sources inventées
 ingest/               # écrivain de l'ingestion : Node 24, Admin SDK ; lit import/ingest/prepare/,
                       # émulateur par défaut, production sur option et confirmation (ADR-005)
@@ -155,7 +157,7 @@ firestore.indexes.json
 scripts/              # check-version.mjs, check-agents.mjs, changelog-recent.mjs, garder-apk-en-ligne.sh (ADR-012)
 import/fiches/        # JSON d'import des 16 fiches (contiennent des prix) : jamais versionné
 import/backup/        # copie faite par effacement-l1/ avant l'effacement : jamais versionnée
-import/sources/       # fichiers de Brewtarget et de DIY Dog (P20) : jamais versionnés
+import/sources/       # fichiers de Brewtarget et de DIY Dog (P20) : jamais versionnés ; fiches des fabricants dans exchange/donnees/
 import/ingest/        # prepare/ (documents préparés, rapport.json), rapports/ (écritures) : jamais versionné
 ```
 

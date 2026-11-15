@@ -635,10 +635,22 @@ void main() {
         scrollable: _liste,
       );
       await tester.scrollUntilVisible(
+        find.text(DataSourcesScreen.fabricants),
+        200,
+        scrollable: _liste,
+      );
+      await tester.scrollUntilVisible(
         find.text(DataSourcesScreen.diyDog),
         200,
         scrollable: _liste,
       );
+      await tester.scrollUntilVisible(
+        find.text('Lire la licence CC BY-SA 4.0'),
+        -200,
+        scrollable: _liste,
+      );
+      await tester.ensureVisible(find.text('Lire la licence CC BY-SA 4.0'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Lire la licence CC BY-SA 4.0'));
       await tester.pumpAndSettle();
       expect(app.openedLinks, [kLicenceCcBySa]);

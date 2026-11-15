@@ -6,6 +6,49 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.64 — technique
+
+ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par
+hop-columbus, hop-ctz », 3 noms partagés). Le fichier 003 de Brewtarget porte `CTZ`,
+`Tomahawk` et `Zeus` en documents à part. La ligne `Columbus` de `kFusions` les absorbe
+(`EntreeDesignee` du 003) au lieu de les ajouter en alias ; leurs noms restent des alias de
+`hop-columbus`. Cas ajoutés aux sources inventées de `fusions_test.dart`. Documents attendus en
+moins : 24 (466 → 442), `DATA_SOURCES.md` à jour.
+### v0.1.63 — technique
+
+Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
+l'utilisateur) : le fichier BeerJSON 2.01 des 25 cultures Fermentis, relevé le 2026-11-14 et
+écrit à la main, entre dans le dépôt sous `exchange/donnees/fabricants/cultures.json`.
+`bin/preparer_referentiels.dart` le lit par défaut (option `--fabricants` pour un autre
+chemin) : l'administrateur n'a plus à le copier dans `import/sources/`. Le fichier ne contient
+que noms et valeurs techniques ; il n'est ni un asset ni servi par Hosting.
+`exchange/test/fabricants_donnees_test.dart` le lit : 25 entrées, aucun rejet, les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 écartées. `DATA_SOURCES.md` (exception à « aucun
+fichier de ces sources dans le dépôt », SHA-256 du fichier), ADR-005, `exigences-techniques.md`,
+« Structure » de `CLAUDE.md` et `guide-reseau.md` mis à jour.
+
+### v0.1.62 — fonctionnel
+
+La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le
+référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf
+absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et
+LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant.
+« Sources des données » nomme cette nouvelle source.
+
+### v0.1.62 — technique
+
+ADR-005, amendement du 2026-11-14 : source `fabricants` de l'ingestion, fichier BeerJSON 2.01
+écrit à la main (`import/sources/fabricants/cultures.json`, hors dépôt), lu par
+`lireFabricants` d'`exchange/` et exigé par `bin/preparer_referentiels.dart`. Rang 0 : elle
+passe avant 005, et les rangs des autres sources montent d'un. Une souche déjà connue de
+Brewtarget garde l'identifiant de son document (`ingest/ecrire.mjs` n'efface rien). Licence
+`Données publiées par le fabricant`, version et date du relevé `2026-11-14`, acceptées par
+`ingest/lib/validation.mjs`. L'application affiche « Fiches des fabricants ». Les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 dépassent la borne de 100 % : écartées et
+comptées au rapport. Admin › Sources nomme la source « Fiches des fabricants » dans
+« Sources lues » (`libelleSourceExecution`) et dans son introduction. `DATA_SOURCES.md`,
+`exigences-techniques.md` et `exigences-fonctionnelles.md` mis à jour.
+
 ### v0.1.61 — fonctionnel
 
 La Bibliothèque des houblons est plus propre. Un même houblon n'apparaît plus plusieurs fois

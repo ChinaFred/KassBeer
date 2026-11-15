@@ -66,6 +66,10 @@ const List<_Houblon> _h003 = [
   ('Sultana (Denali)', 'United States of America (USA)', 32.0),
   ('Tettnang (US)', 'United States of America (USA)', 32.1),
   ('Tettnanger', 'Germany', 32.2),
+  // Documents à part dans le 003, absorbés par Columbus.
+  ('CTZ', 'United States of America (USA)', 30.31),
+  ('Tomahawk', 'United States of America (USA)', 30.32),
+  ('Zeus', 'United States of America (USA)', 30.33),
 ];
 
 /// Houblons du fichier 001.
@@ -151,6 +155,9 @@ SourcesBrutes _sources({
   texte003: _texte003(h003),
   texte004: '{"beerjson": {"version": 2.01, "cultures": []}}',
   texte005: _texte005(h005, _m005),
+  texteFabricants: File(
+    'test/fixtures/ingestion/fabricants/vide.json',
+  ).readAsStringSync(),
   diyDog: const [],
 );
 
