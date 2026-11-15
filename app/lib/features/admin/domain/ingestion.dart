@@ -20,10 +20,11 @@ class ComptesCollection {
 class SourceExecution {
   const SourceExecution({required this.source, required this.version});
 
-  /// `brewtarget-001` à `brewtarget-005`, `diydog`.
+  /// `brewtarget-001` à `brewtarget-005`, `fabricants`, `diydog`.
   final String source;
 
-  /// `v5.2.3 ea10908`, `e6c12ab`.
+  /// `v5.2.3 ea10908`, `e6c12ab`, ou la date du relevé des fiches des
+  /// fabricants (`2026-11-14`).
   final String version;
 }
 

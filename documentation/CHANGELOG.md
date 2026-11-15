@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.65 — fonctionnel
+### v0.1.67 — fonctionnel
 
 Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à
 20 °C ou à 15,6 °C, réfractomètre, densimètre électronique, ou autre instrument sans
@@ -22,7 +22,7 @@ degré et rendement. Les mesures déjà enregistrées ne changent pas. Installez
 avant d'utiliser le réfractomètre : une ancienne version de l'application ne peut pas afficher
 « Prévu et mesuré » d'un brassin mesuré au réfractomètre.
 
-### v0.1.65 — technique
+### v0.1.67 — technique
 
 Module `brewing/lib/src/gravity_instruments.dart` : `InstrumentDensite` (liste fermée),
 `masseVolumiqueEau` (Kell 1975), `corrigerDensimetre`, `plageCorrection` (0–40 °C, 40–75 °C
@@ -41,9 +41,90 @@ correction de l'instrument permise, préférence en liste blanche ; tests
 `rules-tests/test/gravity_instruments.test.mjs` ; budget mesuré (environ 600 expressions de
 marge, cas ajoutés à la suite « budget des règles » de `recipe_format.test.mjs`).
 `kReleveChampMinWidth` retiré (relevé en une colonne). Aucune dépendance ajoutée. Une lecture
-de réfractomètre a `value` nulle : les versions 0.1.64 et antérieures lisent `event.value!` sur
+de réfractomètre a `value` nulle : les versions 0.1.66 et antérieures lisent `event.value!` sur
 une densité retenue et plantent sur « Prévu et mesuré » d'un tel brassin ; risque accepté par
 l'utilisateur, couvert par la mise à jour proposée au lancement (ADR-012).
+
+### v0.1.66 — fonctionnel
+
+Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
+Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
+houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
+
+### v0.1.66 — technique
+
+`_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
+jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
+insécable avant « · » pour couper la ligne après le point médian. Tests ajoutés
+dans `brew_day_screen_test.dart` et `deroule_d4_test.dart`.
+
+P15 accepte `noreply@anthropic.com`, l'adresse des sessions Claude Code, comme l'adresse
+`noreply` de GitHub, pour les commits et les tags (décision de l'utilisateur du 2026-11-15).
+Aucune des deux ne désigne une personne. `session-start.sh` n'avertit plus pour cette adresse.
+Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte à recoller sur
+claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
+
+Ces deux changements avaient été numérotés v0.1.62 et v0.1.63 sur leur branche, numéros pris
+entre-temps par la branche principale, puis v0.1.64 et v0.1.65, pris aussi : ils sont renumérotés en v0.1.66.
+
+### v0.1.65 — fonctionnel
+
+Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux
+utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion.
+Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à
+la coller. Google ne permet pas d'ajouter cette adresse automatiquement.
+
+### v0.1.65 — technique
+
+`invite_member_form.dart` devient un `ConsumerStatefulWidget` et ouvre
+`console.cloud.google.com/auth/audience?project=<FIREBASE_PROJECT_ID>` par `ouvrirLienProvider`.
+L'identifiant vient de `firebaseProjectIdProvider` (`members_providers.dart`, lu à la
+compilation) et `consoleUtilisateursTest` le contrôle avant de construire l'adresse ; sans
+identifiant valide, le bloc ne s'affiche pas. Échecs rapportés sous `members.open_console` et
+`members.copy_email`, sans l'adresse. Aucune dépendance ajoutée.
+
+### v0.1.64 — technique
+
+ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par
+hop-columbus, hop-ctz », 3 noms partagés). Le fichier 003 de Brewtarget porte `CTZ`,
+`Tomahawk` et `Zeus` en documents à part. La ligne `Columbus` de `kFusions` les absorbe
+(`EntreeDesignee` du 003) au lieu de les ajouter en alias ; leurs noms restent des alias de
+`hop-columbus`. Cas ajoutés aux sources inventées de `fusions_test.dart`. Documents attendus en
+moins : 24 (466 → 442), `DATA_SOURCES.md` à jour.
+### v0.1.63 — technique
+
+Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
+l'utilisateur) : le fichier BeerJSON 2.01 des 25 cultures Fermentis, relevé le 2026-11-14 et
+écrit à la main, entre dans le dépôt sous `exchange/donnees/fabricants/cultures.json`.
+`bin/preparer_referentiels.dart` le lit par défaut (option `--fabricants` pour un autre
+chemin) : l'administrateur n'a plus à le copier dans `import/sources/`. Le fichier ne contient
+que noms et valeurs techniques ; il n'est ni un asset ni servi par Hosting.
+`exchange/test/fabricants_donnees_test.dart` le lit : 25 entrées, aucun rejet, les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 écartées. `DATA_SOURCES.md` (exception à « aucun
+fichier de ces sources dans le dépôt », SHA-256 du fichier), ADR-005, `exigences-techniques.md`,
+« Structure » de `CLAUDE.md` et `guide-reseau.md` mis à jour.
+
+### v0.1.62 — fonctionnel
+
+La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le
+référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf
+absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et
+LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant.
+« Sources des données » nomme cette nouvelle source.
+
+### v0.1.62 — technique
+
+ADR-005, amendement du 2026-11-14 : source `fabricants` de l'ingestion, fichier BeerJSON 2.01
+écrit à la main (`import/sources/fabricants/cultures.json`, hors dépôt), lu par
+`lireFabricants` d'`exchange/` et exigé par `bin/preparer_referentiels.dart`. Rang 0 : elle
+passe avant 005, et les rangs des autres sources montent d'un. Une souche déjà connue de
+Brewtarget garde l'identifiant de son document (`ingest/ecrire.mjs` n'efface rien). Licence
+`Données publiées par le fabricant`, version et date du relevé `2026-11-14`, acceptées par
+`ingest/lib/validation.mjs`. L'application affiche « Fiches des fabricants ». Les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 dépassent la borne de 100 % : écartées et
+comptées au rapport. Admin › Sources nomme la source « Fiches des fabricants » dans
+« Sources lues » (`libelleSourceExecution`) et dans son introduction. `DATA_SOURCES.md`,
+`exigences-techniques.md` et `exigences-fonctionnelles.md` mis à jour.
 
 ### v0.1.61 — fonctionnel
 

@@ -44,7 +44,8 @@ CLAUDE.md                       règles, chaîne de travail, tableaux à remplir
 ├── skills/                     quatre skills
 └── hooks/
     ├── session-start.sh        vérifie agents et skills, lance setup-projet.sh s'il existe,
-    │                           avertit si l'adresse git n'est pas noreply (ADR-002)
+    │                           avertit si l'adresse git n'est pas noreply de GitHub
+    │                           ou noreply@anthropic.com (ADR-002, P15)
     ├── setup-projet.sh         session cloud : installe Flutter 3.44.6 et les dépendances
     │                           (app, brewing, rules-tests, functions)
     └── format-on-edit.mjs      formate le fichier écrit, selon formatters.json
@@ -238,6 +239,10 @@ contrôlée de `ingest/ecrire.mjs --supprimer-absents` (`securite`), P56 ajouté
 table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent, skill ni hook nouveau.
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
+
+Le 2026-11-15 (v0.1.63), décision de l'utilisateur : « Structure » de `CLAUDE.md` décrit
+`exchange/donnees/fabricants/`, fichier des fiches des fabricants versionné (ADR-005, amendement
+du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.
 
 Le 2026-11-14, à la demande de l'utilisateur : P36 et la section « Coûts variables » de
 `CLAUDE.md` ajoutent le compte fondateur (`members/{email}.founder`, posé dans la console

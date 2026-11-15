@@ -71,7 +71,7 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets, types)` (types facultatifs, `kTypesImages` pour une image de ticket) rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/app_update_service.dart`, `app_update_transport*.dart`, `app_installer.dart` | mise à jour de l'APK (ADR-012) : `AppUpdateService` (`verifier`, `telecharger`, `installer`), `ManifesteApk.lire`, `TransportMiseAJour` (`dart:io` sur Android par import conditionnel, stub sur le web), `InstallateurApkPlateforme` (canal `fr.kassbeer/updates`) ; fourni par `appUpdateServiceProvider` (`main.dart`). Fenêtre `app_update_dialog.dart`, vérification au lancement `verification_mise_a_jour.dart` (dans la coquille) |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
-| `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite : palette tirée du logo (primaire brun, secondaire et surfaces laiton, tertiaire ambre pour « en cours » et les avertissements ; couleurs principales en variante `fidelity`, conteneurs en `tonalSpot`), `CouleursEtat` (succès, vert), `StylesJourDeBrassage` (tailles de l'écran du jour et de « Préparer le brassage » : minuteur 88, 72 en paysage, 128 en large ; étape 36 ou 45 ; ligne « Ensuite » 22 ; chronologie 16 ; étiquette d'étape 18 ; ligne d'information « Fin prévue vers… » 18 ; libellé des boutons 22 ; chiffres d'une mesure saisie 28 ; aucune taille écrite en dur dans `features/brew_day/`) ; texte en Roboto, titres `display*`, `headline*` et `titleLarge` en Bitter demi-grasse, polices de secours Roboto puis `Symboles`, chiffres tabulaires dans tous les styles ; `app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 en clair et en sombre |
+| `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite : palette tirée du logo (primaire brun, secondaire et surfaces laiton, tertiaire ambre pour « en cours » et les avertissements ; couleurs principales en variante `fidelity`, conteneurs en `tonalSpot`), `CouleursEtat` (succès, vert), `StylesJourDeBrassage` (tailles de l'écran du jour et de « Préparer le brassage » : minuteur 88, 72 en paysage, 128 en large ; étape 36 ou 45 ; ligne « Ensuite » 22 ; chronologie 16 ; étiquette d'étape 18 ; ligne d'information « Fin du brassage prévue vers… » 18 ; libellé des boutons 22 ; chiffres d'une mesure saisie 28 ; aucune taille écrite en dur dans `features/brew_day/`) ; texte en Roboto, titres `display*`, `headline*` et `titleLarge` en Bitter demi-grasse, polices de secours Roboto puis `Symboles`, chiffres tabulaires dans tous les styles ; `app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 en clair et en sombre |
 | `assets/fonts/`, `assets/images/` | polices embarquées, sous SIL OFL 1.1, chacune avec sa licence en asset (`OFL-Bitter.txt`, `OFL-Roboto.txt`, `OFL-NotoSansMath.txt`) : `Bitter-SemiBold.ttf` (titres, graisse 600, 38 Ko) ; `Roboto-Regular`, `-Medium`, `-Bold`, `-Italic` (texte, 56 Ko chacune ; une famille « Roboto » au manifeste empêche le moteur web de la télécharger depuis `fonts.gstatic.com`) ; `Symboles.ttf` (flèches et ⋮ tirés de Noto Sans Math, 8 Ko, police de secours). Réduites au latin, au latin étendu A, à la ponctuation et aux symboles employés : un caractère hors de ces jeux fait télécharger une police Noto sur le web. `logo_kass_beer.webp` (médaillon de 384 px, 38 Ko, tiré de `assets/Kassbeer_transparent.png` à la racine du dépôt) |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
@@ -953,6 +953,17 @@ couleurs » (`TextesCouleurEbc.echelle`).
 **Hors ligne.** Aucun code de la Bibliothèque dans l'écran du jour ni dans ce qu'il appelle
 (P2). Sans réseau, ce qui est en cache se lit ; un document absent du cache est rendu
 `DocumentAbsentDuCache` et affiché « indisponible hors ligne », jamais « absent ».
+
+#### Admin › Membres — lien vers la console
+
+Le formulaire « Inviter un membre »
+(`invite_member_form.dart`) ouvre la page des utilisateurs test de Google Auth Platform par
+`ouvrirLienProvider`. L'adresse est construite par `consoleUtilisateursTest`
+(`members_providers.dart`) à partir de `firebaseProjectIdProvider` (`FIREBASE_PROJECT_ID`, lu
+à la compilation) ; un identifiant hors du motif `^[a-z][a-z0-9-]{4,28}[a-z0-9]$` rend `null`
+et le bloc ne s'affiche pas. L'adresse saisie, si elle est valide, est copiée avant
+l'ouverture. Échecs rapportés sous `members.copy_email` et `members.open_console`, sans
+l'adresse (P13).
 
 #### Tickets — client
 
@@ -2105,22 +2116,26 @@ Dog dans `recipe.notes`. Unités canoniques en couples `{value, unit}` (`g`, `l`
 
 | Champ | Contenu |
 |---|---|
-| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908` ou `e6c12ab` ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)` ; `retrieved` : `2026-11-08` |
+| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005`, `fabricants` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908`, `e6c12ab` ou la date du relevé des fiches des fabricants (`2026-11-14`) ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)`, `Données publiées par le fabricant` ; `retrieved` : `2026-11-08`, `2026-11-14` pour les fiches des fabricants |
 | `content_sha256` | SHA-256 du JSON canonique du document (clés triées, entier sans décimale), hors `content_sha256` et `updated_at`, calculé par la préparation ; l'écrivain ne réécrit pas un document de même empreinte |
 | `updated_at` | `serverTimestamp()`, posé par l'écrivain |
 
 Identifiant d'une entrée : `<nature>-<clé>`, nature `fermentable`, `hop`, `culture` ou `misc` ;
 clé = nom normalisé comme une clé d'ingrédient de `brewing/` (`normalizeName` : minuscules,
 accents retirés, tout caractère hors a-z et 0-9 en tiret, tirets réduits), 100 caractères au
-plus. Deux entrées de même clé fusionnent : la source prioritaire (005, puis 003 et 004, puis
-001) donne toutes les valeurs, chaque entrée ajoute sa ligne de `provenance` et son nom aux
+plus. Deux entrées de même clé fusionnent : la source prioritaire (fiches des fabricants, puis 005, puis
+003 et 004, puis 001) donne toutes les valeurs, chaque entrée ajoute sa ligne de `provenance` et son nom aux
 `aliases`. Pour les houblons, la table de fusion écrite à la main (ADR-014) rattache aussi des
 entrées de noms différents d'une même variété et d'un même pays (`Saaz (CZ)` et `Saaz (Czech
 Republic)` dans `hop-saaz`) ; l'identifiant reste `hop-<clé du nom du document>`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
 de même producteur et de même référence (`Wyeast Labs` = `Wyeast`, `Omega Yeast Labs` =
 `Omega Yeast` ; `WY1056` = `1056` chez Wyeast, `001` = `WLP001` chez White Labs ; tirets
 ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
-ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`). Un
+ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`).
+L'identifiant d'une souche se calcule sans les fiches des fabricants quand une source de
+Brewtarget la connaît : le document garde son identifiant, et `ingest/ecrire.mjs`, qui n'efface
+rien, ne laisse pas d'ancien document à côté. Une souche connue de la seule fiche prend
+l'identifiant de la fiche (`culture-fermentis-e30-saflager-e-30`). Un
 rendement, un acide alpha ou une atténuation à 0 dans une source est lu comme inconnu : écarté
 et compté.
 
@@ -3060,7 +3075,10 @@ importés réécrits par un autre membre refusés, rejeux refusés, brassin `don
 ## Ingestion des référentiels et des recettes publiques (ADR-005, L3)
 
 Deux étapes, lancées à la main par l'administrateur sur son poste (ADR-005, D5). Les sources
-vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/`), la préparation
+vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/` ; un fichier absent
+arrête la préparation), sauf les fiches des fabricants, versionnées dans
+`exchange/donnees/fabricants/cultures.json` et lues par défaut (option `--fabricants`,
+ADR-005, amendement du 2026-11-15), la préparation
 dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapports/` :
 `import/` est ignoré par Git (P20).
 
@@ -3088,7 +3106,9 @@ la préparation s'arrête sans rien écrire. Aucune empreinte des sources n'est 
 `decodage_xml.dart`, sous une racine ajoutée car le fichier en a plusieurs ; listes
 `FERMENTABLES`, `HOPS`, `MISCS`, `YEASTS` du premier niveau seules, ni recettes, ni
 équipements, ni styles d'anciennes éditions) ; 002 à 004 en BeerJSON 2.01 et 005 en DotBeer,
-JSON dont les lignes commençant par `//` sont retirées (`lireJsonCommente`) ; DIY Dog. Les
+JSON dont les lignes commençant par `//` sont retirées (`lireJsonCommente`) ; fiches des
+fabricants (`lireFabricants`) en BeerJSON 2.01 commenté, lu par `lireJsonCommente`, liste
+`cultures` seule, toute autre liste ignorée et comptée ; DIY Dog. Les
 couleurs passent par `versEbc` (Lovibond et SRM de `brewing/`, P3), les °F par `versCelsius`.
 Une valeur d'unité inconnue, illisible, hors bornes ou nulle (rendement, alpha, atténuation)
 est écartée et comptée. Résolution d'un nom de DIY Dog : clé normalisée égale à celle d'un nom
@@ -3112,7 +3132,7 @@ Table de fusion des houblons (ADR-014, `lib/src/ingestion/fusions.dart`, `kFusio
 à la main et distincte de la table d'alias. Une ligne : nom du document (identifiant
 `hop-<clé du nom>`), origine imposée s'il le faut, entrées rattachées (source, nom, et origine
 lue quand deux entrées de même nom diffèrent par le pays, comme les « Saaz » américains du
-005), noms ajoutés aux `aliases` (`Denali`, `CTZ`), noms écartés des `aliases` (`Saaz` pour
+005), noms ajoutés aux `aliases` (`Denali`), noms écartés des `aliases` (`Saaz` pour
 `hop-saaz-us`). Une variété et un pays de culture font un document ; le nom court désigne la
 variété dans son pays d'origine (`hop-saaz` tchèque). Les valeurs viennent de l'entrée la
 plus prioritaire du groupe. Une ligne qui ne désigne aucune entrée, une entrée désignée par
@@ -4433,7 +4453,8 @@ particulier « Chaîne de travail », « Version », « Tickets », « Git » et
    - tu ne modifies ni ne supprimes aucun commentaire existant.
 6. Avant le premier commit, dans cet ordre :
    - lis git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT. Si l'une des deux adresses
-     n'est pas une adresse noreply de GitHub (…@users.noreply.github.com), ne commite rien :
+     n'est ni une adresse noreply de GitHub (…@users.noreply.github.com) ni
+     noreply@anthropic.com, ne commite rien :
      publie un commentaire qui commence par « ## Analyse — compléments » et dit « adresse
      d'auteur ou de commiteur hors noreply : session arrêtée », sans citer l'adresse, puis
      arrête-toi ;
@@ -4530,7 +4551,8 @@ L5. Prends la branche de la pull request, git fetch origin, puis intègre origin
     puis blocage. Sans conflit, si la version de la pull request n'est plus supérieure à
     celle de origin/main, fais la même correction.
 L6. Avant le commit de fusion, lis git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT :
-    une adresse hors noreply de GitHub (…@users.noreply.github.com) est un blocage, sans
+    une adresse autre que noreply de GitHub (…@users.noreply.github.com) ou
+    noreply@anthropic.com est un blocage, sans
     citer l'adresse. git fetch --tags && node scripts/check-version.mjs doit réussir ; sinon
     corrige seulement la version et le CHANGELOG comme en L5, ou blocage. Commite la fusion
     et pousse sur la branche claude/… de la pull request : jamais sur main, jamais --force.
@@ -4584,7 +4606,7 @@ R4. Corrige en suivant la « Chaîne de travail » comme au point 7 : contrôles
     version passe à celle de origin/main augmentée de un, numéro de build compris ; seuls
     conflits permis : app/pubspec.yaml et documentation/CHANGELOG.md, comme en L5. Avant le
     premier commit, git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT doivent être des
-    adresses noreply ; sinon arrête-toi sans commenter. Les fichiers interdits du point 5
+    adresses noreply de GitHub ou noreply@anthropic.com ; sinon arrête-toi sans commenter. Les fichiers interdits du point 5
     restent interdits.
 R5. git push origin <head.ref>, sans --force. Poussée refusée : git fetch, git merge, rejoue
     les contrôles une fois et repousse ; second refus : arrête-toi. Suis la CI jusqu'au vert.
@@ -4979,6 +5001,12 @@ projet. Rien dans le dépôt ne les garde : les vérifier à chaque création de
   sert plus : le keystore de débogage a un mot de passe connu (`android`).
 - **Client OAuth Web** : son identifiant est `GOOGLE_SERVER_CLIENT_ID` ; ne pas le
   supprimer, `google_sign_in` en dépend sur Android.
+- **Écran de consentement OAuth** (Google Auth Platform) : en mode « Test ». Google refuse la
+  connexion d'un compte absent de la liste « Utilisateurs test » (Audience), en plus du
+  contrôle de `members/{email}` par les règles. Google ne fournit aucune API pour ajouter un
+  utilisateur test : chaque adresse invitée s'ajoute à la main sur
+  `console.cloud.google.com/auth/audience?project=<projet>`. Le formulaire « Inviter un
+  membre » ouvre cette page (voir « Admin › Membres — lien vers la console »).
 
 ### État de la production
 
