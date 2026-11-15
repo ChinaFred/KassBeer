@@ -225,7 +225,7 @@ write: if false; }`, tests des cinq profils de P4.
 l'ouverture de la fiche, aucun écouteur (P22). Elle montre les descripteurs, puis un
 paragraphe par usage présent, dans l'ordre premier moût, amérisant, fin d'ébullition,
 whirlpool, houblonnage à cru. Sous la section : « Texte rédigé par une IA (Claude), relu le
-JJ/MM/AAAA » ou « Texte rédigé par une IA (Claude), non relu ». `unknown` : « Aucune
+14 novembre 2026 » (date longue, `formatDateLongue`) ou « Texte rédigé par une IA (Claude), non relu ». `unknown` : « Aucune
 description : houblon trop peu documenté. ». Document absent : rien ne s'affiche, et aucune
 valeur de remplacement. Document illisible : panne affichée et `reportError`.
 

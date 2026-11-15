@@ -26,10 +26,13 @@ dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 | Kaggle « Brewer's Friend Beer Recipes » | non téléchargé | « CC0: Public Domain » déclarée sur la page (relevé du 2026-11-11) ; ingestion reportée (ADR-005, D1) | statistiques par style | lignes brutes, CSV |
 | BeerJSON | `4370892d44` | MIT | schémas pour ajv en CI et à l'ingestion | — |
 | paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
+| Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
 beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, doublons
-fusionnés), DIY Dog et srm2hex (MIT, avec le texte de la licence). Chaque entrée de Firestore
+fusionnés), DIY Dog et srm2hex (MIT, avec le texte de la licence), et dit que les descriptions
+aromatiques des houblons sont rédigées par une IA (Claude, d'Anthropic) pour Kass'Beer. Chaque
+entrée de Firestore
 porte sa licence dans `provenance[]` ; la licence de srm2hex est en tête de `teintes_srm.dart`
 et dans l'écran.
 

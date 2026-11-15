@@ -199,3 +199,58 @@ RecettePublique publicRecipe({
   'diydog-$id',
   publicRecipeDoc(id: id, name: name, avecForme: avecForme, styleId: styleId),
 );
+
+/// Textes inventés pour les tests, de 40 à 400 caractères comme le veut la
+/// validation de l'écriture (ADR-013) ; aucun n'est tiré d'un catalogue.
+const kTexteAmertume =
+    'Amertume nette et franche, sans dureté, qui laisse la place au malt.';
+const kTexteCru =
+    'Pamplemousse et fleurs blanches, avec une pointe résineuse en finale.';
+const kTexteWhirlpool =
+    'Agrumes mûrs et notes florales, plus rondes qu\'en fin d\'ébullition.';
+
+/// `beer_hop_aromas/hop-cascade`, `described`, relu le 14 novembre 2026.
+/// [uses] remplace la map des usages ; [extra] ajoute ou remplace des champs.
+Map<String, dynamic> hopAromaDoc({
+  Map<String, Object?>? uses,
+  Map<String, Object?> extra = const {},
+}) => {
+  'hop_name': 'Cascade',
+  'status': 'described',
+  'confidence': 'high',
+  'descriptors': [
+    {'key': 'pamplemousse', 'label': 'Pamplemousse'},
+    {'key': 'floral', 'label': 'Floral'},
+  ],
+  'uses':
+      uses ??
+      {
+        'dry_hop': {'text': kTexteCru},
+        'bittering': {'text': kTexteAmertume},
+      },
+  'reviewed': true,
+  'reviewed_at': '2026-11-14',
+  'provenance': [
+    {
+      'source': 'claude-api',
+      'source_id': 'hop-cascade',
+      'version': 'claude-fable-5-2 / prompt 1 / effort medium',
+      'licence': 'Texte généré pour Kass\'Beer',
+      'retrieved': '2026-11-14',
+    },
+  ],
+  'input_sha256': 'ab' * 32,
+  'content_sha256': 'cd' * 32,
+  ...extra,
+};
+
+/// `beer_hop_aromas/{id}` en `unknown`, non relu.
+Map<String, dynamic> hopAromaUnknownDoc() => {
+  'hop_name': 'Houblon doré',
+  'status': 'unknown',
+  'descriptors': <Object>[],
+  'uses': <String, Object>{},
+  'reviewed': false,
+  'input_sha256': 'ab' * 32,
+  'content_sha256': 'cd' * 32,
+};

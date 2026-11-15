@@ -788,6 +788,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Descriptions aromatiques des houblons (ADR-013, P55) : texte rédigé par l'API Claude
+    // depuis le poste de l'admin, écrit par ingest/ecrire.mjs seul ; lu par get à
+    // l'ouverture d'une fiche, aucune requête.
+    match /beer_hop_aromas/{entryId} {
+      allow get: if isMember();
+      allow list, write: if false;
+    }
+
     match /beer_cultures/{entryId} {
       allow get: if isMember();
       allow write: if false;
