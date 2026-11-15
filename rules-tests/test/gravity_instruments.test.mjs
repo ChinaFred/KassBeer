@@ -12,6 +12,7 @@ import {
   FIVE_PROFILES,
   seed,
   serverTimestamp,
+  Timestamp,
   uidOf,
 } from "./helpers.mjs";
 import { expectRule, state, useEnv } from "./setup.mjs";
@@ -173,6 +174,42 @@ describe("densité avec instrument — forme", () => {
       db(state.env, "owner")
         .doc(`${EVENTS}/ev-c`)
         .update({ ...REFRACTOMETER, sample_temperature: deleteField() }),
+    );
+  });
+
+  it("correction : flottant à heure estimée devenu réfractomètre, heure changée : autorisé", async () => {
+    await seed(state.env, {
+      [`${EVENTS}/ev-c`]: event("brewer-a", {
+        measure_type: "gravity",
+        value: 1.05,
+        ...HYDROMETER,
+        time_estimated: true,
+      }),
+    });
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc(`${EVENTS}/ev-c`)
+        .update({
+          ...REFRACTOMETER,
+          sample_temperature: deleteField(),
+          time_estimated: deleteField(),
+          measured_at: Timestamp.fromDate(new Date("2026-11-03T10:00:00Z")),
+        }),
+    );
+  });
+
+  it("correction : instrument changé sur une heure estimée, estimation gardée : autorisé", async () => {
+    await seed(state.env, {
+      [`${EVENTS}/ev-c`]: event("brewer-a", {
+        measure_type: "gravity",
+        value: 1.05,
+        time_estimated: true,
+      }),
+    });
+    await expectRule(
+      true,
+      db(state.env, "owner").doc(`${EVENTS}/ev-c`).update({ gravity_instrument: "digital" }),
     );
   });
 

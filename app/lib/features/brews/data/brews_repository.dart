@@ -114,6 +114,8 @@ abstract class BrewsRepository {
 
   /// Corrige une saisie : valeur, note et heure seulement (règles) ; pour une
   /// densité, [densite] remplace la valeur, l'instrument et la lecture brute.
+  /// [heureEstimeeCorrigee] : l'heure d'une saisie estimée à l'import change ;
+  /// `time_estimated` et `date_estimated` sont retirés, l'heure devient notée.
   Future<void> correct({
     required String brewId,
     required String eventId,
@@ -121,6 +123,7 @@ abstract class BrewsRepository {
     DensiteSaisie? densite,
     required String? note,
     required DateTime measuredAt,
+    bool heureEstimeeCorrigee = false,
   });
 
   /// Supprime une saisie.
@@ -675,14 +678,24 @@ class FirestoreBrewsRepository implements BrewsRepository {
     DensiteSaisie? densite,
     required String? note,
     required DateTime measuredAt,
+    bool heureEstimeeCorrigee = false,
   }) => _guard(
     'brews.event_correct',
     () => _events(brewId).doc(eventId).update({
       if (densite == null) 'value': value else ...densite.champsCorrection(),
       'note': note == null || note.trim().isEmpty ? null : note.trim(),
       'measured_at': Timestamp.fromDate(measuredAt),
+      ...?_sansEstimation(heureEstimeeCorrigee),
     }),
   );
+
+  /// Champs qui retirent l'heure estimée d'une saisie dont l'heure change.
+  static Map<String, Object>? _sansEstimation(bool retirer) => retirer
+      ? {
+          'time_estimated': FieldValue.delete(),
+          'date_estimated': FieldValue.delete(),
+        }
+      : null;
 
   @override
   Future<void> deleteEvent({required String brewId, required String eventId}) =>
@@ -717,6 +730,11 @@ class FirestoreBrewsRepository implements BrewsRepository {
     phase: PhaseEvenement.fermentation,
     densite: densite,
   ).toFirestore();
+
+  /// Vrai si [releve] change l'heure de [existant], estimée à l'import.
+  static bool _heureEstimeeCorrigee(BrewEvent existant, ReleveSaisi releve) =>
+      existant.timeEstimated &&
+      !releve.measuredAt.isAtSameMomentAs(existant.measuredAt);
 
   String? _texteNote(String? note) {
     final text = note?.trim();
@@ -837,6 +855,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
             ...densite.champsCorrection(),
           'note': noteDeSlot,
           'measured_at': at,
+          ...?_sansEstimation(_heureEstimeeCorrigee(existant, releve)),
         });
       }
     }
@@ -865,6 +884,7 @@ class FirestoreBrewsRepository implements BrewsRepository {
       batch.update(_events(brewId).doc(noteEvent.id), {
         'note': note,
         'measured_at': at,
+        ...?_sansEstimation(_heureEstimeeCorrigee(noteEvent, releve)),
       });
     } else if (!aDesValeurs && note != null) {
       final ref = _events(brewId).doc();

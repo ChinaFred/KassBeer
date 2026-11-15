@@ -648,6 +648,9 @@ void ouvrirCorrection({
                 : null,
             note: saisie.note,
             measuredAt: saisie.at,
+            heureEstimeeCorrigee:
+                event.timeEstimated &&
+                !saisie.at.isAtSameMomentAs(event.measuredAt),
           ),
           'Correction',
         ),

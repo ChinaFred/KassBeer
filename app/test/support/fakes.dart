@@ -462,6 +462,7 @@ class FakeBrewsRepository implements BrewsRepository {
     DensiteSaisie? densite,
     required String? note,
     required DateTime measuredAt,
+    bool heureEstimeeCorrigee = false,
   }) {
     writes.add(
       BrewWrite('correct', brewId, {
@@ -469,6 +470,7 @@ class FakeBrewsRepository implements BrewsRepository {
         'at': measuredAt,
         'value': value,
         'densite': densite,
+        if (heureEstimeeCorrigee) 'estimee_corrigee': true,
       }),
     );
     return serverAnswer();

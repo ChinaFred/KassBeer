@@ -56,6 +56,7 @@ Brew unBrassin({
   bool? sugarsInWort,
   RecipeContent? recipe,
   Deroule? process,
+  String? importedFrom,
 }) => Brew(
   id: id,
   ownerUid: owner,
@@ -76,6 +77,7 @@ Brew unBrassin({
   fgEventId: fgEventId,
   sugarsInWort: sugarsInWort,
   process: process,
+  importedFrom: importedFrom,
 );
 
 /// Relevé de fermentation (phase `fermentation`, sans étape).

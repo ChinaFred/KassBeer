@@ -538,6 +538,11 @@ service cloud.firestore {
     // Création du plus grand modèle de processus (5 journées de 60 éléments) :
     // 185 pad(). Un lot de 60 step_skipped, plus le début d'étape suivant, passe
     // (rules-tests/test/processes.test.mjs).
+    //
+    // Événements (heures estimées de la v0.1.69, densité et instrument de la v0.1.70) :
+    // mesure de la v0.1.70, notée avant isEventShape (match /events ci-dessous), qui
+    // remplace celle de la v0.1.69 (16 pad10() avant densityOk). Le lot de 60
+    // step_skipped passe toujours.
     match /brews/{brewId} {
       allow read: if isMember();
       allow create: if isMember()
@@ -556,9 +561,21 @@ service cloud.firestore {
       // created_at = serverTimestamp() pour l'audit. Aucune transaction requise.
       function eventFields() {
         return ['owner_uid', 'kind', 'step_key', 'measure_type', 'value', 'note',
-                'measured_at', 'created_at', 'phase', 'gravity_instrument', 'brix',
-                'sample_temperature', 'refractometer_factor', 'correct'];
+                'measured_at', 'created_at', 'phase', 'time_estimated', 'date_estimated',
+                'gravity_instrument', 'brix', 'sample_temperature', 'refractometer_factor',
+                'correct'];
       }
+
+      // Budget des événements (isEventShape, estimatedOk, estimationRetireeOk,
+      // densityOk), mesuré en v0.1.70 après la fusion avec la v0.1.69, même
+      // émulateur, pad10() ajoutés à la création et à la correction d'un
+      // événement : création d'une lecture de réfractomètre en
+      // fermentation avec une note de 2 000 caractères, 15 pad10() passent, 16 sont
+      // refusés ; correction d'un flottant à heure estimée en réfractomètre, heure
+      // changée et estimation retirée, note de 2 000 caractères, 14 passent, 15 sont
+      // refusés ; lot de 10 événements du plus grand brassin importé
+      // (import_fiches.test.mjs), 15 passent, 16 sont refusés. Marge la plus faible :
+      // 14 pad10(), environ 560 expressions.
 
       // Forme selon kind. Début, fin ou saut d'étape : step_key obligatoire, sans
       // mesure. Mesure : type connu et valeur numérique finie et bornée, step_key nul
@@ -571,16 +588,36 @@ service cloud.firestore {
           && optString(d, 'note', 2000)
           && d.measured_at is timestamp
           && phaseOk(d)
+          && estimatedOk(d)
           && densityOk(d)
           && (isStepEvent(d) || isMeasurement(d) || isNote(d));
       }
 
-      // Budget mesuré en v0.1.69 (même émulateur, pad10() ajoutés à la règle) :
-      // création d'une lecture de réfractomètre en fermentation avec une note de
-      // 2 000 caractères, et correction d'un flottant en réfractomètre, passent
-      // avec 15 pad10() et sont refusées à 17 (17 passaient et 19 étaient refusés
-      // avant densityOk, pour une densité sans instrument) : environ 600
-      // expressions de marge.
+      // Heure estimée à l'import d'une fiche (v0.1.69) : time_estimated vaut true,
+      // sur un début d'étape, une mesure ou une note ; absent, l'heure est notée.
+      // date_estimated (relevé daté du jour du brassage + 28 jours) vaut true, sur une
+      // mesure ou une note, et seulement avec time_estimated. Aucun champ ajouté au
+      // brassin.
+      function estimatedOk(d) {
+        return (!('time_estimated' in d)
+            || (d.time_estimated == true
+                && d.kind in ['step_started', 'measurement', 'note']))
+          && (!('date_estimated' in d)
+            || (d.date_estimated == true
+                && d.get('time_estimated', false) == true
+                && d.kind in ['measurement', 'note']));
+      }
+
+      // Une heure estimée ne s'ajoute pas à une saisie : seul passage permis, vrai →
+      // absent, avec measured_at changé (l'heure corrigée devient notée).
+      function estimationRetireeOk() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['time_estimated', 'date_estimated'])
+          || (!('time_estimated' in request.resource.data)
+            && !('date_estimated' in request.resource.data)
+            && request.resource.data.measured_at != resource.data.measured_at);
+      }
+
       // Instrument d'une densité et sa lecture brute ; la valeur corrigée n'est
       // jamais stockée (brewing/, densiteRetenue). Sans instrument : aucun champ de
       // lecture (mesure ancienne, ou instrument « À choisir »). Densimètre
@@ -670,14 +707,17 @@ service cloud.firestore {
           && request.resource.data.created_at == request.time
           && get(/databases/$(database)/documents/brews/$(brewId)).data.owner_uid
                == request.auth.uid;
-        // Correction d'une saisie : valeur, note et heure ; pour une densité, aussi
-        // l'instrument et la lecture brute (densityOk).
+        // Correction d'une saisie : valeur, note et heure ; une heure estimée corrigée
+        // perd time_estimated et date_estimated (estimationRetireeOk) ; pour une
+        // densité, aussi l'instrument et la lecture brute (densityOk).
         allow update: if isMember()
           && resource.data.owner_uid == request.auth.uid
           && isEventShape(request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['value', 'note', 'measured_at', 'gravity_instrument', 'brix',
-                         'sample_temperature', 'refractometer_factor', 'correct']);
+               .hasOnly(['value', 'note', 'measured_at', 'time_estimated',
+                         'date_estimated', 'gravity_instrument', 'brix',
+                         'sample_temperature', 'refractometer_factor', 'correct'])
+          && estimationRetireeOk();
         // Sans lecture du brassin : un événement reste supprimable par son auteur
         // si le brassin a déjà été supprimé.
         allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;

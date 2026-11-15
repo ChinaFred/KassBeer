@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.69 — fonctionnel
+### v0.1.70 — fonctionnel
 
 Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à
 20 °C ou à 15,6 °C, réfractomètre, densimètre électronique, ou autre instrument sans
@@ -22,7 +22,7 @@ degré et rendement. Les mesures déjà enregistrées ne changent pas. Installez
 avant d'utiliser le réfractomètre : une ancienne version de l'application ne peut pas afficher
 « Prévu et mesuré » d'un brassin mesuré au réfractomètre.
 
-### v0.1.69 — technique
+### v0.1.70 — technique
 
 Module `brewing/lib/src/gravity_instruments.dart` : `InstrumentDensite` (liste fermée),
 `masseVolumiqueEau` (Kell 1975), `corrigerDensimetre`, `plageCorrection` (0–40 °C, 40–75 °C
@@ -38,12 +38,58 @@ de `value` dans `MesuresRetenues`, `relevesDe`, la chronologie, les deux courbes
 `PreferenceMesureRepository`, écriture simple sans transaction). Saisie commune `BlocDensite`
 (`saisie_densite.dart`) dans les quatre formulaires de densité. `firestore.rules` : `densityOk`,
 correction de l'instrument permise, préférence en liste blanche ; tests
-`rules-tests/test/gravity_instruments.test.mjs` ; budget mesuré (environ 600 expressions de
-marge, cas ajoutés à la suite « budget des règles » de `recipe_format.test.mjs`).
+`rules-tests/test/gravity_instruments.test.mjs` ; budget mesuré après la fusion avec la v0.1.69 : environ 560 expressions de marge (14
+`pad10()`) sur la correction d'un flottant à heure estimée en réfractomètre. Quatre cas
+« autorisé » ajoutés à la suite « budget des règles » de `recipe_format.test.mjs`, sur le
+brassin du 22 novembre : création d'une lecture au réfractomètre en fermentation, correction
+d'un flottant en réfractomètre et la même correction sur une heure estimée avec l'heure changée,
+ces trois cas avec une note de 2 000 caractères ; enfin embouteillage avec une densité finale
+au réfractomètre dans le même lot.
 `kReleveChampMinWidth` retiré (relevé en une colonne). Aucune dépendance ajoutée. Une lecture
-de réfractomètre a `value` nulle : les versions 0.1.68 et antérieures lisent `event.value!` sur
+de réfractomètre a `value` nulle : les versions 0.1.69 et antérieures lisent `event.value!` sur
 une densité retenue et plantent sur « Prévu et mesuré » d'un tel brassin ; risque accepté par
 l'utilisateur, couvert par la mise à jour proposée au lancement (ADR-012).
+
+### v0.1.69 — fonctionnel
+
+Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
+sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
+s'affiche « Non notée » à son heure prévue, au lieu de « Non faite ». Une heure estimée ne
+compte dans aucune durée réelle. Chaque étape d'un brassin, importé ou non, montre aussi
+son écart de début : « Début : 25 min de retard » ou « Début : 5 min d'avance », sur la fiche
+du brassin comme sur l'écran du jour. Une étape sans « Terminer » finit au début de l'étape
+suivante. La durée totale dit quand une étape n'a pas d'heure notée. Les relevés importés sans
+heure portent « heure non notée », la densité finale datée de 28 jours après le brassage
+« date estimée ». Dans Admin › Import, une fiche modifiée depuis son import peut être
+remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
+import.
+
+### v0.1.69 — technique
+
+`brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
+noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
+(début estimé, sans réel ni écart) ; `actualDurations(plannedStart:)` rend la fin retenue
+(`end` : fin enregistrée, sinon début noté de l'étape suivante), l'écart de début au plan
+d'origine (`startDeltaMinutes`), l'heure théorique (`theoreticalStart`), la nature
+`ActualStepKind.estimated` et les natures de journée `partial`, `startNotNoted`,
+`endNotNoted` (`stepsWithoutTime` remplace `stepsWithoutEnd`, `ActualDayKind.missingEnd`
+retiré). `fixtures/process.json` : 4 cas ajoutés, écarts de début, heures théoriques et fins
+sur les cas existants ; les cas « commencée sans fin » changent (fin au début noté suivant).
+`exchange/` : format `kassbeer_fiches` v2 (un fichier v1 est refusé) : `time_source`
+`fiche`, `estimee` (heure calculée par le lecteur avec `brewing/`), `midi`, `estimee_j28` ;
+`ligne_precedente` et `debut_brassage` retirés ; codes de refus `debutEnDouble`,
+`heuresHorsOrdre`, `heureEnTrop` ; `verifier_fiches.dart` compte heures notées et estimées.
+Firestore : `brews/{id}/events/{eventId}.time_estimated` et `date_estimated` (booléens
+vrais seulement ; retirés seulement avec `measured_at` changé, `estimatedOk` et
+`estimationRetireeOk`), tests des cinq profils dans `events.test.mjs` et
+`import_fiches.test.mjs` (remplacement compris), budget noté (16 `pad10()` sur un lot de
+10 événements). Application : `BrewEvent.timeEstimated`, `dateEstimated`, `natureHeure` ;
+`Brew.importedFrom` et `importeDUneFiche` ; `ChronologieJour` reçoit les durées et l'écart de
+début aussi sur l'écran du jour (calcul local, P2) ; une correction d'heure retire
+l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
+`SuppressionBrassin`, état `remplacementATerminer` (marque `Fiche Excel · {id} ·
+remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
+rubrique « Heures estimées ». Aucune dépendance ne change.
 
 ### v0.1.68 — technique
 

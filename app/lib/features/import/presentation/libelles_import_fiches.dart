@@ -51,6 +51,11 @@ abstract final class TextesImportFiches {
       'Impossible de vérifier ce qui est déjà importé. Vérifiez la connexion.';
   static const rienAEcrire =
       'Toutes les fiches de ce fichier sont déjà importées. Rien à écrire.';
+  static const rienDeNouveau =
+      'Rien de nouveau à importer. Cochez « Remplacer » pour réécrire une '
+      'fiche modifiée.';
+  static const remplacerCeBrassin = 'Remplacer ce brassin';
+  static const supprimes = 'Supprimés';
   static const aucuneCochee = 'Cochez au moins une fiche.';
   static const detail = 'Détail';
   static const termine = 'Import terminé';
@@ -67,8 +72,62 @@ abstract final class TextesImportFiches {
 
   static String importer(int n) =>
       n == 1 ? 'Importer 1 fiche' : 'Importer $n fiches';
-  static String confirmationTitre(int n) =>
-      n == 1 ? 'Importer 1 fiche ?' : 'Importer $n fiches ?';
+  static String remplacer(int n) =>
+      n == 1 ? 'Remplacer 1 fiche' : 'Remplacer $n fiches';
+
+  /// Titre de la confirmation : « Importer 14 fiches ? », « Importer 14 fiches
+  /// et en remplacer 2 ? », « Remplacer 16 brassins ? ».
+  static String confirmationTitre(int imports, {int remplacements = 0}) {
+    if (imports == 0) {
+      return remplacements == 1
+          ? 'Remplacer 1 brassin ?'
+          : 'Remplacer $remplacements brassins ?';
+    }
+    final importer = imports == 1
+        ? 'Importer 1 fiche'
+        : 'Importer $imports fiches';
+    return remplacements == 0
+        ? '$importer ?'
+        : '$importer et en remplacer $remplacements ?';
+  }
+
+  /// Bouton de la confirmation : « Importer », « Importer et remplacer »,
+  /// « Remplacer ».
+  static String confirmationBouton(int imports, int remplacements) =>
+      imports == 0
+      ? 'Remplacer'
+      : remplacements == 0
+      ? 'Importer'
+      : 'Importer et remplacer';
+
+  /// « 2 brassins seront remplacés. Leurs étapes, … perdues. »
+  static String remplacements(int n) =>
+      '${n == 1 ? '1 brassin sera remplacé. Ses' : '$n brassins seront remplacés. Leurs'} '
+      'étapes, ${n == 1 ? 'ses' : 'leurs'} mesures et ${n == 1 ? 'son coût figé seront supprimés' : 'leurs coûts figés seront supprimés'} '
+      'puis écrits de nouveau. Les heures corrigées depuis l\'import seront '
+      'perdues.';
+
+  /// Paragraphe de la confirmation : écritures, puis remplacements.
+  static String confirmationRemplacement({
+    required int brassins,
+    required int recettes,
+    required int remplacementsN,
+  }) {
+    if (brassins == 0) return remplacements(remplacementsN);
+    final b = _n(brassins, 'brassin', 'brassins');
+    final quoi = recettes == 0
+        ? b
+        : '$b et ${_n(recettes, 'recette', 'recettes')}';
+    final pluriel = brassins + recettes > 1;
+    final ecrits = pluriel
+        ? '$quoi seront écrits sous votre compte.'
+        : '$quoi sera écrit sous votre compte.';
+    final visibles = brassins + remplacementsN > 1
+        ? 'Ils seront visibles du groupe.'
+        : 'Il sera visible du groupe.';
+    return '$ecrits ${remplacements(remplacementsN)} $visibles Les coûts '
+        'restent privés.';
+  }
 
   /// « 16 brassins et 15 recettes seront écrits sous votre compte. »
   static String confirmation(int brassins, int recettes) {
@@ -108,6 +167,8 @@ abstract final class TextesImportFiches {
   static String _compteEtat(EtatFiche e, int n) => switch (e) {
     EtatFiche.nouvelle => _n(n, 'nouvelle', 'nouvelles'),
     EtatFiche.aCompleter => '$n à compléter',
+    EtatFiche.remplacementATerminer =>
+      '$n remplacement${n > 1 ? 's' : ''} à terminer',
     EtatFiche.dejaImportee => _n(n, 'déjà importée', 'déjà importées'),
     EtatFiche.contenuDifferent => '$n au contenu différent',
     EtatFiche.refusee => _n(n, 'refusée', 'refusées'),
@@ -116,6 +177,7 @@ abstract final class TextesImportFiches {
   static String etat(EtatFiche e) => switch (e) {
     EtatFiche.nouvelle => 'Nouvelle',
     EtatFiche.aCompleter => 'À compléter',
+    EtatFiche.remplacementATerminer => 'Remplacement à terminer',
     EtatFiche.dejaImportee => 'Déjà importée',
     EtatFiche.contenuDifferent => 'Déjà importée, contenu différent',
     EtatFiche.refusee => 'Refusée',
@@ -124,39 +186,75 @@ abstract final class TextesImportFiches {
   static String? explication(EtatFiche e) => switch (e) {
     EtatFiche.aCompleter =>
       'Import commencé et non terminé : seul ce qui manque sera écrit.',
-    EtatFiche.contenuDifferent =>
-      'Le fichier a changé depuis l\'import. Pour remplacer cette fiche, '
-          'supprimez son brassin et sa recette, puis importez de nouveau.',
+    EtatFiche.remplacementATerminer =>
+      'Remplacement commencé et non terminé : l\'import le terminera.',
+    EtatFiche.contenuDifferent => 'Le fichier a changé depuis l\'import.',
     _ => null,
   };
 
-  static String progression(int fiche, int fiches, String nom) => nom.isEmpty
+  /// « Fiche 4 sur 16 · Ale blonde », « … · Ale blonde · remplacement ».
+  static String progression(
+    int fiche,
+    int fiches,
+    String nom, {
+    bool remplacement = false,
+  }) => nom.isEmpty
       ? 'Fiche $fiche sur $fiches'
-      : 'Fiche $fiche sur $fiches · $nom';
+      : 'Fiche $fiche sur $fiches · $nom${remplacement ? ' · remplacement' : ''}';
   static String ecritures(int faites, int total) =>
       '$faites écriture${faites > 1 ? 's' : ''} sur $total';
   static const enCours = 'Import en cours';
 
   static const arrete = 'Import arrêté';
 
-  /// « Import terminé · 16 créées · 0 ignorées · 0 en erreur » ; « Import
-  /// arrêté · … » après une perte de connexion ou un accusé absent ([arret]).
+  /// « Import terminé · 12 créées · 2 remplacées · 2 ignorées · 0 en
+  /// erreur », sans « remplacées » quand aucune fiche n'est remplacée ;
+  /// « Import arrêté · … » après une perte de connexion ou un accusé absent
+  /// ([arret]).
   static String bilan(
     int creees,
     int ignorees,
     int erreurs, {
+    int remplacees = 0,
     bool arret = false,
   }) =>
       '${arret ? arrete : termine} · '
-      '${TextesImport.bilan(creees, ignorees, erreurs)}';
+      '${_comptesBilan(creees, remplacees, ignorees, erreurs)}';
   static String bilanParle(
     int creees,
     int ignorees,
     int erreurs, {
+    int remplacees = 0,
     bool arret = false,
   }) =>
       '${arret ? arrete : termine}. '
-      '${TextesImport.bilan(creees, ignorees, erreurs).replaceAll(' · ', ', ')}.';
+      '${_comptesBilan(creees, remplacees, ignorees, erreurs).replaceAll(' · ', ', ')}.';
+
+  static String _comptesBilan(
+    int creees,
+    int remplacees,
+    int ignorees,
+    int erreurs,
+  ) => [
+    _n(creees, 'créée', 'créées'),
+    if (remplacees > 0) _n(remplacees, 'remplacée', 'remplacées'),
+    _n(ignorees, 'ignorée', 'ignorées'),
+    '$erreurs en erreur',
+  ].join(' · ');
+
+  /// « Ale blonde (2024-07-14-ale-blonde) : 34 heures et mesures, 1 coût
+  /// figé ».
+  static String supprime(
+    String nom,
+    String ficheId,
+    int evenements,
+    bool cout,
+  ) =>
+      '$nom ($ficheId) : $evenements '
+      '${evenements > 1 ? 'heures et mesures' : 'heure ou mesure'}'
+      '${cout ? ', 1 coût figé' : ''}';
+
+  static const nonCocheeDifferente = 'Non cochée : contenu différent';
 
   static String connexionPerdue(int fiche, int fiches) =>
       'Connexion perdue. Import arrêté à la fiche $fiche sur $fiches. '
@@ -202,6 +300,11 @@ String _refusLecture(RefusFiche r) {
     CodeRefusFiche.horsBornes => 'valeur hors limites ($champ).',
     CodeRefusFiche.formatInvalide => 'valeur mal écrite ($champ).',
     CodeRefusFiche.enDouble => 'identifiant en double ($champ).',
+    CodeRefusFiche.debutEnDouble => 'deux débuts pour la même étape ($champ).',
+    CodeRefusFiche.heuresHorsOrdre =>
+      'heure antérieure à celle d\'une étape précédente ($champ).',
+    CodeRefusFiche.heureEnTrop =>
+      'heure écrite pour une heure estimée ($champ).',
     CodeRefusFiche.etapeInconnue => 'étape inconnue ($champ).',
     CodeRefusFiche.evenementInconnu => 'mesure retenue introuvable ($champ).',
     CodeRefusFiche.adresseWeb => 'adresse web dans un texte ($champ).',
@@ -260,7 +363,7 @@ List<Rubrique> rubriquesDe(
       titre: 'Reprises de la Bibliothèque',
       lignes: [for (final r in f.reprises) libelleModification(r)],
     ),
-    (titre: 'Heures reprises', lignes: heuresReprises(f)),
+    (titre: 'Heures estimées', lignes: heuresEstimees(f)),
     (
       titre: 'Non importé',
       lignes: [
@@ -337,35 +440,32 @@ List<String> _aCompleter(
   };
 }
 
-/// Heures que la préparation a reprises ou estimées (CR4, CR5, CR6, CR12).
-List<String> heuresReprises(FicheAImporter f) {
+/// Heures non notées dans la fiche : estimées par le lecteur ou datées par la
+/// préparation (CR4, CR5, CR6, CR12). Écrites avec `time_estimated`.
+List<String> heuresEstimees(FicheAImporter f) {
   final fiche = f.fiche;
   if (fiche == null) return const [];
   int n(OrigineHeure o) =>
       fiche.evenements.where((e) => e.origineHeure == o).length;
-  final precedente = n(OrigineHeure.lignePrecedente);
-  final debut = n(OrigineHeure.debutBrassage);
+  final estimee = n(OrigineHeure.estimee);
   final midi = n(OrigineHeure.midi);
   final j28 = n(OrigineHeure.estimeeJ28);
   return [
     if (f.brassageDateParLePlan)
-      'Aucune heure réelle : brassage daté de l\'heure de début du plan.',
-    if (precedente > 0)
-      'Mesure sans heure : heure de la ligne précédente ($precedente).',
-    if (debut > 0) 'Mesure sans heure : heure de début du plan ($debut).',
+      'Aucune heure notée : brassage daté de l\'heure de début prévue.',
+    if (estimee > 0)
+      'Heure non notée : estimée d\'après la chronologie ($estimee).',
     if (midi > 0) 'Relevé sans heure : daté de 12:00 ($midi).',
     for (var i = 0; i < j28; i++)
       'Relevé sans date : daté de 28 jours après le brassage.',
   ];
 }
 
-/// Nombre d'heures reprises de [f].
-int nombreHeuresReprises(FicheAImporter f) {
+/// Nombre d'heures estimées de [f].
+int nombreHeuresEstimees(FicheAImporter f) {
   final fiche = f.fiche;
   if (fiche == null) return 0;
-  return fiche.evenements
-          .where((e) => e.origineHeure != OrigineHeure.fiche)
-          .length +
+  return fiche.evenements.where((e) => e.heureEstimee).length +
       (f.brassageDateParLePlan ? 1 : 0);
 }
 
@@ -409,7 +509,7 @@ String _raison(RaisonCout r) => switch (r) {
   CalculImpossible() => 'calcul impossible',
 };
 
-/// « 3 divergences · 1 correction · 2 heures reprises · 1 à compléter ».
+/// « 3 divergences · 1 correction · 2 heures estimées · 1 à compléter ».
 String pointsARevoir(FicheAImporter f, List<Rubrique> rubriques) {
   final fiche = f.fiche;
   if (fiche == null) return '';
@@ -417,13 +517,13 @@ String pointsARevoir(FicheAImporter f, List<Rubrique> rubriques) {
     for (final r in rubriques)
       if (r.titre == 'À compléter dans la recette') ...r.lignes,
   ].length;
-  final heures = nombreHeuresReprises(f);
+  final heures = nombreHeuresEstimees(f);
   return [
     if (fiche.divergences.isNotEmpty)
       _n(fiche.divergences.length, 'divergence', 'divergences'),
     if (fiche.corrections.isNotEmpty)
       _n(fiche.corrections.length, 'correction', 'corrections'),
-    if (heures > 0) _n(heures, 'heure reprise', 'heures reprises'),
+    if (heures > 0) _n(heures, 'heure estimée', 'heures estimées'),
     if (aCompleter > 0) '$aCompleter à compléter',
   ].join(' · ');
 }
@@ -434,7 +534,7 @@ int nombrePointsARevoir(FicheAImporter f, List<Rubrique> rubriques) {
   if (fiche == null) return 0;
   return fiche.divergences.length +
       fiche.corrections.length +
-      nombreHeuresReprises(f) +
+      nombreHeuresEstimees(f) +
       [
         for (final r in rubriques)
           if (r.titre == 'À compléter dans la recette') ...r.lignes,

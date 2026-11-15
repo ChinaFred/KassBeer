@@ -127,6 +127,41 @@ String? etapeDuReleve(Brew brew, Releve releve) {
   return '${trouvee.journee.name.trim()} : ${trouvee.ligne.name}';
 }
 
+/// Date d'un relevé, affichée et lue, d'après [BrewEvent.natureHeure] :
+/// « sam. 15 nov. 18:30 » ; relevé importé sans heure, « sam. 15 nov. · heure
+/// non notée » ; relevé J+28, « sam. 13 déc. · date estimée ». Jamais déduite
+/// de l'heure 12:00.
+({String affiche, String lu}) dateDeReleve(BrewEvent e) {
+  final at = e.measuredAt;
+  return switch (e.natureHeure) {
+    NatureHeure.notee => (affiche: formatJourHeure(at), lu: jourHeureParle(at)),
+    NatureHeure.estimee => (
+      affiche: '${formatJourMois(at)} vers ${formatHeure(at)}',
+      lu: '${jourParle(at)} vers ${heureParlee(at)}, heure estimée',
+    ),
+    NatureHeure.nonNotee => (
+      affiche: '${formatJourMois(at)} · heure non notée',
+      lu: '${jourParle(at)}, heure non notée',
+    ),
+    NatureHeure.dateEstimee => (
+      affiche: '${formatJourMois(at)} · date estimée',
+      lu: '${jourParle(at)}, date estimée',
+    ),
+  };
+}
+
+/// Date de l'info-bulle de la courbe : celle du relevé à cette heure
+/// ([dateDeReleve]), sinon la date et l'heure.
+String Function(DateTime) _dateDansLaCourbe(List<BrewEvent> events) {
+  final parInstant = {
+    for (final e in events) e.measuredAt.microsecondsSinceEpoch: e,
+  };
+  return (at) {
+    final e = parInstant[at.microsecondsSinceEpoch];
+    return e == null ? formatJourHeure(at) : dateDeReleve(e).affiche;
+  };
+}
+
 /// Texte lu par un lecteur d'écran pour une ligne de relevé.
 String releveParle({
   required Releve releve,
@@ -142,7 +177,7 @@ String releveParle({
       ? null
       : complementDensite(gravity, densite);
   return [
-    jourHeureParle(releve.measuredAt),
+    dateDeReleve(releve.events.first).lu,
     if (jour != null) 'jour $jour',
     ?etape,
     if (gravity != null && densite != null)
@@ -319,6 +354,10 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
       else if (brewedAt != null)
         CourbeFermentation(
           points: pointsCourbe,
+          libelleDate: _dateDansLaCourbe([
+            for (final r in ascendants) ...r.events,
+            ?initiale?.event,
+          ]),
           densiteInitialePrevue: prevu.originalGravity,
           densiteFinalePrevue: prevu.finalGravity,
           ecartInitiale: ecarts.initiale,
@@ -477,7 +516,7 @@ class _LigneReleve extends StatelessWidget {
                 ),
                 Text(
                   [
-                    formatJourHeure(releve.measuredAt),
+                    dateDeReleve(releve.events.first).affiche,
                     if (jour != null) 'J+$jour',
                     ?etape,
                   ].join(' · '),

@@ -579,7 +579,7 @@ describe("recipes et brews — budget des règles", () => {
     );
   });
 
-  // v0.1.69 : densité avec instrument (densityOk), mesures de la plus grande forme.
+  // v0.1.70 : densité avec instrument (densityOk), mesures de la plus grande forme.
   const REFRACTO = {
     measure_type: "gravity",
     gravity_instrument: "refractometer",
@@ -623,6 +623,34 @@ describe("recipes et brews — budget des règles", () => {
       db(state.env, "owner")
         .doc("brews/b-22/events/c")
         .update({ ...REFRACTO, sample_temperature: deleteField(), note: "n".repeat(2000) }),
+    );
+  });
+
+  // Marge la plus faible mesurée en v0.1.70 (14 pad10()) : estimationRetireeOk et
+  // densityOk dans la même correction.
+  it("correction : flottant à heure estimée devenu réfractomètre, heure changée, note de 2 000 caractères : autorisé", async () => {
+    await seed22({ adjustments: adjustments11 });
+    await seed(state.env, {
+      "brews/b-22/events/e": event(uidOf("owner"), {
+        measure_type: "gravity",
+        value: 1.05,
+        gravity_instrument: "hydrometer_20c",
+        sample_temperature: 68,
+        correct: true,
+        time_estimated: true,
+      }),
+    });
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("brews/b-22/events/e")
+        .update({
+          ...REFRACTO,
+          sample_temperature: deleteField(),
+          time_estimated: deleteField(),
+          measured_at: at("2026-11-22T10:15:00Z"),
+          note: "n".repeat(2000),
+        }),
     );
   });
 

@@ -7,7 +7,7 @@ import 'package:exchange/exchange.dart'
 import 'package:exchange/fiches.dart';
 import 'package:test/test.dart';
 
-/// Lecteur du format `kassbeer_fiches` v1 (v0.6, TE1). Fixture inventée :
+/// Lecteur du format `kassbeer_fiches` v2 (v0.6, TE1 ; heures estimées). Fixture inventée :
 /// noms fictifs, prix fictifs.
 const _fixture = 'test/fixtures/fiches/fiches-valide.json';
 
@@ -113,7 +113,75 @@ void main() {
       expect(ambree.cout, isNull);
       expect(ambree.evenements.last.nature, NatureEvenementFiche.note);
       expect(ambree.evenements.last.fermentation, isTrue);
-      expect(ambree.evenements[1].origineHeure, OrigineHeure.debutBrassage);
+      expect(ambree.evenements[1].origineHeure, OrigineHeure.estimee);
+    });
+
+    test('heures estimées : calculées par le lecteur, jamais écrites', () {
+      final lu = _lu(_fichier());
+      final blonde = _acceptee(lu.fiches[0]);
+      // Mesure d'une étape notée : heure du début de son étape.
+      final volume = blonde.evenements[5];
+      expect(volume.origineHeure, OrigineHeure.estimee);
+      expect(volume.heureEstimee, isTrue);
+      expect(volume.measuredAt, DateTime.parse('2024-07-14T12:05:00+02:00'));
+      expect(blonde.evenements.first.heureEstimee, isFalse);
+      final ambree = _acceptee(lu.fiches[1]);
+      expect(
+        ambree.evenements[1].measuredAt,
+        DateTime.parse('2023-04-02T10:10:00+02:00'),
+      );
+      // Étape citée sans heure : début noté de l'empâtage + 60 min.
+      final ebullition = ambree.evenements[2];
+      expect(ebullition.nature, NatureEvenementFiche.debutEtape);
+      expect(ebullition.heureEstimee, isTrue);
+      expect(
+        ebullition.measuredAt,
+        DateTime.parse('2023-04-02T11:10:00+02:00'),
+      );
+      // Mesure sans étape : heure de l'événement précédent.
+      expect(
+        ambree.evenements[3].measuredAt,
+        DateTime.parse('2023-04-02T11:10:00+02:00'),
+      );
+      // Relevés datés par la préparation : heure estimée gardée.
+      expect(ambree.evenements[4].origineHeure, OrigineHeure.midi);
+      expect(ambree.evenements[4].heureEstimee, isTrue);
+      expect(
+        ambree.evenements[4].measuredAt,
+        DateTime.parse('2023-04-03T12:00:00+02:00'),
+      );
+    });
+
+    test('heure estimée sans début noté avant : début prévu du brassin', () {
+      final f = _fichier();
+      final ambree = _fiche(f, 1);
+      _events(ambree).removeAt(0);
+      final lu = _acceptee(_lu(f).fiches[1]);
+      // Empâtage sans début : 10:00 (start_at) ; ébullition : 11:00.
+      expect(
+        lu.evenements[0].measuredAt,
+        DateTime.parse('2023-04-02T10:00:00+02:00'),
+      );
+      expect(
+        lu.evenements[1].measuredAt,
+        DateTime.parse('2023-04-02T11:00:00+02:00'),
+      );
+    });
+
+    test('mesure sans étape en tête : début prévu du brassin', () {
+      final f = _fichier();
+      _events(_fiche(f, 1)).insert(0, {
+        'id': 'a00',
+        'kind': 'measurement',
+        'measure_type': 'temperature',
+        'value': 20,
+        'time_source': 'estimee',
+      });
+      final lu = _acceptee(_lu(f).fiches[1]);
+      expect(
+        lu.evenements[0].measuredAt,
+        DateTime.parse('2023-04-02T10:00:00+02:00'),
+      );
     });
 
     test('relevé estimé J+28 : daté par le fichier, après le brassage', () {
@@ -123,7 +191,8 @@ void main() {
       expect(releve.fermentation, isTrue);
       expect(releve.typeMesure, TypeMesureFiche.densite);
       expect(releve.valeur, 1.023);
-      expect(releve.note, 'Date estimée : jour du brassage + 28 jours.');
+      expect(releve.note, isNull);
+      expect(releve.heureEstimee, isTrue);
       expect(releve.measuredAt, DateTime.parse('2024-08-11T12:00:00+02:00'));
       expect(releve.measuredAt.isAfter(blonde.brassin.startAt), isTrue);
     });
@@ -170,7 +239,9 @@ void main() {
 
     test('version de format inconnue', () {
       final f = _fichier();
-      (f['kassbeer_fiches']! as Map<String, Object?>)['format_version'] = 2;
+      (f['kassbeer_fiches']! as Map<String, Object?>)['format_version'] = 1;
+      expect(raison(f), RaisonFichierFiches.versionInconnue);
+      (f['kassbeer_fiches']! as Map<String, Object?>)['format_version'] = 3;
       expect(raison(f), RaisonFichierFiches.versionInconnue);
     });
 
@@ -301,6 +372,59 @@ void main() {
       );
       final c = _refusApres((fi) => _event(fi, 2)['id'] = 'e01');
       expect((c.chemin, c.code), ('events[2].id', CodeRefusFiche.enDouble));
+    });
+
+    test('heures : début en double, ordre, measured_at et time_source', () {
+      final a = _refusApres(
+        (fi) => _events(fi).add({
+          'id': 'e99',
+          'kind': 'step_started',
+          'step_key': 'empatage',
+          'time_source': 'estimee',
+        }),
+      );
+      expect(
+        (a.chemin, a.code),
+        ('events[7].step_key', CodeRefusFiche.debutEnDouble),
+      );
+      final b = _refusApres(
+        (fi) => _event(fi, 2)['measured_at'] = '2024-07-14T09:00:00+02:00',
+      );
+      expect(
+        (b.chemin, b.code),
+        ('events[2].measured_at', CodeRefusFiche.heuresHorsOrdre),
+      );
+      final c = _refusApres(
+        (fi) => _event(fi, 5)['measured_at'] = '2024-07-14T12:05:00+02:00',
+      );
+      expect(
+        (c.chemin, c.code),
+        ('events[5].measured_at', CodeRefusFiche.heureEnTrop),
+      );
+      final d = _refusApres((fi) => _event(fi, 0).remove('measured_at'));
+      expect(
+        (d.chemin, d.code),
+        ('events[0].measured_at', CodeRefusFiche.champAbsent),
+      );
+      final e = _refusApres((fi) => _event(fi, 6).remove('measured_at'));
+      expect(
+        (e.chemin, e.code),
+        ('events[6].measured_at', CodeRefusFiche.champAbsent),
+      );
+      final j28 = _refusApres(
+        (fi) => _event(fi, 2)['time_source'] = 'estimee_j28',
+      );
+      expect(
+        (j28.chemin, j28.code),
+        ('events[2].time_source', CodeRefusFiche.horsBornes),
+      );
+      for (final ancienne in ['ligne_precedente', 'debut_brassage']) {
+        final r = _refusApres((fi) => _event(fi, 5)['time_source'] = ancienne);
+        expect(
+          (r.chemin, r.code),
+          ('events[5].time_source', CodeRefusFiche.horsBornes),
+        );
+      }
     });
 
     test('bornes des listes : étapes, événements, coût, divergences', () {
@@ -571,7 +695,14 @@ void main() {
       expect(r.stdout, contains('Fiches : 3, 3 lues, 0 refusées.'));
       expect(
         r.stdout,
-        contains('3 brassins, 2 recettes, 12 heures et mesures'),
+        contains('3 brassins, 2 recettes, 14 heures et mesures'),
+      );
+      expect(
+        r.stdout,
+        contains(
+          '6 événements (2 débuts d\'étape, 1 heures notées, '
+          '5 heures estimées dont 0 datées J+28, 2 relevés)',
+        ),
       );
       expect(r.stdout, isNot(contains('17.5')));
       expect(r.stdout, isNot(contains('€')));
