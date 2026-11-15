@@ -3031,8 +3031,10 @@ importés réécrits par un autre membre refusés, rejeux refusés, brassin `don
 ## Ingestion des référentiels et des recettes publiques (ADR-005, L3)
 
 Deux étapes, lancées à la main par l'administrateur sur son poste (ADR-005, D5). Les sources
-vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/`,
-`fabricants/cultures.json` ; un fichier absent arrête la préparation), la préparation
+vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/` ; un fichier absent
+arrête la préparation), sauf les fiches des fabricants, versionnées dans
+`exchange/donnees/fabricants/cultures.json` et lues par défaut (option `--fabricants`,
+ADR-005, amendement du 2026-11-15), la préparation
 dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapports/` :
 `import/` est ignoré par Git (P20).
 

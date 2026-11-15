@@ -601,11 +601,23 @@ Décision de l'utilisateur. Les sources de Brewtarget s'arrêtent à 2023 : SafL
 SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et LA-02, SafSour LB 1 manquaient. Une source
 de plus, `fabricants`, lit un fichier BeerJSON 2.01 écrit à la main depuis les fiches publiées
 par le fabricant (`import/sources/fabricants/cultures.json`, hors dépôt comme les autres
-sources). Elle passe avant 005 : la fiche est plus récente. Une souche déjà connue garde
+sources ; versionné dans `exchange/donnees/` depuis l'amendement du 2026-11-15). Elle passe avant 005 : la fiche est plus récente. Une souche déjà connue garde
 l'identifiant de son document. Le fabricant publie ces données en accès libre : l'utilisateur
 en accepte la reprise (licence notée « Données publiées par le fabricant »). Seuls les noms et
 les valeurs techniques entrent dans le référentiel (P20). Détail :
 `documentation/DATA_SOURCES.md`, « Fiches des fabricants ».
+
+## Amendement du 2026-11-15 : fiches des fabricants versionnées
+
+Décision de l'utilisateur. Le fichier des fiches des fabricants entre dans le dépôt :
+`exchange/donnees/fabricants/cultures.json`, lu par défaut par
+`exchange/bin/preparer_referentiels.dart` (option `--fabricants` pour un autre chemin).
+L'administrateur n'a plus à le copier dans `import/sources/`. C'est la seule exception, avec la
+table de `srm2hex`, à la règle « aucun fichier de ces sources dans le dépôt » de
+`DATA_SOURCES.md` : le fichier est écrit à la main, ne contient que des noms et des valeurs
+techniques (aucun texte des fiches), et le fabricant publie ces données en accès libre. Les
+fichiers de Brewtarget, DIY Dog, `diydog-beerxml` et Kaggle restent hors du dépôt (P20). Le
+fichier n'est ni un asset Flutter ni servi par Hosting (P12).
 
 ## Évolutions du réseau acceptées
 
