@@ -56,7 +56,7 @@ void main() {
       events: [debut('e1', 'k-palier', hm(11, 45))],
     );
     expect(tester.widget<Text>(minuteur()).data, '20:00');
-    expect(find.text('Terminer l\'étape'), findsOneWidget);
+    expect(find.text(libelleEtapeSuivante), findsOneWidget);
   });
 
   testWidgets('le minuteur suit l\'horloge, pas un compteur', (tester) async {
@@ -76,13 +76,56 @@ void main() {
       now: hm(12, 10),
       events: [debut('e1', 'k-palier', hm(11, 45))],
     );
-    await tester.tap(find.text('Terminer l\'étape'));
-    await tester.tap(find.text('Terminer l\'étape'));
+    await tester.tap(find.text(libelleEtapeSuivante));
+    await tester.tap(find.text(libelleEtapeSuivante));
     await tester.pump();
     final steps = app.brews.writes.where((w) => w.kind == 'steps').toList();
     expect(steps.length, 1);
-    expect(steps.single.detail['writes'], ['step_ended:k-palier']);
+    expect(steps.single.detail['writes'], [
+      'step_ended:k-palier',
+      'step_started:k-ebullition',
+    ]);
     expect(steps.single.detail['at'], hm(12, 10));
+  });
+
+  testWidgets('dernière étape en cours : Terminer l\'étape, fin seule', (
+    tester,
+  ) async {
+    final app = await ouvrir(
+      tester,
+      now: hm(12, 10),
+      brew: unBrassin(
+        id: _brassinId,
+        brewedAt: hm(11, 45),
+        steps: const [palier],
+      ),
+      events: [debut('e1', 'k-palier', hm(11, 45))],
+    );
+    expect(find.text(libelleEtapeSuivante), findsNothing);
+    await tester.tap(find.text('Terminer l\'étape'));
+    await tester.pump();
+    final write = app.brews.writes.where((w) => w.kind == 'steps').single;
+    expect(write.detail['writes'], ['step_ended:k-palier']);
+  });
+
+  testWidgets('suivante de 0 minute : Terminer l\'étape, puis Fait', (
+    tester,
+  ) async {
+    final app = await ouvrir(
+      tester,
+      now: hm(12, 10),
+      brew: unBrassin(
+        id: _brassinId,
+        brewedAt: hm(11, 45),
+        steps: const [palier, ajout, ebullition],
+      ),
+      events: [debut('e1', 'k-palier', hm(11, 45))],
+    );
+    expect(find.text(libelleEtapeSuivante), findsNothing);
+    await tester.tap(find.text('Terminer l\'étape'));
+    await tester.pump();
+    final write = app.brews.writes.where((w) => w.kind == 'steps').single;
+    expect(write.detail['writes'], ['step_ended:k-palier']);
   });
 
   testWidgets(
@@ -341,7 +384,7 @@ void main() {
       events: [debut('e1', 'k-palier', hm(11, 45))],
     );
     expect(tester.widget<Text>(minuteur()).style?.fontSize, 72);
-    await tester.tap(find.text('Terminer l\'étape'));
+    await tester.tap(find.text(libelleEtapeSuivante));
     await tester.pump();
     expect(app.brews.writes.where((w) => w.kind == 'steps'), hasLength(1));
   });
@@ -468,7 +511,7 @@ void main() {
       events: [debut('e1', 'k-palier', hm(11, 45))],
     );
     expect(find.text(BrewDayScreen.notOwner), findsOneWidget);
-    expect(find.text('Terminer l\'étape'), findsNothing);
+    expect(find.text(libelleEtapeSuivante), findsNothing);
   });
 
   testWidgets('saisies en attente : pastille Hors ligne · n', (tester) async {
@@ -503,7 +546,7 @@ void main() {
     );
     final refus = Completer<void>();
     app.brews.serverAnswer = () => refus.future;
-    await tester.tap(find.text('Terminer l\'étape'));
+    await tester.tap(find.text(libelleEtapeSuivante));
     await tester.pump();
     refus.completeError(Exception('permission-denied'));
     await tester.pump();
@@ -676,7 +719,7 @@ void main() {
           app.now = hm(12, 35);
           await tester.pump(const Duration(seconds: 1));
           expect(find.text('ÉTAPE 1 SUR 2 · DÉPASSÉ'), findsOneWidget);
-          expect(find.text('Terminer l\'étape'), findsOneWidget);
+          expect(find.text(libelleEtapeSuivante), findsOneWidget);
         } finally {
           FlutterError.onError = original;
         }

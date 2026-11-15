@@ -6,6 +6,21 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.62 — fonctionnel
+
+Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
+commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
+l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le
+bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ».
+
+### v0.1.62 — technique
+
+`brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
+de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
+(P2), et prépare l'alerte du minuteur. `_BarreActions` l'affiche quand la suivante a une
+durée ; sinon « Terminer l'étape » reste. Tests de `brew_day_screen_test.dart` adaptés, deux
+cas ajoutés (dernière étape, suivante de 0 min).
+
 ### v0.1.61 — fonctionnel
 
 La Bibliothèque des houblons est plus propre. Un même houblon n'apparaît plus plusieurs fois
