@@ -405,5 +405,17 @@
       "outcome": "throws"
     }
   ],
+  "gravity_gap": {
+    "rule": "Écart en points d'une densité mesurée sur une densité prévue (courbe de fermentation) : (mesurée − prévue) × 1000, chaque densité dans 0,980 à 1,200.",
+    "cases": [
+      { "id": "au-dessus-de-la-finale", "measured": 1.020, "planned": 1.012, "expected": 8.0, "tolerance": 1e-9 },
+      { "id": "sous-l-initiale", "measured": 1.0605, "planned": 1.063, "expected": -2.5, "tolerance": 1e-9 },
+      { "id": "egales", "measured": 1.05, "planned": 1.05, "expected": 0.0, "tolerance": 1e-9 }
+    ],
+    "invalid": [
+      { "id": "mesuree-hors-bornes", "measured": 1.3, "planned": 1.012 },
+      { "id": "prevue-hors-bornes", "measured": 1.02, "planned": 0.9 }
+    ]
+  },
   "divergences": []
 }

@@ -113,6 +113,7 @@ class SectionDeroule extends StatelessWidget {
     required this.mine,
     required this.chronologieBrassage,
     required this.modeleSupprime,
+    this.courbeBrassage,
     this.onChangerProcessus,
     this.onChangerDate,
     this.onRetablirDate,
@@ -128,6 +129,9 @@ class SectionDeroule extends StatelessWidget {
   final Brew brew;
   final bool mine;
   final Widget chronologieBrassage;
+
+  /// Courbe du jour de brassage, en tête de la journée de brassage, ou `null`.
+  final Widget? courbeBrassage;
 
   /// Chronologie d'une journée après le brassage déjà commencée, ou `null` pour
   /// lister ses étapes.
@@ -230,8 +234,10 @@ class SectionDeroule extends StatelessWidget {
                       onPressed: changer,
                     ),
                   ),
-                if (j.etapes.isNotEmpty) const SizedBox(height: 8),
+                // Écart aussi au-dessus de « Chargement des saisies ».
+                const SizedBox(height: 8),
               ],
+              ?courbeBrassage,
               chronologieBrassage,
             ] else
               _Journee(

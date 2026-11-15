@@ -109,8 +109,8 @@ class ChoixProcessus {
 
   /// Présélection : le choix par défaut du lecteur s'il est un de ses modèles ;
   /// s'il n'a jamais réglé de choix par défaut, son seul modèle s'il n'en a
-  /// qu'un ; sinon `null` (« Chronologie de la recette seule »). Le modèle d'exemple n'est
-  /// jamais présélectionné ni créé (P37).
+  /// qu'un ; sinon `null` (« Chronologie de la recette seule »). Aucun modèle à
+  /// copier n'est présélectionné ni créé (P37).
   final String? defaut;
 
   /// Le choix par défaut désigne un modèle absent du serveur.

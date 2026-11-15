@@ -22,7 +22,7 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../recipes/domain/chronologie.dart';
 import '../../recipes/presentation/ingredient_forms.dart';
-import '../domain/modele_exemple.dart';
+import '../domain/modeles_a_copier.dart';
 import '../domain/modele_processus.dart';
 import '../domain/preference_processus.dart';
 import 'formulaire_journee.dart';
@@ -30,13 +30,15 @@ import 'libelles_processus.dart';
 import 'process_detail_screen.dart';
 import 'processes_providers.dart';
 
-/// Nouveau processus ([id] nul, prérempli du modèle d'exemple si [exemple]) ou
+/// Nouveau processus ([id] nul, prérempli de [modele] s'il est donné) ou
 /// modification d'un processus, en plein écran.
 class ProcessEditorScreen extends ConsumerWidget {
-  const ProcessEditorScreen({super.key, this.id, this.exemple = false});
+  const ProcessEditorScreen({super.key, this.id, this.modele});
 
   final String? id;
-  final bool exemple;
+
+  /// Modèle à copier qui préremplit un nouveau processus.
+  final ModeleACopier? modele;
 
   static const titreNouveau = 'Nouveau processus';
   static const titreModifier = 'Modifier le processus';
@@ -45,7 +47,7 @@ class ProcessEditorScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final id = this.id;
-    if (id == null) return _Editeur(initial: null, exemple: exemple);
+    if (id == null) return _Editeur(initial: null, modele: modele);
     final access = ref.watch(grantedAccessProvider);
     return PageDocument<ModeleProcessus>(
       async: ref.watch(processTemplatesProvider),
@@ -77,7 +79,7 @@ class ProcessEditorScreen extends ConsumerWidget {
             ),
           );
         }
-        return _Editeur(key: ValueKey(id), initial: modele, exemple: false);
+        return _Editeur(key: ValueKey(id), initial: modele, modele: null);
       },
     );
   }
@@ -123,10 +125,10 @@ class _Journee {
 }
 
 class _Editeur extends ConsumerStatefulWidget {
-  const _Editeur({super.key, required this.initial, required this.exemple});
+  const _Editeur({super.key, required this.initial, required this.modele});
 
   final ModeleProcessus? initial;
-  final bool exemple;
+  final ModeleACopier? modele;
 
   @override
   ConsumerState<_Editeur> createState() => _EditeurState();
@@ -160,8 +162,7 @@ class _EditeurState extends ConsumerState<_Editeur> {
   void initState() {
     super.initState();
     final ContenuModele? depart =
-        widget.initial?.content ??
-        (widget.exemple ? modeleExemple(_newKey) : null);
+        widget.initial?.content ?? widget.modele?.copie(_newKey);
     _name = TextEditingController(text: depart?.name ?? '');
     _notes = TextEditingController(text: depart?.notes ?? '');
     _journees = depart == null
@@ -179,9 +180,9 @@ class _EditeurState extends ConsumerState<_Editeur> {
             ),
           ]
         : [for (final j in depart.journees) _Journee.de(j)];
-    // Le modèle d'exemple n'est écrit qu'à « Enregistrer » : le quitter demande
+    // Un modèle à copier n'est écrit qu'à « Enregistrer » : le quitter demande
     // confirmation.
-    _dirty = widget.initial == null && widget.exemple;
+    _dirty = widget.initial == null && widget.modele != null;
   }
 
   @override
@@ -585,7 +586,7 @@ class _EditeurState extends ConsumerState<_Editeur> {
                           key: _nameField,
                           controller: _name,
                           focusNode: _nameFocus,
-                          autofocus: initial == null && !widget.exemple,
+                          autofocus: initial == null && widget.modele == null,
                           maxLength: kNomModeleMaxLength,
                           textCapitalization: TextCapitalization.sentences,
                           decoration: const InputDecoration(
