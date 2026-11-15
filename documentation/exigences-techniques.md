@@ -4400,7 +4400,8 @@ particulier « Chaîne de travail », « Version », « Tickets », « Git » et
    - tu ne modifies ni ne supprimes aucun commentaire existant.
 6. Avant le premier commit, dans cet ordre :
    - lis git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT. Si l'une des deux adresses
-     n'est pas une adresse noreply de GitHub (…@users.noreply.github.com), ne commite rien :
+     n'est ni une adresse noreply de GitHub (…@users.noreply.github.com) ni
+     noreply@anthropic.com, ne commite rien :
      publie un commentaire qui commence par « ## Analyse — compléments » et dit « adresse
      d'auteur ou de commiteur hors noreply : session arrêtée », sans citer l'adresse, puis
      arrête-toi ;
@@ -4497,7 +4498,8 @@ L5. Prends la branche de la pull request, git fetch origin, puis intègre origin
     puis blocage. Sans conflit, si la version de la pull request n'est plus supérieure à
     celle de origin/main, fais la même correction.
 L6. Avant le commit de fusion, lis git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT :
-    une adresse hors noreply de GitHub (…@users.noreply.github.com) est un blocage, sans
+    une adresse autre que noreply de GitHub (…@users.noreply.github.com) ou
+    noreply@anthropic.com est un blocage, sans
     citer l'adresse. git fetch --tags && node scripts/check-version.mjs doit réussir ; sinon
     corrige seulement la version et le CHANGELOG comme en L5, ou blocage. Commite la fusion
     et pousse sur la branche claude/… de la pull request : jamais sur main, jamais --force.
@@ -4551,7 +4553,7 @@ R4. Corrige en suivant la « Chaîne de travail » comme au point 7 : contrôles
     version passe à celle de origin/main augmentée de un, numéro de build compris ; seuls
     conflits permis : app/pubspec.yaml et documentation/CHANGELOG.md, comme en L5. Avant le
     premier commit, git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT doivent être des
-    adresses noreply ; sinon arrête-toi sans commenter. Les fichiers interdits du point 5
+    adresses noreply de GitHub ou noreply@anthropic.com ; sinon arrête-toi sans commenter. Les fichiers interdits du point 5
     restent interdits.
 R5. git push origin <head.ref>, sans --force. Poussée refusée : git fetch, git merge, rejoue
     les contrôles une fois et repousse ; second refus : arrête-toi. Suis la CI jusqu'au vert.

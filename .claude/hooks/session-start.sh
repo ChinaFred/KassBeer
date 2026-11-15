@@ -4,7 +4,8 @@
 #    invalide les retire de la session sans message.
 # 2. Lance .claude/hooks/setup-projet.sh s'il existe (installation de la chaîne
 #    d'outils du projet, proposé par l'architecte, écrit par la session principale).
-# 3. Avertit quand l'adresse des commits n'est pas une adresse noreply de GitHub :
+# 3. Avertit quand l'adresse des commits n'est ni une adresse noreply de GitHub ni
+#    noreply@anthropic.com (sessions Claude Code), les deux admises par P15 :
 #    le dépôt est public, et l'adresse d'un commit poussé ne s'efface plus (ADR-002).
 # N'échoue jamais : un avertissement part sur stdout, que la session lit.
 set -uo pipefail
@@ -28,8 +29,8 @@ if command -v git >/dev/null 2>&1; then
   ident=$(git -C "$ROOT" var GIT_AUTHOR_IDENT 2>/dev/null || true)
   email=$(printf '%s' "$ident" | sed -n 's/.*<\(.*\)>.*/\1/p' | tr '[:upper:]' '[:lower:]')
   case "$email" in
-    *@users.noreply.github.com) ;;
-    *) echo "session-start : l'adresse des commits (git var GIT_AUTHOR_IDENT) n'est pas une adresse noreply de GitHub. Le dépôt est public (ADR-002) : régler git config user.email <id>+<compte>@users.noreply.github.com avant de commiter." ;;
+    *@users.noreply.github.com | noreply@anthropic.com) ;;
+    *) echo "session-start : l'adresse des commits (git var GIT_AUTHOR_IDENT) n'est ni une adresse noreply de GitHub ni noreply@anthropic.com. Le dépôt est public (ADR-002) : régler git config user.email <id>+<compte>@users.noreply.github.com avant de commiter." ;;
   esac
 fi
 exit 0

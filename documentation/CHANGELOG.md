@@ -6,6 +6,14 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.63 — technique
+
+P15 accepte `noreply@anthropic.com`, l'adresse des sessions Claude Code, comme l'adresse
+`noreply` de GitHub, pour les commits et les tags (décision de l'utilisateur du 2026-11-15).
+Aucune des deux ne désigne une personne. `session-start.sh` n'avertit plus pour cette adresse.
+Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte à recoller sur
+claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
+
 ### v0.1.62 — fonctionnel
 
 Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
