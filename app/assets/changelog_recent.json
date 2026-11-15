@@ -1,11 +1,18 @@
 {
   "versions": [
     {
-      "version": "0.1.56",
-      "date": "2026-11-14",
+      "version": "0.1.57",
+      "date": "2026-11-15",
       "paragraphs": [
         "« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage) autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un processus », ou « Créer un processus » si vous n'en avez aucun. Une recette sans chronologie affiche « sans processus, le brassin n'aura aucune étape ».",
         "Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son propriétaire. Demandé par le ticket #61."
+      ]
+    },
+    {
+      "version": "0.1.56",
+      "date": "2026-11-14",
+      "paragraphs": [
+        "Sur la fiche d'un style, une barre en dégradé montre sous la ligne « Couleur » la teinte de la bière, du minimum au maximum de la plage. Une nouvelle page « Couleurs EBC » montre la teinte de 0 à 79 EBC, tous les 4 EBC. Elle s'ouvre depuis la Bibliothèque (« Échelle des couleurs ») et depuis la fiche d'un style, et marche sans réseau. La teinte est indicative : la couleur réelle dépend du verre, de la lumière et de l'écran. Au-delà de 79 EBC, la teinte ne fonce plus, et la fiche le dit. « Sources des données » nomme la source des teintes et donne le texte de sa licence. Demandé par le ticket #48."
       ]
     },
     {
@@ -37,14 +44,6 @@
       "date": "2026-11-14",
       "paragraphs": [
         "Le compte fondateur a son propre plafond de lancements de sessions : 50 par jour, cinq fois celui des autres administrateurs. Ses lancements ne consomment pas les 10 du groupe, et inversement. Le compteur d'Admin › Tickets et la boîte de lancement affichent le plafond du compte connecté. Le mois compte tous les lancements."
-      ]
-    },
-    {
-      "version": "0.1.51",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Les fiches d'une recette, d'un brassin, d'un équipement et d'un processus ont un en-tête avec le nom et ses étiquettes, puis des sections dans des cartes. Sur la fiche d'un brassin, la prochaine journée et son bouton sont en tête, dans une carte colorée. Les boutons suivent le même ordre partout : l'action principale en plein, « Modifier » en teinte, « Supprimer » en rouge. La liste des brassins est groupée : en cours, prévus, terminés et abandonnés. La recherche des recettes prend toute la largeur. Les listes vides de tickets, de prix et de membres ont un titre.",
-        "Sur l'écran du jour, l'étape en cours est dans une carte, avec une barre qui montre le temps écoulé. Quand le temps est dépassé, la carte passe à l'ambre, avec un bord et une alarme. L'étape et l'heure de fin s'écrivent plus grand, pour se lire à deux mètres. Dans la chronologie, une étape faite est en vert et l'étape en cours en brun. Dans « Préparer le brassage », chaque vérification a l'icône et la couleur de son état, et le nom du brassin et sa date sont sur deux lignes."
       ]
     }
   ]
