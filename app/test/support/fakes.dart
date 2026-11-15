@@ -1142,9 +1142,14 @@ class FakeSourcesRepository implements SourcesRepository {
   bool pagesFromCache = false;
   final pages = <CurseurPage?>[];
 
+  /// Réponses retenues jusqu'à ce que ce `Completer` soit complété.
+  Completer<void>? attente;
+
   @override
   Future<LectureExecution> derniereExecution() async {
     executionReads++;
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
     final error = executionError;
     if (error != null) throw error;
     return execution ??
@@ -1154,6 +1159,8 @@ class FakeSourcesRepository implements SourcesRepository {
   @override
   Future<PageNonResolus> pageNonResolus({CurseurPage? apres}) async {
     pages.add(apres);
+    final retenue = attente;
+    if (retenue != null) await retenue.future;
     final error = pageError;
     if (error != null) {
       pageError = null;

@@ -1089,58 +1089,79 @@ l'application ne contrôle que la longueur.
 ### Admin › Sources
 
 Réservé à l'administrateur (ADR-005, L4). Adresse `/admin/sources`, titre « Sources », retour
-vers Admin. Lecture seule : l'écran n'écrit rien. La mise à jour (ingestion) se lance depuis le
-poste de l'administrateur (`exchange/bin/preparer_referentiels.dart`, puis `ingest/ecrire.mjs`).
+vers Admin. Sous-titre de l'entrée dans Admin : « Dernière mise à jour de la Bibliothèque et noms
+non reconnus ». Lecture seule : l'écran n'écrit rien. La mise à jour (ingestion) se lance depuis
+le poste de l'administrateur (`exchange/bin/preparer_referentiels.dart`, puis
+`ingest/ecrire.mjs`).
 
 En tête : « Mise à jour de la Bibliothèque depuis les sources externes (Brewtarget, BJCP, DIY
-Dog). » et le bouton « Relire », qui relit la dernière mise à jour et la première page des noms
-non reconnus.
+Dog). » et le bouton icône « Actualiser » (48 px), qui relit la dernière mise à jour et la
+première page des noms non reconnus. Tirer la page vers le bas fait la même chose. Pendant la
+lecture lancée par ce bouton, il laisse la place à un indicateur de même taille, annoncé
+« Lecture en cours » ; pendant toute lecture, les autres boutons de lecture sont désactivés.
+Ce qui est affiché reste visible jusqu'à la réponse.
 
-Deux blocs, dont le titre est d'un cran au-dessus de celui de leurs sous-sections.
+L'écran prend la largeur du contenu, sans borne propre.
 
-**Dernière mise à jour.** L'exécution la plus récente de l'écrivain, lue à l'ouverture. Sur
-grand écran, le bloc est borné à 480 px.
+**Dernière mise à jour.** Carte titrée « Dernière mise à jour » : l'exécution la plus récente
+de l'écrivain, lue à l'ouverture.
 
 - « Terminée le » : « 11 novembre 2026 à 13:49 » ; « Cible » : « Production » ou
-  « Émulateur » ; « Rapport local » : `import/ingest/rapports/20261111T124912Z.json`.
-- « Documents » : une ligne par collection, dans l'ordre des segments de la Bibliothèque
-  (« Styles », « Malts et sucres », « Houblons », « Levures », « Divers », « Recettes
-  publiques »), puis « Index de la bibliothèque » et « Noms non reconnus », avec « 412 écrits
-  · 3 inchangés · 0 refusé ». Une collection inconnue de l'application suit, sous son nom
-  technique. Si des documents sont refusés : « 2 documents refusés. Le détail est dans le
-  rapport local. », en ton d'erreur.
-- « Sources lues » : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 » et « DIY
-  Dog », chacun avec sa version (`v5.2.3 ea10908`, `e6c12ab`).
-- « Noms non reconnus (cette exécution) » : le nombre par nature (« Malts et sucres »,
-  « Houblons », « Levures », « Divers »), écrit « 12 noms ».
+  « Émulateur » ; « Rapport local » : `import/ingest/rapports/20261111T124912Z.json`, texte
+  sélectionnable.
+- « Documents » (sous-section) : une ligne par collection, dans l'ordre des segments de la
+  Bibliothèque (« Styles », « Malts et sucres », « Houblons », « Levures », « Divers »,
+  « Recettes publiques »), puis « Index de la Bibliothèque » et « Noms non reconnus », avec
+  « 412 écrits · 3 inchangés · 0 refusé ». Une collection inconnue de l'application suit, sous
+  son nom technique. Si des documents sont refusés : « 2 documents refusés. Le détail est dans
+  le rapport local. », dans un encadré d'erreur.
+- « Sources lues » (sous-section) : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 »
+  et « DIY Dog », chacun avec sa version (`v5.2.3 ea10908`, `e6c12ab`).
+- « Noms non reconnus lors de cette mise à jour » (sous-section) : le nombre par nature
+  (« Malts et sucres », « Houblons », « Levures », « Divers »), écrit « 12 noms ».
 
-Sous ce bloc, le lien « Sources des données » ouvre l'écran du même nom.
+Le lien « Sources des données », dernier élément de la carte, ouvre l'écran du même nom.
 
-**Tous les noms non reconnus.** Aide : « Noms qu'aucune source n'a rattachés à un ingrédient de
-la Bibliothèque, du plus fréquent au moins fréquent. ». Pages de 50, « Afficher les noms
-suivants » pour la suite. Chaque ligne : le nom, puis « Houblon · recettes DIY Dog · 12 fois · le
-11 nov. 2026 ». Nature : « Malt ou sucre », « Houblon », « Levure », « Ajout divers », comme
-les fiches de la Bibliothèque. Origine : « recettes DIY Dog », ou « import d'un membre ». Un
-document illisible s'affiche « Nom illisible » / « Mettez l'application à jour. ». Cette liste
-montre à l'administrateur les noms à ajouter à la table d'alias de l'ingestion : un nom
-rattaché donne ses valeurs à la ligne de recette, qui peut alors se calculer.
+**Tous les noms non reconnus.** Titre de section, puis l'aide : « Noms qu'aucune source n'a
+rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent. ». Au-dessus
+des lignes, « 12 noms affichés » (« 1 nom affiché »), annoncé à chaque changement. Pages de 50 :
+« Charger la suite » lit la page suivante ; après la dernière page, « Fin des noms non
+reconnus. ». Chaque ligne, sans action : repère « lien rompu », le nom (deux lignes au plus),
+puis « Houblon · recettes DIY Dog · 12 fois · le 11 nov. 2026 ». Nature : « Malt ou sucre »,
+« Houblon », « Levure », « Ajout divers », comme les fiches de la Bibliothèque. Origine :
+« recettes DIY Dog », ou « import d'un membre ». Un document illisible s'affiche « Nom
+illisible » / « Mettez l'application à jour. », repère en ton d'erreur. Cette liste montre à
+l'administrateur les noms à ajouter à la table d'alias de l'ingestion : un nom rattaché donne
+ses valeurs à la ligne de recette, qui peut alors se calculer.
 
-**États**, pour chaque bloc :
+**États**, dans chaque bloc (aucun état en plein écran) :
 
-- chargement : indicateur « Chargement de la dernière mise à jour » ou « Chargement des noms
-  non reconnus » ;
-- vide : « Aucune mise à jour enregistrée. Elle se lance depuis votre poste, puis s'affiche
-  ici. » ; « Aucun nom non reconnu. » ;
-- panne : « Impossible de lire la dernière mise à jour. » ou « Impossible de lire les noms non
-  reconnus. », et « Réessayer » ; l'erreur est journalisée. Une panne de la page suivante garde
-  les lignes lues, avec « Impossible de lire la page suivante. » et « Réessayer » ;
-- compte rendu illisible : « Le compte rendu de la dernière mise à jour est illisible. Mettez
-  l'application à jour. » ;
-- hors ligne, sans rien dans le cache : « Dernière mise à jour indisponible hors ligne. » ou
-  « Liste indisponible hors ligne. », et « Réessayer » ; lu depuis le cache : « Hors ligne : lu
-  sur l'appareil. Ce compte rendu peut ne plus être à jour. » au-dessus du compte rendu, et
-  « Hors ligne : lu sur l'appareil. Cette liste peut ne plus être à jour. » au-dessus de la
-  liste.
+- chargement : indicateur « Chargement de la dernière mise à jour » dans la carte, ou
+  « Chargement des noms non reconnus » sous le titre de la liste ;
+- vide : « Aucune mise à jour enregistrée. Lancez-la depuis votre poste : son compte rendu
+  s'affichera ici. » dans la carte ; « Aucun nom non reconnu. » en italique sous la liste ;
+- panne de la première lecture : encadré d'erreur, annoncé, « Impossible de lire la dernière
+  mise à jour. » ou « Impossible de lire les noms non reconnus. », avec « Réessayer » ;
+  l'erreur est journalisée ;
+- relecture du compte rendu en échec alors qu'un compte rendu est affiché : encadré d'erreur
+  annoncé au-dessus de lui, « Impossible de relire la dernière mise à jour. Le compte rendu
+  affiché peut ne plus être à jour. », avec « Réessayer » ;
+- relecture de la liste en échec (« Actualiser » ou geste) alors que des noms sont affichés :
+  encadré d'erreur annoncé en tête de la liste, « Lecture impossible. Les noms déjà affichés
+  restent visibles. », avec « Réessayer », qui relit la première page ; les lignes restent ;
+- page suivante en échec : le même encadré sous la dernière ligne, à la place de « Charger la
+  suite », avec « Réessayer », qui relit la page suivante ; les lignes restent ;
+- compte rendu illisible : encadré d'erreur dans la carte, « Le compte rendu de la dernière
+  mise à jour est illisible. Mettez l'application à jour. », sans « Réessayer » ;
+- hors ligne, sans rien dans le cache : encadré d'avertissement « Dernière mise à jour
+  indisponible hors ligne. » ou « Liste indisponible hors ligne. », avec « Réessayer » ; lu
+  depuis le cache : encadré d'avertissement « Hors ligne : lu sur l'appareil. Ce compte rendu
+  peut ne plus être à jour. » en tête de la carte, et encadré d'avertissement du même ton « Hors
+  ligne : lu sur l'appareil. Cette liste peut ne plus être à jour. », avec « Réessayer », en tête
+  de la liste.
+
+Pendant une lecture lancée par un « Réessayer » ou par « Charger la suite », ce bouton affiche
+« Lecture en cours ».
 
 ### Équipements
 

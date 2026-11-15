@@ -1,16 +1,19 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/breakpoints.dart';
+import 'package:kass_beer/core/presentation/encadre.dart';
+import 'package:kass_beer/core/presentation/etats.dart';
 import 'package:kass_beer/core/presentation/fiche.dart';
+import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
 import 'package:kass_beer/features/admin/data/sources_repository.dart';
 import 'package:kass_beer/features/admin/domain/ingestion.dart';
-import 'package:kass_beer/features/admin/presentation/admin_screen.dart';
 import 'package:kass_beer/features/admin/presentation/admin_sources_screen.dart';
 import 'package:kass_beer/features/admin/presentation/libelles_sources.dart';
 import 'package:kass_beer/features/library/presentation/data_sources_screen.dart';
@@ -95,6 +98,18 @@ Finder get _liste => find
       matching: find.byType(Scrollable),
     )
     .first;
+
+/// Compte rendu de `runDoc()`, lu sur le serveur.
+LectureExecution get _uneExecution => LectureExecution(
+  execution: DocumentTrouve(
+    ExecutionIngestion.fromFirestore('20261111T124912Z', runDoc()),
+  ),
+  fromCache: false,
+);
+
+/// Encadré qui contient [texte].
+Finder _encadre(String texte) =>
+    find.ancestor(of: find.text(texte), matching: find.byType(Encadre));
 
 String location(TestApp app) => app.container
     .read(routerProvider)
@@ -205,6 +220,7 @@ void main() {
       expect(libelleCollection('public_recipes'), 'Recettes publiques');
       expect(libelleCollection('beer_styles'), 'Styles');
       expect(libelleCollection('import_unresolved'), 'Noms non reconnus');
+      expect(libelleCollection('beer_index'), 'Index de la Bibliothèque');
       expect(libelleCollection('style_stats'), 'style_stats');
       expect(libelleNatures('culture'), 'Levures');
       expect(libelleNature('misc'), 'Ajout divers');
@@ -387,19 +403,42 @@ void main() {
         'Sources',
         'Import',
       ]);
-      expect(find.text(AdminScreen.sourcesSubtitle), findsOneWidget);
+      expect(find.text(AdminSourcesScreen.sousTitre), findsOneWidget);
       await tester.tap(find.text('Sources'));
       await tester.pumpAndSettle();
       expect(location(app), AppRoutes.adminSources);
       expect(find.text(AdminSourcesScreen.emptyRun), findsOneWidget);
-      // Second bloc sous le premier : la liste ne le construit qu'à l'approche.
-      await tester.scrollUntilVisible(
-        find.text(AdminSourcesScreen.emptyUnresolved),
-        200,
-        // La liste de la page, pas le défilement propre d'un état vide.
-        scrollable: find.byType(Scrollable).first,
-      );
       expect(find.text(AdminSourcesScreen.emptyUnresolved), findsOneWidget);
+    });
+
+    testWidgets('états vides compacts : tout tient sans défiler', (
+      tester,
+    ) async {
+      await openSources(tester, height: 900);
+      expect(find.byType(EtatVide), findsNothing);
+      expect(find.byType(EtatErreur), findsNothing);
+      // Paragraphe dans la carte du compte rendu, texte en italique sous la
+      // liste.
+      expect(
+        find.ancestor(
+          of: find.text(AdminSourcesScreen.emptyRun),
+          matching: find.byType(CarteSection),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.ancestor(
+          of: find.text(AdminSourcesScreen.emptyUnresolved),
+          matching: find.byType(TexteAbsent),
+        ),
+        findsOneWidget,
+      );
+      final bas = tester
+          .getBottomLeft(find.text(AdminSourcesScreen.emptyUnresolved))
+          .dy;
+      expect(bas, lessThan(900));
+      expect(find.text(AdminSourcesScreen.fin), findsNothing);
+      expect(find.text(AdminSourcesScreen.compte(0)), findsNothing);
     });
 
     testWidgets('un brasseur n\'ouvre pas Admin › Sources', (tester) async {
@@ -419,12 +458,7 @@ void main() {
     ) async {
       await openSources(
         tester,
-        before: (app) => app.sources.execution = LectureExecution(
-          execution: DocumentTrouve(
-            ExecutionIngestion.fromFirestore('20261111T124912Z', runDoc()),
-          ),
-          fromCache: false,
-        ),
+        before: (app) => app.sources.execution = _uneExecution,
       );
       expect(find.text('11 novembre 2026 à 13:49'), findsOneWidget);
       expect(find.text('Production'), findsOneWidget);
@@ -433,15 +467,43 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(AdminSourcesScreen.intro), findsOneWidget);
-      expect(find.text('Noms non reconnus (cette exécution)'), findsOneWidget);
+      expect(find.text(AdminSourcesScreen.runUnresolvedTitle), findsOneWidget);
+      for (final titre in [
+        'Documents',
+        'Sources lues',
+        AdminSourcesScreen.runUnresolvedTitle,
+      ]) {
+        final section = tester.widget<TitreSection>(
+          find.ancestor(
+            of: find.text(titre),
+            matching: find.byType(TitreSection),
+          ),
+        );
+        expect(section.niveau, NiveauTitre.sousSection, reason: titre);
+      }
+      // Titre de la carte, au niveau d'une section.
+      expect(
+        find.ancestor(
+          of: find.text(AdminSourcesScreen.runTitle),
+          matching: find.byType(CarteSection),
+        ),
+        findsOneWidget,
+      );
+      // Chemin du rapport sélectionnable.
+      expect(
+        find.ancestor(
+          of: find.text('import/ingest/rapports/20261111T124912Z.json'),
+          matching: find.byType(SelectableText),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Malts et sucres'), findsNWidgets(2));
       expect(find.text('412 écrits · 3 inchangés · 0 refusé'), findsOneWidget);
       expect(find.text('1 écrit · 0 inchangé · 2 refusés'), findsOneWidget);
       expect(find.text('Recettes publiques'), findsOneWidget);
-      expect(
-        find.text('2 documents refusés. Le détail est dans le rapport local.'),
-        findsOneWidget,
-      );
+      const refus = '2 documents refusés. Le détail est dans le rapport local.';
+      expect(find.text(refus), findsOneWidget);
+      expect(tester.widget<Encadre>(_encadre(refus)).ton, TonEncadre.erreur);
       expect(find.text('Brewtarget, fichier 001'), findsOneWidget);
       expect(find.text('v5.2.3 ea10908'), findsOneWidget);
       expect(find.text('DIY Dog'), findsOneWidget);
@@ -453,8 +515,15 @@ void main() {
       expect(styles, lessThan(malts));
     });
 
-    testWidgets('lien vers Sources des données', (tester) async {
+    testWidgets('lien vers Sources des données, dans la carte', (tester) async {
       await openSources(tester);
+      expect(
+        find.ancestor(
+          of: find.text(AdminSourcesScreen.sourcesLabel),
+          matching: find.byType(CarteSection),
+        ),
+        findsOneWidget,
+      );
       await tester.tap(find.text(AdminSourcesScreen.sourcesLabel));
       await tester.pumpAndSettle();
       expect(find.byType(DataSourcesScreen), findsOneWidget);
@@ -470,6 +539,15 @@ void main() {
       );
       expect(find.text(AdminSourcesScreen.runError), findsOneWidget);
       expect(find.text(AdminSourcesScreen.unresolvedError), findsOneWidget);
+      for (final texte in [
+        AdminSourcesScreen.runError,
+        AdminSourcesScreen.unresolvedError,
+      ]) {
+        final encadre = tester.widget<Encadre>(_encadre(texte));
+        expect(encadre.ton, TonEncadre.erreur);
+        expect(encadre.liveRegion, isTrue);
+      }
+      expect(find.byType(EtatErreur), findsNothing);
       app.sources.executionError = null;
       await tester.tap(find.text('Réessayer').first);
       await tester.pumpAndSettle();
@@ -481,18 +559,19 @@ void main() {
       expect(app.sources.pages, hasLength(2));
     });
 
-    testWidgets('Relire : dernière exécution et première page', (tester) async {
+    testWidgets('Actualiser : dernière exécution et première page', (
+      tester,
+    ) async {
       final app = await openSources(tester);
       expect(app.sources.executionReads, 1);
       expect(app.sources.pages, [null]);
-      app.sources.execution = LectureExecution(
-        execution: DocumentTrouve(
-          ExecutionIngestion.fromFirestore('20261111T124912Z', runDoc()),
-        ),
-        fromCache: false,
-      );
+      final bouton = find.byTooltip(AdminSourcesScreen.actualiser);
+      final taille = tester.getSize(bouton);
+      expect(taille.width, greaterThanOrEqualTo(48));
+      expect(taille.height, greaterThanOrEqualTo(48));
+      app.sources.execution = _uneExecution;
       app.sources.nonResolus.add(DocumentValide('a', unIngredient('a')));
-      await tester.tap(find.text(AdminSourcesScreen.reload));
+      await tester.tap(bouton);
       await tester.pumpAndSettle();
       expect(app.sources.executionReads, 2);
       expect(app.sources.pages, [null, null]);
@@ -505,14 +584,11 @@ void main() {
       expect(find.text('Houblon inventé'), findsOneWidget);
     });
 
-    testWidgets('grand écran : compte rendu borné', (tester) async {
+    testWidgets('grand écran : compte rendu sur la largeur du contenu', (
+      tester,
+    ) async {
       final app = TestApp();
-      app.sources.execution = LectureExecution(
-        execution: DocumentTrouve(
-          ExecutionIngestion.fromFirestore('20261111T124912Z', runDoc()),
-        ),
-        fromCache: false,
-      );
+      app.sources.execution = _uneExecution;
       await app.pump(tester, width: 1400);
       app.signIn(adminUser, member: adminMember);
       await tester.pumpAndSettle();
@@ -522,7 +598,7 @@ void main() {
         of: find.text('Production'),
         matching: find.byType(LigneFiche),
       );
-      expect(tester.getSize(ligne).width, lessThanOrEqualTo(kDialogMaxWidth));
+      expect(tester.getSize(ligne).width, greaterThan(kDialogMaxWidth));
     });
 
     testWidgets('exécution illisible', (tester) async {
@@ -536,6 +612,17 @@ void main() {
         ),
       );
       expect(find.text(AdminSourcesScreen.runUnreadable), findsOneWidget);
+      final encadre = tester.widget<Encadre>(
+        _encadre(AdminSourcesScreen.runUnreadable),
+      );
+      expect(encadre.ton, TonEncadre.erreur);
+      expect(
+        find.descendant(
+          of: find.byType(CarteSection),
+          matching: find.text('Réessayer'),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('hors ligne : panne et cache vide annoncés hors ligne', (
@@ -552,6 +639,15 @@ void main() {
       expect(find.text(AdminSourcesScreen.runOffline), findsOneWidget);
       expect(find.text(AdminSourcesScreen.unresolvedOffline), findsOneWidget);
       expect(find.text(AdminSourcesScreen.runError), findsNothing);
+      for (final texte in [
+        AdminSourcesScreen.runOffline,
+        AdminSourcesScreen.unresolvedOffline,
+      ]) {
+        final encadre = tester.widget<Encadre>(_encadre(texte));
+        expect(encadre.ton, TonEncadre.avertissement);
+        expect(encadre.icone, Icons.cloud_off);
+      }
+      expect(find.text('Réessayer'), findsNWidgets(2));
     });
 
     testWidgets('hors ligne : lecture du cache signalée', (tester) async {
@@ -561,9 +657,7 @@ void main() {
         height: 2400,
         before: (app) {
           app.sources.execution = LectureExecution(
-            execution: DocumentTrouve(
-              ExecutionIngestion.fromFirestore('20261111T124912Z', runDoc()),
-            ),
+            execution: _uneExecution.execution,
             fromCache: true,
           );
           app.sources.pagesFromCache = true;
@@ -571,7 +665,23 @@ void main() {
         },
       );
       expect(find.text(AdminSourcesScreen.runFromCache), findsOneWidget);
+      expect(
+        tester.widget<Encadre>(_encadre(AdminSourcesScreen.runFromCache)).ton,
+        TonEncadre.avertissement,
+      );
       expect(find.text(AdminSourcesScreen.unresolvedFromCache), findsOneWidget);
+      final horsLigne = tester.widget<Encadre>(
+        _encadre(AdminSourcesScreen.unresolvedFromCache),
+      );
+      expect(horsLigne.ton, TonEncadre.avertissement);
+      expect(horsLigne.icone, Icons.cloud_off);
+      expect(
+        find.descendant(
+          of: _encadre(AdminSourcesScreen.unresolvedFromCache),
+          matching: find.text('Réessayer'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('non résolus : ligne, origine, illisible, page suivante', (
@@ -617,22 +727,46 @@ void main() {
       );
       expect(find.text(AdminSourcesScreen.rowUnreadable), findsOneWidget);
       expect(find.text(AdminSourcesScreen.rowUnreadableDetail), findsOneWidget);
-      final more = find.text(AdminSourcesScreen.showMore);
+      final ligne = tester.widget<LigneListe>(
+        find.ancestor(
+          of: find.text('Pilsner inventé'),
+          matching: find.byType(LigneListe),
+        ),
+      );
+      expect(ligne.icone, Icons.link_off);
+      expect(ligne.titreMaxLignes, 2);
+      expect(ligne.onTap, isNull);
+      final illisible = tester.widget<LigneListe>(
+        find.ancestor(
+          of: find.text(AdminSourcesScreen.rowUnreadable),
+          matching: find.byType(LigneListe),
+        ),
+      );
+      expect(illisible.erreur, isTrue);
+      expect(find.text(AdminSourcesScreen.compte(50)), findsOneWidget);
+      final more = find.text(AdminSourcesScreen.chargerSuite);
       await tester.scrollUntilVisible(more, 300, scrollable: _liste);
+      expect(find.text(AdminSourcesScreen.fin), findsNothing);
       await tester.tap(more);
       await tester.pumpAndSettle();
       expect(app.sources.pages, hasLength(2));
       expect(app.sources.pages.last?.valeur, 50);
-      expect(find.text(AdminSourcesScreen.showMore), findsNothing);
+      expect(find.text(AdminSourcesScreen.chargerSuite), findsNothing);
       await tester.scrollUntilVisible(
         find.text('Nom 49'),
         300,
         scrollable: _liste,
       );
       expect(find.text('Nom 49'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text(AdminSourcesScreen.fin),
+        300,
+        scrollable: _liste,
+      );
+      expect(find.text(AdminSourcesScreen.fin), findsOneWidget);
     });
 
-    testWidgets('page suivante en panne : bandeau, liste gardée', (
+    testWidgets('page suivante en panne : encadré dans le pied, liste gardée', (
       tester,
     ) async {
       final app = await openSources(
@@ -646,13 +780,204 @@ void main() {
         },
       );
       app.sources.pageError = Exception('refus');
-      final more = find.text(AdminSourcesScreen.showMore);
+      final more = find.text(AdminSourcesScreen.chargerSuite);
       await tester.scrollUntilVisible(more, 300, scrollable: _liste);
       await tester.tap(more);
       await tester.pumpAndSettle();
-      expect(find.text(AdminSourcesScreen.nextPageError), findsOneWidget);
       expect(app.sources.pages, hasLength(2));
       expect(find.text('Nom 49'), findsOneWidget);
+      // L'encadré prend la place du bouton, sous la dernière ligne.
+      final panne = find.text(AdminSourcesScreen.unresolvedListError);
+      expect(panne, findsOneWidget);
+      expect(find.text(AdminSourcesScreen.chargerSuite), findsNothing);
+      expect(find.text(AdminSourcesScreen.fin), findsNothing);
+      expect(
+        tester.getTopLeft(panne).dy,
+        greaterThan(tester.getTopLeft(find.text('Nom 49')).dy),
+      );
+      final encadre = tester.widget<Encadre>(
+        _encadre(AdminSourcesScreen.unresolvedListError),
+      );
+      expect(encadre.ton, TonEncadre.erreur);
+      expect(encadre.liveRegion, isTrue);
+      // Aucun encadré de panne en tête de la liste.
+      await tester.scrollUntilVisible(
+        find.text(AdminSourcesScreen.unresolvedTitle),
+        -300,
+        scrollable: _liste,
+      );
+      expect(panne, findsNothing);
+      await tester.scrollUntilVisible(panne, 300, scrollable: _liste);
+      final reessayer = find.descendant(
+        of: _encadre(AdminSourcesScreen.unresolvedListError),
+        matching: find.text('Réessayer'),
+      );
+      await tester.ensureVisible(reessayer);
+      await tester.pumpAndSettle();
+      await tester.tap(reessayer);
+      await tester.pumpAndSettle();
+      // La page en échec est rejouée, pas la première.
+      expect(app.sources.pages, hasLength(3));
+      expect(app.sources.pages.last?.valeur, 50);
+      expect(find.text(AdminSourcesScreen.unresolvedListError), findsNothing);
+    });
+
+    testWidgets('relecture en échec, compte rendu affiché : encadré', (
+      tester,
+    ) async {
+      final app = await openSources(
+        tester,
+        before: (app) => app.sources.execution = _uneExecution,
+      );
+      expect(find.text(AdminSourcesScreen.runRefreshError), findsNothing);
+      app.sources.executionError = Exception('refus');
+      await tester.tap(find.byTooltip(AdminSourcesScreen.actualiser));
+      await tester.pumpAndSettle();
+      expect(find.text(AdminSourcesScreen.runRefreshError), findsOneWidget);
+      final encadre = tester.widget<Encadre>(
+        _encadre(AdminSourcesScreen.runRefreshError),
+      );
+      expect(encadre.ton, TonEncadre.erreur);
+      expect(encadre.icone, Icons.error_outline);
+      expect(encadre.liveRegion, isTrue);
+      // Le compte rendu reste affiché, sous l'encadré.
+      expect(find.text('Production'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text(AdminSourcesScreen.runRefreshError)).dy,
+        lessThan(tester.getTopLeft(find.text('Production')).dy),
+      );
+      expect(find.text(AdminSourcesScreen.runError), findsNothing);
+      app.sources.executionError = null;
+      final attente = app.sources.attente = Completer<void>();
+      await tester.tap(
+        find.descendant(
+          of: _encadre(AdminSourcesScreen.runRefreshError),
+          matching: find.text('Réessayer'),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(IndicateurBouton), findsOneWidget);
+      expect(
+        tester
+            .widget<IconButton>(
+              find.ancestor(
+                of: find.byIcon(Icons.refresh),
+                matching: find.byType(IconButton),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      app.sources.attente = null;
+      attente.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(AdminSourcesScreen.runRefreshError), findsNothing);
+      expect(find.text('Production'), findsOneWidget);
+      expect(app.sources.executionReads, 3);
+    });
+
+    testWidgets(
+      'Actualiser : liste gardée pendant la lecture, encadré en panne',
+      (tester) async {
+        final app = await openSources(
+          tester,
+          before: (app) => app.sources.nonResolus.add(
+            DocumentValide('a', unIngredient('a', name: 'Pilsner inventé')),
+          ),
+        );
+        final attente = app.sources.attente = Completer<void>();
+        app.sources.pageError = Exception('refus');
+        await tester.tap(find.byTooltip(AdminSourcesScreen.actualiser));
+        await tester.pump();
+        // Pendant la lecture : la liste reste, l'en-tête attend.
+        expect(find.text('Pilsner inventé'), findsOneWidget);
+        expect(find.byTooltip(AdminSourcesScreen.actualiser), findsNothing);
+        final indicateur = find.bySemanticsLabel(
+          AdminSourcesScreen.lectureEnCours,
+        );
+        expect(indicateur, findsOneWidget);
+        final taille = tester.getSize(indicateur);
+        expect(taille.width, greaterThanOrEqualTo(48));
+        expect(taille.height, greaterThanOrEqualTo(48));
+        app.sources.attente = null;
+        attente.complete();
+        await tester.pumpAndSettle();
+        // Panne : encadré d'erreur en tête de la liste, lignes gardées.
+        expect(
+          find.text(AdminSourcesScreen.unresolvedListError),
+          findsOneWidget,
+        );
+        expect(find.text('Pilsner inventé'), findsOneWidget);
+        expect(
+          tester
+              .getTopLeft(find.text(AdminSourcesScreen.unresolvedListError))
+              .dy,
+          lessThan(tester.getTopLeft(find.text('Pilsner inventé')).dy),
+        );
+        expect(
+          tester
+              .widget<Encadre>(_encadre(AdminSourcesScreen.unresolvedListError))
+              .ton,
+          TonEncadre.erreur,
+        );
+        expect(find.text(AdminSourcesScreen.fin), findsNothing);
+        await tester.tap(
+          find.descendant(
+            of: _encadre(AdminSourcesScreen.unresolvedListError),
+            matching: find.text('Réessayer'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(app.sources.pages, [null, null, null]);
+        expect(find.text(AdminSourcesScreen.unresolvedListError), findsNothing);
+        expect(find.text('Pilsner inventé'), findsOneWidget);
+      },
+    );
+
+    testWidgets('compte des noms et fin de la liste', (tester) async {
+      final app = await openSources(
+        tester,
+        before: (app) => app.sources.nonResolus.add(
+          DocumentValide('a', unIngredient('a', name: 'Pilsner inventé')),
+        ),
+      );
+      expect(find.text('1 nom affiché'), findsOneWidget);
+      expect(find.text(AdminSourcesScreen.fin), findsOneWidget);
+      expect(find.text(AdminSourcesScreen.chargerSuite), findsNothing);
+      app.sources.nonResolus.add(
+        DocumentValide('b', unIngredient('b', name: 'Saaz inventé')),
+      );
+      await tester.tap(find.byTooltip(AdminSourcesScreen.actualiser));
+      await tester.pumpAndSettle();
+      expect(find.text('2 noms affichés'), findsOneWidget);
+      final compte = find.ancestor(
+        of: find.text('2 noms affichés'),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && (w.properties.liveRegion ?? false),
+        ),
+      );
+      expect(compte, findsOneWidget);
+    });
+
+    testWidgets("tirer pour actualiser : seul l'indicateur du geste", (
+      tester,
+    ) async {
+      final app = await openSources(tester);
+      final attente = app.sources.attente = Completer<void>();
+      await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(app.sources.executionReads, 2);
+      expect(app.sources.pages, [null, null]);
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+      expect(find.byTooltip(AdminSourcesScreen.actualiser), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(AdminSourcesScreen.lectureEnCours),
+        findsNothing,
+      );
+      app.sources.attente = null;
+      attente.complete();
+      await tester.pumpAndSettle();
     });
   });
 }
