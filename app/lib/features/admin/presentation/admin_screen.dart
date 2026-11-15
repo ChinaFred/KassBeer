@@ -5,10 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/presentation/menu_compte.dart';
 import '../../../core/router/routes.dart';
-import 'error_reports_screen.dart';
-import 'logs_screen.dart';
 import '../../tickets/presentation/admin_tickets_screen.dart';
 import '../../tickets/presentation/bandeau_tickets_admin.dart';
+import 'admin_sources_screen.dart';
+import 'error_reports_screen.dart';
+import 'logs_screen.dart';
 
 /// Accueil de l'administration : réservé au rôle `admin` (le routeur le vérifie).
 class AdminScreen extends ConsumerWidget {
@@ -56,6 +57,13 @@ class AdminScreen extends ConsumerWidget {
                     '${alerts == 1 ? '1 alerte' : '$alerts alertes'}, '
                     '$ticketsSubtitle',
           onTap: () => context.go(AppRoutes.adminTickets),
+        ),
+        LigneListe(
+          icone: Icons.source_outlined,
+          titre: AdminSourcesScreen.titre,
+          details: const [Text(AdminSourcesScreen.sousTitre)],
+          chevron: true,
+          onTap: () => context.go(AppRoutes.adminSources),
         ),
         LigneListe(
           icone: Icons.upload_file_outlined,

@@ -527,7 +527,7 @@ mixin _FormulaireLigne<W extends ConsumerStatefulWidget, T>
             _repris = valeursReprises(onSuggestion?.call(e) ?? const []);
             _reprisPour = e.name;
           }),
-          fieldBuilder: (context, aide, onSubmitted) =>
+          fieldBuilder: (context, aide, onSubmitted, _) =>
               champ(aide, onSubmitted),
         ),
         // Ce que la suggestion a rempli, annoncé au lecteur d'écran.

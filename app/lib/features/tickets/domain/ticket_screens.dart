@@ -70,6 +70,7 @@ const Map<String, String> kTicketScreenNames = {
   '/admin/rapports-erreur': 'Admin › Rapports d\'erreur',
   '/admin/journaux': 'Admin › Journaux',
   '/admin/import': 'Admin › Import',
+  '/admin/sources': 'Admin › Sources',
   '/admin/tickets': 'Admin › Tickets des membres',
   '/admin/tickets/:id': 'Admin › Ticket d\'un membre',
 };
@@ -106,6 +107,7 @@ const kTicketShellScreens = [
   '/admin/journaux',
   '/admin/tickets',
   '/admin/tickets/:id',
+  '/admin/sources',
 ];
 
 /// Éléments de la coquille, ajoutés à chaque écran de [kTicketShellScreens].
@@ -180,6 +182,7 @@ const _kTicketScreenElements = {
   '/recettes/nouvelle/fenetre/ajout': 'Autre ajout',
   '/recettes/nouvelle/fenetre/levure': 'Levure',
   '/recettes/nouvelle/fenetre/palier': 'Palier',
+  '/recettes/nouvelle/fenetre/style': 'Choisir un style',
   '/recettes/nouvelle/fenetre/calculs': 'Détail des calculs',
   '/recettes/nouvelle/menu/ligne': 'Actions d\'une ligne',
   '/recettes/:id/modifier/fenetre/malt': 'Malt ou sucre',
@@ -187,6 +190,7 @@ const _kTicketScreenElements = {
   '/recettes/:id/modifier/fenetre/ajout': 'Autre ajout',
   '/recettes/:id/modifier/fenetre/levure': 'Levure',
   '/recettes/:id/modifier/fenetre/palier': 'Palier',
+  '/recettes/:id/modifier/fenetre/style': 'Choisir un style',
   '/recettes/:id/modifier/fenetre/calculs': 'Détail des calculs',
   '/recettes/:id/modifier/menu/ligne': 'Actions d\'une ligne',
   '/recettes/:id/chronologie/fenetre/etape': 'Étape',

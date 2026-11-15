@@ -26,11 +26,15 @@ class LigneFiche extends StatelessWidget {
     required this.label,
     required this.value,
     this.avant,
+    this.selectionnable = false,
   });
 
   final String label;
   final String? value;
   final Widget? avant;
+
+  /// Vrai : la valeur se sélectionne et se copie (chemin d'un fichier).
+  final bool selectionnable;
 
   @override
   Widget build(BuildContext context) {
@@ -42,15 +46,17 @@ class LigneFiche extends StatelessWidget {
         color: theme.colorScheme.onSurfaceVariant,
       ),
     );
-    final texte = Text(
-      v ?? 'Non renseigné',
-      style: v == null
-          ? theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontStyle: FontStyle.italic,
-            )
-          : theme.textTheme.bodyLarge,
-    );
+    final Widget texte = v != null && selectionnable
+        ? SelectableText(v, style: theme.textTheme.bodyLarge)
+        : Text(
+            v ?? 'Non renseigné',
+            style: v == null
+                ? theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  )
+                : theme.textTheme.bodyLarge,
+          );
     final a = avant;
     final valeur = a == null
         ? texte
