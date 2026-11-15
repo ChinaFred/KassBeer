@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.58 — fonctionnel
+### v0.1.59 — fonctionnel
 
 Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière
 mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de
@@ -24,7 +24,7 @@ fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la ta
 nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne
 fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur.
 
-### v0.1.58 — technique
+### v0.1.59 — technique
 
 Dernière partie de L4 d'ADR-005, préparée en v0.1.29 (PR #33) et reprise sur la branche
 principale par une fusion. `features/admin/` : `SourcesRepository` (`ingest_runs/` par
@@ -39,6 +39,31 @@ borne `kDialogMaxWidth`. L'échec d'une relecture sous un compte rendu affiché 
 `hasError && hasValue` (Riverpod 3 garde la valeur). `LigneFiche` reçoit `selectionnable`
 (chemin du rapport en `SelectableText`). `firestore.rules` inchangé : les deux collections sont
 déjà lues par l'admin seul (P19).
+
+### v0.1.58 — fonctionnel
+
+Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on
+le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » :
+une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui
+écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le
+style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49.
+
+### v0.1.58 — technique
+
+`ChampBibliotheque` reçoit `choixDesStyles` (champ « Style » seul ; malts, houblons, ajouts et
+levures inchangés) et un quatrième argument `boutonListe` dans `fieldBuilder`. Nouveau
+`choix_style.dart` (`choisirStyle`, `stylesGroupes`, `aideStyleSaisi`) ; `stylesParCode` et
+`comparerCodesStyle` dans `referentiel.dart`. Index `beer_index/styles` lu par `get()` une fois,
+partagé entre la liste et la feuille, aucun `snapshots()` (P22). Aucune dépendance ni règle
+changée. L'aide « Style de la Bibliothèque » demande le nom exact, casse comprise, comme
+l'export BeerXML. Demandé par le ticket #49.
+
+La relecture ajoute : index des styles lu dès l'ouverture de l'éditeur, pour que l'aide « hors
+Bibliothèque » paraisse sur une recette existante sans focus ; états de la feuille par
+`EtatChargement`, `EtatVide` et `EtatErreur` (« Réessayer ») ; tailles de la feuille dans
+`breakpoints.dart` ; avertissement retenu pendant la frappe tant que le texte a des
+suggestions ; annonce « Style choisi » au lecteur d'écran ; curseur dans la recherche sur grand
+écran.
 
 ### v0.1.57 — fonctionnel
 
