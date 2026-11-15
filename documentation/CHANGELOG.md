@@ -85,7 +85,10 @@ rejoignent leur document Brewtarget, 39 en créent un (942 documents `beer_cultu
 autre document changé, aucun nom rendu ambigu ; WLP4042 et WLP4044 restent en double (White
 Labs sur la fiche, The Yeast Bay chez Brewtarget). `fabricants_donnees_test.dart` : 362
 entrées, types et champs absents de White Labs. `DATA_SOURCES.md`, ADR-005, exigences et
-écran « Sources des données » à jour.
+écran « Sources des données » à jour. `CLAUDE.md`, décisions de l'utilisateur : P15 accepte le
+nom commercial d'une souche publié par son fabricant (WLP520, WLP4045, WLP4046), et
+« Structure » décrit `exchange/donnees/fabricants/` sans liste de fabricants ;
+`guide-reseau.md` à jour.
 
 ### v0.1.73 — fonctionnel
 
