@@ -1954,7 +1954,9 @@ s'affiche sans réseau.
   relevées le 14 novembre 2026, sans floculation. », « Imperial Yeast : fiches relevées le
   15 novembre 2026, floculation comprise. », « Mangrove Jack's : fiches relevées le
   15 novembre 2026, floculation comprise. », « Omega Yeast : fiches relevées le 15 novembre
-  2026, floculation comprise. ». Un fabricant ajouté ajoute sa ligne.
+  2026, floculation comprise. », « The Yeast Bay : fiches relevées le 15 novembre 2026,
+  floculation comprise. », « White Labs : fiches relevées le 15 novembre 2026, floculation
+  comprise. ». Un fabricant ajouté ajoute sa ligne.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
 - srm2hex : « Teintes de la page « Échelle des couleurs » et de la barre de couleur d'un style :

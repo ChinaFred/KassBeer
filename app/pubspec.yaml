@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.73+74
+version: 0.1.74+75
 
 environment:
   sdk: ^3.11.4
