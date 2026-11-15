@@ -2079,22 +2079,26 @@ Dog dans `recipe.notes`. Unités canoniques en couples `{value, unit}` (`g`, `l`
 
 | Champ | Contenu |
 |---|---|
-| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908` ou `e6c12ab` ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)` ; `retrieved` : `2026-11-08` |
+| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005`, `fabricants` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908`, `e6c12ab` ou la date du relevé des fiches des fabricants (`2026-11-14`) ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)`, `Données publiées par le fabricant` ; `retrieved` : `2026-11-08`, `2026-11-14` pour les fiches des fabricants |
 | `content_sha256` | SHA-256 du JSON canonique du document (clés triées, entier sans décimale), hors `content_sha256` et `updated_at`, calculé par la préparation ; l'écrivain ne réécrit pas un document de même empreinte |
 | `updated_at` | `serverTimestamp()`, posé par l'écrivain |
 
 Identifiant d'une entrée : `<nature>-<clé>`, nature `fermentable`, `hop`, `culture` ou `misc` ;
 clé = nom normalisé comme une clé d'ingrédient de `brewing/` (`normalizeName` : minuscules,
 accents retirés, tout caractère hors a-z et 0-9 en tiret, tirets réduits), 100 caractères au
-plus. Deux entrées de même clé fusionnent : la source prioritaire (005, puis 003 et 004, puis
-001) donne toutes les valeurs, chaque entrée ajoute sa ligne de `provenance` et son nom aux
+plus. Deux entrées de même clé fusionnent : la source prioritaire (fiches des fabricants, puis 005, puis
+003 et 004, puis 001) donne toutes les valeurs, chaque entrée ajoute sa ligne de `provenance` et son nom aux
 `aliases`. Pour les houblons, la table de fusion écrite à la main (ADR-014) rattache aussi des
 entrées de noms différents d'une même variété et d'un même pays (`Saaz (CZ)` et `Saaz (Czech
 Republic)` dans `hop-saaz`) ; l'identifiant reste `hop-<clé du nom du document>`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
 de même producteur et de même référence (`Wyeast Labs` = `Wyeast`, `Omega Yeast Labs` =
 `Omega Yeast` ; `WY1056` = `1056` chez Wyeast, `001` = `WLP001` chez White Labs ; tirets
 ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
-ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`). Un
+ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`).
+L'identifiant d'une souche se calcule sans les fiches des fabricants quand une source de
+Brewtarget la connaît : le document garde son identifiant, et `ingest/ecrire.mjs`, qui n'efface
+rien, ne laisse pas d'ancien document à côté. Une souche connue de la seule fiche prend
+l'identifiant de la fiche (`culture-fermentis-e30-saflager-e-30`). Un
 rendement, un acide alpha ou une atténuation à 0 dans une source est lu comme inconnu : écarté
 et compté.
 
@@ -3027,7 +3031,10 @@ importés réécrits par un autre membre refusés, rejeux refusés, brassin `don
 ## Ingestion des référentiels et des recettes publiques (ADR-005, L3)
 
 Deux étapes, lancées à la main par l'administrateur sur son poste (ADR-005, D5). Les sources
-vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/`), la préparation
+vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/` ; un fichier absent
+arrête la préparation), sauf les fiches des fabricants, versionnées dans
+`exchange/donnees/fabricants/cultures.json` et lues par défaut (option `--fabricants`,
+ADR-005, amendement du 2026-11-15), la préparation
 dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapports/` :
 `import/` est ignoré par Git (P20).
 
@@ -3055,7 +3062,9 @@ la préparation s'arrête sans rien écrire. Aucune empreinte des sources n'est 
 `decodage_xml.dart`, sous une racine ajoutée car le fichier en a plusieurs ; listes
 `FERMENTABLES`, `HOPS`, `MISCS`, `YEASTS` du premier niveau seules, ni recettes, ni
 équipements, ni styles d'anciennes éditions) ; 002 à 004 en BeerJSON 2.01 et 005 en DotBeer,
-JSON dont les lignes commençant par `//` sont retirées (`lireJsonCommente`) ; DIY Dog. Les
+JSON dont les lignes commençant par `//` sont retirées (`lireJsonCommente`) ; fiches des
+fabricants (`lireFabricants`) en BeerJSON 2.01 commenté, lu par `lireJsonCommente`, liste
+`cultures` seule, toute autre liste ignorée et comptée ; DIY Dog. Les
 couleurs passent par `versEbc` (Lovibond et SRM de `brewing/`, P3), les °F par `versCelsius`.
 Une valeur d'unité inconnue, illisible, hors bornes ou nulle (rendement, alpha, atténuation)
 est écartée et comptée. Résolution d'un nom de DIY Dog : clé normalisée égale à celle d'un nom

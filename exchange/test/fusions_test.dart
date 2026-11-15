@@ -155,6 +155,9 @@ SourcesBrutes _sources({
   texte003: _texte003(h003),
   texte004: '{"beerjson": {"version": 2.01, "cultures": []}}',
   texte005: _texte005(h005, _m005),
+  texteFabricants: File(
+    'test/fixtures/ingestion/fabricants/vide.json',
+  ).readAsStringSync(),
   diyDog: const [],
 );
 

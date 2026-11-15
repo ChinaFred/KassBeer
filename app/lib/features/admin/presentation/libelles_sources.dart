@@ -55,10 +55,12 @@ String libelleOrigine(String source) => switch (source) {
   _ => source,
 };
 
-/// Source d'une exécution : « Brewtarget, fichier 001 », « DIY Dog ».
+/// Source d'une exécution : « Brewtarget, fichier 001 », « Fiches des
+/// fabricants », « DIY Dog ».
 String libelleSourceExecution(String source) {
   final fichier = RegExp(r'^brewtarget-(\d{3})$').firstMatch(source);
   if (fichier != null) return 'Brewtarget, fichier ${fichier.group(1)}';
+  if (source == 'fabricants') return 'Fiches des fabricants';
   if (source == 'diydog') return 'DIY Dog';
   return source;
 }
