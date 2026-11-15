@@ -31,6 +31,7 @@ l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`
 | Fiches techniques Imperial Yeast (`imperialyeast.com/yeast-strains/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `149051162efdff5de2c91b6709092eaf85c23fea778551ac51a9ed3936e50f23` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 55 levures de bière : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | A40 Bubbles (cidre), W01 Champion et W04 Paramount (levures de vin), tolérance à l'alcool, descripteurs, descriptions |
 | Fiches techniques Omega Yeast (`omegayeast.com/products/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `77ade05bd46079eaa5bce980ca8fbae031a833c9f98d1d573878b790a7c3b76b` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 104 cultures (102 levures liquides ou sèches, 2 bactéries) : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | tolérance à l'alcool, notes de dégustation, descriptions |
 | Fiches techniques White Labs et The Yeast Bay (`whitelabs.com/yeast-single?id=…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `2709a66bca326bea6e8a4f13698c89e160353156ac99501dbe32c66974fdf601` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 162 cultures WLP (115 White Labs, 47 The Yeast Bay) : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | levures de vin, saké, hydromel, cidre et distillerie, kombucha, bactéries acétiques et malolactiques, produits d'autres marques revendus, tolérance à l'alcool, styles conseillés, descriptions |
+| Fiches techniques Wyeast (`wyeastlab.com/product/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 (Crawl-delay de 10 s respecté) ; SHA-256 du fichier `4d0206ca6143b07a3e4824274b496b9f9f07843b61f5ec0c48d1ca8575826b10` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 77 cultures (bière, « Wild & Sour ») : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | cultures de vin, cidre, hydromel, saké et distillerie (série 4000), produits d'appoint, tolérance à l'alcool, profil, styles conseillés |
 | paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
 | Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
 
@@ -253,13 +254,13 @@ Fichier écrit à la main, versionné dans `exchange/donnees/fabricants/cultures
 2026-11-15 (lu par défaut par `bin/preparer_referentiels.dart`, option `--fabricants`), au format
 BeerJSON 2.01 (liste `cultures`, mêmes champs que 003 et 004) ; en-tête en `//` avec l'adresse des
 fiches. Il ne contient que noms et valeurs techniques, aucun texte des fiches.
-`exchange/test/fabricants_donnees_test.dart` le lit : 362 entrées (25 Fermentis, 16 Mangrove
-Jack's, 55 Imperial Yeast, 104 Omega Yeast, 115 White Labs, 47 The Yeast Bay), aucun rejet, quatre atténuations écartées (Fermentis).
+`exchange/test/fabricants_donnees_test.dart` le lit : 439 entrées (25 Fermentis, 16 Mangrove
+Jack's, 55 Imperial Yeast, 104 Omega Yeast, 115 White Labs, 47 The Yeast Bay, 77 Wyeast), aucun rejet, quatre atténuations écartées (Fermentis).
 Lu par `lireFabricants` d'`exchange/` ; toute autre liste est ignorée et comptée.
 
 Chaque fabricant a sa date de relevé, dans `kDatesReleveFabricants` (`exchange/lib/src/ingestion/sources.dart`),
 par clé de producteur : Fermentis le 2026-11-14, Mangrove Jack's, Imperial Yeast,
-Omega Yeast, White Labs et The Yeast Bay le 2026-11-15. Cette date
+Omega Yeast, White Labs, The Yeast Bay et Wyeast le 2026-11-15. Cette date
 devient `version` et `retrieved` dans `provenance[]` de chaque fiche. Une fiche d'un producteur
 absent de la table est refusée (« date du relevé inconnue »). Au rapport, la version de la source
 `fabricants` est la date du relevé le plus récent.
@@ -364,6 +365,30 @@ Mesure sur les sources du relevé du 2026-11-08 : 123 fiches rejoignent le docum
 même producteur et même référence, 39 créent un document ; 942 documents `beer_cultures` au lieu
 de 903 ; aucun nom ne devient ambigu. WLP4042 et WLP4044 (Hazy Daze) restent en double : leur
 fiche les donne à White Labs, Brewtarget à The Yeast Bay.
+
+### Wyeast
+
+Relevé du 2026-11-15 sur `wyeastlab.com/product/<fiche>`, pages du plan du site, une requête
+toutes les 10 s (`Crawl-delay`) : 77 cultures liquides marquées « Beer » ou « Wild & Sour ». Les
+16 cultures de vin, cidre, hydromel, saké et distillerie (série 4000, dont *Oenococcus oeni*) et
+les produits d'appoint ne sont pas repris.
+
+| Valeur de la fiche | Champ |
+|---|---|
+| nom sans ® (`American Ale`), numéro de « Strain » sans le suffixe `-PC` (gamme Private Collection) : `2001-PC` → `2001` ; Wyeast | `name`, `product_id`, `producer` |
+| « Species » : *S. pastorianus* → `lager` ; *S. cerevisiae* → `ale`, et `wheat` pour une levure de bière de blé (Wheat, Weizen, Witbier dans le nom) ; *Brettanomyces* → `brett` ; *Lactobacillus* → `lacto` ; *Pediococcus* → `pedio` ; plusieurs genres → `mixed-culture` | `type` |
+| levure liquide | `form` : `liquid` |
+| « Apparent Attenuation » ; valeur unique (1275, 3763, 5151) : plage de la valeur à elle-même | `attenuation` |
+| « Temperature Range » en °F | `temperature_range` |
+| « Flocculation » : `Low Medium` → `medium low`, `Medium High` → `medium high` ; `Low - High` (assemblages, bactéries) : absente | `flocculation` |
+
+Mesure sur les sources du relevé du 2026-11-08 : 74 fiches rejoignent un document Brewtarget, 3
+en créent un ; 945 documents `beer_cultures` au lieu de 942. Brewtarget écrit une souche de la
+Private Collection sous deux références (`WY2001-PC` dans 003 et 004, `2001` dans 005), qui
+donnent deux documents : la fiche rejoint le second et lui donne son nom, et six noms désignent
+désormais deux documents (`belgian-schelde-ale`, `belgian-style-blend`, `bi-re-de-garde`,
+`burton-ipa-blend`, `hella-bock-lager`, `west-coast-ipa`). Une clé de référence Wyeast sans `WY`
+ni `-PC` (`cleProduit`) fusionnerait ces doublons ; elle change des identifiants de documents.
 
 ## Correspondance DotBeer (fichier 005) → référentiels
 
