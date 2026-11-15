@@ -36,7 +36,8 @@ class DataSourcesScreen extends ConsumerWidget {
   static const beerAnalytics =
       'Une partie des ingrédients du fichier 005 de Brewtarget vient de '
       'beer-analytics.com, sous licence CC BY-SA 4.0. Modifications : unités '
-      'normalisées, doublons fusionnés.';
+      'normalisées, origines ramenées à une liste de pays, doublons fusionnés '
+      'et renommés.';
   static const fabricants =
       'Levures et bactéries de Fermentis : noms, type, forme, atténuation et '
       'températures recopiés des fiches techniques publiées par le fabricant, '

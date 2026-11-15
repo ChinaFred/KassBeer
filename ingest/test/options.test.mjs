@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import {
   cheminIdentifiants,
   confirmerProduction,
+  confirmerSuppressions,
   controlerIdentifiants,
   ErreurOptions,
   lireOptions,
@@ -21,6 +22,7 @@ describe("lireOptions", () => {
       dossier: null,
       rapports: null,
       aromes: null,
+      supprimerAbsents: null,
     });
   });
 
@@ -54,6 +56,7 @@ describe("lireOptions", () => {
       dossier: null,
       rapports: null,
       aromes: null,
+      supprimerAbsents: null,
     });
   });
 
@@ -90,6 +93,33 @@ describe("lireOptions", () => {
     assert.throws(() => lireOptions(["--force"], EMULATEUR), ErreurOptions);
     assert.throws(() => lireOptions(["--dossier"], EMULATEUR), ErreurOptions);
     assert.throws(() => lireOptions(["--projet", "--simulation"], EMULATEUR), ErreurOptions);
+  });
+});
+
+describe("--supprimer-absents", () => {
+  it("beer_hops ou beer_hop_aromas : accepté, sans suppression par défaut", () => {
+    assert.equal(lireOptions([], EMULATEUR).supprimerAbsents, null);
+    for (const c of ["beer_hops", "beer_hop_aromas"]) {
+      assert.equal(lireOptions(["--supprimer-absents", c], EMULATEUR).supprimerAbsents, c);
+    }
+  });
+
+  it("autre collection ou sans valeur : refusé", () => {
+    for (const c of ["beer_fermentables", "beer_index", "recipes", "public_recipes"]) {
+      assert.throws(
+        () => lireOptions(["--supprimer-absents", c], EMULATEUR),
+        (e) => e instanceof ErreurOptions && e.message.includes(c),
+        c,
+      );
+    }
+    assert.throws(() => lireOptions(["--supprimer-absents"], EMULATEUR), ErreurOptions);
+  });
+
+  it("confirmation sans terminal : refusée avant toute question", async () => {
+    await assert.rejects(
+      confirmerSuppressions("beer_hops", ["hop-a"], { isTTY: false }, { isTTY: true }),
+      ErreurOptions,
+    );
   });
 });
 

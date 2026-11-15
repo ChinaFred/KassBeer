@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.61 — fonctionnel
+### v0.1.62 — fonctionnel
 
 La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le
 référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf
@@ -14,7 +14,7 @@ absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, 
 LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant.
 « Sources des données » nomme cette nouvelle source.
 
-### v0.1.61 — technique
+### v0.1.62 — technique
 
 ADR-005, amendement du 2026-11-14 : source `fabricants` de l'ingestion, fichier BeerJSON 2.01
 écrit à la main (`import/sources/fabricants/cultures.json`, hors dépôt), lu par
@@ -27,6 +27,30 @@ de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 dépassent la borne de 100 % : é
 comptées au rapport. Admin › Sources nomme la source « Fiches des fabricants » dans
 « Sources lues » (`libelleSourceExecution`) et dans son introduction. `DATA_SOURCES.md`,
 `exigences-techniques.md` et `exigences-fonctionnelles.md` mis à jour.
+
+### v0.1.61 — fonctionnel
+
+La Bibliothèque des houblons est plus propre. Un même houblon n'apparaît plus plusieurs fois
+sous des noms voisins : « Saaz (CZ) » et « Saaz (Czech Republic) », par exemple, ne font plus
+qu'un. « Saaz » désigne le Saaz tchèque, et le Saaz cultivé aux États-Unis s'appelle « Saaz
+(US) ». Les pays d'origine des houblons et des malts s'écrivent d'une seule façon. Une recette
+qui cite « Hallertau », « Tettnanger », « CTZ » ou « Denali » retrouve le bon houblon. Ces
+corrections arrivent dans l'application après la prochaine mise à jour de la Bibliothèque par
+l'administrateur.
+
+### v0.1.61 — technique
+
+ADR-014 (option B). `exchange/lib/src/ingestion/origines.dart` : liste fermée des pays
+(`kPays`) et table des graphies (`kGraphiesOrigine`), appliquées aux houblons et aux malts dans
+`lecture_sources.dart` ; graphie inconnue ou double laissée absente et listée dans
+`rapport.json` (`origines_inconnues`). `fusions.dart` : table de fusion écrite à la main
+(`kFusions`, 16 lignes) branchée dans `Referentiel.fusionner`, identifiant inchangé
+`hop-<cleNormalisee(nom)>`, noms écartés des alias ; la préparation s'arrête sur une ligne sans
+entrée, une entrée désignée deux fois ou un nom porté par deux houblons ; trois alias DIY Dog
+réorientés vers `hop-hallertauer-…`. `ingest/ecrire.mjs --supprimer-absents <beer_hops|beer_hop_aromas>` :
+suppression contrôlée (30 au plus par lancement et par collection, refus sous 95 %, motif
+d'identifiant, confirmation par la saisie du nombre, simulation, rapport `deletions`). 21
+documents de `beer_hops` attendus en moins (466 → 445). Contrôles P19 complété et P56.
 
 ### v0.1.60 — fonctionnel
 

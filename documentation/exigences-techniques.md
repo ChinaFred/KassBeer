@@ -2088,7 +2088,9 @@ clé = nom normalisé comme une clé d'ingrédient de `brewing/` (`normalizeName
 accents retirés, tout caractère hors a-z et 0-9 en tiret, tirets réduits), 100 caractères au
 plus. Deux entrées de même clé fusionnent : la source prioritaire (fiches des fabricants, puis 005, puis
 003 et 004, puis 001) donne toutes les valeurs, chaque entrée ajoute sa ligne de `provenance` et son nom aux
-`aliases`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
+`aliases`. Pour les houblons, la table de fusion écrite à la main (ADR-014) rattache aussi des
+entrées de noms différents d'une même variété et d'un même pays (`Saaz (CZ)` et `Saaz (Czech
+Republic)` dans `hop-saaz`) ; l'identifiant reste `hop-<clé du nom du document>`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
 de même producteur et de même référence (`Wyeast Labs` = `Wyeast`, `Omega Yeast Labs` =
 `Omega Yeast` ; `WY1056` = `1056` chez Wyeast, `001` = `WLP001` chez White Labs ; tirets
 ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
@@ -2102,8 +2104,8 @@ et compté.
 
 | Collection | Champs |
 |---|---|
-| `beer_fermentables/{id}` | `name`, `aliases` (liste, peut être vide), `label_fr`?, `type` (`grain`, `sugar`, `extract`, `dry extract`, `honey`, `fruit`, `juice`, `other` ; `Adjunct` du 001 donne `grain`), `yield`? (`{fine_grind: {value, unit: '%'}}`), `color`? (EBC ; Lovibond et SRM convertis par `brewing/`), `producer`?, `origin`? |
-| `beer_hops/{id}` | `name`, `aliases`, `label_fr`?, `form`?, `alpha_acid`? (`%`), `beta_acid`? (`%`), `origin`?, `purpose`? (`type` BeerJSON du houblon : `aroma`, `bittering`, `aroma/bittering`… ; `Both` du 001 donne `aroma/bittering`) |
+| `beer_fermentables/{id}` | `name`, `aliases` (liste, peut être vide), `label_fr`?, `type` (`grain`, `sugar`, `extract`, `dry extract`, `honey`, `fruit`, `juice`, `other` ; `Adjunct` du 001 donne `grain`), `yield`? (`{fine_grind: {value, unit: '%'}}`), `color`? (EBC ; Lovibond et SRM convertis par `brewing/`), `producer`?, `origin`? (pays de la liste fermée d'ADR-014, en anglais) |
+| `beer_hops/{id}` | `name`, `aliases`, `label_fr`?, `form`?, `alpha_acid`? (`%`), `beta_acid`? (`%`), `origin`? (pays de la liste fermée d'ADR-014, en anglais), `purpose`? (`type` BeerJSON du houblon : `aroma`, `bittering`, `aroma/bittering`… ; `Both` du 001 donne `aroma/bittering`) |
 | `beer_cultures/{id}` | `name`, `aliases`, `type`?, `form`?, `producer`?, `product_id`?, `attenuation`? (plage `%` ; une valeur du 001 donne une plage d'une valeur), `temperature_range`? (plage `C`, °F convertis), `flocculation`? (`very low` à `very high`) |
 | `beer_miscs/{id}` | `name`, `aliases`, `label_fr`?, `type`? (`spice`, `herb`, `flavor`, `fining`, `water agent`, `wood`, `other`) |
 | `beer_styles/bjcp2021-{code}` | `name`, `category`, `category_id`, `style_id`, `type`, `style_guide`, `original_gravity`, `final_gravity` (plages `sg`), `international_bitterness_units` (plage `IBUs`), `color` (plage EBC, SRM converti par `brewing/`), `alcohol_by_volume` (plage `%`) ; 17 des 110 styles n'ont aucune plage |
@@ -3044,6 +3046,9 @@ dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapp
 gcloud auth application-default login   # compte de l'admin ; kassbeer-ingest reporté (ADR-005, D7)
 (cd ingest && node ecrire.mjs --production --projet kassbeer --simulation)   # compte sans écrire
 (cd ingest && node ecrire.mjs --production --projet kassbeer)
+# 4. Suppression des documents absents de la préparation (ADR-014), une collection par lancement
+(cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops --simulation)
+(cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops)
 ```
 
 **Préparation** (`package:exchange/ingestion.dart`, bibliothèque distincte de
@@ -3065,12 +3070,39 @@ du référentiel, puis pour une levure le producteur et la référence lus dans 
 1056`, `WLP099`), puis la table d'alias écrite à la main (`lib/src/ingestion/alias.dart`). Un
 alias vers une entrée absente arrête la préparation (`StateError`). La table liste aussi les
 noms de la liste `hops` qui ne sont pas des houblons (épices, fruits, copeaux) : leur ligne va
-dans `miscellaneous_additions`. Sortie : `<collection>.json` (listes `{id, data}`, triées par
-identifiant, `content_sha256` calculé) et `rapport.json` : entrées par source, entrées
-rejetées, listes ignorées, valeurs écartées, fusions, documents par collection, recettes lues
-et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non résolus
-avec leur nombre de lignes, lignes rejetées, libellés perdus, températures de fermentation non
-reprises, taille JSON des index.
+dans `miscellaneous_additions`.
+
+Origines (ADR-014, `lib/src/ingestion/origines.dart`) : `origin` d'un malt ou d'un houblon,
+de chaque source, est ramené à la liste fermée des pays (`kPays`, graphie anglaise la plus
+fréquente des sources : `United States`, `Germany`, `Great Britain`, `Czech Republic`, `New
+Zealand`…) par la table des graphies (`kGraphiesOrigine` : `US`, `United States of America
+(USA)`, `Germany (GER)`, `United Kingdom (UK)`, `UK`, `England`, `Czech Replublic (CZH)`,
+`New Zealand, Canterbury`…), sans casse et espaces réduites. Une graphie inconnue ou double
+(`Austria/Slovenia`) laisse `origin` absent et part au rapport (`origines_inconnues` :
+identifiant du document, source, nom, graphie lue) ; une origine vide reste absente. Le champ
+reste un texte : aucun changement de modèle ni de règle. La liste n'existe qu'en Dart (P56).
+
+Table de fusion des houblons (ADR-014, `lib/src/ingestion/fusions.dart`, `kFusions`), écrite
+à la main et distincte de la table d'alias. Une ligne : nom du document (identifiant
+`hop-<clé du nom>`), origine imposée s'il le faut, entrées rattachées (source, nom, et origine
+lue quand deux entrées de même nom diffèrent par le pays, comme les « Saaz » américains du
+005), noms ajoutés aux `aliases` (`Denali`, `CTZ`), noms écartés des `aliases` (`Saaz` pour
+`hop-saaz-us`). Une variété et un pays de culture font un document ; le nom court désigne la
+variété dans son pays d'origine (`hop-saaz` tchèque). Les valeurs viennent de l'entrée la
+plus prioritaire du groupe. Une ligne qui ne désigne aucune entrée, une entrée désignée par
+deux lignes, deux lignes de même identifiant, ou un nom (nom ou alias) porté par deux
+houblons arrêtent la préparation (`StateError`). La résolution par nom de la préparation
+(`parNomExact`) lit le nom et les alias de chaque document, noms écartés exclus.
+
+Sortie : `<collection>.json` (listes `{id, data}`, triées par identifiant, `content_sha256`
+calculé) et `rapport.json` : entrées par source, entrées rejetées, listes ignorées, valeurs
+écartées, origines inconnues, table de fusion appliquée (`table_de_fusion` : document,
+origine, entrées rattachées), groupes de houblons de même nom une fois les parenthèses
+retirées (`groupes_sans_parenthese`, pour la revue suivante de la table), noms portés par
+plusieurs documents par nature (`noms_partages`), fusions, documents par collection, recettes
+lues et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non
+résolus avec leur nombre de lignes, lignes rejetées, libellés perdus, températures de
+fermentation non reprises, taille JSON des index.
 
 **Écriture** (`ingest/`, Node 24, ESM ; `firebase-admin` 14.5.0, comme `functions/` ; `ajv`
 8.20.0 et `prettier` 3.9.6, comme `rules-tests/` ; `firebase-tools` 15.35.0 pour les tests).
@@ -3099,14 +3131,48 @@ réécrit. Les autres s'écrivent en entier (`set` sans fusion, `updated_at` du 
 lots de 400. `--simulation` lit et compte sans écrire. En fin d'exécution : rapport JSON
 `import/ingest/rapports/<id>.json` (comptes, documents refusés et leurs erreurs, sources, non
 résolus), puis `ingest_runs/<id>` par `create`, hors simulation. L'Admin SDK se charge au
-premier usage, après les contrôles. Aucun document absent de la préparation n'est supprimé.
+premier usage, après les contrôles.
+
+Suppression des documents absents (ADR-014, section 3, P19). Sans option, `ecrire.mjs` ne
+supprime rien. `--supprimer-absents <collection>` (`beer_hops` ou `beer_hop_aromas`, une par
+lancement ; toute autre est refusée par `lireOptions`) lit les identifiants en ligne
+(`select()`, sans les champs) et les compare aux identifiants préparés, refusés compris
+(`beer_hops.json`, ou `aromes.json` pour `beer_hop_aromas`, exigé). Avant toute écriture,
+`planifierSuppressions` (`lib/ecriture.mjs`) refuse : une autre collection ; une préparation
+qui compte moins de 95 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
+suppressions (`PLAFOND_SUPPRESSIONS`). Un identifiant hors du motif de la collection
+(`motifIdentifiant`, celui de `beer_hops` pour les arômes) n'est jamais supprimé : il est
+compté « ignoré ». Avec `--simulation`, la liste seule. Sinon, la liste s'affiche et la
+saisie du nombre de suppressions au terminal confirme (après le nom du projet en production) ;
+sans terminal ou sur une autre saisie, rien n'est écrit ni supprimé. Les documents changés
+s'écrivent, puis les absents se suppriment un à un. Le rapport JSON porte `deletions` :
+collection, documents en ligne et préparés, identifiants candidats, supprimés, ignorés (avec
+la raison) et en erreur (avec le code) ; une suppression en erreur donne le code de sortie 1.
+`ingest_runs/<id>` ne change pas de forme.
+
+Mise en production d'ADR-014 (section 5), dans l'ordre : préparation, relecture de
+`rapport.json` (`origines_inconnues`, `groupes_sans_parenthese`, `table_de_fusion`) ; garder
+la préparation précédente dans `import/ingest/` comme copie ; `ecrire.mjs` sur l'émulateur,
+avec et sans `--supprimer-absents` ; en production `--simulation`, écriture, puis
+`--supprimer-absents beer_hops` (simulation puis confirmation) ; retirer de `aromes.json` les
+entrées dont l'identifiant a disparu, relancer `lister-houblons-recettes.mjs` et
+`lister_houblons_recettes.dart`, générer les arômes changés (empreinte `input_sha256` changée
+par l'origine ou les alias ; `--regenerer <id>` pour une entrée relue), relire les houblons du
+groupe, `ecrire.mjs`, puis `--supprimer-absents beer_hop_aromas`.
 
 Tests : `(cd exchange && dart test)` (`test/ingestion_test.dart`, fixtures écrites à la main
-dans `test/fixtures/ingestion/`, entrées inventées dans la forme des sources) ;
+dans `test/fixtures/ingestion/`, entrées inventées dans la forme des sources ;
+`test/fusions_test.dart` : liste des pays, chaque ligne de la table de fusion sur des sources
+écrites dans le test, noms de variétés relevés et acides inventés, aucun nom porté par deux
+houblons, résolution de « Saaz », « Hallertau », « Tettnanger », « CTZ », « Denali » par
+`IndexBibliotheque`, tables fausses refusées) ;
 `(cd ingest && npm test)` (`node --test` sous `firebase emulators:exec`, projet
 `demo-kassbeer` : options, contrôle, lots sur une base simulée, et deux écritures de la
 fixture `test/fixtures/prepare/` contre l'émulateur, la seconde sans aucun référentiel ni
-aucune recette réécrit, seul son document `ingest_runs` créé) ;
+aucune recette réécrit, seul son document `ingest_runs` créé ; `--supprimer-absents` : sans
+l'option rien n'est supprimé, simulation, nombre non confirmé sans écriture, suppression
+confirmée, identifiant hors motif gardé, préparation à moins de 95 % refusée, plus de 30
+absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé) ;
 `npm run test:unitaires` sans émulateur. La CI ne lance pas encore `ingest/` (ADR-005, D2).
 
 ## Descriptions aromatiques des houblons (ADR-013)

@@ -243,9 +243,9 @@ const List<Alias> kAlias = [
     labelFr: 'Sucre blanc',
   ),
   // Houblons : abréviations, fautes de frappe, anciens noms et codes.
-  Alias(_h, 'H. Blanc', 'hop-hallertau-blanc'),
-  Alias(_h, 'H. Mittelfruh', 'hop-hallertau-mittelfruh'),
-  Alias(_h, 'H. Taurus', 'hop-hallertau-taurus'),
+  Alias(_h, 'H. Blanc', 'hop-hallertauer-blanc'),
+  Alias(_h, 'H. Mittelfruh', 'hop-hallertauer-mittelfruh'),
+  Alias(_h, 'H. Taurus', 'hop-hallertauer-taurus'),
   Alias(_h, 'Goldings', 'hop-golding'),
   Alias(_h, 'German Cascade', 'hop-cascade'),
   Alias(_h, 'Saphire', 'hop-saphir'),

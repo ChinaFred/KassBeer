@@ -5,10 +5,16 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ecrireCollections } from "./ecriture.mjs";
+import {
+  ecrireCollections,
+  idsEnLigne,
+  planifierSuppressions,
+  supprimerDocuments,
+} from "./ecriture.mjs";
 import {
   cheminIdentifiants,
   confirmerProduction,
+  confirmerSuppressions,
   controlerIdentifiants,
   ErreurOptions,
   lireOptions,
@@ -184,9 +190,27 @@ export function resumePreparation(rapport) {
   return { sources, unresolved };
 }
 
+/// Identifiants préparés de [collection] (refusés compris : un document refusé garde sa
+/// version en ligne), pour --supprimer-absents. beer_hop_aromas exige aromes.json : sans
+/// lui, ErreurOptions, rien n'est écrit ni supprimé.
+export function idsPrepares(collection, preparation, aromes) {
+  if (collection === COLLECTION_AROMES) {
+    if (aromes === null) {
+      throw new ErreurOptions(
+        "--supprimer-absents beer_hop_aromas sans aromes.json : rien n'est écrit ni supprimé.",
+      );
+    }
+    return aromes.entrees.map((e) => e?.id).filter((id) => typeof id === "string");
+  }
+  return (preparation.documents[collection] ?? [])
+    .map((d) => d?.id)
+    .filter((id) => typeof id === "string");
+}
+
 /// Exécute l'écrivain. [argv] sans `node` ni le script ; [env], [entree], [sortie] : ceux
 /// du processus. Rend le rapport d'exécution. Lève ErreurOptions pour une utilisation
-/// refusée, une autre erreur pour un échec.
+/// refusée, une autre erreur pour un échec. [confirmerSuppression] (collection, ids) :
+/// saisie du nombre de suppressions, remplacée dans les tests.
 export async function executer({
   argv,
   env,
@@ -194,6 +218,8 @@ export async function executer({
   sortie,
   maintenant = () => new Date(),
   lireIdentifiants = (chemin) => readFileSync(chemin, "utf8"),
+  confirmerSuppression = (collection, ids) =>
+    confirmerSuppressions(collection, ids, entree, sortie),
 }) {
   const debut = maintenant();
   const options = lireOptions(argv, env);
@@ -216,6 +242,10 @@ export async function executer({
     preparation.documents.beer_hops,
     aromes?.entrees ?? [],
   );
+  const prepares =
+    options.supprimerAbsents === null
+      ? null
+      : idsPrepares(options.supprimerAbsents, preparation, aromes);
 
   if (options.cible === "production") {
     controlerIdentifiants(cheminIdentifiants(env), lireIdentifiants);
@@ -230,6 +260,23 @@ export async function executer({
   const app = initializeApp({ projectId: options.projet }, `ingest-${runId}-${process.pid}`);
   try {
     const db = getFirestore(app);
+    // Plan et confirmation des suppressions avant toute écriture : un refus n'écrit rien.
+    let plan = null;
+    if (prepares !== null) {
+      plan = planifierSuppressions({
+        collection: options.supprimerAbsents,
+        enLigne: await idsEnLigne(db, options.supprimerAbsents),
+        prepares,
+      });
+      if (!options.simulation && plan.candidates.length > 0) {
+        const confirme = await confirmerSuppression(plan.collection, plan.candidates);
+        if (!confirme) {
+          throw new ErreurOptions(
+            "Nombre de suppressions non confirmé : rien n'est écrit ni supprimé.",
+          );
+        }
+      }
+    }
     const ecrits = await ecrireCollections({
       db,
       FieldValue,
@@ -241,6 +288,21 @@ export async function executer({
       counts[collection] = {
         ...ecrits[collection],
         refused: refuses.filter((r) => r.collection === collection).length,
+      };
+    }
+    let deletions = null;
+    if (plan !== null) {
+      const fait = options.simulation
+        ? { deleted: [], errors: [] }
+        : await supprimerDocuments({ db, collection: plan.collection, ids: plan.candidates });
+      deletions = {
+        collection: plan.collection,
+        online: plan.online,
+        prepared: plan.prepared,
+        candidates: plan.candidates,
+        deleted: fait.deleted,
+        ignored: plan.ignored,
+        errors: fait.errors,
       };
     }
     const fin = maintenant();
@@ -258,6 +320,7 @@ export async function executer({
       unresolved,
       aromas_file: aromes === null ? "absent" : "read",
       hops_without_aroma: sansDescription,
+      ...(deletions === null ? {} : { deletions }),
     };
     mkdirSync(dossierRapports, { recursive: true });
     const texte = `${JSON.stringify(rapport, null, 2)}\n`;

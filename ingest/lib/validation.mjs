@@ -126,6 +126,13 @@ const ID = {
   import_unresolved: /^[0-9a-f]{64}$/,
 };
 
+/// Motif de l'identifiant d'un document de [collection] (beer_hop_aromas : celui de
+/// beer_hops, même identifiant que le houblon), ou null pour une collection sans motif.
+export function motifIdentifiant(collection) {
+  if (collection === "beer_hop_aromas") return ID.beer_hops;
+  return ID[collection] ?? null;
+}
+
 /// Vrai si [id] est l'identifiant d'une entrée de référentiel, de même forme que
 /// l'identifiant contrôlé dans sa collection (200 caractères au plus).
 function estIdReferentiel(
