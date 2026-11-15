@@ -159,12 +159,6 @@ double brixCorrige({required double brix, required double facteur}) {
   return brix / facteur;
 }
 
-/// Densité SG d'une lecture de réfractomètre avant fermentation : °Brix
-/// corrigé du facteur ([brixCorrige]), lu comme des degrés Plato,
-/// SG = 1 + B / (258,6 − (B / 258,2) × 227,1) ([platoToSg]).
-double brixVersSg({required double brix, required double facteur}) =>
-    platoToSg(brixCorrige(brix: brix, facteur: facteur));
-
 /// Densité finale d'une lecture de réfractomètre en fermentation, corrigée de
 /// l'alcool par l'équation cubique de Sean Terrill (« Refractometer FG
 /// Results », seanterrill.com, 7 avril 2011) :

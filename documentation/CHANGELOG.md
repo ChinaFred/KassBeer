@@ -26,8 +26,8 @@ avant d'utiliser le réfractomètre : une ancienne version de l'application ne p
 
 Module `brewing/lib/src/gravity_instruments.dart` : `InstrumentDensite` (liste fermée),
 `masseVolumiqueEau` (Kell 1975), `corrigerDensimetre`, `plageCorrection` (0–40 °C, 40–75 °C
-approchée, impossible au-delà), `brixVersSg` (formule de `platoToSg`, partagée sans bornes par
-`platoVersSgSansBornes`, non exportée), `densiteTerrill` (Terrill 2011, cubique) et
+approchée, impossible au-delà), `brixCorrige` (°Brix divisé par le facteur, converti par la formule de
+`platoToSg`, partagée sans bornes par `platoVersSgSansBornes`, non exportée), `densiteTerrill` (Terrill 2011, cubique) et
 `densiteRetenue`, seule lecture d'une densité mesurée ; cas d'abord dans
 `brewing/test/fixtures/hydrometer.json` et `refractometer.json`. Événements : champs
 `gravity_instrument`, `brix`, `sample_temperature`, `refractometer_factor`, `correct` ; la

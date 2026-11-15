@@ -8,13 +8,11 @@ import 'package:brewing/brewing.dart'
         GravityRead,
         InstrumentDensite,
         LectureDensite,
-        PlageCorrection,
         densiteRetenue,
         gravityGapPoints,
         kBrixMax,
         kCorrectionApprocheeMaxC,
         kCorrectionExacteMaxC,
-        kCorrectionTemperatureMinC,
         kFacteurRefractometreMax,
         kFacteurRefractometreMin,
         kTemperatureEchantillonMaxC,
@@ -74,13 +72,12 @@ String get kCorrectionApprochee =>
     'Correction approchée au-delà de ${formatCelsius(kCorrectionExacteMaxC)}. '
     'Refroidissez l\'échantillon vers 20$nbsp°C pour une mesure fiable.';
 
-/// Message d'une température hors de la plage de correction ([plage] rendue
-/// par `brewing/`).
-String messageHorsPlage(PlageCorrection? plage) =>
-    plage == PlageCorrection.tropFroid
-    ? 'Correction impossible sous ${formatCelsius(kCorrectionTemperatureMinC)}.'
-    : 'Correction impossible au-delà de '
-          '${formatCelsius(kCorrectionApprocheeMaxC)}.';
+/// Message d'une température hors de la plage de correction. La saisie et les
+/// règles bornent la température à 0 °C au moins : seul le dépassement de
+/// [kCorrectionApprocheeMaxC] peut s'afficher.
+String get kCorrectionHorsPlage =>
+    'Correction impossible au-delà de '
+    '${formatCelsius(kCorrectionApprocheeMaxC)}.';
 
 const kChoisirInstrument = 'Choisissez un instrument.';
 
@@ -657,7 +654,7 @@ class _BlocDensiteState extends ConsumerState<BlocDensite> {
         lignes.add(const Text('Sans température, la densité lue est retenue.'));
       case EtatDensite.horsPlage:
         ton = TonEncadre.avertissement;
-        lignes.add(_Annonce(messageHorsPlage(d.plage)));
+        lignes.add(_Annonce(kCorrectionHorsPlage));
       case EtatDensite.densiteInitialeManquante:
         ton = TonEncadre.avertissement;
         lignes.add(const _Annonce(kDensiteInitialeASaisir));

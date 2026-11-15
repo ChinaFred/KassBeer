@@ -202,7 +202,7 @@ void main() {
       for (final c in objects(refractometer['brix_to_sg'])) {
         final brix = number(c['brix']);
         final facteur = number(c['factor']);
-        expectCase(c, brixVersSg(brix: brix, facteur: facteur));
+        expectCase(c, platoToSg(brixCorrige(brix: brix, facteur: facteur)));
         final retenue = densiteRetenue(
           LectureDensite(
             instrument: InstrumentDensite.refractometre,
@@ -265,7 +265,10 @@ void main() {
         ),
       );
       expect(retenue.etat, EtatDensite.densiteInitialeManquante);
-      expect(retenue.sg, closeTo(brixVersSg(brix: 6.3, facteur: 1), 1e-12));
+      expect(
+        retenue.sg,
+        closeTo(platoToSg(brixCorrige(brix: 6.3, facteur: 1)), 1e-12),
+      );
     });
 
     test('densité initiale sous 1,000 : traitée comme absente', () {
@@ -293,15 +296,20 @@ void main() {
         densiteInitialeSg: 1.05,
       );
       expect(retenue.etat, EtatDensite.nonCorrigee);
-      expect(retenue.sg, closeTo(brixVersSg(brix: 6.5, facteur: 1.04), 1e-12));
+      expect(
+        retenue.sg,
+        closeTo(platoToSg(brixCorrige(brix: 6.5, facteur: 1.04)), 1e-12),
+      );
       expect(retenue.corrigee, closeTo(1.0121137, 1e-6));
     });
 
     test('entrées invalides', () {
       for (final c in objects(refractometer['invalid'])) {
         expectInvalid(
-          () =>
-              brixVersSg(brix: number(c['brix']), facteur: number(c['factor'])),
+          () => brixCorrige(
+            brix: number(c['brix']),
+            facteur: number(c['factor']),
+          ),
           label(c),
         );
       }
