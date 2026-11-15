@@ -6,6 +6,40 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.77 — fonctionnel
+
+La Bibliothèque reprend les fiches de 98 cultures d'Escarpment Labs : levures d'ale, de lager
+et de bière de blé, kveiks, Brettanomyces, bactéries et assemblages pour bières acides. Type,
+atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs
+remplacent celles de l'ancienne base pour 50 cultures déjà connues, et 48 cultures
+apparaissent. Sept fiches portent un autre nom que l'ancienne base pour la même souche
+(« Classic Wit » pour « Classic Witbier », « Chaudron Sûr » pour « Lactobacillus Blend »…) :
+elles rejoignent la culture déjà connue, qui prend le nom de la fiche et garde l'ancien nom
+comme autre nom. L'écran « Sources des données » nomme Escarpment Labs. Les cultures arrivent
+dans la Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.77 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 98 cultures Escarpment Labs relevées le
+2026-11-15 sur `escarpmentlabs.com`, règles dans l'en-tête ; levures Lallemand revendues non
+reprises. `kDatesReleveFabricants` reçoit `escarpment-labs`. Escarpment ne publie presque
+aucune référence : une table de fusion des cultures (`kFusionsCultures`, `fusions.dart`,
+décision de l'utilisateur du 2026-11-15) rattache sept fiches au document Brewtarget de la même
+souche sous un autre nom. L'identifiant Brewtarget reste, la fiche donne valeurs et nom, le nom
+Brewtarget passe en alias ; une ligne sans fiche ou sans entrée Brewtarget, une entrée désignée
+deux fois, deux lignes de même identifiant ou une cible Brewtarget d'un autre identifiant (une
+souche à référence) lèvent `StateError`. `Referentiel.fusionner` et
+`preparer` reçoivent `fusionsCultures` ; `rapport.json` gagne `table_de_fusion_cultures`.
+`kFusions` inchangée. Préparation rejouée sur les sources du 2026-11-08 : 50 fiches rejoignent
+un document Brewtarget (43 par le nom, 7 par la table), 48 en créent un (993 documents
+`beer_cultures` au lieu de 945), aucun document retiré ni autre document changé. Six noms
+désignent désormais deux documents de producteurs différents (`cream-ale-blend`,
+`lactobacillus-delbrueckii`, `northwest-ale`, `framgarden-kveik`, `granvin`, `midtbust`) ;
+`berliner-weisse-blend` et `french-saison`, déjà partagés, gagnent un document. Tests :
+`fusions_test.dart` (fixtures inventées, un cas par ligne de la table), `fabricants_donnees_test.dart` (537 entrées, chaque ligne de la table
+désigne une fiche). `DATA_SOURCES.md`, ADR-005, exigences et écran « Sources des données » à
+jour.
+
 ### v0.1.75 — fonctionnel
 
 La Bibliothèque reprend les fiches de 77 cultures de Wyeast : levures d'ale, de lager et de

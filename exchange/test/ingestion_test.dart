@@ -51,13 +51,14 @@ SourcesBrutes _sources() {
   );
 }
 
-/// Sans table de fusion : celle du projet désigne des entrées absentes des
-/// fixtures. La table est essayée par `fusions_test.dart`.
+/// Sans tables de fusion : celles du projet désignent des entrées absentes
+/// des fixtures. Elles sont essayées par `fusions_test.dart`.
 Preparation _preparer() => preparer(
   _sources(),
   alias: _alias,
   ajoutsDansHoublons: _ajouts,
   fusions: const [],
+  fusionsCultures: const [],
 );
 
 /// Données du document [id] de [collection].
@@ -690,6 +691,7 @@ void main() {
         alias: _alias,
         ajoutsDansHoublons: _ajouts,
         fusions: const [],
+        fusionsCultures: const [],
         datesReleveFabricants: _datesFiches,
       );
     });

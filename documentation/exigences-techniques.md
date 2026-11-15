@@ -2132,7 +2132,7 @@ Dog dans `recipe.notes`. Unités canoniques en couples `{value, unit}` (`g`, `l`
 
 | Champ | Contenu |
 |---|---|
-| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005`, `fabricants` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908`, `e6c12ab` ou, pour une fiche de fabricant, la date du relevé de son producteur (`kDatesReleveFabricants` : `2026-11-14` pour Fermentis, `2026-11-15` pour Mangrove Jack's, Imperial Yeast, Omega Yeast, White Labs, The Yeast Bay et Wyeast) ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)`, `Données publiées par le fabricant` ; `retrieved` : `2026-11-08`, ou la date du relevé du producteur pour une fiche de fabricant ; une fiche d'un producteur sans date est refusée |
+| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005`, `fabricants` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908`, `e6c12ab` ou, pour une fiche de fabricant, la date du relevé de son producteur (`kDatesReleveFabricants` : `2026-11-14` pour Fermentis, `2026-11-15` pour Mangrove Jack's, Imperial Yeast, Omega Yeast, White Labs, The Yeast Bay, Wyeast et Escarpment Labs) ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)`, `Données publiées par le fabricant` ; `retrieved` : `2026-11-08`, ou la date du relevé du producteur pour une fiche de fabricant ; une fiche d'un producteur sans date est refusée |
 | `content_sha256` | SHA-256 du JSON canonique du document (clés triées, entier sans décimale), hors `content_sha256` et `updated_at`, calculé par la préparation ; l'écrivain ne réécrit pas un document de même empreinte |
 | `updated_at` | `serverTimestamp()`, posé par l'écrivain |
 
@@ -3211,10 +3211,24 @@ deux lignes, deux lignes de même identifiant, ou un nom (nom ou alias) porté p
 houblons arrêtent la préparation (`StateError`). La résolution par nom de la préparation
 (`parNomExact`) lit le nom et les alias de chaque document, noms écartés exclus.
 
+Table de fusion des cultures (`lib/src/ingestion/fusions.dart`, `kFusionsCultures`, décision
+de l'utilisateur du 2026-11-15), pour un fabricant qui ne publie aucune référence
+(Escarpment Labs) : une ligne nomme le producteur, le nom de la fiche et le nom du document
+Brewtarget de la même souche. Elle désigne l'entrée `fabricants` de ce producteur et de ce nom,
+et les entrées Brewtarget (001, 003, 004, 005) de ce producteur et du nom cible, noms comparés
+après normalisation. Toutes rejoignent le document d'identifiant
+`culture-<cleCulture(nom Brewtarget, producteur)>`, celui que Brewtarget donne déjà : aucun
+ancien document ne reste à côté du nouveau. La fiche, prioritaire, donne les valeurs et le
+nom ; le nom Brewtarget passe en alias. Une ligne sans fiche ou sans entrée Brewtarget, une
+entrée désignée par deux lignes, deux lignes de même identifiant, ou une entrée Brewtarget
+désignée dont l'identifiant (celui de sa souche si elle porte producteur et référence) diffère
+de celui de la ligne arrêtent la préparation (`StateError`). Sept lignes, listées dans `DATA_SOURCES.md` (« Escarpment Labs »).
+
 Sortie : `<collection>.json` (listes `{id, data}`, triées par identifiant, `content_sha256`
 calculé) et `rapport.json` : entrées par source, entrées rejetées, listes ignorées, valeurs
-écartées, origines inconnues, table de fusion appliquée (`table_de_fusion` : document,
-origine, entrées rattachées), groupes de houblons de même nom une fois les parenthèses
+écartées, origines inconnues, tables de fusion appliquées (`table_de_fusion` : document,
+origine, entrées rattachées ; `table_de_fusion_cultures` : document, nom, entrées
+rattachées), groupes de houblons de même nom une fois les parenthèses
 retirées (`groupes_sans_parenthese`, pour la revue suivante de la table), noms portés par
 plusieurs documents par nature (`noms_partages`), fusions, documents par collection, recettes
 lues et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non

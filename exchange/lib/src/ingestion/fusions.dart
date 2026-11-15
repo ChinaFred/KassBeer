@@ -1,5 +1,6 @@
 import 'cles.dart';
 import 'lecture_sources.dart';
+import 'referentiel.dart';
 import 'sources.dart';
 
 /// Table de fusion écrite à la main (ADR-014, « Table de fusion »), distincte
@@ -179,5 +180,104 @@ const List<Fusion> kFusions = [
       EntreeDesignee(_s003, 'Tomahawk'),
       EntreeDesignee(_s003, 'Zeus'),
     ],
+  ),
+];
+
+/// Sources de Brewtarget qui portent des cultures.
+const Set<Source> _sourcesBrewtarget = {
+  Source.brewtarget001,
+  Source.brewtarget003,
+  Source.brewtarget004,
+  Source.brewtarget005,
+};
+
+/// Ligne de la table de fusion des cultures : la fiche d'un fabricant qui ne
+/// publie aucune référence (`product_id`) et le document Brewtarget de la
+/// même souche, sous un autre nom (décision de l'utilisateur du 2026-11-15).
+///
+/// La ligne désigne l'entrée de la source `fabricants` de [producteur] et de
+/// nom [nom], et les entrées de Brewtarget de [producteur] et de nom
+/// [nomBrewtarget] (noms comparés après normalisation). Toutes rejoignent un
+/// seul document, d'identifiant [id] : celui que Brewtarget donne déjà, pour
+/// ne laisser aucun ancien document à côté du nouveau. La fiche, prioritaire,
+/// donne les valeurs et le nom ; le nom Brewtarget passe en alias.
+class FusionCulture {
+  /// Crée la ligne.
+  const FusionCulture(this.producteur, this.nom, {required this.nomBrewtarget});
+
+  /// Producteur, tel que les sources l'écrivent.
+  final String producteur;
+
+  /// Nom de la fiche du fabricant.
+  final String nom;
+
+  /// Nom du document Brewtarget de la même souche.
+  final String nomBrewtarget;
+
+  /// Identifiant du document : celui des entrées Brewtarget, sans référence.
+  String get id => idEntree(
+    NatureReferentiel.culture,
+    cleCulture(nomBrewtarget, producteur, null),
+  );
+
+  bool _culture(EntreeBrute e, String n) =>
+      e.nature == NatureReferentiel.culture &&
+      e.producteur != null &&
+      cleProducteur(e.producteur!) == cleProducteur(producteur) &&
+      cleNormalisee(e.nom) == cleNormalisee(n);
+
+  /// Vrai si [e] est la fiche désignée.
+  bool designeFiche(EntreeBrute e) =>
+      e.source == Source.fabricants && _culture(e, nom);
+
+  /// Vrai si [e] est une entrée Brewtarget désignée.
+  bool designeBrewtarget(EntreeBrute e) =>
+      _sourcesBrewtarget.contains(e.source) && _culture(e, nomBrewtarget);
+
+  @override
+  String toString() => '$producteur « $nom » → « $nomBrewtarget »';
+}
+
+/// Table de fusion des cultures. Chaque ligne a son cas dans
+/// `exchange/test/fabricants_donnees_test.dart` (fiche présente dans
+/// `donnees/fabricants/cultures.json`) ; la règle est essayée par
+/// `exchange/test/fusions_test.dart` sur des fixtures inventées.
+const List<FusionCulture> kFusionsCultures = [
+  FusionCulture(
+    'Escarpment Labs',
+    'Ardennes Ale',
+    nomBrewtarget: 'Ardennes Belgian Ale',
+  ),
+  FusionCulture(
+    'Escarpment Labs',
+    'Classic Wit',
+    nomBrewtarget: 'Classic Witbier',
+  ),
+  FusionCulture(
+    'Escarpment Labs',
+    'Fruity Wit',
+    nomBrewtarget: 'Fruity Witbier',
+  ),
+  FusionCulture(
+    'Escarpment Labs',
+    'Fruit Bomb Saison Blend',
+    nomBrewtarget: 'Fruit Bomb Saison',
+  ),
+  FusionCulture(
+    'Escarpment Labs',
+    'New World Saison Blend',
+    nomBrewtarget: 'New World Saison',
+  ),
+  // 005 écrit « St. Lucifer Belgian Ale », 004 « St Lucifer Belgian Ale » :
+  // même clé normalisée.
+  FusionCulture(
+    'Escarpment Labs',
+    'St. Lucifer',
+    nomBrewtarget: 'St. Lucifer Belgian Ale',
+  ),
+  FusionCulture(
+    'Escarpment Labs',
+    'Chaudron Sûr',
+    nomBrewtarget: 'Lactobacillus Blend',
   ),
 ];
