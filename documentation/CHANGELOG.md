@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.70 — fonctionnel
+### v0.1.72 — fonctionnel
 
 Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à
 20 °C ou à 15,6 °C, réfractomètre, densimètre électronique, ou autre instrument sans
@@ -22,7 +22,7 @@ degré et rendement. Les mesures déjà enregistrées ne changent pas. Installez
 avant d'utiliser le réfractomètre : une ancienne version de l'application ne peut pas afficher
 « Prévu et mesuré » d'un brassin mesuré au réfractomètre.
 
-### v0.1.70 — technique
+### v0.1.72 — technique
 
 Module `brewing/lib/src/gravity_instruments.dart` : `InstrumentDensite` (liste fermée),
 `masseVolumiqueEau` (Kell 1975), `corrigerDensimetre`, `plageCorrection` (0–40 °C, 40–75 °C
@@ -46,9 +46,57 @@ d'un flottant en réfractomètre et la même correction sur une heure estimée a
 ces trois cas avec une note de 2 000 caractères ; enfin embouteillage avec une densité finale
 au réfractomètre dans le même lot.
 `kReleveChampMinWidth` retiré (relevé en une colonne). Aucune dépendance ajoutée. Une lecture
-de réfractomètre a `value` nulle : les versions 0.1.69 et antérieures lisent `event.value!` sur
+de réfractomètre a `value` nulle : les versions 0.1.71 et antérieures lisent `event.value!` sur
 une densité retenue et plantent sur « Prévu et mesuré » d'un tel brassin ; risque accepté par
 l'utilisateur, couvert par la mise à jour proposée au lancement (ADR-012).
+
+### v0.1.71 — fonctionnel
+
+La Bibliothèque reprend les fiches de 55 levures liquides d'Imperial Yeast : type, atténuation,
+plage de température et floculation, telles que le fabricant les publie. Ces valeurs remplacent
+celles de l'ancienne base pour les 36 levures déjà connues. 19 levures absentes jusqu'ici
+apparaissent, dont des lagers (Alpha, Kanpai, Lookr) et les Liquid Brick. L'écran « Sources
+des données » nomme Imperial Yeast et la date du relevé. Les levures arrivent dans la
+Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.71 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 55 cultures Imperial Yeast relevées le
+2026-11-15 sur `www.imperialyeast.com` (aucun `robots.txt`), règles dans l'en-tête :
+températures en °F de la fiche, converties par le lecteur ; floculation `low-medium` →
+`medium low`, `medium-high` → `medium high`, `very-high` → `very high` ; `type` d'après la
+catégorie (kveik pour A37, A43, A44, A46 ; `wheat` pour G01). A40, W01 et W04 (cidre, vin)
+non reprises. `kDatesReleveFabricants` reçoit `imperial-yeast`. Préparation rejouée sur les
+sources du 2026-11-08 : 36 fiches rejoignent leur document Brewtarget, 19 en créent un
+(874 documents `beer_cultures`), aucun autre document changé. `fabricants_donnees_test.dart` :
+96 entrées, conversion des °F et floculation d'Imperial. `DATA_SOURCES.md`, ADR-005,
+`exigences-techniques.md`, `exigences-fonctionnelles.md` et l'écran « Sources des données »
+à jour.
+
+### v0.1.70 — fonctionnel
+
+La Bibliothèque reprend les fiches des 16 levures de bière sèches de Mangrove Jack's : type,
+atténuation, plage de température et floculation, telles que le fabricant les publie. Ces
+valeurs remplacent celles de l'ancienne base pour les mêmes levures. La M24 Versa Lager, absente
+jusqu'ici, apparaît. L'écran « Sources des données » nomme Mangrove Jack's et la date du relevé.
+Les levures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.70 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 16 cultures Mangrove Jack's relevées le
+2026-11-15 sur `mangrovejacks.com` (collection « Beer Yeasts »), avec leurs règles dans
+l'en-tête : `type` sans espèce sur la fiche (haute → `ale`, basse → `lager`, bière de blé →
+`wheat`, M12 → `kveik`), floculation reprise, M76 sans atténuation, °C gardés quand les °F de
+M20 et M44 ne correspondent pas. Chaque fabricant a sa date de relevé :
+`kDatesReleveFabricants` (`sources.dart`) remplace `kDateReleveFabricants`, `provenance[]`
+prend la date du producteur de la fiche, une fiche d'un producteur sans date est refusée, et la
+version de la source `fabricants` au rapport est le relevé le plus récent. Les 25 fiches
+Fermentis gardent `2026-11-14`. Préparation rejouée sur les sources du 2026-11-08 : 15 fiches
+rejoignent leur document Brewtarget, M24 crée `culture-mangrove-jack-s-m24-versa-lager`
+(855 documents `beer_cultures`), aucun autre document changé. `fabricants_donnees_test.dart` :
+41 entrées, dates par producteur, floculation ; `ingestion_test.dart` : version au rapport et
+refus d'un producteur sans date. `DATA_SOURCES.md`, `exigences-techniques.md`,
+`exigences-fonctionnelles.md` et l'écran « Sources des données » à jour.
 
 ### v0.1.69 — fonctionnel
 

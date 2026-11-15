@@ -639,6 +639,13 @@ void main() {
         200,
         scrollable: _liste,
       );
+      for (final ligne in DataSourcesScreen.fabricantsLignes) {
+        await tester.scrollUntilVisible(
+          find.text(ligne),
+          200,
+          scrollable: _liste,
+        );
+      }
       await tester.scrollUntilVisible(
         find.text(DataSourcesScreen.diyDog),
         200,

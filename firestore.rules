@@ -539,8 +539,8 @@ service cloud.firestore {
     // 185 pad(). Un lot de 60 step_skipped, plus le début d'étape suivant, passe
     // (rules-tests/test/processes.test.mjs).
     //
-    // Événements (heures estimées de la v0.1.69, densité et instrument de la v0.1.70) :
-    // mesure de la v0.1.70, notée avant isEventShape (match /events ci-dessous), qui
+    // Événements (heures estimées de la v0.1.69, densité et instrument de la v0.1.72) :
+    // mesure de la v0.1.72, notée avant isEventShape (match /events ci-dessous), qui
     // remplace celle de la v0.1.69 (16 pad10() avant densityOk). Le lot de 60
     // step_skipped passe toujours.
     match /brews/{brewId} {
@@ -567,7 +567,7 @@ service cloud.firestore {
       }
 
       // Budget des événements (isEventShape, estimatedOk, estimationRetireeOk,
-      // densityOk), mesuré en v0.1.70 après la fusion avec la v0.1.69, même
+      // densityOk), mesuré en v0.1.72 après la fusion avec la v0.1.69, même
       // émulateur, pad10() ajoutés à la création et à la correction d'un
       // événement : création d'une lecture de réfractomètre en
       // fermentation avec une note de 2 000 caractères, 15 pad10() passent, 16 sont

@@ -56,6 +56,7 @@ class EntreeBrute {
     required this.sourceId,
     required this.licence,
     this.origineInconnue,
+    this.releveFabricant,
   });
 
   /// Nature de l'entrée.
@@ -90,9 +91,13 @@ class EntreeBrute {
   /// Référence d'une culture chez son producteur, ou `null`.
   String? get produit => valeurs['product_id'] as String?;
 
+  /// Date du relevé de la fiche d'un fabricant ([Source.fabricants]), ou
+  /// `null` pour une autre source.
+  final String? releveFabricant;
+
   /// Ligne de `provenance[]`.
   Map<String, Object> get provenanceLigne =>
-      provenance(source, sourceId, licence);
+      provenance(source, sourceId, licence, releveFabricant: releveFabricant);
 }
 
 /// Entrée refusée d'une source : sans nom, ou sans valeur obligatoire.
@@ -135,6 +140,13 @@ class StyleLu {
 
 /// Ce que la lecture des sources de Brewtarget a produit.
 class LectureReferentiels {
+  /// Crée la lecture. [datesReleveFabricants] : date du relevé des fiches de
+  /// chaque producteur, par clé de producteur (`kDatesReleveFabricants`).
+  LectureReferentiels({this.datesReleveFabricants = kDatesReleveFabricants});
+
+  /// Date du relevé des fiches de chaque producteur.
+  final Map<String, String> datesReleveFabricants;
+
   /// Entrées lues, dans l'ordre : 001, 002, 003, 004, 005, fiches des
   /// fabricants.
   final List<EntreeBrute> entrees = [];
@@ -178,6 +190,26 @@ class LectureReferentiels {
       rejets.add(EntreeRejetee(source.id, nature.prefixe, nom, 'nom absent'));
       return;
     }
+    // Une fiche de fabricant porte la date du relevé de son producteur ;
+    // sans date connue, l'entrée est refusée, sans date de remplacement.
+    String? releve;
+    if (source == Source.fabricants) {
+      final producteur = valeurs['producer'];
+      releve = producteur is String
+          ? datesReleveFabricants[cleProducteur(producteur)]
+          : null;
+      if (releve == null) {
+        rejets.add(
+          EntreeRejetee(
+            source.id,
+            nature.prefixe,
+            nom,
+            'date du relevé inconnue',
+          ),
+        );
+        return;
+      }
+    }
     // Origine ramenée à la liste des pays : une graphie inconnue est retirée
     // et gardée pour le rapport (ADR-014).
     final lue = valeurs['origin'] as String?;
@@ -195,6 +227,7 @@ class LectureReferentiels {
         sourceId: sourceId ?? nom,
         licence: licence,
         origineInconnue: lue != null && pays == null ? lue : null,
+        releveFabricant: releve,
       ),
     );
   }

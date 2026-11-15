@@ -16,18 +16,83 @@ void main() {
       );
   });
 
-  test('25 cultures Fermentis, aucun rejet', () {
-    expect(lecture.entrees, hasLength(25));
+  test('96 cultures (25 Fermentis, 16 Mangrove Jack\'s, 55 Imperial), '
+      'aucun rejet', () {
+    expect(lecture.entrees, hasLength(96));
+    final parProducteur = <String, int>{};
+    for (final e in lecture.entrees) {
+      parProducteur[e.producteur!] = (parProducteur[e.producteur!] ?? 0) + 1;
+    }
+    expect(parProducteur, {
+      'Fermentis': 25,
+      "Mangrove Jack's": 16,
+      'Imperial Yeast': 55,
+    });
     expect(lecture.rejets, isEmpty);
     expect(lecture.listesIgnorees, isEmpty);
     expect(lecture.entrees.map((e) => e.source).toSet(), {Source.fabricants});
     expect(lecture.entrees.map((e) => e.nature).toSet(), {
       NatureReferentiel.culture,
     });
-    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(25));
+    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(96));
   });
 
-  test('atténuations de 98 à 102 % écartées, et elles seules', () {
+  test('chaque fiche porte la date du relevé de son producteur', () {
+    for (final e in lecture.entrees) {
+      expect(e.releveFabricant, switch (e.producteur) {
+        'Fermentis' => '2026-11-14',
+        _ => '2026-11-15',
+      }, reason: e.nom);
+    }
+  });
+
+  test(
+    'Imperial : liquide, °F convertis, floculation et atténuation partout',
+    () {
+      final imp = lecture.entrees.where(
+        (e) => e.producteur == 'Imperial Yeast',
+      );
+      expect(imp.every((e) => e.valeurs['form'] == 'liquid'), isTrue);
+      expect(
+        imp.every(
+          (e) =>
+              e.valeurs.containsKey('flocculation') &&
+              e.valeurs.containsKey('attenuation') &&
+              e.valeurs.containsKey('temperature_range'),
+        ),
+        isTrue,
+      );
+      final house = imp.singleWhere((e) => e.produit == 'A01');
+      // 62-70 °F de la fiche.
+      expect(house.valeurs['temperature_range'], {
+        'minimum': {'value': 16.7, 'unit': 'C'},
+        'maximum': {'value': 21.1, 'unit': 'C'},
+      });
+      expect(house.valeurs['flocculation'], 'high');
+      expect(
+        imp.singleWhere((e) => e.produit == 'A07').valeurs['flocculation'],
+        'medium low',
+      );
+    },
+  );
+
+  test(
+    'Mangrove Jack\'s : floculation sur chaque fiche, M76 sans atténuation',
+    () {
+      final mj = lecture.entrees.where(
+        (e) => e.producteur == "Mangrove Jack's",
+      );
+      expect(mj.every((e) => e.valeurs.containsKey('flocculation')), isTrue);
+      expect(
+        mj
+            .where((e) => !e.valeurs.containsKey('attenuation'))
+            .map((e) => e.nom),
+        ['M76 Bavarian Lager'],
+      );
+    },
+  );
+
+  test('atténuations de 98 à 102 % de Fermentis écartées, et elles seules', () {
     final ecartees = lecture.journal.ecartees;
     expect(ecartees.every((e) => e.source == 'fabricants'), isTrue);
     expect(

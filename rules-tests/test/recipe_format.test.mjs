@@ -579,7 +579,7 @@ describe("recipes et brews — budget des règles", () => {
     );
   });
 
-  // v0.1.70 : densité avec instrument (densityOk), mesures de la plus grande forme.
+  // v0.1.72 : densité avec instrument (densityOk), mesures de la plus grande forme.
   const REFRACTO = {
     measure_type: "gravity",
     gravity_instrument: "refractometer",
@@ -626,7 +626,7 @@ describe("recipes et brews — budget des règles", () => {
     );
   });
 
-  // Marge la plus faible mesurée en v0.1.70 (14 pad10()) : estimationRetireeOk et
+  // Marge la plus faible mesurée en v0.1.72 (14 pad10()) : estimationRetireeOk et
   // densityOk dans la même correction.
   it("correction : flottant à heure estimée devenu réfractomètre, heure changée, note de 2 000 caractères : autorisé", async () => {
     await seed22({ adjustments: adjustments11 });
