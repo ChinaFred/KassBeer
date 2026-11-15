@@ -539,7 +539,7 @@ service cloud.firestore {
     // 185 pad(). Un lot de 60 step_skipped, plus le début d'étape suivant, passe
     // (rules-tests/test/processes.test.mjs).
     //
-    // Mesure de la v0.1.67 (même émulateur, pad10()) : création d'un événement avec
+    // Mesure de la v0.1.68 (même émulateur, pad10()) : création d'un événement avec
     // estimatedOk, dans le lot de 10 événements à notes de 2 000 caractères du plus grand
     // brassin importé, avec time_estimated et date_estimated (import_fiches.test.mjs,
     // « budget des règles ») : 16 pad10() passent, 17 sont refusés. Le lot de 60
@@ -580,7 +580,7 @@ service cloud.firestore {
           && (isStepEvent(d) || isMeasurement(d) || isNote(d));
       }
 
-      // Heure estimée à l'import d'une fiche (v0.1.67) : time_estimated vaut true,
+      // Heure estimée à l'import d'une fiche (v0.1.68) : time_estimated vaut true,
       // sur un début d'étape, une mesure ou une note ; absent, l'heure est notée.
       // date_estimated (relevé daté du jour du brassage + 28 jours) vaut true, sur une
       // mesure ou une note, et seulement avec time_estimated. Aucun champ ajouté au

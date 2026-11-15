@@ -1,6 +1,27 @@
 {
   "versions": [
     {
+      "version": "0.1.67",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ». Après l'appui, un message « Étape « Ébullition » commencée. » s'affiche dix secondes avec « Annuler » : un appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son action, comme celui qui annule un début ou une fin d'étape."
+      ]
+    },
+    {
+      "version": "0.1.66",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ». Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… »."
+      ]
+    },
+    {
+      "version": "0.1.65",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion. Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à la coller. Google ne permet pas d'ajouter cette adresse automatiquement."
+      ]
+    },
+    {
       "version": "0.1.62",
       "date": "2026-11-15",
       "paragraphs": [
@@ -19,28 +40,6 @@
       "date": "2026-11-15",
       "paragraphs": [
         "La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et devant la couleur calculée d'une recette. La page des teintes s'appelle désormais « Échelle des couleurs », comme le lien qui l'ouvre. En thème sombre, les teintes foncées ont une bordure plus visible. Demandé par le ticket #48."
-      ]
-    },
-    {
-      "version": "0.1.59",
-      "date": "2026-11-15",
-      "paragraphs": [
-        "Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière mise à jour de la Bibliothèque depuis les sources externes : sa date, sa cible, le nombre de documents écrits, inchangés et refusés pour chaque collection, les sources lues avec leur version et le nombre de noms non reconnus par nature. Un lien ouvre « Sources des données ». Le bouton « Actualiser », ou un geste qui tire la page vers le bas, relit l'écran sans effacer ce qui est affiché. Si cette lecture échoue, un message le dit au-dessus du compte rendu ou de la liste, qui restent visibles.",
-        "En dessous, « Tous les noms non reconnus » liste les noms qu'aucune source n'a rattachés à un ingrédient de la Bibliothèque, du plus fréquent au moins fréquent, par pages de 50, avec le nombre de noms affichés, « Charger la suite » et la fin de la liste signalée. Chaque ligne donne la nature, le nom, l'origine (recettes DIY Dog ou import d'un membre), le nombre de fois et la date. Cette liste dit à l'administrateur quels noms ajouter à la table d'alias : un nom rattaché reçoit les valeurs de l'ingrédient, et plus de recettes se calculent. L'écran ne fait que lire : la mise à jour se lance toujours depuis le poste de l'administrateur."
-      ]
-    },
-    {
-      "version": "0.1.58",
-      "date": "2026-11-15",
-      "paragraphs": [
-        "Dans l'éditeur de recette, le champ « Style » montre les styles de la Bibliothèque dès qu'on le touche, sans rien taper. Une icône de liste au bout du champ ouvre « Choisir un style » : une recherche par code, nom ou catégorie, et tous les styles rangés par catégorie. Un appui écrit le style dans le champ. La saisie libre reste permise. Sous le champ, une aide dit si le style vient de la Bibliothèque ou si l'export BeerXML le refusera. Demandé par le ticket #49."
-      ]
-    },
-    {
-      "version": "0.1.57",
-      "date": "2026-11-15",
-      "paragraphs": [
-        "La fiche d'un houblon de la Bibliothèque montre ses arômes : des descripteurs (agrumes, floral, résineux…) et un court texte pour chaque moment d'ajout, du premier moût au houblonnage à cru. Ces textes sont rédigés par une IA pour Kass'Beer. La fiche dit s'ils ont été relus par l'administrateur, et signale une confiance faible. Les houblons de vos recettes sont relus en premier. Un houblon trop peu documenté l'indique au lieu d'inventer. L'écran « Sources des données » explique d'où viennent ces textes."
       ]
     }
   ]

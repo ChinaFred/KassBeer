@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.67 — fonctionnel
+### v0.1.68 — fonctionnel
 
 Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
 sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
@@ -20,7 +20,7 @@ heure portent « heure non notée », la densité finale datée de 28 jours apr�
 remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
 import.
 
-### v0.1.67 — technique
+### v0.1.68 — technique
 
 `brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
 noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
@@ -46,6 +46,29 @@ l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
 `SuppressionBrassin`, état `remplacementATerminer` (marque `Fiche Excel · {id} ·
 remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
 rubrique « Heures estimées ». Aucune dépendance ne change.
+
+### v0.1.67 — fonctionnel
+
+Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
+commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
+l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le
+bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ». Après l'appui,
+un message « Étape « Ébullition » commencée. » s'affiche dix secondes avec « Annuler » : un
+appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son
+action, comme celui qui annule un début ou une fin d'étape.
+
+### v0.1.67 — technique
+
+`brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
+de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
+(P2), et prépare l'alerte du minuteur. `_BarreActions` l'affiche quand la suivante a une
+durée ; sinon « Terminer l'étape » reste. Le libellé lu par TalkBack nomme les deux étapes.
+Une `SnackBar` (10 s, `persist` vrai sous TalkBack par `MediaQuery.accessibleNavigationOf`,
+comme celle de `_annuler`) propose « Annuler » : `_annulerEnchainement` relit le
+plan et supprime `startEventId` de l'étape commencée et `endEventId` de la précédente par
+`deleteEvents`, un `WriteBatch` sans transaction ; rien n'est supprimé si l'étape commencée
+est déjà terminée ou sautée. Tests de `brew_day_screen_test.dart` adaptés, quatre cas ajoutés
+(dernière étape, suivante de 0 min, « Annuler », « Annuler » après la fin).
 
 ### v0.1.66 — fonctionnel
 
