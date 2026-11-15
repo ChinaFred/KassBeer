@@ -6,6 +6,24 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.76 — fonctionnel
+
+Les variantes « + » des levures Omega s'écrivent maintenant « Plus » : « Kolsch II Plus »,
+« Bayern Lager Plus », « Point Loma Plus »… Elles ne se confondent plus avec la levure
+d'origine. Une recette importée qui nomme « Kolsch II » retrouve à nouveau sa levure. Le
+changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.76 — technique
+
+`exchange/donnees/fabricants/cultures.json` : les douze noms Omega en « + » s'écrivent « Plus »
+(décision de l'utilisateur du 2026-11-15). Préparation rejouée : 903 documents, cinq noms
+normalisés (`kolsch-ii`, `german-lager-i`, `bayern-lager`, `point-loma`, `extra-special`) ne
+désignent plus deux documents. Les identifiants de ces douze documents suivent le nom
+(`culture-omega-yeast-oyl435-kolsch-ii` devient `…-kolsch-ii-plus`) ; `ingest/ecrire.mjs` ne
+supprime rien dans `beer_cultures` : une ingestion faite depuis la v0.1.73 laisse les douze
+anciens documents en ligne. `fabricants_donnees_test.dart` vérifie qu'aucun nom Omega ne
+contient « + » et que leurs noms normalisés sont distincts. `DATA_SOURCES.md` à jour.
+
 ### v0.1.73 — fonctionnel
 
 La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures
