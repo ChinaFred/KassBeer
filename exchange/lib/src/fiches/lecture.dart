@@ -10,7 +10,7 @@ import '../texte.dart';
 import 'modele.dart';
 
 /// Lecture du format `kassbeer_fiches` v2 (v0.6, FO1 à FO7 ; heures estimées
-/// depuis la v0.1.63) : un fichier JSON
+/// depuis la v0.1.64) : un fichier JSON
 /// dont la racine porte `beerjson` (les recettes, lues par [analyserFichier]
 /// comme dans Recettes › Importer) et `kassbeer_fiches` (chronologies,
 /// mesures, relevés, embouteillage, prix et écarts des fiches Excel).

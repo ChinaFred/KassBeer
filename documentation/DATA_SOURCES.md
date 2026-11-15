@@ -9,8 +9,9 @@ Public Domain » (relevé du 2026-11-11), mais le téléchargement demande un co
 poste ; l'ingestion de `style_stats` est reportée (ADR-005, amendements de L3, D1).
 
 Aucun fichier de ces sources n'entre dans le dépôt public, un asset ou l'APK, sauf la table des
-teintes de `srm2hex` (MIT), reprise dans `brewing/` avec sa licence. Les données vivent
-dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
+teintes de `srm2hex` (MIT), reprise dans `brewing/` avec sa licence, et le fichier des fiches
+des fabricants, écrit à la main dans `exchange/donnees/fabricants/cultures.json` (décision de
+l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 
 ## Sources, versions et licences
 
@@ -25,7 +26,7 @@ dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 | dépôt GitHub `diydog-beerxml` | `d469275` | aucune | tests locaux, hors CI | Firestore, dépôt |
 | Kaggle « Brewer's Friend Beer Recipes » | non téléchargé | « CC0: Public Domain » déclarée sur la page (relevé du 2026-11-11) ; ingestion reportée (ADR-005, D1) | statistiques par style | lignes brutes, CSV |
 | BeerJSON | `4370892d44` | MIT | schémas pour ajv en CI et à l'ingestion | — |
-| Fiches techniques Fermentis (`fermentis.com/en/product/…`), recopiées à la main dans `import/sources/fabricants/cultures.json` (BeerJSON 2.01) | relevé du 2026-11-14 ; fichier écrit à la main, hors dépôt : la date du relevé tient lieu de version, aucun SHA | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-14 | 25 cultures (23 levures, 2 bactéries) : nom, type, forme, producteur, référence, atténuation apparente, plage de température | floculation (la fiche donne un temps de sédimentation), tolérance à l'alcool, dosage, descriptions |
+| Fiches techniques Fermentis (`fermentis.com/en/product/…`), recopiées à la main dans `exchange/donnees/fabricants/cultures.json` (BeerJSON 2.01, versionné) | relevé du 2026-11-14 ; fichier écrit à la main, SHA-256 `1eb1f9ae2e05e36fc4bd2bd9b279582cde3f8907912d897ca436615fcff4dbdf` au versement | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-14 | 25 cultures (23 levures, 2 bactéries) : nom, type, forme, producteur, référence, atténuation apparente, plage de température | floculation (la fiche donne un temps de sédimentation), tolérance à l'alcool, dosage, descriptions |
 | paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
 | Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
 
@@ -244,8 +245,12 @@ manque. Aucune étape de fermentation n'est écrite : Kass'Beer n'en stocke pas.
 
 ## Fiches des fabricants → `beer_cultures`
 
-Fichier écrit à la main, `import/sources/fabricants/cultures.json`, au format BeerJSON 2.01
-(liste `cultures`, mêmes champs que 003 et 004) ; en-tête en `//` avec l'adresse des fiches.
+Fichier écrit à la main, versionné dans `exchange/donnees/fabricants/cultures.json` depuis le
+2026-11-15 (lu par défaut par `bin/preparer_referentiels.dart`, option `--fabricants`), au format
+BeerJSON 2.01 (liste `cultures`, mêmes champs que 003 et 004) ; en-tête en `//` avec l'adresse des
+fiches. Il ne contient que noms et valeurs techniques, aucun texte des fiches.
+`exchange/test/fabricants_donnees_test.dart` le lit : 25 entrées, aucun rejet, quatre atténuations
+écartées.
 Lu par `lireFabricants` d'`exchange/` ; toute autre liste est ignorée et comptée. Fermentis
 seul au relevé du 2026-11-14.
 

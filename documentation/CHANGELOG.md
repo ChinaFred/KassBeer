@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.63 — fonctionnel
+### v0.1.64 — fonctionnel
 
 Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
 sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
@@ -20,7 +20,7 @@ heure portent « heure non notée », la densité finale datée de 28 jours apr�
 remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
 import.
 
-### v0.1.63 — technique
+### v0.1.64 — technique
 
 `brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
 noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
@@ -46,6 +46,19 @@ l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
 `SuppressionBrassin`, état `remplacementATerminer` (marque `Fiche Excel · {id} ·
 remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
 rubrique « Heures estimées ». Aucune dépendance ne change.
+
+### v0.1.63 — technique
+
+Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
+l'utilisateur) : le fichier BeerJSON 2.01 des 25 cultures Fermentis, relevé le 2026-11-14 et
+écrit à la main, entre dans le dépôt sous `exchange/donnees/fabricants/cultures.json`.
+`bin/preparer_referentiels.dart` le lit par défaut (option `--fabricants` pour un autre
+chemin) : l'administrateur n'a plus à le copier dans `import/sources/`. Le fichier ne contient
+que noms et valeurs techniques ; il n'est ni un asset ni servi par Hosting.
+`exchange/test/fabricants_donnees_test.dart` le lit : 25 entrées, aucun rejet, les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 écartées. `DATA_SOURCES.md` (exception à « aucun
+fichier de ces sources dans le dépôt », SHA-256 du fichier), ADR-005, `exigences-techniques.md`,
+« Structure » de `CLAUDE.md` et `guide-reseau.md` mis à jour.
 
 ### v0.1.62 — fonctionnel
 
