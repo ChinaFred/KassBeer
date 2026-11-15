@@ -107,6 +107,17 @@ void main() {
     },
   );
 
+  test('Omega : variantes « Plus », noms normalisés distincts', () {
+    final noms = [
+      for (final e in lecture.entrees)
+        if (e.producteur == 'Omega Yeast') e.nom,
+    ];
+    expect(noms.where((n) => n.contains('+')), isEmpty);
+    expect(noms, contains('Kolsch II Plus'));
+    final cles = noms.map(cleNormalisee).toList();
+    expect(cles.toSet(), hasLength(cles.length));
+  });
+
   test('Omega : types tirés de la fiche, champs absents attendus', () {
     final om = {
       for (final e in lecture.entrees.where(
