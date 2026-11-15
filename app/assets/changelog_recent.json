@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.60",
+      "date": "2026-11-15",
+      "paragraphs": [
+        "La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et devant la couleur calculée d'une recette. La page des teintes s'appelle désormais « Échelle des couleurs », comme le lien qui l'ouvre. En thème sombre, les teintes foncées ont une bordure plus visible. Demandé par le ticket #48."
+      ]
+    },
+    {
       "version": "0.1.59",
       "date": "2026-11-15",
       "paragraphs": [
@@ -36,13 +43,6 @@
         "« Mes processus » propose toujours deux modèles à copier, même hors ligne : le modèle d'exemple et le plan de brassage des fiches Excel, avec ses étapes et ses températures. Un appui ouvre un nouveau processus prérempli ; rien n'est enregistré avant « Enregistrer ».",
         "Une courbe des températures accompagne le jour de brassage. Elle montre la température visée de chaque étape selon le plan de départ et selon les heures réelles, les températures et les densités mesurées, et la densité initiale prévue. Sur le téléphone, une bascule « Étapes » | « Courbe » l'affiche à la place de la chronologie ; sur grand écran, elle se place sous le minuteur. Sur la fiche du brassin, elle paraît en tête de la journée de brassage dès la première étape commencée. En paysage, sur un téléphone, la bascule garde le minuteur visible.",
         "La courbe de fermentation commence à la densité initiale du jour de brassage : un seul relevé suffit pour la voir. Elle montre aussi les densités initiale et finale prévues, et la plage de température de la levure quand la Bibliothèque connaît cette levure. Si la levure est absente de la Bibliothèque, ou sans plage, une ligne le dit."
-      ]
-    },
-    {
-      "version": "0.1.54",
-      "date": "2026-11-14",
-      "paragraphs": [
-        "Après un import de recettes, un appui sur le nom d'une recette créée ouvre de nouveau sa fiche. Le retour ramène au compte rendu de l'import. Après « Modifier » ou « Modifier la chronologie », « Enregistrer » revient à cette fiche ; « Supprimer » revient au compte rendu. On peut ainsi compléter les recettes importées l'une après l'autre. Demandé par le ticket #60."
       ]
     }
   ]

@@ -6,6 +6,25 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.60 — fonctionnel
+
+La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et
+devant la couleur calculée d'une recette. La page des teintes s'appelle désormais « Échelle
+des couleurs », comme le lien qui l'ouvre. En thème sombre, les teintes foncées ont une
+bordure plus visible. Demandé par le ticket #48.
+
+### v0.1.60 — technique
+
+Suites du ticket #48. `couleur_ebc.dart` : `CarreTeinte` (carré bordé d'une teinte),
+`PastilleEbc` (teinte d'une valeur EBC par `teinteEbc` de `brewing/`, masquée et rapportée
+une fois `library.color_swatch` si la valeur est refusée), `bordureTeinte` (`outline` au lieu
+de `outlineVariant` sur la barre, les pastilles de l'échelle et les nouvelles pastilles).
+`LigneFiche.avant` place un widget décoratif, exclu de la lecture d'écran, devant la valeur :
+pastille de 20 px devant la couleur d'un malt. `_Indicateur.teinte` : pastille de 24 px dans
+la tuile « Couleur » des calculs d'une recette. Titre de la page, nom de l'écran dans les
+tickets et « Sources des données » : « Échelle des couleurs ». Aucune formule ni table dans
+`app/lib/` (P3), aucune dépendance ajoutée.
+
 ### v0.1.59 — fonctionnel
 
 Admin a une nouvelle entrée « Sources », réservée à l'administrateur. Elle montre la dernière
