@@ -954,6 +954,17 @@ couleurs » (`TextesCouleurEbc.echelle`).
 (P2). Sans réseau, ce qui est en cache se lit ; un document absent du cache est rendu
 `DocumentAbsentDuCache` et affiché « indisponible hors ligne », jamais « absent ».
 
+#### Admin › Membres — lien vers la console
+
+Le formulaire « Inviter un membre »
+(`invite_member_form.dart`) ouvre la page des utilisateurs test de Google Auth Platform par
+`ouvrirLienProvider`. L'adresse est construite par `consoleUtilisateursTest`
+(`members_providers.dart`) à partir de `firebaseProjectIdProvider` (`FIREBASE_PROJECT_ID`, lu
+à la compilation) ; un identifiant hors du motif `^[a-z][a-z0-9-]{4,28}[a-z0-9]$` rend `null`
+et le bloc ne s'affiche pas. L'adresse saisie, si elle est valide, est copiée avant
+l'ouverture. Échecs rapportés sous `members.copy_email` et `members.open_console`, sans
+l'adresse (P13).
+
 #### Tickets — client
 
 Feature `lib/features/tickets/` (ADR-006, lot T1). Dans l'écran du jour de brassage et ce
@@ -4957,6 +4968,12 @@ projet. Rien dans le dépôt ne les garde : les vérifier à chaque création de
   sert plus : le keystore de débogage a un mot de passe connu (`android`).
 - **Client OAuth Web** : son identifiant est `GOOGLE_SERVER_CLIENT_ID` ; ne pas le
   supprimer, `google_sign_in` en dépend sur Android.
+- **Écran de consentement OAuth** (Google Auth Platform) : en mode « Test ». Google refuse la
+  connexion d'un compte absent de la liste « Utilisateurs test » (Audience), en plus du
+  contrôle de `members/{email}` par les règles. Google ne fournit aucune API pour ajouter un
+  utilisateur test : chaque adresse invitée s'ajoute à la main sur
+  `console.cloud.google.com/auth/audience?project=<projet>`. Le formulaire « Inviter un
+  membre » ouvre cette page (voir « Admin › Membres — lien vers la console »).
 
 ### État de la production
 

@@ -6,13 +6,13 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.65 — fonctionnel
+### v0.1.66 — fonctionnel
 
 Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
 Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
 houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
 
-### v0.1.65 — technique
+### v0.1.66 — technique
 
 `_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
 jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
@@ -26,7 +26,23 @@ Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte �
 claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
 
 Ces deux changements avaient été numérotés v0.1.62 et v0.1.63 sur leur branche, numéros pris
-entre-temps par la branche principale, puis v0.1.64, pris aussi : ils sont renumérotés en v0.1.65.
+entre-temps par la branche principale, puis v0.1.64 et v0.1.65, pris aussi : ils sont renumérotés en v0.1.66.
+
+### v0.1.65 — fonctionnel
+
+Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux
+utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion.
+Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à
+la coller. Google ne permet pas d'ajouter cette adresse automatiquement.
+
+### v0.1.65 — technique
+
+`invite_member_form.dart` devient un `ConsumerStatefulWidget` et ouvre
+`console.cloud.google.com/auth/audience?project=<FIREBASE_PROJECT_ID>` par `ouvrirLienProvider`.
+L'identifiant vient de `firebaseProjectIdProvider` (`members_providers.dart`, lu à la
+compilation) et `consoleUtilisateursTest` le contrôle avant de construire l'adresse ; sans
+identifiant valide, le bloc ne s'affiche pas. Échecs rapportés sous `members.open_console` et
+`members.copy_email`, sans l'adresse. Aucune dépendance ajoutée.
 
 ### v0.1.64 — technique
 
