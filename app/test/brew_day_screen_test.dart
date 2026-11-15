@@ -93,6 +93,9 @@ void main() {
         now: hm(12, 10),
         events: [debut('e1', 'k-palier', hm(11, 45))],
       );
+      // L'écart de début ajoute une ligne : l'étape peut sortir de l'écran.
+      await tester.ensureVisible(find.text('Ébullition').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Ébullition').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Commencer cette étape'));

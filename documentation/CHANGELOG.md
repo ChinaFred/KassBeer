@@ -6,6 +6,47 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.63 — fonctionnel
+
+Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
+sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
+s'affiche « Non notée » à son heure prévue, au lieu de « Non faite ». Une heure estimée ne
+compte dans aucune durée réelle. Chaque étape d'un brassin, importé ou non, montre aussi
+son écart de début : « Début : 25 min de retard » ou « Début : 5 min d'avance », sur la fiche
+du brassin comme sur l'écran du jour. Une étape sans « Terminer » finit au début de l'étape
+suivante. La durée totale dit quand une étape n'a pas d'heure notée. Les relevés importés sans
+heure portent « heure non notée », la densité finale datée de 28 jours après le brassage
+« date estimée ». Dans Admin › Import, une fiche modifiée depuis son import peut être
+remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
+import.
+
+### v0.1.63 — technique
+
+`brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
+noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
+(début estimé, sans réel ni écart) ; `actualDurations(plannedStart:)` rend la fin retenue
+(`end` : fin enregistrée, sinon début noté de l'étape suivante), l'écart de début au plan
+d'origine (`startDeltaMinutes`), l'heure théorique (`theoreticalStart`), la nature
+`ActualStepKind.estimated` et les natures de journée `partial`, `startNotNoted`,
+`endNotNoted` (`stepsWithoutTime` remplace `stepsWithoutEnd`, `ActualDayKind.missingEnd`
+retiré). `fixtures/process.json` : 4 cas ajoutés, écarts de début, heures théoriques et fins
+sur les cas existants ; les cas « commencée sans fin » changent (fin au début noté suivant).
+`exchange/` : format `kassbeer_fiches` v2 (un fichier v1 est refusé) : `time_source`
+`fiche`, `estimee` (heure calculée par le lecteur avec `brewing/`), `midi`, `estimee_j28` ;
+`ligne_precedente` et `debut_brassage` retirés ; codes de refus `debutEnDouble`,
+`heuresHorsOrdre`, `heureEnTrop` ; `verifier_fiches.dart` compte heures notées et estimées.
+Firestore : `brews/{id}/events/{eventId}.time_estimated` et `date_estimated` (booléens
+vrais seulement ; retirés seulement avec `measured_at` changé, `estimatedOk` et
+`estimationRetireeOk`), tests des cinq profils dans `events.test.mjs` et
+`import_fiches.test.mjs` (remplacement compris), budget noté (16 `pad10()` sur un lot de
+10 événements). Application : `BrewEvent.timeEstimated`, `dateEstimated`, `natureHeure` ;
+`Brew.importedFrom` et `importeDUneFiche` ; `ChronologieJour` reçoit les durées et l'écart de
+début aussi sur l'écran du jour (calcul local, P2) ; une correction d'heure retire
+l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
+`SuppressionBrassin`, état `remplacementATerminer` (marque `Fiche Excel · {id} ·
+remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
+rubrique « Heures estimées ». Aucune dépendance ne change.
+
 ### v0.1.62 — fonctionnel
 
 La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le

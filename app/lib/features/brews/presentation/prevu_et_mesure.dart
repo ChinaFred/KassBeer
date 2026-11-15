@@ -53,6 +53,33 @@ sealed class ComparaisonEvaluee {
   const ComparaisonEvaluee();
 }
 
+/// Date d'une mesure retenue, affichée et lue, d'après [BrewEvent.natureHeure],
+/// jamais d'après l'heure : « 15 nov. 12:10 » ; heure estimée à l'import,
+/// « 15 nov. 12:10 (estimée) », lu « … vers 12 h 10, heure estimée » ; relevé
+/// sans heure, « 15 nov. (heure non notée) » ; relevé J+28, « 13 déc. (date
+/// estimée) ».
+({String affiche, String lu}) dateDeMesure(BrewEvent e) {
+  final at = e.measuredAt;
+  return switch (e.natureHeure) {
+    NatureHeure.notee => (
+      affiche: formatJourCourtHeure(at),
+      lu: jourHeureParle(at),
+    ),
+    NatureHeure.estimee => (
+      affiche: '${formatJourCourtHeure(at)} (estimée)',
+      lu: '${jourParle(at)} vers ${heureParlee(at)}, heure estimée',
+    ),
+    NatureHeure.nonNotee => (
+      affiche: '${formatJourCourt(at)} (heure non notée)',
+      lu: '${jourParle(at)}, heure non notée',
+    ),
+    NatureHeure.dateEstimee => (
+      affiche: '${formatJourCourt(at)} (date estimée)',
+      lu: '${jourParle(at)}, date estimée',
+    ),
+  };
+}
+
 class ComparaisonObtenue extends ComparaisonEvaluee {
   const ComparaisonObtenue(this.comparison);
 
@@ -204,11 +231,26 @@ class _Tableau extends ConsumerWidget {
     return 'Sans étape';
   }
 
-  String _origine(MesureRetenue retenue, {required bool masquerDerniere}) => [
-    _etape(retenue.event),
-    formatJourCourtHeure(retenue.event.measuredAt),
-    if (retenue.choisie) 'Choisie' else if (!masquerDerniere) 'Dernière mesure',
-  ].join(' · ');
+  /// Origine d'une valeur retenue, affichée et lue : « Empâtage · 15 nov.
+  /// 12:10 (estimée) · Dernière mesure », « Relevé J+28 · 13 déc. (date
+  /// estimée) · Dernière mesure ».
+  ({String affiche, String lu}) _origine(
+    MesureRetenue retenue, {
+    required bool masquerDerniere,
+  }) {
+    final e = retenue.event;
+    final quand = dateDeMesure(e);
+    final fin = [
+      if (retenue.choisie)
+        'Choisie'
+      else if (!masquerDerniere)
+        'Dernière mesure',
+    ];
+    return (
+      affiche: [_etape(e), quand.affiche, ...fin].join(' · '),
+      lu: [_etape(e), quand.lu, ...fin].join(', '),
+    );
+  }
 
   /// « Changer » : présent pour le propriétaire dès qu'une mesure peut être retenue.
   VoidCallback? _actionChanger(
@@ -247,7 +289,7 @@ class _Tableau extends ConsumerWidget {
         candidats: candidats,
         libelle: (e) => (
           valeur: libelleMesure(e.measureType!, e.value!),
-          origine: '${_etape(e)} · ${formatJourCourtHeure(e.measuredAt)}',
+          origine: '${_etape(e)} · ${dateDeMesure(e).affiche}',
         ),
       ),
     );
@@ -591,7 +633,9 @@ class _DonneesLigne {
   final String Function(double) format;
   final String Function(double) ecart;
   final MesureRetenue? retenue;
-  final String? origine;
+
+  /// Origine de la valeur retenue, affichée et lue.
+  final ({String affiche, String lu})? origine;
   final VoidCallback? onChanger;
   final String? changerSemantique;
   final String? suffixeValeur;
@@ -930,7 +974,12 @@ class _LigneComparaison extends StatelessWidget {
                     spacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (origine != null) Text(origine, style: muted),
+                      if (origine != null)
+                        Semantics(
+                          label: origine.lu,
+                          excludeSemantics: true,
+                          child: Text(origine.affiche, style: muted),
+                        ),
                       if (retenue != null && retenue.event.hasPendingWrites)
                         const Etiquette(label: 'En attente du réseau'),
                     ],

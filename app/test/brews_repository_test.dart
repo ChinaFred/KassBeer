@@ -343,6 +343,47 @@ void main() {
       expect(data['kind'], 'measurement');
     });
 
+    test('correction d\'une heure estimée : l\'estimation est retirée, '
+        'gardée sans heure changée', () async {
+      final doc = firestore.collection('brews/b1/events').doc('e2');
+      await doc.set({
+        'owner_uid': 'u',
+        'kind': 'measurement',
+        'measure_type': 'gravity',
+        'value': 1.023,
+        'measured_at': Timestamp.fromDate(at),
+        'created_at': Timestamp.fromDate(at),
+        'phase': 'fermentation',
+        'time_estimated': true,
+        'date_estimated': true,
+      });
+      final lu = BrewEvent.fromFirestore('e2', (await doc.get()).data()!);
+      expect(lu.natureHeure, NatureHeure.dateEstimee);
+      await repository.correct(
+        brewId: 'b1',
+        eventId: 'e2',
+        value: 1.022,
+        note: null,
+        measuredAt: at,
+      );
+      expect((await doc.get()).data()!['time_estimated'], isTrue);
+      await repository.correct(
+        brewId: 'b1',
+        eventId: 'e2',
+        value: 1.022,
+        note: null,
+        measuredAt: at.add(const Duration(days: 1)),
+        heureEstimeeCorrigee: true,
+      );
+      final data = (await doc.get()).data()!;
+      expect(data.containsKey('time_estimated'), isFalse);
+      expect(data.containsKey('date_estimated'), isFalse);
+      expect(
+        BrewEvent.fromFirestore('e2', data).natureHeure,
+        NatureHeure.notee,
+      );
+    });
+
     test('restaurer : même identifiant, même heure', () async {
       final event = debut('e9', 'k1', at);
       await repository.restoreEvent(brewId: 'b1', event: event);

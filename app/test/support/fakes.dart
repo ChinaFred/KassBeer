@@ -457,8 +457,15 @@ class FakeBrewsRepository implements BrewsRepository {
     required double? value,
     required String? note,
     required DateTime measuredAt,
+    bool heureEstimeeCorrigee = false,
   }) {
-    writes.add(BrewWrite('correct', brewId, {'id': eventId, 'at': measuredAt}));
+    writes.add(
+      BrewWrite('correct', brewId, {
+        'id': eventId,
+        'at': measuredAt,
+        if (heureEstimeeCorrigee) 'estimee_corrigee': true,
+      }),
+    );
     return serverAnswer();
   }
 

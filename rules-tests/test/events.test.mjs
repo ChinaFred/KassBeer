@@ -9,6 +9,7 @@ import {
   FIVE_PROFILES,
   seed,
   serverTimestamp,
+  Timestamp,
   uidOf,
 } from "./helpers.mjs";
 import { expectRule, state, useEnv } from "./setup.mjs";
@@ -365,6 +366,201 @@ describe("events — compte non invité, sur son propre uid", () => {
     await expectRule(
       false,
       db(state.env, "nonMember").doc(`${STRANGER_EVENTS}/ev-stranger`).delete(),
+    );
+  });
+});
+
+// Heures estimées à l'import d'une fiche (v0.1.63) : time_estimated et
+// date_estimated, booléens vrais seulement ; seul passage permis, vrai → absent,
+// avec measured_at changé.
+describe("events — heure estimée, cinq profils", () => {
+  const ESTIMEE = `${EVENTS}/ev-estimee`;
+  const seedEstimee = (extra = {}) =>
+    seed(state.env, {
+      [ESTIMEE]: event("brewer-a", {
+        time_estimated: true,
+        phase: "fermentation",
+        step_key: null,
+        measure_type: "gravity",
+        value: 1.023,
+        date_estimated: true,
+        ...extra,
+      }),
+    });
+  const create = {
+    anonymous: false,
+    nonMember: false,
+    owner: true,
+    otherBrewer: false,
+    admin: false,
+  };
+  for (const [name, allowed] of Object.entries(create)) {
+    it(`${name} crée une mesure à heure estimée sur le brassin de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await expectRule(
+        allowed,
+        db(state.env, name)
+          .doc(`${EVENTS}/ev-nouveau`)
+          .set(freshEvent(ownerFor(name), { time_estimated: true })),
+      );
+    });
+    it(`${name} corrige l'heure d'une mesure estimée de brewer-a et retire l'estimation : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedEstimee();
+      await expectRule(
+        allowed,
+        db(state.env, name)
+          .doc(ESTIMEE)
+          .update({
+            measured_at: Timestamp.fromDate(new Date("2024-08-10T10:00:00Z")),
+            time_estimated: deleteField(),
+            date_estimated: deleteField(),
+          }),
+      );
+    });
+  }
+  const read = { anonymous: false, nonMember: false, owner: true, otherBrewer: true, admin: true };
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit une mesure estimée de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedEstimee();
+      await expectRule(allowed, db(state.env, name).doc(ESTIMEE).get());
+    });
+  }
+});
+
+describe("events — heure estimée, forme et passages", () => {
+  const ESTIMEE = `${EVENTS}/ev-estimee`;
+  const owner = () => db(state.env, "owner");
+  const at = (iso) => Timestamp.fromDate(new Date(iso));
+  const seedEstimee = (extra = {}) =>
+    seed(state.env, { [ESTIMEE]: event("brewer-a", { time_estimated: true, ...extra }) });
+
+  const permis = [
+    [
+      "début d'étape estimé",
+      { kind: "step_started", measure_type: null, value: null, time_estimated: true },
+    ],
+    ["mesure estimée", { time_estimated: true }],
+    [
+      "note estimée",
+      {
+        kind: "note",
+        note: "Fermentation lente.",
+        measure_type: null,
+        value: null,
+        step_key: null,
+        phase: "fermentation",
+        time_estimated: true,
+      },
+    ],
+    [
+      "relevé J+28 : date et heure estimées",
+      {
+        step_key: null,
+        measure_type: "gravity",
+        value: 1.023,
+        phase: "fermentation",
+        time_estimated: true,
+        date_estimated: true,
+      },
+    ],
+  ];
+  for (const [label, extra] of permis) {
+    it(`${label} : autorisé`, async () => {
+      await expectRule(
+        true,
+        owner()
+          .doc(`${EVENTS}/ev-forme`)
+          .set(freshEvent(uidOf("owner"), extra)),
+      );
+    });
+  }
+
+  const refuses = [
+    ["time_estimated à false", { time_estimated: false }],
+    ["time_estimated en texte", { time_estimated: "oui" }],
+    [
+      "fin d'étape estimée",
+      { kind: "step_ended", measure_type: null, value: null, time_estimated: true },
+    ],
+    [
+      "saut d'étape estimé",
+      { kind: "step_skipped", measure_type: null, value: null, time_estimated: true },
+    ],
+    ["date_estimated sans time_estimated", { date_estimated: true }],
+    [
+      "date_estimated sur un début d'étape",
+      {
+        kind: "step_started",
+        measure_type: null,
+        value: null,
+        time_estimated: true,
+        date_estimated: true,
+      },
+    ],
+    ["date_estimated à false", { time_estimated: true, date_estimated: false }],
+  ];
+  for (const [label, extra] of refuses) {
+    it(`${label} : refusé`, async () => {
+      await expectRule(
+        false,
+        owner()
+          .doc(`${EVENTS}/ev-forme`)
+          .set(freshEvent(uidOf("owner"), extra)),
+      );
+    });
+  }
+
+  it("retirer time_estimated sans changer l'heure : refusé", async () => {
+    await seedEstimee();
+    await expectRule(false, owner().doc(ESTIMEE).update({ time_estimated: deleteField() }));
+  });
+
+  it("changer l'heure en gardant time_estimated : autorisé", async () => {
+    await seedEstimee();
+    await expectRule(
+      true,
+      owner()
+        .doc(ESTIMEE)
+        .update({ measured_at: at("2026-11-03T09:30:00Z") }),
+    );
+  });
+
+  it("corriger la valeur d'une mesure estimée : autorisé, estimation gardée", async () => {
+    await seedEstimee();
+    await expectRule(true, owner().doc(ESTIMEE).update({ value: 67 }));
+  });
+
+  it("ajouter time_estimated à une heure notée, même avec l'heure changée : refusé", async () => {
+    await expectRule(
+      false,
+      owner()
+        .doc(`${EVENTS}/ev-a`)
+        .update({ time_estimated: true, measured_at: at("2026-11-03T09:30:00Z") }),
+    );
+  });
+
+  it("retirer time_estimated en gardant date_estimated : refusé", async () => {
+    await seedEstimee({
+      step_key: null,
+      measure_type: "gravity",
+      value: 1.023,
+      phase: "fermentation",
+      date_estimated: true,
+    });
+    await expectRule(
+      false,
+      owner()
+        .doc(ESTIMEE)
+        .update({ time_estimated: deleteField(), measured_at: at("2026-11-03T09:30:00Z") }),
+    );
+  });
+
+  it("retirer l'estimation avec l'heure changée : autorisé", async () => {
+    await seedEstimee();
+    await expectRule(
+      true,
+      owner()
+        .doc(ESTIMEE)
+        .update({ time_estimated: deleteField(), measured_at: at("2026-11-03T09:30:00Z") }),
     );
   });
 });

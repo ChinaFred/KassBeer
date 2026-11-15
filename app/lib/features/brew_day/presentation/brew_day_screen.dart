@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:brewing/brewing.dart'
-    show StepEvent, StepEventKind, StepStatus, readTimer;
+    show ActualDayDuration, StepEvent, StepEventKind, StepStatus, readTimer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -937,6 +937,9 @@ class _EcranJourState extends ConsumerState<_EcranJour>
             value: null,
             note: null,
             measuredAt: at,
+            heureEstimeeCorrigee:
+                record.startEstimated &&
+                !at.isAtSameMomentAs(record.startedAt!),
           ),
       'Correction de « ${ligne.step.name} »',
     );
@@ -1010,6 +1013,9 @@ class _EcranJourState extends ConsumerState<_EcranJour>
                 },
                 stepKey: ligne.step.key,
                 measuredAt: at,
+                timeEstimated:
+                    kind == StepEventKind.started &&
+                    (ligne.record?.startEstimated ?? false),
               ),
             ),
             'Rétablissement de « ${ligne.step.name} »',
@@ -1131,10 +1137,23 @@ class _EcranJourState extends ConsumerState<_EcranJour>
       PlanObtenu(:final plan) => plan,
       PlanImpossible() => null,
     };
+    // Prévu, réel, écarts et heures théoriques des étapes, calculés par
+    // `brewing/` sur l'appareil (P2, P3).
+    final cible = journee ?? _brew.deroule.brassage;
+    final durees = plan == null || cible == null
+        ? null
+        : evaluerDurees(
+            brew: _brew,
+            journee: cible,
+            plan: plan,
+            errors: ref.read(errorReportServiceProvider),
+            reported: ref.read(planReportsProvider),
+          );
     return _Jour(
       brew: _brew,
       journee: journee,
       plan: plan,
+      durees: durees,
       densiteInitialePrevue: journee == null ? _densiteInitialePrevue() : null,
       verrouRefuse: wakelock.failed,
       now: now,
@@ -1172,6 +1191,7 @@ class _Jour extends StatelessWidget {
     required this.brew,
     required this.journee,
     required this.plan,
+    required this.durees,
     required this.verrouRefuse,
     required this.now,
     required this.events,
@@ -1203,6 +1223,9 @@ class _Jour extends StatelessWidget {
   /// Journée 2 ou suivante ; `null` pour le brassage.
   final JourneeDeroulee? journee;
   final PlanDuJour? plan;
+
+  /// Prévu et réel des étapes de la journée ([evaluerDurees]), ou nul.
+  final ActualDayDuration? durees;
   final ValueListenable<bool> verrouRefuse;
   final DateTime now;
   final List<BrewEvent> events;
@@ -1310,6 +1333,12 @@ class _Jour extends StatelessWidget {
             ? null
             : ChronologieJour(
                 plan: plan!,
+                durees: durees,
+                importe: brew.importeDUneFiche,
+                close: switch (suivie ?? brew.deroule.brassage) {
+                  final j? => journeeClose(brew: brew, journee: j, plan: plan),
+                  null => false,
+                },
                 onTapLigne: (l) => onTapLigne(l, plan!),
                 onTapSaisie: onTapSaisie,
                 onSupprimerDoublon: onSupprimerDoublon,

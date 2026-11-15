@@ -1,7 +1,10 @@
-// v0.6 — Admin › Import des fiches Excel : sans règle nouvelle, les écritures d'une
-// fiche importée (FirestoreImportFichesRepository, CR3) passent sous le compte de celui
-// qui importe, pour les cinq profils de P4, et le plus grand brassin importé tient dans
-// le budget de 1 000 expressions (P21). Fiche fictive (P15).
+// v0.6 — Admin › Import des fiches Excel : les écritures d'une fiche importée
+// (FirestoreImportFichesRepository, CR3) passent sous le compte de celui qui importe,
+// pour les cinq profils de P4, et le plus grand brassin importé tient dans le budget
+// de 1 000 expressions (P21). v0.1.63 : heures estimées (time_estimated,
+// date_estimated) et remplacement d'une fiche au contenu différent (marque, suppression
+// des événements, du brassin et du coût figé, puis nouvelle écriture). Fiche fictive
+// (P15).
 
 import { describe, it } from "node:test";
 import {
@@ -67,6 +70,8 @@ const ficheEvents = (owner, note = undefined) => [
       measure_type: i % 2 === 0 ? null : "temperature",
       value: i % 2 === 0 ? null : 66.5,
       ...(note === undefined ? {} : { note }),
+      // Une ligne sur quatre citée sans heure : heure estimée par le lecteur.
+      ...(i % 4 === 2 ? { time_estimated: true } : {}),
       measured_at: at(`2024-07-14T0${7 + Math.floor(i / 2)}:15:00Z`),
       created_at: serverTimestamp(),
     },
@@ -92,9 +97,11 @@ const ficheEvents = (owner, note = undefined) => [
       step_key: null,
       measure_type: "gravity",
       value: 1.023,
-      note: "Date estimée : jour du brassage + 28 jours.",
+      ...(note === undefined ? {} : { note }),
       measured_at: at("2024-08-11T10:00:00Z"),
       phase: "fermentation",
+      time_estimated: true,
+      date_estimated: true,
       created_at: serverTimestamp(),
     },
   ],
@@ -354,5 +361,89 @@ describe("import des fiches — création du brassin", () => {
         }),
     );
     await expectRule(false, fs.doc(RECIPE).set(data));
+  });
+});
+
+// Remplacement d'une fiche au contenu différent (v0.1.63), dans l'ordre de
+// planDeRemplacement : marque de remplacement, événements supprimés par lots,
+// brassin et coût figé dans un même lot (CB19), puis les écritures de CR3. Seul le
+// propriétaire du brassin importé remplace ; la recette est gardée.
+describe("import des fiches — remplacement d'un brassin importé, cinq profils", () => {
+  const importe = async () => importerFiche(db(state.env, "admin"), "admin");
+
+  async function remplacer(fs, name) {
+    const uid = name === "anonymous" ? "anon" : uidOf(name);
+    const brew = fs.doc(BREW);
+    await brew.update(
+      stamped(name, {
+        imported_from: "Fiche Excel · 2024-07-14-blonde-essai · remplacement",
+      }),
+    );
+    const suppression = fs.batch();
+    for (const [id] of ficheEvents("admin")) {
+      suppression.delete(fs.doc(`${BREW}/events/${id}`));
+    }
+    await suppression.commit();
+    const lot = fs.batch();
+    lot.delete(brew);
+    lot.delete(fs.doc(`users/${uid}/brew_costs/fiche-2024-07-14-blonde-essai`));
+    await lot.commit();
+    await fs.doc(BREW).set(ficheBrew(uid, nameOf(name)));
+    await brew.update(stamped(name, { brewed_at: at("2024-07-14T07:15:00Z") }));
+    const ecriture = fs.batch();
+    for (const [id, data] of ficheEvents(uid)) {
+      ecriture.set(fs.doc(`${BREW}/events/${id}`), data);
+    }
+    await ecriture.commit();
+    await fs.doc(`users/${uid}/brew_costs/fiche-2024-07-14-blonde-essai`).set(ficheCost());
+    await brew.update(stamped(name, { imported_from: MARQUE }));
+  }
+
+  for (const name of FIVE_PROFILES) {
+    const allowed = name === "admin";
+    it(`${name} remplace le brassin importé de l'admin : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await importe();
+      await expectRule(allowed, remplacer(db(state.env, name), name));
+    });
+
+    it(`${name} supprime un lot d'événements du brassin importé : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await importe();
+      const fs = db(state.env, name);
+      const batch = fs.batch();
+      for (const [id] of ficheEvents("admin").slice(0, 10)) {
+        batch.delete(fs.doc(`${BREW}/events/${id}`));
+      }
+      await expectRule(allowed, batch.commit());
+    });
+  }
+
+  it("remplacement repris après une coupure : marque déjà posée, suite autorisée", async () => {
+    await importe();
+    const fs = db(state.env, "admin");
+    await fs.doc(BREW).update(
+      stamped("admin", {
+        imported_from: "Fiche Excel · 2024-07-14-blonde-essai · remplacement",
+      }),
+    );
+    // Coupure après le premier lot : deux événements restent.
+    const premier = fs.batch();
+    for (const [id] of ficheEvents("admin").slice(0, 8)) {
+      premier.delete(fs.doc(`${BREW}/events/${id}`));
+    }
+    await premier.commit();
+    await expectRule(
+      true,
+      (async () => {
+        const reste = fs.batch();
+        for (const [id] of ficheEvents("admin").slice(8)) {
+          reste.delete(fs.doc(`${BREW}/events/${id}`));
+        }
+        await reste.commit();
+        const lot = fs.batch();
+        lot.delete(fs.doc(BREW));
+        lot.delete(fs.doc("users/admin/brew_costs/fiche-2024-07-14-blonde-essai"));
+        await lot.commit();
+      })(),
+    );
   });
 });

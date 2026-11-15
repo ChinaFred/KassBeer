@@ -53,6 +53,18 @@ abstract class ImportFichesRepository {
 
   /// Écrit un lot d'événements dans un `WriteBatch`.
   Future<void> ecrireEvenements(LotEvenements lot);
+
+  /// Supprime un lot d'événements d'un brassin remplacé dans un `WriteBatch`.
+  Future<void> supprimerEvenements(LotSuppression lot);
+
+  /// Relit sur le serveur les événements restants du brassin remplacé, les
+  /// supprime par lots de [kEvenementsParLot], puis supprime le brassin et le
+  /// coût figé `users/{uid}/brew_costs/{brewId}` dans un même lot (CB19).
+  /// Rend le nombre d'événements supprimés ici.
+  Future<int> supprimerBrassin(
+    SuppressionBrassin suppression, {
+    required String uid,
+  });
 }
 
 /// [ImportFichesRepository] sur Cloud Firestore.
@@ -214,5 +226,40 @@ class FirestoreImportFichesRepository implements ImportFichesRepository {
       batch.set(events.doc(e.id), e.toFirestore());
     }
     return batch.commit();
+  }
+
+  @override
+  Future<void> supprimerEvenements(LotSuppression lot) {
+    final events = _firestore
+        .collection('brews')
+        .doc(lot.brewId)
+        .collection('events');
+    final batch = _firestore.batch();
+    for (final id in lot.ids) {
+      batch.delete(events.doc(id));
+    }
+    return batch.commit();
+  }
+
+  @override
+  Future<int> supprimerBrassin(
+    SuppressionBrassin suppression, {
+    required String uid,
+  }) async {
+    final brew = _firestore.collection('brews').doc(suppression.brewId);
+    final restants = await brew.collection('events').get(_serveur);
+    final docs = restants.docs;
+    for (var i = 0; i < docs.length; i += kEvenementsParLot) {
+      final batch = _firestore.batch();
+      for (final d in docs.skip(i).take(kEvenementsParLot)) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+    }
+    final batch = _firestore.batch()
+      ..delete(brew)
+      ..delete(brewCostRef(_firestore, uid: uid, brewId: suppression.brewId));
+    await batch.commit();
+    return docs.length;
   }
 }
