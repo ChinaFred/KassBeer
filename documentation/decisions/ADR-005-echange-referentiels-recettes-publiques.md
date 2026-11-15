@@ -619,6 +619,14 @@ techniques (aucun texte des fiches), et le fabricant publie ces données en acc�
 fichiers de Brewtarget, DIY Dog, `diydog-beerxml` et Kaggle restent hors du dépôt (P20). Le
 fichier n'est ni un asset Flutter ni servi par Hosting (P12).
 
+## Note du 2026-11-15 : valeurs proposées par l'assistant
+
+ADR-015 crée une exception à la règle « aucune valeur inventée », limitée au lot A2 de
+l'assistant de recette et à quatre champs : `alpha_acid`, `color`, `yield`, `attenuation`. La
+Bibliothèque reste la source principale. Quand elle n'a pas la valeur, celle du modèle est
+acceptée et marquée dans le champ d'enveloppe `ai_proposed`, hors de `recipe`. Toute autre
+absence reste absente.
+
 ## Évolutions du réseau acceptées
 
 Acceptées par l'utilisateur le 2026-11-08. À appliquer par le skill `evolution-reseau`, après la

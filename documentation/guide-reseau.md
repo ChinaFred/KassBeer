@@ -289,6 +289,15 @@ questions une par une » : quand plusieurs décisions lui reviennent, la session
 question par message, avec son contexte, ses options et sa recommandation, et attend la
 réponse avant la suivante.
 
+Le 2026-11-15, avec l'acceptation d'ADR-015 (assistant de recette) et d'ADR-016 (socle IA),
+`CLAUDE.md` ajoute P57 (socle IA, `securite`), P58 (règles et réglages de l'IA, `securite`),
+P59 (requête de l'assistant, `securite`), P60 (client IA, `relecteur-regles`) et P61
+(propositions du lot A2, `relecteur-regles`). P14, P25, P35 et P54 sont modifiés pour la clé
+`ANTHROPIC_API_KEY` des Functions et les callables `saveAiSettings` et `recipeAssistantTurn`.
+« Logique dupliquée » reçoit `ai_cost_centers.json` et `recipe_assistant_operations.json`.
+« Le projet », « Structure », « Coûts variables » et « Recettes en BeerJSON partiel » sont mis
+à jour.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

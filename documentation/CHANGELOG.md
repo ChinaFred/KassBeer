@@ -6,6 +6,25 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
+### v0.1.66 — technique
+
+ADR-015 (assistant de recette) et ADR-016 (socle IA) sont acceptés. L'utilisateur a tranché
+quinze questions, une par une. La règle « Aucune IA dans l'application » d'ADR-001 est
+retirée : l'IA passe par le serveur seul, avec Claude comme seul fournisseur. Le socle
+`functions/src/ai/` appelle l'API par `fetch`. Admin › Moteur d'IA règle par poste le
+modèle, l'effort, les plafonds (20 tours par membre et par jour, 60 pour le fondateur, borne
+de 100) et l'ouverture aux membres. Admin › Coûts de l'IA suit les coûts par personne et par
+poste, d'après une grille tarifaire dans Firestore. L'assistant arrive en deux lots :
+analyse en texte (A1), puis propositions appliquées au brouillon (A2). `CLAUDE.md` reçoit
+les contrôles P57 à P61, et P14, P25, P35 et P54 sont modifiés. Deux lignes s'ajoutent à
+« Logique dupliquée », et le poste `recipe_assistant_turn` entre dans « Coûts variables ».
+« Recettes en BeerJSON partiel » reçoit une exception à « aucune valeur inventée » : au lot A2,
+une valeur technique proposée par l'assistant, faute de Bibliothèque, est acceptée et marquée
+(`ai_proposed`). ADR-005 et ADR-008 reçoivent leur note de renvoi.
+La relecture de sécurité ajoute des bornes à la requête de l'assistant (liste blanche,
+120 000 caractères au total), garde le tour sur un délai ou un 5xx, et fixe `concurrency: 4`.
+Aucun code n'est écrit à ce stade.
+
 ### v0.1.65 — technique
 
 `CLAUDE.md`, section « Ton » : ajout de « Poser ses questions une par une ». Quand plusieurs
