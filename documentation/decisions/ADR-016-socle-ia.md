@@ -334,3 +334,13 @@ Aucune migration.
   `<mois>_` suivi de `request.auth.uid`. Un membre lit son mois absent sans erreur de droits, et
   le mois d'un autre lui est refusé.
 - **Concurrence** : test de 20 appels simultanés au 20e tour restant, dont un seul est accepté.
+
+## Amendement du 2026-11-15 : cadrage du lot A1
+
+- **`member_email`** : le serveur écrit l'e-mail en minuscules du membre dans
+  `ai_usage/{AAAA-MM}_{uid}`. Admin › Coûts de l'IA retrouve le nom dans `members/` par cet
+  e-mail ; un membre retiré s'affiche « Membre retiré » avec son e-mail. C'est le précédent de
+  `author_email` dans `tickets/`. Le document reste lisible par son membre et par l'admin seuls.
+- **Grille et politique** : `saveAiSettings` refuse une grille qui retire un modèle cité par la
+  politique d'un poste (`details.field` sur ce modèle, message « Ce modèle sert au poste
+  « <libellé> » : choisissez-en un autre d'abord. »).

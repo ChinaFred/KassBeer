@@ -381,3 +381,18 @@ Compte d'exécution : décision de l'utilisateur du 2026-11-15, `recipeAssistant
 sous `tickets-functions`, comme les autres fonctions et les autres secrets. Aucun compte propre
 à l'assistant. Une fuite de `ANTHROPIC_API_KEY` reste bornée par la limite de 20 $ de l'espace
 de travail.
+
+## Amendement du 2026-11-15 : cadrage du lot A1
+
+Décisions de l'utilisateur sur le cadrage de l'analyste-métier :
+
+- **Conversation trop longue** : quand la requête atteint 120 000 caractères, ou au 20e tour, le
+  panneau propose « Résumer et continuer ». Le bouton part sur un appui, jamais tout seul. Un
+  appel en mode résumé demande au modèle un résumé de la conversation : recette discutée,
+  conclusions, questions ouvertes. Ce résumé, affiché dans le panneau, devient le premier
+  message d'une nouvelle conversation, avec un nouveau `conversationId`. Le résumé coûte un
+  tour, compté dans le plafond du jour, et le compteur de la conversation repart à zéro. Hors
+  de ce bouton, un dépassement est refusé sans décompte. La compaction de l'API n'est pas
+  utilisée, parce qu'elle se déclenche vers 150 000 jetons, au-delà de la borne.
+- **Ligne « IA ce mois »** du menu du compte : affichée à l'admin, à tout membre quand le poste
+  est ouvert, et à tout membre qui a des comptes non nuls ce mois.
