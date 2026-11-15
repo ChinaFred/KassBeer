@@ -444,7 +444,18 @@ qu'une invitation faite hors ligne n'a pas atteint le serveur.
 - **Inviter** : bouton flottant « Inviter » sur téléphone, bouton en tête de liste sur
   grand écran. Le formulaire « Inviter un membre » (feuille du bas sur téléphone, dialogue
   sinon) demande « Adresse e-mail Google » (mise en minuscules), « Nom (facultatif) » et,
-  sous le titre « Rôle », « Brasseur » (par défaut) ou « Administrateur ». Sur le web, Entrée valide. Erreurs :
+  sous le titre « Rôle », « Brasseur » (par défaut) ou « Administrateur ». Sous le rôle, la
+  phrase « Google refuse la connexion tant que l'adresse n'est pas dans les utilisateurs test
+  du projet. Ajoutez-la dans la console Google. » et le bouton « Copier l'adresse et ouvrir la
+  console Google » : il copie l'adresse saisie quand elle est valide (« Adresse copiée ({e-mail}) :
+  collez-la dans « Utilisateurs test » › « Ajouter des utilisateurs ». » ; sans adresse valide,
+  « Aucune adresse valide à copier : saisissez-la d'abord. » ; copie en échec, « Copie
+  impossible : recopiez l'adresse à la main. » ; le message s'efface à la frappe suivante) et ouvre dans le
+  navigateur la page Audience de Google Auth Platform du projet
+  (`console.cloud.google.com/auth/audience?project=<projet>`). Google ne fournit aucune API
+  pour ajouter un utilisateur test : l'ajout reste manuel. Si le système refuse d'ouvrir la
+  page, le formulaire affiche « Impossible d'ouvrir la console. Adresse de la page : » et
+  l'adresse, sélectionnable. Le formulaire reste ouvert. Sur le web, Entrée valide. Erreurs :
   « Adresse e-mail invalide. », « Cette adresse est déjà membre. ». Après « Inviter », le
   formulaire se ferme aussitôt, même hors ligne, et l'écran affiche « {e-mail} est invité.
   Aucun e-mail n'est envoyé : prévenez-le. ». Si le serveur refuse l'invitation, ce message

@@ -25,14 +25,27 @@ La relecture de sécurité ajoute des bornes à la requête de l'assistant (list
 120 000 caractères au total), garde le tour sur un délai ou un 5xx, et fixe `concurrency: 4`.
 Aucun code n'est écrit à ce stade.
 
+Dans la même version, `CLAUDE.md` (section « Ton ») ajoute « Poser ses questions une par
+une ». Quand plusieurs décisions reviennent à l'utilisateur, la session pose une question par
+message, avec son contexte, ses options et sa recommandation. L'utilisateur l'a demandé après
+l'avis de l'architecte sur l'assistant de recette, qui listait treize questions d'un coup.
+`documentation/guide-reseau.md` décrit le changement.
+
+### v0.1.65 — fonctionnel
+
+Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux
+utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion.
+Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à
+la coller. Google ne permet pas d'ajouter cette adresse automatiquement.
+
 ### v0.1.65 — technique
 
-`CLAUDE.md`, section « Ton » : ajout de « Poser ses questions une par une ». Quand plusieurs
-décisions reviennent à l'utilisateur, la session pose une question par message, avec son
-contexte, ses options et sa recommandation. Demandé par l'utilisateur après l'avis de
-l'architecte sur l'assistant de recette, qui listait treize questions d'un coup.
-`documentation/guide-reseau.md` décrit le changement. ADR-015 (assistant de recette) est
-ajouté au statut « proposé », en attente des décisions de l'utilisateur.
+`invite_member_form.dart` devient un `ConsumerStatefulWidget` et ouvre
+`console.cloud.google.com/auth/audience?project=<FIREBASE_PROJECT_ID>` par `ouvrirLienProvider`.
+L'identifiant vient de `firebaseProjectIdProvider` (`members_providers.dart`, lu à la
+compilation) et `consoleUtilisateursTest` le contrôle avant de construire l'adresse ; sans
+identifiant valide, le bloc ne s'affiche pas. Échecs rapportés sous `members.open_console` et
+`members.copy_email`, sans l'adresse. Aucune dépendance ajoutée.
 
 ### v0.1.64 — technique
 
