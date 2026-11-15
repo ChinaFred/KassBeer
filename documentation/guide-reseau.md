@@ -242,7 +242,8 @@ Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 
 Le 2026-11-15 (v0.1.74), décisions de l'utilisateur : P15 accepte, dans le champ `name`
 d'une entrée de `exchange/donnees/fabricants/cultures.json`, le nom de la fiche du fabricant,
-même s'il contient le nom d'une personne (WLP520) ; « Structure » de `CLAUDE.md` décrit
+relevée à l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name`
+de cet en-tête, même s'il contient le nom d'une personne (WLP520) ; « Structure » de `CLAUDE.md` décrit
 `exchange/donnees/fabricants/` sans liste de fabricants. Aucun contrôle, agent, skill ni hook
 nouveau.
 
@@ -452,6 +453,7 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   JSON chiffré. Admin › Sources affiche les compteurs et les noms non reconnus (L4). ADR-005,
   évolution acceptée le 2026-11-08.
 - 2026-11-15 : exception à P15. Le champ `name` d'une entrée de
-  `exchange/donnees/fabricants/cultures.json` reprend le nom de la fiche du fabricant, même s'il
-  contient le nom d'une personne (WLP520, WLP4045, WLP4046) ; aucun e-mail, aucune autre donnée,
+  `exchange/donnees/fabricants/cultures.json` reprend le nom de la fiche du fabricant, relevée à
+  l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name` de cet
+  en-tête, même s'il contient le nom d'une personne (WLP520, WLP4045, WLP4046) ; aucun e-mail, aucune autre donnée,
   aucun commentaire. Décision de l'utilisateur.
