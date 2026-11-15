@@ -1,0 +1,31 @@
+// Fixture écrite à la main : entrées inventées, dans la forme de
+// import/sources/fabricants/cultures.json.
+{
+  "beerjson": {
+    "version": 2.01,
+    "cultures": [
+      {
+        "id": "labo-fictif-lf1",
+        "name": "Fictiale LF1",
+        "type": "ale",
+        "form": "dry",
+        "producer": "Labo Fictif",
+        "product_id": "LF1",
+        "attenuation_range": { "minimum": { "unit": "%", "value": 76 }, "maximum": { "unit": "%", "value": 80 } },
+        "temperature_range": { "minimum": { "unit": "C", "value": 18 }, "maximum": { "unit": "C", "value": 26 } },
+        "notes": "TEXTE LIBRE FICHE A NE PAS COPIER"
+      },
+      {
+        "id": "labo-fictif-lf2",
+        "name": "Fictibrew LF2",
+        "type": "ale",
+        "form": "dry",
+        "producer": "Labo Fictif",
+        "product_id": "LF2",
+        "attenuation_range": { "minimum": { "unit": "%", "value": 98 }, "maximum": { "unit": "%", "value": 102 } },
+        "temperature_range": { "minimum": { "unit": "C", "value": 20 }, "maximum": { "unit": "C", "value": 32 } }
+      }
+    ],
+    "hop_varieties": [{ "name": "Houblon De Fiche", "form": "pellet" }]
+  }
+}

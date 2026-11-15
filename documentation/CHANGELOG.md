@@ -8,18 +8,25 @@ données, outillage), ou les deux.
 
 ### v0.1.62 — fonctionnel
 
-Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
-commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
-l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le
-bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ».
+La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le
+référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf
+absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et
+LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant.
+« Sources des données » nomme cette nouvelle source.
 
 ### v0.1.62 — technique
 
-`brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
-de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
-(P2), et prépare l'alerte du minuteur. `_BarreActions` l'affiche quand la suivante a une
-durée ; sinon « Terminer l'étape » reste. Tests de `brew_day_screen_test.dart` adaptés, deux
-cas ajoutés (dernière étape, suivante de 0 min).
+ADR-005, amendement du 2026-11-14 : source `fabricants` de l'ingestion, fichier BeerJSON 2.01
+écrit à la main (`import/sources/fabricants/cultures.json`, hors dépôt), lu par
+`lireFabricants` d'`exchange/` et exigé par `bin/preparer_referentiels.dart`. Rang 0 : elle
+passe avant 005, et les rangs des autres sources montent d'un. Une souche déjà connue de
+Brewtarget garde l'identifiant de son document (`ingest/ecrire.mjs` n'efface rien). Licence
+`Données publiées par le fabricant`, version et date du relevé `2026-11-14`, acceptées par
+`ingest/lib/validation.mjs`. L'application affiche « Fiches des fabricants ». Les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 dépassent la borne de 100 % : écartées et
+comptées au rapport. Admin › Sources nomme la source « Fiches des fabricants » dans
+« Sources lues » (`libelleSourceExecution`) et dans son introduction. `DATA_SOURCES.md`,
+`exigences-techniques.md` et `exigences-fonctionnelles.md` mis à jour.
 
 ### v0.1.61 — fonctionnel
 

@@ -9,8 +9,12 @@ const kVersionBrewtarget = 'v5.2.3 ea10908';
 /// Version figée de `alxiw/punkapi` (DIY Dog) : commit.
 const kVersionDiyDog = 'e6c12ab';
 
-/// Date du relevé des sources.
+/// Date du relevé des sources de Brewtarget et de DIY Dog.
 const kDateReleve = '2026-11-08';
+
+/// Date du relevé des fiches techniques des fabricants
+/// (`import/sources/fabricants/cultures.json`), qui tient lieu de version.
+const kDateReleveFabricants = '2026-11-14';
 
 /// Licences écrites dans `provenance[].licence`.
 abstract final class Licence {
@@ -25,40 +29,49 @@ abstract final class Licence {
 
   /// Recettes DIY Dog.
   static const diyDog = 'DIY Dog (usage privé)';
+
+  /// Valeurs recopiées à la main des fiches techniques publiées par les
+  /// fabricants (décision de l'utilisateur du 2026-11-14).
+  static const fabricant = 'Données publiées par le fabricant';
 }
 
 /// Source lue, et son rang de priorité pour un même ingrédient (0 d'abord) :
-/// 005, puis 003 et 004, puis 001 (`DATA_SOURCES.md`, décision 4).
+/// fiches des fabricants, puis 005, puis 003 et 004, puis 001
+/// (`DATA_SOURCES.md`, décision 4).
 enum Source {
+  /// `fabricants/cultures.json`, BeerJSON 2.01 écrit à la main depuis les
+  /// fiches techniques des fabricants.
+  fabricants('fabricants', 0, 'cultures.json'),
+
   /// `DefaultContent001-OriginalDefaultData.xml`, BeerXML.
   brewtarget001(
     'brewtarget-001',
-    2,
+    3,
     'DefaultContent001-OriginalDefaultData.xml',
   ),
 
   /// `DefaultContent002-BJCP_2021_Styles.json`, BeerJSON 2.01.
-  brewtarget002('brewtarget-002', 1, 'DefaultContent002-BJCP_2021_Styles.json'),
+  brewtarget002('brewtarget-002', 2, 'DefaultContent002-BJCP_2021_Styles.json'),
 
   /// `DefaultContent003-Ingredients-Hops-Yeasts.json`, BeerJSON 2.01.
   brewtarget003(
     'brewtarget-003',
-    1,
+    2,
     'DefaultContent003-Ingredients-Hops-Yeasts.json',
   ),
 
   /// `DefaultContent004-MoreYeasts.json`, BeerJSON 2.01.
-  brewtarget004('brewtarget-004', 1, 'DefaultContent004-MoreYeasts.json'),
+  brewtarget004('brewtarget-004', 2, 'DefaultContent004-MoreYeasts.json'),
 
   /// `DefaultContent005-Fermentables-Recipes.beer`, DotBeer 1.0.0.
   brewtarget005(
     'brewtarget-005',
-    0,
+    1,
     'DefaultContent005-Fermentables-Recipes.beer',
   ),
 
   /// `alxiw/punkapi`, `data/NNN.json`.
-  diydog('diydog', 3, 'data');
+  diydog('diydog', 4, 'data');
 
   const Source(this.id, this.rang, this.fichier);
 
@@ -72,7 +85,14 @@ enum Source {
   final String fichier;
 
   /// Version figée de la source.
-  String get version => this == diydog ? kVersionDiyDog : kVersionBrewtarget;
+  String get version => switch (this) {
+    diydog => kVersionDiyDog,
+    fabricants => kDateReleveFabricants,
+    _ => kVersionBrewtarget,
+  };
+
+  /// Date du relevé de la source.
+  String get releve => this == fabricants ? kDateReleveFabricants : kDateReleve;
 }
 
 /// Ligne de `provenance[]`.
@@ -85,7 +105,7 @@ Map<String, Object> provenance(
   'source_id': sourceId,
   'version': source.version,
   'licence': licence,
-  'retrieved': kDateReleve,
+  'retrieved': source.releve,
 };
 
 /// Licence d'une entrée du fichier 005 selon son `folder_path` : The Swaen,
