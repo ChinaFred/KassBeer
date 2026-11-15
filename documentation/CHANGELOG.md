@@ -16,13 +16,63 @@ changement arrive dans la Bibliothèque quand l'administrateur relance l'ingesti
 ### v0.1.76 — technique
 
 `exchange/donnees/fabricants/cultures.json` : les douze noms Omega en « + » s'écrivent « Plus »
-(décision de l'utilisateur du 2026-11-15). Préparation rejouée : 903 documents, cinq noms
+(décision de l'utilisateur du 2026-11-15). Préparation rejouée : 945 documents, cinq noms
 normalisés (`kolsch-ii`, `german-lager-i`, `bayern-lager`, `point-loma`, `extra-special`) ne
 désignent plus deux documents. Les identifiants de ces douze documents suivent le nom
 (`culture-omega-yeast-oyl435-kolsch-ii` devient `…-kolsch-ii-plus`) ; `ingest/ecrire.mjs` ne
 supprime rien dans `beer_cultures` : une ingestion faite depuis la v0.1.73 laisse les douze
 anciens documents en ligne. `fabricants_donnees_test.dart` vérifie qu'aucun nom Omega ne
 contient « + » et que leurs noms normalisés sont distincts. `DATA_SOURCES.md` à jour.
+
+### v0.1.75 — fonctionnel
+
+La Bibliothèque reprend les fiches de 77 cultures de Wyeast : levures d'ale, de lager et de
+bière de blé, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation,
+plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent
+celles de l'ancienne base pour 74 cultures déjà connues, et 3 cultures apparaissent. Les
+cultures de vin, de cidre, d'hydromel et de saké ne sont pas reprises. L'écran « Sources des
+données » nomme Wyeast. Les cultures arrivent dans la Bibliothèque quand l'administrateur
+relance l'ingestion.
+
+### v0.1.75 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 77 cultures Wyeast relevées le 2026-11-15 sur
+`wyeastlab.com` (Crawl-delay de 10 s), règles dans l'en-tête : `type` d'après « Species »,
+référence sans le suffixe `-PC`, températures en °F, floculation `Low - High` absente ; série
+4000 (vin, cidre, hydromel, saké, distillerie) non reprise. `kDatesReleveFabricants` reçoit
+`wyeast`. Préparation rejouée sur les sources du 2026-11-08 : 74 fiches rejoignent un document
+Brewtarget, 3 en créent un (945 documents `beer_cultures`), aucun autre document changé. Les
+doublons Brewtarget de la Private Collection (`WY2001-PC` et `2001`) restent, et six noms
+deviennent ambigus ; `DATA_SOURCES.md` décrit la correction possible par `cleProduit`.
+`fabricants_donnees_test.dart` : 439 entrées, types et références Wyeast. `DATA_SOURCES.md`,
+ADR-005, exigences et écran « Sources des données » à jour.
+
+### v0.1.74 — fonctionnel
+
+La Bibliothèque reprend les fiches de 162 cultures de White Labs et de sa gamme The Yeast Bay :
+levures d'ale et de lager, levures de bière de blé, kveiks, Brettanomyces, bactéries et
+assemblages pour bières acides. Type, atténuation, plage de température et floculation
+viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour les
+123 cultures déjà connues. 39 cultures absentes jusqu'ici apparaissent. Les levures de vin, de
+cidre et de distillerie ne sont pas reprises. L'écran « Sources des données » nomme White Labs
+et The Yeast Bay. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance
+l'ingestion.
+
+### v0.1.74 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 162 cultures WLP relevées le 2026-11-15 sur
+`www.whitelabs.com` (115 White Labs, 47 The Yeast Bay d'après le titre de la fiche), règles
+dans l'en-tête ; non reprises : WLP700 à WLP799, WLP616, distillerie, kombucha, bactéries
+acétiques et malolactiques, WLP686, WLP692, produits revendus. `kDatesReleveFabricants` reçoit
+`white-labs` et `the-yeast-bay`. Préparation rejouée sur les sources du 2026-11-08 : 123 fiches
+rejoignent leur document Brewtarget, 39 en créent un (942 documents `beer_cultures`), aucun
+autre document changé, aucun nom rendu ambigu ; WLP4042 et WLP4044 restent en double (White
+Labs sur la fiche, The Yeast Bay chez Brewtarget). `fabricants_donnees_test.dart` : 362
+entrées, types et champs absents de White Labs. `DATA_SOURCES.md`, ADR-005, exigences et
+écran « Sources des données » à jour. `CLAUDE.md`, décisions de l'utilisateur : P15 accepte le
+nom commercial d'une souche publié par son fabricant (WLP520, WLP4045, WLP4046), et
+« Structure » décrit `exchange/donnees/fabricants/` sans liste de fabricants ;
+`guide-reseau.md` à jour.
 
 ### v0.1.73 — fonctionnel
 
