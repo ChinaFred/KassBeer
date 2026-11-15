@@ -366,7 +366,7 @@ class StylesJourDeBrassage extends ThemeExtension<StylesJourDeBrassage> {
   /// Étiquette d'étape (« ÉTAPE 2 SUR 7 · EN COURS »).
   final double etiquette;
 
-  /// Ligne d'information sous le panneau (« Fin prévue vers… »).
+  /// Ligne d'information sous le panneau (« Fin du brassage prévue vers… »).
   final double information;
 
   /// Libellé des boutons de l'écran du jour et de « Commencer le brassage ».

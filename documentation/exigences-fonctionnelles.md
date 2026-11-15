@@ -2395,7 +2395,7 @@ ouvert. Une page rechargée sans réseau ne s'ouvre plus. ».
 barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le minuteur ; avec un
 processus, la seconde ligne nomme la journée (« Brassage · 10:42 », lu « Journée Brassage, heure
 actuelle 10:42 »), et l'écran suit les seules étapes de la journée de brassage du déroulé
-(« Étape 3 sur 18 », « Fin prévue » de la journée). Quand le brassage
+(« Étape 3 sur 18 », « Fin du brassage prévue »). Quand le brassage
 est affiché, ou pendant la lecture des saisies, le retour Android ramène à la fiche du brassin. À
 droite de la barre, après ⋮, l'avatar à l'initiale seule ouvre le menu du compte (voir Accueil). Un
 autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
@@ -2405,14 +2405,25 @@ sa fiche, en lecture seule.
 COURS » avec une icône de minuteur, nom, minuteur lisible à deux mètres (« 32:15 », « 1:05:12 »),
 barre de progression de la part écoulée de l'étape (non lue par le lecteur d'écran, qui lit le
 minuteur), « restantes sur 45 min », température visée et dernière mesure, « Ensuite : {nom} ·
-vers 12:30 », « Fin prévue vers 16:05 · retard 12 min ». Étiquette d'étape et ligne « Fin
-prévue » en grand (18), lisibles à deux mètres. Durée dépassée : la carte passe en ambre avec un
+vers 12:30 », « Fin du brassage prévue vers 16:05 · retard 12 min » (« Fin de la journée prévue
+vers… » sur une journée 2 ou suivante), distincte de la fin de l'étape en cours. Étiquette d'étape et
+ligne de fin prévue en grand (18), lisibles à deux mètres. Durée dépassée : la carte passe en ambre avec un
 bord ambre plus foncé, l'étiquette devient « ÉTAPE 2 SUR 7 · DÉPASSÉ » avec une icône de réveil,
 la barre est pleine, « +04:12 », « Dépassé de 4 min · prévu 45 min » (« Dépassé · prévu 45 min »
 la première minute). La carte garde la même taille et la même marge dans les deux états : rien
 ne bouge au passage en dépassé. Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
 « Prévue vers 12:30 », bouton « Commencer l'étape » (« Fait » pour une étape de 0 min, début et
-fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
+fin au même instant). Étape en cours suivie d'une étape avec une durée : bouton « Étape
+suivante », qui termine l'étape en cours et commence la suivante en un appui (un seul lot
+`step_ended` + `step_started`) ; la lecture d'écran nomme les deux étapes (« Terminer « Palier
+68 » et commencer « Ébullition » »). Après l'appui, un message « Étape « {nom} » commencée. »
+reste 10 s (ouvert tant que TalkBack est actif) avec « Annuler », qui supprime dans un même lot
+le début de l'étape commencée et la fin de la précédente, puis affiche « Étape « {précédente} »
+reprise. » ; si l'étape commencée est déjà terminée ou sautée, rien n'est supprimé et le message
+« L'étape « {nom} » est déjà terminée ou sautée : touchez chaque étape pour la corriger. »
+s'affiche. Étape en cours suivie d'une étape de 0 min, ou dernière
+étape : bouton « Terminer l'étape » (« Terminer la journée » sur la dernière étape d'une journée
+autre que le brassage et l'embouteillage) ; l'étape de 0 min garde son appui « Fait ». Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
 « En fermentation »). Sans chronologie : « Aucune étape. Saisissez vos mesures. ». Quand le
 panneau ne tient pas dans sa place (60 % de l'écran au plus en portrait), une barre de
 défilement reste visible à sa droite (couleur `onSurfaceVariant`, 6 px, comme les autres
@@ -2510,7 +2521,7 @@ l'administrateur. ».
 « Préparer la journée »), ouvert au statut En fermentation ou En conditionnement (En fermentation
 seulement pour l'embouteillage). Il reprend l'écran du jour de brassage : barre « Blonde » puis
 « Houblonnage à cru · 10:42 » (lu « Journée Houblonnage à cru, heure actuelle 10:42 »), panneau,
-minuteurs, alerte de fin, étapes, corrections, « Fin prévue » de la journée, écran allumé. Départ
+minuteurs, alerte de fin, étapes, corrections, « Fin de la journée prévue », écran allumé. Départ
 prévu de la journée : son premier début, sinon l'heure de l'appareil. Les étapes du brassage et
 des autres journées n'y figurent pas et ne changent pas d'état.
 

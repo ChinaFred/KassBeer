@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-15
 
-### v0.1.66 — technique
+### v0.1.68 — technique
 
 ADR-015 (assistant de recette) et ADR-016 (socle IA) sont acceptés. L'utilisateur a tranché
 quinze questions, une par une. La règle « Aucune IA dans l'application » d'ADR-001 est
@@ -30,6 +30,58 @@ une ». Quand plusieurs décisions reviennent à l'utilisateur, la session pose 
 message, avec son contexte, ses options et sa recommandation. L'utilisateur l'a demandé après
 l'avis de l'architecte sur l'assistant de recette, qui listait treize questions d'un coup.
 `documentation/guide-reseau.md` décrit le changement.
+
+Après l'acceptation, trois amendements s'ajoutent. ADR-015 inscrit la décision de garder
+`tickets-functions` comme compte d'exécution de l'assistant (commit 8657e43). ADR-015 et ADR-016
+inscrivent les décisions du cadrage du lot A1 (commit 6b51e1f) : `member_email` dans `ai_usage`,
+ligne « IA ce mois » selon le membre, refus d'une grille qui retire un modèle utilisé, et
+« Résumer et continuer ». Ce dernier ajoute les clés `mode` et `summary` à la requête de
+l'assistant, avec leurs bornes ; P57, P58, P59 et P60 sont complétés en conséquence.
+
+### v0.1.67 — fonctionnel
+
+Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
+commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
+l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le
+bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ». Après l'appui,
+un message « Étape « Ébullition » commencée. » s'affiche dix secondes avec « Annuler » : un
+appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son
+action, comme celui qui annule un début ou une fin d'étape.
+
+### v0.1.67 — technique
+
+`brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
+de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
+(P2), et prépare l'alerte du minuteur. `_BarreActions` l'affiche quand la suivante a une
+durée ; sinon « Terminer l'étape » reste. Le libellé lu par TalkBack nomme les deux étapes.
+Une `SnackBar` (10 s, `persist` vrai sous TalkBack par `MediaQuery.accessibleNavigationOf`,
+comme celle de `_annuler`) propose « Annuler » : `_annulerEnchainement` relit le
+plan et supprime `startEventId` de l'étape commencée et `endEventId` de la précédente par
+`deleteEvents`, un `WriteBatch` sans transaction ; rien n'est supprimé si l'étape commencée
+est déjà terminée ou sautée. Tests de `brew_day_screen_test.dart` adaptés, quatre cas ajoutés
+(dernière étape, suivante de 0 min, « Annuler », « Annuler » après la fin).
+
+### v0.1.66 — fonctionnel
+
+Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
+Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
+houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
+
+### v0.1.66 — technique
+
+`_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
+jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
+insécable avant « · » pour couper la ligne après le point médian. Tests ajoutés
+dans `brew_day_screen_test.dart` et `deroule_d4_test.dart`.
+
+P15 accepte `noreply@anthropic.com`, l'adresse des sessions Claude Code, comme l'adresse
+`noreply` de GitHub, pour les commits et les tags (décision de l'utilisateur du 2026-11-15).
+Aucune des deux ne désigne une personne. `session-start.sh` n'avertit plus pour cette adresse.
+Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte à recoller sur
+claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
+
+Ces deux changements avaient été numérotés v0.1.62 et v0.1.63 sur leur branche, numéros pris
+entre-temps par la branche principale, puis v0.1.64 et v0.1.65, pris aussi : ils sont renumérotés en v0.1.66.
 
 ### v0.1.65 — fonctionnel
 
