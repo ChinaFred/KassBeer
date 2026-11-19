@@ -4,9 +4,9 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
-## 2026-11-15
+## 2026-11-19
 
-### v0.1.77 — fonctionnel
+### v0.1.78 — fonctionnel
 
 La Bibliothèque reprend les fiches de 98 cultures d'Escarpment Labs : levures d'ale, de lager
 et de bière de blé, kveiks, Brettanomyces, bactéries et assemblages pour bières acides. Type,
@@ -18,7 +18,7 @@ elles rejoignent la culture déjà connue, qui prend le nom de la fiche et garde
 comme autre nom. L'écran « Sources des données » nomme Escarpment Labs. Les cultures arrivent
 dans la Bibliothèque quand l'administrateur relance l'ingestion.
 
-### v0.1.77 — technique
+### v0.1.78 — technique
 
 `exchange/donnees/fabricants/cultures.json` : 98 cultures Escarpment Labs relevées le
 2026-11-15 sur `escarpmentlabs.com`, règles dans l'en-tête ; levures Lallemand revendues non
@@ -47,6 +47,51 @@ donne deux documents listés par `nomsPartages`, et que la table de fusion ne cr
 partagé. La préparation rejouée compte 18 noms qui désignent deux documents d'un même
 producteur, tous antérieurs aux fiches Escarpment (doublons Brewtarget, dont six de la Private
 Collection de Wyeast) ; la préparation ne les refuse pas.
+
+## 2026-11-15
+
+### v0.1.77 — technique
+
+ADR-015 (assistant de recette) et ADR-016 (socle IA) sont acceptés. L'utilisateur a tranché
+quinze questions, une par une. La règle « Aucune IA dans l'application » d'ADR-001 est
+retirée : l'IA passe par le serveur seul, avec Claude comme seul fournisseur. Le socle
+`functions/src/ai/` appelle l'API par `fetch`. Admin › Moteur d'IA règle par poste le
+modèle, l'effort, les plafonds (20 tours par membre et par jour, 60 pour le fondateur, borne
+de 100) et l'ouverture aux membres. Admin › Coûts de l'IA suit les coûts par personne et par
+poste, d'après une grille tarifaire dans Firestore. L'assistant arrive en deux lots :
+analyse en texte (A1), puis propositions appliquées au brouillon (A2). `CLAUDE.md` reçoit
+les contrôles P57 à P61, et P14, P25, P35 et P54 sont modifiés. Deux lignes s'ajoutent à
+« Logique dupliquée », et le poste `recipe_assistant_turn` entre dans « Coûts variables ».
+« Recettes en BeerJSON partiel » reçoit une exception à « aucune valeur inventée » : au lot A2,
+une valeur technique proposée par l'assistant, faute de Bibliothèque, est acceptée et marquée
+(`ai_proposed`). ADR-005 et ADR-008 reçoivent leur note de renvoi.
+La relecture de sécurité ajoute des bornes à la requête de l'assistant (liste blanche,
+120 000 caractères au total), garde le tour sur un délai ou un 5xx, et fixe `concurrency: 4`.
+Aucun code n'est écrit à ce stade.
+
+Dans la même version, `CLAUDE.md` (section « Ton ») ajoute « Poser ses questions une par
+une ». Quand plusieurs décisions reviennent à l'utilisateur, la session pose une question par
+message, avec son contexte, ses options et sa recommandation. L'utilisateur l'a demandé après
+l'avis de l'architecte sur l'assistant de recette, qui listait treize questions d'un coup.
+`documentation/guide-reseau.md` décrit le changement.
+
+Après l'acceptation, trois amendements s'ajoutent. ADR-015 inscrit la décision de garder
+`tickets-functions` comme compte d'exécution de l'assistant (commit 8657e43). ADR-015 et ADR-016
+inscrivent les décisions du cadrage du lot A1 (commit 6b51e1f) : `member_email` dans `ai_usage`,
+ligne « IA ce mois » selon le membre, refus d'une grille qui retire un modèle utilisé, et
+« Résumer et continuer ». Ce dernier ajoute les clés `mode` et `summary` à la requête de
+l'assistant, avec leurs bornes ; P57, P58, P59 et P60 sont complétés en conséquence.
+
+Les relectures de `relecteur-regles` et de `securite` complètent ces amendements. En mode
+résumé, les bornes par champ et la forme de l'historique restent, `message` est refusé et
+`history` compte au moins 2 messages. Le prompt nomme huit blocs de données, dont `RESUME`,
+jamais suivis comme consignes. La grille et la politique se relisent l'une dans la
+transaction de l'autre, et une grille qui retire un modèle ou un effort utilisé est refusée.
+`ai_usage/` est gardé 13 mois, par `expires_at` et une règle TTL (décision de l'utilisateur).
+La procédure d'effacement RGPD couvre `ai_usage/` et `ai_quotas/`. La dépense par jour est
+bornée à environ 31 $, poste ouvert à tous, sous la limite de 20 $ de la Console. ADR-015
+reçoit les décisions sur les écrans du lot A1 : icône « Assistant » dans la barre du haut,
+commutateur « Calculs / Assistant » de 840 à 1 279 px, champ « Efforts acceptés ».
 
 ### v0.1.76 — fonctionnel
 

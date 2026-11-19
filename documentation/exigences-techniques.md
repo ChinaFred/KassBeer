@@ -2415,7 +2415,8 @@ console Firebase ou par l'Admin SDK, avec l'uid du membre : les documents `recip
 brassins `brews/` à son `owner_uid` et leurs `events/`, ses données `users/{uid}/`, et, dans les
 brassins des autres membres, les copies `recipe_snapshot` et `equipment_snapshot` qui portent
 son `owner_uid` ou son `owner_name`. Le document `members/{email}` est déjà supprimé par le
-retrait.
+retrait. À partir du lot A1 de l'assistant (ADR-016) : ses comptes `ai_usage/{AAAA-MM}_{uid}`,
+qui portent son e-mail, et son compteur `ai_quotas/{uid}`.
 
 Tests : `rules-tests/` (Node 22, `@firebase/rules-unit-testing`, `node --test`), lancés par
 `npm test`, qui démarre les émulateurs Firestore et Storage (Java 21) sur le projet
