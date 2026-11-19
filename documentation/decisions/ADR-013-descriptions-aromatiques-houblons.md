@@ -364,3 +364,9 @@ Documents touchés : `exigences-techniques.md` (collection, règles d'accès, pr
 - Volumes de réflexion par effort (800 et 2 000 jetons de plus que l'effort `low`) :
   estimation de l'architecte, mesurée par l'essai.
 - Volumes : `documentation/DATA_SOURCES.md`, relevé du 2026-11-11 (466 houblons).
+
+## Note du 2026-11-15
+
+ADR-016 utilise le même espace de travail de la Console Anthropic, avec une seconde clé rangée
+dans Secret Manager pour les Functions. La limite de 20 $ par mois est commune : quand
+l'assistant de recette (ADR-015) l'atteint, la génération des arômes est bloquée aussi.

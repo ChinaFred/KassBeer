@@ -240,7 +240,7 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
-Le 2026-11-15 (v0.1.78), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
+Le 2026-11-15 (v0.1.79), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
 garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.
 
@@ -299,6 +299,28 @@ exécuter les dépendances de `functions/` dans le job qui détient le jeton Goo
 l'installation verrouillée de firebase-tools, sans script, y est permise), et ajouté la section
 « Tickets » de `CLAUDE.md`. `formatters.json` formate le TypeScript de `functions/` par
 prettier, et `setup-projet.sh` y lance `npm ci`.
+
+Le 2026-11-15, à la demande de l'utilisateur, `CLAUDE.md` (« Ton ») ajoute « Poser ses
+questions une par une » : quand plusieurs décisions lui reviennent, la session pose une
+question par message, avec son contexte, ses options et sa recommandation, et attend la
+réponse avant la suivante.
+
+Le 2026-11-15, avec l'acceptation d'ADR-015 (assistant de recette) et d'ADR-016 (socle IA),
+`CLAUDE.md` ajoute P57 (socle IA, `securite`), P58 (règles et réglages de l'IA, `securite`),
+P59 (requête de l'assistant, `securite`), P60 (client IA, `relecteur-regles`) et P61
+(propositions du lot A2, `relecteur-regles`). P14, P25, P35 et P54 sont modifiés pour la clé
+`ANTHROPIC_API_KEY` des Functions et les callables `saveAiSettings` et `recipeAssistantTurn`.
+« Logique dupliquée » reçoit `ai_cost_centers.json` et `recipe_assistant_operations.json`.
+« Le projet », « Structure », « Coûts variables » et « Recettes en BeerJSON partiel » sont mis
+à jour.
+
+Le 2026-11-15, avec les décisions du cadrage du lot A1 de l'assistant, P57 (`member_email` tiré
+du jeton, `expires_at`), P58 (TTL de 13 mois sur `ai_usage`, grille et politique relues l'une
+dans la transaction de l'autre, refus d'une grille qui retire un modèle ou un effort utilisé),
+P59 (clés `mode` et `summary`, refus `conversation_full`, bornes du mode résumé, `message`
+refusé et `history` d'au moins 2 messages en mode résumé, liste des huit blocs de données avec
+un test de prompt par bloc) et P60 (« Résumer et continuer » sans seuil en Dart) sont
+complétés.
 
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :

@@ -1,12 +1,14 @@
 # ADR-001 — Pile technique de la version 1
 
-- **Statut** : accepté le 2026-11-07
+- **Statut** : accepté le 2026-11-07 ; arbitrage 1 (« Aucune IA dans l'application en v1 »)
+  remplacé par ADR-016 le 2026-11-15
 - **Date** : 2026-11-06
 - **Remplace** : —
 - **Modifié par** : ADR-002 (dépôt public, minutes de la CI) ; ADR-005 (recettes en BeerJSON,
   référentiels, et export BeerXML avancé avant la v1, malgré les mentions « après la v1 » ci-dessous) ; ADR-006 (un serveur
   Cloud Functions Node 24 avant l'IA et le RAPT Pill, pour les tickets) ; ADR-008 (points d'accès
-  publics des tickets, Cloud Storage, premier poste de coût variable)
+  publics des tickets, Cloud Storage, premier poste de coût variable) ; ADR-016 (IA dans
+  l'application par le serveur seul, arbitrage 1 remplacé)
 
 ## Contexte
 
@@ -90,7 +92,8 @@ ADR.
 L'utilisateur a retenu toutes les recommandations du livrable « Démarrage » :
 
 1. Import des 16 fiches par une session Claude Code, relu et écrit par Admin › Import.
-   Aucune IA dans l'application en v1.
+   Aucune IA dans l'application en v1. *Remplacé par ADR-016 (2026-11-15) : IA dans
+   l'application par le serveur seul.*
 2. APK distribué par Firebase App Distribution.
 3. Plan Blaze dès la v1, sauvegarde gérée de Firestore, alerte budgétaire à 5 €.
 4. Coût d'un brassin privé à son brasseur (`users/{uid}/brew_costs/`).
