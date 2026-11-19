@@ -240,6 +240,10 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
+Le 2026-11-15 (v0.1.79), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
+`beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
+garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.
+
 Le 2026-11-15 (v0.1.74), décisions de l'utilisateur : P15 accepte, dans le champ `name`
 d'une entrée de `exchange/donnees/fabricants/cultures.json`, le nom de la fiche du fabricant,
 relevée à l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name`

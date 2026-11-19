@@ -15,7 +15,7 @@ export const PROJET_PRODUCTION = "kassbeer";
 export const PROJET_EMULATEUR = "demo-kassbeer";
 
 /// Collections où `--supprimer-absents` peut supprimer (ADR-014, P19), une par lancement.
-export const COLLECTIONS_SUPPRIMABLES = ["beer_hops", "beer_hop_aromas"];
+export const COLLECTIONS_SUPPRIMABLES = ["beer_hops", "beer_hop_aromas", "beer_cultures"];
 
 /// Erreur d'utilisation : message montré tel quel, code de sortie 2.
 export class ErreurOptions extends Error {}
@@ -67,7 +67,7 @@ export function lireOptions(argv, env) {
   if (supprimer !== null && !COLLECTIONS_SUPPRIMABLES.includes(supprimer)) {
     throw new ErreurOptions(
       `--supprimer-absents : « ${supprimer} » refusée, seules ` +
-        `${COLLECTIONS_SUPPRIMABLES.join(" et ")} sont permises (ADR-014).`,
+        `${COLLECTIONS_SUPPRIMABLES.join(", ")} sont permises (ADR-014).`,
     );
   }
   for (const cle of Object.keys(env)) {

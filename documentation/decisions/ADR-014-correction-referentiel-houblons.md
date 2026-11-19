@@ -200,6 +200,23 @@ Décision de l'utilisateur : le seuil passe à 90 % (`PART_MIN_PREPAREE`,
 `ingest/lib/ecriture.mjs`). Les autres garde-fous ne changent pas (30 suppressions au plus,
 simulation, saisie du nombre).
 
+## Amendement du 2026-11-15 : `beer_cultures`
+
+Décision de l'utilisateur : `ecrire.mjs --supprimer-absents` accepte aussi `beer_cultures`.
+Des fiches de fabricants renommées laissent d'anciens documents `culture-…` en ligne, car
+`ecrire.mjs` n'efface rien sans cette option. Les douze variantes Omega en « + »
+s'écrivent « Plus » (« Kolsch II+ » devient « Kolsch II Plus »), et des entrées Wyeast
+changent aussi.
+
+Les garde-fous de la section 3 et de la note précédente s'appliquent tels quels : simulation
+d'abord, liste des identifiants avant la confirmation, 30 suppressions au plus par lancement,
+refus sous 90 % des documents en ligne, saisie du nombre, identifiant conforme au motif de
+`beer_cultures` (`^culture-[a-z0-9]+(-[a-z0-9]+)*$`, `ingest/lib/validation.mjs`), rapport
+chiffré avec les identifiants, émulateur par défaut, production sur `--production --projet
+kassbeer`, une collection par lancement. Sans l'option, rien n'est supprimé. Les identifiants
+préparés sont ceux de `beer_cultures.json`, refusés compris. Les autres collections restent
+refusées.
+
 ## Sources
 
 - Code lu le 2026-11-15 sur la branche à jour de `main` (v0.1.57) : fichiers cités dans le

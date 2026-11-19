@@ -97,15 +97,22 @@ describe("lireOptions", () => {
 });
 
 describe("--supprimer-absents", () => {
-  it("beer_hops ou beer_hop_aromas : accepté, sans suppression par défaut", () => {
+  it("beer_hops, beer_hop_aromas ou beer_cultures : accepté, sans suppression par défaut", () => {
     assert.equal(lireOptions([], EMULATEUR).supprimerAbsents, null);
-    for (const c of ["beer_hops", "beer_hop_aromas"]) {
+    for (const c of ["beer_hops", "beer_hop_aromas", "beer_cultures"]) {
       assert.equal(lireOptions(["--supprimer-absents", c], EMULATEUR).supprimerAbsents, c);
     }
   });
 
   it("autre collection ou sans valeur : refusé", () => {
-    for (const c of ["beer_fermentables", "beer_index", "recipes", "public_recipes"]) {
+    for (const c of [
+      "beer_fermentables",
+      "beer_miscs",
+      "beer_styles",
+      "beer_index",
+      "recipes",
+      "public_recipes",
+    ]) {
       assert.throws(
         () => lireOptions(["--supprimer-absents", c], EMULATEUR),
         (e) => e instanceof ErreurOptions && e.message.includes(c),
