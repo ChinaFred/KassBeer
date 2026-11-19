@@ -171,7 +171,9 @@ class _FeuilleChangerProcessusState
         Semantics(
           header: true,
           child: Text(
-            TextesDeroule.changerProcessus,
+            sansProcessusPrevu(_brew)
+                ? TextesChoixProcessus.choisir
+                : TextesDeroule.changerProcessus,
             style: theme.textTheme.titleLarge,
           ),
         ),
@@ -189,7 +191,8 @@ class _FeuilleChangerProcessusState
           }),
           onRetry: () => ref.invalidate(processTemplatesProvider),
           onGerer: () => _ouvrir(AppRoutes.processes),
-          onCreer: () => _ouvrir(AppRoutes.newProcess),
+          // « Mes processus » : modèles à copier et nouveau processus (#61).
+          onCreer: () => _ouvrir(AppRoutes.processes),
         ),
         const SizedBox(height: 8),
         DerouleProcessusPrevu(
@@ -197,8 +200,7 @@ class _FeuilleChangerProcessusState
           depart: _brew.departDeroule,
           chronologieSeule: Text(
             seule == null || seule.isEmpty
-                ? 'Cette recette figée n\'a pas de chronologie : le jour du '
-                      'brassage n\'aura aucune étape à suivre.'
+                ? TextesChoixProcessus.recetteSansChronologie
                 : 'Chronologie : ${formatEtapes(seule.length)} · '
                       '${formatDuree(dureeChronologie(seule))}',
             style: theme.textTheme.bodyMedium,
@@ -209,7 +211,9 @@ class _FeuilleChangerProcessusState
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
-              TextesDeroule.choisirAutre,
+              sansProcessusPrevu(_brew)
+                  ? TextesDeroule.choisirUn
+                  : TextesDeroule.choisirAutre,
               textAlign: TextAlign.end,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
