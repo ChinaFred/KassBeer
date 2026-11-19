@@ -16,10 +16,10 @@ void main() {
       );
   });
 
-  test('439 cultures (25 Fermentis, 16 Mangrove Jack\'s, 55 Imperial, '
-      '104 Omega, 115 White Labs, 47 The Yeast Bay, 77 Wyeast), '
-      'aucun rejet', () {
-    expect(lecture.entrees, hasLength(439));
+  test('537 cultures (25 Fermentis, 16 Mangrove Jack\'s, 55 Imperial, '
+      '104 Omega, 115 White Labs, 47 The Yeast Bay, 77 Wyeast, '
+      '98 Escarpment Labs), aucun rejet', () {
+    expect(lecture.entrees, hasLength(537));
     final parProducteur = <String, int>{};
     for (final e in lecture.entrees) {
       parProducteur[e.producteur!] = (parProducteur[e.producteur!] ?? 0) + 1;
@@ -32,6 +32,7 @@ void main() {
       'White Labs': 115,
       'The Yeast Bay': 47,
       'Wyeast': 77,
+      'Escarpment Labs': 98,
     });
     expect(lecture.rejets, isEmpty);
     expect(lecture.listesIgnorees, isEmpty);
@@ -39,7 +40,13 @@ void main() {
     expect(lecture.entrees.map((e) => e.nature).toSet(), {
       NatureReferentiel.culture,
     });
-    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(439));
+    expect(lecture.entrees.map((e) => e.sourceId).toSet(), hasLength(537));
+  });
+
+  test('chaque ligne de la table de fusion des cultures désigne une fiche', () {
+    for (final f in kFusionsCultures) {
+      expect(lecture.entrees.where(f.designeFiche), hasLength(1), reason: '$f');
+    }
   });
 
   test('chaque fiche porte la date du relevé de son producteur', () {
@@ -97,6 +104,21 @@ void main() {
         hasLength(18),
       );
       expect(wl.keys.where((k) => k.startsWith('WLP7')), isEmpty);
+    },
+  );
+
+  test(
+    'P56 : aucun nom normalisé porté par deux fiches d\'un même producteur',
+    () {
+      final parProducteur = <String, List<String>>{};
+      for (final e in lecture.entrees) {
+        parProducteur
+            .putIfAbsent(e.producteur!, () => [])
+            .add(cleNormalisee(e.nom));
+      }
+      for (final MapEntry(:key, :value) in parProducteur.entries) {
+        expect(value.toSet(), hasLength(value.length), reason: key);
+      }
     },
   );
 

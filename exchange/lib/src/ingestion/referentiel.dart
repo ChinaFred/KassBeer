@@ -7,8 +7,9 @@ import 'sources.dart';
 /// d'un nom (spécification de L3 : « Identifiants » ; `DATA_SOURCES.md`,
 /// décision 4). Deux entrées de même clé fusionnent : la plus prioritaire
 /// donne les valeurs, chaque entrée ajoute sa ligne de `provenance[]` et son
-/// nom aux `aliases`. La table de fusion (`fusions.dart`, ADR-014) rattache
-/// en plus des entrées de noms différents à un même document de houblon.
+/// nom aux `aliases`. Les tables de fusion (`fusions.dart`) rattachent en
+/// plus des entrées de noms différents à un même document de houblon
+/// (ADR-014) ou de culture.
 /// `cleProducteur` et `cleProduit` vivent dans `noms.dart`, partagés avec la
 /// résolution d'un import.
 
@@ -194,6 +195,15 @@ class Referentiel {
   /// aucune entrée, une entrée désignée par deux lignes ou deux lignes de même
   /// identifiant lèvent [StateError] : la table est fausse.
   ///
+  /// Une ligne de [fusionsCultures] rattache la fiche d'un fabricant et les
+  /// entrées Brewtarget qu'elle désigne au document de cette ligne
+  /// ([FusionCulture.id]) ; la fiche, prioritaire, donne les valeurs et le
+  /// nom. Une ligne dont la fiche ou les entrées Brewtarget sont absentes,
+  /// une entrée désignée par deux lignes, deux lignes de même identifiant, ou
+  /// une entrée Brewtarget dont l'identifiant (celui de sa souche si elle
+  /// porte producteur et référence) diffère de celui de la ligne lèvent
+  /// [StateError].
+  ///
   /// Une culture qui porte un producteur et une référence se regroupe d'abord
   /// avec celles de même producteur et de même référence : c'est la même
   /// souche, quel que soit le nom écrit (`SafAle S-04` et `SafAle English
@@ -205,6 +215,7 @@ class Referentiel {
   factory Referentiel.fusionner(
     List<EntreeBrute> entrees, {
     List<Fusion> fusions = const [],
+    List<FusionCulture> fusionsCultures = const [],
   }) {
     final lignes = <String, Fusion>{};
     final ligneDe = <int, Fusion>{};
@@ -229,6 +240,34 @@ class Referentiel {
         }
       }
     }
+    final idsCultures = <String>{};
+    final ligneCultureDe = <int, FusionCulture>{};
+    for (final f in fusionsCultures) {
+      if (!idsCultures.add(f.id)) {
+        throw StateError('fusion de culture en double : ${f.id}');
+      }
+      var fiches = 0;
+      var brewtarget = 0;
+      for (var i = 0; i < entrees.length; i++) {
+        final fiche = f.designeFiche(entrees[i]);
+        if (!fiche && !f.designeBrewtarget(entrees[i])) continue;
+        final deja = ligneCultureDe[i];
+        if (deja != null) {
+          throw StateError(
+            '${entrees[i].source.id} « ${entrees[i].nom} » désignée par '
+            '$deja et $f',
+          );
+        }
+        ligneCultureDe[i] = f;
+        fiche ? fiches++ : brewtarget++;
+      }
+      if (fiches == 0) {
+        throw StateError('fusion ${f.id} : aucune fiche $f');
+      }
+      if (brewtarget == 0) {
+        throw StateError('fusion ${f.id} : aucune entrée Brewtarget $f');
+      }
+    }
 
     int ordre((int, EntreeBrute) a, (int, EntreeBrute) b) {
       final rang = a.$2.source.rang.compareTo(b.$2.source.rang);
@@ -250,11 +289,26 @@ class Referentiel {
     for (final MapEntry(:key, :value) in souches.entries) {
       idSouche[key] = idDe((value..sort(ordreIdentifiant)).first.$2);
     }
+    // Une entrée Brewtarget désignée par une ligne de culture garde son
+    // identifiant : sinon la ligne créerait un document à côté de l'ancien.
+    for (final MapEntry(key: i, value: f) in ligneCultureDe.entries) {
+      final e = entrees[i];
+      if (e.source == Source.fabricants) continue;
+      final souche = _cleSouche(e);
+      final naturel = souche == null ? idDe(e) : idSouche[souche]!;
+      if (naturel != f.id) {
+        throw StateError(
+          'fusion ${f.id} : ${e.source.id} « ${e.nom} » a pour identifiant '
+          '$naturel',
+        );
+      }
+    }
     final groupes = <String, List<(int, EntreeBrute)>>{};
     for (var i = 0; i < entrees.length; i++) {
       final souche = _cleSouche(entrees[i]);
       final id =
           ligneDe[i]?.id ??
+          ligneCultureDe[i]?.id ??
           (souche == null ? idDe(entrees[i]) : idSouche[souche]!);
       groupes.putIfAbsent(id, () => []).add((i, entrees[i]));
     }

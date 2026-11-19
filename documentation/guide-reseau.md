@@ -240,6 +240,12 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
+Le 2026-11-15 (v0.1.78), décision de l'utilisateur : P56 précise la règle des noms pour la
+nature `culture` : aucun nom normalisé ne désigne deux documents d'un même producteur ; un nom
+partagé entre deux producteurs (deux souches différentes vendues sous le même nom commercial)
+reste permis, compté au rapport et documenté dans `DATA_SOURCES.md`. Aucun contrôle, agent,
+skill ni hook nouveau.
+
 Le 2026-11-15 (v0.1.74), décisions de l'utilisateur : P15 accepte, dans le champ `name`
 d'une entrée de `exchange/donnees/fabricants/cultures.json`, le nom de la fiche du fabricant,
 relevée à l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name`
