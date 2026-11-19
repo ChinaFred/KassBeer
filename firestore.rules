@@ -538,6 +538,11 @@ service cloud.firestore {
     // Création du plus grand modèle de processus (5 journées de 60 éléments) :
     // 185 pad(). Un lot de 60 step_skipped, plus le début d'étape suivant, passe
     // (rules-tests/test/processes.test.mjs).
+    //
+    // Événements (heures estimées de la v0.1.69, densité et instrument de la v0.1.72) :
+    // mesure de la v0.1.72, notée avant isEventShape (match /events ci-dessous), qui
+    // remplace celle de la v0.1.69 (16 pad10() avant densityOk). Le lot de 60
+    // step_skipped passe toujours.
     match /brews/{brewId} {
       allow read: if isMember();
       allow create: if isMember()
@@ -556,8 +561,21 @@ service cloud.firestore {
       // created_at = serverTimestamp() pour l'audit. Aucune transaction requise.
       function eventFields() {
         return ['owner_uid', 'kind', 'step_key', 'measure_type', 'value', 'note',
-                'measured_at', 'created_at', 'phase'];
+                'measured_at', 'created_at', 'phase', 'time_estimated', 'date_estimated',
+                'gravity_instrument', 'brix', 'sample_temperature', 'refractometer_factor',
+                'correct'];
       }
+
+      // Budget des événements (isEventShape, estimatedOk, estimationRetireeOk,
+      // densityOk), mesuré en v0.1.72 après la fusion avec la v0.1.69, même
+      // émulateur, pad10() ajoutés à la création et à la correction d'un
+      // événement : création d'une lecture de réfractomètre en
+      // fermentation avec une note de 2 000 caractères, 15 pad10() passent, 16 sont
+      // refusés ; correction d'un flottant à heure estimée en réfractomètre, heure
+      // changée et estimation retirée, note de 2 000 caractères, 14 passent, 15 sont
+      // refusés ; lot de 10 événements du plus grand brassin importé
+      // (import_fiches.test.mjs), 15 passent, 16 sont refusés. Marge la plus faible :
+      // 14 pad10(), environ 560 expressions.
 
       // Forme selon kind. Début, fin ou saut d'étape : step_key obligatoire, sans
       // mesure. Mesure : type connu et valeur numérique finie et bornée, step_key nul
@@ -570,7 +588,65 @@ service cloud.firestore {
           && optString(d, 'note', 2000)
           && d.measured_at is timestamp
           && phaseOk(d)
+          && estimatedOk(d)
+          && densityOk(d)
           && (isStepEvent(d) || isMeasurement(d) || isNote(d));
+      }
+
+      // Heure estimée à l'import d'une fiche (v0.1.69) : time_estimated vaut true,
+      // sur un début d'étape, une mesure ou une note ; absent, l'heure est notée.
+      // date_estimated (relevé daté du jour du brassage + 28 jours) vaut true, sur une
+      // mesure ou une note, et seulement avec time_estimated. Aucun champ ajouté au
+      // brassin.
+      function estimatedOk(d) {
+        return (!('time_estimated' in d)
+            || (d.time_estimated == true
+                && d.kind in ['step_started', 'measurement', 'note']))
+          && (!('date_estimated' in d)
+            || (d.date_estimated == true
+                && d.get('time_estimated', false) == true
+                && d.kind in ['measurement', 'note']));
+      }
+
+      // Une heure estimée ne s'ajoute pas à une saisie : seul passage permis, vrai →
+      // absent, avec measured_at changé (l'heure corrigée devient notée).
+      function estimationRetireeOk() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['time_estimated', 'date_estimated'])
+          || (!('time_estimated' in request.resource.data)
+            && !('date_estimated' in request.resource.data)
+            && request.resource.data.measured_at != resource.data.measured_at);
+      }
+
+      // Instrument d'une densité et sa lecture brute ; la valeur corrigée n'est
+      // jamais stockée (brewing/, densiteRetenue). Sans instrument : aucun champ de
+      // lecture (mesure ancienne, ou instrument « À choisir »). Densimètre
+      // flottant : value (SG lue), sample_temperature facultative de 0 à 100 °C,
+      // correct booléen. Réfractomètre : value nulle, brix de 0 à 40, facteur
+      // facultatif de 0,9 à 1,2, correct booléen. Électronique ou autre : value
+      // seule. Bornes identiques à celles de la saisie (brewing/).
+      function densityOk(d) {
+        return d.get('gravity_instrument', null) == null
+          ? d.get('brix', null) == null && d.get('sample_temperature', null) == null
+            && d.get('refractometer_factor', null) == null && d.get('correct', null) == null
+          : d.kind == 'measurement' && d.get('measure_type', null) == 'gravity'
+            && (d.gravity_instrument == 'refractometer'
+              ? d.get('value', null) == null
+                && d.get('brix', null) is number && d.brix >= 0 && d.brix <= 40
+                && (d.get('refractometer_factor', null) == null
+                  || (d.refractometer_factor is number
+                    && d.refractometer_factor >= 0.9 && d.refractometer_factor <= 1.2))
+                && d.get('sample_temperature', null) == null
+                && d.get('correct', null) is bool
+              : d.get('brix', null) == null && d.get('refractometer_factor', null) == null
+                && (d.gravity_instrument in ['hydrometer_20c', 'hydrometer_15_6c']
+                  ? d.get('correct', null) is bool
+                    && (d.get('sample_temperature', null) == null
+                      || (d.sample_temperature is number
+                        && d.sample_temperature >= 0 && d.sample_temperature <= 100))
+                  : d.gravity_instrument in ['digital', 'other']
+                    && d.get('sample_temperature', null) == null
+                    && d.get('correct', null) == null));
       }
 
       // Absente ou nulle : jour de brassage. 'fermentation' : relevé après le brassage,
@@ -607,10 +683,13 @@ service cloud.firestore {
           || (type == 'ph' && v >= 0 && v <= 14);
       }
 
+      // Une lecture de réfractomètre n'a pas de value (densityOk contrôle brix).
       function isMeasurement(d) {
         return d.kind == 'measurement'
-          && d.get('value', null) is number
-          && measureInRange(d.get('measure_type', null), d.value);
+          && ((d.get('value', null) is number
+              && measureInRange(d.get('measure_type', null), d.value))
+            || (d.get('gravity_instrument', null) == 'refractometer'
+              && d.get('measure_type', null) == 'gravity'));
       }
 
       function isNote(d) {
@@ -628,12 +707,17 @@ service cloud.firestore {
           && request.resource.data.created_at == request.time
           && get(/databases/$(database)/documents/brews/$(brewId)).data.owner_uid
                == request.auth.uid;
-        // Correction d'une saisie : valeur, note et heure seulement.
+        // Correction d'une saisie : valeur, note et heure ; une heure estimée corrigée
+        // perd time_estimated et date_estimated (estimationRetireeOk) ; pour une
+        // densité, aussi l'instrument et la lecture brute (densityOk).
         allow update: if isMember()
           && resource.data.owner_uid == request.auth.uid
           && isEventShape(request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['value', 'note', 'measured_at']);
+               .hasOnly(['value', 'note', 'measured_at', 'time_estimated',
+                         'date_estimated', 'gravity_instrument', 'brix',
+                         'sample_temperature', 'refractometer_factor', 'correct'])
+          && estimationRetireeOk();
         // Sans lecture du brassin : un événement reste supprimable par son auteur
         // si le brassin a déjà été supprimé.
         allow delete: if isMember() && resource.data.owner_uid == request.auth.uid;
@@ -734,6 +818,23 @@ service cloud.firestore {
       allow create, update: if isMember() && isSelf(uid)
         && request.resource.data.keys().hasOnly(['default_template_id', 'updated_at'])
         && optString(request.resource.data, 'default_template_id', 128)
+        && request.resource.data.updated_at == request.time;
+      allow delete: if isMember() && isSelf(uid);
+    }
+
+    // Instrument de densité du brasseur : état propre au lecteur, jamais écrit sur
+    // le brassin. Écriture simple, sans transaction (jour de brassage hors ligne).
+    // Le facteur du réfractomètre est gardé quand l'instrument change.
+    match /users/{uid}/preferences/measurement {
+      allow create, update: if isMember() && isSelf(uid)
+        && request.resource.data.keys().hasOnly(
+             ['gravity_instrument', 'refractometer_factor', 'updated_at'])
+        && request.resource.data.gravity_instrument in
+             ['hydrometer_20c', 'hydrometer_15_6c', 'refractometer', 'digital', 'other']
+        && (request.resource.data.get('refractometer_factor', null) == null
+          || (request.resource.data.refractometer_factor is number
+            && request.resource.data.refractometer_factor >= 0.9
+            && request.resource.data.refractometer_factor <= 1.2))
         && request.resource.data.updated_at == request.time;
       allow delete: if isMember() && isSelf(uid);
     }

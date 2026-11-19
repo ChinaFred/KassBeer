@@ -2,8 +2,17 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ecrireCollections, inchange, TAILLE_LECTURE, TAILLE_LOT } from "../lib/ecriture.mjs";
-import { idExecution } from "../lib/execution.mjs";
+import {
+  ecrireCollections,
+  inchange,
+  PLAFOND_SUPPRESSIONS,
+  planifierSuppressions,
+  supprimerDocuments,
+  TAILLE_LECTURE,
+  TAILLE_LOT,
+} from "../lib/ecriture.mjs";
+import { idExecution, idsPrepares } from "../lib/execution.mjs";
+import { ErreurOptions } from "../lib/options.mjs";
 
 const SERVEUR = Symbol("serverTimestamp");
 const FieldValue = { serverTimestamp: () => SERVEUR };
@@ -114,5 +123,102 @@ describe("ecrireCollections", () => {
 describe("idExecution", () => {
   it("horodatage ISO compact en UTC", () => {
     assert.equal(idExecution(new Date("2026-11-11T14:30:12.345Z")), "20261111T143012Z");
+  });
+});
+
+describe("planifierSuppressions (ADR-014)", () => {
+  const ids = (n, prefixe = "hop-p") => Array.from({ length: n }, (_, i) => `${prefixe}${i}`);
+
+  it("absents de la préparation, triés ; identifiant hors motif ignoré", () => {
+    const plan = planifierSuppressions({
+      collection: "beer_hops",
+      enLigne: [...ids(40), "hop-z-ancien", "hop-a-ancien", "Hop_Mauvais"],
+      prepares: ids(41),
+    });
+    assert.deepEqual(plan.candidates, ["hop-a-ancien", "hop-z-ancien"]);
+    assert.deepEqual(plan.ignored, [
+      { id: "Hop_Mauvais", raison: "identifiant hors du motif de la collection" },
+    ]);
+    assert.equal(plan.online, 43);
+    assert.equal(plan.prepared, 41);
+  });
+
+  it("plafond : 30 acceptés, 31 refusés", () => {
+    const prepares = ids(1000);
+    const plan = planifierSuppressions({
+      collection: "beer_hops",
+      enLigne: [...prepares, ...ids(PLAFOND_SUPPRESSIONS, "hop-x")],
+      prepares,
+    });
+    assert.equal(plan.candidates.length, 30);
+    assert.throws(
+      () =>
+        planifierSuppressions({
+          collection: "beer_hops",
+          enLigne: [...prepares, ...ids(PLAFOND_SUPPRESSIONS + 1, "hop-x")],
+          prepares,
+        }),
+      (e) => e instanceof ErreurOptions && /30 au plus/.test(e.message),
+    );
+  });
+
+  it("préparation à moins de 90 % des documents en ligne : refusée", () => {
+    const prepares = ids(90);
+    const ok = planifierSuppressions({
+      collection: "beer_hop_aromas",
+      enLigne: [...prepares, ...ids(10, "hop-x")],
+      prepares,
+    });
+    assert.equal(ok.candidates.length, 10);
+    assert.throws(
+      () =>
+        planifierSuppressions({
+          collection: "beer_hop_aromas",
+          enLigne: [...prepares, ...ids(11, "hop-x")],
+          prepares,
+        }),
+      (e) => e instanceof ErreurOptions && /moins de 90 %/.test(e.message),
+    );
+  });
+
+  it("autre collection : refusée", () => {
+    for (const collection of ["beer_fermentables", "beer_index", "public_recipes", "recipes"]) {
+      assert.throws(
+        () => planifierSuppressions({ collection, enLigne: ["x"], prepares: ["x"] }),
+        ErreurOptions,
+        collection,
+      );
+    }
+  });
+
+  it("beer_hop_aromas sans aromes.json : refusée ; identifiants préparés, refusés compris", () => {
+    assert.throws(() => idsPrepares("beer_hop_aromas", { documents: {} }, null), ErreurOptions);
+    assert.deepEqual(
+      idsPrepares("beer_hop_aromas", { documents: {} }, { entrees: [{ id: "hop-a" }, {}] }),
+      ["hop-a"],
+    );
+    assert.deepEqual(
+      idsPrepares("beer_hops", { documents: { beer_hops: [{ id: "hop-b" }] } }, null),
+      ["hop-b"],
+    );
+  });
+});
+
+describe("supprimerDocuments", () => {
+  it("un par un ; un échec noté avec son code, les autres supprimés", async () => {
+    const supprimes = [];
+    const db = {
+      collection: (c) => ({
+        doc: (id) => ({
+          async delete() {
+            if (id === "hop-b") throw Object.assign(new Error("refus"), { code: 7 });
+            supprimes.push(`${c}/${id}`);
+          },
+        }),
+      }),
+    };
+    const r = await supprimerDocuments({ db, collection: "beer_hops", ids: ["hop-a", "hop-b"] });
+    assert.deepEqual(r, { deleted: ["hop-a"], errors: [{ id: "hop-b", erreur: "7" }] });
+    assert.deepEqual(supprimes, ["beer_hops/hop-a"]);
   });
 });

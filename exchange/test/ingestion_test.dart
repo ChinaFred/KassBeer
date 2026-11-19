@@ -31,6 +31,10 @@ const _alias = [
 
 const _ajouts = ['Fruit Inconnu', 'Jus Fictif'];
 
+/// Dates de relevé inventées : `Labo Fictif` pour la fixture des fiches, et
+/// un second producteur pour la version de la source (relevé le plus récent).
+const _datesFiches = {'labo-fictif': '2026-11-01', 'autre': '2026-11-03'};
+
 SourcesBrutes _sources() {
   String texte(String f) => File('$_dossier/brewtarget/$f').readAsStringSync();
   return SourcesBrutes(
@@ -39,6 +43,7 @@ SourcesBrutes _sources() {
     texte003: texte('003.json'),
     texte004: texte('004.json'),
     texte005: texte('005.beer'),
+    texteFabricants: File('$_dossier/fabricants/vide.json').readAsStringSync(),
     diyDog: [
       for (final f in ['001.json', '002.json'])
         (fichier: f, texte: File('$_dossier/diydog/$f').readAsStringSync()),
@@ -46,8 +51,14 @@ SourcesBrutes _sources() {
   );
 }
 
-Preparation _preparer() =>
-    preparer(_sources(), alias: _alias, ajoutsDansHoublons: _ajouts);
+/// Sans table de fusion : celle du projet désigne des entrées absentes des
+/// fixtures. La table est essayée par `fusions_test.dart`.
+Preparation _preparer() => preparer(
+  _sources(),
+  alias: _alias,
+  ajoutsDansHoublons: _ajouts,
+  fusions: const [],
+);
 
 /// Données du document [id] de [collection].
 Map<String, Object?> _doc(Preparation p, String collection, String id) {
@@ -660,6 +671,103 @@ void main() {
     });
   });
 
+  group('fiches des fabricants', () {
+    late Preparation p;
+    setUpAll(() {
+      final s = _sources();
+      p = preparer(
+        SourcesBrutes(
+          octets001: s.octets001,
+          texte002: s.texte002,
+          texte003: s.texte003,
+          texte004: s.texte004,
+          texte005: s.texte005,
+          texteFabricants: File(
+            '$_dossier/fabricants/cultures.json',
+          ).readAsStringSync(),
+          diyDog: s.diyDog,
+        ),
+        alias: _alias,
+        ajoutsDansHoublons: _ajouts,
+        fusions: const [],
+        datesReleveFabricants: _datesFiches,
+      );
+    });
+
+    test('la fiche donne les valeurs, l\'identifiant ne change pas', () {
+      final l = _doc(
+        p,
+        'beer_cultures',
+        'culture-labo-fictif-lf1-levure-test-ale',
+      );
+      expect(l['name'], 'Fictiale LF1');
+      expect(l['aliases'], ['Levure Test Ale']);
+      expect(l['attenuation'], plage(76, 80, '%'));
+      expect(l['temperature_range'], plage(18, 26, 'C'));
+      // La fiche ne donne pas la floculation : elle n'est pas reprise du 003.
+      expect(l.containsKey('flocculation'), isFalse);
+      expect(l.containsKey('notes'), isFalse);
+      final provenance = l['provenance']! as List;
+      expect(provenance.first, {
+        'source': 'fabricants',
+        'source_id': 'labo-fictif-lf1',
+        'version': '2026-11-01',
+        'licence': Licence.fabricant,
+        'retrieved': '2026-11-01',
+      });
+      expect(provenance, hasLength(3));
+    });
+
+    test('souche connue de la seule fiche ; atténuation hors bornes', () {
+      final fiche = p.collections['beer_cultures']!.singleWhere(
+        (e) => (e['data']! as Map)['name'] == 'Fictibrew LF2',
+      );
+      expect(fiche['id'], 'culture-labo-fictif-lf2-fictibrew-lf2');
+      final n = fiche['data']! as Map;
+      expect(n['temperature_range'], plage(20, 32, 'C'));
+      expect(n.containsKey('attenuation'), isFalse);
+      expect(p.collections['beer_cultures'], hasLength(4));
+      final ecartees = (p.rapport['valeurs_ecartees']! as Map)['lignes']!;
+      expect(
+        (ecartees as List).where(
+          (e) =>
+              (e as Map)['source'] == 'fabricants' &&
+              '${e['champ']}'.startsWith('attenuation_range'),
+        ),
+        isNotEmpty,
+      );
+    });
+
+    test('version des fiches : relevé le plus récent', () {
+      final sources = p.rapport['sources']! as List;
+      expect(sources.first, {'source': 'fabricants', 'version': '2026-11-03'});
+    });
+
+    test('producteur sans date de relevé : entrée refusée', () {
+      final lecture = LectureReferentiels(datesReleveFabricants: const {})
+        ..lireFabricants(
+          File('$_dossier/fabricants/cultures.json').readAsStringSync(),
+        );
+      expect(lecture.entrees, isEmpty);
+      expect(lecture.rejets.map((r) => r.raison).toSet(), {
+        'date du relevé inconnue',
+      });
+    });
+
+    test('liste autre que cultures ignorée et comptée', () {
+      expect(
+        (p.rapport['listes_ignorees']! as Map)['fabricants:hop_varieties'],
+        1,
+      );
+      expect(
+        p.collections['beer_hops']!.where(
+          (e) => (e['data']! as Map)['name'] == 'Houblon De Fiche',
+        ),
+        isEmpty,
+      );
+    });
+  });
+
   group('rapport', () {
     late Preparation p;
     setUpAll(() => p = _preparer());
@@ -746,6 +854,24 @@ void main() {
       });
     });
 
+    test('origine hors de la liste des pays : absente, listée (ADR-014)', () {
+      final inconnues = (p.rapport['origines_inconnues']! as List)
+          .map((l) => '${(l as Map)['id']}|${l['source']}|${l['graphie']}')
+          .toList();
+      expect(
+        inconnues,
+        [
+          'fermentable-malt-imaginaire|brewtarget-001|Pays fictif',
+          'hop-houblon-test|brewtarget-005|Pays fictif',
+          'hop-houblon-test|brewtarget-003|Pays fictif',
+          'hop-houblon-test|brewtarget-001|Pays fictif',
+          'hop-houblon-second|brewtarget-003|Pays fictif',
+        ]..sort(),
+      );
+      final houblon = _doc(p, 'beer_hops', 'hop-houblon-test');
+      expect(houblon.containsKey('origin'), isFalse);
+    });
+
     test('entrées par source et fusions', () {
       expect(p.rapport['entrees_par_source'], {
         'brewtarget-001': {'fermentable': 4, 'hop': 1, 'misc': 1, 'culture': 1},
@@ -793,6 +919,7 @@ void main() {
       texte003: s.texte003,
       texte004: s.texte004,
       texte005: s.texte005,
+      texteFabricants: s.texteFabricants,
       diyDog: List.filled(kMaxFichiersDiyDog + 1, s.diyDog.first),
     );
     expect(() => preparer(trop), throwsStateError);
@@ -818,6 +945,21 @@ void main() {
       throwsStateError,
       reason: 'nature différente',
     );
+  });
+
+  test('table d\'alias du projet : aucune cible n\'est un houblon absorbé', () {
+    // ADR-014 : un identifiant absorbé par une ligne de kFusions disparaît.
+    final gardes = {for (final f in kFusions) f.id};
+    final absorbes = {
+      for (final f in kFusions)
+        for (final e in f.entrees)
+          idEntree(NatureReferentiel.hop, cleNormalisee(e.nom)),
+    }..removeAll(gardes);
+    for (final a in kAlias) {
+      if (a.nature == NatureReferentiel.hop && a.cible != null) {
+        expect(absorbes, isNot(contains(a.cible)), reason: a.nom);
+      }
+    }
   });
 
   test('table d\'alias du projet : chaque cible existe dans sa nature', () {

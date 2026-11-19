@@ -4,6 +4,7 @@ import 'package:brewing/brewing.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/features/brews/domain/brew_event.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/features/brews/data/brews_repository.dart';
 import 'package:kass_beer/features/brews/domain/brew.dart';
@@ -450,7 +451,7 @@ void main() {
         reported: reported,
         brew: unBrassin(recipe: _recette, status: BrewStatus.fermenting),
         embouteillage: embouteillage,
-        finalGravity: 1.012,
+        finalGravity: const DensiteSaisie(sg: 1.012),
         modification: false,
         ownerName: null,
         prices: null,
@@ -505,7 +506,7 @@ void main() {
         reported: reported,
         brew: unBrassin(recipe: _recette, status: BrewStatus.fermenting),
         embouteillage: embouteillage,
-        finalGravity: 1.010,
+        finalGravity: const DensiteSaisie(sg: 1.010),
         modification: false,
         ownerName: 'Bruno',
         prices: _lus({'malt-pils': _pils, 'levure-s-04': _s04}),

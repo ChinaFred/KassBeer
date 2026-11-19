@@ -25,9 +25,19 @@ sealed class IssueFiche {
   const IssueFiche();
 }
 
-/// Toutes les écritures acceptées, marque de fin comprise.
+/// Toutes les écritures acceptées, marque de fin comprise. Pour un
+/// remplacement ([remplacee]) : événements et coût figé supprimés avant
+/// l'écriture.
 class FicheEcrite extends IssueFiche {
-  const FicheEcrite();
+  const FicheEcrite({
+    this.remplacee = false,
+    this.evenementsSupprimes = 0,
+    this.coutSupprime = false,
+  });
+
+  final bool remplacee;
+  final int evenementsSupprimes;
+  final bool coutSupprime;
 }
 
 /// Écriture refusée : la fiche est passée, les suivantes continuent.
@@ -58,12 +68,15 @@ typedef ProgressionImport = ({
   int fiche,
   int fiches,
   String nom,
+  bool remplacement,
   int ecritures,
   int total,
 });
 
 /// Écrit [fiches] (cochées, dans l'ordre du fichier) sous [uid], d'après
 /// [etat] lu à l'analyse. Rend l'issue de chaque fiche, dans le même ordre.
+/// Une fiche dont le brassin est dans [aRemplacer] est remplacée
+/// ([planDeRemplacement]) : réseau exigé, comme tout l'import.
 ///
 /// [perteConnexion] se termine quand l'appareil passe hors ligne ;
 /// [arret] vaut vrai quand l'administrateur arrête l'import. Une erreur est
@@ -78,18 +91,32 @@ Future<List<IssueFiche>> executerImport({
   required CostsRepository couts,
   required ErrorReportService errors,
   required Future<void> perteConnexion,
+  Set<String> aRemplacer = const {},
   bool Function() arret = _jamais,
   Duration delai = kDelaiEcriture,
   void Function(ProgressionImport)? surProgression,
 }) async {
   final recettes = {...etat.recettes.keys};
-  List<EcritureImport> plan(FicheAImporter f, Set<String> presentes) =>
-      planDeFiche(
+  bool remplace(FicheAImporter f) =>
+      aRemplacer.contains(f.brewId) && etat.brassins[f.brewId] != null;
+  List<EcritureImport> plan(FicheAImporter f, Set<String> presentes) {
+    final existant = etat.brassins[f.brewId];
+    final recetteAbsente = !presentes.contains(f.fiche!.recipeDocId);
+    if (existant != null && aRemplacer.contains(f.brewId)) {
+      return planDeRemplacement(
         f,
-        existant: etat.brassins[f.brewId],
-        recetteAbsente: !presentes.contains(f.fiche!.recipeDocId),
-        coutFige: etat.coutsFiges.contains(f.brewId),
+        existant: existant,
+        recetteAbsente: recetteAbsente,
       );
+    }
+    return planDeFiche(
+      f,
+      existant: existant,
+      recetteAbsente: recetteAbsente,
+      coutFige: etat.coutsFiges.contains(f.brewId),
+    );
+  }
+
   // Total annoncé : chaque recette créée une fois, par la première fiche.
   final prevues = {...recettes};
   var total = 0;
@@ -111,6 +138,8 @@ Future<List<IssueFiche>> executerImport({
       continue;
     }
     final ecritures = plan(f, recettes);
+    final remplacement = remplace(f);
+    var supprimes = 0;
     IssueFiche issue = const FicheEcrite();
     for (final e in ecritures) {
       if (arret()) {
@@ -121,11 +150,12 @@ Future<List<IssueFiche>> executerImport({
         fiche: n + 1,
         fiches: fiches.length,
         nom: f.fiche!.brassin.name,
+        remplacement: remplacement,
         ecritures: faites,
         total: total,
       ));
       final reponse = await _attendre(
-        _ecrire(e, depot, couts, uid, ownerName),
+        _ecrire(e, depot, couts, uid, ownerName, (n) => supprimes += n),
         perteConnexion,
         delai,
         errors,
@@ -146,16 +176,19 @@ Future<List<IssueFiche>> executerImport({
             stackTrace: stackTrace,
             context: _contexte(n + 1, e, code),
           );
-          issue = FicheEnErreur(
-            e.etape,
-            e is LotEvenements ? e.numero : null,
-            code,
-          );
+          issue = FicheEnErreur(e.etape, _lot(e), code);
         case _SansReponse():
           connexionPerdue = true;
           issue = const FicheInterrompue();
       }
       if (issue is! FicheEcrite) break;
+    }
+    if (issue is FicheEcrite && remplacement) {
+      issue = FicheEcrite(
+        remplacee: true,
+        evenementsSupprimes: supprimes,
+        coutSupprime: etat.coutsFiges.contains(f.brewId),
+      );
     }
     issues.add(issue);
   }
@@ -163,6 +196,7 @@ Future<List<IssueFiche>> executerImport({
     fiche: fiches.length,
     fiches: fiches.length,
     nom: '',
+    remplacement: false,
     ecritures: faites,
     total: total,
   ));
@@ -171,16 +205,28 @@ Future<List<IssueFiche>> executerImport({
 
 bool _jamais() => false;
 
+/// Rang du lot d'un lot d'événements ou d'une suppression, ou `null`.
+int? _lot(EcritureImport e) => switch (e) {
+  LotEvenements(:final numero) ||
+  LotSuppression(:final numero) ||
+  SuppressionBrassin(:final numero) => numero,
+  _ => null,
+};
+
+/// Contexte d'un rapport : rang, étape, lot, code ; ni heure, ni texte, ni
+/// prix (P13).
 String _contexte(int rang, EcritureImport e, String code) =>
     'fiche n° $rang, étape ${e.etape.name}'
-    '${e is LotEvenements ? ', lot ${e.numero}' : ''}, code $code';
+    '${_lot(e) == null ? '' : ', lot ${_lot(e)}'}, code $code';
 
+/// Écrit [e]. [supprimes] reçoit le nombre d'événements supprimés.
 Future<void> _ecrire(
   EcritureImport e,
   ImportFichesRepository depot,
   CostsRepository couts,
   String uid,
   String? ownerName,
+  void Function(int) supprimes,
 ) => switch (e) {
   CreationRecette(:final recipeId, :final content) => depot.creerRecette(
     id: recipeId,
@@ -195,6 +241,10 @@ Future<void> _ecrire(
   ),
   final ModificationBrassin m => depot.modifierBrassin(m, ownerName: ownerName),
   final LotEvenements lot => depot.ecrireEvenements(lot),
+  final LotSuppression lot =>
+    depot.supprimerEvenements(lot).then((_) => supprimes(lot.ids.length)),
+  final SuppressionBrassin s =>
+    depot.supprimerBrassin(s, uid: uid).then(supprimes),
   FigeageCout(:final cout) => couts.saveBrewCost(uid: uid, cost: cout),
 };
 

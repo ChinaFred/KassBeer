@@ -1,5 +1,5 @@
 /// Fiches Excel préparées pour Admin › Import de Kass'Beer (v0.6), en Dart
-/// pur : lecture typée et bornée du format `kassbeer_fiches` v1.
+/// pur : lecture typée et bornée du format `kassbeer_fiches` v2.
 ///
 /// Les recettes du fichier sont lues par `analyserFichier`, comme dans
 /// Recettes › Importer ; le reste (chronologie, mesures, relevés,

@@ -314,7 +314,7 @@ void main() {
         '1,020',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Température (°C)'),
+        find.widgetWithText(TextFormField, 'Température du fermenteur (°C)'),
         '18,5',
       );
       await tester.tap(find.text('Enregistrer le relevé'));
@@ -334,7 +334,7 @@ void main() {
       await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Température (°C)'),
+        find.widgetWithText(TextFormField, 'Température du fermenteur (°C)'),
         '150',
       );
       await tester.tap(find.text('Enregistrer le relevé'));

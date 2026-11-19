@@ -177,6 +177,9 @@ plus.
   - « Comme l'appareil », « Suit le mode clair ou sombre du téléphone ou du navigateur. » ;
   - « Clair » ;
   - « Sombre ».
+- L'instrument de densité ne se choisit pas ici : il se choisit à « Préparer le brassage »,
+  « Préparer la journée » ou dans le formulaire d'une densité (voir « Densimètre et correction
+  des densités »), et il est gardé sur le compte, pas sur l'appareil.
 - Sous la carte : « Ce choix vaut pour cet appareil seulement. ».
 - Par défaut, et quand rien n'a été enregistré : « Comme l'appareil ».
 - Un choix change le thème de toute l'application aussitôt et s'enregistre sur l'appareil,
@@ -444,7 +447,18 @@ qu'une invitation faite hors ligne n'a pas atteint le serveur.
 - **Inviter** : bouton flottant « Inviter » sur téléphone, bouton en tête de liste sur
   grand écran. Le formulaire « Inviter un membre » (feuille du bas sur téléphone, dialogue
   sinon) demande « Adresse e-mail Google » (mise en minuscules), « Nom (facultatif) » et,
-  sous le titre « Rôle », « Brasseur » (par défaut) ou « Administrateur ». Sur le web, Entrée valide. Erreurs :
+  sous le titre « Rôle », « Brasseur » (par défaut) ou « Administrateur ». Sous le rôle, la
+  phrase « Google refuse la connexion tant que l'adresse n'est pas dans les utilisateurs test
+  du projet. Ajoutez-la dans la console Google. » et le bouton « Copier l'adresse et ouvrir la
+  console Google » : il copie l'adresse saisie quand elle est valide (« Adresse copiée ({e-mail}) :
+  collez-la dans « Utilisateurs test » › « Ajouter des utilisateurs ». » ; sans adresse valide,
+  « Aucune adresse valide à copier : saisissez-la d'abord. » ; copie en échec, « Copie
+  impossible : recopiez l'adresse à la main. » ; le message s'efface à la frappe suivante) et ouvre dans le
+  navigateur la page Audience de Google Auth Platform du projet
+  (`console.cloud.google.com/auth/audience?project=<projet>`). Google ne fournit aucune API
+  pour ajouter un utilisateur test : l'ajout reste manuel. Si le système refuse d'ouvrir la
+  page, le formulaire affiche « Impossible d'ouvrir la console. Adresse de la page : » et
+  l'adresse, sélectionnable. Le formulaire reste ouvert. Sur le web, Entrée valide. Erreurs :
   « Adresse e-mail invalide. », « Cette adresse est déjà membre. ». Après « Inviter », le
   formulaire se ferme aussitôt, même hors ligne, et l'écran affiche « {e-mail} est invité.
   Aucun e-mail n'est envoyé : prévenez-le. ». Si le serveur refuse l'invitation, ce message
@@ -490,47 +504,67 @@ l'utilisateur pendant la préparation ; l'application n'en fait aucune.
    · 490 heures et mesures · 8 coûts figés » et les comptes par état sans les zéros (« 14
    nouvelles · 1 à compléter · 1 refusée »). Une ligne par fiche : case, « Ale blonde · 14
    juil. 2024 », identifiant de la fiche, étiquette d'état, points à revoir (« 3 divergences
-   · 2 heures reprises »), détail dépliable. États : « Nouvelle » et « À compléter » (« Import
-   commencé et non terminé : seul ce qui manque sera écrit. »), cochées ; « Déjà importée » ;
-   « Déjà importée, contenu différent » (« Le fichier a changé depuis l'import. Pour remplacer
-   cette fiche, supprimez son brassin et sa recette, puis importez de nouveau. ») ;
-   « Refusée : {raison} », avec le champ en cause (par exemple « montant dans un texte lu
-   par le groupe (brew.notes). » : un prix ne va que dans le coût figé). Seules les deux
-   premières se cochent. Le lecteur d'écran lit la ligne d'un bloc, explication de l'état
+   · 2 heures estimées »), détail dépliable. États : « Nouvelle » et « À compléter » (« Import
+   commencé et non terminé : seul ce qui manque sera écrit. »), cochées ; « Remplacement à
+   terminer » (étiquette au ton tertiaire, « Remplacement commencé et non terminé : l'import le
+   terminera. »), cochée ; « Déjà importée » ; « Déjà importée, contenu différent » (« Le
+   fichier a changé depuis l'import. »), non cochable, avec en dessous une case de 48 px au
+   moins, non cochée, « Remplacer ce brassin » ; « Refusée : {raison} », avec le champ en cause
+   (par exemple « montant dans un texte lu par le groupe (brew.notes). » : un prix ne va que
+   dans le coût figé). Le lecteur d'écran lit la ligne d'un bloc, explication de l'état
    comprise : « Ale blonde, 14 juillet 2024, à compléter, 3 points à revoir, Import commencé
-   et non terminé : seul ce qui manque sera écrit. ». Le détail liste, sans rubrique vide :
+   et non terminé : seul ce qui manque sera écrit. », « …, déjà importée, contenu différent,
+   Le fichier a changé depuis l'import. » puis « Remplacer ce brassin, non cochée ». Le détail
+   liste, sans rubrique vide :
    nom en double (« Une de vos recettes s'appelle déjà « Ale blonde ». »), « À compléter dans
    la recette », « Divergences », « Corrections validées », « Valeurs déduites » (dont unités
    converties, durées arrondies, moments et style simplifiés, textes coupés à la lecture de la
-   recette), « Reprises de la Bibliothèque », « Heures reprises » (dont « Relevé sans date :
-   daté de 28 jours après le brassage. »), « Non importé » (dont parties de la recette non
+   recette), « Reprises de la Bibliothèque », « Heures estimées » (« Aucune heure notée :
+   brassage daté de l'heure de début prévue. », « Heure non notée : estimée d'après la
+   chronologie (3). », « Relevé sans heure : daté de 12:00 (2). », « Relevé sans date : daté de
+   28 jours après le brassage. »), « Non importé » (dont parties de la recette non
    importées et valeurs rejetées), « Coût » (« Coût figé : 49,04 € », « Coût non figé : prix
    manquant pour Houblon Saaz. Vous pourrez le figer depuis le brassin. », « Écart avec la
    fiche : … dans la fiche, … recalculé. »). Hors ligne, « Choisir un autre fichier »
    disparaît.
-4. **Barre du bas.** « Importer N fiches » ; sans case cochée, « Cochez au moins une
-   fiche. » ; quand rien n'est cochable, « Toutes les fiches de ce fichier sont déjà
-   importées. Rien à écrire. » à la place du bouton ; hors ligne, « Import impossible hors
-   ligne. Reconnectez-vous pour importer les fiches cochées. ». Le second import d'un même
-   fichier n'écrit donc rien.
+4. **Barre du bas.** « Importer N fiches » (remplacements compris) ; remplacements seuls,
+   « Remplacer N fiches » ; sans case cochée, « Cochez au moins une fiche. » ; rien de
+   nouveau mais des fiches au contenu différent, « Rien de nouveau à importer. Cochez
+   « Remplacer » pour réécrire une fiche modifiée. » ; quand rien n'est cochable ni
+   remplaçable, « Toutes les fiches de ce fichier sont déjà importées. Rien à écrire. » à la
+   place du bouton ; hors ligne, « Import impossible hors ligne. Reconnectez-vous pour
+   importer les fiches cochées. ». Le second import d'un même fichier n'écrit donc rien.
 5. **Confirmation.** « Importer 16 fiches ? » / « 16 brassins et 15 recettes seront écrits
    sous votre compte. Ils seront visibles du groupe. Les coûts restent privés. » (une fiche :
    « 1 brassin sera écrit sous votre compte. Il sera visible du groupe. … »), boutons
-   « Annuler » et « Importer ». Une recette déjà enregistrée n'entre pas dans le compte.
-6. **Écriture.** « Fiche 4 sur 16 · Ale blonde », barre de progression et « 212 écritures sur
-   610 », ce dernier texte absent tant que le total n'est pas connu ; annonce au lecteur
+   « Annuler » et « Importer ». Une recette déjà enregistrée n'entre pas dans le compte. Avec
+   des remplacements : « Importer 14 fiches et en remplacer 2 ? » / « 14 brassins et 13
+   recettes seront écrits sous votre compte. 2 brassins seront remplacés. Leurs étapes, leurs
+   mesures et leurs coûts figés seront supprimés puis écrits de nouveau. Les heures corrigées
+   depuis l'import seront perdues. Ils seront visibles du groupe. Les coûts restent
+   privés. », boutons « Annuler » et « Importer et remplacer » ; remplacements seuls :
+   « Remplacer 16 brassins ? » / « 16 brassins seront remplacés. Leurs étapes, leurs mesures
+   et leurs coûts figés seront supprimés puis écrits de nouveau. Les heures corrigées depuis
+   l'import seront perdues. », boutons « Annuler » et « Remplacer ». Une fiche « Remplacement
+   à terminer » compte parmi les remplacements.
+6. **Écriture.** « Fiche 4 sur 16 · Ale blonde » (« · remplacement » pour une fiche
+   remplacée), barre de progression et « 212 écritures sur 610 » (suppressions comprises), ce
+   dernier texte absent tant que le total n'est pas connu ; annonce au lecteur
    d'écran une fois par fiche. Quitter demande « Arrêter l'import ? » / « La fiche en cours
    sera reprise au prochain import du même fichier. », boutons « Continuer l'import » et
    « Arrêter ». Une écriture sans accusé du serveur en 30 s, ou la perte de la connexion,
    arrête l'import.
-7. **Compte rendu.** « Import terminé · 16 créées · 0 ignorées · 0 en erreur », annoncé au
-   lecteur d'écran sans montant ; après une perte de connexion ou un accusé absent, le titre
+7. **Compte rendu.** « Import terminé · 16 créées · 0 ignorées · 0 en erreur » (« Import
+   terminé · 12 créées · 2 remplacées · 2 ignorées · 0 en erreur » avec des remplacements),
+   annoncé au lecteur d'écran sans montant ; après une perte de connexion ou un accusé absent, le titre
    et l'annonce disent « Import arrêté · 4 créées · 11 ignorées · 1 en erreur », suivis de
    « Connexion perdue. Import arrêté à la fiche 5 sur 16. Reconnectez-vous puis choisissez de
    nouveau le fichier : les fiches commencées seront reprises. ». Sections « Fiches à revoir » (rubriques du détail),
-   « Ignorées » (« Non cochée », « Déjà importée », « Refusée : … », « Non traitée : import
-   arrêté ») et « En erreur » (« Ale blonde (2024-07-14-ale-blonde) — événements, lot 3 :
-   écriture refusée. Relancez l'import du même fichier pour reprendre. »). Une fiche en
+   « Supprimés » (« Ale blonde (2024-07-14-ale-blonde) : 34 heures et mesures, 1 coût
+   figé »), « Ignorées » (« Non cochée », « Non cochée : contenu différent », « Déjà
+   importée », « Refusée : … », « Non traitée : import arrêté ») et « En erreur » (« Ale blonde
+   (2024-07-14-ale-blonde) — événements, lot 3 : écriture refusée. Relancez l'import du même
+   fichier pour reprendre. », « … — suppression, lot 2 : écriture refusée. … »). Une fiche en
    erreur est passée, les suivantes continuent. Boutons « Voir les brassins » et « Revenir
    à l'administration ». Le compte rendu se relit en choisissant de nouveau le fichier.
 
@@ -542,7 +576,25 @@ Excel) » ou « Brew in bag (fiches Excel) ») et donc une densité prévue « �
 ses heures réelles (débuts d'étape), mesures, relevés de fermentation, nombre de bouteilles,
 volume conditionné et nature du sucre de resucrage ; le coût figé de la fiche quand tous
 ses prix sont connus (voir « Coût »). Rien n'est écrit dans « Mes prix » ni dans « Mes
-frais ». Une recette ou un brassin déjà présent à l'identifiant prévu n'est pas réécrit.
+frais ». Une recette ou un brassin déjà présent à l'identifiant prévu n'est pas réécrit, sauf
+remplacement demandé.
+
+**Heures d'une fiche importée.** Une étape dont la fiche note l'heure reçoit cette heure. Une
+étape citée sans heure (avec une mesure) reçoit son heure théorique, marquée estimée : dernière
+heure notée avant elle, plus la durée prévue de chaque étape entre les deux ; sans heure notée
+avant, l'heure de début prévue de la fiche. Une mesure sans heure prend l'heure de son étape,
+ou celle de la ligne précédente de la fiche. Une étape absente de la fiche n'a aucune heure
+écrite : la fiche du brassin affiche son heure théorique, calculée à l'affichage. Le brassage
+est daté du début de la première étape, noté ou estimé.
+
+**Remplacer une fiche.** Cocher « Remplacer ce brassin » sur une fiche « Déjà importée,
+contenu différent » la réécrit, réseau exigé : le brassin est marqué « remplacement », ses
+heures et mesures sont supprimées par lots, puis le brassin et son coût figé ensemble, puis
+la fiche est écrite comme une fiche nouvelle (coût figé recalculé avec les prix de la fiche,
+au jour du brassage). La recette est toujours gardée ; le brassin reçoit sa copie figée depuis
+le fichier. Une coupure laisse la fiche « Remplacement à terminer », cochée au prochain
+import, qui termine sans doublon. Une fiche dont un document appartient à un autre compte reste
+« Refusée », rien n'est supprimé.
 
 
 ### Admin › Rapports d'erreur
@@ -1095,9 +1147,9 @@ non reconnus ». Lecture seule : l'écran n'écrit rien. La mise à jour (ingest
 le poste de l'administrateur (`exchange/bin/preparer_referentiels.dart`, puis
 `ingest/ecrire.mjs`).
 
-En tête : « Mise à jour de la Bibliothèque depuis les sources externes (Brewtarget, BJCP, DIY
-Dog). » et le bouton icône « Actualiser » (48 px), qui relit la dernière mise à jour et la
-première page des noms non reconnus. Tirer la page vers le bas fait la même chose. Pendant la
+En tête : « Mise à jour de la Bibliothèque depuis les sources externes (Brewtarget, BJCP, fiches
+des fabricants, DIY Dog). » et le bouton icône « Actualiser » (48 px), qui relit la dernière
+mise à jour et la première page des noms non reconnus. Tirer la page vers le bas fait la même chose. Pendant la
 lecture lancée par ce bouton, il laisse la place à un indicateur de même taille, annoncé
 « Lecture en cours » ; pendant toute lecture, les autres boutons de lecture sont désactivés.
 Ce qui est affiché reste visible jusqu'à la réponse.
@@ -1116,8 +1168,9 @@ de l'écrivain, lue à l'ouverture.
   « 412 écrits · 3 inchangés · 0 refusé ». Une collection inconnue de l'application suit, sous
   son nom technique. Si des documents sont refusés : « 2 documents refusés. Le détail est dans
   le rapport local. », dans un encadré d'erreur.
-- « Sources lues » (sous-section) : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 »
-  et « DIY Dog », chacun avec sa version (`v5.2.3 ea10908`, `e6c12ab`).
+- « Sources lues » (sous-section) : « Brewtarget, fichier 001 » à « Brewtarget, fichier 005 »,
+  « Fiches des fabricants » et « DIY Dog », chacun avec sa version (`v5.2.3 ea10908`, date du
+  relevé le plus récent `2026-11-15`, `e6c12ab`).
 - « Noms non reconnus lors de cette mise à jour » (sous-section) : le nombre par nature
   (« Malts et sucres », « Houblons », « Levures », « Divers »), écrit « 12 noms ».
 
@@ -1741,7 +1794,8 @@ La ligne « Nom français » est masquée quand la valeur est absente. Une autre
 s'affiche « Non renseigné ». Une valeur que l'application ne sait pas traduire s'affiche
 telle quelle. Section « Provenance » : une ligne courte par source, sans doublon,
 « Brewtarget 5.2.3 · licence GPL-3.0 · relevé le 8 novembre 2026 » ou « DIY Dog · licence DIY
-Dog (usage privé) · relevé le 8 novembre 2026 », et le lien « Sources des données », qui
+Dog (usage privé) · relevé le 8 novembre 2026 » ou « Fiches des fabricants · données publiées
+par le fabricant · relevé le 14 novembre 2026 », et le lien « Sources des données », qui
 donne le fichier et le commit. Le texte de la fiche est sélectionnable.
 
 **Arômes d'un houblon** (ADR-013). Sur la fiche d'un houblon seulement, une section
@@ -1782,7 +1836,7 @@ recette ne lisent pas les arômes.
 
 **Descriptions aromatiques (administrateur, hors de l'application).** L'administrateur fait
 rédiger les textes par l'API Claude depuis son poste, puis les écrit dans la Bibliothèque par
-le script d'ingestion ; l'application n'appelle aucune IA. Ordre : un essai sur 10 houblons
+le script d'ingestion ; l'application n'appelle pas ce script. Ordre : un essai sur 10 houblons
 choisis, puis les houblons utilisés dans les recettes et les brassins du groupe, puis le
 reste. L'administrateur relit les textes des houblons du groupe avant leur écriture ; les
 autres paraissent « non relu ». Un houblon ajouté plus tard reçoit sa description par une
@@ -1889,10 +1943,20 @@ s'affiche sans réseau.
 - BJCP 2021 : noms, codes, catégories et plages chiffrées des styles, lus dans le fichier 002
   de Brewtarget, sans descriptions.
 - beer-analytics.com : une partie des ingrédients du fichier 005 de Brewtarget, sous licence
-  CC BY-SA 4.0, « Modifications : unités normalisées, doublons fusionnés. », l'adresse
+  CC BY-SA 4.0, « Modifications : unités normalisées, origines ramenées à une liste de pays, doublons fusionnés et renommés. », l'adresse
   `https://creativecommons.org/licenses/by-sa/4.0/` en texte et le bouton « Lire la licence
   CC BY-SA 4.0 », qui l'ouvre hors de l'application. Si le système refuse : « Impossible
   d'ouvrir le lien. Il reste sélectionnable sur cette page. », et l'échec est journalisé.
+- Fiches des fabricants : « Levures et bactéries : noms, type, forme, atténuation et
+  températures recopiés des fiches techniques que chaque fabricant publie en accès libre. Ces
+  valeurs remplacent celles de Brewtarget pour les mêmes levures. Les textes des fiches ne sont
+  pas repris. », puis une ligne par fabricant, dans l'ordre alphabétique : « Fermentis : fiches
+  relevées le 14 novembre 2026, sans floculation. », « Imperial Yeast : fiches relevées le
+  15 novembre 2026, floculation comprise. », « Mangrove Jack's : fiches relevées le
+  15 novembre 2026, floculation comprise. », « Omega Yeast : fiches relevées le 15 novembre
+  2026, floculation comprise. », « The Yeast Bay : fiches relevées le 15 novembre 2026,
+  floculation comprise. », « White Labs : fiches relevées le 15 novembre 2026, floculation
+  comprise. », « Wyeast : fiches relevées le 15 novembre 2026, floculation comprise. ». Un fabricant ajouté ajoute sa ligne.
 - DIY Dog : recettes DIY Dog publiées par BrewDog, reprises pour un usage privé (version
   e6c12ab de leur transcription).
 - srm2hex : « Teintes de la page « Échelle des couleurs » et de la barre de couleur d'un style :
@@ -2095,28 +2159,49 @@ annonce « Journée « Houblonnage à cru » passée. », hors ligne « Journée
 passée sur l'appareil. Elle partira au retour du réseau. ». La journée d'embouteillage ne le
 propose pas : « Embouteiller sans suivre la journée » en tient lieu.
 
-**Prévu et réel** (Déroulé de la fiche, tous les lecteurs). Dès qu'une étape d'une journée a un
-début et une fin, la journée passe en prévu et réel. La deuxième ligne de chaque étape devient
-« Terminée · prévu 45 min · réel 57 min · +12 min » (écart « −5 min », « 0 min », « +1 h 15 » au-delà
-d'une heure ; lu « 12 minutes de plus », « 5 minutes de moins », « sans écart »). Étape sautée
-ou non faite : « prévu 45 min · réel — » (lu « pas de durée réelle ») ; à venir : « À venir · prévu
-45 min » (lu « prévu 45 min ») ; en cours :
-« réel en cours » ; commencée sans fin, ou restée en cours après la fin de la journée (brassage
-terminé, journée terminée, brassin terminé ou abandonné) : « réel sans heure de fin ». Une
-action de 0 min garde « Action ». La durée réelle d'une étape va de son premier début à sa
-dernière fin retenue, arrondie à la minute la plus proche ; le prévu s'arrondit de même. Une
-ligne « Durée totale : prévu 6 h 10 · réel 6 h 52, dont 32 min entre les étapes · +42 min » se place
-sous le titre de la journée de brassage, et en tête du pli des journées suivantes (le résumé du pli
-ne change pas). Le réel de la journée va du premier début à la dernière fin ; « dont … entre les
-étapes » (écoulé moins la somme des réels des étapes) n'apparaît qu'à partir d'une minute. Étape
-en cours : « réel en cours » ; étape sans fin : « réel inconnu : 1 étape sans heure de fin ». Lu :
-« Durée totale : prévue 6 h 10, réelle 6 h 52 dont 32 minutes entre les étapes, 42 minutes de plus
-que prévu. ». Aucune couleur : l'écart se lit au signe. Seuls le nombre et son unité (« 45 min »,
-« 6 h 10 ») et l'espace avant « : » sont insécables : à 200 % sur un téléphone, la ligne se coupe
-entre les mots, jamais au milieu d'un mot. Une journée jamais commencée garde son
-affichage. Le prévu de la journée compte les étapes sautées. L'écran du jour et l'écran d'une
-journée après le brassage ne changent pas. Un brassin sans processus (ancien, importé) montre
-aussi ses durées quand ses étapes ont des heures.
+**Prévu et réel** (Déroulé de la fiche, écran du jour et écran d'une journée après le brassage,
+tous les lecteurs). Seule une heure notée compte : une heure estimée à l'import d'une fiche date
+l'étape, sans réel ni écart. La fin d'une étape est l'heure de « Terminer », sinon le début noté de
+l'étape suivante (étapes sautées passées). Chaque étape porte sur sa deuxième ligne :
+« Terminée · prévu 45 min · réel 57 min · +12 min » (écart « −5 min », « 0 min », « +1 h 15 »
+au-delà d'une heure ; lu « 12 minutes de plus », « 5 minutes de moins », « sans écart »), et la
+colonne d'heure « 12:10 → 12:57 » (lu « de 12 h 10 à 12 h 57 »), ou « 12:10 » sans fin (lu
+« commencée à 12 h 10 »). Étape sautée ou non faite : « prévu 45 min · réel — » (lu « pas de durée
+réelle ») ; à venir : « 13:30 · À venir · prévu 60 min », sans « vers » ; en cours : « réel en
+cours » ; début noté sans fin retenue, ou début estimé : « réel inconnu » (lu « durée réelle
+inconnue »). Dans une journée terminée, une étape restée en cours s'affiche « Terminée · prévu
+45 min · réel inconnu », sans fond ni icône de lecture (lu « terminée »). Une action de 0 min garde
+« Action ». Durées arrondies à la minute la plus proche.
+
+Début estimé : « vers 13:02 », « Terminée · heure estimée · prévu 60 min · réel inconnu » (lu
+« Ébullition, terminée, heure estimée vers 13 h 02, prévu 60 min, durée réelle inconnue. ») ;
+action : « Terminée · heure estimée · Action ». Sur un brassin importé d'une fiche (marque
+« Fiche Excel »), une étape sans début est « Non notée » (au lieu de « Non faite »), icône point
+d'interrogation en couleur atténuée, à son heure théorique « vers 12:57 », « Non notée · prévu
+15 min » ou « Non notée · Action » (lu « Rinçage des drêches, non notée sur la fiche, heure prévue
+vers 12 h 57, prévu 15 min. »). Une étape non faite d'un brassin de l'application reste « Non
+faite ». Une mesure à heure estimée s'affiche « vers 12:10 · 67,5 °C ».
+
+Écart de début : une troisième ligne « Début : 25 min de retard » ou « Début : 5 min d'avance »,
+en mots, sans signe ni couleur (lu « début 25 minutes en retard »), pour une étape au début noté.
+Il compare au plan d'origine : premier début noté de la journée, plus la durée prévue de chaque
+étape avant elle ; le retard s'accumule. Absente à 0 min, donc jamais sur la première étape. Sur
+grand écran (largeur « étendue »), elle rejoint la deuxième ligne après « · ».
+
+Une ligne « Durée totale : prévu 6 h 10 · réel 6 h 52, dont 32 min entre les étapes · +42 min » se
+place sous le titre de la journée de brassage, et en tête du pli des journées suivantes (le résumé
+du pli ne change pas). Le réel de la journée va du premier début noté à la dernière fin ; « dont …
+entre les étapes » (écoulé moins la somme des réels des étapes) n'apparaît qu'à partir d'une
+minute. Étapes intermédiaires sans réel : « … · réel 6 h 52 · +42 min · 3 étapes sans heure
+notée », sans « dont … ». Étape en cours : « réel en cours » ; première étape à heure estimée :
+« réel inconnu : début non noté » ; dernière étape sans fin : « réel inconnu : fin non notée ».
+Lu : « Durée totale : prévue 6 h 10, réelle 6 h 52 dont 32 minutes entre les étapes, 42 minutes de
+plus que prévu. ». Aucune couleur : l'écart se lit au signe. Seuls le nombre et son unité
+(« 45 min », « 6 h 10 ») et l'espace avant « : » sont insécables : à 200 % sur un téléphone, la
+ligne se coupe entre les mots, jamais au milieu d'un mot. Une journée jamais commencée garde son
+affichage. Le prévu de la journée compte les étapes sautées. Un brassin sans processus (ancien,
+importé) montre aussi ses durées quand ses étapes ont des heures. Corriger l'heure d'une saisie
+estimée la rend notée.
 
 **Courbe du jour de brassage.** Elle se dérive à l'affichage, rien n'est lu ni écrit en plus.
 Elle porte sur la journée de brassage : celle du déroulé, ou celle tirée de la chronologie de la
@@ -2233,6 +2318,77 @@ réelles notées à côté) et ne portent ni prix ni prénom. Sa copie d'équipe
 et son type : la densité prévue est « à compléter », la densité mesurée, le degré mesuré et le
 rendement réel restent calculés.
 
+### Densimètre et correction des densités
+
+Chaque brasseur choisit son instrument de mesure de la densité dans une liste fermée. Chaque
+ligne dit ce que l'instrument demande :
+
+| Instrument | Demande | Correction |
+|---|---|---|
+| Densimètre flottant, étalonné à 20 °C | densité lue, température de l'échantillon | température |
+| Densimètre flottant, étalonné à 15,6 °C | densité lue, température de l'échantillon | température |
+| Réfractomètre | lecture en °Brix, facteur de correction du moût | conversion en densité, puis alcool en fermentation |
+| Densimètre électronique | densité seule | aucune |
+| Autre instrument, sans correction | densité seule | aucune |
+
+Le choix est une préférence du brasseur, propre à lui et à aucun brassin. Il se fait par la
+ligne « Densimètre » de « Préparer le brassage » et de « Préparer la journée » (« Changer »),
+ou par la ligne « Densimètre : … · Changer » du formulaire d'une densité (« Densimètre :
+Réfractomètre, facteur 1,04 » ; le bouton est lu « Changer le densimètre »). La feuille
+« Densimètre » liste les cinq instruments ; « Enregistrer » sans instrument coché affiche
+« Choisissez un instrument. » ; pour le réfractomètre, elle ajoute « Facteur de correction du moût »
+(0,9 à 1,2, facultatif). Un choix fait dans un formulaire vaut pour la mesure en cours et
+devient la préférence. Rien n'est écrit sans action du brasseur. Sans préférence, la ligne
+affiche « À choisir » (icône ambre) : aucun instrument n'est présélectionné, la saisie reste
+une densité simple. Une préférence illisible s'affiche aussi « À choisir », et l'erreur est
+signalée.
+
+**La lecture brute est enregistrée, jamais la valeur corrigée.** Une densité garde son
+instrument, sa lecture (densité lue ou °Brix), la température de l'échantillon (flottant), le
+facteur (réfractomètre) et la case « Corriger ». La valeur corrigée se calcule à l'affichage.
+Elle sert partout : chronologie, relevé, courbes, « Prévu et mesuré », densités initiale et
+finale retenues, degré, rendement, écarts. Case décochée ou correction impossible : la lecture
+brute sert. Une mesure enregistrée avant cette version, sans instrument, s'affiche et se calcule
+comme avant.
+
+**Densimètre flottant.** Champs « Densité lue » (aperçu « = 1057,9 ») et « Température de
+l'échantillon (°C) » (0 à 100, aide « Pour proposer la densité corrigée. »). Un encadré annoncé
+donne « Densité corrigée à 20 °C : 1070,7 (+20,7 pts) », l'interrupteur
+« Corriger » (coché par défaut) et « Valeur retenue : 1070,7, corrigée » ou « Valeur retenue :
+1050,0, lue à 68 °C ». Le lecteur d'écran annonce les seuls changements d'état (correction
+approchée ou impossible, calcul refusé, facteur ou densité initiale manquants), pas chaque
+valeur. De 0 à 40 °C la correction est sans réserve ; au-delà de 40 jusqu'à 75 °C
+elle est marquée « ≈ », encadré ambre, « Correction approchée au-delà de 40 °C. Refroidissez
+l'échantillon vers 20 °C pour une mesure fiable. ». Au-delà de 75 °C : « Correction impossible
+au-delà de 75 °C. », sans interrupteur, la lecture brute est retenue. Sans température : « Sans
+température, la densité lue est retenue. ». Un calcul refusé affiche « Correction impossible :
+le calcul est refusé. La lecture est retenue. » et l'erreur est signalée.
+
+**Réfractomètre.** Champ « Lecture (°Brix) » (0 à 40). Sans facteur : « Facteur à renseigner :
+aucune conversion en densité. Appuyez sur Changer. » ; la lecture est enregistrée mais ne donne
+aucune densité, et elle n'est jamais retenue automatiquement. Avec facteur, avant la
+fermentation : « Valeur retenue : 1048,1, lue 12,4 °Brix ». Après le début de la fermentation
+(relevé, journée 2 ou suivante, densité finale de l'embouteillage), la lecture se corrige de
+l'alcool à partir de la densité initiale retenue du brassin : « Densité corrigée de l'alcool :
+1012,1 (−12,6 pts) » (lecture 6,5 °Brix, facteur 1,04, densité initiale
+1050,0), interrupteur « Corriger » ; sans densité initiale retenue :
+« Densité initiale à saisir : la lecture n'est pas corrigée de l'alcool. ».
+
+**Électronique et autre instrument.** Champ « Densité », sans correction, comme avant.
+
+**Affichage.** Chronologie : « Densité 1070,7 · corrigée, lue 1050,0 à 68 °C » (« Densité
+≈ 1070,7 · … » pour une correction approchée), « Densité 1050,0 · lue à 68 °C, sans
+correction », « Densité 1048,1 · lue 12,4 °Brix », « Densité 12,4 °Brix · facteur à
+renseigner ». Relevé de fermentation et « Prévu et mesuré » : étiquette « corrigée » à côté
+d'un complément qui commence par la lecture (« lue 1050,0 à 68 °C »), sans répéter
+« corrigée ». Courbes : un point par mesure à la valeur retenue ; l'info-bulle et
+le résumé lu disent « corrigée ». Une lecture sans densité (réfractomètre sans facteur) n'a pas
+de point.
+
+Les quatre saisies de densité suivent ces règles : mesure du jour de brassage et des journées
+suivantes (correction comprise), « Ajouter un relevé », densité finale de l'embouteillage,
+« Saisir la densité initiale » de « Prévu et mesuré ». Le RAPT Pill n'est pas dans la liste.
+
 ### Relevé de fermentation
 
 Section « Relevé de fermentation » de la fiche, visible à partir de En fermentation, et dans tout
@@ -2273,13 +2429,20 @@ de fermentation suffit. Sans date de brassage, seule la liste s'affiche.
   enregistrée est refusée. » et la liste reste lisible.
 
 Brassin importé d'une fiche sans relevé de fermentation : la densité finale de l'en-tête de la
-fiche devient un relevé, daté par la fiche, sinon du jour du brassage + 28 jours à 12:00, avec la
-note « Date estimée : jour du brassage + 28 jours. ». La date est fixée à la préparation du
-fichier ; l'application n'en calcule aucune. Ce relevé compte dans la densité finale retenue.
-Les relevés des fiches, qui n'ont pas d'heure, sont datés de 12:00.
+fiche devient un relevé, daté par la fiche, sinon du jour du brassage + 28 jours à 12:00, marqué
+« date estimée » (« sam. 13 déc. · date estimée · J+28 », lu « Samedi 13 décembre, date
+estimée »). La date est fixée à la préparation du fichier ; l'application n'en calcule aucune.
+Ce relevé compte dans la densité finale retenue. Les relevés des fiches notés sans heure sont
+datés de 12:00 et marqués « heure non notée » (« sam. 15 nov. · heure non notée · J+5 »), dans
+la liste comme dans l'info-bulle de la courbe ; la marque est enregistrée avec le relevé, jamais
+déduite de l'heure 12:00.
 
-« Ajouter un relevé » (propriétaire, En fermentation ou En conditionnement) : « Densité »
-(0,980 à 1,200), « Température (°C) » (0 à 110), « Date et heure » (maintenant par défaut,
+« Ajouter un relevé » (propriétaire, En fermentation ou En conditionnement) : « Température du
+fermenteur (°C) » (0 à 110), puis la densité selon l'instrument (voir « Densimètre et correction
+des densités » ; densité 0,980 à 1,200) ; pour un densimètre flottant, « Température de
+l'échantillon (°C) » reprend la température du fermenteur à l'ouverture (correction comprise),
+à chaque frappe et au passage à un densimètre flottant, tant que le brasseur ne la modifie
+pas, « Date et heure » (maintenant par défaut,
 « Changer la date »), « Ajouter une note » (2 000 caractères). Densité, température et note sont
 facultatives, sauf les trois vides : « Saisissez une densité, une température ou une note. ». Une
 heure à venir : « L'heure ne peut pas être dans le futur. » ; un jour antérieur au brassage : « Le
@@ -2309,7 +2472,9 @@ indisponibles sur cet appareil hors ligne. ».
 le menu ⋮ quand le déroulé a une journée d'embouteillage ; ou « Embouteiller » en fin de journée
 d'embouteillage, voir « Journée après le brassage ») ouvre le formulaire : « Date d'embouteillage »
 (aujourd'hui par défaut, ni future ni antérieure au jour du brassage), « Densité finale
-(facultatif) », « Nombre de bouteilles (facultatif) » (entier de 1 à 9 999), « Volume conditionné
+(facultatif) » selon l'instrument (« Densité finale lue (facultatif) » pour un flottant,
+« Densité finale, lecture (°Brix) (facultatif) » pour un réfractomètre) (voir « Densimètre et correction des densités » ; un
+réfractomètre s'y corrige de l'alcool), « Nombre de bouteilles (facultatif) » (entier de 1 à 9 999), « Volume conditionné
 (L) (facultatif) » (0 exclu à 1 000), « Sucre de resucrage (g) (facultatif) » (0 à 100 000),
 « Nature du sucre (facultatif) » (80 caractères). Densité finale remplie : un relevé de
 fermentation est créé à l'heure d'embouteillage, dans le même envoi que le statut. Seule la date
@@ -2346,11 +2511,19 @@ densités et le rendement, en % vol pour le degré, en litres pour le volume, sa
 recalculé à l'affichage ; aucune valeur n'est enregistrée, et aucune valeur prévue ne remplace une
 mesure absente (« — » dans sa colonne et dans l'écart).
 
+Les densités sont les valeurs retenues de « Densimètre et correction des densités » :
+corrigées si la case « Corriger » est cochée et la correction possible, sinon brutes ; une
+densité corrigée porte l'étiquette « corrigée » et la lecture dans l'origine (« Relevé J+12
+· 20 nov. 18:30 · Choisie · lue 6,5 °Brix »). « Saisir la densité initiale » suit
+l'instrument du brasseur.
+
 Densité initiale et volume retenus : la dernière mesure du jour de brassage, ou celle que le
 propriétaire choisit. Densité finale retenue : la dernière densité de fermentation (hors celle
 retenue comme densité initiale) ou celle choisie ; hors statut En fermentation, seuls comptent les
 relevés d'un jour au plus égal à celui de l'embouteillage. Chaque valeur affiche son origine
 (« Refroidissement · 8 nov. 15:20 · Dernière mesure », « Relevé J+12 · 20 nov. 18:30 · Choisie »,
+« Empâtage · 15 nov. 12:10 (estimée) · Dernière mesure » pour une heure estimée à l'import, lu
+« … vers 12 h 10, heure estimée », « Relevé J+28 · 13 déc. (date estimée) · Dernière mesure »,
 « Houblonnage à cru · Mesure de densité · 26 nov. 09:20 · Dernière mesure » pour une mesure prise
 sur une étape d'une journée après le brassage)
 et « Changer » (propriétaire), qui liste les mesures possibles et, si une mesure est retenue, « Dernière mesure (automatique) ».
@@ -2388,7 +2561,9 @@ rien écrire, et liste : brassin et recette figée, équipement, chronologie («
 fin vers 16:05 » ; avec un processus, « Brassage : 18 étapes · 6 h 10 · fin vers 16:05 » et
 « Ensuite : Houblonnage à cru le mer. 25 nov., Embouteillage le sam. 5 déc. », ou « à J+4 »
 sans date prévue), compte, écran gardé allumé, minuteurs (« Aucune alarme ne sonne écran
-verrouillé : gardez l'écran visible. »), chaque ligne avec une icône colorée selon son état (vert : fait ; ambre : à surveiller ; rouge : en panne ; gris : information). Réponse reçue, dans un encadré vert : « Tout est prêt. Vous pouvez couper le
+verrouillé : gardez l'écran visible. »), densimètre (« Densimètre flottant, étalonné à 20 °C »,
+« Réfractomètre, facteur 1,04 », « À choisir », avec « Changer », voir « Densimètre et correction
+des densités »), chaque ligne avec une icône colorée selon son état (vert : fait ; ambre : à surveiller ; rouge : en panne ; gris : information). Réponse reçue, dans un encadré vert : « Tout est prêt. Vous pouvez couper le
 réseau. ». Sans réponse ni réseau : « Préparation impossible sans réseau. Le brassin est lisible
 sur cet appareil, mais peut ne pas être à jour. ». « Commencer le brassage » passe le brassin « En
 cours » avec l'heure de l'appareil, démarre la première étape si elle a une durée, et ouvre
@@ -2403,7 +2578,7 @@ ouvert. Une page rechargée sans réseau ne s'ouvre plus. ».
 barre affiche le nom du brassin et l'heure de l'appareil, mise à jour avec le minuteur ; avec un
 processus, la seconde ligne nomme la journée (« Brassage · 10:42 », lu « Journée Brassage, heure
 actuelle 10:42 »), et l'écran suit les seules étapes de la journée de brassage du déroulé
-(« Étape 3 sur 18 », « Fin prévue » de la journée). Quand le brassage
+(« Étape 3 sur 18 », « Fin du brassage prévue »). Quand le brassage
 est affiché, ou pendant la lecture des saisies, le retour Android ramène à la fiche du brassin. À
 droite de la barre, après ⋮, l'avatar à l'initiale seule ouvre le menu du compte (voir Accueil). Un
 autre membre lit « Seul le brasseur de ce brassin suit son brassage. » et suit le brassin depuis
@@ -2413,14 +2588,25 @@ sa fiche, en lecture seule.
 COURS » avec une icône de minuteur, nom, minuteur lisible à deux mètres (« 32:15 », « 1:05:12 »),
 barre de progression de la part écoulée de l'étape (non lue par le lecteur d'écran, qui lit le
 minuteur), « restantes sur 45 min », température visée et dernière mesure, « Ensuite : {nom} ·
-vers 12:30 », « Fin prévue vers 16:05 · retard 12 min ». Étiquette d'étape et ligne « Fin
-prévue » en grand (18), lisibles à deux mètres. Durée dépassée : la carte passe en ambre avec un
+vers 12:30 », « Fin du brassage prévue vers 16:05 · retard 12 min » (« Fin de la journée prévue
+vers… » sur une journée 2 ou suivante), distincte de la fin de l'étape en cours. Étiquette d'étape et
+ligne de fin prévue en grand (18), lisibles à deux mètres. Durée dépassée : la carte passe en ambre avec un
 bord ambre plus foncé, l'étiquette devient « ÉTAPE 2 SUR 7 · DÉPASSÉ » avec une icône de réveil,
 la barre est pleine, « +04:12 », « Dépassé de 4 min · prévu 45 min » (« Dépassé · prévu 45 min »
 la première minute). La carte garde la même taille et la même marge dans les deux états : rien
 ne bouge au passage en dépassé. Pas d'étape en cours : « Prochaine étape : {nom} », « Maintenant » ou
 « Prévue vers 12:30 », bouton « Commencer l'étape » (« Fait » pour une étape de 0 min, début et
-fin au même instant). Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
+fin au même instant). Étape en cours suivie d'une étape avec une durée : bouton « Étape
+suivante », qui termine l'étape en cours et commence la suivante en un appui (un seul lot
+`step_ended` + `step_started`) ; la lecture d'écran nomme les deux étapes (« Terminer « Palier
+68 » et commencer « Ébullition » »). Après l'appui, un message « Étape « {nom} » commencée. »
+reste 10 s (ouvert tant que TalkBack est actif) avec « Annuler », qui supprime dans un même lot
+le début de l'étape commencée et la fin de la précédente, puis affiche « Étape « {précédente} »
+reprise. » ; si l'étape commencée est déjà terminée ou sautée, rien n'est supprimé et le message
+« L'étape « {nom} » est déjà terminée ou sautée : touchez chaque étape pour la corriger. »
+s'affiche. Étape en cours suivie d'une étape de 0 min, ou dernière
+étape : bouton « Terminer l'étape » (« Terminer la journée » sur la dernière étape d'une journée
+autre que le brassage et l'embouteillage) ; l'étape de 0 min garde son appui « Fait ». Fin : « Toutes les étapes sont faites. », « Terminer le brassage » (statut
 « En fermentation »). Sans chronologie : « Aucune étape. Saisissez vos mesures. ». Quand le
 panneau ne tient pas dans sa place (60 % de l'écran au plus en portrait), une barre de
 défilement reste visible à sa droite (couleur `onSurfaceVariant`, 6 px, comme les autres
@@ -2436,8 +2622,11 @@ avec la taille du texte, jusqu'à 30 % de la largeur. Un appui sur une ligne ouv
 « Ne plus sauter », « Corriger l'heure de début », « Corriger l'heure de fin » (l'heure choisie se place au jour le plus proche de la valeur corrigée, sans jamais être dans le futur : un début à 23:50 corrigé à 00:05 passe au lendemain, une fin notée à 08:00 corrigée à 18:00 revient à la veille ; une heure à venir se place à la veille si la veille reste après le début du brassage, sinon elle est refusée ; « La fin doit suivre le début. »), « Annuler le début » / « Annuler la fin » (SnackBar
 « Annuler » 10 s), « Saisir une mesure pour cette étape ». Une étape jamais commencée s'affiche
 « Non faite » dès qu'une étape plus loin a commencé ; marquée sautée, elle s'affiche « Sautée » ; dans les deux cas, elle reste démarrable.
-Étapes faites : heure réelle de début et de fin. À venir : heure attendue, recalculée à partir
-des heures réelles (un retard décale la suite). Commencer une étape alors qu'une autre tourne
+Étapes faites : heure réelle de début et de fin (fin retenue : « Terminer », sinon le début
+noté de l'étape suivante). À venir : heure attendue, recalculée à partir des heures réelles (un
+retard décale la suite). Chaque étape porte aussi son prévu et réel et son écart de début (voir
+« Prévu et réel » sur la fiche), heures estimées et étapes « Non notées » d'un brassin importé
+comprises ; tout se calcule sur l'appareil, sans réseau. Commencer une étape alors qu'une autre tourne
 demande « « {nom} » est en cours. », « Terminer et commencer » ; après des étapes non commencées,
 « Les sauter et commencer ». Un double appui n'écrit qu'un événement. Deux débuts pour une étape
 (deux appareils hors ligne) : le plus ancien compte, l'autre s'affiche « Début en double »,
@@ -2446,7 +2635,8 @@ finit avant de commencer. Corrigez son heure. ».
 
 **Mesures.** Bouton « Mesure » : étape (ou « Sans étape »), type (Température 0 à 110 °C, Densité,
 Volume au-delà de 0 et jusqu'à 1 000 L, pH 0 à 14, Note), heure (« maintenant » par défaut,
-une heure à venir se place à la veille si la veille reste après le début du brassage, comme 23:55 saisi à 00:05 ; sinon elle est refusée), note facultative. Densité : « 1057,9 » ou « 1.058 » (« Densité illisible.
+une heure à venir se place à la veille si la veille reste après le début du brassage, comme 23:55 saisi à 00:05 ; sinon elle est refusée), note facultative. Densité : selon l'instrument du brasseur (voir « Densimètre et correction des
+densités »), « 1057,9 » ou « 1.058 » (« Densité illisible.
 Écrivez 1057,9 ou 1.058. », « Densité hors de 980 à 1200. »). Le formulaire ne se ferme pas par un appui hors de la feuille
 ni par un glissement : seuls « Annuler » et l'enregistrement le ferment. « Enregistrer la mesure » ferme la
 feuille ; « Mesure enregistrée. » avec « Annuler » 10 s. Un appui sur une mesure ouvre sa
@@ -2490,7 +2680,8 @@ toute journée 2 ou suivante du déroulé), ouvert depuis la fiche, dans la barr
 retour vers la fiche. Titre sur deux lignes : « Blonde », puis « Houblonnage à cru · prévue le
 mer. 25 nov. » (« prévue aujourd'hui »). « Préparez la journée sur le téléphone qui servira. ». Comme « Préparer le
 brassage », il attend une réponse du serveur 15 s au plus, sans rien écrire, et liste :
-« Brassin et déroulé figé », « Étapes » (« 4 étapes · 25 min · fin vers 10:40 »), compte, écran
+« Brassin et déroulé figé », « Étapes » (« 4 étapes · 25 min · fin vers 10:40 »), « Densimètre »
+avec « Changer » (comme « Préparer le brassage »), compte, écran
 gardé allumé, minuteurs, navigateur (web). Journée d'embouteillage : « Prix et frais », « Lus sur
 l'appareil : le coût se figera à l'embouteillage. » ou « Prix indisponibles sur cet appareil hors
 ligne. Le coût ne se figera pas. ». Informations : « Prévue le mer. 25 nov. Vous pouvez la
@@ -2518,7 +2709,7 @@ l'administrateur. ».
 « Préparer la journée »), ouvert au statut En fermentation ou En conditionnement (En fermentation
 seulement pour l'embouteillage). Il reprend l'écran du jour de brassage : barre « Blonde » puis
 « Houblonnage à cru · 10:42 » (lu « Journée Houblonnage à cru, heure actuelle 10:42 »), panneau,
-minuteurs, alerte de fin, étapes, corrections, « Fin prévue » de la journée, écran allumé. Départ
+minuteurs, alerte de fin, étapes, corrections, « Fin de la journée prévue », écran allumé. Départ
 prévu de la journée : son premier début, sinon l'heure de l'appareil. Les étapes du brassage et
 des autres journées n'y figurent pas et ne changent pas d'état.
 

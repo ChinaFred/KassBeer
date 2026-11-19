@@ -7,6 +7,7 @@ import '../features/admin/data/sources_repository.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/brew_day/data/alerte_minuteur.dart';
 import '../features/brews/data/brews_repository.dart';
+import '../features/brews/data/preference_mesure_repository.dart';
 import '../features/costs/data/costs_repository.dart';
 import '../features/equipment/data/equipment_repository.dart';
 import '../features/import/data/import_fiches_repository.dart';
@@ -46,6 +47,12 @@ final equipmentRepositoryProvider = Provider<EquipmentRepository>(
 
 final brewsRepositoryProvider = Provider<BrewsRepository>(
   (ref) => throw UnimplementedError('brewsRepositoryProvider non fourni'),
+);
+
+/// Instrument de densité du compte connecté (`users/{uid}/preferences/measurement`).
+final preferenceMesureRepositoryProvider = Provider<PreferenceMesureRepository>(
+  (ref) =>
+      throw UnimplementedError('preferenceMesureRepositoryProvider non fourni'),
 );
 
 /// Prix, frais et coûts figés du compte connecté (`users/{uid}/`).

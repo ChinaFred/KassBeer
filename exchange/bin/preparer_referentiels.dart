@@ -7,10 +7,12 @@ import 'package:exchange/ingestion.dart';
 /// Prépare l'ingestion (ADR-005, D5) depuis `exchange/` :
 ///
 /// ```
-/// dart run bin/preparer_referentiels.dart [--sources ../import/sources] [--sortie ../import/ingest/prepare]
+/// dart run bin/preparer_referentiels.dart [--sources ../import/sources] [--fabricants donnees/fabricants/cultures.json] [--sortie ../import/ingest/prepare]
 /// ```
 ///
-/// Lit `brewtarget-v5.2.3/` et `punkapi-e6c12ab/data/` sous `--sources`, écrit
+/// Lit `brewtarget-v5.2.3/` et `punkapi-e6c12ab/data/` sous `--sources`, et
+/// les fiches des fabricants dans `--fabricants`, fichier versionné dans
+/// `exchange/donnees/` (ADR-005, amendement du 2026-11-15). Écrit
 /// `<collection>.json` (listes `{id, data}`) et `rapport.json` sous `--sortie`.
 /// Aucun réseau. Une source absente ou illisible arrête la préparation avec
 /// son erreur : rien n'est écrit.
@@ -18,6 +20,9 @@ Future<void> main(List<String> arguments) async {
   final options = _options(arguments);
   final racine = options['--sources'] ?? '../import/sources';
   final sortie = options['--sortie'] ?? '../import/ingest/prepare';
+  final fabricants =
+      options['--fabricants'] ??
+      'donnees/fabricants/${Source.fabricants.fichier}';
   final brewtarget = '$racine/brewtarget-v5.2.3';
   String texte(Source s) =>
       _borne(File('$brewtarget/${s.fichier}')).readAsStringSync();
@@ -45,6 +50,7 @@ Future<void> main(List<String> arguments) async {
       texte003: texte(Source.brewtarget003),
       texte004: texte(Source.brewtarget004),
       texte005: texte(Source.brewtarget005),
+      texteFabricants: _borne(File(fabricants)).readAsStringSync(),
       diyDog: [
         for (final f in fichiers)
           (
@@ -79,7 +85,18 @@ Future<void> main(List<String> arguments) async {
       '${r['taux_apres_alias']} % après alias',
     );
   }
-  stdout.writeln('rapport : ${dossier.path}/rapport.json');
+  final inconnues = preparation.rapport['origines_inconnues']! as List;
+  final restants = preparation.rapport['groupes_sans_parenthese']! as List;
+  stdout
+    ..writeln(
+      'origines hors de la liste des pays : ${inconnues.length} '
+      '(origines_inconnues)',
+    )
+    ..writeln(
+      'houblons de même nom sans parenthèse : ${restants.length} groupes '
+      '(groupes_sans_parenthese)',
+    )
+    ..writeln('rapport : ${dossier.path}/rapport.json');
 }
 
 /// [fichier], si sa taille ne dépasse pas [kMaxOctetsParFichier] (10 Mo) ;
@@ -97,7 +114,7 @@ File _borne(File fichier) {
 /// Options `--nom valeur`. Une option inconnue ou sans valeur arrête le
 /// programme.
 Map<String, String> _options(List<String> arguments) {
-  const connues = {'--sources', '--sortie'};
+  const connues = {'--sources', '--fabricants', '--sortie'};
   final options = <String, String>{};
   for (var i = 0; i < arguments.length; i++) {
     final nom = arguments[i];

@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:brewing/brewing.dart'
     show
         ActualDayDuration,
-        ActualDayKind,
         ActualStepDuration,
         BrewingInputException,
         StepEvent,
@@ -16,6 +15,8 @@ import '../../../core/services/error_report_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/domain/densites.dart';
+import '../../brews/presentation/saisie_densite.dart';
 import '../../brews/domain/deroule.dart';
 import '../../brews/presentation/libelles_deroule.dart';
 import '../domain/plan_du_jour.dart';
@@ -96,8 +97,9 @@ PlanEvalue evaluerPlan({
   }
 }
 
-/// Prévu et réel de la journée [journee] de [brew], d'après [plan] (fiche
-/// seule) ; `null` tant qu'aucune étape n'a début et fin. Un refus de
+/// Prévu et réel de la journée [journee] de [brew] et de ses étapes, d'après
+/// [plan] (fiche et écran du jour) ; la ligne de durée totale ne s'affiche
+/// qu'à partir d'une étape qui a un réel (`dureeJourneeReelle`). Un refus de
 /// `brewing/` est rapporté une fois ([reported]) et rend `null` : les lignes
 /// gardent leur durée prévue.
 ActualDayDuration? evaluerDurees({
@@ -111,7 +113,7 @@ ActualDayDuration? evaluerDurees({
     final durees = plan.durees(
       close: journeeClose(brew: brew, journee: journee, plan: plan),
     );
-    return durees.kind == ActualDayKind.none ? null : durees;
+    return durees;
   } on BrewingInputException catch (error, stackTrace) {
     if (reported.add('${brew.id}|durees|${journee.key}|${error.field}')) {
       errors.reportError(
@@ -144,25 +146,30 @@ Map<String, ActualDayDuration> dureesDesJournees({
       ),
 };
 
-/// Texte de l'état d'une étape, jamais la couleur seule.
-String libelleEtat(StepStatus status) => switch (status) {
-  StepStatus.done => 'Terminée',
-  StepStatus.running => 'En cours',
-  StepStatus.pending => 'À venir',
-  StepStatus.skipped => 'Sautée',
-  StepStatus.notDone => 'Non faite',
-};
+/// Texte de l'état d'une étape, jamais la couleur seule. [nonNotee] : étape
+/// sans début d'un brassin importé d'une fiche (« Non notée » au lieu de « Non
+/// faite »).
+String libelleEtat(StepStatus status, {bool nonNotee = false}) =>
+    switch (status) {
+      StepStatus.done => 'Terminée',
+      StepStatus.running => 'En cours',
+      StepStatus.pending => 'À venir',
+      StepStatus.skipped => 'Sautée',
+      StepStatus.notDone => nonNotee ? 'Non notée' : 'Non faite',
+    };
 
-IconData iconeEtat(StepStatus status) => switch (status) {
-  StepStatus.done => Icons.check_circle_outline,
-  StepStatus.running => Icons.play_circle_outline,
-  StepStatus.pending => Icons.schedule,
-  StepStatus.skipped => Icons.skip_next,
-  StepStatus.notDone => Icons.remove_circle_outline,
-};
+IconData iconeEtat(StepStatus status, {bool nonNotee = false}) =>
+    switch (status) {
+      StepStatus.done => Icons.check_circle_outline,
+      StepStatus.running => Icons.play_circle_outline,
+      StepStatus.pending => Icons.schedule,
+      StepStatus.skipped => Icons.skip_next,
+      StepStatus.notDone =>
+        nonNotee ? Icons.help_outline : Icons.remove_circle_outline,
+    };
 
 /// Couleur de l'icône d'état : fait en succès, en cours en `primary`, le reste
-/// (à venir, sautée, non faite) en `onSurfaceVariant`. Le libellé
+/// (à venir, sautée, non faite, non notée) en `onSurfaceVariant`. Le libellé
 /// ([libelleEtat]) dit l'état, la couleur ne fait que le souligner.
 Color couleurEtat(BuildContext context, StepStatus status) {
   final scheme = Theme.of(context).colorScheme;
@@ -175,28 +182,74 @@ Color couleurEtat(BuildContext context, StepStatus status) {
   };
 }
 
-/// Colonne d'heure d'une ligne : heure réelle pour une étape faite ou en cours,
-/// heure attendue pour une étape à venir (vide si les heures sont incohérentes).
-String heureDeLigne(LigneJour ligne, PlanDuJour plan) {
+/// État affiché d'une étape : dans une journée close ([close]), une étape
+/// restée en cours est terminée ; sinon l'état de `recomputeSchedule`.
+StepStatus statutAffiche(StepStatus status, {required bool close}) =>
+    close && status == StepStatus.running ? StepStatus.done : status;
+
+/// Colonne d'heure d'une ligne, affichée et lue :
+/// - début noté : « 12:10 → 12:57 » (fin retenue par `brewing/`, ou fin
+///   enregistrée), sinon « 12:10 » (« commencée à 12 h 10 ») ;
+/// - début estimé à l'import : « vers 13:02 » ;
+/// - étape non notée d'un brassin importé ([importe]) : heure théorique dérivée
+///   par `brewing/`, jamais écrite, « vers 12:57 » ;
+/// - à venir : heure attendue, sans « vers » (vide si les heures sont
+///   incohérentes) ; sautée ou non faite : « — ».
+TexteDuree heureDeLigne(
+  LigneJour ligne,
+  PlanDuJour plan, {
+  ActualStepDuration? reelle,
+  bool importe = false,
+}) {
   final record = ligne.record;
   final started = record?.startedAt;
   if (started != null) {
-    final ended = record?.endedAt;
+    if (record!.startEstimated) {
+      return (
+        affiche: 'vers ${formatHeure(started)}',
+        lu: 'heure estimée vers ${heureParlee(started)}',
+      );
+    }
+    final ended = reelle?.end ?? record.endedAt;
     return ended == null
-        ? formatHeure(started)
-        : '${formatHeure(started)} → ${formatHeure(ended)}';
+        ? (
+            affiche: formatHeure(started),
+            lu: 'commencée à ${heureParlee(started)}',
+          )
+        : (
+            affiche: '${formatHeure(started)} → ${formatHeure(ended)}',
+            lu: 'de ${heureParlee(started)} à ${heureParlee(ended)}',
+          );
   }
-  if (ligne.status != StepStatus.pending || !plan.horairesFiables) return '—';
-  return formatHeure(ligne.schedule.expectedStart);
+  final theorique = reelle?.theoreticalStart;
+  if (importe && ligne.status == StepStatus.notDone && theorique != null) {
+    return (
+      affiche: 'vers ${formatHeure(theorique)}',
+      lu: 'heure prévue vers ${heureParlee(theorique)}',
+    );
+  }
+  if (ligne.status != StepStatus.pending || !plan.horairesFiables) {
+    return (affiche: '—', lu: 'sans heure');
+  }
+  final attendue = ligne.schedule.expectedStart;
+  return (affiche: formatHeure(attendue), lu: heureParlee(attendue));
 }
 
-/// Mesure ou note d'une étape, en une ligne : « 12:10 · 67,5 °C · note ».
-String libelleSaisie(BrewEvent e) {
+/// Mesure ou note d'une étape, en une ligne : « 12:10 · 67,5 °C · note »,
+/// « 12:10 · Densité 1070,7 · corrigée, lue 1050,0 à 68 °C » ; heure estimée à
+/// l'import : « vers 12:10 · 67,5 °C ». Une densité passe par `densiteDe`
+/// (`brewing/`) ; [densiteInitiale] : densité initiale retenue du brassin.
+String libelleSaisie(BrewEvent e, {double? densiteInitiale}) {
   final type = e.measureType;
   final value = e.value;
   return [
-    formatHeure(e.measuredAt),
-    if (type != null && value != null) libelleMesure(type, value),
+    e.timeEstimated
+        ? 'vers ${formatHeure(e.measuredAt)}'
+        : formatHeure(e.measuredAt),
+    if (e.isGravity)
+      libelleDensiteMesure(e, densiteDe(e, densiteInitiale: densiteInitiale))
+    else if (type != null && value != null)
+      libelleMesure(type, value),
     if (e.note != null) e.note!,
   ].join(' · ');
 }
@@ -226,14 +279,24 @@ class ChronologieJour extends StatelessWidget {
     this.onSupprimerDoublon,
     this.sansEtape = true,
     this.durees,
+    this.importe = false,
+    this.close = false,
   });
 
   final PlanDuJour plan;
 
-  /// Prévu et réel de la journée ([evaluerDurees]), sur la fiche seule ; nul
-  /// sur l'écran du jour et tant qu'aucune étape n'a début et fin : chaque
-  /// ligne garde sa durée prévue.
+  /// Prévu et réel de la journée et de ses étapes ([evaluerDurees]) : réel,
+  /// écart de durée, écart de début, heure théorique. Nul si le calcul est
+  /// refusé : chaque ligne garde sa durée prévue.
   final ActualDayDuration? durees;
+
+  /// Brassin importé d'une fiche Excel (`Brew.importeDUneFiche`) : une étape
+  /// sans début est « Non notée », à son heure théorique.
+  final bool importe;
+
+  /// Journée close (`journeeClose`) : une étape restée « en cours » s'y affiche
+  /// « Terminée », sans fond (règle d'affichage, [statutAffiche]).
+  final bool close;
 
   /// Affiche les mesures « Sans étape ». Faux sur la fiche pour une journée 2 ou
   /// suivante : ces mesures sont des relevés, déjà dans le relevé de
@@ -262,6 +325,7 @@ class ChronologieJour extends StatelessWidget {
         textSize,
         reelles,
         largeurColonneHeure(constraints.maxWidth, echelle),
+        WindowSize.of(constraints.maxWidth) == WindowSize.expanded,
       ),
     );
   }
@@ -271,6 +335,7 @@ class ChronologieJour extends StatelessWidget {
     double textSize,
     List<ActualStepDuration>? reelles,
     double heure,
+    bool large,
   ) {
     // Mesures, notes et débuts en double : alignés sur la fin de la colonne
     // d'heure.
@@ -291,8 +356,11 @@ class ChronologieJour extends StatelessWidget {
         for (final (i, l) in plan.lignes.indexed) ...[
           _Ligne(
             ligne: l,
-            heure: heureDeLigne(l, plan),
+            heure: heureDeLigne(l, plan, reelle: reelles?[i], importe: importe),
             reelle: reelles?[i],
+            statut: statutAffiche(l.status, close: close),
+            nonNotee: importe && l.status == StepStatus.notDone,
+            large: large,
             textSize: textSize,
             largeurHeure: heure,
             onTap: onTapLigne == null ? null : () => onTapLigne!(l),
@@ -308,6 +376,7 @@ class ChronologieJour extends StatelessWidget {
           for (final s in l.mesures)
             _Saisie(
               event: s,
+              densiteInitiale: plan.densiteInitiale,
               retrait: retrait,
               onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
             ),
@@ -321,6 +390,7 @@ class ChronologieJour extends StatelessWidget {
           for (final s in plan.mesuresSansEtape)
             _Saisie(
               event: s,
+              densiteInitiale: plan.densiteInitiale,
               retrait: retrait,
               onTap: onTapSaisie == null ? null : () => onTapSaisie!(s),
             ),
@@ -334,16 +404,28 @@ class _Ligne extends StatelessWidget {
     required this.ligne,
     required this.heure,
     required this.reelle,
+    required this.statut,
+    required this.nonNotee,
+    required this.large,
     required this.textSize,
     required this.largeurHeure,
     required this.onTap,
   });
 
   final LigneJour ligne;
-  final String heure;
+  final TexteDuree heure;
 
-  /// Prévu et réel de l'étape (fiche), ou nul : durée prévue seule.
+  /// Prévu et réel de l'étape, ou nul : durée prévue seule.
   final ActualStepDuration? reelle;
+
+  /// État affiché ([statutAffiche]).
+  final StepStatus statut;
+
+  /// Étape sans début d'un brassin importé : « Non notée ».
+  final bool nonNotee;
+
+  /// Grand écran : l'écart de début rejoint la deuxième ligne.
+  final bool large;
   final double textSize;
 
   /// Largeur de la colonne d'heure ([largeurColonneHeure]).
@@ -354,14 +436,23 @@ class _Ligne extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final running = ligne.status == StepStatus.running;
+    final running = statut == StepStatus.running;
+    final action = ligne.step.durationMin == 0;
+    final estimee = ligne.record?.startEstimated ?? false;
     final texte = reelle == null
         ? null
-        : dureeEtapeReelle(reelle!, ligne.status);
+        : dureeEtapeReelle(reelle!, statut, nonNotee: nonNotee);
     final duration =
-        texte?.affiche ??
-        (ligne.step.durationMin == 0 ? 'Action' : formatDuree(ligne.duree));
+        texte?.affiche ?? (action ? 'Action' : formatDuree(ligne.duree));
     final durationLue = texte?.lu ?? duration;
+    final etat = libelleEtat(statut, nonNotee: nonNotee);
+    final debut = ecartDeDebut(reelle?.startDeltaMinutes);
+    final details = [
+      etat,
+      if (estimee) 'heure estimée',
+      duration,
+      if (large && debut != null) debut.affiche,
+    ].join(' · ');
     final content = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 64),
       child: Padding(
@@ -373,12 +464,12 @@ class _Ligne extends StatelessWidget {
           children: [
             SizedBox(
               width: largeurHeure,
-              child: Text(heure, style: TextStyle(fontSize: textSize)),
+              child: Text(heure.affiche, style: TextStyle(fontSize: textSize)),
             ),
             Icon(
-              iconeEtat(ligne.status),
+              iconeEtat(statut, nonNotee: nonNotee),
               size: 24,
-              color: couleurEtat(context, ligne.status),
+              color: couleurEtat(context, statut),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -386,10 +477,9 @@ class _Ligne extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(ligne.step.name, style: TextStyle(fontSize: textSize)),
-                  Text(
-                    '${libelleEtat(ligne.status)} · $duration',
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  Text(details, style: theme.textTheme.bodyMedium),
+                  if (!large && debut != null)
+                    Text(debut.affiche, style: theme.textTheme.bodyMedium),
                 ],
               ),
             ),
@@ -397,11 +487,16 @@ class _Ligne extends StatelessWidget {
         ),
       ),
     );
+    final etatLu = nonNotee ? 'non notée sur la fiche' : etat.toLowerCase();
     return Semantics(
       button: onTap != null,
-      label:
-          '${ligne.step.name}, ${libelleEtat(ligne.status)}, $heure, '
-          '$durationLue',
+      label: [
+        ligne.step.name,
+        etatLu,
+        heure.lu,
+        durationLue,
+        ?debut?.lu,
+      ].join(', '),
       onTap: onTap,
       excludeSemantics: true,
       // Fond seulement pour l'étape en cours ; les autres lignes restent sur
@@ -419,11 +514,13 @@ class _Ligne extends StatelessWidget {
 class _Saisie extends StatelessWidget {
   const _Saisie({
     required this.event,
+    required this.densiteInitiale,
     required this.retrait,
     required this.onTap,
   });
 
   final BrewEvent event;
+  final double? densiteInitiale;
 
   /// Retrait à gauche : fin de la colonne d'heure.
   final double retrait;
@@ -444,7 +541,7 @@ class _Saisie extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    libelleSaisie(event),
+                    libelleSaisie(event, densiteInitiale: densiteInitiale),
                     style: theme.textTheme.bodyMedium,
                   ),
                 ),

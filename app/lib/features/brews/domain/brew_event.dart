@@ -1,4 +1,14 @@
-import 'package:brewing/brewing.dart' show StepEvent, StepEventKind;
+import 'package:brewing/brewing.dart'
+    show
+        InstrumentDensite,
+        StepEvent,
+        StepEventKind,
+        kBrixMax,
+        kFacteurRefractometreMax,
+        kFacteurRefractometreMin,
+        kTemperatureEchantillonMaxC,
+        maxGravity,
+        minGravity;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -79,6 +89,25 @@ enum PhaseEvenement {
   }
 }
 
+/// Nature de l'heure d'une saisie, lue dans `time_estimated`,
+/// `date_estimated` et `phase` : jamais déduite de l'heure elle-même.
+enum NatureHeure {
+  /// Heure notée (sur l'appareil, ou dans la fiche importée).
+  notee,
+
+  /// Saisie du jour de brassage d'une fiche importée, citée sans heure : heure
+  /// estimée d'après la chronologie.
+  estimee,
+
+  /// Relevé d'une fiche importée noté sans heure : date gardée, heure posée à
+  /// 12:00 par la préparation.
+  nonNotee,
+
+  /// Relevé de l'en-tête d'une fiche importée, sans date : jour du brassage
+  /// + 28 jours.
+  dateEstimee,
+}
+
 /// Valeur d'une mesure à l'écran : « 67,5 °C », « 1057,9 », « 23,0 L », « pH 5,42 ».
 String libelleMesure(MeasureType type, double value) => switch (type) {
   MeasureType.temperature => formatCelsius(value),
@@ -87,6 +116,149 @@ String libelleMesure(MeasureType type, double value) => switch (type) {
     '${formatNombre(value, decimales: 1, fixe: true)}${nbsp}L',
   MeasureType.ph => 'pH ${formatPh(value)}',
 };
+
+/// Instrument et lecture brute d'une mesure de densité (`gravity_instrument`,
+/// `brix`, `sample_temperature`, `refractometer_factor`, `correct`). La valeur
+/// corrigée n'est jamais stockée : `brewing/` la calcule à l'affichage
+/// (`densiteRetenue`). Absent : mesure sans instrument, lue telle quelle.
+@immutable
+class DetailDensite {
+  const DetailDensite({
+    required this.instrument,
+    this.brix,
+    this.temperatureEchantillon,
+    this.facteur,
+    this.corriger,
+  });
+
+  final InstrumentDensite instrument;
+
+  /// Lecture du réfractomètre (°Brix) ; `value` est alors nulle.
+  final double? brix;
+
+  /// Température de l'échantillon d'un densimètre flottant (°C).
+  final double? temperatureEchantillon;
+
+  /// Facteur de correction du moût, copié de la préférence du brasseur.
+  final double? facteur;
+
+  /// Case « Corriger » : posée pour un flottant et un réfractomètre, nulle sinon.
+  final bool? corriger;
+
+  /// Champs à écrire avec la mesure. [creation] faux : un champ sans valeur est
+  /// retiré (correction d'une saisie, ME5).
+  Map<String, Object?> toFirestore({required bool creation}) => {
+    'gravity_instrument': instrument.storedValue,
+    ...champFacultatif('brix', brix, creation: creation),
+    ...champFacultatif(
+      'sample_temperature',
+      temperatureEchantillon,
+      creation: creation,
+    ),
+    ...champFacultatif('refractometer_factor', facteur, creation: creation),
+    ...champFacultatif('correct', corriger, creation: creation),
+  };
+
+  /// Retire les champs d'une mesure sans instrument (correction, ME5).
+  static Map<String, Object?> champsRetires() => {
+    'gravity_instrument': FieldValue.delete(),
+    'brix': FieldValue.delete(),
+    'sample_temperature': FieldValue.delete(),
+    'refractometer_factor': FieldValue.delete(),
+    'correct': FieldValue.delete(),
+  };
+
+  /// Lit le détail d'une mesure, bornes identiques à `firestore.rules`. Rend `null`
+  /// sans `gravity_instrument`. Lève [DocumentIllisible] sur un champ hors forme,
+  /// ou une valeur [value] incompatible avec l'instrument.
+  static DetailDensite? lire(
+    LecteurChamps read,
+    Map<String, dynamic> data, {
+    required bool gravity,
+    required double? value,
+  }) {
+    final stored = read.texteFacultatif('gravity_instrument');
+    final brix = read.nombreFacultatif('brix');
+    final temperature = read.nombreFacultatif('sample_temperature');
+    final facteur = read.nombreFacultatif('refractometer_factor');
+    final corriger = read.boolFacultatif('correct');
+    if (stored == null) {
+      if (brix != null ||
+          temperature != null ||
+          facteur != null ||
+          corriger != null) {
+        throw const DocumentIllisible(
+          'gravity_instrument',
+          'lecture sans instrument',
+        );
+      }
+      return null;
+    }
+    if (!gravity) {
+      throw const DocumentIllisible(
+        'gravity_instrument',
+        'instrument sur une mesure qui n\'est pas une densité',
+      );
+    }
+    final instrument = InstrumentDensite.values
+        .where((i) => i.storedValue == stored)
+        .firstOrNull;
+    if (instrument == null) {
+      throw const DocumentIllisible('gravity_instrument', 'instrument inconnu');
+    }
+    bool dans(double? v, double min, double max) =>
+        v == null || (v >= min && v <= max);
+    final ok = instrument.lectureBrix
+        ? value == null &&
+              brix != null &&
+              dans(brix, 0, kBrixMax) &&
+              dans(
+                facteur,
+                kFacteurRefractometreMin,
+                kFacteurRefractometreMax,
+              ) &&
+              temperature == null &&
+              corriger != null
+        : value != null &&
+              brix == null &&
+              facteur == null &&
+              (instrument.flottant
+                  ? corriger != null &&
+                        dans(temperature, 0, kTemperatureEchantillonMaxC)
+                  : temperature == null && corriger == null);
+    if (!ok) {
+      throw const DocumentIllisible(
+        'gravity_instrument',
+        'lecture incompatible avec l\'instrument',
+      );
+    }
+    return DetailDensite(
+      instrument: instrument,
+      brix: brix,
+      temperatureEchantillon: temperature,
+      facteur: facteur,
+      corriger: corriger,
+    );
+  }
+}
+
+/// Densité saisie : lecture en SG (nulle pour un réfractomètre) et détail de
+/// l'instrument (nul sans instrument choisi).
+@immutable
+class DensiteSaisie {
+  const DensiteSaisie({this.sg, this.detail});
+
+  final double? sg;
+  final DetailDensite? detail;
+
+  /// Champs d'une correction (ME5) : valeur et détail ; sans instrument, les
+  /// champs du détail sont retirés.
+  Map<String, Object?> champsCorrection() => {
+    'value': sg,
+    ...?detail?.toFirestore(creation: false),
+    if (detail == null) ...DetailDensite.champsRetires(),
+  };
+}
 
 /// Document `brews/{id}/events/{eventId}`. Un document par mesure, début ou fin
 /// d'étape, identifiant créé par l'appareil (CLAUDE.md, « hors ligne »).
@@ -102,6 +274,9 @@ class BrewEvent {
     this.note,
     required this.measuredAt,
     this.phase,
+    this.timeEstimated = false,
+    this.dateEstimated = false,
+    this.densite,
     this.hasPendingWrites = false,
   });
 
@@ -121,6 +296,20 @@ class BrewEvent {
   /// Relevé de fermentation, ou `null` pour le jour de brassage (FE4).
   final PhaseEvenement? phase;
 
+  /// Heure estimée à l'import d'une fiche (`time_estimated: true`) : l'heure
+  /// n'a pas été notée. Elle date l'événement, sans réel ni écart. Retirée
+  /// quand une correction change l'heure.
+  final bool timeEstimated;
+
+  /// Date elle-même estimée (`date_estimated: true`) : relevé de l'en-tête
+  /// daté du jour du brassage + 28 jours par la préparation. Toujours avec
+  /// [timeEstimated].
+  final bool dateEstimated;
+
+  /// Instrument et lecture brute d'une densité ; `null` pour une mesure sans
+  /// instrument.
+  final DetailDensite? densite;
+
   /// Écriture locale pas encore reçue par le serveur.
   final bool hasPendingWrites;
 
@@ -135,20 +324,45 @@ class BrewEvent {
       throw const DocumentIllisible('measured_at', 'heure absente');
     }
     final kind = BrewEventKind.fromStored(data['kind']);
+    final timeEstimated = read.boolFacultatif('time_estimated') ?? false;
+    final dateEstimated = read.boolFacultatif('date_estimated') ?? false;
     final stepKey = read.texteFacultatif('step_key');
     if (kind.stepKind != null && stepKey == null) {
       throw const DocumentIllisible('step_key', 'clé d\'étape absente');
+    }
+    final measureType = MeasureType.fromStored(data['measure_type']);
+    final value = read.nombreFacultatif('value');
+    final gravity =
+        kind == BrewEventKind.measurement && measureType == MeasureType.gravity;
+    final densite = DetailDensite.lire(
+      read,
+      data,
+      gravity: gravity,
+      value: value,
+    );
+    if (kind == BrewEventKind.measurement &&
+        value == null &&
+        densite?.instrument.lectureBrix != true) {
+      throw const DocumentIllisible('value', 'valeur de la mesure absente');
+    }
+    if (gravity &&
+        value != null &&
+        (value < minGravity || value > maxGravity)) {
+      throw const DocumentIllisible('value', 'densité hors bornes');
     }
     return BrewEvent(
       id: id,
       ownerUid: read.texte('owner_uid'),
       kind: kind,
       stepKey: stepKey,
-      measureType: MeasureType.fromStored(data['measure_type']),
-      value: read.nombreFacultatif('value'),
+      measureType: measureType,
+      value: value,
       note: read.texteFacultatif('note'),
       measuredAt: measuredAt,
       phase: PhaseEvenement.fromStored(data['phase']),
+      timeEstimated: timeEstimated || dateEstimated,
+      dateEstimated: dateEstimated,
+      densite: densite,
       hasPendingWrites: hasPendingWrites,
     );
   }
@@ -159,7 +373,13 @@ class BrewEvent {
     final step = kind.stepKind;
     final key = stepKey;
     if (step == null || key == null) return null;
-    return StepEvent(id: id, kind: step, stepKey: key, measuredAt: measuredAt);
+    return StepEvent(
+      id: id,
+      kind: step,
+      stepKey: key,
+      measuredAt: measuredAt,
+      estimated: timeEstimated,
+    );
   }
 
   /// Champs à écrire. `created_at` est posée par le serveur (audit seul).
@@ -172,6 +392,9 @@ class BrewEvent {
     if (note != null) 'note': note,
     'measured_at': Timestamp.fromDate(measuredAt),
     if (phase != null) 'phase': phase!.storedValue,
+    if (timeEstimated || dateEstimated) 'time_estimated': true,
+    if (dateEstimated) 'date_estimated': true,
+    ...?densite?.toFirestore(creation: true),
     'created_at': FieldValue.serverTimestamp(),
   };
 
@@ -179,6 +402,15 @@ class BrewEvent {
       kind == BrewEventKind.measurement || kind == BrewEventKind.note;
 
   bool get isFermentation => phase == PhaseEvenement.fermentation;
+
+  /// Nature de [measuredAt] ([NatureHeure]).
+  NatureHeure get natureHeure => dateEstimated
+      ? NatureHeure.dateEstimee
+      : !timeEstimated
+      ? NatureHeure.notee
+      : isFermentation
+      ? NatureHeure.nonNotee
+      : NatureHeure.estimee;
 
   bool get isGravity =>
       kind == BrewEventKind.measurement && measureType == MeasureType.gravity;

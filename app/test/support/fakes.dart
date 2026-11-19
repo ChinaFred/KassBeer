@@ -6,6 +6,8 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kass_beer/features/brews/data/preference_mesure_repository.dart';
+import 'package:kass_beer/features/brews/domain/preference_mesure.dart';
 import 'package:kass_beer/app.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/data/nouveautes.dart';
@@ -39,6 +41,7 @@ import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
+import 'package:kass_beer/features/members/presentation/members_providers.dart';
 import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
@@ -442,6 +445,7 @@ class FakeBrewsRepository implements BrewsRepository {
         'kind': input.kind.storedValue,
         'type': input.measureType?.storedValue,
         'value': input.value,
+        'densite': input.densite,
         'step': input.stepKey,
         'at': input.measuredAt,
         'phase': input.phase?.storedValue,
@@ -455,10 +459,20 @@ class FakeBrewsRepository implements BrewsRepository {
     required String brewId,
     required String eventId,
     required double? value,
+    DensiteSaisie? densite,
     required String? note,
     required DateTime measuredAt,
+    bool heureEstimeeCorrigee = false,
   }) {
-    writes.add(BrewWrite('correct', brewId, {'id': eventId, 'at': measuredAt}));
+    writes.add(
+      BrewWrite('correct', brewId, {
+        'id': eventId,
+        'at': measuredAt,
+        'value': value,
+        'densite': densite,
+        if (heureEstimeeCorrigee) 'estimee_corrigee': true,
+      }),
+    );
     return serverAnswer();
   }
 
@@ -487,7 +501,8 @@ class FakeBrewsRepository implements BrewsRepository {
     writes.add(
       BrewWrite('releve', brewId, {
         'ids': ids,
-        'gravity': releve.gravity,
+        'gravity': releve.gravity?.sg,
+        'densite': releve.gravity?.detail,
         'temperature': releve.temperature,
         'note': releve.note,
         'at': releve.measuredAt,
@@ -506,7 +521,8 @@ class FakeBrewsRepository implements BrewsRepository {
     writes.add(
       BrewWrite('correct_releve', brewId, {
         'before': [for (final e in avant.events) e.id],
-        'gravity': releve.gravity,
+        'gravity': releve.gravity?.sg,
+        'densite': releve.gravity?.detail,
         'temperature': releve.temperature,
         'note': releve.note,
         'at': releve.measuredAt,
@@ -555,7 +571,7 @@ class FakeBrewsRepository implements BrewsRepository {
     required String ownerUid,
     required Embouteillage embouteillage,
     required BrewStatus? nouveauStatut,
-    double? finalGravity,
+    DensiteSaisie? finalGravity,
     required String? ownerName,
   }) {
     writes.add(
@@ -566,7 +582,8 @@ class FakeBrewsRepository implements BrewsRepository {
         'packaged_volume_l': embouteillage.packagedVolumeL,
         'priming_sugar_g': embouteillage.primingSugarG,
         'priming_sugar_name': embouteillage.primingSugarName,
-        'final_gravity': finalGravity,
+        'final_gravity': finalGravity?.sg,
+        'final_gravity_detail': finalGravity?.detail,
         'owner_name': ownerName,
       }),
     );
@@ -609,6 +626,38 @@ class FakeBrewsRepository implements BrewsRepository {
   Future<void> deleteWithEvents(String id, {required String ownerUid}) {
     writes.add(BrewWrite('delete_with_events', id, {'owner_uid': ownerUid}));
     return serverAnswer();
+  }
+}
+
+/// Double de [PreferenceMesureRepository] : document en mémoire, écritures
+/// comptées. Aucun document par défaut (« À choisir »).
+class FakePreferenceMesureRepository implements PreferenceMesureRepository {
+  final _replay = <String, Replay<RechercheDocument<PreferenceMesure>>>{};
+  final saved = <PreferenceMesure>[];
+
+  Replay<RechercheDocument<PreferenceMesure>> _of(String uid) =>
+      _replay.putIfAbsent(uid, () {
+        final r = Replay<RechercheDocument<PreferenceMesure>>();
+        r.add(const DocumentAbsent<PreferenceMesure>());
+        return r;
+      });
+
+  void publish(String uid, PreferenceMesure? p) => _of(uid).add(
+    p == null ? const DocumentAbsent<PreferenceMesure>() : DocumentTrouve(p),
+  );
+
+  @override
+  Stream<RechercheDocument<PreferenceMesure>> watch(String uid) =>
+      _of(uid).stream;
+
+  @override
+  Future<void> save({
+    required String uid,
+    required PreferenceMesure preference,
+  }) {
+    saved.add(preference);
+    publish(uid, preference);
+    return Future<void>.value();
   }
 }
 
@@ -1429,6 +1478,7 @@ class TestApp {
        logs = FakeLogsRepository(),
        processes = FakeProcessesRepository(),
        preferencesProcessus = FakePreferencesProcessusRepository(),
+       preferenceMesure = FakePreferenceMesureRepository(),
        importFirestore = FakeFirebaseFirestore(),
        preferences = FakePreferencesAppareil(),
        transportMiseAJour = FakeTransportMiseAJour(),
@@ -1461,6 +1511,8 @@ class TestApp {
         preferencesProcessusRepositoryProvider.overrideWithValue(
           preferencesProcessus,
         ),
+        preferenceMesureRepositoryProvider.overrideWithValue(preferenceMesure),
+        firebaseProjectIdProvider.overrideWithValue('demo-kassbeer'),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
           return openLinkResult;
@@ -1516,6 +1568,9 @@ class TestApp {
   final FakeLogsRepository logs;
   final FakeProcessesRepository processes;
   final FakePreferencesProcessusRepository preferencesProcessus;
+
+  /// Instrument de densité du brasseur (`users/{uid}/preferences/measurement`).
+  final FakePreferenceMesureRepository preferenceMesure;
 
   /// Firestore en mémoire d'Admin › Import (v0.6).
   final FakeFirebaseFirestore importFirestore;

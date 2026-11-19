@@ -2,7 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:brewing/brewing.dart'
-    show StepEvent, StepEventKind, StepStatus, readTimer;
+    show
+        ActualDayDuration,
+        StepEvent,
+        StepEventKind,
+        StepRecord,
+        StepStatus,
+        readTimer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -614,6 +620,62 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     );
   }
 
+  /// « Étape suivante » : fin de [enCours] et début de [suivante] dans le même
+  /// lot, en un appui. [suivante] a une durée : une étape de 0 minute garde
+  /// son appui « Fait ».
+  void _enchainer(LigneJour enCours, LigneJour suivante) {
+    if (!_premierAppui()) return;
+    ref.read(alerteMinuteurProvider).preparer();
+    unawaited(
+      _ecrire([
+        (kind: StepEventKind.ended, stepKey: enCours.step.key),
+        (kind: StepEventKind.started, stepKey: suivante.step.key),
+      ], 'Début de « ${suivante.step.name} »'),
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 10),
+        // Sous TalkBack, le message reste ouvert : « Annuler » doit rester
+        // joignable au balayage.
+        persist: MediaQuery.accessibleNavigationOf(context),
+        content: Text(texteEtapeCommencee(suivante.step.name)),
+        action: SnackBarAction(
+          label: 'Annuler',
+          onPressed: () => _annulerEnchainement(enCours, suivante),
+        ),
+      ),
+    );
+  }
+
+  /// « Annuler » du message de « Étape suivante » : supprime le début de
+  /// [suivante] et la fin de [enCours] dans un même lot, si [suivante] est
+  /// toujours en cours ; sinon renvoie au menu de l'étape.
+  void _annulerEnchainement(LigneJour enCours, LigneJour suivante) {
+    final evalue = _evaluer();
+    if (evalue is! PlanObtenu) return;
+    StepRecord? record(String key) =>
+        evalue.plan.lignes.where((l) => l.step.key == key).firstOrNull?.record;
+    final debut = record(suivante.step.key);
+    final finId = record(enCours.step.key)?.endEventId;
+    final debutId = debut?.startEventId;
+    if (debutId == null ||
+        finId == null ||
+        debut?.endEventId != null ||
+        debut!.skipEventIds.isNotEmpty) {
+      _message(texteAnnulationImpossible(suivante.step.name));
+      return;
+    }
+    _suivre(
+      ref
+          .read(brewsRepositoryProvider)
+          .deleteEvents(brewId: _brew.id, eventIds: [debutId, finId]),
+      'Annulation de « Étape suivante »',
+    );
+    _message(texteEtapeReprise(enCours.step.name));
+  }
+
   Future<void> _terminerBrassage() async {
     final ok = await _confirmer(
       'Terminer le brassage ?',
@@ -702,6 +764,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
           brew: _brew,
           modification: false,
           fermentationMesuree: densiteDeFermentationMesuree(events),
+          densiteInitiale: densiteInitialeLue(ref, _brew),
           now: _now,
           onSubmit: (embouteillage, finalGravity) =>
               unawaited(_envoyerEmbouteillage(embouteillage, finalGravity)),
@@ -717,7 +780,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
   /// serveur : `enregistrerEmbouteillage` n'écrit aucune étape.
   Future<void> _envoyerEmbouteillage(
     Embouteillage embouteillage,
-    double? finalGravity,
+    DensiteSaisie? finalGravity,
   ) async {
     final envoyer = capturerEmbouteillage(ref, _brew);
     final offline = ref.read(grantedAccessProvider)?.offline ?? false;
@@ -757,10 +820,12 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     MeasureType? type,
     bool note = false,
     double? initialValue,
+    DensiteSaisie? initialDensite,
     DateTime? initialAt,
     String? initialNote,
   }) {
     final messenger = ScaffoldMessenger.of(context);
+    final densiteInitiale = densiteInitialeLue(ref, _brew);
     unawaited(
       // ticket: /brassins/:id/jour/fenetre/mesure, /brassins/:id/jour/:journee/fenetre/mesure
       showFeuilleOuDialogue<void>(
@@ -775,6 +840,8 @@ class _EcranJourState extends ConsumerState<_EcranJour>
           note: note,
           now: _now,
           initialValue: initialValue,
+          initialDensite: initialDensite,
+          densiteInitiale: densiteInitiale,
           initialAt: initialAt,
           initialNote: initialNote,
           plancher: _brew.brewedAt,
@@ -794,6 +861,12 @@ class _EcranJourState extends ConsumerState<_EcranJour>
                         stepKey: saisie.stepKey,
                         type: saisie.type,
                         initialValue: saisie.value,
+                        initialDensite: saisie.type == MeasureType.gravity
+                            ? DensiteSaisie(
+                                sg: saisie.value,
+                                detail: saisie.densite,
+                              )
+                            : null,
                         initialAt: saisie.at,
                         initialNote: saisie.note,
                       )
@@ -937,6 +1010,9 @@ class _EcranJourState extends ConsumerState<_EcranJour>
             value: null,
             note: null,
             measuredAt: at,
+            heureEstimeeCorrigee:
+                record.startEstimated &&
+                !at.isAtSameMomentAs(record.startedAt!),
           ),
       'Correction de « ${ligne.step.name} »',
     );
@@ -989,7 +1065,9 @@ class _EcranJourState extends ConsumerState<_EcranJour>
     messenger.showSnackBar(
       SnackBar(
         duration: const Duration(seconds: 10),
-        persist: false,
+        // Sous TalkBack, le message reste ouvert : « Annuler » doit rester
+        // joignable au balayage.
+        persist: MediaQuery.accessibleNavigationOf(context),
         content: Text(
           kind == StepEventKind.ended
               ? 'La fin est annulée.'
@@ -1010,6 +1088,9 @@ class _EcranJourState extends ConsumerState<_EcranJour>
                 },
                 stepKey: ligne.step.key,
                 measuredAt: at,
+                timeEstimated:
+                    kind == StepEventKind.started &&
+                    (ligne.record?.startEstimated ?? false),
               ),
             ),
             'Rétablissement de « ${ligne.step.name} »',
@@ -1131,10 +1212,23 @@ class _EcranJourState extends ConsumerState<_EcranJour>
       PlanObtenu(:final plan) => plan,
       PlanImpossible() => null,
     };
+    // Prévu, réel, écarts et heures théoriques des étapes, calculés par
+    // `brewing/` sur l'appareil (P2, P3).
+    final cible = journee ?? _brew.deroule.brassage;
+    final durees = plan == null || cible == null
+        ? null
+        : evaluerDurees(
+            brew: _brew,
+            journee: cible,
+            plan: plan,
+            errors: ref.read(errorReportServiceProvider),
+            reported: ref.read(planReportsProvider),
+          );
     return _Jour(
       brew: _brew,
       journee: journee,
       plan: plan,
+      durees: durees,
       densiteInitialePrevue: journee == null ? _densiteInitialePrevue() : null,
       verrouRefuse: wakelock.failed,
       now: now,
@@ -1142,6 +1236,7 @@ class _EcranJourState extends ConsumerState<_EcranJour>
       offline: offline,
       refus: _refus,
       onTerminerEtape: _terminerEtape,
+      onEnchainer: _enchainer,
       onCommencer: (l, p) => unawaited(_commencer(l, p)),
       onMesure: (ligne) =>
           _ouvrirMesure(stepKey: ligne?.step.key, type: _typeParDefaut(ligne)),
@@ -1172,12 +1267,14 @@ class _Jour extends StatelessWidget {
     required this.brew,
     required this.journee,
     required this.plan,
+    required this.durees,
     required this.verrouRefuse,
     required this.now,
     required this.events,
     required this.offline,
     required this.refus,
     required this.onTerminerEtape,
+    required this.onEnchainer,
     required this.onCommencer,
     required this.onMesure,
     required this.onNote,
@@ -1203,12 +1300,16 @@ class _Jour extends StatelessWidget {
   /// Journée 2 ou suivante ; `null` pour le brassage.
   final JourneeDeroulee? journee;
   final PlanDuJour? plan;
+
+  /// Prévu et réel des étapes de la journée ([evaluerDurees]), ou nul.
+  final ActualDayDuration? durees;
   final ValueListenable<bool> verrouRefuse;
   final DateTime now;
   final List<BrewEvent> events;
   final bool offline;
   final List<SaisieRefusee> refus;
   final void Function(LigneJour) onTerminerEtape;
+  final void Function(LigneJour enCours, LigneJour suivante) onEnchainer;
   final void Function(LigneJour, PlanDuJour) onCommencer;
   final void Function(LigneJour?) onMesure;
   final VoidCallback onNote;
@@ -1287,6 +1388,9 @@ class _Jour extends StatelessWidget {
           toutFait: role == RoleJournee.autre
               ? TextesJournee.toutFait
               : 'Toutes les étapes sont faites.',
+          libelleFin: role == null
+              ? 'Fin du brassage prévue'
+              : 'Fin de la journée prévue',
           illisible: messageDerouleIllisible(brew.deroule),
           now: now,
           timerSize: timerSize,
@@ -1310,6 +1414,12 @@ class _Jour extends StatelessWidget {
             ? null
             : ChronologieJour(
                 plan: plan!,
+                durees: durees,
+                importe: brew.importeDUneFiche,
+                close: switch (suivie ?? brew.deroule.brassage) {
+                  final j? => journeeClose(brew: brew, journee: j, plan: plan),
+                  null => false,
+                },
                 onTapLigne: (l) => onTapLigne(l, plan!),
                 onTapSaisie: onTapSaisie,
                 onSupprimerDoublon: onSupprimerDoublon,
@@ -1330,6 +1440,7 @@ class _Jour extends StatelessWidget {
           role: role,
           onMesure: onMesure,
           onTerminerEtape: onTerminerEtape,
+          onEnchainer: onEnchainer,
           onCommencer: onCommencer,
           onTerminerBrassage: onTerminerBrassage,
           onTerminerJournee: onTerminerJournee,
@@ -1588,6 +1699,7 @@ class _Panneau extends StatelessWidget {
   const _Panneau({
     required this.plan,
     required this.toutFait,
+    required this.libelleFin,
     required this.illisible,
     required this.now,
     required this.timerSize,
@@ -1601,6 +1713,10 @@ class _Panneau extends StatelessWidget {
 
   /// Texte affiché quand toutes les étapes sont faites.
   final String toutFait;
+
+  /// Début de la ligne d'heure de fin (« Fin du brassage prévue »), suivi de
+  /// « vers 16:05 ». Distinct de la fin de l'étape en cours.
+  final String libelleFin;
 
   /// Texte d'un déroulé illisible ([messageDerouleIllisible]), ou `null`.
   final String? illisible;
@@ -1649,8 +1765,8 @@ class _Panneau extends StatelessWidget {
     final finPrevue = p.finPrevue;
     final ligneFin = finPrevue == null
         ? null
-        : 'Fin prévue vers ${formatHeure(finPrevue)}'
-              '${p.retard > Duration.zero ? ' · retard ${formatDuree(p.retard)}' : ''}';
+        : '$libelleFin vers ${formatHeure(finPrevue)}'
+              '${p.retard > Duration.zero ? '\u00A0· retard ${formatDuree(p.retard)}' : ''}';
     final running = p.enCours;
     if (running == null) {
       final next = p.prochaine!;
@@ -1856,12 +1972,28 @@ class _CarteEtape extends StatelessWidget {
   }
 }
 
+/// Libellé du bouton principal qui termine l'étape en cours et commence la
+/// suivante.
+const libelleEtapeSuivante = 'Étape suivante';
+
+/// Message après « Étape suivante ».
+String texteEtapeCommencee(String nom) => 'Étape « $nom » commencée.';
+
+/// Message après « Annuler » : l'étape [nom] a repris.
+String texteEtapeReprise(String nom) => 'Étape « $nom » reprise.';
+
+/// « Annuler » quand l'étape commencée [nom] est déjà terminée ou sautée.
+String texteAnnulationImpossible(String nom) =>
+    'L\'étape « $nom » est déjà terminée ou sautée : touchez chaque étape '
+    'pour la corriger.';
+
 class _BarreActions extends StatelessWidget {
   const _BarreActions({
     required this.plan,
     required this.role,
     required this.onMesure,
     required this.onTerminerEtape,
+    required this.onEnchainer,
     required this.onCommencer,
     required this.onTerminerBrassage,
     required this.onTerminerJournee,
@@ -1877,6 +2009,7 @@ class _BarreActions extends StatelessWidget {
   final RoleJournee? role;
   final void Function(LigneJour?) onMesure;
   final void Function(LigneJour) onTerminerEtape;
+  final void Function(LigneJour enCours, LigneJour suivante) onEnchainer;
   final void Function(LigneJour, PlanDuJour) onCommencer;
   final VoidCallback onTerminerBrassage;
   final VoidCallback onTerminerJournee;
@@ -1893,13 +2026,24 @@ class _BarreActions extends StatelessWidget {
     final p = plan;
     final running = p?.enCours;
     final next = p?.prochaine;
+    final suivante = running == null ? null : p?.suivanteDe(running);
     final String? principal;
     final VoidCallback? action;
+    // Lecture d'écran du bouton « Étape suivante » : nomme les deux étapes.
+    String? lecture;
     if (running != null && role == RoleJournee.autre && next == null) {
       // Dernière étape commencée d'une journée « autre » : la terminer termine
       // la journée (ADR-010).
       principal = TextesJournee.terminer;
       action = onTerminerJournee;
+    } else if (running != null &&
+        suivante != null &&
+        suivante.step.durationMin > 0) {
+      principal = libelleEtapeSuivante;
+      lecture =
+          'Terminer « ${running.step.name} » et commencer '
+          '« ${suivante.step.name} »';
+      action = () => onEnchainer(running, suivante);
     } else if (running != null) {
       principal = 'Terminer l\'étape';
       action = () => onTerminerEtape(running);
@@ -1954,6 +2098,7 @@ class _BarreActions extends StatelessWidget {
                 onPressed: action,
                 child: Text(
                   principal,
+                  semanticsLabel: lecture,
                   textAlign: TextAlign.center,
                   style: textStyle,
                 ),

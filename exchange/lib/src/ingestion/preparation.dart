@@ -4,6 +4,7 @@ import 'alias.dart';
 import 'json_commentaires.dart';
 import 'cles.dart';
 import 'diydog.dart';
+import 'fusions.dart';
 import 'lecture_sources.dart';
 import 'referentiel.dart';
 import 'resolution.dart';
@@ -27,6 +28,7 @@ class SourcesBrutes {
     required this.texte003,
     required this.texte004,
     required this.texte005,
+    required this.texteFabricants,
     required this.diyDog,
   });
 
@@ -44,6 +46,9 @@ class SourcesBrutes {
 
   /// Fichier 005.
   final String texte005;
+
+  /// Fiches techniques des fabricants (`fabricants/cultures.json`).
+  final String texteFabricants;
 
   /// Recettes DIY Dog : nom du fichier et contenu, dans l'ordre des fichiers.
   final List<({String fichier, String texte})> diyDog;
@@ -78,25 +83,42 @@ int _parNom(Map<String, Object?> a, Map<String, Object?> b) {
   return nom != 0 ? nom : (a['id']! as String).compareTo(b['id']! as String);
 }
 
-/// Prépare les documents à partir de [sources], avec la table [alias] et la
-/// liste [ajoutsDansHoublons].
+/// Prépare les documents à partir de [sources], avec la table [alias], la
+/// liste [ajoutsDansHoublons] et la table de fusion des houblons [fusions].
+///
+/// Un nom (nom du document ou alias) porté par deux houblons lève
+/// [StateError] (ADR-014) : la résolution par nom ne saurait lequel choisir.
+/// [datesReleveFabricants] : date du relevé des fiches de chaque producteur
+/// (`kDatesReleveFabricants`).
 Preparation preparer(
   SourcesBrutes sources, {
   List<Alias> alias = kAlias,
   List<String> ajoutsDansHoublons = kAjoutsDansHoublons,
+  List<Fusion> fusions = kFusions,
+  Map<String, String> datesReleveFabricants = kDatesReleveFabricants,
 }) {
-  final lecture = LectureReferentiels()
-    ..lire001(sources.octets001)
-    ..lire002(sources.texte002)
-    ..lire003ou004(sources.texte003, Source.brewtarget003)
-    ..lire003ou004(sources.texte004, Source.brewtarget004)
-    ..lire005(sources.texte005);
-  final referentiel = Referentiel.fusionner(lecture.entrees);
+  final lecture =
+      LectureReferentiels(datesReleveFabricants: datesReleveFabricants)
+        ..lire001(sources.octets001)
+        ..lire002(sources.texte002)
+        ..lire003ou004(sources.texte003, Source.brewtarget003)
+        ..lire003ou004(sources.texte004, Source.brewtarget004)
+        ..lire005(sources.texte005)
+        ..lireFabricants(sources.texteFabricants);
+  final referentiel = Referentiel.fusionner(lecture.entrees, fusions: fusions);
   final resolveur = Resolveur(
     referentiel,
     alias: alias,
     ajoutsDansHoublons: ajoutsDansHoublons,
   );
+  final houblonsPartages = referentiel.nomsPartages(NatureReferentiel.hop);
+  if (houblonsPartages.isNotEmpty) {
+    final MapEntry(:key, :value) = houblonsPartages.entries.first;
+    throw StateError(
+      'nom « $key » porté par ${value.join(', ')} : '
+      'corriger fusions.dart (${houblonsPartages.length} noms partagés)',
+    );
+  }
   final conversion = ConversionDiyDog(resolveur);
 
   if (sources.diyDog.length > kMaxFichiersDiyDog) {
@@ -175,7 +197,8 @@ Preparation preparer(
   parSource[Source.diydog.id] = {'recette': sources.diyDog.length};
   final rapport = <String, Object?>{
     'sources': [
-      for (final s in Source.values) {'source': s.id, 'version': s.version},
+      for (final s in Source.values)
+        {'source': s.id, 'version': s.version(datesReleveFabricants)},
     ],
     'entrees_par_source': parSource,
     'entrees_rejetees': [for (final r in lecture.rejets) r.toJson()],
@@ -183,6 +206,29 @@ Preparation preparer(
     'valeurs_ecartees': {
       'nombre': ecartees.length,
       'lignes': [for (final e in ecartees) e.toJson()],
+    },
+    'origines_inconnues': _originesInconnues(referentiel),
+    'table_de_fusion': [
+      for (final f in fusions)
+        if (referentiel.entree(f.id) case final e?)
+          {
+            'id': f.id,
+            'name': e.nom,
+            'origin': ?e.document()['origin'],
+            'entrees': [
+              for (final b in e.entrees)
+                {'source': b.source.id, 'name': b.nom, 'origin': ?b.origine},
+            ],
+          },
+    ],
+    'groupes_sans_parenthese': _groupesSansParenthese(
+      referentiel,
+      NatureReferentiel.hop,
+    ),
+    'noms_partages': {
+      for (final n in NatureReferentiel.values)
+        if (referentiel.nomsPartages(n) case final p when p.isNotEmpty)
+          n.prefixe: p,
     },
     'fusions': {
       for (final n in NatureReferentiel.values)
@@ -244,6 +290,47 @@ Preparation preparer(
     },
   };
   return Preparation(collections, rapport);
+}
+
+/// Entrées dont l'origine lue n'est pas dans la table des graphies
+/// (`origines.dart`) : document, source, nom et graphie, triées.
+List<Map<String, Object>> _originesInconnues(Referentiel referentiel) {
+  final lignes = [
+    for (final docs in referentiel.parNature.values)
+      for (final d in docs.values)
+        for (final e in d.entrees)
+          if (e.origineInconnue case final graphie?)
+            {
+              'id': d.id,
+              'source': e.source.id,
+              'name': e.nom,
+              'graphie': graphie,
+            },
+  ];
+  return lignes..sort(
+    (a, b) => '${a['id']}|${a['source']}|${a['name']}'.compareTo(
+      '${b['id']}|${b['source']}|${b['name']}',
+    ),
+  );
+}
+
+/// Groupes de documents de [nature] dont le nom, une fois les parenthèses
+/// retirées (`Saaz (US)` donne `saaz`), est le même : à revoir pour la table
+/// de fusion (ADR-014).
+List<Map<String, Object>> _groupesSansParenthese(
+  Referentiel referentiel,
+  NatureReferentiel nature,
+) {
+  final groupes = <String, List<String>>{};
+  for (final d in referentiel.parNature[nature]!.values) {
+    final cle = cleNormalisee(d.nom.replaceAll(RegExp(r'\([^)]*\)'), ' '));
+    groupes.putIfAbsent(cle, () => []).add(d.id);
+  }
+  final cles = groupes.keys.where((k) => groupes[k]!.length > 1).toList()
+    ..sort();
+  return [
+    for (final k in cles) {'name': k, 'ids': groupes[k]!..sort()},
+  ];
 }
 
 /// Entrée de `beer_index/styles` : plages en `[min, max]`, nombres nus.

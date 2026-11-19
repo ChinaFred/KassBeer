@@ -15,12 +15,14 @@ String? formatPlage(Plage? plage, String Function(double) format) {
   return 'jusqu\'à ${format(max!)}';
 }
 
-/// Nom court d'une source de `provenance[]` : « Brewtarget », « DIY Dog ».
+/// Nom court d'une source de `provenance[]` : « Brewtarget », « DIY Dog »,
+/// « Fiches des fabricants ».
 /// Le fichier et le commit restent dans « Sources des données ». Une source
 /// inconnue s'affiche telle quelle.
 String libelleSource(String source) {
   if (RegExp(r'^brewtarget-\d{3}$').hasMatch(source)) return 'Brewtarget';
   if (source == 'diydog') return 'DIY Dog';
+  if (source == 'fabricants') return 'Fiches des fabricants';
   return source;
 }
 
@@ -37,13 +39,18 @@ String libelleReleve(String retrieved) {
 }
 
 /// Ligne de provenance d'une fiche : « Brewtarget 5.2.3 · licence GPL-3.0 ·
-/// relevé le 8 novembre 2026 ».
+/// relevé le 8 novembre 2026 ». Les fiches des fabricants n'ont pas de
+/// licence : leur condition de reprise s'affiche sans le mot « licence », en
+/// minuscule (« données publiées par le fabricant »).
 String ligneProvenance(Provenance p) {
   final version = versionCourte(p.version);
   final source = libelleSource(p.source);
+  final licence = p.source == 'fabricants' && p.licence.isNotEmpty
+      ? p.licence[0].toLowerCase() + p.licence.substring(1)
+      : 'licence ${p.licence}';
   return [
     version == null ? source : '$source $version',
-    'licence ${p.licence}',
+    licence,
     'relevé le ${libelleReleve(p.retrieved)}',
   ].join(' · ');
 }

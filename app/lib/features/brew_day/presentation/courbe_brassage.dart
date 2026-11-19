@@ -2,6 +2,7 @@ import 'package:brewing/brewing.dart'
     show
         BrewDayTemperatureSeries,
         BrewingInputException,
+        DensiteRetenue,
         TargetTemperaturePoint,
         brewDayTemperatureSeries;
 import 'package:flutter/material.dart';
@@ -12,8 +13,10 @@ import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
+import '../../brews/domain/densites.dart';
 import '../../brews/presentation/brews_providers.dart';
 import '../../brews/presentation/legende_courbe.dart';
+import '../../brews/presentation/saisie_densite.dart';
 import '../../brews/presentation/trace_courbe.dart';
 import '../domain/plan_du_jour.dart';
 import 'chronologie_jour.dart';
@@ -36,6 +39,9 @@ const kCourbeChronologieImpossible =
 const kCourbeValeurRefusee =
     'Courbe indisponible : une valeur enregistrée est refusée.';
 
+/// Mesure de densité et sa valeur retenue, calculée par `brewing/`.
+typedef DensiteMesuree = ({BrewEvent event, DensiteRetenue densite});
+
 /// Données de la courbe, dérivées d'un plan de la journée de brassage.
 @immutable
 class DonneesCourbeBrassage {
@@ -54,8 +60,10 @@ class DonneesCourbeBrassage {
   final List<LigneJour> lignes;
 
   /// Températures et densités mesurées de la journée 1, par heure croissante.
+  /// Une densité porte sa valeur retenue (`densiteDe`) ; une lecture qui n'en
+  /// donne aucune (réfractomètre sans facteur) n'a pas de point.
   final List<BrewEvent> temperatures;
-  final List<BrewEvent> densites;
+  final List<DensiteMesuree> densites;
 
   /// Densité initiale prévue (`computeRecipe`), ou nulle si elle manque.
   final double? densiteInitialePrevue;
@@ -102,10 +110,12 @@ DonneesCourbeBrassage donneesCourbeBrassage(
       for (final e in saisies)
         if (mesure(e, MeasureType.temperature)) e,
     ],
+    // Jour de brassage : aucune correction de l'alcool, la densité initiale
+    // n'est pas lue.
     densites: [
       for (final e in saisies)
-        if (mesure(e, MeasureType.gravity)) e,
-    ],
+        if (e.isGravity && !e.isFermentation) (event: e, densite: densiteDe(e)),
+    ].where((d) => d.densite.sg != null).toList(),
     densiteInitialePrevue: densiteInitialePrevue,
   );
 }
@@ -148,8 +158,10 @@ String resumeCourbeBrassage(DonneesCourbeBrassage d) {
   }
   final prevue = d.densiteInitialePrevue;
   final densites = [
-    for (final e in d.densites)
-      '${formatDensite(e.value!)} à ${formatHeure(e.measuredAt)}',
+    for (final m in d.densites)
+      '${valeurDensite(m.event, m.densite)}'
+          '${m.densite.estCorrigee ? ' corrigée' : ''}'
+          ' à ${formatHeure(m.event.measuredAt)}',
   ];
   if (densites.isNotEmpty) {
     phrases.add(
@@ -377,14 +389,18 @@ class _Courbe extends StatelessWidget {
                         ),
                     ],
                     densites: [
-                      for (final e in d.densites)
+                      for (final m in d.densites)
                         PointCourbe(
-                          at: e.measuredAt,
-                          valeur: e.value!,
+                          at: m.event.measuredAt,
+                          valeur: m.densite.sg!,
                           infoBulle: _infoMesure(
-                            e,
-                            'Densité ${formatDensite(e.value!)}'
-                            '${prevue == null ? '' : ' · initiale prévue ${formatDensite(prevue)}'}',
+                            m.event,
+                            [
+                              'Densité ${valeurDensite(m.event, m.densite)}',
+                              ?complementDensite(m.event, m.densite),
+                              if (prevue != null)
+                                'initiale prévue ${formatDensite(prevue)}',
+                            ].join(' · '),
                           ),
                         ),
                     ],

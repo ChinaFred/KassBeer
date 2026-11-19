@@ -66,18 +66,18 @@ Projet `kass_beer`, plateformes Android et web, `applicationId` `fr.kassbeer.kas
 | `lib/core/router/page_de_coquille.dart` | `PageDeCoquille` : route de la coquille qui donne le titre de la barre du haut et le chemin du bouton retour ; `PageDeCoquilleDynamique` : retour calculé depuis le chemin (préparation d'un brassin) |
 | `lib/core/data/lecture_document.dart` | `LecteurChamps` (lecture stricte d'un document, `DocumentIllisible` sans valeur par défaut), `champFacultatif` (absent à la création, `FieldValue.delete()` à la modification), `libelleAuteur`, `ListeLue` (documents lus et `fromCache`), `RechercheDocument` (trouvé, illisible, absent du serveur, absent du cache), `CreationEnCours` |
 | `lib/core/data/nouveautes.dart` | `Nouveaute`, `lireNouveautes` (valide la forme de `assets/changelog_recent.json`, lève une `FormatException` sinon), `NouveautesRepository` (lecture de l'asset, panne journalisée sous `nouveautes` puis relancée) |
-| `lib/core/presentation/` | `AppShell` (barre du bas à icônes seules sous 600 px, en-tête du rail étendu en `Wrap` : le nom passe sous le médaillon quand il ne tient pas, réduit par `FittedBox` au-delà de la largeur du rail, `label` en infobulle et pour le lecteur d'écran ; rail défilable ; titre et retour reçus de la route ; menu du compte), `MenuCompte` (`menu_compte.dart` : avatar et menu du compte de la coquille et des pages pleines, rien sans `AccessGranted` ; `photo: false` sur l'écran du jour, initiale seule ; entrée de l'écran courant masquée par `kEntreeDeLEcran`, comparée au `fullPath` ; `avantDeQuitter` appelé avant « Tickets à traiter », « Mes processus » et « Se déconnecter » ; « Tickets à traiter » par `go`, sauf sur `kEcransDuJour` (`/brassins/:id/jour`, `/brassins/:id/jour/:journee`), par `push` pour garder l'écran du jour et son verrou ; `avantDeDeconnecter` avant « Se déconnecter » ; `textePastille`, `infobulleCompte`), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kMargeBoutonFlottant` 96 (marge basse d'une liste sous un bouton flottant), `kLibelleFicheFraction` 0,4, `kLigneListeMinHeight` 64, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kReleveChampMinWidth` 140 et `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte, `kDebordCarteCompact` 8 : débord d'une `CarteSection` de chaque côté de sa colonne sous 600 px, `kChronologieHeureWidth` 104 (colonne d'heure de la chronologie du jour, multipliée par l'échelle du texte) et `kChronologieHeureMaxFraction` 0,3 (part de la largeur qu'elle ne dépasse pas)), `etats.dart` (`EtatChargement`, `EtatVide` avec titre et action facultatifs, icône dans un disque `secondaryContainer`, message borné à `kContentMaxWidth`, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette` (`etiquette.dart` : ton normal sous `SurLigneChoisie`, posé par une `LigneListe` choisie, avec un contour `outlineVariant`), `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` (menu du compte après l'action, `avantDeQuitter` = confirmation d'abandon si modifié ; bouton d'action borné par la largeur restante, libellé réduit par `FittedBox` ; `actionActive` faux : bouton grisé sous son libellé) et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche` : libellé et valeur aux deux bords sous 600 px, libellé dans une colonne de `kLibelleFicheFraction` de la largeur au-delà, valeur en `SelectableText` avec `selectionnable: true` (chemin du rapport d'Admin › Sources), `avant` : widget décoratif devant la valeur (pastille de teinte), exclu de la lecture d'écran ; `TitreSection` et `SectionRepliable` en `titleLarge`, ou `titleMedium` avec `niveau: NiveauTitre.sousSection` sous un autre titre ; `SectionRepliable(margeHorizontale:)` pour une liste sans marge (Mes prix) ; `EnTeteFiche` : nom en `headlineSmall` déclaré en-tête (nœud propre), sous-titre facultatif en `onSurfaceVariant`, étiquettes facultatives, action à droite du nom, en tête des fiches recette, brassin, équipement, processus, recette publique, ticket d'Admin › Tickets et suivi d'un ticket du membre ; `CarteSection` : section dans une carte du thème, titre `TitreSection` facultatif (sans titre, le bloc qui en est le premier enfant porte le sien), espace de 16 au-dessus, marge intérieure de 16 sur les côtés et en bas, 8 sous 600 px avec un débord de `kDebordCarteCompact` (`OverflowBox`) qui garde le contenu aligné sur l'en-tête et sa largeur à 200 %, `repliable` sans marge basse, `action` : carte d'action sans titre (fond `primaryContainer`, textes de l'appelant en `onPrimaryContainer`, marge de 16 en haut, enfants espacés de 8), `semanticContainer: false` ; `LigneDeuxNiveaux`, `TexteAbsent`), `LigneListe` (`ligne_liste.dart` : ligne de liste commune, repère dans un disque de 40 px, titre, détails, étiquettes dessous, élément passif ou bouton à droite, lue d'un bloc ou par `semanticsLabel`, ligne choisie en `secondaryContainer` ; `RepereDisque` : disque de 40 px, aussi employé par Admin › Membres et Admin › Rapports d'erreur pour aligner leur texte ; `kDetailLigneIllisible` : détail commun de la ligne d'un document illisible), `Encadre` (`encadre.dart` : bloc coloré de `TonEncadre` information, avertissement, succès ou erreur, icône facultative non lue, `liveRegion`), `PageSecondaire` (`page_secondaire.dart` : cadre d'une page pleine hors de la coquille, retour vers `repli`, menu du compte, bandeau hors ligne ; corps sur toute la largeur, liste centrée sur `largeurMax` par `PageSecondaire.marges(context, base)` (contexte sous la page, sinon assertion) : la molette fait défiler la page au-dessus des marges ; Mes prix, Mes processus, Mes tickets sans borne, Préférences, Nouveautés, Sources des données), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` et `MedaillonKassBeer` (`logo_kass_beer.dart` : médaillon, 48 px au moins ; connexion, chargement, compte non invité, panne au démarrage, en-tête du rail étendu) ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
+| `lib/core/presentation/` | `AppShell` (barre du bas à icônes seules sous 600 px, en-tête du rail étendu en `Wrap` : le nom passe sous le médaillon quand il ne tient pas, réduit par `FittedBox` au-delà de la largeur du rail, `label` en infobulle et pour le lecteur d'écran ; rail défilable ; titre et retour reçus de la route ; menu du compte), `MenuCompte` (`menu_compte.dart` : avatar et menu du compte de la coquille et des pages pleines, rien sans `AccessGranted` ; `photo: false` sur l'écran du jour, initiale seule ; entrée de l'écran courant masquée par `kEntreeDeLEcran`, comparée au `fullPath` ; `avantDeQuitter` appelé avant « Tickets à traiter », « Mes processus » et « Se déconnecter » ; « Tickets à traiter » par `go`, sauf sur `kEcransDuJour` (`/brassins/:id/jour`, `/brassins/:id/jour/:journee`), par `push` pour garder l'écran du jour et son verrou ; `avantDeDeconnecter` avant « Se déconnecter » ; `textePastille`, `infobulleCompte`), `NouveautesScreen`, `PreferencesScreen` (`/preferences`, hors de la coquille), `breakpoints.dart` (seuils 600 / 840 et largeurs `kFormMaxWidth` 400, `kDialogMaxWidth` 480, `kMessageMaxWidth` 480, `kAccountMenuMaxWidth` 280, `kRailLabelMaxWidth` 160 (libellé d'une destination du rail non étendu, réduit par `FittedBox` au-delà), `kContentMaxWidth` 840, `kMargeBoutonFlottant` 96 (marge basse d'une liste sous un bouton flottant), `kLibelleFicheFraction` 0,4, `kLigneListeMinHeight` 64, `kEditorMaxWidth` 920, `kCalculationPanelWidth` 340, `kCalculationTileMinWidth` 120 à multiplier par l'échelle du texte, `kCompactMaxHeight` 480, `kBrewDayActionsMaxWidth` 480, `kBrewDayChronologyMaxWidth` 480, `kBrewDayMaxWidth` 1200, `kComparaisonValeurMinWidth` 96, à multiplier par l'échelle du texte, `kDebordCarteCompact` 8 : débord d'une `CarteSection` de chaque côté de sa colonne sous 600 px, `kChronologieHeureWidth` 104 (colonne d'heure de la chronologie du jour, multipliée par l'échelle du texte) et `kChronologieHeureMaxFraction` 0,3 (part de la largeur qu'elle ne dépasse pas)), `etats.dart` (`EtatChargement`, `EtatVide` avec titre et action facultatifs, icône dans un disque `secondaryContainer`, message borné à `kContentMaxWidth`, `EtatErreur` avec libellé de nouvelle lecture, `IndicateurBouton`), `BandeauHorsLigne`, `BandeauListePerimee`, `Etiquette` (`etiquette.dart` : ton normal sous `SurLigneChoisie`, posé par une `LigneListe` choisie, avec un contour `outlineVariant`), `showFeuilleOuDialogue`, `formats.dart` (affichage à la française, `formatDateLongue`, `lireNombre`, `erreurNombre`), `ChampNombre` (mode entier, minimum), `PageDocument` (états d'une page de document), `EditeurPleinEcran` (menu du compte après l'action, `avantDeQuitter` = confirmation d'abandon si modifié ; bouton d'action borné par la largeur restante, libellé réduit par `FittedBox` ; `actionActive` faux : bouton grisé sous son libellé) et `montrerChamp` (défilement vers le premier champ en erreur), `ecriture.dart` (`suivreEcriture`, `annoncerRefus`, `annoncerAvecAnnulation`, `annoncerAvecAction` (10 s, bouton facultatif), confirmations d'abandon, de suppression, `confirmerAction` et `confirmerActionOuAlternative` (« Annuler », une autre action, la confirmation ; boutons empilés quand la largeur manque)), `fiche.dart` (`LigneFiche` : libellé et valeur aux deux bords sous 600 px, libellé dans une colonne de `kLibelleFicheFraction` de la largeur au-delà, valeur en `SelectableText` avec `selectionnable: true` (chemin du rapport d'Admin › Sources), `avant` : widget décoratif devant la valeur (pastille de teinte), exclu de la lecture d'écran ; `TitreSection` et `SectionRepliable` en `titleLarge`, ou `titleMedium` avec `niveau: NiveauTitre.sousSection` sous un autre titre ; `SectionRepliable(margeHorizontale:)` pour une liste sans marge (Mes prix) ; `EnTeteFiche` : nom en `headlineSmall` déclaré en-tête (nœud propre), sous-titre facultatif en `onSurfaceVariant`, étiquettes facultatives, action à droite du nom, en tête des fiches recette, brassin, équipement, processus, recette publique, ticket d'Admin › Tickets et suivi d'un ticket du membre ; `CarteSection` : section dans une carte du thème, titre `TitreSection` facultatif (sans titre, le bloc qui en est le premier enfant porte le sien), espace de 16 au-dessus, marge intérieure de 16 sur les côtés et en bas, 8 sous 600 px avec un débord de `kDebordCarteCompact` (`OverflowBox`) qui garde le contenu aligné sur l'en-tête et sa largeur à 200 %, `repliable` sans marge basse, `action` : carte d'action sans titre (fond `primaryContainer`, textes de l'appelant en `onPrimaryContainer`, marge de 16 en haut, enfants espacés de 8), `semanticContainer: false` ; `LigneDeuxNiveaux`, `TexteAbsent`), `LigneListe` (`ligne_liste.dart` : ligne de liste commune, repère dans un disque de 40 px, titre, détails, étiquettes dessous, élément passif ou bouton à droite, lue d'un bloc ou par `semanticsLabel`, ligne choisie en `secondaryContainer` ; `RepereDisque` : disque de 40 px, aussi employé par Admin › Membres et Admin › Rapports d'erreur pour aligner leur texte ; `kDetailLigneIllisible` : détail commun de la ligne d'un document illisible), `Encadre` (`encadre.dart` : bloc coloré de `TonEncadre` information, avertissement, succès ou erreur, icône facultative non lue, `liveRegion`), `PageSecondaire` (`page_secondaire.dart` : cadre d'une page pleine hors de la coquille, retour vers `repli`, menu du compte, bandeau hors ligne ; corps sur toute la largeur, liste centrée sur `largeurMax` par `PageSecondaire.marges(context, base)` (contexte sous la page, sinon assertion) : la molette fait défiler la page au-dessus des marges ; Mes prix, Mes processus, Mes tickets sans borne, Préférences, Nouveautés, Sources des données), `LigneEditeur` (ligne d'une liste d'éditeur avec menu ⋮), `LogoKassBeer` et `MedaillonKassBeer` (`logo_kass_beer.dart` : médaillon, 48 px au moins ; connexion, chargement, compte non invité, panne au démarrage, en-tête du rail étendu) ; `segments.dart` (`BoutonsSegmentes`, `segmentsTiennent` : choix par segments qui passent en colonne quand les libellés, mesurés avec l'échelle du texte, ne tiennent pas ; éditeur des recettes et formulaire de prix) |
 | `lib/core/preferences/` | préférence de thème gardée sur l'appareil (ADR-009) : `PreferencesAppareil` (`lireValeurTheme`, `ecrireTheme`), `PreferencesAppareilPlateforme` (canal `fr.kassbeer/prefs` sur Android, `preferences_web.dart` par `package:web` sur le web, `preferences_web_stub.dart` hors du web, import conditionnel), `lireTheme` (rend `LectureTheme`, ne lève pas), `themeModeProvider` (`ThemeModeNotifier.choisir`) ; fournis par `preferencesAppareilProvider` et `themeModeInitialProvider` |
 | `lib/core/fichiers/` | `EchangeFichiers` (ADR-007) : `choisir(maxOctets, types)` (types facultatifs, `kTypesImages` pour une image de ticket) rend `ChoixAnnule`, `FichierChoisi` (nom, octets), `FichierTropGros` (taille ou `null`) ou `ChoixImpossible` ; `modes` (Android : `enregistrer`, `partager` ; web : `telecharger`) et `envoyer` rendent `EnvoiFait`, `EnvoiAnnule` ou `EnvoiImpossible`. `EchangeFichiersPlateforme` : canal `fr.kassbeer/files` sur Android, `fichiers_web.dart` (`package:web`) sur le web, `fichiers_web_stub.dart` hors du web (import conditionnel) ; fourni par `echangeFichiersProvider` |
 | `lib/core/services/app_update_service.dart`, `app_update_transport*.dart`, `app_installer.dart` | mise à jour de l'APK (ADR-012) : `AppUpdateService` (`verifier`, `telecharger`, `installer`), `ManifesteApk.lire`, `TransportMiseAJour` (`dart:io` sur Android par import conditionnel, stub sur le web), `InstallateurApkPlateforme` (canal `fr.kassbeer/updates`) ; fourni par `appUpdateServiceProvider` (`main.dart`). Fenêtre `app_update_dialog.dart`, vérification au lancement `verification_mise_a_jour.dart` (dans la coquille) |
 | `lib/core/services/screen_wakelock.dart` | `ScreenWakelock` (verrou compté, une remontée d'erreur par session), `KeepScreenAwake` |
-| `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite : palette tirée du logo (primaire brun, secondaire et surfaces laiton, tertiaire ambre pour « en cours » et les avertissements ; couleurs principales en variante `fidelity`, conteneurs en `tonalSpot`), `CouleursEtat` (succès, vert), `StylesJourDeBrassage` (tailles de l'écran du jour et de « Préparer le brassage » : minuteur 88, 72 en paysage, 128 en large ; étape 36 ou 45 ; ligne « Ensuite » 22 ; chronologie 16 ; étiquette d'étape 18 ; ligne d'information « Fin prévue vers… » 18 ; libellé des boutons 22 ; chiffres d'une mesure saisie 28 ; aucune taille écrite en dur dans `features/brew_day/`) ; texte en Roboto, titres `display*`, `headline*` et `titleLarge` en Bitter demi-grasse, polices de secours Roboto puis `Symboles`, chiffres tabulaires dans tous les styles ; `app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 en clair et en sombre |
+| `lib/core/theme/app_theme.dart` | thème Material 3, seul fichier où une couleur est écrite : palette tirée du logo (primaire brun, secondaire et surfaces laiton, tertiaire ambre pour « en cours » et les avertissements ; couleurs principales en variante `fidelity`, conteneurs en `tonalSpot`), `CouleursEtat` (succès, vert), `StylesJourDeBrassage` (tailles de l'écran du jour et de « Préparer le brassage » : minuteur 88, 72 en paysage, 128 en large ; étape 36 ou 45 ; ligne « Ensuite » 22 ; chronologie 16 ; étiquette d'étape 18 ; ligne d'information « Fin du brassage prévue vers… » 18 ; libellé des boutons 22 ; chiffres d'une mesure saisie 28 ; aucune taille écrite en dur dans `features/brew_day/`) ; texte en Roboto, titres `display*`, `headline*` et `titleLarge` en Bitter demi-grasse, polices de secours Roboto puis `Symboles`, chiffres tabulaires dans tous les styles ; `app/test/app_theme_test.dart` vérifie un contraste d'au moins 4,5:1 en clair et en sombre |
 | `assets/fonts/`, `assets/images/` | polices embarquées, sous SIL OFL 1.1, chacune avec sa licence en asset (`OFL-Bitter.txt`, `OFL-Roboto.txt`, `OFL-NotoSansMath.txt`) : `Bitter-SemiBold.ttf` (titres, graisse 600, 38 Ko) ; `Roboto-Regular`, `-Medium`, `-Bold`, `-Italic` (texte, 56 Ko chacune ; une famille « Roboto » au manifeste empêche le moteur web de la télécharger depuis `fonts.gstatic.com`) ; `Symboles.ttf` (flèches et ⋮ tirés de Noto Sans Math, 8 Ko, police de secours). Réduites au latin, au latin étendu A, à la ponctuation et aux symboles employés : un caractère hors de ces jeux fait télécharger une police Noto sur le web. `logo_kass_beer.webp` (médaillon de 384 px, 38 Ko, tiré de `assets/Kassbeer_transparent.png` à la racine du dépôt) |
 | `lib/features/auth/` | `AuthRepository` (Firebase Auth, Google, `currentTokenName`), état d'accès, `grantedAccessProvider`, écrans Chargement, Connexion, Compte non invité, Erreur |
 | `lib/features/members/` | `MembersRepository` (`members/`), `Member`, Admin › Membres |
 | `lib/features/equipment/` | `EquipmentRepository` (`equipment/`), `Equipment`, `EquipmentContent`, `EquipmentKind` ; liste, fiche, éditeur |
 | `lib/features/recipes/` | `RecipesRepository` (`recipes/`, `updateBrewSteps`, `newStepKey`) ; `domain/recipe.dart` : `Recipe`, `RecipeContent` et ses lignes, conversion document BeerJSON ↔ `brewing/`, tri, duplication ; `domain/beerjson.dart` : unités canoniques, lecture des couples `{value, unit}`, valeurs énumérées du schéma et leurs libellés (`EnumerationBeerJson`), `verifierVersionFormat` ; `domain/chronologie.dart` : `BrewStepLine`, lecture et validation de `brew_steps`, durées dérivées ; liste, fiche, éditeur, éditeur de chronologie, `ContenuRecette` (sections partagées avec le brassin, la recette publique et l'écran du jour ; `enCartes` : chaque section dans une `CarteSection` sur la fiche d'une recette et d'une recette publique, sections à la suite sous un titre « Recette » sinon ; `momentsOrigine` ajoute « moment d'origine : … » à un houblon), formulaires des lignes (`ListeBeerJson` : liste déroulante d'une valeur BeerJSON, « Non précisé » en tête), vue des calculs (`libelleManque`, et `libelleManqueExport` pour l'export et l'aperçu de l'import) ; `domain/import_recettes.dart` : `preparerImport` (recette lue par `exchange/`, relue par `RecipeContent.fromFirestore`, « Déjà importée » par l'empreinte), `avecEquipement` ; `presentation/import_recipes_screen.dart` (Recettes › Importer, `statutImport` : l'auteur retenu est le nom du jeton (`currentTokenName`, lu une fois avant le premier aperçu), celui qu'écrit l'import ; statuts mémorisés par équipement et lignes construites à l'écran par `ListView.builder` : un appui sur une case avec 500 recettes prend 53 ms en test), `export_recipe_sheet.dart` (feuille « Exporter » : « Auteur dans le fichier : {nom}. » lu dans `ExportPret.auteur`, boutons radio inactifs pendant un envoi), `libelles_echange.dart` (refus, modifications, fichiers refusés, pertes) |
-| `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction ; un déroulé illisible est rapporté sous `brews.process`, une chronologie figée illisible sous `brews.brew_steps`), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType`, `PhaseEvenement`, `GroupeBrassins` et `groupeBrassin` (groupe d'un statut dans la liste, seul découpage lu par `compareBrews`) ; `domain/deroule.dart` (ADR-010) : `Deroule`, `JourneeDeroulee`, `EtapeDeroulee`, `lireDeroule` (lecture de `process`, illisible avec sa raison, sans repli), `erreurDeroule` (contrôle avant écriture, clés d'étapes uniques sur toutes les journées) ; `Brew.deroule`, seul accès aux étapes d'un brassin (P37) : `process` s'il existe, sinon une journée de brassage tirée de `recipe_snapshot.brew_steps` ; `domain/assemblage_deroule.dart` (`assemblerDeroule`, `ecartDuProcessus`, v0.1.34) ; `setProcess` du dépôt ; `presentation/choix_processus.dart` (« Processus » et « Déroulé prévu » ; `lireChoixProcessus` présélectionne le processus par défaut du lecteur, sinon, si aucun document de préférence n'existe (`DocumentAbsent`), son seul processus valide s'il n'en a qu'un, ticket #61 ; l'éditeur écrit `default_template_id` nul quand « Proposer par défaut » est décoché à la création d'un premier choix ; `AideChronologieSeule` et `choisirProcessus` sous « Chronologie de la recette seule » ; `BoutonProcessus`), `section_deroule.dart` (section « Déroulé » de la fiche ; `sansProcessusPrevu` : brassin prévu, pas commencé, sans `process` et lisible), `changer_processus.dart`, `libelles_deroule.dart` ; `domain/mesures_retenues.dart` (mesures retenues, VR1, VR2, RR2), `domain/releves.dart` (regroupement du relevé) ; liste (`brews_screen.dart` : un en-tête `TitreSection` de sous-section par groupe non vide dans l'ordre de `compareBrews`, puis « Illisibles » ; `tonStatutBrassin`, ton de l'étiquette du statut, partagé avec la fiche), fiche (`brew_detail_screen.dart` : `EnTeteFiche` avec le statut en étiquette et le menu ⋮ ; `CarteSection(action: true)` pour la prochaine journée et l'action principale ; chaque bloc dans une `CarteSection`, sections de la recette figée en sous-sections de la carte « Recette »), « Nouveau brassin », `presentation/releve_fermentation.dart`, `prevu_et_mesure.dart`, `embouteillage.dart`, `courbe_fermentation.dart`, `trace_courbe.dart` (seul import de `fl_chart`, P18) |
+| `lib/features/brews/` | `BrewsRepository` (`brews/`, `brews/{id}/events/`, jamais de transaction ; un déroulé illisible est rapporté sous `brews.process`, une chronologie figée illisible sous `brews.brew_steps`), `Brew`, `BrewEvent`, `BrewStatus`, `MeasureType`, `PhaseEvenement`, `GroupeBrassins` et `groupeBrassin` (groupe d'un statut dans la liste, seul découpage lu par `compareBrews`) ; `domain/deroule.dart` (ADR-010) : `Deroule`, `JourneeDeroulee`, `EtapeDeroulee`, `lireDeroule` (lecture de `process`, illisible avec sa raison, sans repli), `erreurDeroule` (contrôle avant écriture, clés d'étapes uniques sur toutes les journées) ; `Brew.deroule`, seul accès aux étapes d'un brassin (P37) : `process` s'il existe, sinon une journée de brassage tirée de `recipe_snapshot.brew_steps` ; `domain/assemblage_deroule.dart` (`assemblerDeroule`, `ecartDuProcessus`, v0.1.34) ; `setProcess` du dépôt ; `presentation/choix_processus.dart` (« Processus » et « Déroulé prévu » ; `lireChoixProcessus` présélectionne le processus par défaut du lecteur, sinon, si aucun document de préférence n'existe (`DocumentAbsent`), son seul processus valide s'il n'en a qu'un, ticket #61 ; l'éditeur écrit `default_template_id` nul quand « Proposer par défaut » est décoché à la création d'un premier choix ; `AideChronologieSeule` et `choisirProcessus` sous « Chronologie de la recette seule » ; `BoutonProcessus`), `section_deroule.dart` (section « Déroulé » de la fiche ; `sansProcessusPrevu` : brassin prévu, pas commencé, sans `process` et lisible), `changer_processus.dart`, `libelles_deroule.dart` ; `domain/mesures_retenues.dart` (mesures retenues, VR1, VR2, RR2), `domain/releves.dart` (regroupement du relevé) ; liste (`brews_screen.dart` : un en-tête `TitreSection` de sous-section par groupe non vide dans l'ordre de `compareBrews`, puis « Illisibles » ; `tonStatutBrassin`, ton de l'étiquette du statut, partagé avec la fiche), fiche (`brew_detail_screen.dart` : `EnTeteFiche` avec le statut en étiquette et le menu ⋮ ; `CarteSection(action: true)` pour la prochaine journée et l'action principale ; chaque bloc dans une `CarteSection`, sections de la recette figée en sous-sections de la carte « Recette »), « Nouveau brassin », `presentation/releve_fermentation.dart`, `prevu_et_mesure.dart`, `embouteillage.dart`, `courbe_fermentation.dart`, `trace_courbe.dart` (seul import de `fl_chart`, P18) ; densité et instrument (v0.1.72) : `domain/densites.dart` (`lectureDe`, `densiteDe` : seule lecture d'une densité mesurée, par `densiteRetenue` de `brewing/`), `domain/preference_mesure.dart` (`PreferenceMesure`, `preferenceMesureDe`), `data/preference_mesure_repository.dart` (`PreferenceMesureRepository`, `users/{uid}/preferences/measurement`, écriture simple sans transaction), `presentation/saisie_densite.dart` (`BlocDensite` et `SaisieDensiteControleur`, saisie commune aux quatre formulaires de densité ; feuille « Densimètre » `choisirInstrument` ; `BoutonChangerDensimetre` ; libellés `valeurDensite`, `complementDensite`, `libelleDensiteMesure`) |
 | `lib/features/costs/` | `CostsRepository` (`users/{uid}/prices`, `fees`, `brew_costs`, jamais de transaction ni de `Source.server`, `brewCostRef`) ; `domain/price.dart` (`Price`, `purchaseUnitOf`, `isUnusualPrice`), `domain/fee.dart` (`Fee`), `domain/brew_cost.dart` (`BrewCost`, `BrewCostLine`, `FreezeKind`) ; `domain/cost_evaluation.dart` : clés dérivées des lignes de `RecipeContent` (`ingredientsDeRecette`), raisons d'un coût indisponible (`RaisonCout`), `evaluerCoutRecette`, `evaluerEstimationBrassin`, `evaluerFigeage`, déclencheur du figeage (`doitFigerAuPremierEmbouteillage`), boutons proposés (`figerLeCoutPropose`, `recalculerPropose`), écart avec l'embouteillage (`ecartsDepuisFigeage`) ; `data/figeage_embouteillage.dart` (`enregistrerEmbouteillage` : embouteillage puis coût, sans attente) ; `presentation/costs_providers.dart` (`pricesProvider`, `feesProvider`, `brewCostProvider`, `costReportsProvider`) ; `presentation/prices_screen.dart` (« Mes prix », route `/prix`), `price_form.dart` (`ouvrirFormulairePrix` : nouveau, manquant, modification ; « Reprendre un de mes prix »), `fee_form.dart`, `bloc_cout.dart` (`BlocCoutRecette`, lignes des raisons et du détail), `bloc_cout_brassin.dart` (`BlocCoutBrassin` : estimation, « Figer le coût », coût figé, écart, « Recalculer avec mes prix actuels »), `formats_cout.dart` (euros, kilogrammes et euros par kilogramme à l'affichage ; aucun calcul de coût) |
 | `lib/features/processes/` | modèles de processus (ADR-010, lot D2). `domain/modele_processus.dart` : `ModeleProcessus` (avec `hasPendingWrites`), `ContenuModele`, `JourneeModele`, `ElementModele`, `NatureElement` (lecture de `process_templates/`, champ inconnu ignoré, `DocumentIllisible` sinon ; écriture en liste blanche ; `erreurModele` : bornes, clés uniques, puis contraintes d'ADR-010 par `processTemplateIssue` de `brewing/` ; `copieModele` : clés neuves de journées et d'éléments, nom coupé à 120 caractères) ; `domain/modele_exemple.dart` : `modeleExemple` (trois journées acceptées le 2026-11-11, nom « Brassage, houblonnage à cru, embouteillage », note « Durées typiques, à ajuster à votre matériel. », clés neuves à chaque copie), `kJourneesSuiteExemple` (journées J+4 et J+14), `contenuPredefini` ; `domain/modele_fiches.dart` : `modeleFiches` (« Plan de brassage des fiches », accepté le 2026-11-14 : journée Brassage des fiches Excel avec ses températures, puis les journées J+4 et J+14 du modèle d'exemple) ; `domain/modeles_a_copier.dart` : `ModeleACopier` (paramètre `modele` de la route, nom, note, copie), écrits seulement à « Enregistrer » après un appui dans « Modèles à copier » ; `domain/preference_processus.dart` : `PreferenceProcessus`, `idModeleParDefaut`. `data/processes_repository.dart` : `ProcessesRepository` (`watchAll` avec `includeMetadataChanges`, document illisible isolé en `DocumentInvalide` et rapporté sous `processes.read` ; `create`, `update`, `copy`, `duplicate` (« {nom} (copie) »), `delete`, `newKey` = `doc().id` ; `erreurModele` vérifié avant chaque écriture, refus `ModeleInvalide` rapporté sans rien écrire ; aucune transaction). `data/preferences_processus_repository.dart` : `PreferencesProcessusRepository` (`watch(uid)`, `saveDefault` par `set` de `default_template_id` et `updated_at`). `presentation/` : `processes_providers.dart`, `process_list_screen.dart` (« Mes processus »), `process_detail_screen.dart` (fiche, `textesProcessus` ; le défaut n'est remis à nul qu'après l'acceptation de la suppression de son processus), `process_editor_screen.dart` (éditeur plein écran en un `CustomScrollView`, une `SliverReorderableList` par journée dans un `SliverMainAxisGroup` ; `FormulaireEtape` des recettes, `LigneEditeur` ; « Proposer par défaut » coché seulement quand l'absence de défaut est lue avec certitude), `formulaire_journee.dart`, `libelles_processus.dart` (résumés ; durées par `dureeChronologie` et `decalagesChronologie`, P3) |
 | `lib/features/brew_day/` | `PlanDuJour` (chronologie dérivée par `brewing/`, d'une journée du déroulé, brassage par défaut : événements réduits sur les étapes de toutes les journées, horaire recalculé sur celles de la journée ; `journeeTerminee`, v0.1.35), écran du jour et « Préparer le brassage » paramétrés par la journée (`journeeASuivre`, `TextesJournee`), `AlerteMinuteur` (canal `fr.kassbeer/alert`, Web Audio), écran du jour, « Préparer le brassage », formulaire de mesure, `IndicateurEnvoi`, `RepriseBrassage` |
@@ -282,7 +282,7 @@ l'appel ; les `Future` rendues se terminent à la réponse du serveur. Aucune tr
 | Nouveau brassin | `doc()`, `set` seul (un brassin s'écrit avant tout événement : la règle d'un événement le lit par `get()`), `status: planned`, `recipe_snapshot`, `equipment_snapshot`, `owner_name` s'il existe |
 | Modifier | `update` de `name`, `planned_for`, `notes`, `owner_name`, `updated_at` |
 | Commencer le brassage | `WriteBatch` : `status: brewing`, `brewed_at` (heure de l'appareil), `owner_name`, et le premier `step_started` si la première étape a une durée |
-| Début, fin, saut d'étape | `set` d'un événement (`writeSteps`) ; `WriteBatch` pour « Terminer et commencer » et une étape de 0 min (`step_started` + `step_ended`). « Les sauter et commencer » : chaque `step_skipped` en écriture simple, l'une après l'autre, puis le début : un lot de plus de 20 événements ferait plus de 20 `get()` dans les règles |
+| Début, fin, saut d'étape | `set` d'un événement (`writeSteps`) ; `WriteBatch` pour « Terminer et commencer », « Étape suivante » (`step_ended` de l'étape en cours + `step_started` de la suivante ; son « Annuler » les supprime par `deleteEvents`, un `WriteBatch`) et une étape de 0 min (`step_started` + `step_ended`). « Les sauter et commencer » : chaque `step_skipped` en écriture simple, l'une après l'autre, puis le début : un lot de plus de 20 événements ferait plus de 20 `get()` dans les règles |
 | Terminer le brassage | `update` : `status: fermenting`, `owner_name` |
 | Mesure, note | `set` (`addEvent`), identifiant créé par l'appareil, `measured_at` = heure de l'appareil |
 | Corriger | `update` de `value`, `note`, `measured_at` |
@@ -953,6 +953,17 @@ couleurs » (`TextesCouleurEbc.echelle`).
 **Hors ligne.** Aucun code de la Bibliothèque dans l'écran du jour ni dans ce qu'il appelle
 (P2). Sans réseau, ce qui est en cache se lit ; un document absent du cache est rendu
 `DocumentAbsentDuCache` et affiché « indisponible hors ligne », jamais « absent ».
+
+#### Admin › Membres — lien vers la console
+
+Le formulaire « Inviter un membre »
+(`invite_member_form.dart`) ouvre la page des utilisateurs test de Google Auth Platform par
+`ouvrirLienProvider`. L'adresse est construite par `consoleUtilisateursTest`
+(`members_providers.dart`) à partir de `firebaseProjectIdProvider` (`FIREBASE_PROJECT_ID`, lu
+à la compilation) ; un identifiant hors du motif `^[a-z][a-z0-9-]{4,28}[a-z0-9]$` rend `null`
+et le bloc ne s'affiche pas. L'adresse saisie, si elle est valide, est copiée avant
+l'ouverture. Échecs rapportés sous `members.copy_email` et `members.open_console`, sans
+l'adresse (P13).
 
 #### Tickets — client
 
@@ -1634,13 +1645,21 @@ rattachée. Aucun calcul d'heure nouveau dans `brewing/` : aucun cas ajouté à 
 lignes d'une journée (durée prévue, état de `recomputeSchedule`, enregistrement de
 `stepRecordsFromEvents`) à `actualDurations` de `brewing/` (P3). `journeeClose` : le brassage
 dès que le statut a quitté « En cours », une autre journée terminée (`journeeTerminee`), ou un
-brassin terminé ou abandonné ; une étape restée en cours y est « sans heure de fin ».
-`evaluerDurees` (`chronologie_jour.dart`) rend `null` tant qu'aucune étape n'a début et fin, et
-rapporte un refus de `brewing/` une fois (`brews.actual_durations`, `planReportsProvider`) ;
-`dureesDesJournees` rend les durées de chaque journée de la fiche. `ChronologieJour` reçoit
-`durees` sur la fiche seule ; l'écran du jour et l'écran d'une journée ne le passent pas et
-gardent leurs lignes. `dureeEtapeReelle` et `dureeJourneeReelle` (`libelles_deroule.dart`)
-construisent le texte affiché et le texte lu, sans calcul ; `LigneDureeJournee`
+brassin terminé ou abandonné ; une étape restée en cours y est sans fin (« réel inconnu »).
+`ChronologieJour(close:)` reçoit `journeeClose` (fiche du brassin et écran du jour), et
+`statutAffiche(status, close:)` affiche alors « Terminée » pour une étape restée en cours.
+`evaluerDurees` (`chronologie_jour.dart`) rend les durées de la journée, `kind: none` compris
+(heures théoriques et écarts de début des étapes), et rapporte un refus de `brewing/` une fois
+(`brews.actual_durations`, `planReportsProvider`) en rendant `null` ; `dureesDesJournees` rend
+les durées de chaque journée de la fiche. `ChronologieJour` reçoit `durees` sur la fiche, sur
+l'écran du jour et sur l'écran d'une journée (v0.1.69, calcul local, P2), et `importe`
+(`Brew.importeDUneFiche`, `imported_from` qui commence par « Fiche Excel ») : une étape non
+faite d'un brassin importé est « Non notée » à son heure théorique. `heureDeLigne` rend la
+colonne d'heure affichée et lue (fin retenue par `ActualStepDuration.end`, « vers » pour un
+début estimé) ; `ecartDeDebut` la ligne « Début : 25 min de retard » ; sur grand écran
+(`WindowSize.expanded`, dans le `LayoutBuilder` de `ChronologieJour`), elle rejoint la deuxième
+ligne. `dureeEtapeReelle` et `dureeJourneeReelle` (`libelles_deroule.dart`) construisent le
+texte affiché et le texte lu, sans calcul ; `LigneDureeJournee`
 (`section_deroule.dart`) place la ligne de journée. « Mettre à jour mon processus avec ce
 brassin » : `proposerMiseAJour` (`brews/domain/mise_a_jour_processus.dart`) rattache chaque
 étape d'origine `template` à l'élément du modèle par `template_step_key`, puis
@@ -1780,6 +1799,19 @@ règles au retour du réseau.
 | `measured_at` | timestamp, obligatoire : heure de l'appareil |
 | `created_at` | timestamp, obligatoire : `serverTimestamp()`, audit seul |
 | `phase` | string \| null : absent ou nul pour le jour de brassage, `fermentation` pour un relevé et pour une mesure ou une note d'une journée 2 ou suivante (avec son `step_key`, v0.1.35) ; permis sur `measurement` et `note`, refusé sur un événement d'étape ; immuable |
+| `time_estimated` | booléen `true` ou absent (v0.1.69) : heure non notée, écrite par Admin › Import pour tout événement d'une fiche dont `time_source` n'est pas `fiche` ; permis sur `step_started`, `measurement`, `note` ; ne s'ajoute jamais ; se retire seulement avec `measured_at` changé (correction d'une saisie : l'heure devient notée) |
+| `date_estimated` | booléen `true` ou absent (v0.1.69) : date elle-même estimée, relevé de densité finale daté du jour du brassage + 28 jours (`estimee_j28`) ; sur `measurement` ou `note`, seulement avec `time_estimated` ; retiré avec lui |
+| `gravity_instrument` | string \| absent (v0.1.72) : instrument d'une densité (`measure_type == 'gravity'` seulement), `hydrometer_20c`, `hydrometer_15_6c`, `refractometer`, `digital`, `other` ; absent pour une mesure ancienne ou sans instrument choisi |
+| `brix` | number \| absent : lecture du réfractomètre, 0 à 40 °Brix ; `value` est alors nulle |
+| `sample_temperature` | number \| absent : température de l'échantillon d'un densimètre flottant, 0 à 100 °C |
+| `refractometer_factor` | number \| absent : facteur de correction du moût, 0,9 à 1,2, copié de la préférence |
+| `correct` | bool \| absent : case « Corriger », obligatoire pour un flottant et un réfractomètre, absente sinon |
+
+`time_estimated` et `date_estimated` distinguent les trois heures non notées d'une fiche
+sans rien déduire de l'heure : jour du brassage (`time_estimated` sans `phase`, « vers
+12:10 »), relevé daté de midi (`time_estimated` avec `phase: fermentation`, « heure non
+notée »), relevé J+28 (`date_estimated`, « date estimée ») ; `BrewEvent.natureHeure` les lit.
+Aucun champ n'est ajouté au brassin.
 
 Forme selon `kind` (règles) :
 
@@ -1789,12 +1821,32 @@ Forme selon `kind` (règles) :
 | `measurement` | facultatif : nul pour une mesure sans étape, sinon non vide | type de la liste, valeur numérique dans les bornes de son type (ci-dessous) | facultative |
 | `note` | facultatif : nul pour une note sans étape, sinon non vide | absents ou nuls | obligatoire, 1 à 2 000 caractères |
 
+**Densité et instrument (v0.1.72).** La lecture brute est stockée, jamais la valeur corrigée.
+Flottant : `value` = densité lue (SG), `sample_temperature` facultative, `correct`.
+Réfractomètre : `value` nulle (un °Brix n'est pas une densité, et `value` garde le sens d'une
+densité SG pour tout lecteur), `brix`, `refractometer_factor` facultatif, `correct`.
+Électronique et autre : `value` seule. La valeur retenue se calcule à l'affichage par
+`densiteRetenue` de `brewing/` (`gravity_instruments.dart`), appelée par
+`densiteDe(BrewEvent)` (`app/lib/features/brews/domain/densites.dart`) : seule lecture d'une
+densité mesurée par la chronologie, le relevé, les deux courbes, `MesuresRetenues` (densités
+initiale et finale retenues, et donc `compareBrewWithPlan` : degré, rendement, écarts) et les
+listes de « Changer ». Correction d'un flottant : lecture × ρ(étalonnage) / ρ(échantillon), ρ
+masse volumique de l'eau par la formule de Kell (1975) ; sans réserve de 0 à 40 °C, approchée
+jusqu'à 75 °C, impossible sous 0 °C ou au-delà de 75 °C (lecture brute ; `PlageCorrection.tropFroid` ou `tropChaud` ; la saisie et les règles bornent la température à 0 °C au moins, et l'écran n'affiche que le message « au-delà de 75 °C »). Réfractomètre : °Brix divisé par le facteur,
+converti par la formule de `platoToSg` ; en `phase: 'fermentation'`, corrigé de l'alcool par
+l'équation cubique de Terrill (2011), °Brix initial tiré de la densité initiale retenue
+(`sgToPlato`) ; sans facteur, aucune densité (la mesure n'est jamais retenue automatiquement) ;
+sans densité initiale retenue, conversion seule. Cas dans `brewing/test/fixtures/hydrometer.json`
+et `refractometer.json`. `BrewEvent.fromFirestore` relit ces champs avec les bornes des règles
+(`DetailDensite.lire`) ; une forme hors règles rend l'événement illisible.
+
 Les bornes de saisie (température 0 à 110 °C, densité 0,980 à 1,200, volume au-delà de 0 et
 jusqu'à 1 000 L, pH 0 à 14) sont vérifiées par l'application et par les règles, à la création et
 à la correction d'un événement. Les deux jeux de bornes sont identiques, bornes comprises : une
 saisie acceptée à l'écran n'est pas refusée au retour du réseau.
 
-Après création, seuls `value`, `note` et `measured_at` se corrigent, et la forme reste
+Après création, seuls `value`, `note` et `measured_at` se corrigent, plus, pour une densité,
+`gravity_instrument`, `brix`, `sample_temperature`, `refractometer_factor` et `correct`, et la forme reste
 valide : une mesure ne perd pas sa valeur, un début d'étape n'en reçoit pas. « Ne plus
 sauter » supprime l'événement `step_skipped`. Deux appareils hors ligne peuvent écrire deux
 débuts de la même étape : `stepRecordsFromEvents` garde le plus ancien et rend l'autre comme
@@ -1841,6 +1893,7 @@ contrôle de forme. Unités du système international : masses en grammes, monta
 | `users/{uid}/prices/{ingredientKey}` | `name` string (1 à 120), `price_eur` number (prix payé, 0 à 100 000), `quantity` number (quantité achetée, au-delà de 0 et jusqu'à 1e9), `unit` string (`g`, `unit` pour un sachet de levure, ou `l` depuis la v0.1.17 : prix au litre d'un houblon ou d'un ajout ; `purchaseUnitsOf` limite les litres à ces deux natures dans le formulaire, les règles ne lient pas l'unité au préfixe), `updated_at` timestamp (`serverTimestamp()`). Identifiant : clé d'ingrédient, 100 caractères au plus, préfixe `malt`, `sucre`, `houblon`, `levure` ou `ajout`, forme `^(malt|sucre|houblon|levure|ajout)(-[a-z0-9]+)*$` ; un identifiant hors de cette forme est lu comme illisible (`DocumentIllisible('id', 'clé hors format')`), rapporté sans l'identifiant, qui dérive du nom, puis se supprime après confirmation. Un kilogramme saisi est converti en grammes à l'écran, un millilitre en litres |
 | `users/{uid}/fees/{feeId}` | `name` string (1 à 60), `amount_eur` number (0 à 10 000), `basis` string (`per_brew`, `per_bottle`), `updated_at` timestamp (`serverTimestamp()`). Identifiant créé par l'appareil ; 20 frais au plus, limite du formulaire |
 | `users/{uid}/stock/{ingredientKey}` | `name` string, `quantity` number, `unit` string, `updated_at` timestamp (après la v1) |
+| `users/{uid}/preferences/measurement` | `gravity_instrument` string obligatoire (`hydrometer_20c`, `hydrometer_15_6c`, `refractometer`, `digital`, `other`), `refractometer_factor` number \| null (0,9 à 1,2, gardé quand l'instrument change), `updated_at` timestamp (`serverTimestamp()`). Instrument de densité du brasseur (v0.1.72), état propre au lecteur, jamais copié sur `brews/` ; écrit par une écriture simple sans transaction, seulement sur action du brasseur (« Changer »), y compris hors ligne depuis le formulaire d'une densité ; écouté par « Préparer le brassage » et « Préparer la journée » pour rester dans le cache de l'écran du jour. Absent ou illisible (rapporté, `brews.measurement_preference_read`) : « À choisir », aucun instrument par défaut |
 | `users/{uid}/preferences/processes` | `default_template_id` string \| null (128) : modèle présélectionné dans « Nouveau brassin » ; `null` écrit vaut refus (aucune présélection, écrit par l'éditeur quand « Proposer par défaut » est décoché à la création, ticket #61), alors qu'un document absent laisse présélectionner le seul processus du lecteur ; `updated_at` timestamp (`serverTimestamp()`). Document unique, état propre au lecteur, jamais écrit sur le modèle lu par le groupe (ADR-010, v0.1.32 ; lu et écrit par « Mes processus » depuis la v0.1.33. Supprimer le processus par défaut remet `default_template_id` à nul) |
 | `users/{uid}/brew_costs/{brewId}` | `brew_id` string (égal à l'identifiant), `total_eur` number (somme exacte des lignes, positive ou nulle), `lines` list<map> (200 au plus : `key` clé d'ingrédient ou `frais-{feeId}`, `name`, `quantity`, `unit` parmi `g`, `unit`, `l` (v0.1.17, ligne en volume au prix au litre), `brew`, `bottle`, `cost_eur`), `computed_at` timestamp (heure de l'appareil au figeage), `freeze_kind` string (`initial`, `recalculation`), et, facultatifs, les valeurs d'embouteillage utilisées : `bottles_count` (entier de 1 à 9 999), `packaged_volume_l` (au-delà de 0 et jusqu'à 1 000), `priming_sugar_g` (0 à 100 000), `priming_sugar_name` (80) |
 
@@ -2079,27 +2132,33 @@ Dog dans `recipe.notes`. Unités canoniques en couples `{value, unit}` (`g`, `l`
 
 | Champ | Contenu |
 |---|---|
-| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908` ou `e6c12ab` ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)` ; `retrieved` : `2026-11-08` |
+| `provenance` | liste de `{source, source_id, version, licence, retrieved}` ; `source` : `brewtarget-001` à `brewtarget-005`, `fabricants` ou `diydog` ; `source_id` : `id` ou `local_id` de la source, sinon le nom, ou le code de style, ou le numéro de recette ; `version` : `v5.2.3 ea10908`, `e6c12ab` ou, pour une fiche de fabricant, la date du relevé de son producteur (`kDatesReleveFabricants` : `2026-11-14` pour Fermentis, `2026-11-15` pour Mangrove Jack's, Imperial Yeast, Omega Yeast, White Labs, The Yeast Bay et Wyeast) ; `licence` : `GPL-3.0`, `CC BY-SA 4.0` (part beer-analytics.com du 005, selon `folder_path`), `BJCP (noms et plages)`, `DIY Dog (usage privé)`, `Données publiées par le fabricant` ; `retrieved` : `2026-11-08`, ou la date du relevé du producteur pour une fiche de fabricant ; une fiche d'un producteur sans date est refusée |
 | `content_sha256` | SHA-256 du JSON canonique du document (clés triées, entier sans décimale), hors `content_sha256` et `updated_at`, calculé par la préparation ; l'écrivain ne réécrit pas un document de même empreinte |
 | `updated_at` | `serverTimestamp()`, posé par l'écrivain |
 
 Identifiant d'une entrée : `<nature>-<clé>`, nature `fermentable`, `hop`, `culture` ou `misc` ;
 clé = nom normalisé comme une clé d'ingrédient de `brewing/` (`normalizeName` : minuscules,
 accents retirés, tout caractère hors a-z et 0-9 en tiret, tirets réduits), 100 caractères au
-plus. Deux entrées de même clé fusionnent : la source prioritaire (005, puis 003 et 004, puis
-001) donne toutes les valeurs, chaque entrée ajoute sa ligne de `provenance` et son nom aux
-`aliases`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
+plus. Deux entrées de même clé fusionnent : la source prioritaire (fiches des fabricants, puis 005, puis
+003 et 004, puis 001) donne toutes les valeurs, chaque entrée ajoute sa ligne de `provenance` et son nom aux
+`aliases`. Pour les houblons, la table de fusion écrite à la main (ADR-014) rattache aussi des
+entrées de noms différents d'une même variété et d'un même pays (`Saaz (CZ)` et `Saaz (Czech
+Republic)` dans `hop-saaz`) ; l'identifiant reste `hop-<clé du nom du document>`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
 de même producteur et de même référence (`Wyeast Labs` = `Wyeast`, `Omega Yeast Labs` =
 `Omega Yeast` ; `WY1056` = `1056` chez Wyeast, `001` = `WLP001` chez White Labs ; tirets
 ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
-ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`). Un
+ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`).
+L'identifiant d'une souche se calcule sans les fiches des fabricants quand une source de
+Brewtarget la connaît : le document garde son identifiant, et `ingest/ecrire.mjs`, qui n'efface
+rien, ne laisse pas d'ancien document à côté. Une souche connue de la seule fiche prend
+l'identifiant de la fiche (`culture-fermentis-e30-saflager-e-30`). Un
 rendement, un acide alpha ou une atténuation à 0 dans une source est lu comme inconnu : écarté
 et compté.
 
 | Collection | Champs |
 |---|---|
-| `beer_fermentables/{id}` | `name`, `aliases` (liste, peut être vide), `label_fr`?, `type` (`grain`, `sugar`, `extract`, `dry extract`, `honey`, `fruit`, `juice`, `other` ; `Adjunct` du 001 donne `grain`), `yield`? (`{fine_grind: {value, unit: '%'}}`), `color`? (EBC ; Lovibond et SRM convertis par `brewing/`), `producer`?, `origin`? |
-| `beer_hops/{id}` | `name`, `aliases`, `label_fr`?, `form`?, `alpha_acid`? (`%`), `beta_acid`? (`%`), `origin`?, `purpose`? (`type` BeerJSON du houblon : `aroma`, `bittering`, `aroma/bittering`… ; `Both` du 001 donne `aroma/bittering`) |
+| `beer_fermentables/{id}` | `name`, `aliases` (liste, peut être vide), `label_fr`?, `type` (`grain`, `sugar`, `extract`, `dry extract`, `honey`, `fruit`, `juice`, `other` ; `Adjunct` du 001 donne `grain`), `yield`? (`{fine_grind: {value, unit: '%'}}`), `color`? (EBC ; Lovibond et SRM convertis par `brewing/`), `producer`?, `origin`? (pays de la liste fermée d'ADR-014, en anglais) |
+| `beer_hops/{id}` | `name`, `aliases`, `label_fr`?, `form`?, `alpha_acid`? (`%`), `beta_acid`? (`%`), `origin`? (pays de la liste fermée d'ADR-014, en anglais), `purpose`? (`type` BeerJSON du houblon : `aroma`, `bittering`, `aroma/bittering`… ; `Both` du 001 donne `aroma/bittering`) |
 | `beer_cultures/{id}` | `name`, `aliases`, `type`?, `form`?, `producer`?, `product_id`?, `attenuation`? (plage `%` ; une valeur du 001 donne une plage d'une valeur), `temperature_range`? (plage `C`, °F convertis), `flocculation`? (`very low` à `very high`) |
 | `beer_miscs/{id}` | `name`, `aliases`, `label_fr`?, `type`? (`spice`, `herb`, `flavor`, `fining`, `water agent`, `wood`, `other`) |
 | `beer_styles/bjcp2021-{code}` | `name`, `category`, `category_id`, `style_id`, `type`, `style_guide`, `original_gravity`, `final_gravity` (plages `sg`), `international_bitterness_units` (plage `IBUs`), `color` (plage EBC, SRM converti par `brewing/`), `alcohol_by_volume` (plage `%`) ; 17 des 110 styles n'ont aucune plage |
@@ -2154,11 +2213,12 @@ Un membre est un compte connecté par Google (`firebase.sign_in_provider == 'goo
 | `recipes/`, `equipment/` | membres | membre, à son `owner_uid` ; `owner_name` absent ou égal au nom du jeton (`request.auth.token.name`, 1 à 80 caractères) | propriétaire, `owner_uid` et `created_at` inchangés, `owner_name` comme à la création | propriétaire |
 | `brews/` | membres | membre, à son `owner_uid` ; `owner_name` comme dans `recipes/` ; champs de création seuls (`owner_uid`, `owner_name`, `recipe_id`, `name`, `status`, `planned_for`, `notes`, `imported_from`, copies, dates) ; `recipe_snapshot` contrôlé comme `recipes/` | propriétaire ; `recipe_id`, `recipe_snapshot`, `equipment_snapshot` inchangés ; liste blanche des clés ; seuls les champs changés sont contrôlés, par groupe (nom, statut, dates, ajustements, embouteillage, mesures retenues et `sugars_in_wort`, notes et `imported_from`, `process`) ; `process` changé seulement si `brewed_at` est nul avant et après l'écriture, nul ou map aux clés `format_version` (== 1), `template_id` (128), `template_name` (120), `sessions` (liste de 1 à 5) ; `owner_name` comme à la création | propriétaire |
 | `process_templates/` | membres | membre, à son `owner_uid` (`createdByMe`), `owner_name` comme dans `recipes/` ; clés en liste blanche, `format_version == 1`, `name` 1 à 120, `notes` 10 000, `sessions` liste de 1 à 5 | propriétaire (`updatedByOwner`), même forme | propriétaire |
-| `brews/{id}/events/` | membres | propriétaire du brassin existant, à son `owner_uid`, forme selon `kind` | auteur : `value`, `note`, `measured_at`, forme gardée | auteur |
+| `brews/{id}/events/` | membres | propriétaire du brassin existant, à son `owner_uid`, forme selon `kind` ; `time_estimated` et `date_estimated` à `true` seulement (`estimatedOk`) ; lecture de densité selon l'instrument (`densityOk`) | auteur : `value`, `note`, `measured_at`, et pour une densité l'instrument et sa lecture, forme gardée ; `time_estimated` et `date_estimated` seulement retirés, avec `measured_at` changé (`estimationRetireeOk`) | auteur |
 | `users/{uid}/**` | propriétaire | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous | refusé, sauf les collections ci-dessous |
 | `users/{uid}/prices/`, `fees/` | propriétaire | propriétaire, forme et bornes contrôlées | propriétaire, forme et bornes contrôlées | propriétaire |
 | `users/{uid}/brew_costs/` | propriétaire | propriétaire, forme contrôlée, `freeze_kind == 'initial'` | propriétaire, forme contrôlée, `freeze_kind == 'recalculation'` | propriétaire |
 | `users/{uid}/stock/` | propriétaire | propriétaire | propriétaire | propriétaire |
+| `users/{uid}/preferences/measurement` | propriétaire (joker) | propriétaire, clés `gravity_instrument` (liste fermée), `refractometer_factor` (0,9 à 1,2 ou nul) et `updated_at == request.time` | idem | propriétaire |
 | `users/{uid}/preferences/processes` | propriétaire (joker) | propriétaire, clés `default_template_id` (128 ou nul) et `updated_at == request.time` | idem | propriétaire |
 | `error_reports/` | admin | membre, `uid` = le sien, champs en liste blanche et bornés | personne | admin |
 | `tickets/` | auteur (`author_uid` = le sien, requête « Mes tickets » comprise) ; tous pour l'admin | membre, champs de création seuls (voir `tickets/`), `status == 'pending'`, `created_at == request.time`, `author_email` = e-mail du jeton en minuscules | auteur : `seen_by_author_at == request.time` seul ; l'admin n'écrit rien (T7) | personne |
@@ -2355,7 +2415,8 @@ console Firebase ou par l'Admin SDK, avec l'uid du membre : les documents `recip
 brassins `brews/` à son `owner_uid` et leurs `events/`, ses données `users/{uid}/`, et, dans les
 brassins des autres membres, les copies `recipe_snapshot` et `equipment_snapshot` qui portent
 son `owner_uid` ou son `owner_name`. Le document `members/{email}` est déjà supprimé par le
-retrait.
+retrait. À partir du lot A1 de l'assistant (ADR-016) : ses comptes `ai_usage/{AAAA-MM}_{uid}`,
+qui portent son e-mail, et son compteur `ai_quotas/{uid}`.
 
 Tests : `rules-tests/` (Node 22, `@firebase/rules-unit-testing`, `node --test`), lancés par
 `npm test`, qui démarre les émulateurs Firestore et Storage (Java 21) sur le projet
@@ -2380,6 +2441,12 @@ l'ingestion, empreinte arbitraire), `key` vide, de 101 caractères ou modifiée,
 `nature` ou `source` changées, nom vide ou de 121
 caractères, heure posée par le client, identifiant qui n'a pas 64 chiffres hexadécimaux en
 minuscules ; connexions non conformes de P11 refusées.
+`gravity_instruments.test.mjs` (v0.1.72) rejoue pour les cinq profils la création d'une lecture
+de flottant et de réfractomètre et la correction de l'instrument, les formes refusées (instrument
+hors liste, °Brix ou facteur hors bornes, `value` avec un réfractomètre, lecture sans
+instrument, instrument sur une température ou une note, champ hors liste), et
+`users/{uid}/preferences/measurement` (cinq profils, formes refusées). Budget mesuré et noté
+dans `firestore.rules` : environ 560 expressions de marge sur la correction, mesurée après la fusion avec les heures estimées (v0.1.69).
 `brew_day.test.mjs` vérifie `brew_steps`
 (60 étapes acceptées, 61 refusées, dans la recette et dans sa copie), les statuts `brewing` puis
 `fermenting`, le premier début en un `WriteBatch`, et un brassin créé puis son premier événement.
@@ -2474,6 +2541,12 @@ calcul de coût par `CalculCoutRefuse`, qui ne porte que le type de l'erreur d'o
 | Teinte d'une couleur (ticket #48) | `teinteEbc`, `degradeEbc`, `teinteEbcLimite` | teinte `0xRRGGBB` de la table `teintesSrm` (`teintes_srm.dart`, fichier généré : 400 triplets du paquet npm srm2hex 1.0.2, MIT, indexés par dixième de SRM), indice = floor(`ebcToSrm`(EBC) × 10) ; 0 EBC : première teinte ; à partir de `teinteEbcLimite` (40 SRM = 78,8 EBC, affichée « 79 EBC et plus ») : dernière ; `degradeEbc` rend `points` teintes régulières (24 par défaut, 2 au moins) de la plus petite à la plus grande borne. Valeur négative ou non finie : `BrewingInputException`. Cas : `brewing/test/fixtures/teinte.json` |
 | Rendement donné en densité (v0.1.17) | `potentialToYieldPercent` | % = (potentiel − 1) × 1000 / 46,214 × 100 (`yield.potential` de BeerJSON, densité d'une livre dans un gallon) ; potentiel de 1,000 à 1,046214 |
 | Nature et forme d'une valeur BeerJSON (v0.1.17) | `FermentableKind.ofType`, `HopForm.ofBeerJson` | voir `recipes/` : extrait, miel, fruit, jus comptés comme un sucre ; `plug` comme des cônes ; `other`, `powder`, `extract`, `leaf (wet)` sans valeur de calcul |
+| Masse volumique de l'eau (v0.1.72) | `masseVolumiqueEau` | Kell (1975), éq. 16 : ρ = (999,83952 + 16,945176 t − 7,9870401e-3 t² − 46,170461e-6 t³ + 105,56302e-9 t⁴ − 280,54253e-12 t⁵) / (1 + 16,879850e-3 t), kg/m³ ; t de 0 à 150 °C, sinon refusée. Cas : `hydrometer.json` (`water_density`) |
+| Correction d'un densimètre flottant (v0.1.72) | `corrigerDensimetre` | SG corrigée = lecture × ρ(t étalonnage) / ρ(t échantillon) (ρ de `masseVolumiqueEau`) ; lecture de 0,980 à 1,200, températures de 0 à 100 °C, sinon refusées. 1,050 lue à 68 °C, étalonnage 20 °C : 1,0707. Cas : `hydrometer.json` (`correction`) |
+| Plage de la correction (v0.1.72) | `plageCorrection` | `exacte` de 0 à 40 °C, `approchee` au-delà de 40 jusqu'à 75 °C, `tropFroid` sous 0 °C, `tropChaud` au-delà de 75 °C (correction impossible, lecture brute retenue) ; température non finie refusée. Constantes `kCorrectionTemperatureMinC`, `kCorrectionExacteMaxC`, `kCorrectionApprocheeMaxC`. Cas : `hydrometer.json` (`ranges`, `impossible`) |
+| °Brix corrigé d'un réfractomètre (v0.1.72) | `brixCorrige` | °Brix lu / facteur de correction du moût ; °Brix de 0 à 40 (`kBrixMax`), facteur de 0,9 à 1,2, sinon refusés ; aucun facteur par défaut. La densité se lit ensuite par la formule de `platoToSg` (°Brix corrigé lu comme des °Plato). Cas : `refractometer.json` (`brix_to_sg`, `invalid`) |
+| Densité finale corrigée de l'alcool (v0.1.72) | `densiteTerrill` | Terrill (« Refractometer FG Results », 7 avril 2011), équation cubique : FG = 1 − 0,0044993 OB + 0,011774 FB + 0,00027581 OB² − 0,0012717 FB² − 0,0000072800 OB³ + 0,000063293 FB³, OB et FB en °Brix corrigés, de 0 à 40 / 0,9 ; OB tiré de la densité initiale retenue par `sgToPlato`. Cas : `refractometer.json` (`terrill`, `fermentation`) |
+| Densité retenue d'une mesure (v0.1.72) | `densiteRetenue` | seule lecture d'une densité mesurée (`LectureDensite` → `DensiteRetenue` : `sg`, `etat`, `corrigee`, `lueSg`, `correctionApprochee`, `plage`) : sans instrument, électronique ou autre, densité lue ; flottant, `corrigerDensimetre` si la case « Corriger » est cochée et la plage le permet, sinon lecture brute ; réfractomètre, conversion du °Brix corrigé, puis en fermentation `densiteTerrill` ; sans facteur, aucune densité ; résultat hors de 0,980 – 1,200 : lecture brute (flottant) ou aucune densité (réfractomètre). Ne lève que pour une lecture absente ou non finie. Cas : `hydrometer.json`, `refractometer.json`, `gravity_instruments_test.dart` |
 | Calculs d'une recette | `computeRecipe` | OG, FG, degré, IBU, EBC, IBU par houblon : voir « Calculs d'une recette » |
 | Clé d'ingrédient | `ingredientKey`, `isValidIngredientName` | préfixe de nature + nom normalisé (voir `recipes/`) ; `BrewingInputException` pour un nom sans lettre ni chiffre, que `isValidIngredientName` détecte sans exception (une seule définition de la règle) |
 | Coût | `computeCost` | Σ quantité × prix, coût de chaque ligne (`lineCosts`) ; par litre = total / V ; bouteille de 33 cl = par litre × 0,33 ; sans volume, total seul. Un prix manquant rend `CostUnavailable` |
@@ -2591,23 +2664,37 @@ d'exemple, 11 modèles invalides, 2 recettes invalides, 6 jours d'ajout, 9 dates
 changements d'heure du 2026-10-25 et du 2027-03-28, et 5 ordres de journées (`session_orders`,
 4 refusés).
 
-**Durées réelles (v0.1.37).** `actualDurations(steps:, dayClosed:)` (`actual_durations.dart`)
-reçoit pour chaque étape sa durée prévue, son état (`recomputeSchedule`) et son enregistrement
-(`stepRecordsFromEvents`) dans un `StepTiming`. Durée réelle d'une étape : `StepRecord.endedAt`
-moins `StepRecord.startedAt`, jamais `ScheduledStep.end`, arrondie à la minute la plus proche
-(30 s vers le haut) ; le prévu s'arrondit de même ; écart = réel arrondi moins prévu arrondi.
-Natures (`ActualStepKind`) : `measured`, `action` (prévue à 0 min), `none` (sautée, non faite,
-à venir), `running`, `missingEnd` (faite sans fin, ou en cours dans une journée close). Journée
-(`ActualDayDuration`) : prévu = somme des durées prévues, sautées comprises ; `none` tant
-qu'aucune étape n'a début et fin, `running`, `missingEnd` avec le nombre d'étapes sans fin,
-sinon réel = dernière fin moins premier début et `betweenStepsMinutes` = réel moins la somme des
-réels arrondis. Les heures sont des instants : minuit et les changements d'heure ne changent pas
+**Durées réelles (v0.1.37, heures estimées v0.1.69).** `actualDurations(steps:, dayClosed:,
+plannedStart:)` (`actual_durations.dart`) reçoit pour chaque étape sa durée prévue, son état
+(`recomputeSchedule`) et son enregistrement (`stepRecordsFromEvents`) dans un `StepTiming`.
+`StepEvent.estimated` (`time_estimated`) devient `StepRecord.startEstimated` : un début estimé
+date l'étape sans compter pour aucun réel ni écart. Fin d'une étape : `StepRecord.endedAt`, sinon
+le début noté de l'étape suivante (sautées passées), jamais `ScheduledStep.end`. Durée réelle :
+fin moins début noté, arrondie à la minute la plus proche (30 s vers le haut) ; le prévu
+s'arrondit de même ; écart = réel arrondi moins prévu arrondi. Natures (`ActualStepKind`) :
+`measured` (avec sa fin `end`), `action` (prévue à 0 min), `none` (sautée, non faite, à venir),
+`running`, `missingEnd` (début noté sans fin retenue), `estimated` (début estimé).
+`startDeltaMinutes` : début noté moins plan d'origine (premier début noté de la journée plus les
+durées prévues des étapes entre les deux, sautées comprises). `theoreticalStart` :
+`theoreticalStarts(planned:, notedStarts:, skipped:, anchor:)`, dernier début noté qui précède
+l'étape plus les durées prévues entre les deux (non notée : durée prévue, sautée : zéro), sinon
+l'ancre (`plannedStart`, `brewed_at` du brassin) ; le lecteur des fiches l'emploie aussi pour
+dater une étape citée sans heure. Journée (`ActualDayDuration`) : prévu = somme des durées
+prévues, sautées comprises ; `none` tant qu'aucune étape n'a de réel, `running`,
+`startNotNoted` (première étape commencée à une heure estimée), `endNotNoted` (dernière sans
+fin), sinon réel = dernière fin moins premier début ; `measured` et `betweenStepsMinutes` = réel
+moins la somme des réels arrondis, ou `partial` avec `stepsWithoutTime` (étapes `estimated` ou
+`missingEnd`), sans `betweenStepsMinutes`. Les heures sont des instants : minuit et les changements d'heure ne changent pas
 le temps écoulé. `durationUpdateIssue` rend la raison de ne pas proposer une durée réelle à une
 étape de modèle (`noActual`, `outOfBounds` hors de 1 à 600 min, `unchanged` égale à
 `roundedStepMinutes` de la durée actuelle). `fixtures/process.json` y ajoute 17 cas
 (`actual_durations` : faite, sautée, non faite, en cours, journée close, sans fin, fin écartée,
 début en double, action, arrondi de 30 s, durée hors de 1 à 600, attentes, minuit, 2026-10-25,
-2027-03-28, jamais commencée, journée passée), 12 cas de `duration_updates` et 4 arrondis.
+2027-03-28, jamais commencée, journée passée), 12 cas de `duration_updates` et 4 arrondis ;
+la v0.1.69 y ajoute 4 cas (fiche importée à heures notées, estimée et absente ; première étape
+estimée ; étape sautée puis non faite ; début estimé avec fin), l'écart de début de chaque cas
+(`start_delta`), les heures théoriques (`theoretical`) et la fin retenue (`end`), et revoit
+les cas « commencée sans fin » (fin au début noté de l'étape suivante).
 
 **Comparaison prévu / mesuré.** `compareBrewWithPlan` (`brew_comparison.dart`) rend pour chaque
 ligne la valeur prévue, le résultat mesuré (`MeasuredComputed`, `MeasuredUnavailable` et la liste
@@ -2916,7 +3003,7 @@ Une session Claude Code lit les extraits texte des 16 fiches `.xlsx` et écrit u
 Aucun code de préparation n'entre dans le dépôt. La session passe le fichier au vérificateur,
 puis l'administrateur le choisit dans Admin › Import.
 
-### Format `kassbeer_fiches` v1
+### Format `kassbeer_fiches` v2
 
 Fichier JSON en UTF-8, 10 Mo au plus. Racine : `beerjson` et `kassbeer_fiches`, rien d'autre.
 Exemple complet, fictif : `exchange/test/fixtures/fiches/fiches-valide.json`.
@@ -2926,8 +3013,9 @@ Exemple complet, fictif : `exchange/test/fixtures/fiches/fiches-valide.json`.
   compte rendu, même reprise de la Bibliothèque. Aucune adresse web dans aucune chaîne de
   la recette (noms et notes des lignes, auteur, style compris) ; aucun montant dans `name`
   ni `notes`.
-- `kassbeer_fiches` : `format_version` (1, sinon le fichier est refusé) et `fiches` (50 au plus,
-  `fiche_id` uniques, sinon le fichier est refusé).
+- `kassbeer_fiches` : `format_version` (2, sinon le fichier est refusé : un fichier v1 se
+  prépare de nouveau) et `fiches` (50 au plus, `fiche_id` uniques, sinon le fichier est
+  refusé).
 
 Une entrée de `fiches` (tout champ inconnu refuse la fiche) :
 
@@ -2938,15 +3026,23 @@ Une entrée de `fiches` (tout champ inconnu refuse la fiche) :
 | `recipe_doc_id` | `^[a-z0-9-]{1,100}$` ; deux fiches au même identifiant ont le même `recipe_index` et la même chronologie (CR2) |
 | `brew_steps` | 60 au plus : `key` (`^[A-Za-z0-9_-]{1,100}$`, unique), `name` (1 à 120), `duration_min` (0 à 600), `temp_c` (0 à 100, facultatif) |
 | `brew` | `name` (1 à 120), `planned_for`, `start_at` (heure de début du plan), `notes` (10 000, facultatif, lues par le groupe : ni prix ni prénom), `bottles_count` (1 à 9 999), `packaged_volume_l` (0 exclu à 1 000), `priming_sugar_name` (1 à 80), `equipment` : `name` (1 à 120), `kind` (`multi_vessel` ou `all_in_one`) |
-| `events` | 300 au plus, `id` unique (`^[A-Za-z0-9_-]{1,100}$`), `kind` (`step_started`, `measurement`, `note`), `step_key` (clé de `brew_steps`, obligatoire pour `step_started`), `measure_type` et `value` (mesure seule : température 0 à 110, densité 0,980 à 1,200, volume 0 exclu à 1 000, pH 0 à 14), `note` (2 000, obligatoire pour `note`), `measured_at`, `phase` (`fermentation`, mesure ou note seule), `time_source` (`fiche`, `ligne_precedente`, `debut_brassage`, `midi`, `estimee_j28`) |
+| `events` | 300 au plus, `id` unique (`^[A-Za-z0-9_-]{1,100}$`), `kind` (`step_started`, `measurement`, `note`), `step_key` (clé de `brew_steps`, obligatoire pour `step_started`), `measure_type` et `value` (mesure seule : température 0 à 110, densité 0,980 à 1,200, volume 0 exclu à 1 000, pH 0 à 14), `note` (2 000, obligatoire pour `note`), `measured_at` (obligatoire, sauf `estimee` : interdit), `phase` (`fermentation`, mesure ou note seule), `time_source` (`fiche`, `estimee`, `midi`, `estimee_j28`, ce dernier sur `measurement` ou `note` seulement) ; un seul `step_started` par étape ; les heures `fiche` des débuts d'étape dans l'ordre de `brew_steps` |
 | `retained` | facultatif : `og_event_id` (densité), `fg_event_id` (densité de fermentation), `fermenter_volume_event_id` (volume hors fermentation), chacun l'`id` d'un événement de la fiche |
 | `cost` | facultatif : `prices` (`key` au format de `users/{uid}/prices`, unique ; `name` 1 à 120 ; `price_eur` 0 à 100 000 ; `quantity` 0 exclu à 10⁹ ; `unit` `g`, `unit` ou `l`), `fees` (`name` 1 à 60, `amount_eur` 0 à 10 000, `basis` `per_brew` ou `per_bottle`), 200 lignes au plus ensemble ; `fiche_total_eur` (facultatif) |
 | `corrections` | 200 au plus : `subject`, `fiche_value`, `imported_value`, `reason` (textes de 2 000 au plus) |
 | `deductions`, `divergences`, `not_imported` | 200 textes au plus, 2 000 caractères chacun ; lus par l'administrateur seul |
 
 Dates : ISO 8601 avec le décalage d'Europe/Paris du jour (`2024-07-14T11:15:00+02:00`),
-entre le 1er janvier 2015 et l'heure de l'import. La préparation écrit chaque heure, dont la
-date J+28 à 12:00 du relevé de densité finale estimé (Q2) ; l'application n'en calcule aucune.
+entre le 1er janvier 2015 et l'heure de l'import. `time_source` (v2) : `fiche`, heure notée dans
+la fiche ; `estimee`, étape citée sans heure ou mesure sans heure, sans `measured_at` dans le
+fichier : le lecteur calcule l'heure par `theoreticalStarts` de `brewing/` (dernier début
+`fiche` avant l'étape plus les durées prévues, ancre `start_at`) ; une mesure ou une note d'étape
+prend l'heure de début de son étape, une mesure sans étape celle de l'événement précédent de la
+fiche (`start_at` pour le premier) ; `midi` et `estimee_j28`, date écrite par la préparation
+(relevé à 12:00 du jour noté, densité finale J+28 à 12:00, Q2). Une étape absente de la fiche
+n'a aucun événement. La préparation n'écrit plus de note « Date estimée : jour du brassage +
+28 jours. » : le relevé porte `date_estimated`. Tout événement non `fiche` s'écrit avec
+`time_estimated: true`.
 Textes : contrôles bidirectionnels et caractères de contrôle retirés (P9) ; une adresse web
 dans un texte écrit en base refuse la fiche (code `adresseWeb`, FO5). Un texte lu par le
 groupe qui contient un montant (`€`, `EUR`, `euro` ou `euros`, sans distinction de casse)
@@ -2965,9 +3061,16 @@ refus ne porte de valeur, donc aucun prix. Un JSON mal formé lève la `FormatEx
 `jsonDecode` ; l'écran la rapporte avec sa seule position. L'empreinte d'une fiche
 (`lireEmpreinte` de l'entrée et de sa recette) change avec toute valeur de l'une ou l'autre.
 
+Codes de refus des heures (v2) : `debutEnDouble` (deux `step_started` pour une étape),
+`heuresHorsOrdre` (heure `fiche` d'un début d'étape antérieure à celle d'une étape précédente),
+`heureEnTrop` (`measured_at` écrit avec `estimee`), `champAbsent` (`measured_at` absent avec une
+autre origine) ; `ligne_precedente` et `debut_brassage` sont hors bornes.
+
 `dart run bin/verifier_fiches.dart <fichier>`, depuis `exchange/`, lit le fichier avec ce
-même lecteur et affiche les comptes et les refus, sans prix ; code de sortie 0 si toutes les
-fiches sont lues, 1 sinon.
+même lecteur et affiche les comptes, dont par fiche les heures notées et estimées (« 6
+événements (2 débuts d'étape, 1 heures notées, 5 heures estimées dont 0 datées J+28, 2
+relevés) »), et les refus, sans prix ; code de sortie 0 si toutes les fiches sont lues, 1
+sinon.
 
 ### Écritures
 
@@ -2981,9 +3084,10 @@ serveur avant la suivante, 30 s au plus (`kDelaiEcriture`), et la perte de la co
    `Fiche Excel · {fiche_id}`, sans `equipment_id` ;
 2. `brews/fiche-{fiche_id}` s'il n'existe pas : statut `done`, `planned_for`, copie figée de
    la recette, copie d'équipement réduite à `name`, `kind`, `owner_uid`, `owner_name` ;
-3. modifications, une écriture par groupe : `brewed_at` (premier `step_started`, sinon
-   `start_at`) ; `bottles_count`, `packaged_volume_l`, `priming_sugar_name` ; `notes` ;
-4. événements absents, par lots de 10 dans un `WriteBatch` (`created_at` du serveur) ;
+3. modifications, une écriture par groupe : `brewed_at` (début, noté ou estimé, de la première
+   étape de la chronologie, sinon `start_at` : ancre des heures théoriques à l'affichage) ; `bottles_count`, `packaged_volume_l`, `priming_sugar_name` ; `notes` ;
+4. événements absents, par lots de 10 dans un `WriteBatch` (`created_at` du serveur ;
+   `time_estimated: true` pour une heure non notée, `date_estimated: true` pour `estimee_j28`) ;
 5. `og_event_id`, `fg_event_id`, `fermenter_volume_event_id` ;
 6. `users/{uid}/brew_costs/fiche-{fiche_id}`, `freeze_kind: initial`, s'il n'existe pas et si
    `evaluerFigeage` le calcule avec les prix et frais de la fiche (Q1), `computed_at` =
@@ -2995,24 +3099,42 @@ brassin importé, daté par `brewed_at`, ne peut plus en recevoir. Il se lit par
 comme une seule journée tirée de `recipe_snapshot.brew_steps` (P37), test dans
 `import_fiches_test.dart`.
 
+**Remplacement (v0.1.69).** Une fiche « Déjà importée, contenu différent » dont « Remplacer ce
+brassin » est cochée, ou « Remplacement à terminer », suit `planDeRemplacement` : modification
+de `imported_from` à `Fiche Excel · {fiche_id} · remplacement` (`marqueRemplacement`, omise si
+elle est déjà posée), suppression des événements lus à l'analyse par lots de 10
+(`LotSuppression`, `WriteBatch`), puis `supprimerBrassin` (`SuppressionBrassin`) : événements
+restants relus en `Source.server` et supprimés, puis brassin et
+`users/{uid}/brew_costs/fiche-{fiche_id}` dans un même lot (CB19) ; enfin les écritures 2 à 7
+d'une fiche nouvelle, coût figé recalculé avec les prix de la fiche. La recette existante est
+gardée. Toutes ces écritures sont étape `suppression` au compte rendu et au rapport (« fiche
+n° 3, étape suppression, lot 2, code permission-denied »), sans heure ni texte (P13).
+`executerImport(aRemplacer:)` reçoit les brassins à remplacer ; `FicheEcrite` rend
+`remplacee`, `evenementsSupprimes`, `coutSupprime` (rubrique « Supprimés »). Une coupure laisse
+la marque de remplacement : état `remplacementATerminer`, coché, terminé au prochain import
+sans doublon (les identifiants viennent du fichier).
+
 Un groupe déjà écrit avec les mêmes valeurs n'est pas réécrit. Analyse : recettes, brassins,
 événements et coûts figés aux identifiants du fichier, lus en `Source.server` avec les index
 de la Bibliothèque. Les événements de `brews/fiche-{id}` sont lus même sans brassin : un
 événement laissé par un autre compte serait sinon pris pour un événement déjà écrit.
 États : brassin absent, « Nouvelle » ; présent sans marque, « À compléter » (reprise de ce
-qui manque) ; marque égale, « Déjà importée » ; autre marque, « Déjà importée, contenu
-différent » ; recette, brassin ou événement d'un autre compte à ces identifiants
+qui manque) ; marque de remplacement, « Remplacement à terminer » ; marque égale, « Déjà
+importée » ; autre marque, « Déjà importée, contenu différent » ; recette, brassin ou événement d'un autre compte à ces identifiants
 (`DocumentDUnAutreMembre`), « Refusée ». Erreur :
 `reportError(feature: 'import.fiches')`, contexte « fiche n° 3, étape evenements, lot 2, code
-permission-denied », sans valeur ni texte de la fiche (P13). Aucune règle Firestore ne change :
-`rules-tests/test/import_fiches.test.mjs` rejoue ces écritures pour les cinq profils et mesure
-le budget sur le plus grand brassin importé (P21).
+permission-denied », sans valeur ni texte de la fiche (P13). Règles : `time_estimated` et
+`date_estimated` des événements (v0.1.69, voir `brews/{brewId}/events/{eventId}`) ;
+`rules-tests/test/import_fiches.test.mjs` rejoue ces écritures et le remplacement pour les cinq
+profils et mesure le budget sur le plus grand brassin importé (P21).
 
 **Tests.** `exchange/test/fiches_test.dart` (fichier valide, relevé J+28, empreinte, refus de
 FO4 un par un, champ inconnu, `step_key` inconnue, identifiants en double, version inconnue,
 contrôles bidirectionnels, adresse web dans toute chaîne de la recette, montant dans un texte
-lu par le groupe et permis dans les divergences, aucune valeur dans un refus, vérificateur) ;
-`app/test/import_fiches_test.dart` (plan et ordre, lots de 10, coût figé avec les prix de la
+lu par le groupe et permis dans les divergences, aucune valeur dans un refus, heures estimées
+calculées, refus des heures v2, vérificateur) ;
+`app/test/import_fiches_test.dart` (plan et ordre, lots de 10, `time_estimated` et
+`date_estimated` écrits, date de brassage, remplacement complet et coupé puis terminé, coût figé avec les prix de la
 fiche sans écriture sous `prices` ni `fees`, relevé J+28 retenu comme densité finale d'un
 brassin Terminé, second import sans écriture, contenu différent, reprise sans doublon, erreur
 partielle, connexion perdue, délai, hors ligne, recette, brassin ou événement d'un autre
@@ -3025,7 +3147,10 @@ importés réécrits par un autre membre refusés, rejeux refusés, brassin `don
 ## Ingestion des référentiels et des recettes publiques (ADR-005, L3)
 
 Deux étapes, lancées à la main par l'administrateur sur son poste (ADR-005, D5). Les sources
-vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/`), la préparation
+vivent dans `import/sources/` (`brewtarget-v5.2.3/`, `punkapi-e6c12ab/data/` ; un fichier absent
+arrête la préparation), sauf les fiches des fabricants, versionnées dans
+`exchange/donnees/fabricants/cultures.json` et lues par défaut (option `--fabricants`,
+ADR-005, amendement du 2026-11-15), la préparation
 dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapports/` :
 `import/` est ignoré par Git (P20).
 
@@ -3039,6 +3164,9 @@ dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapp
 gcloud auth application-default login   # compte de l'admin ; kassbeer-ingest reporté (ADR-005, D7)
 (cd ingest && node ecrire.mjs --production --projet kassbeer --simulation)   # compte sans écrire
 (cd ingest && node ecrire.mjs --production --projet kassbeer)
+# 4. Suppression des documents absents de la préparation (ADR-014), une collection par lancement
+(cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops --simulation)
+(cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops)
 ```
 
 **Préparation** (`package:exchange/ingestion.dart`, bibliothèque distincte de
@@ -3050,7 +3178,9 @@ la préparation s'arrête sans rien écrire. Aucune empreinte des sources n'est 
 `decodage_xml.dart`, sous une racine ajoutée car le fichier en a plusieurs ; listes
 `FERMENTABLES`, `HOPS`, `MISCS`, `YEASTS` du premier niveau seules, ni recettes, ni
 équipements, ni styles d'anciennes éditions) ; 002 à 004 en BeerJSON 2.01 et 005 en DotBeer,
-JSON dont les lignes commençant par `//` sont retirées (`lireJsonCommente`) ; DIY Dog. Les
+JSON dont les lignes commençant par `//` sont retirées (`lireJsonCommente`) ; fiches des
+fabricants (`lireFabricants`) en BeerJSON 2.01 commenté, lu par `lireJsonCommente`, liste
+`cultures` seule, toute autre liste ignorée et comptée ; DIY Dog. Les
 couleurs passent par `versEbc` (Lovibond et SRM de `brewing/`, P3), les °F par `versCelsius`.
 Une valeur d'unité inconnue, illisible, hors bornes ou nulle (rendement, alpha, atténuation)
 est écartée et comptée. Résolution d'un nom de DIY Dog : clé normalisée égale à celle d'un nom
@@ -3058,12 +3188,39 @@ du référentiel, puis pour une levure le producteur et la référence lus dans 
 1056`, `WLP099`), puis la table d'alias écrite à la main (`lib/src/ingestion/alias.dart`). Un
 alias vers une entrée absente arrête la préparation (`StateError`). La table liste aussi les
 noms de la liste `hops` qui ne sont pas des houblons (épices, fruits, copeaux) : leur ligne va
-dans `miscellaneous_additions`. Sortie : `<collection>.json` (listes `{id, data}`, triées par
-identifiant, `content_sha256` calculé) et `rapport.json` : entrées par source, entrées
-rejetées, listes ignorées, valeurs écartées, fusions, documents par collection, recettes lues
-et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non résolus
-avec leur nombre de lignes, lignes rejetées, libellés perdus, températures de fermentation non
-reprises, taille JSON des index.
+dans `miscellaneous_additions`.
+
+Origines (ADR-014, `lib/src/ingestion/origines.dart`) : `origin` d'un malt ou d'un houblon,
+de chaque source, est ramené à la liste fermée des pays (`kPays`, graphie anglaise la plus
+fréquente des sources : `United States`, `Germany`, `Great Britain`, `Czech Republic`, `New
+Zealand`…) par la table des graphies (`kGraphiesOrigine` : `US`, `United States of America
+(USA)`, `Germany (GER)`, `United Kingdom (UK)`, `UK`, `England`, `Czech Replublic (CZH)`,
+`New Zealand, Canterbury`…), sans casse et espaces réduites. Une graphie inconnue ou double
+(`Austria/Slovenia`) laisse `origin` absent et part au rapport (`origines_inconnues` :
+identifiant du document, source, nom, graphie lue) ; une origine vide reste absente. Le champ
+reste un texte : aucun changement de modèle ni de règle. La liste n'existe qu'en Dart (P56).
+
+Table de fusion des houblons (ADR-014, `lib/src/ingestion/fusions.dart`, `kFusions`), écrite
+à la main et distincte de la table d'alias. Une ligne : nom du document (identifiant
+`hop-<clé du nom>`), origine imposée s'il le faut, entrées rattachées (source, nom, et origine
+lue quand deux entrées de même nom diffèrent par le pays, comme les « Saaz » américains du
+005), noms ajoutés aux `aliases` (`Denali`), noms écartés des `aliases` (`Saaz` pour
+`hop-saaz-us`). Une variété et un pays de culture font un document ; le nom court désigne la
+variété dans son pays d'origine (`hop-saaz` tchèque). Les valeurs viennent de l'entrée la
+plus prioritaire du groupe. Une ligne qui ne désigne aucune entrée, une entrée désignée par
+deux lignes, deux lignes de même identifiant, ou un nom (nom ou alias) porté par deux
+houblons arrêtent la préparation (`StateError`). La résolution par nom de la préparation
+(`parNomExact`) lit le nom et les alias de chaque document, noms écartés exclus.
+
+Sortie : `<collection>.json` (listes `{id, data}`, triées par identifiant, `content_sha256`
+calculé) et `rapport.json` : entrées par source, entrées rejetées, listes ignorées, valeurs
+écartées, origines inconnues, table de fusion appliquée (`table_de_fusion` : document,
+origine, entrées rattachées), groupes de houblons de même nom une fois les parenthèses
+retirées (`groupes_sans_parenthese`, pour la revue suivante de la table), noms portés par
+plusieurs documents par nature (`noms_partages`), fusions, documents par collection, recettes
+lues et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non
+résolus avec leur nombre de lignes, lignes rejetées, libellés perdus, températures de
+fermentation non reprises, taille JSON des index.
 
 **Écriture** (`ingest/`, Node 24, ESM ; `firebase-admin` 14.5.0, comme `functions/` ; `ajv`
 8.20.0 et `prettier` 3.9.6, comme `rules-tests/` ; `firebase-tools` 15.35.0 pour les tests).
@@ -3092,14 +3249,48 @@ réécrit. Les autres s'écrivent en entier (`set` sans fusion, `updated_at` du 
 lots de 400. `--simulation` lit et compte sans écrire. En fin d'exécution : rapport JSON
 `import/ingest/rapports/<id>.json` (comptes, documents refusés et leurs erreurs, sources, non
 résolus), puis `ingest_runs/<id>` par `create`, hors simulation. L'Admin SDK se charge au
-premier usage, après les contrôles. Aucun document absent de la préparation n'est supprimé.
+premier usage, après les contrôles.
+
+Suppression des documents absents (ADR-014, section 3, P19). Sans option, `ecrire.mjs` ne
+supprime rien. `--supprimer-absents <collection>` (`beer_hops` ou `beer_hop_aromas`, une par
+lancement ; toute autre est refusée par `lireOptions`) lit les identifiants en ligne
+(`select()`, sans les champs) et les compare aux identifiants préparés, refusés compris
+(`beer_hops.json`, ou `aromes.json` pour `beer_hop_aromas`, exigé). Avant toute écriture,
+`planifierSuppressions` (`lib/ecriture.mjs`) refuse : une autre collection ; une préparation
+qui compte moins de 90 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
+suppressions (`PLAFOND_SUPPRESSIONS`). Un identifiant hors du motif de la collection
+(`motifIdentifiant`, celui de `beer_hops` pour les arômes) n'est jamais supprimé : il est
+compté « ignoré ». Avec `--simulation`, la liste seule. Sinon, la liste s'affiche et la
+saisie du nombre de suppressions au terminal confirme (après le nom du projet en production) ;
+sans terminal ou sur une autre saisie, rien n'est écrit ni supprimé. Les documents changés
+s'écrivent, puis les absents se suppriment un à un. Le rapport JSON porte `deletions` :
+collection, documents en ligne et préparés, identifiants candidats, supprimés, ignorés (avec
+la raison) et en erreur (avec le code) ; une suppression en erreur donne le code de sortie 1.
+`ingest_runs/<id>` ne change pas de forme.
+
+Mise en production d'ADR-014 (section 5), dans l'ordre : préparation, relecture de
+`rapport.json` (`origines_inconnues`, `groupes_sans_parenthese`, `table_de_fusion`) ; garder
+la préparation précédente dans `import/ingest/` comme copie ; `ecrire.mjs` sur l'émulateur,
+avec et sans `--supprimer-absents` ; en production `--simulation`, écriture, puis
+`--supprimer-absents beer_hops` (simulation puis confirmation) ; retirer de `aromes.json` les
+entrées dont l'identifiant a disparu, relancer `lister-houblons-recettes.mjs` et
+`lister_houblons_recettes.dart`, générer les arômes changés (empreinte `input_sha256` changée
+par l'origine ou les alias ; `--regenerer <id>` pour une entrée relue), relire les houblons du
+groupe, `ecrire.mjs`, puis `--supprimer-absents beer_hop_aromas`.
 
 Tests : `(cd exchange && dart test)` (`test/ingestion_test.dart`, fixtures écrites à la main
-dans `test/fixtures/ingestion/`, entrées inventées dans la forme des sources) ;
+dans `test/fixtures/ingestion/`, entrées inventées dans la forme des sources ;
+`test/fusions_test.dart` : liste des pays, chaque ligne de la table de fusion sur des sources
+écrites dans le test, noms de variétés relevés et acides inventés, aucun nom porté par deux
+houblons, résolution de « Saaz », « Hallertau », « Tettnanger », « CTZ », « Denali » par
+`IndexBibliotheque`, tables fausses refusées) ;
 `(cd ingest && npm test)` (`node --test` sous `firebase emulators:exec`, projet
 `demo-kassbeer` : options, contrôle, lots sur une base simulée, et deux écritures de la
 fixture `test/fixtures/prepare/` contre l'émulateur, la seconde sans aucun référentiel ni
-aucune recette réécrit, seul son document `ingest_runs` créé) ;
+aucune recette réécrit, seul son document `ingest_runs` créé ; `--supprimer-absents` : sans
+l'option rien n'est supprimé, simulation, nombre non confirmé sans écriture, suppression
+confirmée, identifiant hors motif gardé, préparation à moins de 90 % refusée, plus de 30
+absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé) ;
 `npm run test:unitaires` sans émulateur. La CI ne lance pas encore `ingest/` (ADR-005, D2).
 
 ## Descriptions aromatiques des houblons (ADR-013)
@@ -4334,7 +4525,8 @@ particulier « Chaîne de travail », « Version », « Tickets », « Git » et
    - tu ne modifies ni ne supprimes aucun commentaire existant.
 6. Avant le premier commit, dans cet ordre :
    - lis git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT. Si l'une des deux adresses
-     n'est pas une adresse noreply de GitHub (…@users.noreply.github.com), ne commite rien :
+     n'est ni une adresse noreply de GitHub (…@users.noreply.github.com) ni
+     noreply@anthropic.com, ne commite rien :
      publie un commentaire qui commence par « ## Analyse — compléments » et dit « adresse
      d'auteur ou de commiteur hors noreply : session arrêtée », sans citer l'adresse, puis
      arrête-toi ;
@@ -4431,7 +4623,8 @@ L5. Prends la branche de la pull request, git fetch origin, puis intègre origin
     puis blocage. Sans conflit, si la version de la pull request n'est plus supérieure à
     celle de origin/main, fais la même correction.
 L6. Avant le commit de fusion, lis git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT :
-    une adresse hors noreply de GitHub (…@users.noreply.github.com) est un blocage, sans
+    une adresse autre que noreply de GitHub (…@users.noreply.github.com) ou
+    noreply@anthropic.com est un blocage, sans
     citer l'adresse. git fetch --tags && node scripts/check-version.mjs doit réussir ; sinon
     corrige seulement la version et le CHANGELOG comme en L5, ou blocage. Commite la fusion
     et pousse sur la branche claude/… de la pull request : jamais sur main, jamais --force.
@@ -4485,7 +4678,7 @@ R4. Corrige en suivant la « Chaîne de travail » comme au point 7 : contrôles
     version passe à celle de origin/main augmentée de un, numéro de build compris ; seuls
     conflits permis : app/pubspec.yaml et documentation/CHANGELOG.md, comme en L5. Avant le
     premier commit, git var GIT_AUTHOR_IDENT et git var GIT_COMMITTER_IDENT doivent être des
-    adresses noreply ; sinon arrête-toi sans commenter. Les fichiers interdits du point 5
+    adresses noreply de GitHub ou noreply@anthropic.com ; sinon arrête-toi sans commenter. Les fichiers interdits du point 5
     restent interdits.
 R5. git push origin <head.ref>, sans --force. Poussée refusée : git fetch, git merge, rejoue
     les contrôles une fois et repousse ; second refus : arrête-toi. Suis la CI jusqu'au vert.
@@ -4880,6 +5073,12 @@ projet. Rien dans le dépôt ne les garde : les vérifier à chaque création de
   sert plus : le keystore de débogage a un mot de passe connu (`android`).
 - **Client OAuth Web** : son identifiant est `GOOGLE_SERVER_CLIENT_ID` ; ne pas le
   supprimer, `google_sign_in` en dépend sur Android.
+- **Écran de consentement OAuth** (Google Auth Platform) : en mode « Test ». Google refuse la
+  connexion d'un compte absent de la liste « Utilisateurs test » (Audience), en plus du
+  contrôle de `members/{email}` par les règles. Google ne fournit aucune API pour ajouter un
+  utilisateur test : chaque adresse invitée s'ajoute à la main sur
+  `console.cloud.google.com/auth/audience?project=<projet>`. Le formulaire « Inviter un
+  membre » ouvre cette page (voir « Admin › Membres — lien vers la console »).
 
 ### État de la production
 

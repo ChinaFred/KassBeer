@@ -5,6 +5,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../brews/domain/brew.dart';
 import '../../brews/domain/brew_event.dart';
 import '../../brews/domain/deroule.dart';
+import '../../brews/domain/mesures_retenues.dart';
 import '../../recipes/domain/chronologie.dart';
 
 /// Une étape de la chronologie d'un brassin, à l'instant du calcul.
@@ -45,6 +46,8 @@ class PlanDuJour {
     required this.etapeIncoherente,
     required this.finPrevue,
     required this.retard,
+    this.densiteInitiale,
+    this.depart,
   });
 
   final List<LigneJour> lignes;
@@ -61,6 +64,14 @@ class PlanDuJour {
 
   /// Écart de la fin prévue avec le plan depuis le premier début.
   final Duration retard;
+
+  /// Densité initiale retenue du brassin (SG), pour corriger de l'alcool une
+  /// lecture de réfractomètre d'une journée 2 ou suivante.
+  final double? densiteInitiale;
+
+  /// Départ prévu de la journée : ancre des heures théoriques d'une étape non
+  /// notée ([durees]).
+  final DateTime? depart;
 
   bool get horairesFiables => etapeIncoherente == null;
 
@@ -88,14 +99,16 @@ class PlanDuJour {
   /// Prévu et réel de la journée et de chaque étape, dans l'ordre de [lignes],
   /// calculés par `brewing/` (P3) à partir des heures enregistrées. [close] :
   /// la journée est close (voir [journeeClose]) ; une étape restée en cours y
-  /// est sans heure de fin. Lève `BrewingInputException` pour une étape faite
-  /// sans début.
+  /// est sans fin. Heures théoriques ancrées sur [depart], écarts de
+  /// début, fin d'une étape au début noté de la suivante : `brewing/` (P3).
+  /// Lève `BrewingInputException` pour une étape faite sans début.
   ActualDayDuration durees({required bool close}) => actualDurations(
     steps: [
       for (final l in lignes)
         StepTiming(planned: l.duree, status: l.status, record: l.record),
     ],
     dayClosed: close,
+    plannedStart: depart,
   );
 
   /// Étape à venir après [ligne], ou `null`.
@@ -258,6 +271,8 @@ class PlanDuJour {
       etapeIncoherente: incoherente,
       finPrevue: finPrevue,
       retard: retard,
+      densiteInitiale: MesuresRetenues.de(brew, events).densiteInitialeSg,
+      depart: plannedStart,
     );
   }
 }

@@ -78,6 +78,10 @@ Ajout du 2026-11-14 : ADR-011 ajoute `queryLogs` (`onCall`, `requireAdmin`, lot 
 `maxInstances` 1, `concurrency` 1, 60 s, aucun secret monté), lecture des journaux des fonctions
 par l'admin.
 
+Ajout du 2026-11-15 : ADR-016 et ADR-015 ajoutent, au lot A1, `saveAiSettings` (`onCall`,
+`requireAdmin`, `maxInstances` 1, 60 s, aucun secret) et `recipeAssistantTurn` (`onCall`,
+`requireMember` puis ouverture du poste, `maxInstances` 2, `concurrency` 4, 120 s, secret `ANTHROPIC_API_KEY`).
+
 **La création du ticket reste dans Firestore (T1).** `submitTicket` n'est pas copiée. Le
 ticket se crée hors ligne compris, et Kass'Dalle perd ce cas (« Le ticket n'est pas parti.
 Vérifiez la connexion »). Les règles de `tickets/` et leurs tests pour cinq profils sont livrés

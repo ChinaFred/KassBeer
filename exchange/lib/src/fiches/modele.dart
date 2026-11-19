@@ -2,7 +2,7 @@ import 'package:brewing/brewing.dart' show CostUnit, FeeBasis;
 
 import '../compte_rendu.dart';
 
-/// Types du format `kassbeer_fiches` v1 : fiches Excel préparées pour
+/// Types du format `kassbeer_fiches` v2 : fiches Excel préparées pour
 /// Admin › Import (v0.6). Aucun texte affiché ici : l'application écrit les
 /// libellés. Un texte tiré du fichier est une donnée, affichée en texte
 /// simple, jamais interprétée (P9).
@@ -16,7 +16,8 @@ enum RaisonFichierFiches {
   /// fiches.
   pasUnFichierDeFiches,
 
-  /// `format_version` autre que 1.
+  /// `format_version` autre que 2 (un fichier v1 compris : il est à préparer
+  /// de nouveau).
   versionInconnue,
 
   /// Plus de [kMaxFiches] fiches.
@@ -46,6 +47,17 @@ enum CodeRefusFiche {
 
   /// Clé d'étape, identifiant d'événement ou clé de prix en double.
   enDouble,
+
+  /// Deux débuts (`step_started`) pour la même étape.
+  debutEnDouble,
+
+  /// Heure notée d'un début d'étape antérieure à celle d'une étape précédente
+  /// de la chronologie.
+  heuresHorsOrdre,
+
+  /// `measured_at` écrit sur un événement `estimee` : le lecteur calcule
+  /// cette heure.
+  heureEnTrop,
 
   /// `step_key` absente de `brew_steps`.
   etapeInconnue,
@@ -153,22 +165,23 @@ enum TypeMesureFiche {
 }
 
 /// Origine de l'heure d'un événement, fixée par la préparation (CR5, CR6,
-/// CR12). L'application ne calcule aucune date.
+/// CR12). Seule [fiche] est une heure notée ; les autres s'écrivent avec
+/// `time_estimated: true`.
 enum OrigineHeure {
-  /// Heure notée dans la fiche.
+  /// Heure notée dans la fiche : `measured_at` obligatoire.
   fiche('fiche'),
 
-  /// Heure réelle de la ligne précédente (CR5).
-  lignePrecedente('ligne_precedente'),
+  /// Étape citée sans heure, ou mesure sans heure : `measured_at` interdit dans
+  /// le fichier, calculé par le lecteur (`theoreticalStarts` de `brewing/`,
+  /// ou heure de l'événement précédent pour une mesure sans étape).
+  estimee('estimee'),
 
-  /// Heure de début du plan (CR5).
-  debutBrassage('debut_brassage'),
-
-  /// Relevé sans heure, à 12:00 du jour noté (CR6).
+  /// Relevé sans heure, à 12:00 du jour noté (CR6) : date écrite par la
+  /// préparation.
   midi('midi'),
 
   /// Densité finale de l'en-tête, datée du jour du brassage + 28 jours, à
-  /// 12:00 (CR12).
+  /// 12:00 (CR12) : date écrite par la préparation.
   estimeeJ28('estimee_j28');
 
   const OrigineHeure(this.valeur);
@@ -210,7 +223,8 @@ class EvenementFiche {
   /// Note, 2 000 caractères au plus.
   final String? note;
 
-  /// Heure de la mesure, écrite par la préparation avec son décalage.
+  /// Heure de l'événement : écrite par la préparation avec son décalage, ou
+  /// calculée par le lecteur pour [OrigineHeure.estimee].
   final DateTime measuredAt;
 
   /// Vrai pour un relevé de fermentation (`phase: fermentation`).
@@ -218,6 +232,10 @@ class EvenementFiche {
 
   /// Origine de [measuredAt].
   final OrigineHeure origineHeure;
+
+  /// Vrai si [measuredAt] n'est pas une heure notée : écrit
+  /// `time_estimated: true`.
+  bool get heureEstimee => origineHeure != OrigineHeure.fiche;
 }
 
 /// Type de la copie d'équipement d'un brassin importé (EQ2).

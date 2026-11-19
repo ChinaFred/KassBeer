@@ -44,7 +44,8 @@ CLAUDE.md                       règles, chaîne de travail, tableaux à remplir
 ├── skills/                     quatre skills
 └── hooks/
     ├── session-start.sh        vérifie agents et skills, lance setup-projet.sh s'il existe,
-    │                           avertit si l'adresse git n'est pas noreply (ADR-002)
+    │                           avertit si l'adresse git n'est pas noreply de GitHub
+    │                           ou noreply@anthropic.com (ADR-002, P15)
     ├── setup-projet.sh         session cloud : installe Flutter 3.44.6 et les dépendances
     │                           (app, brewing, rules-tests, functions)
     └── format-on-edit.mjs      formate le fichier écrit, selon formatters.json
@@ -233,6 +234,27 @@ nomme `ingest/lister-houblons-recettes.mjs` et `IndexBibliotheque.resoudre` ; «
 `CLAUDE.md` décrit `ingest/generer-aromes.mjs`, `ingest/lister-houblons-recettes.mjs` et
 `exchange/bin/lister_houblons_recettes.dart`, et « Commandes utiles » leurs commandes.
 
+Le 2026-11-15, ADR-014 accepté par l'utilisateur (option B) : P19 complété par la suppression
+contrôlée de `ingest/ecrire.mjs --supprimer-absents` (`securite`), P56 ajouté (`relecteur-regles`,
+table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent, skill ni hook nouveau.
+Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
+`ecrire.mjs --supprimer-absents`.
+
+Le 2026-11-15 (v0.1.74), décisions de l'utilisateur : P15 accepte, dans le champ `name`
+d'une entrée de `exchange/donnees/fabricants/cultures.json`, le nom de la fiche du fabricant,
+relevée à l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name`
+de cet en-tête, même s'il contient le nom d'une personne (WLP520) ; « Structure » de `CLAUDE.md` décrit
+`exchange/donnees/fabricants/` sans liste de fabricants. Aucun contrôle, agent, skill ni hook
+nouveau.
+
+Le 2026-11-15 (v0.1.68), décision de l'utilisateur : P19 abaisse le seuil de
+`--supprimer-absents` de 95 % à 90 % des documents en ligne (ADR-014, note du 2026-11-15).
+Aucun contrôle, agent, skill ni hook nouveau.
+
+Le 2026-11-15 (v0.1.63), décision de l'utilisateur : « Structure » de `CLAUDE.md` décrit
+`exchange/donnees/fabricants/`, fichier des fiches des fabricants versionné (ADR-005, amendement
+du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.
+
 Le 2026-11-14, à la demande de l'utilisateur : P36 et la section « Coûts variables » de
 `CLAUDE.md` ajoutent le compte fondateur (`members/{email}.founder`, posé dans la console
 Firebase) et son plafond `FOUNDER_LAUNCHES_PER_DAY`, cinq fois celui du groupe, sur un compteur
@@ -273,6 +295,28 @@ exécuter les dépendances de `functions/` dans le job qui détient le jeton Goo
 l'installation verrouillée de firebase-tools, sans script, y est permise), et ajouté la section
 « Tickets » de `CLAUDE.md`. `formatters.json` formate le TypeScript de `functions/` par
 prettier, et `setup-projet.sh` y lance `npm ci`.
+
+Le 2026-11-15, à la demande de l'utilisateur, `CLAUDE.md` (« Ton ») ajoute « Poser ses
+questions une par une » : quand plusieurs décisions lui reviennent, la session pose une
+question par message, avec son contexte, ses options et sa recommandation, et attend la
+réponse avant la suivante.
+
+Le 2026-11-15, avec l'acceptation d'ADR-015 (assistant de recette) et d'ADR-016 (socle IA),
+`CLAUDE.md` ajoute P57 (socle IA, `securite`), P58 (règles et réglages de l'IA, `securite`),
+P59 (requête de l'assistant, `securite`), P60 (client IA, `relecteur-regles`) et P61
+(propositions du lot A2, `relecteur-regles`). P14, P25, P35 et P54 sont modifiés pour la clé
+`ANTHROPIC_API_KEY` des Functions et les callables `saveAiSettings` et `recipeAssistantTurn`.
+« Logique dupliquée » reçoit `ai_cost_centers.json` et `recipe_assistant_operations.json`.
+« Le projet », « Structure », « Coûts variables » et « Recettes en BeerJSON partiel » sont mis
+à jour.
+
+Le 2026-11-15, avec les décisions du cadrage du lot A1 de l'assistant, P57 (`member_email` tiré
+du jeton, `expires_at`), P58 (TTL de 13 mois sur `ai_usage`, grille et politique relues l'une
+dans la transaction de l'autre, refus d'une grille qui retire un modèle ou un effort utilisé),
+P59 (clés `mode` et `summary`, refus `conversation_full`, bornes du mode résumé, `message`
+refusé et `history` d'au moins 2 messages en mode résumé, liste des huit blocs de données avec
+un test de prompt par bloc) et P60 (« Résumer et continuer » sans seuil en Dart) sont
+complétés.
 
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
@@ -430,3 +474,8 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   explicite et confirmation, liste blanche de collections, identifiants déterministes, rapport
   JSON chiffré. Admin › Sources affiche les compteurs et les noms non reconnus (L4). ADR-005,
   évolution acceptée le 2026-11-08.
+- 2026-11-15 : exception à P15. Le champ `name` d'une entrée de
+  `exchange/donnees/fabricants/cultures.json` reprend le nom de la fiche du fabricant, relevée à
+  l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name` de cet
+  en-tête, même s'il contient le nom d'une personne (WLP520, WLP4045, WLP4046) ; aucun e-mail, aucune autre donnée,
+  aucun commentaire. Décision de l'utilisateur.

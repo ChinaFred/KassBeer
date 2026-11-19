@@ -4,9 +4,9 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
-## 2026-11-15
+## 2026-11-19
 
-### v0.1.61 — fonctionnel
+### v0.1.78 — fonctionnel
 
 « Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous
 n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage)
@@ -21,7 +21,7 @@ Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit 
 choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son
 propriétaire. Demandé par le ticket #61.
 
-### v0.1.61 — technique
+### v0.1.78 — technique
 
 `lireChoixProcessus` présélectionne le seul processus valide du lecteur quand son document de
 préférence est absent (`DocumentAbsent`) ; un défaut coupé ou supprimé garde la chronologie
@@ -42,6 +42,413 @@ données ne change ; l'écran du jour et les journées ne sont pas touchés (P2)
 de la voie « Chronologie de la recette seule » n'est pas fait (point 5 de l'analyse). Tests de
 widgets ajoutés dans `deroule_d3_test.dart` et `process_screens_test.dart`. Demandé par le
 ticket #61.
+
+## 2026-11-15
+
+### v0.1.77 — technique
+
+ADR-015 (assistant de recette) et ADR-016 (socle IA) sont acceptés. L'utilisateur a tranché
+quinze questions, une par une. La règle « Aucune IA dans l'application » d'ADR-001 est
+retirée : l'IA passe par le serveur seul, avec Claude comme seul fournisseur. Le socle
+`functions/src/ai/` appelle l'API par `fetch`. Admin › Moteur d'IA règle par poste le
+modèle, l'effort, les plafonds (20 tours par membre et par jour, 60 pour le fondateur, borne
+de 100) et l'ouverture aux membres. Admin › Coûts de l'IA suit les coûts par personne et par
+poste, d'après une grille tarifaire dans Firestore. L'assistant arrive en deux lots :
+analyse en texte (A1), puis propositions appliquées au brouillon (A2). `CLAUDE.md` reçoit
+les contrôles P57 à P61, et P14, P25, P35 et P54 sont modifiés. Deux lignes s'ajoutent à
+« Logique dupliquée », et le poste `recipe_assistant_turn` entre dans « Coûts variables ».
+« Recettes en BeerJSON partiel » reçoit une exception à « aucune valeur inventée » : au lot A2,
+une valeur technique proposée par l'assistant, faute de Bibliothèque, est acceptée et marquée
+(`ai_proposed`). ADR-005 et ADR-008 reçoivent leur note de renvoi.
+La relecture de sécurité ajoute des bornes à la requête de l'assistant (liste blanche,
+120 000 caractères au total), garde le tour sur un délai ou un 5xx, et fixe `concurrency: 4`.
+Aucun code n'est écrit à ce stade.
+
+Dans la même version, `CLAUDE.md` (section « Ton ») ajoute « Poser ses questions une par
+une ». Quand plusieurs décisions reviennent à l'utilisateur, la session pose une question par
+message, avec son contexte, ses options et sa recommandation. L'utilisateur l'a demandé après
+l'avis de l'architecte sur l'assistant de recette, qui listait treize questions d'un coup.
+`documentation/guide-reseau.md` décrit le changement.
+
+Après l'acceptation, trois amendements s'ajoutent. ADR-015 inscrit la décision de garder
+`tickets-functions` comme compte d'exécution de l'assistant (commit 8657e43). ADR-015 et ADR-016
+inscrivent les décisions du cadrage du lot A1 (commit 6b51e1f) : `member_email` dans `ai_usage`,
+ligne « IA ce mois » selon le membre, refus d'une grille qui retire un modèle utilisé, et
+« Résumer et continuer ». Ce dernier ajoute les clés `mode` et `summary` à la requête de
+l'assistant, avec leurs bornes ; P57, P58, P59 et P60 sont complétés en conséquence.
+
+Les relectures de `relecteur-regles` et de `securite` complètent ces amendements. En mode
+résumé, les bornes par champ et la forme de l'historique restent, `message` est refusé et
+`history` compte au moins 2 messages. Le prompt nomme huit blocs de données, dont `RESUME`,
+jamais suivis comme consignes. La grille et la politique se relisent l'une dans la
+transaction de l'autre, et une grille qui retire un modèle ou un effort utilisé est refusée.
+`ai_usage/` est gardé 13 mois, par `expires_at` et une règle TTL (décision de l'utilisateur).
+La procédure d'effacement RGPD couvre `ai_usage/` et `ai_quotas/`. La dépense par jour est
+bornée à environ 31 $, poste ouvert à tous, sous la limite de 20 $ de la Console. ADR-015
+reçoit les décisions sur les écrans du lot A1 : icône « Assistant » dans la barre du haut,
+commutateur « Calculs / Assistant » de 840 à 1 279 px, champ « Efforts acceptés ».
+
+### v0.1.76 — fonctionnel
+
+Les variantes « + » des levures Omega s'écrivent maintenant « Plus » : « Kolsch II Plus »,
+« Bayern Lager Plus », « Point Loma Plus »… Elles ne se confondent plus avec la levure
+d'origine. Une recette importée qui nomme « Kolsch II » retrouve à nouveau sa levure. Le
+changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.76 — technique
+
+`exchange/donnees/fabricants/cultures.json` : les douze noms Omega en « + » s'écrivent « Plus »
+(décision de l'utilisateur du 2026-11-15). Préparation rejouée : 945 documents, cinq noms
+normalisés (`kolsch-ii`, `german-lager-i`, `bayern-lager`, `point-loma`, `extra-special`) ne
+désignent plus deux documents. Les identifiants de ces douze documents suivent le nom
+(`culture-omega-yeast-oyl435-kolsch-ii` devient `…-kolsch-ii-plus`) ; `ingest/ecrire.mjs` ne
+supprime rien dans `beer_cultures` : une ingestion faite depuis la v0.1.73 laisse les douze
+anciens documents en ligne. `fabricants_donnees_test.dart` vérifie qu'aucun nom Omega ne
+contient « + » et que leurs noms normalisés sont distincts. `DATA_SOURCES.md` à jour.
+
+### v0.1.75 — fonctionnel
+
+La Bibliothèque reprend les fiches de 77 cultures de Wyeast : levures d'ale, de lager et de
+bière de blé, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation,
+plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent
+celles de l'ancienne base pour 74 cultures déjà connues, et 3 cultures apparaissent. Les
+cultures de vin, de cidre, d'hydromel et de saké ne sont pas reprises. L'écran « Sources des
+données » nomme Wyeast. Les cultures arrivent dans la Bibliothèque quand l'administrateur
+relance l'ingestion.
+
+### v0.1.75 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 77 cultures Wyeast relevées le 2026-11-15 sur
+`wyeastlab.com` (Crawl-delay de 10 s), règles dans l'en-tête : `type` d'après « Species »,
+référence sans le suffixe `-PC`, températures en °F, floculation `Low - High` absente ; série
+4000 (vin, cidre, hydromel, saké, distillerie) non reprise. `kDatesReleveFabricants` reçoit
+`wyeast`. Préparation rejouée sur les sources du 2026-11-08 : 74 fiches rejoignent un document
+Brewtarget, 3 en créent un (945 documents `beer_cultures`), aucun autre document changé. Les
+doublons Brewtarget de la Private Collection (`WY2001-PC` et `2001`) restent, et six noms
+deviennent ambigus ; `DATA_SOURCES.md` décrit la correction possible par `cleProduit`.
+`fabricants_donnees_test.dart` : 439 entrées, types et références Wyeast. `DATA_SOURCES.md`,
+ADR-005, exigences et écran « Sources des données » à jour.
+
+### v0.1.74 — fonctionnel
+
+La Bibliothèque reprend les fiches de 162 cultures de White Labs et de sa gamme The Yeast Bay :
+levures d'ale et de lager, levures de bière de blé, kveiks, Brettanomyces, bactéries et
+assemblages pour bières acides. Type, atténuation, plage de température et floculation
+viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour les
+123 cultures déjà connues. 39 cultures absentes jusqu'ici apparaissent. Les levures de vin, de
+cidre et de distillerie ne sont pas reprises. L'écran « Sources des données » nomme White Labs
+et The Yeast Bay. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance
+l'ingestion.
+
+### v0.1.74 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 162 cultures WLP relevées le 2026-11-15 sur
+`www.whitelabs.com` (115 White Labs, 47 The Yeast Bay d'après le titre de la fiche), règles
+dans l'en-tête ; non reprises : WLP700 à WLP799, WLP616, distillerie, kombucha, bactéries
+acétiques et malolactiques, WLP686, WLP692, produits revendus. `kDatesReleveFabricants` reçoit
+`white-labs` et `the-yeast-bay`. Préparation rejouée sur les sources du 2026-11-08 : 123 fiches
+rejoignent leur document Brewtarget, 39 en créent un (942 documents `beer_cultures`), aucun
+autre document changé, aucun nom rendu ambigu ; WLP4042 et WLP4044 restent en double (White
+Labs sur la fiche, The Yeast Bay chez Brewtarget). `fabricants_donnees_test.dart` : 362
+entrées, types et champs absents de White Labs. `DATA_SOURCES.md`, ADR-005, exigences et
+écran « Sources des données » à jour. `CLAUDE.md`, décisions de l'utilisateur : P15 accepte le
+nom commercial d'une souche publié par son fabricant (WLP520, WLP4045, WLP4046), et
+« Structure » décrit `exchange/donnees/fabricants/` sans liste de fabricants ;
+`guide-reseau.md` à jour.
+
+### v0.1.73 — fonctionnel
+
+La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures
+sèches (Pinnacle, Dried Lutra), Brettanomyces, kveiks et deux bactéries qui acidifient la
+bière. Type, atténuation, plage
+de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles
+de l'ancienne base pour les 75 cultures déjà connues. 29 cultures absentes jusqu'ici
+apparaissent, dont les variantes « + » et les levures sèches. L'écran « Sources des
+données » nomme Omega Yeast et la date du relevé. Les cultures arrivent dans la Bibliothèque
+quand l'administrateur relance l'ingestion.
+
+### v0.1.73 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 104 cultures Omega Yeast relevées le 2026-11-15
+sur `omegayeast.com`, règles dans l'en-tête : référence OYL du titre ou de la page, cinq
+Pinnacle sans référence (identifiant tiré du nom), `type` d'après « Strain Type » puis kveik,
+blé, `mixed-culture` (C2C), `lacto`, `pedio`, `other` (*Lachancea*), températures en °F.
+`kDatesReleveFabricants` reçoit `omega-yeast`. Préparation rejouée sur les sources du
+2026-11-08 : 75 fiches rejoignent leur document Brewtarget, 29 en créent un (903 documents
+`beer_cultures`), aucun autre document changé. Les variantes « + » rendent ambigus cinq noms
+de plus (`kolsch-ii`, `german-lager-i`, `bayern-lager`, `point-loma`, `extra-special`),
+résolus par la souche. `fabricants_donnees_test.dart` : 200 entrées, types et champs absents
+d'Omega. `DATA_SOURCES.md`, ADR-005, exigences et écran « Sources des données » à jour.
+
+### v0.1.72 — fonctionnel
+
+Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à
+20 °C ou à 15,6 °C, réfractomètre, densimètre électronique, ou autre instrument sans
+correction. Le choix se fait par la ligne « Densimètre » de « Préparer le brassage » et de
+« Préparer la journée », ou depuis le formulaire d'une densité. Avec un densimètre flottant,
+vous saisissez aussi la température de l'échantillon : l'application propose la densité
+corrigée (1050,0 lue à 68 °C donne 1070,7), approchée au-delà de 40 °C, impossible au-delà de
+75 °C. Avec un réfractomètre, vous saisissez des °Brix et le facteur de votre appareil ; après
+le début de la fermentation, la lecture est corrigée de l'alcool à partir de la densité
+initiale. La case « Corriger » permet de garder la lecture telle quelle. La lecture d'origine
+est toujours gardée, et la valeur retenue sert partout : relevé, courbes, « Prévu et mesuré »,
+degré et rendement. Les mesures déjà enregistrées ne changent pas. Installez cette mise à jour
+avant d'utiliser le réfractomètre : une ancienne version de l'application ne peut pas afficher
+« Prévu et mesuré » d'un brassin mesuré au réfractomètre.
+
+### v0.1.72 — technique
+
+Module `brewing/lib/src/gravity_instruments.dart` : `InstrumentDensite` (liste fermée),
+`masseVolumiqueEau` (Kell 1975), `corrigerDensimetre`, `plageCorrection` (0–40 °C, 40–75 °C
+approchée, impossible au-delà), `brixCorrige` (°Brix divisé par le facteur, converti par la formule de
+`platoToSg`, partagée sans bornes par `platoVersSgSansBornes`, non exportée), `densiteTerrill` (Terrill 2011, cubique) et
+`densiteRetenue`, seule lecture d'une densité mesurée ; cas d'abord dans
+`brewing/test/fixtures/hydrometer.json` et `refractometer.json`. Événements : champs
+`gravity_instrument`, `brix`, `sample_temperature`, `refractometer_factor`, `correct` ; la
+lecture brute est stockée, `value` reste la densité lue en SG et est nulle pour un
+réfractomètre. `densiteDe` (`app/lib/features/brews/domain/densites.dart`) remplace la lecture
+de `value` dans `MesuresRetenues`, `relevesDe`, la chronologie, les deux courbes et
+« Prévu et mesuré ». Préférence `users/{uid}/preferences/measurement` (dépôt
+`PreferenceMesureRepository`, écriture simple sans transaction). Saisie commune `BlocDensite`
+(`saisie_densite.dart`) dans les quatre formulaires de densité. `firestore.rules` : `densityOk`,
+correction de l'instrument permise, préférence en liste blanche ; tests
+`rules-tests/test/gravity_instruments.test.mjs` ; budget mesuré après la fusion avec la v0.1.69 : environ 560 expressions de marge (14
+`pad10()`) sur la correction d'un flottant à heure estimée en réfractomètre. Quatre cas
+« autorisé » ajoutés à la suite « budget des règles » de `recipe_format.test.mjs`, sur le
+brassin du 22 novembre : création d'une lecture au réfractomètre en fermentation, correction
+d'un flottant en réfractomètre et la même correction sur une heure estimée avec l'heure changée,
+ces trois cas avec une note de 2 000 caractères ; enfin embouteillage avec une densité finale
+au réfractomètre dans le même lot.
+`kReleveChampMinWidth` retiré (relevé en une colonne). Aucune dépendance ajoutée. Une lecture
+de réfractomètre a `value` nulle : les versions 0.1.71 et antérieures lisent `event.value!` sur
+une densité retenue et plantent sur « Prévu et mesuré » d'un tel brassin ; risque accepté par
+l'utilisateur, couvert par la mise à jour proposée au lancement (ADR-012).
+
+### v0.1.71 — fonctionnel
+
+La Bibliothèque reprend les fiches de 55 levures liquides d'Imperial Yeast : type, atténuation,
+plage de température et floculation, telles que le fabricant les publie. Ces valeurs remplacent
+celles de l'ancienne base pour les 36 levures déjà connues. 19 levures absentes jusqu'ici
+apparaissent, dont des lagers (Alpha, Kanpai, Lookr) et les Liquid Brick. L'écran « Sources
+des données » nomme Imperial Yeast et la date du relevé. Les levures arrivent dans la
+Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.71 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 55 cultures Imperial Yeast relevées le
+2026-11-15 sur `www.imperialyeast.com` (aucun `robots.txt`), règles dans l'en-tête :
+températures en °F de la fiche, converties par le lecteur ; floculation `low-medium` →
+`medium low`, `medium-high` → `medium high`, `very-high` → `very high` ; `type` d'après la
+catégorie (kveik pour A37, A43, A44, A46 ; `wheat` pour G01). A40, W01 et W04 (cidre, vin)
+non reprises. `kDatesReleveFabricants` reçoit `imperial-yeast`. Préparation rejouée sur les
+sources du 2026-11-08 : 36 fiches rejoignent leur document Brewtarget, 19 en créent un
+(874 documents `beer_cultures`), aucun autre document changé. `fabricants_donnees_test.dart` :
+96 entrées, conversion des °F et floculation d'Imperial. `DATA_SOURCES.md`, ADR-005,
+`exigences-techniques.md`, `exigences-fonctionnelles.md` et l'écran « Sources des données »
+à jour.
+
+### v0.1.70 — fonctionnel
+
+La Bibliothèque reprend les fiches des 16 levures de bière sèches de Mangrove Jack's : type,
+atténuation, plage de température et floculation, telles que le fabricant les publie. Ces
+valeurs remplacent celles de l'ancienne base pour les mêmes levures. La M24 Versa Lager, absente
+jusqu'ici, apparaît. L'écran « Sources des données » nomme Mangrove Jack's et la date du relevé.
+Les levures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.70 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 16 cultures Mangrove Jack's relevées le
+2026-11-15 sur `mangrovejacks.com` (collection « Beer Yeasts »), avec leurs règles dans
+l'en-tête : `type` sans espèce sur la fiche (haute → `ale`, basse → `lager`, bière de blé →
+`wheat`, M12 → `kveik`), floculation reprise, M76 sans atténuation, °C gardés quand les °F de
+M20 et M44 ne correspondent pas. Chaque fabricant a sa date de relevé :
+`kDatesReleveFabricants` (`sources.dart`) remplace `kDateReleveFabricants`, `provenance[]`
+prend la date du producteur de la fiche, une fiche d'un producteur sans date est refusée, et la
+version de la source `fabricants` au rapport est le relevé le plus récent. Les 25 fiches
+Fermentis gardent `2026-11-14`. Préparation rejouée sur les sources du 2026-11-08 : 15 fiches
+rejoignent leur document Brewtarget, M24 crée `culture-mangrove-jack-s-m24-versa-lager`
+(855 documents `beer_cultures`), aucun autre document changé. `fabricants_donnees_test.dart` :
+41 entrées, dates par producteur, floculation ; `ingestion_test.dart` : version au rapport et
+refus d'un producteur sans date. `DATA_SOURCES.md`, `exigences-techniques.md`,
+`exigences-fonctionnelles.md` et l'écran « Sources des données » à jour.
+
+### v0.1.69 — fonctionnel
+
+Les heures des brassins importés des fiches Excel se lisent mieux. Une étape notée sans heure
+sur la fiche s'affiche « vers 13:02 · heure estimée », et une étape absente de la fiche
+s'affiche « Non notée » à son heure prévue, au lieu de « Non faite ». Une heure estimée ne
+compte dans aucune durée réelle. Chaque étape d'un brassin, importé ou non, montre aussi
+son écart de début : « Début : 25 min de retard » ou « Début : 5 min d'avance », sur la fiche
+du brassin comme sur l'écran du jour. Une étape sans « Terminer » finit au début de l'étape
+suivante. La durée totale dit quand une étape n'a pas d'heure notée. Les relevés importés sans
+heure portent « heure non notée », la densité finale datée de 28 jours après le brassage
+« date estimée ». Dans Admin › Import, une fiche modifiée depuis son import peut être
+remplacée par la case « Remplacer ce brassin » ; un remplacement coupé se termine au prochain
+import.
+
+### v0.1.69 — technique
+
+`brewing/` : `theoreticalStarts` (heure théorique d'une étape, ancrée sur le dernier début
+noté ou l'heure de début prévue), `StepEvent.estimated` et `StepRecord.startEstimated`
+(début estimé, sans réel ni écart) ; `actualDurations(plannedStart:)` rend la fin retenue
+(`end` : fin enregistrée, sinon début noté de l'étape suivante), l'écart de début au plan
+d'origine (`startDeltaMinutes`), l'heure théorique (`theoreticalStart`), la nature
+`ActualStepKind.estimated` et les natures de journée `partial`, `startNotNoted`,
+`endNotNoted` (`stepsWithoutTime` remplace `stepsWithoutEnd`, `ActualDayKind.missingEnd`
+retiré). `fixtures/process.json` : 4 cas ajoutés, écarts de début, heures théoriques et fins
+sur les cas existants ; les cas « commencée sans fin » changent (fin au début noté suivant).
+`exchange/` : format `kassbeer_fiches` v2 (un fichier v1 est refusé) : `time_source`
+`fiche`, `estimee` (heure calculée par le lecteur avec `brewing/`), `midi`, `estimee_j28` ;
+`ligne_precedente` et `debut_brassage` retirés ; codes de refus `debutEnDouble`,
+`heuresHorsOrdre`, `heureEnTrop` ; `verifier_fiches.dart` compte heures notées et estimées.
+Firestore : `brews/{id}/events/{eventId}.time_estimated` et `date_estimated` (booléens
+vrais seulement ; retirés seulement avec `measured_at` changé, `estimatedOk` et
+`estimationRetireeOk`), tests des cinq profils dans `events.test.mjs` et
+`import_fiches.test.mjs` (remplacement compris), budget noté (16 `pad10()` sur un lot de
+10 événements). Application : `BrewEvent.timeEstimated`, `dateEstimated`, `natureHeure` ;
+`Brew.importedFrom` et `importeDUneFiche` ; `ChronologieJour` reçoit les durées et l'écart de
+début aussi sur l'écran du jour (calcul local, P2) ; une correction d'heure retire
+l'estimation ; Admin › Import : `planDeRemplacement`, `LotSuppression`,
+`SuppressionBrassin`, état `remplacementATerminer` (marque `Fiche Excel · {id} ·
+remplacement`), `executerImport(aRemplacer:)`, compte rendu « remplacées » et « Supprimés »,
+rubrique « Heures estimées ». Aucune dépendance ne change.
+
+### v0.1.68 — technique
+
+ADR-014 : `ecrire.mjs --supprimer-absents` refusait de supprimer les 24 doublons de
+`beer_hops`, car la préparation compte 442 documents pour 466 en ligne (94,85 %, sous le seuil
+de 95 %). Décision de l'utilisateur : `PART_MIN_PREPAREE` passe à 0,9
+(`ingest/lib/ecriture.mjs`). Tests de `ingest/` adaptés (90 préparés pour 100 acceptés, 11
+absents refusés ; émulateur à 61 pour 72 refusé). P19 de `CLAUDE.md`, `exigences-techniques.md`
+et ADR-014 (note du 2026-11-15) mis à jour.
+
+### v0.1.67 — fonctionnel
+
+Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et
+commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer
+l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le
+bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ». Après l'appui,
+un message « Étape « Ébullition » commencée. » s'affiche dix secondes avec « Annuler » : un
+appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son
+action, comme celui qui annule un début ou une fin d'étape.
+
+### v0.1.67 — technique
+
+`brew_day_screen.dart` : `_enchainer` écrit `step_ended` de l'étape en cours et `step_started`
+de `PlanDuJour.suivanteDe` dans un même lot, hors ligne comme les autres écritures d'étape
+(P2), et prépare l'alerte du minuteur. `_BarreActions` l'affiche quand la suivante a une
+durée ; sinon « Terminer l'étape » reste. Le libellé lu par TalkBack nomme les deux étapes.
+Une `SnackBar` (10 s, `persist` vrai sous TalkBack par `MediaQuery.accessibleNavigationOf`,
+comme celle de `_annuler`) propose « Annuler » : `_annulerEnchainement` relit le
+plan et supprime `startEventId` de l'étape commencée et `endEventId` de la précédente par
+`deleteEvents`, un `WriteBatch` sans transaction ; rien n'est supprimé si l'étape commencée
+est déjà terminée ou sautée. Tests de `brew_day_screen_test.dart` adaptés, quatre cas ajoutés
+(dernière étape, suivante de 0 min, « Annuler », « Annuler » après la fin).
+
+### v0.1.66 — fonctionnel
+
+Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ».
+Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le
+houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… ».
+
+### v0.1.66 — technique
+
+`_Panneau` (`brew_day_screen.dart`) reçoit `libelleFin` : « Fin du brassage prévue » pour le
+jour de brassage, « Fin de la journée prévue » pour une journée 2 ou suivante ; espace
+insécable avant « · » pour couper la ligne après le point médian. Tests ajoutés
+dans `brew_day_screen_test.dart` et `deroule_d4_test.dart`.
+
+P15 accepte `noreply@anthropic.com`, l'adresse des sessions Claude Code, comme l'adresse
+`noreply` de GitHub, pour les commits et les tags (décision de l'utilisateur du 2026-11-15).
+Aucune des deux ne désigne une personne. `session-start.sh` n'avertit plus pour cette adresse.
+Les prompts de développement (point 6, L6, Reprise) l'acceptent aussi : texte à recoller sur
+claude.ai. `CLAUDE.md`, `guide-reseau.md` et `exigences-techniques.md` mis à jour.
+
+Ces deux changements avaient été numérotés v0.1.62 et v0.1.63 sur leur branche, numéros pris
+entre-temps par la branche principale, puis v0.1.64 et v0.1.65, pris aussi : ils sont renumérotés en v0.1.66.
+
+### v0.1.65 — fonctionnel
+
+Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux
+utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion.
+Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à
+la coller. Google ne permet pas d'ajouter cette adresse automatiquement.
+
+### v0.1.65 — technique
+
+`invite_member_form.dart` devient un `ConsumerStatefulWidget` et ouvre
+`console.cloud.google.com/auth/audience?project=<FIREBASE_PROJECT_ID>` par `ouvrirLienProvider`.
+L'identifiant vient de `firebaseProjectIdProvider` (`members_providers.dart`, lu à la
+compilation) et `consoleUtilisateursTest` le contrôle avant de construire l'adresse ; sans
+identifiant valide, le bloc ne s'affiche pas. Échecs rapportés sous `members.open_console` et
+`members.copy_email`, sans l'adresse. Aucune dépendance ajoutée.
+
+### v0.1.64 — technique
+
+ADR-014 : la première préparation réelle s'est arrêtée (`StateError`, « nom « ctz » porté par
+hop-columbus, hop-ctz », 3 noms partagés). Le fichier 003 de Brewtarget porte `CTZ`,
+`Tomahawk` et `Zeus` en documents à part. La ligne `Columbus` de `kFusions` les absorbe
+(`EntreeDesignee` du 003) au lieu de les ajouter en alias ; leurs noms restent des alias de
+`hop-columbus`. Cas ajoutés aux sources inventées de `fusions_test.dart`. Documents attendus en
+moins : 24 (466 → 442), `DATA_SOURCES.md` à jour.
+### v0.1.63 — technique
+
+Fiches des fabricants versionnées (ADR-005, amendement du 2026-11-15, décision de
+l'utilisateur) : le fichier BeerJSON 2.01 des 25 cultures Fermentis, relevé le 2026-11-14 et
+écrit à la main, entre dans le dépôt sous `exchange/donnees/fabricants/cultures.json`.
+`bin/preparer_referentiels.dart` le lit par défaut (option `--fabricants` pour un autre
+chemin) : l'administrateur n'a plus à le copier dans `import/sources/`. Le fichier ne contient
+que noms et valeurs techniques ; il n'est ni un asset ni servi par Hosting.
+`exchange/test/fabricants_donnees_test.dart` le lit : 25 entrées, aucun rejet, les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 écartées. `DATA_SOURCES.md` (exception à « aucun
+fichier de ces sources dans le dépôt », SHA-256 du fichier), ADR-005, `exigences-techniques.md`,
+« Structure » de `CLAUDE.md` et `guide-reseau.md` mis à jour.
+
+### v0.1.62 — fonctionnel
+
+La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le
+référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf
+absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et
+LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant.
+« Sources des données » nomme cette nouvelle source.
+
+### v0.1.62 — technique
+
+ADR-005, amendement du 2026-11-14 : source `fabricants` de l'ingestion, fichier BeerJSON 2.01
+écrit à la main (`import/sources/fabricants/cultures.json`, hors dépôt), lu par
+`lireFabricants` d'`exchange/` et exigé par `bin/preparer_referentiels.dart`. Rang 0 : elle
+passe avant 005, et les rangs des autres sources montent d'un. Une souche déjà connue de
+Brewtarget garde l'identifiant de son document (`ingest/ecrire.mjs` n'efface rien). Licence
+`Données publiées par le fabricant`, version et date du relevé `2026-11-14`, acceptées par
+`ingest/lib/validation.mjs`. L'application affiche « Fiches des fabricants ». Les atténuations
+de 98 à 102 % de HA-18, DA-16, DW-17 et LD-20 dépassent la borne de 100 % : écartées et
+comptées au rapport. Admin › Sources nomme la source « Fiches des fabricants » dans
+« Sources lues » (`libelleSourceExecution`) et dans son introduction. `DATA_SOURCES.md`,
+`exigences-techniques.md` et `exigences-fonctionnelles.md` mis à jour.
+
+### v0.1.61 — fonctionnel
+
+La Bibliothèque des houblons est plus propre. Un même houblon n'apparaît plus plusieurs fois
+sous des noms voisins : « Saaz (CZ) » et « Saaz (Czech Republic) », par exemple, ne font plus
+qu'un. « Saaz » désigne le Saaz tchèque, et le Saaz cultivé aux États-Unis s'appelle « Saaz
+(US) ». Les pays d'origine des houblons et des malts s'écrivent d'une seule façon. Une recette
+qui cite « Hallertau », « Tettnanger », « CTZ » ou « Denali » retrouve le bon houblon. Ces
+corrections arrivent dans l'application après la prochaine mise à jour de la Bibliothèque par
+l'administrateur.
+
+### v0.1.61 — technique
+
+ADR-014 (option B). `exchange/lib/src/ingestion/origines.dart` : liste fermée des pays
+(`kPays`) et table des graphies (`kGraphiesOrigine`), appliquées aux houblons et aux malts dans
+`lecture_sources.dart` ; graphie inconnue ou double laissée absente et listée dans
+`rapport.json` (`origines_inconnues`). `fusions.dart` : table de fusion écrite à la main
+(`kFusions`, 16 lignes) branchée dans `Referentiel.fusionner`, identifiant inchangé
+`hop-<cleNormalisee(nom)>`, noms écartés des alias ; la préparation s'arrête sur une ligne sans
+entrée, une entrée désignée deux fois ou un nom porté par deux houblons ; trois alias DIY Dog
+réorientés vers `hop-hallertauer-…`. `ingest/ecrire.mjs --supprimer-absents <beer_hops|beer_hop_aromas>` :
+suppression contrôlée (30 au plus par lancement et par collection, refus sous 95 %, motif
+d'identifiant, confirmation par la saisie du nombre, simulation, rapport `deletions`). 21
+documents de `beer_hops` attendus en moins (466 → 445). Contrôles P19 complété et P56.
 
 ### v0.1.60 — fonctionnel
 

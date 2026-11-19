@@ -94,7 +94,9 @@ les contraintes.
 ### Coûts et délais
 
 - **Budget mensuel (à l'arrêt / à l'usage)** : du même ordre que Kass'Dalle.
-- **IA ou API facturée, pour quoi** : aucune dans l'application en version 1 (ADR-001).
+- **IA ou API facturée, pour quoi** : ADR-001 excluait l'IA de l'application en version 1.
+  Depuis le 2026-11-15, l'IA passe par le serveur seul (ADR-016) ; premier poste, l'assistant
+  de recette (ADR-015).
   L'import des 16 fiches est préparé par une session Claude Code et validé dans Admin ›
   Import. Ensuite, côté serveur seulement : substitution d'un ingrédient manquant,
   explication d'un écart prévu / mesuré, diagnostic d'un défaut de dégustation.
@@ -110,7 +112,7 @@ les contraintes.
 - Import des 16 fiches.
 
 Après la version 1 : RAPT Pill, stock, eau (sels et pH), conditionnement (calcul du sucre de
-resucrage), dégustations notées, assistant IA. La masse et la nature du sucre de resucrage sont
+resucrage), dégustations notées. L'assistant de recette est avancé (ADR-015). La masse et la nature du sucre de resucrage sont
 notées dès la v0.4, sans calcul.
 
 ### Découpage en incréments

@@ -2,10 +2,12 @@ import '../decodage_xml.dart';
 import '../schema.dart';
 import 'cles.dart';
 import 'json_commentaires.dart';
+import 'origines.dart';
 import 'sources.dart';
 import 'valeurs.dart';
 
-/// Lecture des fichiers DefaultContent 001 à 005 de Brewtarget (v5.2.3) vers
+/// Lecture des fichiers DefaultContent 001 à 005 de Brewtarget (v5.2.3) et
+/// du fichier des fiches techniques des fabricants vers
 /// des entrées de référentiel en unités canoniques. Seuls les noms et les
 /// valeurs techniques sont lus (P20) : aucun `notes`, description, URL,
 /// substitut, `best_for`, recette, équipement ni eau.
@@ -53,6 +55,8 @@ class EntreeBrute {
     required this.source,
     required this.sourceId,
     required this.licence,
+    this.origineInconnue,
+    this.releveFabricant,
   });
 
   /// Nature de l'entrée.
@@ -74,15 +78,26 @@ class EntreeBrute {
   /// Licence de l'entrée.
   final String licence;
 
+  /// Origine lue et absente de la table des graphies (`origines.dart`), ou
+  /// `null` : `valeurs` n'a alors pas d'`origin` (ADR-014).
+  final String? origineInconnue;
+
+  /// Origine du document, en graphie canonique, ou `null`.
+  String? get origine => valeurs['origin'] as String?;
+
   /// Producteur d'une culture, ou `null`.
   String? get producteur => valeurs['producer'] as String?;
 
   /// Référence d'une culture chez son producteur, ou `null`.
   String? get produit => valeurs['product_id'] as String?;
 
+  /// Date du relevé de la fiche d'un fabricant ([Source.fabricants]), ou
+  /// `null` pour une autre source.
+  final String? releveFabricant;
+
   /// Ligne de `provenance[]`.
   Map<String, Object> get provenanceLigne =>
-      provenance(source, sourceId, licence);
+      provenance(source, sourceId, licence, releveFabricant: releveFabricant);
 }
 
 /// Entrée refusée d'une source : sans nom, ou sans valeur obligatoire.
@@ -125,7 +140,15 @@ class StyleLu {
 
 /// Ce que la lecture des sources de Brewtarget a produit.
 class LectureReferentiels {
-  /// Entrées lues, dans l'ordre : 001, 002, 003, 004, 005.
+  /// Crée la lecture. [datesReleveFabricants] : date du relevé des fiches de
+  /// chaque producteur, par clé de producteur (`kDatesReleveFabricants`).
+  LectureReferentiels({this.datesReleveFabricants = kDatesReleveFabricants});
+
+  /// Date du relevé des fiches de chaque producteur.
+  final Map<String, String> datesReleveFabricants;
+
+  /// Entrées lues, dans l'ordre : 001, 002, 003, 004, 005, fiches des
+  /// fabricants.
   final List<EntreeBrute> entrees = [];
 
   /// Styles du fichier 002.
@@ -167,16 +190,44 @@ class LectureReferentiels {
       rejets.add(EntreeRejetee(source.id, nature.prefixe, nom, 'nom absent'));
       return;
     }
+    // Une fiche de fabricant porte la date du relevé de son producteur ;
+    // sans date connue, l'entrée est refusée, sans date de remplacement.
+    String? releve;
+    if (source == Source.fabricants) {
+      final producteur = valeurs['producer'];
+      releve = producteur is String
+          ? datesReleveFabricants[cleProducteur(producteur)]
+          : null;
+      if (releve == null) {
+        rejets.add(
+          EntreeRejetee(
+            source.id,
+            nature.prefixe,
+            nom,
+            'date du relevé inconnue',
+          ),
+        );
+        return;
+      }
+    }
+    // Origine ramenée à la liste des pays : une graphie inconnue est retirée
+    // et gardée pour le rapport (ADR-014).
+    final lue = valeurs['origin'] as String?;
+    final pays = lue == null ? null : paysDeGraphie(lue);
     entrees.add(
       EntreeBrute(
         nature: nature,
         nom: nom,
         valeurs: {
-          for (final MapEntry(:key, :value) in valeurs.entries) key: ?value,
+          for (final MapEntry(:key, :value) in valeurs.entries)
+            if (key != 'origin') key: ?value,
+          'origin': ?pays,
         },
         source: source,
         sourceId: sourceId ?? nom,
         licence: licence,
+        origineInconnue: lue != null && pays == null ? lue : null,
+        releveFabricant: releve,
       ),
     );
   }
@@ -425,22 +476,43 @@ class LectureReferentiels {
             );
           }
         case 'cultures':
-          for (final brut in value) {
-            final c = brut is Map ? brut : const <String, Object?>{};
-            final nom = nomPropre(c['name']);
-            final v = LecteurValeurs(journal, source.id, nom ?? '');
-            _ajouter(
-              NatureReferentiel.culture,
-              nom,
-              _culture(v, c, c['type']),
-              source,
-              _texteId(c['id']),
-              Licence.gpl3,
-            );
-          }
+          _lireCultures(value, source, Licence.gpl3);
         default:
           listesIgnorees['${source.id}:$key'] = value.length;
       }
+    }
+  }
+
+  /// Lit le fichier des fiches techniques des fabricants (BeerJSON 2.01,
+  /// `fabricants/cultures.json`, écrit à la main) : `cultures` seules, avec
+  /// les mêmes champs que 003 et 004. Toute autre liste est ignorée et
+  /// comptée.
+  void lireFabricants(String texte) {
+    const source = Source.fabricants;
+    final racine = _racine(texte, 'beerjson', source);
+    for (final MapEntry(:key, :value) in racine.entries) {
+      if (value is! List) continue;
+      if (key == 'cultures') {
+        _lireCultures(value, source, Licence.fabricant);
+      } else {
+        listesIgnorees['${source.id}:$key'] = value.length;
+      }
+    }
+  }
+
+  void _lireCultures(List<Object?> liste, Source source, String licence) {
+    for (final brut in liste) {
+      final c = brut is Map ? brut : const <String, Object?>{};
+      final nom = nomPropre(c['name']);
+      final v = LecteurValeurs(journal, source.id, nom ?? '');
+      _ajouter(
+        NatureReferentiel.culture,
+        nom,
+        _culture(v, c, c['type']),
+        source,
+        _texteId(c['id']),
+        licence,
+      );
     }
   }
 

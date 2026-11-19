@@ -9,8 +9,32 @@ const kVersionBrewtarget = 'v5.2.3 ea10908';
 /// Version figée de `alxiw/punkapi` (DIY Dog) : commit.
 const kVersionDiyDog = 'e6c12ab';
 
-/// Date du relevé des sources.
+/// Date du relevé des sources de Brewtarget et de DIY Dog.
 const kDateReleve = '2026-11-08';
+
+/// Date du relevé des fiches techniques de chaque fabricant
+/// (`exchange/donnees/fabricants/cultures.json`), par clé de producteur
+/// (`cleProducteur`). Elle tient lieu de version dans `provenance[]`. Une
+/// entrée d'un producteur absent de cette table est refusée.
+const Map<String, String> kDatesReleveFabricants = {
+  'fermentis': '2026-11-14',
+  'mangrove-jack-s': '2026-11-15',
+  'imperial-yeast': '2026-11-15',
+  'omega-yeast': '2026-11-15',
+  'white-labs': '2026-11-15',
+  'the-yeast-bay': '2026-11-15',
+  'wyeast': '2026-11-15',
+};
+
+/// Date du relevé le plus récent de [dates] : version de la source
+/// `fabricants` au rapport ; `null` si [dates] est vide.
+String? dernierReleve(Map<String, String> dates) {
+  String? dernier;
+  for (final d in dates.values) {
+    if (dernier == null || d.compareTo(dernier) > 0) dernier = d;
+  }
+  return dernier;
+}
 
 /// Licences écrites dans `provenance[].licence`.
 abstract final class Licence {
@@ -25,40 +49,49 @@ abstract final class Licence {
 
   /// Recettes DIY Dog.
   static const diyDog = 'DIY Dog (usage privé)';
+
+  /// Valeurs recopiées à la main des fiches techniques publiées par les
+  /// fabricants (décision de l'utilisateur du 2026-11-14).
+  static const fabricant = 'Données publiées par le fabricant';
 }
 
 /// Source lue, et son rang de priorité pour un même ingrédient (0 d'abord) :
-/// 005, puis 003 et 004, puis 001 (`DATA_SOURCES.md`, décision 4).
+/// fiches des fabricants, puis 005, puis 003 et 004, puis 001
+/// (`DATA_SOURCES.md`, décision 4).
 enum Source {
+  /// `fabricants/cultures.json`, BeerJSON 2.01 écrit à la main depuis les
+  /// fiches techniques des fabricants.
+  fabricants('fabricants', 0, 'cultures.json'),
+
   /// `DefaultContent001-OriginalDefaultData.xml`, BeerXML.
   brewtarget001(
     'brewtarget-001',
-    2,
+    3,
     'DefaultContent001-OriginalDefaultData.xml',
   ),
 
   /// `DefaultContent002-BJCP_2021_Styles.json`, BeerJSON 2.01.
-  brewtarget002('brewtarget-002', 1, 'DefaultContent002-BJCP_2021_Styles.json'),
+  brewtarget002('brewtarget-002', 2, 'DefaultContent002-BJCP_2021_Styles.json'),
 
   /// `DefaultContent003-Ingredients-Hops-Yeasts.json`, BeerJSON 2.01.
   brewtarget003(
     'brewtarget-003',
-    1,
+    2,
     'DefaultContent003-Ingredients-Hops-Yeasts.json',
   ),
 
   /// `DefaultContent004-MoreYeasts.json`, BeerJSON 2.01.
-  brewtarget004('brewtarget-004', 1, 'DefaultContent004-MoreYeasts.json'),
+  brewtarget004('brewtarget-004', 2, 'DefaultContent004-MoreYeasts.json'),
 
   /// `DefaultContent005-Fermentables-Recipes.beer`, DotBeer 1.0.0.
   brewtarget005(
     'brewtarget-005',
-    0,
+    1,
     'DefaultContent005-Fermentables-Recipes.beer',
   ),
 
   /// `alxiw/punkapi`, `data/NNN.json`.
-  diydog('diydog', 3, 'data');
+  diydog('diydog', 4, 'data');
 
   const Source(this.id, this.rang, this.fichier);
 
@@ -71,22 +104,39 @@ enum Source {
   /// Fichier ou dossier de la source, sous son dossier dans `import/sources/`.
   final String fichier;
 
-  /// Version figée de la source.
-  String get version => this == diydog ? kVersionDiyDog : kVersionBrewtarget;
+  /// Version figée de la source ; pour les fiches des fabricants, date du
+  /// relevé le plus récent de [datesFabricants], et [StateError] si la table
+  /// est vide.
+  String version([
+    Map<String, String> datesFabricants = kDatesReleveFabricants,
+  ]) => switch (this) {
+    diydog => kVersionDiyDog,
+    fabricants =>
+      dernierReleve(datesFabricants) ??
+          (throw StateError('aucune date de relevé des fabricants')),
+    _ => kVersionBrewtarget,
+  };
 }
 
-/// Ligne de `provenance[]`.
+/// Ligne de `provenance[]`. [releveFabricant] : date du relevé de la fiche,
+/// obligatoire pour [Source.fabricants], qui la prend pour version.
 Map<String, Object> provenance(
   Source source,
   String sourceId,
-  String licence,
-) => {
-  'source': source.id,
-  'source_id': sourceId,
-  'version': source.version,
-  'licence': licence,
-  'retrieved': kDateReleve,
-};
+  String licence, {
+  String? releveFabricant,
+}) {
+  if (source == Source.fabricants && releveFabricant == null) {
+    throw ArgumentError.notNull('releveFabricant');
+  }
+  return {
+    'source': source.id,
+    'source_id': sourceId,
+    'version': releveFabricant ?? source.version(),
+    'licence': licence,
+    'retrieved': releveFabricant ?? kDateReleve,
+  };
+}
 
 /// Licence d'une entrée du fichier 005 selon son `folder_path` : The Swaen,
 /// la Canadian Homebrewers Association et les exemples dotBeer (agents de

@@ -541,6 +541,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
           fermentationMesuree: densiteDeFermentationMesuree([
             ...?events?.valides,
           ]),
+          densiteInitiale: densiteInitialeLue(ref, brew),
           now: ref.read(horlogeProvider),
           onSubmit: (embouteillage, finalGravity) {
             unawaited(
@@ -565,7 +566,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
     required ScaffoldMessengerState messenger,
     required Brew brew,
     required Embouteillage embouteillage,
-    required double? finalGravity,
+    required DensiteSaisie? finalGravity,
     required bool modification,
   }) async {
     final envoyer = capturerEmbouteillage(ref, brew);
@@ -993,6 +994,8 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
                 plan: plan,
                 sansEtape: false,
                 durees: durees[j.key],
+                importe: brew.importeDUneFiche,
+                close: journeeClose(brew: brew, journee: j, plan: plan),
                 onTapSaisie: mine
                     ? (e) => ouvrirCorrection(
                         context: context,
@@ -1320,6 +1323,11 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
             : ChronologieJour(
                 plan: plan,
                 durees: durees,
+                importe: brew.importeDUneFiche,
+                close: switch (brew.deroule.brassage) {
+                  final b? => journeeClose(brew: brew, journee: b, plan: plan),
+                  null => false,
+                },
                 onTapSaisie: mine
                     ? (e) => ouvrirCorrection(
                         context: context,

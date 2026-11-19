@@ -5,11 +5,9 @@ import 'package:brewing/brewing.dart'
         BrewingInputException,
         FermentationPoint,
         FermentationReading,
-        GravityRead,
         fermentationDayNumber,
         fermentationSeries,
-        gravityGapPoints,
-        readGravity;
+        gravityGapPoints;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,6 +36,7 @@ import '../domain/releves.dart';
 import 'brews_providers.dart';
 import 'courbe_fermentation.dart';
 import 'plage_levure.dart';
+import 'saisie_densite.dart';
 
 /// Relevés affichés sur téléphone avant « Voir les N relevés plus anciens ».
 const kRelevesVisibles = 5;
@@ -67,16 +66,16 @@ List<FermentationPoint>? serieDesReleves({
   required List<Releve> ascendants,
   required ErrorReportService errors,
   required Set<String> reported,
-  BrewEvent? initiale,
+  MesureRetenue? initiale,
 }) {
   if (ascendants.isEmpty) return const [];
   try {
     return fermentationSeries(
       brewedAt: brew.brewedAt ?? ascendants.first.measuredAt,
       readings: [
-        if (initiale != null)
+        if (initiale != null && initiale.value != null)
           FermentationReading(
-            measuredAt: initiale.measuredAt,
+            measuredAt: initiale.event.measuredAt,
             gravity: initiale.value,
           ),
         for (final r in ascendants)
@@ -104,7 +103,12 @@ List<FermentationPoint>? serieDesReleves({
 String libelleReleve(ReleveSaisi releve) {
   final quand = 'du ${formatJourCourtHeure(releve.measuredAt)}';
   final gravity = releve.gravity;
-  if (gravity != null) return 'Densité ${formatDensite(gravity)} $quand';
+  final sg = gravity?.sg;
+  final brix = gravity?.detail?.brix;
+  if (sg != null) return 'Densité ${formatDensite(sg)} $quand';
+  if (brix != null) {
+    return 'Densité ${formatNombre(brix, decimales: 1, fixe: true)}$nbsp°Brix $quand';
+  }
   final temperature = releve.temperature;
   if (temperature != null) {
     return 'Température ${formatCelsius(temperature)} $quand';
@@ -123,6 +127,41 @@ String? etapeDuReleve(Brew brew, Releve releve) {
   return '${trouvee.journee.name.trim()} : ${trouvee.ligne.name}';
 }
 
+/// Date d'un relevé, affichée et lue, d'après [BrewEvent.natureHeure] :
+/// « sam. 15 nov. 18:30 » ; relevé importé sans heure, « sam. 15 nov. · heure
+/// non notée » ; relevé J+28, « sam. 13 déc. · date estimée ». Jamais déduite
+/// de l'heure 12:00.
+({String affiche, String lu}) dateDeReleve(BrewEvent e) {
+  final at = e.measuredAt;
+  return switch (e.natureHeure) {
+    NatureHeure.notee => (affiche: formatJourHeure(at), lu: jourHeureParle(at)),
+    NatureHeure.estimee => (
+      affiche: '${formatJourMois(at)} vers ${formatHeure(at)}',
+      lu: '${jourParle(at)} vers ${heureParlee(at)}, heure estimée',
+    ),
+    NatureHeure.nonNotee => (
+      affiche: '${formatJourMois(at)} · heure non notée',
+      lu: '${jourParle(at)}, heure non notée',
+    ),
+    NatureHeure.dateEstimee => (
+      affiche: '${formatJourMois(at)} · date estimée',
+      lu: '${jourParle(at)}, date estimée',
+    ),
+  };
+}
+
+/// Date de l'info-bulle de la courbe : celle du relevé à cette heure
+/// ([dateDeReleve]), sinon la date et l'heure.
+String Function(DateTime) _dateDansLaCourbe(List<BrewEvent> events) {
+  final parInstant = {
+    for (final e in events) e.measuredAt.microsecondsSinceEpoch: e,
+  };
+  return (at) {
+    final e = parInstant[at.microsecondsSinceEpoch];
+    return e == null ? formatJourHeure(at) : dateDeReleve(e).affiche;
+  };
+}
+
 /// Texte lu par un lecteur d'écran pour une ligne de relevé.
 String releveParle({
   required Releve releve,
@@ -130,14 +169,20 @@ String releveParle({
   required double? ecart,
   String? etape,
 }) {
-  final gravity = releve.gravityValue;
+  final gravity = releve.gravity;
+  final densite = releve.densite;
   final temperature = releve.temperatureValue;
   final note = releve.note;
+  final complement = gravity == null || densite == null
+      ? null
+      : complementDensite(gravity, densite);
   return [
-    jourHeureParle(releve.measuredAt),
+    dateDeReleve(releve.events.first).lu,
     if (jour != null) 'jour $jour',
     ?etape,
-    if (gravity != null) 'densité ${formatDensite(gravity)}',
+    if (gravity != null && densite != null)
+      'densité ${valeurDensite(gravity, densite)}',
+    ?complement,
     if (temperature != null)
       '${formatNombre(temperature, decimales: 1)} degrés',
     if (ecart != null)
@@ -222,7 +267,14 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
   List<Widget> _contenu(ListeLue<BrewEvent> liste, bool peutAjouter) {
     final brew = widget.brew;
     final mine = widget.mine;
-    final releves = relevesDe(liste.valides);
+    // Densité initiale retenue (« Prévu et mesuré ») : premier point de la
+    // courbe, et base de la correction de l'alcool d'un réfractomètre.
+    final retenues = MesuresRetenues.de(brew, liste.valides);
+    final initiale = retenues.densiteInitiale;
+    final releves = relevesDe(
+      liste.valides,
+      densiteInitiale: retenues.densiteInitialeSg,
+    );
     if (releves.isEmpty) {
       return [
         TexteAbsent(
@@ -247,10 +299,9 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
         for (final (i, r) in ascendants.indexed) r.cle: points[i],
     };
     final brewedAt = brew.brewedAt;
-    // Courbe : la densité initiale retenue du jour de brassage (« Prévu et
-    // mesuré ») en premier point, à son heure de mesure ; elle n'entre pas
-    // dans la liste des relevés ni dans leurs écarts.
-    final initiale = MesuresRetenues.de(brew, liste.valides).densiteInitiale;
+    // Courbe : la densité initiale retenue du jour de brassage en premier
+    // point, à son heure de mesure ; elle n'entre pas dans la liste des
+    // relevés ni dans leurs écarts.
     final dejaReleve =
         initiale != null &&
         ascendants.any((r) => r.events.any((e) => e.id == initiale.event.id));
@@ -259,7 +310,7 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
         : serieDesReleves(
             brew: brew,
             ascendants: ascendants,
-            initiale: initiale.event,
+            initiale: initiale,
             errors: ref.read(errorReportServiceProvider),
             reported: ref.read(planReportsProvider),
           );
@@ -303,6 +354,10 @@ class _SectionReleveState extends ConsumerState<SectionReleve> {
       else if (brewedAt != null)
         CourbeFermentation(
           points: pointsCourbe,
+          libelleDate: _dateDansLaCourbe([
+            for (final r in ascendants) ...r.events,
+            ?initiale?.event,
+          ]),
           densiteInitialePrevue: prevu.originalGravity,
           densiteFinalePrevue: prevu.finalGravity,
           ecartInitiale: ecarts.initiale,
@@ -397,12 +452,18 @@ class _LigneReleve extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gravity = releve.gravityValue;
+    final gravity = releve.gravity;
+    final densite = releve.densite;
     final temperature = releve.temperatureValue;
     final ecart = point?.gravityChangePoints;
     final muted = theme.colorScheme.onSurfaceVariant;
+    final complement = gravity == null || densite == null
+        ? null
+        : complementDensite(gravity, densite, avecEtiquette: true);
     final valeurs = <String?>[
-      gravity == null ? null : formatDensite(gravity),
+      gravity == null || densite == null
+          ? null
+          : valeurDensite(gravity, densite),
       temperature == null ? null : formatCelsius(temperature),
       ecart == null ? null : formatEcart(ecart),
     ];
@@ -455,12 +516,27 @@ class _LigneReleve extends StatelessWidget {
                 ),
                 Text(
                   [
-                    formatJourHeure(releve.measuredAt),
+                    dateDeReleve(releve.events.first).affiche,
                     if (jour != null) 'J+$jour',
                     ?etape,
                   ].join(' · '),
                   style: theme.textTheme.bodyMedium?.copyWith(color: muted),
                 ),
+                if (complement != null)
+                  Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (densite?.estCorrigee ?? false)
+                        const Etiquette(label: 'corrigée'),
+                      Text(
+                        complement,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: muted,
+                        ),
+                      ),
+                    ],
+                  ),
                 if (note != null) Text(note, style: theme.textTheme.bodyMedium),
                 if (releve.hasPendingWrites)
                   const Padding(
@@ -490,6 +566,7 @@ void ouvrirAjoutReleve(BuildContext context, WidgetRef ref, Brew brew) {
         brewedAt: brew.brewedAt,
         bottledAt: brew.bottledAt,
         now: ref.read(horlogeProvider),
+        densiteInitiale: densiteInitialeLue(ref, brew),
         onSubmit: (saisie) {
           final creation = repo.addReleve(
             brewId: brew.id,
@@ -543,6 +620,7 @@ void ouvrirCorrectionReleve({
         brewedAt: brew.brewedAt,
         bottledAt: brew.bottledAt,
         now: ref.read(horlogeProvider),
+        densiteInitiale: densiteInitialeLue(ref, brew),
         correction: releve,
         onSubmit: (saisie) {
           unawaited(
@@ -620,10 +698,15 @@ class FormulaireReleve extends StatefulWidget {
     required this.onSubmit,
     this.correction,
     this.onDelete,
+    this.densiteInitiale,
   });
 
   final DateTime? brewedAt;
   final DateTime? bottledAt;
+
+  /// Densité initiale retenue du brassin, pour corriger de l'alcool une
+  /// lecture de réfractomètre.
+  final double? densiteInitiale;
   final DateTime Function() now;
   final ValueChanged<ReleveSaisi> onSubmit;
   final Releve? correction;
@@ -635,7 +718,7 @@ class FormulaireReleve extends StatefulWidget {
 
 class _FormulaireReleveState extends State<FormulaireReleve> {
   final _formKey = GlobalKey<FormState>();
-  final _gravity = TextEditingController();
+  late final SaisieDensiteControleur _gravity;
   final _temperature = TextEditingController();
   final _note = TextEditingController();
   final _gravityFocus = FocusNode();
@@ -645,19 +728,41 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
   bool _noteOuverte = false;
   String? _message;
   bool _envoye = false;
-  late final ({String gravity, String temperature, String note, DateTime? at})
+
+  /// Vrai dès que le brasseur modifie la température de l'échantillon : elle
+  /// ne suit plus celle du fermenteur.
+  bool _echantillonModifie = false;
+  late final ({
+    String gravity,
+    String echantillon,
+    String temperature,
+    String note,
+    DateTime? at,
+  })
   _initial;
 
   Releve? get _edit => widget.correction;
 
   /// Vrai si une saisie serait perdue en quittant le formulaire.
   bool get _saisieEnCours =>
-      _gravity.text != _initial.gravity ||
+      _gravity.lecture.text != _initial.gravity ||
+      _gravity.temperature.text != _initial.echantillon ||
       _temperature.text != _initial.temperature ||
       _note.text != _initial.note ||
       _at != _initial.at;
 
   void _changement() => setState(() {});
+
+  /// La température de l'échantillon reprend celle du fermenteur tant que le
+  /// brasseur ne l'a pas modifiée.
+  void _suivreFermenteur() {
+    if (_echantillonModifie || !(_gravity.instrument?.flottant ?? true)) {
+      return;
+    }
+    if (_gravity.temperature.text != _temperature.text) {
+      _gravity.temperature.text = _temperature.text;
+    }
+  }
 
   Future<void> _quitter() async {
     final navigator = Navigator.of(context);
@@ -677,10 +782,13 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
   void initState() {
     super.initState();
     final edit = _edit;
+    final g = edit?.gravity;
+    _gravity = g == null
+        ? SaisieDensiteControleur()
+        : SaisieDensiteControleur.depuis(g.value, g.densite);
+    if (g?.densite?.temperatureEchantillon != null) _echantillonModifie = true;
     if (edit != null) {
       _at = edit.measuredAt;
-      final g = edit.gravityValue;
-      if (g != null) _gravity.text = formatDensite(g);
       final t = edit.temperatureValue;
       if (t != null) _temperature.text = texteSaisi(t, decimales: 1);
       final n = edit.note;
@@ -689,14 +797,23 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
         _noteOuverte = true;
       }
     }
+    // Température de l'échantillon reprise du fermenteur dès l'ouverture,
+    // correction comprise, tant que le brasseur ne l'a pas modifiée.
+    _suivreFermenteur();
     _initial = (
-      gravity: _gravity.text,
+      gravity: _gravity.lecture.text,
+      echantillon: _gravity.temperature.text,
       temperature: _temperature.text,
       note: _note.text,
       at: _at,
     );
-    _gravity.addListener(_changement);
+    _gravity.lecture.addListener(_changement);
+    _gravity.temperature.addListener(_changement);
     _temperature.addListener(_changement);
+    _temperature.addListener(_suivreFermenteur);
+    // Instrument changé (un flottant après un autre instrument) : la
+    // température de l'échantillon, vidée, reprend celle du fermenteur.
+    _gravity.addListener(_suivreFermenteur);
     _note.addListener(_changement);
   }
 
@@ -748,12 +865,7 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
       unawaited(montrerChamp(invalid.first.context));
       return;
     }
-    final gravity = _gravity.text.trim().isEmpty
-        ? null
-        : switch (readGravity(_gravity.text)) {
-            GravityRead(:final sg) => sg,
-            _ => null,
-          };
+    final gravity = _gravity.vide ? null : _gravity.saisie();
     final temperature = lireNombre(_temperature.text).valeur;
     final note = _note.text.trim();
     if (gravity == null && temperature == null && note.isEmpty) {
@@ -791,21 +903,24 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
     final bottled = widget.bottledAt;
     final apresEmbouteillage =
         bottled != null && jourAvant(bottled, at ?? widget.now());
-    final densite = ChampDensite(
-      controller: _gravity,
+    final densite = BlocDensite(
+      controleur: _gravity,
       focusNode: _gravityFocus,
       autofocus: !correcting,
-      onSubmit: _temperatureFocus.requestFocus,
-      textInputAction: TextInputAction.next,
+      onSubmit: _soumettre,
+      textInputAction: TextInputAction.done,
       obligatoire: false,
+      enFermentation: true,
+      densiteInitiale: widget.densiteInitiale,
+      onTemperatureModifiee: () => _echantillonModifie = true,
     );
     final temperature = ChampNombre(
       controller: _temperature,
       focusNode: _temperatureFocus,
-      label: 'Température (°C)',
+      label: 'Température du fermenteur (°C)',
       max: 110,
-      textInputAction: TextInputAction.done,
-      onSubmitted: (_) => _soumettre(),
+      textInputAction: TextInputAction.next,
+      onSubmitted: (_) => _gravityFocus.requestFocus(),
     );
     return PopScope(
       canPop: !_saisieEnCours,
@@ -826,27 +941,11 @@ class _FormulaireReleveState extends State<FormulaireReleve> {
               ),
             ),
             const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final minChamp =
-                    kReleveChampMinWidth *
-                    MediaQuery.textScalerOf(context).scale(1);
-                if (constraints.maxWidth >= minChamp * 2 + 12) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: densite),
-                      const SizedBox(width: 12),
-                      Expanded(child: temperature),
-                    ],
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [densite, const SizedBox(height: 12), temperature],
-                );
-              },
-            ),
+            // Température du fermenteur d'abord : elle préremplit celle de
+            // l'échantillon d'un densimètre flottant.
+            temperature,
+            const SizedBox(height: 12),
+            densite,
             const SizedBox(height: 8),
             Row(
               children: [

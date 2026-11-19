@@ -7,7 +7,6 @@ import 'package:brewing/brewing.dart'
         BrewingInputException,
         ComparisonLine,
         FermentableKind,
-        GravityRead,
         MeasuredComputed,
         MeasuredImpossible,
         MeasuredImpossibleKind,
@@ -16,8 +15,7 @@ import 'package:brewing/brewing.dart'
         MeasurementGap,
         MeasurementGapKind,
         compareBrewWithPlan,
-        fermentationDayNumber,
-        readGravity;
+        fermentationDayNumber;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -43,6 +41,7 @@ import '../domain/mesures_retenues.dart';
 import '../domain/prevu.dart';
 import 'brews_providers.dart';
 import 'releve_fermentation.dart';
+import 'saisie_densite.dart';
 
 /// Texte de l'annonce d'un choix écrit hors ligne.
 const _kChoixHorsLigne =
@@ -51,6 +50,33 @@ const _kChoixHorsLigne =
 /// Résultat de la comparaison, pour l'écran.
 sealed class ComparaisonEvaluee {
   const ComparaisonEvaluee();
+}
+
+/// Date d'une mesure retenue, affichée et lue, d'après [BrewEvent.natureHeure],
+/// jamais d'après l'heure : « 15 nov. 12:10 » ; heure estimée à l'import,
+/// « 15 nov. 12:10 (estimée) », lu « … vers 12 h 10, heure estimée » ; relevé
+/// sans heure, « 15 nov. (heure non notée) » ; relevé J+28, « 13 déc. (date
+/// estimée) ».
+({String affiche, String lu}) dateDeMesure(BrewEvent e) {
+  final at = e.measuredAt;
+  return switch (e.natureHeure) {
+    NatureHeure.notee => (
+      affiche: formatJourCourtHeure(at),
+      lu: jourHeureParle(at),
+    ),
+    NatureHeure.estimee => (
+      affiche: '${formatJourCourtHeure(at)} (estimée)',
+      lu: '${jourParle(at)} vers ${heureParlee(at)}, heure estimée',
+    ),
+    NatureHeure.nonNotee => (
+      affiche: '${formatJourCourt(at)} (heure non notée)',
+      lu: '${jourParle(at)}, heure non notée',
+    ),
+    NatureHeure.dateEstimee => (
+      affiche: '${formatJourCourt(at)} (date estimée)',
+      lu: '${jourParle(at)}, date estimée',
+    ),
+  };
 }
 
 class ComparaisonObtenue extends ComparaisonEvaluee {
@@ -204,11 +230,34 @@ class _Tableau extends ConsumerWidget {
     return 'Sans étape';
   }
 
-  String _origine(MesureRetenue retenue, {required bool masquerDerniere}) => [
-    _etape(retenue.event),
-    formatJourCourtHeure(retenue.event.measuredAt),
-    if (retenue.choisie) 'Choisie' else if (!masquerDerniere) 'Dernière mesure',
-  ].join(' · ');
+  /// Origine d'une valeur retenue, affichée et lue : « Empâtage · 15 nov.
+  /// 12:10 (estimée) · Dernière mesure », « Relevé J+28 · 13 déc. (date
+  /// estimée) · Dernière mesure ».
+  ({String affiche, String lu}) _origine(
+    MesureRetenue retenue, {
+    required bool masquerDerniere,
+  }) {
+    final e = retenue.event;
+    final densite = retenue.densite;
+    final quand = dateDeMesure(e);
+    final fin = [
+      if (retenue.choisie)
+        'Choisie'
+      else if (!masquerDerniere)
+        'Dernière mesure',
+      if (densite != null) ?complementDensite(e, densite, avecEtiquette: true),
+    ];
+    return (
+      affiche: [_etape(e), quand.affiche, ...fin].join(' · '),
+      lu: [_etape(e), quand.lu, ...fin].join(', '),
+    );
+  }
+
+  /// Valeur d'une mesure proposée par « Changer » : densité retenue
+  /// (`densiteDe`, `brewing/`) ou volume.
+  String _valeur(BrewEvent e, MesuresRetenues retenues) => e.isGravity
+      ? valeurDensite(e, retenues.densite(e))
+      : libelleMesure(e.measureType!, e.value!);
 
   /// « Changer » : présent pour le propriétaire dès qu'une mesure peut être retenue.
   VoidCallback? _actionChanger(
@@ -216,11 +265,14 @@ class _Tableau extends ConsumerWidget {
     WidgetRef ref,
     MesureRetenueChamp champ,
     MesureRetenue? retenue,
+    MesuresRetenues retenues,
   ) {
     final candidats = candidatsRetenus(champ, events);
     if (!mine || candidats.isEmpty) return null;
     return () => unawaited(
-      uneAction(() => _changer(context, ref, champ, retenue, candidats)),
+      uneAction(
+        () => _changer(context, ref, champ, retenue, candidats, retenues),
+      ),
     );
   }
 
@@ -230,6 +282,7 @@ class _Tableau extends ConsumerWidget {
     MesureRetenueChamp champ,
     MesureRetenue? retenue,
     List<BrewEvent> candidats,
+    MesuresRetenues retenues,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     final repo = ref.read(brewsRepositoryProvider);
@@ -246,8 +299,8 @@ class _Tableau extends ConsumerWidget {
         courant: courant,
         candidats: candidats,
         libelle: (e) => (
-          valeur: libelleMesure(e.measureType!, e.value!),
-          origine: '${_etape(e)} · ${formatJourCourtHeure(e.measuredAt)}',
+          valeur: _valeur(e, retenues),
+          origine: '${_etape(e)} · ${dateDeMesure(e).affiche}',
         ),
       ),
     );
@@ -263,7 +316,7 @@ class _Tableau extends ConsumerWidget {
     final annonce = event == null
         ? '${_titreChamp(champ)} : dernière mesure. ${_recalcule(champ)}'
         : '${_titreChamp(champ)} : '
-              '${libelleMesure(event.measureType!, event.value!)}. '
+              '${_valeur(event, retenues)}. '
               '${_recalcule(champ)}';
     suivreEcriture(
       messenger: messenger,
@@ -290,7 +343,7 @@ class _Tableau extends ConsumerWidget {
         type: type,
         brewedAt: brew.brewedAt,
         now: ref.read(horlogeProvider),
-        onSubmit: (value, at) {
+        onSubmit: (value, densite, at) {
           final created = repo.addEvent(
             brewId: brew.id,
             input: BrewEventInput(
@@ -298,15 +351,19 @@ class _Tableau extends ConsumerWidget {
               kind: BrewEventKind.measurement,
               measureType: type,
               value: value,
+              densite: densite,
               measuredAt: at,
             ),
           );
+          final brix = densite?.brix;
+          final lu = brix != null
+              ? '${formatNombre(brix, decimales: 1, fixe: true)}$nbsp°Brix'
+              : libelleMesure(type, value!);
           unawaited(
             created.written.catchError((Object _) {
               annoncerRefus(
                 messenger,
-                '${type.label} ${libelleMesure(type, value)} du '
-                '${formatJourCourtHeure(at)}',
+                '${type.label} $lu du ${formatJourCourtHeure(at)}',
               );
             }),
           );
@@ -400,6 +457,7 @@ class _Tableau extends ConsumerWidget {
           ref,
           MesureRetenueChamp.densiteInitiale,
           retenues.densiteInitiale,
+          retenues,
         ),
         changerSemantique: 'Changer la densité initiale',
         raisons: _raisonsDensite(c.originalGravity.measured, mine, () {
@@ -430,6 +488,7 @@ class _Tableau extends ConsumerWidget {
           ref,
           MesureRetenueChamp.densiteFinale,
           retenues.densiteFinale,
+          retenues,
         ),
         changerSemantique: 'Changer la densité finale',
         raisons: _raisonsDensite(
@@ -468,6 +527,7 @@ class _Tableau extends ConsumerWidget {
           ref,
           MesureRetenueChamp.volumeFermenteur,
           retenues.volumeFermenteur,
+          retenues,
         ),
         changerSemantique: 'Changer le volume en fermenteur',
         raisons: _raisonsVolume(c.fermenterVolume.measured, mine, () {
@@ -591,7 +651,9 @@ class _DonneesLigne {
   final String Function(double) format;
   final String Function(double) ecart;
   final MesureRetenue? retenue;
-  final String? origine;
+
+  /// Origine de la valeur retenue, affichée et lue.
+  final ({String affiche, String lu})? origine;
   final VoidCallback? onChanger;
   final String? changerSemantique;
   final String? suffixeValeur;
@@ -930,7 +992,14 @@ class _LigneComparaison extends StatelessWidget {
                     spacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (origine != null) Text(origine, style: muted),
+                      if (retenue?.densite?.estCorrigee ?? false)
+                        const Etiquette(label: 'corrigée'),
+                      if (origine != null)
+                        Semantics(
+                          label: origine.lu,
+                          excludeSemantics: true,
+                          child: Text(origine.affiche, style: muted),
+                        ),
                       if (retenue != null && retenue.event.hasPendingWrites)
                         const Etiquette(label: 'En attente du réseau'),
                     ],
@@ -1119,7 +1188,11 @@ class _FormulaireMesureSeule extends StatefulWidget {
   final MeasureType type;
   final DateTime? brewedAt;
   final DateTime Function() now;
-  final void Function(double value, DateTime at) onSubmit;
+
+  /// [value] : valeur saisie, ou lecture en SG d'une densité (nulle pour un
+  /// réfractomètre) ; [densite] : instrument et lecture brute.
+  final void Function(double? value, DetailDensite? densite, DateTime at)
+  onSubmit;
 
   @override
   State<_FormulaireMesureSeule> createState() => _FormulaireMesureSeuleState();
@@ -1128,6 +1201,7 @@ class _FormulaireMesureSeule extends StatefulWidget {
 class _FormulaireMesureSeuleState extends State<_FormulaireMesureSeule> {
   final _formKey = GlobalKey<FormState>();
   final _value = TextEditingController();
+  final _densite = SaisieDensiteControleur();
   final _focus = FocusNode();
   DateTime? _at;
   String? _erreur;
@@ -1136,6 +1210,7 @@ class _FormulaireMesureSeuleState extends State<_FormulaireMesureSeule> {
   @override
   void dispose() {
     _value.dispose();
+    _densite.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -1188,16 +1263,17 @@ class _FormulaireMesureSeuleState extends State<_FormulaireMesureSeule> {
       setState(() => _erreur = 'La mesure ne peut pas précéder le brassage.');
       return;
     }
-    final double value = switch (widget.type) {
-      MeasureType.gravity => switch (readGravity(_value.text)) {
-        GravityRead(:final sg) => sg,
-        _ => lireNombre(_value.text).valeur!,
-      },
-      _ => lireNombre(_value.text).valeur!,
-    };
+    final densite = widget.type == MeasureType.gravity
+        ? _densite.saisie()
+        : null;
+    if (widget.type == MeasureType.gravity && densite == null) return;
     _envoye = true;
     Navigator.of(context).pop();
-    widget.onSubmit(value, at);
+    widget.onSubmit(
+      densite == null ? lireNombre(_value.text).valeur! : densite.sg,
+      densite?.detail,
+      at,
+    );
   }
 
   @override
@@ -1216,8 +1292,8 @@ class _FormulaireMesureSeuleState extends State<_FormulaireMesureSeule> {
           ),
           const SizedBox(height: 16),
           if (widget.type == MeasureType.gravity)
-            ChampDensite(
-              controller: _value,
+            BlocDensite(
+              controleur: _densite,
               focusNode: _focus,
               autofocus: true,
               onSubmit: _soumettre,
