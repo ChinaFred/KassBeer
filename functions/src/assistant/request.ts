@@ -23,6 +23,7 @@ import {
   dataBlock,
   type DataBlock,
 } from "./prompt";
+import { assistantOutputFormat } from "./proposition";
 
 // ── Bornes (ADR-015, section 4 et amendements) ──────────────────────────────
 
@@ -407,7 +408,8 @@ export function contextText(args: AssistantArgs): string {
 /**
  * Requête du tour : un seul bloc système, les consignes fixes (en cache) ; un seul message
  * `user`, en dernier : les blocs de contexte, puis le bloc `DEMANDE` (mode `turn`) ou la
- * consigne de résumé fixe (mode `summary`). La requête finit toujours par ce message. Pure.
+ * consigne de résumé fixe (mode `summary`). La requête finit toujours par ce message. Mode
+ * `turn` : sortie structurée (`assistantOutputFormat`). Pure.
  */
 export function buildAssistantRequest(args: AssistantArgs): ClaudeTurnRequest {
   const context = contextText(args);
@@ -423,6 +425,9 @@ export function buildAssistantRequest(args: AssistantArgs): ClaudeTurnRequest {
     timeoutMs: CALL_TIMEOUT_MS,
     correlationId: args.conversationId,
     promptVersion: ASSISTANT_PROMPT_VERSION,
+    // Lot A2 : un tour rend `{reponse, proposition}` (sortie structurée) ; un résumé reste
+    // du texte, sans proposition.
+    outputFormat: args.mode === "turn" ? assistantOutputFormat() : null,
   };
 }
 

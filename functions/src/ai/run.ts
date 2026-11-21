@@ -58,6 +58,8 @@ export interface ClaudeTurnRequest {
   correlationId: string;
   /** Version du prompt du poste, notée au journal. */
   promptVersion: number;
+  /** Sortie structurée du poste (`output_config.format`), ou `null` pour du texte. */
+  outputFormat?: Record<string, unknown> | null;
 }
 
 export interface ClaudeTurnResult {
@@ -69,7 +71,8 @@ export interface ClaudeTurnResult {
 
 export type Logger = (level: "error" | "warn" | "info", entry: LogEntry) => void;
 
-const defaultLogger: Logger = (level, entry) => {
+/** Journal par défaut : `logError`, `logWarn` ou `logInfo` selon le niveau. */
+export const defaultLogger: Logger = (level, entry) => {
   if (level === "error") logError(entry);
   else if (level === "warn") logWarn(entry);
   else logInfo(entry);
@@ -296,6 +299,7 @@ export async function runClaudeTurn(
       messages: request.messages,
       maxTokens: request.maxTokens,
       timeoutMs: request.timeoutMs,
+      outputFormat: request.outputFormat ?? null,
     },
     deps.apiKey(),
     { fetchImpl: deps.fetchImpl, log: (entry) => log("error", entry) },

@@ -454,3 +454,56 @@ Choix du développement, relus par `securite` et `relecteur-regles` :
 - **Exécution** : `cpu: 1` et 512 Mio, exigés par Cloud Run pour `concurrency: 4`.
 - **Client** : le mois affiché par « IA ce mois » est celui de l'appareil ; le serveur compte en
   mois de Paris, d'où un écart possible de quelques heures en fin de mois.
+
+## Amendement du 2026-11-21 : lot A2
+
+Décision de l'utilisateur et choix du développement, pour la partie sans écran du lot A2 :
+
+- **Élément changé depuis la proposition** (décision de l'utilisateur) : la section 6 désignait
+  la ligne d'une modification ou d'un retrait par son seul `index`. Une opération `update_*` ou
+  `remove_*` (malt, houblon, autre ajout, palier) porte aussi `name`, obligatoire, et
+  `appliquerProposition` la refuse quand le nom de la ligne à cet index diffère de ce `name`,
+  comparés par nom normalisé (`cleNormalisee`, comme `ingredientKey`). Raison stable
+  `element_changed` (« ce houblon a changé depuis la proposition ») ; les autres opérations
+  s'appliquent. Une modification garde donc le nom de la ligne : un remplacement d'ingrédient
+  passe par un retrait puis un ajout. Cas dans `test-fixtures/recipe_assistant_operations.json`.
+- **Proposition périmée** (décision de l'utilisateur) : l'aperçu d'une proposition se recalcule
+  sur le brouillon actuel de l'éditeur, et non sur celui envoyé au modèle ; les opérations dont
+  la ligne a changé entre-temps sont listées comme refusées.
+- **Clé des marques** : `<nature>:<ingredientKey>:<champ>` avec la clé entière de `brewing/`,
+  préfixe compris (`hop:houblon-citra:alpha_acid`, et non `hop:citra:alpha_acid` comme
+  l'exemple de la section 6).
+- **Règle de `ai_proposed`** : `d.get('ai_proposed', []).size() <= 100` au lieu de
+  `optList(d, 'ai_proposed', 100)`, sur `recipes/` et sur la copie figée d'un brassin. Mesure du
+  2026-11-21 : la création d'un brassin qui copie la plus grande recette avec 100 marques
+  dépasse le budget de 1 000 expressions avec `optList` ou `optArray`, et passe avec le contrôle
+  de taille seul (création de la recette : 6 `pad10()` ; création du brassin : 0 `pad10()`,
+  marge nulle). Règle gardée telle quelle par décision de l'utilisateur du 2026-11-21 : risque
+  accepté qu'un texte ou une map de 100 éléments au plus passe à la place d'une liste, et que
+  la taille de chaque entrée ne soit pas bornée par les règles ; `exchange/` lit ces valeurs
+  comme illisibles et l'application les rapporte.
+- **Marque sans ambiguïté** : une marque vaut pour une clé d'ingrédient. Elle ne reste que si
+  toutes les lignes de cette clé qui ont une valeur pour le champ ont la valeur marquée,
+  inchangée depuis la référence ; une valeur du modèle pour un ingrédient dont une autre ligne
+  porte déjà une valeur de ce champ est refusée (`champ_incompatible`). Aucune valeur saisie à
+  la main ne s'affiche « proposée par l'IA ».
+- **Changement de conversation** : après « Résumer et continuer » ou « Nouvelle conversation »,
+  la proposition appliquée ne s'annule plus ; le brouillon reste annulable en quittant
+  l'éditeur sans enregistrer. La proposition est périmée quand le brouillon a changé depuis
+  l'« Envoyer » du message.
+- **Bornes et format** : le format envoyé au modèle (`output_config.format`) porte types,
+  valeurs permises et champs requis ; les bornes des valeurs restent dans la fixture et sont
+  vérifiées par le client, opération par opération (`hors_bornes`). Le serveur écarte une
+  proposition hors format ou de plus de 30 opérations (`proposition_rejected: true`, tour
+  compté) et rend `ai_no_answer` pour une sortie qui n'est pas un JSON avec `reponse`.
+- **Écran de la proposition** (décisions de l'utilisateur du 2026-11-21, sur la proposition de
+  `ux-designer`, toutes ses recommandations retenues) :
+  - « Appliquer au brouillon » d'un seul appui, sans déplier l'aperçu ;
+  - proposition périmée : bouton gardé, aperçu recalculé sur le brouillon actuel, détail
+    déplié et avertissement « La recette a changé depuis cette proposition. Vérifiez le détail
+    avant d'appliquer. » ;
+  - garde du nom (`element_changed`, ci-dessus) ;
+  - sur téléphone, la feuille du bas se ferme après « Appliquer » ;
+  - « Annuler la proposition » après une saisie à la main demande une confirmation ;
+  - marque écrite en texte « (proposée par l'IA) » après la valeur.
+

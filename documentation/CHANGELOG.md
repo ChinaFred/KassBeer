@@ -6,6 +6,35 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.91 — fonctionnel
+
+L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou
+retirer un malt, un houblon, un ajout ou un palier, changer une quantité, le volume, le nom ou
+la levure. Sa réponse porte alors une carte « Proposition de l'assistant » qui montre l'effet sur
+la densité, le degré, l'amertume et la couleur. Un appui sur « Appliquer au brouillon » recopie
+tous les changements dans la recette ; rien n'est enregistré avant « Enregistrer », et
+« Annuler la proposition » rend la recette d'avant. Une valeur technique que la Bibliothèque ne
+connaît pas (acides alpha, couleur, rendement, atténuation) et que l'IA a proposée s'affiche avec
+la mention « (proposée par l'IA) », dans l'éditeur, la fiche, le brassin et le compte rendu
+d'export. Sur téléphone, l'assistant se ferme après l'application pour montrer la recette.
+
+### v0.1.91 — technique
+
+Lot A2 d'ADR-015 (amendement du 2026-11-21). Sorties structurées de `recipeAssistantTurn`
+(`output_config.format`, `{reponse, proposition}`), prompt en version 2 ; une proposition hors
+format ou de plus de 30 opérations est rendue `null`, tour compté. Liste fermée des 18
+opérations dans `test-fixtures/recipe_assistant_operations.json`, rejouée par `exchange/test/`
+et `functions/test/`. `exchange/lib/src/proposition.dart` (`lireProposition`,
+`appliquerProposition`, garde du nom sur l'index : refus `element_changed`, décision de
+l'utilisateur) et `marques_ia.dart` (`ai_proposed`, `<nature>:<ingredientKey>:<champ>`, marque
+gardée seulement si toutes les lignes de la clé portent la valeur marquée) ;
+`lireRecettePartielle` devient publique. `ai_proposed` dans l'enveloppe de `recipes/` et de
+`recipe_snapshot`, règle `size() <= 100` seule : budget des règles à marge nulle à la création
+d'un brassin, taille de chaque entrée non bornée, risque accepté par l'utilisateur le
+2026-11-21 et figé par des tests. Écran : `carte_proposition.dart`, aperçu par `computeRecipe`,
+Bibliothèque lue en cache hors ligne sans repli sur la valeur du modèle. `main.dart.js` :
+5 901 437 → 5 947 894 octets (+ 0,79 %). Aucune dépendance changée.
+
 ### v0.1.85 — fonctionnel
 
 Avant de lancer une analyse, un développement ou une livraison d'un ticket, l'administrateur

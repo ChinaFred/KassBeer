@@ -182,7 +182,7 @@ service cloud.firestore {
     // qu'à partir de ses types, sans prix.
     function recipeFields() {
       return ['format_version', 'owner_uid', 'owner_name', 'equipment_id', 'imported_from',
-              'brew_steps', 'recipe', 'created_at', 'updated_at'];
+              'brew_steps', 'ai_proposed', 'recipe', 'created_at', 'updated_at'];
     }
 
     // Couple {value, unit} : absent, ou complet dans l'unité canonique de la grandeur.
@@ -262,7 +262,21 @@ service cloud.firestore {
         && optString(d, 'equipment_id', 128)
         // Chronologie du jour : 60 étapes au plus (key, name, duration_min, temp_c).
         && optList(d, 'brew_steps', 60)
-        && optString(d, 'imported_from', 200);
+        && optString(d, 'imported_from', 200)
+        // Marques « proposée par l'IA » (ADR-015, lot A2) : 100 entrées au plus. Leur forme
+        // (`<nature>:<ingredientKey>:<champ>`, 200 caractères) est lue par exchange/, qui ignore
+        // et rapporte une entrée hors forme ou un champ qui n'est pas une liste. Taille seule,
+        // ni optList ni optArray (ADR-015 prévoyait optList) : mesure du 2026-11-21, la création
+        // d'un brassin qui copie la plus grande recette et 100 marques dépasse le budget de
+        // 1 000 expressions avec un contrôle de type, et passe avec celui-ci (marge nulle).
+        // Risque accepté (décision de l'utilisateur du 2026-11-21) : un texte ou une map de
+        // 100 éléments au plus passe, et la taille de chaque entrée n'est pas bornée (une
+        // entrée de 10 000 caractères, une map imbriquée passent) ; null et un nombre sont
+        // refusés (size() en erreur). Mesure du budget avec cette règle (pad10() = dix
+        // pad(), plus grande recette et 100 marques de 200 caractères) : création de la
+        // recette 6 pad10() (7 refusés) ; création du brassin qui la copie 0 pad10(), un
+        // pad() passe et deux sont refusés, soit une marge nulle.
+        && d.get('ai_proposed', []).size() <= 100;
     }
 
     function isRecipeShape(d) {

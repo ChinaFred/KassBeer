@@ -1834,8 +1834,8 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   recette. » et « Voir la recette » (« Seul l'auteur modifie cet équipement. » et « Voir
   l'équipement » pour un équipement).
 
-**Assistant** (ADR-015, lot A1). Conversation avec l'IA sur le brouillon de la recette, en
-texte. Le serveur appelle Claude (poste « Assistant de recette ») ; l'application n'appelle
+**Assistant** (ADR-015, lots A1 et A2). Conversation avec l'IA sur le brouillon de la recette,
+en texte, avec des propositions applicables (ci-dessous). Le serveur appelle Claude (poste « Assistant de recette ») ; l'application n'appelle
 aucune API d'IA.
 
 - **Accès** : icône « Assistant » dans la barre du haut, avant « Enregistrer » (infobulle
@@ -1929,6 +1929,85 @@ aucune API d'IA.
 - **État vide** : « Posez une question sur cette recette, ou choisissez un raccourci. », et
   « Ajoutez au moins un malt ou un houblon pour une analyse utile. » pour une recette sans
   malt ni houblon (rien n'est bloqué).
+
+**Propositions de l'assistant** (ADR-015, lot A2 ; décisions de l'utilisateur du 2026-11-21).
+Une réponse peut porter une proposition : des changements de la recette que le brasseur
+applique au brouillon d'un appui. Rien n'est enregistré avant « Enregistrer ».
+
+- **Carte** « Proposition de l'assistant », dans la bulle de la réponse, sous le texte et
+  au-dessus de « Copier la réponse » ; hors de la sélection du texte. Repliée : le résumé du
+  modèle (deux lignes au plus), la ligne « 3 changements · 2 valeurs proposées par l'IA ·
+  1 refusé » (les deux derniers comptes seulement s'ils ne sont pas nuls), puis un chiffre qui
+  change par ligne (« IBU : 28 → 35 IBU », « Couleur : 12 → 14 EBC », « Degré : 5,2 → 5,6 %
+  vol », « Densité initiale : 1052,0 → 1058,3 », « Densité finale : … » ; « — » pour une valeur
+  indisponible), boutons « Appliquer au
+  brouillon » et « Voir le détail ». « Appliquer au brouillon » s'utilise sans déplier le
+  détail.
+- **Détail** (« Voir le détail » / « Masquer le détail ») : « Changements », une ligne par
+  changement, verbe en tête (« Ajout · Citra · Whirlpool 15 min · 30 g · 12 % alpha (proposée
+  par l'IA) · Pellets », « Modification · … », « Retrait · … », « Ajout · Palier Mash out ·
+  78 °C · 10 min », « Nom : Blonde → Blonde révisée ») ; « Calculs avant et après » (les cinq
+  chiffres) ; « Changements refusés », avec la raison (« Modification du houblon n° 4 : ce
+  houblon n'est plus dans la recette. », « Ajout de Citra : valeur hors des limites acceptées
+  (quantité). », « Ajout d'un houblon : valeur manquante (durée). », « Retrait du houblon
+  n° 1 : ce houblon a changé depuis la proposition. », « Ajout de Malt maison : valeur
+  incompatible avec le reste de la recette (couleur). » quand une autre ligne du même
+  ingrédient porte déjà une couleur). Le résumé, limité à deux lignes, s'affiche en entier
+  quand le détail est déplié. Tous les chiffres viennent du calcul de
+  Kass'Beer, jamais du texte du modèle.
+- **Aperçu** : calculé sur le brouillon actuel de l'éditeur avec la Bibliothèque ; une valeur
+  technique (couleur, rendement, acides alpha, atténuation) vient de la Bibliothèque d'abord,
+  sinon du modèle, et porte alors la marque « (proposée par l'IA) ». Un changement dont la
+  ligne n'est plus à son rang, ou ne porte plus son nom, est refusé ; les autres s'appliquent.
+  Une valeur du modèle pour un ingrédient dont une autre ligne porte déjà une valeur du même
+  champ est refusée : aucune valeur saisie à la main ne s'affiche « proposée par l'IA ».
+- **États** :
+  - préparation : « Préparation de l'aperçu… », sans bouton (aussi tant que l'éditeur n'a
+    pas construit son brouillon) ;
+  - Bibliothèque illisible : « Aperçu impossible : la Bibliothèque n'a pas pu être lue. » et
+    « Réessayer », sans bouton « Appliquer » (aucune valeur du modèle n'est gardée à la place) ;
+  - recette invalide : « Cette proposition donne une recette invalide. Elle ne peut pas
+    s'appliquer. » ;
+  - rien d'applicable : « Aucun changement de cette proposition ne peut s'appliquer. » et la
+    liste des refus ;
+  - périmée (le brouillon a changé depuis l'envoi du message, par une saisie ou une autre
+    proposition) : « La recette a changé depuis cette proposition. Vérifiez le détail avant
+    d'appliquer. », détail déplié, bouton actif ; cet avertissement n'est pas annoncé par le
+    lecteur d'écran à chaque frappe ;
+  - appliquée : « Appliquée au brouillon. Rien n'est enregistré avant « Enregistrer ». » et
+    « Annuler la proposition » ;
+  - annulée : « Proposition annulée. Le brouillon d'avant est revenu. » et « Appliquer au
+    brouillon » ;
+  - remplacée : « Une autre proposition a été appliquée depuis. », sans bouton. Seule la
+    dernière proposition appliquée s'annule ;
+  - proposition illisible du modèle, en encadré d'avertissement : « L'assistant a rendu une
+    proposition illisible. Elle ne peut pas s'appliquer : reformulez votre demande. ».
+- **Appliquer au brouillon** : aucun appel à l'IA, marche hors ligne (Bibliothèque lue depuis
+  l'appareil). Le brouillon est remplacé, l'éditeur passe en « modifié », et « Proposition
+  appliquée au brouillon. Rien n'est enregistré. » s'affiche 10 s avec « Annuler ». Sous
+  840 px, la feuille se ferme et le focus revient sur l'icône « Assistant » ; la conversation
+  reste. À partir de 840 px, la colonne reste sur « Assistant » et le focus va sur « Annuler la
+  proposition ».
+- **Annuler la proposition** : sans modification depuis, le brouillon d'avant revient tout de
+  suite. Après une modification à la main : « Annuler la proposition ? » / « Le brouillon
+  revient à son état d'avant la proposition. Les modifications faites depuis seront
+  perdues. », bouton « Annuler la proposition ». Après « Résumer et continuer » ou « Nouvelle
+  conversation », la proposition appliquée ne s'annule plus (sa carte disparaît avec la
+  conversation, et l'annonce « Annuler » se ferme) ; le brouillon reste annulable en
+  quittant l'éditeur sans enregistrer.
+- **Lecture d'écran** : la réponse est annoncée « Réponse de l'assistant reçue, avec une
+  proposition » ; un chiffre se lit « IBU, avant 28, après 35 », sans la flèche.
+
+**Valeurs proposées par l'IA** (lot A2). Une valeur technique gardée d'une proposition porte
+« (proposée par l'IA) » après la valeur, dans l'éditeur, la fiche de la recette et la recette
+figée d'un brassin. Dans le formulaire de l'ingrédient, son champ porte l'aide « Valeur
+proposée par l'IA : vérifiez-la. », qui disparaît dès que la valeur est corrigée. La marque
+disparaît quand la valeur est corrigée à la main ou reprise de la Bibliothèque, ou quand
+l'ingrédient est retiré ; elle est enregistrée avec la recette et suit sa copie dans un
+brassin. Une marque illisible affiche en tête de la fiche « Marques IA illisibles : une valeur
+proposée par l'IA peut ne pas être signalée. ». L'export ne porte pas la marque ; son compte
+rendu dit « Valeurs proposées par l'IA : Citra (acides alpha), Munich (couleur). » quand il y
+en a.
 
 **Saisie des nombres.** Virgule ou point décimal ; les espaces sont ignorés. « 22.4 » et
 « 22,4 » valent 22,4 ; « 1.500 » kg vaut 1,5 kg. Un nombre qui contient plus d'un séparateur
