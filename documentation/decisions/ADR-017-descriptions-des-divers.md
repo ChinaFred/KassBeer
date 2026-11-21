@@ -1,6 +1,6 @@
 # ADR-017 — Descriptions des divers, rédigées par l'API Claude depuis le poste de l'admin
 
-- **Statut** : proposé
+- **Statut** : accepté (2026-11-21)
 - **Date** : 2026-11-21
 - **Remplace** : — (étend ADR-013 à une seconde nature, avec un poste de coût à part ; complète
   ADR-005 et P20 : seconde exception aux textes des référentiels ; laisse ADR-014 et ADR-016
@@ -12,6 +12,23 @@ dans `exchange/donnees/`, génération puis relecture complète à la main.
 
 Structure demandée : moment d'utilisation, rôle, goût apporté pour les seuls divers qui en ont
 un.
+
+Réponses de l'utilisateur aux questions ouvertes, le 2026-11-21 :
+
+1. Doses : aucun chiffre de dose dans les textes. Le texte renvoie à la notice du fabricant. La
+   validation refuse un nombre suivi d'une unité de dose (`g`, `mg`, `ml`, `l`, `%`, `g/l`,
+   `ppm`).
+2. Budget : essai puis lot lancés dès que le code est livré, quel que soit le mois.
+3. Moments : les cinq moments de l'éditeur (`mash`, `boil`, `after_boil`, `fermentation`,
+   `bottling`). Le traitement de l'eau de brassage ou de rinçage est rangé sous `mash`, et le
+   texte le précise. Aucun sixième moment.
+4. Goût : un texte seul, sans liste de descripteurs.
+5. `--supprimer-absents` : étendu à `beer_misc_descriptions` avec le lot de fusion des divers,
+   pas dans ce lot.
+6. Essai : Irish Moss, Whirlfloc, Gypsum, Calcium Chloride, Lactic Acid, Yeast Nutrient,
+   Coriander Seed, Sweet Orange Peel, Oak Chips, Vanilla ; un nom absent de la Bibliothèque est
+   remplacé par un divers du même type, signalé à l'utilisateur.
+7. Collection : `beer_misc_descriptions`.
 
 ## Contexte
 
@@ -125,7 +142,7 @@ inchangés ; un poste à part garde chaque coût lisible.
   permis : « Whirlfloc ») ; `unknown` si le divers n'est pas reconnu de façon sûre ou si le nom
   est ambigu ; rôles pris dans la liste fermée ; aucun chiffre absent des données (dose,
   température, durée) ; aucune allégation de santé ; texte simple, sans URL, `@`, balisage ni
-  symbole monétaire. La règle sur les doses attend la question ouverte 1.
+  symbole monétaire ; aucune dose, renvoi à la notice du fabricant (décision 1).
 
 ### 3. Modèle de données
 
