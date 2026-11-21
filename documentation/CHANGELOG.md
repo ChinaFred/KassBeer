@@ -6,6 +6,32 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.94 — fonctionnel
+
+Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une
+ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position.
+Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la
+fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour
+ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur
+téléphone, ou avec un texte agrandi, rien ne change.
+
+### v0.1.94 — technique
+
+Liste et fiche côte à côte dans la Bibliothèque à partir de `kBibliothequeCoteACoteMinWidth`
+(1 096 px, égal à `kTicketsAdminCoteACoteMinWidth`, la coquille ayant un rail de 256 px) et
+sous `kGrandTexteMinScale` (prédicat `bibliothequeCoteACote`, `breakpoints.dart`). Une
+`ShellRoute` par segment dans `app_router.dart` : en large, `BibliothequeCoteACote` pose
+l'en-tête sur toute la largeur, la liste de `kListeBibliothequeWidth` (380 px) et un
+navigateur à droite (invite `InviteFicheBibliotheque` ou fiche en `NoTransitionPage`) ; en une
+colonne, les deux `MaterialPage` restent. Recherche, préfixe des recettes publiques et filtre
+de confiance dans `rechercheBibliothequeProvider` (mémoire, par segment). « Voir le style »
+garde son `push` ; `PageDeCoquille.retourParPopSelon` et `AppShell.backByPop` dépilent vers la
+recette, `pageEmpilee` (`page_de_coquille.dart`) reconnaît une page empilée par
+`ImperativeRouteMatch` (à retester à chaque montée de go_router). `fermerFicheBibliotheque`
+(bouton et Échap, posé sur `BibliothequeCoteACote`), focus rendu à la ligne fermée par
+`_FocusApresFermeture` et `LigneListe.focusNode`, annonce « Fiche ouverte : {nom} ».
+Décisions de l'utilisateur du 2026-11-21.
+
 ### v0.1.93 — technique
 
 Livraison 1 d'ADR-017 : descriptions aromatiques des levures, générées, relues et écrites

@@ -8,6 +8,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
+import '../../../core/router/page_de_coquille.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../recipes/domain/beerjson.dart';
@@ -29,6 +30,74 @@ abstract final class TextesFicheBibliotheque {
   static const unreadable =
       'Cette fiche ne peut pas s\'afficher. L\'erreur est signalée à '
       'l\'administrateur.';
+
+  /// Bouton de la fiche ouverte à côté de la liste, et de ses états absente
+  /// ou illisible.
+  static const fermer = 'Fermer la fiche';
+
+  /// Annonce aux lecteurs d'écran d'une fiche ouverte à côté de la liste.
+  static String ouverte(String nom) => 'Fiche ouverte : $nom';
+}
+
+/// Ferme la fiche ouverte à côté de la liste : dépile une fiche ouverte par
+/// `push` par-dessus une autre page (« Voir le style » depuis une recette
+/// publique), qui revient à cette page ; sinon, ouvre le segment, qui montre
+/// l'invite. « Fermer la fiche » et la touche Échap passent par elle.
+void fermerFicheBibliotheque(
+  BuildContext context,
+  SegmentBibliotheque segment,
+) {
+  if (pageEmpilee(context)) {
+    context.pop();
+  } else {
+    context.go(AppRoutes.librarySegment(segment.slug));
+  }
+}
+
+/// Fiche ouverte à côté de la liste (Bibliothèque en large) : « Fermer la
+/// fiche », premier élément de la colonne, puis [child]. La touche Échap est
+/// posée sur les deux colonnes (`BibliothequeCoteACote`). L'en-tête de la colonne annonce
+/// « Fiche ouverte : » suivi du nom aux lecteurs d'écran à chaque fiche ouverte ;
+/// [nom] est `null` tant que la fiche n'est pas lue.
+class FicheCoteACote extends StatelessWidget {
+  const FicheCoteACote({
+    super.key,
+    required this.nom,
+    required this.onFermer,
+    required this.child,
+  });
+
+  final String? nom;
+  final VoidCallback onFermer;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final nom = this.nom;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          container: true,
+          explicitChildNodes: true,
+          liveRegion: nom != null,
+          label: nom == null ? null : TextesFicheBibliotheque.ouverte(nom),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                tooltip: TextesFicheBibliotheque.fermer,
+                onPressed: onFermer,
+                icon: const Icon(Icons.close),
+              ),
+            ),
+          ),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
 }
 
 /// État d'une fiche lue par `get()` : chargement, panne, absente, absente du cache
@@ -118,31 +187,43 @@ class SectionProvenance extends StatelessWidget {
 }
 
 /// Fiche d'un style ou d'un ingrédient : valeurs, plages, provenance et licence.
+/// [coteACote] : fiche ouverte à côté de la liste, dans [FicheCoteACote].
 class ReferenceEntryScreen extends ConsumerWidget {
   const ReferenceEntryScreen({
     super.key,
     required this.segment,
     required this.id,
+    this.coteACote = false,
   });
 
   final SegmentBibliotheque segment;
   final String id;
+  final bool coteACote;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final nature = segment.nature!;
     final cle = (nature: nature, id: id);
     final async = ref.watch(ficheReferentielProvider(cle));
+    void fermer() => coteACote
+        ? fermerFicheBibliotheque(context, segment)
+        : context.go(AppRoutes.librarySegment(segment.slug));
     final etat = etatFiche(
       async: async,
       offline: ref.watch(grantedAccessProvider)?.offline ?? false,
       onRetry: () => ref.invalidate(ficheReferentielProvider(cle)),
-      onBack: () => context.go(AppRoutes.librarySegment(segment.slug)),
-      retour: 'Revenir à la bibliothèque',
+      onBack: fermer,
+      retour: coteACote
+          ? TextesFicheBibliotheque.fermer
+          : 'Revenir à la bibliothèque',
     );
-    if (etat != null) return etat;
-    final fiche = (async.value! as DocumentTrouve<FicheReferentiel>).value;
-    return _Fiche(fiche: fiche);
+    final fiche = switch (async.value) {
+      DocumentTrouve<FicheReferentiel>(:final value) when etat == null => value,
+      _ => null,
+    };
+    final contenu = fiche == null ? etat! : _Fiche(fiche: fiche);
+    if (!coteACote) return contenu;
+    return FicheCoteACote(nom: fiche?.name, onFermer: fermer, child: contenu);
   }
 }
 
