@@ -3164,7 +3164,8 @@ dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapp
 gcloud auth application-default login   # compte de l'admin ; kassbeer-ingest reporté (ADR-005, D7)
 (cd ingest && node ecrire.mjs --production --projet kassbeer --simulation)   # compte sans écrire
 (cd ingest && node ecrire.mjs --production --projet kassbeer)
-# 4. Suppression des documents absents de la préparation (ADR-014), une collection par lancement
+# 4. Suppression des documents absents de la préparation (ADR-014), une collection par lancement :
+#    beer_hops, beer_hop_aromas ou beer_cultures
 (cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops --simulation)
 (cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops)
 ```
@@ -3266,10 +3267,11 @@ résolus), puis `ingest_runs/<id>` par `create`, hors simulation. L'Admin SDK se
 premier usage, après les contrôles.
 
 Suppression des documents absents (ADR-014, section 3, P19). Sans option, `ecrire.mjs` ne
-supprime rien. `--supprimer-absents <collection>` (`beer_hops` ou `beer_hop_aromas`, une par
-lancement ; toute autre est refusée par `lireOptions`) lit les identifiants en ligne
-(`select()`, sans les champs) et les compare aux identifiants préparés, refusés compris
-(`beer_hops.json`, ou `aromes.json` pour `beer_hop_aromas`, exigé). Avant toute écriture,
+supprime rien. `--supprimer-absents <collection>` (`beer_hops`, `beer_hop_aromas` ou `beer_cultures`,
+amendement du 2026-11-15 ; une par lancement ; toute autre est refusée par `lireOptions`)
+lit les identifiants en ligne (`select()`, sans les champs) et les compare aux identifiants
+préparés, refusés compris (`beer_hops.json`, `beer_cultures.json`, ou `aromes.json` pour
+`beer_hop_aromas`, exigé). Avant toute écriture,
 `planifierSuppressions` (`lib/ecriture.mjs`) refuse : une autre collection ; une préparation
 qui compte moins de 90 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
 suppressions (`PLAFOND_SUPPRESSIONS`). Un identifiant hors du motif de la collection
@@ -3304,7 +3306,8 @@ fixture `test/fixtures/prepare/` contre l'émulateur, la seconde sans aucun réf
 aucune recette réécrit, seul son document `ingest_runs` créé ; `--supprimer-absents` : sans
 l'option rien n'est supprimé, simulation, nombre non confirmé sans écriture, suppression
 confirmée, identifiant hors motif gardé, préparation à moins de 90 % refusée, plus de 30
-absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé) ;
+absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé,
+`beer_cultures` : simulation puis ancien identifiant supprimé, plafond et seuil de 90 %) ;
 `npm run test:unitaires` sans émulateur. La CI ne lance pas encore `ingest/` (ADR-005, D2).
 
 ## Descriptions aromatiques des houblons (ADR-013)
