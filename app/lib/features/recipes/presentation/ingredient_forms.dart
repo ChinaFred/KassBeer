@@ -850,13 +850,20 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
   final _time = TextEditingController();
   HopUse _use = HopUse.boil;
 
-  /// Valeur de [formesHoublon], ou `null` tant qu'aucune n'est choisie.
-  String? _form;
+  /// Valeur de [formesHoublon], ou `null` pour une forme effacée.
+  String? _form = formeHoublonProposee;
+
+  /// Vrai tant que [_form] est la forme proposée d'avance : une suggestion de
+  /// la Bibliothèque la remplace. Le brasseur qui choisit une forme l'éteint.
+  bool _formeProposee = true;
   bool _formError = false;
   UniteSaisie _unite = UniteSaisie.grammes;
 
   /// Entrée de la Bibliothèque choisie pour le nom, ou `null`.
   EntreeHoublon? _suggestion;
+
+  /// Forme proposée d'avance pour un houblon sans forme (ticket #105).
+  static const formeHoublonProposee = 'pellet';
 
   /// Suggestion choisie : remplit l'acide alpha et la forme vides.
   List<ValeurRemplie> _choisir(EntreeIndex e) {
@@ -868,8 +875,9 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
       remplies.add(ValeurRemplie.acidesAlpha);
     }
     final forme = _accepte(e.form, formesHoublon);
-    if (_form == null && forme != null) {
+    if ((_form == null || _formeProposee) && forme != null) {
       _form = forme;
+      _formeProposee = false;
       _formError = false;
       remplies.add(ValeurRemplie.forme);
     }
@@ -897,6 +905,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
     final forme = _accepte(s.form, formesHoublon);
     if (forme != null && forme != _form) {
       _form = forme;
+      _formeProposee = false;
       _formError = false;
       reprises.add(ValeurRemplie.forme);
     }
@@ -973,7 +982,11 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
       _alpha.text = texteSaisi(i.alphaPct);
       _alphaInitial = _alpha.text;
       _use = i.use;
-      _form = i.form;
+      // Un houblon sans forme s'ouvre avec la forme proposée d'avance.
+      if (i.form != null) {
+        _form = i.form;
+        _formeProposee = false;
+      }
       final t = i.timeMin;
       _time.text = texteSaisi(
         t == null || i.use != HopUse.dryHop ? t : t / minutesParJour,
@@ -1031,7 +1044,8 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
     _alpha.clear();
     _time.clear();
     _timeTexts.clear();
-    _form = null;
+    _form = formeHoublonProposee;
+    _formeProposee = true;
     _formError = false;
     _unite = UniteSaisie.grammes;
     _suggestion = null;
@@ -1158,6 +1172,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
             avertissement: _formeAvertissement,
             onChanged: (f) => setState(() {
               _form = f;
+              _formeProposee = false;
               _formError = false;
             }),
           ),

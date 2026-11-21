@@ -74,6 +74,13 @@ abstract class LibraryRepository {
   /// texte du document.
   Future<RechercheDocument<AromesHoublon>> lireAromesHoublon(String id);
 
+  /// Index des arômes (`beer_index/hop_aromas`, ADR-013, note du 2026-11-21),
+  /// lu par un `get` à l'ouverture du segment Houblons, puis rendu de mémoire
+  /// comme les autres index. Hors ligne, le `get` lit le cache. Panne et
+  /// document illisible rapportés (`library.hop_aroma_index`), sans contenu ;
+  /// une panne est relancée.
+  Future<RechercheDocument<IndexAromes>> lireIndexAromes();
+
   /// Page de [kTaillePageRecettes] recettes publiques ordonnées par
   /// `search_name`, après [apres] ; [prefixe] : début du nom, normalisé comme
   /// `search_name` (`normaliserNomRecherche`) ; vide après normalisation, aucun
@@ -107,6 +114,9 @@ class FirestoreLibraryRepository implements LibraryRepository {
 
   /// Index lus du serveur pendant la session, un document par nature.
   final _index = <NatureReferentiel, DocumentTrouve<IndexReferentiel>>{};
+
+  /// Index des arômes lu du serveur pendant la session.
+  DocumentTrouve<IndexAromes>? _indexAromes;
 
   FirebaseFirestore get _firestore =>
       _injectedFirestore ?? FirebaseFirestore.instance;
@@ -155,7 +165,10 @@ class FirestoreLibraryRepository implements LibraryRepository {
             '${index.illisibles + index.entrees.length}',
       );
     }
-    final found = DocumentTrouve(index);
+    final found = DocumentTrouve(
+      index,
+      fromCache: snapshot.metadata.isFromCache,
+    );
     // Une lecture du cache (hors ligne) n'est pas gardée : la suivante, en ligne,
     // ira au serveur.
     if (!snapshot.metadata.isFromCache) _index[nature] = found;
@@ -228,6 +241,28 @@ class FirestoreLibraryRepository implements LibraryRepository {
     } on DocumentIllisible catch (error, stackTrace) {
       return _illisible('library.hop_aroma', path, error, stackTrace);
     }
+  }
+
+  @override
+  Future<RechercheDocument<IndexAromes>> lireIndexAromes() async {
+    final memo = _indexAromes;
+    if (memo != null) return memo;
+    const path = 'beer_index/$kIndexAromesId';
+    final snapshot = await _get('library.hop_aroma_index', path);
+    final data = snapshot.data();
+    if (data == null) return _absent(snapshot);
+    final IndexAromes index;
+    try {
+      index = IndexAromes.fromFirestore(data);
+    } on DocumentIllisible catch (error, stackTrace) {
+      return _illisible('library.hop_aroma_index', path, error, stackTrace);
+    }
+    final found = DocumentTrouve(
+      index,
+      fromCache: snapshot.metadata.isFromCache,
+    );
+    if (!snapshot.metadata.isFromCache) _indexAromes = found;
+    return found;
   }
 
   @override

@@ -305,7 +305,7 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
   fermentation », « Coût du brassin »… sur la fiche d'un brassin ; « Malt ou sucre »,
   « Houblon »… dans l'éditeur de recette ; « Journée », « Étape », « Actions d'une journée »,
   « Insérer un bloc de la recette » dans l'éditeur de processus ; « Plus d'actions » sur la
-  fiche d'un processus). Le formulaire de prix porte le même nom, « Prix d'un
+  fiche d'un processus ; « Confiance des arômes » sur la liste des houblons). Le formulaire de prix porte le même nom, « Prix d'un
   ingrédient », sur « Mes prix », la fiche d'une recette et celle d'un brassin, et sa liste
   « Reprendre un prix » aussi ; « Coût du brassin » désigne les deux confirmations « Figer le
   coût » et « Recalculer avec mes prix actuels ». Aide : « Menu ou fenêtre concerné. »
@@ -660,39 +660,53 @@ lancements, livraisons), du plus récent au plus ancien, 50 à la fois. Lecture 
 - **Ouverture** : aucune recherche ne part. L'écran affiche les filtres et « Choisissez les
   filtres, puis appuyez sur Rechercher. ».
 - **Filtres** : « Gravité » (« Info et plus » par défaut, « Avertissements et plus »,
-  « Erreurs », « Débogage seul »), boutons segmentés qui passent en colonne quand ils ne
-  tiennent pas ; « Période » (« 1 h » par défaut, « 24 h », « 7 jours ») ; « Fonction »
-  (« Toutes les fonctions », puis la liste rendue par le serveur ; avant la première réponse,
-  aide « La liste des fonctions arrive avec la première recherche. ») ; « Ticket » (aide
-  « Identifiant du ticket ») ; « Texte à chercher » (aide « Mot ou expression contenu dans le
-  message »). La touche Entrée d'un champ ne lance rien.
+  « Erreurs », « Débogage seul ») et « Période » (« 1 h » par défaut, « 24 h », « 7 jours »),
+  chacune une puce qui affiche sa valeur (« Gravité : Info et plus ») et ouvre le menu des
+  valeurs, la valeur choisie cochée ; « Fonction » (« Toutes les fonctions », puis la liste
+  rendue par le serveur ; avant la première réponse, aide « La liste des fonctions arrive avec
+  la première recherche. ») ; « Ticket » (aide « Identifiant du ticket ») ; « Texte à chercher »
+  (aide « Mot ou expression contenu dans le message »). La touche Entrée d'un champ ne lance
+  rien.
 - **Rechercher** : bouton « Rechercher ». Pendant un appel, seul le bouton appuyé
   (« Rechercher », « Réessayer » ou « Charger la suite ») affiche « Recherche en cours » ; les
   autres sont désactivés, sans indicateur. Après une recherche, « N entrées affichées » (« 1 entrée affichée ») est
   annoncé.
 - **Filtre changé après une recherche** : la liste reste, avec « Filtres modifiés : appuyez sur
   Rechercher pour mettre la liste à jour. », et « Charger la suite » disparaît.
-- **Téléphone** : filtres et liste dans le même défilement. Après une recherche réussie, les
+- **Téléphone** : filtres et liste dans le même défilement. En haut, les puces « Gravité » et
+  « Période » et « Rechercher », sur une ligne quand elles tiennent ; dessous, « Plus de
+  filtres » déplie « Fonction », « Ticket » et « Texte à chercher », repliés à l'ouverture.
+  Le bouton dit combien de ces trois filtres sont remplis (« Plus de filtres (2) »). Un champ
+  refusé par le serveur les déplie. Après une recherche réussie, les
   filtres se replient en une ligne (« Info et plus · 1 h · Toutes les fonctions », suivie du
-  ticket et du texte s'ils sont remplis) avec « Modifier les filtres ». **Grand écran** (fenêtre
-  d'au moins 840 px) : filtres toujours dépliés, « Gravité » et « Période » sur une ligne,
-  « Fonction », « Ticket » et « Texte à chercher » côte à côte, « Rechercher » à droite.
-- **Note fixe** sous les filtres : « Les journaux peuvent contenir des adresses e-mail. Ne les
-  recopiez pas dans une Issue. » Les adresses ne sont pas masquées (choix de l'utilisateur du
+  ticket et du texte s'ils sont remplis) avec « Modifier les filtres ». Sur un téléphone de
+  360 × 640, « Rechercher » se voit sans défiler, et cinq entrées repliées d'une ligne au
+  moins après une recherche. **Grand écran** (fenêtre d'au moins 840 px) : filtres toujours
+  dépliés, sans « Plus de filtres » ; les deux puces sur une ligne, « Fonction », « Ticket » et
+  « Texte à chercher » côte à côte, « Rechercher » à droite ; filtres et liste sur 840 px au
+  plus, comme les autres écrans de la coquille.
+- **Note fixe** : « Les journaux peuvent contenir des adresses e-mail. Ne les recopiez pas
+  dans une Issue. », en petit, sous les filtres avant la première recherche, puis sous « N
+  entrées affichées ». Les adresses ne sont pas masquées (choix de l'utilisateur du
   2026-11-14).
-- **Une entrée repliée** : icône et couleur de la gravité (erreur, avertissement, information,
-  débogage), lue « Erreur », « Avertissement », « Information » ou « Débogage » ; `CRITICAL`,
-  `ALERT` et `EMERGENCY` s'affichent en erreur, `NOTICE` en information, toute autre gravité
-  avec une icône de cercle, lue « Gravité inconnue » ; titre = la première ligne du message,
-  deux lignes au plus ; sous-titre « date et heure avec les secondes · fonction »
-  (« 14 nov. 10:30:05 · synctickets »).
+- **Une entrée repliée** : une carte à bord fin par entrée. En tête, une étiquette de gravité
+  (icône et mot « Erreur », « Avertissement », « Information », « Débogage » ou « Gravité
+  inconnue », sur un fond du thème : erreur, tertiaire, primaire, ou neutre pour le débogage
+  et une gravité inconnue) ; `CRITICAL`, `ALERT` et `EMERGENCY` s'affichent en erreur,
+  `NOTICE` en information, toute autre gravité avec une icône de cercle ; à droite, sur la
+  même ligne, « date et heure avec les secondes · fonction » (« 14 nov. 10:30:05 ·
+  synctickets »), sans « · » quand la fonction manque ; avec un texte agrandi (plus de 130 %),
+  cette ligne passe sous l'étiquette, en entier. Dessous, la première ligne du message, deux
+  lignes au plus. Dans le menu d'une puce, la valeur choisie est annoncée comme sélectionnée ;
+  la puce et « Plus de filtres » annoncent s'ils sont ouverts.
 - **Une entrée dépliée** : « Message » (le message entier, en chasse fixe s'il tient sur
-  plusieurs lignes, comme une pile d'appels) et « Données » (le reste de l'entrée, en chasse
-  fixe), texte sélectionnable ; « Texte coupé à N caractères. » sous « Message » ou sous
+  plusieurs lignes, comme une pile d'appels) et « Données » (le reste de l'entrée) ; un texte
+  en chasse fixe s'affiche dans un bloc à fond neutre qui défile en largeur quand une ligne
+  dépasse ; texte sélectionnable ; « Texte coupé à N caractères. » sous « Message » ou sous
   « Données » quand le serveur a coupé ce texte, N étant la longueur gardée que le serveur
   indique (8 000 aujourd'hui). Une entrée
   dépliée le reste quand elle sort de l'écran et y revient ; une nouvelle recherche replie
-  tout ; « Copier l'entrée », puis « Entrée copiée. » (« Impossible de copier l'entrée. »
+  tout ; « Copier l'entrée », à droite, puis « Entrée copiée. » (« Impossible de copier l'entrée. »
   en cas d'échec).
 - **Suite** : « Charger la suite » lit les 50 suivantes ; sans suite, « Fin des journaux pour
   cette période. ».
@@ -1015,9 +1029,9 @@ ce ticket (`allowed_decisions`), jamais déduits du statut par l'application : �
 | Statut | Action principale |
 |---|---|
 | Reçu | « Lancer l'analyse » (valeur `launch_analysis`) ; après l'échéance d'un lancement sans changement de statut, « Relancer l'analyse » (bouton tonal) |
-| Analysé | « Valider » |
+| Analysé | « Valider » (bouton à contour), puis « Valider et lancer le développement » (bouton plein, en dernier) |
 | Validé dans l'application | « Lancer le développement » (valeur `launch_development`), ou « Relancer le développement » |
-| Validé sur GitHub seul | « Valider » |
+| Validé sur GitHub seul | « Valider » (bouton à contour), puis « Valider et lancer le développement » (bouton plein, en dernier) |
 | En cours, validé dans l'application | selon la pull request (ci-dessous) : « Livrer » (valeur `launch_delivery`), « Relancer la livraison » (bouton tonal) ou « Relancer le développement » (valeur `relaunch_development`, bouton tonal) |
 | En cours, validé sur GitHub seul, Livré, Refusé, Clos | aucune |
 
@@ -1159,6 +1173,30 @@ est dans la section Lancements. » ; « Résultat inconnu, compté dans les lanc
 Vérifiez sur claude.ai/code avant de relancer. » (ou le message du serveur) ; « Réponse perdue.
 Regardez la section Lancements avant de relancer. » quand la réponse n'arrive pas ; un refus
 arrivé après « Fermer » affiche son motif.
+
+**Boîte « Valider et lancer le développement ? »** (ticket #64, P39). Le bouton « Valider et
+lancer le développement » (icône de code) s'affiche dès que le serveur offre « Valider »
+(`validate` dans `allowed_decisions`), aucun autre critère ; il ouvre la boîte de lancement en
+variante. Contenu, dans cet ordre : la phrase de « Valider ce ticket ? » (pour un ticket validé
+sur GitHub seul : « La validation sera enregistrée dans l'application. »), « Une session Claude
+Code va écrire le code de l'Issue #12 et ouvrir une pull request. Elle ne fusionne rien. », la
+ligne du quota, le lien « Usage Claude (5 h et semaine) : voir sur claude.ai », l'encadré du
+coût. Boutons « Annuler » (focus initial) et « Valider et lancer ». Plafond atteint : « Valider
+et lancer » inactif et la phrase « Annulez, puis appuyez sur « Valider » : « Lancer le
+développement » sera proposé ensuite. » ; quota illisible (« Lancements restants :
+inconnu. ») : bouton actif, le serveur décide. Rien n'est appelé avant « Valider et lancer ».
+Ensuite, la fiche appelle la validation, avec la ligne « Validation en cours. Vous pouvez
+fermer : le résultat s'affichera en bas de l'écran. », puis le lancement du développement,
+avec la ligne « Lancement en cours. … », seulement si la validation est appliquée (une
+validation déjà faite compte). « Fermer » ferme la boîte sans couper les appels ; un seul
+enchaînement part à la fois. La boîte se ferme sur tout résultat, affiché en bas d'écran :
+validation en échec ou partielle, le message d'échec de « Valider », sans lancement ;
+« Ticket #12 validé. Développement lancé. » ; « Ticket #12 validé. Le développement n'a pas été
+lancé : <motif du serveur> » (sans motif : « Ticket #12 validé. Le développement n'a pas été
+lancé. ») ; « Ticket #12 validé. Résultat du lancement inconnu, compté. », sans relance
+proposée. Hors ligne, le bouton reste visible et inactif, comme les autres décisions. Le
+serveur recontrôle tout : les deux appels sont ceux de « Valider » et de « Lancer le
+développement ».
 
 **Boîte « Livrer »** (ADR-008, P39). Même boîte que les lancements. Titre « Livrer ce
 ticket ? » (relance : « Relancer la livraison de ce ticket ? ») ; « Une session Claude Code va
@@ -1434,7 +1472,17 @@ ouvre Recettes › Importer : après le filtre sur téléphone, après « Nouvel
 
 **Fiche.** En-tête : nom, puis style · « Recette de {auteur} » (autre brasseur) sur la ligne
 grise. Boutons, dans l'ordre : « Nouveau brassin » (plein), « Modifier » (auteur, tonal),
-« Dupliquer », « Exporter » (contour), « Supprimer » (auteur, contour rouge). Puis, chacun dans
+« Dupliquer », « Exporter » (contour), « Supprimer » (auteur, contour rouge). Pour l'auteur
+d'une recette dont au moins un houblon n'a pas de forme, un bandeau d'avertissement suit les
+boutons : « {n} houblons sans forme. Sans forme, l'amertume d'un houblon d'ébullition ne se
+calcule pas. » ({n} compte les noms distincts, à cru et whirlpool compris) et le bouton
+« Mettre en pellets ». La boîte « Mettre en pellets : {noms} ? » (« Les houblons qui ont déjà
+une forme ne changent pas. », « Annuler », « Mettre en pellets ») précède l'écriture ; le
+bouton affiche « Enregistrement » pendant ce temps. L'écriture pose Pellets sur chaque
+houblon sans forme et ne change rien d'autre. Elle part comme « Enregistrer », hors ligne
+compris : « Formes enregistrées. » (« Formes enregistrées sur l'appareil. Elles partiront au
+retour du réseau. » hors ligne), ou « Les formes n'ont pas été enregistrées. » sur un refus. Le bandeau disparaît ensuite. Un
+autre brasseur ne voit pas le bandeau (ticket #105). Puis, chacun dans
 sa carte, le bloc Calculs (voir
 « Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (type de recette, « Non renseigné » s'il
 manque ; « Auteur indiqué par le fichier importé » quand une recette importée le porte ; volume en
@@ -1743,9 +1791,11 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   « Couleur (EBC) » (aide « Sert au calcul de la couleur. »), « Rendement d'extrait (%) »
   (aide « Sert au calcul de la densité initiale. »).
 - Houblon : « Nom », « Quantité (g) », « Acides alpha (%) », « Utilisation » (Ébullition,
-  Whirlpool, À cru), durée, « Forme » (Pellets, Cônes, sans choix par défaut ; sinon
-  « Choisissez une forme. », y compris pour un houblon sans forme d'une recette publique
-  dupliquée, quand sa ligne est modifiée). La durée dépend du moment : « Durée d'ébullition (min) »,
+  Whirlpool, À cru), durée, « Forme » (Pellets, Cônes ; Pellets choisi d'avance pour un
+  houblon ajouté et pour un houblon sans forme ouvert en modification, ticket #105 ; une
+  forme déjà enregistrée reste choisie ; une suggestion de la Bibliothèque dont la forme est
+  connue remplace Pellets tant que le brasseur n'a pas choisi de forme lui-même ; une forme
+  effacée affiche « Choisissez une forme. »). La durée dépend du moment : « Durée d'ébullition (min) »,
   obligatoire, entier de 0 à 600 ; « Durée d'infusion (min) » au whirlpool, obligatoire,
   entier de 1 à 600 (« Champ obligatoire. » si vide ; à 0, « Au moins 1 min. Pour un ajout à
   l'arrêt du feu, choisissez Ébullition et 0 min. »), avec l'aide « Temps entre l'arrêt du
@@ -2052,22 +2102,57 @@ ouvre « Sources des données ». Sinon, les puces affichent le nom complet ; à
 « Échelle des couleurs » en texte avec son icône, puis l'icône « Sources des données ».
 
 **Styles et ingrédients.** La liste du segment est lue à la première ouverture, puis gardée
-pour la session. Ordre alphabétique, avec le nombre d'entrées (« 812 entrées », « 3 sur
-812 » pendant une recherche, annoncé aux lecteurs d'écran). Chaque ligne :
+pour la session. Ordre alphabétique, avec le nombre d'entrées, nommées par segment (« 110
+styles », « 442 houblons », « 854 levures », « 1 houblon », « 37 sur 442 houblons » quand la
+recherche ou le filtre réduit la liste). Le nombre s'affiche à chaque frappe ; les lecteurs
+d'écran l'entendent quand la frappe s'arrête depuis une demi-seconde. Le champ de recherche et
+le nombre restent en haut pendant le défilement, séparés de la liste par un trait fin ; les
+puces des segments et le filtre de confiance défilent avec la liste. À partir de 130 % de
+taille du texte, la recherche et le nombre défilent aussi. Une liste lue
+sur l'appareil, hors ligne, porte la note « Hors ligne : liste lue sur l'appareil. ». Chaque
+ligne :
 
 - style : « 21A · American IPA », puis catégorie · degré · amertume (« IPA · 5,5 % vol à
   7,5 % vol · 40 IBU à 70 IBU ») ;
 - malt ou sucre : nom, puis nom français · type · couleur · rendement ;
-- houblon : nom, puis forme · « 6,5 % alpha » ;
+- houblon : nom, puis usage · origine · forme · alpha (« Aromatique · United States ·
+  12 % alpha ») ; usage et origine sont ceux de la fiche ; la forme n'apparaît que si elle
+  n'est pas « Pellets » ; une valeur absente est omise. Avec l'index des arômes, l'étiquette
+  « Confiance faible » ou « Sans description », sans icône, s'ajoute sous la ligne, et rien
+  pour une confiance élevée ou moyenne ;
 - levure : nom, puis producteur et référence (« Wyeast 1056 ») · type · forme ·
   atténuation ;
 - divers : nom, puis nom français · type.
 
 « Rechercher par nom » (« Rechercher par nom ou code » pour les styles) filtre à la frappe,
 sans lecture en base, sur le nom, les autres noms, le nom français, le code d'un style, le
-producteur et la référence d'une levure ; majuscules et accents ne comptent pas. Sans
+producteur et la référence d'une levure ; majuscules et accents ne comptent pas. Une icône
+« × » (infobulle « Effacer la recherche ») vide le champ quand il n'est pas vide. Sans
 résultat : « Aucun résultat pour « {texte} ». » et « Effacer la recherche ». La recherche
-n'est pas enregistrée ; elle reste en place au retour d'une fiche. Une entrée illisible est
+n'est pas enregistrée ; elle reste en place au retour d'une fiche.
+
+**Filtre de confiance des arômes** (segment Houblons, tout membre ; décisions de
+l'utilisateur du 2026-11-21). À l'ouverture du segment, l'index des arômes est lu une fois
+(une lecture de plus, aucune lecture des descriptions elles-mêmes). Sous le champ de
+recherche et le nombre, en tête de la liste, un bouton sur une ligne reprend le choix en cours
+et son nombre : « Confiance des arômes : Toutes (442) », « Confiance des arômes : Faible
+(37) ». Il ouvre un menu à choix unique : en tête, la ligne « Confiance indiquée par l'IA qui
+a rédigé les arômes. », non cliquable, puis « Toutes (n) », « Élevée (n) », « Moyenne (n) »,
+« Faible (n) », « Sans description (n) », le choix en cours coché. Chaque nombre compte les
+houblons qui répondent à la recherche en cours ; filtre et recherche se cumulent. « Sans
+description » regroupe les houblons trop peu documentés et ceux qui n'ont pas de description.
+Le bouton est lu « Confiance des arômes : Faible, 37 houblons » ; chaque entrée du menu est lue
+« Faible, 37 houblons » avec son état coché ; zones d'appui de 48 px ; à 200 % de taille du
+texte, le libellé du bouton passe à la ligne. Sur un téléphone de 360 × 640, au moins un
+houblon est visible à l'ouverture. Par défaut
+« Toutes ». Le choix reste en place au retour d'une fiche ; il est perdu au changement de
+segment ou à la sortie de l'écran, et rien n'est écrit en base. Sans houblon pour la recherche
+et le filtre : « Aucun houblon pour « citra » avec une confiance faible. » (« Aucun houblon
+avec une confiance faible. » sans recherche), avec « Effacer la recherche » (s'il y a une
+recherche) et « Afficher toutes les confiances ». Index des arômes absent, illisible ou
+impossible à lire : ni filtre ni étiquette, la liste reste entière ; un index illisible est
+signalé à l'administrateur, sans son contenu. Hors ligne, le filtre marche sur l'index déjà
+lu sur l'appareil. Une entrée illisible est
 écartée : « 1 entrée illisible n'est pas affichée. L'erreur est signalée à
 l'administrateur. »
 
@@ -2091,7 +2176,8 @@ noms : … », puis :
   lecteur d'écran ; une couleur refusée par le calcul de teinte masque la pastille et
   l'erreur est journalisée ;
 - houblon : nom français, forme, acides alpha, acides bêta, usage (« Aromatique »,
-  « Amérisant », « Aromatique et amérisant », « Double usage »), origine ;
+  « Amérisant », « Aromatique et amérisant », « Double usage », « Goût », « Aromatique et
+  goût », « Amérisant et goût », « Aromatique, amérisant et goût »), origine ;
 - levure : producteur, type, forme, atténuation et température de fermentation en plages,
   floculation ;
 - divers : nom français, type.
@@ -2109,23 +2195,23 @@ donne le fichier et le commit. Le texte de la fiche est sélectionnable.
 de la fiche, sans suivi en direct ; le reste de la fiche s'affiche sans l'attendre. Contenu,
 dans l'ordre :
 
-- « Confiance faible », seule sur sa ligne, quand le texte est donné avec une confiance
-  faible ;
+- « Texte rédigé par une IA (Claude), relu le 14 novembre 2026 » (date de la relecture par
+  l'administrateur) ou « Texte rédigé par une IA (Claude), non relu », sous le titre ;
+- « Confiance faible » (icône d'information), seule sur sa ligne, quand le texte est donné
+  avec une confiance faible ;
 - les descripteurs (« Pamplemousse », « Floral »…), en étiquettes, dans l'ordre du document,
   lus « Descripteurs : Pamplemousse, Floral » par le lecteur d'écran ;
 - un paragraphe titré par usage décrit, toujours dans cet ordre : « Premier moût »,
   « Ébullition longue (amertume) », « Fin d'ébullition (10 min ou moins) », « Whirlpool »,
   « Houblonnage à cru ». Un usage qui ne convient pas au houblon n'a ni titre ni texte ; un
-  usage inconnu de l'application est ignoré ;
-- « Texte rédigé par une IA (Claude), relu le 14 novembre 2026 » (date de la relecture par
-  l'administrateur) ou « Texte rédigé par une IA (Claude), non relu ».
+  usage inconnu de l'application est ignoré.
 
 États de la section :
 
 - chargement : « Chargement des arômes » sous le titre ;
 - aucune description pour ce houblon : la section ne s'affiche pas ;
-- houblon trop peu documenté : « Aucune description : houblon trop peu documenté. », puis la
-  mention IA ;
+- houblon trop peu documenté : la mention IA, puis « Aucune description : houblon trop peu
+  documenté. » ;
 - aucun usage que l'application connaît : descripteurs, puis « Mettez l'application à jour
   pour lire ces descriptions. » ;
 - description illisible : « Les arômes ne peuvent pas s'afficher. L'erreur est signalée à
@@ -2190,9 +2276,10 @@ Aucun coût : une recette publique n'a pas de prix.
 **Dupliquer** (tout membre). Le bouton affiche « Duplication » pendant la lecture du nom du
 compte (3 s au plus). La recette est créée au nom du lecteur, avec le même nom, les mêmes
 ingrédients, paliers et notes, l'auteur « BrewDog » et l'origine « DIY Dog · diydog-{id} ».
-Elle n'a ni équipement ni chronologie. Un houblon sans forme reste sans forme : l'éditeur la
-demande (« Choisissez une forme. ») quand la ligne est modifiée, et le calcul affiche « Forme
-du houblon à compléter : {noms}. » tant qu'elle manque. Le message « Recette dupliquée dans
+Elle n'a ni équipement ni chronologie. Un houblon sans forme reste sans forme : l'éditeur
+propose Pellets quand la ligne est modifiée, la fiche propose « Mettre en pellets » à
+l'auteur, et le calcul affiche « Forme du houblon à compléter : {noms}. » tant qu'elle
+manque. Le message « Recette dupliquée dans
 vos recettes. » (« Recette dupliquée sur l'appareil. Elle partira au retour du réseau. » hors
 ligne) s'affiche, puis l'éditeur de la nouvelle recette s'ouvre par-dessus la fiche ;
 « Fermer » revient à la fiche, « Enregistrer » ouvre la recette. Un refus du serveur affiche

@@ -1,46 +1,45 @@
 {
   "versions": [
     {
-      "version": "0.1.83",
+      "version": "0.1.91",
       "date": "2026-11-21",
       "paragraphs": [
-        "L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec une intelligence artificielle, qui analyse la recette en cours ou propose des améliorations. Les chiffres de la recette restent ceux du calcul de Kass'Beer. L'assistant est réservé à l'administrateur pour commencer ; il pourra ensuite l'ouvrir à tous les membres. Chaque membre dispose d'un nombre de tours par jour, et le menu du compte affiche ce que l'IA a coûté dans le mois. Une conversation trop longue peut être résumée pour continuer. Dans Admin, deux écrans nouveaux règlent l'IA (modèle, tarifs, plafonds, ouverture aux membres) et suivent ses coûts par personne. L'assistant ne marche qu'une fois ses réglages enregistrés."
+        "L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou retirer un malt, un houblon, un ajout ou un palier, changer une quantité, le volume, le nom ou la levure. Sa réponse porte alors une carte « Proposition de l'assistant » qui montre l'effet sur la densité, le degré, l'amertume et la couleur. Un appui sur « Appliquer au brouillon » recopie tous les changements dans la recette ; rien n'est enregistré avant « Enregistrer », et « Annuler la proposition » rend la recette d'avant. Une valeur technique que la Bibliothèque ne connaît pas (acides alpha, couleur, rendement, atténuation) et que l'IA a proposée s'affiche avec la mention « (proposée par l'IA) », dans l'éditeur, la fiche, le brassin et le compte rendu d'export. Sur téléphone, l'assistant se ferme après l'application pour montrer la recette."
       ]
     },
     {
-      "version": "0.1.82",
+      "version": "0.1.90",
       "date": "2026-11-21",
       "paragraphs": [
-        "La Bibliothèque ne montre plus en double onze noms de levures que l'ancienne base donnait à deux fiches d'un même fabricant. Une levure écrite sous deux références n'a plus qu'une fiche. Les levures Lalvin, SafSpirit et Fermoale, qui portaient toutes le même nom, s'appellent maintenant par leur référence : « Lalvin 71B », « SafSpirit HG-1 », « Fermoale AY3 ». Trois levures Wyeast ne portent plus le nom d'une autre. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
+        "Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ; sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé par le ticket #105."
       ]
     },
     {
-      "version": "0.1.81",
+      "version": "0.1.89",
       "date": "2026-11-21",
       "paragraphs": [
-        "La Bibliothèque ne montre plus en double 26 levures de la gamme Private Collection de Wyeast : 27 fiches en trop disparaissent. L'ancienne base les écrivait sous deux références : chaque levure n'a plus qu'une fiche, celle du fabricant. Une recette importée qui nomme la référence avec « -PC » retrouve aussi sa levure. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
+        "Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation, qui rappelle la validation, la session qui va partir, les lancements restants du jour, le lien vers l'usage de Claude et le coût. La validation part d'abord ; le développement n'est lancé que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand le plafond du jour est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le ticket #64."
       ]
     },
     {
-      "version": "0.1.79",
+      "version": "0.1.88",
       "date": "2026-11-21",
       "paragraphs": [
-        "La Bibliothèque reprend les fiches de 98 cultures d'Escarpment Labs : levures d'ale, de lager et de bière de blé, kveiks, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour 50 cultures déjà connues, et 48 cultures apparaissent. Sept fiches portent un autre nom que l'ancienne base pour la même souche (« Classic Wit » pour « Classic Witbier », « Chaudron Sûr » pour « Lactobacillus Blend »…) : elles rejoignent la culture déjà connue, qui prend le nom de la fiche et garde l'ancien nom comme autre nom. L'écran « Sources des données » nomme Escarpment Labs. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
+        "Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de leur description (élevée, moyenne, faible, sans description), avec le nombre de houblons de chaque choix. Une ligne signale « Confiance faible » ou « Sans description ». La recherche et le nombre restent visibles en haut pendant le défilement, un bouton efface la recherche, et le nombre dit « 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA passe avant le texte. Une liste lue hors ligne le signale."
       ]
     },
     {
-      "version": "0.1.78",
-      "date": "2026-11-19",
+      "version": "0.1.87",
+      "date": "2026-11-21",
       "paragraphs": [
-        "« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage) autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un processus », ou « Créer un processus » si vous n'en avez aucun : ce bouton ouvre « Mes processus », où le modèle d'exemple et le plan de brassage des fiches sont prêts à copier. Une recette sans chronologie affiche « sans processus, le brassin n'aura aucune étape ».",
-        "Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son propriétaire. Demandé par le ticket #61."
+        "L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par « Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95."
       ]
     },
     {
-      "version": "0.1.76",
-      "date": "2026-11-15",
+      "version": "0.1.86",
+      "date": "2026-11-21",
       "paragraphs": [
-        "Les variantes « + » des levures Omega s'écrivent maintenant « Plus » : « Kolsch II Plus », « Bayern Lager Plus », « Point Loma Plus »… Elles ne se confondent plus avec la levure d'origine. Une recette importée qui nomme « Kolsch II » retrouve à nouveau sa levure. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
+        "La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la Bibliothèque : c'est la même levure, sous une autre référence. Sa fiche est celle de « Lalvin EC-1118 », qui garde « Prise de Mousse Wine » comme autre nom. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     }
   ]

@@ -24,6 +24,8 @@ enum SegmentBibliotheque {
     'Style',
     'Aucun style$_remplie',
     NatureReferentiel.styles,
+    'style',
+    'styles',
   ),
   fermentables(
     'malts',
@@ -33,6 +35,8 @@ enum SegmentBibliotheque {
     'Malt ou sucre',
     'Aucun malt ni sucre$_remplie',
     NatureReferentiel.fermentables,
+    'malt ou sucre',
+    'malts et sucres',
   ),
   hops(
     'houblons',
@@ -42,6 +46,8 @@ enum SegmentBibliotheque {
     'Houblon',
     'Aucun houblon$_remplie',
     NatureReferentiel.hops,
+    'houblon',
+    'houblons',
   ),
   cultures(
     'levures',
@@ -51,6 +57,8 @@ enum SegmentBibliotheque {
     'Levure',
     'Aucune levure$_remplie',
     NatureReferentiel.cultures,
+    'levure',
+    'levures',
   ),
   miscs(
     'divers',
@@ -60,6 +68,8 @@ enum SegmentBibliotheque {
     'Ajout divers',
     'Aucun ajout divers$_remplie',
     NatureReferentiel.miscs,
+    'ajout divers',
+    'ajouts divers',
   ),
   recettes(
     'recettes',
@@ -69,6 +79,8 @@ enum SegmentBibliotheque {
     'Recette publique',
     "Aucune recette publique pour l'instant.",
     null,
+    'recette publique',
+    'recettes publiques',
   );
 
   const SegmentBibliotheque(
@@ -79,6 +91,8 @@ enum SegmentBibliotheque {
     this.titreFiche,
     this.vide,
     this.nature,
+    this.singulier,
+    this.pluriel,
   );
 
   /// Segment du chemin (`/bibliotheque/houblons`).
@@ -94,6 +108,14 @@ enum SegmentBibliotheque {
   /// Message du segment sans aucune entrée.
   final String vide;
   final NatureReferentiel? nature;
+
+  /// Nom d'une entrée du segment, au singulier et au pluriel (« houblon »,
+  /// « houblons »), pour le compte de la liste.
+  final String singulier;
+  final String pluriel;
+
+  /// « 1 houblon », « 442 houblons ».
+  String compte(int n) => n == 1 ? '1 $singulier' : '$n $pluriel';
 }
 
 Duration? _sansNouvelEssai(int retryCount, Object error) => null;
@@ -103,6 +125,15 @@ Duration? _sansNouvelEssai(int retryCount, Object error) => null;
 final indexReferentielProvider = FutureProvider.autoDispose
     .family<RechercheDocument<IndexReferentiel>, NatureReferentiel>(
       (ref, nature) => ref.watch(libraryRepositoryProvider).lireIndex(nature),
+      retry: _sansNouvelEssai,
+    );
+
+/// Index des arômes (`beer_index/hop_aromas`), lu par `get()` à l'ouverture du
+/// segment Houblons seulement ; le dépôt de données le garde pour la session.
+/// Absent, illisible ou en panne : la liste s'affiche sans filtre de confiance.
+final indexAromesProvider =
+    FutureProvider.autoDispose<RechercheDocument<IndexAromes>>(
+      (ref) => ref.watch(libraryRepositoryProvider).lireIndexAromes(),
       retry: _sansNouvelEssai,
     );
 
