@@ -285,6 +285,9 @@ class FirestoreBrewsRepository implements BrewsRepository {
   final ErrorReportService _errors;
   final FirebaseFirestore? _injectedFirestore;
 
+  /// Brassins dont les marques IA illisibles ont déjà été rapportées.
+  final Set<String> _aiProposedRapportes = {};
+
   FirebaseFirestore get _firestore =>
       _injectedFirestore ?? FirebaseFirestore.instance;
 
@@ -340,6 +343,21 @@ class FirestoreBrewsRepository implements BrewsRepository {
           context:
               'brews/$id : ${deroule.resolu ? 'déroulé' : 'chronologie'} '
               'illisible',
+        );
+      }
+      final illisibles = brew.recipe.aiProposedIllisibles;
+      // Une fois par brassin et par session : la liste se relit à chaque
+      // changement du groupe.
+      if (illisibles > 0 && _aiProposedRapportes.add(id)) {
+        // Marques « proposée par l'IA » de la recette figée hors forme
+        // (ADR-015) : ignorées, rapportées sans contenu (P13).
+        _errors.reportError(
+          feature: 'recipes.ai_proposed',
+          error: DocumentIllisible(
+            'recipe_snapshot.ai_proposed',
+            '$illisibles entrée(s) hors forme',
+          ),
+          context: 'brews/$id : marques IA illisibles',
         );
       }
       return DocumentValide(id, brew);

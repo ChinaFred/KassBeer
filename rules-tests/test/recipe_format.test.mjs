@@ -404,6 +404,12 @@ describe("brews — copie figée au format BeerJSON partiel", () => {
 // prévu 145 `pad()` ; brassin du 22 novembre (11 ajustements), statut 174 `pad()` (177
 // avant le contrôle de `process`), embouteillage 138 `pad()`, écriture des 11 ajustements
 // 68 `pad()` (70 avant) ; création du plus grand modèle de processus 185 `pad()`.
+//
+// Mesure du lot A2 d'ADR-015 (2026-11-21), règle `d.get('ai_proposed', []).size() <= 100` et
+// plus grande recette portant 100 marques de 200 caractères : création de la recette 6 `pad10()`
+// (7 refusés) ; création du brassin qui la copie 0 `pad10()`, un `pad()` passe et deux sont
+// refusés : marge nulle. `optList` et `optArray` sur `ai_proposed` faisaient refuser cette
+// création.
 describe("recipes et brews — budget des règles", () => {
   const g = (value) => ({ value, unit: "g" });
   const largest = (owner) =>
@@ -414,6 +420,11 @@ describe("recipes et brews — budget des règles", () => {
         equipment_id: "e".repeat(128),
         imported_from: "f".repeat(200),
         brew_steps: brewSteps(60),
+        // Marques « proposée par l'IA » (ADR-015, lot A2) : 100 entrées de 200 caractères.
+        ai_proposed: Array.from(
+          { length: 100 },
+          (_, i) => `fermentable:malt-${String(i).padStart(177, "a")}:color`,
+        ),
       },
       {
         author: "a".repeat(120),

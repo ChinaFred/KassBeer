@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:brewing/brewing.dart';
 
 import 'compte_rendu.dart' show Champ, ListeRecette;
+import 'marques_ia.dart';
 import 'schema.dart';
 
 /// Export BeerJSON d'une recette (ADR-005) : le sous-arbre `recipe` stocké,
@@ -228,7 +229,12 @@ class ExportBloque extends ResultatExport {
 /// Fichier prêt.
 class ExportPret extends ResultatExport {
   /// Crée le résultat.
-  const ExportPret(this.contenu, this.pertes, this.auteur);
+  const ExportPret(
+    this.contenu,
+    this.pertes,
+    this.auteur, {
+    this.valeursIa = const [],
+  });
 
   /// Contenu du fichier, en JSON indenté ou en XML : deux exports de la même
   /// recette donnent le même texte (E7).
@@ -239,6 +245,11 @@ class ExportPret extends ResultatExport {
 
   /// Auteur écrit dans le fichier (`author`), montré avant l'envoi.
   final String auteur;
+
+  /// Valeurs marquées « proposée par l'IA » ([MarqueIa]) : le fichier ne
+  /// porte pas la marque, le compte rendu les liste (« Valeurs proposées par
+  /// l'IA : … », ADR-015, section 6).
+  final List<ValeurProposee> valeursIa;
 }
 
 /// Exporte [recipe] (sous-arbre `recipe` en BeerJSON partiel) en BeerJSON
@@ -252,13 +263,15 @@ class ExportPret extends ResultatExport {
 /// [rendementEmpatage], le rendement d'empâtage de l'équipement de la recette
 /// (amendements de L2). [calcul] : résultat de `computeRecipe` ; seules les
 /// valeurs calculées sont écrites. [chronologie] : la recette a une
-/// chronologie du jour, qui n'est pas exportée.
+/// chronologie du jour, qui n'est pas exportée. [marquesIa] : marques
+/// `ai_proposed` de la recette, listées dans [ExportPret.valeursIa].
 ResultatExport exporterBeerJson({
   required Map<String, Object?> recipe,
   required String? ownerName,
   required double? rendementEmpatage,
   required RecipeCalculation? calcul,
   required bool chronologie,
+  List<MarqueIa> marquesIa = const [],
 }) {
   final author = _texte(recipe['author']) ?? _texte(ownerName);
   final manques = manquesExportBeerJson(
@@ -302,6 +315,7 @@ ResultatExport exporterBeerJson({
     List.unmodifiable(pertes),
     // Non nul : sans auteur, l'export est bloqué plus haut.
     author!,
+    valeursIa: valeursProposees(recipe, marquesIa),
   );
 }
 

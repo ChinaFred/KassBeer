@@ -432,3 +432,18 @@ String libellePerte(PerteExport perte) => switch (perte) {
   DureeApresArretNonExportee(:final lignes) =>
     'Non exporté : durée après l\'arrêt du feu (${lignes.join(', ')}).',
 };
+
+/// Compte rendu d'un export d'une recette marquée (ADR-015, section 6) :
+/// « Valeurs proposées par l'IA : Citra (acides alpha), Munich (couleur). »,
+/// ou `null` sans marque. Le fichier ne porte pas la marque.
+String? libelleValeursIa(List<ValeurProposee> valeurs) {
+  if (valeurs.isEmpty) return null;
+  String champ(String c) => switch (c) {
+    'color' => 'couleur',
+    'yield' => 'rendement',
+    'alpha_acid' => 'acides alpha',
+    _ => 'atténuation',
+  };
+  return 'Valeurs proposées par l\'IA : '
+      '${valeurs.map((v) => '${v.nom} (${champ(v.marque.champ)})').join(', ')}.';
+}

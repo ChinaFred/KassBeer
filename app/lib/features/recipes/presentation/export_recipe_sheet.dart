@@ -106,6 +106,7 @@ class _ExportRecipeSheetState extends ConsumerState<ExportRecipeSheet> {
         rendementEmpatage: widget.equipement.efficiency,
         calcul: calculs is CalculsObtenus ? calculs.calculation : null,
         chronologie: recipe.content.brewSteps.isNotEmpty,
+        marquesIa: recipe.content.aiProposed,
       );
     } catch (error, stackTrace) {
       ref
@@ -163,6 +164,7 @@ class _ExportRecipeSheetState extends ConsumerState<ExportRecipeSheet> {
           manquesStyle: manquesStyle,
           calcul: calculs is CalculsObtenus ? calculs.calculation : null,
           chronologie: recipe.content.brewSteps.isNotEmpty,
+          marquesIa: recipe.content.aiProposed,
         ),
       );
     } catch (error, stackTrace) {
@@ -431,6 +433,7 @@ class _ExportRecipeSheetState extends ConsumerState<ExportRecipeSheet> {
         const Text(TextesExport.pret),
         Text(TextesExport.auteur(pret.auteur)),
         for (final p in pret.pertes) Text(libellePerte(p)),
+        if (libelleValeursIa(pret.valeursIa) case final valeurs?) Text(valeurs),
         if (_echec) ...[
           const SizedBox(height: 8),
           Text(

@@ -18,6 +18,13 @@ const kNomEmpatage = 'Empâtage';
 /// Lit [brut], une recette d'un fichier BeerJSON.
 ResultatRecette lireRecetteBeerJson(Object? brut) => lireRecetteConvertie(brut);
 
+/// Relit [recipe], sous-arbre `recipe` en BeerJSON partiel de Kass'Beer (un
+/// document de `recipes/`, ou le résultat d'une proposition de l'assistant,
+/// ADR-015) : mêmes bornes, unités et nettoyage des textes qu'un import. Une
+/// recette refusée rend [RecetteRefusee].
+ResultatRecette lireRecettePartielle(Map<String, Object?> recipe) =>
+    lireRecetteConvertie(recipe);
+
 /// Lit [brut], une recette en BeerJSON tirée d'un autre format (BeerXML), avec
 /// ce que la conversion a déjà relevé : [avant] (modifications propres au
 /// format, placées en tête), [parties] non importées, [inconnus] champs
