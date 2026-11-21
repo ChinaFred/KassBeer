@@ -273,3 +273,81 @@ Map<String, dynamic> hopAromaUnknownDoc() => {
   'input_sha256': 'ab' * 32,
   'content_sha256': 'cd' * 32,
 };
+
+/// `beer_cultures/culture-levure-fictive`, levure inventée. [temperature] :
+/// `temperature_range` ; `null` : plage absente.
+Map<String, dynamic> cultureDoc({
+  Map<String, Object>? temperature = const {
+    'minimum': {'value': 15, 'unit': 'C'},
+    'maximum': {'value': 20, 'unit': 'C'},
+  },
+}) => {
+  'name': 'Levure fictive',
+  'producer': 'Brasserie inventée',
+  'type': 'ale',
+  'form': 'dry',
+  'attenuation': plage(75, 80, '%'),
+  'temperature_range': ?temperature,
+  'provenance': [provenance()],
+  'content_sha256': '45' * 32,
+};
+
+/// Textes inventés pour les tests des levures, de 40 à 400 caractères.
+const kTexteProfil =
+    'Profil net et sec, quelques esters de poire, laisse parler le malt.';
+const kTexteBas =
+    'Très propre au bas de la plage, presque neutre, finale sèche et nette.';
+const kTexteHaut =
+    'Esters de banane et de poire plus marqués en haut de plage, corps rond.';
+
+/// `beer_culture_aromas/culture-levure-fictive`, `described`.
+/// [texts] remplace la map des textes ; [extra] ajoute ou remplace des champs.
+Map<String, dynamic> cultureAromaDoc({
+  Map<String, Object?>? texts,
+  Map<String, Object?> extra = const {},
+}) => {
+  'culture_name': 'Levure fictive',
+  'status': 'described',
+  'confidence': 'high',
+  'descriptors': [
+    {'key': 'pear', 'label': 'poire'},
+    {'key': 'dry', 'label': 'sec'},
+  ],
+  'texts':
+      texts ??
+      {
+        'profile': {'text': kTexteProfil},
+        'cool': {'text': kTexteBas},
+        'warm': {'text': kTexteHaut},
+      },
+  'styles': [
+    {'code': 'bjcp2021-21a', 'name': 'American IPA'},
+    {'code': 'bjcp2021-18b', 'name': 'American Pale Ale'},
+  ],
+  'reviewed': true,
+  'reviewed_at': '2026-11-21',
+  'provenance': [
+    {
+      'source': 'claude-api',
+      'source_id': 'culture-levure-fictive',
+      'version': 'claude-fable-5-2 / prompt 1 / effort medium',
+      'licence': 'Texte généré pour Kass\'Beer',
+      'retrieved': '2026-11-21',
+    },
+  ],
+  'input_sha256': 'ab' * 32,
+  'content_sha256': 'cd' * 32,
+  ...extra,
+};
+
+/// `beer_culture_aromas/{id}` en `unknown`, non relu.
+Map<String, dynamic> cultureAromaUnknownDoc() => {
+  'culture_name': 'Levure rare',
+  'status': 'unknown',
+  'descriptors': <Object>[],
+  'texts': <String, Object>{},
+  'styles': <Object>[],
+  'reviewed': false,
+  'input_sha256': 'ab' * 32,
+  'content_sha256': 'cd' * 32,
+};

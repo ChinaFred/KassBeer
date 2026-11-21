@@ -1,6 +1,14 @@
 {
   "versions": [
     {
+      "version": "0.1.94",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.",
+        "Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données » présente aussi les arômes des levures."
+      ]
+    },
+    {
       "version": "0.1.92",
       "date": "2026-11-21",
       "paragraphs": [
@@ -33,13 +41,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de leur description (élevée, moyenne, faible, sans description), avec le nombre de houblons de chaque choix. Une ligne signale « Confiance faible » ou « Sans description ». La recherche et le nombre restent visibles en haut pendant le défilement, un bouton efface la recherche, et le nombre dit « 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA passe avant le texte. Une liste lue hors ligne le signale."
-      ]
-    },
-    {
-      "version": "0.1.87",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par « Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95."
       ]
     }
   ]

@@ -5,6 +5,7 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/providers.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/aromes_houblon.dart';
+import '../domain/aromes_levure.dart';
 import '../domain/recette_publique.dart';
 import '../domain/referentiel.dart';
 
@@ -161,4 +162,12 @@ final aromesHoublonProvider = FutureProvider.autoDispose
     .family<RechercheDocument<AromesHoublon>, String>((ref, id) {
       ref.watch(grantedAccessProvider.select((a) => a?.offline));
       return ref.watch(libraryRepositoryProvider).lireAromesHoublon(id);
+    }, retry: _sansNouvelEssai);
+
+/// Description aromatique d'une levure, lue par `get()` à l'ouverture de sa
+/// fiche (ADR-017). Relue au passage hors ligne ou au retour du réseau.
+final aromesLevureProvider = FutureProvider.autoDispose
+    .family<RechercheDocument<AromesLevure>, String>((ref, id) {
+      ref.watch(grantedAccessProvider.select((a) => a?.offline));
+      return ref.watch(libraryRepositoryProvider).lireAromesLevure(id);
     }, retry: _sansNouvelEssai);

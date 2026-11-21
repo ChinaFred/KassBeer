@@ -15,7 +15,7 @@ Matcher illisible(String field) =>
 
 void main() {
   group('AromesHoublon.fromFirestore', () {
-    test('décrit : descripteurs dans l\'ordre, usages, relu', () {
+    test('décrit : descripteurs dans l\'ordre, usages', () {
       final a = decrits(hopAromaDoc());
       expect(a.confiance, ConfianceArome.haute);
       expect(a.descripteurs.map((d) => d.label), ['Pamplemousse', 'Floral']);
@@ -23,8 +23,6 @@ void main() {
         UsageArome.dryHop: kTexteCru,
         UsageArome.bittering: kTexteAmertume,
       });
-      expect(a.relu, isTrue);
-      expect(a.reluLe, DateTime(2026, 11, 14));
     });
 
     test('confiance faible', () {
@@ -55,19 +53,19 @@ void main() {
       expect(a.usages, isEmpty);
     });
 
-    test('unknown, non relu', () {
+    test('unknown', () {
       final a = AromesHoublon.fromFirestore(hopAromaUnknownDoc());
       expect(a, isA<AromesInconnus>());
-      expect(a.relu, isFalse);
-      expect(a.reluLe, isNull);
     });
 
-    test('non relu : reviewed_at ignoré', () {
-      final a = decrits(
-        hopAromaDoc(extra: {'reviewed': false, 'reviewed_at': null}),
-      );
-      expect(a.relu, isFalse);
-      expect(a.reluLe, isNull);
+    test('reviewed et reviewed_at ignorés, quelle que soit leur valeur', () {
+      for (final extra in [
+        {'reviewed': false, 'reviewed_at': null},
+        {'reviewed': null, 'reviewed_at': '14/11/2026'},
+        {'reviewed': 'oui', 'reviewed_at': 20261114},
+      ]) {
+        expect(decrits(hopAromaDoc(extra: extra)).usages, hasLength(2));
+      }
     });
 
     test('illisible : chaque champ attendu', () {
@@ -81,19 +79,6 @@ void main() {
         ),
         illisible('confidence'),
       );
-      expect(
-        () =>
-            AromesHoublon.fromFirestore(hopAromaDoc(extra: {'reviewed': null})),
-        illisible('reviewed'),
-      );
-      for (final date in [null, '14/11/2026', '2026-02-30', 20261114]) {
-        expect(
-          () => AromesHoublon.fromFirestore(
-            hopAromaDoc(extra: {'reviewed_at': date}),
-          ),
-          illisible('reviewed_at'),
-        );
-      }
       expect(
         () => AromesHoublon.fromFirestore(hopAromaDoc(extra: {'uses': null})),
         illisible('uses'),
