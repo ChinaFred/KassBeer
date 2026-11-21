@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/admin/data/error_reports_repository.dart';
+import '../features/ai/data/ai_repository.dart';
 import '../features/admin/data/logs_repository.dart';
 import '../features/admin/data/sources_repository.dart';
 import '../features/auth/data/auth_repository.dart';
@@ -107,6 +108,12 @@ final errorReportsRepositoryProvider = Provider<ErrorReportsRepository>(
 /// Admin › Journaux (ADR-011, J2) : callable `queryLogs`.
 final logsRepositoryProvider = Provider<LogsRepository>(
   (ref) => throw UnimplementedError('logsRepositoryProvider non fourni'),
+);
+
+/// Réglages et comptes de l'IA (ADR-016) : `ai_config/`, `ai_quotas/`,
+/// `ai_usage/` par `get()` seul, callable `saveAiSettings`.
+final aiRepositoryProvider = Provider<AiRepository>(
+  (ref) => throw UnimplementedError('aiRepositoryProvider non fourni'),
 );
 
 /// Heure de l'appareil. Injectée pour les tests : un minuteur se recalcule à

@@ -17,6 +17,7 @@ import 'core/services/error_report_service.dart';
 import 'features/admin/data/error_reports_repository.dart';
 import 'features/admin/data/logs_repository.dart';
 import 'features/admin/data/sources_repository.dart';
+import 'features/ai/data/ai_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/brews/data/brews_repository.dart';
 import 'features/brews/data/preference_mesure_repository.dart';
@@ -27,7 +28,9 @@ import 'features/library/data/library_repository.dart';
 import 'features/members/data/members_repository.dart';
 import 'features/processes/data/preferences_processus_repository.dart';
 import 'features/processes/data/processes_repository.dart';
+import 'features/recipes/data/assistant_repository.dart';
 import 'features/recipes/data/recipes_repository.dart';
+import 'features/recipes/presentation/assistant_controleur.dart';
 import 'features/tickets/data/tickets_repository.dart';
 import 'firebase_options.dart';
 
@@ -174,6 +177,12 @@ Future<void> main() async {
         ),
         logsRepositoryProvider.overrideWithValue(
           FunctionsLogsRepository(errorReportService: errors),
+        ),
+        aiRepositoryProvider.overrideWithValue(
+          FirestoreAiRepository(errorReportService: errors),
+        ),
+        assistantRepositoryProvider.overrideWithValue(
+          FunctionsAssistantRepository(errorReportService: errors),
         ),
         appUpdateServiceProvider.overrideWithValue(
           AppUpdateService(

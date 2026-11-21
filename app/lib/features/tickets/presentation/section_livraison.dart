@@ -12,7 +12,7 @@ import '../domain/ticket.dart';
 import '../domain/ticket_delivery.dart';
 import '../domain/ticket_launch.dart';
 import 'encadre_reponse.dart';
-import 'section_analyses.dart';
+import '../../../core/presentation/corps_markdown.dart';
 import 'section_lancements.dart';
 import 'ticket_lien_github.dart';
 import 'tickets_providers.dart';
@@ -182,7 +182,10 @@ class _CarteCompteRendu extends StatelessWidget {
       corps: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          CorpsAnalyse(texte: corpsCompteRendu(compteRendu.body), encre: encre),
+          CorpsMarkdown(
+            texte: corpsCompteRendu(compteRendu.body),
+            encre: encre,
+          ),
           if (compteRendu.truncated) ...[
             const SizedBox(height: 8),
             Text(

@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.83 — fonctionnel
+### v0.1.84 — fonctionnel
 
 Avant de lancer une analyse, un développement ou une livraison d'un ticket, l'administrateur
 peut ouvrir la page d'usage de claude.ai : un lien « Usage Claude (5 h et semaine) : voir sur
@@ -15,7 +15,7 @@ la part restante de l'abonnement Claude pour la fenêtre de 5 heures et pour la 
 L'application n'affiche aucun chiffre : Anthropic ne publie pas ces valeurs. Demandé par le
 ticket #96.
 
-### v0.1.83 — technique
+### v0.1.84 — technique
 
 Option A de l'analyse du ticket #96 : `LienUsageClaude`
 (`app/lib/features/tickets/presentation/lien_usage_claude.dart`) ouvre
@@ -26,6 +26,37 @@ Option A de l'analyse du ticket #96 : `LienUsageClaude`
 fiche seule sur écran étroit, qui garderait sinon sa barre de décision sous le seuil de
 480 px). Aucun serveur ni règle touché ; l'option B (lancements comptés sur 5 h et 7 jours)
 n'est pas faite. Tests : `tickets_lancements_test.dart`. Demandé par le ticket #96.
+
+### v0.1.83 — fonctionnel
+
+L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec
+une intelligence artificielle, qui analyse la recette en cours ou propose des améliorations.
+Les chiffres de la recette restent ceux du calcul de Kass'Beer. L'assistant est réservé à
+l'administrateur pour commencer ; il pourra ensuite l'ouvrir à tous les membres. Chaque membre
+dispose d'un nombre de tours par jour, et le menu du compte affiche ce que l'IA a coûté dans le
+mois. Une conversation trop longue peut être résumée pour continuer. Dans Admin, deux écrans
+nouveaux règlent l'IA (modèle, tarifs, plafonds, ouverture aux membres) et suivent ses coûts
+par personne. L'assistant ne marche qu'une fois ses réglages enregistrés.
+
+### v0.1.83 — technique
+
+Lot A1 d'ADR-015 et ADR-016. Serveur : socle `functions/src/ai/` (client Claude par `fetch`,
+postes, politique et grille dans `ai_config/`, réservation des tours en transaction dans
+`ai_quotas/`, coût et comptes du mois dans `ai_usage/` avec `member_email` et `expires_at`),
+callables `saveAiSettings` et `recipeAssistantTurn` (`functions/src/assistant/`), secret
+`ANTHROPIC_API_KEY`, règles Firestore et leurs tests pour les cinq profils, TTL de
+`ai_usage.expires_at`, fixture `test-fixtures/ai_cost_centers.json`. `ci.yml` et `deploy.yml`
+ajoutent les deux callables à la liste fermée et réservent `ANTHROPIC_API_KEY` à
+`recipeAssistantTurn`. Client : feature `ai/`, écrans `/admin/moteur-ia` et `/admin/couts-ia`,
+panneau Assistant de l'éditeur (feuille sous 840 px, commutateur de 840 à 1 279 px, trois
+colonnes au-delà), ligne « IA ce mois », `CorpsAnalyse` déplacé en `CorpsMarkdown`
+(`core/presentation/corps_markdown.dart`), garde de départ des pages de la coquille
+(`garde_depart.dart`). Aucune dépendance ajoutée ; seul le commentaire de `flutter_markdown_plus`
+change dans `pubspec.yaml`. Taille de `main.dart.js` : 5 801 939 octets avant, 5 892 104 après
+(+90 165, +1,6 %). ADR-015 note les choix de la livraison ; `CLAUDE.md` passe le lot A1 en livré.
+Avant la mise en service : créer `ANTHROPIC_API_KEY` dans Secret Manager, donner à
+`github-deploy` l'accès à ce secret, puis enregistrer la grille et la politique dans Admin ›
+Moteur d'IA.
 
 ### v0.1.82 — fonctionnel
 
