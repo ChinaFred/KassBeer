@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/ecriture.dart';
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
@@ -81,6 +82,22 @@ class RecipeDetailScreen extends ConsumerStatefulWidget {
   static String deleteRejected(String name) =>
       'La suppression de « $name » a échoué.';
 
+  /// Bandeau des houblons sans forme, pour l'auteur (ticket #105).
+  /// [n] compte les noms distincts, comme la boîte de confirmation.
+  static String houblonsSansForme(int n) =>
+      '${n == 1 ? '1 houblon sans forme' : '$n houblons sans forme'}. Sans '
+      'forme, l\'amertume d\'un houblon d\'ébullition ne se calcule pas.';
+  static const mettreEnPellets = 'Mettre en pellets';
+  static String mettreEnPelletsTitre(List<String> noms) =>
+      'Mettre en pellets : ${noms.join(', ')} ?';
+  static const mettreEnPelletsMessage =
+      'Les houblons qui ont déjà une forme ne changent pas.';
+  static const formesEnregistrees = 'Formes enregistrées.';
+  static const formesEnregistreesHorsLigne =
+      'Formes enregistrées sur l\'appareil. Elles partiront au retour du '
+      'réseau.';
+  static const formesRefusees = 'Les formes n\'ont pas été enregistrées.';
+
   @override
   ConsumerState<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
 }
@@ -89,6 +106,48 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   /// Une duplication attend le nom du jeton : le bouton attend aussi, pour qu'un
   /// double appui ne crée pas deux copies.
   bool _duplicating = false;
+
+  /// « Mettre en pellets » attend le nom du jeton, après la confirmation.
+  bool _settingForms = false;
+
+  /// Écrit `pellet` sur chaque houblon sans forme de [recipe], après
+  /// confirmation (ticket #105). Écriture de la recette comme « Enregistrer » :
+  /// locale d'abord, elle part au retour du réseau.
+  Future<void> _mettreEnPellets(Recipe recipe) async {
+    if (_settingForms) return;
+    final noms = {
+      for (final h in recipe.content.hopsSansForme) h.name,
+    }.toList();
+    if (noms.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    // ticket: aucun (confirmation)
+    final confirmed = await confirmerAction(
+      context,
+      titre: RecipeDetailScreen.mettreEnPelletsTitre(noms),
+      paragraphes: const [RecipeDetailScreen.mettreEnPelletsMessage],
+      libelle: RecipeDetailScreen.mettreEnPellets,
+    );
+    if (!confirmed || !mounted) return;
+    setState(() => _settingForms = true);
+    final ownerName = await ref.read(authRepositoryProvider).currentTokenName();
+    if (!mounted) return;
+    final written = ref
+        .read(recipesRepositoryProvider)
+        .update(
+          id: recipe.id,
+          content: recipe.content.avecFormeHoublons('pellet'),
+          ownerName: ownerName,
+        );
+    suivreEcriture(
+      messenger: messenger,
+      written: written,
+      succes: ref.read(grantedAccessProvider)?.offline ?? false
+          ? RecipeDetailScreen.formesEnregistreesHorsLigne
+          : RecipeDetailScreen.formesEnregistrees,
+      refus: RecipeDetailScreen.formesRefusees,
+    );
+    setState(() => _settingForms = false);
+  }
 
   Future<void> _duplicate(Recipe recipe) async {
     if (_duplicating) return;
@@ -191,6 +250,10 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           onEdit: mine ? edit : null,
           onDelete: mine ? () => _delete(recipe) : null,
           onDuplicate: () => _duplicate(recipe),
+          onMettreEnPellets: mine && recipe.content.hopsSansForme.isNotEmpty
+              ? () => _mettreEnPellets(recipe)
+              : null,
+          settingForms: _settingForms,
           // Tout membre exporte toute recette lisible ; l'auteur seul complète.
           onExport: () => ouvrirExport(
             context,
@@ -221,6 +284,8 @@ class _Fiche extends StatelessWidget {
     required this.onDuplicate,
     required this.onExport,
     required this.duplicating,
+    required this.onMettreEnPellets,
+    required this.settingForms,
   });
 
   final Recipe recipe;
@@ -240,6 +305,13 @@ class _Fiche extends StatelessWidget {
 
   /// Duplication en cours : le bouton attend.
   final bool duplicating;
+
+  /// « Mettre en pellets », pour l'auteur d'une recette qui a un houblon sans
+  /// forme ; `null` sinon (pas de bandeau).
+  final VoidCallback? onMettreEnPellets;
+
+  /// Mise en pellets en cours : le bouton attend.
+  final bool settingForms;
 
   @override
   Widget build(BuildContext context) {
@@ -311,6 +383,34 @@ class _Fiche extends StatelessWidget {
               ),
           ],
         ),
+        if (onMettreEnPellets case final pellets?) ...[
+          const SizedBox(height: 16),
+          Encadre(
+            ton: TonEncadre.avertissement,
+            icone: Icons.warning_amber_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  RecipeDetailScreen.houblonsSansForme(
+                    {for (final h in c.hopsSansForme) h.name}.length,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (settingForms)
+                  const FilledButton.tonal(
+                    onPressed: null,
+                    child: IndicateurBouton(label: 'Enregistrement'),
+                  )
+                else
+                  FilledButton.tonal(
+                    onPressed: pellets,
+                    child: const Text(RecipeDetailScreen.mettreEnPellets),
+                  ),
+              ],
+            ),
+          ),
+        ],
         CarteSection(
           titre: 'Calculs',
           children: [

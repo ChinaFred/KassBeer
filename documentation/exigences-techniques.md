@@ -1488,7 +1488,14 @@ un houblon d'ébullition rend l'IBU indisponible (`MissingInputKind.hopForm`, `b
 inchangé). `libelleManque(..., content:)` lit la ligne et affiche « Forme du houblon à
 compléter : {noms}. » pour une forme absente, « Forme non prise en charge par le calcul :
 {noms}. » pour une forme sans facteur ; la fiche, l'éditeur et la feuille « Exporter » passent
-`content`. L'éditeur demande une forme quand la ligne est modifiée (« Choisissez une forme. »).
+`content`. `FormulaireHoublon` part de `pellet` (`formeHoublonProposee`, ticket #105) pour
+une ligne ajoutée ou sans forme ; `_formeProposee` laisse une suggestion de la Bibliothèque
+remplacer cette forme proposée, jamais une forme choisie ou enregistrée ; « Choisissez une
+forme. » reste pour une forme effacée. Sur la fiche, l'auteur d'une recette dont
+`RecipeContent.hopsSansForme` n'est pas vide voit « Mettre en pellets » : après confirmation,
+`RecipesRepository.update` écrit `avecFormeHoublons('pellet')`, qui ne change que les
+houblons sans forme (écriture locale d'abord, sans transaction ni callable ; `recipe_snapshot`
+des brassins inchangée).
 L'import BeerJSON et BeerXML garde une ligne sans forme, sans `form` et sans perte listée ;
 une forme hors du schéma reste refusée. L'export BeerJSON l'écrit sans `form` (le schéma ne
 l'exige pas) ; l'export BeerXML est bloqué (`ChampExport.formeHoublon`, « Forme du houblon à
