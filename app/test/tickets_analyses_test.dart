@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
+import 'package:kass_beer/core/presentation/corps_markdown.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
 import 'package:kass_beer/features/members/domain/member.dart';
@@ -581,7 +582,7 @@ void main() {
       app.openLinkResult = false;
       toucherLien(tester, 'le dépôt');
       await tester.pumpAndSettle();
-      expect(find.text(CorpsAnalyse.lienImpossible), findsOneWidget);
+      expect(find.text(CorpsMarkdown.lienImpossible), findsOneWidget);
       final report = app.errors.reports.last;
       expect(report.feature, 'tickets.open_analysis_link');
       expect(report.context, isNot(contains('github.com')));

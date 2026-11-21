@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import '../../features/brew_day/presentation/reprise_brassage.dart';
 import '../router/routes.dart';
 import 'bandeau_hors_ligne.dart';
 import 'breakpoints.dart';
+import 'garde_depart.dart';
 import 'logo_kass_beer.dart';
 import 'menu_compte.dart';
 import 'verification_mise_a_jour.dart';
@@ -105,15 +108,27 @@ class AppShell extends ConsumerWidget {
     final selected = _selectedIndex(destinations);
     final back = backTo;
 
-    void goTo(int index) => context.go(destinations[index].path);
+    final garde = ref.watch(gardeDepartProvider);
+
+    /// Quitte la page vers [path], après la confirmation d'une page qui a des
+    /// changements non enregistrés ([GardeDepart]).
+    Future<void> quitterVers(String path) async {
+      if (!await garde.peutQuitter() || !context.mounted) return;
+      context.go(path);
+    }
+
+    void goTo(int index) => unawaited(quitterVers(destinations[index].path));
 
     final appBar = AppBar(
       title: Text(title),
       leading: back == null
           ? null
-          : BackButton(onPressed: () => context.go(back)),
+          : BackButton(onPressed: () => unawaited(quitterVers(back))),
       automaticallyImplyLeading: false,
-      actions: [const MenuCompte(), const SizedBox(width: 8)],
+      actions: [
+        MenuCompte(avantDeQuitter: garde.peutQuitter),
+        const SizedBox(width: 8),
+      ],
     );
 
     final offline = granted?.offline ?? false;

@@ -1063,5 +1063,32 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // ---------------------------------------------------------------- IA (ADR-016, P58)
+
+    // Réglages de l'IA, écrits par la callable `saveAiSettings` seule (SDK Admin) : la
+    // politique (modèle, effort, plafonds, ouverture par poste) lue par tout membre, la
+    // grille tarifaire par l'admin seul. Aucune autre clé, aucune liste.
+    match /ai_config/{docId} {
+      allow get: if (docId == 'policy' && isMember()) || (docId == 'pricing' && isAdmin());
+      allow list, write: if false;
+    }
+
+    // Tours du jour par membre, écrits par le serveur en transaction avant chaque appel.
+    match /ai_quotas/{uid} {
+      allow get: if (isMember() && request.auth.uid == uid) || isAdmin();
+      allow list, write: if false;
+    }
+
+    // Comptes du mois `<AAAA-MM>_<uid>`, écrits par le serveur. Un membre lit les siens,
+    // document absent compris ; l'admin lit tout, par pages de 50 au plus.
+    match /ai_usage/{docId} {
+      allow get: if (isMember()
+          && docId.split('_')[0].matches('[0-9]{4}-[0-9]{2}')
+          && docId == docId.split('_')[0] + '_' + request.auth.uid)
+        || isAdmin();
+      allow list: if isAdmin() && request.query.limit <= 50;
+      allow write: if false;
+    }
   }
 }
