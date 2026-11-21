@@ -4,6 +4,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/features/library/data/library_repository.dart';
+import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
@@ -101,6 +102,39 @@ void main() {
       expect(read, isA<DocumentIllisibleTrouve<IndexReferentiel>>());
       expect(errors.reports.single.feature, 'library.index');
       expect(errors.reports.single.context, 'beer_index/styles illisible');
+    });
+  });
+
+  group('beer_index/hop_aromas', () {
+    test('lu par get(), gardé pour la session ; absent sans rapport', () async {
+      expect(
+        await repository.lireIndexAromes(),
+        isA<DocumentAbsent<IndexAromes>>(),
+      );
+      await firestore.doc('beer_index/hop_aromas').set(aromesIndex());
+      final first = await repository.lireIndexAromes();
+      final index = (first as DocumentTrouve<IndexAromes>).value;
+      expect(index.confianceDe('hop-cascade'), ConfianceIndex.faible);
+      expect(first.fromCache, isFalse);
+      await firestore.doc('beer_index/hop_aromas').delete();
+      expect(identical(await repository.lireIndexAromes(), first), isTrue);
+      expect(errors.reports, isEmpty);
+    });
+
+    test('illisible : rapporté sans contenu, rendu comme tel', () async {
+      await firestore
+          .doc('beer_index/hop_aromas')
+          .set(
+            aromesIndex([
+              {'id': 'hop-cascade', 'confidence': 'texte-secret'},
+            ]),
+          );
+      final read = await repository.lireIndexAromes();
+      expect(read, isA<DocumentIllisibleTrouve<IndexAromes>>());
+      final report = errors.reports.single;
+      expect(report.feature, 'library.hop_aroma_index');
+      expect(report.context, 'beer_index/hop_aromas illisible');
+      expect('${report.error}', isNot(contains('texte-secret')));
     });
   });
 

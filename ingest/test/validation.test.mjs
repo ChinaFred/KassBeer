@@ -209,6 +209,41 @@ describe("controlerDocument", () => {
     const type = doc("beer_index", "cultures");
     type.data.entries[0].form = "poudre";
     refuse("beer_index", type);
+    const usage = doc("beer_index", "hops");
+    usage.data.entries[0].purpose = "aromatique";
+    refuse("beer_index", usage);
+    const origine = doc("beer_index", "hops");
+    origine.data.entries[0].origin = "";
+    refuse("beer_index", origine);
+  });
+
+  it("beer_index/hops : usage et origine permis", () => {
+    const d = doc("beer_index", "hops");
+    d.data.entries[0].purpose = "aroma/bittering";
+    d.data.entries[0].origin = "United States";
+    assert.deepEqual(controlerDocument("beer_index", d), []);
+  });
+
+  it("beer_index/hop_aromas : id et confidence seuls, confiance en liste fermée", () => {
+    const index = (entries) => ({
+      id: "hop_aromas",
+      data: { count: entries.length, entries, content_sha256: "a".repeat(64) },
+    });
+    assert.deepEqual(
+      controlerDocument(
+        "beer_index",
+        index([
+          { id: "hop-alpha", confidence: "high" },
+          { id: "hop-beta", confidence: "unknown" },
+        ]),
+      ),
+      [],
+    );
+    refuse("beer_index", index([{ id: "hop-alpha", confidence: "élevée" }]));
+    refuse("beer_index", index([{ id: "hop-alpha" }]));
+    refuse("beer_index", index([{ id: "hop-alpha", confidence: "low", reviewed: true }]));
+    refuse("beer_index", index([{ id: "hop-alpha", name: "Alpha", confidence: "low" }]));
+    refuse("beer_index", index([{ id: "fermentable-malt", confidence: "low" }]));
   });
 
   it("ingredient_refs : identifiant de référentiel, 200 caractères au plus", () => {
@@ -255,6 +290,18 @@ describe("tailleFirestore", () => {
 });
 
 describe("trier", () => {
+  it("beer_index/hop_aromas dans la préparation : refusé, construit par l'écrivain seul", () => {
+    const d = {
+      id: "hop_aromas",
+      data: { count: 0, entries: [], content_sha256: "a".repeat(64) },
+    };
+    const { valides, refuses } = trier({ beer_index: [d] });
+    assert.deepEqual(valides.beer_index, []);
+    assert.deepEqual(refuses[0].erreurs, [
+      "id : construit par ecrire.mjs depuis aromes.json, jamais préparé",
+    ]);
+  });
+
   it("identifiant en double : le second refusé", () => {
     const d = doc("beer_hops");
     const { valides, refuses } = trier({ beer_hops: [d, structuredClone(d)] });

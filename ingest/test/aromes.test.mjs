@@ -26,7 +26,13 @@ import {
   nettoyerTexte,
   reglesTexte,
 } from "../lib/aromes/validation.mjs";
-import { compterSansDescription, messageSansDescription, trierAromes } from "../lib/execution.mjs";
+import {
+  compterSansDescription,
+  indexAromes,
+  messageSansDescription,
+  trierAromes,
+} from "../lib/execution.mjs";
+import { controlerDocument } from "../lib/validation.mjs";
 
 const CLE = "sk-ant-cle-fictive-0123456789";
 const TEXTE =
@@ -736,6 +742,40 @@ describe("tri des arômes par l'écrivain", () => {
     const { valides, refuses } = trierAromes([relue, relue], ids, new Set(["hop-beta"]));
     assert.equal(valides.length, 1);
     assert.deepEqual(refuses[0].erreurs, ["id : en double"]);
+  });
+
+  it("index des arômes : id et confiance des entrées acceptées, triés ; unknown sans confiance", () => {
+    const { valides } = trierAromes(
+      [
+        entree("hop-beta", { confidence: "low" }),
+        entree("hop-alpha", {
+          status: "unknown",
+          confidence: undefined,
+          descriptors: [],
+          uses: {},
+        }),
+        entree("hop-gamma"),
+      ].map((e) => JSON.parse(JSON.stringify(e))),
+      new Set(["hop-alpha", "hop-beta"]),
+      new Set(),
+    );
+    const index = indexAromes(valides);
+    assert.equal(index.id, "hop_aromas");
+    assert.deepEqual(index.data.entries, [
+      { id: "hop-alpha", confidence: "unknown" },
+      { id: "hop-beta", confidence: "low" },
+    ]);
+    assert.equal(index.data.count, 2);
+    assert.match(index.data.content_sha256, /^[0-9a-f]{64}$/);
+    assert.deepEqual(controlerDocument("beer_index", index), []);
+    // Même contenu, même empreinte : un index inchangé n'est pas réécrit.
+    assert.equal(
+      indexAromes([...valides].reverse()).data.content_sha256,
+      index.data.content_sha256,
+    );
+    // Aucun texte ni état de relecture dans l'index.
+    assert.equal(JSON.stringify(index).includes("reviewed"), false);
+    assert.equal(JSON.stringify(index).includes(TEXTE), false);
   });
 
   it("houblons sans description : compte et message", () => {

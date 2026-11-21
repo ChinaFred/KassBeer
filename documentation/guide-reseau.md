@@ -240,6 +240,11 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
+Le 2026-11-21 (v0.1.88), décision de l'utilisateur : P22 et P55 couvrent l'index des arômes
+`beer_index/hop_aromas` (ADR-013, note du 2026-11-21) : lecture par un `get` dans la liste des
+houblons (P22), construction par `ingest/ecrire.mjs` seul avec des entrées `{id, confidence}` (P55).
+Aucun contrôle, agent, skill ni hook nouveau.
+
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
 garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.

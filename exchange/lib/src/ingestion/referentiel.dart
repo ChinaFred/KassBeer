@@ -145,7 +145,8 @@ class EntreeFusionnee {
     };
   }
 
-  /// Entrée de `beer_index/{nature}` : nombres nus.
+  /// Entrée de `beer_index/{nature}` : nombres nus ; pour un houblon, usage
+  /// (`purpose`) et origine (`origin`) du document quand il les a.
   Map<String, Object?> entreeIndex() {
     final v = principale.valeurs;
     final a = aliases;
@@ -165,6 +166,9 @@ class EntreeFusionnee {
         NatureReferentiel.hop => {
           'form': ?v['form'],
           'alpha': ?nombre(v['alpha_acid']),
+          'purpose': ?v['purpose'],
+          // Origine du document, celle de la ligne de fusion comprise.
+          'origin': ?_valeurs['origin'],
         },
         NatureReferentiel.culture => {
           'producer': ?v['producer'],

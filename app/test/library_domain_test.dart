@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
+import 'package:kass_beer/core/presentation/formats.dart';
+import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/library/presentation/libelles_bibliotheque.dart';
@@ -83,6 +85,88 @@ void main() {
         ),
       );
     });
+
+    test(
+      'houblon : usage et origine lus, absents sans valeur de remplacement',
+      () {
+        final hops = IndexReferentiel.fromFirestore(
+          NatureReferentiel.hops,
+          hopsIndex,
+        ).entrees.cast<EntreeHoublon>();
+        expect(hops.first.purpose, 'aroma');
+        expect(hops.first.origin, 'United States');
+        expect(hops.last.purpose, isNull);
+        expect(hops.last.origin, isNull);
+        expect(detailsEntree(hops.first), [
+          'Aromatique',
+          'United States',
+          '${formatPourcent(6.5)} alpha',
+        ]);
+        expect(
+          [
+            for (final p in [
+              'aroma',
+              'bittering',
+              'aroma/bittering',
+              'flavor',
+              'aroma/flavor',
+              'bittering/flavor',
+              'aroma/bittering/flavor',
+            ])
+              libelleUsageHoublon(p),
+          ],
+          [
+            'Aromatique',
+            'Amérisant',
+            'Aromatique et amérisant',
+            'Goût',
+            'Aromatique et goût',
+            'Amérisant et goût',
+            'Aromatique, amérisant et goût',
+          ],
+        );
+        // La forme n'apparaît que si elle n'est pas « Pellets ».
+        expect(detailsEntree(hops.last), [
+          'Cônes',
+          '${formatPourcent(4)} alpha',
+        ]);
+      },
+    );
+
+    test(
+      'index des arômes : confiance par houblon, absent sans description',
+      () {
+        final index = IndexAromes.fromFirestore(
+          aromesIndex([
+            {'id': 'hop-a', 'confidence': 'high'},
+            {'id': 'hop-b', 'confidence': 'medium'},
+            {'id': 'hop-c', 'confidence': 'low'},
+            {'id': 'hop-d', 'confidence': 'unknown'},
+          ]),
+        );
+        expect(index.confianceDe('hop-a'), ConfianceIndex.elevee);
+        expect(index.confianceDe('hop-b'), ConfianceIndex.moyenne);
+        expect(index.confianceDe('hop-c'), ConfianceIndex.faible);
+        expect(index.confianceDe('hop-d'), ConfianceIndex.sansDescription);
+        expect(index.confianceDe('hop-absent'), ConfianceIndex.sansDescription);
+        expect(
+          () => IndexAromes.fromFirestore(
+            aromesIndex([
+              {'id': 'hop-a', 'confidence': 'élevée'},
+            ]),
+          ),
+          throwsA(
+            isA<DocumentIllisible>()
+                .having((e) => e.field, 'field', 'entries[0].confidence')
+                .having((e) => e.reason, 'reason', isNot(contains('élevée'))),
+          ),
+        );
+        expect(
+          () => IndexAromes.fromFirestore({'count': 0}),
+          throwsA(isA<DocumentIllisible>()),
+        );
+      },
+    );
 
     test('recherche : nom, alias, code, sans accents ni majuscules', () {
       final hops = IndexReferentiel.fromFirestore(
