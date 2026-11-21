@@ -164,7 +164,8 @@ défile avec le panneau et se ferme par « Fermer ».
 
 Une page de second niveau (fiche d'une recette, d'un équipement, d'une entrée de la
 Bibliothèque, Admin › Membres) porte son titre (« Recette », « Équipement », « Houblon »,
-« Recette publique », « Membres ») et un bouton retour vers sa liste. Les
+« Recette publique », « Membres ») et un bouton retour vers sa liste ; une fiche de la
+Bibliothèque ouverte depuis une ligne de recette revient à cette recette. Les
 éditeurs s'ouvrent en plein écran, hors de la barre de navigation, avec « Fermer » (✕), leur
 titre, « Enregistrer », le menu du compte, et le bandeau hors ligne quand l'appareil n'a pas de
 réseau. À 360 px et texte à 200 %, le libellé « Enregistrer » se réduit pour laisser la place à
@@ -1568,7 +1569,24 @@ ajoutée) », ne figure que dans le menu de l'éditeur). Quand elle est renseign
 température du grain précède les paliers sur une ligne libellé-valeur, comme les valeurs de
 Général : « Température du grain », « 18 °C ». La copie figée d'un brassin et l'écran du
 jour montrent les mêmes détails. « Nouveau brassin » (tous les membres) ouvre le
-formulaire de création. Une chronologie illisible s'affiche « Chronologie illisible », sans
+formulaire de création.
+
+Lignes liées à la Bibliothèque (ADR-017, lot D4). Sur la fiche d'une recette, la recette figée
+d'un brassin et la fiche d'une recette publique, une ligne de houblon ou d'autre ajout dont le
+nom désigne une seule entrée de la Bibliothèque (nom ou autre nom, à la normalisation près, comme
+à l'import) porte un chevron à droite ; un appui, Entrée ou Espace ouvre la fiche de l'entrée
+(« Houblon » ou « Ajout divers ») par-dessus la recette. La flèche du haut et le retour Android
+ramènent à la recette. Une ligne dont le nom n'est pas reconnu, ou en désigne plusieurs, reste
+telle quelle, sans chevron ni mention. Pendant la lecture de la liste de la Bibliothèque, les
+lignes s'affichent sans chevron ni indicateur, et le chevron paraît dès qu'elle est lue ; liste
+absente, illisible ou en panne : aucune ligne liée, rien d'autre à l'écran (une panne est
+rapportée). Hors ligne, les lignes sont liées si la liste est sur l'appareil, et la fiche
+ouverte montre son état hors ligne. Le lecteur d'écran lit la ligne en un seul bouton : « Cascade,
+Ébullition 60 min, 30 g, …. Ouvre la fiche dans la Bibliothèque. ». L'écran du jour, ses
+journées et l'éditeur ne lient aucune ligne, pas plus que la fiche d'une recette juste
+importée (décision de l'utilisateur du 2026-11-21). Sur le web, l'adresse affichée reste celle de
+la recette pendant que la fiche est ouverte, et le bouton « Précédent » du navigateur peut sauter
+la recette : la flèche de l'écran y ramène. Une chronologie illisible s'affiche « Chronologie illisible », sans
 masquer le reste de la recette, et l'erreur est rapportée.
 
 - Recette absente d'une réponse du serveur : « Cette recette n'existe pas ou a été
@@ -2145,8 +2163,9 @@ lu sur l'appareil. Une entrée illisible est
 l'administrateur. »
 
 **Fiche d'une entrée** (`/bibliotheque/{segment}/{id}`, titre « Style », « Malt ou
-sucre », « Houblon », « Levure » ou « Ajout divers », retour vers le segment). Nom, « Autres
-noms : … », puis :
+sucre », « Houblon », « Levure » ou « Ajout divers », retour vers le segment ; ouverte depuis
+une ligne d'une recette, d'une recette figée ou d'une recette publique, le retour ramène à
+cette recette). Nom, « Autres noms : … », puis :
 
 - style : « Classement » (code, catégorie « 21 · IPA », type traduit : « Bière », « Cidre »,
   « Hydromel »…, guide), « Plages » (densité initiale « 1056,0 à 1070,0 », densité finale,
@@ -2304,7 +2323,8 @@ brasser. ». Puis, chacune dans sa carte :
   donne pas la durée porte « moment d'origine : … », traduit avec la valeur de la source entre
   parenthèses : « début d'ébullition (start) », « milieu d'ébullition (middle) », « fin
   d'ébullition (end) », « houblonnage à cru (dry hop) », « whirlpool (Whirlpool) » ; une
-  autre valeur s'affiche telle quelle (« FWH ») ;
+  autre valeur s'affiche telle quelle (« FWH ») ; houblons et autres ajouts reconnus liés à
+  leur fiche, comme sur la fiche d'une recette ;
 - « Provenance », comme la fiche d'une entrée.
 
 Aucun coût : une recette publique n'a pas de prix.
@@ -2503,7 +2523,8 @@ d'action en tête de fiche, sur fond de couleur primaire claire ; « Modifier »
 « Supprimer » (contour rouge) d'un brassin prévu suivent la carte. Chaque bloc ci-dessous est
 une carte. Prévu et En cours : bloc Calculs sur la copie figée, Déroulé
 (voir ci-dessous), carte « Recette » où les sections de la recette figée restent des
-sous-sections, Général (date prévue, brassé le, équipement). Après le brassage, dans l'ordre : en fermentation, Relevé, Prévu et mesuré, Notes ;
+sous-sections (houblons et autres ajouts reconnus liés à leur fiche de la Bibliothèque, comme
+sur la fiche d'une recette), Général (date prévue, brassé le, équipement). Après le brassage, dans l'ordre : en fermentation, Relevé, Prévu et mesuré, Notes ;
 en conditionnement, Prévu et mesuré, Embouteillage, Relevé, Notes ; terminé, Prévu et mesuré,
 Embouteillage, Notes, Relevé ; abandonné, Relevé, Prévu et mesuré, Embouteillage (si `bottled_at`
 existe), Notes. Puis Général, le pli « Déroulé » (fermé, résumé « 3 journées », ou le nombre

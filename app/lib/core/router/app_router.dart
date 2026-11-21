@@ -309,6 +309,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   }
                 : null,
             fullWidth: page is PageDeCoquille && page.pleineLargeur,
+            retourParPop:
+                page is PageDeCoquille &&
+                page.retourParPopPermis &&
+                state.extra == AppRoutes.retourParPop,
             child: child,
           );
         },
@@ -339,6 +343,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                   path: ':id',
                   titre: segment.titreFiche,
                   retour: AppRoutes.librarySegment(segment.slug),
+                  // Ouverte depuis une ligne de recette (ADR-017, D4) : le
+                  // retour ramène à la recette.
+                  retourParPopPermis: true,
                   builder: (_, state) {
                     final id = state.pathParameters['id']!;
                     return segment.nature == null

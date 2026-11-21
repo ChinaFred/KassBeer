@@ -113,6 +113,14 @@ List<Widget> listeEtapes(List<BrewStepLine> steps) => [
     ),
 ];
 
+/// Nature d'une ligne qu'un écran peut lier à sa fiche de la Bibliothèque.
+enum IngredientLie { houblon, divers }
+
+/// Ligne d'un houblon ou d'un autre ajout, construite par l'écran qui la lie à
+/// la Bibliothèque : [nom] et ses [details] (ADR-017, lot D4).
+typedef LigneIngredient =
+    Widget Function(IngredientLie nature, String nom, List<String> details);
+
 /// Sections d'une recette, de la fiche et de la copie figée d'un brassin : malts,
 /// houblons, ajouts, levure, paliers, chronologie, notes.
 class ContenuRecette extends StatelessWidget {
@@ -124,6 +132,7 @@ class ContenuRecette extends StatelessWidget {
     this.chronologie,
     this.niveauTitres = NiveauTitre.section,
     this.enCartes = false,
+    this.ligneIngredient,
   }) : assert(
          !enCartes || niveauTitres == NiveauTitre.section,
          'Une section en carte a un titre de section.',
@@ -150,6 +159,11 @@ class ContenuRecette extends StatelessWidget {
   /// Section de chronologie, après les paliers ; nulle pour ne pas l'afficher.
   final Widget? chronologie;
 
+  /// Lignes des houblons et des autres ajouts liées à leur fiche de la
+  /// Bibliothèque (fiche d'une recette, recette figée d'un brassin, recette
+  /// publique) ; nulle : des [LigneDeuxNiveaux] sans lien (écran du jour, P2).
+  final LigneIngredient? ligneIngredient;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -169,6 +183,11 @@ class ContenuRecette extends StatelessWidget {
             ...lignes,
           ];
     final chronologie = this.chronologie;
+    final lier = ligneIngredient;
+    Widget ligne(IngredientLie nature, String nom, List<String> details) =>
+        lier == null
+        ? LigneDeuxNiveaux(title: nom, details: details)
+        : lier(nature, nom, details);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -190,19 +209,16 @@ class ContenuRecette extends StatelessWidget {
         ...section('Houblons', [
           if (c.hops.isEmpty) const TexteAbsent('Aucun houblon.'),
           for (final (i, h) in c.hops.indexed)
-            LigneDeuxNiveaux(
-              title: h.name,
-              details: [
-                ...detailsHoublon(h, fiche: true, ibu: hopIbu[i]),
-                if (momentsOrigine[i] case final moment?)
-                  "moment d'origine : $moment",
-              ],
-            ),
+            ligne(IngredientLie.houblon, h.name, [
+              ...detailsHoublon(h, fiche: true, ibu: hopIbu[i]),
+              if (momentsOrigine[i] case final moment?)
+                "moment d'origine : $moment",
+            ]),
         ]),
         ...section('Autres ajouts', [
           if (c.others.isEmpty) const TexteAbsent('Aucun ajout.'),
           for (final o in c.others)
-            LigneDeuxNiveaux(title: o.name, details: detailsAjout(o)),
+            ligne(IngredientLie.divers, o.name, detailsAjout(o)),
         ]),
         ...section('Levure', [
           if (c.yeasts.isEmpty) const TexteAbsent('Aucune levure.'),

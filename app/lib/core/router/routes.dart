@@ -87,7 +87,9 @@ abstract final class AppRoutes {
 
   /// `extra` d'un éditeur de recette ouvert depuis la fiche importée : après
   /// « Enregistrer », l'éditeur se ferme par `pop` et ramène à cette fiche,
-  /// au lieu d'ouvrir la fiche de la coquille (ticket #60).
+  /// au lieu d'ouvrir la fiche de la coquille (ticket #60). Aussi `extra`
+  /// d'une fiche de la Bibliothèque ouverte depuis une ligne de recette : son
+  /// bouton retour dépile la fiche et ramène à la recette (ADR-017, lot D4).
   static const retourParPop = 'retour-par-pop';
 
   static const newEquipment = '/equipements/nouveau';

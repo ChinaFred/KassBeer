@@ -18,6 +18,7 @@ import '../../recipes/presentation/recipe_calculations_view.dart';
 import '../../recipes/presentation/recipes_providers.dart';
 import '../domain/recette_publique.dart';
 import 'libelles_bibliotheque.dart';
+import 'lien_bibliotheque.dart';
 import 'library_providers.dart';
 import 'reference_entry_screen.dart';
 
@@ -253,6 +254,7 @@ class _Fiche extends StatelessWidget {
           content: c,
           hopIbu: hopIbu,
           enCartes: true,
+          ligneIngredient: ligneVersBibliotheque,
           momentsOrigine: {
             for (final MapEntry(:key, :value) in recette.momentsOrigine.entries)
               key: libelleMomentOrigine(value),

@@ -6,6 +6,23 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.96 — fonctionnel
+
+Sur la fiche d'une recette, la recette d'un brassin et une recette publique, un houblon ou un
+divers que la Bibliothèque connaît porte maintenant un chevron : un appui ouvre sa fiche, avec
+ses arômes ou sa description. La flèche du haut ou le retour du téléphone ramène à la recette.
+Un ingrédient que la Bibliothèque ne reconnaît pas reste affiché comme avant.
+
+### v0.1.96 — technique
+
+Lot D4 d'ADR-017 : `ContenuRecette` reçoit `ligneIngredient`, fourni par la fiche d'une recette,
+la recette figée d'un brassin et la recette publique (`lien_bibliotheque.dart`,
+`indexLiensProvider` : `beer_index/hops` et `beer_index/miscs` lus par `get`, résolus par
+`IndexBibliotheque.resoudre`). L'écran du jour, ses journées, l'éditeur et la fiche d'une recette
+juste importée ne lient rien. Retour par `pop` quand la fiche est poussée avec
+`AppRoutes.retourParPop` (`PageDeCoquille.retourParPopPermis`, `AppShell.retourParPop`).
+`main.dart.js` : 5 948 779 octets avant, 5 951 901 après (+ 3 122). Tests Flutter : 1 949.
+
 ### v0.1.95 — fonctionnel
 
 Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment
