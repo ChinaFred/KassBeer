@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.94 — fonctionnel
+### v0.1.95 — fonctionnel
 
 Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment
 l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un
@@ -16,7 +16,7 @@ notable. Ces textes sont rédigés par une IA et ne donnent aucune dose : suivez
 fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur, les autres sont
 marqués « non relu ».
 
-### v0.1.94 — technique
+### v0.1.95 — technique
 
 Lot D3 d'ADR-017 : `lireDescriptionDivers` (un `get` de `beer_misc_descriptions/{id}`, sans
 écouteur) et `descriptionDiversProvider` ; `SectionDescriptionDivers` sur la fiche d'un divers ;
@@ -26,7 +26,7 @@ pour les deux natures ; libellés « Descriptions des houblons » et « Descript
 dans Admin › Sources ; ligne « Descriptions des divers » dans « Sources des données ». Taille de
 `main.dart.js` : 5 921 851 octets avant, 5 927 958 après (+ 6 107). Tests Flutter : 1 906.
 
-### v0.1.93 — technique
+### v0.1.94 — technique
 
 Lot D2 d'ADR-017 : les descriptions des divers se rédigent depuis le poste de l'admin.
 `ingest/generer-divers.mjs` passe par le moteur commun avec la nature `ingest/lib/divers/`
@@ -40,7 +40,7 @@ avec les garde-fous des arômes ; `firestore.rules` l'ouvre en `get` aux membres
 cinq profils. Empreinte des houblons inchangée ; leurs textes passent aussi par le contrôle Cf et NFKC. Tests : `ingest` 275, `exchange`
 307, `referentiels.test.mjs` 158.
 
-### v0.1.92 — technique
+### v0.1.93 — technique
 
 Lot D1 d'ADR-017 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
 `ingest/lib/redaction/` (`client.mjs`, `tarif.mjs`, `texte.mjs`, `moteur.mjs`), paramétré par un
@@ -50,7 +50,7 @@ objet de nature (`ingest/lib/aromes/nature.mjs`). Il servira aussi aux descripti
 message qui dit où le déplacer. L'empreinte des houblons ne change pas, et un test la fige.
 Tests d'`ingest/` : 127 sur 127.
 
-### v0.1.91 — technique
+### v0.1.92 — technique
 
 ADR-017 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
 rôle, goût le cas échéant, aucune dose), rédigée par l'API Claude depuis le poste de l'admin sur
@@ -58,6 +58,39 @@ un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P62 (`beer_mi
 et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
 P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
 complétés et marqués « à livrer ». Aucun code.
+
+### v0.1.91 — fonctionnel
+
+L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans
+Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre
+« Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour
+et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et
+le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer
+l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui
+annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis
+l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient
+« Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis
+la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche
+« Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un
+second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai.
+Demandé par le ticket #67.
+
+### v0.1.91 — technique
+
+`features/admin/domain/ticket_depuis_panne.dart` : brouillon d'un ticket tiré d'un
+`ErrorReport` ou d'une `EntreeJournal` (champs contrôlés par leur forme, trames Dart exactes de
+`package:kass_beer/` seules et 15 au plus, type en `Exception` ou `Error` seul, titre de 100 et description de 2 000 caractères au plus ; ni message, ni
+contexte, ni uid, ni message ou données d'un journal, P24 et P49 inchangés) ; identifiant lu sur
+la première ligne d'une description et index des tickets par rapport. La marque est dérivée des
+tickets, lus une fois par `TicketsRepository.readAll` (`get()`, aucun écouteur sur ces écrans,
+P50) : aucune écriture sur `error_reports/`, aucune règle ni fonction serveur changée. `BoiteEnvoiAnalyse` (`boite_lancement.dart`) écrit le ticket après
+confirmation, le suit par `adminTicketsProvider` et appelle `launchTicketAnalysis` une fois,
+quand `github_issue_number`, le statut `received` et `launch_analysis` sont posés par le serveur ;
+au plafond lu dans `ticket_status/launches`, aucun appel.
+`TicketFormScreen` reçoit `proposerLancement` (`extra` `BrouillonAnalyse`). `BoiteEnvoiAnalyse` porte aussi `LienUsageClaude` (#96) sous la
+ligne du quota, échec affiché dans la boîte. Sur `logs_screen.dart` (#95), la marque passe sous le
+titre de la carte et `BoutonsPanne` remplace « Copier » aligné à droite. Trois éléments
+d'écran de ticket ajoutés. Aucune dépendance changée. Demandé par le ticket #67.
 
 ### v0.1.90 — fonctionnel
 
