@@ -17,9 +17,10 @@ const kAdresseUsageClaude = 'https://claude.ai/settings/usage';
 class LienUsageClaude extends ConsumerWidget {
   const LienUsageClaude({super.key, this.onEchec});
 
-  /// Échec d'ouverture affiché par l'appelant (la boîte de lancement, sous son
-  /// voile) ; `null` : message en bas de l'écran.
-  final void Function(String message)? onEchec;
+  /// Message d'échec affiché par l'appelant (la boîte de lancement, sous son
+  /// voile), ou `null` après une ouverture réussie, qui l'efface. Sans
+  /// [onEchec] : message en bas de l'écran.
+  final void Function(String? message)? onEchec;
 
   static const libelle = 'Usage Claude (5 h et semaine) : voir sur claude.ai';
   static const description =
@@ -42,7 +43,10 @@ class LienUsageClaude extends ConsumerWidget {
         stackTrace = st;
       }
     }
-    if (opened) return;
+    if (opened) {
+      onEchec?.call(null);
+      return;
+    }
     errors.reportError(
       feature: 'tickets.open_claude_usage',
       error:

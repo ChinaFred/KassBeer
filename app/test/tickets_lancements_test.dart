@@ -648,6 +648,11 @@ void main() {
       final report = app.errors.reports.single;
       expect(report.feature, 'tickets.open_claude_usage');
       expect(report.context, isNot(contains('claude.ai')));
+      // Un second appui réussi efface le message.
+      app.openLinkResult = true;
+      await tester.tap(find.text(LienUsageClaude.libelle));
+      await tester.pumpAndSettle();
+      expect(find.text(LienUsageClaude.echec), findsNothing);
       expect(app.tickets.launches, isEmpty);
     });
 
