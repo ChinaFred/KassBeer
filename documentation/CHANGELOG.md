@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.88 — fonctionnel
+### v0.1.89 — fonctionnel
 
 Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en
 un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation,
@@ -16,7 +16,7 @@ que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand 
 est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le
 ticket #64.
 
-### v0.1.88 — technique
+### v0.1.89 — technique
 
 `BoiteLancement` (`boite_lancement.dart`) reçoit `validationAvant` et `valider` : la boîte
 appelle `valider`, puis `envoyer` seulement si la validation rend `null`, et se ferme sur tout
@@ -32,6 +32,31 @@ widgets : ordre des appels, validation en échec ou partielle sans lancement, re
 motif, résultat inconnu, plafond atteint, quota illisible, double appui, boîte fermée pendant
 la validation, hors ligne, barre à 360 px et texte × 2 ; test du dépôt : `changed: false` rendu
 sans échec. Demandé par le ticket #64.
+
+### v0.1.88 — fonctionnel
+
+Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un
+bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de
+leur description (élevée, moyenne, faible, sans description), avec le nombre de houblons de
+chaque choix. Une
+ligne signale « Confiance faible » ou « Sans description ». La recherche et le nombre restent
+visibles en haut pendant le défilement, un bouton efface la recherche, et le nombre dit
+« 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA
+passe avant le texte. Une liste lue hors ligne le signale.
+
+### v0.1.88 — technique
+
+Nouvel index `beer_index/hop_aromas` (`{id, confidence}`), construit par `ingest/ecrire.mjs`
+depuis les entrées acceptées de `aromes.json` et validé par `ingest/lib/validation.mjs` ; un
+`hop_aromas` venu de la préparation est refusé. `beer_index/hops` porte `purpose` et `origin`
+(`exchange/lib/src/ingestion/referentiel.dart`). Côté application : `lireIndexAromes` (un
+`get`, gardé pour la session), `indexAromesProvider`, filtre `_FiltreConfiance` (bouton et `MenuAnchor`), recherche et
+compte dans un `PinnedHeaderSliver` (sauf à partir de `kGrandTexteMinScale`, même seuil `>=`
+que l'en-tête), compte annoncé
+500 ms après la frappe, `DocumentTrouve.fromCache`, libellés d'usage complétés. Tests de
+`rules-tests/` pour `beer_index/hop_aromas`. ADR-013, note du 2026-11-21. Après la fusion,
+l'administrateur relance la préparation du référentiel puis `ecrire.mjs`. P22 et P55 de
+`CLAUDE.md` couvrent `beer_index/hop_aromas` (décision de l'utilisateur du 2026-11-21).
 
 ### v0.1.87 — fonctionnel
 

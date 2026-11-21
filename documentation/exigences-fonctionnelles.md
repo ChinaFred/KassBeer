@@ -305,7 +305,7 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
   fermentation », « Coût du brassin »… sur la fiche d'un brassin ; « Malt ou sucre »,
   « Houblon »… dans l'éditeur de recette ; « Journée », « Étape », « Actions d'une journée »,
   « Insérer un bloc de la recette » dans l'éditeur de processus ; « Plus d'actions » sur la
-  fiche d'un processus). Le formulaire de prix porte le même nom, « Prix d'un
+  fiche d'un processus ; « Confiance des arômes » sur la liste des houblons). Le formulaire de prix porte le même nom, « Prix d'un
   ingrédient », sur « Mes prix », la fiche d'une recette et celle d'un brassin, et sa liste
   « Reprendre un prix » aussi ; « Coût du brassin » désigne les deux confirmations « Figer le
   coût » et « Recalculer avec mes prix actuels ». Aide : « Menu ou fenêtre concerné. »
@@ -2011,22 +2011,57 @@ ouvre « Sources des données ». Sinon, les puces affichent le nom complet ; à
 « Échelle des couleurs » en texte avec son icône, puis l'icône « Sources des données ».
 
 **Styles et ingrédients.** La liste du segment est lue à la première ouverture, puis gardée
-pour la session. Ordre alphabétique, avec le nombre d'entrées (« 812 entrées », « 3 sur
-812 » pendant une recherche, annoncé aux lecteurs d'écran). Chaque ligne :
+pour la session. Ordre alphabétique, avec le nombre d'entrées, nommées par segment (« 110
+styles », « 442 houblons », « 854 levures », « 1 houblon », « 37 sur 442 houblons » quand la
+recherche ou le filtre réduit la liste). Le nombre s'affiche à chaque frappe ; les lecteurs
+d'écran l'entendent quand la frappe s'arrête depuis une demi-seconde. Le champ de recherche et
+le nombre restent en haut pendant le défilement, séparés de la liste par un trait fin ; les
+puces des segments et le filtre de confiance défilent avec la liste. À partir de 130 % de
+taille du texte, la recherche et le nombre défilent aussi. Une liste lue
+sur l'appareil, hors ligne, porte la note « Hors ligne : liste lue sur l'appareil. ». Chaque
+ligne :
 
 - style : « 21A · American IPA », puis catégorie · degré · amertume (« IPA · 5,5 % vol à
   7,5 % vol · 40 IBU à 70 IBU ») ;
 - malt ou sucre : nom, puis nom français · type · couleur · rendement ;
-- houblon : nom, puis forme · « 6,5 % alpha » ;
+- houblon : nom, puis usage · origine · forme · alpha (« Aromatique · United States ·
+  12 % alpha ») ; usage et origine sont ceux de la fiche ; la forme n'apparaît que si elle
+  n'est pas « Pellets » ; une valeur absente est omise. Avec l'index des arômes, l'étiquette
+  « Confiance faible » ou « Sans description », sans icône, s'ajoute sous la ligne, et rien
+  pour une confiance élevée ou moyenne ;
 - levure : nom, puis producteur et référence (« Wyeast 1056 ») · type · forme ·
   atténuation ;
 - divers : nom, puis nom français · type.
 
 « Rechercher par nom » (« Rechercher par nom ou code » pour les styles) filtre à la frappe,
 sans lecture en base, sur le nom, les autres noms, le nom français, le code d'un style, le
-producteur et la référence d'une levure ; majuscules et accents ne comptent pas. Sans
+producteur et la référence d'une levure ; majuscules et accents ne comptent pas. Une icône
+« × » (infobulle « Effacer la recherche ») vide le champ quand il n'est pas vide. Sans
 résultat : « Aucun résultat pour « {texte} ». » et « Effacer la recherche ». La recherche
-n'est pas enregistrée ; elle reste en place au retour d'une fiche. Une entrée illisible est
+n'est pas enregistrée ; elle reste en place au retour d'une fiche.
+
+**Filtre de confiance des arômes** (segment Houblons, tout membre ; décisions de
+l'utilisateur du 2026-11-21). À l'ouverture du segment, l'index des arômes est lu une fois
+(une lecture de plus, aucune lecture des descriptions elles-mêmes). Sous le champ de
+recherche et le nombre, en tête de la liste, un bouton sur une ligne reprend le choix en cours
+et son nombre : « Confiance des arômes : Toutes (442) », « Confiance des arômes : Faible
+(37) ». Il ouvre un menu à choix unique : en tête, la ligne « Confiance indiquée par l'IA qui
+a rédigé les arômes. », non cliquable, puis « Toutes (n) », « Élevée (n) », « Moyenne (n) »,
+« Faible (n) », « Sans description (n) », le choix en cours coché. Chaque nombre compte les
+houblons qui répondent à la recherche en cours ; filtre et recherche se cumulent. « Sans
+description » regroupe les houblons trop peu documentés et ceux qui n'ont pas de description.
+Le bouton est lu « Confiance des arômes : Faible, 37 houblons » ; chaque entrée du menu est lue
+« Faible, 37 houblons » avec son état coché ; zones d'appui de 48 px ; à 200 % de taille du
+texte, le libellé du bouton passe à la ligne. Sur un téléphone de 360 × 640, au moins un
+houblon est visible à l'ouverture. Par défaut
+« Toutes ». Le choix reste en place au retour d'une fiche ; il est perdu au changement de
+segment ou à la sortie de l'écran, et rien n'est écrit en base. Sans houblon pour la recherche
+et le filtre : « Aucun houblon pour « citra » avec une confiance faible. » (« Aucun houblon
+avec une confiance faible. » sans recherche), avec « Effacer la recherche » (s'il y a une
+recherche) et « Afficher toutes les confiances ». Index des arômes absent, illisible ou
+impossible à lire : ni filtre ni étiquette, la liste reste entière ; un index illisible est
+signalé à l'administrateur, sans son contenu. Hors ligne, le filtre marche sur l'index déjà
+lu sur l'appareil. Une entrée illisible est
 écartée : « 1 entrée illisible n'est pas affichée. L'erreur est signalée à
 l'administrateur. »
 
@@ -2050,7 +2085,8 @@ noms : … », puis :
   lecteur d'écran ; une couleur refusée par le calcul de teinte masque la pastille et
   l'erreur est journalisée ;
 - houblon : nom français, forme, acides alpha, acides bêta, usage (« Aromatique »,
-  « Amérisant », « Aromatique et amérisant », « Double usage »), origine ;
+  « Amérisant », « Aromatique et amérisant », « Double usage », « Goût », « Aromatique et
+  goût », « Amérisant et goût », « Aromatique, amérisant et goût »), origine ;
 - levure : producteur, type, forme, atténuation et température de fermentation en plages,
   floculation ;
 - divers : nom français, type.
@@ -2068,23 +2104,23 @@ donne le fichier et le commit. Le texte de la fiche est sélectionnable.
 de la fiche, sans suivi en direct ; le reste de la fiche s'affiche sans l'attendre. Contenu,
 dans l'ordre :
 
-- « Confiance faible », seule sur sa ligne, quand le texte est donné avec une confiance
-  faible ;
+- « Texte rédigé par une IA (Claude), relu le 14 novembre 2026 » (date de la relecture par
+  l'administrateur) ou « Texte rédigé par une IA (Claude), non relu », sous le titre ;
+- « Confiance faible » (icône d'information), seule sur sa ligne, quand le texte est donné
+  avec une confiance faible ;
 - les descripteurs (« Pamplemousse », « Floral »…), en étiquettes, dans l'ordre du document,
   lus « Descripteurs : Pamplemousse, Floral » par le lecteur d'écran ;
 - un paragraphe titré par usage décrit, toujours dans cet ordre : « Premier moût »,
   « Ébullition longue (amertume) », « Fin d'ébullition (10 min ou moins) », « Whirlpool »,
   « Houblonnage à cru ». Un usage qui ne convient pas au houblon n'a ni titre ni texte ; un
-  usage inconnu de l'application est ignoré ;
-- « Texte rédigé par une IA (Claude), relu le 14 novembre 2026 » (date de la relecture par
-  l'administrateur) ou « Texte rédigé par une IA (Claude), non relu ».
+  usage inconnu de l'application est ignoré.
 
 États de la section :
 
 - chargement : « Chargement des arômes » sous le titre ;
 - aucune description pour ce houblon : la section ne s'affiche pas ;
-- houblon trop peu documenté : « Aucune description : houblon trop peu documenté. », puis la
-  mention IA ;
+- houblon trop peu documenté : la mention IA, puis « Aucune description : houblon trop peu
+  documenté. » ;
 - aucun usage que l'application connaît : descripteurs, puis « Mettez l'application à jour
   pour lire ces descriptions. » ;
 - description illisible : « Les arômes ne peuvent pas s'afficher. L'erreur est signalée à

@@ -25,6 +25,7 @@ import {
   COLLECTIONS,
   COLLECTIONS_ECRITES,
   controlerDocument,
+  ID_INDEX_AROMES,
 } from "./validation.mjs";
 
 const NATURES = ["fermentable", "hop", "culture", "misc"];
@@ -69,6 +70,9 @@ export function trier(documents) {
     valides[collection] = [];
     for (const doc of documents[collection] ?? []) {
       const erreurs = controlerDocument(collection, doc);
+      if (collection === "beer_index" && doc?.id === ID_INDEX_AROMES) {
+        erreurs.push("id : construit par ecrire.mjs depuis aromes.json, jamais préparé");
+      }
       if (typeof doc?.id === "string" && vus.has(doc.id)) erreurs.push("id : en double");
       if (typeof doc?.id === "string") vus.add(doc.id);
       if (erreurs.length > 0) {
@@ -166,6 +170,21 @@ export function trierAromes(entrees, idsHoublons, groupe) {
   return { valides, refuses };
 }
 
+/// Document beer_index/hop_aromas (ADR-013, note du 2026-11-21) tiré des entrées
+/// acceptées par trierAromes ([valides]) : une entrée `{id, confidence}` par houblon, triée
+/// par identifiant, `confidence` valant celle d'une entrée `described` ou `unknown`. Aucun
+/// texte, aucun état de relecture. Rend `{id, data}` avec `count` et `content_sha256`.
+export function indexAromes(valides) {
+  const entries = valides
+    .map(({ id, data }) => ({
+      id,
+      confidence: data.status === "described" ? data.confidence : "unknown",
+    }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const data = { count: entries.length, entries };
+  return { id: ID_INDEX_AROMES, data: { ...data, content_sha256: empreinteContenu(data) } };
+}
+
 /// Houblons de beer_hops.json sans entrée dans aromes.json (ADR-013, « Ajouter un houblon »).
 export function compterSansDescription(documentsHoublons, entreesAromes) {
   const decrits = new Set((entreesAromes ?? []).map((e) => e?.id));
@@ -237,6 +256,14 @@ export async function executer({
     const tri = trierAromes(aromes.entrees, idsHoublons, aromes.groupe);
     valides[COLLECTION_AROMES] = tri.valides;
     refuses.push(...tri.refuses);
+    // Index des arômes, contrôlé comme les autres documents de beer_index.
+    const index = indexAromes(tri.valides);
+    const erreurs = controlerDocument("beer_index", index);
+    if (erreurs.length > 0) {
+      refuses.push({ collection: "beer_index", id: index.id, erreurs });
+    } else {
+      valides.beer_index.push(index);
+    }
   }
   const sansDescription = compterSansDescription(
     preparation.documents.beer_hops,

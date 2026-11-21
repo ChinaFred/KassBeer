@@ -95,6 +95,9 @@ String libelleUsageHoublon(String purpose) => switch (purpose) {
   'dual-purpose' => 'Double usage',
   'aroma/bittering' => 'Aromatique et amérisant',
   'flavor' => 'Goût',
+  'aroma/flavor' => 'Aromatique et goût',
+  'bittering/flavor' => 'Amérisant et goût',
+  'aroma/bittering/flavor' => 'Aromatique, amérisant et goût',
   _ => purpose,
 };
 
@@ -140,10 +143,16 @@ List<String> detailsEntree(EntreeIndex e) => switch (e) {
       if (colorEbc != null) formatEbc(colorEbc),
       if (yieldPct != null) 'rendement ${formatPourcent(yieldPct)}',
     ],
-  EntreeHoublon(:final form, :final alphaPct) => [
-    if (form != null) formesHoublon.libelle(form),
-    if (alphaPct != null) '${formatPourcent(alphaPct)} alpha',
-  ],
+  // « Aromatique · United States · 12 % alpha » : la forme n'apparaît que si
+  // elle n'est pas celle de presque tous les houblons (granulés, `pellet`).
+  // L'origine s'affiche telle que la fiche la montre.
+  EntreeHoublon(:final purpose, :final origin, :final form, :final alphaPct) =>
+    [
+      if (purpose != null) libelleUsageHoublon(purpose),
+      ?origin,
+      if (form != null && form != 'pellet') formesHoublon.libelle(form),
+      if (alphaPct != null) '${formatPourcent(alphaPct)} alpha',
+    ],
   EntreeLevure(
     :final producer,
     :final productId,
