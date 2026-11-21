@@ -103,8 +103,9 @@ class SectionAromes extends ConsumerWidget {
 
   List<Widget> _aromes(BuildContext context, AromesHoublon aromes) {
     final theme = Theme.of(context);
+    // Mention sous le titre « Arômes », avant les descripteurs.
     final mention = Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         switch (aromes.reluLe) {
           final le? when aromes.relu => TextesAromes.relu(le),
@@ -116,8 +117,9 @@ class SectionAromes extends ConsumerWidget {
       ),
     );
     return switch (aromes) {
-      AromesInconnus() => [const TexteAbsent(TextesAromes.inconnu), mention],
+      AromesInconnus() => [mention, const TexteAbsent(TextesAromes.inconnu)],
       AromesDecrits() => [
+        mention,
         if (aromes.confiance == ConfianceArome.faible)
           const Padding(
             padding: EdgeInsets.only(bottom: 8),
@@ -126,7 +128,7 @@ class SectionAromes extends ConsumerWidget {
               child: Etiquette(
                 label: TextesAromes.confianceFaible,
                 ton: TonEtiquette.neutre,
-                icon: Icons.help_outline,
+                icon: Icons.info_outline,
               ),
             ),
           ),
@@ -158,7 +160,6 @@ class SectionAromes extends ConsumerWidget {
             ),
             Text(texte, style: theme.textTheme.bodyLarge),
           ],
-        mention,
       ],
     };
   }

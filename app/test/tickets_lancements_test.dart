@@ -426,9 +426,11 @@ void main() {
       bool lectureEnCours = false,
       bool offline = false,
       bool decisionsLues = true,
+      double width = 400,
+      double height = 2000,
     }) async {
       final app = TestApp();
-      await app.pump(tester, width: 400, height: 2000);
+      await app.pump(tester, width: width, height: height);
       app.signIn(adminUser, member: adminMember, fromCache: offline);
       await tester.pumpAndSettle();
       if (lectureEnCours) app.tickets.launchHistories[ticket.id] = Replay();
@@ -1086,6 +1088,414 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(SectionLancements.loadError), findsNothing);
       expect(find.text('Lancer l\'analyse'), findsOneWidget);
+    });
+    // Ticket #64 : « Valider et lancer le développement ».
+    group('valider et lancer', () {
+      Ticket analyse() => unTicket(
+        status: TicketStatus.analyzed,
+        issueNumber: 12,
+        issueUrl: issueUrl,
+        allowedDecisions: const [
+          TicketDecisionAction.validate,
+          TicketDecisionAction.refuse,
+          TicketDecisionAction.close,
+        ],
+      );
+
+      Ticket valideSurGithub() => unTicket(
+        status: TicketStatus.validated,
+        issueNumber: 12,
+        issueUrl: issueUrl,
+        allowedDecisions: const [
+          TicketDecisionAction.validate,
+          TicketDecisionAction.refuse,
+          TicketDecisionAction.close,
+        ],
+      );
+
+      Finder confirmer() =>
+          find.widgetWithText(FilledButton, 'Valider et lancer');
+
+      /// Ordre des appels au serveur simulé.
+      List<String> journal(
+        TestApp app, {
+        Future<EchecReponse?> Function()? validation,
+        Future<ResultatLancement> Function()? lancement,
+      }) {
+        final appels = <String>[];
+        app.tickets.decideResult = () {
+          appels.add('validateTicket');
+          return validation == null ? Future.value() : validation();
+        };
+        app.tickets.launchResult = () {
+          appels.add('launchTicketDevelopment');
+          return lancement == null
+              ? Future.value(const ResultatLancement(IssueLancement.lance))
+              : lancement();
+        };
+        return appels;
+      }
+
+      testWidgets('analysé : Valider à contour, l\'action pleine en dernier', (
+        tester,
+      ) async {
+        await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        expect(find.widgetWithText(OutlinedButton, 'Valider'), findsOneWidget);
+        expect(
+          find.widgetWithText(FilledButton, kValiderEtLancer),
+          findsOneWidget,
+        );
+        expect(
+          tester.getTopLeft(find.text(kValiderEtLancer)).dy,
+          greaterThan(tester.getTopLeft(find.text('Valider')).dy),
+        );
+      });
+
+      testWidgets('reçu et validé dans l\'application : bouton absent', (
+        tester,
+      ) async {
+        final app = await fiche(tester, recu(), etat: quota);
+        await tester.pumpAndSettle();
+        expect(find.text(kValiderEtLancer), findsNothing);
+        app.tickets.publishAll([valide()]);
+        await tester.pumpAndSettle();
+        expect(find.text('Lancer le développement'), findsOneWidget);
+        expect(find.text(kValiderEtLancer), findsNothing);
+      });
+
+      testWidgets('Valider seul : aucun lancement', (tester) async {
+        final app = await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        final appels = journal(app);
+        await tester.tap(find.text('Valider'));
+        await tester.pumpAndSettle();
+        expect(find.text('Valider ce ticket ?'), findsOneWidget);
+        await tester.tap(find.widgetWithText(FilledButton, 'Valider').last);
+        await tester.pumpAndSettle();
+        expect(appels, ['validateTicket']);
+        expect(app.tickets.launches, isEmpty);
+      });
+
+      testWidgets('boîte : textes dans l\'ordre, Annuler sans appel', (
+        tester,
+      ) async {
+        final app = await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        final appels = journal(app);
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        expect(find.text(BoiteLancement.titreValiderEtLancer), findsOneWidget);
+        final textes = [
+          kValiderConfirmation,
+          BoiteLancement.effet(ActionLancement.developpement, 12),
+          'Lancements restants le 08/11 : 7 sur 10.',
+          BoiteLancement.cout,
+        ];
+        for (final t in textes) {
+          expect(find.text(t), findsOneWidget, reason: t);
+        }
+        for (var i = 1; i < textes.length; i++) {
+          expect(
+            tester.getTopLeft(find.text(textes[i])).dy,
+            greaterThan(tester.getTopLeft(find.text(textes[i - 1])).dy),
+          );
+        }
+        expect(find.text(BoiteLancement.validerSansLancer), findsNothing);
+        expect(find.text('Annuler'), findsOneWidget);
+        expect(tester.widget<FilledButton>(confirmer()).onPressed, isNotNull);
+        await tester.tap(find.text('Annuler'));
+        await tester.pumpAndSettle();
+        expect(appels, isEmpty);
+        expect(find.byType(BoiteLancement), findsNothing);
+      });
+
+      testWidgets('validé sur GitHub seul : phrase propre dans la boîte', (
+        tester,
+      ) async {
+        await fiche(tester, valideSurGithub(), etat: quota);
+        await tester.pumpAndSettle();
+        expect(find.text('Valider'), findsOneWidget);
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        // Le lancement suit : la phrase de « Valider » seul, qui annonce
+        // « Lancer le développement », n'a pas sa place ici.
+        expect(
+          find.text('La validation sera enregistrée dans l\'application.'),
+          findsOneWidget,
+        );
+        expect(find.text(kValiderConfirmationGithub), findsNothing);
+        expect(find.text(kValiderConfirmation), findsNothing);
+      });
+
+      testWidgets(
+        'succès : validation puis lancement, une fois chacun, états',
+        (tester) async {
+          final app = await fiche(tester, analyse(), etat: quota);
+          await tester.pumpAndSettle();
+          final validation = Completer<EchecReponse?>();
+          final lancement = Completer<ResultatLancement>();
+          final appels = journal(
+            app,
+            validation: () => validation.future,
+            lancement: () => lancement.future,
+          );
+          await tester.tap(find.text(kValiderEtLancer));
+          await tester.pumpAndSettle();
+          await tester.tap(confirmer());
+          await tester.pump();
+          expect(appels, ['validateTicket']);
+          expect(find.text(BoiteLancement.validationEnCours), findsOneWidget);
+          expect(find.text('Fermer'), findsOneWidget);
+          // Double appui : bouton inactif, aucun second appel.
+          await tester.tap(
+            find.descendant(
+              of: find.byType(BoiteLancement),
+              matching: find.byType(FilledButton),
+            ),
+            warnIfMissed: false,
+          );
+          await tester.pump();
+          expect(appels, ['validateTicket']);
+          validation.complete(null);
+          await tester.pump();
+          await tester.pump();
+          expect(appels, ['validateTicket', 'launchTicketDevelopment']);
+          expect(find.text(BoiteLancement.envoiEnCours), findsOneWidget);
+          expect(find.text(BoiteLancement.validationEnCours), findsNothing);
+          lancement.complete(const ResultatLancement(IssueLancement.lance));
+          await tester.pumpAndSettle();
+          expect(find.byType(BoiteLancement), findsNothing);
+          expect(
+            find.text('Ticket #12 validé. Développement lancé.'),
+            findsOneWidget,
+          );
+          expect(
+            app.tickets.decisionsAppelees.single.action,
+            TicketDecisionAction.validate,
+          );
+          expect(app.tickets.launches.single, (
+            ticketId: 't1',
+            action: ActionLancement.developpement,
+          ));
+        },
+      );
+
+      testWidgets('validation en échec : aucun lancement, message', (
+        tester,
+      ) async {
+        final app = await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        const echec = EchecReponse(
+          CauseEchecReponse.motif,
+          motif: 'Cette décision n\'est plus possible pour ce statut.',
+        );
+        final appels = journal(app, validation: () async => echec);
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        await tester.tap(confirmer());
+        await tester.pumpAndSettle();
+        expect(appels, ['validateTicket']);
+        expect(app.tickets.launches, isEmpty);
+        expect(find.byType(BoiteLancement), findsNothing);
+        expect(
+          find.text(messageEchecDecision(TicketDecisionAction.validate, echec)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('validation partielle : aucun lancement', (tester) async {
+        final app = await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        const echec = EchecReponse(
+          CauseEchecReponse.motif,
+          motif: 'Étiquette posée, mais la décision n\'est pas terminée.',
+          partiel: true,
+        );
+        final appels = journal(app, validation: () async => echec);
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        await tester.tap(confirmer());
+        await tester.pumpAndSettle();
+        expect(appels, ['validateTicket']);
+        expect(app.tickets.launches, isEmpty);
+      });
+
+      testWidgets('lancement refusé : la validation faite et le motif', (
+        tester,
+      ) async {
+        final app = await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        journal(
+          app,
+          lancement: () async => const ResultatLancement(
+            IssueLancement.refuse,
+            motif: 'Un développement est déjà en cours. Rien n\'a été lancé.',
+          ),
+        );
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        await tester.tap(confirmer());
+        await tester.pumpAndSettle();
+        expect(find.byType(BoiteLancement), findsNothing);
+        expect(
+          find.text(
+            'Ticket #12 validé. Le développement n\'a pas été lancé : Un '
+            'développement est déjà en cours. Rien n\'a été lancé.',
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('lancement refusé sans motif : phrase courte', (
+        tester,
+      ) async {
+        final app = await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        journal(
+          app,
+          lancement: () async => const ResultatLancement(IssueLancement.refuse),
+        );
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        await tester.tap(confirmer());
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Ticket #12 validé. Le développement n\'a pas été lancé.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('texte × 2 sur 360 px : barre sans débordement', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await fiche(tester, analyse(), etat: quota, width: 360, height: 700);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.ensureVisible(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(
+          tester.getRect(bouton(kValiderEtLancer)).right,
+          lessThanOrEqualTo(360),
+        );
+        expect(
+          tester.getSize(bouton(kValiderEtLancer)).height,
+          greaterThanOrEqualTo(48),
+        );
+      });
+
+      testWidgets('lancement au résultat inconnu : compté, sans relance', (
+        tester,
+      ) async {
+        final app = await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        journal(
+          app,
+          lancement: () async =>
+              const ResultatLancement(IssueLancement.inconnu),
+        );
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        await tester.tap(confirmer());
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            'Ticket #12 validé. Résultat du lancement inconnu, compté.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+          kDureeMessageEchec,
+        );
+        expect(find.byType(SnackBarAction), findsNothing);
+      });
+
+      testWidgets('plafond atteint : Valider et lancer inactif, phrase', (
+        tester,
+      ) async {
+        final app = await fiche(
+          tester,
+          analyse(),
+          etat: const DocumentTrouve(
+            EtatLancements(day: '20261108', countDay: 10, perDay: 10),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final appels = journal(app);
+        // Le bouton de la barre reste actif : la boîte dit pourquoi.
+        expect(
+          tester.widget<ButtonStyleButton>(bouton(kValiderEtLancer)).onPressed,
+          isNotNull,
+        );
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        expect(find.text(BoiteLancement.validerSansLancer), findsOneWidget);
+        expect(tester.widget<FilledButton>(confirmer()).onPressed, isNull);
+        await tester.tap(confirmer(), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(appels, isEmpty);
+      });
+
+      testWidgets('quota illisible : inconnu, bouton actif', (tester) async {
+        final app = await fiche(tester, analyse());
+        await tester.pumpAndSettle();
+        journal(app);
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        expect(find.text('Lancements restants : inconnu.'), findsOneWidget);
+        expect(find.text(BoiteLancement.validerSansLancer), findsNothing);
+        expect(tester.widget<FilledButton>(confirmer()).onPressed, isNotNull);
+      });
+
+      testWidgets('boîte fermée pendant la validation : le lancement part', (
+        tester,
+      ) async {
+        final app = await fiche(tester, analyse(), etat: quota);
+        await tester.pumpAndSettle();
+        final validation = Completer<EchecReponse?>();
+        final appels = journal(app, validation: () => validation.future);
+        await tester.tap(find.text(kValiderEtLancer));
+        await tester.pumpAndSettle();
+        await tester.tap(confirmer());
+        await tester.pump();
+        await tester.tap(find.text('Fermer'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.byType(BoiteLancement), findsNothing);
+        // Validation en cours, boîte fermée : la barre dit pourquoi.
+        expect(find.text('Validation en cours sur GitHub.'), findsOneWidget);
+        expect(appels, ['validateTicket']);
+        validation.complete(null);
+        await tester.pumpAndSettle();
+        expect(appels, ['validateTicket', 'launchTicketDevelopment']);
+        expect(
+          find.text('Ticket #12 validé. Développement lancé.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('hors ligne : deux boutons inactifs, phrase réseau', (
+        tester,
+      ) async {
+        final app = await fiche(tester, analyse(), etat: quota, offline: true);
+        await tester.pumpAndSettle();
+        for (final label in ['Valider', kValiderEtLancer]) {
+          expect(
+            tester.widget<ButtonStyleButton>(bouton(label)).onPressed,
+            isNull,
+            reason: label,
+          );
+        }
+        expect(find.text(kActionsHorsLigne), findsOneWidget);
+        await tester.tap(find.text(kValiderEtLancer), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.byType(BoiteLancement), findsNothing);
+        expect(app.tickets.decisionsAppelees, isEmpty);
+      });
     });
   });
 

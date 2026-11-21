@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/presentation/bandeau_liste_perimee.dart';
+import 'package:kass_beer/core/presentation/breakpoints.dart';
 import 'package:kass_beer/core/presentation/etats.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
@@ -25,11 +26,12 @@ EntreeJournal _entree(
   String severity = 'ERROR',
   String payload = '{\n  "feature": "tickets"\n}',
   bool coupe = false,
+  String? message,
 }) => EntreeJournal(
   horodatage: DateTime(2026, 11, 14, 10, 30, n % 60),
   severity: severity,
   fonction: 'synctickets',
-  message: 'Tickets : tâche horaire en échec $n\nsuite',
+  message: message ?? 'Tickets : tâche horaire en échec $n\nsuite',
   insertId: 'id-$n',
   payload: payload,
   payloadCoupe: coupe,
@@ -63,10 +65,11 @@ Future<TestApp> _ouvrir(
   WidgetTester tester, {
   List<Object> reponses = const [],
   double width = 400,
+  double height = 900,
 }) async {
   final app = TestApp();
   app.logs.reponses.addAll(reponses);
-  await app.pump(tester, width: width);
+  await app.pump(tester, width: width, height: height);
   app.signIn(adminUser, member: adminMember);
   await tester.pumpAndSettle();
   app.container.read(routerProvider).go(AppRoutes.adminLogs);
@@ -90,6 +93,24 @@ Future<void> _voir(
   await tester.scrollUntilVisible(cible, pas, scrollable: liste);
   // Pendant un appel, l'indicateur tourne sans fin : une image suffit.
   attendre ? await tester.pumpAndSettle() : await tester.pump();
+}
+
+/// Téléphone : déplie « Fonction », « Ticket » et « Texte à chercher ».
+Future<void> _plusDeFiltres(WidgetTester tester) async {
+  final bouton = find.textContaining(LogsScreen.plusDeFiltres);
+  await _voir(tester, bouton);
+  await tester.tap(bouton);
+  await tester.pumpAndSettle();
+}
+
+/// Ouvre la puce [filtre] et choisit [valeur].
+Future<void> _choisir(WidgetTester tester, String filtre, String valeur) async {
+  final puce = find.textContaining('$filtre : ');
+  await _voir(tester, puce, pas: -200);
+  await tester.tap(puce);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(valeur).last);
+  await tester.pumpAndSettle();
 }
 
 Future<void> _rechercher(WidgetTester tester) async {
@@ -349,8 +370,11 @@ void main() {
       await tester.pumpAndSettle();
       await _voir(tester, find.text(LogsScreen.invite));
       expect(find.text(LogsScreen.invite), findsOneWidget);
-      expect(find.text(LogsScreen.aideFonctions), findsOneWidget);
       expect(find.text(LogsScreen.noteEmails), findsOneWidget);
+      // Téléphone : « Fonction », « Ticket » et « Texte » repliés.
+      expect(find.text(LogsScreen.fonction), findsNothing);
+      await _plusDeFiltres(tester);
+      expect(find.text(LogsScreen.aideFonctions), findsOneWidget);
       expect(app.logs.demandes, isEmpty);
     });
 
@@ -374,6 +398,7 @@ void main() {
           _page([_entree(1), _entree(2, severity: 'INFO')]),
         ],
       );
+      await _plusDeFiltres(tester);
       await tester.enterText(
         find.widgetWithText(TextField, LogsScreen.texte),
         'échec',
@@ -397,6 +422,9 @@ void main() {
       expect(find.text('14 nov. 10:30:01 · synctickets'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('Erreur')), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('Information')), findsOneWidget);
+      // Gravité écrite en toutes lettres, en plus de la couleur.
+      expect(find.text('Erreur'), findsOneWidget);
+      expect(find.text('Information'), findsOneWidget);
       expect(find.text('Charger la suite'), findsNothing);
     });
 
@@ -413,6 +441,7 @@ void main() {
       await _rechercher(tester);
       await tester.tap(find.text(LogsScreen.modifierFiltres));
       await tester.pumpAndSettle();
+      await _plusDeFiltres(tester);
       expect(find.text(LogsScreen.aideFonctions), findsNothing);
       await tester.tap(find.byType(DropdownMenu<String>));
       await tester.pumpAndSettle();
@@ -420,6 +449,7 @@ void main() {
       await tester.pumpAndSettle();
       await _voir(tester, find.text(LogsScreen.filtresModifies));
       expect(find.text(LogsScreen.filtresModifies), findsOneWidget);
+      expect(find.text(LogsScreen.plusDeFiltresCompte(1)), findsOneWidget);
       await _rechercher(tester);
       expect(app.logs.demandes.last.filtres.fonction, 'syncTickets');
       expect(find.text(LogsScreen.filtresModifies), findsNothing);
@@ -439,16 +469,13 @@ void main() {
       expect(find.text(LogsScreen.chargerSuite), findsOneWidget);
       await tester.tap(find.text(LogsScreen.modifierFiltres));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('24 h'));
-      await tester.pumpAndSettle();
+      await _choisir(tester, LogsScreen.periode, '24 h');
       await _voir(tester, find.text(LogsScreen.filtresModifies));
       expect(find.text(LogsScreen.filtresModifies), findsOneWidget);
       expect(find.text(LogsScreen.compte(1)), findsOneWidget);
       expect(find.text(LogsScreen.chargerSuite), findsNothing);
       // Revenir aux filtres de la liste efface la ligne.
-      await _voir(tester, find.text('1 h'), pas: -200);
-      await tester.tap(find.text('1 h'));
-      await tester.pumpAndSettle();
+      await _choisir(tester, LogsScreen.periode, '1 h');
       expect(find.text(LogsScreen.filtresModifies), findsNothing);
       await _voir(tester, find.text(LogsScreen.chargerSuite));
       await tester.tap(find.text(LogsScreen.chargerSuite));
@@ -574,6 +601,7 @@ void main() {
       );
       await _rechercher(tester);
       expect(find.text(quota), findsOneWidget);
+      await _plusDeFiltres(tester);
       await tester.enterText(
         find.widgetWithText(TextField, LogsScreen.ticket),
         'a b',
@@ -829,9 +857,149 @@ void main() {
         find.widgetWithText(TextField, LogsScreen.texte),
       );
       expect(bouton.right, greaterThan(texte.right));
-      final gravite = tester.getTopLeft(find.text(LogsScreen.gravite));
-      final periode = tester.getTopLeft(find.text(LogsScreen.periode));
+      final gravite = tester.getTopLeft(
+        find.text(LogsScreen.puce(LogsScreen.gravite, 'Info et plus')),
+      );
+      final periode = tester.getTopLeft(
+        find.text(LogsScreen.puce(LogsScreen.periode, '1 h')),
+      );
       expect(periode.dy, gravite.dy);
+      expect(find.text(LogsScreen.plusDeFiltres), findsNothing);
+      // Cartes bornées par la coquille.
+      final carte = tester.getRect(find.byType(Card).first);
+      expect(carte.width, lessThanOrEqualTo(kContentMaxWidth));
+    });
+
+    testWidgets('téléphone 360 × 640 : Rechercher visible, gravité en une '
+        'puce, cinq entrées visibles', (tester) async {
+      await _ouvrir(
+        tester,
+        width: 360,
+        height: 640,
+        reponses: [
+          // Police de test : un caractère vaut sa taille en largeur, un
+          // message court tient sur une ligne comme un message réel.
+          _page([
+            for (var i = 1; i <= 10; i++) _entree(i, message: 'Échec $i'),
+          ]),
+        ],
+      );
+      // Partie visible de la liste, sous la barre d'application et au-dessus
+      // de la barre de navigation.
+      final bas = tester.getRect(find.byType(ListView)).bottom;
+      final bouton = tester.getRect(find.text(LogsScreen.rechercher));
+      expect(bouton.bottom, lessThanOrEqualTo(bas));
+      final puce = find.text(
+        LogsScreen.puce(LogsScreen.gravite, 'Info et plus'),
+      );
+      expect(puce, findsOneWidget);
+      expect(find.byType(SegmentedButton<FiltreGravite>), findsNothing);
+      // Gravité choisie au menu.
+      await _choisir(tester, LogsScreen.gravite, 'Avertissements et plus');
+      expect(
+        find.text(
+          LogsScreen.puce(LogsScreen.gravite, 'Avertissements et plus'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+
+      await _rechercher(tester);
+      final visibles = find
+          .byType(Card)
+          .evaluate()
+          .where((e) => tester.getRect(find.byWidget(e.widget)).bottom <= bas)
+          .length;
+      expect(visibles, greaterThanOrEqualTo(5));
+    });
+
+    testWidgets('lecteur d\'écran : « Plus de filtres » et puce annoncent '
+        'leur ouverture, le menu sa valeur choisie', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _ouvrir(tester);
+      final plus = find.ancestor(
+        of: find.text(LogsScreen.plusDeFiltres),
+        matching: find.byType(TextButton),
+      );
+      expect(
+        tester.getSemantics(plus),
+        isSemantics(hasExpandedState: true, isExpanded: false),
+      );
+      await _plusDeFiltres(tester);
+      expect(tester.getSemantics(plus), isSemantics(isExpanded: true));
+
+      final puce = find.ancestor(
+        of: find.text(LogsScreen.puce(LogsScreen.gravite, 'Info et plus')),
+        matching: find.byType(ActionChip),
+      );
+      expect(tester.getSemantics(puce), isSemantics(isExpanded: false));
+      await tester.tap(puce);
+      await tester.pumpAndSettle();
+      expect(tester.getSemantics(puce), isSemantics(isExpanded: true));
+      final choisie = find.ancestor(
+        of: find.text('Info et plus').last,
+        matching: find.byType(MenuItemButton),
+      );
+      final autre = find.ancestor(
+        of: find.text('Erreurs'),
+        matching: find.byType(MenuItemButton),
+      );
+      expect(tester.getSemantics(choisie), isSemantics(isSelected: true));
+      expect(tester.getSemantics(autre), isSemantics(isSelected: false));
+      semantics.dispose();
+    });
+
+    testWidgets('« Plus de filtres (N) » compte les champs remplis', (
+      tester,
+    ) async {
+      await _ouvrir(tester);
+      expect(find.text(LogsScreen.plusDeFiltres), findsOneWidget);
+      await _plusDeFiltres(tester);
+      await tester.enterText(
+        find.widgetWithText(TextField, LogsScreen.ticket),
+        'abc',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, LogsScreen.texte),
+        'échec',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(LogsScreen.plusDeFiltresCompte(2)), findsOneWidget);
+      // Repliés, les champs gardent leur valeur et le compte reste.
+      await _plusDeFiltres(tester);
+      expect(find.text(LogsScreen.ticket), findsNothing);
+      expect(find.text(LogsScreen.plusDeFiltresCompte(2)), findsOneWidget);
+    });
+
+    testWidgets('entrée dépliée : « Données » dans un bloc à fond qui défile '
+        'en largeur', (tester) async {
+      await _ouvrir(
+        tester,
+        reponses: [
+          _page([_entree(1, payload: '{"cle": "${'x' * 300}"}')]),
+        ],
+      );
+      await _rechercher(tester);
+      await tester.tap(find.byType(ExpansionTile));
+      await tester.pumpAndSettle();
+      final bloc = find.ancestor(
+        of: find.textContaining('"cle"', findRichText: true),
+        matching: find.byType(SingleChildScrollView),
+      );
+      expect(bloc, findsOneWidget);
+      expect(
+        tester.widget<SingleChildScrollView>(bloc).scrollDirection,
+        Axis.horizontal,
+      );
+      final fond = tester.widget<DecoratedBox>(
+        find.ancestor(of: bloc, matching: find.byType(DecoratedBox)).first,
+      );
+      final theme = Theme.of(tester.element(bloc));
+      expect(
+        (fond.decoration as BoxDecoration).color,
+        theme.colorScheme.surfaceContainerHighest,
+      );
+      expect(tester.takeException(), isNull);
     });
 
     for (final width in [400.0, 1300.0]) {
@@ -851,6 +1019,15 @@ void main() {
         await _rechercher(tester);
         expect(tester.takeException(), isNull);
         expect(find.text(LogsScreen.compte(1)), findsOneWidget);
+        // Date et fonction en entier, sous l'étiquette.
+        final date = find.text('14 nov. 10:30:01 · synctickets');
+        expect(date, findsOneWidget);
+        final ligne = tester.widget<Text>(date);
+        expect(ligne.maxLines, isNull);
+        expect(
+          tester.getTopLeft(date).dy,
+          greaterThan(tester.getBottomLeft(find.text('Erreur')).dy),
+        );
       });
     }
   });

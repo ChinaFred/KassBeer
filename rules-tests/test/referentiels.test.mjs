@@ -81,6 +81,12 @@ const DOCS = {
     entries: [{ id: "hop-houblon-fictif", name: "Houblon Fictif", alpha: 7 }],
     content_sha256: "f".repeat(64),
   },
+  // Index des arômes (ADR-013, note du 2026-11-21) : écrit par ecrire.mjs seul.
+  "beer_index/hop_aromas": {
+    count: 1,
+    entries: [{ id: "hop-houblon-fictif", confidence: "medium" }],
+    content_sha256: "5".repeat(64),
+  },
   "public_recipes/diydog-1": {
     format_version: 1,
     owner_uid: "system",
@@ -191,6 +197,21 @@ describe("référentiels et recettes publiques : lecture par les membres", () =>
       const fs = db(state.env, profil);
       await expectRule(false, fs.doc(cheminDe("beer_hops")).get());
       await expectRule(false, fs.collection("public_recipes").limit(50).get());
+    });
+  }
+});
+
+describe("beer_index/hop_aromas : lu par les membres en get, jamais écrit", () => {
+  for (const profil of FIVE_PROFILES) {
+    const permis = MEMBRES.includes(profil);
+    it(`${profil} ${permis ? "lit" : "ne lit pas"} ; aucune écriture`, async () => {
+      const fs = db(state.env, profil);
+      await expectRule(permis, fs.doc("beer_index/hop_aromas").get());
+      await expectRule(
+        false,
+        fs.doc("beer_index/hop_aromas").set({ ...DOCS["beer_index/hop_aromas"], count: 2 }),
+      );
+      await expectRule(false, fs.doc("beer_index/hop_aromas").delete());
     });
   }
 });

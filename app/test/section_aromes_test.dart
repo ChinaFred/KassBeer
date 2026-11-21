@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
+import 'package:kass_beer/core/presentation/etiquette.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
@@ -64,6 +65,15 @@ void main() {
     expect(find.text('Whirlpool'), findsNothing);
     expect(find.text(TextesAromes.confianceFaible), findsNothing);
     expect(find.text(_mention('14 novembre 2026')), findsOneWidget);
+    // Mention sous le titre « Arômes », avant les descripteurs.
+    final mention = tester
+        .getTopLeft(find.text(_mention('14 novembre 2026')))
+        .dy;
+    expect(
+      tester.getTopLeft(find.text(TextesAromes.titre)).dy < mention,
+      isTrue,
+    );
+    expect(mention < tester.getTopLeft(find.text('Pamplemousse')).dy, isTrue);
     // Entre « Valeurs » et « Provenance ».
     final valeurs = tester.getTopLeft(find.text('Valeurs')).dy;
     final aromes = tester.getTopLeft(find.text(TextesAromes.titre)).dy;
@@ -107,6 +117,14 @@ void main() {
     );
     expect(find.text(TextesAromes.confianceFaible), findsOneWidget);
     expect(find.text(TextesAromes.nonRelu), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.widgetWithText(Etiquette, TextesAromes.confianceFaible),
+        matching: find.byIcon(Icons.info_outline),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.help_outline), findsNothing);
     expect(find.textContaining('relu le'), findsNothing);
   });
 
