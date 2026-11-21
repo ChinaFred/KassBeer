@@ -1,6 +1,6 @@
 # ADR-017 — Descriptions aromatiques des levures, sur le modèle d'ADR-013
 
-- **Statut** : proposé
+- **Statut** : accepté le 2026-11-21
 - **Date** : 2026-11-21
 - **Remplace** : — (étend ADR-013 aux levures ; complète ADR-005 : nouvelle collection de
   référence, exception à P20 limitée à un texte généré ; amende ADR-014 : `--supprimer-absents`
@@ -10,6 +10,24 @@
 Décision de l'utilisateur du 2026-11-21, relayée par la session principale : il accepte de
 relever la limite de 20 $ par mois de l'espace de travail Kass'Beer de la Console Anthropic si
 le lot l'exige. Montant et durée : section 6.
+
+Décisions de l'utilisateur du 2026-11-21, après l'avis :
+
+1. Périmètre : 923 levures. Toutes les levures des recettes du groupe, plus les types `ale`,
+   `lager`, `wheat`, `kveik`, `brett`, `lacto`, `pedio`, `mixed-culture`, `bacteria` (mélanges
+   pour bières acides) et les levures sans type. Les types `other`, `wine`, `champagne` et
+   `malolactic` (37 levures de vin, cidre, hydromel et saké) restent sans texte, sauf une levure
+   du groupe.
+2. Effort : celui retenu pour les houblons (`import/ingest/aromes/rapport.json`), un seul essai.
+3. Limite de la Console : 70 $ jusqu'à la fin du dernier lot, au plus tard le 30 novembre 2026,
+   puis retour à 20 $.
+4. Contenu : descripteurs, `profile`, `cool`, `warm` et styles conseillés (section 4).
+5. Liste des 32 descripteurs acceptée telle quelle.
+6. Essai : US-05, S-04, W-34/70, WLP001, Wyeast 3068, Wyeast 3944, Wyeast 3711, Wyeast 1968,
+   Voss Kveik et une Brettanomyces.
+7. Doublons d'un même producteur : un texte par document (section 5).
+8. Évolutions du réseau acceptées : P19, P20, P22 et P54 étendus, nouveau P62, puce dans
+   « Le projet », quatrième poste dans « Coûts variables » de `CLAUDE.md`.
 
 ## Contexte
 
@@ -132,7 +150,7 @@ et le SHA-256 de la liste des styles du prompt : un changement de `beer_styles` 
 | `styles` | 0 à 6 `{code, name}`, `code` présent dans `beer_styles.json` préparé (`bjcp2021-<code>`), `name` recopié du style ; vide si `unknown` |
 | `reviewed`, `reviewed_at`, `provenance`, `input_sha256`, `content_sha256`, `updated_at` | comme `beer_hop_aromas/` (ADR-013, section 4) |
 
-Liste des descripteurs proposée (32 entrées, clé : libellé), à valider par l'utilisateur :
+Liste des descripteurs (32 entrées, clé : libellé), acceptée par l'utilisateur le 2026-11-21 :
 `clean` neutre, `fruity_esters` esters fruités, `banana` banane, `pear` poire, `apple` pomme,
 `stone_fruit` fruits à noyau, `citrus` agrumes, `tropical_fruit` fruits tropicaux,
 `red_berries` fruits rouges, `bubblegum` bonbon, `floral` floral, `clove` clou de girofle,
