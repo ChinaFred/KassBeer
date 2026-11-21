@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
@@ -6,6 +7,7 @@ import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
+import 'package:kass_beer/features/library/presentation/couleur_ebc.dart';
 import 'package:kass_beer/features/library/presentation/data_sources_screen.dart';
 import 'package:kass_beer/features/library/presentation/library_providers.dart';
 import 'package:kass_beer/features/library/presentation/library_screen.dart';
@@ -44,12 +46,9 @@ String location(TestApp app) => app.container
 /// Défilement de la page, et non du champ de recherche.
 Finder get _liste => find.byType(Scrollable).first;
 
-/// Appuie sur la puce [label] : sur téléphone, la ligne des puces défile.
+/// Appuie sur la puce [label].
 Future<void> tapChip(WidgetTester tester, String label) async {
-  final chip = find.widgetWithText(ChoiceChip, label);
-  await tester.ensureVisible(chip);
-  await tester.pumpAndSettle();
-  await tester.tap(chip);
+  await tester.tap(find.widgetWithText(ChoiceChip, label));
   await tester.pumpAndSettle();
 }
 
@@ -106,16 +105,20 @@ void main() {
         ),
         findsOneWidget,
       );
-      for (final label in [
-        'Styles',
-        'Malts et sucres',
-        'Houblons',
-        'Levures',
-        'Divers',
-        'Recettes publiques',
-      ]) {
-        expect(find.widgetWithText(ChoiceChip, label), findsOneWidget);
+      // Téléphone : nom court affiché, nom complet lu par le lecteur d'écran.
+      for (final s in SegmentBibliotheque.values) {
+        final texte = tester.widget<Text>(
+          find.descendant(
+            of: find.widgetWithText(ChoiceChip, s.labelCourt),
+            matching: find.byType(Text),
+          ),
+        );
+        expect(texte.semanticsLabel, s.label);
       }
+      expect(
+        [for (final s in SegmentBibliotheque.values) s.labelCourt],
+        ['Styles', 'Malts', 'Houblons', 'Levures', 'Divers', 'Recettes'],
+      );
     });
 
     testWidgets('un segment par chemin', (tester) async {
@@ -351,6 +354,17 @@ void main() {
           matching: find.text('Confiance faible'),
         ),
         findsOneWidget,
+      );
+      // Les six puces de segment poussent la seconde ligne sous l'écran.
+      await tester.scrollUntilVisible(
+        find.text('Houblon doré'),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(CustomScrollView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(
         find.descendant(
@@ -638,32 +652,52 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('téléphone : puces sur une ligne qui défile', (tester) async {
-      await open(tester, '/bibliotheque/styles');
-      final rows = find.ancestor(
-        of: find.widgetWithText(ChoiceChip, 'Styles'),
-        matching: find.byWidgetPredicate(
-          (w) =>
-              w is SingleChildScrollView &&
-              w.scrollDirection == Axis.horizontal,
-        ),
-      );
-      expect(rows, findsOneWidget);
-      expect(
-        tester.getTopLeft(find.widgetWithText(ChoiceChip, 'Styles')).dy,
-        tester.getTopLeft(find.widgetWithText(ChoiceChip, 'Divers')).dy,
-      );
-      expect(find.byTooltip(LibraryScreen.sourcesLabel), findsOneWidget);
-      // Fondu au bord droit : une puce coupée annonce la suite. Opacité seule
-      // (dstIn) : la couleur du dégradé ne se voit pas.
-      final fondu = tester.widget<ShaderMask>(
-        find.ancestor(
-          of: find.widgetWithText(ChoiceChip, 'Styles'),
-          matching: find.byType(ShaderMask),
-        ),
-      );
-      expect(fondu.blendMode, BlendMode.dstIn);
-    });
+    for (final echelle in [1.0, 1.3, 2.0]) {
+      testWidgets('320 px, texte × $echelle : six puces visibles, sans '
+          'défilement horizontal', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = echelle;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final app = TestApp();
+        await app.pump(tester, width: 320);
+        app.signIn(brewerUser, member: brewerMember);
+        await tester.pumpAndSettle();
+        app.container.read(routerProvider).go('/bibliotheque/levures');
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        final ecran = tester.view.physicalSize / tester.view.devicePixelRatio;
+        for (final s in SegmentBibliotheque.values) {
+          final puce = find.widgetWithText(ChoiceChip, s.labelCourt);
+          final rect = tester.getRect(puce);
+          expect(rect.left, greaterThanOrEqualTo(0), reason: s.label);
+          expect(rect.right, lessThanOrEqualTo(ecran.width), reason: s.label);
+          expect(rect.height, greaterThanOrEqualTo(48), reason: s.label);
+          // Puce ouverte : la coche à la place de l'icône.
+          final ouverte = s == SegmentBibliotheque.cultures;
+          expect(tester.widget<ChoiceChip>(puce).selected, ouverte);
+          expect(
+            find.descendant(of: puce, matching: find.byIcon(s.icone)),
+            ouverte ? findsNothing : findsOneWidget,
+            reason: s.label,
+          );
+        }
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is SingleChildScrollView &&
+                w.scrollDirection == Axis.horizontal,
+          ),
+          findsNothing,
+        );
+        expect(find.byType(ShaderMask), findsNothing);
+        for (final acces in [
+          TextesCouleurEbc.echelle,
+          LibraryScreen.sourcesLabel,
+        ]) {
+          final rect = tester.getRect(find.byTooltip(acces));
+          expect(rect.right, lessThanOrEqualTo(ecran.width), reason: acces);
+        }
+      });
+    }
 
     testWidgets('au-delà de 600 px : puces à la ligne, icône des sources à '
         'droite', (tester) async {
@@ -678,7 +712,17 @@ void main() {
         find.ancestor(of: puce, matching: find.byType(Wrap)),
         findsOneWidget,
       );
-      // Même place qu'au téléphone : une icône à droite des puces, sans fondu.
+      // Nom complet et icône en tête de chaque puce, sauf la puce ouverte.
+      for (final s in SegmentBibliotheque.values.skip(1)) {
+        expect(
+          find.descendant(
+            of: find.widgetWithText(ChoiceChip, s.label),
+            matching: find.byIcon(s.icone),
+          ),
+          findsOneWidget,
+        );
+      }
+      // Une icône à droite des puces.
       final sources = find.byTooltip(LibraryScreen.sourcesLabel);
       expect(sources, findsOneWidget);
       expect(
@@ -687,11 +731,47 @@ void main() {
           tester.getTopRight(find.widgetWithText(ChoiceChip, 'Divers')).dx,
         ),
       );
-      expect(
-        find.ancestor(of: puce, matching: find.byType(ShaderMask)),
-        findsNothing,
-      );
     });
+
+    for (final echelle in [1.3, 2.0]) {
+      testWidgets('600 px, texte × $echelle : noms courts entiers, accès '
+          'au-dessus des puces', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = echelle;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final app = TestApp();
+        await app.pump(tester, width: 600);
+        app.signIn(brewerUser, member: brewerMember);
+        await tester.pumpAndSettle();
+        app.container.read(routerProvider).go('/bibliotheque/styles');
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        for (final s in SegmentBibliotheque.values) {
+          final nom = find.descendant(
+            of: find.byType(ChoiceChip),
+            matching: find.text(s.labelCourt),
+          );
+          final texte = tester.renderObject<RenderParagraph>(
+            find.descendant(of: nom, matching: find.byType(RichText)),
+          );
+          expect(
+            texte.getMaxIntrinsicWidth(double.infinity),
+            lessThanOrEqualTo(texte.size.width + 0.5),
+            reason: s.label,
+          );
+          expect(
+            tester.getRect(nom).right,
+            lessThanOrEqualTo(600),
+            reason: s.label,
+          );
+        }
+        expect(
+          tester.getBottomLeft(find.byTooltip(LibraryScreen.sourcesLabel)).dy,
+          lessThanOrEqualTo(
+            tester.getTopLeft(find.widgetWithText(ChoiceChip, 'Styles')).dy,
+          ),
+        );
+      });
+    }
 
     testWidgets('barre du bas à 360 px, admin, texte × 2 : aucun débordement', (
       tester,
@@ -803,7 +883,7 @@ void main() {
       );
       app.library.pageError = Exception('refus');
       await tapChip(tester, 'Styles');
-      await tapChip(tester, 'Recettes publiques');
+      await tapChip(tester, 'Recettes');
       expect(find.text(LibraryScreen.loadError), findsOneWidget);
     });
 
@@ -938,7 +1018,7 @@ void main() {
       tester,
     ) async {
       final app = await open(tester, '/bibliotheque');
-      // Téléphone : une icône à droite des puces.
+      // Téléphone : une icône au-dessus des puces, à droite.
       await tester.tap(find.byTooltip(LibraryScreen.sourcesLabel));
       await tester.pumpAndSettle();
       expect(find.byType(DataSourcesScreen), findsOneWidget);

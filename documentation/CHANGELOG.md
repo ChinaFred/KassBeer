@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.84 — fonctionnel
+### v0.1.85 — fonctionnel
 
 Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un
 filtre « Confiance des arômes » trie les houblons selon la confiance de leur description
@@ -16,7 +16,7 @@ visibles en haut pendant le défilement, un bouton efface la recherche, et le no
 « 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA
 passe avant le texte. Une liste lue hors ligne le signale.
 
-### v0.1.84 — technique
+### v0.1.85 — technique
 
 Nouvel index `beer_index/hop_aromas` (`{id, confidence}`), construit par `ingest/ecrire.mjs`
 depuis les entrées acceptées de `aromes.json` et validé par `ingest/lib/validation.mjs` ; un
@@ -28,6 +28,30 @@ compte dans un `PinnedHeaderSliver` (sauf au-delà de `kGrandTexteMinScale`), co
 `rules-tests/` pour `beer_index/hop_aromas`. ADR-013, note du 2026-11-21. Après la fusion,
 l'administrateur relance la préparation du référentiel puis `ecrire.mjs`. P22 et P55 de
 `CLAUDE.md` couvrent `beer_index/hop_aromas` (décision de l'utilisateur du 2026-11-21).
+
+### v0.1.84 — fonctionnel
+
+Sur téléphone, la Bibliothèque montre ses six rubriques sans faire glisser la ligne : les
+Levures, les Divers et les Recettes publiques ne sont plus cachées hors de l'écran. Chaque
+rubrique a maintenant une icône à côté de son nom, à toutes les tailles d'écran ; la rubrique
+ouverte montre une coche à la place de son icône. Sur téléphone, ou avec un texte agrandi, les
+noms sont raccourcis (« Malts », « Recettes ») et les boutons « Échelle des couleurs » et
+« Sources des données » passent en icônes sur une ligne au-dessus des rubriques.
+Demandé par le ticket #97.
+
+### v0.1.84 — technique
+
+`SegmentBibliotheque` (`library_providers.dart`) reçoit `labelCourt` et `icone`. `_EnTete`
+(`library_screen.dart`) place les puces dans un `Wrap` à toutes les largeurs. Sous 600 px, ou
+à partir de `kGrandTexteMinScale` (130 %), les deux accès sont des icônes sur une ligne
+au-dessus des puces, qui affichent leur nom court : à 600 px et 200 %, le rail laisse 423 px,
+trop peu pour « Recettes publiques » et le bouton « Échelle des couleurs » en texte. La puce
+ouverte n'a pas d'avatar : la coche de `ChoiceChip` remplace l'icône au lieu d'être peinte
+dessus. Le `ShaderMask`, le défilement horizontal et la constante `_fondu` sortent. Le nom
+complet reste le `semanticsLabel` de la puce et le titre de la fiche. Tests : à 320 px, texte
+à 100 %, 130 % et 200 %, les six puces et les deux accès tiennent dans la largeur, sans
+débordement, avec une cible de 48 px ; à 600 px, texte à 130 % et 200 %, les noms courts sont
+entiers. Demandé par le ticket #97.
 
 ### v0.1.83 — fonctionnel
 
