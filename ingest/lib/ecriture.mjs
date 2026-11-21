@@ -5,8 +5,9 @@
 // posé par le serveur.
 //
 // Suppression des documents absents de la préparation (ADR-014, section 3, P19) : seulement
-// sur option (--supprimer-absents <collection>), dans beer_hops, beer_hop_aromas ou
-// beer_cultures (amendement du 2026-11-15), 30 au plus par lancement, refusée si la
+// sur option (--supprimer-absents <collection>), dans beer_hops, beer_hop_aromas,
+// beer_cultures (amendement du 2026-11-15) ou beer_culture_aromas (ADR-017), 30 au plus par
+// lancement, refusée si la
 // préparation compte moins de 90 % des documents en ligne.
 // Un identifiant hors du motif de la collection n'est jamais supprimé.
 

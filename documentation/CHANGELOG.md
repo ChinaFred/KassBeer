@@ -6,6 +6,35 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.93 — technique
+
+Livraison 1 d'ADR-017 : descriptions aromatiques des levures, générées, relues et écrites
+depuis le poste de l'administrateur. L'application ne les affiche pas encore (livraison 2).
+
+`ingest/generer-aromes.mjs` prend `--nature hop|culture` (`hop` par défaut : les commandes des
+houblons gardent leur effet). Le moteur commun reste dans `ingest/lib/aromes/generation.mjs` ;
+ce qui dépend de la nature vit dans `lib/aromes/natures/hop.mjs` (qui reprend `prompt.mjs` et
+`validation.mjs`) et `lib/aromes/natures/culture.mjs` (données envoyées sans `notes` ni
+`provenance`, prompt versionné, schéma, contrôle, 32 descripteurs de
+`descripteurs-levures.json`, périmètre). Fichiers des levures dans `import/ingest/aromes/levures/`,
+`tarif.json` commun. Poste `culture_aroma_generation`. Périmètre : levures du groupe, plus les
+types autres que `other`, `wine`, `champagne`, `malolactic` (923 levures sur 960). Styles
+conseillés pris dans `beer_styles.json` préparé, après le contrôle de `beer_styles` de
+`ingest/lib/validation.mjs` au générateur comme à l'écrivain (un style refusé n'entre ni dans le
+prompt ni dans les codes acceptés) ; l'empreinte couvre la liste des styles.
+
+`ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs --nature
+hop|culture`, et `exchange/bin/lister_houblons_recettes.dart` devient
+`lister_ingredients_recettes.dart` (`--referentiel` remplace `--houblons`) ; aucun ancien nom
+gardé. `IndexBibliotheque.correspondances` est remplacé par `candidats`, qui liste les
+identifiants d'un nom non résolu ; `houblons-recettes.json` porte aussi ces candidats.
+`ecrire.mjs` écrit `beer_culture_aromas/` depuis `levures/aromes.json` : refus d'une levure
+absente de `beer_cultures.json`, d'une levure du groupe non relue, d'un code de style inconnu ;
+rapport `culture_aromas_file` et `reviewed_orphans`. `--supprimer-absents beer_culture_aromas`
+accepté dans les bornes d'ADR-014. `firestore.rules` : `beer_culture_aromas/{entryId}` en `get`
+par les membres, `list` et écriture refusés. Aucune dépendance ajoutée ni montée ; `app/lib/`
+inchangé, `main.dart.js` non concerné.
+
 ### v0.1.92 — fonctionnel
 
 L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou

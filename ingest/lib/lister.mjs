@@ -1,10 +1,12 @@
-// Liste des noms de houblons des recettes du groupe (ADR-013, décisions 9 et 10), en lecture
-// seule : lit recipes/*.recipe.ingredients.hop_additions[].name et
-// brews/*.recipe_snapshot.recipe.ingredients.hop_additions[].name, et n'écrit que les noms,
-// triés et sans doublon, dans import/ingest/aromes/noms-houblons.json. Aucun identifiant
-// de recette, de brassin ni de membre, aucune quantité ni prix ne sort. Aucune écriture
-// dans Firestore. Mêmes garde-fous que ecrire.mjs (émulateur par défaut, production sur
-// option, ADC d'un compte utilisateur, saisie du nom du projet).
+// Liste des noms d'ingrédients des recettes du groupe, en lecture seule : houblons
+// (--nature hop, ADR-013, décisions 9 et 10) ou levures (--nature culture, ADR-017). Lit
+// recipes/*.recipe.ingredients.<liste>[].name et
+// brews/*.recipe_snapshot.recipe.ingredients.<liste>[].name (hop_additions ou
+// culture_additions), et n'écrit que les noms, triés et sans doublon, dans
+// import/ingest/aromes/noms-houblons.json ou import/ingest/aromes/levures/noms-levures.json.
+// Aucun identifiant de recette, de brassin ni de membre, aucune quantité ni prix ne sort.
+// Aucune écriture dans Firestore. Mêmes garde-fous que ecrire.mjs (émulateur par défaut,
+// production sur option, ADC d'un compte utilisateur, saisie du nom du projet).
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -17,20 +19,29 @@ import {
   lireOptions,
 } from "./options.mjs";
 
-/// Fichier écrit par défaut.
-export const FICHIER_NOMS = fileURLToPath(
-  new URL("../../import/ingest/aromes/noms-houblons.json", import.meta.url),
-);
+/// Natures listées : liste lue dans `ingredients`, fichier écrit par défaut, format.
+export const NATURES_LISTE = {
+  hop: {
+    liste: "hop_additions",
+    fichier: fileURLToPath(
+      new URL("../../import/ingest/aromes/noms-houblons.json", import.meta.url),
+    ),
+    format: "kassbeer_noms_houblons",
+  },
+  culture: {
+    liste: "culture_additions",
+    fichier: fileURLToPath(
+      new URL("../../import/ingest/aromes/levures/noms-levures.json", import.meta.url),
+    ),
+    format: "kassbeer_noms_levures",
+  },
+};
 
 /// Longueur maximale d'un nom gardé (borne de `name` dans les règles).
 const NOM_MAX = 120;
 
-/// Champs lus : seule la liste des houblons, pas le reste du document.
-const CHAMP_RECETTE = "recipe.ingredients.hop_additions";
-const CHAMP_BRASSIN = "recipe_snapshot.recipe.ingredients.hop_additions";
-
-/// Noms de houblons d'une liste `hop_additions` lue ([lignes], valeur Firestore), ajoutés à
-/// [noms]. Rend le nombre de lignes écartées (nom absent, vide ou trop long).
+/// Noms d'une liste d'ingrédients lue ([lignes], valeur Firestore), ajoutés à [noms]. Rend
+/// le nombre de lignes écartées (nom absent, vide ou trop long).
 export function ajouterNoms(lignes, noms) {
   let ecartees = 0;
   if (!Array.isArray(lignes)) return 0;
@@ -43,28 +54,40 @@ export function ajouterNoms(lignes, noms) {
 }
 
 /// Lit [argv] : options de ecrire.mjs pour la cible (--production --projet kassbeer), plus
-/// --sortie <fichier>. --simulation, --dossier, --rapports et --aromes sont refusés.
+/// --nature hop|culture (hop par défaut) et --sortie <fichier>. --simulation, --dossier,
+/// --rapports, --aromes et --supprimer-absents sont refusés.
 export function lireOptionsLister(argv, env) {
   const reste = [];
   let sortie = null;
+  let nature = "hop";
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--sortie") {
+    if (argv[i] === "--nature") {
+      nature = argv[++i];
+      if (!(nature in NATURES_LISTE)) {
+        throw new ErreurOptions(`--nature : ${Object.keys(NATURES_LISTE).join(" ou ")}.`);
+      }
+    } else if (argv[i] === "--sortie") {
       sortie = argv[++i];
       if (sortie === undefined || sortie.startsWith("--")) {
         throw new ErreurOptions("--sortie demande une valeur.");
       }
-    } else if (["--simulation", "--dossier", "--rapports", "--aromes"].includes(argv[i])) {
+    } else if (
+      ["--simulation", "--dossier", "--rapports", "--aromes", "--supprimer-absents"].includes(
+        argv[i],
+      )
+    ) {
       throw new ErreurOptions(`Option inconnue : ${argv[i]} (lecture seule, rien n'est écrit).`);
     } else {
       reste.push(argv[i]);
     }
   }
   const cible = lireOptions(reste, env);
-  return { cible: cible.cible, projet: cible.projet, sortie };
+  return { cible: cible.cible, projet: cible.projet, sortie, nature };
 }
 
-/// Exécute la liste. Rend `{target, project, recettes, brassins, ecartees, noms, fichier}`.
-export async function listerHoublons({
+/// Exécute la liste. Rend `{target, project, nature, recettes, brassins, ecartees, noms,
+/// fichier}`.
+export async function listerIngredients({
   argv,
   env,
   entree,
@@ -73,6 +96,10 @@ export async function listerHoublons({
   lireIdentifiants = (chemin) => readFileSync(chemin, "utf8"),
 }) {
   const options = lireOptionsLister(argv, env);
+  const nature = NATURES_LISTE[options.nature];
+  // Champs lus : seule la liste de la nature, pas le reste du document.
+  const champRecette = `recipe.ingredients.${nature.liste}`;
+  const champBrassin = `recipe_snapshot.recipe.ingredients.${nature.liste}`;
   if (options.cible === "production") {
     controlerIdentifiants(cheminIdentifiants(env), lireIdentifiants);
     const confirme = await confirmerProduction(options.projet, entree, sortie);
@@ -85,18 +112,18 @@ export async function listerHoublons({
     const db = getFirestore(app);
     const noms = new Set();
     let ecartees = 0;
-    const recettes = await db.collection("recipes").select(CHAMP_RECETTE).get();
-    for (const d of recettes.docs) ecartees += ajouterNoms(d.get(CHAMP_RECETTE), noms);
-    const brassins = await db.collection("brews").select(CHAMP_BRASSIN).get();
-    for (const d of brassins.docs) ecartees += ajouterNoms(d.get(CHAMP_BRASSIN), noms);
+    const recettes = await db.collection("recipes").select(champRecette).get();
+    for (const d of recettes.docs) ecartees += ajouterNoms(d.get(champRecette), noms);
+    const brassins = await db.collection("brews").select(champBrassin).get();
+    for (const d of brassins.docs) ecartees += ajouterNoms(d.get(champBrassin), noms);
     const liste = [...noms].sort();
-    const fichier = resolve(options.sortie ?? FICHIER_NOMS);
+    const fichier = resolve(options.sortie ?? nature.fichier);
     mkdirSync(dirname(fichier), { recursive: true });
     writeFileSync(
       fichier,
       `${JSON.stringify(
         {
-          format: "kassbeer_noms_houblons",
+          format: nature.format,
           version: 1,
           generated_at: maintenant().toISOString(),
           target: options.cible,
@@ -109,6 +136,7 @@ export async function listerHoublons({
     return {
       target: options.cible,
       project: options.projet,
+      nature: options.nature,
       recettes: recettes.size,
       brassins: brassins.size,
       ecartees,

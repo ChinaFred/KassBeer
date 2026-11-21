@@ -1,13 +1,12 @@
-// Tarif et estimation du poste hop_aroma_generation (ADR-013, section 5). Le tarif vient de
-// import/ingest/aromes/tarif.json, écrit par l'admin avec sa date et sa source ; aucun
-// tarif n'est écrit dans le code. Sans fichier lisible, ou s'il a plus de 90 jours, aucune
-// estimation, donc aucun envoi.
+// Tarif et estimation des postes hop_aroma_generation (ADR-013, section 5) et
+// culture_aroma_generation (ADR-017, section 6). Le tarif vient de
+// import/ingest/aromes/tarif.json, commun aux deux natures, écrit par l'admin avec sa date et
+// sa source ; aucun tarif n'est écrit dans le code. Sans fichier lisible, ou s'il a plus de
+// 90 jours, aucune estimation, donc aucun envoi. Le nom du poste vient de la nature
+// (natures/hop.mjs, natures/culture.mjs).
 
 import { readFileSync } from "node:fs";
 import { estDate } from "./validation.mjs";
-
-/// Nom du poste de coût, porté par chaque rapport (catalogue « Coûts variables »).
-export const POSTE = "hop_aroma_generation";
 
 /// Âge maximal du tarif, en jours.
 export const AGE_MAX_TARIF_JOURS = 90;
@@ -52,9 +51,9 @@ export function lireTarif(chemin, modele, maintenant, lire = (c) => readFileSync
   return { model: tarif.model, date: tarif.date, source: tarif.source, prix };
 }
 
-/// Borne haute d'un envoi : pour chaque houblon, jetons d'entrée comptés × tarif d'entrée
-/// (écriture du cache comprise en appels directs) + max_tokens × tarif de sortie. Rend le
-/// montant total et le nombre de houblons qui tiennent dans [budget] (dans l'ordre).
+/// Borne haute d'un envoi : pour chaque élément (houblon ou levure), jetons d'entrée comptés
+/// × tarif d'entrée (écriture du cache comprise en appels directs) + max_tokens × tarif de
+/// sortie. Rend le montant total et le nombre d'éléments qui tiennent dans [budget] (dans l'ordre).
 export function borneHaute(jetonsEntree, { tarif, mode, maxTokens, budget = null }) {
   const p = tarif.prix;
   const entree = mode === "lot" ? p.batch_input : Math.max(p.input, p.cache_write);

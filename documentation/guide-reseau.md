@@ -253,6 +253,21 @@ Le 2026-11-21 (v0.1.88), décision de l'utilisateur : P22 et P55 couvrent l'inde
 houblons (P22), construction par `ingest/ecrire.mjs` seul avec des entrées `{id, confidence}` (P55).
 Aucun contrôle, agent, skill ni hook nouveau.
 
+Le 2026-11-21, ADR-017 accepté par l'utilisateur (descriptions aromatiques des levures,
+décision 8) : P19 (`beer_culture_aromas` en `get` seul, `--supprimer-absents
+beer_culture_aromas`), P20 (exception des textes générés étendue à `beer_culture_aromas/`), P22
+(aucun écouteur ni lecture entière sur `beer_culture_aromas`) et P54 (poste
+`culture_aroma_generation`, nature `culture` du même générateur) sont étendus ; P62 est ajouté
+(`relecteur-regles` : collection, contrôle de `ingest/lib/aromes/natures/culture.mjs`, styles
+conseillés pris dans `beer_styles.json` préparé, périmètre, refus de `ecrire.mjs`, liste du
+groupe, affichage). « Le projet » et « Coûts variables » de `CLAUDE.md` nomment le quatrième
+poste et la limite de 70 $ jusqu'au 30 novembre 2026 au plus tard. Livraison 1 (v0.1.93) :
+`ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs` et
+`exchange/bin/lister_houblons_recettes.dart` devient `lister_ingredients_recettes.dart`, sans
+ancien nom gardé ; « Structure » et « Commandes utiles » de `CLAUDE.md` suivent et reçoivent les
+commandes `--nature culture`. P20 précise que la ligne des levures arrive à l'écran « Sources
+des données » avec la livraison 2. Aucun agent, skill ni hook nouveau.
+
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
 garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.

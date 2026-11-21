@@ -600,7 +600,7 @@ void main() {
       };
       for (final MapEntry(:key, :value) in attendu.entries) {
         expect(index.resoudre(key)?.id, value, reason: key);
-        expect(index.correspondances(key), 1, reason: key);
+        expect(index.candidats(key), [value], reason: key);
       }
     });
 

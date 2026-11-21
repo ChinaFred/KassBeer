@@ -10,7 +10,7 @@ export 'src/ingestion/alias.dart';
 export 'src/ingestion/cles.dart';
 export 'src/ingestion/diydog.dart';
 export 'src/ingestion/fusions.dart';
-export 'src/ingestion/houblons_recettes.dart';
+export 'src/ingestion/ingredients_recettes.dart';
 export 'src/ingestion/json_commentaires.dart';
 export 'src/ingestion/lecture_sources.dart';
 export 'src/ingestion/origines.dart';
