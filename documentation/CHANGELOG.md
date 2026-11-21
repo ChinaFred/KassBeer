@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.87 — fonctionnel
+### v0.1.88 — fonctionnel
 
 Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme
 reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue
@@ -15,7 +15,7 @@ sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton �
 forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé
 par le ticket #105.
 
-### v0.1.87 — technique
+### v0.1.88 — technique
 
 `FormulaireHoublon` (`ingredient_forms.dart`) part de `pellet` (`formeHoublonProposee`) avec
 `_formeProposee` : une suggestion de la Bibliothèque remplace la forme proposée, jamais une
@@ -23,6 +23,32 @@ forme choisie. `RecipeContent.hopsSansForme` et `avecFormeHoublons` (`recipe.dar
 (`recipe_detail_screen.dart`) écrit par `RecipesRepository.update`, comme l'éditeur, sans
 transaction ni appel réseau. Lecture et import inchangés ; note à ADR-005 (D8). Aucune règle
 ni fonction serveur touchée. Tests : `recipe_screens_test.dart`. Demandé par le ticket #105.
+
+### v0.1.87 — fonctionnel
+
+L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux
+puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès
+l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par
+« Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y
+est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même
+ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les
+données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95.
+
+### v0.1.87 — technique
+
+`logs_screen.dart` : `_PuceMenu` (`MenuAnchor` et `ActionChip`) remplace `BoutonsSegmentes`
+pour la gravité et la période ; `_plusDeFiltres` replie les trois autres filtres sur
+téléphone, et un refus de champ du serveur les déplie. Gravité en
+`Etiquette` partagée, ton choisi par gravité, à la place de l'icône de tête ; date et fonction dessous au-delà
+de `kGrandTexteMinScale`. Entrées en `Card.outlined`, texte en chasse fixe dans un
+`SingleChildScrollView` horizontal sur `surfaceContainerHighest`. Puces avec `childFocusNode`
+et `Semantics(expanded)`, valeur du menu en `Semantics(selected)`, chacun dans un
+`MergeSemantics` pour viser le nœud du bouton. La note sur les e-mails
+passe sous le compte des entrées. Aucun appel, filtre, règle ni fonction serveur ne change ; la
+recherche part toujours du seul bouton « Rechercher » (P50). Tests de `logs_test.dart` :
+téléphone de 360 × 640 (« Rechercher » visible, gravité en une puce, cinq entrées visibles),
+compte de « Plus de filtres (2) », bloc des données, date entière à 200 %, états
+« développé » et « sélectionné » lus sur les nœuds de sémantique.
 
 ### v0.1.86 — fonctionnel
 
