@@ -863,49 +863,59 @@ void main() {
       },
     );
 
-    test(
-      'chaque ligne de kCorrectionsCultures, sur ses noms et références',
-      () {
-        // Noms et références des souches visées seuls, valeurs inventées (P20).
-        final r = fusionner(
-          [
-            culture('C2C American Farmhouse', 'Omega Yeast', 'OYL-217-C2C'),
-            culture('Saison #1', 'GigaYeast', 'GY018-SAISON-1'),
-            culture('Saison #2', 'GigaYeast', 'GY027-SAISON-2'),
-            culture('Sweet Flemish Brett', 'GigaYeast', 'GY144'),
-            culture('Saison Blend', 'The Yeast Bay', null),
-            culture('Lalvin', 'Lallemand', '71B'),
-            culture('SafSpirit', 'Fermentis', 'HG-1'),
-            culture('Fermoale', 'AEB', 'AY3'),
-            culture('Bavarian Wheat Blend', 'Wyeast', '3056'),
-            culture('British Ale II', 'Wyeast', '1335'),
-            culture('Lactobacillus buchneri', 'Wyeast', '5335'),
-          ],
-          [
-            culture('C2C American Farmhouse', 'Omega Yeast', 'OYL-217'),
-            culture('Saison #1', 'GigaYeast', 'GY018'),
-            culture('Saison #2', 'GigaYeast', 'GY027'),
-            culture('Sweet Flemish Brett', 'GigaYeast', 'GB144'),
-            culture('Saison Blend', 'The Yeast Bay', 'WLP4007'),
-            culture('Bavarian Wheat', 'Wyeast', '3056'),
-            culture('British Ale', 'Wyeast', '1335'),
-            culture('Lactobacillus', 'Wyeast', '5335'),
-          ],
-          kCorrectionsCultures,
-        );
-        final c = r.parNature[NatureReferentiel.culture]!;
-        expect(c, hasLength(11));
-        expect({
-          for (final f in c.values) f.nom,
-        }, containsAll(['Lalvin 71B', 'SafSpirit HG-1', 'Fermoale AY3']));
-        for (final f in c.values) {
-          expect(f.aliases, isNot(contains('Bavarian Wheat')), reason: f.id);
-          expect(f.aliases, isNot(contains('British Ale')), reason: f.id);
-          expect(f.aliases, isNot(contains('Lactobacillus')), reason: f.id);
-        }
-        expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
-      },
-    );
+    test('chaque ligne de kCorrectionsCultures, sur ses noms et références', () {
+      // Noms et références des souches visées seuls, valeurs inventées (P20).
+      final r = fusionner(
+        [
+          culture('C2C American Farmhouse', 'Omega Yeast', 'OYL-217-C2C'),
+          culture('Saison #1', 'GigaYeast', 'GY018-SAISON-1'),
+          culture('Saison #2', 'GigaYeast', 'GY027-SAISON-2'),
+          culture('Sweet Flemish Brett', 'GigaYeast', 'GY144'),
+          culture('Saison Blend', 'The Yeast Bay', null),
+          culture('Prise de Mousse Wine', 'Lallemand', 'LALVIN-EC-1118'),
+          culture('Lalvin', 'Lallemand', '71B'),
+          culture('SafSpirit', 'Fermentis', 'HG-1'),
+          culture('Fermoale', 'AEB', 'AY3'),
+          culture('Bavarian Wheat Blend', 'Wyeast', '3056'),
+          culture('British Ale II', 'Wyeast', '1335'),
+          culture('Lactobacillus buchneri', 'Wyeast', '5335'),
+        ],
+        [
+          culture('C2C American Farmhouse', 'Omega Yeast', 'OYL-217'),
+          culture('Saison #1', 'GigaYeast', 'GY018'),
+          culture('Saison #2', 'GigaYeast', 'GY027'),
+          culture('Sweet Flemish Brett', 'GigaYeast', 'GB144'),
+          culture('Saison Blend', 'The Yeast Bay', 'WLP4007'),
+          culture('Lalvin', 'Lallemand', 'EC-1118'),
+          culture('Bavarian Wheat', 'Wyeast', '3056'),
+          culture('British Ale', 'Wyeast', '1335'),
+          culture('Lactobacillus', 'Wyeast', '5335'),
+        ],
+        kCorrectionsCultures,
+      );
+      final c = r.parNature[NatureReferentiel.culture]!;
+      expect(c, hasLength(12));
+      expect({
+        for (final f in c.values) f.nom,
+      }, containsAll(['Lalvin 71B', 'SafSpirit HG-1', 'Fermoale AY3']));
+      // « Prise de Mousse Wine » (`LALVIN-EC-1118`) rejoint la souche EC-1118 :
+      // un seul document porte les deux noms.
+      expect(
+        c.values.where(
+          (f) => {
+            f.nom,
+            ...f.aliases,
+          }.containsAll(['Lalvin EC-1118', 'Prise de Mousse Wine']),
+        ),
+        hasLength(1),
+      );
+      for (final f in c.values) {
+        expect(f.aliases, isNot(contains('Bavarian Wheat')), reason: f.id);
+        expect(f.aliases, isNot(contains('British Ale')), reason: f.id);
+        expect(f.aliases, isNot(contains('Lactobacillus')), reason: f.id);
+      }
+      expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+    });
   });
 
   group('table de fusion des cultures', () {

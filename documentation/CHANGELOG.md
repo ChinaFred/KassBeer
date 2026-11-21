@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.86 — fonctionnel
+### v0.1.87 — fonctionnel
 
 L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux
 puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès
@@ -16,7 +16,7 @@ est écrite en toutes lettres sur un fond coloré, avec la date et la fonction s
 ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les
 données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95.
 
-### v0.1.86 — technique
+### v0.1.87 — technique
 
 `logs_screen.dart` : `_PuceMenu` (`MenuAnchor` et `ActionChip`) remplace `BoutonsSegmentes`
 pour la gravité et la période ; `_plusDeFiltres` replie les trois autres filtres sur
@@ -31,6 +31,25 @@ recherche part toujours du seul bouton « Rechercher » (P50). Tests de `logs_te
 téléphone de 360 × 640 (« Rechercher » visible, gravité en une puce, cinq entrées visibles),
 compte de « Plus de filtres (2) », bloc des données, date entière à 200 %, états
 « développé » et « sélectionné » lus sur les nœuds de sémantique.
+
+### v0.1.86 — fonctionnel
+
+La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la
+Bibliothèque : c'est la même levure, sous une autre référence. Sa fiche est celle de « Lalvin
+EC-1118 », qui garde « Prise de Mousse Wine » comme autre nom. Le changement arrive dans la
+Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.86 — technique
+
+`kCorrectionsCultures` (`exchange/lib/src/ingestion/fusions.dart`) gagne une ligne
+`ReferenceCulture` (demande de l'utilisateur du 2026-11-21) : Lallemand `LALVIN-EC-1118` (fichier 004, « Prise de Mousse Wine ») →
+`EC-1118`. L'entrée rejoint la souche EC-1118 du fichier 005, prioritaire, qui garde
+l'identifiant `culture-lallemand-ec1118-lalvin-ec-1118` et ses valeurs. Préparation rejouée sur
+les sources du 2026-11-08 : 960 documents `beer_cultures` au lieu de 961, 1 identifiant sort,
+aucun n'entre, 1 document change. Doublons d'un même producteur inchangés (4, laissés listés).
+`ecrire.mjs --supprimer-absents beer_cultures` retire l'ancien identifiant. Test : la ligne
+rejouée dans « chaque ligne de kCorrectionsCultures » de `fusions_test.dart`. `DATA_SOURCES.md`
+et `exigences-techniques.md` à jour.
 
 ### v0.1.85 — fonctionnel
 

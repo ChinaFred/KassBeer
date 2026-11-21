@@ -396,6 +396,7 @@ const List<CorrectionCulture> kCorrectionsCultures = [
   ReferenceCulture('GigaYeast', lue: 'GY027-SAISON-2', retenue: 'GY027'),
   ReferenceCulture('GigaYeast', lue: 'GY144', retenue: 'GB144'),
   ReferenceCulture('The Yeast Bay', nom: 'Saison Blend', retenue: 'WLP4007'),
+  ReferenceCulture('Lallemand', lue: 'LALVIN-EC-1118', retenue: 'EC-1118'),
   // Un nom de gamme porté par plusieurs souches.
   GammeCulture('Lallemand', 'Lalvin'),
   GammeCulture('Fermentis', 'SafSpirit'),
