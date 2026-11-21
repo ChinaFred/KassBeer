@@ -9,6 +9,7 @@ import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../domain/ticket.dart';
+import '../domain/ticket_analysis.dart';
 import '../domain/ticket_launch.dart';
 import 'lien_usage_claude.dart';
 import 'tickets_providers.dart';
@@ -48,12 +49,23 @@ final lancementFicheProvider = NotifierProvider.autoDispose
     .family<LancementFicheNotifier, bool, String>(LancementFicheNotifier.new);
 
 /// Fin de la boîte : [resultat] quand l'appel a conclu boîte ouverte ;
-/// [detache] quand « Fermer » l'a fermée pendant l'envoi (l'appel continue).
-typedef FinBoiteLancement = ({ResultatLancement? resultat, bool detache});
+/// [echecValidation] quand la validation demandée avant le lancement a
+/// échoué (aucun lancement n'est parti) ; [detache] quand « Fermer » l'a
+/// fermée pendant l'envoi (les appels continuent).
+typedef FinBoiteLancement = ({
+  ResultatLancement? resultat,
+  EchecReponse? echecValidation,
+  bool detache,
+});
 
 /// Boîte de confirmation d'un lancement (P39). Rien n'est appelé avant
 /// « Lancer ». Pendant l'envoi, « Fermer » et le retour la ferment
 /// sans couper l'appel. Un refus du serveur reste affiché dans la boîte.
+///
+/// Avec [validationAvant] et [valider] (« Valider et lancer le
+/// développement ») : la boîte appelle d'abord [valider], puis [envoyer]
+/// seulement si la validation est appliquée. Elle se ferme sur tout
+/// résultat : la fiche l'affiche dans un message.
 class BoiteLancement extends StatefulWidget {
   const BoiteLancement({
     super.key,
@@ -65,7 +77,9 @@ class BoiteLancement extends StatefulWidget {
     this.prNumber,
     this.avertissement,
     this.typeTicket,
-  });
+    this.validationAvant,
+    this.valider,
+  }) : assert((validationAvant == null) == (valider == null));
 
   final ActionLancement action;
   final int? issueNumber;
@@ -90,9 +104,28 @@ class BoiteLancement extends StatefulWidget {
   /// Appel du serveur, fait par la fiche.
   final Future<ResultatLancement> Function() envoyer;
 
+  /// Phrase de la boîte « Valider ce ticket ? », affichée en tête quand la
+  /// validation précède le lancement.
+  final String? validationAvant;
+
+  /// Appel de `validateTicket`, fait par la fiche avant [envoyer]. Rend
+  /// l'échec, ou `null` si le serveur a appliqué la validation (`changed:
+  /// false` compris).
+  final Future<EchecReponse?> Function()? valider;
+
   static const cout =
       'Facturé sur l\'abonnement Claude de l\'administrateur. Ce coût '
       'n\'apparaît pas dans le suivi des coûts de l\'application.';
+  static const titreValiderEtLancer = 'Valider et lancer le développement ?';
+  static const validationEnCours =
+      'Validation en cours. Vous pouvez fermer : le résultat s\'affichera en '
+      'bas de l\'écran.';
+
+  /// Plafond atteint dans la boîte « Valider et lancer le développement ».
+  static const validerSansLancer =
+      'Annulez, puis appuyez sur « Valider » : « Lancer le développement » '
+      'sera proposé ensuite.';
+
   static const envoiEnCours =
       'Lancement en cours. Vous pouvez fermer : le résultat s\'affichera dans '
       'la section Lancements.';
@@ -153,6 +186,9 @@ class BoiteLancement extends StatefulWidget {
 
 class _BoiteLancementState extends State<BoiteLancement> {
   bool _envoi = false;
+
+  /// Appel de la validation en cours, avant le lancement.
+  bool _validation = false;
   String? _erreur;
 
   /// Échec d'ouverture du lien d'usage Claude, affiché sous le lien.
@@ -173,13 +209,26 @@ class _BoiteLancementState extends State<BoiteLancement> {
   }
 
   Future<void> _lancer() async {
+    // Appels lus avant le premier `await` : boîte fermée pendant la
+    // validation, le lancement part quand même.
+    final valider = widget.valider;
+    final envoyer = widget.envoyer;
     setState(() {
       _erreur = null;
       _envoi = true;
+      _validation = valider != null;
     });
-    final resultat = await widget.envoyer();
+    if (valider != null) {
+      final echec = await valider();
+      if (echec != null) {
+        _fermer((resultat: null, echecValidation: echec, detache: false));
+        return;
+      }
+      if (mounted && !_fermeture) setState(() => _validation = false);
+    }
+    final resultat = await envoyer();
     if (!mounted || _fermeture) return;
-    if (resultat.rienNestParti) {
+    if (resultat.rienNestParti && valider == null) {
       setState(() {
         _erreur = resultat.message;
         _envoi = false;
@@ -187,7 +236,7 @@ class _BoiteLancementState extends State<BoiteLancement> {
       });
       return;
     }
-    _fermer((resultat: resultat, detache: false));
+    _fermer((resultat: resultat, echecValidation: null, detache: false));
   }
 
   @override
@@ -205,7 +254,10 @@ class _BoiteLancementState extends State<BoiteLancement> {
             ? null
             : BoiteLancement.avertissementRelance(relanceDe));
     final typeTicket = widget.typeTicket;
+    final validationAvant = widget.validationAvant;
+    final plafondAtteint = widget.quota?.plafondAtteint ?? false;
     final libelle = switch (action) {
+      _ when validationAvant != null => 'Valider et lancer',
       ActionLancement.livraison => relance ? 'Relancer' : 'Livrer',
       ActionLancement.reprise => 'Relancer',
       _ => relance ? 'Relancer' : 'Lancer',
@@ -215,15 +267,25 @@ class _BoiteLancementState extends State<BoiteLancement> {
       canPop: !_envoi,
       // Le retour pendant l'envoi vaut « Fermer ».
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _envoi) _fermer((resultat: null, detache: true));
+        if (!didPop && _envoi) {
+          _fermer((resultat: null, echecValidation: null, detache: true));
+        }
       },
       child: AlertDialog(
         scrollable: true,
-        title: Text(BoiteLancement.titre(action, relance: relance)),
+        title: Text(
+          validationAvant != null
+              ? BoiteLancement.titreValiderEtLancer
+              : BoiteLancement.titre(action, relance: relance),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (validationAvant != null) ...[
+              Text(validationAvant),
+              const SizedBox(height: 12),
+            ],
             Text(
               BoiteLancement.effet(
                 action,
@@ -258,6 +320,10 @@ class _BoiteLancementState extends State<BoiteLancement> {
                   ),
                 ),
               ),
+            if (validationAvant != null && plafondAtteint) ...[
+              const SizedBox(height: 12),
+              const Text(BoiteLancement.validerSansLancer),
+            ],
             if (avertissement != null) ...[
               const SizedBox(height: 12),
               Encadre(
@@ -276,7 +342,9 @@ class _BoiteLancementState extends State<BoiteLancement> {
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  BoiteLancement.envoiEnCours,
+                  _validation
+                      ? BoiteLancement.validationEnCours
+                      : BoiteLancement.envoiEnCours,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -302,19 +370,22 @@ class _BoiteLancementState extends State<BoiteLancement> {
           TextButton(
             autofocus: true,
             onPressed: _envoi
-                ? () => _fermer((resultat: null, detache: true))
+                ? () => _fermer((
+                    resultat: null,
+                    echecValidation: null,
+                    detache: true,
+                  ))
                 : () => _fermer(null),
             child: Text(_envoi ? 'Fermer' : 'Annuler'),
           ),
           FilledButton(
             // Plafond atteint : la ligne du quota dit pourquoi.
-            onPressed:
-                _envoi || _bloque || (widget.quota?.plafondAtteint ?? false)
-                ? null
-                : _lancer,
+            onPressed: _envoi || _bloque || plafondAtteint ? null : _lancer,
             child: _envoi
                 ? IndicateurBouton(
-                    label: livraison
+                    label: _validation
+                        ? 'Validation en cours'
+                        : livraison
                         ? 'Livraison en cours'
                         : 'Lancement en cours',
                   )

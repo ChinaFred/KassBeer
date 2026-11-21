@@ -257,6 +257,20 @@ void main() {
       expect((await firestore.collection('tickets').get()).docs, isEmpty);
     });
 
+    test('Valider déjà appliqué (changed: false) : aucun échec', () async {
+      // « Valider et lancer le développement » lance alors quand même
+      // (ticket #64).
+      final repository = depot(
+        (name, data) async => {'status': 'validated', 'changed': false},
+      );
+      final resultat = await repository.decide(
+        ticketId: 'a',
+        action: TicketDecisionAction.validate,
+      );
+      expect(resultat.echec, isNull);
+      expect(errors.reports, isEmpty);
+    });
+
     test('texte gardé par le serveur : rendu', () async {
       final repository = depot(
         (name, data) async => {

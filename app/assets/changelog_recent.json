@@ -1,10 +1,31 @@
 {
   "versions": [
     {
-      "version": "0.1.88",
+      "version": "0.1.91",
       "date": "2026-11-21",
       "paragraphs": [
         "L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre « Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient « Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche « Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai. Demandé par le ticket #67."
+      ]
+    },
+    {
+      "version": "0.1.90",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ; sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé par le ticket #105."
+      ]
+    },
+    {
+      "version": "0.1.89",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation, qui rappelle la validation, la session qui va partir, les lancements restants du jour, le lien vers l'usage de Claude et le coût. La validation part d'abord ; le développement n'est lancé que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand le plafond du jour est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le ticket #64."
+      ]
+    },
+    {
+      "version": "0.1.88",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de leur description (élevée, moyenne, faible, sans description), avec le nombre de houblons de chaque choix. Une ligne signale « Confiance faible » ou « Sans description ». La recherche et le nombre restent visibles en haut pendant le défilement, un bouton efface la recherche, et le nombre dit « 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA passe avant le texte. Une liste lue hors ligne le signale."
       ]
     },
     {
@@ -19,27 +40,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la Bibliothèque : c'est la même levure, sous une autre référence. Sa fiche est celle de « Lalvin EC-1118 », qui garde « Prise de Mousse Wine » comme autre nom. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
-      ]
-    },
-    {
-      "version": "0.1.85",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Avant de lancer une analyse, un développement ou une livraison d'un ticket, l'administrateur peut ouvrir la page d'usage de claude.ai : un lien « Usage Claude (5 h et semaine) : voir sur claude.ai » figure dans la boîte de lancement et en tête de la liste des tickets. Il montre la part restante de l'abonnement Claude pour la fenêtre de 5 heures et pour la semaine. L'application n'affiche aucun chiffre : Anthropic ne publie pas ces valeurs. Demandé par le ticket #96."
-      ]
-    },
-    {
-      "version": "0.1.84",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Sur téléphone, la Bibliothèque montre ses six rubriques sans faire glisser la ligne : les Levures, les Divers et les Recettes publiques ne sont plus cachées hors de l'écran. Chaque rubrique a maintenant une icône à côté de son nom, à toutes les tailles d'écran ; la rubrique ouverte montre une coche à la place de son icône. Sur téléphone, ou avec un texte agrandi, les noms sont raccourcis (« Malts », « Recettes ») et les boutons « Échelle des couleurs » et « Sources des données » passent en icônes sur une ligne au-dessus des rubriques. Demandé par le ticket #97."
-      ]
-    },
-    {
-      "version": "0.1.83",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec une intelligence artificielle, qui analyse la recette en cours ou propose des améliorations. Les chiffres de la recette restent ceux du calcul de Kass'Beer. L'assistant est réservé à l'administrateur pour commencer ; il pourra ensuite l'ouvrir à tous les membres. Chaque membre dispose d'un nombre de tours par jour, et le menu du compte affiche ce que l'IA a coûté dans le mois. Une conversation trop longue peut être résumée pour continuer. Dans Admin, deux écrans nouveaux règlent l'IA (modèle, tarifs, plafonds, ouverture aux membres) et suivent ses coûts par personne. L'assistant ne marche qu'une fois ses réglages enregistrés."
       ]
     }
   ]

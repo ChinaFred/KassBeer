@@ -1125,6 +1125,13 @@ class FakeLibraryRepository implements LibraryRepository {
   final aromesAttente = <String, Completer<void>>{};
   final aromesReads = <String>[];
 
+  /// Réponse à `lireIndexAromes` ; absente : `DocumentAbsent`.
+  RechercheDocument<IndexAromes>? indexAromes;
+
+  /// Panne de `lireIndexAromes`.
+  Object? indexAromesError;
+  var indexAromesReads = 0;
+
   /// Recettes publiques, dans l'ordre de `recipe.name`.
   final recettes = <RecettePublique>[];
 
@@ -1166,6 +1173,14 @@ class FakeLibraryRepository implements LibraryRepository {
     final error = aromesErrors[id];
     if (error != null) throw error;
     return aromes[id] ?? DocumentAbsent<AromesHoublon>();
+  }
+
+  @override
+  Future<RechercheDocument<IndexAromes>> lireIndexAromes() async {
+    indexAromesReads++;
+    final error = indexAromesError;
+    if (error != null) throw error;
+    return indexAromes ?? DocumentAbsent<IndexAromes>();
   }
 
   @override
