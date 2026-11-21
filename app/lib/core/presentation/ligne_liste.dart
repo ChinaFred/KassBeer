@@ -78,6 +78,7 @@ class LigneListe extends StatelessWidget {
     this.selected = false,
     this.titreMaxLignes,
     this.semanticsLabel,
+    this.focusNode,
   });
 
   final String titre;
@@ -107,6 +108,10 @@ class LigneListe extends StatelessWidget {
   /// Lecture de la ligne entière, à la place de ses textes : un seul nœud qui
   /// porte l'appui. `null` : les textes de la ligne, fusionnés.
   final String? semanticsLabel;
+
+  /// Nœud de focus de la zone d'appui, pour y rendre le focus (fiche fermée
+  /// à côté de la liste) ; `null` : celui de l'`InkWell`.
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +199,12 @@ class LigneListe extends StatelessWidget {
     final tap = onTap;
     final zone = tap == null
         ? pose
-        : InkWell(onTap: tap, customBorder: forme, child: pose);
+        : InkWell(
+            onTap: tap,
+            focusNode: focusNode,
+            customBorder: forme,
+            child: pose,
+          );
     final label = semanticsLabel;
     // `selected` nul hors sélection : une ligne ordinaire n'est pas lue « non
     // sélectionnée ».

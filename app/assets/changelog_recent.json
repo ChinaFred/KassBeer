@@ -1,11 +1,18 @@
 {
   "versions": [
     {
-      "version": "0.1.94",
+      "version": "0.1.95",
       "date": "2026-11-21",
       "paragraphs": [
         "La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.",
         "Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données » présente aussi les arômes des levures."
+      ]
+    },
+    {
+      "version": "0.1.94",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position. Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur téléphone, ou avec un texte agrandi, rien ne change."
       ]
     },
     {
@@ -34,13 +41,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation, qui rappelle la validation, la session qui va partir, les lancements restants du jour, le lien vers l'usage de Claude et le coût. La validation part d'abord ; le développement n'est lancé que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand le plafond du jour est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le ticket #64."
-      ]
-    },
-    {
-      "version": "0.1.88",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de leur description (élevée, moyenne, faible, sans description), avec le nombre de houblons de chaque choix. Une ligne signale « Confiance faible » ou « Sans description ». La recherche et le nombre restent visibles en haut pendant le défilement, un bouton efface la recherche, et le nombre dit « 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA passe avant le texte. Une liste lue hors ligne le signale."
       ]
     }
   ]

@@ -171,3 +171,86 @@ final aromesLevureProvider = FutureProvider.autoDispose
       ref.watch(grantedAccessProvider.select((a) => a?.offline));
       return ref.watch(libraryRepositoryProvider).lireAromesLevure(id);
     }, retry: _sansNouvelEssai);
+
+/// Filtre de confiance des arômes (segment Houblons) : choix unique, jamais
+/// écrit en base ; « Sans description » regroupe les entrées `unknown` et les
+/// houblons absents de l'index.
+enum FiltreConfiance {
+  toutes('Toutes', null, ''),
+  elevee('Élevée', ConfianceIndex.elevee, 'avec une confiance élevée'),
+  moyenne('Moyenne', ConfianceIndex.moyenne, 'avec une confiance moyenne'),
+  faible('Faible', ConfianceIndex.faible, 'avec une confiance faible'),
+  sansDescription(
+    'Sans description',
+    ConfianceIndex.sansDescription,
+    'sans description',
+  );
+
+  const FiltreConfiance(this.libelle, this.confiance, this.suite);
+
+  final String libelle;
+
+  /// Confiance retenue ; `null` : toutes.
+  final ConfianceIndex? confiance;
+
+  /// Fin du message d'une liste vide (« avec une confiance faible »).
+  final String suite;
+
+  bool retient(ConfianceIndex c) => confiance == null || confiance == c;
+}
+
+/// Recherche et filtre d'un segment de la Bibliothèque. [texte] : le texte du
+/// champ ; [prefixe] : la recherche validée des recettes publiques (la frappe
+/// seule ne lit rien) ; [filtre] : le filtre de confiance des houblons.
+@immutable
+class RechercheBibliotheque {
+  const RechercheBibliotheque({
+    this.texte = '',
+    this.prefixe = '',
+    this.filtre = FiltreConfiance.toutes,
+  });
+
+  final String texte;
+  final String prefixe;
+  final FiltreConfiance filtre;
+
+  RechercheBibliotheque copyWith({
+    String? texte,
+    String? prefixe,
+    FiltreConfiance? filtre,
+  }) => RechercheBibliotheque(
+    texte: texte ?? this.texte,
+    prefixe: prefixe ?? this.prefixe,
+    filtre: filtre ?? this.filtre,
+  );
+}
+
+class RechercheBibliothequeNotifier extends Notifier<RechercheBibliotheque> {
+  RechercheBibliothequeNotifier(this.segment);
+
+  final SegmentBibliotheque segment;
+
+  @override
+  RechercheBibliotheque build() => const RechercheBibliotheque();
+
+  void saisir(String texte) => state = state.copyWith(texte: texte);
+
+  /// Recettes publiques : valide le texte du champ comme préfixe.
+  void valider() => state = state.copyWith(prefixe: state.texte.trim());
+
+  void effacer() => state = state.copyWith(texte: '', prefixe: '');
+
+  void filtrer(FiltreConfiance filtre) =>
+      state = state.copyWith(filtre: filtre);
+}
+
+/// Recherche et filtre d'un segment, en mémoire seulement (jamais écrits en
+/// base). Gardés tant que la liste du segment est ouverte : au retour d'une
+/// fiche, au choix d'une autre fiche et au passage d'une à deux colonnes ;
+/// perdus au changement de segment.
+final rechercheBibliothequeProvider = NotifierProvider.autoDispose
+    .family<
+      RechercheBibliothequeNotifier,
+      RechercheBibliotheque,
+      SegmentBibliotheque
+    >(RechercheBibliothequeNotifier.new);

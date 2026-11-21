@@ -1111,6 +1111,9 @@ class FakeLibraryRepository implements LibraryRepository {
   final fiches = <String, RechercheDocument<FicheReferentiel>>{};
   final ficheReads = <String>[];
 
+  /// Panne de `lireFiche`, par identifiant.
+  final ficheErrors = <String, Object>{};
+
   /// Lectures de fiche faites dans le cache seul (`cacheSeul`).
   final ficheCacheReads = <String>[];
 
@@ -1175,6 +1178,8 @@ class FakeLibraryRepository implements LibraryRepository {
   }) async {
     ficheReads.add(id);
     if (cacheSeul) ficheCacheReads.add(id);
+    final error = ficheErrors[id];
+    if (error != null) throw error;
     return fiches[id] ?? DocumentAbsent<FicheReferentiel>();
   }
 
