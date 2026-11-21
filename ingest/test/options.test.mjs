@@ -97,9 +97,9 @@ describe("lireOptions", () => {
 });
 
 describe("--supprimer-absents", () => {
-  it("beer_hops, beer_hop_aromas ou beer_cultures : accepté, sans suppression par défaut", () => {
+  it("beer_hops, beer_hop_aromas, beer_cultures ou beer_culture_aromas : accepté, sans suppression par défaut", () => {
     assert.equal(lireOptions([], EMULATEUR).supprimerAbsents, null);
-    for (const c of ["beer_hops", "beer_hop_aromas", "beer_cultures"]) {
+    for (const c of ["beer_hops", "beer_hop_aromas", "beer_cultures", "beer_culture_aromas"]) {
       assert.equal(lireOptions(["--supprimer-absents", c], EMULATEUR).supprimerAbsents, c);
     }
   });

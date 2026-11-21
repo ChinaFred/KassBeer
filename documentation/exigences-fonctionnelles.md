@@ -2144,6 +2144,18 @@ autres paraissent « non relu ». Un houblon ajouté plus tard reçoit sa descri
 nouvelle génération lancée par l'administrateur (`--nouveaux`). Détail : `exigences-techniques.md`,
 « Descriptions aromatiques ».
 
+**Descriptions aromatiques des levures (administrateur, hors de l'application, ADR-017).** Même
+parcours que pour les houblons, par le même script avec `--nature culture` : un essai sur 10
+levures (US-05, S-04, W-34/70, WLP001, Wyeast 3068, 3944, 3711, 1968, Voss Kveik et une
+Brettanomyces), puis les levures des recettes et des brassins du groupe, relues avant leur
+écriture, puis le reste. Les levures de vin, de cidre, d'hydromel et de saké (types `other`,
+`wine`, `champagne`, `malolactic`) restent sans texte, sauf si une recette du groupe les
+utilise. Chaque texte donne des descripteurs, un profil, l'effet du bas et du haut de la plage
+de température et jusqu'à six styles conseillés. Un nom de levure d'une recette qui désigne
+plusieurs souches est listé avec ses candidats ; l'administrateur choisit. Les membres ne voient
+pas encore ces textes : la fiche d'une levure les affichera dans une livraison suivante.
+Détail : `exigences-techniques.md`, « Descriptions aromatiques des levures ».
+
 **Recettes publiques.** Les recettes DIY Dog, par pages de 50 dans l'ordre alphabétique.
 Chaque ligne : le repère de la liste des recettes (icône de livre dans un disque ; les styles
 et les ingrédients n'en ont pas), nom, puis style · volume · « 4,5 % vol annoncés ».

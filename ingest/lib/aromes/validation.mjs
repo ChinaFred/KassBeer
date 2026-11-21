@@ -1,6 +1,8 @@
 // Contrôle des descriptions aromatiques des houblons (ADR-013, section 4), partagé par le
-// générateur (generer-aromes.mjs) et l'écrivain (ecrire.mjs). N'importe pas le SDK
-// d'Anthropic : ecrire.mjs et les tests chargent ce fichier sans lui (P54).
+// générateur (generer-aromes.mjs) et l'écrivain (ecrire.mjs), et règles communes aux deux
+// natures (textes, descripteurs, relecture, provenance), reprises par natures/culture.mjs
+// pour les levures (ADR-017). N'importe pas le SDK d'Anthropic : ecrire.mjs et les tests
+// chargent ce fichier sans lui (P54).
 //
 // Une erreur est un chemin et une règle, jamais le texte contrôlé : les rapports ne
 // recopient aucun texte rendu par le modèle.
@@ -33,9 +35,12 @@ export const LICENCE_PROVENANCE = "Texte généré pour Kass'Beer";
 
 /// Liste fermée des descripteurs (`{key, label}`), lue une fois. Seul endroit où elle vit :
 /// le document porte le libellé, l'application ne fait que l'afficher.
-export const DESCRIPTEURS = JSON.parse(
-  readFileSync(new URL("./descripteurs.json", import.meta.url), "utf8"),
-);
+export const DESCRIPTEURS = lireDescripteurs(new URL("./descripteurs.json", import.meta.url));
+
+/// Liste fermée de descripteurs `{key, label}` du fichier [url].
+export function lireDescripteurs(url) {
+  return JSON.parse(readFileSync(url, "utf8"));
+}
 
 const LIBELLES = new Map(DESCRIPTEURS.map((d) => [d.key, d.label]));
 
@@ -48,8 +53,8 @@ const VERSION = new RegExp(
 // Contrôles C0 et C1, et marques et contrôles bidirectionnels (P9).
 const CONTROLES = /[\u0000-\u001f\u007f-\u009f؜‎‏‪-‮⁦-⁩]/gu;
 
-const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
-const longueur = (t) => [...t].length;
+export const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+export const longueur = (t) => [...t].length;
 
 /// Vrai si [texte] est une date réelle `AAAA-MM-JJ`.
 export function estDate(texte) {
@@ -157,6 +162,43 @@ export function controlerSortieModele(sortie) {
   return { regles, resultat: regles.length === 0 ? resultat : null };
 }
 
+/// Règles d'une liste `descriptors` (`{key, label}`, clé dans [libelles], libellé recopié,
+/// sans doublon). Le nombre d'entrées se contrôle avec le statut.
+export function reglesDescripteurs(descripteurs, libelles) {
+  const regles = [];
+  const r = (chemin, regle) => regles.push(`${chemin} : ${regle}`);
+  if (!Array.isArray(descripteurs)) {
+    r("descriptors", "liste attendue");
+    return regles;
+  }
+  const vus = new Set();
+  descripteurs.forEach((d, i) => {
+    const c = `descriptors[${i}]`;
+    if (!estObjet(d) || Object.keys(d).sort().join(",") !== "key,label") {
+      r(c, "{key, label} attendu");
+      return;
+    }
+    if (!libelles.has(d.key)) r(`${c}.key`, "hors de la liste fermée");
+    else if (d.label !== libelles.get(d.key)) r(`${c}.label`, "différent de la liste");
+    if (vus.has(d.key)) r(`${c}.key`, "en double");
+    vus.add(d.key);
+  });
+  return regles;
+}
+
+/// Règles d'un texte `{text}` au [chemin] : forme, nettoyage, puis reglesTexte.
+export function reglesBlocTexte(chemin, v) {
+  const regles = [];
+  if (!estObjet(v) || Object.keys(v).join(",") !== "text" || typeof v.text !== "string") {
+    return [`${chemin} : {text} attendu`];
+  }
+  if (v.text !== nettoyerTexte(v.text)) {
+    regles.push(`${chemin}.text : texte non nettoyé (NFC, contrôles)`);
+  }
+  for (const regle of reglesTexte(v.text)) regles.push(`${chemin}.text : ${regle}`);
+  return regles;
+}
+
 /// Règles de `status`, `confidence`, `descriptors` et `uses` d'une entrée.
 function reglesContenu(data) {
   const regles = [];
@@ -166,22 +208,7 @@ function reglesContenu(data) {
     return regles;
   }
   const descripteurs = data.descriptors;
-  if (!Array.isArray(descripteurs)) {
-    r("descriptors", "liste attendue");
-  } else {
-    const vus = new Set();
-    descripteurs.forEach((d, i) => {
-      const c = `descriptors[${i}]`;
-      if (!estObjet(d) || Object.keys(d).sort().join(",") !== "key,label") {
-        r(c, "{key, label} attendu");
-        return;
-      }
-      if (!LIBELLES.has(d.key)) r(`${c}.key`, "hors de la liste fermée");
-      else if (d.label !== LIBELLES.get(d.key)) r(`${c}.label`, "différent de la liste");
-      if (vus.has(d.key)) r(`${c}.key`, "en double");
-      vus.add(d.key);
-    });
-  }
+  regles.push(...reglesDescripteurs(descripteurs, LIBELLES));
   if (!estObjet(data.uses)) {
     r("uses", "objet attendu");
     return regles;
@@ -192,12 +219,7 @@ function reglesContenu(data) {
       r("uses", `usage non permis ${k}`);
       continue;
     }
-    if (!estObjet(v) || Object.keys(v).join(",") !== "text" || typeof v.text !== "string") {
-      r(c, "{text} attendu");
-      continue;
-    }
-    if (v.text !== nettoyerTexte(v.text)) r(`${c}.text`, "texte non nettoyé (NFC, contrôles)");
-    for (const regle of reglesTexte(v.text)) r(`${c}.text`, regle);
+    regles.push(...reglesBlocTexte(c, v));
   }
   if (data.status === "described") {
     if (!CONFIANCES.includes(data.confidence)) r("confidence", "high, medium ou low attendu");
@@ -255,6 +277,15 @@ export function controlerEntreeArome(doc) {
     r("hop_name", "texte de 1 à 120 caractères attendu");
   }
   erreurs.push(...reglesContenu(d));
+  erreurs.push(...reglesRelectureProvenance(doc.id, d, "identifiant du houblon attendu"));
+  return erreurs;
+}
+
+/// Règles de `reviewed`, `reviewed_at`, `input_sha256` et `provenance` d'une entrée [d]
+/// d'identifiant [id] ; [attenduSource] : message d'un `source_id` différent de [id].
+export function reglesRelectureProvenance(id, d, attenduSource) {
+  const erreurs = [];
+  const r = (chemin, regle) => erreurs.push(`${chemin} : ${regle}`);
   if (typeof d.reviewed !== "boolean") r("reviewed", "booléen attendu");
   if (d.reviewed === true && !estDate(d.reviewed_at)) {
     r("reviewed_at", "date AAAA-MM-JJ attendue pour une entrée relue");
@@ -271,7 +302,7 @@ export function controlerEntreeArome(doc) {
       r("provenance[0]", "clés source, source_id, version, licence, retrieved attendues");
     } else {
       if (l.source !== SOURCE_PROVENANCE) r("provenance[0].source", `${SOURCE_PROVENANCE} attendu`);
-      if (l.source_id !== doc.id) r("provenance[0].source_id", "identifiant du houblon attendu");
+      if (l.source_id !== id) r("provenance[0].source_id", attenduSource);
       if (typeof l.version !== "string" || !VERSION.test(l.version)) {
         r("provenance[0].version", "« <modèle> / prompt <n> / effort <e> » attendu");
       }

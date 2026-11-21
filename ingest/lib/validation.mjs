@@ -20,8 +20,10 @@ export const COLLECTIONS = [
 ];
 
 /// Collections écrites par ecrire.mjs : celles de la préparation, puis beer_hop_aromas, lue
-/// dans import/ingest/aromes/aromes.json et contrôlée par lib/aromes/validation.mjs (ADR-013).
-export const COLLECTIONS_ECRITES = [...COLLECTIONS, "beer_hop_aromas"];
+/// dans import/ingest/aromes/aromes.json et contrôlée par lib/aromes/validation.mjs (ADR-013),
+/// et beer_culture_aromas, lue dans import/ingest/aromes/levures/aromes.json et contrôlée par
+/// lib/aromes/natures/culture.mjs (ADR-017).
+export const COLLECTIONS_ECRITES = [...COLLECTIONS, "beer_hop_aromas", "beer_culture_aromas"];
 
 /// Collection du compte rendu d'exécution, écrite par l'écrivain lui-même.
 export const COLLECTION_EXECUTIONS = "ingest_runs";
@@ -135,9 +137,11 @@ const ID = {
 };
 
 /// Motif de l'identifiant d'un document de [collection] (beer_hop_aromas : celui de
-/// beer_hops, même identifiant que le houblon), ou null pour une collection sans motif.
+/// beer_hops, même identifiant que le houblon ; beer_culture_aromas : celui de
+/// beer_cultures), ou null pour une collection sans motif.
 export function motifIdentifiant(collection) {
   if (collection === "beer_hop_aromas") return ID.beer_hops;
+  if (collection === "beer_culture_aromas") return ID.beer_cultures;
   return ID[collection] ?? null;
 }
 

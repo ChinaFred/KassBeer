@@ -1,33 +1,33 @@
-// Génération des descriptions aromatiques des houblons (ADR-013), lancée par
-// generer-aromes.mjs sur le poste de l'admin. Lit import/ingest/prepare/beer_hops.json et
-// import/ingest/aromes/ ; n'importe pas firebase-admin, ne lit ni n'écrit Firestore. Seul
-// accès réseau : l'API Messages d'Anthropic, par client.mjs (P54).
+// Génération des descriptions aromatiques des houblons (ADR-013) et des levures (ADR-017),
+// lancée par generer-aromes.mjs sur le poste de l'admin. Moteur commun aux deux natures
+// (--nature hop|culture, hop par défaut) ; ce qui dépend de la nature vit dans natures/.
+// Lit import/ingest/prepare/ et import/ingest/aromes/ ; n'importe pas firebase-admin, ne lit
+// ni n'écrit Firestore. Seul accès réseau : l'API Messages d'Anthropic, par client.mjs (P54).
 //
-// Fichiers de import/ingest/aromes/ (jamais versionnés) :
-//   tarif.json               écrit par l'admin : modèle, date, source, prix par million de jetons
+// Fichiers de import/ingest/aromes/ (jamais versionnés), houblons à la racine, levures dans
+// levures/ :
+//   tarif.json               écrit par l'admin : modèle, date, source, prix par million de
+//                            jetons ; commun aux deux natures, à la racine seulement
 //   aromes.json              entrées {id, data}, copie de référence, corrigée à la main
-//   houblons-recettes.json   houblons des recettes du groupe (exchange/bin/lister_houblons_recettes.dart)
-//   lot-<id>.json            table custom_id → houblon d'un lot de l'API Batches
+//   houblons-recettes.json   houblons des recettes du groupe ; levures-recettes.json dans
+//                            levures/ (exchange/bin/lister_ingredients_recettes.dart)
+//   lot-<id>.json            table custom_id → élément d'un lot de l'API Batches
 //   brut/                    réponses de chaque exécution, effort dans le nom
 //   rapport.json             dernière exécution : poste, modèle, effort, jetons, montant
-//   a-relire.md              houblons du groupe à relire
+//   a-relire.md              éléments du groupe à relire
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { creerAccesApi, erreurLisible } from "./client.mjs";
-import { MAX_TOKENS, MODELE, parametresRequete, PROMPT_VERSION } from "./prompt.mjs";
-import { borneHaute, ErreurAromes, lireTarif, montantUsage, POSTE } from "./tarif.mjs";
-import {
-  controlerEntreeArome,
-  controlerSortieModele,
-  donneesEnvoyees,
-  EFFORTS,
-  empreinteEntree,
-  LICENCE_PROVENANCE,
-  SOURCE_PROVENANCE,
-  USAGES,
-} from "./validation.mjs";
+import { NATURE_LEVURE } from "./natures/culture.mjs";
+import { NATURE_HOUBLON } from "./natures/hop.mjs";
+import { MAX_TOKENS, MODELE } from "./prompt.mjs";
+import { borneHaute, ErreurAromes, lireTarif, montantUsage } from "./tarif.mjs";
+import { EFFORTS, LICENCE_PROVENANCE, SOURCE_PROVENANCE } from "./validation.mjs";
+
+/// Natures acceptées par --nature.
+export const NATURES = { hop: NATURE_HOUBLON, culture: NATURE_LEVURE };
 
 /// Dossiers par défaut, à la racine du dépôt.
 export const DOSSIER_PREPARE = fileURLToPath(
@@ -37,32 +37,33 @@ export const DOSSIER_AROMES = fileURLToPath(
   new URL("../../../import/ingest/aromes/", import.meta.url),
 );
 
-/// Houblons par lancement, au plus (ADR-013, plafond 3).
-export const MAX_HOUBLONS = 500;
+/// Éléments par lancement, au plus (ADR-013, plafond 3 ; ADR-017, section 6).
+export const MAX_ELEMENTS = 500;
 
-/// Houblons envoyés en appels directs, au plus (essai, --nouveaux sans --lot).
+/// Éléments envoyés en appels directs, au plus (essai, --nouveaux sans --lot).
 export const SEUIL_DIRECT = 20;
 
-/// Houblons d'un essai par défaut (ADR-013, décision 5).
+/// Éléments d'un essai par défaut (ADR-013, décision 5 ; ADR-017, décision 6).
 export const ESSAI_DEFAUT = 10;
 
 export const EFFORT_DEFAUT = "medium";
 
-const ID_HOUBLON = /^hop-[a-z0-9]+(-[a-z0-9]+)*$/;
 const ID_LOT = /^[A-Za-z0-9_-]{1,128}$/;
 
 const AIDE = `Usage (dans ingest/) :
-  node generer-aromes.mjs --essai [n] [--seulement <houblons.json>] [--effort <e>] [--budget-usd <$>]
-  node generer-aromes.mjs --lot --budget-usd <$> [--seulement <houblons.json>] [--nouveaux] [--tout] [--max <n>] [--effort <e>]
-  node generer-aromes.mjs --nouveaux --budget-usd <$> [--effort <e>]          (${SEUIL_DIRECT} houblons au plus, appels directs)
+  node generer-aromes.mjs --essai [n] [--seulement <liste.json>] [--effort <e>] [--budget-usd <$>]
+  node generer-aromes.mjs --lot --budget-usd <$> [--seulement <liste.json>] [--nouveaux] [--tout] [--max <n>] [--effort <e>]
+  node generer-aromes.mjs --nouveaux --budget-usd <$> [--effort <e>]          (${SEUIL_DIRECT} au plus, appels directs)
   node generer-aromes.mjs --lot|--essai --regenerer <id> [--regenerer <id>…] --budget-usd <$>
   node generer-aromes.mjs --suivre <id du lot>
   node generer-aromes.mjs --relire                                            (réécrit a-relire.md, aucun appel)
-Options communes : --dossier <prepare> --aromes <dossier>. Effort : ${EFFORTS.join(", ")}.`;
+Options communes : --nature hop|culture (hop par défaut), --dossier <prepare>, --aromes <dossier>.
+Effort : ${EFFORTS.join(", ")}.`;
 
 /// Lit [argv] (sans `node` ni le script). Lève ErreurAromes.
 export function lireOptionsAromes(argv) {
   const o = {
+    nature: "hop",
     essai: null,
     lot: false,
     nouveaux: false,
@@ -70,7 +71,7 @@ export function lireOptionsAromes(argv) {
     relire: false,
     seulement: null,
     budget: null,
-    max: MAX_HOUBLONS,
+    max: MAX_ELEMENTS,
     effort: EFFORT_DEFAUT,
     regenerer: [],
     tout: false,
@@ -91,7 +92,7 @@ export function lireOptionsAromes(argv) {
         o.essai = ESSAI_DEFAUT;
         if (/^[0-9]+$/.test(argv[i + 1] ?? "")) o.essai = Number(argv[++i]);
         if (!Number.isInteger(o.essai) || o.essai < 1 || o.essai > SEUIL_DIRECT) {
-          throw new ErreurAromes(`--essai : de 1 à ${SEUIL_DIRECT} houblons.`);
+          throw new ErreurAromes(`--essai : de 1 à ${SEUIL_DIRECT} éléments.`);
         }
         break;
       }
@@ -112,6 +113,12 @@ export function lireOptionsAromes(argv) {
         if (!ID_LOT.test(o.suivre))
           throw new ErreurAromes("--suivre : identifiant de lot mal formé.");
         break;
+      case "--nature":
+        o.nature = valeur(++i, nom);
+        if (!(o.nature in NATURES)) {
+          throw new ErreurAromes(`--nature : ${Object.keys(NATURES).join(" ou ")}.`);
+        }
+        break;
       case "--seulement":
       case "--dossier":
       case "--aromes":
@@ -126,8 +133,8 @@ export function lireOptionsAromes(argv) {
       }
       case "--max": {
         const v = Number(valeur(++i, nom));
-        if (!Number.isInteger(v) || v < 1 || v > MAX_HOUBLONS) {
-          throw new ErreurAromes(`--max : entier de 1 à ${MAX_HOUBLONS}.`);
+        if (!Number.isInteger(v) || v < 1 || v > MAX_ELEMENTS) {
+          throw new ErreurAromes(`--max : entier de 1 à ${MAX_ELEMENTS}.`);
         }
         o.max = v;
         break;
@@ -138,16 +145,19 @@ export function lireOptionsAromes(argv) {
           throw new ErreurAromes(`--effort : ${EFFORTS.join(", ")}.`);
         }
         break;
-      case "--regenerer": {
-        const id = valeur(++i, nom);
-        if (!ID_HOUBLON.test(id) || id.length > 200) {
-          throw new ErreurAromes(`--regenerer : identifiant de houblon attendu (hop-…).`);
-        }
-        o.regenerer.push(id);
+      case "--regenerer":
+        o.regenerer.push(valeur(++i, nom));
         break;
-      }
       default:
         throw new ErreurAromes(`Option inconnue : ${nom}\n${AIDE}`);
+    }
+  }
+  const nature = NATURES[o.nature];
+  for (const id of o.regenerer) {
+    if (!nature.motifId.test(id) || id.length > 200) {
+      throw new ErreurAromes(
+        `--regenerer : identifiant ${nature.mots.de} attendu (${nature.prefixeId}).`,
+      );
     }
   }
   const modes = [o.essai !== null, o.lot, o.suivre !== null, o.relire].filter(Boolean).length;
@@ -173,7 +183,7 @@ export function lireOptionsAromes(argv) {
   if ((mode === "lot" || mode === "nouveaux") && o.budget === null) {
     throw new ErreurAromes("--budget-usd est obligatoire hors essai (ADR-013, plafond 2).");
   }
-  return { ...o, mode };
+  return { ...o, mode, nature };
 }
 
 /// Lit un fichier JSON ; un fichier absent rend [absent].
@@ -182,10 +192,12 @@ function lireJson(chemin, absent) {
   return JSON.parse(readFileSync(chemin, "utf8"));
 }
 
-/// Houblons de beer_hops.json préparé : Map id → data.
-export function lireHoublons(dossierPrepare) {
-  const liste = JSON.parse(readFileSync(join(dossierPrepare, "beer_hops.json"), "utf8"));
-  if (!Array.isArray(liste)) throw new Error("beer_hops.json : liste attendue");
+/// Éléments du fichier préparé de [nature] (beer_hops.json, beer_cultures.json) : Map id →
+/// data.
+export function lireReferentiel(dossierPrepare, nature) {
+  const nom = nature.referentiel;
+  const liste = JSON.parse(readFileSync(join(dossierPrepare, nom), "utf8"));
+  if (!Array.isArray(liste)) throw new Error(`${nom} : liste attendue`);
   return new Map(liste.map((d) => [d.id, d.data]));
 }
 
@@ -204,13 +216,13 @@ export function ecrireAromes(dossierAromes, aromes) {
   renameSync(`${chemin}.tmp`, chemin);
 }
 
-/// Identifiants résolus d'un fichier houblons-recettes.json (exchange/bin/
-/// lister_houblons_recettes.dart), ou null s'il manque.
-export function lireHoublonsRecettes(chemin) {
+/// Identifiants résolus d'un fichier houblons-recettes.json ou levures-recettes.json
+/// (exchange/bin/lister_ingredients_recettes.dart) de [nature], ou null s'il manque.
+export function lireGroupe(chemin, nature) {
   const f = lireJson(chemin, null);
   if (f === null) return null;
-  if (f?.format !== "kassbeer_houblons_recettes" || !Array.isArray(f.resolus)) {
-    throw new ErreurAromes(`${chemin} : fichier de lister_houblons_recettes.dart attendu.`);
+  if (f?.format !== nature.formatGroupe || !Array.isArray(f.resolus)) {
+    throw new ErreurAromes(`${chemin} : fichier de ${nature.scriptGroupe} attendu.`);
   }
   return {
     ids: f.resolus.map((r) => r.id),
@@ -218,10 +230,23 @@ export function lireHoublonsRecettes(chemin) {
   };
 }
 
+/// Périmètre de [nature] sur [elements] (Map id → data) : les éléments du groupe
+/// ([groupeIds]) toujours, les autres si leur type est dans le périmètre (ADR-017,
+/// décision 1). Rend `{ids, hors}` : identifiants triés retenus, et ceux écartés.
+export function perimetre(elements, groupeIds, nature) {
+  const ids = [];
+  const hors = [];
+  for (const id of [...elements.keys()].sort()) {
+    if (groupeIds.has(id) || nature.dansPerimetre(elements.get(id))) ids.push(id);
+    else hors.push(id);
+  }
+  return { ids, hors };
+}
+
 /// Sélection d'un lancement. Rend `{envoi: [{id, donnees, empreinte, categorie, relue}],
 /// nouveaux, changes, inchanges, relues: [{id, raison}]}` ; `categorie` : `nouveau`,
 /// `change` ou `force`.
-export function selectionner({ houblons, aromes, options, base }) {
+export function selectionner({ elements, aromes, options, base, contexte }) {
   const forces = new Set(options.regenerer);
   const envoi = [];
   const relues = [];
@@ -229,13 +254,9 @@ export function selectionner({ houblons, aromes, options, base }) {
   let changes = 0;
   let inchanges = 0;
   for (const id of base) {
-    const data = houblons.get(id);
-    const donnees = donneesEnvoyees(data);
-    const empreinte = empreinteEntree(donnees, {
-      promptVersion: PROMPT_VERSION,
-      modele: MODELE,
-      effort: options.effort,
-    });
+    const data = elements.get(id);
+    const donnees = options.nature.donneesEnvoyees(data);
+    const empreinte = options.nature.empreinte(donnees, { effort: options.effort, contexte });
     const existante = aromes.get(id);
     const relue = existante?.reviewed === true;
     const categorie =
@@ -267,22 +288,23 @@ export function selectionner({ houblons, aromes, options, base }) {
 }
 
 /// Ligne de provenance d'une entrée générée.
-function provenance(id, effort, date) {
+function provenance(id, effort, date, promptVersion) {
   return [
     {
       source: SOURCE_PROVENANCE,
       source_id: id,
-      version: `${MODELE} / prompt ${PROMPT_VERSION} / effort ${effort}`,
+      version: `${MODELE} / prompt ${promptVersion} / effort ${effort}`,
       licence: LICENCE_PROVENANCE,
       retrieved: date,
     },
   ];
 }
 
-/// Lecture d'une réponse de l'API pour le houblon [cible] (`{id, nom, empreinte}`). Rend
-/// `{etat: 'ok', data}`, `{etat: 'erreur', raison}` (refusal, max_tokens, JSON illisible)
-/// ou `{etat: 'refus', regles}` (contrôle). Aucun texte dans `raison` ni `regles`.
-export function lireReponse(message, cible, { effort, date }) {
+/// Lecture d'une réponse de l'API pour l'élément [cible] (`{id, nom, empreinte}`) de
+/// [nature]. Rend `{etat: 'ok', data}`, `{etat: 'erreur', raison}` (refusal, max_tokens,
+/// JSON illisible) ou `{etat: 'refus', regles}` (contrôle). Aucun texte dans `raison` ni
+/// `regles`.
+export function lireReponse(message, cible, { effort, date, nature, contexte }) {
   if (message?.stop_reason === "refusal") return { etat: "erreur", raison: "refusal" };
   if (message?.stop_reason === "max_tokens") return { etat: "erreur", raison: "max_tokens" };
   if (message?.stop_reason !== "end_turn") {
@@ -298,16 +320,16 @@ export function lireReponse(message, cible, { effort, date }) {
   } catch (erreur) {
     return { etat: "erreur", raison: `json_illisible (${erreur.name})` };
   }
-  const { regles, resultat } = controlerSortieModele(sortie);
+  const { regles, resultat } = nature.controlerSortie(sortie, contexte);
   if (regles.length > 0) return { etat: "refus", regles, sortie };
   const data = {
-    hop_name: cible.nom,
+    [nature.champNom]: cible.nom,
     ...resultat,
     reviewed: false,
-    provenance: provenance(cible.id, effort, date),
+    provenance: provenance(cible.id, effort, date, nature.promptVersion),
     input_sha256: cible.empreinte,
   };
-  const erreurs = controlerEntreeArome({ id: cible.id, data });
+  const erreurs = nature.controlerEntree({ id: cible.id, data }, contexte);
   if (erreurs.length > 0) return { etat: "refus", regles: erreurs, sortie };
   return { etat: "ok", data, sortie };
 }
@@ -365,38 +387,26 @@ export async function confirmerTerminal(question, entree, sortie) {
   }
 }
 
-/// Écrit a-relire.md : un houblon du groupe par section, données d'entrée et texte.
-export function ecrireARelire(dossierAromes, houblons, aromes, groupe) {
-  const libelles = {
-    first_wort: "Premier moût",
-    bittering: "Amérisant",
-    late_boil: "Fin d'ébullition",
-    whirlpool: "Whirlpool",
-    dry_hop: "Houblonnage à cru",
-  };
+/// Écrit a-relire.md : un élément du groupe par section, données d'entrée et texte.
+export function ecrireARelire(dossierAromes, elements, aromes, groupe, nature) {
   const ids = [...new Set(groupe.ids)].sort();
   const lignes = [
     "# Descriptions aromatiques à relire",
     "",
-    "Houblons des recettes du groupe (houblons-recettes.json). Corrigez aromes.json, puis posez",
+    `${nature.mots.Des} des recettes du groupe (${nature.fichierGroupe}). Corrigez aromes.json, puis posez`,
     '`reviewed: true` et `reviewed_at: "AAAA-MM-JJ"` sur chaque entrée relue.',
     "",
   ];
   let aRelire = 0;
   for (const id of ids) {
-    const h = houblons.get(id);
+    const h = elements.get(id);
     const a = aromes.get(id);
     lignes.push(`## ${h?.name ?? id} (\`${id}\`)`, "");
     if (h === undefined) {
-      lignes.push("Absent de beer_hops.json.", "");
+      lignes.push(`Absent de ${nature.referentiel}.`, "");
       continue;
     }
-    const d = donneesEnvoyees(h);
-    lignes.push(
-      `- Données envoyées : origine ${d.origin ?? "inconnue"}, alpha ${d.alpha_acid_pct ?? "?"} %, ` +
-        `bêta ${d.beta_acid_pct ?? "?"} %, usage ${d.purpose ?? "inconnu"}` +
-        (d.aliases.length > 0 ? `, autres noms : ${d.aliases.join(", ")}` : ""),
-    );
+    lignes.push(nature.ligneDonnees(h));
     if (a === undefined) {
       lignes.push("- Aucune entrée : lancez la génération.", "");
       continue;
@@ -409,18 +419,19 @@ export function ecrireARelire(dossierAromes, houblons, aromes, groupe) {
     if (Array.isArray(a.descriptors) && a.descriptors.length > 0) {
       lignes.push(`- Descripteurs : ${a.descriptors.map((x) => x.label).join(", ")}`);
     }
-    for (const u of USAGES) {
-      if (a.uses?.[u]) lignes.push(`- ${libelles[u]} : ${a.uses[u].text}`);
-    }
+    lignes.push(...nature.lignesTextes(a));
     lignes.push("");
   }
   if (groupe.nonResolus.length > 0) {
     lignes.push("## Noms non résolus", "");
-    for (const n of groupe.nonResolus) lignes.push(`- ${n.nom} : ${n.raison}`);
+    for (const n of groupe.nonResolus) {
+      const candidats = Array.isArray(n.candidats) && n.candidats.length > 0;
+      lignes.push(`- ${n.nom} : ${n.raison}${candidats ? ` (${n.candidats.join(", ")})` : ""}`);
+    }
     lignes.push("");
   }
   writeFileSync(join(dossierAromes, "a-relire.md"), lignes.join("\n"));
-  return { houblons: ids.length, aRelire };
+  return { [nature.mots.des]: ids.length, aRelire };
 }
 
 /// Exécute generer-aromes.mjs. Rend le rapport de l'exécution. [chargerSdk] et
@@ -438,67 +449,102 @@ export async function genererAromes({
 }) {
   const debut = maintenant();
   const options = lireOptionsAromes(argv);
+  const nature = options.nature;
+  const poste = nature.poste;
   const dossierPrepare = resolve(options.dossier ?? DOSSIER_PREPARE);
-  const dossierAromes = resolve(options.aromes ?? DOSSIER_AROMES);
+  const dossierBase = resolve(options.aromes ?? DOSSIER_AROMES);
+  // Tarif commun à la racine ; fichiers de la nature dans son sous-dossier (levures/).
+  const dossierAromes =
+    nature.sousDossier === null ? dossierBase : join(dossierBase, nature.sousDossier);
   mkdirSync(dossierAromes, { recursive: true });
-  const houblons = lireHoublons(dossierPrepare);
+  const elements = lireReferentiel(dossierPrepare, nature);
   const aromes = lireAromes(dossierAromes);
-  const groupe = lireHoublonsRecettes(join(dossierAromes, "houblons-recettes.json"));
+  const groupe = lireGroupe(join(dossierAromes, nature.fichierGroupe), nature);
   const runId = idExecution(debut);
   const date = debut.toISOString().slice(0, 10);
   const relire = () => {
     if (groupe === null) {
-      ecrire("houblons-recettes.json absent : a-relire.md n'est pas écrit.");
+      ecrire(`${nature.fichierGroupe} absent : a-relire.md n'est pas écrit.`);
       return null;
     }
-    return ecrireARelire(dossierAromes, houblons, aromes, groupe);
+    return ecrireARelire(dossierAromes, elements, aromes, groupe, nature);
   };
 
   if (options.mode === "relire") {
     const r = relire();
     if (r !== null) {
-      ecrire(`a-relire.md : ${r.houblons} houblons du groupe, ${r.aRelire} à relire.`);
+      ecrire(
+        `a-relire.md : ${r[nature.mots.des]} ${nature.mots.des} du groupe, ${r.aRelire} à relire.`,
+      );
     }
-    return { poste: POSTE, mode: "relire", a_relire: r };
+    return { poste, mode: "relire", a_relire: r };
   }
+  const contexte = nature.contexte(dossierPrepare);
   const api = creerAccesApi({ env, chargerSdk });
   if (options.mode === "suivre") {
-    return suivre({ options, dossierAromes, aromes, api, debut, runId, ecrire, relire });
+    return suivre({
+      options,
+      dossierBase,
+      dossierAromes,
+      aromes,
+      api,
+      debut,
+      runId,
+      ecrire,
+      relire,
+      contexte,
+    });
   }
 
-  // Sélection, sans réseau.
+  // Sélection, sans réseau. Périmètre de la nature : éléments du groupe, plus ceux dont le
+  // type est retenu ; un élément nommé hors du périmètre est refusé.
+  const groupeIds = new Set(groupe?.ids ?? []);
+  const { ids: dansLePerimetre, hors } = perimetre(elements, groupeIds, nature);
   let base;
   if (options.regenerer.length > 0) base = options.regenerer;
   else if (options.seulement !== null) {
-    const f = lireHoublonsRecettes(resolve(options.seulement));
+    const f = lireGroupe(resolve(options.seulement), nature);
     if (f === null) throw new ErreurAromes(`${options.seulement} : fichier absent.`);
     base = f.ids;
-  } else base = [...houblons.keys()].sort();
-  const inconnus = base.filter((id) => !houblons.has(id));
+  } else base = dansLePerimetre;
+  const inconnus = base.filter((id) => !elements.has(id));
   if (inconnus.length > 0) {
     throw new ErreurAromes(
-      `Houblons absents de beer_hops.json : ${inconnus.slice(0, 20).join(", ")}.`,
+      `${nature.mots.Des} absents de ${nature.referentiel} : ${inconnus.slice(0, 20).join(", ")}.`,
+    );
+  }
+  const horsNommes = base.filter((id) => hors.includes(id));
+  if (horsNommes.length > 0) {
+    throw new ErreurAromes(
+      `${nature.mots.Des} hors du périmètre (types ${nature.typesExclus.join(", ")}, hors du ` +
+        `groupe) : ${horsNommes.slice(0, 20).join(", ")}. Rien n'est envoyé.`,
     );
   }
   base = [...new Set(base)];
-  const s = selectionner({ houblons, aromes, options, base });
+  const s = selectionner({ elements, aromes, options, base, contexte });
   let envoi = s.envoi;
   if (options.mode === "essai") envoi = envoi.slice(0, options.essai);
   const direct = options.mode !== "lot";
+  if (nature.typesExclus !== null) {
+    ecrire(
+      `Périmètre : ${dansLePerimetre.length} ${nature.mots.des} sur ${elements.size}, ` +
+        `${hors.length} hors périmètre (types ${nature.typesExclus.join(", ")}).`,
+    );
+  }
   ecrire(
-    `Houblons : ${s.nouveaux} nouveaux, ${s.changes} changés, ${s.inchanges} inchangés` +
+    `${nature.mots.Des} : ${s.nouveaux} nouveaux, ${s.changes} changés, ${s.inchanges} inchangés` +
       (options.tout ? " (--tout : tous renvoyés)" : "") +
       ` ; ${envoi.length} à envoyer.`,
   );
   for (const r of s.relues)
     ecrire(`  ${r.id} : ${r.raison} (--regenerer ${r.id} pour la renvoyer)`);
   const cr = {
-    poste: POSTE,
+    poste,
     run_id: runId,
     mode: options.mode,
     model: MODELE,
     effort: options.effort,
-    prompt_version: PROMPT_VERSION,
+    prompt_version: nature.promptVersion,
     counts: { nouveaux: s.nouveaux, changes: s.changes, inchanges: s.inchanges, envoyes: 0 },
     generes: 0,
     erreurs: [],
@@ -508,23 +554,32 @@ export async function genererAromes({
     appels_au_resultat_inconnu: 0,
     montant_incomplet: false,
   };
+  if (nature.typesExclus !== null) {
+    cr.perimetre = {
+      retenus: dansLePerimetre.length,
+      hors: hors.length,
+      types_exclus: nature.typesExclus,
+    };
+  }
   if (envoi.length === 0) {
     ecrire("Rien à envoyer.");
     return terminer(cr, { dossierAromes, aromes, relire, ecrire, ecrireAromesFichier: false });
   }
   if (envoi.length > options.max) {
-    throw new ErreurAromes(`${envoi.length} houblons à envoyer, --max ${options.max} au plus.`);
+    throw new ErreurAromes(
+      `${envoi.length} ${nature.mots.des} à envoyer, --max ${options.max} au plus.`,
+    );
   }
   if (direct && envoi.length > SEUIL_DIRECT) {
     throw new ErreurAromes(
-      `${envoi.length} houblons : au-delà de ${SEUIL_DIRECT}, passez par un lot (--lot).`,
+      `${envoi.length} ${nature.mots.des} : au-delà de ${SEUIL_DIRECT}, passez par un lot (--lot).`,
     );
   }
 
   // Tarif d'abord : sans lui, aucune estimation et aucun appel.
-  const tarif = lireTarif(join(dossierAromes, "tarif.json"), MODELE, debut);
+  const tarif = lireTarif(join(dossierBase, "tarif.json"), MODELE, debut);
   const requetes = envoi.map((c) =>
-    parametresRequete(c.donnees, { effort: options.effort, cache: direct }),
+    nature.requete(c.donnees, { effort: options.effort, cache: direct, contexte }),
   );
   const jetons = [];
   for (const p of requetes) jetons.push(await api.compterJetons(p));
@@ -536,7 +591,7 @@ export async function genererAromes({
   });
   const totalJetons = jetons.reduce((a, b) => a + b, 0);
   cr.estimation = {
-    houblons: envoi.length,
+    [nature.mots.des]: envoi.length,
     mode: direct ? "direct" : "lot",
     jetons_entree: totalJetons,
     max_tokens: MAX_TOKENS,
@@ -545,17 +600,17 @@ export async function genererAromes({
     tarif: { date: tarif.date, source: tarif.source },
   };
   ecrire(
-    `Envoi : ${envoi.length} houblons, ${direct ? "appels directs" : "lot de l'API Batches (− 50 %, 24 h au plus)"}, ` +
+    `Envoi : ${envoi.length} ${nature.mots.des}, ${direct ? "appels directs" : "lot de l'API Batches (− 50 %, 24 h au plus)"}, ` +
       `modèle ${MODELE}, effort ${options.effort}, ${totalJetons} jetons d'entrée, ` +
       `borne haute ${borne.montant.toFixed(2)} $ (tarif du ${tarif.date}).`,
   );
   if (options.budget !== null && borne.montant > options.budget) {
     throw new ErreurAromes(
       `Borne haute ${borne.montant.toFixed(2)} $ au-delà du budget ${options.budget} $ : ` +
-        `${borne.tiennent} houblons tiendraient. Rien n'est envoyé.`,
+        `${borne.tiennent} ${nature.mots.des} tiendraient. Rien n'est envoyé.`,
     );
   }
-  if (!(await confirmer(`Poste ${POSTE}.`, entree, sortie))) {
+  if (!(await confirmer(`Poste ${poste}.`, entree, sortie))) {
     throw new ErreurAromes("Envoi non confirmé : rien n'est envoyé.");
   }
 
@@ -574,7 +629,7 @@ export async function genererAromes({
       try {
         message = await api.creerMessage(requetes[i]);
       } catch (erreur) {
-        // Aucun envoi rejoué : l'erreur est notée, les houblons restants ne partent pas.
+        // Aucun envoi rejoué : l'erreur est notée, les éléments restants ne partent pas.
         const raison = erreurLisible(erreur, api.cle());
         cr.erreurs.push({ id: cible.id, raison: `api : ${raison}` });
         cr.non_envoyes = envoi.slice(i + 1).map((c) => c.id);
@@ -594,7 +649,7 @@ export async function genererAromes({
       }
       cr.counts.envoyes++;
       cumuler(usage, message.usage);
-      const lu = lireReponse(message, cible, { effort: options.effort, date });
+      const lu = lireReponse(message, cible, { effort: options.effort, date, nature, contexte });
       brut.push({
         id: cible.id,
         stop_reason: message.stop_reason,
@@ -621,18 +676,20 @@ const aRecuUneReponse = (erreur) => typeof erreur?.status === "number";
 
 /// Crée le lot : table custom_id écrite avant l'envoi, puis lot-<id>.json.
 async function creerLotAromes({ envoi, requetes, options, dossierAromes, cr, api, debut, ecrire }) {
+  const nature = options.nature;
   const table = {};
   const demandes = envoi.map((c, i) => {
-    const customId = `h${String(i + 1).padStart(4, "0")}`;
-    table[customId] = { id: c.id, hop_name: c.nom, input_sha256: c.empreinte };
+    const customId = `${nature.prefixeLot}${String(i + 1).padStart(4, "0")}`;
+    table[customId] = { id: c.id, [nature.champNom]: c.nom, input_sha256: c.empreinte };
     return { custom_id: customId, params: requetes[i] };
   });
   const lot = {
+    nature: nature.cle,
     created_at: debut.toISOString(),
     retrieved: debut.toISOString().slice(0, 10),
     model: MODELE,
     effort: options.effort,
-    prompt_version: PROMPT_VERSION,
+    prompt_version: nature.promptVersion,
     estimation: cr.estimation,
     table,
   };
@@ -652,7 +709,7 @@ async function creerLotAromes({ envoi, requetes, options, dossierAromes, cr, api
     throw new ErreurAromes(
       `Lot au résultat inconnu : ${raison}. Résultat inconnu : vérifiez les lots dans la ` +
         "Console Anthropic avant de relancer. Table des requêtes gardée dans " +
-        `${attente} (h0001 → houblon).`,
+        `${attente} (${nature.prefixeLot}0001 → ${nature.mots.un}).`,
     );
   }
   if (!ID_LOT.test(cree?.id ?? ""))
@@ -670,12 +727,32 @@ async function creerLotAromes({ envoi, requetes, options, dossierAromes, cr, api
 }
 
 /// --suivre : état d'un lot ; terminé, résultats contrôlés et fusionnés dans aromes.json.
-async function suivre({ options, dossierAromes, aromes, api, debut, runId, ecrire, relire }) {
+async function suivre({
+  options,
+  dossierBase,
+  dossierAromes,
+  aromes,
+  api,
+  debut,
+  runId,
+  ecrire,
+  relire,
+  contexte,
+}) {
+  const nature = options.nature;
+  const poste = nature.poste;
   const cheminLot = join(dossierAromes, `lot-${options.suivre}.json`);
   if (!existsSync(cheminLot)) {
     throw new ErreurAromes(`lot-${options.suivre}.json absent : lot inconnu de ce poste.`);
   }
   const lot = JSON.parse(readFileSync(cheminLot, "utf8"));
+  // Un lot d'avant ADR-017 ne porte pas sa nature : c'est un lot de houblons.
+  if ((lot.nature ?? "hop") !== nature.cle) {
+    throw new ErreurAromes(
+      `lot-${options.suivre}.json : lot de nature ${lot.nature ?? "hop"}, ` +
+        `--nature ${nature.cle} demandée.`,
+    );
+  }
   const etat = await api.lireLot(options.suivre);
   const c = etat.request_counts ?? {};
   ecrire(
@@ -685,7 +762,7 @@ async function suivre({ options, dossierAromes, aromes, api, debut, runId, ecrir
   );
   if (etat.processing_status !== "ended") {
     return {
-      poste: POSTE,
+      poste,
       mode: "suivre",
       batch_id: options.suivre,
       processing_status: etat.processing_status,
@@ -693,7 +770,7 @@ async function suivre({ options, dossierAromes, aromes, api, debut, runId, ecrir
     };
   }
   const cr = {
-    poste: POSTE,
+    poste,
     run_id: runId,
     mode: "suivre",
     batch_id: options.suivre,
@@ -714,7 +791,11 @@ async function suivre({ options, dossierAromes, aromes, api, debut, runId, ecrir
     const cible0 = lot.table[r?.custom_id];
     if (cible0 === undefined || vus.has(r.custom_id)) continue;
     vus.add(r.custom_id);
-    const cible = { id: cible0.id, nom: cible0.hop_name, empreinte: cible0.input_sha256 };
+    const cible = {
+      id: cible0.id,
+      nom: cible0[nature.champNom],
+      empreinte: cible0.input_sha256,
+    };
     if (r.result?.type !== "succeeded") {
       cr.a_relancer.push({
         id: cible.id,
@@ -723,7 +804,12 @@ async function suivre({ options, dossierAromes, aromes, api, debut, runId, ecrir
       continue;
     }
     cumuler(usage, r.result.message.usage);
-    const lu = lireReponse(r.result.message, cible, { effort: lot.effort, date: lot.retrieved });
+    const lu = lireReponse(r.result.message, cible, {
+      effort: lot.effort,
+      date: lot.retrieved,
+      nature,
+      contexte,
+    });
     brut.push({
       id: cible.id,
       custom_id: r.custom_id,
@@ -741,7 +827,7 @@ async function suivre({ options, dossierAromes, aromes, api, debut, runId, ecrir
   writeFileSync(cr.brut, `${JSON.stringify(brut, null, 2)}\n`);
   cr.usage = usage;
   try {
-    const tarif = lireTarif(join(dossierAromes, "tarif.json"), lot.model, debut);
+    const tarif = lireTarif(join(dossierBase, "tarif.json"), lot.model, debut);
     cr.montant_usd = montantUsage(usage, tarif, "lot");
     cr.tarif = { date: tarif.date, source: tarif.source };
   } catch (erreur) {

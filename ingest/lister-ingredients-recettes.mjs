@@ -1,20 +1,22 @@
-// Noms des houblons des recettes du groupe (ADR-013), en lecture seule : recipes/ et brews/
-// (recette figée), vers import/ingest/aromes/noms-houblons.json. Puis, dans exchange/ :
-// dart run bin/lister_houblons_recettes.dart (résolution vers beer_hops/).
+// Noms des houblons (--nature hop, par défaut, ADR-013) ou des levures (--nature culture,
+// ADR-017) des recettes du groupe, en lecture seule : recipes/ et brews/ (recette figée),
+// vers import/ingest/aromes/noms-houblons.json ou import/ingest/aromes/levures/noms-levures.json.
+// Puis, dans exchange/ : dart run bin/lister_ingredients_recettes.dart --nature <même nature>
+// (résolution vers beer_hops/ ou beer_cultures/).
 //
 //   Émulateur (par défaut) :
 //     npx firebase --config ../firebase.json emulators:exec --only firestore \
-//       --project demo-kassbeer "node lister-houblons-recettes.mjs"
+//       --project demo-kassbeer "node lister-ingredients-recettes.mjs --nature culture"
 //   Production (identifiants ADC, saisie du nom du projet) :
-//     node lister-houblons-recettes.mjs --production --projet kassbeer
+//     node lister-ingredients-recettes.mjs --nature culture --production --projet kassbeer
 //
 // Codes de sortie : 0 liste écrite ; 1 échec ; 2 utilisation refusée.
 
-import { listerHoublons } from "./lib/lister.mjs";
+import { listerIngredients } from "./lib/lister.mjs";
 import { ErreurOptions } from "./lib/options.mjs";
 
 try {
-  const r = await listerHoublons({
+  const r = await listerIngredients({
     argv: process.argv.slice(2),
     env: process.env,
     entree: process.stdin,
@@ -22,7 +24,8 @@ try {
   });
   console.log(`Cible : ${r.target}, projet ${r.project} (lecture seule)`);
   console.log(
-    `${r.recettes} recettes et ${r.brassins} brassins lus : ${r.noms} noms de houblons` +
+    `${r.recettes} recettes et ${r.brassins} brassins lus : ${r.noms} noms de ` +
+      `${r.nature === "culture" ? "levures" : "houblons"}` +
       (r.ecartees > 0 ? `, ${r.ecartees} lignes sans nom lisible écartées` : "") +
       ".",
   );

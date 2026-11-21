@@ -5,6 +5,12 @@
 - **Remplace** : — (complète ADR-005 : nouvelle collection de référence, exception à P20
   limitée à un texte généré ; complète ADR-001 : l'application reste sans IA, la génération
   vit hors de l'application ; ouvre un poste de coût variable)
+- **Étendu par ADR-017** (2026-11-21, livré à la v0.1.90) : le moteur prend `--nature
+  hop|culture` (`hop` par défaut, commandes inchangées) ; les levures ont leur collection
+  (`beer_culture_aromas/`), leur prompt et leur poste (`culture_aroma_generation`).
+  `ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs` et
+  `exchange/bin/lister_houblons_recettes.dart` devient `lister_ingredients_recettes.dart`. La
+  limite de 20 $ de l'espace de travail passe à 70 $ jusqu'au 30 novembre 2026 au plus tard.
 
 Décisions de l'utilisateur du 2026-11-14 :
 

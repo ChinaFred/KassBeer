@@ -6,6 +6,10 @@
   Complète ADR-008 (liste fermée des points d'accès : `saveAiSettings`) et ADR-013 (même espace
   de travail de la Console Anthropic, seconde clé). ADR-015 (assistant de recette) est le
   premier poste branché sur ce socle.
+- **Note du 2026-11-21 (ADR-017, v0.1.90)** : un quatrième poste, `culture_aroma_generation`,
+  dépense sur le même espace de travail depuis le poste de l'admin. La limite commune de 20 $
+  par mois passe à 70 $ jusqu'à la fin du dernier lot des levures, au plus tard le 30 novembre
+  2026, puis revient à 20 $ à la main ; l'atteindre pendant ce temps bloque aussi l'assistant.
 
 ## Contexte
 
