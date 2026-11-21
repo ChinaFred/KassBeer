@@ -32,6 +32,7 @@ l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`
 | Fiches techniques Omega Yeast (`omegayeast.com/products/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `bb486777fbacd5fc0b64a17ed36e65bc7c7d7f090308e07aa8e0ba0cf1b784bd` après l'ajout et le renommage « Plus » | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 104 cultures (102 levures liquides ou sèches, 2 bactéries) : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | tolérance à l'alcool, notes de dégustation, descriptions |
 | Fiches techniques White Labs et The Yeast Bay (`whitelabs.com/yeast-single?id=…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `2709a66bca326bea6e8a4f13698c89e160353156ac99501dbe32c66974fdf601` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 162 cultures WLP (115 White Labs, 47 The Yeast Bay) : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | levures de vin, saké, hydromel, cidre et distillerie, kombucha, bactéries acétiques et malolactiques, produits d'autres marques revendus, tolérance à l'alcool, styles conseillés, descriptions |
 | Fiches techniques Wyeast (`wyeastlab.com/product/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 (Crawl-delay de 10 s respecté) ; SHA-256 du fichier `4d0206ca6143b07a3e4824274b496b9f9f07843b61f5ec0c48d1ca8575826b10` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 77 cultures (bière, « Wild & Sour ») : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | cultures de vin, cidre, hydromel, saké et distillerie (série 4000), produits d'appoint, tolérance à l'alcool, profil, styles conseillés |
+| Fiches techniques Escarpment Labs (`escarpmentlabs.com/products/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `4bf68e54e3c437887e383e18babc4787405ae8eab6a955c765bb037f2379fc53` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 98 cultures liquides : nom, type, forme, producteur, référence LSB quand la fiche en donne une, atténuation, plage de température, floculation | levures Lallemand revendues (LalBrew, WildBrew), doublons de conditionnement (homebrew, dose primaire ou secondaire), tolérance à l'alcool, descriptions |
 | paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
 | Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
 
@@ -254,13 +255,14 @@ Fichier écrit à la main, versionné dans `exchange/donnees/fabricants/cultures
 2026-11-15 (lu par défaut par `bin/preparer_referentiels.dart`, option `--fabricants`), au format
 BeerJSON 2.01 (liste `cultures`, mêmes champs que 003 et 004) ; en-tête en `//` avec l'adresse des
 fiches. Il ne contient que noms et valeurs techniques, aucun texte des fiches.
-`exchange/test/fabricants_donnees_test.dart` le lit : 439 entrées (25 Fermentis, 16 Mangrove
-Jack's, 55 Imperial Yeast, 104 Omega Yeast, 115 White Labs, 47 The Yeast Bay, 77 Wyeast), aucun rejet, quatre atténuations écartées (Fermentis).
+`exchange/test/fabricants_donnees_test.dart` le lit : 537 entrées (25 Fermentis, 16 Mangrove
+Jack's, 55 Imperial Yeast, 104 Omega Yeast, 115 White Labs, 47 The Yeast Bay, 77 Wyeast, 98
+Escarpment Labs), aucun rejet, quatre atténuations écartées (Fermentis).
 Lu par `lireFabricants` d'`exchange/` ; toute autre liste est ignorée et comptée.
 
 Chaque fabricant a sa date de relevé, dans `kDatesReleveFabricants` (`exchange/lib/src/ingestion/sources.dart`),
 par clé de producteur : Fermentis le 2026-11-14, Mangrove Jack's, Imperial Yeast,
-Omega Yeast, White Labs, The Yeast Bay et Wyeast le 2026-11-15. Cette date
+Omega Yeast, White Labs, The Yeast Bay, Wyeast et Escarpment Labs le 2026-11-15. Cette date
 devient `version` et `retrieved` dans `provenance[]` de chaque fiche. Une fiche d'un producteur
 absent de la table est refusée (« date du relevé inconnue »). Au rapport, la version de la source
 `fabricants` est la date du relevé le plus récent.
@@ -384,10 +386,80 @@ les produits d'appoint ne sont pas repris.
 Mesure sur les sources du relevé du 2026-11-08 : 74 fiches rejoignent un document Brewtarget, 3
 en créent un ; 945 documents `beer_cultures` au lieu de 942. Brewtarget écrit une souche de la
 Private Collection sous deux références (`WY2001-PC` dans 003 et 004, `2001` dans 005), qui
-donnent deux documents : la fiche rejoint le second et lui donne son nom, et six noms désignent
-désormais deux documents (`belgian-schelde-ale`, `belgian-style-blend`, `bi-re-de-garde`,
-`burton-ipa-blend`, `hella-bock-lager`, `west-coast-ipa`). Une clé de référence Wyeast sans `WY`
+donnent deux documents : la fiche rejoint le second et lui donne son nom. Le premier document
+reste : 24 noms de la Private Collection désignent deux documents Wyeast, tous antérieurs aux
+fiches (section « Doublons d'un même producteur hérités de Brewtarget », mesure du 2026-11-21 ;
+la mesure du 2026-11-15 en comptait six, faute de rapprocher « Wyeast Labs » de Wyeast). Une clé de référence Wyeast sans `WY`
 ni `-PC` (`cleProduit`) fusionnerait ces doublons ; elle change des identifiants de documents.
+
+### Escarpment Labs
+
+Relevé du 2026-11-15 sur `escarpmentlabs.com/products/<fiche>`, robots.txt relu : 98 cultures
+liquides de la marque. Non reprises : les levures Lallemand revendues (LalBrew, WildBrew). Quand
+la boutique donne plusieurs fiches d'une souche (homebrew `[HB]`, dose primaire ou secondaire),
+une seule est reprise.
+
+| Valeur de la fiche | Champ |
+|---|---|
+| titre du produit sans `[HB]`, ™, « The Kveik Ring: » ni la référence LSB ; référence LSB quand la fiche en donne une (3 fiches, dont Juteuse : `LSB1011`), sinon absente ; Escarpment Labs | `name`, `product_id`, `producer` |
+| la fiche ne nomme pas toujours l'espèce. Kveik (souches et mélanges, The Kveik Ring, KRISPY, KRUSHER) → `kveik` ; Brett dans le nom → `brett` ; *Lactobacillus*, Chaudron Sûr → `lacto` ; *Pediococcus* → `pedio` ; *Lachancea* (Lactic Magic) → `other` ; assemblage dont la fiche nomme plusieurs genres (Belgian Sour, Berliner Weisse, New World Saison, Ontario Farmhouse, Optimus Primary, Fruit Bomb Saison, Mud King, Simonaitis + Lacto) → `mixed-culture` ; lager et pils → `lager` ; Wit, Weizen, Blanche → `wheat` ; les autres → `ale` | `type` |
+| levure liquide | `form` : `liquid` |
+| plage chiffrée complète seulement ; « 80%+ », « >90% », « 75–85+% », « Low Attenuation » : absente (43 fiches) | `attenuation` |
+| plage en °C, unité donnée en premier par la fiche ; « 25ºC+ » ou plage absente : absente (14 fiches) | `temperature_range` |
+| `Medium-Low` → `medium low`, `Medium-High` → `medium high`, Low, Medium, High, Very High ; absente sur 18 fiches | `flocculation` |
+
+Escarpment ne publie aucune référence pour la plupart de ses souches : une fiche ne rejoint le
+document Brewtarget que par le même nom normalisé. Sept fiches portent un autre nom que
+Brewtarget pour la même souche. La table de fusion des cultures (`kFusionsCultures`,
+`exchange/lib/src/ingestion/fusions.dart`, décision de l'utilisateur du 2026-11-15) les rattache
+au document Brewtarget : l'identifiant reste celui de Brewtarget, la fiche donne les valeurs et
+le nom, le nom Brewtarget passe en alias. Une ligne sans fiche ou sans entrée Brewtarget, une
+entrée désignée par deux lignes, deux lignes de même identifiant, ou une entrée Brewtarget dont
+l'identifiant (celui de sa souche si elle porte une référence) diffère de celui de la ligne
+arrêtent la préparation.
+
+| Fiche (nom du document) | Document Brewtarget rattaché | Entrées Brewtarget |
+|---|---|---|
+| Ardennes Ale | `culture-escarpment-labs-ardennes-belgian-ale` « Ardennes Belgian Ale » | 005, 004 |
+| Classic Wit | `culture-escarpment-labs-classic-witbier` « Classic Witbier » | 005, 004 |
+| Fruity Wit | `culture-escarpment-labs-fruity-witbier` « Fruity Witbier » | 005, 004 |
+| Fruit Bomb Saison Blend | `culture-escarpment-labs-fruit-bomb-saison` « Fruit Bomb Saison » | 005, 004 |
+| New World Saison Blend | `culture-escarpment-labs-new-world-saison` « New World Saison » | 005, 004 |
+| St. Lucifer | `culture-escarpment-labs-st-lucifer-belgian-ale` « St. Lucifer Belgian Ale » (005), « St Lucifer Belgian Ale » (004) | 005, 004 |
+| Chaudron Sûr | `culture-escarpment-labs-lactobacillus-blend` « Lactobacillus Blend » | 005 |
+
+Mesure sur les sources du relevé du 2026-11-08 : 50 fiches rejoignent un document Brewtarget
+(43 par le nom, 7 par la table), 48 en créent un ; 993 documents `beer_cultures` au lieu de 945,
+aucun document retiré, aucun autre document changé par cet ajout. Sept documents Brewtarget
+d'Escarpment restent sans fiche : Cali Common Lager, Munich Lager, Scotia Sauvage, Scottish Ale,
+Skare Kveik, Stirling Ale (004 ; Sterling Ale, du 005, a sa fiche) et Weizen II. Six noms
+désignent désormais deux documents, une souche d'Escarpment et celle d'un autre producteur de
+même nom : `cream-ale-blend`, `lactobacillus-delbrueckii`, `northwest-ale`, `framgarden-kveik`,
+`granvin`, `midtbust`. Deux noms déjà partagés gagnent le document d'Escarpment :
+`berliner-weisse-blend` et `french-saison`. Un import
+qui ne donne que ce nom ne le résout plus ; le producteur ne départage pas un nom seul.
+Ces noms partagés entre deux producteurs sont permis (P56, décision de l'utilisateur du
+2026-11-15) et comptés dans `noms_partages.culture` du rapport (97 noms). Aucun nom ne désigne
+deux documents d'Escarpment.
+
+### Doublons d'un même producteur hérités de Brewtarget
+
+Mesure du 2026-11-21 sur les sources du relevé du 2026-11-08 : 39 noms normalisés désignent au
+moins deux documents `beer_cultures` d'un même producteur, après `kProducteursEquivalents`
+(« Wyeast Labs » est Wyeast, « Omega Yeast Labs » est Omega Yeast). Aucun ne vient d'Escarpment
+ni d'une ligne de la table de fusion. Chacun tient à une souche que Brewtarget écrit deux fois,
+ou à un nom que Brewtarget donne à deux souches. Ils sont comptés dans `noms_partages.culture`
+du rapport et restent en attendant leur fusion (P56, décisions de l'utilisateur du 2026-11-21).
+
+| Cause | Producteur | Noms normalisés | Nombre |
+|---|---|---|---|
+| Private Collection : référence `nnnn-PC` ou `WYnnnn-PC`, que `cleProduit` ne rapproche pas de `nnnn` | Wyeast | `belgian-dark-ale`, `belgian-schelde-ale`, `belgian-style-blend`, `berliner-weisse-blend`, `biere-de-garde`, `brettanomyces-claussenii`, `burton-ipa-blend`, `canadian-belgian-ale`, `danish-lager`, `european-lager`, `flanders-golden-ale`, `forbidden-fruit`, `gambrinus-style-lager`, `german-wheat`, `hella-bock-lager`, `kolsch-ii`, `lactobacillus-brevis`, `munich-lager-ii`, `north-american-lager`, `pilsner-urquell-h-strain`, `rogue-pacman`, `saison-brett-blend`, `staro-prague-lager`, `west-coast-ipa` | 24 |
+| une souche sous deux références (`OYL-217-C2C`, `GY018-SAISON-1`, `GY027-SAISON-2`, `GB144` et `GY144`, une entrée sans référence) | Omega Yeast, GigaYeast, The Yeast Bay | `c2c-american-farmhouse`, `saison-1`, `saison-2`, `sweet-flemish-brett`, `saison-blend` | 5 |
+| un nom que Brewtarget donne à deux souches (en alias de l'une) | Wyeast, Mangrove Jack's, Fermentis, Omega Yeast | `bavarian-wheat` (3056, 3638), `british-ale` (1098, 1335), `lactobacillus` (4335, 5335), `belgian-ale` (M27, M41), `belgian-wit` (M21, M27), `safale-american-ale` (US-05, US-56), `scottish-ale` (OYL-015, OYL-045) | 7 |
+| un nom de gamme porté par plusieurs souches | Fermentis, AEB, Lallemand | `safspirit`, `fermoale`, `lalvin` | 3 |
+
+Vingt-sept de ces noms sont portés par une fiche de fabricant, mais le second document Brewtarget
+existait avant la fiche ; P56 les compte comme hérités. Aucune fiche n'en a créé.
 
 ## Correspondance DotBeer (fichier 005) → référentiels
 

@@ -24,6 +24,7 @@ const Map<String, String> kDatesReleveFabricants = {
   'white-labs': '2026-11-15',
   'the-yeast-bay': '2026-11-15',
   'wyeast': '2026-11-15',
+  'escarpment-labs': '2026-11-15',
 };
 
 /// Date du relevé le plus récent de [dates] : version de la source

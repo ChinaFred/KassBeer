@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.79",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "La Bibliothèque reprend les fiches de 98 cultures d'Escarpment Labs : levures d'ale, de lager et de bière de blé, kveiks, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour 50 cultures déjà connues, et 48 cultures apparaissent. Sept fiches portent un autre nom que l'ancienne base pour la même souche (« Classic Wit » pour « Classic Witbier », « Chaudron Sûr » pour « Lactobacillus Blend »…) : elles rejoignent la culture déjà connue, qui prend le nom de la fiche et garde l'ancien nom comme autre nom. L'écran « Sources des données » nomme Escarpment Labs. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
+      ]
+    },
+    {
       "version": "0.1.78",
       "date": "2026-11-19",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-15",
       "paragraphs": [
         "La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures sèches (Pinnacle, Dried Lutra), Brettanomyces, kveiks et deux bactéries qui acidifient la bière. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour les 75 cultures déjà connues. 29 cultures absentes jusqu'ici apparaissent, dont les variantes « + » et les levures sèches. L'écran « Sources des données » nomme Omega Yeast et la date du relevé. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
-      ]
-    },
-    {
-      "version": "0.1.72",
-      "date": "2026-11-15",
-      "paragraphs": [
-        "Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à 20 °C ou à 15,6 °C, réfractomètre, densimètre électronique, ou autre instrument sans correction. Le choix se fait par la ligne « Densimètre » de « Préparer le brassage » et de « Préparer la journée », ou depuis le formulaire d'une densité. Avec un densimètre flottant, vous saisissez aussi la température de l'échantillon : l'application propose la densité corrigée (1050,0 lue à 68 °C donne 1070,7), approchée au-delà de 40 °C, impossible au-delà de 75 °C. Avec un réfractomètre, vous saisissez des °Brix et le facteur de votre appareil ; après le début de la fermentation, la lecture est corrigée de l'alcool à partir de la densité initiale. La case « Corriger » permet de garder la lecture telle quelle. La lecture d'origine est toujours gardée, et la valeur retenue sert partout : relevé, courbes, « Prévu et mesuré », degré et rendement. Les mesures déjà enregistrées ne changent pas. Installez cette mise à jour avant d'utiliser le réfractomètre : une ancienne version de l'application ne peut pas afficher « Prévu et mesuré » d'un brassin mesuré au réfractomètre."
       ]
     }
   ]

@@ -171,6 +171,147 @@ Preparation _preparer({
   alias: const [],
   ajoutsDansHoublons: const [],
   fusions: fusions,
+  // La table des cultures du projet désigne des fiches absentes de ces
+  // sources : elle est essayée par le groupe « table de fusion des cultures ».
+  fusionsCultures: const [],
+);
+
+/// Culture inventée : nom, atténuation minimale (la maximale vaut + 4).
+typedef _Culture = (String nom, int attenuation);
+
+/// Fiches inventées du producteur `Labo Fictif`, sans référence.
+const List<_Culture> _fiches = [('Souche Courte', 80), ('Autre Fiche', 70)];
+
+/// Cultures inventées du fichier 004, même producteur, sans référence.
+const List<_Culture> _c004 = [
+  ('Souche Courte Belge', 60),
+  ('Souche Seule', 65),
+];
+
+String _texteFiches(
+  List<_Culture> fiches, {
+  String producteur = 'Labo Fictif',
+}) => jsonEncode({
+  'beerjson': {
+    'version': 2.01,
+    'cultures': [
+      for (final (nom, att) in fiches)
+        {
+          'id': '${cleProducteur(producteur)}-${cleNormalisee(nom)}',
+          'name': nom,
+          'type': 'ale',
+          'form': 'liquid',
+          'producer': producteur,
+          'attenuation_range': {
+            'minimum': {'unit': '%', 'value': att},
+            'maximum': {'unit': '%', 'value': att + 4},
+          },
+        },
+    ],
+  },
+});
+
+String _texte004(
+  List<_Culture> cultures, {
+  String? produit,
+  String producteur = 'Labo Fictif',
+}) => jsonEncode({
+  'beerjson': {
+    'version': 2.01,
+    'cultures': [
+      for (final (nom, att) in cultures)
+        {
+          'name': nom,
+          'product_id': ?produit,
+          'type': 'ale',
+          'form': 'liquid',
+          'producer': producteur,
+          'attenuation_range': {
+            'minimum': {'unit': '%', 'value': att},
+            'maximum': {'unit': '%', 'value': att + 4},
+          },
+        },
+    ],
+  },
+});
+
+/// Référentiel des cultures inventées, avec la table [table].
+Referentiel _cultures(
+  List<FusionCulture> table, {
+  List<_Culture> fiches = _fiches,
+  List<_Culture> c004 = _c004,
+  String? produit004,
+}) {
+  final lecture =
+      LectureReferentiels(
+          datesReleveFabricants: const {'labo-fictif': '2026-11-01'},
+        )
+        ..lire003ou004(
+          _texte004(c004, produit: produit004),
+          Source.brewtarget004,
+        )
+        ..lireFabricants(_texteFiches(fiches));
+  return Referentiel.fusionner(lecture.entrees, fusionsCultures: table);
+}
+
+/// Cultures du fichier 005 (DotBeer), atténuations inventées.
+String _texte005Cultures(List<_Culture> cultures, String producteur) =>
+    jsonEncode({
+      'DotBeer': {
+        'version': '1.0.0',
+        'cultures': [
+          for (final (nom, att) in cultures)
+            {
+              'name': nom,
+              'folder_path': 'Fictif',
+              'culture_type': 'ale',
+              'form': 'liquid',
+              'producer': producteur,
+              'attenuation_range': {
+                'minimum': {'unit': '%', 'value': att},
+                'maximum': {'unit': '%', 'value': att + 4},
+              },
+            },
+        ],
+      },
+    });
+
+/// Sources des lignes de [kFusionsCultures] : noms des souches seuls (fiches
+/// et cibles Brewtarget de la table), atténuations inventées (P20).
+/// Brewtarget écrit la cible de « St. Lucifer » avec et sans point (005,
+/// 004) ; celle de « Chaudron Sûr » n'est que dans le 005.
+const _escarpment = 'Escarpment Labs';
+const List<_Culture> _fichesEscarpment = [
+  ('Ardennes Ale', 81),
+  ('Classic Wit', 82),
+  ('Fruity Wit', 83),
+  ('Fruit Bomb Saison Blend', 84),
+  ('New World Saison Blend', 85),
+  ('St. Lucifer', 86),
+  ('Chaudron Sûr', 87),
+];
+const List<_Culture> _c005Escarpment = [
+  ('Ardennes Belgian Ale', 51),
+  ('Classic Witbier', 52),
+  ('Fruity Witbier', 53),
+  ('Fruit Bomb Saison', 54),
+  ('New World Saison', 55),
+  ('St. Lucifer Belgian Ale', 56),
+  ('Lactobacillus Blend', 57),
+];
+const List<_Culture> _c004Escarpment = [
+  ('Ardennes Belgian Ale', 41),
+  ('Classic Witbier', 42),
+  ('Fruity Witbier', 43),
+  ('Fruit Bomb Saison', 44),
+  ('New World Saison', 45),
+  ('St Lucifer Belgian Ale', 46),
+];
+
+const _ligneCourte = FusionCulture(
+  'Labo Fictif',
+  'Souche Courte',
+  nomBrewtarget: 'Souche Courte Belge',
 );
 
 Map<String, Map<String, Object?>> _houblons(Preparation p) => {
@@ -489,6 +630,257 @@ void main() {
         },
       ]);
     });
+  });
+
+  group('table de fusion des cultures', () {
+    test('sans la table : la fiche crée un second document', () {
+      final c = _cultures(const []).parNature[NatureReferentiel.culture]!;
+      expect(c.keys, {
+        'culture-labo-fictif-souche-courte',
+        'culture-labo-fictif-souche-courte-belge',
+        'culture-labo-fictif-autre-fiche',
+        'culture-labo-fictif-souche-seule',
+      });
+    });
+
+    test('la fiche rejoint le document Brewtarget : même identifiant, '
+        'valeurs et nom de la fiche, nom Brewtarget en alias', () {
+      expect(_ligneCourte.id, 'culture-labo-fictif-souche-courte-belge');
+      final r = _cultures(const [_ligneCourte]);
+      final c = r.parNature[NatureReferentiel.culture]!;
+      expect(c.keys, {
+        'culture-labo-fictif-souche-courte-belge',
+        'culture-labo-fictif-autre-fiche',
+        'culture-labo-fictif-souche-seule',
+      });
+      final doc = c['culture-labo-fictif-souche-courte-belge']!.document();
+      expect(doc['name'], 'Souche Courte');
+      expect(doc['aliases'], ['Souche Courte Belge']);
+      expect(doc['attenuation'], {
+        'minimum': {'unit': '%', 'value': 80},
+        'maximum': {'unit': '%', 'value': 84},
+      });
+      expect(
+        [for (final l in doc['provenance']! as List) (l as Map)['source']],
+        ['fabricants', 'brewtarget-004'],
+      );
+      expect(
+        r.parNomExact(NatureReferentiel.culture, 'Souche Courte'),
+        'culture-labo-fictif-souche-courte-belge',
+      );
+      expect(
+        r.parNomExact(NatureReferentiel.culture, 'Souche Courte Belge'),
+        'culture-labo-fictif-souche-courte-belge',
+      );
+    });
+
+    test('ligne sans fiche ou sans entrée Brewtarget : StateError', () {
+      expect(
+        () => _cultures(const [_ligneCourte], fiches: [_fiches.last]),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('aucune fiche'),
+          ),
+        ),
+      );
+      expect(
+        () => _cultures(const [_ligneCourte], c004: [_c004.last]),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('aucune entrée Brewtarget'),
+          ),
+        ),
+      );
+    });
+
+    test('nom partagé par deux producteurs : deux documents, nom compté '
+        'dans nomsPartages', () {
+      final lecture =
+          LectureReferentiels(
+              datesReleveFabricants: const {
+                'labo-fictif': '2026-11-01',
+                'autre-labo': '2026-11-01',
+              },
+            )
+            ..lireFabricants(_texteFiches(const [('Souche Courte', 80)]))
+            ..lireFabricants(
+              _texteFiches(const [
+                ('Souche Courte', 70),
+              ], producteur: 'Autre Labo'),
+            );
+      final r = Referentiel.fusionner(lecture.entrees);
+      expect(r.parNature[NatureReferentiel.culture]!.keys, {
+        'culture-labo-fictif-souche-courte',
+        'culture-autre-labo-souche-courte',
+      });
+      expect(r.nomsPartages(NatureReferentiel.culture), {
+        'souche-courte': [
+          'culture-autre-labo-souche-courte',
+          'culture-labo-fictif-souche-courte',
+        ],
+      });
+    });
+
+    test('cible Brewtarget qui porte une référence : StateError', () {
+      // Avec la référence, l'identifiant de la cible est celui de sa souche
+      // (`culture-labo-fictif-lf9-souche-courte-belge`) : la ligne créerait
+      // un document à côté de l'ancien.
+      expect(
+        () => _cultures(
+          const [_ligneCourte],
+          c004: [_c004.first],
+          produit004: 'LF9',
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('a pour identifiant'),
+          ),
+        ),
+      );
+    });
+
+    test('ligne en double, entrée désignée par deux lignes : StateError', () {
+      expect(
+        () => _cultures(const [
+          _ligneCourte,
+          FusionCulture(
+            'Labo Fictif',
+            'Autre Fiche',
+            nomBrewtarget: 'Souche Courte Belge',
+          ),
+        ]),
+        throwsStateError,
+      );
+      expect(
+        () => _cultures(const [
+          _ligneCourte,
+          FusionCulture(
+            'Labo Fictif',
+            'Souche Courte',
+            nomBrewtarget: 'Souche Seule',
+          ),
+        ]),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('désignée par'),
+          ),
+        ),
+      );
+    });
+
+    test(
+      'chaque ligne de kFusionsCultures : document, entrées, nom, alias',
+      () {
+        final lecture =
+            LectureReferentiels(
+                datesReleveFabricants: const {'escarpment-labs': '2026-11-01'},
+              )
+              ..lire003ou004(
+                _texte004(_c004Escarpment, producteur: _escarpment),
+                Source.brewtarget004,
+              )
+              ..lire005(_texte005Cultures(_c005Escarpment, _escarpment))
+              ..lireFabricants(
+                _texteFiches(_fichesEscarpment, producteur: _escarpment),
+              );
+        final r = Referentiel.fusionner(
+          lecture.entrees,
+          fusionsCultures: kFusionsCultures,
+        );
+        const tous = {'fabricants', 'brewtarget-005', 'brewtarget-004'};
+        const attendu = {
+          'Ardennes Ale': (
+            'culture-escarpment-labs-ardennes-belgian-ale',
+            tous,
+            ['Ardennes Belgian Ale'],
+          ),
+          'Classic Wit': (
+            'culture-escarpment-labs-classic-witbier',
+            tous,
+            ['Classic Witbier'],
+          ),
+          'Fruity Wit': (
+            'culture-escarpment-labs-fruity-witbier',
+            tous,
+            ['Fruity Witbier'],
+          ),
+          'Fruit Bomb Saison Blend': (
+            'culture-escarpment-labs-fruit-bomb-saison',
+            tous,
+            ['Fruit Bomb Saison'],
+          ),
+          'New World Saison Blend': (
+            'culture-escarpment-labs-new-world-saison',
+            tous,
+            ['New World Saison'],
+          ),
+          'St. Lucifer': (
+            'culture-escarpment-labs-st-lucifer-belgian-ale',
+            tous,
+            ['St Lucifer Belgian Ale', 'St. Lucifer Belgian Ale'],
+          ),
+          'Chaudron Sûr': (
+            'culture-escarpment-labs-lactobacillus-blend',
+            {'fabricants', 'brewtarget-005'},
+            ['Lactobacillus Blend'],
+          ),
+        };
+        expect(kFusionsCultures.map((f) => f.nom), attendu.keys);
+        expect(
+          r.parNature[NatureReferentiel.culture],
+          hasLength(kFusionsCultures.length),
+        );
+        for (final f in kFusionsCultures) {
+          final (id, sources, alias) = attendu[f.nom]!;
+          expect(f.id, id, reason: f.nom);
+          final doc = r.entree(id);
+          expect(doc, isNotNull, reason: f.nom);
+          expect(doc!.entrees.where(f.designeFiche), hasLength(1));
+          expect(doc.principale.source, Source.fabricants, reason: f.nom);
+          expect(
+            doc.entrees.where(f.designeBrewtarget),
+            hasLength(sources.length - 1),
+            reason: f.nom,
+          );
+          expect(doc.entrees.map((e) => e.source.id).toSet(), sources);
+          final data = doc.document();
+          expect(data['name'], f.nom);
+          expect(data['aliases'], alias, reason: f.nom);
+          expect(data['aliases'], contains(f.nomBrewtarget));
+          final fiche = _fichesEscarpment.firstWhere((c) => c.$1 == f.nom);
+          expect(
+            ((data['attenuation']! as Map)['minimum'] as Map)['value'],
+            fiche.$2,
+            reason: f.nom,
+          );
+        }
+        // P56, nature `culture` : la table ne laisse aucun nom normalisé
+        // partagé entre deux documents de ce référentiel.
+        expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+      },
+    );
+
+    test(
+      'table du projet : une ligne par identifiant, une fiche par ligne',
+      () {
+        expect(
+          kFusionsCultures.map((f) => f.id).toSet(),
+          hasLength(kFusionsCultures.length),
+        );
+        expect(
+          kFusionsCultures.map((f) => cleNormalisee(f.nom)).toSet(),
+          hasLength(kFusionsCultures.length),
+        );
+      },
+    );
   });
 
   group('table fausse : préparation arrêtée', () {

@@ -84,7 +84,8 @@ int _parNom(Map<String, Object?> a, Map<String, Object?> b) {
 }
 
 /// Prépare les documents à partir de [sources], avec la table [alias], la
-/// liste [ajoutsDansHoublons] et la table de fusion des houblons [fusions].
+/// liste [ajoutsDansHoublons], la table de fusion des houblons [fusions] et
+/// celle des cultures [fusionsCultures].
 ///
 /// Un nom (nom du document ou alias) porté par deux houblons lève
 /// [StateError] (ADR-014) : la résolution par nom ne saurait lequel choisir.
@@ -95,6 +96,7 @@ Preparation preparer(
   List<Alias> alias = kAlias,
   List<String> ajoutsDansHoublons = kAjoutsDansHoublons,
   List<Fusion> fusions = kFusions,
+  List<FusionCulture> fusionsCultures = kFusionsCultures,
   Map<String, String> datesReleveFabricants = kDatesReleveFabricants,
 }) {
   final lecture =
@@ -105,7 +107,11 @@ Preparation preparer(
         ..lire003ou004(sources.texte004, Source.brewtarget004)
         ..lire005(sources.texte005)
         ..lireFabricants(sources.texteFabricants);
-  final referentiel = Referentiel.fusionner(lecture.entrees, fusions: fusions);
+  final referentiel = Referentiel.fusionner(
+    lecture.entrees,
+    fusions: fusions,
+    fusionsCultures: fusionsCultures,
+  );
   final resolveur = Resolveur(
     referentiel,
     alias: alias,
@@ -218,6 +224,17 @@ Preparation preparer(
             'entrees': [
               for (final b in e.entrees)
                 {'source': b.source.id, 'name': b.nom, 'origin': ?b.origine},
+            ],
+          },
+    ],
+    'table_de_fusion_cultures': [
+      for (final f in fusionsCultures)
+        if (referentiel.entree(f.id) case final e?)
+          {
+            'id': f.id,
+            'name': e.nom,
+            'entrees': [
+              for (final b in e.entrees) {'source': b.source.id, 'name': b.nom},
             ],
           },
     ],
