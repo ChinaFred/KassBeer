@@ -11,6 +11,8 @@ import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../domain/log_entry.dart';
+import '../domain/ticket_depuis_panne.dart';
+import 'analyser_panne.dart';
 
 /// Admin › Journaux (ADR-011, J2) : sortie des Cloud Functions, lue par la
 /// callable `queryLogs`. La recherche part sur « Rechercher » seul, jamais à
@@ -201,8 +203,11 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
     });
   }
 
-  void _rechercher() =>
-      unawaited(_lancer(_filtres, origine: _Origine.rechercher));
+  void _rechercher() {
+    // Les tickets de la marque sont relus avec chaque recherche.
+    ref.invalidate(marquesPannesProvider);
+    unawaited(_lancer(_filtres, origine: _Origine.rechercher));
+  }
 
   void _chargerLaSuite() => unawaited(
     _lancer(_filtresListe!, suite: _suite, origine: _Origine.suite),
@@ -593,6 +598,9 @@ class _LigneJournal extends ConsumerWidget {
         color: scheme.onSurfaceVariant,
       ),
     );
+    final cle = entree.insertId.isEmpty
+        ? null
+        : (nature: NaturePanne.journal, id: entree.insertId);
     final bordure = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
     );
@@ -632,6 +640,8 @@ class _LigneJournal extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium,
             ),
+            // Marque « Ticket #N créé le… » sous le titre (ticket #67).
+            MarqueTicketPanne(cle: cle),
           ],
         ),
         expandedCrossAxisAlignment: CrossAxisAlignment.start,
@@ -652,12 +662,20 @@ class _LigneJournal extends ConsumerWidget {
             ),
           if (entree.payloadCoupe) _NoteCoupe(gardes: entree.caracteresGardes),
           const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
+          BoutonsPanne(
+            copier: TextButton.icon(
               onPressed: () => unawaited(_copier(context, ref)),
               icon: const Icon(Icons.copy),
               label: const Text(LogsScreen.copier),
+            ),
+            analyser: () => unawaited(
+              ouvrirAnalyse(
+                context,
+                ref,
+                cle: cle,
+                nature: NaturePanne.journal,
+                brouillon: brouillonDepuisJournal(entree),
+              ),
             ),
           ),
         ],

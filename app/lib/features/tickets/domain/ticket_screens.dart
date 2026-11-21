@@ -259,6 +259,9 @@ const _kTicketScreenElements = {
   '/admin/tickets/:id/fenetre/decision': 'Refuser ou clore',
   '/admin/tickets/:id/fenetre/reponse': 'Répondre',
   '/admin/tickets/:id/fenetre/lancement': 'Lancer une session',
+  '/admin/rapports-erreur/fenetre/doublon': 'Ticket déjà créé',
+  '/admin/journaux/fenetre/doublon': 'Ticket déjà créé',
+  '/tickets/nouveau/fenetre/lancement': 'Envoyer et lancer l\'analyse',
 };
 
 /// Élément (menu ou fenêtre) → nom affiché : table fermée.

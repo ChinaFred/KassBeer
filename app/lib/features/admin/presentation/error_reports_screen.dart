@@ -12,11 +12,15 @@ import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../data/error_reports_repository.dart';
 import '../domain/error_report.dart';
+import '../domain/ticket_depuis_panne.dart';
+import 'analyser_panne.dart';
 
 /// Admin › Rapports d'erreur (ADR-011, J1) : `error_reports/` du plus récent au
 /// plus ancien, par pages de [kTaillePageRapports], en lecture seule. Aucune
 /// suppression depuis l'écran (choix de l'utilisateur du 2026-11-14), aucun
-/// écouteur (P50).
+/// écouteur (P50) : ni sur `error_reports/`, ni sur `tickets/`, lu une fois
+/// pour la marque « Ticket #N créé le… » ([marquesPannesProvider]) et relu
+/// par « Actualiser ».
 class ErrorReportsScreen extends ConsumerStatefulWidget {
   const ErrorReportsScreen({super.key});
 
@@ -81,6 +85,7 @@ class _ErrorReportsScreenState extends ConsumerState<ErrorReportsScreen> {
   /// Relit la première page ; la liste affichée, et une panne affichée, restent
   /// visibles jusqu'à la réponse.
   Future<void> _actualiser([_Origine origine = _Origine.entete]) {
+    ref.invalidate(marquesPannesProvider);
     setState(() {
       _chargement = true;
       _origine = origine;
@@ -332,6 +337,15 @@ class _LigneRapportState extends ConsumerState<_LigneRapport> {
     required bool aDroite,
   }) {
     final resume = r.resume;
+    final cle = (nature: NaturePanne.rapport, id: r.id);
+    final Widget? infos = !aDroite
+        ? Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [if (resume.isNotEmpty) Text(resume), etiquette],
+          )
+        : (resume.isEmpty ? null : Text(resume));
     return ExpansionTile(
       // Disque de 40 px comme LigneListe : le texte s'aligne sur celui de
       // l'accueil Admin.
@@ -344,14 +358,15 @@ class _LigneRapportState extends ConsumerState<_LigneRapport> {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: !aDroite
-          ? Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [if (resume.isNotEmpty) Text(resume), etiquette],
-            )
-          : (resume.isEmpty ? null : Text(resume)),
+      // Marque « Ticket #N créé le… » sous le résumé (ticket #67).
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ?infos,
+          MarqueTicketPanne(cle: cle),
+        ],
+      ),
       trailing: !aDroite
           ? fleche
           : Row(
@@ -372,10 +387,21 @@ class _LigneRapportState extends ConsumerState<_LigneRapport> {
           _Section(titre: 'Pile d\'appels', contenu: pile, monospace: true),
         if (r.uid case final uid?) _Section(titre: 'Compte', contenu: uid),
         const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: () => unawaited(_copier()),
-          icon: const Icon(Icons.copy),
-          label: const Text(ErrorReportsScreen.copier),
+        BoutonsPanne(
+          copier: TextButton.icon(
+            onPressed: () => unawaited(_copier()),
+            icon: const Icon(Icons.copy),
+            label: const Text(ErrorReportsScreen.copier),
+          ),
+          analyser: () => unawaited(
+            ouvrirAnalyse(
+              context,
+              ref,
+              cle: cle,
+              nature: NaturePanne.rapport,
+              brouillon: brouillonDepuisRapport(r),
+            ),
+          ),
         ),
       ],
     );
