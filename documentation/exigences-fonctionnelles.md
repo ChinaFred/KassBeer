@@ -130,7 +130,9 @@ Une pastille chiffrée sur l'avatar et sur « Mes tickets » compte les tickets 
 « Mes tickets, 2 à lire ». Sans suivi à lire, rien ne change. Voir « Tickets ».
 
 Pour l'administrateur, « Tickets à traiter » ouvre Admin › Tickets des membres. Sa pastille
-compte les tickets reçus ou analysés sans décision et ceux dont l'envoi est impossible, rien à 0 ; elle est
+compte les tickets dont l'envoi est impossible et ceux pour lesquels le serveur permet « Valider », « Lancer
+l'analyse » ou « Lancer le développement » (ticket #63), rien à 0 ; elle ne compte ni PR prête
+ni CI en échec, et compte un ticket dont une session tourne ; elle est
 lue « Tickets à traiter, 3 ». La pastille de l'avatar additionne les suivis à lire et les
 tickets à traiter, et l'avatar est lu « Mon compte, 1 suivi de ticket à lire, 3 tickets à
 traiter ».
@@ -946,13 +948,23 @@ cours. » ; hors ligne, absent du cache : « … : compteur non disponible hors 
 illisible : « … : compteur illisible. » ; panne : « Lancements de sessions : compteur
 indisponible. » en ton d'erreur, avec un bouton icône « Réessayer ».
 
-**Liste.** Filtres « À traiter (N) » (tickets reçus ou analysés sans décision, envois
-impossibles, et tickets En cours dont la pull request est prête à livrer, sauf pendant une
-livraison ou une correction de ce ticket et tant que GitHub refuse au jeton la lecture de la CI ; un ticket validé n'y est pas ; le compteur « Tickets à traiter » du menu ne compte que les statuts),
+**Liste.** Filtres « À traiter (N) » (ticket #63 : tout ticket qui attend une action de
+l'administrateur, d'après les actions que le serveur permet, sans session en cours pour cette
+action : envoi impossible ; « Valider » permis, ticket Analysé ou Validé sur GitHub seul ;
+« Lancer l'analyse » permis, sauf pendant une analyse de ce ticket ; « Lancer le
+développement » permis, sauf pendant un développement de ce ticket ; ticket En cours dont la
+pull request est prête à livrer ; ticket En cours dont la CI est en échec et dont le serveur
+permet « Relancer le développement », sauf pendant un développement, une correction ou une
+livraison de ce ticket ; ni PR prête ni CI en échec tant que GitHub refuse au jeton la lecture de
+la CI ; « Refuser », « Clore » et « Répondre » ne comptent pas ; un historique des lancements
+ou un état de la pull request en panne laisse le ticket à traiter. Le compteur « Tickets à
+traiter » du menu compte l'envoi impossible, « Valider », « Lancer l'analyse » et « Lancer le
+développement » permis, sans lire l'historique des lancements ni l'état des pull requests :
+il compte un ticket dont une session tourne, et ne compte ni PR prête ni CI en échec),
 « Tous » et « Bloqués (N) » (envoi impossible, en attente depuis plus d'une heure, Issue
 disparue) ; sans nombre tant que la liste n'est pas lue. Le choix n'est pas enregistré :
 l'écran s'ouvre sur « À traiter », et passe une fois sur « Tous » s'il n'y a rien à traiter,
-une fois lu l'état de la pull request de chaque ticket En cours ;
+une fois lus l'historique des lancements et l'état de la pull request des tickets qui en ont ;
 il reste le même entre la liste et une fiche. Au téléphone, les filtres défilent à
 l'horizontale. Liste du plus récent au plus ancien ; chaque ligne : icône du type (lue),
 titre sur deux lignes au plus, « #12 · Nom · jj/mm/aa » (sans Issue, pas de numéro ; le nom
@@ -964,16 +976,17 @@ pour un ticket dont le serveur permet un lancement (reçu ou validé). Un ticket
 au plus une pastille de livraison, dans cet ordre : « Livraison en cours » (sablier, lu
 « Livraison en cours depuis 14:05 »), « Correction en cours » (sablier, lu « Correction de la
 pull request en cours », pendant une relance du développement), « CI en cours » (horloge, lu
-« CI de la pull request en cours »), « PR prête » (icône de livraison, ton tertiaire, lu
+« CI de la pull request en cours »), « CI en échec » (icône d'erreur, ton d'erreur, lu « CI de
+la pull request en échec », sans développement de ce ticket en cours, ticket #63), « PR prête » (icône de livraison, ton tertiaire, lu
 « Pull request prête à livrer ») ; l'état de la pull request n'est lu que pour les tickets En cours, et sans lui
 aucune pastille ne s'affiche. Tant que GitHub refuse au jeton la lecture de la CI, ni « CI en
-cours » ni « PR prête » ne s'affiche. Pas de point de non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
+cours », ni « CI en échec », ni « PR prête » ne s'affiche. Pas de point de non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
 l'application à jour. ».
 
 États : « Chargement des tickets » ; « Impossible de lire les tickets. » et « Réessayer » ;
 panne après une lecture : bandeau « Mise à jour de la liste impossible. » au-dessus de la liste ;
 aucun ticket : titre « Aucun ticket », puis « Les membres n'ont encore rien signalé. » ;
-« À traiter » vide : titre « Tout est traité », puis « Chaque ticket a reçu une décision. » ; « Bloqués »
+« À traiter » vide : titre « Rien à traiter », puis « Aucun ticket n'attend d'action de votre part. » ; « Bloqués »
 vide : titre « Rien de bloqué », puis « Aucun envoi en échec ou en retard, aucune Issue disparue. » ; ces deux derniers avec « Afficher tous les tickets ».
 
 **Fiche « Ticket d'un membre ».** Texte sélectionnable, dans cet ordre : titre, en en-tête de
