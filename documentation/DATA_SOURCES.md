@@ -461,11 +461,12 @@ l'utilisateur du 2026-11-21).
 avant la fiche ; P56 le compte comme hérité. Aucune fiche n'en a créé.
 
 La v0.1.82 a réglé 11 noms par les corrections des cultures de Brewtarget (`kCorrectionsCultures`,
-`exchange/lib/src/ingestion/fusions.dart`), une ligne par cas :
+`exchange/lib/src/ingestion/fusions.dart`), et la v0.1.86 une souche Lallemand sous deux
+références, une ligne par cas :
 
 | Correction | Lignes | Effet |
 |---|---|---|
-| une souche sous deux références : l'entrée prend la référence retenue | Omega Yeast `OYL-217-C2C` → `OYL-217` ; GigaYeast `GY018-SAISON-1` → `GY018`, `GY027-SAISON-2` → `GY027`, `GY144` → `GB144` ; The Yeast Bay « Saison Blend » sans référence → `WLP4007` | `c2c-american-farmhouse`, `saison-1`, `saison-2`, `sweet-flemish-brett`, `saison-blend` : un document chacun |
+| une souche sous deux références : l'entrée prend la référence retenue | Omega Yeast `OYL-217-C2C` → `OYL-217` ; GigaYeast `GY018-SAISON-1` → `GY018`, `GY027-SAISON-2` → `GY027`, `GY144` → `GB144` ; The Yeast Bay « Saison Blend » sans référence → `WLP4007` ; Lallemand « Prise de Mousse Wine » `LALVIN-EC-1118` (004) → `EC-1118` (v0.1.86) | `c2c-american-farmhouse`, `saison-1`, `saison-2`, `sweet-flemish-brett`, `saison-blend` : un document chacun ; « Prise de Mousse Wine » devient un alias de « Lalvin EC-1118 » |
 | un nom de gamme porté par plusieurs souches : l'entrée qui porte une référence prend le nom `<gamme> <référence>`, construit par Kass'Beer à partir de la référence de la source | Lallemand « Lalvin » (71B, EC-1118, V1116) ; Fermentis « SafSpirit » (HG-1, USW-6) ; AEB « Fermoale » (AY3, AY4) | « Lalvin 71B », « SafSpirit HG-1 », « Fermoale AY3 »… ; l'entrée AEB « Fermoale » sans référence garde son nom, qu'elle seule porte désormais |
 | un nom en alias d'une autre souche du même producteur : il sort des alias | Wyeast 3056 sans « Bavarian Wheat » (nom de la fiche 3638), 1335 sans « British Ale » (fiche 1098), 5335 sans « Lactobacillus » (sa fiche dit « Lactobacillus buchneri » ; 4335 garde ce nom) | `bavarian-wheat`, `british-ale`, `lactobacillus` : un document chacun |
 
@@ -473,6 +474,13 @@ Effet de la v0.1.82 : 961 documents `beer_cultures` au lieu de 966. 12 identifia
 préparation (5 souches rattachées, 7 noms de gamme renommés), 7 y entrent (les noms de gamme,
 `culture-lallemand-71b-lalvin-71b`…), 8 documents changent ; `ingest/ecrire.mjs
 --supprimer-absents beer_cultures` (v0.1.80) retire les 12 anciens.
+
+Effet de la v0.1.86 : le fichier 004 donne à « Prise de Mousse Wine » la référence
+`LALVIN-EC-1118`, celle de la souche EC-1118 de Lallemand précédée du nom de gamme. Le document « Prise de Mousse Wine » rejoint
+`culture-lallemand-ec1118-lalvin-ec-1118`, qui garde ses valeurs (fichier 005, prioritaire) et
+prend ce nom en alias. 960 documents `beer_cultures` au lieu de 961 ; 1 identifiant sort
+(`culture-lallemand-lalvinec1118-prise-de-mousse-wine`), aucun n'entre, 1 document change ;
+`ingest/ecrire.mjs --supprimer-absents beer_cultures` retire l'ancien.
 
 La v0.1.81 a réglé 24 noms de la Private Collection de Wyeast (`belgian-dark-ale`,
 `belgian-schelde-ale`, `belgian-style-blend`, `berliner-weisse-blend`, `biere-de-garde`,

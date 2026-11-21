@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.86 — technique
+### v0.1.88 — technique
 
 Lot D1 d'ADR-017 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
 `ingest/lib/redaction/` (`client.mjs`, `tarif.mjs`, `texte.mjs`, `moteur.mjs`), paramétré par un
@@ -16,7 +16,7 @@ objet de nature (`ingest/lib/aromes/nature.mjs`). Il servira aussi aux descripti
 message qui dit où le déplacer. L'empreinte des houblons ne change pas, et un test la fige.
 Tests d'`ingest/` : 127 sur 127.
 
-### v0.1.85 — technique
+### v0.1.87 — technique
 
 ADR-017 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
 rôle, goût le cas échéant, aucune dose), rédigée par l'API Claude depuis le poste de l'admin sur
@@ -24,6 +24,46 @@ un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P62 (`beer_mi
 et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
 P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
 complétés et marqués « à livrer ». Aucun code.
+
+### v0.1.86 — fonctionnel
+
+La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la
+Bibliothèque : c'est la même levure, sous une autre référence. Sa fiche est celle de « Lalvin
+EC-1118 », qui garde « Prise de Mousse Wine » comme autre nom. Le changement arrive dans la
+Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.86 — technique
+
+`kCorrectionsCultures` (`exchange/lib/src/ingestion/fusions.dart`) gagne une ligne
+`ReferenceCulture` (demande de l'utilisateur du 2026-11-21) : Lallemand `LALVIN-EC-1118` (fichier 004, « Prise de Mousse Wine ») →
+`EC-1118`. L'entrée rejoint la souche EC-1118 du fichier 005, prioritaire, qui garde
+l'identifiant `culture-lallemand-ec1118-lalvin-ec-1118` et ses valeurs. Préparation rejouée sur
+les sources du 2026-11-08 : 960 documents `beer_cultures` au lieu de 961, 1 identifiant sort,
+aucun n'entre, 1 document change. Doublons d'un même producteur inchangés (4, laissés listés).
+`ecrire.mjs --supprimer-absents beer_cultures` retire l'ancien identifiant. Test : la ligne
+rejouée dans « chaque ligne de kCorrectionsCultures » de `fusions_test.dart`. `DATA_SOURCES.md`
+et `exigences-techniques.md` à jour.
+
+### v0.1.85 — fonctionnel
+
+Avant de lancer une analyse, un développement ou une livraison d'un ticket, l'administrateur
+peut ouvrir la page d'usage de claude.ai : un lien « Usage Claude (5 h et semaine) : voir sur
+claude.ai » figure dans la boîte de lancement et en tête de la liste des tickets. Il montre
+la part restante de l'abonnement Claude pour la fenêtre de 5 heures et pour la semaine.
+L'application n'affiche aucun chiffre : Anthropic ne publie pas ces valeurs. Demandé par le
+ticket #96.
+
+### v0.1.85 — technique
+
+Option A de l'analyse du ticket #96 : `LienUsageClaude`
+(`app/lib/features/tickets/presentation/lien_usage_claude.dart`) ouvre
+`https://claude.ai/settings/usage` par `ouvrirLienProvider`, après `lienSessionOuvrable`
+(`Uri.tryParse`, `https`, hôte `claude.ai`, sans identifiants ni port). Un échec passe par `reportError`
+(`tickets.open_claude_usage`), sans adresse. Le lien est placé sous la ligne du quota dans
+`BoiteLancement` et sous les messages de `BandeauTicketsAdmin` (`lienUsage`, faux pour la
+fiche seule sur écran étroit, qui garderait sinon sa barre de décision sous le seuil de
+480 px). Aucun serveur ni règle touché ; l'option B (lancements comptés sur 5 h et 7 jours)
+n'est pas faite. Tests : `tickets_lancements_test.dart`. Demandé par le ticket #96.
 
 ### v0.1.84 — fonctionnel
 
@@ -48,6 +88,7 @@ complet reste le `semanticsLabel` de la puce et le titre de la fiche. Tests : à
 à 100 %, 130 % et 200 %, les six puces et les deux accès tiennent dans la largeur, sans
 débordement, avec une cible de 48 px ; à 600 px, texte à 130 % et 200 %, les noms courts sont
 entiers. Demandé par le ticket #97.
+
 ### v0.1.83 — fonctionnel
 
 L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec
