@@ -1,10 +1,17 @@
 {
   "versions": [
     {
-      "version": "0.1.91",
+      "version": "0.1.92",
       "date": "2026-11-21",
       "paragraphs": [
         "L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou retirer un malt, un houblon, un ajout ou un palier, changer une quantité, le volume, le nom ou la levure. Sa réponse porte alors une carte « Proposition de l'assistant » qui montre l'effet sur la densité, le degré, l'amertume et la couleur. Un appui sur « Appliquer au brouillon » recopie tous les changements dans la recette ; rien n'est enregistré avant « Enregistrer », et « Annuler la proposition » rend la recette d'avant. Une valeur technique que la Bibliothèque ne connaît pas (acides alpha, couleur, rendement, atténuation) et que l'IA a proposée s'affiche avec la mention « (proposée par l'IA) », dans l'éditeur, la fiche, le brassin et le compte rendu d'export. Sur téléphone, l'assistant se ferme après l'application pour montrer la recette."
+      ]
+    },
+    {
+      "version": "0.1.91",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre « Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient « Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche « Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai. Demandé par le ticket #67."
       ]
     },
     {
@@ -33,13 +40,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par « Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95."
-      ]
-    },
-    {
-      "version": "0.1.86",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la Bibliothèque : c'est la même levure, sous une autre référence. Sa fiche est celle de « Lalvin EC-1118 », qui garde « Prise de Mousse Wine » comme autre nom. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     }
   ]

@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.91 — fonctionnel
+### v0.1.92 — fonctionnel
 
 L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou
 retirer un malt, un houblon, un ajout ou un palier, changer une quantité, le volume, le nom ou
@@ -18,7 +18,7 @@ connaît pas (acides alpha, couleur, rendement, atténuation) et que l'IA a prop
 la mention « (proposée par l'IA) », dans l'éditeur, la fiche, le brassin et le compte rendu
 d'export. Sur téléphone, l'assistant se ferme après l'application pour montrer la recette.
 
-### v0.1.91 — technique
+### v0.1.92 — technique
 
 Lot A2 d'ADR-015 (amendement du 2026-11-21). Sorties structurées de `recipeAssistantTurn`
 (`output_config.format`, `{reponse, proposition}`), prompt en version 2 ; une proposition hors
@@ -34,6 +34,39 @@ d'un brassin, taille de chaque entrée non bornée, risque accepté par l'utilis
 2026-11-21 et figé par des tests. Écran : `carte_proposition.dart`, aperçu par `computeRecipe`,
 Bibliothèque lue en cache hors ligne sans repli sur la valeur du modèle. `main.dart.js` :
 5 901 437 → 5 947 894 octets (+ 0,79 %). Aucune dépendance changée.
+
+### v0.1.91 — fonctionnel
+
+L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans
+Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre
+« Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour
+et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et
+le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer
+l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui
+annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis
+l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient
+« Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis
+la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche
+« Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un
+second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai.
+Demandé par le ticket #67.
+
+### v0.1.91 — technique
+
+`features/admin/domain/ticket_depuis_panne.dart` : brouillon d'un ticket tiré d'un
+`ErrorReport` ou d'une `EntreeJournal` (champs contrôlés par leur forme, trames Dart exactes de
+`package:kass_beer/` seules et 15 au plus, type en `Exception` ou `Error` seul, titre de 100 et description de 2 000 caractères au plus ; ni message, ni
+contexte, ni uid, ni message ou données d'un journal, P24 et P49 inchangés) ; identifiant lu sur
+la première ligne d'une description et index des tickets par rapport. La marque est dérivée des
+tickets, lus une fois par `TicketsRepository.readAll` (`get()`, aucun écouteur sur ces écrans,
+P50) : aucune écriture sur `error_reports/`, aucune règle ni fonction serveur changée. `BoiteEnvoiAnalyse` (`boite_lancement.dart`) écrit le ticket après
+confirmation, le suit par `adminTicketsProvider` et appelle `launchTicketAnalysis` une fois,
+quand `github_issue_number`, le statut `received` et `launch_analysis` sont posés par le serveur ;
+au plafond lu dans `ticket_status/launches`, aucun appel.
+`TicketFormScreen` reçoit `proposerLancement` (`extra` `BrouillonAnalyse`). `BoiteEnvoiAnalyse` porte aussi `LienUsageClaude` (#96) sous la
+ligne du quota, échec affiché dans la boîte. Sur `logs_screen.dart` (#95), la marque passe sous le
+titre de la carte et `BoutonsPanne` remplace « Copier » aligné à droite. Trois éléments
+d'écran de ticket ajoutés. Aucune dépendance changée. Demandé par le ticket #67.
 
 ### v0.1.90 — fonctionnel
 
