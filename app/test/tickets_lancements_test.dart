@@ -14,6 +14,7 @@ import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
 import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
 import 'package:kass_beer/features/tickets/presentation/admin_ticket_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/boite_lancement.dart';
+import 'package:kass_beer/features/tickets/presentation/lien_usage_claude.dart';
 import 'package:kass_beer/features/tickets/presentation/section_lancements.dart';
 
 import 'support/fakes.dart';
@@ -568,6 +569,88 @@ void main() {
       );
     });
 
+    testWidgets('usage Claude : lien de la boîte, rien lancé', (tester) async {
+      final app = await fiche(tester, valide(), etat: quota);
+      await tester.pumpAndSettle();
+      final usage = Uri.parse('https://claude.ai/settings/usage');
+      // Fiche seule (téléphone) : le bandeau ne porte pas le lien.
+      expect(find.text(LienUsageClaude.libelle), findsNothing);
+
+      await tester.tap(find.text('Lancer le développement'));
+      await tester.pumpAndSettle();
+      final lienBoite = find.descendant(
+        of: find.byType(BoiteLancement),
+        matching: find.text(LienUsageClaude.libelle),
+      );
+      expect(lienBoite, findsOneWidget);
+      // Sous « Lancements restants », avant le coût.
+      expect(
+        tester.getTopLeft(lienBoite).dy,
+        greaterThan(
+          tester
+              .getTopLeft(find.text('Lancements restants le 08/11 : 7 sur 10.'))
+              .dy,
+        ),
+      );
+      expect(
+        tester.getTopLeft(lienBoite).dy,
+        lessThan(tester.getTopLeft(find.text(BoiteLancement.cout)).dy),
+      );
+      expect(
+        tester.getSize(find.byType(LienUsageClaude)).height,
+        greaterThanOrEqualTo(48),
+      );
+      // Lecteur d'écran : bouton au libellé visible, action d'appui.
+      expect(
+        tester.getSemantics(
+          find.descendant(
+            of: find.byType(LienUsageClaude),
+            matching: find.byWidgetPredicate((w) => w is TextButton),
+          ),
+        ),
+        matchesSemantics(
+          isButton: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          label: LienUsageClaude.libelle,
+        ),
+      );
+      expect(find.byTooltip(LienUsageClaude.description), findsOneWidget);
+      await tester.tap(lienBoite);
+      await tester.pumpAndSettle();
+      expect(app.openedLinks.single, usage);
+      // Le lien ne lance rien et la boîte reste ouverte.
+      expect(app.tickets.launches, isEmpty);
+      expect(find.byType(BoiteLancement), findsOneWidget);
+      expect(app.errors.reports, isEmpty);
+    });
+
+    testWidgets('usage Claude : ouverture refusée, rapportée', (tester) async {
+      final app = await fiche(tester, valide(), etat: quota);
+      await tester.pumpAndSettle();
+      app.openLinkResult = false;
+      await tester.tap(find.text('Lancer le développement'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(LienUsageClaude.libelle));
+      await tester.pumpAndSettle();
+      // Échec affiché dans la boîte, au-dessus du voile.
+      expect(
+        find.descendant(
+          of: find.byType(BoiteLancement),
+          matching: find.text(LienUsageClaude.echec),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(SnackBar), findsNothing);
+      final report = app.errors.reports.single;
+      expect(report.feature, 'tickets.open_claude_usage');
+      expect(report.context, isNot(contains('claude.ai')));
+      expect(app.tickets.launches, isEmpty);
+    });
+
     testWidgets('boîte : refus affiché, la boîte reste ouverte', (
       tester,
     ) async {
@@ -1017,6 +1100,20 @@ void main() {
       await tester.pumpAndSettle();
       return app;
     }
+
+    testWidgets('usage Claude : lien du bandeau, sans autre message', (
+      tester,
+    ) async {
+      final app = await liste(tester, [recuSimple()]);
+      expect(find.text(LienUsageClaude.libelle), findsOneWidget);
+      await tester.tap(find.text(LienUsageClaude.libelle));
+      await tester.pumpAndSettle();
+      expect(
+        app.openedLinks.single,
+        Uri.parse('https://claude.ai/settings/usage'),
+      );
+      expect(app.tickets.launches, isEmpty);
+    });
 
     testWidgets('compteur lu dans ticket_status/launches', (tester) async {
       await liste(
