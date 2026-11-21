@@ -38,8 +38,10 @@ désignent désormais deux documents de producteurs différents (`cream-ale-blen
 `berliner-weisse-blend` et `french-saison`, déjà partagés, gagnent un document. Tests :
 `fusions_test.dart` (fixtures inventées, un cas par ligne de la table), `fabricants_donnees_test.dart` (537 entrées, chaque ligne de la table
 désigne une fiche). `DATA_SOURCES.md`, ADR-005, exigences et écran « Sources des données » à
-jour. `CLAUDE.md`, P56 (décision de l'utilisateur) : pour les cultures, un nom normalisé ne
-désigne pas deux documents d'un même producteur ; un nom partagé entre deux producteurs reste
+jour. `CLAUDE.md`, P56 (décision de l'utilisateur) : pour les cultures, un nom normalisé créé
+par une fiche de fabricant ou par la table de fusion ne désigne pas deux documents d'un même
+producteur, les 18 doublons hérités de Brewtarget sont comptés et listés en attendant leur
+fusion ; un nom partagé entre deux producteurs reste
 permis et compté au rapport. `guide-reseau.md` à jour. Tests de cette règle :
 `fabricants_donnees_test.dart` vérifie qu'aucune fiche ne partage son nom normalisé avec une
 fiche du même producteur ; `fusions_test.dart` vérifie qu'un nom porté par deux producteurs
