@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.82 — fonctionnel
+### v0.1.83 — fonctionnel
 
 L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec
 une intelligence artificielle, qui analyse la recette en cours ou propose des améliorations.
@@ -17,7 +17,7 @@ mois. Une conversation trop longue peut être résumée pour continuer. Dans Adm
 nouveaux règlent l'IA (modèle, tarifs, plafonds, ouverture aux membres) et suivent ses coûts
 par personne. L'assistant ne marche qu'une fois ses réglages enregistrés.
 
-### v0.1.82 — technique
+### v0.1.83 — technique
 
 Lot A1 d'ADR-015 et ADR-016. Serveur : socle `functions/src/ai/` (client Claude par `fetch`,
 postes, politique et grille dans `ai_config/`, réservation des tours en transaction dans
@@ -36,6 +36,31 @@ change dans `pubspec.yaml`. Taille de `main.dart.js` : 5 801 939 octets avant, 5
 Avant la mise en service : créer `ANTHROPIC_API_KEY` dans Secret Manager, donner à
 `github-deploy` l'accès à ce secret, puis enregistrer la grille et la politique dans Admin ›
 Moteur d'IA.
+
+### v0.1.82 — fonctionnel
+
+La Bibliothèque ne montre plus en double onze noms de levures que l'ancienne base donnait à
+deux fiches d'un même fabricant. Une levure écrite sous deux références n'a plus qu'une fiche.
+Les levures Lalvin, SafSpirit et Fermoale, qui portaient toutes le même nom, s'appellent
+maintenant par leur référence : « Lalvin 71B », « SafSpirit HG-1 », « Fermoale AY3 ». Trois
+levures Wyeast ne portent plus le nom d'une autre. Le changement arrive dans la Bibliothèque
+quand l'administrateur relance l'ingestion.
+
+### v0.1.82 — technique
+
+`kCorrectionsCultures` (`exchange/lib/src/ingestion/fusions.dart`), appliquées par
+`Referentiel.fusionner` aux seules entrées de Brewtarget (P56, décisions de l'utilisateur du
+2026-11-21) : `ReferenceCulture` (5 lignes, une souche sous deux références), `GammeCulture` (3
+lignes, nom `<gamme> <référence>` construit par Kass'Beer ; l'entrée AEB « Fermoale » sans
+référence garde son nom), `AliasEcarteCulture` (3 lignes Wyeast). Ligne sans effet, entrée
+corrigée deux fois ou alias absent : `StateError`. `EntreeBrute.corrigee`. `rapport.json` gagne
+`doublons_meme_producteur`. Préparation rejouée sur les sources du 2026-11-08 : 961 documents
+`beer_cultures` au lieu de 966, 12 identifiants sortent, 7 entrent, 8 documents changent ; noms
+d'un même producteur en double : 4 au lieu de 15, laissés en attente (aucune fiche ne départage
+les souches). `ecrire.mjs --supprimer-absents beer_cultures` (v0.1.80, PR #92) retire les 12
+anciens, sous le plafond de 30. Tests : `fusions_test.dart`, groupe « corrections des cultures de Brewtarget »
+(chaque sorte de ligne et ses refus sur des fixtures inventées, chaque ligne du projet sur ses
+noms et références). `DATA_SOURCES.md` et `exigences-techniques.md` à jour.
 
 ### v0.1.81 — fonctionnel
 

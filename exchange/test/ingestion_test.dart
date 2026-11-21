@@ -59,6 +59,7 @@ Preparation _preparer() => preparer(
   ajoutsDansHoublons: _ajouts,
   fusions: const [],
   fusionsCultures: const [],
+  correctionsCultures: const [],
 );
 
 /// Données du document [id] de [collection].
@@ -702,6 +703,7 @@ void main() {
         ajoutsDansHoublons: _ajouts,
         fusions: const [],
         fusionsCultures: const [],
+        correctionsCultures: const [],
         datesReleveFabricants: _datesFiches,
       );
     });

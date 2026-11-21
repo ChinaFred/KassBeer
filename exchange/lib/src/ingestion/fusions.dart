@@ -281,3 +281,127 @@ const List<FusionCulture> kFusionsCultures = [
     nomBrewtarget: 'Lactobacillus Blend',
   ),
 ];
+
+/// Correction d'une culture que Brewtarget écrit mal (P56, décisions de
+/// l'utilisateur du 2026-11-21) : une souche sous deux références
+/// ([ReferenceCulture]), un nom de gamme porté par plusieurs souches
+/// ([GammeCulture]), un nom en alias d'une autre souche ([AliasEcarteCulture]).
+/// Elle ne touche que les entrées de Brewtarget, jamais une fiche. Une ligne
+/// qui ne désigne rien, ou une entrée désignée par deux lignes, arrête la
+/// préparation ([StateError]). Chaque ligne a son cas de test
+/// (`exchange/test/fusions_test.dart`, fixtures inventées).
+sealed class CorrectionCulture {
+  const CorrectionCulture(this.producteur);
+
+  /// Producteur, tel que les sources l'écrivent.
+  final String producteur;
+
+  /// Vrai si [e] est une culture de Brewtarget de ce producteur.
+  bool _brewtarget(EntreeBrute e) =>
+      e.nature == NatureReferentiel.culture &&
+      _sourcesBrewtarget.contains(e.source) &&
+      e.producteur != null &&
+      cleProducteur(e.producteur!) == cleProducteur(producteur);
+}
+
+/// Souche que Brewtarget écrit sous une autre référence ([lue]), ou sans
+/// référence sous le nom [nom] : l'entrée prend la référence [retenue] et
+/// rejoint la souche de cette référence.
+final class ReferenceCulture extends CorrectionCulture {
+  /// Crée la ligne : [lue] ou [nom], l'un des deux.
+  const ReferenceCulture(
+    super.producteur, {
+    this.lue,
+    this.nom,
+    required this.retenue,
+  }) : assert((lue == null) != (nom == null));
+
+  /// Référence lue dans la source.
+  final String? lue;
+
+  /// Nom d'une entrée sans référence.
+  final String? nom;
+
+  /// Référence retenue.
+  final String retenue;
+
+  /// Vrai si [e] est l'entrée désignée.
+  bool designe(EntreeBrute e) {
+    if (!_brewtarget(e)) return false;
+    final cp = cleProducteur(producteur);
+    final p = e.produit;
+    if (lue != null) {
+      return p != null && cleProduit(cp, p) == cleProduit(cp, lue!);
+    }
+    return p == null && cleNormalisee(e.nom) == cleNormalisee(nom!);
+  }
+
+  @override
+  String toString() => '$producteur « ${lue ?? nom} » → « $retenue »';
+}
+
+/// Nom de gamme que Brewtarget donne à plusieurs souches d'un producteur
+/// (`Lalvin`) : une entrée de ce nom qui porte une référence prend le nom
+/// `<nom> <référence>` (`Lalvin 71B`), construit par Kass'Beer ; une entrée
+/// sans référence garde son nom.
+final class GammeCulture extends CorrectionCulture {
+  /// Crée la ligne.
+  const GammeCulture(super.producteur, this.nom);
+
+  /// Nom de gamme.
+  final String nom;
+
+  /// Vrai si [e] porte ce nom et une référence.
+  bool designe(EntreeBrute e) =>
+      _brewtarget(e) &&
+      e.produit != null &&
+      cleNormalisee(e.nom) == cleNormalisee(nom);
+
+  @override
+  String toString() => '$producteur « $nom »';
+}
+
+/// Nom [alias] que Brewtarget donne à la souche [reference] alors qu'il est
+/// celui d'une autre souche du même producteur : il sort des `aliases` du
+/// document de [reference].
+final class AliasEcarteCulture extends CorrectionCulture {
+  /// Crée la ligne.
+  const AliasEcarteCulture(
+    super.producteur, {
+    required this.reference,
+    required this.alias,
+  });
+
+  /// Référence de la souche qui porte le nom en trop.
+  final String reference;
+
+  /// Nom écarté.
+  final String alias;
+
+  /// Clé de souche du document visé.
+  String get cleSouche {
+    final cp = cleProducteur(producteur);
+    return '$cp|${cleProduit(cp, reference)}';
+  }
+
+  @override
+  String toString() => '$producteur $reference sans « $alias »';
+}
+
+/// Corrections des cultures de Brewtarget.
+const List<CorrectionCulture> kCorrectionsCultures = [
+  // Une souche sous deux références.
+  ReferenceCulture('Omega Yeast', lue: 'OYL-217-C2C', retenue: 'OYL-217'),
+  ReferenceCulture('GigaYeast', lue: 'GY018-SAISON-1', retenue: 'GY018'),
+  ReferenceCulture('GigaYeast', lue: 'GY027-SAISON-2', retenue: 'GY027'),
+  ReferenceCulture('GigaYeast', lue: 'GY144', retenue: 'GB144'),
+  ReferenceCulture('The Yeast Bay', nom: 'Saison Blend', retenue: 'WLP4007'),
+  // Un nom de gamme porté par plusieurs souches.
+  GammeCulture('Lallemand', 'Lalvin'),
+  GammeCulture('Fermentis', 'SafSpirit'),
+  GammeCulture('AEB', 'Fermoale'),
+  // Un nom en alias d'une autre souche du même producteur.
+  AliasEcarteCulture('Wyeast', reference: '3056', alias: 'Bavarian Wheat'),
+  AliasEcarteCulture('Wyeast', reference: '1335', alias: 'British Ale'),
+  AliasEcarteCulture('Wyeast', reference: '5335', alias: 'Lactobacillus'),
+];

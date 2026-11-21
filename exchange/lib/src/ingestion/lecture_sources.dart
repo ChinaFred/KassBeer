@@ -95,6 +95,19 @@ class EntreeBrute {
   /// `null` pour une autre source.
   final String? releveFabricant;
 
+  /// Copie de l'entrée sous le nom [nom] ou la référence [produit]
+  /// (`kCorrectionsCultures`).
+  EntreeBrute corrigee({String? nom, String? produit}) => EntreeBrute(
+    nature: nature,
+    nom: nom ?? this.nom,
+    valeurs: produit == null ? valeurs : {...valeurs, 'product_id': produit},
+    source: source,
+    sourceId: sourceId,
+    licence: licence,
+    origineInconnue: origineInconnue,
+    releveFabricant: releveFabricant,
+  );
+
   /// Ligne de `provenance[]`.
   Map<String, Object> get provenanceLigne =>
       provenance(source, sourceId, licence, releveFabricant: releveFabricant);
