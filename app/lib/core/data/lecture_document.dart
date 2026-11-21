@@ -195,9 +195,14 @@ sealed class RechercheDocument<T> {
 }
 
 class DocumentTrouve<T> extends RechercheDocument<T> {
-  const DocumentTrouve(this.value);
+  const DocumentTrouve(this.value, {this.fromCache = false});
 
   final T value;
+
+  /// Vrai quand le document vient du cache local (hors ligne) : il peut être
+  /// plus ancien que celui du serveur. Posé par les lectures qui le savent
+  /// (index de la Bibliothèque), faux sinon.
+  final bool fromCache;
 }
 
 class DocumentIllisibleTrouve<T> extends RechercheDocument<T> {

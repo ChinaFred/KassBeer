@@ -4,6 +4,7 @@ import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
 import 'package:kass_beer/core/presentation/ligne_liste.dart';
 import 'package:kass_beer/core/router/app_router.dart';
+import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/library/presentation/data_sources_screen.dart';
 import 'package:kass_beer/features/library/presentation/library_providers.dart';
@@ -19,12 +20,13 @@ Future<TestApp> open(
   WidgetTester tester,
   String path, {
   bool offline = false,
+  double width = 400,
   double height = 900,
   void Function(TestApp app)? before,
 }) async {
   final app = TestApp();
   before?.call(app);
-  await app.pump(tester, height: height);
+  await app.pump(tester, width: width, height: height);
   app.signIn(brewerUser, member: brewerMember, fromCache: offline);
   await tester.pumpAndSettle();
   app.container.read(routerProvider).go(path);
@@ -55,6 +57,30 @@ DocumentTrouve<IndexReferentiel> found(
   NatureReferentiel nature,
   Map<String, dynamic> doc,
 ) => DocumentTrouve(IndexReferentiel.fromFirestore(nature, doc));
+
+DocumentTrouve<IndexAromes> foundAromes([List<Object?>? entries]) =>
+    DocumentTrouve(IndexAromes.fromFirestore(aromesIndex(entries)));
+
+/// Ouvre la liste des houblons, index des arômes [aromes] (absent : `null`).
+Future<TestApp> openHops(
+  WidgetTester tester, {
+  RechercheDocument<IndexAromes>? aromes,
+  bool offline = false,
+  bool fromCache = false,
+}) => open(
+  tester,
+  '/bibliotheque/houblons',
+  offline: offline,
+  before: (app) {
+    app.library.index[NatureReferentiel.hops] = DocumentTrouve(
+      IndexReferentiel.fromFirestore(NatureReferentiel.hops, hopsIndex),
+      fromCache: fromCache,
+    );
+    app.library.indexAromes = aromes;
+  },
+);
+
+Finder chip(String label) => find.widgetWithText(ChoiceChip, label);
 
 void main() {
   group('navigation', () {
@@ -113,7 +139,7 @@ void main() {
       );
       expect(find.text('Cascade'), findsOneWidget);
       expect(find.text('Houblon doré'), findsOneWidget);
-      expect(find.text('2 entrées'), findsOneWidget);
+      expect(find.text('2 houblons'), findsOneWidget);
       // Ingrédients sans repère, à la différence des recettes publiques.
       expect(
         find.descendant(
@@ -127,7 +153,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Cascade'), findsNothing);
       expect(find.text('Houblon doré'), findsOneWidget);
-      expect(find.text('1 sur 2'), findsOneWidget);
+      expect(find.text('1 sur 2 houblons'), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'zzz');
       await tester.pumpAndSettle();
       expect(find.text(LibraryScreen.noMatch('zzz')), findsOneWidget);
@@ -279,6 +305,179 @@ void main() {
     });
   });
 
+  group('houblons : ligne et filtre de confiance', () {
+    testWidgets('ligne : usage, origine, alpha ; forme hors pellets', (
+      tester,
+    ) async {
+      await openHops(tester);
+      expect(
+        find.text('Aromatique · United States · ${formatPourcent(6.5)} alpha'),
+        findsOneWidget,
+      );
+      expect(find.text('Cônes · ${formatPourcent(4)} alpha'), findsOneWidget);
+    });
+
+    testWidgets('puces comptées, filtre local, étiquettes des exceptions', (
+      tester,
+    ) async {
+      final app = await openHops(tester, aromes: foundAromes());
+      expect(find.text('Confiance des arômes'), findsOneWidget);
+      expect(
+        find.text('Confiance indiquée par l\'IA qui a rédigé les arômes.'),
+        findsOneWidget,
+      );
+      for (final label in [
+        'Toutes (2)',
+        'Élevée (0)',
+        'Moyenne (0)',
+        'Faible (1)',
+        'Sans description (1)',
+      ]) {
+        expect(chip(label), findsOneWidget, reason: label);
+      }
+      expect(tester.widget<ChoiceChip>(chip('Toutes (2)')).selected, isTrue);
+      // Étiquettes : confiance faible et sans description seulement, sans
+      // icône dans la liste.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(LigneListe, 'Cascade'),
+          matching: find.byIcon(Icons.info_outline),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.widgetWithText(LigneListe, 'Cascade'),
+          matching: find.text('Confiance faible'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.widgetWithText(LigneListe, 'Houblon doré'),
+          matching: find.text('Sans description'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Relu'), findsNothing);
+      // Lecture d'une puce : nom, nombre de houblons, état.
+      final semantics = tester.ensureSemantics();
+      expect(
+        tester.getSemantics(chip('Faible (1)')),
+        matchesSemantics(
+          label: 'Faible, 1 houblon',
+          isSelected: false,
+          hasSelectedState: true,
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+        ),
+      );
+      expect(
+        tester.getSize(chip('Faible (1)')).height,
+        greaterThanOrEqualTo(48),
+      );
+      semantics.dispose();
+
+      await tester.tap(chip('Faible (1)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cascade'), findsOneWidget);
+      expect(find.text('Houblon doré'), findsNothing);
+      expect(find.text('1 sur 2 houblons'), findsOneWidget);
+
+      // Recherche et filtre se cumulent ; les nombres suivent la recherche.
+      await tester.enterText(find.byType(TextField), 'dore');
+      await tester.pumpAndSettle();
+      expect(chip('Toutes (1)'), findsOneWidget);
+      expect(chip('Faible (0)'), findsOneWidget);
+      expect(
+        find.text('Aucun houblon pour « dore » avec une confiance faible.'),
+        findsOneWidget,
+      );
+      expect(find.text('Effacer la recherche'), findsOneWidget);
+      await tester.ensureVisible(find.text('Afficher toutes les confiances'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Afficher toutes les confiances'));
+      await tester.pumpAndSettle();
+      expect(find.text('Houblon doré'), findsOneWidget);
+      expect(tester.widget<ChoiceChip>(chip('Toutes (1)')).selected, isTrue);
+
+      // Gardé au retour d'une fiche ; une seule lecture de l'index des arômes.
+      await tester.tap(chip('Sans description (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Houblon doré'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<ChoiceChip>(chip('Sans description (1)')).selected,
+        isTrue,
+      );
+      expect(app.library.indexAromesReads, 1);
+    });
+
+    testWidgets('perdu au changement de segment ; lu pour les seuls houblons', (
+      tester,
+    ) async {
+      final app = await openHops(tester, aromes: foundAromes());
+      await tester.tap(chip('Faible (1)'));
+      await tester.pumpAndSettle();
+      await tapChip(tester, 'Styles');
+      expect(find.text('Confiance des arômes'), findsNothing);
+      await tapChip(tester, 'Houblons');
+      expect(tester.widget<ChoiceChip>(chip('Toutes (2)')).selected, isTrue);
+      expect(app.library.indexAromesReads, 2);
+    });
+
+    for (final (nom, aromes) in <(String, RechercheDocument<IndexAromes>?)>[
+      ('absent', null),
+      (
+        'illisible',
+        const DocumentIllisibleTrouve(DocumentIllisible('entries', 'x')),
+      ),
+    ]) {
+      testWidgets('index $nom : ni filtre ni étiquette', (tester) async {
+        await openHops(tester, aromes: aromes);
+        expect(find.text('Confiance des arômes'), findsNothing);
+        expect(find.text('Sans description'), findsNothing);
+        expect(find.text('Cascade'), findsOneWidget);
+        expect(find.text('Houblon doré'), findsOneWidget);
+      });
+    }
+
+    testWidgets('index en panne : ni filtre ni étiquette', (tester) async {
+      await open(
+        tester,
+        '/bibliotheque/houblons',
+        before: (app) {
+          app.library.index[NatureReferentiel.hops] = found(
+            NatureReferentiel.hops,
+            hopsIndex,
+          );
+          app.library.indexAromesError = Exception('refus');
+        },
+      );
+      expect(find.text('Confiance des arômes'), findsNothing);
+      expect(find.text('Cascade'), findsOneWidget);
+    });
+
+    testWidgets('hors ligne : liste et filtre lus sur l\'appareil', (
+      tester,
+    ) async {
+      await openHops(
+        tester,
+        aromes: foundAromes(),
+        offline: true,
+        fromCache: true,
+      );
+      expect(find.text(LibraryScreen.offlineIndex), findsOneWidget);
+      expect(chip('Faible (1)'), findsOneWidget);
+    });
+  });
+
   group('disposition', () {
     testWidgets('la recherche survit au retour d\'une fiche', (tester) async {
       await open(
@@ -305,17 +504,138 @@ void main() {
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextField, 'casc'), findsOneWidget);
-      expect(find.text('1 sur 2'), findsOneWidget);
+      expect(find.text('1 sur 2 houblons'), findsOneWidget);
       // Le compte est annoncé aux lecteurs d'écran.
       expect(
         find.ancestor(
-          of: find.text('1 sur 2'),
+          of: find.text('1 sur 2 houblons'),
           matching: find.byWidgetPredicate(
             (w) => w is Semantics && w.properties.liveRegion == true,
           ),
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('« × » efface la recherche ; en-tête épinglé au défilement', (
+      tester,
+    ) async {
+      final many = indexDoc([
+        for (var i = 0; i < 40; i++)
+          {'id': 'hop-h$i', 'name': 'Houblon ${i.toString().padLeft(2, '0')}'},
+      ]);
+      await open(
+        tester,
+        '/bibliotheque/houblons',
+        height: 700,
+        before: (app) => app.library.index[NatureReferentiel.hops] = found(
+          NatureReferentiel.hops,
+          many,
+        ),
+      );
+      expect(find.byTooltip('Effacer la recherche'), findsNothing);
+      await tester.enterText(find.byType(TextField), 'houblon');
+      await tester.pump();
+      await tester.tap(find.byTooltip('Effacer la recherche'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'houblon'), findsNothing);
+      expect(find.text('40 houblons'), findsOneWidget);
+      await tester.drag(_liste, const Offset(0, -1500));
+      await tester.pumpAndSettle();
+      expect(find.text('Houblon 00'), findsNothing);
+      expect(find.byType(TextField).hitTestable(), findsOneWidget);
+      expect(find.text('40 houblons').hitTestable(), findsOneWidget);
+      // Les segments défilent avec la liste ; un trait borne la partie épinglée.
+      expect(
+        find.widgetWithText(ChoiceChip, 'Styles').hitTestable(),
+        findsNothing,
+      );
+      final trait = tester.widget<Divider>(find.byType(Divider).first);
+      expect(trait.height, 1);
+      expect(
+        trait.color,
+        Theme.of(
+          tester.element(find.byType(TextField)),
+        ).colorScheme.outlineVariant,
+      );
+    });
+
+    testWidgets('téléphone de 640 dp, clavier ouvert, index des arômes : des '
+        'lignes restent visibles sous la recherche épinglée', (tester) async {
+      final many = indexDoc([
+        for (var i = 0; i < 40; i++)
+          {'id': 'hop-h$i', 'name': 'Houblon ${i.toString().padLeft(2, '0')}'},
+      ]);
+      await open(
+        tester,
+        '/bibliotheque/houblons',
+        width: 360,
+        height: 640,
+        before: (app) {
+          app.library.index[NatureReferentiel.hops] = found(
+            NatureReferentiel.hops,
+            many,
+          );
+          app.library.indexAromes = foundAromes();
+        },
+      );
+      expect(find.text('Confiance des arômes'), findsOneWidget);
+      await tester.tap(find.byType(TextField));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      await tester.drag(_liste, const Offset(0, -600));
+      await tester.pumpAndSettle();
+      // Filtre et segments sortis par le haut ; recherche et compte restent.
+      expect(find.byType(TextField).hitTestable(), findsOneWidget);
+      expect(find.text('Confiance des arômes').hitTestable(), findsNothing);
+      final basEnTete = tester.getBottomLeft(find.byType(Divider).first).dy;
+      // Au moins une ligne entière entre la partie épinglée et le clavier.
+      final entieres = [
+        for (final e in find.byType(LigneListe).evaluate())
+          if (tester.getRect(find.byWidget(e.widget)).top >= basEnTete &&
+              tester.getRect(find.byWidget(e.widget)).bottom <= 640 - 280)
+            e,
+      ];
+      expect(entieres, isNotEmpty);
+      expect(basEnTete, lessThan(640 - 280 - 48));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('compte annoncé quand la frappe s\'arrête', (tester) async {
+      await openHops(tester);
+      String annonce() => tester
+          .widget<Semantics>(
+            find
+                .ancestor(
+                  of: find.textContaining('houblon'),
+                  matching: find.byWidgetPredicate(
+                    (w) => w is Semantics && w.properties.liveRegion == true,
+                  ),
+                )
+                .first,
+          )
+          .properties
+          .label!;
+      expect(annonce(), '2 houblons');
+      await tester.enterText(find.byType(TextField), 'c');
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'ca');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('1 sur 2 houblons'), findsOneWidget);
+      expect(annonce(), '2 houblons');
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(annonce(), '1 sur 2 houblons');
+    });
+
+    testWidgets('texte × 2 : en-tête non épinglé, défile avec la liste', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await openHops(tester, aromes: foundAromes());
+      expect(find.byType(PinnedHeaderSliver), findsNothing);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('téléphone : puces sur une ligne qui défile', (tester) async {
