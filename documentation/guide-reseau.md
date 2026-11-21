@@ -243,8 +243,9 @@ Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 Le 2026-11-15 (v0.1.79), décision de l'utilisateur : P56 précise la règle des noms pour la
 nature `culture` : aucun nom normalisé créé par une fiche de fabricant ou par une ligne de la
 table de fusion ne désigne deux documents d'un même producteur ; les doublons de ce type hérités
-de Brewtarget sont comptés au rapport et listés dans `DATA_SOURCES.md` en attendant leur fusion
-(décision de l'utilisateur du 2026-11-21) ; un nom partagé entre deux producteurs (deux souches différentes vendues sous le même nom commercial)
+de Brewtarget sont comptés au rapport et listés dans `DATA_SOURCES.md` en attendant leur fusion,
+y compris quand une fiche porte aujourd'hui ce nom alors que les deux documents existaient avant
+elle (décision de l'utilisateur du 2026-11-21) ; un nom partagé entre deux producteurs (deux souches différentes vendues sous le même nom commercial)
 reste permis, compté au rapport et documenté dans `DATA_SOURCES.md`. Aucun contrôle, agent,
 skill ni hook nouveau.
 
