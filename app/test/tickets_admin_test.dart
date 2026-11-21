@@ -843,11 +843,18 @@ void main() {
       expect(find.text('Refuser'), findsOneWidget);
       expect(find.text('Clore'), findsOneWidget);
       expect(find.text('Valider'), findsOneWidget);
-      // Principal à droite.
+      // « Valider » à contour après « Clore » ; l'action pleine en dernier
+      // (ticket #64).
+      expect(find.widgetWithText(OutlinedButton, 'Valider'), findsOneWidget);
       expect(
-        tester.getTopLeft(find.text('Valider')).dx,
-        greaterThan(tester.getTopLeft(find.text('Clore')).dx),
+        find.widgetWithText(FilledButton, kValiderEtLancer),
+        findsOneWidget,
       );
+      final clore = tester.getTopLeft(find.text('Clore'));
+      final valider = tester.getTopLeft(find.text('Valider'));
+      final lancer = tester.getTopLeft(find.text(kValiderEtLancer));
+      expect(valider.dy > clore.dy || valider.dx > clore.dx, isTrue);
+      expect(lancer.dy > valider.dy || lancer.dx > valider.dx, isTrue);
       // Un statut reçu sans décision écrite par le serveur : aucun bouton
       // dérivé du statut.
       app.tickets.publishAll([unTicket()]);

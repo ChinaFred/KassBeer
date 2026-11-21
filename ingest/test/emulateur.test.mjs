@@ -51,9 +51,10 @@ describe(
     it("simulation : compte sans écrire", async () => {
       const r = await lancer(["--simulation"]);
       assert.equal(r.simulation, true);
-      assert.deepEqual(r.counts.beer_index, { written: 5, unchanged: 0, refused: 0 });
+      // Cinq index préparés et beer_index/hop_aromas, tiré de aromes.json.
+      assert.deepEqual(r.counts.beer_index, { written: 6, unchanged: 0, refused: 0 });
       const r2 = await lancer(["--simulation"]);
-      assert.deepEqual(r2.counts.beer_index, { written: 5, unchanged: 0, refused: 0 });
+      assert.deepEqual(r2.counts.beer_index, { written: 6, unchanged: 0, refused: 0 });
     });
 
     it("première écriture, puis seconde à 0 écriture", async () => {
@@ -108,6 +109,10 @@ describe(
         assert.equal(description.misc_name, "Épice Fictive");
         assert.match(description.content_sha256, /^[0-9a-f]{64}$/);
         assert.ok(description.updated_at, "updated_at posé par le serveur");
+        const index = (await db.doc("beer_index/hop_aromas").get()).data();
+        assert.deepEqual(index.entries, [{ id: "hop-houblon-fictif", confidence: "medium" }]);
+        assert.equal(index.count, 1);
+        assert.ok(index.updated_at, "updated_at posé par le serveur");
       } finally {
         await deleteApp(app);
       }
@@ -135,6 +140,8 @@ describe(
           },
         ]);
         assert.equal(r.hops_without_aroma, 0);
+        // L'entrée refusée sort de l'index : index réécrit, sans entrée.
+        assert.deepEqual(r.counts.beer_index, { written: 1, unchanged: 5, refused: 0 });
         writeFileSync(join(dossierAromes, "aromes.json"), "[]");
         const vide = await lancer(["--simulation", "--aromes", dossierAromes]);
         assert.equal(vide.hops_without_aroma, 1);

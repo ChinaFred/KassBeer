@@ -27,6 +27,7 @@ import {
   COLLECTIONS,
   COLLECTIONS_ECRITES,
   controlerDocument,
+  ID_INDEX_AROMES,
 } from "./validation.mjs";
 
 const NATURES = ["fermentable", "hop", "culture", "misc"];
@@ -75,6 +76,9 @@ export function trier(documents) {
     valides[collection] = [];
     for (const doc of documents[collection] ?? []) {
       const erreurs = controlerDocument(collection, doc);
+      if (collection === "beer_index" && doc?.id === ID_INDEX_AROMES) {
+        erreurs.push("id : construit par ecrire.mjs depuis aromes.json, jamais préparé");
+      }
       if (typeof doc?.id === "string" && vus.has(doc.id)) erreurs.push("id : en double");
       if (typeof doc?.id === "string") vus.add(doc.id);
       if (erreurs.length > 0) {
@@ -180,6 +184,27 @@ export function trierRedigees(nature, entrees, idsReferentiel, groupe) {
   return { valides, refuses };
 }
 
+/// Document beer_index/hop_aromas (ADR-013, note du 2026-11-21) tiré des entrées
+/// acceptées par trierRedigees(NATURE_HOUBLON, …) ([valides]) : une entrée `{id, confidence}`
+/// par houblon, triée par identifiant, `confidence` valant celle d'une entrée `described` ou
+/// `unknown`. Aucun texte, aucun état de relecture. Rend `{id, data}` avec `count` et
+/// `content_sha256`.
+export function indexAromes(valides) {
+  const entries = valides
+    .map(({ id, data }) => ({
+      id,
+      confidence: data.status === "described" ? data.confidence : "unknown",
+    }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const data = { count: entries.length, entries };
+  return { id: ID_INDEX_AROMES, data: { ...data, content_sha256: empreinteContenu(data) } };
+}
+
+/// Index de beer_index construit par ecrire.mjs depuis les entrées acceptées d'une nature
+/// rédigée. Seuls les houblons en ont un (ADR-013, note du 2026-11-21) ; les divers n'en ont
+/// pas (ADR-017).
+const INDEX_REDIGEES = new Map([[NATURE_HOUBLON, indexAromes]]);
+
 /// Entrées du référentiel préparé ([documents]) sans entrée rédigée (ADR-013, « Ajouter un
 /// houblon » ; ADR-017).
 export function compterSansDescription(documents, entrees) {
@@ -264,6 +289,17 @@ export async function executer({
       const tri = trierRedigees(nature, lues.entrees, ids, lues.groupe);
       valides[e.collection] = tri.valides;
       refuses.push(...tri.refuses);
+      // Index de la nature (houblons seuls), contrôlé comme les autres documents de beer_index.
+      const construireIndex = INDEX_REDIGEES.get(nature);
+      if (construireIndex !== undefined) {
+        const index = construireIndex(tri.valides);
+        const erreurs = controlerDocument("beer_index", index);
+        if (erreurs.length > 0) {
+          refuses.push({ collection: "beer_index", id: index.id, erreurs });
+        } else {
+          valides.beer_index.push(index);
+        }
+      }
     }
     resume[e.champFichier] = lues === null ? "absent" : "read";
     resume[e.champSansDescription] = compterSansDescription(

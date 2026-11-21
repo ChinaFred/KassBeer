@@ -240,6 +240,11 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
+Le 2026-11-21 (v0.1.88), décision de l'utilisateur : P22 et P55 couvrent l'index des arômes
+`beer_index/hop_aromas` (ADR-013, note du 2026-11-21) : lecture par un `get` dans la liste des
+houblons (P22), construction par `ingest/ecrire.mjs` seul avec des entrées `{id, confidence}` (P55).
+Aucun contrôle, agent, skill ni hook nouveau.
+
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
 garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.
@@ -334,6 +339,9 @@ complétés.
 Le 2026-11-15, avec la livraison du lot A1, `CLAUDE.md` passe P25 et « Coûts variables » de « à
 livrer » à « livrés au lot A1 », ajoute la feature `ai` à « Structure » et retire les mentions
 « (lot A1) » de la fixture `ai_cost_centers.json` et du calcul du coût.
+
+Le 2026-11-21, avec le ticket #64 et l'accord de l'utilisateur, P39 ajoute « Valider et lancer le
+développement » aux lancements soumis à la boîte de confirmation obligatoire.
 
 Le 2026-11-21, avec l'acceptation d'ADR-017 (descriptions des divers), `CLAUDE.md` ajoute P62
 (`beer_misc_descriptions/`, `relecteur-regles`). P54 est étendu au moteur commun

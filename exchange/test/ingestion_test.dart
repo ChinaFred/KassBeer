@@ -409,6 +409,20 @@ void main() {
           'attenuation': 74.0,
         },
       );
+      // Houblons : usage et origine de leur document, absents quand il ne
+      // les a pas.
+      final h = _doc(p, 'beer_index', 'hops')['entries']! as List;
+      expect(h, isNotEmpty);
+      for (final e in h.cast<Map<String, Object?>>()) {
+        final d = _doc(p, 'beer_hops', e['id']! as String);
+        expect(e['purpose'], d['purpose'], reason: '${e['id']}');
+        expect(e['origin'], d['origin'], reason: '${e['id']}');
+        expect(e.containsKey('origin'), d.containsKey('origin'));
+      }
+      expect(
+        h.firstWhere((e) => (e as Map)['id'] == 'hop-houblon-test'),
+        containsPair('purpose', 'aroma'),
+      );
       final s = _doc(p, 'beer_index', 'styles')['entries']! as List;
       expect(s.last, {
         'id': 'bjcp2021-99b',

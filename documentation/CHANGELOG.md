@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.89 — technique
+### v0.1.92 — technique
 
 Lot D2 d'ADR-017 : les descriptions des divers se rédigent depuis le poste de l'admin.
 `ingest/generer-divers.mjs` passe par le moteur commun avec la nature `ingest/lib/divers/`
@@ -17,10 +17,10 @@ invisibles retirés, adresse, `@`, balisage et monnaie contrôlés sur la forme 
 groupe vient de `ingest/lister-divers-recettes.mjs` puis `exchange/bin/lister_divers_recettes.dart`
 (résolution commune `ingredients_recettes.dart`). `ingest/ecrire.mjs` écrit `beer_misc_descriptions/`
 avec les garde-fous des arômes ; `firestore.rules` l'ouvre en `get` aux membres seuls, tests des
-cinq profils. Empreinte des houblons inchangée ; leurs textes passent aussi par le contrôle Cf et NFKC. Tests : `ingest` 271, `exchange`
-307, `referentiels.test.mjs` 153.
+cinq profils. Empreinte des houblons inchangée ; leurs textes passent aussi par le contrôle Cf et NFKC. Tests : `ingest` 275, `exchange`
+307, `referentiels.test.mjs` 158.
 
-### v0.1.88 — technique
+### v0.1.91 — technique
 
 Lot D1 d'ADR-017 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
 `ingest/lib/redaction/` (`client.mjs`, `tarif.mjs`, `texte.mjs`, `moteur.mjs`), paramétré par un
@@ -30,7 +30,7 @@ objet de nature (`ingest/lib/aromes/nature.mjs`). Il servira aussi aux descripti
 message qui dit où le déplacer. L'empreinte des houblons ne change pas, et un test la fige.
 Tests d'`ingest/` : 127 sur 127.
 
-### v0.1.87 — technique
+### v0.1.90 — technique
 
 ADR-017 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
 rôle, goût le cas échéant, aucune dose), rédigée par l'API Claude depuis le poste de l'admin sur
@@ -38,6 +38,84 @@ un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P62 (`beer_mi
 et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
 P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
 complétés et marqués « à livrer ». Aucun code.
+
+### v0.1.89 — fonctionnel
+
+Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en
+un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation,
+qui rappelle la validation, la session qui va partir, les lancements restants du jour, le lien
+vers l'usage de Claude et le coût. La validation part d'abord ; le développement n'est lancé
+que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand le plafond du jour
+est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le
+ticket #64.
+
+### v0.1.89 — technique
+
+`BoiteLancement` (`boite_lancement.dart`) reçoit `validationAvant` et `valider` : la boîte
+appelle `valider`, puis `envoyer` seulement si la validation rend `null`, et se ferme sur tout
+résultat. `FinBoiteLancement` porte `echecValidation`. Dans `admin_ticket_screen.dart`,
+`_validerEtLancer` passe par `decisionsFicheProvider` (`validateTicket`) puis
+`lancementFicheProvider` (`launchTicketDevelopment`) ; boîte fermée pendant la validation, le
+lancement part quand même et le résultat s'affiche en bas d'écran (`messageValiderEtLancer`,
+« Ticket #N validé. … »). Un ticket validé sur GitHub seul a sa phrase propre
+(`kValiderEtLancerConfirmationGithub`). « Valider » passe en `OutlinedButton`, « Valider et
+lancer le développement » en `FilledButton` (`Icons.code`), en dernier. Le quota se lit dès
+que `validate` est dans `allowed_decisions`. Aucune fonction serveur ni règle changée. Tests de
+widgets : ordre des appels, validation en échec ou partielle sans lancement, refus avec et sans
+motif, résultat inconnu, plafond atteint, quota illisible, double appui, boîte fermée pendant
+la validation, hors ligne, barre à 360 px et texte × 2 ; test du dépôt : `changed: false` rendu
+sans échec. Demandé par le ticket #64.
+
+### v0.1.88 — fonctionnel
+
+Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un
+bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de
+leur description (élevée, moyenne, faible, sans description), avec le nombre de houblons de
+chaque choix. Une
+ligne signale « Confiance faible » ou « Sans description ». La recherche et le nombre restent
+visibles en haut pendant le défilement, un bouton efface la recherche, et le nombre dit
+« 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA
+passe avant le texte. Une liste lue hors ligne le signale.
+
+### v0.1.88 — technique
+
+Nouvel index `beer_index/hop_aromas` (`{id, confidence}`), construit par `ingest/ecrire.mjs`
+depuis les entrées acceptées de `aromes.json` et validé par `ingest/lib/validation.mjs` ; un
+`hop_aromas` venu de la préparation est refusé. `beer_index/hops` porte `purpose` et `origin`
+(`exchange/lib/src/ingestion/referentiel.dart`). Côté application : `lireIndexAromes` (un
+`get`, gardé pour la session), `indexAromesProvider`, filtre `_FiltreConfiance` (bouton et `MenuAnchor`), recherche et
+compte dans un `PinnedHeaderSliver` (sauf à partir de `kGrandTexteMinScale`, même seuil `>=`
+que l'en-tête), compte annoncé
+500 ms après la frappe, `DocumentTrouve.fromCache`, libellés d'usage complétés. Tests de
+`rules-tests/` pour `beer_index/hop_aromas`. ADR-013, note du 2026-11-21. Après la fusion,
+l'administrateur relance la préparation du référentiel puis `ecrire.mjs`. P22 et P55 de
+`CLAUDE.md` couvrent `beer_index/hop_aromas` (décision de l'utilisateur du 2026-11-21).
+
+### v0.1.87 — fonctionnel
+
+L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux
+puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès
+l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par
+« Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y
+est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même
+ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les
+données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95.
+
+### v0.1.87 — technique
+
+`logs_screen.dart` : `_PuceMenu` (`MenuAnchor` et `ActionChip`) remplace `BoutonsSegmentes`
+pour la gravité et la période ; `_plusDeFiltres` replie les trois autres filtres sur
+téléphone, et un refus de champ du serveur les déplie. Gravité en
+`Etiquette` partagée, ton choisi par gravité, à la place de l'icône de tête ; date et fonction dessous au-delà
+de `kGrandTexteMinScale`. Entrées en `Card.outlined`, texte en chasse fixe dans un
+`SingleChildScrollView` horizontal sur `surfaceContainerHighest`. Puces avec `childFocusNode`
+et `Semantics(expanded)`, valeur du menu en `Semantics(selected)`, chacun dans un
+`MergeSemantics` pour viser le nœud du bouton. La note sur les e-mails
+passe sous le compte des entrées. Aucun appel, filtre, règle ni fonction serveur ne change ; la
+recherche part toujours du seul bouton « Rechercher » (P50). Tests de `logs_test.dart` :
+téléphone de 360 × 640 (« Rechercher » visible, gravité en une puce, cinq entrées visibles),
+compte de « Plus de filtres (2) », bloc des données, date entière à 200 %, états
+« développé » et « sélectionné » lus sur les nœuds de sémantique.
 
 ### v0.1.86 — fonctionnel
 

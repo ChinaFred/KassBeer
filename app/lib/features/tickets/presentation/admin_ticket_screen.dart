@@ -164,16 +164,45 @@ const kValiderDepuisApplication =
     'Validé sur GitHub : validez depuis l\'application pour lancer le '
     'développement.';
 
+/// Bouton de la barre d'un ticket à valider : validation, puis lancement du
+/// développement, après une seule confirmation.
+const kValiderEtLancer = 'Valider et lancer le développement';
+
 /// Boîte « Valider ce ticket ? » d'un ticket à valider.
 const kValiderConfirmation =
     'L\'étiquette « validé » sera posée sur l\'Issue. Le membre verra '
     '« Validé ».';
+
+/// Boîte « Valider et lancer le développement ? » d'un ticket validé sur
+/// GitHub seul : le lancement suit, rien d'autre ne sera « proposé ».
+const kValiderEtLancerConfirmationGithub =
+    'La validation sera enregistrée dans l\'application.';
 
 /// Boîte « Valider ce ticket ? » d'un ticket validé sur GitHub seul :
 /// l'étiquette est déjà posée.
 const kValiderConfirmationGithub =
     'La validation sera enregistrée dans l\'application. « Lancer le '
     'développement » sera ensuite proposé.';
+
+/// Message après « Valider et lancer le développement », la validation
+/// appliquée : [resultat] est celui du lancement qui a suivi. Un refus
+/// rend le motif du serveur seul, sans redire « Rien n'a été lancé ».
+String messageValiderEtLancer(ResultatLancement resultat, int? issueNumber) {
+  final valide = issueNumber == null
+      ? 'Ticket validé.'
+      : 'Ticket #$issueNumber validé.';
+  const pasLance = 'Le développement n\'a pas été lancé';
+  return switch (resultat.issue) {
+    IssueLancement.lance => '$valide Développement lancé.',
+    IssueLancement.inconnu => '$valide Résultat du lancement inconnu, compté.',
+    IssueLancement.refuse => switch (resultat.motif) {
+      final motif? => '$valide $pasLance : $motif',
+      null => '$valide $pasLance.',
+    },
+    IssueLancement.acces => '$valide $pasLance : accès administrateur refusé.',
+    IssueLancement.perdu => '$valide ${resultat.message}',
+  };
+}
 
 /// Valider offert par le serveur sur un ticket déjà validé : la validation
 /// vient d'une étiquette posée sur GitHub. Le client lit `allowed_decisions`
@@ -648,6 +677,73 @@ class _FicheState extends ConsumerState<_Fiche> {
     );
   }
 
+  /// « Valider et lancer le développement » : une boîte (P39), puis
+  /// `validateTicket` et, s'il est appliqué, `launchTicketDevelopment`, par
+  /// les mêmes fournisseurs que « Valider » et « Lancer le développement ».
+  /// Le serveur recontrôle tout ; le client ne recopie aucune précondition.
+  /// Boîte fermée pendant l'envoi : les appels continuent et le résultat
+  /// s'affiche dans un message de la fiche.
+  Future<void> _validerEtLancer({required EtatLancements? quota}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final fiche = ref.read(decisionsFicheProvider(_ticket.id).notifier);
+    final notifier = ref.read(lancementFicheProvider(_ticket.id).notifier);
+    final valideSurGithub = _valideSurGithub(_ticket);
+    Future<EchecReponse?>? validation;
+    final lancement = Completer<ResultatLancement>();
+    // ticket: /admin/tickets/:id/fenetre/lancement
+    final fin = await showDialog<FinBoiteLancement>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BoiteLancement(
+        action: ActionLancement.developpement,
+        issueNumber: _ticket.issueNumber,
+        quota: quota,
+        relanceDe: null,
+        validationAvant: valideSurGithub
+            ? kValiderEtLancerConfirmationGithub
+            : kValiderConfirmation,
+        valider: () => validation = fiche
+            .decider(TicketDecisionAction.validate)
+            .then((r) => r.echec),
+        envoyer: () {
+          final appel = notifier.lancer(ActionLancement.developpement);
+          lancement.complete(appel);
+          return appel;
+        },
+      ),
+    );
+    if (fin == null) return;
+    var echec = fin.echecValidation;
+    var resultat = fin.resultat;
+    if (fin.detache) {
+      final appel = validation;
+      if (appel == null) return;
+      echec = await appel;
+      if (echec == null) resultat = await lancement.future;
+    }
+    messenger.hideCurrentSnackBar();
+    if (echec != null) {
+      messenger.showSnackBar(
+        SnackBar(
+          duration: kDureeMessageEchec,
+          content: Text(
+            messageEchecDecision(TicketDecisionAction.validate, echec),
+          ),
+        ),
+      );
+      return;
+    }
+    if (resultat == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        duration: resultat.issue == IssueLancement.lance
+            ? const Duration(milliseconds: 4000)
+            : kDureeMessageEchec,
+        content: Text(messageValiderEtLancer(resultat, _ticket.issueNumber)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -938,11 +1034,15 @@ class _FicheState extends ConsumerState<_Fiche> {
     final enCoursDeLivraison =
         ticket.status == TicketStatus.inProgress && ticket.issueNumber != null;
     // Le plafond se lit aussi pour un ticket à valider (« Vous pouvez
-    // valider. ») et pour un ticket En cours (verrou des livraisons).
+    // valider. », boîte « Valider et lancer le développement ») et pour un
+    // ticket En cours (verrou des livraisons).
     final quota =
         lancement == null &&
             ticket.status != TicketStatus.analyzed &&
-            !_valideSurGithub(ticket) &&
+            !(ticket.allowedDecisions?.contains(
+                  TicketDecisionAction.validate,
+                ) ??
+                false) &&
             !enCoursDeLivraison
         ? null
         : switch (ref.watch(launchStatusProvider).value) {
@@ -1250,12 +1350,22 @@ class _FicheState extends ConsumerState<_Fiche> {
                 label: const Text('Clore'),
               ),
             if (allowed.contains(TicketDecisionAction.validate))
-              FilledButton.icon(
+              OutlinedButton.icon(
                 onPressed: inactif ? null : _valider,
                 icon: const Icon(Icons.thumb_up_alt_outlined),
                 label: const Text('Valider'),
               ),
             ?boutonLancement,
+            // Action pleine en dernier ; le plafond se contrôle dans la
+            // boîte, qui dit pourquoi « Valider et lancer » est inactif.
+            if (allowed.contains(TicketDecisionAction.validate))
+              FilledButton.icon(
+                onPressed: inactif
+                    ? null
+                    : () => _validerEtLancer(quota: quota),
+                icon: const Icon(Icons.code),
+                label: const Text(kValiderEtLancer),
+              ),
           ],
         );
         // La ligne des précisions reste sous la ligne du plafond ou de la

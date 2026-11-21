@@ -224,10 +224,12 @@ Un texte du modèle n'est jamais exécuté ni interprété comme une consigne.
 write: if false; }`, tests des cinq profils de P4.
 
 **Affichage** (fiche d'un houblon, Bibliothèque) : une section « Arômes », lue par `get` à
-l'ouverture de la fiche, aucun écouteur (P22). Elle montre les descripteurs, puis un
-paragraphe par usage présent, dans l'ordre premier moût, amérisant, fin d'ébullition,
-whirlpool, houblonnage à cru. Sous la section : « Texte rédigé par une IA (Claude), relu le
-14 novembre 2026 » (date longue, `formatDateLongue`) ou « Texte rédigé par une IA (Claude), non relu ». `unknown` : « Aucune
+l'ouverture de la fiche, aucun écouteur (P22). Sous le titre « Arômes », avant tout le reste :
+« Texte rédigé par une IA (Claude), relu le 14 novembre 2026 » (date longue,
+`formatDateLongue`) ou « Texte rédigé par une IA (Claude), non relu » (note du 2026-11-21).
+Puis « Confiance faible » (icône d'information) quand `confidence` vaut `low`, les
+descripteurs, et un paragraphe par usage présent, dans l'ordre premier moût, amérisant, fin
+d'ébullition, whirlpool, houblonnage à cru. `unknown` : la mention, puis « Aucune
 description : houblon trop peu documenté. ». Document absent : rien ne s'affiche, et aucune
 valeur de remplacement. Document illisible : panne affichée et `reportError`.
 
@@ -372,3 +374,38 @@ Documents touchés : `exigences-techniques.md` (collection, règles d'accès, pr
 ADR-016 utilise le même espace de travail de la Console Anthropic, avec une seconde clé rangée
 dans Secret Manager pour les Functions. La limite de 20 $ par mois est commune : quand
 l'assistant de recette (ADR-015) l'atteint, la génération des arômes est bloquée aussi.
+
+## Note du 2026-11-21
+
+Décision de l'utilisateur : la liste des houblons de la Bibliothèque propose un filtre par
+confiance des arômes, ouvert à tout membre. Il lit un document de plus, `beer_index/hop_aromas`,
+par un `get` à l'ouverture du segment Houblons ; aucune lecture de `beer_hop_aromas/` dans la
+liste (P22).
+
+- Forme : `{count, entries: [{id, confidence}], content_sha256, updated_at}`. `confidence` vaut
+  `high`, `medium` ou `low` pour une entrée `described`, `unknown` pour une entrée `unknown`.
+  Aucun nom, texte ni état de relecture : l'utilisateur ne veut pas d'étiquette « Relu » dans la
+  liste.
+- Construit par `ingest/ecrire.mjs` (`indexAromes`, `lib/execution.mjs`) à chaque passage qui lit
+  `aromes.json`, depuis les seules entrées acceptées par `trierRedigees(NATURE_HOUBLON, …)`, et contrôlé par la liste
+  blanche de `beer_index` (`ingest/lib/validation.mjs`, taille sous 900 Ko). Inchangé, il n'est
+  pas réécrit. La préparation de `exchange/` ne lit pas `aromes.json` : un `hop_aromas` préparé
+  est refusé.
+- Règles inchangées : `match /beer_index/{nature}` (`get` par `isMember()`, aucune écriture
+  client) couvre ce document ; `rules-tests/` le vérifie pour les cinq profils.
+- Une entrée refusée à un passage sort de l'index, alors que son ancien document
+  `beer_hop_aromas/{id}` reste en ligne jusqu'à `--supprimer-absents beer_hop_aromas` : la liste
+  la range alors dans « Sans description » et la fiche affiche encore l'ancien texte.
+- Index absent, illisible ou en panne : la liste s'affiche sans filtre ni étiquette ; un index
+  illisible est rapporté (`library.hop_aroma_index`) sans son contenu.
+- Forme du filtre : un bouton sur une ligne, « Confiance des arômes : Faible (37) », qui ouvre
+  un menu à choix unique (aide en tête, non cliquable, puis les cinq choix comptés, le choix en
+  cours coché), et non une rangée de puces : avec les six puces de segment sur trois rangées,
+  une rangée de puces de plus cachait tous les houblons à l'ouverture sur un téléphone de
+  360 × 640 (décision de l'utilisateur du 2026-11-21).
+- Liste : étiquettes « Confiance faible » et « Sans description », sans icône (l'icône
+  d'information est celle de « Sources des données » dans l'en-tête de la Bibliothèque) ; rien
+  pour une confiance élevée ou moyenne.
+- Fiche : la mention « Texte rédigé par une IA (Claude), relu le … » ou « …, non relu » passe
+  sous le titre « Arômes », avant les descripteurs ; l'étiquette « Confiance faible » de la
+  fiche prend l'icône d'information (`info_outline`) à la place du point d'interrogation.

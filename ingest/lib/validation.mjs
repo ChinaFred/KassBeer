@@ -48,7 +48,15 @@ const LICENCES = [
   "Données publiées par le fabricant",
 ];
 const NATURES = ["fermentable", "hop", "culture", "misc"];
-const INDEX = ["fermentables", "hops", "cultures", "miscs", "styles"];
+const INDEX = ["fermentables", "hops", "cultures", "miscs", "styles", "hop_aromas"];
+
+/// Document de beer_index construit par ecrire.mjs depuis aromes.json (ADR-013, note du
+/// 2026-11-21), jamais lu dans la préparation de exchange/.
+export const ID_INDEX_AROMES = "hop_aromas";
+
+/// Confiance d'une entrée de beer_index/hop_aromas : celle d'une entrée `described`, ou
+/// `unknown` pour une entrée `unknown`.
+export const CONFIANCES_INDEX_AROMES = ["high", "medium", "low", "unknown"];
 
 const TYPES_FERMENTABLE = [
   "dry extract",
@@ -145,7 +153,8 @@ function estIdReferentiel(
 }
 
 /// Champs permis d'une entrée de beer_index, par document : collection de son
-/// identifiant, puis type de chaque champ facultatif (liste de valeurs permises,
+/// identifiant, `sansNom` pour une entrée sans `name` (hop_aromas), puis type de chaque
+/// champ (liste de valeurs permises,
 /// « texte », « nombre » fini, « aliases », « plage » [min, max] de nombres finis).
 const ENTREES_INDEX = {
   fermentables: {
@@ -160,7 +169,19 @@ const ENTREES_INDEX = {
   },
   hops: {
     collection: "beer_hops",
-    champs: { aliases: "aliases", form: FORMES_HOUBLON, alpha: "nombre" },
+    champs: {
+      aliases: "aliases",
+      form: FORMES_HOUBLON,
+      alpha: "nombre",
+      purpose: USAGES_HOUBLON,
+      origin: "texte",
+    },
+  },
+  hop_aromas: {
+    collection: "beer_hops",
+    sansNom: true,
+    obligatoires: ["confidence"],
+    champs: { confidence: CONFIANCES_INDEX_AROMES },
   },
   cultures: {
     collection: "beer_cultures",
@@ -412,10 +433,11 @@ const CONTROLES = {
     const forme = ENTREES_INDEX[id];
     d.entries.forEach((e, i) => {
       const c = `entries[${i}]`;
-      const permis = ["id", "name", ...Object.keys(forme?.champs ?? {})];
-      if (!forme || !k.cles(c, e, permis, ["id", "name", ...(forme.obligatoires ?? [])])) return;
+      const communs = forme?.sansNom ? ["id"] : ["id", "name"];
+      const permis = [...communs, ...Object.keys(forme?.champs ?? {})];
+      if (!forme || !k.cles(c, e, permis, [...communs, ...(forme.obligatoires ?? [])])) return;
       if (!estIdReferentiel(e.id, [forme.collection])) k.erreur(`${c}.id`, "identifiant mal formé");
-      k.texte(`${c}.name`, e.name);
+      if (!forme.sansNom) k.texte(`${c}.name`, e.name);
       for (const [cle, type] of Object.entries(forme.champs)) {
         if (!(cle in e)) continue;
         const v = e[cle];
