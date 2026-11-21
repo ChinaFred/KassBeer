@@ -12,9 +12,12 @@ import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/editeur_plein_ecran.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/services/error_report_service.dart';
 import '../../auth/presentation/access_providers.dart';
+import '../data/tickets_repository.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_screens.dart';
+import 'boite_lancement.dart';
 import 'capture_ticket.dart';
 import 'ticket_statut.dart';
 import 'vignette_capture.dart';
@@ -36,7 +39,14 @@ String ticketFormLocation(String? routePattern) {
 ///
 /// [ecranOrigine] : modèle de route de l'écran d'où vient le membre, réduit à
 /// l'ensemble fermé de `ticket_screens.dart`. [reprise] : contenu d'un ticket
-/// non transmis (« Reprendre ce ticket ») ; il part comme un nouveau ticket.
+/// non transmis (« Reprendre ce ticket »), ou brouillon tiré d'une panne
+/// (« Analyser ») ; il part comme un nouveau ticket.
+///
+/// [proposerLancement] : ouvert par « Analyser » d'Admin › Rapports d'erreur
+/// ou d'Admin › Journaux (ticket #67). Pour l'administrateur, la case
+/// « Lancer l'analyse dès la publication », cochée par défaut, fait passer
+/// « Envoyer » par [BoiteEnvoiAnalyse] ; décochée ou hors ligne, l'envoi reste
+/// celui d'un ticket ordinaire.
 ///
 /// Ouvert depuis le menu du compte, le formulaire prend une fois la capture de
 /// l'écran quitté ([captureEnAttenteProvider]) et propose de la joindre, case
@@ -45,10 +55,16 @@ String ticketFormLocation(String? routePattern) {
 /// de l'appareil, réduite et réencodée en PNG ; une seule image part, la
 /// capture de l'écran ou l'image choisie (complément du 2026-11-14).
 class TicketFormScreen extends ConsumerStatefulWidget {
-  const TicketFormScreen({super.key, this.ecranOrigine, this.reprise});
+  const TicketFormScreen({
+    super.key,
+    this.ecranOrigine,
+    this.reprise,
+    this.proposerLancement = false,
+  });
 
   final String? ecranOrigine;
   final TicketBrouillon? reprise;
+  final bool proposerLancement;
 
   static const titre = 'Signaler ou proposer';
   static const typeMissing = 'Choisissez le type de ticket.';
@@ -88,6 +104,8 @@ class TicketFormScreen extends ConsumerStatefulWidget {
       'Cette image n\'a pas pu être ouverte. Choisissez-en une autre.';
   static const imageTooLarge =
       'Cette image dépasse 5 Mo. Choisissez une image plus légère.';
+  static const lancerAnalyse = 'Lancer l\'analyse dès la publication';
+  static const lancementHorsLigne = 'Le lancement demande le réseau.';
 
   /// Délai d'acceptation du ticket par le serveur avant le dépôt de la
   /// capture ; au-delà, le ticket part sans elle.
@@ -141,6 +159,10 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
 
   /// Texte d'erreur du dernier choix, ou `null`.
   String? _erreurImage;
+
+  /// « Lancer l'analyse dès la publication », cochée à l'ouverture (ticket
+  /// #67) ; lue seulement si [TicketFormScreen.proposerLancement].
+  bool _lancerAnalyse = true;
 
   @override
   void initState() {
@@ -307,7 +329,14 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
     final access = ref.read(grantedAccessProvider);
     final email = access?.user.memberKey;
     if (access == null || email == null) return;
-    setState(() => _sending = true);
+    final lancer =
+        widget.proposerLancement &&
+        _lancerAnalyse &&
+        !access.offline &&
+        access.member.isAdmin;
+    // Avec le lancement, la boîte modale empêche un second appui : le
+    // formulaire ne passe pas en envoi tant que rien n'est écrit.
+    if (!lancer) setState(() => _sending = true);
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
     final id = _id;
@@ -320,23 +349,100 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
     final repository = ref.read(ticketsRepositoryProvider);
     final errors = ref.read(errorReportServiceProvider);
     final capture = _joindre ? _capture?.png : _image;
-    final written = repository.create(
-      id: id,
-      brouillon: brouillon,
-      authorUid: access.user.uid,
-      authorEmail: email,
-      appVersion: _installedVersion,
-      platform: kIsWeb ? 'web' : 'android',
-    );
-    setState(() => _dirty = false);
-    if (router.canPop()) {
-      router.pop();
-    } else {
-      router.go(AppRoutes.tickets);
-    }
-    void voir() => unawaited(router.push(AppRoutes.ticket(id)));
     // Hors ligne, la capture ne part pas : elle n'est gardée qu'en mémoire.
     final sansCapture = capture != null && access.offline;
+    void refuse() => annoncerAvecAction(
+      messenger,
+      TicketFormScreen.refused,
+      action: 'Reprendre',
+      onAction: () =>
+          unawaited(router.push(AppRoutes.newTicket, extra: brouillon)),
+    );
+
+    /// Écrit le ticket, puis joint l'image une fois le ticket accepté.
+    Future<void> ecrire(void Function() voir) {
+      final written = repository.create(
+        id: id,
+        brouillon: brouillon,
+        authorUid: access.user.uid,
+        authorEmail: email,
+        appVersion: _installedVersion,
+        platform: kIsWeb ? 'web' : 'android',
+      );
+      if (capture != null && !sansCapture) {
+        unawaited(
+          _joindreApres(
+            written,
+            repository: repository,
+            errors: errors,
+            messenger: messenger,
+            id: id,
+            authorUid: access.user.uid,
+            png: capture,
+            voir: voir,
+          ),
+        );
+      }
+      return written;
+    }
+
+    void fermer() {
+      setState(() => _dirty = false);
+      if (router.canPop()) {
+        router.pop();
+      } else {
+        router.go(AppRoutes.tickets);
+      }
+    }
+
+    if (lancer) {
+      void voirFiche() => unawaited(router.push(AppRoutes.adminTicket(id)));
+      Future<void>? ecrit;
+      // ticket: /tickets/nouveau/fenetre/lancement
+      final fin = await showDialog<FinEnvoiAnalyse>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => BoiteEnvoiAnalyse(
+          ticketId: id,
+          ecrire: () => ecrit = ecrire(voirFiche),
+        ),
+      );
+      final written = ecrit;
+      // Rien d'écrit (« Annuler »), ou ticket refusé, déjà dit dans la
+      // boîte : le formulaire reste ouvert avec le texte saisi.
+      if (written == null || fin == null) return;
+      if (mounted) fermer();
+      // Un refus arrivé après la fermeture de la boîte est déjà rapporté par
+      // le dépôt de données ; « Reprendre » rouvre le formulaire.
+      unawaited(written.then((_) {}, onError: (Object _) => refuse()));
+      if (fin.voir) {
+        voirFiche();
+        return;
+      }
+      final annonce = fin.annonce;
+      final enVol = fin.enVol;
+      if (annonce != null) {
+        annoncerAvecAction(
+          messenger,
+          annonce,
+          action: BoiteEnvoiAnalyse.voir,
+          onAction: voirFiche,
+        );
+      } else if (enVol != null) {
+        final resultat = await enVol;
+        annoncerAvecAction(
+          messenger,
+          resultat.message,
+          action: BoiteEnvoiAnalyse.voir,
+          onAction: voirFiche,
+        );
+      }
+      return;
+    }
+
+    void voir() => unawaited(router.push(AppRoutes.ticket(id)));
+    final written = ecrire(voir);
+    fermer();
     annoncerAvecAction(
       messenger,
       access.offline
@@ -347,59 +453,63 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
       action: 'Voir',
       onAction: voir,
     );
-    void refuse() => annoncerAvecAction(
-      messenger,
-      TicketFormScreen.refused,
-      action: 'Reprendre',
-      onAction: () =>
-          unawaited(router.push(AppRoutes.newTicket, extra: brouillon)),
-    );
     // Un refus est déjà rapporté par le dépôt de données, sans le texte du
     // ticket. « Reprendre » rouvre le formulaire avec le texte envoyé.
     unawaited(written.then((_) {}, onError: (Object _) => refuse()));
-    if (capture == null || sansCapture) return;
-    unawaited(() async {
-      // Le dépôt attend le ticket accepté par le serveur, au plus
-      // [captureWaitTimeout]. `false` : ticket refusé, déjà rapporté et
-      // annoncé ci-dessus ; `null` : délai dépassé.
-      final accepte = await written
-          .then<bool?>((_) => true, onError: (Object _) => false)
-          .timeout(TicketFormScreen.captureWaitTimeout, onTimeout: () => null);
-      if (accepte == false) return;
-      if (accepte == null) {
-        errors.reportError(
-          feature: 'tickets.screenshot',
-          error: TimeoutException(
-            'ticket non accepté par le serveur',
-            TicketFormScreen.captureWaitTimeout,
-          ),
-          stackTrace: StackTrace.current,
-          context: 'tickets/$id step=wait',
-        );
-        annoncerAvecAction(
-          messenger,
-          TicketFormScreen.sentWithoutCapture,
-          action: 'Voir',
-          onAction: voir,
-        );
-        return;
-      }
-      // Dépôt de l'image, puis `attachTicketScreenshot`. Le formulaire est
-      // déjà fermé ; un échec est rapporté par le dépôt de données.
-      final jointe = await repository.attachScreenshot(
-        ticketId: id,
-        authorUid: access.user.uid,
-        png: capture,
+  }
+
+  /// Joint [png] au ticket [id] une fois [written] accepté par le serveur, au
+  /// plus [TicketFormScreen.captureWaitTimeout]. Le formulaire est déjà
+  /// fermé : les dépendances sont lues avant.
+  static Future<void> _joindreApres(
+    Future<void> written, {
+    required TicketsRepository repository,
+    required ErrorReportService errors,
+    required ScaffoldMessengerState messenger,
+    required String id,
+    required String authorUid,
+    required Uint8List png,
+    required void Function() voir,
+  }) async {
+    // `false` : ticket refusé, déjà rapporté et annoncé ; `null` : délai
+    // dépassé.
+    final accepte = await written
+        .then<bool?>((_) => true, onError: (Object _) => false)
+        .timeout(TicketFormScreen.captureWaitTimeout, onTimeout: () => null);
+    if (accepte == false) return;
+    if (accepte == null) {
+      errors.reportError(
+        feature: 'tickets.screenshot',
+        error: TimeoutException(
+          'ticket non accepté par le serveur',
+          TicketFormScreen.captureWaitTimeout,
+        ),
+        stackTrace: StackTrace.current,
+        context: 'tickets/$id step=wait',
       );
-      if (!jointe) {
-        annoncerAvecAction(
-          messenger,
-          TicketFormScreen.sentWithoutCapture,
-          action: 'Voir',
-          onAction: voir,
-        );
-      }
-    }());
+      annoncerAvecAction(
+        messenger,
+        TicketFormScreen.sentWithoutCapture,
+        action: 'Voir',
+        onAction: voir,
+      );
+      return;
+    }
+    // Dépôt de l'image, puis `attachTicketScreenshot`. Un échec est rapporté
+    // par le dépôt de données.
+    final jointe = await repository.attachScreenshot(
+      ticketId: id,
+      authorUid: authorUid,
+      png: png,
+    );
+    if (!jointe) {
+      annoncerAvecAction(
+        messenger,
+        TicketFormScreen.sentWithoutCapture,
+        action: 'Voir',
+        onAction: voir,
+      );
+    }
   }
 
   /// Version installée sans `+build` ; `null` si illisible.
@@ -412,6 +522,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
     final version = ref.watch(appVersionProvider)?.split('+').first;
     final type = _type;
     final isAdmin = ref.watch(grantedAccessProvider)?.member.isAdmin ?? false;
+    final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
     final elements = ticketElementOptions(_screen, isAdmin: isAdmin);
     const gap = SizedBox(height: 16);
     return EditeurPleinEcran(
@@ -525,6 +636,19 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                     validator: _descriptionError,
                     onChanged: _changed,
                   ),
+                  if (widget.proposerLancement && isAdmin)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: _lancerAnalyse && !offline,
+                      onChanged: offline || _sending
+                          ? null
+                          : (v) => setState(() => _lancerAnalyse = v ?? false),
+                      title: const Text(TicketFormScreen.lancerAnalyse),
+                      subtitle: offline
+                          ? const Text(TicketFormScreen.lancementHorsLigne)
+                          : null,
+                    ),
                   gap,
                   DropdownButtonFormField<String>(
                     initialValue: _screen,

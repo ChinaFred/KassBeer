@@ -187,6 +187,29 @@ void main() {
     expect(m.allowedDecisions, isNull);
   });
 
+  test('readAll : lecture unique de tous les tickets (marque, #67)', () async {
+    await firestore.doc('tickets/a').set({
+      'type': 'bug',
+      'title': 'Erreur x',
+      'description': 'Rapport : R1 (ne pas modifier)\nsuite',
+      'screen': 'inconnu',
+      'status': 'received',
+    });
+    final all = await repository.readAll();
+    expect(all.valides.single.id, 'a');
+    expect(errors.reports, isEmpty);
+  });
+
+  test('readAll en panne : rapportée sans texte, relancée', () async {
+    final enPanne = FirestoreTicketsRepository(
+      errorReportService: errors,
+      firestore: _FirestoreEnPanne(),
+    );
+    await expectLater(enPanne.readAll(), throwsA(isA<FirebaseException>()));
+    expect(errors.reports.single.feature, 'tickets.read_all');
+    expect(errors.reports.single.context, isNull);
+  });
+
   group('décisions par callable (T7)', () {
     final calls = <(String, Map<String, Object?>)>[];
     FirestoreTicketsRepository depot(AppelCallable callable) =>
@@ -389,4 +412,10 @@ void main() {
     );
     expect(errors.reports.single.feature, 'tickets.read_github_status');
   });
+}
+
+class _FirestoreEnPanne extends FakeFirebaseFirestore {
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String path) =>
+      throw FirebaseException(plugin: 'cloud_firestore', code: 'unavailable');
 }

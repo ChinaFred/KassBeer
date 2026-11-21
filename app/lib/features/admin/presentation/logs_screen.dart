@@ -11,6 +11,8 @@ import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/segments.dart';
 import '../../../core/providers.dart';
 import '../domain/log_entry.dart';
+import '../domain/ticket_depuis_panne.dart';
+import 'analyser_panne.dart';
 
 /// Admin › Journaux (ADR-011, J2) : sortie des Cloud Functions, lue par la
 /// callable `queryLogs`. La recherche part sur « Rechercher » seul, jamais à
@@ -187,8 +189,11 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
     });
   }
 
-  void _rechercher() =>
-      unawaited(_lancer(_filtres, origine: _Origine.rechercher));
+  void _rechercher() {
+    // Les tickets de la marque sont relus avec chaque recherche.
+    ref.invalidate(marquesPannesProvider);
+    unawaited(_lancer(_filtres, origine: _Origine.rechercher));
+  }
 
   void _chargerLaSuite() => unawaited(
     _lancer(_filtresListe!, suite: _suite, origine: _Origine.suite),
@@ -571,6 +576,9 @@ class _LigneJournal extends ConsumerWidget {
       GraviteJournal.debogage => (Icons.bug_report_outlined, scheme.outline),
       GraviteJournal.autre => (Icons.circle_outlined, scheme.onSurfaceVariant),
     };
+    final cle = entree.insertId.isEmpty
+        ? null
+        : (nature: NaturePanne.journal, id: entree.insertId);
     return ExpansionTile(
       initiallyExpanded: ouverte,
       onExpansionChanged: onOuverte,
@@ -579,7 +587,15 @@ class _LigneJournal extends ConsumerWidget {
         child: ExcludeSemantics(child: Icon(icone, color: couleur)),
       ),
       title: Text(entree.titre, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: Text(entree.resume),
+      // Marque « Ticket #N créé le… » sous le résumé (ticket #67).
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(entree.resume),
+          MarqueTicketPanne(cle: cle),
+        ],
+      ),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       children: [
@@ -598,10 +614,21 @@ class _LigneJournal extends ConsumerWidget {
           ),
         if (entree.payloadCoupe) _NoteCoupe(gardes: entree.caracteresGardes),
         const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: () => unawaited(_copier(context, ref)),
-          icon: const Icon(Icons.copy),
-          label: const Text(LogsScreen.copier),
+        BoutonsPanne(
+          copier: TextButton.icon(
+            onPressed: () => unawaited(_copier(context, ref)),
+            icon: const Icon(Icons.copy),
+            label: const Text(LogsScreen.copier),
+          ),
+          analyser: () => unawaited(
+            ouvrirAnalyse(
+              context,
+              ref,
+              cle: cle,
+              nature: NaturePanne.journal,
+              brouillon: brouillonDepuisJournal(entree),
+            ),
+          ),
         ),
       ],
     );

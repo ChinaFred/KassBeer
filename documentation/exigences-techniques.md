@@ -699,7 +699,9 @@ première ligne, résumé, texte copié), `data/error_reports_repository.dart`
 - Lecture : `error_reports` par `orderBy('created_at', descending: true)`, `limit(50)`
   (`kTaillePageRapports`), `get()` ; la suite par `startAfterDocument` du dernier document
   lu. Aucun `snapshots()`, aucune écriture ni suppression (lecture seule, choix du
-  2026-11-14 ; P50). `fromCache` vient de `metadata.isFromCache` : l'écran affiche alors le
+  2026-11-14 ; P50). La marque « Ticket #N créé le… » (ticket #67) lit `tickets/` par un seul
+  `get()` (`TicketsRepository.readAll`, `marquesPannesProvider`), relu par « Actualiser » et
+  le geste : aucun écouteur sur l'écran. `fromCache` vient de `metadata.isFromCache` : l'écran affiche alors le
   bandeau « Hors ligne ».
 - Une lecture en échec passe par `reportError` (`admin.error_reports`, contexte « première
   page » ou « page suivante »), puis l'écran affiche la panne. Une copie en échec rapporte
@@ -767,6 +769,36 @@ première ligne, résumé, texte copié), `data/error_reports_repository.dart`
   depuis la première page, champ refusé avec le message du serveur, focus et panne effacée,
   Rechercher avec une liste (un seul indicateur), entrée dépliée, titre d'une ligne, message en
   chasse fixe et copie, entrée gardée dépliée au défilement, disposition large, texte à 200 %) ; `app/test/formats_test.dart`.
+
+#### Analyser une panne — client (ticket #67)
+
+« Analyser » sur une ligne dépliée d'Admin › Rapports d'erreur et d'Admin › Journaux : ticket
+bug prérempli et lancement de son analyse. Tout se fait dans le client ; aucune callable,
+aucune règle, aucun modèle de données ne change, et rien n'est écrit sur `error_reports/`.
+
+| Fichier | Contenu |
+|---|---|
+| `features/admin/domain/ticket_depuis_panne.dart` | fonctions pures : `brouillonDepuisRapport`, `brouillonDepuisJournal` (`TicketBrouillon` type bug, écran `inconnu`, titre de 5 à 100 caractères sur une ligne, description de 2 000 au plus) ; `typeException` (mot avant le premier « : », nom de classe qui finit par `Exception` ou `Error`) ; `lignesPileApplication` (trames Dart exactes seules, `#N nom (package:kass_beer/<chemin>.dart:L:C)`, nom de 1 à 100 caractères `[A-Za-z0-9_$.]`, précédé au besoin de `new ` et suivi au besoin de `.<anonymous closure>`, sans espace libre, chemin en minuscules de 150 au plus, 15 trames au plus ; trame écartée si elle porte `users/`, `members/` ou un mot de 28 caractères alphanumériques ; aucun texte libre, pile du web compilé non publiée) ; `clePanneDeDescription` (identifiant lu sur la première ligne d'une description, « Rapport : » ou « Entrée de journal : ») ; `indexTicketsParPanne` et `MarquePanne` (ticket le plus récent, nombre, libellé). Chaque champ repris est contrôlé par sa forme (identifiant, fonctionnalité, version, fonction, gravité), sinon omis. Le message de l'erreur, le contexte, l'uid, le message et les données d'un journal ne sont jamais repris (P24, P49). Une valeur de la bonne forme reste écrite par un membre (fonctionnalité, identifiant, nom d'une trame) : l'admin relit le texte avant l'envoi |
+| `features/tickets/data/tickets_repository.dart` | `readAll()` : `tickets/` lu une fois par `get()`, échec rapporté (`tickets.read_all`, sans contexte) puis relancé |
+| `features/admin/presentation/analyser_panne.dart` | `marquesPannesProvider` (`FutureProvider.autoDispose` sur `readAll`, sans nouvel essai automatique ; relu par `ref.invalidate` sur « Actualiser » et le geste d'Admin › Rapports d'erreur, et sur « Rechercher » d'Admin › Journaux ; aucune marque pendant la première lecture ni après une panne ; aucun écouteur sur ces écrans, P50), `ouvrirAnalyse` (boîte de doublon, puis `push` de `/tickets/nouveau` avec `BrouillonAnalyse`), `BoutonsPanne` (`Wrap` : copie, puis « Analyser » en `OutlinedButton`, même hauteur que la copie), `MarqueTicketPanne` (vers `/admin/tickets/:id`) |
+| `features/tickets/domain/ticket.dart` | `BrouillonAnalyse`, `extra` du formulaire : `TicketFormScreen(reprise:, proposerLancement: true)` |
+| `features/tickets/presentation/ticket_form_screen.dart` | case « Lancer l'analyse dès la publication » pour l'admin seul, sous la description (l'avertissement public reste en tête du formulaire), désactivée hors ligne ; cochée et en ligne, « Envoyer » ouvre `BoiteEnvoiAnalyse` ; l'écriture du ticket et le dépôt de l'image sont communs aux deux envois |
+| `features/tickets/presentation/boite_lancement.dart` | `BoiteEnvoiAnalyse` et `FinEnvoiAnalyse` : rien n'est écrit avant « Envoyer et lancer » ; quota lu dans `ticket_status/launches` (`launchStatusProvider`, aucune constante) ; puis écriture, suivi du ticket par `ref.listenManual(adminTicketsProvider)`, un seul appel de `launchTicketAnalysis` (dépôt `launch`, `FirebaseFunctions` mémorisé, P6) quand le ticket a `github_issue_number`, le statut `received` et `launch_analysis` dans `allowed_decisions` (aucune précondition recopiée, P39) ; abandon sur `over_quota`, `send_failed` ou après `delaiPublication` (2 minutes, `Timer` hors du jour de brassage) ; plafond du jour atteint (`EtatLancements.plafondAtteint`) : « Envoyer sans lancer » écrit le ticket et ferme la boîte, sans appel ; titre « Envoi en cours », puis « Ticket envoyé » (« Ticket non envoyé » sur un refus d'écriture) ; un seul indicateur, dans le contenu ; refus du lancement affiché « Ticket envoyé. <motif> » en ton d'erreur |
+| `features/tickets/domain/ticket_screens.dart` | éléments `/admin/rapports-erreur/fenetre/doublon`, `/admin/journaux/fenetre/doublon` (« Ticket déjà créé ») et `/tickets/nouveau/fenetre/lancement` (« Envoyer et lancer l'analyse ») |
+
+- Le lancement compte dans le plafond `ticket_routine_launch` (P36), et le ticket dans le quota
+  d'envoi de l'admin ; aucun nouveau poste de coût.
+- Une écriture refusée est rapportée par le dépôt de données, sans le texte du ticket (P13) ;
+  le lancement passe par `TicketsRepository.launch`, qui rapporte ses échecs.
+- Tests : `app/test/analyser_panne_test.dart` (fonctions pures : e-mail, uid et `users/` absents,
+  tri et nombre des lignes de pile, bornes, journal sans message ni données, identifiant de la
+  première ligne, index ; écrans : bouton de 48 px et formulaire prérempli, marque sur R1 et pas
+  sur R2, boîte de doublon, rien d'écrit avant « Envoyer et lancer » et un seul lancement,
+  `over_quota`, 2 minutes, boîte fermée avant la publication, plafond atteint sans appel,
+  lancement refusé, écriture refusée, lecture unique relue par « Actualiser » et panne sans
+  marque, case décochée, hors ligne, formulaire ordinaire sans case, journal ; trames avec texte
+  libre écartées, types en `Exception` ou `Error` seuls) ; `app/test/tickets_repository_test.dart`
+  (`readAll`, panne rapportée).
 
 #### Bibliothèque — client
 
