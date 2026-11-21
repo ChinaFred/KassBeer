@@ -171,9 +171,11 @@ Preparation _preparer({
   alias: const [],
   ajoutsDansHoublons: const [],
   fusions: fusions,
-  // La table des cultures du projet désigne des fiches absentes de ces
-  // sources : elle est essayée par le groupe « table de fusion des cultures ».
+  // La table et les corrections des cultures du projet désignent des entrées
+  // absentes de ces sources : elles sont essayées par les groupes « table de
+  // fusion des cultures » et « corrections des cultures de Brewtarget ».
   fusionsCultures: const [],
+  correctionsCultures: const [],
 );
 
 /// Culture inventée : nom, atténuation minimale (la maximale vaut + 4).
@@ -689,6 +691,221 @@ void main() {
     expect(doc.entrees, hasLength(3));
     expect(doc.principale.source, Source.fabricants);
     expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+  });
+
+  group('corrections des cultures de Brewtarget', () {
+    /// Culture inventée d'un fichier 004 : nom, producteur, référence.
+    String culture(String nom, String producteur, String? produit) =>
+        jsonEncode({
+          'name': nom,
+          'product_id': ?produit,
+          'type': 'ale',
+          'form': 'liquid',
+          'producer': producteur,
+          'attenuation_range': {
+            'minimum': {'unit': '%', 'value': 70},
+            'maximum': {'unit': '%', 'value': 74},
+          },
+        });
+    Referentiel fusionner(
+      List<String> c004,
+      List<String> c005,
+      List<CorrectionCulture> corrections,
+    ) {
+      String fichier(List<String> c) =>
+          '{"beerjson": {"version": 2.01, "cultures": [${c.join(',')}]}}';
+      final lecture = LectureReferentiels(datesReleveFabricants: const {})
+        ..lire003ou004(fichier(c004), Source.brewtarget004)
+        ..lire003ou004(fichier(c005), Source.brewtarget003);
+      return Referentiel.fusionner(
+        lecture.entrees,
+        correctionsCultures: corrections,
+      );
+    }
+
+    Set<String> ids(Referentiel r) =>
+        r.parNature[NatureReferentiel.culture]!.keys.toSet();
+
+    test('référence lue : l\'entrée rejoint la souche retenue', () {
+      final r = fusionner(
+        [culture('Souche Courte', 'Labo Fictif', 'LF-7-SC')],
+        [culture('Souche Courte', 'Labo Fictif', 'LF-7')],
+        const [
+          ReferenceCulture('Labo Fictif', lue: 'LF-7-SC', retenue: 'LF-7'),
+        ],
+      );
+      expect(ids(r), {'culture-labo-fictif-lf7-souche-courte'});
+      expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+    });
+
+    test('entrée sans référence : elle prend la référence retenue', () {
+      final r = fusionner(
+        [culture('Souche Courte', 'Labo Fictif', null)],
+        [culture('LF-7 Souche Courte Longue', 'Labo Fictif', 'LF-7')],
+        const [
+          ReferenceCulture(
+            'Labo Fictif',
+            nom: 'Souche Courte',
+            retenue: 'LF-7',
+          ),
+        ],
+      );
+      expect(ids(r), hasLength(1));
+      expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+    });
+
+    test('nom de gamme : « <gamme> <référence> », une entrée sans référence '
+        'garde son nom', () {
+      final r = fusionner(
+        [
+          culture('Gamme', 'Labo Fictif', 'A-1'),
+          culture('Gamme', 'Labo Fictif', 'B2'),
+          culture('Gamme', 'Labo Fictif', null),
+        ],
+        const [],
+        const [GammeCulture('Labo Fictif', 'Gamme')],
+      );
+      final c = r.parNature[NatureReferentiel.culture]!;
+      expect(
+        {for (final f in c.values) f.nom},
+        {'Gamme A-1', 'Gamme B2', 'Gamme'},
+      );
+      expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+    });
+
+    test('alias écarté : le nom sort des alias de la seule souche visée', () {
+      final r = fusionner(
+        [
+          culture('Souche Longue', 'Labo Fictif', 'LF-1'),
+          culture('Souche Courte', 'Labo Fictif', 'LF-2'),
+        ],
+        [culture('Souche Courte', 'Labo Fictif', 'LF-1')],
+        const [
+          AliasEcarteCulture(
+            'Labo Fictif',
+            reference: 'LF-1',
+            alias: 'Souche Courte',
+          ),
+        ],
+      );
+      expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+      expect(
+        r.parNature[NatureReferentiel.culture]!.values
+            .firstWhere((f) => f.nom == 'Souche Longue')
+            .aliases,
+        isEmpty,
+      );
+    });
+
+    test('doublons d\'un même producteur : seuls les noms partagés chez un '
+        'même producteur, « Labs » rapproché', () {
+      final r = fusionner(
+        [
+          culture('Souche Courte', 'Wyeast', '1001'),
+          culture('Souche Courte', 'Wyeast Labs', '1002'),
+          culture('Autre Souche', 'Labo Fictif', 'LF-1'),
+          culture('Autre Souche', 'Autre Labo', 'AL-1'),
+        ],
+        const [],
+        const [],
+      );
+      expect(r.nomsPartages(NatureReferentiel.culture).keys, {
+        'souche-courte',
+        'autre-souche',
+      });
+      expect(r.doublonsMemeProducteur().keys, {'souche-courte'});
+    });
+
+    test('nom de gamme : le nom construit est coupé à 120 caractères', () {
+      final longue = 'R${'1' * 119}';
+      final r = fusionner(
+        [culture('Gamme', 'Labo Fictif', longue)],
+        const [],
+        const [GammeCulture('Labo Fictif', 'Gamme')],
+      );
+      final nom = r.parNature[NatureReferentiel.culture]!.values.single.nom;
+      expect(nom, hasLength(120));
+      expect(nom, startsWith('Gamme R1'));
+    });
+
+    test(
+      'ligne qui ne désigne rien, entrée corrigée deux fois : StateError',
+      () {
+        final c = [culture('Souche Courte', 'Labo Fictif', 'LF-7')];
+        expect(
+          () => fusionner(c, const [], const [
+            ReferenceCulture('Labo Fictif', lue: 'LF-9', retenue: 'LF-7'),
+          ]),
+          throwsStateError,
+        );
+        expect(
+          () =>
+              fusionner(c, const [], const [GammeCulture('Labo Fictif', 'X')]),
+          throwsStateError,
+        );
+        expect(
+          () => fusionner(c, const [], const [
+            AliasEcarteCulture('Labo Fictif', reference: 'LF-7', alias: 'X'),
+          ]),
+          throwsStateError,
+        );
+        expect(
+          () => fusionner(
+            [culture('Gamme', 'Labo Fictif', 'LF-7')],
+            const [],
+            const [
+              GammeCulture('Labo Fictif', 'Gamme'),
+              ReferenceCulture('Labo Fictif', lue: 'LF-7', retenue: 'LF-8'),
+            ],
+          ),
+          throwsStateError,
+        );
+      },
+    );
+
+    test(
+      'chaque ligne de kCorrectionsCultures, sur ses noms et références',
+      () {
+        // Noms et références des souches visées seuls, valeurs inventées (P20).
+        final r = fusionner(
+          [
+            culture('C2C American Farmhouse', 'Omega Yeast', 'OYL-217-C2C'),
+            culture('Saison #1', 'GigaYeast', 'GY018-SAISON-1'),
+            culture('Saison #2', 'GigaYeast', 'GY027-SAISON-2'),
+            culture('Sweet Flemish Brett', 'GigaYeast', 'GY144'),
+            culture('Saison Blend', 'The Yeast Bay', null),
+            culture('Lalvin', 'Lallemand', '71B'),
+            culture('SafSpirit', 'Fermentis', 'HG-1'),
+            culture('Fermoale', 'AEB', 'AY3'),
+            culture('Bavarian Wheat Blend', 'Wyeast', '3056'),
+            culture('British Ale II', 'Wyeast', '1335'),
+            culture('Lactobacillus buchneri', 'Wyeast', '5335'),
+          ],
+          [
+            culture('C2C American Farmhouse', 'Omega Yeast', 'OYL-217'),
+            culture('Saison #1', 'GigaYeast', 'GY018'),
+            culture('Saison #2', 'GigaYeast', 'GY027'),
+            culture('Sweet Flemish Brett', 'GigaYeast', 'GB144'),
+            culture('Saison Blend', 'The Yeast Bay', 'WLP4007'),
+            culture('Bavarian Wheat', 'Wyeast', '3056'),
+            culture('British Ale', 'Wyeast', '1335'),
+            culture('Lactobacillus', 'Wyeast', '5335'),
+          ],
+          kCorrectionsCultures,
+        );
+        final c = r.parNature[NatureReferentiel.culture]!;
+        expect(c, hasLength(11));
+        expect({
+          for (final f in c.values) f.nom,
+        }, containsAll(['Lalvin 71B', 'SafSpirit HG-1', 'Fermoale AY3']));
+        for (final f in c.values) {
+          expect(f.aliases, isNot(contains('Bavarian Wheat')), reason: f.id);
+          expect(f.aliases, isNot(contains('British Ale')), reason: f.id);
+          expect(f.aliases, isNot(contains('Lactobacillus')), reason: f.id);
+        }
+        expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+      },
+    );
   });
 
   group('table de fusion des cultures', () {
