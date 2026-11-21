@@ -346,6 +346,12 @@ Le 2026-11-21, avec le lot D1 d'ADR-017, P54 décrit le moteur commun `ingest/li
 comme livré pour les houblons, avec le tarif commun `import/ingest/tarif.json` et l'empreinte
 figée ; la nature des divers reste « à livrer ».
 
+Le 2026-11-21, avec le lot D2 d'ADR-017, `CLAUDE.md` retire « à livrer » de `generer-divers.mjs`,
+`lister-divers-recettes.mjs`, `exchange/bin/lister_divers_recettes.dart` et `ingest/lib/divers/` ;
+« Structure » nomme `exchange/bin/src/lister_recettes.dart`, `lib/redaction/entree.mjs` et
+`lancer.mjs` ; P54 couvre les deux natures ; P62 refuse aussi les doses en toutes lettres ;
+« Exception durable » cite les descriptions des divers. Seul l'affichage reste à livrer (D3).
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

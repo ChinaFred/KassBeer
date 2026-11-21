@@ -117,7 +117,8 @@ class IndexBibliotheque {
   /// Nombre d'entrées dont l'identifiant (`<nature>-<clé du nom>`), le nom ou
   /// un alias a la clé de [nom] : 0 ou au moins 2 quand [resoudre] rend `null`
   /// pour un malt, un houblon ou un ajout. Sert à dire pourquoi un nom n'est
-  /// pas résolu (`exchange/bin/lister_houblons_recettes.dart`, ADR-013).
+  /// pas résolu (`exchange/bin/lister_houblons_recettes.dart`, ADR-013 ;
+  /// `exchange/bin/lister_divers_recettes.dart`, ADR-017).
   int correspondances(String nom) {
     final cle = cleNormalisee(nom);
     if (cle.isEmpty) return 0;

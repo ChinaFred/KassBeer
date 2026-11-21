@@ -1,4 +1,5 @@
-// Référentiels, descriptions aromatiques (ADR-013, P55), recettes publiques et comptes
+// Référentiels, descriptions aromatiques (ADR-013, P55), descriptions des divers (ADR-017,
+// P62), recettes publiques et comptes
 // rendus de l'ingestion (ADR-005, P19) :
 // écrits par aucun client, lus par les membres (ingest_runs et import_unresolved : par
 // l'admin). Cinq profils de P4, plus les connexions non conformes de P11. L'écriture
@@ -55,6 +56,27 @@ const DOCS = {
     ],
     input_sha256: "3".repeat(64),
     content_sha256: "4".repeat(64),
+  },
+  "beer_misc_descriptions/misc-epice-fictive": {
+    misc_name: "Épice Fictive",
+    status: "described",
+    confidence: "medium",
+    summary: "Épice inventée pour le test, ajoutée pour une note chaude et poivrée.",
+    roles: [{ key: "flavor", label: "Aromatiser" }],
+    moments: { boil: { text: "Texte fictif de quarante caractères au moins, pour le test." } },
+    changes_taste: false,
+    reviewed: false,
+    provenance: [
+      {
+        source: "claude-api",
+        source_id: "misc-epice-fictive",
+        version: "claude-fable-5-2 / prompt 1 / effort medium",
+        licence: "Texte généré pour Kass'Beer",
+        retrieved: "2026-11-21",
+      },
+    ],
+    input_sha256: "5".repeat(64),
+    content_sha256: "6".repeat(64),
   },
   "beer_cultures/culture-labo-fictif-lf1-levure-fictive": {
     name: "Levure Fictive",
@@ -113,6 +135,7 @@ const LUS_PAR_LES_MEMBRES = [
   "beer_fermentables",
   "beer_hops",
   "beer_hop_aromas",
+  "beer_misc_descriptions",
   "beer_cultures",
   "beer_miscs",
   "beer_styles",

@@ -6,6 +6,20 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.89 — technique
+
+Lot D2 d'ADR-017 : les descriptions des divers se rédigent depuis le poste de l'admin.
+`ingest/generer-divers.mjs` passe par le moteur commun avec la nature `ingest/lib/divers/`
+(prompt, contrôle, 13 rôles, poste `misc_description_generation`). Le contrôle refuse toute dose,
+en chiffres ou en lettres (liste d'unités élargie par l'utilisateur : kg, cl, hl, oz, cuillère,
+sachet, goutte, comprimé, tablette…), et un goût décrit sans `changes_taste`. Commun aux deux natures : caractères de format
+invisibles retirés, adresse, `@`, balisage et monnaie contrôlés sur la forme NFKC. La liste des divers du
+groupe vient de `ingest/lister-divers-recettes.mjs` puis `exchange/bin/lister_divers_recettes.dart`
+(résolution commune `ingredients_recettes.dart`). `ingest/ecrire.mjs` écrit `beer_misc_descriptions/`
+avec les garde-fous des arômes ; `firestore.rules` l'ouvre en `get` aux membres seuls, tests des
+cinq profils. Empreinte des houblons inchangée ; leurs textes passent aussi par le contrôle Cf et NFKC. Tests : `ingest` 271, `exchange`
+307, `referentiels.test.mjs` 153.
+
 ### v0.1.88 — technique
 
 Lot D1 d'ADR-017 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers

@@ -584,7 +584,10 @@ void main() {
     });
 
     test('résolution d\'un nom à l\'import (IndexBibliotheque)', () {
-      final index = indexHoublons(p.collections['beer_hops']);
+      final index = indexIngredients(
+        NatureRecettes.houblons,
+        p.collections['beer_hops'],
+      );
       const attendu = {
         'Saaz': 'hop-saaz',
         'saaz (cz)': 'hop-saaz',

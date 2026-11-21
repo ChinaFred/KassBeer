@@ -14,15 +14,15 @@
 // Le tarif est lu dans import/ingest/tarif.json, commun aux natures (ADR-017).
 
 import { fileURLToPath } from "node:url";
+import { construireEntree } from "../redaction/entree.mjs";
 import { MAX_TOKENS, MODELE, parametresRequete, PROMPT_VERSION } from "./prompt.mjs";
 import {
+  COLLECTION_AROMES,
   controlerEntreeArome,
   controlerSortieModele,
   donneesEnvoyees,
   empreinteEntree,
   ID_HOUBLON,
-  LICENCE_PROVENANCE,
-  SOURCE_PROVENANCE,
   USAGES,
 } from "./validation.mjs";
 
@@ -34,26 +34,6 @@ const LIBELLES_USAGES = {
   whirlpool: "Whirlpool",
   dry_hop: "Houblonnage à cru",
 };
-
-/// Entrée de aromes.json tirée d'une sortie contrôlée du modèle ([resultat]) pour [cible]
-/// (`{id, nom, empreinte}`).
-function construireEntree(cible, resultat, { effort, date }) {
-  return {
-    hop_name: cible.nom,
-    ...resultat,
-    reviewed: false,
-    provenance: [
-      {
-        source: SOURCE_PROVENANCE,
-        source_id: cible.id,
-        version: `${MODELE} / prompt ${PROMPT_VERSION} / effort ${effort}`,
-        licence: LICENCE_PROVENANCE,
-        retrieved: date,
-      },
-    ],
-    input_sha256: cible.empreinte,
-  };
-}
 
 export const NATURE_HOUBLON = Object.freeze({
   /// Poste de coût porté par chaque rapport (catalogue « Coûts variables »).
@@ -83,7 +63,26 @@ export const NATURE_HOUBLON = Object.freeze({
   parametresRequete,
   controlerSortieModele,
   controlerEntree: controlerEntreeArome,
-  construireEntree,
+  /// Entrée de aromes.json tirée d'une sortie contrôlée du modèle.
+  construireEntree: (cible, resultat, { effort, date }) =>
+    construireEntree(cible, resultat, {
+      champNom: "hop_name",
+      modele: MODELE,
+      promptVersion: PROMPT_VERSION,
+      effort,
+      date,
+    }),
+  /// Écriture par ecrire.mjs (lib/execution.mjs).
+  ecriture: {
+    collection: COLLECTION_AROMES,
+    option: "aromes",
+    nomDossier: "aromes",
+    referentielCollection: "beer_hops",
+    scriptNoms: "lister-houblons-recettes.mjs",
+    champFichier: "aromas_file",
+    champSansDescription: "hops_without_aroma",
+    sansDescription: "sans description aromatique",
+  },
   relecture: {
     titre: "# Descriptions aromatiques à relire",
     intro: [

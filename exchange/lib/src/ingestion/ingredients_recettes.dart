@@ -1,16 +1,44 @@
 import '../resolution_import.dart';
 import '../compte_rendu.dart';
 
-/// Houblons des recettes du groupe (ADR-013, décisions 9 à 11) : résolution
-/// des noms lus par `ingest/lister-houblons-recettes.mjs` vers les documents de
-/// `beer_hops/`, par [IndexBibliotheque.resoudre] (identifiant, nom et alias),
+/// Ingrédients des recettes du groupe, pour une nature rédigée par l'API
+/// Claude : houblons (ADR-013, décisions 9 à 11) ou divers (ADR-017).
+/// Résolution des noms lus par `ingest/lister-houblons-recettes.mjs` ou
+/// `ingest/lister-divers-recettes.mjs` vers les documents de `beer_hops/` ou
+/// `beer_miscs/`, par [IndexBibliotheque.resoudre] (identifiant, nom et alias),
 /// comme Recettes › Importer. Aucune copie de cette résolution en Node.
 
 /// Noms lus au plus dans un fichier de noms.
-const int kMaxNomsHoublons = 5000;
+const int kMaxNomsIngredients = 5000;
 
 /// Longueur maximale d'un nom, en caractères.
-const int kMaxLongueurNomHoublon = 120;
+const int kMaxLongueurNomIngredient = 120;
+
+/// Nature d'une liste du groupe : liste de recette résolue, référentiel
+/// préparé lu, format du fichier écrit.
+enum NatureRecettes {
+  /// Houblons (`hop_additions`, `beer_hops.json`, `houblons-recettes.json`).
+  houblons(
+    ListeRecette.houblons,
+    'beer_hops.json',
+    'kassbeer_houblons_recettes',
+  ),
+
+  /// Divers (`miscellaneous_additions`, `beer_miscs.json`,
+  /// `divers-recettes.json`).
+  divers(ListeRecette.ajouts, 'beer_miscs.json', 'kassbeer_divers_recettes');
+
+  const NatureRecettes(this.liste, this.referentiel, this.format);
+
+  /// Liste de recette résolue par [IndexBibliotheque].
+  final ListeRecette liste;
+
+  /// Nom du référentiel préparé (`import/ingest/prepare/`).
+  final String referentiel;
+
+  /// Valeur de `format` du fichier écrit, lue par `ingest/`.
+  final String format;
+}
 
 /// Raison d'un nom non résolu : aucune entrée, ou plusieurs.
 enum RaisonNonResolu {
@@ -21,11 +49,11 @@ enum RaisonNonResolu {
   plusieurs,
 }
 
-/// Noms d'un fichier `noms-houblons.json` (`{"noms": [...]}`) ou d'une liste
-/// de noms écrite à la main pour l'essai (`[...]`). Lève [FormatException]
-/// pour une autre forme, un nom qui n'est pas un texte de 1 à 120 caractères,
-/// ou plus de 5 000 noms.
-List<String> lireNomsHoublons(Object? json) {
+/// Noms d'un fichier de noms (`{"noms": [...]}`, écrit par `ingest/`) ou
+/// d'une liste de noms écrite à la main pour l'essai (`[...]`). Lève
+/// [FormatException] pour une autre forme, un nom qui n'est pas un texte de 1
+/// à 120 caractères, ou plus de 5 000 noms.
+List<String> lireNomsIngredients(Object? json) {
   final liste = switch (json) {
     {'noms': final List<Object?> noms} => noms,
     final List<Object?> noms => noms,
@@ -33,14 +61,14 @@ List<String> lireNomsHoublons(Object? json) {
       '{"noms": [...]} ou liste de noms attendu',
     ),
   };
-  if (liste.length > kMaxNomsHoublons) {
-    throw FormatException('$kMaxNomsHoublons noms au plus');
+  if (liste.length > kMaxNomsIngredients) {
+    throw FormatException('$kMaxNomsIngredients noms au plus');
   }
   return [
     for (final (i, n) in liste.indexed)
       if (n is String &&
           n.trim().isNotEmpty &&
-          n.trim().runes.length <= kMaxLongueurNomHoublon)
+          n.trim().runes.length <= kMaxLongueurNomIngredient)
         n.trim()
       else
         throw FormatException('noms[$i] : texte de 1 à 120 caractères attendu'),
@@ -48,10 +76,10 @@ List<String> lireNomsHoublons(Object? json) {
 }
 
 /// Cible (`emulator` ou `production`) et date (`generated_at`, ISO 8601) d'un
-/// fichier `noms-houblons.json`, recopiées dans `houblons-recettes.json` :
-/// `ingest/ecrire.mjs` refuse en production une liste tirée de l'émulateur ou
-/// trop ancienne. `null` pour une liste écrite à la main ou un champ illisible.
-({String? cible, String? genereLe}) origineNomsHoublons(Object? json) {
+/// fichier de noms, recopiées dans la liste du groupe : `ingest/ecrire.mjs`
+/// refuse en production une liste tirée de l'émulateur ou trop ancienne.
+/// `null` pour une liste écrite à la main ou un champ illisible.
+({String? cible, String? genereLe}) origineNoms(Object? json) {
   if (json is! Map<String, Object?>) return (cible: null, genereLe: null);
   final cible = json['target'];
   final date = json['generated_at'];
@@ -63,13 +91,13 @@ List<String> lireNomsHoublons(Object? json) {
   );
 }
 
-/// Index des houblons tiré de `beer_hops.json` préparé (liste `{id, data}`).
+/// Index de [nature] tiré de son référentiel préparé (liste `{id, data}`).
 /// Lève [FormatException] pour une autre forme.
-IndexBibliotheque indexHoublons(Object? json) {
+IndexBibliotheque indexIngredients(NatureRecettes nature, Object? json) {
   if (json is! List<Object?>) {
-    throw const FormatException('beer_hops.json : liste attendue');
+    throw FormatException('${nature.referentiel} : liste attendue');
   }
-  return IndexBibliotheque(ListeRecette.houblons, [
+  return IndexBibliotheque(nature.liste, [
     for (final (i, d) in json.indexed)
       switch (d) {
         {
@@ -85,16 +113,18 @@ IndexBibliotheque indexHoublons(Object? json) {
             ],
           ),
         _ => throw FormatException(
-          'beer_hops.json[$i] : {id, data.name} attendu',
+          '${nature.referentiel}[$i] : {id, data.name} attendu',
         ),
       },
   ]);
 }
 
-/// Contenu de `houblons-recettes.json` : cible et date de la liste des noms
-/// ([origine], `null` si inconnues), identifiants résolus, triés, chacun avec
-/// les noms qui y mènent, et noms non résolus avec leur raison.
-Map<String, Object?> houblonsRecettes(
+/// Contenu de la liste du groupe de [nature] (`houblons-recettes.json`,
+/// `divers-recettes.json`) : cible et date de la liste des noms ([origine],
+/// `null` si inconnues), identifiants résolus, triés, chacun avec les noms qui
+/// y mènent, et noms non résolus avec leur raison.
+Map<String, Object?> ingredientsRecettes(
+  NatureRecettes nature,
   List<String> noms,
   IndexBibliotheque index, {
   ({String? cible, String? genereLe}) origine = (cible: null, genereLe: null),
@@ -114,7 +144,7 @@ Map<String, Object?> houblonsRecettes(
   final ids = resolus.keys.toList()..sort();
   final restants = nonResolus.keys.toList()..sort();
   return {
-    'format': 'kassbeer_houblons_recettes',
+    'format': nature.format,
     'version': 1,
     'target': origine.cible,
     'generated_at': origine.genereLe,

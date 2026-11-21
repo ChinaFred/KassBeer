@@ -20,8 +20,10 @@ export const COLLECTIONS = [
 ];
 
 /// Collections écrites par ecrire.mjs : celles de la préparation, puis beer_hop_aromas, lue
-/// dans import/ingest/aromes/aromes.json et contrôlée par lib/aromes/validation.mjs (ADR-013).
-export const COLLECTIONS_ECRITES = [...COLLECTIONS, "beer_hop_aromas"];
+/// dans import/ingest/aromes/aromes.json et contrôlée par lib/aromes/validation.mjs
+/// (ADR-013), puis beer_misc_descriptions, lue dans import/ingest/divers/descriptions.json et
+/// contrôlée par lib/divers/validation.mjs (ADR-017).
+export const COLLECTIONS_ECRITES = [...COLLECTIONS, "beer_hop_aromas", "beer_misc_descriptions"];
 
 /// Collection du compte rendu d'exécution, écrite par l'écrivain lui-même.
 export const COLLECTION_EXECUTIONS = "ingest_runs";

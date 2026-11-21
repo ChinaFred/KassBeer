@@ -22,19 +22,33 @@ describe("lireOptions", () => {
       dossier: null,
       rapports: null,
       aromes: null,
+      divers: null,
       supprimerAbsents: null,
     });
   });
 
   it("simulation, dossiers et projet demo-*", () => {
     const o = lireOptions(
-      ["--simulation", "--dossier", "a", "--rapports", "b", "--aromes", "c", "--projet", "demo-x"],
+      [
+        "--simulation",
+        "--dossier",
+        "a",
+        "--rapports",
+        "b",
+        "--aromes",
+        "c",
+        "--divers",
+        "d",
+        "--projet",
+        "demo-x",
+      ],
       EMULATEUR,
     );
     assert.equal(o.simulation, true);
     assert.equal(o.dossier, "a");
     assert.equal(o.rapports, "b");
     assert.equal(o.aromes, "c");
+    assert.equal(o.divers, "d");
     assert.equal(o.projet, "demo-x");
   });
 
@@ -56,6 +70,7 @@ describe("lireOptions", () => {
       dossier: null,
       rapports: null,
       aromes: null,
+      divers: null,
       supprimerAbsents: null,
     });
   });

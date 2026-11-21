@@ -7,14 +7,8 @@
 // recopient aucun texte rendu par le modèle.
 
 import { readFileSync } from "node:fs";
-import {
-  EFFORTS,
-  estDate,
-  jsonCanonique,
-  nettoyerTexte,
-  reglesTexte,
-  sha256,
-} from "../redaction/texte.mjs";
+import { reglesEnveloppe } from "../redaction/entree.mjs";
+import { jsonCanonique, nettoyerTexte, reglesTexte, sha256 } from "../redaction/texte.mjs";
 
 /// Collection écrite par ecrire.mjs depuis import/ingest/aromes/aromes.json.
 export const COLLECTION_AROMES = "beer_hop_aromas";
@@ -30,10 +24,6 @@ export const CONFIANCES = ["high", "medium", "low"];
 export const DESCRIPTEURS_MIN = 1;
 export const DESCRIPTEURS_MAX = 8;
 
-/// Ligne de provenance d'une entrée générée.
-export const SOURCE_PROVENANCE = "claude-api";
-export const LICENCE_PROVENANCE = "Texte généré pour Kass'Beer";
-
 /// Liste fermée des descripteurs (`{key, label}`), lue une fois. Seul endroit où elle vit :
 /// le document porte le libellé, l'application ne fait que l'afficher.
 export const DESCRIPTEURS = JSON.parse(
@@ -44,9 +34,6 @@ const LIBELLES = new Map(DESCRIPTEURS.map((d) => [d.key, d.label]));
 
 /// Identifiant d'un houblon de beer_hops/.
 export const ID_HOUBLON = /^hop-[a-z0-9]+(-[a-z0-9]+)*$/;
-const VERSION = new RegExp(
-  `^claude-[a-z0-9-]{1,60} / prompt [1-9][0-9]{0,3} / effort (${EFFORTS.join("|")})$`,
-);
 
 const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const longueur = (t) => [...t].length;
@@ -70,11 +57,6 @@ export function empreinteEntree(donnees, { promptVersion, modele, effort }) {
   return sha256(
     jsonCanonique({ hop: donnees, prompt_version: promptVersion, model: modele, effort }),
   );
-}
-
-/// Empreinte du contenu d'une entrée de aromes.json, calculée par ecrire.mjs.
-export function empreinteContenu(data) {
-  return sha256(jsonCanonique(data));
 }
 
 /// Contrôle de la sortie structurée du modèle ([sortie], objet déjà décodé). Rend
@@ -213,29 +195,6 @@ export function controlerEntreeArome(doc) {
     r("hop_name", "texte de 1 à 120 caractères attendu");
   }
   erreurs.push(...reglesContenu(d));
-  if (typeof d.reviewed !== "boolean") r("reviewed", "booléen attendu");
-  if (d.reviewed === true && !estDate(d.reviewed_at)) {
-    r("reviewed_at", "date AAAA-MM-JJ attendue pour une entrée relue");
-  }
-  if (d.reviewed === false && "reviewed_at" in d) r("reviewed_at", "absente attendue si non relue");
-  if (!/^[0-9a-f]{64}$/.test(d.input_sha256 ?? "")) r("input_sha256", "64 hexadécimaux attendus");
-  const p = d.provenance;
-  if (!Array.isArray(p) || p.length !== 1 || !estObjet(p[0])) {
-    r("provenance", "une ligne attendue");
-  } else {
-    const l = p[0];
-    const cles = ["source", "source_id", "version", "licence", "retrieved"];
-    if (Object.keys(l).sort().join(",") !== [...cles].sort().join(",")) {
-      r("provenance[0]", "clés source, source_id, version, licence, retrieved attendues");
-    } else {
-      if (l.source !== SOURCE_PROVENANCE) r("provenance[0].source", `${SOURCE_PROVENANCE} attendu`);
-      if (l.source_id !== doc.id) r("provenance[0].source_id", "identifiant du houblon attendu");
-      if (typeof l.version !== "string" || !VERSION.test(l.version)) {
-        r("provenance[0].version", "« <modèle> / prompt <n> / effort <e> » attendu");
-      }
-      if (l.licence !== LICENCE_PROVENANCE) r("provenance[0].licence", "licence attendue");
-      if (!estDate(l.retrieved)) r("provenance[0].retrieved", "date AAAA-MM-JJ attendue");
-    }
-  }
+  erreurs.push(...reglesEnveloppe(doc, "houblon"));
   return erreurs;
 }

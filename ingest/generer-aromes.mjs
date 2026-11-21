@@ -14,32 +14,9 @@
 //
 // Clé : ANTHROPIC_API_KEY dans l'environnement, jamais affichée. Codes de sortie : 0 fini ;
 // 1 échec ; 2 utilisation refusée (tarif, budget, confirmation…) ; 3 réponses en erreur ou
-// refusées au contrôle (voir rapport.json).
+// refusées au contrôle (voir rapport.json), posés par lib/redaction/lancer.mjs.
 
 import { NATURE_HOUBLON } from "./lib/aromes/nature.mjs";
-import { masquerCle } from "./lib/redaction/client.mjs";
-import { generer } from "./lib/redaction/moteur.mjs";
-import { ErreurRedaction } from "./lib/redaction/tarif.mjs";
+import { lancerGenerateur } from "./lib/redaction/lancer.mjs";
 
-const cle = process.env.ANTHROPIC_API_KEY;
-try {
-  const rapport = await generer({
-    nature: NATURE_HOUBLON,
-    argv: process.argv.slice(2),
-    env: process.env,
-    entree: process.stdin,
-    sortie: process.stdout,
-  });
-  if ((rapport.erreurs?.length ?? 0) + (rapport.refus?.length ?? 0) > 0) process.exitCode = 3;
-} catch (erreur) {
-  // Message seul, clé retirée : ni pile ni objet d'erreur du SDK à l'écran.
-  if (erreur instanceof ErreurRedaction) {
-    console.error(masquerCle(erreur.message, cle));
-    process.exitCode = 2;
-  } else {
-    console.error(
-      `Échec de la génération : ${masquerCle(`${erreur?.name}: ${erreur?.message}`, cle)}`,
-    );
-    process.exitCode = 1;
-  }
-}
+await lancerGenerateur(NATURE_HOUBLON);

@@ -29,7 +29,11 @@ import {
   MESSAGE_TARIF_INCONNU,
 } from "../lib/redaction/tarif.mjs";
 import { nettoyerTexte, reglesTexte } from "../lib/redaction/texte.mjs";
-import { compterSansDescription, messageSansDescription, trierAromes } from "../lib/execution.mjs";
+import {
+  compterSansDescription,
+  messageSansDescription,
+  trierRedigees,
+} from "../lib/execution.mjs";
 
 const CLE = "sk-ant-cle-fictive-0123456789";
 const lireOptionsHoublon = (argv) => lireOptions(argv, NATURE_HOUBLON);
@@ -107,6 +111,27 @@ describe("contrôle d'un texte d'usage", () => {
 
   it("nettoyage : NFC, contrôles et bidirectionnels retirés", () => {
     assert.equal(nettoyerTexte("Café‮ x\u0007 "), "Café x");
+  });
+
+  it("nettoyage : caractères de format invisibles retirés (U+200B–U+200D, U+2060, U+FEFF)", () => {
+    assert.equal(nettoyerTexte("a\u200bb\u200cc\u200dd\u2060e\ufefff\u00adg"), "abcdefg");
+  });
+
+  for (const [cas, texte, regle] of [
+    ["www avec espace sans chasse", `${TEXTE} www\u200b.exemple.shop`, "adresse web"],
+    ["$ pleine chasse", `${TEXTE} 12 ＄`, "symbole monétaire"],
+    ["€ avec espace sans chasse", `${TEXTE} 12\u200b€`, "symbole monétaire"],
+    ["@ pleine chasse", `${TEXTE} ＠auteur`, "@"],
+    ["EUR pleine chasse", `${TEXTE} 12 ＥＵＲ`, "monnaie"],
+  ]) {
+    it(`${cas} : refusé (forme NFKC)`, () => assert.ok(reglesTexte(texte).includes(regle), cas));
+  }
+
+  it("entrée avec un caractère invisible : « texte non nettoyé »", () => {
+    const e = entree("hop-alpha", { uses: { dry_hop: { text: `${TEXTE}\u200b` } } });
+    assert.ok(
+      controlerEntreeArome(e).includes("uses.dry_hop.text : texte non nettoyé (NFC, contrôles)"),
+    );
   });
 });
 
@@ -326,6 +351,8 @@ describe("le SDK n'est pas chargé à l'import", () => {
       "../lib/redaction/tarif.mjs",
       "../lib/redaction/client.mjs",
       "../lib/redaction/moteur.mjs",
+      "../lib/redaction/entree.mjs",
+      "../lib/redaction/lancer.mjs",
       "../lib/aromes/validation.mjs",
       "../lib/aromes/prompt.mjs",
       "../lib/aromes/nature.mjs",
@@ -817,7 +844,8 @@ describe("tri des arômes par l'écrivain", () => {
   const ids = new Set(["hop-alpha", "hop-beta"]);
 
   it("bonne entrée : content_sha256 ajouté ; houblon du groupe non relu et id inconnu refusés", () => {
-    const { valides, refuses } = trierAromes(
+    const { valides, refuses } = trierRedigees(
+      NATURE_HOUBLON,
       [entree("hop-alpha"), entree("hop-beta", { hop_name: "Beta" }), entree("hop-gamma")],
       ids,
       new Set(["hop-beta"]),
@@ -838,7 +866,12 @@ describe("tri des arômes par l'écrivain", () => {
 
   it("houblon du groupe relu : accepté ; entrée en double refusée", () => {
     const relue = entree("hop-beta", { reviewed: true, reviewed_at: "2026-11-14" });
-    const { valides, refuses } = trierAromes([relue, relue], ids, new Set(["hop-beta"]));
+    const { valides, refuses } = trierRedigees(
+      NATURE_HOUBLON,
+      [relue, relue],
+      ids,
+      new Set(["hop-beta"]),
+    );
     assert.equal(valides.length, 1);
     assert.deepEqual(refuses[0].erreurs, ["id : en double"]);
   });
@@ -846,9 +879,9 @@ describe("tri des arômes par l'écrivain", () => {
   it("houblons sans description : compte et message", () => {
     const hops = [{ id: "hop-alpha" }, { id: "hop-beta" }, { id: "hop-gamma" }];
     assert.equal(compterSansDescription(hops, [entree("hop-alpha")]), 2);
-    assert.equal(messageSansDescription(0), null);
+    assert.equal(messageSansDescription(0, NATURE_HOUBLON), null);
     assert.match(
-      messageSansDescription(2),
+      messageSansDescription(2, NATURE_HOUBLON),
       /^2 houblons sans description aromatique : lancez `node generer-aromes\.mjs --nouveaux`/,
     );
   });

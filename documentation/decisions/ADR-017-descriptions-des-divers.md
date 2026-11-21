@@ -119,6 +119,41 @@ inchangés ; un poste à part garde chaque coût lisible.
   deux existent, l'ancien est signalé ignoré. Les constantes nommées `ErreurAromes`,
   `MAX_HOUBLONS` deviennent `ErreurRedaction`, `MAX_ENTREES` ; `EFFORTS` vit dans
   `texte.mjs` avec les règles de texte.
+  Précision d'implémentation (lot D2, 2026-11-21) : l'enveloppe d'une entrée (relecture,
+  provenance, `input_sha256`) est commune aux deux natures dans `lib/redaction/entree.mjs`
+  (`construireEntree`, `reglesEnveloppe`), le point d'entrée des générateurs dans
+  `lib/redaction/lancer.mjs`, et `empreinteContenu` dans `texte.mjs` ; `reglesTexte` reçoit
+  ses bornes en option (résumé d'un divers : 40 à 300). Chaque nature porte un objet
+  `ecriture` (collection, option `--aromes` ou `--divers` de `ecrire.mjs`, référentiel,
+  champs du rapport) lu par `lib/execution.mjs`. Le refus d'une dose couvre aussi les formes
+  en toutes lettres (`gramme(s)`, `milligramme(s)`, `litre(s)`, `millilitre(s)`, `pour cent`).
+  En Dart, `NatureRecettes` (`houblons`, `divers`) paramètre `ingredients_recettes.dart`, et
+  les deux programmes partagent `exchange/bin/src/lister_recettes.dart`.
+
+Note du 2026-11-21 (décision de l'utilisateur, après relecture du lot D2) :
+
+- **Liste des doses élargie.** Outre `g`, `mg`, `ml`, `l`, `%`, `g/l`, `ppm` (décision 1), la
+  validation refuse un nombre suivi de `kg`, `gr`, `cl`, `dl`, `hl`, `oz`, ou des mots
+  `gramme(s)`, `kilogramme(s)`, `milligramme(s)`, `litre(s)`, `centilitre(s)`,
+  `décilitre(s)`, `hectolitre(s)`, `millilitre(s)`, `once(s)`, `cuillère(s)`, `sachet(s)`,
+  `pastille(s)`, `pour cent`, `pour-cent`. Le nombre peut être écrit en chiffres ou en
+  lettres (`un`, `une` à `seize`, `vingt` à `soixante`, `cent`, `demi`, `quart` : « cinq
+  grammes », « un demi sachet »). Une lettre ou une apostrophe juste après l'unité l'annule
+  (« 2 lots », « 5,2 l'hiver » acceptés). Le contrôle porte sur la forme NFKC du texte, après
+  retrait des caractères de format invisibles (catégorie Unicode Cf), commun aux houblons :
+  « ５ g » et un « 5 g » coupé par une espace sans chasse sont refusés. La règle 8 du prompt
+  nomme ces unités ; `PROMPT_VERSION` des divers passe à 2 avant toute génération.
+- **Liste complétée après la seconde relecture de `securite`** (décision de l'utilisateur du
+  même jour) : pluriels des symboles (`kgs`, `grs`, `mls`, `cls`…), `cuil.` et `c. à café`,
+  `c.à.s`, `mille` et `quarts` parmi les nombres en lettres, et les unités `goutte(s)`,
+  `comprimé(s)`, `tablette(s)`, `capsule(s)`, `dosette(s)`, `tsp`, `tbsp`, `ppb`. La règle 8
+  du prompt nomme les mots et abréviations (`cuil.`, `c. à café`, `c. à soupe`, `c.à.c`,
+  `c.à.s`, goutte, comprimé…) ; les pluriels des symboles restent au seul contrôle, sans changer `PROMPT_VERSION` : aucune génération n'a eu lieu.
+- **Lot D3.** L'affichage dans la Bibliothèque (section 4 : fiche d'un divers, sections
+  « Utilisation » et « Goût », mention IA commune aux houblons, `get` à l'ouverture, P22, P62)
+  et la ligne « Descriptions des divers » de l'écran « Sources des données » (P20) arrivent au
+  lot D3. Jusque-là, `beer_misc_descriptions/` peut être écrit sans être lu par
+  l'application.
 - **Liste des divers du groupe** : `ingest/lib/lister.mjs` reçoit la nature (champ
   `hop_additions` ou `miscellaneous_additions`, fichier de sortie) ;
   `ingest/lister-divers-recettes.mjs` écrit `import/ingest/divers/noms-divers.json`.

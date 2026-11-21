@@ -20,12 +20,12 @@ export const COLLECTIONS_SUPPRIMABLES = ["beer_hops", "beer_hop_aromas", "beer_c
 /// Erreur d'utilisation : message montré tel quel, code de sortie 2.
 export class ErreurOptions extends Error {}
 
-const AIDE = `Usage : node ecrire.mjs [--simulation] [--dossier <prepare>] [--rapports <dossier>] [--aromes <dossier>]
+const AIDE = `Usage : node ecrire.mjs [--simulation] [--dossier <prepare>] [--rapports <dossier>] [--aromes <dossier>] [--divers <dossier>]
         node ecrire.mjs --production --projet ${PROJET_PRODUCTION} [--simulation] [...]
         node ecrire.mjs [...] --supprimer-absents <${COLLECTIONS_SUPPRIMABLES.join("|")}>`;
 
 /// Lit [argv] (sans `node` ni le script) et [env]. Rend
-/// `{ cible, projet, simulation, dossier, rapports, aromes, supprimerAbsents }` ; lève
+/// `{ cible, projet, simulation, dossier, rapports, aromes, divers, supprimerAbsents }` ; lève
 /// ErreurOptions. `supprimerAbsents` : collection où supprimer les documents absents de la
 /// préparation, ou null (aucune suppression).
 export function lireOptions(argv, env) {
@@ -36,6 +36,7 @@ export function lireOptions(argv, env) {
     dossier: null,
     rapports: null,
     aromes: null,
+    divers: null,
     "supprimer-absents": null,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -51,6 +52,7 @@ export function lireOptions(argv, env) {
       case "--dossier":
       case "--rapports":
       case "--aromes":
+      case "--divers":
       case "--supprimer-absents": {
         const valeur = argv[++i];
         if (valeur === undefined || valeur.startsWith("--")) {
@@ -114,6 +116,7 @@ export function lireOptions(argv, env) {
     dossier: options.dossier,
     rapports: options.rapports,
     aromes: options.aromes,
+    divers: options.divers,
     supprimerAbsents: supprimer,
   };
 }

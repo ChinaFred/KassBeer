@@ -1,0 +1,14 @@
+{
+  "format": "kassbeer_divers_recettes",
+  "version": 1,
+  "target": "production",
+  "generated_at": "2026-11-21T10:00:00.000Z",
+  "resolus": [
+    { "id": "misc-ecorce-fictive", "noms": ["Écorce fictive"] },
+    { "id": "misc-mousse-fictive", "noms": ["Mousse Fictive", "algue fictive"] }
+  ],
+  "non_resolus": [
+    { "nom": "Minéral", "raison": "plusieurs" },
+    { "nom": "Poudre Inconnue", "raison": "aucun" }
+  ]
+}

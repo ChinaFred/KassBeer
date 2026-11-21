@@ -1,0 +1,18 @@
+[
+  {
+    "id": "misc-mousse-fictive",
+    "data": { "name": "Mousse Fictive", "aliases": ["Algue Fictive"], "type": "fining" }
+  },
+  {
+    "id": "misc-sel-fictif",
+    "data": { "name": "Sel Fictif", "aliases": ["Minéral"], "type": "water agent" }
+  },
+  {
+    "id": "misc-sel-imaginaire",
+    "data": { "name": "Sel Imaginaire", "aliases": ["Minéral"], "type": "water agent" }
+  },
+  {
+    "id": "misc-ecorce-fictive",
+    "data": { "name": "Écorce Fictive", "aliases": [], "type": "spice" }
+  }
+]

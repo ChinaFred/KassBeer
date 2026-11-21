@@ -9,12 +9,13 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { executer } from "../lib/execution.mjs";
-import { listerHoublons } from "../lib/lister.mjs";
+import { listerNoms } from "../lib/lister.mjs";
 import { ErreurOptions } from "../lib/options.mjs";
 
 const HOTE = process.env.FIRESTORE_EMULATOR_HOST;
 const FIXTURE = fileURLToPath(new URL("./fixtures/prepare/", import.meta.url));
 const AROMES = fileURLToPath(new URL("./fixtures/aromes/", import.meta.url));
+const DIVERS = fileURLToPath(new URL("./fixtures/divers/", import.meta.url));
 const PROJET = "demo-kassbeer";
 
 async function viderEmulateur() {
@@ -100,6 +101,13 @@ describe(
         assert.equal(arome.reviewed, true);
         assert.match(arome.content_sha256, /^[0-9a-f]{64}$/);
         assert.ok(arome.updated_at, "updated_at posé par le serveur");
+        const description = (
+          await db.doc("beer_misc_descriptions/misc-epice-fictive").get()
+        ).data();
+        assert.equal(description.reviewed, true);
+        assert.equal(description.misc_name, "Épice Fictive");
+        assert.match(description.content_sha256, /^[0-9a-f]{64}$/);
+        assert.ok(description.updated_at, "updated_at posé par le serveur");
       } finally {
         await deleteApp(app);
       }
@@ -135,6 +143,137 @@ describe(
       }
     });
 
+    it("divers : divers du groupe non relu refusé et nommé ; divers sans description comptés", async () => {
+      const dossierDivers = mkdtempSync(join(tmpdir(), "kassbeer-divers-"));
+      try {
+        const entrees = JSON.parse(readFileSync(join(DIVERS, "descriptions.json"), "utf8"));
+        entrees[0].data.reviewed = false;
+        delete entrees[0].data.reviewed_at;
+        writeFileSync(join(dossierDivers, "descriptions.json"), JSON.stringify(entrees));
+        writeFileSync(
+          join(dossierDivers, "divers-recettes.json"),
+          readFileSync(join(DIVERS, "divers-recettes.json")),
+        );
+        const r = await lancer(["--simulation", "--divers", dossierDivers]);
+        assert.deepEqual(r.counts.beer_misc_descriptions, {
+          written: 0,
+          unchanged: 0,
+          refused: 1,
+        });
+        assert.deepEqual(r.refused, [
+          {
+            collection: "beer_misc_descriptions",
+            id: "misc-epice-fictive",
+            erreurs: ["reviewed : divers des recettes du groupe non relu"],
+          },
+        ]);
+        assert.equal(r.misc_descriptions_file, "read");
+        assert.equal(r.miscs_without_description, 0);
+        writeFileSync(join(dossierDivers, "descriptions.json"), "[]");
+        const vide = await lancer(["--simulation", "--divers", dossierDivers]);
+        assert.equal(vide.miscs_without_description, 1);
+        rmSync(join(dossierDivers, "descriptions.json"));
+        const absent = await lancer(["--simulation", "--divers", dossierDivers]);
+        assert.equal(absent.misc_descriptions_file, "absent");
+        assert.equal(absent.counts.beer_misc_descriptions.written, 0);
+      } finally {
+        rmSync(dossierDivers, { recursive: true, force: true });
+      }
+    });
+
+    it("divers : id absent de beer_miscs.json refusé ; descriptions.json sans liste du groupe : rien n'est écrit", async () => {
+      const dossierDivers = mkdtempSync(join(tmpdir(), "kassbeer-divers-"));
+      try {
+        const [e] = JSON.parse(readFileSync(join(DIVERS, "descriptions.json"), "utf8"));
+        const orphelin = structuredClone(e);
+        orphelin.id = "misc-orphelin";
+        orphelin.data.provenance[0].source_id = "misc-orphelin";
+        writeFileSync(join(dossierDivers, "descriptions.json"), JSON.stringify([e, orphelin]));
+        await assert.rejects(
+          lancer(["--simulation", "--divers", dossierDivers]),
+          /divers-recettes.json absent/,
+        );
+        writeFileSync(
+          join(dossierDivers, "divers-recettes.json"),
+          readFileSync(join(DIVERS, "divers-recettes.json")),
+        );
+        const r = await lancer(["--simulation", "--divers", dossierDivers]);
+        assert.deepEqual(
+          r.refused.map((x) => [x.id, x.erreurs]),
+          [["misc-orphelin", ["id : divers absent de beer_miscs.json"]]],
+        );
+      } finally {
+        rmSync(dossierDivers, { recursive: true, force: true });
+      }
+    });
+
+    it("--supprimer-absents beer_misc_descriptions : refusé (ADR-017, décision 5)", async () => {
+      await assert.rejects(
+        lancer(["--supprimer-absents", "beer_misc_descriptions"], async () => true),
+        ErreurOptions,
+      );
+    });
+
+    it("lister-divers-recettes : noms des divers seuls, triés, sans doublon, aucune écriture", async () => {
+      const { deleteApp, initializeApp } = await import("firebase-admin/app");
+      const { getFirestore } = await import("firebase-admin/firestore");
+      const app = initializeApp({ projectId: PROJET }, "semis-lister-divers");
+      const sortieNoms = join(rapports, "noms-divers.json");
+      try {
+        const db = getFirestore(app);
+        const ligne = (name) => ({ name, amount: { value: 5, unit: "g" } });
+        await db.doc("recipes/rd1").set({
+          owner_uid: "uid-fictif",
+          recipe: {
+            name: "Recette",
+            ingredients: {
+              miscellaneous_additions: [ligne("Mousse Fictive"), ligne("Sel Fictif")],
+              hop_additions: [ligne("Houblon Écarté")],
+            },
+          },
+        });
+        await db.doc("brews/bd1").set({
+          owner_uid: "uid-fictif",
+          recipe_snapshot: {
+            recipe: {
+              ingredients: {
+                miscellaneous_additions: [ligne(" Sel Fictif "), ligne("Écorce Ancienne"), {}],
+              },
+            },
+          },
+        });
+        const r = await listerNoms({
+          nature: "divers",
+          argv: ["--sortie", sortieNoms],
+          env: { FIRESTORE_EMULATOR_HOST: HOTE },
+          entree: process.stdin,
+          sortie: process.stdout,
+        });
+        assert.equal(r.ecartees, 1);
+        const fichier = JSON.parse(readFileSync(sortieNoms, "utf8"));
+        assert.equal(fichier.format, "kassbeer_noms_divers");
+        assert.equal(fichier.target, "emulator");
+        assert.deepEqual(fichier.noms, ["Mousse Fictive", "Sel Fictif", "Écorce Ancienne"]);
+        assert.equal(JSON.stringify(fichier).includes("uid-fictif"), false);
+        assert.equal(JSON.stringify(fichier).includes("Houblon"), false);
+        await assert.rejects(
+          listerNoms({
+            nature: "divers",
+            argv: ["--divers", "x"],
+            env: { FIRESTORE_EMULATOR_HOST: HOTE },
+            entree: process.stdin,
+            sortie: process.stdout,
+          }),
+          ErreurOptions,
+        );
+      } finally {
+        // Retirés pour la liste des houblons qui suit, qui compte les recettes.
+        await getFirestore(app).doc("recipes/rd1").delete();
+        await getFirestore(app).doc("brews/bd1").delete();
+        await deleteApp(app);
+      }
+    });
+
     it("lister-houblons-recettes : noms seuls, triés, sans doublon, aucune écriture", async () => {
       const { deleteApp, initializeApp } = await import("firebase-admin/app");
       const { getFirestore } = await import("firebase-admin/firestore");
@@ -160,7 +299,8 @@ describe(
           },
         });
         const avant = (await db.collection("recipes").get()).size;
-        const r = await listerHoublons({
+        const r = await listerNoms({
+          nature: "houblons",
           argv: ["--sortie", sortieNoms],
           env: { FIRESTORE_EMULATOR_HOST: HOTE },
           entree: process.stdin,
@@ -403,6 +543,7 @@ describe("arômes en production : liste des houblons du groupe contrôlée avant
   const source = fileURLToPath(new URL("./fixtures/aromes/", import.meta.url));
   const MAINTENANT = new Date("2026-11-15T10:00:00Z");
   let dossierAromes;
+  let sansDivers;
 
   const lancerProduction = (origine) => {
     const groupe = JSON.parse(readFileSync(join(source, "houblons-recettes.json"), "utf8"));
@@ -422,6 +563,9 @@ describe("arômes en production : liste des houblons du groupe contrôlée avant
           FIXTURE,
           "--aromes",
           dossierAromes,
+          // Sans descriptions.json, la liste des divers du groupe n'est pas lue.
+          "--divers",
+          sansDivers,
         ],
         env: {},
         entree: { isTTY: false },
@@ -437,9 +581,13 @@ describe("arômes en production : liste des houblons du groupe contrôlée avant
 
   before(() => {
     dossierAromes = mkdtempSync(join(tmpdir(), "kassbeer-aromes-prod-"));
+    sansDivers = mkdtempSync(join(tmpdir(), "kassbeer-sans-divers-"));
     writeFileSync(join(dossierAromes, "aromes.json"), readFileSync(join(source, "aromes.json")));
   });
-  after(() => rmSync(dossierAromes, { recursive: true, force: true }));
+  after(() => {
+    rmSync(dossierAromes, { recursive: true, force: true });
+    rmSync(sansDivers, { recursive: true, force: true });
+  });
 
   it("liste d'émulateur + --production : rien n'est écrit", async () => {
     const r = lancerProduction({ target: "emulator", generated_at: "2026-11-15T09:00:00.000Z" });
@@ -463,6 +611,82 @@ describe("arômes en production : liste des houblons du groupe contrôlée avant
 
   it("liste de production récente : le contrôle passe, la suite exige un terminal", async () => {
     const r = lancerProduction({ target: "production", generated_at: "2026-11-14T09:00:00.000Z" });
+    await assert.rejects(r.promesse, /sans terminal/);
+    assert.equal(r.lus(), true);
+  });
+});
+
+describe("divers en production : liste des divers du groupe contrôlée avant toute écriture", () => {
+  let dossierDivers;
+  let sansAromes;
+
+  before(() => {
+    dossierDivers = mkdtempSync(join(tmpdir(), "kassbeer-divers-prod-"));
+    sansAromes = mkdtempSync(join(tmpdir(), "kassbeer-sans-aromes-prod-"));
+    writeFileSync(
+      join(dossierDivers, "descriptions.json"),
+      readFileSync(join(DIVERS, "descriptions.json")),
+    );
+  });
+  after(() => {
+    rmSync(dossierDivers, { recursive: true, force: true });
+    rmSync(sansAromes, { recursive: true, force: true });
+  });
+
+  const lancerProduction = (origine) => {
+    const groupe = JSON.parse(readFileSync(join(DIVERS, "divers-recettes.json"), "utf8"));
+    writeFileSync(
+      join(dossierDivers, "divers-recettes.json"),
+      JSON.stringify({ ...groupe, ...origine }),
+    );
+    let identifiantsLus = false;
+    return {
+      lus: () => identifiantsLus,
+      promesse: executer({
+        argv: [
+          "--production",
+          "--projet",
+          "kassbeer",
+          "--dossier",
+          FIXTURE,
+          "--aromes",
+          sansAromes,
+          "--divers",
+          dossierDivers,
+        ],
+        env: {},
+        entree: { isTTY: false },
+        sortie: { isTTY: false },
+        maintenant: () => new Date("2026-11-21T10:00:00Z"),
+        lireIdentifiants: () => {
+          identifiantsLus = true;
+          return JSON.stringify({ type: "authorized_user" });
+        },
+      }),
+    };
+  };
+
+  it("liste d'émulateur + --production : rien n'est écrit", async () => {
+    const r = lancerProduction({ target: "emulator", generated_at: "2026-11-21T09:00:00.000Z" });
+    await assert.rejects(
+      r.promesse,
+      (e) =>
+        e instanceof ErreurOptions && /divers-recettes\.json vient de la cible/.test(e.message),
+    );
+    assert.equal(r.lus(), false, "refus avant les identifiants et toute écriture");
+  });
+
+  it("liste de production de plus de 7 jours : refusée", async () => {
+    const r = lancerProduction({ target: "production", generated_at: "2026-11-10T09:00:00.000Z" });
+    await assert.rejects(
+      r.promesse,
+      /lister-divers-recettes\.mjs.*plus de 7 jours|plus de 7 jours.*lister-divers/s,
+    );
+    assert.equal(r.lus(), false);
+  });
+
+  it("liste de production récente : le contrôle passe, la suite exige un terminal", async () => {
+    const r = lancerProduction({ target: "production", generated_at: "2026-11-20T09:00:00.000Z" });
     await assert.rejects(r.promesse, /sans terminal/);
     assert.equal(r.lus(), true);
   });

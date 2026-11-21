@@ -16,8 +16,10 @@ export const TEXTE_MAX = 400;
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-// Contrôles C0 et C1, et marques et contrôles bidirectionnels (P9).
-const CONTROLES = /[\u0000-\u001f\u007f-\u009f؜‎‏‪-‮⁦-⁩]/gu;
+// Contrôles C0 et C1, et caractères de format invisibles (catégorie Unicode Cf) : marques
+// et contrôles bidirectionnels (P9), espaces et liants sans chasse (U+200B à U+200D,
+// U+2060), marque d'ordre des octets (U+FEFF), trait d'union conditionnel…
+const CONTROLES = /[\u0000-\u001f\u007f-\u009f\p{Cf}]/gu;
 
 const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const longueur = (t) => [...t].length;
@@ -30,25 +32,36 @@ export function estDate(texte) {
   return d.toISOString().slice(0, 10) === texte;
 }
 
-/// Texte en NFC, caractères de contrôle et bidirectionnels retirés, espaces de bord retirées.
+/// Texte en NFC, caractères de contrôle et de format invisibles retirés, espaces de bord
+/// retirées. Un texte stocké doit être égal à sa forme nettoyée (« texte non nettoyé »).
 export function nettoyerTexte(texte) {
   return texte.normalize("NFC").replace(CONTROLES, "").trim();
 }
 
+/// Forme contrôlée d'un texte : nettoyée, puis en NFKC, qui ramène les formes pleine chasse
+/// et de compatibilité (« ５ », « ｇ », « ＄ », « ＠ ») à leur forme courante. Les règles de
+/// contenu (adresse web, @, balisage, monnaie, dose) portent sur elle ; le texte stocké reste
+/// en NFC.
+export function formeControlee(texte) {
+  return nettoyerTexte(texte).normalize("NFKC");
+}
+
 /// Règles enfreintes par un texte déjà nettoyé (liste vide s'il est bon). Une comparaison à
-/// un autre ingrédient est permise (ADR-013, décision 8).
-export function reglesTexte(texte) {
+/// un autre ingrédient est permise (ADR-013, décision 8). [min] et [max] : bornes de
+/// longueur, TEXTE_MIN et TEXTE_MAX par défaut (le résumé d'un divers s'arrête à 300).
+export function reglesTexte(texte, { min = TEXTE_MIN, max = TEXTE_MAX } = {}) {
   const regles = [];
   const n = longueur(texte);
-  if (n < TEXTE_MIN || n > TEXTE_MAX) regles.push(`longueur ${TEXTE_MIN} à ${TEXTE_MAX}`);
-  if (/https?:\/\/|\bwww\./iu.test(texte)) regles.push("adresse web");
-  else if (/\b[a-z0-9-]+\.(com|net|org|fr|de|eu|io|uk|us|nz|au|be|ch|cz)\b/iu.test(texte)) {
+  if (n < min || n > max) regles.push(`longueur ${min} à ${max}`);
+  const t = formeControlee(texte);
+  if (/https?:\/\/|\bwww\./iu.test(t)) regles.push("adresse web");
+  else if (/\b[a-z0-9-]+\.(com|net|org|fr|de|eu|io|uk|us|nz|au|be|ch|cz)\b/iu.test(t)) {
     regles.push("adresse web");
   }
-  if (texte.includes("@")) regles.push("@");
-  if (/[<>`]/u.test(texte) || /(^|\n)\s*[#*]/u.test(texte)) regles.push("balisage");
-  if (texte.includes("€") || texte.includes("$")) regles.push("symbole monétaire");
-  if (/(^|[^\p{L}])(eur|euros?)(?![\p{L}])/iu.test(texte)) regles.push("monnaie");
+  if (t.includes("@")) regles.push("@");
+  if (/[<>`]/u.test(t) || /(^|\n)\s*[#*]/u.test(t)) regles.push("balisage");
+  if (t.includes("€") || t.includes("$")) regles.push("symbole monétaire");
+  if (/(^|[^\p{L}])(eur|euros?)(?![\p{L}])/iu.test(t)) regles.push("monnaie");
   return regles;
 }
 
@@ -63,3 +76,7 @@ export function jsonCanonique(valeur) {
 }
 
 export const sha256 = (texte) => createHash("sha256").update(texte).digest("hex");
+
+/// Empreinte du contenu d'une entrée rédigée (aromes.json, descriptions.json), calculée par
+/// ecrire.mjs : un document de même empreinte n'est pas réécrit.
+export const empreinteContenu = (data) => sha256(jsonCanonique(data));
