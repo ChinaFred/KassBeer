@@ -21,7 +21,7 @@ import '../domain/referentiel.dart';
 import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
-import 'section_aromes.dart' show TextesAromes;
+import 'texte_redige.dart' show TextesRediges;
 
 /// Bibliothèque : styles, ingrédients et recettes publiques, en lecture seule
 /// (ADR-005, L4). Un segment par chemin (`/bibliotheque/houblons`) ; la recherche
@@ -648,7 +648,7 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
                   // données » dans l'en-tête.
                   if (c == ConfianceIndex.faible)
                     const Etiquette(
-                      label: TextesAromes.confianceFaible,
+                      label: TextesRediges.confianceFaible,
                       ton: TonEtiquette.neutre,
                     ),
                   if (c == ConfianceIndex.sansDescription)

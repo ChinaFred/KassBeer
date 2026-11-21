@@ -9,6 +9,7 @@ import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/library/presentation/data_sources_screen.dart';
 import 'package:kass_beer/features/library/presentation/section_aromes.dart';
+import 'package:kass_beer/features/library/presentation/texte_redige.dart';
 
 import 'support/fakes.dart';
 import 'support/library_fixtures.dart';
@@ -63,7 +64,7 @@ void main() {
     expect(find.text(kTexteCru), findsOneWidget);
     expect(find.text('Premier moût'), findsNothing);
     expect(find.text('Whirlpool'), findsNothing);
-    expect(find.text(TextesAromes.confianceFaible), findsNothing);
+    expect(find.text(TextesRediges.confianceFaible), findsNothing);
     expect(find.text(_mention('14 novembre 2026')), findsOneWidget);
     // Mention sous le titre « Arômes », avant les descripteurs.
     final mention = tester
@@ -115,11 +116,11 @@ void main() {
       tester,
       aromes: hopAromaDoc(extra: {'confidence': 'low', 'reviewed': false}),
     );
-    expect(find.text(TextesAromes.confianceFaible), findsOneWidget);
-    expect(find.text(TextesAromes.nonRelu), findsOneWidget);
+    expect(find.text(TextesRediges.confianceFaible), findsOneWidget);
+    expect(find.text(TextesRediges.nonRelu), findsOneWidget);
     expect(
       find.descendant(
-        of: find.widgetWithText(Etiquette, TextesAromes.confianceFaible),
+        of: find.widgetWithText(Etiquette, TextesRediges.confianceFaible),
         matching: find.byIcon(Icons.info_outline),
       ),
       findsOneWidget,
@@ -127,6 +128,36 @@ void main() {
     expect(find.byIcon(Icons.help_outline), findsNothing);
     expect(find.textContaining('relu le'), findsNothing);
   });
+
+  testWidgets(
+    'rendu inchangé par le widget commun : mention, confiance, style',
+    (tester) async {
+      await ouvrir(tester, aromes: hopAromaDoc(extra: {'confidence': 'low'}));
+      final mention = _mention('14 novembre 2026');
+      // Titre, mention, « Confiance faible », descripteurs : dans cet ordre.
+      final ordre = [
+        TextesAromes.titre,
+        mention,
+        TextesRediges.confianceFaible,
+        'Pamplemousse',
+        'Ébullition longue (amertume)',
+        'Provenance',
+      ];
+      final positions = [
+        for (final t in ordre) tester.getTopLeft(find.text(t)).dy,
+      ];
+      expect(positions, [...positions]..sort());
+      final theme = Theme.of(tester.element(find.text(mention)));
+      final texte = tester.widget<Text>(find.text(mention));
+      expect(texte.style?.color, theme.colorScheme.onSurfaceVariant);
+      expect(texte.style?.fontSize, theme.textTheme.bodyMedium?.fontSize);
+      expect(find.byType(MentionTexteRedige), findsOneWidget);
+      expect(find.byType(EtiquetteConfianceFaible), findsOneWidget);
+      // Aucune section des divers sur la fiche d'un houblon.
+      expect(find.text('Utilisation'), findsNothing);
+      expect(find.text('Goût'), findsNothing);
+    },
+  );
 
   testWidgets('usage absent et clé inconnue : rien pour eux', (tester) async {
     await ouvrir(
@@ -142,7 +173,7 @@ void main() {
     expect(find.text(kTexteWhirlpool), findsOneWidget);
     expect(find.text(kTexteCru), findsNothing);
     expect(find.text('Houblonnage à cru'), findsNothing);
-    expect(find.text(TextesAromes.aucunUsageConnu), findsNothing);
+    expect(find.text(TextesRediges.miseAJour), findsNothing);
   });
 
   testWidgets('aucune clé d\'usage connue : mettre l\'application à jour', (
@@ -157,7 +188,7 @@ void main() {
       ),
     );
     expect(find.text('Pamplemousse'), findsOneWidget);
-    expect(find.text(TextesAromes.aucunUsageConnu), findsOneWidget);
+    expect(find.text(TextesRediges.miseAJour), findsOneWidget);
     expect(find.text(_mention('14 novembre 2026')), findsOneWidget);
   });
 
@@ -165,8 +196,8 @@ void main() {
     await ouvrir(tester, aromes: hopAromaUnknownDoc());
     expect(find.text(TextesAromes.titre), findsOneWidget);
     expect(find.text(TextesAromes.inconnu), findsOneWidget);
-    expect(find.text(TextesAromes.nonRelu), findsOneWidget);
-    expect(find.text(TextesAromes.confianceFaible), findsNothing);
+    expect(find.text(TextesRediges.nonRelu), findsOneWidget);
+    expect(find.text(TextesRediges.confianceFaible), findsNothing);
   });
 
   testWidgets('document absent : ni titre ni rapport', (tester) async {

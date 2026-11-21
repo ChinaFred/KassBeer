@@ -6,19 +6,16 @@ import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
-import '../../../core/presentation/formats.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/aromes_houblon.dart';
 import 'library_providers.dart';
+import 'texte_redige.dart';
 
 /// Textes de la section « Arômes » de la fiche d'un houblon (ADR-013).
 abstract final class TextesAromes {
   static const titre = 'Arômes';
   static const chargement = 'Chargement des arômes';
-  static const confianceFaible = 'Confiance faible';
   static const inconnu = 'Aucune description : houblon trop peu documenté.';
-  static const aucunUsageConnu =
-      'Mettez l\'application à jour pour lire ces descriptions.';
   static const illisible =
       'Les arômes ne peuvent pas s\'afficher. L\'erreur est signalée à '
       'l\'administrateur.';
@@ -27,10 +24,6 @@ abstract final class TextesAromes {
       'l\'administrateur.';
   static const horsLigne =
       'Arômes indisponibles hors ligne. Ils s\'affichent au retour du réseau.';
-  static const nonRelu = 'Texte rédigé par une IA (Claude), non relu';
-
-  static String relu(DateTime le) =>
-      'Texte rédigé par une IA (Claude), relu le ${formatDateLongue(le)}';
 
   static String usage(UsageArome usage) => switch (usage) {
     UsageArome.firstWort => 'Premier moût',
@@ -70,7 +63,8 @@ class SectionAromes extends ConsumerWidget {
         contenu = const [TexteAbsent(TextesAromes.horsLigne)];
       } else {
         contenu = [
-          _Panne(
+          PanneTexteRedige(
+            message: TextesAromes.panne,
             retrying: async.isLoading,
             onRetry: () => ref.invalidate(aromesHoublonProvider(id)),
           ),
@@ -104,34 +98,16 @@ class SectionAromes extends ConsumerWidget {
   List<Widget> _aromes(BuildContext context, AromesHoublon aromes) {
     final theme = Theme.of(context);
     // Mention sous le titre « Arômes », avant les descripteurs.
-    final mention = Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        switch (aromes.reluLe) {
-          final le? when aromes.relu => TextesAromes.relu(le),
-          _ => TextesAromes.nonRelu,
-        },
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
+    final mention = MentionTexteRedige(
+      relu: aromes.relu,
+      reluLe: aromes.reluLe,
     );
     return switch (aromes) {
       AromesInconnus() => [mention, const TexteAbsent(TextesAromes.inconnu)],
       AromesDecrits() => [
         mention,
         if (aromes.confiance == ConfianceArome.faible)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Etiquette(
-                label: TextesAromes.confianceFaible,
-                ton: TonEtiquette.neutre,
-                icon: Icons.info_outline,
-              ),
-            ),
-          ),
+          const EtiquetteConfianceFaible(),
         if (aromes.descripteurs.isNotEmpty)
           Semantics(
             container: true,
@@ -150,7 +126,7 @@ class SectionAromes extends ConsumerWidget {
         if (aromes.usages.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 16),
-            child: TexteAbsent(TextesAromes.aucunUsageConnu),
+            child: TexteAbsent(TextesRediges.miseAJour),
           ),
         for (final usage in UsageArome.values)
           if (aromes.usages[usage] case final texte?) ...[
@@ -162,35 +138,5 @@ class SectionAromes extends ConsumerWidget {
           ],
       ],
     };
-  }
-}
-
-/// Panne de lecture en ligne : message et « Réessayer », qui relit.
-class _Panne extends StatelessWidget {
-  const _Panne({required this.retrying, required this.onRetry});
-
-  final bool retrying;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Encadre(
-      ton: TonEncadre.erreur,
-      icone: Icons.error_outline,
-      liveRegion: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(TextesAromes.panne),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: retrying ? null : onRetry,
-            child: retrying
-                ? const IndicateurBouton(label: 'Lecture en cours')
-                : const Text('Réessayer'),
-          ),
-        ],
-      ),
-    );
   }
 }

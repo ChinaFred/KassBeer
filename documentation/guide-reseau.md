@@ -360,6 +360,10 @@ Le 2026-11-21, avec le lot D2 d'ADR-017, `CLAUDE.md` retire « à livrer » de `
 `lancer.mjs` ; P54 couvre les deux natures ; P62 refuse aussi les doses en toutes lettres ;
 « Exception durable » cite les descriptions des divers. Seul l'affichage reste à livrer (D3).
 
+Le 2026-11-21, avec le lot D3 d'ADR-017, « Le projet » ne marque plus l'affichage « à livrer » ;
+P62 nomme le widget commun `texte_redige.dart` et les deux écarts d'affichage décidés par
+l'utilisateur (« Confiance faible » en tête, « Goût » affiché quand le divers ne change pas le goût).
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

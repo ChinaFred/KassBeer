@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
+import 'relecture.dart';
 
 /// Collection des descriptions aromatiques des houblons (ADR-013), écrite par
 /// l'ingestion seule, lue par `get` à l'ouverture de la fiche d'un houblon.
@@ -56,11 +57,7 @@ sealed class AromesHoublon {
 
   static AromesHoublon fromFirestore(Map<String, dynamic> data) {
     final read = LecteurChamps(data);
-    final relu = read.boolFacultatif('reviewed');
-    if (relu == null) {
-      throw const DocumentIllisible('reviewed', 'booléen obligatoire absent');
-    }
-    final reluLe = relu ? _dateRelecture(read) : null;
+    final (:relu, :reluLe) = lireRelecture(read);
     final status = data['status'];
     switch (status) {
       case 'unknown':
@@ -94,27 +91,6 @@ sealed class AromesHoublon {
       default:
         throw const DocumentIllisible('status', 'described ou unknown attendu');
     }
-  }
-
-  /// `reviewed_at` en `AAAA-MM-JJ`, date du calendrier ; sinon illisible.
-  static DateTime _dateRelecture(LecteurChamps read) {
-    final value = read.texteFacultatif('reviewed_at');
-    final match = value == null
-        ? null
-        : RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
-    if (match != null) {
-      final annee = int.parse(match.group(1)!);
-      final mois = int.parse(match.group(2)!);
-      final jour = int.parse(match.group(3)!);
-      final date = DateTime(annee, mois, jour);
-      if (date.year == annee && date.month == mois && date.day == jour) {
-        return date;
-      }
-    }
-    throw const DocumentIllisible(
-      'reviewed_at',
-      'date AAAA-MM-JJ attendue quand reviewed est vrai',
-    );
   }
 }
 

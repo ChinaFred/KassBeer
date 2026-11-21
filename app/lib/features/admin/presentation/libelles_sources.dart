@@ -25,6 +25,8 @@ SegmentBibliotheque? _segmentDe(NatureReferentiel? nature) {
 final Map<String, String> _collections = {
   for (final s in SegmentBibliotheque.values)
     s.nature?.collection ?? 'public_recipes': s.label,
+  'beer_hop_aromas': 'Descriptions des houblons',
+  'beer_misc_descriptions': 'Descriptions des divers',
   'beer_index': 'Index de la Bibliothèque',
   'import_unresolved': 'Noms non reconnus',
 };

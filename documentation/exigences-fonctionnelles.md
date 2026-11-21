@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon et la description d'un divers) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus ; régler dans Admin › Moteur d'IA le modèle, l'effort, les plafonds et l'ouverture aux membres de chaque poste d'IA, et la grille tarifaire, en ligne seulement ; lire dans Admin › Coûts de l'IA la dépense de l'IA de chaque membre, par mois et par poste ; utiliser l'assistant de recette, toujours ouvert pour lui, dans la limite de ses tours du jour ; lire « IA ce mois » dans le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -1328,7 +1328,9 @@ de l'écrivain, lue à l'ouverture.
   sélectionnable.
 - « Documents » (sous-section) : une ligne par collection, dans l'ordre des segments de la
   Bibliothèque (« Styles », « Malts et sucres », « Houblons », « Levures », « Divers »,
-  « Recettes publiques »), puis « Index de la Bibliothèque » et « Noms non reconnus », avec
+  « Recettes publiques »), puis « Descriptions des houblons » (`beer_hop_aromas`),
+  « Descriptions des divers » (`beer_misc_descriptions`), « Index de la Bibliothèque » et
+  « Noms non reconnus », avec
   « 412 écrits · 3 inchangés · 0 refusé ». Une collection inconnue de l'application suit, sous
   son nom technique. Si des documents sont refusés : « 2 documents refusés. Le détail est dans
   le rapport local. », dans un encadré d'erreur.
@@ -2101,7 +2103,8 @@ noms : … », puis :
   goût », « Amérisant et goût », « Aromatique, amérisant et goût »), origine ;
 - levure : producteur, type, forme, atténuation et température de fermentation en plages,
   floculation ;
-- divers : nom français, type.
+- divers : nom français, type ; puis les sections « Utilisation » et « Goût » et la mention
+  IA (« Description d'un divers », ci-dessous).
 
 La ligne « Nom français » est masquée quand la valeur est absente. Une autre valeur absente
 s'affiche « Non renseigné ». Une valeur que l'application ne sait pas traduire s'affiche
@@ -2147,6 +2150,45 @@ dans l'ordre :
 Le texte est sélectionnable. Le jour de brassage, les journées du déroulé et l'éditeur de
 recette ne lisent pas les arômes.
 
+**Description d'un divers** (ADR-017). Sur la fiche d'un divers seulement, entre « Valeurs »
+et « Provenance ». La description est lue une fois à l'ouverture de la fiche, sans suivi en
+direct ; le reste de la fiche s'affiche sans l'attendre. Contenu, dans l'ordre :
+
+- section « Utilisation » : « Confiance faible » (étiquette neutre, icône d'information,
+  commune aux houblons) en tête quand le texte est donné avec une confiance faible ; le
+  résumé ; les rôles (« Clarifier », « Ajuster le pH »…) en étiquettes, dans l'ordre du
+  document, lus « Rôles : Clarifier, Ajuster le pH » par le lecteur d'écran ; un paragraphe
+  titré par moment décrit, toujours dans cet ordre et sous les libellés de l'éditeur de
+  recette : « Empâtage », « Ébullition », « Après ébullition », « Fermentation »,
+  « Embouteillage ». Un moment qui ne convient pas au divers n'a ni titre ni texte ; un moment
+  inconnu de l'application est ignoré ;
+- section « Goût » : le goût apporté, ou « Sans effet notable sur le goût » en italique quand
+  le divers ne change pas le goût ;
+- la mention « Texte rédigé par une IA (Claude), relu le 21 novembre 2026 » ou « Texte rédigé
+  par une IA (Claude), non relu », sous « Goût », avant « Provenance ».
+
+États :
+
+- chargement : « Chargement de la description » sous « Utilisation » ; « Goût » attend la fin
+  de la lecture ;
+- aucune description pour ce divers : ni « Utilisation » ni « Goût » ;
+- divers trop peu documenté : « Aucune description : ajout trop peu documenté. », puis la
+  mention IA, sans « Goût » ;
+- aucun moment que l'application connaît : résumé et rôles, puis « Mettez l'application à
+  jour pour lire les moments d'utilisation. », puis « Goût » et la mention IA ;
+- description illisible : « La description ne peut pas s'afficher. L'erreur est signalée à
+  l'administrateur. », sans bouton ; l'erreur est journalisée avec l'identifiant du divers,
+  sans le texte ;
+- lecture impossible en ligne : « Impossible de lire la description. L'erreur est signalée à
+  l'administrateur. » et « Réessayer » (« Lecture en cours » pendant la nouvelle lecture) ;
+- hors ligne : une description déjà lue s'affiche depuis le cache ; sinon « Description
+  indisponible hors ligne. Elle s'affiche au retour du réseau. », sans bouton, et la
+  description se relit au retour du réseau.
+
+Le texte est sélectionnable et suit un texte agrandi à 200 % sans coupure, dans la colonne de
+la fiche. Le jour de brassage, les journées du déroulé et l'éditeur de recette ne lisent pas
+les descriptions des divers.
+
 **Descriptions aromatiques (administrateur, hors de l'application).** L'administrateur fait
 rédiger les textes par l'API Claude depuis son poste, puis les écrit dans la Bibliothèque par
 le script d'ingestion ; l'application n'appelle pas ce script. Ordre : un essai sur 10 houblons
@@ -2155,6 +2197,14 @@ reste. L'administrateur relit les textes des houblons du groupe avant leur écri
 autres paraissent « non relu ». Un houblon ajouté plus tard reçoit sa description par une
 nouvelle génération lancée par l'administrateur (`--nouveaux`). Détail : `exigences-techniques.md`,
 « Descriptions aromatiques ».
+
+**Descriptions des divers (administrateur, hors de l'application).** Même déroulé (ADR-017) :
+l'administrateur fait rédiger les textes par l'API Claude depuis son poste
+(`ingest/generer-divers.mjs`), puis les écrit dans la Bibliothèque par le script d'ingestion ;
+l'application n'appelle pas ce script. Ordre : un essai sur 10 divers choisis, puis les divers
+utilisés dans les recettes et les brassins du groupe, puis le reste. L'administrateur relit les
+textes des divers du groupe avant leur écriture ; les autres paraissent « non relu ». Aucun
+texte ne donne de dose. Détail : `exigences-techniques.md`, « Descriptions des divers ».
 
 **Recettes publiques.** Les recettes DIY Dog, par pages de 50 dans l'ordre alphabétique.
 Chaque ligne : le repère de la liste des recettes (icône de livre dans un disque ; les styles
@@ -2284,6 +2334,11 @@ s'affiche sans réseau.
   l'usage de chaque houblon. Ils ne sont copiés d'aucune source. L'administrateur relit ceux
   des houblons utilisés dans les recettes du groupe ; les autres sont marqués « non relu ». Un
   texte peut contenir des erreurs. »
+- Descriptions des divers : « Divers : textes rédigés pour Kass'Beer par une IA (Claude,
+  d'Anthropic), à partir du nom, des autres noms, du nom français et du type de chaque ajout.
+  Ils ne sont copiés d'aucune source et ne donnent aucune dose : suivez la notice du
+  fabricant. L'administrateur relit ceux des ajouts utilisés dans les recettes du groupe ; les
+  autres sont marqués « non relu ». Un texte peut contenir des erreurs. »
 
 ### Brassins
 

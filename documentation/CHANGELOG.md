@@ -6,6 +6,26 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.94 — fonctionnel
+
+Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment
+l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un
+paragraphe par moment d'ajout (empâtage, ébullition, après ébullition, fermentation,
+embouteillage). La section « Goût » décrit le goût apporté, ou indique qu'il n'y a pas d'effet
+notable. Ces textes sont rédigés par une IA et ne donnent aucune dose : suivez la notice du
+fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur, les autres sont
+marqués « non relu ».
+
+### v0.1.94 — technique
+
+Lot D3 d'ADR-017 : `lireDescriptionDivers` (un `get` de `beer_misc_descriptions/{id}`, sans
+écouteur) et `descriptionDiversProvider` ; `SectionDescriptionDivers` sur la fiche d'un divers ;
+widget commun `texte_redige.dart` (mention IA, « Confiance faible », panne avec « Réessayer »)
+sorti de `section_aromes.dart`, rendu des houblons inchangé ; relecture lue par `relecture.dart`
+pour les deux natures ; libellés « Descriptions des houblons » et « Descriptions des divers »
+dans Admin › Sources ; ligne « Descriptions des divers » dans « Sources des données ». Taille de
+`main.dart.js` : 5 921 851 octets avant, 5 927 958 après (+ 6 107). Tests Flutter : 1 906.
+
 ### v0.1.93 — technique
 
 Lot D2 d'ADR-017 : les descriptions des divers se rédigent depuis le poste de l'admin.

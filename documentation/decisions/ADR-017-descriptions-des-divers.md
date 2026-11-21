@@ -252,6 +252,18 @@ Fiche d'un divers, Bibliothèque : lecture par `get` à l'ouverture, aucun écou
   du document.
 - Écran « Sources des données » et `DATA_SOURCES.md` : ligne « Descriptions des divers ».
 
+Note du 2026-11-21 (lot D3, décisions de l'utilisateur sur la proposition d'écran) : deux
+écarts d'affichage avec les points ci-dessus.
+
+- **« Goût » si `changes_taste` est faux.** La section s'affiche avec « Sans effet notable sur
+  le goût », en texte d'absence, au lieu de ne rien afficher. Pour `unknown` et pour un
+  document absent, elle ne s'affiche pas.
+- **« Confiance faible » en tête.** L'étiquette se place en tête de la section
+  « Utilisation », avant le résumé ; la mention IA se place après « Goût », avant
+  « Provenance ». Sur la fiche d'un houblon, l'ordre d'ADR-013 ne change pas (mention sous le
+  titre « Arômes », puis l'étiquette). Les deux fiches emploient les mêmes widgets
+  (`app/lib/features/library/presentation/texte_redige.dart`).
+
 ### 5. Déroulé
 
 1. `node generer-divers.mjs --essai --seulement ../import/ingest/divers/divers-essai.json`

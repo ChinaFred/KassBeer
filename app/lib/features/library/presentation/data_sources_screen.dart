@@ -100,6 +100,13 @@ class DataSourcesScreen extends ConsumerWidget {
       'source. L\'administrateur relit ceux des houblons utilisés dans les '
       'recettes du groupe ; les autres sont marqués « non relu ». Un texte peut '
       'contenir des erreurs.';
+  static const descriptionsDivers =
+      'Divers : textes rédigés pour Kass\'Beer par une IA (Claude, '
+      'd\'Anthropic), à partir du nom, des autres noms, du nom français et du '
+      'type de chaque ajout. Ils ne sont copiés d\'aucune source et ne donnent '
+      'aucune dose : suivez la notice du fabricant. L\'administrateur relit '
+      'ceux des ajouts utilisés dans les recettes du groupe ; les autres sont '
+      'marqués « non relu ». Un texte peut contenir des erreurs.';
   static const openFailure =
       'Impossible d\'ouvrir le lien. Il reste sélectionnable sur cette page.';
 
@@ -169,6 +176,8 @@ class DataSourcesScreen extends ConsumerWidget {
               paragraphe(licenceMit),
               const TitreSection('Descriptions aromatiques'),
               paragraphe(aromesHoublons),
+              const TitreSection('Descriptions des divers'),
+              paragraphe(descriptionsDivers),
             ],
           ),
         ),

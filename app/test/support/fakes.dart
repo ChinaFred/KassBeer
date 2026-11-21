@@ -37,6 +37,7 @@ import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/import/data/import_fiches_repository.dart';
 import 'package:kass_beer/features/library/data/library_repository.dart';
 import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
+import 'package:kass_beer/features/library/domain/description_divers.dart';
 import 'package:kass_beer/features/library/domain/recette_publique.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/members/data/members_repository.dart';
@@ -1108,6 +1109,18 @@ class FakeLibraryRepository implements LibraryRepository {
   final aromesAttente = <String, Completer<void>>{};
   final aromesReads = <String>[];
 
+  /// Réponse à `lireDescriptionDivers`, par identifiant ; absente :
+  /// `DocumentAbsent`.
+  final descriptions = <String, RechercheDocument<DescriptionDivers>>{};
+
+  /// Panne de `lireDescriptionDivers`, par identifiant.
+  final descriptionsErrors = <String, Object>{};
+
+  /// Réponse retenue jusqu'à ce que le `Completer` de l'identifiant soit
+  /// complété.
+  final descriptionsAttente = <String, Completer<void>>{};
+  final descriptionsReads = <String>[];
+
   /// Réponse à `lireIndexAromes` ; absente : `DocumentAbsent`.
   RechercheDocument<IndexAromes>? indexAromes;
 
@@ -1156,6 +1169,18 @@ class FakeLibraryRepository implements LibraryRepository {
     final error = aromesErrors[id];
     if (error != null) throw error;
     return aromes[id] ?? DocumentAbsent<AromesHoublon>();
+  }
+
+  @override
+  Future<RechercheDocument<DescriptionDivers>> lireDescriptionDivers(
+    String id,
+  ) async {
+    descriptionsReads.add(id);
+    final attente = descriptionsAttente[id];
+    if (attente != null) await attente.future;
+    final error = descriptionsErrors[id];
+    if (error != null) throw error;
+    return descriptions[id] ?? DocumentAbsent<DescriptionDivers>();
   }
 
   @override
