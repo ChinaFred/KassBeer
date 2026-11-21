@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/aromes_houblon.dart';
 import '../domain/aromes_levure.dart';
@@ -20,6 +21,9 @@ abstract final class TextesAromesLevure {
   static const inconnu = 'Aucune description : levure trop peu documentée.';
   static const profil = 'Profil';
   static const stylesConseilles = 'Styles conseillés';
+
+  /// Libellé lu d'un style conseillé ; le texte visible reste le nom.
+  static String ouvrirStyle(String nom) => 'Ouvrir la fiche du style $nom';
 
   /// « En bas de plage (15 °C) » ; sans borne, sans parenthèses.
   static String basDePlage(double? celsius) =>
@@ -104,16 +108,28 @@ class _BoutonStyle extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: TextButton(
+        // Retrait horizontal nul : le nom s'aligne sur le bord gauche des
+        // textes de la section ; la cible garde 48 px et le surlignage.
         style: TextButton.styleFrom(
           minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           alignment: Alignment.centerLeft,
+          // Coins peu arrondis : sans retrait latéral, la pilule par défaut
+          // passerait sous la première et la dernière lettre.
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.rayonChamp),
+          ),
         ),
         onPressed: () => unawaited(
           context.push(
             AppRoutes.libraryEntry(SegmentBibliotheque.styles.slug, style.code),
           ),
         ),
-        child: Text(style.name, softWrap: true),
+        child: Text(
+          style.name,
+          softWrap: true,
+          semanticsLabel: TextesAromesLevure.ouvrirStyle(style.name),
+        ),
       ),
     );
   }

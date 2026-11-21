@@ -2309,7 +2309,9 @@ sans l'attendre. Contenu, dans l'ordre :
   sans parenthèses ni valeur de remplacement ;
 - « Styles conseillés », puis un style par ligne, de 1 à 6, sous son seul nom (sans code). Un
   appui sur un style ouvre sa fiche dans la Bibliothèque, par-dessus celle de la levure ; la
-  cible fait au moins 48 px de haut et un nom long passe à la ligne. Sans style, ni titre ni
+  cible fait au moins 48 px de haut, le nom s'aligne sur le bord gauche des textes, un nom long
+  passe à la ligne, et le lecteur d'écran lit « Ouvrir la fiche du style <nom> ». « Profil »,
+  « En bas de plage », « En haut de plage » et « Styles conseillés » sont lus comme des titres. Sans style, ni titre ni
   ligne.
 
 États de la section : ceux d'un houblon, mot pour mot, sauf « levure trop peu documentée » :

@@ -228,7 +228,8 @@ const kTexteCru =
 const kTexteWhirlpool =
     'Agrumes mûrs et notes florales, plus rondes qu\'en fin d\'ébullition.';
 
-/// `beer_hop_aromas/hop-cascade`, `described`, relu le 14 novembre 2026.
+/// `beer_hop_aromas/hop-cascade`, `described`, champs du document
+/// `reviewed: true` et `reviewed_at: 2026-11-14` (non affichés).
 /// [uses] remplace la map des usages ; [extra] ajoute ou remplace des champs.
 Map<String, dynamic> hopAromaDoc({
   Map<String, Object?>? uses,
@@ -263,7 +264,7 @@ Map<String, dynamic> hopAromaDoc({
   ...extra,
 };
 
-/// `beer_hop_aromas/{id}` en `unknown`, non relu.
+/// `beer_hop_aromas/{id}` en `unknown`, champ du document `reviewed: false`.
 Map<String, dynamic> hopAromaUnknownDoc() => {
   'hop_name': 'Houblon doré',
   'status': 'unknown',
@@ -340,7 +341,8 @@ Map<String, dynamic> cultureAromaDoc({
   ...extra,
 };
 
-/// `beer_culture_aromas/{id}` en `unknown`, non relu.
+/// `beer_culture_aromas/{id}` en `unknown`, champ du document
+/// `reviewed: false`.
 Map<String, dynamic> cultureAromaUnknownDoc() => {
   'culture_name': 'Levure rare',
   'status': 'unknown',

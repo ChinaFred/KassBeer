@@ -2383,6 +2383,9 @@ que `beer_hop_aromas/` : texte rédigé par l'API Claude depuis le poste de l'ad
 (`lireAromesLevure`, livraison 2 d'ADR-017), en lecture stricte (`AromesLevure.fromFirestore`) :
 `status`, `confidence`, `descriptors`, `texts.profile` (obligatoire pour un `described`),
 `texts.cool` et `texts.warm` facultatifs, clé inconnue de `texts` ignorée, `styles` de 0 à 6 ;
+bornes de l'écrivain rejouées à la lecture : textes de 400 caractères au plus, 8 descripteurs
+au plus (commun aux houblons), `styles[].name` de 120 caractères au plus, `styles[].code` de
+la forme d'`idStyle` (`^bjcp2021-[a-z0-9]+(-[a-z0-9]+)*$`), refusé sans recopier la valeur ;
 `reviewed` et `reviewed_at` ne sont pas lus par l'application (décision de l'utilisateur du
 2026-11-21), qui ne les affiche pas. Aucun index `beer_index/` n'en est tiré.
 

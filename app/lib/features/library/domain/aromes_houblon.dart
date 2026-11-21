@@ -49,13 +49,23 @@ ConfianceArome lireConfianceArome(Map<String, dynamic> data) =>
       'high, medium ou low attendu',
     ));
 
-/// Descripteurs `{key, label}` de `descriptors`, dans l'ordre du document.
-/// Communs aux houblons et aux levures (ADR-017).
-List<DescripteurArome> lireDescripteursArome(LecteurChamps read) =>
-    List.unmodifiable([
-      for (final d in read.liste('descriptors'))
-        DescripteurArome(key: d.texte('key'), label: d.texte('label')),
-    ]);
+/// Nombre de descripteurs au plus, borne de l'écrivain (`DESCRIPTEURS_MAX` de
+/// `ingest/lib/aromes/validation.mjs`).
+const kDescripteursAromeMax = 8;
+
+/// Descripteurs `{key, label}` de `descriptors`, dans l'ordre du document ;
+/// au-delà de [kDescripteursAromeMax], le document est illisible. Communs aux
+/// houblons et aux levures (ADR-017).
+List<DescripteurArome> lireDescripteursArome(LecteurChamps read) {
+  final descripteurs = read.liste('descriptors');
+  if (descripteurs.length > kDescripteursAromeMax) {
+    throw const DocumentIllisible('descriptors', '8 descripteurs au plus');
+  }
+  return List.unmodifiable([
+    for (final d in descripteurs)
+      DescripteurArome(key: d.texte('key'), label: d.texte('label')),
+  ]);
+}
 
 /// Description aromatique d'un houblon, `beer_hop_aromas/{id}` (ADR-013,
 /// section 4). Lecture stricte : un champ attendu absent ou mal typé lève

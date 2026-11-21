@@ -165,10 +165,87 @@ void main() {
     expect(app.library.ficheReads, contains('bjcp2021-21a'));
   });
 
+  testWidgets('style : lu « Ouvrir la fiche du style … », nom visible seul', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await ouvrir(tester, aromes: cultureAromaDoc());
+    expect(find.text('American IPA'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('Ouvrir la fiche du style American IPA'),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSemantics(find.text('American IPA')),
+      isSemantics(
+        label: 'Ouvrir la fiche du style American IPA',
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('style : nom aligné sur le bord gauche des textes', (
+    tester,
+  ) async {
+    await ouvrir(tester, aromes: cultureAromaDoc());
+    expect(
+      tester.getTopLeft(find.text('American IPA')).dx,
+      tester.getTopLeft(find.text(kTexteProfil)).dx,
+    );
+  });
+
+  testWidgets('sous-titres annoncés comme en-têtes', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await ouvrir(tester, aromes: cultureAromaDoc());
+    for (final titre in [
+      TextesAromesLevure.profil,
+      bas,
+      haut,
+      TextesAromesLevure.stylesConseilles,
+    ]) {
+      expect(
+        tester.getSemantics(find.text(titre)),
+        isSemantics(label: titre, isHeader: true),
+        reason: titre,
+      );
+    }
+    semantics.dispose();
+  });
+
+  testWidgets('texte à 200 % : sous-titre avec température sans débordement', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final app = TestApp();
+    app.library.fiches[_id] = DocumentTrouve(
+      FicheReferentiel.fromFirestore(
+        NatureReferentiel.cultures,
+        _id,
+        cultureDoc(),
+      ),
+    );
+    app.library.aromesLevures[_id] = DocumentTrouve(
+      AromesLevure.fromFirestore(cultureAromaDoc()),
+    );
+    await app.pump(tester, width: 320, height: 4000);
+    app.signIn(brewerUser, member: brewerMember);
+    await tester.pumpAndSettle();
+    app.container.read(routerProvider).go(_chemin);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text(haut), findsOneWidget);
+    final largeur = tester.getSize(find.text(haut)).width;
+    expect(largeur, lessThanOrEqualTo(320));
+  });
+
   testWidgets('nom de style long : passe à la ligne sans déborder', (
     tester,
   ) async {
-    final long = 'Style au nom très long ' * 8;
+    // 114 caractères, sous la borne de 120 de `beer_styles.name`.
+    final long = ('Style au nom très long ' * 5).trim();
     await ouvrir(
       tester,
       aromes: cultureAromaDoc(

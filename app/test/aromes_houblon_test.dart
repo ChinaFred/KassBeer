@@ -68,6 +68,24 @@ void main() {
       }
     });
 
+    test('8 descripteurs lus, 9 illisible (lecture commune)', () {
+      List<Map<String, String>> descripteurs(int n) => [
+        for (var i = 0; i < n; i++) {'key': 'k$i', 'label': 'd$i'},
+      ];
+      expect(
+        decrits(
+          hopAromaDoc(extra: {'descriptors': descripteurs(8)}),
+        ).descripteurs,
+        hasLength(8),
+      );
+      expect(
+        () => AromesHoublon.fromFirestore(
+          hopAromaDoc(extra: {'descriptors': descripteurs(9)}),
+        ),
+        illisible('descriptors'),
+      );
+    });
+
     test('illisible : chaque champ attendu', () {
       expect(
         () => AromesHoublon.fromFirestore(hopAromaDoc(extra: {'status': 'x'})),

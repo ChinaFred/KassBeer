@@ -141,6 +141,101 @@ void main() {
     });
   });
 
+  group('AromesLevure.fromFirestore : bornes de l\'écrivain', () {
+    test('texte de 400 caractères lu, de 401 illisible', () {
+      final t400 = 'a' * 400;
+      for (final cle in ['profile', 'cool', 'warm']) {
+        final textes = <String, Object?>{
+          'profile': {'text': kTexteProfil},
+          cle: {'text': t400},
+        };
+        expect(decrits(cultureAromaDoc(texts: textes)), isNotNull);
+        textes[cle] = {'text': '$t400.'};
+        expect(
+          () => AromesLevure.fromFirestore(cultureAromaDoc(texts: textes)),
+          illisible('texts.$cle.text'),
+        );
+      }
+    });
+
+    test('texte compté en points de code, comme l\'écrivain', () {
+      // 399 « a » et un emoji : 400 points de code, 401 unités UTF-16.
+      final t = '${'a' * 399}\u{1F37A}';
+      final textes = <String, Object?>{
+        'profile': {'text': t},
+      };
+      expect(decrits(cultureAromaDoc(texts: textes)), isNotNull);
+    });
+
+    test('8 descripteurs lus, 9 illisible', () {
+      List<Map<String, String>> descripteurs(int n) => [
+        for (var i = 0; i < n; i++) {'key': 'k$i', 'label': 'd$i'},
+      ];
+      expect(
+        decrits(
+          cultureAromaDoc(extra: {'descriptors': descripteurs(8)}),
+        ).descripteurs,
+        hasLength(8),
+      );
+      expect(
+        () => AromesLevure.fromFirestore(
+          cultureAromaDoc(extra: {'descriptors': descripteurs(9)}),
+        ),
+        illisible('descriptors'),
+      );
+    });
+
+    test('nom de style de 120 caractères lu, de 121 illisible', () {
+      Map<String, dynamic> doc(String name) => cultureAromaDoc(
+        extra: {
+          'styles': [
+            {'code': 'bjcp2021-21a', 'name': name},
+          ],
+        },
+      );
+      expect(decrits(doc('n' * 120)).styles.single.name, hasLength(120));
+      expect(
+        () => AromesLevure.fromFirestore(doc('n' * 121)),
+        illisible('styles[0].name'),
+      );
+    });
+
+    test('codes de style : forme d\'idStyle seule', () {
+      for (final code in ['bjcp2021-21a', 'bjcp2021-27-historical-beer']) {
+        final doc = cultureAromaDoc(
+          extra: {
+            'styles': [
+              {'code': code, 'name': 'Style'},
+            ],
+          },
+        );
+        expect(decrits(doc).styles.single.code, code);
+      }
+      for (final code in [
+        '..',
+        'a/b',
+        'bjcp2021-21A',
+        'bjcp2021-',
+        'bjcp2021-21a/../x',
+        'bjcp2015-21a',
+      ]) {
+        final doc = cultureAromaDoc(
+          extra: {
+            'styles': [
+              {'code': 'bjcp2021-21a', 'name': 'Style'},
+              {'code': code, 'name': 'Style'},
+            ],
+          },
+        );
+        expect(
+          () => AromesLevure.fromFirestore(doc),
+          illisible('styles[1].code'),
+          reason: code,
+        );
+      }
+    });
+  });
+
   group('lireAromesLevure', () {
     late FakeFirebaseFirestore firestore;
     late RecordingErrorReportService errors;
@@ -171,6 +266,30 @@ void main() {
       expect(errors.reports, isEmpty);
     });
 
+    test('code de style refusé : rapport sans la valeur', () async {
+      for (final code in ['..', 'a/b']) {
+        errors.reports.clear();
+        await firestore
+            .doc('beer_culture_aromas/$id')
+            .set(
+              cultureAromaDoc(
+                extra: {
+                  'styles': [
+                    {'code': code, 'name': 'Style'},
+                  ],
+                },
+              ),
+            );
+        final lu = await repository.lireAromesLevure(id);
+        expect(lu, isA<DocumentIllisibleTrouve<AromesLevure>>());
+        final report = errors.reports.single;
+        final rapporte = '${report.error} ${report.context}';
+        expect(rapporte, contains('styles[0].code'));
+        expect(rapporte, isNot(contains('..')), reason: code);
+        expect(rapporte, isNot(contains('a/b')), reason: code);
+      }
+    });
+
     test('illisible : rapporté avec l\'identifiant, sans texte', () async {
       await firestore
           .doc('beer_culture_aromas/$id')
@@ -181,6 +300,7 @@ void main() {
       expect(report.feature, 'library.culture_aroma');
       expect(report.context, 'beer_culture_aromas/$id illisible');
       final rapporte = '${report.error} ${report.context}';
+      expect(rapporte, isNot(contains('..')));
       for (final texte in [
         kTexteProfil,
         kTexteBas,
