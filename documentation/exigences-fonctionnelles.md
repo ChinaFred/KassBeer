@@ -10,8 +10,8 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus ; régler dans Admin › Moteur d'IA le modèle, l'effort, les plafonds et l'ouverture aux membres de chaque poste d'IA, et la grille tarifaire, en ligne seulement ; lire dans Admin › Coûts de l'IA la dépense de l'IA de chaque membre, par mois et par poste ; utiliser l'assistant de recette, toujours ouvert pour lui, dans la limite de ses tours du jour ; lire « IA ce mois » dans le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -70,10 +70,23 @@ d'Admin pour un brasseur, qui renvoie sur Recettes.
 
 Barre du haut : titre de la section, avatar Google à droite (« Mon compte »). Le menu du
 compte montre le nom, l'e-mail, « Version X.Y.Z » (« Version indisponible » si elle n'a pas
-pu être lue), un séparateur, « Mes prix », « Mes processus », « Préférences », un séparateur, « Signaler ou proposer », « Mes
+pu être lue), la ligne « IA ce mois » (voir plus bas), un séparateur, « Mes prix », « Mes processus », « Préférences », un séparateur, « Signaler ou proposer », « Mes
 tickets », « Tickets à traiter » (administrateur seul), « Nouveautés », « Sources des données », un séparateur et « Se
 déconnecter ». Une déconnexion qui échoue
 affiche « Déconnexion impossible. Réessayez. ».
+
+**IA ce mois** (ADR-016, section 6). Ligne d'information sous la version, même style, sans
+action. Elle est lue à l'ouverture du menu (compte du mois `ai_usage/{AAAA-MM}_{uid}` et
+politique `ai_config/policy`, sans écouteur), et additionne les tours de tous les postes. Elle
+s'affiche à l'administrateur, à tout membre quand un poste est ouvert aux membres, et à tout
+membre qui a des tours ce mois. Pendant la lecture, rien n'est affiché à un brasseur dont le
+droit n'est pas encore connu. Textes : « IA ce mois : 12 tours, ≈ 0,42 $ » ; « IA ce mois :
+12 tours, ≈ 0,40 $ (2 sans montant) » ; « IA ce mois : 12 tours, montant inconnu » quand tous
+les appels sont sans montant ; « IA ce mois : aucun tour » ; « < 0,01 $ » sous un centime ;
+« IA ce mois : lecture en cours » ; « IA ce mois : indisponible hors ligne » (hors ligne,
+sans copie sur l'appareil) ; « IA ce mois : lecture impossible » (panne rapportée, sans
+montant). Le montant est celui que le serveur a écrit ; l'application ne le recalcule pas. Le
+mois est celui de l'appareil.
 
 Le même avatar et le même menu sont à droite de la barre du haut de chaque page pleine, hors de
 la barre de navigation : éditeurs (recette, chronologie, processus, équipement, « Signaler ou
@@ -428,12 +441,16 @@ d'une étape).
 
 ### Admin
 
-Réservé à l'administrateur. Six entrées : « Membres » (« Inviter et retirer les comptes »),
+Réservé à l'administrateur. Huit entrées : « Membres » (« Inviter et retirer les comptes »),
 « Tickets des membres » (« Bugs et idées des membres, et leur suivi sur GitHub », avec une
 pastille en ton d'erreur qui compte les alertes en ton d'erreur du bandeau des tickets et la
 panne de lecture des tickets, lue « Tickets des membres, 2 alertes, Bugs et idées des membres,
 et leur suivi sur GitHub » ; une échéance de jeton proche ne l'allume pas, un jeton de routine
-refusé l'allume), « Sources » (« Dernière mise à jour de la Bibliothèque et noms non
+refusé l'allume), « Moteur d'IA » (« Modèle, plafonds et ouverture de chaque poste, grille des
+tarifs », avec une pastille en ton d'erreur qui compte une grille absente ou illisible et
+chaque poste sans réglage lisible, lue « Moteur d'IA, 1 alerte, … » ; « Tarifs à revérifier »
+ne l'allume pas), « Coûts de l'IA » (« Dépense de l'IA par mois, par personne et par
+poste »), « Sources » (« Dernière mise à jour de la Bibliothèque et noms non
 reconnus »), « Import » (« Fiches Excel préparées en JSON »), « Rapports d'erreur »
 (« Pannes rencontrées dans l'application par les membres ») et « Journaux » (« Messages des
 fonctions du serveur »).
@@ -694,6 +711,101 @@ lancements, livraisons), du plus récent au plus ancien, 50 à la fois. Lecture 
 - **Champ refusé** par le serveur (ticket ou texte) : le message rendu par le serveur
   s'affiche sous le champ, qui prend le focus, et une panne affichée auparavant disparaît.
   L'application ne recopie ni la forme d'un identifiant ni la longueur permise du texte.
+
+### Admin › Moteur d'IA
+
+Réservé à l'administrateur (ADR-016, section 9). Adresse `/admin/moteur-ia`, titre « Moteur
+d'IA », retour vers Admin, dans la barre de navigation. L'écran lit la politique
+(`ai_config/policy`) et la grille tarifaire (`ai_config/pricing`) par `get()` à l'ouverture et
+sur « Actualiser ». Deux sections, chacune avec son bouton : « Postes » puis « Grille
+tarifaire ». L'application ne connaît ni tarif, ni liste de modèles ou d'efforts, ni borne de
+plafond : les menus viennent de la grille, et le serveur (`saveAiSettings`) refuse une valeur
+en nommant le champ en faute.
+
+- **Bandeaux** : « Tarifs à revérifier : vérifiés il y a plus de 90 jours. Les appels restent
+  chiffrés. » (avertissement) ; « Tarifs en panne : aucune grille enregistrée. Les appels
+  partent sans montant. » ou « Tarifs en panne : grille illisible. Les appels partent sans
+  montant. » (erreur) ; hors ligne ou lecture du cache : « Hors ligne. Réglages lus sur cet
+  appareil : ils peuvent ne pas être à jour. ».
+- **Postes** : une carte par poste, sous son libellé (« Assistant de recette »).
+  - Sans réglage : étiquette « Non enregistré » (ton d'avertissement) et « Aucun réglage enregistré : ce poste refuse
+    tout appel. » ; réglage illisible : « Réglage illisible : ce poste refuse tout appel.
+    Enregistrez-le de nouveau. ». Le formulaire est alors prérempli : Sonnet 5.5
+    (`claude-sonnet-5-5`) s'il est dans la grille, effort `medium` s'il est accepté, 20 tours
+    par jour, 60 pour le fondateur, 20 par conversation, administrateur seul. Rien ne
+    s'applique avant « Enregistrer ».
+  - « Modèle » : liste tirée de la grille (« Sonnet 5.5 · claude-sonnet-5-5 ») ; grille vide :
+    liste inactive, « Ajoutez d'abord un modèle à la grille. » ; modèle enregistré absent de la
+    grille : « claude-x (absent de la grille) » et « Modèle absent de la grille : les appels
+    partent sans montant. Choisissez un modèle de la grille. ».
+  - « Effort » : liste tirée des efforts du modèle ; modèle sans effort : liste inactive, « Ce
+    modèle n'a pas de réglage d'effort. ». Un changement de modèle garde l'effort s'il existe
+    pour le nouveau modèle, sinon « Choisissez un effort. ».
+  - « Tours par jour et par membre », « Tours par jour du compte fondateur », « Tours par
+    conversation » : nombres entiers positifs ; la borne haute est vérifiée par le serveur, qui
+    affiche son message sous le champ.
+  - « Ouvert à tous les membres » : « Seul l'administrateur utilise ce poste. » ou « Chaque
+    membre l'utilise, dans la limite de ses tours du jour. ». Passer de fermé à ouvert demande
+    « Ouvrir « Assistant de recette » à tous les membres ? » / « Chaque membre pourra faire
+    20 tours par jour. La limite de dépense de la Console Anthropic reste la borne. »,
+    boutons « Annuler » et « Ouvrir et enregistrer ».
+  - « Enregistrer » est actif si la carte a changé, ou si le poste n'a pas de réglage lisible.
+    Succès : « Réglages de « Assistant de recette » enregistrés. ».
+- **Grille tarifaire** : « Tarifs vérifiés le 1er novembre 2026 » (date obligatoire, jamais
+  posée seule : « Choisir la date » ou « Aujourd'hui ») ; « Ouvrir les tarifs d'Anthropic » ;
+  « Source » (200 caractères, préremplie « Page des tarifs d'Anthropic ») ; une ligne par
+  modèle (nom, identifiant, « Entrée 2 $ · Sortie 10 $ · Cache écrit 2,5 $ · Cache lu 0,2 $, par
+  million de jetons », « Efforts : low, medium, high » ou « Sans réglage d'effort »). Un appui
+  ouvre le formulaire ; le menu de la ligne propose « Retirer » (« « Sonnet 5.5 » retiré. »
+  avec « Annuler »), inactif pour un modèle cité par un poste (« Sert au poste « Assistant de
+  recette » : choisissez-en un autre d'abord. »). « Ajouter un modèle » ouvre le formulaire
+  (feuille du bas au téléphone, dialogue sinon) : « Identifiant » (à l'ajout seulement, aide
+  « Tel qu'écrit sur la page d'Anthropic, par exemple claude-sonnet-5-5. »), « Nom affiché »,
+  « Entrée », « Sortie », « Écriture du cache », « Lecture du cache » (en $ par million de
+  jetons), « Efforts acceptés » (valeurs séparées par des virgules ; vide : modèle sans
+  effort). Grille illisible : « Recommencer la grille » part d'une grille vide. « Enregistrer
+  la grille » : « Grille tarifaire enregistrée. ». Un refus s'affiche sur la ligne ou le champ
+  nommé par le serveur, par exemple « Ce modèle sert au poste « Assistant de recette » :
+  choisissez-en un autre d'abord. ».
+- **États** : « Lecture des réglages de l'IA » ; « Impossible de lire les réglages de l'IA. »
+  et « Réessayer » ; hors ligne, boutons inactifs avec « L'enregistrement demande le réseau. » ;
+  autre refus : message du serveur ou « Enregistrement refusé par le serveur. » ; réseau coupé
+  pendant l'appel : « Enregistrement impossible. Réessayez. ». Avec des changements non
+  enregistrés, y compris sur un poste « Non enregistré » dont une valeur diffère de la
+  proposition initiale, « Abandonner les modifications ? » (« Les réglages modifiés ne seront
+  pas enregistrés. ») s'ouvre avant le retour, la barre ou le rail de navigation, « Tickets à
+  traiter », « Mes processus », « Se déconnecter » et « Actualiser ». Un refus du serveur donne
+  le focus au champ qu'il nomme.
+
+### Admin › Coûts de l'IA
+
+Réservé à l'administrateur (ADR-016, section 9). Adresse `/admin/couts-ia`, titre « Coûts de
+l'IA », retour vers Admin. Lecture par `get()` des comptes du mois (`ai_usage/`, 50 au plus),
+noms lus dans `members/` par l'e-mail que le serveur écrit avec chaque compte.
+
+- « Mois » : « Novembre 2026 (en cours) » et les 12 mois précédents ; un choix relance la
+  lecture.
+- Total : « Total : ≈ 3,42 $ · 48 tours · 4 personnes » ; appels sans montant : « 4 appels sans
+  montant : tarifs en panne. Le total ne les compte pas. » ; appels en échec : « 2 appels en
+  échec (délai dépassé ou serveur indisponible), comptés dans les tours. ».
+- Une ligne par personne, par montant puis par tours décroissants : nom du membre, « Membre
+  retiré » ou « Nom non renseigné » avec l'e-mail, puis « 12 tours · ≈ 0,42 $ » (« · 2 sans
+  montant ») ; à partir de 840 px, ce résumé est à droite du nom, sur la même ligne, et les
+  jetons du détail passent sur deux colonnes. Un appui déplie le détail par poste : « Tours 12 · Échecs 1 · Sans montant 2 »,
+  « Jetons : entrée 98 000, cache écrit 2 500, cache lu 20 000, sortie 15 000 », « Montant
+  ≈ 0,42 $ » (« montant inconnu » quand tous les appels sont sans montant). Un poste inconnu
+  s'affiche sous sa clé, avec « Poste inconnu ».
+- Montants tels que le serveur les a écrits, jamais recalculés ; « < 0,01 $ » sous un centime.
+- Grille actuelle absente ou illisible : « Tarifs en panne : les appels en cours partent sans
+  montant. » et « Ouvrir Moteur d'IA ».
+- En bas : « Les montants sont estimés avec la grille au moment de chaque appel. La facture
+  fait foi dans la Console Anthropic. » et « Ouvrir la Console Anthropic ».
+- États : « Chargement des coûts » ; « Aucun appel à l'IA en novembre 2026. » ; « Impossible de
+  lire les coûts de l'IA. » et « Réessayer » (hors ligne sans copie : « Hors ligne. Les coûts
+  demandent le réseau. ») ; lecture du cache hors ligne : « Hors ligne. Coûts lus sur cet
+  appareil : ils peuvent ne pas être à jour. » ; membres illisibles : e-mails affichés et
+  « Noms indisponibles : les membres n'ont pas pu être lus. » ; 50 comptes reçus : « 50
+  premières personnes affichées. ».
 
 ### Admin › Tickets des membres
 
@@ -1707,6 +1819,102 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
 - L'adresse de modification d'une recette d'un autre affiche « Seul l'auteur modifie cette
   recette. » et « Voir la recette » (« Seul l'auteur modifie cet équipement. » et « Voir
   l'équipement » pour un équipement).
+
+**Assistant** (ADR-015, lot A1). Conversation avec l'IA sur le brouillon de la recette, en
+texte. Le serveur appelle Claude (poste « Assistant de recette ») ; l'application n'appelle
+aucune API d'IA.
+
+- **Accès** : icône « Assistant » dans la barre du haut, avant « Enregistrer » (infobulle
+  « Ouvrir l'assistant », « Fermer l'assistant » quand la colonne est ouverte). Toujours
+  visible pour l'administrateur ; pour un brasseur, seulement quand la politique lue ouvre le
+  poste aux membres. La politique est lue à l'ouverture de l'éditeur et relue à l'ouverture du
+  panneau, avec les tours du jour.
+- **Disposition** : sous 840 px, feuille du bas à 90 % de la hauteur, qui remonte avec le
+  clavier (640 px de large au plus à partir de 600 px). De 840 à 1 279 px, la colonne de droite
+  porte deux boutons segmentés « Calculs » et « Assistant » ; avec « Assistant », elle passe à
+  400 px et le formulaire reste modifiable ; sous le commutateur, le panneau ne répète ni le
+  titre ni ✕ et garde son menu ⋮. À partir de 1 280 px, trois colonnes : formulaire,
+  calculs, assistant. En tête du panneau (feuille et trois colonnes) : « Assistant », menu
+  « Nouvelle conversation » et « Copier la conversation », « Fermer l'assistant », puis la
+  ligne des calculs (« DI 1057,9 ·
+  DF 1012,0 · 5,9 % · 32 IBU · 18 EBC »). Le champ et la ligne « Tours restants · Envoyer »
+  restent fixés en bas ; quand la hauteur manque (360 × 640 à 200 %), tout le panneau défile
+  d'un bloc sous son en-tête.
+- **Contenu fixe** : « Les chiffres viennent du calcul de Kass'Beer ; une valeur marquée
+  « proposée par l'IA » est à vérifier. » en tête ; champ « Votre message » (2 à 6 lignes,
+  compteur « 1 234 / 1 500 » ; au-delà, « 1 500 caractères au plus. » et « Envoyer » inactif,
+  sans couper le texte) ; sous le champ, « La recette et vos messages partent chez Anthropic,
+  qui les garde 30 jours. ».
+- **Envoyer** : rien ne part à l'ouverture ni sur une frappe ; Entrée insère un saut de ligne.
+  « Analyser la recette » et « Proposer des améliorations », affichés quand le champ est vide,
+  remplissent le champ sans envoyer. Un appui sur « Envoyer » fait un seul appel : le message
+  passe dans la conversation, « L'assistant rédige sa réponse » s'affiche, le bouton devient
+  « Envoi » et reste inactif. La réponse s'affiche en Markdown (aucune image chargée, aucun
+  HTML ; un lien `http` ou `https` montre d'abord son adresse complète dans « Ouvrir ce lien ? »,
+  boutons « Annuler » et « Ouvrir »), sélectionnable, avec « Copier la réponse ». Elle est
+  annoncée « Réponse de l'assistant reçue ».
+- **Données envoyées** : le brouillon tel que le lit le bloc Calculs (sans auteur, ni
+  propriétaire, ni dates, ni prix), ses calculs (valeurs de Kass'Beer, une valeur indisponible
+  part absente), l'équipement choisi s'il est lu, le style s'il désigne une seule entrée de la
+  Bibliothèque par son nom exact, et les arômes des houblons de la recette trouvés dans la
+  Bibliothèque (20 houblons au plus). Rien n'est lu sous les prix du membre.
+- **Tours restants** : « Tours restants aujourd'hui : 17 sur 20 » (limite du fondateur pour le
+  compte fondateur), lus dans la réponse ; avant le premier tour, tirés de la politique et du
+  compteur du jour. Politique ou compteur illisible : « Tours restants : inconnu ». À 0 : « Plus
+  aucun tour aujourd'hui. Reprise le 16 nov. à 00:00. » et « Envoyer » inactif. À trois tours
+  ou moins de la limite de la conversation : « Cette conversation : 2 tours restants sur 20 ».
+- **Résumer et continuer** : quand la conversation atteint la limite de tours de la politique
+  (« Cette conversation a atteint 20 tours. »), ou après un refus du serveur pour une
+  conversation trop longue (« Cette conversation est trop longue pour continuer. »), un encadré
+  dit « Le résumé coûte un tour. Il remplace l'échange actuel et ouvre une nouvelle
+  conversation. », avec « Résumer et continuer » et « Nouvelle conversation ». Le résumé part
+  sur un appui seulement ; il s'affiche en première bulle « Résumé de la conversation
+  précédente » et accompagne la conversation suivante.
+- **Nouvelle conversation** : avec au moins un tour, « Commencer une nouvelle conversation ? » /
+  « La conversation en cours sera effacée. Les tours déjà faits restent comptés aujourd'hui. »,
+  boutons « Annuler » et « Effacer et recommencer ».
+- **Conversation en mémoire** : fermer le panneau la garde tant que l'éditeur est ouvert ;
+  fermer l'éditeur la perd, et un rafraîchissement de la page web aussi, sans question.
+  Quitter avec au moins un tour (✕, retour Android, menu du compte) : « Quitter l'éditeur ? » /
+  « La conversation avec l'assistant sera perdue. Elle n'est enregistrée nulle part. »,
+  boutons « Rester » et « Quitter » ; avec des changements de la recette, « Abandonner les
+  modifications ? » / « Les changements de cette recette ne seront pas enregistrés. La
+  conversation avec l'assistant sera perdue. ». « Enregistrer » avec une conversation, une
+  fois le nom et les champs validés :
+  « Enregistrer et fermer l'assistant ? » / « La recette sera enregistrée. La conversation sera
+  perdue : copiez d'abord ce que vous voulez garder. », boutons « Continuer la conversation »
+  et « Enregistrer ». Un appel en cours ajoute « La réponse en attente sera perdue ; le tour
+  est compté. ».
+- **Échecs**, au-dessus du champ ; le message revient dans le champ et la conversation ne
+  compte pas ce tour :
+  - poste fermé : « L'administrateur a fermé l'assistant aux membres. Le tour n'est pas
+    compté. » (« Envoyer » inactif) ;
+  - réglages absents : « Assistant indisponible : les réglages de l'IA manquent.
+    L'administrateur les enregistre dans Admin › Moteur d'IA. » ;
+  - plafond du jour : « Vous avez utilisé vos 20 tours d'aujourd'hui. Reprise le 16 nov. à
+    00:00. » (sans limite connue : « Vous avez utilisé tous vos tours d'aujourd'hui. ») ;
+  - crédit épuisé : « Crédit de l'IA épuisé pour ce mois. Le tour n'est pas compté. Prévenez
+    l'administrateur. » (administrateur : « … Rechargez le crédit dans la Console
+    Anthropic. ») ;
+  - IA très demandée : « L'IA est très demandée. Réessayez dans une minute. Le tour n'est pas
+    compté. » ;
+  - réponse illisible : « L'IA n'a pas rendu de réponse lisible. Le tour est compté.
+    Reformulez votre message. » ;
+  - délai dépassé : « L'assistant n'a pas répondu à temps. Le tour est compté. Votre message
+    est remis dans le champ. » ;
+  - envoi refusé avant l'appel : « Envoi impossible. Le tour n'est pas compté. Réessayez. » ;
+  - donnée trop longue : « Trop long pour l'assistant : la recette. Le tour n'est pas
+    compté. » (votre message, l'équipement, le style, les calculs, les arômes, le résumé, la
+    conversation) ;
+  - clé ou modèle refusé : message du serveur, puis « Le tour n'est pas compté. » ;
+  - réseau coupé pendant l'appel : « Résultat inconnu : ce tour a peut-être été compté. Votre
+    message est remis dans le champ. » ;
+  - autre refus : « Demande refusée par le serveur. Le tour n'est pas compté. » ;
+  - brouillon illisible : « La recette contient une valeur refusée. Corrigez-la avant
+    d'envoyer. ».
+- **État vide** : « Posez une question sur cette recette, ou choisissez un raccourci. », et
+  « Ajoutez au moins un malt ou un houblon pour une analyse utile. » pour une recette sans
+  malt ni houblon (rien n'est bloqué).
 
 **Saisie des nombres.** Virgule ou point décimal ; les espaces sont ignorés. « 22.4 » et
 « 22,4 » valent 22,4 ; « 1.500 » kg vaut 1,5 kg. Un nombre qui contient plus d'un séparateur
@@ -3135,6 +3343,9 @@ affiche « Calcul impossible : {champ} hors des limites. » ; l'erreur est rappo
   après la sortie de l'écran. « Déjà importée » se lit dans les recettes en cache.
 - L'export marche sans réseau si la recette et son équipement sont dans le cache ; sinon
   « Équipement indisponible hors ligne. » bloque l'export.
+- L'assistant de l'éditeur demande le réseau : hors ligne, « Envoyer » est inactif avec
+  « L'assistant demande le réseau. », le brouillon et le message sont gardés, et rien ne part
+  au retour du réseau. L'écran du jour et les journées n'utilisent pas l'assistant.
 
 ### Configuration absente
 

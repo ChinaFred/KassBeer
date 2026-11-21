@@ -398,9 +398,11 @@ void main() {
           .widgetList<LigneListe>(find.byType(LigneListe))
           .map((l) => l.titre)
           .toList();
-      expect(titres.take(4), [
+      expect(titres.take(6), [
         'Membres',
         'Tickets des membres',
+        'Moteur d\'IA',
+        'Coûts de l\'IA',
         'Sources',
         'Import',
       ]);
