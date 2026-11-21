@@ -6,6 +6,30 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.85 — fonctionnel
+
+L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux
+puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès
+l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par
+« Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y
+est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même
+ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les
+données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95.
+
+### v0.1.85 — technique
+
+`logs_screen.dart` : `_PuceMenu` (`MenuAnchor` et `ActionChip`) remplace `BoutonsSegmentes`
+pour la gravité et la période ; `_plusDeFiltres` replie les trois autres filtres sur
+téléphone, et un refus de champ du serveur les déplie. L'icône
+de tête : une `Etiquette` partagée, ton choisi par gravité ; date et fonction dessous au-delà
+de `kGrandTexteMinScale`. Entrées en `Card.outlined`, texte en chasse fixe dans un
+`SingleChildScrollView` horizontal sur `surfaceContainerHighest`. Puces avec `childFocusNode`
+et `Semantics(expanded)`, valeur du menu en `Semantics(selected)`. La note sur les e-mails
+passe sous le compte des entrées. Aucun appel, filtre, règle ni fonction serveur ne change ; la
+recherche part toujours du seul bouton « Rechercher » (P50). Tests de `logs_test.dart` :
+téléphone de 360 × 640 (« Rechercher » visible, gravité en une puce, cinq entrées visibles),
+compte de « Plus de filtres (2) », bloc des données, date entière à 200 %.
+
 ### v0.1.84 — fonctionnel
 
 Sur téléphone, la Bibliothèque montre ses six rubriques sans faire glisser la ligne : les

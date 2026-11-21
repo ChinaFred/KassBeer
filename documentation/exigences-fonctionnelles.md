@@ -660,39 +660,53 @@ lancements, livraisons), du plus récent au plus ancien, 50 à la fois. Lecture 
 - **Ouverture** : aucune recherche ne part. L'écran affiche les filtres et « Choisissez les
   filtres, puis appuyez sur Rechercher. ».
 - **Filtres** : « Gravité » (« Info et plus » par défaut, « Avertissements et plus »,
-  « Erreurs », « Débogage seul »), boutons segmentés qui passent en colonne quand ils ne
-  tiennent pas ; « Période » (« 1 h » par défaut, « 24 h », « 7 jours ») ; « Fonction »
-  (« Toutes les fonctions », puis la liste rendue par le serveur ; avant la première réponse,
-  aide « La liste des fonctions arrive avec la première recherche. ») ; « Ticket » (aide
-  « Identifiant du ticket ») ; « Texte à chercher » (aide « Mot ou expression contenu dans le
-  message »). La touche Entrée d'un champ ne lance rien.
+  « Erreurs », « Débogage seul ») et « Période » (« 1 h » par défaut, « 24 h », « 7 jours »),
+  chacune une puce qui affiche sa valeur (« Gravité : Info et plus ») et ouvre le menu des
+  valeurs, la valeur choisie cochée ; « Fonction » (« Toutes les fonctions », puis la liste
+  rendue par le serveur ; avant la première réponse, aide « La liste des fonctions arrive avec
+  la première recherche. ») ; « Ticket » (aide « Identifiant du ticket ») ; « Texte à chercher »
+  (aide « Mot ou expression contenu dans le message »). La touche Entrée d'un champ ne lance
+  rien.
 - **Rechercher** : bouton « Rechercher ». Pendant un appel, seul le bouton appuyé
   (« Rechercher », « Réessayer » ou « Charger la suite ») affiche « Recherche en cours » ; les
   autres sont désactivés, sans indicateur. Après une recherche, « N entrées affichées » (« 1 entrée affichée ») est
   annoncé.
 - **Filtre changé après une recherche** : la liste reste, avec « Filtres modifiés : appuyez sur
   Rechercher pour mettre la liste à jour. », et « Charger la suite » disparaît.
-- **Téléphone** : filtres et liste dans le même défilement. Après une recherche réussie, les
+- **Téléphone** : filtres et liste dans le même défilement. En haut, les puces « Gravité » et
+  « Période » et « Rechercher », sur une ligne quand elles tiennent ; dessous, « Plus de
+  filtres » déplie « Fonction », « Ticket » et « Texte à chercher », repliés à l'ouverture.
+  Le bouton dit combien de ces trois filtres sont remplis (« Plus de filtres (2) »). Un champ
+  refusé par le serveur les déplie. Après une recherche réussie, les
   filtres se replient en une ligne (« Info et plus · 1 h · Toutes les fonctions », suivie du
-  ticket et du texte s'ils sont remplis) avec « Modifier les filtres ». **Grand écran** (fenêtre
-  d'au moins 840 px) : filtres toujours dépliés, « Gravité » et « Période » sur une ligne,
-  « Fonction », « Ticket » et « Texte à chercher » côte à côte, « Rechercher » à droite.
-- **Note fixe** sous les filtres : « Les journaux peuvent contenir des adresses e-mail. Ne les
-  recopiez pas dans une Issue. » Les adresses ne sont pas masquées (choix de l'utilisateur du
+  ticket et du texte s'ils sont remplis) avec « Modifier les filtres ». Sur un téléphone de
+  360 × 640, « Rechercher » se voit sans défiler, et cinq entrées repliées d'une ligne au
+  moins après une recherche. **Grand écran** (fenêtre d'au moins 840 px) : filtres toujours
+  dépliés, sans « Plus de filtres » ; les deux puces sur une ligne, « Fonction », « Ticket » et
+  « Texte à chercher » côte à côte, « Rechercher » à droite ; filtres et liste sur 840 px au
+  plus, comme les autres écrans de la coquille.
+- **Note fixe** : « Les journaux peuvent contenir des adresses e-mail. Ne les recopiez pas
+  dans une Issue. », en petit, sous les filtres avant la première recherche, puis sous « N
+  entrées affichées ». Les adresses ne sont pas masquées (choix de l'utilisateur du
   2026-11-14).
-- **Une entrée repliée** : icône et couleur de la gravité (erreur, avertissement, information,
-  débogage), lue « Erreur », « Avertissement », « Information » ou « Débogage » ; `CRITICAL`,
-  `ALERT` et `EMERGENCY` s'affichent en erreur, `NOTICE` en information, toute autre gravité
-  avec une icône de cercle, lue « Gravité inconnue » ; titre = la première ligne du message,
-  deux lignes au plus ; sous-titre « date et heure avec les secondes · fonction »
-  (« 14 nov. 10:30:05 · synctickets »).
+- **Une entrée repliée** : une carte à bord fin par entrée. En tête, une étiquette de gravité
+  (icône et mot « Erreur », « Avertissement », « Information », « Débogage » ou « Gravité
+  inconnue », sur un fond du thème : erreur, tertiaire, primaire, ou neutre pour le débogage
+  et une gravité inconnue) ; `CRITICAL`, `ALERT` et `EMERGENCY` s'affichent en erreur,
+  `NOTICE` en information, toute autre gravité avec une icône de cercle ; à droite, sur la
+  même ligne, « date et heure avec les secondes · fonction » (« 14 nov. 10:30:05 ·
+  synctickets »), sans « · » quand la fonction manque ; avec un texte agrandi (plus de 130 %),
+  cette ligne passe sous l'étiquette, en entier. Dessous, la première ligne du message, deux
+  lignes au plus. Dans le menu d'une puce, la valeur choisie est annoncée comme sélectionnée ;
+  la puce et « Plus de filtres » annoncent s'ils sont ouverts.
 - **Une entrée dépliée** : « Message » (le message entier, en chasse fixe s'il tient sur
-  plusieurs lignes, comme une pile d'appels) et « Données » (le reste de l'entrée, en chasse
-  fixe), texte sélectionnable ; « Texte coupé à N caractères. » sous « Message » ou sous
+  plusieurs lignes, comme une pile d'appels) et « Données » (le reste de l'entrée) ; un texte
+  en chasse fixe s'affiche dans un bloc à fond neutre qui défile en largeur quand une ligne
+  dépasse ; texte sélectionnable ; « Texte coupé à N caractères. » sous « Message » ou sous
   « Données » quand le serveur a coupé ce texte, N étant la longueur gardée que le serveur
   indique (8 000 aujourd'hui). Une entrée
   dépliée le reste quand elle sort de l'écran et y revient ; une nouvelle recherche replie
-  tout ; « Copier l'entrée », puis « Entrée copiée. » (« Impossible de copier l'entrée. »
+  tout ; « Copier l'entrée », à droite, puis « Entrée copiée. » (« Impossible de copier l'entrée. »
   en cas d'échec).
 - **Suite** : « Charger la suite » lit les 50 suivantes ; sans suite, « Fin des journaux pour
   cette période. ».

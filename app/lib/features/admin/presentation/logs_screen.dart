@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
+import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/presentation/formats.dart';
-import '../../../core/presentation/segments.dart';
 import '../../../core/providers.dart';
 import '../domain/log_entry.dart';
 
@@ -50,6 +50,15 @@ class LogsScreen extends ConsumerStatefulWidget {
   static const copier = 'Copier l\'entrée';
   static const copie = 'Entrée copiée.';
   static const copieImpossible = 'Impossible de copier l\'entrée.';
+  static const plusDeFiltres = 'Plus de filtres';
+
+  /// « Plus de filtres », suivi du nombre de filtres remplis parmi
+  /// « Fonction », « Ticket » et « Texte à chercher » : « Plus de filtres (2) ».
+  static String plusDeFiltresCompte(int n) =>
+      n == 0 ? plusDeFiltres : '$plusDeFiltres ($n)';
+
+  /// « Gravité : Info et plus », libellé de la puce de menu.
+  static String puce(String filtre, String valeur) => '$filtre : $valeur';
 
   /// « Texte coupé à 8 000 caractères. », [gardes] rendu par le serveur.
   static String texteCoupe(int gardes) =>
@@ -97,6 +106,10 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
 
   /// Téléphone : bloc des filtres replié en une ligne après une recherche.
   bool _replie = false;
+
+  /// « Fonction », « Ticket » et « Texte à chercher » affichés. Repliés par
+  /// défaut sur téléphone, toujours affichés sur grand écran.
+  bool _plusDeFiltres = false;
 
   String? _erreurTicket;
   String? _erreurTexte;
@@ -152,6 +165,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
           // Le refus vise un champ : plus aucune panne générale affichée.
           _echec = null;
           _replie = false;
+          _plusDeFiltres = true;
           // Message du serveur ; aucune borne recopiée en Dart.
           final texte = echec.motif ?? echec.cause.message;
           if (echec.champ == EchecJournaux.champTicket) {
@@ -224,23 +238,25 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
         ? _reessayer
         : null;
 
+    final note = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      child: Text(
+        LogsScreen.noteEmails,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+
     final head = <Widget>[
       if (!large && _replie && _listeLue)
         _resumeFiltres(theme)
       else
         _blocFiltres(theme, large: large),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-        child: Text(
-          LogsScreen.noteEmails,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
     ];
 
     if (!_listeLue || (_entrees.isEmpty && echec != null)) {
+      head.addAll([const SizedBox(height: 8), note]);
       head.add(
         echec != null
             ? EtatErreur(
@@ -286,7 +302,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
           ),
         ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
         child: Semantics(
           liveRegion: true,
           child: Text(
@@ -295,6 +311,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
           ),
         ),
       ),
+      note,
       if (_entrees.isEmpty)
         const EtatVide(icon: Icons.inbox_outlined, message: LogsScreen.vide),
     ]);
@@ -364,35 +381,27 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
     ),
   );
 
+  /// Nombre de filtres remplis parmi « Fonction », « Ticket » et « Texte ».
+  int get _filtresEnPlus => [
+    _filtres.fonction != null,
+    _filtres.ticket.trim().isNotEmpty,
+    _filtres.texte.isNotEmpty,
+  ].where((rempli) => rempli).length;
+
   Widget _blocFiltres(ThemeData theme, {required bool large}) {
-    final libelle = theme.textTheme.labelLarge;
-    final gravite = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(LogsScreen.gravite, style: libelle),
-        const SizedBox(height: 8),
-        BoutonsSegmentes<FiltreGravite>(
-          values: FiltreGravite.values,
-          labelOf: (g) => g.libelle,
-          selected: {_filtres.gravite},
-          onSelectionChanged: (s) =>
-              _changer(_filtres.copyWith(gravite: s.first)),
-        ),
-      ],
+    final gravite = _PuceMenu<FiltreGravite>(
+      filtre: LogsScreen.gravite,
+      valeurs: FiltreGravite.values,
+      libelleDe: (g) => g.libelle,
+      choisie: _filtres.gravite,
+      onChoisie: (g) => _changer(_filtres.copyWith(gravite: g)),
     );
-    final periode = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(LogsScreen.periode, style: libelle),
-        const SizedBox(height: 8),
-        BoutonsSegmentes<FiltrePeriode>(
-          values: FiltrePeriode.values,
-          labelOf: (p) => p.libelle,
-          selected: {_filtres.periode},
-          onSelectionChanged: (s) =>
-              _changer(_filtres.copyWith(periode: s.first)),
-        ),
-      ],
+    final periode = _PuceMenu<FiltrePeriode>(
+      filtre: LogsScreen.periode,
+      valeurs: FiltrePeriode.values,
+      libelleDe: (p) => p.libelle,
+      choisie: _filtres.periode,
+      onChoisie: (p) => _changer(_filtres.copyWith(periode: p)),
     );
     // Désactivé pendant tout appel ; l'attente ne s'affiche que s'il l'a lancé.
     final Widget bouton = _origine == _Origine.rechercher
@@ -412,17 +421,33 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            gravite,
-            const SizedBox(height: 16),
-            periode,
-            const SizedBox(height: 16),
-            _menuFonction(null),
-            const SizedBox(height: 16),
-            _champTicket(),
-            const SizedBox(height: 16),
-            _champTexte(),
-            const SizedBox(height: 16),
-            bouton,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [gravite, periode, bouton],
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Semantics(
+                expanded: _plusDeFiltres,
+                child: TextButton.icon(
+                  onPressed: () =>
+                      setState(() => _plusDeFiltres = !_plusDeFiltres),
+                  icon: Icon(_plusDeFiltres ? Icons.expand_less : Icons.tune),
+                  label: Text(LogsScreen.plusDeFiltresCompte(_filtresEnPlus)),
+                ),
+              ),
+            ),
+            if (_plusDeFiltres) ...[
+              const SizedBox(height: 4),
+              _menuFonction(null),
+              const SizedBox(height: 16),
+              _champTicket(),
+              const SizedBox(height: 16),
+              _champTexte(),
+              const SizedBox(height: 8),
+            ],
           ],
         ),
       );
@@ -435,14 +460,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 3, child: gravite),
-              const SizedBox(width: 16),
-              Expanded(flex: 2, child: periode),
-            ],
-          ),
+          Wrap(spacing: 8, runSpacing: 8, children: [gravite, periode]),
           const SizedBox(height: 16),
           Wrap(
             spacing: 16,
@@ -560,50 +578,176 @@ class _LigneJournal extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final gravite = entree.gravite;
-    final (icone, couleur) = switch (gravite) {
-      GraviteJournal.erreur => (Icons.error_outline, scheme.error),
-      GraviteJournal.avertissement => (
-        Icons.warning_amber_outlined,
-        scheme.tertiary,
+    // Texte agrandi : la date et la fonction passent sous l'étiquette, en
+    // entier.
+    final grandTexte =
+        MediaQuery.textScalerOf(context).scale(1) > kGrandTexteMinScale;
+    final date = Text(
+      entree.resume,
+      maxLines: grandTexte ? null : 1,
+      overflow: grandTexte ? null : TextOverflow.ellipsis,
+      textAlign: grandTexte ? TextAlign.start : TextAlign.end,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: scheme.onSurfaceVariant,
       ),
-      GraviteJournal.information => (Icons.info_outline, scheme.primary),
-      GraviteJournal.debogage => (Icons.bug_report_outlined, scheme.outline),
-      GraviteJournal.autre => (Icons.circle_outlined, scheme.onSurfaceVariant),
-    };
-    return ExpansionTile(
-      initiallyExpanded: ouverte,
-      onExpansionChanged: onOuverte,
-      leading: Semantics(
-        label: gravite.mot,
-        child: ExcludeSemantics(child: Icon(icone, color: couleur)),
-      ),
-      title: Text(entree.titre, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: Text(entree.resume),
-      expandedCrossAxisAlignment: CrossAxisAlignment.start,
-      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      children: [
-        _Section(
-          titre: LogsScreen.message,
-          contenu: entree.messageComplet,
-          // Une pile d'appels se lit en chasse fixe, comme « Données ».
-          monospace: entree.messageMultiligne,
+    );
+    final bordure = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    );
+    return Card.outlined(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: ouverte,
+        onExpansionChanged: onOuverte,
+        shape: bordure,
+        collapsedShape: bordure,
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        tilePadding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (grandTexte) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _etiquetteGravite(entree.gravite),
+              ),
+              const SizedBox(height: 4),
+              date,
+            ] else
+              Row(
+                children: [
+                  Flexible(child: _etiquetteGravite(entree.gravite)),
+                  const SizedBox(width: 8),
+                  Expanded(child: date),
+                ],
+              ),
+            const SizedBox(height: 2),
+            Text(
+              entree.titre,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
         ),
-        if (entree.messageCoupe) _NoteCoupe(gardes: entree.caracteresGardes),
-        if (entree.payload.isNotEmpty)
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        children: [
           _Section(
-            titre: LogsScreen.donnees,
-            contenu: entree.payload,
-            monospace: true,
+            titre: LogsScreen.message,
+            contenu: entree.messageComplet,
+            // Une pile d'appels se lit en chasse fixe, comme « Données ».
+            monospace: entree.messageMultiligne,
           ),
-        if (entree.payloadCoupe) _NoteCoupe(gardes: entree.caracteresGardes),
-        const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: () => unawaited(_copier(context, ref)),
-          icon: const Icon(Icons.copy),
-          label: const Text(LogsScreen.copier),
-        ),
+          if (entree.messageCoupe) _NoteCoupe(gardes: entree.caracteresGardes),
+          if (entree.payload.isNotEmpty)
+            _Section(
+              titre: LogsScreen.donnees,
+              contenu: entree.payload,
+              monospace: true,
+            ),
+          if (entree.payloadCoupe) _NoteCoupe(gardes: entree.caracteresGardes),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => unawaited(_copier(context, ref)),
+              icon: const Icon(Icons.copy),
+              label: const Text(LogsScreen.copier),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Gravité d'une entrée : icône et mot, sur le fond du ton de l'étiquette.
+Etiquette _etiquetteGravite(GraviteJournal gravite) {
+  final (icone, ton) = switch (gravite) {
+    GraviteJournal.erreur => (Icons.error_outline, TonEtiquette.erreur),
+    GraviteJournal.avertissement => (
+      Icons.warning_amber_outlined,
+      TonEtiquette.tertiaire,
+    ),
+    GraviteJournal.information => (Icons.info_outline, TonEtiquette.primaire),
+    GraviteJournal.debogage => (Icons.bug_report_outlined, TonEtiquette.neutre),
+    GraviteJournal.autre => (Icons.circle_outlined, TonEtiquette.neutre),
+  };
+  return Etiquette(label: gravite.mot, icon: icone, ton: ton);
+}
+
+/// Puce « Filtre : valeur » qui ouvre le menu des valeurs du filtre.
+class _PuceMenu<T> extends StatefulWidget {
+  const _PuceMenu({
+    required this.filtre,
+    required this.valeurs,
+    required this.libelleDe,
+    required this.choisie,
+    required this.onChoisie,
+  });
+
+  final String filtre;
+  final List<T> valeurs;
+  final String Function(T) libelleDe;
+  final T choisie;
+  final ValueChanged<T> onChoisie;
+
+  @override
+  State<_PuceMenu<T>> createState() => _PuceMenuState<T>();
+}
+
+class _PuceMenuState<T> extends State<_PuceMenu<T>> {
+  /// Focus de la puce, rendu par le menu à sa fermeture (clavier, web).
+  final _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget;
+    // ticket: aucun (menu d'un filtre, dans l'écran entier)
+    return MenuAnchor(
+      childFocusNode: _focus,
+      menuChildren: [
+        for (final v in w.valeurs)
+          Semantics(
+            selected: v == w.choisie,
+            child: MenuItemButton(
+              // Une coche devant la valeur choisie, un vide de même largeur
+              // devant les autres.
+              leadingIcon: v == w.choisie
+                  ? const Icon(Icons.check)
+                  : const SizedBox(width: 24),
+              onPressed: () => w.onChoisie(v),
+              child: Text(w.libelleDe(v)),
+            ),
+          ),
       ],
+      builder: (context, menu, _) => Semantics(
+        expanded: menu.isOpen,
+        child: ActionChip(
+          focusNode: _focus,
+          onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(LogsScreen.puce(w.filtre, w.libelleDe(w.choisie))),
+              ),
+              const ExcludeSemantics(
+                child: Icon(Icons.arrow_drop_down, size: 18),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -650,12 +794,25 @@ class _Section extends StatelessWidget {
         children: [
           Text(titre, style: theme.textTheme.labelMedium),
           const SizedBox(height: 4),
-          SelectableText(
-            contenu,
-            style: monospace
-                ? theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace')
-                : theme.textTheme.bodyMedium,
-          ),
+          if (monospace)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.all(8),
+                child: SelectableText(
+                  contenu,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            )
+          else
+            SelectableText(contenu, style: theme.textTheme.bodyMedium),
         ],
       ),
     );
