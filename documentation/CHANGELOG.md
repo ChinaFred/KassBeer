@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.92 — technique
+### v0.1.93 — technique
 
 Lot D2 d'ADR-017 : les descriptions des divers se rédigent depuis le poste de l'admin.
 `ingest/generer-divers.mjs` passe par le moteur commun avec la nature `ingest/lib/divers/`
@@ -20,7 +20,7 @@ avec les garde-fous des arômes ; `firestore.rules` l'ouvre en `get` aux membres
 cinq profils. Empreinte des houblons inchangée ; leurs textes passent aussi par le contrôle Cf et NFKC. Tests : `ingest` 275, `exchange`
 307, `referentiels.test.mjs` 158.
 
-### v0.1.91 — technique
+### v0.1.92 — technique
 
 Lot D1 d'ADR-017 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
 `ingest/lib/redaction/` (`client.mjs`, `tarif.mjs`, `texte.mjs`, `moteur.mjs`), paramétré par un
@@ -30,7 +30,7 @@ objet de nature (`ingest/lib/aromes/nature.mjs`). Il servira aussi aux descripti
 message qui dit où le déplacer. L'empreinte des houblons ne change pas, et un test la fige.
 Tests d'`ingest/` : 127 sur 127.
 
-### v0.1.90 — technique
+### v0.1.91 — technique
 
 ADR-017 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
 rôle, goût le cas échéant, aucune dose), rédigée par l'API Claude depuis le poste de l'admin sur
@@ -38,6 +38,24 @@ un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P62 (`beer_mi
 et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
 P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
 complétés et marqués « à livrer ». Aucun code.
+
+### v0.1.90 — fonctionnel
+
+Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme
+reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue
+la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ;
+sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la
+forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé
+par le ticket #105.
+
+### v0.1.90 — technique
+
+`FormulaireHoublon` (`ingredient_forms.dart`) part de `pellet` (`formeHoublonProposee`) avec
+`_formeProposee` : une suggestion de la Bibliothèque remplace la forme proposée, jamais une
+forme choisie. `RecipeContent.hopsSansForme` et `avecFormeHoublons` (`recipe.dart`) ; la fiche
+(`recipe_detail_screen.dart`) écrit par `RecipesRepository.update`, comme l'éditeur, sans
+transaction ni appel réseau. Lecture et import inchangés ; note à ADR-005 (D8). Aucune règle
+ni fonction serveur touchée. Tests : `recipe_screens_test.dart`. Demandé par le ticket #105.
 
 ### v0.1.89 — fonctionnel
 

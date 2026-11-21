@@ -1472,7 +1472,17 @@ ouvre Recettes › Importer : après le filtre sur téléphone, après « Nouvel
 
 **Fiche.** En-tête : nom, puis style · « Recette de {auteur} » (autre brasseur) sur la ligne
 grise. Boutons, dans l'ordre : « Nouveau brassin » (plein), « Modifier » (auteur, tonal),
-« Dupliquer », « Exporter » (contour), « Supprimer » (auteur, contour rouge). Puis, chacun dans
+« Dupliquer », « Exporter » (contour), « Supprimer » (auteur, contour rouge). Pour l'auteur
+d'une recette dont au moins un houblon n'a pas de forme, un bandeau d'avertissement suit les
+boutons : « {n} houblons sans forme. Sans forme, l'amertume d'un houblon d'ébullition ne se
+calcule pas. » ({n} compte les noms distincts, à cru et whirlpool compris) et le bouton
+« Mettre en pellets ». La boîte « Mettre en pellets : {noms} ? » (« Les houblons qui ont déjà
+une forme ne changent pas. », « Annuler », « Mettre en pellets ») précède l'écriture ; le
+bouton affiche « Enregistrement » pendant ce temps. L'écriture pose Pellets sur chaque
+houblon sans forme et ne change rien d'autre. Elle part comme « Enregistrer », hors ligne
+compris : « Formes enregistrées. » (« Formes enregistrées sur l'appareil. Elles partiront au
+retour du réseau. » hors ligne), ou « Les formes n'ont pas été enregistrées. » sur un refus. Le bandeau disparaît ensuite. Un
+autre brasseur ne voit pas le bandeau (ticket #105). Puis, chacun dans
 sa carte, le bloc Calculs (voir
 « Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (type de recette, « Non renseigné » s'il
 manque ; « Auteur indiqué par le fichier importé » quand une recette importée le porte ; volume en
@@ -1781,9 +1791,11 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   « Couleur (EBC) » (aide « Sert au calcul de la couleur. »), « Rendement d'extrait (%) »
   (aide « Sert au calcul de la densité initiale. »).
 - Houblon : « Nom », « Quantité (g) », « Acides alpha (%) », « Utilisation » (Ébullition,
-  Whirlpool, À cru), durée, « Forme » (Pellets, Cônes, sans choix par défaut ; sinon
-  « Choisissez une forme. », y compris pour un houblon sans forme d'une recette publique
-  dupliquée, quand sa ligne est modifiée). La durée dépend du moment : « Durée d'ébullition (min) »,
+  Whirlpool, À cru), durée, « Forme » (Pellets, Cônes ; Pellets choisi d'avance pour un
+  houblon ajouté et pour un houblon sans forme ouvert en modification, ticket #105 ; une
+  forme déjà enregistrée reste choisie ; une suggestion de la Bibliothèque dont la forme est
+  connue remplace Pellets tant que le brasseur n'a pas choisi de forme lui-même ; une forme
+  effacée affiche « Choisissez une forme. »). La durée dépend du moment : « Durée d'ébullition (min) »,
   obligatoire, entier de 0 à 600 ; « Durée d'infusion (min) » au whirlpool, obligatoire,
   entier de 1 à 600 (« Champ obligatoire. » si vide ; à 0, « Au moins 1 min. Pour un ajout à
   l'arrêt du feu, choisissez Ébullition et 0 min. »), avec l'aide « Temps entre l'arrêt du
@@ -2185,9 +2197,10 @@ Aucun coût : une recette publique n'a pas de prix.
 **Dupliquer** (tout membre). Le bouton affiche « Duplication » pendant la lecture du nom du
 compte (3 s au plus). La recette est créée au nom du lecteur, avec le même nom, les mêmes
 ingrédients, paliers et notes, l'auteur « BrewDog » et l'origine « DIY Dog · diydog-{id} ».
-Elle n'a ni équipement ni chronologie. Un houblon sans forme reste sans forme : l'éditeur la
-demande (« Choisissez une forme. ») quand la ligne est modifiée, et le calcul affiche « Forme
-du houblon à compléter : {noms}. » tant qu'elle manque. Le message « Recette dupliquée dans
+Elle n'a ni équipement ni chronologie. Un houblon sans forme reste sans forme : l'éditeur
+propose Pellets quand la ligne est modifiée, la fiche propose « Mettre en pellets » à
+l'auteur, et le calcul affiche « Forme du houblon à compléter : {noms}. » tant qu'elle
+manque. Le message « Recette dupliquée dans
 vos recettes. » (« Recette dupliquée sur l'appareil. Elle partira au retour du réseau. » hors
 ligne) s'affiche, puis l'éditeur de la nouvelle recette s'ouvre par-dessus la fiche ;
 « Fermer » revient à la fiche, « Enregistrer » ouvre la recette. Un refus du serveur affiche
