@@ -131,6 +131,17 @@ class TicketBrouillon {
   final String screen;
 }
 
+/// `extra` de « Signaler ou proposer » ouvert par « Analyser » d'Admin ›
+/// Rapports d'erreur ou d'Admin › Journaux (ticket #67) : le formulaire est
+/// prérempli par [brouillon] et propose « Lancer l'analyse dès la
+/// publication ».
+@immutable
+class BrouillonAnalyse {
+  const BrouillonAnalyse(this.brouillon);
+
+  final TicketBrouillon brouillon;
+}
+
 /// Document `tickets/{id}`, lu par son auteur et par l'administrateur.
 ///
 /// Aucun prix, stock ni coût (P5). Le titre et la description partent sur une

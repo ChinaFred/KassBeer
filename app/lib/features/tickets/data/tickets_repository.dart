@@ -59,6 +59,12 @@ abstract class TicketsRepository {
   /// menu, bandeau).
   Stream<ListeLue<Ticket>> watchAll();
 
+  /// Tous les tickets, lus une fois (`get()`), pour l'administrateur : marque
+  /// « Ticket #N créé le… » d'Admin › Rapports d'erreur et d'Admin › Journaux,
+  /// sans écouteur sur ces écrans (P50). Un échec est rapporté
+  /// (`tickets.read_all`), puis relancé.
+  Future<ListeLue<Ticket>> readAll();
+
   /// Historique des décisions du ticket [ticketId], écrit par le serveur,
   /// pour l'administrateur.
   Stream<ListeLue<TicketDecision>> watchDecisions(String ticketId);
@@ -283,6 +289,25 @@ class FirestoreTicketsRepository implements TicketsRepository {
 
   @override
   Stream<ListeLue<Ticket>> watchAll() => _watch(_tickets, 'tickets.watch_all');
+
+  @override
+  Future<ListeLue<Ticket>> readAll() async {
+    try {
+      final snapshot = await _tickets.get();
+      return ListeLue<Ticket>(
+        documents: [for (final doc in snapshot.docs) _read(doc)],
+        fromCache: snapshot.metadata.isFromCache,
+      );
+    } catch (error, stackTrace) {
+      _errors.reportError(
+        feature: 'tickets.read_all',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      // Relancée : l'écran n'affiche aucune marque.
+      rethrow;
+    }
+  }
 
   CollectionReference<Map<String, dynamic>> _decisions(String ticketId) =>
       _tickets.doc(ticketId).collection('decisions');

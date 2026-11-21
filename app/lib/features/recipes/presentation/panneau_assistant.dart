@@ -65,6 +65,8 @@ abstract final class TextesAssistant {
   static const tropLongue =
       'Cette conversation est trop longue pour continuer.';
   static const reponseRecue = 'Réponse de l\'assistant reçue';
+  static const reponseAvecProposition =
+      'Réponse de l\'assistant reçue, avec une proposition';
   static const confirmerNouvelle = 'Commencer une nouvelle conversation ?';
   static const confirmerNouvelleTexte =
       'La conversation en cours sera effacée. Les tours déjà faits restent '
@@ -166,9 +168,15 @@ class PanneauAssistant extends ConsumerStatefulWidget {
     required this.onFermer,
     this.autofocus = false,
     this.titreEtFermer = true,
+    this.carteProposition,
   });
 
   final ControleurAssistant controleur;
+
+  /// Carte « Proposition de l'assistant » de la réponse de rang donné dans
+  /// `controleur.messages` (lot A2), placée sous son Markdown ; `null` : pas
+  /// de carte.
+  final Widget? Function(int rangMessage)? carteProposition;
 
   /// Ligne de résumé des calculs (même texte que la barre des calculs).
   final String resumeCalculs;
@@ -226,7 +234,9 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
       unawaited(
         SemanticsService.sendAnnouncement(
           View.of(context),
-          TextesAssistant.reponseRecue,
+          widget.controleur.derniereAvecProposition
+              ? TextesAssistant.reponseAvecProposition
+              : TextesAssistant.reponseRecue,
           TextDirection.ltr,
         ),
       );
@@ -524,7 +534,7 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
             ),
           ),
         );
-        Widget reponse(String t, {String? titre}) => bulle(
+        Widget reponse(String t, {String? titre, Widget? carte}) => bulle(
           personne: false,
           lecture: '${titre ?? TextesAssistant.assistant} :',
           child: Column(
@@ -540,6 +550,7 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
                 featureLien: 'recipes.assistant_link',
                 contexteLien: 'lien d\'une réponse de l\'assistant',
               ),
+              ?carte,
               Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: IconButton(
@@ -584,10 +595,13 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
                         Text(TextesAssistant.recetteVide, style: petit),
                       ],
                     ],
-                    for (final m in c.messages)
+                    for (final (i, m) in c.messages.indexed)
                       m.auteur == AuteurMessage.personne
                           ? messagePersonne(m.texte)
-                          : reponse(m.texte),
+                          : reponse(
+                              m.texte,
+                              carte: widget.carteProposition?.call(i),
+                            ),
                     if (enAttente != null) messagePersonne(enAttente),
                     if (c.enCours)
                       bulle(

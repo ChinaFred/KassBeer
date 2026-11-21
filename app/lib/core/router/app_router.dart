@@ -268,8 +268,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ecranOrigine: state.uri.queryParameters[kTicketScreenQueryParam],
           reprise: switch (state.extra) {
             final TicketBrouillon brouillon => brouillon,
+            BrouillonAnalyse(:final brouillon) => brouillon,
             _ => null,
           },
+          proposerLancement: state.extra is BrouillonAnalyse,
         ),
       ),
       GoRoute(

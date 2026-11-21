@@ -5,7 +5,7 @@
  * appel, jamais rejoué ; `redirect: "error"` (une redirection renverrait la clé ailleurs) ;
  * délai fixé par l'appelant. Aucune clé `thinking`, `tools` ni `tool_choice`, aucun message
  * `assistant` prérempli : l'effort passe par `output_config.effort` quand la politique en
- * donne un.
+ * donne un, la sortie structurée par `output_config.format` quand le poste en donne une.
  *
  * La clé (`ANTHROPIC_API_KEY`) n'entre dans aucun journal, aucun résultat ni aucune erreur
  * rendue : sa valeur exacte est retirée de tout texte (`withoutKey`). Du corps d'une erreur
@@ -38,6 +38,11 @@ export interface ClaudeRequest {
   messages: readonly ClaudeMessage[];
   maxTokens: number;
   timeoutMs: number;
+  /**
+   * Format de sortie structurée (`{type: "json_schema", schema}`), posé dans
+   * `output_config.format` ; absent ou `null` : réponse en texte.
+   */
+  outputFormat?: Record<string, unknown> | null;
 }
 
 /**
@@ -96,7 +101,10 @@ export function messagesBody(req: ClaudeRequest): Record<string, unknown> {
     })),
     messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
   };
-  if (req.effort !== null) body.output_config = { effort: req.effort };
+  const outputConfig: Record<string, unknown> = {};
+  if (req.effort !== null) outputConfig.effort = req.effort;
+  if (req.outputFormat) outputConfig.format = req.outputFormat;
+  if (Object.keys(outputConfig).length > 0) body.output_config = outputConfig;
   return body;
 }
 

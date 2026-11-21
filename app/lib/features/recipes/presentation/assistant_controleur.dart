@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:exchange/exchange.dart' show Proposition;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,6 +22,21 @@ import 'recipe_calculations_view.dart';
 final assistantRepositoryProvider = Provider<AssistantRepository>(
   (ref) => throw UnimplementedError('assistantRepositoryProvider non fourni'),
 );
+
+/// Proposition rendue avec une réponse (lot A2) : la proposition relue, ou
+/// [ecartee] si le serveur ou la relecture l'a écartée ; [empreinte] : état
+/// du brouillon à l'« Envoyer », pour dire qu'elle est périmée.
+class PropositionRecue {
+  const PropositionRecue({
+    required this.proposition,
+    required this.ecartee,
+    required this.empreinte,
+  });
+
+  final Proposition? proposition;
+  final bool ecartee;
+  final String? empreinte;
+}
 
 /// Conversation de l'assistant, gardée en mémoire tant que l'éditeur est
 /// ouvert (ADR-015, section 8) : fermer le panneau la garde, fermer
@@ -69,6 +85,17 @@ class ControleurAssistant extends ChangeNotifier {
   /// Monte à chaque réponse reçue : l'écran l'annonce.
   int reponsesRecues = 0;
 
+  /// Propositions des réponses, par rang de la réponse dans [messages].
+  final Map<int, PropositionRecue> propositions = {};
+
+  /// État du brouillon de l'éditeur, noté à l'« Envoyer » : une proposition
+  /// est périmée si le brouillon a changé depuis l'envoi.
+  String? Function()? empreinteBrouillon;
+
+  /// La dernière réponse reçue porte une proposition.
+  bool get derniereAvecProposition =>
+      propositions[messages.length - 1]?.proposition != null;
+
   bool _ferme = false;
 
   bool get enCours => appelEnCours != null;
@@ -85,6 +112,8 @@ class ControleurAssistant extends ChangeNotifier {
   Future<void> envoyer(Future<ContexteAssistant?> Function() contexte) async {
     final message = champ.text.trim();
     if (enCours || message.isEmpty) return;
+    // Brouillon que lit le modèle : pris à l'envoi, avant l'attente.
+    final empreinte = empreinteBrouillon?.call();
     appelEnCours = ModeAssistant.tour;
     enAttente = message;
     echec = null;
@@ -115,6 +144,13 @@ class ControleurAssistant extends ChangeNotifier {
       messages
         ..add(MessageConversation(AuteurMessage.personne, message))
         ..add(MessageConversation(AuteurMessage.assistant, reponse.texte));
+      if (reponse.proposition != null || reponse.propositionEcartee) {
+        propositions[messages.length - 1] = PropositionRecue(
+          proposition: reponse.proposition,
+          ecartee: reponse.propositionEcartee && reponse.proposition == null,
+          empreinte: empreinte,
+        );
+      }
       quota = reponse.quota ?? quota;
       enAttente = null;
       appelEnCours = null;
@@ -154,6 +190,7 @@ class ControleurAssistant extends ChangeNotifier {
       );
       if (_ferme) return;
       messages.clear();
+      propositions.clear();
       resume = reponse.texte;
       idConversation = nouvelIdConversation(_random);
       quota = reponse.quota ?? quota;
@@ -188,6 +225,7 @@ class ControleurAssistant extends ChangeNotifier {
   void nouvelleConversation() {
     if (enCours) return;
     messages.clear();
+    propositions.clear();
     resume = null;
     echec = null;
     idConversation = nouvelIdConversation(_random);

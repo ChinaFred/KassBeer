@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.90 — fonctionnel
+### v0.1.93 — fonctionnel
 
 Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui
 attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le
@@ -18,7 +18,7 @@ nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à 
 l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ».
 Demandé par le ticket #63.
 
-### v0.1.90 — technique
+### v0.1.93 — technique
 
 `ticketATraiter` (`app/lib/features/tickets/domain/ticket_delivery.dart`) définit le filtre
 « À traiter » de la liste à partir des documents du serveur seuls : `send_failed`, `validate`
@@ -35,6 +35,86 @@ gardée). Tests : domaine de `toProcess` et de `ticketATraiter`, liste avec un t
 lancer et une analyse en cours, état vide, pastille « CI en échec » avec et sans relance permise,
 CI rouge pendant un développement ou une correction.
 Demandé par le ticket #63.
+
+### v0.1.92 — fonctionnel
+
+L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou
+retirer un malt, un houblon, un ajout ou un palier, changer une quantité, le volume, le nom ou
+la levure. Sa réponse porte alors une carte « Proposition de l'assistant » qui montre l'effet sur
+la densité, le degré, l'amertume et la couleur. Un appui sur « Appliquer au brouillon » recopie
+tous les changements dans la recette ; rien n'est enregistré avant « Enregistrer », et
+« Annuler la proposition » rend la recette d'avant. Une valeur technique que la Bibliothèque ne
+connaît pas (acides alpha, couleur, rendement, atténuation) et que l'IA a proposée s'affiche avec
+la mention « (proposée par l'IA) », dans l'éditeur, la fiche, le brassin et le compte rendu
+d'export. Sur téléphone, l'assistant se ferme après l'application pour montrer la recette.
+
+### v0.1.92 — technique
+
+Lot A2 d'ADR-015 (amendement du 2026-11-21). Sorties structurées de `recipeAssistantTurn`
+(`output_config.format`, `{reponse, proposition}`), prompt en version 2 ; une proposition hors
+format ou de plus de 30 opérations est rendue `null`, tour compté. Liste fermée des 18
+opérations dans `test-fixtures/recipe_assistant_operations.json`, rejouée par `exchange/test/`
+et `functions/test/`. `exchange/lib/src/proposition.dart` (`lireProposition`,
+`appliquerProposition`, garde du nom sur l'index : refus `element_changed`, décision de
+l'utilisateur) et `marques_ia.dart` (`ai_proposed`, `<nature>:<ingredientKey>:<champ>`, marque
+gardée seulement si toutes les lignes de la clé portent la valeur marquée) ;
+`lireRecettePartielle` devient publique. `ai_proposed` dans l'enveloppe de `recipes/` et de
+`recipe_snapshot`, règle `size() <= 100` seule : budget des règles à marge nulle à la création
+d'un brassin, taille de chaque entrée non bornée, risque accepté par l'utilisateur le
+2026-11-21 et figé par des tests. Écran : `carte_proposition.dart`, aperçu par `computeRecipe`,
+Bibliothèque lue en cache hors ligne sans repli sur la valeur du modèle. `main.dart.js` :
+5 901 437 → 5 947 894 octets (+ 0,79 %). Aucune dépendance changée.
+
+### v0.1.91 — fonctionnel
+
+L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans
+Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre
+« Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour
+et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et
+le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer
+l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui
+annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis
+l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient
+« Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis
+la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche
+« Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un
+second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai.
+Demandé par le ticket #67.
+
+### v0.1.91 — technique
+
+`features/admin/domain/ticket_depuis_panne.dart` : brouillon d'un ticket tiré d'un
+`ErrorReport` ou d'une `EntreeJournal` (champs contrôlés par leur forme, trames Dart exactes de
+`package:kass_beer/` seules et 15 au plus, type en `Exception` ou `Error` seul, titre de 100 et description de 2 000 caractères au plus ; ni message, ni
+contexte, ni uid, ni message ou données d'un journal, P24 et P49 inchangés) ; identifiant lu sur
+la première ligne d'une description et index des tickets par rapport. La marque est dérivée des
+tickets, lus une fois par `TicketsRepository.readAll` (`get()`, aucun écouteur sur ces écrans,
+P50) : aucune écriture sur `error_reports/`, aucune règle ni fonction serveur changée. `BoiteEnvoiAnalyse` (`boite_lancement.dart`) écrit le ticket après
+confirmation, le suit par `adminTicketsProvider` et appelle `launchTicketAnalysis` une fois,
+quand `github_issue_number`, le statut `received` et `launch_analysis` sont posés par le serveur ;
+au plafond lu dans `ticket_status/launches`, aucun appel.
+`TicketFormScreen` reçoit `proposerLancement` (`extra` `BrouillonAnalyse`). `BoiteEnvoiAnalyse` porte aussi `LienUsageClaude` (#96) sous la
+ligne du quota, échec affiché dans la boîte. Sur `logs_screen.dart` (#95), la marque passe sous le
+titre de la carte et `BoutonsPanne` remplace « Copier » aligné à droite. Trois éléments
+d'écran de ticket ajoutés. Aucune dépendance changée. Demandé par le ticket #67.
+
+### v0.1.90 — fonctionnel
+
+Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme
+reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue
+la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ;
+sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la
+forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé
+par le ticket #105.
+
+### v0.1.90 — technique
+
+`FormulaireHoublon` (`ingredient_forms.dart`) part de `pellet` (`formeHoublonProposee`) avec
+`_formeProposee` : une suggestion de la Bibliothèque remplace la forme proposée, jamais une
+forme choisie. `RecipeContent.hopsSansForme` et `avecFormeHoublons` (`recipe.dart`) ; la fiche
+(`recipe_detail_screen.dart`) écrit par `RecipesRepository.update`, comme l'éditeur, sans
+transaction ni appel réseau. Lecture et import inchangés ; note à ADR-005 (D8). Aucune règle
+ni fonction serveur touchée. Tests : `recipe_screens_test.dart`. Demandé par le ticket #105.
 
 ### v0.1.89 — fonctionnel
 

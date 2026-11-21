@@ -18,6 +18,7 @@ import {
   blockJson,
 } from "../src/assistant/prompt";
 import { cleanRecipe, cutText, isPrivateKey, withoutPrivateFields } from "../src/assistant/request";
+import { assistantOutputFormat } from "../src/assistant/proposition";
 import { handleRecipeAssistantCall, type AssistantResponse } from "../src/assistant/turn";
 import { anthropicResponse, FEATURE, PRICING } from "./aiFixtures";
 import { FakeDb } from "./fakeFirestore";
@@ -88,7 +89,8 @@ interface Run {
 }
 
 function setup(
-  respond: () => Response = () => anthropicResponse("## Analyse\n\nBonne base."),
+  respond: () => Response = () =>
+    anthropicResponse(JSON.stringify({ reponse: "## Analyse\n\nBonne base.", proposition: null })),
   feature: Record<string, unknown> = FEATURE,
 ): Run {
   const db = new FakeDb(() => NOW);
@@ -415,6 +417,8 @@ describe("recipeAssistantTurn : mode summary (amendement « cadrage du lot A1 »
     assert.ok(messages[0].content.startsWith("<RECETTE>\n"));
     assert.equal((body.system as unknown[]).length, 1);
     assert.equal(body.max_tokens, 2000);
+    // Un résumé reste du texte, sans proposition (lot A2).
+    assert.deepEqual(body.output_config, { effort: "medium" });
   });
   it("résumé de 6 500 caractères rendu à 6 000, tour compté", async () => {
     const text = `${"a".repeat(3000)}\n\n${"b".repeat(2900)}\n\n${"c".repeat(596)}`;
@@ -512,7 +516,8 @@ describe("recipeAssistantTurn : requête au modèle (P59)", () => {
     await run.call(baseArgs({ history: history(1) }));
     const body = run.bodies[0];
     assert.equal(body.model, "claude-sonnet-5-5");
-    assert.deepEqual(body.output_config, { effort: "medium" });
+    // Lot A2 : sortie structurée {reponse, proposition}.
+    assert.deepEqual(body.output_config, { effort: "medium", format: assistantOutputFormat() });
     assert.equal(body.max_tokens, 4000);
     const system = body.system as { text: string; cache_control?: unknown }[];
     assert.equal(system[0].text, ASSISTANT_SYSTEM_PROMPT);
@@ -554,6 +559,7 @@ describe("recipeAssistantTurn : requête au modèle (P59)", () => {
     assert.deepEqual(res, {
       reponse: "## Analyse\n\nBonne base.",
       proposition: null,
+      proposition_rejected: false,
       mode: "turn",
       turn: 1,
       truncated: false,

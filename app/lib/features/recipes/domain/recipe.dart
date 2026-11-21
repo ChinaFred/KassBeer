@@ -1,4 +1,12 @@
 import 'package:brewing/brewing.dart';
+import 'package:exchange/exchange.dart'
+    show
+        MarqueIa,
+        PropositionAppliquee,
+        ecrireMarques,
+        lireMarques,
+        marquesApresEdition,
+        marquesCoherentes;
 import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
@@ -523,6 +531,8 @@ class RecipeContent {
     this.brewSteps = const [],
     this.brewStepsProblem,
     this.importedFrom,
+    this.aiProposed = const [],
+    this.aiProposedIllisibles = 0,
   });
 
   final String name;
@@ -566,6 +576,16 @@ class RecipeContent {
   /// ou dupliquée.
   final String? importedFrom;
 
+  /// Valeurs techniques « proposées par l'IA » (`ai_proposed`, ADR-015, lot
+  /// A2) : marques `<nature>:<ingredientKey>:<champ>`, lues par `exchange/`.
+  /// Elles suivent la recette dans la copie figée d'un brassin.
+  final List<MarqueIa> aiProposed;
+
+  /// Entrées de `ai_proposed` ignorées à la lecture (hors forme) : le dépôt
+  /// les rapporte (`recipes.ai_proposed`) et la fiche affiche « Marques IA
+  /// illisibles ».
+  final int aiProposedIllisibles;
+
   /// Lit l'enveloppe et le sous-arbre `recipe` ; lève [DocumentIllisible] (version
   /// de format, unité ou valeur hors du schéma, type de malt et forme de houblon
   /// compris) sans jamais remplacer une valeur absente.
@@ -576,6 +596,7 @@ class RecipeContent {
     final ingredients = read.objet('ingredients');
     final mash = read.objetFacultatif('mash');
     final chronologie = readBrewSteps(data['brew_steps']);
+    final marques = lireMarques(data['ai_proposed']);
     return RecipeContent(
       name: read.texte('name'),
       type: read.valeurDe('type', typesRecette),
@@ -609,6 +630,8 @@ class RecipeContent {
       brewSteps: chronologie.steps,
       brewStepsProblem: chronologie.problem,
       importedFrom: envelope.texteFacultatif('imported_from'),
+      aiProposed: marques.marques,
+      aiProposedIllisibles: marques.illisibles,
     );
   }
 
@@ -634,6 +657,32 @@ class RecipeContent {
       if (mashSteps.isNotEmpty)
         'mash_steps': [for (final m in mashSteps) m.toFirestore()],
     };
+    final recipe = <String, Object?>{
+      'name': name.trim(),
+      if (type != null) 'type': type,
+      'author': ?authorText,
+      if (styleName != null) 'style': {'name': styleName},
+      'notes': ?notesText,
+      if (batchVolumeL != null)
+        'batch_size': mesureBeerJson(batchVolumeL!, UniteBeerJson.litre),
+      if (boilTimeMin != null)
+        'boil': {
+          'boil_time': mesureBeerJson(boilTimeMin!, UniteBeerJson.minute),
+        },
+      if (mash.isNotEmpty) 'mash': {'name': kNomEmpatage, ...mash},
+      'ingredients': {
+        'fermentable_additions': [
+          for (final f in fermentables) f.toFirestore(),
+        ],
+        'hop_additions': [for (final h in hops) h.toFirestore()],
+        'miscellaneous_additions': [for (final o in others) o.toFirestore()],
+        'culture_additions': [for (final y in yeasts) y.toFirestore()],
+      },
+    };
+    // Marques que la recette porte sans ambiguïté : un ingrédient retiré, ou
+    // une ligne de la même clé avec une autre valeur, efface la marque
+    // (ADR-015, section 6).
+    final marques = marquesCoherentes(recipe, aiProposed);
     return {
       'format_version': kRecipeFormatVersion,
       ...opt('equipment_id', equipmentId),
@@ -642,28 +691,8 @@ class RecipeContent {
       if (creation && brewSteps.isNotEmpty)
         'brew_steps': [for (final b in brewSteps) b.toFirestore()],
       ...opt('imported_from', text(importedFrom)),
-      'recipe': {
-        'name': name.trim(),
-        if (type != null) 'type': type,
-        'author': ?authorText,
-        if (styleName != null) 'style': {'name': styleName},
-        'notes': ?notesText,
-        if (batchVolumeL != null)
-          'batch_size': mesureBeerJson(batchVolumeL!, UniteBeerJson.litre),
-        if (boilTimeMin != null)
-          'boil': {
-            'boil_time': mesureBeerJson(boilTimeMin!, UniteBeerJson.minute),
-          },
-        if (mash.isNotEmpty) 'mash': {'name': kNomEmpatage, ...mash},
-        'ingredients': {
-          'fermentable_additions': [
-            for (final f in fermentables) f.toFirestore(),
-          ],
-          'hop_additions': [for (final h in hops) h.toFirestore()],
-          'miscellaneous_additions': [for (final o in others) o.toFirestore()],
-          'culture_additions': [for (final y in yeasts) y.toFirestore()],
-        },
-      },
+      ...opt('ai_proposed', marques.isEmpty ? null : ecrireMarques(marques)),
+      'recipe': recipe,
     };
   }
 
@@ -696,8 +725,133 @@ class RecipeContent {
     yeasts: yeasts,
     mashSteps: mashSteps,
     brewSteps: brewSteps,
+    aiProposed: aiProposed,
   );
+
+  /// Houblons sans forme ([HopLine.form] nul), dans l'ordre de la recette.
+  List<HopLine> get hopsSansForme => [
+    for (final h in hops)
+      if (h.form == null) h,
+  ];
+
+  /// Copie où chaque houblon sans forme prend [form], choisie par le brasseur
+  /// (« Mettre en pellets », ticket #105). Les autres champs et les houblons
+  /// qui ont une forme ne changent pas.
+  RecipeContent avecFormeHoublons(String form) => RecipeContent(
+    name: name,
+    type: type,
+    author: author,
+    style: style,
+    notes: notes,
+    batchVolumeL: batchVolumeL,
+    boilTimeMin: boilTimeMin,
+    grainTempC: grainTempC,
+    equipmentId: equipmentId,
+    fermentables: fermentables,
+    hops: List.unmodifiable([
+      for (final h in hops)
+        h.form != null
+            ? h
+            : HopLine(
+                name: h.name,
+                amount: h.amount,
+                use: h.use,
+                form: form,
+                alphaPct: h.alphaPct,
+                timeMin: h.timeMin,
+                dayMin: h.dayMin,
+              ),
+    ]),
+    others: others,
+    yeasts: yeasts,
+    mashSteps: mashSteps,
+    brewSteps: brewSteps,
+    brewStepsProblem: brewStepsProblem,
+    importedFrom: importedFrom,
+    aiProposed: aiProposed,
+  );
+
+  /// Copie avec les marques [marques], le reste inchangé ; sert à
+  /// [marquesRevues].
+  RecipeContent avecMarques(List<MarqueIa> marques) => RecipeContent(
+    name: name,
+    type: type,
+    author: author,
+    style: style,
+    notes: notes,
+    batchVolumeL: batchVolumeL,
+    boilTimeMin: boilTimeMin,
+    grainTempC: grainTempC,
+    equipmentId: equipmentId,
+    fermentables: fermentables,
+    hops: hops,
+    others: others,
+    yeasts: yeasts,
+    mashSteps: mashSteps,
+    brewSteps: brewSteps,
+    brewStepsProblem: brewStepsProblem,
+    importedFrom: importedFrom,
+    aiProposed: List.unmodifiable(marques),
+  );
+
+  /// Marques après une édition à la main depuis [reference] (le brouillon
+  /// d'avant, ou la recette chargée) : une marque sort quand sa valeur a
+  /// changé (corrigée à la main, reprise de la Bibliothèque) ou quand son
+  /// ingrédient est retiré ; rien d'autre ne l'efface (`exchange/`,
+  /// `marquesApresEdition`). Lève comme [toFirestore].
+  RecipeContent marquesRevues(RecipeContent reference) => avecMarques(
+    marquesApresEdition(
+      reference: _recipeMap(reference),
+      edite: _recipeMap(this),
+      marques: aiProposed,
+    ),
+  );
+
+  /// Brouillon après « Appliquer au brouillon » : la recette relue de
+  /// [proposition] et ses marques, avec l'enveloppe de ce brouillon
+  /// (équipement, chronologie, origine). Lève [DocumentIllisible] si la
+  /// recette relue sort de ce que l'éditeur lit.
+  RecipeContent avecProposition(PropositionAppliquee proposition) {
+    final envelope = toFirestore(creation: true);
+    return RecipeContent.fromFirestore({
+      ...envelope,
+      'recipe': proposition.recipe,
+      'ai_proposed': ecrireMarques(proposition.marques),
+    });
+  }
+
+  static Map<String, Object?> _recipeMap(RecipeContent c) =>
+      (c.toFirestore(creation: true)['recipe']! as Map).cast<String, Object?>();
 }
+
+/// Vrai si [marques] marque le champ [champ] de la ligne de nature [nature]
+/// (`fermentable`, `hop`, `culture`) nommée [nom] : valeur « proposée par
+/// l'IA » (ADR-015, lot A2). [cleNature] : nature de la clé d'ingrédient.
+bool _marque(
+  List<MarqueIa> marques,
+  String nature,
+  IngredientNature cleNature,
+  String nom,
+  String champ,
+) =>
+    marques.isNotEmpty &&
+    isValidIngredientName(nom) &&
+    marques.contains(MarqueIa(nature, ingredientKey(cleNature, nom), champ));
+
+/// Couleur (`color`) ou rendement (`yield`) de [f] proposé par l'IA.
+bool fermentableProposeParIa(
+  List<MarqueIa> marques,
+  FermentableLine f,
+  String champ,
+) => _marque(marques, 'fermentable', f.nature, f.name, champ);
+
+/// Acides alpha de [h] proposés par l'IA.
+bool houblonProposeParIa(List<MarqueIa> marques, HopLine h) =>
+    _marque(marques, 'hop', IngredientNature.hop, h.name, 'alpha_acid');
+
+/// Atténuation de [y] proposée par l'IA.
+bool levureProposeeParIa(List<MarqueIa> marques, YeastLine y) =>
+    _marque(marques, 'culture', IngredientNature.yeast, y.name, 'attenuation');
 
 /// [value] coupé à [max] unités UTF-16 sans couper un caractère en deux. Les
 /// règles comptent des caractères : une chaîne coupée ainsi ne les dépasse jamais.

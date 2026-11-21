@@ -546,12 +546,13 @@ void main() {
       Future<void> hop(
         String quantity, {
         bool continuer = true,
-        bool pickForm = true,
+        bool clearForm = false,
       }) async {
         await tester.enterText(sheetField('Nom'), 'Citra');
         await tester.enterText(sheetField('Quantité (g)'), quantity);
         await tester.enterText(sheetField('Durée d\'ébullition (min)'), '10');
-        if (pickForm) {
+        // Pellets est choisi d'avance (ticket #105) ; un appui l'efface.
+        if (clearForm) {
           await tester.ensureVisible(inSheet(find.text('Pellets')));
           await tester.tap(inSheet(find.text('Pellets')));
           await tester.pump();
@@ -564,10 +565,14 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await hop('1.234,5', pickForm: false);
+      await hop('1.234,5', clearForm: true);
       expect(inSheet(find.text('Nombre illisible.')), findsOneWidget);
       expect(inSheet(find.text('Choisissez une forme.')), findsOneWidget);
       expect(find.text('Houblons (0)'), findsOneWidget);
+      // Forme effacée : le brasseur la choisit de nouveau.
+      await tester.ensureVisible(inSheet(find.text('Pellets')));
+      await tester.tap(inSheet(find.text('Pellets')));
+      await tester.pump();
       await hop('22.4');
       await hop('22,4', continuer: false);
       expect(find.byType(BottomSheet), findsNothing);
@@ -963,9 +968,6 @@ void main() {
       await tester.tap(inSheet(find.text('À cru')));
       await tester.pumpAndSettle();
       await tester.enterText(sheetField('Durée à cru (jours)'), '2,7');
-      await tester.ensureVisible(inSheet(find.text('Pellets')));
-      await tester.tap(inSheet(find.text('Pellets')));
-      await tester.pump();
       final button = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
       await tester.ensureVisible(button);
       await tester.tap(button);
@@ -1705,7 +1707,7 @@ void main() {
       );
     });
 
-    testWidgets('éditeur : la copie s\'ouvre, la forme se complète', (
+    testWidgets('éditeur : la copie s\'ouvre, Pellets proposé d\'avance', (
       tester,
     ) async {
       final app = await open(
@@ -1722,14 +1724,7 @@ void main() {
       await tester.tap(line);
       await tester.pumpAndSettle();
       final save = inSheet(find.widgetWithText(FilledButton, 'Enregistrer'));
-      await tester.ensureVisible(save);
-      await tester.tap(save);
-      await tester.pumpAndSettle();
-      // Aucune forme inventée : la ligne modifiée en demande une.
-      expect(inSheet(find.text('Choisissez une forme.')), findsOneWidget);
-      await tester.ensureVisible(inSheet(find.text('Pellets')));
-      await tester.tap(inSheet(find.text('Pellets')));
-      await tester.pump();
+      // Pellets proposé d'avance (ticket #105) : enregistré sans autre appui.
       await tester.ensureVisible(save);
       await tester.tap(save);
       await tester.pumpAndSettle();
@@ -1739,6 +1734,152 @@ void main() {
       final hops = app.recipes.writes.single.content!.hops;
       expect(hops.single.form, 'pellet');
       expect(hops.single.toFirestore()['form'], 'pellet');
+    });
+
+    group('« Mettre en pellets » sur la fiche (ticket #105)', () {
+      const melange = RecipeContent(
+        name: 'Ambrée du Verger',
+        batchVolumeL: 23,
+        fermentables: [pils],
+        hops: [
+          HopLine(
+            name: 'Houblon Alpha',
+            amount: Quantite.grammes(30),
+            use: HopUse.boil,
+            form: null,
+            alphaPct: 8.2,
+            timeMin: 60,
+          ),
+          HopLine(
+            name: 'Houblon Beta',
+            amount: Quantite.grammes(20),
+            use: HopUse.boil,
+            form: 'leaf',
+            alphaPct: 5,
+            timeMin: 10,
+          ),
+          HopLine(
+            name: 'Houblon Gamma',
+            amount: Quantite.grammes(50),
+            use: HopUse.dryHop,
+            form: null,
+            timeMin: 4320,
+          ),
+        ],
+      );
+
+      testWidgets('auteur : bandeau, confirmation, seuls les houblons sans '
+          'forme passent en pellets', (tester) async {
+        final app = await open(
+          tester,
+          '/recettes/v',
+          before: (app) => app.recipes.publish([recipe('v', melange)]),
+        );
+        expect(
+          find.text(
+            '2 houblons sans forme. Sans forme, l\'amertume d\'un houblon '
+            'd\'ébullition ne se calcule pas.',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Mettre en pellets'),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Mettre en pellets : Houblon Alpha, Houblon Gamma ?'),
+          findsOneWidget,
+        );
+        await tester.tap(find.widgetWithText(TextButton, 'Annuler'));
+        await tester.pumpAndSettle();
+        expect(app.recipes.writes, isEmpty);
+
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Mettre en pellets'),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.text('Mettre en pellets'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final write = app.recipes.writes.single;
+        expect(write.kind, 'update');
+        expect(write.id, 'v');
+        expect(write.content!.hops.map((h) => h.form), [
+          'pellet',
+          'leaf',
+          'pellet',
+        ]);
+        expect(write.content!.hops.map((h) => h.amount), [
+          for (final h in melange.hops) h.amount,
+        ]);
+        expect(find.text('Formes enregistrées.'), findsOneWidget);
+      });
+
+      testWidgets('écriture refusée : message', (tester) async {
+        await open(
+          tester,
+          '/recettes/v',
+          before: (app) {
+            app.recipes.serverAnswer = () =>
+                Future<void>.error(StateError('refus'));
+            app.recipes.publish([recipe('v', melange)]);
+          },
+        );
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Mettre en pellets'),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.text('Mettre en pellets'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Les formes n\'ont pas été enregistrées.'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('autre brasseur : aucun bandeau', (tester) async {
+        await open(
+          tester,
+          '/recettes/v',
+          before: (app) => app.recipes.publish([
+            recipe('v', melange, owner: 'uid-autre', ownerName: 'Autre'),
+          ]),
+        );
+        expect(find.text('Mettre en pellets'), findsNothing);
+        expect(find.textContaining('houblons sans forme'), findsNothing);
+      });
+
+      testWidgets('toutes les formes connues : aucun bandeau', (tester) async {
+        await open(
+          tester,
+          '/recettes/v',
+          before: (app) => app.recipes.publish([
+            recipe('v', melange.avecFormeHoublons('pellet')),
+          ]),
+        );
+        expect(find.text('Mettre en pellets'), findsNothing);
+      });
+    });
+
+    test('avecFormeHoublons : seules les formes absentes changent', () {
+      final hop = sansForme.hops.single;
+      final c = sansForme.avecFormeHoublons('pellet');
+      expect(c.hops.single.form, 'pellet');
+      expect(c.hops.single.name, hop.name);
+      expect(c.hops.single.alphaPct, hop.alphaPct);
+      expect(c.hops.single.timeMin, hop.timeMin);
+      expect(c.name, sansForme.name);
+      expect(sansForme.hopsSansForme, [hop]);
+      expect(c.hopsSansForme, isEmpty);
     });
 
     test('lecture et écriture sans forme : aucune clé `form` inventée', () {
@@ -1786,6 +1927,12 @@ void main() {
           'name': 'Cascade',
           'form': 'pellet',
           'alpha': 6.5,
+        },
+        {
+          'id': 'hop-saaz-fictif',
+          'name': 'Saaz Fictif',
+          'form': 'leaf',
+          'alpha': 3.5,
         },
       ]);
       lu(NatureReferentiel.cultures, [
@@ -1955,6 +2102,78 @@ void main() {
       expect(content.yeasts.single.name, 'Safale American');
       expect(content.yeasts.single.type, 'ale');
       expect(content.yeasts.single.form, 'dry');
+    });
+
+    Future<RecipeContent> ajouterHoublon(
+      WidgetTester tester,
+      TestApp app, {
+      required String saisie,
+      required String suggestion,
+      String? formeChoisie,
+    }) async {
+      await openSheet(tester, 'Ajouter un houblon');
+      if (formeChoisie != null) {
+        await tester.ensureVisible(inSheet(find.text(formeChoisie)));
+        await tester.tap(inSheet(find.text(formeChoisie)));
+        await tester.pump();
+      }
+      await tester.enterText(sheetField('Nom'), saisie);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(suggestion));
+      await tester.pumpAndSettle();
+      await tester.enterText(sheetField('Quantité (g)'), '20');
+      await tester.enterText(sheetField('Durée d\'ébullition (min)'), '60');
+      final ajouter = inSheet(find.widgetWithText(FilledButton, 'Ajouter'));
+      await tester.ensureVisible(ajouter);
+      await tester.pumpAndSettle();
+      await tester.tap(ajouter);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nom').first,
+        'Blonde',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      return app.recipes.writes.single.content!;
+    }
+
+    testWidgets('houblon : la forme de la Bibliothèque remplace Pellets '
+        'proposé (ticket #105)', (tester) async {
+      final app = await open(
+        tester,
+        '/recettes/nouvelle',
+        before: bibliotheque,
+      );
+      final content = await ajouterHoublon(
+        tester,
+        app,
+        saisie: 'saaz',
+        suggestion: 'Saaz Fictif',
+      );
+      expect(content.hops.single.form, 'leaf');
+    });
+
+    testWidgets('houblon : la forme choisie par le brasseur reste '
+        '(ticket #105)', (tester) async {
+      final app = await open(
+        tester,
+        '/recettes/nouvelle',
+        before: bibliotheque,
+      );
+      final content = await ajouterHoublon(
+        tester,
+        app,
+        saisie: 'casc',
+        suggestion: 'Cascade',
+        formeChoisie: 'Cônes',
+      );
+      expect(content.hops.single.form, 'leaf');
     });
 
     testWidgets('style : choix par code, nom exact enregistré', (tester) async {
