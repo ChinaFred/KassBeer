@@ -20,15 +20,17 @@ données s'affichent dans un bloc à fond qui défile en largeur. Demandé par l
 
 `logs_screen.dart` : `_PuceMenu` (`MenuAnchor` et `ActionChip`) remplace `BoutonsSegmentes`
 pour la gravité et la période ; `_plusDeFiltres` replie les trois autres filtres sur
-téléphone, et un refus de champ du serveur les déplie. L'icône
-de tête : une `Etiquette` partagée, ton choisi par gravité ; date et fonction dessous au-delà
+téléphone, et un refus de champ du serveur les déplie. Gravité en
+`Etiquette` partagée, ton choisi par gravité, à la place de l'icône de tête ; date et fonction dessous au-delà
 de `kGrandTexteMinScale`. Entrées en `Card.outlined`, texte en chasse fixe dans un
 `SingleChildScrollView` horizontal sur `surfaceContainerHighest`. Puces avec `childFocusNode`
-et `Semantics(expanded)`, valeur du menu en `Semantics(selected)`. La note sur les e-mails
+et `Semantics(expanded)`, valeur du menu en `Semantics(selected)`, chacun dans un
+`MergeSemantics` pour viser le nœud du bouton. La note sur les e-mails
 passe sous le compte des entrées. Aucun appel, filtre, règle ni fonction serveur ne change ; la
 recherche part toujours du seul bouton « Rechercher » (P50). Tests de `logs_test.dart` :
 téléphone de 360 × 640 (« Rechercher » visible, gravité en une puce, cinq entrées visibles),
-compte de « Plus de filtres (2) », bloc des données, date entière à 200 %.
+compte de « Plus de filtres (2) », bloc des données, date entière à 200 %, états
+« développé » et « sélectionné » lus sur les nœuds de sémantique.
 
 ### v0.1.85 — fonctionnel
 

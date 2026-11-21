@@ -913,6 +913,42 @@ void main() {
       expect(visibles, greaterThanOrEqualTo(5));
     });
 
+    testWidgets('lecteur d\'écran : « Plus de filtres » et puce annoncent '
+        'leur ouverture, le menu sa valeur choisie', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _ouvrir(tester);
+      final plus = find.ancestor(
+        of: find.text(LogsScreen.plusDeFiltres),
+        matching: find.byType(TextButton),
+      );
+      expect(
+        tester.getSemantics(plus),
+        containsSemantics(hasExpandedState: true, isExpanded: false),
+      );
+      await _plusDeFiltres(tester);
+      expect(tester.getSemantics(plus), containsSemantics(isExpanded: true));
+
+      final puce = find.ancestor(
+        of: find.text(LogsScreen.puce(LogsScreen.gravite, 'Info et plus')),
+        matching: find.byType(ActionChip),
+      );
+      expect(tester.getSemantics(puce), containsSemantics(isExpanded: false));
+      await tester.tap(puce);
+      await tester.pumpAndSettle();
+      expect(tester.getSemantics(puce), containsSemantics(isExpanded: true));
+      final choisie = find.ancestor(
+        of: find.text('Info et plus').last,
+        matching: find.byType(MenuItemButton),
+      );
+      final autre = find.ancestor(
+        of: find.text('Erreurs'),
+        matching: find.byType(MenuItemButton),
+      );
+      expect(tester.getSemantics(choisie), containsSemantics(isSelected: true));
+      expect(tester.getSemantics(autre), containsSemantics(isSelected: false));
+      semantics.dispose();
+    });
+
     testWidgets('« Plus de filtres (N) » compte les champs remplis', (
       tester,
     ) async {

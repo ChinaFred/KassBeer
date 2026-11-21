@@ -429,13 +429,15 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
             ),
             Align(
               alignment: Alignment.centerLeft,
-              child: Semantics(
-                expanded: _plusDeFiltres,
-                child: TextButton.icon(
-                  onPressed: () =>
-                      setState(() => _plusDeFiltres = !_plusDeFiltres),
-                  icon: Icon(_plusDeFiltres ? Icons.expand_less : Icons.tune),
-                  label: Text(LogsScreen.plusDeFiltresCompte(_filtresEnPlus)),
+              child: MergeSemantics(
+                child: Semantics(
+                  expanded: _plusDeFiltres,
+                  child: TextButton.icon(
+                    onPressed: () =>
+                        setState(() => _plusDeFiltres = !_plusDeFiltres),
+                    icon: Icon(_plusDeFiltres ? Icons.expand_less : Icons.tune),
+                    label: Text(LogsScreen.plusDeFiltresCompte(_filtresEnPlus)),
+                  ),
                 ),
               ),
             ),
@@ -717,34 +719,40 @@ class _PuceMenuState<T> extends State<_PuceMenu<T>> {
       childFocusNode: _focus,
       menuChildren: [
         for (final v in w.valeurs)
-          Semantics(
-            selected: v == w.choisie,
-            child: MenuItemButton(
-              // Une coche devant la valeur choisie, un vide de même largeur
-              // devant les autres.
-              leadingIcon: v == w.choisie
-                  ? const Icon(Icons.check)
-                  : const SizedBox(width: 24),
-              onPressed: () => w.onChoisie(v),
-              child: Text(w.libelleDe(v)),
+          MergeSemantics(
+            child: Semantics(
+              selected: v == w.choisie,
+              child: MenuItemButton(
+                // Une coche devant la valeur choisie, un vide de même largeur
+                // devant les autres.
+                leadingIcon: v == w.choisie
+                    ? const Icon(Icons.check)
+                    : const SizedBox(width: 24),
+                onPressed: () => w.onChoisie(v),
+                child: Text(w.libelleDe(v)),
+              ),
             ),
           ),
       ],
-      builder: (context, menu, _) => Semantics(
-        expanded: menu.isOpen,
-        child: ActionChip(
-          focusNode: _focus,
-          onPressed: () => menu.isOpen ? menu.close() : menu.open(),
-          label: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(LogsScreen.puce(w.filtre, w.libelleDe(w.choisie))),
-              ),
-              const ExcludeSemantics(
-                child: Icon(Icons.arrow_drop_down, size: 18),
-              ),
-            ],
+      builder: (context, menu, _) => MergeSemantics(
+        child: Semantics(
+          expanded: menu.isOpen,
+          child: ActionChip(
+            focusNode: _focus,
+            onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    LogsScreen.puce(w.filtre, w.libelleDe(w.choisie)),
+                  ),
+                ),
+                const ExcludeSemantics(
+                  child: Icon(Icons.arrow_drop_down, size: 18),
+                ),
+              ],
+            ),
           ),
         ),
       ),
