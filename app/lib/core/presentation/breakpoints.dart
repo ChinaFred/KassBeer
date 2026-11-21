@@ -121,6 +121,16 @@ const double kRailEtenduWidth = 256;
 const double kTicketsAdminCoteACoteMinWidth =
     kExpandedMinWidth + kRailEtenduWidth;
 
+/// Largeur de fenêtre à partir de laquelle la Bibliothèque montre la liste et
+/// la fiche côte à côte : le même seuil qu'Admin › Tickets, le rail étendu et
+/// [kExpandedMinWidth] de contenu. Avec un texte agrandi (à partir de
+/// [kGrandTexteMinScale]), elle garde une colonne.
+const double kBibliothequeCoteACoteMinWidth = kTicketsAdminCoteACoteMinWidth;
+
+/// Largeur de la liste de la Bibliothèque quand la fiche s'affiche à côté ;
+/// la fiche prend le reste, bornée à [kContentMaxWidth].
+const double kListeBibliothequeWidth = 380;
+
 /// Hauteur maximale d'une liste de suggestions sous un champ de saisie : six
 /// lignes à deux lignes de texte, sans cacher tout le formulaire au téléphone.
 const double kSuggestionsMaxHeight = 280;

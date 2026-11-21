@@ -2,6 +2,7 @@ import 'dart:ui' show CheckedState;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/presentation/formats.dart';
@@ -11,6 +12,7 @@ import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/library/presentation/couleur_ebc.dart';
 import 'package:kass_beer/features/library/presentation/data_sources_screen.dart';
+import 'package:kass_beer/features/library/presentation/libelles_bibliotheque.dart';
 import 'package:kass_beer/features/library/presentation/library_providers.dart';
 import 'package:kass_beer/features/library/presentation/library_screen.dart';
 import 'package:kass_beer/features/library/presentation/public_recipe_screen.dart';
@@ -106,6 +108,64 @@ Future<void> choisir(WidgetTester tester, String label) async {
   await tester.tap(filtre);
   await tester.pumpAndSettle();
   await tester.tap(choix(label));
+  await tester.pumpAndSettle();
+}
+
+/// Fiche du houblon Cascade, lisible.
+DocumentTrouve<FicheReferentiel> get _ficheCascade => DocumentTrouve(
+  FicheReferentiel.fromFirestore(
+    NatureReferentiel.hops,
+    'hop-cascade',
+    hopDoc(),
+  ),
+);
+
+/// Houblons en large (1 280 px) : index, fiche de Cascade, index des arômes
+/// [aromes].
+Future<TestApp> openHopsLarge(
+  WidgetTester tester, {
+  String path = '/bibliotheque/houblons',
+  RechercheDocument<IndexAromes>? aromes,
+  bool offline = false,
+  double width = 1280,
+}) => open(
+  tester,
+  path,
+  width: width,
+  offline: offline,
+  before: (app) {
+    app.library.index[NatureReferentiel.hops] = found(
+      NatureReferentiel.hops,
+      hopsIndex,
+    );
+    app.library.fiches['hop-cascade'] = _ficheCascade;
+    app.library.indexAromes = aromes;
+  },
+);
+
+/// Ligne [titre] de la liste.
+Finder ligne(String titre) => find.widgetWithText(LigneListe, titre);
+
+bool choisie(WidgetTester tester, String titre) =>
+    tester.widget<LigneListe>(ligne(titre)).selected;
+
+/// Titre de la barre du haut.
+Finder titreBarre(String titre) =>
+    find.descendant(of: find.byType(AppBar), matching: find.text(titre));
+
+/// Nœud de focus de la ligne [titre] (son `InkWell`).
+FocusNode focusLigne(WidgetTester tester, String titre) => Focus.of(
+  tester.element(
+    find.descendant(of: ligne(titre), matching: find.text(titre)).first,
+  ),
+);
+
+/// Nœud de focus du champ de recherche.
+FocusNode focusRecherche(WidgetTester tester) =>
+    tester.widget<TextField>(find.byType(TextField)).focusNode!;
+
+Future<void> redimensionner(WidgetTester tester, double width) async {
+  tester.view.physicalSize = Size(width, 900);
   await tester.pumpAndSettle();
 }
 
@@ -1196,6 +1256,431 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(DataSourcesScreen.openFailure), findsOneWidget);
       expect(app.errors.reports.single.feature, 'library.open_licence');
+    });
+  });
+
+  group('liste et fiche côte à côte (1 280 px)', () {
+    testWidgets('deux colonnes : invite sans fiche, ligne choisie, barre sans '
+        'retour', (tester) async {
+      final app = await openHopsLarge(tester);
+      expect(find.byType(BibliothequeCoteACote), findsOneWidget);
+      expect(find.byType(VerticalDivider), findsNWidgets(2));
+      expect(
+        find.text('Choisissez un houblon pour voir sa fiche.'),
+        findsOneWidget,
+      );
+      expect(titreBarre('Bibliothèque'), findsOneWidget);
+      expect(find.byType(BackButton), findsNothing);
+      expect(choisie(tester, 'Cascade'), isFalse);
+
+      await tester.tap(ligne('Cascade'));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons/hop-cascade');
+      expect(find.text('Autres noms : Cascade US'), findsOneWidget);
+      expect(ligne('Houblon doré'), findsOneWidget);
+      expect(choisie(tester, 'Cascade'), isTrue);
+      expect(choisie(tester, 'Houblon doré'), isFalse);
+      expect(titreBarre('Bibliothèque'), findsOneWidget);
+      expect(titreBarre('Houblon'), findsNothing);
+      expect(find.byType(BackButton), findsNothing);
+      // L'en-tête de la colonne de droite annonce la fiche ouverte.
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is Semantics &&
+              w.properties.liveRegion == true &&
+              w.properties.label == TextesFicheBibliotheque.ouverte('Cascade'),
+        ),
+        findsOneWidget,
+      );
+      // La liste est 380 px de large ; la fiche, 840 px au plus.
+      expect(tester.getSize(find.byType(CustomScrollView).first).width, 380);
+      expect(
+        tester.getSize(find.byType(FicheCoteACote)).width,
+        lessThanOrEqualTo(840),
+      );
+    });
+
+    testWidgets('la liste garde son défilement d\'une fiche à l\'autre', (
+      tester,
+    ) async {
+      final many = indexDoc([
+        for (var i = 0; i < 40; i++)
+          {'id': 'hop-h$i', 'name': 'Houblon ${i.toString().padLeft(2, '0')}'},
+      ]);
+      await open(
+        tester,
+        '/bibliotheque/houblons',
+        width: 1280,
+        before: (app) => app.library.index[NatureReferentiel.hops] = found(
+          NatureReferentiel.hops,
+          many,
+        ),
+      );
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -1200),
+      );
+      await tester.pumpAndSettle();
+      expect(ligne('Houblon 00'), findsNothing);
+      final avant = tester.getTopLeft(ligne('Houblon 25'));
+      await tester.tap(ligne('Houblon 25'));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(ligne('Houblon 25')), avant);
+      expect(choisie(tester, 'Houblon 25'), isTrue);
+      await tester.tap(ligne('Houblon 26'));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(ligne('Houblon 25')), avant);
+      expect(choisie(tester, 'Houblon 26'), isTrue);
+    });
+
+    testWidgets('une invite par rubrique', (tester) async {
+      for (final s in SegmentBibliotheque.values) {
+        expect(inviteFiche(s), startsWith('Choisissez '));
+      }
+      await open(tester, '/bibliotheque/recettes', width: 1280);
+      expect(
+        find.text('Choisissez une recette publique pour voir sa fiche.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('« Fermer la fiche », Échap et changement de rubrique', (
+      tester,
+    ) async {
+      final app = await openHopsLarge(
+        tester,
+        path: '/bibliotheque/houblons/hop-cascade',
+      );
+      await tester.tap(find.byTooltip(TextesFicheBibliotheque.fermer));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons');
+      expect(
+        find.text('Choisissez un houblon pour voir sa fiche.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(ligne('Cascade'));
+      await tester.pumpAndSettle();
+      Focus.of(tester.element(find.byIcon(Icons.close))).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons');
+
+      await tester.tap(ligne('Cascade'));
+      await tester.pumpAndSettle();
+      await tapChip(tester, 'Styles');
+      expect(location(app), '/bibliotheque/styles');
+      expect(
+        find.text('Choisissez un style pour voir sa fiche.'),
+        findsOneWidget,
+      );
+      expect(find.byType(ReferenceEntryScreen), findsNothing);
+    });
+
+    testWidgets('focus rendu à la ligne de la fiche fermée, sinon à la '
+        'recherche', (tester) async {
+      final app = await openHopsLarge(tester);
+      await tester.tap(ligne('Cascade'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip(TextesFicheBibliotheque.fermer));
+      await tester.pumpAndSettle();
+      expect(focusLigne(tester, 'Cascade').hasPrimaryFocus, isTrue);
+
+      // Fiche absente de la liste : le focus va sur la recherche.
+      app.container
+          .read(routerProvider)
+          .go('/bibliotheque/houblons/hop-absent');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip(TextesFicheBibliotheque.fermer));
+      await tester.pumpAndSettle();
+      expect(focusRecherche(tester).hasFocus, isTrue);
+    });
+
+    testWidgets('Entrée sur une ligne, puis Échap ferme la fiche', (
+      tester,
+    ) async {
+      final app = await openHopsLarge(tester);
+      focusLigne(tester, 'Cascade').requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons/hop-cascade');
+      expect(focusLigne(tester, 'Cascade').hasPrimaryFocus, isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons');
+      expect(
+        find.text('Choisissez un houblon pour voir sa fiche.'),
+        findsOneWidget,
+      );
+      expect(focusLigne(tester, 'Cascade').hasPrimaryFocus, isTrue);
+      // Sans fiche ouverte, Échap ne fait rien.
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons');
+    });
+
+    testWidgets('recherche et filtre gardés d\'une fiche à l\'autre', (
+      tester,
+    ) async {
+      await openHopsLarge(tester, aromes: foundAromes());
+      await tester.enterText(find.byType(TextField), 'cas');
+      await tester.pumpAndSettle();
+      await choisir(tester, 'Faible (1)');
+      await tester.tap(ligne('Cascade'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'cas'), findsOneWidget);
+      expect(find.text('Confiance des arômes : Faible (1)'), findsOneWidget);
+      await tester.tap(find.byTooltip(TextesFicheBibliotheque.fermer));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'cas'), findsOneWidget);
+      expect(find.text('Confiance des arômes : Faible (1)'), findsOneWidget);
+      expect(find.text('1 sur 2 houblons'), findsOneWidget);
+    });
+
+    testWidgets('« Voir le style » : styles en deux colonnes par-dessus, le '
+        'retour revient à la recette', (tester) async {
+      final app = await open(
+        tester,
+        '/bibliotheque/recettes',
+        width: 1280,
+        before: (app) {
+          app.library.recettes.add(publicRecipe(styleId: 'bjcp2021-21a'));
+          app.library.index[NatureReferentiel.styles] = found(
+            NatureReferentiel.styles,
+            stylesIndex,
+          );
+          app.library.fiches['bjcp2021-21a'] = DocumentTrouve(
+            FicheReferentiel.fromFirestore(
+              NatureReferentiel.styles,
+              'bjcp2021-21a',
+              styleDoc(),
+            ),
+          );
+        },
+      );
+      await tester.enterText(find.byType(TextField), 'Blo');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      await tester.tap(ligne('Blonde du Verger'));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/recettes/diydog-1');
+      expect(choisie(tester, 'Blonde du Verger'), isTrue);
+
+      await tester.tap(find.text('Voir le style'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is BibliothequeCoteACote &&
+              w.segment == SegmentBibliotheque.styles &&
+              w.selectedId == 'bjcp2021-21a',
+        ),
+        findsOneWidget,
+      );
+      expect(choisie(tester, '21A · American IPA'), isTrue);
+      expect(find.text('21 · IPA'), findsOneWidget);
+      expect(find.byType(BackButton), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/recettes/diydog-1');
+      expect(find.byType(PublicRecipeScreen), findsOneWidget);
+      expect(find.byType(BackButton), findsNothing);
+      expect(find.widgetWithText(TextField, 'Blo'), findsOneWidget);
+      expect(app.library.pages.map((p) => p.prefixe), ['', 'Blo']);
+    });
+
+    testWidgets('« Voir le style » en large : « Fermer la fiche » et Échap '
+        'reviennent à la recette', (tester) async {
+      final app = await open(
+        tester,
+        '/bibliotheque/recettes/diydog-1',
+        width: 1280,
+        before: (app) {
+          app.library.recettes.add(publicRecipe(styleId: 'bjcp2021-21a'));
+          app.library.index[NatureReferentiel.styles] = found(
+            NatureReferentiel.styles,
+            stylesIndex,
+          );
+          app.library.fiches['bjcp2021-21a'] = DocumentTrouve(
+            FicheReferentiel.fromFirestore(
+              NatureReferentiel.styles,
+              'bjcp2021-21a',
+              styleDoc(),
+            ),
+          );
+        },
+      );
+      await tester.tap(find.text('Voir le style'));
+      await tester.pumpAndSettle();
+      expect(find.text('21 · IPA'), findsOneWidget);
+      await tester.tap(find.byTooltip(TextesFicheBibliotheque.fermer));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/recettes/diydog-1');
+      expect(find.byType(PublicRecipeScreen), findsOneWidget);
+      expect(find.text('21 · IPA'), findsNothing);
+
+      await tester.tap(find.text('Voir le style'));
+      await tester.pumpAndSettle();
+      focusLigne(tester, '21A · American IPA').requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/recettes/diydog-1');
+      expect(find.byType(PublicRecipeScreen), findsOneWidget);
+      expect(find.text('21 · IPA'), findsNothing);
+    });
+
+    testWidgets('états de la fiche à droite, la liste reste utilisable', (
+      tester,
+    ) async {
+      final app = await openHopsLarge(
+        tester,
+        path: '/bibliotheque/houblons/hop-absent',
+      );
+      expect(find.text(TextesFicheBibliotheque.absent), findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, TextesFicheBibliotheque.fermer),
+        findsOneWidget,
+      );
+      expect(find.text('Revenir à la bibliothèque'), findsNothing);
+      expect(choisie(tester, 'Cascade'), isFalse);
+      await tester.tap(
+        find.widgetWithText(FilledButton, TextesFicheBibliotheque.fermer),
+      );
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons');
+
+      // Panne : « Réessayer » à droite, la liste ouvre une autre fiche.
+      app.library.ficheErrors['hop-houblon-dore'] = StateError('panne');
+      await tester.tap(ligne('Houblon doré'));
+      await tester.pumpAndSettle();
+      expect(find.text(TextesFicheBibliotheque.loadError), findsOneWidget);
+      expect(find.text('Réessayer'), findsOneWidget);
+      await tester.tap(ligne('Cascade'));
+      await tester.pumpAndSettle();
+      expect(find.text('Autres noms : Cascade US'), findsOneWidget);
+    });
+
+    testWidgets('hors ligne, fiche absente du cache', (tester) async {
+      await open(
+        tester,
+        '/bibliotheque/houblons/hop-cascade',
+        width: 1280,
+        offline: true,
+        before: (app) {
+          app.library.index[NatureReferentiel.hops] = found(
+            NatureReferentiel.hops,
+            hopsIndex,
+          );
+          app.library.fiches['hop-cascade'] =
+              DocumentAbsentDuCache<FicheReferentiel>();
+        },
+      );
+      expect(find.text(TextesFicheBibliotheque.offline), findsOneWidget);
+      expect(ligne('Houblon doré'), findsOneWidget);
+    });
+
+    testWidgets('recettes publiques : fiche à droite, « Fermer la fiche »', (
+      tester,
+    ) async {
+      final app = await open(
+        tester,
+        '/bibliotheque/recettes/diydog-404',
+        width: 1280,
+        before: (app) => app.library.recettes.add(publicRecipe()),
+      );
+      expect(find.text(TextesFicheBibliotheque.absent), findsOneWidget);
+      expect(find.text('Revenir aux recettes publiques'), findsNothing);
+      expect(ligne('Blonde du Verger'), findsOneWidget);
+      await tester.tap(find.byTooltip(TextesFicheBibliotheque.fermer));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/recettes');
+    });
+
+    testWidgets('texte à 130 % : une colonne', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await openHopsLarge(tester, path: '/bibliotheque/houblons/hop-cascade');
+      expect(find.byType(BibliothequeCoteACote), findsNothing);
+      expect(titreBarre('Houblon'), findsOneWidget);
+      expect(find.byType(BackButton), findsOneWidget);
+      expect(find.byTooltip(TextesFicheBibliotheque.fermer), findsNothing);
+    });
+
+    testWidgets('fenêtre réduite à 390 px puis rendue, fiche ouverte : '
+        'recherche gardée', (tester) async {
+      final app = await openHopsLarge(tester);
+      await tester.enterText(find.byType(TextField), 'casc');
+      await tester.pumpAndSettle();
+      await tester.tap(ligne('Cascade'));
+      await tester.pumpAndSettle();
+
+      await redimensionner(tester, 390);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(BibliothequeCoteACote), findsNothing);
+      expect(find.text('Autres noms : Cascade US'), findsOneWidget);
+      expect(titreBarre('Houblon'), findsOneWidget);
+      expect(find.byType(BackButton), findsOneWidget);
+
+      await redimensionner(tester, 1280);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(BibliothequeCoteACote), findsOneWidget);
+      expect(find.text('Autres noms : Cascade US'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'casc'), findsOneWidget);
+      expect(choisie(tester, 'Cascade'), isTrue);
+
+      await redimensionner(tester, 390);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons');
+      expect(find.widgetWithText(TextField, 'casc'), findsOneWidget);
+      expect(find.text('1 sur 2 houblons'), findsOneWidget);
+    });
+  });
+
+  group('téléphone (390 px) : disposition inchangée', () {
+    testWidgets('fiche seule, retour qui garde la recherche', (tester) async {
+      final app = await openHopsLarge(tester, width: 390);
+      expect(find.byType(BibliothequeCoteACote), findsNothing);
+      await tester.enterText(find.byType(TextField), 'casc');
+      await tester.pumpAndSettle();
+      await tester.tap(ligne('Cascade'));
+      await tester.pumpAndSettle();
+      expect(ligne('Houblon doré'), findsNothing);
+      expect(find.byTooltip(TextesFicheBibliotheque.fermer), findsNothing);
+      expect(titreBarre('Houblon'), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/houblons');
+      expect(find.widgetWithText(TextField, 'casc'), findsOneWidget);
+    });
+
+    testWidgets('« Voir le style » empilé, une colonne', (tester) async {
+      final app = await open(
+        tester,
+        '/bibliotheque/recettes/diydog-1',
+        width: 390,
+        before: (app) =>
+            app.library.recettes.add(publicRecipe(styleId: 'bjcp2021-21a')),
+      );
+      await tester.tap(find.text('Voir le style'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BibliothequeCoteACote), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is ReferenceEntryScreen && w.id == 'bjcp2021-21a',
+        ),
+        findsOneWidget,
+      );
+      expect(titreBarre('Style'), findsOneWidget);
+      // Le retour ouvre la liste des styles, comme avant.
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(location(app), '/bibliotheque/styles');
     });
   });
 }

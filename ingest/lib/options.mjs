@@ -14,8 +14,14 @@ export const PROJET_PRODUCTION = "kassbeer";
 /// Projet de l'émulateur par défaut.
 export const PROJET_EMULATEUR = "demo-kassbeer";
 
-/// Collections où `--supprimer-absents` peut supprimer (ADR-014, P19), une par lancement.
-export const COLLECTIONS_SUPPRIMABLES = ["beer_hops", "beer_hop_aromas", "beer_cultures"];
+/// Collections où `--supprimer-absents` peut supprimer (ADR-014, P19 ; beer_culture_aromas :
+/// ADR-017, section 5), une par lancement.
+export const COLLECTIONS_SUPPRIMABLES = [
+  "beer_hops",
+  "beer_hop_aromas",
+  "beer_cultures",
+  "beer_culture_aromas",
+];
 
 /// Erreur d'utilisation : message montré tel quel, code de sortie 2.
 export class ErreurOptions extends Error {}

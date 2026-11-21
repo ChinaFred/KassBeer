@@ -19,7 +19,9 @@ import {
   ErreurOptions,
   lireOptions,
 } from "./options.mjs";
-import { COLLECTION_AROMES, controlerEntreeArome, empreinteContenu } from "./aromes/validation.mjs";
+import { contexteStyles, NATURE_LEVURE } from "./aromes/natures/culture.mjs";
+import { NATURE_HOUBLON } from "./aromes/natures/hop.mjs";
+import { COLLECTION_AROMES, empreinteContenu } from "./aromes/validation.mjs";
 import {
   COLLECTION_EXECUTIONS,
   COLLECTIONS,
@@ -29,6 +31,10 @@ import {
 } from "./validation.mjs";
 
 const NATURES = ["fermentable", "hop", "culture", "misc"];
+
+/// Natures des descriptions aromatiques écrites (ADR-013, ADR-017) : houblons depuis
+/// import/ingest/aromes/, levures depuis import/ingest/aromes/levures/.
+export const NATURES_AROMES = [NATURE_HOUBLON, NATURE_LEVURE];
 
 /// Dossier de la préparation par défaut : import/ingest/prepare/ à la racine du dépôt.
 export const DOSSIER_PREPARE = fileURLToPath(
@@ -85,26 +91,33 @@ export function trier(documents) {
   return { valides, refuses };
 }
 
-/// Lit import/ingest/aromes/ ([dossier]) : `aromes.json` (liste `{id, data}`) et
-/// `houblons-recettes.json` (houblons des recettes du groupe). Rend null si aromes.json
-/// manque : aucune description n'est écrite. Lève une erreur si aromes.json existe sans
-/// houblons-recettes.json : sans cette liste, l'écrivain ne peut pas refuser un houblon du
-/// groupe non relu, et rien n'est écrit.
-export function lireAromesPrepares(dossier) {
+/// Commandes qui refont la liste du groupe de [nature], en production.
+const commandesListe = (nature) =>
+  `node lister-ingredients-recettes.mjs --nature ${nature.cle} --production --projet kassbeer, ` +
+  `puis dart run bin/lister_ingredients_recettes.dart --nature ${nature.cle}`;
+
+/// Lit le dossier des arômes de [nature] ([dossier] : import/ingest/aromes/, ou levures/) :
+/// `aromes.json` (liste `{id, data}`) et la liste du groupe (`houblons-recettes.json`,
+/// `levures-recettes.json`). Rend null si aromes.json manque : aucune description n'est
+/// écrite. Lève une erreur si aromes.json existe sans la liste du groupe : sans elle,
+/// l'écrivain ne peut pas refuser un élément du groupe non relu, et rien n'est écrit.
+export function lireAromesPrepares(dossier, nature = NATURE_HOUBLON) {
   const chemin = join(dossier, "aromes.json");
   if (!existsSync(chemin)) return null;
   const entrees = JSON.parse(readFileSync(chemin, "utf8"));
   if (!Array.isArray(entrees)) throw new Error("aromes.json : liste attendue");
-  const cheminGroupe = join(dossier, "houblons-recettes.json");
+  const nomGroupe = nature.fichierGroupe;
+  const cheminGroupe = join(dossier, nomGroupe);
   if (!existsSync(cheminGroupe)) {
     throw new Error(
-      "houblons-recettes.json absent à côté de aromes.json : lancez lister-houblons-recettes.mjs " +
-        "puis exchange/bin/lister_houblons_recettes.dart. Rien n'est écrit.",
+      `${nomGroupe} absent à côté de aromes.json : lancez ` +
+        `lister-ingredients-recettes.mjs --nature ${nature.cle} puis ` +
+        `exchange/bin/lister_ingredients_recettes.dart --nature ${nature.cle}. Rien n'est écrit.`,
     );
   }
   const groupe = JSON.parse(readFileSync(cheminGroupe, "utf8"));
-  if (groupe?.format !== "kassbeer_houblons_recettes" || !Array.isArray(groupe.resolus)) {
-    throw new Error("houblons-recettes.json : fichier de lister_houblons_recettes.dart attendu");
+  if (groupe?.format !== nature.formatGroupe || !Array.isArray(groupe.resolus)) {
+    throw new Error(`${nomGroupe} : fichier de lister_ingredients_recettes.dart attendu`);
   }
   return {
     entrees,
@@ -113,56 +126,57 @@ export function lireAromesPrepares(dossier) {
   };
 }
 
-/// Âge maximal, en jours, de la liste des houblons du groupe lue par une écriture en
-/// production : une liste plus ancienne peut omettre un houblon ajouté depuis à une recette,
-/// dont le texte non relu partirait.
+/// Âge maximal, en jours, de la liste des éléments du groupe lue par une écriture en
+/// production : une liste plus ancienne peut omettre un houblon ou une levure ajouté depuis
+/// à une recette, dont le texte non relu partirait.
 export const AGE_MAX_LISTE_GROUPE_JOURS = 7;
 
-/// Contrôle, avant une écriture en production, l'origine de houblons-recettes.json
-/// ([origine] : `target` et `generated_at` recopiés de noms-houblons.json). Lève
+/// Contrôle, avant une écriture en production, l'origine de la liste du groupe de [nature]
+/// ([origine] : `target` et `generated_at` recopiés de la liste des noms). Lève
 /// ErreurOptions si la liste vient de l'émulateur, d'une cible inconnue, n'a pas de date
 /// lisible ou a plus de AGE_MAX_LISTE_GROUPE_JOURS jours : rien n'est écrit.
-export function controlerListeGroupe(origine, maintenant) {
-  const refaire =
-    "Refaites la liste : node lister-houblons-recettes.mjs --production --projet kassbeer, " +
-    "puis dart run bin/lister_houblons_recettes.dart. Rien n'est écrit.";
+export function controlerListeGroupe(origine, maintenant, nature = NATURE_HOUBLON) {
+  const nom = nature.fichierGroupe;
+  const refaire = `Refaites la liste : ${commandesListe(nature)}. Rien n'est écrit.`;
   if (origine?.target !== "production") {
     throw new ErreurOptions(
-      `houblons-recettes.json vient de la cible « ${origine?.target ?? "inconnue"} », pas ` +
-        `de la production : les houblons du groupe peuvent manquer. ${refaire}`,
+      `${nom} vient de la cible « ${origine?.target ?? "inconnue"} », pas ` +
+        `de la production : les ${nature.mots.des} du groupe peuvent manquer. ${refaire}`,
     );
   }
   const date = Date.parse(origine.generated_at ?? "");
   if (!Number.isFinite(date)) {
-    throw new ErreurOptions(`houblons-recettes.json sans date de liste lisible. ${refaire}`);
+    throw new ErreurOptions(`${nom} sans date de liste lisible. ${refaire}`);
   }
   const age = (maintenant.getTime() - date) / 86_400_000;
   if (age > AGE_MAX_LISTE_GROUPE_JOURS || age < -1) {
     throw new ErreurOptions(
-      `houblons-recettes.json tiré le ${origine.generated_at.slice(0, 10)} : plus de ` +
+      `${nom} tiré le ${origine.generated_at.slice(0, 10)} : plus de ` +
         `${AGE_MAX_LISTE_GROUPE_JOURS} jours. ${refaire}`,
     );
   }
 }
 
-/// Sépare les entrées de aromes.json bonnes des refusées (ADR-013, P55) : contrôle de
-/// lib/aromes/validation.mjs, identifiant absent de beer_hops.json, houblon du groupe non
-/// relu, identifiant en double. Les bonnes reçoivent `content_sha256`.
-export function trierAromes(entrees, idsHoublons, groupe) {
+/// Sépare les entrées de aromes.json de [nature] bonnes des refusées (ADR-013, P55 ;
+/// ADR-017, P62) : contrôle de la nature (lib/aromes/validation.mjs ou
+/// lib/aromes/natures/culture.mjs, styles de [contexte] pour les levures), identifiant
+/// absent du référentiel préparé ([idsReferentiel]), élément du groupe non relu, identifiant
+/// en double. Les bonnes reçoivent `content_sha256`.
+export function trierAromes(entrees, idsReferentiel, groupe, nature = NATURE_HOUBLON, contexte) {
   const valides = [];
   const refuses = [];
   const vus = new Set();
   for (const doc of entrees) {
-    const erreurs = controlerEntreeArome(doc);
+    const erreurs = nature.controlerEntree(doc, contexte);
     const id = typeof doc?.id === "string" ? doc.id : null;
-    if (id !== null && !idsHoublons.has(id)) erreurs.push("id : houblon absent de beer_hops.json");
+    if (id !== null && !idsReferentiel.has(id)) erreurs.push(`id : ${nature.refus.absent}`);
     if (id !== null && groupe.has(id) && doc?.data?.reviewed !== true) {
-      erreurs.push("reviewed : houblon des recettes du groupe non relu");
+      erreurs.push(`reviewed : ${nature.refus.nonRelu}`);
     }
     if (id !== null && vus.has(id)) erreurs.push("id : en double");
     if (id !== null) vus.add(id);
     if (erreurs.length > 0) {
-      refuses.push({ collection: COLLECTION_AROMES, id, erreurs });
+      refuses.push({ collection: nature.collection, id, erreurs });
     } else {
       valides.push({ id, data: { ...doc.data, content_sha256: empreinteContenu(doc.data) } });
     }
@@ -209,17 +223,33 @@ export function resumePreparation(rapport) {
   return { sources, unresolved };
 }
 
+/// Entrées relues ([entrees] de aromes.json) dont l'identifiant manque au référentiel
+/// préparé ([idsReferentiel]) : description relue orpheline, après une fusion d'ADR-014
+/// (ADR-017, section 5). Identifiants triés.
+export function relueOrphelines(entrees, idsReferentiel) {
+  return entrees
+    .filter((e) => e?.data?.reviewed === true && typeof e?.id === "string")
+    .map((e) => e.id)
+    .filter((id) => !idsReferentiel.has(id))
+    .sort();
+}
+
 /// Identifiants préparés de [collection] (refusés compris : un document refusé garde sa
-/// version en ligne), pour --supprimer-absents. beer_hop_aromas exige aromes.json : sans
-/// lui, ErreurOptions, rien n'est écrit ni supprimé.
+/// version en ligne), pour --supprimer-absents. beer_hop_aromas et beer_culture_aromas
+/// exigent leur aromes.json ([aromes] : lecture par collection, null si absent) : sans lui,
+/// ErreurOptions, rien n'est écrit ni supprimé.
 export function idsPrepares(collection, preparation, aromes) {
-  if (collection === COLLECTION_AROMES) {
-    if (aromes === null) {
+  const nature = NATURES_AROMES.find((n) => n.collection === collection);
+  if (nature !== undefined) {
+    const lu = aromes?.[collection] ?? null;
+    if (lu === null) {
+      const fichier =
+        nature.sousDossier === null ? "aromes.json" : `${nature.sousDossier}/aromes.json`;
       throw new ErreurOptions(
-        "--supprimer-absents beer_hop_aromas sans aromes.json : rien n'est écrit ni supprimé.",
+        `--supprimer-absents ${collection} sans ${fichier} : rien n'est écrit ni supprimé.`,
       );
     }
-    return aromes.entrees.map((e) => e?.id).filter((id) => typeof id === "string");
+    return lu.entrees.map((e) => e?.id).filter((id) => typeof id === "string");
   }
   return (preparation.documents[collection] ?? [])
     .map((d) => d?.id)
@@ -247,17 +277,33 @@ export async function executer({
   const dossierAromes = resolve(options.aromes ?? join(dossier, "..", "aromes"));
   const preparation = lirePreparation(dossier);
   const { valides, refuses } = trier(preparation.documents);
-  const aromes = lireAromesPrepares(dossierAromes);
-  if (aromes !== null && options.cible === "production") {
-    controlerListeGroupe(aromes.origine, debut);
+  // Arômes des deux natures : houblons à la racine du dossier, levures dans levures/.
+  const lus = {};
+  for (const nature of NATURES_AROMES) {
+    const d = nature.sousDossier === null ? dossierAromes : join(dossierAromes, nature.sousDossier);
+    lus[nature.collection] = lireAromesPrepares(d, nature);
+    if (lus[nature.collection] !== null && options.cible === "production") {
+      controlerListeGroupe(lus[nature.collection].origine, debut, nature);
+    }
   }
-  const idsHoublons = new Set(preparation.documents.beer_hops.map((d) => d.id));
-  if (aromes !== null) {
-    const tri = trierAromes(aromes.entrees, idsHoublons, aromes.groupe);
-    valides[COLLECTION_AROMES] = tri.valides;
+  const aromes = lus[COLLECTION_AROMES];
+  const orphelines = {};
+  for (const nature of NATURES_AROMES) {
+    const lu = lus[nature.collection];
+    if (lu === null) continue;
+    const referentiel = nature.referentiel.replace(/\.json$/, "");
+    const ids = new Set(preparation.documents[referentiel].map((d) => d.id));
+    // Styles acceptés par trier() seuls : un style refusé à la préparation n'est pas écrit, et
+    // une entrée qui le cite est refusée.
+    const contexte = nature === NATURE_LEVURE ? contexteStyles(valides.beer_styles) : undefined;
+    const tri = trierAromes(lu.entrees, ids, lu.groupe, nature, contexte);
+    valides[nature.collection] = tri.valides;
     refuses.push(...tri.refuses);
-    // Index des arômes, contrôlé comme les autres documents de beer_index.
-    const index = indexAromes(tri.valides);
+    orphelines[nature.collection] = relueOrphelines(lu.entrees, ids);
+  }
+  if (aromes !== null) {
+    // Index des arômes des houblons, contrôlé comme les autres documents de beer_index.
+    const index = indexAromes(valides[COLLECTION_AROMES]);
     const erreurs = controlerDocument("beer_index", index);
     if (erreurs.length > 0) {
       refuses.push({ collection: "beer_index", id: index.id, erreurs });
@@ -272,7 +318,7 @@ export async function executer({
   const prepares =
     options.supprimerAbsents === null
       ? null
-      : idsPrepares(options.supprimerAbsents, preparation, aromes);
+      : idsPrepares(options.supprimerAbsents, preparation, lus);
 
   if (options.cible === "production") {
     controlerIdentifiants(cheminIdentifiants(env), lireIdentifiants);
@@ -346,6 +392,8 @@ export async function executer({
       sources,
       unresolved,
       aromas_file: aromes === null ? "absent" : "read",
+      culture_aromas_file: lus[NATURE_LEVURE.collection] === null ? "absent" : "read",
+      reviewed_orphans: orphelines,
       hops_without_aroma: sansDescription,
       ...(deletions === null ? {} : { deletions }),
     };

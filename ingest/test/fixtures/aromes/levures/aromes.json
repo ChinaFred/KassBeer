@@ -1,0 +1,33 @@
+[
+  {
+    "id": "culture-labo-fictif-lf1-levure-fictive",
+    "data": {
+      "culture_name": "Levure Fictive",
+      "status": "described",
+      "confidence": "medium",
+      "descriptors": [
+        { "key": "clean", "label": "neutre" },
+        { "key": "fruity_esters", "label": "esters fruités" }
+      ],
+      "texts": {
+        "profile": {
+          "text": "Profil fictif, neutre et sec, avec une pointe d'esters fruités en fin de bouche."
+        },
+        "warm": { "text": "Plus chaude, la levure fictive pousse les esters fruités et arrondit la bouche." }
+      },
+      "styles": [{ "code": "bjcp2021-99a", "name": "Style Fictif" }],
+      "reviewed": true,
+      "reviewed_at": "2026-11-21",
+      "provenance": [
+        {
+          "source": "claude-api",
+          "source_id": "culture-labo-fictif-lf1-levure-fictive",
+          "version": "claude-fable-5-2 / prompt 1 / effort medium",
+          "licence": "Texte généré pour Kass'Beer",
+          "retrieved": "2026-11-21"
+        }
+      ],
+      "input_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  }
+]

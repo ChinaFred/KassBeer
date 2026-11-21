@@ -911,6 +911,13 @@ service cloud.firestore {
       allow list, write: if false;
     }
 
+    // Descriptions aromatiques des levures (ADR-017, P62) : même régime que
+    // beer_hop_aromas, écrit par ingest/ecrire.mjs seul, lu par get.
+    match /beer_culture_aromas/{entryId} {
+      allow get: if isMember();
+      allow list, write: if false;
+    }
+
     match /beer_cultures/{entryId} {
       allow get: if isMember();
       allow write: if false;

@@ -300,6 +300,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             title: page is PageDeCoquille
                 ? page.titreSelon?.call(context, state) ?? page.titre
                 : "Kass'Beer",
+            backByPop:
+                page is PageDeCoquille &&
+                (page.retourParPopSelon?.call(context, state) ?? false),
             backTo: page is PageDeCoquilleDynamique
                 ? page.retourDepuis(state)
                 : page is PageDeCoquille
@@ -308,7 +311,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                     null => page.retour,
                   }
                 : null,
-            fullWidth: page is PageDeCoquille && page.pleineLargeur,
+            fullWidth:
+                page is PageDeCoquille &&
+                (page.pleineLargeurSelon?.call(context) ?? page.pleineLargeur),
             child: child,
           );
         },
@@ -328,23 +333,74 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           // Bibliothèque (ADR-005, L4) : un chemin par segment, la fiche sous
-          // son segment, qui garde la liste lue et la recherche au retour.
+          // son segment, qui garde la liste lue et la recherche au retour. Une
+          // coquille par segment : en large (bibliothequeCoteACote), elle porte
+          // l'en-tête et la liste à gauche, et son navigateur la fiche ou
+          // l'invite à droite ; la liste reste la même d'une fiche à l'autre.
+          // En une colonne, elle ne montre que son navigateur : la liste, et
+          // la fiche par-dessus.
           for (final segment in SegmentBibliotheque.values)
-            PageDeCoquille(
-              path: AppRoutes.librarySegment(segment.slug),
-              titre: 'Bibliothèque',
-              builder: (_, _) => LibraryScreen(segment: segment),
+            ShellRoute(
+              builder: (context, state, child) => bibliothequeCoteACote(context)
+                  ? BibliothequeCoteACote(
+                      segment: segment,
+                      selectedId: state.pathParameters['id'],
+                      child: child,
+                    )
+                  : child,
               routes: [
                 PageDeCoquille(
-                  path: ':id',
-                  titre: segment.titreFiche,
-                  retour: AppRoutes.librarySegment(segment.slug),
-                  builder: (_, state) {
-                    final id = state.pathParameters['id']!;
-                    return segment.nature == null
-                        ? PublicRecipeScreen(id: id)
-                        : ReferenceEntryScreen(segment: segment, id: id);
-                  },
+                  path: AppRoutes.librarySegment(segment.slug),
+                  titre: 'Bibliothèque',
+                  pleineLargeurSelon: bibliothequeCoteACote,
+                  builder: (context, _) => bibliothequeCoteACote(context)
+                      ? InviteFicheBibliotheque(segment: segment)
+                      : LibraryScreen(segment: segment),
+                  routes: [
+                    PageDeCoquille(
+                      path: ':id',
+                      titre: segment.titreFiche,
+                      retour: AppRoutes.librarySegment(segment.slug),
+                      pleineLargeurSelon: bibliothequeCoteACote,
+                      // En large, la barre garde « Bibliothèque » sans
+                      // retour ; une fiche ouverte par-dessus (« Voir le
+                      // style ») garde un retour qui la dépile.
+                      titreSelon: (context, _) => bibliothequeCoteACote(context)
+                          ? 'Bibliothèque'
+                          : segment.titreFiche,
+                      retourSelon: (context, _) =>
+                          bibliothequeCoteACote(context) &&
+                              !pageEmpilee(context)
+                          ? null
+                          : AppRoutes.librarySegment(segment.slug),
+                      retourParPopSelon: (context, _) =>
+                          bibliothequeCoteACote(context) &&
+                          pageEmpilee(context),
+                      pageBuilder: (context, state) {
+                        final id = state.pathParameters['id']!;
+                        final cote = bibliothequeCoteACote(context);
+                        final fiche = segment.nature == null
+                            ? PublicRecipeScreen(id: id, coteACote: cote)
+                            : ReferenceEntryScreen(
+                                segment: segment,
+                                id: id,
+                                coteACote: cote,
+                              );
+                        // En large, la fiche remplace l'invite sans
+                        // transition ; une fiche ouverte par-dessus une autre
+                        // page (« Voir le style ») garde la sienne.
+                        return cote && !pageEmpilee(context)
+                            ? NoTransitionPage<void>(
+                                key: state.pageKey,
+                                child: fiche,
+                              )
+                            : MaterialPage<void>(
+                                key: state.pageKey,
+                                child: fiche,
+                              );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

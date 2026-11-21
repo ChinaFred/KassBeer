@@ -114,14 +114,36 @@ class IndexBibliotheque {
   static EntreeBibliotheque? _seule(Set<EntreeBibliotheque>? entrees) =>
       entrees != null && entrees.length == 1 ? entrees.single : null;
 
-  /// Nombre d'entrées dont l'identifiant (`<nature>-<clé du nom>`), le nom ou
-  /// un alias a la clé de [nom] : 0 ou au moins 2 quand [resoudre] rend `null`
-  /// pour un malt, un houblon ou un ajout. Sert à dire pourquoi un nom n'est
-  /// pas résolu (`exchange/bin/lister_houblons_recettes.dart`, ADR-013).
-  int correspondances(String nom) {
+  /// Identifiants, triés, des entrées que [nom] désigne par l'une des voies de
+  /// [resoudre] : identifiant (`<nature>-<clé du nom>`), nom ou alias ; pour
+  /// une levure, aussi souche lue dans le nom, référence, producteur et
+  /// référence. Vide ou d'au moins 2 entrées quand [resoudre] rend `null`. Sert
+  /// à dire pourquoi un nom n'est pas résolu et à lister ses candidats
+  /// (`exchange/bin/lister_ingredients_recettes.dart`, ADR-013 et ADR-017).
+  List<String> candidats(String nom) {
     final cle = cleNormalisee(nom);
-    if (cle.isEmpty) return 0;
-    return {?_parId['$_prefixe-$cle'], ...?_parNom[cle]}.length;
+    if (cle.isEmpty) return const [];
+    final trouves = <EntreeBibliotheque>{
+      ?_parId['$_prefixe-$cle'],
+      ...?_parNom[cle],
+    };
+    if (liste == ListeRecette.levures) {
+      final souche = soucheDuNom(nom);
+      if (souche != null) {
+        final cp = cleProducteur(souche.producteur);
+        trouves.addAll(
+          _parSouche['$cp|${cleProduit(cp, souche.produit)}'] ?? const {},
+        );
+      }
+      trouves.addAll(_parReference[cle.replaceAll('-', '')] ?? const {});
+      final segments = cle.split('-');
+      for (var i = 1; i < segments.length; i++) {
+        final cp = cleProducteur(segments.take(i).join('-'));
+        final cr = cleProduit(cp, segments.skip(i).join('-'));
+        trouves.addAll(_parSouche['$cp|$cr'] ?? const {});
+      }
+    }
+    return [for (final e in trouves) e.id]..sort();
   }
 
   /// Entrée de [nom], ou `null` si aucune ou plusieurs correspondent.

@@ -1,0 +1,25 @@
+{
+  "format": "kassbeer_levures_recettes",
+  "version": 1,
+  "target": "production",
+  "generated_at": "2026-11-21T10:00:00.000Z",
+  "resolus": [
+    { "id": "culture-labo-fictif-lf1-levure-fictive", "noms": ["Levure Fictive"] },
+    { "id": "culture-labo-fictif-lf2-belge-fictive", "noms": ["LF2"] },
+    { "id": "culture-labo-fictif-lf3-belge-fictive", "noms": ["Labo Fictif LF3"] },
+    { "id": "culture-wyeast-9901-levure-imaginaire", "noms": ["Wyeast 9901 Imaginaire"] }
+  ],
+  "non_resolus": [
+    {
+      "nom": "Belge Fictive",
+      "raison": "plusieurs",
+      "candidats": ["culture-labo-fictif-lf2-belge-fictive", "culture-labo-fictif-lf3-belge-fictive"]
+    },
+    { "nom": "Levure Inconnue", "raison": "aucun", "candidats": [] },
+    {
+      "nom": "ZZ9",
+      "raison": "plusieurs",
+      "candidats": ["culture-autre-labo-zz9-zeta-fictive", "culture-troisieme-labo-zz9-zeta-bis"]
+    }
+  ]
+}

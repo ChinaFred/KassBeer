@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.93 — fonctionnel
+### v0.1.95 — fonctionnel
 
 Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui
 attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le
@@ -18,7 +18,7 @@ nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à 
 l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ».
 Demandé par le ticket #63.
 
-### v0.1.93 — technique
+### v0.1.95 — technique
 
 `ticketATraiter` (`app/lib/features/tickets/domain/ticket_delivery.dart`) définit le filtre
 « À traiter » de la liste à partir des documents du serveur seuls : `send_failed`, `validate`
@@ -35,6 +35,61 @@ gardée). Tests : domaine de `toProcess` et de `ticketATraiter`, liste avec un t
 lancer et une analyse en cours, état vide, pastille « CI en échec » avec et sans relance permise,
 CI rouge pendant un développement ou une correction.
 Demandé par le ticket #63.
+
+### v0.1.94 — fonctionnel
+
+Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une
+ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position.
+Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la
+fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour
+ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur
+téléphone, ou avec un texte agrandi, rien ne change.
+
+### v0.1.94 — technique
+
+Liste et fiche côte à côte dans la Bibliothèque à partir de `kBibliothequeCoteACoteMinWidth`
+(1 096 px, égal à `kTicketsAdminCoteACoteMinWidth`, la coquille ayant un rail de 256 px) et
+sous `kGrandTexteMinScale` (prédicat `bibliothequeCoteACote`, `breakpoints.dart`). Une
+`ShellRoute` par segment dans `app_router.dart` : en large, `BibliothequeCoteACote` pose
+l'en-tête sur toute la largeur, la liste de `kListeBibliothequeWidth` (380 px) et un
+navigateur à droite (invite `InviteFicheBibliotheque` ou fiche en `NoTransitionPage`) ; en une
+colonne, les deux `MaterialPage` restent. Recherche, préfixe des recettes publiques et filtre
+de confiance dans `rechercheBibliothequeProvider` (mémoire, par segment). « Voir le style »
+garde son `push` ; `PageDeCoquille.retourParPopSelon` et `AppShell.backByPop` dépilent vers la
+recette, `pageEmpilee` (`page_de_coquille.dart`) reconnaît une page empilée par
+`ImperativeRouteMatch` (à retester à chaque montée de go_router). `fermerFicheBibliotheque`
+(bouton et Échap, posé sur `BibliothequeCoteACote`), focus rendu à la ligne fermée par
+`_FocusApresFermeture` et `LigneListe.focusNode`, annonce « Fiche ouverte : {nom} ».
+Décisions de l'utilisateur du 2026-11-21.
+
+### v0.1.93 — technique
+
+Livraison 1 d'ADR-017 : descriptions aromatiques des levures, générées, relues et écrites
+depuis le poste de l'administrateur. L'application ne les affiche pas encore (livraison 2).
+
+`ingest/generer-aromes.mjs` prend `--nature hop|culture` (`hop` par défaut : les commandes des
+houblons gardent leur effet). Le moteur commun reste dans `ingest/lib/aromes/generation.mjs` ;
+ce qui dépend de la nature vit dans `lib/aromes/natures/hop.mjs` (qui reprend `prompt.mjs` et
+`validation.mjs`) et `lib/aromes/natures/culture.mjs` (données envoyées sans `notes` ni
+`provenance`, prompt versionné, schéma, contrôle, 32 descripteurs de
+`descripteurs-levures.json`, périmètre). Fichiers des levures dans `import/ingest/aromes/levures/`,
+`tarif.json` commun. Poste `culture_aroma_generation`. Périmètre : levures du groupe, plus les
+types autres que `other`, `wine`, `champagne`, `malolactic` (923 levures sur 960). Styles
+conseillés pris dans `beer_styles.json` préparé, après le contrôle de `beer_styles` de
+`ingest/lib/validation.mjs` au générateur comme à l'écrivain (un style refusé n'entre ni dans le
+prompt ni dans les codes acceptés) ; l'empreinte couvre la liste des styles.
+
+`ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs --nature
+hop|culture`, et `exchange/bin/lister_houblons_recettes.dart` devient
+`lister_ingredients_recettes.dart` (`--referentiel` remplace `--houblons`) ; aucun ancien nom
+gardé. `IndexBibliotheque.correspondances` est remplacé par `candidats`, qui liste les
+identifiants d'un nom non résolu ; `houblons-recettes.json` porte aussi ces candidats.
+`ecrire.mjs` écrit `beer_culture_aromas/` depuis `levures/aromes.json` : refus d'une levure
+absente de `beer_cultures.json`, d'une levure du groupe non relue, d'un code de style inconnu ;
+rapport `culture_aromas_file` et `reviewed_orphans`. `--supprimer-absents beer_culture_aromas`
+accepté dans les bornes d'ADR-014. `firestore.rules` : `beer_culture_aromas/{entryId}` en `get`
+par les membres, `list` et écriture refusés. Aucune dépendance ajoutée ni montée ; `app/lib/`
+inchangé, `main.dart.js` non concerné.
 
 ### v0.1.92 — fonctionnel
 

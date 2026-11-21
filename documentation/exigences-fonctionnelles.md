@@ -2179,6 +2179,49 @@ ouvre la page du même nom, et une icône d'information (infobulle « Sources de
 ouvre « Sources des données ». Sinon, les puces affichent le nom complet ; à leur droite,
 « Échelle des couleurs » en texte avec son icône, puis l'icône « Sources des données ».
 
+**Liste et fiche côte à côte** (décision de l'utilisateur du 2026-11-21, les six segments).
+Dans une fenêtre de 1 096 px ou plus (rail étendu de 256 px et 840 px de contenu), avec un
+texte sous 130 %, la Bibliothèque montre deux colonnes. Les puces des segments, « Échelle des
+couleurs » et « Sources des données » restent sur toute la largeur, au-dessus. À gauche, la
+liste sur 380 px : la recherche, le nombre, le filtre de confiance (Houblons) et les notes
+hors ligne restent en tête de la colonne, la liste défile dessous. Un trait vertical sépare
+les colonnes. À droite, la fiche, sur 840 px au plus, alignée en haut à gauche ; elle défile
+de son côté. Sans fiche ouverte, la colonne de droite invite à choisir : « Choisissez un
+style pour voir sa fiche. », « Choisissez un houblon pour voir sa fiche. », « Choisissez un
+malt ou un sucre pour voir sa fiche. », « Choisissez une levure pour voir sa fiche. »,
+« Choisissez un ajout divers pour voir sa fiche. », « Choisissez une recette publique pour
+voir sa fiche. ».
+
+- Un appui sur une ligne ouvre la fiche à droite, sans transition, et met son adresse dans la
+  barre du navigateur (une entrée d'historique par fiche : « Précédent » revient à la fiche
+  d'avant). La ligne de la fiche ouverte est surlignée ; la liste ne défile pas d'elle-même
+  et garde sa position, sa recherche et son filtre. Une fiche hors du filtre, ou pas encore
+  chargée dans la liste, s'affiche sans ligne surlignée.
+- La barre du haut garde le titre « Bibliothèque », sans flèche retour. Le premier élément
+  de la fiche est le bouton « Fermer la fiche » (croix) ; il ferme la fiche et rend
+  l'invite. Tant qu'une fiche est ouverte, la touche Échap fait de même, que le focus soit
+  dans la liste ou dans la fiche ; le menu du filtre ouvert garde Échap pour se fermer.
+  Après la fermeture, le focus revient sur la ligne de la fiche fermée, ou sur le champ de
+  recherche si cette ligne n'est pas affichée (hors du filtre, de la recherche ou de la
+  partie lue de la liste). Changer de segment ferme la fiche.
+- Chargement, panne et « Réessayer », fiche hors ligne (« Fiche indisponible hors ligne. Elle
+  s'ouvre au retour du réseau. ») s'affichent à droite ; la liste reste utilisable. Pour une
+  fiche absente ou illisible, le bouton devient « Fermer la fiche ».
+- « Voir le style » d'une recette publique ouvre par-dessus la recette les styles en deux
+  colonnes, le style choisi à droite. La flèche retour revient à la recette, avec sa
+  recherche. Sur cette page, « Fermer la fiche » et Échap reviennent aussi à la recette, au
+  lieu d'ouvrir la liste des styles.
+- Les lecteurs d'écran entendent « Fiche ouverte : {nom} » à chaque fiche ouverte. Ordre de
+  lecture et du clavier : rail, segments, recherche, nombre, filtre, liste, fiche ; après
+  Entrée sur une ligne, le focus reste sur la ligne.
+- En réduisant la fenêtre sous le seuil, la fiche ouverte s'affiche seule avec la flèche
+  retour ; en l'agrandissant, les deux colonnes reviennent avec la fiche ouverte. La recherche
+  et le filtre sont gardés.
+
+Sous 1 096 px, ou avec un texte de 130 % ou plus, une seule colonne : la fiche s'ouvre
+par-dessus la liste, avec son titre (« Houblon »…) et la flèche retour, comme décrit
+ci-dessous.
+
 **Styles et ingrédients.** La liste du segment est lue à la première ouverture, puis gardée
 pour la session. Ordre alphabétique, avec le nombre d'entrées, nommées par segment (« 110
 styles », « 442 houblons », « 854 levures », « 1 houblon », « 37 sur 442 houblons » quand la
@@ -2207,7 +2250,8 @@ sans lecture en base, sur le nom, les autres noms, le nom français, le code d'u
 producteur et la référence d'une levure ; majuscules et accents ne comptent pas. Une icône
 « × » (infobulle « Effacer la recherche ») vide le champ quand il n'est pas vide. Sans
 résultat : « Aucun résultat pour « {texte} ». » et « Effacer la recherche ». La recherche
-n'est pas enregistrée ; elle reste en place au retour d'une fiche.
+n'est pas enregistrée en base ; elle reste en place au retour d'une fiche, au choix d'une autre
+fiche et au passage d'une à deux colonnes, et se perd au changement de segment.
 
 **Filtre de confiance des arômes** (segment Houblons, tout membre ; décisions de
 l'utilisateur du 2026-11-21). À l'ouverture du segment, l'index des arômes est lu une fois
@@ -2223,8 +2267,9 @@ Le bouton est lu « Confiance des arômes : Faible, 37 houblons » ; chaque entr
 « Faible, 37 houblons » avec son état coché ; zones d'appui de 48 px ; à 200 % de taille du
 texte, le libellé du bouton passe à la ligne. Sur un téléphone de 360 × 640, au moins un
 houblon est visible à l'ouverture. Par défaut
-« Toutes ». Le choix reste en place au retour d'une fiche ; il est perdu au changement de
-segment ou à la sortie de l'écran, et rien n'est écrit en base. Sans houblon pour la recherche
+« Toutes ». Le choix reste en place au retour d'une fiche, au choix d'une autre fiche et au
+passage d'une à deux colonnes ; il est perdu au changement de segment ou à la sortie de
+l'écran, et rien n'est écrit en base. Sans houblon pour la recherche
 et le filtre : « Aucun houblon pour « citra » avec une confiance faible. » (« Aucun houblon
 avec une confiance faible. » sans recherche), avec « Effacer la recherche » (s'il y a une
 recherche) et « Afficher toutes les confiances ». Index des arômes absent, illisible ou
@@ -2235,7 +2280,8 @@ lu sur l'appareil. Une entrée illisible est
 l'administrateur. »
 
 **Fiche d'une entrée** (`/bibliotheque/{segment}/{id}`, titre « Style », « Malt ou
-sucre », « Houblon », « Levure » ou « Ajout divers », retour vers le segment). Nom, « Autres
+sucre », « Houblon », « Levure » ou « Ajout divers », retour vers le segment ; côte à côte,
+voir plus haut). Nom, « Autres
 noms : … », puis :
 
 - style : « Classement » (code, catégorie « 21 · IPA », type traduit : « Bière », « Cidre »,
@@ -2312,6 +2358,18 @@ reste. L'administrateur relit les textes des houblons du groupe avant leur écri
 autres paraissent « non relu ». Un houblon ajouté plus tard reçoit sa description par une
 nouvelle génération lancée par l'administrateur (`--nouveaux`). Détail : `exigences-techniques.md`,
 « Descriptions aromatiques ».
+
+**Descriptions aromatiques des levures (administrateur, hors de l'application, ADR-017).** Même
+parcours que pour les houblons, par le même script avec `--nature culture` : un essai sur 10
+levures (US-05, S-04, W-34/70, WLP001, Wyeast 3068, 3944, 3711, 1968, Voss Kveik et une
+Brettanomyces), puis les levures des recettes et des brassins du groupe, relues avant leur
+écriture, puis le reste. Les levures de vin, de cidre, d'hydromel et de saké (types `other`,
+`wine`, `champagne`, `malolactic`) restent sans texte, sauf si une recette du groupe les
+utilise. Chaque texte donne des descripteurs, un profil, l'effet du bas et du haut de la plage
+de température et jusqu'à six styles conseillés. Un nom de levure d'une recette qui désigne
+plusieurs souches est listé avec ses candidats ; l'administrateur choisit. Les membres ne voient
+pas encore ces textes : la fiche d'une levure les affichera dans une livraison suivante.
+Détail : `exigences-techniques.md`, « Descriptions aromatiques des levures ».
 
 **Recettes publiques.** Les recettes DIY Dog, par pages de 50 dans l'ordre alphabétique.
 Chaque ligne : le repère de la liste des recettes (icône de livre dans un disque ; les styles

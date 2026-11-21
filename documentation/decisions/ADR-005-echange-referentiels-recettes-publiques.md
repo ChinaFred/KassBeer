@@ -5,6 +5,9 @@
 - **Remplace** : — (modifie ADR-001, qui renvoyait l'export BeerXML après la v1)
 - **Complété par ADR-013** (2026-11-14) : `beer_hop_aromas/` porte un texte rédigé par l'API
   Claude, relu par l'admin. P20 reste inchangé pour les données des sources.
+- **Complété par ADR-017** (2026-11-21, livré à la v0.1.93) : `beer_culture_aromas/`, même
+  exception à P20 pour les levures (texte généré, levures du groupe relues) ; les descriptions
+  et styles conseillés des fiches des fabricants restent écartés.
 
 ## Contexte
 

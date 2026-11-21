@@ -25,10 +25,17 @@ import 'reference_entry_screen.dart';
 /// `brewing/` quand c'est possible, ingrédients, paliers, moments d'origine,
 /// provenance. « Dupliquer » la copie dans les recettes du lecteur et ouvre
 /// l'éditeur.
+///
+/// [coteACote] : fiche ouverte à côté de la liste, dans [FicheCoteACote].
 class PublicRecipeScreen extends ConsumerStatefulWidget {
-  const PublicRecipeScreen({super.key, required this.id});
+  const PublicRecipeScreen({
+    super.key,
+    required this.id,
+    this.coteACote = false,
+  });
 
   final String id;
+  final bool coteACote;
 
   // Mêmes mots que la fiche d'une recette (`RecipeDetailScreen`).
   static const duplicated = 'Recette dupliquée dans vos recettes.';
@@ -86,16 +93,24 @@ class _PublicRecipeScreenState extends ConsumerState<PublicRecipeScreen> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(recettePubliqueProvider(widget.id));
+    void fermer() => widget.coteACote
+        ? fermerFicheBibliotheque(context, SegmentBibliotheque.recettes)
+        : context.go(
+            AppRoutes.librarySegment(SegmentBibliotheque.recettes.slug),
+          );
     final etat = etatFiche(
       async: async,
       offline: ref.watch(grantedAccessProvider)?.offline ?? false,
       onRetry: () => ref.invalidate(recettePubliqueProvider(widget.id)),
-      onBack: () => context.go(
-        AppRoutes.librarySegment(SegmentBibliotheque.recettes.slug),
-      ),
-      retour: 'Revenir aux recettes publiques',
+      onBack: fermer,
+      retour: widget.coteACote
+          ? TextesFicheBibliotheque.fermer
+          : 'Revenir aux recettes publiques',
     );
-    if (etat != null) return etat;
+    Widget enColonne(Widget contenu, {String? nom}) => widget.coteACote
+        ? FicheCoteACote(nom: nom, onFermer: fermer, child: contenu)
+        : contenu;
+    if (etat != null) return enColonne(etat);
     final recette = (async.value! as DocumentTrouve<RecettePublique>).value;
     final calculs = evaluerRecette(
       recette.content,
@@ -104,11 +119,14 @@ class _PublicRecipeScreenState extends ConsumerState<PublicRecipeScreen> {
       reported: ref.read(calculationReportsProvider),
       recipeKey: 'public_recipes/${recette.id}',
     );
-    return _Fiche(
-      recette: recette,
-      calculs: calculs,
-      duplicating: _duplicating,
-      onDuplicate: () => _duplicate(recette),
+    return enColonne(
+      _Fiche(
+        recette: recette,
+        calculs: calculs,
+        duplicating: _duplicating,
+        onDuplicate: () => _duplicate(recette),
+      ),
+      nom: recette.content.name,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,11 +22,23 @@ import '../domain/referentiel.dart';
 import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
+import 'reference_entry_screen.dart' show fermerFicheBibliotheque;
 import 'section_aromes.dart' show TextesAromes;
 
+/// Liste et fiche côte à côte dans la Bibliothèque : fenêtre d'au moins
+/// [kBibliothequeCoteACoteMinWidth] (rail étendu et [kExpandedMinWidth] de
+/// contenu), texte sous [kGrandTexteMinScale]. Sinon, une colonne.
+bool bibliothequeCoteACote(BuildContext context) =>
+    MediaQuery.sizeOf(context).width >= kBibliothequeCoteACoteMinWidth &&
+    MediaQuery.textScalerOf(context).scale(1) < kGrandTexteMinScale;
+
 /// Bibliothèque : styles, ingrédients et recettes publiques, en lecture seule
-/// (ADR-005, L4). Un segment par chemin (`/bibliotheque/houblons`) ; la recherche
-/// est un état de l'écran, jamais écrit en base.
+/// (ADR-005, L4). Un segment par chemin (`/bibliotheque/houblons`) ; la
+/// recherche et le filtre vivent dans [rechercheBibliothequeProvider], jamais
+/// écrits en base.
+///
+/// En une colonne : l'en-tête, la recherche épinglée et la liste ; la fiche
+/// s'ouvre par-dessus. Côte à côte, voir [BibliothequeCoteACote].
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({super.key, required this.segment});
 
@@ -55,13 +68,114 @@ class LibraryScreen extends StatelessWidget {
             'signalée à l\'administrateur.';
 
   @override
+  Widget build(BuildContext context) =>
+      _liste(segment, enTete: _EnTete(segment: segment));
+}
+
+/// Liste du segment ; [enTete] en tête de la liste (une colonne), ou `null`
+/// quand l'en-tête est au-dessus des deux colonnes ([selectedId] : ligne de
+/// la fiche ouverte).
+Widget _liste(
+  SegmentBibliotheque segment, {
+  Widget? enTete,
+  String? selectedId,
+}) {
+  final nature = segment.nature;
+  return nature == null
+      ? _RecettesPubliques(enTete: enTete, selectedId: selectedId)
+      : _ListeReferentiel(
+          segment: segment,
+          nature: nature,
+          enTete: enTete,
+          selectedId: selectedId,
+        );
+}
+
+/// Bibliothèque en deux colonnes ([bibliothequeCoteACote]) : l'en-tête sur
+/// toute la largeur, puis la liste ([kListeBibliothequeWidth]) à gauche, sa
+/// recherche épinglée en tête, et [child] à droite (la fiche ouverte, ou
+/// l'invite [InviteFicheBibliotheque]), bornée à [kContentMaxWidth] et
+/// alignée en haut à gauche. La liste et la fiche défilent chacune de leur
+/// côté ; un groupe de parcours au clavier par colonne. Tant qu'une fiche est
+/// ouverte, la touche Échap la ferme ([fermerFicheBibliotheque]), le focus
+/// étant dans la liste ou dans la fiche ; un champ ou un menu qui traite Échap
+/// lui-même (menu du filtre ouvert) le garde.
+class BibliothequeCoteACote extends StatelessWidget {
+  const BibliothequeCoteACote({
+    super.key,
+    required this.segment,
+    required this.selectedId,
+    required this.child,
+  });
+
+  final SegmentBibliotheque segment;
+  final String? selectedId;
+  final Widget child;
+
+  @override
   Widget build(BuildContext context) {
-    final enTete = _EnTete(segment: segment);
-    final nature = segment.nature;
-    return nature == null
-        ? _RecettesPubliques(enTete: enTete)
-        : _ListeReferentiel(segment: segment, nature: nature, enTete: enTete);
+    final colonnes = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _EnTete(segment: segment),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: kListeBibliothequeWidth,
+                child: FocusTraversalGroup(
+                  // Material propre : le fond de la ligne choisie et l'encre de
+                  // l'appui se peignent sur lui.
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: _liste(segment, selectedId: selectedId),
+                  ),
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: FocusTraversalGroup(
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: kContentMaxWidth,
+                      ),
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    // Toujours présent, sans raccourci quand aucune fiche n'est ouverte :
+    // l'arbre ne change pas, et la liste garde son état.
+    return CallbackShortcuts(
+      bindings: {
+        if (selectedId != null)
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              fermerFicheBibliotheque(context, segment),
+      },
+      child: colonnes,
+    );
   }
+}
+
+/// Colonne de droite sans fiche ouverte : « Choisissez un houblon pour voir sa
+/// fiche. »
+class InviteFicheBibliotheque extends StatelessWidget {
+  const InviteFicheBibliotheque({super.key, required this.segment});
+
+  final SegmentBibliotheque segment;
+
+  @override
+  Widget build(BuildContext context) =>
+      EtatVide(icon: segment.icone, message: inviteFiche(segment));
 }
 
 /// Segments, accès à « Échelle des couleurs » et à « Sources des données ».
@@ -161,9 +275,11 @@ class _ChampRecherche extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.onEffacer,
+    this.focusNode,
   });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String label;
   final String? helper;
   final ValueChanged<String>? onChanged;
@@ -185,6 +301,7 @@ class _ChampRecherche extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: kFormMaxWidth),
           child: TextField(
             controller: controller,
+            focusNode: focusNode,
             textInputAction: submit == null
                 ? TextInputAction.done
                 : TextInputAction.search,
@@ -291,33 +408,6 @@ class _CompteState extends State<_Compte> {
   }
 }
 
-/// Filtre de confiance des arômes (segment Houblons) : choix unique, jamais
-/// écrit en base ; « Sans description » regroupe les entrées `unknown` et les
-/// houblons absents de l'index.
-enum FiltreConfiance {
-  toutes('Toutes', null, ''),
-  elevee('Élevée', ConfianceIndex.elevee, 'avec une confiance élevée'),
-  moyenne('Moyenne', ConfianceIndex.moyenne, 'avec une confiance moyenne'),
-  faible('Faible', ConfianceIndex.faible, 'avec une confiance faible'),
-  sansDescription(
-    'Sans description',
-    ConfianceIndex.sansDescription,
-    'sans description',
-  );
-
-  const FiltreConfiance(this.libelle, this.confiance, this.suite);
-
-  final String libelle;
-
-  /// Confiance retenue ; `null` : toutes.
-  final ConfianceIndex? confiance;
-
-  /// Fin du message d'une liste vide (« avec une confiance faible »).
-  final String suite;
-
-  bool retient(ConfianceIndex c) => confiance == null || confiance == c;
-}
-
 /// Textes du filtre de confiance.
 abstract final class TextesFiltreConfiance {
   static const titre = 'Confiance des arômes';
@@ -417,27 +507,108 @@ Widget _boutonReessayer(VoidCallback onRetry) =>
 
 // ------------------------------------------------------------ référentiels
 
+/// Rend le focus à la liste quand la fiche ouverte à côté se ferme (« Fermer
+/// la fiche », Échap) : sur la ligne de la fiche fermée si elle est affichée,
+/// sinon sur le champ de recherche. [noeudLigne] suit la ligne de la dernière
+/// fiche ouverte.
+mixin _FocusApresFermeture<W extends ConsumerStatefulWidget>
+    on ConsumerState<W> {
+  /// Fiche ouverte à côté de la liste selon [widget].
+  String? selectionDe(W widget);
+
+  final noeudRecherche = FocusNode(debugLabel: 'recherche de la bibliothèque');
+  final noeudLigne = FocusNode(debugLabel: 'ligne de la fiche ouverte');
+
+  /// Dernière fiche ouverte : sa ligne porte [noeudLigne].
+  String? derniereFiche;
+
+  /// Nœud de la ligne [id].
+  FocusNode? noeudDe(String id) => id == derniereFiche ? noeudLigne : null;
+
+  @override
+  void initState() {
+    super.initState();
+    derniereFiche = selectionDe(widget);
+  }
+
+  @override
+  void didUpdateWidget(W oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final avant = selectionDe(oldWidget);
+    final apres = selectionDe(widget);
+    if (apres == avant) return;
+    if (apres != null) {
+      derniereFiche = apres;
+      // Fiche ouverte au clavier (Entrée sur une ligne) : le focus reste sur
+      // la ligne, au lieu de passer à la page de la fiche.
+      final focus = FocusManager.instance.primaryFocus?.context;
+      if (focus == null || focus.findAncestorStateOfType<State<W>>() != this) {
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _ligneDansLArbre()) noeudLigne.requestFocus();
+      });
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      (_ligneDansLArbre() ? noeudLigne : noeudRecherche).requestFocus();
+    });
+  }
+
+  /// La ligne de la dernière fiche est construite : affichée par le filtre et
+  /// la recherche, et dans la partie défilée de la liste.
+  bool _ligneDansLArbre() =>
+      noeudLigne.parent != null && (noeudLigne.context?.mounted ?? false);
+
+  @override
+  void dispose() {
+    noeudRecherche.dispose();
+    noeudLigne.dispose();
+    super.dispose();
+  }
+}
+
 class _ListeReferentiel extends ConsumerStatefulWidget {
   const _ListeReferentiel({
     required this.segment,
     required this.nature,
     required this.enTete,
+    required this.selectedId,
   });
 
   final SegmentBibliotheque segment;
   final NatureReferentiel nature;
-  final Widget enTete;
+
+  /// En-tête en tête de la liste (une colonne) ; `null` côte à côte : la
+  /// recherche, le compte, le filtre et les notes restent alors épinglés en
+  /// tête de la colonne.
+  final Widget? enTete;
+  final String? selectedId;
 
   @override
   ConsumerState<_ListeReferentiel> createState() => _ListeReferentielState();
 }
 
-class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
+class _ListeReferentielState extends ConsumerState<_ListeReferentiel>
+    with _FocusApresFermeture<_ListeReferentiel> {
+  @override
+  String? selectionDe(_ListeReferentiel widget) => widget.selectedId;
+
+  /// Texte repris de [rechercheBibliothequeProvider] : il survit au passage
+  /// d'une à deux colonnes, qui reconstruit la liste.
   final _search = TextEditingController();
 
-  /// Filtre de confiance des houblons : état de l'écran, gardé au retour d'une
-  /// fiche, perdu au changement de segment.
-  var _filtre = FiltreConfiance.toutes;
+  RechercheBibliothequeNotifier get _recherche =>
+      ref.read(rechercheBibliothequeProvider(widget.segment).notifier);
+
+  @override
+  void initState() {
+    super.initState();
+    _search.text = ref
+        .read(rechercheBibliothequeProvider(widget.segment))
+        .texte;
+  }
 
   @override
   void dispose() {
@@ -447,7 +618,10 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
 
   void _retry() => ref.invalidate(indexReferentielProvider(widget.nature));
 
-  void _effacer() => setState(_search.clear);
+  void _effacer() {
+    _search.clear();
+    _recherche.saisir('');
+  }
 
   /// Index des arômes lisible, ou `null` : absent, illisible (rapporté par le
   /// dépôt de données), en panne ou en cours de lecture. Lu pour le seul
@@ -464,6 +638,9 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
   Widget build(BuildContext context) {
     final async = ref.watch(indexReferentielProvider(widget.nature));
     final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
+    // Filtre de confiance des houblons : gardé au retour d'une fiche et au
+    // choix d'une autre, perdu au changement de segment.
+    final choix = ref.watch(rechercheBibliothequeProvider(widget.segment));
     final aromes = _indexAromes();
     final value = async.value;
 
@@ -519,18 +696,18 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
     if (etat != null || index == null) {
       return ListView(
         padding: const EdgeInsets.only(bottom: 24),
-        children: [widget.enTete, ?etat],
+        children: [?widget.enTete, ?etat],
       );
     }
 
-    final texte = _search.text.trim();
+    final texte = choix.texte.trim();
     final query = normaliserRecherche(texte);
     final trouves = [
       for (final e in index.entrees)
         if (e.correspond(query)) e,
     ];
     // Sans index des arômes, ni filtre ni étiquette : la liste reste entière.
-    final filtre = aromes == null ? FiltreConfiance.toutes : _filtre;
+    final filtre = aromes == null ? FiltreConfiance.toutes : choix.filtre;
     final comptes = <FiltreConfiance, int>{
       for (final f in FiltreConfiance.values) f: 0,
     };
@@ -549,28 +726,42 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
 
     // Partie épinglée : recherche et compte seuls, sur le fond de la page, et
     // un trait qui la sépare de la liste qui glisse dessous. Les segments, le
-    // filtre et son aide défilent avec la liste.
+    // filtre et son aide défilent avec la liste. Côte à côte, le filtre et les
+    // notes sont épinglés avec eux.
     final scheme = Theme.of(context).colorScheme;
-    final recherche = ColoredBox(
-      color: scheme.surface,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _ChampRecherche(
-            controller: _search,
-            label: widget.nature == NatureReferentiel.styles
-                ? 'Rechercher par nom ou code'
-                : 'Rechercher par nom',
-            onChanged: (_) => setState(() {}),
-            onEffacer: _effacer,
-          ),
-          _Compte(
-            shown.length == total ? compte : '${shown.length} sur $compte',
-          ),
-          Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
-        ],
-      ),
+    final champ = _ChampRecherche(
+      controller: _search,
+      focusNode: noeudRecherche,
+      label: widget.nature == NatureReferentiel.styles
+          ? 'Rechercher par nom ou code'
+          : 'Rechercher par nom',
+      onChanged: _recherche.saisir,
+      onEffacer: _effacer,
     );
+    final compteListe = _Compte(
+      shown.length == total ? compte : '${shown.length} sur $compte',
+    );
+    final trait = Divider(
+      height: 1,
+      thickness: 1,
+      color: scheme.outlineVariant,
+    );
+    final filtreConfiance = aromes == null
+        ? null
+        : Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _FiltreConfiance(
+              filtre: filtre,
+              comptes: comptes,
+              segment: widget.segment,
+              onSelected: _recherche.filtrer,
+            ),
+          );
+    final notes = [
+      if (fromCache) const _Note(LibraryScreen.offlineIndex),
+      if (index.illisibles > 0)
+        _Note(LibraryScreen.unreadableEntries(index.illisibles)),
+    ];
     final Widget? vide = shown.isNotEmpty
         ? null
         : filtre == FiltreConfiance.toutes
@@ -596,74 +787,89 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
                     child: const Text(LibraryScreen.clearSearch),
                   ),
                 TextButton(
-                  onPressed: () =>
-                      setState(() => _filtre = FiltreConfiance.toutes),
+                  onPressed: () => _recherche.filtrer(FiltreConfiance.toutes),
                   child: const Text(TextesFiltreConfiance.toutes),
                 ),
               ],
             ),
           );
+    final lignes = SliverPadding(
+      padding: const EdgeInsets.only(bottom: 24),
+      sliver: SliverList.builder(
+        itemCount: shown.length,
+        itemBuilder: (context, i) {
+          final e = shown[i];
+          final c = aromes?.confianceDe(e.id);
+          return _Ligne(
+            titre: titreEntree(e),
+            details: detailsEntree(e),
+            selected: e.id == widget.selectedId,
+            focusNode: noeudDe(e.id),
+            etiquettes: [
+              // Sans icône : `info_outline` est celle de « Sources des
+              // données » dans l'en-tête.
+              if (c == ConfianceIndex.faible)
+                const Etiquette(
+                  label: TextesAromes.confianceFaible,
+                  ton: TonEtiquette.neutre,
+                ),
+              if (c == ConfianceIndex.sansDescription)
+                const Etiquette(
+                  label: TextesFiltreConfiance.sansDescription,
+                  ton: TonEtiquette.neutre,
+                ),
+            ],
+            onTap: () =>
+                context.go(AppRoutes.libraryEntry(widget.segment.slug, e.id)),
+          );
+        },
+      ),
+    );
+    final enTete = widget.enTete;
+    if (enTete == null) {
+      // Côte à côte : tout l'en-tête de la colonne reste en place, la liste
+      // défile dessous.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          champ,
+          compteListe,
+          ?filtreConfiance,
+          ...notes,
+          trait,
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                if (vide != null) SliverToBoxAdapter(child: vide),
+                lignes,
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    final recherche = ColoredBox(
+      color: scheme.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [champ, compteListe, trait],
+      ),
+    );
     // Recherche et compte épinglés pendant le défilement ; à partir de
     // kGrandTexteMinScale, ils défilent avec la liste pour lui laisser la place.
     final grandTexte =
         MediaQuery.textScalerOf(context).scale(1) >= kGrandTexteMinScale;
     return CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(child: widget.enTete),
+        SliverToBoxAdapter(child: enTete),
         if (grandTexte)
           SliverToBoxAdapter(child: recherche)
         else
           PinnedHeaderSliver(child: recherche),
-        if (aromes != null)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _FiltreConfiance(
-                filtre: filtre,
-                comptes: comptes,
-                segment: widget.segment,
-                onSelected: (f) => setState(() => _filtre = f),
-              ),
-            ),
-          ),
-        if (fromCache)
-          const SliverToBoxAdapter(child: _Note(LibraryScreen.offlineIndex)),
-        if (index.illisibles > 0)
-          SliverToBoxAdapter(
-            child: _Note(LibraryScreen.unreadableEntries(index.illisibles)),
-          ),
+        if (filtreConfiance != null) SliverToBoxAdapter(child: filtreConfiance),
+        for (final note in notes) SliverToBoxAdapter(child: note),
         if (vide != null) SliverToBoxAdapter(child: vide),
-        SliverPadding(
-          padding: const EdgeInsets.only(bottom: 24),
-          sliver: SliverList.builder(
-            itemCount: shown.length,
-            itemBuilder: (context, i) {
-              final e = shown[i];
-              final c = aromes?.confianceDe(e.id);
-              return _Ligne(
-                titre: titreEntree(e),
-                details: detailsEntree(e),
-                etiquettes: [
-                  // Sans icône : `info_outline` est celle de « Sources des
-                  // données » dans l'en-tête.
-                  if (c == ConfianceIndex.faible)
-                    const Etiquette(
-                      label: TextesAromes.confianceFaible,
-                      ton: TonEtiquette.neutre,
-                    ),
-                  if (c == ConfianceIndex.sansDescription)
-                    const Etiquette(
-                      label: TextesFiltreConfiance.sansDescription,
-                      ton: TonEtiquette.neutre,
-                    ),
-                ],
-                onTap: () => context.go(
-                  AppRoutes.libraryEntry(widget.segment.slug, e.id),
-                ),
-              );
-            },
-          ),
-        ),
+        lignes,
       ],
     );
   }
@@ -672,15 +878,21 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
 // ------------------------------------------------------------ recettes publiques
 
 class _RecettesPubliques extends ConsumerStatefulWidget {
-  const _RecettesPubliques({required this.enTete});
+  const _RecettesPubliques({required this.enTete, required this.selectedId});
 
-  final Widget enTete;
+  /// En-tête en tête de la liste (une colonne) ; `null` côte à côte.
+  final Widget? enTete;
+  final String? selectedId;
 
   @override
   ConsumerState<_RecettesPubliques> createState() => _RecettesPubliquesState();
 }
 
-class _RecettesPubliquesState extends ConsumerState<_RecettesPubliques> {
+class _RecettesPubliquesState extends ConsumerState<_RecettesPubliques>
+    with _FocusApresFermeture<_RecettesPubliques> {
+  @override
+  String? selectionDe(_RecettesPubliques widget) => widget.selectedId;
+
   final _search = TextEditingController();
   final _documents = <DocumentLu<RecettePublique>>[];
   CurseurPage? _suite;
@@ -691,16 +903,27 @@ class _RecettesPubliquesState extends ConsumerState<_RecettesPubliques> {
   bool _chargement = true;
   Object? _erreur;
 
-  /// Préfixe de la recherche en cours (texte validé, pas la frappe).
-  String _prefixe = '';
-
   /// Numéro de la lecture en cours : une réponse d'une lecture remplacée est
   /// ignorée.
   int _lecture = 0;
 
+  /// Recherche du segment : texte du champ et préfixe validé, gardés au
+  /// passage d'une à deux colonnes, qui reconstruit la liste.
+  RechercheBibliothequeNotifier get _recherche => ref.read(
+    rechercheBibliothequeProvider(SegmentBibliotheque.recettes).notifier,
+  );
+
+  /// Préfixe de la recherche en cours (texte validé, pas la frappe).
+  String get _prefixe => ref
+      .read(rechercheBibliothequeProvider(SegmentBibliotheque.recettes))
+      .prefixe;
+
   @override
   void initState() {
     super.initState();
+    _search.text = ref
+        .read(rechercheBibliothequeProvider(SegmentBibliotheque.recettes))
+        .texte;
     unawaited(_lire(apres: null));
   }
 
@@ -714,8 +937,10 @@ class _RecettesPubliquesState extends ConsumerState<_RecettesPubliques> {
   /// « Entrée » ou sur le bouton, jamais à la frappe : chaque recherche lit
   /// jusqu'à [kTaillePageRecettes] documents.
   void _rechercher() {
+    _recherche
+      ..saisir(_search.text)
+      ..valider();
     setState(() {
-      _prefixe = _search.text.trim();
       _documents.clear();
       _suite = null;
       _lue = false;
@@ -767,12 +992,16 @@ class _RecettesPubliquesState extends ConsumerState<_RecettesPubliques> {
   @override
   Widget build(BuildContext context) {
     final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
+    // Garde la recherche du segment tant que la liste est ouverte.
+    ref.watch(rechercheBibliothequeProvider(SegmentBibliotheque.recettes));
     final head = <Widget>[
-      widget.enTete,
+      ?widget.enTete,
       _ChampRecherche(
         controller: _search,
+        focusNode: noeudRecherche,
         label: 'Rechercher par début de nom',
         helper: LibraryScreen.searchHelp,
+        onChanged: _recherche.saisir,
         onSubmitted: _rechercher,
       ),
     ];
@@ -850,15 +1079,23 @@ class _RecettesPubliquesState extends ConsumerState<_RecettesPubliques> {
           ),
         ),
     ];
-    return ListView.builder(
+    // Une colonne : l'en-tête et la recherche défilent avec la liste. Côte à
+    // côte, la recherche et la note restent en tête de la colonne.
+    final epingles = widget.enTete == null ? head : const <Widget>[];
+    final defilants = widget.enTete == null ? const <Widget>[] : head;
+    final liste = ListView.builder(
       padding: const EdgeInsets.only(bottom: 24),
-      itemCount: head.length + _documents.length + foot.length,
+      itemCount: defilants.length + _documents.length + foot.length,
       itemBuilder: (context, i) {
-        if (i < head.length) return head[i];
-        final j = i - head.length;
+        if (i < defilants.length) return defilants[i];
+        final j = i - defilants.length;
         if (j >= _documents.length) return foot[j - _documents.length];
         return switch (_documents[j]) {
-          DocumentValide(:final value) => _LigneRecette(recette: value),
+          DocumentValide(:final value) => _LigneRecette(
+            recette: value,
+            selected: value.id == widget.selectedId,
+            focusNode: noeudDe(value.id),
+          ),
           DocumentInvalide() => const _Ligne(
             titre: 'Recette illisible',
             details: ['L\'erreur est signalée à l\'administrateur.'],
@@ -867,13 +1104,32 @@ class _RecettesPubliquesState extends ConsumerState<_RecettesPubliques> {
         };
       },
     );
+    if (epingles.isEmpty) return liste;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ...epingles,
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+        Expanded(child: liste),
+      ],
+    );
   }
 }
 
 class _LigneRecette extends StatelessWidget {
-  const _LigneRecette({required this.recette});
+  const _LigneRecette({
+    required this.recette,
+    required this.selected,
+    required this.focusNode,
+  });
 
   final RecettePublique recette;
+  final bool selected;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -889,6 +1145,8 @@ class _LigneRecette extends StatelessWidget {
       icone: Icons.menu_book_outlined,
       titre: c.name,
       details: details,
+      selected: selected,
+      focusNode: focusNode,
       onTap: () => context.go(
         AppRoutes.libraryEntry(SegmentBibliotheque.recettes.slug, recette.id),
       ),
@@ -907,6 +1165,8 @@ class _Ligne extends StatelessWidget {
     this.icone,
     this.onTap,
     this.erreur = false,
+    this.selected = false,
+    this.focusNode,
   });
 
   final String titre;
@@ -918,6 +1178,12 @@ class _Ligne extends StatelessWidget {
   final VoidCallback? onTap;
   final bool erreur;
 
+  /// Ligne de la fiche ouverte à côté de la liste.
+  final bool selected;
+
+  /// Nœud qui reçoit le focus quand cette fiche se ferme.
+  final FocusNode? focusNode;
+
   @override
   Widget build(BuildContext context) => LigneListe(
     icone: erreur ? Icons.error_outline : icone,
@@ -926,5 +1192,7 @@ class _Ligne extends StatelessWidget {
     details: [if (details.isNotEmpty) Text(details.join(' · '))],
     etiquettes: etiquettes,
     onTap: onTap,
+    selected: selected,
+    focusNode: focusNode,
   );
 }
