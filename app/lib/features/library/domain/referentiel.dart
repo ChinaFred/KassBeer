@@ -264,6 +264,8 @@ sealed class EntreeIndex {
         aliases: aliases,
         form: read.texteFacultatif('form'),
         alphaPct: read.nombreFacultatif('alpha'),
+        purpose: read.texteFacultatif('purpose'),
+        origin: read.texteFacultatif('origin'),
       ),
       NatureReferentiel.cultures => EntreeLevure(
         id: id,
@@ -364,10 +366,19 @@ class EntreeHoublon extends EntreeIndex {
     super.aliases,
     this.form,
     this.alphaPct,
+    this.purpose,
+    this.origin,
   });
 
   final String? form;
   final double? alphaPct;
+
+  /// `purpose` du houblon (`aroma`, `bittering`, `aroma/bittering`…), absent
+  /// quand son document ne le porte pas.
+  final String? purpose;
+
+  /// Pays d'origine, tel qu'écrit par l'ingestion (« United States »).
+  final String? origin;
 }
 
 class EntreeLevure extends EntreeIndex {

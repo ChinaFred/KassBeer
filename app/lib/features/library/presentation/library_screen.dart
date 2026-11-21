@@ -8,17 +8,20 @@ import '../../../core/data/lecture_document.dart';
 import '../../../core/presentation/bandeau_liste_perimee.dart';
 import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
+import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/ligne_liste.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../data/library_repository.dart';
+import '../domain/aromes_houblon.dart';
 import '../domain/recette_publique.dart';
 import '../domain/referentiel.dart';
 import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
+import 'section_aromes.dart' show TextesAromes;
 
 /// Bibliothèque : styles, ingrédients et recettes publiques, en lecture seule
 /// (ADR-005, L4). Un segment par chemin (`/bibliotheque/houblons`) ; la recherche
@@ -40,6 +43,8 @@ class LibraryScreen extends StatelessWidget {
   static const sourcesLabel = 'Sources des données';
   static const offlinePartial =
       'Hors ligne : liste lue sur l\'appareil. Elle peut être incomplète.';
+  static const offlineIndex = 'Hors ligne : liste lue sur l\'appareil.';
+  static const clearSearch = 'Effacer la recherche';
   static String noMatch(String text) => 'Aucun résultat pour « $text ».';
   static String noRecipeMatch(String text) =>
       'Aucune recette ne commence par « $text ».';
@@ -155,6 +160,7 @@ class _ChampRecherche extends StatelessWidget {
     this.helper,
     this.onChanged,
     this.onSubmitted,
+    this.onEffacer,
   });
 
   final TextEditingController controller;
@@ -163,9 +169,14 @@ class _ChampRecherche extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final VoidCallback? onSubmitted;
 
+  /// Recherche locale (référentiels) : « × » qui vide le champ, affiché
+  /// quand il n'est pas vide. Sans effet quand [onSubmitted] est donné.
+  final VoidCallback? onEffacer;
+
   @override
   Widget build(BuildContext context) {
     final submit = onSubmitted;
+    final effacer = onEffacer;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Align(
@@ -182,7 +193,13 @@ class _ChampRecherche extends StatelessWidget {
               helperText: helper,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: submit == null
-                  ? null
+                  ? (effacer == null || controller.text.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: LibraryScreen.clearSearch,
+                            onPressed: effacer,
+                            icon: const Icon(Icons.clear),
+                          ))
                   : IconButton(
                       tooltip: 'Rechercher',
                       onPressed: submit,
@@ -198,14 +215,60 @@ class _ChampRecherche extends StatelessWidget {
   }
 }
 
-/// Ligne d'aide sous la recherche (compte, illisibles, hors ligne).
+/// Ligne d'aide sous la recherche (illisibles, hors ligne).
 class _Note extends StatelessWidget {
-  const _Note(this.text, {this.annoncee = false});
+  const _Note(this.text);
 
   final String text;
 
-  /// Annoncée aux lecteurs d'écran à chaque changement (compte d'une recherche).
-  final bool annoncee;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+/// Compte de la liste (« 37 sur 442 houblons »), affiché à chaque frappe et
+/// annoncé aux lecteurs d'écran quand la frappe s'arrête depuis
+/// [_Compte.delai] : une annonce par recherche, et non par lettre.
+class _Compte extends StatefulWidget {
+  const _Compte(this.text);
+
+  final String text;
+
+  static const delai = Duration(milliseconds: 500);
+
+  @override
+  State<_Compte> createState() => _CompteState();
+}
+
+class _CompteState extends State<_Compte> {
+  late String _annonce = widget.text;
+  Timer? _attente;
+
+  @override
+  void didUpdateWidget(_Compte oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.text == oldWidget.text) return;
+    _attente?.cancel();
+    _attente = Timer(_Compte.delai, () {
+      if (mounted) setState(() => _annonce = widget.text);
+    });
+  }
+
+  @override
+  void dispose() {
+    _attente?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,11 +276,134 @@ class _Note extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Semantics(
-        liveRegion: annoncee,
-        child: Text(
-          text,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        liveRegion: true,
+        label: _annonce,
+        child: ExcludeSemantics(
+          child: Text(
+            widget.text,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Filtre de confiance des arômes (segment Houblons) : choix unique, jamais
+/// écrit en base ; « Sans description » regroupe les entrées `unknown` et les
+/// houblons absents de l'index.
+enum FiltreConfiance {
+  toutes('Toutes', null, ''),
+  elevee('Élevée', ConfianceIndex.elevee, 'avec une confiance élevée'),
+  moyenne('Moyenne', ConfianceIndex.moyenne, 'avec une confiance moyenne'),
+  faible('Faible', ConfianceIndex.faible, 'avec une confiance faible'),
+  sansDescription(
+    'Sans description',
+    ConfianceIndex.sansDescription,
+    'sans description',
+  );
+
+  const FiltreConfiance(this.libelle, this.confiance, this.suite);
+
+  final String libelle;
+
+  /// Confiance retenue ; `null` : toutes.
+  final ConfianceIndex? confiance;
+
+  /// Fin du message d'une liste vide (« avec une confiance faible »).
+  final String suite;
+
+  bool retient(ConfianceIndex c) => confiance == null || confiance == c;
+}
+
+/// Textes du filtre de confiance.
+abstract final class TextesFiltreConfiance {
+  static const titre = 'Confiance des arômes';
+  static const aide = 'Confiance indiquée par l\'IA qui a rédigé les arômes.';
+  static const toutes = 'Afficher toutes les confiances';
+  static const sansDescription = 'Sans description';
+
+  static String aucun(String recherche, FiltreConfiance filtre) =>
+      recherche.isEmpty
+      ? 'Aucun houblon ${filtre.suite}.'
+      : 'Aucun houblon pour « $recherche » ${filtre.suite}.';
+}
+
+/// Filtre de confiance sur une ligne, sous la recherche épinglée : un bouton
+/// « Confiance des arômes : Faible (37) », lu « Confiance des arômes : Faible,
+/// 37 houblons », qui ouvre un menu à choix unique. Le menu commence par la
+/// ligne d'aide, non cliquable, puis les cinq choix comptés, le choix en cours
+/// coché. Zone d'appui de 48 px ; le libellé passe à la ligne en grand texte.
+class _FiltreConfiance extends StatelessWidget {
+  const _FiltreConfiance({
+    required this.filtre,
+    required this.comptes,
+    required this.segment,
+    required this.onSelected,
+  });
+
+  final FiltreConfiance filtre;
+  final Map<FiltreConfiance, int> comptes;
+  final SegmentBibliotheque segment;
+  final ValueChanged<FiltreConfiance> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    String court(FiltreConfiance f) => '${f.libelle} (${comptes[f] ?? 0})';
+    String lu(FiltreConfiance f) =>
+        '${f.libelle}, ${segment.compte(comptes[f] ?? 0)}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        // ticket: /bibliotheque/houblons/menu/confiance
+        child: MenuAnchor(
+          menuChildren: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280),
+                child: Text(
+                  TextesFiltreConfiance.aide,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            // Un seul nœud lu par entrée : nombre et état coché ensemble.
+            for (final f in FiltreConfiance.values)
+              MergeSemantics(
+                child: Semantics(
+                  checked: f == filtre,
+                  inMutuallyExclusiveGroup: true,
+                  child: RadioMenuButton<FiltreConfiance>(
+                    value: f,
+                    groupValue: filtre,
+                    onChanged: (v) {
+                      if (v != null) onSelected(v);
+                    },
+                    child: Text(court(f), semanticsLabel: lu(f)),
+                  ),
+                ),
+              ),
+          ],
+          builder: (context, controller, _) => OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              tapTargetSize: MaterialTapTargetSize.padded,
+            ),
+            onPressed: () =>
+                controller.isOpen ? controller.close() : controller.open(),
+            icon: const Icon(Icons.filter_list),
+            label: Text(
+              '${TextesFiltreConfiance.titre} : ${court(filtre)}',
+              semanticsLabel: '${TextesFiltreConfiance.titre} : ${lu(filtre)}',
+              softWrap: true,
+            ),
           ),
         ),
       ),
@@ -249,6 +435,10 @@ class _ListeReferentiel extends ConsumerStatefulWidget {
 class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
   final _search = TextEditingController();
 
+  /// Filtre de confiance des houblons : état de l'écran, gardé au retour d'une
+  /// fiche, perdu au changement de segment.
+  var _filtre = FiltreConfiance.toutes;
+
   @override
   void dispose() {
     _search.dispose();
@@ -257,14 +447,29 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
 
   void _retry() => ref.invalidate(indexReferentielProvider(widget.nature));
 
+  void _effacer() => setState(_search.clear);
+
+  /// Index des arômes lisible, ou `null` : absent, illisible (rapporté par le
+  /// dépôt de données), en panne ou en cours de lecture. Lu pour le seul
+  /// segment Houblons.
+  IndexAromes? _indexAromes() {
+    if (widget.nature != NatureReferentiel.hops) return null;
+    return switch (ref.watch(indexAromesProvider).value) {
+      DocumentTrouve(value: final index) => index,
+      _ => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(indexReferentielProvider(widget.nature));
     final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
+    final aromes = _indexAromes();
     final value = async.value;
 
     Widget? etat;
     IndexReferentiel? index;
+    var fromCache = false;
     if (value == null) {
       if (!async.hasError) {
         etat = const EtatChargement(label: 'Chargement de la bibliothèque');
@@ -284,8 +489,9 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
       }
     } else {
       switch (value) {
-        case DocumentTrouve(value: final found):
+        case DocumentTrouve(value: final found, fromCache: final cache):
           index = found;
+          fromCache = cache;
         case DocumentAbsent():
           etat = EtatVide(
             icon: Icons.local_library_outlined,
@@ -317,53 +523,148 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
       );
     }
 
-    final query = normaliserRecherche(_search.text.trim());
-    final shown = [
+    final texte = _search.text.trim();
+    final query = normaliserRecherche(texte);
+    final trouves = [
       for (final e in index.entrees)
         if (e.correspond(query)) e,
     ];
+    // Sans index des arômes, ni filtre ni étiquette : la liste reste entière.
+    final filtre = aromes == null ? FiltreConfiance.toutes : _filtre;
+    final comptes = <FiltreConfiance, int>{
+      for (final f in FiltreConfiance.values) f: 0,
+    };
+    final shown = <EntreeIndex>[];
+    for (final e in trouves) {
+      final c = aromes?.confianceDe(e.id);
+      for (final f in FiltreConfiance.values) {
+        if (c == null ? f == FiltreConfiance.toutes : f.retient(c)) {
+          comptes[f] = comptes[f]! + 1;
+        }
+      }
+      if (c == null || filtre.retient(c)) shown.add(e);
+    }
     final total = index.entrees.length;
-    final head = <Widget>[
-      widget.enTete,
-      _ChampRecherche(
-        controller: _search,
-        label: widget.nature == NatureReferentiel.styles
-            ? 'Rechercher par nom ou code'
-            : 'Rechercher par nom',
-        onChanged: (_) => setState(() {}),
+    final compte = widget.segment.compte(total);
+
+    // Partie épinglée : recherche et compte seuls, sur le fond de la page, et
+    // un trait qui la sépare de la liste qui glisse dessous. Les segments, le
+    // filtre et son aide défilent avec la liste.
+    final scheme = Theme.of(context).colorScheme;
+    final recherche = ColoredBox(
+      color: scheme.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ChampRecherche(
+            controller: _search,
+            label: widget.nature == NatureReferentiel.styles
+                ? 'Rechercher par nom ou code'
+                : 'Rechercher par nom',
+            onChanged: (_) => setState(() {}),
+            onEffacer: _effacer,
+          ),
+          _Compte(
+            shown.length == total ? compte : '${shown.length} sur $compte',
+          ),
+          Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
+        ],
       ),
-      _Note(
-        query.isEmpty
-            ? (total == 1 ? '1 entrée' : '$total entrées')
-            : '${shown.length} sur $total',
-        annoncee: true,
-      ),
-      if (index.illisibles > 0)
-        _Note(LibraryScreen.unreadableEntries(index.illisibles)),
-      if (shown.isEmpty)
-        EtatVide(
-          icon: Icons.search_off,
-          message: LibraryScreen.noMatch(_search.text.trim()),
-          action: TextButton(
-            onPressed: () => setState(_search.clear),
-            child: const Text('Effacer la recherche'),
+    );
+    final Widget? vide = shown.isNotEmpty
+        ? null
+        : filtre == FiltreConfiance.toutes
+        ? EtatVide(
+            icon: Icons.search_off,
+            message: LibraryScreen.noMatch(texte),
+            action: TextButton(
+              onPressed: _effacer,
+              child: const Text(LibraryScreen.clearSearch),
+            ),
+          )
+        : EtatVide(
+            icon: Icons.search_off,
+            message: TextesFiltreConfiance.aucun(texte, filtre),
+            action: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (texte.isNotEmpty)
+                  TextButton(
+                    onPressed: _effacer,
+                    child: const Text(LibraryScreen.clearSearch),
+                  ),
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _filtre = FiltreConfiance.toutes),
+                  child: const Text(TextesFiltreConfiance.toutes),
+                ),
+              ],
+            ),
+          );
+    // Recherche et compte épinglés pendant le défilement ; à partir de
+    // kGrandTexteMinScale, ils défilent avec la liste pour lui laisser la place.
+    final grandTexte =
+        MediaQuery.textScalerOf(context).scale(1) >= kGrandTexteMinScale;
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: widget.enTete),
+        if (grandTexte)
+          SliverToBoxAdapter(child: recherche)
+        else
+          PinnedHeaderSliver(child: recherche),
+        if (aromes != null)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _FiltreConfiance(
+                filtre: filtre,
+                comptes: comptes,
+                segment: widget.segment,
+                onSelected: (f) => setState(() => _filtre = f),
+              ),
+            ),
+          ),
+        if (fromCache)
+          const SliverToBoxAdapter(child: _Note(LibraryScreen.offlineIndex)),
+        if (index.illisibles > 0)
+          SliverToBoxAdapter(
+            child: _Note(LibraryScreen.unreadableEntries(index.illisibles)),
+          ),
+        if (vide != null) SliverToBoxAdapter(child: vide),
+        SliverPadding(
+          padding: const EdgeInsets.only(bottom: 24),
+          sliver: SliverList.builder(
+            itemCount: shown.length,
+            itemBuilder: (context, i) {
+              final e = shown[i];
+              final c = aromes?.confianceDe(e.id);
+              return _Ligne(
+                titre: titreEntree(e),
+                details: detailsEntree(e),
+                etiquettes: [
+                  // Sans icône : `info_outline` est celle de « Sources des
+                  // données » dans l'en-tête.
+                  if (c == ConfianceIndex.faible)
+                    const Etiquette(
+                      label: TextesAromes.confianceFaible,
+                      ton: TonEtiquette.neutre,
+                    ),
+                  if (c == ConfianceIndex.sansDescription)
+                    const Etiquette(
+                      label: TextesFiltreConfiance.sansDescription,
+                      ton: TonEtiquette.neutre,
+                    ),
+                ],
+                onTap: () => context.go(
+                  AppRoutes.libraryEntry(widget.segment.slug, e.id),
+                ),
+              );
+            },
           ),
         ),
-    ];
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 24),
-      itemCount: head.length + shown.length,
-      itemBuilder: (context, i) {
-        if (i < head.length) return head[i];
-        final e = shown[i - head.length];
-        final details = detailsEntree(e);
-        return _Ligne(
-          titre: titreEntree(e),
-          details: details,
-          onTap: () =>
-              context.go(AppRoutes.libraryEntry(widget.segment.slug, e.id)),
-        );
-      },
+      ],
     );
   }
 }
@@ -501,7 +802,7 @@ class _RecettesPubliquesState extends ConsumerState<_RecettesPubliques> {
           message: LibraryScreen.noRecipeMatch(_prefixe),
           action: TextButton(
             onPressed: _effacer,
-            child: const Text('Effacer la recherche'),
+            child: const Text(LibraryScreen.clearSearch),
           ),
         );
       } else if (_fromCache) {
@@ -602,6 +903,7 @@ class _Ligne extends StatelessWidget {
   const _Ligne({
     required this.titre,
     required this.details,
+    this.etiquettes = const [],
     this.icone,
     this.onTap,
     this.erreur = false,
@@ -609,6 +911,9 @@ class _Ligne extends StatelessWidget {
 
   final String titre;
   final List<String> details;
+
+  /// Exceptions seules (« Confiance faible », « Sans description »).
+  final List<Widget> etiquettes;
   final IconData? icone;
   final VoidCallback? onTap;
   final bool erreur;
@@ -619,6 +924,7 @@ class _Ligne extends StatelessWidget {
     erreur: erreur,
     titre: titre,
     details: [if (details.isNotEmpty) Text(details.join(' · '))],
+    etiquettes: etiquettes,
     onTap: onTap,
   );
 }

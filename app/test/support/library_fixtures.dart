@@ -44,12 +44,30 @@ final hopsIndex = indexDoc([
     'aliases': ['Cascade US'],
     'form': 'pellet',
     'alpha': 6.5,
+    'purpose': 'aroma',
+    'origin': 'United States',
     'champ_futur': 'ignoré',
   },
-  {'id': 'hop-houblon-dore', 'name': 'Houblon doré', 'alpha': 4},
+  {
+    'id': 'hop-houblon-dore',
+    'name': 'Houblon doré',
+    'form': 'leaf',
+    'alpha': 4,
+  },
   // Mal typé : l'entrée est écartée et comptée.
   {'id': 'hop-saaz', 'name': 'Saaz', 'alpha': '3,5'},
 ]);
+
+/// `beer_index/hop_aromas` : Cascade en confiance faible ; Houblon doré absent
+/// (« Sans description »).
+Map<String, dynamic> aromesIndex([List<Object?>? entries]) {
+  final e =
+      entries ??
+      [
+        {'id': 'hop-cascade', 'confidence': 'low'},
+      ];
+  return {'count': e.length, 'content_sha256': 'ef' * 32, 'entries': e};
+}
 
 final stylesIndex = indexDoc([
   {
