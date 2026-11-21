@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.84 — fonctionnel
+### v0.1.85 — fonctionnel
 
 Avant de lancer une analyse, un développement ou une livraison d'un ticket, l'administrateur
 peut ouvrir la page d'usage de claude.ai : un lien « Usage Claude (5 h et semaine) : voir sur
@@ -15,7 +15,7 @@ la part restante de l'abonnement Claude pour la fenêtre de 5 heures et pour la 
 L'application n'affiche aucun chiffre : Anthropic ne publie pas ces valeurs. Demandé par le
 ticket #96.
 
-### v0.1.84 — technique
+### v0.1.85 — technique
 
 Option A de l'analyse du ticket #96 : `LienUsageClaude`
 (`app/lib/features/tickets/presentation/lien_usage_claude.dart`) ouvre
@@ -26,6 +26,30 @@ Option A de l'analyse du ticket #96 : `LienUsageClaude`
 fiche seule sur écran étroit, qui garderait sinon sa barre de décision sous le seuil de
 480 px). Aucun serveur ni règle touché ; l'option B (lancements comptés sur 5 h et 7 jours)
 n'est pas faite. Tests : `tickets_lancements_test.dart`. Demandé par le ticket #96.
+
+### v0.1.84 — fonctionnel
+
+Sur téléphone, la Bibliothèque montre ses six rubriques sans faire glisser la ligne : les
+Levures, les Divers et les Recettes publiques ne sont plus cachées hors de l'écran. Chaque
+rubrique a maintenant une icône à côté de son nom, à toutes les tailles d'écran ; la rubrique
+ouverte montre une coche à la place de son icône. Sur téléphone, ou avec un texte agrandi, les
+noms sont raccourcis (« Malts », « Recettes ») et les boutons « Échelle des couleurs » et
+« Sources des données » passent en icônes sur une ligne au-dessus des rubriques.
+Demandé par le ticket #97.
+
+### v0.1.84 — technique
+
+`SegmentBibliotheque` (`library_providers.dart`) reçoit `labelCourt` et `icone`. `_EnTete`
+(`library_screen.dart`) place les puces dans un `Wrap` à toutes les largeurs. Sous 600 px, ou
+à partir de `kGrandTexteMinScale` (130 %), les deux accès sont des icônes sur une ligne
+au-dessus des puces, qui affichent leur nom court : à 600 px et 200 %, le rail laisse 423 px,
+trop peu pour « Recettes publiques » et le bouton « Échelle des couleurs » en texte. La puce
+ouverte n'a pas d'avatar : la coche de `ChoiceChip` remplace l'icône au lieu d'être peinte
+dessus. Le `ShaderMask`, le défilement horizontal et la constante `_fondu` sortent. Le nom
+complet reste le `semanticsLabel` de la puce et le titre de la fiche. Tests : à 320 px, texte
+à 100 %, 130 % et 200 %, les six puces et les deux accès tiennent dans la largeur, sans
+débordement, avec une cible de 48 px ; à 600 px, texte à 130 % et 200 %, les noms courts sont
+entiers. Demandé par le ticket #97.
 
 ### v0.1.83 — fonctionnel
 

@@ -59,63 +59,80 @@ class LibraryScreen extends StatelessWidget {
   }
 }
 
-/// Segments, accès à « Échelle des couleurs » (icône sur téléphone, texte
-/// au-delà) et à « Sources des données », une icône à droite des puces à
-/// toutes les largeurs. Sur téléphone, les puces tiennent sur une ligne qui
-/// défile à l'horizontale, en fondu au bord droit ; au-delà, elles passent à
-/// la ligne.
+/// Segments, accès à « Échelle des couleurs » et à « Sources des données ».
+/// Chaque puce porte l'icône et le nom de son segment ; la puce ouverte montre
+/// la coche à la place de son icône. Les puces passent à la ligne à toutes les
+/// largeurs : aucune n'est cachée hors de l'écran. Sur téléphone, ou avec un
+/// texte agrandi à partir de [kGrandTexteMinScale], les deux accès sont des
+/// icônes sur une ligne au-dessus des puces, qui affichent leur nom court.
+/// Sinon, « Échelle des couleurs » en texte et l'icône des sources sont à
+/// droite des puces, qui affichent leur nom complet.
 class _EnTete extends StatelessWidget {
   const _EnTete({required this.segment});
 
   final SegmentBibliotheque segment;
 
-  /// Largeur du fondu au bord droit de la ligne des puces (téléphone) : une
-  /// puce coupée par le bord s'y efface et annonce la suite.
-  static const _fondu = 32.0;
-
   @override
   Widget build(BuildContext context) {
     final compact =
         WindowSize.of(MediaQuery.sizeOf(context).width) == WindowSize.compact;
-    final puces = [
-      for (final s in SegmentBibliotheque.values)
-        ChoiceChip(
-          label: Text(s.label),
-          selected: s == segment,
-          onSelected: (_) {
-            if (s != segment) context.go(AppRoutes.librarySegment(s.slug));
-          },
+    // Texte agrandi : les deux accès à droite et les noms complets ne tiennent
+    // plus à côté du rail. Les accès passent au-dessus des puces, en icônes, et
+    // les puces prennent leur nom court.
+    final enColonne =
+        compact ||
+        MediaQuery.textScalerOf(context).scale(1) >= kGrandTexteMinScale;
+    final segments = Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, enColonne ? 16 : 0, 0),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final s in SegmentBibliotheque.values)
+            ChoiceChip(
+              // Puce ouverte : la coche remplace l'icône, qui serait
+              // sinon peinte sous elle.
+              avatar: s == segment ? null : Icon(s.icone),
+              // Le nom complet reste lu par le lecteur d'écran.
+              label: Text(
+                enColonne ? s.labelCourt : s.label,
+                semanticsLabel: s.label,
+              ),
+              selected: s == segment,
+              onSelected: (_) {
+                if (s != segment) context.go(AppRoutes.librarySegment(s.slug));
+              },
+            ),
+        ],
+      ),
+    );
+    final acces = [
+      if (enColonne)
+        IconButton(
+          tooltip: TextesCouleurEbc.echelle,
+          onPressed: () => unawaited(context.push(AppRoutes.libraryColors)),
+          icon: const Icon(Icons.palette_outlined),
+        )
+      else
+        TextButton.icon(
+          onPressed: () => unawaited(context.push(AppRoutes.libraryColors)),
+          icon: const Icon(Icons.palette_outlined),
+          label: const Text(TextesCouleurEbc.echelle),
         ),
+      IconButton(
+        tooltip: LibraryScreen.sourcesLabel,
+        onPressed: () => unawaited(context.push(AppRoutes.dataSources)),
+        icon: const Icon(Icons.info_outline),
+      ),
+      const SizedBox(width: 4),
     ];
-    final Widget segments;
-    if (compact) {
-      // Fondu par l'opacité seule (BlendMode.dstIn) : la couleur du dégradé
-      // ne compte pas, son alpha va de 1 à 0. La marge droite égale au fondu
-      // laisse la dernière puce nette en fin de défilement.
-      final opaque = Theme.of(context).colorScheme.onSurface;
-      segments = ShaderMask(
-        blendMode: BlendMode.dstIn,
-        shaderCallback: (bounds) => LinearGradient(
-          colors: [opaque, opaque.withValues(alpha: 0)],
-          stops: [bounds.width <= _fondu ? 0 : 1 - _fondu / bounds.width, 1],
-        ).createShader(bounds),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.only(left: 16, right: _fondu),
-          child: Row(
-            children: [
-              for (final (i, p) in puces.indexed) ...[
-                if (i > 0) const SizedBox(width: 8),
-                p,
-              ],
-            ],
-          ),
-        ),
-      );
-    } else {
-      segments = Padding(
-        padding: const EdgeInsets.only(left: 16),
-        child: Wrap(spacing: 8, runSpacing: 8, children: puces),
+    if (enColonne) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(mainAxisAlignment: MainAxisAlignment.end, children: acces),
+          segments,
+        ],
       );
     }
     return Padding(
@@ -123,24 +140,7 @@ class _EnTete extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: segments),
-          if (compact)
-            IconButton(
-              tooltip: TextesCouleurEbc.echelle,
-              onPressed: () => unawaited(context.push(AppRoutes.libraryColors)),
-              icon: const Icon(Icons.palette_outlined),
-            )
-          else
-            TextButton.icon(
-              onPressed: () => unawaited(context.push(AppRoutes.libraryColors)),
-              icon: const Icon(Icons.palette_outlined),
-              label: const Text(TextesCouleurEbc.echelle),
-            ),
-          IconButton(
-            tooltip: LibraryScreen.sourcesLabel,
-            onPressed: () => unawaited(context.push(AppRoutes.dataSources)),
-            icon: const Icon(Icons.info_outline),
-          ),
-          const SizedBox(width: 4),
+          ...acces,
         ],
       ),
     );
