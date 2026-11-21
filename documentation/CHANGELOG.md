@@ -26,7 +26,8 @@ depuis les entrées acceptées de `aromes.json` et validé par `ingest/lib/valid
 compte dans un `PinnedHeaderSliver` (sauf au-delà de `kGrandTexteMinScale`), compte annoncé
 500 ms après la frappe, `DocumentTrouve.fromCache`, libellés d'usage complétés. Tests de
 `rules-tests/` pour `beer_index/hop_aromas`. ADR-013, note du 2026-11-21. Après la fusion,
-l'administrateur relance la préparation du référentiel puis `ecrire.mjs`.
+l'administrateur relance la préparation du référentiel puis `ecrire.mjs`. P22 et P55 de
+`CLAUDE.md` couvrent `beer_index/hop_aromas` (décision de l'utilisateur du 2026-11-21).
 
 ### v0.1.83 — fonctionnel
 
