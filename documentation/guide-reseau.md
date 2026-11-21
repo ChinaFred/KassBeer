@@ -331,6 +331,13 @@ refusé et `history` d'au moins 2 messages en mode résumé, liste des huit bloc
 un test de prompt par bloc) et P60 (« Résumer et continuer » sans seuil en Dart) sont
 complétés.
 
+Le 2026-11-21, avec l'acceptation d'ADR-017 (descriptions des divers), `CLAUDE.md` ajoute P62
+(`beer_misc_descriptions/`, `relecteur-regles`). P54 est étendu au moteur commun
+`ingest/lib/redaction/` et au poste `misc_description_generation`, avec un test qui fige
+l'empreinte des houblons. P19, P20 et P22 reçoivent la nouvelle collection. « Le projet »,
+« Structure », « Commandes utiles » et « Coûts variables » sont mis à jour, marqués « à
+livrer » jusqu'au code.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

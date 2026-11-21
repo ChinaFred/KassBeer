@@ -6,6 +6,15 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.83 — technique
+
+ADR-017 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
+rôle, goût le cas échéant, aucune dose), rédigée par l'API Claude depuis le poste de l'admin sur
+un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P62 (`beer_misc_descriptions/`)
+et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
+P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
+complétés et marqués « à livrer ». Aucun code.
+
 ### v0.1.82 — fonctionnel
 
 La Bibliothèque ne montre plus en double onze noms de levures que l'ancienne base donnait à
