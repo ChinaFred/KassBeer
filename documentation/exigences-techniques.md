@@ -2177,12 +2177,15 @@ plus. Deux entrées de même clé fusionnent : la source prioritaire (fiches des
 entrées de noms différents d'une même variété et d'un même pays (`Saaz (CZ)` et `Saaz (Czech
 Republic)` dans `hop-saaz`) ; l'identifiant reste `hop-<clé du nom du document>`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
 de même producteur et de même référence (`Wyeast Labs` = `Wyeast`, `Omega Yeast Labs` =
-`Omega Yeast` ; `WY1056` = `1056` chez Wyeast, `001` = `WLP001` chez White Labs ; tirets
-ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
+`Omega Yeast` ; `WY1056` = `1056` chez Wyeast, et `2001-PC` = `WY2001-PC` = `2001` pour la
+Private Collection depuis la v0.1.81 ; `001` = `WLP001` chez White Labs ; tirets ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
 ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`).
 L'identifiant d'une souche se calcule sans les fiches des fabricants quand une source de
 Brewtarget la connaît : le document garde son identifiant, et `ingest/ecrire.mjs`, qui n'efface
-rien, ne laisse pas d'ancien document à côté. Une souche connue de la seule fiche prend
+rien, ne laisse pas d'ancien document à côté. Exception : un changement de clé de référence
+(v0.1.81, Private Collection de Wyeast) regroupe des souches jusque-là séparées ; les documents
+absorbés sortent de la préparation et `ecrire.mjs --supprimer-absents beer_cultures` (v0.1.80)
+les retire. Une souche connue de la seule fiche prend
 l'identifiant de la fiche (`culture-fermentis-e30-saflager-e-30`). Un
 rendement, un acide alpha ou une atténuation à 0 dans une source est lu comme inconnu : écarté
 et compté.
@@ -3196,7 +3199,8 @@ dans `import/ingest/prepare/`, les rapports d'écriture dans `import/ingest/rapp
 gcloud auth application-default login   # compte de l'admin ; kassbeer-ingest reporté (ADR-005, D7)
 (cd ingest && node ecrire.mjs --production --projet kassbeer --simulation)   # compte sans écrire
 (cd ingest && node ecrire.mjs --production --projet kassbeer)
-# 4. Suppression des documents absents de la préparation (ADR-014), une collection par lancement
+# 4. Suppression des documents absents de la préparation (ADR-014), une collection par lancement :
+#    beer_hops, beer_hop_aromas ou beer_cultures
 (cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops --simulation)
 (cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops)
 ```
@@ -3257,13 +3261,26 @@ entrée désignée par deux lignes, deux lignes de même identifiant, ou une ent
 désignée dont l'identifiant (celui de sa souche si elle porte producteur et référence) diffère
 de celui de la ligne arrêtent la préparation (`StateError`). Sept lignes, listées dans `DATA_SOURCES.md` (« Escarpment Labs »).
 
+**Corrections des cultures de Brewtarget (`kCorrectionsCultures`, `fusions.dart`, v0.1.82, P56,
+décisions de l'utilisateur du 2026-11-21).** Avant la fusion, `Referentiel.fusionner` corrige
+des entrées de Brewtarget, jamais une fiche : `ReferenceCulture` donne à une entrée la
+référence retenue (une souche sous deux références, ou une entrée sans référence), et l'entrée
+rejoint la souche de cette référence ; `GammeCulture` renomme `<gamme> <référence>` une entrée
+d'un nom de gamme qui porte une référence (`Lalvin 71B`, nom construit par Kass'Beer), une
+entrée sans référence garde son nom. Après la fusion, `AliasEcarteCulture` retire des `aliases`
+d'une souche un nom qui est celui d'une autre souche du même producteur. Une ligne qui ne
+désigne rien, une entrée corrigée par deux lignes, ou un alias absent du document visé
+arrêtent la préparation (`StateError`). Onze lignes, listées dans `DATA_SOURCES.md`
+(« Doublons d'un même producteur hérités de Brewtarget »).
+
 Sortie : `<collection>.json` (listes `{id, data}`, triées par identifiant, `content_sha256`
 calculé) et `rapport.json` : entrées par source, entrées rejetées, listes ignorées, valeurs
 écartées, origines inconnues, tables de fusion appliquées (`table_de_fusion` : document,
 origine, entrées rattachées ; `table_de_fusion_cultures` : document, nom, entrées
 rattachées), groupes de houblons de même nom une fois les parenthèses
 retirées (`groupes_sans_parenthese`, pour la revue suivante de la table), noms portés par
-plusieurs documents par nature (`noms_partages`), fusions, documents par collection, recettes
+plusieurs documents par nature (`noms_partages`), parmi eux les noms de cultures dont deux
+documents ont le même producteur (`doublons_meme_producteur`, P56), fusions, documents par collection, recettes
 lues et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non
 résolus avec leur nombre de lignes, lignes rejetées, libellés perdus, températures de
 fermentation non reprises, taille JSON des index.
@@ -3298,10 +3315,11 @@ résolus), puis `ingest_runs/<id>` par `create`, hors simulation. L'Admin SDK se
 premier usage, après les contrôles.
 
 Suppression des documents absents (ADR-014, section 3, P19). Sans option, `ecrire.mjs` ne
-supprime rien. `--supprimer-absents <collection>` (`beer_hops` ou `beer_hop_aromas`, une par
-lancement ; toute autre est refusée par `lireOptions`) lit les identifiants en ligne
-(`select()`, sans les champs) et les compare aux identifiants préparés, refusés compris
-(`beer_hops.json`, ou `aromes.json` pour `beer_hop_aromas`, exigé). Avant toute écriture,
+supprime rien. `--supprimer-absents <collection>` (`beer_hops`, `beer_hop_aromas` ou `beer_cultures`,
+amendement du 2026-11-15 ; une par lancement ; toute autre est refusée par `lireOptions`)
+lit les identifiants en ligne (`select()`, sans les champs) et les compare aux identifiants
+préparés, refusés compris (`beer_hops.json`, `beer_cultures.json`, ou `aromes.json` pour
+`beer_hop_aromas`, exigé). Avant toute écriture,
 `planifierSuppressions` (`lib/ecriture.mjs`) refuse : une autre collection ; une préparation
 qui compte moins de 90 % des documents en ligne (`PART_MIN_PREPAREE`) ; plus de 30
 suppressions (`PLAFOND_SUPPRESSIONS`). Un identifiant hors du motif de la collection
@@ -3336,7 +3354,8 @@ fixture `test/fixtures/prepare/` contre l'émulateur, la seconde sans aucun réf
 aucune recette réécrit, seul son document `ingest_runs` créé ; `--supprimer-absents` : sans
 l'option rien n'est supprimé, simulation, nombre non confirmé sans écriture, suppression
 confirmée, identifiant hors motif gardé, préparation à moins de 90 % refusée, plus de 30
-absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé) ;
+absents refusés, autre collection refusée, `beer_hop_aromas` sans `aromes.json` refusé,
+`beer_cultures` : simulation puis ancien identifiant supprimé, plafond et seuil de 90 %) ;
 `npm run test:unitaires` sans émulateur. La CI ne lance pas encore `ingest/` (ADR-005, D2).
 
 ## Descriptions aromatiques des houblons (ADR-013)

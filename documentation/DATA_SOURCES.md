@@ -386,11 +386,9 @@ les produits d'appoint ne sont pas repris.
 Mesure sur les sources du relevé du 2026-11-08 : 74 fiches rejoignent un document Brewtarget, 3
 en créent un ; 945 documents `beer_cultures` au lieu de 942. Brewtarget écrit une souche de la
 Private Collection sous deux références (`WY2001-PC` dans 003 et 004, `2001` dans 005), qui
-donnent deux documents : la fiche rejoint le second et lui donne son nom. Le premier document
-reste : 24 noms de la Private Collection désignent deux documents Wyeast, tous antérieurs aux
-fiches (section « Doublons d'un même producteur hérités de Brewtarget », mesure du 2026-11-21 ;
-la mesure du 2026-11-15 en comptait six, faute de rapprocher « Wyeast Labs » de Wyeast). Une clé de référence Wyeast sans `WY`
-ni `-PC` (`cleProduit`) fusionnerait ces doublons ; elle change des identifiants de documents.
+donnaient deux documents. Depuis la v0.1.81, `cleProduit` retire `wy` et `pc` d'une référence
+Wyeast : `2001`, `WY2001`, `2001-PC` et `WY2001-PC` donnent `2001`, et les quatre graphies
+font un seul document (section « Doublons d'un même producteur hérités de Brewtarget »).
 
 ### Escarpment Labs
 
@@ -444,22 +442,51 @@ deux documents d'Escarpment.
 
 ### Doublons d'un même producteur hérités de Brewtarget
 
-Mesure du 2026-11-21 sur les sources du relevé du 2026-11-08 : 39 noms normalisés désignent au
-moins deux documents `beer_cultures` d'un même producteur, après `kProducteursEquivalents`
-(« Wyeast Labs » est Wyeast, « Omega Yeast Labs » est Omega Yeast). Aucun ne vient d'Escarpment
-ni d'une ligne de la table de fusion. Chacun tient à une souche que Brewtarget écrit deux fois,
-ou à un nom que Brewtarget donne à deux souches. Ils sont comptés dans `noms_partages.culture`
-du rapport et restent en attendant leur fusion (P56, décisions de l'utilisateur du 2026-11-21).
+Mesure du 2026-11-21 sur les sources du relevé du 2026-11-08, après la v0.1.82 : 4 noms
+normalisés désignent au moins deux documents `beer_cultures` d'un même producteur, après
+`kProducteursEquivalents` (« Wyeast Labs » est Wyeast, « Omega Yeast Labs » est Omega Yeast).
+Aucun ne vient d'Escarpment ni d'une ligne de la table de fusion. Brewtarget donne chacun à deux
+souches, et aucune fiche du fabricant ne dit laquelle le porte. Ils sont comptés dans
+`doublons_meme_producteur` du rapport et restent en attendant leur fusion (P56, décisions de
+l'utilisateur du 2026-11-21).
 
-| Cause | Producteur | Noms normalisés | Nombre |
-|---|---|---|---|
-| Private Collection : référence `nnnn-PC` ou `WYnnnn-PC`, que `cleProduit` ne rapproche pas de `nnnn` | Wyeast | `belgian-dark-ale`, `belgian-schelde-ale`, `belgian-style-blend`, `berliner-weisse-blend`, `biere-de-garde`, `brettanomyces-claussenii`, `burton-ipa-blend`, `canadian-belgian-ale`, `danish-lager`, `european-lager`, `flanders-golden-ale`, `forbidden-fruit`, `gambrinus-style-lager`, `german-wheat`, `hella-bock-lager`, `kolsch-ii`, `lactobacillus-brevis`, `munich-lager-ii`, `north-american-lager`, `pilsner-urquell-h-strain`, `rogue-pacman`, `saison-brett-blend`, `staro-prague-lager`, `west-coast-ipa` | 24 |
-| une souche sous deux références (`OYL-217-C2C`, `GY018-SAISON-1`, `GY027-SAISON-2`, `GB144` et `GY144`, une entrée sans référence) | Omega Yeast, GigaYeast, The Yeast Bay | `c2c-american-farmhouse`, `saison-1`, `saison-2`, `sweet-flemish-brett`, `saison-blend` | 5 |
-| un nom que Brewtarget donne à deux souches (en alias de l'une) | Wyeast, Mangrove Jack's, Fermentis, Omega Yeast | `bavarian-wheat` (3056, 3638), `british-ale` (1098, 1335), `lactobacillus` (4335, 5335), `belgian-ale` (M27, M41), `belgian-wit` (M21, M27), `safale-american-ale` (US-05, US-56), `scottish-ale` (OYL-015, OYL-045) | 7 |
-| un nom de gamme porté par plusieurs souches | Fermentis, AEB, Lallemand | `safspirit`, `fermoale`, `lalvin` | 3 |
+| Nom normalisé | Producteur | Souches |
+|---|---|---|
+| `belgian-ale` | Mangrove Jack's | M27 (absente des fiches, que Brewtarget nomme « Belgian Wit » avec cet alias), M41 |
+| `belgian-wit` | Mangrove Jack's | M21, M27 |
+| `safale-american-ale` | Fermentis | US-05 (en alias), US-56 (absente des fiches) |
+| `scottish-ale` | Omega Yeast | OYL-015 (absente des fiches), OYL-045 (sa fiche porte ce nom ; Brewtarget la nomme « New Jersey Ale ») |
 
-Vingt-sept de ces noms sont portés par une fiche de fabricant, mais le second document Brewtarget
-existait avant la fiche ; P56 les compte comme hérités. Aucune fiche n'en a créé.
+`scottish-ale` est porté par une fiche de fabricant, mais le second document Brewtarget existait
+avant la fiche ; P56 le compte comme hérité. Aucune fiche n'en a créé.
+
+La v0.1.82 a réglé 11 noms par les corrections des cultures de Brewtarget (`kCorrectionsCultures`,
+`exchange/lib/src/ingestion/fusions.dart`), une ligne par cas :
+
+| Correction | Lignes | Effet |
+|---|---|---|
+| une souche sous deux références : l'entrée prend la référence retenue | Omega Yeast `OYL-217-C2C` → `OYL-217` ; GigaYeast `GY018-SAISON-1` → `GY018`, `GY027-SAISON-2` → `GY027`, `GY144` → `GB144` ; The Yeast Bay « Saison Blend » sans référence → `WLP4007` | `c2c-american-farmhouse`, `saison-1`, `saison-2`, `sweet-flemish-brett`, `saison-blend` : un document chacun |
+| un nom de gamme porté par plusieurs souches : l'entrée qui porte une référence prend le nom `<gamme> <référence>`, construit par Kass'Beer à partir de la référence de la source | Lallemand « Lalvin » (71B, EC-1118, V1116) ; Fermentis « SafSpirit » (HG-1, USW-6) ; AEB « Fermoale » (AY3, AY4) | « Lalvin 71B », « SafSpirit HG-1 », « Fermoale AY3 »… ; l'entrée AEB « Fermoale » sans référence garde son nom, qu'elle seule porte désormais |
+| un nom en alias d'une autre souche du même producteur : il sort des alias | Wyeast 3056 sans « Bavarian Wheat » (nom de la fiche 3638), 1335 sans « British Ale » (fiche 1098), 5335 sans « Lactobacillus » (sa fiche dit « Lactobacillus buchneri » ; 4335 garde ce nom) | `bavarian-wheat`, `british-ale`, `lactobacillus` : un document chacun |
+
+Effet de la v0.1.82 : 961 documents `beer_cultures` au lieu de 966. 12 identifiants sortent de la
+préparation (5 souches rattachées, 7 noms de gamme renommés), 7 y entrent (les noms de gamme,
+`culture-lallemand-71b-lalvin-71b`…), 8 documents changent ; `ingest/ecrire.mjs
+--supprimer-absents beer_cultures` (v0.1.80) retire les 12 anciens.
+
+La v0.1.81 a réglé 24 noms de la Private Collection de Wyeast (`belgian-dark-ale`,
+`belgian-schelde-ale`, `belgian-style-blend`, `berliner-weisse-blend`, `biere-de-garde`,
+`brettanomyces-claussenii`, `burton-ipa-blend`, `canadian-belgian-ale`, `danish-lager`,
+`european-lager`, `flanders-golden-ale`, `forbidden-fruit`, `gambrinus-style-lager`,
+`german-wheat`, `hella-bock-lager`, `kolsch-ii`, `lactobacillus-brevis`, `munich-lager-ii`,
+`north-american-lager`, `pilsner-urquell-h-strain`, `rogue-pacman`, `saison-brett-blend`,
+`staro-prague-lager`, `west-coast-ipa`) : 966 documents `beer_cultures` au lieu de 993. Les 27
+documents de référence `-PC` rejoignent celui de leur souche, et deux documents changent
+d'identifiant, tiré d'une entrée `-PC` placée en tête par `ordreIdentifiant` (`culture-wyeast-2001-urquell-lager` devient
+`…-2001-pilsner-urquell-h-strain`, `culture-wyeast-3209-oud-bruin-ale-blend` devient
+`…-3209-oud-bruin-blend`). 29 identifiants sortent de la préparation, 2 y entrent, 24 documents
+changent ; `ingest/ecrire.mjs --supprimer-absents beer_cultures` (v0.1.80) retire les 29
+anciens.
 
 ## Correspondance DotBeer (fichier 005) → référentiels
 
