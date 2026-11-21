@@ -923,19 +923,19 @@ void main() {
       );
       expect(
         tester.getSemantics(plus),
-        containsSemantics(hasExpandedState: true, isExpanded: false),
+        isSemantics(hasExpandedState: true, isExpanded: false),
       );
       await _plusDeFiltres(tester);
-      expect(tester.getSemantics(plus), containsSemantics(isExpanded: true));
+      expect(tester.getSemantics(plus), isSemantics(isExpanded: true));
 
       final puce = find.ancestor(
         of: find.text(LogsScreen.puce(LogsScreen.gravite, 'Info et plus')),
         matching: find.byType(ActionChip),
       );
-      expect(tester.getSemantics(puce), containsSemantics(isExpanded: false));
+      expect(tester.getSemantics(puce), isSemantics(isExpanded: false));
       await tester.tap(puce);
       await tester.pumpAndSettle();
-      expect(tester.getSemantics(puce), containsSemantics(isExpanded: true));
+      expect(tester.getSemantics(puce), isSemantics(isExpanded: true));
       final choisie = find.ancestor(
         of: find.text('Info et plus').last,
         matching: find.byType(MenuItemButton),
@@ -944,8 +944,8 @@ void main() {
         of: find.text('Erreurs'),
         matching: find.byType(MenuItemButton),
       );
-      expect(tester.getSemantics(choisie), containsSemantics(isSelected: true));
-      expect(tester.getSemantics(autre), containsSemantics(isSelected: false));
+      expect(tester.getSemantics(choisie), isSemantics(isSelected: true));
+      expect(tester.getSemantics(autre), isSemantics(isSelected: false));
       semantics.dispose();
     });
 
