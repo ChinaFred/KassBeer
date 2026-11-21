@@ -739,6 +739,15 @@ première ligne, résumé, texte copié), `data/error_reports_repository.dart`
   `HttpsError` (`EchecJournaux.motif`), et efface la panne affichée. « Texte coupé à N
   caractères. » s'affiche sous « Message » d'après `messageTruncated` et sous « Données »
   d'après `payloadTruncated`, N lu dans `maxChars` de la réponse.
+- Disposition (ticket #95) : « Gravité » et « Période » sont des `_PuceMenu` (`MenuAnchor` et
+  `ActionChip`), sans `BoutonsSegmentes`. Sur téléphone, `_plusDeFiltres` (faux à l'ouverture,
+  vrai après un refus de champ) affiche « Fonction », « Ticket » et « Texte à chercher » ; le
+  compte de « Plus de filtres (N) » se dérive de `FiltresJournaux` à l'affichage. Une entrée
+  est une `ExpansionTile` dans un `Card.outlined` ; la gravité est une `Etiquette`
+  (`TonEtiquette.erreur`, `tertiaire`, `primaire`, `neutre`). Au-delà de `kGrandTexteMinScale`,
+  la date et la fonction passent sous l'étiquette. Un texte en chasse fixe est un
+  `SelectableText` dans un `SingleChildScrollView` horizontal, sur `surfaceContainerHighest`.
+  La largeur reste celle de la coquille (`kContentMaxWidth`).
 - Erreurs : `EchecJournaux.depuis(code, details, message)` — `resource-exhausted` (quota),
   `failed-precondition` avec `reason` `iam` ou `emulator`, `permission-denied` et
   `unauthenticated`, `invalid-argument` sur `ticketId` ou `freeText` (sous le champ), sur
