@@ -9,6 +9,7 @@ import '../../brew_day/domain/plan_du_jour.dart';
 import '../../processes/presentation/libelles_processus.dart';
 import '../domain/brew.dart';
 import '../domain/deroule.dart';
+import 'choix_processus.dart';
 import 'libelles_deroule.dart';
 
 /// Section « Déroulé » de la fiche d'un brassin (ADR-010, lot D3) : processus
@@ -21,7 +22,16 @@ abstract final class TextesDeroule {
       'Modèle supprimé depuis ; ce brassin garde son déroulé.';
   static const fige = 'Le déroulé est figé depuis le début du brassage.';
   static const changerProcessus = 'Changer de processus';
+
+  /// Brassin prévu sans processus (ticket #61), avec ou sans chronologie de
+  /// recette.
+  static const sansProcessus =
+      'Aucun processus choisi : le déroulé se limite à la chronologie de la '
+      'recette.';
   static const choisirAutre = 'Choisissez un autre processus.';
+
+  /// Feuille ouverte sur un brassin prévu sans processus (ticket #61).
+  static const choisirUn = 'Choisissez un processus.';
   static const changerDate = 'Changer la date';
   static const retablirDate = 'Rétablir la date du processus';
   static const change = 'Déroulé changé.';
@@ -45,6 +55,14 @@ abstract final class TextesDeroule {
       'Journée « $journee » passée sur l\'appareil. Elle partira au retour du '
       'réseau.';
 }
+
+/// Vrai pour un brassin prévu, pas commencé, sans processus et lisible : la
+/// fiche dit qu'aucun processus n'est choisi, et propose d'en choisir un à son
+/// propriétaire (ticket #61). Un brassin commencé garde son affichage.
+bool sansProcessusPrevu(Brew brew) =>
+    brew.derouleModifiable &&
+    !brew.deroule.resolu &&
+    brew.deroule.probleme == null;
 
 /// Résumé d'une journée terminée : « Terminée · 3 faites, 1 sautée », ou
 /// « Terminée » seul quand [plan] manque ou que la journée n'a pas d'étape. Une
@@ -159,13 +177,14 @@ class SectionDeroule extends StatelessWidget {
     final deroule = brew.deroule;
     final depart = brew.departDeroule;
     final changer = onChangerProcessus;
+    final sansProcessus = sansProcessusPrevu(brew);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (deroule.probleme == null)
           Text(libelleProcessus(deroule), style: theme.textTheme.bodyLarge),
         if (modeleSupprime) Text(TextesDeroule.modeleSupprime, style: muted),
-        if (changer != null)
+        if (changer != null && !sansProcessus)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Align(
@@ -204,6 +223,20 @@ class SectionDeroule extends StatelessWidget {
                 ),
               ),
               ?LigneDureeJournee.ou(dureesJournee?.call(j)),
+              if (sansProcessus) ...[
+                Text(TextesDeroule.sansProcessus, style: muted),
+                if (changer != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: BoutonProcessus(
+                      label: TextesChoixProcessus.choisir,
+                      icon: Icons.list_alt,
+                      onPressed: changer,
+                    ),
+                  ),
+                // Écart aussi au-dessus de « Chargement des saisies ».
+                const SizedBox(height: 8),
+              ],
               ?courbeBrassage,
               chronologieBrassage,
             ] else

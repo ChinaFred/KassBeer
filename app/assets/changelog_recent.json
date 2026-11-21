@@ -1,45 +1,46 @@
 {
   "versions": [
     {
-      "version": "0.1.67",
-      "date": "2026-11-15",
+      "version": "0.1.78",
+      "date": "2026-11-19",
       "paragraphs": [
-        "Sur l'écran du jour de brassage, le bouton « Étape suivante » termine l'étape en cours et commence la suivante en un seul appui. Il fallait auparavant deux appuis : « Terminer l'étape », puis « Commencer l'étape ». Avant une étape sans durée (un ajout, par exemple), le bouton reste « Terminer l'étape » : l'ajout se confirme ensuite par « Fait ». Après l'appui, un message « Étape « Ébullition » commencée. » s'affiche dix secondes avec « Annuler » : un appui de trop se corrige en un geste. Avec TalkBack, le message reste ouvert jusqu'à son action, comme celui qui annule un début ou une fin d'étape."
+        "« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage) autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un processus », ou « Créer un processus » si vous n'en avez aucun : ce bouton ouvre « Mes processus », où le modèle d'exemple et le plan de brassage des fiches sont prêts à copier. Une recette sans chronologie affiche « sans processus, le brassin n'aura aucune étape ».",
+        "Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son propriétaire. Demandé par le ticket #61."
       ]
     },
     {
-      "version": "0.1.66",
+      "version": "0.1.76",
       "date": "2026-11-15",
       "paragraphs": [
-        "Sur l'écran du jour de brassage, l'heure de fin s'écrit « Fin du brassage prévue vers 16:05 ». Elle ne se confond plus avec la fin de l'étape en cours. Sur une autre journée, comme le houblonnage à cru, elle s'écrit « Fin de la journée prévue vers… »."
+        "Les variantes « + » des levures Omega s'écrivent maintenant « Plus » : « Kolsch II Plus », « Bayern Lager Plus », « Point Loma Plus »… Elles ne se confondent plus avec la levure d'origine. Une recette importée qui nomme « Kolsch II » retrouve à nouveau sa levure. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     },
     {
-      "version": "0.1.65",
+      "version": "0.1.75",
       "date": "2026-11-15",
       "paragraphs": [
-        "Le formulaire « Inviter un membre » rappelle qu'une adresse invitée doit aussi être ajoutée aux utilisateurs test du projet dans la console Google, faute de quoi Google refuse la connexion. Un bouton copie l'adresse saisie et ouvre directement la bonne page de la console : il reste à la coller. Google ne permet pas d'ajouter cette adresse automatiquement."
+        "La Bibliothèque reprend les fiches de 77 cultures de Wyeast : levures d'ale, de lager et de bière de blé, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour 74 cultures déjà connues, et 3 cultures apparaissent. Les cultures de vin, de cidre, d'hydromel et de saké ne sont pas reprises. L'écran « Sources des données » nomme Wyeast. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     },
     {
-      "version": "0.1.62",
+      "version": "0.1.74",
       "date": "2026-11-15",
       "paragraphs": [
-        "La Bibliothèque connaîtra toute la gamme de levures Fermentis pour le brassage, une fois le référentiel relu et réécrit par l'administrateur : 23 levures et 2 bactéries, dont neuf absentes jusqu'ici (SafLager E-30 et SH-45, SafAle BW-20 et W-68, SafBrew BR-8, DW-17, LD-20 et LA-02, SafSour LB 1). Leurs atténuations et températures sont celles des fiches du fabricant. « Sources des données » nomme cette nouvelle source."
+        "La Bibliothèque reprend les fiches de 162 cultures de White Labs et de sa gamme The Yeast Bay : levures d'ale et de lager, levures de bière de blé, kveiks, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour les 123 cultures déjà connues. 39 cultures absentes jusqu'ici apparaissent. Les levures de vin, de cidre et de distillerie ne sont pas reprises. L'écran « Sources des données » nomme White Labs et The Yeast Bay. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     },
     {
-      "version": "0.1.61",
+      "version": "0.1.73",
       "date": "2026-11-15",
       "paragraphs": [
-        "La Bibliothèque des houblons est plus propre. Un même houblon n'apparaît plus plusieurs fois sous des noms voisins : « Saaz (CZ) » et « Saaz (Czech Republic) », par exemple, ne font plus qu'un. « Saaz » désigne le Saaz tchèque, et le Saaz cultivé aux États-Unis s'appelle « Saaz (US) ». Les pays d'origine des houblons et des malts s'écrivent d'une seule façon. Une recette qui cite « Hallertau », « Tettnanger », « CTZ » ou « Denali » retrouve le bon houblon. Ces corrections arrivent dans l'application après la prochaine mise à jour de la Bibliothèque par l'administrateur."
+        "La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures sèches (Pinnacle, Dried Lutra), Brettanomyces, kveiks et deux bactéries qui acidifient la bière. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour les 75 cultures déjà connues. 29 cultures absentes jusqu'ici apparaissent, dont les variantes « + » et les levures sèches. L'écran « Sources des données » nomme Omega Yeast et la date du relevé. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     },
     {
-      "version": "0.1.60",
+      "version": "0.1.72",
       "date": "2026-11-15",
       "paragraphs": [
-        "La teinte indicative s'affiche aussi devant la couleur d'un malt dans la Bibliothèque, et devant la couleur calculée d'une recette. La page des teintes s'appelle désormais « Échelle des couleurs », comme le lien qui l'ouvre. En thème sombre, les teintes foncées ont une bordure plus visible. Demandé par le ticket #48."
+        "Vous pouvez choisir votre instrument de mesure de la densité : densimètre flottant étalonné à 20 °C ou à 15,6 °C, réfractomètre, densimètre électronique, ou autre instrument sans correction. Le choix se fait par la ligne « Densimètre » de « Préparer le brassage » et de « Préparer la journée », ou depuis le formulaire d'une densité. Avec un densimètre flottant, vous saisissez aussi la température de l'échantillon : l'application propose la densité corrigée (1050,0 lue à 68 °C donne 1070,7), approchée au-delà de 40 °C, impossible au-delà de 75 °C. Avec un réfractomètre, vous saisissez des °Brix et le facteur de votre appareil ; après le début de la fermentation, la lecture est corrigée de l'alcool à partir de la densité initiale. La case « Corriger » permet de garder la lecture telle quelle. La lecture d'origine est toujours gardée, et la valeur retenue sert partout : relevé, courbes, « Prévu et mesuré », degré et rendement. Les mesures déjà enregistrées ne changent pas. Installez cette mise à jour avant d'utiliser le réfractomètre : une ancienne version de l'application ne peut pas afficher « Prévu et mesuré » d'un brassin mesuré au réfractomètre."
       ]
     }
   ]

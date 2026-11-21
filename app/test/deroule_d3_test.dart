@@ -18,6 +18,7 @@ import 'package:kass_beer/features/brews/presentation/section_deroule.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/processes/domain/modele_exemple.dart';
 import 'package:kass_beer/features/processes/domain/modele_processus.dart';
+import 'package:kass_beer/features/processes/presentation/process_list_screen.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
 
@@ -348,12 +349,13 @@ void main() {
     Future<TestApp> ouvrir(
       WidgetTester tester, {
       bool offline = false,
+      Recipe? recipe,
       void Function(TestApp app)? before,
     }) async {
       final app = TestApp();
       await app.pump(tester);
       app.signIn(brewerUser, member: brewerMember, fromCache: offline);
-      app.recipes.publish([recette]);
+      app.recipes.publish([recipe ?? recette]);
       app.equipment.publish([equipment]);
       before?.call(app);
       await tester.pumpAndSettle();
@@ -410,17 +412,232 @@ void main() {
       expect(find.text(FormulaireNouveauBrassin.created), findsOneWidget);
     });
 
-    testWidgets('sans préférence : chronologie seule, une écriture', (
-      tester,
-    ) async {
+    ModeleProcessus autre() => ModeleProcessus(
+      id: 'p2',
+      ownerUid: 'uid-brasseur',
+      content: ContenuModele(
+        name: 'Autre',
+        journees: modeleExemple(cles('p2')).journees,
+      ),
+    );
+
+    final recetteVide = Recipe(
+      id: 'r1',
+      ownerUid: 'uid-brasseur',
+      content: const RecipeContent(
+        name: 'Blonde',
+        equipmentId: 'e1',
+        hops: [cascade],
+      ),
+    );
+
+    testWidgets('plusieurs processus sans préférence : chronologie seule, '
+        'une écriture', (tester) async {
+      final app = await ouvrir(
+        tester,
+        before: (app) => app.processes.publish([exemple(), autre()]),
+      );
+      expect(find.text(kChronologieSeule), findsOneWidget);
+      expect(find.textContaining('Chronologie : 2 étapes ·'), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.ajouteVosEtapes), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.choisir), findsOneWidget);
+      // La recette a des étapes : pas d'avertissement de recette vide.
+      expect(
+        find.text(TextesChoixProcessus.recetteSansChronologie),
+        findsNothing,
+      );
+      await creer(tester);
+      expect(app.brews.writes.single.kind, 'create');
+    });
+
+    testWidgets('un seul processus sans préférence : présélectionné, '
+        'déroulé complet', (tester) async {
       final app = await ouvrir(
         tester,
         before: (app) => app.processes.publish([exemple()]),
       );
-      expect(find.text(kChronologieSeule), findsOneWidget);
-      expect(find.textContaining('Chronologie : 2 étapes ·'), findsOneWidget);
+      expect(find.text(kNomModeleExemple), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.ajouteVosEtapes), findsNothing);
+      expect(
+        find.text('Houblonnage à cru · jeu. 12 nov. (J+4) · 4 étapes'),
+        findsOneWidget,
+      );
       await creer(tester);
-      expect(app.brews.writes.single.kind, 'create');
+      expect(app.brews.writes.map((w) => w.kind), ['create', 'process']);
+      final deroule = app.brews.writes[1].detail['deroule']! as Deroule;
+      final noms = [for (final l in deroule.brassage!.lignes) l.name];
+      expect(noms, contains('Mouture du grain'));
+      expect(noms, contains('Palier 68'));
+      expect(noms, contains('Nettoyage du matériel'));
+      expect(deroule.journees[1].name, 'Houblonnage à cru');
+    });
+
+    testWidgets('un seul processus, « Proposer par défaut » coupé : '
+        'chronologie seule', (tester) async {
+      await ouvrir(
+        tester,
+        before: (app) {
+          app.processes.publish([exemple()]);
+          app.preferencesProcessus.publishDefault('uid-brasseur', null);
+        },
+      );
+      expect(find.text(kChronologieSeule), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.ajouteVosEtapes), findsOneWidget);
+    });
+
+    testWidgets('un seul processus, défaut supprimé : chronologie seule et '
+        'message de suppression', (tester) async {
+      await ouvrir(
+        tester,
+        before: (app) {
+          app.processes.publish([exemple()]);
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'disparu');
+        },
+      );
+      expect(find.text(kChronologieSeule), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.defautSupprime), findsOneWidget);
+    });
+
+    testWidgets('un seul processus, recette vide : paliers et ébullition '
+        'préremplis', (tester) async {
+      final app = await ouvrir(
+        tester,
+        recipe: Recipe(
+          id: 'r1',
+          ownerUid: 'uid-brasseur',
+          content: const RecipeContent(
+            name: 'Blonde',
+            equipmentId: 'e1',
+            boilTimeMin: 60,
+            mashSteps: [MashStep(name: 'Empâtage', tempC: 67, durationMin: 60)],
+            hops: [
+              HopLine(
+                name: 'Magnum',
+                amount: Quantite.grammes(20),
+                use: HopUse.boil,
+                form: 'pellet',
+                timeMin: 60,
+              ),
+              HopLine(
+                name: 'Saaz',
+                amount: Quantite.grammes(20),
+                use: HopUse.boil,
+                form: 'pellet',
+                timeMin: 10,
+              ),
+              cascade,
+            ],
+          ),
+        ),
+        before: (app) => app.processes.publish([exemple()]),
+      );
+      expect(find.text(kNomModeleExemple), findsOneWidget);
+      await creer(tester);
+      final deroule = app.brews.writes[1].detail['deroule']! as Deroule;
+      final noms = [for (final l in deroule.brassage!.lignes) l.name];
+      expect(
+        noms,
+        containsAllInOrder([
+          'Mouture du grain',
+          'Empâtage',
+          'Nettoyage du matériel',
+        ]),
+      );
+      // Ébullition coupée à l'ajout de 10 min : deux étapes au moins.
+      expect(
+        noms.where((n) => n.startsWith('Ébullition')).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(deroule.journees[1].name, 'Houblonnage à cru');
+    });
+
+    testWidgets('recette vide, chronologie seule : avertissement ; '
+        '« Choisir un processus » applique le choix', (tester) async {
+      await ouvrir(
+        tester,
+        recipe: recetteVide,
+        before: (app) => app.processes.publish([exemple(), autre()]),
+      );
+      expect(
+        find.text(TextesChoixProcessus.recetteSansChronologie),
+        findsOneWidget,
+      );
+      expect(find.text(TextesChoixProcessus.ajouteVosEtapes), findsOneWidget);
+      await tester.ensureVisible(find.text(TextesChoixProcessus.choisir));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(TextesChoixProcessus.choisir));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Autre').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Autre'), findsOneWidget);
+      expect(
+        find.text(TextesChoixProcessus.recetteSansChronologie),
+        findsNothing,
+      );
+      expect(find.text(TextesChoixProcessus.choisir), findsNothing);
+    });
+
+    testWidgets('aucun processus : texte et « Créer un processus »', (
+      tester,
+    ) async {
+      final app = await ouvrir(
+        tester,
+        recipe: recetteVide,
+        before: (app) => app.processes.publish(const []),
+      );
+      expect(
+        find.text(TextesChoixProcessus.recetteSansChronologie),
+        findsOneWidget,
+      );
+      expect(find.text(TextesChoixProcessus.ajouteVosEtapes), findsOneWidget);
+      // Un seul « Créer un processus », sous la chronologie seule.
+      expect(find.text(TextesChoixProcessus.creer), findsOneWidget);
+      // « Gérer mes processus » reste sous le champ « Processus ».
+      expect(find.text('Gérer mes processus'), findsOneWidget);
+      final creerProcessus = find.widgetWithText(
+        OutlinedButton,
+        TextesChoixProcessus.creer,
+      );
+      await tester.ensureVisible(creerProcessus);
+      await tester.pumpAndSettle();
+      await tester.tap(creerProcessus);
+      await tester.pumpAndSettle();
+      // Aucun modèle n'est écrit à la place du brasseur (P37).
+      expect(app.processes.writes, isEmpty);
+      // « Mes processus » s'ouvre, avec ses modèles à copier.
+      expect(find.byType(ProcessListScreen), findsOneWidget);
+    });
+
+    testWidgets('préférence parmi plusieurs processus : gardée', (
+      tester,
+    ) async {
+      await ouvrir(
+        tester,
+        before: (app) {
+          app.processes.publish([exemple(), autre()]);
+          app.preferencesProcessus.publishDefault('uid-brasseur', 'p2');
+        },
+      );
+      expect(find.text('Autre'), findsOneWidget);
+      expect(find.text(kNomModeleExemple), findsNothing);
+    });
+
+    testWidgets('hors ligne sans processus en cache : aucune présélection', (
+      tester,
+    ) async {
+      await ouvrir(
+        tester,
+        recipe: recetteVide,
+        offline: true,
+        before: (app) => app.processes.publish(const [], fromCache: true),
+      );
+      expect(find.text(kChronologieSeule), findsOneWidget);
+      expect(
+        find.text(TextesChoixProcessus.recetteSansChronologie),
+        findsOneWidget,
+      );
+      expect(find.text(TextesChoixProcessus.choisir), findsNothing);
+      expect(find.text(TextesChoixProcessus.creer), findsNothing);
     });
 
     testWidgets('lecteur d\'écran : lignes lisibles, synthèse en région live', (
@@ -461,17 +678,7 @@ void main() {
       await ouvrir(
         tester,
         before: (app) {
-          app.processes.publish([
-            exemple(),
-            ModeleProcessus(
-              id: 'p2',
-              ownerUid: 'uid-brasseur',
-              content: ContenuModele(
-                name: 'Autre',
-                journees: modeleExemple(cles('p2')).journees,
-              ),
-            ),
-          ]);
+          app.processes.publish([exemple(), autre()]);
           app.preferencesProcessus.publishDefault('uid-brasseur', 'p1');
         },
       );
@@ -495,7 +702,8 @@ void main() {
         },
       );
       expect(find.text(TextesChoixProcessus.aucun), findsOneWidget);
-      expect(find.text('Créer un processus'), findsOneWidget);
+      // Sous « Chronologie de la recette seule » seulement.
+      expect(find.text(TextesChoixProcessus.creer), findsOneWidget);
       expect(find.text(TextesChoixProcessus.defautSupprime), findsOneWidget);
     });
 
@@ -717,8 +925,85 @@ void main() {
     ) async {
       await fiche(tester, unBrassin(status: BrewStatus.planned));
       await voir(tester, find.text(kChronologieSeule));
+      await voir(tester, find.text(TextesDeroule.sansProcessus));
       expect(find.text('Palier 68'), findsWidgets);
-      expect(find.text(TextesDeroule.changerProcessus), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.choisir), findsOneWidget);
+      expect(find.text(TextesDeroule.changerProcessus), findsNothing);
+    });
+
+    testWidgets('prévu sans process, recette vide : texte et « Choisir un '
+        'processus », puis les étapes du processus', (tester) async {
+      final app = await fiche(
+        tester,
+        unBrassin(
+          status: BrewStatus.planned,
+          recipe: const RecipeContent(name: 'Blonde', hops: [cascade]),
+        ),
+      );
+      await voir(tester, find.text(TextesDeroule.sansProcessus));
+      expect(find.text('Aucune étape.'), findsNothing);
+      await voir(tester, find.text(TextesChoixProcessus.choisir));
+      await tester.tap(find.text(TextesChoixProcessus.choisir));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(kChronologieSeule).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(kNomModeleExemple).last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Appliquer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Appliquer'));
+      await tester.pumpAndSettle();
+      final ecrit = app.brews.writes.single.detail['deroule']! as Deroule;
+      // Recette vide : paliers et ébullition préremplis par l'assemblage.
+      expect(
+        ecrit.brassage!.lignes.map((l) => l.name),
+        contains('Mouture du grain'),
+      );
+      app.brews.publish([
+        unBrassin(
+          status: BrewStatus.planned,
+          recipe: const RecipeContent(name: 'Blonde', hops: [cascade]),
+          process: ecrit,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.text(TextesDeroule.sansProcessus), findsNothing);
+      await voir(tester, find.text('Mouture du grain'));
+    });
+
+    testWidgets('prévu sans process d\'un autre membre : texte sans bouton', (
+      tester,
+    ) async {
+      await fiche(
+        tester,
+        unBrassin(
+          owner: 'uid-zoe',
+          status: BrewStatus.planned,
+          recipe: const RecipeContent(name: 'Blonde'),
+        ),
+      );
+      await voir(tester, find.text(TextesDeroule.sansProcessus));
+      expect(find.text(TextesChoixProcessus.choisir), findsNothing);
+      expect(find.text(TextesDeroule.changerProcessus), findsNothing);
+    });
+
+    testWidgets('commencé sans process, recette vide : affichage inchangé', (
+      tester,
+    ) async {
+      await fiche(
+        tester,
+        unBrassin(
+          status: BrewStatus.fermenting,
+          brewedAt: DateTime(2026, 11, 4, 9),
+          recipe: const RecipeContent(name: 'Blonde'),
+        ),
+      );
+      await voir(tester, find.text(TextesDeroule.titre));
+      await tester.tap(find.text(TextesDeroule.titre));
+      await tester.pumpAndSettle();
+      await voir(tester, find.text('Aucune étape.'));
+      expect(find.text(TextesDeroule.sansProcessus), findsNothing);
+      expect(find.text(TextesChoixProcessus.choisir), findsNothing);
     });
 
     testWidgets('déroulé illisible : panne affichée, rapportée par le dépôt', (
@@ -801,9 +1086,14 @@ void main() {
         tester,
         unBrassin(status: BrewStatus.planned, recipe: recetteAvecCru),
       );
-      await voir(tester, find.text(TextesDeroule.changerProcessus));
-      await tester.tap(find.text(TextesDeroule.changerProcessus));
+      // Sans processus, l'action s'appelle « Choisir un processus ».
+      await voir(tester, find.text(TextesChoixProcessus.choisir));
+      await tester.tap(find.text(TextesChoixProcessus.choisir));
       await tester.pumpAndSettle();
+      // Feuille titrée « Choisir un processus », sans « un autre » (#61).
+      expect(find.text(TextesDeroule.changerProcessus), findsNothing);
+      expect(find.text(TextesDeroule.choisirUn), findsOneWidget);
+      expect(find.text(TextesDeroule.choisirAutre), findsNothing);
       await tester.tap(find.text(kChronologieSeule).last);
       await tester.pumpAndSettle();
       await tester.tap(find.text(kNomModeleExemple).last);
@@ -823,15 +1113,38 @@ void main() {
     Future<void> ouvrirFeuille(
       WidgetTester tester, {
       bool settle = true,
+      bool sansProcessus = false,
     }) async {
-      await voir(tester, find.text(TextesDeroule.changerProcessus));
-      await tester.tap(find.text(TextesDeroule.changerProcessus));
+      final bouton = find.text(
+        sansProcessus
+            ? TextesChoixProcessus.choisir
+            : TextesDeroule.changerProcessus,
+      );
+      await voir(tester, bouton);
+      await tester.tap(bouton);
       if (settle) {
         await tester.pumpAndSettle();
       } else {
         await tester.pump(const Duration(milliseconds: 500));
       }
     }
+
+    testWidgets('aucun processus : « Créer un processus » seul, sans '
+        '« Gérer mes processus »', (tester) async {
+      await fiche(
+        tester,
+        unBrassin(
+          status: BrewStatus.planned,
+          recipe: recetteAvecCru,
+          process: derouleExemple(),
+        ),
+        modeles: const [],
+      );
+      await ouvrirFeuille(tester);
+      expect(find.text(TextesChoixProcessus.aucun), findsOneWidget);
+      expect(find.text(TextesChoixProcessus.creer), findsOneWidget);
+      expect(find.text('Gérer mes processus'), findsNothing);
+    });
 
     testWidgets('modèle supprimé : « (actuel) » présélectionné, rien effacé', (
       tester,
@@ -923,7 +1236,7 @@ void main() {
         offline: true,
         cache: true,
       );
-      await ouvrirFeuille(tester);
+      await ouvrirFeuille(tester, sansProcessus: true);
       expect(find.text(TextesChoixProcessus.horsLigneFiche), findsOneWidget);
       expect(find.text(TextesChoixProcessus.horsLigne), findsNothing);
     });
@@ -938,7 +1251,7 @@ void main() {
       );
       app.preferencesProcessus.publishDefault('uid-brasseur', 'supprime');
       await tester.pumpAndSettle();
-      await ouvrirFeuille(tester);
+      await ouvrirFeuille(tester, sansProcessus: true);
       expect(find.text(TextesChoixProcessus.aucun), findsOneWidget);
       expect(find.text(TextesChoixProcessus.defautSupprime), findsNothing);
     });
