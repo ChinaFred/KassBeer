@@ -372,6 +372,30 @@ describe(
       assert.equal(await existe("beer_hop_aromas/hop-orphelin"), false);
       assert.equal(await existe("beer_hop_aromas/hop-houblon-fictif"), true, "écrit");
     });
+
+    it("beer_cultures : simulation, puis ancien nom supprimé (amendement du 2026-11-15)", async () => {
+      await viderEmulateur();
+      // Préparation de la fixture : 1 culture ; en ligne : un ancien nom seul (1 pour 1).
+      await semer("beer_cultures", ["culture-labo-fictif-lf1-levure-ancienne"]);
+      const simulation = await lancer(["--supprimer-absents", "beer_cultures", "--simulation"]);
+      assert.deepEqual(simulation.deletions.candidates, [
+        "culture-labo-fictif-lf1-levure-ancienne",
+      ]);
+      assert.deepEqual(simulation.deletions.deleted, []);
+      assert.equal(await existe("beer_cultures/culture-labo-fictif-lf1-levure-ancienne"), true);
+      let demande = null;
+      const r = await lancer(["--supprimer-absents", "beer_cultures"], async (collection, ids) => {
+        demande = { collection, ids };
+        return true;
+      });
+      assert.deepEqual(demande, {
+        collection: "beer_cultures",
+        ids: ["culture-labo-fictif-lf1-levure-ancienne"],
+      });
+      assert.deepEqual(r.deletions.deleted, ["culture-labo-fictif-lf1-levure-ancienne"]);
+      assert.equal(await existe("beer_cultures/culture-labo-fictif-lf1-levure-ancienne"), false);
+      assert.equal(await existe("beer_cultures/culture-labo-fictif-lf1-levure-fictive"), true);
+    });
   },
 );
 

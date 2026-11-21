@@ -10,8 +10,8 @@
 //     node ecrire.mjs --production --projet kassbeer
 //   Compter sans écrire : --simulation.
 //   Supprimer les documents absents de la préparation (ADR-014) : --supprimer-absents
-//   beer_hops ou beer_hop_aromas, 30 au plus, confirmation par la saisie de leur nombre ;
-//   avec --simulation, la liste seule.
+//   beer_hops, beer_hop_aromas ou beer_cultures, 30 au plus, confirmation par la saisie de
+//   leur nombre ; avec --simulation, la liste seule.
 //
 // Codes de sortie : 0 tout écrit ; 1 échec (dont une suppression en erreur) ; 2 utilisation
 // refusée ; 3 documents refusés par le contrôle (les autres sont écrits, la liste est dans

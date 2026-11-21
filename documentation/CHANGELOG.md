@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.80 — fonctionnel
+### v0.1.81 — fonctionnel
 
 L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec
 une intelligence artificielle, qui analyse la recette en cours ou propose des améliorations.
@@ -17,7 +17,7 @@ mois. Une conversation trop longue peut être résumée pour continuer. Dans Adm
 nouveaux règlent l'IA (modèle, tarifs, plafonds, ouverture aux membres) et suivent ses coûts
 par personne. L'assistant ne marche qu'une fois ses réglages enregistrés.
 
-### v0.1.80 — technique
+### v0.1.81 — technique
 
 Lot A1 d'ADR-015 et ADR-016. Serveur : socle `functions/src/ai/` (client Claude par `fetch`,
 postes, politique et grille dans `ai_config/`, réservation des tours en transaction dans
@@ -36,6 +36,20 @@ change dans `pubspec.yaml`. Taille de `main.dart.js` : 5 801 939 octets avant, 5
 Avant la mise en service : créer `ANTHROPIC_API_KEY` dans Secret Manager, donner à
 `github-deploy` l'accès à ce secret, puis enregistrer la grille et la politique dans Admin ›
 Moteur d'IA.
+
+### v0.1.80 — technique
+
+`ingest/ecrire.mjs --supprimer-absents` accepte aussi `beer_cultures` (ADR-014, amendement du
+2026-11-15, décision de l'utilisateur). Des fiches de fabricants renommées laissaient
+d'anciens documents `culture-…` en ligne : les douze variantes Omega en « + » s'écrivent
+« Plus » (« Kolsch II+ » devient « Kolsch II Plus »), et des entrées Wyeast changent aussi. Les garde-fous sont ceux de
+`beer_hops` : simulation, liste avant confirmation, 30 suppressions au plus, refus sous 90 %
+des documents en ligne, saisie du nombre, motif `culture-…`, une collection par lancement.
+`COLLECTIONS_SUPPRIMABLES` (`ingest/lib/options.mjs`) gagne `beer_cultures` ; tests unitaires
+(acceptation, plafond, seuil, `beer_styles` et `beer_miscs` refusées) et test sous
+l'émulateur (simulation puis suppression d'un ancien identifiant).
+`CLAUDE.md` : P19 et « Commandes utiles » nomment `beer_cultures` parmi les collections
+permises ; `guide-reseau.md` à jour.
 
 ### v0.1.79 — fonctionnel
 

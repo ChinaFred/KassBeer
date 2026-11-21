@@ -240,6 +240,10 @@ table de fusion et liste des pays de `exchange/lib/src/ingestion/`). Aucun agent
 Livraison (v0.1.61) : « Commandes utiles » de `CLAUDE.md` reçoit la commande
 `ecrire.mjs --supprimer-absents`.
 
+Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
+`beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
+garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.
+
 Le 2026-11-15 (v0.1.79), décision de l'utilisateur : P56 précise la règle des noms pour la
 nature `culture` : aucun nom normalisé créé par une fiche de fabricant ou par une ligne de la
 table de fusion ne désigne deux documents d'un même producteur ; les doublons de ce type hérités
