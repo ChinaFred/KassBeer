@@ -3,7 +3,7 @@
 name: kass_beer
 description: "Kass'Beer — recettes et brassins de bière amateur."
 publish_to: "none"
-version: 0.1.82+83
+version: 0.1.83+84
 
 environment:
   sdk: ^3.11.4
@@ -85,8 +85,9 @@ dependencies:
 
   # Analyses des tickets en Markdown (ADR-008, lot T3, P33). Version exacte : le
   # rendu ne change qu'avec une montée relue. Importés par le seul fichier
-  # section_analyses.dart : aucune image chargée, liens http et https seuls, aucun
-  # HTML rendu.
+  # core/presentation/corps_markdown.dart (analyses des tickets, réponses de
+  # l'assistant de recette) : aucune image chargée, liens http et https seuls,
+  # aucun HTML rendu.
   flutter_markdown_plus: 1.0.7
   markdown: 7.3.1
 

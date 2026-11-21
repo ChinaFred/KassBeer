@@ -45,6 +45,7 @@ import 'package:kass_beer/features/members/presentation/members_providers.dart';
 import 'package:kass_beer/features/recipes/data/recipes_repository.dart';
 import 'package:kass_beer/features/recipes/domain/chronologie.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
+import 'package:kass_beer/features/recipes/presentation/assistant_controleur.dart';
 import 'package:kass_beer/features/recipes/presentation/recipes_providers.dart';
 import 'package:kass_beer/core/services/screen_wakelock.dart';
 import 'package:kass_beer/features/tickets/data/tickets_repository.dart';
@@ -56,6 +57,7 @@ import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
 import 'package:kass_beer/features/tickets/presentation/capture_ticket.dart';
 import 'package:kass_beer/features/tickets/presentation/tickets_providers.dart';
 
+import 'ai_fakes.dart';
 import 'cost_fakes.dart';
 import 'process_fakes.dart';
 
@@ -1491,6 +1493,8 @@ class TestApp {
        sources = FakeSourcesRepository(),
        errorReports = FakeErrorReportsRepository(),
        logs = FakeLogsRepository(),
+       ai = FakeAiRepository(),
+       assistant = FakeAssistantRepository(),
        processes = FakeProcessesRepository(),
        preferencesProcessus = FakePreferencesProcessusRepository(),
        preferenceMesure = FakePreferenceMesureRepository(),
@@ -1519,6 +1523,8 @@ class TestApp {
         sourcesRepositoryProvider.overrideWithValue(sources),
         errorReportsRepositoryProvider.overrideWithValue(errorReports),
         logsRepositoryProvider.overrideWithValue(logs),
+        aiRepositoryProvider.overrideWithValue(ai),
+        assistantRepositoryProvider.overrideWithValue(assistant),
         importFichesRepositoryProvider.overrideWithValue(
           FirestoreImportFichesRepository(firestore: importFirestore),
         ),
@@ -1581,6 +1587,10 @@ class TestApp {
   final FakeSourcesRepository sources;
   final FakeErrorReportsRepository errorReports;
   final FakeLogsRepository logs;
+
+  /// Réglages et comptes de l'IA, et callable de l'assistant (ADR-015, 016).
+  final FakeAiRepository ai;
+  final FakeAssistantRepository assistant;
   final FakeProcessesRepository processes;
   final FakePreferencesProcessusRepository preferencesProcessus;
 

@@ -13,8 +13,10 @@ import 'menu_compte.dart';
 import 'zone_capture.dart';
 
 /// Largeur de la barre du haut hors bouton d'action : ✕ (56), marge du bouton
-/// (8), menu du compte (48) et sa marge (8).
+/// (8), menu du compte (48) et sa marge (8). Chaque action de
+/// [EditeurPleinEcran.actionsAvant] ajoute 48.
 const double _largeurHorsAction = 56 + 8 + 48 + 8;
+const double _largeurActionAvant = 48;
 
 /// Cadre d'un éditeur plein écran, hors de la coquille : ✕ « Fermer », titre,
 /// « Enregistrer » (ou [libelleAction]), menu du compte, bandeau hors ligne.
@@ -36,6 +38,8 @@ class EditeurPleinEcran extends ConsumerWidget {
     this.libelleEnCours = 'Enregistrement',
     this.fermerParRetour = false,
     this.actionActive = true,
+    this.actionsAvant = const [],
+    this.confirmerDepart,
   });
 
   final String titre;
@@ -72,11 +76,24 @@ class EditeurPleinEcran extends ConsumerWidget {
   /// préparation en cours, comme le décodage d'une image choisie).
   final bool actionActive;
 
+  /// Icônes placées avant le bouton d'action (« Assistant » de l'éditeur de
+  /// recette), 48 px chacune.
+  final List<Widget> actionsAvant;
+
+  /// Confirmation de départ propre à l'écran (conversation de l'assistant,
+  /// ADR-015) : elle remplace celle de [dirty] ; `false` pour rester.
+  final Future<bool> Function(BuildContext context)? confirmerDepart;
+
+  bool get _departAConfirmer => dirty || confirmerDepart != null;
+
   /// Vrai si rien n'est à perdre, ou si l'utilisateur abandonne.
-  Future<bool> _peutQuitter(BuildContext context) async =>
-      !dirty ||
-      // ticket: aucun (confirmation)
-      await confirmerAbandon(context, abandonMessage);
+  Future<bool> _peutQuitter(BuildContext context) async {
+    final propre = confirmerDepart;
+    if (propre != null) return propre(context);
+    return !dirty ||
+        // ticket: aucun (confirmation)
+        await confirmerAbandon(context, abandonMessage);
+  }
 
   Future<void> _leave(BuildContext context) async {
     if (!await _peutQuitter(context)) return;
@@ -93,7 +110,7 @@ class EditeurPleinEcran extends ConsumerWidget {
     final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
     final save = onSave;
     return PopScope(
-      canPop: !dirty,
+      canPop: !_departAConfirmer,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) unawaited(_leave(context));
       },
@@ -108,6 +125,7 @@ class EditeurPleinEcran extends ConsumerWidget {
           ),
           title: Text(titre),
           actions: [
+            ...actionsAvant,
             if (save != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -118,7 +136,9 @@ class EditeurPleinEcran extends ConsumerWidget {
                   constraints: BoxConstraints(
                     maxWidth: math.max(
                       0,
-                      MediaQuery.sizeOf(context).width - _largeurHorsAction,
+                      MediaQuery.sizeOf(context).width -
+                          _largeurHorsAction -
+                          _largeurActionAvant * actionsAvant.length,
                     ),
                   ),
                   child: FilledButton(
@@ -135,7 +155,9 @@ class EditeurPleinEcran extends ConsumerWidget {
             // Quitter par le menu avec des changements : même confirmation
             // que ✕.
             MenuCompte(
-              avantDeQuitter: dirty ? () => _peutQuitter(context) : null,
+              avantDeQuitter: _departAConfirmer
+                  ? () => _peutQuitter(context)
+                  : null,
             ),
             const SizedBox(width: 8),
           ],

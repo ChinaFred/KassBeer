@@ -682,6 +682,31 @@ class _DetailCalculs extends StatelessWidget {
   }
 }
 
+/// Texte de la barre des calculs, « DI 1057,9 · DF 1012,0 · 5,9 % · 32 IBU ·
+/// 18 EBC », et sa lecture ; repris en tête du panneau de l'assistant.
+({String texte, String lecture}) texteBarreCalculs(CalculsRecette calculs) {
+  switch (calculs) {
+    case CalculsImpossibles(:final field):
+      final text = messageCalculImpossible(field);
+      return (texte: text, lecture: text);
+    case CalculsObtenus(:final calculation):
+      final parts = <String>[];
+      final spoken = <String>[];
+      for (final i in _indicateurs(calculation)) {
+        final r = i.result;
+        if (r is CalculationComputed) {
+          final v = i.format(r.value);
+          parts.add(i.short == 'DI' || i.short == 'DF' ? '${i.short} $v' : v);
+          spoken.add('${i.label} $v');
+        } else {
+          parts.add('${i.short} —');
+          spoken.add('${i.label} indisponible');
+        }
+      }
+      return (texte: parts.join(' · '), lecture: spoken.join(', '));
+  }
+}
+
 /// Barre des calculs de l'éditeur sous 840 px : « DI 1057,9 · DF 1012,0 · 5,9 %
 /// · 32 IBU · 18 EBC ». Un appui ouvre le bloc complet.
 class BarreCalculs extends StatelessWidget {
@@ -693,30 +718,11 @@ class BarreCalculs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final calculs = this.calculs;
-    final String text;
-    final String semantics;
-    switch (calculs) {
-      case CalculsImpossibles(:final field):
-        text = messageCalculImpossible(field);
-        semantics = text;
-      case CalculsObtenus(:final calculation):
-        final parts = <String>[];
-        final spoken = <String>[];
-        for (final i in _indicateurs(calculation)) {
-          final r = i.result;
-          if (r is CalculationComputed) {
-            final v = i.format(r.value);
-            parts.add(i.short == 'DI' || i.short == 'DF' ? '${i.short} $v' : v);
-            spoken.add('${i.label} $v');
-          } else {
-            parts.add('${i.short} —');
-            spoken.add('${i.label} indisponible');
-          }
-        }
-        text = parts.join(' · ');
-        semantics = '${spoken.join(', ')}. Ouvrir le détail des calculs.';
-    }
+    final (:texte, :lecture) = texteBarreCalculs(calculs);
+    final text = texte;
+    final semantics = calculs is CalculsObtenus
+        ? '$lecture. Ouvrir le détail des calculs.'
+        : lecture;
     return Material(
       color: theme.colorScheme.surfaceContainerHigh,
       child: SafeArea(
