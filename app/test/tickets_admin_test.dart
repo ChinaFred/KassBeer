@@ -502,7 +502,11 @@ void main() {
       );
       app.tickets.publishAll(const []);
       await go(tester, app, AppRoutes.admin);
-      expect(find.bySemanticsLabel(RegExp('alerte')), findsNothing);
+      // La pastille de Moteur d'IA (réglages absents du double) est à part.
+      expect(
+        find.bySemanticsLabel(RegExp('^Tickets des membres, .*alerte')),
+        findsNothing,
+      );
       await tester.tap(find.text(AdminTicketsScreen.titre));
       await tester.pumpAndSettle();
       expect(find.text('Le jeton GitHub expire le 11/11/26.'), findsOneWidget);

@@ -1,0 +1,6 @@
+{
+  "_commentaire": "Postes de coût de l'IA (ADR-016, section 3 ; CLAUDE.md, « Coûts variables » et « Logique dupliquée »). Valeurs seules : clé du poste, libellé affiché, ADR qui l'a ouvert. Rejouée par functions/test/ai.test.ts (égalité avec AI_COST_CENTERS de functions/src/ai/costCenters.ts) et, au lot A1 côté client, par app/lib/features/admin/domain/postes_ia.dart. Un poste retiré du code reste dans ce fichier : les mois passés gardent son libellé.",
+  "cost_centers": [
+    { "key": "recipe_assistant_turn", "label": "Assistant de recette", "adr": "ADR-015" }
+  ]
+}

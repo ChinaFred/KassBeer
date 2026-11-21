@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/data/lecture_document.dart';
@@ -11,13 +12,15 @@ import '../domain/referentiel.dart';
 const _remplie =
     " dans la bibliothèque pour l'instant. L'administrateur la remplit.";
 
-/// Segment de la Bibliothèque : chemin, libellé, titre de la fiche, message
-/// quand il est vide, et nature du référentiel lu (`null` pour les recettes
-/// publiques).
+/// Segment de la Bibliothèque : chemin, libellé, libellé court (puce sous
+/// 600 px ou avec un texte agrandi), icône de la puce, titre de la fiche, message quand il est vide,
+/// et nature du référentiel lu (`null` pour les recettes publiques).
 enum SegmentBibliotheque {
   styles(
     'styles',
     'Styles',
+    'Styles',
+    Icons.style_outlined,
     'Style',
     'Aucun style$_remplie',
     NatureReferentiel.styles,
@@ -25,6 +28,8 @@ enum SegmentBibliotheque {
   fermentables(
     'malts',
     'Malts et sucres',
+    'Malts',
+    Icons.grain,
     'Malt ou sucre',
     'Aucun malt ni sucre$_remplie',
     NatureReferentiel.fermentables,
@@ -32,6 +37,8 @@ enum SegmentBibliotheque {
   hops(
     'houblons',
     'Houblons',
+    'Houblons',
+    Icons.eco_outlined,
     'Houblon',
     'Aucun houblon$_remplie',
     NatureReferentiel.hops,
@@ -39,6 +46,8 @@ enum SegmentBibliotheque {
   cultures(
     'levures',
     'Levures',
+    'Levures',
+    Icons.bubble_chart_outlined,
     'Levure',
     'Aucune levure$_remplie',
     NatureReferentiel.cultures,
@@ -46,6 +55,8 @@ enum SegmentBibliotheque {
   miscs(
     'divers',
     'Divers',
+    'Divers',
+    Icons.category_outlined,
     'Ajout divers',
     'Aucun ajout divers$_remplie',
     NatureReferentiel.miscs,
@@ -53,6 +64,8 @@ enum SegmentBibliotheque {
   recettes(
     'recettes',
     'Recettes publiques',
+    'Recettes',
+    Icons.menu_book_outlined,
     'Recette publique',
     "Aucune recette publique pour l'instant.",
     null,
@@ -61,6 +74,8 @@ enum SegmentBibliotheque {
   const SegmentBibliotheque(
     this.slug,
     this.label,
+    this.labelCourt,
+    this.icone,
     this.titreFiche,
     this.vide,
     this.nature,
@@ -69,6 +84,11 @@ enum SegmentBibliotheque {
   /// Segment du chemin (`/bibliotheque/houblons`).
   final String slug;
   final String label;
+
+  /// Libellé de la puce sous 600 px, ou avec un texte agrandi à partir de
+  /// `kGrandTexteMinScale` ; [label] reste lu par le lecteur d'écran.
+  final String labelCourt;
+  final IconData icone;
   final String titreFiche;
 
   /// Message du segment sans aucune entrée.

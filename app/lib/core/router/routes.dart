@@ -37,6 +37,11 @@ abstract final class AppRoutes {
   /// Admin › Journaux (ADR-011, J2), dans la coquille.
   static const adminLogs = '/admin/journaux';
 
+  /// Admin › Moteur d'IA et Admin › Coûts de l'IA (ADR-016), dans la
+  /// coquille.
+  static const adminAiEngine = '/admin/moteur-ia';
+  static const adminAiCosts = '/admin/couts-ia';
+
   /// Admin › Tickets des membres (ADR-006, T2), dans la coquille.
   static const adminTickets = '/admin/tickets';
   static String adminTicket(String id) => '$adminTickets/$id';

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,19 +14,26 @@ import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/ligne_editeur.dart';
 import '../../../core/presentation/page_document.dart';
+import '../../../core/presentation/segments.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/data/lecture_document.dart';
+import '../../admin/domain/postes_ia.dart';
+import '../../ai/domain/reglages_ia.dart';
+import '../../ai/presentation/ai_providers.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_providers.dart';
 import '../../library/domain/referentiel.dart';
 import '../../library/presentation/champ_bibliotheque.dart';
+import '../domain/assistant_recette.dart';
 import '../domain/beerjson.dart';
 import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
+import 'assistant_controleur.dart';
 import 'contenu_recette.dart';
 import 'ingredient_forms.dart';
+import 'panneau_assistant.dart';
 import 'recipe_calculations_view.dart';
 import 'recipe_detail_screen.dart';
 import 'recipes_providers.dart';
@@ -97,6 +106,9 @@ class _RecipeEditor extends ConsumerStatefulWidget {
   ConsumerState<_RecipeEditor> createState() => _RecipeEditorState();
 }
 
+/// Contenu de la colonne de droite de 840 à 1 279 px.
+enum _ColonneDroite { calculs, assistant }
+
 /// Sections de l'éditeur, dans l'ordre des puces de saut.
 enum _Section { general, fermentables, hops, others, yeast, steps, notes }
 
@@ -125,6 +137,22 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   bool _dirty = false;
   bool _saving = false;
   String? _nameError;
+
+  /// Conversation de l'assistant (ADR-015), créée à la première ouverture du
+  /// panneau et perdue à la fermeture de l'éditeur.
+  ControleurAssistant? _assistant;
+
+  /// Colonne de l'assistant affichée (840 px et plus).
+  bool _assistantOuvert = false;
+
+  /// Brouillon, calculs et équipement de la dernière construction : ce que
+  /// lit le bloc Calculs, envoyé à l'assistant (U13).
+  ({
+    RecipeContent content,
+    CalculsRecette calculs,
+    EquipementRecette equipement,
+  })?
+  _dernier;
 
   static const nameMissing = 'Donnez un nom à la recette.';
 
@@ -160,8 +188,127 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     }
     _nameFocus.dispose();
     _styleFocus.dispose();
+    _assistant
+      ?..removeListener(_assistantChange)
+      ..dispose();
     super.dispose();
   }
+
+  void _assistantChange() {
+    if (mounted) setState(() {});
+  }
+
+  ControleurAssistant get _controleur => _assistant ??= ControleurAssistant(
+    repository: ref.read(assistantRepositoryProvider),
+    errorReportService: ref.read(errorReportServiceProvider),
+  )..addListener(_assistantChange);
+
+  /// La conversation a un tour, un résumé ou un appel en cours : la quitter la
+  /// perd.
+  bool get _conversationAPerdre {
+    final a = _assistant;
+    return a != null && (a.aDuContenu || a.enCours);
+  }
+
+  String get _reponsePerdue => _assistant?.enCours ?? false
+      ? ' La réponse en attente sera perdue ; le tour est compté.'
+      : '';
+
+  /// Départ avec une conversation (✕, retour, menu du compte).
+  Future<bool> _confirmerDepart(BuildContext context) => _dirty
+      // ticket: aucun (confirmation)
+      ? confirmerAbandon(
+          context,
+          'Les changements de cette recette ne seront pas enregistrés. La '
+          'conversation avec l\'assistant sera perdue.$_reponsePerdue',
+        )
+      // ticket: aucun (confirmation)
+      : confirmerAbandon(
+          context,
+          'La conversation avec l\'assistant sera perdue. Elle n\'est '
+          'enregistrée nulle part.$_reponsePerdue',
+          titre: 'Quitter l\'éditeur ?',
+          continuer: 'Rester',
+          abandonner: 'Quitter',
+        );
+
+  Future<ContexteAssistant?> _contexteAssistant() async {
+    final dernier = _dernier;
+    if (dernier == null) {
+      // L'éditeur n'a pas encore été construit : rien à envoyer. Rapporté
+      // ici, sans texte ; le panneau affiche « La recette contient une valeur
+      // refusée… ».
+      ref
+          .read(errorReportServiceProvider)
+          .reportError(
+            feature: 'recipes.assistant',
+            error: StateError('brouillon de l\'éditeur non lu'),
+            stackTrace: StackTrace.current,
+            context: 'contexte demandé avant la première construction',
+          );
+      return null;
+    }
+    return contexteAssistant(
+      content: dernier.content,
+      calculs: dernier.calculs,
+      equipement: dernier.equipement,
+      library: ref.read(libraryRepositoryProvider),
+      errors: ref.read(errorReportServiceProvider),
+    );
+  }
+
+  /// Icône « Assistant » de la barre du haut : feuille du bas sous 840 px,
+  /// colonne au-delà. La politique et les tours du jour sont relus à chaque
+  /// ouverture ; rien n'est envoyé.
+  void _basculerAssistant(double width) {
+    final controleur = _controleur;
+    if (width >= kExpandedMinWidth && _assistantOuvert) {
+      setState(() => _assistantOuvert = false);
+      return;
+    }
+    ref
+      ..invalidate(politiqueIaProvider)
+      ..invalidate(quotasIaProvider);
+    if (width >= kExpandedMinWidth) {
+      setState(() => _assistantOuvert = true);
+      return;
+    }
+    unawaited(
+      // ticket: /recettes/nouvelle/fenetre/assistant, /recettes/:id/modifier/fenetre/assistant
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        showDragHandle: true,
+        builder: (sheetContext) {
+          final hauteur = MediaQuery.sizeOf(sheetContext).height;
+          final clavier = MediaQuery.viewInsetsOf(sheetContext).bottom;
+          final dernier = _dernier;
+          return Padding(
+            padding: EdgeInsets.only(bottom: clavier),
+            child: SizedBox(
+              height: (hauteur - clavier).clamp(
+                0.0,
+                hauteur * kFeuilleListeHauteur,
+              ),
+              child: PanneauAssistant(
+                controleur: controleur,
+                resumeCalculs: dernier == null
+                    ? ''
+                    : texteBarreCalculs(dernier.calculs).texte,
+                recetteVide: _recetteVide(dernier?.content),
+                contexte: _contexteAssistant,
+                onFermer: () => Navigator.of(sheetContext).pop(),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  static bool _recetteVide(RecipeContent? c) =>
+      c == null || (c.fermentables.isEmpty && c.hops.isEmpty);
 
   void _changed([Object? _]) => setState(() => _dirty = true);
 
@@ -231,6 +378,20 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       await montrerChamp(invalid.first.context);
       return;
     }
+    // La conversation n'est perdue qu'après une recette prête à enregistrer.
+    if (_conversationAPerdre &&
+        // ticket: aucun (confirmation)
+        !await confirmerAbandon(
+          context,
+          'La recette sera enregistrée. La conversation sera perdue : copiez '
+          'd\'abord ce que vous voulez garder.$_reponsePerdue',
+          titre: 'Enregistrer et fermer l\'assistant ?',
+          continuer: 'Continuer la conversation',
+          abandonner: 'Enregistrer',
+        )) {
+      return;
+    }
+    if (!mounted) return;
     final access = ref.read(grantedAccessProvider);
     if (access == null) return;
     final content = _content(equipmentId);
@@ -446,10 +607,23 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       reported: ref.read(calculationReportsProvider),
       recipeKey: widget.initial?.id ?? 'nouvelle',
     );
+    _dernier = (content: content, calculs: calculs, equipement: equipement);
     final initial = widget.initial;
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= kExpandedMinWidth;
+    final troisColonnes = width >= kEditeurAssistantCoteACoteMinWidth;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    // Bouton visible pour l'administrateur ; pour un brasseur, seulement si
+    // la politique lue ouvre le poste (ADR-015, section 2).
+    final politique = ref.watch(politiqueIaProvider).value?.document;
+    final assistantVisible =
+        (access?.member.isAdmin ?? false) ||
+        (politique is DocumentTrouve<PolitiqueIa> &&
+            (politique.value
+                    .reglage(kPosteAssistantRecette)
+                    ?.ouvertAuxMembres ??
+                false));
+    final assistantColonne = wide && assistantVisible && _assistantOuvert;
 
     final form = Form(
       key: _formKey,
@@ -485,6 +659,94 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       ),
     );
 
+    Widget blocCalculs({bool titre = true}) => SingleChildScrollView(
+      // Sans marge haute : « Calculs » s'aligne sur le premier titre du
+      // formulaire.
+      padding: const EdgeInsets.fromLTRB(8, 0, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (titre) const TitreSection('Calculs'),
+          BlocCalculs(
+            calculs: calculs,
+            content: content,
+            equipement: equipement,
+          ),
+        ],
+      ),
+    );
+    Widget panneau({bool titreEtFermer = true}) => PanneauAssistant(
+      titreEtFermer: titreEtFermer,
+      controleur: _controleur,
+      resumeCalculs: texteBarreCalculs(calculs).texte,
+      recetteVide: _recetteVide(content),
+      contexte: _contexteAssistant,
+      autofocus: true,
+      onFermer: () => setState(() => _assistantOuvert = false),
+    );
+
+    final List<Widget> colonnes;
+    final double largeur;
+    if (troisColonnes) {
+      colonnes = [
+        Expanded(child: form),
+        SizedBox(width: kCalculationPanelWidth, child: blocCalculs()),
+        if (assistantColonne)
+          SizedBox(width: kAssistantPanelWidth, child: panneau()),
+      ];
+      largeur = assistantColonne
+          ? kEditorTroisColonnesMaxWidth
+          : kEditorMaxWidth;
+    } else {
+      // De 840 à 1 279 px : un commutateur « Calculs / Assistant » en tête
+      // de la colonne de droite ; le formulaire reste modifiable.
+      colonnes = [
+        Expanded(child: form),
+        SizedBox(
+          width: assistantColonne
+              ? kAssistantPanelWidth
+              : kCalculationPanelWidth,
+          child: !assistantVisible
+              ? blocCalculs()
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+                      child: BoutonsSegmentes<_ColonneDroite>(
+                        values: _ColonneDroite.values,
+                        labelOf: (c) => switch (c) {
+                          _ColonneDroite.calculs => 'Calculs',
+                          _ColonneDroite.assistant => TextesAssistant.titre,
+                        },
+                        selected: {
+                          assistantColonne
+                              ? _ColonneDroite.assistant
+                              : _ColonneDroite.calculs,
+                        },
+                        onSelectionChanged: (choix) {
+                          final assistant = choix.contains(
+                            _ColonneDroite.assistant,
+                          );
+                          if (assistant == _assistantOuvert) return;
+                          _basculerAssistant(width);
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: assistantColonne
+                          ? panneau(titreEtFermer: false)
+                          : blocCalculs(titre: false),
+                    ),
+                  ],
+                ),
+        ),
+      ];
+      largeur = assistantColonne
+          ? kEditorAvecAssistantMaxWidth
+          : kEditorMaxWidth;
+    }
+
     return EditeurPleinEcran(
       titre: initial == null ? 'Nouvelle recette' : 'Modifier la recette',
       closePath: initial == null
@@ -496,6 +758,19 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       abandonMessage:
           'Les changements de cette recette ne seront pas '
           'enregistrés.',
+      confirmerDepart: _conversationAPerdre ? _confirmerDepart : null,
+      actionsAvant: [
+        if (assistantVisible)
+          IconButton(
+            tooltip: assistantColonne
+                ? TextesAssistant.fermer
+                : TextesAssistant.ouvrir,
+            isSelected: assistantColonne,
+            onPressed: () => _basculerAssistant(width),
+            icon: const Icon(Icons.auto_awesome_outlined),
+            selectedIcon: const Icon(Icons.auto_awesome),
+          ),
+      ],
       bottomBar: wide || keyboardOpen
           ? null
           : BarreCalculs(
@@ -520,31 +795,10 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           ? Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: kEditorMaxWidth),
+                constraints: BoxConstraints(maxWidth: largeur),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: form),
-                    SizedBox(
-                      width: kCalculationPanelWidth,
-                      child: SingleChildScrollView(
-                        // Sans marge haute : « Calculs » s'aligne sur le
-                        // premier titre du formulaire.
-                        padding: const EdgeInsets.fromLTRB(8, 0, 16, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const TitreSection('Calculs'),
-                            BlocCalculs(
-                              calculs: calculs,
-                              content: content,
-                              equipement: equipement,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  children: colonnes,
                 ),
               ),
             )

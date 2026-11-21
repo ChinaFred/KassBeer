@@ -30,6 +30,10 @@ export default tseslint.config(
               group: ["@google-cloud/logging", "@google-cloud/logging/*"],
               message: "Journal par firebase-functions/logger (leçon 5).",
             },
+            {
+              group: ["@anthropic-ai/*"],
+              message: "API Messages par fetch, dans src/ai/claude.ts seul (P54, P57).",
+            },
           ],
         },
       ],
