@@ -1015,9 +1015,9 @@ ce ticket (`allowed_decisions`), jamais déduits du statut par l'application : �
 | Statut | Action principale |
 |---|---|
 | Reçu | « Lancer l'analyse » (valeur `launch_analysis`) ; après l'échéance d'un lancement sans changement de statut, « Relancer l'analyse » (bouton tonal) |
-| Analysé | « Valider » |
+| Analysé | « Valider » (bouton à contour), puis « Valider et lancer le développement » (bouton plein, en dernier) |
 | Validé dans l'application | « Lancer le développement » (valeur `launch_development`), ou « Relancer le développement » |
-| Validé sur GitHub seul | « Valider » |
+| Validé sur GitHub seul | « Valider » (bouton à contour), puis « Valider et lancer le développement » (bouton plein, en dernier) |
 | En cours, validé dans l'application | selon la pull request (ci-dessous) : « Livrer » (valeur `launch_delivery`), « Relancer la livraison » (bouton tonal) ou « Relancer le développement » (valeur `relaunch_development`, bouton tonal) |
 | En cours, validé sur GitHub seul, Livré, Refusé, Clos | aucune |
 
@@ -1159,6 +1159,30 @@ est dans la section Lancements. » ; « Résultat inconnu, compté dans les lanc
 Vérifiez sur claude.ai/code avant de relancer. » (ou le message du serveur) ; « Réponse perdue.
 Regardez la section Lancements avant de relancer. » quand la réponse n'arrive pas ; un refus
 arrivé après « Fermer » affiche son motif.
+
+**Boîte « Valider et lancer le développement ? »** (ticket #64, P39). Le bouton « Valider et
+lancer le développement » (icône de code) s'affiche dès que le serveur offre « Valider »
+(`validate` dans `allowed_decisions`), aucun autre critère ; il ouvre la boîte de lancement en
+variante. Contenu, dans cet ordre : la phrase de « Valider ce ticket ? » (pour un ticket validé
+sur GitHub seul : « La validation sera enregistrée dans l'application. »), « Une session Claude
+Code va écrire le code de l'Issue #12 et ouvrir une pull request. Elle ne fusionne rien. », la
+ligne du quota, le lien « Usage Claude (5 h et semaine) : voir sur claude.ai », l'encadré du
+coût. Boutons « Annuler » (focus initial) et « Valider et lancer ». Plafond atteint : « Valider
+et lancer » inactif et la phrase « Annulez, puis appuyez sur « Valider » : « Lancer le
+développement » sera proposé ensuite. » ; quota illisible (« Lancements restants :
+inconnu. ») : bouton actif, le serveur décide. Rien n'est appelé avant « Valider et lancer ».
+Ensuite, la fiche appelle la validation, avec la ligne « Validation en cours. Vous pouvez
+fermer : le résultat s'affichera en bas de l'écran. », puis le lancement du développement,
+avec la ligne « Lancement en cours. … », seulement si la validation est appliquée (une
+validation déjà faite compte). « Fermer » ferme la boîte sans couper les appels ; un seul
+enchaînement part à la fois. La boîte se ferme sur tout résultat, affiché en bas d'écran :
+validation en échec ou partielle, le message d'échec de « Valider », sans lancement ;
+« Ticket #12 validé. Développement lancé. » ; « Ticket #12 validé. Le développement n'a pas été
+lancé : <motif du serveur> » (sans motif : « Ticket #12 validé. Le développement n'a pas été
+lancé. ») ; « Ticket #12 validé. Résultat du lancement inconnu, compté. », sans relance
+proposée. Hors ligne, le bouton reste visible et inactif, comme les autres décisions. Le
+serveur recontrôle tout : les deux appels sont ceux de « Valider » et de « Lancer le
+développement ».
 
 **Boîte « Livrer »** (ADR-008, P39). Même boîte que les lancements. Titre « Livrer ce
 ticket ? » (relance : « Relancer la livraison de ce ticket ? ») ; « Une session Claude Code va

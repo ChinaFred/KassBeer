@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.87",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation, qui rappelle la validation, la session qui va partir, les lancements restants du jour, le lien vers l'usage de Claude et le coût. La validation part d'abord ; le développement n'est lancé que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand le plafond du jour est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le ticket #64."
+      ]
+    },
+    {
       "version": "0.1.86",
       "date": "2026-11-21",
       "paragraphs": [
@@ -33,13 +40,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "La Bibliothèque ne montre plus en double onze noms de levures que l'ancienne base donnait à deux fiches d'un même fabricant. Une levure écrite sous deux références n'a plus qu'une fiche. Les levures Lalvin, SafSpirit et Fermoale, qui portaient toutes le même nom, s'appellent maintenant par leur référence : « Lalvin 71B », « SafSpirit HG-1 », « Fermoale AY3 ». Trois levures Wyeast ne portent plus le nom d'une autre. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
-      ]
-    },
-    {
-      "version": "0.1.81",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "La Bibliothèque ne montre plus en double 26 levures de la gamme Private Collection de Wyeast : 27 fiches en trop disparaissent. L'ancienne base les écrivait sous deux références : chaque levure n'a plus qu'une fiche, celle du fabricant. Une recette importée qui nomme la référence avec « -PC » retrouve aussi sa levure. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     }
   ]

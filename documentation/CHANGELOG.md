@@ -6,6 +6,33 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.87 — fonctionnel
+
+Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en
+un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation,
+qui rappelle la validation, la session qui va partir, les lancements restants du jour, le lien
+vers l'usage de Claude et le coût. La validation part d'abord ; le développement n'est lancé
+que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand le plafond du jour
+est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le
+ticket #64.
+
+### v0.1.87 — technique
+
+`BoiteLancement` (`boite_lancement.dart`) reçoit `validationAvant` et `valider` : la boîte
+appelle `valider`, puis `envoyer` seulement si la validation rend `null`, et se ferme sur tout
+résultat. `FinBoiteLancement` porte `echecValidation`. Dans `admin_ticket_screen.dart`,
+`_validerEtLancer` passe par `decisionsFicheProvider` (`validateTicket`) puis
+`lancementFicheProvider` (`launchTicketDevelopment`) ; boîte fermée pendant la validation, le
+lancement part quand même et le résultat s'affiche en bas d'écran (`messageValiderEtLancer`,
+« Ticket #N validé. … »). Un ticket validé sur GitHub seul a sa phrase propre
+(`kValiderEtLancerConfirmationGithub`). « Valider » passe en `OutlinedButton`, « Valider et
+lancer le développement » en `FilledButton` (`Icons.code`), en dernier. Le quota se lit dès
+que `validate` est dans `allowed_decisions`. Aucune fonction serveur ni règle changée. Tests de
+widgets : ordre des appels, validation en échec ou partielle sans lancement, refus avec et sans
+motif, résultat inconnu, plafond atteint, quota illisible, double appui, boîte fermée pendant
+la validation, hors ligne, barre à 360 px et texte × 2 ; test du dépôt : `changed: false` rendu
+sans échec. Demandé par le ticket #64.
+
 ### v0.1.86 — fonctionnel
 
 La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la

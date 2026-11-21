@@ -335,6 +335,9 @@ Le 2026-11-15, avec la livraison du lot A1, `CLAUDE.md` passe P25 et « Coûts v
 livrer » à « livrés au lot A1 », ajoute la feature `ai` à « Structure » et retire les mentions
 « (lot A1) » de la fixture `ai_cost_centers.json` et du calcul du coût.
 
+Le 2026-11-21, avec le ticket #64 et l'accord de l'utilisateur, P39 ajoute « Valider et lancer le
+développement » aux lancements soumis à la boîte de confirmation obligatoire.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 
