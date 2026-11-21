@@ -697,6 +697,48 @@ class RecipeContent {
     mashSteps: mashSteps,
     brewSteps: brewSteps,
   );
+
+  /// Houblons sans forme ([HopLine.form] nul), dans l'ordre de la recette.
+  List<HopLine> get hopsSansForme => [
+    for (final h in hops)
+      if (h.form == null) h,
+  ];
+
+  /// Copie où chaque houblon sans forme prend [form], choisie par le brasseur
+  /// (« Mettre en pellets », ticket #105). Les autres champs et les houblons
+  /// qui ont une forme ne changent pas.
+  RecipeContent avecFormeHoublons(String form) => RecipeContent(
+    name: name,
+    type: type,
+    author: author,
+    style: style,
+    notes: notes,
+    batchVolumeL: batchVolumeL,
+    boilTimeMin: boilTimeMin,
+    grainTempC: grainTempC,
+    equipmentId: equipmentId,
+    fermentables: fermentables,
+    hops: List.unmodifiable([
+      for (final h in hops)
+        h.form != null
+            ? h
+            : HopLine(
+                name: h.name,
+                amount: h.amount,
+                use: h.use,
+                form: form,
+                alphaPct: h.alphaPct,
+                timeMin: h.timeMin,
+                dayMin: h.dayMin,
+              ),
+    ]),
+    others: others,
+    yeasts: yeasts,
+    mashSteps: mashSteps,
+    brewSteps: brewSteps,
+    brewStepsProblem: brewStepsProblem,
+    importedFrom: importedFrom,
+  );
 }
 
 /// [value] coupé à [max] unités UTF-16 sans couper un caractère en deux. Les

@@ -6,6 +6,24 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.90 — fonctionnel
+
+Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme
+reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue
+la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ;
+sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la
+forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé
+par le ticket #105.
+
+### v0.1.90 — technique
+
+`FormulaireHoublon` (`ingredient_forms.dart`) part de `pellet` (`formeHoublonProposee`) avec
+`_formeProposee` : une suggestion de la Bibliothèque remplace la forme proposée, jamais une
+forme choisie. `RecipeContent.hopsSansForme` et `avecFormeHoublons` (`recipe.dart`) ; la fiche
+(`recipe_detail_screen.dart`) écrit par `RecipesRepository.update`, comme l'éditeur, sans
+transaction ni appel réseau. Lecture et import inchangés ; note à ADR-005 (D8). Aucune règle
+ni fonction serveur touchée. Tests : `recipe_screens_test.dart`. Demandé par le ticket #105.
+
 ### v0.1.89 — fonctionnel
 
 Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en
