@@ -3868,7 +3868,13 @@ houblons (`model`, `max_tokens: 4000`, partie fixe en cache en appels directs, a
 product_id, type, form, attenuation_pct, temperature_c, flocculation}` (plages en `[min, max]`,
 inconnus à `null` ; ni `notes`, ni `provenance`). Le prompt système est la partie fixe
 ci-dessous suivie d'une ligne `- <code> : <nom>` par style de `beer_styles.json` préparé
-(`contexteStyles`, triés par code). Schéma de sortie : `status`, `confidence`, `descriptors`
+(`contexteStyles`, triés par code). Chaque style passe d'abord `controlerDocument('beer_styles')`
+de `lib/validation.mjs`, le contrôle de l'écrivain : un style refusé, ou un identifiant en
+double, n'entre ni dans le prompt ni dans le schéma, et le générateur affiche « beer_styles.json :
+N styles refusés au contrôle ». Un nom de style qui porte un caractère de contrôle ou
+bidirectionnel est refusé de même. Ce contrôle charge `lib/validation.mjs` (ajv et le schéma
+partiel de `rules-tests/`) : `generer-aromes.mjs` demande `rules-tests/` installé d'abord
+(`npm ci`), pour les deux natures. Schéma de sortie : `status`, `confidence`, `descriptors`
 (clés de `descripteurs-levures.json`), `texts` (`profile`, `cool`, `warm`, chacun texte ou
 `null`), `styles` (codes de la liste du prompt). L'empreinte couvre aussi le SHA-256 de la
 liste des styles.
@@ -3884,7 +3890,8 @@ sans confiance, descripteur, texte ni style.
 `levures/levures-recettes.json`, mêmes garde-fous que les houblons : sans `aromes.json`,
 rien n'est écrit (« levures/aromes.json absent ») ; sans la liste du groupe, l'écrivain
 s'arrête ; en production, liste de production de 7 jours au plus. Sont refusées et nommées au
-rapport : une entrée hors du contrôle, un code de style absent de `beer_styles.json` préparé,
+rapport : une entrée hors du contrôle, un code de style absent des styles acceptés de
+`beer_styles.json` préparé (un style refusé au contrôle de la préparation ne compte pas),
 un identifiant absent de `beer_cultures.json`, une levure du groupe dont `reviewed` n'est pas
 `true`, un doublon. Le rapport porte `counts.beer_culture_aromas`, `culture_aromas_file` et
 `reviewed_orphans` (pour chaque collection d'arômes lue, les entrées `reviewed: true` dont
@@ -3902,9 +3909,11 @@ importés sans le SDK, essai par `--seulement` écrit dans `levures/`, levure de
 puis gardée quand elle est du groupe, hors périmètre nommée refusée, tarif absent, budget
 dépassé, `refusal` et `max_tokens` sans second appel, entrée relue jamais remplacée, lot
 `c0001` puis `--suivre`, lot d'une autre nature refusé, `a-relire.md`, tri de l'écrivain,
-relues orphelines, liste du groupe en production, prompt recopié ci-dessous) ;
+relues orphelines, liste du groupe en production, styles refusés au contrôle absents de la
+liste et du prompt, prompt recopié ci-dessous) ;
 `test/emulateur.test.mjs` (écriture de `beer_culture_aromas`, refus de P62 et orphelines sur
-l'émulateur, `lister-ingredients-recettes --nature culture`) ; `(cd exchange && dart test
+l'émulateur, entrée qui cite un style refusé à la préparation refusée,
+`lister-ingredients-recettes --nature culture`) ; `(cd exchange && dart test
 test/ingredients_recettes_test.dart)` (résolution des levures, candidats).
 
 ### Prompt des levures (`prompt_version` 1)

@@ -480,6 +480,12 @@ export async function genererAromes({
     return { poste, mode: "relire", a_relire: r };
   }
   const contexte = nature.contexte(dossierPrepare);
+  if (contexte.refuses?.length > 0) {
+    ecrire(
+      `beer_styles.json : ${contexte.refuses.length} styles refusés au contrôle, absents de ` +
+        `la liste du prompt : ${contexte.refuses.slice(0, 20).join(", ")}.`,
+    );
+  }
   const api = creerAccesApi({ env, chargerSdk });
   if (options.mode === "suivre") {
     return suivre({

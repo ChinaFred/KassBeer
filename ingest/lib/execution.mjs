@@ -293,8 +293,9 @@ export async function executer({
     if (lu === null) continue;
     const referentiel = nature.referentiel.replace(/\.json$/, "");
     const ids = new Set(preparation.documents[referentiel].map((d) => d.id));
-    const contexte =
-      nature === NATURE_LEVURE ? contexteStyles(preparation.documents.beer_styles) : undefined;
+    // Styles acceptés par trier() seuls : un style refusé à la préparation n'est pas écrit, et
+    // une entrée qui le cite est refusée.
+    const contexte = nature === NATURE_LEVURE ? contexteStyles(valides.beer_styles) : undefined;
     const tri = trierAromes(lu.entrees, ids, lu.groupe, nature, contexte);
     valides[nature.collection] = tri.valides;
     refuses.push(...tri.refuses);

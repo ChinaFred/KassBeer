@@ -7,6 +7,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { controlerDocument } from "../../validation.mjs";
 import { MAX_TOKENS, MODELE } from "../prompt.mjs";
 import { ErreurAromes } from "../tarif.mjs";
 import {
@@ -89,23 +90,48 @@ export function donneesEnvoyeesLevure(data) {
 }
 
 /// Styles du prompt tirés des documents de beer_styles.json préparé ([documents] : liste
-/// `{id, data}`) : `{styles: [{code, name}] triés, noms: Map code → nom, stylesSha256}`.
-/// `code` est l'identifiant du style (`bjcp2021-21a`).
+/// `{id, data}`) : `{styles: [{code, name}] triés, noms: Map code → nom, stylesSha256,
+/// refuses}`. `code` est l'identifiant du style (`bjcp2021-21a`). Chaque document passe
+/// d'abord le contrôle de beer_styles de lib/validation.mjs, comme à l'écrivain : un document
+/// refusé, ou un identifiant en double (second et suivants), n'entre ni dans la liste
+/// envoyée au modèle ni dans celle des codes acceptés ; son identifiant va dans `refuses`. Un
+/// nom qui porte un caractère de contrôle ou bidirectionnel est refusé de même.
+/// Caractères de contrôle et bidirectionnels : un nom qui en porte ajouterait une ligne au
+/// prompt système, après « Liste des styles ».
+const CARACTERES_INTERDITS_NOM_STYLE = /[\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]/u;
+
 export function contexteStyles(documents) {
   if (!Array.isArray(documents)) throw new Error("beer_styles.json : liste attendue");
-  const styles = documents
-    .filter((d) => typeof d?.id === "string" && typeof d?.data?.name === "string")
-    .map((d) => ({ code: d.id, name: d.data.name }))
-    .sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+  const vus = new Set();
+  const refuses = [];
+  const styles = [];
+  for (const d of documents) {
+    const id = typeof d?.id === "string" ? d.id : null;
+    if (
+      controlerDocument("beer_styles", d).length > 0 ||
+      id === null ||
+      vus.has(id) ||
+      CARACTERES_INTERDITS_NOM_STYLE.test(d.data.name)
+    ) {
+      refuses.push(id);
+    } else {
+      styles.push({ code: id, name: d.data.name });
+    }
+    if (id !== null) vus.add(id);
+  }
+  styles.sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
   return {
     styles,
     noms: new Map(styles.map((s) => [s.code, s.name])),
     stylesSha256: sha256(jsonCanonique(styles)),
+    refuses,
   };
 }
 
-/// Contexte d'une génération : styles de beer_styles.json préparé dans [dossierPrepare].
-/// Lève ErreurAromes si la liste est vide : sans elle, aucun style ne peut être proposé.
+/// Contexte d'une génération : styles de beer_styles.json préparé dans [dossierPrepare],
+/// contrôlés par contexteStyles. Lève ErreurAromes si aucun style n'est accepté : sans liste,
+/// aucun style ne peut être proposé. Les refusés sont dans `refuses`, affichés par le
+/// générateur.
 export function contexteLevures(dossierPrepare) {
   const chemin = join(dossierPrepare, "beer_styles.json");
   const contexte = contexteStyles(JSON.parse(readFileSync(chemin, "utf8")));

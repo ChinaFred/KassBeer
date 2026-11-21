@@ -86,6 +86,9 @@ puis le reste dans le périmètre décidé par l'utilisateur.
   fichier préparé lu, motif d'identifiant (`^culture-[a-z0-9]+(-[a-z0-9]+)*$`), collection,
   poste, `donneesEnvoyees`, prompt, schéma de sortie, fonction de contrôle, liste des
   descripteurs, sections de `a-relire.md`. Aucune dépendance ajoutée à `ingest/package.json`.
+  Note du 2026-11-21 (livraison 1, v0.1.92) : le prompt et le contrôle des houblons restent
+  dans `ingest/lib/aromes/prompt.mjs` et `ingest/lib/aromes/validation.mjs`, nommés par P55 ;
+  `natures/hop.mjs` les reprend sans les déplacer.
 - **Fichiers** : `import/ingest/aromes/levures/` (jamais versionné) : `aromes.json`,
   `levures-recettes.json`, `noms-levures.json`, `rapport.json`, `a-relire.md`, `brut/`,
   `lot-<id>.json`. Le tarif reste `import/ingest/aromes/tarif.json`, commun aux deux natures
@@ -100,7 +103,7 @@ puis le reste dans le périmètre décidé par l'utilisateur.
   `IndexBibliotheque.resoudre` sur `beer_cultures.json` (nom, alias, souche lue dans le nom,
   référence, producteur et référence : `exchange/lib/src/resolution_import.dart`). Un nom non
   résolu (`aucun` ou `plusieurs`) est listé avec ses candidats
-  (`IndexBibliotheque.correspondances`). L'admin peut ajouter à la main un identifiant à
+  (`IndexBibliotheque.candidats`). L'admin peut ajouter à la main un identifiant à
   `resolus`, avec le nom d'origine.
 - **Écriture** : `ingest/ecrire.mjs` lit aussi `import/ingest/aromes/levures/aromes.json` et
   écrit `beer_culture_aromas/`, mêmes garde-fous. Il refuse une entrée dont l'identifiant manque

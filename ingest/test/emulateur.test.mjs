@@ -242,6 +242,54 @@ describe(
       }
     });
 
+    it("arômes des levures : un style refusé à la préparation ne valide aucune entrée", async () => {
+      const racine = mkdtempSync(join(tmpdir(), "kassbeer-styles-refuses-"));
+      try {
+        const prepare = join(racine, "prepare");
+        cpSync(FIXTURE, prepare, { recursive: true });
+        const styles = JSON.parse(readFileSync(join(prepare, "beer_styles.json"), "utf8"));
+        const refuse = JSON.parse(JSON.stringify(styles[0]));
+        refuse.id = "bjcp2021-99b";
+        refuse.data.name = "Style Refusé";
+        refuse.data.style_id = "99B";
+        refuse.data.provenance[0].licence = "Licence inventée";
+        writeFileSync(join(prepare, "beer_styles.json"), JSON.stringify([...styles, refuse]));
+        const source = fileURLToPath(new URL("./fixtures/aromes/levures/", import.meta.url));
+        const dossier = join(racine, "aromes", "levures");
+        cpSync(source, dossier, { recursive: true });
+        const [bonne] = JSON.parse(readFileSync(join(source, "aromes.json"), "utf8"));
+        bonne.data.styles = [{ code: "bjcp2021-99b", name: "Style Refusé" }];
+        writeFileSync(join(dossier, "aromes.json"), JSON.stringify([bonne]));
+        const r = await executer({
+          argv: [
+            "--dossier",
+            prepare,
+            "--rapports",
+            rapports,
+            "--aromes",
+            join(racine, "aromes"),
+            "--simulation",
+          ],
+          env: { FIRESTORE_EMULATOR_HOST: HOTE },
+          entree: process.stdin,
+          sortie: process.stdout,
+          maintenant,
+        });
+        assert.ok(r.refused.some((x) => x.collection === "beer_styles" && x.id === "bjcp2021-99b"));
+        assert.deepEqual(
+          r.refused.find((x) => x.collection === "beer_culture_aromas"),
+          {
+            collection: "beer_culture_aromas",
+            id: bonne.id,
+            erreurs: ["styles[0].code : style absent de beer_styles.json"],
+          },
+        );
+        assert.deepEqual(r.counts.beer_culture_aromas, { written: 0, unchanged: 0, refused: 1 });
+      } finally {
+        rmSync(racine, { recursive: true, force: true });
+      }
+    });
+
     it("lister-ingredients-recettes --nature culture : noms de levures seuls, aucune écriture", async () => {
       const { deleteApp, initializeApp } = await import("firebase-admin/app");
       const { getFirestore } = await import("firebase-admin/firestore");

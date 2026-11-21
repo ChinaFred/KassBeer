@@ -218,7 +218,7 @@ dart format --output=none --set-exit-if-changed app/lib app/test brewing exchang
 (cd ingest && node ecrire.mjs --production --projet kassbeer)   # ADC, saisie du nom du projet ; --simulation compte sans écrire
 (cd ingest && node ecrire.mjs --production --projet kassbeer --supprimer-absents beer_hops)   # ADR-014 : absents de la préparation, beer_hops, beer_hop_aromas, beer_cultures ou beer_culture_aromas (ADR-017), 30 au plus, saisie du nombre ; --simulation liste sans supprimer
 
-# Descriptions aromatiques des houblons (poste de l'admin, ADR-013) ; ANTHROPIC_API_KEY dans l'environnement
+# Descriptions aromatiques des houblons (poste de l'admin, ADR-013) ; ANTHROPIC_API_KEY dans l'environnement ; rules-tests/ installé (npm ci)
 (cd ingest && node lister-ingredients-recettes.mjs --production --projet kassbeer)   # lecture seule ; --nature hop par défaut
 (cd exchange && dart run bin/lister_ingredients_recettes.dart)
 (cd ingest && node generer-aromes.mjs --essai --seulement ../import/ingest/aromes/houblons-essai.json)

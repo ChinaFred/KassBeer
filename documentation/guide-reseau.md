@@ -257,7 +257,8 @@ poste et la limite de 70 $ jusqu'au 30 novembre 2026 au plus tard. Livraison 1 (
 `ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs` et
 `exchange/bin/lister_houblons_recettes.dart` devient `lister_ingredients_recettes.dart`, sans
 ancien nom gardé ; « Structure » et « Commandes utiles » de `CLAUDE.md` suivent et reçoivent les
-commandes `--nature culture`. Aucun agent, skill ni hook nouveau.
+commandes `--nature culture`. P20 précise que la ligne des levures arrive à l'écran « Sources
+des données » avec la livraison 2. Aucun agent, skill ni hook nouveau.
 
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes

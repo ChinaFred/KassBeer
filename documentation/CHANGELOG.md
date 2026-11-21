@@ -19,7 +19,9 @@ ce qui dépend de la nature vit dans `lib/aromes/natures/hop.mjs` (qui reprend `
 `descripteurs-levures.json`, périmètre). Fichiers des levures dans `import/ingest/aromes/levures/`,
 `tarif.json` commun. Poste `culture_aroma_generation`. Périmètre : levures du groupe, plus les
 types autres que `other`, `wine`, `champagne`, `malolactic` (923 levures sur 960). Styles
-conseillés pris dans `beer_styles.json` préparé ; l'empreinte couvre la liste des styles.
+conseillés pris dans `beer_styles.json` préparé, après le contrôle de `beer_styles` de
+`ingest/lib/validation.mjs` au générateur comme à l'écrivain (un style refusé n'entre ni dans le
+prompt ni dans les codes acceptés) ; l'empreinte couvre la liste des styles.
 
 `ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs --nature
 hop|culture`, et `exchange/bin/lister_houblons_recettes.dart` devient
