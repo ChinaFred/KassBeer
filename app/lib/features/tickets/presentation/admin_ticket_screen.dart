@@ -273,7 +273,7 @@ class AdminTicketScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const BandeauTicketsAdmin(),
+        const BandeauTicketsAdmin(lienUsage: false),
         Expanded(child: fiche),
       ],
     );

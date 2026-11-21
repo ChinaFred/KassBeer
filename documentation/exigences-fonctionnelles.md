@@ -843,6 +843,19 @@ La ligne choisie prend le fond secondaire du thème, texte et icône accordés, 
 tickets. En dessous, la liste occupe l'écran et la fiche s'ouvre seule par-dessus (titre
 « Ticket d'un membre », retour vers la liste).
 
+**Usage Claude** (ticket #96). Aucune API d'Anthropic ne rend la part restante des limites de
+l'abonnement Claude (fenêtre de 5 h, semaine). Le lien « Usage Claude (5 h et semaine) : voir
+sur claude.ai », icône d'ouverture externe, cible de 48 dp, info-bulle « Ouvre la page d'usage
+de claude.ai dans le navigateur », ouvre `https://claude.ai/settings/usage` dans le navigateur
+externe, sur Android et sur le web. L'adresse est relue par `Uri.tryParse` et ne s'ouvre qu'en
+`https` sur l'hôte `claude.ai`. Un échec d'ouverture affiche « Impossible d'ouvrir claude.ai. »
+et passe par `reportError` (`tickets.open_claude_usage`), sans adresse. Le lien ne lance rien
+et ne compte aucun lancement ; il reste affiché hors ligne. Aucun chiffre d'usage n'est
+affiché. Il figure dans la boîte de lancement des quatre actions et sous les messages du
+bandeau d'Admin › Tickets, affiché même sans message, au-dessus de la liste (et de la fiche
+dans la disposition large). La fiche seule sur écran étroit ne le répète pas dans son bandeau :
+la boîte de lancement le montre, et la hauteur reste à la barre de décision.
+
 **Compteur des lancements.** Au-dessus des filtres, en texte secondaire : « Lancements de
 sessions : 2 sur 10 le 13/11 · 3 en novembre 2026 ». Le jour, le mois et le plafond sont ceux écrits
 par le serveur : l'application ne recalcule pas le jour de Paris et n'a aucun plafond en dur.
@@ -1130,8 +1143,9 @@ appui à côté ne ferme pas ; rien n'est appelé avant « Lancer ». Contenu : 
 Code va lire l'Issue #12 et publier son analyse sur GitHub. » (développement : « … va écrire
 le code de l'Issue #12 et ouvrir une pull request. Elle ne fusionne rien. ») ; la ligne du
 quota, « Lancements restants le 13/11 : 7 sur 10. », « Plafond atteint le 13/11 : … » (« Lancer »
-inactif) ou « Lancements restants : inconnu. » quand l'état des lancements manque ; pour une
-relance, l'avertissement de la relance ; l'encadré « Facturé sur l'abonnement Claude de
+inactif) ou « Lancements restants : inconnu. » quand l'état des lancements manque ; dessous, le
+lien « Usage Claude (5 h et semaine) : voir sur claude.ai » (voir « Usage Claude » ci-dessous) ;
+pour une relance, l'avertissement de la relance ; l'encadré « Facturé sur l'abonnement Claude de
 l'administrateur. Ce coût n'apparaît pas dans le suivi des coûts de l'application. ». Boutons
 « Annuler » (focus initial) et « Lancer » (« Relancer » pour une relance).
 

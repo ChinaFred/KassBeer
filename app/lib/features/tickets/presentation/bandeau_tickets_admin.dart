@@ -7,6 +7,7 @@ import '../../../core/providers.dart';
 import '../domain/etat_jeton_github.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_launch.dart';
+import 'lien_usage_claude.dart';
 import 'tickets_providers.dart';
 
 /// Message du bandeau des tickets d'Admin.
@@ -142,10 +143,15 @@ final messagesBandeauTicketsProvider =
 
 /// Bandeau des tickets en tête d'Admin › Tickets (liste et fiche), lu par
 /// l'administrateur seul (le routeur réserve Admin à son rôle, les règles
-/// réservent `ticket_status/`). Borné au tiers de la hauteur, défilant
-/// au-delà.
+/// réservent `ticket_status/`). Messages bornés au tiers de la hauteur,
+/// défilant au-delà, puis le lien d'usage Claude quand [lienUsage] est vrai.
 class BandeauTicketsAdmin extends ConsumerWidget {
-  const BandeauTicketsAdmin({super.key});
+  const BandeauTicketsAdmin({super.key, this.lienUsage = true});
+
+  /// Lien d'usage Claude sous les messages. Faux sur la fiche seule (écran
+  /// étroit) : la boîte de lancement le montre, et la hauteur reste à la barre
+  /// de décision.
+  final bool lienUsage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -153,9 +159,15 @@ class BandeauTicketsAdmin extends ConsumerWidget {
       for (final m in ref.watch(messagesBandeauTicketsProvider))
         if (m.text != kPanneComptageTickets) m,
     ];
-    if (messages.isEmpty) return const SizedBox.shrink();
+    // Le lien d'usage Claude s'affiche avec ou sans message.
+    const lien = Padding(
+      // Icône alignée à 16 px, comme celle des messages.
+      padding: EdgeInsets.symmetric(horizontal: 4),
+      child: LienUsageClaude(),
+    );
+    if (messages.isEmpty) return lienUsage ? lien : const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
-    return Semantics(
+    final liste = Semantics(
       liveRegion: true,
       container: true,
       child: ConstrainedBox(
@@ -208,6 +220,11 @@ class BandeauTicketsAdmin extends ConsumerWidget {
           ),
         ),
       ),
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [liste, if (lienUsage) lien],
     );
   }
 }

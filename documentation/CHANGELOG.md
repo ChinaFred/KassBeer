@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.85 — fonctionnel
+### v0.1.87 — fonctionnel
 
 Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un
 bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de
@@ -17,7 +17,7 @@ visibles en haut pendant le défilement, un bouton efface la recherche, et le no
 « 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA
 passe avant le texte. Une liste lue hors ligne le signale.
 
-### v0.1.85 — technique
+### v0.1.87 — technique
 
 Nouvel index `beer_index/hop_aromas` (`{id, confidence}`), construit par `ingest/ecrire.mjs`
 depuis les entrées acceptées de `aromes.json` et validé par `ingest/lib/validation.mjs` ; un
@@ -30,6 +30,46 @@ que l'en-tête), compte annoncé
 `rules-tests/` pour `beer_index/hop_aromas`. ADR-013, note du 2026-11-21. Après la fusion,
 l'administrateur relance la préparation du référentiel puis `ecrire.mjs`. P22 et P55 de
 `CLAUDE.md` couvrent `beer_index/hop_aromas` (décision de l'utilisateur du 2026-11-21).
+
+### v0.1.86 — fonctionnel
+
+La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la
+Bibliothèque : c'est la même levure, sous une autre référence. Sa fiche est celle de « Lalvin
+EC-1118 », qui garde « Prise de Mousse Wine » comme autre nom. Le changement arrive dans la
+Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.86 — technique
+
+`kCorrectionsCultures` (`exchange/lib/src/ingestion/fusions.dart`) gagne une ligne
+`ReferenceCulture` (demande de l'utilisateur du 2026-11-21) : Lallemand `LALVIN-EC-1118` (fichier 004, « Prise de Mousse Wine ») →
+`EC-1118`. L'entrée rejoint la souche EC-1118 du fichier 005, prioritaire, qui garde
+l'identifiant `culture-lallemand-ec1118-lalvin-ec-1118` et ses valeurs. Préparation rejouée sur
+les sources du 2026-11-08 : 960 documents `beer_cultures` au lieu de 961, 1 identifiant sort,
+aucun n'entre, 1 document change. Doublons d'un même producteur inchangés (4, laissés listés).
+`ecrire.mjs --supprimer-absents beer_cultures` retire l'ancien identifiant. Test : la ligne
+rejouée dans « chaque ligne de kCorrectionsCultures » de `fusions_test.dart`. `DATA_SOURCES.md`
+et `exigences-techniques.md` à jour.
+
+### v0.1.85 — fonctionnel
+
+Avant de lancer une analyse, un développement ou une livraison d'un ticket, l'administrateur
+peut ouvrir la page d'usage de claude.ai : un lien « Usage Claude (5 h et semaine) : voir sur
+claude.ai » figure dans la boîte de lancement et en tête de la liste des tickets. Il montre
+la part restante de l'abonnement Claude pour la fenêtre de 5 heures et pour la semaine.
+L'application n'affiche aucun chiffre : Anthropic ne publie pas ces valeurs. Demandé par le
+ticket #96.
+
+### v0.1.85 — technique
+
+Option A de l'analyse du ticket #96 : `LienUsageClaude`
+(`app/lib/features/tickets/presentation/lien_usage_claude.dart`) ouvre
+`https://claude.ai/settings/usage` par `ouvrirLienProvider`, après `lienSessionOuvrable`
+(`Uri.tryParse`, `https`, hôte `claude.ai`, sans identifiants ni port). Un échec passe par `reportError`
+(`tickets.open_claude_usage`), sans adresse. Le lien est placé sous la ligne du quota dans
+`BoiteLancement` et sous les messages de `BandeauTicketsAdmin` (`lienUsage`, faux pour la
+fiche seule sur écran étroit, qui garderait sinon sa barre de décision sous le seuil de
+480 px). Aucun serveur ni règle touché ; l'option B (lancements comptés sur 5 h et 7 jours)
+n'est pas faite. Tests : `tickets_lancements_test.dart`. Demandé par le ticket #96.
 
 ### v0.1.84 — fonctionnel
 
