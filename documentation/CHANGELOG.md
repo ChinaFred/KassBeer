@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.86 — fonctionnel
+### v0.1.87 — fonctionnel
 
 Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme
 reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue
@@ -15,7 +15,7 @@ sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton �
 forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé
 par le ticket #105.
 
-### v0.1.86 — technique
+### v0.1.87 — technique
 
 `FormulaireHoublon` (`ingredient_forms.dart`) part de `pellet` (`formeHoublonProposee`) avec
 `_formeProposee` : une suggestion de la Bibliothèque remplace la forme proposée, jamais une
@@ -23,6 +23,25 @@ forme choisie. `RecipeContent.hopsSansForme` et `avecFormeHoublons` (`recipe.dar
 (`recipe_detail_screen.dart`) écrit par `RecipesRepository.update`, comme l'éditeur, sans
 transaction ni appel réseau. Lecture et import inchangés ; note à ADR-005 (D8). Aucune règle
 ni fonction serveur touchée. Tests : `recipe_screens_test.dart`. Demandé par le ticket #105.
+
+### v0.1.86 — fonctionnel
+
+La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la
+Bibliothèque : c'est la même levure, sous une autre référence. Sa fiche est celle de « Lalvin
+EC-1118 », qui garde « Prise de Mousse Wine » comme autre nom. Le changement arrive dans la
+Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.86 — technique
+
+`kCorrectionsCultures` (`exchange/lib/src/ingestion/fusions.dart`) gagne une ligne
+`ReferenceCulture` (demande de l'utilisateur du 2026-11-21) : Lallemand `LALVIN-EC-1118` (fichier 004, « Prise de Mousse Wine ») →
+`EC-1118`. L'entrée rejoint la souche EC-1118 du fichier 005, prioritaire, qui garde
+l'identifiant `culture-lallemand-ec1118-lalvin-ec-1118` et ses valeurs. Préparation rejouée sur
+les sources du 2026-11-08 : 960 documents `beer_cultures` au lieu de 961, 1 identifiant sort,
+aucun n'entre, 1 document change. Doublons d'un même producteur inchangés (4, laissés listés).
+`ecrire.mjs --supprimer-absents beer_cultures` retire l'ancien identifiant. Test : la ligne
+rejouée dans « chaque ligne de kCorrectionsCultures » de `fusions_test.dart`. `DATA_SOURCES.md`
+et `exigences-techniques.md` à jour.
 
 ### v0.1.85 — fonctionnel
 

@@ -3380,7 +3380,7 @@ d'un nom de gamme qui porte une référence (`Lalvin 71B`, nom construit par Kas
 entrée sans référence garde son nom. Après la fusion, `AliasEcarteCulture` retire des `aliases`
 d'une souche un nom qui est celui d'une autre souche du même producteur. Une ligne qui ne
 désigne rien, une entrée corrigée par deux lignes, ou un alias absent du document visé
-arrêtent la préparation (`StateError`). Onze lignes, listées dans `DATA_SOURCES.md`
+arrêtent la préparation (`StateError`). Douze lignes, listées dans `DATA_SOURCES.md`
 (« Doublons d'un même producteur hérités de Brewtarget »).
 
 Sortie : `<collection>.json` (listes `{id, data}`, triées par identifiant, `content_sha256`
