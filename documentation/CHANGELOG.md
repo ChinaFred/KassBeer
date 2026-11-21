@@ -48,10 +48,23 @@ d'un import (`resolution_import.dart`). Préparation rejouée sur les sources du
 identifiants sortent, 2 entrent (identifiant tiré d'une autre entrée par `ordreIdentifiant`), 24
 documents changent. Noms qui désignent deux documents d'un même producteur : 15 au lieu de 39
 (P56, `DATA_SOURCES.md`). Après l'ingestion, `ecrire.mjs --supprimer-absents beer_cultures`
-(v0.1.80, PR #92, à fusionner avant celle-ci) retire les 29 anciens identifiants, sous le
-plafond de 30. Tests : `ingestion_test.dart` (quatre
+(v0.1.80, PR #92) retire les 29 anciens identifiants, sous le plafond de 30. Tests : `ingestion_test.dart` (quatre
 graphies Wyeast, `pc` laissé aux autres producteurs), `fusions_test.dart` (fiche et entrées
 `-PC` inventées en un seul document).
+
+### v0.1.80 — technique
+
+`ingest/ecrire.mjs --supprimer-absents` accepte aussi `beer_cultures` (ADR-014, amendement du
+2026-11-15, décision de l'utilisateur). Des fiches de fabricants renommées laissaient
+d'anciens documents `culture-…` en ligne : les douze variantes Omega en « + » s'écrivent
+« Plus » (« Kolsch II+ » devient « Kolsch II Plus »), et des entrées Wyeast changent aussi. Les garde-fous sont ceux de
+`beer_hops` : simulation, liste avant confirmation, 30 suppressions au plus, refus sous 90 %
+des documents en ligne, saisie du nombre, motif `culture-…`, une collection par lancement.
+`COLLECTIONS_SUPPRIMABLES` (`ingest/lib/options.mjs`) gagne `beer_cultures` ; tests unitaires
+(acceptation, plafond, seuil, `beer_styles` et `beer_miscs` refusées) et test sous
+l'émulateur (simulation puis suppression d'un ancien identifiant).
+`CLAUDE.md` : P19 et « Commandes utiles » nomment `beer_cultures` parmi les collections
+permises ; `guide-reseau.md` à jour.
 
 ### v0.1.79 — fonctionnel
 
