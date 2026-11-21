@@ -47,6 +47,8 @@ class DataSourcesScreen extends ConsumerWidget {
   /// Une ligne par fabricant, dans l'ordre alphabétique : date du relevé et
   /// floculation.
   static const fabricantsLignes = [
+    'Escarpment Labs : fiches relevées le 15 novembre 2026, floculation '
+        'comprise.',
     'Fermentis : fiches relevées le 14 novembre 2026, sans floculation.',
     'Imperial Yeast : fiches relevées le 15 novembre 2026, floculation '
         'comprise.',

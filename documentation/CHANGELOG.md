@@ -4,9 +4,9 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
-## 2026-11-19
+## 2026-11-21
 
-### v0.1.79 — technique
+### v0.1.80 — technique
 
 `ingest/ecrire.mjs --supprimer-absents` accepte aussi `beer_cultures` (ADR-014, amendement du
 2026-11-15, décision de l'utilisateur). Des fiches de fabricants renommées laissaient
@@ -19,6 +19,91 @@ des documents en ligne, saisie du nombre, motif `culture-…`, une collection pa
 l'émulateur (simulation puis suppression d'un ancien identifiant).
 `CLAUDE.md` : P19 et « Commandes utiles » nomment `beer_cultures` parmi les collections
 permises ; `guide-reseau.md` à jour.
+
+### v0.1.79 — fonctionnel
+
+La Bibliothèque reprend les fiches de 98 cultures d'Escarpment Labs : levures d'ale, de lager
+et de bière de blé, kveiks, Brettanomyces, bactéries et assemblages pour bières acides. Type,
+atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs
+remplacent celles de l'ancienne base pour 50 cultures déjà connues, et 48 cultures
+apparaissent. Sept fiches portent un autre nom que l'ancienne base pour la même souche
+(« Classic Wit » pour « Classic Witbier », « Chaudron Sûr » pour « Lactobacillus Blend »…) :
+elles rejoignent la culture déjà connue, qui prend le nom de la fiche et garde l'ancien nom
+comme autre nom. L'écran « Sources des données » nomme Escarpment Labs. Les cultures arrivent
+dans la Bibliothèque quand l'administrateur relance l'ingestion.
+
+### v0.1.79 — technique
+
+`exchange/donnees/fabricants/cultures.json` : 98 cultures Escarpment Labs relevées le
+2026-11-15 sur `escarpmentlabs.com`, règles dans l'en-tête ; levures Lallemand revendues non
+reprises. `kDatesReleveFabricants` reçoit `escarpment-labs`. Escarpment ne publie presque
+aucune référence : une table de fusion des cultures (`kFusionsCultures`, `fusions.dart`,
+décision de l'utilisateur du 2026-11-15) rattache sept fiches au document Brewtarget de la même
+souche sous un autre nom. L'identifiant Brewtarget reste, la fiche donne valeurs et nom, le nom
+Brewtarget passe en alias ; une ligne sans fiche ou sans entrée Brewtarget, une entrée désignée
+deux fois, deux lignes de même identifiant ou une cible Brewtarget d'un autre identifiant (une
+souche à référence) lèvent `StateError`. `Referentiel.fusionner` et
+`preparer` reçoivent `fusionsCultures` ; `rapport.json` gagne `table_de_fusion_cultures`.
+`kFusions` inchangée. Préparation rejouée sur les sources du 2026-11-08 : 50 fiches rejoignent
+un document Brewtarget (43 par le nom, 7 par la table), 48 en créent un (993 documents
+`beer_cultures` au lieu de 945), aucun document retiré ni autre document changé. Six noms
+désignent désormais deux documents de producteurs différents (`cream-ale-blend`,
+`lactobacillus-delbrueckii`, `northwest-ale`, `framgarden-kveik`, `granvin`, `midtbust`) ;
+`berliner-weisse-blend` et `french-saison`, déjà partagés, gagnent un document. Tests :
+`fusions_test.dart` (fixtures inventées, un cas par ligne de la table), `fabricants_donnees_test.dart` (537 entrées, chaque ligne de la table
+désigne une fiche). `DATA_SOURCES.md`, ADR-005, exigences et écran « Sources des données » à
+jour. `CLAUDE.md`, P56 (décision de l'utilisateur) : pour les cultures, un nom normalisé créé
+par une fiche de fabricant ou par la table de fusion ne désigne pas deux documents d'un même
+producteur, les 39 doublons hérités de Brewtarget sont comptés et listés en attendant leur
+fusion ; un nom porté par une fiche dont les documents en double existaient avant elle compte
+comme hérité (27 des 39, liste dans `DATA_SOURCES.md`) ; un nom partagé entre deux producteurs reste
+permis et compté au rapport. `guide-reseau.md` à jour. Tests de cette règle :
+`fabricants_donnees_test.dart` vérifie qu'aucune fiche ne partage son nom normalisé avec une
+fiche du même producteur ; `fusions_test.dart` vérifie qu'un nom porté par deux producteurs
+donne deux documents listés par `nomsPartages`, et que la table de fusion ne crée aucun nom
+partagé. La préparation rejouée compte 39 noms qui désignent deux documents d'un même
+producteur (« Wyeast Labs » compté comme Wyeast), tous antérieurs aux fiches Escarpment :
+24 doublons de la Private Collection de Wyeast, 5 souches sous deux références, 7 noms donnés à
+deux souches, 3 noms de gamme ; la préparation ne les refuse pas.
+
+## 2026-11-19
+
+### v0.1.78 — fonctionnel
+
+« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous
+n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage)
+autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie
+de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un
+processus », ou « Créer un processus » si vous n'en avez aucun : ce bouton ouvre « Mes
+processus », où le modèle d'exemple et le plan de brassage des fiches sont prêts à copier. Une
+recette sans chronologie
+affiche « sans processus, le brassin n'aura aucune étape ».
+
+Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus
+choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son
+propriétaire. Demandé par le ticket #61.
+
+### v0.1.78 — technique
+
+`lireChoixProcessus` présélectionne le seul processus valide du lecteur quand son document de
+préférence est absent (`DocumentAbsent`) ; un défaut coupé ou supprimé garde la chronologie
+seule. L'éditeur écrit `default_template_id` nul quand « Proposer par défaut » est décoché à
+la création alors qu'aucun choix n'existe. Aucun modèle à copier n'est appliqué seul
+(P37). « Créer un processus » n'apparaît plus qu'une fois dans « Nouveau brassin »
+(`ChampProcessus.onCreer` facultatif) et ouvre `AppRoutes.processes` (« Mes processus » et
+ses modèles à copier) au lieu de `AppRoutes.newProcess`, dans le formulaire comme dans la
+feuille de la fiche ; dans cette feuille, sans processus, « Gérer mes processus » est retiré,
+car « Créer un processus » ouvre le même écran ; la feuille de la fiche se titre « Choisir un
+processus » sur un brassin prévu sans processus. `AideChronologieSeule`,
+`BoutonProcessus` et `choisirProcessus` (`choix_processus.dart`) sous « Chronologie de la
+recette seule » ; nouvelle fenêtre `/recettes/:id/fenetre/choix-processus` (et `/recettes/importer/:id/…`) dans
+`kTicketElements`. `sansProcessusPrevu` (`section_deroule.dart`) remplace « Changer de
+processus » par « Choisir un processus » sur un brassin prévu sans `process`, et
+`_chronologie` n'y affiche plus « Aucune étape. ». Aucun calcul, aucune règle, aucun modèle de
+données ne change ; l'écran du jour et les journées ne sont pas touchés (P2). Le préremplissage
+de la voie « Chronologie de la recette seule » n'est pas fait (point 5 de l'analyse). Tests de
+widgets ajoutés dans `deroule_d3_test.dart` et `process_screens_test.dart`. Demandé par le
+ticket #61.
 
 ## 2026-11-15
 

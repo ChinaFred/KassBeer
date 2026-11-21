@@ -233,6 +233,31 @@ void main() {
       expect(find.text(ProcessDetailScreen.titre), findsOneWidget);
     });
 
+    testWidgets('premier processus : « Proposer par défaut » coupé avant '
+        '« Enregistrer » : refus écrit, aucun processus par défaut', (
+      tester,
+    ) async {
+      final app = await open(
+        tester,
+        '/processus/nouveau?modele=exemple',
+        before: (app) => app.processes.publish(const []),
+      );
+      Finder interrupteur() => find.widgetWithText(
+        SwitchListTile,
+        ProcessDetailScreen.proposerParDefaut,
+      );
+      expect(tester.widget<SwitchListTile>(interrupteur()).value, isTrue);
+      await tester.tap(interrupteur());
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(interrupteur()).value, isFalse);
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+      expect(app.processes.writes.single.kind, 'create');
+      // `default_template_id` nul : « Nouveau brassin » ne présélectionnera
+      // pas ce seul processus (ticket #61).
+      expect(app.preferencesProcessus.saved.single.templateId, isNull);
+    });
+
     testWidgets('miens puis groupe, par nom ; résumé, auteur, « Par défaut »', (
       tester,
     ) async {
