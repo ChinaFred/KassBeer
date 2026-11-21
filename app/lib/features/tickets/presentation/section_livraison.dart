@@ -287,6 +287,15 @@ class PastilleLivraison extends ConsumerWidget {
           ton: TonEtiquette.neutre,
         ),
       ),
+      PastilleLivraisonType.ciRouge => Semantics(
+        label: 'CI de la pull request en échec',
+        excludeSemantics: true,
+        child: const Etiquette(
+          label: 'CI en échec',
+          icon: Icons.error_outline,
+          ton: TonEtiquette.erreur,
+        ),
+      ),
       PastilleLivraisonType.prPrete => Semantics(
         label: 'Pull request prête à livrer',
         excludeSemantics: true,

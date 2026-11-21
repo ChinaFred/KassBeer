@@ -266,14 +266,19 @@ class Ticket {
   bool get waitingForNetwork =>
       status == TicketStatus.pending && hasPendingWrites;
 
-  /// « À traiter » pour l'administrateur : reçu ou analysé sans décision
-  /// (`received`, `analyzed`), ou envoi impossible (`send_failed`). Un ticket
-  /// `validated` a déjà sa décision. Même définition pour le compteur du menu,
-  /// le filtre et la pastille de l'avatar.
+  /// Compteur « Tickets à traiter » du menu et pastille de l'avatar : envoi
+  /// impossible (`send_failed`), ou une action qui fait avancer le ticket
+  /// dans `allowed_decisions` écrit par le serveur (`validate`,
+  /// `launch_analysis`, `launch_development`). Lu sur le ticket seul, sans
+  /// `admin/launches` ni `admin/delivery` : il ne retire pas une session en
+  /// cours et ne compte ni PR prête ni CI rouge (option A, ticket #63). Le
+  /// filtre « À traiter » de la liste va plus loin ([ticketATraiter]).
+  /// `allowed_decisions` absent : faux, sauf en `send_failed`.
   bool get toProcess =>
-      status == TicketStatus.received ||
-      status == TicketStatus.analyzed ||
-      status == TicketStatus.sendFailed;
+      status == TicketStatus.sendFailed ||
+      (allowedDecisions?.contains(TicketDecisionAction.validate) ?? false) ||
+      canLaunchAnalysis ||
+      canLaunchDevelopment;
 
   /// Création transmise par l'appareil, mais toujours pas publiée après
   /// [kTicketSendDelay].
