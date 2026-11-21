@@ -268,6 +268,11 @@ ancien nom gardé ; « Structure » et « Commandes utiles » de `CLAUDE.md` sui
 commandes `--nature culture`. P20 précise que la ligne des levures arrive à l'écran « Sources
 des données » avec la livraison 2. Aucun agent, skill ni hook nouveau.
 
+Le 2026-11-21, décision de l'utilisateur : P55 ne demande plus d'afficher « relu le <date> »
+ni « non relu ». La mention des arômes devient « Texte rédigé par une IA (Claude) », pour les
+houblons et les levures. P62 renvoie aux états de P55 et suit la même règle. La relecture reste
+une étape de l'ingestion (`ecrire.mjs`).
+
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
 garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.
