@@ -85,7 +85,8 @@ int _parNom(Map<String, Object?> a, Map<String, Object?> b) {
 
 /// Prépare les documents à partir de [sources], avec la table [alias], la
 /// liste [ajoutsDansHoublons], la table de fusion des houblons [fusions] et
-/// celle des cultures [fusionsCultures].
+/// celle des cultures [fusionsCultures], et les corrections des cultures de
+/// Brewtarget [correctionsCultures].
 ///
 /// Un nom (nom du document ou alias) porté par deux houblons lève
 /// [StateError] (ADR-014) : la résolution par nom ne saurait lequel choisir.
@@ -97,6 +98,7 @@ Preparation preparer(
   List<String> ajoutsDansHoublons = kAjoutsDansHoublons,
   List<Fusion> fusions = kFusions,
   List<FusionCulture> fusionsCultures = kFusionsCultures,
+  List<CorrectionCulture> correctionsCultures = kCorrectionsCultures,
   Map<String, String> datesReleveFabricants = kDatesReleveFabricants,
 }) {
   final lecture =
@@ -111,6 +113,7 @@ Preparation preparer(
     lecture.entrees,
     fusions: fusions,
     fusionsCultures: fusionsCultures,
+    correctionsCultures: correctionsCultures,
   );
   final resolveur = Resolveur(
     referentiel,
@@ -242,6 +245,7 @@ Preparation preparer(
       referentiel,
       NatureReferentiel.hop,
     ),
+    'doublons_meme_producteur': referentiel.doublonsMemeProducteur(),
     'noms_partages': {
       for (final n in NatureReferentiel.values)
         if (referentiel.nomsPartages(n) case final p when p.isNotEmpty)

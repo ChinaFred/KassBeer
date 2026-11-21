@@ -3228,13 +3228,26 @@ entrée désignée par deux lignes, deux lignes de même identifiant, ou une ent
 désignée dont l'identifiant (celui de sa souche si elle porte producteur et référence) diffère
 de celui de la ligne arrêtent la préparation (`StateError`). Sept lignes, listées dans `DATA_SOURCES.md` (« Escarpment Labs »).
 
+**Corrections des cultures de Brewtarget (`kCorrectionsCultures`, `fusions.dart`, v0.1.82, P56,
+décisions de l'utilisateur du 2026-11-21).** Avant la fusion, `Referentiel.fusionner` corrige
+des entrées de Brewtarget, jamais une fiche : `ReferenceCulture` donne à une entrée la
+référence retenue (une souche sous deux références, ou une entrée sans référence), et l'entrée
+rejoint la souche de cette référence ; `GammeCulture` renomme `<gamme> <référence>` une entrée
+d'un nom de gamme qui porte une référence (`Lalvin 71B`, nom construit par Kass'Beer), une
+entrée sans référence garde son nom. Après la fusion, `AliasEcarteCulture` retire des `aliases`
+d'une souche un nom qui est celui d'une autre souche du même producteur. Une ligne qui ne
+désigne rien, une entrée corrigée par deux lignes, ou un alias absent du document visé
+arrêtent la préparation (`StateError`). Onze lignes, listées dans `DATA_SOURCES.md`
+(« Doublons d'un même producteur hérités de Brewtarget »).
+
 Sortie : `<collection>.json` (listes `{id, data}`, triées par identifiant, `content_sha256`
 calculé) et `rapport.json` : entrées par source, entrées rejetées, listes ignorées, valeurs
 écartées, origines inconnues, tables de fusion appliquées (`table_de_fusion` : document,
 origine, entrées rattachées ; `table_de_fusion_cultures` : document, nom, entrées
 rattachées), groupes de houblons de même nom une fois les parenthèses
 retirées (`groupes_sans_parenthese`, pour la revue suivante de la table), noms portés par
-plusieurs documents par nature (`noms_partages`), fusions, documents par collection, recettes
+plusieurs documents par nature (`noms_partages`), parmi eux les noms de cultures dont deux
+documents ont le même producteur (`doublons_meme_producteur`, P56), fusions, documents par collection, recettes
 lues et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non
 résolus avec leur nombre de lignes, lignes rejetées, libellés perdus, températures de
 fermentation non reprises, taille JSON des index.

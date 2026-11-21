@@ -1,3 +1,5 @@
+import '../bornes.dart';
+import '../texte.dart';
 import 'cles.dart';
 import 'fusions.dart';
 import 'lecture_sources.dart';
@@ -81,6 +83,9 @@ class EntreeFusionnee {
   /// Noms ajoutés par la table d'alias et par la table de fusion.
   final Set<String> aliasAjoutes = {};
 
+  /// Noms écartés des `aliases` par [AliasEcarteCulture].
+  final Set<String> aliasEcartes = {};
+
   /// Ligne de la table de fusion qui nomme ce document, ou `null`.
   Fusion? ligne;
 
@@ -103,6 +108,7 @@ class EntreeFusionnee {
   List<String> get aliases {
     final ecartes = {
       for (final n in ligne?.ecartes ?? const <String>[]) cleNormalisee(n),
+      for (final n in aliasEcartes) cleNormalisee(n),
     };
     final noms = {for (final e in entrees) e.nom, ...aliasAjoutes}
       ..remove(nom)
@@ -212,11 +218,16 @@ class Referentiel {
   /// l'identifiant de son document, et `ingest/ecrire.mjs`, qui n'efface
   /// rien, ne laisse pas d'ancien document à côté du nouveau. Une souche que
   /// seule une fiche connaît prend l'identifiant de la fiche.
+  ///
+  /// [correctionsCultures] corrige d'abord les cultures de Brewtarget
+  /// (référence, nom de gamme), puis écarte des alias ([CorrectionCulture]).
   factory Referentiel.fusionner(
-    List<EntreeBrute> entrees, {
+    List<EntreeBrute> lues, {
     List<Fusion> fusions = const [],
     List<FusionCulture> fusionsCultures = const [],
+    List<CorrectionCulture> correctionsCultures = const [],
   }) {
+    final entrees = _corriger(lues, correctionsCultures);
     final lignes = <String, Fusion>{};
     final ligneDe = <int, Fusion>{};
     for (final f in fusions) {
@@ -325,7 +336,59 @@ class Referentiel {
       }
       parNature[fusion.nature]![id] = fusion;
     }
+    for (final c in correctionsCultures.whereType<AliasEcarteCulture>()) {
+      final docs = [
+        for (final f in parNature[NatureReferentiel.culture]!.values)
+          if (f.entrees.any((e) => _cleSouche(e) == c.cleSouche)) f,
+      ];
+      if (docs.length != 1 ||
+          !docs.single.aliases.any(
+            (n) => cleNormalisee(n) == cleNormalisee(c.alias),
+          )) {
+        throw StateError('correction $c : aucun document qui porte cet alias');
+      }
+      docs.single.aliasEcartes.add(c.alias);
+    }
     return Referentiel._(parNature);
+  }
+
+  /// Entrées [lues] corrigées par les lignes [ReferenceCulture] et
+  /// [GammeCulture] de [corrections].
+  static List<EntreeBrute> _corriger(
+    List<EntreeBrute> lues,
+    List<CorrectionCulture> corrections,
+  ) {
+    final entrees = [...lues];
+    final corrigees = <int, CorrectionCulture>{};
+    for (final c in corrections) {
+      var trouvees = 0;
+      for (var i = 0; i < entrees.length; i++) {
+        final e = entrees[i];
+        final EntreeBrute? nouvelle = switch (c) {
+          ReferenceCulture() when c.designe(lues[i]) => e.corrigee(
+            produit: c.retenue,
+          ),
+          GammeCulture() when c.designe(lues[i]) => e.corrigee(
+            nom: couper('${c.nom} ${e.produit}', kMaxNom),
+          ),
+          _ => null,
+        };
+        if (nouvelle == null) continue;
+        final deja = corrigees[i];
+        if (deja != null) {
+          throw StateError(
+            '${e.source.id} « ${e.nom} » corrigée par $deja et $c',
+          );
+        }
+        corrigees[i] = c;
+        entrees[i] = nouvelle;
+        trouvees++;
+      }
+      if (trouvees == 0 && c is! AliasEcarteCulture) {
+        throw StateError('correction $c : aucune entrée');
+      }
+    }
+    return entrees;
   }
 
   Referentiel._(this.parNature) {
@@ -410,6 +473,32 @@ class Referentiel {
       for (final MapEntry(:key, :value) in parNom.entries)
         if (value.length > 1) key: value.toList()..sort(),
     };
+  }
+
+  /// Noms partagés des cultures ([nomsPartages]) dont deux documents au
+  /// moins ont le même producteur (`cleProducteur`), et leurs identifiants
+  /// triés (P56 : doublons hérités de Brewtarget).
+  Map<String, List<String>> doublonsMemeProducteur() {
+    final cultures = parNature[NatureReferentiel.culture]!;
+    return {
+      for (final MapEntry(:key, :value) in nomsPartages(
+        NatureReferentiel.culture,
+      ).entries)
+        if (_memeProducteur([
+          for (final id in value) cultures[id]!.principale.producteur,
+        ]))
+          key: value,
+    };
+  }
+
+  /// Vrai si deux producteurs de [producteurs] ont la même clé ; un document
+  /// sans producteur n'est rapproché d'aucun.
+  static bool _memeProducteur(List<String?> producteurs) {
+    final vus = <String>{};
+    for (final p in producteurs) {
+      if (p != null && !vus.add(cleProducteur(p))) return true;
+    }
+    return false;
   }
 
   /// Nombre de fusions de [nature] : entrées lues moins documents.
