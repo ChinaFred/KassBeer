@@ -78,6 +78,7 @@ class AppShell extends ConsumerWidget {
     required this.location,
     required this.title,
     this.backTo,
+    this.backByPop = false,
     this.fullWidth = false,
     required this.child,
   });
@@ -90,6 +91,10 @@ class AppShell extends ConsumerWidget {
 
   /// Chemin du bouton retour ; `null` pour une destination principale.
   final String? backTo;
+
+  /// Le bouton retour dépile la page (`pop`) au lieu d'ouvrir [backTo] : page
+  /// ouverte par-dessus une autre (« Voir le style » en large).
+  final bool backByPop;
 
   /// Contenu sur toute la largeur, sans la borne de [kContentMaxWidth] (liste et
   /// fiche côte à côte).
@@ -117,13 +122,22 @@ class AppShell extends ConsumerWidget {
       context.go(path);
     }
 
+    /// Dépile la page, après la même confirmation.
+    Future<void> depiler() async {
+      if (!await garde.peutQuitter() || !context.mounted) return;
+      context.pop();
+    }
+
     void goTo(int index) => unawaited(quitterVers(destinations[index].path));
 
     final appBar = AppBar(
       title: Text(title),
       leading: back == null
           ? null
-          : BackButton(onPressed: () => unawaited(quitterVers(back))),
+          : BackButton(
+              onPressed: () =>
+                  unawaited(backByPop ? depiler() : quitterVers(back)),
+            ),
       automaticallyImplyLeading: false,
       actions: [
         MenuCompte(avantDeQuitter: garde.peutQuitter),
