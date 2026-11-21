@@ -342,6 +342,19 @@ describe("claude : requête et réponses (P57)", () => {
     assert.ok(!("cache_control" in system[1]));
     assert.ok(!("output_config" in messagesBody({ ...req, effort: null })));
   });
+  it("corps : sortie structurée dans output_config.format, avec ou sans effort", () => {
+    const format = { type: "json_schema", schema: { type: "object" } };
+    assert.deepEqual(messagesBody({ ...req, outputFormat: format }).output_config, {
+      effort: "medium",
+      format,
+    });
+    assert.deepEqual(messagesBody({ ...req, effort: null, outputFormat: format }).output_config, {
+      format,
+    });
+    assert.ok(!("output_config" in messagesBody({ ...req, effort: null, outputFormat: null })));
+    const body = messagesBody({ ...req, outputFormat: format });
+    assert.ok(!("tools" in body) && !("tool_choice" in body) && !("output_format" in body));
+  });
   it("un seul fetch : URL, en-têtes, redirect error, délai", async () => {
     const calls: { url: string; init: RequestInit }[] = [];
     const out = await callClaude(req, API_KEY, {

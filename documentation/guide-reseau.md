@@ -169,6 +169,14 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
+Le 2026-11-21, avec la livraison du lot A2 d'ADR-015 (propositions de l'assistant appliquées au
+brouillon), la session principale a mis `CLAUDE.md` à jour : « Le projet » dit les lots A1 et A2
+de l'assistant de recette livrés (analyse en texte, propositions appliquées au brouillon) ; la
+ligne de `test-fixtures/recipe_assistant_operations.json` figure dans « Structure » et dans le
+tableau « Logique dupliquée » sans la mention « (lot A2) » ; « Recettes en BeerJSON partiel »
+écrit « depuis le lot A2 » pour l'exception des valeurs techniques proposées par l'assistant et
+marquées dans `ai_proposed`. Aucun contrôle n'est ajouté ni retiré.
+
 Le 2026-11-11, ADR-010 (déroulé en journées) a étendu la règle absolue du hors ligne à chaque
 journée du déroulé et la règle « Un brassin fige sa recette » à son déroulé, ajouté le lieu des
 modèles (`process_templates/`) aux règles des prix, complété P2, P3 et P5, et ajouté P37 (lecture
@@ -253,7 +261,7 @@ beer_culture_aromas`), P20 (exception des textes générés étendue à `beer_cu
 (`relecteur-regles` : collection, contrôle de `ingest/lib/aromes/natures/culture.mjs`, styles
 conseillés pris dans `beer_styles.json` préparé, périmètre, refus de `ecrire.mjs`, liste du
 groupe, affichage). « Le projet » et « Coûts variables » de `CLAUDE.md` nomment le quatrième
-poste et la limite de 70 $ jusqu'au 30 novembre 2026 au plus tard. Livraison 1 (v0.1.92) :
+poste et la limite de 70 $ jusqu'au 30 novembre 2026 au plus tard. Livraison 1 (v0.1.93) :
 `ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs` et
 `exchange/bin/lister_houblons_recettes.dart` devient `lister_ingredients_recettes.dart`, sans
 ancien nom gardé ; « Structure » et « Commandes utiles » de `CLAUDE.md` suivent et reçoivent les

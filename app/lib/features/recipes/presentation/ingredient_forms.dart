@@ -11,6 +11,7 @@ import '../../library/presentation/champ_bibliotheque.dart';
 import '../domain/beerjson.dart';
 import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
+import 'contenu_recette.dart' show kAideProposeeParIa;
 
 /// Formulaires d'une ligne de recette, ouverts en feuille du bas ou en dialogue
 /// (`showFeuilleOuDialogue`). « Ajouter » ajoute la ligne et ferme ; « Ajouter et
@@ -581,9 +582,14 @@ class FormulaireFermentescible extends ConsumerStatefulWidget {
     this.initial,
     required this.remaining,
     required this.onSubmit,
+    this.champsProposes = const {},
   });
 
   final FermentableLine? initial;
+
+  /// Champs de [initial] proposés par l'IA (`color`, `yield`) : leur aide
+  /// dit de les vérifier, tant qu'ils ne sont pas corrigés à la main.
+  final Set<String> champsProposes;
   final int remaining;
   final ValueChanged<FermentableLine> onSubmit;
 
@@ -634,7 +640,12 @@ class _FormulaireFermentescibleState
       _ebc.text = texteSaisi(i.ebc);
       _yield.text = texteSaisi(i.yieldPct);
     }
+    _ebcInitial = _ebc.text;
+    _yieldInitial = _yield.text;
   }
+
+  late final String _ebcInitial;
+  late final String _yieldInitial;
 
   @override
   void dispose() {
@@ -774,14 +785,22 @@ class _FormulaireFermentescibleState
             controller: _ebc,
             focusNode: _ebcFocus,
             label: 'Couleur (EBC)',
-            aide: 'Sert au calcul de la couleur.',
+            aide:
+                widget.champsProposes.contains('color') &&
+                    _ebc.text == _ebcInitial
+                ? kAideProposeeParIa
+                : 'Sert au calcul de la couleur.',
             onChanged: _suiviSuggestion,
           ),
           ChampNombre(
             controller: _yield,
             focusNode: _yieldFocus,
             label: 'Rendement d\'extrait (%)',
-            aide: 'Sert au calcul de la densité initiale.',
+            aide:
+                widget.champsProposes.contains('yield') &&
+                    _yield.text == _yieldInitial
+                ? kAideProposeeParIa
+                : 'Sert au calcul de la densité initiale.',
             max: 100,
             onChanged: _suiviSuggestion,
             textInputAction: TextInputAction.done,
@@ -804,9 +823,14 @@ class FormulaireHoublon extends ConsumerStatefulWidget {
     required this.remaining,
     required this.recipeBoilMin,
     required this.onSubmit,
+    this.alphaPropose = false,
   });
 
   final HopLine? initial;
+
+  /// Acides alpha de [initial] proposés par l'IA : l'aide dit de les
+  /// vérifier, tant qu'ils ne sont pas corrigés à la main.
+  final bool alphaPropose;
   final int remaining;
 
   /// Durée d'ébullition de la recette, pour l'avertissement U6.
@@ -822,6 +846,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
   final _mass = TextEditingController();
   final _alpha = TextEditingController();
   final _alphaFocus = FocusNode();
+  String _alphaInitial = '';
   final _time = TextEditingController();
   HopUse _use = HopUse.boil;
 
@@ -955,6 +980,7 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
       _mass.text = texteQuantite(i.amount);
       _unite = uniteDe(i.amount);
       _alpha.text = texteSaisi(i.alphaPct);
+      _alphaInitial = _alpha.text;
       _use = i.use;
       // Un houblon sans forme s'ouvre avec la forme proposée d'avance.
       if (i.form != null) {
@@ -1080,6 +1106,9 @@ class _FormulaireHoublonState extends ConsumerState<FormulaireHoublon>
             controller: _alpha,
             focusNode: _alphaFocus,
             label: 'Acides alpha (%)',
+            aide: widget.alphaPropose && _alpha.text == _alphaInitial
+                ? kAideProposeeParIa
+                : null,
             max: 100,
             onChanged: _suiviSuggestion,
           ),
@@ -1339,9 +1368,18 @@ class _FormulaireAjoutState extends ConsumerState<FormulaireAjout>
 
 /// Formulaire de la levure (I4) : une seule par recette, pas de continuation.
 class FormulaireLevure extends ConsumerStatefulWidget {
-  const FormulaireLevure({super.key, this.initial, required this.onSubmit});
+  const FormulaireLevure({
+    super.key,
+    this.initial,
+    required this.onSubmit,
+    this.attenuationProposee = false,
+  });
 
   final YeastLine? initial;
+
+  /// Atténuation de [initial] proposée par l'IA : l'aide dit de la vérifier,
+  /// tant qu'elle n'est pas corrigée à la main.
+  final bool attenuationProposee;
   final ValueChanged<YeastLine> onSubmit;
 
   @override
@@ -1353,6 +1391,7 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
   final _amount = TextEditingController();
   final _attenuation = TextEditingController();
   final _attenuationFocus = FocusNode();
+  String _attenuationInitial = '';
   String? _type;
   UniteSaisie _unite = UniteSaisie.grammes;
 
@@ -1434,6 +1473,7 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
       _amount.text = texteQuantite(i.amount);
       _unite = uniteDe(i.amount);
       _attenuation.text = texteSaisi(i.attenuationPct);
+      _attenuationInitial = _attenuation.text;
       _type = i.type;
       _form = i.form;
     }
@@ -1500,7 +1540,11 @@ class _FormulaireLevureState extends ConsumerState<FormulaireLevure>
             controller: _attenuation,
             focusNode: _attenuationFocus,
             label: 'Atténuation (%)',
-            aide: 'Sert au calcul de la densité finale.',
+            aide:
+                widget.attenuationProposee &&
+                    _attenuation.text == _attenuationInitial
+                ? kAideProposeeParIa
+                : 'Sert au calcul de la densité finale.',
             max: 100,
             onChanged: _suiviSuggestion,
           ),

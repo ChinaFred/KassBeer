@@ -1,6 +1,8 @@
 import 'package:brewing/brewing.dart';
+import 'package:exchange/exchange.dart' show MarqueIa;
 import 'package:flutter/material.dart';
 
+import '../../../core/presentation/encadre.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../domain/beerjson.dart';
@@ -8,6 +10,23 @@ import '../domain/chronologie.dart';
 import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
 import 'ingredient_forms.dart';
+
+/// Marque d'une valeur technique proposée par l'IA (ADR-015, lot A2), écrite
+/// après la valeur : « 12 % alpha (proposée par l'IA) ». Texte et fonctions
+/// ici, hors des fichiers de l'assistant : l'écran du jour importe ce fichier
+/// (P2, P60).
+const kProposeeParIa = '(proposée par l\'IA)';
+
+/// Aide d'un champ du formulaire dont la valeur a été proposée par l'IA.
+const kAideProposeeParIa = 'Valeur proposée par l\'IA : vérifiez-la.';
+
+/// Encadré de la fiche quand des marques n'ont pas pu être lues.
+const kMarquesIaIllisibles =
+    'Marques IA illisibles : une valeur proposée par l\'IA peut ne pas être '
+    'signalée.';
+
+String _avecMarque(String texte, bool marquee) =>
+    marquee ? '$texte $kProposeeParIa' : texte;
 
 /// Moment d'un houblon et sa durée : « Ébullition 60 min », « Whirlpool 20 min »,
 /// « À cru 3 jours », « Empâtage 60 min ».
@@ -42,13 +61,21 @@ String? enteteHoublons(List<HopLine> hops) {
 /// Détails d'un houblon, dans la fiche et dans l'éditeur : « Ébullition 60 min ·
 /// 30 g · 10 % alpha · Pellets · 31 IBU ». [fiche] vrai : l'alpha et la forme
 /// absents sont nommés. [ibu] : IBU apporté par ce houblon, s'il est calculé.
-List<String> detailsHoublon(HopLine h, {required bool fiche, double? ibu}) => [
+List<String> detailsHoublon(
+  HopLine h, {
+  required bool fiche,
+  double? ibu,
+  List<MarqueIa> marques = const [],
+}) => [
   libelleMomentHoublon(h),
   if (h.dayMin != null)
     'ajout au jour ${formatNombre(h.dayMin! / minutesParJour, decimales: 1)}',
   formatQuantiteRecette(h.amount),
   if (h.alphaPct != null)
-    '${formatPourcent(h.alphaPct!)} alpha'
+    _avecMarque(
+      '${formatPourcent(h.alphaPct!)} alpha',
+      houblonProposeParIa(marques, h),
+    )
   else if (fiche)
     'alpha non renseigné',
   if (h.form != null)
@@ -59,16 +86,24 @@ List<String> detailsHoublon(HopLine h, {required bool fiche, double? ibu}) => [
 ];
 
 /// Détails d'un malt ou d'un sucre : « Malt · 4,5 kg · 4 EBC · rendement
-/// 80 % ». [fiche] vrai : couleur et rendement absents sont nommés.
+/// 80 % ». [fiche] vrai : couleur et rendement absents sont nommés. [marques] :
+/// marques `ai_proposed` de la recette, écrites après la valeur.
 List<String> detailsFermentescible(
   FermentableLine f, {
   required bool fiche,
+  List<MarqueIa> marques = const [],
 }) => [
   typesFermentable.libelle(f.type),
   formatKilogrammes(f.weightG),
-  if (f.ebc != null) formatEbc(f.ebc!) else if (fiche) 'couleur non renseignée',
+  if (f.ebc != null)
+    _avecMarque(formatEbc(f.ebc!), fermentableProposeParIa(marques, f, 'color'))
+  else if (fiche)
+    'couleur non renseignée',
   if (f.yieldPct != null)
-    'rendement ${formatPourcent(f.yieldPct!)}'
+    _avecMarque(
+      'rendement ${formatPourcent(f.yieldPct!)}',
+      fermentableProposeParIa(marques, f, 'yield'),
+    )
   else if (fiche)
     'rendement non renseigné',
 ];
@@ -91,11 +126,18 @@ List<String> detailsPalier(MashStep s) => [
 
 /// Détails d'une levure : « Haute fermentation (ale) · 11 g · atténuation 75 % ·
 /// Sèche ». [fiche] vrai : l'atténuation absente est nommée.
-List<String> detailsLevure(YeastLine y, {required bool fiche}) => [
+List<String> detailsLevure(
+  YeastLine y, {
+  required bool fiche,
+  List<MarqueIa> marques = const [],
+}) => [
   if (y.type != null) typesLevure.libelle(y.type!),
   if (y.amount != null) formatQuantiteRecette(y.amount!),
   if (y.attenuationPct != null)
-    'atténuation ${formatPourcent(y.attenuationPct!)}'
+    _avecMarque(
+      'atténuation ${formatPourcent(y.attenuationPct!)}',
+      levureProposeeParIa(marques, y),
+    )
   else if (fiche)
     'atténuation non renseignée',
   if (y.form != null) formesLevure.libelle(y.form!),
@@ -169,9 +211,18 @@ class ContenuRecette extends StatelessWidget {
             ...lignes,
           ];
     final chronologie = this.chronologie;
+    final marques = c.aiProposed;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (c.aiProposedIllisibles > 0) ...[
+          const Encadre(
+            ton: TonEncadre.avertissement,
+            icone: Icons.warning_amber_outlined,
+            child: Text(kMarquesIaIllisibles),
+          ),
+          const SizedBox(height: 8),
+        ],
         ...section(
           'Malts et sucres',
           trailing: c.fermentables.isEmpty
@@ -183,7 +234,11 @@ class ContenuRecette extends StatelessWidget {
             for (final f in c.fermentables)
               LigneDeuxNiveaux(
                 title: f.name,
-                details: detailsFermentescible(f, fiche: true),
+                details: detailsFermentescible(
+                  f,
+                  fiche: true,
+                  marques: marques,
+                ),
               ),
           ],
         ),
@@ -193,7 +248,12 @@ class ContenuRecette extends StatelessWidget {
             LigneDeuxNiveaux(
               title: h.name,
               details: [
-                ...detailsHoublon(h, fiche: true, ibu: hopIbu[i]),
+                ...detailsHoublon(
+                  h,
+                  fiche: true,
+                  ibu: hopIbu[i],
+                  marques: marques,
+                ),
                 if (momentsOrigine[i] case final moment?)
                   "moment d'origine : $moment",
               ],
@@ -209,7 +269,7 @@ class ContenuRecette extends StatelessWidget {
           for (final y in c.yeasts)
             LigneDeuxNiveaux(
               title: y.name,
-              details: detailsLevure(y, fiche: true),
+              details: detailsLevure(y, fiche: true, marques: marques),
             ),
         ]),
         ...section('Paliers d\'empâtage', [

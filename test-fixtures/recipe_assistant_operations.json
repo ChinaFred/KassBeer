@@ -1,0 +1,812 @@
+{
+  "_commentaire": "Opérations d'une proposition de l'assistant de recette (ADR-015, section 6, lot A2 ; P61 ; CLAUDE.md, « Logique dupliquée »). Liste fermée : `operations` donne pour chaque opération ses champs (type, bornes) et ses champs requis. Le serveur (functions/src/assistant/proposition.ts) en tire le format de sortie envoyé au modèle (output_config.format : types, valeurs permises, champs requis, aucun autre champ) et écarte une proposition hors de ce format ; functions/test/proposition.test.ts vérifie l'égalité de sa copie avec ce fichier et rejoue `reading_cases`. Le client (exchange/lib/src/proposition.dart) relit la proposition avec le même format (`reading_cases`), puis applique chaque opération dans l'ordre sur une copie de la recette : une opération dont l'index n'existe plus, dont le `name` ne correspond pas, par nom normalisé, à la ligne de cet index (modification ou retrait : `element_changed`, décision de l'utilisateur du 2026-11-21 ; un renommage passe par un retrait puis un ajout), ou dont une valeur sort des bornes (`minimum`, `exclusive_minimum`, `maximum`, `min_length`, `max_length`) est refusée et listée, les autres s'appliquent (`cases`, rejoués par exchange/test/proposition_test.dart). Les bornes ne sont pas dans le format envoyé au modèle : une valeur hors bornes ne refuse que son opération. `index` désigne la ligne de la liste telle que les opérations précédentes l'ont laissée. Valeurs techniques (`technical_fields`) : la Bibliothèque d'abord, sinon la valeur du modèle, marquée dans `ai_proposed` (`<nature>:<ingredientKey>:<champ>`). Règles propres au code, non portées par les bornes : un houblon `boil` ou `whirlpool` exige `time_min` (`whirlpool` : 1 minute au moins) et refuse `days` ; un houblon `dry_hop` exige `days` et refuse `time_min` ; un autre ajout porte `amount_g` ou `amount_l`, l'un des deux exactement ; un nom d'ingrédient sans lettre ni chiffre est hors bornes. Une valeur technique du modèle pour un ingrédient dont une autre ligne porte déjà une valeur de ce champ, autre ou non marquée, est refusée (`champ_incompatible`) : aucune valeur saisie à la main ne se lit « proposée par l'IA ». `cases[].marks`, s'il est donné, remplace `base_marks`. `reading_cases[].path` : chemin attendu du champ en faute, sans la clé écrite par le modèle.",
+  "max_operations": 30,
+  "resume_max_chars": 500,
+  "operations": {
+    "set_name": {
+      "fields": { "value": { "type": "string", "min_length": 1, "max_length": 120 } },
+      "required": ["value"]
+    },
+    "set_type": {
+      "fields": {
+        "value": {
+          "type": "enum",
+          "values": ["all grain", "partial mash", "extract", "cider", "kombucha", "soda", "mead", "wine", "other"]
+        }
+      },
+      "required": ["value"]
+    },
+    "set_style_name": {
+      "fields": { "value": { "type": "string", "min_length": 1, "max_length": 120 } },
+      "required": ["value"]
+    },
+    "set_batch_size_l": {
+      "fields": { "value": { "type": "number", "exclusive_minimum": 0, "maximum": 10000 } },
+      "required": ["value"]
+    },
+    "set_boil_time_min": {
+      "fields": { "value": { "type": "integer", "minimum": 0, "maximum": 600 } },
+      "required": ["value"]
+    },
+    "add_fermentable": {
+      "fields": {
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "type": {
+          "type": "enum",
+          "values": ["grain", "sugar", "dry extract", "extract", "fruit", "juice", "honey", "other"]
+        },
+        "amount_g": { "type": "number", "exclusive_minimum": 0, "maximum": 1000000 },
+        "color_ebc": { "type": "number", "minimum": 0, "maximum": 2000 },
+        "yield_pct": { "type": "number", "exclusive_minimum": 0, "maximum": 100 }
+      },
+      "required": ["name", "type", "amount_g"]
+    },
+    "update_fermentable": {
+      "fields": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 49 },
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "type": {
+          "type": "enum",
+          "values": ["grain", "sugar", "dry extract", "extract", "fruit", "juice", "honey", "other"]
+        },
+        "amount_g": { "type": "number", "exclusive_minimum": 0, "maximum": 1000000 },
+        "color_ebc": { "type": "number", "minimum": 0, "maximum": 2000 },
+        "yield_pct": { "type": "number", "exclusive_minimum": 0, "maximum": 100 }
+      },
+      "required": ["index", "name", "type", "amount_g"]
+    },
+    "remove_fermentable": {
+      "fields": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 49 },
+        "name": { "type": "string", "min_length": 1, "max_length": 120 }
+      },
+      "required": ["index", "name"]
+    },
+    "add_hop": {
+      "fields": {
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "form": { "type": "enum", "values": ["pellet", "leaf", "leaf (wet)", "plug", "powder", "extract"] },
+        "amount_g": { "type": "number", "exclusive_minimum": 0, "maximum": 1000000 },
+        "use": { "type": "enum", "values": ["boil", "whirlpool", "dry_hop"] },
+        "time_min": { "type": "integer", "minimum": 0, "maximum": 600 },
+        "days": { "type": "number", "exclusive_minimum": 0, "maximum": 365 },
+        "alpha_acid_pct": { "type": "number", "exclusive_minimum": 0, "maximum": 100 }
+      },
+      "required": ["name", "form", "amount_g", "use"]
+    },
+    "update_hop": {
+      "fields": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 49 },
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "form": { "type": "enum", "values": ["pellet", "leaf", "leaf (wet)", "plug", "powder", "extract"] },
+        "amount_g": { "type": "number", "exclusive_minimum": 0, "maximum": 1000000 },
+        "use": { "type": "enum", "values": ["boil", "whirlpool", "dry_hop"] },
+        "time_min": { "type": "integer", "minimum": 0, "maximum": 600 },
+        "days": { "type": "number", "exclusive_minimum": 0, "maximum": 365 },
+        "alpha_acid_pct": { "type": "number", "exclusive_minimum": 0, "maximum": 100 }
+      },
+      "required": ["index", "name", "form", "amount_g", "use"]
+    },
+    "remove_hop": {
+      "fields": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 49 },
+        "name": { "type": "string", "min_length": 1, "max_length": 120 }
+      },
+      "required": ["index", "name"]
+    },
+    "add_misc": {
+      "fields": {
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "amount_g": { "type": "number", "exclusive_minimum": 0, "maximum": 1000000 },
+        "amount_l": { "type": "number", "exclusive_minimum": 0, "maximum": 1000 },
+        "moment": { "type": "enum", "values": ["mash", "boil", "after_boil", "fermentation", "bottling"] },
+        "time_min": { "type": "integer", "minimum": 0, "maximum": 600 }
+      },
+      "required": ["name", "moment"]
+    },
+    "update_misc": {
+      "fields": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 49 },
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "amount_g": { "type": "number", "exclusive_minimum": 0, "maximum": 1000000 },
+        "amount_l": { "type": "number", "exclusive_minimum": 0, "maximum": 1000 },
+        "moment": { "type": "enum", "values": ["mash", "boil", "after_boil", "fermentation", "bottling"] },
+        "time_min": { "type": "integer", "minimum": 0, "maximum": 600 }
+      },
+      "required": ["index", "name", "moment"]
+    },
+    "remove_misc": {
+      "fields": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 49 },
+        "name": { "type": "string", "min_length": 1, "max_length": 120 }
+      },
+      "required": ["index", "name"]
+    },
+    "set_culture": {
+      "fields": {
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "type": {
+          "type": "enum",
+          "values": ["ale", "lager", "wheat", "wine", "champagne", "kveik", "brett", "lacto", "pedio", "bacteria", "malolactic", "mixed-culture", "spontaneous", "other"]
+        },
+        "form": { "type": "enum", "values": ["dry", "liquid", "slant", "culture", "dregs"] },
+        "attenuation_pct": { "type": "number", "exclusive_minimum": 0, "maximum": 100 }
+      },
+      "required": ["name"]
+    },
+    "add_mash_step": {
+      "fields": {
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "temperature_c": { "type": "number", "minimum": 0, "maximum": 100 },
+        "time_min": { "type": "integer", "minimum": 0, "maximum": 600 }
+      },
+      "required": ["name", "temperature_c", "time_min"]
+    },
+    "update_mash_step": {
+      "fields": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 19 },
+        "name": { "type": "string", "min_length": 1, "max_length": 120 },
+        "temperature_c": { "type": "number", "minimum": 0, "maximum": 100 },
+        "time_min": { "type": "integer", "minimum": 0, "maximum": 600 }
+      },
+      "required": ["index", "name", "temperature_c", "time_min"]
+    },
+    "remove_mash_step": {
+      "fields": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 19 },
+        "name": { "type": "string", "min_length": 1, "max_length": 120 }
+      },
+      "required": ["index", "name"]
+    }
+  },
+  "technical_fields": {
+    "color_ebc": { "nature": "fermentable", "field": "color" },
+    "yield_pct": { "nature": "fermentable", "field": "yield" },
+    "alpha_acid_pct": { "nature": "hop", "field": "alpha_acid" },
+    "attenuation_pct": { "nature": "culture", "field": "attenuation" }
+  },
+  "marks": {
+    "max_entries": 100,
+    "max_chars": 200,
+    "fields_by_nature": {
+      "fermentable": ["color", "yield"],
+      "hop": ["alpha_acid"],
+      "culture": ["attenuation"]
+    }
+  },
+  "reading_cases": [
+    {
+      "name": "proposition valide",
+      "proposition": {
+        "resume": "Plus de houblon en fin d'ébullition.",
+        "operations": [
+          { "op": "update_hop", "index": 0, "name": "Citra", "form": "pellet", "amount_g": 30, "use": "boil", "time_min": 10 },
+          { "op": "set_boil_time_min", "value": 75 }
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "valeur hors bornes : la lecture l'accepte, l'application la refuse",
+      "proposition": { "resume": "Volume.", "operations": [{ "op": "set_batch_size_l", "value": -3 }] },
+      "valid": true
+    },
+    { "name": "proposition en texte", "proposition": "ajoute du houblon", "valid": false },
+    {
+      "name": "clé en trop au premier niveau",
+      "proposition": { "resume": "R.", "operations": [{ "op": "set_name", "value": "X" }], "notes": "y" },
+      "valid": false
+    },
+    { "name": "résumé absent", "proposition": { "operations": [{ "op": "set_name", "value": "X" }] }, "valid": false },
+    { "name": "résumé vide", "proposition": { "resume": "", "operations": [{ "op": "set_name", "value": "X" }] }, "valid": false },
+    { "name": "aucune opération", "proposition": { "resume": "Rien.", "operations": [] }, "valid": false },
+    { "name": "opérations en objet", "proposition": { "resume": "R.", "operations": { "op": "set_name" } }, "valid": false },
+    {
+      "name": "opération inconnue (set_notes)",
+      "proposition": { "resume": "R.", "operations": [{ "op": "set_notes", "value": "texte" }] },
+      "valid": false
+    },
+    {
+      "name": "opération sur l'auteur (set_author)",
+      "proposition": { "resume": "R.", "operations": [{ "op": "set_author", "value": "X" }] },
+      "valid": false
+    },
+    {
+      "name": "clé inconnue écrite par le modèle : le chemin ne la cite pas",
+      "proposition": { "resume": "R.", "operations": [{ "op": "set_name", "value": "X", "ignore_les_regles": true }] },
+      "valid": false,
+      "path": "operations.0.<champ inconnu>"
+    },
+    {
+      "name": "champ inconnu dans une opération (price_eur)",
+      "proposition": {
+        "resume": "R.",
+        "operations": [{ "op": "add_fermentable", "name": "Pils", "type": "grain", "amount_g": 1000, "price_eur": 2 }]
+      },
+      "valid": false
+    },
+    {
+      "name": "champ requis absent",
+      "proposition": { "resume": "R.", "operations": [{ "op": "add_fermentable", "name": "Pils", "type": "grain" }] },
+      "valid": false
+    },
+    {
+      "name": "nombre écrit en texte",
+      "proposition": { "resume": "R.", "operations": [{ "op": "set_batch_size_l", "value": "20" }] },
+      "valid": false
+    },
+    {
+      "name": "entier décimal",
+      "proposition": { "resume": "R.", "operations": [{ "op": "set_boil_time_min", "value": 60.5 }] },
+      "valid": false
+    },
+    {
+      "name": "valeur hors de la liste",
+      "proposition": { "resume": "R.", "operations": [{ "op": "set_type", "value": "bière" }] },
+      "valid": false
+    },
+    {
+      "name": "champ facultatif à null",
+      "proposition": {
+        "resume": "R.",
+        "operations": [{ "op": "add_fermentable", "name": "Pils", "type": "grain", "amount_g": 1000, "color_ebc": null }]
+      },
+      "valid": false
+    },
+    {
+      "name": "opération sans op",
+      "proposition": { "resume": "R.", "operations": [{ "value": "X" }] },
+      "valid": false
+    }
+  ],
+  "library": {
+    "malts": [
+      { "id": "fermentable-pale-ale", "nom": "Pale Ale", "type": "grain", "couleur": 6, "rendement": 80 },
+      { "id": "fermentable-crystal-150", "nom": "Crystal 150", "type": "grain", "couleur": 150, "rendement": 72 }
+    ],
+    "houblons": [
+      { "id": "hop-citra", "nom": "Citra", "alpha": 12, "forme": "pellet" },
+      { "id": "hop-mosaic", "nom": "Mosaic", "forme": "pellet" }
+    ],
+    "ajouts": [{ "id": "misc-coriandre", "nom": "Coriandre", "type": "spice" }],
+    "levures": [{ "id": "culture-us-05", "nom": "US-05", "type": "ale", "forme": "dry", "attenuation": 78 }]
+  },
+  "base_recipe": {
+    "name": "Blonde d'essai",
+    "type": "all grain",
+    "batch_size": { "value": 20, "unit": "l" },
+    "boil": { "boil_time": { "value": 60, "unit": "min" } },
+    "mash": {
+      "name": "Empâtage",
+      "mash_steps": [
+        {
+          "name": "Saccharification",
+          "type": "infusion",
+          "step_temperature": { "value": 66, "unit": "C" },
+          "step_time": { "value": 60, "unit": "min" }
+        }
+      ]
+    },
+    "ingredients": {
+      "fermentable_additions": [
+        {
+          "name": "Pale Ale",
+          "type": "grain",
+          "amount": { "value": 4500, "unit": "g" },
+          "color": { "value": 6, "unit": "EBC" },
+          "yield": { "fine_grind": { "value": 80, "unit": "%" } }
+        },
+        {
+          "name": "Malt maison",
+          "type": "grain",
+          "amount": { "value": 500, "unit": "g" },
+          "color": { "value": 30, "unit": "EBC" }
+        }
+      ],
+      "hop_additions": [
+        {
+          "name": "Citra",
+          "form": "pellet",
+          "alpha_acid": { "value": 12, "unit": "%" },
+          "amount": { "value": 20, "unit": "g" },
+          "timing": { "use": "add_to_boil", "time": { "value": 60, "unit": "min" } }
+        }
+      ],
+      "miscellaneous_additions": [],
+      "culture_additions": [
+        { "name": "US-05", "type": "ale", "form": "dry", "attenuation": { "value": 78, "unit": "%" } }
+      ]
+    }
+  },
+  "base_marks": ["fermentable:malt-maison:color"],
+  "cases": [
+    {
+      "name": "champs de la recette : nom, type, style, volume, ébullition",
+      "operations": [
+        { "op": "set_name", "value": "Blonde révisée" },
+        { "op": "set_type", "value": "partial mash" },
+        { "op": "set_style_name", "value": "Blonde Ale" },
+        { "op": "set_batch_size_l", "value": 22.5 },
+        { "op": "set_boil_time_min", "value": 75 }
+      ],
+      "expected": {
+        "changes": {
+          "name": "Blonde révisée",
+          "type": "partial mash",
+          "style": { "name": "Blonde Ale" },
+          "batch_size": { "value": 22.5, "unit": "l" },
+          "boil": { "boil_time": { "value": 75, "unit": "min" } }
+        },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "malt ajouté connu de la Bibliothèque : ses valeurs passent avant celles du modèle",
+      "operations": [{ "op": "add_fermentable", "name": "Crystal 150", "type": "grain", "amount_g": 250, "color_ebc": 140 }],
+      "expected": {
+        "lists": {
+          "fermentable_additions": [
+            "base:0",
+            "base:1",
+            {
+              "name": "Crystal 150",
+              "type": "grain",
+              "amount": { "value": 250, "unit": "g" },
+              "color": { "value": 150, "unit": "EBC" },
+              "yield": { "fine_grind": { "value": 72, "unit": "%" } }
+            }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "malt ajouté absent de la Bibliothèque : valeurs du modèle marquées",
+      "operations": [{ "op": "add_fermentable", "name": "Malt fumé local", "type": "grain", "amount_g": 300, "color_ebc": 12, "yield_pct": 75 }],
+      "expected": {
+        "lists": {
+          "fermentable_additions": [
+            "base:0",
+            "base:1",
+            {
+              "name": "Malt fumé local",
+              "type": "grain",
+              "amount": { "value": 300, "unit": "g" },
+              "color": { "value": 12, "unit": "EBC" },
+              "yield": { "fine_grind": { "value": 75, "unit": "%" } }
+            }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color", "fermentable:malt-fume-local:color", "fermentable:malt-fume-local:yield"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "malt modifié, même nom, sans valeur technique : valeurs et marque gardées",
+      "operations": [{ "op": "update_fermentable", "index": 1, "name": "Malt maison", "type": "grain", "amount_g": 800 }],
+      "expected": {
+        "lists": {
+          "fermentable_additions": [
+            "base:0",
+            {
+              "name": "Malt maison",
+              "type": "grain",
+              "amount": { "value": 800, "unit": "g" },
+              "color": { "value": 30, "unit": "EBC" }
+            }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "malt renommé par une modification : refusé (element_changed) ; retrait puis ajout appliqués, marque retirée",
+      "operations": [
+        { "op": "update_fermentable", "index": 1, "name": "Crystal 150", "type": "grain", "amount_g": 200 },
+        { "op": "remove_fermentable", "index": 1, "name": "Malt maison" },
+        { "op": "add_fermentable", "name": "Crystal 150", "type": "grain", "amount_g": 200 }
+      ],
+      "expected": {
+        "lists": {
+          "fermentable_additions": [
+            "base:0",
+            {
+              "name": "Crystal 150",
+              "type": "grain",
+              "amount": { "value": 200, "unit": "g" },
+              "color": { "value": 150, "unit": "EBC" },
+              "yield": { "fine_grind": { "value": 72, "unit": "%" } }
+            }
+          ]
+        },
+        "marks": [],
+        "refusals": [{ "index": 0, "reason": "element_changed", "field": "name" }]
+      }
+    },
+    {
+      "name": "élément changé depuis la proposition (houblon, palier) : refusé, les autres opérations appliquées",
+      "operations": [
+        { "op": "update_hop", "index": 0, "name": "Mosaic", "form": "pellet", "amount_g": 25, "use": "boil", "time_min": 30 },
+        { "op": "remove_hop", "index": 0, "name": "Mosaic" },
+        { "op": "update_mash_step", "index": 0, "name": "Protéines", "temperature_c": 52, "time_min": 15 },
+        { "op": "remove_mash_step", "index": 0, "name": "Mash out" },
+        { "op": "update_misc", "index": 0, "name": "Coriandre", "amount_g": 10, "moment": "boil", "time_min": 5 },
+        { "op": "set_boil_time_min", "value": 70 }
+      ],
+      "expected": {
+        "changes": { "boil": { "boil_time": { "value": 70, "unit": "min" } } },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": [
+          { "index": 0, "reason": "element_changed", "field": "name" },
+          { "index": 1, "reason": "element_changed", "field": "name" },
+          { "index": 2, "reason": "element_changed", "field": "name" },
+          { "index": 3, "reason": "element_changed", "field": "name" },
+          { "index": 4, "reason": "index_absent", "field": "index" }
+        ]
+      }
+    },
+    {
+      "name": "malt retiré : sa marque disparaît ; index décalé pour l'opération suivante",
+      "operations": [
+        { "op": "remove_fermentable", "index": 0, "name": "Pale Ale" },
+        { "op": "remove_fermentable", "index": 0, "name": "Malt maison" }
+      ],
+      "expected": {
+        "lists": { "fermentable_additions": [] },
+        "marks": [],
+        "refusals": []
+      }
+    },
+    {
+      "name": "index disparu et élément changé : opérations refusées, les autres appliquées",
+      "operations": [
+        { "op": "remove_fermentable", "index": 0, "name": "Pilsner" },
+        { "op": "update_fermentable", "index": 5, "name": "Pale Ale", "type": "grain", "amount_g": 1000 },
+        { "op": "remove_hop", "index": 3, "name": "Citra" },
+        { "op": "set_boil_time_min", "value": 90 }
+      ],
+      "expected": {
+        "changes": { "boil": { "boil_time": { "value": 90, "unit": "min" } } },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": [
+          { "index": 0, "reason": "element_changed", "field": "name" },
+          { "index": 1, "reason": "index_absent", "field": "index" },
+          { "index": 2, "reason": "index_absent", "field": "index" }
+        ]
+      }
+    },
+    {
+      "name": "houblon ajouté sans acides alpha dans la Bibliothèque : valeur du modèle marquée ; whirlpool",
+      "operations": [{ "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 40, "use": "whirlpool", "time_min": 15, "alpha_acid_pct": 12.5 }],
+      "expected": {
+        "lists": {
+          "hop_additions": [
+            "base:0",
+            {
+              "name": "Mosaic",
+              "form": "pellet",
+              "alpha_acid": { "value": 12.5, "unit": "%" },
+              "amount": { "value": 40, "unit": "g" },
+              "timing": {
+                "use": "add_to_boil",
+                "time": { "value": 0, "unit": "min" },
+                "duration": { "value": 15, "unit": "min" }
+              }
+            }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color", "hop:houblon-mosaic:alpha_acid"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "houblon à cru en jours ; houblon connu : acides alpha de la Bibliothèque, valeur du modèle écartée",
+      "operations": [{ "op": "add_hop", "name": "Citra", "form": "pellet", "amount_g": 50, "use": "dry_hop", "days": 3, "alpha_acid_pct": 14 }],
+      "expected": {
+        "lists": {
+          "hop_additions": [
+            "base:0",
+            {
+              "name": "Citra",
+              "form": "pellet",
+              "alpha_acid": { "value": 12, "unit": "%" },
+              "amount": { "value": 50, "unit": "g" },
+              "timing": { "use": "add_to_fermentation", "duration": { "value": 4320, "unit": "min" } }
+            }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "houblon modifié puis retiré",
+      "operations": [
+        { "op": "update_hop", "index": 0, "name": "Citra", "form": "pellet", "amount_g": 25, "use": "boil", "time_min": 30 },
+        { "op": "add_hop", "name": "Mosaic", "form": "leaf", "amount_g": 10, "use": "boil", "time_min": 5 },
+        { "op": "remove_hop", "index": 0, "name": "citra" }
+      ],
+      "expected": {
+        "lists": {
+          "hop_additions": [
+            {
+              "name": "Mosaic",
+              "form": "leaf",
+              "amount": { "value": 10, "unit": "g" },
+              "timing": { "use": "add_to_boil", "time": { "value": 5, "unit": "min" } }
+            }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "houblon : durée manquante, jours avec l'ébullition, durée avec le houblon à cru, whirlpool de 0 minute",
+      "operations": [
+        { "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 10, "use": "boil" },
+        { "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 10, "use": "boil", "time_min": 10, "days": 2 },
+        { "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 10, "use": "dry_hop", "time_min": 10 },
+        { "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 10, "use": "whirlpool", "time_min": 0 }
+      ],
+      "expected": {
+        "lists": { "hop_additions": ["base:0"] },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": [
+          { "index": 0, "reason": "valeur_manquante", "field": "time_min" },
+          { "index": 1, "reason": "champ_incompatible", "field": "days" },
+          { "index": 2, "reason": "champ_incompatible", "field": "time_min" },
+          { "index": 3, "reason": "hors_bornes", "field": "time_min" }
+        ]
+      }
+    },
+    {
+      "name": "autres ajouts : ajout (type de la Bibliothèque), modification, retrait, quantité double refusée",
+      "operations": [
+        { "op": "add_misc", "name": "Coriandre", "amount_g": 15, "moment": "boil", "time_min": 5 },
+        { "op": "add_misc", "name": "Écorce d'orange", "amount_g": 20, "moment": "after_boil", "time_min": 10 },
+        { "op": "update_misc", "index": 1, "name": "Écorce d'orange", "amount_g": 25, "moment": "fermentation" },
+        { "op": "add_misc", "name": "Acide lactique", "amount_l": 0.005, "moment": "mash" },
+        { "op": "remove_misc", "index": 2, "name": "Acide lactique" },
+        { "op": "add_misc", "name": "Sel", "amount_g": 2, "amount_l": 0.1, "moment": "mash" },
+        { "op": "add_misc", "name": "Sel", "moment": "mash" }
+      ],
+      "expected": {
+        "lists": {
+          "miscellaneous_additions": [
+            {
+              "name": "Coriandre",
+              "type": "spice",
+              "amount": { "value": 15, "unit": "g" },
+              "timing": { "use": "add_to_boil", "time": { "value": 5, "unit": "min" } }
+            },
+            {
+              "name": "Écorce d'orange",
+              "amount": { "value": 25, "unit": "g" },
+              "timing": { "use": "add_to_fermentation" }
+            }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": [
+          { "index": 5, "reason": "champ_incompatible", "field": "amount_l" },
+          { "index": 6, "reason": "valeur_manquante", "field": "amount_g" }
+        ]
+      }
+    },
+    {
+      "name": "levure absente de la Bibliothèque : atténuation du modèle marquée",
+      "operations": [{ "op": "set_culture", "name": "Levure maison", "form": "liquid", "attenuation_pct": 80 }],
+      "expected": {
+        "lists": {
+          "culture_additions": [
+            { "name": "Levure maison", "form": "liquid", "attenuation": { "value": 80, "unit": "%" } }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color", "culture:levure-maison:attenuation"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "même levure, atténuation du modèle : celle de la Bibliothèque passe avant",
+      "operations": [{ "op": "set_culture", "name": "US-05", "attenuation_pct": 70 }],
+      "expected": {
+        "lists": {
+          "culture_additions": [
+            { "name": "US-05", "type": "ale", "form": "dry", "attenuation": { "value": 78, "unit": "%" } }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "paliers : ajout, modification, retrait",
+      "operations": [
+        { "op": "add_mash_step", "name": "Protéines", "temperature_c": 52, "time_min": 15 },
+        { "op": "update_mash_step", "index": 0, "name": "Saccharification", "temperature_c": 67, "time_min": 45 },
+        { "op": "add_mash_step", "name": "Mash out", "temperature_c": 78, "time_min": 10 },
+        { "op": "remove_mash_step", "index": 1, "name": "Protéines" }
+      ],
+      "expected": {
+        "changes": {
+          "mash": {
+            "name": "Empâtage",
+            "mash_steps": [
+              {
+                "name": "Saccharification",
+                "type": "infusion",
+                "step_temperature": { "value": 67, "unit": "C" },
+                "step_time": { "value": 45, "unit": "min" }
+              },
+              {
+                "name": "Mash out",
+                "step_temperature": { "value": 78, "unit": "C" },
+                "step_time": { "value": 10, "unit": "min" }
+              }
+            ]
+          }
+        },
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": []
+      }
+    },
+    {
+      "name": "valeurs hors bornes : chaque opération refusée seule",
+      "operations": [
+        { "op": "set_batch_size_l", "value": 0 },
+        { "op": "set_boil_time_min", "value": 601 },
+        { "op": "add_fermentable", "name": "Pils", "type": "grain", "amount_g": -5 },
+        { "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 10, "use": "boil", "time_min": 10, "alpha_acid_pct": 150 },
+        { "op": "add_fermentable", "name": "---", "type": "grain", "amount_g": 100 },
+        { "op": "set_style_name", "value": "" },
+        { "op": "update_fermentable", "index": -1, "name": "Pale Ale", "type": "grain", "amount_g": 1000 },
+        { "op": "add_mash_step", "name": "Trop chaud", "temperature_c": 101, "time_min": 10 }
+      ],
+      "expected": {
+        "changes": {},
+        "marks": ["fermentable:malt-maison:color"],
+        "refusals": [
+          { "index": 0, "reason": "hors_bornes", "field": "value" },
+          { "index": 1, "reason": "hors_bornes", "field": "value" },
+          { "index": 2, "reason": "hors_bornes", "field": "amount_g" },
+          { "index": 3, "reason": "hors_bornes", "field": "alpha_acid_pct" },
+          { "index": 4, "reason": "hors_bornes", "field": "name" },
+          { "index": 5, "reason": "hors_bornes", "field": "value" },
+          { "index": 6, "reason": "hors_bornes", "field": "index" },
+          { "index": 7, "reason": "hors_bornes", "field": "temperature_c" }
+        ]
+      }
+    },
+    {
+      "name": "valeur du modèle pour un malt déjà saisi à la main avec une valeur : refusée",
+      "marks": [],
+      "operations": [
+        { "op": "add_fermentable", "name": "Malt maison", "type": "grain", "amount_g": 200, "color_ebc": 30 }
+      ],
+      "expected": {
+        "changes": {},
+        "marks": [],
+        "refusals": [{ "index": 0, "reason": "champ_incompatible", "field": "color_ebc" }]
+      }
+    },
+    {
+      "name": "même houblon ajouté deux fois : même valeur du modèle acceptée, autre valeur refusée",
+      "operations": [
+        { "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 10, "use": "boil", "time_min": 10, "alpha_acid_pct": 12.5 },
+        { "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 20, "use": "boil", "time_min": 5, "alpha_acid_pct": 12.5 },
+        { "op": "add_hop", "name": "Mosaic", "form": "pellet", "amount_g": 30, "use": "boil", "time_min": 1, "alpha_acid_pct": 13 }
+      ],
+      "expected": {
+        "lists": {
+          "hop_additions": [
+            "base:0",
+            {
+              "name": "Mosaic",
+              "form": "pellet",
+              "alpha_acid": { "value": 12.5, "unit": "%" },
+              "amount": { "value": 10, "unit": "g" },
+              "timing": { "use": "add_to_boil", "time": { "value": 10, "unit": "min" } }
+            },
+            {
+              "name": "Mosaic",
+              "form": "pellet",
+              "alpha_acid": { "value": 12.5, "unit": "%" },
+              "amount": { "value": 20, "unit": "g" },
+              "timing": { "use": "add_to_boil", "time": { "value": 5, "unit": "min" } }
+            }
+          ]
+        },
+        "marks": ["fermentable:malt-maison:color", "hop:houblon-mosaic:alpha_acid"],
+        "refusals": [{ "index": 2, "reason": "champ_incompatible", "field": "alpha_acid_pct" }]
+      }
+    },
+    {
+      "name": "recette refusée par la relecture : nom fait d'un caractère de contrôle",
+      "operations": [{ "op": "set_name", "value": "\u0007" }],
+      "expected": { "rejected": true, "refusals": [] }
+    }
+  ],
+  "marks_cases": [
+    {
+      "name": "marques valides, doublon retiré",
+      "input": ["hop:houblon-citra:alpha_acid", "fermentable:malt-pils:color", "hop:houblon-citra:alpha_acid"],
+      "marks": ["hop:houblon-citra:alpha_acid", "fermentable:malt-pils:color"],
+      "unreadable": 0
+    },
+    {
+      "name": "entrées hors forme ignorées et comptées",
+      "input": [
+        "hop:houblon-citra:color",
+        "misc:ajout-sel:yield",
+        "hop:Houblon-Citra:alpha_acid",
+        "hop:malt-pils:alpha_acid",
+        "hop:houblon-citra",
+        "culture:levure-us-05:attenuation:x",
+        42,
+        "culture:levure-us-05:attenuation"
+      ],
+      "marks": ["culture:levure-us-05:attenuation"],
+      "unreadable": 7
+    },
+    { "name": "champ absent", "input": null, "marks": [], "unreadable": 0 },
+    { "name": "champ qui n'est pas une liste", "input": "hop:houblon-citra:alpha_acid", "marks": [], "unreadable": 1 },
+    { "name": "champ map (accepté par les règles, risque accepté)", "input": { "a": 1, "b": 2, "c": 3 }, "marks": [], "unreadable": 1 },
+    { "name": "sucre : préfixe sucre accepté", "input": ["fermentable:sucre-candi:color"], "marks": ["fermentable:sucre-candi:color"], "unreadable": 0 }
+  ],
+  "_commentaire_marks_edit_cases": "Marques après une édition à la main (marquesApresEdition) : `reference` et `edited` sont des houblons {name, alpha} (alpha absent : sans valeur) ; une marque reste seulement si toutes les lignes de sa clé dans `edited` portent la valeur marquée de `reference`, inchangée.",
+  "marks_edit_cases": [
+    {
+      "name": "valeur inchangée : marque gardée",
+      "reference": [{ "name": "Mosaic", "alpha": 12.5 }],
+      "edited": [{ "name": "Mosaic", "alpha": 12.5 }],
+      "input": ["hop:houblon-mosaic:alpha_acid"],
+      "marks": ["hop:houblon-mosaic:alpha_acid"]
+    },
+    {
+      "name": "valeur corrigée à la main : marque retirée",
+      "reference": [{ "name": "Mosaic", "alpha": 12.5 }],
+      "edited": [{ "name": "Mosaic", "alpha": 11 }],
+      "input": ["hop:houblon-mosaic:alpha_acid"],
+      "marks": []
+    },
+    {
+      "name": "deux lignes de la clé, l'une corrigée à la main : marque retirée",
+      "reference": [{ "name": "Mosaic", "alpha": 12.5 }, { "name": "Mosaic", "alpha": 12.5 }],
+      "edited": [{ "name": "Mosaic", "alpha": 12.5 }, { "name": "Mosaic", "alpha": 11 }],
+      "input": ["hop:houblon-mosaic:alpha_acid"],
+      "marks": []
+    },
+    {
+      "name": "ligne de la même clé ajoutée à la main avec une autre valeur : marque retirée",
+      "reference": [{ "name": "Mosaic", "alpha": 12.5 }],
+      "edited": [{ "name": "Mosaic", "alpha": 12.5 }, { "name": "Mosaic", "alpha": 10 }],
+      "input": ["hop:houblon-mosaic:alpha_acid"],
+      "marks": []
+    },
+    {
+      "name": "ligne de la même clé ajoutée sans valeur : marque gardée",
+      "reference": [{ "name": "Mosaic", "alpha": 12.5 }],
+      "edited": [{ "name": "Mosaic", "alpha": 12.5 }, { "name": "Mosaic" }],
+      "input": ["hop:houblon-mosaic:alpha_acid"],
+      "marks": ["hop:houblon-mosaic:alpha_acid"]
+    },
+    {
+      "name": "valeur effacée : marque retirée",
+      "reference": [{ "name": "Mosaic", "alpha": 12.5 }],
+      "edited": [{ "name": "Mosaic" }],
+      "input": ["hop:houblon-mosaic:alpha_acid"],
+      "marks": []
+    },
+    {
+      "name": "ingrédient retiré : marque retirée",
+      "reference": [{ "name": "Mosaic", "alpha": 12.5 }],
+      "edited": [],
+      "input": ["hop:houblon-mosaic:alpha_acid"],
+      "marks": []
+    }
+  ]
+}

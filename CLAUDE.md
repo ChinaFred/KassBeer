@@ -103,7 +103,7 @@ desktop sont hors périmètre. Le détail vit dans `documentation/projet.md`.
   écrits par l'écran Admin › Import.
 - IA dans l'application par le serveur seul (ADR-016) : socle `functions/src/ai/`, Claude seul,
   Admin › Moteur d'IA (modèle, effort, plafonds et ouverture par poste) et Admin › Coûts de
-  l'IA ; premier poste, l'assistant de recette dans l'éditeur (ADR-015, lots A1 puis A2).
+  l'IA ; premier poste, l'assistant de recette dans l'éditeur (ADR-015, lots A1 et A2 livrés : analyse en texte, propositions appliquées au brouillon).
 - Descriptions aromatiques des houblons (ADR-013) : rédigées par l'API Claude (`claude-fable-5-2`,
   SDK `@anthropic-ai/sdk`, API Batches) depuis le poste de l'admin par `ingest/generer-aromes.mjs`,
   relues pour les houblons des recettes du groupe, écrites par `ingest/ecrire.mjs` dans
@@ -166,7 +166,7 @@ rules-tests/          # tests de firestore.rules et storage.rules contre les ém
 functions/            # Cloud Functions des tickets (ADR-006), socle IA src/ai/ (ADR-016) et assistant
                       # de recette src/assistant/ (ADR-015) : Node 24, TypeScript ; src/, test/
 test-fixtures/        # fixtures partagées par plusieurs suites (member_access.json : rules-tests/ pour firestore.rules et storage.rules, functions/test/ ;
-                      # ai_cost_centers.json : postes de coût IA, ADR-016 ; recipe_assistant_operations.json à A2, ADR-015)
+                      # ai_cost_centers.json : postes de coût IA, ADR-016 ; recipe_assistant_operations.json : opérations d'une proposition de l'assistant, ADR-015)
 schemas/beerjson-4370892d44/  # schémas BeerJSON au commit figé et leur LICENSE MIT (ADR-005)
 effacement-l1/        # outil local à usage unique : efface recipes/, brews/ et leurs coûts figés au passage
                       # de L1 (ADR-005) ; sort du dépôt à la livraison suivante
@@ -325,7 +325,7 @@ malts en kilogrammes). Un champ obligatoire inconnu reste absent : aucune valeur
 liste des absences permises est celle d'ADR-005 ; l'export bloque et liste ce qui manque.
 Durées en minutes entières. `key` n'est pas stockée : `ingredientKey` la dérive. Un champ
 propre à Kass'Beer vit dans l'enveloppe du document, jamais dans `recipe`. Seule exception à
-« aucune valeur inventée » : au lot A2, une valeur technique (`alpha_acid`, `color`, `yield`,
+« aucune valeur inventée » : depuis le lot A2, une valeur technique (`alpha_acid`, `color`, `yield`,
 `attenuation`) proposée par l'assistant quand la Bibliothèque n'en a pas, marquée dans
 `ai_proposed` (ADR-015).
 
@@ -514,7 +514,7 @@ IA n'existe qu'en TypeScript (`functions/src/ai/pricing.ts`) ; le client affiche
 |---|---|---|---|
 | `test-fixtures/member_access.json` | appartenance et rôle : jeton présent, `email_verified`, fournisseur `google.com`, `members/{email en minuscules}`, rôle `admin` ou `brewer` ; compte fondateur (admin et `founder === true`) | `firestore.rules` et `storage.rules` (`isMember`, `isAdmin`), rejouées par `rules-tests/` (`storage.test.mjs` pour `storage.rules`) ; `Member.founder` (`app/lib/features/members/domain/member.dart`, choix du compteur affiché), rejoué par `app/test/members_repository_test.dart` | `functions/src/auth.ts` (`requireMember`, `requireAdmin`, `isFounder`), rejouée par `functions/test/` |
 | `test-fixtures/ai_cost_centers.json` | liste des postes de coût IA (clé, libellé, ADR), valeurs seules ; un poste retiré reste | `app/lib/features/admin/domain/postes_ia.dart` (libellés de Moteur d'IA et de Coûts de l'IA) | `functions/src/ai/costCenters.ts` (`AI_COST_CENTERS`, refus d'un poste inconnu) |
-| `test-fixtures/recipe_assistant_operations.json` (lot A2) | opérations d'une proposition de l'assistant | `exchange/lib/src/proposition.dart` (`appliquerProposition`), rejoué par `exchange/test/` | `functions/src/assistant/` (format de sortie envoyé au modèle), rejoué par `functions/test/` |
+| `test-fixtures/recipe_assistant_operations.json` | opérations d'une proposition de l'assistant | `exchange/lib/src/proposition.dart` (`appliquerProposition`), rejoué par `exchange/test/` | `functions/src/assistant/` (format de sortie envoyé au modèle), rejoué par `functions/test/` |
 | bloc « L3 » du prompt de développement (`exigences-techniques.md`, « Routines des tickets ») | fichiers sensibles d'une livraison | prompt de la routine (session Claude Code) | `functions/src/tickets/delivery.ts` (`isSensitiveDeliveryPath`), égalité rejouée par `functions/test/prompts.test.ts` |
 
 ## Une écriture de masse sur les données a un seul écran

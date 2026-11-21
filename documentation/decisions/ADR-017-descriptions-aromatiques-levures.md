@@ -86,7 +86,7 @@ puis le reste dans le périmètre décidé par l'utilisateur.
   fichier préparé lu, motif d'identifiant (`^culture-[a-z0-9]+(-[a-z0-9]+)*$`), collection,
   poste, `donneesEnvoyees`, prompt, schéma de sortie, fonction de contrôle, liste des
   descripteurs, sections de `a-relire.md`. Aucune dépendance ajoutée à `ingest/package.json`.
-  Note du 2026-11-21 (livraison 1, v0.1.92) : le prompt et le contrôle des houblons restent
+  Note du 2026-11-21 (livraison 1, v0.1.93) : le prompt et le contrôle des houblons restent
   dans `ingest/lib/aromes/prompt.mjs` et `ingest/lib/aromes/validation.mjs`, nommés par P55 ;
   `natures/hop.mjs` les reprend sans les déplacer.
 - **Fichiers** : `import/ingest/aromes/levures/` (jamais versionné) : `aromes.json`,
