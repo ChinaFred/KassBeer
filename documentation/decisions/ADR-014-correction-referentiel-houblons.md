@@ -4,7 +4,7 @@
 - **Date** : 2026-11-15
 - **Remplace** : — (complète ADR-005, « Exception durable » de l'ingestion, et ADR-013,
   « Idempotence »)
-- **Amendé par ADR-017** (2026-11-21, livré à la v0.1.90) : `--supprimer-absents` accepte
+- **Amendé par ADR-017** (2026-11-21, livré à la v0.1.92) : `--supprimer-absents` accepte
   aussi `beer_culture_aromas`, dans les mêmes bornes que `beer_hop_aromas` (simulation, 30 au
   plus, seuil de 90 %, saisie du nombre), liste de référence `levures/aromes.json` ; le rapport
   de `ecrire.mjs` liste les entrées relues dont l'identifiant a disparu.

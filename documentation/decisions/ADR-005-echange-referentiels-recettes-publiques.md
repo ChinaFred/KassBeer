@@ -5,7 +5,7 @@
 - **Remplace** : — (modifie ADR-001, qui renvoyait l'export BeerXML après la v1)
 - **Complété par ADR-013** (2026-11-14) : `beer_hop_aromas/` porte un texte rédigé par l'API
   Claude, relu par l'admin. P20 reste inchangé pour les données des sources.
-- **Complété par ADR-017** (2026-11-21, livré à la v0.1.90) : `beer_culture_aromas/`, même
+- **Complété par ADR-017** (2026-11-21, livré à la v0.1.92) : `beer_culture_aromas/`, même
   exception à P20 pour les levures (texte généré, levures du groupe relues) ; les descriptions
   et styles conseillés des fiches des fabricants restent écartés.
 
@@ -411,6 +411,12 @@ base (v0.1.25), puis la consultation dans l'application, puis le reste de L4.
 - D8. La forme d'un houblon est facultative à la lecture, parce que DIY Dog ne la donne pas.
   L'IBU d'un houblon d'ébullition sans forme est « à compléter », et l'éditeur demande la
   forme. Ce code est livré par la branche des écrans.
+  Note du 2026-11-21 (ticket #105, analyse validée) : l'éditeur propose Pellets d'avance
+  pour un houblon ajouté ou sans forme, et la fiche propose « Mettre en pellets » à
+  l'auteur pour les houblons sans forme. La forme vient d'un choix du brasseur, qui
+  enregistre la ligne ou appuie sur le bouton : ce n'est pas une valeur inventée par la
+  lecture. La lecture et l'import ne changent pas : un fichier sans forme donne toujours un
+  houblon sans forme.
 
 Décisions de l'étape 3, côté recettes (v0.1.28) :
 

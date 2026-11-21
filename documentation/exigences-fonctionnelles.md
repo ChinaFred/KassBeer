@@ -11,7 +11,7 @@ l'invitation.
 | Rôle | Peut |
 |---|---|
 | `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
-| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus ; régler dans Admin › Moteur d'IA le modèle, l'effort, les plafonds et l'ouverture aux membres de chaque poste d'IA, et la grille tarifaire, en ligne seulement ; lire dans Admin › Coûts de l'IA la dépense de l'IA de chaque membre, par mois et par poste ; utiliser l'assistant de recette, toujours ouvert pour lui, dans la limite de ses tours du jour ; lire « IA ce mois » dans le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
+| `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; depuis un rapport ou une entrée de journal, ouvrir un ticket bug prérempli (« Analyser ») et lancer son analyse dès la publication, voir quels rapports et quelles entrées ont déjà un ticket ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus ; régler dans Admin › Moteur d'IA le modèle, l'effort, les plafonds et l'ouverture aux membres de chaque poste d'IA, et la grille tarifaire, en ligne seulement ; lire dans Admin › Coûts de l'IA la dépense de l'IA de chaque membre, par mois et par poste ; utiliser l'assistant de recette, toujours ouvert pour lui, dans la limite de ses tours du jour ; lire « IA ce mois » dans le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
 Pas de changement de rôle : l'administrateur retire le compte puis le réinvite. Seul
@@ -341,6 +341,37 @@ Jamais prérempli ; changer d'écran le remet à « L'écran entier » ; absent 
   refusé avant d'être ouvert) et « Cette image dépasse 5 Mo. Choisissez une image plus
   légère. » (fichier, ou image réenregistrée, de plus de 5 Mo). Sélecteur fermé sans choix :
   rien d'autre ne change.
+- **Ouvert par « Analyser »** (Admin › Rapports d'erreur, Admin › Journaux, administrateur seul,
+  ticket #67) : type « Bug », écran « Je ne sais pas », titre et description préremplis (voir
+  « Analyser » dans ces deux écrans). Sous la description, case « Lancer l'analyse dès la
+  publication », cochée par défaut ; l'encadré « Publié sur un site public » reste en tête du
+  formulaire. Hors ligne, elle est désactivée avec « Le lancement demande
+  le réseau. » : le ticket part comme un ticket ordinaire, sans lancement. Case décochée :
+  envoi ordinaire.
+- **Envoi avec la case cochée** : « Envoyer » ouvre la boîte « Envoyer le ticket et lancer
+  l'analyse ? » : « Le ticket sera publié sur GitHub, puis une session Claude Code partira sur
+  son Issue. », lancements restants du jour lus sur le serveur (« Lancements restants :
+  inconnu. » s'ils sont illisibles), lien « Usage Claude » (voir « Usage Claude »), échec
+  d'ouverture affiché dans la boîte, coût du lancement ; « Annuler » (focus initial) et
+  « Envoyer et lancer ». Rien n'est écrit avant l'appui sur « Envoyer et lancer ». Plafond du
+  jour atteint : la boîte ajoute « Le ticket partira. L'analyse ne sera pas lancée
+  aujourd'hui. », le bouton devient « Envoyer sans lancer », et l'appui envoie le ticket sans
+  lancement, ferme le formulaire et affiche « Ticket envoyé. Analyse non lancée : lancez-la
+  depuis la fiche du ticket. » avec « Voir le ticket ». Sinon : le titre devient « Envoi en
+  cours », le bouton reste grisé sous son libellé, et un seul indicateur accompagne
+  « Publication du ticket… » (avec « Si vous fermez maintenant, l'analyse ne sera pas
+  lancée. ») pendant que le serveur crée l'Issue, puis « Lancement… ». Le titre devient alors
+  « Ticket envoyé », avec le résultat du lancement (« Session lancée… », résultat inconnu ;
+  un refus du serveur s'affiche « Ticket envoyé. <motif> » en rouge), « Voir le ticket » (fiche
+  d'Admin › Tickets) et « Fermer ». L'analyse part
+  une fois, quand l'Issue est publiée et que le serveur permet le lancement. Sans publication
+  en 2 minutes, ticket refusé par le quota d'envoi ou en échec d'envoi : « Ticket envoyé.
+  Analyse non lancée : lancez-la depuis la fiche du ticket. ». « Fermer » avant la publication :
+  le formulaire se ferme, même message en bas d'écran avec « Voir le ticket », aucun lancement.
+  « Fermer » pendant le lancement : le résultat arrive en bas d'écran. Ticket refusé à
+  l'écriture : titre « Ticket non envoyé » et « Votre ticket a été refusé. Il n'est pas
+  enregistré. Votre texte reste dans le formulaire. » ; « Fermer » rend le formulaire ouvert
+  avec le texte saisi.
 - Ligne grise : « Envoyé avec : version 0.2.0, Android » (ou « web », « version
   indisponible »).
 - Erreurs à l'appui sur « Envoyer », le premier champ en erreur reçoit le focus : « Choisissez
@@ -632,6 +663,32 @@ ne se supprime depuis l'écran.
   fixe) et « Compte » (identifiant du compte, tel quel), chacune absente si elle est vide,
   texte sélectionnable. « Copier le rapport » copie le résumé, la plateforme et les sections,
   puis affiche « Rapport copié. » (« Impossible de copier le rapport. » en cas d'échec).
+- **Analyser** (ticket #67) : bouton à contour de la hauteur de « Copier le rapport », à sa droite,
+  dessous sur une ligne trop étroite. Il ouvre « Signaler ou proposer » prérempli :
+  - titre « Erreur <fonctionnalité> : <type> » (« Erreur recipes.watch : StateError »), coupé
+    à 100 caractères ; « Rapport d'erreur à analyser » sans fonctionnalité ni type lisible ;
+  - description : « Rapport : <identifiant> (ne pas modifier : sert à marquer le rapport) »,
+    « Créé depuis Admin › Rapports d'erreur. », « <fonctionnalité> · v<version> ·
+    <plateforme> · <jour> », « Type : <type> », « Pile (code de l'application) : » puis les
+    trames de la pile du code de Kass'Beer, dans leur forme exacte et sans autre texte, 15 au plus (« Pile non publiée : aucune ligne du
+    code de l'application. » sans elles), retirées par la fin au-delà de 2 000 caractères, et
+    une ligne vide pour ce que l'administrateur a vu ;
+  - le type est le mot avant le premier « : » de l'erreur, s'il a la forme d'un nom de classe
+    qui finit par « Exception » ou « Error » (« StateError », « FirebaseException »).
+    Le message de l'erreur, le contexte et le compte ne sont jamais préremplis (règles de
+    publication des Issues) : l'administrateur peut les coller lui-même. La fonctionnalité,
+    l'identifiant et les noms des trames viennent de l'appareil d'un membre : l'administrateur
+    relit le texte avant l'envoi ;
+  - si le rapport a déjà un ticket, une boîte demande d'abord « Un ticket existe déjà pour ce
+    rapport (#N). Créer un second ticket ? » (« Annuler », « Créer un second ticket »).
+- **Marque** : un rapport dont l'identifiant figure en première ligne de la description d'un
+  ticket affiche, sous son résumé, « Ticket #N créé le 14 novembre 2026 » (« Ticket créé, non
+  publié » sans Issue ; « (2 tickets) » s'il y en a plusieurs, le plus récent nommé) avec une
+  icône de ticket ; un appui ouvre la fiche du ticket dans Admin › Tickets. Rien n'est écrit
+  sur le rapport : la marque se lit dans les tickets, lus une fois à l'ouverture de l'écran et
+  relus par « Actualiser » (« Rechercher » dans Admin › Journaux). Ligne « Rapport : … » effacée
+  ou modifiée avant l'envoi : aucune marque. Liste des tickets illisible ou en lecture : aucune
+  marque, sans message sur la ligne.
 - **Pages de 50** : « Charger la suite » lit les 50 suivants, « Lecture en cours » pendant la
   lecture. Seul le bouton appuyé montre l'attente, les autres sont désactivés : pendant
   « Actualiser », l'icône laisse place à un indicateur annoncé « Lecture en cours » ; pendant
@@ -706,8 +763,15 @@ lancements, livraisons), du plus récent au plus ancien, 50 à la fois. Lecture 
   « Données » quand le serveur a coupé ce texte, N étant la longueur gardée que le serveur
   indique (8 000 aujourd'hui). Une entrée
   dépliée le reste quand elle sort de l'écran et y revient ; une nouvelle recherche replie
-  tout ; « Copier l'entrée », à droite, puis « Entrée copiée. » (« Impossible de copier l'entrée. »
+  tout ; « Copier l'entrée », puis « Entrée copiée. » (« Impossible de copier l'entrée. »
   en cas d'échec).
+- **Analyser** (ticket #67), à droite de « Copier l'entrée », les deux boutons alignés à
+  gauche, comme dans Admin › Rapports d'erreur : titre « Erreur dans <fonction> » (« Entrée de journal à analyser » sans
+  fonction) ; description « Entrée de journal : <identifiant> (ne pas modifier : sert à
+  marquer l'entrée) », « Créé depuis Admin › Journaux. », « Fonction : … », « Gravité : … »,
+  « Heure : … », puis une ligne vide. Ni le message ni les données de l'entrée ne sont
+  préremplis. Boîte « Un ticket existe déjà pour cette entrée (#N). Créer un second ticket ? »
+  et marque « Ticket #N créé le … » sous le titre de la carte, comme pour un rapport.
 - **Suite** : « Charger la suite » lit les 50 suivantes ; sans suite, « Fin des journaux pour
   cette période. ».
 - Chargement : « Recherche des journaux ». Aucune entrée : « Aucune entrée pour ces filtres.
@@ -865,7 +929,8 @@ externe, sur Android et sur le web. L'adresse est relue par `Uri.tryParse` et ne
 `https` sur l'hôte `claude.ai`. Un échec d'ouverture affiche « Impossible d'ouvrir claude.ai. »
 et passe par `reportError` (`tickets.open_claude_usage`), sans adresse. Le lien ne lance rien
 et ne compte aucun lancement ; il reste affiché hors ligne. Aucun chiffre d'usage n'est
-affiché. Il figure dans la boîte de lancement des quatre actions et sous les messages du
+affiché. Il figure dans la boîte de lancement des quatre actions, dans la boîte « Envoyer le
+ticket et lancer l'analyse ? » du formulaire ouvert par « Analyser », et sous les messages du
 bandeau d'Admin › Tickets, affiché même sans message, au-dessus de la liste (et de la fiche
 dans la disposition large). La fiche seule sur écran étroit ne le répète pas dans son bandeau :
 la boîte de lancement le montre, et la hauteur reste à la barre de décision.
@@ -1472,7 +1537,17 @@ ouvre Recettes › Importer : après le filtre sur téléphone, après « Nouvel
 
 **Fiche.** En-tête : nom, puis style · « Recette de {auteur} » (autre brasseur) sur la ligne
 grise. Boutons, dans l'ordre : « Nouveau brassin » (plein), « Modifier » (auteur, tonal),
-« Dupliquer », « Exporter » (contour), « Supprimer » (auteur, contour rouge). Puis, chacun dans
+« Dupliquer », « Exporter » (contour), « Supprimer » (auteur, contour rouge). Pour l'auteur
+d'une recette dont au moins un houblon n'a pas de forme, un bandeau d'avertissement suit les
+boutons : « {n} houblons sans forme. Sans forme, l'amertume d'un houblon d'ébullition ne se
+calcule pas. » ({n} compte les noms distincts, à cru et whirlpool compris) et le bouton
+« Mettre en pellets ». La boîte « Mettre en pellets : {noms} ? » (« Les houblons qui ont déjà
+une forme ne changent pas. », « Annuler », « Mettre en pellets ») précède l'écriture ; le
+bouton affiche « Enregistrement » pendant ce temps. L'écriture pose Pellets sur chaque
+houblon sans forme et ne change rien d'autre. Elle part comme « Enregistrer », hors ligne
+compris : « Formes enregistrées. » (« Formes enregistrées sur l'appareil. Elles partiront au
+retour du réseau. » hors ligne), ou « Les formes n'ont pas été enregistrées. » sur un refus. Le bandeau disparaît ensuite. Un
+autre brasseur ne voit pas le bandeau (ticket #105). Puis, chacun dans
 sa carte, le bloc Calculs (voir
 « Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (type de recette, « Non renseigné » s'il
 manque ; « Auteur indiqué par le fichier importé » quand une recette importée le porte ; volume en
@@ -1781,9 +1856,11 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   « Couleur (EBC) » (aide « Sert au calcul de la couleur. »), « Rendement d'extrait (%) »
   (aide « Sert au calcul de la densité initiale. »).
 - Houblon : « Nom », « Quantité (g) », « Acides alpha (%) », « Utilisation » (Ébullition,
-  Whirlpool, À cru), durée, « Forme » (Pellets, Cônes, sans choix par défaut ; sinon
-  « Choisissez une forme. », y compris pour un houblon sans forme d'une recette publique
-  dupliquée, quand sa ligne est modifiée). La durée dépend du moment : « Durée d'ébullition (min) »,
+  Whirlpool, À cru), durée, « Forme » (Pellets, Cônes ; Pellets choisi d'avance pour un
+  houblon ajouté et pour un houblon sans forme ouvert en modification, ticket #105 ; une
+  forme déjà enregistrée reste choisie ; une suggestion de la Bibliothèque dont la forme est
+  connue remplace Pellets tant que le brasseur n'a pas choisi de forme lui-même ; une forme
+  effacée affiche « Choisissez une forme. »). La durée dépend du moment : « Durée d'ébullition (min) »,
   obligatoire, entier de 0 à 600 ; « Durée d'infusion (min) » au whirlpool, obligatoire,
   entier de 1 à 600 (« Champ obligatoire. » si vide ; à 0, « Au moins 1 min. Pour un ajout à
   l'arrêt du feu, choisissez Ébullition et 0 min. »), avec l'aide « Temps entre l'arrêt du
@@ -2197,9 +2274,10 @@ Aucun coût : une recette publique n'a pas de prix.
 **Dupliquer** (tout membre). Le bouton affiche « Duplication » pendant la lecture du nom du
 compte (3 s au plus). La recette est créée au nom du lecteur, avec le même nom, les mêmes
 ingrédients, paliers et notes, l'auteur « BrewDog » et l'origine « DIY Dog · diydog-{id} ».
-Elle n'a ni équipement ni chronologie. Un houblon sans forme reste sans forme : l'éditeur la
-demande (« Choisissez une forme. ») quand la ligne est modifiée, et le calcul affiche « Forme
-du houblon à compléter : {noms}. » tant qu'elle manque. Le message « Recette dupliquée dans
+Elle n'a ni équipement ni chronologie. Un houblon sans forme reste sans forme : l'éditeur
+propose Pellets quand la ligne est modifiée, la fiche propose « Mettre en pellets » à
+l'auteur, et le calcul affiche « Forme du houblon à compléter : {noms}. » tant qu'elle
+manque. Le message « Recette dupliquée dans
 vos recettes. » (« Recette dupliquée sur l'appareil. Elle partira au retour du réseau. » hors
 ligne) s'affiche, puis l'éditeur de la nouvelle recette s'ouvre par-dessus la fiche ;
 « Fermer » revient à la fiche, « Enregistrer » ouvre la recette. Un refus du serveur affiche

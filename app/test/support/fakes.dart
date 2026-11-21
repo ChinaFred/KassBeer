@@ -922,6 +922,23 @@ class FakeTicketsRepository implements TicketsRepository {
   @override
   Stream<ListeLue<Ticket>> watchAll() => all.stream;
 
+  /// Lectures uniques de tous les tickets ([readAll]).
+  int readAllCount = 0;
+
+  /// Panne de la prochaine lecture unique.
+  Object? readAllError;
+
+  @override
+  Future<ListeLue<Ticket>> readAll() async {
+    readAllCount++;
+    final error = readAllError;
+    if (error != null) {
+      readAllError = null;
+      throw error;
+    }
+    return all.stream.first;
+  }
+
   @override
   Stream<ListeLue<TicketDecision>> watchDecisions(String ticketId) =>
       decisionsOf(ticketId).stream;

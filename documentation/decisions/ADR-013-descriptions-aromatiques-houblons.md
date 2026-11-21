@@ -5,7 +5,7 @@
 - **Remplace** : — (complète ADR-005 : nouvelle collection de référence, exception à P20
   limitée à un texte généré ; complète ADR-001 : l'application reste sans IA, la génération
   vit hors de l'application ; ouvre un poste de coût variable)
-- **Étendu par ADR-017** (2026-11-21, livré à la v0.1.90) : le moteur prend `--nature
+- **Étendu par ADR-017** (2026-11-21, livré à la v0.1.92) : le moteur prend `--nature
   hop|culture` (`hop` par défaut, commandes inchangées) ; les levures ont leur collection
   (`beer_culture_aromas/`), leur prompt et leur poste (`culture_aroma_generation`).
   `ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs` et

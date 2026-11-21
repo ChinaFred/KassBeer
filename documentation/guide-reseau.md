@@ -253,7 +253,7 @@ beer_culture_aromas`), P20 (exception des textes générés étendue à `beer_cu
 (`relecteur-regles` : collection, contrôle de `ingest/lib/aromes/natures/culture.mjs`, styles
 conseillés pris dans `beer_styles.json` préparé, périmètre, refus de `ecrire.mjs`, liste du
 groupe, affichage). « Le projet » et « Coûts variables » de `CLAUDE.md` nomment le quatrième
-poste et la limite de 70 $ jusqu'au 30 novembre 2026 au plus tard. Livraison 1 (v0.1.90) :
+poste et la limite de 70 $ jusqu'au 30 novembre 2026 au plus tard. Livraison 1 (v0.1.92) :
 `ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs` et
 `exchange/bin/lister_houblons_recettes.dart` devient `lister_ingredients_recettes.dart`, sans
 ancien nom gardé ; « Structure » et « Commandes utiles » de `CLAUDE.md` suivent et reçoivent les

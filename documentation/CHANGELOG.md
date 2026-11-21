@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.90 — technique
+### v0.1.92 — technique
 
 Livraison 1 d'ADR-017 : descriptions aromatiques des levures, générées, relues et écrites
 depuis le poste de l'administrateur. L'application ne les affiche pas encore (livraison 2).
@@ -32,6 +32,57 @@ rapport `culture_aromas_file` et `reviewed_orphans`. `--supprimer-absents beer_c
 accepté dans les bornes d'ADR-014. `firestore.rules` : `beer_culture_aromas/{entryId}` en `get`
 par les membres, `list` et écriture refusés. Aucune dépendance ajoutée ni montée ; `app/lib/`
 inchangé, `main.dart.js` non concerné.
+
+### v0.1.91 — fonctionnel
+
+L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans
+Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre
+« Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour
+et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et
+le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer
+l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui
+annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis
+l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient
+« Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis
+la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche
+« Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un
+second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai.
+Demandé par le ticket #67.
+
+### v0.1.91 — technique
+
+`features/admin/domain/ticket_depuis_panne.dart` : brouillon d'un ticket tiré d'un
+`ErrorReport` ou d'une `EntreeJournal` (champs contrôlés par leur forme, trames Dart exactes de
+`package:kass_beer/` seules et 15 au plus, type en `Exception` ou `Error` seul, titre de 100 et description de 2 000 caractères au plus ; ni message, ni
+contexte, ni uid, ni message ou données d'un journal, P24 et P49 inchangés) ; identifiant lu sur
+la première ligne d'une description et index des tickets par rapport. La marque est dérivée des
+tickets, lus une fois par `TicketsRepository.readAll` (`get()`, aucun écouteur sur ces écrans,
+P50) : aucune écriture sur `error_reports/`, aucune règle ni fonction serveur changée. `BoiteEnvoiAnalyse` (`boite_lancement.dart`) écrit le ticket après
+confirmation, le suit par `adminTicketsProvider` et appelle `launchTicketAnalysis` une fois,
+quand `github_issue_number`, le statut `received` et `launch_analysis` sont posés par le serveur ;
+au plafond lu dans `ticket_status/launches`, aucun appel.
+`TicketFormScreen` reçoit `proposerLancement` (`extra` `BrouillonAnalyse`). `BoiteEnvoiAnalyse` porte aussi `LienUsageClaude` (#96) sous la
+ligne du quota, échec affiché dans la boîte. Sur `logs_screen.dart` (#95), la marque passe sous le
+titre de la carte et `BoutonsPanne` remplace « Copier » aligné à droite. Trois éléments
+d'écran de ticket ajoutés. Aucune dépendance changée. Demandé par le ticket #67.
+
+### v0.1.90 — fonctionnel
+
+Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme
+reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue
+la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ;
+sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la
+forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé
+par le ticket #105.
+
+### v0.1.90 — technique
+
+`FormulaireHoublon` (`ingredient_forms.dart`) part de `pellet` (`formeHoublonProposee`) avec
+`_formeProposee` : une suggestion de la Bibliothèque remplace la forme proposée, jamais une
+forme choisie. `RecipeContent.hopsSansForme` et `avecFormeHoublons` (`recipe.dart`) ; la fiche
+(`recipe_detail_screen.dart`) écrit par `RecipesRepository.update`, comme l'éditeur, sans
+transaction ni appel réseau. Lecture et import inchangés ; note à ADR-005 (D8). Aucune règle
+ni fonction serveur touchée. Tests : `recipe_screens_test.dart`. Demandé par le ticket #105.
 
 ### v0.1.89 — fonctionnel
 
