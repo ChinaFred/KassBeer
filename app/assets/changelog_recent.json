@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "version": "0.1.82",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec une intelligence artificielle, qui analyse la recette en cours ou propose des améliorations. Les chiffres de la recette restent ceux du calcul de Kass'Beer. L'assistant est réservé à l'administrateur pour commencer ; il pourra ensuite l'ouvrir à tous les membres. Chaque membre dispose d'un nombre de tours par jour, et le menu du compte affiche ce que l'IA a coûté dans le mois. Une conversation trop longue peut être résumée pour continuer. Dans Admin, deux écrans nouveaux règlent l'IA (modèle, tarifs, plafonds, ouverture aux membres) et suivent ses coûts par personne. L'assistant ne marche qu'une fois ses réglages enregistrés."
+      ]
+    },
+    {
+      "version": "0.1.81",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "La Bibliothèque ne montre plus en double 26 levures de la gamme Private Collection de Wyeast : 27 fiches en trop disparaissent. L'ancienne base les écrivait sous deux références : chaque levure n'a plus qu'une fiche, celle du fabricant. Une recette importée qui nomme la référence avec « -PC » retrouve aussi sa levure. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
+      ]
+    },
+    {
       "version": "0.1.79",
       "date": "2026-11-21",
       "paragraphs": [
@@ -27,20 +41,6 @@
       "date": "2026-11-15",
       "paragraphs": [
         "La Bibliothèque reprend les fiches de 77 cultures de Wyeast : levures d'ale, de lager et de bière de blé, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour 74 cultures déjà connues, et 3 cultures apparaissent. Les cultures de vin, de cidre, d'hydromel et de saké ne sont pas reprises. L'écran « Sources des données » nomme Wyeast. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
-      ]
-    },
-    {
-      "version": "0.1.74",
-      "date": "2026-11-15",
-      "paragraphs": [
-        "La Bibliothèque reprend les fiches de 162 cultures de White Labs et de sa gamme The Yeast Bay : levures d'ale et de lager, levures de bière de blé, kveiks, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour les 123 cultures déjà connues. 39 cultures absentes jusqu'ici apparaissent. Les levures de vin, de cidre et de distillerie ne sont pas reprises. L'écran « Sources des données » nomme White Labs et The Yeast Bay. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
-      ]
-    },
-    {
-      "version": "0.1.73",
-      "date": "2026-11-15",
-      "paragraphs": [
-        "La Bibliothèque reprend les fiches de 104 cultures d'Omega Yeast : levures liquides, levures sèches (Pinnacle, Dried Lutra), Brettanomyces, kveiks et deux bactéries qui acidifient la bière. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour les 75 cultures déjà connues. 29 cultures absentes jusqu'ici apparaissent, dont les variantes « + » et les levures sèches. L'écran « Sources des données » nomme Omega Yeast et la date du relevé. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     }
   ]

@@ -2264,12 +2264,15 @@ plus. Deux entrées de même clé fusionnent : la source prioritaire (fiches des
 entrées de noms différents d'une même variété et d'un même pays (`Saaz (CZ)` et `Saaz (Czech
 Republic)` dans `hop-saaz`) ; l'identifiant reste `hop-<clé du nom du document>`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
 de même producteur et de même référence (`Wyeast Labs` = `Wyeast`, `Omega Yeast Labs` =
-`Omega Yeast` ; `WY1056` = `1056` chez Wyeast, `001` = `WLP001` chez White Labs ; tirets
-ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
+`Omega Yeast` ; `WY1056` = `1056` chez Wyeast, et `2001-PC` = `WY2001-PC` = `2001` pour la
+Private Collection depuis la v0.1.81 ; `001` = `WLP001` chez White Labs ; tirets ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
 ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`).
 L'identifiant d'une souche se calcule sans les fiches des fabricants quand une source de
 Brewtarget la connaît : le document garde son identifiant, et `ingest/ecrire.mjs`, qui n'efface
-rien, ne laisse pas d'ancien document à côté. Une souche connue de la seule fiche prend
+rien, ne laisse pas d'ancien document à côté. Exception : un changement de clé de référence
+(v0.1.81, Private Collection de Wyeast) regroupe des souches jusque-là séparées ; les documents
+absorbés sortent de la préparation et `ecrire.mjs --supprimer-absents beer_cultures` (v0.1.80)
+les retire. Une souche connue de la seule fiche prend
 l'identifiant de la fiche (`culture-fermentis-e30-saflager-e-30`). Un
 rendement, un acide alpha ou une atténuation à 0 dans une source est lu comme inconnu : écarté
 et compté.
