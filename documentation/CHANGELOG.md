@@ -6,6 +6,30 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.83 — fonctionnel
+
+Sur téléphone, la Bibliothèque montre ses six rubriques sans faire glisser la ligne : les
+Levures, les Divers et les Recettes publiques ne sont plus cachées hors de l'écran. Chaque
+rubrique a maintenant une icône à côté de son nom, à toutes les tailles d'écran ; la rubrique
+ouverte montre une coche à la place de son icône. Sur téléphone, ou avec un texte agrandi, les
+noms sont raccourcis (« Malts », « Recettes ») et les boutons « Échelle des couleurs » et
+« Sources des données » passent en icônes sur une ligne au-dessus des rubriques.
+Demandé par le ticket #97.
+
+### v0.1.83 — technique
+
+`SegmentBibliotheque` (`library_providers.dart`) reçoit `labelCourt` et `icone`. `_EnTete`
+(`library_screen.dart`) place les puces dans un `Wrap` à toutes les largeurs. Sous 600 px, ou
+à partir de `kGrandTexteMinScale` (130 %), les deux accès sont des icônes sur une ligne
+au-dessus des puces, qui affichent leur nom court : à 600 px et 200 %, le rail laisse 423 px,
+trop peu pour « Recettes publiques » et le bouton « Échelle des couleurs » en texte. La puce
+ouverte n'a pas d'avatar : la coche de `ChoiceChip` remplace l'icône au lieu d'être peinte
+dessus. Le `ShaderMask`, le défilement horizontal et la constante `_fondu` sortent. Le nom
+complet reste le `semanticsLabel` de la puce et le titre de la fiche. Tests : à 320 px, texte
+à 100 %, 130 % et 200 %, les six puces et les deux accès tiennent dans la largeur, sans
+débordement, avec une cible de 48 px ; à 600 px, texte à 130 % et 200 %, les noms courts sont
+entiers. Demandé par le ticket #97.
+
 ### v0.1.82 — fonctionnel
 
 La Bibliothèque ne montre plus en double onze noms de levures que l'ancienne base donnait à

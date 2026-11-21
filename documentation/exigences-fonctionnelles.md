@@ -1737,13 +1737,18 @@ l'administrateur ; personne ne les modifie dans l'application.
 **Accès.** Destination « Bibliothèque » de la navigation, après Recettes. L'adresse
 `/bibliotheque` mène aux styles (`/bibliotheque/styles`). Six segments en puces :
 « Styles », « Malts et sucres », « Houblons », « Levures », « Divers », « Recettes
-publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). À droite des puces,
-« Échelle des couleurs » ouvre la page du même nom : une icône de palette sous 600 px
-(infobulle « Échelle des couleurs »), le texte avec l'icône au-delà. À toutes les largeurs,
-une icône d'information à droite des puces (infobulle « Sources des données ») ouvre
-« Sources des données ». Sous 600 px, les puces tiennent sur une ligne qui défile à
-l'horizontale et s'effacent en fondu au bord droit : une puce coupée annonce la suite. À
-partir de 600 px, les puces passent à la ligne.
+publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). Chaque puce porte
+une icône et le nom du segment : Styles (style), Malts (grain), Houblons (feuille), Levures
+(bulles), Divers (catégories), Recettes (livre ouvert). Sur la puce du segment ouvert, une
+coche remplace l'icône, et le fond change. Les puces passent à la ligne à toutes les
+largeurs : aucune n'est cachée hors de l'écran, à 320 px comme avec un texte agrandi à 200 %.
+
+Sous 600 px, ou avec un texte agrandi à 130 % ou plus, les puces affichent un nom court
+(« Malts », « Recettes ») ; le lecteur d'écran lit le nom complet. Une ligne au-dessus des
+puces porte, à droite, deux icônes : une palette (infobulle « Échelle des couleurs ») qui
+ouvre la page du même nom, et une icône d'information (infobulle « Sources des données ») qui
+ouvre « Sources des données ». Sinon, les puces affichent le nom complet ; à leur droite,
+« Échelle des couleurs » en texte avec son icône, puis l'icône « Sources des données ».
 
 **Styles et ingrédients.** La liste du segment est lue à la première ouverture, puis gardée
 pour la session. Ordre alphabétique, avec le nombre d'entrées (« 812 entrées », « 3 sur
