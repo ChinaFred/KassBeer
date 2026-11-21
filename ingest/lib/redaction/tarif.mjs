@@ -1,13 +1,12 @@
-// Tarif et estimation du poste hop_aroma_generation (ADR-013, section 5). Le tarif vient de
-// import/ingest/aromes/tarif.json, écrit par l'admin avec sa date et sa source ; aucun
-// tarif n'est écrit dans le code. Sans fichier lisible, ou s'il a plus de 90 jours, aucune
-// estimation, donc aucun envoi.
+// Tarif et estimation des textes rédigés par l'API (ADR-013, section 5 ; ADR-017, section 1).
+// Le tarif vient de import/ingest/tarif.json, commun à toutes les natures, écrit par l'admin
+// avec sa date et sa source ; aucun tarif n'est écrit dans le code. Sans fichier lisible, ou
+// s'il a plus de 90 jours, aucune estimation, donc aucun envoi. Le nom du poste de coût vient
+// de la nature, jamais de ce fichier.
 
-import { readFileSync } from "node:fs";
-import { estDate } from "./validation.mjs";
-
-/// Nom du poste de coût, porté par chaque rapport (catalogue « Coûts variables »).
-export const POSTE = "hop_aroma_generation";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { estDate } from "./texte.mjs";
 
 /// Âge maximal du tarif, en jours.
 export const AGE_MAX_TARIF_JOURS = 90;
@@ -17,14 +16,49 @@ export const MESSAGE_TARIF_INCONNU = "Tarif inconnu : estimation impossible";
 /// Prix lus, en dollars par million de jetons.
 const PRIX = ["input", "output", "cache_write", "cache_read", "batch_input", "batch_output"];
 
-/// Erreur d'utilisation de generer-aromes.mjs : message montré tel quel, code de sortie 2.
-export class ErreurAromes extends Error {}
+/// Erreur d'utilisation d'un générateur (generer-aromes.mjs…) : message montré tel quel,
+/// code de sortie 2.
+export class ErreurRedaction extends Error {}
 
-/// Lit le tarif de [chemin] pour [modele] à la date [maintenant]. Lève ErreurAromes
+/// Nom du fichier de tarif, dans le dossier parent de celui de la nature
+/// (import/ingest/tarif.json par défaut).
+export const FICHIER_TARIF = "tarif.json";
+
+/// Chemins du tarif d'une nature dont les fichiers vivent dans [dossierNature] : `chemin`, le
+/// seul lu, et `ancien`, l'emplacement d'avant ADR-017 (import/ingest/aromes/tarif.json),
+/// qui n'est plus lu.
+export function cheminsTarif(dossierNature) {
+  return {
+    chemin: join(dossierNature, "..", FICHIER_TARIF),
+    ancien: join(dossierNature, FICHIER_TARIF),
+  };
+}
+
+/// Lit le tarif commun pour [dossierNature] (voir cheminsTarif). Si seul l'ancien fichier
+/// existe, refus « Tarif inconnu » qui dit de le déplacer : aucun repli sur l'ancien
+/// emplacement. Rend aussi `ancienIgnore` : vrai si l'ancien fichier existe à côté du
+/// nouveau, pour le signaler à l'écran.
+export function lireTarifCommun(dossierNature, modele, maintenant, existe = existsSync) {
+  const { chemin, ancien } = cheminsTarif(dossierNature);
+  if (!existe(chemin) && existe(ancien)) {
+    throw new ErreurRedaction(
+      `${MESSAGE_TARIF_INCONNU} (${chemin} absent ; ${ancien} n'est plus lu depuis ADR-017 : ` +
+        `déplacez-le d'un dossier vers le haut, dans ${chemin}).`,
+    );
+  }
+  return {
+    tarif: lireTarif(chemin, modele, maintenant),
+    chemin,
+    ancien,
+    ancienIgnore: existe(ancien),
+  };
+}
+
+/// Lit le tarif de [chemin] pour [modele] à la date [maintenant]. Lève ErreurRedaction
 /// (« Tarif inconnu : estimation impossible », avec la raison) si le fichier manque, est
 /// illisible, vise un autre modèle, ou a plus de 90 jours.
 export function lireTarif(chemin, modele, maintenant, lire = (c) => readFileSync(c, "utf8")) {
-  const refus = (raison) => new ErreurAromes(`${MESSAGE_TARIF_INCONNU} (${raison}).`);
+  const refus = (raison) => new ErreurRedaction(`${MESSAGE_TARIF_INCONNU} (${raison}).`);
   let tarif;
   try {
     tarif = JSON.parse(lire(chemin));
@@ -52,9 +86,9 @@ export function lireTarif(chemin, modele, maintenant, lire = (c) => readFileSync
   return { model: tarif.model, date: tarif.date, source: tarif.source, prix };
 }
 
-/// Borne haute d'un envoi : pour chaque houblon, jetons d'entrée comptés × tarif d'entrée
+/// Borne haute d'un envoi : pour chaque entrée, jetons d'entrée comptés × tarif d'entrée
 /// (écriture du cache comprise en appels directs) + max_tokens × tarif de sortie. Rend le
-/// montant total et le nombre de houblons qui tiennent dans [budget] (dans l'ordre).
+/// montant total et le nombre d'entrées qui tiennent dans [budget] (dans l'ordre).
 export function borneHaute(jetonsEntree, { tarif, mode, maxTokens, budget = null }) {
   const p = tarif.prix;
   const entree = mode === "lot" ? p.batch_input : Math.max(p.input, p.cache_write);

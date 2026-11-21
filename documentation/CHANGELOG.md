@@ -6,6 +6,16 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.86 — technique
+
+Lot D1 d'ADR-017 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
+`ingest/lib/redaction/` (`client.mjs`, `tarif.mjs`, `texte.mjs`, `moteur.mjs`), paramétré par un
+objet de nature (`ingest/lib/aromes/nature.mjs`). Il servira aussi aux descriptions des divers.
+`generer-aromes.mjs` garde ses options et son rapport. Le tarif se lit désormais dans
+`import/ingest/tarif.json` : l'ancien `import/ingest/aromes/tarif.json` seul est refusé avec un
+message qui dit où le déplacer. L'empreinte des houblons ne change pas, et un test la fige.
+Tests d'`ingest/` : 127 sur 127.
+
 ### v0.1.85 — technique
 
 ADR-017 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,

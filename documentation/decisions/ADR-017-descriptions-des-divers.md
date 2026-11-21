@@ -113,6 +113,12 @@ inchangés ; un poste à part garde chaque coût lisible.
 - **Tarif** : un fichier pour le modèle, `import/ingest/tarif.json` (non versionné), lu par les
   deux natures ; `import/ingest/aromes/tarif.json` n'est plus lu. Mêmes règles : daté, 90 jours
   au plus, sinon « Tarif inconnu : estimation impossible ».
+  Précision d'implémentation (lot D1, 2026-11-21) : le moteur lit `tarif.json` dans le dossier
+  parent de celui de la nature (`import/ingest/` par défaut). Si seul l'ancien fichier existe,
+  le refus « Tarif inconnu » dit de le déplacer ; aucun repli sur l'ancien emplacement. Si les
+  deux existent, l'ancien est signalé ignoré. Les constantes nommées `ErreurAromes`,
+  `MAX_HOUBLONS` deviennent `ErreurRedaction`, `MAX_ENTREES` ; `EFFORTS` vit dans
+  `texte.mjs` avec les règles de texte.
 - **Liste des divers du groupe** : `ingest/lib/lister.mjs` reçoit la nature (champ
   `hop_additions` ou `miscellaneous_additions`, fichier de sortie) ;
   `ingest/lister-divers-recettes.mjs` écrit `import/ingest/divers/noms-divers.json`.

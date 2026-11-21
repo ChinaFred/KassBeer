@@ -3471,8 +3471,9 @@ variables »).
 ```bash
 # 0. Clé de l'espace de travail Kass'Beer de la Console Anthropic, dans le terminal seulement
 export ANTHROPIC_API_KEY=…            # jamais dans le dépôt ni dans import/
-# Tarif écrit à la main, relevé sur la grille d'Anthropic (90 jours au plus) :
-# import/ingest/aromes/tarif.json
+# Tarif écrit à la main, relevé sur la grille d'Anthropic (90 jours au plus), commun aux
+# natures (ADR-017) ; import/ingest/aromes/tarif.json n'est plus lu :
+# import/ingest/tarif.json
 #   {"model": "claude-fable-5-2", "date": "AAAA-MM-JJ", "source": "…",
 #    "usd_per_million_tokens": {"input": …, "output": …, "cache_write": …, "cache_read": …,
 #                               "batch_input": …, "batch_output": …}}
@@ -3498,8 +3499,8 @@ export ANTHROPIC_API_KEY=…            # jamais dans le dépôt ni dans import/
 (cd ingest && node ecrire.mjs --production --projet kassbeer)
 ```
 
-**Fichiers** (`import/ingest/aromes/`, jamais versionnés) : `tarif.json` (écrit par l'admin) ;
-`noms-houblons.json` (`{format: 'kassbeer_noms_houblons', version, generated_at, target, noms}`,
+**Fichiers** (`import/ingest/aromes/`, jamais versionnés ; le tarif est à part, dans
+`import/ingest/tarif.json`, écrit par l'admin) : `noms-houblons.json` (`{format: 'kassbeer_noms_houblons', version, generated_at, target, noms}`,
 noms seuls, triés, sans doublon) ; `houblons-recettes.json` (`{format:
 'kassbeer_houblons_recettes', version, target, generated_at, resolus: [{id, noms}],
 non_resolus: [{nom, raison}]}`, raison `aucun` ou `plusieurs` ; `target` et `generated_at`
@@ -3529,9 +3530,33 @@ kassbeer`, ADC `authorized_user`, saisie du nom du projet) ; `--sortie <fichier>
 non résolu reçoit `plusieurs` quand `IndexBibliotheque.correspondances` en compte au moins
 deux, sinon `aucun`. Aucune résolution en Node.
 
-**Génération** (`ingest/generer-aromes.mjs`, `ingest/lib/aromes/`). N'importe pas
-`firebase-admin`. Lit `import/ingest/prepare/beer_hops.json` (`--dossier`) et
-`import/ingest/aromes/` (`--aromes`). Modes, un seul à la fois :
+**Moteur commun** (`ingest/lib/redaction/`, ADR-017, lot D1). Le code des houblons est
+découpé en un moteur qui ne nomme aucune nature et une nature « houblon » :
+
+| Fichier | Contenu |
+|---|---|
+| `lib/redaction/client.mjs` | accès à l'API (`creerAccesApi`, SDK chargé par `await import()` au premier appel et mémorisé), `erreurLisible`, `masquerCle` |
+| `lib/redaction/tarif.mjs` | `lireTarif`, `lireTarifCommun` (tarif commun et ancien emplacement), `borneHaute` par entrée, `montantUsage`, `ErreurRedaction` (code de sortie 2) ; aucun nom de poste |
+| `lib/redaction/texte.mjs` | `nettoyerTexte`, `reglesTexte`, `jsonCanonique`, `sha256`, `estDate`, `EFFORTS` |
+| `lib/redaction/moteur.mjs` | `lireOptions(argv, nature)`, `generer({nature, …})` : sélection par empreinte, appels directs, lots, `--suivre`, cumul d'`usage`, borne haute et budget, confirmation, `rapport.json`, `a-relire.md` |
+| `lib/aromes/nature.mjs` | `NATURE_HOUBLON` : poste `hop_aroma_generation`, `generer-aromes.mjs`, option `--aromes` et dossier `import/ingest/aromes/`, `beer_hops.json`, `aromes.json`, `houblons-recettes.json`, motif `hop-…`, préfixe `h` des `custom_id`, champ `hop_name`, modèle, `max_tokens`, `prompt_version`, données envoyées, empreinte, requête, contrôles, entrée construite, lignes de `a-relire.md` |
+| `lib/aromes/prompt.mjs`, `validation.mjs`, `descripteurs.json` | prompt, contrôle et liste fermée propres aux houblons |
+
+Le poste de chaque rapport vient de la nature (`nature.poste`). L'empreinte `input_sha256`
+d'un houblon garde sa forme canonique `{hop, prompt_version, model, effort}` ; un test fige
+la valeur d'un houblon de fixture calculée avant la refonte. Options, messages, codes de
+sortie et `rapport.json` de `generer-aromes.mjs` sont inchangés, hors l'emplacement du tarif.
+
+**Tarif commun.** `tarif.json` du dossier parent de celui de la nature, soit
+`import/ingest/tarif.json` par défaut (avec `--aromes <dossier>`, `<dossier>/../tarif.json`).
+Si seul l'ancien `import/ingest/aromes/tarif.json` existe, refus « Tarif inconnu : estimation
+impossible (… n'est plus lu depuis ADR-017 : déplacez-le d'un dossier vers le haut …) », code
+2, SDK non chargé : aucun repli sur l'ancien emplacement. Si les deux existent, le tarif commun
+est lu et l'écran affiche « <ancien> ignoré : seul <nouveau> est lu (ADR-017). ».
+
+**Génération** (`ingest/generer-aromes.mjs`, `ingest/lib/aromes/` sur `ingest/lib/redaction/`).
+N'importe pas `firebase-admin`. Lit `import/ingest/prepare/beer_hops.json` (`--dossier`),
+`import/ingest/aromes/` (`--aromes`) et `import/ingest/tarif.json`. Modes, un seul à la fois :
 
 | Mode | Envoi | Houblons pris |
 |---|---|---|
@@ -3549,7 +3574,7 @@ n'est jamais remplacée : changée, elle est signalée « relue, entrées chang�
 forcée, sa réponse va dans `brut/` et le rapport la note « relue, non remplacée ».
 
 Ordre d'un envoi : sélection sans réseau ; refus au-delà de `--max` (500 au plus, défaut
-500) ; tarif (`tarif.json` du modèle, date de 90 jours au plus, six prix positifs ; sinon
+500) ; tarif (`import/ingest/tarif.json` du modèle, date de 90 jours au plus, six prix positifs ; sinon
 « Tarif inconnu : estimation impossible », code 2, SDK non chargé) ; clé `ANTHROPIC_API_KEY`
 lue et client construit au premier appel (`await import('@anthropic-ai/sdk')`, mémorisé) ;
 `messages.countTokens` par houblon ; borne haute = Σ (jetons comptés × prix d'entrée) +
@@ -3584,8 +3609,8 @@ Schéma de sortie : objet sans propriété en plus, `status` (`described` | `unk
 fermée), `uses` (les cinq usages, chacun texte ou `null`). Bornes de longueur et de nombre
 contrôlées après la réponse.
 
-**Contrôle d'une réponse** (`lib/aromes/validation.mjs`, sans le SDK, partagé avec
-`ecrire.mjs`). `stop_reason` `refusal` ou `max_tokens` : erreur `{id, raison}`, sans texte,
+**Contrôle d'une réponse** (`lib/aromes/validation.mjs`, règles de texte de
+`lib/redaction/texte.mjs`, sans le SDK, partagé avec `ecrire.mjs`). `stop_reason` `refusal` ou `max_tokens` : erreur `{id, raison}`, sans texte,
 jamais réessayée sur un autre modèle ; autre `stop_reason` que `end_turn` ou JSON illisible :
 erreur aussi. Sinon : clés exactes, statut, textes nettoyés (NFC, contrôles et
 bidirectionnels retirés) puis contrôlés comme `uses` du modèle de données, descripteurs
@@ -3628,8 +3653,11 @@ relue.
 
 Tests : `(cd ingest && npm test)` (`test/aromes.test.mjs`, SDK simulé, aucun appel réel :
 contrôle des textes, sortie du modèle, entrée de `aromes.json`, requête sans `thinking` ni
-`tools`, tarif absent ou ancien, borne haute et budget, options, clé absente des sorties, SDK
-non chargé à l'import (crochet `test/support/interdire-sdk.mjs`), `refusal` sans second
+`tools`, tarif absent ou ancien, tarif à l'ancien emplacement seul refusé, tarif aux deux
+emplacements, borne haute et budget, options, clé absente des sorties, SDK non chargé à
+l'import du moteur, du tarif, du client, de la nature et de la validation (crochet
+`test/support/interdire-sdk.mjs`), poste du rapport tiré de la nature, aucun nom de poste
+dans `lib/redaction/`, empreinte figée d'un houblon de fixture, `refusal` sans second
 appel, appel coupé compté au résultat inconnu, lot coupé gardant sa table, entrée relue jamais remplacée, nouveau houblon et `--nouveaux`, lot et `--suivre`,
 `a-relire.md`, tri de l'écrivain ; `test/emulateur.test.mjs` : écriture de
 `beer_hop_aromas`, refus d'un houblon du groupe non relu, compte des houblons sans
@@ -5673,7 +5701,7 @@ et troncature des entrées ; liste fermée égale aux exports ; champs de `loggi
 | API REST GitHub (`api.github.com`) | `functions/` seul | créer une Issue, chercher une Issue par référence, lire Issues, commentaires, événements, PR d'un commit, `app/pubspec.yaml` à un commit ; depuis T5, lire les PR ouvertes, une PR, ses fichiers, les runs d'un commit (rien n'est écrit pour une livraison) | jeton à grain fin `GITHUB_TICKETS_TOKEN` (Secret Manager), en-tête `x-github-api-version: 2022-11-28` |
 | Cloud Storage for Firebase (bucket `kassbeer.firebasestorage.app`, `us-east1`, nommé dans le code, cycle de vie de 180 jours sous `tickets/`) | l'application (`firebase_storage` : `putData`, `getData`) sous `storage.rules` ; `attachTicketScreenshot` (`firebase-admin/storage`) | captures jointes aux tickets, `tickets/{uid}/{ticketId}/screenshot.png` (ADR-008, T6) ; jamais d'URL de téléchargement | compte Google du membre (règles) ; compte d'exécution `tickets-functions` (`roles/storage.objectViewer` sur le bucket) |
 | API Cloud Logging (`logging.googleapis.com/v2/entries:list`) | `queryLogs` seul (`functions/src/logs/queryLogs.ts`, `fetch`, sans SDK) | lire la sortie des fonctions pour Admin › Journaux (ADR-011, J2, P49) | jeton du compte d'exécution lu au serveur de métadonnées, rôle `roles/logging.viewer` ; `redirect: "error"`, délai de 20 s |
-| API Messages d'Anthropic (`api.anthropic.com/v1/messages`, `/v1/messages/count_tokens`, `/v1/messages/batches`) | `ingest/generer-aromes.mjs` seul, sur le poste de l'admin (`ingest/lib/aromes/client.mjs`, SDK `@anthropic-ai/sdk` 1.8.0 chargé au premier appel) ; jamais `app/` ni la CI ; `functions/` a son propre client (ligne suivante) | descriptions aromatiques des houblons (ADR-013) : `messages.create` (essai, `--nouveaux`), `messages.countTokens` (estimation), `messages.batches.create`, `.retrieve`, `.results` (lots) ; modèle `claude-fable-5-2`, sorties structurées ; données publiques seules (nom, alias, origine, acides, usage), gardées 30 jours par Anthropic | clé `ANTHROPIC_API_KEY` de l'espace de travail Kass'Beer de la Console (distincte de Kass'Dalle), dans l'environnement du poste ; `maxRetries: 0` sur les envois facturés |
+| API Messages d'Anthropic (`api.anthropic.com/v1/messages`, `/v1/messages/count_tokens`, `/v1/messages/batches`) | `ingest/generer-aromes.mjs` seul, sur le poste de l'admin (`ingest/lib/redaction/client.mjs`, SDK `@anthropic-ai/sdk` 1.8.0 chargé au premier appel) ; jamais `app/` ni la CI ; `functions/` a son propre client (ligne suivante) | descriptions aromatiques des houblons (ADR-013) : `messages.create` (essai, `--nouveaux`), `messages.countTokens` (estimation), `messages.batches.create`, `.retrieve`, `.results` (lots) ; modèle `claude-fable-5-2`, sorties structurées ; données publiques seules (nom, alias, origine, acides, usage), gardées 30 jours par Anthropic | clé `ANTHROPIC_API_KEY` de l'espace de travail Kass'Beer de la Console (distincte de Kass'Dalle), dans l'environnement du poste ; `maxRetries: 0` sur les envois facturés |
 | API Messages d'Anthropic (`api.anthropic.com/v1/messages`) depuis les Functions | `recipeAssistantTurn` seule au lot A1, par `functions/src/ai/claude.ts` (`fetch`, sans SDK, ADR-016) ; jamais `app/` | assistant de recette (ADR-015) : un appel par tour, jamais rejoué ; recette, calculs, équipement, style, arômes et messages, sans prix, stock, coût, e-mail, uid ni nom de personne, gardés 30 jours par Anthropic | seconde clé `ANTHROPIC_API_KEY` de l'espace de travail Kass'Beer (Secret Manager), en-têtes `x-api-key`, `anthropic-version: 2023-06-01` ; `redirect: "error"`, délai de 90 s |
 | API Routines de Claude Code (`api.anthropic.com/v1/claude_code/routines/{id}/fire`) | `launchTicketAnalysis` et `launchTicketDevelopment` seuls (`functions/src/tickets/routine.ts`, `fetch`, sans SDK) | lancer une session d'analyse ou de développement d'un ticket, corps `{"text": "analyse #N"}` ou `{"text": "developpement #N"}` (P35) ; API expérimentale, sans clé d'idempotence : un appel n'est jamais rejoué | identifiant et jeton de chaque routine (`TICKETS_ROUTINE_*`, Secret Manager), en-têtes `authorization: Bearer`, `anthropic-version: 2023-06-01` ; `redirect: "error"`, délai de 30 s |
 
@@ -5686,5 +5714,5 @@ ici et son plafond.
 | Poste | Appelé par | Facturation et limites du fournisseur | Plafond | Compteurs |
 |---|---|---|---|---|
 | `ticket_routine_launch` | `launchTicketAnalysis`, `launchTicketDevelopment` (développement et, avec `mode: "resume"`, reprise), `launchTicketDelivery` (ADR-008, T4 et T5) | abonnement Claude de l'administrateur, aucune facture à l'appel ; 30 appels par heure et par routine, 100 par heure et par compte (API, quota partagé avec Kass'Dalle) ; la livraison et la reprise partagent la limite de la routine de développement ; une session de livraison dure jusqu'à 2 h 30 (part des limites d'usage de l'abonnement à vérifier) | `LAUNCHES_PER_DAY` = 10 par jour de Paris pour le groupe, et `FOUNDER_LAUNCHES_PER_DAY` = 50 sur un compteur à part pour le compte fondateur (`members/{email}.founder`), analyse, développement, reprise et livraison confondus (`functions/src/config.ts`), compté en transaction avant l'appel, et pour une livraison ou une reprise seulement après leurs contrôles (P43, P47) et la prise du verrou (P44) ; aucune limite de reprises par ticket ; boîte de confirmation obligatoire côté client (P39) | `ticket_quotas/launch_{AAAAMMJJ}` et `launch_founder_{AAAAMMJJ}`, `ticket_status/launches` (`count_day`, `founder_count_day`, `count_month`, `per_day`, `founder_per_day`) |
-| `hop_aroma_generation` | `ingest/generer-aromes.mjs`, poste de l'admin (ADR-013) | API Messages d'Anthropic, facturée au jeton sur un compte de la Console à part de l'abonnement Claude (crédit acheté) ; réflexion facturée en jetons de sortie ; − 50 % en lot (API Batches) ; tarif lu dans `import/ingest/aromes/tarif.json`, jamais dans le code ; estimation de l'ADR : ≈ 18 $ à l'effort `medium` pour les 466 houblons (essai, groupe, reste) | limite de dépense de 20 $ de l'espace de travail Kass'Beer (Console) ; `--budget-usd` obligatoire hors essai, refus au-delà de la borne haute (`countTokens` × prix d'entrée + `max_tokens` 4 000 × prix de sortie, par houblon) ; `--max` 500 houblons par lancement ; 20 houblons au plus en appels directs ; confirmation par la saisie de `oui` | `import/ingest/aromes/rapport.json` (`poste`, modèle, effort, `usage`, `montant_usd`) ; console Anthropic |
+| `hop_aroma_generation` | `ingest/generer-aromes.mjs`, poste de l'admin (ADR-013) | API Messages d'Anthropic, facturée au jeton sur un compte de la Console à part de l'abonnement Claude (crédit acheté) ; réflexion facturée en jetons de sortie ; − 50 % en lot (API Batches) ; tarif lu dans `import/ingest/tarif.json` (commun aux natures, ADR-017), jamais dans le code ; estimation de l'ADR : ≈ 18 $ à l'effort `medium` pour les 466 houblons (essai, groupe, reste) | limite de dépense de 20 $ de l'espace de travail Kass'Beer (Console) ; `--budget-usd` obligatoire hors essai, refus au-delà de la borne haute (`countTokens` × prix d'entrée + `max_tokens` 4 000 × prix de sortie, par houblon) ; `--max` 500 houblons par lancement ; 20 houblons au plus en appels directs ; confirmation par la saisie de `oui` | `import/ingest/aromes/rapport.json` (`poste`, modèle, effort, `usage`, `montant_usd`) ; console Anthropic |
 | `recipe_assistant_turn` | `recipeAssistantTurn` (ADR-015, socle d'ADR-016) | API Messages d'Anthropic, facturée au jeton sur l'espace de travail Kass'Beer de la Console (celui d'ADR-013, seconde clé) ; limite de 20 $ par mois commune avec `hop_aroma_generation`, l'atteindre bloque aussi les arômes ; estimation d'ADR-015 : ≈ 0,037 $ par tour moyen avec Sonnet 5.5, ≈ 0,12 $ à la borne haute d'un tour, ≈ 0,13 $ pour un résumé | `turns_per_day` par membre et par jour de Paris, `founder_turns_per_day` pour le compte fondateur, `turns_per_conversation` (`ai_config/policy`, réglés dans Admin › Moteur d'IA, chacun de 1 à `AI_MAX_TURNS` = 100) ; tour réservé en transaction avant l'appel ; poste fermé aux membres tant que `members_enabled` est faux ; `maxInstances` 2 ; sans politique lisible, refus | `ai_quotas/{uid}` (tours du jour), `ai_usage/{AAAA-MM}_{uid}` (appels, jetons, `cost_usd`, `unpriced_calls`), journal « IA : appel » (Admin › Journaux), Console Anthropic, qui fait foi pour la facture |

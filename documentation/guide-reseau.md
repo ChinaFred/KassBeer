@@ -342,6 +342,10 @@ l'empreinte des houblons. P19, P20 et P22 reçoivent la nouvelle collection. « 
 « Structure », « Commandes utiles » et « Coûts variables » sont mis à jour, marqués « à
 livrer » jusqu'au code.
 
+Le 2026-11-21, avec le lot D1 d'ADR-017, P54 décrit le moteur commun `ingest/lib/redaction/`
+comme livré pour les houblons, avec le tarif commun `import/ingest/tarif.json` et l'empreinte
+figée ; la nature des divers reste « à livrer ».
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

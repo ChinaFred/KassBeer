@@ -1,7 +1,8 @@
-// Descriptions aromatiques des houblons (ADR-013, P54, P55) : contrôle des textes, tarif,
+// Descriptions aromatiques des houblons (ADR-013, P54, P55), par le moteur commun
+// (lib/redaction/, ADR-017) et la nature « houblon » : contrôle des textes, tarif commun,
 // budget, refus du modèle, clé jamais écrite, sélection des houblons nouveaux ou changés,
-// entrées relues jamais remplacées, tri par l'écrivain. Le SDK est simulé : aucun appel
-// réel ne part.
+// empreinte figée, entrées relues jamais remplacées, tri par l'écrivain. Le SDK est simulé :
+// aucun appel réel ne part.
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -10,25 +11,28 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { erreurLisible, masquerCle } from "../lib/aromes/client.mjs";
-import { genererAromes, lireOptionsAromes } from "../lib/aromes/generation.mjs";
-import { MODELE, parametresRequete, SCHEMA_SORTIE } from "../lib/aromes/prompt.mjs";
-import {
-  borneHaute,
-  ErreurAromes,
-  lireTarif,
-  MESSAGE_TARIF_INCONNU,
-} from "../lib/aromes/tarif.mjs";
+import { NATURE_HOUBLON } from "../lib/aromes/nature.mjs";
+import { MODELE, parametresRequete, PROMPT_VERSION, SCHEMA_SORTIE } from "../lib/aromes/prompt.mjs";
 import {
   controlerEntreeArome,
   controlerSortieModele,
   DESCRIPTEURS,
-  nettoyerTexte,
-  reglesTexte,
+  donneesEnvoyees,
+  empreinteEntree,
 } from "../lib/aromes/validation.mjs";
+import { erreurLisible, masquerCle } from "../lib/redaction/client.mjs";
+import { generer, lireOptions } from "../lib/redaction/moteur.mjs";
+import {
+  borneHaute,
+  ErreurRedaction,
+  lireTarif,
+  MESSAGE_TARIF_INCONNU,
+} from "../lib/redaction/tarif.mjs";
+import { nettoyerTexte, reglesTexte } from "../lib/redaction/texte.mjs";
 import { compterSansDescription, messageSansDescription, trierAromes } from "../lib/execution.mjs";
 
 const CLE = "sk-ant-cle-fictive-0123456789";
+const lireOptionsHoublon = (argv) => lireOptions(argv, NATURE_HOUBLON);
 const TEXTE =
   "Notes franches d'agrumes et de résine, amertume nette, proche du Cascade en plus doux.";
 const MAINTENANT = new Date("2026-11-14T10:00:00Z");
@@ -258,7 +262,7 @@ describe("tarif et borne haute", () => {
     ]) {
       assert.throws(
         () => lireTarif("tarif.json", MODELE, MAINTENANT, l),
-        (e) => e instanceof ErreurAromes && e.message.startsWith(MESSAGE_TARIF_INCONNU),
+        (e) => e instanceof ErreurRedaction && e.message.startsWith(MESSAGE_TARIF_INCONNU),
       );
     }
     assert.equal(lireTarif("tarif.json", MODELE, MAINTENANT, lire(tarifValide)).date, "2026-11-03");
@@ -281,20 +285,23 @@ describe("tarif et borne haute", () => {
 
 describe("options", () => {
   it("--lot et --nouveaux sans --budget-usd : refusés ; essai sans budget accepté", () => {
-    assert.throws(() => lireOptionsAromes(["--lot"]), ErreurAromes);
-    assert.throws(() => lireOptionsAromes(["--nouveaux"]), ErreurAromes);
-    assert.equal(lireOptionsAromes(["--essai"]).essai, 10);
-    assert.equal(lireOptionsAromes(["--essai", "3"]).essai, 3);
+    assert.throws(() => lireOptionsHoublon(["--lot"]), ErreurRedaction);
+    assert.throws(() => lireOptionsHoublon(["--nouveaux"]), ErreurRedaction);
+    assert.equal(lireOptionsHoublon(["--essai"]).essai, 10);
+    assert.equal(lireOptionsHoublon(["--essai", "3"]).essai, 3);
   });
 
   it("--max au-delà de 500, effort inconnu, deux modes : refusés", () => {
     assert.throws(
-      () => lireOptionsAromes(["--lot", "--budget-usd", "1", "--max", "501"]),
-      ErreurAromes,
+      () => lireOptionsHoublon(["--lot", "--budget-usd", "1", "--max", "501"]),
+      ErreurRedaction,
     );
-    assert.throws(() => lireOptionsAromes(["--essai", "--effort", "aucun"]), ErreurAromes);
-    assert.throws(() => lireOptionsAromes(["--essai", "--lot", "--budget-usd", "1"]), ErreurAromes);
-    assert.throws(() => lireOptionsAromes([]), ErreurAromes);
+    assert.throws(() => lireOptionsHoublon(["--essai", "--effort", "aucun"]), ErreurRedaction);
+    assert.throws(
+      () => lireOptionsHoublon(["--essai", "--lot", "--budget-usd", "1"]),
+      ErreurRedaction,
+    );
+    assert.throws(() => lireOptionsHoublon([]), ErreurRedaction);
   });
 });
 
@@ -312,12 +319,16 @@ describe("clé", () => {
 });
 
 describe("le SDK n'est pas chargé à l'import", () => {
-  it("validation, execution (ecrire.mjs), client et génération s'importent sans lui", () => {
+  it("moteur, tarif, texte, client, nature, validation et execution (ecrire.mjs) s'importent sans lui", () => {
     const hook = fileURLToPath(new URL("./support/interdire-sdk.mjs", import.meta.url));
     const modules = [
+      "../lib/redaction/texte.mjs",
+      "../lib/redaction/tarif.mjs",
+      "../lib/redaction/client.mjs",
+      "../lib/redaction/moteur.mjs",
       "../lib/aromes/validation.mjs",
-      "../lib/aromes/client.mjs",
-      "../lib/aromes/generation.mjs",
+      "../lib/aromes/prompt.mjs",
+      "../lib/aromes/nature.mjs",
       "../lib/execution.mjs",
     ].map((m) => new URL(m, import.meta.url).href);
     const code = `for (const m of ${JSON.stringify(modules)}) await import(m); console.log("ok");`;
@@ -340,6 +351,45 @@ describe("le SDK n'est pas chargé à l'import", () => {
         },
       ),
     );
+  });
+});
+
+/// Empreinte `input_sha256` de hop-houblon-fictif (test/fixtures/prepare/beer_hops.json),
+/// modèle claude-fable-5-2, prompt 1, effort medium, calculée sur le code d'avant le moteur
+/// commun (ADR-017, invariant de la refonte). Une valeur changée renverrait tous les houblons.
+const EMPREINTE_FIGEE = "2b7ca0ed78301eb4aa4afd6885944fc2d4dd917b3401ac7016c92d79aa094bdb";
+
+describe("empreinte des houblons (ADR-017, invariant)", () => {
+  it("forme canonique {hop, prompt_version, model, effort} : valeur figée", () => {
+    const [h] = JSON.parse(
+      readFileSync(new URL("./fixtures/prepare/beer_hops.json", import.meta.url), "utf8"),
+    );
+    assert.equal(PROMPT_VERSION, 1);
+    assert.equal(MODELE, "claude-fable-5-2");
+    const options = { promptVersion: PROMPT_VERSION, modele: MODELE, effort: "medium" };
+    assert.equal(empreinteEntree(donneesEnvoyees(h.data), options), EMPREINTE_FIGEE);
+    assert.equal(
+      NATURE_HOUBLON.empreinteEntree(NATURE_HOUBLON.donneesEnvoyees(h.data), options),
+      EMPREINTE_FIGEE,
+    );
+  });
+});
+
+describe("moteur commun", () => {
+  it("aucun nom de poste ni de nature écrit dans lib/redaction/", () => {
+    const dossier = new URL("../lib/redaction/", import.meta.url);
+    for (const f of readdirSync(dossier)) {
+      const source = readFileSync(new URL(f, dossier), "utf8");
+      for (const nom of [
+        "hop_aroma_generation",
+        "misc_description_generation",
+        "beer_hop",
+        "beer_misc",
+        "hop_name",
+      ]) {
+        assert.equal(source.includes(nom), false, `${f} : ${nom}`);
+      }
+    }
   });
 });
 
@@ -435,8 +485,9 @@ describe("génération (SDK simulé)", () => {
     },
   });
 
-  const lancer = (argv, sdk, { confirmer = true } = {}) =>
-    genererAromes({
+  const lancer = (argv, sdk, { confirmer = true, nature = NATURE_HOUBLON } = {}) =>
+    generer({
+      nature,
       argv: [...argv, "--dossier", prepare, "--aromes", aromes],
       env: { ANTHROPIC_API_KEY: CLE },
       entree: {},
@@ -462,14 +513,15 @@ describe("génération (SDK simulé)", () => {
       join(prepare, "beer_hops.json"),
       JSON.stringify([houblon("hop-alpha", "Alpha"), houblon("hop-beta", "Beta")]),
     );
-    writeFileSync(join(aromes, "tarif.json"), JSON.stringify(TARIF));
+    // Tarif commun (ADR-017) : dossier parent de celui de la nature.
+    writeFileSync(join(racine, "tarif.json"), JSON.stringify(TARIF));
     lignes = [];
     confirmations = 0;
   });
   afterEach(() => rmSync(racine, { recursive: true, force: true }));
 
   it("sans tarif : refus avant tout appel, SDK non chargé", async () => {
-    rmSync(join(aromes, "tarif.json"));
+    rmSync(join(racine, "tarif.json"));
     const sdk = sdkSimule();
     await assert.rejects(lancer(["--essai"], sdk), (e) =>
       e.message.startsWith(MESSAGE_TARIF_INCONNU),
@@ -491,7 +543,7 @@ describe("génération (SDK simulé)", () => {
 
   it("confirmation refusée : rien n'est envoyé", async () => {
     const sdk = sdkSimule();
-    await assert.rejects(lancer(["--essai"], sdk, { confirmer: false }), ErreurAromes);
+    await assert.rejects(lancer(["--essai"], sdk, { confirmer: false }), ErreurRedaction);
     assert.equal(sdk.appels.create.length, 0);
   });
 
@@ -580,7 +632,7 @@ describe("génération (SDK simulé)", () => {
     await assert.rejects(
       lancer(["--lot", "--budget-usd", "5"], sdkSimule({ erreurLot: coupure })),
       (e) =>
-        e instanceof ErreurAromes &&
+        e instanceof ErreurRedaction &&
         e.message.includes(
           "Résultat inconnu : vérifiez les lots dans la Console Anthropic avant de relancer",
         ) &&
@@ -684,7 +736,7 @@ describe("génération (SDK simulé)", () => {
       ["hop-alpha"],
     );
     assert.equal(suivi2.generes, 1);
-    await assert.rejects(lancer(["--suivre", "msgbatch_inconnu"], sdkSimule()), ErreurAromes);
+    await assert.rejects(lancer(["--suivre", "msgbatch_inconnu"], sdkSimule()), ErreurRedaction);
   });
 
   it("a-relire.md : les houblons du groupe seuls", async () => {
@@ -705,6 +757,59 @@ describe("génération (SDK simulé)", () => {
     assert.ok(md.includes("`hop-beta`"));
     assert.equal(md.includes("`hop-alpha`"), false);
     assert.ok(md.includes("Inconnu : aucun"));
+  });
+
+  it("tarif à l'ancien emplacement seul (aromes/tarif.json) : refus qui dit de le déplacer, SDK non chargé", async () => {
+    rmSync(join(racine, "tarif.json"));
+    writeFileSync(join(aromes, "tarif.json"), JSON.stringify(TARIF));
+    const sdk = sdkSimule();
+    await assert.rejects(
+      lancer(["--essai"], sdk),
+      (e) =>
+        e instanceof ErreurRedaction &&
+        e.message.startsWith(MESSAGE_TARIF_INCONNU) &&
+        e.message.includes("n'est plus lu depuis ADR-017") &&
+        e.message.includes(join(racine, "tarif.json")),
+    );
+    assert.equal(sdk.appels.charge, 0);
+    assert.equal(confirmations, 0);
+  });
+
+  it("tarif aux deux emplacements : le tarif commun est lu, l'ancien signalé ignoré", async () => {
+    writeFileSync(
+      join(aromes, "tarif.json"),
+      JSON.stringify({ ...TARIF, usd_per_million_tokens: { input: -1 } }),
+    );
+    const sdk = sdkSimule({ reponses: [message(sortieModele()), message(sortieModele())] });
+    const cr = await lancer(["--essai"], sdk);
+    assert.equal(cr.generes, 2);
+    assert.ok(lignes.some((l) => l.includes("ignoré : seul") && l.includes("(ADR-017)")));
+  });
+
+  it("le rapport porte le poste de la nature passée au moteur", async () => {
+    const nature = { ...NATURE_HOUBLON, poste: "poste_de_test" };
+    const sdk = sdkSimule({ reponses: [message(sortieModele()), message(sortieModele())] });
+    const cr = await lancer(["--essai"], sdk, { nature });
+    assert.equal(cr.poste, "poste_de_test");
+    const rapport = JSON.parse(readFileSync(join(aromes, "rapport.json"), "utf8"));
+    assert.equal(rapport.poste, "poste_de_test");
+    const relire = await lancer(["--relire"], sdkSimule(), { nature });
+    assert.equal(relire.poste, "poste_de_test");
+  });
+
+  it("empreinte du houblon de fixture inchangée par le moteur commun (ADR-017)", async () => {
+    // Valeur calculée sur le code d'avant la refonte (lib/aromes/generation.mjs, commit
+    // 455f6df9) pour test/fixtures/prepare/beer_hops.json, effort medium.
+    const fixture = readFileSync(
+      new URL("./fixtures/prepare/beer_hops.json", import.meta.url),
+      "utf8",
+    );
+    writeFileSync(join(prepare, "beer_hops.json"), fixture);
+    const sdk = sdkSimule({ reponses: [message(sortieModele())] });
+    await lancer(["--essai"], sdk);
+    const [e] = lireAromes();
+    assert.equal(e.id, "hop-houblon-fictif");
+    assert.equal(e.data.input_sha256, EMPREINTE_FIGEE);
   });
 });
 
