@@ -1,5 +1,5 @@
 // Liste des noms d'ingrédients des recettes du groupe, en lecture seule, pour une nature
-// rédigée : houblons (ADR-013, décisions 9 et 10) ou divers (ADR-017). Lit
+// rédigée : houblons (ADR-013, décisions 9 et 10) ou divers (ADR-018). Lit
 // recipes/*.recipe.ingredients.<liste>[].name et
 // brews/*.recipe_snapshot.recipe.ingredients.<liste>[].name (<liste> : hop_additions ou
 // miscellaneous_additions), et n'écrit que les noms, triés et sans doublon, dans

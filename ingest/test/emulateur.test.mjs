@@ -214,7 +214,7 @@ describe(
       }
     });
 
-    it("--supprimer-absents beer_misc_descriptions : refusé (ADR-017, décision 5)", async () => {
+    it("--supprimer-absents beer_misc_descriptions : refusé (ADR-018, décision 5)", async () => {
       await assert.rejects(
         lancer(["--supprimer-absents", "beer_misc_descriptions"], async () => true),
         ErreurOptions,

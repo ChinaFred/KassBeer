@@ -1,4 +1,4 @@
-// Nature « houblon » du moteur de rédaction (ADR-013 ; ADR-017, section 1) : descriptions
+// Nature « houblon » du moteur de rédaction (ADR-013 ; ADR-018, section 1) : descriptions
 // aromatiques des houblons, écrites dans beer_hop_aromas/ par ecrire.mjs. Ce fichier dit au
 // moteur (lib/redaction/moteur.mjs) ce qui est propre aux houblons : poste de coût,
 // fichiers, données envoyées, empreinte, prompt, contrôle, a-relire.md. N'importe pas le
@@ -11,7 +11,7 @@
 //   brut/                    réponses de chaque exécution, effort dans le nom
 //   rapport.json             dernière exécution : poste, modèle, effort, jetons, montant
 //   a-relire.md              houblons du groupe à relire
-// Le tarif est lu dans import/ingest/tarif.json, commun aux natures (ADR-017).
+// Le tarif est lu dans import/ingest/tarif.json, commun aux natures (ADR-018).
 
 import { fileURLToPath } from "node:url";
 import { construireEntree } from "../redaction/entree.mjs";

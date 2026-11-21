@@ -15,7 +15,7 @@ import '../../recipes/presentation/contenu_recette.dart';
 import '../domain/referentiel.dart';
 import 'library_providers.dart';
 
-// Liens d'une ligne de recette vers sa fiche de la Bibliothèque (ADR-017,
+// Liens d'une ligne de recette vers sa fiche de la Bibliothèque (ADR-018,
 // lot D4) : houblons et autres ajouts de la fiche d'une recette, de la recette
 // figée d'un brassin et d'une recette publique. L'écran du jour et les
 // journées n'importent pas ce fichier (P2) : `ContenuRecette` y reste sans

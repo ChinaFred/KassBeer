@@ -1,4 +1,4 @@
-// Règles de texte et empreintes communes aux natures rédigées par l'API (ADR-013, ADR-017),
+// Règles de texte et empreintes communes aux natures rédigées par l'API (ADR-013, ADR-018),
 // tirées de lib/aromes/validation.mjs. N'importe pas le SDK d'Anthropic : l'écrivain
 // (ecrire.mjs) et les tests chargent ce fichier sans lui (P54).
 //

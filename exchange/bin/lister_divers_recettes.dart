@@ -3,7 +3,7 @@ import 'package:exchange/ingestion.dart';
 import 'src/lister_recettes.dart';
 
 /// Résout les noms de divers des recettes du groupe vers `beer_miscs/`
-/// (ADR-017), depuis `exchange/` :
+/// (ADR-018), depuis `exchange/` :
 ///
 /// ```
 /// dart run bin/lister_divers_recettes.dart

@@ -1,4 +1,4 @@
-// Contrôle des descriptions des divers (ADR-017, section 3, P62), partagé par le générateur
+// Contrôle des descriptions des divers (ADR-018, section 3, P63), partagé par le générateur
 // (generer-divers.mjs) et l'écrivain (ecrire.mjs). N'importe pas le SDK d'Anthropic :
 // ecrire.mjs et les tests chargent ce fichier sans lui (P54). Les règles de texte et les
 // empreintes communes aux natures viennent de lib/redaction/texte.mjs.
@@ -19,7 +19,7 @@ import {
 /// Collection écrite par ecrire.mjs depuis import/ingest/divers/descriptions.json.
 export const COLLECTION_DIVERS = "beer_misc_descriptions";
 
-/// Les cinq moments de l'éditeur de recette (OtherUse, ADR-017, décision 3), dans l'ordre
+/// Les cinq moments de l'éditeur de recette (OtherUse, ADR-018, décision 3), dans l'ordre
 /// d'affichage de la fiche. Le traitement de l'eau de brassage ou de rinçage est rangé sous
 /// `mash`.
 export const MOMENTS = ["mash", "boil", "after_boil", "fermentation", "bottling"];
@@ -44,7 +44,7 @@ const LIBELLES = new Map(ROLES.map((d) => [d.key, d.label]));
 /// Identifiant d'un divers de beer_miscs/.
 export const ID_DIVERS = /^misc-[a-z0-9]+(-[a-z0-9]+)*$/;
 
-// Unités de dose refusées (ADR-017, décision 1, liste élargie par la décision de
+// Unités de dose refusées (ADR-018, décision 1, liste élargie par la décision de
 // l'utilisateur du 2026-11-21) : symboles et mots, les plus longs d'abord.
 const UNITES_DOSE =
   "(?:g\\s*/\\s*l|ppm|ppb|kilogrammes?|milligrammes?|grammes?|centilitres?|d[ée]cilitres?|" +
@@ -91,7 +91,7 @@ export function reglesTexteDivers(texte, bornes) {
   return regles;
 }
 
-/// Données d'un divers envoyées au modèle (ADR-017, section 2), tirées de `beer_miscs/{id}`
+/// Données d'un divers envoyées au modèle (ADR-018, section 2), tirées de `beer_miscs/{id}`
 /// préparé : rien d'autre ne part.
 export function donneesEnvoyees(data) {
   return {

@@ -1,6 +1,6 @@
 // Descriptions aromatiques des houblons (ADR-013) : génération par l'API Messages
 // d'Anthropic (modèle claude-fable-5-2), depuis le poste de l'admin. Passe la nature
-// « houblon » (lib/aromes/nature.mjs) au moteur commun (lib/redaction/, ADR-017). Lit
+// « houblon » (lib/aromes/nature.mjs) au moteur commun (lib/redaction/, ADR-018). Lit
 // import/ingest/prepare/beer_hops.json, import/ingest/aromes/ et le tarif commun
 // import/ingest/tarif.json ; ne lit ni n'écrit Firestore (l'écriture passe par ecrire.mjs).
 // Poste de coût : hop_aroma_generation.

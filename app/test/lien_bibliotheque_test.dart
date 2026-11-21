@@ -19,7 +19,7 @@ import 'support/fakes.dart';
 import 'support/library_fixtures.dart';
 
 /// Liens des lignes de houblons et d'autres ajouts vers leur fiche de la
-/// Bibliothèque (ADR-017, lot D4).
+/// Bibliothèque (ADR-018, lot D4).
 
 const _cascade = HopLine(
   name: 'Cascade US',

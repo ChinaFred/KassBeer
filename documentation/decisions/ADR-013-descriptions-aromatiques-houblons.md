@@ -5,7 +5,7 @@
 - **Remplace** : — (complète ADR-005 : nouvelle collection de référence, exception à P20
   limitée à un texte généré ; complète ADR-001 : l'application reste sans IA, la génération
   vit hors de l'application ; ouvre un poste de coût variable)
-- **Amendé par** : ADR-017 (2026-11-21) : moteur commun `ingest/lib/redaction/` et tarif
+- **Amendé par** : ADR-018 (2026-11-21) : moteur commun `ingest/lib/redaction/` et tarif
   commun `import/ingest/tarif.json` ; l'ancien `import/ingest/aromes/tarif.json` n'est plus lu.
 
 Décisions de l'utilisateur du 2026-11-14 :

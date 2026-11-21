@@ -1,5 +1,5 @@
-// Référentiels, descriptions aromatiques (ADR-013, P55), descriptions des divers (ADR-017,
-// P62), recettes publiques et comptes
+// Référentiels, descriptions aromatiques (ADR-013, P55), descriptions des divers (ADR-018,
+// P63), recettes publiques et comptes
 // rendus de l'ingestion (ADR-005, P19) :
 // écrits par aucun client, lus par les membres (ingest_runs et import_unresolved : par
 // l'admin). Cinq profils de P4, plus les connexions non conformes de P11. L'écriture

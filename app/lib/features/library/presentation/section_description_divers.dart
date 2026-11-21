@@ -12,7 +12,7 @@ import 'library_providers.dart';
 import 'texte_redige.dart';
 
 /// Textes des sections « Utilisation » et « Goût » de la fiche d'un divers
-/// (ADR-017).
+/// (ADR-018).
 abstract final class TextesDescriptionDivers {
   static const titre = 'Utilisation';
   static const titreGout = 'Goût';

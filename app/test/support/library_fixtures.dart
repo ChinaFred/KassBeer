@@ -284,7 +284,7 @@ Map<String, dynamic> miscDoc() => {
   'content_sha256': '02' * 32,
 };
 
-/// Textes inventés d'une description de divers (ADR-017), de 40 à 300
+/// Textes inventés d'une description de divers (ADR-018), de 40 à 300
 /// caractères pour le résumé, 40 à 400 pour les autres ; aucune dose.
 const kTexteResume =
     'Algue séchée qui aide les protéines à se déposer pour un moût plus clair.';

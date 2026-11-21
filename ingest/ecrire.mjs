@@ -2,7 +2,7 @@
 // `dart run bin/preparer_referentiels.dart` dans exchange/) et écrit les référentiels et
 // les recettes publiques par l'Admin SDK ; lit aussi import/ingest/aromes/aromes.json
 // (generer-aromes.mjs, ADR-013) et écrit beer_hop_aromas/, puis
-// import/ingest/divers/descriptions.json (generer-divers.mjs, ADR-017) et écrit
+// import/ingest/divers/descriptions.json (generer-divers.mjs, ADR-018) et écrit
 // beer_misc_descriptions/.
 //
 //   Émulateur (par défaut) :

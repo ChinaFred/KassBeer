@@ -6,7 +6,7 @@ import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/formats.dart';
 
 /// Textes communs aux descriptions rédigées par l'API Claude : arômes d'un
-/// houblon (ADR-013) et description d'un divers (ADR-017).
+/// houblon (ADR-013) et description d'un divers (ADR-018).
 abstract final class TextesRediges {
   static const confianceFaible = 'Confiance faible';
 

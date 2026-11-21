@@ -1,4 +1,4 @@
-// Tarif et estimation des textes rédigés par l'API (ADR-013, section 5 ; ADR-017, section 1).
+// Tarif et estimation des textes rédigés par l'API (ADR-013, section 5 ; ADR-018, section 1).
 // Le tarif vient de import/ingest/tarif.json, commun à toutes les natures, écrit par l'admin
 // avec sa date et sa source ; aucun tarif n'est écrit dans le code. Sans fichier lisible, ou
 // s'il a plus de 90 jours, aucune estimation, donc aucun envoi. Le nom du poste de coût vient
@@ -25,7 +25,7 @@ export class ErreurRedaction extends Error {}
 export const FICHIER_TARIF = "tarif.json";
 
 /// Chemins du tarif d'une nature dont les fichiers vivent dans [dossierNature] : `chemin`, le
-/// seul lu, et `ancien`, l'emplacement d'avant ADR-017 (import/ingest/aromes/tarif.json),
+/// seul lu, et `ancien`, l'emplacement d'avant ADR-018 (import/ingest/aromes/tarif.json),
 /// qui n'est plus lu.
 export function cheminsTarif(dossierNature) {
   return {
@@ -42,7 +42,7 @@ export function lireTarifCommun(dossierNature, modele, maintenant, existe = exis
   const { chemin, ancien } = cheminsTarif(dossierNature);
   if (!existe(chemin) && existe(ancien)) {
     throw new ErreurRedaction(
-      `${MESSAGE_TARIF_INCONNU} (${chemin} absent ; ${ancien} n'est plus lu depuis ADR-017 : ` +
+      `${MESSAGE_TARIF_INCONNU} (${chemin} absent ; ${ancien} n'est plus lu depuis ADR-018 : ` +
         `déplacez-le d'un dossier vers le haut, dans ${chemin}).`,
     );
   }

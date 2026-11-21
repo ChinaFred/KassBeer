@@ -1,4 +1,4 @@
-# ADR-017 — Descriptions des divers, rédigées par l'API Claude depuis le poste de l'admin
+# ADR-018 — Descriptions des divers, rédigées par l'API Claude depuis le poste de l'admin
 
 - **Statut** : accepté (2026-11-21)
 - **Date** : 2026-11-21
@@ -150,7 +150,7 @@ Note du 2026-11-21 (décision de l'utilisateur, après relecture du lot D2) :
   du prompt nomme les mots et abréviations (`cuil.`, `c. à café`, `c. à soupe`, `c.à.c`,
   `c.à.s`, goutte, comprimé…) ; les pluriels des symboles restent au seul contrôle, sans changer `PROMPT_VERSION` : aucune génération n'a eu lieu.
 - **Lot D3.** L'affichage dans la Bibliothèque (section 4 : fiche d'un divers, sections
-  « Utilisation » et « Goût », mention IA commune aux houblons, `get` à l'ouverture, P22, P62)
+  « Utilisation » et « Goût », mention IA commune aux houblons, `get` à l'ouverture, P22, P63)
   et la ligne « Descriptions des divers » de l'écran « Sources des données » (P20) arrivent au
   lot D3. Jusque-là, `beer_misc_descriptions/` peut être écrit sans être lu par
   l'application.

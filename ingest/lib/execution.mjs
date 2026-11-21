@@ -33,7 +33,7 @@ import {
 const NATURES = ["fermentable", "hop", "culture", "misc"];
 
 /// Natures rédigées par l'API dont ecrire.mjs écrit les entrées, dans l'ordre : houblons
-/// (beer_hop_aromas, ADR-013), divers (beer_misc_descriptions, ADR-017).
+/// (beer_hop_aromas, ADR-013), divers (beer_misc_descriptions, ADR-018).
 export const NATURES_REDIGEES = [NATURE_HOUBLON, NATURE_DIVERS];
 
 /// Dossier de la préparation par défaut : import/ingest/prepare/ à la racine du dépôt.
@@ -154,7 +154,7 @@ export function controlerListeGroupe(origine, maintenant, nature) {
   }
 }
 
-/// Sépare les entrées d'une nature rédigée bonnes des refusées (P55, P62) : contrôle de
+/// Sépare les entrées d'une nature rédigée bonnes des refusées (P55, P63) : contrôle de
 /// lib/<nature>/validation.mjs, identifiant absent du référentiel préparé
 /// ([idsReferentiel]), entrée du groupe non relue, identifiant en double. Les bonnes
 /// reçoivent `content_sha256`.
@@ -202,11 +202,11 @@ export function indexAromes(valides) {
 
 /// Index de beer_index construit par ecrire.mjs depuis les entrées acceptées d'une nature
 /// rédigée. Seuls les houblons en ont un (ADR-013, note du 2026-11-21) ; les divers n'en ont
-/// pas (ADR-017).
+/// pas (ADR-018).
 const INDEX_REDIGEES = new Map([[NATURE_HOUBLON, indexAromes]]);
 
 /// Entrées du référentiel préparé ([documents]) sans entrée rédigée (ADR-013, « Ajouter un
-/// houblon » ; ADR-017).
+/// houblon » ; ADR-018).
 export function compterSansDescription(documents, entrees) {
   const decrits = new Set((entrees ?? []).map((e) => e?.id));
   return (documents ?? []).filter((d) => !decrits.has(d.id)).length;
@@ -234,7 +234,7 @@ export function resumePreparation(rapport) {
 /// Identifiants préparés de [collection] (refusés compris : un document refusé garde sa
 /// version en ligne), pour --supprimer-absents. beer_hop_aromas exige aromes.json ([aromes],
 /// lu par lireEntreesRedigees) : sans lui, ErreurOptions, rien n'est écrit ni supprimé.
-/// beer_misc_descriptions n'est pas supprimable (ADR-017, décision 5).
+/// beer_misc_descriptions n'est pas supprimable (ADR-018, décision 5).
 export function idsPrepares(collection, preparation, aromes) {
   if (collection === NATURE_HOUBLON.ecriture.collection) {
     if (aromes === null) {

@@ -165,7 +165,7 @@ final aromesHoublonProvider = FutureProvider.autoDispose
     }, retry: _sansNouvelEssai);
 
 /// Description d'un divers, lue par `get()` à l'ouverture de sa fiche
-/// (ADR-017). Relue au passage hors ligne ou au retour du réseau.
+/// (ADR-018). Relue au passage hors ligne ou au retour du réseau.
 final descriptionDiversProvider = FutureProvider.autoDispose
     .family<RechercheDocument<DescriptionDivers>, String>((ref, id) {
       ref.watch(grantedAccessProvider.select((a) => a?.offline));

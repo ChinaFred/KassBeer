@@ -6,7 +6,7 @@ import 'package:exchange/ingestion.dart';
 import 'package:test/test.dart';
 
 /// Ingrédients des recettes du groupe : houblons (ADR-013, décisions 9 à 11)
-/// et divers (ADR-017). Noms lus, résolus par IndexBibliotheque.resoudre (nom
+/// et divers (ADR-018). Noms lus, résolus par IndexBibliotheque.resoudre (nom
 /// et alias), non résolus avec leur raison. Fixtures écrites à la main (P20).
 
 Object? _fixture(String dossier, String nom) =>

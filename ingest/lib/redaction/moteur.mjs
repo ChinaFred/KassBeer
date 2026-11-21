@@ -1,5 +1,5 @@
 // Moteur commun des textes rédigés par l'API Messages d'Anthropic depuis le poste de l'admin
-// (ADR-013, ADR-017), lancé par un générateur (generer-aromes.mjs…) qui lui passe sa nature
+// (ADR-013, ADR-018), lancé par un générateur (generer-aromes.mjs…) qui lui passe sa nature
 // (lib/<nature>/nature.mjs : poste de coût, fichiers, données envoyées, empreinte, prompt,
 // contrôle). Le moteur ne nomme aucune nature ni aucun poste. Il lit le référentiel préparé
 // (import/ingest/prepare/) et le dossier de la nature ; il n'importe pas firebase-admin, ne
@@ -23,13 +23,13 @@ export const DOSSIER_PREPARE = fileURLToPath(
   new URL("../../../import/ingest/prepare/", import.meta.url),
 );
 
-/// Entrées par lancement, au plus (ADR-013, plafond 3 ; ADR-017, section 6).
+/// Entrées par lancement, au plus (ADR-013, plafond 3 ; ADR-018, section 6).
 export const MAX_ENTREES = 500;
 
 /// Entrées envoyées en appels directs, au plus (essai, --nouveaux sans --lot).
 export const SEUIL_DIRECT = 20;
 
-/// Entrées d'un essai par défaut (ADR-013, décision 5 ; ADR-017, section 5).
+/// Entrées d'un essai par défaut (ADR-013, décision 5 ; ADR-018, section 5).
 export const ESSAI_DEFAUT = 10;
 
 export const EFFORT_DEFAUT = "medium";
@@ -485,7 +485,7 @@ export async function generer({
   // Tarif d'abord : sans lui, aucune estimation et aucun appel.
   const lu = lireTarifCommun(dossierNature, nature.modele, debut);
   const tarif = lu.tarif;
-  if (lu.ancienIgnore) ecrire(`${lu.ancien} ignoré : seul ${lu.chemin} est lu (ADR-017).`);
+  if (lu.ancienIgnore) ecrire(`${lu.ancien} ignoré : seul ${lu.chemin} est lu (ADR-018).`);
   const requetes = envoi.map((c) =>
     nature.parametresRequete(c.donnees, { effort: options.effort, cache: direct }),
   );
@@ -722,7 +722,7 @@ async function suivre(ctx) {
   cr.usage = usage;
   try {
     const t = lireTarifCommun(dossierNature, lot.model, debut);
-    if (t.ancienIgnore) ecrire(`${t.ancien} ignoré : seul ${t.chemin} est lu (ADR-017).`);
+    if (t.ancienIgnore) ecrire(`${t.ancien} ignoré : seul ${t.chemin} est lu (ADR-018).`);
     cr.montant_usd = montantUsage(usage, t.tarif, "lot");
     cr.tarif = { date: t.tarif.date, source: t.tarif.source };
   } catch (erreur) {

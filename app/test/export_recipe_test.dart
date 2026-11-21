@@ -359,7 +359,7 @@ void main() {
     ) async {
       final app = await ouvrirXml(tester, complete());
       // La fiche lit aussi les index des houblons et des divers pour ses
-      // lignes liées (ADR-017, D4) ; l'export ne lit que celui des styles.
+      // lignes liées (ADR-018, D4) ; l'export ne lit que celui des styles.
       expect(
         app.library.indexReads.where(
           (n) => n != NatureReferentiel.hops && n != NatureReferentiel.miscs,

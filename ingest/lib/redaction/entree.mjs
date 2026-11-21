@@ -1,4 +1,4 @@
-// Enveloppe d'une entrée rédigée, commune aux natures (ADR-013, section 4 ; ADR-017,
+// Enveloppe d'une entrée rédigée, commune aux natures (ADR-013, section 4 ; ADR-018,
 // section 3) : relecture (`reviewed`, `reviewed_at`), provenance, empreinte des données
 // envoyées. Le contenu propre à chaque nature (usages d'un houblon, moments d'un divers…)
 // est contrôlé par lib/<nature>/validation.mjs. N'importe pas le SDK d'Anthropic (P54).

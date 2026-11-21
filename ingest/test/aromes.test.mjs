@@ -1,5 +1,5 @@
 // Descriptions aromatiques des houblons (ADR-013, P54, P55), par le moteur commun
-// (lib/redaction/, ADR-017) et la nature « houblon » : contrôle des textes, tarif commun,
+// (lib/redaction/, ADR-018) et la nature « houblon » : contrôle des textes, tarif commun,
 // budget, refus du modèle, clé jamais écrite, sélection des houblons nouveaux ou changés,
 // empreinte figée, entrées relues jamais remplacées, tri par l'écrivain. Le SDK est simulé :
 // aucun appel réel ne part.
@@ -385,10 +385,10 @@ describe("le SDK n'est pas chargé à l'import", () => {
 
 /// Empreinte `input_sha256` de hop-houblon-fictif (test/fixtures/prepare/beer_hops.json),
 /// modèle claude-fable-5-2, prompt 1, effort medium, calculée sur le code d'avant le moteur
-/// commun (ADR-017, invariant de la refonte). Une valeur changée renverrait tous les houblons.
+/// commun (ADR-018, invariant de la refonte). Une valeur changée renverrait tous les houblons.
 const EMPREINTE_FIGEE = "2b7ca0ed78301eb4aa4afd6885944fc2d4dd917b3401ac7016c92d79aa094bdb";
 
-describe("empreinte des houblons (ADR-017, invariant)", () => {
+describe("empreinte des houblons (ADR-018, invariant)", () => {
   it("forme canonique {hop, prompt_version, model, effort} : valeur figée", () => {
     const [h] = JSON.parse(
       readFileSync(new URL("./fixtures/prepare/beer_hops.json", import.meta.url), "utf8"),
@@ -542,7 +542,7 @@ describe("génération (SDK simulé)", () => {
       join(prepare, "beer_hops.json"),
       JSON.stringify([houblon("hop-alpha", "Alpha"), houblon("hop-beta", "Beta")]),
     );
-    // Tarif commun (ADR-017) : dossier parent de celui de la nature.
+    // Tarif commun (ADR-018) : dossier parent de celui de la nature.
     writeFileSync(join(racine, "tarif.json"), JSON.stringify(TARIF));
     lignes = [];
     confirmations = 0;
@@ -797,7 +797,7 @@ describe("génération (SDK simulé)", () => {
       (e) =>
         e instanceof ErreurRedaction &&
         e.message.startsWith(MESSAGE_TARIF_INCONNU) &&
-        e.message.includes("n'est plus lu depuis ADR-017") &&
+        e.message.includes("n'est plus lu depuis ADR-018") &&
         e.message.includes(join(racine, "tarif.json")),
     );
     assert.equal(sdk.appels.charge, 0);
@@ -812,7 +812,7 @@ describe("génération (SDK simulé)", () => {
     const sdk = sdkSimule({ reponses: [message(sortieModele()), message(sortieModele())] });
     const cr = await lancer(["--essai"], sdk);
     assert.equal(cr.generes, 2);
-    assert.ok(lignes.some((l) => l.includes("ignoré : seul") && l.includes("(ADR-017)")));
+    assert.ok(lignes.some((l) => l.includes("ignoré : seul") && l.includes("(ADR-018)")));
   });
 
   it("le rapport porte le poste de la nature passée au moteur", async () => {
@@ -826,7 +826,7 @@ describe("génération (SDK simulé)", () => {
     assert.equal(relire.poste, "poste_de_test");
   });
 
-  it("empreinte du houblon de fixture inchangée par le moteur commun (ADR-017)", async () => {
+  it("empreinte du houblon de fixture inchangée par le moteur commun (ADR-018)", async () => {
     // Valeur calculée sur le code d'avant la refonte (lib/aromes/generation.mjs, commit
     // 455f6df9) pour test/fixtures/prepare/beer_hops.json, effort medium.
     const fixture = readFileSync(

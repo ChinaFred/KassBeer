@@ -1,4 +1,4 @@
-// Descriptions des divers (ADR-017, P54, P62), par le moteur commun (lib/redaction/) et la
+// Descriptions des divers (ADR-018, P54, P63), par le moteur commun (lib/redaction/) et la
 // nature « divers » : contrôle des textes (doses comprises), sortie du modèle, entrée de
 // descriptions.json, requête, données envoyées, empreinte figée, poste du rapport, tri par
 // l'écrivain, prompt documenté. Le SDK est simulé : aucun appel réel ne part. Fixtures
@@ -85,7 +85,7 @@ const entree = (id = "misc-alpha", data = {}) => ({
 });
 
 describe("rôles et moments", () => {
-  it("13 rôles d'ADR-017, clé et libellé ; cinq moments de l'éditeur", () => {
+  it("13 rôles d'ADR-018, clé et libellé ; cinq moments de l'éditeur", () => {
     assert.deepEqual(
       ROLES.map((r) => r.key),
       [
@@ -454,7 +454,7 @@ describe("empreintes", () => {
     assert.equal(empreinteEntree(donneesEnvoyees(m.data), options), EMPREINTE_DIVERS);
   });
 
-  it("houblon de fixture : empreinte toujours égale à 2b7ca0ed… (ADR-017, invariant)", () => {
+  it("houblon de fixture : empreinte toujours égale à 2b7ca0ed… (ADR-018, invariant)", () => {
     const [h] = JSON.parse(
       readFileSync(new URL("./fixtures/prepare/beer_hops.json", import.meta.url), "utf8"),
     );

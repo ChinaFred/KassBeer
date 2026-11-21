@@ -1571,7 +1571,7 @@ Général : « Température du grain », « 18 °C ». La copie figée d'un bras
 jour montrent les mêmes détails. « Nouveau brassin » (tous les membres) ouvre le
 formulaire de création.
 
-Lignes liées à la Bibliothèque (ADR-017, lot D4). Sur la fiche d'une recette, la recette figée
+Lignes liées à la Bibliothèque (ADR-018, lot D4). Sur la fiche d'une recette, la recette figée
 d'un brassin et la fiche d'une recette publique, une ligne de houblon ou d'autre ajout dont le
 nom désigne une seule entrée de la Bibliothèque (nom ou autre nom, à la normalisation près, comme
 à l'import) porte un chevron à droite ; un appui, Entrée ou Espace ouvre la fiche de l'entrée
@@ -2234,7 +2234,7 @@ dans l'ordre :
 Le texte est sélectionnable. Le jour de brassage, les journées du déroulé et l'éditeur de
 recette ne lisent pas les arômes.
 
-**Description d'un divers** (ADR-017). Sur la fiche d'un divers seulement, entre « Valeurs »
+**Description d'un divers** (ADR-018). Sur la fiche d'un divers seulement, entre « Valeurs »
 et « Provenance ». La description est lue une fois à l'ouverture de la fiche, sans suivi en
 direct ; le reste de la fiche s'affiche sans l'attendre. Contenu, dans l'ordre :
 
@@ -2282,7 +2282,7 @@ autres paraissent « non relu ». Un houblon ajouté plus tard reçoit sa descri
 nouvelle génération lancée par l'administrateur (`--nouveaux`). Détail : `exigences-techniques.md`,
 « Descriptions aromatiques ».
 
-**Descriptions des divers (administrateur, hors de l'application).** Même déroulé (ADR-017) :
+**Descriptions des divers (administrateur, hors de l'application).** Même déroulé (ADR-018) :
 l'administrateur fait rédiger les textes par l'API Claude depuis son poste
 (`ingest/generer-divers.mjs`), puis les écrit dans la Bibliothèque par le script d'ingestion ;
 l'application n'appelle pas ce script. Ordre : un essai sur 10 divers choisis, puis les divers

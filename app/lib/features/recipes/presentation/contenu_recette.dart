@@ -117,7 +117,7 @@ List<Widget> listeEtapes(List<BrewStepLine> steps) => [
 enum IngredientLie { houblon, divers }
 
 /// Ligne d'un houblon ou d'un autre ajout, construite par l'écran qui la lie à
-/// la Bibliothèque : [nom] et ses [details] (ADR-017, lot D4).
+/// la Bibliothèque : [nom] et ses [details] (ADR-018, lot D4).
 typedef LigneIngredient =
     Widget Function(IngredientLie nature, String nom, List<String> details);
 

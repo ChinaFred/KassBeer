@@ -1,7 +1,7 @@
 import '../../../core/data/lecture_document.dart';
 
 /// Relecture d'un texte rédigé par l'API Claude (`beer_hop_aromas/`, ADR-013 ;
-/// `beer_misc_descriptions/`, ADR-017) : `reviewed`, et `reviewed_at` quand il
+/// `beer_misc_descriptions/`, ADR-018) : `reviewed`, et `reviewed_at` quand il
 /// est vrai.
 typedef Relecture = ({bool relu, DateTime? reluLe});
 

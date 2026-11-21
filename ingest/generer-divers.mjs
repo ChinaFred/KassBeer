@@ -1,4 +1,4 @@
-// Descriptions des divers (ADR-017) : moment, rôle et goût, sans dose, rédigés par l'API
+// Descriptions des divers (ADR-018) : moment, rôle et goût, sans dose, rédigés par l'API
 // Messages d'Anthropic (modèle claude-fable-5-2), depuis le poste de l'admin. Passe la
 // nature « divers » (lib/divers/nature.mjs) au moteur commun (lib/redaction/). Lit
 // import/ingest/prepare/beer_miscs.json, import/ingest/divers/ et le tarif commun

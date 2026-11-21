@@ -1,5 +1,5 @@
 // Client de l'API Messages d'Anthropic des textes rédigés depuis le poste de l'admin
-// (ADR-013, ADR-017, P54), commun à toutes les natures. Le SDK officiel se charge au premier appel, par un import dynamique, et le client est
+// (ADR-013, ADR-018, P54), commun à toutes les natures. Le SDK officiel se charge au premier appel, par un import dynamique, et le client est
 // mémorisé : importer ce fichier ne charge pas le SDK. La clé ANTHROPIC_API_KEY est lue
 // dans l'environnement au premier appel ; elle n'est jamais écrite, et sa valeur est
 // retirée de tout texte d'erreur avant affichage.

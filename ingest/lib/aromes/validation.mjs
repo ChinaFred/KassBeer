@@ -1,7 +1,7 @@
 // Contrôle des descriptions aromatiques des houblons (ADR-013, section 4), partagé par le
 // générateur (generer-aromes.mjs) et l'écrivain (ecrire.mjs). N'importe pas le SDK
 // d'Anthropic : ecrire.mjs et les tests chargent ce fichier sans lui (P54). Les règles de
-// texte et les empreintes communes aux natures viennent de lib/redaction/texte.mjs (ADR-017).
+// texte et les empreintes communes aux natures viennent de lib/redaction/texte.mjs (ADR-018).
 //
 // Une erreur est un chemin et une règle, jamais le texte contrôlé : les rapports ne
 // recopient aucun texte rendu par le modèle.

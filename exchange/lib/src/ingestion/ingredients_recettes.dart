@@ -2,7 +2,7 @@ import '../resolution_import.dart';
 import '../compte_rendu.dart';
 
 /// Ingrédients des recettes du groupe, pour une nature rédigée par l'API
-/// Claude : houblons (ADR-013, décisions 9 à 11) ou divers (ADR-017).
+/// Claude : houblons (ADR-013, décisions 9 à 11) ou divers (ADR-018).
 /// Résolution des noms lus par `ingest/lister-houblons-recettes.mjs` ou
 /// `ingest/lister-divers-recettes.mjs` vers les documents de `beer_hops/` ou
 /// `beer_miscs/`, par [IndexBibliotheque.resoudre] (identifiant, nom et alias),

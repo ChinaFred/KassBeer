@@ -343,26 +343,31 @@ livrer » à « livrés au lot A1 », ajoute la feature `ai` à « Structure » 
 Le 2026-11-21, avec le ticket #64 et l'accord de l'utilisateur, P39 ajoute « Valider et lancer le
 développement » aux lancements soumis à la boîte de confirmation obligatoire.
 
-Le 2026-11-21, avec l'acceptation d'ADR-017 (descriptions des divers), `CLAUDE.md` ajoute P62
+Le 2026-11-21, avec l'acceptation d'ADR-018 (descriptions des divers), `CLAUDE.md` ajoute P63
 (`beer_misc_descriptions/`, `relecteur-regles`). P54 est étendu au moteur commun
 `ingest/lib/redaction/` et au poste `misc_description_generation`, avec un test qui fige
 l'empreinte des houblons. P19, P20 et P22 reçoivent la nouvelle collection. « Le projet »,
 « Structure », « Commandes utiles » et « Coûts variables » sont mis à jour, marqués « à
 livrer » jusqu'au code.
 
-Le 2026-11-21, avec le lot D1 d'ADR-017, P54 décrit le moteur commun `ingest/lib/redaction/`
+Le 2026-11-21, avec le lot D1 d'ADR-018, P54 décrit le moteur commun `ingest/lib/redaction/`
 comme livré pour les houblons, avec le tarif commun `import/ingest/tarif.json` et l'empreinte
 figée ; la nature des divers reste « à livrer ».
 
-Le 2026-11-21, avec le lot D2 d'ADR-017, `CLAUDE.md` retire « à livrer » de `generer-divers.mjs`,
+Le 2026-11-21, avec le lot D2 d'ADR-018, `CLAUDE.md` retire « à livrer » de `generer-divers.mjs`,
 `lister-divers-recettes.mjs`, `exchange/bin/lister_divers_recettes.dart` et `ingest/lib/divers/` ;
 « Structure » nomme `exchange/bin/src/lister_recettes.dart`, `lib/redaction/entree.mjs` et
-`lancer.mjs` ; P54 couvre les deux natures ; P62 refuse aussi les doses en toutes lettres ;
+`lancer.mjs` ; P54 couvre les deux natures ; P63 refuse aussi les doses en toutes lettres ;
 « Exception durable » cite les descriptions des divers. Seul l'affichage reste à livrer (D3).
 
-Le 2026-11-21, avec le lot D3 d'ADR-017, « Le projet » ne marque plus l'affichage « à livrer » ;
-P62 nomme le widget commun `texte_redige.dart` et les deux écarts d'affichage décidés par
+Le 2026-11-21, avec le lot D3 d'ADR-018, « Le projet » ne marque plus l'affichage « à livrer » ;
+P63 nomme le widget commun `texte_redige.dart` et les deux écarts d'affichage décidés par
 l'utilisateur (« Confiance faible » en tête, « Goût » affiché quand le divers ne change pas le goût).
+
+Le 2026-11-21, avec l'acceptation d'ADR-019 (réconciliation avec l'ADR-017 des levures de
+`main`), l'ADR des divers devient ADR-018 et son contrôle P63 (renumérotation R1), et `CLAUDE.md`
+ajoute P64 (`relecteur-regles`) : un numéro d'ADR ou de contrôle se vérifie libre sur `main` et
+sur chaque branche distante (leçon 17). P54, P55 et le P62 des levures seront réécrits au lot R2.
 
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :

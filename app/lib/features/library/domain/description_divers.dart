@@ -4,12 +4,12 @@ import '../../../core/data/lecture_document.dart';
 import '../../recipes/domain/recipe.dart' show OtherUse;
 import 'relecture.dart';
 
-/// Collection des descriptions des divers (ADR-017), écrite par l'ingestion
+/// Collection des descriptions des divers (ADR-018), écrite par l'ingestion
 /// seule, lue par `get` à l'ouverture de la fiche d'un divers.
 const kCollectionDescriptionsDivers = 'beer_misc_descriptions';
 
 /// Clé de la map `moments` pour chaque moment de l'éditeur de recette, dans
-/// l'ordre d'affichage de la fiche (ADR-017, section 3). Le libellé affiché est
+/// l'ordre d'affichage de la fiche (ADR-018, section 3). Le libellé affiché est
 /// [OtherUse.label] : aucun libellé recopié.
 const kClesMoments = {
   OtherUse.mash: 'mash',
@@ -22,7 +22,7 @@ const kClesMoments = {
 const _confiances = {'high', 'medium', 'low'};
 
 /// Rôle d'un divers : `label` est affiché tel quel. La liste fermée des clés
-/// vit dans `ingest/` seul : aucune copie en Dart (ADR-017).
+/// vit dans `ingest/` seul : aucune copie en Dart (ADR-018).
 @immutable
 class RoleDivers {
   const RoleDivers({required this.key, required this.label});
@@ -31,7 +31,7 @@ class RoleDivers {
   final String label;
 }
 
-/// Description d'un divers, `beer_misc_descriptions/{id}` (ADR-017, section 3).
+/// Description d'un divers, `beer_misc_descriptions/{id}` (ADR-018, section 3).
 /// Lecture stricte : un champ attendu absent ou mal typé lève
 /// [DocumentIllisible], dont la raison ne recopie aucun texte du document. Une
 /// clé de `moments` inconnue est ignorée.

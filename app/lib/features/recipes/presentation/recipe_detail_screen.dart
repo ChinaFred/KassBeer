@@ -319,7 +319,7 @@ class _Fiche extends StatelessWidget {
   /// Mise en pellets en cours : le bouton attend.
   final bool settingForms;
 
-  /// Lignes liées à la Bibliothèque ; `null` depuis l'import (ADR-017, D4).
+  /// Lignes liées à la Bibliothèque ; `null` depuis l'import (ADR-018, D4).
   final LigneIngredient? ligneIngredient;
 
   @override

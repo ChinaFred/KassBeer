@@ -6,7 +6,7 @@ import 'package:exchange/ingestion.dart';
 
 /// Résolution des noms des recettes du groupe d'une nature rédigée, commune à
 /// `bin/lister_houblons_recettes.dart` (ADR-013) et
-/// `bin/lister_divers_recettes.dart` (ADR-017). [arguments] : options de la
+/// `bin/lister_divers_recettes.dart` (ADR-018). [arguments] : options de la
 /// ligne de commande ; [script] : nom du programme dans l'usage ;
 /// [optionReferentiel] : option du référentiel préparé (`--houblons`,
 /// `--divers`) ; [defauts] : chemins par défaut de `--noms`,

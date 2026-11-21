@@ -6,6 +6,15 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
+### v0.1.97 — technique
+
+Lot R1 d'ADR-019 : `main` a reçu entre-temps un ADR-017 (arômes des levures) et un contrôle P62.
+L'ADR des divers de cette branche devient `ADR-018-descriptions-des-divers.md`, et son contrôle
+P63 ; les renvois sont repris dans `CLAUDE.md`, la documentation, le code, les tests et les
+entrées v0.1.92 à v0.1.96 de cette branche, qui ne sont pas sur `main`. ADR-019 (moteur commun
+des trois natures) est accepté. `CLAUDE.md` ajoute P64 : un numéro d'ADR ou de contrôle se vérifie
+libre sur `main` et sur chaque branche distante (leçon 17). Aucun changement de comportement.
+
 ### v0.1.96 — fonctionnel
 
 Sur la fiche d'une recette, la recette d'un brassin et une recette publique, un houblon ou un
@@ -15,7 +24,7 @@ Un ingrédient que la Bibliothèque ne reconnaît pas reste affiché comme avant
 
 ### v0.1.96 — technique
 
-Lot D4 d'ADR-017 : `ContenuRecette` reçoit `ligneIngredient`, fourni par la fiche d'une recette,
+Lot D4 d'ADR-018 : `ContenuRecette` reçoit `ligneIngredient`, fourni par la fiche d'une recette,
 la recette figée d'un brassin et la recette publique (`lien_bibliotheque.dart`,
 `indexLiensProvider` : `beer_index/hops` et `beer_index/miscs` lus par `get`, résolus par
 `IndexBibliotheque.resoudre`). L'écran du jour, ses journées, l'éditeur et la fiche d'une recette
@@ -35,7 +44,7 @@ marqués « non relu ».
 
 ### v0.1.95 — technique
 
-Lot D3 d'ADR-017 : `lireDescriptionDivers` (un `get` de `beer_misc_descriptions/{id}`, sans
+Lot D3 d'ADR-018 : `lireDescriptionDivers` (un `get` de `beer_misc_descriptions/{id}`, sans
 écouteur) et `descriptionDiversProvider` ; `SectionDescriptionDivers` sur la fiche d'un divers ;
 widget commun `texte_redige.dart` (mention IA, « Confiance faible », panne avec « Réessayer »)
 sorti de `section_aromes.dart`, rendu des houblons inchangé ; relecture lue par `relecture.dart`
@@ -45,7 +54,7 @@ dans Admin › Sources ; ligne « Descriptions des divers » dans « Sources des
 
 ### v0.1.94 — technique
 
-Lot D2 d'ADR-017 : les descriptions des divers se rédigent depuis le poste de l'admin.
+Lot D2 d'ADR-018 : les descriptions des divers se rédigent depuis le poste de l'admin.
 `ingest/generer-divers.mjs` passe par le moteur commun avec la nature `ingest/lib/divers/`
 (prompt, contrôle, 13 rôles, poste `misc_description_generation`). Le contrôle refuse toute dose,
 en chiffres ou en lettres (liste d'unités élargie par l'utilisateur : kg, cl, hl, oz, cuillère,
@@ -59,7 +68,7 @@ cinq profils. Empreinte des houblons inchangée ; leurs textes passent aussi par
 
 ### v0.1.93 — technique
 
-Lot D1 d'ADR-017 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
+Lot D1 d'ADR-018 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
 `ingest/lib/redaction/` (`client.mjs`, `tarif.mjs`, `texte.mjs`, `moteur.mjs`), paramétré par un
 objet de nature (`ingest/lib/aromes/nature.mjs`). Il servira aussi aux descriptions des divers.
 `generer-aromes.mjs` garde ses options et son rapport. Le tarif se lit désormais dans
@@ -69,9 +78,9 @@ Tests d'`ingest/` : 127 sur 127.
 
 ### v0.1.92 — technique
 
-ADR-017 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
+ADR-018 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
 rôle, goût le cas échéant, aucune dose), rédigée par l'API Claude depuis le poste de l'admin sur
-un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P62 (`beer_misc_descriptions/`)
+un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P63 (`beer_misc_descriptions/`)
 et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
 P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
 complétés et marqués « à livrer ». Aucun code.

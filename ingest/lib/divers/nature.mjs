@@ -1,4 +1,4 @@
-// Nature « divers » du moteur de rédaction (ADR-017) : descriptions des divers (moment, rôle,
+// Nature « divers » du moteur de rédaction (ADR-018) : descriptions des divers (moment, rôle,
 // goût, sans dose), écrites dans beer_misc_descriptions/ par ecrire.mjs. Ce fichier dit au
 // moteur (lib/redaction/moteur.mjs) ce qui est propre aux divers : poste de coût, fichiers,
 // données envoyées, empreinte, prompt, contrôle, a-relire.md. N'importe pas le SDK
@@ -39,7 +39,7 @@ const LIBELLES_MOMENTS = {
 export const NATURE_DIVERS = Object.freeze({
   /// Poste de coût porté par chaque rapport (catalogue « Coûts variables »).
   poste: "misc_description_generation",
-  adr: "ADR-017",
+  adr: "ADR-018",
   script: "generer-divers.mjs",
   /// Option qui remplace le dossier de la nature, et dossier par défaut.
   optionDossier: "--divers",

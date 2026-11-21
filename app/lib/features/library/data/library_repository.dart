@@ -75,7 +75,7 @@ abstract class LibraryRepository {
   /// texte du document.
   Future<RechercheDocument<AromesHoublon>> lireAromesHoublon(String id);
 
-  /// Description du divers [id] (`beer_misc_descriptions/{id}`, ADR-017),
+  /// Description du divers [id] (`beer_misc_descriptions/{id}`, ADR-018),
   /// lue par un `get` à l'ouverture de sa fiche, jamais par un écouteur (P22).
   /// Panne rapportée puis relancée ; document illisible rapporté
   /// (`library.misc_description`) avec son chemin seul, sans aucun texte du

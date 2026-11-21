@@ -36,7 +36,7 @@ class PageDeCoquille extends GoRoute {
 
   /// Vrai : ouverte par `context.push` avec `extra: AppRoutes.retourParPop`,
   /// la page revient par `pop` à la page qui l'a ouverte (fiche de la
-  /// Bibliothèque ouverte depuis une recette, ADR-017, lot D4) ; sinon, ou
+  /// Bibliothèque ouverte depuis une recette, ADR-018, lot D4) ; sinon, ou
   /// sans page à dépiler, le retour ouvre [retour].
   final bool retourParPopPermis;
 }

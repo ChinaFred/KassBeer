@@ -1,4 +1,4 @@
-// Noms des divers des recettes du groupe (ADR-017), en lecture seule : recipes/ et brews/
+// Noms des divers des recettes du groupe (ADR-018), en lecture seule : recipes/ et brews/
 // (recette figée), miscellaneous_additions[].name, vers
 // import/ingest/divers/noms-divers.json. Puis, dans exchange/ :
 // dart run bin/lister_divers_recettes.dart (résolution vers beer_miscs/).

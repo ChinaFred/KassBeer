@@ -1,4 +1,4 @@
-// Prompt et requête des descriptions des divers (ADR-017, section 2). Le texte est recopié
+// Prompt et requête des descriptions des divers (ADR-018, section 2). Le texte est recopié
 // à l'identique dans exigences-techniques.md, « Descriptions des divers » ; un changement
 // de texte fait monter PROMPT_VERSION, ce qui change l'empreinte des entrées et fait
 // régénérer les divers au prochain lancement.
@@ -11,7 +11,7 @@ import { MOMENTS, ROLES } from "./validation.mjs";
 /// liste des unités de dose élargie dans la règle 8, avant toute génération.
 export const PROMPT_VERSION = 2;
 
-/// Modèle décidé par l'utilisateur (ADR-013, repris par ADR-017) ; réflexion réglée par
+/// Modèle décidé par l'utilisateur (ADR-013, repris par ADR-018) ; réflexion réglée par
 /// output_config.effort. Ni `thinking`, ni `temperature`, ni `tools`, ni `tool_choice`.
 export const MODELE = "claude-fable-5-2";
 
