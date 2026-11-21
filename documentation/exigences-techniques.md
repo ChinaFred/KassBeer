@@ -2145,12 +2145,15 @@ plus. Deux entrées de même clé fusionnent : la source prioritaire (fiches des
 entrées de noms différents d'une même variété et d'un même pays (`Saaz (CZ)` et `Saaz (Czech
 Republic)` dans `hop-saaz`) ; l'identifiant reste `hop-<clé du nom du document>`. Une culture qui porte un producteur et une référence se regroupe d'abord avec celles
 de même producteur et de même référence (`Wyeast Labs` = `Wyeast`, `Omega Yeast Labs` =
-`Omega Yeast` ; `WY1056` = `1056` chez Wyeast, `001` = `WLP001` chez White Labs ; tirets
-ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
+`Omega Yeast` ; `WY1056` = `1056` chez Wyeast, et `2001-PC` = `WY2001-PC` = `2001` pour la
+Private Collection depuis la v0.1.81 ; `001` = `WLP001` chez White Labs ; tirets ignorés) ; sa clé est producteur, référence et nom de l'entrée prioritaire, sans producteur
 ni référence répétés en tête du nom ni `yeast` final (`culture-wyeast-1056-american-ale`).
 L'identifiant d'une souche se calcule sans les fiches des fabricants quand une source de
 Brewtarget la connaît : le document garde son identifiant, et `ingest/ecrire.mjs`, qui n'efface
-rien, ne laisse pas d'ancien document à côté. Une souche connue de la seule fiche prend
+rien, ne laisse pas d'ancien document à côté. Exception : un changement de clé de référence
+(v0.1.81, Private Collection de Wyeast) regroupe des souches jusque-là séparées ; les documents
+absorbés sortent de la préparation et `ecrire.mjs --supprimer-absents beer_cultures` (v0.1.80)
+les retire. Une souche connue de la seule fiche prend
 l'identifiant de la fiche (`culture-fermentis-e30-saflager-e-30`). Un
 rendement, un acide alpha ou une atténuation à 0 dans une source est lu comme inconnu : écarté
 et compté.
@@ -3226,13 +3229,26 @@ entrée désignée par deux lignes, deux lignes de même identifiant, ou une ent
 désignée dont l'identifiant (celui de sa souche si elle porte producteur et référence) diffère
 de celui de la ligne arrêtent la préparation (`StateError`). Sept lignes, listées dans `DATA_SOURCES.md` (« Escarpment Labs »).
 
+**Corrections des cultures de Brewtarget (`kCorrectionsCultures`, `fusions.dart`, v0.1.82, P56,
+décisions de l'utilisateur du 2026-11-21).** Avant la fusion, `Referentiel.fusionner` corrige
+des entrées de Brewtarget, jamais une fiche : `ReferenceCulture` donne à une entrée la
+référence retenue (une souche sous deux références, ou une entrée sans référence), et l'entrée
+rejoint la souche de cette référence ; `GammeCulture` renomme `<gamme> <référence>` une entrée
+d'un nom de gamme qui porte une référence (`Lalvin 71B`, nom construit par Kass'Beer), une
+entrée sans référence garde son nom. Après la fusion, `AliasEcarteCulture` retire des `aliases`
+d'une souche un nom qui est celui d'une autre souche du même producteur. Une ligne qui ne
+désigne rien, une entrée corrigée par deux lignes, ou un alias absent du document visé
+arrêtent la préparation (`StateError`). Onze lignes, listées dans `DATA_SOURCES.md`
+(« Doublons d'un même producteur hérités de Brewtarget »).
+
 Sortie : `<collection>.json` (listes `{id, data}`, triées par identifiant, `content_sha256`
 calculé) et `rapport.json` : entrées par source, entrées rejetées, listes ignorées, valeurs
 écartées, origines inconnues, tables de fusion appliquées (`table_de_fusion` : document,
 origine, entrées rattachées ; `table_de_fusion_cultures` : document, nom, entrées
 rattachées), groupes de houblons de même nom une fois les parenthèses
 retirées (`groupes_sans_parenthese`, pour la revue suivante de la table), noms portés par
-plusieurs documents par nature (`noms_partages`), fusions, documents par collection, recettes
+plusieurs documents par nature (`noms_partages`), parmi eux les noms de cultures dont deux
+documents ont le même producteur (`doublons_meme_producteur`, P56), fusions, documents par collection, recettes
 lues et refusées, résolution par nature avant et après alias, valeurs recopiées, noms non
 résolus avec leur nombre de lignes, lignes rejetées, libellés perdus, températures de
 fermentation non reprises, taille JSON des index.

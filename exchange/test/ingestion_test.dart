@@ -59,6 +59,7 @@ Preparation _preparer() => preparer(
   ajoutsDansHoublons: _ajouts,
   fusions: const [],
   fusionsCultures: const [],
+  correctionsCultures: const [],
 );
 
 /// Données du document [id] de [collection].
@@ -135,6 +136,16 @@ void main() {
       expect(
         cleProduit('fermentis', 'W-34/70'),
         cleProduit('fermentis', 'W34/70'),
+      );
+      // Private Collection de Wyeast : quatre graphies, une seule souche.
+      for (final r in ['9999', 'WY9999', '9999-PC', 'WY9999-PC']) {
+        expect(cleProduit('wyeast', r), '9999', reason: r);
+      }
+      expect(cleProduit('wyeast', 'PC-9999'), 'pc9999');
+      expect(cleProduit('fermentis', '9999-PC'), '9999pc');
+      expect(
+        cleCulture('Souche Fictive', 'Wyeast Labs', 'WY9999-PC'),
+        cleCulture('Souche Fictive', 'Wyeast', '9999'),
       );
     });
 
@@ -692,6 +703,7 @@ void main() {
         ajoutsDansHoublons: _ajouts,
         fusions: const [],
         fusionsCultures: const [],
+        correctionsCultures: const [],
         datesReleveFabricants: _datesFiches,
       );
     });
