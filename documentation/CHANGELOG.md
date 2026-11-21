@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.87 — fonctionnel
+### v0.1.88 — fonctionnel
 
 L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans
 Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre
@@ -19,9 +19,10 @@ l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton 
 « Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis
 la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche
 « Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un
-second. Demandé par le ticket #67.
+second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai.
+Demandé par le ticket #67.
 
-### v0.1.87 — technique
+### v0.1.88 — technique
 
 `features/admin/domain/ticket_depuis_panne.dart` : brouillon d'un ticket tiré d'un
 `ErrorReport` ou d'une `EntreeJournal` (champs contrôlés par leur forme, trames Dart exactes de
@@ -33,8 +34,36 @@ P50) : aucune écriture sur `error_reports/`, aucune règle ni fonction serveur 
 confirmation, le suit par `adminTicketsProvider` et appelle `launchTicketAnalysis` une fois,
 quand `github_issue_number`, le statut `received` et `launch_analysis` sont posés par le serveur ;
 au plafond lu dans `ticket_status/launches`, aucun appel.
-`TicketFormScreen` reçoit `proposerLancement` (`extra` `BrouillonAnalyse`). Trois éléments
+`TicketFormScreen` reçoit `proposerLancement` (`extra` `BrouillonAnalyse`). `BoiteEnvoiAnalyse` porte aussi `LienUsageClaude` (#96) sous la
+ligne du quota, échec affiché dans la boîte. Sur `logs_screen.dart` (#95), la marque passe sous le
+titre de la carte et `BoutonsPanne` remplace « Copier » aligné à droite. Trois éléments
 d'écran de ticket ajoutés. Aucune dépendance changée. Demandé par le ticket #67.
+
+### v0.1.87 — fonctionnel
+
+L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux
+puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès
+l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par
+« Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y
+est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même
+ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les
+données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95.
+
+### v0.1.87 — technique
+
+`logs_screen.dart` : `_PuceMenu` (`MenuAnchor` et `ActionChip`) remplace `BoutonsSegmentes`
+pour la gravité et la période ; `_plusDeFiltres` replie les trois autres filtres sur
+téléphone, et un refus de champ du serveur les déplie. Gravité en
+`Etiquette` partagée, ton choisi par gravité, à la place de l'icône de tête ; date et fonction dessous au-delà
+de `kGrandTexteMinScale`. Entrées en `Card.outlined`, texte en chasse fixe dans un
+`SingleChildScrollView` horizontal sur `surfaceContainerHighest`. Puces avec `childFocusNode`
+et `Semantics(expanded)`, valeur du menu en `Semantics(selected)`, chacun dans un
+`MergeSemantics` pour viser le nœud du bouton. La note sur les e-mails
+passe sous le compte des entrées. Aucun appel, filtre, règle ni fonction serveur ne change ; la
+recherche part toujours du seul bouton « Rechercher » (P50). Tests de `logs_test.dart` :
+téléphone de 360 × 640 (« Rechercher » visible, gravité en une puce, cinq entrées visibles),
+compte de « Plus de filtres (2) », bloc des données, date entière à 200 %, états
+« développé » et « sélectionné » lus sur les nœuds de sémantique.
 
 ### v0.1.86 — fonctionnel
 

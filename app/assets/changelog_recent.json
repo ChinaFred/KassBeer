@@ -1,6 +1,20 @@
 {
   "versions": [
     {
+      "version": "0.1.88",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre « Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient « Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche « Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai. Demandé par le ticket #67."
+      ]
+    },
+    {
+      "version": "0.1.87",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par « Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95."
+      ]
+    },
+    {
       "version": "0.1.86",
       "date": "2026-11-21",
       "paragraphs": [
@@ -26,20 +40,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec une intelligence artificielle, qui analyse la recette en cours ou propose des améliorations. Les chiffres de la recette restent ceux du calcul de Kass'Beer. L'assistant est réservé à l'administrateur pour commencer ; il pourra ensuite l'ouvrir à tous les membres. Chaque membre dispose d'un nombre de tours par jour, et le menu du compte affiche ce que l'IA a coûté dans le mois. Une conversation trop longue peut être résumée pour continuer. Dans Admin, deux écrans nouveaux règlent l'IA (modèle, tarifs, plafonds, ouverture aux membres) et suivent ses coûts par personne. L'assistant ne marche qu'une fois ses réglages enregistrés."
-      ]
-    },
-    {
-      "version": "0.1.82",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "La Bibliothèque ne montre plus en double onze noms de levures que l'ancienne base donnait à deux fiches d'un même fabricant. Une levure écrite sous deux références n'a plus qu'une fiche. Les levures Lalvin, SafSpirit et Fermoale, qui portaient toutes le même nom, s'appellent maintenant par leur référence : « Lalvin 71B », « SafSpirit HG-1 », « Fermoale AY3 ». Trois levures Wyeast ne portent plus le nom d'une autre. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
-      ]
-    },
-    {
-      "version": "0.1.81",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "La Bibliothèque ne montre plus en double 26 levures de la gamme Private Collection de Wyeast : 27 fiches en trop disparaissent. L'ancienne base les écrivait sous deux références : chaque levure n'a plus qu'une fiche, celle du fabricant. Une recette importée qui nomme la référence avec « -PC » retrouve aussi sa levure. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     }
   ]
