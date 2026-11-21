@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.85 — fonctionnel
+### v0.1.86 — fonctionnel
 
 Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui
 attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le
@@ -18,7 +18,7 @@ nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à 
 l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ».
 Demandé par le ticket #63.
 
-### v0.1.85 — technique
+### v0.1.86 — technique
 
 `ticketATraiter` (`app/lib/features/tickets/domain/ticket_delivery.dart`) définit le filtre
 « À traiter » de la liste à partir des documents du serveur seuls : `send_failed`, `validate`
@@ -35,6 +35,27 @@ gardée). Tests : domaine de `toProcess` et de `ticketATraiter`, liste avec un t
 lancer et une analyse en cours, état vide, pastille « CI en échec » avec et sans relance permise,
 CI rouge pendant un développement ou une correction.
 Demandé par le ticket #63.
+
+### v0.1.85 — fonctionnel
+
+Avant de lancer une analyse, un développement ou une livraison d'un ticket, l'administrateur
+peut ouvrir la page d'usage de claude.ai : un lien « Usage Claude (5 h et semaine) : voir sur
+claude.ai » figure dans la boîte de lancement et en tête de la liste des tickets. Il montre
+la part restante de l'abonnement Claude pour la fenêtre de 5 heures et pour la semaine.
+L'application n'affiche aucun chiffre : Anthropic ne publie pas ces valeurs. Demandé par le
+ticket #96.
+
+### v0.1.85 — technique
+
+Option A de l'analyse du ticket #96 : `LienUsageClaude`
+(`app/lib/features/tickets/presentation/lien_usage_claude.dart`) ouvre
+`https://claude.ai/settings/usage` par `ouvrirLienProvider`, après `lienSessionOuvrable`
+(`Uri.tryParse`, `https`, hôte `claude.ai`, sans identifiants ni port). Un échec passe par `reportError`
+(`tickets.open_claude_usage`), sans adresse. Le lien est placé sous la ligne du quota dans
+`BoiteLancement` et sous les messages de `BandeauTicketsAdmin` (`lienUsage`, faux pour la
+fiche seule sur écran étroit, qui garderait sinon sa barre de décision sous le seuil de
+480 px). Aucun serveur ni règle touché ; l'option B (lancements comptés sur 5 h et 7 jours)
+n'est pas faite. Tests : `tickets_lancements_test.dart`. Demandé par le ticket #96.
 
 ### v0.1.84 — fonctionnel
 
@@ -59,6 +80,7 @@ complet reste le `semanticsLabel` de la puce et le titre de la fiche. Tests : à
 à 100 %, 130 % et 200 %, les six puces et les deux accès tiennent dans la largeur, sans
 débordement, avec une cible de 48 px ; à 600 px, texte à 130 % et 200 %, les noms courts sont
 entiers. Demandé par le ticket #97.
+
 ### v0.1.83 — fonctionnel
 
 L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec
