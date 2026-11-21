@@ -4,6 +4,45 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-19
+
+### v0.1.78 — fonctionnel
+
+« Nouveau brassin » choisit d'office votre processus quand vous n'en avez qu'un et que vous
+n'avez jamais réglé de choix par défaut : le déroulé prévu reprend vos étapes (préparation, mouture, nettoyage)
+autour de la chronologie de la recette, et la journée de houblonnage à cru. Avec « Chronologie
+de la recette seule », le formulaire dit ce qu'un processus ajoute et propose « Choisir un
+processus », ou « Créer un processus » si vous n'en avez aucun : ce bouton ouvre « Mes
+processus », où le modèle d'exemple et le plan de brassage des fiches sont prêts à copier. Une
+recette sans chronologie
+affiche « sans processus, le brassin n'aura aucune étape ».
+
+Sur la fiche d'un brassin prévu sans processus, la section « Déroulé » dit « Aucun processus
+choisi » au lieu de « Aucune étape. », avec le bouton « Choisir un processus » pour son
+propriétaire. Demandé par le ticket #61.
+
+### v0.1.78 — technique
+
+`lireChoixProcessus` présélectionne le seul processus valide du lecteur quand son document de
+préférence est absent (`DocumentAbsent`) ; un défaut coupé ou supprimé garde la chronologie
+seule. L'éditeur écrit `default_template_id` nul quand « Proposer par défaut » est décoché à
+la création alors qu'aucun choix n'existe. Aucun modèle à copier n'est appliqué seul
+(P37). « Créer un processus » n'apparaît plus qu'une fois dans « Nouveau brassin »
+(`ChampProcessus.onCreer` facultatif) et ouvre `AppRoutes.processes` (« Mes processus » et
+ses modèles à copier) au lieu de `AppRoutes.newProcess`, dans le formulaire comme dans la
+feuille de la fiche ; dans cette feuille, sans processus, « Gérer mes processus » est retiré,
+car « Créer un processus » ouvre le même écran ; la feuille de la fiche se titre « Choisir un
+processus » sur un brassin prévu sans processus. `AideChronologieSeule`,
+`BoutonProcessus` et `choisirProcessus` (`choix_processus.dart`) sous « Chronologie de la
+recette seule » ; nouvelle fenêtre `/recettes/:id/fenetre/choix-processus` (et `/recettes/importer/:id/…`) dans
+`kTicketElements`. `sansProcessusPrevu` (`section_deroule.dart`) remplace « Changer de
+processus » par « Choisir un processus » sur un brassin prévu sans `process`, et
+`_chronologie` n'y affiche plus « Aucune étape. ». Aucun calcul, aucune règle, aucun modèle de
+données ne change ; l'écran du jour et les journées ne sont pas touchés (P2). Le préremplissage
+de la voie « Chronologie de la recette seule » n'est pas fait (point 5 de l'analyse). Tests de
+widgets ajoutés dans `deroule_d3_test.dart` et `process_screens_test.dart`. Demandé par le
+ticket #61.
+
 ## 2026-11-15
 
 ### v0.1.78 — fonctionnel

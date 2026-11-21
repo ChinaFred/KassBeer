@@ -175,10 +175,12 @@ const kTicketScreensWithPrices = {
 const _kTicketScreenElements = {
   '/recettes/:id/fenetre/exporter': 'Exporter la recette',
   '/recettes/:id/fenetre/nouveau-brassin': 'Nouveau brassin',
+  '/recettes/:id/fenetre/choix-processus': 'Choisir un processus',
   '/recettes/:id/fenetre/prix': 'Prix d\'un ingrédient',
   '/recettes/:id/fenetre/reprendre': 'Reprendre un prix',
   '/recettes/importer/:id/fenetre/exporter': 'Exporter la recette',
   '/recettes/importer/:id/fenetre/nouveau-brassin': 'Nouveau brassin',
+  '/recettes/importer/:id/fenetre/choix-processus': 'Choisir un processus',
   '/recettes/importer/:id/fenetre/prix': 'Prix d\'un ingrédient',
   '/recettes/importer/:id/fenetre/reprendre': 'Reprendre un prix',
   '/recettes/nouvelle/fenetre/malt': 'Malt ou sucre',

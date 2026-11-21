@@ -417,6 +417,15 @@ class _EditeurState extends ConsumerState<_Editeur> {
     }
   }
 
+  /// Vrai si le lecteur n'a jamais réglé de choix par défaut : document de
+  /// préférence absent d'une lecture du serveur.
+  bool _jamaisRegle() {
+    final uid = ref.read(grantedAccessProvider)?.user.uid;
+    if (uid == null) return false;
+    return ref.read(processPreferenceProvider(uid)).value
+        is DocumentAbsent<PreferenceProcessus>;
+  }
+
   /// La journée [key] à l'écran. Les listes d'étapes au-dessus d'elle ne sont
   /// mesurées qu'une fois affichées : un second défilement corrige le premier.
   Future<void> _montrerJournee(String key) async {
@@ -477,10 +486,17 @@ class _EditeurState extends ConsumerState<_Editeur> {
       );
       id = created.id;
       written = created.written;
-      if (parDefaut) {
+      // Interrupteur coupé alors qu'aucun choix n'a jamais été réglé : le refus
+      // s'écrit (`default_template_id` nul), sinon « Nouveau brassin »
+      // présélectionnerait ce seul processus (ticket #61).
+      final refuse = !parDefaut && _parDefautChoisi == false && _jamaisRegle();
+      if (parDefaut || refuse) {
         final pref = ref
             .read(preferencesProcessusRepositoryProvider)
-            .saveDefault(uid: access.user.uid, templateId: id);
+            .saveDefault(
+              uid: access.user.uid,
+              templateId: parDefaut ? id : null,
+            );
         unawaited(
           pref.catchError((Object _) {
             // Déjà rapportée par le dépôt ; le refus s'affiche.
