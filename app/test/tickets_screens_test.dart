@@ -8,6 +8,7 @@ import 'package:kass_beer/core/presentation/etiquette.dart';
 import 'package:kass_beer/core/presentation/fiche.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/core/router/routes.dart';
+import 'package:kass_beer/features/ai/data/ai_repository.dart';
 import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
@@ -16,6 +17,7 @@ import 'package:kass_beer/features/tickets/presentation/ticket_detail_screen.dar
 import 'package:kass_beer/features/tickets/presentation/ticket_form_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/ticket_lien_github.dart';
 
+import 'support/ai_fakes.dart';
 import 'support/brew_fixtures.dart';
 import 'support/fakes.dart';
 import 'support/ticket_fixtures.dart';
@@ -819,6 +821,10 @@ void main() {
       final app = await signedIn(tester, admin: true);
       app.tickets.githubStatus.add(const DocumentAbsent());
       app.tickets.publishAll(const []);
+      // Réglages de l'IA lisibles : la pastille de Moteur d'IA reste éteinte.
+      app.ai
+        ..grille = LectureIa(DocumentTrouve(uneGrille()), fromCache: false)
+        ..politique = politiqueLue(reglageAssistant);
       await tester.tap(find.byTooltip('Admin'));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel(RegExp('alerte')), findsNothing);

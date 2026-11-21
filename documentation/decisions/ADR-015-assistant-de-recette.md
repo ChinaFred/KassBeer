@@ -431,3 +431,26 @@ Décisions de l'utilisateur sur la proposition de l'agent `ux-designer` :
   modifiable. À 1 280 px et au-delà, trois colonnes ; sous 840 px, une feuille du bas.
 - **Efforts de la grille** (Admin › Moteur d'IA) : un champ texte « Efforts acceptés », valeurs
   séparées par des virgules, validé par le serveur ; aucune liste d'efforts en Dart (P60).
+
+## Amendement du 2026-11-15 : choix de la livraison du lot A1
+
+Choix du développement, relus par `securite` et `relecteur-regles` :
+
+- **Forme de la requête** : le `system` ne porte que les consignes fixes, en cache. Les blocs de
+  données (`RECETTE`, `CALCULS`, `EQUIPEMENT`, `STYLE`, `AROMES`, `RESUME`, `CONVERSATION`) et la
+  demande partent dans un seul message `user` final. L'historique entre dans le bloc
+  `CONVERSATION` au lieu d'être rejoué en messages : un tour « assistant » écrit par le client
+  reste une donnée. L'historique n'est donc pas mis en cache ; le plafond du jour et la limite
+  de la Console bornent ce coût.
+- **Historique** : éléments `{role, text}`, texte de 1 500 caractères pour `user` et 6 000 pour
+  `assistant`. La réponse d'un tour est coupée à 6 000 caractères pour rester rejouable.
+- **Champs retirés** : en plus de la liste de P59, tout champ dont le nom contient un segment
+  `price`, `prix`, `cost`, `cout`, `stock`, `inventory`, `email` ou `uid`.
+- **Tour gardé** en plus de P57 : un 408, une erreur réseau survenue après l'envoi, une
+  redirection et une réponse 1xx ou 3xx. Le doute coûte un tour au membre, jamais une dépense
+  non comptée.
+- **Crédit épuisé** reconnu au texte de l'erreur d'Anthropic, jamais journalisé ; le tour est
+  rendu dans tous les cas.
+- **Exécution** : `cpu: 1` et 512 Mio, exigés par Cloud Run pour `concurrency: 4`.
+- **Client** : le mois affiché par « IA ce mois » est celui de l'appareil ; le serveur compte en
+  mois de Paris, d'où un écart possible de quelques heures en fin de mois.

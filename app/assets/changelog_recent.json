@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.83",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec une intelligence artificielle, qui analyse la recette en cours ou propose des améliorations. Les chiffres de la recette restent ceux du calcul de Kass'Beer. L'assistant est réservé à l'administrateur pour commencer ; il pourra ensuite l'ouvrir à tous les membres. Chaque membre dispose d'un nombre de tours par jour, et le menu du compte affiche ce que l'IA a coûté dans le mois. Une conversation trop longue peut être résumée pour continuer. Dans Admin, deux écrans nouveaux règlent l'IA (modèle, tarifs, plafonds, ouverture aux membres) et suivent ses coûts par personne. L'assistant ne marche qu'une fois ses réglages enregistrés."
+      ]
+    },
+    {
       "version": "0.1.82",
       "date": "2026-11-21",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-15",
       "paragraphs": [
         "Les variantes « + » des levures Omega s'écrivent maintenant « Plus » : « Kolsch II Plus », « Bayern Lager Plus », « Point Loma Plus »… Elles ne se confondent plus avec la levure d'origine. Une recette importée qui nomme « Kolsch II » retrouve à nouveau sa levure. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
-      ]
-    },
-    {
-      "version": "0.1.75",
-      "date": "2026-11-15",
-      "paragraphs": [
-        "La Bibliothèque reprend les fiches de 77 cultures de Wyeast : levures d'ale, de lager et de bière de blé, Brettanomyces, bactéries et assemblages pour bières acides. Type, atténuation, plage de température et floculation viennent des fiches du fabricant. Ces valeurs remplacent celles de l'ancienne base pour 74 cultures déjà connues, et 3 cultures apparaissent. Les cultures de vin, de cidre, d'hydromel et de saké ne sont pas reprises. L'écran « Sources des données » nomme Wyeast. Les cultures arrivent dans la Bibliothèque quand l'administrateur relance l'ingestion."
       ]
     }
   ]

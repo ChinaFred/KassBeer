@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/ai/presentation/ligne_ia_ce_mois.dart';
 import '../../features/auth/presentation/access_providers.dart';
 import '../../features/auth/presentation/sign_out.dart';
 import '../../features/tickets/domain/ticket_screens.dart';
@@ -57,8 +58,8 @@ const Map<String, EntreeCompte> kEntreeDeLEcran = {
 };
 
 /// Avatar et menu du compte, dans la barre du haut de la coquille et des pages
-/// pleines : nom, e-mail, version, Mes prix, Mes processus, Préférences,
-/// Signaler ou proposer, Mes tickets, Tickets à traiter (admin), Nouveautés,
+/// pleines : nom, e-mail, version, « IA ce mois », Mes prix, Mes processus,
+/// Préférences, Signaler ou proposer, Mes tickets, Tickets à traiter (admin), Nouveautés,
 /// Sources des données, déconnexion. La pastille compte les suivis de ticket à
 /// lire et, pour l'administrateur, les tickets à traiter. Rien sans accès
 /// accordé. L'entrée qui mène à l'écran courant est masquée.
@@ -177,6 +178,9 @@ class MenuCompte extends ConsumerWidget {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
+                // Montée à l'ouverture du menu seulement : la lecture part
+                // alors, jamais au chargement de la page.
+                const LigneIaCeMois(),
               ],
             ),
           ),
