@@ -37,12 +37,14 @@ String cleProducteur(String producteur) {
 
 /// Clé d'une référence de levure chez son producteur : normalisée, sans
 /// tiret (`W-34/70` et `W34/70` donnent `w3470`). Wyeast écrit `WY1056` ou
-/// `1056` : le `wy` est retiré. White Labs écrit `WLP001` ou `001` : le `wlp`
-/// est ajouté.
+/// `1056` : le `wy` est retiré ; une souche de la Private Collection s'écrit
+/// aussi `2001-PC` ou `WY2001-PC` : le `pc` est retiré, et les trois formes
+/// donnent `2001`. White Labs écrit `WLP001` ou `001` : le `wlp` est ajouté.
 String cleProduit(String cleDuProducteur, String produit) {
   final cle = cleNormalisee(produit).replaceAll('-', '');
-  if (cleDuProducteur == 'wyeast' && RegExp(r'^wy\d+$').hasMatch(cle)) {
-    return cle.substring(2);
+  if (cleDuProducteur == 'wyeast') {
+    final m = RegExp(r'^(?:wy)?(\d+)(?:pc)?$').firstMatch(cle);
+    if (m != null) return m.group(1)!;
   }
   if (cleDuProducteur == 'white-labs' && RegExp(r'^\d+$').hasMatch(cle)) {
     return 'wlp$cle';

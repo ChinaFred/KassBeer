@@ -632,6 +632,65 @@ void main() {
     });
   });
 
+  test('Private Collection de Wyeast : la fiche et les entrées « -PC » '
+      'font un seul document', () {
+    String culture(String nom, String producteur, String produit, int att) =>
+        jsonEncode({
+          'name': nom,
+          'product_id': produit,
+          'type': 'ale',
+          'form': 'liquid',
+          'producer': producteur,
+          'attenuation_range': {
+            'minimum': {'unit': '%', 'value': att},
+            'maximum': {'unit': '%', 'value': att + 4},
+          },
+        });
+    String fichier(List<String> cultures) =>
+        '{"beerjson": {"version": 2.01, "cultures": [${cultures.join(',')}]}}';
+    final lecture =
+        LectureReferentiels(
+            datesReleveFabricants: const {'wyeast': '2026-11-01'},
+          )
+          ..lire003ou004(
+            fichier([
+              culture('Souche Fictive', 'Wyeast Labs', 'WY9999-PC', 60),
+              culture('Autre Fictive', 'Wyeast Labs', 'WY9998-PC', 61),
+            ]),
+            Source.brewtarget003,
+          )
+          ..lire003ou004(
+            fichier([culture('Souche Fictive', 'Wyeast', '9999-PC', 62)]),
+            Source.brewtarget004,
+          )
+          ..lireFabricants(
+            jsonEncode({
+              'beerjson': {
+                'version': 2.01,
+                'cultures': [
+                  {
+                    ...jsonDecode(
+                          culture('Souche Fictive', 'Wyeast', '9999', 80),
+                        )
+                        as Map<String, Object?>,
+                    'id': 'wyeast-9999',
+                  },
+                ],
+              },
+            }),
+          );
+    final r = Referentiel.fusionner(lecture.entrees);
+    final c = r.parNature[NatureReferentiel.culture]!;
+    expect(c.keys, {
+      'culture-wyeast-9999-souche-fictive',
+      'culture-wyeast-9998-autre-fictive',
+    });
+    final doc = c['culture-wyeast-9999-souche-fictive']!;
+    expect(doc.entrees, hasLength(3));
+    expect(doc.principale.source, Source.fabricants);
+    expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+  });
+
   group('table de fusion des cultures', () {
     test('sans la table : la fiche crée un second document', () {
       final c = _cultures(const []).parNature[NatureReferentiel.culture]!;
