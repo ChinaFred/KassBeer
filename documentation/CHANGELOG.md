@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-21
 
-### v0.1.85 — fonctionnel
+### v0.1.86 — fonctionnel
 
 L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux
 puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès
@@ -16,7 +16,7 @@ est écrite en toutes lettres sur un fond coloré, avec la date et la fonction s
 ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les
 données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95.
 
-### v0.1.85 — technique
+### v0.1.86 — technique
 
 `logs_screen.dart` : `_PuceMenu` (`MenuAnchor` et `ActionChip`) remplace `BoutonsSegmentes`
 pour la gravité et la période ; `_plusDeFiltres` replie les trois autres filtres sur
@@ -29,6 +29,27 @@ passe sous le compte des entrées. Aucun appel, filtre, règle ni fonction serve
 recherche part toujours du seul bouton « Rechercher » (P50). Tests de `logs_test.dart` :
 téléphone de 360 × 640 (« Rechercher » visible, gravité en une puce, cinq entrées visibles),
 compte de « Plus de filtres (2) », bloc des données, date entière à 200 %.
+
+### v0.1.85 — fonctionnel
+
+Avant de lancer une analyse, un développement ou une livraison d'un ticket, l'administrateur
+peut ouvrir la page d'usage de claude.ai : un lien « Usage Claude (5 h et semaine) : voir sur
+claude.ai » figure dans la boîte de lancement et en tête de la liste des tickets. Il montre
+la part restante de l'abonnement Claude pour la fenêtre de 5 heures et pour la semaine.
+L'application n'affiche aucun chiffre : Anthropic ne publie pas ces valeurs. Demandé par le
+ticket #96.
+
+### v0.1.85 — technique
+
+Option A de l'analyse du ticket #96 : `LienUsageClaude`
+(`app/lib/features/tickets/presentation/lien_usage_claude.dart`) ouvre
+`https://claude.ai/settings/usage` par `ouvrirLienProvider`, après `lienSessionOuvrable`
+(`Uri.tryParse`, `https`, hôte `claude.ai`, sans identifiants ni port). Un échec passe par `reportError`
+(`tickets.open_claude_usage`), sans adresse. Le lien est placé sous la ligne du quota dans
+`BoiteLancement` et sous les messages de `BandeauTicketsAdmin` (`lienUsage`, faux pour la
+fiche seule sur écran étroit, qui garderait sinon sa barre de décision sous le seuil de
+480 px). Aucun serveur ni règle touché ; l'option B (lancements comptés sur 5 h et 7 jours)
+n'est pas faite. Tests : `tickets_lancements_test.dart`. Demandé par le ticket #96.
 
 ### v0.1.84 — fonctionnel
 
@@ -53,6 +74,7 @@ complet reste le `semanticsLabel` de la puce et le titre de la fiche. Tests : à
 à 100 %, 130 % et 200 %, les six puces et les deux accès tiennent dans la largeur, sans
 débordement, avec une cible de 48 px ; à 600 px, texte à 130 % et 200 %, les noms courts sont
 entiers. Demandé par le ticket #97.
+
 ### v0.1.83 — fonctionnel
 
 L'éditeur de recette reçoit un assistant. Le bouton « Assistant » ouvre une conversation avec
