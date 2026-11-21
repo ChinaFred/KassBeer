@@ -9,8 +9,9 @@ données, outillage), ou les deux.
 ### v0.1.85 — fonctionnel
 
 Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un
-filtre « Confiance des arômes » trie les houblons selon la confiance de leur description
-(élevée, moyenne, faible, sans description), avec le nombre de houblons de chaque choix. Une
+bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de
+leur description (élevée, moyenne, faible, sans description), avec le nombre de houblons de
+chaque choix. Une
 ligne signale « Confiance faible » ou « Sans description ». La recherche et le nombre restent
 visibles en haut pendant le défilement, un bouton efface la recherche, et le nombre dit
 « 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA
@@ -22,8 +23,9 @@ Nouvel index `beer_index/hop_aromas` (`{id, confidence}`), construit par `ingest
 depuis les entrées acceptées de `aromes.json` et validé par `ingest/lib/validation.mjs` ; un
 `hop_aromas` venu de la préparation est refusé. `beer_index/hops` porte `purpose` et `origin`
 (`exchange/lib/src/ingestion/referentiel.dart`). Côté application : `lireIndexAromes` (un
-`get`, gardé pour la session), `indexAromesProvider`, filtre `_FiltreConfiance`, recherche et
-compte dans un `PinnedHeaderSliver` (sauf au-delà de `kGrandTexteMinScale`), compte annoncé
+`get`, gardé pour la session), `indexAromesProvider`, filtre `_FiltreConfiance` (bouton et `MenuAnchor`), recherche et
+compte dans un `PinnedHeaderSliver` (sauf à partir de `kGrandTexteMinScale`, même seuil `>=`
+que l'en-tête), compte annoncé
 500 ms après la frappe, `DocumentTrouve.fromCache`, libellés d'usage complétés. Tests de
 `rules-tests/` pour `beer_index/hop_aromas`. ADR-013, note du 2026-11-21. Après la fusion,
 l'administrateur relance la préparation du référentiel puis `ecrire.mjs`. P22 et P55 de

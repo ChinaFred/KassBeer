@@ -305,7 +305,7 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
   fermentation », « Coût du brassin »… sur la fiche d'un brassin ; « Malt ou sucre »,
   « Houblon »… dans l'éditeur de recette ; « Journée », « Étape », « Actions d'une journée »,
   « Insérer un bloc de la recette » dans l'éditeur de processus ; « Plus d'actions » sur la
-  fiche d'un processus). Le formulaire de prix porte le même nom, « Prix d'un
+  fiche d'un processus ; « Confiance des arômes » sur la liste des houblons). Le formulaire de prix porte le même nom, « Prix d'un
   ingrédient », sur « Mes prix », la fiche d'une recette et celle d'un brassin, et sa liste
   « Reprendre un prix » aussi ; « Coût du brassin » désigne les deux confirmations « Figer le
   coût » et « Recalculer avec mes prix actuels ». Aide : « Menu ou fenêtre concerné. »
@@ -1964,7 +1964,7 @@ styles », « 442 houblons », « 854 levures », « 1 houblon », « 37 sur 442
 recherche ou le filtre réduit la liste). Le nombre s'affiche à chaque frappe ; les lecteurs
 d'écran l'entendent quand la frappe s'arrête depuis une demi-seconde. Le champ de recherche et
 le nombre restent en haut pendant le défilement, séparés de la liste par un trait fin ; les
-puces des segments et le filtre de confiance défilent avec la liste. Au-delà de 130 % de
+puces des segments et le filtre de confiance défilent avec la liste. À partir de 130 % de
 taille du texte, la recherche et le nombre défilent aussi. Une liste lue
 sur l'appareil, hors ligne, porte la note « Hors ligne : liste lue sur l'appareil. ». Chaque
 ligne :
@@ -1991,13 +1991,17 @@ n'est pas enregistrée ; elle reste en place au retour d'une fiche.
 **Filtre de confiance des arômes** (segment Houblons, tout membre ; décisions de
 l'utilisateur du 2026-11-21). À l'ouverture du segment, l'index des arômes est lu une fois
 (une lecture de plus, aucune lecture des descriptions elles-mêmes). Sous le champ de
-recherche et le nombre, en tête de la liste : le titre « Confiance des arômes », puis des puces à choix
-unique, qui passent à la ligne quand la place manque : « Toutes (n) », « Élevée (n) »,
-« Moyenne (n) », « Faible (n) », « Sans description (n) », et la ligne « Confiance indiquée
-par l'IA qui a rédigé les arômes. ». Chaque nombre compte les houblons qui répondent à la
-recherche en cours ; filtre et recherche se cumulent. « Sans description » regroupe les
-houblons trop peu documentés et ceux qui n'ont pas de description. Chaque puce est lue
-« Faible, 37 houblons » avec son état sélectionné ; zone d'appui de 48 px. Par défaut
+recherche et le nombre, en tête de la liste, un bouton sur une ligne reprend le choix en cours
+et son nombre : « Confiance des arômes : Toutes (442) », « Confiance des arômes : Faible
+(37) ». Il ouvre un menu à choix unique : en tête, la ligne « Confiance indiquée par l'IA qui
+a rédigé les arômes. », non cliquable, puis « Toutes (n) », « Élevée (n) », « Moyenne (n) »,
+« Faible (n) », « Sans description (n) », le choix en cours coché. Chaque nombre compte les
+houblons qui répondent à la recherche en cours ; filtre et recherche se cumulent. « Sans
+description » regroupe les houblons trop peu documentés et ceux qui n'ont pas de description.
+Le bouton est lu « Confiance des arômes : Faible, 37 houblons » ; chaque entrée du menu est lue
+« Faible, 37 houblons » avec son état coché ; zones d'appui de 48 px ; à 200 % de taille du
+texte, le libellé du bouton passe à la ligne. Sur un téléphone de 360 × 640, au moins un
+houblon est visible à l'ouverture. Par défaut
 « Toutes ». Le choix reste en place au retour d'une fiche ; il est perdu au changement de
 segment ou à la sortie de l'écran, et rien n'est écrit en base. Sans houblon pour la recherche
 et le filtre : « Aucun houblon pour « citra » avec une confiance faible. » (« Aucun houblon

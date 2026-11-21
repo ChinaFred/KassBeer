@@ -331,10 +331,11 @@ abstract final class TextesFiltreConfiance {
       : 'Aucun houblon pour « $recherche » ${filtre.suite}.';
 }
 
-/// Titre, puces du filtre et ligne d'aide, sous la recherche épinglée ; ils
-/// défilent avec la liste. Chaque puce est lue « Faible,
-/// 37 houblons » avec son état sélectionné ; zone d'appui de 48 px ; les
-/// puces passent à la ligne quand la place manque.
+/// Filtre de confiance sur une ligne, sous la recherche épinglée : un bouton
+/// « Confiance des arômes : Faible (37) », lu « Confiance des arômes : Faible,
+/// 37 houblons », qui ouvre un menu à choix unique. Le menu commence par la
+/// ligne d'aide, non cliquable, puis les cinq choix comptés, le choix en cours
+/// coché. Zone d'appui de 48 px ; le libellé passe à la ligne en grand texte.
 class _FiltreConfiance extends StatelessWidget {
   const _FiltreConfiance({
     required this.filtre,
@@ -351,45 +352,60 @@ class _FiltreConfiance extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    String court(FiltreConfiance f) => '${f.libelle} (${comptes[f] ?? 0})';
+    String lu(FiltreConfiance f) =>
+        '${f.libelle}, ${segment.compte(comptes[f] ?? 0)}';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              TextesFiltreConfiance.titre,
-              style: theme.textTheme.titleSmall,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final f in FiltreConfiance.values)
-                ChoiceChip(
-                  materialTapTargetSize: MaterialTapTargetSize.padded,
-                  label: Semantics(
-                    label: '${f.libelle}, ${segment.compte(comptes[f] ?? 0)}',
-                    child: ExcludeSemantics(
-                      child: Text('${f.libelle} (${comptes[f] ?? 0})'),
-                    ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        // ticket: /bibliotheque/houblons/menu/confiance
+        child: MenuAnchor(
+          menuChildren: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280),
+                child: Text(
+                  TextesFiltreConfiance.aide,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  selected: f == filtre,
-                  onSelected: (_) => onSelected(f),
                 ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            TextesFiltreConfiance.aide,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            // Un seul nœud lu par entrée : nombre et état coché ensemble.
+            for (final f in FiltreConfiance.values)
+              MergeSemantics(
+                child: Semantics(
+                  checked: f == filtre,
+                  inMutuallyExclusiveGroup: true,
+                  child: RadioMenuButton<FiltreConfiance>(
+                    value: f,
+                    groupValue: filtre,
+                    onChanged: (v) {
+                      if (v != null) onSelected(v);
+                    },
+                    child: Text(court(f), semanticsLabel: lu(f)),
+                  ),
+                ),
+              ),
+          ],
+          builder: (context, controller, _) => OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              tapTargetSize: MaterialTapTargetSize.padded,
+            ),
+            onPressed: () =>
+                controller.isOpen ? controller.close() : controller.open(),
+            icon: const Icon(Icons.filter_list),
+            label: Text(
+              '${TextesFiltreConfiance.titre} : ${court(filtre)}',
+              semanticsLabel: '${TextesFiltreConfiance.titre} : ${lu(filtre)}',
+              softWrap: true,
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -587,10 +603,10 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel> {
               ],
             ),
           );
-    // Recherche et compte épinglés pendant le défilement ; au-delà de
+    // Recherche et compte épinglés pendant le défilement ; à partir de
     // kGrandTexteMinScale, ils défilent avec la liste pour lui laisser la place.
     final grandTexte =
-        MediaQuery.textScalerOf(context).scale(1) > kGrandTexteMinScale;
+        MediaQuery.textScalerOf(context).scale(1) >= kGrandTexteMinScale;
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(child: widget.enTete),

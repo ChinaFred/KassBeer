@@ -396,6 +396,11 @@ liste (P22).
   la range alors dans « Sans description » et la fiche affiche encore l'ancien texte.
 - Index absent, illisible ou en panne : la liste s'affiche sans filtre ni étiquette ; un index
   illisible est rapporté (`library.hop_aroma_index`) sans son contenu.
+- Forme du filtre : un bouton sur une ligne, « Confiance des arômes : Faible (37) », qui ouvre
+  un menu à choix unique (aide en tête, non cliquable, puis les cinq choix comptés, le choix en
+  cours coché), et non une rangée de puces : avec les six puces de segment sur trois rangées,
+  une rangée de puces de plus cachait tous les houblons à l'ouverture sur un téléphone de
+  360 × 640 (décision de l'utilisateur du 2026-11-21).
 - Liste : étiquettes « Confiance faible » et « Sans description », sans icône (l'icône
   d'information est celle de « Sources des données » dans l'en-tête de la Bibliothèque) ; rien
   pour une confiance élevée ou moyenne.

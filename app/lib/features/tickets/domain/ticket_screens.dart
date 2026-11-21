@@ -174,6 +174,7 @@ const kTicketScreensWithPrices = {
 /// Éléments propres à un écran, dans l'ordre de la liste « Élément précis ».
 const _kTicketScreenElements = {
   '/recettes/:id/fenetre/exporter': 'Exporter la recette',
+  '/bibliotheque/houblons/menu/confiance': 'Confiance des arômes',
   '/recettes/:id/fenetre/nouveau-brassin': 'Nouveau brassin',
   '/recettes/:id/fenetre/choix-processus': 'Choisir un processus',
   '/recettes/:id/fenetre/prix': 'Prix d\'un ingrédient',

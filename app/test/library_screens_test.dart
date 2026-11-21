@@ -1,3 +1,5 @@
+import 'dart:ui' show CheckedState;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,7 +81,33 @@ Future<TestApp> openHops(
   },
 );
 
-Finder chip(String label) => find.widgetWithText(ChoiceChip, label);
+const _aide = 'Confiance indiquée par l\'IA qui a rédigé les arômes.';
+
+/// Bouton du filtre de confiance (« Confiance des arômes : … »).
+Finder get filtre => find.ancestor(
+  of: find.textContaining('Confiance des arômes :'),
+  matching: find.byType(OutlinedButton),
+);
+
+/// Entrée [label] du menu du filtre, ouvert.
+Finder choix(String label) =>
+    find.widgetWithText(RadioMenuButton<FiltreConfiance>, label);
+
+/// Entrées du menu ouvert, avec leur état coché.
+Map<String, bool> etatMenu(WidgetTester tester) => {
+  for (final b in tester.widgetList<RadioMenuButton<FiltreConfiance>>(
+    find.byType(RadioMenuButton<FiltreConfiance>),
+  ))
+    (b.child! as Text).data!: b.value == b.groupValue,
+};
+
+/// Ouvre le menu du filtre et choisit [label].
+Future<void> choisir(WidgetTester tester, String label) async {
+  await tester.tap(filtre);
+  await tester.pumpAndSettle();
+  await tester.tap(choix(label));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group('navigation', () {
@@ -320,27 +348,18 @@ void main() {
       expect(find.text('Cônes · ${formatPourcent(4)} alpha'), findsOneWidget);
     });
 
-    testWidgets('puces comptées, filtre local, étiquettes des exceptions', (
+    testWidgets('filtre sur une ligne : menu compté, filtre local, étiquettes', (
       tester,
     ) async {
       final app = await openHops(tester, aromes: foundAromes());
-      expect(find.text('Confiance des arômes'), findsOneWidget);
-      expect(
-        find.text('Confiance indiquée par l\'IA qui a rédigé les arômes.'),
-        findsOneWidget,
-      );
-      for (final label in [
-        'Toutes (2)',
-        'Élevée (0)',
-        'Moyenne (0)',
-        'Faible (1)',
-        'Sans description (1)',
-      ]) {
-        expect(chip(label), findsOneWidget, reason: label);
-      }
-      expect(tester.widget<ChoiceChip>(chip('Toutes (2)')).selected, isTrue);
+      expect(filtre, findsOneWidget);
+      expect(find.text('Confiance des arômes : Toutes (2)'), findsOneWidget);
+      // Ni titre séparé ni aide hors du menu.
+      expect(find.text('Confiance des arômes'), findsNothing);
+      expect(find.text(_aide), findsNothing);
+      expect(tester.getSize(filtre).height, greaterThanOrEqualTo(48));
       // Étiquettes : confiance faible et sans description seulement, sans
-      // icône dans la liste.
+      // icône dans la liste ; les deux lignes visibles sans défiler.
       expect(
         find.descendant(
           of: find.widgetWithText(LigneListe, 'Cascade'),
@@ -355,17 +374,6 @@ void main() {
         ),
         findsOneWidget,
       );
-      // Les six puces de segment poussent la seconde ligne sous l'écran.
-      await tester.scrollUntilVisible(
-        find.text('Houblon doré'),
-        200,
-        scrollable: find
-            .descendant(
-              of: find.byType(CustomScrollView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
       expect(
         find.descendant(
           of: find.widgetWithText(LigneListe, 'Houblon doré'),
@@ -374,14 +382,13 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Relu'), findsNothing);
-      // Lecture d'une puce : nom, nombre de houblons, état.
+
+      // Lecture du bouton : choix en cours et nombre de houblons.
       final semantics = tester.ensureSemantics();
       expect(
-        tester.getSemantics(chip('Faible (1)')),
+        tester.getSemantics(filtre),
         matchesSemantics(
-          label: 'Faible, 1 houblon',
-          isSelected: false,
-          hasSelectedState: true,
+          label: 'Confiance des arômes : Toutes, 2 houblons',
           isButton: true,
           hasEnabledState: true,
           isEnabled: true,
@@ -390,14 +397,51 @@ void main() {
           hasFocusAction: true,
         ),
       );
+
+      // Menu : aide en tête, non cliquable, puis les cinq choix comptés.
+      await tester.tap(filtre);
+      await tester.pumpAndSettle();
+      expect(find.text(_aide), findsOneWidget);
       expect(
-        tester.getSize(chip('Faible (1)')).height,
+        find.ancestor(
+          of: find.text(_aide),
+          matching: find.byType(MenuItemButton),
+        ),
+        findsNothing,
+      );
+      expect(
+        tester.getTopLeft(find.text(_aide)).dy <
+            tester.getTopLeft(choix('Toutes (2)')).dy,
+        isTrue,
+      );
+      expect(etatMenu(tester), {
+        'Toutes (2)': true,
+        'Élevée (0)': false,
+        'Moyenne (0)': false,
+        'Faible (1)': false,
+        'Sans description (1)': false,
+      });
+      // Entrée lue avec son nombre et son état coché.
+      final faible = tester.getSemantics(
+        find.bySemanticsLabel('Faible, 1 houblon'),
+      );
+      expect(faible.flagsCollection.isChecked, isNot(CheckedState.isTrue));
+      expect(
+        tester
+            .getSemantics(find.bySemanticsLabel('Toutes, 2 houblons'))
+            .flagsCollection
+            .isChecked,
+        CheckedState.isTrue,
+      );
+      expect(
+        tester.getSize(choix('Faible (1)')).height,
         greaterThanOrEqualTo(48),
       );
       semantics.dispose();
 
-      await tester.tap(chip('Faible (1)'));
+      await tester.tap(choix('Faible (1)'));
       await tester.pumpAndSettle();
+      expect(find.text('Confiance des arômes : Faible (1)'), findsOneWidget);
       expect(find.text('Cascade'), findsOneWidget);
       expect(find.text('Houblon doré'), findsNothing);
       expect(find.text('1 sur 2 houblons'), findsOneWidget);
@@ -405,30 +449,34 @@ void main() {
       // Recherche et filtre se cumulent ; les nombres suivent la recherche.
       await tester.enterText(find.byType(TextField), 'dore');
       await tester.pumpAndSettle();
-      expect(chip('Toutes (1)'), findsOneWidget);
-      expect(chip('Faible (0)'), findsOneWidget);
+      expect(find.text('Confiance des arômes : Faible (0)'), findsOneWidget);
+      await tester.tap(filtre);
+      await tester.pumpAndSettle();
+      expect(etatMenu(tester)['Toutes (1)'], isFalse);
+      expect(etatMenu(tester)['Faible (0)'], isTrue);
+      // Le choix en cours, choisi de nouveau, referme le menu sans rien changer.
+      await tester.tap(choix('Faible (0)'));
+      await tester.pumpAndSettle();
+      expect(choix('Faible (0)'), findsNothing);
       expect(
         find.text('Aucun houblon pour « dore » avec une confiance faible.'),
         findsOneWidget,
       );
       expect(find.text('Effacer la recherche'), findsOneWidget);
-      await tester.ensureVisible(find.text('Afficher toutes les confiances'));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('Afficher toutes les confiances'));
       await tester.pumpAndSettle();
       expect(find.text('Houblon doré'), findsOneWidget);
-      expect(tester.widget<ChoiceChip>(chip('Toutes (1)')).selected, isTrue);
+      expect(find.text('Confiance des arômes : Toutes (1)'), findsOneWidget);
 
       // Gardé au retour d'une fiche ; une seule lecture de l'index des arômes.
-      await tester.tap(chip('Sans description (1)'));
-      await tester.pumpAndSettle();
+      await choisir(tester, 'Sans description (1)');
       await tester.tap(find.text('Houblon doré'));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       expect(
-        tester.widget<ChoiceChip>(chip('Sans description (1)')).selected,
-        isTrue,
+        find.text('Confiance des arômes : Sans description (1)'),
+        findsOneWidget,
       );
       expect(app.library.indexAromesReads, 1);
     });
@@ -437,13 +485,74 @@ void main() {
       tester,
     ) async {
       final app = await openHops(tester, aromes: foundAromes());
-      await tester.tap(chip('Faible (1)'));
-      await tester.pumpAndSettle();
+      await choisir(tester, 'Faible (1)');
       await tapChip(tester, 'Styles');
-      expect(find.text('Confiance des arômes'), findsNothing);
+      expect(filtre, findsNothing);
       await tapChip(tester, 'Houblons');
-      expect(tester.widget<ChoiceChip>(chip('Toutes (2)')).selected, isTrue);
+      expect(find.text('Confiance des arômes : Toutes (2)'), findsOneWidget);
       expect(app.library.indexAromesReads, 2);
+    });
+
+    testWidgets('texte à 200 % : le libellé du filtre passe à la ligne', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await open(
+        tester,
+        '/bibliotheque/houblons',
+        width: 360,
+        height: 900,
+        before: (app) {
+          app.library.index[NatureReferentiel.hops] = found(
+            NatureReferentiel.hops,
+            hopsIndex,
+          );
+          app.library.indexAromes = foundAromes();
+        },
+      );
+      await choisir(tester, 'Sans description (1)');
+      expect(tester.takeException(), isNull);
+      final libelle = find.text('Confiance des arômes : Sans description (1)');
+      expect(libelle, findsOneWidget);
+      expect(tester.getRect(filtre).right, lessThanOrEqualTo(360));
+      expect(
+        tester.getSize(libelle).height,
+        greaterThan(1.5 * tester.getSize(find.text('1 sur 2 houblons')).height),
+      );
+    });
+
+    testWidgets('téléphone de 360 × 640 : un houblon visible à l\'ouverture', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        '/bibliotheque/houblons',
+        width: 360,
+        height: 640,
+        before: (app) {
+          app.library.index[NatureReferentiel.hops] = found(
+            NatureReferentiel.hops,
+            // Index sans entrée illisible : la note des illisibles n'occupe
+            // pas la place de la première ligne.
+            indexDoc([
+              for (final e in hopsIndex['entries'] as List)
+                if ((e as Map)['alpha'] is num) e,
+            ]),
+          );
+          app.library.indexAromes = foundAromes();
+        },
+      );
+      expect(filtre, findsOneWidget);
+      final corps = tester.getRect(find.byType(CustomScrollView));
+      final entieres = [
+        for (final e in find.byType(LigneListe).evaluate())
+          if (tester.getRect(find.byWidget(e.widget)).top >= corps.top &&
+              tester.getRect(find.byWidget(e.widget)).bottom <= corps.bottom)
+            e,
+      ];
+      expect(entieres, isNotEmpty);
+      expect(tester.takeException(), isNull);
     });
 
     for (final (nom, aromes) in <(String, RechercheDocument<IndexAromes>?)>[
@@ -455,7 +564,7 @@ void main() {
     ]) {
       testWidgets('index $nom : ni filtre ni étiquette', (tester) async {
         await openHops(tester, aromes: aromes);
-        expect(find.text('Confiance des arômes'), findsNothing);
+        expect(filtre, findsNothing);
         expect(find.text('Sans description'), findsNothing);
         expect(find.text('Cascade'), findsOneWidget);
         expect(find.text('Houblon doré'), findsOneWidget);
@@ -474,7 +583,7 @@ void main() {
           app.library.indexAromesError = Exception('refus');
         },
       );
-      expect(find.text('Confiance des arômes'), findsNothing);
+      expect(filtre, findsNothing);
       expect(find.text('Cascade'), findsOneWidget);
     });
 
@@ -488,7 +597,9 @@ void main() {
         fromCache: true,
       );
       expect(find.text(LibraryScreen.offlineIndex), findsOneWidget);
-      expect(chip('Faible (1)'), findsOneWidget);
+      await tester.tap(filtre);
+      await tester.pumpAndSettle();
+      expect(choix('Faible (1)'), findsOneWidget);
     });
   });
 
@@ -593,7 +704,7 @@ void main() {
           app.library.indexAromes = foundAromes();
         },
       );
-      expect(find.text('Confiance des arômes'), findsOneWidget);
+      expect(filtre, findsOneWidget);
       await tester.tap(find.byType(TextField));
       tester.view.viewInsets = const FakeViewPadding(bottom: 280);
       addTearDown(tester.view.resetViewInsets);
@@ -602,7 +713,7 @@ void main() {
       await tester.pumpAndSettle();
       // Filtre et segments sortis par le haut ; recherche et compte restent.
       expect(find.byType(TextField).hitTestable(), findsOneWidget);
-      expect(find.text('Confiance des arômes').hitTestable(), findsNothing);
+      expect(filtre.hitTestable(), findsNothing);
       final basEnTete = tester.getBottomLeft(find.byType(Divider).first).dy;
       // Au moins une ligne entière entre la partie épinglée et le clavier.
       final entieres = [
