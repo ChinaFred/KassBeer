@@ -439,9 +439,39 @@ même nom : `cream-ale-blend`, `lactobacillus-delbrueckii`, `northwest-ale`, `fr
 qui ne donne que ce nom ne le résout plus ; le producteur ne départage pas un nom seul.
 Ces noms partagés entre deux producteurs sont permis (P56, décision de l'utilisateur du
 2026-11-15) et comptés dans `noms_partages.culture` du rapport (97 noms). Aucun nom ne désigne
-deux documents d'Escarpment. Dix-huit noms désignent deux documents d'un même producteur, tous
-antérieurs à cet ajout : doublons Brewtarget, dont les six de la Private Collection de Wyeast
-(section Wyeast).
+deux documents d'Escarpment.
+
+### Doublons d'un même producteur hérités de Brewtarget
+
+Mesure du 2026-11-21 sur les sources du relevé du 2026-11-08 : 18 noms normalisés désignent au
+moins deux documents `beer_cultures` d'un même producteur. Aucun ne vient d'Escarpment ni d'une
+ligne de la table de fusion. Chacun tient à un document Brewtarget en double. Ils sont comptés
+dans `noms_partages.culture` du rapport et restent en attendant leur fusion (P56, décision de
+l'utilisateur du 2026-11-21).
+
+| Nom normalisé | Producteur | Documents | Cause |
+|---|---|---|---|
+| `pilsner-urquell-h-strain` | Wyeast | `2001-urquell-lager`, `2001pc-…`, `wy2001pc-…` | Private Collection, référence écrite `2001-PC` et `WY2001-PC` ; la fiche porte ce nom |
+| `brettanomyces-claussenii` | Wyeast | `5151-…`, `5151pc-…` | Private Collection ; la fiche porte ce nom |
+| `gambrinus-style-lager` | Wyeast | `2002-…`, `2002pc-…` | Private Collection ; la fiche porte ce nom |
+| `lactobacillus-brevis` | Wyeast | `5223-…`, `5223pc-…` | Private Collection ; la fiche porte ce nom |
+| `saison-brett-blend` | Wyeast | `3031-…`, `3031pc-…` | Private Collection ; la fiche porte ce nom |
+| `bavarian-wheat` | Wyeast | `3056-…`, `3638-…` | Brewtarget donne ce nom à 3056 et à 3638 ; la fiche de 3638 le porte |
+| `british-ale` | Wyeast | `1098-…`, `1335-…` | Brewtarget donne ce nom à 1098 et à 1335 ; la fiche de 1098 le porte |
+| `c2c-american-farmhouse` | Omega Yeast | `oyl217-…`, `oyl217c2c-…` | Brewtarget écrit aussi la référence `OYL-217-C2C` ; la fiche porte ce nom |
+| `belgian-ale` | Mangrove Jack's | `m27-belgian-wit`, `m41-…` | Brewtarget donne ce nom à M27 et à M41 |
+| `belgian-wit` | Mangrove Jack's | `m21-…`, `m27-…` | Brewtarget donne ce nom à M21 et à M27 |
+| `safale-american-ale` | Fermentis | `us05-…`, `us56-…` | Brewtarget donne ce nom à US-05 et à US-56 |
+| `safspirit` | Fermentis | `hg1-…`, `usw6-…` | nom de gamme porté par deux souches |
+| `saison-blend` | The Yeast Bay | `saison-blend`, `wlp4007-…` | une entrée Brewtarget sans référence, une avec |
+| `saison-1` | GigaYeast | `gy018-…`, `gy018saison1-…` | Brewtarget écrit la référence `GY018` et `GY018-SAISON-1` |
+| `saison-2` | GigaYeast | `gy027-…`, `gy027saison2-…` | Brewtarget écrit la référence `GY027` et `GY027-SAISON-2` |
+| `sweet-flemish-brett` | GigaYeast | `gb144-…`, `gy144-…` | Brewtarget écrit la référence `GB144` et `GY144` |
+| `fermoale` | AEB | `ay3-…`, `ay4-…`, `fermoale` | nom de gamme porté par trois entrées |
+| `lalvin` | Lallemand | `71b-…`, `ec1118-…`, `v1116-…` | nom de gamme porté par trois souches |
+
+Les identifiants abrègent `culture-<producteur>-…`. Huit noms sont portés par une fiche de
+fabricant, mais le second document Brewtarget existait avant la fiche ; aucune fiche n'en a créé.
 
 ## Correspondance DotBeer (fichier 005) → référentiels
 

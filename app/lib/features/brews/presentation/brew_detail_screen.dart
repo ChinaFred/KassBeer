@@ -1316,7 +1316,10 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
         probleme != null
             ? TexteAbsent(probleme)
             : plan.lignes.isEmpty && plan.mesuresSansEtape.isEmpty
-            ? const TexteAbsent('Aucune étape.')
+            // Brassin prévu sans processus : la section le dit déjà (#61).
+            ? (sansProcessusPrevu(brew)
+                  ? const SizedBox.shrink()
+                  : const TexteAbsent('Aucune étape.'))
             : ChronologieJour(
                 plan: plan,
                 durees: durees,

@@ -1983,11 +1983,18 @@ recette peut changer ensuite, le brassin garde sa version.
 
 « Processus » propose « Chronologie de la recette seule » puis les seuls processus du lecteur,
 par nom ; aucun processus d'un autre membre n'est proposé. Présélection : le processus par
-défaut du lecteur (« Mes processus »), sinon « Chronologie de la recette seule ». Aide :
+défaut du lecteur (« Mes processus ») ; s'il n'a jamais réglé de choix par défaut (aucun
+document de préférence, lu du serveur), son seul processus s'il n'en a qu'un ; sinon
+« Chronologie de la recette seule ». Un choix coupé (« Proposer par défaut » décoché) ou un
+processus par défaut supprimé garde « Chronologie de la recette seule ».
+Aucun modèle à copier (modèle d'exemple, plan de brassage des fiches) n'est appliqué,
+présélectionné ni créé à la place du brasseur. Aide :
 « Ajoute les étapes de préparation et les journées après le brassage. ». Lien « Gérer mes
 processus » (ferme le formulaire, ouvre « Mes processus »). États : « Lecture des processus »
 (la création reste possible avec la chronologie seule) ; « Impossible de lire les processus. »
-avec « Réessayer » ; « Aucun processus. » avec « Créer un processus » ; « Votre processus par
+avec « Réessayer » ; « Aucun processus. » (dans « Nouveau brassin », « Créer un processus »
+est sous la chronologie seule ; dans la feuille de la fiche, à côté de ce texte, sans « Gérer
+mes processus » ; il ouvre « Mes processus ») ; « Votre processus par
 défaut a été supprimé. » ; hors ligne sans processus lu : « Processus indisponibles hors ligne.
 Créez le brassin avec la chronologie de la recette seule, puis choisissez son processus sur sa
 fiche au retour du réseau. » (texte d'information, pas d'erreur). Un processus qui ne
@@ -2008,8 +2015,18 @@ cru. Ce processus n'a pas de journée pour eux. », « Recette sans houblon à c
 « {nom} ». » pour une journée d'embouteillage conditionnée à ses ajouts), « Chronologie de la
 recette vide : paliers et ébullition préremplis. » suivie des avertissements du préremplissage
 (« « Empâtage » : durée non renseignée, étape non ajoutée. »). Avec « Chronologie de la recette
-seule », le texte de la chronologie reste celui d'avant : recette sans chronologie, le brassin
-se crée sans étape à suivre.
+seule » : « Chronologie : 2 étapes · 1 h 45 » quand la recette en a ; sinon « Cette recette
+n'a pas de chronologie : sans processus, le brassin n'aura aucune étape. ». Dans les deux cas
+suit « Un processus ajoute vos étapes (préparation, mouture, nettoyage) autour de la
+recette. » (couleur atténuée), puis un bouton à contour de 48 px (pleine largeur sur un
+téléphone, aligné à gauche au-delà) : « Choisir un processus » quand le lecteur a au moins un
+processus (fenêtre qui liste ses processus par nom ; le choix remplace la sélection de
+« Processus »), « Créer un processus » quand il n'en a aucun (lu du serveur), qui ouvre « Mes
+processus » (modèles à copier et « Nouveau processus ») ; aucun bouton
+pendant la lecture, en panne ou hors ligne. Recette sans chronologie, juste sous son
+avertissement et avant le texte sur les processus : « Écrire la chronologie » pour son auteur,
+« Seul l'auteur écrit la chronologie de cette recette. Dupliquez-la pour écrire la vôtre. »
+(couleur atténuée) pour un autre membre.
 
 Création : le brassin s'écrit, puis son déroulé, sans attendre le serveur, hors ligne compris.
 Messages : « Brassin créé. », « Brassin créé sur l'appareil. Il partira au retour du réseau. »,
@@ -2101,7 +2118,16 @@ puis sa chronologie (heures, état, mesures ; un appui sur une mesure ouvre sa c
 Journées suivantes, repliées : « Houblonnage à cru · mer. 25 nov. (J+4) », résumé « 4 étapes ·
 25 min », étapes « nom · durée » ; « (J+3, jour fixé par la recette) », « (J+6, date
 changée) » ; sans date de départ, « Houblonnage à cru · J+4 ». Les dates partent de la date du
-brassage, sinon de la date prévue. Avant le départ, pour le propriétaire : « Changer de
+brassage, sinon de la date prévue. Brassin prévu sans processus : en tête de la journée de brassage,
+« Aucun processus choisi : le déroulé se limite à la chronologie de la recette. » (couleur
+atténuée, au-dessus des étapes de la recette, ou seul quand elle n'en a pas, sans « Aucune
+étape. »), puis, pour le propriétaire, « Choisir un processus » (bouton à contour de 48 px,
+pleine largeur sur un téléphone), qui ouvre la feuille de choix, titrée « Choisir un
+processus » (recette figée sans étape : « Cette recette n'a pas de chronologie : sans
+processus, le brassin n'aura aucune étape. ») ; un autre
+membre lit le texte sans bouton. Un brassin commencé sans processus garde son affichage
+(« Aucune étape. » quand la recette n'en a pas). Avant le départ, pour le propriétaire d'un
+brassin qui a un processus : « Changer de
 processus » (feuille : liste des processus du lecteur et déroulé prévu, « Appliquer » ;
 « Déroulé changé. », hors ligne « Déroulé changé sur l'appareil. Il partira au retour du
 réseau. »). La feuille présélectionne le déroulé actuel : son processus, ou « {nom} (actuel) »
@@ -2110,7 +2136,7 @@ ligne), avec l'aperçu du déroulé actuel, dates changées comprises. Hors lign
 lu, la feuille affiche « Processus indisponibles hors ligne. Changez de processus au retour du
 réseau. » ; « Votre processus par défaut a été supprimé. » ne s'affiche que dans « Nouveau
 brassin ». « Appliquer » reste inactif,
-avec « Choisissez un autre processus. », tant que le choix ne diffère pas du déroulé actuel ;
+avec « Choisissez un autre processus. » (« Choisissez un processus. » sur un brassin prévu sans processus), tant que le choix ne diffère pas du déroulé actuel ;
 pendant la lecture, en panne ou hors ligne, seul « Chronologie de la recette seule », choisi par
 le brasseur, s'applique ; le menu ⋮ d'une journée après le brassage porte « Changer la date » (sélecteur du
 jour du brassage à J+365 ; sans date de départ, « Écart (jours après le brassage) ») et
@@ -2895,7 +2921,9 @@ Annonce « Processus supprimé. ».
 centrée sur 920 pixels, « Enregistrer »). « Nom du processus » (obligatoire, 120 caractères ;
 sinon « Donnez un nom au processus. », curseur sur le champ), « Notes (facultatif) »
 (10 000 caractères). À la création seulement : « Proposer par défaut dans Nouveau brassin »,
-coché si le lecteur n'a pas de processus par défaut. Tant que son choix n'est pas lu avec
+coché si le lecteur n'a pas de processus par défaut. Décoché à la création alors que le
+lecteur n'a jamais réglé de choix, il écrit `default_template_id` nul : « Nouveau brassin » ne
+présélectionne pas ce processus, même s'il est le seul. Tant que son choix n'est pas lu avec
 certitude (lecture en cours, cache seul, document illisible, panne), l'interrupteur est
 décoché et inactif, avec « Lecture du choix par défaut » ou « Votre choix actuel n'a pas pu
 être lu. » : aucun défaut existant n'est remplacé. Un nouveau processus part de la journée

@@ -4,6 +4,8 @@ import 'package:brewing/brewing.dart' show BrewingInputException;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/data/lecture_document.dart';
+import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/etats.dart';
 import '../../../core/services/error_report_service.dart';
 import '../../processes/domain/modele_processus.dart';
@@ -52,6 +54,18 @@ abstract final class TextesChoixProcessus {
   static const recetteRefusee =
       'Une valeur de cette recette empêche d\'appliquer ce processus.';
 
+  /// « Chronologie de la recette seule » choisie pour une recette sans étape.
+  static const recetteSansChronologie =
+      'Cette recette n\'a pas de chronologie : sans processus, le brassin '
+      'n\'aura aucune étape.';
+
+  /// « Chronologie de la recette seule » choisie, avec ou sans étape.
+  static const ajouteVosEtapes =
+      'Un processus ajoute vos étapes (préparation, mouture, nettoyage) autour '
+      'de la recette.';
+  static const choisir = 'Choisir un processus';
+  static const creer = 'Créer un processus';
+
   /// « Déroulé prévu : Mon processus, 3 journées. » : le nom distingue deux
   /// processus de même nombre de journées dans la région live.
   static String annonceDeroule(String? processus, int journees) {
@@ -93,8 +107,10 @@ class ChoixProcessus {
   final EtatChoixProcessus etat;
   final List<ModeleProcessus> miens;
 
-  /// Présélection : le choix par défaut du lecteur s'il est un de ses modèles,
-  /// sinon `null` (« Chronologie de la recette seule »).
+  /// Présélection : le choix par défaut du lecteur s'il est un de ses modèles ;
+  /// s'il n'a jamais réglé de choix par défaut, son seul modèle s'il n'en a
+  /// qu'un ; sinon `null` (« Chronologie de la recette seule »). Aucun modèle à
+  /// copier n'est présélectionné ni créé (P37).
   final String? defaut;
 
   /// Le choix par défaut désigne un modèle absent du serveur.
@@ -130,7 +146,14 @@ ChoixProcessus lireChoixProcessus(
         ),
       );
   final prefere = idModeleParDefaut(preference);
-  final defaut = miens.any((m) => m.id == prefere) ? prefere : null;
+  final prefereValide = miens.any((m) => m.id == prefere);
+  // Seul modèle présélectionné quand le lecteur n'a jamais réglé de choix par
+  // défaut (document absent d'une lecture du serveur) ; un choix coupé
+  // (`default_template_id` nul) ou supprimé garde la chronologie seule.
+  final jamaisRegle = preference is DocumentAbsent<PreferenceProcessus>;
+  final defaut = prefereValide
+      ? prefere
+      : (jamaisRegle && miens.length == 1 ? miens.single.id : null);
   final EtatChoixProcessus etat;
   if (list == null) {
     etat = async.hasError
@@ -148,7 +171,7 @@ ChoixProcessus lireChoixProcessus(
     miens: List.unmodifiable(miens),
     defaut: defaut,
     defautSupprime:
-        prefere != null && defaut == null && list != null && !list.fromCache,
+        prefere != null && !prefereValide && list != null && !list.fromCache,
   );
 }
 
@@ -238,7 +261,7 @@ class ChampProcessus extends StatelessWidget {
     required this.onChanged,
     required this.onRetry,
     required this.onGerer,
-    required this.onCreer,
+    this.onCreer,
     this.errorText,
     this.actuel,
     this.surLaFiche = false,
@@ -264,8 +287,11 @@ class ChampProcessus extends StatelessWidget {
   /// Ferme le formulaire et ouvre « Mes processus ».
   final VoidCallback onGerer;
 
-  /// Ferme le formulaire et ouvre « Nouveau processus ».
-  final VoidCallback onCreer;
+  /// « Créer un processus » à côté de « Aucun processus. » : ferme le
+  /// formulaire et ouvre « Mes processus », et remplace alors « Gérer mes
+  /// processus ». Nul : aucun bouton (« Nouveau brassin » le place sous la
+  /// chronologie seule).
+  final VoidCallback? onCreer;
   final String? errorText;
 
   @override
@@ -327,10 +353,11 @@ class ChampProcessus extends StatelessWidget {
             child: Row(
               children: [
                 const Expanded(child: Text(TextesChoixProcessus.aucun)),
-                TextButton(
-                  onPressed: onCreer,
-                  child: const Text('Créer un processus'),
-                ),
+                if (onCreer case final creer?)
+                  TextButton(
+                    onPressed: creer,
+                    child: const Text(TextesChoixProcessus.creer),
+                  ),
               ],
             ),
           ),
@@ -350,17 +377,138 @@ class ChampProcessus extends StatelessWidget {
             padding: EdgeInsets.only(top: 8),
             child: Text(TextesChoixProcessus.defautSupprime),
           ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: onGerer,
-            child: const Text('Gérer mes processus'),
+        // Sans processus, « Créer un processus » ouvre déjà « Mes processus » (#61).
+        if (choix.etat != EtatChoixProcessus.aucun || onCreer == null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: onGerer,
+              child: const Text('Gérer mes processus'),
+            ),
           ),
-        ),
       ],
     );
   }
 }
+
+/// Bouton à contour de 48 px de haut : pleine largeur sur un téléphone, aligné
+/// à gauche au-delà (ticket #61).
+class BoutonProcessus extends StatelessWidget {
+  const BoutonProcessus({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < kCompactMaxWidth;
+    final bouton = OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+    );
+    return compact
+        ? SizedBox(width: double.infinity, child: bouton)
+        : Align(alignment: Alignment.centerLeft, child: bouton);
+  }
+}
+
+/// Sous « Chronologie de la recette seule » dans « Nouveau brassin » : ce que
+/// la recette donne sans processus, puis « Choisir un processus » (au moins un
+/// modèle du lecteur) ou « Créer un processus » (aucun, lu du serveur). Aucun
+/// bouton pendant la lecture, en panne ou hors ligne : le champ « Processus »
+/// affiche déjà cet état.
+class AideChronologieSeule extends StatelessWidget {
+  const AideChronologieSeule({
+    super.key,
+    required this.choix,
+    required this.recetteSansEtape,
+    required this.onChoisir,
+    required this.onCreer,
+    this.suiteRecette,
+  });
+
+  final ChoixProcessus choix;
+  final bool recetteSansEtape;
+
+  /// Sous le texte de recette vide : ce que le lecteur peut faire de la
+  /// recette elle-même (« Écrire la chronologie », ou « Seul l'auteur… »).
+  final Widget? suiteRecette;
+  final VoidCallback onChoisir;
+  final VoidCallback onCreer;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final bouton = switch (choix.etat) {
+      EtatChoixProcessus.pret => BoutonProcessus(
+        label: TextesChoixProcessus.choisir,
+        icon: Icons.list_alt,
+        onPressed: onChoisir,
+      ),
+      EtatChoixProcessus.aucun => BoutonProcessus(
+        label: TextesChoixProcessus.creer,
+        icon: Icons.add,
+        onPressed: onCreer,
+      ),
+      _ => null,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (recetteSansEtape)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              TextesChoixProcessus.recetteSansChronologie,
+              style: muted,
+            ),
+          ),
+        if (recetteSansEtape) ?suiteRecette,
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(TextesChoixProcessus.ajouteVosEtapes, style: muted),
+        ),
+        if (bouton != null)
+          Padding(padding: const EdgeInsets.only(top: 8), child: bouton),
+      ],
+    );
+  }
+}
+
+/// Feuille « Choisir un processus » de « Nouveau brassin » : les modèles du
+/// lecteur, par nom. Rend l'identifiant choisi, ou `null` sans choix.
+Future<String?> choisirProcessus(
+  BuildContext context,
+  List<ModeleProcessus> miens,
+) =>
+    // ticket: /recettes/:id/fenetre/choix-processus, /recettes/importer/:id/fenetre/choix-processus
+    showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text(TextesChoixProcessus.choisir),
+        children: [
+          for (final m in miens)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(m.id),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(m.content.name),
+              ),
+            ),
+        ],
+      ),
+    );
 
 /// Bloc « Déroulé prévu » : les journées du processus choisi et leurs dates
 /// depuis [depart], puis les annonces ; [chronologieSeule] sans processus.
