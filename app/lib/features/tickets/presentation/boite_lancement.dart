@@ -10,6 +10,7 @@ import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_launch.dart';
+import 'lien_usage_claude.dart';
 import 'tickets_providers.dart';
 
 /// Appel de lancement en cours sur une fiche, hors de l'état du widget : un
@@ -154,6 +155,9 @@ class _BoiteLancementState extends State<BoiteLancement> {
   bool _envoi = false;
   String? _erreur;
 
+  /// Échec d'ouverture du lien d'usage Claude, affiché sous le lien.
+  String? _erreurLien;
+
   /// Refus `delivery_sensitive_files` ou `delivery_files_unreadable`
   /// ([kRefusFusionALaMain]) : « Livrer » reste inactif tant que la boîte est
   /// ouverte.
@@ -237,6 +241,23 @@ class _BoiteLancementState extends State<BoiteLancement> {
             ],
             const SizedBox(height: 12),
             Text(ligneQuota(widget.quota)),
+            const SizedBox(height: 4),
+            // Usage de l'abonnement Claude : lien seul, aucun chiffre.
+            LienUsageClaude(
+              onEchec: (message) {
+                if (mounted) setState(() => _erreurLien = message);
+              },
+            ),
+            if (_erreurLien case final erreurLien?)
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  erreurLien,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.error,
+                  ),
+                ),
+              ),
             if (avertissement != null) ...[
               const SizedBox(height: 12),
               Encadre(
@@ -384,6 +405,9 @@ class _BoiteEnvoiAnalyseState extends ConsumerState<BoiteEnvoiAnalyse> {
 
   /// Le texte de la fin est un refus du lancement : affiché en ton d'erreur.
   bool _texteRefus = false;
+
+  /// Échec d'ouverture du lien d'usage Claude, affiché sous le lien.
+  String? _erreurLien;
   ProviderSubscription<AsyncValue<ListeLue<Ticket>>>? _suivi;
   Timer? _delai;
   Future<ResultatLancement>? _enVol;
@@ -542,6 +566,23 @@ class _BoiteEnvoiAnalyseState extends ConsumerState<BoiteEnvoiAnalyse> {
             const Text(BoiteEnvoiAnalyse.effet),
             const SizedBox(height: 12),
             Text(ligneQuota(quota)),
+            const SizedBox(height: 4),
+            // Usage de l'abonnement Claude : lien seul, aucun chiffre (#96).
+            LienUsageClaude(
+              onEchec: (message) {
+                if (mounted) setState(() => _erreurLien = message);
+              },
+            ),
+            if (_erreurLien case final erreurLien?)
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  erreurLien,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.error,
+                  ),
+                ),
+              ),
             if (plafond && _phase == _PhaseEnvoi.confirmation) ...[
               const SizedBox(height: 12),
               const Text(BoiteEnvoiAnalyse.plafond),

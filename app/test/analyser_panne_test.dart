@@ -14,6 +14,7 @@ import 'package:kass_beer/features/tickets/domain/ticket.dart';
 import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
 import 'package:kass_beer/features/tickets/presentation/admin_ticket_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/boite_lancement.dart';
+import 'package:kass_beer/features/tickets/presentation/lien_usage_claude.dart';
 import 'package:kass_beer/features/tickets/presentation/ticket_form_screen.dart';
 
 import 'support/fakes.dart';
@@ -395,6 +396,56 @@ void main() {
       await tester.tap(find.text(TextesAnalyser.creerSecond));
       await tester.pumpAndSettle();
       expect(find.byType(TicketFormScreen), findsOneWidget);
+    });
+
+    testWidgets('boîte d\'envoi : lien d\'usage Claude, rien écrit ni '
+        'lancé', (tester) async {
+      final app = await _ouvrirRapports(tester);
+      await _analyser(tester);
+      await _envoyer(tester);
+      final lien = find.descendant(
+        of: find.byType(BoiteEnvoiAnalyse),
+        matching: find.text(LienUsageClaude.libelle),
+      );
+      expect(lien, findsOneWidget);
+      // Sous « Lancements restants », avant le coût.
+      expect(
+        tester.getTopLeft(lien).dy,
+        greaterThan(
+          tester.getTopLeft(find.text('Lancements restants : inconnu.')).dy,
+        ),
+      );
+      expect(
+        tester.getTopLeft(lien).dy,
+        lessThan(tester.getTopLeft(find.text(BoiteLancement.cout)).dy),
+      );
+      await tester.tap(lien);
+      await tester.pumpAndSettle();
+      expect(
+        app.openedLinks.single,
+        Uri.parse('https://claude.ai/settings/usage'),
+      );
+      expect(app.tickets.created, isEmpty);
+      expect(app.tickets.launches, isEmpty);
+      expect(find.byType(BoiteEnvoiAnalyse), findsOneWidget);
+
+      // Ouverture refusée : message dans la boîte, effacé par un succès.
+      app.openLinkResult = false;
+      await tester.tap(lien);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(BoiteEnvoiAnalyse),
+          matching: find.text(LienUsageClaude.echec),
+        ),
+        findsOneWidget,
+      );
+      expect(app.errors.reports.single.feature, 'tickets.open_claude_usage');
+      app.openLinkResult = true;
+      await tester.tap(lien);
+      await tester.pumpAndSettle();
+      expect(find.text(LienUsageClaude.echec), findsNothing);
+      expect(app.tickets.created, isEmpty);
     });
 
     testWidgets('case cochée : boîte, rien d\'écrit avant « Envoyer et '

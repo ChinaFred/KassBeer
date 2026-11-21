@@ -906,6 +906,19 @@ La ligne choisie prend le fond secondaire du thème, texte et icône accordés, 
 tickets. En dessous, la liste occupe l'écran et la fiche s'ouvre seule par-dessus (titre
 « Ticket d'un membre », retour vers la liste).
 
+**Usage Claude** (ticket #96). Aucune API d'Anthropic ne rend la part restante des limites de
+l'abonnement Claude (fenêtre de 5 h, semaine). Le lien « Usage Claude (5 h et semaine) : voir
+sur claude.ai », icône d'ouverture externe, cible de 48 dp, info-bulle « Ouvre la page d'usage
+de claude.ai dans le navigateur », ouvre `https://claude.ai/settings/usage` dans le navigateur
+externe, sur Android et sur le web. L'adresse est relue par `Uri.tryParse` et ne s'ouvre qu'en
+`https` sur l'hôte `claude.ai`. Un échec d'ouverture affiche « Impossible d'ouvrir claude.ai. »
+et passe par `reportError` (`tickets.open_claude_usage`), sans adresse. Le lien ne lance rien
+et ne compte aucun lancement ; il reste affiché hors ligne. Aucun chiffre d'usage n'est
+affiché. Il figure dans la boîte de lancement des quatre actions et sous les messages du
+bandeau d'Admin › Tickets, affiché même sans message, au-dessus de la liste (et de la fiche
+dans la disposition large). La fiche seule sur écran étroit ne le répète pas dans son bandeau :
+la boîte de lancement le montre, et la hauteur reste à la barre de décision.
+
 **Compteur des lancements.** Au-dessus des filtres, en texte secondaire : « Lancements de
 sessions : 2 sur 10 le 13/11 · 3 en novembre 2026 ». Le jour, le mois et le plafond sont ceux écrits
 par le serveur : l'application ne recalcule pas le jour de Paris et n'a aucun plafond en dur.
@@ -1193,8 +1206,9 @@ appui à côté ne ferme pas ; rien n'est appelé avant « Lancer ». Contenu : 
 Code va lire l'Issue #12 et publier son analyse sur GitHub. » (développement : « … va écrire
 le code de l'Issue #12 et ouvrir une pull request. Elle ne fusionne rien. ») ; la ligne du
 quota, « Lancements restants le 13/11 : 7 sur 10. », « Plafond atteint le 13/11 : … » (« Lancer »
-inactif) ou « Lancements restants : inconnu. » quand l'état des lancements manque ; pour une
-relance, l'avertissement de la relance ; l'encadré « Facturé sur l'abonnement Claude de
+inactif) ou « Lancements restants : inconnu. » quand l'état des lancements manque ; dessous, le
+lien « Usage Claude (5 h et semaine) : voir sur claude.ai » (voir « Usage Claude » ci-dessous) ;
+pour une relance, l'avertissement de la relance ; l'encadré « Facturé sur l'abonnement Claude de
 l'administrateur. Ce coût n'apparaît pas dans le suivi des coûts de l'application. ». Boutons
 « Annuler » (focus initial) et « Lancer » (« Relancer » pour une relance).
 
@@ -2008,13 +2022,18 @@ l'administrateur ; personne ne les modifie dans l'application.
 **Accès.** Destination « Bibliothèque » de la navigation, après Recettes. L'adresse
 `/bibliotheque` mène aux styles (`/bibliotheque/styles`). Six segments en puces :
 « Styles », « Malts et sucres », « Houblons », « Levures », « Divers », « Recettes
-publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). À droite des puces,
-« Échelle des couleurs » ouvre la page du même nom : une icône de palette sous 600 px
-(infobulle « Échelle des couleurs »), le texte avec l'icône au-delà. À toutes les largeurs,
-une icône d'information à droite des puces (infobulle « Sources des données ») ouvre
-« Sources des données ». Sous 600 px, les puces tiennent sur une ligne qui défile à
-l'horizontale et s'effacent en fondu au bord droit : une puce coupée annonce la suite. À
-partir de 600 px, les puces passent à la ligne.
+publiques ». Chaque segment a son adresse (`/bibliotheque/houblons`…). Chaque puce porte
+une icône et le nom du segment : Styles (style), Malts (grain), Houblons (feuille), Levures
+(bulles), Divers (catégories), Recettes (livre ouvert). Sur la puce du segment ouvert, une
+coche remplace l'icône, et le fond change. Les puces passent à la ligne à toutes les
+largeurs : aucune n'est cachée hors de l'écran, à 320 px comme avec un texte agrandi à 200 %.
+
+Sous 600 px, ou avec un texte agrandi à 130 % ou plus, les puces affichent un nom court
+(« Malts », « Recettes ») ; le lecteur d'écran lit le nom complet. Une ligne au-dessus des
+puces porte, à droite, deux icônes : une palette (infobulle « Échelle des couleurs ») qui
+ouvre la page du même nom, et une icône d'information (infobulle « Sources des données ») qui
+ouvre « Sources des données ». Sinon, les puces affichent le nom complet ; à leur droite,
+« Échelle des couleurs » en texte avec son icône, puis l'icône « Sources des données ».
 
 **Styles et ingrédients.** La liste du segment est lue à la première ouverture, puis gardée
 pour la session. Ordre alphabétique, avec le nombre d'entrées (« 812 entrées », « 3 sur
