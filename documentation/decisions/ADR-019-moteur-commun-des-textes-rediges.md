@@ -1,11 +1,26 @@
 # ADR-019 — Moteur commun des textes rédigés : houblons, levures et divers sur `ingest/lib/redaction/`
 
-- **Statut** : proposé
+- **Statut** : accepté (2026-11-21)
 - **Date** : 2026-11-21
 - **Remplace** : — (amende ADR-013, section « Où vit le code » ; amende ADR-017, section 1
   « Où vit le code » et section 6 pour l'emplacement du tarif ; amende ADR-018, section 1, pour
   les listes du groupe ; ADR-018 est l'ADR des divers, numéroté ADR-017 sur la branche
   `claude/focused-brahmagupta-h8gzfh` et renuméroté par ce changement)
+
+Décisions de l'utilisateur du 2026-11-21, après l'avis :
+
+1. Option B : le moteur `ingest/lib/redaction/` est gardé, les levures y sont portées.
+2. Calendrier : R1 (renumérotation) tout de suite ; R2 (portage des levures) après le dernier
+   `--suivre` de la campagne des levures.
+3. Lot des divers : en novembre si la Console montre au moins 12 $ de reste après les levures,
+   sinon en décembre.
+4. « relu le <date> » et « non relu » retirés pour les trois natures (houblons, levures,
+   divers), dans le widget commun ; la mention « Texte rédigé par une IA (Claude) » reste.
+5. Listes du groupe : scripts `--nature` de `main` (`lister-ingredients-recettes.mjs`,
+   `lister_ingredients_recettes.dart`), étendus à `--nature misc` ; les cinq scripts par nature
+   de la branche sortent.
+6. Levures : la commande `generer-aromes.mjs --nature culture` reste.
+7. Contrôle P64 et leçon apprise sur la collision des numéros : ajoutés.
 
 ## Contexte
 
