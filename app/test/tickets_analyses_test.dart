@@ -630,7 +630,7 @@ void main() {
                 .map((e) => (e.widget as Text).data)
                 .single,
         ],
-        ['Refuser', 'Répondre', 'Clore', 'Valider'],
+        ['Refuser', 'Répondre', 'Clore', 'Valider', kValiderEtLancer],
       );
       // Le client ne déduit rien du statut (P26).
       app.tickets.publishAll([analyse0(canAnswer: false)]);
