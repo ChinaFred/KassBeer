@@ -362,6 +362,27 @@ void main() {
       expect(paysDeGraphie(''), isNull);
     });
 
+    test(
+      'noms français : une entrée par pays de la liste, et rien d\'autre',
+      () {
+        expect(kPaysFr.keys.toSet(), kPays);
+        expect(kPaysFr['United States'], 'États-Unis');
+        expect(kPaysFr['Great Britain'], 'Royaume-Uni');
+        expect(kPaysFr['Czech Republic'], 'République tchèque');
+        for (final fr in kPaysFr.values) {
+          expect(fr.trim(), fr);
+          expect(fr, isNotEmpty);
+        }
+        expect(kPaysFr.values.toSet(), hasLength(kPaysFr.length));
+      },
+    );
+
+    test('pays sans nom français : StateError, aucun nom deviné', () {
+      expect(paysEnFrancais('Germany'), 'Allemagne');
+      expect(() => paysEnFrancais('Pays fictif'), throwsStateError);
+      expect(() => paysEnFrancais('germany'), throwsStateError);
+    });
+
     test('table : clés normalisées, chaque cible dans la liste', () {
       for (final MapEntry(:key, :value) in kGraphiesOrigine.entries) {
         expect(key, cleOrigine(key));
@@ -385,6 +406,8 @@ void main() {
           d['id']! as String: d['data']! as Map<String, Object?>,
       };
       expect(malts['fermentable-malt-fictif-us']!['origin'], 'United States');
+      expect(malts['fermentable-malt-fictif-us']!['origin_fr'], 'États-Unis');
+      expect(malts['fermentable-malt-fictif-uk']!['origin_fr'], 'Royaume-Uni');
       expect(malts['fermentable-malt-fictif-uk']!['origin'], 'Great Britain');
       expect(malts['fermentable-malt-fictif-nz']!['origin'], 'New Zealand');
       for (final id in [
@@ -393,6 +416,7 @@ void main() {
         'fermentable-malt-fictif-inconnu',
       ]) {
         expect(malts[id]!.containsKey('origin'), isFalse, reason: id);
+        expect(malts[id]!.containsKey('origin_fr'), isFalse, reason: id);
       }
       expect(p.rapport['origines_inconnues'], [
         {
@@ -423,6 +447,35 @@ void main() {
         'United States',
       });
       expect(kPays.containsAll(origines), isTrue);
+    });
+
+    test('origine en français : document et index, origine imposée par la '
+        'ligne de fusion comprise ; origin inchangée', () {
+      for (final d in h.values) {
+        final origine = d['origin'] as String?;
+        expect(
+          d['origin_fr'],
+          origine == null ? isNull : kPaysFr[origine],
+          reason: '${d['name']}',
+        );
+      }
+      // Taurus : la ligne impose « Germany » (le 003 écrit « United Kingdom
+      // (UK) »).
+      expect(h['hop-hallertauer-taurus']!['origin'], 'Germany');
+      expect(h['hop-hallertauer-taurus']!['origin_fr'], 'Allemagne');
+      expect(h['hop-saaz']!['origin_fr'], 'République tchèque');
+      final index = {
+        for (final e
+            in (p.collections['beer_index']!.firstWhere(
+                      (d) => d['id'] == 'hops',
+                    )['data']!
+                    as Map)['entries']!
+                as List)
+          (e as Map)['id']: e,
+      };
+      expect(index['hop-saaz-us']!['origin'], 'United States');
+      expect(index['hop-saaz-us']!['origin_fr'], 'États-Unis');
+      expect(index['hop-hallertauer-taurus']!['origin_fr'], 'Allemagne');
     });
 
     test('documents restants : une variété et un pays par document', () {
@@ -538,7 +591,7 @@ void main() {
       },
     );
 
-    test('East Kent Goldings : quatre noms, Grande-Bretagne', () {
+    test('East Kent Goldings : quatre noms, Royaume-Uni', () {
       final ekg = h['hop-east-kent-goldings']!;
       expect(ekg['name'], 'East Kent Goldings');
       expect(ekg['origin'], 'Great Britain');
@@ -566,6 +619,9 @@ void main() {
         'Hallertau Mittelfrüh',
         'Hallertauer Mittelfrueh',
       ]);
+      expect(h['hop-hallertauer-hersbrucker']!['aliases'], [
+        'Hallertau Hersbrucker',
+      ]);
       expect(h['hop-hallertau-nz']!['aliases'], isEmpty);
       expect(h['hop-hallertau-us']!['aliases'], isEmpty);
     });
@@ -591,6 +647,8 @@ void main() {
         'Saaz (USA)': 'hop-saaz-us',
         'Hallertau': 'hop-hallertauer-mittelfruh',
         'Hallertau Mittelfrüh': 'hop-hallertauer-mittelfruh',
+        'Hallertau Hersbrucker': 'hop-hallertauer-hersbrucker',
+        'Hallertauer Hersbrucker': 'hop-hallertauer-hersbrucker',
         'Tettnanger': 'hop-tettnang',
         'CTZ': 'hop-columbus',
         'Zeus': 'hop-columbus',
@@ -611,6 +669,21 @@ void main() {
       };
       expect(groupes['saaz'], ['hop-saaz', 'hop-saaz-us']);
       expect(groupes['hallertau'], ['hop-hallertau-nz', 'hop-hallertau-us']);
+    });
+
+    test('ligne sans entrée dont le document n\'est pas lu : StateError', () {
+      final lecture = LectureReferentiels()
+        ..lire003ou004(_texte003(_h003), Source.brewtarget003)
+        ..lire005(_texte005(_h005, _m005));
+      expect(
+        () => Referentiel.fusionner(
+          lecture.entrees,
+          fusions: const [
+            Fusion('Houblon Absent', entrees: [], alias: ['Autre Nom']),
+          ],
+        ),
+        throwsStateError,
+      );
     });
 
     test('table de fusion au rapport : document et entrées', () {

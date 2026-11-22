@@ -46,6 +46,7 @@ final hopsIndex = indexDoc([
     'alpha': 6.5,
     'purpose': 'aroma',
     'origin': 'United States',
+    'origin_fr': 'États-Unis',
     'champ_futur': 'ignoré',
   },
   {
@@ -110,7 +111,8 @@ Map<String, dynamic> hopDoc() => {
   'form': 'pellet',
   'alpha_acid': mesure(6.5, '%'),
   'beta_acid': mesure(5.5, '%'),
-  'origin': 'US',
+  'origin': 'United States',
+  'origin_fr': 'États-Unis',
   'purpose': 'aroma',
   'provenance': [provenance(source: 'brewtarget-005', licence: 'CC BY-SA 4.0')],
   'content_sha256': '01' * 32,

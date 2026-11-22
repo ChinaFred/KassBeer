@@ -266,6 +266,7 @@ sealed class EntreeIndex {
         alphaPct: read.nombreFacultatif('alpha'),
         purpose: read.texteFacultatif('purpose'),
         origin: read.texteFacultatif('origin'),
+        originFr: read.texteFacultatif('origin_fr'),
       ),
       NatureReferentiel.cultures => EntreeLevure(
         id: id,
@@ -368,6 +369,7 @@ class EntreeHoublon extends EntreeIndex {
     this.alphaPct,
     this.purpose,
     this.origin,
+    this.originFr,
   });
 
   final String? form;
@@ -379,6 +381,10 @@ class EntreeHoublon extends EntreeIndex {
 
   /// Pays d'origine, tel qu'écrit par l'ingestion (« United States »).
   final String? origin;
+
+  /// Nom français du pays d'origine, écrit par l'ingestion (« États-Unis »),
+  /// absent d'un index écrit avant lui.
+  final String? originFr;
 }
 
 class EntreeLevure extends EntreeIndex {
@@ -543,6 +549,7 @@ sealed class FicheReferentiel {
         colorEbc: read.mesure('color', UniteBeerJson.ebc),
         producer: read.texteFacultatif('producer'),
         origin: read.texteFacultatif('origin'),
+        originFr: read.texteFacultatif('origin_fr'),
       ),
       NatureReferentiel.hops => FicheHoublon(
         id: id,
@@ -554,6 +561,7 @@ sealed class FicheReferentiel {
         alphaPct: read.mesure('alpha_acid', UniteBeerJson.pourcent),
         betaPct: read.mesure('beta_acid', UniteBeerJson.pourcent),
         origin: read.texteFacultatif('origin'),
+        originFr: read.texteFacultatif('origin_fr'),
         purpose: read.texteFacultatif('purpose'),
       ),
       NatureReferentiel.cultures => FicheLevure(
@@ -629,6 +637,7 @@ class FicheFermentable extends FicheReferentiel {
     this.colorEbc,
     this.producer,
     this.origin,
+    this.originFr,
   });
 
   final String? labelFr;
@@ -637,6 +646,10 @@ class FicheFermentable extends FicheReferentiel {
   final double? colorEbc;
   final String? producer;
   final String? origin;
+
+  /// Nom français du pays d'origine (`origin_fr`), absent d'un document écrit
+  /// avant lui.
+  final String? originFr;
 }
 
 class FicheHoublon extends FicheReferentiel {
@@ -650,6 +663,7 @@ class FicheHoublon extends FicheReferentiel {
     this.alphaPct,
     this.betaPct,
     this.origin,
+    this.originFr,
     this.purpose,
   });
 
@@ -658,6 +672,10 @@ class FicheHoublon extends FicheReferentiel {
   final double? alphaPct;
   final double? betaPct;
   final String? origin;
+
+  /// Nom français du pays d'origine (`origin_fr`), absent d'un document écrit
+  /// avant lui.
+  final String? originFr;
 
   /// `type` BeerJSON du houblon : `aroma`, `bittering`, `dual-purpose`…
   final String? purpose;

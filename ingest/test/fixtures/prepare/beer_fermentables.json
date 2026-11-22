@@ -19,6 +19,7 @@
         "unit": "EBC"
       },
       "origin": "Pays fictif",
+      "origin_fr": "Pays fictif en français",
       "provenance": [
         {
           "source": "brewtarget-005",

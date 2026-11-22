@@ -302,7 +302,10 @@ class _Fiche extends StatelessWidget {
         value: f.yieldPct == null ? null : formatPourcent(f.yieldPct!),
       ),
       LigneFiche(label: 'Producteur', value: f.producer),
-      LigneFiche(label: 'Origine', value: f.origin),
+      LigneFiche(
+        label: 'Origine',
+        value: origineAffichee(f.originFr, f.origin),
+      ),
     ],
     FicheHoublon() => [
       const TitreSection('Valeurs'),
@@ -324,7 +327,10 @@ class _Fiche extends StatelessWidget {
         label: 'Usage',
         value: f.purpose == null ? null : libelleUsageHoublon(f.purpose!),
       ),
-      LigneFiche(label: 'Origine', value: f.origin),
+      LigneFiche(
+        label: 'Origine',
+        value: origineAffichee(f.originFr, f.origin),
+      ),
     ],
     FicheLevure() => [
       const TitreSection('Valeurs'),
