@@ -82,16 +82,30 @@ const DOSE_LETTRES = new RegExp(
 /// oblique (« / », « ⁄ », « ∕ », « ⧸ »), « × », « + » ou un chiffre (« 2x », « ½ ») juste après comptent ; sinon toute
 /// ponctuation et tout symbole sont sautés avant le mot de liaison (« (ou deux) », « — voire
 /// deux », « : par brassin »), puis « et » suivi d'un nombre (« et demi », « et quart », « et un »,
-/// « et deux », « et 1/2 »), « ou », « voire », « à », « par », « pour », « fois », « x » suivi d'un
-/// nombre (« x2 », « x deux ») et un nombre suivi de « fois » (« deux fois », « 3 fois ») comptent.
+/// « et deux », « et 1/2 »), « ou », « voire », « à » ou « pour » suivis d'un nombre (NOMBRE_APRES),
+/// « par », « fois », « x » suivi d'un nombre (« x2 », « x deux ») et un nombre suivi de « fois »
+/// (« deux fois », « 3 fois ») comptent.
 const SACHET_CONTENANT = /^une?\s+sachet$/iu;
+/// Nombre après « ou », « voire », « à » ou « pour » : un chiffre, ou un nombre en lettres
+/// autre que « un » ou « une » seuls (« ou deux », « ou un demi », mais pas « ou un tube » ni
+/// « ou ajouter une teinture » ; décision de l'utilisateur du 2026-11-22, après le lot de 110
+/// divers).
+/// Complétée après la relecture de securite (décision de l'utilisateur du 2026-11-22) : un mot
+/// intercalé avant le nombre (« ou bien deux », « pour environ deux », « à raison de deux »),
+/// « un » ou « une » répétés (« ou un ou deux »), un ordinal (« ou 2e », « ou un second ») et un
+/// nombre collectif (« ou une douzaine », « pour une vingtaine »).
+const NOMBRE_APRES =
+  `(?:(?:bien|encore|m[êe]me|alors|environ|peut-[êe]tre|jusqu['’][àa]|raison\\s+de)\\s+)?` +
+  `(?:une?\\s+ou\\s+)?(?:\\d+(?:e|er|[èe]me)?|(?:une?\\s+)?(?:seconde?|deuxi[èe]me|troisi[èe]me|` +
+  `(?:douz|diz|quinz|vingt|trent|cent)aines?|paires?)|` +
+  `(?:une?\\s+)?(?!une?(?![\\p{L}]))${NOMBRE_LETTRES})`;
 /// Fin de phrase : « . », « ! » ou « ? » suivi d'une espace et d'une majuscule. La phrase
 /// suivante n'est pas lue (« Dans un sachet. À la fin, retirer. » accepté ; décision de
 /// l'utilisateur du 2026-11-22).
 const FIN_PHRASE = /[.!?]\s+(?=\p{Lu})/u;
 const SUITE_SYMBOLE = /^\s*[/⁄∕⧸×+\d]/u;
 const SUITE_QUANTITE = new RegExp(
-  `^[\\s\\p{P}\\p{S}]*(?:et\\s+(?:demie?|quarts?|\\d|${NOMBRE_LETTRES})|ou|voire|à|par|pour|fois|x\\s*\\d|` +
+  `^[\\s\\p{P}\\p{S}]*(?:et\\s+(?:demie?|quarts?|\\d|${NOMBRE_LETTRES})|(?:ou|voire|à|pour)\\s+${NOMBRE_APRES}|par|fois|x\\s*\\d|` +
     `x\\s+${NOMBRE_LETTRES}|\\d+\\s*fois|${NOMBRE_LETTRES}\\s+fois)(?![\\p{L}])`,
   "iu",
 );

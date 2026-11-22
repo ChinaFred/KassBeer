@@ -6,6 +6,17 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.1 — technique
+
+Contrôle des descriptions des divers (ADR-018) : après « un sachet », les mots « ou », « voire »,
+« à » et « pour » ne comptent plus comme une dose que suivis d'un nombre (`contientDose`,
+`ingest/lib/divers/validation.mjs`). Le lot de 110 divers avait refusé deux textes justes, le
+clou de girofle (« dans un sachet ou ajouter une teinture ») et le carvi (« dans un sachet à
+infusion »). « un sachet ou deux », « pour vingt litres » et « par brassin » restent refusés,
+comme « ou bien deux », « à raison de deux », « ou un ou deux » et « ou une douzaine », ajoutés
+après la relecture de sécurité. « pour un brassin » passe, pour ne pas refuser « pour le fût »
+ou « à chaque étape ». Tests ajoutés, ingest 349. Décisions de l'utilisateur.
+
 ### v0.2.0 — technique
 
 Bibliothèque : neuf noms français de divers deviennent des alias (`exchange/lib/src/ingestion/alias.dart`,

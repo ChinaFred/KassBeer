@@ -149,6 +149,19 @@ Note du 2026-11-21 (décision de l'utilisateur, après relecture du lot D2) :
   `comprimé(s)`, `tablette(s)`, `capsule(s)`, `dosette(s)`, `tsp`, `tbsp`, `ppb`. La règle 8
   du prompt nomme les mots et abréviations (`cuil.`, `c. à café`, `c. à soupe`, `c.à.c`,
   `c.à.s`, goutte, comprimé…) ; les pluriels des symboles restent au seul contrôle, sans changer `PROMPT_VERSION` : aucune génération n'a eu lieu.
+- **Mots de liaison** (décision de l'utilisateur du 2026-11-22, après le lot de 110 divers) :
+  le lot a refusé deux textes justes, « dans un sachet ou ajouter une teinture » (clou de
+  girofle) et « dans un sachet à infusion » (carvi). « ou », « voire », « à » et « pour » ne
+  comptent plus que suivis d'un nombre, en chiffres ou en lettres hors « un » ou « une » seuls
+  (« un sachet ou deux », « ou un demi », « pour vingt litres »). « par » compte toujours
+  (« un sachet par brassin »). « un sachet ou plus » passe, et reste à la relecture humaine.
+  Après la relecture de `securite`, l'utilisateur a complété la règle le même jour : un mot
+  intercalé (« ou bien deux », « pour environ deux », « à raison de deux »), « ou un ou deux »,
+  un ordinal (« ou un second », « ou 2e ») et un nombre collectif (« ou une douzaine »), dans les
+  listes fermées de P63, comptent. Une règle des lots (« à chaque brassin », « pour la cuve ») a
+  été essayée puis retirée : elle refusait « pour le fût » ou « à chaque étape ». L'utilisateur a
+  demandé la règle la plus ouverte : « pour un brassin », « ou un quatrième » ou « ou une
+  quarantaine » passent, et restent à la relecture humaine.
 - **Noms français** (décision de l'utilisateur du 2026-11-22) : la liste du groupe ne résolvait
   qu'un nom sur 11, les recettes nommant leurs divers en français. La table d'alias
   (`exchange/lib/src/ingestion/alias.dart`) rattache neuf noms français à cinq divers
