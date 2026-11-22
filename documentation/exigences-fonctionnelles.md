@@ -1142,7 +1142,7 @@ des boutons, une seule ligne de lancement, dans cet ordre de priorité :
 | appel de la fiche en cours | barre de progression, « Lancement de l'analyse en cours. » ; le bouton est inactif |
 | lancement en cours | « Analyse en cours depuis 14:05 » (autre jour : « … depuis le 12/11/26 à 14:05 ») |
 | plafond atteint, ticket reçu ou validé | « Plafond atteint le 13/11 : 10 lancements sur 10. Le compteur repart à zéro peu après minuit. » ; le bouton est inactif |
-| développement arrêté par la session (marqué par le serveur, ADR-018) | « Le développement du jj/mm/aa à hh:mm s'est arrêté. Lisez l'arrêt dans la section Analyses, puis relancez si besoin. » (ton d'erreur) ; « Relancer le développement » est offert tout de suite, la validation reste valable, et la boîte de relance reprend cette ligne |
+| développement arrêté par la session (marqué par le serveur, ADR-018) | « Le développement du jj/mm/aa à hh:mm s'est arrêté. Lisez la raison dans la section Analyses. Répondez si l'arrêt pose une question, puis relancez. » (ton d'erreur, icône d'erreur comme une livraison bloquée) ; « Relancer le développement » est offert tout de suite, la validation reste valable, et la boîte de relance affiche « Le développement du jj/mm/aa à hh:mm s'est arrêté. Vérifiez dans la section Analyses que la raison de l'arrêt est levée. » |
 | relance | « Le lancement du jj/mm/aa à hh:mm n'a rien changé au ticket. Vérifiez sur claude.ai/code qu'aucune session ne tourne encore. » |
 | plafond atteint, ticket analysé ou validé sur GitHub seul | « Plafond atteint le 13/11 : 10 lancements sur 10. Vous pouvez valider. Le compteur repart à zéro peu après minuit. » |
 

@@ -23,9 +23,15 @@ entrées) ; `hasAnalysis` et la reconnaissance d'une précision déjà publiée 
 (webhook et passe horaire), marque `ended_by: "stopped"` la dernière entrée `developpement`
 lancée avant l'arrêt et ramène son `retry_after` à l'heure du relevé
 (`stoppedDevelopmentEntries`, `launchModel.ts`) ; aucun statut n'est tiré du commentaire.
+`endLatestEntry` (`launchModel.ts`) porte la règle commune à `stoppedDevelopmentEntries` et à
+`blockedDeliveryEntries` (`delivery.ts`), sans changement de comportement ; `launchRawEntries`
+et `launchEntryViews` passent de `launch.ts` à `launchModel.ts`, et `analyses.ts` et
+`delivery.ts` les lisent au lieu de leur copie (`rawEntries` et `entryViews` de `delivery.ts`
+retirés).
 Client : `TicketAnalysisKind.developmentStop`, carte « Arrêt du développement », titre retiré
-par `corpsAffiche` ; `TicketLaunch.arreteParLaSession` et `ligneDeveloppementArrete` dans la
-barre et la boîte de relance. Prompt de la routine de développement (`exigences-techniques.md`,
+par `corpsAffiche` ; `TicketLaunch.arreteParLaSession`, `ligneDeveloppementArrete` dans la
+barre (icône d'erreur, comme une livraison bloquée) et `avertissementRelanceApresArret` dans la
+boîte de relance. Prompt de la routine de développement (`exigences-techniques.md`,
 « Routines des tickets ») : arrêts des points 3, 4 et 6 sous « ## Développement — arrêt »,
 « ## Analyse » interdit au point 5, et le point 3 ignore les « ## Analyse — compléments ».
 Les arrêts déjà publiés sur #104, #110 et #114 cessent d'être des spécifications. À faire après

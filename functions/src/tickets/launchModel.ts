@@ -15,6 +15,7 @@ import {
   isValidatedByApp,
   type AllowedDecision,
 } from "./decisionModel";
+import type { FirestoreKit } from "../firestore";
 import type { TicketStatus } from "./model";
 
 // ── Actions et texte envoyé ─────────────────────────────────────────────────
@@ -218,29 +219,26 @@ export function closeRunningEntries(
   return changed ? out : null;
 }
 
-/** `ended_by` d'une entrée `developpement` close par un arrêt relevé (ADR-018, lot R1). */
-export const DEVELOPMENT_ENDED_BY_STOP = "stopped";
-
 /**
- * L'historique après un arrêt du développement relevé à `stoppedAtMs` (commentaire
- * `## Développement — arrêt` du compte 16348852) : la dernière entrée `developpement`
- * (`launched` ou `unknown`) lancée avant lui reçoit `ended_by: "stopped"`, et son
- * `retry_after` est ramené à `nowMs` s'il est encore futur. L'admin peut relancer tout de
- * suite (ADR-018, décision 5). Un arrêt antérieur à tout lancement ne change rien. Même
- * règle que `blockedDeliveryEntries` pour une livraison. Le client choisit son texte
- * (« s'est arrêté ») d'après ce champ, sans comparer de dates. `null` si rien ne change.
- * Pure.
+ * L'historique après une fin relevée à `endedAtMs` (arrêt du développement, blocage d'une
+ * livraison) : la dernière entrée `action` (`launched` ou `unknown`) lancée avant elle reçoit
+ * `ended_by: endedBy`, et son `retry_after` est ramené à `nowMs` s'il est encore futur. Une
+ * fin antérieure à tout lancement de cette action ne change rien. `null` si rien ne change.
+ * Règle commune de `stoppedDevelopmentEntries` et de `blockedDeliveryEntries`
+ * (`delivery.ts`). Pure.
  */
-export function stoppedDevelopmentEntries(
+export function endLatestEntry(
   entries: readonly Record<string, unknown>[],
   views: readonly LaunchEntryView[],
-  stoppedAtMs: number,
+  action: LaunchAction,
+  endedBy: string,
+  endedAtMs: number,
   nowMs: number,
   toTimestamp: (ms: number) => unknown,
 ): Record<string, unknown>[] | null {
   let target = -1;
   views.forEach((v, i) => {
-    if (v.action !== "developpement" || v.at_ms === null || v.at_ms >= stoppedAtMs) return;
+    if (v.action !== action || v.at_ms === null || v.at_ms >= endedAtMs) return;
     if (v.state !== "launched" && v.state !== "unknown") return;
     const best = target < 0 ? null : views[target].at_ms;
     if (best === null || v.at_ms > best) target = i;
@@ -249,14 +247,70 @@ export function stoppedDevelopmentEntries(
   const entry = entries[target];
   const v = views[target];
   const running = v.retry_after_ms !== null && v.retry_after_ms > nowMs;
-  if (!running && entry.ended_by === DEVELOPMENT_ENDED_BY_STOP) return null;
+  if (!running && entry.ended_by === endedBy) return null;
   const out = [...entries];
   out[target] = {
     ...entry,
-    ended_by: DEVELOPMENT_ENDED_BY_STOP,
+    ended_by: endedBy,
     ...(running ? { retry_after: toTimestamp(nowMs) } : {}),
   };
   return out;
+}
+
+/** `ended_by` d'une entrée `developpement` close par un arrêt relevé (ADR-018, lot R1). */
+export const DEVELOPMENT_ENDED_BY_STOP = "stopped";
+
+/**
+ * L'historique après un arrêt du développement relevé à `stoppedAtMs` (commentaire
+ * `## Développement — arrêt` du compte 16348852) : `endLatestEntry` sur les entrées
+ * `developpement`, avec `ended_by: "stopped"`. L'admin peut relancer tout de suite (ADR-018,
+ * décision 5). Le client choisit son texte (« s'est arrêté ») d'après ce champ, sans comparer
+ * de dates. `null` si rien ne change. Pure.
+ */
+export function stoppedDevelopmentEntries(
+  entries: readonly Record<string, unknown>[],
+  views: readonly LaunchEntryView[],
+  stoppedAtMs: number,
+  nowMs: number,
+  toTimestamp: (ms: number) => unknown,
+): Record<string, unknown>[] | null {
+  return endLatestEntry(
+    entries,
+    views,
+    "developpement",
+    DEVELOPMENT_ENDED_BY_STOP,
+    stoppedAtMs,
+    nowMs,
+    toTimestamp,
+  );
+}
+
+// ── Lecture de l'historique ─────────────────────────────────────────────────
+
+/** Les entrées brutes de l'historique `entries` (objets seuls). Pure. */
+export function launchRawEntries(
+  data: Record<string, unknown> | undefined,
+): Record<string, unknown>[] {
+  const list = data?.entries;
+  if (!Array.isArray(list)) return [];
+  return list.filter(
+    (e): e is Record<string, unknown> => e !== null && typeof e === "object" && !Array.isArray(e),
+  );
+}
+
+/** Les entrées lues sans supposer leur forme. Pure. */
+export function launchEntryViews(
+  kit: Pick<FirestoreKit, "Timestamp">,
+  entries: readonly Record<string, unknown>[],
+): LaunchEntryView[] {
+  const ms = (v: unknown) => (v instanceof kit.Timestamp ? v.toMillis() : null);
+  return entries.map((e) => ({
+    id: e.id,
+    action: e.action,
+    state: e.state,
+    at_ms: ms(e.at),
+    retry_after_ms: ms(e.retry_after),
+  }));
 }
 
 // ── Plafond (P36) ───────────────────────────────────────────────────────────

@@ -96,7 +96,9 @@ import {
   launchPoolOf,
   launchPrecondition,
   launchQuotaDocId,
+  launchEntryViews,
   launchQuotaMessage,
+  launchRawEntries,
   launchRetryAfterMs,
   launchRunningMessage,
   nextLaunchStatus,
@@ -104,7 +106,6 @@ import {
   refreshedLaunchStatus,
   runningLaunch,
   type LaunchAction,
-  type LaunchEntryView,
   type LaunchPool,
 } from "./launchModel";
 import { parisDay, statusFromIssue, type IssueView } from "./model";
@@ -289,30 +290,6 @@ function quotaRef(kit: FirestoreKit, day: string, pool: LaunchPool = "group") {
   return kit.db.collection(COLL_TICKET_QUOTAS).doc(launchQuotaDocId(day, pool));
 }
 
-/** Les entrées brutes de l'historique (objets seuls). */
-function rawEntries(data: Record<string, unknown> | undefined): Record<string, unknown>[] {
-  const list = data?.entries;
-  if (!Array.isArray(list)) return [];
-  return list.filter(
-    (e): e is Record<string, unknown> => e !== null && typeof e === "object" && !Array.isArray(e),
-  );
-}
-
-/** Les entrées lues sans supposer leur forme. */
-export function launchEntryViews(
-  kit: Pick<FirestoreKit, "Timestamp">,
-  entries: readonly Record<string, unknown>[],
-): LaunchEntryView[] {
-  const ms = (v: unknown) => (v instanceof kit.Timestamp ? v.toMillis() : null);
-  return entries.map((e) => ({
-    id: e.id,
-    action: e.action,
-    state: e.state,
-    at_ms: ms(e.at),
-    retry_after_ms: ms(e.retry_after),
-  }));
-}
-
 /** Code stable d'un refus « en cours » : `reprise_running` quand une reprise bloque. Pure. */
 export function runningRefusalCode(action: LaunchAction, blocking: LaunchAction): string {
   if (action === "livraison" && blocking === "reprise") return "reprise_running";
@@ -349,7 +326,7 @@ async function claimLaunch(ctx: Ctx): Promise<{ issueNumber: number; leaseUntilM
       throw refusal("failed-precondition", LAUNCH_LEASE_TAKEN, "decision_in_progress");
     }
     const running = runningLaunch(
-      launchEntryViews(ctx.kit, rawEntries(history.data())),
+      launchEntryViews(ctx.kit, launchRawEntries(history.data())),
       ctx.action,
       nowMs,
     );
@@ -460,7 +437,7 @@ async function recordLaunch(ctx: Ctx, entry: Record<string, unknown>): Promise<v
   const ref = launchesRef(ctx.kit, ctx.ticketId);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const list = [entry, ...rawEntries(snap.data())].slice(0, LAUNCH_HISTORY_MAX);
+    const list = [entry, ...launchRawEntries(snap.data())].slice(0, LAUNCH_HISTORY_MAX);
     tx.set(ref, { entries: list, updated_at: FieldValue.serverTimestamp() });
   });
 }
@@ -472,7 +449,7 @@ async function updateLaunch(ctx: Ctx, id: string, patch: Record<string, unknown>
   try {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
-      const list = rawEntries(snap.data()).map((e) => (e.id === id ? { ...e, ...patch } : e));
+      const list = launchRawEntries(snap.data()).map((e) => (e.id === id ? { ...e, ...patch } : e));
       tx.set(ref, { entries: list, updated_at: FieldValue.serverTimestamp() });
     });
   } catch (err) {
@@ -889,7 +866,7 @@ export async function closeRunningLaunches(
     await kit.db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists) return;
-      const entries = rawEntries(snap.data());
+      const entries = launchRawEntries(snap.data());
       const next = closeRunningEntries(entries, launchEntryViews(kit, entries), nowMs(), (ms) =>
         kit.Timestamp.fromMillis(ms),
       );

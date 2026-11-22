@@ -1228,7 +1228,7 @@ class _FicheState extends ConsumerState<_Fiche> {
       ),
       // Texte choisi d'après `ended_by`, écrit par le serveur (ADR-018).
       _ when relanceDe != null && (aRelancer?.arreteParLaSession ?? false) => (
-        icon: Icons.block,
+        icon: Icons.error_outline,
         progress: null,
         text: ligneDeveloppementArrete(relanceDe),
         precisionsVisibles: true,
@@ -1264,7 +1264,7 @@ class _FicheState extends ConsumerState<_Fiche> {
       final avertissement = switch (action) {
         ActionLancement.livraison when relanceDe != null => livraison?.texte,
         _ when relanceDe != null && (aRelancer?.arreteParLaSession ?? false) =>
-          ligneDeveloppementArrete(relanceDe),
+          avertissementRelanceApresArret(relanceDe),
         _ => null,
       };
       // Hors ligne, appel en cours ou plafond atteint le jour écrit par le

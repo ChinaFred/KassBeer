@@ -824,11 +824,14 @@ void main() {
       await tester.pumpAndSettle();
       final ligne = ligneDeveloppementArrete(t0);
       expect(ligne, contains('s\'est arrêté'));
+      expect(ligne, contains('Répondez si l\'arrêt pose une question'));
       expect(find.text(ligne), findsOneWidget);
       expect(find.text(BoiteLancement.avertissementRelance(t0)), findsNothing);
       await tester.tap(find.text('Relancer le développement'));
       await tester.pumpAndSettle();
-      expect(find.text(ligne), findsNWidgets(2));
+      // La boîte porte son propre avertissement, la ligne de la barre reste.
+      expect(find.text(ligne), findsOneWidget);
+      expect(find.text(avertissementRelanceApresArret(t0)), findsOneWidget);
       expect(find.text('Relancer'), findsOneWidget);
     });
 

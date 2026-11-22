@@ -28,7 +28,7 @@ import {
   readAnswerCommentIds,
 } from "./analysisModel";
 import type { GithubClient } from "./github";
-import { stoppedDevelopmentEntries, type LaunchEntryView } from "./launchModel";
+import { launchEntryViews, launchRawEntries, stoppedDevelopmentEntries } from "./launchModel";
 import type { CommentView } from "./model";
 
 export async function analysisRef(ticketId: string) {
@@ -140,21 +140,11 @@ export async function writeDevelopmentStops(
     .doc(ticketId)
     .collection(TICKET_ADMIN_SUBCOLLECTION)
     .doc(TICKET_LAUNCHES_DOC);
-  const ms = (v: unknown) => (v instanceof kit.Timestamp ? v.toMillis() : null);
   return kit.db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return false;
-    const list = snap.get("entries");
-    const entries = (Array.isArray(list) ? list : []).filter(
-      (e): e is Record<string, unknown> => e !== null && typeof e === "object" && !Array.isArray(e),
-    );
-    const views: LaunchEntryView[] = entries.map((e) => ({
-      id: e.id,
-      action: e.action,
-      state: e.state,
-      at_ms: ms(e.at),
-      retry_after_ms: ms(e.retry_after),
-    }));
+    const entries = launchRawEntries(snap.data());
+    const views = launchEntryViews(kit, entries);
     const next = stoppedDevelopmentEntries(entries, views, stoppedAtMs, nowMs, (t) =>
       kit.Timestamp.fromMillis(t),
     );

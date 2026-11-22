@@ -231,14 +231,23 @@ const kLivraisonFinBlocage = 'blocked';
 /// (`DEVELOPMENT_ENDED_BY_STOP` du serveur, ADR-018).
 const kDeveloppementFinArret = 'stopped';
 
-/// Ligne d'un développement arrêté par la session, à la place de
+/// Ligne de la barre d'un développement arrêté par la session, à la place de
 /// l'avertissement de relance. La validation reste valable : la relance ne
 /// demande pas de nouvelle validation.
 String ligneDeveloppementArrete(DateTime at) {
   final a = at.toLocal();
   return 'Le développement du ${formatDateChiffres(a)} à ${formatHeure(a)} '
-      's\'est arrêté. Lisez l\'arrêt dans la section Analyses, puis relancez '
-      'si besoin.';
+      's\'est arrêté. Lisez la raison dans la section Analyses. Répondez si '
+      'l\'arrêt pose une question, puis relancez.';
+}
+
+/// Avertissement de la boîte « Relancer le développement » après un arrêt
+/// de la session (ADR-018).
+String avertissementRelanceApresArret(DateTime at) {
+  final a = at.toLocal();
+  return 'Le développement du ${formatDateChiffres(a)} à ${formatHeure(a)} '
+      's\'est arrêté. Vérifiez dans la section Analyses que la raison de '
+      'l\'arrêt est levée.';
 }
 
 /// `ticket_status/launches.delivery_running` (P44) : verrou des livraisons,
