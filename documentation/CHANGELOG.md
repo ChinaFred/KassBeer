@@ -6,6 +6,26 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.1.99 — fonctionnel
+
+L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait
+sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de
+réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent
+maintenant.
+
+### v0.1.99 — technique
+
+`recipeAssistantTurn` : `output_config.format` réduit à `{reponse: string, proposition:
+string}` (aucun champ facultatif, aucune union). L'ancien format, une branche `anyOf` par
+opération (18 branches, 19 champs facultatifs), dépassait la limite interne de compilation des
+sorties structurées : 400 « Schema is too complex for compilation » sur chaque tour, rendu
+`ai_request_rejected`. La proposition s'écrit en JSON dans son texte ; `readTurnOutput` la
+relit par `readProposition` (JSON illisible ou hors catalogue : `proposition: null`, tour
+compté, nom de l'erreur ou chemin seuls au journal). Le catalogue des opérations passe dans le
+prompt, version 3 (`operationsCatalog`, tiré de `PROPOSITION_OPERATIONS`). Amendement du
+2026-11-22 d'ADR-015, décision de l'utilisateur. Aucune dépendance changée, aucun fichier de
+l'application touché.
+
 ### v0.1.98 — fonctionnel
 
 À l'import d'une recette, une levure se reconnaît aussi par la référence écrite dans son nom,

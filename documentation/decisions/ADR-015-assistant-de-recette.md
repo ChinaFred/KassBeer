@@ -507,3 +507,22 @@ Décision de l'utilisateur et choix du développement, pour la partie sans écra
   - « Annuler la proposition » après une saisie à la main demande une confirmation ;
   - marque écrite en texte « (proposée par l'IA) » après la valeur.
 
+
+## Amendement du 2026-11-22 : format de sortie réduit à deux textes
+
+Décision de l'utilisateur du 2026-11-22. Le format de sortie du lot A2 (une branche `anyOf` par
+opération, 18 branches, 19 champs facultatifs) restait sous les limites publiées des sorties
+structurées (24 champs facultatifs, 16 unions), mais dépassait la limite interne de compilation :
+l'API refusait chaque tour en 400 (« Schema is too complex for compilation »), affiché « Envoi
+impossible ». Les tests simulaient la réponse d'Anthropic et ne compilaient pas le schéma.
+
+- Le format devient `{reponse: string, proposition: string}`, deux textes requis, aucun champ
+  facultatif ni union. `proposition` est vide, ou le texte JSON d'un objet `{resume,
+  operations}`.
+- La liste fermée des opérations passe dans le prompt (version 3), en catalogue tiré de
+  `PROPOSITION_OPERATIONS` (`operationsCatalog`) : aucune copie écrite à la main.
+- Le contrôle reste celui du lot A2 : `readProposition` au serveur, `lireProposition` et
+  `appliquerProposition` au client. Une proposition au JSON illisible ou hors catalogue est
+  rendue sans proposition, tour compté, avec le seul chemin du champ en faute au journal.
+- Ce qui change pour le modèle : la grammaire ne le contraint plus sur les opérations. Une
+  opération mal écrite est écartée au lieu d'être impossible ; le prompt donne un exemple.
