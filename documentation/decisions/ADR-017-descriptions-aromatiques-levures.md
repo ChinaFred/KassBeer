@@ -224,7 +224,7 @@ liste des descripteurs et liste des 110 styles 2 500, données 300). Sortie, ré
 
 Plafonds : limite de dépense de l'espace de travail (ci-dessous) ; `--budget-usd` obligatoire
 hors essai, contre la borne haute (≈ 0,091 $ par levure en Batch) ; `--max` 500 par lancement,
-donc deux lots au moins pour 960 levures ; 20 levures au plus en appels directs ; confirmation
+donc deux lots au moins pour 960 levures (porté à 1 000 le 2026-11-22, voir la note ci-dessous) ; 20 levures au plus en appels directs ; confirmation
 par `oui`.
 
 **Limite de la Console.** Le lot entier à l'effort `medium` (≈ 40 $) dépasse 20 $, et la
@@ -299,3 +299,15 @@ données »), `DATA_SOURCES.md` (ligne « Descriptions aromatiques des levures �
 - Volumes : `DATA_SOURCES.md` (960 documents après la v0.1.86, 4 noms en double mesurés le
   2026-11-21). Champs de `beer_cultures/` : `exigences-techniques.md`, tableau des référentiels.
 - Jetons par levure : hypothèses d'ADR-013 et de l'architecte, non mesurées ; l'essai les mesure.
+
+## Note du 2026-11-22 : un seul lot pour les levures
+
+Décision de l'utilisateur du 2026-11-22, après l'essai de 10 levures (0,2451 $, effort `medium`,
+≈ 5 884 jetons d'entrée et 420 de sortie par levure) : les 923 levures du périmètre partent en un
+seul lancement. `--max` vaut 1 000 au plus pour `--nature culture`, et ce plafond est aussi la
+valeur par défaut ; les houblons restent à 500. Le plafond vit dans la nature
+(`maxElements` de `natures/culture.mjs` et `natures/hop.mjs`), contrôlé une fois `--nature` lu.
+Coût attendu en Batch : ≈ 29,5 $ ; borne haute du script avec `max_tokens` 4 000 : ≈ 95,6 $,
+d'où `--budget-usd 100`. La limite de 70 $ de l'espace de travail reste le plafond de dépense
+réelle. `max_tokens` reste à 4 000 : il borne la réflexion d'une levure sans coûter plus que les
+jetons produits.
