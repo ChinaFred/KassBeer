@@ -146,7 +146,9 @@ reçoit pas de tag : si l'autre session fusionne la première, son numéro chang
 Une entrée `— fonctionnel` du `CHANGELOG.md` est extraite par `scripts/changelog-recent.mjs`
 vers `app/assets/changelog_recent.json`, que l'écran « Nouveautés » affiche. `CLAUDE.md` (« Version ») demande de l'écrire pour le
 brasseur, sans chemin de fichier ni numéro d'incrément ; le détail va dans l'entrée
-`— technique`.
+`— technique`. Depuis la v0.2.1, l'entrée commence par une ligne `Résumé : …` de 120 caractères
+au plus, que l'écran affiche seule, le reste replié ; le script échoue sur un résumé absent,
+vide, trop long ou mal placé (ticket #114).
 
 `check-version.mjs` lit le fichier déclaré dans `.claude/version.json` dans le dernier commit
 de la branche (`HEAD`) et sur la branche principale : la plus haute version entre `main` et
@@ -285,7 +287,7 @@ qui s'affiche désormais dans l'écran « Sources des données ».
 Le 2026-11-22, décision de l'utilisateur : P54 et « Coûts variables » portent `--max` à 1 000 pour
 les levures (un seul lot de 923), les houblons restant à 500 (ADR-017, note du 2026-11-22).
 
-Le 2026-11-22 (v0.2.0), ADR-018 accepté par l'utilisateur (second guide de styles, Brewers
+Le 2026-11-22 (v0.2.2), ADR-018 accepté par l'utilisateur (second guide de styles, Brewers
 Association, sans superposition avec le BJCP 2021) : `CLAUDE.md` ajoute P63 (table de
 dédoublonnage des styles BA, codes figés, `relecteur-regles`) ; P20 reçoit l'exception du guide
 BA (table versionnée seule, plages et PDF hors du dépôt) ; P62 exige que les styles conseillés des

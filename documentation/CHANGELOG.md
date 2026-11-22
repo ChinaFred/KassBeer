@@ -8,40 +8,77 @@ données, outillage), ou les deux.
 
 ### v0.2.2 — technique
 
-Lot S0 d'ADR-018 : la table `exchange/donnees/styles/ba.json` reçoit les 169 styles du guide BA
-2026 (le guide en compte 169, et non 165 comme l'écrivait la v0.2.1). 69 styles sont `nouveau`
-(codes BA1A à BA10AA) et 100 `equivalent` à un style BJCP 2021. Les cas douteux ont été tranchés
-par des règles strictes, sur délégation de l'utilisateur : un style décrit tel quel par le BJCP
-est un `equivalent`, un sous-type n'entre que si le texte BJCP le nomme ou le couvre comme
-variante, un écart de plages ne crée pas de style. La table ne contient aucune plage ; les plages
-recopiées du PDF restent hors du dépôt, et onze champs contredits par le PDF lui-même ou
-accompagnés d'une réserve y sont laissés absents. 23 styles n'ont aucune plage chiffrée dans le
-guide. Les styles BA restent refusés en production jusqu'au lot S2.
+ADR-018 accepté : la Bibliothèque reçoit, en plus des 110 styles BJCP 2021, les styles de la
+Brewers Association (édition 2026) sans équivalent BJCP. Les plages et le PDF restent hors du
+dépôt public, sous la mention d'usage gratuit de la BA ; code BeerXML propre à Kass'Beer (`BA3C`),
+figé ; reprise à chaque édition, avec l'extension d'ADR-014 à `beer_styles` pour les identifiants
+`ba-` (lot S3). `CLAUDE.md` ajoute P63, amende P19, P20 et P62, et cite la table dans « Structure ».
+
+Lot S1 : `exchange/bin/preparer_referentiels.dart --ba <dossier>` joint les plages recopiées du
+PDF (SHA-256 contrôlé) et la table versionnée `exchange/donnees/styles/ba.json` ; seuls les
+styles `nouveau` entrent dans `beer_styles` sous `ba-<clé>`, avec `style_guide` `BA2026`, un code
+lu dans la table et la couleur convertie par `brewing/`. La préparation échoue sur une ligne
+manquante, un code en double ou invalide, un équivalent BJCP inconnu ou un nom en collision.
+L'index `beer_index/styles` reçoit `guide` par entrée et `ba_mention`. `ingest/` accepte les
+identifiants `ba-` avec la source et la licence de la BA, refuse les caractères de contrôle et
+bidirectionnels dans les noms, refuse toute écriture de styles BA en production avant le lot S2,
+et `contexteStyles` des levures ne garde que les styles `bjcp2021-`, ce qui évite une
+régénération facturée des descriptions.
+
+Lot S0 : la table reçoit les 169 styles du guide BA 2026 : 69 `nouveau` (codes BA1A à BA10AA) et
+100 `equivalent` à un style BJCP 2021. Les cas douteux ont été tranchés par des règles strictes,
+sur délégation de l'utilisateur : un style décrit tel quel par le BJCP est un `equivalent`, un
+sous-type n'entre que si le texte BJCP le nomme ou le couvre comme variante, un écart de plages ne
+crée pas de style. La table ne contient aucune plage ; onze champs contredits par le PDF lui-même
+ou accompagnés d'une réserve sont laissés absents des plages recopiées. 23 styles n'ont aucune
+plage chiffrée dans le guide. Le guide ne contient pas d'Imperial Pils.
+
+### v0.2.1 — fonctionnel
+
+Résumé : L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet.
+
+Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans
+l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé :
+seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre
+dans le navigateur le journal de toutes les versions, détail technique et versions plus
+récentes compris. Demandé par le ticket #114.
 
 ### v0.2.1 — technique
 
-Lot S1 d'ADR-018 : la préparation des référentiels sait joindre le guide de styles de la Brewers
-Association. `exchange/bin/preparer_referentiels.dart --ba <dossier>` lit les plages recopiées du
-PDF (hors du dépôt, SHA-256 du PDF contrôlé) et la table versionnée
-`exchange/donnees/styles/ba.json`, encore vide ; seuls les styles `nouveau` entrent dans
-`beer_styles` sous `ba-<clé>`, avec `style_guide` `BA2026`, un code figé lu dans la table et la
-couleur convertie par `brewing/`. La préparation échoue sur une ligne manquante, un code en
-double ou invalide, un équivalent BJCP inconnu ou un nom en collision. L'index `beer_index/styles`
-reçoit `guide` par entrée et `ba_mention`. `ingest/` accepte les identifiants `ba-` avec la source
-et la licence de la BA, refuse les caractères de contrôle et bidirectionnels dans les noms, refuse
-toute écriture de styles BA en production avant le lot S2, et `contexteStyles` des levures ne
-garde que les styles `bjcp2021-`, ce qui évite une régénération facturée des descriptions. Le
-guide BA 2026 a été relevé : 165 styles, aucune Imperial Pils.
+`scripts/changelog-recent.mjs` : une entrée « fonctionnel » commence par une ligne
+`Résumé : …` de 120 caractères au plus (`SUMMARY_MAX_LENGTH`), obligatoire à partir de la
+v0.2.1 (`SUMMARY_REQUIRED_FROM`). Le script échoue (code 1) sur un résumé absent, vide, trop
+long ou placé après le premier paragraphe. L'asset `changelog_recent.json` gagne le champ
+`summaries` (un résumé par entrée « fonctionnel » qui en porte un) ; `paragraphs` peut être
+vide quand la version a un résumé. `lireNouveautes` lit `summaries` ; la borne de longueur
+reste au script seul. `NouveautesScreen` : détail replié par carte (état
+non mémorisé), lien `kJournalComplet` ouvert par `ouvrirLienProvider` ; un refus du système
+affiche « Le lien n'a pas pu s'ouvrir. » sans rapport, une exception est rapportée sous
+`nouveautes.open_changelog`. Règle d'écriture ajoutée à `CLAUDE.md` (« Version »). Aucune
+dépendance changée. Demandé par le ticket #114.
+
+### v0.2.0 — fonctionnel
+
+La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew
+Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms :
+une recette qui écrit l'un ou l'autre retrouve la même levure.
 
 ### v0.2.0 — technique
 
-ADR-018 accepté : la Bibliothèque recevra, en plus des 110 styles BJCP 2021, les styles de la
-Brewers Association (édition 2026) sans équivalent BJCP, pour combler des styles manquants comme
-l'Imperial Pils. Chaque style BA reçoit une décision écrite à la main (`nouveau` ou `equivalent`)
-dans une table versionnée ; les plages et le PDF restent hors du dépôt public, sous la mention
-d'usage gratuit de la BA. Code BeerXML propre à Kass'Beer (`BA3C`), figé ; reprise à chaque
-édition, avec l'extension d'ADR-014 à `beer_styles` pour les identifiants `ba-` (lot S3).
-`CLAUDE.md` ajoute P63 et amende P19, P20 et P62. Aucun code : les lots S1 à S3 suivront.
+Brewtarget écrit Belle Saison de Lallemand sans référence, sous deux noms : « LalBrew Belle
+Saison » (fichiers 005 et 004) et « Belle Saison Belgian Saison-Style » (fichier 003). Les deux
+entrées n'ont pas de `product_id` et aucune n'est une fiche de fabricant : ni `FusionCulture` ni
+`ReferenceCulture` ne s'appliquent. Nouvelle correction `MemeSoucheCulture`
+(`exchange/lib/src/ingestion/fusions.dart`) : deux entrées Brewtarget sans référence d'un même
+producteur font un document, à l'identifiant de la première dans `ordreIdentifiant`
+(`referentiel.dart`) ; les deux noms doivent être lus, sinon `StateError`. Une ligne, Lallemand.
+Identifiant gardé : `culture-lallemand-lalbrew-belle-saison` (fichier 005, rang 1), celui de
+`levures-recettes.json` et de la description aromatique relue ; rien à reporter. Préparation
+rejouée : 959 documents `beer_cultures` au lieu de 960, 1 identifiant sort
+(`culture-lallemand-belle-saison-belgian-saison-style`), aucun n'entre, 1 document change
+(alias et provenance) ; les autres collections préparées sont identiques. Tests sur fixtures
+inventées (P20, P56). Version 0.2.0 : le dernier chiffre a atteint 99. Demande de l'utilisateur
+du 2026-11-22.
 
 ### v0.1.99 — fonctionnel
 
