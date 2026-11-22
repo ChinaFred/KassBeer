@@ -293,6 +293,49 @@ describe("options", () => {
     assert.equal(lireOptionsAromes(["--essai", "3"]).essai, 3);
   });
 
+  it("--max : 500 au plus pour les houblons, 1 000 pour les levures, défaut selon la nature", () => {
+    assert.equal(lireOptionsAromes(["--lot", "--budget-usd", "1"]).max, 500);
+    assert.equal(lireOptionsAromes(["--lot", "--budget-usd", "1", "--max", "500"]).max, 500);
+    assert.throws(
+      () => lireOptionsAromes(["--lot", "--budget-usd", "1", "--nature", "hop", "--max", "501"]),
+      ErreurAromes,
+    );
+    assert.equal(
+      lireOptionsAromes(["--nature", "culture", "--lot", "--budget-usd", "1"]).max,
+      1000,
+    );
+    // --max avant --nature : contrôlé une fois la nature lue.
+    assert.equal(
+      lireOptionsAromes(["--max", "1000", "--lot", "--budget-usd", "1", "--nature", "culture"]).max,
+      1000,
+    );
+    assert.throws(
+      () =>
+        lireOptionsAromes(["--nature", "culture", "--lot", "--budget-usd", "1", "--max", "1001"]),
+      ErreurAromes,
+    );
+    assert.throws(
+      () => lireOptionsAromes(["--lot", "--budget-usd", "1", "--max", "0"]),
+      ErreurAromes,
+    );
+    // --nature répété : la dernière valeur compte, et le plafond est le sien.
+    assert.throws(
+      () =>
+        lireOptionsAromes([
+          "--max",
+          "1000",
+          "--nature",
+          "culture",
+          "--nature",
+          "hop",
+          "--lot",
+          "--budget-usd",
+          "1",
+        ]),
+      ErreurAromes,
+    );
+  });
+
   it("--max au-delà de 500, effort inconnu, deux modes : refusés", () => {
     assert.throws(
       () => lireOptionsAromes(["--lot", "--budget-usd", "1", "--max", "501"]),

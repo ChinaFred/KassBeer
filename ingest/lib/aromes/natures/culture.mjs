@@ -396,6 +396,8 @@ export const NATURE_LEVURE = Object.freeze({
   fichierGroupe: "levures-recettes.json",
   formatGroupe: "kassbeer_levures_recettes",
   scriptGroupe: "lister_ingredients_recettes.dart --nature culture",
+  /// Éléments par lancement, au plus (ADR-017, décision de l'utilisateur du 2026-11-22 : les 923 levures en un seul lot).
+  maxElements: 1000,
   mots: { un: "levure", des: "levures", Des: "Levures", de: "de levure" },
   refus: {
     absent: "levure absente de beer_cultures.json",

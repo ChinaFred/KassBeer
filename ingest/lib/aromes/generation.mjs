@@ -37,9 +37,6 @@ export const DOSSIER_AROMES = fileURLToPath(
   new URL("../../../import/ingest/aromes/", import.meta.url),
 );
 
-/// Éléments par lancement, au plus (ADR-013, plafond 3 ; ADR-017, section 6).
-export const MAX_ELEMENTS = 500;
-
 /// Éléments envoyés en appels directs, au plus (essai, --nouveaux sans --lot).
 export const SEUIL_DIRECT = 20;
 
@@ -71,7 +68,7 @@ export function lireOptionsAromes(argv) {
     relire: false,
     seulement: null,
     budget: null,
-    max: MAX_ELEMENTS,
+    max: null,
     effort: EFFORT_DEFAUT,
     regenerer: [],
     tout: false,
@@ -133,8 +130,8 @@ export function lireOptionsAromes(argv) {
       }
       case "--max": {
         const v = Number(valeur(++i, nom));
-        if (!Number.isInteger(v) || v < 1 || v > MAX_ELEMENTS) {
-          throw new ErreurAromes(`--max : entier de 1 à ${MAX_ELEMENTS}.`);
+        if (!Number.isInteger(v) || v < 1) {
+          throw new ErreurAromes("--max : entier positif attendu.");
         }
         o.max = v;
         break;
@@ -153,6 +150,12 @@ export function lireOptionsAromes(argv) {
     }
   }
   const nature = NATURES[o.nature];
+  // Plafond par lancement propre à la nature (houblons 500, levures 1 000), contrôlé une
+  // fois --nature lu, quel que soit l'ordre des options.
+  if (o.max === null) o.max = nature.maxElements;
+  else if (o.max > nature.maxElements) {
+    throw new ErreurAromes(`--max : entier de 1 à ${nature.maxElements} pour ${nature.mots.des}.`);
+  }
   for (const id of o.regenerer) {
     if (!nature.motifId.test(id) || id.length > 200) {
       throw new ErreurAromes(

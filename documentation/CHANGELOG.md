@@ -4,6 +4,19 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-22
+
+### v0.1.96 — technique
+
+Descriptions aromatiques des levures (ADR-017) : `ingest/generer-aromes.mjs --nature culture`
+accepte `--max` jusqu'à 1 000 levures par lancement, et 1 000 devient sa valeur par défaut, pour
+que les 923 levures du périmètre partent en un seul lot de l'API Batches (décision de l'utilisateur
+du 2026-11-22, après l'essai de 10 levures). Les houblons restent à 500. Le plafond vit dans chaque
+nature (`maxElements` de `natures/hop.mjs` et `natures/culture.mjs`) ; `MAX_ELEMENTS` sort de
+`generation.mjs`. `--max` est contrôlé une fois `--nature` lu, quel que soit l'ordre des options.
+P54 et « Coûts variables » de `CLAUDE.md`, ADR-017 (note du 2026-11-22), `exigences-techniques.md`
+et `guide-reseau.md` suivent. Coût attendu du lot : ≈ 29,5 $ ; borne haute du script : ≈ 95,6 $.
+
 ## 2026-11-21
 
 ### v0.1.95 — fonctionnel

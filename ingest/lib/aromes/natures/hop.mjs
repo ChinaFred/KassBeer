@@ -39,6 +39,8 @@ export const NATURE_HOUBLON = Object.freeze({
   fichierGroupe: "houblons-recettes.json",
   formatGroupe: "kassbeer_houblons_recettes",
   scriptGroupe: "lister_ingredients_recettes.dart",
+  /// Éléments par lancement, au plus (ADR-013, plafond 3).
+  maxElements: 500,
   mots: { un: "houblon", des: "houblons", Des: "Houblons", de: "de houblon" },
   /// Refus de ecrire.mjs (lib/execution.mjs, trierAromes).
   refus: {
