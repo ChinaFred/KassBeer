@@ -5,9 +5,11 @@
  *
  * Relevé (P32) : seuls comptent les commentaires du compte `maintainerId` (identifiant
  * numérique, jamais le login), dont le texte en NFC, espaces de tête retirées, commence par
- * `## Analyse` (`analysis`) ou `## Précisions` (`reply` si l'identifiant figure dans
- * `answer_comment_ids`, écrit par le serveur seul, sinon `unverified_reply`). Dix entrées
- * au plus, les plus récentes, 20 000 caractères chacune, coupées à une ligne vide.
+ * `## Analyse` (`analysis`), `## Développement — arrêt` (`development_stop`, ADR-018, lot R1)
+ * ou `## Précisions` (`reply` si l'identifiant figure dans `answer_comment_ids`, écrit par le
+ * serveur seul, sinon `unverified_reply`). Dix entrées au plus, les plus récentes, 20 000
+ * caractères chacune, coupées à une ligne vide. Un arrêt n'est jamais une analyse :
+ * `hasAnalysis` et la reconnaissance d'une réponse ne comptent que `analysis` et les réponses.
  *
  * « Répondre » (P34) : texte de 5 à 4 000 caractères après nettoyage, publié par
  * `publicText` sous `## Précisions de l'administrateur` (P24).
@@ -24,11 +26,12 @@ export const ANALYSIS_MAX_CHARS = 20_000;
 
 const ANALYSIS_PREFIX = "## Analyse";
 const ANSWER_PREFIX = "## Précisions";
+const DEVELOPMENT_STOP_PREFIX = "## Développement — arrêt";
 
 /** Titre du commentaire publié par « Répondre ». */
 export const ANSWER_TITLE = "## Précisions de l'administrateur";
 
-export type TicketAnalysisKind = "analysis" | "reply" | "unverified_reply";
+export type TicketAnalysisKind = "analysis" | "development_stop" | "reply" | "unverified_reply";
 
 /** Une entrée de `tickets/{id}/admin/analysis.analyses`, dates en ISO (écrites en `Timestamp`). */
 export interface TicketAnalysis {
@@ -68,6 +71,35 @@ export function isAnswerComment(
   maintainerId: number,
 ): boolean {
   return startsWithTitle(comment, maintainerId, ANSWER_PREFIX);
+}
+
+/**
+ * Vrai si ce commentaire est un arrêt de la routine de développement du compte `maintainerId`
+ * (ADR-018, lot R1). Pure.
+ */
+export function isDevelopmentStopComment(
+  comment: Pick<CommentView, "authorId" | "body">,
+  maintainerId: number,
+): boolean {
+  return startsWithTitle(comment, maintainerId, DEVELOPMENT_STOP_PREFIX);
+}
+
+/**
+ * Date du dernier arrêt du développement du compte `maintainerId`, en millisecondes, ou
+ * `null` (aucun arrêt, ou date absente ou illisible). Aucun statut n'en est tiré (P32). Pure.
+ */
+export function lastDevelopmentStopAtMs(
+  comments: readonly CommentView[],
+  maintainerId: number,
+): number | null {
+  let best: number | null = null;
+  for (const c of comments) {
+    if (!isDevelopmentStopComment(c, maintainerId) || c.createdAt === null) continue;
+    const ms = Date.parse(c.createdAt);
+    if (Number.isNaN(ms)) continue;
+    if (best === null || ms > best) best = ms;
+  }
+  return best;
 }
 
 /**
@@ -113,6 +145,7 @@ function commentKind(
   answerIds: ReadonlySet<number>,
 ): TicketAnalysisKind | null {
   if (isAnalysisComment(c, maintainerId)) return "analysis";
+  if (isDevelopmentStopComment(c, maintainerId)) return "development_stop";
   if (isAnswerComment(c, maintainerId)) {
     return c.id !== null && answerIds.has(c.id) ? "reply" : "unverified_reply";
   }
@@ -169,7 +202,8 @@ export interface SameAnswer {
 }
 
 /**
- * Où en est la dernière analyse, lue dans les commentaires :
+ * Où en est la dernière analyse, lue dans les commentaires (un arrêt du développement n'est
+ * ni une analyse ni une réponse, ADR-018) :
  * - `hasAnalysis` : au moins une analyse du compte `maintainerId` ;
  * - `same` : une précision du compte `maintainerId` qui suit la dernière analyse (n'importe
  *   où sans analyse) porte déjà `expectedBody`, publiée depuis l'application (`reply`) ou
@@ -193,7 +227,10 @@ export function analysisAnswerState(
   const expected = norm(expectedBody);
   const matches = ordered
     .slice(lastAnalysis + 1)
-    .filter((e) => e.kind !== "analysis" && norm(e.c.body ?? "") === expected);
+    .filter(
+      (e) =>
+        (e.kind === "reply" || e.kind === "unverified_reply") && norm(e.c.body ?? "") === expected,
+    );
   const match = matches.find((e) => e.kind === "reply") ?? matches[0];
   return {
     hasAnalysis: lastAnalysis >= 0,

@@ -19,7 +19,8 @@ String dateAnalyse(String nom, DateTime? at) =>
 
 /// Section « Analyses (N) » de la fiche d'Admin (ADR-008, P33) : entrées
 /// relevées sur l'Issue, dans l'ordre chronologique, en Markdown. N compte
-/// les analyses seules. Corps en Markdown par [CorpsMarkdown].
+/// les analyses seules : un arrêt du développement (ADR-018) a sa carte, sans
+/// compter comme une analyse. Corps en Markdown par [CorpsMarkdown].
 class SectionAnalyses extends ConsumerWidget {
   const SectionAnalyses({super.key, required this.ticket});
 
@@ -184,6 +185,12 @@ class _CarteAnalyse extends StatelessWidget {
         Icons.manage_search,
         false,
         'Analyse tronquée, voir GitHub.',
+      ),
+      TicketAnalysisKind.developmentStop => (
+        dateAnalyse('Arrêt du développement', at),
+        Icons.block,
+        false,
+        'Arrêt tronqué, voir GitHub.',
       ),
       TicketAnalysisKind.reply => (
         dateAnalyse('Votre réponse', at),

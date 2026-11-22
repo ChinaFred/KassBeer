@@ -98,6 +98,12 @@ void main() {
           },
           {'kind': 'futur', 'body': 'x'},
           {
+            'comment_id': 104,
+            'kind': 'development_stop',
+            'body': '## Développement — arrêt\n\nPoint 4.',
+            'created_at': Timestamp.fromDate(t3),
+          },
+          {
             'comment_id': 103,
             'kind': 'unverified_reply',
             'body': '## Précisions\n\nAutre.',
@@ -111,6 +117,7 @@ void main() {
       expect(doc.analyses.map((a) => a.kind), [
         TicketAnalysisKind.analysis,
         TicketAnalysisKind.reply,
+        TicketAnalysisKind.developmentStop,
         TicketAnalysisKind.unverifiedReply,
       ]);
       expect(doc.analyses.last.truncated, isTrue);
@@ -120,6 +127,22 @@ void main() {
       // Réponse après la dernière analyse : la prochaine analyse la lira.
       expect(doc.pendingAnswerAt, t2);
     });
+
+    test(
+      'arrêt du développement : ni analyse, ni date de dernière analyse',
+      () {
+        final doc = TicketAnalysisDoc(
+          analyses: [
+            entree(TicketAnalysisKind.analysis, 'a', at: t1),
+            entree(TicketAnalysisKind.developmentStop, 's', at: t2),
+            entree(TicketAnalysisKind.reply, 'r', at: t3),
+          ],
+        );
+        expect(doc.analysisCount, 1);
+        expect(doc.lastAnalysisAt, t1);
+        expect(doc.pendingAnswerAt, t3);
+      },
+    );
 
     test('document : réponse avant la dernière analyse, déjà lue', () {
       final doc = TicketAnalysisDoc(
@@ -153,6 +176,10 @@ void main() {
         'Oui',
       );
       expect(corpsAffiche('## Analyse'), '');
+      expect(
+        corpsAffiche('## Développement — arrêt\n\nPoint 4 : question.'),
+        'Point 4 : question.',
+      );
       expect(corpsAffiche('Texte libre'), 'Texte libre');
     });
 
@@ -566,6 +593,45 @@ void main() {
           tester.getTopLeft(find.text('Votre réponse du 08/11/26 à 11:15')).dy,
         ),
       );
+    });
+
+    testWidgets('arrêt du développement : carte, titre retiré, non compté', (
+      tester,
+    ) async {
+      await fiche(
+        tester,
+        analyse0(),
+        analyses: DocumentTrouve(
+          TicketAnalysisDoc(
+            analyses: [
+              entree(
+                TicketAnalysisKind.analysis,
+                '## Analyse\n\nCritères.',
+                at: t1,
+              ),
+              entree(
+                TicketAnalysisKind.developmentStop,
+                '## Développement — arrêt\n\nPoint 4 : changement lourd.'
+                '\n\n![schéma](https://exemple.fr/s.png)',
+                at: t2,
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Analyses (1)'), findsOneWidget);
+      expect(
+        find.text('Arrêt du développement du 08/11/26 à 11:15'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('## Développement'), findsNothing);
+      expect(
+        find.textContaining('Point 4 : changement lourd.'),
+        findsOneWidget,
+      );
+      expect(find.text('[Image non affichée : schéma]'), findsOneWidget);
+      expect(find.byType(Image), findsNothing);
     });
 
     testWidgets('liens : https ouvert, javascript ignoré, échec rapporté', (

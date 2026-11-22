@@ -6,6 +6,33 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.0 — fonctionnel
+
+Pour l'administrateur : quand une session de développement lancée depuis la fiche d'un ticket
+s'arrête avant d'écrire du code, son message s'affiche dans la section Analyses sous le titre
+« Arrêt du développement », à part des analyses. La barre de la fiche dit « Le développement du
+… s'est arrêté » et propose « Relancer le développement » tout de suite, sans attendre trois
+heures. La validation du ticket reste valable : un arrêt ne demande plus de valider à nouveau.
+
+### v0.2.0 — technique
+
+Lot R1 d'ADR-018. `analysisModel.ts` relève « ## Développement — arrêt » du compte 16348852
+sous la nature `development_stop` (NFC, espaces de tête retirées, 20 000 caractères, dix
+entrées) ; `hasAnalysis` et la reconnaissance d'une précision déjà publiée ne comptent que
+`analysis` et les réponses. `writeDevelopmentStops` (`analyses.ts`), appelé par `applyIssue`
+(webhook et passe horaire), marque `ended_by: "stopped"` la dernière entrée `developpement`
+lancée avant l'arrêt et ramène son `retry_after` à l'heure du relevé
+(`stoppedDevelopmentEntries`, `launchModel.ts`) ; aucun statut n'est tiré du commentaire.
+Client : `TicketAnalysisKind.developmentStop`, carte « Arrêt du développement », titre retiré
+par `corpsAffiche` ; `TicketLaunch.arreteParLaSession` et `ligneDeveloppementArrete` dans la
+barre et la boîte de relance. Prompt de la routine de développement (`exigences-techniques.md`,
+« Routines des tickets ») : arrêts des points 3, 4 et 6 sous « ## Développement — arrêt »,
+« ## Analyse » interdit au point 5, et le point 3 ignore les « ## Analyse — compléments ».
+Les arrêts déjà publiés sur #104, #110 et #114 cessent d'être des spécifications. À faire après
+la fusion : recoller le prompt de la routine de développement sur claude.ai/code.
+`CLAUDE.md` : P32, P33 et P40 (parts R1). ADR-008 reçoit « Modifié par : ADR-018 ». Aucun
+paquet ajouté ni monté.
+
 ### v0.1.99 — fonctionnel
 
 L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait

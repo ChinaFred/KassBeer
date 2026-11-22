@@ -170,7 +170,8 @@ function isLaunchAction(value: unknown): value is LaunchAction {
  * `LAUNCH_BLOCKED_BY[action]`, `launched` ou `unknown`, dont `retry_after` est dans le futur.
  * C'est la seule règle, au serveur comme au client : une entrée `failed` porte `retry_after`
  * égal à son heure et ne bloque rien ; « Répondre » et un blocage de livraison relevé
- * ramènent `retry_after` à l'heure du relevé (`closeRunningEntries`). Rend l'entrée la plus
+ * ramènent `retry_after` à l'heure du relevé (`closeRunningEntries`), comme un arrêt du
+ * développement relevé (`stoppedDevelopmentEntries`). Rend l'entrée la plus
  * récente qui bloque, avec son action. Pure.
  */
 export function runningLaunch(
@@ -215,6 +216,47 @@ export function closeRunningEntries(
     return { ...entry, retry_after: toTimestamp(nowMs) };
   });
   return changed ? out : null;
+}
+
+/** `ended_by` d'une entrée `developpement` close par un arrêt relevé (ADR-018, lot R1). */
+export const DEVELOPMENT_ENDED_BY_STOP = "stopped";
+
+/**
+ * L'historique après un arrêt du développement relevé à `stoppedAtMs` (commentaire
+ * `## Développement — arrêt` du compte 16348852) : la dernière entrée `developpement`
+ * (`launched` ou `unknown`) lancée avant lui reçoit `ended_by: "stopped"`, et son
+ * `retry_after` est ramené à `nowMs` s'il est encore futur. L'admin peut relancer tout de
+ * suite (ADR-018, décision 5). Un arrêt antérieur à tout lancement ne change rien. Même
+ * règle que `blockedDeliveryEntries` pour une livraison. Le client choisit son texte
+ * (« s'est arrêté ») d'après ce champ, sans comparer de dates. `null` si rien ne change.
+ * Pure.
+ */
+export function stoppedDevelopmentEntries(
+  entries: readonly Record<string, unknown>[],
+  views: readonly LaunchEntryView[],
+  stoppedAtMs: number,
+  nowMs: number,
+  toTimestamp: (ms: number) => unknown,
+): Record<string, unknown>[] | null {
+  let target = -1;
+  views.forEach((v, i) => {
+    if (v.action !== "developpement" || v.at_ms === null || v.at_ms >= stoppedAtMs) return;
+    if (v.state !== "launched" && v.state !== "unknown") return;
+    const best = target < 0 ? null : views[target].at_ms;
+    if (best === null || v.at_ms > best) target = i;
+  });
+  if (target < 0) return null;
+  const entry = entries[target];
+  const v = views[target];
+  const running = v.retry_after_ms !== null && v.retry_after_ms > nowMs;
+  if (!running && entry.ended_by === DEVELOPMENT_ENDED_BY_STOP) return null;
+  const out = [...entries];
+  out[target] = {
+    ...entry,
+    ended_by: DEVELOPMENT_ENDED_BY_STOP,
+    ...(running ? { retry_after: toTimestamp(nowMs) } : {}),
+  };
+  return out;
 }
 
 // ── Plafond (P36) ───────────────────────────────────────────────────────────

@@ -1024,14 +1024,17 @@ pas disponible hors ligne. », « Ticket illisible. Mettez l'application à jour
 aux tickets ».
 
 **Analyses (N).** Section toujours ouverte, lue par l'administrateur seul (ADR-008). Elle
-montre ce que le compte du mainteneur a publié sur l'Issue : analyses (`## Analyse…`) et
-précisions (`## Précisions…`), la plus ancienne en haut, séparées de 12 px. N compte les seules
-analyses ; le titre reste « Analyses » sans nombre tant que la section n'est pas lue. Une
+montre ce que le compte du mainteneur a publié sur l'Issue : analyses (`## Analyse…`), arrêts
+d'une session de développement (`## Développement — arrêt`, ADR-018) et précisions
+(`## Précisions…`), la plus ancienne en haut, séparées de 12 px. N compte les seules
+analyses : un arrêt n'en est pas une. Une entrée d'une nature que cette version ne connaît pas
+n'est pas affichée, sans erreur ; le titre reste « Analyses » sans nombre tant que la section n'est pas lue. Une
 carte par entrée, dans l'encadré du texte de l'administrateur, titre en en-tête :
 
 | Entrée | Icône, fond | Titre |
 |---|---|---|
 | analyse | loupe, fond de surface | « Analyse du jj/mm/aa à hh:mm » (sans date : « Analyse ») |
+| arrêt d'une session de développement | sens interdit, fond de surface | « Arrêt du développement du jj/mm/aa à hh:mm » |
 | réponse publiée par « Répondre » | flèche de réponse, fond secondaire | « Votre réponse du jj/mm/aa à hh:mm » |
 | précisions publiées hors de l'application | bulle, fond de surface | « Précisions du jj/mm/aa à hh:mm », puis « Non publiée depuis l'application. » |
 
@@ -1041,7 +1044,7 @@ Le corps est rendu en Markdown (style GitHub), aux couleurs du thème, sans sa l
 `https` avec un hôte ; un autre lien ne fait rien ; un échec affiche « Impossible d'ouvrir le
 lien. ». Aucun HTML n'est rendu : une balise reste du texte. Le lien est lu comme un lien
 activable. Un tableau large défile à l'horizontale. Entrée tronquée : « Analyse tronquée, voir
-GitHub. » (« Réponse tronquée, voir GitHub. » pour une réponse, « Précisions tronquées, voir
+GitHub. » (« Arrêt tronqué, voir GitHub. » pour un arrêt, « Réponse tronquée, voir GitHub. » pour une réponse, « Précisions tronquées, voir
 GitHub. » pour des précisions non publiées depuis l'application) et « Ouvrir l'Issue #12 ».
 Plus de dix entrées sur l'Issue : « Seules les 10 dernières entrées sont affichées. Les autres
 sont sur GitHub. », puis « Ouvrir l'Issue #12 ».
@@ -1139,6 +1142,7 @@ des boutons, une seule ligne de lancement, dans cet ordre de priorité :
 | appel de la fiche en cours | barre de progression, « Lancement de l'analyse en cours. » ; le bouton est inactif |
 | lancement en cours | « Analyse en cours depuis 14:05 » (autre jour : « … depuis le 12/11/26 à 14:05 ») |
 | plafond atteint, ticket reçu ou validé | « Plafond atteint le 13/11 : 10 lancements sur 10. Le compteur repart à zéro peu après minuit. » ; le bouton est inactif |
+| développement arrêté par la session (marqué par le serveur, ADR-018) | « Le développement du jj/mm/aa à hh:mm s'est arrêté. Lisez l'arrêt dans la section Analyses, puis relancez si besoin. » (ton d'erreur) ; « Relancer le développement » est offert tout de suite, la validation reste valable, et la boîte de relance reprend cette ligne |
 | relance | « Le lancement du jj/mm/aa à hh:mm n'a rien changé au ticket. Vérifiez sur claude.ai/code qu'aucune session ne tourne encore. » |
 | plafond atteint, ticket analysé ou validé sur GitHub seul | « Plafond atteint le 13/11 : 10 lancements sur 10. Vous pouvez valider. Le compteur repart à zéro peu après minuit. » |
 

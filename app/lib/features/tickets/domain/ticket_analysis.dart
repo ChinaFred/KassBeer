@@ -10,11 +10,13 @@ const kTicketAnswerMinLength = 5;
 const kTicketAnswerMaxLength = 4000;
 
 /// Nature d'une entrée relevée sur l'Issue (P32) : analyse du mainteneur
-/// (`## Analyse…`), réponse publiée par « Répondre » (`## Précisions…` dont
-/// l'identifiant est dans `answer_comment_ids`), ou `## Précisions…` du même
-/// compte publié hors de l'application.
+/// (`## Analyse…`), arrêt d'une session de développement
+/// (`## Développement — arrêt`, ADR-018), réponse publiée par « Répondre »
+/// (`## Précisions…` dont l'identifiant est dans `answer_comment_ids`), ou
+/// `## Précisions…` du même compte publié hors de l'application.
 enum TicketAnalysisKind {
   analysis('analysis'),
+  developmentStop('development_stop'),
   reply('reply'),
   unverifiedReply('unverified_reply');
 
@@ -149,13 +151,20 @@ VueAnalysesVide vueAnalysesVide({
       : VueAnalysesVide.pasEncoreAnalyse;
 }
 
+/// Titres de commentaire retirés à l'affichage : le titre de la carte les
+/// remplace (P33).
+const _titresRetires = [
+  '## Analyse',
+  '## Développement — arrêt',
+  '## Précisions',
+];
+
 /// Texte d'une entrée sans sa ligne de titre (`## Analyse…`,
-/// `## Précisions…`), que le titre de la carte remplace (P33).
+/// `## Développement — arrêt`, `## Précisions…`), que le titre de la carte
+/// remplace (P33).
 String corpsAffiche(String body) {
   final text = body.replaceAll('\r\n', '\n').trimLeft();
-  if (!text.startsWith('## Analyse') && !text.startsWith('## Précisions')) {
-    return text;
-  }
+  if (!_titresRetires.any(text.startsWith)) return text;
   final newline = text.indexOf('\n');
   return newline < 0 ? '' : text.substring(newline + 1).trim();
 }

@@ -383,6 +383,17 @@ livrer » à « livrés au lot A1 », ajoute la feature `ai` à « Structure » 
 Le 2026-11-21, avec le ticket #64 et l'accord de l'utilisateur, P39 ajoute « Valider et lancer le
 développement » aux lancements soumis à la boîte de confirmation obligatoire.
 
+Le 2026-11-22, avec le lot R1 d'ADR-018 (accepté par l'utilisateur), P32 relève
+« ## Développement — arrêt » sous la nature `development_stop`, sans le compter comme une
+analyse, et un arrêt relevé après le lancement clôt l'entrée `developpement` (`ended_by:
+"stopped"`) ; P33 retire ce titre à l'affichage et ignore une nature inconnue sans erreur ;
+P40 interdit à la routine de développement tout commentaire qui commence par « ## Analyse »,
+publie ses arrêts sous « ## Développement — arrêt » et écarte les « ## Analyse — compléments »
+de la spécification (point 3). Le prompt de la routine de développement
+(`exigences-techniques.md`, « Routines des tickets ») change aux points 3, 4, 5 et 6 : il se
+recolle sur claude.ai après la fusion. Les lots R2 et R3 changeront les autres contrôles cités
+par l'ADR.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

@@ -27,6 +27,7 @@ import {
   nextLaunchStatus,
   refreshedLaunchStatus,
   runningLaunch,
+  stoppedDevelopmentEntries,
   type LaunchEntryView,
 } from "../src/tickets/launchModel";
 import {
@@ -38,6 +39,7 @@ import {
   sessionUrlOrNull,
   withoutSecrets,
 } from "../src/tickets/routine";
+import { writeDevelopmentStops } from "../src/tickets/analyses";
 import { FakeDb } from "./fakeFirestore";
 
 const NOW = Date.parse("2026-11-13T09:00:00Z");
@@ -1114,5 +1116,124 @@ describe("passe horaire : ticket_status/launches remis au jour", () => {
       per_day: LAUNCHES_PER_DAY,
       founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
     });
+  });
+});
+
+describe("arrêt du développement relevé (ADR-018, lot R1)", () => {
+  const HOUR = 60 * 60 * 1000;
+  const OWNER = 16348852;
+  const stop = (id: number, atMs: number, authorId = OWNER) => ({
+    id,
+    authorId,
+    body: "## Développement — arrêt\n\nPoint 4 : changement lourd.",
+    createdAt: new Date(atMs).toISOString(),
+    updatedAt: null,
+  });
+  const dev = (atMs: number, extra: Record<string, unknown> = {}) => ({
+    id: "d",
+    action: "developpement",
+    state: "launched",
+    at: Timestamp.fromMillis(atMs),
+    retry_after: Timestamp.fromMillis(atMs + 3 * HOUR),
+    ...extra,
+  });
+  const entriesOf = (db: FakeDb) =>
+    (db.read("tickets/t-1/admin/launches")?.entries ?? []) as Record<string, unknown>[];
+
+  it("arrêt postérieur au lancement : retry_after ramené à l'heure du relevé, ended_by stopped", async () => {
+    const db = new FakeDb(() => NOW);
+    db.seed("tickets/t-1/admin/launches", { entries: [dev(NOW - HOUR)] });
+    const relevé = NOW;
+    const changed = await writeDevelopmentStops(
+      db.kit(),
+      "t-1",
+      [stop(9, NOW - 30 * 60_000)],
+      relevé,
+    );
+    assert.equal(changed, true);
+    const [e] = entriesOf(db);
+    assert.equal(e.ended_by, "stopped");
+    assert.equal((e.retry_after as Timestamp).toMillis(), relevé);
+    const views: LaunchEntryView[] = [
+      {
+        id: "d",
+        action: "developpement",
+        state: "launched",
+        at_ms: NOW - HOUR,
+        retry_after_ms: relevé,
+      },
+    ];
+    assert.equal(runningLaunch(views, "developpement", relevé), null);
+  });
+
+  it("arrêt antérieur au lancement : ignoré", async () => {
+    const db = new FakeDb(() => NOW);
+    db.seed("tickets/t-1/admin/launches", { entries: [dev(NOW - HOUR)] });
+    const changed = await writeDevelopmentStops(db.kit(), "t-1", [stop(9, NOW - 2 * HOUR)], NOW);
+    assert.equal(changed, false);
+    const [e] = entriesOf(db);
+    assert.equal(e.ended_by, undefined);
+    assert.equal((e.retry_after as Timestamp).toMillis(), NOW + 2 * HOUR);
+  });
+
+  it("arrêt d'un autre compte : ignoré", async () => {
+    const db = new FakeDb(() => NOW);
+    db.seed("tickets/t-1/admin/launches", { entries: [dev(NOW - HOUR)] });
+    assert.equal(
+      await writeDevelopmentStops(db.kit(), "t-1", [stop(9, NOW - 30 * 60_000, 999)], NOW),
+      false,
+    );
+    assert.equal(entriesOf(db)[0].ended_by, undefined);
+  });
+
+  it("arrêt relevé après l'échéance : marqué stopped, échéance inchangée", () => {
+    const entries = [{ id: "d", action: "developpement", state: "unknown" }];
+    const views: LaunchEntryView[] = [
+      {
+        id: "d",
+        action: "developpement",
+        state: "unknown",
+        at_ms: NOW - 4 * HOUR,
+        retry_after_ms: NOW - HOUR,
+      },
+    ];
+    const out = stoppedDevelopmentEntries(entries, views, NOW - 3.5 * HOUR, NOW, (ms) => ms);
+    assert.deepEqual(out, [
+      { id: "d", action: "developpement", state: "unknown", ended_by: "stopped" },
+    ]);
+    assert.equal(
+      stoppedDevelopmentEntries(out ?? [], views, NOW - 3.5 * HOUR, NOW, (ms) => ms),
+      null,
+    );
+  });
+
+  it("autre action ou lancement en échec : rien ne change", () => {
+    const views: LaunchEntryView[] = [
+      {
+        id: "l",
+        action: "livraison",
+        state: "launched",
+        at_ms: NOW - HOUR,
+        retry_after_ms: NOW + HOUR,
+      },
+      {
+        id: "f",
+        action: "developpement",
+        state: "failed",
+        at_ms: NOW - HOUR,
+        retry_after_ms: NOW - HOUR,
+      },
+    ];
+    assert.equal(
+      stoppedDevelopmentEntries([{}, {}], views, NOW - 30 * 60_000, NOW, (ms) => ms),
+      null,
+    );
+  });
+
+  it("sans arrêt : aucune lecture ni écriture", async () => {
+    const db = new FakeDb(() => NOW);
+    db.seed("tickets/t-1/admin/launches", { entries: [dev(NOW - HOUR)] });
+    assert.equal(await writeDevelopmentStops(db.kit(), "t-1", [], NOW), false);
+    assert.equal(entriesOf(db)[0].ended_by, undefined);
   });
 });
