@@ -159,8 +159,9 @@ test("résumé placé après le premier paragraphe refusé", () => {
 });
 
 test("résumé obligatoire à partir de SUMMARY_REQUIRED_FROM", () => {
-  assert.equal(SUMMARY_REQUIRED_FROM, "0.2.0");
-  assert.throws(() => extractRecentVersions(withSummary("0.2.0", "Détail.")), /manque/);
+  assert.equal(SUMMARY_REQUIRED_FROM, "0.2.1");
+  assert.throws(() => extractRecentVersions(withSummary("0.2.1", "Détail.")), /manque/);
+  assert.deepEqual(extractRecentVersions(withSummary("0.2.0", "Détail."))[0].summaries, []);
   assert.throws(() => extractRecentVersions(withSummary("1.0.0", "Détail.")), /manque/);
   assert.deepEqual(extractRecentVersions(withSummary("0.1.99", "Détail."))[0].summaries, []);
 });

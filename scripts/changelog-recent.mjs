@@ -6,7 +6,7 @@
 //   node scripts/changelog-recent.mjs
 //
 // Écrit app/assets/changelog_recent.json :
-//   { "versions": [ { "version": "0.2.0", "date": "2026-11-22",
+//   { "versions": [ { "version": "0.2.1", "date": "2026-11-22",
 //                     "summaries": ["…"], "paragraphs": ["…"] } ] }
 //
 // Une entrée « fonctionnel » commence par une ligne « Résumé : … » de
@@ -35,7 +35,7 @@ export const COUNT = 6;
 export const SUMMARY_MAX_LENGTH = 120;
 
 /** Première version dont chaque entrée « fonctionnel » porte un résumé. */
-export const SUMMARY_REQUIRED_FROM = "0.2.0";
+export const SUMMARY_REQUIRED_FROM = "0.2.1";
 
 const SUMMARY_RE = /^Résumé\s*:\s*(.*)$/;
 

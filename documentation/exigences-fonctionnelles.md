@@ -227,7 +227,7 @@ d'où le membre est parti ; ouvert par son adresse, elle mène à l'accueil.
   l'autre). Six versions au plus.
 - Sous le résumé, « Voir le détail » (lu « Voir le détail de la version X.Y.Z ») déplie le texte
   complet de l'entrée, en paragraphes sélectionnables ; « Masquer le détail » le replie. Le
-  détail est replié à chaque ouverture de l'écran. Une version publiée avant la v0.2.0 n'a pas
+  détail est replié à chaque ouverture de l'écran. Une version publiée avant la v0.2.1 n'a pas
   de résumé : seul « Voir le détail » s'affiche, aucun résumé n'est tiré du texte. Une version
   dont l'entrée n'a qu'un résumé n'a pas de bouton.
 - En bas de la liste, « Journal complet sur GitHub, versions plus récentes comprises » (icône
