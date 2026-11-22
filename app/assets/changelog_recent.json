@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.1.98",
+      "date": "2026-11-22",
+      "paragraphs": [
+        "L'assistant de recette répond de nouveau. Depuis la version précédente, chaque message finissait sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent maintenant."
+      ]
+    },
+    {
       "version": "0.1.97",
       "date": "2026-11-22",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre « Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient « Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche « Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai. Demandé par le ticket #67."
-      ]
-    },
-    {
-      "version": "0.1.90",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ; sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé par le ticket #105."
       ]
     }
   ]

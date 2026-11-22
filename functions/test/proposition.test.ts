@@ -18,6 +18,7 @@ import {
   PROPOSITION_OPERATIONS,
   RESUME_MAX_CHARS,
   assistantOutputFormat,
+  operationsCatalog,
   readProposition,
   readTurnOutput,
 } from "../src/assistant/proposition";
@@ -36,24 +37,6 @@ const fixture = JSON.parse(
   >;
   reading_cases: { name: string; proposition: unknown; valid: boolean; path?: string }[];
 };
-
-interface OperationSchema {
-  additionalProperties: boolean;
-  required: string[];
-  properties: Record<string, { type: string; enum?: string[] }> & {
-    op: { type: string; enum: string[] };
-  };
-}
-
-interface OutputSchema {
-  required: string[];
-  additionalProperties: boolean;
-  properties: {
-    proposition: {
-      anyOf: [unknown, { properties: { operations: { items: { anyOf: OperationSchema[] } } } }];
-    };
-  };
-}
 
 const NOW = Date.parse("2026-11-21T10:00:00Z");
 const CC = "recipe_assistant_turn";
@@ -115,36 +98,40 @@ describe("recipe_assistant_operations.json — PROPOSITION_OPERATIONS (logique d
     assert.equal(MAX_OPERATIONS, fixture.max_operations);
     assert.equal(RESUME_MAX_CHARS, fixture.resume_max_chars);
   });
-  it("format de sortie tiré de la fixture : une branche par opération, champs et requis", () => {
+  it("format de sortie : deux textes requis, aucun champ facultatif ni union", () => {
     const format = assistantOutputFormat();
-    assert.equal(format.type, "json_schema");
-    const schema = format.schema as OutputSchema;
-    assert.deepEqual(schema.required, ["reponse", "proposition"]);
-    assert.equal(schema.additionalProperties, false);
-    const branches = schema.properties.proposition.anyOf;
-    assert.deepEqual(branches[0], { type: "null" });
-    const operations = branches[1].properties.operations.items.anyOf;
+    assert.deepEqual(format, {
+      type: "json_schema",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["reponse", "proposition"],
+        properties: { reponse: { type: "string" }, proposition: { type: "string" } },
+      },
+    });
+  });
+  it("catalogue du prompt tiré de la fixture : une ligne par opération, champs et facultatifs", () => {
+    const lines = operationsCatalog().split("\n");
     assert.deepEqual(
-      operations.map((o) => o.properties.op.enum[0]),
+      lines.map((l) => l.slice(2, l.indexOf(" : "))),
       Object.keys(fixture.operations),
     );
-    for (const o of operations) {
-      const spec = fixture.operations[o.properties.op.enum[0]];
-      assert.equal(o.additionalProperties, false);
-      assert.deepEqual(o.required, ["op", ...spec.required]);
-      assert.deepEqual(Object.keys(o.properties), ["op", ...Object.keys(spec.fields)]);
+    for (const line of lines) {
+      const op = line.slice(2, line.indexOf(" : "));
+      const spec = fixture.operations[op];
       for (const [key, field] of Object.entries(spec.fields)) {
-        const expected =
+        const optional = spec.required.includes(key) ? "" : "?";
+        const label =
           field.type === "enum"
-            ? { type: "string", enum: field.values }
-            : { type: field.type as string };
-        // Bornes absentes du format : le client refuse l'opération seule.
-        assert.deepEqual(o.properties[key], expected, key);
+            ? (field.values as string[]).join(" | ")
+            : { string: "texte", number: "nombre", integer: "entier" }[field.type as string];
+        assert.ok(line.includes(`${key}${optional} (${label})`), `${op}.${key}`);
       }
     }
+    assert.ok(ASSISTANT_SYSTEM_PROMPT.includes(operationsCatalog()));
   });
   it("aucune opération ni champ sur notes, author, brew_steps, prix ou stock", () => {
-    const text = JSON.stringify(assistantOutputFormat());
+    const text = operationsCatalog();
     for (const forbidden of ["notes", "author", "brew_steps", "price", "stock", "cost"]) {
       assert.ok(!text.includes(forbidden), forbidden);
     }
@@ -180,7 +167,7 @@ describe("sortie d'un tour (P59)", () => {
     const r = run(
       JSON.stringify({
         reponse: "Ajout d'un whirlpool.",
-        proposition: { resume: "Whirlpool.", operations: [OP] },
+        proposition: JSON.stringify({ resume: "Whirlpool.", operations: [OP] }),
       }),
     );
     const res = await r.call(ARGS);
@@ -193,7 +180,7 @@ describe("sortie d'un tour (P59)", () => {
     const r = run(
       JSON.stringify({
         reponse: "Voici.",
-        proposition: { resume: "R.", operations: [{ ...OP, price_eur: 4 }] },
+        proposition: JSON.stringify({ resume: "R.", operations: [{ ...OP, price_eur: 4 }] }),
       }),
       logs,
     );
@@ -203,7 +190,7 @@ describe("sortie d'un tour (P59)", () => {
     assert.equal(res.quota.remaining, 19);
     assert.equal(r.calls(), 1);
     const warn = logs.find((l) => l.includes("proposition hors format"));
-    assert.ok(warn?.includes("operations.0.<champ inconnu>"));
+    assert.ok(warn?.includes("proposition.operations.0.<champ inconnu>"));
     assert.ok(!logs.join("").includes("price_eur"));
     assert.ok(!logs.join("").includes("Citra"));
   });
@@ -213,7 +200,7 @@ describe("sortie d'un tour (P59)", () => {
     const r = run(
       JSON.stringify({
         reponse: "Voici.",
-        proposition: { resume: "R.", operations: [{ ...OP, [key]: 1 }] },
+        proposition: JSON.stringify({ resume: "R.", operations: [{ ...OP, [key]: 1 }] }),
       }),
       logs,
     );
@@ -229,7 +216,10 @@ describe("sortie d'un tour (P59)", () => {
     const r = run(
       JSON.stringify({
         reponse: "Beaucoup de changements.",
-        proposition: { resume: "R.", operations: Array.from({ length: 31 }, () => OP) },
+        proposition: JSON.stringify({
+          resume: "R.",
+          operations: Array.from({ length: 31 }, () => OP),
+        }),
       }),
     );
     const res = await r.call(ARGS);
@@ -250,6 +240,35 @@ describe("sortie d'un tour (P59)", () => {
     assert.equal((err.details as Record<string, unknown>).reason, "ai_no_answer");
     assert.equal((err.details as Record<string, unknown>).counted, true);
     assert.ok(!logs.join("").includes("Texte libre"));
+  });
+  it("proposition vide : aucune proposition, rien d'écarté", () => {
+    const log = () => undefined;
+    assert.deepEqual(
+      readTurnOutput(JSON.stringify({ reponse: "Analyse.", proposition: "" }), log),
+      {
+        reponse: "Analyse.",
+        proposition: null,
+        rejectedPath: null,
+      },
+    );
+  });
+  it("proposition au JSON illisible : écartée, nom de l'erreur seul au journal", () => {
+    const entries: string[] = [];
+    const out = readTurnOutput(
+      JSON.stringify({ reponse: "Voici.", proposition: '{"resume": "Citra secret' }),
+      (e) => entries.push(JSON.stringify(e)),
+    );
+    assert.deepEqual(out, { reponse: "Voici.", proposition: null, rejectedPath: "proposition" });
+    assert.ok(entries.join("").includes("SyntaxError"));
+    assert.ok(!entries.join("").includes("Citra"));
+  });
+  it("proposition écrite en objet au lieu d'un texte : écartée", () => {
+    const log = () => undefined;
+    const out = readTurnOutput(
+      JSON.stringify({ reponse: "Voici.", proposition: { resume: "R.", operations: [OP] } }),
+      log,
+    );
+    assert.deepEqual(out, { reponse: "Voici.", proposition: null, rejectedPath: "proposition" });
   });
   it("reponse absente ou vide : sortie illisible", () => {
     const log = () => undefined;
@@ -274,8 +293,8 @@ describe("sortie d'un tour (P59)", () => {
   });
 });
 
-describe("prompt de l'assistant, version 2 (lot A2)", () => {
-  it("version 2", () => assert.equal(ASSISTANT_PROMPT_VERSION, 2));
+describe("prompt de l'assistant, version 3", () => {
+  it("version 3", () => assert.equal(ASSISTANT_PROMPT_VERSION, 3));
   it("valeur technique seulement en l'absence de la Bibliothèque", () => {
     assert.ok(
       ASSISTANT_SYSTEM_PROMPT.includes(
@@ -292,7 +311,9 @@ describe("prompt de l'assistant, version 2 (lot A2)", () => {
   });
   it("quand proposer, et plafond de 30 opérations", () => {
     assert.ok(
-      ASSISTANT_SYSTEM_PROMPT.includes("Pour une analyse ou une question, proposition vaut null."),
+      ASSISTANT_SYSTEM_PROMPT.includes(
+        "Pour une analyse ou une question, proposition est un texte vide.",
+      ),
     );
     assert.ok(ASSISTANT_SYSTEM_PROMPT.includes(`de 1 à ${MAX_OPERATIONS} opérations`));
     assert.ok(ASSISTANT_SYSTEM_PROMPT.includes(`${RESUME_MAX_CHARS} caractères au plus`));
