@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
-### v0.1.96 — fonctionnel
+### v0.1.97 — fonctionnel
 
 La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les
 arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de
@@ -17,7 +17,7 @@ Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement
 par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données »
 présente aussi les arômes des levures.
 
-### v0.1.96 — technique
+### v0.1.97 — technique
 
 Livraison 2 d'ADR-017. `app/lib/features/library/domain/aromes_levure.dart` lit
 `beer_culture_aromas/{id}` en lecture stricte (`status`, `confidence`, `descriptors`,
@@ -48,6 +48,17 @@ sa date, « Sources des données » perd la phrase sur « non relu ». `ingest/`
 relecture reste exigée à l'écriture. Notes datées dans ADR-013 et ADR-017. Aucune dépendance
 ajoutée ni montée. `main.dart.js` (`flutter build web --release`) : 5 989 110 octets avant,
 5 993 166 après (+ 4 056).
+
+### v0.1.96 — technique
+
+Descriptions aromatiques des levures (ADR-017) : `ingest/generer-aromes.mjs --nature culture`
+accepte `--max` jusqu'à 1 000 levures par lancement, et 1 000 devient sa valeur par défaut, pour
+que les 923 levures du périmètre partent en un seul lot de l'API Batches (décision de l'utilisateur
+du 2026-11-22, après l'essai de 10 levures). Les houblons restent à 500. Le plafond vit dans chaque
+nature (`maxElements` de `natures/hop.mjs` et `natures/culture.mjs`) ; `MAX_ELEMENTS` sort de
+`generation.mjs`. `--max` est contrôlé une fois `--nature` lu, quel que soit l'ordre des options.
+P54 et « Coûts variables » de `CLAUDE.md`, ADR-017 (note du 2026-11-22), `exigences-techniques.md`
+et `guide-reseau.md` suivent. Coût attendu du lot : ≈ 29,5 $ ; borne haute du script : ≈ 95,6 $.
 
 ## 2026-11-21
 

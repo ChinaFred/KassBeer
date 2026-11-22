@@ -1,7 +1,7 @@
 {
   "versions": [
     {
-      "version": "0.1.96",
+      "version": "0.1.97",
       "date": "2026-11-22",
       "paragraphs": [
         "La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.",
