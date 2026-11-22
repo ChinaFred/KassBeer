@@ -38,6 +38,53 @@ prompt de livraison cite « Livrer » ou « Mettre en file » : à recoller sur 
 Firestore inchangées ; tests de `rules-tests/` étendus aux nouveaux champs. Aucune dépendance
 changée. Demandé par le ticket #104.
 
+### v0.2.1 — fonctionnel
+
+Résumé : L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet.
+
+Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans
+l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé :
+seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre
+dans le navigateur le journal de toutes les versions, détail technique et versions plus
+récentes compris. Demandé par le ticket #114.
+
+### v0.2.1 — technique
+
+`scripts/changelog-recent.mjs` : une entrée « fonctionnel » commence par une ligne
+`Résumé : …` de 120 caractères au plus (`SUMMARY_MAX_LENGTH`), obligatoire à partir de la
+v0.2.1 (`SUMMARY_REQUIRED_FROM`). Le script échoue (code 1) sur un résumé absent, vide, trop
+long ou placé après le premier paragraphe. L'asset `changelog_recent.json` gagne le champ
+`summaries` (un résumé par entrée « fonctionnel » qui en porte un) ; `paragraphs` peut être
+vide quand la version a un résumé. `lireNouveautes` lit `summaries` ; la borne de longueur
+reste au script seul. `NouveautesScreen` : détail replié par carte (état
+non mémorisé), lien `kJournalComplet` ouvert par `ouvrirLienProvider` ; un refus du système
+affiche « Le lien n'a pas pu s'ouvrir. » sans rapport, une exception est rapportée sous
+`nouveautes.open_changelog`. Règle d'écriture ajoutée à `CLAUDE.md` (« Version »). Aucune
+dépendance changée. Demandé par le ticket #114.
+
+### v0.2.0 — fonctionnel
+
+La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew
+Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms :
+une recette qui écrit l'un ou l'autre retrouve la même levure.
+
+### v0.2.0 — technique
+
+Brewtarget écrit Belle Saison de Lallemand sans référence, sous deux noms : « LalBrew Belle
+Saison » (fichiers 005 et 004) et « Belle Saison Belgian Saison-Style » (fichier 003). Les deux
+entrées n'ont pas de `product_id` et aucune n'est une fiche de fabricant : ni `FusionCulture` ni
+`ReferenceCulture` ne s'appliquent. Nouvelle correction `MemeSoucheCulture`
+(`exchange/lib/src/ingestion/fusions.dart`) : deux entrées Brewtarget sans référence d'un même
+producteur font un document, à l'identifiant de la première dans `ordreIdentifiant`
+(`referentiel.dart`) ; les deux noms doivent être lus, sinon `StateError`. Une ligne, Lallemand.
+Identifiant gardé : `culture-lallemand-lalbrew-belle-saison` (fichier 005, rang 1), celui de
+`levures-recettes.json` et de la description aromatique relue ; rien à reporter. Préparation
+rejouée : 959 documents `beer_cultures` au lieu de 960, 1 identifiant sort
+(`culture-lallemand-belle-saison-belgian-saison-style`), aucun n'entre, 1 document change
+(alias et provenance) ; les autres collections préparées sont identiques. Tests sur fixtures
+inventées (P20, P56). Version 0.2.0 : le dernier chiffre a atteint 99. Demande de l'utilisateur
+du 2026-11-22.
+
 ### v0.1.99 — fonctionnel
 
 L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait

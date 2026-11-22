@@ -1586,6 +1586,8 @@ class TestApp {
         firebaseProjectIdProvider.overrideWithValue('demo-kassbeer'),
         ouvrirLienProvider.overrideWithValue((uri) async {
           openedLinks.add(uri);
+          final error = openLinkError;
+          if (error != null) throw error;
           return openLinkResult;
         }),
         horlogeProvider.overrideWithValue(() => now),
@@ -1664,6 +1666,9 @@ class TestApp {
   /// Adresses ouvertes hors de l'application, et réponse du système.
   final openedLinks = <Uri>[];
   bool openLinkResult = true;
+
+  /// Exception levée par l'ouverture d'une adresse ; `null` : aucune.
+  Object? openLinkError;
   late final ScreenWakelock wakelock;
   final wakelockCalls = <bool>[];
 

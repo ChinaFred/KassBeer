@@ -1,8 +1,27 @@
 {
   "versions": [
     {
+      "version": "0.2.1",
+      "date": "2026-11-22",
+      "summaries": [
+        "L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet."
+      ],
+      "paragraphs": [
+        "Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé : seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre dans le navigateur le journal de toutes les versions, détail technique et versions plus récentes compris. Demandé par le ticket #114."
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-11-22",
+      "summaries": [],
+      "paragraphs": [
+        "La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms : une recette qui écrit l'un ou l'autre retrouve la même levure."
+      ]
+    },
+    {
       "version": "0.1.99",
       "date": "2026-11-22",
+      "summaries": [],
       "paragraphs": [
         "L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent maintenant."
       ]
@@ -10,6 +29,7 @@
     {
       "version": "0.1.98",
       "date": "2026-11-22",
+      "summaries": [],
       "paragraphs": [
         "À l'import d'une recette, une levure se reconnaît aussi par la référence écrite dans son nom, même quand le nom est saisi à la main avec le producteur à la fin, des mots en français, un poids ou une référence sans tiret (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »). La levure n'est choisie que si une seule souche de la Bibliothèque porte cette référence. La plage de température de la levure sur la courbe d'un brassin et les valeurs reprises par l'assistant de recette suivent la même règle."
       ]
@@ -17,6 +37,7 @@
     {
       "version": "0.1.97",
       "date": "2026-11-22",
+      "summaries": [],
       "paragraphs": [
         "La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.",
         "Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données » présente aussi les arômes des levures."
@@ -25,22 +46,9 @@
     {
       "version": "0.1.95",
       "date": "2026-11-21",
+      "summaries": [],
       "paragraphs": [
         "Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le développement », un ticket validé sur GitHub à valider de nouveau dans l'application, et un ticket en cours dont la CI de la pull request est en échec. Un ticket dont l'analyse, le développement ou la correction tourne déjà en sort jusqu'à la fin de la session prévue. Une nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à corriger. Le nombre « Tickets à traiter » du menu compte aussi les tickets validés à lancer. Quand rien n'attend, l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ». Demandé par le ticket #63."
-      ]
-    },
-    {
-      "version": "0.1.94",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position. Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur téléphone, ou avec un texte agrandi, rien ne change."
-      ]
-    },
-    {
-      "version": "0.1.92",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou retirer un malt, un houblon, un ajout ou un palier, changer une quantité, le volume, le nom ou la levure. Sa réponse porte alors une carte « Proposition de l'assistant » qui montre l'effet sur la densité, le degré, l'amertume et la couleur. Un appui sur « Appliquer au brouillon » recopie tous les changements dans la recette ; rien n'est enregistré avant « Enregistrer », et « Annuler la proposition » rend la recette d'avant. Une valeur technique que la Bibliothèque ne connaît pas (acides alpha, couleur, rendement, atténuation) et que l'IA a proposée s'affiche avec la mention « (proposée par l'IA) », dans l'éditeur, la fiche, le brassin et le compte rendu d'export. Sur téléphone, l'assistant se ferme après l'application pour montrer la recette."
       ]
     }
   ]
