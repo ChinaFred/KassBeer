@@ -248,7 +248,11 @@ void main() {
           ),
         ),
       )!;
-      expect(l.action, isNull);
+      // File des livraisons (ticket #104) : « Mettre en file » à la place
+      // d'une ligne sans bouton.
+      expect(l.action, ActionLancement.livraison);
+      expect(l.mode, ModeLivraison.mettreEnFile);
+      expect(l.actif, isTrue);
       expect(l.verrouTicketId, 't9');
       expect(
         l.texte,
@@ -747,6 +751,99 @@ void main() {
         ticketId: 't1',
         action: ActionLancement.livraison,
       ));
+    });
+
+    testWidgets('verrou d\'un autre ticket : Mettre en file, boîte et appel en '
+        'mode queue', (tester) async {
+      final app = await fiche(
+        tester,
+        enCours(),
+        etat: DocumentTrouve(
+          EtatLancements(
+            day: '20261108',
+            countDay: 10,
+            perDay: 10,
+            deliveryRunning: VerrouLivraison(
+              ticketId: 't9',
+              issueNumber: 9,
+              launchedAt: DateTime(2026, 11, 8, 11, 5),
+              retryAfter: DateTime(2026, 11, 8, 14, 5),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Livrer'), findsNothing);
+      expect(
+        find.text(
+          '${SectionLivraison.vide} ${SectionLivraison.invitationFile}',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Mettre en file'));
+      await tester.pumpAndSettle();
+      expect(find.text(BoiteLancement.titreFile), findsOneWidget);
+      expect(find.text(BoiteLancement.effetFile(34)), findsOneWidget);
+      expect(find.text(BoiteLancement.delaiFile), findsOneWidget);
+      expect(find.text(BoiteLancement.accordFusionFile), findsOneWidget);
+      expect(
+        find.text(
+          'Position dans la file : 1 sur 1, après la livraison du ticket #9.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(BoiteLancement.attenteRemiseAZero),
+        findsOneWidget,
+      );
+      // Plafond atteint : « Mettre en file » reste actif.
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Mettre en file').last,
+      );
+      await tester.pump();
+      expect(app.tickets.launches.single.action, ActionLancement.livraison);
+      expect(app.tickets.launchModes.single, ModeLivraison.mettreEnFile);
+    });
+
+    testWidgets('dans la file : Retirer de la file, confirmation, appel en '
+        'mode unqueue', (tester) async {
+      final app = await fiche(
+        tester,
+        enCours(),
+        etat: DocumentTrouve(
+          EtatLancements(
+            day: '20261108',
+            countDay: 3,
+            perDay: 10,
+            deliveryQueue: [
+              EntreeFileLivraison(
+                ticketId: 't1',
+                issueNumber: 12,
+                prNumber: 34,
+                queuedAt: DateTime(2026, 11, 8, 11, 5),
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        find.text(
+          'Dans la file (position 1 sur 1) : départ dans 5 minutes au plus.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Accord du 08/11/26 à 11:05 pour la PR #34.'),
+        findsOneWidget,
+      );
+      app.tickets.launchResult = () async =>
+          const ResultatLancement(IssueLancement.retire);
+      await tester.tap(find.text('Retirer de la file'));
+      await tester.pumpAndSettle();
+      expect(find.text('Retirer ce ticket de la file ?'), findsOneWidget);
+      await tester.tap(find.text('Retirer'));
+      await tester.pumpAndSettle();
+      expect(app.tickets.launchModes.single, ModeLivraison.retirer);
+      expect(find.text('Ticket #12 retiré de la file.'), findsOneWidget);
     });
 
     testWidgets('refus fichier protégé : message et Livrer inactif', (

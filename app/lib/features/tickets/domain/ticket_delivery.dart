@@ -61,6 +61,7 @@ class TicketDelivery {
     this.ready = false,
     this.relaunchReady = false,
     this.reports = const [],
+    this.queueExit,
   });
 
   final int eligiblePrCount;
@@ -83,6 +84,10 @@ class TicketDelivery {
 
   /// Comptes rendus, ordre chronologique, dix au plus.
   final List<CompteRenduLivraison> reports;
+
+  /// Dernière sortie de la file des livraisons sans départ (`queue_exit`),
+  /// ou `null`.
+  final SortieFile? queueExit;
 
   /// Lit le document ; lève [DocumentIllisible] pour un champ mal typé. Un
   /// compte rendu d'une nature inconnue est écarté. Aucune valeur reçue
@@ -121,8 +126,76 @@ class TicketDelivery {
       ready: read.boolFacultatif('ready') ?? false,
       relaunchReady: read.boolFacultatif('relaunch_ready') ?? false,
       reports: reports,
+      queueExit: switch (read.objetFacultatif('queue_exit')) {
+        final LecteurChamps e => switch (e.texteFacultatif('code')) {
+          final String code => SortieFile(code: code, at: e.date('at')),
+          null => null,
+        },
+        null => null,
+      },
     );
   }
+}
+
+/// `admin/delivery.queue_exit` : sortie de la file sans départ, écrite par le
+/// serveur seul (ADR-008, amendement du 2026-11-22, P45).
+@immutable
+class SortieFile {
+  const SortieFile({required this.code, this.at});
+
+  /// Code stable du serveur ; un code inconnu reste lisible.
+  final String code;
+  final DateTime? at;
+}
+
+/// Code de « Retirer de la file ».
+const kSortieRetrait = 'delivery_queue_removed';
+
+/// Phrase de chaque code de sortie connu, après « Sortie de la file le … : ».
+const kPhrasesSortieFile = <String, String>{
+  'delivery_queue_cleared_after_blockage':
+      'une livraison s\'est bloquée et la file a été vidée. Remettez ce ticket '
+      'en file si vous le voulez.',
+  'delivery_queue_head_changed':
+      'le code de la PR a changé depuis votre accord.',
+  'delivery_ci_not_green': 'la CI de la PR n\'était pas verte au départ.',
+  'delivery_no_pr': 'aucune pull request prête au départ.',
+  'delivery_multiple_prs': 'plusieurs pull requests ferment l\'Issue.',
+  'delivery_sensitive_files':
+      'la PR modifie un fichier protégé. Fusionnez-la vous-même après '
+      'relecture.',
+  'delivery_files_unreadable':
+      'la liste des fichiers de la PR est trop longue pour être vérifiée. '
+      'Fusionnez-la vous-même après relecture.',
+  'delivery_queue_not_admin':
+      'le compte qui avait donné l\'accord n\'est plus administrateur.',
+  'reprise_running': 'une correction de la PR était en cours.',
+  'delivery_queue_relaunched': 'le développement a été relancé.',
+  'delivery_queue_refused': 'le ticket a été refusé.',
+  'delivery_queue_closed': 'le ticket a été clos.',
+  'delivery_queue_left_in_progress': 'le ticket a quitté « En cours ».',
+  'not_allowed': 'le ticket ne permettait plus la livraison.',
+  'issue_not_found': 'l\'Issue n\'existe plus sur GitHub.',
+  'routine_paused': 'la routine de développement était en pause.',
+  'routine_failed': 'la routine de développement a refusé le lancement.',
+};
+
+/// Ligne de sortie de file : texte et ton d'erreur (tout code sauf
+/// [kSortieRetrait]).
+({String texte, bool erreur}) ligneSortieFile(SortieFile sortie) {
+  final at = sortie.at;
+  final quand = at == null ? '' : ' le ${_du(at)}';
+  if (sortie.code == kSortieRetrait) {
+    return (texte: 'Retiré de la file$quand.', erreur: false);
+  }
+  final phrase = kPhrasesSortieFile[sortie.code];
+  return (
+    texte: phrase == null
+        ? 'Sortie de la file$quand. Mettez l\'application à jour pour lire '
+              'la raison.'
+        : 'Sortie de la file$quand : $phrase',
+    erreur: true,
+  );
 }
 
 /// Adresse d'une PR, seulement `https://github.com/ChinaFred/KassBeer/pull/<n>`
@@ -200,6 +273,11 @@ class LigneLivraison {
     this.verrouTicketId,
     this.verrouIssue,
     this.masquerRefuserClore = false,
+    this.mode,
+    this.ligneAccord,
+    this.ligneDetail,
+    this.sortie,
+    this.repriseAussi = false,
   });
 
   final TonLivraison ton;
@@ -214,6 +292,43 @@ class LigneLivraison {
   final String? verrouTicketId;
   final int? verrouIssue;
   final bool masquerRefuserClore;
+
+  /// Bouton de livraison : « Livrer » ([ModeLivraison.livrer] ou `null`),
+  /// « Mettre en file » ou « Retirer de la file ».
+  final ModeLivraison? mode;
+
+  /// Seconde ligne d'un ticket en file : « Accord du … pour la PR #34. ».
+  final String? ligneAccord;
+
+  /// Ligne d'un ticket en file dont la PR n'est plus prête (CI rouge…).
+  final String? ligneDetail;
+
+  /// Ligne de sortie de la file (`queue_exit`), sous la ligne principale.
+  final ({String texte, bool erreur})? sortie;
+
+  /// Ticket en file à CI rouge : « Relancer le développement » à côté de
+  /// « Retirer de la file ».
+  final bool repriseAussi;
+
+  LigneLivraison _avecSortie(({String texte, bool erreur})? s) => s == null
+      ? this
+      : LigneLivraison(
+          ton: ton,
+          texte: texte,
+          progression: progression,
+          action: action,
+          actif: actif,
+          relanceDe: relanceDe,
+          reessayer: reessayer,
+          verrouTicketId: verrouTicketId,
+          verrouIssue: verrouIssue,
+          masquerRefuserClore: masquerRefuserClore,
+          mode: mode,
+          ligneAccord: ligneAccord,
+          ligneDetail: ligneDetail,
+          sortie: s,
+          repriseAussi: repriseAussi,
+        );
 }
 
 /// « le 13/11/26 à 14:05 », ou « 14:05 » le même jour que [now].
@@ -257,6 +372,13 @@ String _pr(int? n) => n == null ? 'la pull request' : 'la PR #$n';
 /// compare l'heure de l'appareil aux échéances écrites par le serveur et lit
 /// `ready`, `relaunch_ready` et `allowed_decisions`. `null` pour un ticket qui
 /// n'est pas En cours ou sans Issue.
+///
+/// File des livraisons (amendement du 2026-11-22) : le bouton (« Livrer »,
+/// « Mettre en file », « Retirer de la file ») se choisit d'après
+/// `delivery_running`, `delivery_last` et `delivery_queue` lus, sans
+/// condition de départ ni éligibilité recopiée (P39). [modeEnCours] : mode de
+/// l'appel en cours ; [uid] : compte connecté (ligne du plafond de la tête de
+/// file, seulement pour son propre accord).
 LigneLivraison? ligneLivraison({
   required Ticket ticket,
   required RechercheDocument<TicketDelivery>? livraison,
@@ -266,11 +388,12 @@ LigneLivraison? ligneLivraison({
   required DateTime now,
   required bool offline,
   required bool appelEnCours,
+  ModeLivraison? modeEnCours,
+  String? uid,
 }) {
   if (ticket.status != TicketStatus.inProgress || ticket.issueNumber == null) {
     return null;
   }
-  final issue = ticket.issueNumber;
   final verrou = quota?.deliveryRunning;
   final verrouIci =
       verrou != null && verrou.ticketId == ticket.id && verrou.tient(now);
@@ -278,11 +401,14 @@ LigneLivraison? ligneLivraison({
   // 1. Livraison de ce ticket en cours : verrou ou entrée de l'historique.
   if (verrouIci || livraisonEnCours != null) {
     final since = livraisonEnCours?.at ?? verrou?.launchedAt;
+    final file = (livraisonEnCours?.queued ?? false)
+        ? ', partie de la file'
+        : '';
     return LigneLivraison(
       ton: TonLivraison.enCours,
       texte: since == null
-          ? 'Livraison en cours.'
-          : 'Livraison en cours depuis ${_depuis(since, now)}.',
+          ? 'Livraison en cours$file.'
+          : 'Livraison en cours depuis ${_depuis(since, now)}$file.',
       masquerRefuserClore: true,
     );
   }
@@ -339,6 +465,189 @@ LigneLivraison? ligneLivraison({
       progression: 'Lecture de la pull request',
     );
   }
+  final file = quota?.positionFile(ticket.id);
+  if (file != null) {
+    return _ligneDansFile(
+      ticket: ticket,
+      doc: doc,
+      file: file,
+      historique: historique,
+      quota: quota!,
+      now: now,
+      offline: offline,
+      appelEnCours: appelEnCours,
+      modeEnCours: modeEnCours,
+      uid: uid,
+    );
+  }
+  return _ligneHorsFile(
+    ticket: ticket,
+    doc: doc,
+    historique: historique,
+    quota: quota,
+    now: now,
+    offline: offline,
+    appelEnCours: appelEnCours,
+    modeEnCours: modeEnCours,
+  )._avecSortie(_sortieAffichee(doc.queueExit, historique));
+}
+
+/// Ligne de sortie de file, seulement si aucune entrée `livraison` de
+/// l'historique n'est postérieure à la sortie (un départ réussi n'écrit pas
+/// `queue_exit`).
+({String texte, bool erreur})? _sortieAffichee(
+  SortieFile? sortie,
+  TicketLaunchesDoc? historique,
+) {
+  if (sortie == null) return null;
+  final at = sortie.at;
+  if (at != null && historique != null) {
+    for (final e in historique.entries) {
+      final eAt = e.at;
+      if (e.action == ActionLancement.livraison &&
+          eAt != null &&
+          eAt.isAfter(at)) {
+        return null;
+      }
+    }
+  }
+  return ligneSortieFile(sortie);
+}
+
+/// « 2 tickets attendent déjà » ou « 1 ticket attend déjà ».
+String _attendent(int n, String quoi) =>
+    n == 1 ? '1 $quoi attend' : '$n ${quoi}s attendent';
+
+/// Ticket en file (P44) : position, raison de l'attente en tête, accord, et
+/// « Retirer de la file ».
+LigneLivraison _ligneDansFile({
+  required Ticket ticket,
+  required TicketDelivery doc,
+  required PositionFile file,
+  required TicketLaunchesDoc? historique,
+  required EtatLancements quota,
+  required DateTime now,
+  required bool offline,
+  required bool appelEnCours,
+  required ModeLivraison? modeEnCours,
+  required String? uid,
+}) {
+  if (appelEnCours) {
+    return LigneLivraison(
+      ton: TonLivraison.progression,
+      texte: modeEnCours == ModeLivraison.retirer
+          ? 'Retrait de la file en cours.'
+          : 'Lancement en cours.',
+      progression: modeEnCours == ModeLivraison.retirer
+          ? 'Retrait de la file en cours'
+          : 'Lancement en cours',
+      action: ActionLancement.livraison,
+      mode: ModeLivraison.retirer,
+    );
+  }
+  final position = 'Dans la file (position ${file.position} sur ${file.total})';
+  final entree = file.entree;
+  final accordAt = entree.queuedAt;
+  final accord =
+      'Accord${accordAt == null ? '' : ' du ${_du(accordAt)}'} pour '
+      '${_pr(entree.prNumber ?? doc.prNumber)}.';
+  final verrou = quota.deliveryRunning;
+  final verrouAutre =
+      verrou != null && verrou.ticketId != ticket.id && verrou.tient(now);
+  final derniere = quota.deliveryLast;
+  var ton = TonLivraison.info;
+  String texte;
+  String? autreId;
+  int? autreIssue;
+  final devant = file.devant;
+  if (devant != null) {
+    texte =
+        '$position, derrière le ticket'
+        '${devant.issueNumber == null ? '' : ' #${devant.issueNumber}'}.';
+    autreId = devant.ticketId;
+    autreIssue = devant.issueNumber;
+  } else if (quota.developmentInvalidSince case final depuis?) {
+    ton = TonLivraison.erreur;
+    texte =
+        '$position : la file attend, le jeton de la routine de développement '
+        'est refusé depuis le ${formatDateChiffres(depuis.toLocal())}.';
+  } else if (verrouAutre) {
+    final n = verrou.issueNumber;
+    texte =
+        '$position : partira après la livraison du ticket'
+        '${n == null ? '' : ' #$n'}.';
+  } else if (derniere != null &&
+      derniere.ticketId != ticket.id &&
+      derniere.compteRenduAttendu(now)) {
+    final n = derniere.issueNumber;
+    final fin = derniere.retryAfter!;
+    texte =
+        '$position : partira après le compte rendu de la livraison du ticket'
+        '${n == null ? '' : ' #$n'}, à ${formatHeure(fin.toLocal())} au plus '
+        'tard.';
+  } else if (quota.plafondAtteint && uid != null && entree.byUid == uid) {
+    ton = TonLivraison.plafond;
+    texte =
+        '$position : plafond atteint le ${quota.jourAffiche} '
+        '(${quota.perDay} sur ${quota.perDay}). Elle partira quand le '
+        'compteur repartira à zéro, peu après minuit.';
+  } else {
+    texte = '$position : départ dans 5 minutes au plus.';
+  }
+  // La PR n'est plus prête : la sortie au départ est annoncée.
+  final pr = doc.prNumber;
+  String? detail;
+  var reprise = false;
+  if (doc.relaunchReady) {
+    detail =
+        'CI de ${_pr(pr)} en échec : la livraison sortira de la file au '
+        'départ.';
+    reprise =
+        ticket.canLaunch(ActionLancement.reprise) &&
+        historique?.enCours(ActionLancement.developpement, now) == null &&
+        historique?.enCours(ActionLancement.reprise, now) == null;
+  } else if (doc.eligiblePrCount > 1) {
+    detail =
+        '${doc.eligiblePrCount} pull requests ferment l\'Issue : la livraison '
+        'sortira de la file au départ.';
+  } else if (pr == null) {
+    detail =
+        'Aucune pull request prête : la livraison sortira de la file au '
+        'départ.';
+  } else if (!doc.ready) {
+    detail =
+        'CI de la PR #$pr pas verte : la livraison sortira de la file au '
+        'départ si elle ne l\'est pas.';
+  }
+  return LigneLivraison(
+    ton: ton,
+    texte: texte,
+    action: ActionLancement.livraison,
+    mode: ModeLivraison.retirer,
+    actif: !offline && historique != null,
+    verrouTicketId: autreId,
+    verrouIssue: autreIssue,
+    ligneAccord: accord,
+    ligneDetail: detail,
+    repriseAussi: reprise,
+  );
+}
+
+/// Ticket hors file, PR relue : cas 4 à 8 (T5), avec « Mettre en file » quand
+/// une autre livraison tient le verrou, n'a pas publié son compte rendu, ou
+/// quand la file n'est pas vide.
+LigneLivraison _ligneHorsFile({
+  required Ticket ticket,
+  required TicketDelivery doc,
+  required TicketLaunchesDoc? historique,
+  required EtatLancements? quota,
+  required DateTime now,
+  required bool offline,
+  required bool appelEnCours,
+  required ModeLivraison? modeEnCours,
+}) {
+  final issue = ticket.issueNumber;
+  final verrou = quota?.deliveryRunning;
   final pr = doc.prNumber;
   final plafond = quota?.plafondAtteint ?? false;
   final developpementEnCours = historique?.enCours(
@@ -430,20 +739,68 @@ LigneLivraison? ligneLivraison({
     );
   }
   // 8. PR prête.
-  if (verrou != null && verrou.ticketId != ticket.id && verrou.tient(now)) {
+  final verrouAutre =
+      verrou != null && verrou.ticketId != ticket.id && verrou.tient(now);
+  final enFile = quota?.deliveryQueue.length ?? 0;
+  final peutLivrer = ticket.canLaunch(ActionLancement.livraison);
+  // « Mettre en file » reste actif au plafond : l'entrée attendra.
+  bool actifFile() => !offline && !appelEnCours && historique != null;
+  if (verrouAutre) {
     final at = verrou.launchedAt;
     final numero = verrou.issueNumber;
+    final attente = enFile == 0 ? '' : ' ${_attendent(enFile, 'ticket')} déjà.';
     return LigneLivraison(
       ton: TonLivraison.info,
       texte:
           'Livraison du ticket ${numero == null ? '' : '#$numero '}en cours'
           '${at == null ? '' : ' depuis ${_depuis(at, now)}'}. Une seule '
-          'livraison à la fois.',
+          'livraison à la fois.$attente',
       verrouTicketId: verrou.ticketId,
       verrouIssue: numero,
+      action: peutLivrer ? ActionLancement.livraison : null,
+      mode: peutLivrer ? ModeLivraison.mettreEnFile : null,
+      actif: peutLivrer && actifFile(),
     );
   }
-  if (!ticket.canLaunch(ActionLancement.livraison)) {
+  final derniere = quota?.deliveryLast;
+  if (peutLivrer && appelEnCours && modeEnCours == ModeLivraison.mettreEnFile) {
+    return const LigneLivraison(
+      ton: TonLivraison.progression,
+      texte: 'Mise en file en cours.',
+      progression: 'Mise en file en cours',
+      action: ActionLancement.livraison,
+      mode: ModeLivraison.mettreEnFile,
+    );
+  }
+  if (peutLivrer &&
+      derniere != null &&
+      derniere.ticketId != ticket.id &&
+      derniere.compteRenduAttendu(now)) {
+    final numero = derniere.issueNumber;
+    return LigneLivraison(
+      ton: TonLivraison.info,
+      texte:
+          'La livraison du ticket ${numero == null ? '' : '#$numero '}n\'a '
+          'pas encore publié son compte rendu. Une seule livraison à la fois.',
+      verrouTicketId: derniere.ticketId,
+      verrouIssue: numero,
+      action: ActionLancement.livraison,
+      mode: ModeLivraison.mettreEnFile,
+      actif: actifFile(),
+    );
+  }
+  if (peutLivrer && enFile > 0) {
+    return LigneLivraison(
+      ton: TonLivraison.info,
+      texte:
+          '${_attendent(enFile, 'livraison')} dans la file. La prochaine part '
+          'dans 5 minutes au plus.',
+      action: ActionLancement.livraison,
+      mode: ModeLivraison.mettreEnFile,
+      actif: actifFile(),
+    );
+  }
+  if (!peutLivrer) {
     final valider =
         ticket.allowedDecisions?.contains(TicketDecisionAction.validate) ??
         false;
@@ -514,13 +871,18 @@ enum PastilleLivraisonType {
   correctionEnCours,
   ciEnCours,
   ciRouge,
+
+  /// Dans la file des livraisons : « En file 2/3 ».
+  enFile,
   prPrete,
 }
 
 /// La pastille d'un ticket En cours : livraison en cours (verrou ou
 /// historique), correction (reprise) en cours, CI en cours, CI en échec
 /// (`relaunch_ready` écrit par le serveur, sans développement en cours), PR
-/// prête ; une seule, dans cet ordre (UX T5, ticket #63). Ni « CI en
+/// prête ; une seule, dans l'ordre : livraison en cours, correction en cours,
+/// CI en échec, en file (ticket #104), CI en cours, PR prête (UX T5, ticket
+/// #63). Ni « CI en
 /// cours », ni « CI en échec », ni « PR prête » tant que
 /// `ticket_status/launches.ci_read_denied_since` est posé : l'état de la CI
 /// n'est plus relu par le serveur.
@@ -540,16 +902,20 @@ PastilleLivraisonType? pastilleLivraison({
   if (historique?.enCours(ActionLancement.reprise, now) != null) {
     return PastilleLivraisonType.correctionEnCours;
   }
-  if (livraison == null || quota?.ciReadDeniedSince != null) return null;
+  final lisible = livraison != null && quota?.ciReadDeniedSince == null;
+  final developpement = historique?.enCours(ActionLancement.developpement, now);
+  if (lisible && livraison.relaunchReady && developpement == null) {
+    return PastilleLivraisonType.ciRouge;
+  }
+  if (quota?.positionFile(ticket.id) != null) {
+    return PastilleLivraisonType.enFile;
+  }
+  if (!lisible) return null;
   final ci = livraison.ciStatus;
   if (livraison.prNumber != null && ci != null && ci != 'completed') {
     return PastilleLivraisonType.ciEnCours;
   }
-  if (livraison.relaunchReady) {
-    return historique?.enCours(ActionLancement.developpement, now) == null
-        ? PastilleLivraisonType.ciRouge
-        : null;
-  }
+  if (livraison.relaunchReady) return null;
   if (livraison.ready) return PastilleLivraisonType.prPrete;
   return null;
 }
@@ -568,6 +934,9 @@ PastilleLivraisonType? pastilleLivraison({
 /// - PR prête (pastille « PR prête », règle d'avant le ticket #63) ;
 /// - `relaunch_development` permis et pastille « CI en échec » (`ciRouge`).
 ///
+/// Un ticket dans la file des livraisons n'est pas à traiter : l'accord est
+/// donné (ticket #104).
+///
 /// [historique] ou [livraison] absent, illisible ou en panne : aucun
 /// lancement n'est tenu pour en cours ; un ticket permis par
 /// `allowed_decisions` reste à traiter plutôt que caché.
@@ -579,6 +948,7 @@ bool ticketATraiter({
   required DateTime now,
 }) {
   if (ticket.status == TicketStatus.sendFailed) return true;
+  if (quota?.positionFile(ticket.id) != null) return false;
   if (ticket.allowedDecisions?.contains(TicketDecisionAction.validate) ??
       false) {
     return true;

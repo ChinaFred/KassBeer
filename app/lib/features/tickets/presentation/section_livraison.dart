@@ -27,18 +27,25 @@ class SectionLivraison extends ConsumerWidget {
     super.key,
     required this.ticket,
     required this.livrerActif,
+    this.mettreEnFile = false,
   });
 
   final Ticket ticket;
 
-  /// « Livrer » est affiché et actif dans la barre (dérivé par la fiche).
+  /// « Livrer » ou « Mettre en file » est affiché et actif dans la barre
+  /// (dérivé par la fiche).
   final bool livrerActif;
+
+  /// Le bouton actif est « Mettre en file » (file des livraisons).
+  final bool mettreEnFile;
 
   static const loadError = 'Impossible de lire la livraison.';
   static const horsLigne = 'Livraison non disponible hors ligne.';
   static const illisible = 'Livraison illisible. Mettez l\'application à jour.';
   static const vide = 'Aucun compte rendu de livraison.';
   static const invitation = 'Appuyez sur « Livrer », en bas de la fiche.';
+  static const invitationFile =
+      'Appuyez sur « Mettre en file », en bas de la fiche.';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -102,7 +109,9 @@ class SectionLivraison extends ConsumerWidget {
         ),
       ),
     ];
-    final avecInvitation = livrerActif ? '$vide $invitation' : vide;
+    final avecInvitation = livrerActif
+        ? '$vide ${mettreEnFile ? invitationFile : invitation}'
+        : vide;
     final List<Widget> corps;
     if (async.hasError) {
       corps = [
@@ -296,6 +305,20 @@ class PastilleLivraison extends ConsumerWidget {
           ton: TonEtiquette.erreur,
         ),
       ),
+      PastilleLivraisonType.enFile => switch (quota?.positionFile(ticket.id)) {
+        final f? => Semantics(
+          label:
+              'Dans la file des livraisons, position ${f.position} sur '
+              '${f.total}',
+          excludeSemantics: true,
+          child: Etiquette(
+            label: 'En file ${f.position}/${f.total}',
+            icon: Icons.low_priority,
+            ton: TonEtiquette.neutre,
+          ),
+        ),
+        null => const SizedBox.shrink(),
+      },
       PastilleLivraisonType.prPrete => Semantics(
         label: 'Pull request prête à livrer',
         excludeSemantics: true,

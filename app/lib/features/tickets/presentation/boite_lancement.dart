@@ -25,9 +25,16 @@ class LancementFicheNotifier extends Notifier<bool> {
   @override
   bool build() => false;
 
+  /// Mode de l'appel de livraison en cours (« Mettre en file », « Retirer de
+  /// la file »), lu par la barre pendant l'appel ; `null` sinon.
+  ModeLivraison? modeEnCours;
+
   /// Appelle le serveur une fois, jamais rejoué. Un second appel pendant le
   /// premier est refusé sans rien envoyer.
-  Future<ResultatLancement> lancer(ActionLancement action) async {
+  Future<ResultatLancement> lancer(
+    ActionLancement action, {
+    ModeLivraison? mode,
+  }) async {
     if (state) {
       return const ResultatLancement(
         IssueLancement.refuse,
@@ -35,12 +42,17 @@ class LancementFicheNotifier extends Notifier<bool> {
       );
     }
     final repository = ref.read(ticketsRepositoryProvider);
+    modeEnCours = mode;
     state = true;
     final resultat = await repository.launch(
       ticketId: ticketId,
       action: action,
+      mode: mode,
     );
-    if (ref.mounted) state = false;
+    if (ref.mounted) {
+      modeEnCours = null;
+      state = false;
+    }
     return resultat;
   }
 }
@@ -79,6 +91,7 @@ class BoiteLancement extends StatefulWidget {
     this.typeTicket,
     this.validationAvant,
     this.valider,
+    this.positionFile,
   }) : assert((validationAvant == null) == (valider == null));
 
   final ActionLancement action;
@@ -93,6 +106,10 @@ class BoiteLancement extends StatefulWidget {
 
   /// « Bug », rappelé dans la boîte « Livrer ».
   final String? typeTicket;
+
+  /// Boîte « Mettre en file » (livraison seule, ticket #104) : ligne de la
+  /// position que prendra le ticket ; `null` pour « Livrer ».
+  final String? positionFile;
 
   /// `ticket_status/launches` lu, ou `null` : « Lancements restants :
   /// inconnu. ».
@@ -135,6 +152,36 @@ class BoiteLancement extends StatefulWidget {
       'La fusion met l\'application en ligne pour tout le groupe, sur le web '
       'et sur Android, sans autre accord. Appuyer sur « Livrer » vaut accord '
       'de fusion.';
+
+  /// Titre de la boîte « Mettre en file ».
+  static const titreFile = 'Mettre ce ticket en file de livraison ?';
+
+  /// Départ différé (P39, ADR-008, amendement du 2026-11-22), mot pour mot.
+  static const delaiFile =
+      'La livraison partira sans autre accord quand la livraison en cours '
+      'aura publié son compte rendu, environ 5 minutes après, ou 3 h après son '
+      'lancement s\'il n\'arrive pas. Elle sera comptée au départ ; si le '
+      'plafond du jour est atteint, elle attendra. Si le code de la PR change '
+      'd\'ici là, ou si une livraison se bloque, elle sortira de la file.';
+
+  /// Accord de fusion de « Mettre en file ».
+  static const accordFusionFile =
+      'La fusion met l\'application en ligne pour tout le groupe, sur le web '
+      'et sur Android, sans autre accord. Appuyer sur « Mettre en file » vaut '
+      'accord de fusion.';
+
+  /// Plafond atteint dans la boîte « Mettre en file ».
+  static const attenteRemiseAZero = 'La livraison attendra la remise à zéro.';
+
+  static const miseEnFileEnCours =
+      'Mise en file en cours. Vous pouvez fermer : le résultat s\'affichera '
+      'en bas de l\'écran.';
+
+  /// Effet de « Mettre en file », au futur : la session part plus tard.
+  static String effetFile(int? prNumber) =>
+      'Une session Claude Code mettra '
+      '${prNumber == null ? 'la pull request' : 'la PR #$prNumber'} à jour '
+      'avec main, la fusionnera, puis suivra le déploiement.';
 
   /// « Une session Claude Code va lire l'Issue #12… » (P39).
   static String effet(
@@ -255,9 +302,14 @@ class _BoiteLancementState extends State<BoiteLancement> {
             : BoiteLancement.avertissementRelance(relanceDe));
     final typeTicket = widget.typeTicket;
     final validationAvant = widget.validationAvant;
-    final plafondAtteint = widget.quota?.plafondAtteint ?? false;
+    final positionFile = widget.positionFile;
+    final file = positionFile != null;
+    final plafond = widget.quota?.plafondAtteint ?? false;
+    // « Mettre en file » reste actif au plafond : l'entrée attendra.
+    final plafondAtteint = plafond && !file;
     final libelle = switch (action) {
       _ when validationAvant != null => 'Valider et lancer',
+      _ when file => 'Mettre en file',
       ActionLancement.livraison => relance ? 'Relancer' : 'Livrer',
       ActionLancement.reprise => 'Relancer',
       _ => relance ? 'Relancer' : 'Lancer',
@@ -276,6 +328,8 @@ class _BoiteLancementState extends State<BoiteLancement> {
         title: Text(
           validationAvant != null
               ? BoiteLancement.titreValiderEtLancer
+              : file
+              ? BoiteLancement.titreFile
               : BoiteLancement.titre(action, relance: relance),
         ),
         content: Column(
@@ -287,22 +341,41 @@ class _BoiteLancementState extends State<BoiteLancement> {
               const SizedBox(height: 12),
             ],
             Text(
-              BoiteLancement.effet(
-                action,
-                widget.issueNumber,
-                prNumber: widget.prNumber,
-              ),
+              file
+                  ? BoiteLancement.effetFile(widget.prNumber)
+                  : BoiteLancement.effet(
+                      action,
+                      widget.issueNumber,
+                      prNumber: widget.prNumber,
+                    ),
             ),
+            if (file) ...[
+              const SizedBox(height: 12),
+              const Text(BoiteLancement.delaiFile),
+            ],
             if (livraison) ...[
               const SizedBox(height: 12),
-              const Text(BoiteLancement.accordFusion),
+              Text(
+                file
+                    ? BoiteLancement.accordFusionFile
+                    : BoiteLancement.accordFusion,
+              ),
+              if (positionFile != null) ...[
+                const SizedBox(height: 12),
+                Text(positionFile),
+              ],
               if (typeTicket != null) ...[
                 const SizedBox(height: 12),
                 Text('Type du ticket : $typeTicket.'),
               ],
             ],
             const SizedBox(height: 12),
-            Text(ligneQuota(widget.quota)),
+            Text(
+              file && plafond
+                  ? '${ligneQuota(widget.quota)} '
+                        '${BoiteLancement.attenteRemiseAZero}'
+                  : ligneQuota(widget.quota),
+            ),
             const SizedBox(height: 4),
             // Usage de l'abonnement Claude : lien seul, aucun chiffre.
             LienUsageClaude(
@@ -344,6 +417,8 @@ class _BoiteLancementState extends State<BoiteLancement> {
                 child: Text(
                   _validation
                       ? BoiteLancement.validationEnCours
+                      : file
+                      ? BoiteLancement.miseEnFileEnCours
                       : BoiteLancement.envoiEnCours,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
@@ -385,6 +460,8 @@ class _BoiteLancementState extends State<BoiteLancement> {
                 ? IndicateurBouton(
                     label: _validation
                         ? 'Validation en cours'
+                        : file
+                        ? 'Mise en file en cours'
                         : livraison
                         ? 'Livraison en cours'
                         : 'Lancement en cours',

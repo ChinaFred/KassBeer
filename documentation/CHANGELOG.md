@@ -6,6 +6,38 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.2 — fonctionnel
+
+Résumé : « Mettre en file » enregistre votre accord : une livraison part seule après la précédente.
+
+Admin › Tickets : quand une livraison est déjà en cours, ou qu'elle n'a pas encore publié son
+compte rendu, « Mettre en file » remplace « Livrer ». Votre accord est enregistré une fois :
+la livraison part seule, environ 5 minutes après le compte rendu de la précédente, de jour
+comme de nuit. Elle est comptée au départ, attend la remise à zéro si le plafond du jour est
+atteint, et sort de la file si le code de la pull request change ou si une livraison se
+bloque. La fiche montre la position dans la file, la raison de l'attente et l'accord donné ;
+la liste porte une pastille « En file 2/3 ». « Retirer de la file » annule l'accord. Une sortie
+de file sans départ est expliquée sur la fiche. Demandé par le ticket #104.
+
+### v0.2.2 — technique
+
+File des livraisons (ADR-008, amendement du 2026-11-22). `launchTicketDelivery` reçoit `mode`
+(`start`, `queue`, `unqueue`) ; `ticket_status/launches` porte `delivery_queue`
+(`DELIVERY_QUEUE_MAX` = 10, `config.ts`) et `delivery_last` (`reported_at` posé par
+`writeDeliveryReports`, un blocage vide la file dans la même transaction) ;
+`admin/delivery.queue_exit` note chaque sortie sans départ. Nouvelle tâche planifiée
+`startQueuedDelivery` (toutes les 5 minutes, `maxInstances` 1, `concurrency` 1, 300 s,
+`retryCount` 0, secrets `GITHUB_TICKETS_TOKEN` et `TICKETS_ROUTINE_DEV_*`), qui fait partir la
+tête de file après les contrôles de « Livrer », la tête de la PR relue égale à l'accord, et une
+transaction qui retire l'entrée, prend le verrou et compte ensemble. `syncTickets` reste le
+rattrapage du relevé et ne monte aucun secret de routine. Refuser, Clore, une reprise et la
+sortie d'« En cours » retirent le ticket de la file. `QUERYABLE_FUNCTIONS` reçoit
+`startQueuedDelivery` ; `ci.yml` et `deploy.yml` acceptent la seconde tâche planifiée, vérifient
+ses réglages et lui réservent avec les deux callables les secrets `TICKETS_ROUTINE_DEV_*`. Le
+prompt de livraison cite « Livrer » ou « Mettre en file » : à recoller sur claude.ai. Règles
+Firestore inchangées ; tests de `rules-tests/` étendus aux nouveaux champs. Aucune dépendance
+changée. Demandé par le ticket #104.
+
 ### v0.1.99 — fonctionnel
 
 L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait

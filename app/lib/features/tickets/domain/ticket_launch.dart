@@ -74,6 +74,20 @@ enum ActionLancement {
   };
 }
 
+/// Mode de `launchTicketDelivery` (ADR-008, amendement du 2026-11-22) :
+/// « Livrer », « Mettre en file », « Retirer de la file ». Le bouton appuyé
+/// choisit le mode ; le serveur recontrôle tout.
+enum ModeLivraison {
+  livrer('start'),
+  mettreEnFile('queue'),
+  retirer('unqueue');
+
+  const ModeLivraison(this.storedValue);
+
+  /// Valeur de `mode` envoyée au serveur.
+  final String storedValue;
+}
+
 /// Résultat d'un lancement, écrit par le serveur (`state`).
 enum EtatLancement {
   launched('launched'),
@@ -611,6 +625,13 @@ enum IssueLancement {
   /// Pas de réponse (réseau coupé, délai dépassé, réponse illisible) : la
   /// session est peut-être partie.
   perdu,
+
+  /// « Mettre en file » accepté : rien n'est parti ni compté.
+  enFile,
+
+  /// « Retirer de la file » appliqué ([ResultatLancement.changed] faux : le
+  /// ticket n'était plus en file).
+  retire,
 }
 
 /// Codes des refus de livraison qui demandent une fusion à la main : la PR
@@ -626,15 +647,34 @@ const kRefusFusionALaMain = {
 /// `launchTicketDelivery`.
 @immutable
 class ResultatLancement {
-  const ResultatLancement(this.issue, {this.motif, this.code});
+  const ResultatLancement(
+    this.issue, {
+    this.motif,
+    this.code,
+    this.position,
+    this.total,
+    this.changed = true,
+    this.reseau = false,
+  });
 
   final IssueLancement issue;
 
   /// `details.reason` : texte français du serveur.
   final String? motif;
 
-  /// `details.code` : code stable du serveur, pour le rapport d'erreur seul.
+  /// `details.code` : code stable du serveur, pour le rapport d'erreur et
+  /// le texte d'un refus de la file.
   final String? code;
+
+  /// Position et taille de la file après « Mettre en file ».
+  final int? position;
+  final int? total;
+
+  /// « Retirer de la file » : faux si le ticket n'était plus en file.
+  final bool changed;
+
+  /// Échec `unavailable` sans motif du serveur : pas de réseau.
+  final bool reseau;
 
   /// La boîte reste ouverte et affiche le message : rien n'est parti.
   bool get rienNestParti =>
@@ -647,6 +687,20 @@ class ResultatLancement {
     final map = data is Map ? data : const {};
     if (map['outcome'] == 'launched') {
       return const ResultatLancement(IssueLancement.lance);
+    }
+    int? entier(Object? v) => v is int && v > 0 ? v : null;
+    if (map['outcome'] == 'queued') {
+      return ResultatLancement(
+        IssueLancement.enFile,
+        position: entier(map['position']),
+        total: entier(map['total']),
+      );
+    }
+    if (map['outcome'] == 'unqueued') {
+      return ResultatLancement(
+        IssueLancement.retire,
+        changed: map['changed'] != false,
+      );
     }
     return ResultatLancement(
       IssueLancement.inconnu,
@@ -681,7 +735,12 @@ class ResultatLancement {
       _ when motif != null => IssueLancement.refuse,
       _ => IssueLancement.perdu,
     };
-    return ResultatLancement(issue, motif: motif, code: codeServeur);
+    return ResultatLancement(
+      issue,
+      motif: motif,
+      code: codeServeur,
+      reseau: code == 'unavailable' && motif == null,
+    );
   }
 
   /// Message affiché, dans la boîte (refus) ou en bas d'écran.
@@ -692,10 +751,29 @@ class ResultatLancement {
       'Résultat inconnu, compté dans les lancements du jour. '
           '${motif ?? 'Vérifiez sur claude.ai/code avant de relancer.'}',
     IssueLancement.refuse =>
-      motif ?? 'Lancement refusé par le serveur. Rien n\'a été lancé.',
+      kRefusFile[code] ??
+          motif ??
+          'Lancement refusé par le serveur. Rien n\'a été lancé.',
     IssueLancement.acces =>
       'Lancement refusé : accès administrateur refusé. Rien n\'a été lancé.',
     IssueLancement.perdu =>
       'Réponse perdue. Regardez la section Lancements avant de relancer.',
+    IssueLancement.enFile => 'Ticket mis en file de livraison.',
+    IssueLancement.retire =>
+      changed
+          ? 'Ticket retiré de la file.'
+          : 'Ce ticket n\'était plus dans la file.',
   };
 }
+
+/// Textes des refus de la file des livraisons, par `details.code`. Le refus
+/// `delivery_queue_full` garde le texte du serveur, qui porte la taille de la
+/// file (`DELIVERY_QUEUE_MAX`) : aucune constante en Dart.
+const kRefusFile = <String, String>{
+  'delivery_queue_already': 'Ce ticket est déjà dans la file.',
+  'delivery_lock_free':
+      'La livraison précédente est finie : appuyez sur « Livrer ».',
+  'delivery_queue_ahead':
+      'D\'autres livraisons attendent : appuyez sur « Mettre en file ». '
+      'Rien n\'a été lancé ni décompté.',
+};

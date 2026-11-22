@@ -376,11 +376,21 @@ class CarteLancement extends ConsumerWidget {
     final l = lancement;
     final at = l.at;
     final by = l.byUid;
-    final sousTitre = [
-      if (at != null) dateLancement(at),
-      if (by != null)
-        by == lecteurUid ? 'par vous' : 'par un autre administrateur',
-    ].join(' ');
+    // Livraison partie de la file : `by_uid` est l'auteur de l'accord.
+    final sousTitre = l.queued
+        ? [
+            if (at != null) '${dateLancement(at)},',
+            'partie de la file',
+            if (by != null)
+              by == lecteurUid
+                  ? 'sur votre accord'
+                  : 'sur l\'accord d\'un autre administrateur',
+          ].join(' ')
+        : [
+            if (at != null) dateLancement(at),
+            if (by != null)
+              by == lecteurUid ? 'par vous' : 'par un autre administrateur',
+          ].join(' ');
     final (IconData icone, Color couleur, String resultat) = switch (l.etat) {
       EtatLancement.launched => (
         Icons.check_circle_outline,
