@@ -285,7 +285,8 @@ const List<FusionCulture> kFusionsCultures = [
 /// Correction d'une culture que Brewtarget écrit mal (P56, décisions de
 /// l'utilisateur du 2026-11-21) : une souche sous deux références
 /// ([ReferenceCulture]), un nom de gamme porté par plusieurs souches
-/// ([GammeCulture]), un nom en alias d'une autre souche ([AliasEcarteCulture]).
+/// ([GammeCulture]), un nom en alias d'une autre souche ([AliasEcarteCulture]),
+/// une souche sans référence sous deux noms ([MemeSoucheCulture]).
 /// Elle ne touche que les entrées de Brewtarget, jamais une fiche. Une ligne
 /// qui ne désigne rien, ou une entrée désignée par deux lignes, arrête la
 /// préparation ([StateError]). Chaque ligne a son cas de test
@@ -388,6 +389,42 @@ final class AliasEcarteCulture extends CorrectionCulture {
   String toString() => '$producteur $reference sans « $alias »';
 }
 
+/// Souche que Brewtarget écrit sans référence sous deux noms : les entrées
+/// sans référence de [producteur] nommées [nom] et [rejoint] font un seul
+/// document. Son identifiant est celui de la première entrée du groupe dans
+/// l'ordre des identifiants (`ordreIdentifiant` de `referentiel.dart` : rang
+/// de la source, puis ordre de lecture) ; l'entrée la plus prioritaire donne
+/// les valeurs et le nom, les autres noms passent en alias.
+final class MemeSoucheCulture extends CorrectionCulture {
+  /// Crée la ligne.
+  const MemeSoucheCulture(
+    super.producteur, {
+    required this.nom,
+    required this.rejoint,
+  });
+
+  /// Nom d'une des entrées.
+  final String nom;
+
+  /// Nom de l'autre entrée.
+  final String rejoint;
+
+  bool _sansReference(EntreeBrute e, String n) =>
+      _brewtarget(e) &&
+      e.produit == null &&
+      cleNormalisee(e.nom) == cleNormalisee(n);
+
+  /// Vrai si [e] est l'une des entrées désignées.
+  bool designe(EntreeBrute e) =>
+      _sansReference(e, nom) || _sansReference(e, rejoint);
+
+  /// Vrai si [e] porte [nom] ; faux pour [rejoint].
+  bool designeNom(EntreeBrute e) => _sansReference(e, nom);
+
+  @override
+  String toString() => '$producteur « $nom » = « $rejoint »';
+}
+
 /// Corrections des cultures de Brewtarget.
 const List<CorrectionCulture> kCorrectionsCultures = [
   // Une souche sous deux références.
@@ -401,6 +438,13 @@ const List<CorrectionCulture> kCorrectionsCultures = [
   GammeCulture('Lallemand', 'Lalvin'),
   GammeCulture('Fermentis', 'SafSpirit'),
   GammeCulture('AEB', 'Fermoale'),
+  // Une souche sans référence sous deux noms (003 d'une part, 004 et 005 de
+  // l'autre ; décision de l'utilisateur du 2026-11-22).
+  MemeSoucheCulture(
+    'Lallemand',
+    nom: 'Belle Saison Belgian Saison-Style',
+    rejoint: 'LalBrew Belle Saison',
+  ),
   // Un nom en alias d'une autre souche du même producteur.
   AliasEcarteCulture('Wyeast', reference: '3056', alias: 'Bavarian Wheat'),
   AliasEcarteCulture('Wyeast', reference: '1335', alias: 'British Ale'),

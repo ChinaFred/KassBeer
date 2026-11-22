@@ -6,7 +6,9 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
-### v0.2.0 — fonctionnel
+### v0.2.2 — fonctionnel
+
+Résumé : Un arrêt du développement d'un ticket s'affiche à part et se relance tout de suite.
 
 Pour l'administrateur : quand une session de développement lancée depuis la fiche d'un ticket
 s'arrête avant d'écrire du code, son message s'affiche dans la section Analyses sous le titre
@@ -14,7 +16,7 @@ s'arrête avant d'écrire du code, son message s'affiche dans la section Analyse
 … s'est arrêté » et propose « Relancer le développement » tout de suite, sans attendre trois
 heures. La validation du ticket reste valable : un arrêt ne demande plus de valider à nouveau.
 
-### v0.2.0 — technique
+### v0.2.2 — technique
 
 Lot R1 d'ADR-018. `analysisModel.ts` relève « ## Développement — arrêt » du compte 16348852
 sous la nature `development_stop` (NFC, espaces de tête retirées, 20 000 caractères, dix
@@ -38,6 +40,53 @@ Les arrêts déjà publiés sur #104, #110 et #114 cessent d'être des spécific
 la fusion : recoller le prompt de la routine de développement sur claude.ai/code.
 `CLAUDE.md` : P32, P33 et P40 (parts R1). ADR-008 reçoit « Modifié par : ADR-018 ». Aucun
 paquet ajouté ni monté.
+
+### v0.2.1 — fonctionnel
+
+Résumé : L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet.
+
+Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans
+l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé :
+seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre
+dans le navigateur le journal de toutes les versions, détail technique et versions plus
+récentes compris. Demandé par le ticket #114.
+
+### v0.2.1 — technique
+
+`scripts/changelog-recent.mjs` : une entrée « fonctionnel » commence par une ligne
+`Résumé : …` de 120 caractères au plus (`SUMMARY_MAX_LENGTH`), obligatoire à partir de la
+v0.2.1 (`SUMMARY_REQUIRED_FROM`). Le script échoue (code 1) sur un résumé absent, vide, trop
+long ou placé après le premier paragraphe. L'asset `changelog_recent.json` gagne le champ
+`summaries` (un résumé par entrée « fonctionnel » qui en porte un) ; `paragraphs` peut être
+vide quand la version a un résumé. `lireNouveautes` lit `summaries` ; la borne de longueur
+reste au script seul. `NouveautesScreen` : détail replié par carte (état
+non mémorisé), lien `kJournalComplet` ouvert par `ouvrirLienProvider` ; un refus du système
+affiche « Le lien n'a pas pu s'ouvrir. » sans rapport, une exception est rapportée sous
+`nouveautes.open_changelog`. Règle d'écriture ajoutée à `CLAUDE.md` (« Version »). Aucune
+dépendance changée. Demandé par le ticket #114.
+
+### v0.2.0 — fonctionnel
+
+La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew
+Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms :
+une recette qui écrit l'un ou l'autre retrouve la même levure.
+
+### v0.2.0 — technique
+
+Brewtarget écrit Belle Saison de Lallemand sans référence, sous deux noms : « LalBrew Belle
+Saison » (fichiers 005 et 004) et « Belle Saison Belgian Saison-Style » (fichier 003). Les deux
+entrées n'ont pas de `product_id` et aucune n'est une fiche de fabricant : ni `FusionCulture` ni
+`ReferenceCulture` ne s'appliquent. Nouvelle correction `MemeSoucheCulture`
+(`exchange/lib/src/ingestion/fusions.dart`) : deux entrées Brewtarget sans référence d'un même
+producteur font un document, à l'identifiant de la première dans `ordreIdentifiant`
+(`referentiel.dart`) ; les deux noms doivent être lus, sinon `StateError`. Une ligne, Lallemand.
+Identifiant gardé : `culture-lallemand-lalbrew-belle-saison` (fichier 005, rang 1), celui de
+`levures-recettes.json` et de la description aromatique relue ; rien à reporter. Préparation
+rejouée : 959 documents `beer_cultures` au lieu de 960, 1 identifiant sort
+(`culture-lallemand-belle-saison-belgian-saison-style`), aucun n'entre, 1 document change
+(alias et provenance) ; les autres collections préparées sont identiques. Tests sur fixtures
+inventées (P20, P56). Version 0.2.0 : le dernier chiffre a atteint 99. Demande de l'utilisateur
+du 2026-11-22.
 
 ### v0.1.99 — fonctionnel
 
