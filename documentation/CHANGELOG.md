@@ -6,6 +6,26 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.2 — fonctionnel
+
+Dans la Bibliothèque, l'origine des houblons et des malts s'affiche en français :
+« États-Unis », « Royaume-Uni », « République tchèque »… La recette qui nomme le houblon
+« Hallertau Hersbrucker » retrouve maintenant sa fiche et sa description. Ces changements
+s'affichent une fois le référentiel réécrit par l'administrateur.
+
+### v0.2.2 — technique
+
+La préparation (`exchange/lib/src/ingestion/referentiel.dart`) écrit `origin_fr` à côté
+d'`origin`, qui reste la graphie anglaise lue par l'export, les arômes et la table de fusion,
+dans `beer_hops/`, `beer_fermentables/` et les entrées de `beer_index/hops`. Noms français
+dans `kPaysFr` (`origines.dart`, mêmes clés que `kPays`, test) ; un pays sans nom arrête la
+préparation. `ingest/lib/validation.mjs` accepte `origin_fr` (texte de 1 à 120 caractères,
+seulement avec `origin`). `origin_fr` n'est ni envoyé au modèle ni compté dans `input_sha256`
+(tests). L'application affiche `origin_fr`, sinon `origin` (`origineAffichee`). Table de
+fusion : ligne sans entrée pour l'alias « Hallertau Hersbrucker » ; `Referentiel.fusionner`
+refuse une ligne dont le document manque (`StateError`, test). ADR-014, note du 2026-11-22.
+Après la fusion, l'administrateur relance la préparation puis `ecrire.mjs`.
+
 ### v0.2.1 — fonctionnel
 
 Résumé : L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet.
