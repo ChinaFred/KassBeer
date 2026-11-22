@@ -4,6 +4,20 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-22
+
+### v0.1.98 — technique
+
+Contrôle des descriptions des divers (ADR-018) : « un sachet » ou « une sachet » seuls ne
+comptent plus comme une dose. L'essai sur 10 divers du 2026-11-22 a refusé la coriandre pour
+« placées dans un sachet désinfecté », où le sachet sert de contenant. « un demi sachet »,
+« deux sachets », « 1 sachet », « une pastille », et « un sachet » suivi d'une quantité ou d'un
+rapport (« et demi », « ou deux », « (ou deux) », « par brassin », « / hl », « ∕ hl », « x2 »,
+« + un demi », « deux fois », « et 1/2 », « ½ », « 2x », « et quart ») restent refusés (`contientDose`,
+`ingest/lib/divers/validation.mjs`, tests ajoutés, ingest 321). La lecture s'arrête à la fin de la phrase :
+« Dans un sachet. À la fin, retirer. » est accepté. « éventuellement deux » ou « un second »
+restent à la relecture humaine. Décisions de l'utilisateur.
+
 ## 2026-11-21
 
 ### v0.1.97 — technique

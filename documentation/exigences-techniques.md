@@ -2399,7 +2399,7 @@ combinés par une espace, un trait d'union ou « et », suivis au besoin de « d
 `oz(s)`, `tsp(s)`, `tbsp(s)`, `cuil.`, `c. à café`, `c. à soupe`, `c.à.c`, `c.à.s`, ou des mots
 `gramme(s)`, `kilogramme(s)`, `milligramme(s)`, `litre(s)`, `centilitre(s)`, `décilitre(s)`,
 `hectolitre(s)`, `millilitre(s)`, `once(s)`, `cuillère(s)`, `sachet(s)`, `pastille(s)`,
-`goutte(s)`, `comprimé(s)`, `tablette(s)`, `capsule(s)`, `dosette(s)`, `pour cent`, `pour-cent`. Une lettre ou une apostrophe juste après l'unité l'annule (« 2 lots », « 5,2
+`goutte(s)`, `comprimé(s)`, `tablette(s)`, `capsule(s)`, `dosette(s)`, `pour cent`, `pour-cent` ; « un sachet » ou « une sachet » seuls ne sont pas une dose (contenant), sauf suivis de « et » et d'un nombre (« et demi(e) », « et quart », « et un(e) », « et deux », « et 1/2 »), de « ou », « voire », « à », « par », « pour », « fois », de « x » et d'un nombre, ou d'un nombre et de « fois », avec ou sans ponctuation ou symbole devant (« (ou deux) », « — voire deux »), dans la même phrase (un « . », « ! » ou « ? » suivi d'une espace et d'une majuscule arrête la lecture), ou de « / », « ⁄ », « ∕ », « ⧸ », « × », « + » ou d'un chiffre (décisions de l'utilisateur du 2026-11-22). Une lettre ou une apostrophe juste après l'unité l'annule (« 2 lots », « 5,2
 l'hiver » acceptés). Les règles de contenu (adresse web, `@`, balisage, monnaie, dose) portent
 sur la forme nettoyée puis NFKC du texte (`formeControlee`) : « ５ g », « 5 ｇ », « 5 g » avec
 une espace sans chasse, « www.exemple.shop » avec une espace sans chasse, « ＄ » sont refusés ;

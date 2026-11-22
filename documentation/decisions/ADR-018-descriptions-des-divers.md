@@ -149,6 +149,20 @@ Note du 2026-11-21 (décision de l'utilisateur, après relecture du lot D2) :
   `comprimé(s)`, `tablette(s)`, `capsule(s)`, `dosette(s)`, `tsp`, `tbsp`, `ppb`. La règle 8
   du prompt nomme les mots et abréviations (`cuil.`, `c. à café`, `c. à soupe`, `c.à.c`,
   `c.à.s`, goutte, comprimé…) ; les pluriels des symboles restent au seul contrôle, sans changer `PROMPT_VERSION` : aucune génération n'a eu lieu.
+- **Contenant** (décision de l'utilisateur du 2026-11-22, après l'essai sur 10 divers) :
+  « un sachet » ou « une sachet » seuls ne sont plus une dose, pour permettre « placées dans un
+  sachet désinfecté » (infusion en cuve). « un demi sachet », « deux sachets », « 1 sachet » et
+  « une pastille » restent refusés. Après la relecture de `securite`, l'utilisateur a resserré
+  l'exception le même jour : « un sachet » suivi de « et demi », « et un », « ou », « voire »,
+  « à », « par », « pour » ou « / » reste une dose (« un sachet par brassin », « un sachet ou
+  deux »). « un sachet de levure » reste accepté. Après une seconde relecture de `securite`,
+  l'utilisateur a retenu des corrections simples : toute ponctuation ou tout symbole avant le
+  mot de liaison compte (« un sachet (ou deux) », « un sachet — voire deux »), les barres
+  obliques « ⁄ », « ∕ », « ⧸ » aussi, et « × », « + », « x2 », « fois », « deux fois » et
+  « et 1/2 » deviennent des quantités. Les tournures « éventuellement deux » ou « un second »
+  restent à la relecture humaine et au prompt. Après la même relecture, la lecture s'arrête
+  à la fin de la phrase (« . », « ! » ou « ? » suivi d'une espace et d'une majuscule) : « Dans
+  un sachet. À la fin, retirer. » est accepté.
 - **Lot D3.** L'affichage dans la Bibliothèque (section 4 : fiche d'un divers, sections
   « Utilisation » et « Goût », mention IA commune aux houblons, `get` à l'ouverture, P22, P63)
   et la ligne « Descriptions des divers » de l'écran « Sources des données » (P20) arrivent au

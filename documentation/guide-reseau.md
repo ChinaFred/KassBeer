@@ -369,6 +369,12 @@ Le 2026-11-21, avec l'acceptation d'ADR-019 (réconciliation avec l'ADR-017 des 
 ajoute P64 (`relecteur-regles`) : un numéro d'ADR ou de contrôle se vérifie libre sur `main` et
 sur chaque branche distante (leçon 17). P54, P55 et le P62 des levures seront réécrits au lot R2.
 
+Le 2026-11-22, après l'essai sur 10 divers, P63 accepte « un sachet » ou « une sachet » comme
+contenant, sauf suivis de « et » et d'un nombre, de « ou », « voire », « à », « par », « pour »,
+« fois », de « x » et d'un nombre, ou d'un nombre et de « fois », avec ou sans ponctuation ou
+symbole devant dans la même phrase, ou de « / », « ⁄ », « ∕ », « ⧸ », « × », « + » ou d'un chiffre (décisions de
+l'utilisateur).
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

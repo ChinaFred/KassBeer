@@ -71,6 +71,27 @@ const DOSE_CHIFFRES = new RegExp(`\\d(?:[.,]\\d+)?\\s*(?:-\\s*)?${UNITES_DOSE}${
 const DOSE_LETTRES = new RegExp(
   `(?<![\\p{L}])${NOMBRE_LETTRES}(?:(?:\\s*-\\s*|\\s+et\\s+|\\s+)${NOMBRE_LETTRES})*` +
     `(?:\\s+|\\s*-\\s*)(?:(?:de|d['’])\\s*)?${UNITES_DOSE}${FIN_UNITE}`,
+  "giu",
+);
+
+/// « un sachet » et « une sachet » seuls : un contenant (infusion en cuve), pas une dose
+/// (décision de l'utilisateur du 2026-11-22). « un demi sachet », « deux sachets » restent
+/// des doses, comme « un sachet » suivi d'une quantité ou d'un rapport : SUITE_QUANTITE
+/// (décisions de l'utilisateur du 2026-11-22, après deux relectures de securite). Une barre
+/// oblique (« / », « ⁄ », « ∕ », « ⧸ »), « × », « + » ou un chiffre (« 2x », « ½ ») juste après comptent ; sinon toute
+/// ponctuation et tout symbole sont sautés avant le mot de liaison (« (ou deux) », « — voire
+/// deux », « : par brassin »), puis « et » suivi d'un nombre (« et demi », « et quart », « et un »,
+/// « et deux », « et 1/2 »), « ou », « voire », « à », « par », « pour », « fois », « x » suivi d'un
+/// nombre (« x2 », « x deux ») et un nombre suivi de « fois » (« deux fois », « 3 fois ») comptent.
+const SACHET_CONTENANT = /^une?\s+sachet$/iu;
+/// Fin de phrase : « . », « ! » ou « ? » suivi d'une espace et d'une majuscule. La phrase
+/// suivante n'est pas lue (« Dans un sachet. À la fin, retirer. » accepté ; décision de
+/// l'utilisateur du 2026-11-22).
+const FIN_PHRASE = /[.!?]\s+(?=\p{Lu})/u;
+const SUITE_SYMBOLE = /^\s*[/⁄∕⧸×+\d]/u;
+const SUITE_QUANTITE = new RegExp(
+  `^[\\s\\p{P}\\p{S}]*(?:et\\s+(?:demie?|quarts?|\\d|${NOMBRE_LETTRES})|ou|voire|à|par|pour|fois|x\\s*\\d|` +
+    `x\\s+${NOMBRE_LETTRES}|\\d+\\s*fois|${NOMBRE_LETTRES}\\s+fois)(?![\\p{L}])`,
   "iu",
 );
 
@@ -81,7 +102,14 @@ const longueur = (t) => [...t].length;
 /// dose, contrôlé sur la forme nettoyée et NFKC (« ５ g », « 5\u200Bg »).
 export function contientDose(texte) {
   const t = formeControlee(texte);
-  return DOSE_CHIFFRES.test(t) || DOSE_LETTRES.test(t);
+  if (DOSE_CHIFFRES.test(t)) return true;
+  // DOSE_LETTRES porte le drapeau `g` pour matchAll : ne pas l'employer avec .test ou .exec.
+  for (const m of t.matchAll(DOSE_LETTRES)) {
+    if (!SACHET_CONTENANT.test(m[0])) return true;
+    const suite = t.slice(m.index + m[0].length).split(FIN_PHRASE)[0];
+    if (SUITE_SYMBOLE.test(suite) || SUITE_QUANTITE.test(suite)) return true;
+  }
+  return false;
 }
 
 /// Règles d'un texte de divers : celles de texte.mjs, plus le refus d'une dose.
