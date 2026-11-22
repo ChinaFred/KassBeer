@@ -604,6 +604,11 @@ chemin de fichier, nom de fichier, nom de paquet, numéro d'incrément (« v0.4 
 lot. Ce détail va dans l'entrée `— technique`. Les entrées antérieures à la v0.1.14 ne se
 réécrivent pas.
 
+Depuis la v0.2.0, une entrée `— fonctionnel` commence par une ligne `Résumé : …` : une phrase de
+120 caractères au plus, que l'écran « Nouveautés » affiche seule, le reste de l'entrée replié
+sous « Voir le détail » (ticket #114). `scripts/changelog-recent.mjs` échoue, et la CI avec lui,
+sur un résumé absent, vide, trop long ou placé après le premier paragraphe.
+
 Deux sessions qui travaillent en parallèle peuvent choisir le même numéro. Avant de fusionner
 une branche, l'intégrer **par une fusion, jamais par un rebase**, puis lancer
 `git fetch --tags` et `node scripts/check-version.mjs`. Il échoue si le numéro de la branche

@@ -6,6 +6,30 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.0 — fonctionnel
+
+Résumé : L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet.
+
+Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans
+l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé :
+seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre
+dans le navigateur le journal de toutes les versions, détail technique et versions plus
+récentes compris. Demandé par le ticket #114.
+
+### v0.2.0 — technique
+
+`scripts/changelog-recent.mjs` : une entrée « fonctionnel » commence par une ligne
+`Résumé : …` de 120 caractères au plus (`SUMMARY_MAX_LENGTH`), obligatoire à partir de la
+v0.2.0 (`SUMMARY_REQUIRED_FROM`). Le script échoue (code 1) sur un résumé absent, vide, trop
+long ou placé après le premier paragraphe. L'asset `changelog_recent.json` gagne le champ
+`summaries` (un résumé par entrée « fonctionnel » qui en porte un) ; `paragraphs` peut être
+vide quand la version a un résumé. `lireNouveautes` lit `summaries` ; la borne de longueur
+reste au script seul. `NouveautesScreen` : détail replié par carte (état
+non mémorisé), lien `kJournalComplet` ouvert par `ouvrirLienProvider` ; un refus du système
+affiche « Le lien n'a pas pu s'ouvrir. » sans rapport, une exception est rapportée sous
+`nouveautes.open_changelog`. Règle d'écriture ajoutée à `CLAUDE.md` (« Version »). Aucune
+dépendance changée. Demandé par le ticket #114.
+
 ### v0.1.99 — fonctionnel
 
 L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait

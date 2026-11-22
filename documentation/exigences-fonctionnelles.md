@@ -222,14 +222,26 @@ d'où le membre est parti ; ouvert par son adresse, elle mène à l'accueil.
   sont listées. », ou « Version installée indisponible. … » si la version n'a pas pu être lue.
 - Une carte par version, la plus récente en tête : « Version X.Y.Z » (titre lu comme en-tête par les
   lecteurs d'écran), l'étiquette « Installée » sur la version de l'appareil, la date
-  (« 8 novembre 2026 », « 1er » le premier du mois) et le texte de l'entrée « fonctionnel » du
-  CHANGELOG, en paragraphes sélectionnables. Six versions au plus.
+  (« 8 novembre 2026 », « 1er » le premier du mois) et le résumé d'une ligne de chaque entrée
+  « fonctionnel » du CHANGELOG (deux entrées d'une même version : deux résumés l'un sous
+  l'autre). Six versions au plus.
+- Sous le résumé, « Voir le détail » (lu « Voir le détail de la version X.Y.Z ») déplie le texte
+  complet de l'entrée, en paragraphes sélectionnables ; « Masquer le détail » le replie. Le
+  détail est replié à chaque ouverture de l'écran. Une version publiée avant la v0.2.0 n'a pas
+  de résumé : seul « Voir le détail » s'affiche, aucun résumé n'est tiré du texte. Une version
+  dont l'entrée n'a qu'un résumé n'a pas de bouton.
+- En bas de la liste, « Journal complet sur GitHub, versions plus récentes comprises » (icône
+  d'ouverture externe, annoncé comme ouvrant le navigateur) ouvre le `CHANGELOG.md` de la
+  branche `main` sur GitHub, entrées techniques comprises, après un appui seul. Si le système
+  refuse de l'ouvrir (hors ligne, aucun navigateur) : « Le lien n'a pas pu s'ouvrir. », sans
+  rapport d'erreur ; une exception est rapportée.
 - Chargement : indicateur « Chargement des nouveautés ».
 - Fichier illisible : « Impossible d'afficher les nouveautés. » et « Réessayer » ; la panne est
   journalisée.
 - Aucune version : « Aucune nouveauté à afficher. » et « Revenir à
   l'accueil ».
-- Le texte est livré avec l'application : l'écran marche sans réseau, sans bandeau hors ligne.
+- Le texte est livré avec l'application : l'écran marche sans réseau, sans bandeau hors ligne ;
+  seul le lien vers GitHub demande le réseau.
   Colonne de 840 px au plus.
 
 ### Nouvelle version (Android)

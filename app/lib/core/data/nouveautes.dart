@@ -10,12 +10,19 @@ import '../services/error_report_service.dart';
 /// Asset écrit par `scripts/changelog-recent.mjs` depuis `documentation/CHANGELOG.md`.
 const kNouveautesAsset = 'assets/changelog_recent.json';
 
+/// Journal complet sur GitHub, entrées « technique » et versions plus récentes
+/// comprises (ticket #114).
+final kJournalComplet = Uri.parse(
+  'https://github.com/ChinaFred/KassBeer/blob/main/documentation/CHANGELOG.md',
+);
+
 /// Une version de l'écran « Nouveautés » : son entrée « fonctionnel » du CHANGELOG.
 @immutable
 class Nouveaute {
   const Nouveaute({
     required this.version,
     required this.date,
+    required this.summaries,
     required this.paragraphs,
   });
 
@@ -25,7 +32,12 @@ class Nouveaute {
   /// Jour de la version, sans heure.
   final DateTime date;
 
-  /// Texte simple, un paragraphe par chaîne ; une puce commence par « • ».
+  /// Résumés de la version, un par entrée « fonctionnel » qui en porte un
+  /// (ligne « Résumé : » du CHANGELOG) ; vide pour les versions antérieures.
+  final List<String> summaries;
+
+  /// Détail, en texte simple, un paragraphe par chaîne ; une puce commence par
+  /// « • ». Vide seulement si la version a un résumé.
   final List<String> paragraphs;
 }
 
@@ -35,8 +47,10 @@ final RegExp _date = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
 /// Lit le JSON de [kNouveautesAsset], de la plus récente version à la plus ancienne.
 ///
 /// Lève une [FormatException] sur un fichier mal formé : racine sans `versions`,
-/// version qui n'a pas la forme `X.Y.Z`, date absente ou invalide, paragraphes
-/// absents, vides ou qui ne sont pas des chaînes. Aucune liste de repli.
+/// version qui n'a pas la forme `X.Y.Z`, date absente ou invalide, résumés ou
+/// paragraphes absents, blancs ou qui ne sont pas des chaînes, version sans résumé
+/// ni paragraphe. La longueur d'un résumé est bornée par le script qui écrit
+/// l'asset. Aucune liste de repli.
 List<Nouveaute> lireNouveautes(String source) {
   final decoded = jsonDecode(source);
   if (decoded is! Map<String, Object?>) {
@@ -70,15 +84,21 @@ Nouveaute _lireVersion(int index, Object? item) {
   if (parsed.year != year || parsed.month != month || parsed.day != day) {
     throw invalide('date');
   }
+  bool blanc(Object? p) => p is! String || p.trim().isEmpty;
+  final summaries = item['summaries'];
+  if (summaries is! List<Object?> || summaries.any(blanc)) {
+    throw invalide('summaries');
+  }
   final paragraphs = item['paragraphs'];
   if (paragraphs is! List<Object?> ||
-      paragraphs.isEmpty ||
-      paragraphs.any((p) => p is! String || p.trim().isEmpty)) {
+      (paragraphs.isEmpty && summaries.isEmpty) ||
+      paragraphs.any(blanc)) {
     throw invalide('paragraphs');
   }
   return Nouveaute(
     version: version,
     date: parsed,
+    summaries: List.unmodifiable(summaries.cast<String>()),
     paragraphs: List.unmodifiable(paragraphs.cast<String>()),
   );
 }
