@@ -17,6 +17,7 @@ import '../../../core/router/routes.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../../costs/presentation/bloc_cout.dart';
 import '../../equipment/presentation/equipment_providers.dart';
+import '../../library/presentation/lien_bibliotheque.dart';
 import '../domain/beerjson.dart';
 import '../domain/chronologie.dart';
 import '../domain/recipe.dart';
@@ -265,6 +266,10 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
             onDupliquer: () => _duplicate(recipe),
           ),
           duplicating: _duplicating,
+          // Depuis l'import, la fiche est hors de la coquille, posée sur une
+          // page de coquille : un `push` d'une fiche de la Bibliothèque y
+          // ajouterait une seconde page de coquille de même clé (ticket #60).
+          ligneIngredient: widget.depuisImport ? null : ligneVersBibliotheque,
         );
       },
     );
@@ -286,6 +291,7 @@ class _Fiche extends StatelessWidget {
     required this.duplicating,
     required this.onMettreEnPellets,
     required this.settingForms,
+    required this.ligneIngredient,
   });
 
   final Recipe recipe;
@@ -312,6 +318,9 @@ class _Fiche extends StatelessWidget {
 
   /// Mise en pellets en cours : le bouton attend.
   final bool settingForms;
+
+  /// Lignes liées à la Bibliothèque ; `null` depuis l'import (ADR-018, D4).
+  final LigneIngredient? ligneIngredient;
 
   @override
   Widget build(BuildContext context) {
@@ -459,6 +468,7 @@ class _Fiche extends StatelessWidget {
           content: c,
           hopIbu: hopIbu,
           enCartes: true,
+          ligneIngredient: ligneIngredient,
           chronologie: _Chronologie(
             content: c,
             onEdit: edit == null ? null : onEditSteps,

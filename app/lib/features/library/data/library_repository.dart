@@ -4,6 +4,7 @@ import 'package:exchange/exchange.dart' show NomNonResolu;
 import '../../../core/data/lecture_document.dart';
 import '../../../core/services/error_report_service.dart';
 import '../domain/aromes_houblon.dart';
+import '../domain/description_divers.dart';
 import '../domain/aromes_levure.dart';
 import '../domain/recette_publique.dart';
 import '../domain/referentiel.dart';
@@ -74,6 +75,13 @@ abstract class LibraryRepository {
   /// Panne rapportée puis relancée ; document illisible rapporté sans aucun
   /// texte du document.
   Future<RechercheDocument<AromesHoublon>> lireAromesHoublon(String id);
+
+  /// Description du divers [id] (`beer_misc_descriptions/{id}`, ADR-018),
+  /// lue par un `get` à l'ouverture de sa fiche, jamais par un écouteur (P22).
+  /// Panne rapportée puis relancée ; document illisible rapporté
+  /// (`library.misc_description`) avec son chemin seul, sans aucun texte du
+  /// document.
+  Future<RechercheDocument<DescriptionDivers>> lireDescriptionDivers(String id);
 
   /// Description aromatique de la levure [id] (`beer_culture_aromas/{id}`,
   /// ADR-017), lue par un `get` à l'ouverture de sa fiche, jamais par un
@@ -248,6 +256,21 @@ class FirestoreLibraryRepository implements LibraryRepository {
       return DocumentTrouve(AromesHoublon.fromFirestore(data));
     } on DocumentIllisible catch (error, stackTrace) {
       return _illisible('library.hop_aroma', path, error, stackTrace);
+    }
+  }
+
+  @override
+  Future<RechercheDocument<DescriptionDivers>> lireDescriptionDivers(
+    String id,
+  ) async {
+    final path = '$kCollectionDescriptionsDivers/$id';
+    final snapshot = await _get('library.misc_description', path);
+    final data = snapshot.data();
+    if (data == null) return _absent(snapshot);
+    try {
+      return DocumentTrouve(DescriptionDivers.fromFirestore(data));
+    } on DocumentIllisible catch (error, stackTrace) {
+      return _illisible('library.misc_description', path, error, stackTrace);
     }
   }
 

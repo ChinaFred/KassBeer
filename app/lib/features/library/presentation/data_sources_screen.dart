@@ -106,6 +106,12 @@ class DataSourcesScreen extends ConsumerWidget {
       'd\'aucune source, ni des fiches des fabricants. Les styles conseillés '
       'sont choisis dans les styles BJCP 2021 de la Bibliothèque. Un texte peut '
       'contenir des erreurs.';
+  static const descriptionsDivers =
+      'Divers : textes rédigés pour Kass\'Beer par une IA (Claude, '
+      'd\'Anthropic), à partir du nom, des autres noms, du nom français et du '
+      'type de chaque ajout. Ils ne sont copiés d\'aucune source et ne donnent '
+      'aucune dose : suivez la notice du fabricant. Un texte peut contenir des '
+      'erreurs.';
   static const openFailure =
       'Impossible d\'ouvrir le lien. Il reste sélectionnable sur cette page.';
 
@@ -176,6 +182,8 @@ class DataSourcesScreen extends ConsumerWidget {
               const TitreSection('Descriptions aromatiques'),
               paragraphe(aromesHoublons),
               paragraphe(aromesLevures),
+              const TitreSection('Descriptions des divers'),
+              paragraphe(descriptionsDivers),
             ],
           ),
         ),

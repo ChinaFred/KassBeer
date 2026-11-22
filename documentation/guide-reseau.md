@@ -385,6 +385,40 @@ livrer » à « livrés au lot A1 », ajoute la feature `ai` à « Structure » 
 Le 2026-11-21, avec le ticket #64 et l'accord de l'utilisateur, P39 ajoute « Valider et lancer le
 développement » aux lancements soumis à la boîte de confirmation obligatoire.
 
+Le 2026-11-21, avec l'acceptation d'ADR-018 (descriptions des divers), `CLAUDE.md` ajoute P63
+(`beer_misc_descriptions/`, `relecteur-regles`). P54 est étendu au moteur commun
+`ingest/lib/redaction/` et au poste `misc_description_generation`, avec un test qui fige
+l'empreinte des houblons. P19, P20 et P22 reçoivent la nouvelle collection. « Le projet »,
+« Structure », « Commandes utiles » et « Coûts variables » sont mis à jour, marqués « à
+livrer » jusqu'au code.
+
+Le 2026-11-21, avec le lot D1 d'ADR-018, P54 décrit le moteur commun `ingest/lib/redaction/`
+comme livré pour les houblons, avec le tarif commun `import/ingest/tarif.json` et l'empreinte
+figée ; la nature des divers reste « à livrer ».
+
+Le 2026-11-21, avec le lot D2 d'ADR-018, `CLAUDE.md` retire « à livrer » de `generer-divers.mjs`,
+`lister-divers-recettes.mjs`, `exchange/bin/lister_divers_recettes.dart` et `ingest/lib/divers/` ;
+« Structure » nomme `exchange/bin/src/lister_recettes.dart`, `lib/redaction/entree.mjs` et
+`lancer.mjs` ; P54 couvre les deux natures ; P63 refuse aussi les doses en toutes lettres ;
+« Exception durable » cite les descriptions des divers. Seul l'affichage reste à livrer (D3).
+
+Le 2026-11-21, avec le lot D3 d'ADR-018, « Le projet » ne marque plus l'affichage « à livrer » ;
+P63 nomme le widget commun `texte_redige.dart` et les deux écarts d'affichage décidés par
+l'utilisateur (« Confiance faible » en tête, « Goût » affiché quand le divers ne change pas le goût).
+
+Le 2026-11-21, avec l'acceptation d'ADR-019 (réconciliation avec l'ADR-017 des levures de
+`main`), l'ADR des divers devient ADR-018 et son contrôle P63 (renumérotation R1), et `CLAUDE.md`
+ajoute P64 (`relecteur-regles`) : un numéro d'ADR ou de contrôle se vérifie libre sur `main` et
+sur chaque branche distante (leçon 17). P54, P55 et le P62 des levures seront réécrits au lot R2.
+
+Le 2026-11-22, après le lot de 110 divers, P63 ne compte « ou », « voire », « à » et « pour »
+qu'avant un nombre (décisions de l'utilisateur). Le même jour, P63 ajoute aussi `gal(s)` et `gallon(s)` aux unités de dose refusées (décision de
+l'utilisateur). Le même jour, après l'essai sur 10 divers, P63 accepte « un sachet » ou « une sachet » comme
+contenant, sauf suivis de « et » et d'un nombre, de « ou », « voire », « à », « par », « pour »,
+« fois », de « x » et d'un nombre, ou d'un nombre et de « fois », avec ou sans ponctuation ou
+symbole devant dans la même phrase, ou de « / », « ⁄ », « ∕ », « ⧸ », « × », « + » ou d'un chiffre (décisions de
+l'utilisateur).
+
 Le 2026-11-22, avec le ticket #104 (file d'attente des livraisons, amendement d'ADR-008) et
 l'accord de l'utilisateur, P25, P36, P39, P40, P43, P44, P45, P46 et P47 sont complétés, et la
 puce « Une action qui appelle un modèle… » de « Coûts variables » admet un départ différé, parti
@@ -552,3 +586,12 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name` de cet
   en-tête, même s'il contient le nom d'une personne (WLP520, WLP4045, WLP4046) ; aucun e-mail, aucune autre donnée,
   aucun commentaire. Décision de l'utilisateur.
+
+Le 2026-11-22, avec le lot R2 d'ADR-019 fait par la fusion de `main` dans la branche des divers
+(v0.2.12), `CLAUDE.md` décrit les trois natures sur le seul moteur `ingest/lib/redaction/` :
+« Le projet » et « Structure » nomment `ingest/lib/levures/`, `lister-ingredients-recettes.mjs`
+et `exchange/bin/lister_ingredients_recettes.dart` (`--nature hop|culture|misc`) ; « Commandes
+utiles » remplace les listes par nature ; P19 et P22 portent les deux collections ; P54 couvre
+les trois natures, le tarif commun et l'empreinte figée des levures ; P55, P62 et P63 nomment les
+fichiers de `lib/levures/` et le cadre commun `texte_redige.dart`, sans « relu » ni « non relu »
+(ADR-019, décision 4) ; « Coûts variables » compte cinq postes.

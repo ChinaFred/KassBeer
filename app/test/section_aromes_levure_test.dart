@@ -13,6 +13,7 @@ import 'package:kass_beer/features/library/presentation/library_providers.dart';
 import 'package:kass_beer/features/library/presentation/reference_entry_screen.dart';
 import 'package:kass_beer/features/library/presentation/section_aromes.dart';
 import 'package:kass_beer/features/library/presentation/section_aromes_levure.dart';
+import 'package:kass_beer/features/library/presentation/texte_redige.dart';
 
 import 'support/fakes.dart';
 import 'support/library_fixtures.dart';
@@ -77,12 +78,12 @@ void main() {
     expect(find.text(kTexteBas), findsOneWidget);
     expect(find.text(kTexteHaut), findsOneWidget);
     expect(find.textContaining('relu'), findsNothing);
-    expect(find.text(TextesAromes.confianceFaible), findsNothing);
+    expect(find.text(TextesRediges.confianceFaible), findsNothing);
     expect(find.text('bjcp2021-21a'), findsNothing);
     final ordre = [
       'Valeurs',
       TextesAromes.titre,
-      TextesAromes.mention,
+      TextesRediges.mention,
       'poire',
       TextesAromesLevure.profil,
       kTexteProfil,
@@ -263,14 +264,14 @@ void main() {
   testWidgets('confiance faible : étiquette', (tester) async {
     await ouvrir(tester, aromes: cultureAromaDoc(extra: {'confidence': 'low'}));
     expect(
-      find.widgetWithText(Etiquette, TextesAromes.confianceFaible),
+      find.widgetWithText(Etiquette, TextesRediges.confianceFaible),
       findsOneWidget,
     );
   });
 
   testWidgets('unknown : mention, aucune description', (tester) async {
     await ouvrir(tester, aromes: cultureAromaUnknownDoc());
-    expect(find.text(TextesAromes.mention), findsOneWidget);
+    expect(find.text(TextesRediges.mention), findsOneWidget);
     expect(find.text(TextesAromesLevure.inconnu), findsOneWidget);
     expect(find.text(TextesAromesLevure.profil), findsNothing);
   });
