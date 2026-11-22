@@ -1,13 +1,13 @@
 # ADR-018 — Second guide de styles : Brewers Association, sans superposition avec le BJCP 2021
 
-- **Statut** : proposé (décisions de l'utilisateur du 2026-11-22 intégrées ; évolutions du réseau
-  à valider)
+- **Statut** : accepté (2026-11-22), option B ; évolutions du réseau acceptées (P19, P20, P62,
+  P63)
 - **Date** : 2026-11-22
 - **Remplace** : — (amende ADR-005 : décision 2 de `DATA_SOURCES.md`, exception à P20 pour
   la table de décisions d'un second guide ; amende ADR-017 : la liste des styles conseillés
   reste celle du BJCP 2021, filtrée sur l'identifiant ; complète ADR-015 : le style envoyé à
   l'assistant porte son guide ; amende ADR-014 au lot S3 : `--supprimer-absents beer_styles`,
-  identifiants `ba-` seuls, section « Amendement proposé par ADR-018 » d'ADR-014)
+  identifiants `ba-` seuls, section « Amendement par ADR-018 » d'ADR-014)
 
 Décisions de l'utilisateur du 2026-11-22 :
 
@@ -23,6 +23,10 @@ Décisions de l'utilisateur du 2026-11-22 :
    sa ligne cite le code BJCP qui le contient (`contenu_dans`).
 6. Reprise à chaque édition annuelle, avec extension d'ADR-014 à `beer_styles` pour les
    identifiants `ba-` seuls.
+7. Lot S3 (suppression des `ba-` absents) livré seul, avant l'ingestion de l'édition 2027.
+8. Mention de la BA lue dans `beer_index/styles.ba_mention`, sans texte en Dart.
+9. Style BA renommé : rien n'est prévu pour retrouver les recettes qui portent l'ancien nom ;
+   l'export BeerXML les refuse et dit de choisir le style dans la liste.
 
 ## Contexte
 
@@ -276,7 +280,7 @@ niveau gratuit.
   leurs plages.
 - `DATA_SOURCES.md`, décision 2 : « `beer_styles` prend les 110 styles BJCP 2021 du fichier 002,
   et les styles BA sans équivalent BJCP (ADR-018) ; seule la table de décisions est versionnée ».
-- P20, P62 et P19 sont amendés, P63 est ajouté (propositions de l'avis).
+- P20, P62 et P19 sont amendés, P63 est ajouté (acceptés le 2026-11-22).
 
 ## Sources
 

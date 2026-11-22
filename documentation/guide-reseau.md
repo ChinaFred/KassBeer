@@ -285,6 +285,14 @@ qui s'affiche désormais dans l'écran « Sources des données ».
 Le 2026-11-22, décision de l'utilisateur : P54 et « Coûts variables » portent `--max` à 1 000 pour
 les levures (un seul lot de 923), les houblons restant à 500 (ADR-017, note du 2026-11-22).
 
+Le 2026-11-22 (v0.2.0), ADR-018 accepté par l'utilisateur (second guide de styles, Brewers
+Association, sans superposition avec le BJCP 2021) : `CLAUDE.md` ajoute P63 (table de
+dédoublonnage des styles BA, codes figés, `relecteur-regles`) ; P20 reçoit l'exception du guide
+BA (table versionnée seule, plages et PDF hors du dépôt) ; P62 exige que les styles conseillés des
+levures ne lisent que les styles `bjcp2021-` ; P19 ajoute `beer_styles` aux collections de
+`--supprimer-absents`, pour les seuls identifiants `ba-` (amendement d'ADR-014, lot S3).
+« Le projet » nomme le second guide. Aucun agent, skill ni hook nouveau.
+
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
 garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.

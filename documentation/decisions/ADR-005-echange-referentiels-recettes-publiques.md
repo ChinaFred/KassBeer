@@ -8,6 +8,9 @@
 - **Complété par ADR-017** (2026-11-21, livré à la v0.1.93) : `beer_culture_aromas/`, même
   exception à P20 pour les levures (texte généré, levures du groupe relues) ; les descriptions
   et styles conseillés des fiches des fabricants restent écartés.
+- **Amendé par ADR-018** (accepté le 2026-11-22) : styles de la Brewers Association sans
+  équivalent BJCP ajoutés à `beer_styles` ; table `exchange/donnees/styles/ba.json` seule
+  versionnée. La décision 2 de `DATA_SOURCES.md` change au lot S1.
 
 ## Contexte
 

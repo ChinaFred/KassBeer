@@ -8,8 +8,8 @@
   aussi `beer_culture_aromas`, dans les mêmes bornes que `beer_hop_aromas` (simulation, 30 au
   plus, seuil de 90 %, saisie du nombre), liste de référence `levures/aromes.json` ; le rapport
   de `ecrire.mjs` liste les entrées relues dont l'identifiant a disparu.
-- **Amendement proposé par ADR-018** (2026-11-22, statut proposé, lot S3) : `beer_styles`,
-  identifiants `ba-` seuls (section « Amendement proposé par ADR-018 »).
+- **Amendement par ADR-018** (accepté le 2026-11-22, lot S3) : `beer_styles`,
+  identifiants `ba-` seuls (section « Amendement par ADR-018 »).
 
 Décisions de l'utilisateur du 2026-11-15 :
 
@@ -223,9 +223,9 @@ kassbeer`, une collection par lancement. Sans l'option, rien n'est supprimé. Le
 préparés sont ceux de `beer_cultures.json`, refusés compris. Les autres collections restent
 refusées.
 
-## Amendement proposé par ADR-018 (2026-11-22) : `beer_styles`, identifiants `ba-`
+## Amendement par ADR-018 (2026-11-22) : `beer_styles`, identifiants `ba-`
 
-Statut : proposé, avec ADR-018. Livré au lot S3 d'ADR-018, avant l'ingestion de l'édition 2027
+Statut : accepté le 2026-11-22, avec ADR-018. Livré au lot S3 d'ADR-018, avant l'ingestion de l'édition 2027
 du guide de la Brewers Association.
 
 `ecrire.mjs --supprimer-absents beer_styles` retire les styles BA disparus ou renommés d'une

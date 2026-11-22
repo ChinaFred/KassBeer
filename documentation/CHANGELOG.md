@@ -6,6 +6,16 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.0 — technique
+
+ADR-018 accepté : la Bibliothèque recevra, en plus des 110 styles BJCP 2021, les styles de la
+Brewers Association (édition 2026) sans équivalent BJCP, pour combler des styles manquants comme
+l'Imperial Pils. Chaque style BA reçoit une décision écrite à la main (`nouveau` ou `equivalent`)
+dans une table versionnée ; les plages et le PDF restent hors du dépôt public, sous la mention
+d'usage gratuit de la BA. Code BeerXML propre à Kass'Beer (`BA3C`), figé ; reprise à chaque
+édition, avec l'extension d'ADR-014 à `beer_styles` pour les identifiants `ba-` (lot S3).
+`CLAUDE.md` ajoute P63 et amende P19, P20 et P62. Aucun code : les lots S1 à S3 suivront.
+
 ### v0.1.99 — fonctionnel
 
 L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait

@@ -6,6 +6,8 @@
   référence, exception à P20 limitée à un texte généré ; amende ADR-014 : `--supprimer-absents`
   accepte `beer_culture_aromas` ; ouvre le poste de coût `culture_aroma_generation` ; relève pour
   un temps la limite de dépense commune d'ADR-013 et ADR-016)
+- **Amendé par ADR-018** (accepté le 2026-11-22) : `contexteStyles` ne garde que les styles
+  `bjcp2021-` ; les styles conseillés restent des codes BJCP 2021.
 
 Décision de l'utilisateur du 2026-11-21, relayée par la session principale : il accepte de
 relever la limite de 20 $ par mois de l'espace de travail Kass'Beer de la Console Anthropic si
