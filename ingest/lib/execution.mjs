@@ -223,9 +223,10 @@ export function compterSansDescription(documents, entrees) {
   return (documents ?? []).filter((d) => !decrits.has(d.id)).length;
 }
 
-/// Message de fin de ecrire.mjs pour [n] entrées de [nature] sans description ; null pour 0.
+/// Message de fin de ecrire.mjs pour [n] entrées de [nature] sans description ; null pour 0
+/// et pour une nature qui ne compte pas ses entrées sans description (levures, ADR-017).
 export function messageSansDescription(n, nature) {
-  if (n === 0) return null;
+  if (nature.ecriture.champSansDescription === null || n === 0) return null;
   const { un, des } = nature.mots;
   return (
     `${n} ${n > 1 ? des : un} ${nature.ecriture.sansDescription} : lancez ` +

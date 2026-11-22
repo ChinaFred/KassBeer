@@ -6,6 +6,15 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.14 — technique
+
+`ingest/ecrire.mjs` affichait « undefined levure sans description aromatique » à la fin de
+chaque écriture. La nature des levures ne compte pas ses entrées sans description
+(`champSansDescription: null`, ADR-017), et `ecrire.mjs` lisait `rapport[null]`.
+`messageSansDescription` (`ingest/lib/execution.mjs`) rend maintenant `null` pour une nature
+sans compte (test) ; le libellé `sansDescription` des levures, que rien ne lisait, sort de
+`ingest/lib/levures/nature.mjs`. Aucune donnée n'était écrite de travers.
+
 ### v0.2.13 — fonctionnel
 
 Résumé : L'origine des houblons et des malts s'affiche en français dans la Bibliothèque.
