@@ -5,7 +5,8 @@ import 'schema.dart';
 
 /// Résolution des noms d'une recette importée contre la Bibliothèque
 /// (ADR-005, E5) : correspondance exacte après normalisation ([cleNormalisee])
-/// du nom ou d'un alias, puis, pour une levure, producteur et référence. Aucune
+/// du nom ou d'un alias, puis, pour une levure, producteur et référence, et en
+/// dernier une référence lue dans le nom (lettres et chiffres). Aucune
 /// correspondance floue. Une valeur absente du fichier est reprise de l'entrée
 /// résolue, comme l'ingestion le fait pour une recette publique (D4) ; une
 /// valeur du fichier n'est jamais remplacée. Les index arrivent en paramètre :
@@ -85,10 +86,12 @@ class IndexBibliotheque {
         final cle = cleNormalisee(n);
         if (cle.isNotEmpty) _ajouter(_parNom, cle, e);
       }
-      final r = e.reference;
-      if (liste != ListeRecette.levures || r == null) continue;
+      if (liste != ListeRecette.levures) continue;
       final p = e.producteur;
       final cp = p == null ? '' : cleProducteur(p);
+      if (cp.isNotEmpty) _producteurs.add(cp);
+      final r = e.reference;
+      if (r == null) continue;
       final cr = cleProduit(cp, r);
       if (cr.isEmpty) continue;
       _ajouter(_parReference, cr, e);
@@ -104,6 +107,7 @@ class IndexBibliotheque {
   final Map<String, Set<EntreeBibliotheque>> _parNom = {};
   final Map<String, Set<EntreeBibliotheque>> _parReference = {};
   final Map<String, Set<EntreeBibliotheque>> _parSouche = {};
+  final Set<String> _producteurs = {};
 
   static void _ajouter(
     Map<String, Set<EntreeBibliotheque>> table,
@@ -114,15 +118,89 @@ class IndexBibliotheque {
   static EntreeBibliotheque? _seule(Set<EntreeBibliotheque>? entrees) =>
       entrees != null && entrees.length == 1 ? entrees.single : null;
 
+  /// Poids écrit dans un nom (`10g`, `11-5-g` joint en `115g`, `500-ml`) :
+  /// jamais lu comme une référence.
+  static final RegExp _poids = RegExp(r'^\d+(?:g|gr|kg|mg|l|ml|cl)$');
+
+  /// Candidats au plus d'une correspondance partielle : levures dont le nom,
+  /// un alias ou le producteur portent tous les mots de [cle]
+  /// (`belle-saison-lallemand` désigne LalBrew Belle Saison de Lallemand).
+  /// Jamais une résolution : ces entrées ne servent qu'à lister des candidats.
+  static const int _maxCandidatsPartiels = 10;
+
+  Set<EntreeBibliotheque> _parMotsDuNom(String cle) {
+    final mots = cle.split('-').toSet();
+    final trouves = <EntreeBibliotheque>{};
+    for (final e in _parId.values) {
+      final motsEntree = <String>{
+        for (final n in [e.nom, ...e.alias, ?e.producteur])
+          ...cleNormalisee(n).split('-'),
+      };
+      if (motsEntree.containsAll(mots)) trouves.add(e);
+      if (trouves.length > _maxCandidatsPartiels) return const {};
+    }
+    return trouves;
+  }
+
+  /// Entrées d'une levure désignées par une référence lue dans [cle] (clé
+  /// normalisée du nom), quand aucune autre voie n'aboutit : chaque suite
+  /// d'un à trois segments consécutifs, jointe sans tiret (`s23`, `be-256`
+  /// donne `be256`, `w-34-70` donne `w3470`), qui porte au moins une lettre et
+  /// un chiffre et n'est pas un poids, est cherchée parmi les références
+  /// (`product_id`) de la Bibliothèque. Une référence faite de chiffres seuls
+  /// n'est pas lue ainsi : Wyeast passe par [soucheDuNom]. White Labs, indexé
+  /// en `wlpNNN`, est lu ainsi aussi.
+  Set<EntreeBibliotheque> _parJetonsReference(String cle) {
+    final segments = cle.split('-');
+    final trouves = <EntreeBibliotheque>{};
+    for (var debut = 0; debut < segments.length; debut++) {
+      for (var n = 1; n <= 3 && debut + n <= segments.length; n++) {
+        final jeton = segments.sublist(debut, debut + n).join();
+        if (!jeton.contains(RegExp(r'[a-z]')) ||
+            !jeton.contains(RegExp(r'\d')) ||
+            _poids.hasMatch(jeton)) {
+          continue;
+        }
+        trouves.addAll(_parReference[jeton] ?? const {});
+      }
+    }
+    return trouves;
+  }
+
+  /// Clés des producteurs de la Bibliothèque écrits dans [cle] (suites d'un à
+  /// trois segments, après [kProducteursEquivalents]).
+  Set<String> _producteursDuNom(String cle) {
+    final segments = cle.split('-');
+    return {
+      for (var debut = 0; debut < segments.length; debut++)
+        for (var n = 1; n <= 3 && debut + n <= segments.length; n++)
+          if (_producteurs.contains(
+            cleProducteur(segments.sublist(debut, debut + n).join('-')),
+          ))
+            cleProducteur(segments.sublist(debut, debut + n).join('-')),
+    };
+  }
+
   /// Identifiants, triés, des entrées que [nom] désigne par l'une des voies de
   /// [resoudre] : identifiant (`<nature>-<clé du nom>`), nom ou alias ; pour
   /// une levure, aussi souche lue dans le nom, référence, producteur et
-  /// référence. Vide ou d'au moins 2 entrées quand [resoudre] rend `null`. Sert
+  /// référence, puis référence lue dans le nom ; si aucune de ces voies ne
+  /// donne rien, les levures qui portent tous les mots du nom
+  /// ([_parMotsDuNom], dix au plus). Pour les voies de [resoudre], vide ou d'au
+  /// moins 2 entrées quand [resoudre] rend `null`, sauf une référence lue
+  /// dans un nom qui cite un autre producteur (une entrée, refusée) ; une
+  /// correspondance partielle peut n'en donner qu'une, jamais choisie. Sert
   /// à dire pourquoi un nom n'est pas résolu et à lister ses candidats
   /// (`exchange/bin/lister_ingredients_recettes.dart`, ADR-013 et ADR-017).
-  List<String> candidats(String nom) {
+  List<String> candidats(String nom) => candidatsAvecOrigine(nom).ids;
+
+  /// [candidats], et `partiels` vrai s'ils viennent de la seule
+  /// correspondance partielle ([_parMotsDuNom]) : ils ne disent pas qu'un nom
+  /// désigne plusieurs entrées.
+  ({List<String> ids, bool partiels}) candidatsAvecOrigine(String nom) {
     final cle = cleNormalisee(nom);
-    if (cle.isEmpty) return const [];
+    if (cle.isEmpty) return (ids: const [], partiels: false);
+    var partiels = false;
     final trouves = <EntreeBibliotheque>{
       ?_parId['$_prefixe-$cle'],
       ...?_parNom[cle],
@@ -142,8 +220,13 @@ class IndexBibliotheque {
         final cr = cleProduit(cp, segments.skip(i).join('-'));
         trouves.addAll(_parSouche['$cp|$cr'] ?? const {});
       }
+      if (trouves.isEmpty) trouves.addAll(_parJetonsReference(cle));
+      if (trouves.isEmpty) {
+        trouves.addAll(_parMotsDuNom(cle));
+        partiels = trouves.isNotEmpty;
+      }
     }
-    return [for (final e in trouves) e.id]..sort();
+    return (ids: [for (final e in trouves) e.id]..sort(), partiels: partiels);
   }
 
   /// Entrée de [nom], ou `null` si aucune ou plusieurs correspondent.
@@ -152,7 +235,9 @@ class IndexBibliotheque {
   /// entrée dont le nom ou un alias a la clé de [nom] ; pour une levure, la
   /// seule souche lue dans le nom (`Wyeast 1056`, `WLP001`, [soucheDuNom]),
   /// puis la seule entrée de cette référence (`US-05`), puis la seule de ce
-  /// producteur et de cette référence (`Fermentis US-05`).
+  /// producteur et de cette référence (`Fermentis US-05`), puis la seule
+  /// désignée par une référence lue dans le nom ([_parJetonsReference]), si
+  /// le nom ne nomme pas un autre producteur de la Bibliothèque.
   EntreeBibliotheque? resoudre(String nom) {
     final cle = cleNormalisee(nom);
     if (cle.isEmpty) return null;
@@ -175,7 +260,20 @@ class IndexBibliotheque {
       final e = _seule(_parSouche['$cp|$cr']);
       if (e != null) return e;
     }
-    return null;
+    // En dernier, une référence lue dans le nom écrit à la main
+    // (`BOHEMIAN LAGER M84 MANGROVE JACK`, `SafeLager S23`), seulement si une
+    // seule souche la porte et si le nom ne nomme pas un autre producteur
+    // (`Labo Fictif Z23` pour un Z23 de Sèche Fictive) ; sinon, ses candidats
+    // sont listés.
+    final e = _seule(_parJetonsReference(cle));
+    if (e == null) return null;
+    final nommes = _producteursDuNom(cle);
+    final p = e.producteur;
+    if (nommes.isNotEmpty &&
+        (p == null || !nommes.contains(cleProducteur(p)))) {
+      return null;
+    }
+    return e;
   }
 }
 

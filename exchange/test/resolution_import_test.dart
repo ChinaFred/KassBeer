@@ -154,6 +154,137 @@ void main() {
       expect(_levures.resoudre('Fermentis S-04'), isNull);
     });
 
+    test(
+      'levure : référence lue dans un nom écrit à la main (formes du groupe)',
+      () {
+        // Fixtures inventées (P20) : un producteur fictif à références « LF »,
+        // une référence partagée par deux producteurs, deux souches sans
+        // référence au même nom de gamme.
+        final index = IndexBibliotheque(ListeRecette.levures, const [
+          EntreeBibliotheque(
+            id: 'culture-labo-fictif-lf84-lager-fictive',
+            nom: 'LF84 Lager Fictive',
+            producteur: 'Labo Fictif',
+            reference: 'LF84',
+          ),
+          EntreeBibliotheque(
+            id: 'culture-labo-fictif-lf31-triple-fictive',
+            nom: 'LF31 Triple Fictive',
+            producteur: 'Labo Fictif',
+            reference: 'LF31',
+          ),
+          EntreeBibliotheque(
+            id: 'culture-seche-fictive-ab256-abbaye-fictive',
+            nom: 'AbbAle AB-256',
+            producteur: 'Sèche Fictive',
+            reference: 'AB-256',
+          ),
+          EntreeBibliotheque(
+            id: 'culture-seche-fictive-z23-lager-fictive',
+            nom: 'ZetaLager Z-23',
+            producteur: 'Sèche Fictive',
+            reference: 'Z-23',
+          ),
+          EntreeBibliotheque(
+            id: 'culture-seche-fictive-q-34-70-lager',
+            nom: 'ZetaLager Q-34/70',
+            producteur: 'Sèche Fictive',
+            reference: 'Q-34/70',
+          ),
+          // Même référence chez deux producteurs : jamais choisie.
+          EntreeBibliotheque(
+            id: 'culture-labo-fictif-k9-un',
+            nom: 'K9 Un',
+            producteur: 'Labo Fictif',
+            reference: 'K9',
+          ),
+          EntreeBibliotheque(
+            id: 'culture-autre-fictif-k9-deux',
+            nom: 'K9 Deux',
+            producteur: 'Autre Fictif',
+            reference: 'K9',
+          ),
+          EntreeBibliotheque(
+            id: 'culture-labo-fictif-belle-gamme-fictive',
+            nom: 'Belle Gamme Fictive',
+            producteur: 'Labo Fictif',
+          ),
+          EntreeBibliotheque(
+            id: 'culture-labo-fictif-flacon-belle-gamme',
+            nom: 'Flacon Belle Gamme',
+            producteur: 'Labo Fictif',
+          ),
+        ]);
+        const lf84 = 'culture-labo-fictif-lf84-lager-fictive';
+        const lf31 = 'culture-labo-fictif-lf31-triple-fictive';
+        const ab256 = 'culture-seche-fictive-ab256-abbaye-fictive';
+        // Producteur en suffixe, majuscules.
+        expect(index.resoudre('LAGER FICTIVE LF84 LABO FICTIF')?.id, lf84);
+        // Référence en fin de nom.
+        expect(index.resoudre('Lager rustique LF84')?.id, lf84);
+        // Mots français et poids, avec ou sans espace.
+        expect(index.resoudre('Levure de bière sèche Triple LF31')?.id, lf31);
+        expect(index.resoudre('Triple Fictive LF31 10g')?.id, lf31);
+        expect(
+          index
+              .resoudre(
+                'Sèche Fictive levure de bière sèche AbbAle AB-256 (Abbaye) 11.5 g',
+              )
+              ?.id,
+          ab256,
+        );
+        // Référence sans tiret, et coquille dans le nom de gamme.
+        expect(
+          index.resoudre('ZetaLagerr Z23')?.id,
+          'culture-seche-fictive-z23-lager-fictive',
+        );
+        // Référence en trois segments (`Q-34/70`).
+        expect(
+          index.resoudre('Lager Q 34/70')?.id,
+          'culture-seche-fictive-q-34-70-lager',
+        );
+        // Un poids n'est jamais une référence, ni des chiffres seuls.
+        expect(index.resoudre('Ma levure 84'), isNull);
+        expect(index.resoudre('Ma levure 23g'), isNull);
+        // Référence partagée par deux producteurs : aucune, deux candidats.
+        expect(index.resoudre('Ma levure K9'), isNull);
+        expect(index.candidats('Ma levure K9'), [
+          'culture-autre-fictif-k9-deux',
+          'culture-labo-fictif-k9-un',
+        ]);
+        // Correspondance partielle : candidats seulement, jamais choisis.
+        expect(index.resoudre('Belle Gamme'), isNull);
+        expect(index.candidats('Belle Gamme'), [
+          'culture-labo-fictif-belle-gamme-fictive',
+          'culture-labo-fictif-flacon-belle-gamme',
+        ]);
+        expect(index.candidats('belle gamme labo fictif'), hasLength(2));
+        expect(index.candidats('Ma levure'), isEmpty);
+        expect(index.candidatsAvecOrigine('Belle Gamme').partiels, isTrue);
+        expect(index.candidatsAvecOrigine('Ma levure K9').partiels, isFalse);
+        // Référence d'un producteur, nom qui en nomme un autre : aucune, la
+        // souche reste candidate.
+        expect(index.resoudre('Labo Fictif Z23'), isNull);
+        expect(index.candidats('Labo Fictif Z23'), [
+          'culture-seche-fictive-z23-lager-fictive',
+        ]);
+        expect(
+          index.resoudre('Sèche Fictive Z23')?.id,
+          'culture-seche-fictive-z23-lager-fictive',
+        );
+        // Le nom entier reste la règle d'abord.
+        expect(
+          index.resoudre('Flacon Belle Gamme')?.id,
+          'culture-labo-fictif-flacon-belle-gamme',
+        );
+      },
+    );
+
+    test('houblons : aucune lecture de référence ni candidat partiel', () {
+      expect(_houblons.resoudre('Saaz LF84'), isNull);
+      expect(_houblons.candidats('Saaz Tchèque'), isEmpty);
+    });
+
     test('une liste sans nature (paliers) est refusée', () {
       expect(
         () => IndexBibliotheque(ListeRecette.paliers, const []),

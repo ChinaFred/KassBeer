@@ -3064,7 +3064,17 @@ correspondance approchée : entrée d'identifiant `<nature>-<clé du nom>`, puis
 le nom ou un alias a la clé normalisée du nom (`cleNormalisee`, `normalizeName` de `brewing/`
 coupé à 100 caractères), puis, pour une levure, la seule souche lue dans le nom
 (`soucheDuNom`), la seule entrée de cette référence (`cleProduit`), la seule de ce producteur
-et de cette référence (`cleProducteur`). Deux entrées pour une même clé : aucune. Valeur
+et de cette référence (`cleProducteur`), puis la seule entrée désignée par une référence lue
+dans le nom (`_parJetonsReference` : suites d'un à trois segments jointes sans tiret, avec au
+moins une lettre et un chiffre, hors poids comme `10g` ; « BOHEMIAN LAGER M84 MANGROVE JACK »,
+« SafeLager S23 », v0.1.98), refusée si le nom nomme un autre producteur de la Bibliothèque
+(« Labo Fictif Z23 » pour un Z23 d'un autre producteur). Le nom entier passe toujours d'abord. Deux entrées pour une même
+clé ou une même référence : aucune. `candidats` rend en plus, quand aucune voie ne donne rien,
+les levures qui portent tous les mots du nom (nom, alias, producteur ; dix au plus), sans
+jamais les choisir : « Belle saison » liste les deux souches Belle Saison de Lallemand.
+`candidatsAvecOrigine` dit si les candidats viennent de cette seule correspondance partielle :
+`lister_ingredients_recettes.dart` classe alors le nom en `aucun`, jamais en `plusieurs`. Les
+houblons, malts et ajouts n'ont ni lecture de référence ni candidat partiel. Valeur
 reprise quand la ligne n'en a pas et que celle de l'index est valide pour le schéma
 (`schema.dart`, pourcentages de 0 exclu à 100, couleur de 0 à `kMaxEbc`) : malt `type`,
 `yield.fine_grind`, `color` ; houblon `alpha_acid`, `form` ; levure `type`, `form`,
@@ -3937,7 +3947,7 @@ noms non résolus avec leurs candidats). `tarif.json` reste à la racine de `aro
 seule, mêmes garde-fous que pour les houblons, et n'écrit que les noms.
 `lister_ingredients_recettes.dart --nature culture` résout chaque nom sur `beer_cultures.json`
 par `IndexBibliotheque.resoudre` (nom, alias, souche lue dans le nom, référence, producteur
-et référence) ; un nom non résolu (`aucun` ou `plusieurs`, par exemple « Belgian Ale », porté
+et référence, référence lue dans le nom) ; un nom non résolu (`aucun` ou `plusieurs`, par exemple « Belgian Ale », porté
 par deux souches d'un même producteur) est listé avec ses candidats
 (`IndexBibliotheque.candidats`). L'admin peut ajouter à la main un identifiant à `resolus`,
 avec le nom d'origine. Aucune résolution en Node.

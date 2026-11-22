@@ -640,12 +640,13 @@ dans les `aliases` de l'index.
 | 3 (levure) | seule souche lue dans le nom : `Wyeast 1056`, `WLP001` |
 | 4 (levure) | seule entrée de cette référence : `US-05`, `us05` |
 | 5 (levure) | seule entrée de ce producteur et de cette référence : `Fermentis US-05` |
+| 6 (levure) | seule entrée d'une référence lue dans le nom, sauf si le nom nomme un autre producteur : `Bohemian Lager M84 Mangrove Jack`, `SafeLager S23` (v0.1.98) |
 
 Deux entrées pour une même clé ne résolvent rien. Valeurs reprises, seulement si la ligne n'en a
 pas : malt `type`, `yield.fine_grind`, `color` ; houblon `alpha_acid`, `form` ; levure `type`,
 `form`, `attenuation` (milieu de la plage de la fiche) ; autre ajout `type`. Chaque reprise est
-listée au compte rendu. Les étapes 4 et 5 et la reprise de la forme du houblon et du type d'un
-ajout vont au-delà de l'ingestion (D4) : ce sont des choix de l'étape 3 (ADR-005, E7). Un nom non
+listée au compte rendu. Les étapes 4 à 6 et la reprise de la forme du houblon et du type d'un
+ajout vont au-delà de l'ingestion (D4) : ce sont des choix de l'étape 3 (ADR-005, E7, et note du 2026-11-22 pour l'étape 6). Un nom non
 résolu d'un import est signalé dans `import_unresolved/` avec `source: import` et `key` (le nom
 normalisé), sous un identifiant propre à l'import (SHA-256 de `import|nature|key`, vérifié par
 les règles) : il ne touche jamais un document de l'ingestion, et un même nom a une ligne par
