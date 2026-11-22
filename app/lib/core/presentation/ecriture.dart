@@ -114,13 +114,15 @@ Future<bool> confirmerSuppression(
 );
 
 /// Confirmation d'une action : vrai si l'utilisateur confirme ; le bouton porte
-/// [libelle], en couleur d'erreur si [destructive].
+/// [libelle], en couleur d'erreur si [destructive]. [focusAnnuler] : focus
+/// initial sur « Annuler », rien ne part sur un Entrée.
 Future<bool> confirmerAction(
   BuildContext context, {
   required String titre,
   required List<String> paragraphes,
   required String libelle,
   bool destructive = false,
+  bool focusAnnuler = false,
 }) async {
   final result = await _dialogueDeConfirmation(
     context,
@@ -128,6 +130,7 @@ Future<bool> confirmerAction(
     paragraphes: paragraphes,
     libelle: libelle,
     destructive: destructive,
+    focusAnnuler: focusAnnuler,
   );
   return result == ChoixConfirmation.confirmer;
 }
@@ -163,6 +166,7 @@ Future<ChoixConfirmation?> _dialogueDeConfirmation(
   required String libelle,
   String? alternative,
   bool destructive = false,
+  bool focusAnnuler = false,
 }) => showDialog<ChoixConfirmation>(
   context: context,
   builder: (context) {
@@ -186,6 +190,7 @@ Future<ChoixConfirmation?> _dialogueDeConfirmation(
       // s'empilent quand elles ne tiennent pas sur une ligne.
       actions: [
         TextButton(
+          autofocus: focusAnnuler,
           onPressed: () => navigator.pop(ChoixConfirmation.annuler),
           child: const Text('Annuler'),
         ),

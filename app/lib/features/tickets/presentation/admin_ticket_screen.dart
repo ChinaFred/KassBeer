@@ -228,7 +228,9 @@ String positionDansFileApres(
     return '$debut, après la livraison du ticket${n == null ? '' : ' #$n'}.';
   }
   final derniere = quota?.deliveryLast;
-  if (derniere != null && derniere.compteRenduAttendu(now)) {
+  if (derniere != null &&
+      derniere.ticketId != ticketId &&
+      derniere.compteRenduAttendu(now)) {
     final n = derniere.issueNumber;
     return '$debut, après le compte rendu de la livraison du ticket'
         '${n == null ? '' : ' #$n'}.';
@@ -759,6 +761,7 @@ class _FicheState extends ConsumerState<_Fiche> {
       titre: kRetirerFileTitre,
       paragraphes: [retirerFileTexte(prNumber)],
       libelle: 'Retirer',
+      focusAnnuler: true,
     );
     if (!ok) return;
     final resultat = await notifier.lancer(
@@ -1619,11 +1622,7 @@ class _FicheState extends ConsumerState<_Fiche> {
                       Text(
                         detail,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color:
-                              livraison!.repriseAussi ||
-                                  (etat.etatPr?.relaunchReady ?? false)
-                              ? scheme.error
-                              : null,
+                          color: livraison!.detailErreur ? scheme.error : null,
                         ),
                       ),
                     ],

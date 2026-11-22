@@ -317,6 +317,18 @@ class DerniereLivraison {
   }
 }
 
+/// `ticket_status/launches.delivery_queue_halted` : file arrêtée par un refus
+/// de la routine au départ (`routine_paused`, `routine_failed`), écrite par le
+/// serveur et effacée au prochain lancement réussi de la routine de
+/// développement (décision de l'utilisateur du 2026-11-22).
+@immutable
+class ArretFile {
+  const ArretFile({required this.code, this.at});
+
+  final String code;
+  final DateTime? at;
+}
+
 /// Position d'un ticket dans la file des livraisons : [position] à partir de
 /// 1, sur [total] ; [devant] : l'entrée qui le précède, ou `null` en tête.
 typedef PositionFile = ({
@@ -347,6 +359,7 @@ class EtatLancements {
     this.ciReadDeniedSince,
     this.deliveryQueue = const [],
     this.deliveryLast,
+    this.deliveryQueueHalted,
   });
 
   /// Jour de Paris du compteur, `AAAAMMJJ`, écrit par le serveur. Le client
@@ -381,6 +394,9 @@ class EtatLancements {
 
   /// Dernière livraison lancée, ou `null`.
   final DerniereLivraison? deliveryLast;
+
+  /// File arrêtée par un refus de la routine, ou `null`.
+  final ArretFile? deliveryQueueHalted;
 
   /// Position de [ticketId] dans la file, ou `null` s'il n'y est pas.
   PositionFile? positionFile(String ticketId) {
@@ -444,6 +460,15 @@ class EtatLancements {
             ),
       ],
       deliveryLast: _derniere(read.objetFacultatif('delivery_last')),
+      deliveryQueueHalted: switch (read.objetFacultatif(
+        'delivery_queue_halted',
+      )) {
+        final LecteurChamps a => switch (a.texteFacultatif('code')) {
+          final String code => ArretFile(code: code, at: a.date('at')),
+          null => null,
+        },
+        null => null,
+      },
     );
   }
 
@@ -485,6 +510,7 @@ class EtatLancements {
       ciReadDeniedSince: ciReadDeniedSince,
       deliveryQueue: deliveryQueue,
       deliveryLast: deliveryLast,
+      deliveryQueueHalted: deliveryQueueHalted,
     );
   }
 

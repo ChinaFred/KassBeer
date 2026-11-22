@@ -1740,17 +1740,43 @@ describe("file des livraisons : départ par startQueuedDelivery (point 8, P44)",
     }
   });
 
-  it("members/ illisible : entrée gardée", async () => {
+  it("members/ illisible : entrée gardée, code d'erreur seul au journal", async () => {
     const h = harness();
     seedTicket(h);
     seedQueue(h, [queueEntry("t-1")]);
     const out = await runQueuedDelivery({
       ...h.deps(),
       lookup: async () => {
-        throw new Error("Firestore indisponible");
+        throw Object.assign(new Error("lecture de admin@example.com refusée"), {
+          code: "unavailable",
+        });
       },
     });
     assert.equal(out.kind, "kept");
+    assert.equal(queue(h).length, 1);
+    assert.equal(h.githubCalls.length, 0);
+    const journal = JSON.stringify(h.logs.map((l) => ({ ...l.entry, error: l.entry.error })));
+    assert.equal(journal.includes("admin@example.com"), false);
+    assert.ok(h.logs.some((l) => l.entry.extra?.code === "unavailable"));
+    assert.ok(h.logs.every((l) => l.entry.error === undefined));
+  });
+
+  it("jeton GitHub refusé (token_invalid_since) : arrêt avant tout appel", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")]);
+    h.db.seed("ticket_status/github", { token_invalid_since: Timestamp.fromMillis(NOW - HOUR) });
+    let lookups = 0;
+    const out = await runQueuedDelivery({
+      ...h.deps(),
+      lookup: async () => {
+        lookups++;
+        return { role: "admin" };
+      },
+    });
+    assert.deepEqual(out, { kind: "kept", ticketId: "t-1", reason: "github_token" });
+    assert.equal(lookups, 0);
+    assert.equal(h.githubCalls.length, 0);
     assert.equal(queue(h).length, 1);
   });
 
@@ -1761,6 +1787,8 @@ describe("file des livraisons : départ par startQueuedDelivery (point 8, P44)",
     h.db.seed(`ticket_quotas/launch_${DAY}`, { day: DAY, count: LAUNCHES_PER_DAY });
     const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
     assert.deepEqual(out, { kind: "kept", ticketId: "t-1", reason: "quota_exceeded" });
+    // Plafond lu avant tout appel à GitHub.
+    assert.equal(h.githubCalls.length, 0);
     assert.equal(quota(h), LAUNCHES_PER_DAY);
     assert.deepEqual(
       queue(h).map((e) => e.ticket_id),
@@ -1809,6 +1837,69 @@ describe("file des livraisons : départ par startQueuedDelivery (point 8, P44)",
     const next = await runQueuedDelivery({ ...h.deps(), lookup: admin });
     assert.deepEqual(next, { kind: "idle", reason: "routine_invalid" });
     assert.equal(h.routineCalls.length, 1);
+  });
+
+  for (const [name, body, code] of [
+    ["routine en pause", { error: { message: "Routine is paused" } }, "routine_paused"],
+    ["appel refusé (400)", { error: { message: "bad request" } }, "routine_failed"],
+  ] as const) {
+    it(`${name} : entrée remise en tête, rien compté, file arrêtée jusqu'au prochain lancement réussi`, async () => {
+      const h = harness({}, async () => new Response(JSON.stringify(body), { status: 400 }));
+      seedTicket(h);
+      seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")]);
+      const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+      assert.deepEqual(out, { kind: "kept", ticketId: "t-1", reason: code });
+      assert.deepEqual(
+        queue(h).map((e) => e.ticket_id),
+        ["t-1", "t-2"],
+      );
+      assert.equal(queueExit(h), undefined);
+      assert.equal(quota(h), 0);
+      assert.equal(lock(h), null);
+      const halted = h.db.read("ticket_status/launches")?.delivery_queue_halted as Record<
+        string,
+        unknown
+      >;
+      assert.equal(halted.code, code);
+      assert.deepEqual(await runQueuedDelivery({ ...h.deps(), lookup: admin }), {
+        kind: "idle",
+        reason: "queue_halted",
+      });
+      assert.equal(h.routineCalls.length, 1);
+    });
+  }
+
+  it("file arrêtée : effacée par le prochain lancement réussi de la routine de développement", async () => {
+    const h = harness({ runs: RED });
+    seedTicket(h, "t-3", { github_issue_number: 12 });
+    h.db.seed("tickets/t-3/admin/delivery", { relaunch_ready: true });
+    seedQueue(h, [queueEntry("t-1")], {
+      delivery_queue_halted: { code: "routine_paused", at: Timestamp.fromMillis(NOW - HOUR) },
+    });
+    await launchTicketSession("t-3", "reprise", "admin-uid", h.deps());
+    assert.equal(h.db.read("ticket_status/launches")?.delivery_queue_halted, null);
+  });
+
+  it("routine en 200 puis enregistrement du résultat en échec : unknown, compté, verrou gardé, entrée non remise", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")]);
+    const logs: LogEntry[] = [];
+    const out = await runQueuedDelivery({
+      ...h.deps(),
+      lookup: admin,
+      log: (level, entry) => {
+        logs.push(entry);
+        if (level === "info" && entry.message.startsWith("Tickets : session lancée")) {
+          throw new Error("écriture impossible");
+        }
+      },
+    });
+    assert.deepEqual(out, { kind: "unknown", ticketId: "t-1" });
+    assert.equal(quota(h), 1);
+    assert.equal(lock(h)?.ticket_id, "t-1");
+    assert.deepEqual(queue(h), []);
+    assert.ok(logs.some((e) => e.message.includes("non enregistré") && e.error !== undefined));
   });
 
   it("délai dépassé de la routine : unknown, compté, verrou gardé, entrée retirée", async () => {

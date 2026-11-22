@@ -35,8 +35,11 @@ sortie d'« En cours » retirent le ticket de la file. `QUERYABLE_FUNCTIONS` re�
 `startQueuedDelivery` ; `ci.yml` et `deploy.yml` acceptent la seconde tâche planifiée, vérifient
 ses réglages et lui réservent avec les deux callables les secrets `TICKETS_ROUTINE_DEV_*`. Le
 prompt de livraison cite « Livrer » ou « Mettre en file » : à recoller sur claude.ai. Règles
-Firestore inchangées ; tests de `rules-tests/` étendus aux nouveaux champs. Aucune dépendance
-changée. Demandé par le ticket #104.
+Firestore inchangées ; tests de `rules-tests/` étendus aux nouveaux champs. Au départ, un
+refus de la routine (pause, appel refusé) remet l'entrée en tête dans la transaction qui rend le
+verrou et arrête la file (`delivery_queue_halted`) jusqu'au prochain lancement réussi ; la tâche
+s'arrête aussi sur `token_invalid_since` et au plafond, avant tout appel à GitHub. Aucune
+dépendance changée. Demandé par le ticket #104.
 
 ### v0.2.1 — fonctionnel
 

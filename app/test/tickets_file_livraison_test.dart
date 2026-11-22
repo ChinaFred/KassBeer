@@ -342,6 +342,95 @@ void main() {
     });
   });
 
+  group('relectures du 2026-11-22', () {
+    test('file arrêtée par la routine : « la file attend », ton d\'erreur', () {
+      final arret = EtatLancements.fromFirestore({
+        'day': '20261122',
+        'count_day': 3,
+        'per_day': 10,
+        'delivery_queue': [
+          {'ticket_id': 't1', 'issue_number': 12, 'pr_number': 34},
+        ],
+        'delivery_queue_halted': {
+          'code': 'routine_paused',
+          'at': Timestamp.fromDate(DateTime(2026, 11, 22, 9)),
+        },
+      });
+      final l = ligne(arret);
+      expect(l.ton, TonLivraison.erreur);
+      expect(
+        l.texte,
+        'Dans la file (position 1 sur 1) : la file attend, la routine de '
+        'développement est en pause depuis le 22/11/26. Réactivez-la sur '
+        'claude.ai.',
+      );
+      final refuse = EtatLancements(
+        deliveryQueue: [entree('t1', 12)],
+        deliveryQueueHalted: const ArretFile(code: 'routine_failed'),
+      );
+      expect(
+        ligne(refuse).texte,
+        'Dans la file (position 1 sur 1) : la file attend, la routine de '
+        'développement a refusé le lancement.',
+      );
+    });
+
+    test('CI en cours : phrase neutre ; lecture de la CI refusée : aucune', () {
+      const enCours = TicketDelivery(
+        eligiblePrCount: 1,
+        prNumber: 34,
+        ciStatus: 'in_progress',
+      );
+      final l = ligne(etat(file: [entree('t1', 12)]), doc: enCours);
+      expect(
+        l.ligneDetail,
+        'CI de la PR #34 en cours : si elle n\'est pas verte au départ, la '
+        'livraison sortira de la file.',
+      );
+      expect(l.detailErreur, isFalse);
+      final sansPr = ligne(
+        etat(file: [entree('t1', 12)]),
+        doc: const TicketDelivery(),
+      );
+      expect(sansPr.detailErreur, isTrue);
+      final refusee = EtatLancements(
+        deliveryQueue: [entree('t1', 12)],
+        ciReadDeniedSince: DateTime(2026, 11, 22, 9),
+      );
+      expect(ligne(refusee, doc: enCours).ligneDetail, isNull);
+      expect(ligne(refusee, doc: rouge).ligneDetail, isNull);
+    });
+
+    test('appel « Mettre en file » en cours avec un verrou tenu : « Mise en '
+        'file en cours. »', () {
+      final l = ligneLivraison(
+        ticket: enCours(),
+        livraison: const DocumentTrouve(prete),
+        livraisonEnPanne: false,
+        historique: historiqueVide,
+        quota: etat(verrou: verrou9),
+        now: now,
+        offline: false,
+        appelEnCours: true,
+        modeEnCours: ModeLivraison.mettreEnFile,
+        uid: 'moi',
+      )!;
+      expect(l.texte, 'Mise en file en cours.');
+    });
+
+    test('boîte « Mettre en file » : sa propre dernière livraison ignorée', () {
+      final propre = DerniereLivraison(
+        ticketId: 't1',
+        issueNumber: 12,
+        retryAfter: DateTime(2026, 11, 22, 17),
+      );
+      expect(
+        positionDansFileApres(etat(derniere: propre), 't1', now),
+        'Position dans la file : 1 sur 1.',
+      );
+    });
+  });
+
   group('pastille et filtre', () {
     test(
       '« En file » après CI en échec, avant PR prête ; hors « À traiter »',

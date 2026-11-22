@@ -803,6 +803,19 @@ Elles fixent la décision ci-dessus.
 6. **Départ toute la journée** : « On doit lancer plus qu'une par heure et le faire tout au
    long de la journée. » Le départ passe par la tâche dédiée `startQueuedDelivery`, toutes les
    5 minutes, 24 h sur 24, et non par `syncTickets` (point 8).
+7. **2026-11-22 : routine en pause ou appel refusé = entrée gardée, file arrêtée.** Au départ,
+   un refus de la routine de développement (`routine_paused`, `routine_failed`) ne fait plus
+   sortir l'entrée : elle revient en tête dans la transaction qui rend le verrou et
+   `delivery_last`, rien n'est décompté, et `ticket_status/launches.delivery_queue_halted`
+   (`code`, `at`) arrête la file. Le jeton refusé l'arrête déjà par
+   `development_invalid_since`. Les deux s'effacent au prochain lancement réussi de la routine
+   de développement. La fiche affiche « la file attend ». `startQueuedDelivery` s'arrête aussi,
+   avant tout appel à GitHub, sur `ticket_status/github.token_invalid_since` et sur le plafond
+   du compteur de l'auteur de l'accord, lu sans décompte. Seul un refus de l'API (`failed`)
+   remet l'entrée en tête ; toute autre panne après l'appel est traitée comme `unknown`.
+8. **2026-11-22 : file à 11 entrées.** Une entrée remise en tête après un départ rendu n'est
+   pas refusée au plafond : la file peut compter `DELIVERY_QUEUE_MAX` + 1 entrées si une mise
+   en file a eu lieu pendant ce départ. `queue` refuse toujours au-delà de 10.
 
 ### Évolutions du réseau acceptées (2026-11-22)
 

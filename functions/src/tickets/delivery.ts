@@ -674,12 +674,14 @@ export function deliveryLastFinished(last: DeliveryLastView | null, nowMs: numbe
 }
 
 /** Pourquoi `startQueuedDelivery` s'arrête sans autre lecture (point 8). */
-export type DeliveryQueueStop = "empty" | "lock_held" | "awaiting_report" | "routine_invalid";
+export type DeliveryQueueStop =
+  "empty" | "lock_held" | "awaiting_report" | "routine_invalid" | "queue_halted";
 
 /**
  * Lecture de `ticket_status/launches` seule : la tête de file à tenter, ou la raison de
  * s'arrêter (file vide, verrou tenu, compte rendu attendu, jeton de la routine de développement
- * refusé). Pure.
+ * refusé, file arrêtée par un refus de la routine : `delivery_queue_halted`, décision de
+ * l'utilisateur du 2026-11-22). Pure.
  */
 export function deliveryQueueDeparture(
   status: Record<string, unknown>,
@@ -696,6 +698,8 @@ export function deliveryQueueDeparture(
   }
   const invalid = status.development_invalid_since;
   if (invalid !== null && invalid !== undefined) return { stop: "routine_invalid" };
+  const halted = status.delivery_queue_halted;
+  if (halted !== null && halted !== undefined) return { stop: "queue_halted" };
   return { head: queue.views[0] };
 }
 
@@ -848,31 +852,6 @@ export function dequeueInTransaction(
     { merge: true },
   );
   return true;
-}
-
-/**
- * Note `queue_exit` hors transaction, pour une entrée déjà retirée de la file (départ refusé
- * après le retrait). Au mieux, journalisé.
- */
-export async function writeQueueExit(
-  kit: FirestoreKit,
-  ticketId: string,
-  code: string,
-  nowMs: number,
-): Promise<void> {
-  try {
-    await deliveryRef(kit, ticketId).set(
-      { queue_exit: { code, at: kit.Timestamp.fromMillis(nowMs) } },
-      { merge: true },
-    );
-  } catch (err) {
-    logError({
-      message: `Tickets : sortie de file (${code}) non notée`,
-      feature: "tickets",
-      ticketId,
-      error: err,
-    });
-  }
 }
 
 /** Écrit l'état « PR prête » (fusion : les comptes rendus restent). Lève sur une panne. */
@@ -1195,21 +1174,47 @@ export async function claimDeliveryLock(
 }
 
 /**
+ * Départ de la file rendu (rien n'est parti) : entrée remise en tête, et file arrêtée si
+ * `halt` est donné (`delivery_queue_halted`, effacé au prochain lancement réussi de la routine
+ * de développement). Absente seulement : une entrée déjà remise n'est pas doublée. La file
+ * peut alors compter `DELIVERY_QUEUE_MAX` + 1 entrées : un ajout pendant le départ (décision de
+ * l'utilisateur du 2026-11-22).
+ */
+export interface QueueRestore {
+  rawEntry: Record<string, unknown>;
+  halt: { code: string; atMs: number } | null;
+}
+
+/**
  * Rend le verrou d'une livraison qui n'est pas partie (refus, panne avant l'appel, refus de
  * l'API) : seulement s'il porte encore ce ticket et ce lancement. `delivery_last` reprend sa
- * valeur précédente (`previousLast`) s'il est encore celui de ce lancement. Au mieux,
- * journalisé : le verrou expire seul à son échéance.
+ * valeur précédente (`previousLast`) s'il est encore celui de ce lancement. `restore` (départ
+ * de la file) : entrée remise en tête dans la même transaction, sans intervalle où la file et
+ * le verrou sont libres ensemble. Au mieux, journalisé : le verrou expire seul à son échéance.
  */
 export async function releaseDeliveryLock(
   kit: FirestoreKit,
   ticketId: string,
   launchedAtMs: number,
   previousLast: unknown = null,
+  restore: QueueRestore | null = null,
 ): Promise<void> {
   try {
     await kit.db.runTransaction(async (tx) => {
       const snap = await tx.get(statusRef(kit));
       const patch: Record<string, unknown> = {};
+      if (restore !== null) {
+        const queue = readDeliveryQueue(snap.get("delivery_queue"), millisOf(kit));
+        if (!queue.views.some((v) => v.ticketId === ticketId)) {
+          patch.delivery_queue = [restore.rawEntry, ...queue.raw];
+        }
+        if (restore.halt !== null) {
+          patch.delivery_queue_halted = {
+            code: restore.halt.code,
+            at: kit.Timestamp.fromMillis(restore.halt.atMs),
+          };
+        }
+      }
       const lock = readDeliveryLock(snap.get("delivery_running"), millisOf(kit));
       if (lock !== null && lock.ticketId === ticketId && lock.launchedAtMs === launchedAtMs) {
         patch.delivery_running = null;
@@ -1222,7 +1227,10 @@ export async function releaseDeliveryLock(
     });
   } catch (err) {
     logError({
-      message: "Tickets : verrou des livraisons non rendu (expire seul en 3 h)",
+      message:
+        restore === null
+          ? "Tickets : verrou des livraisons non rendu (expire seul en 3 h)"
+          : "Tickets : verrou non rendu, entrée de la file non remise en tête",
       feature: "tickets",
       ticketId,
       error: err,
@@ -1314,34 +1322,6 @@ export async function dequeueHead(
     if (first === undefined || !sameQueueEntry(first, head)) return false;
     return dequeueInTransaction(tx, kit, snap.data(), head.ticketId, code, nowMs);
   });
-}
-
-/**
- * Remet en tête de file une entrée retirée au départ alors que rien n'est parti (panne
- * passagère, refus passager de la routine). Absente seulement : une entrée déjà remise n'est
- * pas doublée. La file peut dépasser `DELIVERY_QUEUE_MAX` d'une entrée dans ce seul cas. Au
- * mieux, journalisé : l'accord est perdu et l'admin remet le ticket en file.
- */
-export async function requeueHead(
-  kit: FirestoreKit,
-  rawEntry: Record<string, unknown>,
-  ticketId: string,
-): Promise<void> {
-  try {
-    await kit.db.runTransaction(async (tx) => {
-      const snap = await tx.get(statusRef(kit));
-      const queue = readDeliveryQueue(snap.get("delivery_queue"), millisOf(kit));
-      if (queue.views.some((v) => v.ticketId === ticketId)) return;
-      tx.set(statusRef(kit), { delivery_queue: [rawEntry, ...queue.raw] }, { merge: true });
-    });
-  } catch (err) {
-    logError({
-      message: "Tickets : entrée de la file des livraisons non remise en tête",
-      feature: "tickets",
-      ticketId,
-      error: err,
-    });
-  }
 }
 
 /** Vrai si deux entrées sont le même accord : même ticket, même `queued_at`. Pure. */

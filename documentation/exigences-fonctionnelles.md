@@ -1213,6 +1213,7 @@ file, avec « Retirer de la file » (bouton à contour) :
 |---|---|
 | pas en tête | « Dans la file (position 2 sur 3), derrière le ticket #15. », puis « Ouvrir le ticket #15 » |
 | en tête, jeton de la routine de développement refusé | « Dans la file (position 1 sur 3) : la file attend, le jeton de la routine de développement est refusé depuis le 22/11/26. » (ton d'erreur) |
+| en tête, routine en pause ou lancement refusé au départ | « Dans la file (position 1 sur 3) : la file attend, la routine de développement est en pause depuis le 22/11/26. Réactivez-la sur claude.ai. » ou « … : la file attend, la routine de développement a refusé le lancement depuis le 22/11/26. » (ton d'erreur) ; l'entrée reste en tête et la file repart après le prochain lancement réussi de la routine de développement |
 | en tête, autre livraison en cours | « Dans la file (position 1 sur 3) : partira après la livraison du ticket #9. » |
 | en tête, compte rendu attendu | « Dans la file (position 1 sur 3) : partira après le compte rendu de la livraison du ticket #9, à 17:05 au plus tard. » |
 | en tête, plafond atteint, accord donné par ce compte | « Dans la file (position 1 sur 3) : plafond atteint le 22/11 (10 sur 10). Elle partira quand le compteur repartira à zéro, peu après minuit. » (accord d'un autre administrateur : ligne suivante) |
@@ -1222,8 +1223,10 @@ Sous la ligne : « Accord du 22/11/26 à 14:05 pour la PR #34. ». Si la pull re
 prête, une ligne annonce la sortie au départ : « CI de la PR #34 en échec : la livraison
 sortira de la file au départ. » (ton d'erreur, avec « Relancer le développement » en bouton
 tonal à côté de « Retirer de la file » quand le serveur l'offre), « 2 pull requests ferment
-l'Issue : … », « Aucune pull request prête : … », « CI de la PR #34 pas verte : la livraison
-sortira de la file au départ si elle ne l'est pas. ».
+l'Issue : … », « Aucune pull request prête : … » (ton d'erreur), « CI de la PR #34 en cours :
+si elle n'est pas verte au départ, la livraison sortira de la file. » (neutre), « CI de la PR
+#34 pas verte : la livraison sortira de la file au départ. » (ton d'erreur). Aucune phrase sur
+la CI tant que GitHub refuse au jeton sa lecture.
 
 Sortie de la file sans départ : sous la ligne principale, « Sortie de la file le 22/11/26 à
 14:15 : <raison> » (ton d'erreur), jusqu'à la livraison suivante de ce ticket. Raisons : « une
@@ -1235,8 +1238,7 @@ l'Issue. », « la PR modifie un fichier protégé. Fusionnez-la vous-même apr�
 après relecture. », « le compte qui avait donné l'accord n'est plus administrateur. », « une
 correction de la PR était en cours. », « le développement a été relancé. », « le ticket a été
 refusé. », « le ticket a été clos. », « le ticket a quitté « En cours ». », « le ticket ne
-permettait plus la livraison. », « l'Issue n'existe plus sur GitHub. », « la routine de
-développement était en pause. », « la routine de développement a refusé le lancement. ».
+permettait plus la livraison. », « l'Issue n'existe plus sur GitHub. ».
 Retrait demandé : « Retiré de la file le 22/11/26 à 14:15. » (ton informatif). Raison inconnue
 de cette version : « Sortie de la file le 22/11/26 à 14:15. Mettez l'application à jour pour
 lire la raison. ».
@@ -1261,7 +1263,7 @@ appuyez sur « Mettre en file ». Rien n'a été lancé ni décompté. ».
 
 Boîte « Retirer ce ticket de la file ? » : « La PR #34 ne partira pas. Les tickets suivants
 avancent d'une place. Rien n'est décompté. Pour la livrer ensuite, il faudra la remettre en
-fin de file. », « Annuler » et « Retirer ». Résultats : « Ticket #12 retiré de la file. » ;
+fin de file. », « Annuler » (focus initial) et « Retirer ». Résultats : « Ticket #12 retiré de la file. » ;
 « Ce ticket n'était plus dans la file. » ; échecs : « Retrait non fait : pas de réseau. »,
 « Retrait non fait : accès administrateur refusé. », « Résultat inconnu : regardez la file
 avant de réessayer. ». Les boîtes « Refuser » et « Clore » d'un ticket en file ajoutent « Le

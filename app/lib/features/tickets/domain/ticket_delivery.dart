@@ -176,8 +176,6 @@ const kPhrasesSortieFile = <String, String>{
   'delivery_queue_left_in_progress': 'le ticket a quitté « En cours ».',
   'not_allowed': 'le ticket ne permettait plus la livraison.',
   'issue_not_found': 'l\'Issue n\'existe plus sur GitHub.',
-  'routine_paused': 'la routine de développement était en pause.',
-  'routine_failed': 'la routine de développement a refusé le lancement.',
 };
 
 /// Ligne de sortie de file : texte et ton d'erreur (tout code sauf
@@ -276,6 +274,7 @@ class LigneLivraison {
     this.mode,
     this.ligneAccord,
     this.ligneDetail,
+    this.detailErreur = false,
     this.sortie,
     this.repriseAussi = false,
   });
@@ -303,6 +302,9 @@ class LigneLivraison {
   /// Ligne d'un ticket en file dont la PR n'est plus prête (CI rouge…).
   final String? ligneDetail;
 
+  /// [ligneDetail] en ton d'erreur (tout sauf « CI en cours »).
+  final bool detailErreur;
+
   /// Ligne de sortie de la file (`queue_exit`), sous la ligne principale.
   final ({String texte, bool erreur})? sortie;
 
@@ -326,6 +328,7 @@ class LigneLivraison {
           mode: mode,
           ligneAccord: ligneAccord,
           ligneDetail: ligneDetail,
+          detailErreur: detailErreur,
           sortie: s,
           repriseAussi: repriseAussi,
         );
@@ -571,6 +574,22 @@ LigneLivraison _ligneDansFile({
     texte =
         '$position : la file attend, le jeton de la routine de développement '
         'est refusé depuis le ${formatDateChiffres(depuis.toLocal())}.';
+  } else if (quota.deliveryQueueHalted case final arret?) {
+    // Routine en pause ou appel refusé au départ (décision de l'utilisateur
+    // du 2026-11-22) : la file attend le prochain lancement réussi.
+    ton = TonLivraison.erreur;
+    final depuis = arret.at;
+    final quand = depuis == null
+        ? ''
+        : ' depuis le ${formatDateChiffres(depuis.toLocal())}';
+    texte = switch (arret.code) {
+      'routine_paused' =>
+        '$position : la file attend, la routine de développement est en '
+            'pause$quand. Réactivez-la sur claude.ai.',
+      _ =>
+        '$position : la file attend, la routine de développement a refusé le '
+            'lancement$quand.',
+    };
   } else if (verrouAutre) {
     final n = verrou.issueNumber;
     texte =
@@ -594,11 +613,14 @@ LigneLivraison _ligneDansFile({
   } else {
     texte = '$position : départ dans 5 minutes au plus.';
   }
-  // La PR n'est plus prête : la sortie au départ est annoncée.
+  // La PR n'est plus prête : la sortie au départ est annoncée. Aucune phrase
+  // sur la CI tant que GitHub refuse au jeton sa lecture.
   final pr = doc.prNumber;
+  final ciLisible = quota.ciReadDeniedSince == null;
   String? detail;
+  var detailErreur = true;
   var reprise = false;
-  if (doc.relaunchReady) {
+  if (doc.relaunchReady && ciLisible) {
     detail =
         'CI de ${_pr(pr)} en échec : la livraison sortira de la file au '
         'départ.';
@@ -614,10 +636,18 @@ LigneLivraison _ligneDansFile({
     detail =
         'Aucune pull request prête : la livraison sortira de la file au '
         'départ.';
-  } else if (!doc.ready) {
-    detail =
-        'CI de la PR #$pr pas verte : la livraison sortira de la file au '
-        'départ si elle ne l\'est pas.';
+  } else if (!doc.ready && ciLisible) {
+    final ci = doc.ciStatus;
+    if (ci != null && ci != 'completed') {
+      detailErreur = false;
+      detail =
+          'CI de la PR #$pr en cours : si elle n\'est pas verte au départ, la '
+          'livraison sortira de la file.';
+    } else {
+      detail =
+          'CI de la PR #$pr pas verte : la livraison sortira de la file au '
+          'départ.';
+    }
   }
   return LigneLivraison(
     ton: ton,
@@ -629,6 +659,7 @@ LigneLivraison _ligneDansFile({
     verrouIssue: autreIssue,
     ligneAccord: accord,
     ligneDetail: detail,
+    detailErreur: detailErreur,
     repriseAussi: reprise,
   );
 }
@@ -745,6 +776,17 @@ LigneLivraison _ligneHorsFile({
   final peutLivrer = ticket.canLaunch(ActionLancement.livraison);
   // « Mettre en file » reste actif au plafond : l'entrée attendra.
   bool actifFile() => !offline && !appelEnCours && historique != null;
+  // Appel « Mettre en file » en cours : avant les lignes de la file, qui le
+  // proposent.
+  if (peutLivrer && appelEnCours && modeEnCours == ModeLivraison.mettreEnFile) {
+    return const LigneLivraison(
+      ton: TonLivraison.progression,
+      texte: 'Mise en file en cours.',
+      progression: 'Mise en file en cours',
+      action: ActionLancement.livraison,
+      mode: ModeLivraison.mettreEnFile,
+    );
+  }
   if (verrouAutre) {
     final at = verrou.launchedAt;
     final numero = verrou.issueNumber;
@@ -763,15 +805,6 @@ LigneLivraison _ligneHorsFile({
     );
   }
   final derniere = quota?.deliveryLast;
-  if (peutLivrer && appelEnCours && modeEnCours == ModeLivraison.mettreEnFile) {
-    return const LigneLivraison(
-      ton: TonLivraison.progression,
-      texte: 'Mise en file en cours.',
-      progression: 'Mise en file en cours',
-      action: ActionLancement.livraison,
-      mode: ModeLivraison.mettreEnFile,
-    );
-  }
   if (peutLivrer &&
       derniere != null &&
       derniere.ticketId != ticket.id &&
