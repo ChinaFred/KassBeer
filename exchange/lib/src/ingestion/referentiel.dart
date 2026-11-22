@@ -224,7 +224,8 @@ class Referentiel {
   /// seule une fiche connaît prend l'identifiant de la fiche.
   ///
   /// [correctionsCultures] corrige d'abord les cultures de Brewtarget
-  /// (référence, nom de gamme), puis écarte des alias ([CorrectionCulture]).
+  /// (référence, nom de gamme), réunit une souche sans référence sous deux
+  /// noms, puis écarte des alias ([CorrectionCulture]).
   factory Referentiel.fusionner(
     List<EntreeBrute> lues, {
     List<Fusion> fusions = const [],
@@ -304,6 +305,26 @@ class Referentiel {
     for (final MapEntry(:key, :value) in souches.entries) {
       idSouche[key] = idDe((value..sort(ordreIdentifiant)).first.$2);
     }
+    // Une souche sans référence sous deux noms : un document, à l'identifiant
+    // de la première entrée dans l'ordre des identifiants.
+    final idMemeSouche = <int, String>{};
+    for (final c in correctionsCultures.whereType<MemeSoucheCulture>()) {
+      final groupe = [
+        for (var i = 0; i < entrees.length; i++)
+          if (c.designe(entrees[i])) (i, entrees[i]),
+      ];
+      final noms = groupe.where((g) => c.designeNom(g.$2)).length;
+      if (noms == 0 || noms == groupe.length) {
+        throw StateError('correction $c : les deux noms ne sont pas lus');
+      }
+      final id = idDe((groupe..sort(ordreIdentifiant)).first.$2);
+      for (final (i, e) in groupe) {
+        if (idMemeSouche.containsKey(i) || ligneCultureDe.containsKey(i)) {
+          throw StateError('${e.source.id} « ${e.nom} » désignée deux fois');
+        }
+        idMemeSouche[i] = id;
+      }
+    }
     // Une entrée Brewtarget désignée par une ligne de culture garde son
     // identifiant : sinon la ligne créerait un document à côté de l'ancien.
     for (final MapEntry(key: i, value: f) in ligneCultureDe.entries) {
@@ -324,6 +345,7 @@ class Referentiel {
       final id =
           ligneDe[i]?.id ??
           ligneCultureDe[i]?.id ??
+          idMemeSouche[i] ??
           (souche == null ? idDe(entrees[i]) : idSouche[souche]!);
       groupes.putIfAbsent(id, () => []).add((i, entrees[i]));
     }
@@ -388,7 +410,9 @@ class Referentiel {
         entrees[i] = nouvelle;
         trouvees++;
       }
-      if (trouvees == 0 && c is! AliasEcarteCulture) {
+      if (trouvees == 0 &&
+          c is! AliasEcarteCulture &&
+          c is! MemeSoucheCulture) {
         throw StateError('correction $c : aucune entrée');
       }
     }

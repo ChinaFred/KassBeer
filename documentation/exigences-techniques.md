@@ -3071,7 +3071,8 @@ moins une lettre et un chiffre, hors poids comme `10g` ; « BOHEMIAN LAGER M84 M
 (« Labo Fictif Z23 » pour un Z23 d'un autre producteur). Le nom entier passe toujours d'abord. Deux entrées pour une même
 clé ou une même référence : aucune. `candidats` rend en plus, quand aucune voie ne donne rien,
 les levures qui portent tous les mots du nom (nom, alias, producteur ; dix au plus), sans
-jamais les choisir : « Belle saison » liste les deux souches Belle Saison de Lallemand.
+jamais les choisir : « belle gamme labo fictif » liste les levures de Labo Fictif qui portent « Belle Gamme »
+(test).
 `candidatsAvecOrigine` dit si les candidats viennent de cette seule correspondance partielle :
 `lister_ingredients_recettes.dart` classe alors le nom en `aucun`, jamais en `plusieurs`. Les
 houblons, malts et ajouts n'ont ni lecture de référence ni candidat partiel. Valeur
@@ -3541,10 +3542,13 @@ des entrées de Brewtarget, jamais une fiche : `ReferenceCulture` donne à une e
 référence retenue (une souche sous deux références, ou une entrée sans référence), et l'entrée
 rejoint la souche de cette référence ; `GammeCulture` renomme `<gamme> <référence>` une entrée
 d'un nom de gamme qui porte une référence (`Lalvin 71B`, nom construit par Kass'Beer), une
-entrée sans référence garde son nom. Après la fusion, `AliasEcarteCulture` retire des `aliases`
+entrée sans référence garde son nom ; `MemeSoucheCulture` réunit en un document deux entrées
+sans référence d'un même producteur sous deux noms, à l'identifiant de la première dans
+l'ordre des identifiants (`ordreIdentifiant`), les autres noms en alias ; les deux noms doivent
+être lus. Après la fusion, `AliasEcarteCulture` retire des `aliases`
 d'une souche un nom qui est celui d'une autre souche du même producteur. Une ligne qui ne
 désigne rien, une entrée corrigée par deux lignes, ou un alias absent du document visé
-arrêtent la préparation (`StateError`). Douze lignes, listées dans `DATA_SOURCES.md`
+arrêtent la préparation (`StateError`). Treize lignes, listées dans `DATA_SOURCES.md`
 (« Doublons d'un même producteur hérités de Brewtarget »).
 
 Sortie : `<collection>.json` (listes `{id, data}`, triées par identifiant, `content_sha256`
