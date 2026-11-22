@@ -1007,6 +1007,11 @@ describe("tri des arômes par l'écrivain", () => {
       /^2 houblons sans description aromatique : lancez `node generer-aromes\.mjs --nouveaux`/,
     );
   });
+
+  it("levures : aucun message, faute de compte (ecrire.mjs lit rapport[null])", () => {
+    assert.equal(NATURE_LEVURE.ecriture.champSansDescription, null);
+    assert.equal(messageSansDescription(undefined, NATURE_LEVURE), null);
+  });
 });
 
 describe("prompt documenté", () => {
