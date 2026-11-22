@@ -3,8 +3,8 @@
 - **Statut** : accepté le 2026-11-11, décision de l'utilisateur : option B, « copie exacte » de
   Kass'Dalle
 - **Date** : 2026-11-11
-- **Amendement** : « File d'attente des livraisons » (ticket #104), statut : proposé
-  (2026-11-22)
+- **Amendement** : « File d'attente des livraisons » (ticket #104), accepté le 2026-11-22
+  (option B, décisions de l'utilisateur)
 - **Remplace** : ADR-006 sur trois points : option C (« aucun point d'accès HTTP »), décision 1
   et décision 5 ; P25 (« aucun `onRequest` ni `onCall` sans ADR » : cet ADR est celui qui les
   autorise, liste fermée ci-dessous). ADR-006 reste en vigueur pour le reste. Modifie ADR-001
@@ -564,9 +564,11 @@ variables » (premier poste), « Logique dupliquée » (`member_access.json`), �
 (exception de la capture), P23 à P27 modifiés, P29 à P34 ajoutés au lot T3 (2026-11-12), les suivants par lot. ADR-006 reçoit « Modifié
 par : ADR-008 (option C, décisions 1 et 5, P25) » ; ADR-001 aussi.
 
-## Amendement proposé du 2026-11-22 : file d'attente des livraisons (ticket #104)
+## Amendement du 2026-11-22 : file d'attente des livraisons (ticket #104)
 
-- **Statut** : proposé
+- **Statut** : accepté le 2026-11-22, décisions de l'utilisateur : option B, départ après le
+  compte rendu de la livraison précédente, file vidée par un blocage, entrée gardée au plafond
+  du jour, 10 entrées sans limite de durée (section « Décisions de l'utilisateur »)
 - **Date** : 2026-11-22
 - **Modifie** : sections « Points d'accès autorisés » (secrets de `syncTickets`), « Lancements
   de sessions (Routines) » (plafond, mode de `launchTicketDelivery`), « Livraison » (verrou) et
@@ -647,7 +649,7 @@ livraison en cours, après les mêmes contrôles que « Livrer ».
 7. **Départ.** Dernière étape de `runHourlyPass` (`sync.ts`), après la relecture des Issues, des
    comptes rendus et du verrou. Une seule tentative par passe, sur la tête de file, si le
    verrou est libre et si la condition de fin de la livraison précédente est remplie
-   (question 2). Aucun départ si `development_invalid_since` est posé, ni s'il reste moins de
+   (décision 2 de l'utilisateur). Aucun départ si `development_invalid_since` est posé, ni s'il reste moins de
    120 s au délai de 300 s de la passe. Dans l'ordre :
    - `members/{by_email}` relu : rôle `admin` toujours présent, sinon sortie
      `delivery_queue_not_admin` ; compteur du fondateur ou du groupe lu à ce moment ;
@@ -717,11 +719,31 @@ rouge ou modifiée entre-temps : chaque contrôle est refait au départ, et la t
 P46, P47, « Coûts variables » (départ différé). `exigences-techniques.md` : modèle de
 `ticket_status/launches`, prompt. `exigences-fonctionnelles.md` : Admin › Tickets.
 
-### Questions laissées à l'utilisateur
+### Décisions de l'utilisateur (2026-11-22)
 
-Option retenue ; moment du départ (fusion du précédent, ou fin de son déploiement) ; effet
-d'un blocage sur la file ; plafond du jour atteint au départ ; taille de la file et durée de
-validité d'un accord.
+Elles complètent la décision proposée ci-dessus et la précisent là où elle renvoyait à une
+question.
+
+1. **Option retenue** : B, file au serveur, départ par `syncTickets` seule. Le webhook ne monte
+   pas le jeton de la routine (option C écartée).
+2. **Moment du départ** : après le compte rendu de la livraison précédente. La tête de file ne
+   part que si le verrou est libre et si la dernière livraison lancée a publié
+   `## Livraison — terminée` ou `## Livraison — blocage` postérieur à son lancement, ou si
+   3 h sont passées depuis son lancement. Le serveur note la dernière livraison lancée dans
+   `ticket_status/launches.delivery_last` (`ticket_id`, `issue_number`, `launched_at`,
+   `retry_after`), écrit par le serveur seul. Le compte rendu d'un ticket déjà clos (Issue
+   fermée par la fusion) est relevé par la passe horaire. Un seul déploiement tourne à la
+   fois.
+3. **Blocage** : un `## Livraison — blocage` relevé vide la file. Chaque entrée sort avec le
+   code `delivery_queue_cleared_after_blockage`, noté dans `admin/delivery.queue_exit` de son
+   ticket. Rien n'est décompté. L'admin remet en file les tickets qu'il veut. Aucun état de
+   pause.
+4. **Plafond du jour atteint au départ** : l'entrée reste en tête de file et repart à la passe
+   suivante, y compris après la remise à zéro du compteur à minuit (heure de Paris). Rien
+   n'est compté ni retiré.
+5. **Taille et validité** : `DELIVERY_QUEUE_MAX` vaut 10 (`functions/src/config.ts`). Un accord
+   n'a pas de durée de validité : aucune sortie pour ancienneté. Le contrôle de `head_sha` au
+   départ (décision proposée, point 7) reste la seule garde sur un code changé.
 
 ## Sources
 
