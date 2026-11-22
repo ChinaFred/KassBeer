@@ -6,8 +6,8 @@ import 'package:exchange/exchange.dart'
 import 'package:exchange/ingestion.dart';
 import 'package:test/test.dart';
 
-/// Ingrédients des recettes du groupe : houblons (ADR-013, décisions 9 à 11)
-/// et levures (ADR-017). Noms lus, résolus par IndexBibliotheque.resoudre, non
+/// Ingrédients des recettes du groupe : houblons (ADR-013, décisions 9 à 11),
+/// levures (ADR-017) et divers (ADR-018). Noms lus, résolus par IndexBibliotheque.resoudre, non
 /// résolus avec leur raison et leurs candidats. Fixtures écrites à la main
 /// (P20).
 
@@ -188,5 +188,52 @@ void main() {
       ]),
       throwsFormatException,
     );
+  });
+
+  group('divers (--nature misc, ADR-018)', () {
+    IndexBibliotheque index() => indexDivers(_fixture('beer_miscs.json'));
+
+    test(
+      'fixture : résolus par identifiant, nom et alias ; non résolus aucun et plusieurs',
+      () {
+        final noms = _fixture('noms-divers.json');
+        final resultat = ingredientsRecettes(
+          lireNomsIngredients(noms),
+          index(),
+          origine: origineNoms(noms),
+        );
+        expect(resultat, _fixture('attendu-divers.json'));
+      },
+    );
+
+    test('format kassbeer_divers_recettes, lu par ingest/', () {
+      final r = ingredientsRecettes(['Sel Fictif'], index());
+      expect(r['format'], 'kassbeer_divers_recettes');
+      expect(r['resolus'], [
+        {
+          'id': 'misc-sel-fictif',
+          'noms': ['Sel Fictif'],
+        },
+      ]);
+    });
+
+    test('candidats : aucun, un seul (résolu) ou plusieurs', () {
+      expect(index().candidats('Poudre Inconnue'), isEmpty);
+      expect(index().candidats('Algue Fictive'), hasLength(1));
+      expect(index().candidats('Minéral'), hasLength(2));
+    });
+
+    test('beer_miscs.json mal formé : refusé', () {
+      expect(
+        () => indexDivers({}),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'beer_miscs.json : liste attendue',
+          ),
+        ),
+      );
+    });
   });
 }

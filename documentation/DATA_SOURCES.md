@@ -35,7 +35,8 @@ l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`
 | Fiches techniques Escarpment Labs (`escarpmentlabs.com/products/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `4bf68e54e3c437887e383e18babc4787405ae8eab6a955c765bb037f2379fc53` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 98 cultures liquides : nom, type, forme, producteur, référence LSB quand la fiche en donne une, atténuation, plage de température, floculation | levures Lallemand revendues (LalBrew, WildBrew), doublons de conditionnement (homebrew, dose primaire ou secondaire), tolérance à l'alcool, descriptions |
 | paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
 | Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin avant l'écriture, relecture non affichée dans l'application (décision de l'utilisateur du 2026-11-21) ; un texte peut contenir des erreurs ; `beer_index/hop_aromas` : identifiant du houblon et confiance de chaque description acceptée, sans texte (filtre de la Bibliothèque, note du 2026-11-21) | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
-| Descriptions aromatiques des levures (ADR-017) | modèle `claude-fable-5-2`, prompt versionné propre aux levures (`prompt_version` de la nature `culture`, `ingest/lib/aromes/natures/culture.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, producteur, référence, type, forme, atténuation, plage de température, floculation de `beer_cultures/` (publiques) ; styles conseillés pris dans la liste des styles BJCP 2021 de `beer_styles/` (codes et noms) | `beer_culture_aromas/` : descripteurs de la liste fermée de 32, profil, bas et haut de plage, 0 à 6 styles conseillés ; périmètre : levures des recettes du groupe, plus les types autres que `other`, `wine`, `champagne`, `malolactic` (923 levures sur 960) ; levures du groupe relues par l'admin avant l'écriture, relecture non affichée dans l'application (décision de l'utilisateur du 2026-11-21) ; un texte peut contenir des erreurs ; affichés dans la section « Arômes » de la fiche d'une levure depuis la v0.1.97 | `notes`, `provenance` et descriptions des fiches des fabricants (jamais envoyées), recherche web, reformulation d'une fiche de fabricant |
+| Descriptions aromatiques des levures (ADR-017) | modèle `claude-fable-5-2`, prompt versionné propre aux levures (`PROMPT_VERSION_LEVURES`, `ingest/lib/levures/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, producteur, référence, type, forme, atténuation, plage de température, floculation de `beer_cultures/` (publiques) ; styles conseillés pris dans la liste des styles BJCP 2021 de `beer_styles/` (codes et noms) | `beer_culture_aromas/` : descripteurs de la liste fermée de 32, profil, bas et haut de plage, 0 à 6 styles conseillés ; périmètre : levures des recettes du groupe, plus les types autres que `other`, `wine`, `champagne`, `malolactic` (923 levures sur 960) ; levures du groupe relues par l'admin avant l'écriture, relecture non affichée dans l'application (décision de l'utilisateur du 2026-11-21) ; un texte peut contenir des erreurs ; affichés dans la section « Arômes » de la fiche d'une levure depuis la v0.1.97 | `notes`, `provenance` et descriptions des fiches des fabricants (jamais envoyées), recherche web, reformulation d'une fiche de fabricant |
+| Descriptions des divers (ADR-018) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/divers/prompt.mjs`, propre aux divers), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, libellé français, type de `beer_miscs/` (publiques) | `beer_misc_descriptions/` : résumé, rôles de la liste fermée, un texte par moment (empâtage, ébullition, après ébullition, fermentation, embouteillage), goût s'il en a un ; aucune dose (renvoi à la notice du fabricant) ; divers des recettes du groupe relus par l'admin avant l'écriture, relecture non affichée dans l'application (ADR-019, décision 4) ; un texte peut contenir des erreurs | `notes` et `USE_FOR` de Brewtarget (jamais lus ni envoyés), doses, recherche web, citation d'un fournisseur ou d'un catalogue |
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
 beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, origines
@@ -611,7 +612,8 @@ moments `Kettle` ou `Additions`, 2 quantités en `total` ou `ml`, 58 paliers. Li
 d'origine perdus sur un ajout placé hors de `hop_additions` : 20.
 
 **Table d'alias** (`exchange/lib/src/ingestion/alias.dart`, écrite à la main le 2026-11-11) :
-102 alias (60 malts et sucres, 14 houblons, 23 ajouts, 5 levures par producteur et référence),
+111 alias (60 malts et sucres, 14 houblons, 32 ajouts dont les 9 noms français du 2026-11-22,
+5 levures par producteur et référence),
 31 `label_fr`, et 65 noms de la liste `hops` qui ne sont pas des houblons. Une entrée n'est
 écrite que si la correspondance est sûre :
 
@@ -672,6 +674,19 @@ résolu d'un import est signalé dans `import_unresolved/` avec `source: import`
 normalisé), sous un identifiant propre à l'import (SHA-256 de `import|nature|key`, vérifié par
 les règles) : il ne touche jamais un document de l'ingestion, et un même nom a une ligne par
 origine. 200 noms au plus par import ; les suivants sont comptés au compte rendu.
+
+### Noms français des divers des recettes du groupe
+
+La table d'alias (`exchange/lib/src/ingestion/alias.dart`) rattache aussi les noms français que
+les recettes du groupe donnent à leurs divers (ADR-018, décision de l'utilisateur du
+2026-11-22) : « Coriandre » → `misc-coriander-seeds`, « Chlorure de calcium » →
+`misc-calcium-chloride`, « Gypse » et « Gypse (sulfate de calcium) » → `misc-gypsum`,
+« Orange peel amère » et « Écorce d'orange amère » → `misc-bitter-orange-peel`, « Orange peel
+douce », « Écorce d'orange douce » et « Écorces d'orange douce » → `misc-sweet-orange-peel`. Ces
+noms passent dans les `aliases` de l'entrée, donc dans `beer_index/`, et la liste du groupe comme
+Recettes › Importer les résolvent. « Acide lactique 80 % » reste non résolu : la Bibliothèque ne
+connaît que `misc-lactic-acid-88`, d'une autre concentration. Les fautes de frappe des recettes
+(« Irsih moss », « oragnge ») se corrigent dans les recettes, pas dans la table.
 
 ## Correspondance `beer_styles` → `STYLE` du BeerXML
 

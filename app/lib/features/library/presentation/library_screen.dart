@@ -23,7 +23,7 @@ import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
 import 'reference_entry_screen.dart' show fermerFicheBibliotheque;
-import 'section_aromes.dart' show TextesAromes;
+import 'texte_redige.dart' show TextesRediges;
 
 /// Liste et fiche côte à côte dans la Bibliothèque : fenêtre d'au moins
 /// [kBibliothequeCoteACoteMinWidth] (rail étendu et [kExpandedMinWidth] de
@@ -810,7 +810,7 @@ class _ListeReferentielState extends ConsumerState<_ListeReferentiel>
               // données » dans l'en-tête.
               if (c == ConfianceIndex.faible)
                 const Etiquette(
-                  label: TextesAromes.confianceFaible,
+                  label: TextesRediges.confianceFaible,
                   ton: TonEtiquette.neutre,
                 ),
               if (c == ConfianceIndex.sansDescription)

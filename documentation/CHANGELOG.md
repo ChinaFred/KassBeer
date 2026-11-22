@@ -6,14 +6,16 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
-### v0.2.2 — fonctionnel
+### v0.2.13 — fonctionnel
+
+Résumé : L'origine des houblons et des malts s'affiche en français dans la Bibliothèque.
 
 Dans la Bibliothèque, l'origine des houblons et des malts s'affiche en français :
 « États-Unis », « Royaume-Uni », « République tchèque »… La recette qui nomme le houblon
 « Hallertau Hersbrucker » retrouve maintenant sa fiche et sa description. Ces changements
 s'affichent une fois le référentiel réécrit par l'administrateur.
 
-### v0.2.2 — technique
+### v0.2.13 — technique
 
 La préparation (`exchange/lib/src/ingestion/referentiel.dart`) écrit `origin_fr` à côté
 d'`origin`, qui reste la graphie anglaise lue par l'export, les arômes et la table de fusion,
@@ -23,8 +25,160 @@ préparation. `ingest/lib/validation.mjs` accepte `origin_fr` (texte de 1 à 120
 seulement avec `origin`). `origin_fr` n'est ni envoyé au modèle ni compté dans `input_sha256`
 (tests). L'application affiche `origin_fr`, sinon `origin` (`origineAffichee`). Table de
 fusion : ligne sans entrée pour l'alias « Hallertau Hersbrucker » ; `Referentiel.fusionner`
-refuse une ligne dont le document manque (`StateError`, test). ADR-014, note du 2026-11-22.
+refuse une ligne dont le document manque (`StateError`, test). ADR-014, note du 2026-11-22. `CLAUDE.md` complète P56 (ligne de fusion sans entrée, `kPaysFr`,
+`origin_fr`).
 Après la fusion, l'administrateur relance la préparation puis `ecrire.mjs`.
+
+### v0.2.12 — technique
+
+Lot R2 d'ADR-019, par la fusion de `main` dans la branche des divers (décision de l'utilisateur
+du 2026-11-22). Les levures d'ADR-017 passent sur le moteur commun `ingest/lib/redaction/` comme
+une nature, dans `ingest/lib/levures/` (`nature.mjs`, `prompt.mjs`, `validation.mjs`,
+`descripteurs.json`), avec le même poste `culture_aroma_generation`, le même modèle, le même
+prompt (`PROMPT_VERSION_LEVURES` 1), la même liste de 32 descripteurs, le même périmètre et le
+même `--max` de 1 000. Le moteur reçoit deux crochets de nature, `contexte` (styles du prompt) et
+`perimetre` (types exclus) ; `generer-aromes.mjs` garde `--nature hop|culture`. L'ancien moteur
+de `main` sort : `ingest/lib/aromes/generation.mjs`, `natures/hop.mjs`, `natures/culture.mjs`,
+`client.mjs`, `tarif.mjs`. Le tarif des levures se lit dans `import/ingest/tarif.json`, comme
+celui des houblons et des divers ; `import/ingest/aromes/tarif.json` seul est refusé sans repli.
+Les textes des levures passent aux règles communes (NFC, catégorie Unicode Cf retirée, contrôle
+sur la forme NFKC). Empreinte d'une levure figée par un test sur la valeur calculée par le code
+de `main` avant le portage (`e4dc92e8…`, styles `b96d1a54…`), avec le texte du prompt et la
+requête d'un lot : les 923 levures déjà rédigées ne repartent pas. `--suivre` relit un
+`lot-<id>.json` écrit par l'ancien moteur (test). Listes du groupe : `ingest/lister-ingredients-recettes.mjs`
+et `exchange/bin/lister_ingredients_recettes.dart` de `main`, étendus à `--nature misc` ; sortent
+`ingest/lister-houblons-recettes.mjs`, `ingest/lister-divers-recettes.mjs`,
+`exchange/bin/lister_houblons_recettes.dart`, `exchange/bin/lister_divers_recettes.dart` et
+`exchange/bin/src/lister_recettes.dart`. `ecrire.mjs` écrit les trois natures et liste les
+entrées relues orphelines pour chacune. Application : un seul cadre des textes rédigés
+(`texte_redige.dart` : `CadreTexteRedige`, `MentionTexteRedige`, `EtiquetteConfianceFaible`,
+`EtiquettesRedigees`, `PanneTexteRedige`) pour les houblons, les levures et les divers ;
+`CadreAromes`, `MentionAromes`, `ConfianceFaibleAromes` et `DescripteursAromes` sortent, avec
+`domain/relecture.dart`. « relu le » et « non relu » ne s'affichent plus pour les divers non
+plus (ADR-019, décision 4). Les entrées v0.1.92 à v0.2.1 de la branche, absentes de `main`, sont
+renumérotées v0.2.2 à v0.2.11, au-dessus de la v0.2.1 de `main` (Nouveautés, #121), fusionnée après ce lot. Aucune dépendance ajoutée ni retirée.
+
+### v0.2.11 — technique
+
+Contrôle des descriptions des divers (ADR-018) : après « un sachet », les mots « ou », « voire »,
+« à » et « pour » ne comptent plus comme une dose que suivis d'un nombre (`contientDose`,
+`ingest/lib/divers/validation.mjs`). Le lot de 110 divers avait refusé deux textes justes, le
+clou de girofle (« dans un sachet ou ajouter une teinture ») et le carvi (« dans un sachet à
+infusion »). « un sachet ou deux », « pour vingt litres » et « par brassin » restent refusés,
+comme « ou bien deux », « à raison de deux », « ou un ou deux » et « ou une douzaine », ajoutés
+après la relecture de sécurité. « pour un brassin » passe, pour ne pas refuser « pour le fût »
+ou « à chaque étape ». Tests ajoutés, ingest 349. Décisions de l'utilisateur.
+
+### v0.2.10 — technique
+
+Bibliothèque : neuf noms français de divers deviennent des alias (`exchange/lib/src/ingestion/alias.dart`,
+ADR-018) : coriandre, chlorure de calcium, gypse, écorces d'orange amère et douce. La liste des
+divers du groupe ne résolvait qu'un nom sur 11, les recettes nommant leurs divers en français.
+« Acide lactique 80 % » reste non résolu, la Bibliothèque ne connaissant que l'acide lactique à
+88 %. Effet après la préparation et l'écriture des référentiels sur le poste de l'admin. Décision
+de l'utilisateur. Test ajouté dans `exchange/test/ingestion_test.dart`.
+
+### v0.2.9 — technique
+
+Contrôle des descriptions des divers (ADR-018) : « gal », « gals », « gallon » et « gallons »
+rejoignent les unités de dose refusées (`contientDose`, `ingest/lib/divers/validation.mjs`).
+Un texte rédigé d'après une source américaine pouvait écrire « 5 gallons » sans être refusé.
+« 2 galets » reste accepté. Le prompt et `PROMPT_VERSION` ne changent pas : les 10 textes de
+l'essai ne se régénèrent pas. Tests ajoutés, ingest 326. Décision de l'utilisateur.
+
+### v0.2.8 — technique
+
+Contrôle des descriptions des divers (ADR-018) : « un sachet » ou « une sachet » seuls ne
+comptent plus comme une dose. L'essai sur 10 divers du 2026-11-22 a refusé la coriandre pour
+« placées dans un sachet désinfecté », où le sachet sert de contenant. « un demi sachet »,
+« deux sachets », « 1 sachet », « une pastille », et « un sachet » suivi d'une quantité ou d'un
+rapport (« et demi », « ou deux », « (ou deux) », « par brassin », « / hl », « ∕ hl », « x2 »,
+« + un demi », « deux fois », « et 1/2 », « ½ », « 2x », « et quart ») restent refusés (`contientDose`,
+`ingest/lib/divers/validation.mjs`, tests ajoutés, ingest 321). La lecture s'arrête à la fin de la phrase :
+« Dans un sachet. À la fin, retirer. » est accepté. « éventuellement deux » ou « un second »
+restent à la relecture humaine. Décisions de l'utilisateur.
+
+### v0.2.7 — technique
+
+Lot R1 d'ADR-019 : `main` a reçu entre-temps un ADR-017 (arômes des levures) et un contrôle P62.
+L'ADR des divers de cette branche devient `ADR-018-descriptions-des-divers.md`, et son contrôle
+P63 ; les renvois sont repris dans `CLAUDE.md`, la documentation, le code, les tests et les
+entrées v0.2.2 à v0.2.6 de cette branche, qui ne sont pas sur `main`. ADR-019 (moteur commun
+des trois natures) est accepté. `CLAUDE.md` ajoute P64 : un numéro d'ADR ou de contrôle se vérifie
+libre sur `main` et sur chaque branche distante (leçon 17). Aucun changement de comportement.
+
+### v0.2.6 — fonctionnel
+
+Résumé : Dans une recette, un houblon ou un divers connu de la Bibliothèque ouvre sa fiche d'un appui.
+
+Sur la fiche d'une recette, la recette d'un brassin et une recette publique, un houblon ou un
+divers que la Bibliothèque connaît porte maintenant un chevron : un appui ouvre sa fiche, avec
+ses arômes ou sa description. La flèche du haut ou le retour du téléphone ramène à la recette.
+Un ingrédient que la Bibliothèque ne reconnaît pas reste affiché comme avant.
+
+### v0.2.6 — technique
+
+Lot D4 d'ADR-018 : `ContenuRecette` reçoit `ligneIngredient`, fourni par la fiche d'une recette,
+la recette figée d'un brassin et la recette publique (`lien_bibliotheque.dart`,
+`indexLiensProvider` : `beer_index/hops` et `beer_index/miscs` lus par `get`, résolus par
+`IndexBibliotheque.resoudre`). L'écran du jour, ses journées, l'éditeur et la fiche d'une recette
+juste importée ne lient rien. Retour par `pop` quand la fiche est poussée avec
+`AppRoutes.retourParPop` (`PageDeCoquille.retourParPopPermis`, `AppShell.retourParPop`).
+`main.dart.js` : 5 948 779 octets avant, 5 951 901 après (+ 3 122). Tests Flutter : 1 949.
+
+### v0.2.5 — fonctionnel
+
+Résumé : La fiche d'un divers dit à quoi il sert, quand l'ajouter et s'il change le goût.
+
+Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment
+l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un
+paragraphe par moment d'ajout (empâtage, ébullition, après ébullition, fermentation,
+embouteillage). La section « Goût » décrit le goût apporté, ou indique qu'il n'y a pas d'effet
+notable. Ces textes sont rédigés par une IA et ne donnent aucune dose : suivez la notice du
+fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur.
+
+### v0.2.5 — technique
+
+Lot D3 d'ADR-018 : `lireDescriptionDivers` (un `get` de `beer_misc_descriptions/{id}`, sans
+écouteur) et `descriptionDiversProvider` ; `SectionDescriptionDivers` sur la fiche d'un divers ;
+widget commun `texte_redige.dart` (mention IA, « Confiance faible », panne avec « Réessayer »)
+sorti de `section_aromes.dart`, rendu des houblons inchangé ; relecture lue par `relecture.dart`
+pour les deux natures ; libellés « Descriptions des houblons » et « Descriptions des divers »
+dans Admin › Sources ; ligne « Descriptions des divers » dans « Sources des données ». Taille de
+`main.dart.js` : 5 921 851 octets avant, 5 927 958 après (+ 6 107). Tests Flutter : 1 906.
+
+### v0.2.4 — technique
+
+Lot D2 d'ADR-018 : les descriptions des divers se rédigent depuis le poste de l'admin.
+`ingest/generer-divers.mjs` passe par le moteur commun avec la nature `ingest/lib/divers/`
+(prompt, contrôle, 13 rôles, poste `misc_description_generation`). Le contrôle refuse toute dose,
+en chiffres ou en lettres (liste d'unités élargie par l'utilisateur : kg, cl, hl, oz, cuillère,
+sachet, goutte, comprimé, tablette…), et un goût décrit sans `changes_taste`. Commun aux deux natures : caractères de format
+invisibles retirés, adresse, `@`, balisage et monnaie contrôlés sur la forme NFKC. La liste des divers du
+groupe vient de `ingest/lister-divers-recettes.mjs` puis `exchange/bin/lister_divers_recettes.dart`
+(résolution commune `ingredients_recettes.dart`). `ingest/ecrire.mjs` écrit `beer_misc_descriptions/`
+avec les garde-fous des arômes ; `firestore.rules` l'ouvre en `get` aux membres seuls, tests des
+cinq profils. Empreinte des houblons inchangée ; leurs textes passent aussi par le contrôle Cf et NFKC. Tests : `ingest` 275, `exchange`
+307, `referentiels.test.mjs` 158.
+
+### v0.2.3 — technique
+
+Lot D1 d'ADR-018 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
+`ingest/lib/redaction/` (`client.mjs`, `tarif.mjs`, `texte.mjs`, `moteur.mjs`), paramétré par un
+objet de nature (`ingest/lib/aromes/nature.mjs`). Il servira aussi aux descriptions des divers.
+`generer-aromes.mjs` garde ses options et son rapport. Le tarif se lit désormais dans
+`import/ingest/tarif.json` : l'ancien `import/ingest/aromes/tarif.json` seul est refusé avec un
+message qui dit où le déplacer. L'empreinte des houblons ne change pas, et un test la fige.
+Tests d'`ingest/` : 127 sur 127.
+
+### v0.2.2 — technique
+
+ADR-018 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
+rôle, goût le cas échéant, aucune dose), rédigée par l'API Claude depuis le poste de l'admin sur
+un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P63 (`beer_misc_descriptions/`)
+et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
+P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
+complétés et marqués « à livrer ». Aucun code.
 
 ### v0.2.1 — fonctionnel
 

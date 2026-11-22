@@ -314,6 +314,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             fullWidth:
                 page is PageDeCoquille &&
                 (page.pleineLargeurSelon?.call(context) ?? page.pleineLargeur),
+            retourParPop:
+                page is PageDeCoquille &&
+                page.retourParPopPermis &&
+                state.extra == AppRoutes.retourParPop,
             child: child,
           );
         },
@@ -362,6 +366,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                       titre: segment.titreFiche,
                       retour: AppRoutes.librarySegment(segment.slug),
                       pleineLargeurSelon: bibliothequeCoteACote,
+                      // Ouverte depuis une ligne de recette (ADR-018, D4) : le
+                      // retour ramène à la recette.
+                      retourParPopPermis: true,
                       // En large, la barre garde « Bibliothèque » sans
                       // retour ; une fiche ouverte par-dessus (« Voir le
                       // style ») garde un retour qui la dépile.

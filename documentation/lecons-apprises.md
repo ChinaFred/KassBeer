@@ -166,3 +166,15 @@ une CI rouge dans l'historique, car un tag poussé ne se supprime pas.
 **Règle** : le tag se pose sur le commit de fusion, après sa CI verte.
 **Question de l'architecte** : ce contrôle de CI lit-il un état que l'étape suivante de la
 livraison modifie ?
+
+### 17. Deux branches parallèles ont pris le même numéro d'ADR et de contrôle
+
+Le 2026-11-21, deux sessions parties de la v0.1.91 ont écrit chacune un ADR-017 et un contrôle
+P62 : les arômes des levures, fusionnés dans `main` (PR #113), et les descriptions des divers,
+sur `claude/focused-brahmagupta-h8gzfh`. Chacune a aussi refondu le générateur d'ADR-013 d'une
+autre manière. La collision ne s'est vue qu'à la fusion de `main` : il a fallu un avis de
+l'architecte (ADR-019), une renumérotation (ADR-018, P63) et un lot de réconciliation du moteur.
+
+**Règle** : un numéro d'ADR ou de contrôle se vérifie libre sur `main` et sur chaque branche
+distante avant le commit, et de nouveau à chaque fusion de `main` (P64).
+**Question de l'architecte** : une autre session touche-t-elle le même code en ce moment ?
