@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:exchange/exchange.dart'
+    show EntreeBibliotheque, IndexBibliotheque, ListeRecette;
 import 'package:exchange/ingestion.dart';
 import 'package:test/test.dart';
 
@@ -125,6 +127,57 @@ void main() {
       index.resoudre('Labo Fictif LF2')?.id,
       'culture-labo-fictif-lf2-belge-fictive',
     );
+  });
+
+  test('levures : raison aucun pour des candidats partiels ou un autre '
+      'producteur, plusieurs pour une référence partagée', () {
+    final index = IndexBibliotheque(ListeRecette.levures, const [
+      EntreeBibliotheque(
+        id: 'culture-labo-fictif-k9-un',
+        nom: 'K9 Un',
+        producteur: 'Labo Fictif',
+        reference: 'K9',
+      ),
+      EntreeBibliotheque(
+        id: 'culture-autre-fictif-k9-deux',
+        nom: 'K9 Deux',
+        producteur: 'Autre Fictif',
+        reference: 'K9',
+      ),
+      EntreeBibliotheque(
+        id: 'culture-seche-fictive-z23-lager',
+        nom: 'Lager Z',
+        producteur: 'Sèche Fictive',
+        reference: 'Z23',
+      ),
+      EntreeBibliotheque(
+        id: 'culture-labo-sans-ref-belle-gamme',
+        nom: 'Belle Gamme',
+        producteur: 'Labo Sans Ref',
+      ),
+      EntreeBibliotheque(
+        id: 'culture-labo-sans-ref-flacon-belle-gamme',
+        nom: 'Flacon Belle Gamme Douce',
+        producteur: 'Labo Sans Ref',
+      ),
+    ]);
+    // Producteur sans aucune référence, reconnu dans le nom.
+    expect(index.resoudre('Labo Sans Ref Z23'), isNull);
+    expect(index.resoudre('Lager Z23')?.id, 'culture-seche-fictive-z23-lager');
+    final resultat = ingredientsRecettes([
+      'Gamme Belle',
+      'Ma levure K9',
+      'Labo Sans Ref Z23',
+    ], index);
+    final raisons = {
+      for (final n in resultat['non_resolus']! as List<Object?>)
+        (n! as Map)['nom']: (n as Map)['raison'],
+    };
+    expect(raisons, {
+      'Gamme Belle': 'aucun',
+      'Ma levure K9': 'plusieurs',
+      'Labo Sans Ref Z23': 'aucun',
+    });
   });
 
   test('beer_cultures.json mal formé : refusé', () {

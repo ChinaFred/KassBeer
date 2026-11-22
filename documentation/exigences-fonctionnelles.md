@@ -1726,7 +1726,10 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
    ligne se résout quand il est celui d'une entrée ou l'un de ses autres noms, après
    normalisation (casse, accents, ponctuation) ; pour une levure, aussi par sa souche
    (« Wyeast 1056 », « WLP001 »), sa référence (« US-05 ») ou son producteur et sa référence
-   (« Fermentis US-05 »). Aucune correspondance approchée. Une valeur absente du fichier est
+   (« Fermentis US-05 »), puis par la référence écrite dans son nom, même saisi à la main
+   (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »), quand une seule souche de la
+   Bibliothèque porte cette référence ; jamais quand deux producteurs la partagent ni quand le
+   nom en nomme un autre. Aucune correspondance approchée. Une valeur absente du fichier est
    reprise de l'entrée : couleur, rendement d'extrait et type d'un malt ; acides alpha et
    forme d'un houblon ; type, forme et atténuation d'une levure ; type d'un ajout. Une valeur
    du fichier n'est jamais remplacée. Chaque valeur reprise est listée : « Couleur de Pils reprise de la

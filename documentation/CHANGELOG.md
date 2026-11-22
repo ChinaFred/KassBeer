@@ -6,6 +6,36 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.1.98 — fonctionnel
+
+À l'import d'une recette, une levure se reconnaît aussi par la référence écrite dans son nom,
+même quand le nom est saisi à la main avec le producteur à la fin, des mots en français, un poids
+ou une référence sans tiret (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »). La levure
+n'est choisie que si une seule souche de la Bibliothèque porte cette référence. La plage de
+température de la levure sur la courbe d'un brassin et les valeurs reprises par l'assistant de
+recette suivent la même règle.
+
+### v0.1.98 — technique
+
+`IndexBibliotheque.resoudre` (`exchange/lib/src/resolution_import.dart`) gagne une dernière voie
+pour les levures, après le nom entier, les alias et les voies de souche et de référence : la
+seule entrée désignée par une référence lue dans le nom (`_parJetonsReference` : suites d'un à
+trois segments de la clé normalisée, jointes sans tiret, avec une lettre et un chiffre, hors
+poids). Une référence partagée par deux producteurs n'est jamais choisie, ni une référence d'un
+producteur quand le nom en nomme un autre. `candidats` rend en plus ces entrées, et en dernier
+les levures qui portent tous les mots du nom (dix au plus, jamais choisies) ; ces candidats
+partiels classent le nom en `aucun` (`candidatsAvecOrigine`), jamais en `plusieurs`. Houblons, malts et ajouts inchangés. Mêmes effets pour `plage_levure.dart`, `proposition.dart`
+et Admin › Import, qui appellent `resoudre`. Demande de l'utilisateur du 2026-11-22, notée dans
+ADR-005 (E7) et l'étape 6 de `DATA_SOURCES.md`.
+Mesures sur la préparation rejouée : les 12 noms de levures du groupe relevés en production
+passent de 1 à 9 résolus (M84, M76, M31 ×2, M41, BE-256 ×2 et S-23 s'ajoutent à US-05), les
+deux « Belle saison » reçoivent 2 candidats au lieu d'aucun (raison `aucun`), « Ma levure » reste sans candidat ;
+sur 1 171 noms (noms et alias de `beer_cultures`, noms du groupe), aucune résolution existante ne
+change, 8 noms de plus sont résolus (non résolus : 94 à 86) ; sur les 487 noms et
+alias de `beer_hops`, la sortie de `lister_ingredients_recettes.dart` est identique ; la
+préparation (`beer_cultures`, `beer_hops`, `public_recipes`, `import_unresolved`) est identique
+octet pour octet, car l'ingestion a son propre résolveur. Tests sur fixtures inventées (P20).
+
 ### v0.1.97 — fonctionnel
 
 La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les

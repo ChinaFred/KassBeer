@@ -17,10 +17,12 @@ const int kMaxLongueurNomIngredient = 120;
 
 /// Raison d'un nom non résolu : aucune entrée, ou plusieurs.
 enum RaisonNonResolu {
-  /// Aucune entrée n'a ce nom ni cet alias.
+  /// Aucune entrée n'a ce nom ni cet alias. Les candidats éventuels (levures
+  /// seules) viennent d'une correspondance partielle, ou d'une référence dont
+  /// le producteur diffère de celui du nom, jamais choisis.
   aucun,
 
-  /// Plusieurs entrées ont ce nom ou cet alias.
+  /// Plusieurs entrées ont ce nom, cet alias ou cette référence.
   plusieurs,
 }
 
@@ -135,13 +137,13 @@ Map<String, Object?> ingredientsRecettes(
   final format = kFormatsIngredientsRecettes[index.liste];
   if (format == null) throw ArgumentError.value(index.liste, 'index.liste');
   final resolus = <String, Set<String>>{};
-  final nonResolus = <String, List<String>>{};
+  final nonResolus = <String, ({List<String> ids, bool partiels})>{};
   for (final nom in noms) {
     final entree = index.resoudre(nom);
     if (entree != null) {
       resolus.putIfAbsent(entree.id, () => {}).add(nom);
     } else {
-      nonResolus[nom] = index.candidats(nom);
+      nonResolus[nom] = index.candidatsAvecOrigine(nom);
     }
   }
   final ids = resolus.keys.toList()..sort();
@@ -159,11 +161,11 @@ Map<String, Object?> ingredientsRecettes(
         {
           'nom': n,
           'raison':
-              (nonResolus[n]!.length > 1
+              (nonResolus[n]!.ids.length > 1 && !nonResolus[n]!.partiels
                       ? RaisonNonResolu.plusieurs
                       : RaisonNonResolu.aucun)
                   .name,
-          'candidats': nonResolus[n],
+          'candidats': nonResolus[n]!.ids,
         },
     ],
   };
