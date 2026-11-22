@@ -1,5 +1,1948 @@
 {
   "edition_courante": 2026,
   "mention": "Based on Brewers Association 2026 Beer Style Guidelines with changes. Used with permission of Brewers Association.",
-  "styles": []
+  "styles": [
+    {
+      "name": "Ordinary Bitter",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "11A"
+      ],
+      "motif": "Même bière que 11A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Special Bitter or Best Bitter",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "11B"
+      ],
+      "motif": "Même bière que 11B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Extra Special Bitter",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "11C"
+      ],
+      "motif": "11C correspond à l'ESB ; même bière.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Scottish-Style Light Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "14A"
+      ],
+      "motif": "Même bière que 14A ; couleur BA plus claire.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Scottish-Style Heavy Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "14B"
+      ],
+      "motif": "Même bière que 14B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Scottish-Style Export Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "14C"
+      ],
+      "motif": "Même bière que 14C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "English-Style Summer Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "12A"
+      ],
+      "motif": "12A est la bière d'été anglaise ; même bière.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Classic English-Style Pale Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "11C",
+      "motif": "Variante britannique couverte par 11C.",
+      "code": "BA1A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "British-Style India Pale Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "12C"
+      ],
+      "motif": "Même bière que 12C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Strong Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "17A"
+      ],
+      "motif": "Même bière que 17A ; densité BA plus haute.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Old Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "17B"
+      ],
+      "motif": "Même bière que 17B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "English-Style Pale Mild Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "13A ne décrit que la version sombre et écarte la mild pâle.",
+      "code": "BA1B",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "English-Style Dark Mild Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "13A"
+      ],
+      "motif": "Même bière que 13A ; couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "English-Style Brown Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "13B"
+      ],
+      "motif": "Même bière que 13B ; amertume BA plus faible.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Brown Porter",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "13C"
+      ],
+      "motif": "Même bière que 13C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Robust Porter",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "20A"
+      ],
+      "motif": "20A porte aussi le nom Robust Porter ; même bière.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Sweet Stout or Cream Stout",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "16A"
+      ],
+      "motif": "Même bière que 16A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Oatmeal Stout",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "16B"
+      ],
+      "motif": "Même bière que 16B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Scotch Ale or Wee Heavy",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "17C"
+      ],
+      "motif": "Même bière que 17C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "British-Style Imperial Stout",
+      "category": "British Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "20C",
+      "motif": "Variante anglaise couverte par 20C.",
+      "code": "BA1C",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "British-Style Barley Wine Ale",
+      "category": "British Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "17D"
+      ],
+      "motif": "Même bière que 17D ; couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Irish-Style Red Ale",
+      "category": "Irish Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "15A"
+      ],
+      "motif": "Même bière que 15A ; couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Classic Irish-Style Dry Stout",
+      "category": "Irish Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "15B"
+      ],
+      "motif": "Même bière que 15B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Export-Style Stout",
+      "category": "Irish Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "16D"
+      ],
+      "motif": "16D nomme aussi ce style Export Stout ; même bière ; amertume BA plus faible.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Golden or Blonde Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "18A"
+      ],
+      "motif": "Même bière que 18A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Session India Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "21B",
+      "motif": "Force session prévue par 21B.",
+      "code": "BA3A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Amber/Red Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "19A"
+      ],
+      "motif": "Même bière que 19A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "18B"
+      ],
+      "motif": "Même bière que 18B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Juicy or Hazy Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre les versions session d'un style existant, ici 21C.",
+      "code": "BA3B",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Strong Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "18B"
+      ],
+      "motif": "Même bière que 18B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Juicy or Hazy Strong Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "21C"
+      ],
+      "motif": "Même bière que 21C, à sa limite basse de force ; densité BA plus basse.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style India Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "21A"
+      ],
+      "motif": "Même bière que 21A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "West Coast-Style India Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "21A",
+      "motif": "21A nomme la West Coast IPA comme un type d'American IPA.",
+      "code": "BA3C",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Juicy or Hazy India Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "21C"
+      ],
+      "motif": "Même bière que 21C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Belgo-Style Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre un style existant fermenté avec une levure non traditionnelle.",
+      "code": "BA3D",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Brown Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "19C"
+      ],
+      "motif": "Même bière que 19C ; amertume BA plus forte.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Black Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "21B",
+      "motif": "Black IPA, type nommé par 21B.",
+      "code": "BA3E",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Stout",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "20B"
+      ],
+      "motif": "Même bière que 20B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Imperial Porter",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre les versions impériales d'un style existant.",
+      "code": "BA3F",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Imperial Stout",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "20C",
+      "motif": "Variante américaine couverte par 20C.",
+      "code": "BA3G",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Double Hoppy Red Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "21B",
+      "motif": "Red IPA de force double, type et force nommés par 21B.",
+      "code": "BA3H",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Imperial Red Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "22B",
+      "motif": "22B nomme les Double Red Ales parmi les bières qu'il regroupe.",
+      "code": "BA3I",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Imperial or Double India Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "22A"
+      ],
+      "motif": "Même bière que 22A ; couleur BA plus claire.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Juicy or Hazy Imperial or Double India Pale Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "21C"
+      ],
+      "motif": "Même bière que 21C, à sa limite haute de force.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Barley Wine Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "22C"
+      ],
+      "motif": "Même bière que 22C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Wheat Wine Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "22D"
+      ],
+      "motif": "Même bière que 22D ; amertume BA plus forte.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Smoke Porter",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "32B",
+      "motif": "32B couvre les bières fumées d'une famille large comme le porter.",
+      "code": "BA3J",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Sour Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "28B",
+        "28D"
+      ],
+      "motif": "Regroupe 28B et 28D.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Fruited Sour Ale",
+      "category": "North American Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "28C",
+      "motif": "28C couvre les versions fruitées des styles de la catégorie des American Wild Ales.",
+      "code": "BA3K",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Koelsch",
+      "category": "German Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "5B"
+      ],
+      "motif": "Même bière que 5B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Altbier",
+      "category": "German Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "7B"
+      ],
+      "motif": "Même bière que 7B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Berliner-Style Weisse",
+      "category": "German Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "23A"
+      ],
+      "motif": "Même bière que 23A ; densité BA plus haute.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Leipzig-Style Gose",
+      "category": "German Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "23G"
+      ],
+      "motif": "Même bière que 23G, version traditionnelle ; couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Contemporary-Style Gose",
+      "category": "German Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre un style existant avec des ingrédients non traditionnels, ici 23G.",
+      "code": "BA4A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "South German-Style Hefeweizen",
+      "category": "German Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "10A"
+      ],
+      "motif": "10A porte aussi le nom Hefeweizen ; même bière.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "South German-Style Kristal Weizen",
+      "category": "German Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "10A",
+      "motif": "Version filtrée nommée par 10A.",
+      "code": "BA4B",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Leichtes Weizen",
+      "category": "German Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "10A",
+      "motif": "Version légère nommée par 10A.",
+      "code": "BA4C",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "South German-Style Bernsteinfarbenes Weizen",
+      "category": "German Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "10A",
+      "motif": "Version ambrée nommée par 10A.",
+      "code": "BA4D",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "South German-Style Dunkel Weizen",
+      "category": "German Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "10B"
+      ],
+      "motif": "Même bière que 10B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "South German-Style Weizenbock",
+      "category": "German Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "10C"
+      ],
+      "motif": "Même bière que 10C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Rye Ale",
+      "category": "German Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Roggenbier, style historique du BJCP absent de la Bibliothèque.",
+      "code": "BA4E",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Bamberg-Style Weiss Rauchbier",
+      "category": "German Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "32A",
+      "motif": "32A couvre les versions fumées des styles classiques ; 6B ne couvre que le Märzen.",
+      "code": "BA4F",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Table Beer",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Distincte de 26A malgré son nom de bière de table ; aucun style BJCP ne la désigne.",
+      "code": "BA5A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Session Ale",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre les versions session d'un style existant.",
+      "code": "BA5B",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Speciale Belge",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "24B"
+      ],
+      "motif": "24B porte aussi le nom Spéciale Belge ; même bière ; densité BA plus basse.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Blonde Ale",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "25A"
+      ],
+      "motif": "Même bière que 25A ; densité BA plus basse.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Strong Blonde Ale",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "25C"
+      ],
+      "motif": "Même bière que 25C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Strong Dark Ale",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "26D"
+      ],
+      "motif": "Même bière que 26D ; couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Dubbel",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "26B"
+      ],
+      "motif": "Même bière que 26B ; amertume BA plus forte, couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Tripel",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "26C"
+      ],
+      "motif": "Même bière que 26C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Quadrupel",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "26D"
+      ],
+      "motif": "26D porte aussi le nom Belgian Quad ; même bière ; amertume BA plus forte, couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Witbier",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "24A"
+      ],
+      "motif": "Même bière que 24A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Classic French & Belgian-Style Saison",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "25B"
+      ],
+      "motif": "Même bière que 25B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Specialty Saison",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre un style existant avec des ingrédients non traditionnels, ici 25B.",
+      "code": "BA5C",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "French-Style Bière de Garde",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "24C"
+      ],
+      "motif": "Même bière que 24C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Flanders Oud Bruin or Oud Red Ale",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "23B",
+        "23C"
+      ],
+      "motif": "Regroupe 23B et 23C ; couleur BA plus foncée que 23B, amertume BA plus faible que 23C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Lambic",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "23D"
+      ],
+      "motif": "Même bière que 23D ; densité BA plus haute, amertume BA plus forte, couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Traditional Belgian-Style Gueuze",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "23E"
+      ],
+      "motif": "Même bière que 23E ; densité BA plus haute, amertume BA plus forte, couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Contemporary Belgian-Style Spontaneous Fermented Ale",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Distincte du lambic de 23D ; aucun style BJCP ne la désigne.",
+      "code": "BA5D",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Fruit Lambic",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "23F"
+      ],
+      "motif": "Même bière que 23F ; amertume BA plus forte.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Other Belgian-Style Ale",
+      "category": "Belgian and French Origin Ale Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34A",
+      "motif": "34A reprend l'ancien style Belgian Specialty Ale.",
+      "code": "BA5E",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Grodziskie",
+      "category": "Other Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Style historique du BJCP absent de la Bibliothèque.",
+      "code": "BA6A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Adambier",
+      "category": "Other Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA6B",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Dutch-Style Kuit, Kuyt or Koyt",
+      "category": "Other Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA6C",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "International-Style Pale Ale",
+      "category": "Other Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "18B"
+      ],
+      "motif": "Même bière que 18B, houblons du Nouveau Monde compris.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Classic Australian-Style Pale Ale",
+      "category": "Other Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "12B"
+      ],
+      "motif": "Même bière que 12B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Australian-Style Pale Ale",
+      "category": "Other Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "18B"
+      ],
+      "motif": "Même bière que 18B, houblons du Nouveau Monde compris ; amertume BA plus faible.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "New Zealand-Style Pale Ale",
+      "category": "Other Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "18B"
+      ],
+      "motif": "Même bière que 18B, houblons du Nouveau Monde compris ; amertume BA plus faible.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "New Zealand-Style India Pale Ale",
+      "category": "Other Origin Ale Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "21A"
+      ],
+      "motif": "Même bière que 21A, houblons du Nouveau Monde compris ; couleur BA plus claire.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Finnish-Style Sahti",
+      "category": "Other Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Style historique du BJCP absent de la Bibliothèque.",
+      "code": "BA6D",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Swedish-Style Gotlandsdricke",
+      "category": "Other Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA6E",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Breslau-Style Schoeps",
+      "category": "Other Origin Ale Styles",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA6F",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Baltic-Style Porter",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "9C"
+      ],
+      "motif": "Même bière que 9C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Czech-Style Pale Lager",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "3B"
+      ],
+      "motif": "Même bière que 3B par sa densité ; 3A est plus faible.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Czech-Style Amber Lager",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "3C"
+      ],
+      "motif": "Même bière que 3C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Czech-Style Dark Lager",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "3D"
+      ],
+      "motif": "Même bière que 3D.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Italian-Style Pilsener",
+      "category": "European Origin Lager Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre un style existant houblonné à cru.",
+      "code": "BA7A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Vienna-Style Lager",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "7A"
+      ],
+      "motif": "Même bière que 7A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Leichtbier",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "5A"
+      ],
+      "motif": "Même bière que 5A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Pilsener",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "5D"
+      ],
+      "motif": "Même bière que 5D.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Munich-Style Helles",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "4A"
+      ],
+      "motif": "Même bière que 4A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Dortmunder/European-Style Export",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "5C"
+      ],
+      "motif": "5C porte aussi le nom Dortmunder Export ; même bière.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Franconian-Style Rotbier",
+      "category": "European Origin Lager Styles",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA7B",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Maerzen",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "6A"
+      ],
+      "motif": "Même bière que 6A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Oktoberfest/Festbier",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "4B"
+      ],
+      "motif": "Même bière que 4B ; densité BA plus basse, amertume BA plus forte.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Munich-Style Dunkel",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "8A"
+      ],
+      "motif": "Même bière que 8A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "European-Style Dark Lager",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "2C"
+      ],
+      "motif": "Même bière que 2C ; amertume BA plus forte.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Schwarzbier",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "8B"
+      ],
+      "motif": "Même bière que 8B ; couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Bamberg-Style Helles Rauchbier",
+      "category": "European Origin Lager Styles",
+      "decision": "nouveau",
+      "contenu_dans": "32A",
+      "motif": "32A couvre les versions fumées des styles classiques ; 6B ne couvre que le Märzen.",
+      "code": "BA7C",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Bamberg-Style Maerzen Rauchbier",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "6B"
+      ],
+      "motif": "Même bière que 6B, Märzen fumé de Bamberg ; couleur BA plus claire.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Bamberg-Style Bock Rauchbier",
+      "category": "European Origin Lager Styles",
+      "decision": "nouveau",
+      "contenu_dans": "32A",
+      "motif": "32A couvre les versions fumées des styles classiques ; 6B ne couvre que le Märzen.",
+      "code": "BA7D",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Heller Bock/Maibock",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "4C"
+      ],
+      "motif": "Même bière que 4C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Traditional German-Style Bock",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "6C"
+      ],
+      "motif": "Même bière que 6C ; couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Doppelbock",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "9A"
+      ],
+      "motif": "Même bière que 9A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "German-Style Eisbock",
+      "category": "European Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "9B"
+      ],
+      "motif": "Même bière que 9B ; couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "1B"
+      ],
+      "motif": "Même bière que 1B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Contemporary American-Style Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "1B"
+      ],
+      "motif": "Même bière que 1B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Light Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "1A"
+      ],
+      "motif": "Même bière que 1A ; amertume BA plus faible.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Contemporary American-Style Light Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "1A"
+      ],
+      "motif": "Même bière que 1A ; amertume BA plus forte, couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Pilsener",
+      "category": "North American Origin Lager Styles",
+      "decision": "nouveau",
+      "motif": "Pre-Prohibition Lager, style historique du BJCP absent de la Bibliothèque.",
+      "code": "BA8A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Contemporary American-Style Pilsener",
+      "category": "North American Origin Lager Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre un style existant aux houblons d'un autre caractère.",
+      "code": "BA8B",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style India Pale Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "nouveau",
+      "contenu_dans": "21A",
+      "motif": "21A accepte l'India Pale Lager de même caractère.",
+      "code": "BA8C",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Malt Liquor",
+      "category": "North American Origin Lager Styles",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA8D",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Amber Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "2B"
+      ],
+      "motif": "Même bière que 2B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Maerzen/Oktoberfest",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "6A"
+      ],
+      "motif": "Même bière que 6A, brassée aux États-Unis ; amertume BA plus forte.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Dark Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "2C"
+      ],
+      "motif": "Même bière que 2C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Mexican-Style Light Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "1A"
+      ],
+      "motif": "Même bière que 1A ; amertume BA plus forte.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Mexican-Style Pale Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "nouveau",
+      "contenu_dans": "2A",
+      "motif": "Variante régionale mexicaine nommée par 2A.",
+      "code": "BA8E",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Mexican-Style Amber Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "2B"
+      ],
+      "motif": "Même bière que 2B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Mexican-Style Dark Lager",
+      "category": "North American Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "2C"
+      ],
+      "motif": "Même bière que 2C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "West Coast-Style Pilsener",
+      "category": "North American Origin Lager Styles",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre un style existant aux houblons d'un autre caractère.",
+      "code": "BA8F",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "International Light Lager",
+      "category": "Other Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "1A"
+      ],
+      "motif": "Même bière que 1A ; densité BA plus haute, amertume BA plus forte, couleur BA plus foncée.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "International-Style Pilsener",
+      "category": "Other Origin Lager Styles",
+      "decision": "equivalent",
+      "equivalent": [
+        "2A"
+      ],
+      "motif": "2A est souvent vendue sous le nom de Pilsner ; même bière ; amertume BA plus forte.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Rice Lager",
+      "category": "Other Origin Lager Styles",
+      "decision": "nouveau",
+      "contenu_dans": "2A",
+      "motif": "31A range la lager au riz parmi les lagers internationales de 2A.",
+      "code": "BA9A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Session Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre les versions session d'un style existant.",
+      "code": "BA10A",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Cream Ale",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "equivalent",
+      "equivalent": [
+        "1C"
+      ],
+      "motif": "Même bière que 1C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "California Common Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "equivalent",
+      "equivalent": [
+        "19B"
+      ],
+      "motif": "Même bière que 19B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Kentucky Common Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "motif": "Style historique du BJCP absent de la Bibliothèque.",
+      "code": "BA10B",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Wheat Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "equivalent",
+      "equivalent": [
+        "1D"
+      ],
+      "motif": "Même bière que 1D.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Kellerbier or Zwickelbier",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "motif": "Style historique du BJCP absent de la Bibliothèque.",
+      "code": "BA10C",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "American-Style Fruit Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "29A",
+      "motif": "29A couvre les bières aux fruits d'un style classique.",
+      "code": "BA10D",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Fruit Wheat Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "29A",
+      "motif": "29A couvre les bières aux fruits d'un style classique.",
+      "code": "BA10E",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Belgian-Style Fruit Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "29A",
+      "motif": "29A couvre les bières aux fruits d'un style classique.",
+      "code": "BA10F",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Field Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "30A",
+      "motif": "30A couvre les bières aux légumes.",
+      "code": "BA10G",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Pumpkin Spice Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "30B",
+      "motif": "30B couvre les bières au potiron épicées.",
+      "code": "BA10H",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Pumpkin/Squash Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "30A",
+      "motif": "30A couvre les bières aux légumes.",
+      "code": "BA10I",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Chocolate or Cocoa Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "30A",
+      "motif": "30A couvre les ajouts d'aromates ; le BJCP ne nomme pas le chocolat.",
+      "code": "BA10J",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Dessert Stout or Pastry Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "30D",
+      "motif": "30D couvre les bières épicées avec édulcorants.",
+      "code": "BA10K",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Coffee Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "30A",
+      "motif": "30A couvre les ajouts d'aromates ; le BJCP ne nomme pas le café.",
+      "code": "BA10L",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Chili Pepper Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "30A",
+      "motif": "30A couvre les bières au piment.",
+      "code": "BA10M",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Herb and Spice Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "30A",
+      "motif": "30A couvre les bières aux herbes et aux épices.",
+      "code": "BA10N",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Specialty Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "equivalent",
+      "equivalent": [
+        "31A",
+        "31B"
+      ],
+      "motif": "Regroupe 31A et 31B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Specialty Honey Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "31B",
+      "motif": "31B couvre les bières au miel.",
+      "code": "BA10O",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Rye Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "31A",
+      "motif": "31A couvre les bières au seigle.",
+      "code": "BA10P",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Brett Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "equivalent",
+      "equivalent": [
+        "28A"
+      ],
+      "motif": "Même bière que 28A.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Mixed-Culture Brett Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "equivalent",
+      "equivalent": [
+        "28B"
+      ],
+      "motif": "Même bière que 28B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Ginjo Beer or Sake-Yeast Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre un style existant fermenté avec une levure non traditionnelle.",
+      "code": "BA10Q",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Fresh Hop Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA10R",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Wood- and Barrel-Aged Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "motif": "Catégorie bois du BJCP absente de la Bibliothèque.",
+      "code": "BA10S",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Wood- and Barrel-Aged Sour Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "28C",
+      "motif": "28C couvre les bières acides élevées en fût d'un autre alcool.",
+      "code": "BA10T",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Aged Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA10U",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Experimental Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "equivalent",
+      "equivalent": [
+        "34C"
+      ],
+      "motif": "Même bière que 34C.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Experimental India Pale Ale",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "21B",
+      "motif": "21B accueille les nouvelles variantes d'IPA.",
+      "code": "BA10V",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Historical Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "motif": "Catégorie historique du BJCP absente de la Bibliothèque.",
+      "code": "BA10W",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Wild Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA10X",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Smoke Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "equivalent",
+      "equivalent": [
+        "32A",
+        "32B"
+      ],
+      "motif": "Regroupe 32A et 32B.",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Other Strong Ale or Lager",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "34B",
+      "motif": "34B couvre les versions impériales d'un style existant.",
+      "code": "BA10Y",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Gluten-Free Beer",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "contenu_dans": "31A",
+      "motif": "31A accueille les bières sans gluten.",
+      "code": "BA10Z",
+      "editions": [
+        2026
+      ]
+    },
+    {
+      "name": "Non-Alcohol Malt Beverage",
+      "category": "All Origin Hybrid/Mixed Lagers or Ales",
+      "decision": "nouveau",
+      "motif": "Aucun style BJCP ne désigne cette bière.",
+      "code": "BA10AA",
+      "editions": [
+        2026
+      ]
+    }
+  ]
 }

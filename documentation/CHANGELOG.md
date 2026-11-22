@@ -6,6 +6,18 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.2 — technique
+
+Lot S0 d'ADR-018 : la table `exchange/donnees/styles/ba.json` reçoit les 169 styles du guide BA
+2026 (le guide en compte 169, et non 165 comme l'écrivait la v0.2.1). 69 styles sont `nouveau`
+(codes BA1A à BA10AA) et 100 `equivalent` à un style BJCP 2021. Les cas douteux ont été tranchés
+par des règles strictes, sur délégation de l'utilisateur : un style décrit tel quel par le BJCP
+est un `equivalent`, un sous-type n'entre que si le texte BJCP le nomme ou le couvre comme
+variante, un écart de plages ne crée pas de style. La table ne contient aucune plage ; les plages
+recopiées du PDF restent hors du dépôt, et onze champs contredits par le PDF lui-même ou
+accompagnés d'une réserve y sont laissés absents. 23 styles n'ont aucune plage chiffrée dans le
+guide. Les styles BA restent refusés en production jusqu'au lot S2.
+
 ### v0.2.1 — technique
 
 Lot S1 d'ADR-018 : la préparation des référentiels sait joindre le guide de styles de la Brewers
