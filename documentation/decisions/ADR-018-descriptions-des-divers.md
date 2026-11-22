@@ -149,6 +149,13 @@ Note du 2026-11-21 (décision de l'utilisateur, après relecture du lot D2) :
   `comprimé(s)`, `tablette(s)`, `capsule(s)`, `dosette(s)`, `tsp`, `tbsp`, `ppb`. La règle 8
   du prompt nomme les mots et abréviations (`cuil.`, `c. à café`, `c. à soupe`, `c.à.c`,
   `c.à.s`, goutte, comprimé…) ; les pluriels des symboles restent au seul contrôle, sans changer `PROMPT_VERSION` : aucune génération n'a eu lieu.
+- **Noms français** (décision de l'utilisateur du 2026-11-22) : la liste du groupe ne résolvait
+  qu'un nom sur 11, les recettes nommant leurs divers en français. La table d'alias
+  (`exchange/lib/src/ingestion/alias.dart`) rattache neuf noms français à cinq divers
+  (`DATA_SOURCES.md`, « Noms français des divers des recettes du groupe ») ; les fautes de
+  frappe se corrigent dans les recettes ; « Acide lactique 80 % » reste non résolu. Les alias
+  font partie des données envoyées au modèle : les cinq divers déjà relus voient leur empreinte
+  changer, et une génération les compte « relues non remplacées » sans les réécrire.
 - **Gallon** (décision de l'utilisateur du 2026-11-22) : `gal(s)` et `gallon(s)` rejoignent les
   unités refusées par le contrôle, pour un texte rédigé d'après une source américaine. Le prompt
   ne change pas, ni `PROMPT_VERSION` : les 10 textes de l'essai ne se régénèrent pas, et le

@@ -590,7 +590,8 @@ moments `Kettle` ou `Additions`, 2 quantités en `total` ou `ml`, 58 paliers. Li
 d'origine perdus sur un ajout placé hors de `hop_additions` : 20.
 
 **Table d'alias** (`exchange/lib/src/ingestion/alias.dart`, écrite à la main le 2026-11-11) :
-102 alias (60 malts et sucres, 14 houblons, 23 ajouts, 5 levures par producteur et référence),
+111 alias (60 malts et sucres, 14 houblons, 32 ajouts dont les 9 noms français du 2026-11-22,
+5 levures par producteur et référence),
 31 `label_fr`, et 65 noms de la liste `hops` qui ne sont pas des houblons. Une entrée n'est
 écrite que si la correspondance est sûre :
 
@@ -650,6 +651,19 @@ résolu d'un import est signalé dans `import_unresolved/` avec `source: import`
 normalisé), sous un identifiant propre à l'import (SHA-256 de `import|nature|key`, vérifié par
 les règles) : il ne touche jamais un document de l'ingestion, et un même nom a une ligne par
 origine. 200 noms au plus par import ; les suivants sont comptés au compte rendu.
+
+### Noms français des divers des recettes du groupe
+
+La table d'alias (`exchange/lib/src/ingestion/alias.dart`) rattache aussi les noms français que
+les recettes du groupe donnent à leurs divers (ADR-018, décision de l'utilisateur du
+2026-11-22) : « Coriandre » → `misc-coriander-seeds`, « Chlorure de calcium » →
+`misc-calcium-chloride`, « Gypse » et « Gypse (sulfate de calcium) » → `misc-gypsum`,
+« Orange peel amère » et « Écorce d'orange amère » → `misc-bitter-orange-peel`, « Orange peel
+douce », « Écorce d'orange douce » et « Écorces d'orange douce » → `misc-sweet-orange-peel`. Ces
+noms passent dans les `aliases` de l'entrée, donc dans `beer_index/`, et la liste du groupe comme
+Recettes › Importer les résolvent. « Acide lactique 80 % » reste non résolu : la Bibliothèque ne
+connaît que `misc-lactic-acid-88`, d'une autre concentration. Les fautes de frappe des recettes
+(« Irsih moss », « oragnge ») se corrigent dans les recettes, pas dans la table.
 
 ## Correspondance `beer_styles` → `STYLE` du BeerXML
 

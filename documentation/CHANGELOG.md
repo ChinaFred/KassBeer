@@ -6,6 +6,15 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.0 — technique
+
+Bibliothèque : neuf noms français de divers deviennent des alias (`exchange/lib/src/ingestion/alias.dart`,
+ADR-018) : coriandre, chlorure de calcium, gypse, écorces d'orange amère et douce. La liste des
+divers du groupe ne résolvait qu'un nom sur 11, les recettes nommant leurs divers en français.
+« Acide lactique 80 % » reste non résolu, la Bibliothèque ne connaissant que l'acide lactique à
+88 %. Effet après la préparation et l'écriture des référentiels sur le poste de l'admin. Décision
+de l'utilisateur. Test ajouté dans `exchange/test/ingestion_test.dart`.
+
 ### v0.1.99 — technique
 
 Contrôle des descriptions des divers (ADR-018) : « gal », « gals », « gallon » et « gallons »
