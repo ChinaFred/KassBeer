@@ -1,11 +1,28 @@
 # ADR-018 — Second guide de styles : Brewers Association, sans superposition avec le BJCP 2021
 
-- **Statut** : proposé
+- **Statut** : proposé (décisions de l'utilisateur du 2026-11-22 intégrées ; évolutions du réseau
+  à valider)
 - **Date** : 2026-11-22
 - **Remplace** : — (amende ADR-005 : décision 2 de `DATA_SOURCES.md`, exception à P20 pour
-  les styles d'un second guide ; amende ADR-017 : la liste des styles conseillés reste celle du
-  BJCP 2021, filtrée sur l'identifiant ; complète ADR-015 : le style envoyé à l'assistant
-  porte son guide ; ADR-014 inchangé pour le premier lot)
+  la table de décisions d'un second guide ; amende ADR-017 : la liste des styles conseillés
+  reste celle du BJCP 2021, filtrée sur l'identifiant ; complète ADR-015 : le style envoyé à
+  l'assistant porte son guide ; amende ADR-014 au lot S3 : `--supprimer-absents beer_styles`,
+  identifiants `ba-` seuls, section « Amendement proposé par ADR-018 » d'ADR-014)
+
+Décisions de l'utilisateur du 2026-11-22 :
+
+1. Licence : usage gratuit avec la mention de la BA, sans écrire à la BA. Le PDF et les plages
+   chiffrées restent dans `import/sources/`, jamais versionnés ; seule la table de décisions est
+   versionnée.
+2. Imperial Pils : le guide est ajouté sans vérifier d'abord que ce style y figure (risque
+   accepté, section 10).
+3. Étendue : option B, tout le guide BA dédoublonné, une décision relue par style.
+4. Code BeerXML : code propre à Kass'Beer, `BA` + rang de la catégorie + lettre du rang du style
+   (`BA3C`), `STYLE_GUIDE` « BA 2026 » ; la table versionnée porte le code.
+5. Un sous-type nommé d'un style BJCP (Black IPA dans 21B) entre comme style BA (`nouveau`), et
+   sa ligne cite le code BJCP qui le contient (`contenu_dans`).
+6. Reprise à chaque édition annuelle, avec extension d'ADR-014 à `beer_styles` pour les
+   identifiants `ba-` seuls.
 
 ## Contexte
 
@@ -14,7 +31,7 @@ L'assistant de recette (ADR-015) a cité un « Imperial Pils ». La Bibliothèqu
 (`DATA_SOURCES.md`, « Décisions validées », point 2). Un style hors Bibliothèque se saisit à la
 main (`ChampBibliotheque`, `app/lib/features/recipes/presentation/recipe_editor_screen.dart`,
 ligne 1189), mais l'export BeerXML le refuse (ADR-005, E4 ; `kStyleHorsBibliotheque`,
-`app/lib/features/library/presentation/choix_style.dart`).
+`app/lib/features/library/presentation/choix_style.dart`, ligne 17).
 
 L'utilisateur demande d'ajouter le guide de la Brewers Association (BA), sans superposition :
 seuls les styles BA sans équivalent parmi les 110 styles BJCP 2021 entrent.
@@ -23,195 +40,243 @@ Faits relevés le 2026-11-22 :
 
 - Le guide BA le plus récent est l'édition 2026, publiée en PDF le 2025-12-31. Aucune API ni
   aucun fichier structuré. La BA le révise chaque année, entre février et mars.
-- La présence d'un style « Imperial Pils » ou « Imperial Pilsener » dans l'édition 2026 n'est pas
-  confirmée : une recherche n'en trouve aucune mention, et le PDF n'a pas pu être lu depuis la
-  session (domaines `brewersassociation.org` et `cdn.brewersassociation.org` hors du réseau
-  permis). À vérifier sur le PDF avant tout code.
-- Conditions d'usage, d'après les résultats de recherche (pages non lues directement) : un
-  usage gratuit est permis avec la mention « Based on Brewers Association 2026 Beer Style
-  Guidelines with changes. Used with permission of Brewers Association. » ; un usage payant
-  ou lié à un revenu demande une autorisation. Une seconde page de la BA cite les applications et
-  les bases de données parmi les usages soumis à autorisation quand ils sont payants, et demande
-  une autre mention, avec un lien vers la page du guide. Les deux pages ne disent pas la même
-  chose.
+- La présence d'un « Imperial Pils » dans l'édition 2026 n'est pas confirmée : une recherche
+  n'en trouve aucune mention, et le PDF n'a pas pu être lu depuis la session (domaines de la BA
+  hors du réseau permis).
+- Conditions d'usage, d'après les résultats de recherche (pages non lues directement) : usage
+  gratuit permis avec la mention « Based on Brewers Association 2026 Beer Style Guidelines with
+  changes. Used with permission of Brewers Association. » ; usage payant soumis à autorisation.
 - Code existant : identifiant `bjcp2021-<code>` (`idStyle`, `exchange/lib/src/ingestion/cles.dart`,
-  ligne 51) ; motif `^bjcp2021-…$` dans `ingest/lib/validation.mjs` (ligne 134) ; lecture du 002
-  par `lire002` (`exchange/lib/src/ingestion/lecture_sources.dart`, ligne 417), SRM converti en EBC
-  par `brewing/` (`valeurs.dart`, `versEbc`) ; `contexteStyles`
-  (`ingest/lib/aromes/natures/culture.mjs`, ligne 103) prend **tous** les documents de
-  `beer_styles.json` préparé, et leur SHA-256 entre dans `input_sha256` des levures : un style
-  ajouté fait régénérer les 923 levures d'ADR-017 ; la lecture de `beer_index/styles` par
-  l'application ignore un champ inconnu (`app/lib/features/library/domain/referentiel.dart`,
-  ligne 10) et exige `code` (ligne 245) ; les règles de `beer_styles/{styleId}` ne listent aucun
-  champ (`firestore.rules`, ligne 931).
+  ligne 51) ; motif `^bjcp2021-…$` (`ingest/lib/validation.mjs`, ligne 134) ; lecture du 002 par
+  `lire002` (`exchange/lib/src/ingestion/lecture_sources.dart`, ligne 417), SRM converti en EBC
+  par `brewing/` (`versEbc`) ; `contexteStyles` (`ingest/lib/aromes/natures/culture.mjs`,
+  ligne 103) prend tous les documents de `beer_styles.json` préparé, et leur SHA-256 entre dans
+  `input_sha256` des levures ; la recette ne garde que `recipe.style.name` (ADR-005, E1) : le
+  lien avec la Bibliothèque se fait par le nom exact, au moment de l'export ;
+  `planifierSuppressions` (`ingest/lib/ecriture.mjs`, ligne 94) calcule le seuil de 90 % sur
+  toute la collection et filtre par `motifIdentifiant(collection)`.
 
 ## Options
 
 | Option | Pour | Contre | Coût (arrêt / usage) |
 |---|---|---|---|
-| Ne rien changer | aucun travail ; aucun risque de licence | les styles absents restent en saisie libre, export BeerXML refusé pour eux | 0 € / 0 € |
-| A. BA complet, sans dédoublonnage | aucune table à relire | refusé par la demande : deux entrées pour une même bière (« German Pils » et « German-Style Pilsener »), choix ambigu dans l'éditeur, deux fiches aux plages différentes | 0 € / ≈ 0 € ; 2 livraisons |
-| B. BA dédoublonné par une table écrite à la main (demande) | seuls les styles manquants entrent ; chaque exclusion est justifiée et relue | relecture de chaque style BA ; jugement humain, révisable à chaque édition | 0 € / ≈ 0 € ; 2 livraisons et une relecture de la table |
-| B'. Liste courte : quelques styles BA nommés par l'utilisateur | relecture de quelques lignes seulement | même code que B ; les styles non demandés restent absents | 0 € / ≈ 0 € ; 2 livraisons |
-| Styles créés par le brasseur | — | écartée par l'utilisateur | — |
+| Ne rien changer | aucun travail | styles absents en saisie libre, export BeerXML refusé pour eux | 0 € / 0 € |
+| A. BA complet, sans dédoublonnage | aucune table | refusé par la demande : deux entrées pour une même bière | 0 € / ≈ 0 € |
+| **B. BA dédoublonné, table écrite à la main (retenue)** | seuls les styles manquants entrent ; chaque décision relue | relecture de chaque style BA, reprise à chaque édition | 0 € / ≈ 0 € ; 3 livraisons, puis une reprise par an |
+| B'. Liste courte nommée par l'utilisateur | quelques lignes à relire | écartée par l'utilisateur (décision 3) | — |
 
 ## Décision
 
-Option B, sous deux conditions préalables : l'usage du guide BA est confirmé permis pour
-Kass'Beer (application gratuite, dépôt public), et la liste des styles BA retenus est relue par
-l'utilisateur. Les styles BA sans équivalent BJCP 2021 entrent dans `beer_styles` sous
-l'identifiant `ba-<clé du nom>`, sans description, avec leur guide affiché ; tout le reste du
-modèle (recette, règles, export) ne change pas.
+Option B. Les styles BA sans équivalent BJCP 2021 entrent dans `beer_styles` sous
+l'identifiant `ba-<cleNormalisee(name)>`, sans description, avec leur guide affiché. Le modèle
+de recette, `firestore.rules` et l'export BeerJSON ne changent pas.
 
-### 1. Source
+### 1. Source : deux fichiers, un seul versionné
 
-- Le PDF de l'édition figée (2026) est téléchargé par l'administrateur dans `import/sources/`,
-  jamais versionné (P20). Son SHA-256 est noté dans `DATA_SOURCES.md`.
-- Une session Claude Code recopie à la main, depuis le PDF, un fichier
-  `exchange/donnees/styles/ba-2026.json`, versionné, au format BeerJSON 2.01 (`styles`), comme
-  `exchange/donnees/fabricants/cultures.json`. Aucun lecteur de PDF n'entre dans `exchange/`.
-- Le fichier est versionné seulement si la condition de licence est remplie pour un dépôt
-  public. Sinon il vit dans `import/sources/`, et seule la table de décisions (noms et
-  équivalents, sans plages) est versionnée.
-- En tête du fichier : édition, date de publication, SHA-256 du PDF, mention de la BA.
+| Fichier | Contenu | Versionné |
+|---|---|---|
+| `import/sources/ba-2026/guide.pdf` | PDF de l'édition, téléchargé par l'admin ; SHA-256 noté dans `DATA_SOURCES.md` | non (P20) |
+| `import/sources/ba-2026/styles.json` | plages chiffrées recopiées du PDF, BeerJSON 2.01 (`styles`), en-tête : édition, date de publication, SHA-256 du PDF | non (décision 1) |
+| `exchange/donnees/styles/ba.json` | table de décisions, une ligne par style BA, toutes éditions confondues (section 2) ; aucune plage, aucune description | oui |
 
-### 2. Contenu d'une entrée
+La recopie se fait sur le poste de l'admin, par une session Claude Code locale : `import/` n'existe
+pas dans une session cloud, et le PDF n'y est pas lisible. Aucun lecteur de PDF n'entre dans
+`exchange/`.
 
-Chaque style BA du PDF a une entrée, retenu ou non :
+Jointure par `exchange/bin/preparer_referentiels.dart`, option `--ba <dossier>` (absente :
+aucun style BA préparé, comportement actuel) :
+
+- clé de jointure : `name` exact après NFC, et `category` ;
+- chaque style de `styles.json` a une ligne de la table, pour l'édition de l'en-tête ; chaque
+  ligne non retirée de la table a son style dans `styles.json` ; sinon la préparation échoue et
+  liste les noms ;
+- l'édition de l'en-tête est égale à `edition_courante` de la table ; sinon échec.
+
+Les tests de `exchange/test/` rejouent la jointure et les contrôles sur une table et un fichier de
+plages inventés (`exchange/test/fixtures/ingestion/ba/`, P20) : aucun nom ni aucune plage de la BA
+dans le dépôt hors de la table.
+
+### 2. Table de décisions (`exchange/donnees/styles/ba.json`)
+
+En-tête : `edition_courante` (2026), `mention` (texte exact de la BA pour cette édition),
+règle du code (section 4). Une ligne par style BA :
 
 | Champ | Contenu |
 |---|---|
-| `name` | nom BA tel que publié (« American-Style India Pale Lager ») |
-| `category` | catégorie BA telle que publiée |
-| `category_id`, `style_id` | code BA (section 4) |
-| `type` | `beer` |
-| `style_guide` | `BA2026` |
-| `original_gravity`, `final_gravity` | plages en `sg`, valeurs du PDF |
-| `international_bitterness_units` | plage en `IBUs` |
-| `color` | plage en `SRM`, valeurs du PDF ; conversion en EBC par `brewing/` à la préparation (P3) |
-| `alcohol_by_volume` | plage en `%` (ABV, jamais ABW) |
-| `kassbeer_decision` | `nouveau`, ou `{ "equivalent": ["4B"], "motif": "…" }` |
+| `name`, `category` | nom et catégorie BA tels que publiés |
+| `decision` | `nouveau` ou `equivalent` |
+| `equivalent` | pour `equivalent` : codes BJCP 2021 du fichier 002 (`["5D"]`) |
+| `contenu_dans` | pour `nouveau` seulement, facultatif : code BJCP du style plus large qui nomme ce sous-type (`"21B"`) |
+| `motif` | une phrase, obligatoire |
+| `code` | pour `nouveau` : code Kass'Beer (section 4) |
+| `editions` | éditions où le style figure (`[2026]`) |
+| `retire_en` | édition qui ne le contient plus, ou absent |
 
-Un style BA « varie selon le style de base » reste sans plage, et l'export BeerXML le refuse
-comme les 17 styles BJCP sans plage. Aucune plage n'est déduite. Aucune description, exemple,
-historique ni lien n'est recopié.
+La table contient des noms de styles et de catégories, aucun chiffre du guide.
 
 ### 3. Règle de dédoublonnage
 
-Un style BA est un doublon quand un style BJCP 2021 du fichier 002 désigne la même bière :
+`equivalent` seulement quand un style BJCP 2021 désigne la même bière que le style BA lui-même :
 
-1. même mode de fermentation (ale, lager, mixte) et même tradition ou origine ;
-2. le style BJCP couvre le style BA : le style BA en est une version, un sous-type nommé, ou
-   un regroupement plus large ou plus étroit ;
-3. les plages ne contredisent pas : le milieu des plages BA de densité initiale, d'amertume et
+1. même mode de fermentation et même tradition ou origine ;
+2. le style BJCP est ce style, pas une famille plus large qui le contient comme sous-type nommé
+   ou comme variante ; un style BA qui regroupe exactement plusieurs styles BJCP cite chacun ;
+3. les plages ne se contredisent pas : le milieu des plages BA de densité initiale, d'amertume et
    de couleur tombe dans les plages BJCP, ou l'écart est écrit dans `motif`.
 
-La décision est écrite à la main dans `kassbeer_decision`, une par style BA, relue par
-l'utilisateur. La préparation ne décide pas. Elle contrôle et signale :
+Un sous-type nommé d'un style BJCP plus large (Black IPA dans 21B Specialty IPA) est `nouveau`,
+avec `contenu_dans`. Un style BA sans style BJCP proche est `nouveau` sans `contenu_dans`.
 
-- chaque style BA a une décision ; un `equivalent` cite des codes présents dans le fichier 002
-  préparé ; sinon la préparation échoue ;
+La décision est écrite à la main et relue par l'utilisateur. La préparation ne décide pas ; elle
+contrôle :
+
+- chaque ligne a une `decision` et un `motif` ; `equivalent` cite des codes du 002 préparé ;
+  `contenu_dans` cite un code du 002 et n'existe que sur un `nouveau` ;
 - aucun nom BA retenu n'est égal, exactement ou après `cleNormalisee`, au nom d'un style BJCP ou
-  d'un autre style BA (l'export et `aideStyleSaisi` cherchent le style par son nom exact) ;
-- pour chaque style `nouveau`, le rapport liste les styles BJCP dont les cinq plages chevauchent
-  celles du style BA, à revoir. Ce signalement compare des intervalles ; il ne calcule aucune
-  grandeur de brassage.
-
-Les tests de `exchange/test/` rejouent ces contrôles sur des styles inventés (P20).
+  d'un autre style BA ;
+- pour chaque `nouveau`, `rapport.json` liste les styles BJCP dont les plages chevauchent, à
+  revoir. Ce contrôle compare des intervalles ; il ne calcule aucune grandeur de brassage.
 
 ### 4. Code et export BeerXML
 
-`STYLE_GUIDE` vaut `BA 2026`. `CATEGORY` est la catégorie BA. `CATEGORY_NUMBER` et
-`STYLE_LETTER` viennent du code BA : si le PDF numérote ses styles, ce numéro ; sinon, un code
-propre à Kass'Beer (`BA` suivi du rang de la catégorie, puis la lettre du rang du style dans sa
-catégorie, dans l'ordre du PDF), décrit dans `DATA_SOURCES.md`. Le choix revient à
-l'utilisateur (question ouverte). `TYPE` suit E7 d'ADR-005, sans changement. L'export BeerJSON
-ne change pas : le style sort de la recette avec une perte listée (`StyleNonExporte`).
+- Code : `BA` + rang de la catégorie BA dans l'ordre du PDF de la première édition où elle
+  paraît + lettre du rang du style parmi les styles `nouveau` de sa catégorie, dans l'ordre du
+  PDF (A à Z, puis AA, AB…). Motif `^BA[1-9][0-9]?[A-Z]{1,2}$`.
+- Le code est attribué une fois, à l'entrée du style dans la table, puis figé. Une nouvelle
+  édition ne recalcule rien : un style ajouté prend la lettre libre suivante de sa catégorie, une
+  catégorie nouvelle le rang suivant. Un style déplacé de catégorie garde son code. Un code
+  retiré n'est jamais réattribué (la ligne reste, avec `retire_en`).
+- Un code ne change que par une décision de l'utilisateur à la relecture. Effet : seuls les
+  exports BeerXML suivants portent le nouveau code ; aucune recette ni aucun brassin ne stocke le
+  code (E1).
+- Export : `STYLE_GUIDE` « BA 2026 » (« BA <édition> »), `CATEGORY` la catégorie BA,
+  `CATEGORY_NUMBER` et `STYLE_LETTER` tirés du code. `TYPE` suit E7. Export BeerJSON inchangé
+  (perte `StyleNonExporte`).
 
 ### 5. Modèle de données
 
-- `beer_styles/ba-<cleNormalisee(name)>` : mêmes champs que les styles BJCP (`exigences-techniques.md`,
-  « Référentiels et recettes publiques »), `provenance[]` avec `source: brewers-association`,
-  `version: 2026`, `licence: BA (noms et plages, avec la mention de la BA)`. L'identifiant ne
-  porte pas l'édition : un style inchangé garde son document d'une édition à l'autre.
+- `beer_styles/ba-<cleNormalisee(name)>` : mêmes champs que les styles BJCP, `code` de la table,
+  `style_guide` `BA<édition courante>`, `provenance[]` avec `source: brewers-association`,
+  `version: <édition>`, `licence: BA (usage gratuit, mention de la BA)`. L'identifiant ne porte
+  pas l'édition.
 - `beer_index/styles` : chaque entrée reçoit `guide` (`BJCP2021` ou `BA2026`). Une version
-  installée de l'application ignore ce champ et affiche les styles BA à la suite.
-- `ingest/lib/validation.mjs` : motif `^(bjcp2021|ba)-[a-z0-9]+(-[a-z0-9]+)*$`, source et licence
-  ajoutées aux listes, `guide` permis dans l'index.
-- `firestore.rules` ne change pas (P19). Le budget des règles de `recipes/` et `brews/` ne
-  bouge pas : la recette garde `recipe.style.name` seul (ADR-005, E1).
-- Taille de `beer_index/styles` : quelques dizaines d'entrées de plus, moins de 30 Ko
-  (estimation), sous la borne de 900 Ko de l'écrivain.
+  installée ignore ce champ.
+- `ingest/lib/validation.mjs` : motif `^(bjcp2021|ba)-[a-z0-9]+(-[a-z0-9]+)*$` pour l'écriture,
+  source et licence ajoutées, `guide` permis dans l'index.
+- `firestore.rules` ne change pas (P19) ; budget des règles inchangé.
+- Taille de `beer_index/styles` : estimation sous 60 Ko pour tout le guide, sous la borne de
+  900 Ko de l'écrivain (à mesurer à S1).
 
 ### 6. Styles conseillés des levures (ADR-017)
 
-Ils restent des styles BJCP 2021. `contexteStyles` ne garde que les documents dont
-l'identifiant commence par `bjcp2021-`. Un style BA ajouté ne change ni la liste du prompt ni
-`stylesSha256`, et aucune levure n'est régénérée. Ce filtre est livré avant la première
-préparation qui contient un style BA.
+`contexteStyles` ne garde que les identifiants `bjcp2021-`. Un style BA ne change ni le prompt ni
+`stylesSha256`, et aucune levure n'est régénérée. Livré à S1, avant toute préparation qui
+contient un style BA.
 
 ### 7. Assistant de recette (ADR-015)
 
 `stylePourAssistant` (`app/lib/features/recipes/domain/assistant_recette.dart`, ligne 180)
-envoie aussi `style_guide`. Le serveur lit `style` comme un objet borné à 8 000 caractères
-(`functions/src/assistant/request.ts`, ligne 340) : rien ne change côté serveur, sauf la ligne
-du prompt qui décrit le bloc `STYLE` (« nom, code, guide, plages chiffrées »), avec son test de
-prompt. `set_style_name` reste libre.
+envoie aussi `style_guide`. Côté serveur, seule la ligne du prompt qui décrit le bloc `STYLE`
+change (« nom, code, guide, plages chiffrées »), avec son test de prompt.
 
 ### 8. Affichage
 
 - Feuille « Choisir un style » et Bibliothèque : styles groupés par guide, puis par catégorie ;
-  le guide est écrit sur chaque ligne et sur la fiche (« BA 2026 »). Proposition d'écran par
+  guide écrit sur chaque ligne et sur la fiche (« BA 2026 »). Proposition d'écran par
   `ux-designer`.
-- Écran « Sources des données » : section « Brewers Association 2026 », avec la mention exigée
-  par la BA, les modifications (descriptions retirées, couleur convertie en EBC, styles couverts
-  par le BJCP 2021 écartés) et, si la BA l'exige, le lien vers la page du guide.
+- Écran « Sources des données » : section « Brewers Association », avec la mention de la BA et
+  les modifications (descriptions retirées, couleur convertie en EBC, styles couverts par le BJCP
+  2021 écartés). L'édition et la mention viennent de `beer_index/styles` (champ racine
+  `ba_mention`, écrit par la préparation depuis la table) : une nouvelle édition ne demande pas
+  de version de l'application. Index illisible : section en panne, aucun texte de repli.
 
-### 9. Lots
+### 9. Mise à jour annuelle
+
+À chaque édition (février ou mars) :
+
+1. l'admin télécharge le PDF dans `import/sources/ba-<édition>/` ;
+2. une session locale recopie `styles.json`, ajoute les styles nouveaux à la table, met à jour
+   `editions`, `retire_en`, `edition_courante` et `mention`, et liste les styles modifiés (nom,
+   catégorie, plages) ;
+3. l'utilisateur relit les décisions des styles nouveaux ou modifiés, et les seuls ;
+4. préparation, simulation, écriture ; puis `--supprimer-absents beer_styles` (section 9.1).
+
+Effets d'une édition :
+
+- `style_guide` passe de `BA2026` à `BA2027` sur tous les documents `ba-` : chaque document est
+  réécrit une fois. `guide` de l'index et `STYLE_GUIDE` suivent. Une préparation n'a qu'une
+  édition BA.
+- Un style inchangé de nom garde son identifiant et son code.
+- Un style renommé reçoit un nouvel identifiant ; l'ancien document est supprimé. Son code est
+  repris si la relecture le juge le même style (ligne renommée), sinon un nouveau code.
+- Un style disparu : document supprimé, ligne gardée avec `retire_en`. Une recette qui le porte
+  garde son nom, qui devient une saisie libre : l'éditeur affiche « hors Bibliothèque » et
+  l'export BeerXML la refuse (E4, comportement actuel). Un brassin garde sa recette figée. Aucune
+  migration de recette.
+
+#### 9.1 Suppression (amendement d'ADR-014, lot S3)
+
+`ecrire.mjs --supprimer-absents beer_styles` :
+
+- candidats : identifiants en ligne conformes à `^ba-[a-z0-9]+(-[a-z0-9]+)*$` et absents de la
+  préparation ; un `bjcp2021-` n'est jamais candidat ;
+- seuil de 90 % calculé sur les seuls `ba-` (préparés contre en ligne), pas sur la collection ;
+  une préparation sans style BA est donc refusée ;
+- autres garde-fous inchangés : simulation d'abord, liste des identifiants avant la saisie,
+  30 au plus, saisie du nombre, rapport chiffré, émulateur par défaut, une collection par
+  lancement.
+
+### 10. Risques acceptés
+
+- L'Imperial Pils peut manquer au guide BA (décision 2). Dans ce cas, le cas qui a lancé la
+  demande reste en saisie libre.
+- Les plages ne sont pas versionnées : la CI ne vérifie pas la recopie. Une erreur de recopie
+  se voit à la relecture ou dans la Bibliothèque.
+- Les deux pages de conditions d'usage de la BA ne disent pas la même chose ; l'usage gratuit
+  avec mention est retenu (décision 1).
+
+### 11. Lots
 
 | Lot | Contenu | Livraisons |
 |---|---|---|
-| S0 | conditions : licence confirmée, PDF téléchargé, présence de l'Imperial Pils vérifiée, choix du code ; fichier `ba-2026.json` recopié et table relue par l'utilisateur | aucune (données) |
-| S1 | `exchange/` : lecteur du fichier (lecture de `lire002` partagée), `idStyleBa`, contrôles de la section 3, champ `guide` de l'index ; `ingest/` : motif, source, licence, filtre de `contexteStyles` ; documents (`DATA_SOURCES.md`, `exigences-techniques.md`) | 1, technique |
-| S2 | application : guide affiché (feuille, Bibliothèque, fiche), tri par guide, écran « Sources des données », `style_guide` envoyé à l'assistant, export BeerXML vérifié sur un style BA ; puis écriture en production | 1, fonctionnel |
+| S0 | poste de l'admin : PDF, `styles.json` recopié, brouillon de la table ; relecture de chaque ligne par l'utilisateur (nombre de styles BA : à compter sur le PDF) | aucune |
+| S1 | table versionnée ; `exchange/` : `--ba`, jointure, contrôles des sections 1 à 4, codes, `idStyleBa`, `guide` et `ba_mention` de l'index, fixtures inventées ; `ingest/` : motif d'écriture, source, licence, filtre de `contexteStyles` ; `DATA_SOURCES.md`, `exigences-techniques.md` | 1, technique |
+| S2 | application : guide affiché, tri par guide, « Sources des données » lue dans l'index, `style_guide` vers l'assistant et test de prompt, export BeerXML vérifié sur un style BA ; puis écriture en production | 1, fonctionnel |
+| S3 | `--supprimer-absents beer_styles`, identifiants `ba-` (section 9.1) ; livré avant l'ingestion de l'édition 2027 | 1, technique |
 
-L'écriture en production a lieu après le déploiement de S2 : la mention de la BA doit être à
-l'écran quand les styles le sont.
+L'écriture en production suit le déploiement de S2 : la mention de la BA est à l'écran quand les
+styles le sont. S3 attend 2027 : la première édition n'a rien à supprimer.
+
+Coût : S1 touche environ 10 fichiers de `exchange/` et 4 de `ingest/` ; S2 environ 8 fichiers de
+`app/lib/` et 1 de `functions/src/assistant/` ; S3 3 fichiers de `ingest/` et leurs tests.
+Aucune migration de données. Firestore : quelques centaines d'écritures par édition, dans le
+niveau gratuit.
 
 ## Réponses aux questions de l'architecte
 
-1. Où tourne chaque morceau de code : lecture et contrôles du fichier sur le poste de l'admin
-   (`exchange/bin/preparer_referentiels.dart`), écriture par `ingest/ecrire.mjs` ; affichage et
-   export dans l'application ; aucune fonction serveur nouvelle.
-2. Ce qui existera en double : rien. Le filtre `bjcp2021-` vit en Node seul ; la conversion SRM
-   vers EBC reste dans `brewing/`.
-3. Ce qui pèse au démarrage : rien. L'index des styles est lu à l'ouverture du champ Style, par
-   `get` mémorisé, quelques Ko de plus.
-4. Compilation de chaque cible : aucune dépendance ajoutée.
-5. Qui voit quoi : données publiques (noms et plages), lues par tout membre en `get` ; rien de
-   privé ; aucun envoi à un tiers nouveau (l'assistant reçoit déjà le style).
-6. Ce qui coûte à l'usage, plafond : quelques dizaines d'écritures Firestore par ingestion,
-   dans le niveau gratuit. Sans le filtre de la section 6, la régénération des 923 levures
-   serait facturée sur l'espace de travail de la Console (montant : à mesurer sur le rapport du
-   lot d'ADR-017) ; le filtre l'empêche.
-7. Exposition : inchangée. Les noms et plages BA deviennent publics sur GitHub si le fichier est
-   versionné, ce qui dépend de la licence.
-8. Exploitation, sauvegarde, mise à jour : l'édition est figée. Une nouvelle édition BA demande
-   une nouvelle recopie, une relecture de la table et, pour retirer un style disparu, une
-   extension d'ADR-014 à `beer_styles` (préfixe `ba-` seul), décidée à ce moment.
-9. Coût de sortie : retirer les documents `ba-*` et leur section de l'écran ; les recettes
-   gardent leur nom de style en saisie libre, et leur export BeerXML est refusé comme
-   aujourd'hui.
+1. Où tourne le code : préparation et contrôles sur le poste de l'admin, écriture par
+   `ingest/ecrire.mjs` ; affichage et export dans l'application ; aucune fonction serveur.
+2. Double : rien. Le filtre `bjcp2021-` et le motif `ba-` vivent en Node ; la conversion SRM vers
+   EBC reste dans `brewing/` ; les codes sont lus dans la table, jamais recalculés en Dart.
+3. Démarrage : rien. `beer_index/styles` lu par `get` à l'ouverture du champ Style.
+4. Compilation : aucune dépendance ajoutée.
+5. Qui voit quoi : noms et plages BA lus par les membres ; seuls noms et catégories sont publics
+   sur GitHub ; aucun envoi nouveau à un tiers.
+6. Coût à l'usage : écritures Firestore dans le niveau gratuit ; régénération des levures évitée
+   par le filtre de la section 6.
+7. Exposition : inchangée.
+8. Exploitation : une reprise par an (section 9), relecture limitée aux styles nouveaux ou
+   modifiés ; PDF et plages à garder sur le poste de l'admin, hors de toute sauvegarde du dépôt.
+9. Sortie : retirer les documents `ba-` (S3) et la section de l'écran ; les recettes gardent leur
+   nom de style en saisie libre.
 
 ## Conséquences
 
 - La Bibliothèque propose les styles BA manquants, et l'export BeerXML les accepte quand ils ont
   leurs plages.
-- La table de dédoublonnage est un jugement humain, relu une fois par édition.
-- `DATA_SOURCES.md`, décision 2, devient : « `beer_styles` prend les 110 styles BJCP 2021 du
-  fichier 002, et les styles BA 2026 sans équivalent BJCP (ADR-018) ».
-- P20 reçoit une exception pour le fichier BA ; un contrôle `relecteur-regles` couvre la table et
-  ses contrôles ; P62 reçoit le filtre des styles conseillés (propositions de l'avis).
+- `DATA_SOURCES.md`, décision 2 : « `beer_styles` prend les 110 styles BJCP 2021 du fichier 002,
+  et les styles BA sans équivalent BJCP (ADR-018) ; seule la table de décisions est versionnée ».
+- P20, P62 et P19 sont amendés, P63 est ajouté (propositions de l'avis).
 
 ## Sources
 

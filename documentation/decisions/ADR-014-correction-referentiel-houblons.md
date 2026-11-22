@@ -8,6 +8,8 @@
   aussi `beer_culture_aromas`, dans les mêmes bornes que `beer_hop_aromas` (simulation, 30 au
   plus, seuil de 90 %, saisie du nombre), liste de référence `levures/aromes.json` ; le rapport
   de `ecrire.mjs` liste les entrées relues dont l'identifiant a disparu.
+- **Amendement proposé par ADR-018** (2026-11-22, statut proposé, lot S3) : `beer_styles`,
+  identifiants `ba-` seuls (section « Amendement proposé par ADR-018 »).
 
 Décisions de l'utilisateur du 2026-11-15 :
 
@@ -220,6 +222,28 @@ chiffré avec les identifiants, émulateur par défaut, production sur `--produc
 kassbeer`, une collection par lancement. Sans l'option, rien n'est supprimé. Les identifiants
 préparés sont ceux de `beer_cultures.json`, refusés compris. Les autres collections restent
 refusées.
+
+## Amendement proposé par ADR-018 (2026-11-22) : `beer_styles`, identifiants `ba-`
+
+Statut : proposé, avec ADR-018. Livré au lot S3 d'ADR-018, avant l'ingestion de l'édition 2027
+du guide de la Brewers Association.
+
+`ecrire.mjs --supprimer-absents beer_styles` retire les styles BA disparus ou renommés d'une
+édition à l'autre :
+
+- candidats : identifiants en ligne conformes à `^ba-[a-z0-9]+(-[a-z0-9]+)*$` et absents de la
+  préparation ; un identifiant `bjcp2021-` n'est jamais candidat, même absent ;
+- seuil de 90 % (`PART_MIN_PREPAREE`) calculé sur les seuls identifiants `ba-`, préparés contre
+  en ligne ; une préparation sans style BA est refusée ;
+- garde-fous de la section 3 et des notes du 2026-11-15 inchangés : simulation d'abord, liste des
+  identifiants avant la saisie, 30 suppressions au plus, saisie du nombre, rapport chiffré,
+  émulateur par défaut, production sur `--production --projet kassbeer`, une collection par
+  lancement.
+
+Code touché : `COLLECTIONS_SUPPRIMABLES` (`ingest/lib/options.mjs`, ligne 19) et
+`planifierSuppressions` (`ingest/lib/ecriture.mjs`, ligne 94), qui reçoit un préfixe et un
+motif propres à `beer_styles`. Tests : `bjcp2021-` absent jamais candidat, seuil calculé sur les
+`ba-`, préparation sans `ba-` refusée, 31 candidats refusés.
 
 ## Sources
 
