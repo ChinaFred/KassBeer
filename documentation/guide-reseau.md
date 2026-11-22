@@ -169,6 +169,12 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
+Le 2026-11-22, avec le format de sortie de l'assistant réduit à deux textes (amendement
+d'ADR-015 du 2026-11-22), la ligne de `test-fixtures/recipe_assistant_operations.json` du tableau
+« Logique dupliquée » nomme côté serveur `functions/src/assistant/proposition.ts`
+(`operationsCatalog`, catalogue du prompt ; `readProposition`, contrôle de la sortie) au lieu du
+format de sortie. Aucun contrôle n'est ajouté ni retiré.
+
 Le 2026-11-21, avec la livraison du lot A2 d'ADR-015 (propositions de l'assistant appliquées au
 brouillon), la session principale a mis `CLAUDE.md` à jour : « Le projet » dit les lots A1 et A2
 de l'assistant de recette livrés (analyse en texte, propositions appliquées au brouillon) ; la

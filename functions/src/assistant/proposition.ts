@@ -4,9 +4,9 @@
  * Liste fermée des opérations, copie de `test-fixtures/recipe_assistant_operations.json`
  * (`functions/test/proposition.test.ts` vérifie l'égalité et rejoue `reading_cases`). Le
  * client en tient une seconde copie (`exchange/lib/src/proposition.dart`), qui applique la
- * proposition. Le serveur n'applique rien et ne lit pas BeerJSON : il en tire le format de
- * sortie envoyé au modèle (`output_config.format`) et écarte une proposition hors de ce
- * format, ou de plus de `MAX_OPERATIONS` opérations. Les bornes des valeurs (`minimum`,
+ * proposition. Le serveur n'applique rien et ne lit pas BeerJSON : il en tire le catalogue
+ * des opérations écrit dans le prompt (`operationsCatalog`) et écarte une proposition hors de
+ * ce catalogue, ou de plus de `MAX_OPERATIONS` opérations (`readProposition`). Les bornes des valeurs (`minimum`,
  * `maximum`, longueurs) ne sont pas dans le format : le client refuse l'opération seule.
  */
 
@@ -155,35 +155,45 @@ export const PROPOSITION_OPERATIONS: Readonly<Record<string, OperationSpec>> = {
   },
 };
 
-/** Type JSON Schema d'un champ, sans ses bornes. Pure. */
-function fieldSchema(spec: FieldSpec): Record<string, unknown> {
+/** Libellé du type d'un champ dans le catalogue du prompt. Pure. */
+function fieldLabel(spec: FieldSpec): string {
   switch (spec.type) {
     case "string":
-      return { type: "string" };
+      return "texte";
     case "enum":
-      return { type: "string", enum: [...spec.values] };
+      return spec.values.join(" | ");
     case "number":
-      return { type: "number" };
+      return "nombre";
     case "integer":
-      return { type: "integer" };
+      return "entier";
   }
 }
 
 /**
- * Format de sortie d'un tour (`output_config.format`) : `{reponse, proposition}`, la
- * proposition `null` ou `{resume, operations}`, chaque opération l'une de la liste fermée,
- * avec ses champs requis et aucun autre. Pure.
+ * Catalogue des opérations écrit dans le prompt, tiré de `PROPOSITION_OPERATIONS` : une ligne
+ * par opération, `?` après un champ facultatif. Le format de sortie ne porte plus les
+ * opérations (grammaire trop grosse pour l'API, voir `assistantOutputFormat`) : le modèle les
+ * lit ici, et `readProposition` les contrôle. Pure.
+ */
+export function operationsCatalog(): string {
+  return Object.entries(PROPOSITION_OPERATIONS)
+    .map(([op, spec]) => {
+      const fields = Object.entries(spec.fields).map(
+        ([key, field]) => `${key}${spec.required.includes(key) ? "" : "?"} (${fieldLabel(field)})`,
+      );
+      return `- ${op} : ${fields.join(", ")}`;
+    })
+    .join("\n");
+}
+
+/**
+ * Format de sortie d'un tour (`output_config.format`) : deux textes requis, `reponse` et
+ * `proposition` (vide, ou le JSON d'un objet `{resume, operations}`), aucun champ facultatif ni
+ * union. Le format à dix-huit variantes d'opérations dépassait la limite de compilation des
+ * sorties structurées (400 « Schema is too complex for compilation », décision de
+ * l'utilisateur du 2026-11-22) : la proposition est relue par `readProposition`. Pure.
  */
 export function assistantOutputFormat(): Record<string, unknown> {
-  const operations = Object.entries(PROPOSITION_OPERATIONS).map(([op, spec]) => ({
-    type: "object",
-    additionalProperties: false,
-    required: ["op", ...spec.required],
-    properties: {
-      op: { type: "string", enum: [op] },
-      ...Object.fromEntries(Object.entries(spec.fields).map(([k, f]) => [k, fieldSchema(f)])),
-    },
-  }));
   return {
     type: "json_schema",
     schema: {
@@ -192,20 +202,7 @@ export function assistantOutputFormat(): Record<string, unknown> {
       required: ["reponse", "proposition"],
       properties: {
         reponse: { type: "string" },
-        proposition: {
-          anyOf: [
-            { type: "null" },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: ["resume", "operations"],
-              properties: {
-                resume: { type: "string" },
-                operations: { type: "array", items: { anyOf: operations } },
-              },
-            },
-          ],
-        },
+        proposition: { type: "string" },
       },
     },
   };
@@ -311,11 +308,29 @@ export function readTurnOutput(
   if (!isPlainObject(parsed)) return null;
   const reponse = parsed.reponse;
   if (typeof reponse !== "string" || reponse.trim().length === 0) return null;
-  if (parsed.proposition === null || parsed.proposition === undefined) {
+  const brut = parsed.proposition;
+  if (brut === null || brut === undefined)
     return { reponse, proposition: null, rejectedPath: null };
+  if (typeof brut !== "string") return { reponse, proposition: null, rejectedPath: "proposition" };
+  if (brut.trim().length === 0) return { reponse, proposition: null, rejectedPath: null };
+  let proposition: unknown;
+  try {
+    proposition = JSON.parse(brut);
+  } catch (err) {
+    // Même règle que la sortie entière : seul le nom de l'erreur part au journal (P57).
+    log({
+      message: "Assistant : proposition du modèle illisible (JSON)",
+      feature: "assistant",
+      extra: { error_name: err instanceof Error ? err.name : typeof err },
+    });
+    return { reponse, proposition: null, rejectedPath: "proposition" };
   }
-  const read = readProposition(parsed.proposition);
+  const read = readProposition(proposition);
   return read.ok
     ? { reponse, proposition: read.value, rejectedPath: null }
-    : { reponse, proposition: null, rejectedPath: read.path };
+    : {
+        reponse,
+        proposition: null,
+        rejectedPath: read.path === "" ? "proposition" : `proposition.${read.path}`,
+      };
 }
