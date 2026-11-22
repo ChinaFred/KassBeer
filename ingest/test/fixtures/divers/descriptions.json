@@ -1,0 +1,31 @@
+[
+  {
+    "id": "misc-epice-fictive",
+    "data": {
+      "misc_name": "Épice Fictive",
+      "status": "described",
+      "confidence": "medium",
+      "summary": "Épice inventée pour les tests, ajoutée pour donner une note chaude et poivrée à une bière de saison.",
+      "roles": [{ "key": "flavor", "label": "Aromatiser" }],
+      "moments": {
+        "boil": {
+          "text": "En fin d'ébullition, pour garder ses arômes volatils ; la dose suit la notice du fabricant."
+        }
+      },
+      "changes_taste": true,
+      "taste": { "text": "Note chaude et poivrée, discrète, qui se fond dans le malt sans masquer la levure." },
+      "reviewed": true,
+      "reviewed_at": "2026-11-21",
+      "provenance": [
+        {
+          "source": "claude-api",
+          "source_id": "misc-epice-fictive",
+          "version": "claude-fable-5-2 / prompt 2 / effort medium",
+          "licence": "Texte généré pour Kass'Beer",
+          "retrieved": "2026-11-21"
+        }
+      ],
+      "input_sha256": "ace19bdf31d5bdd06f608bce566667c04a8f34f69725f8926468ad111473ef74"
+    }
+  }
+]

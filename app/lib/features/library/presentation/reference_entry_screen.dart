@@ -17,6 +17,7 @@ import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
 import 'section_aromes.dart';
+import 'section_description_divers.dart';
 import 'section_aromes_levure.dart';
 
 /// Textes des états d'une fiche de la Bibliothèque.
@@ -252,6 +253,7 @@ class _Fiche extends StatelessWidget {
             Text('Autres noms : ${f.aliases.join(', ')}', style: muted),
           ..._valeurs(f),
           if (f is FicheHoublon) SectionAromes(id: f.id),
+          if (f is FicheDivers) SectionDescriptionDivers(id: f.id),
           if (f is FicheLevure)
             SectionAromesLevure(id: f.id, temperature: f.temperature),
           SectionProvenance(provenance: f.provenance),

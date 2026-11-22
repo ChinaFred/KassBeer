@@ -1,14 +1,22 @@
 // Contrôle des descriptions aromatiques des houblons (ADR-013, section 4), partagé par le
-// générateur (generer-aromes.mjs) et l'écrivain (ecrire.mjs), et règles communes aux deux
-// natures (textes, descripteurs, relecture, provenance), reprises par natures/culture.mjs
-// pour les levures (ADR-017). N'importe pas le SDK d'Anthropic : ecrire.mjs et les tests
-// chargent ce fichier sans lui (P54).
+// générateur (generer-aromes.mjs) et l'écrivain (ecrire.mjs). N'importe pas le SDK
+// d'Anthropic : ecrire.mjs et les tests chargent ce fichier sans lui (P54). Les règles de
+// texte et les empreintes communes aux natures viennent de lib/redaction/texte.mjs (ADR-018).
 //
 // Une erreur est un chemin et une règle, jamais le texte contrôlé : les rapports ne
 // recopient aucun texte rendu par le modèle.
 
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { reglesEnveloppe } from "../redaction/entree.mjs";
+import {
+  estObjet,
+  jsonCanonique,
+  lireListeFermee,
+  longueur,
+  nettoyerTexte,
+  reglesBlocTexte,
+  reglesDescripteurs,
+  sha256,
+} from "../redaction/texte.mjs";
 
 /// Collection écrite par ecrire.mjs depuis import/ingest/aromes/aromes.json.
 export const COLLECTION_AROMES = "beer_hop_aromas";
@@ -19,84 +27,19 @@ export const USAGES = ["first_wort", "bittering", "late_boil", "whirlpool", "dry
 
 export const STATUTS = ["described", "unknown"];
 export const CONFIANCES = ["high", "medium", "low"];
-export const EFFORTS = ["low", "medium", "high", "xhigh", "max"];
-
-/// Bornes d'un texte d'usage, en caractères (points de code).
-export const TEXTE_MIN = 40;
-export const TEXTE_MAX = 400;
 
 /// Nombre de descripteurs d'une entrée `described`.
 export const DESCRIPTEURS_MIN = 1;
 export const DESCRIPTEURS_MAX = 8;
 
-/// Ligne de provenance d'une entrée générée.
-export const SOURCE_PROVENANCE = "claude-api";
-export const LICENCE_PROVENANCE = "Texte généré pour Kass'Beer";
-
 /// Liste fermée des descripteurs (`{key, label}`), lue une fois. Seul endroit où elle vit :
 /// le document porte le libellé, l'application ne fait que l'afficher.
-export const DESCRIPTEURS = lireDescripteurs(new URL("./descripteurs.json", import.meta.url));
-
-/// Liste fermée de descripteurs `{key, label}` du fichier [url].
-export function lireDescripteurs(url) {
-  return JSON.parse(readFileSync(url, "utf8"));
-}
+export const DESCRIPTEURS = lireListeFermee(new URL("./descripteurs.json", import.meta.url));
 
 const LIBELLES = new Map(DESCRIPTEURS.map((d) => [d.key, d.label]));
 
-const ID_HOUBLON = /^hop-[a-z0-9]+(-[a-z0-9]+)*$/;
-const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const VERSION = new RegExp(
-  `^claude-[a-z0-9-]{1,60} / prompt [1-9][0-9]{0,3} / effort (${EFFORTS.join("|")})$`,
-);
-
-// Contrôles C0 et C1, et marques et contrôles bidirectionnels (P9).
-const CONTROLES = /[\u0000-\u001f\u007f-\u009f؜‎‏‪-‮⁦-⁩]/gu;
-
-export const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
-export const longueur = (t) => [...t].length;
-
-/// Vrai si [texte] est une date réelle `AAAA-MM-JJ`.
-export function estDate(texte) {
-  const m = typeof texte === "string" ? DATE.exec(texte) : null;
-  if (!m) return false;
-  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-  return d.toISOString().slice(0, 10) === texte;
-}
-
-/// Texte en NFC, caractères de contrôle et bidirectionnels retirés, espaces de bord retirées.
-export function nettoyerTexte(texte) {
-  return texte.normalize("NFC").replace(CONTROLES, "").trim();
-}
-
-/// Règles enfreintes par un texte d'usage déjà nettoyé (liste vide s'il est bon). Une
-/// comparaison à un autre houblon est permise (ADR-013, décision 8).
-export function reglesTexte(texte) {
-  const regles = [];
-  const n = longueur(texte);
-  if (n < TEXTE_MIN || n > TEXTE_MAX) regles.push(`longueur ${TEXTE_MIN} à ${TEXTE_MAX}`);
-  if (/https?:\/\/|\bwww\./iu.test(texte)) regles.push("adresse web");
-  else if (/\b[a-z0-9-]+\.(com|net|org|fr|de|eu|io|uk|us|nz|au|be|ch|cz)\b/iu.test(texte)) {
-    regles.push("adresse web");
-  }
-  if (texte.includes("@")) regles.push("@");
-  if (/[<>`]/u.test(texte) || /(^|\n)\s*[#*]/u.test(texte)) regles.push("balisage");
-  if (texte.includes("€") || texte.includes("$")) regles.push("symbole monétaire");
-  if (/(^|[^\p{L}])(eur|euros?)(?![\p{L}])/iu.test(texte)) regles.push("monnaie");
-  return regles;
-}
-
-/// JSON canonique : clés triées à chaque niveau.
-export function jsonCanonique(valeur) {
-  if (Array.isArray(valeur)) return `[${valeur.map(jsonCanonique).join(",")}]`;
-  if (estObjet(valeur)) {
-    const cles = Object.keys(valeur).sort();
-    return `{${cles.map((k) => `${JSON.stringify(k)}:${jsonCanonique(valeur[k])}`).join(",")}}`;
-  }
-  return JSON.stringify(valeur);
-}
-
-export const sha256 = (texte) => createHash("sha256").update(texte).digest("hex");
+/// Identifiant d'un houblon de beer_hops/.
+export const ID_HOUBLON = /^hop-[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /// Données d'un houblon envoyées au modèle (ADR-013, section 3), tirées de
 /// `beer_hops/{id}` préparé : rien d'autre ne part.
@@ -117,11 +60,6 @@ export function empreinteEntree(donnees, { promptVersion, modele, effort }) {
   return sha256(
     jsonCanonique({ hop: donnees, prompt_version: promptVersion, model: modele, effort }),
   );
-}
-
-/// Empreinte du contenu d'une entrée de aromes.json, calculée par ecrire.mjs.
-export function empreinteContenu(data) {
-  return sha256(jsonCanonique(data));
 }
 
 /// Contrôle de la sortie structurée du modèle ([sortie], objet déjà décodé). Rend
@@ -160,43 +98,6 @@ export function controlerSortieModele(sortie) {
   }
   regles.push(...reglesContenu(resultat));
   return { regles, resultat: regles.length === 0 ? resultat : null };
-}
-
-/// Règles d'une liste `descriptors` (`{key, label}`, clé dans [libelles], libellé recopié,
-/// sans doublon). Le nombre d'entrées se contrôle avec le statut.
-export function reglesDescripteurs(descripteurs, libelles) {
-  const regles = [];
-  const r = (chemin, regle) => regles.push(`${chemin} : ${regle}`);
-  if (!Array.isArray(descripteurs)) {
-    r("descriptors", "liste attendue");
-    return regles;
-  }
-  const vus = new Set();
-  descripteurs.forEach((d, i) => {
-    const c = `descriptors[${i}]`;
-    if (!estObjet(d) || Object.keys(d).sort().join(",") !== "key,label") {
-      r(c, "{key, label} attendu");
-      return;
-    }
-    if (!libelles.has(d.key)) r(`${c}.key`, "hors de la liste fermée");
-    else if (d.label !== libelles.get(d.key)) r(`${c}.label`, "différent de la liste");
-    if (vus.has(d.key)) r(`${c}.key`, "en double");
-    vus.add(d.key);
-  });
-  return regles;
-}
-
-/// Règles d'un texte `{text}` au [chemin] : forme, nettoyage, puis reglesTexte.
-export function reglesBlocTexte(chemin, v) {
-  const regles = [];
-  if (!estObjet(v) || Object.keys(v).join(",") !== "text" || typeof v.text !== "string") {
-    return [`${chemin} : {text} attendu`];
-  }
-  if (v.text !== nettoyerTexte(v.text)) {
-    regles.push(`${chemin}.text : texte non nettoyé (NFC, contrôles)`);
-  }
-  for (const regle of reglesTexte(v.text)) regles.push(`${chemin}.text : ${regle}`);
-  return regles;
 }
 
 /// Règles de `status`, `confidence`, `descriptors` et `uses` d'une entrée.
@@ -277,38 +178,6 @@ export function controlerEntreeArome(doc) {
     r("hop_name", "texte de 1 à 120 caractères attendu");
   }
   erreurs.push(...reglesContenu(d));
-  erreurs.push(...reglesRelectureProvenance(doc.id, d, "identifiant du houblon attendu"));
-  return erreurs;
-}
-
-/// Règles de `reviewed`, `reviewed_at`, `input_sha256` et `provenance` d'une entrée [d]
-/// d'identifiant [id] ; [attenduSource] : message d'un `source_id` différent de [id].
-export function reglesRelectureProvenance(id, d, attenduSource) {
-  const erreurs = [];
-  const r = (chemin, regle) => erreurs.push(`${chemin} : ${regle}`);
-  if (typeof d.reviewed !== "boolean") r("reviewed", "booléen attendu");
-  if (d.reviewed === true && !estDate(d.reviewed_at)) {
-    r("reviewed_at", "date AAAA-MM-JJ attendue pour une entrée relue");
-  }
-  if (d.reviewed === false && "reviewed_at" in d) r("reviewed_at", "absente attendue si non relue");
-  if (!/^[0-9a-f]{64}$/.test(d.input_sha256 ?? "")) r("input_sha256", "64 hexadécimaux attendus");
-  const p = d.provenance;
-  if (!Array.isArray(p) || p.length !== 1 || !estObjet(p[0])) {
-    r("provenance", "une ligne attendue");
-  } else {
-    const l = p[0];
-    const cles = ["source", "source_id", "version", "licence", "retrieved"];
-    if (Object.keys(l).sort().join(",") !== [...cles].sort().join(",")) {
-      r("provenance[0]", "clés source, source_id, version, licence, retrieved attendues");
-    } else {
-      if (l.source !== SOURCE_PROVENANCE) r("provenance[0].source", `${SOURCE_PROVENANCE} attendu`);
-      if (l.source_id !== id) r("provenance[0].source_id", attenduSource);
-      if (typeof l.version !== "string" || !VERSION.test(l.version)) {
-        r("provenance[0].version", "« <modèle> / prompt <n> / effort <e> » attendu");
-      }
-      if (l.licence !== LICENCE_PROVENANCE) r("provenance[0].licence", "licence attendue");
-      if (!estDate(l.retrieved)) r("provenance[0].retrieved", "date AAAA-MM-JJ attendue");
-    }
-  }
+  erreurs.push(...reglesEnveloppe(doc, "houblon"));
   return erreurs;
 }

@@ -6,6 +6,17 @@
   référence, exception à P20 limitée à un texte généré ; amende ADR-014 : `--supprimer-absents`
   accepte `beer_culture_aromas` ; ouvre le poste de coût `culture_aroma_generation` ; relève pour
   un temps la limite de dépense commune d'ADR-013 et ADR-016)
+- **Amendé par** : ADR-019 (2026-11-21) : moteur commun `ingest/lib/redaction/` et tarif commun.
+- **Note du 2026-11-22 (ADR-019, lot R2 fait, v0.2.12)** : les levures sont une nature du moteur
+  commun, dans `ingest/lib/levures/` (`nature.mjs`, `prompt.mjs`, `validation.mjs`,
+  `descripteurs.json`, tirés de `ingest/lib/aromes/natures/culture.mjs` et
+  `descripteurs-levures.json`, retirés). Prompt, `PROMPT_VERSION_LEVURES`, descripteurs, données
+  envoyées, périmètre, poste et `--max` 1 000 inchangés ; empreinte figée par un test sur la
+  valeur du code de la v0.2.0 ; `--suivre` relit un lot écrit par l'ancien moteur. Le tarif se
+  lit dans `import/ingest/tarif.json` (section 6 amendée) ; `import/ingest/aromes/tarif.json`
+  seul est refusé sans repli. Les textes passent aux règles communes (NFC, catégorie Unicode Cf
+  retirée, contrôle sur la forme NFKC). Commandes de `generer-aromes.mjs --nature culture`
+  inchangées.
 
 Décision de l'utilisateur du 2026-11-21, relayée par la session principale : il accepte de
 relever la limite de 20 $ par mois de l'espace de travail Kass'Beer de la Console Anthropic si

@@ -80,6 +80,7 @@ class AppShell extends ConsumerWidget {
     this.backTo,
     this.backByPop = false,
     this.fullWidth = false,
+    this.retourParPop = false,
     required this.child,
   });
 
@@ -99,6 +100,10 @@ class AppShell extends ConsumerWidget {
   /// Contenu sur toute la largeur, sans la borne de [kContentMaxWidth] (liste et
   /// fiche côte à côte).
   final bool fullWidth;
+
+  /// Vrai : le bouton retour dépile la page (`pop`) quand une page est
+  /// dessous, au lieu d'ouvrir [backTo] ([PageDeCoquille.retourParPopPermis]).
+  final bool retourParPop;
   final Widget child;
 
   @override
@@ -122,7 +127,8 @@ class AppShell extends ConsumerWidget {
       context.go(path);
     }
 
-    /// Dépile la page, après la même confirmation.
+    /// Dépile la page et revient à celle qui l'a ouverte, après la même
+    /// confirmation.
     Future<void> depiler() async {
       if (!await garde.peutQuitter() || !context.mounted) return;
       context.pop();
@@ -135,8 +141,11 @@ class AppShell extends ConsumerWidget {
       leading: back == null
           ? null
           : BackButton(
-              onPressed: () =>
-                  unawaited(backByPop ? depiler() : quitterVers(back)),
+              onPressed: () => unawaited(
+                backByPop || (retourParPop && context.canPop())
+                    ? depiler()
+                    : quitterVers(back),
+              ),
             ),
       automaticallyImplyLeading: false,
       actions: [

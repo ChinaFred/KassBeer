@@ -275,6 +275,76 @@ Map<String, dynamic> hopAromaUnknownDoc() => {
   'content_sha256': 'cd' * 32,
 };
 
+/// `beer_miscs/misc-mousse-irlandaise` : divers inventé.
+Map<String, dynamic> miscDoc() => {
+  'name': 'Mousse irlandaise',
+  'aliases': ['Algue clarifiante'],
+  'label_fr': 'Mousse d\'Irlande',
+  'type': 'fining',
+  'provenance': [provenance(source: 'brewtarget-004')],
+  'content_sha256': '02' * 32,
+};
+
+/// Textes inventés d'une description de divers (ADR-018), de 40 à 300
+/// caractères pour le résumé, 40 à 400 pour les autres ; aucune dose.
+const kTexteResume =
+    'Algue séchée qui aide les protéines à se déposer pour un moût plus clair.';
+const kTexteEbullition =
+    'Ajoutée en fin d\'ébullition, elle a le temps de se dissoudre et d\'agir.';
+const kTexteFermentation =
+    'En fermentation, elle aide encore la bière à s\'éclaircir avant le soutirage.';
+const kTexteGout =
+    'Une légère note iodée peut se sentir quand la bière est très peu houblonnée.';
+
+/// `beer_misc_descriptions/misc-mousse-irlandaise`, `described`, champ du document
+/// `reviewed: true`, sans effet sur le goût. [moments] remplace la map des
+/// moments ; [extra] ajoute ou remplace des champs.
+Map<String, dynamic> miscDescriptionDoc({
+  Map<String, Object?>? moments,
+  Map<String, Object?> extra = const {},
+}) => {
+  'misc_name': 'Mousse irlandaise',
+  'status': 'described',
+  'confidence': 'high',
+  'summary': kTexteResume,
+  'roles': [
+    {'key': 'clarify', 'label': 'Clarifier'},
+    {'key': 'other', 'label': 'Autre usage'},
+  ],
+  'moments':
+      moments ??
+      {
+        'fermentation': {'text': kTexteFermentation},
+        'boil': {'text': kTexteEbullition},
+      },
+  'changes_taste': false,
+  'reviewed': true,
+  'reviewed_at': '2026-11-21',
+  'provenance': [
+    {
+      'source': 'claude-api',
+      'source_id': 'misc-mousse-irlandaise',
+      'version': 'claude-fable-5-2 / prompt 2 / effort medium',
+      'licence': 'Texte généré pour Kass\'Beer',
+      'retrieved': '2026-11-21',
+    },
+  ],
+  'input_sha256': 'ab' * 32,
+  'content_sha256': 'cd' * 32,
+  ...extra,
+};
+
+/// `beer_misc_descriptions/{id}` en `unknown`, champ du document `reviewed: false`.
+Map<String, dynamic> miscDescriptionUnknownDoc() => {
+  'misc_name': 'Ajout doré',
+  'status': 'unknown',
+  'roles': <Object>[],
+  'moments': <String, Object>{},
+  'reviewed': false,
+  'input_sha256': 'ab' * 32,
+  'content_sha256': 'cd' * 32,
+};
+
 /// `beer_cultures/culture-levure-fictive`, levure inventée. [temperature] :
 /// `temperature_range` ; `null` : plage absente.
 Map<String, dynamic> cultureDoc({

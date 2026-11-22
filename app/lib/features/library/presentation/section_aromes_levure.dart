@@ -14,9 +14,10 @@ import '../domain/aromes_levure.dart';
 import '../domain/referentiel.dart';
 import 'library_providers.dart';
 import 'section_aromes.dart';
+import 'texte_redige.dart';
 
 /// Textes propres à la section « Arômes » de la fiche d'une levure (ADR-017) ;
-/// les autres sont ceux de [TextesAromes].
+/// les autres sont ceux de [TextesAromes] et de [TextesRediges].
 abstract final class TextesAromesLevure {
   static const inconnu = 'Aucune description : levure trop peu documentée.';
   static const profil = 'Profil';
@@ -53,7 +54,8 @@ class SectionAromesLevure extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return CadreAromes<AromesLevure>(
+    return CadreTexteRedige<AromesLevure>(
+      textes: TextesAromes.cadre,
       async: ref.watch(aromesLevureProvider(id)),
       offline: ref.watch(grantedAccessProvider)?.offline ?? false,
       onRetry: () => ref.invalidate(aromesLevureProvider(id)),
@@ -72,14 +74,17 @@ class SectionAromesLevure extends ConsumerWidget {
     );
     return switch (aromes) {
       AromesLevureInconnus() => const [
-        MentionAromes(),
+        MentionTexteRedige(),
         TexteAbsent(TextesAromesLevure.inconnu),
       ],
       AromesLevureDecrits() => [
-        const MentionAromes(),
+        const MentionTexteRedige(),
         if (aromes.confiance == ConfianceArome.faible)
-          const ConfianceFaibleAromes(),
-        DescripteursAromes(descripteurs: aromes.descripteurs),
+          const EtiquetteConfianceFaible(),
+        EtiquettesRedigees(
+          titre: TextesAromes.descripteurs,
+          libelles: [for (final d in aromes.descripteurs) d.label],
+        ),
         texte(TextesAromesLevure.profil, aromes.profil),
         if (aromes.basDePlage case final bas?)
           texte(TextesAromesLevure.basDePlage(temperature?.minimum), bas),

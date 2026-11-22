@@ -1,0 +1,6 @@
+{
+  "format": "kassbeer_divers_recettes",
+  "version": 1,
+  "resolus": [{ "id": "misc-epice-fictive", "noms": ["Épice Fictive"] }],
+  "non_resolus": []
+}

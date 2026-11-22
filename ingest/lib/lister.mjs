@@ -1,9 +1,10 @@
 // Liste des noms d'ingrédients des recettes du groupe, en lecture seule : houblons
-// (--nature hop, ADR-013, décisions 9 et 10) ou levures (--nature culture, ADR-017). Lit
-// recipes/*.recipe.ingredients.<liste>[].name et
-// brews/*.recipe_snapshot.recipe.ingredients.<liste>[].name (hop_additions ou
-// culture_additions), et n'écrit que les noms, triés et sans doublon, dans
-// import/ingest/aromes/noms-houblons.json ou import/ingest/aromes/levures/noms-levures.json.
+// (--nature hop, ADR-013, décisions 9 et 10), levures (--nature culture, ADR-017) ou divers
+// (--nature misc, ADR-018 ; ADR-019). Lit recipes/*.recipe.ingredients.<liste>[].name et
+// brews/*.recipe_snapshot.recipe.ingredients.<liste>[].name (hop_additions,
+// culture_additions ou miscellaneous_additions), et n'écrit que les noms, triés et sans
+// doublon, dans import/ingest/aromes/noms-houblons.json,
+// import/ingest/aromes/levures/noms-levures.json ou import/ingest/divers/noms-divers.json.
 // Aucun identifiant de recette, de brassin ni de membre, aucune quantité ni prix ne sort.
 // Aucune écriture dans Firestore. Mêmes garde-fous que ecrire.mjs (émulateur par défaut,
 // production sur option, ADC d'un compte utilisateur, saisie du nom du projet).
@@ -35,6 +36,11 @@ export const NATURES_LISTE = {
     ),
     format: "kassbeer_noms_levures",
   },
+  misc: {
+    liste: "miscellaneous_additions",
+    fichier: fileURLToPath(new URL("../../import/ingest/divers/noms-divers.json", import.meta.url)),
+    format: "kassbeer_noms_divers",
+  },
 };
 
 /// Longueur maximale d'un nom gardé (borne de `name` dans les règles).
@@ -54,8 +60,8 @@ export function ajouterNoms(lignes, noms) {
 }
 
 /// Lit [argv] : options de ecrire.mjs pour la cible (--production --projet kassbeer), plus
-/// --nature hop|culture (hop par défaut) et --sortie <fichier>. --simulation, --dossier,
-/// --rapports, --aromes et --supprimer-absents sont refusés.
+/// --nature hop|culture|misc (hop par défaut) et --sortie <fichier>. --simulation, --dossier,
+/// --rapports, --aromes, --divers et --supprimer-absents sont refusés.
 export function lireOptionsLister(argv, env) {
   const reste = [];
   let sortie = null;
@@ -64,7 +70,7 @@ export function lireOptionsLister(argv, env) {
     if (argv[i] === "--nature") {
       nature = argv[++i];
       if (!(nature in NATURES_LISTE)) {
-        throw new ErreurOptions(`--nature : ${Object.keys(NATURES_LISTE).join(" ou ")}.`);
+        throw new ErreurOptions(`--nature : ${Object.keys(NATURES_LISTE).join(", ")}.`);
       }
     } else if (argv[i] === "--sortie") {
       sortie = argv[++i];
@@ -72,9 +78,14 @@ export function lireOptionsLister(argv, env) {
         throw new ErreurOptions("--sortie demande une valeur.");
       }
     } else if (
-      ["--simulation", "--dossier", "--rapports", "--aromes", "--supprimer-absents"].includes(
-        argv[i],
-      )
+      [
+        "--simulation",
+        "--dossier",
+        "--rapports",
+        "--aromes",
+        "--divers",
+        "--supprimer-absents",
+      ].includes(argv[i])
     ) {
       throw new ErreurOptions(`Option inconnue : ${argv[i]} (lecture seule, rien n'est écrit).`);
     } else {

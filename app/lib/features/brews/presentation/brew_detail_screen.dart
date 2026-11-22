@@ -33,6 +33,7 @@ import '../../brew_day/presentation/mesure_form.dart';
 import '../../costs/data/figeage_embouteillage.dart';
 import '../../costs/presentation/bloc_cout_brassin.dart';
 import '../../costs/presentation/costs_providers.dart';
+import '../../library/presentation/lien_bibliotheque.dart';
 import '../../processes/domain/modele_processus.dart';
 import '../../processes/presentation/processes_providers.dart';
 import '../../recipes/domain/recipe.dart';
@@ -1046,6 +1047,7 @@ class _BrewDetailScreenState extends ConsumerState<BrewDetailScreen> {
               content: content,
               hopIbu: hopIbu,
               niveauTitres: NiveauTitre.sousSection,
+              ligneIngredient: ligneVersBibliotheque,
             ),
           ],
           general: [
