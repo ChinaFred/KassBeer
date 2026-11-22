@@ -18,6 +18,11 @@
  *    `in_progress` ; état « PR prête » de chaque ticket `in_progress` (30 au plus), liste
  *    des PR ouvertes lue une fois et partagée.
  *
+ * File des livraisons (ADR-008, amendement du 2026-11-22) : la passe rattrape le relevé des
+ * comptes rendus (étape 3, `writeDeliveryReports` pose `delivery_last.reported_at`), mais ne
+ * fait partir aucune livraison : `startQueuedDelivery` seule (P46). Elle ne monte aucun secret
+ * de routine.
+ *
  * Avant tout, sans GitHub : `ticket_status/launches` remis au jour de Paris (T4).
  *
  * Depuis T7 (ADR-008), la passe ne relance aucun envoi et ne reprend aucune décision :

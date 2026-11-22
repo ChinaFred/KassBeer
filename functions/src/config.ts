@@ -43,9 +43,11 @@ export const GITHUB_WEBHOOK_SECRET = defineSecret("GITHUB_WEBHOOK_SECRET");
 /**
  * Routines Claude Code des tickets (ADR-008, T4, P35) : identifiant (`trig_…`) et jeton de
  * déclenchement de chaque routine, créés sur claude.ai/code. Chaque paire est montée par les
- * seules callables qui la lisent (P25) : l'analyse par `launchTicketAnalysis` ; le
- * développement par `launchTicketDevelopment` (développement et reprise) et
- * `launchTicketDelivery`, la livraison partant par la routine de développement (T5). Vides :
+ * seules fonctions qui la lisent (P25) : l'analyse par `launchTicketAnalysis` ; le
+ * développement par `launchTicketDevelopment` (développement et reprise),
+ * `launchTicketDelivery` et la tâche `startQueuedDelivery` (départ de la file des
+ * livraisons, amendement du 2026-11-22), la livraison partant par la routine de
+ * développement (T5). Jamais par `githubTicketWebhook` ni `syncTickets`. Vides :
  * « Lancement non configuré », rien ne part.
  */
 export const TICKETS_ROUTINE_ANALYSIS_ID = defineSecret("TICKETS_ROUTINE_ANALYSIS_ID");
@@ -115,6 +117,13 @@ export const LAUNCHES_PER_DAY = 10;
  */
 export const FOUNDER_LAUNCHES_PER_DAY = 5 * LAUNCHES_PER_DAY;
 
+/**
+ * Entrées au plus de la file des livraisons, `ticket_status/launches.delivery_queue`
+ * (ADR-008, amendement du 2026-11-22, décision 5 ; P44). Seul endroit où elle est écrite :
+ * le client lit le refus `delivery_queue_full`. Un accord n'a pas de durée de validité.
+ */
+export const DELIVERY_QUEUE_MAX = 10;
+
 /** Plafonds du jour de Paris (ADR-006, décision 7) ; l'administrateur n'est pas compté. */
 export const MEMBER_DAILY_LIMIT = 5;
 export const GROUP_DAILY_LIMIT = 20;
@@ -158,6 +167,7 @@ export const QUERYABLE_FUNCTIONS = [
   "launchTicketAnalysis",
   "launchTicketDevelopment",
   "launchTicketDelivery",
+  "startQueuedDelivery",
   "attachTicketScreenshot",
   "queryLogs",
   "saveAiSettings",

@@ -561,3 +561,46 @@ describe("retryTicketSend (P53)", () => {
     await assert.rejects(retry(fakeGithub()), rejectsWith("not-found", "ticket_missing"));
   });
 });
+
+describe("callables de décision : file des livraisons (amendement du 2026-11-22)", () => {
+  for (const [action, code] of [
+    ["refuse", "delivery_queue_refused"],
+    ["close", "delivery_queue_closed"],
+  ] as const) {
+    it(`${action} : le ticket sort de la file dans la transaction qui applique la décision`, async () => {
+      seedTicket({
+        status: "in_progress",
+        validated_by_app_at: Timestamp.fromMillis(Date.now() - 3_600_000),
+        allowed_decisions: allowedDecisions("in_progress", true),
+      });
+      const entry = (id: string) => ({
+        ticket_id: id,
+        issue_number: 12,
+        pr_number: 34,
+        head_sha: "a".repeat(40),
+        queued_at: Timestamp.fromMillis(Date.now() - 60_000),
+        by_uid: "admin-uid",
+        by_email: "admin@example.com",
+      });
+      db.seed("ticket_status/launches", { delivery_queue: [entry("t-1"), entry("t-2")] });
+      const out = await decide(action, { ticketId: "t-1", text: TEXT }, fakeGithub());
+      assert.equal(out.changed, true);
+      const queue = db.read("ticket_status/launches")?.delivery_queue as Record<string, unknown>[];
+      assert.deepEqual(
+        queue.map((e) => e.ticket_id),
+        ["t-2"],
+      );
+      const exit = db.read("tickets/t-1/admin/delivery")?.queue_exit as Record<string, unknown>;
+      assert.equal(exit.code, code);
+      assert.ok(exit.at instanceof Timestamp);
+    });
+  }
+
+  it("validate : la file ne change pas", async () => {
+    seedTicket({ status: "analyzed", allowed_decisions: allowedDecisions("analyzed") });
+    db.seed("ticket_status/launches", { delivery_queue: [{ ticket_id: "t-1" }] });
+    await decide("validate", { ticketId: "t-1" }, fakeGithub({ labels: ["source:app"] }));
+    assert.equal((db.read("ticket_status/launches")?.delivery_queue as unknown[]).length, 1);
+    assert.equal(db.read("tickets/t-1/admin/delivery"), undefined);
+  });
+});

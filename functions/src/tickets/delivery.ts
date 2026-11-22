@@ -17,8 +17,14 @@
  *   (`SENSITIVE_DELIVERY_PATTERNS`) et comparée au bloc L3 du prompt par
  *   `functions/test/prompts.test.ts`.
  *
- * `tickets/{id}/admin/delivery` (P45) et `ticket_status/launches.delivery_running` (P44) sont
- * écrits par le serveur seul et lus par l'administrateur seul. Aucun titre ni corps de PR n'y
+ * - file des livraisons (amendement du 2026-11-22, P44) : `delivery_queue` (entrées dans l'ordre
+ *   des accords, `DELIVERY_QUEUE_MAX` au plus) et `delivery_last` (dernière livraison lancée,
+ *   `reported_at` posé au relevé de son compte rendu) ; un blocage relevé vide la file ; chaque
+ *   sortie de file est notée dans `admin/delivery.queue_exit` (`code`, `at`).
+ *
+ * `tickets/{id}/admin/delivery` (P45) et `ticket_status/launches.delivery_running`,
+ * `delivery_queue` et `delivery_last` (P44) sont écrits par le serveur seul et lus par
+ * l'administrateur seul. Aucun titre ni corps de PR n'y
  * est écrit (P24). Le serveur n'écrit rien sur GitHub pour une livraison.
  *
  * Les fonctions qui lisent ou écrivent reçoivent le client Firestore (`kit`) et le client
@@ -30,6 +36,7 @@ import type { Transaction } from "firebase-admin/firestore";
 import {
   COLL_TICKET_STATUS,
   COLL_TICKETS,
+  DELIVERY_QUEUE_MAX,
   GITHUB_MAINTAINER_ID,
   GITHUB_REPO_FULL_NAME,
   TICKET_ADMIN_SUBCOLLECTION,
@@ -577,6 +584,152 @@ export function blockageReleasesLock(
   return blockedAtMs > lock.launchedAtMs;
 }
 
+// ── File des livraisons (P44, amendement du 2026-11-22) ─────────────────────
+
+/** Une entrée de `ticket_status/launches.delivery_queue`, lue sans supposer sa forme. */
+export interface DeliveryQueueEntryView {
+  ticketId: string;
+  issueNumber: number | null;
+  prNumber: number | null;
+  headSha: string | null;
+  queuedAtMs: number | null;
+  byUid: string | null;
+  byEmail: string | null;
+}
+
+/** La file lue : entrées brutes (réécrites telles quelles) et leur lecture, dans l'ordre. */
+export interface DeliveryQueueRead {
+  raw: Record<string, unknown>[];
+  views: DeliveryQueueEntryView[];
+}
+
+/**
+ * La file lue. Une entrée qui n'est pas un objet, ou dont `ticket_id` n'est pas un
+ * identifiant de document, est écartée : elle sort à la prochaine réécriture. Pure.
+ */
+export function readDeliveryQueue(
+  raw: unknown,
+  toMillis: (v: unknown) => number | null,
+): DeliveryQueueRead {
+  const out: DeliveryQueueRead = { raw: [], views: [] };
+  if (!Array.isArray(raw)) return out;
+  const int = (v: unknown) =>
+    typeof v === "number" && Number.isSafeInteger(v) && v > 0 ? v : null;
+  const text = (v: unknown) => (typeof v === "string" && v.length > 0 ? v : null);
+  for (const e of raw) {
+    if (e === null || typeof e !== "object" || Array.isArray(e)) continue;
+    const r = e as Record<string, unknown>;
+    const ticketId = text(r.ticket_id);
+    if (ticketId === null || !/^[A-Za-z0-9_-]{1,128}$/.test(ticketId)) continue;
+    out.raw.push(r);
+    out.views.push({
+      ticketId,
+      issueNumber: int(r.issue_number),
+      prNumber: int(r.pr_number),
+      headSha: text(r.head_sha),
+      queuedAtMs: toMillis(r.queued_at),
+      byUid: text(r.by_uid),
+      byEmail: text(r.by_email),
+    });
+  }
+  return out;
+}
+
+/** `ticket_status/launches.delivery_last`, lu sans supposer sa forme. */
+export interface DeliveryLastView {
+  ticketId: string;
+  issueNumber: number | null;
+  launchedAtMs: number | null;
+  retryAfterMs: number | null;
+  reportedAtMs: number | null;
+}
+
+/** La dernière livraison lancée, ou `null` si absente ou illisible. Pure. */
+export function readDeliveryLast(
+  raw: unknown,
+  toMillis: (v: unknown) => number | null,
+): DeliveryLastView | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.ticket_id !== "string" || r.ticket_id.length === 0) return null;
+  return {
+    ticketId: r.ticket_id,
+    issueNumber:
+      typeof r.issue_number === "number" && Number.isSafeInteger(r.issue_number)
+        ? r.issue_number
+        : null,
+    launchedAtMs: toMillis(r.launched_at),
+    retryAfterMs: toMillis(r.retry_after),
+    reportedAtMs: toMillis(r.reported_at),
+  };
+}
+
+/**
+ * Condition de fin de la livraison précédente (point 7) : `delivery_last` absent, compte rendu
+ * relevé (`reported_at`), ou échéance passée. Une échéance illisible ne bloque pas. Pure.
+ */
+export function deliveryLastFinished(last: DeliveryLastView | null, nowMs: number): boolean {
+  if (last === null || last.reportedAtMs !== null) return true;
+  return last.retryAfterMs === null || last.retryAfterMs <= nowMs;
+}
+
+/** Pourquoi `startQueuedDelivery` s'arrête sans autre lecture (point 8). */
+export type DeliveryQueueStop = "empty" | "lock_held" | "awaiting_report" | "routine_invalid";
+
+/**
+ * Lecture de `ticket_status/launches` seule : la tête de file à tenter, ou la raison de
+ * s'arrêter (file vide, verrou tenu, compte rendu attendu, jeton de la routine de développement
+ * refusé). Pure.
+ */
+export function deliveryQueueDeparture(
+  status: Record<string, unknown>,
+  nowMs: number,
+  toMillis: (v: unknown) => number | null,
+): { stop: DeliveryQueueStop } | { head: DeliveryQueueEntryView } {
+  const queue = readDeliveryQueue(status.delivery_queue, toMillis);
+  if (queue.views.length === 0) return { stop: "empty" };
+  if (deliveryLockHeld(readDeliveryLock(status.delivery_running, toMillis), nowMs)) {
+    return { stop: "lock_held" };
+  }
+  if (!deliveryLastFinished(readDeliveryLast(status.delivery_last, toMillis), nowMs)) {
+    return { stop: "awaiting_report" };
+  }
+  const invalid = status.development_invalid_since;
+  if (invalid !== null && invalid !== undefined) return { stop: "routine_invalid" };
+  return { head: queue.views[0] };
+}
+
+/** Codes de sortie de file notés dans `admin/delivery.queue_exit.code` (P45). */
+export const QUEUE_EXIT_REMOVED = "delivery_queue_removed";
+export const QUEUE_EXIT_CLEARED = "delivery_queue_cleared_after_blockage";
+export const QUEUE_EXIT_HEAD_CHANGED = "delivery_queue_head_changed";
+export const QUEUE_EXIT_NOT_ADMIN = "delivery_queue_not_admin";
+export const QUEUE_EXIT_RELAUNCHED = "delivery_queue_relaunched";
+export const QUEUE_EXIT_REFUSED = "delivery_queue_refused";
+export const QUEUE_EXIT_CLOSED = "delivery_queue_closed";
+export const QUEUE_EXIT_LEFT_IN_PROGRESS = "delivery_queue_left_in_progress";
+
+/** Le verrou et la dernière livraison écrits ensemble à chaque prise du verrou (P44). */
+export function deliveryLockFields(
+  kit: Pick<FirestoreKit, "Timestamp">,
+  ticketId: string,
+  issueNumber: number,
+  launchedAtMs: number,
+): { delivery_running: Record<string, unknown>; delivery_last: Record<string, unknown> } {
+  const launched_at = kit.Timestamp.fromMillis(launchedAtMs);
+  const retry_after = kit.Timestamp.fromMillis(launchedAtMs + LAUNCH_RETRY_MS.livraison);
+  return {
+    delivery_running: { ticket_id: ticketId, issue_number: issueNumber, launched_at, retry_after },
+    delivery_last: {
+      ticket_id: ticketId,
+      issue_number: issueNumber,
+      launched_at,
+      retry_after,
+      reported_at: null,
+    },
+  };
+}
+
 // ── Firestore ───────────────────────────────────────────────────────────────
 
 function ticketRef(kit: FirestoreKit, ticketId: string) {
@@ -666,6 +819,60 @@ async function closeDeliveryEntries(
       (v) => v.action === "livraison",
     ),
   );
+}
+
+/**
+ * Dans une transaction qui a déjà lu `ticket_status/launches` (`status`) : retire `ticketId` de
+ * la file et note `queue_exit` (`code`, `at`) dans son `admin/delivery`. Aucune lecture : à
+ * appeler après les lectures de la transaction. Rend vrai si le ticket était en file.
+ */
+export function dequeueInTransaction(
+  tx: Transaction,
+  kit: FirestoreKit,
+  status: Record<string, unknown> | undefined,
+  ticketId: string,
+  code: string,
+  nowMs: number,
+): boolean {
+  const queue = readDeliveryQueue(status?.delivery_queue, millisOf(kit));
+  const index = queue.views.findIndex((v) => v.ticketId === ticketId);
+  if (index < 0) return false;
+  tx.set(
+    statusRef(kit),
+    { delivery_queue: queue.raw.filter((_, i) => i !== index) },
+    { merge: true },
+  );
+  tx.set(
+    deliveryRef(kit, ticketId),
+    { queue_exit: { code, at: kit.Timestamp.fromMillis(nowMs) } },
+    { merge: true },
+  );
+  return true;
+}
+
+/**
+ * Note `queue_exit` hors transaction, pour une entrée déjà retirée de la file (départ refusé
+ * après le retrait). Au mieux, journalisé.
+ */
+export async function writeQueueExit(
+  kit: FirestoreKit,
+  ticketId: string,
+  code: string,
+  nowMs: number,
+): Promise<void> {
+  try {
+    await deliveryRef(kit, ticketId).set(
+      { queue_exit: { code, at: kit.Timestamp.fromMillis(nowMs) } },
+      { merge: true },
+    );
+  } catch (err) {
+    logError({
+      message: `Tickets : sortie de file (${code}) non notée`,
+      feature: "tickets",
+      ticketId,
+      error: err,
+    });
+  }
 }
 
 /** Écrit l'état « PR prête » (fusion : les comptes rendus restent). Lève sur une panne. */
@@ -851,9 +1058,11 @@ export async function refreshDeliveryFromRun(
  * Réécrit `reports` de `admin/delivery` depuis les commentaires de l'Issue (P45). Le document
  * n'est créé que s'il y a un compte rendu. Un blocage relevé, postérieur au lancement :
  * verrou libéré s'il porte ce ticket (P44), et dernière entrée `livraison` lancée avant le
- * blocage marquée `ended_by: "blocked"`, son `retry_after` ramené à l'heure du relevé. Une
- * transaction. Rend le nombre de comptes
- * rendus. Lève sur une panne Firestore ; l'appelant journalise.
+ * blocage marquée `ended_by: "blocked"`, son `retry_after` ramené à l'heure du relevé. Sur le
+ * ticket de `delivery_last`, un premier compte rendu postérieur à `launched_at` pose
+ * `reported_at` ; si c'est un blocage, la file est vidée et chaque entrée sort avec
+ * `delivery_queue_cleared_after_blockage` (décision 3). Une transaction. Rend le nombre de
+ * comptes rendus. Lève sur une panne Firestore ; l'appelant journalise.
  */
 export async function writeDeliveryReports(
   kit: FirestoreKit,
@@ -864,17 +1073,52 @@ export async function writeDeliveryReports(
   const reports = deliveryReportsFromComments(comments, GITHUB_MAINTAINER_ID);
   const blockedAtMs = lastBlockedAtMs(reports);
   const ref = deliveryRef(kit, ticketId);
-  const released = await kit.db.runTransaction(async (tx) => {
+  const ms = millisOf(kit);
+  const outcome = await kit.db.runTransaction(async (tx) => {
     const [current, status] = await Promise.all([tx.get(ref), tx.get(statusRef(kit))]);
     const closeEntries =
       blockedAtMs === null
         ? null
         : await rewriteDeliveryEntries(tx, kit, ticketId, (entries, views) =>
-            blockedDeliveryEntries(entries, views, blockedAtMs, nowMs, (ms) =>
-              kit.Timestamp.fromMillis(ms),
+            blockedDeliveryEntries(entries, views, blockedAtMs, nowMs, (at) =>
+              kit.Timestamp.fromMillis(at),
             ),
           );
-    if (reports.length === 0 && !current.exists) return false;
+    if (reports.length === 0 && !current.exists) return { released: false, cleared: 0 };
+    const statusPatch: Record<string, unknown> = {};
+    const lock = readDeliveryLock(status.get("delivery_running"), ms);
+    const released = blockageReleasesLock(lock, ticketId, blockedAtMs);
+    if (released) statusPatch.delivery_running = null;
+    // Compte rendu de la dernière livraison lancée (point 7).
+    const last = readDeliveryLast(status.get("delivery_last"), ms);
+    const launchedAtMs = last?.launchedAtMs ?? null;
+    const after =
+      last !== null &&
+      last.ticketId === ticketId &&
+      last.reportedAtMs === null &&
+      launchedAtMs !== null
+        ? reports.filter((r) => r.created_at !== null && Date.parse(r.created_at) > launchedAtMs)
+        : [];
+    let ownExit: Record<string, unknown> | null = null;
+    let cleared = 0;
+    if (after.length > 0) {
+      statusPatch.delivery_last = {
+        ...(status.get("delivery_last") as Record<string, unknown>),
+        reported_at: kit.Timestamp.fromMillis(nowMs),
+      };
+      if (after.some((r) => r.kind === "blocked")) {
+        const queue = readDeliveryQueue(status.get("delivery_queue"), ms);
+        const exit = { code: QUEUE_EXIT_CLEARED, at: kit.Timestamp.fromMillis(nowMs) };
+        for (const v of queue.views) {
+          if (v.ticketId === ticketId) ownExit = exit;
+          else tx.set(deliveryRef(kit, v.ticketId), { queue_exit: exit }, { merge: true });
+        }
+        cleared = queue.views.length;
+        if (queue.raw.length > 0 || status.get("delivery_queue") !== undefined) {
+          statusPatch.delivery_queue = [];
+        }
+      }
+    }
     tx.set(
       ref,
       {
@@ -884,18 +1128,24 @@ export async function writeDeliveryReports(
           updated_at: timestampOrNull(kit, r.updated_at),
         })),
         reports_checked_at: kit.FieldValue.serverTimestamp(),
+        ...(ownExit !== null ? { queue_exit: ownExit } : {}),
       },
       { merge: true },
     );
     closeEntries?.();
-    const lock = readDeliveryLock(status.get("delivery_running"), millisOf(kit));
-    if (!blockageReleasesLock(lock, ticketId, blockedAtMs)) return false;
-    tx.set(statusRef(kit), { delivery_running: null }, { merge: true });
-    return true;
+    if (Object.keys(statusPatch).length > 0) tx.set(statusRef(kit), statusPatch, { merge: true });
+    return { released, cleared };
   });
-  if (released) {
+  if (outcome.released) {
     logInfo({
       message: "Tickets : verrou des livraisons libéré, blocage relevé",
+      feature: "tickets",
+      ticketId,
+    });
+  }
+  if (outcome.cleared > 0) {
+    logInfo({
+      message: `Tickets : file des livraisons vidée après un blocage (${outcome.cleared} entrée(s))`,
       feature: "tickets",
       ticketId,
     });
@@ -904,10 +1154,13 @@ export async function writeDeliveryReports(
 }
 
 /**
- * Prend le verrou des livraisons pour `ticketId`, en transaction. Refuse
- * (`delivery_running_elsewhere`, par `refuse`) si un autre ticket le tient encore : échéance
- * future et ticket verrouillé toujours `in_progress`. Un verrou du même ticket est écrasé :
- * la règle « en cours » du ticket a déjà décidé.
+ * Prend le verrou des livraisons pour `ticketId`, en transaction, et réécrit `delivery_last`
+ * (sans `reported_at`). Refuse (`delivery_running_elsewhere`, par `refuse`) si un autre ticket
+ * le tient encore : échéance future et ticket verrouillé toujours `in_progress`. Refuse
+ * (`delivery_queue_ahead`, par `refuseQueueAhead`) si la file n'est pas vide : les livraisons
+ * partent dans l'ordre des accords (point 5). Un verrou du même ticket est écrasé : la règle
+ * « en cours » du ticket a déjà décidé. Rend la valeur précédente de `delivery_last`, remise
+ * par `releaseDeliveryLock` si rien ne part.
  */
 export async function claimDeliveryLock(
   kit: FirestoreKit,
@@ -915,8 +1168,9 @@ export async function claimDeliveryLock(
   issueNumber: number,
   launchedAtMs: number,
   refuse: (message: string, otherTicketId: string) => Error,
-): Promise<void> {
-  await kit.db.runTransaction(async (tx) => {
+  refuseQueueAhead: (waiting: number) => Error,
+): Promise<{ previousLast: unknown }> {
+  return kit.db.runTransaction(async (tx) => {
     const snap = await tx.get(statusRef(kit));
     const lock = readDeliveryLock(snap.get("delivery_running"), millisOf(kit));
     if (lock !== null && lock.ticketId !== ticketId && deliveryLockHeld(lock, launchedAtMs)) {
@@ -930,37 +1184,41 @@ export async function claimDeliveryLock(
         );
       }
     }
-    tx.set(
-      statusRef(kit),
-      {
-        delivery_running: {
-          ticket_id: ticketId,
-          issue_number: issueNumber,
-          launched_at: kit.Timestamp.fromMillis(launchedAtMs),
-          retry_after: kit.Timestamp.fromMillis(launchedAtMs + LAUNCH_RETRY_MS.livraison),
-        },
-      },
-      { merge: true },
-    );
+    const waiting = readDeliveryQueue(snap.get("delivery_queue"), millisOf(kit)).views.length;
+    if (waiting > 0) throw refuseQueueAhead(waiting);
+    const previousLast = snap.get("delivery_last") ?? null;
+    tx.set(statusRef(kit), deliveryLockFields(kit, ticketId, issueNumber, launchedAtMs), {
+      merge: true,
+    });
+    return { previousLast };
   });
 }
 
 /**
  * Rend le verrou d'une livraison qui n'est pas partie (refus, panne avant l'appel, refus de
- * l'API) : seulement s'il porte encore ce ticket et ce lancement. Au mieux, journalisé : le
- * verrou expire seul à son échéance.
+ * l'API) : seulement s'il porte encore ce ticket et ce lancement. `delivery_last` reprend sa
+ * valeur précédente (`previousLast`) s'il est encore celui de ce lancement. Au mieux,
+ * journalisé : le verrou expire seul à son échéance.
  */
 export async function releaseDeliveryLock(
   kit: FirestoreKit,
   ticketId: string,
   launchedAtMs: number,
+  previousLast: unknown = null,
 ): Promise<void> {
   try {
     await kit.db.runTransaction(async (tx) => {
       const snap = await tx.get(statusRef(kit));
+      const patch: Record<string, unknown> = {};
       const lock = readDeliveryLock(snap.get("delivery_running"), millisOf(kit));
-      if (lock === null || lock.ticketId !== ticketId || lock.launchedAtMs !== launchedAtMs) return;
-      tx.set(statusRef(kit), { delivery_running: null }, { merge: true });
+      if (lock !== null && lock.ticketId === ticketId && lock.launchedAtMs === launchedAtMs) {
+        patch.delivery_running = null;
+      }
+      const last = readDeliveryLast(snap.get("delivery_last"), millisOf(kit));
+      if (last !== null && last.ticketId === ticketId && last.launchedAtMs === launchedAtMs) {
+        patch.delivery_last = previousLast;
+      }
+      if (Object.keys(patch).length > 0) tx.set(statusRef(kit), patch, { merge: true });
     });
   } catch (err) {
     logError({
@@ -972,11 +1230,131 @@ export async function releaseDeliveryLock(
   }
 }
 
+/** Ce que retient l'accord « Mettre en file » (point 3). */
+export interface DeliveryQueueRequest {
+  ticketId: string;
+  issueNumber: number;
+  prNumber: number;
+  headSha: string;
+  byUid: string;
+  /** E-mail en minuscules tiré du jeton vérifié, jamais d'un argument. */
+  byEmail: string;
+}
+
+/** Refus de la mise en file, dans l'ordre des contrôles (point 4). */
+export type DeliveryQueueRefusal = "already" | "running_here" | "full" | "lock_free";
+
+/**
+ * « Mettre en file » (point 4), en transaction sur `ticket_status/launches` : ticket absent de
+ * la file (`already`), qui ne tient pas le verrou (`running_here`), file non pleine
+ * (`DELIVERY_QUEUE_MAX`, `full`) ; verrou libre, livraison précédente finie et file vide :
+ * `lock_free` (« Livrer » suffit). Sinon l'entrée est ajoutée en fin de file. Rien n'est
+ * compté. Rend la position (à partir de 1) et la taille de la file.
+ */
+export async function enqueueDelivery(
+  kit: FirestoreKit,
+  request: DeliveryQueueRequest,
+  nowMs: number,
+  refuse: (kind: DeliveryQueueRefusal) => Error,
+): Promise<{ position: number; total: number }> {
+  return kit.db.runTransaction(async (tx) => {
+    const snap = await tx.get(statusRef(kit));
+    const ms = millisOf(kit);
+    const queue = readDeliveryQueue(snap.get("delivery_queue"), ms);
+    if (queue.views.some((v) => v.ticketId === request.ticketId)) throw refuse("already");
+    const lock = readDeliveryLock(snap.get("delivery_running"), ms);
+    const held = deliveryLockHeld(lock, nowMs);
+    if (held && lock?.ticketId === request.ticketId) throw refuse("running_here");
+    if (queue.views.length >= DELIVERY_QUEUE_MAX) throw refuse("full");
+    const finished = deliveryLastFinished(readDeliveryLast(snap.get("delivery_last"), ms), nowMs);
+    if (!held && finished && queue.views.length === 0) throw refuse("lock_free");
+    const entry = {
+      ticket_id: request.ticketId,
+      issue_number: request.issueNumber,
+      pr_number: request.prNumber,
+      head_sha: request.headSha,
+      queued_at: kit.Timestamp.fromMillis(nowMs),
+      by_uid: request.byUid,
+      by_email: request.byEmail,
+    };
+    tx.set(statusRef(kit), { delivery_queue: [...queue.raw, entry] }, { merge: true });
+    return { position: queue.raw.length + 1, total: queue.raw.length + 1 };
+  });
+}
+
+/**
+ * « Retirer de la file » (point 6) : entrée retirée en transaction, `queue_exit` noté avec
+ * `delivery_queue_removed`. Aucun appel à GitHub ni à la routine. Rend `false` si le ticket
+ * n'était pas en file.
+ */
+export async function unqueueDelivery(
+  kit: FirestoreKit,
+  ticketId: string,
+  nowMs: number,
+): Promise<boolean> {
+  return kit.db.runTransaction(async (tx) => {
+    const snap = await tx.get(statusRef(kit));
+    return dequeueInTransaction(tx, kit, snap.data(), ticketId, QUEUE_EXIT_REMOVED, nowMs);
+  });
+}
+
+/**
+ * Retire la tête de file si c'est encore `head` (même ticket, même `queued_at`) et note
+ * `queue_exit` (`code`). Rend vrai si retirée. Lève sur une panne Firestore.
+ */
+export async function dequeueHead(
+  kit: FirestoreKit,
+  head: DeliveryQueueEntryView,
+  code: string,
+  nowMs: number,
+): Promise<boolean> {
+  return kit.db.runTransaction(async (tx) => {
+    const snap = await tx.get(statusRef(kit));
+    const first = readDeliveryQueue(snap.get("delivery_queue"), millisOf(kit)).views[0];
+    if (first === undefined || !sameQueueEntry(first, head)) return false;
+    return dequeueInTransaction(tx, kit, snap.data(), head.ticketId, code, nowMs);
+  });
+}
+
+/**
+ * Remet en tête de file une entrée retirée au départ alors que rien n'est parti (panne
+ * passagère, refus passager de la routine). Absente seulement : une entrée déjà remise n'est
+ * pas doublée. La file peut dépasser `DELIVERY_QUEUE_MAX` d'une entrée dans ce seul cas. Au
+ * mieux, journalisé : l'accord est perdu et l'admin remet le ticket en file.
+ */
+export async function requeueHead(
+  kit: FirestoreKit,
+  rawEntry: Record<string, unknown>,
+  ticketId: string,
+): Promise<void> {
+  try {
+    await kit.db.runTransaction(async (tx) => {
+      const snap = await tx.get(statusRef(kit));
+      const queue = readDeliveryQueue(snap.get("delivery_queue"), millisOf(kit));
+      if (queue.views.some((v) => v.ticketId === ticketId)) return;
+      tx.set(statusRef(kit), { delivery_queue: [rawEntry, ...queue.raw] }, { merge: true });
+    });
+  } catch (err) {
+    logError({
+      message: "Tickets : entrée de la file des livraisons non remise en tête",
+      feature: "tickets",
+      ticketId,
+      error: err,
+    });
+  }
+}
+
+/** Vrai si deux entrées sont le même accord : même ticket, même `queued_at`. Pure. */
+export function sameQueueEntry(a: DeliveryQueueEntryView, b: DeliveryQueueEntryView): boolean {
+  return a.ticketId === b.ticketId && a.queuedAtMs !== null && a.queuedAtMs === b.queuedAtMs;
+}
+
 /**
  * Ticket sorti de `in_progress` (livré, refusé, clos, revenu en arrière) : le verrou qu'il
- * tient est libéré et ses entrées `livraison` en cours sont closes (P44, question 5 A). Avec
- * `ticketId` nul (passe horaire), le ticket verrouillé est relu et le verrou libéré s'il
- * n'est plus `in_progress`. Au mieux, journalisé.
+ * tient est libéré et ses entrées `livraison` en cours sont closes (P44, question 5 A) ; s'il
+ * est en file, il en sort (`delivery_queue_left_in_progress`). Avec `ticketId` nul (passe
+ * horaire), le ticket verrouillé est relu et le verrou libéré s'il n'est plus `in_progress`.
+ * Au mieux, journalisé.
  */
 export async function releaseDeliveryLockIfLeft(
   kit: FirestoreKit,
@@ -984,26 +1362,54 @@ export async function releaseDeliveryLockIfLeft(
   nowMs: number,
 ): Promise<void> {
   try {
-    const released = await kit.db.runTransaction(async (tx) => {
+    const outcome = await kit.db.runTransaction(async (tx) => {
       const snap = await tx.get(statusRef(kit));
+      const status = snap.data();
       const lock = readDeliveryLock(snap.get("delivery_running"), millisOf(kit));
-      if (lock === null || (ticketId !== null && lock.ticketId !== ticketId)) return null;
-      const lockedId = lock.ticketId as string;
-      if (!/^[A-Za-z0-9_-]{1,128}$/.test(lockedId)) return null;
-      const locked = await tx.get(ticketRef(kit, lockedId));
-      if (locked.exists && locked.get("status") === "in_progress") return null;
-      const closeEntries = locked.exists
-        ? await closeDeliveryEntries(tx, kit, lockedId, nowMs)
-        : null;
-      tx.set(statusRef(kit), { delivery_running: null }, { merge: true });
+      const lockedId =
+        lock !== null &&
+        (ticketId === null || lock.ticketId === ticketId) &&
+        /^[A-Za-z0-9_-]{1,128}$/.test(lock.ticketId as string)
+          ? (lock.ticketId as string)
+          : null;
+      const queuedId =
+        ticketId !== null &&
+        /^[A-Za-z0-9_-]{1,128}$/.test(ticketId) &&
+        readDeliveryQueue(snap.get("delivery_queue"), millisOf(kit)).views.some(
+          (v) => v.ticketId === ticketId,
+        )
+          ? ticketId
+          : null;
+      const targetId = lockedId ?? queuedId;
+      if (targetId === null) return { released: null, dequeued: false };
+      const target = await tx.get(ticketRef(kit, targetId));
+      if (target.exists && target.get("status") === "in_progress") {
+        return { released: null, dequeued: false };
+      }
+      const closeEntries =
+        lockedId !== null && target.exists
+          ? await closeDeliveryEntries(tx, kit, lockedId, nowMs)
+          : null;
+      const dequeued =
+        queuedId !== null &&
+        target.exists &&
+        dequeueInTransaction(tx, kit, status, queuedId, QUEUE_EXIT_LEFT_IN_PROGRESS, nowMs);
+      if (lockedId !== null) tx.set(statusRef(kit), { delivery_running: null }, { merge: true });
       closeEntries?.();
-      return lockedId;
+      return { released: lockedId, dequeued };
     });
-    if (released !== null) {
+    if (outcome.released !== null) {
       logInfo({
         message: "Tickets : verrou des livraisons libéré, ticket sorti de « En cours »",
         feature: "tickets",
-        ticketId: released,
+        ticketId: outcome.released,
+      });
+    }
+    if (outcome.dequeued) {
+      logInfo({
+        message: "Tickets : ticket sorti de la file des livraisons, sorti de « En cours »",
+        feature: "tickets",
+        ticketId: ticketId ?? undefined,
       });
     }
   } catch (err) {

@@ -2113,15 +2113,15 @@ texte de commentaire ne change un statut, une étiquette ou une adresse appelée
 ### `tickets/{ticketId}/admin/launches`
 
 Historique des lancements de sessions Claude Code sur le ticket (ADR-008, T4 et T5, P41). Écrit
-par `launchTicketAnalysis`, `launchTicketDevelopment`, `launchTicketDelivery` et
-`answerTicketAnalysis`, et par le relevé d'un blocage de livraison ou la sortie d'« En cours »
+par `launchTicketAnalysis`, `launchTicketDevelopment`, `launchTicketDelivery`,
+`startQueuedDelivery` et `answerTicketAnalysis`, et par le relevé d'un blocage de livraison ou la sortie d'« En cours »
 (`retry_after` ramené) ; lu par
 l'admin seul (même règle `match /admin/{docId}` que `analysis`). Rien de ce document n'est
 recopié dans `tickets/{id}`, que l'auteur lit.
 
 | Champ | Contenu |
 |---|---|
-| `entries` | liste de vingt entrées au plus, la plus récente en tête. Chaque entrée : `id` (UUID tiré par le serveur), `action` (`analyse`, `developpement`, `livraison` ou `reprise`), `state` (`unknown` écrit avant l'appel de la routine, puis `launched` ou `failed` ; reste `unknown` sans réponse, après un délai dépassé ou un 5xx), `at` (timestamp du lancement), `by_uid` (uid de l'admin qui a lancé), `retry_after` (timestamp : `at` + 1 h pour une analyse, + 3 h pour un développement, une reprise ou une livraison ; égal à `at` pour un `failed` ; ramené à l'heure de la réponse par « Répondre » ; pour une `livraison`, ramené à l'heure du relevé d'un `## Livraison — blocage` postérieur à `at`, ou de la sortie du ticket d'« En cours »), `ended_by` (facultatif, `livraison` seule : `blocked` sur la dernière livraison lancée avant un `## Livraison — blocage` relevé, même après son échéance ; le client choisit « s'est arrêtée » ou « n'a rien fusionné » d'après ce champ, sans comparer de dates), `session_url` (facultatif : adresse `https://claude.ai/…` rendue par l'API, 500 caractères au plus, toute autre forme écartée), `reason` (facultatif, 300 caractères au plus : message en français d'un échec ou d'un 5xx, jamais le jeton, l'identifiant de la routine ni le corps brut de la réponse) |
+| `entries` | liste de vingt entrées au plus, la plus récente en tête. Chaque entrée : `id` (UUID tiré par le serveur), `action` (`analyse`, `developpement`, `livraison` ou `reprise`), `state` (`unknown` écrit avant l'appel de la routine, puis `launched` ou `failed` ; reste `unknown` sans réponse, après un délai dépassé ou un 5xx), `at` (timestamp du lancement), `by_uid` (uid de l'admin qui a lancé), `retry_after` (timestamp : `at` + 1 h pour une analyse, + 3 h pour un développement, une reprise ou une livraison ; égal à `at` pour un `failed` ; ramené à l'heure de la réponse par « Répondre » ; pour une `livraison`, ramené à l'heure du relevé d'un `## Livraison — blocage` postérieur à `at`, ou de la sortie du ticket d'« En cours »), `ended_by` (facultatif, `livraison` seule : `blocked` sur la dernière livraison lancée avant un `## Livraison — blocage` relevé, même après son échéance ; le client choisit « s'est arrêtée » ou « n'a rien fusionné » d'après ce champ, sans comparer de dates), `queued` (facultatif, `livraison` seule : `true` pour une livraison partie de la file par `startQueuedDelivery`, `by_uid` étant alors l'auteur de l'accord), `session_url` (facultatif : adresse `https://claude.ai/…` rendue par l'API, 500 caractères au plus, toute autre forme écartée), `reason` (facultatif, 300 caractères au plus : message en français d'un échec ou d'un 5xx, jamais le jeton, l'identifiant de la routine ni le corps brut de la réponse) |
 | `updated_at` | timestamp de la dernière écriture |
 
 **Règle « en cours ».** Une entrée `launched` ou `unknown` dont `retry_after` est dans le futur
@@ -2134,8 +2134,8 @@ précondition.
 ### `tickets/{ticketId}/admin/delivery`
 
 État « PR prête » et comptes rendus de livraison (ADR-008, T5, P45). Écrit par le serveur seul
-(webhook `pull_request` et `workflow_run`, passe horaire, `launchTicketDelivery`, relevé des
-commentaires de `applyIssue`) ; lu par l'admin seul (même règle `match /admin/{docId}`). Aucun
+(webhook `pull_request` et `workflow_run`, passe horaire, `launchTicketDelivery`,
+`startQueuedDelivery`, décisions Refuser et Clore, relevé des commentaires de `applyIssue`) ; lu par l'admin seul (même règle `match /admin/{docId}`). Aucun
 titre ni corps de PR (P24).
 
 | Champ | Contenu |
@@ -2147,6 +2147,7 @@ titre ni corps de PR (P24).
 | `relaunch_ready` | CI rouge : ticket `in_progress`, une PR retenue, tous les derniers runs finis, au moins un en `failure`, `timed_out` ou `startup_failure` (`cancelled` ne compte pas) |
 | `reports` | dix au plus, ordre chronologique : commentaires du compte 16348852 (identifiant numérique) dont le texte, en NFC et espaces de tête retirées, commence par `## Livraison — blocage` (`kind: blocked`) ou `## Livraison — terminée` (`done`) ; `comment_id`, `kind`, `body` (20 000 caractères au plus, coupé à une ligne vide), `created_at`, `updated_at`, `truncated`. Le document n'est créé par le relevé que s'il y a un compte rendu |
 | `reports_checked_at`, `updated_at` | timestamps du dernier relevé des commentaires et de la dernière relecture de la PR |
+| `queue_exit` | dernière sortie de la file des livraisons sans départ (amendement du 2026-11-22) : `code`, `at` (timestamp). Codes : `delivery_queue_removed` (« Retirer de la file »), `delivery_queue_cleared_after_blockage` (file vidée par un blocage), `delivery_queue_head_changed`, `delivery_queue_not_admin`, `delivery_queue_relaunched` (reprise), `delivery_queue_refused`, `delivery_queue_closed`, `delivery_queue_left_in_progress`, et au départ les refus `not_allowed`, `issue_not_found`, `reprise_running`, `delivery_no_pr`, `delivery_multiple_prs`, `delivery_files_unreadable`, `delivery_sensitive_files`, `delivery_ci_not_green`, `routine_paused`, `routine_failed`. Un départ réussi ne l'écrit pas ; le client le masque quand le ticket est en file ou quand une entrée `livraison` de `admin/launches` lui est postérieure |
 
 Un `workflow_run` réécrit l'état d'un ticket seulement si `admin/delivery` retient déjà cette
 PR ; il relit la PR et ses runs, jamais la liste des PR ouvertes (P46). Les fichiers sensibles
@@ -2208,8 +2209,10 @@ Admin) :
 ### `ticket_status/launches`
 
 Compteurs et état des routines (ADR-008, T4, P36, P41), écrits par le serveur seul (callables
-de lancement, dans la transaction qui compte ou rend un lancement ; passe horaire, qui le remet
-au jour de Paris), lus par l'admin seul. Aucun jeton ni identifiant de routine.
+de lancement, dans la transaction qui compte ou rend un lancement ; `startQueuedDelivery` ;
+passe horaire, qui le remet au jour de Paris ; relevé des comptes rendus de livraison ;
+décisions Refuser et Clore), lus par l'admin seul. Les règles ne changent pas
+(`ticket_status/**`). Aucun jeton ni identifiant de routine.
 
 | Champ | Contenu |
 |---|---|
@@ -2222,7 +2225,9 @@ au jour de Paris), lus par l'admin seul. Aucun jeton ni identifiant de routine.
 | `founder_per_day` | entier : `FOUNDER_LAUNCHES_PER_DAY` (5 × `LAUNCHES_PER_DAY`), réécrit à chaque écriture. Le client du compte fondateur (`members/{email}.founder`) lit `founder_count_day` et `founder_per_day` à la place de `count_day` et `per_day` (`EtatLancements.vuePour`) ; sans eux, « inconnu » |
 | `analysis_invalid_since`, `development_invalid_since` | timestamp du premier refus de la routine d'analyse ou de développement (401, 403, 404) ; `null` après le premier lancement réussi de cette routine. Une livraison et une reprise partent par la routine de développement : leur refus pose `development_invalid_since` |
 | `ci_read_denied_since` | timestamp (horloge du serveur) du premier 403 sur `GET /actions/runs` (T5, décision de l'utilisateur du 2026-11-14) : le jeton GitHub n'a pas « Actions : lecture ». Écrit par toute relecture de la CI (webhook, passe horaire, `launchTicketDelivery`) seulement quand l'état change, remis à `null` à la lecture suivante réussie des runs, qui n'a lieu que pour une seule PR éligible. La fiche d'un ticket En cours affiche « Le jeton GitHub ne peut pas lire la CI : sur GitHub, donnez-lui le droit « Actions : lecture ». » seulement si `admin/delivery.eligible_pr_count` vaut 1 : sans PR éligible, le champ peut rester posé après la correction du jeton, et la ligne masquerait « Aucune pull request prête ». Tant qu'il est posé, la liste n'affiche ni « CI en cours », ni « CI en échec », ni « PR prête » et le filtre « À traiter » ignore la PR prête et la CI rouge ; `token_invalid_since` n'est pas posé |
-| `delivery_running` | verrou des livraisons (T5, P44) : `ticket_id`, `issue_number`, `launched_at`, `retry_after` (`launched_at` + 3 h), ou `null`. Pris en transaction par `launchTicketDelivery` avant le comptage ; refus `delivery_running_elsewhere` tant qu'un autre ticket le tient (échéance future, ticket verrouillé toujours `in_progress`) ; rendu si rien n'est parti ; gardé sur `launched` et `unknown` ; libéré par le serveur quand un `## Livraison — blocage` postérieur à `launched_at` est relevé sur ce ticket, ou quand ce ticket quitte `in_progress` (relecture de l'Issue, passe horaire). Le client compare seulement l'heure à `retry_after` |
+| `delivery_running` | verrou des livraisons (T5, P44) : `ticket_id`, `issue_number`, `launched_at`, `retry_after` (`launched_at` + 3 h), ou `null`. Pris en transaction par `launchTicketDelivery` avant le comptage ; refus `delivery_running_elsewhere` tant qu'un autre ticket le tient (échéance future, ticket verrouillé toujours `in_progress`) ; rendu si rien n'est parti ; gardé sur `launched` et `unknown` ; libéré par le serveur quand un `## Livraison — blocage` postérieur à `launched_at` est relevé sur ce ticket, ou quand ce ticket quitte `in_progress` (relecture de l'Issue, passe horaire). Pris aussi par `startQueuedDelivery` au départ de la tête de file. Le client compare seulement l'heure à `retry_after` |
+| `delivery_queue` | file des livraisons (amendement du 2026-11-22, P44) : liste ordonnée, `DELIVERY_QUEUE_MAX` (10, `functions/src/config.ts`) entrées au plus, sans durée de validité. Entrée : `ticket_id`, `issue_number`, `pr_number`, `head_sha` (tête relue à l'accord), `queued_at`, `by_uid`, `by_email` (e-mail en minuscules tiré du jeton vérifié, jamais d'un argument, jamais publié ni journalisé). Ajoutée par `launchTicketDelivery` (`mode: "queue"`), retirée par `mode: "unqueue"`, au départ, par Refuser, Clore, une reprise ou la sortie d'« En cours » ; vidée par un blocage relevé |
+| `delivery_last` | dernière livraison lancée : `ticket_id`, `issue_number`, `launched_at`, `retry_after` (`launched_at` + 3 h), `reported_at` (timestamp, `null` à l'écriture). Réécrit avec chaque prise du verrou (« Livrer » et départ de la file), remis à sa valeur précédente si rien ne part. `reported_at` posé par le relevé d'un `## Livraison — terminée` ou `## Livraison — blocage` postérieur à `launched_at` sur ce ticket ; un tel blocage vide la file dans la même transaction. Condition de fin : `delivery_last` absent, `reported_at` posé, ou `retry_after` passé |
 
 ### `ai_config/policy` — politique de l'IA (ADR-016)
 
@@ -4086,22 +4091,24 @@ et du lot A1 d'ADR-016 et d'ADR-015 (P25) : le webhook `githubTicketWebhook` et 
 `answerTicketAnalysis`, `validateTicket`, `refuseTicket`, `closeTicket`, `retryTicketSend`,
 `launchTicketAnalysis`, `launchTicketDevelopment`, `launchTicketDelivery`,
 `attachTicketScreenshot`, `queryLogs`, `saveAiSettings` et `recipeAssistantTurn`. Les
-deux autres fonctions ne s'appellent pas depuis Internet : `publishTicket`, seul déclencheur
-Firestore, et `syncTickets`, seule tâche planifiée (liste fermée vérifiée par `ci.yml` et
-`deploy.yml` sur le manifeste, T7). `onDecisionCreated` et `onDecisionUpdated` sont retirés à
+trois autres fonctions ne s'appellent pas depuis Internet : `publishTicket`, seul déclencheur
+Firestore, et les deux tâches planifiées `syncTickets` et `startQueuedDelivery` (liste fermée
+vérifiée par `ci.yml` et `deploy.yml` sur le manifeste, T7 ; `startQueuedDelivery` depuis
+l'amendement du 2026-11-22, avec ses réglages). `onDecisionCreated` et `onDecisionUpdated` sont retirés à
 T7.
 
 | Fonction | Déclencheur | Réglages | Ce qu'elle fait |
 |---|---|---|---|
 | `publishTicket` | `onDocumentCreated('tickets/{ticketId}')` | `maxInstances` 2, 256 Mio, 60 s, sans rejeu (la passe horaire renvoie) | publie le ticket `pending` |
-| `syncTickets` | `onSchedule('0 * * * *')`, minute 0 de chaque heure de Paris (`timeZone: Europe/Paris`) | `maxInstances` 1, 256 Mio, 300 s, sans rejeu | renvoie les `pending`, relit les Issues, leurs réponses, leurs analyses et leurs comptes rendus de livraison, puis l'état « PR prête » des tickets `in_progress` (T5) |
+| `syncTickets` | `onSchedule('0 * * * *')`, minute 0 de chaque heure de Paris (`timeZone: Europe/Paris`) | `maxInstances` 1, 256 Mio, 300 s, sans rejeu ; secret `GITHUB_TICKETS_TOKEN` seul | renvoie les `pending`, relit les Issues, leurs réponses, leurs analyses et leurs comptes rendus de livraison (rattrapage du webhook, `delivery_last.reported_at` compris), puis l'état « PR prête » des tickets `in_progress` (T5) ; ne fait partir aucune livraison de la file (P46) |
 | `githubTicketWebhook` | `onRequest`, `invoker: "public"` (ADR-008, T3) | `maxInstances` 5, 256 Mio, 60 s | applique l'état d'une Issue poussé par GitHub, relève les analyses (P29, P32) ; `pull_request` et `workflow_run` de `ci.yml` relisent l'état « PR prête » (T5, P46) |
 | `answerTicketAnalysis` | `onCall`, `requireAdmin` (ADR-008, T3) | `maxInstances` 2, 256 Mio, 60 s, `cors` : `https://kassbeer.web.app`, `https://kassbeer.firebaseapp.com` | « Répondre » : publie les précisions de l'admin, ramène le ticket à `received` (P34) |
 | `validateTicket`, `refuseTicket`, `closeTicket` | `onCall`, `requireAdmin` (ADR-008, T7) | `maxInstances` 1, 256 Mio, 60 s, même `cors` | Valider, Refuser, Clore : appliquent la décision sur l'Issue pendant l'appel et l'inscrivent dans `decisions/` (P53, voir « Décisions de l'admin ») |
 | `retryTicketSend` | `onCall`, `requireAdmin` (ADR-008, T7) | `maxInstances` 1, 256 Mio, 60 s, même `cors` | « Relancer l'envoi » d'un ticket `send_failed` : remise à zéro, puis un essai de publication pendant l'appel (P53) |
 | `launchTicketAnalysis` | `onCall`, `requireAdmin` (ADR-008, T4) | `maxInstances` 1, 256 Mio, 120 s, même `cors` | « Lancer l'analyse » : lance la routine d'analyse sur un ticket `received` (P35, P36) |
 | `launchTicketDevelopment` | `onCall`, `requireAdmin` (ADR-008, T4) | `maxInstances` 1, 256 Mio, 120 s, même `cors` | « Lancer le développement » : lance la routine de développement sur un ticket `validated` (P35, P36) ; avec `mode: "resume"`, « Relancer le développement » sur un ticket `in_progress` à CI rouge (T5, P47) |
-| `launchTicketDelivery` | `onCall`, `requireAdmin` (ADR-008, T5) | `maxInstances` 1, 256 Mio, 180 s, même `cors` | « Livrer » : contrôle la PR, ses fichiers et sa CI, prend le verrou des livraisons, lance la routine de développement avec `livraison #N` sur un ticket `in_progress` (P43, P44) |
+| `launchTicketDelivery` | `onCall`, `requireAdmin` (ADR-008, T5) | `maxInstances` 1, 256 Mio, 180 s, même `cors` | « Livrer » : contrôle la PR, ses fichiers et sa CI, prend le verrou des livraisons, lance la routine de développement avec `livraison #N` sur un ticket `in_progress` (P43, P44) ; `mode: "queue"` : « Mettre en file », mêmes contrôles, rien compté ; `mode: "unqueue"` : « Retirer de la file » (voir « File des livraisons ») |
+| `startQueuedDelivery` | `onSchedule('*/5 * * * *')`, heure de Paris (amendement du 2026-11-22) | `maxInstances` 1, `concurrency` 1, 256 Mio, 300 s, `retryCount` 0 ; secrets `GITHUB_TICKETS_TOKEN`, `TICKETS_ROUTINE_DEV_ID`, `TICKETS_ROUTINE_DEV_TOKEN` | départ de la tête de la file des livraisons, une tentative par exécution ; une exécution sans travail lit `ticket_status/launches` seul (voir « File des livraisons ») |
 | `attachTicketScreenshot` | `onCall`, `requireMember`, auteur du ticket (ADR-008, T6) | `maxInstances` 2, 256 Mio, 60 s, même `cors`, aucun secret | joint la capture déposée dans Storage à son ticket : écrit `screenshot_path` (voir ci-dessous) |
 | `queryLogs` | `onCall`, `requireAdmin` (ADR-011, J2) | `maxInstances` 1, `concurrency` 1, 256 Mio, 60 s, même `cors`, aucun secret | Admin › Journaux : lit la sortie des fonctions dans Cloud Logging (`entries:list`), filtre construit par le serveur (P49) ; voir « Journaux » |
 | `saveAiSettings` | `onCall`, `requireAdmin` (ADR-016) | `maxInstances` 1, 256 Mio, 60 s, même `cors`, aucun secret | Admin › Moteur d'IA : enregistre la politique ou la grille tarifaire (P58) ; voir « Socle IA et assistant de recette » |
@@ -4112,9 +4119,10 @@ Toutes, sauf `attachTicketScreenshot`, `queryLogs`, `saveAiSettings` et `recipeA
 `recipeAssistantTurn` lit `ANTHROPIC_API_KEY`, et elle seule. `githubTicketWebhook` lit
 aussi `GITHUB_WEBHOOK_SECRET`, et lui seul ; `launchTicketAnalysis` lit aussi
 `TICKETS_ROUTINE_ANALYSIS_ID` et `TICKETS_ROUTINE_ANALYSIS_TOKEN`, et elle seule ;
-`launchTicketDevelopment` et `launchTicketDelivery` lisent aussi `TICKETS_ROUTINE_DEV_ID` et
-`TICKETS_ROUTINE_DEV_TOKEN`, et elles seules (P25) : la livraison part par la routine de
-développement, aucun secret `TICKETS_ROUTINE_DELIVERY_*`. Chaque callable ne monte que les
+`launchTicketDevelopment`, `launchTicketDelivery` et la tâche `startQueuedDelivery` lisent aussi
+`TICKETS_ROUTINE_DEV_ID` et `TICKETS_ROUTINE_DEV_TOKEN`, et elles seules (P25) : la livraison
+part par la routine de développement, aucun secret `TICKETS_ROUTINE_DELIVERY_*` ; ni
+`githubTicketWebhook` ni `syncTickets` ne les montent. Chaque callable ne monte que les
 secrets de sa routine. App Check n'est pas exigé (ADR-008). `src/firestore.ts` charge le
 SDK Admin au premier appel et crée l'application par défaut si aucune application `[DEFAULT]`
 n'existe (`src/adminApp.ts`, `ensureDefaultApp`, partagé avec `src/storage.ts`) : pour une
@@ -4375,7 +4383,12 @@ Erreurs (`HttpsError`) : `details.reason` (français) et `details.code` (stable)
 | `not-found` | `ticket_not_found` | « Ce ticket n'existe plus. » |
 | `failed-precondition` | `not_launchable` | « Ce ticket n'a pas encore d'Issue GitHub. », « Ce lancement n'est pas possible pour ce statut. », « Validé sur GitHub : validez depuis l'application pour lancer le développement. » (ticket `validated` sans `validated_by_app_at`) |
 | `failed-precondition` | `decision_in_progress` | « Une décision est déjà en cours sur ce ticket. » |
-| `invalid-argument` | `field: "mode"` | « Mode de lancement : « start » ou « resume » attendu. » (`launchTicketDevelopment`) |
+| `invalid-argument` | `field: "mode"` | « Mode de lancement : « start » ou « resume » attendu. » (`launchTicketDevelopment`) ; « Mode de livraison : « start », « queue » ou « unqueue » attendu. » (`launchTicketDelivery`) |
+| `failed-precondition` | `delivery_queue_ahead`, plus `waiting` | « D'autres livraisons attendent : appuyez sur « Mettre en file ». Rien n'a été lancé ni décompté. » (« Livrer » avec une file non vide) |
+| `failed-precondition` | `delivery_queue_already` | « Ce ticket est déjà dans la file. » (`mode: "queue"`) |
+| `failed-precondition` | `delivery_queue_full` | « La file compte déjà 10 livraisons. Rien n'a été mis en file. » |
+| `failed-precondition` | `delivery_lock_free` | « La livraison précédente est finie : appuyez sur « Livrer ». » |
+| `failed-precondition` | `delivery_running` | « Une livraison est en cours sur ce ticket. Rien n'a été mis en file. » |
 | `failed-precondition` | `running` | « Une analyse a été lancée le JJ/MM/AA à HH:MM. Attendez son résultat ou relancez après HH:MM. » (« Un développement a été lancé… », « Une livraison… », « Une correction de la pull request… »), heure de Paris |
 | `failed-precondition` | `reprise_running` | message « en cours » d'une reprise de ce ticket : « Livrer » refusé (décision du 2026-11-14) |
 | `failed-precondition` | `reprise_blocked_by_delivery` | « Une livraison est en cours sur ce ticket. Rien n'a été lancé ni décompté. », ou message « en cours » d'une livraison |
@@ -4404,6 +4417,56 @@ Décisions pendant une livraison (P44) : la transaction de prise d'une décision
 `ticket_status/launches.delivery_running` ; Refuser et Clore d'un ticket dont le verrou est
 tenu passent `rejected` (« Une livraison est en cours sur ce ticket. Attendez sa fin. »), sans
 appel à GitHub.
+
+**File des livraisons** (ADR-008, amendement du 2026-11-22, P43 à P47 ; `launch.ts`,
+`delivery.ts`). « Une seule livraison à la fois » reste : une livraison mise en file part
+quand la précédente a publié son compte rendu.
+
+- `launchTicketDelivery` lit `mode` après `requireAdmin` et avant toute autre lecture :
+  `start` (absent : `start`), `queue` ou `unqueue`, comparés exactement, jamais déduits du
+  verrou ni du statut. Aucune décision nouvelle : les deux modes relèvent de
+  `launch_delivery` (`ALLOWED_DECISIONS_VERSION` reste à 5).
+- `start` : comme avant, plus le refus `delivery_queue_ahead` dans la transaction du verrou
+  quand la file n'est pas vide ; la prise du verrou réécrit `delivery_last`.
+- `queue` : précondition et bail (210 s), contrôles de P43 dans l'ordre de « Livrer » ; puis
+  transaction sur `ticket_status/launches` : ticket absent de la file
+  (`delivery_queue_already`), qui ne tient pas le verrou (`delivery_running`), file non pleine
+  (`delivery_queue_full`) ; verrou libre, livraison précédente finie et file vide :
+  `delivery_lock_free`. L'entrée s'ajoute en fin de file avec la tête de la PR relue. Rien
+  n'est compté. Sortie `{outcome: "queued", position, total}`.
+- `unqueue` : entrée retirée en transaction, `queue_exit` noté (`delivery_queue_removed`),
+  aucun appel à GitHub ni à la routine. Sortie `{outcome: "unqueued", changed}` ;
+  `changed: false` si le ticket n'était pas en file.
+- Départ, `startQueuedDelivery` (toutes les 5 minutes) : lit `ticket_status/launches` seul et
+  s'arrête sans autre lecture ni écriture si la file est vide, si le verrou tient (échéance
+  future), si `delivery_last` n'a ni `reported_at` ni `retry_after` passé, ou si
+  `development_invalid_since` est posé. Sinon une tentative sur la tête : routine configurée,
+  `members/{by_email}` relu (rôle `admin`, sinon sortie `delivery_queue_not_admin` ; compteur
+  du fondateur ou du groupe lu à ce moment) ; bail de 330 s (`QUEUED_DELIVERY_LEASE_MS`) et
+  précondition ; PR éligible, tête égale à `head_sha` de l'accord (sinon
+  `delivery_queue_head_changed`, contrôlé avant la lecture des fichiers), fichiers, chemins
+  sensibles, CI verte ; Issue relue ; puis une transaction relit la tête de file (même
+  `ticket_id`, même `queued_at`), le verrou, la condition de fin et le plafond du jour du
+  départ, retire l'entrée, prend le verrou, réécrit `delivery_last` et compte le lancement
+  ensemble. Une exécution superposée ou un « Livrer » passé entre-temps trouve la tête changée
+  ou le verrou tenu et s'arrête sans rien compter. Puis entrée `livraison` `unknown`
+  (`queued: true`, `by_uid` de l'accord) et appel unique de la routine de développement
+  (`livraison #N`).
+- Au départ, un refus propre au ticket (précondition, Issue disparue ou changée, codes de
+  P43, tête changée, droits) retire l'entrée et note `queue_exit`, sans décompte. Une panne
+  passagère (GitHub 5xx ou délai, limite de débit, 403 « Actions : lecture », Firestore, jeton
+  GitHub refusé, bail tenu, routine non configurée) garde l'entrée. Plafond du jour atteint :
+  l'entrée reste en tête, rien n'est compté ni retiré. Refus de l'API après le retrait : jeton
+  refusé ou limite de débit, compteur et verrou rendus et entrée remise en tête ; routine en
+  pause ou autre refus, entrée sortie (`routine_paused`, `routine_failed`). Un `unknown` garde
+  compteur et verrou.
+- Sorties : Refuser et Clore retirent l'entrée dans la transaction qui écrit le statut
+  (`delivery_queue_refused`, `delivery_queue_closed`) ; une reprise, dans la transaction de son
+  bail (`delivery_queue_relaunched`) ; la sortie d'« En cours » relevée sur l'Issue, juste après
+  l'écriture du statut (`delivery_queue_left_in_progress`) ; un ticket qui n'est plus
+  livrable en tête de file sort au départ suivant (`not_allowed`). Un blocage relevé sur le
+  ticket de `delivery_last` vide la file (`delivery_queue_cleared_after_blockage` sur chaque
+  ticket). Aucune sortie pour ancienneté.
 
 La passe horaire remet `ticket_status/launches` au jour de Paris, sans GitHub, pour que
 l'admin lise le plafond du jour avant le premier lancement. Elle tourne à la minute 0 de
@@ -5107,8 +5170,12 @@ requis.
 
 Le contrôle du manifeste de `ci.yml` et de `deploy.yml` accepte les quatre callables avec
 `maxInstances` 1 et `timeoutSeconds` 60, et vérifie la liste fermée des déclencheurs :
-`publishTicket` seul en `eventTrigger`, `syncTickets` seul en `scheduleTrigger` (P25 ; diff des
-workflows décidé par l'utilisateur, P10, P14). `github-deploy` ne reçoit rien.
+`publishTicket` seul en `eventTrigger`, `syncTickets` et `startQueuedDelivery` seuls en
+`scheduleTrigger` (P25 ; `startQueuedDelivery` depuis l'amendement du 2026-11-22, avec
+`maxInstances` 1, `timeoutSeconds` 300, `concurrency` 1, `schedule` `*/5 * * * *` et
+`retryCount` 0 ; `TICKETS_ROUTINE_DEV_*` montés par `launchTicketDevelopment`,
+`launchTicketDelivery` et `startQueuedDelivery` seuls ; diff des workflows décidé par
+l'utilisateur, P10, P14). `github-deploy` ne reçoit rien.
 
 **Lot J2 d'ADR-011** (`queryLogs`), à faire **avant la fusion qui contient J2** : sans ce
 rôle, Admin › Journaux affiche « Lecture des journaux non autorisée : rôle IAM manquant. ».
@@ -5135,8 +5202,9 @@ contrôle du manifeste de `ci.yml` et de `deploy.yml` accepte les callables des 
 (`launchTicketAnalysis` et `launchTicketDevelopment` : `maxInstances` 1, 120 s ;
 `launchTicketDelivery`, T5 : `maxInstances` 1, 180 s) et refuse un secret de routine monté par
 une autre fonction que les siennes (P25) : `TICKETS_ROUTINE_DEV_*` est monté par
-`launchTicketDevelopment` et `launchTicketDelivery`, la livraison partant par la routine de
-développement. Aucun secret nouveau à T5.
+`launchTicketDevelopment` et `launchTicketDelivery` (et `startQueuedDelivery` depuis
+l'amendement du 2026-11-22), la livraison partant par la routine de développement. Aucun secret
+nouveau à T5.
 
 **Avant la fusion qui contient T5**, dans cet ordre :
 
@@ -5175,7 +5243,8 @@ n'apparaît dans aucun écran de l'application. Pour chacune :
 
 ```bash
 # 12. Secrets des routines (T4) : TICKETS_ROUTINE_ANALYSIS_* lus par launchTicketAnalysis seul,
-#     TICKETS_ROUTINE_DEV_* par launchTicketDevelopment et launchTicketDelivery (P25, T5). Créés avant le déploiement,
+#     TICKETS_ROUTINE_DEV_* par launchTicketDevelopment, launchTicketDelivery et startQueuedDelivery
+#     (P25, T5, amendement du 2026-11-22). Créés avant le déploiement,
 #     même sans routine : une version d'une espace, lue comme vide par le serveur
 #     (« Lancement non configuré », rien ne part). Une version vide est refusée par
 #     Secret Manager (à vérifier).
@@ -5357,9 +5426,9 @@ particulier « Chaîne de travail », « Version », « Tickets », « Git » et
 9. Termine par un résumé : la pull request ouverte et l'état de sa CI, ou la raison de
    l'arrêt.
 
-Livraison (texte « livraison #N »). L'administrateur a appuyé sur « Livrer » dans
-l'application : cela vaut son accord de fusion pour la seule pull request décrite en L2, et
-le déploiement part ensuite sans autre accord. Un « blocage » ci-dessous veut dire : publie
+Livraison (texte « livraison #N »). L'administrateur a appuyé sur « Livrer » ou sur
+« Mettre en file » dans l'application : cela vaut son accord de fusion pour la seule pull
+request décrite en L2, et le déploiement part ensuite sans autre accord. Un « blocage » ci-dessous veut dire : publie
 sur l'Issue N un commentaire qui commence par « ## Livraison — blocage » et donne l'étape, la
 condition ou la raison, le numéro de la pull request s'il est connu et, s'il y en a un, le
 lien du run, sans extrait de journal, sans donnée privée, sans secret ; puis arrête-toi. Le
@@ -5599,7 +5668,7 @@ manuel. Un nouveau push annule le run en cours de la même référence. Permissi
 | Version et outillage | `git fetch --tags`, puis `node scripts/check-version.mjs` : sur une PR avec `--base origin/<base de la PR>` (HEAD est le commit de fusion préparé par GitHub) ; sur un push de `main` avec `--base <commit d'avant le push>` ; sur un push d'une autre branche, contre `origin/main`. Non lancé sur un lancement manuel. Puis `node scripts/check-agents.mjs` et `node --test scripts/*.test.mjs` (dont `changelog-recent.test.mjs`) |
 | Flutter et brewing | Flutter 3.44.6. Dans `brewing/`, puis dans `exchange/` (v0.1.20) : `dart pub get`, `pubspec.lock` à jour, `dart analyze --fatal-infos`, `dart format` vérifié, `dart test`. Dans `app/` : `flutter pub get`, `pubspec.lock` à jour, `node scripts/changelog-recent.mjs` (asset des nouveautés régénéré), `flutter analyze`, `dart format --output=none --set-exit-if-changed lib test`, `flutter test`, `flutter build web --release` sans configuration Firebase |
 | Règles — émulateur | Node 22, Java 21 (Temurin), `npm ci` et `npm test` dans `rules-tests/` (projet `demo-kassbeer`) : `firestore.rules` et `storage.rules` contre les émulateurs Firestore et Storage. Binaires des émulateurs en cache (clé `firebase-emulators-storage-…`) |
-| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`), contrôlé par `jq` : déclencheurs HTTP et callables limités à la liste fermée d'ADR-008, d'ADR-011 et d'ADR-016 déjà livrée (`githubTicketWebhook`, seul `invoker: "public"`, `maxInstances` 5 et 60 s ; `answerTicketAnalysis`, `maxInstances` 2 et 60 s ; `launchTicketAnalysis` et `launchTicketDevelopment`, `maxInstances` 1 et 120 s ; `launchTicketDelivery`, `maxInstances` 1 et 180 s ; `attachTicketScreenshot`, `maxInstances` 2 et 60 s ; `queryLogs`, `maxInstances` 1, 60 s et `concurrency` 1 ; `saveAiSettings`, `maxInstances` 1 et 60 s ; `recipeAssistantTurn`, `maxInstances` 2, 120 s et `concurrency` 4), aucun déclencheur bloquant ni de file, `maxInstances` sur chaque fonction ; sinon échec « Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25). » ; secrets : `GITHUB_TICKETS_TOKEN` partout, chacun des autres monté par les seules fonctions de P25 (table `$only` du filtre : `GITHUB_WEBHOOK_SECRET` → `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_*` → `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_*` → `launchTicketDevelopment` et `launchTicketDelivery`, `ANTHROPIC_API_KEY` → `recipeAssistantTurn`), aucun secret monté par `queryLogs` ni `saveAiSettings`, aucun autre que `ANTHROPIC_API_KEY` par `recipeAssistantTurn`, aucun autre secret déclaré ; sinon échec « Une fonction lit un secret hors de la liste de P25, ou un secret monté par une autre fonction que la sienne. » Même filtre que `deploy.yml` : une PR verte ne se fait pas refuser au déploiement |
+| Functions — lint, build, tests | Node 24, dans `functions/` : `npm ci`, `npm run lint` (ESLint et Prettier), `npm run build`, `npm test`, puis manifeste des fonctions (`firebase-functions` avec `FUNCTIONS_MANIFEST_OUTPUT_PATH`), contrôlé par `jq` : déclencheurs HTTP et callables limités à la liste fermée d'ADR-008, d'ADR-011 et d'ADR-016 déjà livrée (`githubTicketWebhook`, seul `invoker: "public"`, `maxInstances` 5 et 60 s ; `answerTicketAnalysis`, `maxInstances` 2 et 60 s ; `launchTicketAnalysis` et `launchTicketDevelopment`, `maxInstances` 1 et 120 s ; `launchTicketDelivery`, `maxInstances` 1 et 180 s ; `attachTicketScreenshot`, `maxInstances` 2 et 60 s ; `queryLogs`, `maxInstances` 1, 60 s et `concurrency` 1 ; `saveAiSettings`, `maxInstances` 1 et 60 s ; `recipeAssistantTurn`, `maxInstances` 2, 120 s et `concurrency` 4), tâches planifiées `syncTickets` et `startQueuedDelivery` seules (`startQueuedDelivery` : `maxInstances` 1, 300 s, `concurrency` 1, `*/5 * * * *`, `retryCount` 0), aucun déclencheur bloquant ni de file, `maxInstances` sur chaque fonction ; sinon échec « Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25). » ; secrets : `GITHUB_TICKETS_TOKEN` partout, chacun des autres monté par les seules fonctions de P25 (table `$only` du filtre : `GITHUB_WEBHOOK_SECRET` → `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_*` → `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_*` → `launchTicketDevelopment`, `launchTicketDelivery` et `startQueuedDelivery`, `ANTHROPIC_API_KEY` → `recipeAssistantTurn`), aucun secret monté par `queryLogs` ni `saveAiSettings`, aucun autre que `ANTHROPIC_API_KEY` par `recipeAssistantTurn`, aucun autre secret déclaré ; sinon échec « Une fonction lit un secret hors de la liste de P25, ou un secret monté par une autre fonction que la sienne. » Même filtre que `deploy.yml` : une PR verte ne se fait pas refuser au déploiement |
 | Android — compilation | quand le diff touche `app/pubspec.yaml`, `app/pubspec.lock` ou `app/android/`, et toujours sur un lancement manuel : `node scripts/changelog-recent.mjs`, puis `flutter build apk --release`, Java 17, signé par une clé jetable générée par `keytool` dans le job. Sinon le job réussit sans compiler |
 
 Une branche de travail qui n'a pas encore incrémenté sa version est rouge au job Version :
@@ -5637,7 +5706,7 @@ annulé. Aucun déclencheur `pull_request` ni `pull_request_target` (P14).
 | `plan` | `production`, `id-token: write` | vérifie la configuration ; lit la version de `app/pubspec.yaml` ; obtient un jeton Google de 5 minutes ; lit la dernière version publiée sur App Distribution et, sans jeton, le manifeste `apk_release.json` en ligne ; décide s'il faut un nouvel APK |
 | `build` | `production`, `contents: read` | `node scripts/changelog-recent.mjs`, puis build web et, si besoin, APK signé, avec `--dart-define-from-file` ; avec un nouvel APK, le copie dans `app/build/web/app-release.apk` et écrit `app/build/web/apk_release.json` (ADR-012, seul endroit où il s'écrit) ; dépose le web et l'APK en artefacts conservés un jour |
 | `build-functions` | aucun, `contents: read` | quand `gate` le décide : `npm ci`, `npm run build`, manifeste `functions/functions.yaml` (mêmes contrôles P25 que la CI) ; dépose `functions/lib` et `functions.yaml` en artefact conservé un jour |
-| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; sans nouvel APK, lance `scripts/garder-apk-en-ligne.sh` avant l'authentification (paire en ligne recopiée dans `app/build/web`, refusée si incohérente) ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008, d'ADR-011 et d'ADR-016, `queryLogs` en `maxInstances` 1, 60 s et `concurrency` 1, sans secret, `saveAiSettings` sans secret, `recipeAssistantTurn` en `concurrency` 4, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et chacun des autres monté par les seules fonctions de P25 : `GITHUB_WEBHOOK_SECRET` par `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_ID` et `_TOKEN` par `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_ID` et `_TOKEN` par `launchTicketDevelopment` et `launchTicketDelivery`, `ANTHROPIC_API_KEY` par `recipeAssistantTurn`) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage` (`storage` : `storage.rules`, ADR-008, T6) ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
+| `deploy` | `production`, `id-token: write` | revérifie la tête de `main` ; sans nouvel APK, lance `scripts/garder-apk-en-ligne.sh` avant l'authentification (paire en ligne recopiée dans `app/build/web`, refusée si incohérente) ; installe `firebase-tools` depuis `rules-tests/package-lock.json` avant l'authentification ; relit par `jq`, avant l'authentification, le manifeste `functions.yaml` de l'artefact (mêmes contrôles de points d'accès que la CI : liste fermée d'ADR-008, d'ADR-011 et d'ADR-016, `queryLogs` en `maxInstances` 1, 60 s et `concurrency` 1, sans secret, `saveAiSettings` sans secret, `recipeAssistantTurn` en `concurrency` 4, réglages de chaque point d'accès, aucun déclencheur bloquant ni de file ; `maxInstances` partout ; compte `tickets-functions@kassbeer.iam.gserviceaccount.com` écrit en entier (la forme courte fait échouer l'accès au secret) ; secrets limités à `GITHUB_TICKETS_TOKEN`, et chacun des autres monté par les seules fonctions de P25 : `GITHUB_WEBHOOK_SECRET` par `githubTicketWebhook`, `TICKETS_ROUTINE_ANALYSIS_ID` et `_TOKEN` par `launchTicketAnalysis`, `TICKETS_ROUTINE_DEV_ID` et `_TOKEN` par `launchTicketDevelopment`, `launchTicketDelivery` et `startQueuedDelivery`, `ANTHROPIC_API_KEY` par `recipeAssistantTurn` ; tâches planifiées `syncTickets` et `startQueuedDelivery` seules, avec les réglages de la seconde) ; `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage` (`storage` : `storage.rules`, ADR-008, T6) ; si `gate` l'a décidé, `firebase deploy --only functions` depuis l'artefact ; publie l'APK sur App Distribution |
 | `tag` | aucun, `contents: write` | après un `deploy` réussi seulement (condition `!cancelled() && needs.deploy.result == 'success'`, pour que l'absence de `build-functions` ne l'ignore pas) : lit la version de `plan` (sans `+N`) et pose par l'API le tag annoté `vX.Y.Z` sur le commit déployé, au nom de `github-actions[bot]` (adresse `noreply`, P15). Un tag déjà présent n'est ni recréé ni déplacé (avertissement s'il pointe ailleurs). Aucune extraction du code, aucun secret, aucun accès à Google Cloud |
 
 Le code compilé (dépendances pub, Gradle, npm de `functions/`) tourne dans `build` et
@@ -6118,7 +6187,7 @@ ici et son plafond.
 
 | Poste | Appelé par | Facturation et limites du fournisseur | Plafond | Compteurs |
 |---|---|---|---|---|
-| `ticket_routine_launch` | `launchTicketAnalysis`, `launchTicketDevelopment` (développement et, avec `mode: "resume"`, reprise), `launchTicketDelivery` (ADR-008, T4 et T5) | abonnement Claude de l'administrateur, aucune facture à l'appel ; 30 appels par heure et par routine, 100 par heure et par compte (API, quota partagé avec Kass'Dalle) ; la livraison et la reprise partagent la limite de la routine de développement ; une session de livraison dure jusqu'à 2 h 30 (part des limites d'usage de l'abonnement à vérifier) | `LAUNCHES_PER_DAY` = 10 par jour de Paris pour le groupe, et `FOUNDER_LAUNCHES_PER_DAY` = 50 sur un compteur à part pour le compte fondateur (`members/{email}.founder`), analyse, développement, reprise et livraison confondus (`functions/src/config.ts`), compté en transaction avant l'appel, et pour une livraison ou une reprise seulement après leurs contrôles (P43, P47) et la prise du verrou (P44) ; aucune limite de reprises par ticket ; boîte de confirmation obligatoire côté client (P39) | `ticket_quotas/launch_{AAAAMMJJ}` et `launch_founder_{AAAAMMJJ}`, `ticket_status/launches` (`count_day`, `founder_count_day`, `count_month`, `per_day`, `founder_per_day`) |
+| `ticket_routine_launch` | `launchTicketAnalysis`, `launchTicketDevelopment` (développement et, avec `mode: "resume"`, reprise), `launchTicketDelivery` (ADR-008, T4 et T5), `startQueuedDelivery` (départ de la file des livraisons, amendement du 2026-11-22) | abonnement Claude de l'administrateur, aucune facture à l'appel ; 30 appels par heure et par routine, 100 par heure et par compte (API, quota partagé avec Kass'Dalle) ; la livraison et la reprise partagent la limite de la routine de développement ; une session de livraison dure jusqu'à 2 h 30 (part des limites d'usage de l'abonnement à vérifier) | `LAUNCHES_PER_DAY` = 10 par jour de Paris pour le groupe, et `FOUNDER_LAUNCHES_PER_DAY` = 50 sur un compteur à part pour le compte fondateur (`members/{email}.founder`), analyse, développement, reprise et livraison confondus (`functions/src/config.ts`), compté en transaction avant l'appel, et pour une livraison ou une reprise seulement après leurs contrôles (P43, P47) et la prise du verrou (P44) ; une livraison partie de la file est comptée au départ, sur le compteur de l'auteur de l'accord relu à ce moment, et gardée en file au plafond atteint, rien n'étant compté à la mise en file ; aucune limite de reprises par ticket ; boîte de confirmation obligatoire côté client (P39) | `ticket_quotas/launch_{AAAAMMJJ}` et `launch_founder_{AAAAMMJJ}`, `ticket_status/launches` (`count_day`, `founder_count_day`, `count_month`, `per_day`, `founder_per_day`) |
 | `hop_aroma_generation` | `ingest/generer-aromes.mjs`, poste de l'admin (ADR-013) | API Messages d'Anthropic, facturée au jeton sur un compte de la Console à part de l'abonnement Claude (crédit acheté) ; réflexion facturée en jetons de sortie ; − 50 % en lot (API Batches) ; tarif lu dans `import/ingest/aromes/tarif.json`, jamais dans le code ; estimation de l'ADR : ≈ 18 $ à l'effort `medium` pour les 466 houblons (essai, groupe, reste) | limite de dépense de 20 $ de l'espace de travail Kass'Beer (Console) (70 $ jusqu'au 30 novembre 2026 au plus tard, ADR-017) ; `--budget-usd` obligatoire hors essai, refus au-delà de la borne haute (`countTokens` × prix d'entrée + `max_tokens` 4 000 × prix de sortie, par houblon) ; `--max` 500 houblons par lancement ; 20 houblons au plus en appels directs ; confirmation par la saisie de `oui` | `import/ingest/aromes/rapport.json` (`poste`, modèle, effort, `usage`, `montant_usd`) ; console Anthropic |
 | `culture_aroma_generation` | `ingest/generer-aromes.mjs --nature culture`, poste de l'admin (ADR-017) | comme `hop_aroma_generation` : API Messages d'Anthropic, même espace de travail de la Console et même clé du poste, tarif commun lu dans `import/ingest/aromes/tarif.json` ; mesure de l'essai du 2026-11-22 (10 levures, `medium`, 0,2451 $, ≈ 5 884 jetons d'entrée et 420 de sortie par levure) : ≈ 29,5 $ attendus en lot pour les 923 levures du périmètre, borne haute du script ≈ 95,6 $ (`max_tokens` 4 000) | limite de dépense de l'espace de travail Kass'Beer relevée à 70 $ jusqu'à la fin du dernier lot, au plus tard le 30 novembre 2026, puis ramenée à 20 $ à la main (décision 3 de l'utilisateur du 2026-11-21) ; `--budget-usd` obligatoire hors essai, contre la même borne haute par levure ; `--max` 1 000 levures par lancement (décision de l'utilisateur du 2026-11-22), donc un seul lot ; 20 levures au plus en appels directs ; confirmation par la saisie de `oui` ; périmètre : levures du groupe, plus les types autres que `other`, `wine`, `champagne` et `malolactic` | `import/ingest/aromes/levures/rapport.json` (`poste`, modèle, effort, `usage`, `montant_usd`, `perimetre`) ; console Anthropic |
 | `recipe_assistant_turn` | `recipeAssistantTurn` (ADR-015, socle d'ADR-016) | API Messages d'Anthropic, facturée au jeton sur l'espace de travail Kass'Beer de la Console (celui d'ADR-013, seconde clé) ; limite de 20 $ par mois commune avec `hop_aroma_generation` et `culture_aroma_generation` (70 $ jusqu'au 30 novembre 2026 au plus tard, ADR-017), l'atteindre bloque aussi les arômes ; estimation d'ADR-015 : ≈ 0,037 $ par tour moyen avec Sonnet 5.5, ≈ 0,12 $ à la borne haute d'un tour, ≈ 0,13 $ pour un résumé | `turns_per_day` par membre et par jour de Paris, `founder_turns_per_day` pour le compte fondateur, `turns_per_conversation` (`ai_config/policy`, réglés dans Admin › Moteur d'IA, chacun de 1 à `AI_MAX_TURNS` = 100) ; tour réservé en transaction avant l'appel ; poste fermé aux membres tant que `members_enabled` est faux ; `maxInstances` 2 ; sans politique lisible, refus | `ai_quotas/{uid}` (tours du jour), `ai_usage/{AAAA-MM}_{uid}` (appels, jetons, `cost_usd`, `unpriced_calls`), journal « IA : appel » (Admin › Journaux), Console Anthropic, qui fait foi pour la facture |
