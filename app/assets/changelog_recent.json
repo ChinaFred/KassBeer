@@ -1,8 +1,39 @@
 {
   "versions": [
     {
+      "version": "0.2.6",
+      "date": "2026-11-22",
+      "summaries": [
+        "Dans une recette, un houblon ou un divers connu de la Bibliothèque ouvre sa fiche d'un appui."
+      ],
+      "paragraphs": [
+        "Sur la fiche d'une recette, la recette d'un brassin et une recette publique, un houblon ou un divers que la Bibliothèque connaît porte maintenant un chevron : un appui ouvre sa fiche, avec ses arômes ou sa description. La flèche du haut ou le retour du téléphone ramène à la recette. Un ingrédient que la Bibliothèque ne reconnaît pas reste affiché comme avant."
+      ]
+    },
+    {
+      "version": "0.2.5",
+      "date": "2026-11-22",
+      "summaries": [
+        "La fiche d'un divers dit à quoi il sert, quand l'ajouter et s'il change le goût."
+      ],
+      "paragraphs": [
+        "Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un paragraphe par moment d'ajout (empâtage, ébullition, après ébullition, fermentation, embouteillage). La section « Goût » décrit le goût apporté, ou indique qu'il n'y a pas d'effet notable. Ces textes sont rédigés par une IA et ne donnent aucune dose : suivez la notice du fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur."
+      ]
+    },
+    {
+      "version": "0.2.1",
+      "date": "2026-11-22",
+      "summaries": [
+        "L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet."
+      ],
+      "paragraphs": [
+        "Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé : seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre dans le navigateur le journal de toutes les versions, détail technique et versions plus récentes compris. Demandé par le ticket #114."
+      ]
+    },
+    {
       "version": "0.2.0",
       "date": "2026-11-22",
+      "summaries": [],
       "paragraphs": [
         "La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms : une recette qui écrit l'un ou l'autre retrouve la même levure."
       ]
@@ -10,6 +41,7 @@
     {
       "version": "0.1.99",
       "date": "2026-11-22",
+      "summaries": [],
       "paragraphs": [
         "L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent maintenant."
       ]
@@ -17,30 +49,9 @@
     {
       "version": "0.1.98",
       "date": "2026-11-22",
+      "summaries": [],
       "paragraphs": [
         "À l'import d'une recette, une levure se reconnaît aussi par la référence écrite dans son nom, même quand le nom est saisi à la main avec le producteur à la fin, des mots en français, un poids ou une référence sans tiret (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »). La levure n'est choisie que si une seule souche de la Bibliothèque porte cette référence. La plage de température de la levure sur la courbe d'un brassin et les valeurs reprises par l'assistant de recette suivent la même règle."
-      ]
-    },
-    {
-      "version": "0.1.97",
-      "date": "2026-11-22",
-      "paragraphs": [
-        "La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.",
-        "Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données » présente aussi les arômes des levures."
-      ]
-    },
-    {
-      "version": "0.1.95",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le développement », un ticket validé sur GitHub à valider de nouveau dans l'application, et un ticket en cours dont la CI de la pull request est en échec. Un ticket dont l'analyse, le développement ou la correction tourne déjà en sort jusqu'à la fin de la session prévue. Une nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à corriger. Le nombre « Tickets à traiter » du menu compte aussi les tickets validés à lancer. Quand rien n'attend, l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ». Demandé par le ticket #63."
-      ]
-    },
-    {
-      "version": "0.1.94",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position. Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur téléphone, ou avec un texte agrandi, rien ne change."
       ]
     }
   ]

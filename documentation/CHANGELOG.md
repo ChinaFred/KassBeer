@@ -86,6 +86,8 @@ libre sur `main` et sur chaque branche distante (leçon 17). Aucun changement de
 
 ### v0.2.6 — fonctionnel
 
+Résumé : Dans une recette, un houblon ou un divers connu de la Bibliothèque ouvre sa fiche d'un appui.
+
 Sur la fiche d'une recette, la recette d'un brassin et une recette publique, un houblon ou un
 divers que la Bibliothèque connaît porte maintenant un chevron : un appui ouvre sa fiche, avec
 ses arômes ou sa description. La flèche du haut ou le retour du téléphone ramène à la recette.
@@ -102,6 +104,8 @@ juste importée ne lient rien. Retour par `pop` quand la fiche est poussée avec
 `main.dart.js` : 5 948 779 octets avant, 5 951 901 après (+ 3 122). Tests Flutter : 1 949.
 
 ### v0.2.5 — fonctionnel
+
+Résumé : La fiche d'un divers dit à quoi il sert, quand l'ajouter et s'il change le goût.
 
 Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment
 l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un
@@ -152,6 +156,31 @@ un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P63 (`beer_mi
 et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
 P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
 complétés et marqués « à livrer ». Aucun code.
+
+### v0.2.1 — fonctionnel
+
+Résumé : L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet.
+
+Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans
+l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé :
+seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre
+dans le navigateur le journal de toutes les versions, détail technique et versions plus
+récentes compris. Demandé par le ticket #114.
+
+### v0.2.1 — technique
+
+`scripts/changelog-recent.mjs` : une entrée « fonctionnel » commence par une ligne
+`Résumé : …` de 120 caractères au plus (`SUMMARY_MAX_LENGTH`), obligatoire à partir de la
+v0.2.1 (`SUMMARY_REQUIRED_FROM`). Le script échoue (code 1) sur un résumé absent, vide, trop
+long ou placé après le premier paragraphe. L'asset `changelog_recent.json` gagne le champ
+`summaries` (un résumé par entrée « fonctionnel » qui en porte un) ; `paragraphs` peut être
+vide quand la version a un résumé. `lireNouveautes` lit `summaries` ; la borne de longueur
+reste au script seul. `NouveautesScreen` : détail replié par carte (état
+non mémorisé), lien `kJournalComplet` ouvert par `ouvrirLienProvider` ; un refus du système
+affiche « Le lien n'a pas pu s'ouvrir. » sans rapport, une exception est rapportée sous
+`nouveautes.open_changelog`. Règle d'écriture ajoutée à `CLAUDE.md` (« Version »). Aucune
+dépendance changée. Demandé par le ticket #114.
+
 ### v0.2.0 — fonctionnel
 
 La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew

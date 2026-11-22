@@ -17,13 +17,21 @@ const _sample = '''
 {
   "versions": [
     {
+      "version": "0.2.1",
+      "date": "2026-11-23",
+      "summaries": ["Résumé seul."],
+      "paragraphs": []
+    },
+    {
       "version": "0.1.2",
       "date": "2026-11-08",
+      "summaries": ["Un résumé court.", "Un second résumé."],
       "paragraphs": ["Deuxième version.", "• Une puce."]
     },
     {
       "version": "0.1.0",
       "date": "2026-11-01",
+      "summaries": [],
       "paragraphs": ["Première version."]
     }
   ]
@@ -34,9 +42,12 @@ void main() {
   group('lireNouveautes', () {
     test('lit versions, dates et paragraphes dans l\'ordre', () {
       final versions = lireNouveautes(_sample);
-      expect(versions.map((v) => v.version), ['0.1.2', '0.1.0']);
-      expect(versions.first.date, DateTime(2026, 11, 8));
-      expect(versions.first.paragraphs, ['Deuxième version.', '• Une puce.']);
+      expect(versions.map((v) => v.version), ['0.2.1', '0.1.2', '0.1.0']);
+      expect(versions[1].date, DateTime(2026, 11, 8));
+      expect(versions[1].summaries, ['Un résumé court.', 'Un second résumé.']);
+      expect(versions[1].paragraphs, ['Deuxième version.', '• Une puce.']);
+      expect(versions.first.paragraphs, isEmpty);
+      expect(versions.last.summaries, isEmpty);
     });
 
     test('liste vide acceptée', () {
@@ -49,6 +60,7 @@ void main() {
     const valide = {
       'version': '0.1.0',
       'date': '2026-11-01',
+      'summaries': <String>[],
       'paragraphs': ['Texte.'],
     };
 
@@ -63,6 +75,22 @@ void main() {
       ('date invalide', une({...valide, 'date': '2026-02-30'})),
       ('date avec heure', une({...valide, 'date': '2026-11-01T10:00'})),
       ('paragraphes absents', une({...valide}..remove('paragraphs'))),
+      ('résumés absents', une({...valide}..remove('summaries'))),
+      (
+        'résumé non texte',
+        une({
+          ...valide,
+          'summaries': [3],
+        }),
+      ),
+      (
+        'résumé blanc',
+        une({
+          ...valide,
+          'summaries': [' '],
+        }),
+      ),
+      ('ni résumé ni paragraphe', une({...valide, 'paragraphs': <String>[]})),
       ('paragraphes vides', une({...valide, 'paragraphs': <String>[]})),
       (
         'paragraphe non texte',
@@ -90,6 +118,8 @@ void main() {
       );
       expect(versions, isNotEmpty);
       expect(versions.length, lessThanOrEqualTo(6));
+      // La première version livrée avec ce changement porte un résumé.
+      expect(versions.first.summaries, isNotEmpty);
     });
   });
 
@@ -177,7 +207,13 @@ void main() {
     expect(find.text('Version 0.1.0'), findsOneWidget);
     expect(find.text('8 novembre 2026'), findsOneWidget);
     expect(find.text('1er novembre 2026'), findsOneWidget);
-    expect(find.text('• Une puce.'), findsOneWidget);
+    // Résumés affichés, détail replié ; aucun résumé inventé pour 0.1.0.
+    expect(find.text('Un résumé court.'), findsOneWidget);
+    expect(find.text('Un second résumé.'), findsOneWidget);
+    expect(find.text('• Une puce.'), findsNothing);
+    expect(find.text('Première version.'), findsNothing);
+    // 0.2.1 n'a pas de détail : deux boutons pour trois versions.
+    expect(find.text(NouveautesScreen.voirDetail), findsNWidgets(2));
     expect(find.byType(SelectionArea), findsOneWidget);
     // Une seule pastille, sur la carte de la version installée.
     expect(find.byType(Etiquette), findsOneWidget);
@@ -198,6 +234,85 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(NouveautesScreen), findsNothing);
     expect(find.text(RecipesListScreen.emptyMessage), findsOneWidget);
+  });
+
+  testWidgets('Voir le détail déplie, Masquer le détail replie', (
+    tester,
+  ) async {
+    await signedIn(tester);
+    await openFromMenu(tester);
+    final bouton = find.bySemanticsLabel('Voir le détail de la version 0.1.2');
+    expect(bouton, findsOneWidget);
+    expect(
+      tester.getSemantics(bouton),
+      matchesSemantics(
+        label: 'Voir le détail de la version 0.1.2',
+        isButton: true,
+        hasTapAction: true,
+        hasExpandedState: true,
+      ),
+    );
+    await tester.tap(bouton);
+    await tester.pumpAndSettle();
+    expect(find.text('Deuxième version.'), findsOneWidget);
+    expect(find.text('• Une puce.'), findsOneWidget);
+    expect(find.text('Première version.'), findsNothing);
+    final masquer = find.bySemanticsLabel(
+      'Masquer le détail de la version 0.1.2',
+    );
+    expect(masquer, findsOneWidget);
+    await tester.tap(masquer);
+    await tester.pumpAndSettle();
+    expect(find.text('• Une puce.'), findsNothing);
+  });
+
+  Future<void> tapJournal(WidgetTester tester) async {
+    final lien = find.text(NouveautesScreen.journalComplet);
+    await tester.scrollUntilVisible(lien, 200);
+    await tester.tap(lien);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('journal complet : ouvre le CHANGELOG sur GitHub', (
+    tester,
+  ) async {
+    final app = await signedIn(tester);
+    await openFromMenu(tester);
+    expect(app.openedLinks, isEmpty);
+    await tapJournal(tester);
+    expect(app.openedLinks, [
+      Uri.parse(
+        'https://github.com/ChinaFred/KassBeer/blob/main/documentation/'
+        'CHANGELOG.md',
+      ),
+    ]);
+    expect(find.text(NouveautesScreen.lienEchec), findsNothing);
+    expect(app.errors.reports, isEmpty);
+  });
+
+  testWidgets(
+    'journal complet refusé par le système : message, aucun rapport',
+    (tester) async {
+      final app = await signedIn(tester);
+      app.openLinkResult = false;
+      await openFromMenu(tester);
+      await tapJournal(tester);
+      expect(find.text(NouveautesScreen.lienEchec), findsOneWidget);
+      expect(app.errors.reports, isEmpty);
+    },
+  );
+
+  testWidgets('journal complet en exception : message et rapport', (
+    tester,
+  ) async {
+    final app = await signedIn(tester);
+    app.openLinkError = StateError('pas de navigateur');
+    await openFromMenu(tester);
+    await tapJournal(tester);
+    expect(find.text(NouveautesScreen.lienEchec), findsOneWidget);
+    expect(app.errors.reports.map((r) => r.feature), [
+      'nouveautes.open_changelog',
+    ]);
   });
 
   testWidgets('version illisible : en-tête « indisponible », aucune pastille', (

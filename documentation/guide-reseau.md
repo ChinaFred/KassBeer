@@ -146,7 +146,9 @@ reçoit pas de tag : si l'autre session fusionne la première, son numéro chang
 Une entrée `— fonctionnel` du `CHANGELOG.md` est extraite par `scripts/changelog-recent.mjs`
 vers `app/assets/changelog_recent.json`, que l'écran « Nouveautés » affiche. `CLAUDE.md` (« Version ») demande de l'écrire pour le
 brasseur, sans chemin de fichier ni numéro d'incrément ; le détail va dans l'entrée
-`— technique`.
+`— technique`. Depuis la v0.2.1, l'entrée commence par une ligne `Résumé : …` de 120 caractères
+au plus, que l'écran affiche seule, le reste replié ; le script échoue sur un résumé absent,
+vide, trop long ou mal placé (ticket #114).
 
 `check-version.mjs` lit le fichier déclaré dans `.claude/version.json` dans le dernier commit
 de la branche (`HEAD`) et sur la branche principale : la plus haute version entre `main` et
