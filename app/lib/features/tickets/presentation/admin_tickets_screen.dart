@@ -110,10 +110,11 @@ class AdminTicketsScreen extends ConsumerWidget {
   static const titre = 'Tickets des membres';
   static const loadError = 'Impossible de lire les tickets.';
   static const emptyTitle = 'Aucun ticket';
-  static const nothingToProcessTitle = 'Tout est traité';
+  static const nothingToProcessTitle = 'Rien à traiter';
   static const nothingBlockedTitle = 'Rien de bloqué';
   static const emptyMessage = 'Les membres n\'ont encore rien signalé.';
-  static const nothingToProcess = 'Chaque ticket a reçu une décision.';
+  static const nothingToProcess =
+      'Aucun ticket n\'attend d\'action de votre part.';
 
   /// « Bloqué » : envoi impossible, en retard, ou Issue disparue
   /// (`Ticket.isBlocked`).
@@ -192,18 +193,17 @@ class _PanneauListe extends ConsumerWidget {
     final filtre = ref.watch(filtreTicketsProvider).filtre;
     final notifier = ref.read(filtreTicketsProvider.notifier);
     final valides = list?.valides ?? const <Ticket>[];
-    // « À traiter » de la liste : statut, plus les tickets En cours dont la
-    // PR est prête (décision 7 du 2026-11-14) ; le compteur du menu reste sur
-    // le statut seul.
-    final pretes = ref.watch(ticketsPrPreteProvider);
-    final prPretes = pretes.ids;
-    final toProcess = valides
-        .where((t) => t.toProcess || prPretes.contains(t.id))
-        .length;
+    // « À traiter » de la liste : action permise par le serveur sans session
+    // en cours (ticket #63) ; le compteur du menu reste sur le ticket seul.
+    final aTraiter = ref.watch(ticketsATraiterProvider);
+    final aTraiterIds = aTraiter.ids;
+    final toProcess = valides.where((t) => aTraiterIds.contains(t.id)).length;
     final blocked = valides.where((t) => t.isBlocked(now)).length;
-    // Le premier filtre attend l'état des PR des tickets En cours : un ticket
-    // dont la PR est prête est à traiter.
-    if (list != null && pretes.lu && !ref.read(filtreTicketsProvider).ajuste) {
+    // Le premier filtre attend les lancements et l'état des PR : un ticket
+    // dont une session tourne n'est pas à traiter.
+    if (list != null &&
+        aTraiter.lu &&
+        !ref.read(filtreTicketsProvider).ajuste) {
       // Après la construction : un fournisseur ne change pas pendant un
       // build.
       WidgetsBinding.instance.addPostFrameCallback(
@@ -233,7 +233,7 @@ class _PanneauListe extends ConsumerWidget {
     } else {
       body = _Liste(
         list: list,
-        prPretes: prPretes,
+        aTraiterIds: aTraiterIds,
         filtre: filtre,
         now: now,
         selectedId: selectedId,
@@ -326,7 +326,7 @@ class _Filtres extends StatelessWidget {
 class _Liste extends ConsumerWidget {
   const _Liste({
     required this.list,
-    required this.prPretes,
+    required this.aTraiterIds,
     required this.filtre,
     required this.now,
     required this.selectedId,
@@ -339,8 +339,8 @@ class _Liste extends ConsumerWidget {
 
   final ListeLue<Ticket> list;
 
-  /// Tickets En cours dont la PR est prête : sous « À traiter ».
-  final Set<String> prPretes;
+  /// Tickets sous « À traiter » (`ticketsATraiterProvider`).
+  final Set<String> aTraiterIds;
   final FiltreTickets filtre;
   final DateTime now;
   final String? selectedId;
@@ -356,7 +356,7 @@ class _Liste extends ConsumerWidget {
     final tickets = [
       for (final t in list.valides)
         if (switch (filtre) {
-          FiltreTickets.aTraiter => t.toProcess || prPretes.contains(t.id),
+          FiltreTickets.aTraiter => aTraiterIds.contains(t.id),
           FiltreTickets.tous => true,
           FiltreTickets.bloques => t.isBlocked(now),
         })

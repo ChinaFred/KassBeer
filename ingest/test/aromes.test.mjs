@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { NATURE_HOUBLON } from "../lib/aromes/nature.mjs";
+import { NATURE_LEVURE } from "../lib/levures/nature.mjs";
 import { MODELE, parametresRequete, PROMPT_VERSION, SCHEMA_SORTIE } from "../lib/aromes/prompt.mjs";
 import {
   controlerEntreeArome,
@@ -39,6 +40,9 @@ import { controlerDocument } from "../lib/validation.mjs";
 
 const CLE = "sk-ant-cle-fictive-0123456789";
 const lireOptionsHoublon = (argv) => lireOptions(argv, NATURE_HOUBLON);
+// Natures de generer-aromes.mjs : --nature hop (par défaut) ou culture.
+const lireOptionsAromes = (argv) =>
+  lireOptions(argv, { hop: NATURE_HOUBLON, culture: NATURE_LEVURE });
 const TEXTE =
   "Notes franches d'agrumes et de résine, amertume nette, proche du Cascade en plus doux.";
 const MAINTENANT = new Date("2026-11-14T10:00:00Z");
@@ -316,6 +320,49 @@ describe("options", () => {
     assert.throws(() => lireOptionsHoublon(["--nouveaux"]), ErreurRedaction);
     assert.equal(lireOptionsHoublon(["--essai"]).essai, 10);
     assert.equal(lireOptionsHoublon(["--essai", "3"]).essai, 3);
+  });
+
+  it("--max : 500 au plus pour les houblons, 1 000 pour les levures, défaut selon la nature", () => {
+    assert.equal(lireOptionsAromes(["--lot", "--budget-usd", "1"]).max, 500);
+    assert.equal(lireOptionsAromes(["--lot", "--budget-usd", "1", "--max", "500"]).max, 500);
+    assert.throws(
+      () => lireOptionsAromes(["--lot", "--budget-usd", "1", "--nature", "hop", "--max", "501"]),
+      ErreurRedaction,
+    );
+    assert.equal(
+      lireOptionsAromes(["--nature", "culture", "--lot", "--budget-usd", "1"]).max,
+      1000,
+    );
+    // --max avant --nature : contrôlé une fois la nature lue.
+    assert.equal(
+      lireOptionsAromes(["--max", "1000", "--lot", "--budget-usd", "1", "--nature", "culture"]).max,
+      1000,
+    );
+    assert.throws(
+      () =>
+        lireOptionsAromes(["--nature", "culture", "--lot", "--budget-usd", "1", "--max", "1001"]),
+      ErreurRedaction,
+    );
+    assert.throws(
+      () => lireOptionsAromes(["--lot", "--budget-usd", "1", "--max", "0"]),
+      ErreurRedaction,
+    );
+    // --nature répété : la dernière valeur compte, et le plafond est le sien.
+    assert.throws(
+      () =>
+        lireOptionsAromes([
+          "--max",
+          "1000",
+          "--nature",
+          "culture",
+          "--nature",
+          "hop",
+          "--lot",
+          "--budget-usd",
+          "1",
+        ]),
+      ErreurRedaction,
+    );
   });
 
   it("--max au-delà de 500, effort inconnu, deux modes : refusés", () => {
@@ -812,7 +859,7 @@ describe("génération (SDK simulé)", () => {
     const sdk = sdkSimule({ reponses: [message(sortieModele()), message(sortieModele())] });
     const cr = await lancer(["--essai"], sdk);
     assert.equal(cr.generes, 2);
-    assert.ok(lignes.some((l) => l.includes("ignoré : seul") && l.includes("(ADR-018)")));
+    assert.ok(lignes.some((l) => l.includes("ignoré : seul") && l.includes("(ADR-019)")));
   });
 
   it("le rapport porte le poste de la nature passée au moteur", async () => {

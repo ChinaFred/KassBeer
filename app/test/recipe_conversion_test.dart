@@ -1148,4 +1148,110 @@ void main() {
       expect(c.hopsWithoutMass.map((h) => h.name), ['Extrait de houblon']);
     });
   });
+
+  group('ai_proposed (ADR-015, lot A2)', () {
+    Map<String, dynamic> marque(Object? marks) => {
+      ..._doc(),
+      'ai_proposed': marks,
+    };
+
+    test('lu, écrit, et gardé par la copie figée d\'un brassin', () {
+      final content = RecipeContent.fromFirestore(
+        marque(['hop:houblon-citra:alpha_acid', 'fermentable:malt-pils:color']),
+      );
+      expect(
+        [for (final m in content.aiProposed) m.texte],
+        ['hop:houblon-citra:alpha_acid', 'fermentable:malt-pils:color'],
+      );
+      expect(content.aiProposedIllisibles, 0);
+      expect(content.toFirestore(creation: true)['ai_proposed'], [
+        'hop:houblon-citra:alpha_acid',
+        'fermentable:malt-pils:color',
+      ]);
+      final snapshot = recipeSnapshot(
+        Recipe(id: 'r', ownerUid: 'uid-a', content: content),
+      );
+      expect(snapshot['ai_proposed'], hasLength(2));
+      final relue = RecipeContent.fromFirestore(
+        Map<String, dynamic>.from(snapshot),
+      );
+      expect(relue.aiProposed, content.aiProposed);
+      // La marque ne va jamais dans `recipe` (P21).
+      expect((snapshot['recipe']! as Map).containsKey('ai_proposed'), isFalse);
+    });
+
+    test('entrées hors forme ignorées et comptées', () {
+      final content = RecipeContent.fromFirestore(
+        marque(['hop:houblon-citra:alpha_acid', 'x', 42]),
+      );
+      expect(content.aiProposed, hasLength(1));
+      expect(content.aiProposedIllisibles, 2);
+      expect(
+        RecipeContent.fromFirestore(marque('texte')).aiProposedIllisibles,
+        1,
+      );
+    });
+
+    test(
+      'ingrédient retiré : marque effacée à l\'écriture ; aucune marque : champ retiré',
+      () {
+        final content = RecipeContent.fromFirestore(
+          marque([
+            'hop:houblon-citra:alpha_acid',
+            'hop:houblon-absent:alpha_acid',
+          ]),
+        );
+        expect(content.toFirestore(creation: true)['ai_proposed'], [
+          'hop:houblon-citra:alpha_acid',
+        ]);
+        final sans = content.avecMarques(const []);
+        expect(
+          sans.toFirestore(creation: true).containsKey('ai_proposed'),
+          isFalse,
+        );
+        expect(
+          sans.toFirestore(creation: false)['ai_proposed'],
+          isA<FieldValue>(),
+        );
+      },
+    );
+
+    test(
+      'valeur corrigée à la main : marque effacée ; autre champ : gardée',
+      () {
+        final reference = RecipeContent.fromFirestore(
+          marque(['hop:houblon-citra:alpha_acid']),
+        );
+        HopLine citra(double alpha, double grammes) => HopLine(
+          name: 'Citra',
+          amount: Quantite.grammes(grammes),
+          use: HopUse.boil,
+          form: 'pellet',
+          alphaPct: alpha,
+          timeMin: 60,
+        );
+        RecipeContent avec(HopLine h) => RecipeContent(
+          name: reference.name,
+          fermentables: reference.fermentables,
+          hops: [h, ...reference.hops.skip(1)],
+          aiProposed: reference.aiProposed,
+        );
+        expect(
+          avec(citra(13, 22.4)).marquesRevues(reference).aiProposed,
+          isEmpty,
+        );
+        expect(
+          avec(citra(12, 30)).marquesRevues(reference).aiProposed,
+          reference.aiProposed,
+        );
+      },
+    );
+
+    test('duplication : les marques suivent la recette', () {
+      final content = RecipeContent.fromFirestore(
+        marque(['hop:houblon-citra:alpha_acid']),
+      );
+      expect(content.duplicate().aiProposed, content.aiProposed);
+    });
+  });
 }

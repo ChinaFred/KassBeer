@@ -20,29 +20,32 @@ const PRIX = ["input", "output", "cache_write", "cache_read", "batch_input", "ba
 /// code de sortie 2.
 export class ErreurRedaction extends Error {}
 
-/// Nom du fichier de tarif, dans le dossier parent de celui de la nature
-/// (import/ingest/tarif.json par défaut).
+/// Nom du fichier de tarif, à côté des dossiers des natures (import/ingest/tarif.json par
+/// défaut).
 export const FICHIER_TARIF = "tarif.json";
 
-/// Chemins du tarif d'une nature dont les fichiers vivent dans [dossierNature] : `chemin`, le
-/// seul lu, et `ancien`, l'emplacement d'avant ADR-018 (import/ingest/aromes/tarif.json),
-/// qui n'est plus lu.
-export function cheminsTarif(dossierNature) {
+/// Chemins du tarif pour le dossier des natures [dossierBase] (import/ingest/aromes/ pour les
+/// houblons et les levures, dont les fichiers sont dans levures/ ; import/ingest/divers/) :
+/// `chemin`, le seul lu, dans le dossier parent (import/ingest/tarif.json), et `ancien`,
+/// l'emplacement d'avant ADR-018 et ADR-019 (import/ingest/aromes/tarif.json), qui n'est
+/// plus lu. Jamais calculé depuis le sous-dossier d'une nature : pour les levures, son parent
+/// est import/ingest/aromes/.
+export function cheminsTarif(dossierBase) {
   return {
-    chemin: join(dossierNature, "..", FICHIER_TARIF),
-    ancien: join(dossierNature, FICHIER_TARIF),
+    chemin: join(dossierBase, "..", FICHIER_TARIF),
+    ancien: join(dossierBase, FICHIER_TARIF),
   };
 }
 
-/// Lit le tarif commun pour [dossierNature] (voir cheminsTarif). Si seul l'ancien fichier
+/// Lit le tarif commun pour [dossierBase] (voir cheminsTarif). Si seul l'ancien fichier
 /// existe, refus « Tarif inconnu » qui dit de le déplacer : aucun repli sur l'ancien
 /// emplacement. Rend aussi `ancienIgnore` : vrai si l'ancien fichier existe à côté du
 /// nouveau, pour le signaler à l'écran.
-export function lireTarifCommun(dossierNature, modele, maintenant, existe = existsSync) {
-  const { chemin, ancien } = cheminsTarif(dossierNature);
+export function lireTarifCommun(dossierBase, modele, maintenant, existe = existsSync) {
+  const { chemin, ancien } = cheminsTarif(dossierBase);
   if (!existe(chemin) && existe(ancien)) {
     throw new ErreurRedaction(
-      `${MESSAGE_TARIF_INCONNU} (${chemin} absent ; ${ancien} n'est plus lu depuis ADR-018 : ` +
+      `${MESSAGE_TARIF_INCONNU} (${chemin} absent ; ${ancien} n'est plus lu depuis ADR-018 et ADR-019 : ` +
         `déplacez-le d'un dossier vers le haut, dans ${chemin}).`,
     );
   }

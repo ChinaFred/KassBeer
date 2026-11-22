@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:exchange/exchange.dart' show IndexImport, MarqueIa;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,10 +28,12 @@ import '../../equipment/presentation/equipment_providers.dart';
 import '../../library/domain/referentiel.dart';
 import '../../library/presentation/champ_bibliotheque.dart';
 import '../domain/assistant_recette.dart';
+import '../domain/import_recettes.dart' show indexBibliotheque;
 import '../domain/beerjson.dart';
 import '../domain/libelles_etapes.dart';
 import '../domain/recipe.dart';
 import 'assistant_controleur.dart';
+import 'carte_proposition.dart';
 import 'contenu_recette.dart';
 import 'ingredient_forms.dart';
 import 'panneau_assistant.dart';
@@ -145,6 +148,52 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   /// Colonne de l'assistant affichée (840 px et plus).
   bool _assistantOuvert = false;
 
+  /// Marques « proposée par l'IA » du brouillon (ADR-015, lot A2).
+  late List<MarqueIa> _marques;
+
+  /// Brouillon de référence des marques : la recette chargée, ou le
+  /// brouillon d'après la dernière proposition appliquée. Une valeur changée
+  /// depuis perd sa marque (`marquesRevues`).
+  late RecipeContent _reference;
+
+  /// Ce que l'éditeur a fait de chaque proposition, par conversation et rang
+  /// de la réponse ([_cleProposition]) : une proposition d'une nouvelle
+  /// conversation part sans état.
+  final Map<String, EtatApplication> _applications = {};
+
+  static String _cleProposition(String conversation, int rang) =>
+      '$conversation|$rang';
+
+  /// Conversation vue au dernier changement du contrôleur : quand elle change
+  /// (« Nouvelle conversation », « Résumer et continuer »), la proposition
+  /// appliquée ne s'annule plus.
+  String? _conversationVue;
+
+  /// Causes déjà rapportées par [_revoir] pendant cette session de l'éditeur.
+  final Set<String> _revuesRapportees = {};
+
+  /// Dernière proposition appliquée, seule à pouvoir s'annuler.
+  ({
+    int message,
+    String conversation,
+    RecipeContent avant,
+    RecipeContent referenceAvant,
+    bool dirtyAvant,
+    String? empreinteApres,
+  })?
+  _derniere;
+
+  /// Bibliothèque entière lue pour les aperçus, gardée tant que l'éditeur
+  /// est ouvert ; relue par « Réessayer ».
+  Future<IndexImport?>? _indexProposition;
+
+  /// Contexte de la feuille de l'assistant ouverte (sous 840 px), fermée
+  /// après « Appliquer ».
+  BuildContext? _feuille;
+  final _assistantFocus = FocusNode();
+  final _annulerFocus = FocusNode();
+  final Set<String> _calculsProposition = {};
+
   /// Brouillon, calculs et équipement de la dernière construction : ce que
   /// lit le bloc Calculs, envoyé à l'assistant (U13).
   ({
@@ -179,6 +228,8 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     _steps = [...?c?.mashSteps];
     _equipmentId = c?.equipmentId;
     _type = c?.type;
+    _marques = [...?c?.aiProposed];
+    _reference = c ?? const RecipeContent(name: '');
   }
 
   @override
@@ -188,6 +239,8 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     }
     _nameFocus.dispose();
     _styleFocus.dispose();
+    _assistantFocus.dispose();
+    _annulerFocus.dispose();
     _assistant
       ?..removeListener(_assistantChange)
       ..dispose();
@@ -195,13 +248,248 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   }
 
   void _assistantChange() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final conversation = _assistant?.idConversation;
+    if (_conversationVue != null && conversation != _conversationVue) {
+      if (_derniere != null) {
+        // L'annonce « Annuler » de la proposition appliquée ne vaut plus.
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _derniere = null;
+      }
+    }
+    _conversationVue = conversation;
+    setState(() {});
   }
 
-  ControleurAssistant get _controleur => _assistant ??= ControleurAssistant(
-    repository: ref.read(assistantRepositoryProvider),
-    errorReportService: ref.read(errorReportServiceProvider),
-  )..addListener(_assistantChange);
+  ControleurAssistant get _controleur => _assistant ??=
+      ControleurAssistant(
+          repository: ref.read(assistantRepositoryProvider),
+          errorReportService: ref.read(errorReportServiceProvider),
+        )
+        ..empreinteBrouillon = _empreinteActuelle
+        ..addListener(_assistantChange);
+
+  String? _empreinteActuelle() {
+    final dernier = _dernier;
+    if (dernier == null) return null;
+    return empreinteBrouillon(
+      dernier.content,
+      ref.read(errorReportServiceProvider),
+    );
+  }
+
+  // ------------------------------------------------------------ propositions
+
+  /// Les quatre index de la Bibliothèque, hors ligne depuis le cache seul ;
+  /// `null` si l'un manque ou ne se lit pas : l'aperçu affiche la panne, sans
+  /// repli sur la valeur du modèle.
+  Future<IndexImport?> _index({bool relire = false}) {
+    if (relire || _indexProposition == null) {
+      _indexProposition = _lireIndex();
+    }
+    return _indexProposition!;
+  }
+
+  Future<IndexImport?> _lireIndex() async {
+    final repository = ref.read(libraryRepositoryProvider);
+    final offline = ref.read(grantedAccessProvider)?.offline ?? false;
+    const natures = [
+      NatureReferentiel.fermentables,
+      NatureReferentiel.hops,
+      NatureReferentiel.miscs,
+      NatureReferentiel.cultures,
+    ];
+    final List<RechercheDocument<IndexReferentiel>> lus;
+    try {
+      lus = await Future.wait([
+        for (final n in natures) repository.lireIndex(n, cacheSeul: offline),
+      ]);
+    } catch (_) {
+      // Déjà rapportée par le dépôt de la Bibliothèque : `lireIndex` rapporte
+      // chaque panne avant de la relancer. L'aperçu affiche la panne.
+      return null;
+    }
+    final index = [
+      for (final l in lus)
+        if (l case DocumentTrouve(:final value)) indexBibliotheque(value),
+    ];
+    if (index.length != natures.length) return null;
+    return IndexImport(
+      malts: index[0],
+      houblons: index[1],
+      ajouts: index[2],
+      levures: index[3],
+    );
+  }
+
+  CalculsRecette _calculer(RecipeContent content) => evaluerRecette(
+    content,
+    _dernier?.equipement ?? const SansEquipement(),
+    errors: ref.read(errorReportServiceProvider),
+    reported: _calculsProposition,
+    recipeKey: 'proposition',
+  );
+
+  /// Carte de la proposition de la réponse de rang [rang], s'il y en a une.
+  Widget? _carte(int rang) {
+    final controleur = _assistant;
+    final recue = controleur?.propositions[rang];
+    if (controleur == null || recue == null) return null;
+    final derniere = _derniere;
+    final estDerniere =
+        derniere != null &&
+        derniere.message == rang &&
+        derniere.conversation == controleur.idConversation;
+    return CarteProposition(
+      key: ValueKey('proposition-${controleur.idConversation}-$rang'),
+      recue: recue,
+      brouillon: () => _dernier?.content,
+      index: _index,
+      calculer: _calculer,
+      errors: ref.read(errorReportServiceProvider),
+      etat: _applications[_cleProposition(controleur.idConversation, rang)],
+      focusAnnuler: estDerniere ? _annulerFocus : null,
+      onAppliquer: (apercu) => _appliquer(rang, apercu),
+      onAnnuler: () => unawaited(_annuler(rang)),
+    );
+  }
+
+  /// Remplace les champs et les listes de l'éditeur par [c].
+  void _charger(RecipeContent c) {
+    _name.text = c.name;
+    _nameError = null;
+    _style.text = c.style ?? '';
+    _volume.text = texteSaisi(c.batchVolumeL);
+    _boil.text = texteSaisi(c.boilTimeMin);
+    _grainTemp.text = texteSaisi(c.grainTempC);
+    _notes.text = c.notes ?? '';
+    _type = c.type;
+    _replace(_fermentables, sortFermentables(c.fermentables));
+    _replace(_hops, sortHops(c.hops));
+    _replace(_others, c.others);
+    _replace(_yeasts, c.yeasts);
+    _replace(_steps, c.mashSteps);
+    _marques = [...c.aiProposed];
+  }
+
+  /// « Appliquer au brouillon » : aucun appel au modèle, aucune écriture.
+  void _appliquer(int rang, ApercuPret apercu) {
+    final dernier = _dernier;
+    final controleur = _assistant;
+    if (dernier == null || controleur == null) return;
+    final precedente = _derniere;
+    final cle = _cleProposition(controleur.idConversation, rang);
+    setState(() {
+      if (precedente != null) {
+        final avant = _cleProposition(
+          precedente.conversation,
+          precedente.message,
+        );
+        if (_applications[avant] == EtatApplication.appliquee) {
+          _applications[avant] = EtatApplication.remplacee;
+        }
+      }
+      _derniere = (
+        message: rang,
+        conversation: controleur.idConversation,
+        avant: dernier.content,
+        referenceAvant: _reference,
+        dirtyAvant: _dirty,
+        empreinteApres: empreinteBrouillon(
+          apercu.apres,
+          ref.read(errorReportServiceProvider),
+        ),
+      );
+      _applications[cle] = EtatApplication.appliquee;
+      _charger(apercu.apres);
+      _reference = apercu.apres;
+      _dirty = true;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    annoncerAvecAnnulation(
+      messenger,
+      TextesProposition.annonceAppliquee,
+      onAnnuler: () => unawaited(_annuler(rang)),
+    );
+    final width = MediaQuery.sizeOf(context).width;
+    final feuille = _feuille;
+    if (width < kExpandedMinWidth && feuille != null && feuille.mounted) {
+      // Sous 840 px, la feuille se ferme ; la conversation reste dans le
+      // contrôleur.
+      Navigator.of(feuille).pop();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _assistantFocus.requestFocus();
+      });
+    } else if (width >= kExpandedMinWidth) {
+      // Colonne de l'assistant (840 px et plus) : le focus passe sur
+      // « Annuler la proposition ».
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _annulerFocus.requestFocus();
+      });
+    }
+  }
+
+  /// « Annuler la proposition » : le brouillon d'avant revient. Après une
+  /// modification à la main, une confirmation d'abord.
+  Future<void> _annuler(int rang) async {
+    final derniere = _derniere;
+    final controleur = _assistant;
+    if (derniere == null ||
+        controleur == null ||
+        derniere.message != rang ||
+        derniere.conversation != controleur.idConversation ||
+        _applications[_cleProposition(derniere.conversation, rang)] !=
+            EtatApplication.appliquee) {
+      return;
+    }
+    final modifie = _empreinteActuelle() != derniere.empreinteApres;
+    if (modifie &&
+        // ticket: aucun (confirmation)
+        !await confirmerAction(
+          context,
+          titre: TextesProposition.confirmerAnnulation,
+          paragraphes: const [TextesProposition.confirmerAnnulationTexte],
+          libelle: TextesProposition.annuler,
+        )) {
+      return;
+    }
+    if (!mounted || _derniere != derniere) return;
+    setState(() {
+      _charger(derniere.avant);
+      _reference = derniere.referenceAvant;
+      _dirty = derniere.dirtyAvant;
+      _applications[_cleProposition(derniere.conversation, rang)] =
+          EtatApplication.annulee;
+      _derniere = null;
+    });
+  }
+
+  /// Marques revues du dernier brouillon construit (ADR-015, lot A2).
+  List<MarqueIa> get _marquesAffichees =>
+      _dernier?.content.aiProposed ?? _marques;
+
+  /// Marques du brouillon [c] après les modifications faites depuis
+  /// [_reference] (valeur corrigée à la main, ingrédient retiré).
+  RecipeContent _revoir(RecipeContent c) {
+    try {
+      return c.marquesRevues(_reference);
+    } catch (error, stackTrace) {
+      // Ligne refusée à l'écriture : les marques restent telles quelles.
+      // L'éditeur reconstruit à chaque frappe : un rapport par cause et par
+      // session, comme les calculs (`evaluerRecette`).
+      if (_revuesRapportees.add('${error.runtimeType}')) {
+        ref
+            .read(errorReportServiceProvider)
+            .reportError(
+              feature: 'recipes.ai_proposed',
+              error: error,
+              stackTrace: stackTrace,
+              context: 'marques non revues : ${error.runtimeType}',
+            );
+      }
+      return c;
+    }
+  }
 
   /// La conversation a un tour, un résumé ou un appel en cours : la quitter la
   /// perd.
@@ -281,6 +569,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         useSafeArea: true,
         showDragHandle: true,
         builder: (sheetContext) {
+          _feuille = sheetContext;
           final hauteur = MediaQuery.sizeOf(sheetContext).height;
           final clavier = MediaQuery.viewInsetsOf(sheetContext).bottom;
           final dernier = _dernier;
@@ -298,12 +587,13 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
                     : texteBarreCalculs(dernier.calculs).texte,
                 recetteVide: _recetteVide(dernier?.content),
                 contexte: _contexteAssistant,
+                carteProposition: _carte,
                 onFermer: () => Navigator.of(sheetContext).pop(),
               ),
             ),
           );
         },
-      ),
+      ).then((_) => _feuille = null),
     );
   }
 
@@ -340,6 +630,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       importedFrom: initial?.importedFrom,
       // Conservé d'un import, sans champ de saisie (I9).
       author: initial?.author,
+      aiProposed: List.unmodifiable(_marques),
     );
   }
 
@@ -394,7 +685,9 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     if (!mounted) return;
     final access = ref.read(grantedAccessProvider);
     if (access == null) return;
-    final content = _content(equipmentId);
+    // Marques revues contre la référence : une valeur corrigée à la main ou un
+    // ingrédient retiré perd sa marque (ADR-015, section 6).
+    final content = _revoir(_content(equipmentId));
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     // Nom du jeton, celui que comparent les règles ; nul s'il n'y en a pas ou si
@@ -447,6 +740,17 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     context: context,
     builder: (_) => FormulaireFermentescible(
       initial: index == null ? null : _fermentables[index],
+      champsProposes: index == null
+          ? const {}
+          : {
+              for (final champ in const ['color', 'yield'])
+                if (fermentableProposeParIa(
+                  _marquesAffichees,
+                  _fermentables[index],
+                  champ,
+                ))
+                  champ,
+            },
       remaining: kMaxFermentables - _fermentables.length,
       onSubmit: (line) => setState(() {
         final list = [..._fermentables];
@@ -462,6 +766,8 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     context: context,
     builder: (_) => FormulaireHoublon(
       initial: index == null ? null : _hops[index],
+      alphaPropose:
+          index != null && houblonProposeParIa(_marquesAffichees, _hops[index]),
       remaining: kMaxHops - _hops.length,
       recipeBoilMin: _withinBoil(_boil.text),
       onSubmit: (line) => setState(() {
@@ -491,6 +797,9 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     context: context,
     builder: (_) => FormulaireLevure(
       initial: _yeasts.isEmpty ? null : _yeasts.first,
+      attenuationProposee:
+          _yeasts.isNotEmpty &&
+          levureProposeeParIa(_marquesAffichees, _yeasts.first),
       // Une seule levure (A3) : la saisie remplace la première.
       onSubmit: (line) => setState(() {
         _replace(_yeasts, [line, ..._yeasts.skip(1)]);
@@ -599,7 +908,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       equipmentAsync,
       offline: access?.offline ?? false,
     );
-    final content = _content(equipmentId);
+    final content = _revoir(_content(equipmentId));
     final calculs = evaluerRecette(
       content,
       equipement,
@@ -681,6 +990,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       resumeCalculs: texteBarreCalculs(calculs).texte,
       recetteVide: _recetteVide(content),
       contexte: _contexteAssistant,
+      carteProposition: _carte,
       autofocus: true,
       onFermer: () => setState(() => _assistantOuvert = false),
     );
@@ -762,6 +1072,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       actionsAvant: [
         if (assistantVisible)
           IconButton(
+            focusNode: _assistantFocus,
             tooltip: assistantColonne
                 ? TextesAssistant.fermer
                 : TextesAssistant.ouvrir,
@@ -824,6 +1135,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         for (final h in calculs.calculation.hopsLongerThanBoil) h.index,
     };
     final fermentableTotal = _fermentables.fold(0.0, (s, f) => s + f.weightG);
+    final marques = _marquesAffichees;
     final author = widget.initial?.content.author;
     final ids = {for (final e in equipment) e.id};
     Widget section(_Section s, String title, {String? trailing}) =>
@@ -970,7 +1282,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       for (final (i, f) in _fermentables.indexed)
         LigneEditeur(
           title: f.name,
-          details: detailsFermentescible(f, fiche: false),
+          details: detailsFermentescible(f, fiche: false, marques: marques),
           warning: f.weightG > kUnusualFermentableGrams
               ? quantiteInhabituelle(formatKilogrammes(f.weightG))
               : null,
@@ -995,7 +1307,12 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       for (final (i, h) in _hops.indexed)
         LigneEditeur(
           title: h.name,
-          details: detailsHoublon(h, fiche: false, ibu: hopIbu[i]),
+          details: detailsHoublon(
+            h,
+            fiche: false,
+            ibu: hopIbu[i],
+            marques: marques,
+          ),
           warning: [
             if (_inhabituelle(h.amount, kUnusualHopGrams))
               quantiteInhabituelle(formatQuantiteRecette(h.amount)),
@@ -1042,7 +1359,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       else
         LigneEditeur(
           title: _yeasts.first.name,
-          details: detailsLevure(_yeasts.first, fiche: false),
+          details: detailsLevure(_yeasts.first, fiche: false, marques: marques),
           onTap: _openYeast,
           onRemove: () => _remove(_yeasts, 0, _yeasts.first.name),
         ),

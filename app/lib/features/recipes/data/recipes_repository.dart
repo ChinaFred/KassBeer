@@ -62,6 +62,9 @@ class FirestoreRecipesRepository implements RecipesRepository {
   final ErrorReportService _errors;
   final FirebaseFirestore? _injectedFirestore;
 
+  /// Recettes dont les marques IA illisibles ont déjà été rapportées.
+  final Set<String> _aiProposedRapportes = {};
+
   FirebaseFirestore get _firestore =>
       _injectedFirestore ?? FirebaseFirestore.instance;
 
@@ -103,6 +106,12 @@ class FirestoreRecipesRepository implements RecipesRepository {
       );
       final problem = recipe.content.brewStepsProblem;
       if (problem != null) _reportBrewSteps(id, problem);
+      final illisibles = recipe.content.aiProposedIllisibles;
+      // Une fois par recette et par session : la liste se relit à chaque
+      // changement du groupe.
+      if (illisibles > 0 && _aiProposedRapportes.add(id)) {
+        _reportAiProposed(id, illisibles);
+      }
       return DocumentValide(id, recipe);
     } on DocumentIllisible catch (error, stackTrace) {
       // Depuis la v0.1.17, aucune lecture ne passe par brewing/ : un type de malt
@@ -115,6 +124,14 @@ class FirestoreRecipesRepository implements RecipesRepository {
     feature: 'recipes.brew_steps',
     error: DocumentIllisible('brew_steps', problem),
     context: 'recipes/$id : chronologie illisible',
+  );
+
+  /// Marques « proposée par l'IA » hors forme (ADR-015) : ignorées à la
+  /// lecture, rapportées sans contenu (le nombre seul, P13).
+  void _reportAiProposed(String id, int count) => _errors.reportError(
+    feature: 'recipes.ai_proposed',
+    error: DocumentIllisible('ai_proposed', '$count entrée(s) hors forme'),
+    context: 'recipes/$id : marques IA illisibles',
   );
 
   DocumentLu<Recipe> _invalid(String id, Object error, StackTrace stackTrace) {

@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/data/lecture_document.dart';
 import '../../recipes/domain/recipe.dart' show OtherUse;
-import 'relecture.dart';
 
 /// Collection des descriptions des divers (ADR-018), écrite par l'ingestion
 /// seule, lue par `get` à l'ouverture de la fiche d'un divers.
@@ -34,23 +33,17 @@ class RoleDivers {
 /// Description d'un divers, `beer_misc_descriptions/{id}` (ADR-018, section 3).
 /// Lecture stricte : un champ attendu absent ou mal typé lève
 /// [DocumentIllisible], dont la raison ne recopie aucun texte du document. Une
-/// clé de `moments` inconnue est ignorée.
+/// clé de `moments` inconnue est ignorée. `reviewed` et `reviewed_at` servent à
+/// l'ingestion seule : l'application ne les lit pas (ADR-019, décision 4).
 @immutable
 sealed class DescriptionDivers {
-  const DescriptionDivers({required this.relu, required this.reluLe});
-
-  /// `reviewed` : texte relu par l'administrateur.
-  final bool relu;
-
-  /// `reviewed_at`, posé quand [relu] est vrai.
-  final DateTime? reluLe;
+  const DescriptionDivers();
 
   static DescriptionDivers fromFirestore(Map<String, dynamic> data) {
     final read = LecteurChamps(data);
-    final (:relu, :reluLe) = lireRelecture(read);
     switch (data['status']) {
       case 'unknown':
-        return DiversInconnu(relu: relu, reluLe: reluLe);
+        return const DiversInconnu();
       case 'described':
         final confidence = data['confidence'];
         if (!_confiances.contains(confidence)) {
@@ -94,8 +87,6 @@ sealed class DescriptionDivers {
           );
         }
         return DiversDecrit(
-          relu: relu,
-          reluLe: reluLe,
           confianceFaible: confidence == 'low',
           resume: resume,
           roles: List.unmodifiable(roles),
@@ -111,8 +102,6 @@ sealed class DescriptionDivers {
 /// `status: described`.
 class DiversDecrit extends DescriptionDivers {
   const DiversDecrit({
-    required super.relu,
-    required super.reluLe,
     required this.confianceFaible,
     required this.resume,
     required this.roles,
@@ -139,5 +128,5 @@ class DiversDecrit extends DescriptionDivers {
 
 /// `status: unknown` : ajout trop peu documenté.
 class DiversInconnu extends DescriptionDivers {
-  const DiversInconnu({required super.relu, required super.reluLe});
+  const DiversInconnu();
 }

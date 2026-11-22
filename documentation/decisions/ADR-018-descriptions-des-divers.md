@@ -5,6 +5,15 @@
 - **Remplace** : — (étend ADR-013 à une seconde nature, avec un poste de coût à part ; complète
   ADR-005 et P20 : seconde exception aux textes des référentiels ; laisse ADR-014 et ADR-016
   inchangés)
+- **Amendé par** : ADR-019 (2026-11-21) : listes du groupe par `--nature misc`.
+- **Note du 2026-11-22 (ADR-019, lots R2 et R3 faits, v0.2.12)** : `main` fusionné dans la
+  branche des divers. Listes du groupe : `ingest/lister-ingredients-recettes.mjs --nature misc`
+  et `exchange/bin/lister_ingredients_recettes.dart --nature misc` ;
+  `ingest/lister-divers-recettes.mjs`, `exchange/bin/lister_divers_recettes.dart` et
+  `exchange/bin/src/lister_recettes.dart` sortent. La fiche d'un divers affiche « Texte rédigé
+  par une IA (Claude) » sans « relu le » ni « non relu » (ADR-019, décision 4), par le cadre
+  commun aux houblons et aux levures (`texte_redige.dart`). Les entrées v0.1.92 à v0.2.1 de la
+  branche sont renumérotées v0.2.2 à v0.2.11 au `CHANGELOG.md`.
 
 Décision de l'utilisateur du 2026-11-21 : option A, textes rédigés par l'API Claude depuis le
 poste de l'admin, sur le modèle d'ADR-013. Options écartées par lui : textes écrits à la main

@@ -225,6 +225,53 @@ describe("planifierSuppressions (ADR-014)", () => {
     );
   });
 
+  it("beer_culture_aromas (ADR-017) : absents supprimables au motif culture-, plafond et 90 %", () => {
+    const prepares = ids(40, "culture-p");
+    const plan = planifierSuppressions({
+      collection: "beer_culture_aromas",
+      enLigne: [...prepares, "culture-absorbee", "hop-ancien"],
+      prepares,
+    });
+    assert.deepEqual(plan.candidates, ["culture-absorbee"]);
+    assert.deepEqual(
+      plan.ignored.map((i) => i.id),
+      ["hop-ancien"],
+    );
+    assert.throws(
+      () =>
+        planifierSuppressions({
+          collection: "beer_culture_aromas",
+          enLigne: [...ids(1000, "culture-p"), ...ids(PLAFOND_SUPPRESSIONS + 1, "culture-x")],
+          prepares: ids(1000, "culture-p"),
+        }),
+      (e) => e instanceof ErreurOptions && /30 au plus/.test(e.message),
+    );
+    assert.throws(
+      () =>
+        planifierSuppressions({
+          collection: "beer_culture_aromas",
+          enLigne: [...ids(90, "culture-p"), ...ids(11, "culture-x")],
+          prepares: ids(90, "culture-p"),
+        }),
+      (e) => e instanceof ErreurOptions && /moins de 90 %/.test(e.message),
+    );
+  });
+
+  it("beer_culture_aromas sans levures/aromes.json : refusée ; identifiants des levures", () => {
+    assert.throws(
+      () => idsPrepares("beer_culture_aromas", { documents: {} }, { beer_culture_aromas: null }),
+      (e) => e instanceof ErreurOptions && e.message.includes("levures/aromes.json"),
+    );
+    assert.deepEqual(
+      idsPrepares(
+        "beer_culture_aromas",
+        { documents: {} },
+        { beer_culture_aromas: { entrees: [{ id: "culture-a" }] } },
+      ),
+      ["culture-a"],
+    );
+  });
+
   it("autre collection : refusée", () => {
     for (const collection of [
       "beer_fermentables",
@@ -243,9 +290,16 @@ describe("planifierSuppressions (ADR-014)", () => {
   });
 
   it("beer_hop_aromas sans aromes.json : refusée ; identifiants préparés, refusés compris", () => {
-    assert.throws(() => idsPrepares("beer_hop_aromas", { documents: {} }, null), ErreurOptions);
+    assert.throws(
+      () => idsPrepares("beer_hop_aromas", { documents: {} }, { beer_hop_aromas: null }),
+      ErreurOptions,
+    );
     assert.deepEqual(
-      idsPrepares("beer_hop_aromas", { documents: {} }, { entrees: [{ id: "hop-a" }, {}] }),
+      idsPrepares(
+        "beer_hop_aromas",
+        { documents: {} },
+        { beer_hop_aromas: { entrees: [{ id: "hop-a" }, {}] } },
+      ),
       ["hop-a"],
     );
     assert.deepEqual(

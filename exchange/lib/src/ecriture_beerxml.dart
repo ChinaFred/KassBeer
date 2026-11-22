@@ -3,6 +3,7 @@ import 'package:brewing/brewing.dart';
 import 'compte_rendu.dart' show Champ, ListeRecette;
 import 'ecriture_beerjson.dart';
 import 'lecture_beerjson.dart' show kNomEmpatage;
+import 'marques_ia.dart';
 
 /// Export BeerXML 1.0 d'une recette (ADR-005, L2c) : le sous-arbre `recipe`
 /// stocké, l'auteur, le rendement d'empâtage de l'équipement (`EFFICIENCY`), le
@@ -265,8 +266,8 @@ class StyleBeerXml {
 /// [volumeMortL] de l'équipement de la recette ; sans l'une de ces valeurs,
 /// l'export est bloqué. [style] : style BJCP résolu ; sans lui, l'export est
 /// bloqué par [manquesStyle] ([styleBeerXmlDe]), ou par [ChampExport.style]
-/// s'il est vide. Lève [BrewingInputException] pour une valeur d'équipement
-/// négative.
+/// s'il est vide. [marquesIa] : comme [exporterBeerJson]. Lève
+/// [BrewingInputException] pour une valeur d'équipement négative.
 ResultatExport exporterBeerXml({
   required Map<String, Object?> recipe,
   required String? ownerName,
@@ -278,6 +279,7 @@ ResultatExport exporterBeerXml({
   List<ManqueDeFormat> manquesStyle = const [],
   required RecipeCalculation? calcul,
   required bool chronologie,
+  List<MarqueIa> marquesIa = const [],
 }) {
   final author = texteExport(recipe['author']) ?? texteExport(ownerName);
   final manques = manquesExportBeerXml(
@@ -331,7 +333,12 @@ ResultatExport exporterBeerXml({
     ..fermer('RECIPE')
     ..fermer('RECIPES');
   if (chronologie) pertes.add(const ChronologieNonExportee());
-  return ExportPret(x.texte, List.unmodifiable(pertes), author);
+  return ExportPret(
+    x.texte,
+    List.unmodifiable(pertes),
+    author,
+    valeursIa: valeursProposees(recipe, marquesIa),
+  );
 }
 
 /// Ce qui manque à [recipe] pour un export BeerXML : ce qui manque au

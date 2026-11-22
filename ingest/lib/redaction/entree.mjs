@@ -40,8 +40,9 @@ export function construireEntree(
 }
 
 /// Erreurs de l'enveloppe de [doc] (`{id, data}`) : `reviewed`, `reviewed_at`,
-/// `input_sha256`, `provenance`. [un] nomme l'ingrédient dans les messages (« houblon »).
-export function reglesEnveloppe(doc, un) {
+/// `input_sha256`, `provenance`. [un] nomme l'ingrédient dans les messages (« houblon ») ;
+/// [attenduSource] : message d'un `source_id` différent de l'identifiant.
+export function reglesEnveloppe(doc, un, attenduSource = `identifiant du ${un} attendu`) {
   const erreurs = [];
   const r = (chemin, regle) => erreurs.push(`${chemin} : ${regle}`);
   const d = doc.data;
@@ -61,7 +62,7 @@ export function reglesEnveloppe(doc, un) {
       r("provenance[0]", "clés source, source_id, version, licence, retrieved attendues");
     } else {
       if (l.source !== SOURCE_PROVENANCE) r("provenance[0].source", `${SOURCE_PROVENANCE} attendu`);
-      if (l.source_id !== doc.id) r("provenance[0].source_id", `identifiant du ${un} attendu`);
+      if (l.source_id !== doc.id) r("provenance[0].source_id", attenduSource);
       if (typeof l.version !== "string" || !VERSION.test(l.version)) {
         r("provenance[0].version", "« <modèle> / prompt <n> / effort <e> » attendu");
       }

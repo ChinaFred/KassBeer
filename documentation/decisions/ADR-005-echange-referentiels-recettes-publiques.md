@@ -5,6 +5,9 @@
 - **Remplace** : — (modifie ADR-001, qui renvoyait l'export BeerXML après la v1)
 - **Complété par ADR-013** (2026-11-14) : `beer_hop_aromas/` porte un texte rédigé par l'API
   Claude, relu par l'admin. P20 reste inchangé pour les données des sources.
+- **Complété par ADR-017** (2026-11-21, livré à la v0.1.93) : `beer_culture_aromas/`, même
+  exception à P20 pour les levures (texte généré, levures du groupe relues) ; les descriptions
+  et styles conseillés des fiches des fabricants restent écartés.
 
 ## Contexte
 
@@ -469,7 +472,14 @@ Décisions de l'étape 3, côté recettes (v0.1.28) :
     l'export BeerXML : 17 styles BJCP n'ont aucune plage, IPA Argenta n'a pas de densités ;
     aucune plage n'est inventée ;
   - une levure importée se résout aussi par sa référence seule (`US-05`) ou par son producteur
-    et sa référence (`Fermentis US-05`), quand une seule entrée correspond ;
+    et sa référence (`Fermentis US-05`), quand une seule entrée correspond ; note du
+    2026-11-22 (décision de l'utilisateur) : en dernier, elle se résout aussi par une référence
+    lue dans son nom (suite d'un à trois segments de la clé normalisée, jointe sans tiret, avec
+    une lettre et un chiffre, hors poids : « Bohemian Lager M84 Mangrove Jack »,
+    « SafeLager S23 »), seulement si une seule entrée porte cette référence et si le nom ne
+    nomme pas un autre producteur de la Bibliothèque ; les levures qui portent tous les mots du
+    nom (dix au plus) ne sont que des candidats listés par `lister_ingredients_recettes.dart`,
+    jamais choisis ;
   - la forme d'un houblon et le type d'un autre ajout sont repris à l'import, en plus des
     valeurs de D4 ; l'éditeur reprend aussi le type vide d'un ajout.
 

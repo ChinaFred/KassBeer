@@ -12,6 +12,8 @@ class PageDeCoquille extends GoRoute {
     this.titreSelon,
     this.retourSelon,
     this.retourParPopPermis = false,
+    this.pleineLargeurSelon,
+    this.retourParPopSelon,
     super.builder,
     super.pageBuilder,
     super.routes,
@@ -39,6 +41,15 @@ class PageDeCoquille extends GoRoute {
   /// Bibliothèque ouverte depuis une recette, ADR-018, lot D4) ; sinon, ou
   /// sans page à dépiler, le retour ouvre [retour].
   final bool retourParPopPermis;
+
+  /// Pleine largeur qui dépend de la largeur ; `null` : [pleineLargeur].
+  final bool Function(BuildContext context)? pleineLargeurSelon;
+
+  /// Vrai quand le bouton retour dépile la page au lieu d'ouvrir le chemin
+  /// du retour (fiche d'un style ouverte par-dessus une recette publique, en
+  /// large) ; `null` : jamais.
+  final bool Function(BuildContext context, GoRouterState state)?
+  retourParPopSelon;
 }
 
 /// Page de second niveau dont le retour dépend du chemin (préparation d'un brassin).
@@ -52,3 +63,9 @@ class PageDeCoquilleDynamique extends PageDeCoquille {
 
   final String Function(GoRouterState state) retourDepuis;
 }
+
+/// Vrai quand la page affichée a été ouverte par `push` par-dessus une autre
+/// (« Voir le style » depuis une recette publique).
+bool pageEmpilee(BuildContext context) =>
+    GoRouter.of(context).routerDelegate.currentConfiguration.lastOrNull
+        is ImperativeRouteMatch;

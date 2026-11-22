@@ -8,7 +8,7 @@
     { "id": "misc-mousse-fictive", "noms": ["Mousse Fictive", "algue fictive"] }
   ],
   "non_resolus": [
-    { "nom": "Minéral", "raison": "plusieurs" },
-    { "nom": "Poudre Inconnue", "raison": "aucun" }
+    { "nom": "Minéral", "raison": "plusieurs", "candidats": ["misc-sel-fictif", "misc-sel-imaginaire"] },
+    { "nom": "Poudre Inconnue", "raison": "aucun", "candidats": [] }
   ]
 }

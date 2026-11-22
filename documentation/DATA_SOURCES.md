@@ -34,8 +34,9 @@ l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`
 | Fiches techniques Wyeast (`wyeastlab.com/product/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 (Crawl-delay de 10 s respecté) ; SHA-256 du fichier `4d0206ca6143b07a3e4824274b496b9f9f07843b61f5ec0c48d1ca8575826b10` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 77 cultures (bière, « Wild & Sour ») : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | cultures de vin, cidre, hydromel, saké et distillerie (série 4000), produits d'appoint, tolérance à l'alcool, profil, styles conseillés |
 | Fiches techniques Escarpment Labs (`escarpmentlabs.com/products/…`), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `4bf68e54e3c437887e383e18babc4787405ae8eab6a955c765bb037f2379fc53` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 98 cultures liquides : nom, type, forme, producteur, référence LSB quand la fiche en donne une, atténuation, plage de température, floculation | levures Lallemand revendues (LalBrew, WildBrew), doublons de conditionnement (homebrew, dose primaire ou secondaire), tolérance à l'alcool, descriptions |
 | paquet npm `srm2hex` (ticket #48) | 1.0.2, archive `https://registry.npmjs.org/srm2hex/-/srm2hex-1.0.2.tgz`, SHA-1 `d84847e600a65eaee38247e2bce6e6d33c214d14` | MIT, déclarée dans `package.json` et le README ; ni fichier LICENSE ni ligne de copyright | les 400 triplets RGB de `lookup.js` (un par dixième de SRM, de 0 à 39,9 SRM), repris à l'identique par script dans `brewing/lib/src/teintes_srm.dart`, avec le texte de la licence MIT | le code de conversion en hexadécimal (`index.js`), qui omet le zéro de tête d'une composante sous 16, et sa règle « 40 SRM et plus = noir » (Kass'Beer garde la dernière teinte de la table) |
-| Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs ; `beer_index/hop_aromas` : identifiant du houblon et confiance de chaque description acceptée, sans texte (filtre de la Bibliothèque, note du 2026-11-21) | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
-| Descriptions des divers (ADR-018) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/divers/prompt.mjs`, propre aux divers), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, libellé français, type de `beer_miscs/` (publiques) | `beer_misc_descriptions/` : résumé, rôles de la liste fermée, un texte par moment (empâtage, ébullition, après ébullition, fermentation, embouteillage), goût s'il en a un ; aucune dose (renvoi à la notice du fabricant) ; divers des recettes du groupe relus par l'admin, les autres « non relu » ; un texte peut contenir des erreurs | `notes` et `USE_FOR` de Brewtarget (jamais lus ni envoyés), doses, recherche web, citation d'un fournisseur ou d'un catalogue |
+| Descriptions aromatiques des houblons (ADR-013) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/aromes/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, origine, acides, usage de `beer_hops/` (publiques) | `beer_hop_aromas/` : descripteurs de la liste fermée, un texte par usage ; houblons des recettes du groupe relus par l'admin avant l'écriture, relecture non affichée dans l'application (décision de l'utilisateur du 2026-11-21) ; un texte peut contenir des erreurs ; `beer_index/hop_aromas` : identifiant du houblon et confiance de chaque description acceptée, sans texte (filtre de la Bibliothèque, note du 2026-11-21) | `notes` des sources (jamais envoyés), recherche web, citation d'un fournisseur ou d'un catalogue |
+| Descriptions aromatiques des levures (ADR-017) | modèle `claude-fable-5-2`, prompt versionné propre aux levures (`PROMPT_VERSION_LEVURES`, `ingest/lib/levures/prompt.mjs`), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, producteur, référence, type, forme, atténuation, plage de température, floculation de `beer_cultures/` (publiques) ; styles conseillés pris dans la liste des styles BJCP 2021 de `beer_styles/` (codes et noms) | `beer_culture_aromas/` : descripteurs de la liste fermée de 32, profil, bas et haut de plage, 0 à 6 styles conseillés ; périmètre : levures des recettes du groupe, plus les types autres que `other`, `wine`, `champagne`, `malolactic` (923 levures sur 960) ; levures du groupe relues par l'admin avant l'écriture, relecture non affichée dans l'application (décision de l'utilisateur du 2026-11-21) ; un texte peut contenir des erreurs ; affichés dans la section « Arômes » de la fiche d'une levure depuis la v0.1.97 | `notes`, `provenance` et descriptions des fiches des fabricants (jamais envoyées), recherche web, reformulation d'une fiche de fabricant |
+| Descriptions des divers (ADR-018) | modèle `claude-fable-5-2`, prompt versionné (`prompt_version`, `ingest/lib/divers/prompt.mjs`, propre aux divers), effort noté dans `provenance[].version` | texte généré pour Kass'Beer par l'API Claude (Anthropic), copié d'aucune source ; données envoyées : nom, alias, libellé français, type de `beer_miscs/` (publiques) | `beer_misc_descriptions/` : résumé, rôles de la liste fermée, un texte par moment (empâtage, ébullition, après ébullition, fermentation, embouteillage), goût s'il en a un ; aucune dose (renvoi à la notice du fabricant) ; divers des recettes du groupe relus par l'admin avant l'écriture, relecture non affichée dans l'application (ADR-019, décision 4) ; un texte peut contenir des erreurs | `notes` et `USE_FOR` de Brewtarget (jamais lus ni envoyés), doses, recherche web, citation d'un fournisseur ou d'un catalogue |
 
 Attribution : l'écran « Sources des données », ouvert à tout membre, nomme Brewtarget (GPL-3),
 beer-analytics.com (CC BY-SA 4.0, lien vers la licence, modifications : unités normalisées, origines
@@ -462,13 +463,14 @@ l'utilisateur du 2026-11-21).
 avant la fiche ; P56 le compte comme hérité. Aucune fiche n'en a créé.
 
 La v0.1.82 a réglé 11 noms par les corrections des cultures de Brewtarget (`kCorrectionsCultures`,
-`exchange/lib/src/ingestion/fusions.dart`), et la v0.1.86 une souche Lallemand sous deux
-références, une ligne par cas :
+`exchange/lib/src/ingestion/fusions.dart`), la v0.1.86 une souche Lallemand sous deux
+références, et la v0.2.0 une souche Lallemand sans référence sous deux noms, une ligne par cas :
 
 | Correction | Lignes | Effet |
 |---|---|---|
 | une souche sous deux références : l'entrée prend la référence retenue | Omega Yeast `OYL-217-C2C` → `OYL-217` ; GigaYeast `GY018-SAISON-1` → `GY018`, `GY027-SAISON-2` → `GY027`, `GY144` → `GB144` ; The Yeast Bay « Saison Blend » sans référence → `WLP4007` ; Lallemand « Prise de Mousse Wine » `LALVIN-EC-1118` (004) → `EC-1118` (v0.1.86) | `c2c-american-farmhouse`, `saison-1`, `saison-2`, `sweet-flemish-brett`, `saison-blend` : un document chacun ; « Prise de Mousse Wine » devient un alias de « Lalvin EC-1118 » |
 | un nom de gamme porté par plusieurs souches : l'entrée qui porte une référence prend le nom `<gamme> <référence>`, construit par Kass'Beer à partir de la référence de la source | Lallemand « Lalvin » (71B, EC-1118, V1116) ; Fermentis « SafSpirit » (HG-1, USW-6) ; AEB « Fermoale » (AY3, AY4) | « Lalvin 71B », « SafSpirit HG-1 », « Fermoale AY3 »… ; l'entrée AEB « Fermoale » sans référence garde son nom, qu'elle seule porte désormais |
+| une souche sans référence sous deux noms : un document, à l'identifiant de la première entrée dans l'ordre des identifiants | Lallemand « LalBrew Belle Saison » (005 et 004) et « Belle Saison Belgian Saison-Style » (003) (v0.2.0) | `culture-lallemand-lalbrew-belle-saison` garde ses valeurs (005) et prend le second nom en alias |
 | un nom en alias d'une autre souche du même producteur : il sort des alias | Wyeast 3056 sans « Bavarian Wheat » (nom de la fiche 3638), 1335 sans « British Ale » (fiche 1098), 5335 sans « Lactobacillus » (sa fiche dit « Lactobacillus buchneri » ; 4335 garde ce nom) | `bavarian-wheat`, `british-ale`, `lactobacillus` : un document chacun |
 
 Effet de la v0.1.82 : 961 documents `beer_cultures` au lieu de 966. 12 identifiants sortent de la
@@ -482,6 +484,18 @@ Effet de la v0.1.86 : le fichier 004 donne à « Prise de Mousse Wine » la réf
 prend ce nom en alias. 960 documents `beer_cultures` au lieu de 961 ; 1 identifiant sort
 (`culture-lallemand-lalvinec1118-prise-de-mousse-wine`), aucun n'entre, 1 document change ;
 `ingest/ecrire.mjs --supprimer-absents beer_cultures` retire l'ancien.
+
+Effet de la v0.2.0 (décision de l'utilisateur du 2026-11-22) : Brewtarget écrit la levure
+Belle Saison de Lallemand sans référence, sous deux noms. Le fichier 005, prioritaire, et le
+fichier 004 la nomment « LalBrew Belle Saison » ; le fichier 003 la nomme « Belle Saison Belgian
+Saison-Style ». Une ligne `MemeSoucheCulture` réunit les trois entrées dans
+`culture-lallemand-lalbrew-belle-saison`, qui garde son identifiant, ses valeurs et son nom, et
+prend l'autre nom en alias. 959 documents `beer_cultures` au lieu de 960 ; 1 identifiant sort
+(`culture-lallemand-belle-saison-belgian-saison-style`), aucun n'entre, 1 document change ;
+`ingest/ecrire.mjs --supprimer-absents beer_cultures` retire l'ancien document. Sa description
+aromatique sort de `beer_culture_aromas` par `--supprimer-absents beer_culture_aromas`, une fois
+son entrée retirée de `import/ingest/aromes/levures/aromes.json` : l'écrivain compte comme
+préparé tout identifiant de ce fichier.
 
 La v0.1.81 a réglé 24 noms de la Private Collection de Wyeast (`belgian-dark-ale`,
 `belgian-schelde-ale`, `belgian-style-blend`, `berliner-weisse-blend`, `biere-de-garde`,
@@ -641,12 +655,13 @@ dans les `aliases` de l'index.
 | 3 (levure) | seule souche lue dans le nom : `Wyeast 1056`, `WLP001` |
 | 4 (levure) | seule entrée de cette référence : `US-05`, `us05` |
 | 5 (levure) | seule entrée de ce producteur et de cette référence : `Fermentis US-05` |
+| 6 (levure) | seule entrée d'une référence lue dans le nom, sauf si le nom nomme un autre producteur : `Bohemian Lager M84 Mangrove Jack`, `SafeLager S23` (v0.1.98) |
 
 Deux entrées pour une même clé ne résolvent rien. Valeurs reprises, seulement si la ligne n'en a
 pas : malt `type`, `yield.fine_grind`, `color` ; houblon `alpha_acid`, `form` ; levure `type`,
 `form`, `attenuation` (milieu de la plage de la fiche) ; autre ajout `type`. Chaque reprise est
-listée au compte rendu. Les étapes 4 et 5 et la reprise de la forme du houblon et du type d'un
-ajout vont au-delà de l'ingestion (D4) : ce sont des choix de l'étape 3 (ADR-005, E7). Un nom non
+listée au compte rendu. Les étapes 4 à 6 et la reprise de la forme du houblon et du type d'un
+ajout vont au-delà de l'ingestion (D4) : ce sont des choix de l'étape 3 (ADR-005, E7, et note du 2026-11-22 pour l'étape 6). Un nom non
 résolu d'un import est signalé dans `import_unresolved/` avec `source: import` et `key` (le nom
 normalisé), sous un identifiant propre à l'import (SHA-256 de `import|nature|key`, vérifié par
 les règles) : il ne touche jamais un document de l'ingestion, et un même nom a une ligne par

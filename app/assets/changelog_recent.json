@@ -1,45 +1,46 @@
 {
   "versions": [
     {
-      "version": "0.1.91",
-      "date": "2026-11-21",
+      "version": "0.2.0",
+      "date": "2026-11-22",
       "paragraphs": [
-        "L'administrateur peut ouvrir un ticket depuis une panne. Dans Rapports d'erreur et dans Journaux, une ligne dépliée porte le bouton « Analyser », à côté de « Copier ». Il ouvre « Signaler ou proposer » déjà rempli : type Bug, titre, fonctionnalité, version, plateforme, jour et lignes de la pile du code de l'application, à relire avant l'envoi. Le message de l'erreur, le contexte, le compte et le texte d'un journal ne sont pas repris : le ticket part sur un site public. La case « Lancer l'analyse dès la publication » est cochée par défaut. « Envoyer » ouvre alors une boîte qui annonce les lancements restants du jour ; après « Envoyer et lancer », le ticket part, puis l'analyse se lance dès que l'Issue existe. Plafond du jour atteint : le bouton devient « Envoyer sans lancer ». Sans publication en 2 minutes, la boîte dit de lancer l'analyse depuis la fiche du ticket. Un rapport ou une entrée qui a déjà un ticket affiche « Ticket #N créé le … » ; un appui ouvre sa fiche, et « Analyser » demande avant d'en créer un second. La boîte d'envoi porte aussi le lien vers l'usage Claude sur claude.ai. Demandé par le ticket #67."
+        "La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms : une recette qui écrit l'un ou l'autre retrouve la même levure."
       ]
     },
     {
-      "version": "0.1.90",
-      "date": "2026-11-21",
+      "version": "0.1.99",
+      "date": "2026-11-22",
       "paragraphs": [
-        "Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ; sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé par le ticket #105."
+        "L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent maintenant."
       ]
     },
     {
-      "version": "0.1.89",
-      "date": "2026-11-21",
+      "version": "0.1.98",
+      "date": "2026-11-22",
       "paragraphs": [
-        "Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation, qui rappelle la validation, la session qui va partir, les lancements restants du jour, le lien vers l'usage de Claude et le coût. La validation part d'abord ; le développement n'est lancé que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand le plafond du jour est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le ticket #64."
+        "À l'import d'une recette, une levure se reconnaît aussi par la référence écrite dans son nom, même quand le nom est saisi à la main avec le producteur à la fin, des mots en français, un poids ou une référence sans tiret (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »). La levure n'est choisie que si une seule souche de la Bibliothèque porte cette référence. La plage de température de la levure sur la courbe d'un brassin et les valeurs reprises par l'assistant de recette suivent la même règle."
       ]
     },
     {
-      "version": "0.1.88",
-      "date": "2026-11-21",
+      "version": "0.1.97",
+      "date": "2026-11-22",
       "paragraphs": [
-        "Dans la Bibliothèque, la liste des houblons montre l'usage et l'origine de chaque houblon. Un bouton « Confiance des arômes » ouvre un menu qui filtre les houblons selon la confiance de leur description (élevée, moyenne, faible, sans description), avec le nombre de houblons de chaque choix. Une ligne signale « Confiance faible » ou « Sans description ». La recherche et le nombre restent visibles en haut pendant le défilement, un bouton efface la recherche, et le nombre dit « 442 houblons » au lieu de « 442 entrées ». Sur la fiche d'un houblon, la mention de l'IA passe avant le texte. Une liste lue hors ligne le signale."
+        "La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.",
+        "Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données » présente aussi les arômes des levures."
       ]
     },
     {
-      "version": "0.1.87",
+      "version": "0.1.95",
       "date": "2026-11-21",
       "paragraphs": [
-        "L'écran des journaux est plus lisible sur téléphone. « Gravité » et « Période » sont deux puces qui ouvrent leur menu, sur la même ligne que « Rechercher » : le bouton se voit dès l'ouverture, sans défiler. « Fonction », « Ticket » et « Texte à chercher » se déplient par « Plus de filtres », qui dit combien sont remplis. Chaque entrée est une carte : la gravité y est écrite en toutes lettres sur un fond coloré, avec la date et la fonction sur la même ligne ; avec un texte agrandi, la date passe dessous, en entier. Une fois dépliée, les données s'affichent dans un bloc à fond qui défile en largeur. Demandé par le ticket #95."
+        "Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le développement », un ticket validé sur GitHub à valider de nouveau dans l'application, et un ticket en cours dont la CI de la pull request est en échec. Un ticket dont l'analyse, le développement ou la correction tourne déjà en sort jusqu'à la fin de la session prévue. Une nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à corriger. Le nombre « Tickets à traiter » du menu compte aussi les tickets validés à lancer. Quand rien n'attend, l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ». Demandé par le ticket #63."
       ]
     },
     {
-      "version": "0.1.86",
+      "version": "0.1.94",
       "date": "2026-11-21",
       "paragraphs": [
-        "La levure Lallemand « Prise de Mousse Wine » n'apparaît plus à côté de « Lalvin EC-1118 » dans la Bibliothèque : c'est la même levure, sous une autre référence. Sa fiche est celle de « Lalvin EC-1118 », qui garde « Prise de Mousse Wine » comme autre nom. Le changement arrive dans la Bibliothèque quand l'administrateur relance l'ingestion."
+        "Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position. Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur téléphone, ou avec un texte agrandi, rien ne change."
       ]
     }
   ]

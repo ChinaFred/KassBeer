@@ -6,8 +6,8 @@
 //
 // Fichiers de import/ingest/divers/ (jamais versionnés) :
 //   descriptions.json   entrées {id, data}, copie de référence, corrigée à la main
-//   noms-divers.json    noms des divers des recettes (lister-divers-recettes.mjs)
-//   divers-recettes.json  divers des recettes du groupe (exchange/bin/lister_divers_recettes.dart)
+//   noms-divers.json    noms des divers des recettes (lister-ingredients-recettes.mjs --nature misc)
+//   divers-recettes.json  divers des recettes du groupe (exchange/bin/lister_ingredients_recettes.dart --nature misc)
 //   lot-<id>.json       table custom_id → divers d'un lot de l'API Batches
 //   brut/               réponses de chaque exécution, effort dans le nom
 //   rapport.json        dernière exécution : poste, modèle, effort, jetons, montant
@@ -37,25 +37,34 @@ const LIBELLES_MOMENTS = {
 };
 
 export const NATURE_DIVERS = Object.freeze({
+  /// Valeur de --nature (lister-ingredients-recettes.mjs) et du champ `nature` d'un lot.
+  cle: "misc",
   /// Poste de coût porté par chaque rapport (catalogue « Coûts variables »).
   poste: "misc_description_generation",
   adr: "ADR-018",
   script: "generer-divers.mjs",
+  /// Commande de la nature, citée dans les messages (« Suivi : node … --suivre <id> »).
+  commande: "generer-divers.mjs",
   /// Option qui remplace le dossier de la nature, et dossier par défaut.
   optionDossier: "--divers",
   dossierDefaut: fileURLToPath(new URL("../../../import/ingest/divers/", import.meta.url)),
+  sousDossier: null,
   /// Référentiel préparé (import/ingest/prepare/), fichier des entrées, liste du groupe.
   referentiel: "beer_miscs.json",
   fichierEntrees: "descriptions.json",
   fichierGroupe: "divers-recettes.json",
   formatGroupe: "kassbeer_divers_recettes",
-  scriptGroupe: "lister_divers_recettes.dart",
+  scriptGroupe: "lister_ingredients_recettes.dart --nature misc",
   motifId: ID_DIVERS,
   prefixeId: "misc-",
   /// Préfixe des custom_id d'un lot (m0001…) et nom de l'ingrédient dans la table du lot.
+  /// --suivre accepte un lot sans champ `nature` (lot du lot D2 d'ADR-018, sans champ `nature`).
+  lotsSansNature: true,
   prefixeCustomId: "m",
   champNom: "misc_name",
   mots: { un: "divers", des: "divers", Des: "Divers", fichierExemple: "divers.json" },
+  /// Entrées par lancement, au plus (ADR-013, plafond 3 ; ADR-018, section 6).
+  maxEntrees: 500,
   modele: MODELE,
   maxTokens: MAX_TOKENS,
   promptVersion: PROMPT_VERSION,
@@ -73,13 +82,18 @@ export const NATURE_DIVERS = Object.freeze({
       effort,
       date,
     }),
+  /// Refus de ecrire.mjs (lib/execution.mjs, trierRedigees).
+  refus: {
+    absent: "divers absent de beer_miscs.json",
+    nonRelu: "divers des recettes du groupe non relu",
+  },
   /// Écriture par ecrire.mjs (lib/execution.mjs).
   ecriture: {
     collection: COLLECTION_DIVERS,
     option: "divers",
     nomDossier: "divers",
+    sousDossier: null,
     referentielCollection: "beer_miscs",
-    scriptNoms: "lister-divers-recettes.mjs",
     champFichier: "misc_descriptions_file",
     champSansDescription: "miscs_without_description",
     sansDescription: "sans description",

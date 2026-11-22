@@ -1,5 +1,5 @@
-// Référentiels, descriptions aromatiques (ADR-013, P55), descriptions des divers (ADR-018,
-// P63), recettes publiques et comptes
+// Référentiels, descriptions aromatiques (ADR-013, P55 ; ADR-017, P62), descriptions des
+// divers (ADR-018, P63), recettes publiques et comptes
 // rendus de l'ingestion (ADR-005, P19) :
 // écrits par aucun client, lus par les membres (ingest_runs et import_unresolved : par
 // l'admin). Cinq profils de P4, plus les connexions non conformes de P11. L'écriture
@@ -78,6 +78,26 @@ const DOCS = {
     input_sha256: "5".repeat(64),
     content_sha256: "6".repeat(64),
   },
+  "beer_culture_aromas/culture-labo-fictif-lf1-levure-fictive": {
+    culture_name: "Levure Fictive",
+    status: "described",
+    confidence: "medium",
+    descriptors: [{ key: "clean", label: "neutre" }],
+    texts: { profile: { text: "Texte fictif de quarante caractères au moins, pour le test." } },
+    styles: [{ code: "bjcp2021-99a", name: "Style Fictif" }],
+    reviewed: false,
+    provenance: [
+      {
+        source: "claude-api",
+        source_id: "culture-labo-fictif-lf1-levure-fictive",
+        version: "claude-fable-5-2 / prompt 1 / effort medium",
+        licence: "Texte généré pour Kass'Beer",
+        retrieved: "2026-11-21",
+      },
+    ],
+    input_sha256: "6".repeat(64),
+    content_sha256: "7".repeat(64),
+  },
   "beer_cultures/culture-labo-fictif-lf1-levure-fictive": {
     name: "Levure Fictive",
     aliases: [],
@@ -143,6 +163,7 @@ const LUS_PAR_LES_MEMBRES = [
   "beer_hop_aromas",
   "beer_misc_descriptions",
   "beer_cultures",
+  "beer_culture_aromas",
   "beer_miscs",
   "beer_styles",
   "beer_index",

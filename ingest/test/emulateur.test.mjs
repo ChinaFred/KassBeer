@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { executer } from "../lib/execution.mjs";
-import { listerNoms } from "../lib/lister.mjs";
+import { listerIngredients } from "../lib/lister.mjs";
 import { ErreurOptions } from "../lib/options.mjs";
 
 const HOTE = process.env.FIRESTORE_EMULATOR_HOST;
@@ -221,7 +221,7 @@ describe(
       );
     });
 
-    it("lister-divers-recettes : noms des divers seuls, triés, sans doublon, aucune écriture", async () => {
+    it("lister-ingredients-recettes --nature misc : noms des divers seuls, triés, sans doublon, aucune écriture", async () => {
       const { deleteApp, initializeApp } = await import("firebase-admin/app");
       const { getFirestore } = await import("firebase-admin/firestore");
       const app = initializeApp({ projectId: PROJET }, "semis-lister-divers");
@@ -249,9 +249,8 @@ describe(
             },
           },
         });
-        const r = await listerNoms({
-          nature: "divers",
-          argv: ["--sortie", sortieNoms],
+        const r = await listerIngredients({
+          argv: ["--nature", "misc", "--sortie", sortieNoms],
           env: { FIRESTORE_EMULATOR_HOST: HOTE },
           entree: process.stdin,
           sortie: process.stdout,
@@ -264,9 +263,8 @@ describe(
         assert.equal(JSON.stringify(fichier).includes("uid-fictif"), false);
         assert.equal(JSON.stringify(fichier).includes("Houblon"), false);
         await assert.rejects(
-          listerNoms({
-            nature: "divers",
-            argv: ["--divers", "x"],
+          listerIngredients({
+            argv: ["--nature", "misc", "--divers", "x"],
             env: { FIRESTORE_EMULATOR_HOST: HOTE },
             entree: process.stdin,
             sortie: process.stdout,
@@ -281,7 +279,7 @@ describe(
       }
     });
 
-    it("lister-houblons-recettes : noms seuls, triés, sans doublon, aucune écriture", async () => {
+    it("lister-ingredients-recettes (houblons) : noms seuls, triés, sans doublon, aucune écriture", async () => {
       const { deleteApp, initializeApp } = await import("firebase-admin/app");
       const { getFirestore } = await import("firebase-admin/firestore");
       const app = initializeApp({ projectId: PROJET }, "semis-lister");
@@ -306,8 +304,7 @@ describe(
           },
         });
         const avant = (await db.collection("recipes").get()).size;
-        const r = await listerNoms({
-          nature: "houblons",
+        const r = await listerIngredients({
           argv: ["--sortie", sortieNoms],
           env: { FIRESTORE_EMULATOR_HOST: HOTE },
           entree: process.stdin,
@@ -327,6 +324,159 @@ describe(
         ]);
         assert.equal(JSON.stringify(fichier).includes("uid-fictif"), false);
         assert.equal((await db.collection("recipes").get()).size, avant);
+      } finally {
+        await deleteApp(app);
+      }
+    });
+
+    it("arômes des levures : écrits depuis levures/, refus de P62, relues orphelines listées", async () => {
+      const dossierAromes = mkdtempSync(join(tmpdir(), "kassbeer-aromes-levures-"));
+      try {
+        const source = fileURLToPath(new URL("./fixtures/aromes/levures/", import.meta.url));
+        const [bonne] = JSON.parse(readFileSync(join(source, "aromes.json"), "utf8"));
+        const id = bonne.id;
+        const copie = (data) =>
+          JSON.parse(JSON.stringify({ ...bonne, data: { ...bonne.data, ...data } }));
+        const nonRelue = copie({ reviewed: false });
+        delete nonRelue.data.reviewed_at;
+        const orpheline = { ...copie({}), id: "culture-labo-fictif-lf9-absorbee" };
+        orpheline.data.provenance[0].source_id = orpheline.id;
+        const styleInconnu = { ...copie({ styles: [{ code: "bjcp2021-21a", name: "Inconnu" }] }) };
+        const dossier = join(dossierAromes, "levures");
+        cpSync(source, dossier, { recursive: true });
+        writeFileSync(join(dossier, "aromes.json"), JSON.stringify([nonRelue, orpheline]));
+        const r = await lancer(["--simulation", "--aromes", dossierAromes]);
+        assert.equal(r.culture_aromas_file, "read");
+        assert.equal(r.aromas_file, "absent");
+        assert.deepEqual(r.counts.beer_culture_aromas, { written: 0, unchanged: 0, refused: 2 });
+        assert.deepEqual(
+          r.refused.map((x) => [x.collection, x.id, x.erreurs]),
+          [
+            ["beer_culture_aromas", id, ["reviewed : levure des recettes du groupe non relue"]],
+            [
+              "beer_culture_aromas",
+              "culture-labo-fictif-lf9-absorbee",
+              ["id : levure absente de beer_cultures.json"],
+            ],
+          ],
+        );
+        assert.deepEqual(r.reviewed_orphans, {
+          beer_culture_aromas: ["culture-labo-fictif-lf9-absorbee"],
+          beer_misc_descriptions: [],
+        });
+        writeFileSync(join(dossier, "aromes.json"), JSON.stringify([styleInconnu]));
+        const r2 = await lancer(["--simulation", "--aromes", dossierAromes]);
+        assert.deepEqual(r2.refused[0].erreurs, [
+          "styles[0].code : style absent de beer_styles.json",
+        ]);
+        // Sans la liste du groupe à côté de levures/aromes.json : rien n'est écrit.
+        rmSync(join(dossier, "levures-recettes.json"));
+        await assert.rejects(
+          lancer(["--simulation", "--aromes", dossierAromes]),
+          /levures-recettes\.json absent à côté de aromes\.json/,
+        );
+      } finally {
+        rmSync(dossierAromes, { recursive: true, force: true });
+      }
+    });
+
+    it("arômes des levures : un style refusé à la préparation ne valide aucune entrée", async () => {
+      const racine = mkdtempSync(join(tmpdir(), "kassbeer-styles-refuses-"));
+      try {
+        const prepare = join(racine, "prepare");
+        cpSync(FIXTURE, prepare, { recursive: true });
+        const styles = JSON.parse(readFileSync(join(prepare, "beer_styles.json"), "utf8"));
+        const refuse = JSON.parse(JSON.stringify(styles[0]));
+        refuse.id = "bjcp2021-99b";
+        refuse.data.name = "Style Refusé";
+        refuse.data.style_id = "99B";
+        refuse.data.provenance[0].licence = "Licence inventée";
+        writeFileSync(join(prepare, "beer_styles.json"), JSON.stringify([...styles, refuse]));
+        const source = fileURLToPath(new URL("./fixtures/aromes/levures/", import.meta.url));
+        const dossier = join(racine, "aromes", "levures");
+        cpSync(source, dossier, { recursive: true });
+        const [bonne] = JSON.parse(readFileSync(join(source, "aromes.json"), "utf8"));
+        bonne.data.styles = [{ code: "bjcp2021-99b", name: "Style Refusé" }];
+        writeFileSync(join(dossier, "aromes.json"), JSON.stringify([bonne]));
+        const r = await executer({
+          argv: [
+            "--dossier",
+            prepare,
+            "--rapports",
+            rapports,
+            "--aromes",
+            join(racine, "aromes"),
+            "--simulation",
+          ],
+          env: { FIRESTORE_EMULATOR_HOST: HOTE },
+          entree: process.stdin,
+          sortie: process.stdout,
+          maintenant,
+        });
+        assert.ok(r.refused.some((x) => x.collection === "beer_styles" && x.id === "bjcp2021-99b"));
+        assert.deepEqual(
+          r.refused.find((x) => x.collection === "beer_culture_aromas"),
+          {
+            collection: "beer_culture_aromas",
+            id: bonne.id,
+            erreurs: ["styles[0].code : style absent de beer_styles.json"],
+          },
+        );
+        assert.deepEqual(r.counts.beer_culture_aromas, { written: 0, unchanged: 0, refused: 1 });
+      } finally {
+        rmSync(racine, { recursive: true, force: true });
+      }
+    });
+
+    it("lister-ingredients-recettes --nature culture : noms de levures seuls, aucune écriture", async () => {
+      const { deleteApp, initializeApp } = await import("firebase-admin/app");
+      const { getFirestore } = await import("firebase-admin/firestore");
+      const app = initializeApp({ projectId: PROJET }, "semis-lister-levures");
+      const sortieNoms = join(rapports, "noms-levures.json");
+      try {
+        const db = getFirestore(app);
+        const ligne = (name) => ({ name, amount: { value: 11, unit: "g" } });
+        await db.doc("recipes/rl1").set({
+          owner_uid: "uid-fictif",
+          recipe: {
+            name: "Recette",
+            ingredients: {
+              hop_additions: [ligne("Houblon Jamais Lu")],
+              culture_additions: [ligne("Levure Fictive"), ligne("Belgian Ale")],
+            },
+          },
+        });
+        await db.doc("brews/bl1").set({
+          owner_uid: "uid-fictif",
+          recipe_snapshot: {
+            recipe: {
+              ingredients: { culture_additions: [ligne(" Levure Fictive "), { amount: 1 }] },
+            },
+          },
+        });
+        const r = await listerIngredients({
+          argv: ["--nature", "culture", "--sortie", sortieNoms],
+          env: { FIRESTORE_EMULATOR_HOST: HOTE },
+          entree: process.stdin,
+          sortie: process.stdout,
+        });
+        assert.equal(r.nature, "culture");
+        assert.equal(r.ecartees, 1);
+        const fichier = JSON.parse(readFileSync(sortieNoms, "utf8"));
+        assert.equal(fichier.format, "kassbeer_noms_levures");
+        assert.ok(fichier.noms.includes("Levure Fictive"));
+        assert.ok(fichier.noms.includes("Belgian Ale"));
+        assert.equal(fichier.noms.includes("Houblon Jamais Lu"), false);
+        assert.equal(JSON.stringify(fichier).includes("uid-fictif"), false);
+        await assert.rejects(
+          listerIngredients({
+            argv: ["--nature", "malt"],
+            env: { FIRESTORE_EMULATOR_HOST: HOTE },
+            entree: process.stdin,
+            sortie: process.stdout,
+          }),
+          ErreurOptions,
+        );
       } finally {
         await deleteApp(app);
       }
@@ -687,7 +837,7 @@ describe("divers en production : liste des divers du groupe contrôlée avant to
     const r = lancerProduction({ target: "production", generated_at: "2026-11-10T09:00:00.000Z" });
     await assert.rejects(
       r.promesse,
-      /lister-divers-recettes\.mjs.*plus de 7 jours|plus de 7 jours.*lister-divers/s,
+      /plus de 7 jours.*lister-ingredients-recettes\.mjs --nature misc/s,
     );
     assert.equal(r.lus(), false);
   });

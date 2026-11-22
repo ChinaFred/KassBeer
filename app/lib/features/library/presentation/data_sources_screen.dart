@@ -97,16 +97,21 @@ class DataSourcesScreen extends ConsumerWidget {
       'Arômes des houblons : textes rédigés pour Kass\'Beer par une IA (Claude, '
       'd\'Anthropic), à partir du nom, des autres noms, de l\'origine, des '
       'acides et de l\'usage de chaque houblon. Ils ne sont copiés d\'aucune '
-      'source. L\'administrateur relit ceux des houblons utilisés dans les '
-      'recettes du groupe ; les autres sont marqués « non relu ». Un texte peut '
+      'source. Un texte peut contenir des erreurs.';
+  static const aromesLevures =
+      'Arômes des levures : textes rédigés pour Kass\'Beer par une IA (Claude, '
+      'd\'Anthropic), à partir du nom, des autres noms, du producteur, de la '
+      'référence, du type, de la forme, de l\'atténuation, de la plage de '
+      'température et de la floculation de chaque levure. Ils ne sont copiés '
+      'd\'aucune source, ni des fiches des fabricants. Les styles conseillés '
+      'sont choisis dans les styles BJCP 2021 de la Bibliothèque. Un texte peut '
       'contenir des erreurs.';
   static const descriptionsDivers =
       'Divers : textes rédigés pour Kass\'Beer par une IA (Claude, '
       'd\'Anthropic), à partir du nom, des autres noms, du nom français et du '
       'type de chaque ajout. Ils ne sont copiés d\'aucune source et ne donnent '
-      'aucune dose : suivez la notice du fabricant. L\'administrateur relit '
-      'ceux des ajouts utilisés dans les recettes du groupe ; les autres sont '
-      'marqués « non relu ». Un texte peut contenir des erreurs.';
+      'aucune dose : suivez la notice du fabricant. Un texte peut contenir des '
+      'erreurs.';
   static const openFailure =
       'Impossible d\'ouvrir le lien. Il reste sélectionnable sur cette page.';
 
@@ -176,6 +181,7 @@ class DataSourcesScreen extends ConsumerWidget {
               paragraphe(licenceMit),
               const TitreSection('Descriptions aromatiques'),
               paragraphe(aromesHoublons),
+              paragraphe(aromesLevures),
               const TitreSection('Descriptions des divers'),
               paragraphe(descriptionsDivers),
             ],

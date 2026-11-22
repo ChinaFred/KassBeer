@@ -78,6 +78,7 @@ class AppShell extends ConsumerWidget {
     required this.location,
     required this.title,
     this.backTo,
+    this.backByPop = false,
     this.fullWidth = false,
     this.retourParPop = false,
     required this.child,
@@ -91,6 +92,10 @@ class AppShell extends ConsumerWidget {
 
   /// Chemin du bouton retour ; `null` pour une destination principale.
   final String? backTo;
+
+  /// Le bouton retour dépile la page (`pop`) au lieu d'ouvrir [backTo] : page
+  /// ouverte par-dessus une autre (« Voir le style » en large).
+  final bool backByPop;
 
   /// Contenu sur toute la largeur, sans la borne de [kContentMaxWidth] (liste et
   /// fiche côte à côte).
@@ -122,8 +127,9 @@ class AppShell extends ConsumerWidget {
       context.go(path);
     }
 
-    /// Revient à la page qui a ouvert celle-ci, après la même confirmation.
-    Future<void> revenir() async {
+    /// Dépile la page et revient à celle qui l'a ouverte, après la même
+    /// confirmation.
+    Future<void> depiler() async {
       if (!await garde.peutQuitter() || !context.mounted) return;
       context.pop();
     }
@@ -136,8 +142,8 @@ class AppShell extends ConsumerWidget {
           ? null
           : BackButton(
               onPressed: () => unawaited(
-                retourParPop && context.canPop()
-                    ? revenir()
+                backByPop || (retourParPop && context.canPop())
+                    ? depiler()
                     : quitterVers(back),
               ),
             ),

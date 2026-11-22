@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:brewing/brewing.dart';
+import 'package:exchange/exchange.dart'
+    show Proposition, PropositionIllisible, PropositionLue, lireProposition;
 import 'package:flutter/foundation.dart';
 
 import '../../equipment/domain/equipment.dart';
@@ -234,10 +236,18 @@ QuotaRendu? _lireQuota(Object? quota) {
 }
 
 /// Réponse de `recipeAssistantTurn` : `{reponse, proposition, turn, quota}`
-/// (ADR-015, section 3). En A1, `proposition` vaut toujours `null`.
+/// (ADR-015, section 3). Au lot A2, `proposition` est relue par
+/// `lireProposition` (`exchange/`) : une proposition hors format n'est pas
+/// proposée.
 @immutable
 class ReponseAssistant {
-  const ReponseAssistant({required this.texte, this.tour, this.quota});
+  const ReponseAssistant({
+    required this.texte,
+    this.tour,
+    this.quota,
+    this.proposition,
+    this.propositionEcartee = false,
+  });
 
   /// Markdown du modèle (ou résumé, en mode résumé).
   final String texte;
@@ -245,6 +255,14 @@ class ReponseAssistant {
   /// Numéro du tour dans la conversation, s'il est rendu.
   final int? tour;
   final QuotaRendu? quota;
+
+  /// Proposition du modèle, relue, ou `null`.
+  final Proposition? proposition;
+
+  /// Vrai si le modèle a rendu une proposition écartée : par le serveur
+  /// (`proposition_rejected`, hors format ou plus de 30 opérations) ou par
+  /// la relecture du client.
+  final bool propositionEcartee;
 
   /// Lève [FormatException] sur une réponse sans texte.
   factory ReponseAssistant.lire(Object? data) {
@@ -254,10 +272,15 @@ class ReponseAssistant {
       throw const FormatException('réponse : texte absent');
     }
     final tour = data['turn'];
+    final brute = data['proposition'];
+    final lue = brute == null ? null : lireProposition(brute);
     return ReponseAssistant(
       texte: texte,
       tour: tour is int ? tour : null,
       quota: _lireQuota(data['quota']),
+      proposition: lue is PropositionLue ? lue.proposition : null,
+      propositionEcartee:
+          data['proposition_rejected'] == true || lue is PropositionIllisible,
     );
   }
 }

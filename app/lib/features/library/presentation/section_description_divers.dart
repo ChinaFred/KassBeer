@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/data/lecture_document.dart';
-import '../../../core/presentation/encadre.dart';
-import '../../../core/presentation/etats.dart';
-import '../../../core/presentation/etiquette.dart';
 import '../../../core/presentation/fiche.dart';
 import '../../auth/presentation/access_providers.dart';
 import '../domain/description_divers.dart';
@@ -34,9 +30,16 @@ abstract final class TextesDescriptionDivers {
       'Description indisponible hors ligne. Elle s\'affiche au retour du '
       'réseau.';
 
-  /// Nœud sémantique unique des rôles : « Rôles : Clarifier, Ajuster le pH ».
-  static String roles(List<RoleDivers> roles) =>
-      'Rôles : ${roles.map((r) => r.label).join(', ')}';
+  /// Titre lu des rôles : « Rôles : Clarifier, Ajuster le pH ».
+  static const titreRoles = 'Rôles';
+
+  static const cadre = TextesCadre(
+    titre: titre,
+    chargement: chargement,
+    horsLigne: horsLigne,
+    illisible: illisible,
+    panne: panne,
+  );
 }
 
 /// Sections « Utilisation » et « Goût » de la fiche du divers [id], puis la
@@ -50,66 +53,18 @@ class SectionDescriptionDivers extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(descriptionDiversProvider(id));
-    final offline = ref.watch(grantedAccessProvider)?.offline ?? false;
-    final value = async.value;
-    final List<Widget> contenu;
-    if (value == null) {
-      if (!async.hasError) {
-        contenu = [
-          Semantics(
-            liveRegion: true,
-            child: const Align(
-              alignment: Alignment.centerLeft,
-              child: IndicateurBouton(
-                label: TextesDescriptionDivers.chargement,
-              ),
-            ),
-          ),
-        ];
-      } else if (offline) {
-        contenu = const [TexteAbsent(TextesDescriptionDivers.horsLigne)];
-      } else {
-        contenu = [
-          PanneTexteRedige(
-            message: TextesDescriptionDivers.panne,
-            retrying: async.isLoading,
-            onRetry: () => ref.invalidate(descriptionDiversProvider(id)),
-          ),
-        ];
-      }
-    } else {
-      switch (value) {
-        case DocumentAbsent():
-          return const SizedBox.shrink();
-        case DocumentAbsentDuCache():
-          contenu = const [TexteAbsent(TextesDescriptionDivers.horsLigne)];
-        case DocumentIllisibleTrouve():
-          contenu = const [
-            Encadre(
-              ton: TonEncadre.erreur,
-              icone: Icons.error_outline,
-              liveRegion: true,
-              child: Text(TextesDescriptionDivers.illisible),
-            ),
-          ];
-        case DocumentTrouve(value: final description):
-          contenu = _description(context, description);
-      }
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [const TitreSection(TextesDescriptionDivers.titre), ...contenu],
+    return CadreTexteRedige<DescriptionDivers>(
+      textes: TextesDescriptionDivers.cadre,
+      async: ref.watch(descriptionDiversProvider(id)),
+      offline: ref.watch(grantedAccessProvider)?.offline ?? false,
+      onRetry: () => ref.invalidate(descriptionDiversProvider(id)),
+      contenu: _description,
     );
   }
 
   List<Widget> _description(BuildContext context, DescriptionDivers d) {
     final theme = Theme.of(context);
-    final mention = MentionTexteRedige(
-      relu: d.relu,
-      reluLe: d.reluLe,
-      padding: const EdgeInsets.only(top: 16),
-    );
+    const mention = MentionTexteRedige(padding: EdgeInsets.only(top: 16));
     return switch (d) {
       DiversInconnu() => [
         const TexteAbsent(TextesDescriptionDivers.inconnu),
@@ -121,19 +76,10 @@ class SectionDescriptionDivers extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(d.resume, style: theme.textTheme.bodyLarge),
         ),
-        if (d.roles.isNotEmpty)
-          Semantics(
-            container: true,
-            label: TextesDescriptionDivers.roles(d.roles),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final r in d.roles)
-                  ExcludeSemantics(child: Etiquette(label: r.label)),
-              ],
-            ),
-          ),
+        EtiquettesRedigees(
+          titre: TextesDescriptionDivers.titreRoles,
+          libelles: [for (final r in d.roles) r.label],
+        ),
         if (d.moments.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 16),

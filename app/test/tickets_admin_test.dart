@@ -13,6 +13,7 @@ import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/features/tickets/domain/etat_jeton_github.dart';
 import 'package:kass_beer/features/tickets/domain/ticket.dart';
 import 'package:kass_beer/features/tickets/domain/ticket_analysis.dart';
+import 'package:kass_beer/features/tickets/domain/ticket_delivery.dart';
 import 'package:kass_beer/features/tickets/domain/ticket_launch.dart';
 import 'package:kass_beer/features/tickets/presentation/admin_ticket_screen.dart';
 import 'package:kass_beer/features/tickets/presentation/admin_tickets_screen.dart';
@@ -32,22 +33,179 @@ void main() {
   const all = TicketDecisionAction.values;
 
   group('domaine', () {
-    test('À traiter : reçu, analysé ou envoi impossible, jamais validé', () {
-      expect(unTicket(status: TicketStatus.received).toProcess, isTrue);
-      expect(unTicket(status: TicketStatus.analyzed).toProcess, isTrue);
+    test('compteur du menu : envoi impossible ou action dans '
+        'allowed_decisions, jamais d\'après le statut seul', () {
       expect(unTicket(status: TicketStatus.sendFailed).toProcess, isTrue);
-      for (final s in [
-        TicketStatus.pending,
-        TicketStatus.validated,
-        TicketStatus.inProgress,
-        TicketStatus.delivered,
-        TicketStatus.refused,
-        TicketStatus.closed,
-        TicketStatus.overQuota,
-        TicketStatus.unknown,
-      ]) {
+      expect(
+        unTicket(
+          status: TicketStatus.analyzed,
+          allowedDecisions: const [TicketDecisionAction.validate],
+        ).toProcess,
+        isTrue,
+      );
+      expect(unTicket(canLaunchAnalysis: true).toProcess, isTrue);
+      expect(
+        unTicket(
+          status: TicketStatus.validated,
+          canLaunchDevelopment: true,
+        ).toProcess,
+        isTrue,
+      );
+      // `allowed_decisions` absent, ou sans action qui fait avancer.
+      for (final s in TicketStatus.values) {
+        if (s == TicketStatus.sendFailed) continue;
         expect(unTicket(status: s).toProcess, isFalse, reason: s.name);
       }
+      expect(
+        unTicket(
+          allowedDecisions: const [
+            TicketDecisionAction.refuse,
+            TicketDecisionAction.close,
+          ],
+          canAnswer: true,
+        ).toProcess,
+        isFalse,
+      );
+      // PR prête ou CI rouge : jamais comptées par le menu.
+      expect(
+        unTicket(
+          status: TicketStatus.inProgress,
+          canLaunchDelivery: true,
+          canRelaunchDevelopment: true,
+        ).toProcess,
+        isFalse,
+      );
+    });
+
+    group('ticketATraiter', () {
+      TicketLaunchesDoc enCoursDe(ActionLancement action) => TicketLaunchesDoc(
+        entries: [
+          TicketLaunch(
+            action: action,
+            etat: EtatLancement.launched,
+            at: now.subtract(const Duration(minutes: 10)),
+            retryAfter: now.add(const Duration(hours: 1)),
+          ),
+        ],
+      );
+      bool aTraiter(
+        Ticket t, {
+        TicketLaunchesDoc? historique,
+        TicketDelivery? livraison,
+      }) => ticketATraiter(
+        ticket: t,
+        historique: historique,
+        livraison: livraison,
+        quota: null,
+        now: now,
+      );
+
+      test('envoi impossible et Valider permis', () {
+        expect(aTraiter(unTicket(status: TicketStatus.sendFailed)), isTrue);
+        expect(
+          aTraiter(
+            unTicket(
+              status: TicketStatus.validated,
+              allowedDecisions: const [TicketDecisionAction.validate],
+            ),
+          ),
+          isTrue,
+        );
+      });
+
+      test('lancement permis, sauf session de cette action en cours', () {
+        final recu = unTicket(canLaunchAnalysis: true);
+        expect(aTraiter(recu), isTrue);
+        expect(
+          aTraiter(recu, historique: enCoursDe(ActionLancement.analyse)),
+          isFalse,
+        );
+        final valide = unTicket(
+          status: TicketStatus.validated,
+          canLaunchDevelopment: true,
+        );
+        expect(aTraiter(valide), isTrue);
+        expect(
+          aTraiter(valide, historique: enCoursDe(ActionLancement.analyse)),
+          isTrue,
+        );
+        expect(
+          aTraiter(
+            valide,
+            historique: enCoursDe(ActionLancement.developpement),
+          ),
+          isFalse,
+        );
+        // Échéance passée : de retour.
+        expect(
+          ticketATraiter(
+            ticket: valide,
+            historique: enCoursDe(ActionLancement.developpement),
+            livraison: null,
+            quota: null,
+            now: now.add(const Duration(hours: 2)),
+          ),
+          isTrue,
+        );
+      });
+
+      test('En cours : PR prête, CI rouge avec relance permise', () {
+        final t = unTicket(
+          status: TicketStatus.inProgress,
+          issueNumber: 12,
+          canLaunchDelivery: true,
+          canRelaunchDevelopment: true,
+        );
+        expect(aTraiter(t), isFalse);
+        expect(
+          aTraiter(t, livraison: const TicketDelivery(ready: true)),
+          isTrue,
+        );
+        const rouge = TicketDelivery(
+          eligiblePrCount: 1,
+          prNumber: 34,
+          ciStatus: 'completed',
+          relaunchReady: true,
+        );
+        expect(aTraiter(t, livraison: rouge), isTrue);
+        expect(
+          aTraiter(
+            t,
+            livraison: rouge,
+            historique: enCoursDe(ActionLancement.developpement),
+          ),
+          isFalse,
+        );
+        expect(
+          aTraiter(
+            t,
+            livraison: rouge,
+            historique: enCoursDe(ActionLancement.reprise),
+          ),
+          isFalse,
+        );
+        // Validé sur GitHub seul : aucune relance permise.
+        expect(
+          aTraiter(
+            unTicket(status: TicketStatus.inProgress, issueNumber: 12),
+            livraison: rouge,
+          ),
+          isFalse,
+        );
+      });
+
+      test('Livré, Refusé, Clos, ou allowed_decisions absent : jamais', () {
+        for (final s in [
+          TicketStatus.delivered,
+          TicketStatus.refused,
+          TicketStatus.closed,
+          TicketStatus.received,
+          TicketStatus.analyzed,
+          TicketStatus.validated,
+        ]) {
+          expect(aTraiter(unTicket(status: s)), isFalse, reason: s.name);
+        }
+      });
     });
 
     test('Bloqué : envoi impossible, en retard, Issue disparue', () {
@@ -407,10 +565,10 @@ void main() {
         ),
       ]);
       app.tickets.publishAll([
-        unTicket(id: 'a', status: TicketStatus.received),
+        unTicket(id: 'a', canLaunchAnalysis: true),
         unTicket(id: 'b', status: TicketStatus.sendFailed),
         unTicket(id: 'c', status: TicketStatus.validated),
-        unTicket(id: 'd', status: TicketStatus.received),
+        unTicket(id: 'd', canLaunchAnalysis: true),
       ]);
       await tester.pumpAndSettle();
       expect(
@@ -471,6 +629,58 @@ void main() {
   });
 
   group('Admin › Tickets des membres', () {
+    testWidgets('À traiter : validé à lancer compris, session en cours '
+        'exclue, compteur du menu sur allowed_decisions seul', (tester) async {
+      final app = await admin(tester);
+      app.tickets
+          .launchesOf('b')
+          .add(
+            DocumentTrouve(
+              TicketLaunchesDoc(
+                entries: [
+                  TicketLaunch(
+                    action: ActionLancement.analyse,
+                    etat: EtatLancement.launched,
+                    at: now.subtract(const Duration(minutes: 10)),
+                    retryAfter: now.add(const Duration(minutes: 50)),
+                  ),
+                ],
+              ),
+            ),
+          );
+      app.tickets.publishAll([
+        unTicket(
+          id: 'a',
+          title: 'À lancer',
+          status: TicketStatus.validated,
+          issueNumber: 5,
+          canLaunchDevelopment: true,
+        ),
+        unTicket(
+          id: 'b',
+          title: 'Analyse partie',
+          issueNumber: 6,
+          canLaunchAnalysis: true,
+        ),
+      ]);
+      await go(tester, app, AppRoutes.adminTickets);
+      expect(find.text('À traiter (1)'), findsOneWidget);
+      expect(find.text('À lancer'), findsOneWidget);
+      expect(find.text('Analyse partie'), findsNothing);
+      expect(find.byTooltip('Mon compte, 2 tickets à traiter'), findsOneWidget);
+    });
+
+    testWidgets('À traiter vide : nouveau texte', (tester) async {
+      final app = await admin(tester);
+      app.tickets.publishAll([unTicket(status: TicketStatus.delivered)]);
+      await go(tester, app, AppRoutes.adminTickets);
+      await tapChip(tester, 'À traiter (0)');
+      expect(
+        find.text('Aucun ticket n\'attend d\'action de votre part.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('tuile de l\'accueil Admin', (tester) async {
       final app = await admin(tester);
       app.tickets.publishAll(const []);
@@ -566,6 +776,7 @@ void main() {
           unTicket(
             id: 'a',
             issueNumber: 12,
+            canLaunchAnalysis: true,
             decisionLeaseUntil: now.add(const Duration(minutes: 1)),
           ),
           unTicket(

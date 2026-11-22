@@ -1,0 +1,15 @@
+{
+  "format": "kassbeer_noms_levures",
+  "version": 1,
+  "generated_at": "2026-11-21T10:00:00.000Z",
+  "target": "production",
+  "noms": [
+    "Belge Fictive",
+    "LF2",
+    "Labo Fictif LF3",
+    "Levure Fictive",
+    "Levure Inconnue",
+    "Wyeast 9901 Imaginaire",
+    "ZZ9"
+  ]
+}

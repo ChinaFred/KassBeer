@@ -47,7 +47,7 @@ Future<TestApp> ouvrir(
 double _y(WidgetTester tester, String text) =>
     tester.getTopLeft(find.text(text)).dy;
 
-const _mention = 'Texte rédigé par une IA (Claude), relu le 21 novembre 2026';
+const _mention = TextesRediges.mention;
 
 void main() {
   testWidgets('décrit : résumé, rôles, moments, goût, mention, dans l\'ordre', (
@@ -116,7 +116,9 @@ void main() {
     expect(positions, [...positions]..sort());
   });
 
-  testWidgets('goût, confiance faible en tête, non relu', (tester) async {
+  testWidgets('goût, confiance faible en tête, sans mention de relecture', (
+    tester,
+  ) async {
     await ouvrir(
       tester,
       description: miscDescriptionDoc(
@@ -130,8 +132,8 @@ void main() {
     );
     expect(find.text(kTexteGout), findsOneWidget);
     expect(find.text(_T.sansGout), findsNothing);
-    expect(find.text(TextesRediges.nonRelu), findsOneWidget);
-    expect(find.textContaining('relu le'), findsNothing);
+    expect(find.text(TextesRediges.mention), findsOneWidget);
+    expect(find.textContaining('relu'), findsNothing);
     expect(
       find.descendant(
         of: find.widgetWithText(Etiquette, TextesRediges.confianceFaible),
@@ -142,7 +144,7 @@ void main() {
     final confiance = _y(tester, TextesRediges.confianceFaible);
     expect(_y(tester, _T.titre) < confiance, isTrue);
     expect(confiance < _y(tester, kTexteResume), isTrue);
-    expect(_y(tester, kTexteGout) < _y(tester, TextesRediges.nonRelu), isTrue);
+    expect(_y(tester, kTexteGout) < _y(tester, TextesRediges.mention), isTrue);
   });
 
   testWidgets('mention en bodyMedium, onSurfaceVariant', (tester) async {
@@ -182,8 +184,8 @@ void main() {
     await ouvrir(tester, description: miscDescriptionUnknownDoc());
     expect(find.text(_T.titre), findsOneWidget);
     expect(find.text(_T.inconnu), findsOneWidget);
-    expect(find.text(TextesRediges.nonRelu), findsOneWidget);
-    expect(_y(tester, _T.inconnu) < _y(tester, TextesRediges.nonRelu), isTrue);
+    expect(find.text(TextesRediges.mention), findsOneWidget);
+    expect(_y(tester, _T.inconnu) < _y(tester, TextesRediges.mention), isTrue);
     expect(find.text(_T.titreGout), findsNothing);
     expect(find.text(TextesRediges.confianceFaible), findsNothing);
   });

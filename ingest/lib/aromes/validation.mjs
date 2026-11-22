@@ -6,9 +6,17 @@
 // Une erreur est un chemin et une règle, jamais le texte contrôlé : les rapports ne
 // recopient aucun texte rendu par le modèle.
 
-import { readFileSync } from "node:fs";
 import { reglesEnveloppe } from "../redaction/entree.mjs";
-import { jsonCanonique, nettoyerTexte, reglesTexte, sha256 } from "../redaction/texte.mjs";
+import {
+  estObjet,
+  jsonCanonique,
+  lireListeFermee,
+  longueur,
+  nettoyerTexte,
+  reglesBlocTexte,
+  reglesDescripteurs,
+  sha256,
+} from "../redaction/texte.mjs";
 
 /// Collection écrite par ecrire.mjs depuis import/ingest/aromes/aromes.json.
 export const COLLECTION_AROMES = "beer_hop_aromas";
@@ -26,17 +34,12 @@ export const DESCRIPTEURS_MAX = 8;
 
 /// Liste fermée des descripteurs (`{key, label}`), lue une fois. Seul endroit où elle vit :
 /// le document porte le libellé, l'application ne fait que l'afficher.
-export const DESCRIPTEURS = JSON.parse(
-  readFileSync(new URL("./descripteurs.json", import.meta.url), "utf8"),
-);
+export const DESCRIPTEURS = lireListeFermee(new URL("./descripteurs.json", import.meta.url));
 
 const LIBELLES = new Map(DESCRIPTEURS.map((d) => [d.key, d.label]));
 
 /// Identifiant d'un houblon de beer_hops/.
 export const ID_HOUBLON = /^hop-[a-z0-9]+(-[a-z0-9]+)*$/;
-
-const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
-const longueur = (t) => [...t].length;
 
 /// Données d'un houblon envoyées au modèle (ADR-013, section 3), tirées de
 /// `beer_hops/{id}` préparé : rien d'autre ne part.
@@ -106,22 +109,7 @@ function reglesContenu(data) {
     return regles;
   }
   const descripteurs = data.descriptors;
-  if (!Array.isArray(descripteurs)) {
-    r("descriptors", "liste attendue");
-  } else {
-    const vus = new Set();
-    descripteurs.forEach((d, i) => {
-      const c = `descriptors[${i}]`;
-      if (!estObjet(d) || Object.keys(d).sort().join(",") !== "key,label") {
-        r(c, "{key, label} attendu");
-        return;
-      }
-      if (!LIBELLES.has(d.key)) r(`${c}.key`, "hors de la liste fermée");
-      else if (d.label !== LIBELLES.get(d.key)) r(`${c}.label`, "différent de la liste");
-      if (vus.has(d.key)) r(`${c}.key`, "en double");
-      vus.add(d.key);
-    });
-  }
+  regles.push(...reglesDescripteurs(descripteurs, LIBELLES));
   if (!estObjet(data.uses)) {
     r("uses", "objet attendu");
     return regles;
@@ -132,12 +120,7 @@ function reglesContenu(data) {
       r("uses", `usage non permis ${k}`);
       continue;
     }
-    if (!estObjet(v) || Object.keys(v).join(",") !== "text" || typeof v.text !== "string") {
-      r(c, "{text} attendu");
-      continue;
-    }
-    if (v.text !== nettoyerTexte(v.text)) r(`${c}.text`, "texte non nettoyé (NFC, contrôles)");
-    for (const regle of reglesTexte(v.text)) r(`${c}.text`, regle);
+    regles.push(...reglesBlocTexte(c, v));
   }
   if (data.status === "described") {
     if (!CONFIANCES.includes(data.confidence)) r("confidence", "high, medium ou low attendu");

@@ -7,12 +7,13 @@ import { masquerCle } from "./client.mjs";
 import { generer } from "./moteur.mjs";
 import { ErreurRedaction } from "./tarif.mjs";
 
-/// Lance le générateur de [nature] sur le processus courant.
-export async function lancerGenerateur(nature) {
+/// Lance le générateur de [natures] (une nature, ou un objet clé → nature choisie par
+/// --nature) sur le processus courant.
+export async function lancerGenerateur(natures) {
   const cle = process.env.ANTHROPIC_API_KEY;
   try {
     const rapport = await generer({
-      nature,
+      natures,
       argv: process.argv.slice(2),
       env: process.env,
       entree: process.stdin,

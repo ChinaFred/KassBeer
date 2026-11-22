@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon et la description d'un divers) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon et d'une levure, et la description d'un divers) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; depuis un rapport ou une entrée de journal, ouvrir un ticket bug prérempli (« Analyser ») et lancer son analyse dès la publication, voir quels rapports et quelles entrées ont déjà un ticket ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus ; régler dans Admin › Moteur d'IA le modèle, l'effort, les plafonds et l'ouverture aux membres de chaque poste d'IA, et la grille tarifaire, en ligne seulement ; lire dans Admin › Coûts de l'IA la dépense de l'IA de chaque membre, par mois et par poste ; utiliser l'assistant de recette, toujours ouvert pour lui, dans la limite de ses tours du jour ; lire « IA ce mois » dans le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -130,7 +130,9 @@ Une pastille chiffrée sur l'avatar et sur « Mes tickets » compte les tickets 
 « Mes tickets, 2 à lire ». Sans suivi à lire, rien ne change. Voir « Tickets ».
 
 Pour l'administrateur, « Tickets à traiter » ouvre Admin › Tickets des membres. Sa pastille
-compte les tickets reçus ou analysés sans décision et ceux dont l'envoi est impossible, rien à 0 ; elle est
+compte les tickets dont l'envoi est impossible et ceux pour lesquels le serveur permet « Valider », « Lancer
+l'analyse » ou « Lancer le développement » (ticket #63), rien à 0 ; elle ne compte ni PR prête
+ni CI en échec, et compte un ticket dont une session tourne ; elle est
 lue « Tickets à traiter, 3 ». La pastille de l'avatar additionne les suivis à lire et les
 tickets à traiter, et l'avatar est lu « Mon compte, 1 suivi de ticket à lire, 3 tickets à
 traiter ».
@@ -947,13 +949,23 @@ cours. » ; hors ligne, absent du cache : « … : compteur non disponible hors 
 illisible : « … : compteur illisible. » ; panne : « Lancements de sessions : compteur
 indisponible. » en ton d'erreur, avec un bouton icône « Réessayer ».
 
-**Liste.** Filtres « À traiter (N) » (tickets reçus ou analysés sans décision, envois
-impossibles, et tickets En cours dont la pull request est prête à livrer, sauf pendant une
-livraison ou une correction de ce ticket et tant que GitHub refuse au jeton la lecture de la CI ; un ticket validé n'y est pas ; le compteur « Tickets à traiter » du menu ne compte que les statuts),
+**Liste.** Filtres « À traiter (N) » (ticket #63 : tout ticket qui attend une action de
+l'administrateur, d'après les actions que le serveur permet, sans session en cours pour cette
+action : envoi impossible ; « Valider » permis, ticket Analysé ou Validé sur GitHub seul ;
+« Lancer l'analyse » permis, sauf pendant une analyse de ce ticket ; « Lancer le
+développement » permis, sauf pendant un développement de ce ticket ; ticket En cours dont la
+pull request est prête à livrer ; ticket En cours dont la CI est en échec et dont le serveur
+permet « Relancer le développement », sauf pendant un développement, une correction ou une
+livraison de ce ticket ; ni PR prête ni CI en échec tant que GitHub refuse au jeton la lecture de
+la CI ; « Refuser », « Clore » et « Répondre » ne comptent pas ; un historique des lancements
+ou un état de la pull request en panne laisse le ticket à traiter. Le compteur « Tickets à
+traiter » du menu compte l'envoi impossible, « Valider », « Lancer l'analyse » et « Lancer le
+développement » permis, sans lire l'historique des lancements ni l'état des pull requests :
+il compte un ticket dont une session tourne, et ne compte ni PR prête ni CI en échec),
 « Tous » et « Bloqués (N) » (envoi impossible, en attente depuis plus d'une heure, Issue
 disparue) ; sans nombre tant que la liste n'est pas lue. Le choix n'est pas enregistré :
 l'écran s'ouvre sur « À traiter », et passe une fois sur « Tous » s'il n'y a rien à traiter,
-une fois lu l'état de la pull request de chaque ticket En cours ;
+une fois lus l'historique des lancements et l'état de la pull request des tickets qui en ont ;
 il reste le même entre la liste et une fiche. Au téléphone, les filtres défilent à
 l'horizontale. Liste du plus récent au plus ancien ; chaque ligne : icône du type (lue),
 titre sur deux lignes au plus, « #12 · Nom · jj/mm/aa » (sans Issue, pas de numéro ; le nom
@@ -965,16 +977,17 @@ pour un ticket dont le serveur permet un lancement (reçu ou validé). Un ticket
 au plus une pastille de livraison, dans cet ordre : « Livraison en cours » (sablier, lu
 « Livraison en cours depuis 14:05 »), « Correction en cours » (sablier, lu « Correction de la
 pull request en cours », pendant une relance du développement), « CI en cours » (horloge, lu
-« CI de la pull request en cours »), « PR prête » (icône de livraison, ton tertiaire, lu
+« CI de la pull request en cours »), « CI en échec » (icône d'erreur, ton d'erreur, lu « CI de
+la pull request en échec », sans développement de ce ticket en cours, ticket #63), « PR prête » (icône de livraison, ton tertiaire, lu
 « Pull request prête à livrer ») ; l'état de la pull request n'est lu que pour les tickets En cours, et sans lui
 aucune pastille ne s'affiche. Tant que GitHub refuse au jeton la lecture de la CI, ni « CI en
-cours » ni « PR prête » ne s'affiche. Pas de point de non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
+cours », ni « CI en échec », ni « PR prête » ne s'affiche. Pas de point de non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
 l'application à jour. ».
 
 États : « Chargement des tickets » ; « Impossible de lire les tickets. » et « Réessayer » ;
 panne après une lecture : bandeau « Mise à jour de la liste impossible. » au-dessus de la liste ;
 aucun ticket : titre « Aucun ticket », puis « Les membres n'ont encore rien signalé. » ;
-« À traiter » vide : titre « Tout est traité », puis « Chaque ticket a reçu une décision. » ; « Bloqués »
+« À traiter » vide : titre « Rien à traiter », puis « Aucun ticket n'attend d'action de votre part. » ; « Bloqués »
 vide : titre « Rien de bloqué », puis « Aucun envoi en échec ou en retard, aucune Issue disparue. » ; ces deux derniers avec « Afficher tous les tickets ».
 
 **Fiche « Ticket d'un membre ».** Texte sélectionnable, dans cet ordre : titre, en en-tête de
@@ -1733,7 +1746,10 @@ la flèche de retour et le bandeau hors ligne ; Admin › Import ne change pas.
    ligne se résout quand il est celui d'une entrée ou l'un de ses autres noms, après
    normalisation (casse, accents, ponctuation) ; pour une levure, aussi par sa souche
    (« Wyeast 1056 », « WLP001 »), sa référence (« US-05 ») ou son producteur et sa référence
-   (« Fermentis US-05 »). Aucune correspondance approchée. Une valeur absente du fichier est
+   (« Fermentis US-05 »), puis par la référence écrite dans son nom, même saisi à la main
+   (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »), quand une seule souche de la
+   Bibliothèque porte cette référence ; jamais quand deux producteurs la partagent ni quand le
+   nom en nomme un autre. Aucune correspondance approchée. Une valeur absente du fichier est
    reprise de l'entrée : couleur, rendement d'extrait et type d'un malt ; acides alpha et
    forme d'un houblon ; type, forme et atténuation d'une levure ; type d'un ajout. Une valeur
    du fichier n'est jamais remplacée. Chaque valeur reprise est listée : « Couleur de Pils reprise de la
@@ -1969,8 +1985,8 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   recette. » et « Voir la recette » (« Seul l'auteur modifie cet équipement. » et « Voir
   l'équipement » pour un équipement).
 
-**Assistant** (ADR-015, lot A1). Conversation avec l'IA sur le brouillon de la recette, en
-texte. Le serveur appelle Claude (poste « Assistant de recette ») ; l'application n'appelle
+**Assistant** (ADR-015, lots A1 et A2). Conversation avec l'IA sur le brouillon de la recette,
+en texte, avec des propositions applicables (ci-dessous). Le serveur appelle Claude (poste « Assistant de recette ») ; l'application n'appelle
 aucune API d'IA.
 
 - **Accès** : icône « Assistant » dans la barre du haut, avant « Enregistrer » (infobulle
@@ -2065,6 +2081,85 @@ aucune API d'IA.
   « Ajoutez au moins un malt ou un houblon pour une analyse utile. » pour une recette sans
   malt ni houblon (rien n'est bloqué).
 
+**Propositions de l'assistant** (ADR-015, lot A2 ; décisions de l'utilisateur du 2026-11-21).
+Une réponse peut porter une proposition : des changements de la recette que le brasseur
+applique au brouillon d'un appui. Rien n'est enregistré avant « Enregistrer ».
+
+- **Carte** « Proposition de l'assistant », dans la bulle de la réponse, sous le texte et
+  au-dessus de « Copier la réponse » ; hors de la sélection du texte. Repliée : le résumé du
+  modèle (deux lignes au plus), la ligne « 3 changements · 2 valeurs proposées par l'IA ·
+  1 refusé » (les deux derniers comptes seulement s'ils ne sont pas nuls), puis un chiffre qui
+  change par ligne (« IBU : 28 → 35 IBU », « Couleur : 12 → 14 EBC », « Degré : 5,2 → 5,6 %
+  vol », « Densité initiale : 1052,0 → 1058,3 », « Densité finale : … » ; « — » pour une valeur
+  indisponible), boutons « Appliquer au
+  brouillon » et « Voir le détail ». « Appliquer au brouillon » s'utilise sans déplier le
+  détail.
+- **Détail** (« Voir le détail » / « Masquer le détail ») : « Changements », une ligne par
+  changement, verbe en tête (« Ajout · Citra · Whirlpool 15 min · 30 g · 12 % alpha (proposée
+  par l'IA) · Pellets », « Modification · … », « Retrait · … », « Ajout · Palier Mash out ·
+  78 °C · 10 min », « Nom : Blonde → Blonde révisée ») ; « Calculs avant et après » (les cinq
+  chiffres) ; « Changements refusés », avec la raison (« Modification du houblon n° 4 : ce
+  houblon n'est plus dans la recette. », « Ajout de Citra : valeur hors des limites acceptées
+  (quantité). », « Ajout d'un houblon : valeur manquante (durée). », « Retrait du houblon
+  n° 1 : ce houblon a changé depuis la proposition. », « Ajout de Malt maison : valeur
+  incompatible avec le reste de la recette (couleur). » quand une autre ligne du même
+  ingrédient porte déjà une couleur). Le résumé, limité à deux lignes, s'affiche en entier
+  quand le détail est déplié. Tous les chiffres viennent du calcul de
+  Kass'Beer, jamais du texte du modèle.
+- **Aperçu** : calculé sur le brouillon actuel de l'éditeur avec la Bibliothèque ; une valeur
+  technique (couleur, rendement, acides alpha, atténuation) vient de la Bibliothèque d'abord,
+  sinon du modèle, et porte alors la marque « (proposée par l'IA) ». Un changement dont la
+  ligne n'est plus à son rang, ou ne porte plus son nom, est refusé ; les autres s'appliquent.
+  Une valeur du modèle pour un ingrédient dont une autre ligne porte déjà une valeur du même
+  champ est refusée : aucune valeur saisie à la main ne s'affiche « proposée par l'IA ».
+- **États** :
+  - préparation : « Préparation de l'aperçu… », sans bouton (aussi tant que l'éditeur n'a
+    pas construit son brouillon) ;
+  - Bibliothèque illisible : « Aperçu impossible : la Bibliothèque n'a pas pu être lue. » et
+    « Réessayer », sans bouton « Appliquer » (aucune valeur du modèle n'est gardée à la place) ;
+  - recette invalide : « Cette proposition donne une recette invalide. Elle ne peut pas
+    s'appliquer. » ;
+  - rien d'applicable : « Aucun changement de cette proposition ne peut s'appliquer. » et la
+    liste des refus ;
+  - périmée (le brouillon a changé depuis l'envoi du message, par une saisie ou une autre
+    proposition) : « La recette a changé depuis cette proposition. Vérifiez le détail avant
+    d'appliquer. », détail déplié, bouton actif ; cet avertissement n'est pas annoncé par le
+    lecteur d'écran à chaque frappe ;
+  - appliquée : « Appliquée au brouillon. Rien n'est enregistré avant « Enregistrer ». » et
+    « Annuler la proposition » ;
+  - annulée : « Proposition annulée. Le brouillon d'avant est revenu. » et « Appliquer au
+    brouillon » ;
+  - remplacée : « Une autre proposition a été appliquée depuis. », sans bouton. Seule la
+    dernière proposition appliquée s'annule ;
+  - proposition illisible du modèle, en encadré d'avertissement : « L'assistant a rendu une
+    proposition illisible. Elle ne peut pas s'appliquer : reformulez votre demande. ».
+- **Appliquer au brouillon** : aucun appel à l'IA, marche hors ligne (Bibliothèque lue depuis
+  l'appareil). Le brouillon est remplacé, l'éditeur passe en « modifié », et « Proposition
+  appliquée au brouillon. Rien n'est enregistré. » s'affiche 10 s avec « Annuler ». Sous
+  840 px, la feuille se ferme et le focus revient sur l'icône « Assistant » ; la conversation
+  reste. À partir de 840 px, la colonne reste sur « Assistant » et le focus va sur « Annuler la
+  proposition ».
+- **Annuler la proposition** : sans modification depuis, le brouillon d'avant revient tout de
+  suite. Après une modification à la main : « Annuler la proposition ? » / « Le brouillon
+  revient à son état d'avant la proposition. Les modifications faites depuis seront
+  perdues. », bouton « Annuler la proposition ». Après « Résumer et continuer » ou « Nouvelle
+  conversation », la proposition appliquée ne s'annule plus (sa carte disparaît avec la
+  conversation, et l'annonce « Annuler » se ferme) ; le brouillon reste annulable en
+  quittant l'éditeur sans enregistrer.
+- **Lecture d'écran** : la réponse est annoncée « Réponse de l'assistant reçue, avec une
+  proposition » ; un chiffre se lit « IBU, avant 28, après 35 », sans la flèche.
+
+**Valeurs proposées par l'IA** (lot A2). Une valeur technique gardée d'une proposition porte
+« (proposée par l'IA) » après la valeur, dans l'éditeur, la fiche de la recette et la recette
+figée d'un brassin. Dans le formulaire de l'ingrédient, son champ porte l'aide « Valeur
+proposée par l'IA : vérifiez-la. », qui disparaît dès que la valeur est corrigée. La marque
+disparaît quand la valeur est corrigée à la main ou reprise de la Bibliothèque, ou quand
+l'ingrédient est retiré ; elle est enregistrée avec la recette et suit sa copie dans un
+brassin. Une marque illisible affiche en tête de la fiche « Marques IA illisibles : une valeur
+proposée par l'IA peut ne pas être signalée. ». L'export ne porte pas la marque ; son compte
+rendu dit « Valeurs proposées par l'IA : Citra (acides alpha), Munich (couleur). » quand il y
+en a.
+
 **Saisie des nombres.** Virgule ou point décimal ; les espaces sont ignorés. « 22.4 » et
 « 22,4 » valent 22,4 ; « 1.500 » kg vaut 1,5 kg. Un nombre qui contient plus d'un séparateur
 (« 1.234,5 ») est refusé, comme un nombre trop long pour être lu (plus de 309 chiffres).
@@ -2107,6 +2202,49 @@ ouvre la page du même nom, et une icône d'information (infobulle « Sources de
 ouvre « Sources des données ». Sinon, les puces affichent le nom complet ; à leur droite,
 « Échelle des couleurs » en texte avec son icône, puis l'icône « Sources des données ».
 
+**Liste et fiche côte à côte** (décision de l'utilisateur du 2026-11-21, les six segments).
+Dans une fenêtre de 1 096 px ou plus (rail étendu de 256 px et 840 px de contenu), avec un
+texte sous 130 %, la Bibliothèque montre deux colonnes. Les puces des segments, « Échelle des
+couleurs » et « Sources des données » restent sur toute la largeur, au-dessus. À gauche, la
+liste sur 380 px : la recherche, le nombre, le filtre de confiance (Houblons) et les notes
+hors ligne restent en tête de la colonne, la liste défile dessous. Un trait vertical sépare
+les colonnes. À droite, la fiche, sur 840 px au plus, alignée en haut à gauche ; elle défile
+de son côté. Sans fiche ouverte, la colonne de droite invite à choisir : « Choisissez un
+style pour voir sa fiche. », « Choisissez un houblon pour voir sa fiche. », « Choisissez un
+malt ou un sucre pour voir sa fiche. », « Choisissez une levure pour voir sa fiche. »,
+« Choisissez un ajout divers pour voir sa fiche. », « Choisissez une recette publique pour
+voir sa fiche. ».
+
+- Un appui sur une ligne ouvre la fiche à droite, sans transition, et met son adresse dans la
+  barre du navigateur (une entrée d'historique par fiche : « Précédent » revient à la fiche
+  d'avant). La ligne de la fiche ouverte est surlignée ; la liste ne défile pas d'elle-même
+  et garde sa position, sa recherche et son filtre. Une fiche hors du filtre, ou pas encore
+  chargée dans la liste, s'affiche sans ligne surlignée.
+- La barre du haut garde le titre « Bibliothèque », sans flèche retour. Le premier élément
+  de la fiche est le bouton « Fermer la fiche » (croix) ; il ferme la fiche et rend
+  l'invite. Tant qu'une fiche est ouverte, la touche Échap fait de même, que le focus soit
+  dans la liste ou dans la fiche ; le menu du filtre ouvert garde Échap pour se fermer.
+  Après la fermeture, le focus revient sur la ligne de la fiche fermée, ou sur le champ de
+  recherche si cette ligne n'est pas affichée (hors du filtre, de la recherche ou de la
+  partie lue de la liste). Changer de segment ferme la fiche.
+- Chargement, panne et « Réessayer », fiche hors ligne (« Fiche indisponible hors ligne. Elle
+  s'ouvre au retour du réseau. ») s'affichent à droite ; la liste reste utilisable. Pour une
+  fiche absente ou illisible, le bouton devient « Fermer la fiche ».
+- « Voir le style » d'une recette publique ouvre par-dessus la recette les styles en deux
+  colonnes, le style choisi à droite. La flèche retour revient à la recette, avec sa
+  recherche. Sur cette page, « Fermer la fiche » et Échap reviennent aussi à la recette, au
+  lieu d'ouvrir la liste des styles.
+- Les lecteurs d'écran entendent « Fiche ouverte : {nom} » à chaque fiche ouverte. Ordre de
+  lecture et du clavier : rail, segments, recherche, nombre, filtre, liste, fiche ; après
+  Entrée sur une ligne, le focus reste sur la ligne.
+- En réduisant la fenêtre sous le seuil, la fiche ouverte s'affiche seule avec la flèche
+  retour ; en l'agrandissant, les deux colonnes reviennent avec la fiche ouverte. La recherche
+  et le filtre sont gardés.
+
+Sous 1 096 px, ou avec un texte de 130 % ou plus, une seule colonne : la fiche s'ouvre
+par-dessus la liste, avec son titre (« Houblon »…) et la flèche retour, comme décrit
+ci-dessous.
+
 **Styles et ingrédients.** La liste du segment est lue à la première ouverture, puis gardée
 pour la session. Ordre alphabétique, avec le nombre d'entrées, nommées par segment (« 110
 styles », « 442 houblons », « 854 levures », « 1 houblon », « 37 sur 442 houblons » quand la
@@ -2135,7 +2273,8 @@ sans lecture en base, sur le nom, les autres noms, le nom français, le code d'u
 producteur et la référence d'une levure ; majuscules et accents ne comptent pas. Une icône
 « × » (infobulle « Effacer la recherche ») vide le champ quand il n'est pas vide. Sans
 résultat : « Aucun résultat pour « {texte} ». » et « Effacer la recherche ». La recherche
-n'est pas enregistrée ; elle reste en place au retour d'une fiche.
+n'est pas enregistrée en base ; elle reste en place au retour d'une fiche, au choix d'une autre
+fiche et au passage d'une à deux colonnes, et se perd au changement de segment.
 
 **Filtre de confiance des arômes** (segment Houblons, tout membre ; décisions de
 l'utilisateur du 2026-11-21). À l'ouverture du segment, l'index des arômes est lu une fois
@@ -2151,8 +2290,9 @@ Le bouton est lu « Confiance des arômes : Faible, 37 houblons » ; chaque entr
 « Faible, 37 houblons » avec son état coché ; zones d'appui de 48 px ; à 200 % de taille du
 texte, le libellé du bouton passe à la ligne. Sur un téléphone de 360 × 640, au moins un
 houblon est visible à l'ouverture. Par défaut
-« Toutes ». Le choix reste en place au retour d'une fiche ; il est perdu au changement de
-segment ou à la sortie de l'écran, et rien n'est écrit en base. Sans houblon pour la recherche
+« Toutes ». Le choix reste en place au retour d'une fiche, au choix d'une autre fiche et au
+passage d'une à deux colonnes ; il est perdu au changement de segment ou à la sortie de
+l'écran, et rien n'est écrit en base. Sans houblon pour la recherche
 et le filtre : « Aucun houblon pour « citra » avec une confiance faible. » (« Aucun houblon
 avec une confiance faible. » sans recherche), avec « Effacer la recherche » (s'il y a une
 recherche) et « Afficher toutes les confiances ». Index des arômes absent, illisible ou
@@ -2163,9 +2303,9 @@ lu sur l'appareil. Une entrée illisible est
 l'administrateur. »
 
 **Fiche d'une entrée** (`/bibliotheque/{segment}/{id}`, titre « Style », « Malt ou
-sucre », « Houblon », « Levure » ou « Ajout divers », retour vers le segment ; ouverte depuis
-une ligne d'une recette, d'une recette figée ou d'une recette publique, le retour ramène à
-cette recette). Nom, « Autres noms : … », puis :
+sucre », « Houblon », « Levure » ou « Ajout divers », retour vers le segment ; côte à côte,
+voir plus haut ; ouverte depuis une ligne d'une recette, d'une recette figée ou d'une recette
+publique, le retour ramène à cette recette). Nom, « Autres noms : … », puis :
 
 - style : « Classement » (code, catégorie « 21 · IPA », type traduit : « Bière », « Cidre »,
   « Hydromel »…, guide), « Plages » (densité initiale « 1056,0 à 1070,0 », densité finale,
@@ -2203,8 +2343,8 @@ donne le fichier et le commit. Le texte de la fiche est sélectionnable.
 de la fiche, sans suivi en direct ; le reste de la fiche s'affiche sans l'attendre. Contenu,
 dans l'ordre :
 
-- « Texte rédigé par une IA (Claude), relu le 14 novembre 2026 » (date de la relecture par
-  l'administrateur) ou « Texte rédigé par une IA (Claude), non relu », sous le titre ;
+- « Texte rédigé par une IA (Claude) », sous le titre ; la fiche ne dit pas si le texte a été
+  relu (décision de l'utilisateur du 2026-11-21) ;
 - « Confiance faible » (icône d'information), seule sur sa ligne, quand le texte est donné
   avec une confiance faible ;
 - les descripteurs (« Pamplemousse », « Floral »…), en étiquettes, dans l'ordre du document,
@@ -2234,6 +2374,39 @@ dans l'ordre :
 Le texte est sélectionnable. Le jour de brassage, les journées du déroulé et l'éditeur de
 recette ne lisent pas les arômes.
 
+**Arômes d'une levure** (ADR-017). Sur la fiche d'une levure seulement, une section « Arômes »
+se place entre « Valeurs » et « Provenance », lue comme celle d'un houblon : une fois à
+l'ouverture, sans suivi en direct, relue au retour du réseau ; le reste de la fiche s'affiche
+sans l'attendre. Contenu, dans l'ordre :
+
+- « Texte rédigé par une IA (Claude) », sous le titre, sans état de relecture ;
+- « Confiance faible » (icône d'information), quand le texte est donné avec une confiance
+  faible ;
+- les descripteurs (« poire », « sec »…), en étiquettes, dans l'ordre du document, lus
+  « Descripteurs : poire, sec » par le lecteur d'écran ;
+- « Profil » et son texte ;
+- « En bas de plage (15 °C) » et le texte du bas de la plage de température, s'il existe ;
+- « En haut de plage (20 °C) » et le texte du haut de la plage, s'il existe. La température
+  entre parenthèses est la borne de la ligne « Température de fermentation » de la fiche, au
+  même format ; sans cette borne, le titre reste « En bas de plage » ou « En haut de plage »,
+  sans parenthèses ni valeur de remplacement ;
+- « Styles conseillés », puis un style par ligne, de 1 à 6, sous son seul nom (sans code). Un
+  appui sur un style ouvre sa fiche dans la Bibliothèque, par-dessus celle de la levure ; la
+  cible fait au moins 48 px de haut, le nom s'aligne sur le bord gauche des textes, un nom long
+  passe à la ligne, et le lecteur d'écran lit « Ouvrir la fiche du style <nom> ». « Profil »,
+  « En bas de plage », « En haut de plage » et « Styles conseillés » sont lus comme des titres. Sans style, ni titre ni
+  ligne.
+
+États de la section : ceux d'un houblon, mot pour mot, sauf « levure trop peu documentée » :
+chargement « Chargement des arômes » ; aucune description, la section ne s'affiche pas ;
+levure trop peu documentée, la mention IA puis « Aucune description : levure trop peu
+documentée. » ; description illisible, « Les arômes ne peuvent pas s'afficher. L'erreur est
+signalée à l'administrateur. », sans bouton, l'erreur journalisée avec l'identifiant de la
+levure seul ; lecture impossible en ligne, « Impossible de lire les arômes. L'erreur est
+signalée à l'administrateur. » et « Réessayer » (« Lecture en cours ») ; hors ligne sans copie
+en cache, « Arômes indisponibles hors ligne. Ils s'affichent au retour du réseau. ».
+L'assistant de recette ne lit pas ces textes.
+
 **Description d'un divers** (ADR-018). Sur la fiche d'un divers seulement, entre « Valeurs »
 et « Provenance ». La description est lue une fois à l'ouverture de la fiche, sans suivi en
 direct ; le reste de la fiche s'affiche sans l'attendre. Contenu, dans l'ordre :
@@ -2248,8 +2421,8 @@ direct ; le reste de la fiche s'affiche sans l'attendre. Contenu, dans l'ordre :
   inconnu de l'application est ignoré ;
 - section « Goût » : le goût apporté, ou « Sans effet notable sur le goût » en italique quand
   le divers ne change pas le goût ;
-- la mention « Texte rédigé par une IA (Claude), relu le 21 novembre 2026 » ou « Texte rédigé
-  par une IA (Claude), non relu », sous « Goût », avant « Provenance ».
+- la mention « Texte rédigé par une IA (Claude) », sans état de relecture (ADR-019,
+  décision 4), sous « Goût », avant « Provenance ».
 
 États :
 
@@ -2277,17 +2450,29 @@ les descriptions des divers.
 rédiger les textes par l'API Claude depuis son poste, puis les écrit dans la Bibliothèque par
 le script d'ingestion ; l'application n'appelle pas ce script. Ordre : un essai sur 10 houblons
 choisis, puis les houblons utilisés dans les recettes et les brassins du groupe, puis le
-reste. L'administrateur relit les textes des houblons du groupe avant leur écriture ; les
-autres paraissent « non relu ». Un houblon ajouté plus tard reçoit sa description par une
+reste. L'administrateur relit les textes des houblons du groupe avant leur écriture ;
+l'application n'affiche pas cette relecture. Un houblon ajouté plus tard reçoit sa description par une
 nouvelle génération lancée par l'administrateur (`--nouveaux`). Détail : `exigences-techniques.md`,
 « Descriptions aromatiques ».
+
+**Descriptions aromatiques des levures (administrateur, hors de l'application, ADR-017).** Même
+parcours que pour les houblons, par le même script avec `--nature culture` : un essai sur 10
+levures (US-05, S-04, W-34/70, WLP001, Wyeast 3068, 3944, 3711, 1968, Voss Kveik et une
+Brettanomyces), puis les levures des recettes et des brassins du groupe, relues avant leur
+écriture, puis le reste. Les levures de vin, de cidre, d'hydromel et de saké (types `other`,
+`wine`, `champagne`, `malolactic`) restent sans texte, sauf si une recette du groupe les
+utilise. Chaque texte donne des descripteurs, un profil, l'effet du bas et du haut de la plage
+de température et jusqu'à six styles conseillés. Un nom de levure d'une recette qui désigne
+plusieurs souches est listé avec ses candidats ; l'administrateur choisit. Les membres lisent
+ces textes dans la section « Arômes » de la fiche d'une levure.
+Détail : `exigences-techniques.md`, « Descriptions aromatiques des levures ».
 
 **Descriptions des divers (administrateur, hors de l'application).** Même déroulé (ADR-018) :
 l'administrateur fait rédiger les textes par l'API Claude depuis son poste
 (`ingest/generer-divers.mjs`), puis les écrit dans la Bibliothèque par le script d'ingestion ;
 l'application n'appelle pas ce script. Ordre : un essai sur 10 divers choisis, puis les divers
 utilisés dans les recettes et les brassins du groupe, puis le reste. L'administrateur relit les
-textes des divers du groupe avant leur écriture ; les autres paraissent « non relu ». Aucun
+textes des divers du groupe avant leur écriture ; l'application n'affiche pas cette relecture. Aucun
 texte ne donne de dose. Détail : `exigences-techniques.md`, « Descriptions des divers ».
 
 **Recettes publiques.** Les recettes DIY Dog, par pages de 50 dans l'ordre alphabétique.
@@ -2416,14 +2601,17 @@ s'affiche sans réseau.
   en anglais, reproduit en entier comme la licence l'exige pour toute copie livrée.
 - Descriptions aromatiques : « Arômes des houblons : textes rédigés pour Kass'Beer par une
   IA (Claude, d'Anthropic), à partir du nom, des autres noms, de l'origine, des acides et de
-  l'usage de chaque houblon. Ils ne sont copiés d'aucune source. L'administrateur relit ceux
-  des houblons utilisés dans les recettes du groupe ; les autres sont marqués « non relu ». Un
-  texte peut contenir des erreurs. »
+  l'usage de chaque houblon. Ils ne sont copiés d'aucune source. Un texte peut contenir des
+  erreurs. », puis « Arômes des levures : textes rédigés pour Kass'Beer par une IA (Claude,
+  d'Anthropic), à partir du nom, des autres noms, du producteur, de la référence, du type, de
+  la forme, de l'atténuation, de la plage de température et de la floculation de chaque
+  levure. Ils ne sont copiés d'aucune source, ni des fiches des fabricants. Les styles
+  conseillés sont choisis dans les styles BJCP 2021 de la Bibliothèque. Un texte peut contenir
+  des erreurs. »
 - Descriptions des divers : « Divers : textes rédigés pour Kass'Beer par une IA (Claude,
   d'Anthropic), à partir du nom, des autres noms, du nom français et du type de chaque ajout.
   Ils ne sont copiés d'aucune source et ne donnent aucune dose : suivez la notice du
-  fabricant. L'administrateur relit ceux des ajouts utilisés dans les recettes du groupe ; les
-  autres sont marqués « non relu ». Un texte peut contenir des erreurs. »
+  fabricant. Un texte peut contenir des erreurs. »
 
 ### Brassins
 

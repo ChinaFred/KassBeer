@@ -228,7 +228,8 @@ const kTexteCru =
 const kTexteWhirlpool =
     'Agrumes mûrs et notes florales, plus rondes qu\'en fin d\'ébullition.';
 
-/// `beer_hop_aromas/hop-cascade`, `described`, relu le 14 novembre 2026.
+/// `beer_hop_aromas/hop-cascade`, `described`, champs du document
+/// `reviewed: true` et `reviewed_at: 2026-11-14` (non affichés).
 /// [uses] remplace la map des usages ; [extra] ajoute ou remplace des champs.
 Map<String, dynamic> hopAromaDoc({
   Map<String, Object?>? uses,
@@ -263,7 +264,7 @@ Map<String, dynamic> hopAromaDoc({
   ...extra,
 };
 
-/// `beer_hop_aromas/{id}` en `unknown`, non relu.
+/// `beer_hop_aromas/{id}` en `unknown`, champ du document `reviewed: false`.
 Map<String, dynamic> hopAromaUnknownDoc() => {
   'hop_name': 'Houblon doré',
   'status': 'unknown',
@@ -295,8 +296,8 @@ const kTexteFermentation =
 const kTexteGout =
     'Une légère note iodée peut se sentir quand la bière est très peu houblonnée.';
 
-/// `beer_misc_descriptions/misc-mousse-irlandaise`, `described`, relu le
-/// 21 novembre 2026, sans effet sur le goût. [moments] remplace la map des
+/// `beer_misc_descriptions/misc-mousse-irlandaise`, `described`, champ du document
+/// `reviewed: true`, sans effet sur le goût. [moments] remplace la map des
 /// moments ; [extra] ajoute ou remplace des champs.
 Map<String, dynamic> miscDescriptionDoc({
   Map<String, Object?>? moments,
@@ -333,12 +334,91 @@ Map<String, dynamic> miscDescriptionDoc({
   ...extra,
 };
 
-/// `beer_misc_descriptions/{id}` en `unknown`, non relu.
+/// `beer_misc_descriptions/{id}` en `unknown`, champ du document `reviewed: false`.
 Map<String, dynamic> miscDescriptionUnknownDoc() => {
   'misc_name': 'Ajout doré',
   'status': 'unknown',
   'roles': <Object>[],
   'moments': <String, Object>{},
+  'reviewed': false,
+  'input_sha256': 'ab' * 32,
+  'content_sha256': 'cd' * 32,
+};
+
+/// `beer_cultures/culture-levure-fictive`, levure inventée. [temperature] :
+/// `temperature_range` ; `null` : plage absente.
+Map<String, dynamic> cultureDoc({
+  Map<String, Object>? temperature = const {
+    'minimum': {'value': 15, 'unit': 'C'},
+    'maximum': {'value': 20, 'unit': 'C'},
+  },
+}) => {
+  'name': 'Levure fictive',
+  'producer': 'Brasserie inventée',
+  'type': 'ale',
+  'form': 'dry',
+  'attenuation': plage(75, 80, '%'),
+  'temperature_range': ?temperature,
+  'provenance': [provenance()],
+  'content_sha256': '45' * 32,
+};
+
+/// Textes inventés pour les tests des levures, de 40 à 400 caractères.
+const kTexteProfil =
+    'Profil net et sec, quelques esters de poire, laisse parler le malt.';
+const kTexteBas =
+    'Très propre au bas de la plage, presque neutre, finale sèche et nette.';
+const kTexteHaut =
+    'Esters de banane et de poire plus marqués en haut de plage, corps rond.';
+
+/// `beer_culture_aromas/culture-levure-fictive`, `described`.
+/// [texts] remplace la map des textes ; [extra] ajoute ou remplace des champs.
+Map<String, dynamic> cultureAromaDoc({
+  Map<String, Object?>? texts,
+  Map<String, Object?> extra = const {},
+}) => {
+  'culture_name': 'Levure fictive',
+  'status': 'described',
+  'confidence': 'high',
+  'descriptors': [
+    {'key': 'pear', 'label': 'poire'},
+    {'key': 'dry', 'label': 'sec'},
+  ],
+  'texts':
+      texts ??
+      {
+        'profile': {'text': kTexteProfil},
+        'cool': {'text': kTexteBas},
+        'warm': {'text': kTexteHaut},
+      },
+  'styles': [
+    {'code': 'bjcp2021-21a', 'name': 'American IPA'},
+    {'code': 'bjcp2021-18b', 'name': 'American Pale Ale'},
+  ],
+  'reviewed': true,
+  'reviewed_at': '2026-11-21',
+  'provenance': [
+    {
+      'source': 'claude-api',
+      'source_id': 'culture-levure-fictive',
+      'version': 'claude-fable-5-2 / prompt 1 / effort medium',
+      'licence': 'Texte généré pour Kass\'Beer',
+      'retrieved': '2026-11-21',
+    },
+  ],
+  'input_sha256': 'ab' * 32,
+  'content_sha256': 'cd' * 32,
+  ...extra,
+};
+
+/// `beer_culture_aromas/{id}` en `unknown`, champ du document
+/// `reviewed: false`.
+Map<String, dynamic> cultureAromaUnknownDoc() => {
+  'culture_name': 'Levure rare',
+  'status': 'unknown',
+  'descriptors': <Object>[],
+  'texts': <String, Object>{},
+  'styles': <Object>[],
   'reviewed': false,
   'input_sha256': 'ab' * 32,
   'content_sha256': 'cd' * 32,

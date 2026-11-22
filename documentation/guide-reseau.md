@@ -169,6 +169,20 @@ projet » de `CLAUDE.md`, que les relecteurs lisent à chaque relecture.
 
 Un incident qui change une règle s'inscrit dans `lecons-apprises.md`.
 
+Le 2026-11-22, avec le format de sortie de l'assistant réduit à deux textes (amendement
+d'ADR-015 du 2026-11-22), la ligne de `test-fixtures/recipe_assistant_operations.json` du tableau
+« Logique dupliquée » nomme côté serveur `functions/src/assistant/proposition.ts`
+(`operationsCatalog`, catalogue du prompt ; `readProposition`, contrôle de la sortie) au lieu du
+format de sortie. Aucun contrôle n'est ajouté ni retiré.
+
+Le 2026-11-21, avec la livraison du lot A2 d'ADR-015 (propositions de l'assistant appliquées au
+brouillon), la session principale a mis `CLAUDE.md` à jour : « Le projet » dit les lots A1 et A2
+de l'assistant de recette livrés (analyse en texte, propositions appliquées au brouillon) ; la
+ligne de `test-fixtures/recipe_assistant_operations.json` figure dans « Structure » et dans le
+tableau « Logique dupliquée » sans la mention « (lot A2) » ; « Recettes en BeerJSON partiel »
+écrit « depuis le lot A2 » pour l'exception des valeurs techniques proposées par l'assistant et
+marquées dans `ai_proposed`. Aucun contrôle n'est ajouté ni retiré.
+
 Le 2026-11-11, ADR-010 (déroulé en journées) a étendu la règle absolue du hors ligne à chaque
 journée du déroulé et la règle « Un brassin fige sa recette » à son déroulé, ajouté le lieu des
 modèles (`process_templates/`) aux règles des prix, complété P2, P3 et P5, et ajouté P37 (lecture
@@ -244,6 +258,32 @@ Le 2026-11-21 (v0.1.88), décision de l'utilisateur : P22 et P55 couvrent l'inde
 `beer_index/hop_aromas` (ADR-013, note du 2026-11-21) : lecture par un `get` dans la liste des
 houblons (P22), construction par `ingest/ecrire.mjs` seul avec des entrées `{id, confidence}` (P55).
 Aucun contrôle, agent, skill ni hook nouveau.
+
+Le 2026-11-21, ADR-017 accepté par l'utilisateur (descriptions aromatiques des levures,
+décision 8) : P19 (`beer_culture_aromas` en `get` seul, `--supprimer-absents
+beer_culture_aromas`), P20 (exception des textes générés étendue à `beer_culture_aromas/`), P22
+(aucun écouteur ni lecture entière sur `beer_culture_aromas`) et P54 (poste
+`culture_aroma_generation`, nature `culture` du même générateur) sont étendus ; P62 est ajouté
+(`relecteur-regles` : collection, contrôle de `ingest/lib/aromes/natures/culture.mjs`, styles
+conseillés pris dans `beer_styles.json` préparé, périmètre, refus de `ecrire.mjs`, liste du
+groupe, affichage). « Le projet » et « Coûts variables » de `CLAUDE.md` nomment le quatrième
+poste et la limite de 70 $ jusqu'au 30 novembre 2026 au plus tard. Livraison 1 (v0.1.93) :
+`ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs` et
+`exchange/bin/lister_houblons_recettes.dart` devient `lister_ingredients_recettes.dart`, sans
+ancien nom gardé ; « Structure » et « Commandes utiles » de `CLAUDE.md` suivent et reçoivent les
+commandes `--nature culture`. P20 précise que la ligne des levures arrive à l'écran « Sources
+des données » avec la livraison 2. Aucun agent, skill ni hook nouveau.
+
+Le 2026-11-21, décision de l'utilisateur : P55 ne demande plus d'afficher « relu le <date> »
+ni « non relu ». La mention des arômes devient « Texte rédigé par une IA (Claude) », pour les
+houblons et les levures. P62 renvoie aux états de P55 et suit la même règle. La relecture reste
+une étape de l'ingestion (`ecrire.mjs`).
+
+Le 2026-11-21, livraison 2 d'ADR-017 (v0.1.97) : P20 perd sa parenthèse sur la ligne des levures,
+qui s'affiche désormais dans l'écran « Sources des données ».
+
+Le 2026-11-22, décision de l'utilisateur : P54 et « Coûts variables » portent `--max` à 1 000 pour
+les levures (un seul lot de 923), les houblons restant à 500 (ADR-017, note du 2026-11-22).
 
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
@@ -538,3 +578,12 @@ ce fichier local, jamais versionné. État de la production et outils du poste :
   l'adresse de son fabricant donnée en tête du fichier et retouché par la règle `name` de cet
   en-tête, même s'il contient le nom d'une personne (WLP520, WLP4045, WLP4046) ; aucun e-mail, aucune autre donnée,
   aucun commentaire. Décision de l'utilisateur.
+
+Le 2026-11-22, avec le lot R2 d'ADR-019 fait par la fusion de `main` dans la branche des divers
+(v0.2.12), `CLAUDE.md` décrit les trois natures sur le seul moteur `ingest/lib/redaction/` :
+« Le projet » et « Structure » nomment `ingest/lib/levures/`, `lister-ingredients-recettes.mjs`
+et `exchange/bin/lister_ingredients_recettes.dart` (`--nature hop|culture|misc`) ; « Commandes
+utiles » remplace les listes par nature ; P19 et P22 portent les deux collections ; P54 couvre
+les trois natures, le tarif commun et l'empreinte figée des levures ; P55, P62 et P63 nomment les
+fichiers de `lib/levures/` et le cadre commun `texte_redige.dart`, sans « relu » ni « non relu »
+(ADR-019, décision 4) ; « Coûts variables » compte cinq postes.

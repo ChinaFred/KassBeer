@@ -1,0 +1,32 @@
+[
+  {
+    "id": "culture-labo-fictif-lf1-levure-fictive",
+    "data": {
+      "name": "Levure Fictive",
+      "aliases": [],
+      "producer": "Labo Fictif",
+      "product_id": "LF1",
+      "notes": "jamais lu"
+    }
+  },
+  {
+    "id": "culture-labo-fictif-lf2-belge-fictive",
+    "data": { "name": "Belge Fictive", "aliases": [], "producer": "Labo Fictif", "product_id": "LF2" }
+  },
+  {
+    "id": "culture-labo-fictif-lf3-belge-fictive",
+    "data": { "name": "Belge Fictive", "aliases": [], "producer": "Labo Fictif", "product_id": "LF3" }
+  },
+  {
+    "id": "culture-wyeast-9901-levure-imaginaire",
+    "data": { "name": "Levure Imaginaire", "aliases": [], "producer": "Wyeast Labs", "product_id": "9901" }
+  },
+  {
+    "id": "culture-autre-labo-zz9-zeta-fictive",
+    "data": { "name": "Zeta Fictive", "aliases": [], "producer": "Autre Labo", "product_id": "ZZ9" }
+  },
+  {
+    "id": "culture-troisieme-labo-zz9-zeta-bis",
+    "data": { "name": "Zeta Bis", "aliases": [], "producer": "Troisième Labo", "product_id": "ZZ9" }
+  }
+]

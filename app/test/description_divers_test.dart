@@ -16,7 +16,7 @@ Matcher illisible(String field) =>
 
 void main() {
   group('DescriptionDivers.fromFirestore', () {
-    test('décrit : résumé, rôles dans l\'ordre, moments, relu', () {
+    test('décrit : résumé, rôles dans l\'ordre, moments', () {
       final d = decrit(miscDescriptionDoc());
       expect(d.resume, kTexteResume);
       expect(d.roles.map((r) => r.label), ['Clarifier', 'Autre usage']);
@@ -26,8 +26,6 @@ void main() {
       });
       expect(d.gout, isNull);
       expect(d.confianceFaible, isFalse);
-      expect(d.relu, isTrue);
-      expect(d.reluLe, DateTime(2026, 11, 21));
     });
 
     test('clés des moments : celles de l\'éditeur, dans son ordre', () {
@@ -78,11 +76,20 @@ void main() {
       expect(d.moments, isEmpty);
     });
 
-    test('unknown, non relu', () {
+    test('unknown', () {
       final d = DescriptionDivers.fromFirestore(miscDescriptionUnknownDoc());
       expect(d, isA<DiversInconnu>());
-      expect(d.relu, isFalse);
-      expect(d.reluLe, isNull);
+    });
+
+    test('reviewed et reviewed_at non lus (ADR-019, décision 4)', () {
+      expect(
+        decrit(miscDescriptionDoc(extra: {'reviewed': null})),
+        isA<DiversDecrit>(),
+      );
+      expect(
+        decrit(miscDescriptionDoc(extra: {'reviewed_at': '2026-02-30'})),
+        isA<DiversDecrit>(),
+      );
     });
 
     test('illisible : chaque champ attendu', () {
@@ -91,11 +98,6 @@ void main() {
       expect(() => lire({'status': 'x'}), illisible('status'));
       expect(() => lire({'confidence': 'certaine'}), illisible('confidence'));
       expect(() => lire({'confidence': null}), illisible('confidence'));
-      expect(() => lire({'reviewed': null}), illisible('reviewed'));
-      expect(
-        () => lire({'reviewed_at': '2026-02-30'}),
-        illisible('reviewed_at'),
-      );
       expect(() => lire({'summary': null}), illisible('summary'));
       expect(() => lire({'summary': 12}), illisible('summary'));
       expect(() => lire({'roles': null}), illisible('roles'));

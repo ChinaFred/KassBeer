@@ -1,6 +1,7 @@
 import '../../../core/presentation/formats.dart';
 import '../../recipes/domain/beerjson.dart';
 import '../domain/referentiel.dart';
+import 'library_providers.dart';
 
 /// Libellés de la Bibliothèque. Affichage seulement : aucune conversion d'unité,
 /// les valeurs sont déjà en unités canoniques (CLAUDE.md, P3).
@@ -171,4 +172,17 @@ List<String> detailsEntree(EntreeIndex e) => switch (e) {
     ?labelFr,
     if (type != null) typesAjout.libelle(type),
   ],
+};
+
+/// Invite de la colonne de droite quand aucune fiche n'est ouverte (liste et
+/// fiche côte à côte).
+String inviteFiche(SegmentBibliotheque segment) => switch (segment) {
+  SegmentBibliotheque.styles => 'Choisissez un style pour voir sa fiche.',
+  SegmentBibliotheque.hops => 'Choisissez un houblon pour voir sa fiche.',
+  SegmentBibliotheque.fermentables =>
+    'Choisissez un malt ou un sucre pour voir sa fiche.',
+  SegmentBibliotheque.cultures => 'Choisissez une levure pour voir sa fiche.',
+  SegmentBibliotheque.miscs => 'Choisissez un ajout divers pour voir sa fiche.',
+  SegmentBibliotheque.recettes =>
+    'Choisissez une recette publique pour voir sa fiche.',
 };

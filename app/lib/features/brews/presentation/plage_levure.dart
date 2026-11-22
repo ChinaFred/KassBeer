@@ -8,8 +8,8 @@ import '../../recipes/domain/import_recettes.dart' show indexBibliotheque;
 /// Plage de température de la levure d'une recette, lue dans la Bibliothèque
 /// pour la courbe de fermentation de la fiche du brassin. La levure se résout
 /// par son nom, comme à l'import (`IndexBibliotheque.resoudre` d'`exchange/` :
-/// nom ou alias exact après normalisation, puis souche, sans correspondance
-/// floue). Lectures par `get()` seul (P22) : l'index `beer_index/cultures`,
+/// nom ou alias exact après normalisation, puis souche, référence, producteur
+/// et référence, puis référence lue dans le nom, sans correspondance floue). Lectures par `get()` seul (P22) : l'index `beer_index/cultures`,
 /// gardé par le dépôt pour la session, puis la fiche `beer_cultures/{id}`.
 /// L'écran du jour et les journées ne la lisent jamais (P2).
 sealed class EtatPlageLevure {

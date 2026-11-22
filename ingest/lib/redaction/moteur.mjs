@@ -1,15 +1,15 @@
 // Moteur commun des textes rédigés par l'API Messages d'Anthropic depuis le poste de l'admin
-// (ADR-013, ADR-018), lancé par un générateur (generer-aromes.mjs…) qui lui passe sa nature
-// (lib/<nature>/nature.mjs : poste de coût, fichiers, données envoyées, empreinte, prompt,
-// contrôle). Le moteur ne nomme aucune nature ni aucun poste. Il lit le référentiel préparé
+// (ADR-013, ADR-017, ADR-018, ADR-019), lancé par un générateur (generer-aromes.mjs,
+// generer-divers.mjs) qui lui passe sa ou ses natures (lib/<nature>/nature.mjs : poste de coût,
+// fichiers, données envoyées, empreinte, prompt, contrôle ; au besoin périmètre et contexte).
+// Le moteur ne nomme aucune nature ni aucun poste. Il lit le référentiel préparé
 // (import/ingest/prepare/) et le dossier de la nature ; il n'importe pas firebase-admin, ne
 // lit ni n'écrit Firestore. Seul accès réseau : l'API, par client.mjs (P54).
 //
 // Fichiers du dossier de la nature (jamais versionnés) : entrées {id, data}, liste du groupe,
 // lot-<id>.json (table custom_id → entrée d'un lot de l'API Batches), brut/ (réponses de
 // chaque exécution, effort dans le nom), rapport.json (poste, modèle, effort, jetons,
-// montant), a-relire.md. Tarif : tarif.json du dossier parent (import/ingest/tarif.json),
-// commun aux natures (tarif.mjs).
+// montant), a-relire.md. Tarif : import/ingest/tarif.json, commun aux natures (tarif.mjs).
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -23,9 +23,6 @@ export const DOSSIER_PREPARE = fileURLToPath(
   new URL("../../../import/ingest/prepare/", import.meta.url),
 );
 
-/// Entrées par lancement, au plus (ADR-013, plafond 3 ; ADR-018, section 6).
-export const MAX_ENTREES = 500;
-
 /// Entrées envoyées en appels directs, au plus (essai, --nouveaux sans --lot).
 export const SEUIL_DIRECT = 20;
 
@@ -36,21 +33,36 @@ export const EFFORT_DEFAUT = "medium";
 
 const ID_LOT = /^[A-Za-z0-9_-]{1,128}$/;
 
-/// Aide d'un générateur, d'après sa nature.
-const aide = (n) => `Usage (dans ingest/) :
+/// Aide d'un générateur, d'après ses natures ([choix] : Map clé → nature, la première par
+/// défaut).
+const aide = (choix) => {
+  const n = [...choix.values()][0];
+  const natures =
+    choix.size > 1 ? `--nature ${[...choix.keys()].join("|")} (${n.cle} par défaut), ` : "";
+  return `Usage (dans ingest/) :
   node ${n.script} --essai [n] [--seulement <${n.mots.fichierExemple}>] [--effort <e>] [--budget-usd <$>]
   node ${n.script} --lot --budget-usd <$> [--seulement <${n.mots.fichierExemple}>] [--nouveaux] [--tout] [--max <n>] [--effort <e>]
   node ${n.script} --nouveaux --budget-usd <$> [--effort <e>]          (${SEUIL_DIRECT} ${n.mots.des} au plus, appels directs)
   node ${n.script} --lot|--essai --regenerer <id> [--regenerer <id>…] --budget-usd <$>
   node ${n.script} --suivre <id du lot>
   node ${n.script} --relire                                            (réécrit a-relire.md, aucun appel)
-Options communes : --dossier <prepare> ${n.optionDossier} <dossier>. Effort : ${EFFORTS.join(", ")}.`;
+Options communes : ${natures}--dossier <prepare>, ${n.optionDossier} <dossier>. Effort : ${EFFORTS.join(", ")}.`;
+};
 
-/// Lit [argv] (sans `node` ni le script) pour [nature]. Lève ErreurRedaction. Le dossier de
-/// la nature (option `nature.optionDossier`) est rendu dans `dossierNature`.
-export function lireOptions(argv, nature) {
-  const AIDE = aide(nature);
-  const { mots } = nature;
+/// Natures d'un générateur : une nature seule, ou un objet clé → nature (generer-aromes.mjs :
+/// hop, culture). Rend une Map, la première nature par défaut.
+function choixNatures(natures) {
+  if (typeof natures?.poste === "string") return new Map([[natures.cle, natures]]);
+  return new Map(Object.entries(natures));
+}
+
+/// Lit [argv] (sans `node` ni le script) pour [natures] (une nature, ou un objet clé →
+/// nature choisie par --nature). Lève ErreurRedaction. La nature choisie est rendue dans
+/// `nature`, le dossier des natures (option `nature.optionDossier`) dans `dossierNature`.
+export function lireOptions(argv, natures) {
+  const choix = choixNatures(natures);
+  const AIDE = aide(choix);
+  let cle = [...choix.keys()][0];
   const o = {
     essai: null,
     lot: false,
@@ -59,7 +71,7 @@ export function lireOptions(argv, nature) {
     relire: false,
     seulement: null,
     budget: null,
-    max: MAX_ENTREES,
+    max: null,
     effort: EFFORT_DEFAUT,
     regenerer: [],
     tout: false,
@@ -80,7 +92,7 @@ export function lireOptions(argv, nature) {
         o.essai = ESSAI_DEFAUT;
         if (/^[0-9]+$/.test(argv[i + 1] ?? "")) o.essai = Number(argv[++i]);
         if (!Number.isInteger(o.essai) || o.essai < 1 || o.essai > SEUIL_DIRECT) {
-          throw new ErreurRedaction(`--essai : de 1 à ${SEUIL_DIRECT} ${mots.des}.`);
+          throw new ErreurRedaction(`--essai : de 1 à ${SEUIL_DIRECT} entrées.`);
         }
         break;
       }
@@ -105,8 +117,15 @@ export function lireOptions(argv, nature) {
       case "--dossier":
         o[nom.slice(2)] = valeur(++i, nom);
         break;
-      case nature.optionDossier:
+      case [...choix.values()][0].optionDossier:
         o.dossierNature = valeur(++i, nom);
+        break;
+      case "--nature":
+        if (choix.size < 2) throw new ErreurRedaction(`Option inconnue : ${nom}\n${AIDE}`);
+        cle = valeur(++i, nom);
+        if (!choix.has(cle)) {
+          throw new ErreurRedaction(`--nature : ${[...choix.keys()].join(" ou ")}.`);
+        }
         break;
       case "--budget-usd": {
         const v = Number(valeur(++i, nom));
@@ -117,9 +136,8 @@ export function lireOptions(argv, nature) {
       }
       case "--max": {
         const v = Number(valeur(++i, nom));
-        if (!Number.isInteger(v) || v < 1 || v > MAX_ENTREES) {
-          throw new ErreurRedaction(`--max : entier de 1 à ${MAX_ENTREES}.`);
-        }
+        if (!Number.isInteger(v) || v < 1)
+          throw new ErreurRedaction("--max : entier positif attendu.");
         o.max = v;
         break;
       }
@@ -129,18 +147,26 @@ export function lireOptions(argv, nature) {
           throw new ErreurRedaction(`--effort : ${EFFORTS.join(", ")}.`);
         }
         break;
-      case "--regenerer": {
-        const id = valeur(++i, nom);
-        if (!nature.motifId.test(id) || id.length > 200) {
-          throw new ErreurRedaction(
-            `--regenerer : identifiant de ${mots.un} attendu (${nature.prefixeId}…).`,
-          );
-        }
-        o.regenerer.push(id);
+      case "--regenerer":
+        o.regenerer.push(valeur(++i, nom));
         break;
-      }
       default:
         throw new ErreurRedaction(`Option inconnue : ${nom}\n${AIDE}`);
+    }
+  }
+  const nature = choix.get(cle);
+  const { mots } = nature;
+  // Plafond par lancement propre à la nature (houblons et divers 500, levures 1 000),
+  // contrôlé une fois --nature lu, quel que soit l'ordre des options.
+  if (o.max === null) o.max = nature.maxEntrees;
+  else if (o.max > nature.maxEntrees) {
+    throw new ErreurRedaction(`--max : entier de 1 à ${nature.maxEntrees} pour ${mots.des}.`);
+  }
+  for (const id of o.regenerer) {
+    if (!nature.motifId.test(id) || id.length > 200) {
+      throw new ErreurRedaction(
+        `--regenerer : identifiant de ${mots.un} attendu (${nature.prefixeId}…).`,
+      );
     }
   }
   const modes = [o.essai !== null, o.lot, o.suivre !== null, o.relire].filter(Boolean).length;
@@ -168,7 +194,7 @@ export function lireOptions(argv, nature) {
       `--budget-usd est obligatoire hors essai (${nature.adr}, plafond 2).`,
     );
   }
-  return { ...o, mode };
+  return { ...o, mode, nature };
 }
 
 /// Lit un fichier JSON ; un fichier absent rend [absent].
@@ -213,10 +239,27 @@ function lireGroupe(chemin, nature) {
   };
 }
 
+/// Périmètre de [nature] sur [referentiel] (Map id → data) : les entrées du groupe
+/// ([groupeIds]) toujours, les autres si la nature n'a pas de périmètre ou si leur type y est
+/// (ADR-017, décision 1). Rend `{ids, hors}` : identifiants triés retenus, et Set des écartés.
+export function calculerPerimetre(referentiel, groupeIds, nature) {
+  const ids = [];
+  const hors = new Set();
+  for (const id of [...referentiel.keys()].sort()) {
+    const dedans =
+      nature.perimetre === undefined ||
+      groupeIds.has(id) ||
+      nature.perimetre.dansPerimetre(referentiel.get(id));
+    if (dedans) ids.push(id);
+    else hors.add(id);
+  }
+  return { ids, hors };
+}
+
 /// Sélection d'un lancement. Rend `{envoi: [{id, donnees, empreinte, categorie, relue}],
 /// nouveaux, changes, inchanges, relues: [{id, raison}]}` ; `categorie` : `nouveau`,
 /// `change` ou `force`.
-function selectionner({ nature, referentiel, entrees, options, base }) {
+function selectionner({ nature, referentiel, entrees, options, base, contexte }) {
   const forces = new Set(options.regenerer);
   const envoi = [];
   const relues = [];
@@ -230,6 +273,7 @@ function selectionner({ nature, referentiel, entrees, options, base }) {
       promptVersion: nature.promptVersion,
       modele: nature.modele,
       effort: options.effort,
+      contexte,
     });
     const existante = entrees.get(id);
     const relue = existante?.reviewed === true;
@@ -264,7 +308,7 @@ function selectionner({ nature, referentiel, entrees, options, base }) {
 /// Lecture d'une réponse de l'API pour l'entrée [cible] (`{id, nom, empreinte}`). Rend
 /// `{etat: 'ok', data}`, `{etat: 'erreur', raison}` (refusal, max_tokens, JSON illisible)
 /// ou `{etat: 'refus', regles}` (contrôle). Aucun texte dans `raison` ni `regles`.
-function lireReponse(nature, message, cible, { effort, date }) {
+function lireReponse(nature, message, cible, { effort, date, contexte }) {
   if (message?.stop_reason === "refusal") return { etat: "erreur", raison: "refusal" };
   if (message?.stop_reason === "max_tokens") return { etat: "erreur", raison: "max_tokens" };
   if (message?.stop_reason !== "end_turn") {
@@ -280,10 +324,10 @@ function lireReponse(nature, message, cible, { effort, date }) {
   } catch (erreur) {
     return { etat: "erreur", raison: `json_illisible (${erreur.name})` };
   }
-  const { regles, resultat } = nature.controlerSortieModele(sortie);
+  const { regles, resultat } = nature.controlerSortieModele(sortie, contexte);
   if (regles.length > 0) return { etat: "refus", regles, sortie };
   const data = nature.construireEntree(cible, resultat, { effort, date });
-  const erreurs = nature.controlerEntree({ id: cible.id, data });
+  const erreurs = nature.controlerEntree({ id: cible.id, data }, contexte);
   if (erreurs.length > 0) return { etat: "refus", regles: erreurs, sortie };
   return { etat: "ok", data, sortie };
 }
@@ -372,18 +416,23 @@ function ecrireARelire(dossierNature, nature, referentiel, entrees, groupe) {
   }
   if (groupe.nonResolus.length > 0) {
     lignes.push("## Noms non résolus", "");
-    for (const n of groupe.nonResolus) lignes.push(`- ${n.nom} : ${n.raison}`);
+    for (const n of groupe.nonResolus) {
+      const candidats = Array.isArray(n.candidats) && n.candidats.length > 0;
+      lignes.push(`- ${n.nom} : ${n.raison}${candidats ? ` (${n.candidats.join(", ")})` : ""}`);
+    }
     lignes.push("");
   }
   writeFileSync(join(dossierNature, "a-relire.md"), lignes.join("\n"));
   return { [nature.mots.des]: ids.length, aRelire };
 }
 
-/// Exécute un générateur pour [nature]. Rend le rapport de l'exécution. [chargerSdk] et
-/// [confirmer] sont remplacés dans les tests. Lève ErreurRedaction pour une utilisation
-/// refusée.
+/// Exécute un générateur pour [natures] (une nature, ou un objet clé → nature choisie par
+/// --nature ; [nature] : une nature seule, forme courte). Rend le rapport de l'exécution.
+/// [chargerSdk] et [confirmer] sont remplacés dans les tests. Lève ErreurRedaction pour une
+/// utilisation refusée.
 export async function generer({
-  nature,
+  natures,
+  nature: natureSeule,
   argv,
   env,
   entree,
@@ -394,10 +443,15 @@ export async function generer({
   ecrire = (t) => sortie.write(`${t}\n`),
 }) {
   const debut = maintenant();
+  const options = lireOptions(argv, natures ?? natureSeule);
+  const { nature } = options;
   const { mots } = nature;
-  const options = lireOptions(argv, nature);
   const dossierPrepare = resolve(options.dossier ?? DOSSIER_PREPARE);
-  const dossierNature = resolve(options.dossierNature ?? nature.dossierDefaut);
+  // Dossier des natures (import/ingest/aromes/, import/ingest/divers/) : le tarif se lit à
+  // côté ; fichiers de la nature dans son sous-dossier (levures/).
+  const dossierBase = resolve(options.dossierNature ?? nature.dossierDefaut);
+  const dossierNature =
+    nature.sousDossier === null ? dossierBase : join(dossierBase, nature.sousDossier);
   mkdirSync(dossierNature, { recursive: true });
   const referentiel = lireReferentiel(dossierPrepare, nature);
   const entrees = lireEntrees(dossierNature, nature);
@@ -411,7 +465,7 @@ export async function generer({
     }
     return ecrireARelire(dossierNature, nature, referentiel, entrees, groupe);
   };
-  const ctx = { nature, dossierNature, entrees, ecrire, relire };
+  const ctx = { nature, dossierBase, dossierNature, entrees, ecrire, relire };
 
   if (options.mode === "relire") {
     const r = relire();
@@ -420,30 +474,50 @@ export async function generer({
     }
     return { poste: nature.poste, mode: "relire", a_relire: r };
   }
+  // Contexte de la nature (styles du prompt des levures), lu une fois par exécution.
+  const contexte = nature.contexte?.(dossierPrepare);
+  const message = contexte === undefined ? null : (nature.messageContexte?.(contexte) ?? null);
+  if (message !== null) ecrire(message);
+  ctx.contexte = contexte;
   const api = creerAccesApi({ env, chargerSdk });
   if (options.mode === "suivre") {
     return suivre({ ...ctx, options, api, debut, runId });
   }
 
-  // Sélection, sans réseau.
+  // Sélection, sans réseau. Périmètre de la nature : entrées du groupe, plus celles dont le
+  // type est retenu ; un identifiant nommé hors du périmètre est refusé.
+  const perimetre = calculerPerimetre(referentiel, new Set(groupe?.ids ?? []), nature);
   let base;
   if (options.regenerer.length > 0) base = options.regenerer;
   else if (options.seulement !== null) {
     const f = lireGroupe(resolve(options.seulement), nature);
     if (f === null) throw new ErreurRedaction(`${options.seulement} : fichier absent.`);
     base = f.ids;
-  } else base = [...referentiel.keys()].sort();
+  } else base = perimetre.ids;
   const inconnus = base.filter((id) => !referentiel.has(id));
   if (inconnus.length > 0) {
     throw new ErreurRedaction(
       `${mots.Des} absents de ${nature.referentiel} : ${inconnus.slice(0, 20).join(", ")}.`,
     );
   }
+  const horsNommes = base.filter((id) => perimetre.hors.has(id));
+  if (horsNommes.length > 0) {
+    throw new ErreurRedaction(
+      `${mots.Des} hors du périmètre (types ${nature.perimetre.typesExclus.join(", ")}, hors du ` +
+        `groupe) : ${horsNommes.slice(0, 20).join(", ")}. Rien n'est envoyé.`,
+    );
+  }
   base = [...new Set(base)];
-  const s = selectionner({ nature, referentiel, entrees, options, base });
+  const s = selectionner({ nature, referentiel, entrees, options, base, contexte });
   let envoi = s.envoi;
   if (options.mode === "essai") envoi = envoi.slice(0, options.essai);
   const direct = options.mode !== "lot";
+  if (nature.perimetre !== undefined) {
+    ecrire(
+      `Périmètre : ${perimetre.ids.length} ${mots.des} sur ${referentiel.size}, ` +
+        `${perimetre.hors.size} hors périmètre (types ${nature.perimetre.typesExclus.join(", ")}).`,
+    );
+  }
   ecrire(
     `${mots.Des} : ${s.nouveaux} nouveaux, ${s.changes} changés, ${s.inchanges} inchangés` +
       (options.tout ? " (--tout : tous renvoyés)" : "") +
@@ -467,6 +541,13 @@ export async function generer({
     appels_au_resultat_inconnu: 0,
     montant_incomplet: false,
   };
+  if (nature.perimetre !== undefined) {
+    cr.perimetre = {
+      retenus: perimetre.ids.length,
+      hors: perimetre.hors.size,
+      types_exclus: nature.perimetre.typesExclus,
+    };
+  }
   if (envoi.length === 0) {
     ecrire("Rien à envoyer.");
     return terminer(cr, { ...ctx, ecrireFichier: false });
@@ -483,11 +564,11 @@ export async function generer({
   }
 
   // Tarif d'abord : sans lui, aucune estimation et aucun appel.
-  const lu = lireTarifCommun(dossierNature, nature.modele, debut);
+  const lu = lireTarifCommun(dossierBase, nature.modele, debut);
   const tarif = lu.tarif;
-  if (lu.ancienIgnore) ecrire(`${lu.ancien} ignoré : seul ${lu.chemin} est lu (ADR-018).`);
+  if (lu.ancienIgnore) ecrire(`${lu.ancien} ignoré : seul ${lu.chemin} est lu (ADR-019).`);
   const requetes = envoi.map((c) =>
-    nature.parametresRequete(c.donnees, { effort: options.effort, cache: direct }),
+    nature.parametresRequete(c.donnees, { effort: options.effort, cache: direct, contexte }),
   );
   const jetons = [];
   for (const p of requetes) jetons.push(await api.compterJetons(p));
@@ -557,7 +638,11 @@ export async function generer({
       }
       cr.counts.envoyes++;
       cumuler(usage, message.usage);
-      const reponse = lireReponse(nature, message, cible, { effort: options.effort, date });
+      const reponse = lireReponse(nature, message, cible, {
+        effort: options.effort,
+        date,
+        contexte,
+      });
       brut.push({
         id: cible.id,
         stop_reason: message.stop_reason,
@@ -603,6 +688,7 @@ async function creerLot({
     return { custom_id: customId, params: requetes[i] };
   });
   const lot = {
+    nature: nature.cle,
     created_at: debut.toISOString(),
     retrieved: debut.toISOString().slice(0, 10),
     model: nature.modele,
@@ -639,7 +725,7 @@ async function creerLot({
   renameSync(attente, join(dossierNature, `lot-attente-${cr.run_id}.envoye.json`));
   cr.batch_id = cree.id;
   cr.counts.envoyes = envoi.length;
-  ecrire(`Lot ${cree.id} parti. Suivi : node ${nature.script} --suivre ${cree.id}`);
+  ecrire(`Lot ${cree.id} parti. Suivi : node ${nature.commande} --suivre ${cree.id}`);
   writeFileSync(join(dossierNature, "rapport.json"), `${JSON.stringify(cr, null, 2)}\n`);
   return cr;
 }
@@ -647,12 +733,22 @@ async function creerLot({
 /// --suivre : état d'un lot ; terminé, résultats contrôlés et fusionnés dans le fichier des
 /// entrées.
 async function suivre(ctx) {
-  const { nature, dossierNature, entrees, options, api, debut, runId, ecrire } = ctx;
+  const { nature, dossierBase, dossierNature, entrees, options, api, debut, runId, ecrire } = ctx;
   const cheminLot = join(dossierNature, `lot-${options.suivre}.json`);
   if (!existsSync(cheminLot)) {
     throw new ErreurRedaction(`lot-${options.suivre}.json absent : lot inconnu de ce poste.`);
   }
   const lot = JSON.parse(readFileSync(cheminLot, "utf8"));
+  // Un lot d'avant ADR-017 ne porte pas sa nature : c'est un lot de houblons, ou de divers
+  // dans import/ingest/divers/ (lot D2 d'ADR-018) ; `lotsSansNature` de la nature le dit. Un
+  // lot d'une autre nature est refusé.
+  const accepte = lot.nature === undefined ? nature.lotsSansNature : lot.nature === nature.cle;
+  if (!accepte) {
+    throw new ErreurRedaction(
+      `lot-${options.suivre}.json : lot de nature ${lot.nature ?? "hop"}, ` +
+        `--nature ${nature.cle} demandée.`,
+    );
+  }
   const etat = await api.lireLot(options.suivre);
   const c = etat.request_counts ?? {};
   ecrire(
@@ -703,6 +799,7 @@ async function suivre(ctx) {
     const lu = lireReponse(nature, r.result.message, cible, {
       effort: lot.effort,
       date: lot.retrieved,
+      contexte: ctx.contexte,
     });
     brut.push({
       id: cible.id,
@@ -721,8 +818,8 @@ async function suivre(ctx) {
   writeFileSync(cr.brut, `${JSON.stringify(brut, null, 2)}\n`);
   cr.usage = usage;
   try {
-    const t = lireTarifCommun(dossierNature, lot.model, debut);
-    if (t.ancienIgnore) ecrire(`${t.ancien} ignoré : seul ${t.chemin} est lu (ADR-018).`);
+    const t = lireTarifCommun(dossierBase, lot.model, debut);
+    if (t.ancienIgnore) ecrire(`${t.ancien} ignoré : seul ${t.chemin} est lu (ADR-019).`);
     cr.montant_usd = montantUsage(usage, t.tarif, "lot");
     cr.tarif = { date: t.tarif.date, source: t.tarif.source };
   } catch (erreur) {

@@ -21,6 +21,7 @@ import {
 } from "./options.mjs";
 import { NATURE_HOUBLON } from "./aromes/nature.mjs";
 import { NATURE_DIVERS } from "./divers/nature.mjs";
+import { NATURE_LEVURE } from "./levures/nature.mjs";
 import { empreinteContenu } from "./redaction/texte.mjs";
 import {
   COLLECTION_EXECUTIONS,
@@ -33,8 +34,22 @@ import {
 const NATURES = ["fermentable", "hop", "culture", "misc"];
 
 /// Natures rédigées par l'API dont ecrire.mjs écrit les entrées, dans l'ordre : houblons
-/// (beer_hop_aromas, ADR-013), divers (beer_misc_descriptions, ADR-018).
-export const NATURES_REDIGEES = [NATURE_HOUBLON, NATURE_DIVERS];
+/// (beer_hop_aromas, ADR-013), levures (beer_culture_aromas, ADR-017), divers
+/// (beer_misc_descriptions, ADR-018).
+export const NATURES_REDIGEES = [NATURE_HOUBLON, NATURE_LEVURE, NATURE_DIVERS];
+
+/// Commandes qui refont la liste du groupe de [nature], en production.
+const commandesListe = (nature) =>
+  `node lister-ingredients-recettes.mjs --nature ${nature.cle} --production --projet kassbeer, ` +
+  `puis dart run bin/lister_ingredients_recettes.dart --nature ${nature.cle}`;
+
+/// Dossier des entrées de [nature] pour ecrire.mjs : option de la nature (--aromes,
+/// --divers) ou dossier frère de la préparation, puis sous-dossier de la nature (levures/).
+export function dossierRedigees(nature, options, dossierPrepare) {
+  const e = nature.ecriture;
+  const base = resolve(options[e.option] ?? join(dossierPrepare, "..", e.nomDossier));
+  return e.sousDossier === null ? base : join(base, e.sousDossier);
+}
 
 /// Dossier de la préparation par défaut : import/ingest/prepare/ à la racine du dépôt.
 export const DOSSIER_PREPARE = fileURLToPath(
@@ -91,10 +106,10 @@ export function trier(documents) {
   return { valides, refuses };
 }
 
-/// Lit le dossier d'une nature rédigée ([dossier], import/ingest/aromes/ ou
-/// import/ingest/divers/) : le fichier des entrées (`aromes.json`, `descriptions.json`,
-/// liste `{id, data}`) et la liste du groupe (`houblons-recettes.json`,
-/// `divers-recettes.json`). Rend null si le fichier des entrées manque : aucune entrée n'est
+/// Lit le dossier d'une nature rédigée ([dossier], import/ingest/aromes/,
+/// import/ingest/aromes/levures/ ou import/ingest/divers/) : le fichier des entrées
+/// (`aromes.json`, `descriptions.json`, liste `{id, data}`) et la liste du groupe
+/// (`houblons-recettes.json`, `levures-recettes.json`, `divers-recettes.json`). Rend null si le fichier des entrées manque : aucune entrée n'est
 /// écrite. Lève une erreur s'il existe sans la liste du groupe : sans elle, l'écrivain ne
 /// peut pas refuser une entrée du groupe non relue, et rien n'est écrit.
 export function lireEntreesRedigees(dossier, nature) {
@@ -106,13 +121,14 @@ export function lireEntreesRedigees(dossier, nature) {
   const cheminGroupe = join(dossier, fichierGroupe);
   if (!existsSync(cheminGroupe)) {
     throw new Error(
-      `${fichierGroupe} absent à côté de ${fichierEntrees} : lancez ${nature.ecriture.scriptNoms} ` +
-        `puis exchange/bin/${nature.scriptGroupe}. Rien n'est écrit.`,
+      `${fichierGroupe} absent à côté de ${fichierEntrees} : lancez ` +
+        `lister-ingredients-recettes.mjs --nature ${nature.cle} puis ` +
+        `exchange/bin/lister_ingredients_recettes.dart --nature ${nature.cle}. Rien n'est écrit.`,
     );
   }
   const groupe = JSON.parse(readFileSync(cheminGroupe, "utf8"));
   if (groupe?.format !== nature.formatGroupe || !Array.isArray(groupe.resolus)) {
-    throw new Error(`${fichierGroupe} : fichier de ${nature.scriptGroupe} attendu`);
+    throw new Error(`${fichierGroupe} : fichier de lister_ingredients_recettes.dart attendu`);
   }
   return {
     entrees,
@@ -121,7 +137,7 @@ export function lireEntreesRedigees(dossier, nature) {
   };
 }
 
-/// Âge maximal, en jours, de la liste du groupe (houblons, divers) lue par une écriture en
+/// Âge maximal, en jours, de la liste du groupe (houblons, levures, divers) lue par une écriture en
 /// production : une liste plus ancienne peut omettre un ingrédient ajouté depuis à une
 /// recette, dont le texte non relu partirait.
 export const AGE_MAX_LISTE_GROUPE_JOURS = 7;
@@ -132,9 +148,7 @@ export const AGE_MAX_LISTE_GROUPE_JOURS = 7;
 /// de AGE_MAX_LISTE_GROUPE_JOURS jours : rien n'est écrit.
 export function controlerListeGroupe(origine, maintenant, nature) {
   const { fichierGroupe, mots } = nature;
-  const refaire =
-    `Refaites la liste : node ${nature.ecriture.scriptNoms} --production --projet kassbeer, ` +
-    `puis dart run bin/${nature.scriptGroupe}. Rien n'est écrit.`;
+  const refaire = `Refaites la liste : ${commandesListe(nature)}. Rien n'est écrit.`;
   if (origine?.target !== "production") {
     throw new ErreurOptions(
       `${fichierGroupe} vient de la cible « ${origine?.target ?? "inconnue"} », pas ` +
@@ -154,24 +168,21 @@ export function controlerListeGroupe(origine, maintenant, nature) {
   }
 }
 
-/// Sépare les entrées d'une nature rédigée bonnes des refusées (P55, P63) : contrôle de
-/// lib/<nature>/validation.mjs, identifiant absent du référentiel préparé
-/// ([idsReferentiel]), entrée du groupe non relue, identifiant en double. Les bonnes
-/// reçoivent `content_sha256`.
-export function trierRedigees(nature, entrees, idsReferentiel, groupe) {
+/// Sépare les entrées d'une nature rédigée bonnes des refusées (P55, P62, P63) : contrôle de
+/// lib/<nature>/validation.mjs (styles de [contexte] pour les levures, contexteEcriture),
+/// identifiant absent du référentiel préparé ([idsReferentiel]), entrée du groupe non relue,
+/// identifiant en double. Les bonnes reçoivent `content_sha256`.
+export function trierRedigees(nature, entrees, idsReferentiel, groupe, contexte) {
   const { collection } = nature.ecriture;
-  const { un } = nature.mots;
   const valides = [];
   const refuses = [];
   const vus = new Set();
   for (const doc of entrees) {
-    const erreurs = nature.controlerEntree(doc);
+    const erreurs = nature.controlerEntree(doc, contexte);
     const id = typeof doc?.id === "string" ? doc.id : null;
-    if (id !== null && !idsReferentiel.has(id)) {
-      erreurs.push(`id : ${un} absent de ${nature.referentiel}`);
-    }
+    if (id !== null && !idsReferentiel.has(id)) erreurs.push(`id : ${nature.refus.absent}`);
     if (id !== null && groupe.has(id) && doc?.data?.reviewed !== true) {
-      erreurs.push(`reviewed : ${un} des recettes du groupe non relu`);
+      erreurs.push(`reviewed : ${nature.refus.nonRelu}`);
     }
     if (id !== null && vus.has(id)) erreurs.push("id : en double");
     if (id !== null) vus.add(id);
@@ -231,18 +242,37 @@ export function resumePreparation(rapport) {
   return { sources, unresolved };
 }
 
+/// Entrées relues ([entrees] d'une nature rédigée) dont l'identifiant manque au référentiel
+/// préparé ([idsReferentiel]) : description relue orpheline, après une fusion d'ADR-014
+/// (ADR-017, section 5 ; ADR-019, pour les trois natures). Identifiants triés.
+export function relueOrphelines(entrees, idsReferentiel) {
+  return entrees
+    .filter((e) => e?.data?.reviewed === true && typeof e?.id === "string")
+    .map((e) => e.id)
+    .filter((id) => !idsReferentiel.has(id))
+    .sort();
+}
+
 /// Identifiants préparés de [collection] (refusés compris : un document refusé garde sa
-/// version en ligne), pour --supprimer-absents. beer_hop_aromas exige aromes.json ([aromes],
-/// lu par lireEntreesRedigees) : sans lui, ErreurOptions, rien n'est écrit ni supprimé.
-/// beer_misc_descriptions n'est pas supprimable (ADR-018, décision 5).
-export function idsPrepares(collection, preparation, aromes) {
-  if (collection === NATURE_HOUBLON.ecriture.collection) {
-    if (aromes === null) {
+/// version en ligne), pour --supprimer-absents. beer_hop_aromas et beer_culture_aromas
+/// exigent leur fichier d'entrées ([lues] : lecture par collection, null si absent) : sans
+/// lui, ErreurOptions, rien n'est écrit ni supprimé. beer_misc_descriptions n'est pas
+/// supprimable (ADR-018, décision 5 ; COLLECTIONS_SUPPRIMABLES).
+export function idsPrepares(collection, preparation, lues) {
+  const nature = NATURES_REDIGEES.find((n) => n.ecriture.collection === collection);
+  if (nature !== undefined) {
+    const lu = lues?.[collection] ?? null;
+    if (lu === null) {
+      const e = nature.ecriture;
+      const fichier =
+        e.sousDossier === null
+          ? nature.fichierEntrees
+          : `${e.sousDossier}/${nature.fichierEntrees}`;
       throw new ErreurOptions(
-        "--supprimer-absents beer_hop_aromas sans aromes.json : rien n'est écrit ni supprimé.",
+        `--supprimer-absents ${collection} sans ${fichier} : rien n'est écrit ni supprimé.`,
       );
     }
-    return aromes.entrees.map((e) => e?.id).filter((id) => typeof id === "string");
+    return lu.entrees.map((e) => e?.id).filter((id) => typeof id === "string");
   }
   return (preparation.documents[collection] ?? [])
     .map((d) => d?.id)
@@ -272,23 +302,28 @@ export async function executer({
   // Natures rédigées : entrées lues et listes du groupe contrôlées avant toute écriture.
   const redigees = new Map();
   for (const nature of NATURES_REDIGEES) {
-    const e = nature.ecriture;
-    const dossierNature = resolve(options[e.option] ?? join(dossier, "..", e.nomDossier));
-    const lues = lireEntreesRedigees(dossierNature, nature);
+    const lues = lireEntreesRedigees(dossierRedigees(nature, options, dossier), nature);
     if (lues !== null && options.cible === "production") {
       controlerListeGroupe(lues.origine, debut, nature);
     }
     redigees.set(nature, lues);
   }
   const resume = {};
+  const orphelines = {};
+  const luesParCollection = {};
   for (const [nature, lues] of redigees) {
     const e = nature.ecriture;
+    luesParCollection[e.collection] = lues;
     const documentsReferentiel = preparation.documents[e.referentielCollection];
     if (lues !== null) {
       const ids = new Set(documentsReferentiel.map((d) => d.id));
-      const tri = trierRedigees(nature, lues.entrees, ids, lues.groupe);
+      // Levures : styles acceptés par trier() seuls ; une entrée qui cite un style refusé à
+      // la préparation est refusée.
+      const contexte = e.contexteEcriture?.(valides);
+      const tri = trierRedigees(nature, lues.entrees, ids, lues.groupe, contexte);
       valides[e.collection] = tri.valides;
       refuses.push(...tri.refuses);
+      orphelines[e.collection] = relueOrphelines(lues.entrees, ids);
       // Index de la nature (houblons seuls), contrôlé comme les autres documents de beer_index.
       const construireIndex = INDEX_REDIGEES.get(nature);
       if (construireIndex !== undefined) {
@@ -302,16 +337,17 @@ export async function executer({
       }
     }
     resume[e.champFichier] = lues === null ? "absent" : "read";
-    resume[e.champSansDescription] = compterSansDescription(
-      documentsReferentiel,
-      lues?.entrees ?? [],
-    );
+    if (e.champSansDescription !== null) {
+      resume[e.champSansDescription] = compterSansDescription(
+        documentsReferentiel,
+        lues?.entrees ?? [],
+      );
+    }
   }
-  const aromes = redigees.get(NATURE_HOUBLON);
   const prepares =
     options.supprimerAbsents === null
       ? null
-      : idsPrepares(options.supprimerAbsents, preparation, aromes);
+      : idsPrepares(options.supprimerAbsents, preparation, luesParCollection);
 
   if (options.cible === "production") {
     controlerIdentifiants(cheminIdentifiants(env), lireIdentifiants);
@@ -385,6 +421,7 @@ export async function executer({
       sources,
       unresolved,
       ...resume,
+      reviewed_orphans: orphelines,
       ...(deletions === null ? {} : { deletions }),
     };
     mkdirSync(dossierRapports, { recursive: true });

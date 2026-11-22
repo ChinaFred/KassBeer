@@ -6,6 +6,7 @@
 // rendu par le modèle.
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 /// Efforts permis par l'option --effort et dans la version d'une provenance.
 export const EFFORTS = ["low", "medium", "high", "xhigh", "max"];
@@ -21,8 +22,8 @@ const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 // U+2060), marque d'ordre des octets (U+FEFF), trait d'union conditionnel…
 const CONTROLES = /[\u0000-\u001f\u007f-\u009f\p{Cf}]/gu;
 
-const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
-const longueur = (t) => [...t].length;
+export const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+export const longueur = (t) => [...t].length;
 
 /// Vrai si [texte] est une date réelle `AAAA-MM-JJ`.
 export function estDate(texte) {
@@ -62,6 +63,46 @@ export function reglesTexte(texte, { min = TEXTE_MIN, max = TEXTE_MAX } = {}) {
   if (/[<>`]/u.test(t) || /(^|\n)\s*[#*]/u.test(t)) regles.push("balisage");
   if (t.includes("€") || t.includes("$")) regles.push("symbole monétaire");
   if (/(^|[^\p{L}])(eur|euros?)(?![\p{L}])/iu.test(t)) regles.push("monnaie");
+  return regles;
+}
+
+/// Règles d'un texte `{text}` au [chemin] : forme, nettoyage, puis reglesTexte.
+export function reglesBlocTexte(chemin, v) {
+  if (!estObjet(v) || Object.keys(v).join(",") !== "text" || typeof v.text !== "string") {
+    return [`${chemin} : {text} attendu`];
+  }
+  const regles = [];
+  if (v.text !== nettoyerTexte(v.text)) {
+    regles.push(`${chemin}.text : texte non nettoyé (NFC, contrôles)`);
+  }
+  for (const regle of reglesTexte(v.text)) regles.push(`${chemin}.text : ${regle}`);
+  return regles;
+}
+
+/// Liste fermée de descripteurs `{key, label}` du fichier JSON [url], lue une fois par la
+/// nature qui la porte (descripteurs des houblons, des levures).
+export function lireListeFermee(url) {
+  return JSON.parse(readFileSync(url, "utf8"));
+}
+
+/// Règles d'une liste `descriptors` (`{key, label}`, clé dans [libelles], libellé recopié,
+/// sans doublon). Le nombre d'entrées se contrôle avec le statut.
+export function reglesDescripteurs(descripteurs, libelles) {
+  if (!Array.isArray(descripteurs)) return ["descriptors : liste attendue"];
+  const regles = [];
+  const r = (chemin, regle) => regles.push(`${chemin} : ${regle}`);
+  const vus = new Set();
+  descripteurs.forEach((d, i) => {
+    const c = `descriptors[${i}]`;
+    if (!estObjet(d) || Object.keys(d).sort().join(",") !== "key,label") {
+      r(c, "{key, label} attendu");
+      return;
+    }
+    if (!libelles.has(d.key)) r(`${c}.key`, "hors de la liste fermée");
+    else if (d.label !== libelles.get(d.key)) r(`${c}.label`, "différent de la liste");
+    if (vus.has(d.key)) r(`${c}.key`, "en double");
+    vus.add(d.key);
+  });
   return regles;
 }
 

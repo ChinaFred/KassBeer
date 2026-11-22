@@ -43,13 +43,8 @@ Future<TestApp> ouvrir(
   return app;
 }
 
-String _mention(String date) =>
-    'Texte rédigé par une IA (Claude), relu le $date';
-
 void main() {
-  testWidgets('décrit : descripteurs, usages, mention de relecture', (
-    tester,
-  ) async {
+  testWidgets('décrit : descripteurs, usages, mention IA', (tester) async {
     final app = await ouvrir(tester, aromes: hopAromaDoc());
     expect(find.text(TextesAromes.titre), findsOneWidget);
     expect(find.text('Pamplemousse'), findsOneWidget);
@@ -65,11 +60,10 @@ void main() {
     expect(find.text('Premier moût'), findsNothing);
     expect(find.text('Whirlpool'), findsNothing);
     expect(find.text(TextesRediges.confianceFaible), findsNothing);
-    expect(find.text(_mention('14 novembre 2026')), findsOneWidget);
+    expect(find.text(TextesRediges.mention), findsOneWidget);
+    expect(find.textContaining('relu'), findsNothing);
     // Mention sous le titre « Arômes », avant les descripteurs.
-    final mention = tester
-        .getTopLeft(find.text(_mention('14 novembre 2026')))
-        .dy;
+    final mention = tester.getTopLeft(find.text(TextesRediges.mention)).dy;
     expect(
       tester.getTopLeft(find.text(TextesAromes.titre)).dy < mention,
       isTrue,
@@ -111,29 +105,32 @@ void main() {
     expect(positions, [...positions]..sort());
   });
 
-  testWidgets('confiance faible, non relu', (tester) async {
-    await ouvrir(
-      tester,
-      aromes: hopAromaDoc(extra: {'confidence': 'low', 'reviewed': false}),
-    );
-    expect(find.text(TextesRediges.confianceFaible), findsOneWidget);
-    expect(find.text(TextesRediges.nonRelu), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.widgetWithText(Etiquette, TextesRediges.confianceFaible),
-        matching: find.byIcon(Icons.info_outline),
-      ),
-      findsOneWidget,
-    );
-    expect(find.byIcon(Icons.help_outline), findsNothing);
-    expect(find.textContaining('relu le'), findsNothing);
-  });
+  testWidgets(
+    'confiance faible, document non relu : aucune mention de relecture',
+    (tester) async {
+      await ouvrir(
+        tester,
+        aromes: hopAromaDoc(extra: {'confidence': 'low', 'reviewed': false}),
+      );
+      expect(find.text(TextesRediges.confianceFaible), findsOneWidget);
+      expect(find.text(TextesRediges.mention), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.widgetWithText(Etiquette, TextesRediges.confianceFaible),
+          matching: find.byIcon(Icons.info_outline),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.help_outline), findsNothing);
+      expect(find.textContaining('relu'), findsNothing);
+    },
+  );
 
   testWidgets(
     'rendu inchangé par le widget commun : mention, confiance, style',
     (tester) async {
       await ouvrir(tester, aromes: hopAromaDoc(extra: {'confidence': 'low'}));
-      final mention = _mention('14 novembre 2026');
+      const mention = TextesRediges.mention;
       // Titre, mention, « Confiance faible », descripteurs : dans cet ordre.
       final ordre = [
         TextesAromes.titre,
@@ -189,14 +186,15 @@ void main() {
     );
     expect(find.text('Pamplemousse'), findsOneWidget);
     expect(find.text(TextesRediges.miseAJour), findsOneWidget);
-    expect(find.text(_mention('14 novembre 2026')), findsOneWidget);
+    expect(find.text(TextesRediges.mention), findsOneWidget);
   });
 
   testWidgets('unknown : aucune description, mention IA', (tester) async {
     await ouvrir(tester, aromes: hopAromaUnknownDoc());
     expect(find.text(TextesAromes.titre), findsOneWidget);
     expect(find.text(TextesAromes.inconnu), findsOneWidget);
-    expect(find.text(TextesRediges.nonRelu), findsOneWidget);
+    expect(find.text(TextesRediges.mention), findsOneWidget);
+    expect(find.textContaining('relu'), findsNothing);
     expect(find.text(TextesRediges.confianceFaible), findsNothing);
   });
 

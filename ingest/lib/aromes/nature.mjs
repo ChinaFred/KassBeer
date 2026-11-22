@@ -6,7 +6,7 @@
 //
 // Fichiers de import/ingest/aromes/ (jamais versionnés) :
 //   aromes.json              entrées {id, data}, copie de référence, corrigée à la main
-//   houblons-recettes.json   houblons des recettes du groupe (exchange/bin/lister_houblons_recettes.dart)
+//   houblons-recettes.json   houblons des recettes du groupe (exchange/bin/lister_ingredients_recettes.dart)
 //   lot-<id>.json            table custom_id → houblon d'un lot de l'API Batches
 //   brut/                    réponses de chaque exécution, effort dans le nom
 //   rapport.json             dernière exécution : poste, modèle, effort, jetons, montant
@@ -36,25 +36,35 @@ const LIBELLES_USAGES = {
 };
 
 export const NATURE_HOUBLON = Object.freeze({
+  /// Valeur de --nature (generer-aromes.mjs, lister-ingredients-recettes.mjs) et du champ
+  /// `nature` d'un lot.
+  cle: "hop",
   /// Poste de coût porté par chaque rapport (catalogue « Coûts variables »).
   poste: "hop_aroma_generation",
   adr: "ADR-013",
   script: "generer-aromes.mjs",
+  /// Commande de la nature, citée dans les messages (« Suivi : node … --suivre <id> »).
+  commande: "generer-aromes.mjs",
   /// Option qui remplace le dossier de la nature, et dossier par défaut.
   optionDossier: "--aromes",
   dossierDefaut: fileURLToPath(new URL("../../../import/ingest/aromes/", import.meta.url)),
+  sousDossier: null,
   /// Référentiel préparé (import/ingest/prepare/), fichier des entrées, liste du groupe.
   referentiel: "beer_hops.json",
   fichierEntrees: "aromes.json",
   fichierGroupe: "houblons-recettes.json",
   formatGroupe: "kassbeer_houblons_recettes",
-  scriptGroupe: "lister_houblons_recettes.dart",
+  scriptGroupe: "lister_ingredients_recettes.dart --nature hop",
   motifId: ID_HOUBLON,
   prefixeId: "hop-",
   /// Préfixe des custom_id d'un lot (h0001…) et nom de l'ingrédient dans la table du lot.
+  /// --suivre accepte un lot sans champ `nature` (lot d'avant ADR-017, sans champ `nature`).
+  lotsSansNature: true,
   prefixeCustomId: "h",
   champNom: "hop_name",
   mots: { un: "houblon", des: "houblons", Des: "Houblons", fichierExemple: "houblons.json" },
+  /// Entrées par lancement, au plus (ADR-013, plafond 3 ; ADR-018, section 6).
+  maxEntrees: 500,
   modele: MODELE,
   maxTokens: MAX_TOKENS,
   promptVersion: PROMPT_VERSION,
@@ -72,13 +82,18 @@ export const NATURE_HOUBLON = Object.freeze({
       effort,
       date,
     }),
+  /// Refus de ecrire.mjs (lib/execution.mjs, trierRedigees).
+  refus: {
+    absent: "houblon absent de beer_hops.json",
+    nonRelu: "houblon des recettes du groupe non relu",
+  },
   /// Écriture par ecrire.mjs (lib/execution.mjs).
   ecriture: {
     collection: COLLECTION_AROMES,
     option: "aromes",
     nomDossier: "aromes",
+    sousDossier: null,
     referentielCollection: "beer_hops",
-    scriptNoms: "lister-houblons-recettes.mjs",
     champFichier: "aromas_file",
     champSansDescription: "hops_without_aroma",
     sansDescription: "sans description aromatique",

@@ -1,9 +1,10 @@
 // Écrivain de l'ingestion (ADR-005, D5). Lit import/ingest/prepare/ (produit par
 // `dart run bin/preparer_referentiels.dart` dans exchange/) et écrit les référentiels et
 // les recettes publiques par l'Admin SDK ; lit aussi import/ingest/aromes/aromes.json
-// (generer-aromes.mjs, ADR-013) et écrit beer_hop_aromas/, puis
-// import/ingest/divers/descriptions.json (generer-divers.mjs, ADR-018) et écrit
-// beer_misc_descriptions/.
+// (generer-aromes.mjs, ADR-013) et écrit beer_hop_aromas/,
+// import/ingest/aromes/levures/aromes.json (generer-aromes.mjs --nature culture, ADR-017) et
+// écrit beer_culture_aromas/, puis import/ingest/divers/descriptions.json (generer-divers.mjs,
+// ADR-018) et écrit beer_misc_descriptions/.
 //
 //   Émulateur (par défaut) :
 //     npx firebase --config ../firebase.json emulators:exec --only firestore \
@@ -12,8 +13,8 @@
 //     node ecrire.mjs --production --projet kassbeer
 //   Compter sans écrire : --simulation.
 //   Supprimer les documents absents de la préparation (ADR-014) : --supprimer-absents
-//   beer_hops, beer_hop_aromas ou beer_cultures, 30 au plus, confirmation par la saisie de
-//   leur nombre ; avec --simulation, la liste seule.
+//   beer_hops, beer_hop_aromas, beer_cultures ou beer_culture_aromas, 30 au plus,
+//   confirmation par la saisie de leur nombre ; avec --simulation, la liste seule.
 //
 // Codes de sortie : 0 tout écrit ; 1 échec (dont une suppression en erreur) ; 2 utilisation
 // refusée ; 3 documents refusés par le contrôle (les autres sont écrits, la liste est dans
@@ -41,6 +42,14 @@ try {
     if (rapport[e.champFichier] === "absent") {
       console.log(`${e.collection} : ${nature.fichierEntrees} absent, aucune description écrite`);
     }
+  }
+  for (const [collection, ids] of Object.entries(rapport.reviewed_orphans)) {
+    if (ids.length === 0) continue;
+    console.log(
+      `${collection} : ${ids.length} entrées relues absentes du référentiel préparé ` +
+        "(relecture perdue, à reporter sur le nouvel identifiant) :",
+    );
+    for (const id of ids) console.log(`  ${id}`);
   }
   const d = rapport.deletions;
   if (d !== undefined) {

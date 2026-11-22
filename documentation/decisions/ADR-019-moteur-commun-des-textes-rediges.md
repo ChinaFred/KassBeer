@@ -22,6 +22,15 @@ Décisions de l'utilisateur du 2026-11-21, après l'avis :
 6. Levures : la commande `generer-aromes.mjs --nature culture` reste.
 7. Contrôle P64 et leçon apprise sur la collision des numéros : ajoutés.
 
+Note du 2026-11-22 : décision de l'utilisateur (« fais R2 ») de faire R2 tout de suite, avant
+la fin de la campagne des levures, par la fusion de `main` dans la branche des divers, sans
+branche tirée de `main` : R2 et R3 sont faits ensemble à la v0.2.12. Empreinte d'une levure
+figée par `ingest/test/aromes-levures.test.mjs` sur la valeur calculée par le code de `main`
+(`ce6a556`) avant le portage (`e4dc92e8…`) ; `--suivre` relit un `lot-<id>.json` de l'ancien
+moteur (test). Un lot sans champ `nature` reste accepté pour les houblons et les divers, refusé
+pour les levures, dont chaque lot porte `nature: "culture"`. Les levures n'ont pas de compte
+« sans description » au rapport de `ecrire.mjs` : leur périmètre écarte des types entiers.
+
 ## Contexte
 
 Deux branches parties de la v0.1.91 (`5ff7725`) ont chacune pris le numéro ADR-017 et le

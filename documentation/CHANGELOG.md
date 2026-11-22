@@ -6,7 +6,36 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
-### v0.2.1 — technique
+### v0.2.12 — technique
+
+Lot R2 d'ADR-019, par la fusion de `main` dans la branche des divers (décision de l'utilisateur
+du 2026-11-22). Les levures d'ADR-017 passent sur le moteur commun `ingest/lib/redaction/` comme
+une nature, dans `ingest/lib/levures/` (`nature.mjs`, `prompt.mjs`, `validation.mjs`,
+`descripteurs.json`), avec le même poste `culture_aroma_generation`, le même modèle, le même
+prompt (`PROMPT_VERSION_LEVURES` 1), la même liste de 32 descripteurs, le même périmètre et le
+même `--max` de 1 000. Le moteur reçoit deux crochets de nature, `contexte` (styles du prompt) et
+`perimetre` (types exclus) ; `generer-aromes.mjs` garde `--nature hop|culture`. L'ancien moteur
+de `main` sort : `ingest/lib/aromes/generation.mjs`, `natures/hop.mjs`, `natures/culture.mjs`,
+`client.mjs`, `tarif.mjs`. Le tarif des levures se lit dans `import/ingest/tarif.json`, comme
+celui des houblons et des divers ; `import/ingest/aromes/tarif.json` seul est refusé sans repli.
+Les textes des levures passent aux règles communes (NFC, catégorie Unicode Cf retirée, contrôle
+sur la forme NFKC). Empreinte d'une levure figée par un test sur la valeur calculée par le code
+de `main` avant le portage (`e4dc92e8…`, styles `b96d1a54…`), avec le texte du prompt et la
+requête d'un lot : les 923 levures déjà rédigées ne repartent pas. `--suivre` relit un
+`lot-<id>.json` écrit par l'ancien moteur (test). Listes du groupe : `ingest/lister-ingredients-recettes.mjs`
+et `exchange/bin/lister_ingredients_recettes.dart` de `main`, étendus à `--nature misc` ; sortent
+`ingest/lister-houblons-recettes.mjs`, `ingest/lister-divers-recettes.mjs`,
+`exchange/bin/lister_houblons_recettes.dart`, `exchange/bin/lister_divers_recettes.dart` et
+`exchange/bin/src/lister_recettes.dart`. `ecrire.mjs` écrit les trois natures et liste les
+entrées relues orphelines pour chacune. Application : un seul cadre des textes rédigés
+(`texte_redige.dart` : `CadreTexteRedige`, `MentionTexteRedige`, `EtiquetteConfianceFaible`,
+`EtiquettesRedigees`, `PanneTexteRedige`) pour les houblons, les levures et les divers ;
+`CadreAromes`, `MentionAromes`, `ConfianceFaibleAromes` et `DescripteursAromes` sortent, avec
+`domain/relecture.dart`. « relu le » et « non relu » ne s'affichent plus pour les divers non
+plus (ADR-019, décision 4). Les entrées v0.1.92 à v0.2.1 de la branche, absentes de `main`, sont
+renumérotées v0.2.2 à v0.2.11, au-dessus de la v0.2.1 de `main` (Nouveautés, #121), fusionnée après ce lot. Aucune dépendance ajoutée ni retirée.
+
+### v0.2.11 — technique
 
 Contrôle des descriptions des divers (ADR-018) : après « un sachet », les mots « ou », « voire »,
 « à » et « pour » ne comptent plus comme une dose que suivis d'un nombre (`contientDose`,
@@ -17,7 +46,7 @@ comme « ou bien deux », « à raison de deux », « ou un ou deux » et « ou 
 après la relecture de sécurité. « pour un brassin » passe, pour ne pas refuser « pour le fût »
 ou « à chaque étape ». Tests ajoutés, ingest 349. Décisions de l'utilisateur.
 
-### v0.2.0 — technique
+### v0.2.10 — technique
 
 Bibliothèque : neuf noms français de divers deviennent des alias (`exchange/lib/src/ingestion/alias.dart`,
 ADR-018) : coriandre, chlorure de calcium, gypse, écorces d'orange amère et douce. La liste des
@@ -26,7 +55,7 @@ divers du groupe ne résolvait qu'un nom sur 11, les recettes nommant leurs dive
 88 %. Effet après la préparation et l'écriture des référentiels sur le poste de l'admin. Décision
 de l'utilisateur. Test ajouté dans `exchange/test/ingestion_test.dart`.
 
-### v0.1.99 — technique
+### v0.2.9 — technique
 
 Contrôle des descriptions des divers (ADR-018) : « gal », « gals », « gallon » et « gallons »
 rejoignent les unités de dose refusées (`contientDose`, `ingest/lib/divers/validation.mjs`).
@@ -34,7 +63,7 @@ Un texte rédigé d'après une source américaine pouvait écrire « 5 gallons �
 « 2 galets » reste accepté. Le prompt et `PROMPT_VERSION` ne changent pas : les 10 textes de
 l'essai ne se régénèrent pas. Tests ajoutés, ingest 326. Décision de l'utilisateur.
 
-### v0.1.98 — technique
+### v0.2.8 — technique
 
 Contrôle des descriptions des divers (ADR-018) : « un sachet » ou « une sachet » seuls ne
 comptent plus comme une dose. L'essai sur 10 divers du 2026-11-22 a refusé la coriandre pour
@@ -46,25 +75,23 @@ rapport (« et demi », « ou deux », « (ou deux) », « par brassin », « / 
 « Dans un sachet. À la fin, retirer. » est accepté. « éventuellement deux » ou « un second »
 restent à la relecture humaine. Décisions de l'utilisateur.
 
-## 2026-11-21
-
-### v0.1.97 — technique
+### v0.2.7 — technique
 
 Lot R1 d'ADR-019 : `main` a reçu entre-temps un ADR-017 (arômes des levures) et un contrôle P62.
 L'ADR des divers de cette branche devient `ADR-018-descriptions-des-divers.md`, et son contrôle
 P63 ; les renvois sont repris dans `CLAUDE.md`, la documentation, le code, les tests et les
-entrées v0.1.92 à v0.1.96 de cette branche, qui ne sont pas sur `main`. ADR-019 (moteur commun
+entrées v0.2.2 à v0.2.6 de cette branche, qui ne sont pas sur `main`. ADR-019 (moteur commun
 des trois natures) est accepté. `CLAUDE.md` ajoute P64 : un numéro d'ADR ou de contrôle se vérifie
 libre sur `main` et sur chaque branche distante (leçon 17). Aucun changement de comportement.
 
-### v0.1.96 — fonctionnel
+### v0.2.6 — fonctionnel
 
 Sur la fiche d'une recette, la recette d'un brassin et une recette publique, un houblon ou un
 divers que la Bibliothèque connaît porte maintenant un chevron : un appui ouvre sa fiche, avec
 ses arômes ou sa description. La flèche du haut ou le retour du téléphone ramène à la recette.
 Un ingrédient que la Bibliothèque ne reconnaît pas reste affiché comme avant.
 
-### v0.1.96 — technique
+### v0.2.6 — technique
 
 Lot D4 d'ADR-018 : `ContenuRecette` reçoit `ligneIngredient`, fourni par la fiche d'une recette,
 la recette figée d'un brassin et la recette publique (`lien_bibliotheque.dart`,
@@ -74,17 +101,16 @@ juste importée ne lient rien. Retour par `pop` quand la fiche est poussée avec
 `AppRoutes.retourParPop` (`PageDeCoquille.retourParPopPermis`, `AppShell.retourParPop`).
 `main.dart.js` : 5 948 779 octets avant, 5 951 901 après (+ 3 122). Tests Flutter : 1 949.
 
-### v0.1.95 — fonctionnel
+### v0.2.5 — fonctionnel
 
 Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment
 l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un
 paragraphe par moment d'ajout (empâtage, ébullition, après ébullition, fermentation,
 embouteillage). La section « Goût » décrit le goût apporté, ou indique qu'il n'y a pas d'effet
 notable. Ces textes sont rédigés par une IA et ne donnent aucune dose : suivez la notice du
-fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur, les autres sont
-marqués « non relu ».
+fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur.
 
-### v0.1.95 — technique
+### v0.2.5 — technique
 
 Lot D3 d'ADR-018 : `lireDescriptionDivers` (un `get` de `beer_misc_descriptions/{id}`, sans
 écouteur) et `descriptionDiversProvider` ; `SectionDescriptionDivers` sur la fiche d'un divers ;
@@ -94,7 +120,7 @@ pour les deux natures ; libellés « Descriptions des houblons » et « Descript
 dans Admin › Sources ; ligne « Descriptions des divers » dans « Sources des données ». Taille de
 `main.dart.js` : 5 921 851 octets avant, 5 927 958 après (+ 6 107). Tests Flutter : 1 906.
 
-### v0.1.94 — technique
+### v0.2.4 — technique
 
 Lot D2 d'ADR-018 : les descriptions des divers se rédigent depuis le poste de l'admin.
 `ingest/generer-divers.mjs` passe par le moteur commun avec la nature `ingest/lib/divers/`
@@ -108,7 +134,7 @@ avec les garde-fous des arômes ; `firestore.rules` l'ouvre en `get` aux membres
 cinq profils. Empreinte des houblons inchangée ; leurs textes passent aussi par le contrôle Cf et NFKC. Tests : `ingest` 275, `exchange`
 307, `referentiels.test.mjs` 158.
 
-### v0.1.93 — technique
+### v0.2.3 — technique
 
 Lot D1 d'ADR-018 : le moteur de rédaction par l'API Claude sort de `ingest/lib/aromes/` vers
 `ingest/lib/redaction/` (`client.mjs`, `tarif.mjs`, `texte.mjs`, `moteur.mjs`), paramétré par un
@@ -118,7 +144,7 @@ objet de nature (`ingest/lib/aromes/nature.mjs`). Il servira aussi aux descripti
 message qui dit où le déplacer. L'empreinte des houblons ne change pas, et un test la fige.
 Tests d'`ingest/` : 127 sur 127.
 
-### v0.1.92 — technique
+### v0.2.2 — technique
 
 ADR-018 accepté : les divers de la Bibliothèque recevront une description (moment d'utilisation,
 rôle, goût le cas échéant, aucune dose), rédigée par l'API Claude depuis le poste de l'admin sur
@@ -126,6 +152,248 @@ un moteur commun avec les arômes des houblons. `CLAUDE.md` ajoute P63 (`beer_mi
 et étend P54 (moteur commun, poste `misc_description_generation`, empreinte des houblons figée),
 P19, P20 et P22. « Le projet », « Structure », « Commandes utiles » et « Coûts variables » sont
 complétés et marqués « à livrer ». Aucun code.
+### v0.2.0 — fonctionnel
+
+La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew
+Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms :
+une recette qui écrit l'un ou l'autre retrouve la même levure.
+
+### v0.2.0 — technique
+
+Brewtarget écrit Belle Saison de Lallemand sans référence, sous deux noms : « LalBrew Belle
+Saison » (fichiers 005 et 004) et « Belle Saison Belgian Saison-Style » (fichier 003). Les deux
+entrées n'ont pas de `product_id` et aucune n'est une fiche de fabricant : ni `FusionCulture` ni
+`ReferenceCulture` ne s'appliquent. Nouvelle correction `MemeSoucheCulture`
+(`exchange/lib/src/ingestion/fusions.dart`) : deux entrées Brewtarget sans référence d'un même
+producteur font un document, à l'identifiant de la première dans `ordreIdentifiant`
+(`referentiel.dart`) ; les deux noms doivent être lus, sinon `StateError`. Une ligne, Lallemand.
+Identifiant gardé : `culture-lallemand-lalbrew-belle-saison` (fichier 005, rang 1), celui de
+`levures-recettes.json` et de la description aromatique relue ; rien à reporter. Préparation
+rejouée : 959 documents `beer_cultures` au lieu de 960, 1 identifiant sort
+(`culture-lallemand-belle-saison-belgian-saison-style`), aucun n'entre, 1 document change
+(alias et provenance) ; les autres collections préparées sont identiques. Tests sur fixtures
+inventées (P20, P56). Version 0.2.0 : le dernier chiffre a atteint 99. Demande de l'utilisateur
+du 2026-11-22.
+
+### v0.1.99 — fonctionnel
+
+L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait
+sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de
+réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent
+maintenant.
+
+### v0.1.99 — technique
+
+`recipeAssistantTurn` : `output_config.format` réduit à `{reponse: string, proposition:
+string}` (aucun champ facultatif, aucune union). L'ancien format, une branche `anyOf` par
+opération (18 branches, 19 champs facultatifs), dépassait la limite interne de compilation des
+sorties structurées : 400 « Schema is too complex for compilation » sur chaque tour, rendu
+`ai_request_rejected`. La proposition s'écrit en JSON dans son texte ; `readTurnOutput` la
+relit par `readProposition` (JSON illisible ou hors catalogue : `proposition: null`, tour
+compté, nom de l'erreur ou chemin seuls au journal). Le catalogue des opérations passe dans le
+prompt, version 3 (`operationsCatalog`, tiré de `PROPOSITION_OPERATIONS`). Amendement du
+2026-11-22 d'ADR-015, décision de l'utilisateur. Aucune dépendance changée, aucun fichier de
+l'application touché.
+
+### v0.1.98 — fonctionnel
+
+À l'import d'une recette, une levure se reconnaît aussi par la référence écrite dans son nom,
+même quand le nom est saisi à la main avec le producteur à la fin, des mots en français, un poids
+ou une référence sans tiret (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »). La levure
+n'est choisie que si une seule souche de la Bibliothèque porte cette référence. La plage de
+température de la levure sur la courbe d'un brassin et les valeurs reprises par l'assistant de
+recette suivent la même règle.
+
+### v0.1.98 — technique
+
+`IndexBibliotheque.resoudre` (`exchange/lib/src/resolution_import.dart`) gagne une dernière voie
+pour les levures, après le nom entier, les alias et les voies de souche et de référence : la
+seule entrée désignée par une référence lue dans le nom (`_parJetonsReference` : suites d'un à
+trois segments de la clé normalisée, jointes sans tiret, avec une lettre et un chiffre, hors
+poids). Une référence partagée par deux producteurs n'est jamais choisie, ni une référence d'un
+producteur quand le nom en nomme un autre. `candidats` rend en plus ces entrées, et en dernier
+les levures qui portent tous les mots du nom (dix au plus, jamais choisies) ; ces candidats
+partiels classent le nom en `aucun` (`candidatsAvecOrigine`), jamais en `plusieurs`. Houblons, malts et ajouts inchangés. Mêmes effets pour `plage_levure.dart`, `proposition.dart`
+et Admin › Import, qui appellent `resoudre`. Demande de l'utilisateur du 2026-11-22, notée dans
+ADR-005 (E7) et l'étape 6 de `DATA_SOURCES.md`.
+Mesures sur la préparation rejouée : les 12 noms de levures du groupe relevés en production
+passent de 1 à 9 résolus (M84, M76, M31 ×2, M41, BE-256 ×2 et S-23 s'ajoutent à US-05), les
+deux « Belle saison » reçoivent 2 candidats au lieu d'aucun (raison `aucun`), « Ma levure » reste sans candidat ;
+sur 1 171 noms (noms et alias de `beer_cultures`, noms du groupe), aucune résolution existante ne
+change, 8 noms de plus sont résolus (non résolus : 94 à 86) ; sur les 487 noms et
+alias de `beer_hops`, la sortie de `lister_ingredients_recettes.dart` est identique ; la
+préparation (`beer_cultures`, `beer_hops`, `public_recipes`, `import_unresolved`) est identique
+octet pour octet, car l'ingestion a son propre résolveur. Tests sur fixtures inventées (P20).
+
+### v0.1.97 — fonctionnel
+
+La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les
+arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de
+température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui
+sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.
+
+Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé
+par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données »
+présente aussi les arômes des levures.
+
+### v0.1.97 — technique
+
+Livraison 2 d'ADR-017. `app/lib/features/library/domain/aromes_levure.dart` lit
+`beer_culture_aromas/{id}` en lecture stricte (`status`, `confidence`, `descriptors`,
+`texts.profile` obligatoire pour un `described`, `cool` et `warm` facultatifs, clé inconnue de
+`texts` ignorée, `styles` de 0 à 6) et applique les bornes de l'écrivain : textes de 400
+caractères au plus, 8 descripteurs au plus (borne de `lireDescripteursArome`, commune aux
+houblons), nom de style de 120 caractères au plus, code de style de la forme d'`idStyle`
+(`^bjcp2021-[a-z0-9]+(-[a-z0-9]+)*$`), refusé sans recopier la valeur, puisqu'il sert à
+construire une adresse. `LibraryRepository.lireAromesLevure` fait un `get` à
+l'ouverture de la fiche, rapporte un document illisible sous `library.culture_aroma` avec son
+chemin seul ; `aromesLevureProvider` relit au retour du réseau. Aucun `snapshots()`, aucune liste
+de descripteurs ni de styles en Dart (P22, P62) ; l'assistant de recette ne lit pas cette
+collection.
+
+`section_aromes.dart` garde la section des houblons et porte le cadre commun aux deux natures
+(`CadreAromes` : chargement, panne, hors ligne, illisible ; `MentionAromes`,
+`ConfianceFaibleAromes`, `DescripteursAromes`). `section_aromes_levure.dart` ajoute
+`SectionAromesLevure`, placée entre « Valeurs » et « Provenance ». Sous-titres « En bas de
+plage (15 °C) » et « En haut de plage (20 °C) » tirés de `temperature_range` par
+`formatCelsius`, sans parenthèses quand la borne manque ; styles en `TextButton` de 48 px qui
+ouvrent `AppRoutes.libraryEntry('styles', code)` par `push`, sans retrait horizontal (nom
+aligné sur les textes) et lus « Ouvrir la fiche du style <nom> » (décisions de l'utilisateur du
+2026-11-21, note d'ADR-017).
+
+Décision de l'utilisateur du 2026-11-21 : la relecture n'est plus affichée. `AromesHoublon` ne
+lit plus `reviewed` ni `reviewed_at` (un document qui les porte reste lisible), la mention perd
+sa date, « Sources des données » perd la phrase sur « non relu ». `ingest/` inchangé : la
+relecture reste exigée à l'écriture. Notes datées dans ADR-013 et ADR-017. Aucune dépendance
+ajoutée ni montée. `main.dart.js` (`flutter build web --release`) : 5 989 110 octets avant,
+5 993 166 après (+ 4 056).
+
+### v0.1.96 — technique
+
+Descriptions aromatiques des levures (ADR-017) : `ingest/generer-aromes.mjs --nature culture`
+accepte `--max` jusqu'à 1 000 levures par lancement, et 1 000 devient sa valeur par défaut, pour
+que les 923 levures du périmètre partent en un seul lot de l'API Batches (décision de l'utilisateur
+du 2026-11-22, après l'essai de 10 levures). Les houblons restent à 500. Le plafond vit dans chaque
+nature (`maxElements` de `natures/hop.mjs` et `natures/culture.mjs`) ; `MAX_ELEMENTS` sort de
+`generation.mjs`. `--max` est contrôlé une fois `--nature` lu, quel que soit l'ordre des options.
+P54 et « Coûts variables » de `CLAUDE.md`, ADR-017 (note du 2026-11-22), `exigences-techniques.md`
+et `guide-reseau.md` suivent. Coût attendu du lot : ≈ 29,5 $ ; borne haute du script : ≈ 95,6 $.
+
+## 2026-11-21
+
+### v0.1.95 — fonctionnel
+
+Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui
+attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le
+développement », un ticket validé sur GitHub à valider de nouveau dans l'application, et un
+ticket en cours dont la CI de la pull request est en échec. Un ticket dont l'analyse, le
+développement ou la correction tourne déjà en sort jusqu'à la fin de la session prévue. Une
+nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à corriger. Le nombre
+« Tickets à traiter » du menu compte aussi les tickets validés à lancer. Quand rien n'attend,
+l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ».
+Demandé par le ticket #63.
+
+### v0.1.95 — technique
+
+`ticketATraiter` (`app/lib/features/tickets/domain/ticket_delivery.dart`) définit le filtre
+« À traiter » de la liste à partir des documents du serveur seuls : `send_failed`, `validate`
+dans `allowed_decisions`, `launch_analysis` ou `launch_development` sans entrée de cette action
+en cours dans `admin/launches`, pastille « PR prête » (règle inchangée), ou
+`relaunch_development` avec la nouvelle pastille `PastilleLivraisonType.ciRouge`
+(`relaunch_ready` sans développement en cours). Un historique ou un état de PR absent ou en
+panne laisse le ticket à traiter. `ticketsATraiterProvider` remplace `ticketsPrPreteProvider`
+et ne lit que les `admin/launches` et `admin/delivery` déjà lus par les pastilles des lignes.
+`Ticket.toProcess`, lu par le compteur du menu, passe du statut à `allowed_decisions` seul
+(`send_failed`, `validate`, `launch_analysis`, `launch_development`), sans lecture de plus :
+l'écran du jour n'ouvre aucun écouteur de plus (option A de l'analyse, décision 7 d'ADR-008
+gardée). Tests : domaine de `toProcess` et de `ticketATraiter`, liste avec un ticket validé à
+lancer et une analyse en cours, état vide, pastille « CI en échec » avec et sans relance permise,
+CI rouge pendant un développement ou une correction.
+Demandé par le ticket #63.
+
+### v0.1.94 — fonctionnel
+
+Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une
+ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position.
+Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la
+fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour
+ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur
+téléphone, ou avec un texte agrandi, rien ne change.
+
+### v0.1.94 — technique
+
+Liste et fiche côte à côte dans la Bibliothèque à partir de `kBibliothequeCoteACoteMinWidth`
+(1 096 px, égal à `kTicketsAdminCoteACoteMinWidth`, la coquille ayant un rail de 256 px) et
+sous `kGrandTexteMinScale` (prédicat `bibliothequeCoteACote`, `breakpoints.dart`). Une
+`ShellRoute` par segment dans `app_router.dart` : en large, `BibliothequeCoteACote` pose
+l'en-tête sur toute la largeur, la liste de `kListeBibliothequeWidth` (380 px) et un
+navigateur à droite (invite `InviteFicheBibliotheque` ou fiche en `NoTransitionPage`) ; en une
+colonne, les deux `MaterialPage` restent. Recherche, préfixe des recettes publiques et filtre
+de confiance dans `rechercheBibliothequeProvider` (mémoire, par segment). « Voir le style »
+garde son `push` ; `PageDeCoquille.retourParPopSelon` et `AppShell.backByPop` dépilent vers la
+recette, `pageEmpilee` (`page_de_coquille.dart`) reconnaît une page empilée par
+`ImperativeRouteMatch` (à retester à chaque montée de go_router). `fermerFicheBibliotheque`
+(bouton et Échap, posé sur `BibliothequeCoteACote`), focus rendu à la ligne fermée par
+`_FocusApresFermeture` et `LigneListe.focusNode`, annonce « Fiche ouverte : {nom} ».
+Décisions de l'utilisateur du 2026-11-21.
+
+### v0.1.93 — technique
+
+Livraison 1 d'ADR-017 : descriptions aromatiques des levures, générées, relues et écrites
+depuis le poste de l'administrateur. L'application ne les affiche pas encore (livraison 2).
+
+`ingest/generer-aromes.mjs` prend `--nature hop|culture` (`hop` par défaut : les commandes des
+houblons gardent leur effet). Le moteur commun reste dans `ingest/lib/aromes/generation.mjs` ;
+ce qui dépend de la nature vit dans `lib/aromes/natures/hop.mjs` (qui reprend `prompt.mjs` et
+`validation.mjs`) et `lib/aromes/natures/culture.mjs` (données envoyées sans `notes` ni
+`provenance`, prompt versionné, schéma, contrôle, 32 descripteurs de
+`descripteurs-levures.json`, périmètre). Fichiers des levures dans `import/ingest/aromes/levures/`,
+`tarif.json` commun. Poste `culture_aroma_generation`. Périmètre : levures du groupe, plus les
+types autres que `other`, `wine`, `champagne`, `malolactic` (923 levures sur 960). Styles
+conseillés pris dans `beer_styles.json` préparé, après le contrôle de `beer_styles` de
+`ingest/lib/validation.mjs` au générateur comme à l'écrivain (un style refusé n'entre ni dans le
+prompt ni dans les codes acceptés) ; l'empreinte couvre la liste des styles.
+
+`ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs --nature
+hop|culture`, et `exchange/bin/lister_houblons_recettes.dart` devient
+`lister_ingredients_recettes.dart` (`--referentiel` remplace `--houblons`) ; aucun ancien nom
+gardé. `IndexBibliotheque.correspondances` est remplacé par `candidats`, qui liste les
+identifiants d'un nom non résolu ; `houblons-recettes.json` porte aussi ces candidats.
+`ecrire.mjs` écrit `beer_culture_aromas/` depuis `levures/aromes.json` : refus d'une levure
+absente de `beer_cultures.json`, d'une levure du groupe non relue, d'un code de style inconnu ;
+rapport `culture_aromas_file` et `reviewed_orphans`. `--supprimer-absents beer_culture_aromas`
+accepté dans les bornes d'ADR-014. `firestore.rules` : `beer_culture_aromas/{entryId}` en `get`
+par les membres, `list` et écriture refusés. Aucune dépendance ajoutée ni montée ; `app/lib/`
+inchangé, `main.dart.js` non concerné.
+
+### v0.1.92 — fonctionnel
+
+L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou
+retirer un malt, un houblon, un ajout ou un palier, changer une quantité, le volume, le nom ou
+la levure. Sa réponse porte alors une carte « Proposition de l'assistant » qui montre l'effet sur
+la densité, le degré, l'amertume et la couleur. Un appui sur « Appliquer au brouillon » recopie
+tous les changements dans la recette ; rien n'est enregistré avant « Enregistrer », et
+« Annuler la proposition » rend la recette d'avant. Une valeur technique que la Bibliothèque ne
+connaît pas (acides alpha, couleur, rendement, atténuation) et que l'IA a proposée s'affiche avec
+la mention « (proposée par l'IA) », dans l'éditeur, la fiche, le brassin et le compte rendu
+d'export. Sur téléphone, l'assistant se ferme après l'application pour montrer la recette.
+
+### v0.1.92 — technique
+
+Lot A2 d'ADR-015 (amendement du 2026-11-21). Sorties structurées de `recipeAssistantTurn`
+(`output_config.format`, `{reponse, proposition}`), prompt en version 2 ; une proposition hors
+format ou de plus de 30 opérations est rendue `null`, tour compté. Liste fermée des 18
+opérations dans `test-fixtures/recipe_assistant_operations.json`, rejouée par `exchange/test/`
+et `functions/test/`. `exchange/lib/src/proposition.dart` (`lireProposition`,
+`appliquerProposition`, garde du nom sur l'index : refus `element_changed`, décision de
+l'utilisateur) et `marques_ia.dart` (`ai_proposed`, `<nature>:<ingredientKey>:<champ>`, marque
+gardée seulement si toutes les lignes de la clé portent la valeur marquée) ;
+`lireRecettePartielle` devient publique. `ai_proposed` dans l'enveloppe de `recipes/` et de
+`recipe_snapshot`, règle `size() <= 100` seule : budget des règles à marge nulle à la création
+d'un brassin, taille de chaque entrée non bornée, risque accepté par l'utilisateur le
+2026-11-21 et figé par des tests. Écran : `carte_proposition.dart`, aperçu par `computeRecipe`,
+Bibliothèque lue en cache hors ligne sans repli sur la valeur du modèle. `main.dart.js` :
+5 901 437 → 5 947 894 octets (+ 0,79 %). Aucune dépendance changée.
 
 ### v0.1.91 — fonctionnel
 
