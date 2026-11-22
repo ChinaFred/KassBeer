@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.2.0",
+      "date": "2026-11-22",
+      "paragraphs": [
+        "La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms : une recette qui écrit l'un ou l'autre retrouve la même levure."
+      ]
+    },
+    {
       "version": "0.1.99",
       "date": "2026-11-22",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position. Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur téléphone, ou avec un texte agrandi, rien ne change."
-      ]
-    },
-    {
-      "version": "0.1.92",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "L'assistant de recette peut maintenant proposer des changements à la recette : ajouter ou retirer un malt, un houblon, un ajout ou un palier, changer une quantité, le volume, le nom ou la levure. Sa réponse porte alors une carte « Proposition de l'assistant » qui montre l'effet sur la densité, le degré, l'amertume et la couleur. Un appui sur « Appliquer au brouillon » recopie tous les changements dans la recette ; rien n'est enregistré avant « Enregistrer », et « Annuler la proposition » rend la recette d'avant. Une valeur technique que la Bibliothèque ne connaît pas (acides alpha, couleur, rendement, atténuation) et que l'IA a proposée s'affiche avec la mention « (proposée par l'IA) », dans l'éditeur, la fiche, le brassin et le compte rendu d'export. Sur téléphone, l'assistant se ferme après l'application pour montrer la recette."
       ]
     }
   ]

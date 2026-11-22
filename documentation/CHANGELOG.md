@@ -6,6 +6,29 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.0 — fonctionnel
+
+La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew
+Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms :
+une recette qui écrit l'un ou l'autre retrouve la même levure.
+
+### v0.2.0 — technique
+
+Brewtarget écrit Belle Saison de Lallemand sans référence, sous deux noms : « LalBrew Belle
+Saison » (fichiers 005 et 004) et « Belle Saison Belgian Saison-Style » (fichier 003). Les deux
+entrées n'ont pas de `product_id` et aucune n'est une fiche de fabricant : ni `FusionCulture` ni
+`ReferenceCulture` ne s'appliquent. Nouvelle correction `MemeSoucheCulture`
+(`exchange/lib/src/ingestion/fusions.dart`) : deux entrées Brewtarget sans référence d'un même
+producteur font un document, à l'identifiant de la première dans `ordreIdentifiant`
+(`referentiel.dart`) ; les deux noms doivent être lus, sinon `StateError`. Une ligne, Lallemand.
+Identifiant gardé : `culture-lallemand-lalbrew-belle-saison` (fichier 005, rang 1), celui de
+`levures-recettes.json` et de la description aromatique relue ; rien à reporter. Préparation
+rejouée : 959 documents `beer_cultures` au lieu de 960, 1 identifiant sort
+(`culture-lallemand-belle-saison-belgian-saison-style`), aucun n'entre, 1 document change
+(alias et provenance) ; les autres collections préparées sont identiques. Tests sur fixtures
+inventées (P20, P56). Version 0.2.0 : le dernier chiffre a atteint 99. Demande de l'utilisateur
+du 2026-11-22.
+
 ### v0.1.99 — fonctionnel
 
 L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait

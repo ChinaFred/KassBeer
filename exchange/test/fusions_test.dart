@@ -797,6 +797,43 @@ void main() {
       );
     });
 
+    test('même souche sans référence sous deux noms : un document, '
+        'identifiant et valeurs de la source la plus prioritaire', () {
+      // 004 (rang 2) porte « Nom Long Fictif », 003 lu ici comme second
+      // fichier (rang 2 aussi) : l'ordre de lecture départage.
+      final r = fusionner(
+        [culture('Nom Long Fictif', 'Labo Fictif', null)],
+        [culture('Nom Court Fictif', 'Labo Fictif', null)],
+        const [
+          MemeSoucheCulture(
+            'Labo Fictif',
+            nom: 'Nom Court Fictif',
+            rejoint: 'Nom Long Fictif',
+          ),
+        ],
+      );
+      final c = r.parNature[NatureReferentiel.culture]!;
+      expect(c.keys, {'culture-labo-fictif-nom-long-fictif'});
+      expect(c.values.single.nom, 'Nom Long Fictif');
+      expect(c.values.single.aliases, ['Nom Court Fictif']);
+      expect(r.nomsPartages(NatureReferentiel.culture), isEmpty);
+      // Une entrée avec référence n'est pas désignée.
+      expect(
+        () => fusionner(
+          [culture('Nom Long Fictif', 'Labo Fictif', 'LF-1')],
+          [culture('Nom Court Fictif', 'Labo Fictif', null)],
+          const [
+            MemeSoucheCulture(
+              'Labo Fictif',
+              nom: 'Nom Court Fictif',
+              rejoint: 'Nom Long Fictif',
+            ),
+          ],
+        ),
+        throwsStateError,
+      );
+    });
+
     test('doublons d\'un même producteur : seuls les noms partagés chez un '
         'même producteur, « Labs » rapproché', () {
       final r = fusionner(
@@ -879,6 +916,7 @@ void main() {
           culture('Bavarian Wheat Blend', 'Wyeast', '3056'),
           culture('British Ale II', 'Wyeast', '1335'),
           culture('Lactobacillus buchneri', 'Wyeast', '5335'),
+          culture('LalBrew Belle Saison', 'Lallemand', null),
         ],
         [
           culture('C2C American Farmhouse', 'Omega Yeast', 'OYL-217'),
@@ -890,11 +928,17 @@ void main() {
           culture('Bavarian Wheat', 'Wyeast', '3056'),
           culture('British Ale', 'Wyeast', '1335'),
           culture('Lactobacillus', 'Wyeast', '5335'),
+          culture('Belle Saison Belgian Saison-Style', 'Lallemand', null),
         ],
         kCorrectionsCultures,
       );
       final c = r.parNature[NatureReferentiel.culture]!;
-      expect(c, hasLength(12));
+      expect(c, hasLength(13));
+      // Les deux Belle Saison de Lallemand : un document, à l'identifiant de
+      // l'entrée lue la première (004 ici ; 005 en production).
+      expect(c['culture-lallemand-lalbrew-belle-saison']?.aliases, [
+        'Belle Saison Belgian Saison-Style',
+      ]);
       expect({
         for (final f in c.values) f.nom,
       }, containsAll(['Lalvin 71B', 'SafSpirit HG-1', 'Fermoale AY3']));
