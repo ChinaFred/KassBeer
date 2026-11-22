@@ -3,6 +3,8 @@
 - **Statut** : accepté le 2026-11-11, décision de l'utilisateur : option B, « copie exacte » de
   Kass'Dalle
 - **Date** : 2026-11-11
+- **Amendement** : « File d'attente des livraisons » (ticket #104), statut : proposé
+  (2026-11-22)
 - **Remplace** : ADR-006 sur trois points : option C (« aucun point d'accès HTTP »), décision 1
   et décision 5 ; P25 (« aucun `onRequest` ni `onCall` sans ADR » : cet ADR est celui qui les
   autorise, liste fermée ci-dessous). ADR-006 reste en vigueur pour le reste. Modifie ADR-001
@@ -561,6 +563,165 @@ livraison à la fois.
 variables » (premier poste), « Logique dupliquée » (`member_access.json`), « Tickets », P5
 (exception de la capture), P23 à P27 modifiés, P29 à P34 ajoutés au lot T3 (2026-11-12), les suivants par lot. ADR-006 reçoit « Modifié
 par : ADR-008 (option C, décisions 1 et 5, P25) » ; ADR-001 aussi.
+
+## Amendement proposé du 2026-11-22 : file d'attente des livraisons (ticket #104)
+
+- **Statut** : proposé
+- **Date** : 2026-11-22
+- **Modifie** : sections « Points d'accès autorisés » (secrets de `syncTickets`), « Lancements
+  de sessions (Routines) » (plafond, mode de `launchTicketDelivery`), « Livraison » (verrou) et
+  « Prompts » (phrase d'accord de la partie « Livraison ») ; contrôles P25, P36, P39, P43, P44,
+  P45, P46, P47 et règle « Coûts variables » de `CLAUDE.md`. Le verrou « une livraison à la
+  fois » reste.
+
+### Contexte
+
+Demande de l'utilisateur (ticket #104) : « Une seule livraison à la fois : ok mais permettre de
+mettre en file d'attente. » Aujourd'hui, `claimDeliveryLock` (`functions/src/tickets/delivery.ts`)
+refuse une seconde livraison en `delivery_running_elsewhere`. L'administrateur doit revenir
+appuyer sur « Livrer » après la fin de la première, jusqu'à 2 h 30 plus tard (durée maximale
+d'une session, prompt de développement, partie « Livraison »).
+
+État du code lu le 2026-11-22 :
+
+- `launchTicketSession` (`functions/src/tickets/launch.ts`) enchaîne : routine configurée, bail
+  du ticket (`claimLaunch`), contrôles de P43 (`checkDeliveryLaunch`), verrou
+  (`claimDeliveryLock`), plafond (`reserveLaunch`), Issue relue, entrée `unknown`, appel unique.
+  Le compteur du jour dépend de l'appelant (`pool`, fondateur ou groupe, lu par `requireAdmin`).
+- Le verrou est libéré par un `## Livraison — blocage` relevé (`writeDeliveryReports`), par la
+  sortie du ticket d'« En cours » (`releaseDeliveryLockIfLeft`, appelé par `issueState.ts` et par
+  la passe horaire), ou à son échéance de 3 h. La fusion ferme l'Issue (étape L8 du prompt) :
+  le verrou tombe donc avant la fin du déploiement (étape L9).
+- `syncTickets` (`functions/src/index.ts`) tourne à la minute 0 de chaque heure, `maxInstances`
+  1, 300 s, `retryCount` 0, secret `GITHUB_TICKETS_TOKEN` seul. `ci.yml` et `deploy.yml`
+  vérifient la liste des fonctions qui montent `TICKETS_ROUTINE_DEV_*`
+  (`launchTicketDevelopment`, `launchTicketDelivery`).
+- `allowed_decisions` se calcule depuis le statut et `validated_by_app_at` seuls
+  (`allowedDecisions`, `decisionModel.ts`) ; le client lit déjà `ticket_status/launches.
+  delivery_running` pour rendre « Livrer » inactif (`ligneLivraison`,
+  `app/lib/features/tickets/domain/ticket_delivery.dart`).
+
+### Options
+
+| Option | Pour | Contre | Coût (arrêt / usage) |
+|---|---|---|---|
+| Ne pas le faire | aucun code ; aucun secret de plus sur `syncTickets` | l'admin revient appuyer, jusqu'à 2 h 30 après | 0 € / 0 € |
+| A. Signal seul | aucune livraison sans appui ; aucun changement au serveur | l'admin doit encore revenir ; ne répond pas à la demande | 0 € / 0 € |
+| B. File au serveur, départ par `syncTickets` (proposée) | répond à la demande ; jeton de routine hors du webhook public ; un départ par passe, jamais rejoué | départ 0 à 60 min après la fin de la livraison précédente ; `TICKETS_ROUTINE_DEV_*` monté par une troisième fonction ; diff de `ci.yml` et `deploy.yml` (P10) | ≈ 0 € / ≈ 0 € ; lancements comptés au départ sur l'abonnement Claude |
+| C. Comme B, départ aussi par `githubTicketWebhook` | départ en quelques secondes | jeton de routine sur le seul point d'accès sans compte (`invoker: "public"`) ; délai du webhook (60 s) plus court que les contrôles de P43 (jusqu'à 180 s) | ≈ 0 € / ≈ 0 € |
+
+A, dans sa forme la plus simple, est une ligne de la fiche : « La livraison du ticket #63 est
+finie : vous pouvez livrer. » Elle n'ajoute ni secret ni point d'accès.
+
+### Décision proposée
+
+Option B. Une livraison mise en file part au plus tôt à la passe horaire qui suit la fin de la
+livraison en cours, après les mêmes contrôles que « Livrer ».
+
+1. **Aucun point d'accès nouveau.** `launchTicketDelivery` reçoit un argument `mode` : `start`
+   (absent = `start`, comportement actuel), `queue` ou `unqueue`. Le mode vient du bouton
+   appuyé, jamais du statut ni du verrou (même règle que P47). Toute autre valeur : refus
+   `invalid-argument`, sans lecture de Firestore hors `members/`.
+2. **Aucune décision nouvelle.** « Mettre en file » et « Retirer de la file » relèvent de
+   `launch_delivery`, déjà dans `allowedDecisions("in_progress", true)`.
+   `ALLOWED_DECISIONS_VERSION` reste à 5. Raison : l'appartenance à la file dépend de
+   `ticket_status/launches`, et non du statut ; deux décisions `queue_delivery` et
+   `unqueue_delivery` obligeraient à réécrire `allowed_decisions` de chaque ticket à chaque
+   mouvement de la file. Le client choisit le bouton d'après `delivery_running` et
+   `delivery_queue`, écrits par le serveur ; le serveur recontrôle tout.
+3. **File.** `ticket_status/launches.delivery_queue` : liste ordonnée, `DELIVERY_QUEUE_MAX`
+   entrées au plus (`functions/src/config.ts`). Entrée : `ticket_id`, `issue_number`,
+   `pr_number`, `head_sha` relu au moment de l'accord, `queued_at`, `by_uid`, `by_email`
+   (e-mail en minuscules tiré du jeton vérifié, jamais d'un argument). Écrite par le serveur
+   seul, lue par l'admin seul : la règle actuelle de `ticket_status/**` ne change pas.
+4. **`queue`.** `requireAdmin`, puis les contrôles de P43 dans le même ordre (précondition,
+   bail, reprise en cours, PR éligible, fichiers, chemins sensibles, CI verte). Puis, en
+   transaction sur `ticket_status/launches` : ticket absent de la file, file non pleine
+   (`delivery_queue_full`), ticket qui ne tient pas déjà le verrou. Si le verrou est libre
+   et la file vide, le refus `delivery_lock_free` dit « La livraison précédente est finie :
+   appuyez sur « Livrer ». ». Rien n'est compté à la mise en file.
+5. **`start` quand la file n'est pas vide.** Refus `delivery_queue_ahead` : les livraisons
+   partent dans l'ordre des accords.
+6. **`unqueue`.** `requireAdmin`, ticket présent dans la file : entrée retirée en transaction,
+   aucun appel à GitHub ni à la routine. Absent : `changed: false`.
+7. **Départ.** Dernière étape de `runHourlyPass` (`sync.ts`), après la relecture des Issues, des
+   comptes rendus et du verrou. Une seule tentative par passe, sur la tête de file, si le
+   verrou est libre et si la condition de fin de la livraison précédente est remplie
+   (question 2). Aucun départ si `development_invalid_since` est posé, ni s'il reste moins de
+   120 s au délai de 300 s de la passe. Dans l'ordre :
+   - `members/{by_email}` relu : rôle `admin` toujours présent, sinon sortie
+     `delivery_queue_not_admin` ; compteur du fondateur ou du groupe lu à ce moment ;
+   - bail du ticket et contrôles de P43, comme `start` ;
+   - tête de la PR relue égale à `head_sha`, sinon sortie `delivery_queue_head_changed` ;
+   - une transaction : entrée toujours en tête, verrou libre, plafond du jour du départ ;
+     entrée retirée, verrou pris et lancement compté ensemble ;
+   - Issue relue, entrée `livraison` `unknown` dans `admin/launches` (`by_uid` de l'accord,
+     `queued: true`), appel unique de la routine de développement, texte `livraison #N`.
+   Un refus propre au ticket (précondition, codes de P43, tête changée, droits) retire
+   l'entrée et rien n'est compté. Une panne passagère (GitHub 5xx ou délai, Firestore, jeton
+   refusé) garde l'entrée pour la passe suivante. Après un `failed` de la routine, compteur
+   et verrou sont rendus comme aujourd'hui ; un `unknown` garde les deux.
+8. **Sorties de file.** Refuser, Clore, « Relancer le développement », ticket sorti
+   d'« En cours » : l'entrée sort dans la transaction qui l'applique, ou à la passe suivante.
+   La dernière sortie est notée dans `tickets/{id}/admin/delivery.queue_exit` (`code`, `at`),
+   écrit par le serveur seul.
+9. **Écran.** Sur un ticket où `launch_delivery` est permis et où le verrou porte un autre
+   ticket, ou si la file n'est pas vide : « Mettre en file » à la place de « Livrer ». Dans la
+   file : « Dans la file (position P sur T) » et « Retirer de la file ». La boîte de
+   confirmation de « Mettre en file » nomme la PR et dit : « La livraison partira sans autre
+   accord après la livraison en cours, au plus tard une heure après sa fin. Elle sera
+   comptée au départ. Si le code de la PR change d'ici là, elle sortira de la file. » Elle
+   affiche la position et les lancements restants du jour. Le client ne recopie ni
+   l'éligibilité, ni la condition de départ, ni le plafond.
+10. **Prompt.** La phrase d'accord de la partie « Livraison » devient : « L'administrateur a
+    appuyé sur « Livrer » ou sur « Mettre en file » dans l'application : cela vaut son accord
+    de fusion pour la seule pull request décrite en L2 ». Le prompt se recolle sur claude.ai
+    (P40). Les étapes L0 à L11 ne changent pas.
+11. **Livraison du changement.** Le diff touche `functions/src/config.ts`,
+    `functions/src/tickets/delivery.ts`, `.github/workflows/ci.yml` et `deploy.yml` :
+    « Livrer » le refusera (`delivery_sensitive_files`). L'administrateur fusionne à la main
+    après relecture, et le diff des workflows lui est présenté avant (P10).
+
+### Réponses aux questions de l'architecte
+
+1. **Où tourne chaque morceau de code** : mise en file et retrait dans `launchTicketDelivery`
+   (callable existante) ; départ dans `syncTickets` (tâche planifiée) ; affichage dans
+   `app/lib/features/tickets/`. Rien dans l'écran du jour (P2).
+2. **Ce qui existera en double** : rien. La condition de départ et l'éligibilité restent au
+   serveur ; le client lit `delivery_queue`, `delivery_running` et `queue_exit`.
+3. **Ce qui pèse au démarrage** : rien de nouveau ; `fetch` seul (P26). Deux secrets de plus
+   montés par `syncTickets`, lus à l'appel.
+4. **Compilation de chaque cible** : aucun paquet nouveau.
+5. **Qui voit quoi** : la file est lue par l'admin seul (`ticket_status/**`). `by_email` est
+   l'e-mail d'un membre en base, jamais publié sur GitHub ni journalisé (P15).
+6. **Ce qui coûte à l'usage, plafond** : même poste `ticket_routine_launch`, même plafond,
+   compté au départ sur le compteur de l'auteur de l'accord, relu à ce moment. Une file de
+   `DELIVERY_QUEUE_MAX` entrées ne lance qu'une session par passe horaire.
+7. **Exposition** : aucun point d'accès nouveau. `syncTickets` n'est pas invocable par un
+   tiers (déclenchée par Cloud Scheduler) ; elle monte désormais le jeton de la routine de
+   développement. Le webhook public ne le monte pas.
+8. **Exploitation** : prompt recollé sur claude.ai ; aucun secret nouveau. Une entrée bloquée
+   se retire depuis la fiche. Revenir en arrière : retirer le mode `queue`, vider le champ.
+9. **Coût de sortie** : faible ; un champ de `ticket_status/launches` et trois modes.
+
+### Conséquences
+
+Plus simple : l'admin donne son accord une fois par ticket et n'a plus à revenir.
+
+Plus difficile : une fusion sur `main` et un déploiement partent d'une tâche planifiée, sans
+personne devant l'écran. L'accord date de l'appui, et la PR peut avoir été fusionnée, rendue
+rouge ou modifiée entre-temps : chaque contrôle est refait au départ, et la tête de la PR doit
+être celle que l'admin a vue.
+
+`CLAUDE.md` change : P25 (secrets de `syncTickets`), P36, P39, P43, P44, P45 (`queue_exit`),
+P46, P47, « Coûts variables » (départ différé). `exigences-techniques.md` : modèle de
+`ticket_status/launches`, prompt. `exigences-fonctionnelles.md` : Admin › Tickets.
+
+### Questions laissées à l'utilisateur
+
+Option retenue ; moment du départ (fusion du précédent, ou fin de son déploiement) ; effet
+d'un blocage sur la file ; plafond du jour atteint au départ ; taille de la file et durée de
+validité d'un accord.
 
 ## Sources
 
