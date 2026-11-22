@@ -45,9 +45,10 @@ const LIBELLES = new Map(ROLES.map((d) => [d.key, d.label]));
 export const ID_DIVERS = /^misc-[a-z0-9]+(-[a-z0-9]+)*$/;
 
 // Unités de dose refusées (ADR-018, décision 1, liste élargie par la décision de
-// l'utilisateur du 2026-11-21) : symboles et mots, les plus longs d'abord.
+// l'utilisateur du 2026-11-21, gallon et gal ajoutés le 2026-11-22) : symboles et mots, les
+// plus longs d'abord.
 const UNITES_DOSE =
-  "(?:g\\s*/\\s*l|ppm|ppb|kilogrammes?|milligrammes?|grammes?|centilitres?|d[ée]cilitres?|" +
+  "(?:g\\s*/\\s*l|ppm|ppb|gallons?|gals?|kilogrammes?|milligrammes?|grammes?|centilitres?|d[ée]cilitres?|" +
   "hectolitres?|millilitres?|litres?|onces?|cuill[eè]res?|cuil\\.?|c\\.\\s*[àa]\\.?\\s*(?:caf[ée]|soupe|c\\.?|s\\.?)|c\\s+à\\s*(?:caf[ée]|soupe)|" +
   "sachets?|pastilles?|gouttes?|comprim[ée]s?|tablettes?|capsules?|dosettes?|tbsps?|tsps?|" +
   "pour[\\s-]*cent|kgs?|mgs?|cls?|dls?|hls?|mls?|grs?|ozs?|g|l|%)";

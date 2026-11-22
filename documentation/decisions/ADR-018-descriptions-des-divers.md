@@ -149,6 +149,10 @@ Note du 2026-11-21 (décision de l'utilisateur, après relecture du lot D2) :
   `comprimé(s)`, `tablette(s)`, `capsule(s)`, `dosette(s)`, `tsp`, `tbsp`, `ppb`. La règle 8
   du prompt nomme les mots et abréviations (`cuil.`, `c. à café`, `c. à soupe`, `c.à.c`,
   `c.à.s`, goutte, comprimé…) ; les pluriels des symboles restent au seul contrôle, sans changer `PROMPT_VERSION` : aucune génération n'a eu lieu.
+- **Gallon** (décision de l'utilisateur du 2026-11-22) : `gal(s)` et `gallon(s)` rejoignent les
+  unités refusées par le contrôle, pour un texte rédigé d'après une source américaine. Le prompt
+  ne change pas, ni `PROMPT_VERSION` : les 10 textes de l'essai ne se régénèrent pas, et le
+  contrôle suffit.
 - **Contenant** (décision de l'utilisateur du 2026-11-22, après l'essai sur 10 divers) :
   « un sachet » ou « une sachet » seuls ne sont plus une dose, pour permettre « placées dans un
   sachet désinfecté » (infusion en cuve). « un demi sachet », « deux sachets », « 1 sachet » et

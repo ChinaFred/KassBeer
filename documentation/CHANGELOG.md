@@ -6,6 +6,14 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.1.99 — technique
+
+Contrôle des descriptions des divers (ADR-018) : « gal », « gals », « gallon » et « gallons »
+rejoignent les unités de dose refusées (`contientDose`, `ingest/lib/divers/validation.mjs`).
+Un texte rédigé d'après une source américaine pouvait écrire « 5 gallons » sans être refusé.
+« 2 galets » reste accepté. Le prompt et `PROMPT_VERSION` ne changent pas : les 10 textes de
+l'essai ne se régénèrent pas. Tests ajoutés, ingest 326. Décision de l'utilisateur.
+
 ### v0.1.98 — technique
 
 Contrôle des descriptions des divers (ADR-018) : « un sachet » ou « une sachet » seuls ne

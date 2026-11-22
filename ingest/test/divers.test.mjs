@@ -149,6 +149,10 @@ describe("contrôle d'un texte de divers", () => {
     ["cuillères", "2 cuillères"],
     ["sachet", "1 sachet"],
     ["sachets", "2 sachets"],
+    ["gal", "5 gal"],
+    ["gallon", "1 gallon"],
+    ["gallons", "5 gallons"],
+    ["lettres : un gallon", "un gallon"],
     ["pastille", "1 pastille"],
     ["pastilles", "2 pastilles"],
     ["lettres : cinq grammes", "cinq grammes"],
@@ -231,6 +235,7 @@ describe("contrôle d'un texte de divers", () => {
 
   for (const [cas, texte] of [
     ["2 lots", `${TEXTE} Utile sur 2 lots.`],
+    ["2 galets", `${TEXTE} Posé sur 2 galets.`],
     ["5,2 l'hiver", `${TEXTE} Au pH 5,2 l'hiver.`],
     ["deux lots", `${TEXTE} Utile sur deux lots.`],
     ["un rôle", `${TEXTE} Il a un rôle discret.`],
