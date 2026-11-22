@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "0.2.2",
+      "date": "2026-11-22",
+      "paragraphs": [
+        "Sur tablette et ordinateur, l'assistant de recette s'ouvre maintenant dans une grande fenêtre, plus facile à lire, au lieu d'une colonne étroite à droite de l'éditeur. Les réponses prennent environ 70 caractères par ligne. La conversation est gardée : on peut fermer la fenêtre, regarder la recette et la rouvrir pour continuer. « Appliquer au brouillon » ferme la fenêtre pour montrer la recette modifiée. Si une réponse arrive alors que la fenêtre est fermée, un message « Réponse de l'assistant reçue » propose de l'ouvrir ; un échec s'annonce de la même façon. Sur téléphone, l'assistant reste une feuille qui monte du bas de l'écran."
+      ]
+    },
+    {
       "version": "0.2.0",
       "date": "2026-11-22",
       "paragraphs": [
@@ -34,13 +41,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le développement », un ticket validé sur GitHub à valider de nouveau dans l'application, et un ticket en cours dont la CI de la pull request est en échec. Un ticket dont l'analyse, le développement ou la correction tourne déjà en sort jusqu'à la fin de la session prévue. Une nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à corriger. Le nombre « Tickets à traiter » du menu compte aussi les tickets validés à lancer. Quand rien n'attend, l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ». Demandé par le ticket #63."
-      ]
-    },
-    {
-      "version": "0.1.94",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Sur un grand écran, la Bibliothèque montre la liste à gauche et la fiche à droite. Choisir une ligne ouvre sa fiche sans quitter la liste, qui garde sa recherche, son filtre et sa position. Sans fiche ouverte, la droite invite à en choisir une. Un bouton ou la touche Échap ferme la fiche. « Voir le style » depuis une recette publique ouvre le style par-dessus, et le retour ramène à la recette. Le bouton Précédent du navigateur revient à la fiche vue juste avant. Sur téléphone, ou avec un texte agrandi, rien ne change."
       ]
     }
   ]

@@ -38,7 +38,8 @@ void annoncerRefus(ScaffoldMessengerState messenger, String libelle) {
 }
 
 /// Annonce [message] avec « Annuler » pendant 10 s.
-void annoncerAvecAnnulation(
+ScaffoldFeatureController<SnackBar, SnackBarClosedReason>
+annoncerAvecAnnulation(
   ScaffoldMessengerState messenger,
   String message, {
   required VoidCallback onAnnuler,
@@ -50,15 +51,16 @@ void annoncerAvecAnnulation(
 );
 
 /// Annonce [message] pendant 10 s, à la place du message en cours, avec le
-/// bouton [action] s'il est donné (« Voir le coût »).
-void annoncerAvecAction(
+/// bouton [action] s'il est donné (« Voir le coût »). Rend le contrôleur du
+/// message, qui permet de le fermer tant qu'il est affiché.
+ScaffoldFeatureController<SnackBar, SnackBarClosedReason> annoncerAvecAction(
   ScaffoldMessengerState messenger,
   String message, {
   String? action,
   VoidCallback? onAction,
 }) {
   messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
+  return messenger.showSnackBar(
     SnackBar(
       duration: const Duration(seconds: 10),
       persist: false,
