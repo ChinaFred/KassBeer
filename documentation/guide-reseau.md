@@ -385,6 +385,12 @@ livrer » à « livrés au lot A1 », ajoute la feature `ai` à « Structure » 
 Le 2026-11-21, avec le ticket #64 et l'accord de l'utilisateur, P39 ajoute « Valider et lancer le
 développement » aux lancements soumis à la boîte de confirmation obligatoire.
 
+Le 2026-11-22, avec le ticket #104 (file d'attente des livraisons, amendement d'ADR-008) et
+l'accord de l'utilisateur, P25, P36, P39, P40, P43, P44, P45, P46 et P47 sont complétés, et la
+puce « Une action qui appelle un modèle… » de « Coûts variables » admet un départ différé, parti
+d'un appui confirmé et qui refait au départ tous les contrôles de l'appui. La liste fermée des
+tâches planifiées passe à `syncTickets` et `startQueuedDelivery`.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 
