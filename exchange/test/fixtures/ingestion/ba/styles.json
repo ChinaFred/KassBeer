@@ -1,0 +1,38 @@
+{
+  "edition": 2026,
+  "published": "2025-12-01",
+  "pdf_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "retrieved": "2026-11-22",
+  "beerjson": {
+    "version": 2.01,
+    "styles": [
+      {
+        "name": "Ambrée Inventée",
+        "category": "Catégorie Inventée Une",
+        "style_id": "IGNORE",
+        "type": "beer",
+        "overall_impression": "TEXTE LIBRE BA A NE PAS COPIER",
+        "examples": "TEXTE LIBRE BA A NE PAS COPIER",
+        "original_gravity": { "minimum": { "unit": "sg", "value": 1.045 }, "maximum": { "unit": "sg", "value": 1.055 } },
+        "final_gravity": { "minimum": { "unit": "sg", "value": 1.01 }, "maximum": { "unit": "sg", "value": 1.014 } },
+        "international_bitterness_units": { "minimum": { "unit": "IBUs", "value": 25 }, "maximum": { "unit": "IBUs", "value": 35 } },
+        "color": { "minimum": { "unit": "SRM", "value": 5 }, "maximum": { "unit": "SRM", "value": 9 } },
+        "alcohol_by_volume": { "minimum": { "unit": "%", "value": 4.5 }, "maximum": { "unit": "%", "value": 5.5 } }
+      },
+      {
+        "name": "Blonde Imaginaire",
+        "category": "Catégorie Inventée Une",
+        "type": "beer",
+        "original_gravity": { "minimum": { "unit": "sg", "value": 1.07 }, "maximum": { "unit": "sg", "value": 1.09 } },
+        "international_bitterness_units": { "minimum": { "unit": "IBUs", "value": 60 }, "maximum": { "unit": "IBUs", "value": 90 } },
+        "color": { "minimum": { "unit": "SRM", "value": 2 }, "maximum": { "unit": "SRM", "value": 4 } }
+      },
+      {
+        "name": "Style Fictif Bis",
+        "category": "Catégorie Inventée Deux",
+        "type": "beer",
+        "original_gravity": { "minimum": { "unit": "sg", "value": 1.04 }, "maximum": { "unit": "sg", "value": 1.05 } }
+      }
+    ]
+  }
+}

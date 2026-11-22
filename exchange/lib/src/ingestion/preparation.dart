@@ -9,6 +9,8 @@ import 'lecture_sources.dart';
 import 'referentiel.dart';
 import 'resolution.dart';
 import 'sources.dart';
+import 'styles_ba.dart';
+import 'valeurs.dart';
 
 /// Préparation de l'ingestion (ADR-005, D5) : lit les sources, fusionne les
 /// référentiels, convertit les recettes DIY Dog et produit, par collection,
@@ -30,6 +32,7 @@ class SourcesBrutes {
     required this.texte005,
     required this.texteFabricants,
     required this.diyDog,
+    this.ba,
   });
 
   /// Fichier 001, en octets (BeerXML en ISO-8859-1).
@@ -52,6 +55,10 @@ class SourcesBrutes {
 
   /// Recettes DIY Dog : nom du fichier et contenu, dans l'ordre des fichiers.
   final List<({String fichier, String texte})> diyDog;
+
+  /// Styles de la Brewers Association (ADR-018, `--ba`) : table de décisions
+  /// versionnée et fichier des plages ; `null` : aucun style BA préparé.
+  final ({String table, String plages})? ba;
 }
 
 /// Résultat de la préparation.
@@ -130,6 +137,19 @@ Preparation preparer(
   }
   final conversion = ConversionDiyDog(resolveur);
 
+  // Styles BA joints aux styles BJCP du 002 (ADR-018) ; sans `--ba`, aucun.
+  final journalBa = Journal();
+  final ba = switch (sources.ba) {
+    final b? => joindreStylesBa(
+      lireTableBa(b.table),
+      lirePlagesBa(b.plages),
+      lecture.styles,
+      journalBa,
+    ),
+    null => null,
+  };
+  final tousStyles = [...lecture.styles, ...?ba?.styles];
+
   if (sources.diyDog.length > kMaxFichiersDiyDog) {
     throw StateError(
       '${sources.diyDog.length} fichiers DIY Dog, $kMaxFichiersDiyDog au plus',
@@ -163,12 +183,18 @@ Preparation preparer(
     );
   }
   collections['beer_styles'] = [
-    for (final s in lecture.styles) _document(s.id, s.document),
+    for (final s in tousStyles) _document(s.id, s.document),
   ];
   final styles = [
-    for (final s in lecture.styles) _entreeIndexStyle(s.id, s.document),
+    for (final s in tousStyles) _entreeIndexStyle(s.id, s.document),
   ]..sort(_parNom);
-  index.add(_document('styles', {'count': styles.length, 'entries': styles}));
+  index.add(
+    _document('styles', {
+      'count': styles.length,
+      'entries': styles,
+      'ba_mention': ?ba?.mention,
+    }),
+  );
   collections['beer_index'] = index;
   collections['public_recipes'] = recettes;
 
@@ -201,13 +227,17 @@ Preparation preparer(
   final ecartees = [
     ...lecture.journal.ecartees,
     ...conversion.journal.ecartees,
+    ...journalBa.ecartees,
   ];
   final parSource = lecture.parSource;
   parSource[Source.diydog.id] = {'recette': sources.diyDog.length};
+  if (ba != null) parSource[kSourceBa] = {'style': ba.lus};
   final rapport = <String, Object?>{
     'sources': [
       for (final s in Source.values)
         {'source': s.id, 'version': s.version(datesReleveFabricants)},
+      if (ba != null)
+        {'source': kSourceBa, 'version': '${ba.rapport['edition']}'},
     ],
     'entrees_par_source': parSource,
     'entrees_rejetees': [for (final r in lecture.rejets) r.toJson()],
@@ -305,6 +335,7 @@ Preparation preparer(
     },
     'libelles_ajouts_perdus': conversion.libellesAjoutsPerdus,
     'fermentations_non_reprises': conversion.fermentationsNonReprises,
+    'styles_ba': ?ba?.rapport,
     'tailles_index_octets_json': {
       for (final d in index)
         d['id']! as String: utf8.encode(jsonEncode(d['data'])).length,
@@ -354,7 +385,8 @@ List<Map<String, Object>> _groupesSansParenthese(
   ];
 }
 
-/// Entrée de `beer_index/styles` : plages en `[min, max]`, nombres nus.
+/// Entrée de `beer_index/styles` : plages en `[min, max]`, nombres nus, et
+/// guide du style (`BJCP2021`, `BA2026`, ADR-018).
 Map<String, Object?> _entreeIndexStyle(String id, Map<String, Object> s) {
   List<num>? bornes(String champ) {
     final p = s[champ];
@@ -370,6 +402,7 @@ Map<String, Object?> _entreeIndexStyle(String id, Map<String, Object> s) {
     'name': s['name'],
     'code': s['style_id'],
     'category': ?s['category'],
+    'guide': ?s['style_guide'],
     'og': ?bornes('original_gravity'),
     'fg': ?bornes('final_gravity'),
     'ibu': ?bornes('international_bitterness_units'),

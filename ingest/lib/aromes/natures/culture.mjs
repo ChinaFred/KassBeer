@@ -11,6 +11,7 @@ import { controlerDocument } from "../../validation.mjs";
 import { MAX_TOKENS, MODELE } from "../prompt.mjs";
 import { ErreurAromes } from "../tarif.mjs";
 import {
+  CARACTERES_CONTROLE,
   CONFIANCES,
   DESCRIPTEURS_MAX,
   DESCRIPTEURS_MIN,
@@ -95,10 +96,14 @@ export function donneesEnvoyeesLevure(data) {
 /// d'abord le contrôle de beer_styles de lib/validation.mjs, comme à l'écrivain : un document
 /// refusé, ou un identifiant en double (second et suivants), n'entre ni dans la liste
 /// envoyée au modèle ni dans celle des codes acceptés ; son identifiant va dans `refuses`. Un
-/// nom qui porte un caractère de contrôle ou bidirectionnel est refusé de même.
+/// nom qui porte un caractère de contrôle ou bidirectionnel est refusé de même. Seuls les
+/// identifiants `bjcp2021-` entrent (ADR-018, section 6) : un style d'un autre guide accepté
+/// (`ba-`) n'entre ni dans la liste du prompt, ni dans `stylesSha256`, ni dans `refuses`, et
+/// un style conseillé reste un code BJCP 2021.
 /// Caractères de contrôle et bidirectionnels : un nom qui en porte ajouterait une ligne au
 /// prompt système, après « Liste des styles ».
-const CARACTERES_INTERDITS_NOM_STYLE = /[\u0000-\u001F\u007F\u202A-\u202E\u2066-\u2069]/u;
+const PREFIXE_STYLES_CONSEILLES = "bjcp2021-";
+const CARACTERES_INTERDITS_NOM_STYLE = CARACTERES_CONTROLE;
 
 export function contexteStyles(documents) {
   if (!Array.isArray(documents)) throw new Error("beer_styles.json : liste attendue");
@@ -114,7 +119,7 @@ export function contexteStyles(documents) {
       CARACTERES_INTERDITS_NOM_STYLE.test(d.data.name)
     ) {
       refuses.push(id);
-    } else {
+    } else if (id.startsWith(PREFIXE_STYLES_CONSEILLES)) {
       styles.push({ code: id, name: d.data.name });
     }
     if (id !== null) vus.add(id);

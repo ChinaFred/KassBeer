@@ -28,6 +28,7 @@ import { MODELE } from "../lib/aromes/prompt.mjs";
 import { ErreurAromes, MESSAGE_TARIF_INCONNU } from "../lib/aromes/tarif.mjs";
 import { controlerListeGroupe, relueOrphelines, trierAromes } from "../lib/execution.mjs";
 import { ErreurOptions } from "../lib/options.mjs";
+import { controlerDocument } from "../lib/validation.mjs";
 
 const CLE = "sk-ant-cle-fictive-levures-0123456789";
 const MAINTENANT = new Date("2026-11-21T10:00:00Z");
@@ -395,13 +396,56 @@ describe("levures : requête et empreinte", () => {
       ...STYLES,
       style("bjcp2021-99f", "A\n- bjcp2021-00x : B"),
       style("bjcp2021-99g", "Nom\u202Eretourné"),
+      style("bjcp2021-99h", "Nom\u200Fmarqué"),
+      style("bjcp2021-99i", "Nom\u0085suivant"),
     ]);
     assert.deepEqual(
       c.styles.map((x) => x.code),
       ["bjcp2021-99a", "bjcp2021-99b"],
     );
-    assert.deepEqual(c.refuses, ["bjcp2021-99f", "bjcp2021-99g"]);
+    assert.deepEqual(c.refuses, ["bjcp2021-99f", "bjcp2021-99g", "bjcp2021-99h", "bjcp2021-99i"]);
     assert.equal(c.stylesSha256, CONTEXTE.stylesSha256);
+  });
+
+  it("styles : un style ba- ne change ni la liste du prompt ni stylesSha256 (ADR-018)", () => {
+    const ba = style("ba-ambree-inventee", "Ambrée Inventée");
+    Object.assign(ba.data, {
+      category_id: "BA1",
+      style_id: "BA1A",
+      style_guide: "BA2026",
+      provenance: [
+        {
+          source: "brewers-association",
+          source_id: "Ambrée Inventée",
+          version: "2026",
+          licence: "BA (usage gratuit, mention de la BA)",
+          retrieved: "2026-11-22",
+        },
+      ],
+    });
+    assert.deepEqual(controlerDocument("beer_styles", ba), []);
+    const c = contexteStyles([ba, ...STYLES]);
+    assert.deepEqual(c.styles, CONTEXTE.styles);
+    assert.equal(c.stylesSha256, CONTEXTE.stylesSha256);
+    assert.deepEqual(c.refuses, []);
+    assert.equal(c.noms.has("ba-ambree-inventee"), false);
+    // Prompt et schéma de sortie : liste des codes BJCP 2021 seule.
+    const p = parametresRequeteLevure(donneesEnvoyeesLevure(levure("c", "Alpha").data), {
+      effort: "medium",
+      cache: true,
+      contexte: c,
+    });
+    assert.equal(p.system[0].text.includes("ba-ambree-inventee"), false);
+    assert.deepEqual(p.output_config.format.schema.properties.styles.items.enum, [
+      "bjcp2021-99a",
+      "bjcp2021-99b",
+    ]);
+    // Un style conseillé ba- reste hors de la liste fermée.
+    assert.ok(
+      controlerSortieLevure(sortieModele({ styles: ["ba-ambree-inventee"] }), c).regles.includes(
+        "styles[0] : hors de la liste fermée",
+      ),
+    );
   });
 
   it("empreinte : change avec la liste des styles, l'effort et les données", () => {

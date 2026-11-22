@@ -429,6 +429,8 @@ void main() {
         'name': 'Style Sans Plage',
         'code': '99B',
         'category': 'Catégorie Fictive',
+        // Guide du style (ADR-018), lu dans style_guide du 002.
+        'guide': 'BJCP2021',
       });
       expect((s.first as Map)['og'], [1.04, 1.05]);
     });

@@ -27,6 +27,7 @@ import {
   COLLECTIONS,
   COLLECTIONS_ECRITES,
   controlerDocument,
+  stylesBaRefusesEnProduction,
   ID_INDEX_AROMES,
 } from "./validation.mjs";
 
@@ -321,6 +322,16 @@ export async function executer({
       : idsPrepares(options.supprimerAbsents, preparation, lus);
 
   if (options.cible === "production") {
+    // Styles de la Brewers Association : refusés en production avant le lot S2 (ADR-018).
+    const ba = stylesBaRefusesEnProduction(preparation.documents);
+    if (ba.length > 0) {
+      throw new ErreurOptions(
+        `Styles de la Brewers Association refusés en production avant le lot S2 d'ADR-018 ` +
+          `(mention de la BA et guide encore absents de l'application) : ${ba.length} ` +
+          `document(s), dont ${ba.slice(0, 5).join(", ")}. Rien n'est écrit. Préparer sans --ba ` +
+          `pour la production, ou écrire dans l'émulateur.`,
+      );
+    }
     controlerIdentifiants(cheminIdentifiants(env), lireIdentifiants);
     const confirme = await confirmerProduction(options.projet, entree, sortie);
     if (!confirme) throw new ErreurOptions("Nom du projet non confirmé : rien n'est écrit.");

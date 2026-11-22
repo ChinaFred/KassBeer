@@ -1,7 +1,7 @@
 /// Préparation de l'ingestion des référentiels et des recettes publiques de
 /// Kass'Beer (ADR-005, D5), en Dart pur : lecture des fichiers DefaultContent
-/// 001 à 005 de Brewtarget et des recettes DIY Dog, fusion, résolution des
-/// noms, documents et rapport. Bibliothèque distincte de `exchange.dart` :
+/// 001 à 005 de Brewtarget, des recettes DIY Dog et des styles de la Brewers
+/// Association (ADR-018), fusion, résolution des noms, documents et rapport. Bibliothèque distincte de `exchange.dart` :
 /// l'application ne l'importe jamais. Elle ne fait aucun `catch` et aucun
 /// appel réseau.
 library;
@@ -18,4 +18,5 @@ export 'src/ingestion/preparation.dart';
 export 'src/ingestion/referentiel.dart';
 export 'src/ingestion/resolution.dart';
 export 'src/ingestion/sources.dart';
+export 'src/ingestion/styles_ba.dart';
 export 'src/ingestion/valeurs.dart';

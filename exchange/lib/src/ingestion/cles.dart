@@ -50,6 +50,10 @@ String idEntree(NatureReferentiel nature, String cle) =>
 /// Identifiant d'un style BJCP 2021 : `bjcp2021-<code en minuscules>`.
 String idStyle(String code) => 'bjcp2021-${cleNormalisee(code)}';
 
+/// Identifiant d'un style de la Brewers Association (ADR-018) :
+/// `ba-<cleNormalisee(name)>`, sans l'édition.
+String idStyleBa(String nom) => 'ba-${cleNormalisee(nom)}';
+
 /// Identifiant d'une recette DIY Dog : `diydog-<id>`.
 String idRecetteDiyDog(int id) => 'diydog-$id';
 

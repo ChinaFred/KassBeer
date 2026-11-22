@@ -1,0 +1,40 @@
+{
+  "edition_courante": 2026,
+  "mention": "Mention inventée pour la fixture, édition 2026.",
+  "styles": [
+    {
+      "name": "Ambrée Inventée",
+      "category": "Catégorie Inventée Une",
+      "decision": "nouveau",
+      "motif": "Motif inventé : aucun style fictif ne désigne cette bière.",
+      "code": "BA1A",
+      "editions": [2025, 2026]
+    },
+    {
+      "name": "Blonde Imaginaire",
+      "category": "Catégorie Inventée Une",
+      "decision": "nouveau",
+      "contenu_dans": "99A",
+      "motif": "Motif inventé : sous-type nommé du style fictif 99A.",
+      "code": "BA1B",
+      "editions": [2026]
+    },
+    {
+      "name": "Style Fictif Bis",
+      "category": "Catégorie Inventée Deux",
+      "decision": "equivalent",
+      "equivalent": ["99A"],
+      "motif": "Motif inventé : même bière que le style fictif 99A.",
+      "editions": [2025, 2026]
+    },
+    {
+      "name": "Brune Disparue",
+      "category": "Catégorie Inventée Deux",
+      "decision": "nouveau",
+      "motif": "Motif inventé : style retiré du guide inventé.",
+      "code": "BA2A",
+      "editions": [2025],
+      "retire_en": 2026
+    }
+  ]
+}

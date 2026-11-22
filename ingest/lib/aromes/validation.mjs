@@ -50,8 +50,12 @@ const VERSION = new RegExp(
   `^claude-[a-z0-9-]{1,60} / prompt [1-9][0-9]{0,3} / effort (${EFFORTS.join("|")})$`,
 );
 
-// Contrôles C0 et C1, et marques et contrôles bidirectionnels (P9).
-const CONTROLES = /[\u0000-\u001f\u007f-\u009f؜‎‏‪-‮⁦-⁩]/gu;
+// Contrôles C0 et C1, et marques et contrôles bidirectionnels (P9) : U+0000-001F,
+// U+007F-009F, U+061C, U+200E, U+200F, U+202A-202E, U+2066-2069. Sans drapeau `g`, pour un
+// `test` sans état ; partagé avec lib/validation.mjs et natures/culture.mjs.
+export const CARACTERES_CONTROLE =
+  /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
+const CONTROLES = new RegExp(CARACTERES_CONTROLE.source, "gu");
 
 export const estObjet = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 export const longueur = (t) => [...t].length;

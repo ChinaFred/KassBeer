@@ -6,6 +6,7 @@
 
 import Ajv2020 from "ajv/dist/2020.js";
 import { partialSchemas } from "../../rules-tests/test/beerjson_partial.mjs";
+import { CARACTERES_CONTROLE } from "./aromes/validation.mjs";
 
 /// Collections écrites depuis import/ingest/prepare/, dans l'ordre d'écriture.
 export const COLLECTIONS = [
@@ -39,13 +40,17 @@ const SOURCES = [
   "brewtarget-005",
   "fabricants",
   "diydog",
+  "brewers-association",
 ];
+/// Licence des styles de la Brewers Association (ADR-018, `Licence.ba` de exchange/).
+const LICENCE_BA = "BA (usage gratuit, mention de la BA)";
 const LICENCES = [
   "GPL-3.0",
   "CC BY-SA 4.0",
   "BJCP (noms et plages)",
   "DIY Dog (usage privé)",
   "Données publiées par le fabricant",
+  LICENCE_BA,
 ];
 const NATURES = ["fermentable", "hop", "culture", "misc"];
 const INDEX = ["fermentables", "hops", "cultures", "miscs", "styles", "hop_aromas"];
@@ -131,7 +136,8 @@ const ID = {
   beer_hops: /^hop-[a-z0-9]+(-[a-z0-9]+)*$/,
   beer_cultures: /^culture-[a-z0-9]+(-[a-z0-9]+)*$/,
   beer_miscs: /^misc-[a-z0-9]+(-[a-z0-9]+)*$/,
-  beer_styles: /^bjcp2021-[a-z0-9]+(-[a-z0-9]+)*$/,
+  // Styles BJCP 2021 et styles de la Brewers Association (ADR-018).
+  beer_styles: /^(bjcp2021|ba)-[a-z0-9]+(-[a-z0-9]+)*$/,
   public_recipes: /^diydog-[1-9][0-9]{0,5}$/,
   import_unresolved: /^[0-9a-f]{64}$/,
 };
@@ -206,6 +212,7 @@ const ENTREES_INDEX = {
     champs: {
       code: "code",
       category: "texte",
+      guide: "code",
       og: "plage",
       fg: "plage",
       ibu: "plage",
@@ -214,6 +221,60 @@ const ENTREES_INDEX = {
     },
   },
 };
+
+/// Style de la Brewers Association (ADR-018) : identifiant, code Kass'Beer, guide et source.
+const ID_STYLE_BA = /^ba-/;
+const CODE_STYLE_BA = /^BA[1-9][0-9]?[A-Z]{1,2}$/;
+const GUIDE_STYLE_BA = /^BA[0-9]{4}$/;
+const SOURCE_BA = "brewers-association";
+
+/// Caractères de contrôle (C0, C1) et bidirectionnels, refusés dans le nom et la catégorie d'un
+/// style (document et entrée de beer_index/styles) et dans la mention de la BA : textes affichés
+/// tels quels par l'application. Motif de lib/aromes/validation.mjs.
+const CARACTERES_INTERDITS_STYLE = CARACTERES_CONTROLE;
+
+/// Lien ou adresse refusés dans la mention de la BA.
+const LIEN_INTERDIT_MENTION = /http|www\.|@/i;
+
+/// Styles de la Brewers Association en production (ADR-018) : faux tant que le lot S2 n'est pas
+/// livré (guide affiché, mention de la BA à l'écran « Sources des données »). Le lot S2 le passe
+/// à vrai, ou retire ce garde-fou.
+export const STYLES_BA_EN_PRODUCTION = false;
+
+/// Documents de la préparation [documents] (collection → liste `{id, data}`) qui portent un
+/// style de la Brewers Association : identifiants `beer_styles/ba-…`, `beer_index/styles` s'il
+/// porte `ba_mention`, ses entrées dont l'`id` commence par `ba-` ou le `guide` par `BA`, et les
+/// recettes publiques dont `style_id` commence par `ba-`. Liste vide si
+/// [STYLES_BA_EN_PRODUCTION] est vrai.
+export function stylesBaRefusesEnProduction(documents) {
+  if (STYLES_BA_EN_PRODUCTION) return [];
+  const refuses = [];
+  for (const d of documents.beer_styles ?? []) {
+    if (typeof d?.id === "string" && ID_STYLE_BA.test(d.id)) refuses.push(`beer_styles/${d.id}`);
+  }
+  for (const d of documents.beer_index ?? []) {
+    if (d?.id !== "styles" || !estObjet(d.data)) continue;
+    if ("ba_mention" in d.data) refuses.push("beer_index/styles.ba_mention");
+    const entrees = Array.isArray(d.data.entries) ? d.data.entries : [];
+    entrees.forEach((e, i) => {
+      const id = typeof e?.id === "string" ? e.id : "";
+      const guide = typeof e?.guide === "string" ? e.guide : "";
+      if (ID_STYLE_BA.test(id) || guide.startsWith("BA")) {
+        refuses.push(`beer_index/styles.entries[${i}] (${id})`);
+      }
+    });
+  }
+  for (const d of documents.public_recipes ?? []) {
+    const style = estObjet(d?.data) ? d.data.style_id : undefined;
+    if (typeof style === "string" && ID_STYLE_BA.test(style)) {
+      refuses.push(`public_recipes/${d.id}.style_id`);
+    }
+  }
+  return refuses;
+}
+
+/// Clés de `ba_mention` (beer_index/styles, ADR-018) : édition et mention de la BA.
+const CLES_MENTION_BA = ["edition", "mention"];
 
 const estNombre = (v) => typeof v === "number" && Number.isFinite(v);
 
@@ -393,7 +454,7 @@ const CONTROLES = {
       k.facultatif(d, "type", (c, v) => k.valeurDe(c, v, TYPES_AJOUT));
     });
   },
-  beer_styles(k, d) {
+  beer_styles(k, d, id) {
     const plages = {
       original_gravity: "sg",
       final_gravity: "sg",
@@ -407,6 +468,11 @@ const CONTROLES = {
       return;
     }
     k.texte("name", d.name);
+    for (const cle of ["name", "category"]) {
+      if (typeof d[cle] === "string" && CARACTERES_INTERDITS_STYLE.test(d[cle])) {
+        k.erreur(cle, "caractère de contrôle ou bidirectionnel");
+      }
+    }
     k.texte("style_id", d.style_id, 10);
     for (const cle of textes) k.facultatif(d, cle, (c, v) => k.texte(c, v));
     k.facultatif(d, "type", (c, v) => k.valeurDe(c, v, TYPES_STYLE));
@@ -414,19 +480,35 @@ const CONTROLES = {
       k.facultatif(d, cle, (c, v) => k.plage(c, v, unite));
     }
     k.provenance(d.provenance);
+    if (ID_STYLE_BA.test(id)) {
+      if (!CODE_STYLE_BA.test(d.style_id ?? "")) k.erreur("style_id", "code BA attendu");
+      if (!GUIDE_STYLE_BA.test(d.style_guide ?? "")) k.erreur("style_guide", "BA<édition> attendu");
+      if (
+        !Array.isArray(d.provenance) ||
+        d.provenance.some((p) => p?.source !== SOURCE_BA || p?.licence !== LICENCE_BA)
+      ) {
+        k.erreur("provenance", `source « ${SOURCE_BA} » et licence « ${LICENCE_BA} » attendues`);
+      }
+    }
     k.empreinte(d);
   },
   beer_index(k, d, id) {
-    if (
-      !k.cles(
-        "data",
-        d,
-        ["count", "entries", "content_sha256"],
-        ["count", "entries", "content_sha256"],
-      )
-    ) {
-      return;
-    }
+    const obligatoires = ["count", "entries", "content_sha256"];
+    const permises = id === "styles" ? [...obligatoires, "ba_mention"] : obligatoires;
+    if (!k.cles("data", d, permises, obligatoires)) return;
+    k.facultatif(d, "ba_mention", (c, v) => {
+      if (!k.cles(c, v, CLES_MENTION_BA, CLES_MENTION_BA)) return;
+      if (!Number.isInteger(v.edition) || v.edition < 2000 || v.edition > 2100) {
+        k.erreur(`${c}.edition`, "édition de 2000 à 2100 attendue");
+      }
+      k.texte(`${c}.mention`, v.mention, 400);
+      if (typeof v.mention === "string" && CARACTERES_INTERDITS_STYLE.test(v.mention)) {
+        k.erreur(`${c}.mention`, "caractère de contrôle ou bidirectionnel");
+      }
+      if (typeof v.mention === "string" && LIEN_INTERDIT_MENTION.test(v.mention)) {
+        k.erreur(`${c}.mention`, "lien, « www. » ou « @ » refusé");
+      }
+    });
     if (!Array.isArray(d.entries)) {
       k.erreur("entries", "liste attendue");
       return;
@@ -440,6 +522,13 @@ const CONTROLES = {
       if (!forme || !k.cles(c, e, permis, [...communs, ...(forme.obligatoires ?? [])])) return;
       if (!estIdReferentiel(e.id, [forme.collection])) k.erreur(`${c}.id`, "identifiant mal formé");
       if (!forme.sansNom) k.texte(`${c}.name`, e.name);
+      if (id === "styles") {
+        for (const cle of ["name", "category"]) {
+          if (typeof e[cle] === "string" && CARACTERES_INTERDITS_STYLE.test(e[cle])) {
+            k.erreur(`${c}.${cle}`, "caractère de contrôle ou bidirectionnel");
+          }
+        }
+      }
       for (const [cle, type] of Object.entries(forme.champs)) {
         if (!(cle in e)) continue;
         const v = e[cle];

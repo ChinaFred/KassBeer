@@ -4,10 +4,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { lirePreparation, resumePreparation, trier } from "../lib/execution.mjs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { executer, lirePreparation, resumePreparation, trier } from "../lib/execution.mjs";
+import { ErreurOptions } from "../lib/options.mjs";
 import {
   COLLECTIONS,
   controlerDocument,
+  motifIdentifiant,
+  STYLES_BA_EN_PRODUCTION,
+  stylesBaRefusesEnProduction,
   TAILLE_MAX_INDEX,
   tailleFirestore,
 } from "../lib/validation.mjs";
@@ -308,5 +315,227 @@ describe("trier", () => {
     assert.equal(valides.beer_hops.length, 1);
     assert.equal(refuses.length, 1);
     assert.ok(refuses[0].erreurs.includes("id : en double"));
+  });
+});
+
+describe("styles de la Brewers Association (ADR-018)", () => {
+  /// Style BA inventé, de la forme écrite par la préparation de exchange/ (P20).
+  function styleBa() {
+    const d = doc("beer_styles");
+    d.id = "ba-ambree-inventee";
+    Object.assign(d.data, {
+      name: "Ambrée Inventée",
+      category: "Catégorie Inventée",
+      category_id: "BA1",
+      style_id: "BA1A",
+      style_guide: "BA2026",
+      provenance: [
+        {
+          source: "brewers-association",
+          source_id: "Ambrée Inventée",
+          version: "2026",
+          licence: "BA (usage gratuit, mention de la BA)",
+          retrieved: "2026-11-22",
+        },
+      ],
+    });
+    return d;
+  }
+
+  it("style ba- accepté, source et licence de la BA", () => {
+    assert.deepEqual(controlerDocument("beer_styles", styleBa()), []);
+  });
+
+  it("motif d'écriture : bjcp2021- et ba- seuls", () => {
+    const motif = motifIdentifiant("beer_styles");
+    assert.ok(motif.test("bjcp2021-21a"));
+    assert.ok(motif.test("ba-ambree-inventee"));
+    for (const id of ["ba2026-ambree", "BA-ambree", "bjcp-21a", "ba-", "ba-Ambree", "style-21a"]) {
+      assert.equal(motif.test(id), false, id);
+      refuse("beer_styles", { ...styleBa(), id });
+    }
+  });
+
+  it("style ba- : code BA, guide BA<édition> et source de la BA exigés", () => {
+    const code = styleBa();
+    code.data.style_id = "99A";
+    refuse("beer_styles", code);
+    const guide = styleBa();
+    guide.data.style_guide = "BJCP2021";
+    refuse("beer_styles", guide);
+    const source = styleBa();
+    source.data.provenance[0].source = "brewtarget-002";
+    refuse("beer_styles", source);
+    const licence = styleBa();
+    licence.data.provenance[0].licence = "BA";
+    refuse("beer_styles", licence);
+  });
+
+  it("style ba- : licence d'une autre source refusée", () => {
+    for (const licence of ["BJCP (noms et plages)", "GPL-3.0"]) {
+      const d = styleBa();
+      d.data.provenance[0].licence = licence;
+      refuse("beer_styles", d);
+    }
+  });
+
+  it("nom et catégorie d'un style : contrôle et bidirectionnel refusés", () => {
+    for (const c of [
+      "\u0000",
+      "\u001F",
+      "\u007F",
+      "\u0085",
+      "\u009F",
+      "\u061C",
+      "\u200E",
+      "\u200F",
+      "\u202A",
+      "\u202E",
+      "\u2066",
+      "\u2069",
+      "\n",
+    ]) {
+      for (const cle of ["name", "category"]) {
+        const ba = styleBa();
+        ba.data[cle] = `Ambrée${c}Inventée`;
+        refuse("beer_styles", ba);
+        const bjcp = doc("beer_styles");
+        bjcp.data[cle] = `Style${c}Fictif`;
+        refuse("beer_styles", bjcp);
+      }
+    }
+  });
+
+  it("beer_index/styles : nom et catégorie d'une entrée, contrôle et bidirectionnel refusés", () => {
+    for (const c of ["\u200F", "\u0085", "\u202E", "\u0007"]) {
+      for (const cle of ["name", "category"]) {
+        const d = doc("beer_index", "styles");
+        d.data.entries[0][cle] = `Style${c}Fictif`;
+        refuse("beer_index", d);
+      }
+    }
+    const bon = doc("beer_index", "styles");
+    bon.data.entries[0].name = "Bière de Garde Fictive";
+    assert.deepEqual(controlerDocument("beer_index", bon), []);
+  });
+
+  it("ba_mention : contrôle, bidirectionnel, lien, www. et @ refusés", () => {
+    for (const mention of [
+      "Mention\u202Einventée 2026.",
+      "Mention\u200Finventée 2026.",
+      "Mention\u0085inventée 2026.",
+      "Mention\ninventée 2026.",
+      "Voir https://exemple.fr, 2026.",
+      "Voir HTTP 2026.",
+      "Voir www.exemple.fr, 2026.",
+      "Écrire à contact@exemple.fr, 2026.",
+    ]) {
+      const d = doc("beer_index", "styles");
+      d.data.ba_mention = { edition: 2026, mention };
+      refuse("beer_index", d);
+    }
+  });
+
+  it("beer_index/styles : guide par entrée et ba_mention permis", () => {
+    const d = doc("beer_index", "styles");
+    d.data.entries[0].guide = "BJCP2021";
+    d.data.ba_mention = { edition: 2026, mention: "Mention inventée, édition 2026." };
+    assert.deepEqual(controlerDocument("beer_index", d), []);
+  });
+
+  it("ba_mention : forme contrôlée, refusée hors de beer_index/styles", () => {
+    const cle = doc("beer_index", "styles");
+    cle.data.ba_mention = { edition: 2026, mention: "Mention inventée.", lien: "x" };
+    refuse("beer_index", cle);
+    const edition = doc("beer_index", "styles");
+    edition.data.ba_mention = { edition: "2026", mention: "Mention inventée." };
+    refuse("beer_index", edition);
+    const longue = doc("beer_index", "styles");
+    longue.data.ba_mention = { edition: 2026, mention: "x".repeat(401) };
+    refuse("beer_index", longue);
+    const ailleurs = doc("beer_index", "hops");
+    ailleurs.data.ba_mention = { edition: 2026, mention: "Mention inventée." };
+    refuse("beer_index", ailleurs);
+    const guide = doc("beer_index", "styles");
+    guide.data.entries[0].guide = "x".repeat(11);
+    refuse("beer_index", guide);
+  });
+});
+
+describe("styles de la Brewers Association en production (ADR-018, avant S2)", () => {
+  /// Préparation de la fixture, plus un style ba- et ba_mention, copiée dans un dossier
+  /// temporaire.
+  function preparationAvecBa() {
+    const dossier = mkdtempSync(join(tmpdir(), "kassbeer-prepare-ba-"));
+    cpSync(FIXTURE, dossier, { recursive: true });
+    const styles = JSON.parse(readFileSync(join(dossier, "beer_styles.json"), "utf8"));
+    const ba = structuredClone(styles[0]);
+    ba.id = "ba-ambree-inventee";
+    styles.push(ba);
+    writeFileSync(join(dossier, "beer_styles.json"), JSON.stringify(styles));
+    const index = JSON.parse(readFileSync(join(dossier, "beer_index.json"), "utf8"));
+    index.find((d) => d.id === "styles").data.ba_mention = { edition: 2026, mention: "M 2026." };
+    writeFileSync(join(dossier, "beer_index.json"), JSON.stringify(index));
+    return dossier;
+  }
+
+  it("garde-fou actif tant que le lot S2 n'est pas livré", () => {
+    assert.equal(STYLES_BA_EN_PRODUCTION, false);
+  });
+
+  it("documents ba- et ba_mention listés ; préparation BJCP seule sans refus", () => {
+    const dossier = preparationAvecBa();
+    try {
+      assert.deepEqual(stylesBaRefusesEnProduction(lirePreparation(dossier).documents), [
+        "beer_styles/ba-ambree-inventee",
+        "beer_index/styles.ba_mention",
+      ]);
+      assert.deepEqual(stylesBaRefusesEnProduction(lirePreparation(FIXTURE).documents), []);
+    } finally {
+      rmSync(dossier, { recursive: true, force: true });
+    }
+  });
+
+  it("entrée d'index ba- ou de guide BA et recette publique de style ba- listées", () => {
+    const { documents } = lirePreparation(FIXTURE);
+    const d = structuredClone(documents);
+    const index = d.beer_index.find((e) => e.id === "styles");
+    index.data.entries.push({ ...index.data.entries[0], id: "ba-ambree-inventee" });
+    index.data.entries.push({ ...index.data.entries[0], guide: "BA2026" });
+    d.public_recipes[0].data.style_id = "ba-ambree-inventee";
+    const n = index.data.entries.length;
+    assert.deepEqual(stylesBaRefusesEnProduction(d), [
+      `beer_index/styles.entries[${n - 2}] (ba-ambree-inventee)`,
+      `beer_index/styles.entries[${n - 1}] (${index.data.entries[0].id})`,
+      `public_recipes/${d.public_recipes[0].id}.style_id`,
+    ]);
+  });
+
+  it("--production : refusé avant les identifiants, rien n'est écrit", async () => {
+    const dossier = preparationAvecBa();
+    const aromes = mkdtempSync(join(tmpdir(), "kassbeer-aromes-vide-"));
+    let identifiantsLus = false;
+    try {
+      await assert.rejects(
+        executer({
+          argv: ["--production", "--projet", "kassbeer", "--dossier", dossier, "--aromes", aromes],
+          env: {},
+          entree: { isTTY: false },
+          sortie: { isTTY: false },
+          lireIdentifiants: () => {
+            identifiantsLus = true;
+            return JSON.stringify({ type: "authorized_user" });
+          },
+        }),
+        (e) =>
+          e instanceof ErreurOptions &&
+          e.message.includes("refusés en production avant le lot S2") &&
+          e.message.includes("beer_styles/ba-ambree-inventee"),
+      );
+      assert.equal(identifiantsLus, false);
+    } finally {
+      rmSync(dossier, { recursive: true, force: true });
+      rmSync(aromes, { recursive: true, force: true });
+    }
   });
 });

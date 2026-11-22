@@ -157,6 +157,8 @@ exchange/             # paquet Dart pur, dépend de brewing/ : lecture et écrit
 │                     # (--nature culture, ADR-017) du groupe résolus vers beer_hops/ ou beer_cultures/
 ├── donnees/fabricants/  # fiches des fabricants, écrites à la main, versionnées et lues
 │                     # par défaut par bin/preparer_referentiels.dart (ADR-005, amendement du 2026-11-15)
+├── donnees/styles/ba.json  # table de décisions des styles de la Brewers Association, écrite à la
+│                     # main, sans plage ; plages lues par --ba dans import/sources/ba-<édition>/ (ADR-018)
 └── test/fixtures/    # fichiers de lecture et d'export attendus ; ingestion/ : sources inventées
 ingest/               # écrivain de l'ingestion : Node 24, Admin SDK ; lit import/ingest/prepare/,
                       # émulateur par défaut, production sur option et confirmation (ADR-005)

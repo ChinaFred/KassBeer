@@ -11,7 +11,9 @@ poste ; l'ingestion de `style_stats` est reportée (ADR-005, amendements de L3, 
 Aucun fichier de ces sources n'entre dans le dépôt public, un asset ou l'APK, sauf la table des
 teintes de `srm2hex` (MIT), reprise dans `brewing/` avec sa licence, et le fichier des fiches
 des fabricants, écrit à la main dans `exchange/donnees/fabricants/cultures.json` (décision de
-l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
+l'utilisateur du 2026-11-15, ADR-005), et la table de décisions des styles de la Brewers
+Association, `exchange/donnees/styles/ba.json` (noms, catégories et décisions, sans aucun chiffre
+du guide, ADR-018). Les autres données vivent dans `import/`, ignoré par Git. Les fixtures de test sont écrites à la main.
 
 ## Sources, versions et licences
 
@@ -25,6 +27,7 @@ l'utilisateur du 2026-11-15, ADR-005). Les autres données vivent dans `import/`
 | `alxiw/punkapi` | `e6c12ab` | MIT sur le code ; aucune licence écrite pour les recettes BrewDog | 415 recettes, usage privé, avec `method.twist` dans `notes` (seul texte libre gardé) | 327 images, `description`, `tagline`, `food_pairing`, `brewers_tips`, `contributed_by` |
 | dépôt GitHub `diydog-beerxml` | `d469275` | aucune | tests locaux, hors CI | Firestore, dépôt |
 | Kaggle « Brewer's Friend Beer Recipes » | non téléchargé | « CC0: Public Domain » déclarée sur la page (relevé du 2026-11-11) ; ingestion reportée (ADR-005, D1) | statistiques par style | lignes brutes, CSV |
+| Brewers Association, « Beer Style Guidelines » (PDF, `import/sources/ba-<édition>/guide.pdf`), plages recopiées à la main dans `import/sources/ba-<édition>/styles.json` (BeerJSON 2.01, jamais versionné) ; décisions dans `exchange/donnees/styles/ba.json` (versionné) (ADR-018) | édition 2026, publiée le 2025-12-31 ; SHA-256 du PDF `b0ac4c681ebe3878968a4eecd6a460b65e5b70048082c9cae54dcdbfa4bb7a66` (74 pages, 165 styles, relevé le 2026-11-22), recopié dans `pdf_sha256` de `styles.json` et contrôlé par `--ba` | usage gratuit avec la mention « Based on Brewers Association 2026 Beer Style Guidelines with changes. Used with permission of Brewers Association. » (décision 1 d'ADR-018 ; conditions lues par moteur de recherche, pages de la BA non ouvertes) | styles sans équivalent BJCP 2021 (`decision: nouveau`) : nom, catégorie, type, plages chiffrées ; code propre à Kass'Beer (`BA3C`) lu dans la table | styles couverts par le BJCP 2021 (`equivalent`), descriptions, exemples, commentaires, liens, PDF |
 | BeerJSON | `4370892d44` | MIT | schémas pour ajv en CI et à l'ingestion | — |
 | Fiches techniques Fermentis (`fermentis.com/en/product/…`), recopiées à la main dans `exchange/donnees/fabricants/cultures.json` (BeerJSON 2.01, versionné) | relevé du 2026-11-14 ; fichier écrit à la main, SHA-256 `1eb1f9ae2e05e36fc4bd2bd9b279582cde3f8907912d897ca436615fcff4dbdf` au versement | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-14 | 25 cultures (23 levures, 2 bactéries) : nom, type, forme, producteur, référence, atténuation apparente, plage de température | floculation (la fiche donne un temps de sédimentation), tolérance à l'alcool, dosage, descriptions |
 | Fiches techniques Mangrove Jack's (`mangrovejacks.com/products/…`, collection « Beer Yeasts »), recopiées à la main dans le même fichier | relevé du 2026-11-15 ; SHA-256 du fichier `695254c9d80eabf56d450ed7f7904dafbf730226a80daa839b403ef0af3098f2` après l'ajout | données publiées en accès libre par le fabricant ; reprise décidée par l'utilisateur le 2026-11-15 | 16 levures de bière : nom, type, forme, producteur, référence, atténuation, plage de température, floculation | levures de vin, de cidre, d'hydromel et de hard seltzer, tolérance à l'alcool, dosage, descriptions |
@@ -45,7 +48,10 @@ et dit que les descriptions
 aromatiques des houblons sont rédigées par une IA (Claude, d'Anthropic) pour Kass'Beer. Chaque
 entrée de Firestore
 porte sa licence dans `provenance[]` ; la licence de srm2hex est en tête de `teintes_srm.dart`
-et dans l'écran.
+et dans l'écran. Les styles de la Brewers Association ne s'écrivent en production qu'après le
+lot S2 d'ADR-018, qui ajoute à l'écran la section « Brewers Association » : mention de la BA lue
+dans `beer_index/styles.ba_mention`, et modifications (descriptions retirées, couleur convertie en
+EBC, styles couverts par le BJCP 2021 écartés).
 
 Génération de `teintes_srm.dart` : le script, à usage unique, est resté hors du dépôt. Il lit
 `package/lookup.js` de l'archive (SHA-256
@@ -678,6 +684,64 @@ l'export : 17 styles n'ont aucune plage (28A à 34C), IPA Argenta (X2) n'a pas d
 | `original_gravity`, `final_gravity`, `international_bitterness_units`, `alcohol_by_volume`, `color` | plages chiffrées, unités canoniques |
 | `category_description`, `overall_impression`, `aroma`, `appearance`, `flavor`, `mouthfeel`, `comments`, `history`, `style_comparison`, `tags`, `ingredients`, `examples` | écartés |
 
+## Correspondance Brewers Association → `beer_styles` (ADR-018)
+
+Préparation par `dart run bin/preparer_referentiels.dart --ba ../import/sources/ba-<édition>`
+(table par `--table-ba`, `donnees/styles/ba.json` par défaut). Sans `--ba`, aucun style BA.
+
+`styles.json` porte en tête `edition`, `published` (date de publication du PDF), `pdf_sha256`
+(SHA-256 du PDF, comparé au fichier `guide.pdf` du même dossier) et `retrieved` (date de la
+recopie), puis `beerjson.styles`. La table porte `edition_courante`, `mention` (texte exact de la
+BA, qui doit citer l'édition) et une ligne par style, toutes éditions confondues : `name`,
+`category`, `decision` (`nouveau` ou `equivalent`), `equivalent` (codes BJCP 2021, pour un
+`equivalent`), `contenu_dans` (code BJCP du style plus large, pour un `nouveau`, facultatif),
+`motif`, `code` (pour un `nouveau`), `editions`, `retire_en`. Toute autre clé est refusée (champs
+de P20 seuls).
+
+Règle d'attribution du `code` (ADR-018, section 4), appliquée à la main à l'entrée d'un style
+dans la table :
+
+- `BA` + rang de la catégorie BA dans l'ordre du PDF de la première édition où elle paraît +
+  lettre du rang du style parmi les styles `nouveau` de sa catégorie, dans l'ordre du PDF (A à
+  Z, puis AA, AB…) ; motif `^BA[1-9][0-9]?[A-Z]{1,2}$` ;
+- le code est attribué une fois, puis figé : une nouvelle édition ne recalcule rien ; un style
+  ajouté prend la lettre libre suivante de sa catégorie, une catégorie nouvelle le rang suivant ;
+- un style déplacé de catégorie garde son code ; un code retiré n'est jamais réattribué (la
+  ligne reste, avec `retire_en`) ;
+- un code ne change que par une décision de l'utilisateur à la relecture ; seuls les exports
+  BeerXML suivants portent le nouveau code (aucune recette ni aucun brassin ne le stocke).
+
+| Champ | Résultat |
+|---|---|
+| `name`, `category` | jointure avec la table, par égalité exacte ; un nom ou une catégorie hors NFC (marque combinante) est refusé, faute de normalisation Unicode dans le SDK Dart |
+| — | identifiant `ba-<cleNormalisee(name)>`, sans l'édition |
+| `code` de la table | `style_id` ; `category_id` = le code sans sa lettre (`BA3C` → `BA3`, d'où `STYLE_LETTER` `C` à l'export) |
+| `edition_courante` de la table | `style_guide` `BA<édition>` (`BA2026`) ; `guide` de l'entrée de `beer_index/styles` |
+| `type` | conservé s'il est dans `StyleBase.type` |
+| `original_gravity`, `final_gravity`, `international_bitterness_units`, `alcohol_by_volume`, `color` | plages chiffrées, unités canoniques ; SRM converti en EBC par `brewing/` |
+| `style_id`, `category_id` de `styles.json`, descriptions, exemples, tout autre champ | écartés |
+| `edition_courante`, `mention` | `beer_index/styles.ba_mention` (`{edition, mention}`), lu par l'écran « Sources des données » |
+| — | `provenance[]` : `source: brewers-association`, `source_id` le nom BA, `version` l'édition, `licence: BA (usage gratuit, mention de la BA)`, `retrieved` de `styles.json` |
+
+La préparation échoue, et liste les noms, si : l'édition de `styles.json` diffère de
+`edition_courante` ; un style de `styles.json` n'a pas de ligne non retirée (même nom, même
+catégorie) ; une ligne non retirée n'a pas son style ou ne cite pas l'édition courante ; un code
+est hors du motif `^BA[1-9][0-9]?[A-Z]{1,2}$` ou en double (lignes retirées comprises) ; un
+`equivalent` ou un `contenu_dans` cite un code absent du 002 préparé ; `contenu_dans` ou `code`
+figure sur un `equivalent` ; un nom retenu est égal, après `cleNormalisee`, à un style BJCP ou à un
+autre style BA retenu. Seuls les `nouveau` non retirés sont écrits. `rapport.json` porte
+`styles_ba` : édition, nombre de lignes et de styles lus, nouveaux, équivalents et leurs codes,
+lignes retirées, et pour chaque nouveau les codes BJCP dont toutes les plages communes se
+chevauchent (`chevauchements`, à revoir ; comparaison d'intervalles seule).
+
+`guide.pdf` absent : la préparation s'arrête. Sans `--ba`, elle avertit quand la table a des
+lignes non retirées. En production, `ingest/ecrire.mjs` refuse tout `beer_styles/ba-…` et
+`ba_mention` tant que le lot S2 n'est pas livré (`STYLES_BA_EN_PRODUCTION`) ; l'émulateur les
+accepte.
+
+Les styles BA n'entrent pas dans la liste des styles conseillés des levures (ADR-017) :
+`contexteStyles` ne garde que les identifiants `bjcp2021-`.
+
 ## Correspondance Kaggle → `style_stats/`
 
 Reportée (ADR-005, amendements de L3, D1) : aucun code ni aucune règle pour `style_stats` tant
@@ -694,7 +758,9 @@ quartiles, une médiane et un maximum. Si une colonne est en Plato ou en SRM, la
    `start`, `middle` et `end`. `boil.boil_time` et `time` restent absents, le calcul de l'IBU affiche
    « à compléter » et la recette montre l'IBU annoncé. Le libellé d'origine reste dans l'enveloppe,
    `source_hop_timing` (ADR-005).
-2. **Styles.** `beer_styles` ne prend que les 110 styles BJCP 2021 du fichier 002.
+2. **Styles.** `beer_styles` prend les 110 styles BJCP 2021 du fichier 002, et les styles BA sans
+   équivalent BJCP (ADR-018) ; seule la table de décisions est versionnée (amendement d'ADR-018
+   du 2026-11-22).
 3. **`twist` de DIY Dog** (178 recettes). Le texte d'origine va dans `recipe.notes`. C'est la seule
    exception à l'écart des textes libres de DIY Dog.
 4. **Priorité entre sources** pour un même ingrédient : fiches des fabricants (depuis le

@@ -293,6 +293,9 @@ levures ne lisent que les styles `bjcp2021-` ; P19 ajoute `beer_styles` aux coll
 `--supprimer-absents`, pour les seuls identifiants `ba-` (amendement d'ADR-014, lot S3).
 « Le projet » nomme le second guide. Aucun agent, skill ni hook nouveau.
 
+Le 2026-11-22, lot S1 d'ADR-018 : « Structure » de `CLAUDE.md` cite
+`exchange/donnees/styles/ba.json`, la table de décisions des styles BA. Aucun contrôle nouveau.
+
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent
 `beer_cultures` aux collections de `ingest/ecrire.mjs --supprimer-absents`, avec les mêmes
 garde-fous (amendement d'ADR-014 du 2026-11-15). Aucun contrôle, agent, skill ni hook nouveau.

@@ -12,6 +12,12 @@ const kVersionDiyDog = 'e6c12ab';
 /// Date du relevé des sources de Brewtarget et de DIY Dog.
 const kDateReleve = '2026-11-08';
 
+/// Valeur de `provenance[].source` d'un style de la Brewers Association
+/// (ADR-018). Elle n'est pas dans [Source] : sa version est l'édition du
+/// guide, lue dans la table de décisions, et une préparation sans `--ba` ne
+/// la cite pas.
+const kSourceBa = 'brewers-association';
+
 /// Date du relevé des fiches techniques de chaque fabricant
 /// (`exchange/donnees/fabricants/cultures.json`), par clé de producteur
 /// (`cleProducteur`). Elle tient lieu de version dans `provenance[]`. Une
@@ -47,6 +53,9 @@ abstract final class Licence {
 
   /// Styles BJCP 2021 du fichier 002.
   static const bjcp = 'BJCP (noms et plages)';
+
+  /// Styles de la Brewers Association (ADR-018, décision 1).
+  static const ba = 'BA (usage gratuit, mention de la BA)';
 
   /// Recettes DIY Dog.
   static const diyDog = 'DIY Dog (usage privé)';

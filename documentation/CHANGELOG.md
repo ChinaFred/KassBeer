@@ -6,6 +6,21 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.1 — technique
+
+Lot S1 d'ADR-018 : la préparation des référentiels sait joindre le guide de styles de la Brewers
+Association. `exchange/bin/preparer_referentiels.dart --ba <dossier>` lit les plages recopiées du
+PDF (hors du dépôt, SHA-256 du PDF contrôlé) et la table versionnée
+`exchange/donnees/styles/ba.json`, encore vide ; seuls les styles `nouveau` entrent dans
+`beer_styles` sous `ba-<clé>`, avec `style_guide` `BA2026`, un code figé lu dans la table et la
+couleur convertie par `brewing/`. La préparation échoue sur une ligne manquante, un code en
+double ou invalide, un équivalent BJCP inconnu ou un nom en collision. L'index `beer_index/styles`
+reçoit `guide` par entrée et `ba_mention`. `ingest/` accepte les identifiants `ba-` avec la source
+et la licence de la BA, refuse les caractères de contrôle et bidirectionnels dans les noms, refuse
+toute écriture de styles BA en production avant le lot S2, et `contexteStyles` des levures ne
+garde que les styles `bjcp2021-`, ce qui évite une régénération facturée des descriptions. Le
+guide BA 2026 a été relevé : 165 styles, aucune Imperial Pils.
+
 ### v0.2.0 — technique
 
 ADR-018 accepté : la Bibliothèque recevra, en plus des 110 styles BJCP 2021, les styles de la
