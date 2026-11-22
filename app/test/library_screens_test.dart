@@ -289,6 +289,13 @@ void main() {
       expect(find.text('Acides alpha'), findsOneWidget);
       expect(find.text(formatPourcent(6.5)), findsOneWidget);
       expect(find.text('Aromatique'), findsOneWidget);
+      // Origine en français (`origin_fr`), jamais la graphie anglaise.
+      await tester.scrollUntilVisible(
+        find.text('États-Unis'),
+        200,
+        scrollable: _liste,
+      );
+      expect(find.text('United States'), findsNothing);
       await tester.scrollUntilVisible(
         find.text(
           'Brewtarget 5.2.3 · licence CC BY-SA 4.0 · relevé le 8 novembre 2026',
@@ -402,7 +409,7 @@ void main() {
     ) async {
       await openHops(tester);
       expect(
-        find.text('Aromatique · United States · ${formatPourcent(6.5)} alpha'),
+        find.text('Aromatique · États-Unis · ${formatPourcent(6.5)} alpha'),
         findsOneWidget,
       );
       expect(find.text('Cônes · ${formatPourcent(4)} alpha'), findsOneWidget);

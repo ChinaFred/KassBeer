@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "version": "0.2.13",
+      "date": "2026-11-22",
+      "summaries": [
+        "L'origine des houblons et des malts s'affiche en français dans la Bibliothèque."
+      ],
+      "paragraphs": [
+        "Dans la Bibliothèque, l'origine des houblons et des malts s'affiche en français : « États-Unis », « Royaume-Uni », « République tchèque »… La recette qui nomme le houblon « Hallertau Hersbrucker » retrouve maintenant sa fiche et sa description. Ces changements s'affichent une fois le référentiel réécrit par l'administrateur."
+      ]
+    },
+    {
       "version": "0.2.6",
       "date": "2026-11-22",
       "summaries": [
@@ -44,14 +54,6 @@
       "summaries": [],
       "paragraphs": [
         "L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent maintenant."
-      ]
-    },
-    {
-      "version": "0.1.98",
-      "date": "2026-11-22",
-      "summaries": [],
-      "paragraphs": [
-        "À l'import d'une recette, une levure se reconnaît aussi par la référence écrite dans son nom, même quand le nom est saisi à la main avec le producteur à la fin, des mots en français, un poids ou une référence sans tiret (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »). La levure n'est choisie que si une seule souche de la Bibliothèque porte cette référence. La plage de température de la levure sur la courbe d'un brassin et les valeurs reprises par l'assistant de recette suivent la même règle."
       ]
     }
   ]

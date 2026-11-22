@@ -30,6 +30,39 @@ const Set<String> kPays = {
   'United States',
 };
 
+/// Nom français de chaque pays de [kPays], écrit par la préparation à côté de
+/// `origin` (`origin_fr`), que l'application affiche. `origin` reste la
+/// graphie canonique anglaise, lue par l'export, la génération des arômes et
+/// la table de fusion. Seule copie de ces noms (P56) : une entrée par pays.
+const Map<String, String> kPaysFr = {
+  'Argentina': 'Argentine',
+  'Australia': 'Australie',
+  'Austria': 'Autriche',
+  'Belgium': 'Belgique',
+  'Canada': 'Canada',
+  'China': 'Chine',
+  'Czech Republic': 'République tchèque',
+  'France': 'France',
+  'Germany': 'Allemagne',
+  'Great Britain': 'Royaume-Uni',
+  'Japan': 'Japon',
+  'Netherlands': 'Pays-Bas',
+  'New Zealand': 'Nouvelle-Zélande',
+  'Poland': 'Pologne',
+  'Russia': 'Russie',
+  'Serbia': 'Serbie',
+  'Slovenia': 'Slovénie',
+  'South Africa': 'Afrique du Sud',
+  'Sweden': 'Suède',
+  'Ukraine': 'Ukraine',
+  'United States': 'États-Unis',
+};
+
+/// Nom français du pays canonique [pays]. Un pays sans nom français lève
+/// [StateError] : la table est fausse, aucun nom n'est deviné.
+String paysEnFrancais(String pays) =>
+    kPaysFr[pays] ?? (throw StateError('pays sans nom français : $pays'));
+
 /// Graphies relevées dans les sources (mesure du 2026-11-15) et leur pays.
 /// Les clés sont comparées sans casse, espaces réduites ([cleOrigine]).
 const Map<String, String> kGraphiesOrigine = {
