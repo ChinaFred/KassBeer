@@ -1,11 +1,18 @@
 {
   "versions": [
     {
-      "version": "0.1.95",
-      "date": "2026-11-21",
+      "version": "0.1.96",
+      "date": "2026-11-22",
       "paragraphs": [
         "La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.",
         "Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données » présente aussi les arômes des levures."
+      ]
+    },
+    {
+      "version": "0.1.95",
+      "date": "2026-11-21",
+      "paragraphs": [
+        "Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le développement », un ticket validé sur GitHub à valider de nouveau dans l'application, et un ticket en cours dont la CI de la pull request est en échec. Un ticket dont l'analyse, le développement ou la correction tourne déjà en sort jusqu'à la fin de la session prévue. Une nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à corriger. Le nombre « Tickets à traiter » du menu compte aussi les tickets validés à lancer. Quand rien n'attend, l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ». Demandé par le ticket #63."
       ]
     },
     {
@@ -34,13 +41,6 @@
       "date": "2026-11-21",
       "paragraphs": [
         "Un houblon ajouté à une recette s'ouvre avec la forme Pellets déjà choisie. Une autre forme reste possible avant d'enregistrer, et un houblon de la Bibliothèque dont la forme est connue la remplace. Sur la fiche d'une de vos recettes, un bandeau signale les houblons sans forme ; sans forme, l'amertume d'un houblon d'ébullition ne se calcule pas. Le bouton « Mettre en pellets » leur donne la forme Pellets après confirmation ; les houblons qui ont une forme ne changent pas. Demandé par le ticket #105."
-      ]
-    },
-    {
-      "version": "0.1.89",
-      "date": "2026-11-21",
-      "paragraphs": [
-        "Sur la fiche d'un ticket analysé, l'administrateur peut valider et lancer le développement en un seul geste. Le bouton « Valider et lancer le développement » ouvre une seule confirmation, qui rappelle la validation, la session qui va partir, les lancements restants du jour, le lien vers l'usage de Claude et le coût. La validation part d'abord ; le développement n'est lancé que si elle réussit. Le message en bas d'écran dit ce qui a été fait. Quand le plafond du jour est atteint, la confirmation reste inactive : « Valider » seul reste possible. Demandé par le ticket #64."
       ]
     }
   ]

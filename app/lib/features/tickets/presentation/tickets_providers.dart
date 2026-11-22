@@ -43,8 +43,9 @@ final adminTicketsProvider = StreamProvider.autoDispose<ListeLue<Ticket>>(
   retry: (retryCount, error) => null,
 );
 
-/// Nombre de tickets « À traiter » ([Ticket.toProcess]) pour l'administrateur ;
-/// 0 pour un brasseur ou tant que la liste n'est pas lue.
+/// Compteur « Tickets à traiter » du menu ([Ticket.toProcess], calculé sur
+/// `allowed_decisions` seul, sans lecture de plus) pour l'administrateur ; 0
+/// pour un brasseur ou tant que la liste n'est pas lue.
 final ticketsToProcessCountProvider = Provider.autoDispose<int>((ref) {
   final isAdmin = ref.watch(grantedAccessProvider)?.member.isAdmin ?? false;
   if (!isAdmin) return 0;
@@ -87,16 +88,15 @@ final ticketDeliveryProvider = StreamProvider.autoDispose
       retry: (retryCount, error) => null,
     );
 
-/// Tickets En cours dont la PR est prête (`admin/delivery.ready`, écrit par
-/// le serveur), dont aucune livraison ni correction n'est en cours et sans
-/// `ticket_status/launches.ci_read_denied_since` (même lecture que la
-/// pastille, [pastilleLivraison]) : ils entrent dans le filtre
-/// « À traiter » de la liste seule ; le compteur du menu reste calculé sur le
-/// statut (décision 7 du 2026-11-14). `admin/delivery` n'est lu que pour les
-/// tickets En cours. [lu] : chaque `admin/delivery` de ces tickets a rendu
-/// une lecture (document, absence ou panne) ; la liste attend ce moment pour
+/// Tickets du filtre « À traiter » de la liste ([ticketATraiter], ticket
+/// #63). `admin/launches` n'est lu que pour un ticket dont un lancement est
+/// permis ou qui est En cours, `admin/delivery` que pour un ticket En cours
+/// avec son Issue : les pastilles des lignes lisent déjà ces documents. Le
+/// compteur du menu reste calculé sur le ticket seul
+/// ([ticketsToProcessCountProvider]). [lu] : chacune de ces lectures a rendu
+/// un résultat (document, absence ou panne) ; la liste attend ce moment pour
 /// choisir son premier filtre.
-final ticketsPrPreteProvider =
+final ticketsATraiterProvider =
     Provider.autoDispose<({Set<String> ids, bool lu})>((ref) {
       final list = ref.watch(adminTicketsProvider).value;
       if (list == null) return (ids: const {}, lu: false);
@@ -108,30 +108,34 @@ final ticketsPrPreteProvider =
       final ids = <String>{};
       var lu = true;
       for (final t in list.valides) {
-        if (t.status != TicketStatus.inProgress || t.issueNumber == null) {
-          continue;
+        final enCours = t.status == TicketStatus.inProgress;
+        TicketLaunchesDoc? historique;
+        if (enCours || ActionLancement.values.any(t.canLaunch)) {
+          final async = ref.watch(ticketLaunchesProvider(t.id));
+          if (async.value == null && !async.hasError) lu = false;
+          historique = switch (async.value) {
+            DocumentTrouve(:final value) => value,
+            _ => null,
+          };
         }
-        final async = ref.watch(ticketDeliveryProvider(t.id));
-        if (async.value == null && !async.hasError) lu = false;
-        final livraison = switch (async.value) {
-          DocumentTrouve(:final value) => value,
-          _ => null,
-        };
-        if (livraison == null || !livraison.ready) continue;
-        final historique = switch (ref
-            .watch(ticketLaunchesProvider(t.id))
-            .value) {
-          DocumentTrouve(:final value) => value,
-          _ => null,
-        };
-        final pastille = pastilleLivraison(
+        TicketDelivery? livraison;
+        if (enCours && t.issueNumber != null) {
+          final async = ref.watch(ticketDeliveryProvider(t.id));
+          if (async.value == null && !async.hasError) lu = false;
+          livraison = switch (async.value) {
+            DocumentTrouve(:final value) => value,
+            _ => null,
+          };
+        }
+        if (ticketATraiter(
           ticket: t,
-          livraison: livraison,
           historique: historique,
+          livraison: livraison,
           quota: quota,
           now: now,
-        );
-        if (pastille == PastilleLivraisonType.prPrete) ids.add(t.id);
+        )) {
+          ids.add(t.id);
+        }
       }
       return (ids: ids, lu: lu);
     });

@@ -1000,7 +1000,12 @@ void main() {
       );
       app.tickets.publishAll([
         enCours(id: 'a'),
-        unTicket(id: 'b', title: 'Autre', issueNumber: 3),
+        unTicket(
+          id: 'b',
+          title: 'Autre',
+          issueNumber: 3,
+          canLaunchAnalysis: true,
+        ),
       ]);
       app.container.read(routerProvider).go(AppRoutes.adminTickets);
       await tester.pumpAndSettle();
@@ -1035,7 +1040,12 @@ void main() {
       await tester.pumpAndSettle();
       app.tickets.publishAll([
         enCours(id: 'a'),
-        unTicket(id: 'b', title: 'Autre', issueNumber: 3),
+        unTicket(
+          id: 'b',
+          title: 'Autre',
+          issueNumber: 3,
+          canLaunchAnalysis: true,
+        ),
       ]);
       app.container.read(routerProvider).go(AppRoutes.adminTickets);
       await tester.pumpAndSettle();
@@ -1053,7 +1063,12 @@ void main() {
       await tester.pumpAndSettle();
       app.tickets.publishAll([
         enCours(id: 'a'),
-        unTicket(id: 'b', title: 'Autre', issueNumber: 3),
+        unTicket(
+          id: 'b',
+          title: 'Autre',
+          issueNumber: 3,
+          canLaunchAnalysis: true,
+        ),
         unTicket(
           id: 'c',
           title: 'Troisième',
@@ -1070,5 +1085,80 @@ void main() {
       expect(find.text('Autre'), findsOneWidget);
       expect(find.text('Troisième'), findsNothing);
     });
+
+    testWidgets('CI rouge : pastille, et sous « À traiter »', (tester) async {
+      final app = TestApp();
+      app.tickets.deliveryOf('a').add(const DocumentTrouve(rouge));
+      app.tickets.deliveryOf('c').add(const DocumentTrouve(rouge));
+      await app.pump(tester, width: 400, height: 1200);
+      app.signIn(adminUser, member: adminMember);
+      await tester.pumpAndSettle();
+      app.tickets.publishAll([
+        enCours(id: 'a'),
+        // Validé sur GitHub seul : pastille, mais aucune relance permise.
+        enCours(id: 'c', parApplication: false).copyTitle('Troisième'),
+      ]);
+      app.container.read(routerProvider).go(AppRoutes.adminTickets);
+      await tester.pumpAndSettle();
+      expect(find.text('À traiter (1)'), findsOneWidget);
+      expect(find.text('CI en échec'), findsOneWidget);
+      expect(find.text('Densité fausse'), findsOneWidget);
+      expect(find.text('Troisième'), findsNothing);
+      await tester.tap(find.text('Tous'));
+      await tester.pumpAndSettle();
+      expect(find.text('CI en échec'), findsNWidgets(2));
+    });
+
+    testWidgets('CI rouge mais développement ou correction en cours : hors '
+        '« À traiter », sans pastille « CI en échec »', (tester) async {
+      final app = TestApp();
+      for (final (id, action) in [
+        ('a', ActionLancement.developpement),
+        ('c', ActionLancement.reprise),
+      ]) {
+        app.tickets.deliveryOf(id).add(const DocumentTrouve(rouge));
+        app.tickets
+            .launchesOf(id)
+            .add(
+              DocumentTrouve(
+                historique(
+                  action,
+                  at: DateTime(2026, 11, 8, 11, 5),
+                  retryAfter: DateTime(2026, 11, 8, 14, 5),
+                ),
+              ),
+            );
+      }
+      await app.pump(tester, width: 400, height: 1200);
+      app.signIn(adminUser, member: adminMember);
+      await tester.pumpAndSettle();
+      app.tickets.publishAll([
+        enCours(id: 'a'),
+        enCours(id: 'c').copyTitle('Troisième'),
+      ]);
+      app.container.read(routerProvider).go(AppRoutes.adminTickets);
+      await tester.pumpAndSettle();
+      expect(find.text('À traiter (0)'), findsOneWidget);
+      expect(find.text('CI en échec'), findsNothing);
+      expect(find.text('Correction en cours'), findsOneWidget);
+    });
   });
+}
+
+extension on Ticket {
+  /// Même ticket sous un autre titre.
+  Ticket copyTitle(String title) => Ticket(
+    id: id,
+    type: type,
+    title: title,
+    description: description,
+    screen: screen,
+    status: status,
+    createdAt: createdAt,
+    issueNumber: issueNumber,
+    issueUrl: issueUrl,
+    allowedDecisions: allowedDecisions,
+    canLaunchDelivery: canLaunchDelivery,
+    canRelaunchDevelopment: canRelaunchDevelopment,
+  );
 }

@@ -4,9 +4,9 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
-## 2026-11-21
+## 2026-11-22
 
-### v0.1.95 — fonctionnel
+### v0.1.96 — fonctionnel
 
 La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les
 arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de
@@ -17,7 +17,7 @@ Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement
 par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données »
 présente aussi les arômes des levures.
 
-### v0.1.95 — technique
+### v0.1.96 — technique
 
 Livraison 2 d'ADR-017. `app/lib/features/library/domain/aromes_levure.dart` lit
 `beer_culture_aromas/{id}` en lecture stricte (`status`, `confidence`, `descriptors`,
@@ -48,6 +48,38 @@ sa date, « Sources des données » perd la phrase sur « non relu ». `ingest/`
 relecture reste exigée à l'écriture. Notes datées dans ADR-013 et ADR-017. Aucune dépendance
 ajoutée ni montée. `main.dart.js` (`flutter build web --release`) : 5 989 110 octets avant,
 5 993 166 après (+ 4 056).
+
+## 2026-11-21
+
+### v0.1.95 — fonctionnel
+
+Dans Admin › Tickets des membres, le filtre « À traiter » montre tous les tickets qui
+attendent une action de l'administrateur : un ticket validé prêt pour « Lancer le
+développement », un ticket validé sur GitHub à valider de nouveau dans l'application, et un
+ticket en cours dont la CI de la pull request est en échec. Un ticket dont l'analyse, le
+développement ou la correction tourne déjà en sort jusqu'à la fin de la session prévue. Une
+nouvelle pastille « CI en échec » signale sur la liste un ticket en cours à corriger. Le nombre
+« Tickets à traiter » du menu compte aussi les tickets validés à lancer. Quand rien n'attend,
+l'écran affiche « Rien à traiter » et « Aucun ticket n'attend d'action de votre part. ».
+Demandé par le ticket #63.
+
+### v0.1.95 — technique
+
+`ticketATraiter` (`app/lib/features/tickets/domain/ticket_delivery.dart`) définit le filtre
+« À traiter » de la liste à partir des documents du serveur seuls : `send_failed`, `validate`
+dans `allowed_decisions`, `launch_analysis` ou `launch_development` sans entrée de cette action
+en cours dans `admin/launches`, pastille « PR prête » (règle inchangée), ou
+`relaunch_development` avec la nouvelle pastille `PastilleLivraisonType.ciRouge`
+(`relaunch_ready` sans développement en cours). Un historique ou un état de PR absent ou en
+panne laisse le ticket à traiter. `ticketsATraiterProvider` remplace `ticketsPrPreteProvider`
+et ne lit que les `admin/launches` et `admin/delivery` déjà lus par les pastilles des lignes.
+`Ticket.toProcess`, lu par le compteur du menu, passe du statut à `allowed_decisions` seul
+(`send_failed`, `validate`, `launch_analysis`, `launch_development`), sans lecture de plus :
+l'écran du jour n'ouvre aucun écouteur de plus (option A de l'analyse, décision 7 d'ADR-008
+gardée). Tests : domaine de `toProcess` et de `ticketATraiter`, liste avec un ticket validé à
+lancer et une analyse en cours, état vide, pastille « CI en échec » avec et sans relance permise,
+CI rouge pendant un développement ou une correction.
+Demandé par le ticket #63.
 
 ### v0.1.94 — fonctionnel
 

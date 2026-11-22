@@ -273,7 +273,7 @@ ni « non relu ». La mention des arômes devient « Texte rédigé par une IA (
 houblons et les levures. P62 renvoie aux états de P55 et suit la même règle. La relecture reste
 une étape de l'ingestion (`ecrire.mjs`).
 
-Le 2026-11-21, livraison 2 d'ADR-017 (v0.1.95) : P20 perd sa parenthèse sur la ligne des levures,
+Le 2026-11-21, livraison 2 d'ADR-017 (v0.1.96) : P20 perd sa parenthèse sur la ligne des levures,
 qui s'affiche désormais dans l'écran « Sources des données ».
 
 Le 2026-11-15 (v0.1.80), décision de l'utilisateur : P19 et « Commandes utiles » ajoutent

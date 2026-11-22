@@ -513,14 +513,17 @@ enum PastilleLivraisonType {
   livraisonEnCours,
   correctionEnCours,
   ciEnCours,
+  ciRouge,
   prPrete,
 }
 
 /// La pastille d'un ticket En cours : livraison en cours (verrou ou
-/// historique), correction (reprise) en cours, CI en cours, PR prête ; une
-/// seule, dans cet ordre (UX T5). Ni « CI en cours » ni « PR prête » tant
-/// que `ticket_status/launches.ci_read_denied_since` est posé : l'état de la
-/// CI n'est plus relu par le serveur.
+/// historique), correction (reprise) en cours, CI en cours, CI en échec
+/// (`relaunch_ready` écrit par le serveur, sans développement en cours), PR
+/// prête ; une seule, dans cet ordre (UX T5, ticket #63). Ni « CI en
+/// cours », ni « CI en échec », ni « PR prête » tant que
+/// `ticket_status/launches.ci_read_denied_since` est posé : l'état de la CI
+/// n'est plus relu par le serveur.
 PastilleLivraisonType? pastilleLivraison({
   required Ticket ticket,
   required TicketDelivery? livraison,
@@ -542,6 +545,60 @@ PastilleLivraisonType? pastilleLivraison({
   if (livraison.prNumber != null && ci != null && ci != 'completed') {
     return PastilleLivraisonType.ciEnCours;
   }
+  if (livraison.relaunchReady) {
+    return historique?.enCours(ActionLancement.developpement, now) == null
+        ? PastilleLivraisonType.ciRouge
+        : null;
+  }
   if (livraison.ready) return PastilleLivraisonType.prPrete;
   return null;
+}
+
+/// Filtre « À traiter » de la liste d'Admin › Tickets (ticket #63) : le
+/// serveur permet une action qui fait avancer le ticket, et aucune session ne
+/// tourne déjà pour elle. Lu dans les documents du serveur seuls
+/// (`allowed_decisions`, `admin/launches` [historique], `admin/delivery`
+/// [livraison], `ticket_status/launches` [quota]) : aucune précondition
+/// recopiée (P39, P42, P46).
+///
+/// - envoi impossible (`send_failed`) ;
+/// - `validate` permis (Analysé, ou Validé sur GitHub seul) ;
+/// - `launch_analysis` ou `launch_development` permis, sans lancement de
+///   cette action en cours ;
+/// - PR prête (pastille « PR prête », règle d'avant le ticket #63) ;
+/// - `relaunch_development` permis et pastille « CI en échec » (`ciRouge`).
+///
+/// [historique] ou [livraison] absent, illisible ou en panne : aucun
+/// lancement n'est tenu pour en cours ; un ticket permis par
+/// `allowed_decisions` reste à traiter plutôt que caché.
+bool ticketATraiter({
+  required Ticket ticket,
+  required TicketLaunchesDoc? historique,
+  required TicketDelivery? livraison,
+  required EtatLancements? quota,
+  required DateTime now,
+}) {
+  if (ticket.status == TicketStatus.sendFailed) return true;
+  if (ticket.allowedDecisions?.contains(TicketDecisionAction.validate) ??
+      false) {
+    return true;
+  }
+  for (final action in [
+    ActionLancement.analyse,
+    ActionLancement.developpement,
+  ]) {
+    if (ticket.canLaunch(action) && historique?.enCours(action, now) == null) {
+      return true;
+    }
+  }
+  final pastille = pastilleLivraison(
+    ticket: ticket,
+    livraison: livraison,
+    historique: historique,
+    quota: quota,
+    now: now,
+  );
+  return pastille == PastilleLivraisonType.prPrete ||
+      (pastille == PastilleLivraisonType.ciRouge &&
+          ticket.canLaunch(ActionLancement.reprise));
 }
