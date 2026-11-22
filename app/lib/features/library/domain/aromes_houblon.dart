@@ -40,44 +40,52 @@ class DescripteurArome {
   final String label;
 }
 
+/// Confiance lue dans `confidence` ; une autre valeur rend le document
+/// illisible. Commune aux houblons et aux levures (ADR-017).
+ConfianceArome lireConfianceArome(Map<String, dynamic> data) =>
+    _confiances[data['confidence']] ??
+    (throw const DocumentIllisible(
+      'confidence',
+      'high, medium ou low attendu',
+    ));
+
+/// Nombre de descripteurs au plus, borne de l'écrivain (`DESCRIPTEURS_MAX` de
+/// `ingest/lib/aromes/validation.mjs`).
+const kDescripteursAromeMax = 8;
+
+/// Descripteurs `{key, label}` de `descriptors`, dans l'ordre du document ;
+/// au-delà de [kDescripteursAromeMax], le document est illisible. Communs aux
+/// houblons et aux levures (ADR-017).
+List<DescripteurArome> lireDescripteursArome(LecteurChamps read) {
+  final descripteurs = read.liste('descriptors');
+  if (descripteurs.length > kDescripteursAromeMax) {
+    throw const DocumentIllisible('descriptors', '8 descripteurs au plus');
+  }
+  return List.unmodifiable([
+    for (final d in descripteurs)
+      DescripteurArome(key: d.texte('key'), label: d.texte('label')),
+  ]);
+}
+
 /// Description aromatique d'un houblon, `beer_hop_aromas/{id}` (ADR-013,
 /// section 4). Lecture stricte : un champ attendu absent ou mal typé lève
 /// [DocumentIllisible], dont la raison ne recopie aucun texte du document. Une
-/// clé de `uses` inconnue est ignorée.
+/// clé de `uses` inconnue est ignorée. `reviewed` et `reviewed_at` servent à
+/// l'ingestion seule : l'application ne les lit pas (décision de l'utilisateur
+/// du 2026-11-21).
 @immutable
 sealed class AromesHoublon {
-  const AromesHoublon({required this.relu, required this.reluLe});
-
-  /// `reviewed` : texte relu par l'administrateur.
-  final bool relu;
-
-  /// `reviewed_at`, posé quand [relu] est vrai.
-  final DateTime? reluLe;
+  const AromesHoublon();
 
   static AromesHoublon fromFirestore(Map<String, dynamic> data) {
     final read = LecteurChamps(data);
-    final relu = read.boolFacultatif('reviewed');
-    if (relu == null) {
-      throw const DocumentIllisible('reviewed', 'booléen obligatoire absent');
-    }
-    final reluLe = relu ? _dateRelecture(read) : null;
     final status = data['status'];
     switch (status) {
       case 'unknown':
-        return AromesInconnus(relu: relu, reluLe: reluLe);
+        return const AromesInconnus();
       case 'described':
-        final confidence = data['confidence'];
-        final confiance = _confiances[confidence];
-        if (confiance == null) {
-          throw const DocumentIllisible(
-            'confidence',
-            'high, medium ou low attendu',
-          );
-        }
-        final descripteurs = [
-          for (final d in read.liste('descriptors'))
-            DescripteurArome(key: d.texte('key'), label: d.texte('label')),
-        ];
+        final confiance = lireConfianceArome(data);
+        final descripteurs = lireDescripteursArome(read);
         final uses = read.objet('uses');
         final usages = <UsageArome, String>{};
         for (final usage in UsageArome.values) {
@@ -85,44 +93,19 @@ sealed class AromesHoublon {
           if (u != null) usages[usage] = u.texte('text');
         }
         return AromesDecrits(
-          relu: relu,
-          reluLe: reluLe,
           confiance: confiance,
-          descripteurs: List.unmodifiable(descripteurs),
+          descripteurs: descripteurs,
           usages: Map.unmodifiable(usages),
         );
       default:
         throw const DocumentIllisible('status', 'described ou unknown attendu');
     }
   }
-
-  /// `reviewed_at` en `AAAA-MM-JJ`, date du calendrier ; sinon illisible.
-  static DateTime _dateRelecture(LecteurChamps read) {
-    final value = read.texteFacultatif('reviewed_at');
-    final match = value == null
-        ? null
-        : RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
-    if (match != null) {
-      final annee = int.parse(match.group(1)!);
-      final mois = int.parse(match.group(2)!);
-      final jour = int.parse(match.group(3)!);
-      final date = DateTime(annee, mois, jour);
-      if (date.year == annee && date.month == mois && date.day == jour) {
-        return date;
-      }
-    }
-    throw const DocumentIllisible(
-      'reviewed_at',
-      'date AAAA-MM-JJ attendue quand reviewed est vrai',
-    );
-  }
 }
 
 /// `status: described`.
 class AromesDecrits extends AromesHoublon {
   const AromesDecrits({
-    required super.relu,
-    required super.reluLe,
     required this.confiance,
     required this.descripteurs,
     required this.usages,
@@ -139,7 +122,7 @@ class AromesDecrits extends AromesHoublon {
 
 /// `status: unknown` : houblon trop peu documenté.
 class AromesInconnus extends AromesHoublon {
-  const AromesInconnus({required super.relu, required super.reluLe});
+  const AromesInconnus();
 }
 
 /// Document de `beer_index/` qui résume les descriptions aromatiques (ADR-013,

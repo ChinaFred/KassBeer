@@ -300,6 +300,29 @@ données »), `DATA_SOURCES.md` (ligne « Descriptions aromatiques des levures �
   2026-11-21). Champs de `beer_cultures/` : `exigences-techniques.md`, tableau des référentiels.
 - Jetons par levure : hypothèses d'ADR-013 et de l'architecte, non mesurées ; l'essai les mesure.
 
+## Note du 2026-11-21 — fiche d'une levure (livraison 2)
+
+Décisions de l'utilisateur du 2026-11-21, sur la proposition d'écran de l'ux-designer :
+
+1. Chaque style conseillé est un bouton qui ouvre la fiche du style dans la Bibliothèque
+   (`AppRoutes.libraryEntry('styles', code)`, par-dessus la fiche de la levure). Le nom affiché
+   est `styles[].name`, sans code ; la cible fait au moins 48 px de haut.
+2. La mention IA se place en tête de la section, sous le titre « Arômes », comme pour un
+   houblon.
+3. Les sous-titres des textes de plage portent la borne de `temperature_range` de la levure :
+   « En bas de plage (15 °C) », « En haut de plage (20 °C) », au format de la ligne
+   « Température de fermentation » de la fiche. Sans borne, le sous-titre reste « En bas de
+   plage » ou « En haut de plage », sans valeur de remplacement. Cette décision s'écarte du
+   texte de la section 4, qui nomme les sous-titres sans température. Aucune formule : la
+   valeur est lue en °C.
+
+Seconde décision de l'utilisateur du 2026-11-21 : « Relu et non relu ne doivent pas être
+affichés nulle part. » Elle vaut pour les levures et les houblons (ADR-013, note du même jour).
+La mention devient « Texte rédigé par une IA (Claude) », sans date ni état de relecture ; elle
+remplace celle de la section 4. `reviewed` et `reviewed_at` restent dans les documents et
+`ingest/ecrire.mjs` refuse toujours une levure du groupe non relue ; l'application ne les lit
+pas. Le texte de « Sources des données » ne parle pas de relecture.
+
 ## Note du 2026-11-22 : un seul lot pour les levures
 
 Décision de l'utilisateur du 2026-11-22, après l'essai de 10 levures (0,2451 $, effort `medium`,

@@ -6,6 +6,49 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.1.97 — fonctionnel
+
+La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les
+arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de
+température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui
+sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.
+
+Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé
+par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données »
+présente aussi les arômes des levures.
+
+### v0.1.97 — technique
+
+Livraison 2 d'ADR-017. `app/lib/features/library/domain/aromes_levure.dart` lit
+`beer_culture_aromas/{id}` en lecture stricte (`status`, `confidence`, `descriptors`,
+`texts.profile` obligatoire pour un `described`, `cool` et `warm` facultatifs, clé inconnue de
+`texts` ignorée, `styles` de 0 à 6) et applique les bornes de l'écrivain : textes de 400
+caractères au plus, 8 descripteurs au plus (borne de `lireDescripteursArome`, commune aux
+houblons), nom de style de 120 caractères au plus, code de style de la forme d'`idStyle`
+(`^bjcp2021-[a-z0-9]+(-[a-z0-9]+)*$`), refusé sans recopier la valeur, puisqu'il sert à
+construire une adresse. `LibraryRepository.lireAromesLevure` fait un `get` à
+l'ouverture de la fiche, rapporte un document illisible sous `library.culture_aroma` avec son
+chemin seul ; `aromesLevureProvider` relit au retour du réseau. Aucun `snapshots()`, aucune liste
+de descripteurs ni de styles en Dart (P22, P62) ; l'assistant de recette ne lit pas cette
+collection.
+
+`section_aromes.dart` garde la section des houblons et porte le cadre commun aux deux natures
+(`CadreAromes` : chargement, panne, hors ligne, illisible ; `MentionAromes`,
+`ConfianceFaibleAromes`, `DescripteursAromes`). `section_aromes_levure.dart` ajoute
+`SectionAromesLevure`, placée entre « Valeurs » et « Provenance ». Sous-titres « En bas de
+plage (15 °C) » et « En haut de plage (20 °C) » tirés de `temperature_range` par
+`formatCelsius`, sans parenthèses quand la borne manque ; styles en `TextButton` de 48 px qui
+ouvrent `AppRoutes.libraryEntry('styles', code)` par `push`, sans retrait horizontal (nom
+aligné sur les textes) et lus « Ouvrir la fiche du style <nom> » (décisions de l'utilisateur du
+2026-11-21, note d'ADR-017).
+
+Décision de l'utilisateur du 2026-11-21 : la relecture n'est plus affichée. `AromesHoublon` ne
+lit plus `reviewed` ni `reviewed_at` (un document qui les porte reste lisible), la mention perd
+sa date, « Sources des données » perd la phrase sur « non relu ». `ingest/` inchangé : la
+relecture reste exigée à l'écriture. Notes datées dans ADR-013 et ADR-017. Aucune dépendance
+ajoutée ni montée. `main.dart.js` (`flutter build web --release`) : 5 989 110 octets avant,
+5 993 166 après (+ 4 056).
+
 ### v0.1.96 — technique
 
 Descriptions aromatiques des levures (ADR-017) : `ingest/generer-aromes.mjs --nature culture`

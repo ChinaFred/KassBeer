@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon et d'une levure) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; depuis un rapport ou une entrée de journal, ouvrir un ticket bug prérempli (« Analyser ») et lancer son analyse dès la publication, voir quels rapports et quelles entrées ont déjà un ticket ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus ; régler dans Admin › Moteur d'IA le modèle, l'effort, les plafonds et l'ouverture aux membres de chaque poste d'IA, et la grille tarifaire, en ligne seulement ; lire dans Admin › Coûts de l'IA la dépense de l'IA de chaque membre, par mois et par poste ; utiliser l'assistant de recette, toujours ouvert pour lui, dans la limite de ses tours du jour ; lire « IA ce mois » dans le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -2319,8 +2319,8 @@ donne le fichier et le commit. Le texte de la fiche est sélectionnable.
 de la fiche, sans suivi en direct ; le reste de la fiche s'affiche sans l'attendre. Contenu,
 dans l'ordre :
 
-- « Texte rédigé par une IA (Claude), relu le 14 novembre 2026 » (date de la relecture par
-  l'administrateur) ou « Texte rédigé par une IA (Claude), non relu », sous le titre ;
+- « Texte rédigé par une IA (Claude) », sous le titre ; la fiche ne dit pas si le texte a été
+  relu (décision de l'utilisateur du 2026-11-21) ;
 - « Confiance faible » (icône d'information), seule sur sa ligne, quand le texte est donné
   avec une confiance faible ;
 - les descripteurs (« Pamplemousse », « Floral »…), en étiquettes, dans l'ordre du document,
@@ -2350,12 +2350,45 @@ dans l'ordre :
 Le texte est sélectionnable. Le jour de brassage, les journées du déroulé et l'éditeur de
 recette ne lisent pas les arômes.
 
+**Arômes d'une levure** (ADR-017). Sur la fiche d'une levure seulement, une section « Arômes »
+se place entre « Valeurs » et « Provenance », lue comme celle d'un houblon : une fois à
+l'ouverture, sans suivi en direct, relue au retour du réseau ; le reste de la fiche s'affiche
+sans l'attendre. Contenu, dans l'ordre :
+
+- « Texte rédigé par une IA (Claude) », sous le titre, sans état de relecture ;
+- « Confiance faible » (icône d'information), quand le texte est donné avec une confiance
+  faible ;
+- les descripteurs (« poire », « sec »…), en étiquettes, dans l'ordre du document, lus
+  « Descripteurs : poire, sec » par le lecteur d'écran ;
+- « Profil » et son texte ;
+- « En bas de plage (15 °C) » et le texte du bas de la plage de température, s'il existe ;
+- « En haut de plage (20 °C) » et le texte du haut de la plage, s'il existe. La température
+  entre parenthèses est la borne de la ligne « Température de fermentation » de la fiche, au
+  même format ; sans cette borne, le titre reste « En bas de plage » ou « En haut de plage »,
+  sans parenthèses ni valeur de remplacement ;
+- « Styles conseillés », puis un style par ligne, de 1 à 6, sous son seul nom (sans code). Un
+  appui sur un style ouvre sa fiche dans la Bibliothèque, par-dessus celle de la levure ; la
+  cible fait au moins 48 px de haut, le nom s'aligne sur le bord gauche des textes, un nom long
+  passe à la ligne, et le lecteur d'écran lit « Ouvrir la fiche du style <nom> ». « Profil »,
+  « En bas de plage », « En haut de plage » et « Styles conseillés » sont lus comme des titres. Sans style, ni titre ni
+  ligne.
+
+États de la section : ceux d'un houblon, mot pour mot, sauf « levure trop peu documentée » :
+chargement « Chargement des arômes » ; aucune description, la section ne s'affiche pas ;
+levure trop peu documentée, la mention IA puis « Aucune description : levure trop peu
+documentée. » ; description illisible, « Les arômes ne peuvent pas s'afficher. L'erreur est
+signalée à l'administrateur. », sans bouton, l'erreur journalisée avec l'identifiant de la
+levure seul ; lecture impossible en ligne, « Impossible de lire les arômes. L'erreur est
+signalée à l'administrateur. » et « Réessayer » (« Lecture en cours ») ; hors ligne sans copie
+en cache, « Arômes indisponibles hors ligne. Ils s'affichent au retour du réseau. ».
+L'assistant de recette ne lit pas ces textes.
+
 **Descriptions aromatiques (administrateur, hors de l'application).** L'administrateur fait
 rédiger les textes par l'API Claude depuis son poste, puis les écrit dans la Bibliothèque par
 le script d'ingestion ; l'application n'appelle pas ce script. Ordre : un essai sur 10 houblons
 choisis, puis les houblons utilisés dans les recettes et les brassins du groupe, puis le
-reste. L'administrateur relit les textes des houblons du groupe avant leur écriture ; les
-autres paraissent « non relu ». Un houblon ajouté plus tard reçoit sa description par une
+reste. L'administrateur relit les textes des houblons du groupe avant leur écriture ;
+l'application n'affiche pas cette relecture. Un houblon ajouté plus tard reçoit sa description par une
 nouvelle génération lancée par l'administrateur (`--nouveaux`). Détail : `exigences-techniques.md`,
 « Descriptions aromatiques ».
 
@@ -2367,8 +2400,8 @@ Brettanomyces), puis les levures des recettes et des brassins du groupe, relues 
 `wine`, `champagne`, `malolactic`) restent sans texte, sauf si une recette du groupe les
 utilise. Chaque texte donne des descripteurs, un profil, l'effet du bas et du haut de la plage
 de température et jusqu'à six styles conseillés. Un nom de levure d'une recette qui désigne
-plusieurs souches est listé avec ses candidats ; l'administrateur choisit. Les membres ne voient
-pas encore ces textes : la fiche d'une levure les affichera dans une livraison suivante.
+plusieurs souches est listé avec ses candidats ; l'administrateur choisit. Les membres lisent
+ces textes dans la section « Arômes » de la fiche d'une levure.
 Détail : `exigences-techniques.md`, « Descriptions aromatiques des levures ».
 
 **Recettes publiques.** Les recettes DIY Dog, par pages de 50 dans l'ordre alphabétique.
@@ -2496,9 +2529,13 @@ s'affiche sans réseau.
   en anglais, reproduit en entier comme la licence l'exige pour toute copie livrée.
 - Descriptions aromatiques : « Arômes des houblons : textes rédigés pour Kass'Beer par une
   IA (Claude, d'Anthropic), à partir du nom, des autres noms, de l'origine, des acides et de
-  l'usage de chaque houblon. Ils ne sont copiés d'aucune source. L'administrateur relit ceux
-  des houblons utilisés dans les recettes du groupe ; les autres sont marqués « non relu ». Un
-  texte peut contenir des erreurs. »
+  l'usage de chaque houblon. Ils ne sont copiés d'aucune source. Un texte peut contenir des
+  erreurs. », puis « Arômes des levures : textes rédigés pour Kass'Beer par une IA (Claude,
+  d'Anthropic), à partir du nom, des autres noms, du producteur, de la référence, du type, de
+  la forme, de l'atténuation, de la plage de température et de la floculation de chaque
+  levure. Ils ne sont copiés d'aucune source, ni des fiches des fabricants. Les styles
+  conseillés sont choisis dans les styles BJCP 2021 de la Bibliothèque. Un texte peut contenir
+  des erreurs. »
 
 ### Brassins
 

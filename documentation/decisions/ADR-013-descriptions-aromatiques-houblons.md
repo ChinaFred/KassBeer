@@ -413,3 +413,16 @@ liste (P22).
 - Fiche : la mention « Texte rédigé par une IA (Claude), relu le … » ou « …, non relu » passe
   sous le titre « Arômes », avant les descripteurs ; l'étiquette « Confiance faible » de la
   fiche prend l'icône d'information (`info_outline`) à la place du point d'interrogation.
+
+## Note du 2026-11-21 — relecture non affichée
+
+Décision de l'utilisateur du 2026-11-21 : « Relu et non relu ne doivent pas être affichés
+nulle part. » Elle vaut pour les houblons et pour les levures (ADR-017).
+
+- La mention de la fiche devient « Texte rédigé par une IA (Claude) », sans date de relecture,
+  sans « relu » ni « non relu ». Elle remplace celle de la section 4 et de la note précédente.
+- `reviewed` et `reviewed_at` restent dans les documents : l'ingestion les écrit, et
+  `ingest/ecrire.mjs` refuse toujours un houblon du groupe non relu. L'application ne les lit
+  plus ; un document qui les porte reste lisible.
+- « Sources des données » ne parle plus de relecture : le texte des houblons finit par « Un
+  texte peut contenir des erreurs. ».
