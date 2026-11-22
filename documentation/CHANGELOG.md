@@ -22,7 +22,7 @@ d'`origin`, qui reste la graphie anglaise lue par l'export, les arômes et la ta
 dans `beer_hops/`, `beer_fermentables/` et les entrées de `beer_index/hops`. Noms français
 dans `kPaysFr` (`origines.dart`, mêmes clés que `kPays`, test) ; un pays sans nom arrête la
 préparation. `ingest/lib/validation.mjs` accepte `origin_fr` (texte de 1 à 120 caractères,
-seulement avec `origin`). `origin_fr` n'est ni envoyé au modèle ni compté dans `input_sha256`
+seulement avec `origin` dans les documents). `origin_fr` n'est ni envoyé au modèle ni compté dans `input_sha256`
 (tests). L'application affiche `origin_fr`, sinon `origin` (`origineAffichee`). Table de
 fusion : ligne sans entrée pour l'alias « Hallertau Hersbrucker » ; `Referentiel.fusionner`
 refuse une ligne dont le document manque (`StateError`, test). ADR-014, note du 2026-11-22. `CLAUDE.md` complète P56 (ligne de fusion sans entrée, `kPaysFr`,
