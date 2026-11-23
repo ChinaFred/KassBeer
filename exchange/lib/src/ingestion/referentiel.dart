@@ -3,6 +3,7 @@ import '../texte.dart';
 import 'cles.dart';
 import 'fusions.dart';
 import 'lecture_sources.dart';
+import 'origines.dart';
 import 'sources.dart';
 
 /// Fusion des entrées des sources en documents de référentiel, et recherche
@@ -117,12 +118,17 @@ class EntreeFusionnee {
   }
 
   /// Valeurs du document : celles de l'entrée principale, origine imposée par
-  /// la ligne de fusion.
+  /// la ligne de fusion, et nom français du pays (`origin_fr`) quand le
+  /// document a une origine.
   Map<String, Object> get _valeurs {
-    final origine = ligne?.origine;
-    return origine == null
-        ? principale.valeurs
-        : {...principale.valeurs, 'origin': origine};
+    final origine = ligne?.origine ?? principale.valeurs['origin'] as String?;
+    return {
+      ...principale.valeurs,
+      if (origine != null) ...{
+        'origin': origine,
+        'origin_fr': paysEnFrancais(origine),
+      },
+    };
   }
 
   /// Document sans `content_sha256` ni `updated_at`.
@@ -146,7 +152,8 @@ class EntreeFusionnee {
   }
 
   /// Entrée de `beer_index/{nature}` : nombres nus ; pour un houblon, usage
-  /// (`purpose`) et origine (`origin`) du document quand il les a.
+  /// (`purpose`), origine (`origin`) et son nom français (`origin_fr`) du
+  /// document quand il les a.
   Map<String, Object?> entreeIndex() {
     final v = principale.valeurs;
     final a = aliases;
@@ -169,6 +176,7 @@ class EntreeFusionnee {
           'purpose': ?v['purpose'],
           // Origine du document, celle de la ligne de fusion comprise.
           'origin': ?_valeurs['origin'],
+          'origin_fr': ?_valeurs['origin_fr'],
         },
         NatureReferentiel.culture => {
           'producer': ?v['producer'],
@@ -202,7 +210,8 @@ class Referentiel {
   ///
   /// Une entrée désignée par une ligne de [fusions] rejoint le document de
   /// cette ligne (`hop-<clé du nom de la ligne>`). Une ligne qui ne désigne
-  /// aucune entrée, une entrée désignée par deux lignes ou deux lignes de même
+  /// aucune entrée, une ligne sans entrée (alias seul) dont le document n'est
+  /// pas lu, une entrée désignée par deux lignes ou deux lignes de même
   /// identifiant lèvent [StateError] : la table est fausse.
   ///
   /// Une ligne de [fusionsCultures] rattache la fiche d'un fabricant et les
@@ -361,6 +370,12 @@ class Referentiel {
         fusion.aliasAjoutes.addAll(ligne.alias);
       }
       parNature[fusion.nature]![id] = fusion;
+    }
+    // Une ligne sans entrée n'ajoute que ses alias : son document doit être lu.
+    for (final f in fusions) {
+      if (!parNature[NatureReferentiel.hop]!.containsKey(f.id)) {
+        throw StateError('fusion ${f.id} : aucun document de ce nom');
+      }
     }
     for (final c in correctionsCultures.whereType<AliasEcarteCulture>()) {
       final docs = [

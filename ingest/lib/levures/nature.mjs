@@ -116,7 +116,6 @@ export const NATURE_LEVURE = Object.freeze({
     champFichier: "culture_aromas_file",
     /// Aucun compte des levures sans description : le périmètre écarte des types entiers.
     champSansDescription: null,
-    sansDescription: "sans description aromatique",
     /// Styles acceptés par l'écrivain (trier()), contre lesquels une entrée est contrôlée.
     contexteEcriture: (valides) => contexteStyles(valides.beer_styles),
   },

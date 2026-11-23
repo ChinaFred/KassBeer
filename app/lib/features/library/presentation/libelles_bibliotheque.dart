@@ -89,6 +89,12 @@ String libelleMomentOrigine(String label) {
   return traduit == null ? label : '$traduit ($label)';
 }
 
+/// Origine affichée d'un houblon ou d'un malt : le nom français écrit par
+/// l'ingestion (`origin_fr`, « États-Unis »), sinon `origin` tel qu'en base
+/// (« United States ») pour un document écrit avant lui. Aucune traduction en
+/// Dart : la liste des pays n'existe que dans `exchange/` (P56).
+String? origineAffichee(String? originFr, String? origin) => originFr ?? origin;
+
 /// Usage d'un houblon (`type` BeerJSON, `purpose` en base).
 String libelleUsageHoublon(String purpose) => switch (purpose) {
   'aroma' => 'Aromatique',
@@ -144,13 +150,19 @@ List<String> detailsEntree(EntreeIndex e) => switch (e) {
       if (colorEbc != null) formatEbc(colorEbc),
       if (yieldPct != null) 'rendement ${formatPourcent(yieldPct)}',
     ],
-  // « Aromatique · United States · 12 % alpha » : la forme n'apparaît que si
+  // « Aromatique · États-Unis · 12 % alpha » : la forme n'apparaît que si
   // elle n'est pas celle de presque tous les houblons (granulés, `pellet`).
-  // L'origine s'affiche telle que la fiche la montre.
-  EntreeHoublon(:final purpose, :final origin, :final form, :final alphaPct) =>
+  // L'origine s'affiche comme sur la fiche ([origineAffichee]).
+  EntreeHoublon(
+    :final purpose,
+    :final origin,
+    :final originFr,
+    :final form,
+    :final alphaPct,
+  ) =>
     [
       if (purpose != null) libelleUsageHoublon(purpose),
-      ?origin,
+      ?origineAffichee(originFr, origin),
       if (form != null && form != 'pellet') formesHoublon.libelle(form),
       if (alphaPct != null) '${formatPourcent(alphaPct)} alpha',
     ],

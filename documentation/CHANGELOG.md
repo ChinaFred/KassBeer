@@ -4,9 +4,9 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
-## 2026-11-22
+## 2026-11-23
 
-### v0.2.13 — fonctionnel
+### v0.2.15 — fonctionnel
 
 Résumé : « Mettre en file » enregistre votre accord : une livraison part seule après la précédente.
 
@@ -21,7 +21,7 @@ de file sans départ est expliquée sur la fiche. Si la routine de développemen
 refuse un départ, la file s'arrête sans perdre l'accord ; « Relancer la file », en tête de file,
 la fait repartir dans les 5 minutes, après les mêmes contrôles. Demandé par le ticket #104.
 
-### v0.2.13 — technique
+### v0.2.15 — technique
 
 File des livraisons (ADR-008, amendement du 2026-11-22). `launchTicketDelivery` reçoit `mode`
 (`start`, `queue`, `unqueue`) ; `ticket_status/launches` porte `delivery_queue`
@@ -44,6 +44,40 @@ s'arrête aussi sur `token_invalid_since` et au plafond, avant tout appel à Git
 `resume_queue` (« Relancer la file ») : efface `delivery_queue_halted` quand le ticket est en
 tête (sinon `delivery_queue_not_head`), sans lancement, décompte ni appel à GitHub ou à la
 routine. Aucune dépendance changée. Demandé par le ticket #104.
+
+## 2026-11-22
+
+### v0.2.14 — technique
+
+`ingest/ecrire.mjs` affichait « undefined levure sans description aromatique » à la fin de
+chaque écriture. La nature des levures ne compte pas ses entrées sans description
+(`champSansDescription: null`, ADR-017), et `ecrire.mjs` lisait `rapport[null]`.
+`messageSansDescription` (`ingest/lib/execution.mjs`) rend maintenant `null` pour une nature
+sans compte (test) ; le libellé `sansDescription` des levures, que rien ne lisait, sort de
+`ingest/lib/levures/nature.mjs`. Aucune donnée n'était écrite de travers.
+
+### v0.2.13 — fonctionnel
+
+Résumé : L'origine des houblons et des malts s'affiche en français dans la Bibliothèque.
+
+Dans la Bibliothèque, l'origine des houblons et des malts s'affiche en français :
+« États-Unis », « Royaume-Uni », « République tchèque »… La recette qui nomme le houblon
+« Hallertau Hersbrucker » retrouve maintenant sa fiche et sa description. Ces changements
+s'affichent une fois le référentiel réécrit par l'administrateur.
+
+### v0.2.13 — technique
+
+La préparation (`exchange/lib/src/ingestion/referentiel.dart`) écrit `origin_fr` à côté
+d'`origin`, qui reste la graphie anglaise lue par l'export, les arômes et la table de fusion,
+dans `beer_hops/`, `beer_fermentables/` et les entrées de `beer_index/hops`. Noms français
+dans `kPaysFr` (`origines.dart`, mêmes clés que `kPays`, test) ; un pays sans nom arrête la
+préparation. `ingest/lib/validation.mjs` accepte `origin_fr` (texte de 1 à 120 caractères,
+seulement avec `origin` dans les documents). `origin_fr` n'est ni envoyé au modèle ni compté dans `input_sha256`
+(tests). L'application affiche `origin_fr`, sinon `origin` (`origineAffichee`). Table de
+fusion : ligne sans entrée pour l'alias « Hallertau Hersbrucker » ; `Referentiel.fusionner`
+refuse une ligne dont le document manque (`StateError`, test). ADR-014, note du 2026-11-22. `CLAUDE.md` complète P56 (ligne de fusion sans entrée, `kPaysFr`,
+`origin_fr`).
+Après la fusion, l'administrateur relance la préparation puis `ecrire.mjs`.
 
 ### v0.2.12 — technique
 

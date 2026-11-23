@@ -419,6 +419,11 @@ contenant, sauf suivis de « et » et d'un nombre, de « ou », « voire », « 
 symbole devant dans la même phrase, ou de « / », « ⁄ », « ∕ », « ⧸ », « × », « + » ou d'un chiffre (décisions de
 l'utilisateur).
 
+Le 2026-11-22 (v0.2.13), décision de l'utilisateur : P56 ajoute la ligne de fusion sans entrée
+(alias seuls, document absent en `StateError`), `kPaysFr` aux mêmes clés que `kPays` et
+`origin_fr` écrit par la préparation seule, affiché par l'application sans traduction. Aucun
+contrôle, agent, skill ni hook nouveau.
+
 Le 2026-11-22, avec le ticket #104 (file d'attente des livraisons, amendement d'ADR-008) et
 l'accord de l'utilisateur, P25, P36, P39, P40, P43, P44, P45, P46 et P47 sont complétés, et la
 puce « Une action qui appelle un modèle… » de « Coûts variables » admet un départ différé, parti

@@ -102,8 +102,15 @@ France, Germany, Great Britain, Japan, Netherlands, New Zealand, Poland, Russia,
 Slovenia, South Africa, Sweden, Ukraine, United States. Le nom d'un pays de la liste est
 accepté tel quel, sans casse. Une graphie absente de la table, ou qui nomme deux pays
 (`Austria/Slovenia`, décision de l'utilisateur du 2026-11-15), laisse `origin` absent et part
-dans `rapport.json` (`origines_inconnues`). Une origine vide reste absente. La traduction en
-français à l'affichage viendra avec un lot suivant.
+dans `rapport.json` (`origines_inconnues`). Une origine vide reste absente.
+
+Nom français (2026-11-22) : à côté de `origin`, la préparation écrit `origin_fr`, tiré de
+`kPaysFr` dans le même fichier, une entrée par pays de la liste (Argentine, Australie, Autriche,
+Belgique, Canada, Chine, République tchèque, France, Allemagne, Royaume-Uni, Japon, Pays-Bas,
+Nouvelle-Zélande, Pologne, Russie, Serbie, Slovénie, Afrique du Sud, Suède, Ukraine,
+États-Unis). Ces noms sont écrits à la main, aucun ne vient d'une source. `origin` garde la
+graphie anglaise : l'export, la génération des arômes et la table de fusion la lisent.
+L'application affiche `origin_fr`.
 
 ## Table de fusion des houblons
 
@@ -126,6 +133,7 @@ puis 001) ; l'origine est imposée quand cette entrée la porte fausse.
 | `hop-hallertauer-blanc`, `-gold`, `-tradition` | `Germany` | `Hallertau Blanc`, `Hallertau Gold`, `Hallertau Tradition` (003) | — |
 | `hop-hallertauer-taurus` | `Germany` (imposée) | `Hallertau Taurus` (003, dit britannique) | — |
 | `hop-hallertauer-mittelfruh` « Hallertauer Mittelfrüh » | `Germany` | `Hallertau Mittelfrüh` (003), `Hallertauer Mittelfrueh` (005), `Hallertau` (001) | — |
+| `hop-hallertauer-hersbrucker` « Hallertauer Hersbrucker » | celle du document | aucune (ligne ajoutée le 2026-11-22) | « Hallertau Hersbrucker » (nom d'une recette du groupe, qu'aucune source n'écrit) |
 | `hop-tettnang` | `Germany` | `Tettnanger` (005, 003) ; `Tettnang (US)` reste seul | — |
 | `hop-sultana` | `United States` | `Sultana (Denali)` (003) | « Denali » (ancien nom commercial) |
 | `hop-columbus` | `United States` | `Columbus/Tomahawk/Zeus` (001), `Columbus/Tomahawk/Zeus (CTZ)` (005), `CTZ`, `Tomahawk`, `Zeus` (003, ajoutés le 2026-11-15 après la première préparation réelle) | « CTZ », « Tomahawk », « Zeus » |

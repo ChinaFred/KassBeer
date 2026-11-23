@@ -265,6 +265,23 @@ describe("requête", () => {
   });
 });
 
+describe("origine en français (origin_fr)", () => {
+  it("ni envoyée au modèle, ni comptée dans l'empreinte d'entrée", () => {
+    const sans = { name: "Alpha", aliases: [], origin: "Germany", purpose: "aroma" };
+    const avec = { ...sans, origin_fr: "Allemagne" };
+    assert.deepEqual(donneesEnvoyees(avec), donneesEnvoyees(sans));
+    assert.equal("origin_fr" in donneesEnvoyees(avec), false);
+    assert.equal(donneesEnvoyees(avec).origin, "Germany");
+    const contexte = { promptVersion: 1, modele: MODELE, effort: "medium" };
+    assert.equal(
+      empreinteEntree(donneesEnvoyees(avec), contexte),
+      empreinteEntree(donneesEnvoyees(sans), contexte),
+    );
+    const requete = JSON.stringify(parametresRequete(donneesEnvoyees(avec), { effort: "medium" }));
+    assert.equal(requete.includes("Allemagne"), false);
+  });
+});
+
 describe("tarif et borne haute", () => {
   const tarifValide = {
     model: MODELE,
@@ -776,6 +793,27 @@ describe("génération (SDK simulé)", () => {
     );
   });
 
+  it("origin_fr ajouté par la préparation : houblons inchangés, rien n'est renvoyé", async () => {
+    const avecOrigine = (fr) =>
+      JSON.stringify(
+        [houblon("hop-alpha", "Alpha"), houblon("hop-beta", "Beta")].map((h) => ({
+          ...h,
+          data: { ...h.data, origin: "Germany", ...(fr ? { origin_fr: "Allemagne" } : {}) },
+        })),
+      );
+    writeFileSync(join(prepare, "beer_hops.json"), avecOrigine(false));
+    await lancer(
+      ["--essai"],
+      sdkSimule({ reponses: [message(sortieModele()), message(sortieModele())] }),
+    );
+    writeFileSync(join(prepare, "beer_hops.json"), avecOrigine(true));
+    const sdk = sdkSimule();
+    const cr = await lancer(["--essai"], sdk);
+    assert.equal(cr.counts.inchanges, 2);
+    assert.equal(cr.counts.changes, 0);
+    assert.equal(sdk.appels.charge, 0);
+  });
+
   it("--effort différent : les houblons sont « changés » et renvoyés", async () => {
     await lancer(
       ["--essai"],
@@ -968,6 +1006,11 @@ describe("tri des arômes par l'écrivain", () => {
       messageSansDescription(2, NATURE_HOUBLON),
       /^2 houblons sans description aromatique : lancez `node generer-aromes\.mjs --nouveaux`/,
     );
+  });
+
+  it("levures : aucun message, faute de compte (ecrire.mjs lit rapport[null])", () => {
+    assert.equal(NATURE_LEVURE.ecriture.champSansDescription, null);
+    assert.equal(messageSansDescription(undefined, NATURE_LEVURE), null);
   });
 });
 

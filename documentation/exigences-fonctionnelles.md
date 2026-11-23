@@ -2362,8 +2362,10 @@ ligne :
 - style : « 21A · American IPA », puis catégorie · degré · amertume (« IPA · 5,5 % vol à
   7,5 % vol · 40 IBU à 70 IBU ») ;
 - malt ou sucre : nom, puis nom français · type · couleur · rendement ;
-- houblon : nom, puis usage · origine · forme · alpha (« Aromatique · United States ·
-  12 % alpha ») ; usage et origine sont ceux de la fiche ; la forme n'apparaît que si elle
+- houblon : nom, puis usage · origine · forme · alpha (« Aromatique · États-Unis ·
+  12 % alpha ») ; usage et origine sont ceux de la fiche ; l'origine s'affiche en français
+  (« États-Unis », « Allemagne »), et en anglais, telle qu'en base (« United States »), tant
+  que l'administrateur n'a pas réécrit le référentiel ; la forme n'apparaît que si elle
   n'est pas « Pellets » ; une valeur absente est omise. Avec l'index des arômes, l'étiquette
   « Confiance faible » ou « Sans description », sans icône, s'ajoute sous la ligne, et rien
   pour une confiance élevée ou moyenne ;
@@ -2421,13 +2423,14 @@ publique, le retour ramène à cette recette). Nom, « Autres noms : … », pui
   s'ajoute à ce que lit le lecteur d'écran. Dessous : « Teinte indicative : la couleur réelle dépend du verre, de la lumière et
   de l'écran. » et le lien « Échelle des couleurs ». Sans plage de couleur, ni barre ni
   mention. Une borne négative ou non finie masque la barre et l'erreur est journalisée ;
-- malt ou sucre : nom français, type, couleur, rendement d'extrait, producteur, origine ;
-  une pastille de 20 px de la teinte indicative précède la couleur en EBC, ignorée par le
+- malt ou sucre : nom français, type, couleur, rendement d'extrait, producteur, origine
+  (en français, comme la ligne d'un houblon) ; une pastille de 20 px de la teinte indicative précède la couleur en EBC, ignorée par le
   lecteur d'écran ; une couleur refusée par le calcul de teinte masque la pastille et
   l'erreur est journalisée ;
 - houblon : nom français, forme, acides alpha, acides bêta, usage (« Aromatique »,
   « Amérisant », « Aromatique et amérisant », « Double usage », « Goût », « Aromatique et
-  goût », « Amérisant et goût », « Aromatique, amérisant et goût »), origine ;
+  goût », « Amérisant et goût », « Aromatique, amérisant et goût »), origine (en français,
+  comme sur la ligne) ;
 - levure : producteur, type, forme, atténuation et température de fermentation en plages,
   floculation ;
 - divers : nom français, type ; puis les sections « Utilisation » et « Goût » et la mention

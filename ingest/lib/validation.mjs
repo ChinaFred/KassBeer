@@ -183,6 +183,7 @@ const ENTREES_INDEX = {
       alpha: "nombre",
       purpose: USAGES_HOUBLON,
       origin: "texte",
+      origin_fr: "texte",
     },
   },
   hop_aromas: {
@@ -320,6 +321,15 @@ class Controle {
     }
   }
 
+  /// Origine (`origin`, graphie canonique) et son nom français (`origin_fr`) : textes
+  /// bornés, `origin_fr` seulement avec `origin`. La liste des pays n'existe qu'en
+  /// Dart (`exchange/lib/src/ingestion/origines.dart`, P56) : aucun pays contrôlé ici.
+  origine(data) {
+    this.facultatif(data, "origin", (c, v) => this.texte(c, v));
+    this.facultatif(data, "origin_fr", (c, v) => this.texte(c, v));
+    if ("origin_fr" in data && !("origin" in data)) this.erreur("origin_fr", "sans origin");
+  }
+
   entree(data, permises, verifier) {
     const communes = ["name", "aliases", "provenance", "content_sha256"];
     if (!this.cles("data", data, [...communes, ...permises], communes)) return;
@@ -350,7 +360,7 @@ function recetteValide() {
 
 const CONTROLES = {
   beer_fermentables(k, d) {
-    k.entree(d, ["label_fr", "type", "yield", "color", "producer", "origin"], () => {
+    k.entree(d, ["label_fr", "type", "yield", "color", "producer", "origin", "origin_fr"], () => {
       if (!("type" in d)) k.erreur("type", "absent");
       k.facultatif(d, "type", (c, v) => k.valeurDe(c, v, TYPES_FERMENTABLE));
       k.facultatif(d, "yield", (c, v) => {
@@ -359,15 +369,16 @@ const CONTROLES = {
       });
       k.facultatif(d, "color", (c, v) => k.mesure(c, v, "EBC"));
       k.facultatif(d, "producer", (c, v) => k.texte(c, v));
-      k.facultatif(d, "origin", (c, v) => k.texte(c, v));
+      k.origine(d);
     });
   },
   beer_hops(k, d) {
-    k.entree(d, ["label_fr", "form", "alpha_acid", "beta_acid", "origin", "purpose"], () => {
+    const cles = ["label_fr", "form", "alpha_acid", "beta_acid", "origin", "origin_fr", "purpose"];
+    k.entree(d, cles, () => {
       k.facultatif(d, "form", (c, v) => k.valeurDe(c, v, FORMES_HOUBLON));
       k.facultatif(d, "alpha_acid", (c, v) => k.mesure(c, v, "%"));
       k.facultatif(d, "beta_acid", (c, v) => k.mesure(c, v, "%"));
-      k.facultatif(d, "origin", (c, v) => k.texte(c, v));
+      k.origine(d);
       k.facultatif(d, "purpose", (c, v) => k.valeurDe(c, v, USAGES_HOUBLON));
     });
   },

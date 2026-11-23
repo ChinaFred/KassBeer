@@ -418,6 +418,8 @@ void main() {
         expect(e['purpose'], d['purpose'], reason: '${e['id']}');
         expect(e['origin'], d['origin'], reason: '${e['id']}');
         expect(e.containsKey('origin'), d.containsKey('origin'));
+        expect(e['origin_fr'], d['origin_fr'], reason: '${e['id']}');
+        expect(e.containsKey('origin_fr'), d.containsKey('origin'));
       }
       expect(
         h.firstWhere((e) => (e as Map)['id'] == 'hop-houblon-test'),
