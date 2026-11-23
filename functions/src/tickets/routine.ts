@@ -238,7 +238,10 @@ export function routineFailureMessage(
     case "paused":
       return "La routine est en pause sur claude.ai. Réactivez-la, puis relancez.";
     case "token":
-      return "Le jeton de la routine est refusé. Remplacez-le dans Secret Manager.";
+      return (
+        "Le jeton de la routine est refusé. Remplacez-le dans Secret Manager, " +
+        "puis relancez le workflow « Déploiement » sur GitHub."
+      );
     case "not_found":
       return "Routine introuvable : vérifiez son identifiant dans Secret Manager.";
     case "rate_limit":

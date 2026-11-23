@@ -4754,7 +4754,7 @@ Erreurs (`HttpsError`) : `details.reason` (français) et `details.code` (stable)
 | `failed-precondition` | `ticket_changed` | « Le ticket a changé sur GitHub. Rien n'a été lancé. » |
 | `internal` | `not_recorded` | « Le lancement n'a pas pu être préparé. Rien n'a été lancé. » |
 | `failed-precondition` | `routine_paused` | « La routine est en pause sur claude.ai. Réactivez-la, puis relancez. » |
-| `failed-precondition` | `routine_invalid` | « Le jeton de la routine est refusé. Remplacez-le dans Secret Manager. » (401, 403), « Routine introuvable : vérifiez son identifiant dans Secret Manager. » (404) |
+| `failed-precondition` | `routine_invalid` | « Le jeton de la routine est refusé. Remplacez-le dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub. » (401, 403), « Routine introuvable : vérifiez son identifiant dans Secret Manager. » (404) |
 | `resource-exhausted` | `routine_rate_limited` | « Trop de lancements chez Claude. Réessayez dans N min. » (`Retry-After`), ou « … Réessayez plus tard. » |
 | `failed-precondition` | `routine_failed` | « Lancement refusé par Claude. » (autre 400, redirection, statut imprévu) |
 | `internal` | `internal` | « Le lancement a échoué. Regardez la section Lancements avant de relancer. » (panne imprévue : le client ne sait pas si la session est partie) |

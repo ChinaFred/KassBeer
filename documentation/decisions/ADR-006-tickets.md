@@ -212,7 +212,8 @@ lu par l'administrateur seul, porte `token_invalid_since` (réponse 401, 403 hor
 débit, 404 sur le dépôt, secret vide) et `token_expires_at`, lu dans l'en-tête
 `github-authentication-token-expiration` des réponses de GitHub (à vérifier au premier
 appel). Admin › Tickets affiche « Jeton GitHub refusé ou expiré depuis le jj/mm/aa : remplacez
-`GITHUB_TICKETS_TOKEN` dans Secret Manager. », et « Le jeton GitHub expire le jj/mm/aa. »
+`GITHUB_TICKETS_TOKEN` dans Secret Manager. » (depuis le 2026-11-23, ADR-008 : « …, puis relancez
+le workflow « Déploiement » sur GitHub. »), et « Le jeton GitHub expire le jj/mm/aa. »
 quatorze jours avant l'échéance. Un jeton refusé n'use pas les essais d'envoi. Les tickets
 et les décisions repartent quand le jeton est remplacé. Le premier appel réussi efface
 `token_invalid_since`.
