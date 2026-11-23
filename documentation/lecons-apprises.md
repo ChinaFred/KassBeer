@@ -178,3 +178,17 @@ l'architecte (ADR-019), une renumérotation (ADR-018, P63) et un lot de réconci
 **Règle** : un numéro d'ADR ou de contrôle se vérifie libre sur `main` et sur chaque branche
 distante avant le commit, et de nouveau à chaque fusion de `main` (P64).
 **Question de l'architecte** : une autre session touche-t-elle le même code en ce moment ?
+
+### 18. Les Functions de l'assistant (lot A2) ne sont pas parties en production
+
+Le 2026-11-21, la fusion du lot A2 (v0.1.92) changeait `functions/`. Son déploiement s'est
+arrêté en vert, car `main` avait déjà avancé, et le commit suivant ne touchait pas
+`functions/`. Le job `gate` comparait chaque commit à son premier parent : le changement de
+`functions/` ne figurait dans aucun diff lu. Le web et les règles sont partis avec le commit
+suivant, mais pas les Functions. Il a fallu un lancement manuel de `deploy.yml`.
+
+**Règle** : `gate` compare le commit au dernier tag `vX.Y.Z` atteignable posé par le job
+`tag` (`github-actions[bot]`), donc après un déploiement réussi. Un tag posé à la main ne
+compte pas. Un tag absent ou un diff illisible déploie les Functions.
+**Question de l'architecte** : la décision de déployer une partie dépend-elle d'un état que
+l'arrêt d'un déploiement précédent laisse en arrière ?

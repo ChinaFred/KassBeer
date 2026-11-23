@@ -6,12 +6,13 @@ name: Déploiement
 # app/pubspec.yaml dépasse celui de la dernière version publiée. Le même APK
 # est publié sur Hosting avec son manifeste apk_release.json, que l'application
 # Android lit au lancement (ADR-012) ; sans nouvel APK, la paire en ligne est
-# recopiée dans le site déployé. Déploie les Cloud Functions (ADR-006) quand le
-# commit change functions/, et à chaque lancement manuel.
+# recopiée dans le site déployé. Déploie les Cloud Functions (ADR-006) quand
+# functions/ change depuis la dernière version déployée, et à chaque lancement manuel.
 #
 # Six jobs, pour que le code compilé ne tourne jamais à côté d'un accès à
 # Google Cloud :
-#   gate             le commit est la tête de main ; change-t-il functions/ ? ;
+#   gate             le commit est la tête de main ; functions/ a-t-il changé depuis
+#                    la dernière version déployée ? ;
 #   plan             configuration présente, faut-il un nouvel APK ? (jeton Google, aucun build) ;
 #   build            web et APK signé, APK et manifeste copiés dans le web
 #                    (secrets de signature, aucun jeton Google) ;
@@ -93,26 +94,39 @@ jobs:
         if: steps.tip.outputs.sha != ''
         with:
           ref: ${{ steps.tip.outputs.sha }}
-          # Le commit et son premier parent : le diff de la fusion sur main.
-          fetch-depth: 2
+          # Tout l'historique et les tags : le diff depuis la dernière version
+          # déployée (tag vX.Y.Z, posé par le job tag après un déploiement réussi).
+          fetch-depth: 0
+          fetch-tags: true
           persist-credentials: false
 
-      - name: Le commit change-t-il functions/ ?
+      - name: functions/ a-t-il changé depuis la dernière version déployée ?
         id: functions
         # Functions déployées seulement quand functions/** change (P14), ou sur un
         # lancement manuel : après un déploiement des Functions en échec, relancer
         # ce workflow à la main les redéploie. Un diff illisible déploie par prudence.
+        # Le diff part du dernier tag vX.Y.Z atteignable posé par le job tag
+        # (github-actions[bot], après un déploiement réussi), et non du premier
+        # parent : un commit de main dépassé avant son déploiement ne reçoit pas ce
+        # tag, et son changement de functions/ part avec le commit suivant. Un tag
+        # posé à la main (Chaîne de travail, étape 6) ne compte pas comme déployé.
         if: steps.tip.outputs.sha != ''
         env:
           EVENT: ${{ github.event_name }}
         run: |
           if [ "$EVENT" = "workflow_dispatch" ]; then
             deploy=true
-          elif ! git cat-file -e HEAD^1 2>/dev/null; then
-            echo "::warning::Premier parent du commit illisible : les Functions sont déployées."
+          elif ! tags=$(git for-each-ref --merged HEAD --sort=-v:refname \
+                --format='%(refname:short) %(taggername)' 'refs/tags/v*'); then
+            echo "::warning::Tags illisibles : les Functions sont déployées."
             deploy=true
-          elif ! files=$(git diff --name-only HEAD^1 HEAD -- functions/); then
-            echo "::warning::Diff illisible : les Functions sont déployées."
+          elif ! base=$(printf '%s\n' "$tags" \
+                | awk '$2 == "github-actions[bot]" && $1 ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ { print $1; exit }') \
+              || [ -z "$base" ]; then
+            echo "::warning::Aucune version déployée lisible (tag vX.Y.Z du job tag) : les Functions sont déployées."
+            deploy=true
+          elif ! files=$(git diff --name-only "$base" HEAD -- functions/); then
+            echo "::warning::Diff illisible depuis $base : les Functions sont déployées."
             deploy=true
           elif [ -n "$files" ]; then
             deploy=true
@@ -792,7 +806,7 @@ jobs:
             if [ "$FUNCTIONS" = true ]; then
               echo "Cloud Functions des tickets."
             else
-              echo "Functions inchangées : functions/ n'a pas changé."
+              echo "Functions inchangées : functions/ n'a pas changé depuis la dernière version déployée."
             fi
             if [ "$APK" = true ]; then
               echo "Nouvel APK publié sur Hosting et sur App Distribution, groupe « brasseurs »."
