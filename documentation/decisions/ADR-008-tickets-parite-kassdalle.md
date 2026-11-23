@@ -824,7 +824,18 @@ Elles fixent la décision ci-dessus.
    départ, 5 minutes au plus après, avec tous ses contrôles. La boîte de confirmation nomme la
    PR, dit qu'elle partira sans autre accord après les contrôles de « Livrer » et qu'elle sera
    comptée au départ, et affiche les lancements restants. Le jeton refusé
-   (`development_invalid_since`, `token_invalid_since`) n'est pas effacé par ce mode.
+   (`development_invalid_since`, `token_invalid_since`) n'est pas effacé par ce mode
+   (remplacé par la décision 10 pour `development_invalid_since`).
+10. **2026-11-23 : « Relancer la file » efface aussi `development_invalid_since`** (question 18
+    de l'utilisateur). Le mode `resume_queue` efface `delivery_queue_halted` et
+    `development_invalid_since` dans la même transaction, jamais `analysis_invalid_since` ni
+    `ticket_status/github.token_invalid_since`. Aucun des deux posé : `changed: false`, rien
+    écrit. Rien n'est lancé, compté ni appelé. Si le jeton de la routine est encore faux, le
+    départ suivant reçoit un 401, 403 ou 404, qui repose `development_invalid_since`, rend
+    compteur et verrou et remet l'entrée en tête. Le bouton s'affiche aussi en tête de file
+    quand `development_invalid_since` est posé, jamais pour le jeton GitHub, qui s'efface seul
+    à la première réponse réussie de GitHub. La boîte ajoute « Si la routine refuse encore, la
+    file s'arrêtera de nouveau, sans décompte. ».
 
 ### Évolutions du réseau acceptées (2026-11-22)
 

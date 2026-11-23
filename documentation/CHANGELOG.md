@@ -18,8 +18,9 @@ atteint, et sort de la file si le code de la pull request change ou si une livra
 bloque. La fiche montre la position dans la file, la raison de l'attente et l'accord donné ;
 la liste porte une pastille « En file 2/3 ». « Retirer de la file » annule l'accord. Une sortie
 de file sans départ est expliquée sur la fiche. Si la routine de développement est en pause ou
-refuse un départ, la file s'arrête sans perdre l'accord ; « Relancer la file », en tête de file,
-la fait repartir dans les 5 minutes, après les mêmes contrôles. Demandé par le ticket #104.
+refuse un départ, ou si son jeton est refusé, la file s'arrête sans perdre l'accord ; une fois
+la cause réglée, « Relancer la file », en tête de file, la fait repartir dans les 5 minutes, après
+les mêmes contrôles. Demandé par le ticket #104.
 
 ### v0.2.15 — technique
 
@@ -41,9 +42,11 @@ Firestore inchangées ; tests de `rules-tests/` étendus aux nouveaux champs. Au
 refus de la routine (pause, appel refusé) remet l'entrée en tête dans la transaction qui rend le
 verrou et arrête la file (`delivery_queue_halted`) jusqu'au prochain lancement réussi ; la tâche
 s'arrête aussi sur `token_invalid_since` et au plafond, avant tout appel à GitHub. Mode
-`resume_queue` (« Relancer la file ») : efface `delivery_queue_halted` quand le ticket est en
-tête (sinon `delivery_queue_not_head`), sans lancement, décompte ni appel à GitHub ou à la
-routine. Aucune dépendance changée. Demandé par le ticket #104.
+`resume_queue` (« Relancer la file ») : efface `delivery_queue_halted` et
+`development_invalid_since` quand le ticket est en tête (sinon `delivery_queue_not_head`),
+jamais `analysis_invalid_since` ni `token_invalid_since`, sans lancement, décompte ni appel à
+GitHub ou à la routine ; un jeton encore faux repose `development_invalid_since` au départ
+suivant, compteur et verrou rendus. Aucune dépendance changée. Demandé par le ticket #104.
 
 ## 2026-11-22
 

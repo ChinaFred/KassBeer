@@ -876,7 +876,8 @@ void main() {
       expect(
         find.text(
           'La PR #34 partira dans 5 minutes au plus, sans autre accord, après '
-          'les mêmes contrôles que « Livrer ». Elle sera comptée au départ.',
+          'les mêmes contrôles que « Livrer ». Elle sera comptée au départ. Si la '
+          'routine refuse encore, la file s\'arrêtera de nouveau, sans décompte.',
         ),
         findsOneWidget,
       );

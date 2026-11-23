@@ -430,6 +430,10 @@ puce « Une action qui appelle un modèle… » de « Coûts variables » admet 
 d'un appui confirmé et qui refait au départ tous les contrôles de l'appui. La liste fermée des
 tâches planifiées passe à `syncTickets` et `startQueuedDelivery`.
 
+Le 2026-11-22 et le 2026-11-23, toujours pour le ticket #104 et sur décision de l'utilisateur,
+P39, P43 et P44 décrivent « Relancer la file » (`mode: "resume_queue"`), qui efface l'arrêt de la
+file et le refus du jeton de la routine de développement, sans rien lancer ni compter.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

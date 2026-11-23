@@ -303,8 +303,10 @@ void main() {
       expect(
         jeton.texte,
         'Dans la file (position 1 sur 1) : la file attend, le jeton de la '
-        'routine de développement est refusé depuis le 22/11/26.',
+        'routine de développement est refusé depuis le 22/11/26. Remplacez-le '
+        'dans Secret Manager, puis appuyez sur « Relancer la file ».',
       );
+      expect(jeton.relancerFile, isTrue);
     });
 
     test(
@@ -419,9 +421,10 @@ void main() {
       expect(
         github.texte,
         '2 livraisons attendent dans la file. La file est arrêtée : GitHub '
-        'refuse le jeton.',
+        'refuse le jeton. Elle repartira une fois le jeton remplacé.',
       );
-      // En tête : aucun « Relancer la file » pour un jeton refusé.
+      // En tête : « Relancer la file » pour le jeton de la routine refusé
+      // (décision 10), jamais pour le jeton GitHub.
       expect(
         ligne(
           EtatLancements(
@@ -429,7 +432,25 @@ void main() {
             developmentInvalidSince: DateTime(2026, 11, 22, 9),
           ),
         ).relancerFile,
-        isFalse,
+        isTrue,
+      );
+      final githubTete = ligneLivraison(
+        ticket: enCours(),
+        livraison: const DocumentTrouve(prete),
+        livraisonEnPanne: false,
+        historique: historiqueVide,
+        quota: EtatLancements(deliveryQueue: [entree('t1', 12)]),
+        now: now,
+        offline: false,
+        appelEnCours: false,
+        jetonGithubRefuseDepuis: DateTime(2026, 11, 22, 9),
+      )!;
+      expect(githubTete.relancerFile, isFalse);
+      expect(
+        githubTete.texte,
+        'Dans la file (position 1 sur 1) : la file attend, GitHub refuse le '
+        'jeton depuis le 22/11/26. Remplacez GITHUB_TICKETS_TOKEN dans Secret '
+        'Manager : la file repartira d\'elle-même dans l\'heure.',
       );
     });
 
@@ -453,7 +474,8 @@ void main() {
       expect(
         relancerFileTexte(34),
         'La PR #34 partira dans 5 minutes au plus, sans autre accord, après les '
-        'mêmes contrôles que « Livrer ». Elle sera comptée au départ.',
+        'mêmes contrôles que « Livrer ». Elle sera comptée au départ. Si la '
+        'routine refuse encore, la file s\'arrêtera de nouveau, sans décompte.',
       );
     });
 

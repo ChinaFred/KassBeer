@@ -2065,4 +2065,59 @@ describe("file des livraisons : « Relancer la file » (décision 9)", () => {
       assert.equal(h.routineCalls.length + h.githubCalls.length, 0);
     }
   });
+
+  it("jeton de la routine refusé seul : development_invalid_since effacé (décision 10)", async () => {
+    const h = harness();
+    const refused = Timestamp.fromMillis(NOW - HOUR);
+    seedQueue(h, [queueEntry("t-1")], {
+      development_invalid_since: refused,
+      analysis_invalid_since: refused,
+    });
+    h.db.seed("ticket_status/github", { token_invalid_since: refused });
+    assert.deepEqual(await call(h, "t-1"), { outcome: "queue_resumed", changed: true });
+    const status = h.db.read("ticket_status/launches") ?? {};
+    assert.equal(status.development_invalid_since, null);
+    assert.equal(status.delivery_queue_halted, undefined);
+    assert.ok(status.analysis_invalid_since instanceof Timestamp, "analysis_invalid_since intact");
+    assert.ok(
+      h.db.read("ticket_status/github")?.token_invalid_since instanceof Timestamp,
+      "token_invalid_since intact",
+    );
+    assert.equal(h.routineCalls.length + h.githubCalls.length, 0);
+    assert.equal(quota(h), 0);
+  });
+
+  it("file arrêtée et jeton refusé : les deux effacés dans la même écriture", async () => {
+    const h = harness();
+    seedQueue(h, [queueEntry("t-1")], {
+      delivery_queue_halted: halted,
+      development_invalid_since: Timestamp.fromMillis(NOW - HOUR),
+    });
+    const writes = h.db.writes.length;
+    assert.deepEqual(await call(h, "t-1"), { outcome: "queue_resumed", changed: true });
+    const status = h.db.read("ticket_status/launches") ?? {};
+    assert.equal(status.delivery_queue_halted, null);
+    assert.equal(status.development_invalid_since, null);
+    assert.equal(h.db.writes.length, writes + 1);
+  });
+
+  it("jeton encore faux : le départ suivant reçoit 401, repose development_invalid_since, rend compteur et verrou, entrée remise", async () => {
+    const h = harness({}, async () => new Response("{}", { status: 401 }));
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")], {
+      development_invalid_since: Timestamp.fromMillis(NOW - HOUR),
+    });
+    await call(h, "t-1");
+    const out = await runQueuedDelivery({ ...h.deps(), lookup: async () => ({ role: "admin" }) });
+    assert.equal(out.kind, "kept");
+    assert.equal(h.routineCalls.length, 1);
+    const status = h.db.read("ticket_status/launches") ?? {};
+    assert.ok(status.development_invalid_since instanceof Timestamp);
+    assert.equal(quota(h), 0);
+    assert.equal(lock(h), null);
+    assert.deepEqual(
+      queue(h).map((e) => e.ticket_id),
+      ["t-1"],
+    );
+  });
 });

@@ -2237,11 +2237,11 @@ décisions Refuser et Clore), lus par l'admin seul. Les règles ne changent pas
 | `count_month` | entier : lancements comptés ce mois-là, les deux compteurs ensemble ; repart de zéro au changement de mois |
 | `per_day` | entier : `LAUNCHES_PER_DAY` de `functions/src/config.ts`, réécrit à chaque écriture. Le client calcule « N restants le JJ/MM » avec `per_day`, `count_day` et `day`, sans constante en Dart ni calcul du jour |
 | `founder_per_day` | entier : `FOUNDER_LAUNCHES_PER_DAY` (5 × `LAUNCHES_PER_DAY`), réécrit à chaque écriture. Le client du compte fondateur (`members/{email}.founder`) lit `founder_count_day` et `founder_per_day` à la place de `count_day` et `per_day` (`EtatLancements.vuePour`) ; sans eux, « inconnu » |
-| `analysis_invalid_since`, `development_invalid_since` | timestamp du premier refus de la routine d'analyse ou de développement (401, 403, 404) ; `null` après le premier lancement réussi de cette routine. Une livraison et une reprise partent par la routine de développement : leur refus pose `development_invalid_since` |
+| `analysis_invalid_since`, `development_invalid_since` | timestamp du premier refus de la routine d'analyse ou de développement (401, 403, 404) ; `null` après le premier lancement réussi de cette routine. Une livraison et une reprise partent par la routine de développement : leur refus pose `development_invalid_since`. « Relancer la file » (`mode: "resume_queue"`) efface aussi `development_invalid_since`, jamais `analysis_invalid_since` (décision de l'utilisateur du 2026-11-23) |
 | `ci_read_denied_since` | timestamp (horloge du serveur) du premier 403 sur `GET /actions/runs` (T5, décision de l'utilisateur du 2026-11-14) : le jeton GitHub n'a pas « Actions : lecture ». Écrit par toute relecture de la CI (webhook, passe horaire, `launchTicketDelivery`) seulement quand l'état change, remis à `null` à la lecture suivante réussie des runs, qui n'a lieu que pour une seule PR éligible. La fiche d'un ticket En cours affiche « Le jeton GitHub ne peut pas lire la CI : sur GitHub, donnez-lui le droit « Actions : lecture ». » seulement si `admin/delivery.eligible_pr_count` vaut 1 : sans PR éligible, le champ peut rester posé après la correction du jeton, et la ligne masquerait « Aucune pull request prête ». Tant qu'il est posé, la liste n'affiche ni « CI en cours », ni « CI en échec », ni « PR prête » et le filtre « À traiter » ignore la PR prête et la CI rouge ; `token_invalid_since` n'est pas posé |
 | `delivery_running` | verrou des livraisons (T5, P44) : `ticket_id`, `issue_number`, `launched_at`, `retry_after` (`launched_at` + 3 h), ou `null`. Pris en transaction par `launchTicketDelivery` avant le comptage ; refus `delivery_running_elsewhere` tant qu'un autre ticket le tient (échéance future, ticket verrouillé toujours `in_progress`) ; rendu si rien n'est parti ; gardé sur `launched` et `unknown` ; libéré par le serveur quand un `## Livraison — blocage` postérieur à `launched_at` est relevé sur ce ticket, ou quand ce ticket quitte `in_progress` (relecture de l'Issue, passe horaire). Pris aussi par `startQueuedDelivery` au départ de la tête de file. Le client compare seulement l'heure à `retry_after` |
 | `delivery_queue` | file des livraisons (amendement du 2026-11-22, P44) : liste ordonnée, `DELIVERY_QUEUE_MAX` (10, `functions/src/config.ts`) entrées au plus, 11 après une entrée remise en tête au départ (décision de l'utilisateur du 2026-11-22), sans durée de validité. Entrée : `ticket_id`, `issue_number`, `pr_number`, `head_sha` (tête relue à l'accord), `queued_at`, `by_uid`, `by_email` (e-mail en minuscules tiré du jeton vérifié, jamais d'un argument, jamais publié ni journalisé). Ajoutée par `launchTicketDelivery` (`mode: "queue"`), retirée par `mode: "unqueue"`, au départ, par Refuser, Clore, une reprise ou la sortie d'« En cours » ; vidée par un blocage relevé |
-| `delivery_queue_halted` | file arrêtée par un refus de la routine au départ (décision de l'utilisateur du 2026-11-22) : `code` (`routine_paused` ou `routine_failed`), `at`, ou `null`. Écrit par `startQueuedDelivery` dans la transaction qui remet l'entrée en tête ; effacé par le prochain lancement réussi de la routine de développement, ou par « Relancer la file » (`launchTicketDelivery`, `mode: "resume_queue"`, décision de l'utilisateur du 2026-11-22). Tant qu'il est posé, `startQueuedDelivery` s'arrête à la première lecture |
+| `delivery_queue_halted` | file arrêtée par un refus de la routine au départ (décision de l'utilisateur du 2026-11-22) : `code` (`routine_paused` ou `routine_failed`), `at`, ou `null`. Écrit par `startQueuedDelivery` dans la transaction qui remet l'entrée en tête ; effacé par le prochain lancement réussi de la routine de développement, ou par « Relancer la file » (`launchTicketDelivery`, `mode: "resume_queue"`, décision de l'utilisateur du 2026-11-22), qui efface aussi `development_invalid_since` (2026-11-23). Tant qu'il est posé, `startQueuedDelivery` s'arrête à la première lecture |
 | `delivery_last` | dernière livraison lancée : `ticket_id`, `issue_number`, `launched_at`, `retry_after` (`launched_at` + 3 h), `reported_at` (timestamp, `null` à l'écriture). Réécrit avec chaque prise du verrou (« Livrer » et départ de la file), remis à sa valeur précédente si rien ne part. `reported_at` posé par le relevé d'un `## Livraison — terminée` ou `## Livraison — blocage` postérieur à `launched_at` sur ce ticket ; un tel blocage vide la file dans la même transaction. Condition de fin : `delivery_last` absent, `reported_at` posé, ou `retry_after` passé |
 
 ### `ai_config/policy` — politique de l'IA (ADR-016)
@@ -4755,9 +4755,10 @@ appel à GitHub.
 quand la précédente a publié son compte rendu.
 
 - `launchTicketDelivery` lit `mode` après `requireAdmin` et avant toute autre lecture :
-  `start` (absent : `start`), `queue` ou `unqueue`, comparés exactement, jamais déduits du
-  verrou ni du statut. Aucune décision nouvelle : les deux modes relèvent de
-  `launch_delivery` (`ALLOWED_DECISIONS_VERSION` reste à 5).
+  `start` (absent : `start`), `queue`, `unqueue` ou `resume_queue`, comparés exactement,
+  jamais déduits du verrou ni du statut. Aucune décision nouvelle : les trois modes de la file
+  (`queue`, `unqueue`, `resume_queue`) relèvent de `launch_delivery`
+  (`ALLOWED_DECISIONS_VERSION` reste à 5).
 - `start` : comme avant, plus le refus `delivery_queue_ahead` dans la transaction du verrou
   quand la file n'est pas vide ; la prise du verrou réécrit `delivery_last`.
 - `queue` : précondition et bail (210 s), contrôles de P43 dans l'ordre de « Livrer » ; puis
@@ -4766,14 +4767,17 @@ quand la précédente a publié son compte rendu.
   (`delivery_queue_full`) ; verrou libre, livraison précédente finie et file vide :
   `delivery_lock_free`. L'entrée s'ajoute en fin de file avec la tête de la PR relue. Rien
   n'est compté. Sortie `{outcome: "queued", position, total}`.
-- `resume_queue` (« Relancer la file », décision 9 de l'amendement, 2026-11-22) : `requireAdmin`
-  puis `mode`, avant toute lecture hors `members/` ; en transaction sur `ticket_status/launches`,
-  `ticketId` en tête de file (sinon refus `delivery_queue_not_head`, rien écrit), puis
-  `delivery_queue_halted` effacé. File non arrêtée : `{outcome: "queue_resumed", changed:
-  false}`, rien écrit. Sinon `{outcome: "queue_resumed", changed: true}`. Rien n'est lancé ni
-  compté, aucun appel à GitHub ni à la routine : le départ se fait par `startQueuedDelivery`, 5
-  minutes au plus après, avec tous ses contrôles. `development_invalid_since` n'est pas effacé
-  par ce mode : seul un lancement réussi l'efface.
+- `resume_queue` (« Relancer la file », décisions 9 et 10 de l'amendement, 2026-11-22 et
+  2026-11-23) : `requireAdmin` puis `mode`, avant toute lecture hors `members/` ; en transaction
+  sur `ticket_status/launches`, `ticketId` en tête de file (sinon refus
+  `delivery_queue_not_head`, rien écrit), puis `delivery_queue_halted` et
+  `development_invalid_since` effacés dans la même écriture ; jamais `analysis_invalid_since`
+  ni `ticket_status/github.token_invalid_since`. Aucun des deux posé : `{outcome:
+  "queue_resumed", changed: false}`, rien écrit. Sinon `{outcome: "queue_resumed", changed:
+  true}`. Rien n'est lancé ni compté, aucun appel à GitHub ni à la routine : le départ se fait
+  par `startQueuedDelivery`, 5 minutes au plus après, avec tous ses contrôles. Si le jeton de
+  la routine est encore refusé, ce départ reçoit un 401, 403 ou 404 : `development_invalid_since`
+  reposé, compteur et verrou rendus, entrée remise en tête (test).
 - `unqueue` : entrée retirée en transaction, `queue_exit` noté (`delivery_queue_removed`),
   aucun appel à GitHub ni à la routine. Sortie `{outcome: "unqueued", changed}` ;
   `changed: false` si le ticket n'était pas en file.
@@ -4808,7 +4812,9 @@ quand la précédente a publié son compte rendu.
   (décision de l'utilisateur du 2026-11-22) ; limite de débit : nouvel essai à l'exécution
   suivante. Les deux arrêts s'effacent au prochain lancement réussi de la routine de
   développement (« Lancer » ou « Relancer le développement », ou « Livrer » après un retrait de
-  la file) ; `delivery_queue_halted` s'efface aussi par « Relancer la file ». Toute autre panne après l'appel (résultat non enregistré) est journalisée et
+  la file) ; les deux s'effacent aussi par « Relancer la file » (décision de l'utilisateur du
+  2026-11-23). `token_invalid_since` (jeton GitHub) s'efface à la première réponse réussie de
+  GitHub, par la passe horaire ou le webhook. Toute autre panne après l'appel (résultat non enregistré) est journalisée et
   traitée comme `unknown` : compteur et verrou gardés, entrée non remise. Une entrée remise
   en tête n'est pas refusée au plafond : la file peut compter `DELIVERY_QUEUE_MAX` + 1, soit
   11 entrées, si une mise en file a eu lieu pendant ce départ (décision de l'utilisateur du

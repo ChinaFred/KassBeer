@@ -246,7 +246,8 @@ const kRelancerFileTitre = 'Relancer la file des livraisons ?';
 String relancerFileTexte(int? prNumber) =>
     '${prNumber == null ? 'La pull request' : 'La PR #$prNumber'} partira '
     'dans 5 minutes au plus, sans autre accord, après les mêmes contrôles que '
-    '« Livrer ». Elle sera comptée au départ.';
+    '« Livrer ». Elle sera comptée au départ. Si la routine refuse encore, la '
+    'file s\'arrêtera de nouveau, sans décompte.';
 
 /// Message après « Relancer la file ».
 String messageRelanceFile(ResultatLancement resultat) =>

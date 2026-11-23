@@ -38,7 +38,7 @@
  * Le bail est libéré à la fin, réussite ou échec.
  *
  * File des livraisons (amendement du 2026-11-22) : `launchTicketDelivery` reçoit `mode`
- * (`start`, `queue`, `unqueue`, `handleDeliveryCall`) ; « Mettre en file » refait les contrôles
+ * (`start`, `queue`, `unqueue`, `resume_queue`, `handleDeliveryCall`) ; « Mettre en file » refait les contrôles
  * de P43 sans rien compter (`queueTicketDelivery`) ; la tâche `startQueuedDelivery` fait partir
  * la tête de file (`runQueuedDelivery`), compte le lancement au départ sur le compteur de
  * l'auteur de l'accord, relu à ce moment.
@@ -199,7 +199,7 @@ export const REPRISE_DELIVERY_RUNNING_MESSAGE =
   "Une livraison est en cours sur ce ticket. Rien n'a été lancé ni décompté.";
 /** `mode` de `launchTicketDevelopment` hors `start` et `resume` (P47). */
 export const LAUNCH_MODE_INVALID = "Mode de lancement : « start » ou « resume » attendu.";
-/** `mode` de `launchTicketDelivery` hors `start`, `queue` et `unqueue` (P43). */
+/** `mode` de `launchTicketDelivery` hors `start`, `queue`, `unqueue` et `resume_queue` (P43). */
 export const DELIVERY_MODE_INVALID =
   "Mode de livraison : « start », « queue », « unqueue » ou « resume_queue » attendu.";
 /** « Relancer la file » refusé : le ticket n'est pas en tête de file. */
@@ -1020,7 +1020,7 @@ export type DeliveryQueueResult =
 /**
  * `launchTicketDelivery` : garde (P30), puis `mode` avant toute autre lecture, puis
  * `ticketId`. `start` : « Livrer » ; `queue` : « Mettre en file », e-mail de l'accord tiré du
- * jeton vérifié ; `unqueue` : « Retirer de la file ».
+ * jeton vérifié ; `unqueue` : « Retirer de la file » ; `resume_queue` : « Relancer la file ».
  */
 export async function handleDeliveryCall(
   req: AuthLike & { data?: unknown },
@@ -1101,10 +1101,10 @@ export async function queueTicketDelivery(
 }
 
 /**
- * « Relancer la file » (décision 9) : efface `delivery_queue_halted` quand `ticketId` est en
- * tête ; aucun lancement, aucun décompte, aucun appel à GitHub ni à la routine. Refus
- * `delivery_queue_not_head` si le ticket n'est pas en tête ; `changed: false` sans écriture si
- * la file n'est pas arrêtée.
+ * « Relancer la file » (décisions 9 et 10) : efface `delivery_queue_halted` et
+ * `development_invalid_since` quand `ticketId` est en tête ; aucun lancement, aucun décompte,
+ * aucun appel à GitHub ni à la routine. Refus `delivery_queue_not_head` si le ticket n'est pas
+ * en tête ; `changed: false` sans écriture si aucun des deux champs n'est posé.
  */
 export async function resumeTicketQueue(
   ticketId: string,

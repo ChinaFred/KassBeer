@@ -1307,11 +1307,15 @@ export async function unqueueDelivery(
 }
 
 /**
- * « Relancer la file » (décision 9 de l'amendement, 2026-11-22) : efface
- * `delivery_queue_halted` en transaction si `ticketId` est en tête de file. Ne lance rien, ne
+ * « Relancer la file » (décisions 9 et 10 de l'amendement, 2026-11-22 et 2026-11-23) : efface
+ * `delivery_queue_halted` et `development_invalid_since` en transaction si `ticketId` est en
+ * tête de file ; jamais `analysis_invalid_since` ni `ticket_status/github.token_invalid_since`.
+ * Si le jeton de la routine est encore refusé, le départ suivant reçoit un 401, 403 ou 404, qui
+ * repose `development_invalid_since`, rend compteur et verrou et remet l'entrée en tête. Ne lance rien, ne
  * compte rien, n'appelle ni GitHub ni la routine : le départ se fait ensuite par
  * `startQueuedDelivery`, avec tous ses contrôles. Rend `not_head` si le ticket n'est pas en
- * tête (refus), `not_halted` si la file n'est pas arrêtée (rien n'est écrit), `cleared` sinon.
+ * tête (refus), `not_halted` si aucun des deux champs n'est posé (rien n'est écrit), `cleared`
+ * sinon.
  */
 export async function resumeHaltedQueue(
   kit: FirestoreKit,
@@ -1321,9 +1325,12 @@ export async function resumeHaltedQueue(
     const snap = await tx.get(statusRef(kit));
     const first = readDeliveryQueue(snap.get("delivery_queue"), millisOf(kit)).views[0];
     if (first === undefined || first.ticketId !== ticketId) return "not_head";
-    const halted = snap.get("delivery_queue_halted");
-    if (halted === null || halted === undefined) return "not_halted";
-    tx.set(statusRef(kit), { delivery_queue_halted: null }, { merge: true });
+    const posed = (v: unknown) => v !== null && v !== undefined;
+    const patch: Record<string, null> = {};
+    if (posed(snap.get("delivery_queue_halted"))) patch.delivery_queue_halted = null;
+    if (posed(snap.get("development_invalid_since"))) patch.development_invalid_since = null;
+    if (Object.keys(patch).length === 0) return "not_halted";
+    tx.set(statusRef(kit), patch, { merge: true });
     return "cleared";
   });
 }
