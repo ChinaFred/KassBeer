@@ -837,7 +837,9 @@ Elles fixent la décision ci-dessus.
     départ suivant reçoit un 401, 403 ou 404, qui repose `development_invalid_since`, rend
     compteur et verrou et remet l'entrée en tête. Le bouton s'affiche aussi en tête de file
     quand `development_invalid_since` est posé, jamais pour le jeton GitHub, qui s'efface seul
-    à la première réponse réussie de GitHub. La boîte ajoute « Si la routine refuse encore, la
+    à la première réponse réussie de GitHub. Dans les deux cas, le jeton remplacé dans Secret
+    Manager n'est lu qu'après un redéploiement des Functions (lancement manuel de
+    « Déploiement ») : les libellés le disent (2026-11-23). La boîte ajoute « Si la routine refuse encore, la
     file s'arrêtera de nouveau, sans décompte. ».
 
 ### Évolutions du réseau acceptées (2026-11-22)

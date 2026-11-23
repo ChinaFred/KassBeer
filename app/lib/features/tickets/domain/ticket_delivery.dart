@@ -547,8 +547,8 @@ String _attendent(int n, String quoi) =>
     return (
       tete:
           'la file attend, le jeton de la routine de développement est refusé'
-          '${depuis(at)}. Remplacez-le dans Secret Manager, puis appuyez sur '
-          '« $kRelancerFile ».',
+          '${depuis(at)}. Remplacez-le dans Secret Manager, relancez le '
+          'déploiement, puis appuyez sur « $kRelancerFile ».',
       court: 'le jeton de la routine de développement est refusé.',
       // « Relancer la file » efface aussi `development_invalid_since`
       // (décision 10 de l'amendement, 2026-11-23).
@@ -579,10 +579,11 @@ String _attendent(int n, String quoi) =>
       tete:
           'la file attend, GitHub refuse le jeton'
           '${depuis(jetonGithubRefuseDepuis)}. Remplacez GITHUB_TICKETS_TOKEN '
-          'dans Secret Manager : la file repartira d\'elle-même dans l\'heure.',
+          'dans Secret Manager et relancez le déploiement : la file repartira '
+          'd\'elle-même dans l\'heure.',
       court:
           'GitHub refuse le jeton. Elle repartira une fois le jeton '
-          'remplacé.',
+          'remplacé et le déploiement relancé.',
       relancer: false,
     );
   }
