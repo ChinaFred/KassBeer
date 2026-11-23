@@ -918,6 +918,14 @@ service cloud.firestore {
       allow list, write: if false;
     }
 
+    // Descriptions des divers (ADR-018, P63) : moment, rôle et goût, sans dose, rédigés par
+    // l'API Claude depuis le poste de l'admin, écrits par ingest/ecrire.mjs seul ; lus par
+    // get à l'ouverture d'une fiche, aucune requête.
+    match /beer_misc_descriptions/{entryId} {
+      allow get: if isMember();
+      allow list, write: if false;
+    }
+
     match /beer_cultures/{entryId} {
       allow get: if isMember();
       allow write: if false;

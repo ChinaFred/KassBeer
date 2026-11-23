@@ -221,6 +221,11 @@ void main() {
       expect(libelleCollection('beer_styles'), 'Styles');
       expect(libelleCollection('import_unresolved'), 'Noms non reconnus');
       expect(libelleCollection('beer_index'), 'Index de la Bibliothèque');
+      expect(libelleCollection('beer_hop_aromas'), 'Descriptions des houblons');
+      expect(
+        libelleCollection('beer_misc_descriptions'),
+        'Descriptions des divers',
+      );
       expect(libelleCollection('style_stats'), 'style_stats');
       expect(libelleNatures('culture'), 'Levures');
       expect(libelleNature('misc'), 'Ajout divers');

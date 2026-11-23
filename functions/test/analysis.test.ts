@@ -181,7 +181,7 @@ describe("relevé des analyses (P32)", () => {
   });
 });
 
-describe("arrêt du développement (ADR-018, lot R1)", () => {
+describe("arrêt du développement (ADR-020, lot R1)", () => {
   const STOP = "## Développement — arrêt\n\nPoint 5 : CLAUDE.md à changer.";
 
   it("« ## Développement — arrêt » du compte 16348852 relevé en development_stop", () => {

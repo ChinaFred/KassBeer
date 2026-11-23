@@ -4,7 +4,7 @@
  *
  * - `analyses` : dix entrées au plus, ordre chronologique, `{comment_id, kind, body,
  *   created_at, updated_at, truncated}` (`analysisModel.ts`) ; `kind` vaut `analysis`,
- *   `development_stop` (ADR-018), `reply` ou `unverified_reply` ;
+ *   `development_stop` (ADR-020), `reply` ou `unverified_reply` ;
  * - `skipped_count` : entrées reconnues écartées au-delà de dix ;
  * - `checked_at` : dernière relecture des commentaires ;
  * - `validated_at` : dernier « validé » connu (webhook ou décision Valider), ne recule pas ;
@@ -119,7 +119,7 @@ export async function recordValidatedAt(ticketId: string, atMs: number): Promise
 }
 
 /**
- * Arrêt du développement relevé (ADR-018, lot R1, décision 5) : la dernière entrée
+ * Arrêt du développement relevé (ADR-020, lot R1, décision 5) : la dernière entrée
  * `developpement` de `tickets/{id}/admin/launches` lancée avant le dernier
  * « ## Développement — arrêt » du compte 16348852 reçoit `ended_by: "stopped"`, et son
  * `retry_after` est ramené à `nowMs` s'il est encore futur (`stoppedDevelopmentEntries`).

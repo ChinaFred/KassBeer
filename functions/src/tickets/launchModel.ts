@@ -257,13 +257,13 @@ export function endLatestEntry(
   return out;
 }
 
-/** `ended_by` d'une entrée `developpement` close par un arrêt relevé (ADR-018, lot R1). */
+/** `ended_by` d'une entrée `developpement` close par un arrêt relevé (ADR-020, lot R1). */
 export const DEVELOPMENT_ENDED_BY_STOP = "stopped";
 
 /**
  * L'historique après un arrêt du développement relevé à `stoppedAtMs` (commentaire
  * `## Développement — arrêt` du compte 16348852) : `endLatestEntry` sur les entrées
- * `developpement`, avec `ended_by: "stopped"`. L'admin peut relancer tout de suite (ADR-018,
+ * `developpement`, avec `ended_by: "stopped"`. L'admin peut relancer tout de suite (ADR-020,
  * décision 5). Le client choisit son texte (« s'est arrêté ») d'après ce champ, sans comparer
  * de dates. `null` si rien ne change. Pure.
  */

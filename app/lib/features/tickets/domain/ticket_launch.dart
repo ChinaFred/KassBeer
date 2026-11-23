@@ -131,7 +131,7 @@ class TicketLaunch {
   /// Fin d'un lancement écrite par le serveur : `blocked` quand un compte
   /// rendu `## Livraison — blocage` a été relevé après une livraison (P45),
   /// `stopped` quand un `## Développement — arrêt` a été relevé après un
-  /// développement (ADR-018). Le client choisit son texte d'après ce champ,
+  /// développement (ADR-020). Le client choisit son texte d'après ce champ,
   /// sans comparer de dates.
   final String? endedBy;
 
@@ -228,7 +228,7 @@ const kTicketLaunchHistoryMax = 20;
 const kLivraisonFinBlocage = 'blocked';
 
 /// `ended_by` d'un développement clos par un arrêt
-/// (`DEVELOPMENT_ENDED_BY_STOP` du serveur, ADR-018).
+/// (`DEVELOPMENT_ENDED_BY_STOP` du serveur, ADR-020).
 const kDeveloppementFinArret = 'stopped';
 
 /// Ligne de la barre d'un développement arrêté par la session, à la place de
@@ -242,7 +242,7 @@ String ligneDeveloppementArrete(DateTime at) {
 }
 
 /// Avertissement de la boîte « Relancer le développement » après un arrêt
-/// de la session (ADR-018).
+/// de la session (ADR-020).
 String avertissementRelanceApresArret(DateTime at) {
   final a = at.toLocal();
   return 'Le développement du ${formatDateChiffres(a)} à ${formatHeure(a)} '

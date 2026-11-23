@@ -1122,7 +1122,7 @@ describe("passe horaire : ticket_status/launches remis au jour", () => {
   });
 });
 
-describe("arrêt du développement relevé (ADR-018, lot R1)", () => {
+describe("arrêt du développement relevé (ADR-020, lot R1)", () => {
   const HOUR = 60 * 60 * 1000;
   const OWNER = 16348852;
   const stop = (id: number, atMs: number, authorId = OWNER) => ({

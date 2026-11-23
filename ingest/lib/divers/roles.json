@@ -1,0 +1,15 @@
+[
+  { "key": "clarify", "label": "Clarifier" },
+  { "key": "water_minerals", "label": "Corriger les minéraux de l'eau" },
+  { "key": "adjust_ph", "label": "Ajuster le pH" },
+  { "key": "yeast_nutrient", "label": "Nourrir la levure" },
+  { "key": "mash_conversion", "label": "Aider la conversion de l'amidon" },
+  { "key": "antifoam", "label": "Limiter la mousse" },
+  { "key": "stabilize", "label": "Stabiliser, limiter l'oxydation" },
+  { "key": "flavor", "label": "Aromatiser" },
+  { "key": "bitterness", "label": "Apporter de l'amertume" },
+  { "key": "acidity", "label": "Apporter de l'acidité" },
+  { "key": "color", "label": "Colorer" },
+  { "key": "body", "label": "Donner du corps" },
+  { "key": "other", "label": "Autre usage" }
+]

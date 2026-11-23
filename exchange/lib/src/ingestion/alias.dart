@@ -1,8 +1,9 @@
 import 'cles.dart';
 
 /// Table d'alias écrite à la main : noms de DIY Dog (`alxiw/punkapi`,
-/// `e6c12ab`) sans correspondance exacte dans les référentiels, et l'entrée
-/// qu'ils désignent sans doute possible (`DATA_SOURCES.md`, « Résolution des
+/// `e6c12ab`) et noms français des divers des recettes du groupe (ADR-018)
+/// sans correspondance exacte dans les référentiels, et l'entrée qu'ils
+/// désignent sans doute possible (`DATA_SOURCES.md`, « Résolution des
 /// noms DIY Dog »). Une correspondance douteuse n'est pas écrite : le nom
 /// reste non résolu et part dans `import_unresolved/`.
 ///
@@ -327,6 +328,18 @@ const List<Alias> kAlias = [
     'American Oak Wood- chip medium toast, Ageing soaked in Rye Whisky',
     'misc-oak-chips',
   ),
+  // Noms français des divers des recettes du groupe (ADR-018, décision de
+  // l'utilisateur du 2026-11-22). « Acide lactique 80 % » n'est pas rattaché :
+  // la Bibliothèque ne connaît que l'acide lactique à 88 %.
+  Alias(_m, 'Coriandre', 'misc-coriander-seeds'),
+  Alias(_m, 'Chlorure de calcium', 'misc-calcium-chloride'),
+  Alias(_m, 'Gypse', 'misc-gypsum'),
+  Alias(_m, 'Gypse (sulfate de calcium)', 'misc-gypsum'),
+  Alias(_m, 'Orange peel amère', 'misc-bitter-orange-peel'),
+  Alias(_m, "Écorce d'orange amère", 'misc-bitter-orange-peel'),
+  Alias(_m, 'Orange peel douce', 'misc-sweet-orange-peel'),
+  Alias(_m, "Écorce d'orange douce", 'misc-sweet-orange-peel'),
+  Alias(_m, "Écorces d'orange douce", 'misc-sweet-orange-peel'),
   // Levures : souche chez son producteur.
   Alias.souche('W34/70', 'Fermentis', 'W-34/70'),
   Alias.souche('Saflager S189', 'Fermentis', 'S-189'),

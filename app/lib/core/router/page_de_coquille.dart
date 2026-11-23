@@ -11,6 +11,7 @@ class PageDeCoquille extends GoRoute {
     this.pleineLargeur = false,
     this.titreSelon,
     this.retourSelon,
+    this.retourParPopPermis = false,
     this.pleineLargeurSelon,
     this.retourParPopSelon,
     super.builder,
@@ -34,6 +35,12 @@ class PageDeCoquille extends GoRoute {
   /// Retour qui dépend de la largeur ou du chemin ; `null` : [retour].
   final String? Function(BuildContext context, GoRouterState state)?
   retourSelon;
+
+  /// Vrai : ouverte par `context.push` avec `extra: AppRoutes.retourParPop`,
+  /// la page revient par `pop` à la page qui l'a ouverte (fiche de la
+  /// Bibliothèque ouverte depuis une recette, ADR-018, lot D4) ; sinon, ou
+  /// sans page à dépiler, le retour ouvre [retour].
+  final bool retourParPopPermis;
 
   /// Pleine largeur qui dépend de la largeur ; `null` : [pleineLargeur].
   final bool Function(BuildContext context)? pleineLargeurSelon;

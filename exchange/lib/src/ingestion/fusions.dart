@@ -13,8 +13,8 @@ import 'sources.dart';
 /// porte fausse. Table validée par l'utilisateur le 2026-11-15.
 ///
 /// Chaque ligne a son cas de test (`exchange/test/fusions_test.dart`). Une
-/// ligne qui ne désigne aucune entrée lue arrête la préparation
-/// ([StateError]).
+/// ligne qui ne désigne aucune entrée lue, ou une ligne sans entrée (alias
+/// seul) dont le document n'est pas lu, arrête la préparation ([StateError]).
 
 /// Entrée d'une source désignée par une ligne de fusion.
 class EntreeDesignee {
@@ -147,6 +147,13 @@ const List<Fusion> kFusions = [
   Fusion(
     'Hallertauer Tradition',
     entrees: [EntreeDesignee(_s003, 'Hallertau Tradition')],
+  ),
+  // « Hallertau Hersbrucker », nom d'une recette du groupe (2026-11-22) : aucune
+  // source ne l'écrit, la ligne l'ajoute en alias de « Hallertauer Hersbrucker ».
+  Fusion(
+    'Hallertauer Hersbrucker',
+    entrees: [],
+    alias: ['Hallertau Hersbrucker'],
   ),
   Fusion(
     'Hallertauer Mittelfrüh',

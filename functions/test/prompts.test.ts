@@ -232,7 +232,7 @@ describe("prompts des routines (P40)", () => {
     }
   });
 
-  it("développement : arrêts sous « ## Développement — arrêt », jamais un « ## Analyse » publié (ADR-018, R1)", () => {
+  it("développement : arrêts sous « ## Développement — arrêt », jamais un « ## Analyse » publié (ADR-020, R1)", () => {
     const dev = PROMPTS.developpement.replace(/\s+/g, " ");
     const published = [...dev.matchAll(/publie un commentaire qui commence par « ([^»]+) »/g)].map(
       (m) => m[1].trim(),

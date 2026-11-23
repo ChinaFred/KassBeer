@@ -1,12 +1,12 @@
-// Tarif et estimation des postes hop_aroma_generation (ADR-013, section 5) et
-// culture_aroma_generation (ADR-017, section 6). Le tarif vient de
-// import/ingest/aromes/tarif.json, commun aux deux natures, écrit par l'admin avec sa date et
-// sa source ; aucun tarif n'est écrit dans le code. Sans fichier lisible, ou s'il a plus de
-// 90 jours, aucune estimation, donc aucun envoi. Le nom du poste vient de la nature
-// (natures/hop.mjs, natures/culture.mjs).
+// Tarif et estimation des textes rédigés par l'API (ADR-013, section 5 ; ADR-018, section 1).
+// Le tarif vient de import/ingest/tarif.json, commun à toutes les natures, écrit par l'admin
+// avec sa date et sa source ; aucun tarif n'est écrit dans le code. Sans fichier lisible, ou
+// s'il a plus de 90 jours, aucune estimation, donc aucun envoi. Le nom du poste de coût vient
+// de la nature, jamais de ce fichier.
 
-import { readFileSync } from "node:fs";
-import { estDate } from "./validation.mjs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { estDate } from "./texte.mjs";
 
 /// Âge maximal du tarif, en jours.
 export const AGE_MAX_TARIF_JOURS = 90;
@@ -16,14 +16,52 @@ export const MESSAGE_TARIF_INCONNU = "Tarif inconnu : estimation impossible";
 /// Prix lus, en dollars par million de jetons.
 const PRIX = ["input", "output", "cache_write", "cache_read", "batch_input", "batch_output"];
 
-/// Erreur d'utilisation de generer-aromes.mjs : message montré tel quel, code de sortie 2.
-export class ErreurAromes extends Error {}
+/// Erreur d'utilisation d'un générateur (generer-aromes.mjs…) : message montré tel quel,
+/// code de sortie 2.
+export class ErreurRedaction extends Error {}
 
-/// Lit le tarif de [chemin] pour [modele] à la date [maintenant]. Lève ErreurAromes
+/// Nom du fichier de tarif, à côté des dossiers des natures (import/ingest/tarif.json par
+/// défaut).
+export const FICHIER_TARIF = "tarif.json";
+
+/// Chemins du tarif pour le dossier des natures [dossierBase] (import/ingest/aromes/ pour les
+/// houblons et les levures, dont les fichiers sont dans levures/ ; import/ingest/divers/) :
+/// `chemin`, le seul lu, dans le dossier parent (import/ingest/tarif.json), et `ancien`,
+/// l'emplacement d'avant ADR-018 et ADR-019 (import/ingest/aromes/tarif.json), qui n'est
+/// plus lu. Jamais calculé depuis le sous-dossier d'une nature : pour les levures, son parent
+/// est import/ingest/aromes/.
+export function cheminsTarif(dossierBase) {
+  return {
+    chemin: join(dossierBase, "..", FICHIER_TARIF),
+    ancien: join(dossierBase, FICHIER_TARIF),
+  };
+}
+
+/// Lit le tarif commun pour [dossierBase] (voir cheminsTarif). Si seul l'ancien fichier
+/// existe, refus « Tarif inconnu » qui dit de le déplacer : aucun repli sur l'ancien
+/// emplacement. Rend aussi `ancienIgnore` : vrai si l'ancien fichier existe à côté du
+/// nouveau, pour le signaler à l'écran.
+export function lireTarifCommun(dossierBase, modele, maintenant, existe = existsSync) {
+  const { chemin, ancien } = cheminsTarif(dossierBase);
+  if (!existe(chemin) && existe(ancien)) {
+    throw new ErreurRedaction(
+      `${MESSAGE_TARIF_INCONNU} (${chemin} absent ; ${ancien} n'est plus lu depuis ADR-018 et ADR-019 : ` +
+        `déplacez-le d'un dossier vers le haut, dans ${chemin}).`,
+    );
+  }
+  return {
+    tarif: lireTarif(chemin, modele, maintenant),
+    chemin,
+    ancien,
+    ancienIgnore: existe(ancien),
+  };
+}
+
+/// Lit le tarif de [chemin] pour [modele] à la date [maintenant]. Lève ErreurRedaction
 /// (« Tarif inconnu : estimation impossible », avec la raison) si le fichier manque, est
 /// illisible, vise un autre modèle, ou a plus de 90 jours.
 export function lireTarif(chemin, modele, maintenant, lire = (c) => readFileSync(c, "utf8")) {
-  const refus = (raison) => new ErreurAromes(`${MESSAGE_TARIF_INCONNU} (${raison}).`);
+  const refus = (raison) => new ErreurRedaction(`${MESSAGE_TARIF_INCONNU} (${raison}).`);
   let tarif;
   try {
     tarif = JSON.parse(lire(chemin));
@@ -51,9 +89,9 @@ export function lireTarif(chemin, modele, maintenant, lire = (c) => readFileSync
   return { model: tarif.model, date: tarif.date, source: tarif.source, prix };
 }
 
-/// Borne haute d'un envoi : pour chaque élément (houblon ou levure), jetons d'entrée comptés
-/// × tarif d'entrée (écriture du cache comprise en appels directs) + max_tokens × tarif de
-/// sortie. Rend le montant total et le nombre d'éléments qui tiennent dans [budget] (dans l'ordre).
+/// Borne haute d'un envoi : pour chaque entrée, jetons d'entrée comptés × tarif d'entrée
+/// (écriture du cache comprise en appels directs) + max_tokens × tarif de sortie. Rend le
+/// montant total et le nombre d'entrées qui tiennent dans [budget] (dans l'ordre).
 export function borneHaute(jetonsEntree, { tarif, mode, maxTokens, budget = null }) {
   const p = tarif.prix;
   const entree = mode === "lot" ? p.batch_input : Math.max(p.input, p.cache_write);

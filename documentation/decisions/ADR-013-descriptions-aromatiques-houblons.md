@@ -11,6 +11,12 @@
   `ingest/lister-houblons-recettes.mjs` devient `ingest/lister-ingredients-recettes.mjs` et
   `exchange/bin/lister_houblons_recettes.dart` devient `lister_ingredients_recettes.dart`. La
   limite de 20 $ de l'espace de travail passe à 70 $ jusqu'au 30 novembre 2026 au plus tard.
+- **Amendé par** : ADR-018 (2026-11-21) : moteur commun `ingest/lib/redaction/` et tarif
+  commun `import/ingest/tarif.json` ; l'ancien `import/ingest/aromes/tarif.json` n'est plus lu.
+- **Note du 2026-11-22 (ADR-019, lot R2 fait, v0.2.12)** : houblons, levures et divers passent
+  par le seul moteur `ingest/lib/redaction/` ; l'ancien moteur (`ingest/lib/aromes/generation.mjs`,
+  `natures/`, `client.mjs`, `tarif.mjs`) est retiré. Les commandes de `generer-aromes.mjs` ne
+  changent pas, l'empreinte d'un houblon non plus (test figé `2b7ca0ed…`).
 
 Décisions de l'utilisateur du 2026-11-14 :
 
@@ -391,7 +397,7 @@ liste (P22).
   Aucun nom, texte ni état de relecture : l'utilisateur ne veut pas d'étiquette « Relu » dans la
   liste.
 - Construit par `ingest/ecrire.mjs` (`indexAromes`, `lib/execution.mjs`) à chaque passage qui lit
-  `aromes.json`, depuis les seules entrées acceptées par `trierAromes`, et contrôlé par la liste
+  `aromes.json`, depuis les seules entrées acceptées par `trierRedigees(NATURE_HOUBLON, …)`, et contrôlé par la liste
   blanche de `beer_index` (`ingest/lib/validation.mjs`, taille sous 900 Ko). Inchangé, il n'est
   pas réécrit. La préparation de `exchange/` ne lit pas `aromes.json` : un `hop_aromas` préparé
   est refusé.

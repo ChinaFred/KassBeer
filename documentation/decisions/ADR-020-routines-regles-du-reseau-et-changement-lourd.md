@@ -1,15 +1,15 @@
-# ADR-018 — Routines des tickets : arrêt du développement distinct de l'analyse, règles du réseau modifiables avec accord lié à la tête de la PR, changement lourd depuis l'écran
+# ADR-020 — Routines des tickets : arrêt du développement distinct de l'analyse, règles du réseau modifiables avec accord lié à la tête de la PR, changement lourd depuis l'écran
 
 - **Statut** : accepté (2026-11-22), décisions de l'utilisateur du 2026-11-22 sur les sept
   questions de l'avis (section « Décisions de l'utilisateur »)
-- **Date** : 2026-11-22
+- **Date** : 2026-11-22. Numéro ADR-018 à la rédaction, devenu ADR-020 le 2026-11-23 : `main` avait pris ADR-018 (divers) et ADR-019 (leçon 17) ; contrôles proposés P63 et P64 devenus P65 et P66.
 - **Remplace** : —. Modifie ADR-008 sur cinq points : « Prompts » (points 3, 4 et 5 du
   prompt de développement, point 5 du prompt d'analyse, parties « Livraison » L2, L3, L8 et
   L10, et lieu des prompts), « Analyses et « Répondre » » (deux natures d'entrée de plus dans
   `admin/analysis`), « Livraison » (accord des règles du réseau, mode de
   `launchTicketDelivery`, champs de `admin/delivery`, motifs de refus), la liste des fichiers
   interdits à la session de développement (décision 15 du lot T5), et le gabarit des textes
-  publiés (P24 : commentaire d'accord). ADR-008 reçoit « Modifié par : ADR-018 ». ADR-002 et
+  publiés (P24 : commentaire d'accord). ADR-008 reçoit « Modifié par : ADR-020 ». ADR-002 et
   ADR-006 restent inchangés.
 
 ## Contexte
@@ -340,7 +340,7 @@ keystore. La lecture du diff avant l'accord est la protection.
 
 `CLAUDE.md` change : « Tickets », « Chaîne de travail » (étape 0 depuis une routine),
 « Logique dupliquée », P10, P24, P25, P32, P33, P39, P40, P43, P44, P45, et deux contrôles
-nouveaux (P63, P64). `exigences-techniques.md` : `admin/analysis`, `admin/delivery`, mode de
+nouveaux (P65, P66). `exigences-techniques.md` : `admin/analysis`, `admin/delivery`, mode de
 `launchTicketDelivery`, renvoi vers `documentation/prompts-routines.md`. `guide-reseau.md` :
 routines et changement lourd.
 
@@ -380,10 +380,10 @@ Acceptées avec l'ADR (2026-11-22). La session principale les applique par le sk
 [contrôle] P10 (relecteur-regles), R2 — ajout — règles du réseau changées sans le signaler — « une PR de ticket qui touche `NETWORK_RULES_PATTERNS` est signalée à l'utilisateur dans toute session qui la relit ; `documentation/prompts-routines.md` rejoint la liste des fichiers dont le diff est signalé »
 ```
 ```
-[contrôle] P63 (relecteur-regles), R2, nouveau — catégories incohérentes entre serveur et prompt — « `functions/src/tickets/delivery.ts` porte seul `FORBIDDEN_DEVELOPMENT_PATTERNS`, `NETWORK_RULES_PATTERNS` (`CLAUDE.md` à la racine, `scripts/changelog-recent.mjs`, `scripts/changelog-recent.test.mjs`, `documentation/prompts-routines.md`) et `SENSITIVE_DELIVERY_PATTERNS` (union des catégories 1 et 3) ; le point 5, L3a et L3b du prompt de développement en sont les copies, égalités rejouées par `functions/test/prompts.test.ts`, avec le gabarit d'accord ; tout autre fichier de `scripts/` reste interdit à la routine ; une extension de `NETWORK_RULES_PATTERNS` demande un ADR ; le corps d'une PR de règles liste les sections et les contrôles de `CLAUDE.md` changés » | ADR-018
+[contrôle] P65 (relecteur-regles), R2, nouveau — catégories incohérentes entre serveur et prompt — « `functions/src/tickets/delivery.ts` porte seul `FORBIDDEN_DEVELOPMENT_PATTERNS`, `NETWORK_RULES_PATTERNS` (`CLAUDE.md` à la racine, `scripts/changelog-recent.mjs`, `scripts/changelog-recent.test.mjs`, `documentation/prompts-routines.md`) et `SENSITIVE_DELIVERY_PATTERNS` (union des catégories 1 et 3) ; le point 5, L3a et L3b du prompt de développement en sont les copies, égalités rejouées par `functions/test/prompts.test.ts`, avec le gabarit d'accord ; tout autre fichier de `scripts/` reste interdit à la routine ; une extension de `NETWORK_RULES_PATTERNS` demande un ADR ; le corps d'une PR de règles liste les sections et les contrôles de `CLAUDE.md` changés » | ADR-020
 ```
 ```
-[contrôle] P64 (securite), R3, nouveau — décision d'architecture tirée d'un texte non fiable — « changement lourd depuis l'écran : avis publié par la routine d'analyse seule sous « ## Avis d'architecture » ; une question par analyse ; la routine de développement n'écrit un ADR « accepté » que si l'analyse validée suit l'avis, porte « Questions ouvertes : aucune », et si le `validé` d'acteur 16348852 est postérieur aux deux ; une évolution du réseau qui touche un fichier interdit est écrite dans le corps de la PR, jamais appliquée ; un refus n'écrit rien dans `decisions/` » | ADR-018
+[contrôle] P66 (securite), R3, nouveau — décision d'architecture tirée d'un texte non fiable — « changement lourd depuis l'écran : avis publié par la routine d'analyse seule sous « ## Avis d'architecture » ; une question par analyse ; la routine de développement n'écrit un ADR « accepté » que si l'analyse validée suit l'avis, porte « Questions ouvertes : aucune », et si le `validé` d'acteur 16348852 est postérieur aux deux ; une évolution du réseau qui touche un fichier interdit est écrite dans le corps de la PR, jamais appliquée ; un refus n'écrit rien dans `decisions/` » | ADR-020
 ```
 ```
 [règle] CLAUDE.md « Logique dupliquée », R2 — ligne remplacée — divergence entre listes du prompt et du serveur — | point 5, L3a, L3b et gabarit d'accord de `documentation/prompts-routines.md` | fichiers interdits à la routine, règles du réseau, sensibles pour la livraison, accord | prompt de la routine de développement | `functions/src/tickets/delivery.ts` (`FORBIDDEN_DEVELOPMENT_PATTERNS`, `NETWORK_RULES_PATTERNS`, `SENSITIVE_DELIVERY_PATTERNS`, gabarit d'accord), égalités rejouées par `functions/test/prompts.test.ts` |
@@ -392,7 +392,7 @@ Acceptées avec l'ADR (2026-11-22). La session principale les applique par le sk
 [règle] CLAUDE.md « Tickets », R2 — ajout — PR de règles livrée sans lecture — « Une PR de ticket qui modifie `CLAUDE.md`, `scripts/changelog-recent.mjs`, son test ou `documentation/prompts-routines.md` porte l'état « Règles du réseau modifiées ». Elle ne part que par « Approuver les règles et livrer », après lecture du diff sur GitHub ; l'accord vaut pour la tête affichée, et un nouveau commit l'annule. »
 ```
 ```
-[skill] changement-lourd, R3 — section « Depuis une routine » — décision prise sans l'utilisateur — « Dans la routine d'analyse, l'architecte écrit dans `decisions/` de la copie de travail ; rien n'est commité. La session publie « ## Avis d'architecture », puis une seule question dans « ## Analyse ». L'accord est l'appui sur « Valider ». La routine de développement écrit l'ADR au statut accepté. Un refus laisse l'avis sur l'Issue comme seule trace, sans fichier « rejeté » (ADR-018, décision 7). »
+[skill] changement-lourd, R3 — section « Depuis une routine » — décision prise sans l'utilisateur — « Dans la routine d'analyse, l'architecte écrit dans `decisions/` de la copie de travail ; rien n'est commité. La session publie « ## Avis d'architecture », puis une seule question dans « ## Analyse ». L'accord est l'appui sur « Valider ». La routine de développement écrit l'ADR au statut accepté. Un refus laisse l'avis sur l'Issue comme seule trace, sans fichier « rejeté » (ADR-020, décision 7). »
 ```
 
 ## Lots
@@ -403,8 +403,8 @@ modifier ou livrer au moment où ils partent : ils se font dans une session de l
 | Lot | Fichiers touchés | Par qui | Raison |
 |---|---|---|---|
 | R1 — arrêt du développement | `functions/src/tickets/analysisModel.ts`, `functions/src/tickets/launchModel.ts` et `sync.ts` (`ended_by: "stopped"`), `functions/test/analysis.test.ts`, `launch.test.ts`, `prompts.test.ts` ; `app/lib/features/tickets/domain/ticket_analysis.dart`, `ticket_launch.dart`, `presentation/section_analyses.dart`, leurs tests ; prompt de développement dans `exigences-techniques.md` (recollé sur claude.ai) ; `CLAUDE.md` (P32, P33, P40) ; `CHANGELOG.md`, `app/pubspec.yaml` | session de l'admin | `CLAUDE.md` est encore interdit à la routine |
-| R2 — règles du réseau et accord | `functions/src/tickets/delivery.ts` (trois catégories, champs, gabarit), `launch.ts` (mode `network_rules`), `functions/src/index.ts` (commentaire seul), `functions/test/delivery.test.ts`, `launch.test.ts`, `prompts.test.ts` ; `app/lib/features/tickets/domain/ticket_delivery.dart`, section « Livraison », liste, boîte « Approuver les règles et livrer », tests ; `documentation/prompts-routines.md` créé, prompts retirés de `exigences-techniques.md` ; `CLAUDE.md` (P10, P24, P25, P39, P40, P43, P44, P45, P63, « Logique dupliquée », « Tickets ») ; `guide-reseau.md` | session de l'admin | `delivery.ts` est sensible pour la livraison, et le lot crée la catégorie 2 elle-même |
-| R3 — changement lourd depuis l'écran | `functions/src/tickets/analysisModel.ts` et `analyses.ts` (nature `architecture`, 60 000 caractères, `architecture_in_last_analysis`), `functions/test/analysis.test.ts`, `prompts.test.ts` ; `app/lib/features/tickets/` (carte « Avis d'architecture », boîte de « Valider »), tests ; `documentation/prompts-routines.md` (deux prompts recollés) ; `.claude/skills/changement-lourd/SKILL.md` ; `CLAUDE.md` (P32, P33, P39, P40, P64, « Chaîne de travail ») ; `guide-reseau.md` | session de l'admin | `.claude/**` reste interdit à la routine |
+| R2 — règles du réseau et accord | `functions/src/tickets/delivery.ts` (trois catégories, champs, gabarit), `launch.ts` (mode `network_rules`), `functions/src/index.ts` (commentaire seul), `functions/test/delivery.test.ts`, `launch.test.ts`, `prompts.test.ts` ; `app/lib/features/tickets/domain/ticket_delivery.dart`, section « Livraison », liste, boîte « Approuver les règles et livrer », tests ; `documentation/prompts-routines.md` créé, prompts retirés de `exigences-techniques.md` ; `CLAUDE.md` (P10, P24, P25, P39, P40, P43, P44, P45, P65, « Logique dupliquée », « Tickets ») ; `guide-reseau.md` | session de l'admin | `delivery.ts` est sensible pour la livraison, et le lot crée la catégorie 2 elle-même |
+| R3 — changement lourd depuis l'écran | `functions/src/tickets/analysisModel.ts` et `analyses.ts` (nature `architecture`, 60 000 caractères, `architecture_in_last_analysis`), `functions/test/analysis.test.ts`, `prompts.test.ts` ; `app/lib/features/tickets/` (carte « Avis d'architecture », boîte de « Valider »), tests ; `documentation/prompts-routines.md` (deux prompts recollés) ; `.claude/skills/changement-lourd/SKILL.md` ; `CLAUDE.md` (P32, P33, P39, P40, P66, « Chaîne de travail ») ; `guide-reseau.md` | session de l'admin | `.claude/**` reste interdit à la routine |
 
 Estimations non mesurées : R1, 160 à 280 lignes ; R2, 800 à 1 200 lignes ; R3, 180 à 320
 lignes, surtout du texte de prompt. Après R2, les tickets dont la PR ne touche que la

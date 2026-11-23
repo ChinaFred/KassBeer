@@ -19,7 +19,7 @@ String dateAnalyse(String nom, DateTime? at) =>
 
 /// Section « Analyses (N) » de la fiche d'Admin (ADR-008, P33) : entrées
 /// relevées sur l'Issue, dans l'ordre chronologique, en Markdown. N compte
-/// les analyses seules : un arrêt du développement (ADR-018) a sa carte, sans
+/// les analyses seules : un arrêt du développement (ADR-020) a sa carte, sans
 /// compter comme une analyse. Corps en Markdown par [CorpsMarkdown].
 class SectionAnalyses extends ConsumerWidget {
   const SectionAnalyses({super.key, required this.ticket});

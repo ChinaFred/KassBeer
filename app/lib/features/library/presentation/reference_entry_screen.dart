@@ -17,6 +17,7 @@ import 'couleur_ebc.dart';
 import 'libelles_bibliotheque.dart';
 import 'library_providers.dart';
 import 'section_aromes.dart';
+import 'section_description_divers.dart';
 import 'section_aromes_levure.dart';
 
 /// Textes des états d'une fiche de la Bibliothèque.
@@ -252,6 +253,7 @@ class _Fiche extends StatelessWidget {
             Text('Autres noms : ${f.aliases.join(', ')}', style: muted),
           ..._valeurs(f),
           if (f is FicheHoublon) SectionAromes(id: f.id),
+          if (f is FicheDivers) SectionDescriptionDivers(id: f.id),
           if (f is FicheLevure)
             SectionAromesLevure(id: f.id, temperature: f.temperature),
           SectionProvenance(provenance: f.provenance),
@@ -302,7 +304,10 @@ class _Fiche extends StatelessWidget {
         value: f.yieldPct == null ? null : formatPourcent(f.yieldPct!),
       ),
       LigneFiche(label: 'Producteur', value: f.producer),
-      LigneFiche(label: 'Origine', value: f.origin),
+      LigneFiche(
+        label: 'Origine',
+        value: origineAffichee(f.originFr, f.origin),
+      ),
     ],
     FicheHoublon() => [
       const TitreSection('Valeurs'),
@@ -324,7 +329,10 @@ class _Fiche extends StatelessWidget {
         label: 'Usage',
         value: f.purpose == null ? null : libelleUsageHoublon(f.purpose!),
       ),
-      LigneFiche(label: 'Origine', value: f.origin),
+      LigneFiche(
+        label: 'Origine',
+        value: origineAffichee(f.originFr, f.origin),
+      ),
     ],
     FicheLevure() => [
       const TitreSection('Valeurs'),

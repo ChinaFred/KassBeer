@@ -11,7 +11,7 @@ const kTicketAnswerMaxLength = 4000;
 
 /// Nature d'une entrée relevée sur l'Issue (P32) : analyse du mainteneur
 /// (`## Analyse…`), arrêt d'une session de développement
-/// (`## Développement — arrêt`, ADR-018), réponse publiée par « Répondre »
+/// (`## Développement — arrêt`, ADR-020), réponse publiée par « Répondre »
 /// (`## Précisions…` dont l'identifiant est dans `answer_comment_ids`), ou
 /// `## Précisions…` du même compte publié hors de l'application.
 enum TicketAnalysisKind {

@@ -2,7 +2,7 @@
  * État d'une Issue appliqué à son ticket : statut, décisions permises, réponse
  * « Réponse : » du compte 16348852, analyses, arrêts du développement et précisions
  * (`admin/analysis`, P32), entrée `developpement` close par un arrêt relevé (`admin/launches`,
- * `ended_by: "stopped"`, ADR-018), comptes rendus de livraison (`admin/delivery`, P45), verrou des livraisons libéré quand le ticket
+ * `ended_by: "stopped"`, ADR-020), comptes rendus de livraison (`admin/delivery`, P45), verrou des livraisons libéré quand le ticket
  * quitte « En cours » (P44), PR de livraison et version. Appelé par la passe horaire (`sync.ts`), par le webhook
  * (`webhook.ts`) et par une décision qui trouve son Issue déjà fermée (`decisions.ts`).
  */

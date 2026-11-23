@@ -5,7 +5,7 @@
  *
  * Relevé (P32) : seuls comptent les commentaires du compte `maintainerId` (identifiant
  * numérique, jamais le login), dont le texte en NFC, espaces de tête retirées, commence par
- * `## Analyse` (`analysis`), `## Développement — arrêt` (`development_stop`, ADR-018, lot R1)
+ * `## Analyse` (`analysis`), `## Développement — arrêt` (`development_stop`, ADR-020, lot R1)
  * ou `## Précisions` (`reply` si l'identifiant figure dans `answer_comment_ids`, écrit par le
  * serveur seul, sinon `unverified_reply`). Dix entrées au plus, les plus récentes, 20 000
  * caractères chacune, coupées à une ligne vide. Un arrêt n'est jamais une analyse :
@@ -75,7 +75,7 @@ export function isAnswerComment(
 
 /**
  * Vrai si ce commentaire est un arrêt de la routine de développement du compte `maintainerId`
- * (ADR-018, lot R1). Pure.
+ * (ADR-020, lot R1). Pure.
  */
 export function isDevelopmentStopComment(
   comment: Pick<CommentView, "authorId" | "body">,
@@ -203,7 +203,7 @@ export interface SameAnswer {
 
 /**
  * Où en est la dernière analyse, lue dans les commentaires (un arrêt du développement n'est
- * ni une analyse ni une réponse, ADR-018) :
+ * ni une analyse ni une réponse, ADR-020) :
  * - `hasAnalysis` : au moins une analyse du compte `maintainerId` ;
  * - `same` : une précision du compte `maintainerId` qui suit la dernière analyse (n'importe
  *   où sans analyse) porte déjà `expectedBody`, publiée depuis l'application (`reply`) ou

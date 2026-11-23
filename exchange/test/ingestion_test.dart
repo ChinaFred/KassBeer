@@ -418,6 +418,8 @@ void main() {
         expect(e['purpose'], d['purpose'], reason: '${e['id']}');
         expect(e['origin'], d['origin'], reason: '${e['id']}');
         expect(e.containsKey('origin'), d.containsKey('origin'));
+        expect(e['origin_fr'], d['origin_fr'], reason: '${e['id']}');
+        expect(e.containsKey('origin_fr'), d.containsKey('origin'));
       }
       expect(
         h.firstWhere((e) => (e as Map)['id'] == 'hop-houblon-test'),
@@ -988,6 +990,29 @@ void main() {
         expect(absorbes, isNot(contains(a.cible)), reason: a.nom);
       }
     }
+  });
+
+  test('table d\'alias du projet : noms français des divers du groupe', () {
+    // ADR-018, décision de l'utilisateur du 2026-11-22.
+    final attendus = {
+      'Coriandre': 'misc-coriander-seeds',
+      'Chlorure de calcium': 'misc-calcium-chloride',
+      'Gypse': 'misc-gypsum',
+      'Gypse (sulfate de calcium)': 'misc-gypsum',
+      'Orange peel amère': 'misc-bitter-orange-peel',
+      "Écorce d'orange amère": 'misc-bitter-orange-peel',
+      'Orange peel douce': 'misc-sweet-orange-peel',
+      "Écorce d'orange douce": 'misc-sweet-orange-peel',
+      "Écorces d'orange douce": 'misc-sweet-orange-peel',
+    };
+    final table = {
+      for (final a in kAlias)
+        if (a.nature == NatureReferentiel.misc) cleNormalisee(a.nom): a.cible,
+    };
+    for (final MapEntry(:key, :value) in attendus.entries) {
+      expect(table[cleNormalisee(key)], value, reason: key);
+    }
+    expect(table[cleNormalisee('Acide lactique 80 %')], isNull);
   });
 
   test('table d\'alias du projet : chaque cible existe dans sa nature', () {

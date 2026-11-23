@@ -1226,7 +1226,7 @@ class _FicheState extends ConsumerState<_Fiche> {
         error: false,
         ton: null,
       ),
-      // Texte choisi d'après `ended_by`, écrit par le serveur (ADR-018).
+      // Texte choisi d'après `ended_by`, écrit par le serveur (ADR-020).
       _ when relanceDe != null && (aRelancer?.arreteParLaSession ?? false) => (
         icon: Icons.error_outline,
         progress: null,

@@ -221,6 +221,28 @@ kassbeer`, une collection par lancement. Sans l'option, rien n'est supprimé. Le
 préparés sont ceux de `beer_cultures.json`, refusés compris. Les autres collections restent
 refusées.
 
+## Note du 2026-11-22 : origine en français, alias « Hallertau Hersbrucker »
+
+Origine (décision 4, lot suivant livré) : `origin` garde la graphie canonique anglaise. L'export
+BeerJSON et BeerXML la lit, la génération des arômes l'envoie au modèle et la compte dans
+`input_sha256`, et la table de fusion l'emploie (`origine: 'United States'`). La changer aurait
+rendu « changés » les 442 houblons. La préparation écrit à côté `origin_fr`, nom français du
+pays, dans `beer_fermentables/`, `beer_hops/` et les entrées de `beer_index/hops`. La table
+`kPaysFr` vit dans `origines.dart` seul, une entrée par pays de `kPays`, avec un test qui
+vérifie que les deux listes se couvrent ; un pays sans nom français arrête la préparation.
+`donneesEnvoyees` (`ingest/lib/aromes/validation.mjs`) n'envoie pas `origin_fr` : les
+empreintes d'arômes ne changent pas (test). L'application affiche `origin_fr`, et `origin` tel
+qu'en base pour un document pas encore réécrit, sans traduction en Dart (P56).
+`ingest/lib/validation.mjs` accepte `origin_fr` comme texte borné, seulement avec `origin`, sans
+liste de pays.
+
+Table de fusion : une recette du groupe nomme « Hallertau Hersbrucker », que le référentiel
+connaît sous « Hallertauer Hersbrucker » (`hop-hallertauer-hersbrucker`). Aucune source n'écrit
+ce nom. La ligne `Fusion('Hallertauer Hersbrucker', entrees: [], alias: ['Hallertau
+Hersbrucker'])` ajoute l'alias, comme les autres noms du 003 de la section Hallertau. Une ligne
+sans entrée dont le document n'est pas lu arrête la préparation (`StateError`, test). Le test
+« aucun nom normalisé ne désigne deux houblons » passe avec l'alias.
+
 ## Sources
 
 - Code lu le 2026-11-15 sur la branche à jour de `main` (v0.1.57) : fichiers cités dans le
