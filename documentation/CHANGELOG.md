@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-23
 
-### v0.2.17 — fonctionnel
+### v0.2.18 — fonctionnel
 
 Résumé : « Mettre en file » enregistre votre accord : une livraison part seule après la précédente.
 
@@ -22,7 +22,7 @@ refuse un départ, ou si son jeton est refusé, la file s'arrête sans perdre l'
 la cause réglée, « Relancer la file », en tête de file, la fait repartir dans les 5 minutes, après
 les mêmes contrôles. Demandé par le ticket #104.
 
-### v0.2.17 — technique
+### v0.2.18 — technique
 
 File des livraisons (ADR-008, amendement du 2026-11-22). `launchTicketDelivery` reçoit `mode`
 (`start`, `queue`, `unqueue`) ; `ticket_status/launches` porte `delivery_queue`
@@ -47,6 +47,17 @@ s'arrête aussi sur `token_invalid_since` et au plafond, avant tout appel à Git
 jamais `analysis_invalid_since` ni `token_invalid_since`, sans lancement, décompte ni appel à
 GitHub ou à la routine ; un jeton encore faux repose `development_invalid_since` au départ
 suivant, compteur et verrou rendus. Aucune dépendance changée. Demandé par le ticket #104.
+
+### v0.2.17 — technique
+
+`deploy.yml` : le job `gate` décide du déploiement des Functions par le diff de `functions/`
+depuis le dernier tag `vX.Y.Z` atteignable posé par le job `tag` (`github-actions[bot]`), au
+lieu du diff avec le premier parent. Un tag posé à la main ne compte pas. Un commit
+de `main` dépassé avant son déploiement n'a pas de tag, et son changement de `functions/` part
+maintenant avec le commit suivant (leçon 18 : Functions du lot A2 restées en arrière). Un tag
+absent ou un diff illisible déploie les Functions ; le lancement manuel les déploie toujours.
+L'extraction du job `gate` lit tout l'historique et les tags (`fetch-depth: 0`). Documents :
+`exigences-techniques.md` (table des jobs de `deploy.yml`), `lecons-apprises.md`.
 
 ### v0.2.16 — fonctionnel
 
