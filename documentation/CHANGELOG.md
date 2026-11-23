@@ -6,6 +6,17 @@ données, outillage), ou les deux.
 
 ## 2026-11-23
 
+### v0.2.17 — technique
+
+`deploy.yml` : le job `gate` décide du déploiement des Functions par le diff de `functions/`
+depuis le dernier tag `vX.Y.Z` atteignable posé par le job `tag` (`github-actions[bot]`), au
+lieu du diff avec le premier parent. Un tag posé à la main ne compte pas. Un commit
+de `main` dépassé avant son déploiement n'a pas de tag, et son changement de `functions/` part
+maintenant avec le commit suivant (leçon 18 : Functions du lot A2 restées en arrière). Un tag
+absent ou un diff illisible déploie les Functions ; le lancement manuel les déploie toujours.
+L'extraction du job `gate` lit tout l'historique et les tags (`fetch-depth: 0`). Documents :
+`exigences-techniques.md` (table des jobs de `deploy.yml`), `lecons-apprises.md`.
+
 ### v0.2.16 — fonctionnel
 
 Résumé : Un arrêt du développement d'un ticket s'affiche à part et se relance tout de suite.
