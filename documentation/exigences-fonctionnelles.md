@@ -992,7 +992,8 @@ pull request en cours », pendant une relance du développement), « CI en cours
 « CI de la pull request en cours »), « CI en échec » (icône d'erreur, ton d'erreur, lu « CI de
 la pull request en échec », sans développement de ce ticket en cours, ticket #63), « PR prête » (icône de livraison, ton tertiaire, lu
 « Pull request prête à livrer ») ; l'état de la pull request n'est lu que pour les tickets En cours, et sans lui
-aucune pastille ne s'affiche. Tant que GitHub refuse au jeton la lecture de la CI, ni « CI en
+aucune pastille ne s'affiche. Un ticket En cours dont la pull request change les règles du
+réseau porte en plus l'étiquette « Règles du réseau modifiées » (ton d'erreur, ADR-020). Tant que GitHub refuse au jeton la lecture de la CI, ni « CI en
 cours », ni « CI en échec », ni « PR prête » ne s'affiche. Pas de point de non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
 l'application à jour. ».
 
@@ -1092,7 +1093,19 @@ rendus déjà affichés s'il y en a ; hors ligne, absent du cache : « Livraison
 hors ligne. » ; document illisible : « Livraison illisible. Mettez l'application à jour. » ;
 aucun : « Aucun compte rendu de livraison. », suivi de « Appuyez sur « Livrer », en bas de la
 fiche. » quand le bouton « Livrer » est affiché et actif (pas pour « Relancer la
-livraison »).
+livraison ») ; « Appuyez sur « Approuver les règles et livrer », en bas de la fiche. » pour une
+pull request de règles.
+
+**Règles du réseau modifiées** (ADR-020, lot R2). Une pull request de ticket qui modifie
+`CLAUDE.md`, le script des Nouveautés ou son test, ou le fichier des prompts des routines
+change les règles que suivent toutes les sessions Claude Code et le contenu de l'écran
+Nouveautés. Pour un ticket En cours, la section « Livraison » affiche alors, en tête :
+l'étiquette « Règles du réseau modifiées » ; « Fichiers : CLAUDE.md, … » ; « Contrôles
+changés : P10, P65. » (« … : aucun. », ou « Contrôles changés : liste illisible. ») ; l'état de
+l'accord, « Accord donné pour la tête abc1234. » ou « Accord annulé par un nouveau commit. »
+(pendant une livraison de ce ticket : « Accord donné pour la tête abc1234. Livraison en
+cours. », le commit de fusion de la session changeant la tête) ;
+« Ouvrir la PR #34 ». Tout vient de l'état écrit par le serveur.
 
 **Lancements (N).** Section repliée, lue par l'administrateur seul (ADR-008, T4) : les sessions
 Claude Code lancées sur ce ticket, la plus récente en haut, vingt au plus. Le titre reste
@@ -1193,6 +1206,12 @@ cet ordre de priorité :
 | dernière livraison close par un blocage (marquée par le serveur) | « La livraison du 13/11/26 à 14:05 s'est arrêtée. Lisez le blocage dans la section Livraison. » (ton d'erreur) | « Relancer la livraison » |
 | échéance passée sans fusion ni blocage | « La livraison du 13/11/26 à 14:05 n'a rien fusionné en trois heures. Vérifiez sur claude.ai/code qu'aucune session ne tourne encore. » | « Relancer la livraison » |
 | PR prête | « PR #34 prête : CI verte le 13/11/26 à 14:05. » (sans date : « PR #34 prête : CI verte. »), icône de validation en couleur primaire | « Livrer » |
+| PR prête qui change les règles du réseau (ADR-020) | « PR #34 prête : CI verte. Elle change les règles du réseau : lisez le diff avant d'approuver. » | « Approuver les règles et livrer », à la place de « Livrer », relance comprise |
+| PR de règles qui touche aussi un fichier protégé | « PR #34 prête. Elle change les règles du réseau et un fichier protégé (…) : fusionnez-la vous-même après relecture. » | aucun |
+| PR de règles dont les contrôles changés ne peuvent pas être lus | « PR #34 prête. Les contrôles changés ne peuvent pas être lus : fusionnez-la vous-même après relecture. » | aucun |
+| PR de règles dont la liste des fichiers dépasse 1 000 | « La liste des fichiers de la PR #34 est trop longue pour être vérifiée. Fusionnez-la vous-même après relecture. » | aucun |
+| PR de règles sans tête connue | « État de la PR incomplet : rouvrez la fiche dans un instant. » | aucun |
+| PR de règles, CI en cours | « CI de la PR #34 en cours. « Approuver les règles et livrer » sera proposé quand elle sera verte. » | aucun |
 
 Hors ligne, « Livrer » et « Relancer le développement » sont inactifs et « Lancer une session
 demande le réseau. » s'affiche sous les boutons. La barre se redessine aux échéances du verrou,
@@ -1308,6 +1327,33 @@ relecture. … ») : « Livrer » reste alors inactif tant que la boîte est ouv
 plus prête, CI pas verte, lecture de la CI refusée au jeton (« Le jeton GitHub ne peut pas
 lire la CI : sur GitHub, donnez-lui le droit « Actions : lecture ». Rien n'a été lancé ni décompté. »), plusieurs pull
 requests, livraison d'un autre ticket en cours, correction en cours. Aucun de ces refus ne compte un lancement.
+Une pull request qui change les règles du réseau est refusée par « Livrer » : « Cette PR
+change les règles du réseau : utilisez « Approuver les règles et livrer ». Rien n'a été lancé
+ni décompté. »
+
+**Boîte « Approuver les règles et livrer ? »** (ADR-020, lot R2, P39). Ouverte par un appui
+sur le bouton seul. Elle affiche : l'effet de « Livrer » ; « PR #34, tête abc1234. » ;
+« Fichiers des règles du réseau : » et un fichier par ligne ; « Contrôles changés : P10,
+P65. » (ou « aucun ») ; un encadré d'avertissement « Ces fichiers sont les règles que suivent
+toutes les sessions Claude Code et le contenu de l'écran Nouveautés. Lisez le diff sur GitHub
+avant d'approuver. » ; le bouton « Lire le diff », qui ouvre
+`https://github.com/ChinaFred/KassBeer/pull/34/files` hors de l'application ; « La fusion met
+l'application en ligne pour tout le groupe, sur le web et sur Android, sans autre accord.
+Appuyer sur « Approuver et livrer » vaut accord sur ces règles et accord de fusion. » ; le type
+du ticket ; la ligne du quota ; l'encadré du coût ; le champ « Numéro de la PR » (chiffres
+seuls), avec l'aide « Saisissez le numéro de la PR pour approuver » et, pour une saisie qui a
+autant de chiffres que le numéro, ou plus, et en diffère, l'erreur « Ce n'est pas le numéro de la PR #34. ». Entrée
+n'envoie rien. Boutons « Annuler » (focus initial) et « Approuver et livrer », actif
+seulement quand le champ vaut le numéro de la PR. L'appel envoie la tête affichée : le
+serveur publie sur l'Issue un commentaire d'accord lié à cette tête, puis lance la livraison.
+Un nouveau commit sur la PR annule l'accord ; il faut approuver de nouveau. Refus propres,
+dans la boîte, sans décompte : « La PR a changé depuis l'affichage. Relisez-la, puis approuvez
+à nouveau. » et « Cette PR ne change pas les règles du réseau : utilisez « Livrer ». », suivis
+de « Fermez cette boîte pour relire la PR. », bouton inactif tant que la boîte est ouverte
+(même chose pour le refus de « Livrer » sur une PR de règles) ; « Les contrôles changés ne
+peuvent pas être lus : fusionnez-la vous-même après relecture. » (bouton inactif) ;
+« L'accord n'a pas pu être publié sur GitHub. Réessayez. » (bouton actif) ; et les refus de
+« Livrer ».
 
 **Boîte « Relancer le développement ? »** « Une session Claude Code va reprendre la PR #34,
 corriger la CI et pousser sur la même branche. Elle ne fusionne pas. » ; ligne du quota ;

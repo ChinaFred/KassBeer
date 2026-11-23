@@ -6,6 +6,60 @@ données, outillage), ou les deux.
 
 ## 2026-11-23
 
+### v0.2.18 — fonctionnel
+
+Résumé : Une pull request qui change les règles des sessions se livre depuis la fiche, après votre accord.
+
+Pour l'administrateur : une session de développement lancée depuis un ticket peut maintenant
+modifier les règles que suivent toutes les sessions Claude Code et le script de l'écran
+Nouveautés. Sa pull request porte alors l'étiquette « Règles du réseau modifiées », dans la
+liste et sur la fiche, avec les fichiers et les contrôles changés. « Livrer » laisse la place à
+« Approuver les règles et livrer ». La boîte liste les fichiers et les contrôles, propose
+« Lire le diff » et demande de saisir le numéro de la pull request. L'accord vaut pour l'état
+affiché de la pull request : un nouveau commit l'annule, et il faut approuver à nouveau.
+
+### v0.2.18 — technique
+
+Lot R2 d'ADR-020, demandé par l'administrateur (#110 et #114 arrêtés sur `CLAUDE.md` et
+`scripts/changelog-recent.mjs`). `functions/src/tickets/delivery.ts` porte trois catégories :
+`FORBIDDEN_DEVELOPMENT_PATTERNS` (interdits à la routine), `NETWORK_RULES_PATTERNS`
+(`CLAUDE.md` à la racine, `scripts/changelog-recent.mjs`, son test,
+`documentation/prompts-routines.md`, chemins exacts) et `SENSITIVE_DELIVERY_PATTERNS` (union
+des catégories 1 et 3). `CLAUDE.md` à la racine n'est plus un fichier protégé de la livraison ;
+le reste de `scripts/` et tout `CLAUDE.md` d'un sous-dossier le restent. Chaque relecture
+d'une PR retenue lit ses fichiers (`listPullRequestFiles`, `patch` de `CLAUDE.md` seul gardé)
+et écrit dans `admin/delivery` `network_rules_files`, `network_rules_controls` (numéros `Pn`
+seuls), `network_rules_controls_complete`, `sensitive_files`, `files_complete` et
+`network_rules_ack_valid`, recalculé sur la tête. `launchTicketDelivery` reçoit `mode`
+(`deliver` par défaut, `network_rules`) et `headSha`, sans callable ni secret nouveau ;
+refus `delivery_network_rules`, `delivery_head_changed`, `delivery_no_network_rules`,
+`delivery_network_rules_unreadable`, `delivery_ack_publish_failed`, chacun sans décompte. En
+mode `network_rules`, le serveur prend le verrou, écrit l'accord (`network_rules_ack`),
+publie sur l'Issue le commentaire « ## Accord — règles du réseau » sur gabarit fixe (reconnu
+par sa ligne `Accord <id>`, jamais publié deux fois), puis compte et lance la livraison ; le
+verrou est rendu si la publication échoue. Décision de l'utilisateur du 2026-11-23 : dans
+les deux modes, le texte envoyé à la routine devient `livraison #N <tête>`, avec la tête que
+le serveur a relue et contrôlée (motif de `routine.ts` étendu à ce seul cas). La liste des
+contrôles changés est incomplète si `CLAUDE.md` n'est qu'un ancien chemin ou au-delà de 60
+numéros. Client : `TicketDelivery` lit ces champs ;
+`BoiteLancement` reçoit la variante « Approuver les règles et livrer ? » (numéro de PR à
+saisir, lien du diff `…/pull/<n>/files` relu par `Uri.tryParse`, tête envoyée telle
+qu'affichée) ; `BlocReglesDuReseau` et `PastilleReglesDuReseau`. Les deux prompts des routines
+passent dans `documentation/prompts-routines.md`, que lit `functions/test/prompts.test.ts`.
+Le prompt de développement change : règles de session tirées de `git show
+origin/main:CLAUDE.md`, règles du réseau permises au point 5, L3 coupé en L3a (blocage) et
+L3b (accord exigé), tête du texte de lancement exigée en L2 et nommée par l'accord,
+`git rev-list --first-parent <tête accordée>..HEAD` en L8, blocage sans retour en L5 pour une PR de règles quand origin/main avance (L8) ou que la version échoue (L7), aucun commentaire « ## Accord »
+publié par une session. **À recoller sur claude.ai** (routine de
+développement) depuis `documentation/prompts-routines.md` après la fusion ; le prompt
+d'analyse ne change pas. Entre le déploiement des Functions et le recollage, aucune livraison :
+l'ancien prompt refuse `livraison #N <tête>` (« texte inattendu »), et le lancement resterait
+compté avec le verrou tenu 3 h. `CLAUDE.md` : P10, P24, P25, P35, P39, P40, P43, P44, P45 modifiés, P65
+ajouté, lignes « Logique dupliquée » et « Tickets ». Cette PR touche `CLAUDE.md` et
+`delivery.ts` : elle se fusionne à la main. Aucun paquet ajouté ni monté. `main.dart.js`
+(`flutter build web --release`) : 6 015 386 octets sur `main` (v0.2.17), 6 023 389 octets
+avec ce changement (+ 8 003).
+
 ### v0.2.17 — technique
 
 `deploy.yml` : le job `gate` décide du déploiement des Functions par le diff de `functions/`

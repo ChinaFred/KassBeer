@@ -431,9 +431,29 @@ analyse, et un arrêt relevé après le lancement clôt l'entrée `developpement
 P40 interdit à la routine de développement tout commentaire qui commence par « ## Analyse »,
 publie ses arrêts sous « ## Développement — arrêt » et écarte les « ## Analyse — compléments »
 de la spécification (point 3). Le prompt de la routine de développement
-(`exigences-techniques.md`, « Routines des tickets ») change aux points 3, 4, 5 et 6 : il se
+(alors dans `exigences-techniques.md`, « Routines des tickets ») change aux points 3, 4, 5 et 6 : il se
 recolle sur claude.ai après la fusion. Les lots R2 et R3 changeront les autres contrôles cités
 par l'ADR.
+
+Le 2026-11-23, avec le lot R2 d'ADR-020, les règles du réseau deviennent modifiables par la
+routine de développement. Trois catégories de fichiers sont écrites une seule fois dans
+`functions/src/tickets/delivery.ts` : interdits à la routine (`FORBIDDEN_DEVELOPMENT_PATTERNS`),
+règles du réseau (`NETWORK_RULES_PATTERNS` : `CLAUDE.md` à la racine,
+`scripts/changelog-recent.mjs`, son test, `documentation/prompts-routines.md`) et sensibles
+pour la livraison seule. Le reste de `scripts/` et tout `CLAUDE.md` d'un sous-dossier restent
+interdits. Une PR de ticket qui touche la deuxième catégorie porte l'état « Règles du réseau
+modifiées » et ne part que par « Approuver les règles et livrer » : l'admin lit le diff sur
+GitHub, saisit le numéro de la PR, et le serveur publie un commentaire d'accord lié à la tête
+de la PR ; un nouveau commit l'annule. Les prompts des deux routines quittent
+`exigences-techniques.md` pour `documentation/prompts-routines.md`, lu par
+`functions/test/prompts.test.ts`. Le prompt de développement prend ses règles de session dans
+`git show origin/main:CLAUDE.md`, coupe L3 en L3a (blocage) et L3b (accord exigé) et contrôle
+en L8 les commits ajoutés après la tête accordée, et bloque sans retour en L5 quand origin/main avance ou que la version échoue (L7, L8) ; le serveur lui envoie `livraison #N <tête>`,
+avec la tête qu'il a contrôlée, que L2 exige égale à celle de la PR (décision de
+l'utilisateur du 2026-11-23). Il se recolle sur claude.ai juste après le déploiement.
+Le prompt d'analyse ne change pas (il change au lot R3). Contrôles modifiés : P10, P24, P25,
+P35, P39, P40, P43, P44, P45 ; contrôle ajouté : P65 (`relecteur-regles`) ; lignes « Logique
+dupliquée » et « Tickets » de `CLAUDE.md` mises à jour. Aucun agent, skill ni hook nouveau.
 
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :

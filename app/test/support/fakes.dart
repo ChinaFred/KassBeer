@@ -1044,12 +1044,18 @@ class FakeTicketsRepository implements TicketsRepository {
   Future<ResultatLancement> Function() launchResult = () =>
       Completer<ResultatLancement>().future;
 
+  /// Tête accordée de chaque lancement (`null` : « Livrer » ou autre
+  /// action), dans l'ordre de [launches].
+  final teteAccordees = <String?>[];
+
   @override
   Future<ResultatLancement> launch({
     required String ticketId,
     required ActionLancement action,
+    String? teteAccordee,
   }) {
     launches.add((ticketId: ticketId, action: action));
+    teteAccordees.add(teteAccordee);
     return launchResult();
   }
 
