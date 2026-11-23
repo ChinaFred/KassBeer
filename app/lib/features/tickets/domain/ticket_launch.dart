@@ -80,7 +80,11 @@ enum ActionLancement {
 enum ModeLivraison {
   livrer('start'),
   mettreEnFile('queue'),
-  retirer('unqueue');
+  retirer('unqueue'),
+
+  /// « Relancer la file » : efface l'arrêt de la file posé par un refus de la
+  /// routine (décision 9 de l'amendement, 2026-11-22).
+  relancerFile('resume_queue');
 
   const ModeLivraison(this.storedValue);
 
@@ -658,6 +662,10 @@ enum IssueLancement {
   /// « Retirer de la file » appliqué ([ResultatLancement.changed] faux : le
   /// ticket n'était plus en file).
   retire,
+
+  /// « Relancer la file » appliqué ([ResultatLancement.changed] faux : la
+  /// file n'était plus arrêtée).
+  fileRelancee,
 }
 
 /// Codes des refus de livraison qui demandent une fusion à la main : la PR
@@ -720,6 +728,12 @@ class ResultatLancement {
         IssueLancement.enFile,
         position: entier(map['position']),
         total: entier(map['total']),
+      );
+    }
+    if (map['outcome'] == 'queue_resumed') {
+      return ResultatLancement(
+        IssueLancement.fileRelancee,
+        changed: map['changed'] != false,
       );
     }
     if (map['outcome'] == 'unqueued') {
@@ -789,6 +803,10 @@ class ResultatLancement {
       changed
           ? 'Ticket retiré de la file.'
           : 'Ce ticket n\'était plus dans la file.',
+    IssueLancement.fileRelancee =>
+      changed
+          ? 'File des livraisons relancée.'
+          : 'La file des livraisons n\'était plus arrêtée.',
   };
 }
 
@@ -797,6 +815,8 @@ class ResultatLancement {
 /// file (`DELIVERY_QUEUE_MAX`) : aucune constante en Dart.
 const kRefusFile = <String, String>{
   'delivery_queue_already': 'Ce ticket est déjà dans la file.',
+  'delivery_queue_not_head':
+      'Ce ticket n\'est plus en tête de la file. Rien n\'a été relancé.',
   'delivery_lock_free':
       'La livraison précédente est finie : appuyez sur « Livrer ».',
   'delivery_queue_ahead':

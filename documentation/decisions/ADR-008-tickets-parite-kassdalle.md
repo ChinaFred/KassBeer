@@ -816,6 +816,15 @@ Elles fixent la décision ci-dessus.
 8. **2026-11-22 : file à 11 entrées.** Une entrée remise en tête après un départ rendu n'est
    pas refusée au plafond : la file peut compter `DELIVERY_QUEUE_MAX` + 1 entrées si une mise
    en file a eu lieu pendant ce départ. `queue` refuse toujours au-delà de 10.
+9. **2026-11-22 : « Relancer la file ».** `launchTicketDelivery` reçoit le mode `resume_queue`,
+   offert en tête de file quand `delivery_queue_halted` est posé. Après `requireAdmin`, il
+   efface ce champ en transaction si le ticket est en tête (sinon refus
+   `delivery_queue_not_head` ; file non arrêtée : `changed: false`, rien écrit). Il ne lance
+   rien, ne compte rien et n'appelle ni GitHub ni la routine : `startQueuedDelivery` fait le
+   départ, 5 minutes au plus après, avec tous ses contrôles. La boîte de confirmation nomme la
+   PR, dit qu'elle partira sans autre accord après les contrôles de « Livrer » et qu'elle sera
+   comptée au départ, et affiche les lancements restants. Le jeton refusé
+   (`development_invalid_since`, `token_invalid_since`) n'est pas effacé par ce mode.
 
 ### Évolutions du réseau acceptées (2026-11-22)
 

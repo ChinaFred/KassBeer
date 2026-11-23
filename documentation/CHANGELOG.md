@@ -17,7 +17,9 @@ comme de nuit. Elle est comptée au départ, attend la remise à zéro si le pla
 atteint, et sort de la file si le code de la pull request change ou si une livraison se
 bloque. La fiche montre la position dans la file, la raison de l'attente et l'accord donné ;
 la liste porte une pastille « En file 2/3 ». « Retirer de la file » annule l'accord. Une sortie
-de file sans départ est expliquée sur la fiche. Demandé par le ticket #104.
+de file sans départ est expliquée sur la fiche. Si la routine de développement est en pause ou
+refuse un départ, la file s'arrête sans perdre l'accord ; « Relancer la file », en tête de file,
+la fait repartir dans les 5 minutes, après les mêmes contrôles. Demandé par le ticket #104.
 
 ### v0.2.13 — technique
 
@@ -38,8 +40,10 @@ prompt de livraison cite « Livrer » ou « Mettre en file » : à recoller sur 
 Firestore inchangées ; tests de `rules-tests/` étendus aux nouveaux champs. Au départ, un
 refus de la routine (pause, appel refusé) remet l'entrée en tête dans la transaction qui rend le
 verrou et arrête la file (`delivery_queue_halted`) jusqu'au prochain lancement réussi ; la tâche
-s'arrête aussi sur `token_invalid_since` et au plafond, avant tout appel à GitHub. Aucune
-dépendance changée. Demandé par le ticket #104.
+s'arrête aussi sur `token_invalid_since` et au plafond, avant tout appel à GitHub. Mode
+`resume_queue` (« Relancer la file ») : efface `delivery_queue_halted` quand le ticket est en
+tête (sinon `delivery_queue_not_head`), sans lancement, décompte ni appel à GitHub ou à la
+routine. Aucune dépendance changée. Demandé par le ticket #104.
 
 ### v0.2.12 — technique
 

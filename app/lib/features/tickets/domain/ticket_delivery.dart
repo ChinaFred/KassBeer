@@ -277,6 +277,7 @@ class LigneLivraison {
     this.detailErreur = false,
     this.sortie,
     this.repriseAussi = false,
+    this.relancerFile = false,
   });
 
   final TonLivraison ton;
@@ -312,6 +313,10 @@ class LigneLivraison {
   /// « Retirer de la file ».
   final bool repriseAussi;
 
+  /// Tête de file arrêtée par la routine : « Relancer la file » à côté de
+  /// « Retirer de la file ».
+  final bool relancerFile;
+
   LigneLivraison _avecSortie(({String texte, bool erreur})? s) => s == null
       ? this
       : LigneLivraison(
@@ -331,6 +336,7 @@ class LigneLivraison {
           detailErreur: detailErreur,
           sortie: s,
           repriseAussi: repriseAussi,
+          relancerFile: relancerFile,
         );
 }
 
@@ -393,6 +399,7 @@ LigneLivraison? ligneLivraison({
   required bool appelEnCours,
   ModeLivraison? modeEnCours,
   String? uid,
+  DateTime? jetonGithubRefuseDepuis,
 }) {
   if (ticket.status != TicketStatus.inProgress || ticket.issueNumber == null) {
     return null;
@@ -481,6 +488,7 @@ LigneLivraison? ligneLivraison({
       appelEnCours: appelEnCours,
       modeEnCours: modeEnCours,
       uid: uid,
+      jetonGithubRefuseDepuis: jetonGithubRefuseDepuis,
     );
   }
   return _ligneHorsFile(
@@ -492,6 +500,7 @@ LigneLivraison? ligneLivraison({
     offline: offline,
     appelEnCours: appelEnCours,
     modeEnCours: modeEnCours,
+    jetonGithubRefuseDepuis: jetonGithubRefuseDepuis,
   )._avecSortie(_sortieAffichee(doc.queueExit, historique));
 }
 
@@ -521,6 +530,62 @@ LigneLivraison? ligneLivraison({
 String _attendent(int n, String quoi) =>
     n == 1 ? '1 $quoi attend' : '$n ${quoi}s attendent';
 
+/// Pourquoi la file des livraisons ne peut pas partir, lu dans les champs du
+/// serveur seuls : jeton de la routine de développement refusé
+/// (`development_invalid_since`), file arrêtée par la routine
+/// (`delivery_queue_halted`), jeton GitHub refusé (`ticket_status/github`).
+/// [tete] : suite de la ligne de la tête de file ; [court] : fin de la ligne
+/// d'un ticket hors file ; [relancer] : « Relancer la file » proposé. `null`
+/// si rien n'arrête la file.
+({String tete, String court, bool relancer})? _arretFile(
+  EtatLancements? quota,
+  DateTime? jetonGithubRefuseDepuis,
+) {
+  String depuis(DateTime? at) =>
+      at == null ? '' : ' depuis le ${formatDateChiffres(at.toLocal())}';
+  if (quota?.developmentInvalidSince case final at?) {
+    return (
+      tete:
+          'la file attend, le jeton de la routine de développement est refusé'
+          '${depuis(at)}.',
+      court: 'le jeton de la routine de développement est refusé.',
+      relancer: false,
+    );
+  }
+  if (quota?.deliveryQueueHalted case final arret?) {
+    return arret.code == 'routine_paused'
+        ? (
+            tete:
+                'la file attend, la routine de développement est en pause'
+                '${depuis(arret.at)}. Réactivez-la sur claude.ai, puis appuyez '
+                'sur « $kRelancerFile ».',
+            court: 'la routine de développement est en pause.',
+            relancer: true,
+          )
+        : (
+            tete:
+                'la file attend, la routine de développement a refusé le '
+                'lancement${depuis(arret.at)}. Lisez Admin › Journaux, puis '
+                'appuyez sur « $kRelancerFile ».',
+            court: 'la routine de développement a refusé le lancement.',
+            relancer: true,
+          );
+  }
+  if (jetonGithubRefuseDepuis != null) {
+    return (
+      tete:
+          'la file attend, GitHub refuse le jeton${depuis(jetonGithubRefuseDepuis)}.',
+      court: 'GitHub refuse le jeton.',
+      relancer: false,
+    );
+  }
+  return null;
+}
+
+/// Libellé du bouton qui efface l'arrêt de la file (décision 9 de
+/// l'amendement d'ADR-008, 2026-11-22).
+const kRelancerFile = 'Relancer la file';
+
 /// Ticket en file (P44) : position, raison de l'attente en tête, accord, et
 /// « Retirer de la file ».
 LigneLivraison _ligneDansFile({
@@ -534,16 +599,24 @@ LigneLivraison _ligneDansFile({
   required bool appelEnCours,
   required ModeLivraison? modeEnCours,
   required String? uid,
+  required DateTime? jetonGithubRefuseDepuis,
 }) {
   if (appelEnCours) {
+    final (texte, progression) = switch (modeEnCours) {
+      ModeLivraison.retirer => (
+        'Retrait de la file en cours.',
+        'Retrait de la file en cours',
+      ),
+      ModeLivraison.relancerFile => (
+        'Relance de la file en cours.',
+        'Relance de la file en cours',
+      ),
+      _ => ('Lancement en cours.', 'Lancement en cours'),
+    };
     return LigneLivraison(
       ton: TonLivraison.progression,
-      texte: modeEnCours == ModeLivraison.retirer
-          ? 'Retrait de la file en cours.'
-          : 'Lancement en cours.',
-      progression: modeEnCours == ModeLivraison.retirer
-          ? 'Retrait de la file en cours'
-          : 'Lancement en cours',
+      texte: texte,
+      progression: progression,
       action: ActionLancement.livraison,
       mode: ModeLivraison.retirer,
     );
@@ -562,6 +635,7 @@ LigneLivraison _ligneDansFile({
   String texte;
   String? autreId;
   int? autreIssue;
+  var relancer = false;
   final devant = file.devant;
   if (devant != null) {
     texte =
@@ -569,27 +643,11 @@ LigneLivraison _ligneDansFile({
         '${devant.issueNumber == null ? '' : ' #${devant.issueNumber}'}.';
     autreId = devant.ticketId;
     autreIssue = devant.issueNumber;
-  } else if (quota.developmentInvalidSince case final depuis?) {
+  } else if (_arretFile(quota, jetonGithubRefuseDepuis) case final arret?) {
+    // Routine refusée, en pause ou jeton GitHub refusé : la file attend.
     ton = TonLivraison.erreur;
-    texte =
-        '$position : la file attend, le jeton de la routine de développement '
-        'est refusé depuis le ${formatDateChiffres(depuis.toLocal())}.';
-  } else if (quota.deliveryQueueHalted case final arret?) {
-    // Routine en pause ou appel refusé au départ (décision de l'utilisateur
-    // du 2026-11-22) : la file attend le prochain lancement réussi.
-    ton = TonLivraison.erreur;
-    final depuis = arret.at;
-    final quand = depuis == null
-        ? ''
-        : ' depuis le ${formatDateChiffres(depuis.toLocal())}';
-    texte = switch (arret.code) {
-      'routine_paused' =>
-        '$position : la file attend, la routine de développement est en '
-            'pause$quand. Réactivez-la sur claude.ai.',
-      _ =>
-        '$position : la file attend, la routine de développement a refusé le '
-            'lancement$quand.',
-    };
+    texte = '$position : ${arret.tete}';
+    relancer = arret.relancer;
   } else if (verrouAutre) {
     final n = verrou.issueNumber;
     texte =
@@ -661,6 +719,7 @@ LigneLivraison _ligneDansFile({
     ligneDetail: detail,
     detailErreur: detailErreur,
     repriseAussi: reprise,
+    relancerFile: relancer,
   );
 }
 
@@ -676,6 +735,7 @@ LigneLivraison _ligneHorsFile({
   required bool offline,
   required bool appelEnCours,
   required ModeLivraison? modeEnCours,
+  required DateTime? jetonGithubRefuseDepuis,
 }) {
   final issue = ticket.issueNumber;
   final verrou = quota?.deliveryRunning;
@@ -823,11 +883,15 @@ LigneLivraison _ligneHorsFile({
     );
   }
   if (peutLivrer && enFile > 0) {
+    // File arrêtée : aucun départ annoncé ; « Mettre en file » reste actif.
+    final arret = _arretFile(quota, jetonGithubRefuseDepuis);
     return LigneLivraison(
-      ton: TonLivraison.info,
-      texte:
-          '${_attendent(enFile, 'livraison')} dans la file. La prochaine part '
-          'dans 5 minutes au plus.',
+      ton: arret == null ? TonLivraison.info : TonLivraison.erreur,
+      texte: arret == null
+          ? '${_attendent(enFile, 'livraison')} dans la file. La prochaine '
+                'part dans 5 minutes au plus.'
+          : '${_attendent(enFile, 'livraison')} dans la file. La file est '
+                'arrêtée : ${arret.court}',
       action: ActionLancement.livraison,
       mode: ModeLivraison.mettreEnFile,
       actif: actifFile(),

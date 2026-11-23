@@ -846,6 +846,55 @@ void main() {
       expect(find.text('Ticket #12 retiré de la file.'), findsOneWidget);
     });
 
+    testWidgets('tête de file arrêtée : Relancer la file, boîte, appel en mode '
+        'resume_queue', (tester) async {
+      final app = await fiche(
+        tester,
+        enCours(),
+        etat: DocumentTrouve(
+          EtatLancements(
+            day: '20261108',
+            countDay: 3,
+            perDay: 10,
+            deliveryQueue: [
+              EntreeFileLivraison(
+                ticketId: 't1',
+                issueNumber: 12,
+                prNumber: 34,
+                queuedAt: DateTime(2026, 11, 8, 11, 5),
+              ),
+            ],
+            deliveryQueueHalted: const ArretFile(code: 'routine_paused'),
+          ),
+        ),
+      );
+      app.tickets.launchResult = () async =>
+          const ResultatLancement(IssueLancement.fileRelancee);
+      await tester.tap(find.text('Relancer la file'));
+      await tester.pumpAndSettle();
+      expect(find.text('Relancer la file des livraisons ?'), findsOneWidget);
+      expect(
+        find.text(
+          'La PR #34 partira dans 5 minutes au plus, sans autre accord, après '
+          'les mêmes contrôles que « Livrer ». Elle sera comptée au départ.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Lancements restants le 08/11 : 7 sur 10.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+      expect(app.tickets.launches, isEmpty);
+      await tester.tap(find.text('Relancer la file'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Relancer'));
+      await tester.pumpAndSettle();
+      expect(app.tickets.launchModes.single, ModeLivraison.relancerFile);
+      expect(find.text('File des livraisons relancée.'), findsOneWidget);
+    });
+
     testWidgets('refus fichier protégé : message et Livrer inactif', (
       tester,
     ) async {

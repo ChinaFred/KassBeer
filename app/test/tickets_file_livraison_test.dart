@@ -362,8 +362,10 @@ void main() {
         l.texte,
         'Dans la file (position 1 sur 1) : la file attend, la routine de '
         'développement est en pause depuis le 22/11/26. Réactivez-la sur '
-        'claude.ai.',
+        'claude.ai, puis appuyez sur « Relancer la file ».',
       );
+      expect(l.relancerFile, isTrue);
+      expect(l.mode, ModeLivraison.retirer);
       final refuse = EtatLancements(
         deliveryQueue: [entree('t1', 12)],
         deliveryQueueHalted: const ArretFile(code: 'routine_failed'),
@@ -371,7 +373,87 @@ void main() {
       expect(
         ligne(refuse).texte,
         'Dans la file (position 1 sur 1) : la file attend, la routine de '
-        'développement a refusé le lancement.',
+        'développement a refusé le lancement. Lisez Admin › Journaux, puis '
+        'appuyez sur « Relancer la file ».',
+      );
+    });
+
+    test('hors file, file arrêtée : aucun départ annoncé, ton d\'erreur, '
+        'Mettre en file actif', () {
+      final file = [entree('t2', 15), entree('t3', 16)];
+      final arretee = ligne(
+        EtatLancements(
+          deliveryQueue: file,
+          deliveryQueueHalted: const ArretFile(code: 'routine_paused'),
+        ),
+      );
+      expect(
+        arretee.texte,
+        '2 livraisons attendent dans la file. La file est arrêtée : la routine '
+        'de développement est en pause.',
+      );
+      expect(arretee.ton, TonLivraison.erreur);
+      expect(arretee.mode, ModeLivraison.mettreEnFile);
+      expect(arretee.actif, isTrue);
+      expect(
+        ligne(
+          EtatLancements(
+            deliveryQueue: file,
+            developmentInvalidSince: DateTime(2026, 11, 22, 9),
+          ),
+        ).texte,
+        '2 livraisons attendent dans la file. La file est arrêtée : le jeton '
+        'de la routine de développement est refusé.',
+      );
+      final github = ligneLivraison(
+        ticket: enCours(),
+        livraison: const DocumentTrouve(prete),
+        livraisonEnPanne: false,
+        historique: historiqueVide,
+        quota: EtatLancements(deliveryQueue: file),
+        now: now,
+        offline: false,
+        appelEnCours: false,
+        jetonGithubRefuseDepuis: DateTime(2026, 11, 22, 9),
+      )!;
+      expect(
+        github.texte,
+        '2 livraisons attendent dans la file. La file est arrêtée : GitHub '
+        'refuse le jeton.',
+      );
+      // En tête : aucun « Relancer la file » pour un jeton refusé.
+      expect(
+        ligne(
+          EtatLancements(
+            deliveryQueue: [entree('t1', 12)],
+            developmentInvalidSince: DateTime(2026, 11, 22, 9),
+          ),
+        ).relancerFile,
+        isFalse,
+      );
+    });
+
+    test('réponse queue_resumed et messages', () {
+      final ok = ResultatLancement.depuisReponse({
+        'outcome': 'queue_resumed',
+        'changed': true,
+      });
+      expect(ok.issue, IssueLancement.fileRelancee);
+      expect(messageRelanceFile(ok), 'File des livraisons relancée.');
+      expect(
+        messageRelanceFile(
+          ResultatLancement.depuisErreur(
+            code: 'failed-precondition',
+            details: {'code': 'delivery_queue_not_head', 'reason': 'x'},
+          ),
+        ),
+        'Relance non faite : Ce ticket n\'est plus en tête de la file. Rien '
+        'n\'a été relancé.',
+      );
+      expect(
+        relancerFileTexte(34),
+        'La PR #34 partira dans 5 minutes au plus, sans autre accord, après les '
+        'mêmes contrôles que « Livrer ». Elle sera comptée au départ.',
       );
     });
 

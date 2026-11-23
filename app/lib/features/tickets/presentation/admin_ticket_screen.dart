@@ -204,7 +204,8 @@ String messageValiderEtLancer(ResultatLancement resultat, int? issueNumber) {
     // d'un développement.
     IssueLancement.perdu ||
     IssueLancement.enFile ||
-    IssueLancement.retire => '$valide ${resultat.message}',
+    IssueLancement.retire ||
+    IssueLancement.fileRelancee => '$valide ${resultat.message}',
   };
 }
 
@@ -237,6 +238,26 @@ String positionDansFileApres(
   }
   return '$debut.';
 }
+
+/// Titre de la boîte « Relancer la file ».
+const kRelancerFileTitre = 'Relancer la file des livraisons ?';
+
+/// Texte de la boîte « Relancer la file » (P39).
+String relancerFileTexte(int? prNumber) =>
+    '${prNumber == null ? 'La pull request' : 'La PR #$prNumber'} partira '
+    'dans 5 minutes au plus, sans autre accord, après les mêmes contrôles que '
+    '« Livrer ». Elle sera comptée au départ.';
+
+/// Message après « Relancer la file ».
+String messageRelanceFile(ResultatLancement resultat) =>
+    switch (resultat.issue) {
+      IssueLancement.fileRelancee => resultat.message,
+      IssueLancement.acces =>
+        'Relance non faite : accès administrateur refusé.',
+      IssueLancement.refuse => 'Relance non faite : ${resultat.message}',
+      _ when resultat.reseau => 'Relance non faite : pas de réseau.',
+      _ => 'Résultat inconnu : regardez la file avant de réessayer.',
+    };
 
 /// Message après « Mettre en file » accepté.
 String messageMisEnFile(int? issueNumber) => issueNumber == null
@@ -779,6 +800,39 @@ class _FicheState extends ConsumerState<_Fiche> {
     );
   }
 
+  /// « Relancer la file » (décision 9 de l'amendement d'ADR-008) :
+  /// confirmation, puis `launchTicketDelivery` avec `mode: "resume_queue"`.
+  /// Rien ne part pendant l'appel : `startQueuedDelivery` fait le départ.
+  Future<void> _relancerFile({
+    required int? prNumber,
+    required EtatLancements? quota,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(lancementFicheProvider(_ticket.id).notifier);
+    // ticket: aucun (confirmation)
+    final ok = await confirmerAction(
+      context,
+      titre: kRelancerFileTitre,
+      paragraphes: [relancerFileTexte(prNumber), ligneQuota(quota)],
+      libelle: 'Relancer',
+      focusAnnuler: true,
+    );
+    if (!ok) return;
+    final resultat = await notifier.lancer(
+      ActionLancement.livraison,
+      mode: ModeLivraison.relancerFile,
+    );
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: resultat.issue == IssueLancement.fileRelancee
+            ? const Duration(milliseconds: 4000)
+            : kDureeMessageEchec,
+        content: Text(messageRelanceFile(resultat)),
+      ),
+    );
+  }
+
   /// « Valider et lancer le développement » : une boîte (P39), puis
   /// `validateTicket` et, s'il est appliqué, `launchTicketDevelopment`, par
   /// les mêmes fournisseurs que « Valider » et « Lancer le développement ».
@@ -1179,6 +1233,12 @@ class _FicheState extends ConsumerState<_Fiche> {
             .read(lancementFicheProvider(ticket.id).notifier)
             .modeEnCours,
         uid: ref.watch(grantedAccessProvider)?.user.uid,
+        jetonGithubRefuseDepuis: switch (ref
+            .watch(githubStatusProvider)
+            .value) {
+          DocumentTrouve(:final value) => value.tokenInvalidSince,
+          _ => null,
+        },
       );
       lancement = livraison?.action;
     }
@@ -1365,6 +1425,7 @@ class _FicheState extends ConsumerState<_Fiche> {
         lancements?.value is! DocumentAbsentDuCache;
     Widget? boutonLancement;
     Widget? boutonReprise;
+    Widget? boutonRelanceFile;
     final livraison = etat.livraison;
     final position = quota?.positionFile(ticket.id);
     if (livraison?.mode == ModeLivraison.mettreEnFile ||
@@ -1393,6 +1454,15 @@ class _FicheState extends ConsumerState<_Fiche> {
           icon: const Icon(Icons.playlist_remove),
           label: const Text('Retirer de la file'),
         );
+        if (livraison.relancerFile) {
+          boutonRelanceFile = FilledButton.tonalIcon(
+            onPressed: actif
+                ? () => _relancerFile(prNumber: pr, quota: quota)
+                : null,
+            icon: const Icon(Icons.play_arrow),
+            label: const Text(kRelancerFile),
+          );
+        }
         if (livraison.repriseAussi) {
           boutonReprise = FilledButton.tonalIcon(
             onPressed: actif
@@ -1534,6 +1604,7 @@ class _FicheState extends ConsumerState<_Fiche> {
               ),
             ?boutonLancement,
             ?boutonReprise,
+            ?boutonRelanceFile,
             // Action pleine en dernier ; le plafond se contrôle dans la
             // boîte, qui dit pourquoi « Valider et lancer » est inactif.
             if (allowed.contains(TicketDecisionAction.validate))

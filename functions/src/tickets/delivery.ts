@@ -1307,6 +1307,28 @@ export async function unqueueDelivery(
 }
 
 /**
+ * « Relancer la file » (décision 9 de l'amendement, 2026-11-22) : efface
+ * `delivery_queue_halted` en transaction si `ticketId` est en tête de file. Ne lance rien, ne
+ * compte rien, n'appelle ni GitHub ni la routine : le départ se fait ensuite par
+ * `startQueuedDelivery`, avec tous ses contrôles. Rend `not_head` si le ticket n'est pas en
+ * tête (refus), `not_halted` si la file n'est pas arrêtée (rien n'est écrit), `cleared` sinon.
+ */
+export async function resumeHaltedQueue(
+  kit: FirestoreKit,
+  ticketId: string,
+): Promise<"cleared" | "not_halted" | "not_head"> {
+  return kit.db.runTransaction(async (tx) => {
+    const snap = await tx.get(statusRef(kit));
+    const first = readDeliveryQueue(snap.get("delivery_queue"), millisOf(kit)).views[0];
+    if (first === undefined || first.ticketId !== ticketId) return "not_head";
+    const halted = snap.get("delivery_queue_halted");
+    if (halted === null || halted === undefined) return "not_halted";
+    tx.set(statusRef(kit), { delivery_queue_halted: null }, { merge: true });
+    return "cleared";
+  });
+}
+
+/**
  * Retire la tête de file si c'est encore `head` (même ticket, même `queued_at`) et note
  * `queue_exit` (`code`). Rend vrai si retirée. Lève sur une panne Firestore.
  */

@@ -98,6 +98,7 @@ import {
   readDeliveryLock,
   readDeliveryQueue,
   releaseDeliveryLock,
+  resumeHaltedQueue,
   sameQueueEntry,
   sensitiveDeliveryPath,
   unqueueDelivery,
@@ -200,7 +201,10 @@ export const REPRISE_DELIVERY_RUNNING_MESSAGE =
 export const LAUNCH_MODE_INVALID = "Mode de lancement : « start » ou « resume » attendu.";
 /** `mode` de `launchTicketDelivery` hors `start`, `queue` et `unqueue` (P43). */
 export const DELIVERY_MODE_INVALID =
-  "Mode de livraison : « start », « queue » ou « unqueue » attendu.";
+  "Mode de livraison : « start », « queue », « unqueue » ou « resume_queue » attendu.";
+/** « Relancer la file » refusé : le ticket n'est pas en tête de file. */
+export const QUEUE_RESUME_NOT_HEAD_MESSAGE =
+  "Ce ticket n'est pas en tête de la file des livraisons. Rien n'a été relancé.";
 /** « Livrer » refusé : la file n'est pas vide (point 5). */
 export const DELIVERY_QUEUE_AHEAD_MESSAGE = `D'autres livraisons attendent : appuyez sur « Mettre en file ». ${DELIVERY_NOTHING}`;
 /** Refus de « Mettre en file » (point 4). */
@@ -988,18 +992,18 @@ async function guardedLaunch<T>(
 // ── File des livraisons (amendement du 2026-11-22) ──────────────────────────
 
 /** Mode de `launchTicketDelivery` : « Livrer », « Mettre en file », « Retirer de la file ». */
-export type DeliveryMode = "start" | "queue" | "unqueue";
+export type DeliveryMode = "start" | "queue" | "unqueue" | "resume_queue";
 
 /**
  * `mode` de `launchTicketDelivery` (P43) : `start` (absent : `start`, anciens clients),
- * `queue` ou `unqueue`, comparés exactement ; jamais déduit du verrou ni du statut. Lève
+ * `queue`, `unqueue` ou `resume_queue` (« Relancer la file »), comparés exactement ; jamais déduit du verrou ni du statut. Lève
  * `invalid-argument`. Pure.
  */
 export function readDeliveryMode(data: unknown): DeliveryMode {
   const raw = (data as Record<string, unknown> | null | undefined)?.mode;
   const value = requireBoundedText(raw, { field: "mode", max: 16, label: "Mode de livraison" });
   if (value === undefined || value === "start") return "start";
-  if (value === "queue" || value === "unqueue") return value;
+  if (value === "queue" || value === "unqueue" || value === "resume_queue") return value;
   throw new HttpsError("invalid-argument", DELIVERY_MODE_INVALID, {
     field: "mode",
     reason: DELIVERY_MODE_INVALID,
@@ -1009,7 +1013,9 @@ export function readDeliveryMode(data: unknown): DeliveryMode {
 /** Réponse de « Mettre en file » et de « Retirer de la file ». */
 export type DeliveryQueueResult =
   | { outcome: "queued"; position: number; total: number }
-  | { outcome: "unqueued"; changed: boolean };
+  | { outcome: "unqueued"; changed: boolean }
+  /** « Relancer la file » : `changed: false` si la file n'était pas arrêtée (rien écrit). */
+  | { outcome: "queue_resumed"; changed: boolean };
 
 /**
  * `launchTicketDelivery` : garde (P30), puis `mode` avant toute autre lecture, puis
@@ -1028,6 +1034,7 @@ export async function handleDeliveryCall(
       return launchTicketSession(ticketId, "livraison", uid, deps, launchPoolOf(founder));
     }
     if (mode === "unqueue") return unqueueTicketDelivery(ticketId, deps);
+    if (mode === "resume_queue") return resumeTicketQueue(ticketId, deps);
     // `requireAdmin` a vérifié le jeton : sa clé de `members/` existe.
     const email = memberKeyOf(req.auth?.token) as string;
     return queueTicketDelivery(ticketId, uid, email, deps);
@@ -1091,6 +1098,32 @@ export async function queueTicketDelivery(
   } finally {
     await releaseLease(ctx, leaseUntilMs);
   }
+}
+
+/**
+ * « Relancer la file » (décision 9) : efface `delivery_queue_halted` quand `ticketId` est en
+ * tête ; aucun lancement, aucun décompte, aucun appel à GitHub ni à la routine. Refus
+ * `delivery_queue_not_head` si le ticket n'est pas en tête ; `changed: false` sans écriture si
+ * la file n'est pas arrêtée.
+ */
+export async function resumeTicketQueue(
+  ticketId: string,
+  deps: LaunchDeps,
+): Promise<DeliveryQueueResult> {
+  const kit = await (deps.kit ?? firestore)();
+  const outcome = await resumeHaltedQueue(kit, ticketId);
+  if (outcome === "not_head") {
+    throw refusal("failed-precondition", QUEUE_RESUME_NOT_HEAD_MESSAGE, "delivery_queue_not_head");
+  }
+  if (outcome === "cleared") {
+    (deps.log ?? defaultLogger)("info", {
+      message: "Tickets : file des livraisons relancée",
+      feature: "tickets",
+      ticketId,
+      extra: { action: "livraison", cost_center: LAUNCH_COST_CENTER },
+    });
+  }
+  return { outcome: "queue_resumed", changed: outcome === "cleared" };
 }
 
 /** « Retirer de la file » (point 6) : aucun appel à GitHub ni à la routine. */

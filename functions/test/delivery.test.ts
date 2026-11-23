@@ -2004,3 +2004,65 @@ describe("file des livraisons : sorties (points 7 et 9)", () => {
     assert.equal(queue(h).length, 1);
   });
 });
+
+describe("file des livraisons : « Relancer la file » (décision 9)", () => {
+  const admin = {
+    uid: "admin-uid",
+    token: {
+      email: "admin@example.com",
+      email_verified: true,
+      firebase: { sign_in_provider: "google.com" },
+    },
+  };
+  const halted = { code: "routine_paused", at: Timestamp.fromMillis(NOW - HOUR) };
+  const call = (h: Harness, ticketId: string, role = "admin") =>
+    handleDeliveryCall(
+      { auth: admin, data: { ticketId, mode: "resume_queue" } },
+      { ...h.deps(), lookup: async () => ({ role }) },
+    );
+
+  it("mode resume_queue lu ; brasseur refusé avant toute lecture", async () => {
+    assert.equal(readDeliveryMode({ mode: "resume_queue" }), "resume_queue");
+    const h = harness();
+    seedQueue(h, [queueEntry("t-1")], { delivery_queue_halted: halted });
+    const writes = h.db.writes.length;
+    const err = await refusal(call(h, "t-1", "brewer"));
+    assert.equal(err.code, "permission-denied");
+    assert.equal(h.db.writes.length, writes);
+    assert.ok(h.db.read("ticket_status/launches")?.delivery_queue_halted);
+  });
+
+  it("tête de file et file arrêtée : arrêt effacé, rien lancé, rien compté, aucun appel", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")], { delivery_queue_halted: halted });
+    const out = await call(h, "t-1");
+    assert.deepEqual(out, { outcome: "queue_resumed", changed: true });
+    assert.equal(h.db.read("ticket_status/launches")?.delivery_queue_halted, null);
+    assert.equal(queue(h).length, 2);
+    assert.equal(h.routineCalls.length, 0);
+    assert.equal(h.githubCalls.length, 0);
+    assert.equal(quota(h), 0);
+    assert.equal(lock(h), undefined);
+    assert.equal(history(h).length, 0);
+  });
+
+  it("file non arrêtée : changed false, rien écrit", async () => {
+    const h = harness();
+    seedQueue(h, [queueEntry("t-1")]);
+    const writes = h.db.writes.length;
+    assert.deepEqual(await call(h, "t-1"), { outcome: "queue_resumed", changed: false });
+    assert.equal(h.db.writes.length, writes);
+  });
+
+  it("ticket pas en tête, ou absent de la file : delivery_queue_not_head, arrêt gardé", async () => {
+    for (const ticketId of ["t-2", "t-9"]) {
+      const h = harness();
+      seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")], { delivery_queue_halted: halted });
+      const err = await refusal(call(h, ticketId));
+      assert.equal(details(err).code, "delivery_queue_not_head", ticketId);
+      assert.ok(h.db.read("ticket_status/launches")?.delivery_queue_halted, ticketId);
+      assert.equal(h.routineCalls.length + h.githubCalls.length, 0);
+    }
+  });
+});

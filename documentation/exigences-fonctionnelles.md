@@ -1189,7 +1189,7 @@ cet ordre de priorité :
 | dans la file des livraisons (ticket #104) | voir « File des livraisons » ci-dessous | « Retirer de la file » |
 | livraison d'un autre ticket en cours | « Livraison du ticket #9 en cours depuis 14:05. Une seule livraison à la fois. » (file non vide : « … Une seule livraison à la fois. 2 tickets attendent déjà. »), puis « Ouvrir le ticket #9 » (à côté de la liste, la fiche est remplacée ; au téléphone, elle s'empile) | « Mettre en file » (actif au plafond) ; ticket validé sur GitHub seul : aucun |
 | compte rendu de la livraison précédente pas encore relevé (verrou libre) | « La livraison du ticket #9 n'a pas encore publié son compte rendu. Une seule livraison à la fois. », puis « Ouvrir le ticket #9 » | « Mettre en file » |
-| file non vide, livraison précédente finie | « 2 livraisons attendent dans la file. La prochaine part dans 5 minutes au plus. » | « Mettre en file » |
+| file non vide, livraison précédente finie | « 2 livraisons attendent dans la file. La prochaine part dans 5 minutes au plus. » ; file arrêtée : « 2 livraisons attendent dans la file. La file est arrêtée : la routine de développement est en pause. » (« … a refusé le lancement. », « … le jeton de la routine de développement est refusé. », « … GitHub refuse le jeton. »), ton d'erreur | « Mettre en file » (actif) |
 | PR prête, validé sur GitHub seul | « PR #34 prête. Ce ticket a été validé sur GitHub : fusionnez la PR sur GitHub. » ; si le serveur offre « Valider » : « … fusionnez la PR sur GitHub, ou validez-le depuis l'application pour la livrer d'ici. » | aucun |
 | appel de la fiche en cours | barre de progression, « Lancement de la livraison en cours. » (« … de la correction … » ; « Mise en file en cours. », « Retrait de la file en cours. ») | inactif |
 | plafond atteint | ligne du plafond | « Livrer » inactif |
@@ -1214,7 +1214,8 @@ file, avec « Retirer de la file » (bouton à contour) :
 |---|---|
 | pas en tête | « Dans la file (position 2 sur 3), derrière le ticket #15. », puis « Ouvrir le ticket #15 » |
 | en tête, jeton de la routine de développement refusé | « Dans la file (position 1 sur 3) : la file attend, le jeton de la routine de développement est refusé depuis le 22/11/26. » (ton d'erreur) |
-| en tête, routine en pause ou lancement refusé au départ | « Dans la file (position 1 sur 3) : la file attend, la routine de développement est en pause depuis le 22/11/26. Réactivez-la sur claude.ai. » ou « … : la file attend, la routine de développement a refusé le lancement depuis le 22/11/26. » (ton d'erreur) ; l'entrée reste en tête et la file repart après le prochain lancement réussi de la routine de développement |
+| en tête, routine en pause ou lancement refusé au départ | « Dans la file (position 1 sur 3) : la file attend, la routine de développement est en pause depuis le 22/11/26. Réactivez-la sur claude.ai, puis appuyez sur « Relancer la file ». » ou « … : la file attend, la routine de développement a refusé le lancement depuis le 22/11/26. Lisez Admin › Journaux, puis appuyez sur « Relancer la file ». » (ton d'erreur), avec le bouton tonal « Relancer la file » à côté de « Retirer de la file » ; l'entrée reste en tête et la file repart aussi après le prochain lancement réussi de la routine de développement |
+| en tête, GitHub refuse le jeton | « Dans la file (position 1 sur 3) : la file attend, GitHub refuse le jeton depuis le 22/11/26. » (ton d'erreur) |
 | en tête, autre livraison en cours | « Dans la file (position 1 sur 3) : partira après la livraison du ticket #9. » |
 | en tête, compte rendu attendu | « Dans la file (position 1 sur 3) : partira après le compte rendu de la livraison du ticket #9, à 17:05 au plus tard. » |
 | en tête, plafond atteint, accord donné par ce compte | « Dans la file (position 1 sur 3) : plafond atteint le 22/11 (10 sur 10). Elle partira quand le compteur repartira à zéro, peu après minuit. » (accord d'un autre administrateur : ligne suivante) |
@@ -1261,6 +1262,17 @@ Accepté : « Ticket #12 mis en file de livraison. » en bas d'écran. Refus dan
 file. », « La livraison précédente est finie : appuyez sur « Livrer ». », et les refus de
 « Livrer ». « Livrer » refusé quand la file n'est pas vide : « D'autres livraisons attendent :
 appuyez sur « Mettre en file ». Rien n'a été lancé ni décompté. ».
+
+Boîte « Relancer la file des livraisons ? » (décision de l'utilisateur du 2026-11-22) : « La
+PR #34 partira dans 5 minutes au plus, sans autre accord, après les mêmes contrôles que
+« Livrer ». Elle sera comptée au départ. », ligne des lancements restants, « Annuler » (focus
+initial) et « Relancer ». Rien ne part pendant l'appel ; la barre affiche « Relance de la file
+en cours. », boutons inactifs. Résultats : « File des livraisons relancée. » ; « La file des
+livraisons n'était plus arrêtée. » ; refus : « Relance non faite : Ce ticket n'est plus en tête
+de la file. Rien n'a été relancé. » ; « Relance non faite : pas de réseau. », « Relance non
+faite : accès administrateur refusé. », « Résultat inconnu : regardez la file avant de
+réessayer. ». Hors ligne, « Relancer la file » est visible et inactif, avec « Ces actions
+demandent le réseau. ».
 
 Boîte « Retirer ce ticket de la file ? » : « La PR #34 ne partira pas. Les tickets suivants
 avancent d'une place. Rien n'est décompté. Pour la livrer ensuite, il faudra la remettre en
