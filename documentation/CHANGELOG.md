@@ -6,6 +6,33 @@ données, outillage), ou les deux.
 
 ## 2026-11-22
 
+### v0.2.15 — fonctionnel
+
+Résumé : Sur tablette et ordinateur, l'assistant de recette s'ouvre dans une grande fenêtre plus lisible.
+
+Sur tablette et ordinateur, l'assistant de recette s'ouvre maintenant dans une grande fenêtre,
+plus facile à lire, au lieu d'une colonne étroite à droite de l'éditeur. Les réponses prennent
+environ 70 caractères par ligne. La conversation est gardée : on peut fermer la fenêtre,
+regarder la recette et la rouvrir pour continuer. « Appliquer au brouillon » ferme la fenêtre pour
+montrer la recette modifiée. Si une réponse arrive alors que la fenêtre est fermée, un message
+« Réponse de l'assistant reçue » propose de l'ouvrir ; un échec s'annonce de la même façon. Sur
+téléphone, l'assistant reste une feuille qui monte du bas de l'écran.
+
+### v0.2.15 — technique
+
+Amendement d'ADR-015 du 2026-11-22 (écrans, grande fenêtre de l'assistant), décisions de
+l'utilisateur sur la proposition d'`ux-designer`. À partir de `kExpandedMinWidth` (840 px), un
+`Dialog` de min(largeur − 48, `kAssistantFenetreLargeur` = 800) × 90 % ; mesure de lecture
+`kAssistantMesureLecture` = 680 px. Retirés : commutateur « Calculs / Assistant », troisième
+colonne, `kEditeurAssistantCoteACoteMinWidth`, `kAssistantPanelWidth`,
+`kEditorAvecAssistantMaxWidth`, `kEditorTroisColonnesMaxWidth`, `titreEtFermer`, `focusAnnuler`.
+Annonces fenêtre fermée (réponse, réponse avec proposition, résumé, échec) avec « Ouvrir »,
+gardées dans l'éditeur pendant « Proposition appliquée… Annuler » et oubliées à la réouverture ;
+`annoncerAvecAction` et `annoncerAvecAnnulation` rendent le contrôleur du message ;
+`ControleurAssistant.dernierMode`. Boîte d'enregistrement : « Enregistrer et effacer la
+conversation ? ». `main.dart.js` : 6 004 053 → 6 004 237 octets (+ 184). Aucune dépendance
+changée, aucun fichier serveur touché.
+
 ### v0.2.14 — technique
 
 `ingest/ecrire.mjs` affichait « undefined levure sans description aromatique » à la fin de

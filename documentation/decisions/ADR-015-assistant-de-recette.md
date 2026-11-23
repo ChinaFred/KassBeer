@@ -526,3 +526,38 @@ impossible ». Les tests simulaient la réponse d'Anthropic et ne compilaient pa
   rendue sans proposition, tour compté, avec le seul chemin du champ en faute au journal.
 - Ce qui change pour le modèle : la grammaire ne le contraint plus sur les opérations. Une
   opération mal écrite est écartée au lieu d'être impossible ; le prompt donne un exemple.
+
+## Amendement du 2026-11-22 : écrans, grande fenêtre de l'assistant
+
+Décisions de l'utilisateur sur la proposition de l'agent `ux-designer`. Elles remplacent le
+commutateur « Calculs / Assistant » de 840 à 1 279 px et les trois colonnes à partir de
+1 280 px de l'amendement « écrans du lot A1 ».
+
+- **Fenêtre** : à partir de 840 px, l'assistant s'ouvre dans une fenêtre modale par l'icône
+  « Assistant » (bulle « Ouvrir l'assistant », sans état sélectionné) : largeur min(fenêtre
+  − 48, 800), hauteur 90 % de la fenêtre, titre « Assistant », ✕ « Fermer l'assistant »,
+  curseur dans « Votre message ». Échap, ✕ ou un clic hors de la fenêtre la ferment sans rien
+  perdre : la conversation vit dans `ControleurAssistant`, intacte et défilée à la fin à la
+  réouverture, carte appliquée avec son état et « Annuler la proposition ». La ligne de résumé
+  des calculs reste en tête. La fermeture rend le focus à l'icône. Derrière, l'éditeur reste
+  en deux colonnes (formulaire et calculs) à toutes les largeurs. Sous 840 px, la feuille du
+  bas ne change pas.
+- **Appliquer au brouillon** ferme la fenêtre comme la feuille ; l'annonce « Annuler » de
+  10 s reste ; le focus revient sur l'icône. Le focus sur « Annuler la proposition » au-delà
+  de 840 px est retiré.
+- **Réponse arrivée fenêtre fermée** (fenêtre ou feuille) : message « Réponse de l'assistant
+  reçue » avec « Ouvrir », qui rouvre l'assistant sur la réponse.
+- **Mesure de lecture** : réponses bornées à 680 px, centrées, sur toute la mesure (toute la
+  largeur sur téléphone) ; bulles « Vous » à droite, 85 % de cette mesure au plus ; champ et
+  « Envoyer » de la même largeur. Le mode compact à 200 % est gardé.
+- **Enregistrer avec une conversation** : la boîte devient « Enregistrer et effacer la
+  conversation ? », boutons « Revenir à la recette » (sans rouvrir l'assistant) et
+  « Enregistrer », pour la fenêtre comme pour la feuille.
+- **Annonces fenêtre fermée** : « Réponse de l'assistant reçue » (« …, avec une proposition »
+  le cas échéant), « Résumé de la conversation reçu » après un résumé, et, par décision de
+  l'utilisateur du 2026-11-22, « L'assistant n'a pas pu répondre. » après un échec, chacune
+  avec « Ouvrir », qui rouvre la fenêtre sur la réponse ou l'erreur détaillée. Pendant
+  « Proposition appliquée… Annuler », l'annonce attend la fin de ce message, sans le couper ;
+  elle est retirée, affichée ou en attente, quand l'assistant se rouvre. Fenêtre ouverte, un résumé s'annonce aussi « Résumé de la
+  conversation reçu » au lecteur d'écran. La fenêtre est une
+  route nommée « Assistant » pour le lecteur d'écran.

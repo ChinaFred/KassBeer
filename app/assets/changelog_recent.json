@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "version": "0.2.15",
+      "date": "2026-11-22",
+      "summaries": [
+        "Sur tablette et ordinateur, l'assistant de recette s'ouvre dans une grande fenêtre plus lisible."
+      ],
+      "paragraphs": [
+        "Sur tablette et ordinateur, l'assistant de recette s'ouvre maintenant dans une grande fenêtre, plus facile à lire, au lieu d'une colonne étroite à droite de l'éditeur. Les réponses prennent environ 70 caractères par ligne. La conversation est gardée : on peut fermer la fenêtre, regarder la recette et la rouvrir pour continuer. « Appliquer au brouillon » ferme la fenêtre pour montrer la recette modifiée. Si une réponse arrive alors que la fenêtre est fermée, un message « Réponse de l'assistant reçue » propose de l'ouvrir ; un échec s'annonce de la même façon. Sur téléphone, l'assistant reste une feuille qui monte du bas de l'écran."
+      ]
+    },
+    {
       "version": "0.2.13",
       "date": "2026-11-22",
       "summaries": [
@@ -46,14 +56,6 @@
       "summaries": [],
       "paragraphs": [
         "La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms : une recette qui écrit l'un ou l'autre retrouve la même levure."
-      ]
-    },
-    {
-      "version": "0.1.99",
-      "date": "2026-11-22",
-      "summaries": [],
-      "paragraphs": [
-        "L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent maintenant."
       ]
     }
   ]
