@@ -85,6 +85,10 @@ class ControleurAssistant extends ChangeNotifier {
   /// Monte à chaque réponse reçue : l'écran l'annonce.
   int reponsesRecues = 0;
 
+  /// Mode du dernier appel abouti : un résumé s'annonce « Résumé de la
+  /// conversation reçu ».
+  ModeAssistant? dernierMode;
+
   /// Propositions des réponses, par rang de la réponse dans [messages].
   final Map<int, PropositionRecue> propositions = {};
 
@@ -154,6 +158,7 @@ class ControleurAssistant extends ChangeNotifier {
       quota = reponse.quota ?? quota;
       enAttente = null;
       appelEnCours = null;
+      dernierMode = ModeAssistant.tour;
       reponsesRecues++;
       _notifier();
     } on EchecAssistant catch (e) {
@@ -195,6 +200,7 @@ class ControleurAssistant extends ChangeNotifier {
       idConversation = nouvelIdConversation(_random);
       quota = reponse.quota ?? quota;
       appelEnCours = null;
+      dernierMode = ModeAssistant.resume;
       reponsesRecues++;
       _notifier();
     } on EchecAssistant catch (e) {

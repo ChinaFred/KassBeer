@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-23
 
-### v0.2.15 — fonctionnel
+### v0.2.16 — fonctionnel
 
 Résumé : Un arrêt du développement d'un ticket s'affiche à part et se relance tout de suite.
 
@@ -16,7 +16,7 @@ s'arrête avant d'écrire du code, son message s'affiche dans la section Analyse
 … s'est arrêté » et propose « Relancer le développement » tout de suite, sans attendre trois
 heures. La validation du ticket reste valable : un arrêt ne demande plus de valider à nouveau.
 
-### v0.2.15 — technique
+### v0.2.16 — technique
 
 Lot R1 d'ADR-020. `analysisModel.ts` relève « ## Développement — arrêt » du compte 16348852
 sous la nature `development_stop` (NFC, espaces de tête retirées, 20 000 caractères, dix
@@ -42,6 +42,33 @@ la fusion : recoller le prompt de la routine de développement sur claude.ai/cod
 paquet ajouté ni monté.
 
 ## 2026-11-22
+
+### v0.2.15 — fonctionnel
+
+Résumé : Sur tablette et ordinateur, l'assistant de recette s'ouvre dans une grande fenêtre plus lisible.
+
+Sur tablette et ordinateur, l'assistant de recette s'ouvre maintenant dans une grande fenêtre,
+plus facile à lire, au lieu d'une colonne étroite à droite de l'éditeur. Les réponses prennent
+environ 70 caractères par ligne. La conversation est gardée : on peut fermer la fenêtre,
+regarder la recette et la rouvrir pour continuer. « Appliquer au brouillon » ferme la fenêtre pour
+montrer la recette modifiée. Si une réponse arrive alors que la fenêtre est fermée, un message
+« Réponse de l'assistant reçue » propose de l'ouvrir ; un échec s'annonce de la même façon. Sur
+téléphone, l'assistant reste une feuille qui monte du bas de l'écran.
+
+### v0.2.15 — technique
+
+Amendement d'ADR-015 du 2026-11-22 (écrans, grande fenêtre de l'assistant), décisions de
+l'utilisateur sur la proposition d'`ux-designer`. À partir de `kExpandedMinWidth` (840 px), un
+`Dialog` de min(largeur − 48, `kAssistantFenetreLargeur` = 800) × 90 % ; mesure de lecture
+`kAssistantMesureLecture` = 680 px. Retirés : commutateur « Calculs / Assistant », troisième
+colonne, `kEditeurAssistantCoteACoteMinWidth`, `kAssistantPanelWidth`,
+`kEditorAvecAssistantMaxWidth`, `kEditorTroisColonnesMaxWidth`, `titreEtFermer`, `focusAnnuler`.
+Annonces fenêtre fermée (réponse, réponse avec proposition, résumé, échec) avec « Ouvrir »,
+gardées dans l'éditeur pendant « Proposition appliquée… Annuler » et oubliées à la réouverture ;
+`annoncerAvecAction` et `annoncerAvecAnnulation` rendent le contrôleur du message ;
+`ControleurAssistant.dernierMode`. Boîte d'enregistrement : « Enregistrer et effacer la
+conversation ? ». `main.dart.js` : 6 004 053 → 6 004 237 octets (+ 184). Aucune dépendance
+changée, aucun fichier serveur touché.
 
 ### v0.2.14 — technique
 

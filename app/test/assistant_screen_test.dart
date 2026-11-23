@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:brewing/brewing.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
-import 'package:kass_beer/core/presentation/segments.dart';
 import 'package:kass_beer/core/router/app_router.dart';
 import 'package:kass_beer/features/ai/domain/reglages_ia.dart';
 import 'package:kass_beer/features/library/domain/aromes_houblon.dart';
@@ -341,6 +341,40 @@ void main() {
   });
 
   group('Résumer et continuer', () {
+    testWidgets('résumé arrivé fenêtre fermée : « Résumé de la conversation '
+        'reçu » avec « Ouvrir »', (tester) async {
+      final app = await ouvrir(
+        tester,
+        width: 1000,
+        avant: (app) {
+          app.ai.politique = politiqueLue(const ReglagePosteIaTest().unTour);
+          app.assistant.reponses.add(reponse);
+        },
+      );
+      await ouvrirPanneau(tester);
+      await saisir(tester, 'Question');
+      await tester.tap(envoyer());
+      await tester.pumpAndSettle();
+      final attente = Completer<void>();
+      app.assistant
+        ..attente = attente
+        ..reponses.add(const ReponseAssistant(texte: 'Résumé : recette.'));
+      await tester.tap(find.text(TextesAssistant.resumer));
+      await tester.pump();
+      await tester.tap(find.byTooltip(TextesAssistant.fermer));
+      await tester.pumpAndSettle();
+      attente.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(TextesAssistant.resumeRecu), findsOneWidget);
+      expect(find.text(TextesAssistant.reponseRecue), findsNothing);
+      await tester.tap(
+        find.widgetWithText(SnackBarAction, TextesAssistant.ouvrirReponse),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(TextesAssistant.titreResume), findsOneWidget);
+      expect(app.assistant.envois, hasLength(2));
+    });
+
     testWidgets('au dernier tour permis : résumé, nouvelle conversation', (
       tester,
     ) async {
@@ -431,7 +465,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Enregistrer'));
       await tester.pumpAndSettle();
-      expect(find.text('Enregistrer et fermer l\'assistant ?'), findsNothing);
+      expect(
+        find.text('Enregistrer et effacer la conversation ?'),
+        findsNothing,
+      );
       expect(find.text('Donnez un nom à la recette.'), findsOneWidget);
       // Nom donné : la boîte de la conversation paraît.
       await tester.enterText(
@@ -441,21 +478,195 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Enregistrer'));
       await tester.pumpAndSettle();
-      expect(find.text('Enregistrer et fermer l\'assistant ?'), findsOneWidget);
-    });
-
-    testWidgets('de 840 à 1 279 px : commutateur Calculs / Assistant', (
-      tester,
-    ) async {
-      await ouvrir(tester, width: 1000);
       expect(
-        find.byWidgetPredicate((w) => w is BoutonsSegmentes),
+        find.text('Enregistrer et effacer la conversation ?'),
         findsOneWidget,
       );
+    });
+
+    for (final largeur in [1000.0, 1770.0]) {
+      testWidgets('$largeur px : grande fenêtre, fermée puis rouverte avec la '
+          'conversation', (tester) async {
+        final app = await ouvrir(tester, width: largeur);
+        app.assistant.reponses.add(reponse);
+        // Deux colonnes derrière : formulaire et calculs.
+        expect(find.text('Densité initiale'), findsWidgets);
+        await ouvrirPanneau(tester);
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(find.byType(BottomSheet), findsNothing);
+        final taille = tester.getSize(
+          find.descendant(
+            of: find.byType(Dialog),
+            matching: find.byType(PanneauAssistant),
+          ),
+        );
+        expect(taille.width, lessThanOrEqualTo(800));
+        expect(find.text(TextesAssistant.titre), findsOneWidget);
+        expect(find.byTooltip(TextesAssistant.fermer), findsOneWidget);
+        // Curseur dans « Votre message ».
+        final champ = tester.widget<TextField>(
+          find.widgetWithText(TextField, TextesAssistant.champ),
+        );
+        expect(champ.autofocus, isTrue);
+        await saisir(tester, 'Question');
+        await tester.tap(envoyer());
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip(TextesAssistant.fermer));
+        await tester.pumpAndSettle();
+        expect(find.byType(Dialog), findsNothing);
+        // Focus rendu à l'icône.
+        final icone = tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.auto_awesome_outlined),
+        );
+        expect(icone.focusNode?.hasFocus, isTrue);
+        await ouvrirPanneau(tester);
+        expect(find.textContaining('équilibrée'), findsOneWidget);
+        expect(find.text('Question'), findsOneWidget);
+        expect(app.assistant.envois, hasLength(1));
+        // Échap ferme sans rien perdre.
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.byType(Dialog), findsNothing);
+        await ouvrirPanneau(tester);
+        expect(find.text('Question'), findsOneWidget);
+      });
+    }
+
+    testWidgets('réponse arrivée fenêtre fermée : message avec « Ouvrir »', (
+      tester,
+    ) async {
+      final app = await ouvrir(tester, width: 1000);
+      final attente = Completer<void>();
+      app.assistant
+        ..attente = attente
+        ..reponses.add(reponse);
       await ouvrirPanneau(tester);
-      expect(find.byType(BottomSheet), findsNothing);
-      expect(find.text(TextesAssistant.avertissement), findsOneWidget);
-      expect(find.byTooltip(TextesAssistant.fermer), findsWidgets);
+      await saisir(tester, 'Question');
+      await tester.tap(envoyer());
+      await tester.pump();
+      await tester.tap(find.byTooltip(TextesAssistant.fermer));
+      await tester.pumpAndSettle();
+      attente.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(TextesAssistant.reponseRecue), findsOneWidget);
+      await tester.tap(
+        find.widgetWithText(SnackBarAction, TextesAssistant.ouvrirReponse),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.textContaining('équilibrée'), findsOneWidget);
+      expect(app.assistant.envois, hasLength(1));
+    });
+
+    testWidgets('échec arrivé fenêtre fermée : « L\'assistant n\'a pas pu '
+        'répondre. » avec « Ouvrir »', (tester) async {
+      final app = await ouvrir(tester, width: 1000);
+      final attente = Completer<void>();
+      app.assistant
+        ..attente = attente
+        ..reponses.add(const EchecAssistant(CauseEchecAssistant.delaiDepasse));
+      await ouvrirPanneau(tester);
+      await saisir(tester, 'Question');
+      await tester.tap(envoyer());
+      await tester.pump();
+      await tester.tap(find.byTooltip(TextesAssistant.fermer));
+      await tester.pumpAndSettle();
+      attente.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(TextesAssistant.echecFenetreFermee), findsOneWidget);
+      await tester.tap(
+        find.widgetWithText(SnackBarAction, TextesAssistant.ouvrirReponse),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(
+        find.text(
+          TextesAssistant.echec(
+            const EchecAssistant(CauseEchecAssistant.delaiDepasse),
+            admin: true,
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(app.assistant.envois, hasLength(1));
+    });
+
+    testWidgets('840 × 600, texte à 200 % : fenêtre sans débordement', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final app = TestApp();
+      app.assistant.reponses.add(reponse);
+      await app.pump(tester, width: 840, height: 600);
+      app.signIn(adminUser, member: adminMember);
+      await tester.pumpAndSettle();
+      app.container.read(routerProvider).go('/recettes/nouvelle');
+      await tester.pumpAndSettle();
+      await ouvrirPanneau(tester);
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await saisir(tester, 'Question');
+      // Petite hauteur et grand texte : le panneau défile d'un bloc.
+      await tester.scrollUntilVisible(
+        envoyer(),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(PanneauAssistant),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(envoyer());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('réponse annoncée puis assistant rouvert par l\'icône : '
+        'annonce retirée', (tester) async {
+      final app = await ouvrir(tester, width: 1000);
+      final attente = Completer<void>();
+      app.assistant
+        ..attente = attente
+        ..reponses.add(reponse);
+      await ouvrirPanneau(tester);
+      await saisir(tester, 'Question');
+      await tester.tap(envoyer());
+      await tester.pump();
+      await tester.tap(find.byTooltip(TextesAssistant.fermer));
+      await tester.pumpAndSettle();
+      attente.complete();
+      await tester.pumpAndSettle();
+      expect(find.text(TextesAssistant.reponseRecue), findsOneWidget);
+      await ouvrirPanneau(tester);
+      expect(find.text(TextesAssistant.reponseRecue), findsNothing);
+    });
+
+    testWidgets('feuille du bas fermée : même message avec « Ouvrir »', (
+      tester,
+    ) async {
+      final app = await ouvrir(tester);
+      final attente = Completer<void>();
+      app.assistant
+        ..attente = attente
+        ..reponses.add(reponse);
+      await ouvrirPanneau(tester);
+      await saisir(tester, 'Question');
+      await tester.tap(envoyer());
+      await tester.pump();
+      await tester.tap(find.byTooltip(TextesAssistant.fermer));
+      await tester.pumpAndSettle();
+      attente.complete();
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(SnackBarAction, TextesAssistant.ouvrirReponse),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.textContaining('équilibrée'), findsOneWidget);
+      expect(app.assistant.envois, hasLength(1));
     });
 
     testWidgets('360 × 640, texte à 200 % : feuille sans débordement', (
@@ -497,34 +708,6 @@ void main() {
       await voir(find.text(TextesAssistant.resumer));
       expect(find.text(TextesAssistant.resumer), findsOneWidget);
       expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('840 à 1 279 px : ni titre ni ✕ sous le commutateur', (
-      tester,
-    ) async {
-      await ouvrir(tester, width: 1000);
-      await ouvrirPanneau(tester);
-      final panneau = find.byType(PanneauAssistant);
-      expect(
-        find.descendant(of: panneau, matching: find.byIcon(Icons.close)),
-        findsNothing,
-      );
-      expect(
-        find.descendant(
-          of: panneau,
-          matching: find.byTooltip('Plus d\'actions'),
-        ),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('1 280 px et plus : trois colonnes', (tester) async {
-      await ouvrir(tester, width: 1400);
-      await ouvrirPanneau(tester);
-      expect(find.byType(BottomSheet), findsNothing);
-      expect(find.text(TextesAssistant.avertissement), findsOneWidget);
-      // Le bloc des calculs reste affiché à côté.
-      expect(find.text('Densité initiale'), findsWidgets);
     });
   });
 }

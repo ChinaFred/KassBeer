@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:brewing/brewing.dart' show HopUse;
 import 'package:exchange/exchange.dart'
     show
@@ -10,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kass_beer/core/data/lecture_document.dart';
 import 'package:kass_beer/core/router/app_router.dart';
+import 'package:kass_beer/features/equipment/domain/equipment.dart';
 import 'package:kass_beer/features/library/domain/referentiel.dart';
 import 'package:kass_beer/features/recipes/domain/assistant_recette.dart';
 import 'package:kass_beer/features/recipes/domain/recipe.dart';
@@ -70,18 +73,44 @@ void main() {
     double width = 1300,
     bool lireBibliotheque = true,
     Map<String, Object?> operation = mosaic,
+    bool avecMaltEtEquipement = false,
   }) async {
     final app = TestApp();
     if (lireBibliotheque) bibliotheque(app);
+    if (avecMaltEtEquipement) {
+      // Malt et rendement connus : densités, IBU et couleur se calculent.
+      app.equipment.publish([
+        Equipment(
+          id: 'e1',
+          ownerUid: adminUser.uid,
+          content: const EquipmentContent(
+            name: 'Cuve',
+            kind: EquipmentKind.multiVessel,
+            mashEfficiencyPct: 72,
+          ),
+        ),
+      ]);
+    }
     app.recipes.publish([
       Recipe(
         id: 'r1',
         ownerUid: adminUser.uid,
-        content: const RecipeContent(
+        content: RecipeContent(
           name: 'Blonde',
           batchVolumeL: 20,
           boilTimeMin: 60,
-          hops: [
+          equipmentId: avecMaltEtEquipement ? 'e1' : null,
+          fermentables: [
+            if (avecMaltEtEquipement)
+              const FermentableLine(
+                name: 'Pale Ale',
+                type: 'grain',
+                weightG: 4500,
+                ebc: 6,
+                yieldPct: 80,
+              ),
+          ],
+          hops: const [
             HopLine(
               name: 'Cascade',
               amount: Quantite.grammes(20),
@@ -119,6 +148,36 @@ void main() {
     TextesProposition.appliquer,
   );
 
+  Future<void> appliquerProposition(WidgetTester tester) async {
+    await tester.ensureVisible(appliquer);
+    await tester.pumpAndSettle();
+    await tester.tap(appliquer);
+    await tester.pumpAndSettle();
+  }
+
+  /// Ferme la fenêtre (ou la feuille) par ✕.
+  Future<void> fermer(WidgetTester tester) async {
+    await tester.tap(find.byTooltip(TextesAssistant.fermer));
+    await tester.pumpAndSettle();
+  }
+
+  /// Rouvre l'assistant par l'icône de la barre du haut.
+  Future<void> rouvrir(WidgetTester tester) async {
+    await tester.tap(find.byTooltip(TextesAssistant.ouvrir));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> annulerProposition(WidgetTester tester) async {
+    final annuler = find.widgetWithText(
+      OutlinedButton,
+      TextesProposition.annuler,
+    );
+    await tester.ensureVisible(annuler);
+    await tester.pumpAndSettle();
+    await tester.tap(annuler);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets(
     'carte : résumé, compte, chiffres qui changent, aucune écriture',
     (tester) async {
@@ -147,29 +206,36 @@ void main() {
   testWidgets('Appliquer puis Annuler : brouillon remplacé puis rendu', (
     tester,
   ) async {
-    final app = await ouvrir(tester);
-    await tester.ensureVisible(appliquer);
-    await tester.pumpAndSettle();
-    await tester.tap(appliquer);
-    await tester.pumpAndSettle();
+    final app = await ouvrir(tester, avecMaltEtEquipement: true);
+    String resumeCalculs() => tester
+        .widget<PanneauAssistant>(find.byType(PanneauAssistant))
+        .resumeCalculs;
+    final resumeAvant = resumeCalculs();
+    expect(resumeAvant, contains('IBU'));
+    expect(resumeAvant, isNot(contains('DI —')));
+    await appliquerProposition(tester);
     expect(find.text(TextesProposition.annonceAppliquee), findsOneWidget);
-    expect(find.text(TextesProposition.appliquee), findsOneWidget);
-    // Ligne du brouillon, avec la marque de la valeur du modèle.
+    // Fenêtre fermée : la ligne du brouillon porte la marque de la valeur du
+    // modèle.
+    expect(find.byType(Dialog), findsNothing);
     expect(find.text('Mosaic'), findsWidgets);
     expect(
       find.textContaining('12,5\u00a0% alpha $kProposeeParIa'),
       findsWidgets,
     );
     expect(app.recipes.writes, isEmpty);
-    final annuler = find.widgetWithText(
-      OutlinedButton,
-      TextesProposition.annuler,
-    );
-    await tester.ensureVisible(annuler);
-    await tester.pumpAndSettle();
-    await tester.tap(annuler);
-    await tester.pumpAndSettle();
+    await rouvrir(tester);
+    expect(find.text(TextesProposition.appliquee), findsOneWidget);
+    // Le houblon ajouté change l'amertume : la ligne des calculs diffère.
+    expect(resumeCalculs(), isNot(resumeAvant));
+    await annulerProposition(tester);
     expect(find.text(TextesProposition.annulee), findsOneWidget);
+    // Ligne des calculs de la fenêtre : celle du brouillon rendu.
+    expect(resumeCalculs(), resumeAvant);
+    // Fermée puis rouverte, la fenêtre montre toujours la ligne d'avant.
+    await fermer(tester);
+    await rouvrir(tester);
+    expect(resumeCalculs(), resumeAvant);
     expect(find.textContaining('12,5\u00a0% alpha'), findsNothing);
     expect(appliquer, findsOneWidget);
   });
@@ -178,23 +244,14 @@ void main() {
     tester,
   ) async {
     await ouvrir(tester);
-    await tester.ensureVisible(appliquer);
-    await tester.pumpAndSettle();
-    await tester.tap(appliquer);
-    await tester.pumpAndSettle();
+    await appliquerProposition(tester);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Nom'),
       'Blonde révisée',
     );
     await tester.pump();
-    final annuler = find.widgetWithText(
-      OutlinedButton,
-      TextesProposition.annuler,
-    );
-    await tester.ensureVisible(annuler);
-    await tester.pumpAndSettle();
-    await tester.tap(annuler);
-    await tester.pumpAndSettle();
+    await rouvrir(tester);
+    await annulerProposition(tester);
     expect(find.text(TextesProposition.confirmerAnnulation), findsOneWidget);
     expect(
       find.text(TextesProposition.confirmerAnnulationTexte),
@@ -204,13 +261,10 @@ void main() {
 
   testWidgets('Enregistrer : marques écrites dans ai_proposed', (tester) async {
     final app = await ouvrir(tester);
-    await tester.ensureVisible(appliquer);
-    await tester.pumpAndSettle();
-    await tester.tap(appliquer);
-    await tester.pumpAndSettle();
+    await appliquerProposition(tester);
     await tester.tap(find.text('Enregistrer').first);
     await tester.pumpAndSettle();
-    // « Enregistrer et fermer l'assistant ? » : la conversation sera perdue.
+    // « Enregistrer et effacer la conversation ? » : la conversation sera perdue.
     await tester.tap(find.text('Enregistrer').last);
     await tester.pumpAndSettle();
     final ecrit = app.recipes.writes.single.content!;
@@ -224,11 +278,14 @@ void main() {
     tester,
   ) async {
     await ouvrir(tester);
+    // La fenêtre est modale : le brouillon se modifie fenêtre fermée.
+    await fermer(tester);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Nom'),
       'Autre nom',
     );
     await tester.pumpAndSettle();
+    await rouvrir(tester);
     expect(find.text(TextesProposition.perimee), findsOneWidget);
     expect(find.text(TextesProposition.changements), findsOneWidget);
     expect(appliquer, findsOneWidget);
@@ -276,27 +333,98 @@ void main() {
   });
 
   for (final largeur in [1000.0, 1300.0]) {
-    testWidgets('$largeur px : focus sur « Annuler la proposition » après '
-        'Appliquer', (tester) async {
+    testWidgets('$largeur px : Appliquer ferme la fenêtre, « Annuler » 10 s, '
+        'carte appliquée à la réouverture', (tester) async {
       await ouvrir(tester, width: largeur);
-      await tester.ensureVisible(appliquer);
-      await tester.pumpAndSettle();
-      await tester.tap(appliquer);
-      await tester.pumpAndSettle();
-      final annuler = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, TextesProposition.annuler),
+      expect(find.byType(Dialog), findsOneWidget);
+      await appliquerProposition(tester);
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.text(TextesProposition.annonceAppliquee), findsOneWidget);
+      expect(find.widgetWithText(SnackBarAction, 'Annuler'), findsOneWidget);
+      // Focus rendu à l'icône Assistant.
+      final icone = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.auto_awesome_outlined),
       );
-      expect(annuler.focusNode?.hasFocus, isTrue);
+      expect(icone.focusNode?.hasFocus, isTrue);
+      await rouvrir(tester);
+      expect(find.text(TextesProposition.appliquee), findsOneWidget);
+      expect(
+        find.widgetWithText(OutlinedButton, TextesProposition.annuler),
+        findsOneWidget,
+      );
     });
   }
+
+  testWidgets('réponse arrivée pendant « Annuler » : annoncée ensuite, sans '
+      'couper l\'annonce', (tester) async {
+    final app = await ouvrir(tester, width: 1000);
+    final attente = Completer<void>();
+    app.assistant
+      ..attente = attente
+      ..reponses.add(const ReponseAssistant(texte: 'Autre avis.'));
+    await tester.enterText(
+      find.widgetWithText(TextField, TextesAssistant.champ),
+      'Et la levure ?',
+    );
+    await tester.pump();
+    await tester.tap(
+      find.widgetWithText(FilledButton, TextesAssistant.envoyer),
+    );
+    await tester.pump();
+    // Appel en cours : l'indicateur tourne, pas de pumpAndSettle.
+    await tester.ensureVisible(appliquer);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(appliquer);
+    await tester.pump(const Duration(milliseconds: 500));
+    attente.complete();
+    await tester.pumpAndSettle();
+    expect(find.text(TextesProposition.annonceAppliquee), findsOneWidget);
+    expect(find.widgetWithText(SnackBarAction, 'Annuler'), findsOneWidget);
+    expect(find.text(TextesAssistant.reponseRecue), findsNothing);
+    // Fin des 10 s de « Annuler » : l'annonce de la réponse suit.
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pumpAndSettle();
+    expect(find.text(TextesProposition.annonceAppliquee), findsNothing);
+    expect(find.text(TextesAssistant.reponseRecue), findsOneWidget);
+  });
+
+  testWidgets('réponse pendant « Annuler », assistant rouvert avant 10 s : '
+      'aucune annonce ensuite', (tester) async {
+    final app = await ouvrir(tester, width: 1000);
+    final attente = Completer<void>();
+    app.assistant
+      ..attente = attente
+      ..reponses.add(const ReponseAssistant(texte: 'Autre avis.'));
+    await tester.enterText(
+      find.widgetWithText(TextField, TextesAssistant.champ),
+      'Et la levure ?',
+    );
+    await tester.pump();
+    await tester.tap(
+      find.widgetWithText(FilledButton, TextesAssistant.envoyer),
+    );
+    await tester.pump();
+    await tester.ensureVisible(appliquer);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(appliquer);
+    await tester.pump(const Duration(milliseconds: 500));
+    attente.complete();
+    await tester.pumpAndSettle();
+    // Rouverte par l'icône : la réponse est lue dans la fenêtre.
+    await rouvrir(tester);
+    expect(find.text('Autre avis.'), findsOneWidget);
+    // Refermée avant la fin des 10 s : la réponse lue ne s'annonce pas.
+    await fermer(tester);
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pumpAndSettle();
+    expect(find.text(TextesAssistant.reponseRecue), findsNothing);
+  });
 
   testWidgets('nouvelle conversation : la proposition appliquée ne s\'annule '
       'plus', (tester) async {
     await ouvrir(tester);
-    await tester.ensureVisible(appliquer);
-    await tester.pumpAndSettle();
-    await tester.tap(appliquer);
-    await tester.pumpAndSettle();
+    await appliquerProposition(tester);
+    await rouvrir(tester);
     await tester.tap(find.byTooltip('Plus d\'actions').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text(TextesAssistant.nouvelleConversation).last);

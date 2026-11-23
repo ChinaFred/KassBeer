@@ -2006,21 +2006,33 @@ en texte, avec des propositions applicables (ci-dessous). Le serveur appelle Cla
 aucune API d'IA.
 
 - **Accès** : icône « Assistant » dans la barre du haut, avant « Enregistrer » (infobulle
-  « Ouvrir l'assistant », « Fermer l'assistant » quand la colonne est ouverte). Toujours
+  « Ouvrir l'assistant »). Toujours
   visible pour l'administrateur ; pour un brasseur, seulement quand la politique lue ouvre le
   poste aux membres. La politique est lue à l'ouverture de l'éditeur et relue à l'ouverture du
   panneau, avec les tours du jour.
-- **Disposition** : sous 840 px, feuille du bas à 90 % de la hauteur, qui remonte avec le
-  clavier (640 px de large au plus à partir de 600 px). De 840 à 1 279 px, la colonne de droite
-  porte deux boutons segmentés « Calculs » et « Assistant » ; avec « Assistant », elle passe à
-  400 px et le formulaire reste modifiable ; sous le commutateur, le panneau ne répète ni le
-  titre ni ✕ et garde son menu ⋮. À partir de 1 280 px, trois colonnes : formulaire,
-  calculs, assistant. En tête du panneau (feuille et trois colonnes) : « Assistant », menu
-  « Nouvelle conversation » et « Copier la conversation », « Fermer l'assistant », puis la
-  ligne des calculs (« DI 1057,9 ·
-  DF 1012,0 · 5,9 % · 32 IBU · 18 EBC »). Le champ et la ligne « Tours restants · Envoyer »
-  restent fixés en bas ; quand la hauteur manque (360 × 640 à 200 %), tout le panneau défile
-  d'un bloc sous son en-tête.
+- **Disposition** (décisions de l'utilisateur du 2026-11-22) : sous 840 px, feuille du bas à
+  90 % de la hauteur, qui remonte avec le clavier (640 px de large au plus à partir de
+  600 px). À partir de 840 px, grande fenêtre modale au-dessus de l'éditeur : largeur de la
+  fenêtre moins 48 px, 800 px au plus, hauteur 90 % de la fenêtre, curseur dans « Votre
+  message » à l'ouverture. Échap, ✕ ou un clic hors de la fenêtre la ferment sans rien perdre ;
+  la fermeture rend le focus à l'icône « Assistant ». Derrière, l'éditeur garde ses deux
+  colonnes (formulaire et calculs) à toutes les largeurs. En tête du panneau (feuille et
+  fenêtre) : « Assistant », menu « Nouvelle conversation » et « Copier la conversation »,
+  « Fermer l'assistant », puis la ligne des calculs (« DI 1057,9 · DF 1012,0 · 5,9 % · 32 IBU
+  · 18 EBC »). Mesure de lecture : réponses, champ et « Envoyer » bornés à 680 px et centrés ;
+  une réponse occupe toute la mesure (toute la largeur sur téléphone) ; bulles « Vous » à
+  droite sur 85 % de cette mesure au plus. Le champ et la ligne « Tours
+  restants · Envoyer » restent fixés en bas ; quand la hauteur manque (360 × 640 à 200 %),
+  tout le panneau défile d'un bloc sous son en-tête. À la réouverture, la conversation est
+  intacte et défilée à la fin, cartes de propositions comprises.
+- **Réponse arrivée fenêtre fermée** (feuille ou fenêtre) : un message s'affiche 10 s avec
+  « Ouvrir », qui rouvre l'assistant : « Réponse de l'assistant reçue » (« …, avec une
+  proposition » quand elle en porte une), « Résumé de la conversation reçu » après « Résumer et
+  continuer », « L'assistant n'a pas pu répondre. » après un échec (la fenêtre rouverte montre
+  l'erreur détaillée). Arrivé pendant les 10 s de « Proposition appliquée au brouillon…
+  Annuler », il s'affiche ensuite, sans couper « Annuler ». Ce message est retiré quand
+  l'assistant se rouvre, qu'il soit affiché ou en attente. Fenêtre ouverte, le lecteur d'écran annonce de même « Réponse de l'assistant
+  reçue », « …, avec une proposition » ou « Résumé de la conversation reçu ».
 - **Contenu fixe** : « Les chiffres viennent du calcul de Kass'Beer ; une valeur marquée
   « proposée par l'IA » est à vérifier. » en tête ; champ « Votre message » (2 à 6 lignes,
   compteur « 1 234 / 1 500 » ; au-delà, « 1 500 caractères au plus. » et « Envoyer » inactif,
@@ -2062,9 +2074,9 @@ aucune API d'IA.
   modifications ? » / « Les changements de cette recette ne seront pas enregistrés. La
   conversation avec l'assistant sera perdue. ». « Enregistrer » avec une conversation, une
   fois le nom et les champs validés :
-  « Enregistrer et fermer l'assistant ? » / « La recette sera enregistrée. La conversation sera
-  perdue : copiez d'abord ce que vous voulez garder. », boutons « Continuer la conversation »
-  et « Enregistrer ». Un appel en cours ajoute « La réponse en attente sera perdue ; le tour
+  « Enregistrer et effacer la conversation ? » / « La recette sera enregistrée. La conversation
+  sera perdue : copiez d'abord ce que vous voulez garder. », boutons « Revenir à la recette »
+  (l'assistant ne se rouvre pas) et « Enregistrer ». Un appel en cours ajoute « La réponse en attente sera perdue ; le tour
   est compté. ».
 - **Échecs**, au-dessus du champ ; le message revient dans le champ et la conversation ne
   compte pas ce tour :
@@ -2151,10 +2163,10 @@ applique au brouillon d'un appui. Rien n'est enregistré avant « Enregistrer »
     proposition illisible. Elle ne peut pas s'appliquer : reformulez votre demande. ».
 - **Appliquer au brouillon** : aucun appel à l'IA, marche hors ligne (Bibliothèque lue depuis
   l'appareil). Le brouillon est remplacé, l'éditeur passe en « modifié », et « Proposition
-  appliquée au brouillon. Rien n'est enregistré. » s'affiche 10 s avec « Annuler ». Sous
-  840 px, la feuille se ferme et le focus revient sur l'icône « Assistant » ; la conversation
-  reste. À partir de 840 px, la colonne reste sur « Assistant » et le focus va sur « Annuler la
-  proposition ».
+  appliquée au brouillon. Rien n'est enregistré. » s'affiche 10 s avec « Annuler ». La
+  feuille ou la fenêtre se ferme et le focus revient sur l'icône « Assistant » ; la
+  conversation reste, et la carte appliquée garde « Annuler la proposition » à la
+  réouverture.
 - **Annuler la proposition** : sans modification depuis, le brouillon d'avant revient tout de
   suite. Après une modification à la main : « Annuler la proposition ? » / « Le brouillon
   revient à son état d'avant la proposition. Les modifications faites depuis seront
