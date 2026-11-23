@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "version": "0.2.16",
+      "date": "2026-11-23",
+      "summaries": [
+        "Un arrêt du développement d'un ticket s'affiche à part et se relance tout de suite."
+      ],
+      "paragraphs": [
+        "Pour l'administrateur : quand une session de développement lancée depuis la fiche d'un ticket s'arrête avant d'écrire du code, son message s'affiche dans la section Analyses sous le titre « Arrêt du développement », à part des analyses. La barre de la fiche dit « Le développement du … s'est arrêté » et propose « Relancer le développement » tout de suite, sans attendre trois heures. La validation du ticket reste valable : un arrêt ne demande plus de valider à nouveau."
+      ]
+    },
+    {
       "version": "0.2.15",
       "date": "2026-11-22",
       "summaries": [
@@ -48,14 +58,6 @@
       ],
       "paragraphs": [
         "Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé : seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre dans le navigateur le journal de toutes les versions, détail technique et versions plus récentes compris. Demandé par le ticket #114."
-      ]
-    },
-    {
-      "version": "0.2.0",
-      "date": "2026-11-22",
-      "summaries": [],
-      "paragraphs": [
-        "La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms : une recette qui écrit l'un ou l'autre retrouve la même levure."
       ]
     }
   ]
