@@ -49,7 +49,8 @@ passent dans `documentation/prompts-routines.md`, que lit `functions/test/prompt
 Le prompt de développement change : règles de session tirées de `git show
 origin/main:CLAUDE.md`, règles du réseau permises au point 5, L3 coupé en L3a (blocage) et
 L3b (accord exigé), tête du texte de lancement exigée en L2 et nommée par l'accord,
-`git rev-list --first-parent <tête accordée>..HEAD` en L8, blocage sans retour en L5 pour une PR de règles quand origin/main avance (L8) ou que la version échoue (L7), aucun commentaire « ## Accord »
+`git rev-list --first-parent <tête accordée>..<ce sha>` en L8, blocage sans retour en L5 pour une PR de règles quand origin/main avance (L8) ou que la version échoue (L7), contenu du commit de fusion contrôlé en L8
+(`git diff --quiet $(git merge-tree --write-tree <tête accordée> origin/main | head -n 1) <ce sha> -- CLAUDE.md scripts/changelog-recent.mjs scripts/changelog-recent.test.mjs documentation/prompts-routines.md` doit réussir, sinon blocage, décision de l'utilisateur du 2026-11-23), aucun commentaire « ## Accord »
 publié par une session. **À recoller sur claude.ai** (routine de
 développement) depuis `documentation/prompts-routines.md` après la fusion ; le prompt
 d'analyse ne change pas. Entre le déploiement des Functions et le recollage, aucune livraison :

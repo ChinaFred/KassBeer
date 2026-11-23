@@ -328,9 +328,14 @@ L8. Juste avant de fusionner, git fetch origin. Si origin/main a avancé depuis 
     la pull request : elle doit valoir le sha que tu as poussé en L6 (ou, sans push, la tête
     relue en L2) ; sinon blocage. Refais le contrôle de L3 sur cette tête (L3a, et L3b avec
     l'accord de la tête accordée). Si la pull request touche un fichier de L3b :
-    git rev-list --first-parent <tête accordée>..HEAD ne rend rien, ou seulement le commit
-    de fusion de L6, dont le premier parent est la tête accordée ; sinon blocage. Fusionne par
-    gh pr merge M --merge --match-head-commit <ce sha>, sans fusion automatique.
+    git rev-list --first-parent <tête accordée>..<ce sha> ne rend rien, ou seulement le
+    commit de fusion de L6, dont le premier parent est la tête accordée ; sinon blocage. Et
+    git diff --quiet $(git merge-tree --write-tree <tête accordée> origin/main | head -n 1) <ce sha> --
+    CLAUDE.md scripts/changelog-recent.mjs scripts/changelog-recent.test.mjs
+    documentation/prompts-routines.md doit réussir (les quatre chemins de la liste de L3b,
+    qu'ils soient touchés ou non par la pull request) ; sinon blocage (« le commit de fusion
+    change les règles du réseau au-delà de main »).
+    Fusionne par gh pr merge M --merge --match-head-commit <ce sha>, sans fusion automatique.
 L9. Suis le workflow « Déploiement », lancé par la CI du commit de fusion sur main, jusqu'à
     sa fin, job « Tag de la version déployée » compris. Réussi : publie sur l'Issue N un
     commentaire qui commence par « ## Livraison — terminée » et donne la pull request, la

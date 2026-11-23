@@ -185,7 +185,7 @@ describe("prompts des routines (P40)", () => {
     const l8 = between(PROMPTS.developpement, "\nL8. ", "\nL9. ").replace(/\s+/g, " ");
     assert.ok(
       l8.includes(
-        "git rev-list --first-parent <tête accordée>..HEAD ne rend rien, ou seulement le " +
+        "git rev-list --first-parent <tête accordée>..<ce sha> ne rend rien, ou seulement le " +
           "commit de fusion de L6, dont le premier parent est la tête accordée",
       ),
     );
@@ -197,6 +197,13 @@ describe("prompts des routines (P40)", () => {
       ),
       "L8 : avancée de main sur une PR de règles",
     );
+    const merge =
+      /git diff --quiet \$\(git merge-tree --write-tree <tête accordée> origin\/main \| head -n 1\) <ce sha> -- (.+?) doit réussir \(les quatre chemins de la liste de L3b, qu'ils soient touchés ou non par la pull request\) ; sinon blocage \(« le commit de fusion change les règles du réseau au-delà de main »\)\./.exec(
+        l8,
+      );
+    assert.ok(merge !== null, "L8 : contenu du commit de fusion");
+    // Les chemins comparés sont ceux de la catégorie 2, tous (P65).
+    assert.deepEqual(merge[1].split(" "), [...NETWORK_RULES_PATTERNS]);
     const l7 = between(PROMPTS.developpement, "\nL7. ", "\nL8. ").replace(/\s+/g, " ");
     assert.ok(
       l7.includes(

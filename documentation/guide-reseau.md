@@ -448,7 +448,10 @@ de la PR ; un nouveau commit l'annule. Les prompts des deux routines quittent
 `exigences-techniques.md` pour `documentation/prompts-routines.md`, lu par
 `functions/test/prompts.test.ts`. Le prompt de développement prend ses règles de session dans
 `git show origin/main:CLAUDE.md`, coupe L3 en L3a (blocage) et L3b (accord exigé) et contrôle
-en L8 les commits ajoutés après la tête accordée, et bloque sans retour en L5 quand origin/main avance ou que la version échoue (L7, L8) ; le serveur lui envoie `livraison #N <tête>`,
+en L8 les commits ajoutés après la tête accordée et le contenu du commit de fusion
+(les quatre fichiers de L3b dans le commit de fusion égaux à ceux d'une fusion de la tête
+accordée avec `main`, par `git merge-tree --write-tree` et `git diff --quiet`, sinon blocage,
+décision de l'utilisateur du 2026-11-23), et bloque sans retour en L5 quand origin/main avance ou que la version échoue (L7, L8) ; le serveur lui envoie `livraison #N <tête>`,
 avec la tête qu'il a contrôlée, que L2 exige égale à celle de la PR (décision de
 l'utilisateur du 2026-11-23). Il se recolle sur claude.ai juste après le déploiement.
 Le prompt d'analyse ne change pas (il change au lot R3). Contrôles modifiés : P10, P24, P25,
