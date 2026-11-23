@@ -435,7 +435,6 @@ class CarteProposition extends StatefulWidget {
     required this.etat,
     required this.onAppliquer,
     required this.onAnnuler,
-    this.focusAnnuler,
   });
 
   final PropositionRecue recue;
@@ -451,9 +450,6 @@ class CarteProposition extends StatefulWidget {
   final EtatApplication? etat;
   final void Function(ApercuPret apercu) onAppliquer;
   final VoidCallback onAnnuler;
-
-  /// Focus d'« Annuler la proposition » (grand écran, après « Appliquer »).
-  final FocusNode? focusAnnuler;
 
   @override
   State<CarteProposition> createState() => _CartePropositionState();
@@ -520,7 +516,6 @@ class _CartePropositionState extends State<CarteProposition> {
           const SizedBox(height: 8),
           _boutons([
             OutlinedButton(
-              focusNode: widget.focusAnnuler,
               onPressed: widget.onAnnuler,
               child: const Text(TextesProposition.annuler),
             ),

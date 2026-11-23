@@ -10,6 +10,9 @@
   autorise, liste fermée ci-dessous). ADR-006 reste en vigueur pour le reste. Modifie ADR-001
   (premier poste de « Coûts variables », Cloud Storage ajouté). S'appuie sur ADR-007 sans le
   changer.
+- **Modifié par** : ADR-020 (2026-11-22) : arrêts de la routine de développement sous
+  « ## Développement — arrêt » (lot R1), règles du réseau et accord lié à la tête de la PR
+  (lot R2), changement lourd depuis l'écran (lot R3).
 
 ## Contexte
 

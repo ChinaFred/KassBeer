@@ -424,6 +424,17 @@ Le 2026-11-22 (v0.2.13), décision de l'utilisateur : P56 ajoute la ligne de fus
 `origin_fr` écrit par la préparation seule, affiché par l'application sans traduction. Aucun
 contrôle, agent, skill ni hook nouveau.
 
+Le 2026-11-22, avec le lot R1 d'ADR-020 (accepté par l'utilisateur), P32 relève
+« ## Développement — arrêt » sous la nature `development_stop`, sans le compter comme une
+analyse, et un arrêt relevé après le lancement clôt l'entrée `developpement` (`ended_by:
+"stopped"`) ; P33 retire ce titre à l'affichage et ignore une nature inconnue sans erreur ;
+P40 interdit à la routine de développement tout commentaire qui commence par « ## Analyse »,
+publie ses arrêts sous « ## Développement — arrêt » et écarte les « ## Analyse — compléments »
+de la spécification (point 3). Le prompt de la routine de développement
+(`exigences-techniques.md`, « Routines des tickets ») change aux points 3, 4, 5 et 6 : il se
+recolle sur claude.ai après la fusion. Les lots R2 et R3 changeront les autres contrôles cités
+par l'ADR.
+
 Le 2026-11-22, avec le ticket #104 (file d'attente des livraisons, amendement d'ADR-008) et
 l'accord de l'utilisateur, P25, P36, P39, P40, P43, P44, P45, P46 et P47 sont complétés, et la
 puce « Une action qui appelle un modèle… » de « Coûts variables » admet un départ différé, parti

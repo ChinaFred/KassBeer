@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:exchange/exchange.dart' show IndexImport, MarqueIa;
 import 'package:flutter/material.dart';
@@ -15,7 +16,6 @@ import '../../../core/presentation/fiche.dart';
 import '../../../core/presentation/formats.dart';
 import '../../../core/presentation/ligne_editeur.dart';
 import '../../../core/presentation/page_document.dart';
-import '../../../core/presentation/segments.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/data/lecture_document.dart';
@@ -109,9 +109,6 @@ class _RecipeEditor extends ConsumerStatefulWidget {
   ConsumerState<_RecipeEditor> createState() => _RecipeEditorState();
 }
 
-/// Contenu de la colonne de droite de 840 à 1 279 px.
-enum _ColonneDroite { calculs, assistant }
-
 /// Sections de l'éditeur, dans l'ordre des puces de saut.
 enum _Section { general, fermentables, hops, others, yeast, steps, notes }
 
@@ -145,8 +142,21 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   /// panneau et perdue à la fermeture de l'éditeur.
   ControleurAssistant? _assistant;
 
-  /// Colonne de l'assistant affichée (840 px et plus).
-  bool _assistantOuvert = false;
+  /// Réponses de l'assistant déjà vues par l'éditeur : une réponse arrivée
+  /// fenêtre fermée s'annonce avec « Ouvrir ».
+  int _reponsesVues = 0;
+
+  /// Dernier échec déjà vu ou annoncé.
+  EchecAssistant? _echecVu;
+
+  /// Message « Proposition appliquée… Annuler » affiché, et annonce de
+  /// l'assistant affichée : `null` une fois fermés.
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _annonceAnnuler;
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _annonceAssistant;
+
+  /// Annonce arrivée pendant « Annuler » : affichée à sa fermeture, sauf si
+  /// l'assistant s'est rouvert entre-temps.
+  String? _annoncePendante;
 
   /// Marques « proposée par l'IA » du brouillon (ADR-015, lot A2).
   late List<MarqueIa> _marques;
@@ -187,11 +197,14 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   /// est ouvert ; relue par « Réessayer ».
   Future<IndexImport?>? _indexProposition;
 
-  /// Contexte de la feuille de l'assistant ouverte (sous 840 px), fermée
-  /// après « Appliquer ».
-  BuildContext? _feuille;
+  /// Contexte de la fenêtre de l'assistant ouverte (feuille du bas sous
+  /// 840 px, grande fenêtre au-delà), fermée après « Appliquer ».
+  BuildContext? _fenetre;
   final _assistantFocus = FocusNode();
-  final _annulerFocus = FocusNode();
+
+  /// Monte quand l'état des propositions change (annulation) : la fenêtre,
+  /// construite par sa route, se reconstruit sans attendre le contrôleur.
+  final _etatPropositions = ValueNotifier<int>(0);
   final Set<String> _calculsProposition = {};
 
   /// Brouillon, calculs et équipement de la dernière construction : ce que
@@ -240,7 +253,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     _nameFocus.dispose();
     _styleFocus.dispose();
     _assistantFocus.dispose();
-    _annulerFocus.dispose();
+    _etatPropositions.dispose();
     _assistant
       ?..removeListener(_assistantChange)
       ..dispose();
@@ -258,7 +271,52 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       }
     }
     _conversationVue = conversation;
+    final a = _assistant;
+    if (a != null) {
+      final recues = a.reponsesRecues;
+      final echec = a.echec;
+      String? annonce;
+      if (recues != _reponsesVues) {
+        _reponsesVues = recues;
+        annonce = a.dernierMode == ModeAssistant.resume
+            ? TextesAssistant.resumeRecu
+            : a.derniereAvecProposition
+            ? TextesAssistant.reponseAvecProposition
+            : TextesAssistant.reponseRecue;
+      } else if (echec != null && !identical(echec, _echecVu)) {
+        annonce = TextesAssistant.echecFenetreFermee;
+      }
+      _echecVu = echec;
+      if (annonce != null) _annoncerFenetreFermee(annonce);
+    }
     setState(() {});
+  }
+
+  /// Réponse, résumé ou échec arrivé fenêtre fermée : annoncé avec « Ouvrir »,
+  /// qui rouvre l'assistant. Pendant « Proposition appliquée… Annuler », il
+  /// attend sa fermeture, sans la couper.
+  void _annoncerFenetreFermee(String annonce) {
+    if (_fenetre != null) return;
+    if (_annonceAnnuler != null) {
+      _annoncePendante = annonce;
+      return;
+    }
+    final controleur = annoncerAvecAction(
+      ScaffoldMessenger.of(context),
+      annonce,
+      action: TextesAssistant.ouvrirReponse,
+      onAction: () {
+        if (mounted && _fenetre == null) {
+          _ouvrirAssistant(MediaQuery.sizeOf(context).width);
+        }
+      },
+    );
+    _annonceAssistant = controleur;
+    unawaited(
+      controleur.closed.then((_) {
+        if (identical(_annonceAssistant, controleur)) _annonceAssistant = null;
+      }),
+    );
   }
 
   ControleurAssistant get _controleur => _assistant ??=
@@ -335,11 +393,6 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     final controleur = _assistant;
     final recue = controleur?.propositions[rang];
     if (controleur == null || recue == null) return null;
-    final derniere = _derniere;
-    final estDerniere =
-        derniere != null &&
-        derniere.message == rang &&
-        derniere.conversation == controleur.idConversation;
     return CarteProposition(
       key: ValueKey('proposition-${controleur.idConversation}-$rang'),
       recue: recue,
@@ -348,7 +401,6 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       calculer: _calculer,
       errors: ref.read(errorReportServiceProvider),
       etat: _applications[_cleProposition(controleur.idConversation, rang)],
-      focusAnnuler: estDerniere ? _annulerFocus : null,
       onAppliquer: (apercu) => _appliquer(rang, apercu),
       onAnnuler: () => unawaited(_annuler(rang)),
     );
@@ -406,27 +458,28 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       _dirty = true;
     });
     final messenger = ScaffoldMessenger.of(context);
-    annoncerAvecAnnulation(
+    final annonce = annoncerAvecAnnulation(
       messenger,
       TextesProposition.annonceAppliquee,
       onAnnuler: () => unawaited(_annuler(rang)),
     );
-    final width = MediaQuery.sizeOf(context).width;
-    final feuille = _feuille;
-    if (width < kExpandedMinWidth && feuille != null && feuille.mounted) {
-      // Sous 840 px, la feuille se ferme ; la conversation reste dans le
-      // contrôleur.
-      Navigator.of(feuille).pop();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _assistantFocus.requestFocus();
-      });
-    } else if (width >= kExpandedMinWidth) {
-      // Colonne de l'assistant (840 px et plus) : le focus passe sur
-      // « Annuler la proposition ».
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _annulerFocus.requestFocus();
-      });
-    }
+    _annonceAnnuler = annonce;
+    unawaited(
+      annonce.closed.then((_) {
+        if (!identical(_annonceAnnuler, annonce)) return;
+        _annonceAnnuler = null;
+        final pendante = _annoncePendante;
+        _annoncePendante = null;
+        if (mounted && pendante != null) _annoncerFenetreFermee(pendante);
+      }),
+    );
+    // La feuille ou la fenêtre se ferme ; la conversation reste dans le
+    // contrôleur, et le focus revient sur l'icône Assistant.
+    final fenetre = _fenetre;
+    if (fenetre != null && fenetre.mounted) Navigator.of(fenetre).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _assistantFocus.requestFocus();
+    });
   }
 
   /// « Annuler la proposition » : le brouillon d'avant revient. Après une
@@ -461,6 +514,11 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       _applications[_cleProposition(derniere.conversation, rang)] =
           EtatApplication.annulee;
       _derniere = null;
+    });
+    // Après le build de l'éditeur, qui réécrit `_dernier` : la fenêtre se
+    // reconstruit avec la ligne des calculs du brouillon rendu.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _etatPropositions.value++;
     });
   }
 
@@ -546,33 +604,66 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   }
 
   /// Icône « Assistant » de la barre du haut : feuille du bas sous 840 px,
-  /// colonne au-delà. La politique et les tours du jour sont relus à chaque
-  /// ouverture ; rien n'est envoyé.
-  void _basculerAssistant(double width) {
+  /// grande fenêtre au-delà (ADR-015, amendement du 2026-11-22). La politique
+  /// et les tours du jour sont relus à chaque ouverture ; rien n'est envoyé.
+  /// Fermer la fenêtre ne perd rien : la conversation vit dans le contrôleur.
+  void _ouvrirAssistant(double width) {
     final controleur = _controleur;
-    if (width >= kExpandedMinWidth && _assistantOuvert) {
-      setState(() => _assistantOuvert = false);
-      return;
-    }
+    _reponsesVues = controleur.reponsesRecues;
+    _echecVu = controleur.echec;
+    // Réponse déjà lue en rouvrant : son annonce, affichée ou en attente,
+    // est retirée.
+    _annoncePendante = null;
+    _annonceAssistant?.close();
     ref
       ..invalidate(politiqueIaProvider)
       ..invalidate(quotasIaProvider);
+    Widget panneau(BuildContext fenetreContext, {required bool autofocus}) =>
+        ValueListenableBuilder<int>(
+          valueListenable: _etatPropositions,
+          builder: (_, _, _) =>
+              _panneau(controleur, fenetreContext, autofocus: autofocus),
+        );
+
+    final Future<void> ouverte;
     if (width >= kExpandedMinWidth) {
-      setState(() => _assistantOuvert = true);
-      return;
-    }
-    unawaited(
       // ticket: /recettes/nouvelle/fenetre/assistant, /recettes/:id/modifier/fenetre/assistant
-      showModalBottomSheet<void>(
+      ouverte = showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          _fenetre = dialogContext;
+          final taille = MediaQuery.sizeOf(dialogContext);
+          return Dialog(
+            insetPadding: const EdgeInsets.all(24),
+            clipBehavior: Clip.antiAlias,
+            child: Semantics(
+              scopesRoute: true,
+              namesRoute: true,
+              explicitChildNodes: true,
+              label: TextesAssistant.titre,
+              child: SizedBox(
+                width: min(taille.width - 48, kAssistantFenetreLargeur),
+                height: taille.height * _hauteurFenetre,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: panneau(dialogContext, autofocus: true),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      // ticket: /recettes/nouvelle/fenetre/assistant, /recettes/:id/modifier/fenetre/assistant
+      ouverte = showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
         showDragHandle: true,
         builder: (sheetContext) {
-          _feuille = sheetContext;
+          _fenetre = sheetContext;
           final hauteur = MediaQuery.sizeOf(sheetContext).height;
           final clavier = MediaQuery.viewInsetsOf(sheetContext).bottom;
-          final dernier = _dernier;
           return Padding(
             padding: EdgeInsets.only(bottom: clavier),
             child: SizedBox(
@@ -580,22 +671,47 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
                 0.0,
                 hauteur * kFeuilleListeHauteur,
               ),
-              child: PanneauAssistant(
-                controleur: controleur,
-                resumeCalculs: dernier == null
-                    ? ''
-                    : texteBarreCalculs(dernier.calculs).texte,
-                recetteVide: _recetteVide(dernier?.content),
-                contexte: _contexteAssistant,
-                carteProposition: _carte,
-                onFermer: () => Navigator.of(sheetContext).pop(),
-              ),
+              child: panneau(sheetContext, autofocus: false),
             ),
           );
         },
-      ).then((_) => _feuille = null),
+      );
+    }
+    unawaited(
+      ouverte.then((_) {
+        _fenetre = null;
+        _reponsesVues = _assistant?.reponsesRecues ?? _reponsesVues;
+        _echecVu = _assistant?.echec;
+        // La fermeture rend le focus à l'icône Assistant.
+        if (mounted && width >= kExpandedMinWidth) {
+          _assistantFocus.requestFocus();
+        }
+      }),
     );
   }
+
+  /// Panneau de la feuille ou de la fenêtre, avec le dernier brouillon lu.
+  Widget _panneau(
+    ControleurAssistant controleur,
+    BuildContext fenetreContext, {
+    required bool autofocus,
+  }) {
+    final dernier = _dernier;
+    return PanneauAssistant(
+      controleur: controleur,
+      resumeCalculs: dernier == null
+          ? ''
+          : texteBarreCalculs(dernier.calculs).texte,
+      recetteVide: _recetteVide(dernier?.content),
+      contexte: _contexteAssistant,
+      carteProposition: _carte,
+      autofocus: autofocus,
+      onFermer: () => Navigator.of(fenetreContext).pop(),
+    );
+  }
+
+  /// Hauteur de la fenêtre de l'assistant : 90 % de la fenêtre.
+  static const _hauteurFenetre = 0.9;
 
   static bool _recetteVide(RecipeContent? c) =>
       c == null || (c.fermentables.isEmpty && c.hops.isEmpty);
@@ -676,8 +792,8 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           context,
           'La recette sera enregistrée. La conversation sera perdue : copiez '
           'd\'abord ce que vous voulez garder.$_reponsePerdue',
-          titre: 'Enregistrer et fermer l\'assistant ?',
-          continuer: 'Continuer la conversation',
+          titre: 'Enregistrer et effacer la conversation ?',
+          continuer: 'Revenir à la recette',
           abandonner: 'Enregistrer',
         )) {
       return;
@@ -920,7 +1036,6 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     final initial = widget.initial;
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= kExpandedMinWidth;
-    final troisColonnes = width >= kEditeurAssistantCoteACoteMinWidth;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     // Bouton visible pour l'administrateur ; pour un brasseur, seulement si
     // la politique lue ouvre le poste (ADR-015, section 2).
@@ -932,7 +1047,6 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
                     .reglage(kPosteAssistantRecette)
                     ?.ouvertAuxMembres ??
                 false));
-    final assistantColonne = wide && assistantVisible && _assistantOuvert;
 
     final form = Form(
       key: _formKey,
@@ -968,94 +1082,30 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       ),
     );
 
-    Widget blocCalculs({bool titre = true}) => SingleChildScrollView(
-      // Sans marge haute : « Calculs » s'aligne sur le premier titre du
-      // formulaire.
-      padding: const EdgeInsets.fromLTRB(8, 0, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (titre) const TitreSection('Calculs'),
-          BlocCalculs(
-            calculs: calculs,
-            content: content,
-            equipement: equipement,
+    // À partir de 840 px : formulaire et calculs en deux colonnes ;
+    // l'assistant s'ouvre dans sa fenêtre, au-dessus.
+    final colonnes = [
+      Expanded(child: form),
+      SizedBox(
+        width: kCalculationPanelWidth,
+        child: SingleChildScrollView(
+          // Sans marge haute : « Calculs » s'aligne sur le premier titre du
+          // formulaire.
+          padding: const EdgeInsets.fromLTRB(8, 0, 16, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const TitreSection('Calculs'),
+              BlocCalculs(
+                calculs: calculs,
+                content: content,
+                equipement: equipement,
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-    Widget panneau({bool titreEtFermer = true}) => PanneauAssistant(
-      titreEtFermer: titreEtFermer,
-      controleur: _controleur,
-      resumeCalculs: texteBarreCalculs(calculs).texte,
-      recetteVide: _recetteVide(content),
-      contexte: _contexteAssistant,
-      carteProposition: _carte,
-      autofocus: true,
-      onFermer: () => setState(() => _assistantOuvert = false),
-    );
-
-    final List<Widget> colonnes;
-    final double largeur;
-    if (troisColonnes) {
-      colonnes = [
-        Expanded(child: form),
-        SizedBox(width: kCalculationPanelWidth, child: blocCalculs()),
-        if (assistantColonne)
-          SizedBox(width: kAssistantPanelWidth, child: panneau()),
-      ];
-      largeur = assistantColonne
-          ? kEditorTroisColonnesMaxWidth
-          : kEditorMaxWidth;
-    } else {
-      // De 840 à 1 279 px : un commutateur « Calculs / Assistant » en tête
-      // de la colonne de droite ; le formulaire reste modifiable.
-      colonnes = [
-        Expanded(child: form),
-        SizedBox(
-          width: assistantColonne
-              ? kAssistantPanelWidth
-              : kCalculationPanelWidth,
-          child: !assistantVisible
-              ? blocCalculs()
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
-                      child: BoutonsSegmentes<_ColonneDroite>(
-                        values: _ColonneDroite.values,
-                        labelOf: (c) => switch (c) {
-                          _ColonneDroite.calculs => 'Calculs',
-                          _ColonneDroite.assistant => TextesAssistant.titre,
-                        },
-                        selected: {
-                          assistantColonne
-                              ? _ColonneDroite.assistant
-                              : _ColonneDroite.calculs,
-                        },
-                        onSelectionChanged: (choix) {
-                          final assistant = choix.contains(
-                            _ColonneDroite.assistant,
-                          );
-                          if (assistant == _assistantOuvert) return;
-                          _basculerAssistant(width);
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: assistantColonne
-                          ? panneau(titreEtFermer: false)
-                          : blocCalculs(titre: false),
-                    ),
-                  ],
-                ),
         ),
-      ];
-      largeur = assistantColonne
-          ? kEditorAvecAssistantMaxWidth
-          : kEditorMaxWidth;
-    }
+      ),
+    ];
 
     return EditeurPleinEcran(
       titre: initial == null ? 'Nouvelle recette' : 'Modifier la recette',
@@ -1073,13 +1123,9 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
         if (assistantVisible)
           IconButton(
             focusNode: _assistantFocus,
-            tooltip: assistantColonne
-                ? TextesAssistant.fermer
-                : TextesAssistant.ouvrir,
-            isSelected: assistantColonne,
-            onPressed: () => _basculerAssistant(width),
+            tooltip: TextesAssistant.ouvrir,
+            onPressed: () => _ouvrirAssistant(width),
             icon: const Icon(Icons.auto_awesome_outlined),
-            selectedIcon: const Icon(Icons.auto_awesome),
           ),
       ],
       bottomBar: wide || keyboardOpen
@@ -1106,7 +1152,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
           ? Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: largeur),
+                constraints: const BoxConstraints(maxWidth: kEditorMaxWidth),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: colonnes,

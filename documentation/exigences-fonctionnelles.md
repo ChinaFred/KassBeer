@@ -1040,14 +1040,17 @@ pas disponible hors ligne. », « Ticket illisible. Mettez l'application à jour
 aux tickets ».
 
 **Analyses (N).** Section toujours ouverte, lue par l'administrateur seul (ADR-008). Elle
-montre ce que le compte du mainteneur a publié sur l'Issue : analyses (`## Analyse…`) et
-précisions (`## Précisions…`), la plus ancienne en haut, séparées de 12 px. N compte les seules
-analyses ; le titre reste « Analyses » sans nombre tant que la section n'est pas lue. Une
+montre ce que le compte du mainteneur a publié sur l'Issue : analyses (`## Analyse…`), arrêts
+d'une session de développement (`## Développement — arrêt`, ADR-020) et précisions
+(`## Précisions…`), la plus ancienne en haut, séparées de 12 px. N compte les seules
+analyses : un arrêt n'en est pas une. Une entrée d'une nature que cette version ne connaît pas
+n'est pas affichée, sans erreur ; le titre reste « Analyses » sans nombre tant que la section n'est pas lue. Une
 carte par entrée, dans l'encadré du texte de l'administrateur, titre en en-tête :
 
 | Entrée | Icône, fond | Titre |
 |---|---|---|
 | analyse | loupe, fond de surface | « Analyse du jj/mm/aa à hh:mm » (sans date : « Analyse ») |
+| arrêt d'une session de développement | sens interdit, fond de surface | « Arrêt du développement du jj/mm/aa à hh:mm » |
 | réponse publiée par « Répondre » | flèche de réponse, fond secondaire | « Votre réponse du jj/mm/aa à hh:mm » |
 | précisions publiées hors de l'application | bulle, fond de surface | « Précisions du jj/mm/aa à hh:mm », puis « Non publiée depuis l'application. » |
 
@@ -1057,7 +1060,7 @@ Le corps est rendu en Markdown (style GitHub), aux couleurs du thème, sans sa l
 `https` avec un hôte ; un autre lien ne fait rien ; un échec affiche « Impossible d'ouvrir le
 lien. ». Aucun HTML n'est rendu : une balise reste du texte. Le lien est lu comme un lien
 activable. Un tableau large défile à l'horizontale. Entrée tronquée : « Analyse tronquée, voir
-GitHub. » (« Réponse tronquée, voir GitHub. » pour une réponse, « Précisions tronquées, voir
+GitHub. » (« Arrêt tronqué, voir GitHub. » pour un arrêt, « Réponse tronquée, voir GitHub. » pour une réponse, « Précisions tronquées, voir
 GitHub. » pour des précisions non publiées depuis l'application) et « Ouvrir l'Issue #12 ».
 Plus de dix entrées sur l'Issue : « Seules les 10 dernières entrées sont affichées. Les autres
 sont sur GitHub. », puis « Ouvrir l'Issue #12 ».
@@ -1156,6 +1159,7 @@ des boutons, une seule ligne de lancement, dans cet ordre de priorité :
 | appel de la fiche en cours | barre de progression, « Lancement de l'analyse en cours. » ; le bouton est inactif |
 | lancement en cours | « Analyse en cours depuis 14:05 » (autre jour : « … depuis le 12/11/26 à 14:05 ») |
 | plafond atteint, ticket reçu ou validé | « Plafond atteint le 13/11 : 10 lancements sur 10. Le compteur repart à zéro peu après minuit. » ; le bouton est inactif |
+| développement arrêté par la session (marqué par le serveur, ADR-020) | « Le développement du jj/mm/aa à hh:mm s'est arrêté. Lisez la raison dans la section Analyses. Répondez si l'arrêt pose une question, puis relancez. » (ton d'erreur, icône d'erreur comme une livraison bloquée) ; « Relancer le développement » est offert tout de suite, la validation reste valable, et la boîte de relance affiche « Le développement du jj/mm/aa à hh:mm s'est arrêté. Vérifiez dans la section Analyses que la raison de l'arrêt est levée. » |
 | relance | « Le lancement du jj/mm/aa à hh:mm n'a rien changé au ticket. Vérifiez sur claude.ai/code qu'aucune session ne tourne encore. » |
 | plafond atteint, ticket analysé ou validé sur GitHub seul | « Plafond atteint le 13/11 : 10 lancements sur 10. Vous pouvez valider. Le compteur repart à zéro peu après minuit. » |
 
@@ -2094,21 +2098,33 @@ en texte, avec des propositions applicables (ci-dessous). Le serveur appelle Cla
 aucune API d'IA.
 
 - **Accès** : icône « Assistant » dans la barre du haut, avant « Enregistrer » (infobulle
-  « Ouvrir l'assistant », « Fermer l'assistant » quand la colonne est ouverte). Toujours
+  « Ouvrir l'assistant »). Toujours
   visible pour l'administrateur ; pour un brasseur, seulement quand la politique lue ouvre le
   poste aux membres. La politique est lue à l'ouverture de l'éditeur et relue à l'ouverture du
   panneau, avec les tours du jour.
-- **Disposition** : sous 840 px, feuille du bas à 90 % de la hauteur, qui remonte avec le
-  clavier (640 px de large au plus à partir de 600 px). De 840 à 1 279 px, la colonne de droite
-  porte deux boutons segmentés « Calculs » et « Assistant » ; avec « Assistant », elle passe à
-  400 px et le formulaire reste modifiable ; sous le commutateur, le panneau ne répète ni le
-  titre ni ✕ et garde son menu ⋮. À partir de 1 280 px, trois colonnes : formulaire,
-  calculs, assistant. En tête du panneau (feuille et trois colonnes) : « Assistant », menu
-  « Nouvelle conversation » et « Copier la conversation », « Fermer l'assistant », puis la
-  ligne des calculs (« DI 1057,9 ·
-  DF 1012,0 · 5,9 % · 32 IBU · 18 EBC »). Le champ et la ligne « Tours restants · Envoyer »
-  restent fixés en bas ; quand la hauteur manque (360 × 640 à 200 %), tout le panneau défile
-  d'un bloc sous son en-tête.
+- **Disposition** (décisions de l'utilisateur du 2026-11-22) : sous 840 px, feuille du bas à
+  90 % de la hauteur, qui remonte avec le clavier (640 px de large au plus à partir de
+  600 px). À partir de 840 px, grande fenêtre modale au-dessus de l'éditeur : largeur de la
+  fenêtre moins 48 px, 800 px au plus, hauteur 90 % de la fenêtre, curseur dans « Votre
+  message » à l'ouverture. Échap, ✕ ou un clic hors de la fenêtre la ferment sans rien perdre ;
+  la fermeture rend le focus à l'icône « Assistant ». Derrière, l'éditeur garde ses deux
+  colonnes (formulaire et calculs) à toutes les largeurs. En tête du panneau (feuille et
+  fenêtre) : « Assistant », menu « Nouvelle conversation » et « Copier la conversation »,
+  « Fermer l'assistant », puis la ligne des calculs (« DI 1057,9 · DF 1012,0 · 5,9 % · 32 IBU
+  · 18 EBC »). Mesure de lecture : réponses, champ et « Envoyer » bornés à 680 px et centrés ;
+  une réponse occupe toute la mesure (toute la largeur sur téléphone) ; bulles « Vous » à
+  droite sur 85 % de cette mesure au plus. Le champ et la ligne « Tours
+  restants · Envoyer » restent fixés en bas ; quand la hauteur manque (360 × 640 à 200 %),
+  tout le panneau défile d'un bloc sous son en-tête. À la réouverture, la conversation est
+  intacte et défilée à la fin, cartes de propositions comprises.
+- **Réponse arrivée fenêtre fermée** (feuille ou fenêtre) : un message s'affiche 10 s avec
+  « Ouvrir », qui rouvre l'assistant : « Réponse de l'assistant reçue » (« …, avec une
+  proposition » quand elle en porte une), « Résumé de la conversation reçu » après « Résumer et
+  continuer », « L'assistant n'a pas pu répondre. » après un échec (la fenêtre rouverte montre
+  l'erreur détaillée). Arrivé pendant les 10 s de « Proposition appliquée au brouillon…
+  Annuler », il s'affiche ensuite, sans couper « Annuler ». Ce message est retiré quand
+  l'assistant se rouvre, qu'il soit affiché ou en attente. Fenêtre ouverte, le lecteur d'écran annonce de même « Réponse de l'assistant
+  reçue », « …, avec une proposition » ou « Résumé de la conversation reçu ».
 - **Contenu fixe** : « Les chiffres viennent du calcul de Kass'Beer ; une valeur marquée
   « proposée par l'IA » est à vérifier. » en tête ; champ « Votre message » (2 à 6 lignes,
   compteur « 1 234 / 1 500 » ; au-delà, « 1 500 caractères au plus. » et « Envoyer » inactif,
@@ -2150,9 +2166,9 @@ aucune API d'IA.
   modifications ? » / « Les changements de cette recette ne seront pas enregistrés. La
   conversation avec l'assistant sera perdue. ». « Enregistrer » avec une conversation, une
   fois le nom et les champs validés :
-  « Enregistrer et fermer l'assistant ? » / « La recette sera enregistrée. La conversation sera
-  perdue : copiez d'abord ce que vous voulez garder. », boutons « Continuer la conversation »
-  et « Enregistrer ». Un appel en cours ajoute « La réponse en attente sera perdue ; le tour
+  « Enregistrer et effacer la conversation ? » / « La recette sera enregistrée. La conversation
+  sera perdue : copiez d'abord ce que vous voulez garder. », boutons « Revenir à la recette »
+  (l'assistant ne se rouvre pas) et « Enregistrer ». Un appel en cours ajoute « La réponse en attente sera perdue ; le tour
   est compté. ».
 - **Échecs**, au-dessus du champ ; le message revient dans le champ et la conversation ne
   compte pas ce tour :
@@ -2239,10 +2255,10 @@ applique au brouillon d'un appui. Rien n'est enregistré avant « Enregistrer »
     proposition illisible. Elle ne peut pas s'appliquer : reformulez votre demande. ».
 - **Appliquer au brouillon** : aucun appel à l'IA, marche hors ligne (Bibliothèque lue depuis
   l'appareil). Le brouillon est remplacé, l'éditeur passe en « modifié », et « Proposition
-  appliquée au brouillon. Rien n'est enregistré. » s'affiche 10 s avec « Annuler ». Sous
-  840 px, la feuille se ferme et le focus revient sur l'icône « Assistant » ; la conversation
-  reste. À partir de 840 px, la colonne reste sur « Assistant » et le focus va sur « Annuler la
-  proposition ».
+  appliquée au brouillon. Rien n'est enregistré. » s'affiche 10 s avec « Annuler ». La
+  feuille ou la fenêtre se ferme et le focus revient sur l'icône « Assistant » ; la
+  conversation reste, et la carte appliquée garde « Annuler la proposition » à la
+  réouverture.
 - **Annuler la proposition** : sans modification depuis, le brouillon d'avant revient tout de
   suite. Après une modification à la main : « Annuler la proposition ? » / « Le brouillon
   revient à son état d'avant la proposition. Les modifications faites depuis seront

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/data/lecture_document.dart';
+import '../../../core/presentation/breakpoints.dart';
 import '../../../core/presentation/corps_markdown.dart';
 import '../../../core/presentation/ecriture.dart';
 import '../../../core/presentation/encadre.dart';
@@ -65,6 +67,11 @@ abstract final class TextesAssistant {
   static const tropLongue =
       'Cette conversation est trop longue pour continuer.';
   static const reponseRecue = 'Réponse de l\'assistant reçue';
+
+  /// Bouton du message d'une réponse arrivée fenêtre fermée.
+  static const ouvrirReponse = 'Ouvrir';
+  static const resumeRecu = 'Résumé de la conversation reçu';
+  static const echecFenetreFermee = 'L\'assistant n\'a pas pu répondre.';
   static const reponseAvecProposition =
       'Réponse de l\'assistant reçue, avec une proposition';
   static const confirmerNouvelle = 'Commencer une nouvelle conversation ?';
@@ -155,9 +162,11 @@ abstract final class TextesAssistant {
 }
 
 /// Panneau Assistant de l'éditeur de recette (ADR-015, section 8 ;
-/// amendement « écrans du lot A1 ») : feuille du bas sous 840 px, colonne à
-/// droite au-delà. La conversation vit dans [controleur], gardée tant que
-/// l'éditeur est ouvert.
+/// amendement du 2026-11-22) : feuille du bas sous 840 px, grande fenêtre au
+/// delà. La conversation vit dans [controleur], gardée tant que l'éditeur est
+/// ouvert ; le panneau la montre défilée à la fin à chaque ouverture. Les
+/// réponses, le champ et « Envoyer » sont bornés à la mesure de lecture
+/// ([kAssistantMesureLecture]), centrés.
 class PanneauAssistant extends ConsumerStatefulWidget {
   const PanneauAssistant({
     super.key,
@@ -167,7 +176,6 @@ class PanneauAssistant extends ConsumerStatefulWidget {
     required this.contexte,
     required this.onFermer,
     this.autofocus = false,
-    this.titreEtFermer = true,
     this.carteProposition,
   });
 
@@ -188,13 +196,8 @@ class PanneauAssistant extends ConsumerStatefulWidget {
   final Future<ContexteAssistant?> Function() contexte;
   final VoidCallback onFermer;
 
-  /// Curseur dans le champ à l'ouverture (colonne d'un grand écran).
+  /// Curseur dans le champ à l'ouverture (fenêtre d'un grand écran).
   final bool autofocus;
-
-  /// Titre « Assistant » et ✕ en tête ; faux sous le commutateur « Calculs /
-  /// Assistant » (840 à 1 279 px), qui nomme déjà le panneau et le ferme :
-  /// le menu ⋮ reste seul.
-  final bool titreEtFermer;
 
   @override
   ConsumerState<PanneauAssistant> createState() => _PanneauAssistantState();
@@ -208,6 +211,12 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
   void initState() {
     super.initState();
     widget.controleur.addListener(_changement);
+    // Réouverture : la conversation gardée se montre à partir de la fin.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.controleur.aDuContenu && _defilement.hasClients) {
+        _defilement.jumpTo(_defilement.position.maxScrollExtent);
+      }
+    });
   }
 
   @override
@@ -234,7 +243,9 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
       unawaited(
         SemanticsService.sendAnnouncement(
           View.of(context),
-          widget.controleur.derniereAvecProposition
+          widget.controleur.dernierMode == ModeAssistant.resume
+              ? TextesAssistant.resumeRecu
+              : widget.controleur.derniereAvecProposition
               ? TextesAssistant.reponseAvecProposition
               : TextesAssistant.reponseRecue,
           TextDirection.ltr,
@@ -328,6 +339,21 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
     );
     return ok ?? false;
   }
+
+  /// [child] borné à la mesure de lecture plus 16 px de chaque côté, centré ;
+  /// [marge] : ajoute ces 16 px (la conversation), que le champ et le pied
+  /// portent déjà.
+  static Widget _mesure(Widget child, {bool marge = false}) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: kAssistantMesureLecture + 32),
+      child: marge
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: child,
+            )
+          : child,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -445,15 +471,13 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
       child: Row(
         children: [
           Expanded(
-            child: widget.titreEtFermer
-                ? Semantics(
-                    header: true,
-                    child: Text(
-                      TextesAssistant.titre,
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  )
-                : const SizedBox.shrink(),
+            child: Semantics(
+              header: true,
+              child: Text(
+                TextesAssistant.titre,
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
           ),
           // ticket: /recettes/nouvelle/menu/assistant, /recettes/:id/modifier/menu/assistant
           PopupMenuButton<int>(
@@ -480,12 +504,11 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
                     ),
                   ),
           ),
-          if (widget.titreEtFermer)
-            IconButton(
-              tooltip: TextesAssistant.fermer,
-              onPressed: widget.onFermer,
-              icon: const Icon(Icons.close),
-            ),
+          IconButton(
+            tooltip: TextesAssistant.fermer,
+            onPressed: widget.onFermer,
+            icon: const Icon(Icons.close),
+          ),
         ],
       ),
     );
@@ -497,7 +520,9 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
       List<Widget> apres = const [],
     }) => LayoutBuilder(
       builder: (context, constraints) {
-        final largeurBulle = constraints.maxWidth * 0.85;
+        // Mesure de lecture : une réponse occupe au plus la mesure, une
+        // bulle « Vous » 85 % de la mesure.
+        final mesure = min(constraints.maxWidth - 32, kAssistantMesureLecture);
         Widget bulle({
           required bool personne,
           required Widget child,
@@ -507,7 +532,9 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
               ? AlignmentDirectional.centerEnd
               : AlignmentDirectional.centerStart,
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: largeurBulle),
+            constraints: BoxConstraints(
+              maxWidth: personne ? mesure * 0.85 : mesure,
+            ),
             child: Semantics(
               label: lecture,
               child: Container(
@@ -572,9 +599,8 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
           padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
           children: [
             ...avant,
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SelectionArea(
+            _mesure(
+              SelectionArea(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -627,8 +653,9 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
                   ],
                 ),
               ),
+              marge: true,
             ),
-            ...apres,
+            ...apres.map(_mesure),
           ],
         );
       },
@@ -828,9 +855,9 @@ class _PanneauAssistantState extends ConsumerState<PanneauAssistant> {
               constraints: BoxConstraints(
                 maxHeight: constraints.maxHeight * 0.45,
               ),
-              child: SingleChildScrollView(child: bas),
+              child: SingleChildScrollView(child: _mesure(bas)),
             ),
-            pied,
+            _mesure(pied),
           ],
         );
       },

@@ -6,7 +6,7 @@ données, outillage), ou les deux.
 
 ## 2026-11-23
 
-### v0.2.15 — fonctionnel
+### v0.2.17 — fonctionnel
 
 Résumé : « Mettre en file » enregistre votre accord : une livraison part seule après la précédente.
 
@@ -22,7 +22,7 @@ refuse un départ, ou si son jeton est refusé, la file s'arrête sans perdre l'
 la cause réglée, « Relancer la file », en tête de file, la fait repartir dans les 5 minutes, après
 les mêmes contrôles. Demandé par le ticket #104.
 
-### v0.2.15 — technique
+### v0.2.17 — technique
 
 File des livraisons (ADR-008, amendement du 2026-11-22). `launchTicketDelivery` reçoit `mode`
 (`start`, `queue`, `unqueue`) ; `ticket_status/launches` porte `delivery_queue`
@@ -48,7 +48,69 @@ jamais `analysis_invalid_since` ni `token_invalid_since`, sans lancement, décom
 GitHub ou à la routine ; un jeton encore faux repose `development_invalid_since` au départ
 suivant, compteur et verrou rendus. Aucune dépendance changée. Demandé par le ticket #104.
 
+### v0.2.16 — fonctionnel
+
+Résumé : Un arrêt du développement d'un ticket s'affiche à part et se relance tout de suite.
+
+Pour l'administrateur : quand une session de développement lancée depuis la fiche d'un ticket
+s'arrête avant d'écrire du code, son message s'affiche dans la section Analyses sous le titre
+« Arrêt du développement », à part des analyses. La barre de la fiche dit « Le développement du
+… s'est arrêté » et propose « Relancer le développement » tout de suite, sans attendre trois
+heures. La validation du ticket reste valable : un arrêt ne demande plus de valider à nouveau.
+
+### v0.2.16 — technique
+
+Lot R1 d'ADR-020. `analysisModel.ts` relève « ## Développement — arrêt » du compte 16348852
+sous la nature `development_stop` (NFC, espaces de tête retirées, 20 000 caractères, dix
+entrées) ; `hasAnalysis` et la reconnaissance d'une précision déjà publiée ne comptent que
+`analysis` et les réponses. `writeDevelopmentStops` (`analyses.ts`), appelé par `applyIssue`
+(webhook et passe horaire), marque `ended_by: "stopped"` la dernière entrée `developpement`
+lancée avant l'arrêt et ramène son `retry_after` à l'heure du relevé
+(`stoppedDevelopmentEntries`, `launchModel.ts`) ; aucun statut n'est tiré du commentaire.
+`endLatestEntry` (`launchModel.ts`) porte la règle commune à `stoppedDevelopmentEntries` et à
+`blockedDeliveryEntries` (`delivery.ts`), sans changement de comportement ; `launchRawEntries`
+et `launchEntryViews` passent de `launch.ts` à `launchModel.ts`, et `analyses.ts` et
+`delivery.ts` les lisent au lieu de leur copie (`rawEntries` et `entryViews` de `delivery.ts`
+retirés).
+Client : `TicketAnalysisKind.developmentStop`, carte « Arrêt du développement », titre retiré
+par `corpsAffiche` ; `TicketLaunch.arreteParLaSession`, `ligneDeveloppementArrete` dans la
+barre (icône d'erreur, comme une livraison bloquée) et `avertissementRelanceApresArret` dans la
+boîte de relance. Prompt de la routine de développement (`exigences-techniques.md`,
+« Routines des tickets ») : arrêts des points 3, 4 et 6 sous « ## Développement — arrêt »,
+« ## Analyse » interdit au point 5, et le point 3 ignore les « ## Analyse — compléments ».
+Les arrêts déjà publiés sur #104, #110 et #114 cessent d'être des spécifications. À faire après
+la fusion : recoller le prompt de la routine de développement sur claude.ai/code.
+`CLAUDE.md` : P32, P33 et P40 (parts R1). ADR-008 reçoit « Modifié par : ADR-020 ». Aucun
+paquet ajouté ni monté.
+
 ## 2026-11-22
+
+### v0.2.15 — fonctionnel
+
+Résumé : Sur tablette et ordinateur, l'assistant de recette s'ouvre dans une grande fenêtre plus lisible.
+
+Sur tablette et ordinateur, l'assistant de recette s'ouvre maintenant dans une grande fenêtre,
+plus facile à lire, au lieu d'une colonne étroite à droite de l'éditeur. Les réponses prennent
+environ 70 caractères par ligne. La conversation est gardée : on peut fermer la fenêtre,
+regarder la recette et la rouvrir pour continuer. « Appliquer au brouillon » ferme la fenêtre pour
+montrer la recette modifiée. Si une réponse arrive alors que la fenêtre est fermée, un message
+« Réponse de l'assistant reçue » propose de l'ouvrir ; un échec s'annonce de la même façon. Sur
+téléphone, l'assistant reste une feuille qui monte du bas de l'écran.
+
+### v0.2.15 — technique
+
+Amendement d'ADR-015 du 2026-11-22 (écrans, grande fenêtre de l'assistant), décisions de
+l'utilisateur sur la proposition d'`ux-designer`. À partir de `kExpandedMinWidth` (840 px), un
+`Dialog` de min(largeur − 48, `kAssistantFenetreLargeur` = 800) × 90 % ; mesure de lecture
+`kAssistantMesureLecture` = 680 px. Retirés : commutateur « Calculs / Assistant », troisième
+colonne, `kEditeurAssistantCoteACoteMinWidth`, `kAssistantPanelWidth`,
+`kEditorAvecAssistantMaxWidth`, `kEditorTroisColonnesMaxWidth`, `titreEtFermer`, `focusAnnuler`.
+Annonces fenêtre fermée (réponse, réponse avec proposition, résumé, échec) avec « Ouvrir »,
+gardées dans l'éditeur pendant « Proposition appliquée… Annuler » et oubliées à la réouverture ;
+`annoncerAvecAction` et `annoncerAvecAnnulation` rendent le contrôleur du message ;
+`ControleurAssistant.dernierMode`. Boîte d'enregistrement : « Enregistrer et effacer la
+conversation ? ». `main.dart.js` : 6 004 053 → 6 004 237 octets (+ 184). Aucune dépendance
+changée, aucun fichier serveur touché.
 
 ### v0.2.14 — technique
 

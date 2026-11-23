@@ -84,6 +84,32 @@ void main() {
       expect(doc.entries[1].sessionUrl, 'https://claude.ai/code/session_1');
     });
 
+    test('ended_by « stopped » lu : développement arrêté par la session', () {
+      final doc = TicketLaunchesDoc.fromFirestore({
+        'entries': [
+          {
+            'action': 'developpement',
+            'state': 'launched',
+            'at': Timestamp.fromDate(t0),
+            'retry_after': Timestamp.fromDate(t0),
+            'ended_by': 'stopped',
+          },
+          {
+            'action': 'livraison',
+            'state': 'launched',
+            'at': Timestamp.fromDate(t1),
+            'ended_by': 'blocked',
+          },
+        ],
+      });
+      final dev = doc.entries.firstWhere(
+        (e) => e.action == ActionLancement.developpement,
+      );
+      expect(dev.arreteParLaSession, isTrue);
+      expect(dev.arreteeParBlocage, isFalse);
+      expect(doc.entries.first.arreteParLaSession, isFalse);
+    });
+
     test('historique mal typé : illisible', () {
       expect(
         () => TicketLaunchesDoc.fromFirestore({'entries': 'texte'}),
@@ -770,6 +796,42 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Relancer l\'analyse de ce ticket ?'), findsOneWidget);
       expect(find.text(relance), findsNWidgets(2));
+      expect(find.text('Relancer'), findsOneWidget);
+    });
+
+    testWidgets('développement arrêté : « s\'est arrêté », relance offerte', (
+      tester,
+    ) async {
+      await fiche(
+        tester,
+        valide(),
+        etat: quota,
+        lancements: DocumentTrouve(
+          TicketLaunchesDoc(
+            entries: [
+              TicketLaunch(
+                action: ActionLancement.developpement,
+                etat: EtatLancement.launched,
+                at: t0,
+                // Ramené par le serveur à l'heure du relevé de l'arrêt.
+                retryAfter: t0.add(const Duration(minutes: 20)),
+                endedBy: kDeveloppementFinArret,
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final ligne = ligneDeveloppementArrete(t0);
+      expect(ligne, contains('s\'est arrêté'));
+      expect(ligne, contains('Répondez si l\'arrêt pose une question'));
+      expect(find.text(ligne), findsOneWidget);
+      expect(find.text(BoiteLancement.avertissementRelance(t0)), findsNothing);
+      await tester.tap(find.text('Relancer le développement'));
+      await tester.pumpAndSettle();
+      // La boîte porte son propre avertissement, la ligne de la barre reste.
+      expect(find.text(ligne), findsOneWidget);
+      expect(find.text(avertissementRelanceApresArret(t0)), findsOneWidget);
       expect(find.text('Relancer'), findsOneWidget);
     });
 
