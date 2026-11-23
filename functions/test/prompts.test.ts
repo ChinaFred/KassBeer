@@ -232,6 +232,34 @@ describe("prompts des routines (P40)", () => {
     }
   });
 
+  it("développement : arrêts sous « ## Développement — arrêt », jamais un « ## Analyse » publié (ADR-020, R1)", () => {
+    const dev = PROMPTS.developpement.replace(/\s+/g, " ");
+    const published = [...dev.matchAll(/publie un commentaire qui commence par « ([^»]+) »/g)].map(
+      (m) => m[1].trim(),
+    );
+    assert.ok(published.length >= 3, "arrêts des points 3, 4 et 6 absents");
+    for (const title of published) {
+      assert.equal(title, "## Développement — arrêt", `commentaire publié : ${title}`);
+    }
+    for (const step of ["\n3. ", "\n4. ", "\n6. "]) {
+      const raw = PROMPTS.developpement;
+      const start = raw.indexOf(step);
+      const end = raw.indexOf(`\n${Number(step.trim()[0]) + 1}. `, start);
+      const point = raw.slice(start, end).replace(/\s+/g, " ");
+      assert.ok(point.includes("« ## Développement — arrêt »"), `point ${step.trim()} sans arrêt`);
+    }
+    const point5 = dev.slice(dev.indexOf(" 5. Fais "), dev.indexOf(" 6. Avant "));
+    assert.ok(point5.includes("ni par « ## Analyse »"), "point 5 : « ## Analyse » non interdit");
+    const point3 = dev.slice(dev.indexOf(" 3. La spécification"), dev.indexOf(" 4. Si "));
+    assert.ok(
+      point3.includes(
+        "qui commence par « ## Analyse » et ne commence pas par « ## Analyse — compléments »",
+      ),
+      "point 3 : compléments non écartés de la spécification",
+    );
+    assert.ok(!point3.includes("compléments » compris"), "point 3 : compléments encore compris");
+  });
+
   it("développement : fichiers sensibles d'ingest/ et de construction Android (2026-11-13)", () => {
     const dev = PROMPTS.developpement;
     for (const needle of SENSITIVE_ADDED_2026_11_13) {

@@ -4,6 +4,43 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-23
+
+### v0.2.16 — fonctionnel
+
+Résumé : Un arrêt du développement d'un ticket s'affiche à part et se relance tout de suite.
+
+Pour l'administrateur : quand une session de développement lancée depuis la fiche d'un ticket
+s'arrête avant d'écrire du code, son message s'affiche dans la section Analyses sous le titre
+« Arrêt du développement », à part des analyses. La barre de la fiche dit « Le développement du
+… s'est arrêté » et propose « Relancer le développement » tout de suite, sans attendre trois
+heures. La validation du ticket reste valable : un arrêt ne demande plus de valider à nouveau.
+
+### v0.2.16 — technique
+
+Lot R1 d'ADR-020. `analysisModel.ts` relève « ## Développement — arrêt » du compte 16348852
+sous la nature `development_stop` (NFC, espaces de tête retirées, 20 000 caractères, dix
+entrées) ; `hasAnalysis` et la reconnaissance d'une précision déjà publiée ne comptent que
+`analysis` et les réponses. `writeDevelopmentStops` (`analyses.ts`), appelé par `applyIssue`
+(webhook et passe horaire), marque `ended_by: "stopped"` la dernière entrée `developpement`
+lancée avant l'arrêt et ramène son `retry_after` à l'heure du relevé
+(`stoppedDevelopmentEntries`, `launchModel.ts`) ; aucun statut n'est tiré du commentaire.
+`endLatestEntry` (`launchModel.ts`) porte la règle commune à `stoppedDevelopmentEntries` et à
+`blockedDeliveryEntries` (`delivery.ts`), sans changement de comportement ; `launchRawEntries`
+et `launchEntryViews` passent de `launch.ts` à `launchModel.ts`, et `analyses.ts` et
+`delivery.ts` les lisent au lieu de leur copie (`rawEntries` et `entryViews` de `delivery.ts`
+retirés).
+Client : `TicketAnalysisKind.developmentStop`, carte « Arrêt du développement », titre retiré
+par `corpsAffiche` ; `TicketLaunch.arreteParLaSession`, `ligneDeveloppementArrete` dans la
+barre (icône d'erreur, comme une livraison bloquée) et `avertissementRelanceApresArret` dans la
+boîte de relance. Prompt de la routine de développement (`exigences-techniques.md`,
+« Routines des tickets ») : arrêts des points 3, 4 et 6 sous « ## Développement — arrêt »,
+« ## Analyse » interdit au point 5, et le point 3 ignore les « ## Analyse — compléments ».
+Les arrêts déjà publiés sur #104, #110 et #114 cessent d'être des spécifications. À faire après
+la fusion : recoller le prompt de la routine de développement sur claude.ai/code.
+`CLAUDE.md` : P32, P33 et P40 (parts R1). ADR-008 reçoit « Modifié par : ADR-020 ». Aucun
+paquet ajouté ni monté.
+
 ## 2026-11-22
 
 ### v0.2.15 — fonctionnel

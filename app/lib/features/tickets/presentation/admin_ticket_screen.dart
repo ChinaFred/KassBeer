@@ -1226,6 +1226,15 @@ class _FicheState extends ConsumerState<_Fiche> {
         error: false,
         ton: null,
       ),
+      // Texte choisi d'après `ended_by`, écrit par le serveur (ADR-020).
+      _ when relanceDe != null && (aRelancer?.arreteParLaSession ?? false) => (
+        icon: Icons.error_outline,
+        progress: null,
+        text: ligneDeveloppementArrete(relanceDe),
+        precisionsVisibles: true,
+        error: true,
+        ton: null,
+      ),
       _ when relanceDe != null => (
         icon: Icons.info_outline,
         progress: null,
@@ -1252,10 +1261,12 @@ class _FicheState extends ConsumerState<_Fiche> {
     final livraison = etat.livraison;
     if (lancement != null && historique != null && enCours == null) {
       final action = lancement;
-      final avertissement =
-          action == ActionLancement.livraison && relanceDe != null
-          ? livraison?.texte
-          : null;
+      final avertissement = switch (action) {
+        ActionLancement.livraison when relanceDe != null => livraison?.texte,
+        _ when relanceDe != null && (aRelancer?.arreteParLaSession ?? false) =>
+          avertissementRelanceApresArret(relanceDe),
+        _ => null,
+      };
       // Hors ligne, appel en cours ou plafond atteint le jour écrit par le
       // serveur : bouton inactif, la ligne de la barre dit pourquoi.
       final onPressed = etat.actif == null

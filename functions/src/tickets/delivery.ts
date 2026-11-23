@@ -50,6 +50,9 @@ import {
 import {
   LAUNCH_RETRY_MS,
   closeRunningEntries,
+  endLatestEntry,
+  launchEntryViews,
+  launchRawEntries,
   parisHourMinute,
   parisShortDate,
   type LaunchEntryView,
@@ -496,9 +499,8 @@ export function lastBlockedAtMs(reports: readonly DeliveryReport[]): number | nu
 export const DELIVERY_ENDED_BY_BLOCKAGE = "blocked";
 
 /**
- * L'historique après un blocage relevé à `blockedAtMs` : la dernière entrée `livraison`
- * (`launched` ou `unknown`) lancée avant lui reçoit `ended_by: "blocked"`, et son `retry_after`
- * est ramené à `nowMs` s'il est encore futur. Le client choisit son texte (« s'est arrêtée »)
+ * L'historique après un blocage relevé à `blockedAtMs` : `endLatestEntry` sur les entrées
+ * `livraison`, avec `ended_by: "blocked"`. Le client choisit son texte (« s'est arrêtée »)
  * d'après ce champ, sans comparer de dates (P46). `null` si rien ne change. Pure.
  */
 export function blockedDeliveryEntries(
@@ -508,25 +510,15 @@ export function blockedDeliveryEntries(
   nowMs: number,
   toTimestamp: (ms: number) => unknown,
 ): Record<string, unknown>[] | null {
-  let target = -1;
-  views.forEach((v, i) => {
-    if (v.action !== "livraison" || v.at_ms === null || v.at_ms >= blockedAtMs) return;
-    if (v.state !== "launched" && v.state !== "unknown") return;
-    const best = target < 0 ? null : views[target].at_ms;
-    if (best === null || v.at_ms > best) target = i;
-  });
-  if (target < 0) return null;
-  const entry = entries[target];
-  const v = views[target];
-  const running = v.retry_after_ms !== null && v.retry_after_ms > nowMs;
-  if (!running && entry.ended_by === DELIVERY_ENDED_BY_BLOCKAGE) return null;
-  const out = [...entries];
-  out[target] = {
-    ...entry,
-    ended_by: DELIVERY_ENDED_BY_BLOCKAGE,
-    ...(running ? { retry_after: toTimestamp(nowMs) } : {}),
-  };
-  return out;
+  return endLatestEntry(
+    entries,
+    views,
+    "livraison",
+    DELIVERY_ENDED_BY_BLOCKAGE,
+    blockedAtMs,
+    nowMs,
+    toTimestamp,
+  );
 }
 
 // ── Verrou global (P44) ─────────────────────────────────────────────────────
@@ -606,28 +598,6 @@ function timestampOrNull(kit: FirestoreKit, iso: string | null) {
   return Number.isNaN(ms) ? null : kit.Timestamp.fromMillis(ms);
 }
 
-function rawEntries(data: Record<string, unknown> | undefined): Record<string, unknown>[] {
-  const list = data?.entries;
-  if (!Array.isArray(list)) return [];
-  return list.filter(
-    (e): e is Record<string, unknown> => e !== null && typeof e === "object" && !Array.isArray(e),
-  );
-}
-
-function entryViews(
-  kit: FirestoreKit,
-  entries: readonly Record<string, unknown>[],
-): LaunchEntryView[] {
-  const ms = millisOf(kit);
-  return entries.map((e) => ({
-    id: e.id,
-    action: e.action,
-    state: e.state,
-    at_ms: ms(e.at),
-    retry_after_ms: ms(e.retry_after),
-  }));
-}
-
 /**
  * Dans une transaction : l'historique du ticket transformé par `next` (rend `null` si rien ne
  * change). Lit `launches` : à appeler avant toute écriture de la transaction.
@@ -644,8 +614,8 @@ async function rewriteDeliveryEntries(
   const ref = launchesRef(kit, ticketId);
   const snap = await tx.get(ref);
   if (!snap.exists) return null;
-  const entries = rawEntries(snap.data());
-  const out = next(entries, entryViews(kit, entries));
+  const entries = launchRawEntries(snap.data());
+  const out = next(entries, launchEntryViews(kit, entries));
   if (out === null) return null;
   return () => tx.set(ref, { entries: out, updated_at: kit.FieldValue.serverTimestamp() });
 }

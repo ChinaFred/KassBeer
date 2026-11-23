@@ -14,6 +14,7 @@ import {
   analysesFromComments,
   analysisAnswerState,
   answerCommentBody,
+  lastDevelopmentStopAtMs,
   answerPrecondition,
   nextValidatedAt,
   readAnswerCommentIds,
@@ -177,6 +178,92 @@ describe("relevé des analyses (P32)", () => {
     assert.equal(nextValidatedAt(10, 5), null);
     assert.equal(nextValidatedAt(10, 10), null);
     assert.equal(nextValidatedAt(10, 20), 20);
+  });
+});
+
+describe("arrêt du développement (ADR-020, lot R1)", () => {
+  const STOP = "## Développement — arrêt\n\nPoint 5 : CLAUDE.md à changer.";
+
+  it("« ## Développement — arrêt » du compte 16348852 relevé en development_stop", () => {
+    const { entries } = analysesFromComments(
+      [
+        comment(1, "## Analyse\n\nCritères.", "2026-11-22T10:00:00Z"),
+        comment(2, `  ${STOP}`, "2026-11-22T11:00:00Z"),
+        comment(3, STOP, "2026-11-22T11:05:00Z", 999),
+      ],
+      OWNER,
+    );
+    assert.deepEqual(
+      entries.map((e) => [e.comment_id, e.kind]),
+      [
+        [1, "analysis"],
+        [2, "development_stop"],
+      ],
+    );
+    assert.equal(entries[1].body, STOP);
+  });
+
+  it("titre composé en NFD reconnu (NFC)", () => {
+    const { entries } = analysesFromComments(
+      [comment(4, STOP.normalize("NFD"), "2026-11-22T11:00:00Z")],
+      OWNER,
+    );
+    assert.equal(entries[0].kind, "development_stop");
+  });
+
+  it("mêmes bornes : 20 000 caractères, dix entrées", () => {
+    const long = `${STOP}\n\n${"a".repeat(ANALYSIS_MAX_CHARS)}`;
+    const many = Array.from({ length: 11 }, (_, i) =>
+      comment(i + 1, i === 10 ? long : STOP, `2026-11-22T10:${String(i).padStart(2, "0")}:00Z`),
+    );
+    const { entries, skipped } = analysesFromComments(many, OWNER);
+    assert.equal(entries.length, 10);
+    assert.equal(skipped, 1);
+    assert.equal(entries[9].truncated, true);
+    assert.ok(entries[9].body.length <= ANALYSIS_MAX_CHARS);
+  });
+
+  it("un arrêt n'est pas une analyse : hasAnalysis faux", () => {
+    const state = analysisAnswerState(
+      [comment(1, STOP, "2026-11-22T11:00:00Z")],
+      OWNER,
+      new Set(),
+      answerCommentBody("Oui."),
+    );
+    assert.equal(state.hasAnalysis, false);
+  });
+
+  it("un arrêt au texte identique n'est pas pris pour une réponse publiée", () => {
+    const state = analysisAnswerState(
+      [
+        comment(1, "## Analyse\n\nx", "2026-11-22T10:00:00Z"),
+        comment(2, STOP, "2026-11-22T11:00:00Z"),
+      ],
+      OWNER,
+      new Set([2]),
+      STOP,
+    );
+    assert.equal(state.hasAnalysis, true);
+    assert.equal(state.samePublished, false);
+  });
+
+  it("date du dernier arrêt du compte 16348852 seule", () => {
+    assert.equal(
+      lastDevelopmentStopAtMs(
+        [
+          comment(1, STOP, "2026-11-22T11:00:00Z"),
+          comment(2, STOP, "2026-11-22T12:00:00Z", 999),
+          comment(3, "## Analyse — compléments", "2026-11-22T13:00:00Z"),
+          comment(4, STOP, "2026-11-22T10:00:00Z"),
+        ],
+        OWNER,
+      ),
+      Date.parse("2026-11-22T11:00:00Z"),
+    );
+    assert.equal(
+      lastDevelopmentStopAtMs([comment(5, "## Analyse", "2026-11-22T10:00:00Z")], OWNER),
+      null,
+    );
   });
 });
 

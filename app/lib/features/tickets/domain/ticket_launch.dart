@@ -128,13 +128,20 @@ class TicketLaunch {
   /// Raison d'un échec, en français, écrite par le serveur.
   final String? reason;
 
-  /// Fin d'une livraison écrite par le serveur : `blocked` quand un compte
-  /// rendu `## Livraison — blocage` a été relevé après son lancement (P45).
-  /// Le client choisit son texte d'après ce champ, sans comparer de dates.
+  /// Fin d'un lancement écrite par le serveur : `blocked` quand un compte
+  /// rendu `## Livraison — blocage` a été relevé après une livraison (P45),
+  /// `stopped` quand un `## Développement — arrêt` a été relevé après un
+  /// développement (ADR-020). Le client choisit son texte d'après ce champ,
+  /// sans comparer de dates.
   final String? endedBy;
 
   /// Livraison close par un blocage relevé par le serveur.
   bool get arreteeParBlocage => endedBy == kLivraisonFinBlocage;
+
+  /// Développement clos par un arrêt relevé par le serveur : la relance est
+  /// possible tout de suite, le serveur a ramené [retryAfter] à l'heure du
+  /// relevé.
+  bool get arreteParLaSession => endedBy == kDeveloppementFinArret;
 
   /// En cours : [retryAfter] après [now]. Aucune autre condition (ADR-008 :
   /// le client ne recopie pas la règle du serveur).
@@ -219,6 +226,29 @@ const kTicketLaunchHistoryMax = 20;
 /// `ended_by` d'une livraison close par un blocage (`DELIVERY_ENDED_BY_BLOCKAGE`
 /// du serveur).
 const kLivraisonFinBlocage = 'blocked';
+
+/// `ended_by` d'un développement clos par un arrêt
+/// (`DEVELOPMENT_ENDED_BY_STOP` du serveur, ADR-020).
+const kDeveloppementFinArret = 'stopped';
+
+/// Ligne de la barre d'un développement arrêté par la session, à la place de
+/// l'avertissement de relance. La validation reste valable : la relance ne
+/// demande pas de nouvelle validation.
+String ligneDeveloppementArrete(DateTime at) {
+  final a = at.toLocal();
+  return 'Le développement du ${formatDateChiffres(a)} à ${formatHeure(a)} '
+      's\'est arrêté. Lisez la raison dans la section Analyses. Répondez si '
+      'l\'arrêt pose une question, puis relancez.';
+}
+
+/// Avertissement de la boîte « Relancer le développement » après un arrêt
+/// de la session (ADR-020).
+String avertissementRelanceApresArret(DateTime at) {
+  final a = at.toLocal();
+  return 'Le développement du ${formatDateChiffres(a)} à ${formatHeure(a)} '
+      's\'est arrêté. Vérifiez dans la section Analyses que la raison de '
+      'l\'arrêt est levée.';
+}
 
 /// `ticket_status/launches.delivery_running` (P44) : verrou des livraisons,
 /// écrit par le serveur seul. Il tient tant que [retryAfter] n'est pas passé :

@@ -19,7 +19,10 @@ import {
 import {
   LAUNCH_TEXT_PATTERN,
   closeRunningEntries,
+  endLatestEntry,
   launchCommandText,
+  launchEntryViews,
+  launchRawEntries,
   LAUNCH_NOT_VALIDATED_BY_APP_MESSAGE,
   launchPrecondition,
   launchQuotaMessage,
@@ -27,6 +30,7 @@ import {
   nextLaunchStatus,
   refreshedLaunchStatus,
   runningLaunch,
+  stoppedDevelopmentEntries,
   type LaunchEntryView,
 } from "../src/tickets/launchModel";
 import {
@@ -38,6 +42,7 @@ import {
   sessionUrlOrNull,
   withoutSecrets,
 } from "../src/tickets/routine";
+import { writeDevelopmentStops } from "../src/tickets/analyses";
 import { FakeDb } from "./fakeFirestore";
 
 const NOW = Date.parse("2026-11-13T09:00:00Z");
@@ -1114,5 +1119,201 @@ describe("passe horaire : ticket_status/launches remis au jour", () => {
       per_day: LAUNCHES_PER_DAY,
       founder_per_day: FOUNDER_LAUNCHES_PER_DAY,
     });
+  });
+});
+
+describe("arrêt du développement relevé (ADR-020, lot R1)", () => {
+  const HOUR = 60 * 60 * 1000;
+  const OWNER = 16348852;
+  const stop = (id: number, atMs: number, authorId = OWNER) => ({
+    id,
+    authorId,
+    body: "## Développement — arrêt\n\nPoint 4 : changement lourd.",
+    createdAt: new Date(atMs).toISOString(),
+    updatedAt: null,
+  });
+  const dev = (atMs: number, extra: Record<string, unknown> = {}) => ({
+    id: "d",
+    action: "developpement",
+    state: "launched",
+    at: Timestamp.fromMillis(atMs),
+    retry_after: Timestamp.fromMillis(atMs + 3 * HOUR),
+    ...extra,
+  });
+  const entriesOf = (db: FakeDb) =>
+    (db.read("tickets/t-1/admin/launches")?.entries ?? []) as Record<string, unknown>[];
+
+  it("arrêt postérieur au lancement : retry_after ramené à l'heure du relevé, ended_by stopped", async () => {
+    const db = new FakeDb(() => NOW);
+    db.seed("tickets/t-1/admin/launches", { entries: [dev(NOW - HOUR)] });
+    const relevé = NOW;
+    const changed = await writeDevelopmentStops(
+      db.kit(),
+      "t-1",
+      [stop(9, NOW - 30 * 60_000)],
+      relevé,
+    );
+    assert.equal(changed, true);
+    const [e] = entriesOf(db);
+    assert.equal(e.ended_by, "stopped");
+    assert.equal((e.retry_after as Timestamp).toMillis(), relevé);
+    const views: LaunchEntryView[] = [
+      {
+        id: "d",
+        action: "developpement",
+        state: "launched",
+        at_ms: NOW - HOUR,
+        retry_after_ms: relevé,
+      },
+    ];
+    assert.equal(runningLaunch(views, "developpement", relevé), null);
+  });
+
+  it("arrêt antérieur au lancement : ignoré", async () => {
+    const db = new FakeDb(() => NOW);
+    db.seed("tickets/t-1/admin/launches", { entries: [dev(NOW - HOUR)] });
+    const changed = await writeDevelopmentStops(db.kit(), "t-1", [stop(9, NOW - 2 * HOUR)], NOW);
+    assert.equal(changed, false);
+    const [e] = entriesOf(db);
+    assert.equal(e.ended_by, undefined);
+    assert.equal((e.retry_after as Timestamp).toMillis(), NOW + 2 * HOUR);
+  });
+
+  it("arrêt d'un autre compte : ignoré", async () => {
+    const db = new FakeDb(() => NOW);
+    db.seed("tickets/t-1/admin/launches", { entries: [dev(NOW - HOUR)] });
+    assert.equal(
+      await writeDevelopmentStops(db.kit(), "t-1", [stop(9, NOW - 30 * 60_000, 999)], NOW),
+      false,
+    );
+    assert.equal(entriesOf(db)[0].ended_by, undefined);
+  });
+
+  it("arrêt relevé après l'échéance : marqué stopped, échéance inchangée", () => {
+    const entries = [{ id: "d", action: "developpement", state: "unknown" }];
+    const views: LaunchEntryView[] = [
+      {
+        id: "d",
+        action: "developpement",
+        state: "unknown",
+        at_ms: NOW - 4 * HOUR,
+        retry_after_ms: NOW - HOUR,
+      },
+    ];
+    const out = stoppedDevelopmentEntries(entries, views, NOW - 3.5 * HOUR, NOW, (ms) => ms);
+    assert.deepEqual(out, [
+      { id: "d", action: "developpement", state: "unknown", ended_by: "stopped" },
+    ]);
+    assert.equal(
+      stoppedDevelopmentEntries(out ?? [], views, NOW - 3.5 * HOUR, NOW, (ms) => ms),
+      null,
+    );
+  });
+
+  it("autre action ou lancement en échec : rien ne change", () => {
+    const views: LaunchEntryView[] = [
+      {
+        id: "l",
+        action: "livraison",
+        state: "launched",
+        at_ms: NOW - HOUR,
+        retry_after_ms: NOW + HOUR,
+      },
+      {
+        id: "f",
+        action: "developpement",
+        state: "failed",
+        at_ms: NOW - HOUR,
+        retry_after_ms: NOW - HOUR,
+      },
+    ];
+    assert.equal(
+      stoppedDevelopmentEntries([{}, {}], views, NOW - 30 * 60_000, NOW, (ms) => ms),
+      null,
+    );
+  });
+
+  it("sans arrêt : aucune lecture ni écriture", async () => {
+    const db = new FakeDb(() => NOW);
+    db.seed("tickets/t-1/admin/launches", { entries: [dev(NOW - HOUR)] });
+    assert.equal(await writeDevelopmentStops(db.kit(), "t-1", [], NOW), false);
+    assert.equal(entriesOf(db)[0].ended_by, undefined);
+  });
+});
+
+describe("endLatestEntry (arrêt du développement et blocage de livraison)", () => {
+  const HOUR = 60 * 60 * 1000;
+  const view = (
+    id: string,
+    action: string,
+    state: string,
+    atMs: number | null,
+    retryAfterMs: number | null,
+  ): LaunchEntryView => ({ id, action, state, at_ms: atMs, retry_after_ms: retryAfterMs });
+
+  it("marque la dernière entrée de l'action lancée avant la fin et ramène son échéance", () => {
+    const entries = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
+    const views = [
+      view("a", "livraison", "launched", NOW - 2 * HOUR, NOW + HOUR),
+      view("b", "livraison", "unknown", NOW - HOUR, NOW + 2 * HOUR),
+      // Lancée après la fin : ignorée.
+      view("c", "livraison", "launched", NOW - 10 * 60_000, NOW + 3 * HOUR),
+      view("d", "developpement", "launched", NOW - 50 * 60_000, NOW + HOUR),
+    ];
+    const out = endLatestEntry(
+      entries,
+      views,
+      "livraison",
+      "blocked",
+      NOW - 30 * 60_000,
+      NOW,
+      (ms) => ms,
+    );
+    assert.deepEqual(out, [
+      { id: "a" },
+      { id: "b", ended_by: "blocked", retry_after: NOW },
+      { id: "c" },
+      { id: "d" },
+    ]);
+  });
+
+  it("fin antérieure à tout lancement, entrée en échec ou déjà close : null", () => {
+    const views = [view("f", "reprise", "failed", NOW - HOUR, NOW - HOUR)];
+    assert.equal(
+      endLatestEntry([{}], views, "reprise", "x", NOW, NOW, (ms) => ms),
+      null,
+    );
+    const late = [view("r", "reprise", "launched", NOW - HOUR, NOW + HOUR)];
+    assert.equal(
+      endLatestEntry([{}], late, "reprise", "x", NOW - 2 * HOUR, NOW, (ms) => ms),
+      null,
+    );
+    const done = [view("r", "reprise", "launched", NOW - HOUR, NOW - 1)];
+    assert.equal(
+      endLatestEntry([{ ended_by: "x" }], done, "reprise", "x", NOW, NOW, (ms) => ms),
+      null,
+    );
+  });
+
+  it("launchRawEntries et launchEntryViews : objets seuls, dates lues par Timestamp", () => {
+    const raw = launchRawEntries({
+      entries: [
+        null,
+        [1],
+        "texte",
+        {
+          id: "x",
+          action: "developpement",
+          state: "launched",
+          at: Timestamp.fromMillis(NOW),
+          retry_after: "pas une date",
+        },
+      ],
+    });
+    assert.equal(raw.length, 1);
+    assert.deepEqual(launchEntryViews({ Timestamp }, raw), [
+      view("x", "developpement", "launched", NOW, null),
+    ]);
+    assert.deepEqual(launchRawEntries(undefined), []);
   });
 });
