@@ -1,13 +1,13 @@
 import '../resolution_import.dart';
 import '../compte_rendu.dart';
 
-/// Ingrédients des recettes du groupe : houblons (ADR-013, décisions 9 à 11) et
-/// levures (ADR-017). Résolution des noms lus par
-/// `ingest/lister-ingredients-recettes.mjs` vers les documents de `beer_hops/`
-/// ou de `beer_cultures/`, par [IndexBibliotheque.resoudre] (identifiant, nom
-/// et alias ; pour une levure, souche lue dans le nom, référence, producteur
-/// et référence), comme Recettes › Importer. Aucune copie de cette résolution
-/// en Node.
+/// Ingrédients des recettes du groupe : houblons (ADR-013, décisions 9 à 11),
+/// levures (ADR-017) et divers (ADR-018 ; ADR-019). Résolution des noms lus
+/// par `ingest/lister-ingredients-recettes.mjs` vers les documents de
+/// `beer_hops/`, `beer_cultures/` ou `beer_miscs/`, par
+/// [IndexBibliotheque.resoudre] (identifiant, nom et alias ; pour une levure,
+/// souche lue dans le nom, référence, producteur et référence), comme
+/// Recettes › Importer. Aucune copie de cette résolution en Node.
 
 /// Noms lus au plus dans un fichier de noms.
 const int kMaxNomsIngredients = 5000;
@@ -27,14 +27,15 @@ enum RaisonNonResolu {
 }
 
 /// Format du fichier écrit pour chaque liste : lu par `ingest/` (générateur et
-/// écrivain des descriptions aromatiques).
+/// écrivain des descriptions aromatiques et des divers).
 const Map<ListeRecette, String> kFormatsIngredientsRecettes = {
   ListeRecette.houblons: 'kassbeer_houblons_recettes',
   ListeRecette.levures: 'kassbeer_levures_recettes',
+  ListeRecette.ajouts: 'kassbeer_divers_recettes',
 };
 
-/// Noms d'un fichier de noms (`{"noms": [...]}`, `noms-houblons.json` ou
-/// `noms-levures.json`) ou d'une liste de noms écrite à la main pour l'essai
+/// Noms d'un fichier de noms (`{"noms": [...]}`, `noms-houblons.json`,
+/// `noms-levures.json` ou `noms-divers.json`) ou d'une liste de noms écrite à la main pour l'essai
 /// (`[...]`). Lève [FormatException] pour une autre forme, un nom qui n'est
 /// pas un texte de 1 à 120 caractères, ou plus de 5 000 noms.
 List<String> lireNomsIngredients(Object? json) {
@@ -90,6 +91,13 @@ IndexBibliotheque indexLevures(Object? json) => IndexBibliotheque(
   _entrees(json, 'beer_cultures.json', levure: true),
 );
 
+/// Index des divers tiré de `beer_miscs.json` préparé (liste `{id, data}`).
+/// Lève [FormatException] pour une autre forme.
+IndexBibliotheque indexDivers(Object? json) => IndexBibliotheque(
+  ListeRecette.ajouts,
+  _entrees(json, 'beer_miscs.json', levure: false),
+);
+
 List<EntreeBibliotheque> _entrees(
   Object? json,
   String fichier, {
@@ -124,7 +132,8 @@ List<EntreeBibliotheque> _entrees(
   ];
 }
 
-/// Contenu de `houblons-recettes.json` ou `levures-recettes.json` (format
+/// Contenu de `houblons-recettes.json`, `levures-recettes.json` ou
+/// `divers-recettes.json` (format
 /// selon la liste de [index]) : cible et date de la liste des noms ([origine],
 /// `null` si inconnues), identifiants résolus, triés, chacun avec les noms qui
 /// y mènent, et noms non résolus avec leur raison et leurs candidats

@@ -86,6 +86,64 @@ void main() {
       );
     });
 
+    test('origine sans origin_fr (index écrit avant lui) : origin tel qu\'en '
+        'base, sans traduction', () {
+      final hops = IndexReferentiel.fromFirestore(
+        NatureReferentiel.hops,
+        indexDoc([
+          {
+            'id': 'hop-ancien',
+            'name': 'Ancien',
+            'purpose': 'aroma',
+            'origin': 'Germany',
+          },
+        ]),
+      ).entrees.cast<EntreeHoublon>();
+      expect(hops.single.originFr, isNull);
+      expect(detailsEntree(hops.single), ['Aromatique', 'Germany']);
+      expect(origineAffichee(null, 'Germany'), 'Germany');
+      expect(origineAffichee('Allemagne', 'Germany'), 'Allemagne');
+      expect(origineAffichee(null, null), isNull);
+    });
+
+    test('fiches : origin_fr lu pour un houblon et un malt', () {
+      final houblon =
+          FicheReferentiel.fromFirestore(
+                NatureReferentiel.hops,
+                'hop-cascade',
+                hopDoc(),
+              )
+              as FicheHoublon;
+      expect(houblon.origin, 'United States');
+      expect(houblon.originFr, 'États-Unis');
+      final sansFr =
+          FicheReferentiel.fromFirestore(
+                NatureReferentiel.hops,
+                'hop-cascade',
+                {...hopDoc()}..remove('origin_fr'),
+              )
+              as FicheHoublon;
+      expect(sansFr.originFr, isNull);
+      final malt =
+          FicheReferentiel.fromFirestore(
+                NatureReferentiel.fermentables,
+                'fermentable-malt-fictif',
+                {
+                  'name': 'Malt fictif',
+                  'aliases': <String>[],
+                  'type': 'grain',
+                  'color': mesure(4, 'EBC'),
+                  'origin': 'Germany',
+                  'origin_fr': 'Allemagne',
+                  'provenance': [provenance()],
+                  'content_sha256': '02' * 32,
+                },
+              )
+              as FicheFermentable;
+      expect(malt.origin, 'Germany');
+      expect(malt.originFr, 'Allemagne');
+    });
+
     test(
       'houblon : usage et origine lus, absents sans valeur de remplacement',
       () {
@@ -95,11 +153,13 @@ void main() {
         ).entrees.cast<EntreeHoublon>();
         expect(hops.first.purpose, 'aroma');
         expect(hops.first.origin, 'United States');
+        expect(hops.first.originFr, 'États-Unis');
         expect(hops.last.purpose, isNull);
         expect(hops.last.origin, isNull);
+        expect(hops.last.originFr, isNull);
         expect(detailsEntree(hops.first), [
           'Aromatique',
-          'United States',
+          'États-Unis',
           '${formatPourcent(6.5)} alpha',
         ]);
         expect(

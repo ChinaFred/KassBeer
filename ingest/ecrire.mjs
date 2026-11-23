@@ -1,9 +1,10 @@
 // Écrivain de l'ingestion (ADR-005, D5). Lit import/ingest/prepare/ (produit par
 // `dart run bin/preparer_referentiels.dart` dans exchange/) et écrit les référentiels et
 // les recettes publiques par l'Admin SDK ; lit aussi import/ingest/aromes/aromes.json
-// (generer-aromes.mjs, ADR-013) et écrit beer_hop_aromas/, et
-// import/ingest/aromes/levures/aromes.json (generer-aromes.mjs --nature culture, ADR-017)
-// et écrit beer_culture_aromas/.
+// (generer-aromes.mjs, ADR-013) et écrit beer_hop_aromas/,
+// import/ingest/aromes/levures/aromes.json (generer-aromes.mjs --nature culture, ADR-017) et
+// écrit beer_culture_aromas/, puis import/ingest/divers/descriptions.json (generer-divers.mjs,
+// ADR-018) et écrit beer_misc_descriptions/.
 //
 //   Émulateur (par défaut) :
 //     npx firebase --config ../firebase.json emulators:exec --only firestore \
@@ -19,7 +20,7 @@
 // refusée ; 3 documents refusés par le contrôle (les autres sont écrits, la liste est dans
 // le rapport).
 
-import { executer, messageSansDescription } from "./lib/execution.mjs";
+import { executer, messageSansDescription, NATURES_REDIGEES } from "./lib/execution.mjs";
 import { ErreurOptions } from "./lib/options.mjs";
 
 try {
@@ -36,11 +37,11 @@ try {
       `${collection} : ${c.written} écrits, ${c.unchanged} inchangés, ${c.refused} refusés`,
     );
   }
-  if (rapport.aromas_file === "absent") {
-    console.log("beer_hop_aromas : aromes.json absent, aucune description écrite");
-  }
-  if (rapport.culture_aromas_file === "absent") {
-    console.log("beer_culture_aromas : levures/aromes.json absent, aucune description écrite");
+  for (const nature of NATURES_REDIGEES) {
+    const e = nature.ecriture;
+    if (rapport[e.champFichier] === "absent") {
+      console.log(`${e.collection} : ${nature.fichierEntrees} absent, aucune description écrite`);
+    }
   }
   for (const [collection, ids] of Object.entries(rapport.reviewed_orphans)) {
     if (ids.length === 0) continue;
@@ -63,8 +64,11 @@ try {
     if (d.errors.length > 0) process.exitCode = 1;
   }
   console.log(`Rapport : ${rapport.fichier}`);
-  const sansDescription = messageSansDescription(rapport.hops_without_aroma);
-  if (sansDescription !== null) console.log(sansDescription);
+  for (const nature of NATURES_REDIGEES) {
+    const n = rapport[nature.ecriture.champSansDescription];
+    const sansDescription = messageSansDescription(n, nature);
+    if (sansDescription !== null) console.log(sansDescription);
+  }
   if (rapport.refused.length > 0) {
     console.error(`${rapport.refused.length} documents refusés : voir le rapport.`);
     process.exitCode ??= 3;

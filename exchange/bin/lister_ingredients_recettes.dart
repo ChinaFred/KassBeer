@@ -16,20 +16,35 @@ const Map<String, Map<String, String>> _defauts = {
     '--referentiel': '../import/ingest/prepare/beer_cultures.json',
     '--sortie': '../import/ingest/aromes/levures/levures-recettes.json',
   },
+  'misc': {
+    '--noms': '../import/ingest/divers/noms-divers.json',
+    '--referentiel': '../import/ingest/prepare/beer_miscs.json',
+    '--sortie': '../import/ingest/divers/divers-recettes.json',
+  },
+};
+
+/// Mot de chaque nature, dans le résumé.
+const Map<String, String> _mots = {
+  'hop': 'houblons',
+  'culture': 'levures',
+  'misc': 'divers',
 };
 
 const String _usage =
     'Usage : dart run bin/lister_ingredients_recettes.dart '
-    '[--nature hop|culture] [--noms <fichier>] '
-    '[--referentiel <beer_hops.json|beer_cultures.json>] [--sortie <fichier>]';
+    '[--nature hop|culture|misc] [--noms <fichier>] '
+    '[--referentiel <beer_hops.json|beer_cultures.json|beer_miscs.json>] '
+    '[--sortie <fichier>]';
 
 /// Résout les noms d'ingrédients des recettes du groupe vers `beer_hops/`
-/// (`--nature hop`, par défaut, ADR-013, décisions 9 à 11) ou `beer_cultures/`
-/// (`--nature culture`, ADR-017), depuis `exchange/` :
+/// (`--nature hop`, par défaut, ADR-013, décisions 9 à 11), `beer_cultures/`
+/// (`--nature culture`, ADR-017) ou `beer_miscs/` (`--nature misc`, ADR-018),
+/// depuis `exchange/` :
 ///
 /// ```
 /// dart run bin/lister_ingredients_recettes.dart
 /// dart run bin/lister_ingredients_recettes.dart --nature culture
+/// dart run bin/lister_ingredients_recettes.dart --nature misc
 /// dart run bin/lister_ingredients_recettes.dart --nature culture \
 ///   --noms ../import/ingest/aromes/levures/noms-essai.json \
 ///   --sortie ../import/ingest/aromes/levures/levures-essai.json
@@ -65,7 +80,7 @@ void main(List<String> arguments) {
   }
   final defauts = _defauts[nature];
   if (defauts == null) {
-    stderr.writeln('--nature : hop ou culture.\n$_usage');
+    stderr.writeln('--nature : hop, culture ou misc.\n$_usage');
     exitCode = 64;
     return;
   }
@@ -73,9 +88,11 @@ void main(List<String> arguments) {
   final fichierNoms = _lire(chemins['--noms']!);
   final noms = lireNomsIngredients(fichierNoms);
   final referentiel = _lire(chemins['--referentiel']!);
-  final index = nature == 'culture'
-      ? indexLevures(referentiel)
-      : indexHoublons(referentiel);
+  final index = switch (nature) {
+    'culture' => indexLevures(referentiel),
+    'misc' => indexDivers(referentiel),
+    _ => indexHoublons(referentiel),
+  };
   final origine = origineNoms(fichierNoms);
   final resultat = ingredientsRecettes(noms, index, origine: origine);
   final sortie = File(chemins['--sortie']!);
@@ -85,7 +102,7 @@ void main(List<String> arguments) {
   );
   final resolus = (resultat['resolus']! as List).length;
   final nonResolus = resultat['non_resolus']! as List;
-  final mot = nature == 'culture' ? 'levures' : 'houblons';
+  final mot = _mots[nature]!;
   stdout.writeln(
     '${noms.length} noms : $resolus $mot résolus, '
     '${nonResolus.length} noms non résolus.',

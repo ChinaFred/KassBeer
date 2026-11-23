@@ -1,10 +1,10 @@
-// Client de l'API Messages d'Anthropic pour les descriptions aromatiques (ADR-013, P54).
-// Le SDK officiel se charge au premier appel, par un import dynamique, et le client est
+// Client de l'API Messages d'Anthropic des textes rédigés depuis le poste de l'admin
+// (ADR-013, ADR-018, P54), commun à toutes les natures. Le SDK officiel se charge au premier appel, par un import dynamique, et le client est
 // mémorisé : importer ce fichier ne charge pas le SDK. La clé ANTHROPIC_API_KEY est lue
 // dans l'environnement au premier appel ; elle n'est jamais écrite, et sa valeur est
 // retirée de tout texte d'erreur avant affichage.
 
-import { ErreurAromes } from "./tarif.mjs";
+import { ErreurRedaction } from "./tarif.mjs";
 
 export const MESSAGE_CLE_RETIREE = "[clé retirée]";
 
@@ -34,7 +34,7 @@ export function creerAccesApi({ env, chargerSdk = () => import("@anthropic-ai/sd
     if (client !== null) return client;
     cle = env.ANTHROPIC_API_KEY ?? "";
     if (cle.trim() === "") {
-      throw new ErreurAromes(
+      throw new ErreurRedaction(
         "ANTHROPIC_API_KEY absente : définissez la clé de l'espace de travail Kass'Beer de " +
           "la Console Anthropic dans l'environnement du terminal.",
       );

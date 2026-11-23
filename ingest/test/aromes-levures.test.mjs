@@ -1,7 +1,8 @@
-// Descriptions aromatiques des levures (ADR-017, P62 et P54) : descripteurs, données
-// envoyées, périmètre, contrôle des sorties et des entrées, requête, génération avec un SDK
-// simulé et tri par l'écrivain. Aucun appel réel à l'API : le SDK est remplacé, et les
-// levures, styles et textes sont inventés (P20).
+// Descriptions aromatiques des levures (ADR-017, P62 et P54) sur le moteur commun
+// (lib/redaction/, ADR-019) : descripteurs, données envoyées, périmètre, contrôle des sorties
+// et des entrées, requête, empreinte figée, génération avec un SDK simulé, suivi d'un lot écrit
+// par l'ancien moteur et tri par l'écrivain. Aucun appel réel à l'API : le SDK est remplacé,
+// et les levures, styles et textes sont inventés (P20).
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -10,26 +11,31 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { genererAromes, lireOptionsAromes, perimetre } from "../lib/aromes/generation.mjs";
+import { createHash } from "node:crypto";
+import { NATURE_HOUBLON } from "../lib/aromes/nature.mjs";
+import { controlerListeGroupe, relueOrphelines, trierRedigees } from "../lib/execution.mjs";
+import { NATURE_LEVURE } from "../lib/levures/nature.mjs";
+import { parametresRequeteLevure, PROMPT_LEVURES } from "../lib/levures/prompt.mjs";
 import {
+  contexteLevures,
   contexteStyles,
   controlerEntreeAromeLevure,
   controlerSortieLevure,
   DESCRIPTEURS_LEVURES,
   donneesEnvoyeesLevure,
   empreinteEntreeLevure,
-  NATURE_LEVURE,
-  parametresRequeteLevure,
-  PROMPT_LEVURES,
+  MODELE,
   PROMPT_VERSION_LEVURES,
   TYPES_HORS_PERIMETRE,
-} from "../lib/aromes/natures/culture.mjs";
-import { MODELE } from "../lib/aromes/prompt.mjs";
-import { ErreurAromes, MESSAGE_TARIF_INCONNU } from "../lib/aromes/tarif.mjs";
-import { controlerListeGroupe, relueOrphelines, trierAromes } from "../lib/execution.mjs";
+} from "../lib/levures/validation.mjs";
+import { calculerPerimetre, generer, lireOptions } from "../lib/redaction/moteur.mjs";
+import { ErreurRedaction, MESSAGE_TARIF_INCONNU } from "../lib/redaction/tarif.mjs";
 import { ErreurOptions } from "../lib/options.mjs";
 
 const CLE = "sk-ant-cle-fictive-levures-0123456789";
+/// Natures de generer-aromes.mjs.
+const NATURES_AROMES = { hop: NATURE_HOUBLON, culture: NATURE_LEVURE };
+const lireOptionsAromes = (argv) => lireOptions(argv, NATURES_AROMES);
 const MAINTENANT = new Date("2026-11-21T10:00:00Z");
 const PROFIL = "Profil inventé pour le test : fermentation nette, esters discrets, finale sèche.";
 const CHAUD = "Inventé : plus chaude, la levure arrondit la bouche et pousse les esters fruités.";
@@ -181,14 +187,14 @@ describe("levures : périmètre (décision 1 du 2026-11-21)", () => {
     }
     assert.equal(elements.size, 960);
     // Une levure de vin des recettes du groupe entre dans le périmètre.
-    const { ids, hors } = perimetre(elements, new Set(["culture-x00"]), NATURE_LEVURE);
+    const { ids, hors } = calculerPerimetre(elements, new Set(["culture-x00"]), NATURE_LEVURE);
     assert.equal(ids.length, 923);
-    assert.equal(hors.length, 37);
+    assert.equal(hors.size, 37);
     assert.ok(ids.includes("culture-x00"));
     assert.equal(elements.get("culture-r010").type, undefined);
     assert.ok(ids.includes("culture-r010"), "type absent : inclus");
     assert.equal(
-      hors.every((id) => TYPES_HORS_PERIMETRE.includes(elements.get(id).type)),
+      [...hors].every((id) => TYPES_HORS_PERIMETRE.includes(elements.get(id).type)),
       true,
     );
   });
@@ -431,11 +437,64 @@ describe("levures : requête et empreinte", () => {
   });
 });
 
+describe("levures : empreinte et requête figées avant le portage (ADR-019)", () => {
+  // Valeurs calculées le 2026-11-22 par le code de main (lib/aromes/natures/culture.mjs,
+  // commit ce6a556), avant le portage sur lib/redaction/, sur la levure et les styles de
+  // test/fixtures/prepare/. Une empreinte changée ferait renvoyer les 923 levures déjà
+  // rédigées (≈ 40 $).
+  const FIXTURES = fileURLToPath(new URL("./fixtures/prepare/", import.meta.url));
+  const sha = (t) => createHash("sha256").update(t).digest("hex");
+  const contexte = contexteLevures(FIXTURES);
+  const [premiere] = JSON.parse(readFileSync(join(FIXTURES, "beer_cultures.json"), "utf8"));
+  const donnees = donneesEnvoyeesLevure(premiere.data);
+
+  it("liste des styles : même SHA-256", () => {
+    assert.equal(
+      contexte.stylesSha256,
+      "b96d1a54d6b29cdc19051fae852f6b234a97a40e5cd76438e1977f76c97a874f",
+    );
+  });
+
+  it("input_sha256 d'une levure de fixture égal à la valeur de main (e4dc92e8…)", () => {
+    assert.equal(premiere.id, "culture-labo-fictif-lf1-levure-fictive");
+    const attendu = "e4dc92e89bb0f9848cc39e34f6f61139134230514f1428e3b76c908569f00c4c";
+    assert.equal(
+      empreinteEntreeLevure(donnees, { effort: "medium", stylesSha256: contexte.stylesSha256 }),
+      attendu,
+    );
+    // Par la nature, comme le moteur la calcule.
+    assert.equal(
+      NATURE_LEVURE.empreinteEntree(donnees, {
+        promptVersion: NATURE_LEVURE.promptVersion,
+        modele: NATURE_LEVURE.modele,
+        effort: "medium",
+        contexte,
+      }),
+      attendu,
+    );
+  });
+
+  it("texte du prompt et requête d'un lot inchangés", () => {
+    assert.equal(
+      sha(PROMPT_LEVURES),
+      "b511adff9002df66600dae799d4b0a5780f10eb25e1bb4af1788c3adbc7c5c2f",
+    );
+    assert.equal(
+      sha(
+        JSON.stringify(
+          NATURE_LEVURE.parametresRequete(donnees, { effort: "medium", cache: false, contexte }),
+        ),
+      ),
+      "5ca8fc61e12910d160b94c05e564637c56ef94e24c8f40d854d4e18fc64f5eaf",
+    );
+  });
+});
+
 describe("levures : options", () => {
   it("--nature hop par défaut, culture acceptée, autre refusée ; --regenerer au motif culture-", () => {
     assert.equal(lireOptionsAromes(["--essai"]).nature.cle, "hop");
     assert.equal(lireOptionsAromes(["--essai", "--nature", "culture"]).nature.cle, "culture");
-    assert.throws(() => lireOptionsAromes(["--essai", "--nature", "malt"]), ErreurAromes);
+    assert.throws(() => lireOptionsAromes(["--essai", "--nature", "malt"]), ErreurRedaction);
     assert.throws(
       () => lireOptionsAromes(["--essai", "--nature", "culture", "--regenerer", "hop-alpha"]),
       /identifiant de levure attendu \(culture-…\)/,
@@ -448,11 +507,13 @@ describe("levures : options", () => {
 });
 
 describe("levures : le SDK n'est pas chargé à l'import", () => {
-  it("natures/culture.mjs et natures/hop.mjs s'importent sans lui", () => {
+  it("lib/levures/ (nature, prompt, validation) s'importe sans lui", () => {
     const hook = fileURLToPath(new URL("./support/interdire-sdk.mjs", import.meta.url));
-    const modules = ["../lib/aromes/natures/culture.mjs", "../lib/aromes/natures/hop.mjs"].map(
-      (m) => new URL(m, import.meta.url).href,
-    );
+    const modules = [
+      "../lib/levures/nature.mjs",
+      "../lib/levures/prompt.mjs",
+      "../lib/levures/validation.mjs",
+    ].map((m) => new URL(m, import.meta.url).href);
     const code = `for (const m of ${JSON.stringify(modules)}) await import(m); console.log("ok");`;
     const sortie = execFileSync(
       process.execPath,
@@ -542,7 +603,8 @@ describe("levures : génération (SDK simulé)", () => {
   let confirmations;
 
   const lancer = (argv, sdk, { confirmer = true } = {}) =>
-    genererAromes({
+    generer({
+      natures: NATURES_AROMES,
       argv: ["--nature", "culture", ...argv, "--dossier", prepare, "--aromes", aromes],
       env: { ANTHROPIC_API_KEY: CLE },
       entree: {},
@@ -586,8 +648,8 @@ describe("levures : génération (SDK simulé)", () => {
       ]),
     );
     writeFileSync(join(prepare, "beer_styles.json"), JSON.stringify(STYLES));
-    // Tarif commun, à la racine de aromes/ (ADR-017, section 1).
-    writeFileSync(join(aromes, "tarif.json"), JSON.stringify(TARIF));
+    // Tarif commun, dans import/ingest/ (dossier parent de aromes/, ADR-019).
+    writeFileSync(join(racine, "tarif.json"), JSON.stringify(TARIF));
     lignes = [];
     confirmations = 0;
   });
@@ -655,7 +717,7 @@ describe("levures : génération (SDK simulé)", () => {
     const sdk = sdkSimule();
     await assert.rejects(
       lancer(["--essai", "--regenerer", "culture-vin"], sdk),
-      (e) => e instanceof ErreurAromes && /hors du périmètre/.test(e.message),
+      (e) => e instanceof ErreurRedaction && /hors du périmètre/.test(e.message),
     );
     assert.equal(sdk.appels.charge, 0);
     assert.equal(confirmations, 0);
@@ -678,12 +740,31 @@ describe("levures : génération (SDK simulé)", () => {
   });
 
   it("sans tarif commun : « Tarif inconnu », SDK non chargé", async () => {
-    rmSync(join(aromes, "tarif.json"));
+    rmSync(join(racine, "tarif.json"));
     const sdk = sdkSimule();
     await assert.rejects(lancer(["--essai"], sdk), (e) =>
       e.message.startsWith(MESSAGE_TARIF_INCONNU),
     );
     assert.equal(sdk.appels.charge, 0);
+  });
+
+  it("tarif à l'emplacement de la v0.1.93 seul (aromes/tarif.json) : refus sans repli", async () => {
+    rmSync(join(racine, "tarif.json"));
+    writeFileSync(join(aromes, "tarif.json"), JSON.stringify(TARIF));
+    const sdk = sdkSimule();
+    await assert.rejects(
+      lancer(["--essai"], sdk),
+      (e) =>
+        e instanceof ErreurRedaction &&
+        e.message.startsWith(MESSAGE_TARIF_INCONNU) &&
+        e.message.includes(join(racine, "tarif.json")),
+    );
+    assert.equal(sdk.appels.charge, 0);
+    // Le sous-dossier levures/ ne sert jamais de point de départ du tarif.
+    writeFileSync(join(levures, "tarif.json"), JSON.stringify(TARIF));
+    await assert.rejects(lancer(["--essai"], sdkSimule()), (e) =>
+      e.message.startsWith(MESSAGE_TARIF_INCONNU),
+    );
   });
 
   it("au-delà du budget : refus après comptage, sans confirmation ni envoi", async () => {
@@ -748,8 +829,46 @@ describe("levures : génération (SDK simulé)", () => {
     const cr = await lancer(["--essai"], sdkSimule({ reponses: [] }), { confirmer: false }).catch(
       (e) => e,
     );
-    assert.ok(cr instanceof ErreurAromes, "envoi non confirmé");
+    assert.ok(cr instanceof ErreurRedaction, "envoi non confirmé");
     assert.ok(lignes.some((l) => l.includes("0 nouveaux, 2 changés, 0 inchangés")));
+  });
+
+  it("--suivre relit un lot-<id>.json écrit par l'ancien moteur (v0.1.93 à v0.2.0)", async () => {
+    // Forme écrite par creerLotAromes de lib/aromes/generation.mjs (main, ce6a556).
+    const d = donneesEnvoyeesLevure(levure("culture-alpha", "Alpha").data);
+    const empreinte = empreinteEntreeLevure(d, {
+      effort: "medium",
+      stylesSha256: CONTEXTE.stylesSha256,
+    });
+    writeFileSync(
+      join(levures, "lot-msgbatch_levures01.json"),
+      JSON.stringify({
+        batch_id: "msgbatch_levures01",
+        nature: "culture",
+        created_at: "2026-11-21T09:00:00.000Z",
+        retrieved: "2026-11-21",
+        model: "claude-fable-5-2",
+        effort: "medium",
+        prompt_version: 1,
+        estimation: { levures: 1, mode: "lot", jetons_entree: 1000, max_tokens: 4000 },
+        table: { c0001: { id: "culture-alpha", culture_name: "Alpha", input_sha256: empreinte } },
+      }),
+    );
+    const suivi = await lancer(["--suivre", "msgbatch_levures01"], sdkSimule());
+    assert.equal(suivi.poste, "culture_aroma_generation");
+    assert.equal(suivi.generes, 1);
+    assert.deepEqual(suivi.refus, []);
+    const [e] = lireAromes();
+    assert.equal(e.id, "culture-alpha");
+    assert.equal(e.data.input_sha256, empreinte);
+    assert.equal(e.data.provenance[0].retrieved, "2026-11-21");
+    assert.equal(e.data.provenance[0].version, "claude-fable-5-2 / prompt 1 / effort medium");
+    // Un nouvel essai reconnaît l'entrée : même empreinte, rien à renvoyer pour elle.
+    ecrireGroupe("alpha.json", ["culture-alpha"]);
+    const sdk = sdkSimule();
+    await lancer(["--essai", "--seulement", join(levures, "alpha.json")], sdk);
+    assert.ok(lignes.some((l) => l.includes("0 nouveaux, 0 changés, 1 inchangés")));
+    assert.equal(sdk.appels.charge, 0);
   });
 
   it("lot puis --suivre ; un lot de houblons n'est pas suivi en --nature culture", async () => {
@@ -793,7 +912,8 @@ describe("levures : tri par l'écrivain", () => {
   const ids = new Set(["culture-alpha", "culture-beta"]);
 
   it("refus : levure absente de beer_cultures.json, du groupe non relue, style inconnu", () => {
-    const { valides, refuses } = trierAromes(
+    const { valides, refuses } = trierRedigees(
+      NATURE_LEVURE,
       [
         entree("culture-alpha"),
         entree("culture-beta", { culture_name: "Beta" }),
@@ -802,7 +922,6 @@ describe("levures : tri par l'écrivain", () => {
       ],
       ids,
       new Set(["culture-beta"]),
-      NATURE_LEVURE,
       CONTEXTE,
     );
     assert.deepEqual(

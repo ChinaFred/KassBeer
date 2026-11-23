@@ -221,7 +221,32 @@ describe("controlerDocument", () => {
     const d = doc("beer_index", "hops");
     d.data.entries[0].purpose = "aroma/bittering";
     d.data.entries[0].origin = "United States";
+    d.data.entries[0].origin_fr = "États-Unis";
     assert.deepEqual(controlerDocument("beer_index", d), []);
+    const vide = doc("beer_index", "hops");
+    vide.data.entries[0].origin_fr = "";
+    refuse("beer_index", vide);
+  });
+
+  it("origin_fr des houblons et des malts : texte borné, seulement avec origin", () => {
+    for (const collection of ["beer_hops", "beer_fermentables"]) {
+      const d = doc(collection);
+      d.data.origin = "Pays Fictif";
+      d.data.origin_fr = "Pays fictif";
+      assert.deepEqual(controlerDocument(collection, d), [], collection);
+      const long = doc(collection);
+      long.data.origin = "Pays Fictif";
+      long.data.origin_fr = "x".repeat(121);
+      refuse(collection, long);
+      const nombre = doc(collection);
+      nombre.data.origin = "Pays Fictif";
+      nombre.data.origin_fr = 3;
+      refuse(collection, nombre);
+      const seule = doc(collection);
+      delete seule.data.origin;
+      seule.data.origin_fr = "Pays fictif";
+      refuse(collection, seule);
+    }
   });
 
   it("beer_index/hop_aromas : id et confidence seuls, confiance en liste fermée", () => {

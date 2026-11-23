@@ -1,13 +1,43 @@
 {
   "versions": [
     {
-      "version": "0.2.2",
+      "version": "0.2.15",
       "date": "2026-11-22",
       "summaries": [
         "Sur tablette et ordinateur, l'assistant de recette s'ouvre dans une grande fenêtre plus lisible."
       ],
       "paragraphs": [
         "Sur tablette et ordinateur, l'assistant de recette s'ouvre maintenant dans une grande fenêtre, plus facile à lire, au lieu d'une colonne étroite à droite de l'éditeur. Les réponses prennent environ 70 caractères par ligne. La conversation est gardée : on peut fermer la fenêtre, regarder la recette et la rouvrir pour continuer. « Appliquer au brouillon » ferme la fenêtre pour montrer la recette modifiée. Si une réponse arrive alors que la fenêtre est fermée, un message « Réponse de l'assistant reçue » propose de l'ouvrir ; un échec s'annonce de la même façon. Sur téléphone, l'assistant reste une feuille qui monte du bas de l'écran."
+      ]
+    },
+    {
+      "version": "0.2.13",
+      "date": "2026-11-22",
+      "summaries": [
+        "L'origine des houblons et des malts s'affiche en français dans la Bibliothèque."
+      ],
+      "paragraphs": [
+        "Dans la Bibliothèque, l'origine des houblons et des malts s'affiche en français : « États-Unis », « Royaume-Uni », « République tchèque »… La recette qui nomme le houblon « Hallertau Hersbrucker » retrouve maintenant sa fiche et sa description. Ces changements s'affichent une fois le référentiel réécrit par l'administrateur."
+      ]
+    },
+    {
+      "version": "0.2.6",
+      "date": "2026-11-22",
+      "summaries": [
+        "Dans une recette, un houblon ou un divers connu de la Bibliothèque ouvre sa fiche d'un appui."
+      ],
+      "paragraphs": [
+        "Sur la fiche d'une recette, la recette d'un brassin et une recette publique, un houblon ou un divers que la Bibliothèque connaît porte maintenant un chevron : un appui ouvre sa fiche, avec ses arômes ou sa description. La flèche du haut ou le retour du téléphone ramène à la recette. Un ingrédient que la Bibliothèque ne reconnaît pas reste affiché comme avant."
+      ]
+    },
+    {
+      "version": "0.2.5",
+      "date": "2026-11-22",
+      "summaries": [
+        "La fiche d'un divers dit à quoi il sert, quand l'ajouter et s'il change le goût."
+      ],
+      "paragraphs": [
+        "Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un paragraphe par moment d'ajout (empâtage, ébullition, après ébullition, fermentation, embouteillage). La section « Goût » décrit le goût apporté, ou indique qu'il n'y a pas d'effet notable. Ces textes sont rédigés par une IA et ne donnent aucune dose : suivez la notice du fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur."
       ]
     },
     {
@@ -26,31 +56,6 @@
       "summaries": [],
       "paragraphs": [
         "La Bibliothèque ne montre plus deux fiches pour la levure Belle Saison de Lallemand. « LalBrew Belle Saison » reste, et « Belle Saison Belgian Saison-Style » devient l'un de ses autres noms : une recette qui écrit l'un ou l'autre retrouve la même levure."
-      ]
-    },
-    {
-      "version": "0.1.99",
-      "date": "2026-11-22",
-      "summaries": [],
-      "paragraphs": [
-        "L'assistant de recette répond de nouveau. Depuis l'arrivée des propositions de l'assistant, chaque message finissait sur « Envoi impossible. Le tour n'est pas compté. » : le service d'IA refusait la forme de réponse demandée, trop complexe. Les propositions à appliquer au brouillon en un appui marchent maintenant."
-      ]
-    },
-    {
-      "version": "0.1.98",
-      "date": "2026-11-22",
-      "summaries": [],
-      "paragraphs": [
-        "À l'import d'une recette, une levure se reconnaît aussi par la référence écrite dans son nom, même quand le nom est saisi à la main avec le producteur à la fin, des mots en français, un poids ou une référence sans tiret (« Bohemian Lager M84 Mangrove Jack », « SafeLager S23 »). La levure n'est choisie que si une seule souche de la Bibliothèque porte cette référence. La plage de température de la levure sur la courbe d'un brassin et les valeurs reprises par l'assistant de recette suivent la même règle."
-      ]
-    },
-    {
-      "version": "0.1.97",
-      "date": "2026-11-22",
-      "summaries": [],
-      "paragraphs": [
-        "La fiche d'une levure de la Bibliothèque a maintenant une section « Arômes ». Elle donne les arômes en étiquettes, le profil de la levure, ce qu'elle donne en bas et en haut de sa plage de température, avec la température de chaque borne, et jusqu'à six styles conseillés. Un appui sur un style ouvre sa fiche. Ces textes sont rédigés par une IA et peuvent contenir des erreurs.",
-        "Sur la fiche d'un houblon comme sur celle d'une levure, la mention dit seulement « Texte rédigé par une IA (Claude) » : elle ne parle plus de relecture. L'écran « Sources des données » présente aussi les arômes des levures."
       ]
     }
   ]

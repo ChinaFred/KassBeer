@@ -1,8 +1,9 @@
-// Noms des houblons (--nature hop, par défaut, ADR-013) ou des levures (--nature culture,
-// ADR-017) des recettes du groupe, en lecture seule : recipes/ et brews/ (recette figée),
-// vers import/ingest/aromes/noms-houblons.json ou import/ingest/aromes/levures/noms-levures.json.
+// Noms des houblons (--nature hop, par défaut, ADR-013), des levures (--nature culture,
+// ADR-017) ou des divers (--nature misc, ADR-018) des recettes du groupe, en lecture seule :
+// recipes/ et brews/ (recette figée), vers import/ingest/aromes/noms-houblons.json,
+// import/ingest/aromes/levures/noms-levures.json ou import/ingest/divers/noms-divers.json.
 // Puis, dans exchange/ : dart run bin/lister_ingredients_recettes.dart --nature <même nature>
-// (résolution vers beer_hops/ ou beer_cultures/).
+// (résolution vers beer_hops/, beer_cultures/ ou beer_miscs/).
 //
 //   Émulateur (par défaut) :
 //     npx firebase --config ../firebase.json emulators:exec --only firestore \
@@ -13,6 +14,8 @@
 // Codes de sortie : 0 liste écrite ; 1 échec ; 2 utilisation refusée.
 
 import { listerIngredients } from "./lib/lister.mjs";
+
+const MOTS = { hop: "houblons", culture: "levures", misc: "divers" };
 import { ErreurOptions } from "./lib/options.mjs";
 
 try {
@@ -25,7 +28,7 @@ try {
   console.log(`Cible : ${r.target}, projet ${r.project} (lecture seule)`);
   console.log(
     `${r.recettes} recettes et ${r.brassins} brassins lus : ${r.noms} noms de ` +
-      `${r.nature === "culture" ? "levures" : "houblons"}` +
+      `${MOTS[r.nature]}` +
       (r.ecartees > 0 ? `, ${r.ecartees} lignes sans nom lisible écartées` : "") +
       ".",
   );
