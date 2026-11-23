@@ -839,7 +839,8 @@ Elles fixent la décision ci-dessus.
     quand `development_invalid_since` est posé, jamais pour le jeton GitHub, qui s'efface seul
     à la première réponse réussie de GitHub. Dans les deux cas, le jeton remplacé dans Secret
     Manager n'est lu qu'après un redéploiement des Functions (lancement manuel de
-    « Déploiement ») : les libellés le disent (2026-11-23). La boîte ajoute « Si la routine refuse encore, la
+    « Déploiement ») : les libellés de la file et du bandeau d'Admin › Tickets le disent
+    (2026-11-23). La boîte ajoute « Si la routine refuse encore, la
     file s'arrêtera de nouveau, sans décompte. ».
 
 ### Évolutions du réseau acceptées (2026-11-22)

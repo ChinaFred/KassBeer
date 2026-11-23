@@ -911,7 +911,7 @@ texte sélectionnable et annoncé, borné au tiers de la hauteur et défilant au
 tout va bien. Une ligne par alerte :
 
 - « Jeton GitHub refusé ou expiré depuis le jj/mm/aa : remplacez GITHUB_TICKETS_TOKEN dans
-  Secret Manager. » (ton d'erreur) ;
+  Secret Manager, puis relancez le workflow « Déploiement » sur GitHub. » (ton d'erreur) ;
 - « Le jeton GitHub expire le jj/mm/aa. » à 14 jours ou moins de l'échéance, « Le jeton
   GitHub a expiré le jj/mm/aa. » (ton d'erreur) une fois l'échéance passée ; sans échéance
   (jeton sans expiration), rien sur l'expiration ;
@@ -919,8 +919,8 @@ tout va bien. Une ligne par alerte :
   transmission depuis plus d'une heure ;
 - « N tickets dont l'Issue a disparu. » ;
 - « Jeton de la routine d'analyse refusé depuis le jj/mm/aa. Remplacez-le dans Secret
-  Manager. » et « Jeton de la routine de développement refusé depuis le jj/mm/aa. Remplacez-le
-  dans Secret Manager. » (ton d'erreur), lus dans l'état des lancements (ADR-008, T4) ;
+  Manager, puis relancez le workflow « Déploiement » sur GitHub. » et « Jeton de la routine de développement refusé depuis le
+  jj/mm/aa. Remplacez-le dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub. » (ton d'erreur), lus dans l'état des lancements (ADR-008, T4) ;
 - « État du jeton GitHub illisible. » pour un document illisible, journalisé ; « Impossible de
   lire l'état du jeton GitHub. » quand la lecture échoue ; de même « État des lancements
   illisible. » et « Impossible de lire l'état des lancements. ». Le plafond des lancements
@@ -1193,7 +1193,7 @@ cet ordre de priorité :
 | dans la file des livraisons (ticket #104) | voir « File des livraisons » ci-dessous | « Retirer de la file » |
 | livraison d'un autre ticket en cours | « Livraison du ticket #9 en cours depuis 14:05. Une seule livraison à la fois. » (file non vide : « … Une seule livraison à la fois. 2 tickets attendent déjà. »), puis « Ouvrir le ticket #9 » (à côté de la liste, la fiche est remplacée ; au téléphone, elle s'empile) | « Mettre en file » (actif au plafond) ; ticket validé sur GitHub seul : aucun |
 | compte rendu de la livraison précédente pas encore relevé (verrou libre) | « La livraison du ticket #9 n'a pas encore publié son compte rendu. Une seule livraison à la fois. », puis « Ouvrir le ticket #9 » | « Mettre en file » |
-| file non vide, livraison précédente finie | « 2 livraisons attendent dans la file. La prochaine part dans 5 minutes au plus. » ; file arrêtée : « 2 livraisons attendent dans la file. La file est arrêtée : la routine de développement est en pause. » (« … a refusé le lancement. », « … le jeton de la routine de développement est refusé. », « … GitHub refuse le jeton. Elle repartira une fois le jeton remplacé et le déploiement relancé. »), ton d'erreur | « Mettre en file » (actif) |
+| file non vide, livraison précédente finie | « 2 livraisons attendent dans la file. La prochaine part dans 5 minutes au plus. » ; file arrêtée : « 2 livraisons attendent dans la file. La file est arrêtée : la routine de développement est en pause. » (« … a refusé le lancement. », « … le jeton de la routine de développement est refusé. », « … GitHub refuse le jeton. Elle repartira une fois le jeton remplacé et le workflow « Déploiement » relancé. »), ton d'erreur | « Mettre en file » (actif) |
 | PR prête, validé sur GitHub seul | « PR #34 prête. Ce ticket a été validé sur GitHub : fusionnez la PR sur GitHub. » ; si le serveur offre « Valider » : « … fusionnez la PR sur GitHub, ou validez-le depuis l'application pour la livrer d'ici. » | aucun |
 | appel de la fiche en cours | barre de progression, « Lancement de la livraison en cours. » (« … de la correction … » ; « Mise en file en cours. », « Retrait de la file en cours. ») | inactif |
 | plafond atteint | ligne du plafond | « Livrer » inactif |
@@ -1217,9 +1217,9 @@ file, avec « Retirer de la file » (bouton à contour) :
 | Cas | Ligne |
 |---|---|
 | pas en tête | « Dans la file (position 2 sur 3), derrière le ticket #15. », puis « Ouvrir le ticket #15 » |
-| en tête, jeton de la routine de développement refusé | « Dans la file (position 1 sur 3) : la file attend, le jeton de la routine de développement est refusé depuis le 22/11/26. Remplacez-le dans Secret Manager, relancez le déploiement, puis appuyez sur « Relancer la file ». » (ton d'erreur), avec le bouton « Relancer la file » (décision de l'utilisateur du 2026-11-23) |
+| en tête, jeton de la routine de développement refusé | « Dans la file (position 1 sur 3) : la file attend, le jeton de la routine de développement est refusé depuis le 22/11/26. Remplacez-le dans Secret Manager, relancez le workflow « Déploiement » sur GitHub, puis appuyez sur « Relancer la file ». » (ton d'erreur), avec le bouton « Relancer la file » (décision de l'utilisateur du 2026-11-23) |
 | en tête, routine en pause ou lancement refusé au départ | « Dans la file (position 1 sur 3) : la file attend, la routine de développement est en pause depuis le 22/11/26. Réactivez-la sur claude.ai, puis appuyez sur « Relancer la file ». » ou « … : la file attend, la routine de développement a refusé le lancement depuis le 22/11/26. Lisez Admin › Journaux, puis appuyez sur « Relancer la file ». » (ton d'erreur), avec le bouton tonal « Relancer la file » à côté de « Retirer de la file » ; l'entrée reste en tête et la file repart aussi après le prochain lancement réussi de la routine de développement |
-| en tête, GitHub refuse le jeton | « Dans la file (position 1 sur 3) : la file attend, GitHub refuse le jeton depuis le 22/11/26. Remplacez GITHUB_TICKETS_TOKEN dans Secret Manager et relancez le déploiement : la file repartira d'elle-même dans l'heure. » (ton d'erreur), sans « Relancer la file » |
+| en tête, GitHub refuse le jeton | « Dans la file (position 1 sur 3) : la file attend, GitHub refuse le jeton depuis le 22/11/26. Remplacez GITHUB_TICKETS_TOKEN dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub : la file repartira d'elle-même dans l'heure. » (ton d'erreur), sans « Relancer la file » |
 | en tête, autre livraison en cours | « Dans la file (position 1 sur 3) : partira après la livraison du ticket #9. » |
 | en tête, compte rendu attendu | « Dans la file (position 1 sur 3) : partira après le compte rendu de la livraison du ticket #9, à 17:05 au plus tard. » |
 | en tête, plafond atteint, accord donné par ce compte | « Dans la file (position 1 sur 3) : plafond atteint le 22/11 (10 sur 10). Elle partira quand le compteur repartira à zéro, peu après minuit. » (accord d'un autre administrateur : ligne suivante) |

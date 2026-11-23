@@ -304,7 +304,7 @@ void main() {
         jeton.texte,
         'Dans la file (position 1 sur 1) : la file attend, le jeton de la '
         'routine de développement est refusé depuis le 22/11/26. Remplacez-le '
-        'dans Secret Manager, relancez le déploiement, puis appuyez sur '
+        'dans Secret Manager, relancez le workflow « Déploiement » sur GitHub, puis appuyez sur '
         '« Relancer la file ».',
       );
       expect(jeton.relancerFile, isTrue);
@@ -423,7 +423,7 @@ void main() {
         github.texte,
         '2 livraisons attendent dans la file. La file est arrêtée : GitHub '
         'refuse le jeton. Elle repartira une fois le jeton remplacé et le '
-        'déploiement relancé.',
+        'workflow « Déploiement » relancé.',
       );
       // En tête : « Relancer la file » pour le jeton de la routine refusé
       // (décision 10), jamais pour le jeton GitHub.
@@ -452,7 +452,7 @@ void main() {
         githubTete.texte,
         'Dans la file (position 1 sur 1) : la file attend, GitHub refuse le '
         'jeton depuis le 22/11/26. Remplacez GITHUB_TICKETS_TOKEN dans Secret '
-        'Manager et relancez le déploiement : la file repartira d\'elle-même '
+        'Manager, puis relancez le workflow « Déploiement » sur GitHub : la file repartira d\'elle-même '
         'dans l\'heure.',
       );
     });

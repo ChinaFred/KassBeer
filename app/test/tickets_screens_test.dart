@@ -805,7 +805,7 @@ void main() {
       expect(
         find.text(
           'Jeton GitHub refusé ou expiré depuis le 07/11/26 : remplacez '
-          'GITHUB_TICKETS_TOKEN dans Secret Manager.',
+          'GITHUB_TICKETS_TOKEN dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub.',
         ),
         findsOneWidget,
       );
