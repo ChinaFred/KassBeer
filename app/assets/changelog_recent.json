@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "version": "0.2.18",
+      "date": "2026-11-23",
+      "summaries": [
+        "Une pull request qui change les règles des sessions se livre depuis la fiche, après votre accord."
+      ],
+      "paragraphs": [
+        "Pour l'administrateur : une session de développement lancée depuis un ticket peut maintenant modifier les règles que suivent toutes les sessions Claude Code et le script de l'écran Nouveautés. Sa pull request porte alors l'étiquette « Règles du réseau modifiées », dans la liste et sur la fiche, avec les fichiers et les contrôles changés. « Livrer » laisse la place à « Approuver les règles et livrer ». La boîte liste les fichiers et les contrôles, propose « Lire le diff » et demande de saisir le numéro de la pull request. L'accord vaut pour l'état affiché de la pull request : un nouveau commit l'annule, et il faut approuver à nouveau."
+      ]
+    },
+    {
       "version": "0.2.16",
       "date": "2026-11-23",
       "summaries": [
@@ -48,16 +58,6 @@
       ],
       "paragraphs": [
         "Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un paragraphe par moment d'ajout (empâtage, ébullition, après ébullition, fermentation, embouteillage). La section « Goût » décrit le goût apporté, ou indique qu'il n'y a pas d'effet notable. Ces textes sont rédigés par une IA et ne donnent aucune dose : suivez la notice du fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur."
-      ]
-    },
-    {
-      "version": "0.2.1",
-      "date": "2026-11-22",
-      "summaries": [
-        "L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet."
-      ],
-      "paragraphs": [
-        "Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé : seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre dans le navigateur le journal de toutes les versions, détail technique et versions plus récentes compris. Demandé par le ticket #114."
       ]
     }
   ]

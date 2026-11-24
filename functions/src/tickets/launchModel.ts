@@ -28,8 +28,14 @@ import type { TicketStatus } from "./model";
 export const LAUNCH_ACTIONS = ["analyse", "developpement", "livraison", "reprise"] as const;
 export type LaunchAction = (typeof LAUNCH_ACTIONS)[number];
 
-/** Seule forme de texte envoyée à une routine (P35). */
-export const LAUNCH_TEXT_PATTERN = /^(analyse|developpement|livraison|reprise) #[1-9][0-9]{0,6}$/;
+/**
+ * Seules formes de texte envoyées à une routine (P35) : `<action> #N` pour l'analyse, le
+ * développement et la reprise ; `livraison #N <tête>` pour une livraison, avec la tête de la
+ * PR relue et contrôlée par le serveur (40 chiffres hexadécimaux en minuscules, décision de
+ * l'utilisateur du 2026-11-23, ADR-020).
+ */
+export const LAUNCH_TEXT_PATTERN =
+  /^(?:(?:analyse|developpement|reprise) #[1-9][0-9]{0,6}|livraison #[1-9][0-9]{0,6} [0-9a-f]{40})$/;
 
 /**
  * Routine qui reçoit chaque action : la livraison et la reprise partent par la routine de
@@ -43,12 +49,20 @@ export const LAUNCH_ROUTINE: Record<LaunchAction, "analyse" | "developpement"> =
 };
 
 /**
- * Le texte envoyé à la routine : `<action> #N`, `N` tiré de
- * `github_issue_number` écrit par le serveur. Lève si le résultat ne suit pas
- * [LAUNCH_TEXT_PATTERN] : rien d'autre ne part. Pure.
+ * Le texte envoyé à la routine : `<action> #N`, `N` tiré de `github_issue_number` écrit par
+ * le serveur ; pour une livraison, `livraison #N <tête>`, `headSha` relu sur GitHub et
+ * contrôlé par le serveur. Lève si le résultat ne suit pas [LAUNCH_TEXT_PATTERN] : rien
+ * d'autre ne part. Pure.
  */
-export function launchCommandText(action: LaunchAction, issueNumber: number): string {
-  const text = `${action} #${issueNumber}`;
+export function launchCommandText(
+  action: LaunchAction,
+  issueNumber: number,
+  headSha: string | null = null,
+): string {
+  const text =
+    action === "livraison"
+      ? `${action} #${issueNumber} ${headSha ?? ""}`
+      : `${action} #${issueNumber}`;
   if (!LAUNCH_TEXT_PATTERN.test(text)) {
     throw new Error(`texte de lancement refusé : ${JSON.stringify(text)}`);
   }

@@ -27,9 +27,14 @@ class SectionLivraison extends ConsumerWidget {
     super.key,
     required this.ticket,
     required this.livrerActif,
+    this.livraisonEnCours = false,
   });
 
   final Ticket ticket;
+
+  /// Une livraison de ce ticket tourne (ligne de la barre, dérivée par la
+  /// fiche des documents du serveur).
+  final bool livraisonEnCours;
 
   /// « Livrer » est affiché et actif dans la barre (dérivé par la fiche).
   final bool livrerActif;
@@ -39,6 +44,8 @@ class SectionLivraison extends ConsumerWidget {
   static const illisible = 'Livraison illisible. Mettez l\'application à jour.';
   static const vide = 'Aucun compte rendu de livraison.';
   static const invitation = 'Appuyez sur « Livrer », en bas de la fiche.';
+  static const invitationRegles =
+      'Appuyez sur « $kApprouverRegles », en bas de la fiche.';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -102,7 +109,10 @@ class SectionLivraison extends ConsumerWidget {
         ),
       ),
     ];
-    final avecInvitation = livrerActif ? '$vide $invitation' : vide;
+    final regles = doc != null && doc.reglesDuReseau;
+    final avecInvitation = livrerActif
+        ? '$vide ${regles ? invitationRegles : invitation}'
+        : vide;
     final List<Widget> corps;
     if (async.hasError) {
       corps = [
@@ -139,8 +149,104 @@ class SectionLivraison extends ConsumerWidget {
         TitreSection(
           doc == null ? 'Livraison' : 'Livraison (${doc.reports.length})',
         ),
+        if (regles && ticket.status == TicketStatus.inProgress) ...[
+          BlocReglesDuReseau(
+            livraison: doc,
+            livraisonEnCours: livraisonEnCours,
+          ),
+          const SizedBox(height: 12),
+        ],
         ...corps,
       ],
+    );
+  }
+}
+
+/// Règles du réseau changées par la PR d'un ticket En cours (ADR-020) :
+/// étiquette, fichiers, contrôles changés, état de l'accord et « Ouvrir la PR
+/// #M ». Tout est lu dans `admin/delivery`, écrit par le serveur : aucune
+/// comparaison de têtes ni lecture du patch en Dart (P39, P46).
+class BlocReglesDuReseau extends StatelessWidget {
+  const BlocReglesDuReseau({
+    super.key,
+    required this.livraison,
+    this.livraisonEnCours = false,
+  });
+
+  final TicketDelivery livraison;
+
+  /// Une livraison de ce ticket tourne : l'accord publié reste affiché.
+  final bool livraisonEnCours;
+
+  static const controlesIllisibles = 'Contrôles changés : liste illisible.';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final pr = livraison.prNumber;
+    final lien = lienPullRequestOuvrable(livraison.prUrl);
+    final accord = livraison.etatAccord(livraisonEnCours: livraisonEnCours);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Etiquette(
+          label: kReglesModifiees,
+          icon: Icons.rule,
+          ton: TonEtiquette.erreur,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Fichiers : ${livraison.networkRulesFiles.join(', ')}.',
+          style: theme.textTheme.bodyLarge,
+        ),
+        Text(
+          livraison.networkRulesControlsComplete
+              ? 'Contrôles changés : '
+                    '${listeControles(livraison.networkRulesControls)}.'
+              : controlesIllisibles,
+          style: theme.textTheme.bodyLarge,
+        ),
+        if (accord != null) Text(accord, style: theme.textTheme.bodyLarge),
+        if (lien != null) ...[
+          const SizedBox(height: 8),
+          BoutonVoirSurGithub(
+            uri: lien,
+            label: pr == null ? 'Ouvrir la PR' : 'Ouvrir la PR #$pr',
+            contexte: 'PR d\'un ticket',
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Étiquette « Règles du réseau modifiées » de la liste d'Admin › Tickets
+/// pour un ticket En cours dont la PR touche les règles du réseau
+/// (`admin/delivery.network_rules_files` non vide, ADR-020).
+class PastilleReglesDuReseau extends ConsumerWidget {
+  const PastilleReglesDuReseau({super.key, required this.ticket});
+
+  final Ticket ticket;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ticket.status != TicketStatus.inProgress ||
+        ticket.issueNumber == null) {
+      return const SizedBox.shrink();
+    }
+    final livraison = switch (ref
+        .watch(ticketDeliveryProvider(ticket.id))
+        .value) {
+      DocumentTrouve(:final value) => value,
+      _ => null,
+    };
+    if (livraison == null || !livraison.reglesDuReseau) {
+      return const SizedBox.shrink();
+    }
+    return const Etiquette(
+      label: kReglesModifiees,
+      icon: Icons.rule,
+      ton: TonEtiquette.erreur,
     );
   }
 }

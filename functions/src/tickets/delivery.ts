@@ -12,18 +12,25 @@
  *   ticket sorti de `in_progress`, `retry_after` de l'entrée de livraison ramené à l'heure du
  *   relevé) : le client ne lit que `retry_after`, sans règle recopiée (P46) ;
  * - `relaunch_ready` (CI terminée en échec) ouvre « Relancer le développement » (P47) ;
- * - fichiers sensibles : liste d'ADR-008 « Livraison », plus les ajouts des décisions de
- *   l'utilisateur du 2026-11-14, écrite une seule fois ici
- *   (`SENSITIVE_DELIVERY_PATTERNS`) et comparée au bloc L3 du prompt par
- *   `functions/test/prompts.test.ts`.
+ * - fichiers : trois catégories (ADR-020, R2) écrites une seule fois ici
+ *   (`FORBIDDEN_DEVELOPMENT_PATTERNS`, `NETWORK_RULES_PATTERNS`,
+ *   `SENSITIVE_DELIVERY_PATTERNS`) et comparées au point 5, à L3a et à L3b du prompt de
+ *   développement par `functions/test/prompts.test.ts` (P65) ;
+ * - règles du réseau : fichiers et contrôles `Pn` changés, relus à chaque relecture ; accord
+ *   de l'administrateur lié à la tête de la PR (`network_rules_ack`), annulé par un nouveau
+ *   commit (P45).
  *
  * `tickets/{id}/admin/delivery` (P45) et `ticket_status/launches.delivery_running` (P44) sont
  * écrits par le serveur seul et lus par l'administrateur seul. Aucun titre ni corps de PR n'y
- * est écrit (P24). Le serveur n'écrit rien sur GitHub pour une livraison.
+ * est écrit (P24), et du patch de `CLAUDE.md` seuls les numéros `Pn` sont gardés. Pour une
+ * livraison, le serveur n'écrit sur GitHub que le commentaire d'accord du mode
+ * `network_rules`, sur gabarit fixe.
  *
  * Les fonctions qui lisent ou écrivent reçoivent le client Firestore (`kit`) et le client
  * GitHub de l'appelant : rien n'est construit au chargement du module (P26).
  */
+
+import { randomInt } from "node:crypto";
 
 import type { Transaction } from "firebase-admin/firestore";
 
@@ -222,6 +229,16 @@ export interface DeliveryState {
   ready: boolean;
   /** CI rouge : ticket En cours, une PR éligible, CI terminée en échec (P47). */
   relaunch_ready: boolean;
+  /** Règles du réseau touchées par la PR (ADR-020, P45), quatre au plus. */
+  network_rules_files: string[];
+  /** Numéros `Pn` changés dans `CLAUDE.md`, triés, 60 au plus. */
+  network_rules_controls: number[];
+  /** Faux si `CLAUDE.md` change sans `patch` rendu par GitHub. */
+  network_rules_controls_complete: boolean;
+  /** Premier chemin des catégories 1 ou 3, ou `null`. */
+  sensitive_files: string | null;
+  /** Faux si la liste des fichiers dépasse 1 000 entrées. */
+  files_complete: boolean;
 }
 
 /** L'adresse d'une PR de ce dépôt sur github.com, ou `null`. Pure. */
@@ -235,8 +252,8 @@ export function safePullRequestUrl(url: string | null): string | null {
 /**
  * L'état « PR prête » d'un ticket. Une liste de PR ouvertes tronquée ne donne aucune PR
  * retenue (`pr_number` nul, `ready` et `relaunch_ready` faux) : une seconde PR éligible a pu
- * échapper à la lecture. Les fichiers sensibles ne comptent pas ici : ils se contrôlent au
- * lancement (P43). Pure.
+ * échapper à la lecture. Les fichiers ne changent pas `ready` : ils sont décrits à part
+ * (règles du réseau, fichier sensible) et se recontrôlent au lancement (P43, P45). Pure.
  */
 export function deliveryState(args: {
   ticketStatus: unknown;
@@ -245,10 +262,13 @@ export function deliveryState(args: {
   /** Détail relu de la PR éligible quand elle est seule, sinon `null`. */
   pr: PullRequestView | null;
   ci: CiSummary;
+  /** Fichiers de la PR éligible quand elle est seule, sinon `null`. */
+  files?: PullRequestFiles | null;
 }): DeliveryState {
   const single =
     args.prListComplete && args.eligible.length === 1 ? (args.pr ?? args.eligible[0]) : null;
   const ci = single === null ? ciSummary([]) : args.ci;
+  const files = deliveryFilesState(single === null ? null : (args.files ?? null));
   const inProgress = args.ticketStatus === "in_progress";
   return {
     eligible_pr_count: args.eligible.length,
@@ -263,25 +283,30 @@ export function deliveryState(args: {
     ci_completed_at: ci.completedAt,
     ready: inProgress && single !== null && ci.green,
     relaunch_ready: inProgress && single !== null && ci.red,
+    ...files,
   };
 }
 
-// ── Fichiers sensibles (P43, logique dupliquée avec le bloc L3 du prompt) ───
+// ── Trois catégories de fichiers (P43, P65, logique dupliquée avec le prompt) ─
+
+/*
+ * Motifs depuis la racine : un motif qui commence par deux étoiles et une barre vaut pour un
+ * nom de fichier à toute profondeur, un motif qui finit par une barre et deux étoiles pour
+ * tout un dossier, une étoile seule pour un segment. Casse ignorée. Chaque liste est écrite
+ * une seule fois ici ; le point 5, L3a et L3b du prompt de développement
+ * (`documentation/prompts-routines.md`) en sont les copies, comparées par
+ * `functions/test/prompts.test.ts` (tableau « Logique dupliquée » de `CLAUDE.md`, P65).
+ */
 
 /**
- * Fichiers qu'une livraison ne fusionne jamais : liste d'ADR-008 « Livraison », plus les ajouts
- * des décisions de l'utilisateur du 2026-11-14 : les trois `pubspec.lock` (un nouveau paquet
- * exécute son code de construction dans le job `build` de `deploy.yml`, qui détient les
- * secrets de signature), `gradlew` et `gradlew.bat` (lancés par `flutter build apk`), les
- * build hooks Dart (`hook/`), tout dossier `.claude/`, et les fichiers qui portent le contrôle
- * des livraisons (`auth.ts`, `config.ts`, `delivery.ts`, `member_access.json`). Motifs depuis
- * la racine :
- * un motif qui commence par deux étoiles et une barre vaut pour un nom de fichier à toute
- * profondeur, un motif qui finit par une barre et deux étoiles pour tout un dossier, une étoile
- * seule pour un segment. Casse ignorée. Seule copie côté serveur ; le bloc L3 du prompt de
- * développement en est l'autre (tableau « Logique dupliquée » de `CLAUDE.md`).
+ * Catégorie 1 (ADR-020) : fichiers que la session de développement ne touche jamais et
+ * qu'une livraison ne fusionne jamais. Liste d'ADR-008 « Livraison », plus les ajouts des
+ * décisions de l'utilisateur du 2026-11-14 (`gradlew`, `gradlew.bat`, build hooks Dart
+ * `hook/`, tout dossier `.claude/`). Les chemins exacts de `NETWORK_RULES_PATTERNS` en sont
+ * retirés (`CLAUDE.md` à la racine, les deux fichiers de `changelog-recent`) : tout autre
+ * fichier de `scripts/` et tout `CLAUDE.md` d'un sous-dossier restent interdits (décision 2).
  */
-export const SENSITIVE_DELIVERY_PATTERNS: readonly string[] = [
+export const FORBIDDEN_DEVELOPMENT_PATTERNS: readonly string[] = [
   ".github/**",
   "**/.claude/**",
   "scripts/**",
@@ -309,6 +334,29 @@ export const SENSITIVE_DELIVERY_PATTERNS: readonly string[] = [
   "app/android/gradlew",
   "app/android/gradlew.bat",
   "**/hook/**",
+];
+
+/**
+ * Catégorie 2 (ADR-020, décisions 2 et 6) : règles du réseau. Chemins exacts depuis la
+ * racine, casse comprise : un `claude.md` en minuscules ou un `Scripts/…` reste dans la
+ * catégorie 1. Permis à la session de développement ; livrés seulement après un accord de
+ * l'administrateur lié à la tête de la PR (mode `network_rules` de `launchTicketDelivery`).
+ * Liste fermée : l'étendre demande un ADR (P65).
+ */
+export const NETWORK_RULES_PATTERNS: readonly string[] = [
+  "CLAUDE.md",
+  "scripts/changelog-recent.mjs",
+  "scripts/changelog-recent.test.mjs",
+  "documentation/prompts-routines.md",
+];
+
+/**
+ * Catégorie 3 : permis à la session de développement, jamais livrés par la routine (fusion à
+ * la main). Les trois `pubspec.lock` (un nouveau paquet exécute son code de construction dans
+ * le job `build` de `deploy.yml`, qui détient les secrets de signature) et les fichiers qui
+ * portent le contrôle des livraisons (décisions de l'utilisateur du 2026-11-14).
+ */
+export const DELIVERY_ONLY_SENSITIVE_PATTERNS: readonly string[] = [
   "app/pubspec.lock",
   "brewing/pubspec.lock",
   "exchange/pubspec.lock",
@@ -318,7 +366,16 @@ export const SENSITIVE_DELIVERY_PATTERNS: readonly string[] = [
   "test-fixtures/member_access.json",
 ];
 
-/** Un motif de `SENSITIVE_DELIVERY_PATTERNS` en expression régulière, casse ignorée. Pure. */
+/**
+ * Fichiers qu'une livraison ne fusionne jamais : union des catégories 1 et 3, dans cet
+ * ordre. Copie : bloc L3a du prompt.
+ */
+export const SENSITIVE_DELIVERY_PATTERNS: readonly string[] = [
+  ...FORBIDDEN_DEVELOPMENT_PATTERNS,
+  ...DELIVERY_ONLY_SENSITIVE_PATTERNS,
+];
+
+/** Un motif de ces listes en expression régulière, casse ignorée. Pure. */
 export function sensitivePatternRegExp(pattern: string): RegExp {
   let out = "";
   let i = 0;
@@ -341,10 +398,24 @@ export function sensitivePatternRegExp(pattern: string): RegExp {
 }
 
 const SENSITIVE_REGEXPS = SENSITIVE_DELIVERY_PATTERNS.map(sensitivePatternRegExp);
+const FORBIDDEN_REGEXPS = FORBIDDEN_DEVELOPMENT_PATTERNS.map(sensitivePatternRegExp);
 
-/** Vrai si ce chemin est un fichier qu'une livraison ne fusionne jamais (casse ignorée). Pure. */
+/** Vrai si ce chemin est un fichier des règles du réseau (catégorie 2, chemin exact). Pure. */
+export function isNetworkRulesPath(path: string): boolean {
+  return NETWORK_RULES_PATTERNS.includes(path);
+}
+
+/** Vrai si la session de développement ne touche jamais ce chemin (catégorie 1). Pure. */
+export function isForbiddenDevelopmentPath(path: string): boolean {
+  return !isNetworkRulesPath(path) && FORBIDDEN_REGEXPS.some((re) => re.test(path));
+}
+
+/**
+ * Vrai si une livraison ne fusionne jamais ce chemin (catégories 1 et 3, casse ignorée). Un
+ * chemin des règles du réseau n'en est pas : il se livre après accord. Pure.
+ */
 export function isSensitiveDeliveryPath(path: string): boolean {
-  return SENSITIVE_REGEXPS.some((re) => re.test(path));
+  return !isNetworkRulesPath(path) && SENSITIVE_REGEXPS.some((re) => re.test(path));
 }
 
 /**
@@ -358,6 +429,245 @@ export function sensitiveDeliveryPath(files: readonly PullRequestFileView[]): st
     }
   }
   return null;
+}
+
+/**
+ * Les chemins des règles du réseau que touche la PR (nouveaux et anciens chemins), sans
+ * doublon, dans l'ordre de `NETWORK_RULES_PATTERNS` : quatre au plus. Pure.
+ */
+export function networkRulesFiles(files: readonly PullRequestFileView[]): string[] {
+  const seen = new Set<string>();
+  for (const f of files) {
+    for (const path of [f.filename, f.previousFilename]) {
+      if (typeof path === "string" && isNetworkRulesPath(path)) seen.add(path);
+    }
+  }
+  return NETWORK_RULES_PATTERNS.filter((p) => seen.has(p));
+}
+
+/** Le fichier dont le `patch` donne les contrôles changés. */
+export const NETWORK_RULES_CONTROLS_FILE = "CLAUDE.md";
+
+/** Contrôles gardés au plus (P45). */
+export const NETWORK_RULES_CONTROLS_MAX = 60;
+
+/** Ligne ajoutée ou retirée d'une ligne du tableau « Contrôles propres au projet » (P45). */
+const CONTROL_LINE = /^[+-]\| P([0-9]{1,3}) \|/;
+
+/**
+ * Les numéros des contrôles `Pn` ajoutés, retirés ou modifiés, lus dans le `patch` de
+ * `CLAUDE.md` : lignes qui commencent par `+| P` ou `-| P`. Sans doublon, triés, 60 au plus.
+ * Rien d'autre du patch n'est gardé (P45). `complete` faux si `CLAUDE.md` change sans `patch`
+ * rendu par GitHub, s'il n'apparaît que comme ancien chemin d'un renommage, ou si plus de 60
+ * numéros sont relevés. Pure.
+ */
+export function networkRulesControls(files: readonly PullRequestFileView[]): {
+  controls: number[];
+  complete: boolean;
+} {
+  const file = files.find((f) => f.filename === NETWORK_RULES_CONTROLS_FILE);
+  if (file === undefined) {
+    // `CLAUDE.md` renommé ailleurs : son patch ne dit pas les contrôles retirés.
+    const renamed = files.some((f) => f.previousFilename === NETWORK_RULES_CONTROLS_FILE);
+    return { controls: [], complete: !renamed };
+  }
+  if (typeof file.patch !== "string") return { controls: [], complete: false };
+  const found = new Set<number>();
+  for (const line of file.patch.split(/\r?\n/)) {
+    const m = CONTROL_LINE.exec(line);
+    if (m !== null) found.add(Number(m[1]));
+  }
+  return {
+    controls: [...found].sort((a, b) => a - b).slice(0, NETWORK_RULES_CONTROLS_MAX),
+    // Plus de 60 numéros : la liste affichée serait tronquée.
+    complete: found.size <= NETWORK_RULES_CONTROLS_MAX,
+  };
+}
+
+/** Le `patch` à garder le temps de la lecture : celui de `CLAUDE.md` à la racine seul. */
+export function keepNetworkRulesPatch(filename: string): boolean {
+  return filename === NETWORK_RULES_CONTROLS_FILE;
+}
+
+/** Ce que `admin/delivery` retient des fichiers de la PR éligible (P45). */
+export interface DeliveryFilesState {
+  network_rules_files: string[];
+  network_rules_controls: number[];
+  network_rules_controls_complete: boolean;
+  sensitive_files: string | null;
+  files_complete: boolean;
+}
+
+/** Sans PR retenue : aucune règle, rien de sensible. */
+export const NO_DELIVERY_FILES: DeliveryFilesState = {
+  network_rules_files: [],
+  network_rules_controls: [],
+  network_rules_controls_complete: true,
+  sensitive_files: null,
+  files_complete: true,
+};
+
+/** Fichiers de la PR lus (`listPullRequestFiles`). */
+export type PullRequestFiles = { files: PullRequestFileView[]; complete: boolean };
+
+/** L'état des fichiers d'une PR. Pure. */
+export function deliveryFilesState(list: PullRequestFiles | null): DeliveryFilesState {
+  if (list === null) return { ...NO_DELIVERY_FILES };
+  const controls = networkRulesControls(list.files);
+  return {
+    network_rules_files: networkRulesFiles(list.files),
+    network_rules_controls: controls.controls,
+    network_rules_controls_complete: controls.complete,
+    sensitive_files: sensitiveDeliveryPath(list.files),
+    files_complete: list.complete,
+  };
+}
+
+// ── Accord sur les règles du réseau (P24, P43, P45) ─────────────────────────
+
+export const NETWORK_RULES_ACK_TITLE = "## Accord — règles du réseau";
+
+/**
+ * Gabarit du commentaire d'accord, fixe : aucun texte venu de la PR ni de l'Issue. Le bloc
+ * L3b du prompt de développement le cite à l'identique (test de `prompts.test.ts`).
+ */
+export const NETWORK_RULES_ACK_TEMPLATE: readonly string[] = [
+  NETWORK_RULES_ACK_TITLE,
+  "",
+  "PR #<M>",
+  "Tête <head_sha>",
+  "Fichiers : <fichiers>",
+  "Contrôles : <contrôles>",
+  "",
+  "Accord <ack_id>",
+];
+
+/** `ack_id` : tiré par le serveur. */
+export const ACK_ID_PATTERN = /^[A-Za-z0-9]{20}$/;
+const HEAD_SHA_PATTERN = /^[0-9a-f]{40}$/;
+
+/** Ligne `Accord <id>` d'un accord. */
+export function ackLine(ackId: string): string {
+  return `Accord ${ackId}`;
+}
+
+/** Un accord lu dans `admin/delivery.network_rules_ack`. */
+export interface NetworkRulesAck {
+  head_sha: string;
+  ack_id: string;
+  comment_id: number | null;
+  files: string[];
+  controls: number[];
+  atMs: number | null;
+}
+
+/** L'accord stocké, ou `null` s'il est absent ou illisible. Pure. */
+export function readNetworkRulesAck(
+  raw: unknown,
+  toMillis: (v: unknown) => number | null,
+): NetworkRulesAck | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.head_sha !== "string" || !HEAD_SHA_PATTERN.test(r.head_sha)) return null;
+  if (typeof r.ack_id !== "string" || !ACK_ID_PATTERN.test(r.ack_id)) return null;
+  const files = Array.isArray(r.files) ? r.files.filter((f) => typeof f === "string") : [];
+  const controls = Array.isArray(r.controls)
+    ? r.controls.filter((c): c is number => typeof c === "number" && Number.isSafeInteger(c))
+    : [];
+  return {
+    head_sha: r.head_sha,
+    ack_id: r.ack_id,
+    comment_id:
+      typeof r.comment_id === "number" && Number.isSafeInteger(r.comment_id) ? r.comment_id : null,
+    files: files as string[],
+    controls,
+    atMs: toMillis(r.at),
+  };
+}
+
+/**
+ * Vrai si l'accord vaut pour la tête `headSha` : même tête, commentaire publié. Un nouveau
+ * commit change la tête et annule l'accord sans écriture de plus. Pure.
+ */
+export function networkRulesAckValid(ack: NetworkRulesAck | null, headSha: string | null): boolean {
+  return ack !== null && headSha !== null && ack.head_sha === headSha && ack.comment_id !== null;
+}
+
+/** Vrai si l'accord stocké porte la même tête, les mêmes fichiers et les mêmes contrôles. */
+export function sameNetworkRulesAck(
+  ack: NetworkRulesAck | null,
+  headSha: string,
+  files: readonly string[],
+  controls: readonly number[],
+): boolean {
+  return (
+    ack !== null &&
+    ack.head_sha === headSha &&
+    ack.files.length === files.length &&
+    ack.files.every((f, i) => f === files[i]) &&
+    ack.controls.length === controls.length &&
+    ack.controls.every((c, i) => c === controls[i])
+  );
+}
+
+/**
+ * Le corps du commentaire d'accord, sur `NETWORK_RULES_ACK_TEMPLATE`. Les chemins viennent de
+ * la liste fermée de la catégorie 2, les contrôles sont des nombres, la tête et `ack_id` sont
+ * contrôlés par leur motif : lève sinon. Pure.
+ */
+export function networkRulesAckBody(args: {
+  prNumber: number;
+  headSha: string;
+  files: readonly string[];
+  controls: readonly number[];
+  ackId: string;
+}): string {
+  if (!Number.isSafeInteger(args.prNumber) || args.prNumber < 1) {
+    throw new Error("Accord : numéro de PR illisible");
+  }
+  if (!HEAD_SHA_PATTERN.test(args.headSha)) throw new Error("Accord : tête illisible");
+  if (!ACK_ID_PATTERN.test(args.ackId)) throw new Error("Accord : identifiant illisible");
+  if (args.files.length === 0 || !args.files.every((f) => isNetworkRulesPath(f))) {
+    throw new Error("Accord : fichier hors des règles du réseau");
+  }
+  if (!args.controls.every((c) => Number.isSafeInteger(c) && c >= 0 && c <= 999)) {
+    throw new Error("Accord : contrôle illisible");
+  }
+  const controls =
+    args.controls.length === 0 ? "aucun" : args.controls.map((c) => `P${c}`).join(", ");
+  const values: Record<string, string> = {
+    "<M>": String(args.prNumber),
+    "<head_sha>": args.headSha,
+    "<fichiers>": args.files.join(", "),
+    "<contrôles>": controls,
+    "<ack_id>": args.ackId,
+  };
+  return NETWORK_RULES_ACK_TEMPLATE.map((line) =>
+    line.replace(/<[^>]+>/, (key) => values[key] ?? key),
+  ).join("\n");
+}
+
+/**
+ * Vrai si un commentaire du compte `maintainerId` porte la ligne `Accord <id>` : un essai
+ * précédent l'a déjà publié (P26). Pure.
+ */
+export function commentCarriesAck(
+  comment: Pick<CommentView, "authorId" | "body">,
+  ackId: string,
+  maintainerId: number,
+): boolean {
+  if (comment.authorId !== maintainerId || typeof comment.body !== "string") return false;
+  const marker = ackLine(ackId);
+  return comment.body.split(/\r?\n/).some((line) => line.trim() === marker);
+}
+
+const ACK_ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+/** Un `ack_id` neuf : 20 caractères alphanumériques tirés au hasard. */
+export function newAckId(): string {
+  let out = "";
+  for (let i = 0; i < 20; i++) out += ACK_ID_ALPHABET[randomInt(ACK_ID_ALPHABET.length)];
+  return out;
 }
 
 // ── Messages des refus (P43) ────────────────────────────────────────────────
@@ -386,6 +696,28 @@ export function deliverySensitiveMessage(prNumber: number, path: string): string
     `Fusionnez-la vous-même après relecture. ${DELIVERY_NOTHING}`
   );
 }
+
+/** Mode `deliver` sur une PR qui change les règles du réseau (`delivery_network_rules`). */
+export const DELIVERY_NETWORK_RULES_MESSAGE =
+  "Cette PR change les règles du réseau : utilisez « Approuver les règles et livrer ». " +
+  DELIVERY_NOTHING;
+
+/** Mode `network_rules`, tête relue différente de celle affichée (`delivery_head_changed`). */
+export const DELIVERY_HEAD_CHANGED_MESSAGE =
+  "La PR a changé depuis l'affichage. Relisez-la, puis approuvez à nouveau. " + DELIVERY_NOTHING;
+
+/** Mode `network_rules` sur une PR sans règle du réseau (`delivery_no_network_rules`). */
+export const DELIVERY_NO_NETWORK_RULES_MESSAGE =
+  "Cette PR ne change pas les règles du réseau : utilisez « Livrer ». " + DELIVERY_NOTHING;
+
+/** `CLAUDE.md` changé sans `patch` (`delivery_network_rules_unreadable`). */
+export const DELIVERY_NETWORK_RULES_UNREADABLE_MESSAGE =
+  "Les contrôles changés ne peuvent pas être lus : fusionnez-la vous-même après relecture. " +
+  DELIVERY_NOTHING;
+
+/** Accord non publié sur l'Issue (`delivery_ack_publish_failed`). */
+export const DELIVERY_ACK_PUBLISH_FAILED_MESSAGE =
+  "L'accord n'a pas pu être publié sur GitHub. Réessayez. " + DELIVERY_NOTHING;
 
 export function deliveryCiNotGreenMessage(prNumber: number): string {
   return `La CI de la PR #${prNumber} n'est pas verte. ${DELIVERY_NOTHING}`;
@@ -638,20 +970,142 @@ async function closeDeliveryEntries(
   );
 }
 
-/** Écrit l'état « PR prête » (fusion : les comptes rendus restent). Lève sur une panne. */
+/**
+ * Écrit l'état « PR prête » (fusion : les comptes rendus et l'accord restent), avec
+ * `network_rules_ack_valid` recalculé sur la tête relue, en transaction avec l'accord stocké :
+ * un nouveau commit annule l'accord sans autre écriture (P45). Lève sur une panne.
+ */
 export async function writeDeliveryState(
   kit: FirestoreKit,
   ticketId: string,
   state: DeliveryState,
 ): Promise<void> {
-  await deliveryRef(kit, ticketId).set(
-    {
-      ...state,
-      ci_completed_at: timestampOrNull(kit, state.ci_completed_at),
-      updated_at: kit.FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
+  const ref = deliveryRef(kit, ticketId);
+  await kit.db.runTransaction(async (tx) => {
+    const current = await tx.get(ref);
+    const ack = readNetworkRulesAck(current.get("network_rules_ack"), millisOf(kit));
+    tx.set(
+      ref,
+      {
+        ...state,
+        ci_completed_at: timestampOrNull(kit, state.ci_completed_at),
+        network_rules_ack_valid: networkRulesAckValid(ack, state.head_sha),
+        updated_at: kit.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
+}
+
+/** Ce que l'accord en cours de publication retient. */
+export interface PendingNetworkRulesAck {
+  ackId: string;
+  /** Identifiant du commentaire déjà publié pour ce même accord, ou `null`. */
+  commentId: number | null;
+}
+
+/**
+ * Étape 6 du mode `network_rules` (ADR-020), dans la transaction du bail : le bail du
+ * lancement est relu (`leaseUntilMs`), puis l'accord stocké est repris s'il porte la même
+ * tête, les mêmes fichiers et les mêmes contrôles (même `ack_id`, commentaire déjà publié
+ * compris), sinon un accord neuf est écrit sans `comment_id`. `network_rules_ack_valid`
+ * recalculé. Lève `refuse()` si le bail n'est plus celui du lancement.
+ */
+export async function claimNetworkRulesAck(
+  kit: FirestoreKit,
+  ticketId: string,
+  args: {
+    leaseUntilMs: number;
+    headSha: string;
+    files: readonly string[];
+    controls: readonly number[];
+    nowMs: number;
+    newId: () => string;
+  },
+  refuse: () => Error,
+): Promise<PendingNetworkRulesAck> {
+  const ref = deliveryRef(kit, ticketId);
+  const toMillis = millisOf(kit);
+  return kit.db.runTransaction(async (tx) => {
+    const [ticket, current] = await Promise.all([tx.get(ticketRef(kit, ticketId)), tx.get(ref)]);
+    if (toMillis(ticket.get("decision_lease_until")) !== args.leaseUntilMs) throw refuse();
+    const stored = readNetworkRulesAck(current.get("network_rules_ack"), toMillis);
+    if (sameNetworkRulesAck(stored, args.headSha, args.files, args.controls)) {
+      const ack = stored as NetworkRulesAck;
+      return { ackId: ack.ack_id, commentId: ack.comment_id };
+    }
+    const ackId = args.newId();
+    tx.set(
+      ref,
+      {
+        network_rules_ack: {
+          head_sha: args.headSha,
+          at: kit.Timestamp.fromMillis(args.nowMs),
+          ack_id: ackId,
+          comment_id: null,
+          files: [...args.files],
+          controls: [...args.controls],
+        },
+        network_rules_ack_valid: false,
+      },
+      { merge: true },
+    );
+    return { ackId, commentId: null };
+  });
+}
+
+/**
+ * Note le commentaire publié de l'accord `ackId`, s'il est toujours l'accord stocké, et
+ * recalcule `network_rules_ack_valid` sur la tête stockée. Lève sur une panne.
+ */
+export async function recordNetworkRulesAckComment(
+  kit: FirestoreKit,
+  ticketId: string,
+  ackId: string,
+  commentId: number,
+): Promise<boolean> {
+  const ref = deliveryRef(kit, ticketId);
+  const toMillis = millisOf(kit);
+  return kit.db.runTransaction(async (tx) => {
+    const current = await tx.get(ref);
+    const stored = readNetworkRulesAck(current.get("network_rules_ack"), toMillis);
+    if (stored === null || stored.ack_id !== ackId) return false;
+    const headSha = current.get("head_sha");
+    const ack = { ...stored, comment_id: commentId };
+    tx.set(
+      ref,
+      {
+        network_rules_ack: { ...current.get("network_rules_ack"), comment_id: commentId },
+        network_rules_ack_valid: networkRulesAckValid(
+          ack,
+          typeof headSha === "string" ? headSha : null,
+        ),
+      },
+      { merge: true },
+    );
+    return true;
+  });
+}
+
+/**
+ * Commentaire d'accord déjà publié (ligne `Accord <id>` d'un commentaire du compte
+ * 16348852), relu sur les dernières pages de l'Issue, ou `null`.
+ */
+export async function findAckComment(
+  client: GithubClient,
+  issueNumber: number,
+  commentCount: number,
+  ackId: string,
+): Promise<number | null> {
+  if (commentCount < 1) return null;
+  for await (const page of client.lastCommentsFirst(issueNumber, commentCount)) {
+    for (const comment of page) {
+      if (commentCarriesAck(comment, ackId, GITHUB_MAINTAINER_ID) && comment.id !== null) {
+        return comment.id;
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -704,15 +1158,17 @@ async function readCiRuns(
 /** Les PR ouvertes du dépôt, lues une fois et partagées par une passe (P46). */
 export type OpenPullRequests = { prs: PullRequestView[]; complete: boolean };
 
-/** Ce qu'une relecture établit, avec la PR éligible quand elle est seule. */
+/** Ce qu'une relecture établit, avec la PR éligible et ses fichiers quand elle est seule. */
 export interface DeliveryReading {
   state: DeliveryState;
   pr: PullRequestView | null;
+  files: PullRequestFiles | null;
 }
 
 /**
  * Relit sur GitHub ce qui fait une « PR prête » pour l'Issue `issueNumber` : PR ouvertes
- * (`openPrs` de l'appelant, sinon relues), détail de la PR éligible quand elle est seule, runs
+ * (`openPrs` de l'appelant, sinon relues), détail de la PR éligible quand elle est seule, ses
+ * fichiers (10 pages de 100 au plus, `patch` de `CLAUDE.md` seul gardé, ADR-020) et les runs
  * de sa tête. Lève une `GithubError` (`GithubActionsForbidden` pour un 403 sur les runs).
  */
 export async function readDelivery(
@@ -725,11 +1181,13 @@ export async function readDelivery(
   const list = openPrs ?? (await client.listOpenPullRequests());
   let eligible = list.prs.filter((pr) => isEligibleDeliveryPr(pr, issueNumber));
   let pr: PullRequestView | null = null;
+  let files: PullRequestFiles | null = null;
   let ci = ciSummary([]);
   if (list.complete && eligible.length === 1) {
     const detail = await client.getPullRequest(eligible[0].number);
     if (isEligibleDeliveryPr(detail, issueNumber)) {
       pr = detail;
+      files = await client.listPullRequestFiles(detail.number, keepNetworkRulesPatch);
       if (detail.headSha !== null) {
         ci = ciSummary(
           latestCiRunsByEvent(await readCiRuns(kit, client, detail.headSha), detail.headSha),
@@ -746,8 +1204,10 @@ export async function readDelivery(
       eligible,
       pr,
       ci,
+      files,
     }),
     pr,
+    files,
   };
 }
 
@@ -785,6 +1245,7 @@ export async function refreshDeliveryFromRun(
   if (!isDeliveryCandidatePr(pr)) return 0;
   const issues = closingIssueNumbers(pr.body, GITHUB_REPO_FULL_NAME).slice(0, DELIVERY_EVENT_MAX);
   let ci: CiSummary | null = null;
+  let files: PullRequestFiles | null = null;
   let written = 0;
   for (const issueNumber of issues) {
     const snap = await kit.db
@@ -800,6 +1261,9 @@ export async function refreshDeliveryFromRun(
       if (eligible && ci === null && pr.headSha !== null) {
         ci = ciSummary(latestCiRunsByEvent(await readCiRuns(kit, client, pr.headSha), pr.headSha));
       }
+      if (eligible && files === null) {
+        files = await client.listPullRequestFiles(pr.number, keepNetworkRulesPatch);
+      }
       await writeDeliveryState(
         kit,
         doc.id,
@@ -809,6 +1273,7 @@ export async function refreshDeliveryFromRun(
           eligible: eligible ? [pr] : [],
           pr: eligible ? pr : null,
           ci: ci ?? ciSummary([]),
+          files: eligible ? files : null,
         }),
       );
       written++;

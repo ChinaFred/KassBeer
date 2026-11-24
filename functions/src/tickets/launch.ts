@@ -21,8 +21,10 @@
  *     posé (210 s pour une livraison, 150 s sinon) ;
  *  2 bis. livraison seulement, rien compté en cas de refus (P43) : PR ouvertes, fichiers et
  *     runs de la CI relus sur GitHub (état écrit dans `admin/delivery`), une seule PR
- *     éligible, aucun fichier sensible, CI verte ; puis verrou global des livraisons
- *     (`delivery_running`, P44) ;
+ *     éligible, tête égale à `headSha` en mode `network_rules`, aucun fichier sensible,
+ *     règles du réseau selon le mode (ADR-020), CI verte ; puis verrou global des
+ *     livraisons (`delivery_running`, P44) ; en mode `network_rules`, accord publié sur
+ *     l'Issue, verrou rendu si la publication échoue ;
  *  3. plafond du jour (P36) : transaction sur `ticket_quotas/launch_{AAAAMMJJ}` (ou
  *     `launch_founder_{AAAAMMJJ}` pour le fondateur) et `ticket_status/launches` ; refus au
  *     plafond du compteur de l'appelant ;
@@ -61,19 +63,28 @@ import { firestore, type FirestoreKit } from "../firestore";
 import { logError, logInfo, logWarn, type LogEntry } from "../logging";
 import { readTicketIdArg } from "./answer";
 import {
+  DELIVERY_ACK_PUBLISH_FAILED_MESSAGE,
   DELIVERY_ACTIONS_FORBIDDEN_MESSAGE,
+  DELIVERY_HEAD_CHANGED_MESSAGE,
+  DELIVERY_NETWORK_RULES_MESSAGE,
+  DELIVERY_NETWORK_RULES_UNREADABLE_MESSAGE,
+  DELIVERY_NO_NETWORK_RULES_MESSAGE,
   DELIVERY_NO_PR_MESSAGE,
   claimDeliveryLock,
+  claimNetworkRulesAck,
   deliveryCiNotGreenMessage,
   deliveryFilesUnreadableMessage,
   deliveryLockHeld,
   deliveryMultiplePrMessage,
   deliveryRef,
   deliverySensitiveMessage,
+  findAckComment,
+  networkRulesAckBody,
+  newAckId,
   readDelivery,
   readDeliveryLock,
+  recordNetworkRulesAckComment,
   releaseDeliveryLock,
-  sensitiveDeliveryPath,
   writeDeliveryState,
 } from "./delivery";
 import {
@@ -162,6 +173,23 @@ export const REPRISE_DELIVERY_RUNNING_MESSAGE =
   "Une livraison est en cours sur ce ticket. Rien n'a été lancé ni décompté.";
 /** `mode` de `launchTicketDevelopment` hors `start` et `resume` (P47). */
 export const LAUNCH_MODE_INVALID = "Mode de lancement : « start » ou « resume » attendu.";
+/** `mode` de `launchTicketDelivery` hors `deliver` et `network_rules` (ADR-020). */
+export const DELIVERY_MODE_INVALID =
+  "Mode de livraison : « deliver » ou « network_rules » attendu.";
+/** `headSha` absent ou hors forme en mode `network_rules`, ou présent en mode `deliver`. */
+export const DELIVERY_HEAD_SHA_INVALID =
+  "Tête de la PR : 40 chiffres hexadécimaux en minuscules attendus, en mode « network_rules » seul.";
+/** Clé inconnue dans l'argument de `launchTicketDelivery`. */
+export const DELIVERY_ARGUMENT_INVALID = "Argument inattendu pour la livraison.";
+
+/**
+ * Mode d'une livraison (ADR-020) : `deliver` (« Livrer ») ou `network_rules` (« Approuver les
+ * règles et livrer », accord lié à `headSha`).
+ */
+export type DeliveryArgs =
+  { mode: "deliver"; headSha: null } | { mode: "network_rules"; headSha: string };
+
+export const DELIVER: DeliveryArgs = { mode: "deliver", headSha: null };
 
 /**
  * Refus rendu au client : `details.reason` (français) et `details.code` (stable), plus les
@@ -251,6 +279,8 @@ export interface LaunchDeps {
   applyIssue?: (client: GithubClient, doc: DocumentSnapshot, issue: IssueView) => Promise<void>;
   markTokenInvalid?: (error: GithubError | null) => Promise<void>;
   recordTokenAccepted?: (client: GithubClient) => Promise<void>;
+  /** Tirage de `ack_id` (ADR-020), remplacé par les tests. */
+  newAckId?: () => string;
 }
 
 interface Ctx {
@@ -261,6 +291,8 @@ interface Ctx {
   action: LaunchAction;
   /** Compteur du jour de l'appelant. */
   pool: LaunchPool;
+  /** Mode d'une livraison ; `deliver` pour les autres actions. */
+  delivery: DeliveryArgs;
 }
 
 function base(ctx: Ctx, message: string, extra: LogEntry["extra"] = {}): LogEntry {
@@ -268,7 +300,13 @@ function base(ctx: Ctx, message: string, extra: LogEntry["extra"] = {}): LogEntr
     message,
     feature: "tickets",
     ticketId: ctx.ticketId,
-    extra: { action: ctx.action, cost_center: LAUNCH_COST_CENTER, pool: ctx.pool, ...extra },
+    extra: {
+      action: ctx.action,
+      cost_center: LAUNCH_COST_CENTER,
+      pool: ctx.pool,
+      ...(ctx.action === "livraison" ? { mode: ctx.delivery.mode } : {}),
+      ...extra,
+    },
   };
 }
 
@@ -490,30 +528,31 @@ async function setRoutineInvalid(ctx: Ctx, invalid: boolean): Promise<void> {
 
 // ── Livraison (P43) ─────────────────────────────────────────────────────────
 
+/** Client GitHub d'une livraison et enveloppe de ses appels avant le comptage. */
+interface DeliveryGithub {
+  client: GithubClient;
+  call: <T>(what: string, work: () => Promise<T>) => Promise<T>;
+}
+
 /**
- * Étape 2 bis : contrôles d'une livraison avant tout comptage, relus sur GitHub : une seule
- * PR éligible, liste de ses fichiers lue en entier, aucun fichier sensible, CI verte.
- * L'état relu est écrit dans `admin/delivery` (au mieux). Lève un refus
- * `failed-precondition` avec son code stable ; un échec GitHub suit `launchGithubFailure`.
- * Rend le numéro de la PR.
+ * Client GitHub d'une livraison. Un échec suit `launchGithubFailure` ; un 403 sur les runs
+ * est la panne à part `github_actions_forbidden` (P25) ; `failure` remplace le refus rendu
+ * (accord non publié).
  */
-async function checkDeliveryLaunch(
-  ctx: Ctx,
-  issueNumber: number,
-  deps: LaunchDeps,
-): Promise<number> {
+function deliveryGithub(ctx: Ctx, deps: LaunchDeps): DeliveryGithub {
   const token = deps.githubToken().trim();
   const markInvalid = deps.markTokenInvalid ?? markTokenInvalid;
-  if (token.length === 0) {
-    await markInvalid(null);
-    const f = launchGithubFailure("token");
-    throw refusal(f.code, f.reason, f.machine);
-  }
   const client = githubClient(token, deps.fetchGithub);
-  const github = async <T>(what: string, work: () => Promise<T>): Promise<T> => {
+  const call = async <T>(what: string, work: () => Promise<T>): Promise<T> => {
+    if (token.length === 0) {
+      await markInvalid(null);
+      const f = launchGithubFailure("token");
+      throw refusal(f.code, f.reason, f.machine);
+    }
     try {
       return await work();
     } catch (err) {
+      if (err instanceof HttpsError) throw err;
       const kind = err instanceof GithubError ? err.kind : "other";
       ctx.log("error", {
         ...base(ctx, `Tickets : ${what} avant la livraison`, { kind }),
@@ -532,8 +571,37 @@ async function checkDeliveryLaunch(
       throw refusal(f.code, f.reason, f.machine);
     }
   };
-  const reading = await github("pull requests non relues", () =>
-    readDelivery(ctx.kit, client, issueNumber, LAUNCH_FROM_STATUS.livraison),
+  return { client, call };
+}
+
+/** Ce que les contrôles d'une livraison retiennent pour la suite. */
+interface DeliveryChecked {
+  prNumber: number;
+  headSha: string | null;
+  networkRulesFiles: string[];
+  networkRulesControls: number[];
+}
+
+/**
+ * Étape 2 bis : contrôles d'une livraison avant tout comptage, relus sur GitHub : une seule
+ * PR éligible, liste de ses fichiers lue en entier, aucun fichier sensible, règles du réseau
+ * selon le mode (ADR-020), CI verte. L'état relu est écrit dans `admin/delivery` (au mieux).
+ * Lève un refus `failed-precondition` avec son code stable ; un échec GitHub suit
+ * `launchGithubFailure`.
+ *
+ * Mode `deliver` : une règle du réseau touchée est refusée (`delivery_network_rules`). Mode
+ * `network_rules`, dans l'ordre : tête relue égale à `headSha` (`delivery_head_changed`),
+ * fichiers lus en entier, aucun chemin des catégories 1 ou 3, au moins une règle du réseau
+ * (`delivery_no_network_rules`), patch de `CLAUDE.md` lisible
+ * (`delivery_network_rules_unreadable`), puis CI verte.
+ */
+async function checkDeliveryLaunch(
+  ctx: Ctx,
+  issueNumber: number,
+  github: DeliveryGithub,
+): Promise<DeliveryChecked> {
+  const reading = await github.call("pull requests non relues", () =>
+    readDelivery(ctx.kit, github.client, issueNumber, LAUNCH_FROM_STATUS.livraison),
   );
   try {
     await writeDeliveryState(ctx.kit, ctx.ticketId, reading.state);
@@ -550,22 +618,128 @@ async function checkDeliveryLaunch(
     );
     throw refusal("failed-precondition", message, machine);
   };
-  const count = reading.state.eligible_pr_count;
+  const state = reading.state;
+  const count = state.eligible_pr_count;
   if (count > 1) refuse(deliveryMultiplePrMessage(count, issueNumber), "delivery_multiple_prs");
   const pr = reading.pr;
   if (pr === null) return refuse(DELIVERY_NO_PR_MESSAGE, "delivery_no_pr");
-  const files = await github("fichiers de la pull request non relus", () =>
-    client.listPullRequestFiles(pr.number),
-  );
-  if (!files.complete) {
+  const rules = ctx.delivery.mode === "network_rules";
+  if (rules && pr.headSha !== ctx.delivery.headSha) {
+    refuse(DELIVERY_HEAD_CHANGED_MESSAGE, "delivery_head_changed");
+  }
+  if (!state.files_complete || reading.files === null) {
     refuse(deliveryFilesUnreadableMessage(pr.number), "delivery_files_unreadable");
   }
-  const sensitive = sensitiveDeliveryPath(files.files);
-  if (sensitive !== null) {
-    refuse(deliverySensitiveMessage(pr.number, sensitive), "delivery_sensitive_files");
+  if (state.sensitive_files !== null) {
+    refuse(deliverySensitiveMessage(pr.number, state.sensitive_files), "delivery_sensitive_files");
   }
-  if (!reading.state.ready) refuse(deliveryCiNotGreenMessage(pr.number), "delivery_ci_not_green");
-  return pr.number;
+  if (!rules && state.network_rules_files.length > 0) {
+    refuse(DELIVERY_NETWORK_RULES_MESSAGE, "delivery_network_rules");
+  }
+  if (rules && state.network_rules_files.length === 0) {
+    refuse(DELIVERY_NO_NETWORK_RULES_MESSAGE, "delivery_no_network_rules");
+  }
+  if (rules && !state.network_rules_controls_complete) {
+    refuse(DELIVERY_NETWORK_RULES_UNREADABLE_MESSAGE, "delivery_network_rules_unreadable");
+  }
+  if (!state.ready) refuse(deliveryCiNotGreenMessage(pr.number), "delivery_ci_not_green");
+  return {
+    prNumber: pr.number,
+    headSha: pr.headSha,
+    networkRulesFiles: state.network_rules_files,
+    networkRulesControls: state.network_rules_controls,
+  };
+}
+
+/**
+ * Étape 6 du mode `network_rules` (ADR-020, P24, P26) : accord écrit dans la transaction du
+ * bail, sans `comment_id` ; commentaire déjà publié reconnu par sa ligne `Accord <id>`, sinon
+ * publié sur le gabarit fixe ; puis `comment_id` écrit. Tout échec est rendu en
+ * `delivery_ack_publish_failed` : l'appelant rend le verrou, rien n'est compté, et l'accord
+ * sans `comment_id` reste invalide.
+ */
+async function publishNetworkRulesAck(
+  ctx: Ctx,
+  issueNumber: number,
+  leaseUntilMs: number,
+  checked: DeliveryChecked,
+  github: DeliveryGithub,
+  newId: () => string,
+): Promise<void> {
+  const headSha = ctx.delivery.headSha;
+  if (headSha === null) throw new Error("Accord sans tête");
+  const failed = (what: string, err: unknown): never => {
+    if (err instanceof HttpsError && err.details !== undefined) {
+      const code = (err.details as Record<string, unknown>).code;
+      if (code === "decision_in_progress") throw err;
+    }
+    // Un refus venu de `github.call` a déjà son journal : un seul journal par refus.
+    if (!(err instanceof HttpsError)) {
+      ctx.log("error", {
+        ...base(ctx, `Tickets : accord des règles du réseau ${what}`),
+        error: err,
+      });
+    }
+    throw refusal(
+      "failed-precondition",
+      DELIVERY_ACK_PUBLISH_FAILED_MESSAGE,
+      "delivery_ack_publish_failed",
+    );
+  };
+  let pending;
+  try {
+    pending = await claimNetworkRulesAck(
+      ctx.kit,
+      ctx.ticketId,
+      {
+        leaseUntilMs,
+        headSha,
+        files: checked.networkRulesFiles,
+        controls: checked.networkRulesControls,
+        nowMs: ctx.now(),
+        newId,
+      },
+      () => refusal("failed-precondition", LAUNCH_LEASE_TAKEN, "decision_in_progress"),
+    );
+  } catch (err) {
+    return failed("non écrit", err);
+  }
+  if (pending.commentId !== null) return;
+  let commentId: number | null;
+  try {
+    const issue = await github.call("Issue non relue", () => github.client.getIssue(issueNumber));
+    commentId = await github.call("commentaires non relus", () =>
+      findAckComment(github.client, issueNumber, issue.comments, pending.ackId),
+    );
+    if (commentId === null) {
+      const body = networkRulesAckBody({
+        prNumber: checked.prNumber,
+        headSha,
+        files: checked.networkRulesFiles,
+        controls: checked.networkRulesControls,
+        ackId: pending.ackId,
+      });
+      const created = await github.call("commentaire non publié", () =>
+        github.client.createComment(issueNumber, body),
+      );
+      commentId = created.id;
+    }
+  } catch (err) {
+    return failed("non publié", err);
+  }
+  if (commentId === null) return failed("publié sans identifiant", null);
+  let recorded: boolean;
+  try {
+    recorded = await recordNetworkRulesAckComment(ctx.kit, ctx.ticketId, pending.ackId, commentId);
+  } catch (err) {
+    return failed("publié, non noté", err);
+  }
+  // Hors du `try` : un seul journal pour ce refus.
+  if (!recorded) failed("remplacé pendant la publication", null);
+  ctx.log(
+    "info",
+    base(ctx, "Tickets : accord des règles du réseau publié", { pr: checked.prNumber }),
+  );
 }
 
 // ── Lancement ───────────────────────────────────────────────────────────────
@@ -625,6 +799,7 @@ export async function launchTicketSession(
   uid: string,
   deps: LaunchDeps,
   pool: LaunchPool = "group",
+  delivery: DeliveryArgs = DELIVER,
 ): Promise<LaunchResult> {
   const kit = await (deps.kit ?? firestore)();
   const ctx: Ctx = {
@@ -634,6 +809,7 @@ export async function launchTicketSession(
     ticketId,
     action,
     pool,
+    delivery: action === "livraison" ? delivery : DELIVER,
   };
 
   // 1. Routine configurée, sinon rien compté, rien envoyé.
@@ -651,10 +827,17 @@ export async function launchTicketSession(
   let keepCount = false;
   // Livraison : instant du lancement, fixé à la prise du verrou.
   let lockedAtMs: number | null = null;
+  // Livraison : tête de la PR contrôlée, passée dans le texte de lancement.
+  let deliveredHead: string | null = null;
   try {
-    // 2 bis. Livraison : PR, fichiers et CI relus, puis verrou global (P43, P44).
+    // 2 bis. Livraison : PR, fichiers et CI relus, puis verrou global (P43, P44) ; en mode
+    // `network_rules`, accord publié après la prise du verrou (ADR-020).
     if (action === "livraison") {
-      await checkDeliveryLaunch(ctx, issueNumber, deps);
+      const github = deliveryGithub(ctx, deps);
+      const checked = await checkDeliveryLaunch(ctx, issueNumber, github);
+      // Tête relue et contrôlée par le serveur, envoyée à la routine (`livraison #N <tête>`,
+      // décision de l'utilisateur du 2026-11-23) ; en mode `network_rules`, égale à `headSha`.
+      deliveredHead = checked.headSha;
       const plannedAtMs = ctx.now();
       await claimDeliveryLock(kit, ticketId, issueNumber, plannedAtMs, (message, other) =>
         refusal("failed-precondition", message, "delivery_running_elsewhere", {
@@ -662,6 +845,16 @@ export async function launchTicketSession(
         }),
       );
       lockedAtMs = plannedAtMs;
+      if (ctx.delivery.mode === "network_rules") {
+        await publishNetworkRulesAck(
+          ctx,
+          issueNumber,
+          leaseUntilMs,
+          checked,
+          github,
+          deps.newAckId ?? newAckId,
+        );
+      }
     }
 
     // 3. Plafond du jour.
@@ -673,7 +866,7 @@ export async function launchTicketSession(
     await checkIssue(ctx, issueNumber, deps);
 
     // 5. Trace écrite avant l'appel.
-    const text = launchCommandText(action, issueNumber);
+    const text = launchCommandText(action, issueNumber, deliveredHead);
     const atMs = lockedAtMs ?? ctx.now();
     const id = randomUUID();
     const { Timestamp } = kit;
@@ -817,6 +1010,76 @@ export async function handleDevelopmentCall(
     (data) => (readLaunchMode(data) === "resume" ? "reprise" : "developpement"),
     deps,
   );
+}
+
+/** Clés permises dans l'argument de `launchTicketDelivery` (ADR-020). */
+const DELIVERY_ARG_KEYS: readonly string[] = ["ticketId", "mode", "headSha"];
+
+/**
+ * `mode` et `headSha` de `launchTicketDelivery` (ADR-020) : `mode` absent vaut `deliver` ;
+ * `network_rules` exige `headSha` de 40 chiffres hexadécimaux en minuscules ; `headSha` en
+ * mode `deliver` est refusé ; toute autre clé aussi. Lève `invalid-argument`
+ * (`details.field`). Pure.
+ */
+export function readDeliveryArgs(data: unknown): DeliveryArgs {
+  const raw = (data ?? {}) as Record<string, unknown>;
+  const invalid = (field: string, reason: string): never => {
+    throw new HttpsError("invalid-argument", reason, { field, reason });
+  };
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    return invalid("data", DELIVERY_ARGUMENT_INVALID);
+  }
+  for (const key of Object.keys(raw)) {
+    if (!DELIVERY_ARG_KEYS.includes(key)) invalid(key.slice(0, 40), DELIVERY_ARGUMENT_INVALID);
+  }
+  const mode = requireBoundedText(raw.mode, { field: "mode", max: 16, label: "Mode de livraison" });
+  const headSha = requireBoundedText(raw.headSha, {
+    field: "headSha",
+    max: 64,
+    label: "Tête de la PR",
+  });
+  if (mode === undefined || mode === "deliver") {
+    if (headSha !== undefined) invalid("headSha", DELIVERY_HEAD_SHA_INVALID);
+    return DELIVER;
+  }
+  if (mode !== "network_rules") return invalid("mode", DELIVERY_MODE_INVALID);
+  if (headSha === undefined || !/^[0-9a-f]{40}$/.test(headSha)) {
+    return invalid("headSha", DELIVERY_HEAD_SHA_INVALID);
+  }
+  return { mode: "network_rules", headSha };
+}
+
+/**
+ * `launchTicketDelivery` : garde (P30), puis `ticketId`, `mode` et `headSha` avant toute
+ * autre lecture (ADR-020), puis livraison (`livraison #N <tête>`).
+ */
+export async function handleDeliveryCall(
+  req: AuthLike & { data?: unknown },
+  deps: LaunchDeps & { lookup?: MemberLookup },
+): Promise<LaunchResult> {
+  const { uid, founder } = await requireAdmin(req, deps.lookup);
+  const ticketId = readTicketIdArg(req.data);
+  const delivery = readDeliveryArgs(req.data);
+  try {
+    return await launchTicketSession(
+      ticketId,
+      "livraison",
+      uid,
+      deps,
+      launchPoolOf(founder),
+      delivery,
+    );
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    (deps.log ?? defaultLogger)("error", {
+      message: "Tickets : lancement en échec inattendu",
+      feature: "tickets",
+      ticketId,
+      error: err,
+      extra: { action: "livraison", mode: delivery.mode, cost_center: LAUNCH_COST_CENTER },
+    });
+    throw refusal("internal", LAUNCH_INTERNAL_MESSAGE, "internal");
+  }
 }
 
 /**

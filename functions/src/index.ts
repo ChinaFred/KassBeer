@@ -54,7 +54,7 @@ import { logError } from "./logging";
 import { handleQueryLogsCall } from "./logs/queryLogs";
 import { handleAnswerCall } from "./tickets/answer";
 import { handleDecisionCall, handleRetrySendCall } from "./tickets/decisionCalls";
-import { handleDevelopmentCall, handleLaunchCall } from "./tickets/launch";
+import { handleDeliveryCall, handleDevelopmentCall, handleLaunchCall } from "./tickets/launch";
 import { publishTicket as publish } from "./tickets/publish";
 import { handleScreenshotCall } from "./tickets/screenshot";
 import { runHourlyPass } from "./tickets/sync";
@@ -240,9 +240,11 @@ export const launchTicketDevelopment = onCall(
 );
 
 /**
- * « Livrer » (ADR-008, T5, P43, P44) : par la routine de développement (aucun secret
- * `TICKETS_ROUTINE_DELIVERY_*`). Délai de 180 s : PR, fichiers et runs relus sur GitHub
- * avant l'appel ; bail de 210 s (`DELIVERY_LEASE_MS`).
+ * « Livrer » (ADR-008, T5, P43, P44) et, avec `mode: "network_rules"` et `headSha`,
+ * « Approuver les règles et livrer » (ADR-020, R2 : accord publié sur l'Issue par le jeton
+ * GitHub déjà monté, aucune callable ni secret nouveau) : par la routine de développement
+ * (aucun secret `TICKETS_ROUTINE_DELIVERY_*`). Délai de 180 s : PR, fichiers et runs relus
+ * sur GitHub avant l'appel ; bail de 210 s (`DELIVERY_LEASE_MS`).
  */
 export const launchTicketDelivery = onCall(
   {
@@ -251,7 +253,7 @@ export const launchTicketDelivery = onCall(
     secrets: [GITHUB_TICKETS_TOKEN, TICKETS_ROUTINE_DEV_ID, TICKETS_ROUTINE_DEV_TOKEN],
   },
   (req) =>
-    handleLaunchCall(req, "livraison", {
+    handleDeliveryCall(req, {
       routine: devRoutine,
       githubToken: () => GITHUB_TICKETS_TOKEN.value(),
     }),

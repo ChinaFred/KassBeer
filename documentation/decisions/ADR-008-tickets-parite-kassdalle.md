@@ -342,7 +342,8 @@ relecture de la PR par l'administrateur restent les protections.
 
 ### Prompts
 
-Les deux prompts de Kass'Dalle sont repris dans `exigences-techniques.md` avec ces
+Les deux prompts de Kass'Dalle sont repris dans `exigences-techniques.md` (depuis ADR-020,
+lot R2 : `documentation/prompts-routines.md`) avec ces
 substitutions : `ChinaFred/KassBeer`, `main`, `app/pubspec.yaml` (build + 1, P7),
 `git fetch --tags && node scripts/check-version.mjs`, liste des fichiers sensibles ci-dessus,
 contrôles de « Commandes utiles », `statut:en-cours` posée avant le premier commit (`CLAUDE.md`,

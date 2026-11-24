@@ -526,12 +526,24 @@ enum IssueLancement {
 }
 
 /// Codes des refus de livraison qui demandent une fusion à la main : la PR
-/// touche un fichier protégé, ou sa liste de fichiers est trop longue pour
-/// être vérifiée. « Livrer » reste inactif tant que la boîte est ouverte : un
+/// touche un fichier protégé, sa liste de fichiers est trop longue pour être
+/// vérifiée, ou les contrôles changés de `CLAUDE.md` ne peuvent pas être lus
+/// (ADR-020). « Livrer » reste inactif tant que la boîte est ouverte : un
 /// nouvel essai donnerait le même refus.
 const kRefusFusionALaMain = {
   'delivery_sensitive_files',
   'delivery_files_unreadable',
+  'delivery_network_rules_unreadable',
+};
+
+/// Codes des refus d'« Approuver les règles et livrer » ou de « Livrer » qui
+/// demandent de relire la PR (ADR-020) : elle a changé, ou elle relève de
+/// l'autre bouton. Le bouton reste inactif tant que la boîte est ouverte ;
+/// `delivery_ack_publish_failed` n'en est pas : un nouvel essai peut réussir.
+const kRefusRelirePr = {
+  'delivery_head_changed',
+  'delivery_no_network_rules',
+  'delivery_network_rules',
 };
 
 /// Résultat de `launchTicketAnalysis`, `launchTicketDevelopment` ou

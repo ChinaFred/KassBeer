@@ -108,11 +108,14 @@ abstract class TicketsRepository {
   Stream<RechercheDocument<TicketDelivery>> watchDelivery(String ticketId);
 
   /// Lance [action] sur [ticketId] (callable [ActionLancement.callable], avec
-  /// [ActionLancement.arguments]). Un seul appel, jamais rejoué. Tout échec
+  /// [ActionLancement.arguments]). Avec [teteAccordee] (livraison seule) :
+  /// « Approuver les règles et livrer », `mode: "network_rules"` et
+  /// `headSha` affiché (ADR-020). Un seul appel, jamais rejoué. Tout échec
   /// est rapporté ici, puis rendu.
   Future<ResultatLancement> launch({
     required String ticketId,
     required ActionLancement action,
+    String? teteAccordee,
   });
 
   /// Joint la capture [png] au ticket [ticketId] de [authorUid] : dépôt dans
@@ -687,12 +690,21 @@ class FirestoreTicketsRepository implements TicketsRepository {
   Future<ResultatLancement> launch({
     required String ticketId,
     required ActionLancement action,
+    String? teteAccordee,
   }) async {
-    final where = 'tickets/$ticketId action=${action.storedValue}';
+    final regles = teteAccordee != null && action == ActionLancement.livraison;
+    final where =
+        'tickets/$ticketId action=${action.storedValue}'
+        '${regles ? ' mode=network_rules' : ''}';
     try {
       final data = await _call(
         action.callable,
-        {'ticketId': ticketId, ...action.arguments},
+        {
+          'ticketId': ticketId,
+          ...action.arguments,
+          if (regles) 'mode': 'network_rules',
+          if (regles) 'headSha': teteAccordee,
+        },
         timeout: action == ActionLancement.livraison
             ? kDeliveryCallableTimeout
             : kLaunchCallableTimeout,

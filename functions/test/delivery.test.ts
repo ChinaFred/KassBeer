@@ -14,7 +14,20 @@ import type { LogEntry } from "../src/logging";
 import { allowedDecisions, REJECT_DELIVERY_RUNNING } from "../src/tickets/decisionModel";
 import { decideTicket } from "../src/tickets/decisions";
 import {
+  DELIVERY_ONLY_SENSITIVE_PATTERNS,
+  FORBIDDEN_DEVELOPMENT_PATTERNS,
+  NETWORK_RULES_ACK_TITLE,
+  NETWORK_RULES_PATTERNS,
   SENSITIVE_DELIVERY_PATTERNS,
+  commentCarriesAck,
+  isForbiddenDevelopmentPath,
+  isNetworkRulesPath,
+  networkRulesAckBody,
+  networkRulesAckValid,
+  networkRulesControls,
+  networkRulesFiles,
+  readNetworkRulesAck,
+  writeDeliveryState,
   ciSummary,
   deliveryReportsFromComments,
   deliveryRunningElsewhereMessage,
@@ -37,8 +50,10 @@ import {
 import {
   DELIVERY_LEASE_MS,
   LAUNCH_LEASE_MS,
+  handleDeliveryCall,
   handleDevelopmentCall,
   handleLaunchCall,
+  readDeliveryArgs,
   launchLeaseMs,
   launchTicketSession,
   readLaunchMode,
@@ -120,15 +135,33 @@ interface Scene {
   runsStatus?: number;
   /** Code HTTP rendu par `GET /issues/{n}` (200 par défaut). */
   issueStatus?: number;
+  /** Commentaires de l'Issue (ADR-020 : accord) ; un `POST` y ajoute le sien. */
+  comments?: Record<string, unknown>[];
+  /** Code HTTP rendu par `POST /issues/{n}/comments` (201 par défaut). */
+  commentStatus?: number;
 }
 
 function githubFetch(scene: Scene, calls: string[]): FetchLike {
   const json = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-  return async (url) => {
+  return async (url, init) => {
     const u = new URL(url);
     const path = u.pathname.replace(`/repos/${REPO}`, "");
-    calls.push(`${path}${u.search}`);
+    const method = init?.method ?? "GET";
+    calls.push(`${method === "GET" ? "" : `${method} `}${path}${u.search}`);
+    const comments = /^\/issues\/\d+\/comments$/.test(path);
+    if (comments && method === "POST") {
+      if (scene.commentStatus !== undefined) return json(scene.commentStatus, { message: "panne" });
+      const list = (scene.comments ??= []);
+      const id = 9000 + list.length;
+      const body = (JSON.parse(String(init?.body)) as { body: string }).body;
+      list.push({ id, user: { id: OWNER }, body, created_at: "2026-11-14T09:00:00Z" });
+      return json(201, { id });
+    }
+    if (comments) {
+      const page = Number(u.searchParams.get("page") ?? "1");
+      return json(200, (scene.comments ?? []).slice((page - 1) * 100, page * 100));
+    }
     if (/^\/issues\/\d+$/.test(path)) {
       if (scene.issueStatus !== undefined) return json(scene.issueStatus, { message: "panne" });
       return json(200, {
@@ -138,7 +171,7 @@ function githubFetch(scene: Scene, calls: string[]): FetchLike {
         labels: (scene.labels ?? ["source:app", "validé", "statut:en-cours"]).map((name) => ({
           name,
         })),
-        comments: 0,
+        comments: (scene.comments ?? []).length,
         updated_at: "2026-11-14T08:00:00Z",
       });
     }
@@ -261,7 +294,11 @@ describe("livraison : fichiers sensibles (P43)", () => {
       "app/.claude/settings.json",
       "app/.claude/skills/x/SKILL.md",
       "scripts/check-version.mjs",
-      "CLAUDE.md",
+      "scripts/check-agents.mjs",
+      "scripts/garder-apk-en-ligne.sh",
+      "Scripts/changelog-recent.mjs",
+      "claude.md",
+      "docs/CLAUDE.md",
       "app/lib/features/CLAUDE.md",
       "docs/claude.local.md",
       "x/.mcp.json",
@@ -451,11 +488,16 @@ describe("livraison : PR éligible et CI (P43, P45)", () => {
       "ci_conclusion",
       "ci_status",
       "eligible_pr_count",
+      "files_complete",
       "head_sha",
+      "network_rules_controls",
+      "network_rules_controls_complete",
+      "network_rules_files",
       "pr_number",
       "pr_url",
       "ready",
       "relaunch_ready",
+      "sensitive_files",
     ]);
     const notInProgress = deliveryState({
       ticketStatus: "validated",
@@ -519,13 +561,13 @@ describe("livraison : comptes rendus (P45)", () => {
 // ── Livraison de bout en bout (P43, P44, P36) ───────────────────────────────
 
 describe("livraison : chemin nominal (P43, P44)", () => {
-  it("livrée : livraison #12, comptée, verrou pris 3 h, état écrit, bail de 210 s", async () => {
+  it("livrée : livraison #12 <tête>, comptée, verrou pris 3 h, état écrit, bail de 210 s", async () => {
     const h = harness();
     seedTicket(h);
     const out = await launchTicketSession("t-1", "livraison", "admin-uid", h.deps());
     assert.deepEqual(out, { outcome: "launched", sessionUrl: SESSION });
     assert.equal(h.routineCalls.length, 1);
-    assert.equal(h.routineCalls[0].body, '{"text":"livraison #12"}');
+    assert.equal(h.routineCalls[0].body, `{"text":"livraison #12 ${HEAD}"}`);
     assert.equal(quota(h), 1);
     const l = lock(h)!;
     assert.equal(l.ticket_id, "t-1");
@@ -543,7 +585,7 @@ describe("livraison : chemin nominal (P43, P44)", () => {
     assert.equal(launchLeaseMs("livraison"), DELIVERY_LEASE_MS);
     assert.ok(DELIVERY_LEASE_MS >= 210_000);
     assert.equal(launchLeaseMs("reprise"), LAUNCH_LEASE_MS);
-    // Le serveur n'écrit rien sur GitHub pour une livraison : lectures seules.
+    // « Livrer » n'écrit rien sur GitHub : lectures seules (l'accord est propre au mode network_rules).
     assert.ok(h.githubCalls.every((c) => !c.includes("/comments") && !c.includes("/labels")));
   });
 
@@ -1160,14 +1202,14 @@ describe("reprise : argument mode de launchTicketDevelopment (P47)", () => {
     assert.equal(brewer.code, "permission-denied");
   });
 
-  it("launchTicketDelivery : livraison #N par handleLaunchCall", async () => {
+  it("launchTicketDelivery : livraison #N <tête> par handleLaunchCall", async () => {
     const h = harness();
     seedTicket(h);
     await handleLaunchCall({ auth: admin, data: { ticketId: "t-1" } }, "livraison", {
       ...h.deps(),
       lookup,
     });
-    assert.equal(h.routineCalls[0].body, `{"text":"${launchCommandText("livraison", 12)}"}`);
+    assert.equal(h.routineCalls[0].body, `{"text":"${launchCommandText("livraison", 12, HEAD)}"}`);
   });
 });
 
@@ -1296,6 +1338,35 @@ describe("livraison : événements du webhook (P29)", () => {
     assert.equal(state.relaunch_ready, true);
     assert.equal(state.ready, false);
   });
+  it("workflow_run : fichiers relus, accord d'une autre tête annulé (ADR-020, P45)", async () => {
+    const db = new FakeDb(() => NOW);
+    seedTicketDb(db);
+    db.seed("tickets/t-1/admin/delivery", {
+      eligible_pr_count: 1,
+      pr_number: 34,
+      network_rules_ack: {
+        head_sha: "c".repeat(40),
+        at: Timestamp.fromMillis(NOW - HOUR),
+        ack_id: "AckAckAckAckAckAck01",
+        comment_id: 77,
+        files: ["CLAUDE.md"],
+        controls: [],
+      },
+      network_rules_ack_valid: true,
+    });
+    const calls: string[] = [];
+    const client = githubClient(
+      GH_TOKEN,
+      githubFetch({ files: [{ filename: "CLAUDE.md", patch: "+| P7 | x |" }] }, calls),
+    );
+    assert.equal(await refreshDeliveryFromRun(db.kit(), client, 34), 1);
+    assert.ok(calls.some((c) => c.startsWith("/pulls/34/files")));
+    const state = db.read("tickets/t-1/admin/delivery") ?? {};
+    assert.deepEqual(state.network_rules_files, ["CLAUDE.md"]);
+    assert.deepEqual(state.network_rules_controls, [7]);
+    assert.equal(state.network_rules_ack_valid, false);
+    assert.equal((state.network_rules_ack as Record<string, unknown>).comment_id, 77);
+  });
 });
 
 function seedTicketDb(db: FakeDb): void {
@@ -1305,3 +1376,493 @@ function seedTicketDb(db: FakeDb): void {
     validated_by_app_at: BY_APP,
   });
 }
+
+// ── Règles du réseau et accord (ADR-020, lot R2 : P43, P44, P45, P65) ───────
+
+const HEAD_B = "b".repeat(40);
+const ACK_ID = "AckAckAckAckAckAck01";
+const PATCH = [
+  "@@ -1,3 +1,4 @@",
+  " | N° | Contrôle | Agent | Origine |",
+  "-| P10 | ancien | relecteur-regles | ADR-001 |",
+  "+| P10 | nouveau | relecteur-regles | ADR-001 |",
+  "+| P65 | catégories | relecteur-regles | ADR-020 |",
+  " | P3 | inchangé | relecteur-regles | ADR-001 |",
+  "+| P1000 | hors motif |",
+  "+texte | P12 | hors tableau",
+].join("\n");
+const RULES_FILES = [
+  { filename: "app/lib/main.dart" },
+  { filename: "CLAUDE.md", patch: PATCH },
+  { filename: "scripts/changelog-recent.mjs" },
+];
+
+describe("règles du réseau : trois catégories (P65)", () => {
+  it("catégorie 2 : quatre chemins exacts, casse comprise", () => {
+    assert.deepEqual(NETWORK_RULES_PATTERNS, [
+      "CLAUDE.md",
+      "scripts/changelog-recent.mjs",
+      "scripts/changelog-recent.test.mjs",
+      "documentation/prompts-routines.md",
+    ]);
+    for (const p of NETWORK_RULES_PATTERNS) {
+      assert.equal(isNetworkRulesPath(p), true, p);
+      assert.equal(isSensitiveDeliveryPath(p), false, p);
+      assert.equal(isForbiddenDevelopmentPath(p), false, p);
+    }
+    for (const p of ["claude.md", "Scripts/changelog-recent.mjs", "docs/CLAUDE.md"]) {
+      assert.equal(isNetworkRulesPath(p), false, p);
+      assert.equal(isForbiddenDevelopmentPath(p), true, p);
+    }
+  });
+
+  it("le reste de scripts/ et tout CLAUDE.md hors racine restent interdits (décision 2)", () => {
+    for (const p of [
+      "scripts/check-version.mjs",
+      "scripts/check-agents.mjs",
+      "scripts/garder-apk-en-ligne.sh",
+      "scripts/changelog-recent.mjs.bak",
+      "app/CLAUDE.md",
+    ]) {
+      assert.equal(isForbiddenDevelopmentPath(p), true, p);
+      assert.equal(isSensitiveDeliveryPath(p), true, p);
+    }
+  });
+
+  it("catégorie 3 : permise au développement, refusée à la livraison", () => {
+    for (const p of DELIVERY_ONLY_SENSITIVE_PATTERNS) {
+      assert.equal(isForbiddenDevelopmentPath(p), false, p);
+      assert.equal(isSensitiveDeliveryPath(p), true, p);
+    }
+  });
+
+  it("SENSITIVE_DELIVERY_PATTERNS : union des catégories 1 et 3, sans recoupement avec 2", () => {
+    assert.deepEqual(SENSITIVE_DELIVERY_PATTERNS, [
+      ...FORBIDDEN_DEVELOPMENT_PATTERNS,
+      ...DELIVERY_ONLY_SENSITIVE_PATTERNS,
+    ]);
+    for (const p of NETWORK_RULES_PATTERNS) {
+      assert.ok(!SENSITIVE_DELIVERY_PATTERNS.includes(p), p);
+    }
+  });
+
+  it("fichiers de la PR : anciens chemins compris, ordre de la liste, sans doublon", () => {
+    assert.deepEqual(
+      networkRulesFiles([
+        { filename: "scripts/changelog-recent.test.mjs", previousFilename: null },
+        { filename: "doc.md", previousFilename: "CLAUDE.md" },
+        { filename: "CLAUDE.md", previousFilename: null },
+      ]),
+      ["CLAUDE.md", "scripts/changelog-recent.test.mjs"],
+    );
+  });
+});
+
+describe("règles du réseau : contrôles lus dans le patch (P45)", () => {
+  it("lignes +| Pn | et -| Pn | seules, sans doublon, triées", () => {
+    assert.deepEqual(
+      networkRulesControls([{ filename: "CLAUDE.md", previousFilename: null, patch: PATCH }]),
+      { controls: [10, 65], complete: true },
+    );
+  });
+
+  it("patch absent : liste illisible ; CLAUDE.md inchangé : liste vide et complète", () => {
+    assert.deepEqual(
+      networkRulesControls([{ filename: "CLAUDE.md", previousFilename: null, patch: null }]),
+      { controls: [], complete: false },
+    );
+    assert.deepEqual(
+      networkRulesControls([{ filename: "scripts/changelog-recent.mjs", previousFilename: null }]),
+      { controls: [], complete: true },
+    );
+  });
+
+  it("60 contrôles au plus ; au-delà, liste incomplète", () => {
+    const patch = (n: number) =>
+      Array.from({ length: n }, (_, i) => `+| P${i + 1} | x |`).join("\n");
+    const over = networkRulesControls([
+      { filename: "CLAUDE.md", previousFilename: null, patch: patch(80) },
+    ]);
+    assert.equal(over.controls.length, 60);
+    assert.equal(over.complete, false);
+    const exact = networkRulesControls([
+      { filename: "CLAUDE.md", previousFilename: null, patch: patch(60) },
+    ]);
+    assert.equal(exact.controls.length, 60);
+    assert.equal(exact.complete, true);
+  });
+
+  it("CLAUDE.md seulement en ancien chemin d'un renommage : liste incomplète", () => {
+    assert.deepEqual(
+      networkRulesControls([
+        { filename: "documentation/ancien.md", previousFilename: "CLAUDE.md", patch: null },
+      ]),
+      { controls: [], complete: false },
+    );
+  });
+
+  it("état relu : fichiers, contrôles, fichier sensible ; aucune ligne du patch gardée", async () => {
+    const h = harness({ files: [...RULES_FILES, { filename: "functions/src/auth.ts" }] });
+    seedTicket(h);
+    await refusal(launchTicketSession("t-1", "livraison", "admin-uid", h.deps()));
+    const state = h.db.read("tickets/t-1/admin/delivery") ?? {};
+    assert.deepEqual(state.network_rules_files, ["CLAUDE.md", "scripts/changelog-recent.mjs"]);
+    assert.deepEqual(state.network_rules_controls, [10, 65]);
+    assert.equal(state.network_rules_controls_complete, true);
+    assert.equal(state.sensitive_files, "functions/src/auth.ts");
+    assert.equal(state.files_complete, true);
+    assert.ok(!JSON.stringify(state).includes("nouveau"), "texte du patch écrit");
+  });
+});
+
+describe("règles du réseau : accord lié à la tête (P24, P45)", () => {
+  it("gabarit fixe : PR, tête, fichiers, contrôles ou « aucun », ligne Accord", () => {
+    assert.equal(
+      networkRulesAckBody({
+        prNumber: 34,
+        headSha: HEAD,
+        files: ["CLAUDE.md", "scripts/changelog-recent.mjs"],
+        controls: [10, 65],
+        ackId: ACK_ID,
+      }),
+      [
+        "## Accord — règles du réseau",
+        "",
+        "PR #34",
+        `Tête ${HEAD}`,
+        "Fichiers : CLAUDE.md, scripts/changelog-recent.mjs",
+        "Contrôles : P10, P65",
+        "",
+        `Accord ${ACK_ID}`,
+      ].join("\n"),
+    );
+    const none = networkRulesAckBody({
+      prNumber: 34,
+      headSha: HEAD,
+      files: ["documentation/prompts-routines.md"],
+      controls: [],
+      ackId: ACK_ID,
+    });
+    assert.match(none, /^Contrôles : aucun$/m);
+  });
+
+  it("gabarit : fichier hors catégorie 2, tête ou identifiant hors motif refusés", () => {
+    const ok = { prNumber: 34, headSha: HEAD, files: ["CLAUDE.md"], controls: [], ackId: ACK_ID };
+    assert.throws(() => networkRulesAckBody({ ...ok, files: ["@x <img>"] }));
+    assert.throws(() => networkRulesAckBody({ ...ok, files: [] }));
+    assert.throws(() => networkRulesAckBody({ ...ok, headSha: "HEAD" }));
+    assert.throws(() => networkRulesAckBody({ ...ok, ackId: "court" }));
+  });
+
+  it("accord reconnu par sa ligne, du compte 16348852 seul ; ni analyse ni compte rendu", () => {
+    const body = `${NETWORK_RULES_ACK_TITLE}\n\nPR #34\n\nAccord ${ACK_ID}`;
+    assert.equal(commentCarriesAck({ authorId: OWNER, body }, ACK_ID, OWNER), true);
+    assert.equal(commentCarriesAck({ authorId: 42, body }, ACK_ID, OWNER), false);
+    assert.equal(
+      commentCarriesAck({ authorId: OWNER, body: "Accord autre" }, ACK_ID, OWNER),
+      false,
+    );
+    const c = { id: 1, authorId: OWNER, body, createdAt: null, updatedAt: null };
+    assert.deepEqual(deliveryReportsFromComments([c], OWNER), []);
+  });
+
+  it("accord valide sur sa tête, annulé par une nouvelle tête sans autre écriture", async () => {
+    const h = harness();
+    const ack = {
+      head_sha: HEAD,
+      at: Timestamp.fromMillis(NOW),
+      ack_id: ACK_ID,
+      comment_id: 77,
+      files: ["CLAUDE.md"],
+      controls: [65],
+    };
+    h.db.seed("tickets/t-1/admin/delivery", { network_rules_ack: ack });
+    const kit = h.db.kit();
+    const state = deliveryState({
+      ticketStatus: "in_progress",
+      prListComplete: true,
+      eligible: [readPullRequest(rawPr(34))!],
+      pr: readPullRequest(rawPr(34))!,
+      ci: ciSummary([]),
+    });
+    await writeDeliveryState(kit, "t-1", state);
+    assert.equal(h.db.read("tickets/t-1/admin/delivery")?.network_rules_ack_valid, true);
+    await writeDeliveryState(kit, "t-1", { ...state, head_sha: HEAD_B });
+    const after = h.db.read("tickets/t-1/admin/delivery") ?? {};
+    assert.equal(after.network_rules_ack_valid, false);
+    assert.deepEqual(after.network_rules_ack, ack);
+  });
+
+  it("accord sans comment_id : invalide", () => {
+    const read = readNetworkRulesAck(
+      { head_sha: HEAD, ack_id: ACK_ID, comment_id: null, files: [], controls: [] },
+      () => null,
+    );
+    assert.notEqual(read, null);
+    assert.equal(networkRulesAckValid(read, HEAD), false);
+    assert.equal(networkRulesAckValid(null, HEAD), false);
+  });
+});
+
+describe("règles du réseau : livraison (P43, P44)", () => {
+  const RULES: { mode: "network_rules"; headSha: string } = {
+    mode: "network_rules",
+    headSha: HEAD,
+  };
+  const launchRules = (h: Harness, over: Partial<LaunchDeps> = {}, args = RULES) =>
+    launchTicketSession(
+      "t-1",
+      "livraison",
+      "admin-uid",
+      { newAckId: () => ACK_ID, ...h.deps(over) },
+      "group",
+      args,
+    );
+  const posts = (h: Harness) => h.githubCalls.filter((c) => c.startsWith("POST "));
+
+  async function rulesRefused(h: Harness, code: string, args = RULES): Promise<HttpsError> {
+    const err = await refusal(launchRules(h, {}, args));
+    assert.equal(details(err).code, code, String(details(err).reason));
+    assert.equal(err.code, "failed-precondition");
+    assert.match(String(details(err).reason), /Rien n'a été lancé ni décompté/);
+    assert.equal(h.routineCalls.length, 0);
+    assert.equal(quota(h), 0);
+    assert.ok(lock(h) === undefined || lock(h) === null, "verrou rendu");
+    assert.equal(history(h).length, 0);
+    return err;
+  }
+
+  it("Livrer sur une PR de règles : delivery_network_rules, rien compté", async () => {
+    const h = harness({ files: RULES_FILES });
+    seedTicket(h);
+    const err = await refusedWithoutCount(h, "livraison", "delivery_network_rules");
+    assert.match(String(details(err).reason), /Approuver les règles et livrer/);
+  });
+
+  it("accord publié sur le gabarit, puis livraison #12 comptée une fois", async () => {
+    const h = harness({ files: RULES_FILES });
+    seedTicket(h);
+    const out = await launchRules(h);
+    assert.deepEqual(out, { outcome: "launched", sessionUrl: SESSION });
+    assert.equal(h.routineCalls[0].body, `{"text":"livraison #12 ${HEAD}"}`);
+    assert.equal(quota(h), 1);
+    assert.equal(lock(h)?.ticket_id, "t-1");
+    assert.deepEqual(posts(h), ["POST /issues/12/comments"]);
+    const state = h.db.read("tickets/t-1/admin/delivery") ?? {};
+    const ack = state.network_rules_ack as Record<string, unknown>;
+    assert.equal(ack.head_sha, HEAD);
+    assert.equal(ack.ack_id, ACK_ID);
+    assert.equal(ack.comment_id, 9000);
+    assert.deepEqual(ack.files, ["CLAUDE.md", "scripts/changelog-recent.mjs"]);
+    assert.deepEqual(ack.controls, [10, 65]);
+    assert.equal(state.network_rules_ack_valid, true);
+  });
+
+  it("deux appels : accord publié une seule fois (ligne Accord <id> reconnue)", async () => {
+    const scene: Scene = { files: RULES_FILES };
+    const h = harness(scene, async (n) =>
+      n === 1
+        ? new Response(JSON.stringify({ error: "bad" }), { status: 400 })
+        : new Response(JSON.stringify({ claude_code_session_url: SESSION }), { status: 200 }),
+    );
+    seedTicket(h);
+    await refusal(launchRules(h));
+    // L'accord est publié et noté ; le second appel le reprend sans republier.
+    assert.equal(posts(h).length, 1);
+    await launchRules(h, { newAckId: () => "Autre0000000000000001" });
+    assert.equal(posts(h).length, 1);
+    assert.equal(quota(h), 1);
+    // Accord publié mais non noté (fonction coupée) : reconnu sur l'Issue, pas republié.
+    const h2 = harness({
+      files: RULES_FILES,
+      comments: [
+        {
+          id: 555,
+          user: { id: OWNER },
+          body: `${NETWORK_RULES_ACK_TITLE}\n\nAccord ${ACK_ID}`,
+          created_at: "2026-11-14T08:59:00Z",
+        },
+      ],
+    });
+    seedTicket(h2);
+    h2.db.seed("tickets/t-1/admin/delivery", {
+      network_rules_ack: {
+        head_sha: HEAD,
+        at: Timestamp.fromMillis(NOW),
+        ack_id: ACK_ID,
+        comment_id: null,
+        files: ["CLAUDE.md", "scripts/changelog-recent.mjs"],
+        controls: [10, 65],
+      },
+    });
+    await launchRules(h2, { newAckId: () => "Autre0000000000000001" });
+    assert.equal(posts(h2).length, 0);
+    const ack = h2.db.read("tickets/t-1/admin/delivery")?.network_rules_ack as Record<
+      string,
+      unknown
+    >;
+    assert.equal(ack.comment_id, 555);
+  });
+
+  it("tête changée entre l'affichage et l'appel : delivery_head_changed", async () => {
+    const h = harness({ files: RULES_FILES });
+    seedTicket(h);
+    await rulesRefused(h, "delivery_head_changed", { mode: "network_rules", headSha: HEAD_B });
+    assert.equal(posts(h).length, 0);
+  });
+
+  it("CLAUDE.md et functions/src/auth.ts : delivery_sensitive_files", async () => {
+    const h = harness({ files: [...RULES_FILES, { filename: "functions/src/auth.ts" }] });
+    seedTicket(h);
+    await rulesRefused(h, "delivery_sensitive_files");
+  });
+
+  for (const filename of ["docs/CLAUDE.md", "scripts/check-version.mjs"]) {
+    it(`${filename} : delivery_sensitive_files`, async () => {
+      const h = harness({ files: [...RULES_FILES, { filename }] });
+      seedTicket(h);
+      await rulesRefused(h, "delivery_sensitive_files");
+    });
+  }
+
+  it("aucune règle du réseau : delivery_no_network_rules", async () => {
+    const h = harness();
+    seedTicket(h);
+    const err = await rulesRefused(h, "delivery_no_network_rules");
+    assert.match(String(details(err).reason), /utilisez « Livrer »/);
+  });
+
+  it("CLAUDE.md sans patch : delivery_network_rules_unreadable", async () => {
+    const h = harness({ files: [{ filename: "CLAUDE.md" }] });
+    seedTicket(h);
+    await rulesRefused(h, "delivery_network_rules_unreadable");
+  });
+
+  it("1 001 fichiers : delivery_files_unreadable", async () => {
+    const h = harness({
+      files: [
+        { filename: "CLAUDE.md", patch: PATCH },
+        ...Array.from({ length: 1000 }, (_, i) => ({ filename: `app/lib/f${i}.dart` })),
+      ],
+    });
+    seedTicket(h);
+    await rulesRefused(h, "delivery_files_unreadable");
+  });
+
+  it("CI rouge : delivery_ci_not_green", async () => {
+    const h = harness({ files: RULES_FILES, runs: RED });
+    seedTicket(h);
+    await rulesRefused(h, "delivery_ci_not_green");
+  });
+
+  it("scripts/changelog-recent.mjs seul : accepté après accord, « Contrôles : aucun »", async () => {
+    const scene: Scene = { files: [{ filename: "scripts/changelog-recent.mjs" }] };
+    const h = harness(scene);
+    seedTicket(h);
+    await launchRules(h);
+    assert.equal(quota(h), 1);
+    const body = String(scene.comments?.[0]?.body);
+    assert.match(body, /^Fichiers : scripts\/changelog-recent\.mjs$/m);
+    assert.match(body, /^Contrôles : aucun$/m);
+  });
+
+  it("verrou tenu par un autre ticket : delivery_running_elsewhere, aucun accord publié", async () => {
+    const h = harness({ files: RULES_FILES });
+    seedTicket(h);
+    seedTicket(h, "t-2", { github_issue_number: 13 });
+    h.db.seed("ticket_status/launches", {
+      delivery_running: {
+        ticket_id: "t-2",
+        issue_number: 13,
+        launched_at: Timestamp.fromMillis(NOW - HOUR),
+        retry_after: Timestamp.fromMillis(NOW + 2 * HOUR),
+      },
+    });
+    const err = await refusal(launchRules(h));
+    assert.equal(details(err).code, "delivery_running_elsewhere");
+    assert.equal(posts(h).length, 0);
+    assert.equal(quota(h), 0);
+  });
+
+  it("publication en échec : delivery_ack_publish_failed, verrou rendu, rien compté (P44)", async () => {
+    const h = harness({ files: RULES_FILES, commentStatus: 500 });
+    seedTicket(h);
+    await rulesRefused(h, "delivery_ack_publish_failed");
+    // Un seul journal d'erreur pour ce refus : celui de l'appel GitHub en échec.
+    const errors = h.logs.filter(
+      (l) => l.level === "error" && /accord|commentaire/.test(l.entry.message),
+    );
+    assert.equal(errors.length, 1, errors.map((l) => l.entry.message).join(" | "));
+    const state = h.db.read("tickets/t-1/admin/delivery") ?? {};
+    const ack = state.network_rules_ack as Record<string, unknown>;
+    assert.equal(ack.comment_id, null);
+    assert.equal(state.network_rules_ack_valid, false);
+    assert.equal(h.db.read("tickets/t-1")?.decision_lease_until, undefined);
+  });
+});
+
+describe("règles du réseau : arguments de launchTicketDelivery (P25, P30)", () => {
+  it("mode absent ou deliver ; network_rules avec headSha ; le reste refusé", () => {
+    assert.deepEqual(readDeliveryArgs({ ticketId: "t-1" }), { mode: "deliver", headSha: null });
+    assert.deepEqual(readDeliveryArgs({ ticketId: "t-1", mode: "deliver" }), {
+      mode: "deliver",
+      headSha: null,
+    });
+    assert.deepEqual(readDeliveryArgs({ ticketId: "t-1", mode: "network_rules", headSha: HEAD }), {
+      mode: "network_rules",
+      headSha: HEAD,
+    });
+    const field = (data: unknown) => {
+      try {
+        readDeliveryArgs(data);
+      } catch (err) {
+        assert.ok(err instanceof HttpsError);
+        assert.equal(err.code, "invalid-argument");
+        return (err.details as Record<string, unknown>).field;
+      }
+      return assert.fail("refus attendu");
+    };
+    assert.equal(field({ ticketId: "t", mode: "deliver", headSha: HEAD }), "headSha");
+    assert.equal(field({ ticketId: "t", mode: "network_rules" }), "headSha");
+    assert.equal(
+      field({ ticketId: "t", mode: "network_rules", headSha: HEAD.toUpperCase() }),
+      "headSha",
+    );
+    assert.equal(
+      field({ ticketId: "t", mode: "network_rules", headSha: "a".repeat(39) }),
+      "headSha",
+    );
+    assert.equal(field({ ticketId: "t", mode: "autre" }), "mode");
+    assert.equal(field({ ticketId: "t", mode: 1 }), "mode");
+    assert.equal(field({ ticketId: "t", model: "x" }), "model");
+  });
+
+  it("brasseur refusé avant la lecture des arguments ; admin : network_rules jusqu'à l'accord", async () => {
+    const h = harness({ files: RULES_FILES });
+    seedTicket(h);
+    const req = (data: unknown) => ({
+      auth: {
+        uid: "admin-uid",
+        token: {
+          email: "admin@exemple.fr",
+          email_verified: true,
+          firebase: { sign_in_provider: "google.com" },
+        },
+      },
+      data,
+    });
+    const brewer = await refusal(
+      handleDeliveryCall(req({ ticketId: "t-1", mode: "x" }), {
+        ...h.deps(),
+        lookup: async () => ({ role: "brewer" }),
+      }),
+    );
+    assert.equal(brewer.code, "permission-denied");
+    const out = await handleDeliveryCall(
+      req({ ticketId: "t-1", mode: "network_rules", headSha: HEAD }),
+      { ...h.deps(), newAckId: () => ACK_ID, lookup: async () => ({ role: "admin" }) },
+    );
+    assert.equal(out.outcome, "launched");
+    assert.equal(h.githubCalls.filter((c) => c.startsWith("POST ")).length, 1);
+  });
+});

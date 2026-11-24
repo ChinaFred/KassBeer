@@ -467,6 +467,7 @@ class _Ligne extends StatelessWidget {
         ...pastillesAdmin(ticket, now),
         PastilleLancement(ticket: ticket),
         PastilleLivraison(ticket: ticket),
+        PastilleReglesDuReseau(ticket: ticket),
       ],
       selected: selected,
       onTap: onTap,

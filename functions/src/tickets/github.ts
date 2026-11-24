@@ -181,10 +181,16 @@ export function readPullRequest(raw: Record<string, unknown>): PullRequestView |
   };
 }
 
-/** Un fichier d'une PR (`GET /pulls/{n}/files`) : chemin et ancien chemin d'un renommage. */
+/**
+ * Un fichier d'une PR (`GET /pulls/{n}/files`) : chemin et ancien chemin d'un renommage.
+ * `patch` n'est gardé que pour les chemins que l'appelant demande (`keepPatchOf`), le temps
+ * d'en tirer ce qu'il retient ; `null` sinon, ou quand GitHub ne le rend pas (fichier trop
+ * gros). Jamais écrit dans Firestore (P45).
+ */
 export interface PullRequestFileView {
   filename: string | null;
   previousFilename: string | null;
+  patch?: string | null;
 }
 
 /** Un run de GitHub Actions, tel que la livraison le lit (P24). */
@@ -275,9 +281,13 @@ export interface GithubClient {
   /** PR ouvertes du dépôt, `MAX_PAGES` pages de 100 ; `complete` faux si tronquée (P45). */
   listOpenPullRequests(): Promise<{ prs: PullRequestView[]; complete: boolean }>;
   getPullRequest(prNumber: number): Promise<PullRequestView>;
-  /** Fichiers d'une PR, `MAX_FILE_PAGES` pages de 100 ; `complete` faux au-delà (P43). */
+  /**
+   * Fichiers d'une PR, `MAX_FILE_PAGES` pages de 100 ; `complete` faux au-delà (P43). Le
+   * `patch` n'est gardé que pour un chemin accepté par `keepPatchOf` (ADR-020, P45).
+   */
   listPullRequestFiles(
     prNumber: number,
+    keepPatchOf?: (filename: string) => boolean,
   ): Promise<{ files: PullRequestFileView[]; complete: boolean }>;
   /** Runs de GitHub Actions d'un commit (100 au plus). */
   listRunsForCommit(headSha: string): Promise<CiRunView[]>;
@@ -567,7 +577,7 @@ export function githubClient(token: string, fetchImpl: FetchLike = fetch): Githu
       return pr;
     },
 
-    async listPullRequestFiles(prNumber) {
+    async listPullRequestFiles(prNumber, keepPatchOf) {
       const files: PullRequestFileView[] = [];
       for (let page = 1; page <= MAX_FILE_PAGES; page++) {
         const batch = await request<Array<Record<string, unknown>>>(
@@ -575,7 +585,13 @@ export function githubClient(token: string, fetchImpl: FetchLike = fetch): Githu
           `${REPO_PATH}/pulls/${prNumber}/files?per_page=100&page=${page}`,
         );
         for (const f of batch) {
-          files.push({ filename: str(f.filename), previousFilename: str(f.previous_filename) });
+          const filename = str(f.filename);
+          const keep = filename !== null && keepPatchOf !== undefined && keepPatchOf(filename);
+          files.push({
+            filename,
+            previousFilename: str(f.previous_filename),
+            ...(keep ? { patch: str(f.patch) } : {}),
+          });
         }
         if (batch.length < 100) return { files, complete: true };
       }

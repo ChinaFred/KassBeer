@@ -637,6 +637,7 @@ class _FicheState extends ConsumerState<_Fiche> {
     required EtatLancements? quota,
     int? prNumber,
     String? avertissement,
+    AccordReglesDemande? accordRegles,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(lancementFicheProvider(_ticket.id).notifier);
@@ -655,7 +656,11 @@ class _FicheState extends ConsumerState<_Fiche> {
         typeTicket: action == ActionLancement.livraison
             ? _ticket.type.label
             : null,
-        envoyer: () => enVol = notifier.lancer(action),
+        accordRegles: accordRegles,
+        envoyer: () => enVol = notifier.lancer(
+          action,
+          teteAccordee: accordRegles?.headSha,
+        ),
       ),
     );
     var resultat = fin?.resultat;
@@ -877,6 +882,8 @@ class _FicheState extends ConsumerState<_Fiche> {
           livrerActif:
               etatLancements.actif == ActionLancement.livraison &&
               etatLancements.aRelancer == null,
+          livraisonEnCours:
+              etatLancements.livraison?.masquerRefuserClore ?? false,
         ),
       // Sans Issue, il n'y a rien à analyser.
       if (ticket.issueNumber != null) SectionAnalyses(ticket: ticket),
@@ -1267,9 +1274,26 @@ class _FicheState extends ConsumerState<_Fiche> {
           avertissementRelanceApresArret(relanceDe),
         _ => null,
       };
+      // PR qui change les règles du réseau (ADR-020) : « Approuver les règles
+      // et livrer » à la place de « Livrer », boîte nourrie des champs écrits
+      // par le serveur dans `admin/delivery`.
+      final etatPr = etat.etatPr;
+      final regles =
+          action == ActionLancement.livraison &&
+          (livraison?.reglesDuReseau ?? false);
+      final prRegles = etatPr?.prNumber;
+      final teteRegles = etatPr?.headSha;
+      final accordRegles = regles && prRegles != null && teteRegles != null
+          ? AccordReglesDemande(
+              prNumber: prRegles,
+              headSha: teteRegles,
+              fichiers: etatPr!.networkRulesFiles,
+              controles: etatPr.networkRulesControls,
+            )
+          : null;
       // Hors ligne, appel en cours ou plafond atteint le jour écrit par le
       // serveur : bouton inactif, la ligne de la barre dit pourquoi.
-      final onPressed = etat.actif == null
+      final onPressed = etat.actif == null || (regles && accordRegles == null)
           ? null
           : () => _lancer(
               action,
@@ -1277,8 +1301,14 @@ class _FicheState extends ConsumerState<_Fiche> {
               quota: quota,
               prNumber: etat.etatPr?.prNumber,
               avertissement: avertissement,
+              accordRegles: accordRegles,
             );
       boutonLancement = switch (action) {
+        ActionLancement.livraison when regles => FilledButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.rule),
+          label: const Text(kApprouverRegles),
+        ),
         ActionLancement.livraison when relanceDe == null => FilledButton.icon(
           onPressed: onPressed,
           icon: const Icon(Icons.local_shipping_outlined),

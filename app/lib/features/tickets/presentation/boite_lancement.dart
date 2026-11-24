@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/data/lecture_document.dart';
@@ -10,8 +11,10 @@ import '../../../core/presentation/formats.dart';
 import '../../../core/providers.dart';
 import '../domain/ticket.dart';
 import '../domain/ticket_analysis.dart';
+import '../domain/ticket_delivery.dart';
 import '../domain/ticket_launch.dart';
 import 'lien_usage_claude.dart';
+import 'ticket_lien_github.dart';
 import 'tickets_providers.dart';
 
 /// Appel de lancement en cours sur une fiche, hors de l'état du widget : un
@@ -26,8 +29,12 @@ class LancementFicheNotifier extends Notifier<bool> {
   bool build() => false;
 
   /// Appelle le serveur une fois, jamais rejoué. Un second appel pendant le
-  /// premier est refusé sans rien envoyer.
-  Future<ResultatLancement> lancer(ActionLancement action) async {
+  /// premier est refusé sans rien envoyer. [teteAccordee] : « Approuver les
+  /// règles et livrer », tête affichée dans la boîte (ADR-020).
+  Future<ResultatLancement> lancer(
+    ActionLancement action, {
+    String? teteAccordee,
+  }) async {
     if (state) {
       return const ResultatLancement(
         IssueLancement.refuse,
@@ -39,6 +46,7 @@ class LancementFicheNotifier extends Notifier<bool> {
     final resultat = await repository.launch(
       ticketId: ticketId,
       action: action,
+      teteAccordee: teteAccordee,
     );
     if (ref.mounted) state = false;
     return resultat;
@@ -57,6 +65,29 @@ typedef FinBoiteLancement = ({
   EchecReponse? echecValidation,
   bool detache,
 });
+
+/// Ce que la boîte « Approuver les règles et livrer » affiche (ADR-020), lu
+/// dans `admin/delivery` tel que le serveur l'a écrit.
+@immutable
+class AccordReglesDemande {
+  const AccordReglesDemande({
+    required this.prNumber,
+    required this.headSha,
+    required this.fichiers,
+    required this.controles,
+  });
+
+  final int prNumber;
+
+  /// Tête affichée, envoyée telle quelle au serveur.
+  final String headSha;
+  final List<String> fichiers;
+  final List<int> controles;
+
+  /// Les 7 premiers caractères de la tête.
+  String get teteCourte =>
+      headSha.length < 7 ? headSha : headSha.substring(0, 7);
+}
 
 /// Boîte de confirmation d'un lancement (P39). Rien n'est appelé avant
 /// « Lancer ». Pendant l'envoi, « Fermer » et le retour la ferment
@@ -79,6 +110,7 @@ class BoiteLancement extends StatefulWidget {
     this.typeTicket,
     this.validationAvant,
     this.valider,
+    this.accordRegles,
   }) : assert((validationAvant == null) == (valider == null));
 
   final ActionLancement action;
@@ -112,6 +144,32 @@ class BoiteLancement extends StatefulWidget {
   /// l'échec, ou `null` si le serveur a appliqué la validation (`changed:
   /// false` compris).
   final Future<EchecReponse?> Function()? valider;
+
+  /// « Approuver les règles et livrer » (ADR-020) : PR, tête, fichiers et
+  /// contrôles changés ; le bouton n'est actif qu'après la saisie du numéro
+  /// de la PR.
+  final AccordReglesDemande? accordRegles;
+
+  static const titreAccordRegles = 'Approuver les règles et livrer ?';
+  static const avertissementRegles =
+      'Ces fichiers sont les règles que suivent toutes les sessions Claude '
+      'Code et le contenu de l\'écran Nouveautés. Lisez le diff sur GitHub '
+      'avant d\'approuver.';
+  static const lireLeDiff = 'Lire le diff';
+  static const libelleNumero = 'Numéro de la PR';
+  static const saisieNumero = 'Saisissez le numéro de la PR pour approuver';
+  static const relirePr = 'Fermez cette boîte pour relire la PR.';
+
+  /// Saisie d'autant de chiffres que le numéro, ou plus, mais différente.
+  static String numeroFaux(int prNumber) =>
+      'Ce n\'est pas le numéro de la PR #$prNumber.';
+  static const libelleApprouver = 'Approuver et livrer';
+
+  /// Accord de fusion d'« Approuver les règles et livrer » (P39).
+  static const accordFusionRegles =
+      'La fusion met l\'application en ligne pour tout le groupe, sur le web '
+      'et sur Android, sans autre accord. Appuyer sur « Approuver et livrer » '
+      'vaut accord sur ces règles et accord de fusion.';
 
   static const cout =
       'Facturé sur l\'abonnement Claude de l\'administrateur. Ce coût '
@@ -199,8 +257,26 @@ class _BoiteLancementState extends State<BoiteLancement> {
   /// ouverte.
   bool _bloque = false;
 
+  /// Refus de [kRefusRelirePr] : « Fermez cette boîte pour relire la PR. ».
+  bool _relire = false;
+
   /// La fermeture est demandée : un second `pop` fermerait la fiche.
   bool _fermeture = false;
+
+  /// Numéro de PR saisi (« Approuver les règles et livrer »).
+  final _numero = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _numero.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _numero.dispose();
+    super.dispose();
+  }
 
   void _fermer(FinBoiteLancement? fin) {
     if (_fermeture || !mounted) return;
@@ -232,7 +308,8 @@ class _BoiteLancementState extends State<BoiteLancement> {
       setState(() {
         _erreur = resultat.message;
         _envoi = false;
-        _bloque = kRefusFusionALaMain.contains(resultat.code);
+        _relire = kRefusRelirePr.contains(resultat.code);
+        _bloque = kRefusFusionALaMain.contains(resultat.code) || _relire;
       });
       return;
     }
@@ -256,8 +333,18 @@ class _BoiteLancementState extends State<BoiteLancement> {
     final typeTicket = widget.typeTicket;
     final validationAvant = widget.validationAvant;
     final plafondAtteint = widget.quota?.plafondAtteint ?? false;
+    final accord = widget.accordRegles;
+    // Bouton actif seulement quand le champ vaut le numéro de la PR.
+    final saisie = _numero.text.trim();
+    final numeroSaisi = accord == null || saisie == '${accord.prNumber}';
+    final numeroFaux =
+        accord != null &&
+        saisie.length >= '${accord.prNumber}'.length &&
+        !numeroSaisi;
+    final diff = accord == null ? null : lienDiffPullRequest(accord.prNumber);
     final libelle = switch (action) {
       _ when validationAvant != null => 'Valider et lancer',
+      _ when accord != null => BoiteLancement.libelleApprouver,
       ActionLancement.livraison => relance ? 'Relancer' : 'Livrer',
       ActionLancement.reprise => 'Relancer',
       _ => relance ? 'Relancer' : 'Lancer',
@@ -276,6 +363,8 @@ class _BoiteLancementState extends State<BoiteLancement> {
         title: Text(
           validationAvant != null
               ? BoiteLancement.titreValiderEtLancer
+              : accord != null
+              ? BoiteLancement.titreAccordRegles
               : BoiteLancement.titre(action, relance: relance),
         ),
         content: Column(
@@ -293,9 +382,39 @@ class _BoiteLancementState extends State<BoiteLancement> {
                 prNumber: widget.prNumber,
               ),
             ),
+            if (accord != null) ...[
+              const SizedBox(height: 12),
+              Text('PR #${accord.prNumber}, tête ${accord.teteCourte}.'),
+              const SizedBox(height: 8),
+              const Text('Fichiers des règles du réseau :'),
+              for (final f in accord.fichiers) Text('• $f'),
+              const SizedBox(height: 8),
+              Text('Contrôles changés : ${listeControles(accord.controles)}.'),
+              const SizedBox(height: 12),
+              const Encadre(
+                ton: TonEncadre.avertissement,
+                icone: Icons.warning_amber_outlined,
+                child: Text(BoiteLancement.avertissementRegles),
+              ),
+              if (diff != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: BoutonVoirSurGithub(
+                    uri: diff,
+                    label: BoiteLancement.lireLeDiff,
+                    contexte: 'diff d\'une PR de règles du réseau',
+                  ),
+                ),
+              ],
+            ],
             if (livraison) ...[
               const SizedBox(height: 12),
-              const Text(BoiteLancement.accordFusion),
+              Text(
+                accord == null
+                    ? BoiteLancement.accordFusion
+                    : BoiteLancement.accordFusionRegles,
+              ),
               if (typeTicket != null) ...[
                 const SizedBox(height: 12),
                 Text('Type du ticket : $typeTicket.'),
@@ -337,6 +456,24 @@ class _BoiteLancementState extends State<BoiteLancement> {
               icone: Icons.payments_outlined,
               child: Text(BoiteLancement.cout),
             ),
+            if (accord != null) ...[
+              const SizedBox(height: 12),
+              // Aucun envoi sur Entrée : seul « Approuver et livrer » part.
+              TextField(
+                controller: _numero,
+                enabled: !_envoi,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: BoiteLancement.libelleNumero,
+                  helperText: BoiteLancement.saisieNumero,
+                  helperMaxLines: 3,
+                  errorText: numeroFaux
+                      ? BoiteLancement.numeroFaux(accord.prNumber)
+                      : null,
+                ),
+              ),
+            ],
             if (_envoi) ...[
               const SizedBox(height: 12),
               Semantics(
@@ -356,7 +493,7 @@ class _BoiteLancementState extends State<BoiteLancement> {
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  erreur,
+                  _relire ? '$erreur ${BoiteLancement.relirePr}' : erreur,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.error,
                   ),
@@ -380,7 +517,9 @@ class _BoiteLancementState extends State<BoiteLancement> {
           ),
           FilledButton(
             // Plafond atteint : la ligne du quota dit pourquoi.
-            onPressed: _envoi || _bloque || plafondAtteint ? null : _lancer,
+            onPressed: _envoi || _bloque || plafondAtteint || !numeroSaisi
+                ? null
+                : _lancer,
             child: _envoi
                 ? IndicateurBouton(
                     label: _validation

@@ -85,7 +85,7 @@ describe("routine : texte envoyé (P35)", () => {
       "analyse #1",
       "developpement #12",
       "analyse #9999999",
-      "livraison #12",
+      `livraison #12 ${"a".repeat(40)}`,
       "reprise #12",
     ]) {
       assert.equal(LAUNCH_TEXT_PATTERN.test(ok), true, ok);
@@ -106,6 +106,26 @@ describe("routine : texte envoyé (P35)", () => {
       assert.equal(LAUNCH_TEXT_PATTERN.test(ko), false, ko);
     }
   });
+  it("livraison : tête de 40 hexadécimaux exigée, seule action à la porter (ADR-020)", () => {
+    const sha = "0123456789abcdef0123456789abcdef01234567";
+    assert.equal(LAUNCH_TEXT_PATTERN.test(`livraison #12 ${sha}`), true);
+    for (const ko of [
+      "livraison #12",
+      `livraison #12 ${sha.slice(0, 39)}`,
+      `livraison #12 ${sha}0`,
+      `livraison #12 ${sha.toUpperCase()}`,
+      `livraison #12  ${sha}`,
+      `developpement #12 ${sha}`,
+      `reprise #12 ${sha}`,
+      `analyse #12 ${sha}`,
+    ]) {
+      assert.equal(LAUNCH_TEXT_PATTERN.test(ko), false, ko);
+    }
+    assert.equal(launchCommandText("livraison", 12, sha), `livraison #12 ${sha}`);
+    assert.throws(() => launchCommandText("livraison", 12));
+    assert.throws(() => launchCommandText("livraison", 12, sha.slice(0, 39)));
+  });
+
   it("launchCommandText lève hors motif", () => {
     assert.equal(launchCommandText("developpement", 7), "developpement #7");
     assert.throws(() => launchCommandText("analyse", 0));

@@ -45,22 +45,47 @@ class CompteRenduLivraison {
   final bool truncated;
 }
 
+/// Dernier accord sur les règles du réseau (`network_rules_ack`, ADR-020),
+/// écrit par le serveur seul. Le client ne compare aucune tête : la validité
+/// est [TicketDelivery.networkRulesAckValid].
+@immutable
+class AccordRegles {
+  const AccordRegles({required this.headSha, this.at, this.publie = false});
+
+  /// Tête accordée (40 chiffres hexadécimaux).
+  final String headSha;
+  final DateTime? at;
+
+  /// Commentaire d'accord publié sur l'Issue (`comment_id` posé).
+  final bool publie;
+}
+
 /// Document `tickets/{id}/admin/delivery` (ADR-008, T5, P45), écrit par le
-/// serveur seul et lu par l'administrateur seul. Le client lit `ready` et
-/// `relaunch_ready` tels quels : il ne recalcule ni l'éligibilité d'une PR,
-/// ni l'état de la CI (P39, P46).
+/// serveur seul et lu par l'administrateur seul. Le client lit `ready`,
+/// `relaunch_ready`, les champs des règles du réseau et la validité de
+/// l'accord tels quels : il ne recalcule ni l'éligibilité d'une PR, ni l'état
+/// de la CI, ni les catégories de fichiers, ni la comparaison des têtes (P39,
+/// P46).
 @immutable
 class TicketDelivery {
   const TicketDelivery({
     this.eligiblePrCount = 0,
     this.prNumber,
     this.prUrl,
+    this.headSha,
     this.ciStatus,
     this.ciConclusion,
     this.ciCompletedAt,
     this.ready = false,
     this.relaunchReady = false,
     this.reports = const [],
+    this.networkRulesFiles = const [],
+    this.networkRulesControls = const [],
+    this.networkRulesControlsComplete = true,
+    this.sensitiveFile,
+    this.filesComplete = true,
+    this.networkRulesAck,
+    this.networkRulesAckValid = false,
   });
 
   final int eligiblePrCount;
@@ -68,6 +93,53 @@ class TicketDelivery {
 
   /// Adresse écrite par le serveur ; ouverte après [lienPullRequestOuvrable].
   final String? prUrl;
+
+  /// Tête de la PR retenue, envoyée telle quelle par « Approuver les règles
+  /// et livrer ».
+  final String? headSha;
+
+  /// Règles du réseau touchées par la PR (`network_rules_files`).
+  final List<String> networkRulesFiles;
+
+  /// Numéros des contrôles `Pn` changés dans `CLAUDE.md`.
+  final List<int> networkRulesControls;
+
+  /// Faux si GitHub n'a pas rendu le patch de `CLAUDE.md`.
+  final bool networkRulesControlsComplete;
+
+  /// Premier fichier protégé de la PR (`sensitive_files`), ou `null`.
+  final String? sensitiveFile;
+
+  /// Faux si la liste des fichiers dépasse 1 000 entrées.
+  final bool filesComplete;
+
+  /// Dernier accord, ou `null`.
+  final AccordRegles? networkRulesAck;
+
+  /// Accord valable pour la tête courante, calculé par le serveur.
+  final bool networkRulesAckValid;
+
+  /// La PR change les règles du réseau : « Approuver les règles et livrer »
+  /// remplace « Livrer ».
+  bool get reglesDuReseau => networkRulesFiles.isNotEmpty;
+
+  /// État de l'accord affiché dans la section « Livraison », ou `null`.
+  /// « annulé » : un accord publié existe et le serveur le dit invalide, donc
+  /// donné pour une autre tête. [livraisonEnCours] : une livraison de ce
+  /// ticket tourne (verrou ou historique lus par la fiche) ; son commit de
+  /// fusion change la tête sans annuler l'accord qui l'a lancée.
+  String? etatAccord({bool livraisonEnCours = false}) {
+    final ack = networkRulesAck;
+    if (ack == null || !ack.publie) return null;
+    final court = ack.headSha.length < 7
+        ? ack.headSha
+        : ack.headSha.substring(0, 7);
+    if (livraisonEnCours) {
+      return 'Accord donné pour la tête $court. Livraison en cours.';
+    }
+    if (networkRulesAckValid) return 'Accord donné pour la tête $court.';
+    return 'Accord annulé par un nouveau commit.';
+  }
 
   /// `completed` quand tous les derniers runs de la CI sont finis ; sinon
   /// l'état d'un run en cours ; `null` sans run.
@@ -111,10 +183,64 @@ class TicketDelivery {
         ),
       );
     }
+    final files = <String>[];
+    final rawFiles = data['network_rules_files'];
+    if (rawFiles != null) {
+      if (rawFiles is! List) {
+        throw const DocumentIllisible('network_rules_files', 'liste attendue');
+      }
+      for (final f in rawFiles) {
+        if (f is! String) {
+          throw const DocumentIllisible('network_rules_files', 'texte attendu');
+        }
+        files.add(f);
+      }
+    }
+    final controls = <int>[];
+    final rawControls = data['network_rules_controls'];
+    if (rawControls != null) {
+      if (rawControls is! List) {
+        throw const DocumentIllisible(
+          'network_rules_controls',
+          'liste attendue',
+        );
+      }
+      for (final c in rawControls) {
+        if (c is! num || c != c.truncateToDouble() || c < 0) {
+          throw const DocumentIllisible(
+            'network_rules_controls',
+            'entier positif attendu',
+          );
+        }
+        controls.add(c.toInt());
+      }
+    }
+    AccordRegles? ack;
+    final rawAck = read.objetFacultatif('network_rules_ack');
+    if (rawAck != null) {
+      final sha = rawAck.texteFacultatif('head_sha');
+      if (sha != null) {
+        ack = AccordRegles(
+          headSha: sha,
+          at: rawAck.date('at'),
+          publie: rawAck.nombreFacultatif('comment_id') != null,
+        );
+      }
+    }
     return TicketDelivery(
       eligiblePrCount: entier('eligible_pr_count') ?? 0,
       prNumber: entier('pr_number'),
       prUrl: read.texteFacultatif('pr_url'),
+      headSha: read.texteFacultatif('head_sha'),
+      networkRulesFiles: List.unmodifiable(files),
+      networkRulesControls: List.unmodifiable(controls),
+      networkRulesControlsComplete:
+          read.boolFacultatif('network_rules_controls_complete') ?? true,
+      sensitiveFile: read.texteFacultatif('sensitive_files'),
+      filesComplete: read.boolFacultatif('files_complete') ?? true,
+      networkRulesAck: ack,
+      networkRulesAckValid:
+          read.boolFacultatif('network_rules_ack_valid') ?? false,
       ciStatus: read.texteFacultatif('ci_status'),
       ciConclusion: read.texteFacultatif('ci_conclusion'),
       ciCompletedAt: read.date('ci_completed_at'),
@@ -148,6 +274,43 @@ Uri? lienPullRequestOuvrable(String? url) {
       RegExp(r'^[1-9][0-9]{0,6}$').hasMatch(s[3]);
   return ok ? uri : null;
 }
+
+/// Adresse du diff d'une PR, `https://github.com/ChinaFred/KassBeer/pull/<n>/files`
+/// relue par `Uri.tryParse` ; `null` sinon : rien n'est ouvert (P39, ADR-020).
+Uri? lienDiffPullRequest(int? prNumber) {
+  if (prNumber == null) return null;
+  final uri = Uri.tryParse(
+    'https://github.com/ChinaFred/KassBeer/pull/$prNumber/files',
+  );
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      uri.host != 'github.com' ||
+      uri.userInfo.isNotEmpty ||
+      uri.hasPort ||
+      uri.hasQuery ||
+      uri.hasFragment) {
+    return null;
+  }
+  final s = uri.pathSegments;
+  final ok =
+      s.length == 5 &&
+      s[0] == 'ChinaFred' &&
+      s[1] == 'KassBeer' &&
+      s[2] == 'pull' &&
+      RegExp(r'^[1-9][0-9]{0,6}$').hasMatch(s[3]) &&
+      s[4] == 'files';
+  return ok ? uri : null;
+}
+
+/// « P10, P65 », ou « aucun ».
+String listeControles(List<int> controls) =>
+    controls.isEmpty ? 'aucun' : controls.map((c) => 'P$c').join(', ');
+
+/// Libellé du bouton qui remplace « Livrer » pour une PR de règles.
+const kApprouverRegles = 'Approuver les règles et livrer';
+
+/// Étiquette d'une PR qui change les règles du réseau (liste et fiche).
+const kReglesModifiees = 'Règles du réseau modifiées';
 
 /// Texte d'un compte rendu sans sa ligne de titre (`## Livraison — …`), que
 /// le titre de la carte remplace (P33).
@@ -200,6 +363,7 @@ class LigneLivraison {
     this.verrouTicketId,
     this.verrouIssue,
     this.masquerRefuserClore = false,
+    this.reglesDuReseau = false,
   });
 
   final TonLivraison ton;
@@ -214,6 +378,10 @@ class LigneLivraison {
   final String? verrouTicketId;
   final int? verrouIssue;
   final bool masquerRefuserClore;
+
+  /// La PR change les règles du réseau : le bouton de [action] `livraison`
+  /// est « Approuver les règles et livrer » (ADR-020).
+  final bool reglesDuReseau;
 }
 
 /// « le 13/11/26 à 14:05 », ou « 14:05 » le même jour que [now].
@@ -243,6 +411,11 @@ const kCiLectureRefusee =
 /// Ligne d'un `admin/delivery` illisible : une version plus récente l'a écrit.
 const kEtatPrIllisible =
     'État de la pull request illisible. Mettez l\'application à jour.';
+
+/// PR de règles sans tête ou sans numéro dans `admin/delivery` : rien ne
+/// s'approuve sans eux.
+const kEtatPrIncomplet =
+    'État de la PR incomplet : rouvrez la fiche dans un instant.';
 
 /// Ligne d'un `admin/delivery` en panne de lecture, avec « Réessayer ».
 const kEtatPrEnPanne = 'État de la pull request illisible.';
@@ -412,10 +585,11 @@ LigneLivraison? ligneLivraison({
   // 7. CI en cours.
   final ci = doc.ciStatus;
   if (ci != null && ci != 'completed') {
+    final bouton = doc.reglesDuReseau ? kApprouverRegles : 'Livrer';
     return LigneLivraison(
       ton: TonLivraison.info,
       texte:
-          'CI de la PR #$pr en cours. « Livrer » sera proposé quand elle sera '
+          'CI de la PR #$pr en cours. « $bouton » sera proposé quand elle sera '
           'verte.',
     );
   }
@@ -427,6 +601,40 @@ LigneLivraison? ligneLivraison({
                 'sur GitHub.'
           : 'CI de la PR #$pr terminée sans succès. Ouvrez la PR pour la '
                 'suivre sur GitHub.',
+    );
+  }
+  // 7 bis. PR qui change les règles du réseau mais ne peut pas être approuvée
+  // depuis l'application (ADR-020) : champs écrits par le serveur.
+  final regles = doc.reglesDuReseau;
+  if (regles && doc.sensitiveFile != null) {
+    return LigneLivraison(
+      ton: TonLivraison.info,
+      texte:
+          'PR #$pr prête. Elle change les règles du réseau et un fichier '
+          'protégé (${doc.sensitiveFile}) : fusionnez-la vous-même après '
+          'relecture.',
+    );
+  }
+  if (regles && !doc.filesComplete) {
+    return LigneLivraison(
+      ton: TonLivraison.info,
+      texte:
+          'La liste des fichiers de la PR #$pr est trop longue pour être '
+          'vérifiée. Fusionnez-la vous-même après relecture.',
+    );
+  }
+  if (regles && !doc.networkRulesControlsComplete) {
+    return LigneLivraison(
+      ton: TonLivraison.info,
+      texte:
+          'PR #$pr prête. Les contrôles changés ne peuvent pas être lus : '
+          'fusionnez-la vous-même après relecture.',
+    );
+  }
+  if (regles && doc.headSha == null) {
+    return const LigneLivraison(
+      ton: TonLivraison.info,
+      texte: kEtatPrIncomplet,
     );
   }
   // 8. PR prête.
@@ -458,11 +666,12 @@ LigneLivraison? ligneLivraison({
     );
   }
   if (appelEnCours) {
-    return const LigneLivraison(
+    return LigneLivraison(
       ton: TonLivraison.progression,
       texte: 'Lancement de la livraison en cours.',
       progression: 'Lancement en cours',
       action: ActionLancement.livraison,
+      reglesDuReseau: regles,
     );
   }
   if (plafond) {
@@ -470,6 +679,7 @@ LigneLivraison? ligneLivraison({
       ton: TonLivraison.plafond,
       texte: ligneQuota(quota),
       action: ActionLancement.livraison,
+      reglesDuReseau: regles,
     );
   }
   final precedente = historique?.aRelancer(
@@ -490,16 +700,22 @@ LigneLivraison? ligneLivraison({
       action: ActionLancement.livraison,
       actif: actif(),
       relanceDe: precedenteAt,
+      reglesDuReseau: regles,
     );
   }
   final verte = doc.ciCompletedAt;
+  final ciVerte = verte == null
+      ? 'PR #$pr prête : CI verte.'
+      : 'PR #$pr prête : CI verte ${dateLancement(verte.toLocal())}.';
   return LigneLivraison(
     ton: TonLivraison.prete,
-    texte: verte == null
-        ? 'PR #$pr prête : CI verte.'
-        : 'PR #$pr prête : CI verte ${dateLancement(verte.toLocal())}.',
+    texte: regles
+        ? '$ciVerte Elle change les règles du réseau : lisez le diff avant '
+              'd\'approuver.'
+        : ciVerte,
     action: ActionLancement.livraison,
     actif: actif(),
+    reglesDuReseau: regles,
   );
 }
 

@@ -1,15 +1,22 @@
 // Prompts des routines (ADR-008, « Prompts », P40) : le motif du texte de lancement écrit dans
-// chaque prompt de `exigences-techniques.md` (« Routines des tickets ») égale celui du serveur,
-// routine par routine (analyse : `analyse` ; développement : `developpement`, `livraison`,
-// `reprise`), les interdits de P40 restent dans le prompt de développement, et la liste L3
-// des fichiers sensibles égale celle de `delivery.ts` (tableau « Logique dupliquée »).
+// chaque prompt de `documentation/prompts-routines.md` (ADR-020, décision 6) égale celui du
+// serveur, routine par routine (analyse : `analyse` ; développement : `developpement`,
+// `livraison`, `reprise`), les interdits de P40 restent dans le prompt de développement, et le
+// point 5, L3a, L3b et le gabarit de l'accord égalent les listes et le gabarit de
+// `delivery.ts` (P65, tableau « Logique dupliquée »).
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-import { SENSITIVE_DELIVERY_PATTERNS, isSensitiveDeliveryPath } from "../src/tickets/delivery";
+import {
+  FORBIDDEN_DEVELOPMENT_PATTERNS,
+  NETWORK_RULES_ACK_TEMPLATE,
+  NETWORK_RULES_PATTERNS,
+  SENSITIVE_DELIVERY_PATTERNS,
+  isSensitiveDeliveryPath,
+} from "../src/tickets/delivery";
 import {
   LAUNCH_ACTIONS,
   LAUNCH_ROUTINE,
@@ -18,7 +25,7 @@ import {
   type LaunchAction,
 } from "../src/tickets/launchModel";
 
-const doc = readFileSync(join(__dirname, "../../../documentation/exigences-techniques.md"), "utf8");
+const doc = readFileSync(join(__dirname, "../../../documentation/prompts-routines.md"), "utf8");
 
 /** Le bloc ```text qui suit le titre en gras `title`. */
 function promptBlock(title: string): string {
@@ -40,28 +47,49 @@ function actionsOf(routine: keyof typeof PROMPTS): LaunchAction[] {
   return LAUNCH_ACTIONS.filter((a) => LAUNCH_ROUTINE[a] === routine);
 }
 
-/** Le motif attendu dans le prompt d'une routine. */
-function expectedPattern(routine: keyof typeof PROMPTS): string {
-  const actions = actionsOf(routine);
+/**
+ * Les motifs attendus dans le prompt d'une routine : `<action> #N` pour les actions sans
+ * tête, `livraison #N <tête>` à part (décision de l'utilisateur du 2026-11-23).
+ */
+function expectedPatterns(routine: keyof typeof PROMPTS): string[] {
+  const actions = actionsOf(routine).filter((a) => a !== "livraison");
   const head = actions.length === 1 ? actions[0] : `(${actions.join("|")})`;
-  return `^${head} #[1-9][0-9]{0,6}$`;
+  const out = [`^${head} #[1-9][0-9]{0,6}$`];
+  if (actionsOf(routine).includes("livraison")) {
+    out.push("^livraison #[1-9][0-9]{0,6} [0-9a-f]{40}$");
+  }
+  return out;
 }
 
-/** Les motifs de la liste L3 du prompt de développement, un par ligne « - motif ». */
-function l3Patterns(prompt: string): string[] {
-  const start = prompt.indexOf("\nL3. ");
-  const end = prompt.indexOf("\nL4. ", start);
-  assert.ok(start >= 0 && end > start, "bloc L3 absent");
-  return prompt
-    .slice(start, end)
+/** Une tête de PR pour les textes de livraison. */
+const SHA = "0123456789abcdef0123456789abcdef01234567";
+
+/** Le texte du prompt entre deux débuts de ligne. */
+function between(prompt: string, from: string, to: string): string {
+  const start = prompt.indexOf(from);
+  const end = prompt.indexOf(to, start + from.length);
+  assert.ok(start >= 0 && end > start, `bloc absent : ${from.trim()}`);
+  return prompt.slice(start, end);
+}
+
+/** Les motifs d'un bloc, un par ligne « - motif ». */
+function listPatterns(block: string): string[] {
+  return block
     .split("\n")
     .map((line) => /^\s+- (\S+)$/.exec(line)?.[1])
     .filter((p): p is string => p !== undefined);
 }
 
+/** Les blocs L3a et L3b et le point 5 du prompt de développement. */
+const l3a = (prompt: string) => between(prompt, "\nL3a. ", "\nL3b. ");
+const l3b = (prompt: string) => between(prompt, "\nL3b. ", "\nL4. ");
+const point5 = (prompt: string) => between(prompt, "\n5. ", "\n6. ");
+
 /** Les expressions `^… #[1-9][0-9]{0,6}$` citées par un prompt. */
 function promptPatterns(prompt: string): string[] {
-  return [...prompt.matchAll(/\^\S+? #\[1-9\]\[0-9\]\{0,6\}\$/g)].map((m) => m[0]);
+  return [...prompt.matchAll(/\^\S+? #\[1-9\]\[0-9\]\{0,6\}(?: \[0-9a-f\]\{40\})?\$/g)].map(
+    (m) => m[0],
+  );
 }
 
 /** Fichiers sensibles ajoutés le 2026-11-13 (ADR-008, « Livraison », décision de l'utilisateur). */
@@ -85,25 +113,132 @@ describe("prompts des routines (P40)", () => {
     assert.deepEqual(actionsOf("analyse"), ["analyse"]);
     assert.deepEqual(actionsOf("developpement"), ["developpement", "livraison", "reprise"]);
     for (const routine of Object.keys(PROMPTS) as (keyof typeof PROMPTS)[]) {
-      assert.deepEqual(promptPatterns(PROMPTS[routine]), [expectedPattern(routine)], routine);
+      assert.deepEqual(promptPatterns(PROMPTS[routine]), expectedPatterns(routine), routine);
     }
   });
 
   it("le texte envoyé par le serveur suit le motif de sa routine, et lui seul", () => {
     for (const action of LAUNCH_ACTIONS) {
       const routine = LAUNCH_ROUTINE[action];
-      const [pattern] = promptPatterns(PROMPTS[routine]);
-      const text = launchCommandText(action, 1234567);
-      assert.match(text, new RegExp(pattern));
+      const patterns = promptPatterns(PROMPTS[routine]).map((p) => new RegExp(p));
+      const text = launchCommandText(action, 1234567, SHA);
+      assert.ok(
+        patterns.some((re) => re.test(text)),
+        `${text} hors des motifs de ${routine}`,
+      );
       assert.match(text, LAUNCH_TEXT_PATTERN);
       for (const other of LAUNCH_ACTIONS.filter((a) => LAUNCH_ROUTINE[a] !== routine)) {
-        assert.doesNotMatch(launchCommandText(other, 12), new RegExp(pattern));
+        const otherText = launchCommandText(other, 12, SHA);
+        assert.ok(!patterns.some((re) => re.test(otherText)), otherText);
       }
     }
   });
 
-  it("livraison : liste L3 du prompt égale à SENSITIVE_DELIVERY_PATTERNS (logique dupliquée)", () => {
-    assert.deepEqual(l3Patterns(PROMPTS.developpement), [...SENSITIVE_DELIVERY_PATTERNS]);
+  it("livraison : liste L3a du prompt égale à SENSITIVE_DELIVERY_PATTERNS (P65)", () => {
+    assert.deepEqual(listPatterns(l3a(PROMPTS.developpement)), [...SENSITIVE_DELIVERY_PATTERNS]);
+  });
+
+  it("livraison : liste L3b du prompt égale à NETWORK_RULES_PATTERNS (P65)", () => {
+    assert.deepEqual(listPatterns(l3b(PROMPTS.developpement)), [...NETWORK_RULES_PATTERNS]);
+  });
+
+  it("développement : liste du point 5 égale à FORBIDDEN_DEVELOPMENT_PATTERNS (P65)", () => {
+    assert.deepEqual(listPatterns(point5(PROMPTS.developpement)), [
+      ...FORBIDDEN_DEVELOPMENT_PATTERNS,
+    ]);
+    const flat = point5(PROMPTS.developpement).replace(/\s+/g, " ");
+    assert.ok(flat.includes("sauf les quatre fichiers des règles du réseau de L3b"), "exception");
+    for (const path of NETWORK_RULES_PATTERNS) {
+      assert.ok(flat.includes(path), `point 5 : règle du réseau ${path}`);
+    }
+    for (const needle of [
+      "tout autre fichier de scripts/ et tout CLAUDE.md d'un sous-dossier restent interdits",
+      "relecteur-regles et securite",
+      "liste les sections et les contrôles Pn de CLAUDE.md changés",
+      "Approuver les règles et livrer",
+    ]) {
+      assert.ok(flat.includes(needle), `point 5 : ${needle}`);
+    }
+  });
+
+  it("livraison : gabarit de l'accord en L3b égal à celui du serveur (P24, P65)", () => {
+    const lines = l3b(PROMPTS.developpement).split("\n");
+    const start = lines.findIndex((l) => l.trim() === NETWORK_RULES_ACK_TEMPLATE[0]);
+    assert.ok(start >= 0, "gabarit absent de L3b");
+    const indent = lines[start].length - lines[start].trimStart().length;
+    const cited = lines
+      .slice(start, start + NETWORK_RULES_ACK_TEMPLATE.length)
+      .map((l) => l.slice(indent));
+    assert.deepEqual(cited, [...NETWORK_RULES_ACK_TEMPLATE]);
+    const flat = l3b(PROMPTS.developpement).replace(/\s+/g, " ");
+    for (const needle of [
+      "du compte d'identifiant 16348852",
+      "égale la <tête> du texte de lancement (égale à head.sha relu en L2)",
+      "l'ensemble des chemins de cette liste que touche la pull request",
+      "casse comprise",
+    ]) {
+      assert.ok(flat.includes(needle), `L3b : ${needle}`);
+    }
+  });
+
+  it("livraison : L8 limite les commits après la tête accordée (ADR-020)", () => {
+    const l8 = between(PROMPTS.developpement, "\nL8. ", "\nL9. ").replace(/\s+/g, " ");
+    assert.ok(
+      l8.includes(
+        "git rev-list --first-parent <tête accordée>..<ce sha> ne rend rien, ou seulement le " +
+          "commit de fusion de L6, dont le premier parent est la tête accordée",
+      ),
+    );
+    assert.ok(
+      l8.includes(
+        "Si origin/main a avancé depuis L5 : pour une pull request qui touche un fichier de " +
+          "L3b, c'est un blocage (pas de second tour de L5) ; pour les autres, recommence en " +
+          "L5 (trois tours au plus, sinon blocage).",
+      ),
+      "L8 : avancée de main sur une PR de règles",
+    );
+    const merge =
+      /git diff --quiet \$\(git merge-tree --write-tree <tête accordée> origin\/main \| head -n 1\) <ce sha> -- (.+?) doit réussir \(les quatre chemins de la liste de L3b, qu'ils soient touchés ou non par la pull request\) ; sinon blocage \(« le commit de fusion change les règles du réseau au-delà de main »\)\./.exec(
+        l8,
+      );
+    assert.ok(merge !== null, "L8 : contenu du commit de fusion");
+    // Les chemins comparés sont ceux de la catégorie 2, tous (P65).
+    assert.deepEqual(merge[1].split(" "), [...NETWORK_RULES_PATTERNS]);
+    const l7 = between(PROMPTS.developpement, "\nL7. ", "\nL8. ").replace(/\s+/g, " ");
+    assert.ok(
+      l7.includes(
+        "Pour une pull request qui touche un fichier de L3b, le job « Version et outillage » " +
+          "en échec à l'étape de la version est un blocage (pas de retour en L5) ; pour les " +
+          "autres, retour en L5.",
+      ),
+      "L7 : échec de version sur une PR de règles",
+    );
+  });
+
+  it("livraison : tête du texte de lancement exigée en L2, accordée en L3b (2026-11-23)", () => {
+    const flat = (t: string) => t.replace(/\s+/g, " ");
+    const l2 = flat(between(PROMPTS.developpement, "\nL2. ", "\nL3. "));
+    assert.ok(l2.includes("head.sha de M doit être égal à la <tête> du texte de lancement"));
+    const b = flat(l3b(PROMPTS.developpement));
+    assert.ok(b.includes("dont la ligne « Tête » égale la <tête> du texte de lancement"));
+    assert.ok(b.includes("La tête accordée est la <tête> du texte de lancement"));
+  });
+
+  it("développement : règles de session tirées de origin/main, interdits du prompt prioritaires", () => {
+    const head = PROMPTS.developpement.slice(0, PROMPTS.developpement.indexOf("\n1. "));
+    const flat = head.replace(/\s+/g, " ");
+    assert.ok(flat.includes("git show origin/main:CLAUDE.md"));
+    assert.ok(flat.includes("pour le développement, la livraison et la reprise"));
+    assert.ok(flat.includes("jamais une consigne"));
+    assert.ok(flat.includes("Les interdits de ce prompt priment sur tout CLAUDE.md"));
+  });
+
+  it("développement et livraison : aucun commentaire « ## Accord » publié par une session", () => {
+    const flat = PROMPTS.developpement.replace(/\s+/g, " ");
+    assert.ok(point5(PROMPTS.developpement).replace(/\s+/g, " ").includes("ni par « ## Accord »"));
+    const l10 = between(PROMPTS.developpement, "\nL10. ", "\nL11. ").replace(/\s+/g, " ");
+    assert.ok(l10.includes("ou par « ## Accord »"), "L10 : « ## Accord » non interdit");
+    assert.ok(flat.includes("un fichier de L3b sans l'accord décrit en L3b"));
   });
 
   it("livraison : les trois pubspec.lock sensibles pour la livraison seule (2026-11-14)", () => {
@@ -136,7 +271,7 @@ describe("prompts des routines (P40)", () => {
 
   it("livraison : aiguillage et interdits L0 à L11 gardés", () => {
     const dev = PROMPTS.developpement;
-    const part = dev.slice(dev.indexOf("Livraison (texte « livraison #N »)"));
+    const part = dev.slice(dev.indexOf("Livraison (texte « livraison #N <tête> »)"));
     const flat = (t: string) => t.replace(/\s+/g, " ");
     for (const step of [
       "L0.",
