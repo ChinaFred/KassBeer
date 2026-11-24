@@ -99,6 +99,9 @@ class RecipeDetailScreen extends ConsumerStatefulWidget {
       'réseau.';
   static const formesRefusees = 'Les formes n\'ont pas été enregistrées.';
 
+  /// Titre de la section de la description aromatique (`aroma_description`).
+  static const aromaTitre = 'Description aromatique';
+
   @override
   ConsumerState<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
 }
@@ -420,6 +423,12 @@ class _Fiche extends StatelessWidget {
             ),
           ),
         ],
+        // Description saisie par l'auteur ; absente : aucune section.
+        if (c.aromaDescription case final arome?)
+          CarteSection(
+            titre: RecipeDetailScreen.aromaTitre,
+            children: [Text(arome)],
+          ),
         CarteSection(
           titre: 'Calculs',
           children: [

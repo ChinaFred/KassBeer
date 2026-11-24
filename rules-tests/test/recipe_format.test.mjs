@@ -410,6 +410,11 @@ describe("brews — copie figée au format BeerJSON partiel", () => {
 // (7 refusés) ; création du brassin qui la copie 0 `pad10()`, un `pad()` passe et deux sont
 // refusés : marge nulle. `optList` et `optArray` sur `ai_proposed` faisaient refuser cette
 // création.
+//
+// Mesure de la v0.2.19 (description aromatique, `aroma_description` contrôlée par
+// `isRecipeShape` seule) : création du brassin inchangée (un `pad()` passe, deux sont
+// refusés) ; création de la plus grande recette 5 `pad10()` (6 avant), avec ou sans
+// description de 500 caractères ; modification qui pose cette description 4 `pad10()`.
 describe("recipes et brews — budget des règles", () => {
   const g = (value) => ({ value, unit: "g" });
   const largest = (owner) =>
@@ -458,6 +463,31 @@ describe("recipes et brews — budget des règles", () => {
       db(state.env, "owner")
         .doc("recipes/budget")
         .set(fresh({ ...largest(uidOf("owner")), owner_name: nameOf("owner") })),
+    );
+  });
+
+  it("recette la plus grande permise, description aromatique de 500 caractères : autorisé", async () => {
+    await expectRule(
+      true,
+      db(state.env, "owner")
+        .doc("recipes/budget-arome")
+        .set(
+          fresh({
+            ...largest(uidOf("owner")),
+            owner_name: nameOf("owner"),
+            aroma_description: "a".repeat(500),
+          }),
+        ),
+    );
+  });
+
+  it("modification de la recette la plus grande permise, description de 500 caractères : autorisé", async () => {
+    const fs = db(state.env, "owner");
+    const ref = fs.doc("recipes/budget-arome-modif");
+    await ref.set(fresh({ ...largest(uidOf("owner")), owner_name: nameOf("owner") }));
+    await expectRule(
+      true,
+      ref.update({ aroma_description: "a".repeat(500), updated_at: serverTimestamp() }),
     );
   });
 

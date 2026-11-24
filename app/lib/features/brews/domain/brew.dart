@@ -222,9 +222,11 @@ Map<String, dynamic> _map(Object? value, String field) {
 /// (`format_version`, propriétaire, équipement, chronologie, `updated_at` de la
 /// recette) et sous-arbre `recipe` en BeerJSON partiel. Elle se relit par
 /// [RecipeContent.fromFirestore] : une version de format inconnue rend le brassin
-/// illisible.
+/// illisible. La description aromatique (`aroma_description`) n'est pas copiée :
+/// les règles la refusent dans `recipe_snapshot` (budget de la création d'un
+/// brassin).
 Map<String, Object?> recipeSnapshot(Recipe recipe) => {
-  ...recipe.content.toFirestore(creation: true),
+  ...recipe.content.toFirestore(creation: true)..remove('aroma_description'),
   'owner_uid': recipe.ownerUid,
   'owner_name': ?recipe.ownerName,
   if (recipe.updatedAt != null)

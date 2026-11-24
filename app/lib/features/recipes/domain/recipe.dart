@@ -32,6 +32,10 @@ const kRecipeAuthorMaxLength = 120;
 /// Longueur maximale des notes (`firestore.rules`).
 const kRecipeNotesMaxLength = 10000;
 
+/// Longueur maximale de la description aromatique (`aroma_description`,
+/// `firestore.rules`), en unités UTF-16 comme `size()` des règles.
+const kRecipeAromaMaxLength = 500;
+
 /// Longueur maximale du nom d'un ingrédient ou d'un palier saisi.
 const kIngredientNameMaxLength = 120;
 
@@ -531,6 +535,7 @@ class RecipeContent {
     this.brewSteps = const [],
     this.brewStepsProblem,
     this.importedFrom,
+    this.aromaDescription,
     this.aiProposed = const [],
     this.aiProposedIllisibles = 0,
   });
@@ -575,6 +580,12 @@ class RecipeContent {
   /// qui repère un second import du même contenu. Vide pour une recette saisie
   /// ou dupliquée.
   final String? importedFrom;
+
+  /// Description aromatique saisie par l'auteur (`aroma_description`, champ de
+  /// l'enveloppe, jamais dans `recipe`), de 1 à [kRecipeAromaMaxLength]
+  /// caractères ; `null` si vide. Lue par la liste (filtre « Arômes ») et la
+  /// fiche. La copie figée d'un brassin ne la garde pas ([recipeSnapshot]).
+  final String? aromaDescription;
 
   /// Valeurs techniques « proposées par l'IA » (`ai_proposed`, ADR-015, lot
   /// A2) : marques `<nature>:<ingredientKey>:<champ>`, lues par `exchange/`.
@@ -630,6 +641,7 @@ class RecipeContent {
       brewSteps: chronologie.steps,
       brewStepsProblem: chronologie.problem,
       importedFrom: envelope.texteFacultatif('imported_from'),
+      aromaDescription: envelope.texteFacultatif('aroma_description'),
       aiProposed: marques.marques,
       aiProposedIllisibles: marques.illisibles,
     );
@@ -691,6 +703,7 @@ class RecipeContent {
       if (creation && brewSteps.isNotEmpty)
         'brew_steps': [for (final b in brewSteps) b.toFirestore()],
       ...opt('imported_from', text(importedFrom)),
+      ...opt('aroma_description', text(aromaDescription)),
       ...opt('ai_proposed', marques.isEmpty ? null : ecrireMarques(marques)),
       'recipe': recipe,
     };
@@ -707,8 +720,8 @@ class RecipeContent {
   );
 
   /// Copie pour « Dupliquer » (R7) : « Copie de {nom} » coupé à 120 caractères,
-  /// mêmes ingrédients, paliers, chronologie (mêmes clés), équipement et auteur
-  /// de la recette d'origine, sans fiche d'origine.
+  /// mêmes ingrédients, paliers, chronologie (mêmes clés), équipement, auteur
+  /// et description aromatique de la recette d'origine, sans fiche d'origine.
   RecipeContent duplicate() => RecipeContent(
     name: truncateName('Copie de ${name.trim()}', kRecipeNameMaxLength),
     type: type,
@@ -725,6 +738,7 @@ class RecipeContent {
     yeasts: yeasts,
     mashSteps: mashSteps,
     brewSteps: brewSteps,
+    aromaDescription: aromaDescription,
     aiProposed: aiProposed,
   );
 
@@ -768,6 +782,7 @@ class RecipeContent {
     brewSteps: brewSteps,
     brewStepsProblem: brewStepsProblem,
     importedFrom: importedFrom,
+    aromaDescription: aromaDescription,
     aiProposed: aiProposed,
   );
 
@@ -791,6 +806,7 @@ class RecipeContent {
     brewSteps: brewSteps,
     brewStepsProblem: brewStepsProblem,
     importedFrom: importedFrom,
+    aromaDescription: aromaDescription,
     aiProposed: List.unmodifiable(marques),
   );
 

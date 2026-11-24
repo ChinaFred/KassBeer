@@ -282,7 +282,7 @@ void main() {
       // Appels qui ouvrent un menu ou une fenêtre. Les définitions de
       // feuille_ou_dialogue.dart et ecriture.dart ne sont pas des appels.
       final call = RegExp(
-        r'\b(showFeuilleOuDialogue|showDialog|showModalBottomSheet|'
+        r'\b(showFeuilleOuDialogue|showFeuilleOuDialogueAPied|showDialog|showModalBottomSheet|'
         r'PopupMenuButton|MenuAnchor|confirmerActionOuAlternative|'
         r'confirmerAction|confirmerAbandon|confirmerSuppression|'
         r'showDatePicker|showTimePicker|showMenu|showGeneralDialog|'

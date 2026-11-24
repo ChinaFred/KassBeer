@@ -53,6 +53,14 @@ class RecipeEditorScreen extends ConsumerWidget {
 
   static const readOnlyMessage = 'Seul l\'auteur modifie cette recette.';
 
+  /// Champ « Description aromatique » (`aroma_description`).
+  static const aromaLabel = 'Description aromatique (facultatif)';
+  static const aromaAide =
+      'Ce que l\'on sent et goûte : agrumes, caramel, épices… Le filtre '
+      '« Arômes » de la liste cherche dans ce texte.';
+  static const aromaTropLongue =
+      'La description aromatique dépasse $kRecipeAromaMaxLength caractères.';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final id = this.id;
@@ -124,6 +132,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
   late final TextEditingController _boil;
   late final TextEditingController _grainTemp;
   late final TextEditingController _notes;
+  late final TextEditingController _aroma;
   // Listes modifiées en place, jamais remplacées : « Annuler » après un retrait
   // réinsère la ligne dans la liste que l'écran affiche.
   late final List<FermentableLine> _fermentables;
@@ -234,6 +243,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     _boil = TextEditingController(text: texteSaisi(c?.boilTimeMin));
     _grainTemp = TextEditingController(text: texteSaisi(c?.grainTempC));
     _notes = TextEditingController(text: c?.notes ?? '');
+    _aroma = TextEditingController(text: c?.aromaDescription ?? '');
     _fermentables = [...?c?.fermentables];
     _hops = [...?c?.hops];
     _others = [...?c?.others];
@@ -247,7 +257,15 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
 
   @override
   void dispose() {
-    for (final c in [_name, _style, _volume, _boil, _grainTemp, _notes]) {
+    for (final c in [
+      _name,
+      _style,
+      _volume,
+      _boil,
+      _grainTemp,
+      _notes,
+      _aroma,
+    ]) {
       c.dispose();
     }
     _nameFocus.dispose();
@@ -415,6 +433,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
     _boil.text = texteSaisi(c.boilTimeMin);
     _grainTemp.text = texteSaisi(c.grainTempC);
     _notes.text = c.notes ?? '';
+    _aroma.text = c.aromaDescription ?? '';
     _type = c.type;
     _replace(_fermentables, sortFermentables(c.fermentables));
     _replace(_hops, sortHops(c.hops));
@@ -734,6 +753,7 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
       type: _type,
       style: text(_style),
       notes: text(_notes),
+      aromaDescription: text(_aroma),
       batchVolumeL: _positive(_volume.text),
       boilTimeMin: _withinBoil(_boil.text),
       grainTempC: _grainTemperature(_grainTemp.text),
@@ -1443,6 +1463,26 @@ class _RecipeEditorState extends ConsumerState<_RecipeEditor> {
             : null,
       ),
       section(_Section.notes, 'Notes'),
+      TextFormField(
+        controller: _aroma,
+        maxLength: kRecipeAromaMaxLength,
+        minLines: 2,
+        maxLines: 6,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(
+          labelText: RecipeEditorScreen.aromaLabel,
+          helperText: RecipeEditorScreen.aromaAide,
+          helperMaxLines: 3,
+        ),
+        // Les règles comptent des unités UTF-16 (`String.length`), le compteur
+        // du champ des graphèmes : un émoji y compte pour un, et pour deux ou
+        // plus dans les règles. Refus avant l'écriture.
+        validator: (v) => (v ?? '').trim().length > kRecipeAromaMaxLength
+            ? RecipeEditorScreen.aromaTropLongue
+            : null,
+        onChanged: _changed,
+      ),
+      const SizedBox(height: 8),
       TextFormField(
         controller: _notes,
         maxLength: kRecipeNotesMaxLength,

@@ -72,6 +72,28 @@ class CarreTeinte extends StatelessWidget {
   );
 }
 
+/// Disque de [taille] px d'une teinte `0xRRGGBB`, bordé comme [CarreTeinte] :
+/// repère d'une recette dans la liste. Décoratif : la ligne écrit l'EBC.
+class DisqueTeinte extends StatelessWidget {
+  const DisqueTeinte({super.key, required this.teinte, this.taille = 40});
+
+  final int teinte;
+  final double taille;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Container(
+      width: taille,
+      height: taille,
+      decoration: BoxDecoration(
+        color: couleurTeinte(teinte),
+        shape: BoxShape.circle,
+        border: bordureTeinte(context),
+      ),
+    ),
+  );
+}
+
 /// Pastille de teinte d'une couleur [ebc] (fiche d'un malt, couleur calculée
 /// d'une recette). Une valeur refusée par `brewing/` masque la pastille et
 /// passe une fois par `reportError` (`library.color_swatch`).

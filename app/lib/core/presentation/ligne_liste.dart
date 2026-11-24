@@ -58,6 +58,8 @@ class RepereDisque extends StatelessWidget {
 ///
 /// [icone] : repère dans un disque de 40 px (`secondaryContainer`, ou
 /// `errorContainer` pour un document illisible quand [erreur] est vrai).
+/// [repere] : widget posé à la place de ce disque (teinte d'une recette),
+/// décoratif ; il l'emporte sur [icone].
 /// [details] : lignes sous le titre ; un `Text` sans style y prend
 /// `bodyMedium` en `onSurfaceVariant`. [etiquettes] : `Etiquette` ou pastilles
 /// rangées sous les détails. [trailing] : élément passif à droite, lu avec la
@@ -69,6 +71,7 @@ class LigneListe extends StatelessWidget {
     this.details = const [],
     this.etiquettes = const [],
     this.icone,
+    this.repere,
     this.iconeLabel,
     this.erreur = false,
     this.trailing,
@@ -85,6 +88,10 @@ class LigneListe extends StatelessWidget {
   final List<Widget> details;
   final List<Widget> etiquettes;
   final IconData? icone;
+
+  /// Repère libre de 40 px à la place du disque de [icone] ; `null` : le
+  /// disque de [icone], s'il y en a une.
+  final Widget? repere;
 
   /// Lecture du repère quand il porte une information (type d'un ticket) ;
   /// `null` : le repère est décoratif et n'est pas lu.
@@ -128,14 +135,16 @@ class LigneListe extends StatelessWidget {
     final trailing = this.trailing;
     final action = this.action;
 
-    final repere = icone == null
-        ? null
-        : RepereDisque(
-            icone: icone,
-            erreur: erreur,
-            choisi: selected,
-            label: iconeLabel,
-          );
+    final repere =
+        this.repere ??
+        (icone == null
+            ? null
+            : RepereDisque(
+                icone: icone,
+                erreur: erreur,
+                choisi: selected,
+                label: iconeLabel,
+              ));
 
     final contenu = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: kLigneListeMinHeight),

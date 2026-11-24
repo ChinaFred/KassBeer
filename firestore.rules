@@ -185,6 +185,12 @@ service cloud.firestore {
               'brew_steps', 'ai_proposed', 'recipe', 'created_at', 'updated_at'];
     }
 
+    // Champs d'un document recipes/ : ceux de la copie figée, plus la description
+    // aromatique (`aroma_description`), que la copie figée d'un brassin ne garde pas.
+    function recipeDocumentFields() {
+      return recipeFields().concat(['aroma_description']);
+    }
+
     // Couple {value, unit} : absent, ou complet dans l'unité canonique de la grandeur.
     // Jamais une unité sans valeur. Valeur finie et bornée, comme optNumber : une
     // comparaison avec un texte est une erreur, et une erreur refuse l'écriture.
@@ -254,8 +260,9 @@ service cloud.firestore {
     // format_version : 1 seulement ; un ancien document plat n'a ni ce champ ni
     // `recipe`, et il est refusé. Budget : la création d'un brassin évalue cette
     // fonction dans isBrewCreateShape, à moins de 1 000 expressions au total (voir brews/).
-    function isRecipeContent(d) {
-      return d.keys().hasOnly(recipeFields())
+    // [fields] : recipeDocumentFields() pour recipes/, recipeFields() pour la copie figée.
+    function isRecipeContent(d, fields) {
+      return d.keys().hasOnly(fields)
         && d.format_version is int
         && d.format_version == 1
         && isBeerJsonRecipe(d.recipe)
@@ -279,10 +286,18 @@ service cloud.firestore {
         && d.get('ai_proposed', []).size() <= 100;
     }
 
+    // Description aromatique (`aroma_description`), saisie par l'auteur : texte de 1 à
+    // 500 caractères (size() compte des unités UTF-16), absent quand il est vide ; un
+    // texte d'espaces seuls est refusé (trim()). Contrôlée ici seulement, jamais dans
+    // isRecipeContent : la marge de la création d'un brassin est nulle (voir ai_proposed),
+    // et la copie figée la refuse par sa liste de champs (recipeFields()).
     function isRecipeShape(d) {
-      return isRecipeContent(d)
+      return isRecipeContent(d, recipeDocumentFields())
         && d.keys().hasAll(['owner_uid', 'created_at', 'updated_at'])
-        && d.owner_uid is string;
+        && d.owner_uid is string
+        && (!('aroma_description' in d)
+            || (d.aroma_description is string && d.aroma_description.trim().size() >= 1
+                && d.aroma_description.size() <= 500));
     }
 
     match /recipes/{recipeId} {
@@ -501,7 +516,7 @@ service cloud.firestore {
         && d.equipment_snapshot.keys().hasOnly(equipmentFields())
         && snapshotOwnerNameOk(d.equipment_snapshot)
         && snapshotOwnerNameOk(d.recipe_snapshot)
-        && isRecipeContent(d.recipe_snapshot)
+        && isRecipeContent(d.recipe_snapshot, recipeFields())
         && optString(d, 'notes', 10000)
         && optString(d, 'imported_from', 200);
     }
@@ -552,6 +567,14 @@ service cloud.firestore {
     // Création du plus grand modèle de processus (5 journées de 60 éléments) :
     // 185 pad(). Un lot de 60 step_skipped, plus le début d'étape suivant, passe
     // (rules-tests/test/processes.test.mjs).
+    //
+    // Mesure de la v0.2.19 (description aromatique, même émulateur, même méthode) :
+    // aroma_description contrôlée par isRecipeShape seule, et isRecipeContent qui reçoit
+    // sa liste de champs. Création du brassin qui copie la plus grande recette : un pad()
+    // passe et deux sont refusés, comme avant (marge nulle inchangée). Création de la
+    // plus grande recette 5 pad10() (6 avant), avec ou sans description de 500
+    // caractères ; modification de cette recette qui pose une description de 500
+    // caractères 4 pad10() (5 refusés).
     //
     // Événements (heures estimées de la v0.1.69, densité et instrument de la v0.1.72) :
     // mesure de la v0.1.72, notée avant isEventShape (match /events ci-dessous), qui

@@ -1,6 +1,28 @@
 {
   "versions": [
     {
+      "version": "0.2.19",
+      "date": "2026-11-24",
+      "summaries": [
+        "La liste des recettes montre couleur, degré et arômes, et se filtre par style, degré, couleur ou arômes."
+      ],
+      "paragraphs": [
+        "Chaque recette de la liste porte un disque à la teinte de sa couleur calculée, son style, son degré et sa couleur, puis les deux premières lignes de sa description aromatique. Sans équipement ou sans rendement, le degré n'apparaît pas ; une recette que le calcul refuse porte « Calcul impossible ». Sur grand écran, le degré et la couleur passent à droite.",
+        "Une nouvelle origine « Autres » montre les recettes des autres brasseurs, à côté de « Toutes » et « Les miennes ». L'icône de filtre du champ de recherche ouvre « Filtrer les recettes » : styles, degré d'alcool et couleur par curseurs bornés aux valeurs des recettes, et mots de la description. Les filtres actifs s'affichent en puces que l'on retire une à une, et restent en place pendant la session.",
+        "L'auteur d'une recette peut écrire sa description aromatique (500 caractères) dans l'éditeur, section Notes. Elle s'affiche sur la fiche quand elle existe et suit la recette quand on la duplique. Un brassin ne la garde pas."
+      ]
+    },
+    {
+      "version": "0.2.18",
+      "date": "2026-11-23",
+      "summaries": [
+        "« Mettre en file » enregistre votre accord : une livraison part seule après la précédente."
+      ],
+      "paragraphs": [
+        "Admin › Tickets : quand une livraison est déjà en cours, ou qu'elle n'a pas encore publié son compte rendu, « Mettre en file » remplace « Livrer ». Votre accord est enregistré une fois : la livraison part seule, environ 5 minutes après le compte rendu de la précédente, de jour comme de nuit. Elle est comptée au départ, attend la remise à zéro si le plafond du jour est atteint, et sort de la file si le code de la pull request change ou si une livraison se bloque. La fiche montre la position dans la file, la raison de l'attente et l'accord donné ; la liste porte une pastille « En file 2/3 ». « Retirer de la file » annule l'accord. Une sortie de file sans départ est expliquée sur la fiche. Si la routine de développement est en pause ou refuse un départ, ou si son jeton est refusé, la file s'arrête sans perdre l'accord ; une fois la cause réglée, « Relancer la file », en tête de file, la fait repartir dans les 5 minutes, après les mêmes contrôles. Demandé par le ticket #104."
+      ]
+    },
+    {
       "version": "0.2.16",
       "date": "2026-11-23",
       "summaries": [
@@ -38,26 +60,6 @@
       ],
       "paragraphs": [
         "Sur la fiche d'une recette, la recette d'un brassin et une recette publique, un houblon ou un divers que la Bibliothèque connaît porte maintenant un chevron : un appui ouvre sa fiche, avec ses arômes ou sa description. La flèche du haut ou le retour du téléphone ramène à la recette. Un ingrédient que la Bibliothèque ne reconnaît pas reste affiché comme avant."
-      ]
-    },
-    {
-      "version": "0.2.5",
-      "date": "2026-11-22",
-      "summaries": [
-        "La fiche d'un divers dit à quoi il sert, quand l'ajouter et s'il change le goût."
-      ],
-      "paragraphs": [
-        "Dans la Bibliothèque, la fiche d'un divers dit maintenant à quoi il sert, à quel moment l'ajouter et s'il change le goût. La section « Utilisation » donne un résumé, ses rôles et un paragraphe par moment d'ajout (empâtage, ébullition, après ébullition, fermentation, embouteillage). La section « Goût » décrit le goût apporté, ou indique qu'il n'y a pas d'effet notable. Ces textes sont rédigés par une IA et ne donnent aucune dose : suivez la notice du fabricant. Ceux des divers utilisés dans les recettes du groupe sont relus par l'administrateur."
-      ]
-    },
-    {
-      "version": "0.2.1",
-      "date": "2026-11-22",
-      "summaries": [
-        "L'écran Nouveautés montre une ligne courte par version et un lien vers le journal complet."
-      ],
-      "paragraphs": [
-        "Chaque version affiche désormais un résumé d'une ligne. Le texte complet reste dans l'application, replié sous « Voir le détail ». Les versions déjà publiées n'ont pas de résumé : seul « Voir le détail » s'y affiche. En bas de l'écran, « Journal complet sur GitHub, versions plus récentes comprises » ouvre dans le navigateur le journal de toutes les versions, détail technique et versions plus récentes compris. Demandé par le ticket #114."
       ]
     }
   ]

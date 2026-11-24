@@ -10,7 +10,7 @@ l'invitation.
 
 | Rôle | Peut |
 |---|---|
-| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon et d'une levure, et la description d'un divers) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
+| `brewer` (Brasseur) | se connecter ; ouvrir Recettes, Bibliothèque, Brassins et Équipements ; consulter les styles, les ingrédients (dont les arômes d'un houblon et d'une levure, et la description d'un divers) et les recettes publiques de la Bibliothèque, et dupliquer une recette publique à son nom ; ouvrir « Échelle des couleurs » et « Sources des données » ; lire toutes les recettes (description aromatique comprise) et tous les équipements du groupe ; créer des recettes et des équipements, modifier et supprimer les siens ; dupliquer toute recette à son nom ; importer à son seul nom les recettes d'un fichier BeerXML ou BeerJSON (500 recettes et 10 Mo par fichier) ; exporter en BeerJSON ou en BeerXML toute recette lisible (BeerXML : style de la Bibliothèque) ; créer un brassin depuis toute recette ; lire les brassins du groupe, leurs étapes, leurs mesures, leurs relevés et leur embouteillage ; suivre le jour de brassage, noter les relevés de fermentation, embouteiller, changer le statut et modifier ses seuls brassins ; saisir ses prix d'achat et ses frais (« Mes prix ») ; lire les modèles de processus du groupe (« Mes processus »), en créer, modifier, dupliquer et supprimer les siens, copier à son nom celui d'un autre membre, choisir le sien proposé par défaut dans « Nouveau brassin » (choix lu par lui seul) ; lire le coût de toute recette avec ses propres prix ; lire, figer et recalculer le coût de ses seuls brassins ; voir son nom, son e-mail et la version dans le menu du compte, et ses tours et son montant de l'IA du mois (« IA ce mois ») quand le poste est ouvert aux membres ou qu'il a des tours ce mois ; utiliser l'assistant de recette dans l'éditeur de ses recettes quand l'administrateur l'a ouvert aux membres, dans la limite de ses tours du jour ; ouvrir « Nouveautés » depuis ce menu ; choisir le thème de l'application sur son appareil (« Préférences ») ; signaler un bug ou proposer une évolution (« Signaler ou proposer »), et y joindre une capture de l'écran quitté, que seuls lui et l'administrateur voient ; lire ses seuls tickets, leur statut, la réponse de l'administrateur et sa capture (« Mes tickets ») ; sur Android, installer la nouvelle version proposée au lancement (« Nouvelle version ») ; se déconnecter |
 | `admin` (Administrateur) | tout ce que peut un brasseur, avec les mêmes droits sur ses propres recettes, équipements, processus et brassins et aucun droit d'écriture sur ceux des autres ; ouvrir Admin ; inviter un compte (adresse, nom facultatif, rôle) ; retirer un brasseur ; lire tous les tickets des membres, leur auteur, leur capture et l'historique de leurs décisions dans Admin › Tickets des membres, avec l'état du jeton GitHub et les tickets bloqués ; valider, refuser ou clore un ticket parmi les décisions que le serveur permet, en ligne seulement, et reprendre une décision interrompue en la demandant à nouveau ; lire les analyses d'un ticket relevées sur son Issue et y répondre (« Répondre », quand le serveur le permet) ; relancer l'envoi d'un ticket bloqué, en ligne ; ouvrir « Tickets à traiter » depuis le menu du compte ; importer les fiches Excel préparées (Admin › Import), sous son propre compte, coûts figés compris ; lire les rapports d'erreur des membres (Admin › Rapports d'erreur), sans les supprimer ; lire les journaux des fonctions du serveur (Admin › Journaux), adresses e-mail comprises ; depuis un rapport ou une entrée de journal, ouvrir un ticket bug prérempli (« Analyser ») et lancer son analyse dès la publication, voir quels rapports et quelles entrées ont déjà un ticket ; lire dans Admin › Sources le compte rendu de la dernière mise à jour de la Bibliothèque (référentiels et recettes publiques) et les noms non reconnus ; régler dans Admin › Moteur d'IA le modèle, l'effort, les plafonds et l'ouverture aux membres de chaque poste d'IA, et la grille tarifaire, en ligne seulement ; lire dans Admin › Coûts de l'IA la dépense de l'IA de chaque membre, par mois et par poste ; utiliser l'assistant de recette, toujours ouvert pour lui, dans la limite de ses tours du jour ; lire « IA ce mois » dans le menu du compte. Il ne lit ni les prix, ni les frais, ni les coûts d'un autre membre. Il ne peut ni se retirer lui-même, ni retirer un autre administrateur : un administrateur se retire depuis la console Firebase |
 | compte non invité | voir l'écran « Compte non invité », copier son adresse, vérifier à nouveau, se déconnecter. Rien d'autre |
 
@@ -320,7 +320,8 @@ titre, bouton « Envoyer » (« Envoi » pendant l'action), colonne de 840 px au
   fermentation », « Coût du brassin »… sur la fiche d'un brassin ; « Malt ou sucre »,
   « Houblon »… dans l'éditeur de recette ; « Journée », « Étape », « Actions d'une journée »,
   « Insérer un bloc de la recette » dans l'éditeur de processus ; « Plus d'actions » sur la
-  fiche d'un processus ; « Confiance des arômes » sur la liste des houblons). Le formulaire de prix porte le même nom, « Prix d'un
+  fiche d'un processus ; « Confiance des arômes » sur la liste des houblons ; « Filtrer les
+  recettes » sur la liste des recettes). Le formulaire de prix porte le même nom, « Prix d'un
   ingrédient », sur « Mes prix », la fiche d'une recette et celle d'un brassin, et sa liste
   « Reprendre un prix » aussi ; « Coût du brassin » désigne les deux confirmations « Figer le
   coût » et « Recalculer avec mes prix actuels ». Aide : « Menu ou fenêtre concerné. »
@@ -1622,19 +1623,79 @@ recette n'est modifiée.
 
 ### Recettes
 
-**Liste.** Toutes les recettes du groupe, la dernière modifiée en tête. Chaque ligne : icône,
-nom, puis style · volume · auteur ; étiquette « En attente du réseau » dessous. « Rechercher une
-recette » filtre sur le nom et le style ; « Toutes » / « Les miennes » filtre sur l'auteur.
-La recherche et le filtre ne sont pas enregistrés. Aucun calcul dans la liste. En tête, la
-recherche sur toute la largeur, puis « Toutes / Les miennes », puis les actions. Bouton
-flottant « Nouvelle recette » sur téléphone, bouton après le filtre au-delà. « Importer »
-ouvre Recettes › Importer : après le filtre sur téléphone, après « Nouvelle recette » au-delà.
+**Liste.** Toutes les recettes du groupe, la dernière modifiée en tête. En tête, la recherche
+sur toute la largeur, puis les origines « Toutes », « Les miennes », « Autres » (puces à choix
+unique), puis les actions. Bouton flottant « Nouvelle recette » sur téléphone, bouton après les
+origines au-delà. « Importer » ouvre Recettes › Importer : après les origines sur téléphone,
+après « Nouvelle recette » au-delà.
 
+- Ligne d'une recette (v0.2.19) : à gauche, un disque de 40 px à la teinte de la couleur
+  calculée, bordé ; sans couleur calculable, l'icône du livre ; recette illisible, le repère
+  d'erreur. Le nom tient sur deux lignes au plus. Dessous : « style · degré · couleur »
+  (« Tripel · 8,5 % vol · 12 EBC ») ; un terme absent sort de la ligne, aucune valeur n'est
+  inventée. Puis la description aromatique, sur deux lignes au plus, coupée par « … » ; absente,
+  pas de ligne. Puis « volume · auteur » ; l'auteur n'est pas écrit dans « Les miennes ».
+  Étiquettes : « En attente du réseau » ; « Calcul impossible » (ton neutre) quand le calcul
+  refuse une valeur de la recette, rapporté une fois par recette et par session. Sur grand écran
+  (840 px et plus, texte sous 130 %), le degré (en gras) et la couleur (en gris) passent en
+  colonne à droite de la ligne.
+- Degré et couleur viennent du même calcul que la fiche. Le degré demande l'équipement de la
+  recette : sans équipement, avec un équipement sans rendement, supprimé ou absent du cache hors
+  ligne, la ligne n'a pas de degré ; la couleur reste affichée si elle se calcule. Les valeurs
+  sont gardées par recette et recalculées quand la recette ou les équipements changent, pas à
+  chaque frappe dans la recherche.
+- « Rechercher une recette » filtre sur le nom et le style. Origines : « Toutes » par défaut ;
+  « Les miennes », les recettes du lecteur ; « Autres », celles des autres comptes (membres
+  retirés et imports de l'administrateur compris). Les recettes illisibles s'affichent en fin de
+  liste dans « Toutes » et « Autres », jamais dans « Les miennes », et sortent dès qu'un filtre
+  est actif ; une ligne en fin de liste les compte alors : « {n} recettes illisibles ne
+  s'affichent pas avec ces filtres. ». Au changement d'origine, une plage de degré ou de
+  couleur est ramenée dans les bornes de la nouvelle origine. Une plage qui couvrait toutes les
+  bornes avant d'être ramenée ne filtre plus ; une plage hors des bornes se réduit à la borne la
+  plus proche et reste active, même quand toutes les recettes ont la même valeur. La boîte et les puces montrent la même plage. L'origine et les filtres sont gardés en mémoire pour la session (au retour d'une
+  fiche, au changement d'écran), jamais en base ni sur l'appareil ; un changement de compte les
+  remet à « Toutes » et sans filtre. La recherche n'est pas gardée.
+- Filtres : icône « Filtrer les recettes » dans le champ de recherche, à droite, avec une
+  pastille du nombre de groupes actifs (0 à 4, en couleur primaire), lue « Filtrer les
+  recettes, 2 filtres actifs ». Elle ouvre la boîte « Filtrer les recettes » (feuille du bas sur
+  téléphone, dialogue au-delà, avec un bouton « Fermer » en tête). Les sections défilent ; les
+  boutons restent fixés en bas, sauf sous 480 px de hauteur (téléphone en paysage), où ils
+  défilent avec les sections :
+  - « Styles » : une puce par style des recettes de l'origine choisie, avec son nombre
+    (« Tripel (3) »), sans tenir compte de la casse ni des accents, et « Sans style » ; au-delà
+    de 12 styles, « Afficher les {n} styles ». Plusieurs styles se combinent en « ou ».
+  - « Degré d'alcool » : texte « De 5,0 à 9,0 % vol » au-dessus d'un curseur à deux poignées,
+    lu « Degré d'alcool », chaque poignée lue « Degré d'alcool : 5,0 % vol », dont les bornes sont le plus petit et le plus grand degré calculé des recettes de l'origine,
+    arrondis au dixième. Un curseur aux deux bornes ne filtre pas ; resserré, il écarte aussi
+    les recettes sans degré, et la boîte le dit : « {n} recettes sans degré calculé ne
+    s'affichent pas avec ce filtre. ». Aucun degré calculé : « Aucune recette n'a de degré
+    calculé. » à la place du curseur ; un seul : « Toutes les recettes ont le même degré
+    calculé : {degré}. ». Sans curseur, un filtre de degré gardé s'affiche « Filtre en cours :
+    5,0 à 9,0 % vol » avec le bouton « Retirer ce filtre ».
+  - « Couleur » : même règle, curseur lu « Couleur », poignées lues « Couleur : 12 EBC », en EBC entiers (« De 8 à 40 EBC »), avec la bande de teintes de
+    la plage et la mention « Teinte indicative : … ».
+  - « Arômes » : champ « Mots de la description », aide « Séparez les mots par une virgule :
+    la recette doit les contenir tous. » ; une recette doit contenir tous les mots dans sa description aromatique, sans tenir compte
+    de la casse ni des accents.
+  - Bouton « Afficher {n} recettes » (nombre calculé sur l'appareil, recherche comprise) ;
+    aucun résultat : « Aucune recette », inactif, et au-dessus des boutons « Aucune recette ne
+    correspond à ces filtres. Élargissez un curseur, retirez un style ou un mot. », annoncé par le
+    lecteur d'écran dès qu'il paraît. « Réinitialiser » vide la boîte sans la
+    fermer. Fermer la boîte sans valider abandonne les changements. À 130 % de texte et plus,
+    les boutons sont empilés.
+  - Les critères se combinent en « et ». Les filtres valent pour les trois origines.
+- Filtres actifs : sous les origines, une puce par style (« Style : Tripel »), par plage
+  (« 5,0 à 9,0 % vol », « 8 à 40 EBC ») et par mot d'arôme (« Arôme : agrumes »), chacune avec
+  sa croix, qui dit ce qu'elle retire (« Retirer le style Tripel », « Retirer le filtre Degré »,
+  « Retirer le filtre Couleur », « Retirer l'arôme agrumes »), puis « Effacer les filtres ».
 - Liste vide : titre « Aucune recette » ; « Les miennes » vide : titre « Vous n'avez pas
   encore de recette » ; puis, pour les deux, « Appuyez sur Nouvelle recette pour commencer, ou
   importez un fichier BeerXML ou BeerJSON. », les deux
-  avec le bouton « Importer des recettes » ; recherche sans résultat : « Aucune recette ne correspond à « {texte} ». » et
-  « Effacer la recherche ».
+  avec le bouton « Importer des recettes » ; « Autres » vide : « Aucune recette d'un autre
+  membre » ; recherche sans résultat : « Aucune recette ne correspond à « {texte} ». » et
+  « Effacer la recherche » ; filtres sans résultat : icône de filtre barré, « Aucune recette ne
+  correspond à ces filtres. » (avec une recherche : « Aucune recette ne correspond à
+  « {texte} » avec ces filtres. ») et « Effacer les filtres ».
 - Lecture impossible et panne après une première lecture : comme les équipements, avec
   « Impossible de lire les recettes. ». Un document illisible s'affiche dans la liste
   « Recette illisible », avec le sous-titre « Mettez l'application à jour, ou prévenez
@@ -1671,7 +1732,8 @@ bouton affiche « Enregistrement » pendant ce temps. L'écriture pose Pellets s
 houblon sans forme et ne change rien d'autre. Elle part comme « Enregistrer », hors ligne
 compris : « Formes enregistrées. » (« Formes enregistrées sur l'appareil. Elles partiront au
 retour du réseau. » hors ligne), ou « Les formes n'ont pas été enregistrées. » sur un refus. Le bandeau disparaît ensuite. Un
-autre brasseur ne voit pas le bandeau (ticket #105). Puis, chacun dans
+autre brasseur ne voit pas le bandeau (ticket #105). Puis, si l'auteur l'a écrite, la carte « Description
+aromatique » (absente sinon : ni section vide ni texte de remplacement), puis, chacun dans
 sa carte, le bloc Calculs (voir
 « Calculs affichés »), le bloc « Coût avec vos prix » (voir « Coût »), et les sections Général (type de recette, « Non renseigné » s'il
 manque ; « Auteur indiqué par le fichier importé » quand une recette importée le porte ; volume en
@@ -1715,8 +1777,8 @@ masquer le reste de la recette, et l'erreur est rapportée.
   indisponible hors ligne. ».
 
 **Dupliquer.** Crée « Copie de {nom} » (coupé à 120 caractères) au nom de celui qui
-duplique, avec les mêmes ingrédients, paliers et équipement, et l'auteur de la recette
-d'origine s'il y en a un, sans fiche d'origine. La source
+duplique, avec les mêmes ingrédients, paliers, équipement et description aromatique, et
+l'auteur de la recette d'origine s'il y en a un, sans fiche d'origine. La source
 ne change pas. Possible sur toute recette, y compris celle d'un membre retiré. Message
 « Recette dupliquée. » (hors ligne : « Recette dupliquée sur l'appareil. Elle partira au
 retour du réseau. »), puis la fiche de la copie. Pendant la lecture du nom du compte, le
@@ -1960,6 +2022,13 @@ ouvertes, avec des puces de saut en haut (« Malts et sucres (7) », « Houblons
   qui porte un auteur l'affiche en lecture seule (« Auteur indiqué par le fichier
   importé ») ;
   l'éditeur n'a pas de champ pour le saisir et le garde à l'enregistrement.
+- Notes : « Description aromatique (facultatif) » (champ de plusieurs lignes, 500 caractères,
+  aide « Ce que l'on sent et goûte : agrumes, caramel, épices… Le filtre « Arômes » de la liste
+  cherche dans ce texte. »), puis « Notes (facultatif) » (10 000 caractères). Une description
+  de plus de 500 caractères (un émoji en compte deux ou plus) affiche « La description
+  aromatique dépasse 500 caractères. » et rien n'est enregistré. Vidée, elle est retirée de la
+  recette. Elle est lue par tout le groupe et écrite par l'auteur seul. La recette figée d'un
+  brassin ne la garde pas ; ni l'export BeerJSON ou BeerXML ni l'import ne la lisent.
 - Chaque section a son bouton : « Ajouter un malt ou un sucre », « Ajouter un houblon »,
   « Ajouter un ajout », « Ajouter une levure » (une seule levure), « Ajouter un palier ». Le
   formulaire s'ouvre en feuille du bas sur téléphone, en dialogue au-delà, avec « Annuler »,

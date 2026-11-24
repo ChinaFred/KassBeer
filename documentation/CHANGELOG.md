@@ -4,6 +4,57 @@ Une entrée par version, la plus récente en tête, sous la date du jour. Titre
 `### vX.Y.Z — fonctionnel` (ce que voit l'utilisateur) ou `— technique` (architecture,
 données, outillage), ou les deux.
 
+## 2026-11-24
+
+### v0.2.19 — fonctionnel
+
+Résumé : La liste des recettes montre couleur, degré et arômes, et se filtre par style, degré, couleur ou arômes.
+
+Chaque recette de la liste porte un disque à la teinte de sa couleur calculée, son style, son
+degré et sa couleur, puis les deux premières lignes de sa description aromatique. Sans
+équipement ou sans rendement, le degré n'apparaît pas ; une recette que le calcul refuse porte
+« Calcul impossible ». Sur grand écran, le degré et la couleur passent à droite.
+
+Une nouvelle origine « Autres » montre les recettes des autres brasseurs, à côté de « Toutes »
+et « Les miennes ». L'icône de filtre du champ de recherche ouvre « Filtrer les recettes » :
+styles, degré d'alcool et couleur par curseurs bornés aux valeurs des recettes, et mots de la
+description. Les filtres actifs s'affichent en puces que l'on retire une à une, et restent en
+place pendant la session.
+
+L'auteur d'une recette peut écrire sa description aromatique (500 caractères) dans l'éditeur,
+section Notes. Elle s'affiche sur la fiche quand elle existe et suit la recette quand on la
+duplique. Un brassin ne la garde pas.
+
+### v0.2.19 — technique
+
+Champ d'enveloppe `aroma_description` sur `recipes/` (texte de 1 à 500, absent quand il est
+vide, jamais dans `recipe`, P21) : `RecipeContent.aromaDescription`, gardé par `duplicate`,
+`avecFormeHoublons` et `avecMarques`, retiré de `recipe_snapshot` par `recipeSnapshot`.
+`firestore.rules` : `recipeDocumentFields()` (champs de `recipeFields()` plus
+`aroma_description`), `isRecipeContent(d, fields)` reçoit sa liste de champs, et
+`isRecipeShape` seule contrôle le texte (refusé s'il n'est fait que d'espaces) ; la copie figée d'un brassin le refuse. Budget des
+règles mesuré au `pad()` : création du brassin qui copie la plus grande recette inchangée (un
+`pad()` passe, deux refusés, marge nulle) ; création de la plus grande recette 5 `pad10()`
+(6 avant), avec ou sans description de 500 caractères ; modification qui pose cette
+description 4 `pad10()`. `size()` compte des unités UTF-16 (250 émojis passent, 251 sont
+refusés) : l'éditeur compte de même. Tests : `rules-tests/test/aroma_description.test.mjs`,
+budget dans `recipe_format.test.mjs`.
+
+Liste des recettes : `LigneListe` reçoit un `repere` libre (`DisqueTeinte`, ajouté à
+`couleur_ebc.dart`) ; aperçus calculés par `apercuDe` (`evaluerRecette`, puis `teinteEbc`),
+mémorisés par `apercusRecettesProvider` tant que la recette garde son `updated_at` et son
+équipement le même rendement ; rapport `recipes.list_color` pour une teinte refusée. Filtres en
+fonctions pures (`recipes/domain/filtres_recettes.dart`), boîte
+`boite_filtres_recettes.dart`, origine et filtres en
+mémoire de session (`origineRecettesProvider`, `filtresRecettesProvider`), remis à zéro au
+changement de compte ; plages ramenées dans les bornes de l'origine
+(`FiltresRecettes.dansLesBornes`). Boîte ouverte par `showFeuilleOuDialogueAPied` avec
+`CorpsAPied`, nouvelle variante de `feuille_ou_dialogue.dart` : boutons fixés hors du
+défilement, « Fermer » dans le dialogue. Élément de ticket `/recettes/fenetre/filtres`. Aucune
+dépendance ajoutée. Taille de `main.dart.js` (`flutter build web --release`) : 6 036 734 octets
+sur `origin/main` (v0.2.18), 6 093 738 après (+ 57 004). Documents : `exigences-fonctionnelles.md` (liste, fiche, éditeur, Dupliquer, rôles),
+`exigences-techniques.md` (champ, règles, budget, providers, calculs de la liste).
+
 ## 2026-11-23
 
 ### v0.2.18 — fonctionnel
