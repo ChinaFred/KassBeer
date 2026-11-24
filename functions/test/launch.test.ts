@@ -733,7 +733,7 @@ describe("lancement : échec, résultat inconnu, en cours (P35, P36)", () => {
     assert.equal(details(err).code, "routine_invalid");
     assert.equal(
       details(err).reason,
-      "Le jeton de la routine est refusé. Remplacez-le dans Secret Manager.",
+      "Le jeton de la routine est refusé. Remplacez-le dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub.",
     );
     assert.equal(quota(h), 0);
     assert.equal(h.db.read("ticket_status/launches")?.count_day, 0);

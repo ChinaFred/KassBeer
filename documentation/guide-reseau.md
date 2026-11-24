@@ -435,6 +435,16 @@ de la spécification (point 3). Le prompt de la routine de développement
 recolle sur claude.ai après la fusion. Les lots R2 et R3 changeront les autres contrôles cités
 par l'ADR.
 
+Le 2026-11-22, avec le ticket #104 (file d'attente des livraisons, amendement d'ADR-008) et
+l'accord de l'utilisateur, P25, P36, P39, P40, P43, P44, P45, P46 et P47 sont complétés, et la
+puce « Une action qui appelle un modèle… » de « Coûts variables » admet un départ différé, parti
+d'un appui confirmé et qui refait au départ tous les contrôles de l'appui. La liste fermée des
+tâches planifiées passe à `syncTickets` et `startQueuedDelivery`.
+
+Le 2026-11-22 et le 2026-11-23, toujours pour le ticket #104 et sur décision de l'utilisateur,
+P39, P43 et P44 décrivent « Relancer la file » (`mode: "resume_queue"`), qui efface l'arrêt de la
+file et le refus du jeton de la routine de développement, sans rien lancer ni compter.
+
 Le réseau est copié dans chaque projet, puis il y évolue. Pour reprendre une amélioration
 faite dans agent-starter :
 

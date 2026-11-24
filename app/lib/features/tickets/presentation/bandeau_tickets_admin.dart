@@ -45,7 +45,7 @@ List<MessageBandeau> messagesBandeauTickets({
           text:
               'Jeton GitHub refusé ou expiré depuis le '
               '${formatDateChiffres(invalid)} : remplacez GITHUB_TICKETS_TOKEN '
-              'dans Secret Manager.',
+              'dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub.',
           error: true,
         ));
       } else if (expires != null && expires.isBefore(now)) {
@@ -88,7 +88,7 @@ List<MessageBandeau> messagesBandeauTickets({
           text:
               'Jeton de la routine $nom refusé depuis le '
               '${formatDateChiffres(since)}. Remplacez-le dans Secret '
-              'Manager.',
+              'Manager, puis relancez le workflow « Déploiement » sur GitHub.',
           error: true,
         ));
       }

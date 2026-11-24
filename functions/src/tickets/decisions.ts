@@ -14,7 +14,8 @@
  *    l'état lu est appliqué au ticket, la décision passe `rejected`.
  * 3. à 5. Commentaire, étiquette, fermeture, dans cet ordre ; ce qui est fait est sauté.
  * 6. Transaction : statut, `reply_text`, `reply_at`, `allowed_decisions`,
- *    `status_changed_at` du ticket, baux retirés, décision `applied`.
+ *    `status_changed_at` du ticket, baux retirés, décision `applied` ; Refuser et Clore
+ *    retirent le ticket de la file des livraisons (`queue_exit`, amendement du 2026-11-22).
  * 7. Au mieux (ADR-008, P32) : `validated_at` de `admin/analysis` après Valider, puis
  *    relevé des analyses et précisions de l'Issue. Un échec est journalisé, la décision
  *    reste faite.
@@ -28,7 +29,13 @@
 import type { DocumentReference, Transaction } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 
-import { COLL_TICKETS, GITHUB_MAINTAINER_ID, REPLY_MAX_CHARS } from "../config";
+import {
+  COLL_TICKET_STATUS,
+  COLL_TICKETS,
+  GITHUB_MAINTAINER_ID,
+  REPLY_MAX_CHARS,
+  TICKET_STATUS_LAUNCHES_DOC,
+} from "../config";
 import { firestore } from "../firestore";
 import { logError, logInfo, logWarn } from "../logging";
 import {
@@ -50,7 +57,12 @@ import {
   type FailureKind,
 } from "./decisionModel";
 import { recordValidatedAt, refreshAnalyses } from "./analyses";
-import { deliveryRunningFor } from "./delivery";
+import {
+  QUEUE_EXIT_CLOSED,
+  QUEUE_EXIT_REFUSED,
+  deliveryRunningFor,
+  dequeueInTransaction,
+} from "./delivery";
 import { GithubError, githubClient, type FetchLike, type GithubClient } from "./github";
 import { applyIssue } from "./issueState";
 import type { TicketStatus } from "./model";
@@ -210,17 +222,23 @@ async function claim(
 /**
  * Écrit l'issue d'un essai seulement si le bail posé à la prise est encore le sien :
  * décision `applying` et `lease_until` inchangé. Rend `false` sinon (rien n'est écrit).
+ * `ticket_status/launches` est lu avec le ticket et passé à `write` (file des livraisons).
  */
 async function writeIfLeaseHeld(
   refs: Refs,
   leaseUntilMs: number,
-  write: (tx: Transaction, ticket: Record<string, unknown> | null) => void,
+  write: (
+    tx: Transaction,
+    ticket: Record<string, unknown> | null,
+    launches: Record<string, unknown> | undefined,
+  ) => void,
 ): Promise<boolean> {
   const { db, Timestamp } = await firestore();
   return db.runTransaction(async (tx) => {
-    const [decisionSnap, ticketSnap] = await Promise.all([
+    const [decisionSnap, ticketSnap, launchesSnap] = await Promise.all([
       tx.get(refs.decision),
       tx.get(refs.ticket),
+      tx.get(db.collection(COLL_TICKET_STATUS).doc(TICKET_STATUS_LAUNCHES_DOC)),
     ]);
     const lease = decisionSnap.get("lease_until");
     const held =
@@ -229,7 +247,7 @@ async function writeIfLeaseHeld(
       lease.toMillis() === leaseUntilMs;
     if (!held) return false;
     const ticket = ticketSnap.exists ? (ticketSnap.data() ?? {}) : null;
-    write(tx, ticket);
+    write(tx, ticket, launchesSnap.data());
     return true;
   });
 }
@@ -519,9 +537,10 @@ export async function decideTicket(
   const status = statusAfterDecision(action);
   let written: boolean;
   try {
-    const { FieldValue, Timestamp } = await firestore();
+    const kit = await firestore();
+    const { FieldValue, Timestamp } = kit;
     const now = Timestamp.now();
-    written = await writeIfLeaseHeld(refs, claimed.leaseUntilMs, (tx, ticket) => {
+    written = await writeIfLeaseHeld(refs, claimed.leaseUntilMs, (tx, ticket, launches) => {
       if (run.kind === "closed_elsewhere") {
         tx.update(refs.decision, {
           state: "rejected",
@@ -571,6 +590,11 @@ export async function decideTicket(
         },
         FieldValue.delete(),
       );
+      // Refuser et Clore : le ticket sort de la file des livraisons (point 9).
+      if (action !== "validate") {
+        const code = action === "refuse" ? QUEUE_EXIT_REFUSED : QUEUE_EXIT_CLOSED;
+        dequeueInTransaction(tx, kit, launches, ticketId, code, now.toMillis());
+      }
     });
   } catch (err) {
     logError({ ...log, message: "Tickets : décision faite sur GitHub, non écrite", error: err });

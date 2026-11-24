@@ -200,9 +200,93 @@ String messageValiderEtLancer(ResultatLancement resultat, int? issueNumber) {
       null => '$valide $pasLance.',
     },
     IssueLancement.acces => '$valide $pasLance : accès administrateur refusé.',
-    IssueLancement.perdu => '$valide ${resultat.message}',
+    // Réponses de la file des livraisons : jamais rendues par le lancement
+    // d'un développement.
+    IssueLancement.perdu ||
+    IssueLancement.enFile ||
+    IssueLancement.retire ||
+    IssueLancement.fileRelancee => '$valide ${resultat.message}',
   };
 }
+
+/// Ligne de la boîte « Mettre en file » : position que prendrait le ticket,
+/// lue dans `ticket_status/launches` (file, verrou, dernière livraison).
+String positionDansFileApres(
+  EtatLancements? quota,
+  String ticketId,
+  DateTime now,
+) {
+  final file = quota?.deliveryQueue ?? const <EntreeFileLivraison>[];
+  final total = file.length + 1;
+  final debut = 'Position dans la file : $total sur $total';
+  if (file.isNotEmpty) {
+    final n = file.last.issueNumber;
+    return '$debut, derrière le ticket${n == null ? '' : ' #$n'}.';
+  }
+  final verrou = quota?.deliveryRunning;
+  if (verrou != null && verrou.ticketId != ticketId && verrou.tient(now)) {
+    final n = verrou.issueNumber;
+    return '$debut, après la livraison du ticket${n == null ? '' : ' #$n'}.';
+  }
+  final derniere = quota?.deliveryLast;
+  if (derniere != null &&
+      derniere.ticketId != ticketId &&
+      derniere.compteRenduAttendu(now)) {
+    final n = derniere.issueNumber;
+    return '$debut, après le compte rendu de la livraison du ticket'
+        '${n == null ? '' : ' #$n'}.';
+  }
+  return '$debut.';
+}
+
+/// Titre de la boîte « Relancer la file ».
+const kRelancerFileTitre = 'Relancer la file des livraisons ?';
+
+/// Texte de la boîte « Relancer la file » (P39).
+String relancerFileTexte(int? prNumber) =>
+    '${prNumber == null ? 'La pull request' : 'La PR #$prNumber'} partira '
+    'dans 5 minutes au plus, sans autre accord, après les mêmes contrôles que '
+    '« Livrer ». Elle sera comptée au départ. Si la routine refuse encore, la '
+    'file s\'arrêtera de nouveau, sans décompte.';
+
+/// Message après « Relancer la file ».
+String messageRelanceFile(ResultatLancement resultat) =>
+    switch (resultat.issue) {
+      IssueLancement.fileRelancee => resultat.message,
+      IssueLancement.acces =>
+        'Relance non faite : accès administrateur refusé.',
+      IssueLancement.refuse => 'Relance non faite : ${resultat.message}',
+      _ when resultat.reseau => 'Relance non faite : pas de réseau.',
+      _ => 'Résultat inconnu : regardez la file avant de réessayer.',
+    };
+
+/// Message après « Mettre en file » accepté.
+String messageMisEnFile(int? issueNumber) => issueNumber == null
+    ? 'Ticket mis en file de livraison.'
+    : 'Ticket #$issueNumber mis en file de livraison.';
+
+/// Titre de la boîte « Retirer de la file ».
+const kRetirerFileTitre = 'Retirer ce ticket de la file ?';
+
+/// Texte de la boîte « Retirer de la file ».
+String retirerFileTexte(int? prNumber) =>
+    '${prNumber == null ? 'La pull request' : 'La PR #$prNumber'} ne partira '
+    'pas. Les tickets suivants avancent d\'une place. Rien n\'est décompté. '
+    'Pour la livrer ensuite, il faudra la remettre en fin de file.';
+
+/// Message après « Retirer de la file ».
+String messageRetraitFile(ResultatLancement resultat, int? issueNumber) =>
+    switch (resultat.issue) {
+      IssueLancement.retire when resultat.changed =>
+        issueNumber == null
+            ? 'Ticket retiré de la file.'
+            : 'Ticket #$issueNumber retiré de la file.',
+      IssueLancement.retire => 'Ce ticket n\'était plus dans la file.',
+      IssueLancement.acces => 'Retrait non fait : accès administrateur refusé.',
+      IssueLancement.refuse => 'Retrait non fait : ${resultat.message}',
+      _ when resultat.reseau => 'Retrait non fait : pas de réseau.',
+      _ => 'Résultat inconnu : regardez la file avant de réessayer.',
+    };
 
 /// Valider offert par le serveur sur un ticket déjà validé : la validation
 /// vient d'une étiquette posée sur GitHub. Le client lit `allowed_decisions`
@@ -561,8 +645,9 @@ class _FicheState extends ConsumerState<_Fiche> {
   /// dans un message de la fiche.
   Future<void> _demanderTexte(
     TicketDecisionAction action,
-    List<TicketDecision> decisions,
-  ) async {
+    List<TicketDecision> decisions, {
+    bool enFile = false,
+  }) async {
     // Après un rejet ou un échec, la boîte reprend le texte envoyé.
     String? previous;
     for (final d in decisions) {
@@ -588,6 +673,7 @@ class _FicheState extends ConsumerState<_Fiche> {
         ticketId: _ticket.id,
         action: action,
         enCours: _ticket.status == TicketStatus.inProgress,
+        enFile: enFile,
         messenger: ScaffoldMessenger.of(this.context),
       ),
     );
@@ -637,9 +723,11 @@ class _FicheState extends ConsumerState<_Fiche> {
     required EtatLancements? quota,
     int? prNumber,
     String? avertissement,
+    String? positionFile,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(lancementFicheProvider(_ticket.id).notifier);
+    final mode = positionFile == null ? null : ModeLivraison.mettreEnFile;
     Future<ResultatLancement>? enVol;
     // ticket: /admin/tickets/:id/fenetre/lancement
     final fin = await showDialog<FinBoiteLancement>(
@@ -655,7 +743,8 @@ class _FicheState extends ConsumerState<_Fiche> {
         typeTicket: action == ActionLancement.livraison
             ? _ticket.type.label
             : null,
-        envoyer: () => enVol = notifier.lancer(action),
+        positionFile: positionFile,
+        envoyer: () => enVol = notifier.lancer(action, mode: mode),
       ),
     );
     var resultat = fin?.resultat;
@@ -669,10 +758,78 @@ class _FicheState extends ConsumerState<_Fiche> {
     messenger.showSnackBar(
       SnackBar(
         // Échec ou résultat inconnu : le temps de le lire et d'agir.
-        duration: resultat.issue == IssueLancement.lance
+        duration:
+            resultat.issue == IssueLancement.lance ||
+                resultat.issue == IssueLancement.enFile
             ? const Duration(milliseconds: 4000)
             : kDureeMessageEchec,
-        content: Text(resultat.message),
+        content: Text(
+          resultat.issue == IssueLancement.enFile
+              ? messageMisEnFile(_ticket.issueNumber)
+              : resultat.message,
+        ),
+      ),
+    );
+  }
+
+  /// « Retirer de la file » : confirmation, puis `launchTicketDelivery` avec
+  /// `mode: "unqueue"`. Rien n'est décompté.
+  Future<void> _retirerDeFile({required int? prNumber}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(lancementFicheProvider(_ticket.id).notifier);
+    // ticket: aucun (confirmation)
+    final ok = await confirmerAction(
+      context,
+      titre: kRetirerFileTitre,
+      paragraphes: [retirerFileTexte(prNumber)],
+      libelle: 'Retirer',
+      focusAnnuler: true,
+    );
+    if (!ok) return;
+    final resultat = await notifier.lancer(
+      ActionLancement.livraison,
+      mode: ModeLivraison.retirer,
+    );
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: resultat.issue == IssueLancement.retire
+            ? const Duration(milliseconds: 4000)
+            : kDureeMessageEchec,
+        content: Text(messageRetraitFile(resultat, _ticket.issueNumber)),
+      ),
+    );
+  }
+
+  /// « Relancer la file » (décision 9 de l'amendement d'ADR-008) :
+  /// confirmation, puis `launchTicketDelivery` avec `mode: "resume_queue"`.
+  /// Rien ne part pendant l'appel : `startQueuedDelivery` fait le départ.
+  Future<void> _relancerFile({
+    required int? prNumber,
+    required EtatLancements? quota,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(lancementFicheProvider(_ticket.id).notifier);
+    // ticket: aucun (confirmation)
+    final ok = await confirmerAction(
+      context,
+      titre: kRelancerFileTitre,
+      paragraphes: [relancerFileTexte(prNumber), ligneQuota(quota)],
+      libelle: 'Relancer',
+      focusAnnuler: true,
+    );
+    if (!ok) return;
+    final resultat = await notifier.lancer(
+      ActionLancement.livraison,
+      mode: ModeLivraison.relancerFile,
+    );
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: resultat.issue == IssueLancement.fileRelancee
+            ? const Duration(milliseconds: 4000)
+            : kDureeMessageEchec,
+        content: Text(messageRelanceFile(resultat)),
       ),
     );
   }
@@ -876,7 +1033,10 @@ class _FicheState extends ConsumerState<_Fiche> {
           // « Relancer la livraison ».
           livrerActif:
               etatLancements.actif == ActionLancement.livraison &&
-              etatLancements.aRelancer == null,
+              etatLancements.aRelancer == null &&
+              etatLancements.livraison?.mode != ModeLivraison.retirer,
+          mettreEnFile:
+              etatLancements.livraison?.mode == ModeLivraison.mettreEnFile,
         ),
       // Sans Issue, il n'y a rien à analyser.
       if (ticket.issueNumber != null) SectionAnalyses(ticket: ticket),
@@ -1070,14 +1230,29 @@ class _FicheState extends ConsumerState<_Fiche> {
         now: now,
         offline: offline,
         appelEnCours: appelEnCours,
+        modeEnCours: ref
+            .read(lancementFicheProvider(ticket.id).notifier)
+            .modeEnCours,
+        uid: ref.watch(grantedAccessProvider)?.user.uid,
+        jetonGithubRefuseDepuis: switch (ref
+            .watch(githubStatusProvider)
+            .value) {
+          DocumentTrouve(:final value) => value.tokenInvalidSince,
+          _ => null,
+        },
       );
       lancement = livraison?.action;
     }
     final enCours = lancement == null
         ? null
         : historique?.enCours(lancement, now);
+    // « Mettre en file » et « Retirer de la file » ne sont pas des relances.
+    final modeFile =
+        livraison?.mode == ModeLivraison.mettreEnFile ||
+        livraison?.mode == ModeLivraison.retirer;
     final aRelancer = switch (lancement) {
       null || ActionLancement.reprise => null,
+      _ when modeFile => null,
       final a => historique?.aRelancer(
         a,
         now,
@@ -1096,7 +1271,8 @@ class _FicheState extends ConsumerState<_Fiche> {
             !_occupe(now) &&
             !offline &&
             !appelEnCours &&
-            !(quota?.plafondAtteint ?? false) &&
+            // « Mettre en file » reste actif au plafond : l'entrée attendra.
+            (modeFile || !(quota?.plafondAtteint ?? false)) &&
             (livraison == null || livraison.actif)
         ? lancement
         : null;
@@ -1258,8 +1434,66 @@ class _FicheState extends ConsumerState<_Fiche> {
         lancements?.value is! DocumentIllisibleTrouve &&
         lancements?.value is! DocumentAbsentDuCache;
     Widget? boutonLancement;
+    Widget? boutonReprise;
+    Widget? boutonRelanceFile;
     final livraison = etat.livraison;
-    if (lancement != null && historique != null && enCours == null) {
+    final position = quota?.positionFile(ticket.id);
+    if (livraison?.mode == ModeLivraison.mettreEnFile ||
+        livraison?.mode == ModeLivraison.retirer) {
+      // File des livraisons (ticket #104) : bouton choisi par la ligne, lue
+      // dans `ticket_status/launches` ; le serveur recontrôle tout.
+      final pr = etat.etatPr?.prNumber;
+      final actif = etat.actif != null;
+      if (livraison!.mode == ModeLivraison.mettreEnFile) {
+        boutonLancement = FilledButton.icon(
+          onPressed: actif
+              ? () => _lancer(
+                  ActionLancement.livraison,
+                  relanceDe: null,
+                  quota: quota,
+                  prNumber: pr,
+                  positionFile: positionDansFileApres(quota, ticket.id, now),
+                )
+              : null,
+          icon: const Icon(Icons.playlist_add),
+          label: const Text('Mettre en file'),
+        );
+      } else {
+        boutonLancement = OutlinedButton.icon(
+          onPressed: actif ? () => _retirerDeFile(prNumber: pr) : null,
+          icon: const Icon(Icons.playlist_remove),
+          label: const Text('Retirer de la file'),
+        );
+        if (livraison.relancerFile) {
+          boutonRelanceFile = FilledButton.tonalIcon(
+            onPressed: actif
+                ? () => _relancerFile(prNumber: pr, quota: quota)
+                : null,
+            icon: const Icon(Icons.play_arrow),
+            label: const Text(kRelancerFile),
+          );
+        }
+        if (livraison.repriseAussi) {
+          boutonReprise = FilledButton.tonalIcon(
+            onPressed: actif
+                ? () => _lancer(
+                    ActionLancement.reprise,
+                    relanceDe: null,
+                    quota: quota,
+                    prNumber: pr,
+                    avertissement: position == null
+                        ? null
+                        : 'Le ticket sortira de la file des livraisons '
+                              '(position ${position.position} sur '
+                              '${position.total}).',
+                  )
+                : null,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Relancer le développement'),
+          );
+        }
+      }
+    } else if (lancement != null && historique != null && enCours == null) {
       final action = lancement;
       final avertissement = switch (action) {
         ActionLancement.livraison when relanceDe != null => livraison?.texte,
@@ -1304,6 +1538,16 @@ class _FicheState extends ConsumerState<_Fiche> {
         ),
       };
     }
+    // `ticket_status/launches` en lecture : la file n'est pas connue, le
+    // bouton de livraison attend (ticket #104). En panne : « Livrer » offert,
+    // le serveur décide.
+    final statut = ref.watch(launchStatusProvider);
+    final lectureFile =
+        livraison?.action == ActionLancement.livraison &&
+        !offline &&
+        statut.value == null &&
+        !statut.hasError;
+    if (lectureFile) boutonLancement = null;
     // Livraison de ce ticket en cours : Refuser et Clore masqués (P39, P44).
     final masquer = livraison?.masquerRefuserClore ?? false;
     // Relecture de `admin/delivery` après « Réessayer » : bouton inactif,
@@ -1341,6 +1585,7 @@ class _FicheState extends ConsumerState<_Fiche> {
                     : () => _demanderTexte(
                         TicketDecisionAction.refuse,
                         decisions,
+                        enFile: position != null,
                       ),
                 icon: const Icon(Icons.block),
                 label: const Text('Refuser'),
@@ -1355,8 +1600,11 @@ class _FicheState extends ConsumerState<_Fiche> {
               OutlinedButton.icon(
                 onPressed: inactif
                     ? null
-                    : () =>
-                          _demanderTexte(TicketDecisionAction.close, decisions),
+                    : () => _demanderTexte(
+                        TicketDecisionAction.close,
+                        decisions,
+                        enFile: position != null,
+                      ),
                 icon: const Icon(Icons.archive_outlined),
                 label: const Text('Clore'),
               ),
@@ -1367,6 +1615,8 @@ class _FicheState extends ConsumerState<_Fiche> {
                 label: const Text('Valider'),
               ),
             ?boutonLancement,
+            ?boutonReprise,
+            ?boutonRelanceFile,
             // Action pleine en dernier ; le plafond se contrôle dans la
             // boîte, qui dit pourquoi « Valider et lancer » est inactif.
             if (allowed.contains(TicketDecisionAction.validate))
@@ -1450,6 +1700,35 @@ class _FicheState extends ConsumerState<_Fiche> {
                           ),
                       ],
                     ),
+                    if (livraison?.ligneDetail case final detail?) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        detail,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: livraison!.detailErreur ? scheme.error : null,
+                        ),
+                      ),
+                    ],
+                    if (livraison?.ligneAccord case final accord?) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        accord,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                    if (livraison?.sortie case final sortie?) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        sortie.texte,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: sortie.erreur
+                              ? scheme.error
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                     if (livraison?.verrouTicketId case final autre?) ...[
                       const SizedBox(height: 4),
                       Align(
@@ -1481,6 +1760,12 @@ class _FicheState extends ConsumerState<_Fiche> {
             if (lectureLancements) ...[
               const LinearProgressIndicator(
                 semanticsLabel: 'Lecture des lancements',
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (lectureFile && !lectureLancements) ...[
+              const LinearProgressIndicator(
+                semanticsLabel: 'Lecture de la file des livraisons',
               ),
               const SizedBox(height: 8),
             ],
@@ -1539,6 +1824,10 @@ class _FicheState extends ConsumerState<_Fiche> {
       ?historique?.enCours(ActionLancement.livraison, now)?.retryAfter,
       ?historique?.enCours(ActionLancement.reprise, now)?.retryAfter,
       if (verrou != null && verrou.tient(now)) ?verrou.retryAfter,
+      // Échéance du compte rendu attendu : « Mettre en file » devient
+      // « Livrer », la tête de file change de phrase.
+      if (quota?.deliveryLast case final d? when d.compteRenduAttendu(now))
+        ?d.retryAfter,
     ]..sort();
     return ReconstruireA(
       instant: echeances.isEmpty ? null : echeances.first,
@@ -1659,6 +1948,7 @@ class FormulaireDecision extends ConsumerStatefulWidget {
     required this.action,
     required this.enCours,
     required this.messenger,
+    this.enFile = false,
   });
 
   final String ticketId;
@@ -1666,6 +1956,11 @@ class FormulaireDecision extends ConsumerStatefulWidget {
 
   /// Le ticket est « En cours » : une pull request est peut-être ouverte.
   final bool enCours;
+
+  /// Le ticket est dans la file des livraisons (ticket #104).
+  final bool enFile;
+
+  static const sortieFile = 'Le ticket sortira de la file des livraisons.';
   final ScaffoldMessengerState messenger;
 
   static const publicWarning =
@@ -1813,6 +2108,10 @@ class _FormulaireDecisionState extends ConsumerState<FormulaireDecision> {
           if (widget.enCours) ...[
             const SizedBox(height: 12),
             const Text(FormulaireDecision.prWarning),
+          ],
+          if (widget.enFile) ...[
+            const SizedBox(height: 12),
+            const Text(FormulaireDecision.sortieFile),
           ],
           const SizedBox(height: 16),
           TextFormField(

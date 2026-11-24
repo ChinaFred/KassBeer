@@ -522,7 +522,7 @@ jobs:
             and ((keys_with(has("httpsTrigger")) - ["githubTicketWebhook"]) | length == 0)
             and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis", "validateTicket", "refuseTicket", "closeTicket", "retryTicketSend", "launchTicketAnalysis", "launchTicketDevelopment", "launchTicketDelivery", "attachTicketScreenshot", "queryLogs", "saveAiSettings", "recipeAssistantTurn"]) | length == 0)
             and ((keys_with(has("eventTrigger")) - ["publishTicket"]) | length == 0)
-            and ((keys_with(has("scheduleTrigger")) - ["syncTickets"]) | length == 0)
+            and ((keys_with(has("scheduleTrigger")) - ["syncTickets", "startQueuedDelivery"]) | length == 0)
             and ((keys_with((.httpsTrigger.invoker // []) | index("public") != null)) - ["githubTicketWebhook"] | length == 0)
             and ((.endpoints.githubTicketWebhook // null) | . == null or (.maxInstances == 5 and .timeoutSeconds == 60))
             and ((.endpoints.answerTicketAnalysis // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 60))
@@ -537,6 +537,7 @@ jobs:
             and ((.endpoints.queryLogs // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 60 and .concurrency == 1))
             and ((.endpoints.saveAiSettings // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 60))
             and ((.endpoints.recipeAssistantTurn // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 120 and .concurrency == 4))
+            and ((.endpoints.startQueuedDelivery // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 300 and .concurrency == 1 and .scheduleTrigger.schedule == "*/5 * * * *" and .scheduleTrigger.retryConfig.retryCount == 0))
           '
           if ! jq -e "$endpoints_filter" "$manifest" > /dev/null; then
             echo "::error::Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25)."
@@ -649,14 +650,15 @@ jobs:
         # launchTicketAnalysis, launchTicketDevelopment, launchTicketDelivery,
         # attachTicketScreenshot, queryLogs, saveAiSettings, recipeAssistantTurn), avec leurs
         # maxInstances et délais (queryLogs : concurrency 1 ; recipeAssistantTurn :
-        # concurrency 4) ; publishTicket seul déclencheur Firestore et syncTickets seule tâche
-        # planifiée (T7) ; aucun déclencheur bloquant ou de file ; maxInstances sur
-        # chaque fonction ; compte d'exécution tickets-functions ; secrets :
-        # GITHUB_TICKETS_TOKEN, et chacun des autres monté par les seules fonctions de P25
+        # concurrency 4) ; publishTicket seul déclencheur Firestore ; syncTickets et
+        # startQueuedDelivery seules tâches planifiées (T7, ADR-008 du 2026-11-22) ; aucun
+        # déclencheur bloquant ou de file ; maxInstances sur chaque fonction ; compte
+        # d'exécution tickets-functions ; secrets : GITHUB_TICKETS_TOKEN, et chacun des autres monté par les seules fonctions de P25
         # (GITHUB_WEBHOOK_SECRET : githubTicketWebhook ; TICKETS_ROUTINE_ANALYSIS_* :
-        # launchTicketAnalysis ; TICKETS_ROUTINE_DEV_* : launchTicketDevelopment et
-        # launchTicketDelivery ; ANTHROPIC_API_KEY : recipeAssistantTurn, et lui seul ; aucun
-        # secret pour queryLogs ni saveAiSettings, ADR-011, ADR-016).
+        # launchTicketAnalysis ; TICKETS_ROUTINE_DEV_* : launchTicketDevelopment,
+        # launchTicketDelivery et startQueuedDelivery ; ANTHROPIC_API_KEY :
+        # recipeAssistantTurn, et lui seul ; aucun secret pour queryLogs ni saveAiSettings,
+        # ADR-011, ADR-016).
         if: needs.gate.outputs.functions == 'true'
         env:
           PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
@@ -672,7 +674,7 @@ jobs:
             and ((keys_with(has("httpsTrigger")) - ["githubTicketWebhook"]) | length == 0)
             and ((keys_with(has("callableTrigger")) - ["answerTicketAnalysis", "validateTicket", "refuseTicket", "closeTicket", "retryTicketSend", "launchTicketAnalysis", "launchTicketDevelopment", "launchTicketDelivery", "attachTicketScreenshot", "queryLogs", "saveAiSettings", "recipeAssistantTurn"]) | length == 0)
             and ((keys_with(has("eventTrigger")) - ["publishTicket"]) | length == 0)
-            and ((keys_with(has("scheduleTrigger")) - ["syncTickets"]) | length == 0)
+            and ((keys_with(has("scheduleTrigger")) - ["syncTickets", "startQueuedDelivery"]) | length == 0)
             and ((keys_with((.httpsTrigger.invoker // []) | index("public") != null)) - ["githubTicketWebhook"] | length == 0)
             and ((.endpoints.githubTicketWebhook // null) | . == null or (.maxInstances == 5 and .timeoutSeconds == 60))
             and ((.endpoints.answerTicketAnalysis // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 60))
@@ -687,6 +689,7 @@ jobs:
             and ((.endpoints.queryLogs // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 60 and .concurrency == 1))
             and ((.endpoints.saveAiSettings // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 60))
             and ((.endpoints.recipeAssistantTurn // null) | . == null or (.maxInstances == 2 and .timeoutSeconds == 120 and .concurrency == 4))
+            and ((.endpoints.startQueuedDelivery // null) | . == null or (.maxInstances == 1 and .timeoutSeconds == 300 and .concurrency == 1 and .scheduleTrigger.schedule == "*/5 * * * *" and .scheduleTrigger.retryConfig.retryCount == 0))
           '
           if ! jq -e "$endpoints_filter" "$manifest" > /dev/null; then
             echo "::error::Point d'accès hors de la liste fermée d'ADR-008, ou réglages différents (P25)."
@@ -705,8 +708,8 @@ jobs:
             {"GITHUB_WEBHOOK_SECRET": ["githubTicketWebhook"],
              "TICKETS_ROUTINE_ANALYSIS_ID": ["launchTicketAnalysis"],
              "TICKETS_ROUTINE_ANALYSIS_TOKEN": ["launchTicketAnalysis"],
-             "TICKETS_ROUTINE_DEV_ID": ["launchTicketDevelopment", "launchTicketDelivery"],
-             "TICKETS_ROUTINE_DEV_TOKEN": ["launchTicketDevelopment", "launchTicketDelivery"],
+             "TICKETS_ROUTINE_DEV_ID": ["launchTicketDevelopment", "launchTicketDelivery", "startQueuedDelivery"],
+             "TICKETS_ROUTINE_DEV_TOKEN": ["launchTicketDevelopment", "launchTicketDelivery", "startQueuedDelivery"],
              "ANTHROPIC_API_KEY": ["recipeAssistantTurn"]} as $only
             | ([.endpoints | to_entries[] | .key as $f | (.value.secretEnvironmentVariables // [])[] | .key
                 | select(. != "GITHUB_TICKETS_TOKEN" and ((($only[.] // []) | index($f)) == null))] | length == 0)

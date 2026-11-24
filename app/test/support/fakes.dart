@@ -1040,6 +1040,9 @@ class FakeTicketsRepository implements TicketsRepository {
   /// Lancements demandés : ticket et action.
   final launches = <({String ticketId, ActionLancement action})>[];
 
+  /// Mode de chaque lancement de [launches] (livraison seule), dans l'ordre.
+  final launchModes = <ModeLivraison?>[];
+
   /// Réponse du serveur à un lancement ; jamais terminée par défaut.
   Future<ResultatLancement> Function() launchResult = () =>
       Completer<ResultatLancement>().future;
@@ -1048,8 +1051,10 @@ class FakeTicketsRepository implements TicketsRepository {
   Future<ResultatLancement> launch({
     required String ticketId,
     required ActionLancement action,
+    ModeLivraison? mode,
   }) {
     launches.add((ticketId: ticketId, action: action));
+    launchModes.add(mode);
     return launchResult();
   }
 

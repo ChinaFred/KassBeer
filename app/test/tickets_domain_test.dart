@@ -297,7 +297,7 @@ void main() {
       expect(
         m.single.text,
         'Jeton GitHub refusé ou expiré depuis le 18/11/26 : remplacez '
-        'GITHUB_TICKETS_TOKEN dans Secret Manager.',
+        'GITHUB_TICKETS_TOKEN dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub.',
       );
       expect(m.single.error, isTrue);
     });
@@ -407,9 +407,9 @@ void main() {
       );
       expect(m.map((e) => e.text), [
         'Jeton de la routine d\'analyse refusé depuis le 07/11/26. '
-            'Remplacez-le dans Secret Manager.',
+            'Remplacez-le dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub.',
         'Jeton de la routine de développement refusé depuis le 06/11/26. '
-            'Remplacez-le dans Secret Manager.',
+            'Remplacez-le dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub.',
       ]);
       expect(m.every((e) => e.error), isTrue);
     });

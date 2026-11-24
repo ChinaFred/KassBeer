@@ -109,10 +109,13 @@ abstract class TicketsRepository {
 
   /// Lance [action] sur [ticketId] (callable [ActionLancement.callable], avec
   /// [ActionLancement.arguments]). Un seul appel, jamais rejoué. Tout échec
-  /// est rapporté ici, puis rendu.
+  /// est rapporté ici, puis rendu. [mode] (livraison seule) : « Mettre en
+  /// file » ou « Retirer de la file » ; absent : « Livrer » (`mode` non
+  /// envoyé, comme avant la file des livraisons).
   Future<ResultatLancement> launch({
     required String ticketId,
     required ActionLancement action,
+    ModeLivraison? mode,
   });
 
   /// Joint la capture [png] au ticket [ticketId] de [authorUid] : dépôt dans
@@ -687,12 +690,20 @@ class FirestoreTicketsRepository implements TicketsRepository {
   Future<ResultatLancement> launch({
     required String ticketId,
     required ActionLancement action,
+    ModeLivraison? mode,
   }) async {
-    final where = 'tickets/$ticketId action=${action.storedValue}';
+    final envoye = action == ActionLancement.livraison ? mode : null;
+    final where =
+        'tickets/$ticketId action=${action.storedValue}'
+        '${envoye == null ? '' : ' mode=${envoye.storedValue}'}';
     try {
       final data = await _call(
         action.callable,
-        {'ticketId': ticketId, ...action.arguments},
+        {
+          'ticketId': ticketId,
+          ...action.arguments,
+          if (envoye != null) 'mode': envoye.storedValue,
+        },
         timeout: action == ActionLancement.livraison
             ? kDeliveryCallableTimeout
             : kLaunchCallableTimeout,

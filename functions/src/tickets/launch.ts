@@ -37,6 +37,12 @@
  * Le compteur est rendu quand rien n'est parti (refus, panne avant l'appel, refus de l'API).
  * Le bail est libéré à la fin, réussite ou échec.
  *
+ * File des livraisons (amendement du 2026-11-22) : `launchTicketDelivery` reçoit `mode`
+ * (`start`, `queue`, `unqueue`, `resume_queue`, `handleDeliveryCall`) ; « Mettre en file » refait les contrôles
+ * de P43 sans rien compter (`queueTicketDelivery`) ; la tâche `startQueuedDelivery` fait partir
+ * la tête de file (`runQueuedDelivery`), compte le lancement au départ sur le compteur de
+ * l'auteur de l'accord, relu à ce moment.
+ *
  * Rien n'est écrit dans `tickets/{id}`, que l'auteur lit : ni lien de session, ni uid de
  * l'administrateur. Le jeton n'est jamais journalisé (P35).
  */
@@ -46,15 +52,24 @@ import { randomUUID } from "node:crypto";
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { HttpsError, type FunctionsErrorCode } from "firebase-functions/v2/https";
 
-import { requireAdmin, requireBoundedText, type AuthLike, type MemberLookup } from "../auth";
+import {
+  firestoreMemberLookup,
+  memberKeyOf,
+  requireAdmin,
+  requireBoundedText,
+  type AuthLike,
+  type MemberLookup,
+} from "../auth";
 import {
   COLL_TICKET_QUOTAS,
+  DELIVERY_QUEUE_MAX,
   COLL_TICKET_STATUS,
   COLL_TICKETS,
   LAUNCH_COST_CENTER,
   QUOTA_TTL_DAYS,
   TICKET_ADMIN_SUBCOLLECTION,
   TICKET_LAUNCHES_DOC,
+  TICKET_STATUS_GITHUB_DOC,
   TICKET_STATUS_LAUNCHES_DOC,
 } from "../config";
 import { firestore, type FirestoreKit } from "../firestore";
@@ -63,18 +78,35 @@ import { readTicketIdArg } from "./answer";
 import {
   DELIVERY_ACTIONS_FORBIDDEN_MESSAGE,
   DELIVERY_NO_PR_MESSAGE,
+  DELIVERY_NOTHING,
+  QUEUE_EXIT_HEAD_CHANGED,
+  QUEUE_EXIT_NOT_ADMIN,
+  QUEUE_EXIT_RELAUNCHED,
   claimDeliveryLock,
   deliveryCiNotGreenMessage,
   deliveryFilesUnreadableMessage,
+  deliveryLockFields,
   deliveryLockHeld,
   deliveryMultiplePrMessage,
+  deliveryQueueDeparture,
   deliveryRef,
   deliverySensitiveMessage,
+  dequeueHead,
+  dequeueInTransaction,
+  enqueueDelivery,
   readDelivery,
   readDeliveryLock,
+  readDeliveryQueue,
   releaseDeliveryLock,
+  resumeHaltedQueue,
+  sameQueueEntry,
   sensitiveDeliveryPath,
+  unqueueDelivery,
   writeDeliveryState,
+  type DeliveryQueueEntryView,
+  type QueueRestore,
+  type DeliveryQueueRefusal,
+  type DeliveryQueueStop,
 } from "./delivery";
 import {
   GithubActionsForbidden,
@@ -130,6 +162,12 @@ export const LAUNCH_LEASE_MS = 150 * 1000;
 /** Bail d'une livraison : plus long que le délai de `launchTicketDelivery` (180 s, P43). */
 export const DELIVERY_LEASE_MS = 210 * 1000;
 
+/**
+ * Bail d'un départ de la file (`startQueuedDelivery`, point 8) : plus long que le délai de la
+ * tâche (300 s).
+ */
+export const QUEUED_DELIVERY_LEASE_MS = 330 * 1000;
+
 /** Le bail posé par un lancement. Pure. */
 export function launchLeaseMs(action: LaunchAction): number {
   return action === "livraison" ? DELIVERY_LEASE_MS : LAUNCH_LEASE_MS;
@@ -162,6 +200,35 @@ export const REPRISE_DELIVERY_RUNNING_MESSAGE =
   "Une livraison est en cours sur ce ticket. Rien n'a été lancé ni décompté.";
 /** `mode` de `launchTicketDevelopment` hors `start` et `resume` (P47). */
 export const LAUNCH_MODE_INVALID = "Mode de lancement : « start » ou « resume » attendu.";
+/** `mode` de `launchTicketDelivery` hors `start`, `queue`, `unqueue` et `resume_queue` (P43). */
+export const DELIVERY_MODE_INVALID =
+  "Mode de livraison : « start », « queue », « unqueue » ou « resume_queue » attendu.";
+/** « Relancer la file » refusé : le ticket n'est pas en tête de file. */
+export const QUEUE_RESUME_NOT_HEAD_MESSAGE =
+  "Ce ticket n'est pas en tête de la file des livraisons. Rien n'a été relancé.";
+/** « Livrer » refusé : la file n'est pas vide (point 5). */
+export const DELIVERY_QUEUE_AHEAD_MESSAGE = `D'autres livraisons attendent : appuyez sur « Mettre en file ». ${DELIVERY_NOTHING}`;
+/** Refus de « Mettre en file » (point 4). */
+export const DELIVERY_QUEUE_REFUSALS: Record<
+  DeliveryQueueRefusal,
+  { reason: string; machine: string }
+> = {
+  already: { reason: "Ce ticket est déjà dans la file.", machine: "delivery_queue_already" },
+  running_here: {
+    reason: "Une livraison est en cours sur ce ticket. Rien n'a été mis en file.",
+    machine: "delivery_running",
+  },
+  full: {
+    reason: `La file compte déjà ${DELIVERY_QUEUE_MAX} livraisons. Rien n'a été mis en file.`,
+    machine: "delivery_queue_full",
+  },
+  lock_free: {
+    reason: "La livraison précédente est finie : appuyez sur « Livrer ».",
+    machine: "delivery_lock_free",
+  },
+};
+/** Départ refusé : la tête de la PR a changé depuis l'accord (point 8). */
+export const QUEUE_HEAD_CHANGED_MESSAGE = `Le code de la PR a changé depuis l'accord. ${DELIVERY_NOTHING}`;
 
 /**
  * Refus rendu au client : `details.reason` (français) et `details.code` (stable), plus les
@@ -261,6 +328,8 @@ interface Ctx {
   action: LaunchAction;
   /** Compteur du jour de l'appelant. */
   pool: LaunchPool;
+  /** Bail posé sur le ticket ; absent : `launchLeaseMs(action)`. */
+  leaseMs?: number;
 }
 
 function base(ctx: Ctx, message: string, extra: LogEntry["extra"] = {}): LogEntry {
@@ -352,8 +421,10 @@ async function claimLaunch(ctx: Ctx): Promise<{ issueNumber: number; leaseUntilM
       if (delivery?.get("relaunch_ready") !== true) {
         throw refusal("failed-precondition", REPRISE_CI_NOT_RED_MESSAGE, "reprise_ci_not_red");
       }
+      // P47 : une reprise retire le ticket de la file des livraisons, dans la transaction du bail.
+      dequeueInTransaction(tx, ctx.kit, status?.data(), ctx.ticketId, QUEUE_EXIT_RELAUNCHED, nowMs);
     }
-    const leaseUntilMs = nowMs + launchLeaseMs(ctx.action);
+    const leaseUntilMs = nowMs + (ctx.leaseMs ?? launchLeaseMs(ctx.action));
     tx.update(ref, { decision_lease_until: Timestamp.fromMillis(leaseUntilMs) });
     return { issueNumber: issueNumber as number, leaseUntilMs };
   });
@@ -462,18 +533,33 @@ async function updateLaunch(ctx: Ctx, id: string, patch: Record<string, unknown>
   }
 }
 
-/** Pose ou efface `{analysis|development}_invalid_since`. Au mieux, journalisé. */
+/**
+ * Pose ou efface `{analysis|development}_invalid_since`. Un lancement réussi de la routine de
+ * développement efface aussi `delivery_queue_halted` (file arrêtée par un refus de la
+ * routine). Au mieux, journalisé.
+ */
 async function setRoutineInvalid(ctx: Ctx, invalid: boolean): Promise<void> {
   const field = ROUTINE_INVALID_FIELD[ctx.action];
   const { db, Timestamp } = ctx.kit;
   const ref = statusRef(ctx.kit);
   try {
     await db.runTransaction(async (tx) => {
-      const current = (await tx.get(ref)).get(field);
+      const snap = await tx.get(ref);
+      const patch: Record<string, unknown> = {};
+      const current = snap.get(field);
       const isSet = current instanceof Timestamp;
-      if (invalid === isSet) return;
-      if (!invalid && (current === null || current === undefined)) return;
-      tx.set(ref, { [field]: invalid ? Timestamp.fromMillis(ctx.now()) : null }, { merge: true });
+      if (invalid && !isSet) patch[field] = Timestamp.fromMillis(ctx.now());
+      if (!invalid && current !== null && current !== undefined) patch[field] = null;
+      const halted = snap.get("delivery_queue_halted");
+      if (
+        !invalid &&
+        field === ROUTINE_INVALID_FIELD.livraison &&
+        halted !== null &&
+        halted !== undefined
+      ) {
+        patch.delivery_queue_halted = null;
+      }
+      if (Object.keys(patch).length > 0) tx.set(ref, patch, { merge: true });
     });
   } catch (err) {
     ctx.log("error", {
@@ -495,13 +581,16 @@ async function setRoutineInvalid(ctx: Ctx, invalid: boolean): Promise<void> {
  * PR éligible, liste de ses fichiers lue en entier, aucun fichier sensible, CI verte.
  * L'état relu est écrit dans `admin/delivery` (au mieux). Lève un refus
  * `failed-precondition` avec son code stable ; un échec GitHub suit `launchGithubFailure`.
- * Rend le numéro de la PR.
+ * `expectedHead` (départ de la file) : tête de la PR relue à l'accord ; une autre tête refuse
+ * en `delivery_queue_head_changed`, avant la lecture des fichiers. Rend le numéro et la tête de
+ * la PR.
  */
 async function checkDeliveryLaunch(
   ctx: Ctx,
   issueNumber: number,
   deps: LaunchDeps,
-): Promise<number> {
+  expectedHead?: string,
+): Promise<{ prNumber: number; headSha: string | null }> {
   const token = deps.githubToken().trim();
   const markInvalid = deps.markTokenInvalid ?? markTokenInvalid;
   if (token.length === 0) {
@@ -554,6 +643,9 @@ async function checkDeliveryLaunch(
   if (count > 1) refuse(deliveryMultiplePrMessage(count, issueNumber), "delivery_multiple_prs");
   const pr = reading.pr;
   if (pr === null) return refuse(DELIVERY_NO_PR_MESSAGE, "delivery_no_pr");
+  if (expectedHead !== undefined && pr.headSha !== expectedHead) {
+    refuse(QUEUE_HEAD_CHANGED_MESSAGE, QUEUE_EXIT_HEAD_CHANGED);
+  }
   const files = await github("fichiers de la pull request non relus", () =>
     client.listPullRequestFiles(pr.number),
   );
@@ -565,7 +657,7 @@ async function checkDeliveryLaunch(
     refuse(deliverySensitiveMessage(pr.number, sensitive), "delivery_sensitive_files");
   }
   if (!reading.state.ready) refuse(deliveryCiNotGreenMessage(pr.number), "delivery_ci_not_green");
-  return pr.number;
+  return { prNumber: pr.number, headSha: pr.headSha };
 }
 
 // ── Lancement ───────────────────────────────────────────────────────────────
@@ -651,16 +743,28 @@ export async function launchTicketSession(
   let keepCount = false;
   // Livraison : instant du lancement, fixé à la prise du verrou.
   let lockedAtMs: number | null = null;
+  let previousLast: unknown = null;
   try {
-    // 2 bis. Livraison : PR, fichiers et CI relus, puis verrou global (P43, P44).
+    // 2 bis. Livraison : PR, fichiers et CI relus, puis verrou global (P43, P44) ; refus si la
+    // file des livraisons n'est pas vide (point 5).
     if (action === "livraison") {
       await checkDeliveryLaunch(ctx, issueNumber, deps);
       const plannedAtMs = ctx.now();
-      await claimDeliveryLock(kit, ticketId, issueNumber, plannedAtMs, (message, other) =>
-        refusal("failed-precondition", message, "delivery_running_elsewhere", {
-          ticketId: other,
-        }),
+      const claimed = await claimDeliveryLock(
+        kit,
+        ticketId,
+        issueNumber,
+        plannedAtMs,
+        (message, other) =>
+          refusal("failed-precondition", message, "delivery_running_elsewhere", {
+            ticketId: other,
+          }),
+        (waiting) =>
+          refusal("failed-precondition", DELIVERY_QUEUE_AHEAD_MESSAGE, "delivery_queue_ahead", {
+            waiting,
+          }),
       );
+      previousLast = claimed.previousLast;
       lockedAtMs = plannedAtMs;
     }
 
@@ -707,7 +811,9 @@ export async function launchTicketSession(
     });
   } finally {
     if (reservedDay !== null && !keepCount) await releaseLaunch(ctx, reservedDay);
-    if (lockedAtMs !== null && !keepCount) await releaseDeliveryLock(kit, ticketId, lockedAtMs);
+    if (lockedAtMs !== null && !keepCount) {
+      await releaseDeliveryLock(kit, ticketId, lockedAtMs, previousLast);
+    }
     await releaseLease(ctx, leaseUntilMs);
   }
 }
@@ -833,8 +939,20 @@ export async function handleLaunchCall(
   const { uid, founder } = await requireAdmin(req, deps.lookup);
   const action = typeof actionOf === "function" ? actionOf(req.data) : actionOf;
   const ticketId = readTicketIdArg(req.data);
+  return guardedLaunch(ticketId, action, deps, () =>
+    launchTicketSession(ticketId, action, uid, deps, launchPoolOf(founder)),
+  );
+}
+
+/** Les refus attendus passent tels quels ; toute autre panne est journalisée, en `internal`. */
+async function guardedLaunch<T>(
+  ticketId: string,
+  action: LaunchAction,
+  deps: LaunchDeps,
+  work: () => Promise<T>,
+): Promise<T> {
   try {
-    return await launchTicketSession(ticketId, action, uid, deps, launchPoolOf(founder));
+    return await work();
   } catch (err) {
     if (err instanceof HttpsError) throw err;
     (deps.log ?? defaultLogger)("error", {
@@ -845,6 +963,476 @@ export async function handleLaunchCall(
       extra: { action, cost_center: LAUNCH_COST_CENTER },
     });
     throw refusal("internal", LAUNCH_INTERNAL_MESSAGE, "internal");
+  }
+}
+
+// ── File des livraisons (amendement du 2026-11-22) ──────────────────────────
+
+/** Mode de `launchTicketDelivery` : « Livrer », « Mettre en file », « Retirer de la file ». */
+export type DeliveryMode = "start" | "queue" | "unqueue" | "resume_queue";
+
+/**
+ * `mode` de `launchTicketDelivery` (P43) : `start` (absent : `start`, anciens clients),
+ * `queue`, `unqueue` ou `resume_queue` (« Relancer la file »), comparés exactement ; jamais déduit du verrou ni du statut. Lève
+ * `invalid-argument`. Pure.
+ */
+export function readDeliveryMode(data: unknown): DeliveryMode {
+  const raw = (data as Record<string, unknown> | null | undefined)?.mode;
+  const value = requireBoundedText(raw, { field: "mode", max: 16, label: "Mode de livraison" });
+  if (value === undefined || value === "start") return "start";
+  if (value === "queue" || value === "unqueue" || value === "resume_queue") return value;
+  throw new HttpsError("invalid-argument", DELIVERY_MODE_INVALID, {
+    field: "mode",
+    reason: DELIVERY_MODE_INVALID,
+  });
+}
+
+/** Réponse de « Mettre en file » et de « Retirer de la file ». */
+export type DeliveryQueueResult =
+  | { outcome: "queued"; position: number; total: number }
+  | { outcome: "unqueued"; changed: boolean }
+  /** « Relancer la file » : `changed: false` si la file n'était pas arrêtée (rien écrit). */
+  | { outcome: "queue_resumed"; changed: boolean };
+
+/**
+ * `launchTicketDelivery` : garde (P30), puis `mode` avant toute autre lecture, puis
+ * `ticketId`. `start` : « Livrer » ; `queue` : « Mettre en file », e-mail de l'accord tiré du
+ * jeton vérifié ; `unqueue` : « Retirer de la file » ; `resume_queue` : « Relancer la file ».
+ */
+export async function handleDeliveryCall(
+  req: AuthLike & { data?: unknown },
+  deps: LaunchDeps & { lookup?: MemberLookup },
+): Promise<LaunchResult | DeliveryQueueResult> {
+  const { uid, founder } = await requireAdmin(req, deps.lookup);
+  const mode = readDeliveryMode(req.data);
+  const ticketId = readTicketIdArg(req.data);
+  return guardedLaunch(ticketId, "livraison", deps, async () => {
+    if (mode === "start") {
+      return launchTicketSession(ticketId, "livraison", uid, deps, launchPoolOf(founder));
+    }
+    if (mode === "unqueue") return unqueueTicketDelivery(ticketId, deps);
+    if (mode === "resume_queue") return resumeTicketQueue(ticketId, deps);
+    // `requireAdmin` a vérifié le jeton : sa clé de `members/` existe.
+    const email = memberKeyOf(req.auth?.token) as string;
+    return queueTicketDelivery(ticketId, uid, email, deps);
+  });
+}
+
+/**
+ * « Mettre en file » (point 4) : précondition et bail, contrôles de P43 dans l'ordre de
+ * « Livrer », puis `enqueueDelivery` (file non pleine, ticket absent de la file, qui ne tient
+ * pas le verrou ; refus `delivery_lock_free` quand « Livrer » suffit). Rien n'est compté.
+ */
+export async function queueTicketDelivery(
+  ticketId: string,
+  uid: string,
+  email: string,
+  deps: LaunchDeps,
+): Promise<DeliveryQueueResult> {
+  const kit = await (deps.kit ?? firestore)();
+  const ctx: Ctx = {
+    kit,
+    now: deps.nowMs ?? Date.now,
+    log: deps.log ?? defaultLogger,
+    ticketId,
+    action: "livraison",
+    pool: "group",
+  };
+  const { issueNumber, leaseUntilMs } = await claimLaunch(ctx);
+  try {
+    const pr = await checkDeliveryLaunch(ctx, issueNumber, deps);
+    if (pr.headSha === null) {
+      // Une CI verte exige une tête lue : ce cas ne passe pas `ready`.
+      throw refusal(
+        "failed-precondition",
+        deliveryCiNotGreenMessage(pr.prNumber),
+        "delivery_ci_not_green",
+      );
+    }
+    const placed = await enqueueDelivery(
+      kit,
+      {
+        ticketId,
+        issueNumber,
+        prNumber: pr.prNumber,
+        headSha: pr.headSha,
+        byUid: uid,
+        byEmail: email,
+      },
+      ctx.now(),
+      (kind) => {
+        const r = DELIVERY_QUEUE_REFUSALS[kind];
+        return refusal("failed-precondition", r.reason, r.machine);
+      },
+    );
+    ctx.log(
+      "info",
+      base(ctx, `Tickets : livraison mise en file (${placed.position} sur ${placed.total})`, {
+        pr: pr.prNumber,
+      }),
+    );
+    return { outcome: "queued", ...placed };
+  } finally {
+    await releaseLease(ctx, leaseUntilMs);
+  }
+}
+
+/**
+ * « Relancer la file » (décisions 9 et 10) : efface `delivery_queue_halted` et
+ * `development_invalid_since` quand `ticketId` est en tête ; aucun lancement, aucun décompte,
+ * aucun appel à GitHub ni à la routine. Refus `delivery_queue_not_head` si le ticket n'est pas
+ * en tête ; `changed: false` sans écriture si aucun des deux champs n'est posé.
+ */
+export async function resumeTicketQueue(
+  ticketId: string,
+  deps: LaunchDeps,
+): Promise<DeliveryQueueResult> {
+  const kit = await (deps.kit ?? firestore)();
+  const outcome = await resumeHaltedQueue(kit, ticketId);
+  if (outcome === "not_head") {
+    throw refusal("failed-precondition", QUEUE_RESUME_NOT_HEAD_MESSAGE, "delivery_queue_not_head");
+  }
+  if (outcome === "cleared") {
+    (deps.log ?? defaultLogger)("info", {
+      message: "Tickets : file des livraisons relancée",
+      feature: "tickets",
+      ticketId,
+      extra: { action: "livraison", cost_center: LAUNCH_COST_CENTER },
+    });
+  }
+  return { outcome: "queue_resumed", changed: outcome === "cleared" };
+}
+
+/** « Retirer de la file » (point 6) : aucun appel à GitHub ni à la routine. */
+export async function unqueueTicketDelivery(
+  ticketId: string,
+  deps: LaunchDeps,
+): Promise<DeliveryQueueResult> {
+  const kit = await (deps.kit ?? firestore)();
+  const changed = await unqueueDelivery(kit, ticketId, (deps.nowMs ?? Date.now)());
+  if (changed) {
+    (deps.log ?? defaultLogger)("info", {
+      message: "Tickets : livraison retirée de la file",
+      feature: "tickets",
+      ticketId,
+      extra: { action: "livraison", cost_center: LAUNCH_COST_CENTER },
+    });
+  }
+  return { outcome: "unqueued", changed };
+}
+
+/** Ce que fait une exécution de `startQueuedDelivery`. */
+export type QueuedDeliveryOutcome =
+  | { kind: "idle"; reason: DeliveryQueueStop }
+  /** Panne passagère, plafond atteint, routine non configurée : entrée gardée. */
+  | { kind: "kept"; ticketId: string; reason: string }
+  /** Refus propre au ticket : entrée retirée, `queue_exit` noté, rien compté. */
+  | { kind: "exited"; ticketId: string; code: string }
+  /** Exécution superposée ou « Livrer » passé entre-temps : rien compté. */
+  | { kind: "raced"; ticketId: string }
+  | { kind: "launched" | "unknown"; ticketId: string };
+
+/** Codes de refus qui font sortir la tête de file ; tout autre refus la garde (point 8). */
+export const QUEUE_EXIT_CODES: Record<string, string> = {
+  not_launchable: "not_allowed",
+  ticket_not_found: "not_allowed",
+  ticket_changed: "not_allowed",
+  issue_not_found: "issue_not_found",
+  reprise_running: "reprise_running",
+  delivery_no_pr: "delivery_no_pr",
+  delivery_multiple_prs: "delivery_multiple_prs",
+  delivery_files_unreadable: "delivery_files_unreadable",
+  delivery_sensitive_files: "delivery_sensitive_files",
+  delivery_ci_not_green: "delivery_ci_not_green",
+  [QUEUE_EXIT_HEAD_CHANGED]: QUEUE_EXIT_HEAD_CHANGED,
+};
+
+/**
+ * Refus de la routine au départ qui arrêtent la file (`delivery_queue_halted`), entrée remise
+ * en tête : routine en pause ou appel refusé (décision de l'utilisateur du 2026-11-22). Le
+ * jeton refusé arrête la file par `development_invalid_since`.
+ */
+export const QUEUE_HALT_CODES: readonly string[] = ["routine_paused", "routine_failed"];
+
+/** Code d'une erreur pour un journal : `code` ou nom seuls, jamais le message. Pure. */
+function errorCodeOf(err: unknown): string {
+  if (err !== null && typeof err === "object") {
+    const code = (err as { code?: unknown }).code;
+    if (typeof code === "string" || typeof code === "number") return String(code).slice(0, 60);
+    const name = (err as { name?: unknown }).name;
+    if (typeof name === "string") return name.slice(0, 60);
+  }
+  return "inconnu";
+}
+
+/** Code stable d'un refus, ou `null` pour une panne qui n'est pas une `HttpsError`. Pure. */
+function refusalCode(err: unknown): string | null {
+  if (!(err instanceof HttpsError)) return null;
+  const code = (err.details as Record<string, unknown> | undefined)?.code;
+  return typeof code === "string" ? code : null;
+}
+
+/**
+ * Départ de la tête de file (`startQueuedDelivery`, point 8). Première lecture :
+ * `ticket_status/launches` seul ; arrêt sans autre lecture si la file est vide, si le verrou
+ * tient, si la livraison précédente n'a pas rendu son compte rendu, ou si le jeton de la
+ * routine de développement est refusé ou si la file est arrêtée (`delivery_queue_halted`). Puis,
+ * avant tout appel à GitHub : `ticket_status/github.token_invalid_since` (arrêt si posé),
+ * `members/{by_email}` relu (administrateur, compteur), plafond du jour de ce compteur lu sans
+ * décompte (arrêt s'il est atteint). Puis une tentative sur la tête : bail de 330 s, contrôles de P43, tête de la PR égale à
+ * l'accord, Issue relue ; puis une transaction relit la tête, le verrou, la condition de fin
+ * et le plafond, retire l'entrée, prend le verrou et compte ensemble ; entrée d'historique
+ * `unknown` (`queued: true`, `by_uid` de l'accord), appel unique de la routine.
+ */
+export async function runQueuedDelivery(
+  deps: LaunchDeps & { lookup?: MemberLookup },
+): Promise<QueuedDeliveryOutcome> {
+  const kit = await (deps.kit ?? firestore)();
+  const now = deps.nowMs ?? Date.now;
+  const log = deps.log ?? defaultLogger;
+  const millis = (v: unknown) => (v instanceof kit.Timestamp ? v.toMillis() : null);
+
+  const statusSnap = await statusRef(kit).get();
+  const first = deliveryQueueDeparture(statusSnap.data() ?? {}, now(), millis);
+  if ("stop" in first) return { kind: "idle", reason: first.stop };
+  const head = first.head;
+  const rawHead = readDeliveryQueue(statusSnap.get("delivery_queue"), millis).raw[0];
+  const ticketId = head.ticketId;
+  const entry = (message: string, extra: LogEntry["extra"] = {}): LogEntry => ({
+    message,
+    feature: "tickets",
+    ticketId,
+    extra: { action: "livraison", cost_center: LAUNCH_COST_CENTER, queued: true, ...extra },
+  });
+  const exit = async (code: string): Promise<QueuedDeliveryOutcome> => {
+    try {
+      await dequeueHead(kit, head, code, now());
+    } catch (err) {
+      log("error", { ...entry(`Tickets : sortie de file (${code}) non écrite`), error: err });
+      return { kind: "kept", ticketId, reason: "firestore" };
+    }
+    log("info", entry(`Tickets : livraison sortie de la file (${code})`));
+    return { kind: "exited", ticketId, code };
+  };
+  const fate = (err: unknown, step: string): Promise<QueuedDeliveryOutcome> => {
+    const code = refusalCode(err);
+    const exitCode = code === null ? undefined : QUEUE_EXIT_CODES[code];
+    if (exitCode !== undefined) return exit(exitCode);
+    // Panne passagère (GitHub, Firestore, jeton refusé, bail tenu) : entrée gardée.
+    log(code === null ? "error" : "warn", {
+      ...entry(`Tickets : départ de la file reporté (${step})`, { code }),
+      ...(code === null ? { error: err } : {}),
+    });
+    return Promise.resolve({ kind: "kept", ticketId, reason: code ?? "internal" });
+  };
+
+  const secrets = deps.routine();
+  const config = routineConfig(secrets.id, secrets.token);
+  if (config === null) {
+    log("error", entry("Tickets : départ de la file reporté, routine non configurée"));
+    return { kind: "kept", ticketId, reason: "not_configured" };
+  }
+  // Jeton GitHub refusé : aucune tentative tant qu'il n'est pas remplacé.
+  try {
+    const github = await kit.db.collection(COLL_TICKET_STATUS).doc(TICKET_STATUS_GITHUB_DOC).get();
+    const invalid = github.get("token_invalid_since");
+    if (invalid !== null && invalid !== undefined) {
+      return { kind: "kept", ticketId, reason: "github_token" };
+    }
+  } catch (err) {
+    return fate(err, "ticket_status/github non relu");
+  }
+  if (
+    head.byEmail === null ||
+    head.byUid === null ||
+    head.queuedAtMs === null ||
+    head.headSha === null
+  ) {
+    return exit("not_allowed");
+  }
+
+  // Compte de l'accord relu : toujours administrateur, compteur du fondateur ou du groupe.
+  let member: Record<string, unknown> | null;
+  try {
+    member = await (deps.lookup ?? firestoreMemberLookup)(head.byEmail);
+  } catch (err) {
+    // Code d'erreur seul : ni l'objet erreur ni l'e-mail de l'accord dans le journal.
+    log(
+      "error",
+      entry("Tickets : départ de la file reporté, members/ non relu", {
+        code: errorCodeOf(err),
+      }),
+    );
+    return { kind: "kept", ticketId, reason: "members_unreadable" };
+  }
+  if (member === null || member.role !== "admin") return exit(QUEUE_EXIT_NOT_ADMIN);
+  const pool = launchPoolOf(member.founder === true);
+  // Plafond du compteur de l'accord, lu sans décompte avant tout appel à GitHub ; la
+  // transaction du départ le relit.
+  try {
+    const quota = await quotaRef(kit, parisDay(new Date(now())), pool).get();
+    if (!launchFitsQuota(readLaunchCount(quota.get("count")), launchLimitOf(pool))) {
+      return { kind: "kept", ticketId, reason: "quota_exceeded" };
+    }
+  } catch (err) {
+    return fate(err, "plafond non relu");
+  }
+  const ctx: Ctx = {
+    kit,
+    now,
+    log,
+    ticketId,
+    action: "livraison",
+    pool,
+    leaseMs: QUEUED_DELIVERY_LEASE_MS,
+  };
+
+  let claimed: { issueNumber: number; leaseUntilMs: number };
+  try {
+    claimed = await claimLaunch(ctx);
+  } catch (err) {
+    return fate(err, "bail");
+  }
+  try {
+    try {
+      await checkDeliveryLaunch(ctx, claimed.issueNumber, deps, head.headSha);
+      await checkIssue(ctx, claimed.issueNumber, deps);
+    } catch (err) {
+      return await fate(err, "contrôles");
+    }
+    return await departFromQueue(ctx, head, rawHead, claimed.issueNumber, config, deps);
+  } finally {
+    await releaseLease(ctx, claimed.leaseUntilMs);
+  }
+}
+
+/** Fin du départ : transaction anti-doublon, trace, appel unique, résultat. */
+async function departFromQueue(
+  ctx: Ctx,
+  head: DeliveryQueueEntryView,
+  rawHead: Record<string, unknown>,
+  issueNumber: number,
+  config: { id: string; token: string },
+  deps: LaunchDeps,
+): Promise<QueuedDeliveryOutcome> {
+  const { kit } = ctx;
+  const ticketId = ctx.ticketId;
+  const atMs = ctx.now();
+  const day = parisDay(new Date(atMs));
+  const millis = (v: unknown) => (v instanceof kit.Timestamp ? v.toMillis() : null);
+  const qRef = quotaRef(kit, day, ctx.pool);
+  const sRef = statusRef(kit);
+  const limit = launchLimitOf(ctx.pool);
+  let taken: { kind: "taken"; previousLast: unknown } | { kind: "raced" } | { kind: "quota" };
+  try {
+    taken = await kit.db.runTransaction(async (tx) => {
+      const [quota, status] = await Promise.all([tx.get(qRef), tx.get(sRef)]);
+      const data = status.data() ?? {};
+      const check = deliveryQueueDeparture(data, atMs, millis);
+      if ("stop" in check || !sameQueueEntry(check.head, head)) return { kind: "raced" as const };
+      const count = readLaunchCount(quota.get("count"));
+      if (!launchFitsQuota(count, limit)) return { kind: "quota" as const };
+      const rest = readDeliveryQueue(data.delivery_queue, millis).raw.slice(1);
+      tx.set(
+        qRef,
+        {
+          day,
+          count: count + 1,
+          expires_at: kit.Timestamp.fromMillis(atMs + QUOTA_TTL_DAYS * 86_400_000),
+        },
+        { merge: true },
+      );
+      tx.set(
+        sRef,
+        {
+          ...nextLaunchStatus(data, day, count + 1, 1, ctx.pool),
+          ...deliveryLockFields(kit, ticketId, issueNumber, atMs),
+          delivery_queue: rest,
+        },
+        { merge: true },
+      );
+      return { kind: "taken" as const, previousLast: data.delivery_last ?? null };
+    });
+  } catch (err) {
+    ctx.log("error", { ...base(ctx, "Tickets : départ de la file non pris"), error: err });
+    return { kind: "kept", ticketId, reason: "firestore" };
+  }
+  if (taken.kind === "raced") {
+    ctx.log("info", base(ctx, "Tickets : départ de la file laissé à un autre appel"));
+    return { kind: "raced", ticketId };
+  }
+  if (taken.kind === "quota") {
+    ctx.log(
+      "info",
+      base(ctx, `Tickets : départ de la file en attente, plafond de ${limit} atteint`),
+    );
+    return { kind: "kept", ticketId, reason: "quota_exceeded" };
+  }
+
+  let keepCount = false;
+  let restore: QueueRestore | null = null;
+  try {
+    const id = randomUUID();
+    try {
+      await recordLaunch(ctx, {
+        id,
+        action: "livraison",
+        state: "unknown",
+        at: kit.Timestamp.fromMillis(atMs),
+        by_uid: head.byUid,
+        queued: true,
+        retry_after: kit.Timestamp.fromMillis(launchRetryAfterMs("livraison", atMs)),
+      });
+    } catch (err) {
+      ctx.log("error", {
+        ...base(ctx, "Tickets : historique non écrit, départ de la file abandonné"),
+        error: err,
+      });
+      restore = { rawEntry: rawHead, halt: null };
+      return { kind: "kept", ticketId, reason: "not_recorded" };
+    }
+    const outcome: FireOutcome = await fireRoutine(
+      config,
+      launchCommandText("livraison", issueNumber),
+      {
+        fetchImpl: deps.fetchRoutine,
+        nowMs: ctx.now,
+        log: (e) => ctx.log("error", base(ctx, e.message, e.extra)),
+      },
+    );
+    keepCount = true;
+    // Seul un refus de l'API (`failed`) dit que rien n'est parti.
+    const refused = outcome.kind === "failed";
+    try {
+      const result = await settleLaunch(ctx, issueNumber, id, atMs, outcome, () => {
+        keepCount = false;
+      });
+      return { kind: result.outcome, ticketId };
+    } catch (err) {
+      if (!refused) {
+        // Une session a pu partir : compteur et verrou gardés, entrée non remise.
+        keepCount = true;
+        ctx.log("error", {
+          ...base(ctx, "Tickets : résultat du départ de la file non enregistré"),
+          error: err,
+        });
+        return { kind: "unknown", ticketId };
+      }
+      // Refus de l'API : rien n'est parti, entrée remise en tête. Jeton refusé :
+      // `development_invalid_since` arrête la file ; routine en pause ou appel refusé :
+      // `delivery_queue_halted` l'arrête ; limite de débit : nouvel essai à l'exécution suivante.
+      const code = refusalCode(err) ?? "internal";
+      restore = {
+        rawEntry: rawHead,
+        halt: QUEUE_HALT_CODES.includes(code) ? { code, atMs: ctx.now() } : null,
+      };
+      return { kind: "kept", ticketId, reason: code };
+    }
+  } finally {
+    if (!keepCount) {
+      await releaseLaunch(ctx, day);
+      await releaseDeliveryLock(kit, ticketId, atMs, taken.previousLast, restore);
+    }
   }
 }
 

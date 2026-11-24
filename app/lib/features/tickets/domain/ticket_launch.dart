@@ -74,6 +74,24 @@ enum ActionLancement {
   };
 }
 
+/// Mode de `launchTicketDelivery` (ADR-008, amendement du 2026-11-22) :
+/// « Livrer », « Mettre en file », « Retirer de la file ». Le bouton appuyé
+/// choisit le mode ; le serveur recontrôle tout.
+enum ModeLivraison {
+  livrer('start'),
+  mettreEnFile('queue'),
+  retirer('unqueue'),
+
+  /// « Relancer la file » : efface l'arrêt de la file posé par un refus de la
+  /// routine (décision 9 de l'amendement, 2026-11-22).
+  relancerFile('resume_queue');
+
+  const ModeLivraison(this.storedValue);
+
+  /// Valeur de `mode` envoyée au serveur.
+  final String storedValue;
+}
+
 /// Résultat d'un lancement, écrit par le serveur (`state`).
 enum EtatLancement {
   launched('launched'),
@@ -106,6 +124,7 @@ class TicketLaunch {
     this.sessionUrl,
     this.reason,
     this.endedBy,
+    this.queued = false,
   });
 
   /// `null` : action inconnue de cette version.
@@ -134,6 +153,10 @@ class TicketLaunch {
   /// développement (ADR-020). Le client choisit son texte d'après ce champ,
   /// sans comparer de dates.
   final String? endedBy;
+
+  /// Livraison partie de la file des livraisons (`queued: true`, écrit par
+  /// `startQueuedDelivery`) : [byUid] est l'auteur de l'accord.
+  final bool queued;
 
   /// Livraison close par un blocage relevé par le serveur.
   bool get arreteeParBlocage => endedBy == kLivraisonFinBlocage;
@@ -176,6 +199,7 @@ class TicketLaunchesDoc {
           sessionUrl: e.texteFacultatif('session_url'),
           reason: e.texteFacultatif('reason'),
           endedBy: e.texteFacultatif('ended_by'),
+          queued: e.boolFacultatif('queued') ?? false,
         ),
     ];
     final far = DateTime.utc(1);
@@ -275,6 +299,79 @@ class VerrouLivraison {
   }
 }
 
+/// Entrée de `ticket_status/launches.delivery_queue` (ADR-008, amendement du
+/// 2026-11-22, P44), écrite par le serveur seul. L'e-mail de l'accord
+/// (`by_email`) n'est pas lu.
+@immutable
+class EntreeFileLivraison {
+  const EntreeFileLivraison({
+    required this.ticketId,
+    this.issueNumber,
+    this.prNumber,
+    this.queuedAt,
+    this.byUid,
+  });
+
+  final String ticketId;
+  final int? issueNumber;
+  final int? prNumber;
+
+  /// Heure de l'accord (« Mettre en file »).
+  final DateTime? queuedAt;
+
+  /// Compte qui a donné l'accord ; jamais affiché tel quel.
+  final String? byUid;
+}
+
+/// `ticket_status/launches.delivery_last` : dernière livraison lancée, écrite
+/// par le serveur seul. Le serveur pose [reportedAt] au relevé de son compte
+/// rendu.
+@immutable
+class DerniereLivraison {
+  const DerniereLivraison({
+    required this.ticketId,
+    this.issueNumber,
+    this.launchedAt,
+    this.retryAfter,
+    this.reportedAt,
+  });
+
+  final String ticketId;
+  final int? issueNumber;
+  final DateTime? launchedAt;
+  final DateTime? retryAfter;
+  final DateTime? reportedAt;
+
+  /// Compte rendu attendu : ni [reportedAt], ni [retryAfter] passé. Lecture
+  /// des deux champs écrits par le serveur, sans autre règle.
+  bool compteRenduAttendu(DateTime now) {
+    if (reportedAt != null) return false;
+    final until = retryAfter;
+    return until != null && until.isAfter(now);
+  }
+}
+
+/// `ticket_status/launches.delivery_queue_halted` : file arrêtée par un refus
+/// de la routine au départ (`routine_paused`, `routine_failed`), écrite par le
+/// serveur et effacée au prochain lancement réussi de la routine de
+/// développement (décision de l'utilisateur du 2026-11-22).
+@immutable
+class ArretFile {
+  const ArretFile({required this.code, this.at});
+
+  final String code;
+  final DateTime? at;
+}
+
+/// Position d'un ticket dans la file des livraisons : [position] à partir de
+/// 1, sur [total] ; [devant] : l'entrée qui le précède, ou `null` en tête.
+typedef PositionFile = ({
+  int position,
+  int total,
+  EntreeFileLivraison entree,
+  EntreeFileLivraison? devant,
+});
+
 /// Document `ticket_status/launches`, écrit par le serveur seul et lu par
 /// l'administrateur seul (P41). Le plafond [perDay] vient du serveur
 /// (`LAUNCHES_PER_DAY`) : aucune constante en Dart (P39). Le compte fondateur a
@@ -294,6 +391,9 @@ class EtatLancements {
     this.developmentInvalidSince,
     this.deliveryRunning,
     this.ciReadDeniedSince,
+    this.deliveryQueue = const [],
+    this.deliveryLast,
+    this.deliveryQueueHalted,
   });
 
   /// Jour de Paris du compteur, `AAAAMMJJ`, écrit par le serveur. Le client
@@ -322,6 +422,29 @@ class EtatLancements {
   /// « Actions : lecture » absente) depuis cette date ; effacé par le serveur
   /// à la lecture suivante réussie (décision de l'utilisateur du 2026-11-14).
   final DateTime? ciReadDeniedSince;
+
+  /// File des livraisons, dans l'ordre des accords (P44).
+  final List<EntreeFileLivraison> deliveryQueue;
+
+  /// Dernière livraison lancée, ou `null`.
+  final DerniereLivraison? deliveryLast;
+
+  /// File arrêtée par un refus de la routine, ou `null`.
+  final ArretFile? deliveryQueueHalted;
+
+  /// Position de [ticketId] dans la file, ou `null` s'il n'y est pas.
+  PositionFile? positionFile(String ticketId) {
+    for (var i = 0; i < deliveryQueue.length; i++) {
+      if (deliveryQueue[i].ticketId != ticketId) continue;
+      return (
+        position: i + 1,
+        total: deliveryQueue.length,
+        entree: deliveryQueue[i],
+        devant: i == 0 ? null : deliveryQueue[i - 1],
+      );
+    }
+    return null;
+  }
 
   static final _jour = RegExp(r'^\d{8}$');
   static final _mois = RegExp(r'^\d{6}$');
@@ -359,6 +482,45 @@ class EtatLancements {
       developmentInvalidSince: read.date('development_invalid_since'),
       deliveryRunning: _verrou(read.objetFacultatif('delivery_running')),
       ciReadDeniedSince: read.date('ci_read_denied_since'),
+      deliveryQueue: [
+        for (final e in read.liste('delivery_queue'))
+          if (e.texteFacultatif('ticket_id') case final id? when id.isNotEmpty)
+            EntreeFileLivraison(
+              ticketId: id,
+              issueNumber: _entierPositif(e, 'issue_number'),
+              prNumber: _entierPositif(e, 'pr_number'),
+              queuedAt: e.date('queued_at'),
+              byUid: e.texteFacultatif('by_uid'),
+            ),
+      ],
+      deliveryLast: _derniere(read.objetFacultatif('delivery_last')),
+      deliveryQueueHalted: switch (read.objetFacultatif(
+        'delivery_queue_halted',
+      )) {
+        final LecteurChamps a => switch (a.texteFacultatif('code')) {
+          final String code => ArretFile(code: code, at: a.date('at')),
+          null => null,
+        },
+        null => null,
+      },
+    );
+  }
+
+  static int? _entierPositif(LecteurChamps read, String key) {
+    final n = read.nombreFacultatif(key);
+    return n != null && n == n.truncateToDouble() && n > 0 ? n.toInt() : null;
+  }
+
+  static DerniereLivraison? _derniere(LecteurChamps? read) {
+    if (read == null) return null;
+    final ticketId = read.texteFacultatif('ticket_id');
+    if (ticketId == null || ticketId.isEmpty) return null;
+    return DerniereLivraison(
+      ticketId: ticketId,
+      issueNumber: _entierPositif(read, 'issue_number'),
+      launchedAt: read.date('launched_at'),
+      retryAfter: read.date('retry_after'),
+      reportedAt: read.date('reported_at'),
     );
   }
 
@@ -380,6 +542,9 @@ class EtatLancements {
       developmentInvalidSince: developmentInvalidSince,
       deliveryRunning: deliveryRunning,
       ciReadDeniedSince: ciReadDeniedSince,
+      deliveryQueue: deliveryQueue,
+      deliveryLast: deliveryLast,
+      deliveryQueueHalted: deliveryQueueHalted,
     );
   }
 
@@ -387,12 +552,9 @@ class EtatLancements {
     if (read == null) return null;
     final ticketId = read.texteFacultatif('ticket_id');
     if (ticketId == null || ticketId.isEmpty) return null;
-    final n = read.nombreFacultatif('issue_number');
     return VerrouLivraison(
       ticketId: ticketId,
-      issueNumber: n != null && n == n.truncateToDouble() && n > 0
-          ? n.toInt()
-          : null,
+      issueNumber: _entierPositif(read, 'issue_number'),
       launchedAt: read.date('launched_at'),
       retryAfter: read.date('retry_after'),
     );
@@ -523,6 +685,17 @@ enum IssueLancement {
   /// Pas de réponse (réseau coupé, délai dépassé, réponse illisible) : la
   /// session est peut-être partie.
   perdu,
+
+  /// « Mettre en file » accepté : rien n'est parti ni compté.
+  enFile,
+
+  /// « Retirer de la file » appliqué ([ResultatLancement.changed] faux : le
+  /// ticket n'était plus en file).
+  retire,
+
+  /// « Relancer la file » appliqué ([ResultatLancement.changed] faux : la
+  /// file n'était plus arrêtée).
+  fileRelancee,
 }
 
 /// Codes des refus de livraison qui demandent une fusion à la main : la PR
@@ -538,15 +711,34 @@ const kRefusFusionALaMain = {
 /// `launchTicketDelivery`.
 @immutable
 class ResultatLancement {
-  const ResultatLancement(this.issue, {this.motif, this.code});
+  const ResultatLancement(
+    this.issue, {
+    this.motif,
+    this.code,
+    this.position,
+    this.total,
+    this.changed = true,
+    this.reseau = false,
+  });
 
   final IssueLancement issue;
 
   /// `details.reason` : texte français du serveur.
   final String? motif;
 
-  /// `details.code` : code stable du serveur, pour le rapport d'erreur seul.
+  /// `details.code` : code stable du serveur, pour le rapport d'erreur et
+  /// le texte d'un refus de la file.
   final String? code;
+
+  /// Position et taille de la file après « Mettre en file ».
+  final int? position;
+  final int? total;
+
+  /// « Retirer de la file » : faux si le ticket n'était plus en file.
+  final bool changed;
+
+  /// Échec `unavailable` sans motif du serveur : pas de réseau.
+  final bool reseau;
 
   /// La boîte reste ouverte et affiche le message : rien n'est parti.
   bool get rienNestParti =>
@@ -559,6 +751,26 @@ class ResultatLancement {
     final map = data is Map ? data : const {};
     if (map['outcome'] == 'launched') {
       return const ResultatLancement(IssueLancement.lance);
+    }
+    int? entier(Object? v) => v is int && v > 0 ? v : null;
+    if (map['outcome'] == 'queued') {
+      return ResultatLancement(
+        IssueLancement.enFile,
+        position: entier(map['position']),
+        total: entier(map['total']),
+      );
+    }
+    if (map['outcome'] == 'queue_resumed') {
+      return ResultatLancement(
+        IssueLancement.fileRelancee,
+        changed: map['changed'] != false,
+      );
+    }
+    if (map['outcome'] == 'unqueued') {
+      return ResultatLancement(
+        IssueLancement.retire,
+        changed: map['changed'] != false,
+      );
     }
     return ResultatLancement(
       IssueLancement.inconnu,
@@ -593,7 +805,12 @@ class ResultatLancement {
       _ when motif != null => IssueLancement.refuse,
       _ => IssueLancement.perdu,
     };
-    return ResultatLancement(issue, motif: motif, code: codeServeur);
+    return ResultatLancement(
+      issue,
+      motif: motif,
+      code: codeServeur,
+      reseau: code == 'unavailable' && motif == null,
+    );
   }
 
   /// Message affiché, dans la boîte (refus) ou en bas d'écran.
@@ -604,10 +821,35 @@ class ResultatLancement {
       'Résultat inconnu, compté dans les lancements du jour. '
           '${motif ?? 'Vérifiez sur claude.ai/code avant de relancer.'}',
     IssueLancement.refuse =>
-      motif ?? 'Lancement refusé par le serveur. Rien n\'a été lancé.',
+      kRefusFile[code] ??
+          motif ??
+          'Lancement refusé par le serveur. Rien n\'a été lancé.',
     IssueLancement.acces =>
       'Lancement refusé : accès administrateur refusé. Rien n\'a été lancé.',
     IssueLancement.perdu =>
       'Réponse perdue. Regardez la section Lancements avant de relancer.',
+    IssueLancement.enFile => 'Ticket mis en file de livraison.',
+    IssueLancement.retire =>
+      changed
+          ? 'Ticket retiré de la file.'
+          : 'Ce ticket n\'était plus dans la file.',
+    IssueLancement.fileRelancee =>
+      changed
+          ? 'File des livraisons relancée.'
+          : 'La file des livraisons n\'était plus arrêtée.',
   };
 }
+
+/// Textes des refus de la file des livraisons, par `details.code`. Le refus
+/// `delivery_queue_full` garde le texte du serveur, qui porte la taille de la
+/// file (`DELIVERY_QUEUE_MAX`) : aucune constante en Dart.
+const kRefusFile = <String, String>{
+  'delivery_queue_already': 'Ce ticket est déjà dans la file.',
+  'delivery_queue_not_head':
+      'Ce ticket n\'est plus en tête de la file. Rien n\'a été relancé.',
+  'delivery_lock_free':
+      'La livraison précédente est finie : appuyez sur « Livrer ».',
+  'delivery_queue_ahead':
+      'D\'autres livraisons attendent : appuyez sur « Mettre en file ». '
+      'Rien n\'a été lancé ni décompté.',
+};

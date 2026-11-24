@@ -6,6 +6,48 @@ données, outillage), ou les deux.
 
 ## 2026-11-23
 
+### v0.2.18 — fonctionnel
+
+Résumé : « Mettre en file » enregistre votre accord : une livraison part seule après la précédente.
+
+Admin › Tickets : quand une livraison est déjà en cours, ou qu'elle n'a pas encore publié son
+compte rendu, « Mettre en file » remplace « Livrer ». Votre accord est enregistré une fois :
+la livraison part seule, environ 5 minutes après le compte rendu de la précédente, de jour
+comme de nuit. Elle est comptée au départ, attend la remise à zéro si le plafond du jour est
+atteint, et sort de la file si le code de la pull request change ou si une livraison se
+bloque. La fiche montre la position dans la file, la raison de l'attente et l'accord donné ;
+la liste porte une pastille « En file 2/3 ». « Retirer de la file » annule l'accord. Une sortie
+de file sans départ est expliquée sur la fiche. Si la routine de développement est en pause ou
+refuse un départ, ou si son jeton est refusé, la file s'arrête sans perdre l'accord ; une fois
+la cause réglée, « Relancer la file », en tête de file, la fait repartir dans les 5 minutes, après
+les mêmes contrôles. Demandé par le ticket #104.
+
+### v0.2.18 — technique
+
+File des livraisons (ADR-008, amendement du 2026-11-22). `launchTicketDelivery` reçoit `mode`
+(`start`, `queue`, `unqueue`) ; `ticket_status/launches` porte `delivery_queue`
+(`DELIVERY_QUEUE_MAX` = 10, `config.ts`) et `delivery_last` (`reported_at` posé par
+`writeDeliveryReports`, un blocage vide la file dans la même transaction) ;
+`admin/delivery.queue_exit` note chaque sortie sans départ. Nouvelle tâche planifiée
+`startQueuedDelivery` (toutes les 5 minutes, `maxInstances` 1, `concurrency` 1, 300 s,
+`retryCount` 0, secrets `GITHUB_TICKETS_TOKEN` et `TICKETS_ROUTINE_DEV_*`), qui fait partir la
+tête de file après les contrôles de « Livrer », la tête de la PR relue égale à l'accord, et une
+transaction qui retire l'entrée, prend le verrou et compte ensemble. `syncTickets` reste le
+rattrapage du relevé et ne monte aucun secret de routine. Refuser, Clore, une reprise et la
+sortie d'« En cours » retirent le ticket de la file. `QUERYABLE_FUNCTIONS` reçoit
+`startQueuedDelivery` ; `ci.yml` et `deploy.yml` acceptent la seconde tâche planifiée, vérifient
+ses réglages et lui réservent avec les deux callables les secrets `TICKETS_ROUTINE_DEV_*`. Le
+prompt de livraison cite « Livrer » ou « Mettre en file » : à recoller sur claude.ai. Règles
+Firestore inchangées ; tests de `rules-tests/` étendus aux nouveaux champs. Au départ, un
+refus de la routine (pause, appel refusé) remet l'entrée en tête dans la transaction qui rend le
+verrou et arrête la file (`delivery_queue_halted`) jusqu'au prochain lancement réussi ; la tâche
+s'arrête aussi sur `token_invalid_since` et au plafond, avant tout appel à GitHub. Mode
+`resume_queue` (« Relancer la file ») : efface `delivery_queue_halted` et
+`development_invalid_since` quand le ticket est en tête (sinon `delivery_queue_not_head`),
+jamais `analysis_invalid_since` ni `token_invalid_since`, sans lancement, décompte ni appel à
+GitHub ou à la routine ; un jeton encore faux repose `development_invalid_since` au départ
+suivant, compteur et verrou rendus. Aucune dépendance changée. Demandé par le ticket #104.
+
 ### v0.2.17 — technique
 
 `deploy.yml` : le job `gate` décide du déploiement des Functions par le diff de `functions/`

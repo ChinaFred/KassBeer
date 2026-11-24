@@ -1,12 +1,13 @@
 /**
- * Cloud Functions de Kass'Beer (ADR-006, ADR-008, ADR-011, ADR-015, ADR-016). Quinze
+ * Cloud Functions de Kass'Beer (ADR-006, ADR-008, ADR-011, ADR-015, ADR-016). Seize
  * fonctions, dont treize points d'accès de la liste fermée d'ADR-008, d'ADR-011, d'ADR-015 et
  * d'ADR-016 (P25) :
  *
  * - `publishTicket` : déclencheur de création de `tickets/{ticketId}`, publie l'Issue ;
  *   seul déclencheur Firestore (la CI le vérifie) ;
  * - `syncTickets` : tâche horaire, renvoie les tickets `pending` et relit les Issues et
- *   leurs analyses ; seule tâche planifiée ;
+ *   leurs analyses ; rattrape le relevé des comptes rendus de livraison ; aucun secret de
+ *   routine ;
  * - `githubTicketWebhook` : `onRequest` public, signé HMAC (P29), état des Issues poussé
  *   par GitHub (T3) ;
  * - `answerTicketAnalysis` : `onCall` de l'admin (`requireAdmin`, P30), « Répondre » (T3) ;
@@ -17,8 +18,12 @@
  * - `launchTicketAnalysis`, `launchTicketDevelopment` : `onCall` de l'admin, lancement d'une
  *   routine Claude Code d'analyse ou de développement (T4, P35, P36) ; le développement
  *   accepte `mode: "resume"`, « Relancer le développement » (T5, P47) ;
- * - `launchTicketDelivery` : `onCall` de l'admin, « Livrer » (T5, P43, P44), par la routine
- *   de développement. Chaque callable ne monte que les secrets de sa routine (P25).
+ * - `launchTicketDelivery` : `onCall` de l'admin, « Livrer », « Mettre en file » et
+ *   « Retirer de la file » (`mode`, T5, P43, P44), par la routine de développement. Chaque
+ *   callable ne monte que les secrets de sa routine (P25).
+ * - `startQueuedDelivery` : tâche planifiée toutes les 5 minutes, départ de la tête de la file
+ *   des livraisons (ADR-008, amendement du 2026-11-22) ; seconde et dernière tâche planifiée
+ *   (la CI vérifie la liste : `syncTickets`, `startQueuedDelivery`).
  * - `attachTicketScreenshot` : `onCall` de l'auteur membre (`requireMember`, P30), joint
  *   la capture déposée dans Cloud Storage à son ticket (T6). Aucun secret ;
  * - `queryLogs` : `onCall` de l'admin, Admin › Journaux (ADR-011, J2, P49), aucun secret ;
@@ -54,7 +59,12 @@ import { logError } from "./logging";
 import { handleQueryLogsCall } from "./logs/queryLogs";
 import { handleAnswerCall } from "./tickets/answer";
 import { handleDecisionCall, handleRetrySendCall } from "./tickets/decisionCalls";
-import { handleDevelopmentCall, handleLaunchCall } from "./tickets/launch";
+import {
+  handleDeliveryCall,
+  handleDevelopmentCall,
+  handleLaunchCall,
+  runQueuedDelivery,
+} from "./tickets/launch";
 import { publishTicket as publish } from "./tickets/publish";
 import { handleScreenshotCall } from "./tickets/screenshot";
 import { runHourlyPass } from "./tickets/sync";
@@ -242,7 +252,8 @@ export const launchTicketDevelopment = onCall(
 /**
  * « Livrer » (ADR-008, T5, P43, P44) : par la routine de développement (aucun secret
  * `TICKETS_ROUTINE_DELIVERY_*`). Délai de 180 s : PR, fichiers et runs relus sur GitHub
- * avant l'appel ; bail de 210 s (`DELIVERY_LEASE_MS`).
+ * avant l'appel ; bail de 210 s (`DELIVERY_LEASE_MS`). `mode` : `start` (absent), `queue`
+ * (« Mettre en file », rien compté) ou `unqueue` (« Retirer de la file »).
  */
 export const launchTicketDelivery = onCall(
   {
@@ -251,10 +262,46 @@ export const launchTicketDelivery = onCall(
     secrets: [GITHUB_TICKETS_TOKEN, TICKETS_ROUTINE_DEV_ID, TICKETS_ROUTINE_DEV_TOKEN],
   },
   (req) =>
-    handleLaunchCall(req, "livraison", {
+    handleDeliveryCall(req, {
       routine: devRoutine,
       githubToken: () => GITHUB_TICKETS_TOKEN.value(),
     }),
+);
+
+/**
+ * Départ de la file des livraisons (ADR-008, amendement du 2026-11-22, point 8) : toutes les
+ * 5 minutes, 24 h sur 24 ; une exécution sans travail lit `ticket_status/launches` seul. Une
+ * instance, une exécution à la fois, aucune reprise automatique ; délai de 300 s, plus court
+ * que le bail de 330 s (`QUEUED_DELIVERY_LEASE_MS`). Seule tâche à monter les secrets de la
+ * routine de développement ; ni `githubTicketWebhook` ni `syncTickets` ne les montent (P25).
+ */
+export const startQueuedDelivery = onSchedule(
+  {
+    schedule: "*/5 * * * *",
+    timeZone: "Europe/Paris",
+    region: REGION,
+    serviceAccount: RUNTIME_SERVICE_ACCOUNT,
+    secrets: [GITHUB_TICKETS_TOKEN, TICKETS_ROUTINE_DEV_ID, TICKETS_ROUTINE_DEV_TOKEN],
+    maxInstances: 1,
+    concurrency: 1,
+    memory: "256MiB",
+    timeoutSeconds: 300,
+    retryCount: 0,
+  },
+  async () => {
+    try {
+      await runQueuedDelivery({
+        routine: devRoutine,
+        githubToken: () => GITHUB_TICKETS_TOKEN.value(),
+      });
+    } catch (err) {
+      logError({
+        message: "Tickets : départ de la file des livraisons en échec",
+        feature: "tickets",
+        error: err,
+      });
+    }
+  },
 );
 
 /**

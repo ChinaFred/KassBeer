@@ -27,6 +27,7 @@ import {
   sensitiveDeliveryPath,
   writeDeliveryReports,
 } from "../src/tickets/delivery";
+import { DELIVERY_QUEUE_MAX, LAUNCHES_PER_DAY } from "../src/config";
 import {
   githubClient,
   readCiRun,
@@ -37,11 +38,16 @@ import {
 import {
   DELIVERY_LEASE_MS,
   LAUNCH_LEASE_MS,
+  handleDeliveryCall,
   handleDevelopmentCall,
   handleLaunchCall,
   launchLeaseMs,
   launchTicketSession,
+  queueTicketDelivery,
+  readDeliveryMode,
   readLaunchMode,
+  runQueuedDelivery,
+  unqueueTicketDelivery,
   type LaunchDeps,
 } from "../src/tickets/launch";
 import {
@@ -1305,3 +1311,813 @@ function seedTicketDb(db: FakeDb): void {
     validated_by_app_at: BY_APP,
   });
 }
+
+// ── File des livraisons (amendement du 2026-11-22, P43, P44, P45, P47) ──────
+
+describe("file des livraisons : mode de launchTicketDelivery (P43)", () => {
+  const admin = {
+    uid: "admin-uid",
+    token: {
+      email: "Admin@Example.com",
+      email_verified: true,
+      firebase: { sign_in_provider: "google.com" },
+    },
+  };
+
+  it("absent ou start : start ; queue, unqueue ; autre valeur refusée", () => {
+    assert.equal(readDeliveryMode({ ticketId: "t-1" }), "start");
+    assert.equal(readDeliveryMode({ mode: "start" }), "start");
+    assert.equal(readDeliveryMode({ mode: "queue" }), "queue");
+    assert.equal(readDeliveryMode({ mode: "unqueue" }), "unqueue");
+    for (const bad of ["Queue", "resume", "", "x".repeat(17), 3]) {
+      assert.throws(
+        () => readDeliveryMode({ mode: bad }),
+        (e: unknown) => e instanceof HttpsError && e.code === "invalid-argument",
+      );
+    }
+  });
+
+  it("mode inconnu : refusé avant toute lecture hors members/ ; brasseur refusé avant le mode", async () => {
+    const h = harness();
+    seedTicket(h);
+    const writesBefore = h.db.writes.length;
+    const bad = await refusal(
+      handleDeliveryCall(
+        { auth: admin, data: { ticketId: "t-1", mode: "livrer" } },
+        { ...h.deps(), lookup: async () => ({ role: "admin" }) },
+      ),
+    );
+    assert.equal(bad.code, "invalid-argument");
+    const brewer = await refusal(
+      handleDeliveryCall(
+        { auth: admin, data: { ticketId: "t-1", mode: "livrer" } },
+        { ...h.deps(), lookup: async () => ({ role: "brewer" }) },
+      ),
+    );
+    assert.equal(brewer.code, "permission-denied");
+    assert.equal(h.githubCalls.length, 0);
+    assert.equal(h.db.writes.length, writesBefore);
+  });
+
+  it("queue : e-mail de l'accord tiré du jeton, en minuscules, jamais d'un argument", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedOtherLock(h);
+    const out = await handleDeliveryCall(
+      { auth: admin, data: { ticketId: "t-1", mode: "queue", by_email: "autre@example.com" } },
+      { ...h.deps(), lookup: async () => ({ role: "admin" }) },
+    );
+    assert.deepEqual(out, { outcome: "queued", position: 1, total: 1 });
+    assert.equal(queue(h)[0].by_email, "admin@example.com");
+    assert.equal(queue(h)[0].by_uid, "admin-uid");
+  });
+});
+
+/** Verrou tenu par un autre ticket, toujours en cours. */
+function seedOtherLock(h: Harness, extra: Record<string, unknown> = {}): void {
+  h.db.seed("tickets/t-9", { status: "in_progress", github_issue_number: 9 });
+  const status = h.db.read("ticket_status/launches") ?? {};
+  h.db.seed("ticket_status/launches", {
+    ...status,
+    delivery_running: {
+      ticket_id: "t-9",
+      issue_number: 9,
+      launched_at: Timestamp.fromMillis(NOW - HOUR),
+      retry_after: Timestamp.fromMillis(NOW + 2 * HOUR),
+    },
+    delivery_last: {
+      ticket_id: "t-9",
+      issue_number: 9,
+      launched_at: Timestamp.fromMillis(NOW - HOUR),
+      retry_after: Timestamp.fromMillis(NOW + 2 * HOUR),
+      reported_at: null,
+    },
+    ...extra,
+  });
+}
+
+function queueEntry(
+  ticketId: string,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    ticket_id: ticketId,
+    issue_number: 12,
+    pr_number: 34,
+    head_sha: HEAD,
+    queued_at: Timestamp.fromMillis(NOW - 30 * 60_000),
+    by_uid: "admin-uid",
+    by_email: "admin@example.com",
+    ...extra,
+  };
+}
+
+function seedQueue(
+  h: Harness,
+  entries: Record<string, unknown>[],
+  extra: Record<string, unknown> = {},
+) {
+  const status = h.db.read("ticket_status/launches") ?? {};
+  h.db.seed("ticket_status/launches", { ...status, delivery_queue: entries, ...extra });
+}
+
+const queue = (h: Harness) =>
+  (h.db.read("ticket_status/launches")?.delivery_queue ?? []) as Record<string, unknown>[];
+const queueExit = (h: Harness, id = "t-1") =>
+  h.db.read(`tickets/${id}/admin/delivery`)?.queue_exit as Record<string, unknown> | undefined;
+const founderQuota = (h: Harness) => h.db.read(`ticket_quotas/launch_founder_${DAY}`)?.count ?? 0;
+
+describe("file des livraisons : « Mettre en file » (P43, point 4)", () => {
+  it("verrou d'un autre ticket : mis en file, rien compté, rien envoyé, entrée complète", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedOtherLock(h);
+    const out = await queueTicketDelivery("t-1", "admin-uid", "admin@example.com", h.deps());
+    assert.deepEqual(out, { outcome: "queued", position: 1, total: 1 });
+    assert.equal(h.routineCalls.length, 0);
+    assert.equal(quota(h), 0);
+    assert.equal(history(h).length, 0);
+    const [e] = queue(h);
+    assert.deepEqual(Object.keys(e).sort(), [
+      "by_email",
+      "by_uid",
+      "head_sha",
+      "issue_number",
+      "pr_number",
+      "queued_at",
+      "ticket_id",
+    ]);
+    assert.equal(e.ticket_id, "t-1");
+    assert.equal(e.pr_number, 34);
+    assert.equal(e.head_sha, HEAD);
+    assert.equal((e.queued_at as Timestamp).toMillis(), NOW);
+    assert.equal(lock(h)?.ticket_id, "t-9");
+    assert.equal(h.db.read("tickets/t-1")?.decision_lease_until, undefined);
+  });
+
+  it("verrou libre, compte rendu de la précédente attendu : mis en file", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedOtherLock(h, { delivery_running: null });
+    const out = await queueTicketDelivery("t-1", "admin-uid", "admin@example.com", h.deps());
+    assert.equal(out.outcome, "queued");
+  });
+
+  it("verrou libre, précédente finie, file vide : delivery_lock_free, rien en file", async () => {
+    const h = harness();
+    seedTicket(h);
+    const err = await refusal(
+      queueTicketDelivery("t-1", "admin-uid", "admin@example.com", h.deps()),
+    );
+    assert.equal(details(err).code, "delivery_lock_free");
+    assert.equal(
+      details(err).reason,
+      "La livraison précédente est finie : appuyez sur « Livrer ».",
+    );
+    assert.deepEqual(queue(h), []);
+  });
+
+  it("file de 10 : delivery_queue_full ; déjà en file : delivery_queue_already", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedOtherLock(h);
+    seedQueue(
+      h,
+      Array.from({ length: DELIVERY_QUEUE_MAX }, (_, i) => queueEntry(`t-q${i}`)),
+    );
+    const full = await refusal(
+      queueTicketDelivery("t-1", "admin-uid", "admin@example.com", h.deps()),
+    );
+    assert.equal(details(full).code, "delivery_queue_full");
+    assert.equal(queue(h).length, DELIVERY_QUEUE_MAX);
+
+    const h2 = harness();
+    seedTicket(h2);
+    seedOtherLock(h2);
+    seedQueue(h2, [queueEntry("t-1")]);
+    const again = await refusal(
+      queueTicketDelivery("t-1", "admin-uid", "admin@example.com", h2.deps()),
+    );
+    assert.equal(details(again).code, "delivery_queue_already");
+    assert.equal(queue(h2).length, 1);
+  });
+
+  it("contrôles de P43 refaits : CI rouge refusée, rien en file, rien compté", async () => {
+    const h = harness({ runs: RED });
+    seedTicket(h);
+    seedOtherLock(h);
+    const err = await refusal(
+      queueTicketDelivery("t-1", "admin-uid", "admin@example.com", h.deps()),
+    );
+    assert.equal(details(err).code, "delivery_ci_not_green");
+    assert.deepEqual(queue(h), []);
+    assert.equal(quota(h), 0);
+  });
+
+  it("ce ticket tient le verrou : refusé", async () => {
+    const h = harness();
+    seedTicket(h);
+    h.db.seed("ticket_status/launches", {
+      delivery_running: {
+        ticket_id: "t-1",
+        issue_number: 12,
+        launched_at: Timestamp.fromMillis(NOW - 4 * HOUR),
+        retry_after: Timestamp.fromMillis(NOW + HOUR),
+      },
+    });
+    const err = await refusal(
+      queueTicketDelivery("t-1", "admin-uid", "admin@example.com", h.deps()),
+    );
+    assert.equal(details(err).code, "delivery_running");
+  });
+});
+
+describe("file des livraisons : « Livrer » et « Retirer de la file » (points 5 à 7)", () => {
+  it("file non vide : « Livrer » refusé en delivery_queue_ahead, rien compté, verrou inchangé", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-2")]);
+    const err = await refusedWithoutCount(h, "livraison", "delivery_queue_ahead");
+    assert.match(String(details(err).reason), /Mettre en file/);
+    assert.equal(queue(h).length, 1);
+  });
+
+  it("« Livrer » écrit delivery_last sans reported_at ; un 400 le remet à sa valeur", async () => {
+    const h = harness();
+    seedTicket(h);
+    await launchTicketSession("t-1", "livraison", "admin-uid", h.deps());
+    const last = h.db.read("ticket_status/launches")?.delivery_last as Record<string, unknown>;
+    assert.equal(last.ticket_id, "t-1");
+    assert.equal((last.launched_at as Timestamp).toMillis(), NOW);
+    assert.equal((last.retry_after as Timestamp).toMillis(), NOW + 3 * HOUR);
+    assert.equal(last.reported_at, null);
+
+    const h2 = harness({}, async () => new Response("{}", { status: 400 }));
+    seedTicket(h2);
+    const before = { ticket_id: "t-0", issue_number: 3, reported_at: Timestamp.fromMillis(NOW) };
+    h2.db.seed("ticket_status/launches", { delivery_last: before });
+    await refusal(launchTicketSession("t-1", "livraison", "admin-uid", h2.deps()));
+    assert.deepEqual(h2.db.read("ticket_status/launches")?.delivery_last, before);
+    assert.equal(lock(h2), null);
+  });
+
+  it("retirer : entrée retirée, suivants avancent, queue_exit noté, aucun appel", async () => {
+    const h = harness();
+    seedQueue(h, [queueEntry("t-2"), queueEntry("t-1"), queueEntry("t-3")]);
+    const out = await unqueueTicketDelivery("t-1", h.deps());
+    assert.deepEqual(out, { outcome: "unqueued", changed: true });
+    assert.deepEqual(
+      queue(h).map((e) => e.ticket_id),
+      ["t-2", "t-3"],
+    );
+    assert.equal(queueExit(h)?.code, "delivery_queue_removed");
+    assert.equal((queueExit(h)?.at as Timestamp).toMillis(), NOW);
+    assert.equal(h.githubCalls.length, 0);
+    assert.equal(h.routineCalls.length, 0);
+    assert.deepEqual(await unqueueTicketDelivery("t-1", h.deps()), {
+      outcome: "unqueued",
+      changed: false,
+    });
+  });
+});
+
+describe("file des livraisons : départ par startQueuedDelivery (point 8, P44)", () => {
+  const admin = async () => ({ role: "admin" });
+
+  it("file vide, verrou tenu, compte rendu attendu, jeton refusé : arrêt sans autre lecture", async () => {
+    const cases: Array<[string, (h: Harness) => void]> = [
+      ["empty", () => undefined],
+      ["lock_held", (h) => (seedOtherLock(h), seedQueue(h, [queueEntry("t-1")]))],
+      [
+        "awaiting_report",
+        (h) => (seedOtherLock(h, { delivery_running: null }), seedQueue(h, [queueEntry("t-1")])),
+      ],
+      [
+        "routine_invalid",
+        (h) =>
+          seedQueue(h, [queueEntry("t-1")], {
+            development_invalid_since: Timestamp.fromMillis(NOW - HOUR),
+          }),
+      ],
+    ];
+    for (const [reason, seed] of cases) {
+      const h = harness();
+      seedTicket(h);
+      seed(h);
+      let lookups = 0;
+      const writes = h.db.writes.length;
+      const out = await runQueuedDelivery({
+        ...h.deps(),
+        lookup: async () => {
+          lookups++;
+          return { role: "admin" };
+        },
+      });
+      assert.deepEqual(out, { kind: "idle", reason }, reason);
+      assert.equal(lookups, 0, reason);
+      assert.equal(h.githubCalls.length, 0, reason);
+      assert.equal(h.db.writes.length, writes, reason);
+    }
+  });
+
+  it("tête partie : comptée au départ, verrou et delivery_last, entrée queued, file avancée", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1", { by_uid: "accord-uid" }), queueEntry("t-2")]);
+    const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+    assert.deepEqual(out, { kind: "launched", ticketId: "t-1" });
+    assert.equal(h.routineCalls.length, 1);
+    assert.equal(h.routineCalls[0].body, '{"text":"livraison #12"}');
+    assert.equal(quota(h), 1);
+    assert.equal(lock(h)?.ticket_id, "t-1");
+    const last = h.db.read("ticket_status/launches")?.delivery_last as Record<string, unknown>;
+    assert.equal(last.ticket_id, "t-1");
+    assert.equal(last.reported_at, null);
+    assert.deepEqual(
+      queue(h).map((e) => e.ticket_id),
+      ["t-2"],
+    );
+    const [entry] = history(h);
+    assert.equal(entry.action, "livraison");
+    assert.equal(entry.state, "launched");
+    assert.equal(entry.queued, true);
+    assert.equal(entry.by_uid, "accord-uid");
+    assert.equal(queueExit(h), undefined);
+    assert.equal(h.db.read("tickets/t-1")?.decision_lease_until, undefined);
+  });
+
+  it("compte rendu de la précédente relevé : la tête part", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedOtherLock(h, { delivery_running: null });
+    const last = h.db.read("ticket_status/launches")?.delivery_last as Record<string, unknown>;
+    seedQueue(h, [queueEntry("t-1")], {
+      delivery_last: { ...last, reported_at: Timestamp.fromMillis(NOW - 60_000) },
+    });
+    assert.equal((await runQueuedDelivery({ ...h.deps(), lookup: admin })).kind, "launched");
+  });
+
+  it("accord du fondateur : compté sur le compteur du fondateur, relu au départ", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")]);
+    let asked = "";
+    await runQueuedDelivery({
+      ...h.deps(),
+      lookup: async (email) => {
+        asked = email;
+        return { role: "admin", founder: true };
+      },
+    });
+    assert.equal(asked, "admin@example.com");
+    assert.equal(founderQuota(h), 1);
+    assert.equal(quota(h), 0);
+  });
+
+  it("auteur de l'accord plus administrateur : sortie delivery_queue_not_admin, rien compté", async () => {
+    for (const member of [null, { role: "brewer" }]) {
+      const h = harness();
+      seedTicket(h);
+      seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")]);
+      const out = await runQueuedDelivery({ ...h.deps(), lookup: async () => member });
+      assert.deepEqual(out, { kind: "exited", ticketId: "t-1", code: "delivery_queue_not_admin" });
+      assert.equal(queueExit(h)?.code, "delivery_queue_not_admin");
+      assert.deepEqual(
+        queue(h).map((e) => e.ticket_id),
+        ["t-2"],
+      );
+      assert.equal(quota(h), 0);
+      assert.equal(h.routineCalls.length, 0);
+      assert.equal(h.githubCalls.length, 0);
+    }
+  });
+
+  it("tête de la PR changée depuis l'accord : sortie delivery_queue_head_changed", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1", { head_sha: "b".repeat(40) })]);
+    const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+    assert.deepEqual(out, { kind: "exited", ticketId: "t-1", code: "delivery_queue_head_changed" });
+    assert.equal(queueExit(h)?.code, "delivery_queue_head_changed");
+    assert.deepEqual(queue(h), []);
+    assert.equal(quota(h), 0);
+    assert.equal(lock(h), undefined);
+    assert.equal(h.routineCalls.length, 0);
+  });
+
+  it("refus propres au ticket : sortie avec leur code, rien compté", async () => {
+    const cases: Array<[Scene, Record<string, unknown>, string]> = [
+      [{ runs: RED }, {}, "delivery_ci_not_green"],
+      [{ prs: [] }, {}, "delivery_no_pr"],
+      [{ files: [{ filename: ".github/workflows/ci.yml" }] }, {}, "delivery_sensitive_files"],
+      [{}, { status: "refused" }, "not_allowed"],
+    ];
+    for (const [scene, ticket, code] of cases) {
+      const h = harness(scene);
+      seedTicket(h, "t-1", ticket);
+      seedQueue(h, [queueEntry("t-1")]);
+      const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+      assert.deepEqual(out, { kind: "exited", ticketId: "t-1", code }, code);
+      assert.equal(queueExit(h)?.code, code, code);
+      assert.deepEqual(queue(h), [], code);
+      assert.equal(quota(h), 0, code);
+      assert.equal(h.routineCalls.length, 0, code);
+    }
+  });
+
+  it("panne passagère de GitHub et 403 « Actions : lecture » : entrée gardée, rien compté", async () => {
+    for (const scene of [{ issueStatus: 502 }, { runsStatus: 403 }] as Scene[]) {
+      const h = harness(scene);
+      seedTicket(h);
+      seedQueue(h, [queueEntry("t-1")]);
+      const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+      assert.equal(out.kind, "kept", JSON.stringify(scene));
+      assert.equal(queue(h).length, 1);
+      assert.equal(queueExit(h), undefined);
+      assert.equal(quota(h), 0);
+      assert.equal(h.routineCalls.length, 0);
+      assert.equal(lock(h), undefined);
+    }
+  });
+
+  it("members/ illisible : entrée gardée, code d'erreur seul au journal", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")]);
+    const out = await runQueuedDelivery({
+      ...h.deps(),
+      lookup: async () => {
+        throw Object.assign(new Error("lecture de admin@example.com refusée"), {
+          code: "unavailable",
+        });
+      },
+    });
+    assert.equal(out.kind, "kept");
+    assert.equal(queue(h).length, 1);
+    assert.equal(h.githubCalls.length, 0);
+    const journal = JSON.stringify(h.logs.map((l) => ({ ...l.entry, error: l.entry.error })));
+    assert.equal(journal.includes("admin@example.com"), false);
+    assert.ok(h.logs.some((l) => l.entry.extra?.code === "unavailable"));
+    assert.ok(h.logs.every((l) => l.entry.error === undefined));
+  });
+
+  it("jeton GitHub refusé (token_invalid_since) : arrêt avant tout appel", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")]);
+    h.db.seed("ticket_status/github", { token_invalid_since: Timestamp.fromMillis(NOW - HOUR) });
+    let lookups = 0;
+    const out = await runQueuedDelivery({
+      ...h.deps(),
+      lookup: async () => {
+        lookups++;
+        return { role: "admin" };
+      },
+    });
+    assert.deepEqual(out, { kind: "kept", ticketId: "t-1", reason: "github_token" });
+    assert.equal(lookups, 0);
+    assert.equal(h.githubCalls.length, 0);
+    assert.equal(queue(h).length, 1);
+  });
+
+  it("plafond du jour atteint : entrée gardée en tête, rien compté ni retiré", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")]);
+    h.db.seed(`ticket_quotas/launch_${DAY}`, { day: DAY, count: LAUNCHES_PER_DAY });
+    const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+    assert.deepEqual(out, { kind: "kept", ticketId: "t-1", reason: "quota_exceeded" });
+    // Plafond lu avant tout appel à GitHub.
+    assert.equal(h.githubCalls.length, 0);
+    assert.equal(quota(h), LAUNCHES_PER_DAY);
+    assert.deepEqual(
+      queue(h).map((e) => e.ticket_id),
+      ["t-1", "t-2"],
+    );
+    assert.equal(lock(h), undefined);
+    assert.equal(h.routineCalls.length, 0);
+  });
+
+  it("deux exécutions superposées et un « Livrer » concurrent : un seul départ", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedTicket(h, "t-2", { github_issue_number: 12 });
+    seedQueue(h, [queueEntry("t-1")]);
+    const results = await Promise.allSettled([
+      runQueuedDelivery({ ...h.deps(), lookup: admin }),
+      runQueuedDelivery({ ...h.deps(), lookup: admin }),
+      launchTicketSession("t-2", "livraison", "admin-uid", h.deps()),
+    ]);
+    assert.equal(h.routineCalls.length, 1);
+    assert.equal(quota(h), 1);
+    const kinds = results.map((r) => {
+      if (r.status !== "fulfilled") return "rejected";
+      const v = r.value as { outcome?: string; kind?: string };
+      return v.outcome ?? v.kind;
+    });
+    assert.equal(kinds.filter((k) => k === "launched").length, 1, JSON.stringify(kinds));
+    assert.deepEqual(queue(h), []);
+  });
+
+  it("401 de la routine : development_invalid_since posé, entrée remise en tête, rien compté", async () => {
+    const h = harness({}, async () => new Response("{}", { status: 401 }));
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")]);
+    const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+    assert.equal(out.kind, "kept");
+    assert.ok(h.db.read("ticket_status/launches")?.development_invalid_since instanceof Timestamp);
+    assert.deepEqual(
+      queue(h).map((e) => e.ticket_id),
+      ["t-1", "t-2"],
+    );
+    assert.equal(quota(h), 0);
+    assert.equal(lock(h), null);
+    assert.equal(h.db.read("ticket_status/launches")?.delivery_last, null);
+    // L'exécution suivante s'arrête à la première lecture.
+    const next = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+    assert.deepEqual(next, { kind: "idle", reason: "routine_invalid" });
+    assert.equal(h.routineCalls.length, 1);
+  });
+
+  for (const [name, body, code] of [
+    ["routine en pause", { error: { message: "Routine is paused" } }, "routine_paused"],
+    ["appel refusé (400)", { error: { message: "bad request" } }, "routine_failed"],
+  ] as const) {
+    it(`${name} : entrée remise en tête, rien compté, file arrêtée jusqu'au prochain lancement réussi`, async () => {
+      const h = harness({}, async () => new Response(JSON.stringify(body), { status: 400 }));
+      seedTicket(h);
+      seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")]);
+      const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+      assert.deepEqual(out, { kind: "kept", ticketId: "t-1", reason: code });
+      assert.deepEqual(
+        queue(h).map((e) => e.ticket_id),
+        ["t-1", "t-2"],
+      );
+      assert.equal(queueExit(h), undefined);
+      assert.equal(quota(h), 0);
+      assert.equal(lock(h), null);
+      const halted = h.db.read("ticket_status/launches")?.delivery_queue_halted as Record<
+        string,
+        unknown
+      >;
+      assert.equal(halted.code, code);
+      assert.deepEqual(await runQueuedDelivery({ ...h.deps(), lookup: admin }), {
+        kind: "idle",
+        reason: "queue_halted",
+      });
+      assert.equal(h.routineCalls.length, 1);
+    });
+  }
+
+  it("file arrêtée : effacée par le prochain lancement réussi de la routine de développement", async () => {
+    const h = harness({ runs: RED });
+    seedTicket(h, "t-3", { github_issue_number: 12 });
+    h.db.seed("tickets/t-3/admin/delivery", { relaunch_ready: true });
+    seedQueue(h, [queueEntry("t-1")], {
+      delivery_queue_halted: { code: "routine_paused", at: Timestamp.fromMillis(NOW - HOUR) },
+    });
+    await launchTicketSession("t-3", "reprise", "admin-uid", h.deps());
+    assert.equal(h.db.read("ticket_status/launches")?.delivery_queue_halted, null);
+  });
+
+  it("routine en 200 puis enregistrement du résultat en échec : unknown, compté, verrou gardé, entrée non remise", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")]);
+    const logs: LogEntry[] = [];
+    const out = await runQueuedDelivery({
+      ...h.deps(),
+      lookup: admin,
+      log: (level, entry) => {
+        logs.push(entry);
+        if (level === "info" && entry.message.startsWith("Tickets : session lancée")) {
+          throw new Error("écriture impossible");
+        }
+      },
+    });
+    assert.deepEqual(out, { kind: "unknown", ticketId: "t-1" });
+    assert.equal(quota(h), 1);
+    assert.equal(lock(h)?.ticket_id, "t-1");
+    assert.deepEqual(queue(h), []);
+    assert.ok(logs.some((e) => e.message.includes("non enregistré") && e.error !== undefined));
+  });
+
+  it("délai dépassé de la routine : unknown, compté, verrou gardé, entrée retirée", async () => {
+    const h = harness({}, async () => {
+      throw new DOMException("timeout", "TimeoutError");
+    });
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")]);
+    const out = await runQueuedDelivery({ ...h.deps(), lookup: admin });
+    assert.deepEqual(out, { kind: "unknown", ticketId: "t-1" });
+    assert.equal(quota(h), 1);
+    assert.equal(lock(h)?.ticket_id, "t-1");
+    assert.deepEqual(queue(h), []);
+  });
+});
+
+describe("file des livraisons : sorties (points 7 et 9)", () => {
+  function report(kind: "blocage" | "terminée", atMs: number) {
+    return {
+      id: 80,
+      authorId: OWNER,
+      body: `## Livraison — ${kind}\n\nTexte.`,
+      createdAt: new Date(atMs).toISOString(),
+      updatedAt: null,
+    };
+  }
+
+  it("compte rendu « terminée » : reported_at posé, file gardée", async () => {
+    const h = harness();
+    seedTicket(h);
+    await launchTicketSession("t-1", "livraison", "admin-uid", h.deps());
+    seedQueue(h, [queueEntry("t-2")]);
+    await writeDeliveryReports(h.db.kit(), "t-1", [report("terminée", NOW + HOUR)], NOW + HOUR);
+    const last = h.db.read("ticket_status/launches")?.delivery_last as Record<string, unknown>;
+    assert.equal((last.reported_at as Timestamp).toMillis(), NOW + HOUR);
+    assert.equal(queue(h).length, 1);
+  });
+
+  it("compte rendu antérieur au lancement : reported_at reste nul", async () => {
+    const h = harness();
+    seedTicket(h);
+    await launchTicketSession("t-1", "livraison", "admin-uid", h.deps());
+    await writeDeliveryReports(h.db.kit(), "t-1", [report("terminée", NOW - HOUR)], NOW + HOUR);
+    const last = h.db.read("ticket_status/launches")?.delivery_last as Record<string, unknown>;
+    assert.equal(last.reported_at, null);
+  });
+
+  it("blocage relevé : une file de 10 vidée, chaque ticket noté, rien compté", async () => {
+    const h = harness();
+    seedTicket(h);
+    await launchTicketSession("t-1", "livraison", "admin-uid", h.deps());
+    const ids = Array.from({ length: DELIVERY_QUEUE_MAX }, (_, i) => `t-q${i}`);
+    seedQueue(
+      h,
+      ids.map((id) => queueEntry(id)),
+    );
+    await writeDeliveryReports(h.db.kit(), "t-1", [report("blocage", NOW + HOUR)], NOW + HOUR);
+    assert.deepEqual(queue(h), []);
+    for (const id of ids) {
+      assert.equal(queueExit(h, id)?.code, "delivery_queue_cleared_after_blockage", id);
+      assert.equal((queueExit(h, id)?.at as Timestamp).toMillis(), NOW + HOUR, id);
+    }
+    assert.equal(quota(h), 1);
+    assert.equal(lock(h), null);
+    // Relevé une seconde fois : la file remplie depuis n'est pas vidée.
+    seedQueue(h, [queueEntry("t-q0")]);
+    await writeDeliveryReports(h.db.kit(), "t-1", [report("blocage", NOW + HOUR)], NOW + 2 * HOUR);
+    assert.equal(queue(h).length, 1);
+  });
+
+  it("reprise : le ticket sort de la file dans la transaction du bail", async () => {
+    const h = harness({ runs: RED });
+    seedTicket(h);
+    h.db.seed("tickets/t-1/admin/delivery", {
+      eligible_pr_count: 1,
+      pr_number: 34,
+      ready: false,
+      relaunch_ready: true,
+    });
+    seedQueue(h, [queueEntry("t-2"), queueEntry("t-1")]);
+    await launchTicketSession("t-1", "reprise", "admin-uid", h.deps());
+    assert.deepEqual(
+      queue(h).map((e) => e.ticket_id),
+      ["t-2"],
+    );
+    assert.equal(queueExit(h)?.code, "delivery_queue_relaunched");
+  });
+
+  it("ticket sorti de « En cours » : sorti de la file (delivery_queue_left_in_progress)", async () => {
+    const h = harness();
+    seedTicket(h, "t-1", { status: "delivered" });
+    seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")]);
+    await releaseDeliveryLockIfLeft(h.db.kit(), "t-1", NOW);
+    assert.deepEqual(
+      queue(h).map((e) => e.ticket_id),
+      ["t-2"],
+    );
+    assert.equal(queueExit(h)?.code, "delivery_queue_left_in_progress");
+    // Toujours en cours : rien ne bouge.
+    seedTicket(h, "t-2");
+    await releaseDeliveryLockIfLeft(h.db.kit(), "t-2", NOW);
+    assert.equal(queue(h).length, 1);
+  });
+});
+
+describe("file des livraisons : « Relancer la file » (décision 9)", () => {
+  const admin = {
+    uid: "admin-uid",
+    token: {
+      email: "admin@example.com",
+      email_verified: true,
+      firebase: { sign_in_provider: "google.com" },
+    },
+  };
+  const halted = { code: "routine_paused", at: Timestamp.fromMillis(NOW - HOUR) };
+  const call = (h: Harness, ticketId: string, role = "admin") =>
+    handleDeliveryCall(
+      { auth: admin, data: { ticketId, mode: "resume_queue" } },
+      { ...h.deps(), lookup: async () => ({ role }) },
+    );
+
+  it("mode resume_queue lu ; brasseur refusé avant toute lecture", async () => {
+    assert.equal(readDeliveryMode({ mode: "resume_queue" }), "resume_queue");
+    const h = harness();
+    seedQueue(h, [queueEntry("t-1")], { delivery_queue_halted: halted });
+    const writes = h.db.writes.length;
+    const err = await refusal(call(h, "t-1", "brewer"));
+    assert.equal(err.code, "permission-denied");
+    assert.equal(h.db.writes.length, writes);
+    assert.ok(h.db.read("ticket_status/launches")?.delivery_queue_halted);
+  });
+
+  it("tête de file et file arrêtée : arrêt effacé, rien lancé, rien compté, aucun appel", async () => {
+    const h = harness();
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")], { delivery_queue_halted: halted });
+    const out = await call(h, "t-1");
+    assert.deepEqual(out, { outcome: "queue_resumed", changed: true });
+    assert.equal(h.db.read("ticket_status/launches")?.delivery_queue_halted, null);
+    assert.equal(queue(h).length, 2);
+    assert.equal(h.routineCalls.length, 0);
+    assert.equal(h.githubCalls.length, 0);
+    assert.equal(quota(h), 0);
+    assert.equal(lock(h), undefined);
+    assert.equal(history(h).length, 0);
+  });
+
+  it("file non arrêtée : changed false, rien écrit", async () => {
+    const h = harness();
+    seedQueue(h, [queueEntry("t-1")]);
+    const writes = h.db.writes.length;
+    assert.deepEqual(await call(h, "t-1"), { outcome: "queue_resumed", changed: false });
+    assert.equal(h.db.writes.length, writes);
+  });
+
+  it("ticket pas en tête, ou absent de la file : delivery_queue_not_head, arrêt gardé", async () => {
+    for (const ticketId of ["t-2", "t-9"]) {
+      const h = harness();
+      seedQueue(h, [queueEntry("t-1"), queueEntry("t-2")], { delivery_queue_halted: halted });
+      const err = await refusal(call(h, ticketId));
+      assert.equal(details(err).code, "delivery_queue_not_head", ticketId);
+      assert.ok(h.db.read("ticket_status/launches")?.delivery_queue_halted, ticketId);
+      assert.equal(h.routineCalls.length + h.githubCalls.length, 0);
+    }
+  });
+
+  it("jeton de la routine refusé seul : development_invalid_since effacé (décision 10)", async () => {
+    const h = harness();
+    const refused = Timestamp.fromMillis(NOW - HOUR);
+    seedQueue(h, [queueEntry("t-1")], {
+      development_invalid_since: refused,
+      analysis_invalid_since: refused,
+    });
+    h.db.seed("ticket_status/github", { token_invalid_since: refused });
+    assert.deepEqual(await call(h, "t-1"), { outcome: "queue_resumed", changed: true });
+    const status = h.db.read("ticket_status/launches") ?? {};
+    assert.equal(status.development_invalid_since, null);
+    assert.equal(status.delivery_queue_halted, undefined);
+    assert.ok(status.analysis_invalid_since instanceof Timestamp, "analysis_invalid_since intact");
+    assert.ok(
+      h.db.read("ticket_status/github")?.token_invalid_since instanceof Timestamp,
+      "token_invalid_since intact",
+    );
+    assert.equal(h.routineCalls.length + h.githubCalls.length, 0);
+    assert.equal(quota(h), 0);
+  });
+
+  it("file arrêtée et jeton refusé : les deux effacés dans la même écriture", async () => {
+    const h = harness();
+    seedQueue(h, [queueEntry("t-1")], {
+      delivery_queue_halted: halted,
+      development_invalid_since: Timestamp.fromMillis(NOW - HOUR),
+    });
+    const writes = h.db.writes.length;
+    assert.deepEqual(await call(h, "t-1"), { outcome: "queue_resumed", changed: true });
+    const status = h.db.read("ticket_status/launches") ?? {};
+    assert.equal(status.delivery_queue_halted, null);
+    assert.equal(status.development_invalid_since, null);
+    assert.equal(h.db.writes.length, writes + 1);
+  });
+
+  it("jeton encore faux : le départ suivant reçoit 401, repose development_invalid_since, rend compteur et verrou, entrée remise", async () => {
+    const h = harness({}, async () => new Response("{}", { status: 401 }));
+    seedTicket(h);
+    seedQueue(h, [queueEntry("t-1")], {
+      development_invalid_since: Timestamp.fromMillis(NOW - HOUR),
+    });
+    await call(h, "t-1");
+    const out = await runQueuedDelivery({ ...h.deps(), lookup: async () => ({ role: "admin" }) });
+    assert.equal(out.kind, "kept");
+    assert.equal(h.routineCalls.length, 1);
+    const status = h.db.read("ticket_status/launches") ?? {};
+    assert.ok(status.development_invalid_since instanceof Timestamp);
+    assert.equal(quota(h), 0);
+    assert.equal(lock(h), null);
+    assert.deepEqual(
+      queue(h).map((e) => e.ticket_id),
+      ["t-1"],
+    );
+  });
+});

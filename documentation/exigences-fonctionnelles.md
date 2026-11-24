@@ -911,7 +911,7 @@ texte sélectionnable et annoncé, borné au tiers de la hauteur et défilant au
 tout va bien. Une ligne par alerte :
 
 - « Jeton GitHub refusé ou expiré depuis le jj/mm/aa : remplacez GITHUB_TICKETS_TOKEN dans
-  Secret Manager. » (ton d'erreur) ;
+  Secret Manager, puis relancez le workflow « Déploiement » sur GitHub. » (ton d'erreur) ;
 - « Le jeton GitHub expire le jj/mm/aa. » à 14 jours ou moins de l'échéance, « Le jeton
   GitHub a expiré le jj/mm/aa. » (ton d'erreur) une fois l'échéance passée ; sans échéance
   (jeton sans expiration), rien sur l'expiration ;
@@ -919,8 +919,8 @@ tout va bien. Une ligne par alerte :
   transmission depuis plus d'une heure ;
 - « N tickets dont l'Issue a disparu. » ;
 - « Jeton de la routine d'analyse refusé depuis le jj/mm/aa. Remplacez-le dans Secret
-  Manager. » et « Jeton de la routine de développement refusé depuis le jj/mm/aa. Remplacez-le
-  dans Secret Manager. » (ton d'erreur), lus dans l'état des lancements (ADR-008, T4) ;
+  Manager, puis relancez le workflow « Déploiement » sur GitHub. » et « Jeton de la routine de développement refusé depuis le
+  jj/mm/aa. Remplacez-le dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub. » (ton d'erreur), lus dans l'état des lancements (ADR-008, T4) ;
 - « État du jeton GitHub illisible. » pour un document illisible, journalisé ; « Impossible de
   lire l'état du jeton GitHub. » quand la lecture échoue ; de même « État des lancements
   illisible. » et « Impossible de lire l'état des lancements. ». Le plafond des lancements
@@ -970,7 +970,8 @@ pull request est prête à livrer ; ticket En cours dont la CI est en échec et 
 permet « Relancer le développement », sauf pendant un développement, une correction ou une
 livraison de ce ticket ; ni PR prête ni CI en échec tant que GitHub refuse au jeton la lecture de
 la CI ; « Refuser », « Clore » et « Répondre » ne comptent pas ; un historique des lancements
-ou un état de la pull request en panne laisse le ticket à traiter. Le compteur « Tickets à
+ou un état de la pull request en panne laisse le ticket à traiter ; un ticket dans la file des
+livraisons n'est pas à traiter, l'accord étant donné (ticket #104). Le compteur « Tickets à
 traiter » du menu compte l'envoi impossible, « Valider », « Lancer l'analyse » et « Lancer le
 développement » permis, sans lire l'historique des lancements ni l'état des pull requests :
 il compte un ticket dont une session tourne, et ne compte ni PR prête ni CI en échec),
@@ -988,9 +989,11 @@ cours » ou « Développement en cours » (sablier, lu « Analyse en cours depui
 pour un ticket dont le serveur permet un lancement (reçu ou validé). Un ticket En cours porte
 au plus une pastille de livraison, dans cet ordre : « Livraison en cours » (sablier, lu
 « Livraison en cours depuis 14:05 »), « Correction en cours » (sablier, lu « Correction de la
-pull request en cours », pendant une relance du développement), « CI en cours » (horloge, lu
-« CI de la pull request en cours »), « CI en échec » (icône d'erreur, ton d'erreur, lu « CI de
-la pull request en échec », sans développement de ce ticket en cours, ticket #63), « PR prête » (icône de livraison, ton tertiaire, lu
+pull request en cours », pendant une relance du développement), « CI en échec » (icône d'erreur,
+ton d'erreur, lu « CI de la pull request en échec », sans développement de ce ticket en cours,
+ticket #63), « En file 2/3 » (icône de file, ton neutre, lu « Dans la file des livraisons,
+position 2 sur 3 », ticket #104), « CI en cours » (horloge, lu « CI de la pull request en
+cours »), « PR prête » (icône de livraison, ton tertiaire, lu
 « Pull request prête à livrer ») ; l'état de la pull request n'est lu que pour les tickets En cours, et sans lui
 aucune pastille ne s'affiche. Tant que GitHub refuse au jeton la lecture de la CI, ni « CI en
 cours », ni « CI en échec », ni « PR prête » ne s'affiche. Pas de point de non-lu. Un ticket illisible n'apparaît que sous « Tous » : « Ticket illisible » / « Mettez
@@ -1092,7 +1095,8 @@ rendus déjà affichés s'il y en a ; hors ligne, absent du cache : « Livraison
 hors ligne. » ; document illisible : « Livraison illisible. Mettez l'application à jour. » ;
 aucun : « Aucun compte rendu de livraison. », suivi de « Appuyez sur « Livrer », en bas de la
 fiche. » quand le bouton « Livrer » est affiché et actif (pas pour « Relancer la
-livraison »).
+livraison »), ou de « Appuyez sur « Mettre en file », en bas de la fiche. » quand c'est ce
+bouton.
 
 **Lancements (N).** Section repliée, lue par l'administrateur seul (ADR-008, T4) : les sessions
 Claude Code lancées sur ce ticket, la plus récente en haut, vingt au plus. Le titre reste
@@ -1170,7 +1174,7 @@ cet ordre de priorité :
 
 | Cas | Ligne | Bouton principal |
 |---|---|---|
-| livraison de ce ticket en cours | « Livraison en cours depuis 14:05. » (autre jour : « … depuis le 12/11/26 à 14:05. ») | aucun ; « Refuser » et « Clore » masqués |
+| livraison de ce ticket en cours | « Livraison en cours depuis 14:05. » (autre jour : « … depuis le 12/11/26 à 14:05. » ; partie de la file : « Livraison en cours depuis 14:10, partie de la file. ») | aucun ; « Refuser » et « Clore » masqués |
 | correction de la PR en cours | « Correction de la PR #34 en cours depuis 14:05. » | aucun |
 | lecture de la CI refusée au jeton GitHub (403), avec une seule pull request éligible | « Le jeton GitHub ne peut pas lire la CI : sur GitHub, donnez-lui le droit « Actions : lecture ». » en ton d'erreur | aucun |
 | état de la pull request en lecture | barre de progression, « Lecture de la pull request » | aucun |
@@ -1186,17 +1190,105 @@ cet ordre de priorité :
 | CI en cours | « CI de la PR #34 en cours. « Livrer » sera proposé quand elle sera verte. » | aucun |
 | CI annulée | « CI de la PR #34 terminée sans succès. Ouvrez la PR pour la suivre sur GitHub. » | aucun |
 | CI absente (aucun run) | « CI de la PR #34 pas encore lancée. Ouvrez la PR pour la suivre sur GitHub. » | aucun |
-| livraison d'un autre ticket en cours | « Livraison du ticket #9 en cours depuis 14:05. Une seule livraison à la fois. », puis « Ouvrir le ticket #9 » (à côté de la liste, la fiche est remplacée ; au téléphone, elle s'empile) | aucun |
+| dans la file des livraisons (ticket #104) | voir « File des livraisons » ci-dessous | « Retirer de la file » |
+| livraison d'un autre ticket en cours | « Livraison du ticket #9 en cours depuis 14:05. Une seule livraison à la fois. » (file non vide : « … Une seule livraison à la fois. 2 tickets attendent déjà. »), puis « Ouvrir le ticket #9 » (à côté de la liste, la fiche est remplacée ; au téléphone, elle s'empile) | « Mettre en file » (actif au plafond) ; ticket validé sur GitHub seul : aucun |
+| compte rendu de la livraison précédente pas encore relevé (verrou libre) | « La livraison du ticket #9 n'a pas encore publié son compte rendu. Une seule livraison à la fois. », puis « Ouvrir le ticket #9 » | « Mettre en file » |
+| file non vide, livraison précédente finie | « 2 livraisons attendent dans la file. La prochaine part dans 5 minutes au plus. » ; file arrêtée : « 2 livraisons attendent dans la file. La file est arrêtée : la routine de développement est en pause. » (« … a refusé le lancement. », « … le jeton de la routine de développement est refusé. », « … GitHub refuse le jeton. Elle repartira une fois le jeton remplacé et le workflow « Déploiement » relancé. »), ton d'erreur | « Mettre en file » (actif) |
 | PR prête, validé sur GitHub seul | « PR #34 prête. Ce ticket a été validé sur GitHub : fusionnez la PR sur GitHub. » ; si le serveur offre « Valider » : « … fusionnez la PR sur GitHub, ou validez-le depuis l'application pour la livrer d'ici. » | aucun |
-| appel de la fiche en cours | barre de progression, « Lancement de la livraison en cours. » (« … de la correction … ») | inactif |
+| appel de la fiche en cours | barre de progression, « Lancement de la livraison en cours. » (« … de la correction … » ; « Mise en file en cours. », « Retrait de la file en cours. ») | inactif |
 | plafond atteint | ligne du plafond | « Livrer » inactif |
 | dernière livraison close par un blocage (marquée par le serveur) | « La livraison du 13/11/26 à 14:05 s'est arrêtée. Lisez le blocage dans la section Livraison. » (ton d'erreur) | « Relancer la livraison » |
 | échéance passée sans fusion ni blocage | « La livraison du 13/11/26 à 14:05 n'a rien fusionné en trois heures. Vérifiez sur claude.ai/code qu'aucune session ne tourne encore. » | « Relancer la livraison » |
 | PR prête | « PR #34 prête : CI verte le 13/11/26 à 14:05. » (sans date : « PR #34 prête : CI verte. »), icône de validation en couleur primaire | « Livrer » |
 
-Hors ligne, « Livrer » et « Relancer le développement » sont inactifs et « Lancer une session
-demande le réseau. » s'affiche sous les boutons. La barre se redessine aux échéances du verrou,
-de la livraison, de la correction et du développement. Refuser et Clore pendant la livraison
+Hors ligne, « Livrer », « Mettre en file », « Retirer de la file » et « Relancer le
+développement » sont inactifs et « Ces actions demandent le réseau. » s'affiche sous les
+boutons. La barre se redessine à chaque changement de l'état des lancements et aux échéances
+du verrou, de la livraison, de la correction, du développement et du compte rendu attendu de
+la livraison précédente. Pendant la lecture de l'état des lancements, une barre de progression
+« Lecture de la file des livraisons » remplace le bouton de livraison ; en panne, « Livrer »
+est offert et le serveur décide.
+
+**File des livraisons** (ADR-008, amendement du 2026-11-22, ticket #104). Une seule livraison
+part à la fois ; « Mettre en file » enregistre l'accord de l'administrateur, et la livraison
+part seule, environ 5 minutes après le compte rendu de la précédente. Ligne d'un ticket en
+file, avec « Retirer de la file » (bouton à contour) :
+
+| Cas | Ligne |
+|---|---|
+| pas en tête | « Dans la file (position 2 sur 3), derrière le ticket #15. », puis « Ouvrir le ticket #15 » |
+| en tête, jeton de la routine de développement refusé | « Dans la file (position 1 sur 3) : la file attend, le jeton de la routine de développement est refusé depuis le 22/11/26. Remplacez-le dans Secret Manager, relancez le workflow « Déploiement » sur GitHub, puis appuyez sur « Relancer la file ». » (ton d'erreur), avec le bouton « Relancer la file » (décision de l'utilisateur du 2026-11-23) |
+| en tête, routine en pause ou lancement refusé au départ | « Dans la file (position 1 sur 3) : la file attend, la routine de développement est en pause depuis le 22/11/26. Réactivez-la sur claude.ai, puis appuyez sur « Relancer la file ». » ou « … : la file attend, la routine de développement a refusé le lancement depuis le 22/11/26. Lisez Admin › Journaux, puis appuyez sur « Relancer la file ». » (ton d'erreur), avec le bouton tonal « Relancer la file » à côté de « Retirer de la file » ; l'entrée reste en tête et la file repart aussi après le prochain lancement réussi de la routine de développement |
+| en tête, GitHub refuse le jeton | « Dans la file (position 1 sur 3) : la file attend, GitHub refuse le jeton depuis le 22/11/26. Remplacez GITHUB_TICKETS_TOKEN dans Secret Manager, puis relancez le workflow « Déploiement » sur GitHub : la file repartira d'elle-même dans l'heure. » (ton d'erreur), sans « Relancer la file » |
+| en tête, autre livraison en cours | « Dans la file (position 1 sur 3) : partira après la livraison du ticket #9. » |
+| en tête, compte rendu attendu | « Dans la file (position 1 sur 3) : partira après le compte rendu de la livraison du ticket #9, à 17:05 au plus tard. » |
+| en tête, plafond atteint, accord donné par ce compte | « Dans la file (position 1 sur 3) : plafond atteint le 22/11 (10 sur 10). Elle partira quand le compteur repartira à zéro, peu après minuit. » (accord d'un autre administrateur : ligne suivante) |
+| en tête, rien à attendre | « Dans la file (position 1 sur 3) : départ dans 5 minutes au plus. » |
+
+Sous la ligne : « Accord du 22/11/26 à 14:05 pour la PR #34. ». Si la pull request n'est plus
+prête, une ligne annonce la sortie au départ : « CI de la PR #34 en échec : la livraison
+sortira de la file au départ. » (ton d'erreur, avec « Relancer le développement » en bouton
+tonal à côté de « Retirer de la file » quand le serveur l'offre), « 2 pull requests ferment
+l'Issue : … », « Aucune pull request prête : … » (ton d'erreur), « CI de la PR #34 en cours :
+si elle n'est pas verte au départ, la livraison sortira de la file. » (neutre), « CI de la PR
+#34 pas verte : la livraison sortira de la file au départ. » (ton d'erreur). Aucune phrase sur
+la CI tant que GitHub refuse au jeton sa lecture.
+
+Sortie de la file sans départ : sous la ligne principale, « Sortie de la file le 22/11/26 à
+14:15 : <raison> » (ton d'erreur), jusqu'à la livraison suivante de ce ticket. Raisons : « une
+livraison s'est bloquée et la file a été vidée. Remettez ce ticket en file si vous le
+voulez. », « le code de la PR a changé depuis votre accord. », « la CI de la PR n'était pas
+verte au départ. », « aucune pull request prête au départ. », « plusieurs pull requests ferment
+l'Issue. », « la PR modifie un fichier protégé. Fusionnez-la vous-même après relecture. »,
+« la liste des fichiers de la PR est trop longue pour être vérifiée. Fusionnez-la vous-même
+après relecture. », « le compte qui avait donné l'accord n'est plus administrateur. », « une
+correction de la PR était en cours. », « le développement a été relancé. », « le ticket a été
+refusé. », « le ticket a été clos. », « le ticket a quitté « En cours ». », « le ticket ne
+permettait plus la livraison. », « l'Issue n'existe plus sur GitHub. ».
+Retrait demandé : « Retiré de la file le 22/11/26 à 14:15. » (ton informatif). Raison inconnue
+de cette version : « Sortie de la file le 22/11/26 à 14:15. Mettez l'application à jour pour
+lire la raison. ».
+
+Boîte « Mettre en file » : titre « Mettre ce ticket en file de livraison ? » ; « Une session
+Claude Code mettra la PR #34 à jour avec main, la fusionnera, puis suivra le déploiement. » ;
+« La livraison partira sans autre accord quand la livraison en cours aura publié son compte
+rendu, environ 5 minutes après, ou 3 h après son lancement s'il n'arrive pas. Elle sera comptée
+au départ ; si le plafond du jour est atteint, elle attendra. Si le code de la PR change d'ici
+là, ou si une livraison se bloque, elle sortira de la file. » ; « La fusion met l'application
+en ligne pour tout le groupe, sur le web et sur Android, sans autre accord. Appuyer sur
+« Mettre en file » vaut accord de fusion. » ; « Position dans la file : 3 sur 3, derrière le
+ticket #15. » (file vide : « … 1 sur 1, après la livraison du ticket #9. ») ; « Type du ticket :
+Bug. » ; ligne du quota (au plafond, suivie de « La livraison attendra la remise à zéro. ») ;
+lien d'usage Claude ; encadré du coût. « Annuler » (focus initial) et « Mettre en file », actif
+au plafond ; « Mise en file en cours » pendant l'appel, « Annuler » devient « Fermer ».
+Accepté : « Ticket #12 mis en file de livraison. » en bas d'écran. Refus dans la boîte :
+« La file compte déjà 10 livraisons. Rien n'a été mis en file. », « Ce ticket est déjà dans la
+file. », « La livraison précédente est finie : appuyez sur « Livrer ». », et les refus de
+« Livrer ». « Livrer » refusé quand la file n'est pas vide : « D'autres livraisons attendent :
+appuyez sur « Mettre en file ». Rien n'a été lancé ni décompté. ».
+
+Boîte « Relancer la file des livraisons ? » (décision de l'utilisateur du 2026-11-22) : « La
+PR #34 partira dans 5 minutes au plus, sans autre accord, après les mêmes contrôles que
+« Livrer ». Elle sera comptée au départ. Si la routine refuse encore, la file s'arrêtera de
+nouveau, sans décompte. », ligne des lancements restants, « Annuler » (focus
+initial) et « Relancer ». Rien ne part pendant l'appel ; la barre affiche « Relance de la file
+en cours. », boutons inactifs. Résultats : « File des livraisons relancée. » ; « La file des
+livraisons n'était plus arrêtée. » ; refus : « Relance non faite : Ce ticket n'est plus en tête
+de la file. Rien n'a été relancé. » ; « Relance non faite : pas de réseau. », « Relance non
+faite : accès administrateur refusé. », « Résultat inconnu : regardez la file avant de
+réessayer. ». Hors ligne, « Relancer la file » est visible et inactif, avec « Ces actions
+demandent le réseau. ».
+
+Boîte « Retirer ce ticket de la file ? » : « La PR #34 ne partira pas. Les tickets suivants
+avancent d'une place. Rien n'est décompté. Pour la livrer ensuite, il faudra la remettre en
+fin de file. », « Annuler » (focus initial) et « Retirer ». Résultats : « Ticket #12 retiré de la file. » ;
+« Ce ticket n'était plus dans la file. » ; échecs : « Retrait non fait : pas de réseau. »,
+« Retrait non fait : accès administrateur refusé. », « Résultat inconnu : regardez la file
+avant de réessayer. ». Les boîtes « Refuser » et « Clore » d'un ticket en file ajoutent « Le
+ticket sortira de la file des livraisons. » ; la boîte « Relancer le développement ? »,
+« Le ticket sortira de la file des livraisons (position 2 sur 3). ». Dans « Lancements », une
+livraison partie de la file porte « le 22/11/26 à 14:10, partie de la file sur votre accord »
+(« … sur l'accord d'un autre administrateur »). Refuser et Clore pendant la livraison
 de ce ticket sont aussi refusés par le serveur (« Une livraison est en cours sur ce ticket.
 Attendez sa fin. »).
 

@@ -3,6 +3,8 @@
 - **Statut** : accepté le 2026-11-11, décision de l'utilisateur : option B, « copie exacte » de
   Kass'Dalle
 - **Date** : 2026-11-11
+- **Amendement** : « File d'attente des livraisons » (ticket #104), accepté le 2026-11-22
+  (file au serveur, départ par la tâche `startQueuedDelivery`, décisions de l'utilisateur 1 à 6)
 - **Remplace** : ADR-006 sur trois points : option C (« aucun point d'accès HTTP »), décision 1
   et décision 5 ; P25 (« aucun `onRequest` ni `onCall` sans ADR » : cet ADR est celui qui les
   autorise, liste fermée ci-dessous). ADR-006 reste en vigueur pour le reste. Modifie ADR-001
@@ -565,6 +567,340 @@ variables » (premier poste), « Logique dupliquée » (`member_access.json`), �
 (exception de la capture), P23 à P27 modifiés, P29 à P34 ajoutés au lot T3 (2026-11-12), les suivants par lot. ADR-006 reçoit « Modifié
 par : ADR-008 (option C, décisions 1 et 5, P25) » ; ADR-001 aussi.
 
+## Amendement du 2026-11-22 : file d'attente des livraisons (ticket #104)
+
+- **Statut** : accepté le 2026-11-22, décisions de l'utilisateur : option B, départ après le
+  compte rendu de la livraison précédente, file vidée par un blocage, entrée gardée au plafond
+  du jour, 10 entrées sans limite de durée, départ par une tâche planifiée dédiée toutes les
+  5 minutes (section « Décisions de l'utilisateur »)
+- **Date** : 2026-11-22
+- **Modifie** : sections « Points d'accès autorisés » (tâche planifiée `startQueuedDelivery`
+  et ses secrets), « Lancements de sessions (Routines) » (plafond, mode de
+  `launchTicketDelivery`), « Livraison » (verrou, `delivery_last`) et « Prompts » (phrase
+  d'accord de la partie « Livraison ») ; liste fermée des tâches planifiées vérifiée par
+  `ci.yml` et `deploy.yml` (T7) ; contrôles P25, P39, P40, P43, P44, P45, P46, P47 et règle
+  « Coûts variables » de `CLAUDE.md`. Le verrou « une livraison à la fois » reste.
+
+### Contexte
+
+Demande de l'utilisateur (ticket #104) : « Une seule livraison à la fois : ok mais permettre de
+mettre en file d'attente. » Aujourd'hui, `claimDeliveryLock` (`functions/src/tickets/delivery.ts`)
+refuse une seconde livraison en `delivery_running_elsewhere`. L'administrateur doit revenir
+appuyer sur « Livrer » après la fin de la première, jusqu'à 2 h 30 plus tard (durée maximale
+d'une session, prompt de développement, partie « Livraison »).
+
+État du code lu le 2026-11-22 :
+
+- `launchTicketSession` (`functions/src/tickets/launch.ts`) enchaîne : routine configurée, bail
+  du ticket (`claimLaunch`), contrôles de P43 (`checkDeliveryLaunch`), verrou
+  (`claimDeliveryLock`), plafond (`reserveLaunch`), Issue relue, entrée `unknown`, appel unique.
+  Le compteur du jour dépend de l'appelant (`pool`, fondateur ou groupe, lu par `requireAdmin`).
+- Le verrou est libéré par un `## Livraison — blocage` relevé (`writeDeliveryReports`), par la
+  sortie du ticket d'« En cours » (`releaseDeliveryLockIfLeft`, appelé par `issueState.ts` et par
+  la passe horaire), ou à son échéance de 3 h. La fusion ferme l'Issue (étape L8 du prompt) :
+  le verrou tombe donc avant la fin du déploiement (étape L9).
+- Le compte rendu d'une livraison est relevé en quelques secondes par `githubTicketWebhook`,
+  Issue fermée comprise : un `issue_comment` du compte 16348852 donne une action
+  `forceComments: true` (`webhookAction`, `webhookModel.ts`), `applyWebhookAction` retrouve le
+  ticket par `github_issue_number` (`webhook.ts`), et `applyIssue` (`issueState.ts`) accepte
+  tout statut publié, finaux compris (`isPublishedStatus`, `model.ts`), puis appelle
+  `writeDeliveryReports`. La passe horaire (`syncUpdatedIssues`, `sync.ts`) refait ce relevé
+  pour les Issues mises à jour : elle rattrape un webhook perdu ou en 500.
+- `writeDeliveryReports` lit déjà `ticket_status/launches` dans sa transaction.
+- `syncTickets` (`functions/src/index.ts`) tourne à la minute 0 de chaque heure, secret
+  `GITHUB_TICKETS_TOKEN` seul. `ci.yml` (l. 277) et `deploy.yml` (l. 511 et 661) refusent toute
+  tâche planifiée autre que `syncTickets` ; leurs filtres de secrets réservent
+  `TICKETS_ROUTINE_DEV_*` à `launchTicketDevelopment` et `launchTicketDelivery`.
+- `QUERYABLE_FUNCTIONS` (`config.ts`) doit égaler les exports d'`index.ts` (`logs.test.ts`).
+- `allowed_decisions` se calcule depuis le statut et `validated_by_app_at` seuls
+  (`allowedDecisions`, `decisionModel.ts`) ; le client lit déjà `ticket_status/launches.
+  delivery_running` pour rendre « Livrer » inactif (`ligneLivraison`,
+  `app/lib/features/tickets/domain/ticket_delivery.dart`).
+
+### Options
+
+| Option | Pour | Contre | Coût (arrêt / usage) |
+|---|---|---|---|
+| Ne pas le faire | aucun code | l'admin revient appuyer, jusqu'à 2 h 30 après | 0 € / 0 € |
+| A. Signal seul | aucune livraison sans appui ; aucun changement au serveur | l'admin doit encore revenir ; ne répond pas à la demande | 0 € / 0 € |
+| B. File au serveur, départ par `syncTickets` | aucune tâche nouvelle | un départ par heure au plus, 0 à 60 min d'attente ; secrets de routine sur la passe horaire | ≈ 0 € / ≈ 0 € |
+| C. Comme B, départ aussi par `githubTicketWebhook` | départ en quelques secondes | jeton de routine sur le seul point d'accès sans compte (`invoker: "public"`) ; délai du webhook (60 s) plus court que les contrôles de P43 (jusqu'à 180 s) | ≈ 0 € / ≈ 0 € |
+| D. File au serveur, départ par une tâche dédiée `startQueuedDelivery` toutes les 5 min (retenue, décision 6) | départ 0 à 5 min après le compte rendu précédent, toute la journée ; `syncTickets` inchangée ; jeton de routine hors du webhook | une tâche Cloud Scheduler de plus ; ≈ 8 640 exécutions par mois ; diff de `ci.yml` et `deploy.yml` (P10) | à vérifier, ≈ 0 € attendu (voir « Réponses », question 6) |
+
+### Décision
+
+Option D (décision 6 de l'utilisateur, qui remplace le départ par `syncTickets` de l'option B).
+Une livraison mise en file part à l'exécution de `startQueuedDelivery` qui suit la fin de la
+livraison précédente, après les mêmes contrôles que « Livrer ».
+
+1. **Aucun point d'accès nouveau.** `launchTicketDelivery` reçoit un argument `mode` : `start`
+   (absent = `start`, comportement actuel), `queue` ou `unqueue`. Le mode vient du bouton
+   appuyé, jamais du statut ni du verrou (même règle que P47). Toute autre valeur : refus
+   `invalid-argument`, sans lecture de Firestore hors `members/`. `startQueuedDelivery` est une
+   tâche planifiée, invocable par Cloud Scheduler seul.
+2. **Aucune décision nouvelle.** « Mettre en file » et « Retirer de la file » relèvent de
+   `launch_delivery`, déjà dans `allowedDecisions("in_progress", true)`.
+   `ALLOWED_DECISIONS_VERSION` reste à 5. Raison : l'appartenance à la file dépend de
+   `ticket_status/launches`, et non du statut ; deux décisions `queue_delivery` et
+   `unqueue_delivery` obligeraient à réécrire `allowed_decisions` de chaque ticket à chaque
+   mouvement de la file. Le client choisit le bouton d'après `delivery_running` et
+   `delivery_queue`, écrits par le serveur ; le serveur recontrôle tout.
+3. **File.** `ticket_status/launches.delivery_queue` : liste ordonnée, `DELIVERY_QUEUE_MAX`
+   (10) entrées au plus (`functions/src/config.ts`). Entrée : `ticket_id`, `issue_number`,
+   `pr_number`, `head_sha` relu au moment de l'accord, `queued_at`, `by_uid`, `by_email`
+   (e-mail en minuscules tiré du jeton vérifié, jamais d'un argument). Aucune durée de
+   validité. Écrite par le serveur seul, lue par l'admin seul : la règle actuelle de
+   `ticket_status/**` ne change pas.
+4. **`queue`.** `requireAdmin`, puis les contrôles de P43 dans le même ordre (précondition,
+   bail, reprise en cours, PR éligible, fichiers, chemins sensibles, CI verte). Puis, en
+   transaction sur `ticket_status/launches` : ticket absent de la file, file non pleine
+   (`delivery_queue_full`), ticket qui ne tient pas déjà le verrou. Si le verrou est libre,
+   la condition de fin de la livraison précédente remplie et la file vide, le refus
+   `delivery_lock_free` dit « La livraison précédente est finie : appuyez sur « Livrer ». ».
+   Rien n'est compté à la mise en file.
+5. **`start` quand la file n'est pas vide.** Refus `delivery_queue_ahead` : les livraisons
+   partent dans l'ordre des accords.
+6. **`unqueue`.** `requireAdmin`, ticket présent dans la file : entrée retirée en transaction,
+   aucun appel à GitHub ni à la routine. Absent : `changed: false`.
+7. **Dernière livraison lancée.** `ticket_status/launches.delivery_last` (`ticket_id`,
+   `issue_number`, `launched_at`, `retry_after`, `reported_at`), écrit par le serveur seul :
+   réécrit dans la transaction qui prend le verrou (`start` comme départ de la file), sans
+   `reported_at`. `writeDeliveryReports`, dans sa transaction actuelle, pose `reported_at`
+   quand il relève sur le ticket de `delivery_last` un `## Livraison — terminée` ou
+   `## Livraison — blocage` postérieur à `launched_at`. Un blocage relevé vide la file dans la
+   même transaction (décision 3). La condition de fin se lit donc dans le seul document
+   `ticket_status/launches` : `delivery_last` absent, ou `reported_at` posé, ou
+   `retry_after` passé.
+8. **Départ : `startQueuedDelivery`.** `onSchedule`, `schedule: "*/5 * * * *"`,
+   `timeZone: "Europe/Paris"`, région `europe-west1`, compte `tickets-functions`,
+   `maxInstances: 1`, `concurrency: 1`, `timeoutSeconds: 300`, `retryCount: 0`, `memory:
+   "256MiB"`, secrets `GITHUB_TICKETS_TOKEN`, `TICKETS_ROUTINE_DEV_ID`,
+   `TICKETS_ROUTINE_DEV_TOKEN`. `syncTickets` garde son seul secret.
+   - Première lecture : `ticket_status/launches` seul. La tâche s'arrête sans autre lecture
+     ni écriture si la file est vide, si le verrou tient (échéance future), si la condition
+     de fin du point 7 n'est pas remplie, ou si `development_invalid_since` est posé.
+   - Sinon, une seule tentative par exécution, sur la tête de file. Dans l'ordre :
+     `members/{by_email}` relu (rôle `admin` toujours présent, sinon sortie
+     `delivery_queue_not_admin` ; compteur du fondateur ou du groupe lu à ce moment) ; bail du
+     ticket de 330 s (`QUEUED_DELIVERY_LEASE_MS`, plus long que les 300 s de la tâche) et
+     contrôles de P43, comme `start` ; tête de la PR relue égale à `head_sha`, sinon sortie
+     `delivery_queue_head_changed`.
+   - Anti-doublon : une transaction sur `ticket_status/launches` relit l'entrée en tête (même
+     `ticket_id` et même `queued_at`), le verrou libre, la condition du point 7 et le plafond
+     du jour du départ ; elle retire l'entrée, prend le verrou, réécrit `delivery_last` et
+     compte le lancement ensemble. Une exécution superposée, ou une callable `start` passée
+     entre-temps, trouve la tête changée ou le verrou tenu et s'arrête sans rien compter.
+   - Puis Issue relue, entrée `livraison` `unknown` dans `admin/launches` (`by_uid` de
+     l'accord, `queued: true`), appel unique de la routine de développement, texte
+     `livraison #N`.
+   - Un refus propre au ticket (précondition, codes de P43, tête changée, droits) retire
+     l'entrée et rien n'est compté. Une panne passagère (GitHub 5xx ou délai, Firestore, jeton
+     refusé) garde l'entrée pour l'exécution suivante. Plafond du jour atteint : l'entrée reste
+     en tête, rien n'est compté (décision 4). Après un `failed` de la routine, compteur et
+     verrou sont rendus comme aujourd'hui ; un `unknown` garde les deux.
+   - Chaque `catch` passe par `logError` ; aucun client au niveau module (P26).
+9. **Sorties de file.** Refuser, Clore, « Relancer le développement », ticket sorti
+   d'« En cours » : l'entrée sort dans la transaction qui l'applique, ou à l'exécution
+   suivante de `startQueuedDelivery`, qui relit le ticket. Un blocage vide la file (point 7).
+   La dernière sortie est notée dans `tickets/{id}/admin/delivery.queue_exit` (`code`, `at`),
+   écrit par le serveur seul.
+10. **Écran.** Sur un ticket où `launch_delivery` est permis et où le verrou porte un autre
+    ticket, où la livraison précédente n'a pas rendu son compte rendu, ou si la file n'est pas
+    vide : « Mettre en file » à la place de « Livrer ». Dans la file : « Dans la file
+    (position P sur T) » et « Retirer de la file ». La boîte de confirmation de « Mettre en
+    file » nomme la PR et dit : « La livraison partira sans autre accord quand la livraison en
+    cours aura publié son compte rendu, environ 5 minutes après, ou 3 h après son lancement
+    s'il n'arrive pas. Elle sera comptée au départ ; si le plafond du jour est atteint, elle
+    attendra. Si le code de la PR change d'ici là, ou si une livraison se bloque, elle sortira
+    de la file. » Elle affiche la position et les lancements restants du jour. Le client ne
+    recopie ni l'éligibilité, ni la condition de départ, ni le plafond.
+11. **Prompt.** La phrase d'accord de la partie « Livraison » devient : « L'administrateur a
+    appuyé sur « Livrer » ou sur « Mettre en file » dans l'application : cela vaut son accord
+    de fusion pour la seule pull request décrite en L2 ». Le prompt se recolle sur claude.ai
+    (P40). Les étapes L0 à L11 ne changent pas.
+12. **Rattrapage.** La passe horaire reste le rattrapage du webhook : elle relève un compte
+    rendu manqué (`syncUpdatedIssues`), et l'échéance de 3 h de `delivery_last` borne
+    l'attente si ni l'un ni l'autre ne le relève.
+13. **Livraison du changement.** Le diff touche `functions/src/config.ts`,
+    `functions/src/tickets/delivery.ts`, `.github/workflows/ci.yml` et `deploy.yml` (liste
+    fermée des tâches planifiées : `syncTickets` et `startQueuedDelivery` ; filtres de secrets ;
+    réglages de la tâche) : « Livrer » le refusera (`delivery_sensitive_files`).
+    L'administrateur fusionne à la main après relecture, et le diff des workflows lui est
+    présenté avant (P10). `QUERYABLE_FUNCTIONS` reçoit `startQueuedDelivery`.
+
+### Réponses aux questions de l'architecte
+
+1. **Où tourne chaque morceau de code** : mise en file et retrait dans `launchTicketDelivery`
+   (callable existante) ; départ dans `startQueuedDelivery` (tâche planifiée, `europe-west1`) ;
+   relevé des comptes rendus dans `githubTicketWebhook`, rattrapé par `syncTickets` ;
+   affichage dans `app/lib/features/tickets/`. Rien dans l'écran du jour (P2).
+2. **Ce qui existera en double** : rien. La condition de départ et l'éligibilité restent au
+   serveur ; le client lit `delivery_queue`, `delivery_running`, `delivery_last` et
+   `queue_exit`.
+3. **Ce qui pèse au démarrage** : une fonction de plus dans le bundle, `fetch` seul (P26) ;
+   trois secrets lus à l'appel. Une exécution sans travail fait une lecture Firestore.
+4. **Compilation de chaque cible** : aucun paquet nouveau.
+5. **Qui voit quoi** : la file est lue par l'admin seul (`ticket_status/**`). `by_email` est
+   l'e-mail d'un membre en base, jamais publié sur GitHub ni journalisé (P15).
+6. **Ce qui coûte à l'usage, plafond** : même poste `ticket_routine_launch`, même plafond,
+   compté au départ sur le compteur de l'auteur de l'accord, relu à ce moment. Une session
+   par exécution au plus, et une seule livraison à la fois. Fonctionnement :
+   ≈ 8 640 exécutions par mois (12 par heure), une lecture Firestore chacune sans travail,
+   soit ≈ 290 lectures par jour ; une tâche Cloud Scheduler de plus. Niveau gratuit à
+   vérifier : Cloud Scheduler annonce 3 tâches gratuites par compte de facturation, puis un
+   prix par tâche et par mois (à vérifier ; le compte de facturation est peut-être partagé
+   avec Kass'Dalle, dont les tâches comptent alors) ; requêtes et temps de calcul de
+   Cloud Run dans le niveau gratuit attendu (à vérifier) ; lectures Firestore sous le quota
+   gratuit journalier (à vérifier). Dépense attendue ≈ 0 €, au plus le prix d'une tâche
+   Scheduler par mois.
+7. **Exposition** : aucun point d'accès public nouveau. `startQueuedDelivery` est déclenchée
+   par Cloud Scheduler et n'est pas invocable par un tiers ; elle monte le jeton de la
+   routine de développement. Le webhook public ne le monte pas.
+8. **Exploitation** : prompt recollé sur claude.ai ; aucun secret nouveau ; une tâche Cloud
+   Scheduler créée par le déploiement, avec le rôle `roles/cloudscheduler.admin` que
+   `github-deploy` a déjà pour `syncTickets` (à vérifier au premier déploiement). Une entrée
+   bloquée se retire depuis la fiche. Revenir en arrière : supprimer la tâche, retirer le mode
+   `queue`, vider le champ.
+9. **Coût de sortie** : faible ; une tâche planifiée, deux champs de `ticket_status/launches`
+   et trois modes.
+
+### Conséquences
+
+Plus simple : l'admin donne son accord une fois par ticket et n'a plus à revenir. Les
+livraisons s'enchaînent toute la journée, 5 minutes environ après chaque compte rendu.
+
+Plus difficile : une fusion sur `main` et un déploiement partent d'une tâche planifiée, sans
+personne devant l'écran, y compris la nuit. L'accord date de l'appui, et la PR peut avoir été
+fusionnée, rendue rouge ou modifiée entre-temps : chaque contrôle est refait au départ, et la
+tête de la PR doit être celle que l'admin a vue. Le projet compte deux tâches planifiées, et la
+liste fermée de la CI change.
+
+`CLAUDE.md` change : P25 (tâche `startQueuedDelivery`, ses secrets, liste fermée des tâches
+planifiées), P39, P40, P43, P44, P45 (`queue_exit`), P46, P47, « Coûts variables » (départ
+différé). `exigences-techniques.md` : modèle de `ticket_status/launches`, fonctions, prompt.
+`exigences-fonctionnelles.md` : Admin › Tickets.
+
+### Décisions de l'utilisateur (2026-11-22)
+
+Elles fixent la décision ci-dessus.
+
+1. **Option retenue** : file au serveur. Le webhook ne monte pas le jeton de la routine
+   (option C écartée). Le départ par `syncTickets` est remplacé par la décision 6.
+2. **Moment du départ** : après le compte rendu de la livraison précédente. La tête de file ne
+   part que si le verrou est libre et si la dernière livraison lancée a publié
+   `## Livraison — terminée` ou `## Livraison — blocage` postérieur à son lancement, ou si
+   3 h sont passées depuis son lancement. Le serveur note la dernière livraison lancée dans
+   `ticket_status/launches.delivery_last`, écrit par le serveur seul (point 7). Le compte
+   rendu d'un ticket déjà clos (Issue fermée par la fusion) est relevé par le webhook, et la
+   passe horaire le rattrape. Un seul déploiement tourne à la fois.
+3. **Blocage** : un `## Livraison — blocage` relevé vide la file. Chaque entrée sort avec le
+   code `delivery_queue_cleared_after_blockage`, noté dans `admin/delivery.queue_exit` de son
+   ticket. Rien n'est décompté. L'admin remet en file les tickets qu'il veut. Aucun état de
+   pause.
+4. **Plafond du jour atteint au départ** : l'entrée reste en tête de file et repart à
+   l'exécution suivante, y compris après la remise à zéro du compteur à minuit (heure de
+   Paris). Rien n'est compté ni retiré.
+5. **Taille et validité** : `DELIVERY_QUEUE_MAX` vaut 10 (`functions/src/config.ts`). Un accord
+   n'a pas de durée de validité : aucune sortie pour ancienneté. Le contrôle de `head_sha` au
+   départ (point 8) reste la seule garde sur un code changé.
+6. **Départ toute la journée** : « On doit lancer plus qu'une par heure et le faire tout au
+   long de la journée. » Le départ passe par la tâche dédiée `startQueuedDelivery`, toutes les
+   5 minutes, 24 h sur 24, et non par `syncTickets` (point 8).
+7. **2026-11-22 : routine en pause ou appel refusé = entrée gardée, file arrêtée.** Au départ,
+   un refus de la routine de développement (`routine_paused`, `routine_failed`) ne fait plus
+   sortir l'entrée : elle revient en tête dans la transaction qui rend le verrou et
+   `delivery_last`, rien n'est décompté, et `ticket_status/launches.delivery_queue_halted`
+   (`code`, `at`) arrête la file. Le jeton refusé l'arrête déjà par
+   `development_invalid_since`. Les deux s'effacent au prochain lancement réussi de la routine
+   de développement. La fiche affiche « la file attend ». `startQueuedDelivery` s'arrête aussi,
+   avant tout appel à GitHub, sur `ticket_status/github.token_invalid_since` et sur le plafond
+   du compteur de l'auteur de l'accord, lu sans décompte. Seul un refus de l'API (`failed`)
+   remet l'entrée en tête ; toute autre panne après l'appel est traitée comme `unknown`.
+8. **2026-11-22 : file à 11 entrées.** Une entrée remise en tête après un départ rendu n'est
+   pas refusée au plafond : la file peut compter `DELIVERY_QUEUE_MAX` + 1 entrées si une mise
+   en file a eu lieu pendant ce départ. `queue` refuse toujours au-delà de 10.
+9. **2026-11-22 : « Relancer la file ».** `launchTicketDelivery` reçoit le mode `resume_queue`,
+   offert en tête de file quand `delivery_queue_halted` est posé. Après `requireAdmin`, il
+   efface ce champ en transaction si le ticket est en tête (sinon refus
+   `delivery_queue_not_head` ; file non arrêtée : `changed: false`, rien écrit). Il ne lance
+   rien, ne compte rien et n'appelle ni GitHub ni la routine : `startQueuedDelivery` fait le
+   départ, 5 minutes au plus après, avec tous ses contrôles. La boîte de confirmation nomme la
+   PR, dit qu'elle partira sans autre accord après les contrôles de « Livrer » et qu'elle sera
+   comptée au départ, et affiche les lancements restants. Le jeton refusé
+   (`development_invalid_since`, `token_invalid_since`) n'est pas effacé par ce mode
+   (remplacé par la décision 10 pour `development_invalid_since`).
+10. **2026-11-23 : « Relancer la file » efface aussi `development_invalid_since`** (question 18
+    de l'utilisateur). Le mode `resume_queue` efface `delivery_queue_halted` et
+    `development_invalid_since` dans la même transaction, jamais `analysis_invalid_since` ni
+    `ticket_status/github.token_invalid_since`. Aucun des deux posé : `changed: false`, rien
+    écrit. Rien n'est lancé, compté ni appelé. Si le jeton de la routine est encore faux, le
+    départ suivant reçoit un 401, 403 ou 404, qui repose `development_invalid_since`, rend
+    compteur et verrou et remet l'entrée en tête. Le bouton s'affiche aussi en tête de file
+    quand `development_invalid_since` est posé, jamais pour le jeton GitHub, qui s'efface seul
+    à la première réponse réussie de GitHub. Dans les deux cas, le jeton remplacé dans Secret
+    Manager n'est lu qu'après un redéploiement des Functions (lancement manuel de
+    « Déploiement ») : les libellés de la file et du bandeau d'Admin › Tickets le disent
+    (2026-11-23). La boîte ajoute « Si la routine refuse encore, la
+    file s'arrêtera de nouveau, sans décompte. ».
+
+### Évolutions du réseau acceptées (2026-11-22)
+
+Textes à ajouter aux lignes de `CLAUDE.md`, contrôles propres au projet.
+
+- **P25** (`securite`) : « tâches planifiées en liste fermée : `syncTickets` et
+  `startQueuedDelivery` (file des livraisons, amendement du 2026-11-22), vérifiée par `ci.yml`
+  et `deploy.yml` ; `startQueuedDelivery` : `onSchedule` toutes les 5 minutes, `maxInstances:
+  1`, `concurrency: 1`, `timeoutSeconds: 300`, `retryCount: 0`, secrets `GITHUB_TICKETS_TOKEN`,
+  `TICKETS_ROUTINE_DEV_ID` et `TICKETS_ROUTINE_DEV_TOKEN` seuls ; `TICKETS_ROUTINE_DEV_*` :
+  `launchTicketDevelopment`, `launchTicketDelivery` et `startQueuedDelivery`, jamais
+  `githubTicketWebhook` ni `syncTickets` ; filtres de secrets de `ci.yml` et `deploy.yml` égaux
+  à cette liste »
+- **P43** (`securite`) : « `mode` parmi `start`, `queue`, `unqueue` (absent = `start`), jamais
+  déduit du verrou ni du statut, autre valeur refusée avant toute lecture hors `members/` ;
+  `queue` refait tous les contrôles ci-dessus, n'est jamais compté, refuse
+  `delivery_queue_full`, `delivery_lock_free` et un ticket déjà en file ; `start` refusé en
+  `delivery_queue_ahead` quand la file n'est pas vide ; départ par `startQueuedDelivery` :
+  `members/{by_email}` relu (admin, compteur du fondateur), bail de 330 s, mêmes contrôles,
+  tête de la PR égale à `head_sha` de l'accord (`delivery_queue_head_changed`) ; refus propre
+  au ticket = sortie sans décompte, panne passagère et plafond atteint = entrée gardée ; tests
+  de chaque cas »
+- **P44** (`securite`) : « `ticket_status/launches.delivery_queue` : `DELIVERY_QUEUE_MAX` (10)
+  entrées au plus (`config.ts` seul), entrées `ticket_id`, `issue_number`, `pr_number`,
+  `head_sha`, `queued_at`, `by_uid`, `by_email`, sans durée de validité ;
+  `delivery_last` (`ticket_id`, `issue_number`, `launched_at`, `retry_after`, `reported_at`)
+  réécrit avec chaque prise du verrou, `reported_at` posé par `writeDeliveryReports` sur un
+  compte rendu postérieur à `launched_at` ; un blocage relevé vide la file dans la même
+  transaction (`delivery_queue_cleared_after_blockage`) ; `startQueuedDelivery` lit
+  `ticket_status/launches` seul et s'arrête sans autre lecture si la file est vide, si le
+  verrou tient, si `delivery_last` n'a ni `reported_at` ni `retry_after` passé, ou si
+  `development_invalid_since` est posé ; une tentative par exécution, tête de file seule ;
+  entrée en tête relue, verrou libre, condition de fin, plafond, retrait, prise du verrou et
+  décompte dans une seule transaction ; Refuser, Clore, « Relancer le développement » et la
+  sortie d'« En cours » retirent l'entrée ; tests : deux exécutions superposées et une
+  callable `start` concurrente, un seul départ ; blocage qui vide une file de 10 »
+- **P45** (`securite`) : `queue_exit` (`code`, `at`) ajouté à la liste des champs de
+  `tickets/{id}/admin/delivery`.
+- **P39** (`relecteur-regles`) : « « Mettre en file » : boîte de confirmation qui nomme la PR,
+  dit que la livraison partira sans autre accord quand la livraison en cours aura publié son
+  compte rendu, environ 5 minutes après, ou 3 h après son lancement s'il n'arrive pas,
+  qu'elle sera comptée au départ et attendra si le plafond du jour est atteint, et qu'elle
+  sortira de la file si le code de la PR change ou si une livraison se bloque ; position et
+  lancements restants affichés ; bouton choisi d'après `delivery_running`, `delivery_last` et
+  `delivery_queue` lus, sans condition de départ ni éligibilité recopiée ; `queue_exit`
+  affiché avec son code »
+- **P46** (`relecteur-regles`) : « le départ de la file vit dans `startQueuedDelivery` seule,
+  jamais dans `githubTicketWebhook` ni dans `syncTickets` ; `syncTickets` reste le rattrapage
+  du relevé des comptes rendus »
+- **P47** (`securite`) : « une reprise retire le ticket de la file, dans la transaction du
+  bail »
+- **P40** (`relecteur-regles`) : « phrase d'accord de la partie « Livraison » : « Livrer » ou
+  « Mettre en file » ; prompt recollé avant la fusion »
+- **« Coûts variables »**, puce « Une action qui appelle un modèle… », remplacée par :
+  « **Une action qui appelle un modèle ne part pas sur un défilement ou une frappe**, et une
+  action en masse annonce ce qu'elle fera avant de partir. Un départ différé (file des
+  livraisons, ADR-008, amendement du 2026-11-22) part d'un appui confirmé dont la boîte
+  annonce le délai et le décompte, et il refait au départ tous les contrôles de l'appui. »
+
 ## Sources
 
 Consultées le 2026-11-11.
@@ -580,6 +916,10 @@ Consultées le 2026-11-11.
 - Secret Manager, six versions actives gratuites (à vérifier) :
   https://cloud.google.com/secret-manager/pricing
 - Cloud Run, niveau gratuit (à vérifier) : https://cloud.google.com/run/pricing
+- Amendement du 2026-11-22, coûts à vérifier (non consultés) : Cloud Scheduler, 3 tâches
+  gratuites par compte de facturation : https://cloud.google.com/scheduler/pricing ; Cloud Run,
+  niveau gratuit : https://cloud.google.com/run/pricing ; Firestore, quota gratuit journalier :
+  https://firebase.google.com/docs/firestore/pricing
 - Kass'Dalle : `documentation/TechnicalRequirements.md` §3.12 bis, « Tickets », « Routines des
   tickets » ; `documentation/FunctionalRequirements.md` §5.13 ;
   `kass_dalle/functions/src/tickets/routine.ts`, `webhook.ts` (`invoker: "public"`,

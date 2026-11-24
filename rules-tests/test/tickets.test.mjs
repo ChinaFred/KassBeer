@@ -843,3 +843,94 @@ describe("livraison — admin/delivery et ticket_status/launches.delivery_runnin
     });
   }
 });
+
+/// File des livraisons, écrite par le serveur (ADR-008, amendement du 2026-11-22, P44, P45).
+const deliveryQueue = [
+  {
+    ticket_id: "t-a",
+    issue_number: 12,
+    pr_number: 34,
+    head_sha: "a".repeat(40),
+    queued_at: CREATED,
+    by_uid: "admin-uid",
+    by_email: "admin@example.com",
+  },
+];
+const deliveryLast = {
+  ticket_id: "t-b",
+  issue_number: 9,
+  launched_at: CREATED,
+  retry_after: CREATED,
+  reported_at: null,
+};
+
+describe("file des livraisons — delivery_queue, delivery_last et admin/delivery.queue_exit, cinq profils (P4, P41, P44, P45)", () => {
+  const read = {
+    anonymous: false,
+    nonMember: false,
+    owner: false,
+    otherBrewer: false,
+    admin: true,
+  };
+  for (const [name, allowed] of Object.entries(read)) {
+    it(`${name} lit la file des livraisons : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seed(state.env, {
+        "ticket_status/launches": {
+          ...launchStatus,
+          delivery_queue: deliveryQueue,
+          delivery_last: deliveryLast,
+        },
+      });
+      await expectRule(allowed, db(state.env, name).doc("ticket_status/launches").get());
+    });
+    it(`${name} lit la sortie de file du ticket de brewer-a : ${allowed ? "autorisé" : "refusé"}`, async () => {
+      await seedTickets();
+      await seed(state.env, {
+        "tickets/t-a/admin/delivery": {
+          ...delivery,
+          queue_exit: { code: "delivery_queue_removed", at: CREATED },
+        },
+      });
+      await expectRule(allowed, db(state.env, name).doc("tickets/t-a/admin/delivery").get());
+    });
+  }
+
+  for (const name of ["anonymous", "nonMember", "owner", "otherBrewer", "admin"]) {
+    it(`${name} se met en file : refusé`, async () => {
+      await seed(state.env, { "ticket_status/launches": launchStatus });
+      await expectRule(
+        false,
+        db(state.env, name).doc("ticket_status/launches").update({ delivery_queue: deliveryQueue }),
+      );
+    });
+    it(`${name} vide la file ou réécrit delivery_last : refusé`, async () => {
+      await seed(state.env, {
+        "ticket_status/launches": {
+          ...launchStatus,
+          delivery_queue: deliveryQueue,
+          delivery_last: deliveryLast,
+        },
+      });
+      await expectRule(
+        false,
+        db(state.env, name).doc("ticket_status/launches").update({ delivery_queue: [] }),
+      );
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("ticket_status/launches")
+          .update({ delivery_last: { ...deliveryLast, reported_at: CREATED } }),
+      );
+    });
+    it(`${name} écrit queue_exit : refusé`, async () => {
+      await seedTickets();
+      await seed(state.env, { "tickets/t-a/admin/delivery": delivery });
+      await expectRule(
+        false,
+        db(state.env, name)
+          .doc("tickets/t-a/admin/delivery")
+          .update({ queue_exit: { code: "delivery_queue_removed", at: CREATED } }),
+      );
+    });
+  }
+});
