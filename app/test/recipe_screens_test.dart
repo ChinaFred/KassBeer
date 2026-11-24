@@ -162,18 +162,20 @@ void main() {
         ),
       ]);
       await tester.pumpAndSettle();
-      expect(find.text('IPA · 20 L · Zoé'), findsOneWidget);
+      // Style, puis volume et auteur (aucun calcul sans malt).
+      expect(find.text('IPA'), findsNWidgets(2));
+      expect(find.text('20 L · Zoé'), findsOneWidget);
       expect(find.text('Autre brasseur'), findsOneWidget);
       expect(find.text('Vous'), findsOneWidget);
       expect(find.text('En attente du réseau'), findsOneWidget);
-      // Recherche sur toute la largeur, puis le filtre, puis les actions.
+      // Recherche sur toute la largeur, puis l'origine, puis les actions.
       final recherche = find.widgetWithText(
         TextField,
         'Rechercher une recette',
       );
       final largeur = tester.getSize(find.byType(RecipesListScreen)).width;
       expect(tester.getSize(recherche).width, largeur - 32);
-      final filtre = find.byType(SegmentedButton<bool>);
+      final filtre = find.widgetWithText(ChoiceChip, 'Toutes');
       expect(
         tester.getTopLeft(filtre).dy,
         greaterThan(tester.getBottomLeft(recherche).dy),
